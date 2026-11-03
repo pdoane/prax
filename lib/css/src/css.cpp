@@ -187,8 +187,8 @@ PrString conditionPart(CssValueRun run, uint32_t index, CssValueDef production) 
 
 // Returns the part of an @container rule's condition if it has one condition, or the empty string if it has several
 // (css-conditional-5/#dom-csscontainerrule-containername).
-PrString soleConditionPart(const PrCssContainerRule* self, CssValueDef production) {
-    CssValueRun run = preludeOf(self);
+PrString soleConditionPart(const PrCssContainerRule* rule, CssValueDef production) {
+    CssValueRun run = preludeOf(rule);
     return run.values[0].next == run.count ? conditionPart(run, 0, production) : prStringEmpty();
 }
 
@@ -212,9 +212,9 @@ PrString descriptorValue(const Handle* handle, PrCssDescriptor descriptor) {
 // Returns the selectors of an @scope rule's scoping root, or of its limit, or the null string if the rule has none. The
 // prelude is a <scope-boundaries>: the root's selectors in parentheses if written, then `to` and the limit's selectors
 // in parentheses if written. The rule's selectors are the root's, then the limit's (cssCompilePreludeSelectors).
-PrString scopeSelectors(const PrCssScopeRule* self, bool limit) {
-    const CssRuleData* rule = dataOf(self);
-    CssValueRun run = cssValueListRun(&rule->prelude);
+PrString scopeSelectors(const PrCssScopeRule* rule, bool limit) {
+    const CssRuleData* data = dataOf(rule);
+    CssValueRun run = cssValueListRun(&data->prelude);
     uint32_t counts[2] = {0, 0};    // number of selectors of the root and of the limit
     bool written[2] = {false, false};
     bool past = false;              // true once past the `to`
@@ -227,10 +227,10 @@ PrString scopeSelectors(const PrCssScopeRule* self, bool limit) {
             i += value->next - 1;
         }
     }
-    if (!written[limit] || rule->selectors == nullptr)
+    if (!written[limit] || data->selectors == nullptr)
         return prStringNull();
     return serialized([&](TextBuffer* out) {
-        cssSerializeSelectorRange(out, rule->selectors, limit ? counts[0] : 0, counts[limit]);
+        cssSerializeSelectorRange(out, data->selectors, limit ? counts[0] : 0, counts[limit]);
     });
 }
 
@@ -648,38 +648,38 @@ struct PrCssFont : CssFont {};
 // ---------------------------------------------------------------------------------------------------------------------
 // MediaList
 
-PrString prCssMediaListMediaText(const PrCssMediaList* self) {
-    const CssMediaQueries* list = cssMediaListQueries(self);
-    return serialized([&](TextBuffer* out) { cssSerializeMediaList(out, list); });
+PrString prCssMediaListMediaText(const PrCssMediaList* list) {
+    const CssMediaQueries* queries = cssMediaListQueries(list);
+    return serialized([&](TextBuffer* out) { cssSerializeMediaList(out, queries); });
 }
 
-void prCssMediaListSetMediaText(PrCssMediaList* self, PrStringView value) {
+void prCssMediaListSetMediaText(PrCssMediaList* list, PrStringView value) {
     CssEdit edit;
     cssEditBegin(&edit, nullptr);
-    commitMedia(self, &edit, cssMediaListPrepareText(&edit, cssMediaListQueries(self), value));
+    commitMedia(list, &edit, cssMediaListPrepareText(&edit, cssMediaListQueries(list), value));
 }
 
-uint32_t prCssMediaListLength(const PrCssMediaList* self) {
-    return cssMediaListLength(cssMediaListQueries(self));
+uint32_t prCssMediaListLength(const PrCssMediaList* list) {
+    return cssMediaListLength(cssMediaListQueries(list));
 }
 
-PrString prCssMediaListQueryAt(const PrCssMediaList* self, uint32_t index) {
-    const CssMediaQueries* list = cssMediaListQueries(self);
-    if (index >= cssMediaListLength(list))
+PrString prCssMediaListQueryAt(const PrCssMediaList* list, uint32_t index) {
+    const CssMediaQueries* queries = cssMediaListQueries(list);
+    if (index >= cssMediaListLength(queries))
         return prStringNull();
-    return serializedValues(cssMediaQueryAt(list, index));
+    return serializedValues(cssMediaQueryAt(queries, index));
 }
 
-void prCssMediaListAppendMedium(PrCssMediaList* self, PrStringView medium) {
+void prCssMediaListAppendMedium(PrCssMediaList* list, PrStringView medium) {
     CssEdit edit;
     cssEditBegin(&edit, nullptr);
-    commitMedia(self, &edit, cssMediaListPrepareAppend(&edit, cssMediaListQueries(self), medium));
+    commitMedia(list, &edit, cssMediaListPrepareAppend(&edit, cssMediaListQueries(list), medium));
 }
 
-PrStatus prCssMediaListDeleteMedium(PrCssMediaList* self, PrStringView medium) {
+PrStatus prCssMediaListDeleteMedium(PrCssMediaList* list, PrStringView medium) {
     CssEdit edit;
     cssEditBegin(&edit, nullptr);
-    CssEditResult result = commitMedia(self, &edit, cssMediaListPrepareDelete(&edit, cssMediaListQueries(self), medium));
+    CssEditResult result = commitMedia(list, &edit, cssMediaListPrepareDelete(&edit, cssMediaListQueries(list), medium));
     return result == CssEditResult_Rejected ? PrStatus_NotFound : PrStatus_Ok;
 }
 
@@ -692,68 +692,67 @@ PrCssMediaQueryList* PR_NULLABLE prCssMediaQueryListQuery(PrDomEventTarget* PR_N
     return static_cast<PrCssMediaQueryList*>(object);
 }
 
-PrString prCssMediaQueryListMedia(const PrCssMediaQueryList* self) {
-    const CssMediaQueries* list = &self->media;
+PrString prCssMediaQueryListMedia(const PrCssMediaQueryList* mediaQueryList) {
+    const CssMediaQueries* list = &mediaQueryList->media;
     return serialized([&](TextBuffer* out) { cssSerializeMediaList(out, list); });
 }
 
-bool prCssMediaQueryListMatches(const PrCssMediaQueryList* self) {
-    const PrCssMediaQueryList* list = self;
+bool prCssMediaQueryListMatches(const PrCssMediaQueryList* list) {
     return cssMediaListMatches(&list->media, list->environment);
 }
 
 // Adds a `change` listener in the same way as addEventListener() (cssom-view-1/#dom-mediaquerylist-addlistener).
-void prCssMediaQueryListAddListener(PrCssMediaQueryList* self, const PrDomEventListener* PR_NULLABLE callback) {
+void prCssMediaQueryListAddListener(PrCssMediaQueryList* list, const PrDomEventListener* PR_NULLABLE callback) {
     if (callback != nullptr)
-        domListenerAdd(self, "change", callback, nullptr);
+        domListenerAdd(list, "change", callback, nullptr);
 }
 
 // cssom-view-1/#dom-mediaquerylist-removelistener
-void prCssMediaQueryListRemoveListener(PrCssMediaQueryList* self, const PrDomEventListener* PR_NULLABLE callback) {
+void prCssMediaQueryListRemoveListener(PrCssMediaQueryList* list, const PrDomEventListener* PR_NULLABLE callback) {
     if (callback != nullptr)
-        domListenerRemove(self, "change", callback, false);
+        domListenerRemove(list, "change", callback, false);
 }
 
-void prCssMediaQueryListRetain(PrCssMediaQueryList* self) {
-    cssMediaQueryListRetain(self);
+void prCssMediaQueryListRetain(PrCssMediaQueryList* list) {
+    cssMediaQueryListRetain(list);
 }
 
-void prCssMediaQueryListRelease(PrCssMediaQueryList* PR_NULLABLE self) {
-    cssMediaQueryListRelease(self);
+void prCssMediaQueryListRelease(PrCssMediaQueryList* PR_NULLABLE list) {
+    cssMediaQueryListRelease(list);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // StyleSheet
 
-PrStringView prCssStyleSheetHref(const PrCssStyleSheet* self) {
-    return prStringView(&self->href);
+PrStringView prCssStyleSheetHref(const PrCssStyleSheet* sheet) {
+    return prStringView(&sheet->href);
 }
 
-PrDomNode* PR_NULLABLE prCssStyleSheetOwnerNode(PrCssStyleSheet* self) {
-    return self->ownerNode;
+PrDomNode* PR_NULLABLE prCssStyleSheetOwnerNode(PrCssStyleSheet* sheet) {
+    return sheet->ownerNode;
 }
 
-PrCssStyleSheet* PR_NULLABLE prCssStyleSheetParentStyleSheet(PrCssStyleSheet* self) {
-    const PrCssRule* owner = self->ownerRule;
+PrCssStyleSheet* PR_NULLABLE prCssStyleSheetParentStyleSheet(PrCssStyleSheet* sheet) {
+    const PrCssRule* owner = sheet->ownerRule;
     return owner != nullptr ? owner->sheet : nullptr;
 }
 
-PrStringView prCssStyleSheetTitle(const PrCssStyleSheet* self) {
-    return prStringView(&self->title);
+PrStringView prCssStyleSheetTitle(const PrCssStyleSheet* sheet) {
+    return prStringView(&sheet->title);
 }
 
-PrCssMediaList* prCssStyleSheetMedia(PrCssStyleSheet* self) {
+PrCssMediaList* prCssStyleSheetMedia(PrCssStyleSheet* sheet) {
     // An imported sheet's media is its rule's media (cssom-1/#dom-cssimportrule-media).
-    return self->ownerRule != nullptr ? &self->ownerRule->media : &self->mediaList;
+    return sheet->ownerRule != nullptr ? &sheet->ownerRule->media : &sheet->mediaList;
 }
 
-bool prCssStyleSheetDisabled(const PrCssStyleSheet* self) {
-    return self->disabled;
+bool prCssStyleSheetDisabled(const PrCssStyleSheet* sheet) {
+    return sheet->disabled;
 }
 
-void prCssStyleSheetSetDisabled(PrCssStyleSheet* self, bool value) {
-    self->disabled = value;
-    cssDocumentStyleChanged(cssStyleSheetDocument(self));
+void prCssStyleSheetSetDisabled(PrCssStyleSheet* sheet, bool value) {
+    sheet->disabled = value;
+    cssDocumentStyleChanged(cssStyleSheetDocument(sheet));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -778,42 +777,42 @@ PrCssStyleSheet* prCssStyleSheetCreate(const PrCssStyleSheetInit* PR_NULLABLE in
     return sheet;
 }
 
-void prCssStyleSheetRetain(PrCssStyleSheet* self) {
-    cssStyleSheetRetain(self);
+void prCssStyleSheetRetain(PrCssStyleSheet* sheet) {
+    cssStyleSheetRetain(sheet);
 }
 
-void prCssStyleSheetRelease(PrCssStyleSheet* PR_NULLABLE self) {
-    cssStyleSheetRelease(self);
+void prCssStyleSheetRelease(PrCssStyleSheet* PR_NULLABLE sheet) {
+    cssStyleSheetRelease(sheet);
 }
 
-PrCssRule* PR_NULLABLE prCssStyleSheetOwnerRule(PrCssStyleSheet* self) {
-    return self->ownerRule;
+PrCssRule* PR_NULLABLE prCssStyleSheetOwnerRule(PrCssStyleSheet* sheet) {
+    return sheet->ownerRule;
 }
 
-PrCssRuleList* prCssStyleSheetCssRules(PrCssStyleSheet* self) {
-    return &self->cssRules;
+PrCssRuleList* prCssStyleSheetCssRules(PrCssStyleSheet* sheet) {
+    return &sheet->cssRules;
 }
 
-PrStatus prCssStyleSheetInsertRule(PrCssStyleSheet* self, PrStringView rule, uint32_t index, uint32_t* PR_NULLABLE out) {
-    PrStatus status = cssStyleSheetInsertRule(self, rule, index);
+PrStatus prCssStyleSheetInsertRule(PrCssStyleSheet* sheet, PrStringView rule, uint32_t index, uint32_t* PR_NULLABLE out) {
+    PrStatus status = cssStyleSheetInsertRule(sheet, rule, index);
     if (status == PrStatus_Ok && out != nullptr)
         *out = index;
     return status;
 }
 
-PrStatus prCssStyleSheetDeleteRule(PrCssStyleSheet* self, uint32_t index) {
-    return cssStyleSheetDeleteRule(self, index);
+PrStatus prCssStyleSheetDeleteRule(PrCssStyleSheet* sheet, uint32_t index) {
+    return cssStyleSheetDeleteRule(sheet, index);
 }
 
-PrStatus prCssStyleSheetReplaceSync(PrCssStyleSheet* self, PrStringView text) {
-    if (!self->constructed)
+PrStatus prCssStyleSheetReplaceSync(PrCssStyleSheet* sheet, PrStringView text) {
+    if (!sheet->constructed)
         return PrStatus_NotAllowed;
 
-    cssStyleSheetReplace(self, text);
+    cssStyleSheetReplace(sheet, text);
     return PrStatus_Ok;
 }
 
-PrStatus prCssStyleSheetAddRule(PrCssStyleSheet* self, PrStringView selector, PrStringView style,
+PrStatus prCssStyleSheetAddRule(PrCssStyleSheet* sheet, PrStringView selector, PrStringView style,
         const uint32_t* PR_NULLABLE index, int32_t* PR_NULLABLE out) {
     // cssom-1/#dom-cssstylesheet-addrule: the rule is the selector, then ` { `, the style and a space if the style is
     // not empty, and `}`. It is inserted at the end if no index is given. The result is always -1.
@@ -825,7 +824,7 @@ PrStatus prCssStyleSheetAddRule(PrCssStyleSheet* self, PrStringView selector, Pr
         textAppendChar(&rule, ' ');
     }
     textAppendChar(&rule, '}');
-    PrStatus status = cssStyleSheetInsertRule(self, textView(&rule), index != nullptr ? *index : self->rules.count);
+    PrStatus status = cssStyleSheetInsertRule(sheet, textView(&rule), index != nullptr ? *index : sheet->rules.count);
     textReset(&rule);
     if (status == PrStatus_Ok && out != nullptr)
         *out = -1;
@@ -835,36 +834,36 @@ PrStatus prCssStyleSheetAddRule(PrCssStyleSheet* self, PrStringView selector, Pr
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSRule
 
-PrString prCssRuleCssText(const PrCssRule* self) {
-    const CssRuleData* rule = dataOf(self);
-    return serialized([&](TextBuffer* out) { cssSerializeRule(out, rule); });
+PrString prCssRuleCssText(const PrCssRule* rule) {
+    const CssRuleData* data = dataOf(rule);
+    return serialized([&](TextBuffer* out) { cssSerializeRule(out, data); });
 }
 
 // The setter does nothing (cssom-1/#the-cssrule-interface). It exists because the attribute is not readonly.
 void prCssRuleSetCssText(PrCssRule*, PrStringView) {}
 
-PrCssRule* PR_NULLABLE prCssRuleParentRule(PrCssRule* self) {
-    return self->parent;
+PrCssRule* PR_NULLABLE prCssRuleParentRule(PrCssRule* rule) {
+    return rule->parent;
 }
 
-PrCssStyleSheet* PR_NULLABLE prCssRuleParentStyleSheet(PrCssRule* self) {
-    return self->sheet;
+PrCssStyleSheet* PR_NULLABLE prCssRuleParentStyleSheet(PrCssRule* rule) {
+    return rule->sheet;
 }
 
-void prCssRuleRetain(PrCssRule* self) {
-    cssRuleRetain(self);
+void prCssRuleRetain(PrCssRule* rule) {
+    cssRuleRetain(rule);
 }
 
-void prCssRuleRelease(PrCssRule* PR_NULLABLE self) {
-    cssRuleRelease(self);
+void prCssRuleRelease(PrCssRule* PR_NULLABLE rule) {
+    cssRuleRelease(rule);
 }
 
-PrCssRuleType prCssRuleType(const PrCssRule* self) {
-    return cssRuleType(dataOf(self));
+PrCssRuleType prCssRuleType(const PrCssRule* rule) {
+    return cssRuleType(dataOf(rule));
 }
 
-PrCssRuleKind prCssRuleKind(const PrCssRule* self) {
-    return cssRuleKind(self->data);
+PrCssRuleKind prCssRuleKind(const PrCssRule* rule) {
+    return cssRuleKind(rule->data);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -901,19 +900,20 @@ PrCssGroupingRule* PR_NULLABLE prCssGroupingRuleQuery(PrCssRule* PR_NULLABLE obj
     }
 }
 
-PrCssRuleList* prCssGroupingRuleCssRules(PrCssGroupingRule* self) {
-    return &self->cssRules;
+PrCssRuleList* prCssGroupingRuleCssRules(PrCssGroupingRule* rule) {
+    return &rule->cssRules;
 }
 
-PrStatus prCssGroupingRuleInsertRule(PrCssGroupingRule* self, PrStringView rule, uint32_t index, uint32_t* PR_NULLABLE out) {
-    PrStatus status = cssRuleInsertRule(self, rule, index);
+PrStatus prCssGroupingRuleInsertRule(PrCssGroupingRule* groupingRule, PrStringView rule, uint32_t index,
+        uint32_t* PR_NULLABLE out) {
+    PrStatus status = cssRuleInsertRule(groupingRule, rule, index);
     if (status == PrStatus_Ok && out != nullptr)
         *out = index;
     return status;
 }
 
-PrStatus prCssGroupingRuleDeleteRule(PrCssGroupingRule* self, uint32_t index) {
-    return cssRuleDeleteRule(self, index);
+PrStatus prCssGroupingRuleDeleteRule(PrCssGroupingRule* rule, uint32_t index) {
+    return cssRuleDeleteRule(rule, index);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -923,24 +923,24 @@ PrCssStyleRule* PR_NULLABLE prCssStyleRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssStyleRule>(object, PrCssRuleKind_Style);
 }
 
-PrString prCssStyleRuleSelectorText(const PrCssStyleRule* self) {
-    const CssRuleData* rule = dataOf(self);
-    return serialized([&](TextBuffer* out) { cssSerializeSelectorText(out, rule); });
+PrString prCssStyleRuleSelectorText(const PrCssStyleRule* rule) {
+    const CssRuleData* data = dataOf(rule);
+    return serialized([&](TextBuffer* out) { cssSerializeSelectorText(out, data); });
 }
 
-void prCssStyleRuleSetSelectorText(PrCssStyleRule* self, PrStringView value) {
+void prCssStyleRuleSetSelectorText(PrCssStyleRule* rule, PrStringView value) {
     CssEdit edit;
-    cssEditBegin(&edit, cssRuleParser(self));
+    cssEditBegin(&edit, cssRuleParser(rule));
     Array<CssRuleChain> outer;
-    CssEditResult result = cssStyleRulePrepareSelectorText(&edit, cssRuleChain(self->parent, &outer), sheetDataOf(self), value);
+    CssEditResult result = cssStyleRulePrepareSelectorText(&edit, cssRuleChain(rule->parent, &outer), sheetDataOf(rule), value);
     outer.reset();
     if (result == CssEditResult_Changed)
-        cssRuleCommit(&edit, cssRuleWritableTree(self));
+        cssRuleCommit(&edit, cssRuleWritableTree(rule));
     cssEditEnd(&edit);
 }
 
-PrCssStyleProperties* prCssStyleRuleStyle(PrCssStyleRule* self) {
-    return static_cast<PrCssStyleProperties*>(&self->style);
+PrCssStyleProperties* prCssStyleRuleStyle(PrCssStyleRule* rule) {
+    return static_cast<PrCssStyleProperties*>(&rule->style);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -953,22 +953,22 @@ PrCssImportRule* PR_NULLABLE prCssImportRuleQuery(PrCssRule* PR_NULLABLE object)
     return ruleOfKind<PrCssImportRule>(object, PrCssRuleKind_Import);
 }
 
-PrStringView prCssImportRuleHref(const PrCssImportRule* self) {
-    return preludeName(self);
+PrStringView prCssImportRuleHref(const PrCssImportRule* rule) {
+    return preludeName(rule);
 }
 
-PrCssMediaList* prCssImportRuleMedia(PrCssImportRule* self) {
-    return &self->media;
+PrCssMediaList* prCssImportRuleMedia(PrCssImportRule* rule) {
+    return &rule->media;
 }
 
-PrCssStyleSheet* PR_NULLABLE prCssImportRuleStyleSheet(PrCssImportRule* self) {
-    return cssImportRuleSheet(self);
+PrCssStyleSheet* PR_NULLABLE prCssImportRuleStyleSheet(PrCssImportRule* rule) {
+    return cssImportRuleSheet(rule);
 }
 
-PrString prCssImportRuleLayerName(const PrCssImportRule* self) {
+PrString prCssImportRuleLayerName(const PrCssImportRule* rule) {
     // cssom-1/#dom-cssimportrule-layername: the empty string for `layer`, the layer's name for layer(), and the null
     // string for neither.
-    CssValueRun run = preludeOf(self);
+    CssValueRun run = preludeOf(rule);
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
         if (cssValueIsKeyword(value, PrCssKeyword_Layer))
@@ -979,16 +979,16 @@ PrString prCssImportRuleLayerName(const PrCssImportRule* self) {
     return prStringNull();
 }
 
-PrString prCssImportRuleSupportsText(const PrCssImportRule* self) {
-    // cssom-1/#dom-cssimportrule-supportstext: the contents of supports(), or the null string if the rule has none. All
-    // the selectors that the rule holds belong to the condition.
-    const CssRuleData* rule = dataOf(self);
-    CssValueRun run = cssValueListRun(&rule->prelude);
+PrString prCssImportRuleSupportsText(const PrCssImportRule* rule) {
+    // cssom-1/#dom-cssimportrule-supportstext: the contents of supports(), or the null string if the data has none. All
+    // the selectors that the data holds belong to the condition.
+    const CssRuleData* data = dataOf(rule);
+    CssValueRun run = cssValueListRun(&data->prelude);
     uint32_t condition = findProduction(run, CssValueDef_SupportsImportCondition);
     if (condition == run.count)
         return prStringNull();
     return serialized([&](TextBuffer* out) {
-        cssSerializePreludeValues(out, cssValueChildren(run, condition + 1), false, rule->selectors, 0);
+        cssSerializePreludeValues(out, cssValueChildren(run, condition + 1), false, data->selectors, 0);
     });
 }
 
@@ -999,17 +999,17 @@ PrCssNamespaceRule* PR_NULLABLE prCssNamespaceRuleQuery(PrCssRule* PR_NULLABLE o
     return ruleOfKind<PrCssNamespaceRule>(object, PrCssRuleKind_Namespace);
 }
 
-PrStringView prCssNamespaceRuleNamespaceUri(const PrCssNamespaceRule* self) {
+PrStringView prCssNamespaceRuleNamespaceUri(const PrCssNamespaceRule* rule) {
     PrStringView prefix;
     PrStringView url;
-    cssNamespaceRuleParts(dataOf(self), &prefix, &url);
+    cssNamespaceRuleParts(dataOf(rule), &prefix, &url);
     return url;
 }
 
-PrStringView prCssNamespaceRulePrefix(const PrCssNamespaceRule* self) {
+PrStringView prCssNamespaceRulePrefix(const PrCssNamespaceRule* rule) {
     PrStringView prefix;
     PrStringView url;
-    cssNamespaceRuleParts(dataOf(self), &prefix, &url);
+    cssNamespaceRuleParts(dataOf(rule), &prefix, &url);
     return prefix.data != nullptr ? prefix : "";
 }
 
@@ -1023,10 +1023,10 @@ PrCssConditionRule* PR_NULLABLE prCssConditionRuleQuery(PrCssRule* PR_NULLABLE o
     return conditional ? static_cast<PrCssConditionRule*>(object) : nullptr;
 }
 
-PrString prCssConditionRuleConditionText(const PrCssConditionRule* self) {
+PrString prCssConditionRuleConditionText(const PrCssConditionRule* rule) {
     // css-conditional-3/#the-cssmediarule-interface: a media rule's condition text is its media list's serialization. A
     // supports rule's condition text is the condition as written.
-    return preludeText(self);
+    return preludeText(rule);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1036,12 +1036,11 @@ PrCssMediaRule* PR_NULLABLE prCssMediaRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssMediaRule>(object, PrCssRuleKind_Media);
 }
 
-PrCssMediaList* prCssMediaRuleMedia(PrCssMediaRule* self) {
-    return &self->media;
+PrCssMediaList* prCssMediaRuleMedia(PrCssMediaRule* rule) {
+    return &rule->media;
 }
 
-bool prCssMediaRuleMatches(const PrCssMediaRule* self) {
-    const PrCssRule* rule = self;
+bool prCssMediaRuleMatches(const PrCssMediaRule* rule) {
     const CssMediaEnvironment* environment = rule->sheet != nullptr ? cssStyleSheetMedia(rule->sheet) : nullptr;
     return environment != nullptr && cssMediaListMatches(&rule->data->media, environment);
 }
@@ -1053,8 +1052,8 @@ PrCssSupportsRule* PR_NULLABLE prCssSupportsRuleQuery(PrCssRule* PR_NULLABLE obj
     return ruleOfKind<PrCssSupportsRule>(object, PrCssRuleKind_Supports);
 }
 
-bool prCssSupportsRuleMatches(const PrCssSupportsRule* self) {
-    return cssSupportsEvaluate(cssValueListRun(&dataOf(self)->prelude));
+bool prCssSupportsRuleMatches(const PrCssSupportsRule* rule) {
+    return cssSupportsEvaluate(cssValueListRun(&dataOf(rule)->prelude));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1066,17 +1065,17 @@ PrCssContainerRule* PR_NULLABLE prCssContainerRuleQuery(PrCssRule* PR_NULLABLE o
     return ruleOfKind<PrCssContainerRule>(object, PrCssRuleKind_Container);
 }
 
-PrString prCssContainerRuleContainerName(const PrCssContainerRule* self) {
-    return soleConditionPart(self, CssValueDef_ContainerName);
+PrString prCssContainerRuleContainerName(const PrCssContainerRule* rule) {
+    return soleConditionPart(rule, CssValueDef_ContainerName);
 }
 
-PrString prCssContainerRuleContainerQuery(const PrCssContainerRule* self) {
-    return soleConditionPart(self, CssValueDef_ContainerQuery);
+PrString prCssContainerRuleContainerQuery(const PrCssContainerRule* rule) {
+    return soleConditionPart(rule, CssValueDef_ContainerQuery);
 }
 
-uint32_t prCssContainerRuleConditions(const PrCssContainerRule* self, PrCssContainerCondition* PR_NULLABLE items,
+uint32_t prCssContainerRuleConditions(const PrCssContainerRule* rule, PrCssContainerCondition* PR_NULLABLE items,
         uint32_t capacity) {
-    CssValueRun run = preludeOf(self);
+    CssValueRun run = preludeOf(rule);
     auto matches = [](const CssValueNode* value) {
         return cssValueIsProduction(value, CssValueDef_ContainerCondition);
     };
@@ -1095,8 +1094,8 @@ PrCssNestedDeclarations* PR_NULLABLE prCssNestedDeclarationsQuery(PrCssRule* PR_
     return ruleOfKind<PrCssNestedDeclarations>(object, PrCssRuleKind_NestedDeclarations);
 }
 
-PrCssStyleProperties* prCssNestedDeclarationsStyle(PrCssNestedDeclarations* self) {
-    return static_cast<PrCssStyleProperties*>(&self->style);
+PrCssStyleProperties* prCssNestedDeclarationsStyle(PrCssNestedDeclarations* declarations) {
+    return static_cast<PrCssStyleProperties*>(&declarations->style);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1106,8 +1105,8 @@ PrCssFontFaceRule* PR_NULLABLE prCssFontFaceRuleQuery(PrCssRule* PR_NULLABLE obj
     return ruleOfKind<PrCssFontFaceRule>(object, PrCssRuleKind_FontFace);
 }
 
-PrCssFontFaceDescriptors* prCssFontFaceRuleStyle(PrCssFontFaceRule* self) {
-    return static_cast<PrCssFontFaceDescriptors*>(&self->style);
+PrCssFontFaceDescriptors* prCssFontFaceRuleStyle(PrCssFontFaceRule* rule) {
+    return static_cast<PrCssFontFaceDescriptors*>(&rule->style);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1117,16 +1116,16 @@ PrCssPageRule* PR_NULLABLE prCssPageRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssPageRule>(object, PrCssRuleKind_Page);
 }
 
-PrString prCssPageRuleSelectorText(const PrCssPageRule* self) {
-    return preludeText(self);
+PrString prCssPageRuleSelectorText(const PrCssPageRule* rule) {
+    return preludeText(rule);
 }
 
-void prCssPageRuleSetSelectorText(PrCssPageRule* self, PrStringView value) {
-    setPrelude(self, value);
+void prCssPageRuleSetSelectorText(PrCssPageRule* rule, PrStringView value) {
+    setPrelude(rule, value);
 }
 
-PrCssPageDescriptors* prCssPageRuleStyle(PrCssPageRule* self) {
-    return static_cast<PrCssPageDescriptors*>(&self->style);
+PrCssPageDescriptors* prCssPageRuleStyle(PrCssPageRule* rule) {
+    return static_cast<PrCssPageDescriptors*>(&rule->style);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1140,8 +1139,8 @@ PrCssMarginRule* PR_NULLABLE prCssMarginRuleQuery(PrCssRule* PR_NULLABLE object)
     return ruleOfKind<PrCssMarginRule>(object, PrCssRuleKind_Margin);
 }
 
-PrCssMargin prCssMarginRuleMargin(const PrCssMarginRule* self) {
-    CssAtRule rule = dataOf(self)->atRule;
+PrCssMargin prCssMarginRuleMargin(const PrCssMarginRule* marginRule) {
+    CssAtRule rule = dataOf(marginRule)->atRule;
     for (PrCssMargin margin = 0; margin < PrCssMargin_Count; ++margin) {
         if (kMarginRules[margin] == rule)
             return margin;
@@ -1150,8 +1149,8 @@ PrCssMargin prCssMarginRuleMargin(const PrCssMarginRule* self) {
     return PrCssMargin_TopLeftCorner;
 }
 
-PrCssStyleDeclaration* prCssMarginRuleStyle(PrCssMarginRule* self) {
-    return &self->style;
+PrCssStyleDeclaration* prCssMarginRuleStyle(PrCssMarginRule* rule) {
+    return &rule->style;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1161,51 +1160,51 @@ PrCssKeyframesRule* PR_NULLABLE prCssKeyframesRuleQuery(PrCssRule* PR_NULLABLE o
     return ruleOfKind<PrCssKeyframesRule>(object, PrCssRuleKind_Keyframes);
 }
 
-PrStringView prCssKeyframesRuleName(const PrCssKeyframesRule* self) {
-    return preludeName(self);
+PrStringView prCssKeyframesRuleName(const PrCssKeyframesRule* rule) {
+    return preludeName(rule);
 }
 
-void prCssKeyframesRuleSetName(PrCssKeyframesRule* self, PrStringView value) {
+void prCssKeyframesRuleSetName(PrCssKeyframesRule* rule, PrStringView value) {
     // css-animations-1/#dom-csskeyframesrule-name: the name is an identifier if it can be one. Otherwise it is a
     // string, as it is for `none` and the CSS-wide keywords.
     TextBuffer name;
     cssSerializeIdent(&name, value);
-    if (!setPrelude(self, textView(&name))) {
+    if (!setPrelude(rule, textView(&name))) {
         textClear(&name);
         cssSerializeString(&name, value);
-        setPrelude(self, textView(&name));
+        setPrelude(rule, textView(&name));
     }
     textReset(&name);
 }
 
-PrCssRuleList* prCssKeyframesRuleCssRules(PrCssKeyframesRule* self) {
-    return &self->cssRules;
+PrCssRuleList* prCssKeyframesRuleCssRules(PrCssKeyframesRule* rule) {
+    return &rule->cssRules;
 }
 
-uint32_t prCssKeyframesRuleLength(const PrCssKeyframesRule* self) {
-    return dataOf(self)->children.count;
+uint32_t prCssKeyframesRuleLength(const PrCssKeyframesRule* rule) {
+    return dataOf(rule)->children.count;
 }
 
-PrCssKeyframeRule* PR_NULLABLE prCssKeyframesRuleKeyframeRuleAt(PrCssKeyframesRule* self, uint32_t index) {
-    return index < self->children.count ? static_cast<PrCssKeyframeRule*>(cssRuleChild(self, index)) : nullptr;
+PrCssKeyframeRule* PR_NULLABLE prCssKeyframesRuleKeyframeRuleAt(PrCssKeyframesRule* rule, uint32_t index) {
+    return index < rule->children.count ? static_cast<PrCssKeyframeRule*>(cssRuleChild(rule, index)) : nullptr;
 }
 
-void prCssKeyframesRuleAppendRule(PrCssKeyframesRule* self, PrStringView rule) {
+void prCssKeyframesRuleAppendRule(PrCssKeyframesRule* keyframesRule, PrStringView rule) {
     // css-animations-1/#dom-csskeyframesrule-appendrule: text that is not a keyframe rule does nothing.
-    cssRuleInsertRule(self, rule, self->children.count);
+    cssRuleInsertRule(keyframesRule, rule, keyframesRule->children.count);
 }
 
-void prCssKeyframesRuleDeleteRule(PrCssKeyframesRule* self, PrStringView select) {
-    uint32_t index = cssKeyframesFind(self->data, select, cssRuleParser(self));
-    if (index != self->children.count)
-        cssRuleDeleteRule(self, index);
+void prCssKeyframesRuleDeleteRule(PrCssKeyframesRule* rule, PrStringView select) {
+    uint32_t index = cssKeyframesFind(rule->data, select, cssRuleParser(rule));
+    if (index != rule->children.count)
+        cssRuleDeleteRule(rule, index);
 }
 
-PrCssKeyframeRule* PR_NULLABLE prCssKeyframesRuleFindRule(PrCssKeyframesRule* self, PrStringView select) {
-    uint32_t index = cssKeyframesFind(self->data, select, cssRuleParser(self));
-    if (index == self->children.count)
+PrCssKeyframeRule* PR_NULLABLE prCssKeyframesRuleFindRule(PrCssKeyframesRule* rule, PrStringView select) {
+    uint32_t index = cssKeyframesFind(rule->data, select, cssRuleParser(rule));
+    if (index == rule->children.count)
         return nullptr;
-    return static_cast<PrCssKeyframeRule*>(cssRuleChild(self, index));
+    return static_cast<PrCssKeyframeRule*>(cssRuleChild(rule, index));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1215,16 +1214,16 @@ PrCssKeyframeRule* PR_NULLABLE prCssKeyframeRuleQuery(PrCssRule* PR_NULLABLE obj
     return ruleOfKind<PrCssKeyframeRule>(object, PrCssRuleKind_Keyframe);
 }
 
-PrString prCssKeyframeRuleKeyText(const PrCssKeyframeRule* self) {
-    return preludeText(self);
+PrString prCssKeyframeRuleKeyText(const PrCssKeyframeRule* rule) {
+    return preludeText(rule);
 }
 
-PrStatus prCssKeyframeRuleSetKeyText(PrCssKeyframeRule* self, PrStringView value) {
-    return setPrelude(self, value) ? PrStatus_Ok : PrStatus_Syntax;
+PrStatus prCssKeyframeRuleSetKeyText(PrCssKeyframeRule* rule, PrStringView value) {
+    return setPrelude(rule, value) ? PrStatus_Ok : PrStatus_Syntax;
 }
 
-PrCssStyleProperties* prCssKeyframeRuleStyle(PrCssKeyframeRule* self) {
-    return static_cast<PrCssStyleProperties*>(&self->style);
+PrCssStyleProperties* prCssKeyframeRuleStyle(PrCssKeyframeRule* rule) {
+    return static_cast<PrCssStyleProperties*>(&rule->style);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1234,9 +1233,9 @@ PrCssLayerBlockRule* PR_NULLABLE prCssLayerBlockRuleQuery(PrCssRule* PR_NULLABLE
     return ruleOfKind<PrCssLayerBlockRule>(object, PrCssRuleKind_LayerBlock);
 }
 
-PrString prCssLayerBlockRuleName(const PrCssLayerBlockRule* self) {
+PrString prCssLayerBlockRuleName(const PrCssLayerBlockRule* rule) {
     // css-cascade-5/#dom-csslayerblockrule-name: the empty string for an anonymous layer.
-    return serializedValues(preludeOf(self));
+    return serializedValues(preludeOf(rule));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1246,9 +1245,9 @@ PrCssLayerStatementRule* PR_NULLABLE prCssLayerStatementRuleQuery(PrCssRule* PR_
     return ruleOfKind<PrCssLayerStatementRule>(object, PrCssRuleKind_LayerStatement);
 }
 
-uint32_t prCssLayerStatementRuleNameList(const PrCssLayerStatementRule* self, PrString* PR_NULLABLE items,
+uint32_t prCssLayerStatementRuleNameList(const PrCssLayerStatementRule* rule, PrString* PR_NULLABLE items,
         uint32_t capacity) {
-    return serializeEach(preludeOf(self), CssValueDef_LayerName, items, capacity);
+    return serializeEach(preludeOf(rule), CssValueDef_LayerName, items, capacity);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1258,12 +1257,12 @@ PrCssScopeRule* PR_NULLABLE prCssScopeRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssScopeRule>(object, PrCssRuleKind_Scope);
 }
 
-PrString prCssScopeRuleStart(const PrCssScopeRule* self) {
-    return scopeSelectors(self, false);
+PrString prCssScopeRuleStart(const PrCssScopeRule* rule) {
+    return scopeSelectors(rule, false);
 }
 
-PrString prCssScopeRuleEnd(const PrCssScopeRule* self) {
-    return scopeSelectors(self, true);
+PrString prCssScopeRuleEnd(const PrCssScopeRule* rule) {
+    return scopeSelectors(rule, true);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1283,98 +1282,98 @@ PrCssCounterStyleRule* PR_NULLABLE prCssCounterStyleRuleQuery(PrCssRule* PR_NULL
     return ruleOfKind<PrCssCounterStyleRule>(object, PrCssRuleKind_CounterStyle);
 }
 
-PrStringView prCssCounterStyleRuleName(const PrCssCounterStyleRule* self) {
-    return preludeName(self);
+PrStringView prCssCounterStyleRuleName(const PrCssCounterStyleRule* rule) {
+    return preludeName(rule);
 }
 
-void prCssCounterStyleRuleSetName(PrCssCounterStyleRule* self, PrStringView value) {
+void prCssCounterStyleRuleSetName(PrCssCounterStyleRule* rule, PrStringView value) {
     // css-counter-styles-3/#dom-csscounterstylerule-name: setting a name that the rule cannot accept does nothing, and
     // a predefined style's name is lowercased. The value must be a <counter-style-name> as written, which the prelude's
     // grammar checks.
     if (!cssCounterStyleNameDefinable(value))
         return;
     const CssCounterStyle* predefined = cssCounterStylePredefined(value);
-    setPrelude(self, predefined != nullptr ? predefined->name : value);
+    setPrelude(rule, predefined != nullptr ? predefined->name : value);
 }
 
-PrString prCssCounterStyleRuleSystem(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStyleSystem);
+PrString prCssCounterStyleRuleSystem(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStyleSystem);
 }
 
-void prCssCounterStyleRuleSetSystem(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStyleSystem, value);
+void prCssCounterStyleRuleSetSystem(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleSystem, value);
 }
 
-PrString prCssCounterStyleRuleSymbols(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStyleSymbols);
+PrString prCssCounterStyleRuleSymbols(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStyleSymbols);
 }
 
-void prCssCounterStyleRuleSetSymbols(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStyleSymbols, value);
+void prCssCounterStyleRuleSetSymbols(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleSymbols, value);
 }
 
-PrString prCssCounterStyleRuleAdditiveSymbols(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStyleAdditiveSymbols);
+PrString prCssCounterStyleRuleAdditiveSymbols(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStyleAdditiveSymbols);
 }
 
-void prCssCounterStyleRuleSetAdditiveSymbols(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStyleAdditiveSymbols, value);
+void prCssCounterStyleRuleSetAdditiveSymbols(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleAdditiveSymbols, value);
 }
 
-PrString prCssCounterStyleRuleNegative(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStyleNegative);
+PrString prCssCounterStyleRuleNegative(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStyleNegative);
 }
 
-void prCssCounterStyleRuleSetNegative(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStyleNegative, value);
+void prCssCounterStyleRuleSetNegative(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleNegative, value);
 }
 
-PrString prCssCounterStyleRulePrefix(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStylePrefix);
+PrString prCssCounterStyleRulePrefix(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStylePrefix);
 }
 
-void prCssCounterStyleRuleSetPrefix(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStylePrefix, value);
+void prCssCounterStyleRuleSetPrefix(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStylePrefix, value);
 }
 
-PrString prCssCounterStyleRuleSuffix(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStyleSuffix);
+PrString prCssCounterStyleRuleSuffix(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStyleSuffix);
 }
 
-void prCssCounterStyleRuleSetSuffix(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStyleSuffix, value);
+void prCssCounterStyleRuleSetSuffix(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleSuffix, value);
 }
 
-PrString prCssCounterStyleRuleRange(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStyleRange);
+PrString prCssCounterStyleRuleRange(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStyleRange);
 }
 
-void prCssCounterStyleRuleSetRange(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStyleRange, value);
+void prCssCounterStyleRuleSetRange(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleRange, value);
 }
 
-PrString prCssCounterStyleRulePad(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStylePad);
+PrString prCssCounterStyleRulePad(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStylePad);
 }
 
-void prCssCounterStyleRuleSetPad(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStylePad, value);
+void prCssCounterStyleRuleSetPad(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStylePad, value);
 }
 
-PrString prCssCounterStyleRuleSpeakAs(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStyleSpeakAs);
+PrString prCssCounterStyleRuleSpeakAs(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStyleSpeakAs);
 }
 
-void prCssCounterStyleRuleSetSpeakAs(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStyleSpeakAs, value);
+void prCssCounterStyleRuleSetSpeakAs(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleSpeakAs, value);
 }
 
-PrString prCssCounterStyleRuleFallback(const PrCssCounterStyleRule* self) {
-    return descriptorValue(self, PrCssDescriptor_CounterStyleFallback);
+PrString prCssCounterStyleRuleFallback(const PrCssCounterStyleRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_CounterStyleFallback);
 }
 
-void prCssCounterStyleRuleSetFallback(PrCssCounterStyleRule* self, PrStringView value) {
-    setCounterStyleDescriptor(self, PrCssDescriptor_CounterStyleFallback, value);
+void prCssCounterStyleRuleSetFallback(PrCssCounterStyleRule* rule, PrStringView value) {
+    setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleFallback, value);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1384,29 +1383,29 @@ PrCssPropertyRule* PR_NULLABLE prCssPropertyRuleQuery(PrCssRule* PR_NULLABLE obj
     return ruleOfKind<PrCssPropertyRule>(object, PrCssRuleKind_Property);
 }
 
-PrStringView prCssPropertyRuleName(const PrCssPropertyRule* self) {
-    return preludeName(self);
+PrStringView prCssPropertyRuleName(const PrCssPropertyRule* rule) {
+    return preludeName(rule);
 }
 
-PrStringView prCssPropertyRuleSyntax(const PrCssPropertyRule* self) {
+PrStringView prCssPropertyRuleSyntax(const PrCssPropertyRule* rule) {
     // css-properties-values-api-1/#dom-csspropertyrule-syntax: the <string>'s value.
-    const CssRuleData* rule = dataOf(self);
-    const CssDeclaration* syntax = declarationOf(rule, PrCssDescriptor_PropertySyntax);
-    CssValueRun value = cssDeclarationValue(&rule->style, syntax);
+    const CssRuleData* data = dataOf(rule);
+    const CssDeclaration* syntax = declarationOf(data, PrCssDescriptor_PropertySyntax);
+    CssValueRun value = cssDeclarationValue(&data->style, syntax);
     return cssValueText(value, value.values);
 }
 
-bool prCssPropertyRuleInherits(const PrCssPropertyRule* self) {
-    const CssRuleData* rule = dataOf(self);
-    CssValueRun value = cssDeclarationValue(&rule->style, declarationOf(rule, PrCssDescriptor_PropertyInherits));
+bool prCssPropertyRuleInherits(const PrCssPropertyRule* rule) {
+    const CssRuleData* data = dataOf(rule);
+    CssValueRun value = cssDeclarationValue(&data->style, declarationOf(data, PrCssDescriptor_PropertyInherits));
     return cssValueKeyword(&value.values[0]) == PrCssKeyword_True;
 }
 
-PrString prCssPropertyRuleInitialValue(const PrCssPropertyRule* self) {
+PrString prCssPropertyRuleInitialValue(const PrCssPropertyRule* rule) {
     // The null string if the rule declares none.
-    if (declarationOf(dataOf(self), PrCssDescriptor_PropertyInitialValue) == nullptr)
+    if (declarationOf(dataOf(rule), PrCssDescriptor_PropertyInitialValue) == nullptr)
         return prStringNull();
-    return descriptorValue(self, PrCssDescriptor_PropertyInitialValue);
+    return descriptorValue(rule, PrCssDescriptor_PropertyInitialValue);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1416,40 +1415,40 @@ PrCssFontFeatureValuesRule* PR_NULLABLE prCssFontFeatureValuesRuleQuery(PrCssRul
     return ruleOfKind<PrCssFontFeatureValuesRule>(object, PrCssRuleKind_FontFeatureValues);
 }
 
-PrString prCssFontFeatureValuesRuleFontFamily(const PrCssFontFeatureValuesRule* self) {
-    return serializedValues(preludeOf(self));
+PrString prCssFontFeatureValuesRuleFontFamily(const PrCssFontFeatureValuesRule* rule) {
+    return serializedValues(preludeOf(rule));
 }
 
-void prCssFontFeatureValuesRuleSetFontFamily(PrCssFontFeatureValuesRule* self, PrStringView value) {
-    setPrelude(self, value);
+void prCssFontFeatureValuesRuleSetFontFamily(PrCssFontFeatureValuesRule* rule, PrStringView value) {
+    setPrelude(rule, value);
 }
 
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleAnnotation(PrCssFontFeatureValuesRule* self) {
-    return featureMap(self, CssAtRule_Annotation);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleAnnotation(PrCssFontFeatureValuesRule* rule) {
+    return featureMap(rule, CssAtRule_Annotation);
 }
 
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleOrnaments(PrCssFontFeatureValuesRule* self) {
-    return featureMap(self, CssAtRule_Ornaments);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleOrnaments(PrCssFontFeatureValuesRule* rule) {
+    return featureMap(rule, CssAtRule_Ornaments);
 }
 
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleStylistic(PrCssFontFeatureValuesRule* self) {
-    return featureMap(self, CssAtRule_Stylistic);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleStylistic(PrCssFontFeatureValuesRule* rule) {
+    return featureMap(rule, CssAtRule_Stylistic);
 }
 
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleSwash(PrCssFontFeatureValuesRule* self) {
-    return featureMap(self, CssAtRule_Swash);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleSwash(PrCssFontFeatureValuesRule* rule) {
+    return featureMap(rule, CssAtRule_Swash);
 }
 
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleCharacterVariant(PrCssFontFeatureValuesRule* self) {
-    return featureMap(self, CssAtRule_CharacterVariant);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleCharacterVariant(PrCssFontFeatureValuesRule* rule) {
+    return featureMap(rule, CssAtRule_CharacterVariant);
 }
 
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleStyleset(PrCssFontFeatureValuesRule* self) {
-    return featureMap(self, CssAtRule_Styleset);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleStyleset(PrCssFontFeatureValuesRule* rule) {
+    return featureMap(rule, CssAtRule_Styleset);
 }
 
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleHistoricalForms(PrCssFontFeatureValuesRule* self) {
-    return featureMap(self, CssAtRule_HistoricalForms);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleHistoricalForms(PrCssFontFeatureValuesRule* rule) {
+    return featureMap(rule, CssAtRule_HistoricalForms);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1458,33 +1457,33 @@ PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleHistoricalForms(PrCssFontFe
 // The map is a feature value block. Its declarations are its entries, each a name and the <font-feature-index>es of its
 // value (css-fonts-4/#font-feature-values-syntax).
 
-uint32_t prCssFontFeatureValuesMapSize(const PrCssFontFeatureValuesMap* self) {
-    return dataOf(self)->style.count;
+uint32_t prCssFontFeatureValuesMapSize(const PrCssFontFeatureValuesMap* map) {
+    return dataOf(map)->style.count;
 }
 
-PrStringView prCssFontFeatureValuesMapKeyAt(const PrCssFontFeatureValuesMap* self, uint32_t index) {
-    const CssDeclarationBlock* block = &dataOf(self)->style;
+PrStringView prCssFontFeatureValuesMapKeyAt(const PrCssFontFeatureValuesMap* map, uint32_t index) {
+    const CssDeclarationBlock* block = &dataOf(map)->style;
     return cssDeclarationName(block, &cssDeclarations(block)[index]);
 }
 
-uint32_t prCssFontFeatureValuesMapValueAt(const PrCssFontFeatureValuesMap* self, uint32_t index,
+uint32_t prCssFontFeatureValuesMapValueAt(const PrCssFontFeatureValuesMap* map, uint32_t index,
         uint32_t* PR_NULLABLE items, uint32_t capacity) {
-    return featureIndexes(&dataOf(self)->style, index, items, capacity);
+    return featureIndexes(&dataOf(map)->style, index, items, capacity);
 }
 
-bool prCssFontFeatureValuesMapHas(const PrCssFontFeatureValuesMap* self, PrStringView key) {
-    const CssDeclarationBlock* block = &dataOf(self)->style;
+bool prCssFontFeatureValuesMapHas(const PrCssFontFeatureValuesMap* map, PrStringView key) {
+    const CssDeclarationBlock* block = &dataOf(map)->style;
     return featureIndex(block, key) != block->count;
 }
 
-uint32_t prCssFontFeatureValuesMapGet(const PrCssFontFeatureValuesMap* self, PrStringView key,
+uint32_t prCssFontFeatureValuesMapGet(const PrCssFontFeatureValuesMap* map, PrStringView key,
         uint32_t* PR_NULLABLE items, uint32_t capacity) {
-    const CssDeclarationBlock* block = &dataOf(self)->style;
+    const CssDeclarationBlock* block = &dataOf(map)->style;
     return featureIndexes(block, featureIndex(block, key), items, capacity);
 }
 
-bool prCssFontFeatureValuesMapDelete(PrCssFontFeatureValuesMap* self, PrStringView key) {
-    PrCssRule* rule = self;
+bool prCssFontFeatureValuesMapDelete(PrCssFontFeatureValuesMap* map, PrStringView key) {
+    PrCssRule* rule = map;
     CssDeclaredName name = {};
     if (!cssNameFromText(rule->data->style.rule, key, &name))
         return false;
@@ -1494,12 +1493,12 @@ bool prCssFontFeatureValuesMapDelete(PrCssFontFeatureValuesMap* self, PrStringVi
         CssEditResult_Changed;
 }
 
-void prCssFontFeatureValuesMapClear(PrCssFontFeatureValuesMap* self) {
-    if (self->data->style.count != 0)
-        cssDeclarationBlockReset(&cssRuleWritable(self)->style);
+void prCssFontFeatureValuesMapClear(PrCssFontFeatureValuesMap* map) {
+    if (map->data->style.count != 0)
+        cssDeclarationBlockReset(&cssRuleWritable(map)->style);
 }
 
-void prCssFontFeatureValuesMapSet(PrCssFontFeatureValuesMap* self, PrStringView key,
+void prCssFontFeatureValuesMapSet(PrCssFontFeatureValuesMap* map, PrStringView key,
         const uint32_t* PR_NULLABLE values, uint32_t count) {
     // css-fonts-4/#om-fontfeaturevalues: the entry's value is the indexes, if the map's feature type accepts that many.
     // Setting any other count does nothing.
@@ -1509,7 +1508,7 @@ void prCssFontFeatureValuesMapSet(PrCssFontFeatureValuesMap* self, PrStringView 
             textAppendChar(&value, ' ');
         cssSerializeNumber(&value, double(values[i]));
     }
-    PrCssRule* rule = self;
+    PrCssRule* rule = map;
     CssDeclaredName name = {};
     if (cssNameFromText(rule->data->style.rule, key, &name)) {
         CssEdit edit;
@@ -1526,20 +1525,20 @@ PrCssFontPaletteValuesRule* PR_NULLABLE prCssFontPaletteValuesRuleQuery(PrCssRul
     return ruleOfKind<PrCssFontPaletteValuesRule>(object, PrCssRuleKind_FontPaletteValues);
 }
 
-PrStringView prCssFontPaletteValuesRuleName(const PrCssFontPaletteValuesRule* self) {
-    return preludeName(self);
+PrStringView prCssFontPaletteValuesRuleName(const PrCssFontPaletteValuesRule* rule) {
+    return preludeName(rule);
 }
 
-PrString prCssFontPaletteValuesRuleFontFamily(const PrCssFontPaletteValuesRule* self) {
-    return descriptorValue(self, PrCssDescriptor_FontPaletteValuesFontFamily);
+PrString prCssFontPaletteValuesRuleFontFamily(const PrCssFontPaletteValuesRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_FontPaletteValuesFontFamily);
 }
 
-PrString prCssFontPaletteValuesRuleBasePalette(const PrCssFontPaletteValuesRule* self) {
-    return descriptorValue(self, PrCssDescriptor_FontPaletteValuesBasePalette);
+PrString prCssFontPaletteValuesRuleBasePalette(const PrCssFontPaletteValuesRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_FontPaletteValuesBasePalette);
 }
 
-PrString prCssFontPaletteValuesRuleOverrideColors(const PrCssFontPaletteValuesRule* self) {
-    return descriptorValue(self, PrCssDescriptor_FontPaletteValuesOverrideColors);
+PrString prCssFontPaletteValuesRuleOverrideColors(const PrCssFontPaletteValuesRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_FontPaletteValuesOverrideColors);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1549,12 +1548,12 @@ PrCssPositionTryRule* PR_NULLABLE prCssPositionTryRuleQuery(PrCssRule* PR_NULLAB
     return ruleOfKind<PrCssPositionTryRule>(object, PrCssRuleKind_PositionTry);
 }
 
-PrStringView prCssPositionTryRuleName(const PrCssPositionTryRule* self) {
-    return preludeName(self);
+PrStringView prCssPositionTryRuleName(const PrCssPositionTryRule* rule) {
+    return preludeName(rule);
 }
 
-PrCssPositionTryDescriptors* prCssPositionTryRuleStyle(PrCssPositionTryRule* self) {
-    return static_cast<PrCssPositionTryDescriptors*>(&self->style);
+PrCssPositionTryDescriptors* prCssPositionTryRuleStyle(PrCssPositionTryRule* rule) {
+    return static_cast<PrCssPositionTryDescriptors*>(&rule->style);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1564,19 +1563,19 @@ PrCssViewTransitionRule* PR_NULLABLE prCssViewTransitionRuleQuery(PrCssRule* PR_
     return ruleOfKind<PrCssViewTransitionRule>(object, PrCssRuleKind_ViewTransition);
 }
 
-PrString prCssViewTransitionRuleNavigation(const PrCssViewTransitionRule* self) {
-    return descriptorValue(self, PrCssDescriptor_ViewTransitionNavigation);
+PrString prCssViewTransitionRuleNavigation(const PrCssViewTransitionRule* rule) {
+    return descriptorValue(rule, PrCssDescriptor_ViewTransitionNavigation);
 }
 
-uint32_t prCssViewTransitionRuleTypes(const PrCssViewTransitionRule* self, PrStringView* PR_NULLABLE items,
+uint32_t prCssViewTransitionRuleTypes(const PrCssViewTransitionRule* rule, PrStringView* PR_NULLABLE items,
         uint32_t capacity) {
     // css-view-transitions-2/#dom-cssviewtransitionrule-types: the names that the types descriptor declares. `none`
     // declares no names.
-    const CssRuleData* rule = dataOf(self);
-    const CssDeclaration* types = declarationOf(rule, PrCssDescriptor_ViewTransitionTypes);
+    const CssRuleData* data = dataOf(rule);
+    const CssDeclaration* types = declarationOf(data, PrCssDescriptor_ViewTransitionTypes);
     if (types == nullptr)
         return 0;
-    return textOfEach(cssDeclarationValue(&rule->style, types), PrCssValueKind_Ident, items, capacity);
+    return textOfEach(cssDeclarationValue(&data->style, types), PrCssValueKind_Ident, items, capacity);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1589,18 +1588,18 @@ PrCssFunctionRule* PR_NULLABLE prCssFunctionRuleQuery(PrCssRule* PR_NULLABLE obj
     return ruleOfKind<PrCssFunctionRule>(object, PrCssRuleKind_Function);
 }
 
-PrStringView prCssFunctionRuleName(const PrCssFunctionRule* self) {
-    return preludeName(self);
+PrStringView prCssFunctionRuleName(const PrCssFunctionRule* rule) {
+    return preludeName(rule);
 }
 
-uint32_t prCssFunctionRuleGetParameters(const PrCssFunctionRule* self, PrCssFunctionParameter* PR_NULLABLE items,
+uint32_t prCssFunctionRuleGetParameters(const PrCssFunctionRule* rule, PrCssFunctionParameter* PR_NULLABLE items,
         uint32_t capacity) {
-    return functionParameters(preludeOf(self), items, capacity);
+    return functionParameters(preludeOf(rule), items, capacity);
 }
 
-PrString prCssFunctionRuleReturnType(const PrCssFunctionRule* self) {
+PrString prCssFunctionRuleReturnType(const PrCssFunctionRule* rule) {
     // css-mixins-1/#dom-cssfunctionrule-returntype: `*` if the rule writes none.
-    CssValueRun run = preludeOf(self);
+    CssValueRun run = preludeOf(rule);
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         if (cssValueIsKeyword(&run.values[i], PrCssKeyword_Returns))
             return serializedValues(CssValueRun{run.values + i + 1, run.count - i - 1, run.text});
@@ -1615,8 +1614,8 @@ PrCssFunctionDeclarations* PR_NULLABLE prCssFunctionDeclarationsQuery(PrCssRule*
     return ruleOfKind<PrCssFunctionDeclarations>(object, PrCssRuleKind_FunctionDeclarations);
 }
 
-PrCssFunctionDescriptors* prCssFunctionDeclarationsStyle(PrCssFunctionDeclarations* self) {
-    return static_cast<PrCssFunctionDescriptors*>(&self->style);
+PrCssFunctionDescriptors* prCssFunctionDeclarationsStyle(PrCssFunctionDeclarations* declarations) {
+    return static_cast<PrCssFunctionDescriptors*>(&declarations->style);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1626,12 +1625,11 @@ PrCssCustomMediaRule* PR_NULLABLE prCssCustomMediaRuleQuery(PrCssRule* PR_NULLAB
     return ruleOfKind<PrCssCustomMediaRule>(object, PrCssRuleKind_CustomMedia);
 }
 
-PrStringView prCssCustomMediaRuleName(const PrCssCustomMediaRule* self) {
-    return preludeName(self);
+PrStringView prCssCustomMediaRuleName(const PrCssCustomMediaRule* rule) {
+    return preludeName(rule);
 }
 
-PrCssMediaListOrBoolean prCssCustomMediaRuleQueryValue(PrCssCustomMediaRule* self) {
-    PrCssRule* rule = self;
+PrCssMediaListOrBoolean prCssCustomMediaRuleQueryValue(PrCssCustomMediaRule* rule) {
     CssValueRun run = cssValueListRun(&rule->data->prelude);
     if (run.count > 1 && (cssValueIsKeyword(&run.values[1], PrCssKeyword_True) ||
             cssValueIsKeyword(&run.values[1], PrCssKeyword_False))) {
@@ -1647,8 +1645,8 @@ PrCssSupportsConditionRule* PR_NULLABLE prCssSupportsConditionRuleQuery(PrCssRul
     return ruleOfKind<PrCssSupportsConditionRule>(object, PrCssRuleKind_SupportsCondition);
 }
 
-PrStringView prCssSupportsConditionRuleName(const PrCssSupportsConditionRule* self) {
-    return preludeName(self);
+PrStringView prCssSupportsConditionRuleName(const PrCssSupportsConditionRule* rule) {
+    return preludeName(rule);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1658,17 +1656,17 @@ PrCssMixinRule* PR_NULLABLE prCssMixinRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssMixinRule>(object, PrCssRuleKind_Mixin);
 }
 
-PrString prCssMixinRuleName(const PrCssMixinRule* self) {
-    return serializedName(self);
+PrString prCssMixinRuleName(const PrCssMixinRule* rule) {
+    return serializedName(rule);
 }
 
-uint32_t prCssMixinRuleGetParameters(const PrCssMixinRule* self, PrCssFunctionParameter* PR_NULLABLE items,
+uint32_t prCssMixinRuleGetParameters(const PrCssMixinRule* rule, PrCssFunctionParameter* PR_NULLABLE items,
         uint32_t capacity) {
-    return functionParameters(preludeOf(self), items, capacity);
+    return functionParameters(preludeOf(rule), items, capacity);
 }
 
-bool prCssMixinRuleContents(const PrCssMixinRule* self) {
-    return hasContents(dataOf(self));
+bool prCssMixinRuleContents(const PrCssMixinRule* rule) {
+    return hasContents(dataOf(rule));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1678,13 +1676,13 @@ PrCssApplyBlockRule* PR_NULLABLE prCssApplyBlockRuleQuery(PrCssRule* PR_NULLABLE
     return ruleOfKind<PrCssApplyBlockRule>(object, PrCssRuleKind_ApplyBlock);
 }
 
-PrString prCssApplyBlockRuleName(const PrCssApplyBlockRule* self) {
-    return serializedName(self);
+PrString prCssApplyBlockRuleName(const PrCssApplyBlockRule* rule) {
+    return serializedName(rule);
 }
 
-uint32_t prCssApplyBlockRuleGetArguments(const PrCssApplyBlockRule* self, PrStringView* PR_NULLABLE items,
+uint32_t prCssApplyBlockRuleGetArguments(const PrCssApplyBlockRule* rule, PrStringView* PR_NULLABLE items,
         uint32_t capacity) {
-    return textOfEach(preludeOf(self), PrCssValueKind_Tokens, items, capacity);
+    return textOfEach(preludeOf(rule), PrCssValueKind_Tokens, items, capacity);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1694,13 +1692,13 @@ PrCssApplyStatementRule* PR_NULLABLE prCssApplyStatementRuleQuery(PrCssRule* PR_
     return ruleOfKind<PrCssApplyStatementRule>(object, PrCssRuleKind_ApplyStatement);
 }
 
-PrString prCssApplyStatementRuleName(const PrCssApplyStatementRule* self) {
-    return serializedName(self);
+PrString prCssApplyStatementRuleName(const PrCssApplyStatementRule* rule) {
+    return serializedName(rule);
 }
 
-uint32_t prCssApplyStatementRuleGetArguments(const PrCssApplyStatementRule* self,
+uint32_t prCssApplyStatementRuleGetArguments(const PrCssApplyStatementRule* rule,
         PrStringView* PR_NULLABLE items, uint32_t capacity) {
-    return textOfEach(preludeOf(self), PrCssValueKind_Tokens, items, capacity);
+    return textOfEach(preludeOf(rule), PrCssValueKind_Tokens, items, capacity);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1720,25 +1718,25 @@ PrCssContentsStatementRule* PR_NULLABLE prCssContentsStatementRuleQuery(PrCssRul
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSRuleList
 
-PrCssRule* PR_NULLABLE prCssRuleListRuleAt(PrCssRuleList* self, uint32_t index) {
-    if (index >= cssRuleListData(self).count)
+PrCssRule* PR_NULLABLE prCssRuleListRuleAt(PrCssRuleList* list, uint32_t index) {
+    if (index >= cssRuleListData(list).count)
         return nullptr;
-    return cssRuleListItem(self, index);
+    return cssRuleListItem(list, index);
 }
 
-uint32_t prCssRuleListLength(const PrCssRuleList* self) {
-    return cssRuleListData(self).count;
+uint32_t prCssRuleListLength(const PrCssRuleList* list) {
+    return cssRuleListData(list).count;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // StyleSheetList
 
-PrCssStyleSheet* PR_NULLABLE prCssStyleSheetListStyleSheetAt(PrCssStyleSheetList* self, uint32_t index) {
-    return index < self->sheets.count ? self->sheets.data[index] : nullptr;
+PrCssStyleSheet* PR_NULLABLE prCssStyleSheetListStyleSheetAt(PrCssStyleSheetList* list, uint32_t index) {
+    return index < list->sheets.count ? list->sheets.data[index] : nullptr;
 }
 
-uint32_t prCssStyleSheetListLength(const PrCssStyleSheetList* self) {
-    return self->sheets.count;
+uint32_t prCssStyleSheetListLength(const PrCssStyleSheetList* list) {
+    return list->sheets.count;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1756,9 +1754,9 @@ PrCssDeclarationName prCssDeclarationNameCopy(const PrCssDeclarationName* name) 
     return PrCssDeclarationName{name->property, name->descriptor, prStringClone(&name->author)};
 }
 
-void prCssDeclarationNameReset(PrCssDeclarationName* self) {
-    prStringReset(&self->author);
-    *self = prCssDeclarationNameFromProperty(PrCssProperty_Count);
+void prCssDeclarationNameReset(PrCssDeclarationName* name) {
+    prStringReset(&name->author);
+    *name = prCssDeclarationNameFromProperty(PrCssProperty_Count);
 }
 
 bool prCssPropertyNameFromText(PrStringView text, PrCssDeclarationName* out) {
@@ -1772,33 +1770,34 @@ bool prCssPropertyNameFromText(PrStringView text, PrCssDeclarationName* out) {
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSStyleDeclaration
 
-PrString prCssStyleDeclarationCssText(const PrCssStyleDeclaration* self) {
-    const CssDeclarationBlock* block = cssStyleDeclarationBlock(self);
+PrString prCssStyleDeclarationCssText(const PrCssStyleDeclaration* declaration) {
+    const CssDeclarationBlock* block = cssStyleDeclarationBlock(declaration);
     return serialized([&](TextBuffer* out) { cssSerializeDeclarationBlock(out, block); });
 }
 
-PrStatus prCssStyleDeclarationSetCssText(PrCssStyleDeclaration* self, PrStringView value) {
-    if (self->readOnly)
+PrStatus prCssStyleDeclarationSetCssText(PrCssStyleDeclaration* declaration, PrStringView value) {
+    if (declaration->readOnly)
         return PrStatus_ReadOnly;
-    cssDeclarationBlockParse(cssStyleDeclarationWritable(self), value, cssStyleDeclarationParser(self));
-    cssStyleDeclarationUpdateOwner(self);
+    cssDeclarationBlockParse(cssStyleDeclarationWritable(declaration), value, cssStyleDeclarationParser(declaration));
+    cssStyleDeclarationUpdateOwner(declaration);
     return PrStatus_Ok;
 }
 
-uint32_t prCssStyleDeclarationLength(const PrCssStyleDeclaration* self) {
-    return cssDeclarationBlockLength(cssStyleDeclarationBlock(self));
+uint32_t prCssStyleDeclarationLength(const PrCssStyleDeclaration* declaration) {
+    return cssDeclarationBlockLength(cssStyleDeclarationBlock(declaration));
 }
 
-bool prCssStyleDeclarationNameFromText(const PrCssStyleDeclaration* self, PrStringView text, PrCssDeclarationName* out) {
+bool prCssStyleDeclarationNameFromText(const PrCssStyleDeclaration* declaration, PrStringView text,
+        PrCssDeclarationName* out) {
     CssDeclaredName declared = {};
-    if (!cssNameFromText(cssStyleDeclarationAtRule(self), text, &declared))
+    if (!cssNameFromText(cssStyleDeclarationAtRule(declaration), text, &declared))
         return false;
     *out = PrCssDeclarationName{declared.property, declared.descriptor, prStringCopy(declared.text)};
     return true;
 }
 
-void prCssStyleDeclarationNameAt(const PrCssStyleDeclaration* self, uint32_t index, PrCssDeclarationName* out) {
-    const CssDeclarationBlock* block = cssStyleDeclarationBlock(self);
+void prCssStyleDeclarationNameAt(const PrCssStyleDeclaration* declaration, uint32_t index, PrCssDeclarationName* out) {
+    const CssDeclarationBlock* block = cssStyleDeclarationBlock(declaration);
     // A property's or a descriptor's name comes from the generated table, and an author's name from the block.
     CssDeclarationItem item = cssDeclarationBlockItem(block, index);
     bool named = item.property != PrCssProperty_Count || item.declaration->descriptor != PrCssDescriptor_None;
@@ -1808,65 +1807,67 @@ void prCssStyleDeclarationNameAt(const PrCssStyleDeclaration* self, uint32_t ind
     };
 }
 
-PrString prCssStyleDeclarationGetPropertyValue(const PrCssStyleDeclaration* self, const PrCssDeclarationName* name) {
+PrString prCssStyleDeclarationGetPropertyValue(const PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name) {
     // A legacy name alias reads the property that it is an alias of (css-cascade-5/#legacy-name-alias).
     CssDeclaredName declared = {};
-    if (!cssDeclaredNameFromName(cssStyleDeclarationAtRule(self), name, &declared))
+    if (!cssDeclaredNameFromName(cssStyleDeclarationAtRule(declaration), name, &declared))
         return prStringEmpty();
     bool single;
     if (declared.property < PrCssProperty_Count)
         single = kCssPropertyLonghands[declared.property].count == 0;
     else
         single = declared.text.data != nullptr;
-    if (self->serializeValue != nullptr && single) {
+    if (declaration->serializeValue != nullptr && single) {
         TextBuffer text{};
-        if (self->serializeValue(self, declared, &text))
+        if (declaration->serializeValue(declaration, declared, &text))
             return textTake(&text);
         textReset(&text);
     }
-    const CssDeclarationBlock* block = cssStyleDeclarationBlock(self);
+    const CssDeclarationBlock* block = cssStyleDeclarationBlock(declaration);
     return serialized([&](TextBuffer* out) { cssSerializePropertyValue(out, block, declared); });
 }
 
-bool prCssStyleDeclarationIsImportant(const PrCssStyleDeclaration* self, const PrCssDeclarationName* name) {
-    const CssDeclarationBlock* block = cssStyleDeclarationBlock(self);
+bool prCssStyleDeclarationIsImportant(const PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name) {
+    const CssDeclarationBlock* block = cssStyleDeclarationBlock(declaration);
     CssDeclaredName declared = {};
     return cssDeclaredNameFromName(block->rule, name, &declared) && cssDeclarationBlockImportant(block, declared);
 }
 
-PrStatus prCssStyleDeclarationSetProperty(PrCssStyleDeclaration* self,
+PrStatus prCssStyleDeclarationSetProperty(PrCssStyleDeclaration* declaration,
         const PrCssDeclarationName* name, PrStringView value, bool important) {
-    if (self->readOnly)
+    if (declaration->readOnly)
         return PrStatus_ReadOnly;
     CssDeclaredName declared = {};
-    if (!cssDeclaredNameFromName(cssStyleDeclarationBlock(self)->rule, name, &declared))
+    if (!cssDeclaredNameFromName(cssStyleDeclarationBlock(declaration)->rule, name, &declared))
         return PrStatus_InvalidData;
     CssEdit edit;
-    cssEditBegin(&edit, cssStyleDeclarationParser(self));
-    CssEditResult result = commitDeclarations(self, &edit,
-        cssDeclarationBlockPrepareSet(&edit, cssStyleDeclarationBlock(self), declared, value, important));
+    cssEditBegin(&edit, cssStyleDeclarationParser(declaration));
+    CssEditResult result = commitDeclarations(declaration, &edit,
+        cssDeclarationBlockPrepareSet(&edit, cssStyleDeclarationBlock(declaration), declared, value, important));
     return result == CssEditResult_Rejected ? PrStatus_InvalidData : PrStatus_Ok;
 }
 
-PrStatus prCssStyleDeclarationRemoveProperty(PrCssStyleDeclaration* self, const PrCssDeclarationName* name,
+PrStatus prCssStyleDeclarationRemoveProperty(PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name,
         PrString* PR_NULLABLE out) {
-    if (self->readOnly)
+    if (declaration->readOnly)
         return PrStatus_ReadOnly;
     CssDeclaredName declared = {};
-    if (!cssDeclaredNameFromName(cssStyleDeclarationBlock(self)->rule, name, &declared))
+    if (!cssDeclaredNameFromName(cssStyleDeclarationBlock(declaration)->rule, name, &declared))
         return PrStatus_InvalidData;
     CssEdit edit;
-    cssEditBegin(&edit, cssStyleDeclarationParser(self));
-    commitDeclarations(self, &edit, cssDeclarationBlockPrepareRemove(&edit, cssStyleDeclarationBlock(self), declared, out));
+    cssEditBegin(&edit, cssStyleDeclarationParser(declaration));
+    commitDeclarations(declaration, &edit,
+        cssDeclarationBlockPrepareRemove(&edit, cssStyleDeclarationBlock(declaration), declared, out));
     return PrStatus_Ok;
 }
 
-PrCssRule* PR_NULLABLE prCssStyleDeclarationParentRule(PrCssStyleDeclaration* self) {
-    return self->parentRule;
+PrCssRule* PR_NULLABLE prCssStyleDeclarationParentRule(PrCssStyleDeclaration* declaration) {
+    return declaration->parentRule;
 }
 
-PrStatus prCssStyleDeclarationValue(const PrCssStyleDeclaration* self, const PrCssDeclarationName* name, PrCssValue* out) {
-    const CssDeclarationBlock* block = cssStyleDeclarationBlock(self);
+PrStatus prCssStyleDeclarationValue(const PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name,
+        PrCssValue* out) {
+    const CssDeclarationBlock* block = cssStyleDeclarationBlock(declaration);
     CssDeclaredName declared = {};
     if (!cssDeclaredNameFromName(block->rule, name, &declared))
         return PrStatus_InvalidData;
@@ -1876,33 +1877,35 @@ PrStatus prCssStyleDeclarationValue(const PrCssStyleDeclaration* self, const PrC
     });
 }
 
-PrStatus prCssStyleDeclarationSetValue(PrCssStyleDeclaration* self,
+PrStatus prCssStyleDeclarationSetValue(PrCssStyleDeclaration* declaration,
         const PrCssDeclarationName* name, const PrCssValue* value, bool important) {
-    if (self->readOnly)
+    if (declaration->readOnly)
         return PrStatus_ReadOnly;
     CssDeclaredName declared = {};
-    if (!cssDeclaredNameFromName(cssStyleDeclarationBlock(self)->rule, name, &declared))
+    if (!cssDeclaredNameFromName(cssStyleDeclarationBlock(declaration)->rule, name, &declared))
         return PrStatus_InvalidData;
     CssEdit edit;
-    cssEditBegin(&edit, cssStyleDeclarationParser(self));
-    CssEditResult result = cssDeclarationBlockPrepareSetValue(&edit, cssStyleDeclarationBlock(self), declared,
+    cssEditBegin(&edit, cssStyleDeclarationParser(declaration));
+    CssEditResult result = cssDeclarationBlockPrepareSetValue(&edit, cssStyleDeclarationBlock(declaration), declared,
         cssValueRun(valueRead(value)), important, false);
-    return commitDeclarations(self, &edit, result) == CssEditResult_Rejected ? PrStatus_InvalidData : PrStatus_Ok;
+    CssEditResult committed = commitDeclarations(declaration, &edit, result);
+    return committed == CssEditResult_Rejected ? PrStatus_InvalidData : PrStatus_Ok;
 }
 
-PrStatus prCssStyleDeclarationAppendValue(PrCssStyleDeclaration* self, const PrCssDeclarationName* name,
+PrStatus prCssStyleDeclarationAppendValue(PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name,
         const PrCssValue* value) {
-    if (self->readOnly)
+    if (declaration->readOnly)
         return PrStatus_ReadOnly;
     CssDeclaredName declared = {};
-    if (!cssDeclaredNameFromName(cssStyleDeclarationBlock(self)->rule, name, &declared) ||
+    if (!cssDeclaredNameFromName(cssStyleDeclarationBlock(declaration)->rule, name, &declared) ||
             declared.property == PrCssProperty_Count || !listValued(declared.property))
         return PrStatus_InvalidData;
     CssEdit edit;
-    cssEditBegin(&edit, cssStyleDeclarationParser(self));
-    CssEditResult result = cssDeclarationBlockPrepareSetValue(&edit, cssStyleDeclarationBlock(self), declared,
+    cssEditBegin(&edit, cssStyleDeclarationParser(declaration));
+    CssEditResult result = cssDeclarationBlockPrepareSetValue(&edit, cssStyleDeclarationBlock(declaration), declared,
         cssValueRun(valueRead(value)), false, true);
-    return commitDeclarations(self, &edit, result) == CssEditResult_Rejected ? PrStatus_InvalidData : PrStatus_Ok;
+    CssEditResult committed = commitDeclarations(declaration, &edit, result);
+    return committed == CssEditResult_Rejected ? PrStatus_InvalidData : PrStatus_Ok;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1968,41 +1971,41 @@ PrCssFontFace* prCssFontFaceCreateFromData(PrDomDocument* PR_NULLABLE document, 
         compress, descriptors);
 }
 
-void prCssFontFaceRetain(PrCssFontFace* self) {
-    cssFontFaceRetain(self);
+void prCssFontFaceRetain(PrCssFontFace* face) {
+    cssFontFaceRetain(face);
 }
 
-void prCssFontFaceRelease(PrCssFontFace* PR_NULLABLE self) {
-    cssFontFaceRelease(self);
+void prCssFontFaceRelease(PrCssFontFace* PR_NULLABLE face) {
+    cssFontFaceRelease(face);
 }
 
-PrString prCssFontFaceDescriptor(const PrCssFontFace* self, PrCssFontFaceDescriptor descriptor) {
-    return cssFontFaceDescriptor(self, descriptor);
+PrString prCssFontFaceDescriptor(const PrCssFontFace* face, PrCssFontFaceDescriptor descriptor) {
+    return cssFontFaceDescriptor(face, descriptor);
 }
 
-PrStatus prCssFontFaceSetDescriptor(PrCssFontFace* self, PrCssFontFaceDescriptor descriptor, PrStringView value) {
-    return cssFontFaceSetDescriptor(self, descriptor, value);
+PrStatus prCssFontFaceSetDescriptor(PrCssFontFace* face, PrCssFontFaceDescriptor descriptor, PrStringView value) {
+    return cssFontFaceSetDescriptor(face, descriptor, value);
 }
 
-PrCssFontFaceStatus prCssFontFaceStatus(const PrCssFontFace* self) {
-    return self->status;
+PrCssFontFaceStatus prCssFontFaceStatus(const PrCssFontFace* face) {
+    return face->status;
 }
 
-PrDomDocument* prCssFontFaceLoadingDocument(const PrCssFontFace* self) {
-    return self->loading;
+PrDomDocument* prCssFontFaceLoadingDocument(const PrCssFontFace* face) {
+    return face->loading;
 }
 
-bool prCssFontFaceFailedToParse(const PrCssFontFace* self) {
-    return self->unparsed;
+bool prCssFontFaceFailedToParse(const PrCssFontFace* face) {
+    return face->unparsed;
 }
 
-PrCssFontFaceStatus prCssFontFaceLoad(PrCssFontFace* self, PrDomDocument* document) {
-    cssFontFaceLoad(self, document);
-    return self->status;
+PrCssFontFaceStatus prCssFontFaceLoad(PrCssFontFace* face, PrDomDocument* document) {
+    cssFontFaceLoad(face, document);
+    return face->status;
 }
 
-bool prCssFontFaceIsCssConnected(const PrCssFontFace* self) {
-    return self->rule != nullptr;
+bool prCssFontFaceIsCssConnected(const PrCssFontFace* face) {
+    return face->rule != nullptr;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2012,49 +2015,49 @@ PrCssFontFaceSet* PR_NULLABLE prCssFontFaceSetQuery(PrDomEventTarget* PR_NULLABL
     return object != nullptr && object->type == DomTargetType_FontFaceSet ? static_cast<PrCssFontFaceSet*>(object) : nullptr;
 }
 
-PrDomEventTarget* prCssFontFaceSetAsEventTarget(PrCssFontFaceSet* self) {
-    return self;
+PrDomEventTarget* prCssFontFaceSetAsEventTarget(PrCssFontFaceSet* set) {
+    return set;
 }
 
-uint32_t prCssFontFaceSetSize(const PrCssFontFaceSet* self) {
+uint32_t prCssFontFaceSetSize(const PrCssFontFaceSet* set) {
     Array<PrCssFontFace* PR_NONNULL> faces;
-    cssFontFaceSetFaces(self, &faces);
+    cssFontFaceSetFaces(set, &faces);
     uint32_t count = faces.count;
     faces.reset();
     return count;
 }
 
-PrCssFontFace* PR_NULLABLE prCssFontFaceSetAt(PrCssFontFaceSet* self, uint32_t index) {
+PrCssFontFace* PR_NULLABLE prCssFontFaceSetAt(PrCssFontFaceSet* set, uint32_t index) {
     Array<PrCssFontFace* PR_NONNULL> faces;
-    cssFontFaceSetFaces(self, &faces);
+    cssFontFaceSetFaces(set, &faces);
     PrCssFontFace* face = index < faces.count ? faces.data[index] : nullptr;
     faces.reset();
     return face;
 }
 
-bool prCssFontFaceSetHas(const PrCssFontFaceSet* self, const PrCssFontFace* face) {
-    return cssFontFaceSetHas(self, face);
+bool prCssFontFaceSetHas(const PrCssFontFaceSet* set, const PrCssFontFace* face) {
+    return cssFontFaceSetHas(set, face);
 }
 
-PrStatus prCssFontFaceSetAdd(PrCssFontFaceSet* self, PrCssFontFace* face) {
-    return cssFontFaceSetAdd(self, face);
+PrStatus prCssFontFaceSetAdd(PrCssFontFaceSet* set, PrCssFontFace* face) {
+    return cssFontFaceSetAdd(set, face);
 }
 
-bool prCssFontFaceSetDelete(PrCssFontFaceSet* self, PrCssFontFace* face) {
-    return cssFontFaceSetDelete(self, face);
+bool prCssFontFaceSetDelete(PrCssFontFaceSet* set, PrCssFontFace* face) {
+    return cssFontFaceSetDelete(set, face);
 }
 
-void prCssFontFaceSetClear(PrCssFontFaceSet* self) {
-    cssFontFaceSetClear(self);
+void prCssFontFaceSetClear(PrCssFontFaceSet* set) {
+    cssFontFaceSetClear(set);
 }
 
-PrCssFontFaceSetLoadStatus prCssFontFaceSetStatus(const PrCssFontFaceSet* self) {
-    return self->status;
+PrCssFontFaceSetLoadStatus prCssFontFaceSetStatus(const PrCssFontFaceSet* set) {
+    return set->status;
 }
 
-PrStatus prCssFontFaceSetCheck(const PrCssFontFaceSet* self, PrStringView font, bool* out) {
+PrStatus prCssFontFaceSetCheck(const PrCssFontFaceSet* set, PrStringView font, bool* out) {
     Array<PrCssFontFace* PR_NONNULL> matched;
-    PrStatus status = cssFontFaceSetMatch(self, font, &matched);
+    PrStatus status = cssFontFaceSetMatch(set, font, &matched);
     *out = true;
     for (uint32_t i = 0; i < matched.count; ++i) {
         if (matched.data[i]->status != PrCssFontFaceStatus_Loaded)
@@ -2064,10 +2067,10 @@ PrStatus prCssFontFaceSetCheck(const PrCssFontFaceSet* self, PrStringView font, 
     return status;
 }
 
-PrStatus prCssFontFaceSetLoad(PrCssFontFaceSet* self, PrDomDocument* document, PrStringView font,
+PrStatus prCssFontFaceSetLoad(PrCssFontFaceSet* set, PrDomDocument* document, PrStringView font,
         PrCssFontFace* PR_NONNULL* PR_NULLABLE items, uint32_t capacity, uint32_t* count) {
     Array<PrCssFontFace* PR_NONNULL> matched;
-    PrStatus status = cssFontFaceSetMatch(self, font, &matched);
+    PrStatus status = cssFontFaceSetMatch(set, font, &matched);
     *count = matched.count;
     for (uint32_t i = 0; i < matched.count; ++i) {
         cssFontFaceLoad(matched.data[i], document);
@@ -2085,95 +2088,95 @@ PrCssHighlight* prCssHighlightCreate(void) {
     return cssHighlightCreate();
 }
 
-void prCssHighlightRetain(PrCssHighlight* self) {
-    cssHighlightRetain(self);
+void prCssHighlightRetain(PrCssHighlight* highlight) {
+    cssHighlightRetain(highlight);
 }
 
-void prCssHighlightRelease(PrCssHighlight* PR_NULLABLE self) {
-    cssHighlightRelease(self);
+void prCssHighlightRelease(PrCssHighlight* PR_NULLABLE highlight) {
+    cssHighlightRelease(highlight);
 }
 
-uint32_t prCssHighlightSize(const PrCssHighlight* self) {
-    return self->ranges.count;
+uint32_t prCssHighlightSize(const PrCssHighlight* highlight) {
+    return highlight->ranges.count;
 }
 
-PrDomRange* PR_NULLABLE prCssHighlightAt(PrCssHighlight* self, uint32_t index) {
-    return index < self->ranges.count ? self->ranges.data[index] : nullptr;
+PrDomRange* PR_NULLABLE prCssHighlightAt(PrCssHighlight* highlight, uint32_t index) {
+    return index < highlight->ranges.count ? highlight->ranges.data[index] : nullptr;
 }
 
-bool prCssHighlightHas(const PrCssHighlight* self, const PrDomRange* range) {
-    return self->ranges.find(const_cast<PrDomRange*>(range)) != kArrayMissing;
+bool prCssHighlightHas(const PrCssHighlight* highlight, const PrDomRange* range) {
+    return highlight->ranges.find(const_cast<PrDomRange*>(range)) != kArrayMissing;
 }
 
-void prCssHighlightAdd(PrCssHighlight* self, PrDomRange* range) {
-    cssHighlightAdd(self, range);
+void prCssHighlightAdd(PrCssHighlight* highlight, PrDomRange* range) {
+    cssHighlightAdd(highlight, range);
 }
 
-bool prCssHighlightDelete(PrCssHighlight* self, const PrDomRange* range) {
-    return cssHighlightDelete(self, const_cast<PrDomRange*>(range));
+bool prCssHighlightDelete(PrCssHighlight* highlight, const PrDomRange* range) {
+    return cssHighlightDelete(highlight, const_cast<PrDomRange*>(range));
 }
 
-void prCssHighlightClear(PrCssHighlight* self) {
-    cssHighlightClear(self);
+void prCssHighlightClear(PrCssHighlight* highlight) {
+    cssHighlightClear(highlight);
 }
 
-uint32_t prCssHighlightVersion(const PrCssHighlight* self) {
-    return self->version;
+uint32_t prCssHighlightVersion(const PrCssHighlight* highlight) {
+    return highlight->version;
 }
 
-int32_t prCssHighlightPriority(const PrCssHighlight* self) {
-    return self->priority;
+int32_t prCssHighlightPriority(const PrCssHighlight* highlight) {
+    return highlight->priority;
 }
 
-void prCssHighlightSetPriority(PrCssHighlight* self, int32_t priority) {
-    self->priority = priority;
+void prCssHighlightSetPriority(PrCssHighlight* highlight, int32_t priority) {
+    highlight->priority = priority;
 }
 
-PrCssHighlightType prCssHighlightType(const PrCssHighlight* self) {
-    return self->type;
+PrCssHighlightType prCssHighlightType(const PrCssHighlight* highlight) {
+    return highlight->type;
 }
 
-void prCssHighlightSetType(PrCssHighlight* self, PrCssHighlightType type) {
-    self->type = type;
+void prCssHighlightSetType(PrCssHighlight* highlight, PrCssHighlightType type) {
+    highlight->type = type;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HighlightRegistry
 
-uint32_t prCssHighlightRegistrySize(PrCssHighlightRegistry* self) {
-    return cssHighlightRegistryLive(self)->entries.count;
+uint32_t prCssHighlightRegistrySize(PrCssHighlightRegistry* registry) {
+    return cssHighlightRegistryLive(registry)->entries.count;
 }
 
-PrStringView prCssHighlightRegistryNameAt(PrCssHighlightRegistry* self, uint32_t index) {
-    const PrCssHighlightRegistry* registry = cssHighlightRegistryLive(self);
-    return index < registry->entries.count ? prStringView(&registry->entries.data[index]->name) : PrStringView{};
+PrStringView prCssHighlightRegistryNameAt(PrCssHighlightRegistry* registry, uint32_t index) {
+    const PrCssHighlightRegistry* live = cssHighlightRegistryLive(registry);
+    return index < live->entries.count ? prStringView(&live->entries.data[index]->name) : PrStringView{};
 }
 
-PrCssHighlight* PR_NULLABLE prCssHighlightRegistryAt(PrCssHighlightRegistry* self, uint32_t index) {
-    const PrCssHighlightRegistry* registry = cssHighlightRegistryLive(self);
-    return index < registry->entries.count ? (weakGet<PrCssHighlight>(registry->entries.data[index]->highlight)) : nullptr;
+PrCssHighlight* PR_NULLABLE prCssHighlightRegistryAt(PrCssHighlightRegistry* registry, uint32_t index) {
+    const PrCssHighlightRegistry* live = cssHighlightRegistryLive(registry);
+    return index < live->entries.count ? (weakGet<PrCssHighlight>(live->entries.data[index]->highlight)) : nullptr;
 }
 
-PrCssHighlight* PR_NULLABLE prCssHighlightRegistryGet(PrCssHighlightRegistry* self, PrStringView name) {
-    const PrCssHighlightRegistry* registry = cssHighlightRegistryLive(self);
-    uint32_t at = cssHighlightRegistryFind(registry, name);
-    return at != kArrayMissing ? (weakGet<PrCssHighlight>(registry->entries.data[at]->highlight)) : nullptr;
+PrCssHighlight* PR_NULLABLE prCssHighlightRegistryGet(PrCssHighlightRegistry* registry, PrStringView name) {
+    const PrCssHighlightRegistry* live = cssHighlightRegistryLive(registry);
+    uint32_t at = cssHighlightRegistryFind(live, name);
+    return at != kArrayMissing ? (weakGet<PrCssHighlight>(live->entries.data[at]->highlight)) : nullptr;
 }
 
-void prCssHighlightRegistrySet(PrCssHighlightRegistry* self, PrStringView name, PrCssHighlight* highlight) {
-    cssHighlightRegistrySet(cssHighlightRegistryLive(self), name, highlight);
+void prCssHighlightRegistrySet(PrCssHighlightRegistry* registry, PrStringView name, PrCssHighlight* highlight) {
+    cssHighlightRegistrySet(cssHighlightRegistryLive(registry), name, highlight);
 }
 
-bool prCssHighlightRegistryDelete(PrCssHighlightRegistry* self, PrStringView name) {
-    return cssHighlightRegistryDelete(cssHighlightRegistryLive(self), name);
+bool prCssHighlightRegistryDelete(PrCssHighlightRegistry* registry, PrStringView name) {
+    return cssHighlightRegistryDelete(cssHighlightRegistryLive(registry), name);
 }
 
-void prCssHighlightRegistryClear(PrCssHighlightRegistry* self) {
-    cssHighlightRegistryClear(cssHighlightRegistryLive(self));
+void prCssHighlightRegistryClear(PrCssHighlightRegistry* registry) {
+    cssHighlightRegistryClear(cssHighlightRegistryLive(registry));
 }
 
-uint32_t prCssHighlightRegistryVersion(PrCssHighlightRegistry* self) {
-    return cssHighlightRegistryLive(self)->version;
+uint32_t prCssHighlightRegistryVersion(PrCssHighlightRegistry* registry) {
+    return cssHighlightRegistryLive(registry)->version;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2218,19 +2221,18 @@ PrCssValue* prCssValueCreate(void) {
     return allocZeroed<PrCssValue>();
 }
 
-void prCssValueDestroy(PrCssValue* PR_NULLABLE self) {
-    if (self == nullptr)
+void prCssValueDestroy(PrCssValue* PR_NULLABLE value) {
+    if (value == nullptr)
         return;
-    cssValueReset(self);
-    prMemoryFree(self);
+    cssValueReset(value);
+    prMemoryFree(value);
 }
 
-void prCssValueClear(PrCssValue* self) {
-    cssValueClear(self);
+void prCssValueClear(PrCssValue* value) {
+    cssValueClear(value);
 }
 
-PrStatus prCssValueOpen(PrCssValue* self, const PrCssValueFields* fields) {
-    PrCssValue* value = self;
+PrStatus prCssValueOpen(PrCssValue* value, const PrCssValueFields* fields) {
     if (!fieldsValid(fields))
         return PrStatus_InvalidData;
     if (fields->kind == PrCssValueKind_Calc) {
@@ -2248,8 +2250,7 @@ PrStatus prCssValueOpen(PrCssValue* self, const PrCssValueFields* fields) {
     return PrStatus_Ok;
 }
 
-PrStatus prCssValueClose(PrCssValue* self) {
-    PrCssValue* value = self;
+PrStatus prCssValueClose(PrCssValue* value) {
     if (value->open.count == 0)
         PR_FATAL("a value closed with no node open");
     CssValueOpen open = value->open.data[--value->open.count];
@@ -2270,14 +2271,13 @@ PrStatus prCssValueClose(PrCssValue* self) {
     return PrStatus_Ok;
 }
 
-PrStatus prCssValueAdd(PrCssValue* self, const PrCssValueFields* fields) {
-    PrStatus status = prCssValueOpen(self, fields);
-    return status == PrStatus_Ok ? prCssValueClose(self) : status;
+PrStatus prCssValueAdd(PrCssValue* value, const PrCssValueFields* fields) {
+    PrStatus status = prCssValueOpen(value, fields);
+    return status == PrStatus_Ok ? prCssValueClose(value) : status;
 }
 
-PrStatus prCssValueAddTree(PrCssValue* self, const PrCssValue* from, uint32_t node) {
-    PrCssValue* value = self;
-    if (self == from)
+PrStatus prCssValueAddTree(PrCssValue* value, const PrCssValue* from, uint32_t node) {
+    if (value == from)
         PR_FATAL("a value's tree added to itself");
     CssValueRun tree = cssValueSubtree(cssValueRun(valueRead(from, node)), node);
     if (value->open.count + depthOf(tree) > kPrCssValueMaxDepth)
@@ -2286,20 +2286,20 @@ PrStatus prCssValueAddTree(PrCssValue* self, const PrCssValue* from, uint32_t no
     return PrStatus_Ok;
 }
 
-uint32_t prCssValueSize(const PrCssValue* self) {
-    return self->pool.values.count;
+uint32_t prCssValueSize(const PrCssValue* value) {
+    return value->pool.values.count;
 }
 
-uint32_t prCssValueNext(const PrCssValue* self, uint32_t node) {
-    return node + valueRead(self, node)->pool.values.data[node].next;
+uint32_t prCssValueNext(const PrCssValue* value, uint32_t node) {
+    return node + valueRead(value, node)->pool.values.data[node].next;
 }
 
-PrCssValueFields prCssValueFields(const PrCssValue* self, uint32_t node) {
-    return fieldsOf(cssValueRun(valueRead(self, node)), node);
+PrCssValueFields prCssValueFields(const PrCssValue* value, uint32_t node) {
+    return fieldsOf(cssValueRun(valueRead(value, node)), node);
 }
 
-void prCssValueColorChannels(const PrCssValue* self, uint32_t node, PrCssColorChannel channels[PR_NONNULL 4]) {
-    CssValueRun run = cssValueRun(valueRead(self, node));
+void prCssValueColorChannels(const PrCssValue* value, uint32_t node, PrCssColorChannel channels[PR_NONNULL 4]) {
+    CssValueRun run = cssValueRun(valueRead(value, node));
     if (run.values[node].kind != PrCssValueKind_Color)
         PR_FATAL("the channels of a value that is not a color");
     CssColorChannels of = cssColorChannelsFromValue(run, node);
@@ -2535,8 +2535,8 @@ PrStatus prCssParseFilterList(PrStringView text, const PrDomElement* PR_NULLABLE
     return PrStatus_Ok;
 }
 
-PrString prCssValueSerialize(const PrCssValue* self, uint32_t first, uint32_t end) {
-    CssValueRun run = cssValueRun(valueRead(self));
+PrString prCssValueSerialize(const PrCssValue* value, uint32_t first, uint32_t end) {
+    CssValueRun run = cssValueRun(valueRead(value));
     if (first > end || end > run.count)
         PR_FATAL("a value serialized past its end");
     return serialized([&](TextBuffer* out) {
@@ -2544,13 +2544,13 @@ PrString prCssValueSerialize(const PrCssValue* self, uint32_t first, uint32_t en
     });
 }
 
-bool prCssValueEquals(const PrCssValue* self, uint32_t node, const PrCssValue* other, uint32_t otherNode) {
-    return cssValueRunEquals(cssValueSubtree(cssValueRun(valueRead(self, node)), node),
+bool prCssValueEquals(const PrCssValue* value, uint32_t node, const PrCssValue* other, uint32_t otherNode) {
+    return cssValueRunEquals(cssValueSubtree(cssValueRun(valueRead(value, node)), node),
         cssValueSubtree(cssValueRun(valueRead(other, otherNode)), otherNode));
 }
 
-PrStatus prCssValueNumericType(const PrCssValue* self, uint32_t node, PrCssNumericType* out) {
-    return cssMathType(cssValueRun(valueRead(self, node)), node, out) ? PrStatus_Ok : PrStatus_InvalidData;
+PrStatus prCssValueNumericType(const PrCssValue* value, uint32_t node, PrCssNumericType* out) {
+    return cssMathType(cssValueRun(valueRead(value, node)), node, out) ? PrStatus_Ok : PrStatus_InvalidData;
 }
 
 bool prCssNumericTypeFromUnit(PrCssUnit unit, PrCssNumericType* out) {
@@ -2569,22 +2569,22 @@ PrCssNumericType prCssNumericTypeInvert(const PrCssNumericType* type) {
     return cssNumericTypeInvert(*type);
 }
 
-PrStatus prCssValueTo(const PrCssValue* self, uint32_t node, PrCssUnit unit, double* out) {
-    return cssMathTo(cssValueRun(valueRead(self, node)), node, unit, out) ? PrStatus_Ok : PrStatus_InvalidData;
+PrStatus prCssValueTo(const PrCssValue* value, uint32_t node, PrCssUnit unit, double* out) {
+    return cssMathTo(cssValueRun(valueRead(value, node)), node, unit, out) ? PrStatus_Ok : PrStatus_InvalidData;
 }
 
-PrStatus prCssValueToSum(const PrCssValue* self, uint32_t node, const PrCssUnit* PR_NULLABLE units,
+PrStatus prCssValueToSum(const PrCssValue* value, uint32_t node, const PrCssUnit* PR_NULLABLE units,
         uint32_t count, PrCssValue* out) {
-    CssValueRun run = cssValueRun(valueRead(self, node));
-    if (self == out)
+    CssValueRun run = cssValueRun(valueRead(value, node));
+    if (value == out)
         PR_FATAL("a value's sum written to itself");
     return valueWrite(out, [&](CssValuePool* pool) {
         return cssMathToSum(run, node, units, count, pool) ? PrStatus_Ok : PrStatus_InvalidData;
     });
 }
 
-PrStatus prCssValueTransformMatrix(const PrCssValue* self, uint32_t node, PrDomMatrix* out) {
-    CssValueRun run = cssValueRun(valueRead(self, node));
+PrStatus prCssValueTransformMatrix(const PrCssValue* value, uint32_t node, PrDomMatrix* out) {
+    CssValueRun run = cssValueRun(valueRead(value, node));
     return cssTransformMatrix(cssValueSubtree(run, node), out) ? PrStatus_Ok : PrStatus_InvalidData;
 }
 
@@ -2646,21 +2646,21 @@ void prCssEnable(PrDomDocument* document) {
 // Selectors (dom/#dom-parentnode-queryselector, dom/#dom-element-matches)
 
 // dom/#dom-parentnode-queryselector
-PrStatus prCssNodeQuerySelector(PrDomNode* self, PrStringView selectors, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
+PrStatus prCssNodeQuerySelector(PrDomNode* node, PrStringView selectors, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    const PrCssSelectors* parsed = cssDomSelectors(self->document, selectors);
+    const PrCssSelectors* parsed = cssDomSelectors(node->document, selectors);
     if (parsed == nullptr)
         return PrStatus_Syntax;
-    *out = prCssNodeQuerySelectorCompiled(self, parsed);
+    *out = prCssNodeQuerySelectorCompiled(node, parsed);
     return PrStatus_Ok;
 }
 
 // dom/#dom-parentnode-queryselectorall
-PrStatus prCssNodeQuerySelectorAll(PrDomNode* self, PrStringView selectors, PrDomNodeList* list) {
-    const PrCssSelectors* parsed = cssDomSelectors(self->document, selectors);
+PrStatus prCssNodeQuerySelectorAll(PrDomNode* node, PrStringView selectors, PrDomNodeList* list) {
+    const PrCssSelectors* parsed = cssDomSelectors(node->document, selectors);
     if (parsed == nullptr)
         return PrStatus_Syntax;
-    prCssNodeQuerySelectorAllCompiled(self, parsed, list);
+    prCssNodeQuerySelectorAllCompiled(node, parsed, list);
     return PrStatus_Ok;
 }
 
@@ -2669,24 +2669,24 @@ PrStatus prCssSelectorsCreate(PrStringView text, PrCssSelectors* PR_NULLABLE* PR
     return *out != nullptr ? PrStatus_Ok : PrStatus_Syntax;
 }
 
-void prCssSelectorsDestroy(PrCssSelectors* PR_NULLABLE self) {
-    cssSelectorsDestroy(self);
+void prCssSelectorsDestroy(PrCssSelectors* PR_NULLABLE selectors) {
+    cssSelectorsDestroy(selectors);
 }
 
-PrDomElement* PR_NULLABLE prCssNodeQuerySelectorCompiled(PrDomNode* self, const PrCssSelectors* selectors) {
+PrDomElement* PR_NULLABLE prCssNodeQuerySelectorCompiled(PrDomNode* node, const PrCssSelectors* selectors) {
     CssSelectorMatcher matcher;
-    cssSelectorMatcherInit(&matcher, selectors, domElementFromNode(self), self->document, self);
-    PrDomElement* found = cssSelectorMatcherNext(&matcher, self, self);
+    cssSelectorMatcherInit(&matcher, selectors, domElementFromNode(node), node->document, node);
+    PrDomElement* found = cssSelectorMatcherNext(&matcher, node, node);
     cssSelectorMatcherReset(&matcher);
     return found;
 }
 
-void prCssNodeQuerySelectorAllCompiled(PrDomNode* self, const PrCssSelectors* selectors, PrDomNodeList* list) {
+void prCssNodeQuerySelectorAllCompiled(PrDomNode* node, const PrCssSelectors* selectors, PrDomNodeList* list) {
     CssSelectorMatcher matcher;
-    cssSelectorMatcherInit(&matcher, selectors, domElementFromNode(self), self->document, self);
+    cssSelectorMatcherInit(&matcher, selectors, domElementFromNode(node), node->document, node);
     Array<PrDomNode* PR_NONNULL> found;
-    for (PrDomElement* element = cssSelectorMatcherNext(&matcher, self, self); element != nullptr;
-            element = cssSelectorMatcherNext(&matcher, self, element)) {
+    for (PrDomElement* element = cssSelectorMatcherNext(&matcher, node, node); element != nullptr;
+            element = cssSelectorMatcherNext(&matcher, node, element)) {
         found.push(element);
     }
     cssSelectorMatcherReset(&matcher);
@@ -2694,28 +2694,28 @@ void prCssNodeQuerySelectorAllCompiled(PrDomNode* self, const PrCssSelectors* se
     found.reset();
 }
 
-PrStatus prCssElementClosest(PrDomElement* self, PrStringView selectors, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
+PrStatus prCssElementClosest(PrDomElement* element, PrStringView selectors, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    const PrCssSelectors* parsed = cssDomSelectors(self->document, selectors);
+    const PrCssSelectors* parsed = cssDomSelectors(element->document, selectors);
     if (parsed == nullptr)
         return PrStatus_Syntax;
-    *out = prCssElementClosestCompiled(self, parsed);
+    *out = prCssElementClosestCompiled(element, parsed);
     return PrStatus_Ok;
 }
 
-PrStatus prCssElementMatches(const PrDomElement* self, PrStringView selectors, bool* out) {
-    const PrCssSelectors* parsed = cssDomSelectors(self->document, selectors);
+PrStatus prCssElementMatches(const PrDomElement* element, PrStringView selectors, bool* out) {
+    const PrCssSelectors* parsed = cssDomSelectors(element->document, selectors);
     if (parsed == nullptr)
         return PrStatus_Syntax;
-    *out = prCssElementMatchesCompiled(self, parsed);
+    *out = prCssElementMatchesCompiled(element, parsed);
     return PrStatus_Ok;
 }
 
 // dom/#dom-element-closest
-PrDomElement* PR_NULLABLE prCssElementClosestCompiled(PrDomElement* self, const PrCssSelectors* selectors) {
+PrDomElement* PR_NULLABLE prCssElementClosestCompiled(PrDomElement* element, const PrCssSelectors* selectors) {
     CssSelectorMatcher matcher;
-    cssSelectorMatcherInit(&matcher, selectors, self, self->document, self);
-    PrDomElement* found = self;
+    cssSelectorMatcherInit(&matcher, selectors, element, element->document, element);
+    PrDomElement* found = element;
     while (found != nullptr && !cssSelectorMatcherMatches(&matcher, found))
         found = domElementFromNode(domNodeParent(found));
     cssSelectorMatcherReset(&matcher);
@@ -2723,49 +2723,48 @@ PrDomElement* PR_NULLABLE prCssElementClosestCompiled(PrDomElement* self, const 
 }
 
 // dom/#dom-element-matches
-bool prCssElementMatchesCompiled(const PrDomElement* self, const PrCssSelectors* selectors) {
-    return cssSelectorsMatch(selectors, self, self);
+bool prCssElementMatchesCompiled(const PrDomElement* element, const PrCssSelectors* selectors) {
+    return cssSelectorsMatch(selectors, element, element);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The CSS state of documents, shadow roots and elements (cssom-1/#extensions-to-the-document-or-shadow-root-interface)
 
-PrCssStyleSheetList* prCssDocumentStyleSheets(PrDomDocument* self) {
-    return cssDocumentStyleSheets(self);
+PrCssStyleSheetList* prCssDocumentStyleSheets(PrDomDocument* document) {
+    return cssDocumentStyleSheets(document);
 }
 
-PrStatus prCssDocumentRegisterProperty(PrDomDocument* self, const PrCssPropertyDefinition* definition) {
-    return cssRegisterProperty(self, definition->name, definition->syntax, definition->inherits,
+PrStatus prCssDocumentRegisterProperty(PrDomDocument* document, const PrCssPropertyDefinition* definition) {
+    return cssRegisterProperty(document, definition->name, definition->syntax, definition->inherits,
         definition->initialValue);
 }
 
-void prCssDocumentSetFontCallback(PrDomDocument* self, const PrCssFontCallback* PR_NULLABLE callback) {
-    cssDocumentRoot(self)->fontCallback = callback != nullptr ? *callback : PrCssFontCallback{};
+void prCssDocumentSetFontCallback(PrDomDocument* document, const PrCssFontCallback* PR_NULLABLE callback) {
+    cssDocumentRoot(document)->fontCallback = callback != nullptr ? *callback : PrCssFontCallback{};
 }
 
-PrCssFontFaceSet* prCssDocumentFonts(PrDomDocument* self) {
-    CssRoot* style = cssDocumentRoot(self);
+PrCssFontFaceSet* prCssDocumentFonts(PrDomDocument* document) {
+    CssRoot* style = cssDocumentRoot(document);
     if (style->fonts == nullptr)
-        style->fonts = cssFontFaceSetCreate(self);
+        style->fonts = cssFontFaceSetCreate(document);
     return style->fonts;
 }
 
-PrCssHighlightRegistry* prCssDocumentHighlights(PrDomDocument* self) {
-    CssRoot* style = cssDocumentRoot(self);
+PrCssHighlightRegistry* prCssDocumentHighlights(PrDomDocument* document) {
+    CssRoot* style = cssDocumentRoot(document);
     if (style->highlights == nullptr)
         style->highlights = allocZeroed<PrCssHighlightRegistry>();
     return style->highlights;
 }
 
-PrCssStyleSheetList* prCssShadowRootStyleSheets(PrDomShadowRoot* self) {
-    PrDomShadowRoot* shadow = self;
+PrCssStyleSheetList* prCssShadowRootStyleSheets(PrDomShadowRoot* shadow) {
     if (shadow->style == nullptr)
         shadow->style = allocZeroed<CssRoot>();
     return &shadow->style->sheets;
 }
 
-PrCssStyleProperties* prCssElementStyle(PrDomElement* self) {
-    return static_cast<PrCssStyleProperties*>(cssElementInlineStyle(self));
+PrCssStyleProperties* prCssElementStyle(PrDomElement* element) {
+    return static_cast<PrCssStyleProperties*>(cssElementInlineStyle(element));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2796,18 +2795,18 @@ PrStatus prCssMatrixFromString(PrStringView text, PrDomMatrix* out) {
     return PrStatus_Ok;
 }
 
-PrStatus prCssMatrixToString(const PrDomMatrix* self, PrString* out) {
-    for (double element : self->m) {
+PrStatus prCssMatrixToString(const PrDomMatrix* matrix, PrString* out) {
+    for (double element : matrix->m) {
         if (!isFiniteF64(element))
             return PrStatus_InvalidState;
     }
     TextBuffer text;
-    textAppend(&text, self->is2D ? "matrix(" : "matrix3d(");
-    uint32_t count = self->is2D ? 6 : 16;
+    textAppend(&text, matrix->is2D ? "matrix(" : "matrix3d(");
+    uint32_t count = matrix->is2D ? 6 : 16;
     for (uint32_t i = 0; i < count; ++i) {
         if (i != 0)
             textAppend(&text, ", ");
-        cssSerializeNumber(&text, self->m[self->is2D ? kDomMatrix2DIndices[i] : i]);
+        cssSerializeNumber(&text, matrix->m[matrix->is2D ? kDomMatrix2DIndices[i] : i]);
     }
     textAppendChar(&text, ')');
     *out = textTake(&text);
@@ -2832,9 +2831,9 @@ PrCssFontFaceSetLoadEvent* prCssFontFaceSetLoadEventCreate(PrStringView type,
     return event;
 }
 
-uint32_t prCssFontFaceSetLoadEventFontFaces(PrCssFontFaceSetLoadEvent* self,
+uint32_t prCssFontFaceSetLoadEventFontFaces(PrCssFontFaceSetLoadEvent* event,
         PrCssFontFace* PR_NONNULL* PR_NULLABLE items, uint32_t capacity) {
-    const Array<PrCssFontFace* PR_NONNULL>& faces = static_cast<const CssFontFacesData*>(self->extra)->faces;
+    const Array<PrCssFontFace* PR_NONNULL>& faces = static_cast<const CssFontFacesData*>(event->extra)->faces;
     for (uint32_t i = 0; items != nullptr && i < faces.count && i < capacity; ++i)
         items[i] = faces.data[i];
     return faces.count;
@@ -2865,26 +2864,26 @@ PrCssAnimationEvent* prCssAnimationEventCreate(PrStringView type, const PrCssAni
     return event;
 }
 
-PrStringView prCssTransitionEventPropertyName(const PrCssTransitionEvent* self) {
-    return prStringView(&self->animation->name);
+PrStringView prCssTransitionEventPropertyName(const PrCssTransitionEvent* event) {
+    return prStringView(&event->animation->name);
 }
 
-PrStringView prCssAnimationEventAnimationName(const PrCssAnimationEvent* self) {
-    return prStringView(&self->animation->name);
+PrStringView prCssAnimationEventAnimationName(const PrCssAnimationEvent* event) {
+    return prStringView(&event->animation->name);
 }
 
-double prCssTransitionEventElapsedTime(const PrCssTransitionEvent* self) {
-    return self->animation->elapsedTime;
+double prCssTransitionEventElapsedTime(const PrCssTransitionEvent* event) {
+    return event->animation->elapsedTime;
 }
 
-double prCssAnimationEventElapsedTime(const PrCssAnimationEvent* self) {
-    return self->animation->elapsedTime;
+double prCssAnimationEventElapsedTime(const PrCssAnimationEvent* event) {
+    return event->animation->elapsedTime;
 }
 
-PrStringView prCssTransitionEventPseudoElement(const PrCssTransitionEvent* self) {
-    return prStringView(&self->animation->pseudoElement);
+PrStringView prCssTransitionEventPseudoElement(const PrCssTransitionEvent* event) {
+    return prStringView(&event->animation->pseudoElement);
 }
 
-PrStringView prCssAnimationEventPseudoElement(const PrCssAnimationEvent* self) {
-    return prStringView(&self->animation->pseudoElement);
+PrStringView prCssAnimationEventPseudoElement(const PrCssAnimationEvent* event) {
+    return prStringView(&event->animation->pseudoElement);
 }

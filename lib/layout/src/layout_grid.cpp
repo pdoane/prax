@@ -1802,16 +1802,16 @@ void alignTracks(Grid& g, PrLayoutGridAxis axis, double size) {
     g.placed[axis] = true;
 }
 
-// Returns where an item aligned by `self`, or by the container's `items` if `self` is auto, sits along `axis` of its
-// area, and sets `*safe` to whether the alignment is safe (css-align-3/#self-alignment). `stretches` says whether the
-// item can be stretched along the axis, which its auto size and margins decide. Normal is stretch for an item that can
-// be stretched and has no preferred aspect ratio, and start otherwise. `self-start` and `self-end` are the item's own
-// sides along the axis, and `left` and `right` are the line-left and line-right sides along the inline axis and start
-// along the block axis. Baseline alignment needs the item's block axis to run along `axis`, and otherwise falls back to
-// safe self-start or safe self-end (css-align-3/#baseline-values).
-LayoutGridPlace placeOf(const Grid& g, const LayoutGridItem& it, PrLayoutGridAxis axis, PrLayoutAlignment self,
+// Returns where an item aligned by `alignment`, or by the container's `items` if `alignment` is auto, sits along `axis`
+// of its area, and sets `*safe` to whether the alignment is safe (css-align-3/#self-alignment). `stretches` says
+// whether the item can be stretched along the axis, which its auto size and margins decide. Normal is stretch for an
+// item that can be stretched and has no preferred aspect ratio, and start otherwise. `self-start` and `self-end` are
+// the item's own sides along the axis, and `left` and `right` are the line-left and line-right sides along the inline
+// axis and start along the block axis. Baseline alignment needs the item's block axis to run along `axis`, and
+// otherwise falls back to safe self-start or safe self-end (css-align-3/#baseline-values).
+LayoutGridPlace placeOf(const Grid& g, const LayoutGridItem& it, PrLayoutGridAxis axis, PrLayoutAlignment alignment,
         PrLayoutAlignment items, bool stretches, bool ratio, bool* safe) {
-    PrLayoutAlignment align = (self & kPrLayoutAlignmentValueMask) == PrLayoutAlignment_Auto ? items : self;
+    PrLayoutAlignment align = (alignment & kPrLayoutAlignmentValueMask) == PrLayoutAlignment_Auto ? items : alignment;
     *safe = (align & PrLayoutAlignmentFlag_Safe) != 0;
     PrLayoutAlignment value = PrLayoutAlignment(align & kPrLayoutAlignmentValueMask);
     LayoutMode own = layoutOwnMode(g.state.tree, it.node);

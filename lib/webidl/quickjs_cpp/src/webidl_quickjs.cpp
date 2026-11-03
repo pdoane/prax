@@ -334,8 +334,8 @@ void pairMark(JSRuntime* runtime, JSValueConst value, JS_MarkFunc* mark) {
 }
 
 // next, of webidl/#js-iterator-prototype-object.
-JSValue pairNext(JSContext* ctx, JSValueConst self, int, JSValueConst*, int id) {
-    PairIterator* iterator = static_cast<PairIterator*>(JS_GetOpaque2(ctx, self, JSClassID(id)));
+JSValue pairNext(JSContext* ctx, JSValueConst iteratorObject, int, JSValueConst*, int id) {
+    PairIterator* iterator = static_cast<PairIterator*>(JS_GetOpaque2(ctx, iteratorObject, JSClassID(id)));
     if (iterator == nullptr)
         return JS_EXCEPTION;
     JSValue index = JS_NewUint32(ctx, iterator->index);
@@ -404,24 +404,25 @@ typedef uint8_t CollectionMember;
 constexpr char kBacking[] = "[[Backing]]";
 constexpr char kBackingVersion[] = "[[BackingVersion]]";
 
-// Returns the backing of `self`, or an exception. The backing is refilled if the platform object's version differs from
-// the version that the backing last synchronized with.
-JSValue backingOf(JSContext* ctx, JSValueConst self, void* handle, const JsCollection& collection, JSValueConst* data) {
-    JSValue backing = jsSameObject(ctx, self, kBacking);
+// Returns the backing of `backingObject`, or an exception. The backing is refilled if the platform object's version
+// differs from the version that the backing last synchronized with.
+JSValue backingOf(JSContext* ctx, JSValueConst backingObject, void* handle, const JsCollection& collection,
+        JSValueConst* data) {
+    JSValue backing = jsSameObject(ctx, backingObject, kBacking);
     if (JS_IsUndefined(backing)) {
         backing = JS_CallConstructor(ctx, data[CollectionData_Constructor], 0, nullptr);
         if (JS_IsException(backing))
             return backing;
-        jsSetSameObject(ctx, self, kBacking, backing);
+        jsSetSameObject(ctx, backingObject, kBacking, backing);
     }
     uint32_t version = collection.version(handle);
-    JSValue taken = jsSameObject(ctx, self, kBackingVersion);
+    JSValue taken = jsSameObject(ctx, backingObject, kBackingVersion);
     uint32_t last = 0;
     bool current = JS_IsNumber(taken) && JS_ToUint32(ctx, &last, taken) == 0 && last == version;
     JS_FreeValue(ctx, taken);
     if (current)
         return backing;
-    JSValue entries = collection.entries(ctx, self, handle);
+    JSValue entries = collection.entries(ctx, backingObject, handle);
     bool ok = !JS_IsException(entries);
     if (ok)
         JS_FreeValue(ctx, JS_Call(ctx, data[CollectionData_Clear], backing, 0, nullptr));
@@ -445,13 +446,13 @@ JSValue backingOf(JSContext* ctx, JSValueConst self, void* handle, const JsColle
         JS_FreeValue(ctx, backing);
         return JS_EXCEPTION;
     }
-    jsSetSameObject(ctx, self, kBackingVersion, JS_NewUint32(ctx, version));
+    jsSetSameObject(ctx, backingObject, kBackingVersion, JS_NewUint32(ctx, version));
     return backing;
 }
 
 // Records that the backing now reflects the platform object's change, by updating its version.
-void tookChange(JSContext* ctx, JSValueConst self, void* handle, const JsCollection& collection) {
-    jsSetSameObject(ctx, self, kBackingVersion, JS_NewUint32(ctx, collection.version(handle)));
+void tookChange(JSContext* ctx, JSValueConst object, void* handle, const JsCollection& collection) {
+    jsSetSameObject(ctx, object, kBackingVersion, JS_NewUint32(ctx, collection.version(handle)));
 }
 
 // webidl/#js-set-forEach and webidl/#js-map-forEach. The callback receives the value, the key and the platform object.
@@ -461,11 +462,12 @@ JSValue forEachCallback(JSContext* ctx, JSValueConst, int argc, JSValueConst* ar
     return JS_Call(ctx, data[0], data[1], 3, arguments);
 }
 
-JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
+JSValue collectionMember(JSContext* ctx, JSValueConst backingObject, int argc, JSValueConst* argv, int magic,
+        JSValueConst* data) {
     uint32_t id = 0;
     JS_ToUint32(ctx, &id, data[CollectionData_Class]);
     const JsCollection& collection = *interfaceOf(JS_GetRuntime(ctx), id)->collection;
-    void* handle = jsThis<void>(ctx, self, id);
+    void* handle = jsThis<void>(ctx, backingObject, id);
     if (handle == nullptr)
         return JS_EXCEPTION;
     JSValue key = JS_UNDEFINED;
@@ -486,7 +488,7 @@ JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueCon
     }
     if (magic == CollectionMember_ForEach && (argc < 1 || !JS_IsFunction(ctx, argv[0])))
         return JS_ThrowTypeError(ctx, "forEach needs a function");
-    JSValue backing = backingOf(ctx, self, handle, collection, data);
+    JSValue backing = backingOf(ctx, backingObject, handle, collection, data);
     if (JS_IsException(backing)) {
         JS_FreeValue(ctx, key);
         JS_FreeValue(ctx, value);
@@ -499,7 +501,7 @@ JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueCon
             result = JS_Call(ctx, data[CollectionData_Member], backing, 0, nullptr);
             break;
         case CollectionMember_ForEach: {
-            JSValueConst callbackData[] = {argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, self};
+            JSValueConst callbackData[] = {argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, backingObject};
             JSValue callback = JS_NewCFunctionData(ctx, JsCallScoped<forEachCallback>::call, 2, 0, 3, callbackData);
             result = JS_Call(ctx, data[CollectionData_Member], backing, 1, &callback);
             JS_FreeValue(ctx, callback);
@@ -516,10 +518,10 @@ JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueCon
             }
             JSValueConst arguments[] = {key, value};
             result = JS_Call(ctx, data[CollectionData_Add], backing, collection.map ? 2 : 1, arguments);
-            tookChange(ctx, self, handle, collection);
+            tookChange(ctx, backingObject, handle, collection);
             if (!JS_IsException(result)) {
                 JS_FreeValue(ctx, result);
-                result = JS_DupValue(ctx, self);
+                result = JS_DupValue(ctx, backingObject);
             }
             break;
         }
@@ -528,7 +530,7 @@ JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueCon
             if (JS_ToBool(ctx, had) > 0) {
                 collection.remove(ctx, handle, key);
                 result = JS_Call(ctx, data[CollectionData_Delete], backing, 1, &key);
-                tookChange(ctx, self, handle, collection);
+                tookChange(ctx, backingObject, handle, collection);
             } else {
                 result = JS_IsException(had) ? JS_EXCEPTION : JS_FALSE;
             }
@@ -538,7 +540,7 @@ JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueCon
         case CollectionMember_Clear:
             collection.clear(ctx, handle);
             result = JS_Call(ctx, data[CollectionData_Clear], backing, 0, nullptr);
-            tookChange(ctx, self, handle, collection);
+            tookChange(ctx, backingObject, handle, collection);
             break;
     }
     JS_FreeValue(ctx, backing);
@@ -665,8 +667,8 @@ struct DomException {
     double requested;
 };
 
-DomException* PR_NULLABLE exceptionOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<DomException>(ctx, self, domExceptionClass, "DOMException");
+DomException* PR_NULLABLE exceptionOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<DomException>(ctx, object, domExceptionClass, "DOMException");
 }
 
 JSValue newException(JSContext* ctx, JSClassID id, PrStringView message, PrStringView name,
@@ -681,8 +683,8 @@ JSValue newException(JSContext* ctx, JSClassID id, PrStringView message, PrStrin
 }
 
 template <const JSClassID* PR_NONNULL Id>
-void finalizer(JSRuntime* runtime, JSValue self) {
-    jsFinalize<DomException>(runtime, self, *Id, [](DomException* exception) {
+void finalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<DomException>(runtime, object, *Id, [](DomException* exception) {
         prStringReset(&exception->name);
         prStringReset(&exception->message);
         prMemoryFree(exception);
@@ -698,18 +700,18 @@ JSValue construct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst
     return jsConstructed(ctx, newTarget, newException(ctx, domExceptionClass, message.value(), name.value()));
 }
 
-JSValue nameGet(JSContext* ctx, JSValueConst self) {
-    DomException* exception = exceptionOf(ctx, self);
+JSValue nameGet(JSContext* ctx, JSValueConst exceptionObject) {
+    DomException* exception = exceptionOf(ctx, exceptionObject);
     return exception != nullptr ? jsNewString(ctx, &exception->name) : JS_EXCEPTION;
 }
 
-JSValue messageGet(JSContext* ctx, JSValueConst self) {
-    DomException* exception = exceptionOf(ctx, self);
+JSValue messageGet(JSContext* ctx, JSValueConst exceptionObject) {
+    DomException* exception = exceptionOf(ctx, exceptionObject);
     return exception != nullptr ? jsNewString(ctx, &exception->message) : JS_EXCEPTION;
 }
 
-JSValue codeGet(JSContext* ctx, JSValueConst self) {
-    DomException* exception = exceptionOf(ctx, self);
+JSValue codeGet(JSContext* ctx, JSValueConst exceptionObject) {
+    DomException* exception = exceptionOf(ctx, exceptionObject);
     return exception != nullptr ? JS_NewUint32(ctx, prWebIdlErrorCode(prStringView(&exception->name))) : JS_EXCEPTION;
 }
 
@@ -747,8 +749,8 @@ JSValue constructQuota(JSContext* ctx, JSValueConst newTarget, int argc, JSValue
 }
 
 // The quota and requested getters, whose magic is 0 and 1.
-JSValue quotaGet(JSContext* ctx, JSValueConst self, int magic) {
-    DomException* exception = jsValueOf<DomException>(ctx, self, quotaExceededErrorClass, "QuotaExceededError");
+JSValue quotaGet(JSContext* ctx, JSValueConst exceptionObject, int magic) {
+    DomException* exception = jsValueOf<DomException>(ctx, exceptionObject, quotaExceededErrorClass, "QuotaExceededError");
     if (exception == nullptr)
         return JS_EXCEPTION;
     double value = magic == 0 ? exception->quota : exception->requested;

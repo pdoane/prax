@@ -346,91 +346,92 @@ PrStatus prCssIntersectionObserverCreate(PrDomDocument* document, const PrCssInt
     return PrStatus_Ok;
 }
 
-void prCssIntersectionObserverRetain(PrCssIntersectionObserver* self) {
-    ++self->references;
+void prCssIntersectionObserverRetain(PrCssIntersectionObserver* observer) {
+    ++observer->references;
 }
 
-void prCssIntersectionObserverRelease(PrCssIntersectionObserver* PR_NULLABLE self) {
-    if (self == nullptr || --self->references != 0)
+void prCssIntersectionObserverRelease(PrCssIntersectionObserver* PR_NULLABLE observer) {
+    if (observer == nullptr || --observer->references != 0)
         return;
-    Array<PrCssIntersectionObserver* PR_NONNULL>& observers = cssDocumentRoot(self->document)->intersectionObservers;
+    Array<PrCssIntersectionObserver* PR_NONNULL>& observers =
+        cssDocumentRoot(observer->document)->intersectionObservers;
     for (uint32_t i = 0; i < observers.count; ++i) {
-        if (observers.data[i] == self) {
+        if (observers.data[i] == observer) {
             observers.erase(i);
             break;
         }
     }
-    for (uint32_t i = 0; i < self->observations.count; ++i)
-        domNodeRelease(self->observations.data[i].target);
-    self->observations.reset();
-    for (uint32_t i = 0; i < self->queued.count; ++i)
-        domNodeRelease(self->queued.data[i].target);
-    self->queued.reset();
-    self->thresholds.reset();
-    if (self->callback.release != nullptr)
-        self->callback.release(self->callback.context);
-    domNodeRelease(self->root);
-    domNodeRelease(self->document);
-    prMemoryFree(self);
+    for (uint32_t i = 0; i < observer->observations.count; ++i)
+        domNodeRelease(observer->observations.data[i].target);
+    observer->observations.reset();
+    for (uint32_t i = 0; i < observer->queued.count; ++i)
+        domNodeRelease(observer->queued.data[i].target);
+    observer->queued.reset();
+    observer->thresholds.reset();
+    if (observer->callback.release != nullptr)
+        observer->callback.release(observer->callback.context);
+    domNodeRelease(observer->root);
+    domNodeRelease(observer->document);
+    prMemoryFree(observer);
 }
 
-PrDomNode* PR_NULLABLE prCssIntersectionObserverRoot(const PrCssIntersectionObserver* self) {
-    return self->root;
+PrDomNode* PR_NULLABLE prCssIntersectionObserverRoot(const PrCssIntersectionObserver* observer) {
+    return observer->root;
 }
 
-int32_t prCssIntersectionObserverDelay(const PrCssIntersectionObserver* self) {
-    return self->delay;
+int32_t prCssIntersectionObserverDelay(const PrCssIntersectionObserver* observer) {
+    return observer->delay;
 }
 
-bool prCssIntersectionObserverTrackVisibility(const PrCssIntersectionObserver* self) {
-    return self->trackVisibility;
+bool prCssIntersectionObserverTrackVisibility(const PrCssIntersectionObserver* observer) {
+    return observer->trackVisibility;
 }
 
-PrString prCssIntersectionObserverRootMargin(const PrCssIntersectionObserver* self) {
-    return serializeMargin(self->rootMargin);
+PrString prCssIntersectionObserverRootMargin(const PrCssIntersectionObserver* observer) {
+    return serializeMargin(observer->rootMargin);
 }
 
-PrString prCssIntersectionObserverScrollMargin(const PrCssIntersectionObserver* self) {
-    return serializeMargin(self->scrollMargin);
+PrString prCssIntersectionObserverScrollMargin(const PrCssIntersectionObserver* observer) {
+    return serializeMargin(observer->scrollMargin);
 }
 
-const double* prCssIntersectionObserverThresholds(const PrCssIntersectionObserver* self, uint32_t* count) {
-    *count = self->thresholds.count;
-    return self->thresholds.data;
+const double* prCssIntersectionObserverThresholds(const PrCssIntersectionObserver* observer, uint32_t* count) {
+    *count = observer->thresholds.count;
+    return observer->thresholds.data;
 }
 
-void prCssIntersectionObserverObserve(PrCssIntersectionObserver* self, PrDomElement* target) {
-    for (uint32_t i = 0; i < self->observations.count; ++i) {
-        if (self->observations.data[i].target == target)
+void prCssIntersectionObserverObserve(PrCssIntersectionObserver* observer, PrDomElement* target) {
+    for (uint32_t i = 0; i < observer->observations.count; ++i) {
+        if (observer->observations.data[i].target == target)
             return;
     }
     domNodeRetain(target);
-    self->observations.push(CssIntersectionObservation{.target = target, .previousThresholdIndex = -1});
-    if (self->observations.count == 1 && self->callback.observing != nullptr)
-        self->callback.observing(self->callback.context, self, true);
+    observer->observations.push(CssIntersectionObservation{.target = target, .previousThresholdIndex = -1});
+    if (observer->observations.count == 1 && observer->callback.observing != nullptr)
+        observer->callback.observing(observer->callback.context, observer, true);
 }
 
-void prCssIntersectionObserverUnobserve(PrCssIntersectionObserver* self, PrDomElement* target) {
-    for (uint32_t i = 0; i < self->observations.count; ++i) {
-        if (self->observations.data[i].target == target) {
-            removeObservation(self, i);
+void prCssIntersectionObserverUnobserve(PrCssIntersectionObserver* observer, PrDomElement* target) {
+    for (uint32_t i = 0; i < observer->observations.count; ++i) {
+        if (observer->observations.data[i].target == target) {
+            removeObservation(observer, i);
             return;
         }
     }
 }
 
-void prCssIntersectionObserverDisconnect(PrCssIntersectionObserver* self) {
-    while (self->observations.count != 0)
-        removeObservation(self, self->observations.count - 1);
+void prCssIntersectionObserverDisconnect(PrCssIntersectionObserver* observer) {
+    while (observer->observations.count != 0)
+        removeObservation(observer, observer->observations.count - 1);
 }
 
-uint32_t prCssIntersectionObserverTakeRecords(PrCssIntersectionObserver* self, PrCssIntersectionObserverEntry* out,
-        uint32_t capacity) {
-    uint32_t taken = capacity < self->queued.count ? capacity : self->queued.count;
+uint32_t prCssIntersectionObserverTakeRecords(PrCssIntersectionObserver* observer,
+        PrCssIntersectionObserverEntry* out, uint32_t capacity) {
+    uint32_t taken = capacity < observer->queued.count ? capacity : observer->queued.count;
     for (uint32_t i = 0; i < taken; ++i)
-        out[i] = self->queued.data[i];
+        out[i] = observer->queued.data[i];
     for (uint32_t i = 0; i < taken; ++i)
-        self->queued.erase(0);
+        observer->queued.erase(0);
     return taken;
 }
 

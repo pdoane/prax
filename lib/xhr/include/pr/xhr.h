@@ -57,9 +57,9 @@ PrXhrProgressEvent* PR_NULLABLE prXhrProgressEventQuery(PrDomEvent* PR_NULLABLE 
 PrXhrProgressEvent* prXhrProgressEventCreate(PrStringView type, const PrXhrProgressEventInit* PR_NULLABLE init);
 
 // Return the event's attributes (xhr/#dom-progressevent-lengthcomputable).
-bool prXhrProgressEventLengthComputable(const PrXhrProgressEvent* self);
-double prXhrProgressEventLoaded(const PrXhrProgressEvent* self);
-double prXhrProgressEventTotal(const PrXhrProgressEvent* self);
+bool prXhrProgressEventLengthComputable(const PrXhrProgressEvent* event);
+double prXhrProgressEventLoaded(const PrXhrProgressEvent* event);
+double prXhrProgressEventTotal(const PrXhrProgressEvent* event);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // XMLHttpRequestUpload : EventTarget (xhr)
@@ -137,8 +137,8 @@ PrXhr* PR_NULLABLE prXhrQuery(PrDomEventTarget* PR_NULLABLE object);
 PrXhr* prXhrCreate(const PrXhrDesc* desc);
 
 // Adds or releases a reference. The last release frees the request. An active request holds a reference to itself.
-void prXhrRetain(PrXhr* self);
-void prXhrRelease(PrXhr* PR_NULLABLE self);
+void prXhrRetain(PrXhr* xhr);
+void prXhrRelease(PrXhr* PR_NULLABLE xhr);
 
 // Called when the request starts or stops having pending activity (xhr/#garbage-collection). A request is active from
 // send() until it fires loadend or is aborted. A script binding keeps the request's object alive while it is active,
@@ -147,46 +147,46 @@ typedef void (*PrXhrActivityFn)(void* PR_NULLABLE context, PrXhr* request, bool 
 
 // Sets the function that the request calls with each change of its activity, with `context`, or null for none. If the
 // request is active, `activity` is called at once to say so. The function that it replaces is not called again.
-void prXhrSetActivity(PrXhr* self, PrXhrActivityFn PR_NULLABLE activity, void* PR_NULLABLE context);
+void prXhrSetActivity(PrXhr* xhr, PrXhrActivityFn PR_NULLABLE activity, void* PR_NULLABLE context);
 
 // Returns the request's upload (xhr/#dom-xmlhttprequest-upload), which lives as long as the request.
-PrXhrUpload* prXhrUpload(PrXhr* self);
+PrXhrUpload* prXhrUpload(PrXhr* xhr);
 
 // Returns the request's state.
-PrXhrState prXhrReadyState(const PrXhr* self);
+PrXhrState prXhrReadyState(const PrXhr* xhr);
 
 // Opens the request with `method` and `url` (xhr/#dom-xmlhttprequest-open), which ends any request in flight. The URL
 // parses against the client's base URL. Returns Syntax for a method that is not a token or a URL that does not parse,
 // NotAllowed for a forbidden method, and NotSupported for a synchronous request.
-PrStatus prXhrOpen(PrXhr* self, PrStringView method, PrStringView url, bool async);
+PrStatus prXhrOpen(PrXhr* xhr, PrStringView method, PrStringView url, bool async);
 
 // Appends `value` to the request's header `name` (xhr/#dom-xmlhttprequest-setrequestheader). A forbidden request header
 // is ignored. Returns InvalidState unless the request is opened and not yet sent, and Syntax for a name or a value that
 // is not one.
-PrStatus prXhrSetRequestHeader(PrXhr* self, PrStringView name, PrStringView value);
+PrStatus prXhrSetRequestHeader(PrXhr* xhr, PrStringView name, PrStringView value);
 
 // The milliseconds after which a request in flight times out (xhr/#dom-xmlhttprequest-timeout), or zero for none.
-uint32_t prXhrTimeout(const PrXhr* self);
-void prXhrSetTimeout(PrXhr* self, uint32_t milliseconds);
+uint32_t prXhrTimeout(const PrXhr* xhr);
+void prXhrSetTimeout(PrXhr* xhr, uint32_t milliseconds);
 
 // Whether the request sends credentials to another origin (xhr/#dom-xmlhttprequest-withcredentials). Setting it returns
 // InvalidState once the request is sent, or after it is opened.
-bool prXhrWithCredentials(const PrXhr* self);
-PrStatus prXhrSetWithCredentials(PrXhr* self, bool withCredentials);
+bool prXhrWithCredentials(const PrXhr* xhr);
+PrStatus prXhrSetWithCredentials(PrXhr* xhr, bool withCredentials);
 
 // Sends the request with `body`, or with no body for the null view (xhr/#dom-xmlhttprequest-send). `contentType` is the
 // Content-Type of the body, which the request sends if it sets none of its own, or the null view for none. A GET or
 // HEAD request sends no body. Fires loadstart, and later the events of the response. Returns InvalidState unless the
 // request is opened and not yet sent.
-PrStatus prXhrSend(PrXhr* self, PrByteView body, PrStringView contentType);
+PrStatus prXhrSend(PrXhr* xhr, PrByteView body, PrStringView contentType);
 
 // Aborts the request (xhr/#dom-xmlhttprequest-abort). A request in flight fires readystatechange, abort and loadend,
 // and its state becomes unsent.
-void prXhrAbort(PrXhr* self);
+void prXhrAbort(PrXhr* xhr);
 
 // Sets the MIME type that the response is read as (xhr/#dom-xmlhttprequest-overridemimetype). A type that does not
 // parse is application/octet-stream. Returns InvalidState once the response is loading.
-PrStatus prXhrOverrideMimeType(PrXhr* self, PrStringView mime);
+PrStatus prXhrOverrideMimeType(PrXhr* xhr, PrStringView mime);
 
 // What the response is read as (xhr/#dom-xmlhttprequest-responsetype). The request holds the type, and a script binding
 // reads the body as it says.
@@ -201,32 +201,32 @@ enum {
 typedef uint8_t PrXhrResponseType;
 
 // The type that the response is read as. Setting it returns InvalidState once the response is loading.
-PrXhrResponseType prXhrResponseType(const PrXhr* self);
-PrStatus prXhrSetResponseType(PrXhr* self, PrXhrResponseType type);
+PrXhrResponseType prXhrResponseType(const PrXhr* xhr);
+PrStatus prXhrSetResponseType(PrXhr* xhr, PrXhrResponseType type);
 
 // Returns the response's URL, without its fragment (xhr/#dom-xmlhttprequest-responseurl), or the empty view before the
 // response arrives. The view is valid until the request is opened again.
-PrStringView prXhrResponseUrl(const PrXhr* self);
+PrStringView prXhrResponseUrl(const PrXhr* xhr);
 
 // Returns the response's status (xhr/#dom-xmlhttprequest-status), or zero before the response arrives and for a network
 // error.
-uint16_t prXhrStatus(const PrXhr* self);
+uint16_t prXhrStatus(const PrXhr* xhr);
 
 // Returns the response's values of the header `name`, joined with ", " (xhr/#dom-xmlhttprequest-getresponseheader), or
 // the null string if the response has no such header. The caller releases the string with prStringReset.
-PrString prXhrResponseHeader(const PrXhr* self, PrStringView name);
+PrString prXhrResponseHeader(const PrXhr* xhr, PrStringView name);
 
 // Returns the response's headers, each as "name: value" and a CRLF, with lowercase names in order and the values of a
 // name joined (xhr/#dom-xmlhttprequest-getallresponseheaders). The caller releases the string with prStringReset.
-PrString prXhrResponseHeaders(const PrXhr* self);
+PrString prXhrResponseHeaders(const PrXhr* xhr);
 
 // Returns the bytes of the response's body that arrived, or the empty view before the response is loading and after a
 // network error. The view is valid until the request is opened again.
-PrByteView prXhrResponseBody(const PrXhr* self);
+PrByteView prXhrResponseBody(const PrXhr* xhr);
 
 // Returns the response's body decoded as text (xhr/#text-response), in the charset that the final MIME type names, or
 // UTF-8. The caller releases the string with prStringReset.
-PrString prXhrResponseText(const PrXhr* self);
+PrString prXhrResponseText(const PrXhr* xhr);
 
 #if defined(__cplusplus)
 }

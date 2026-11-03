@@ -326,7 +326,7 @@ void htmlPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec ext
 
 // Starts a load whose input arrives in pieces, as prHtmlPageBeginLoad does, without dropping the page's document load
 // (prHtmlPageNavigate), which calls it as its response arrives.
-PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* self, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers);
+PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* page, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers);
 
 } // namespace pr_impl
 

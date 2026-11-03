@@ -152,10 +152,10 @@ void nodeHeld(void* PR_NULLABLE context, PrDomNode* node, bool held) {
 
 // Finalizes a document's object, and clears the document's tree callback, which refers to the runtime that is releasing
 // it.
-void documentFinalizer(JSRuntime* runtime, JSValue self) {
-    if (JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(self, prJsDomDocumentClass)))
+void documentFinalizer(JSRuntime* runtime, JSValue object) {
+    if (JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(object, prJsDomDocumentClass)))
         prDomDocumentSetTreeCallback(static_cast<PrDomDocument*>(wrapper->handle), nullptr);
-    jsFinalize<void>(runtime, self, prJsDomDocumentClass, nullptr);
+    jsFinalize<void>(runtime, object, prJsDomDocumentClass, nullptr);
 }
 
 void nodeWrapped(JSContext* ctx, JSValueConst object, void* handle) {
@@ -186,8 +186,8 @@ JSValue tagNameOf(JSContext* ctx, const PrDomElement* element) {
     return jsTakeString(ctx, prDomElementTagName(element));
 }
 
-JSValue nodeName(JSContext* ctx, JSValueConst self) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue nodeName(JSContext* ctx, JSValueConst nodeObject) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr)
         return JS_EXCEPTION;
     if (PrDomElement* element = prDomElementQuery(prDomNodeAsEventTarget(node)))
@@ -198,8 +198,8 @@ JSValue nodeName(JSContext* ctx, JSValueConst self) {
     return jsTakeString(ctx, prDomNodeName(node));
 }
 
-JSValue localName(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue localName(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomTag tag = prDomElementTag(element);
@@ -208,20 +208,20 @@ JSValue localName(JSContext* ctx, JSValueConst self) {
     return jsNewStringView(ctx, prDomElementLocalName(element));
 }
 
-JSValue tagName(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue tagName(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     return element != nullptr ? tagNameOf(ctx, element) : JS_EXCEPTION;
 }
 
-JSValue elementNamespace(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue elementNamespace(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     return namespaceUrl(ctx, prDomElementNamespace(element), prDomElementNamespaceUri(element));
 }
 
-JSValue attrNamespace(JSContext* ctx, JSValueConst self) {
-    PrDomAttr* attribute = jsThis<PrDomAttr>(ctx, self, domAttrClass);
+JSValue attrNamespace(JSContext* ctx, JSValueConst attributeObject) {
+    PrDomAttr* attribute = jsThis<PrDomAttr>(ctx, attributeObject, domAttrClass);
     if (attribute == nullptr)
         return JS_EXCEPTION;
     return namespaceUrl(ctx, prDomAttrNamespace(attribute), prDomAttrNamespaceUri(attribute));
@@ -254,11 +254,11 @@ JSValue constructed(JSContext* ctx, JSValueConst newTarget, PrDomNode* node) {
     return jsConstructed(ctx, newTarget, object);
 }
 
-// Returns a result that the caller owns as an object of `id` that keeps `self` alive. `destroy` frees the result if the
-// object cannot be created.
+// Returns a result that the caller owns as an object of `id` that keeps `jsObject` alive. `destroy` frees the result if
+// the object cannot be created.
 template <typename T>
-JSValue ownedToJs(JSContext* ctx, JSClassID id, JSValueConst self, T* handle, void (*destroy)(T* PR_NULLABLE)) {
-    JSValue object = jsWrapAs(ctx, id, self, handle, true);
+JSValue ownedToJs(JSContext* ctx, JSClassID id, JSValueConst jsObject, T* handle, void (*destroy)(T* PR_NULLABLE)) {
+    JSValue object = jsWrapAs(ctx, id, jsObject, handle, true);
     if (JS_IsException(object))
         destroy(handle);
     return object;
@@ -366,15 +366,16 @@ JSValue customEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, J
     return constructEvent(ctx, newTarget, argc, argv, 1);
 }
 
-JSValue eventTarget(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomEvent* event = jsThis<PrDomEvent>(ctx, self, prJsDomEventClass);
+JSValue eventTarget(JSContext* ctx, JSValueConst eventObject, int magic) {
+    PrDomEvent* event = jsThis<PrDomEvent>(ctx, eventObject, prJsDomEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
-    return prJsDomWrapEventTarget(ctx, self, magic == 0 ? prDomEventTarget(event) : prDomEventCurrentTarget(event));
+    return prJsDomWrapEventTarget(ctx, eventObject,
+        magic == 0 ? prDomEventTarget(event) : prDomEventCurrentTarget(event));
 }
 
-JSValue composedPath(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomEvent* event = jsThis<PrDomEvent>(ctx, self, prJsDomEventClass);
+JSValue composedPath(JSContext* ctx, JSValueConst eventObject, int, JSValueConst*) {
+    PrDomEvent* event = jsThis<PrDomEvent>(ctx, eventObject, prJsDomEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     Array<PrDomEventTarget*> items;
@@ -382,14 +383,14 @@ JSValue composedPath(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     items.count = prDomEventComposedPath(event, items.data, items.capacity);
     JSValue array = JS_NewArray(ctx);
     for (uint32_t i = 0; i < items.count; ++i)
-        JS_SetPropertyUint32(ctx, array, i, prJsDomWrapEventTarget(ctx, self, items.data[i]));
+        JS_SetPropertyUint32(ctx, array, i, prJsDomWrapEventTarget(ctx, eventObject, items.data[i]));
     items.reset();
     return array;
 }
 
 // Implements stopPropagation, stopImmediatePropagation and preventDefault, selected by the magic.
-JSValue eventControl(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrDomEvent* event = jsThis<PrDomEvent>(ctx, self, prJsDomEventClass);
+JSValue eventControl(JSContext* ctx, JSValueConst eventObject, int, JSValueConst*, int magic) {
+    PrDomEvent* event = jsThis<PrDomEvent>(ctx, eventObject, prJsDomEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     constexpr void (*kControls[])(PrDomEvent*) = {
@@ -401,23 +402,23 @@ JSValue eventControl(JSContext* ctx, JSValueConst self, int, JSValueConst*, int 
 
 // Implements the setter of a boolean attribute.
 template <void (*Set)(PrDomEvent*, bool)>
-JSValue setEventFlag(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrDomEvent* event = jsThis<PrDomEvent>(ctx, self, prJsDomEventClass);
+JSValue setEventFlag(JSContext* ctx, JSValueConst eventObject, JSValueConst input) {
+    PrDomEvent* event = jsThis<PrDomEvent>(ctx, eventObject, prJsDomEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     Set(event, JS_ToBool(ctx, input) != 0);
     return JS_UNDEFINED;
 }
 
-JSValue timeStamp(JSContext* ctx, JSValueConst self) {
-    PrDomEvent* event = jsThis<PrDomEvent>(ctx, self, prJsDomEventClass);
+JSValue timeStamp(JSContext* ctx, JSValueConst eventObject) {
+    PrDomEvent* event = jsThis<PrDomEvent>(ctx, eventObject, prJsDomEventClass);
     return event != nullptr ? JS_NewFloat64(ctx, prDomEventTimeStamp(event)) : JS_EXCEPTION;
 }
 
 // Implements initEvent and initCustomEvent, selected by the magic. Their flags default to false, and the detail
 // defaults to null.
-JSValue initEvent(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomEvent* event = jsThis<PrDomEvent>(ctx, self, magic == 0 ? prJsDomEventClass : prJsDomCustomEventClass);
+JSValue initEvent(JSContext* ctx, JSValueConst eventObject, int argc, JSValueConst* argv, int magic) {
+    PrDomEvent* event = jsThis<PrDomEvent>(ctx, eventObject, magic == 0 ? prJsDomEventClass : prJsDomCustomEventClass);
     StringArgument type = {ctx};
     if (event == nullptr || !jsArgCount(ctx, argc, 1) || !type.read(argv[0]))
         return JS_EXCEPTION;
@@ -427,15 +428,15 @@ JSValue initEvent(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
         prDomEventInitEvent(event, type.value(), bubbles, cancelable);
     } else if (prDomCustomEventInitCustomEvent(prDomCustomEventQuery(event), type.value(), bubbles, cancelable)) {
         JSValueConst detail = jsArgGiven(argc, argv, 3) ? argv[3] : JS_NULL;
-        jsSetReference(ctx, self, 0, detail);
+        jsSetReference(ctx, eventObject, 0, detail);
     }
     return JS_UNDEFINED;
 }
 
-JSValue customDetail(JSContext* ctx, JSValueConst self) {
-    if (jsThis<PrDomCustomEvent>(ctx, self, prJsDomCustomEventClass) == nullptr)
+JSValue customDetail(JSContext* ctx, JSValueConst detailObject) {
+    if (jsThis<PrDomCustomEvent>(ctx, detailObject, prJsDomCustomEventClass) == nullptr)
         return JS_EXCEPTION;
-    JSValue detail = jsReference(ctx, self, 0);
+    JSValue detail = jsReference(ctx, detailObject, 0);
     return JS_IsUndefined(detail) ? JS_NULL : detail;
 }
 
@@ -525,8 +526,8 @@ JSValue focusEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JS
 }
 
 // uievents/#dom-uievent-inituievent. The arguments after the type default to false, null or zero.
-JSValue uiInitUiEvent(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomUiEvent* event = jsThis<PrDomUiEvent>(ctx, self, prJsDomUiEventClass);
+JSValue uiInitUiEvent(JSContext* ctx, JSValueConst eventObject, int argc, JSValueConst* argv) {
+    PrDomUiEvent* event = jsThis<PrDomUiEvent>(ctx, eventObject, prJsDomUiEventClass);
     StringArgument type = {ctx};
     if (event == nullptr || !jsArgCount(ctx, argc, 1) || !type.read(argv[0]))
         return JS_EXCEPTION;
@@ -628,8 +629,8 @@ enum {
 };
 typedef uint8_t MouseMember;
 
-JSValue mouseMember(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomMouseEvent* event = jsThis<PrDomMouseEvent>(ctx, self, prJsDomMouseEventClass);
+JSValue mouseMember(JSContext* ctx, JSValueConst eventObject, int magic) {
+    PrDomMouseEvent* event = jsThis<PrDomMouseEvent>(ctx, eventObject, prJsDomMouseEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     PrDomMouseEventInit members = prDomMouseEventMembers(event);
@@ -647,16 +648,16 @@ JSValue mouseMember(JSContext* ctx, JSValueConst self, int magic) {
     }
 }
 
-JSValue mouseRelatedTarget(JSContext* ctx, JSValueConst self) {
-    PrDomMouseEvent* event = jsThis<PrDomMouseEvent>(ctx, self, prJsDomMouseEventClass);
+JSValue mouseRelatedTarget(JSContext* ctx, JSValueConst eventObject) {
+    PrDomMouseEvent* event = jsThis<PrDomMouseEvent>(ctx, eventObject, prJsDomMouseEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
-    return prJsDomWrapEventTarget(ctx, self, prDomMouseEventMembers(event).relatedTarget);
+    return prJsDomWrapEventTarget(ctx, eventObject, prDomMouseEventMembers(event).relatedTarget);
 }
 
 // pointerevents4/#dom-mouseevent-getmodifierstate
-JSValue mouseGetModifierState(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomMouseEvent* event = jsThis<PrDomMouseEvent>(ctx, self, prJsDomMouseEventClass);
+JSValue mouseGetModifierState(JSContext* ctx, JSValueConst eventObject, int argc, JSValueConst* argv) {
+    PrDomMouseEvent* event = jsThis<PrDomMouseEvent>(ctx, eventObject, prJsDomMouseEventClass);
     StringArgument key = {ctx};
     if (event == nullptr || !jsArgCount(ctx, argc, 1) || !key.read(argv[0]))
         return JS_EXCEPTION;
@@ -665,8 +666,8 @@ JSValue mouseGetModifierState(JSContext* ctx, JSValueConst self, int argc, JSVal
 }
 
 // pointerevents4/#dom-mouseevent-initmouseevent. The arguments after the type default to false, null or zero.
-JSValue mouseInitMouseEvent(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomMouseEvent* event = jsThis<PrDomMouseEvent>(ctx, self, prJsDomMouseEventClass);
+JSValue mouseInitMouseEvent(JSContext* ctx, JSValueConst eventObject, int argc, JSValueConst* argv) {
+    PrDomMouseEvent* event = jsThis<PrDomMouseEvent>(ctx, eventObject, prJsDomMouseEventClass);
     StringArgument type = {ctx};
     if (event == nullptr || !jsArgCount(ctx, argc, 1) || !type.read(argv[0]))
         return JS_EXCEPTION;
@@ -731,8 +732,8 @@ enum {
 };
 typedef uint8_t WheelMember;
 
-JSValue wheelMember(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomWheelEvent* event = jsThis<PrDomWheelEvent>(ctx, self, prJsDomWheelEventClass);
+JSValue wheelMember(JSContext* ctx, JSValueConst eventObject, int magic) {
+    PrDomWheelEvent* event = jsThis<PrDomWheelEvent>(ctx, eventObject, prJsDomWheelEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     PrDomWheelEventInit members = prDomWheelEventMembers(event);
@@ -794,8 +795,8 @@ enum {
 };
 typedef uint8_t KeyboardMember;
 
-JSValue keyboardMember(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomKeyboardEvent* event = jsThis<PrDomKeyboardEvent>(ctx, self, prJsDomKeyboardEventClass);
+JSValue keyboardMember(JSContext* ctx, JSValueConst eventObject, int magic) {
+    PrDomKeyboardEvent* event = jsThis<PrDomKeyboardEvent>(ctx, eventObject, prJsDomKeyboardEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     PrDomKeyboardEventInit members = prDomKeyboardEventMembers(event);
@@ -815,8 +816,8 @@ JSValue keyboardMember(JSContext* ctx, JSValueConst self, int magic) {
 }
 
 // uievents/#dom-keyboardevent-getmodifierstate
-JSValue keyboardGetModifierState(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomKeyboardEvent* event = jsThis<PrDomKeyboardEvent>(ctx, self, prJsDomKeyboardEventClass);
+JSValue keyboardGetModifierState(JSContext* ctx, JSValueConst eventObject, int argc, JSValueConst* argv) {
+    PrDomKeyboardEvent* event = jsThis<PrDomKeyboardEvent>(ctx, eventObject, prJsDomKeyboardEventClass);
     StringArgument key = {ctx};
     if (event == nullptr || !jsArgCount(ctx, argc, 1) || !key.read(argv[0]))
         return JS_EXCEPTION;
@@ -825,8 +826,8 @@ JSValue keyboardGetModifierState(JSContext* ctx, JSValueConst self, int argc, JS
 }
 
 // uievents/#dom-keyboardevent-initkeyboardevent. The arguments after the type default to false, null, empty or zero.
-JSValue keyboardInitKeyboardEvent(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomKeyboardEvent* event = jsThis<PrDomKeyboardEvent>(ctx, self, prJsDomKeyboardEventClass);
+JSValue keyboardInitKeyboardEvent(JSContext* ctx, JSValueConst eventObject, int argc, JSValueConst* argv) {
+    PrDomKeyboardEvent* event = jsThis<PrDomKeyboardEvent>(ctx, eventObject, prJsDomKeyboardEventClass);
     StringArgument type = {ctx};
     StringArgument key = {ctx};
     if (event == nullptr || !jsArgCount(ctx, argc, 1) || !type.read(argv[0]))
@@ -871,14 +872,14 @@ JSValue compositionEventConstruct(JSContext* ctx, JSValueConst newTarget, int ar
     return jsConstructed(ctx, newTarget, object);
 }
 
-JSValue compositionData(JSContext* ctx, JSValueConst self) {
-    PrDomCompositionEvent* event = jsThis<PrDomCompositionEvent>(ctx, self, prJsDomCompositionEventClass);
+JSValue compositionData(JSContext* ctx, JSValueConst eventObject) {
+    PrDomCompositionEvent* event = jsThis<PrDomCompositionEvent>(ctx, eventObject, prJsDomCompositionEventClass);
     return event != nullptr ? jsNewStringView(ctx, prDomCompositionEventData(event)) : JS_EXCEPTION;
 }
 
 // uievents/#dom-compositionevent-initcompositionevent. The arguments after the type default to false, null or empty.
-JSValue compositionInitCompositionEvent(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomCompositionEvent* event = jsThis<PrDomCompositionEvent>(ctx, self, prJsDomCompositionEventClass);
+JSValue compositionInitCompositionEvent(JSContext* ctx, JSValueConst eventObject, int argc, JSValueConst* argv) {
+    PrDomCompositionEvent* event = jsThis<PrDomCompositionEvent>(ctx, eventObject, prJsDomCompositionEventClass);
     StringArgument type = {ctx};
     StringArgument data = {ctx};
     if (event == nullptr || !jsArgCount(ctx, argc, 1) || !type.read(argv[0]))
@@ -893,14 +894,16 @@ JSValue compositionInitCompositionEvent(JSContext* ctx, JSValueConst self, int a
     return JS_UNDEFINED;
 }
 
-JSValue uiEventView(JSContext* ctx, JSValueConst self) {
-    PrDomUiEvent* event = jsThis<PrDomUiEvent>(ctx, self, prJsDomUiEventClass);
-    return event != nullptr ? prJsDomWrapEventTarget(ctx, self, prDomUiEventView(event)) : JS_EXCEPTION;
+JSValue uiEventView(JSContext* ctx, JSValueConst eventObject) {
+    PrDomUiEvent* event = jsThis<PrDomUiEvent>(ctx, eventObject, prJsDomUiEventClass);
+    return event != nullptr ? prJsDomWrapEventTarget(ctx, eventObject, prDomUiEventView(event)) : JS_EXCEPTION;
 }
 
-JSValue focusRelatedTarget(JSContext* ctx, JSValueConst self) {
-    PrDomFocusEvent* event = jsThis<PrDomFocusEvent>(ctx, self, prJsDomFocusEventClass);
-    return event != nullptr ? prJsDomWrapEventTarget(ctx, self, prDomFocusEventRelatedTarget(event)) : JS_EXCEPTION;
+JSValue focusRelatedTarget(JSContext* ctx, JSValueConst eventObject) {
+    PrDomFocusEvent* event = jsThis<PrDomFocusEvent>(ctx, eventObject, prJsDomFocusEventClass);
+    if (event == nullptr)
+        return JS_EXCEPTION;
+    return prJsDomWrapEventTarget(ctx, eventObject, prDomFocusEventRelatedTarget(event));
 }
 
 constexpr JsConstant kEventConstants[] = {
@@ -943,14 +946,14 @@ bool readListenerOptions(JSContext* ctx, JSValueConst value, bool add, PrDomAddE
 }
 
 // Implements addEventListener and removeEventListener, selected by the magic.
-JSValue listenerMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, self, prJsDomEventTargetClass);
+JSValue listenerMethod(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv, int magic) {
+    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, targetObject, prJsDomEventTargetClass);
     if (target == nullptr)
         return JS_EXCEPTION;
     if (!jsArgCount(ctx, argc, 2))
         return JS_EXCEPTION;
     StringArgument type = {ctx};
-    CallbackArgument<PrDomEventListener> callback = {ctx, self};
+    CallbackArgument<PrDomEventListener> callback = {ctx, targetObject};
     if (!type.read(argv[0]))
         return JS_EXCEPTION;
     PrDomAddEventListenerOptions options = prDomAddEventListenerOptionsDefault(target, type.value());
@@ -966,8 +969,8 @@ JSValue listenerMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst
     return JS_UNDEFINED;
 }
 
-JSValue dispatchEvent(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, self, prJsDomEventTargetClass);
+JSValue dispatchEvent(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv) {
+    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, targetObject, prJsDomEventTargetClass);
     if (target == nullptr)
         return JS_EXCEPTION;
     PrDomEvent* event = argc > 0 ? jsHandleAs<PrDomEvent>(ctx, argv[0], prJsDomEventClass) : nullptr;
@@ -1048,10 +1051,10 @@ void abortSignalWrapped(JSContext* ctx, JSValueConst, void* handle) {
 }
 
 // A signal's object stops taking its reasons when it is finalized, since the signal may outlive it.
-void abortSignalFinalize(JSRuntime* runtime, JSValue self) {
-    if (JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(self, prJsDomAbortSignalClass)))
+void abortSignalFinalize(JSRuntime* runtime, JSValue object) {
+    if (JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(object, prJsDomAbortSignalClass)))
         prDomAbortSignalSetReasonHandler(static_cast<PrDomAbortSignal*>(wrapper->handle), nullptr, nullptr);
-    jsFinalize<PrDomAbortSignal>(runtime, self, prJsDomAbortSignalClass,
+    jsFinalize<PrDomAbortSignal>(runtime, object, prJsDomAbortSignalClass,
         [](PrDomAbortSignal* signal) { prDomAbortSignalRelease(signal); });
 }
 
@@ -1068,18 +1071,18 @@ JSValue controllerConstruct(JSContext* ctx, JSValueConst newTarget, int, JSValue
 }
 
 // The controller's signal's object, which the controller's object keeps as its [SameObject] signal.
-JSValue controllerSignalObject(JSContext* ctx, JSValueConst self, PrDomAbortController* controller) {
-    return jsSameObject(ctx, self, "signal", [&] {
-        return jsWrapAs(ctx, prJsDomAbortSignalClass, self, prDomAbortControllerSignal(controller), false);
+JSValue controllerSignalObject(JSContext* ctx, JSValueConst object, PrDomAbortController* controller) {
+    return jsSameObject(ctx, object, "signal", [&] {
+        return jsWrapAs(ctx, prJsDomAbortSignalClass, object, prDomAbortControllerSignal(controller), false);
     });
 }
 
 // The signal's object is made before the abort, so that it is there to keep the reason.
-JSValue controllerAbort(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomAbortController* controller = jsThis<PrDomAbortController>(ctx, self, domAbortControllerClass);
+JSValue controllerAbort(JSContext* ctx, JSValueConst controllerObject, int argc, JSValueConst* argv) {
+    PrDomAbortController* controller = jsThis<PrDomAbortController>(ctx, controllerObject, domAbortControllerClass);
     if (controller == nullptr)
         return JS_EXCEPTION;
-    JSValue signal = controllerSignalObject(ctx, self, controller);
+    JSValue signal = controllerSignalObject(ctx, controllerObject, controller);
     if (JS_IsException(signal))
         return signal;
     JS_FreeValue(ctx, signal);
@@ -1091,9 +1094,9 @@ JSValue controllerAbort(JSContext* ctx, JSValueConst self, int argc, JSValueCons
     return JS_UNDEFINED;
 }
 
-JSValue controllerSignal(JSContext* ctx, JSValueConst self) {
-    PrDomAbortController* controller = jsThis<PrDomAbortController>(ctx, self, domAbortControllerClass);
-    return controller != nullptr ? controllerSignalObject(ctx, self, controller) : JS_EXCEPTION;
+JSValue controllerSignal(JSContext* ctx, JSValueConst controllerObject) {
+    PrDomAbortController* controller = jsThis<PrDomAbortController>(ctx, controllerObject, domAbortControllerClass);
+    return controller != nullptr ? controllerSignalObject(ctx, controllerObject, controller) : JS_EXCEPTION;
 }
 
 JSValue signalAbort(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
@@ -1154,24 +1157,26 @@ JSValue signalAny(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     return result;
 }
 
-JSValue signalReason(JSContext* ctx, JSValueConst self) {
-    if (jsThis<PrDomAbortSignal>(ctx, self, prJsDomAbortSignalClass) == nullptr)
+JSValue signalReason(JSContext* ctx, JSValueConst object) {
+    if (jsThis<PrDomAbortSignal>(ctx, object, prJsDomAbortSignalClass) == nullptr)
         return JS_EXCEPTION;
-    return prJsDomAbortSignalReason(ctx, self);
+    return prJsDomAbortSignalReason(ctx, object);
 }
 
-JSValue throwIfAborted(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomAbortSignal* signal = jsThis<PrDomAbortSignal>(ctx, self, prJsDomAbortSignalClass);
+JSValue throwIfAborted(JSContext* ctx, JSValueConst signalObject, int, JSValueConst*) {
+    PrDomAbortSignal* signal = jsThis<PrDomAbortSignal>(ctx, signalObject, prJsDomAbortSignalClass);
     if (signal == nullptr)
         return JS_EXCEPTION;
-    return prDomAbortSignalAborted(signal) ? JS_Throw(ctx, jsReference(ctx, self, kAbortReasonSlot)) : JS_UNDEFINED;
+    if (!prDomAbortSignalAborted(signal))
+        return JS_UNDEFINED;
+    return JS_Throw(ctx, jsReference(ctx, signalObject, kAbortReasonSlot));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Node (dom/#interface-node)
 
-JSValue hasChildNodes(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue hasChildNodes(JSContext* ctx, JSValueConst nodeObject, int, JSValueConst*) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     return node != nullptr ? JS_NewBool(ctx, prDomNodeHasChildNodes(node)) : JS_EXCEPTION;
 }
 
@@ -1186,8 +1191,8 @@ bool nullableNode(JSContext* ctx, int argc, JSValueConst* argv, int index, PrDom
 }
 
 // Implements contains, isEqualNode and isSameNode, selected by the magic.
-JSValue nodeRelation(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue nodeRelation(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv, int magic) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     PrDomNode* other = nullptr;
     if (node == nullptr || !jsArgCount(ctx, argc, 1) || !nullableNode(ctx, argc, argv, 0, &other))
         return JS_EXCEPTION;
@@ -1198,69 +1203,70 @@ JSValue nodeRelation(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     }
 }
 
-JSValue compareDocumentPosition(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue compareDocumentPosition(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomNode* other = nodeArgument(ctx, argv[0]);
     return other != nullptr ? JS_NewUint32(ctx, prDomNodeCompareDocumentPosition(node, other)) : JS_EXCEPTION;
 }
 
-JSValue normalize(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue normalize(JSContext* ctx, JSValueConst nodeObject, int, JSValueConst*) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr)
         return JS_EXCEPTION;
     prDomNodeNormalize(node);
     return JS_UNDEFINED;
 }
 
-JSValue cloneNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue cloneNode(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr)
         return JS_EXCEPTION;
     PrDomNode* clone = nullptr;
     PrStatus status = prDomNodeCloneNode(node, argc > 0 && JS_ToBool(ctx, argv[0]), &clone);
-    return status == PrStatus_Ok ? madeToJs(ctx, self, clone) : prJsDomThrow(ctx, status);
+    return status == PrStatus_Ok ? madeToJs(ctx, nodeObject, clone) : prJsDomThrow(ctx, status);
 }
 
-JSValue getRootNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue getRootNode(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     bool present = false;
     bool composed = false;
     JSValueConst options = argc > 0 ? argv[0] : JS_UNDEFINED;
     if (node == nullptr || !jsDictionary(ctx, options, &present) ||
             (present && !jsDictBool(ctx, options, "composed", &composed)))
         return JS_EXCEPTION;
-    return nodeToJs(ctx, self, prDomNodeGetRootNode(node, composed));
+    return nodeToJs(ctx, nodeObject, prDomNodeGetRootNode(node, composed));
 }
 
 // Implements the [SameObject] children, a live collection that the node keeps.
-JSValue children(JSContext* ctx, JSValueConst self) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue children(JSContext* ctx, JSValueConst nodeObject) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "children", [&] {
-        return ownedToJs(ctx, prJsDomHtmlCollectionClass, self, prDomHtmlCollectionCreateChildren(node),
+    return jsSameObject(ctx, nodeObject, "children", [&] {
+        return ownedToJs(ctx, prJsDomHtmlCollectionClass, nodeObject, prDomHtmlCollectionCreateChildren(node),
             prDomHtmlCollectionDestroy);
     });
 }
 
 // Implements getElementById (dom/#dom-nonelementparentnode-getelementbyid), for a document or a fragment.
-JSValue getElementById(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue getElementById(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     StringArgument id = {ctx};
     if (node == nullptr || !jsArgCount(ctx, argc, 1) || !id.read(argv[0]))
         return JS_EXCEPTION;
-    return jsWrapAs(ctx, prJsDomElementClass, self, prDomNodeGetElementById(node, id.value()), false);
+    return jsWrapAs(ctx, prJsDomElementClass, nodeObject, prDomNodeGetElementById(node, id.value()), false);
 }
 
 // Implements the [SameObject] childNodes, a live list that the node keeps.
-JSValue childNodes(JSContext* ctx, JSValueConst self) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue childNodes(JSContext* ctx, JSValueConst nodeObject) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "childNodes", [&] {
-        return ownedToJs(ctx, prJsDomNodeListClass, self, prDomNodeListCreateChildNodes(node), prDomNodeListDestroy);
+    return jsSameObject(ctx, nodeObject, "childNodes", [&] {
+        return ownedToJs(ctx, prJsDomNodeListClass, nodeObject, prDomNodeListCreateChildNodes(node),
+            prDomNodeListDestroy);
     });
 }
 
@@ -1274,8 +1280,8 @@ typedef uint8_t Insertion;
 
 // Implements the Node methods that insert and remove children (dom/#concept-node-pre-insert), selected by the magic.
 // Each returns the node it inserted or removed.
-JSValue insertion(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomNode* parent = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue insertion(JSContext* ctx, JSValueConst parentObject, int argc, JSValueConst* argv, int magic) {
+    PrDomNode* parent = jsThis<PrDomNode>(ctx, parentObject, prJsDomNodeClass);
     if (parent == nullptr)
         return JS_EXCEPTION;
     int required = magic == Insertion_InsertBefore || magic == Insertion_ReplaceChild ? 2 : 1;
@@ -1315,8 +1321,8 @@ enum {
 typedef uint8_t NodesMethod;
 
 // Implements the ParentNode and ChildNode methods that take nodes and strings, selected by the magic.
-JSValue nodesMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue nodesMethod(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv, int magic) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     NodesArgument nodes = {};
     if (node == nullptr || !nodes.read(ctx, argc, argv))
         return JS_EXCEPTION;
@@ -1328,8 +1334,8 @@ JSValue nodesMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
-JSValue removeMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue removeMethod(JSContext* ctx, JSValueConst nodeObject, int, JSValueConst*) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr)
         return JS_EXCEPTION;
     prDomNodeRemove(node);
@@ -1377,29 +1383,31 @@ enum {
 };
 typedef uint8_t DocumentMethod;
 
-JSValue documentMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentMethod(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv, int magic) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     StringArgument text = {ctx};
     if (document == nullptr || !jsArgCount(ctx, argc, 1) || !text.read(argv[0]))
         return JS_EXCEPTION;
     switch (DocumentMethod(magic)) {
         case DocumentMethod_GetElementsByTagName:
-            return ownedToJs(ctx, prJsDomHtmlCollectionClass, self,
+            return ownedToJs(ctx, prJsDomHtmlCollectionClass, documentObject,
                 prDomHtmlCollectionCreateByTagName(prDomDocumentAsNode(document), text.value()),
                 prDomHtmlCollectionDestroy);
         case DocumentMethod_GetElementsByClassName:
-            return ownedToJs(ctx, prJsDomHtmlCollectionClass, self,
+            return ownedToJs(ctx, prJsDomHtmlCollectionClass, documentObject,
                 prDomHtmlCollectionCreateByClassName(prDomDocumentAsNode(document), text.value()),
                 prDomHtmlCollectionDestroy);
         case DocumentMethod_CreateElement: {
             PrDomElement* element = nullptr;
             PrStatus status = prDomElementCreate(document, text.value(), nullptr, &element);
-            return status == PrStatus_Ok ? madeToJs(ctx, self, prDomElementAsNode(element)) : prJsDomThrow(ctx, status);
+            if (status != PrStatus_Ok)
+                return prJsDomThrow(ctx, status);
+            return madeToJs(ctx, documentObject, prDomElementAsNode(element));
         }
         case DocumentMethod_CreateTextNode:
-            return madeToJs(ctx, self, prDomTextAsNode(prDomTextCreate(document, text.value())));
+            return madeToJs(ctx, documentObject, prDomTextAsNode(prDomTextCreate(document, text.value())));
         case DocumentMethod_CreateComment:
-            return madeToJs(ctx, self, prDomCommentAsNode(prDomCommentCreate(document, text.value())));
+            return madeToJs(ctx, documentObject, prDomCommentAsNode(prDomCommentCreate(document, text.value())));
         case DocumentMethod_CreateEvent: {
             PrDomEvent* event = nullptr;
             PrDomEventKind kind = PrDomEventKind_Event;
@@ -1414,15 +1422,15 @@ JSValue documentMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst
     return JS_UNDEFINED;
 }
 
-JSValue createElementNs(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue createElementNs(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     StringArgument space = {ctx, PrStringView{}};
     StringArgument name = {ctx};
     if (document == nullptr || !jsArgCount(ctx, argc, 2) || !space.readNullable(argv[0]) || !name.read(argv[1]))
         return JS_EXCEPTION;
     PrDomElement* element = nullptr;
     switch (prDomElementCreateNs(document, space.value(), name.value(), nullptr, &element)) {
-        case PrStatus_Ok: return madeToJs(ctx, self, prDomElementAsNode(element));
+        case PrStatus_Ok: return madeToJs(ctx, documentObject, prDomElementAsNode(element));
         case PrStatus_InvalidData: return jsDomExceptionThrow(ctx, "InvalidCharacterError");
         case PrStatus_NotAllowed: return jsDomExceptionThrow(ctx, "NamespaceError");
         default: return jsDomExceptionThrow(ctx, "NotSupportedError");
@@ -1431,8 +1439,8 @@ JSValue createElementNs(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 
 // The options argument is a boolean that says whether the clone is deep, or an ImportNodeOptions whose selfOnly says
 // whether it is shallow (dom/#dom-document-importnode).
-JSValue importNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue importNode(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomNode* node = jsHandleAs<PrDomNode>(ctx, argv[0], prJsDomNodeClass);
@@ -1451,35 +1459,35 @@ JSValue importNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
     }
     PrDomNode* clone = nullptr;
     PrStatus status = prDomDocumentImportNode(document, node, deep, &clone);
-    return status == PrStatus_Ok ? madeToJs(ctx, self, clone) : prJsDomThrow(ctx, status);
+    return status == PrStatus_Ok ? madeToJs(ctx, documentObject, clone) : prJsDomThrow(ctx, status);
 }
 
-JSValue createDocumentFragment(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue createDocumentFragment(JSContext* ctx, JSValueConst documentObject, int, JSValueConst*) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
-    return madeToJs(ctx, self, prDomDocumentFragmentAsNode(prDomDocumentFragmentCreate(document)));
+    return madeToJs(ctx, documentObject, prDomDocumentFragmentAsNode(prDomDocumentFragmentCreate(document)));
 }
 
-JSValue createRange(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue createRange(JSContext* ctx, JSValueConst documentObject, int, JSValueConst*) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
-    return rangeToJs(ctx, self, prDomRangeCreate(document));
+    return rangeToJs(ctx, documentObject, prDomRangeCreate(document));
 }
 
-JSValue createCdataSection(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue createCdataSection(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     StringArgument data = {ctx};
     if (document == nullptr || !jsArgCount(ctx, argc, 1) || !data.read(argv[0]))
         return JS_EXCEPTION;
     PrDomText* section = nullptr;
     PrStatus status = prDomTextCreateCdataSection(document, data.value(), &section);
-    return status == PrStatus_Ok ? madeToJs(ctx, self, prDomTextAsNode(section)) : prJsDomThrow(ctx, status);
+    return status == PrStatus_Ok ? madeToJs(ctx, documentObject, prDomTextAsNode(section)) : prJsDomThrow(ctx, status);
 }
 
-JSValue createProcessingInstruction(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue createProcessingInstruction(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     StringArgument target = {ctx};
     StringArgument data = {ctx};
     if (document == nullptr || !jsArgCount(ctx, argc, 2) || !target.read(argv[0]) || !data.read(argv[1]))
@@ -1487,12 +1495,12 @@ JSValue createProcessingInstruction(JSContext* ctx, JSValueConst self, int argc,
     PrDomProcessingInstruction* instruction = nullptr;
     PrStatus status = prDomProcessingInstructionCreate(document, target.value(), data.value(), &instruction);
     if (status == PrStatus_Ok)
-        return madeToJs(ctx, self, prDomProcessingInstructionAsNode(instruction));
+        return madeToJs(ctx, documentObject, prDomProcessingInstructionAsNode(instruction));
     return prJsDomThrow(ctx, status);
 }
 
-JSValue setBody(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue setBody(JSContext* ctx, JSValueConst documentObject, JSValueConst input) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     PrDomElement* body = JS_IsNull(input) ? nullptr : jsHandleAs<PrDomElement>(ctx, input, prJsDomElementClass);
@@ -1502,8 +1510,8 @@ JSValue setBody(JSContext* ctx, JSValueConst self, JSValueConst input) {
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
-JSValue compatMode(JSContext* ctx, JSValueConst self) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue compatMode(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     return jsFixedString(ctx, prDomDocumentQuirks(document) ? "BackCompat" : "CSS1Compat");
@@ -1511,16 +1519,17 @@ JSValue compatMode(JSContext* ctx, JSValueConst self) {
 
 // Implements characterSet and its legacy aliases (dom/#dom-document-characterset). A charset's name is one of a fixed
 // set.
-JSValue characterSet(JSContext* ctx, JSValueConst self) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue characterSet(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     return document != nullptr ? jsFixedString(ctx, prDomDocumentCharacterSet(document)) : JS_EXCEPTION;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // DOMImplementation (dom/#interface-domimplementation)
 
-JSValue createDocumentType(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomImplementation* implementation = jsThis<PrDomImplementation>(ctx, self, domImplementationClass);
+JSValue createDocumentType(JSContext* ctx, JSValueConst implementationObject, int argc, JSValueConst* argv) {
+    PrDomImplementation* implementation =
+        jsThis<PrDomImplementation>(ctx, implementationObject, domImplementationClass);
     StringArgument name = {ctx};
     StringArgument publicId = {ctx};
     StringArgument systemId = {ctx};
@@ -1529,13 +1538,16 @@ JSValue createDocumentType(JSContext* ctx, JSValueConst self, int argc, JSValueC
         return JS_EXCEPTION;
     PrDomDocumentType* doctype = nullptr;
     PrStatus status = prDomDocumentTypeCreate(implementation, name.value(), publicId.value(), systemId.value(), &doctype);
-    return status == PrStatus_Ok ? madeToJs(ctx, self, prDomDocumentTypeAsNode(doctype)) : prJsDomThrow(ctx, status);
+    if (status != PrStatus_Ok)
+        return prJsDomThrow(ctx, status);
+    return madeToJs(ctx, implementationObject, prDomDocumentTypeAsNode(doctype));
 }
 
 // Implements createDocument(namespace, qualifiedName, doctype). Its namespace is nullable, and its qualifiedName takes
 // null as the empty string ([LegacyNullToEmptyString]).
-JSValue createDocument(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomImplementation* implementation = jsThis<PrDomImplementation>(ctx, self, domImplementationClass);
+JSValue createDocument(JSContext* ctx, JSValueConst implementationObject, int argc, JSValueConst* argv) {
+    PrDomImplementation* implementation =
+        jsThis<PrDomImplementation>(ctx, implementationObject, domImplementationClass);
     StringArgument space = {ctx, PrStringView{}};
     StringArgument name = {ctx, ""};
     if (implementation == nullptr || !jsArgCount(ctx, argc, 2) || !space.readNullable(argv[0]) ||
@@ -1555,8 +1567,9 @@ JSValue createDocument(JSContext* ctx, JSValueConst self, int argc, JSValueConst
     return ownedToJs(ctx, prJsDomDocumentClass, JS_UNDEFINED, document, prDomDocumentRelease);
 }
 
-JSValue createHtmlDocument(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomImplementation* implementation = jsThis<PrDomImplementation>(ctx, self, domImplementationClass);
+JSValue createHtmlDocument(JSContext* ctx, JSValueConst implementationObject, int argc, JSValueConst* argv) {
+    PrDomImplementation* implementation =
+        jsThis<PrDomImplementation>(ctx, implementationObject, domImplementationClass);
     StringArgument title = {ctx, PrStringView{}};
     if (implementation == nullptr || (jsArgGiven(argc, argv, 0) && !title.read(argv[0])))
         return JS_EXCEPTION;
@@ -1565,22 +1578,22 @@ JSValue createHtmlDocument(JSContext* ctx, JSValueConst self, int argc, JSValueC
 }
 
 // dom/#dom-domimplementation-hasfeature, which is useless and returns true.
-JSValue hasFeature(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    return jsThis<PrDomImplementation>(ctx, self, domImplementationClass) != nullptr ? JS_TRUE : JS_EXCEPTION;
+JSValue hasFeature(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    return jsThis<PrDomImplementation>(ctx, object, domImplementationClass) != nullptr ? JS_TRUE : JS_EXCEPTION;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // ShadowRoot (dom/#interface-shadowroot)
 
-JSValue shadowMode(JSContext* ctx, JSValueConst self) {
-    PrDomShadowRoot* shadow = jsThis<PrDomShadowRoot>(ctx, self, prJsDomShadowRootClass);
+JSValue shadowMode(JSContext* ctx, JSValueConst shadowObject) {
+    PrDomShadowRoot* shadow = jsThis<PrDomShadowRoot>(ctx, shadowObject, prJsDomShadowRootClass);
     if (shadow == nullptr)
         return JS_EXCEPTION;
     return jsFixedString(ctx, prDomShadowRootMode(shadow) == PrDomShadowRootMode_Open ? "open" : "closed");
 }
 
-JSValue slotAssignment(JSContext* ctx, JSValueConst self) {
-    PrDomShadowRoot* shadow = jsThis<PrDomShadowRoot>(ctx, self, prJsDomShadowRootClass);
+JSValue slotAssignment(JSContext* ctx, JSValueConst shadowObject) {
+    PrDomShadowRoot* shadow = jsThis<PrDomShadowRoot>(ctx, shadowObject, prJsDomShadowRootClass);
     if (shadow == nullptr)
         return JS_EXCEPTION;
     return jsFixedString(ctx, prDomShadowRootSlotAssignment(shadow) == PrDomSlotAssignmentMode_Named ? "named" : "manual");
@@ -1601,8 +1614,8 @@ bool readEnumeration(JSContext* ctx, JSValueConst value, const PrStringView* nam
     return false;
 }
 
-JSValue attachShadow(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue attachShadow(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     constexpr PrStringView kModes[] = {"open", "closed"};
@@ -1631,11 +1644,11 @@ JSValue attachShadow(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
         return JS_EXCEPTION;
     PrDomShadowRoot* shadow = nullptr;
     PrStatus status = prDomElementAttachShadow(element, &init, &shadow);
-    return status == PrStatus_Ok ? nodeToJs(ctx, self, prDomShadowRootAsNode(shadow)) : prJsDomThrow(ctx, status);
+    return status == PrStatus_Ok ? nodeToJs(ctx, elementObject, prDomShadowRootAsNode(shadow)) : prJsDomThrow(ctx, status);
 }
 
-JSValue insertAdjacentElement(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue insertAdjacentElement(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     PrDomInsertPosition where = PrDomInsertPosition_BeforeBegin;
     if (element == nullptr || !jsArgCount(ctx, argc, 2) || !prJsDomInsertPositionRead(ctx, argv[0], &where))
         return JS_EXCEPTION;
@@ -1644,11 +1657,11 @@ JSValue insertAdjacentElement(JSContext* ctx, JSValueConst self, int argc, JSVal
         return JS_ThrowTypeError(ctx, "Expected an Element");
     PrDomElement* result = nullptr;
     PrStatus status = prDomElementInsertAdjacentElement(element, where, inserted, &result);
-    return status == PrStatus_Ok ? jsWrapAs(ctx, prJsDomElementClass, self, result, false) : prJsDomThrow(ctx, status);
+    return status == PrStatus_Ok ? jsWrapAs(ctx, prJsDomElementClass, elementObject, result, false) : prJsDomThrow(ctx, status);
 }
 
-JSValue insertAdjacentText(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue insertAdjacentText(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     PrDomInsertPosition where = PrDomInsertPosition_BeforeBegin;
     StringArgument data = {ctx};
     if (element == nullptr || !jsArgCount(ctx, argc, 2) ||
@@ -1658,12 +1671,12 @@ JSValue insertAdjacentText(JSContext* ctx, JSValueConst self, int argc, JSValueC
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
-JSValue shadowRoot(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue shadowRoot(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomShadowRoot* shadow = prDomElementShadowRoot(element);
-    return nodeToJs(ctx, self, shadow != nullptr ? prDomShadowRootAsNode(shadow) : nullptr);
+    return nodeToJs(ctx, elementObject, shadow != nullptr ? prDomShadowRootAsNode(shadow) : nullptr);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1699,21 +1712,21 @@ JSValue commentConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
     return dataConstruct(ctx, newTarget, argc, argv, 1);
 }
 
-JSValue splitText(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomText* text = jsThis<PrDomText>(ctx, self, prJsDomTextClass);
+JSValue splitText(JSContext* ctx, JSValueConst textObject, int argc, JSValueConst* argv) {
+    PrDomText* text = jsThis<PrDomText>(ctx, textObject, prJsDomTextClass);
     uint32_t offset = 0;
     if (text == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &offset, argv[0]) < 0)
         return JS_EXCEPTION;
     PrDomText* split = nullptr;
     PrStatus status = prDomTextSplitText(text, offset, &split);
-    return status == PrStatus_Ok ? madeToJs(ctx, self, prDomTextAsNode(split)) : prJsDomThrow(ctx, status);
+    return status == PrStatus_Ok ? madeToJs(ctx, textObject, prDomTextAsNode(split)) : prJsDomThrow(ctx, status);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Element (dom/#interface-element)
 
-JSValue hasAttributes(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue hasAttributes(JSContext* ctx, JSValueConst elementObject, int, JSValueConst*) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     return element != nullptr ? JS_NewBool(ctx, prDomElementHasAttributes(element)) : JS_EXCEPTION;
 }
 
@@ -1727,8 +1740,8 @@ enum {
 };
 typedef uint8_t ElementMethod;
 
-JSValue elementMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue elementMethod(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv, int magic) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument text = {ctx};
     if (element == nullptr || !jsArgCount(ctx, argc, 1) || !text.read(argv[0]))
         return JS_EXCEPTION;
@@ -1741,19 +1754,19 @@ JSValue elementMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst*
         case ElementMethod_HasAttribute:
             return JS_NewBool(ctx, prDomElementHasAttribute(element, text.value()));
         case ElementMethod_GetElementsByTagName:
-            return ownedToJs(ctx, prJsDomHtmlCollectionClass, self,
+            return ownedToJs(ctx, prJsDomHtmlCollectionClass, elementObject,
                 prDomHtmlCollectionCreateByTagName(prDomElementAsNode(element), text.value()),
                 prDomHtmlCollectionDestroy);
         case ElementMethod_GetElementsByClassName:
-            return ownedToJs(ctx, prJsDomHtmlCollectionClass, self,
+            return ownedToJs(ctx, prJsDomHtmlCollectionClass, elementObject,
                 prDomHtmlCollectionCreateByClassName(prDomElementAsNode(element), text.value()),
                 prDomHtmlCollectionDestroy);
     }
     return JS_UNDEFINED;
 }
 
-JSValue setAttribute(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue setAttribute(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument name = {ctx};
     StringArgument value = {ctx};
     if (element == nullptr || !jsArgCount(ctx, argc, 2) || !name.read(argv[0]) || !value.read(argv[1]))
@@ -1771,8 +1784,8 @@ enum {
 };
 typedef uint8_t AttributeNs;
 
-JSValue attributeNs(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue attributeNs(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv, int magic) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument space = {ctx, ""};
     StringArgument name = {ctx};
     if (element == nullptr || !jsArgCount(ctx, argc, 2) || !space.readNullable(argv[0]) || !name.read(argv[1]))
@@ -1788,8 +1801,8 @@ JSValue attributeNs(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
     }
 }
 
-JSValue setAttributeNs(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue setAttributeNs(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument space = {ctx, ""};
     StringArgument name = {ctx};
     StringArgument value = {ctx};
@@ -1801,8 +1814,8 @@ JSValue setAttributeNs(JSContext* ctx, JSValueConst self, int argc, JSValueConst
 }
 
 // Implements assignedSlot, for an element or a text node (dom/#dom-slotable-assignedslot).
-JSValue assignedSlot(JSContext* ctx, JSValueConst self) {
-    PrDomNode* node = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue assignedSlot(JSContext* ctx, JSValueConst nodeObject) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr)
         return JS_EXCEPTION;
     return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prDomSlottableAssignedSlot(node), false);
@@ -1823,25 +1836,25 @@ PrDomAttr* PR_NULLABLE attrArgument(JSContext* ctx, int argc, JSValueConst* argv
     return attr;
 }
 
-JSValue attrSpecified(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrDomAttr>(ctx, self, domAttrClass) != nullptr ? JS_TRUE : JS_EXCEPTION;
+JSValue attrSpecified(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrDomAttr>(ctx, object, domAttrClass) != nullptr ? JS_TRUE : JS_EXCEPTION;
 }
 
 uint32_t attributeMapLength(void* handle) {
     return prDomElementAttributeCount(static_cast<PrDomElement*>(handle));
 }
 
-JSValue attributeMapItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index) {
-    return attrToJs(ctx, self, prDomElementAttributeAt(static_cast<PrDomElement*>(handle), index));
+JSValue attributeMapItem(JSContext* ctx, JSValueConst object, void* handle, uint32_t index) {
+    return attrToJs(ctx, object, prDomElementAttributeAt(static_cast<PrDomElement*>(handle), index));
 }
 
 bool attributeMapNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
     return jsNameAtoms(ctx, static_cast<const PrDomElement*>(handle), prDomElementNamedAttributeNames, out);
 }
 
-JSValue attributeMapNamed(JSContext* ctx, JSValueConst self, void* handle, PrStringView name) {
+JSValue attributeMapNamed(JSContext* ctx, JSValueConst object, void* handle, PrStringView name) {
     PrDomAttr* attr = prDomElementGetAttributeNode(static_cast<PrDomElement*>(handle), name);
-    return attr != nullptr ? attrToJs(ctx, self, attr) : JS_UNDEFINED;
+    return attr != nullptr ? attrToJs(ctx, object, attr) : JS_UNDEFINED;
 }
 
 constexpr JsIndexed kAttributeMapIndexed = {attributeMapLength, attributeMapItem, nullptr};
@@ -1853,11 +1866,12 @@ constexpr JsNamed kAttributeMapNamed = {
 };
 
 // Implements the [SameObject] attributes (dom/#dom-element-attributes).
-JSValue attributes(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue attributes(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "attributes", [&] { return jsWrap(ctx, domNamedNodeMapClass, self, element, false); });
+    return jsSameObject(ctx, elementObject, "attributes",
+        [&] { return jsWrap(ctx, domNamedNodeMapClass, elementObject, element, false); });
 }
 
 enum {
@@ -1868,9 +1882,9 @@ typedef uint8_t AttributeLookup;
 
 // Implements getNamedItem and getNamedItemNS of a NamedNodeMap, and getAttributeNode and getAttributeNodeNS of an
 // element. The magic's low bit selects the NS form, and its next bit selects the map.
-JSValue getAttributeNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
+JSValue getAttributeNode(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv, int magic) {
     bool map = (magic & 2) != 0;
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, map ? domNamedNodeMapClass : prJsDomElementClass);
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, map ? domNamedNodeMapClass : prJsDomElementClass);
     bool ns = (magic & 1) == AttributeLookup_ByNamespace;
     StringArgument space = {ctx, ""};
     StringArgument name = {ctx};
@@ -1882,25 +1896,26 @@ JSValue getAttributeNode(JSContext* ctx, JSValueConst self, int argc, JSValueCon
         attr = prDomElementGetAttributeNodeNs(element, space.value(), name.value());
     else
         attr = prDomElementGetAttributeNode(element, name.value());
-    return attrToJs(ctx, self, attr);
+    return attrToJs(ctx, elementObject, attr);
 }
 
 // Implements setNamedItem and setNamedItemNS of a NamedNodeMap, and setAttributeNode and setAttributeNodeNS of an
 // element. The magic selects the map.
-JSValue setAttributeNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, magic != 0 ? domNamedNodeMapClass : prJsDomElementClass);
+JSValue setAttributeNode(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv, int magic) {
+    PrDomElement* element =
+        jsThis<PrDomElement>(ctx, elementObject, magic != 0 ? domNamedNodeMapClass : prJsDomElementClass);
     PrDomAttr* attr = element != nullptr ? attrArgument(ctx, argc, argv, 0) : nullptr;
     if (attr == nullptr)
         return JS_EXCEPTION;
     PrDomAttr* old = nullptr;
     if (prDomElementSetAttributeNode(element, attr, &old) != PrStatus_Ok)
         return jsDomExceptionThrow(ctx, "InUseAttributeError");
-    return madeToJs(ctx, self, old != nullptr ? prDomAttrAsNode(old) : nullptr);
+    return madeToJs(ctx, elementObject, old != nullptr ? prDomAttrAsNode(old) : nullptr);
 }
 
 // Implements removeNamedItem and removeNamedItemNS of a NamedNodeMap, selected by the magic.
-JSValue removeNamedItem(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, domNamedNodeMapClass);
+JSValue removeNamedItem(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv, int magic) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, domNamedNodeMapClass);
     bool ns = magic == AttributeLookup_ByNamespace;
     StringArgument space = {ctx, ""};
     StringArgument name = {ctx};
@@ -1913,21 +1928,21 @@ JSValue removeNamedItem(JSContext* ctx, JSValueConst self, int argc, JSValueCons
         status = prDomElementRemoveNamedAttributeNs(element, space.value(), name.value(), &removed);
     else
         status = prDomElementRemoveNamedAttribute(element, name.value(), &removed);
-    return status == PrStatus_Ok ? madeToJs(ctx, self, prDomAttrAsNode(removed)) : prJsDomThrow(ctx, status);
+    return status == PrStatus_Ok ? madeToJs(ctx, elementObject, prDomAttrAsNode(removed)) : prJsDomThrow(ctx, status);
 }
 
-JSValue removeAttributeNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue removeAttributeNode(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     PrDomAttr* attr = element != nullptr ? attrArgument(ctx, argc, argv, 0) : nullptr;
     if (attr == nullptr)
         return JS_EXCEPTION;
     PrStatus status = prDomElementRemoveAttributeNode(element, attr);
-    return status == PrStatus_Ok ? attrToJs(ctx, self, attr) : prJsDomThrow(ctx, status);
+    return status == PrStatus_Ok ? attrToJs(ctx, elementObject, attr) : prJsDomThrow(ctx, status);
 }
 
 // dom/#dom-element-toggleattribute
-JSValue toggleAttribute(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue toggleAttribute(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument name = {ctx};
     if (element == nullptr || !jsArgCount(ctx, argc, 1) || !name.read(argv[0]))
         return JS_EXCEPTION;
@@ -1938,8 +1953,8 @@ JSValue toggleAttribute(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 }
 
 // Implements createAttribute and createAttributeNS, selected by the magic.
-JSValue createAttribute(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue createAttribute(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv, int magic) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     bool ns = magic != 0;
     StringArgument space = {ctx, PrStringView{}};
     StringArgument name = {ctx};
@@ -1953,7 +1968,7 @@ JSValue createAttribute(JSContext* ctx, JSValueConst self, int argc, JSValueCons
     else
         status = prDomAttrCreate(document, name.value(), &attr);
     switch (status) {
-        case PrStatus_Ok: return madeToJs(ctx, self, prDomAttrAsNode(attr));
+        case PrStatus_Ok: return madeToJs(ctx, documentObject, prDomAttrAsNode(attr));
         case PrStatus_InvalidData: return jsDomExceptionThrow(ctx, "InvalidCharacterError");
         case PrStatus_NotAllowed: return jsDomExceptionThrow(ctx, "NamespaceError");
         default: return jsDomExceptionThrow(ctx, "NotSupportedError");
@@ -1961,12 +1976,12 @@ JSValue createAttribute(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 }
 
 // Implements the [SameObject, PutForwards=value] classList (dom/#dom-element-classlist).
-JSValue classList(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue classList(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "classList", [&] {
-        return ownedToJs(ctx, prJsDomTokenListClass, self, prDomTokenListCreate(element, "class"),
+    return jsSameObject(ctx, elementObject, "classList", [&] {
+        return ownedToJs(ctx, prJsDomTokenListClass, elementObject, prDomTokenListCreate(element, "class"),
             prDomTokenListDestroy);
     });
 }
@@ -1984,8 +1999,8 @@ JSValue tokenListItem(JSContext* ctx, JSValueConst, void* handle, uint32_t index
 
 constexpr JsIndexed kTokenListIndexed = {tokenListLength, tokenListItem, nullptr};
 
-JSValue tokenContains(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, self, prJsDomTokenListClass);
+JSValue tokenContains(JSContext* ctx, JSValueConst listObject, int argc, JSValueConst* argv) {
+    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, listObject, prJsDomTokenListClass);
     StringArgument token = {ctx};
     if (list == nullptr || !jsArgCount(ctx, argc, 1) || !token.read(argv[0]))
         return JS_EXCEPTION;
@@ -1993,8 +2008,8 @@ JSValue tokenContains(JSContext* ctx, JSValueConst self, int argc, JSValueConst*
 }
 
 // Implements add and remove, selected by the magic.
-JSValue tokenChange(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, self, prJsDomTokenListClass);
+JSValue tokenChange(JSContext* ctx, JSValueConst listObject, int argc, JSValueConst* argv, int magic) {
+    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, listObject, prJsDomTokenListClass);
     if (list == nullptr)
         return JS_EXCEPTION;
     Array<PrStringView> tokens;
@@ -2015,8 +2030,8 @@ JSValue tokenChange(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
-JSValue tokenToggle(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, self, prJsDomTokenListClass);
+JSValue tokenToggle(JSContext* ctx, JSValueConst listObject, int argc, JSValueConst* argv) {
+    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, listObject, prJsDomTokenListClass);
     StringArgument token = {ctx};
     if (list == nullptr || !jsArgCount(ctx, argc, 1) || !token.read(argv[0]))
         return JS_EXCEPTION;
@@ -2026,8 +2041,8 @@ JSValue tokenToggle(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
     return status == PrStatus_Ok ? JS_NewBool(ctx, present) : prJsDomThrow(ctx, status);
 }
 
-JSValue tokenReplace(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, self, prJsDomTokenListClass);
+JSValue tokenReplace(JSContext* ctx, JSValueConst listObject, int argc, JSValueConst* argv) {
+    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, listObject, prJsDomTokenListClass);
     StringArgument token = {ctx};
     StringArgument newToken = {ctx};
     if (list == nullptr || !jsArgCount(ctx, argc, 2) || !token.read(argv[0]) || !newToken.read(argv[1]))
@@ -2038,14 +2053,14 @@ JSValue tokenReplace(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 }
 
 // The stringifier, which returns value.
-JSValue tokenToString(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    return jsStringGetter<&prJsDomTokenListClass, prDomTokenListValue>(ctx, self);
+JSValue tokenToString(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    return jsStringGetter<&prJsDomTokenListClass, prDomTokenListValue>(ctx, object);
 }
 
 // dom/#dom-domtokenlist-supports, for a list whose attribute defines no supported tokens, as class does.
-JSValue tokenSupports(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue tokenSupports(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
     StringArgument token = {ctx};
-    if (jsThis<PrDomTokenList>(ctx, self, prJsDomTokenListClass) == nullptr || !jsArgCount(ctx, argc, 1) ||
+    if (jsThis<PrDomTokenList>(ctx, object, prJsDomTokenListClass) == nullptr || !jsArgCount(ctx, argc, 1) ||
             !token.read(argv[0]))
         return JS_EXCEPTION;
     return JS_ThrowTypeError(ctx, "The attribute defines no supported tokens");
@@ -2088,14 +2103,14 @@ bool boundaryArgument(JSContext* ctx, JSValueConst* argv, PrDomNode** node, uint
 
 // Implements the container and offset attributes, selected by the magic: startContainer, startOffset, endContainer,
 // endOffset and collapsed.
-JSValue rangeBoundary(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomRange* range = jsThis<PrDomRange>(ctx, self, prJsDomAbstractRangeClass);
+JSValue rangeBoundary(JSContext* ctx, JSValueConst rangeObject, int magic) {
+    PrDomRange* range = jsThis<PrDomRange>(ctx, rangeObject, prJsDomAbstractRangeClass);
     if (range == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
-        case 0: return nodeToJs(ctx, self, prDomRangeStartContainer(range));
+        case 0: return nodeToJs(ctx, rangeObject, prDomRangeStartContainer(range));
         case 1: return JS_NewUint32(ctx, prDomRangeStartOffset(range));
-        case 2: return nodeToJs(ctx, self, prDomRangeEndContainer(range));
+        case 2: return nodeToJs(ctx, rangeObject, prDomRangeEndContainer(range));
         case 3: return JS_NewUint32(ctx, prDomRangeEndOffset(range));
         default: return JS_NewBool(ctx, prDomRangeCollapsed(range));
     }
@@ -2147,31 +2162,31 @@ JSValue rangeConstruct(JSContext* ctx, JSValueConst newTarget, int, JSValueConst
     return document != nullptr ? constructedRange(ctx, newTarget, prDomRangeCreate(document)) : JS_EXCEPTION;
 }
 
-PrDomRange* PR_NULLABLE liveRange(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrDomRange>(ctx, self, prJsDomRangeClass);
+PrDomRange* PR_NULLABLE liveRange(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrDomRange>(ctx, object, prJsDomRangeClass);
 }
 
-JSValue rangeCommonAncestor(JSContext* ctx, JSValueConst self) {
-    PrDomRange* range = liveRange(ctx, self);
-    return range != nullptr ? nodeToJs(ctx, self, prDomRangeCommonAncestorContainer(range)) : JS_EXCEPTION;
+JSValue rangeCommonAncestor(JSContext* ctx, JSValueConst rangeObject) {
+    PrDomRange* range = liveRange(ctx, rangeObject);
+    return range != nullptr ? nodeToJs(ctx, rangeObject, prDomRangeCommonAncestorContainer(range)) : JS_EXCEPTION;
 }
 
 // Implements setStart and setEnd, selected by the magic.
-JSValue rangeSet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomRange* range = liveRange(ctx, self);
+JSValue rangeSet(JSContext* ctx, JSValueConst rangeObject, int argc, JSValueConst* argv, int magic) {
+    PrDomRange* range = liveRange(ctx, rangeObject);
     PrDomNode* node = nullptr;
     uint32_t offset = 0;
     if (range == nullptr || !jsArgCount(ctx, argc, 2) || !boundaryArgument(ctx, argv, &node, &offset))
         return JS_EXCEPTION;
     PrStatus status = magic == 0 ? prDomRangeSetStart(range, node, offset) : prDomRangeSetEnd(range, node, offset);
-    holdRangeDocuments(ctx, self);
+    holdRangeDocuments(ctx, rangeObject);
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
 // Implements setStartBefore, setStartAfter, setEndBefore and setEndAfter, selected by the magic, which is the
 // PrDomRangeSide. The magic values after those select selectNode, selectNodeContents, insertNode and surroundContents.
-JSValue rangeNodeMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomRange* range = liveRange(ctx, self);
+JSValue rangeNodeMethod(JSContext* ctx, JSValueConst rangeObject, int argc, JSValueConst* argv, int magic) {
+    PrDomRange* range = liveRange(ctx, rangeObject);
     if (range == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomNode* node = nodeArgument(ctx, argv[0]);
@@ -2185,20 +2200,20 @@ JSValue rangeNodeMethod(JSContext* ctx, JSValueConst self, int argc, JSValueCons
         case 7: status = prDomRangeSurroundContents(range, node); break;
         default: status = prDomRangeSetBeside(range, PrDomRangeSide(magic), node); break;
     }
-    holdRangeDocuments(ctx, self);
+    holdRangeDocuments(ctx, rangeObject);
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
-JSValue rangeCollapse(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomRange* range = liveRange(ctx, self);
+JSValue rangeCollapse(JSContext* ctx, JSValueConst rangeObject, int argc, JSValueConst* argv) {
+    PrDomRange* range = liveRange(ctx, rangeObject);
     if (range == nullptr)
         return JS_EXCEPTION;
     prDomRangeCollapse(range, argc > 0 && JS_ToBool(ctx, argv[0]));
     return JS_UNDEFINED;
 }
 
-JSValue rangeCompareBoundaryPoints(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomRange* range = liveRange(ctx, self);
+JSValue rangeCompareBoundaryPoints(JSContext* ctx, JSValueConst rangeObject, int argc, JSValueConst* argv) {
+    PrDomRange* range = liveRange(ctx, rangeObject);
     uint32_t how = 0;
     if (range == nullptr || !jsArgCount(ctx, argc, 2) || JS_ToUint32(ctx, &how, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -2215,8 +2230,8 @@ JSValue rangeCompareBoundaryPoints(JSContext* ctx, JSValueConst self, int argc, 
 }
 
 // Implements deleteContents, extractContents, cloneContents, cloneRange, detach and toString, selected by the magic.
-JSValue rangeContents(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrDomRange* range = liveRange(ctx, self);
+JSValue rangeContents(JSContext* ctx, JSValueConst rangeObject, int, JSValueConst*, int magic) {
+    PrDomRange* range = liveRange(ctx, rangeObject);
     if (range == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
@@ -2230,10 +2245,10 @@ JSValue rangeContents(JSContext* ctx, JSValueConst self, int, JSValueConst*, int
                 magic == 1 ? prDomRangeExtractContents(range, &fragment) : prDomRangeCloneContents(range, &fragment);
             if (status != PrStatus_Ok)
                 return prJsDomThrow(ctx, status);
-            return madeToJs(ctx, self, prDomDocumentFragmentAsNode(fragment));
+            return madeToJs(ctx, rangeObject, prDomDocumentFragmentAsNode(fragment));
         }
         case 3:
-            return rangeToJs(ctx, self, prDomRangeCloneRange(range));
+            return rangeToJs(ctx, rangeObject, prDomRangeCloneRange(range));
         case 4:
             return JS_UNDEFINED;   // dom/#dom-range-detach does nothing
         default:
@@ -2242,8 +2257,8 @@ JSValue rangeContents(JSContext* ctx, JSValueConst self, int, JSValueConst*, int
 }
 
 // Implements isPointInRange and comparePoint, selected by the magic.
-JSValue rangePoint(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomRange* range = liveRange(ctx, self);
+JSValue rangePoint(JSContext* ctx, JSValueConst rangeObject, int argc, JSValueConst* argv, int magic) {
+    PrDomRange* range = liveRange(ctx, rangeObject);
     PrDomNode* node = nullptr;
     uint32_t offset = 0;
     if (range == nullptr || !jsArgCount(ctx, argc, 2) || !boundaryArgument(ctx, argv, &node, &offset))
@@ -2258,8 +2273,8 @@ JSValue rangePoint(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
     return status == PrStatus_Ok ? JS_NewInt32(ctx, order) : prJsDomThrow(ctx, status);
 }
 
-JSValue rangeIntersectsNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomRange* range = liveRange(ctx, self);
+JSValue rangeIntersectsNode(JSContext* ctx, JSValueConst rangeObject, int argc, JSValueConst* argv) {
+    PrDomRange* range = liveRange(ctx, rangeObject);
     if (range == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomNode* node = nodeArgument(ctx, argv[0]);
@@ -2273,20 +2288,20 @@ constexpr JsConstant kRangeConstants[] = {
     {"END_TO_START", PrDomRangeHow_EndToStart},
 };
 
-PrDomSelection* PR_NULLABLE selectionThis(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrDomSelection>(ctx, self, prJsDomSelectionClass);
+PrDomSelection* PR_NULLABLE selectionThis(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrDomSelection>(ctx, object, prJsDomSelectionClass);
 }
 
 // Implements anchorNode, anchorOffset, focusNode, focusOffset, isCollapsed, rangeCount, type and direction, selected by
 // the magic.
-JSValue selectionAttribute(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionAttribute(JSContext* ctx, JSValueConst selectionObject, int magic) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     if (selection == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
-        case 0: return nodeToJs(ctx, self, prDomSelectionAnchorNode(selection));
+        case 0: return nodeToJs(ctx, selectionObject, prDomSelectionAnchorNode(selection));
         case 1: return JS_NewUint32(ctx, prDomSelectionAnchorOffset(selection));
-        case 2: return nodeToJs(ctx, self, prDomSelectionFocusNode(selection));
+        case 2: return nodeToJs(ctx, selectionObject, prDomSelectionFocusNode(selection));
         case 3: return JS_NewUint32(ctx, prDomSelectionFocusOffset(selection));
         case 4: return JS_NewBool(ctx, prDomSelectionIsCollapsed(selection));
         case 5: return JS_NewUint32(ctx, prDomSelectionRangeCount(selection));
@@ -2306,29 +2321,29 @@ JSValue selectionAttribute(JSContext* ctx, JSValueConst self, int magic) {
 // created for a call that gives the selection a new range.
 constexpr uint32_t kSelectionRangeSlot = 0;
 
-void holdSelectionRange(JSContext* ctx, JSValueConst self, PrDomSelection* selection) {
+void holdSelectionRange(JSContext* ctx, JSValueConst jsObject, PrDomSelection* selection) {
     PrDomRange* range = prDomSelectionRange(selection);
-    JSValue object = range != nullptr ? jsWrap(ctx, prJsDomRangeClass, self, range, false) : JS_UNDEFINED;
-    jsSetReference(ctx, self, kSelectionRangeSlot, object);
+    JSValue object = range != nullptr ? jsWrap(ctx, prJsDomRangeClass, jsObject, range, false) : JS_UNDEFINED;
+    jsSetReference(ctx, jsObject, kSelectionRangeSlot, object);
     JS_FreeValue(ctx, object);
 }
 
 // Applies `change`, passing a new range that it may make the selection's range. Then holds the range that the selection
 // has afterward.
 template <typename Change>
-JSValue changeSelection(JSContext* ctx, JSValueConst self, PrDomSelection* selection, Change change) {
-    JSValue fresh = rangeToJs(ctx, self, prDomRangeCreate(prDomSelectionDocument(selection)));
+JSValue changeSelection(JSContext* ctx, JSValueConst freshObject, PrDomSelection* selection, Change change) {
+    JSValue fresh = rangeToJs(ctx, freshObject, prDomRangeCreate(prDomSelectionDocument(selection)));
     PrDomRange* range = jsHandleAs<PrDomRange>(ctx, fresh, prJsDomRangeClass);
     if (range == nullptr)
         return JS_EXCEPTION;
     PrStatus status = change(range);
-    holdSelectionRange(ctx, self, selection);
+    holdSelectionRange(ctx, freshObject, selection);
     JS_FreeValue(ctx, fresh);
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
-JSValue selectionGetRangeAt(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionGetRangeAt(JSContext* ctx, JSValueConst selectionObject, int argc, JSValueConst* argv) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     uint32_t index = 0;
     if (selection == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -2336,12 +2351,12 @@ JSValue selectionGetRangeAt(JSContext* ctx, JSValueConst self, int argc, JSValue
     PrStatus status = prDomSelectionGetRangeAt(selection, index, &range);
     if (status != PrStatus_Ok)
         return prJsDomThrow(ctx, status);
-    return jsWrap(ctx, prJsDomRangeClass, self, range, false);
+    return jsWrap(ctx, prJsDomRangeClass, selectionObject, range, false);
 }
 
 // Implements addRange and removeRange, selected by the magic.
-JSValue selectionRange(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionRange(JSContext* ctx, JSValueConst selectionObject, int argc, JSValueConst* argv, int magic) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     if (selection == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomRange* range = jsHandleAs<PrDomRange>(ctx, argv[0], prJsDomRangeClass);
@@ -2352,16 +2367,16 @@ JSValue selectionRange(JSContext* ctx, JSValueConst self, int argc, JSValueConst
         prDomSelectionAddRange(selection, range);
     else
         status = prDomSelectionRemoveRange(selection, range);
-    holdSelectionRange(ctx, self, selection);
+    holdSelectionRange(ctx, selectionObject, selection);
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
 // Implements removeAllRanges, empty, collapseToStart, collapseToEnd and deleteFromDocument, selected by the magic.
-JSValue selectionAction(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionAction(JSContext* ctx, JSValueConst selectionObject, int, JSValueConst*, int magic) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     if (selection == nullptr)
         return JS_EXCEPTION;
-    return changeSelection(ctx, self, selection, [&](PrDomRange* range) -> PrStatus {
+    return changeSelection(ctx, selectionObject, selection, [&](PrDomRange* range) -> PrStatus {
         switch (magic) {
             case 0: prDomSelectionRemoveAllRanges(selection); return PrStatus_Ok;
             case 1: return prDomSelectionCollapseToStart(selection, range);
@@ -2372,8 +2387,8 @@ JSValue selectionAction(JSContext* ctx, JSValueConst self, int, JSValueConst*, i
 }
 
 // Implements collapse and setPosition, whose node may be null, and extend, selected by the magic.
-JSValue selectionPoint(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionPoint(JSContext* ctx, JSValueConst selectionObject, int argc, JSValueConst* argv, int magic) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     uint32_t offset = 0;
     if (selection == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
@@ -2382,15 +2397,15 @@ JSValue selectionPoint(JSContext* ctx, JSValueConst self, int argc, JSValueConst
         return JS_EXCEPTION;
     if (argc > 1 && JS_ToUint32(ctx, &offset, argv[1]) < 0)
         return JS_EXCEPTION;
-    return changeSelection(ctx, self, selection, [&](PrDomRange* range) {
+    return changeSelection(ctx, selectionObject, selection, [&](PrDomRange* range) {
         if (magic == 0)
             return prDomSelectionCollapse(selection, node, offset, range);
         return prDomSelectionExtend(selection, node, offset, range);
     });
 }
 
-JSValue selectionSetBaseAndExtent(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionSetBaseAndExtent(JSContext* ctx, JSValueConst selectionObject, int argc, JSValueConst* argv) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     PrDomNode* anchor = nullptr;
     PrDomNode* focus = nullptr;
     uint32_t anchorOffset = 0;
@@ -2398,27 +2413,27 @@ JSValue selectionSetBaseAndExtent(JSContext* ctx, JSValueConst self, int argc, J
     if (selection == nullptr || !jsArgCount(ctx, argc, 4) || !boundaryArgument(ctx, argv, &anchor, &anchorOffset) ||
             !boundaryArgument(ctx, argv + 2, &focus, &focusOffset))
         return JS_EXCEPTION;
-    return changeSelection(ctx, self, selection, [&](PrDomRange* range) {
+    return changeSelection(ctx, selectionObject, selection, [&](PrDomRange* range) {
         return prDomSelectionSetBaseAndExtent(selection, anchor, anchorOffset, focus, focusOffset, range);
     });
 }
 
-JSValue selectionSelectAllChildren(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionSelectAllChildren(JSContext* ctx, JSValueConst selectionObject, int argc, JSValueConst* argv) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     if (selection == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomNode* node = nodeArgument(ctx, argv[0]);
     if (node == nullptr)
         return JS_EXCEPTION;
-    return changeSelection(ctx, self, selection, [&](PrDomRange* range) {
+    return changeSelection(ctx, selectionObject, selection, [&](PrDomRange* range) {
         return prDomSelectionSelectAllChildren(selection, node, range);
     });
 }
 
 // selection-api/#dom-selection-modify moves by the rendered layout, which the engine does not have. It returns the
 // result of the aborting steps.
-JSValue selectionModify(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    if (selectionThis(ctx, self) == nullptr)
+JSValue selectionModify(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    if (selectionThis(ctx, object) == nullptr)
         return JS_EXCEPTION;
     for (int i = 0; i < argc && i < 3; ++i) {
         StringArgument text = {ctx};
@@ -2428,8 +2443,8 @@ JSValue selectionModify(JSContext* ctx, JSValueConst self, int argc, JSValueCons
     return JS_UNDEFINED;
 }
 
-JSValue selectionContainsNode(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionContainsNode(JSContext* ctx, JSValueConst selectionObject, int argc, JSValueConst* argv) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     if (selection == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomNode* node = nodeArgument(ctx, argv[0]);
@@ -2438,8 +2453,8 @@ JSValue selectionContainsNode(JSContext* ctx, JSValueConst self, int argc, JSVal
     return JS_NewBool(ctx, prDomSelectionContainsNode(selection, node, argc > 1 && JS_ToBool(ctx, argv[1])));
 }
 
-JSValue selectionToString(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionToString(JSContext* ctx, JSValueConst selectionObject, int, JSValueConst*) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     if (selection == nullptr)
         return JS_EXCEPTION;
     return jsTakeString(ctx, prDomSelectionToString(selection));
@@ -2447,8 +2462,8 @@ JSValue selectionToString(JSContext* ctx, JSValueConst self, int, JSValueConst*)
 
 // selection-api/#dom-selection-getcomposedranges, taking a GetComposedRangesOptions dictionary, or shadow roots given
 // as separate arguments.
-JSValue selectionGetComposedRanges(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomSelection* selection = selectionThis(ctx, self);
+JSValue selectionGetComposedRanges(JSContext* ctx, JSValueConst selectionObject, int argc, JSValueConst* argv) {
+    PrDomSelection* selection = selectionThis(ctx, selectionObject);
     if (selection == nullptr)
         return JS_EXCEPTION;
     Array<PrDomShadowRoot*> roots;
@@ -2489,7 +2504,7 @@ JSValue selectionGetComposedRanges(JSContext* ctx, JSValueConst self, int argc, 
     roots.reset();
     JSValue array = JS_NewArray(ctx);
     if (count != 0)
-        JS_SetPropertyUint32(ctx, array, 0, rangeToJs(ctx, self, range));
+        JS_SetPropertyUint32(ctx, array, 0, rangeToJs(ctx, selectionObject, range));
     return array;
 }
 
@@ -2547,8 +2562,8 @@ JSValue observerConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
     return jsConstructed(ctx, newTarget, object);
 }
 
-JSValue observe(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomMutationObserver* observer = jsThis<PrDomMutationObserver>(ctx, self, domMutationObserverClass);
+JSValue observe(JSContext* ctx, JSValueConst observerObject, int argc, JSValueConst* argv) {
+    PrDomMutationObserver* observer = jsThis<PrDomMutationObserver>(ctx, observerObject, domMutationObserverClass);
     if (observer == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomNode* target = nodeArgument(ctx, argv[0]);
@@ -2591,40 +2606,40 @@ JSValue observe(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv)
         return JS_ThrowTypeError(ctx, "The options observe nothing, or ask for what they do not observe");
     // The node's object holds each observer registered on the node, because the registration in C does not hold it. An
     // observer lives while a script can reach a node that it observes (dom/#registered-observer-list).
-    return jsHold(ctx, argv[0], "[[Observers]]", self, true) ? JS_UNDEFINED : JS_EXCEPTION;
+    return jsHold(ctx, argv[0], "[[Observers]]", observerObject, true) ? JS_UNDEFINED : JS_EXCEPTION;
 }
 
-JSValue disconnect(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomMutationObserver* observer = jsThis<PrDomMutationObserver>(ctx, self, domMutationObserverClass);
+JSValue disconnect(JSContext* ctx, JSValueConst observerObject, int, JSValueConst*) {
+    PrDomMutationObserver* observer = jsThis<PrDomMutationObserver>(ctx, observerObject, domMutationObserverClass);
     if (observer == nullptr)
         return JS_EXCEPTION;
     prDomMutationObserverDisconnect(observer);
     return JS_UNDEFINED;
 }
 
-JSValue observerTakeRecords(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomMutationObserver* observer = jsThis<PrDomMutationObserver>(ctx, self, domMutationObserverClass);
+JSValue observerTakeRecords(JSContext* ctx, JSValueConst observerObject, int, JSValueConst*) {
+    PrDomMutationObserver* observer = jsThis<PrDomMutationObserver>(ctx, observerObject, domMutationObserverClass);
     return observer != nullptr ? takeRecords(ctx, observer) : JS_EXCEPTION;
 }
 
-JSValue recordType(JSContext* ctx, JSValueConst self) {
+JSValue recordType(JSContext* ctx, JSValueConst recordObject) {
     constexpr PrStringView kTypes[] = {"attributes", "characterData", "childList"};
-    PrDomMutationRecord* record = jsThis<PrDomMutationRecord>(ctx, self, domMutationRecordClass);
+    PrDomMutationRecord* record = jsThis<PrDomMutationRecord>(ctx, recordObject, domMutationRecordClass);
     return record != nullptr ? jsFixedString(ctx, kTypes[prDomMutationRecordType(record)]) : JS_EXCEPTION;
 }
 
 // Implements the [SameObject] addedNodes and removedNodes, selected by the magic.
-JSValue recordNodes(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomMutationRecord* record = jsThis<PrDomMutationRecord>(ctx, self, domMutationRecordClass);
+JSValue recordNodes(JSContext* ctx, JSValueConst recordObject, int magic) {
+    PrDomMutationRecord* record = jsThis<PrDomMutationRecord>(ctx, recordObject, domMutationRecordClass);
     if (record == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, magic == 0 ? "addedNodes" : "removedNodes", [&] {
+    return jsSameObject(ctx, recordObject, magic == 0 ? "addedNodes" : "removedNodes", [&] {
         PrDomNodeList* list = prDomNodeListCreate();
         if (magic == 0)
             prDomMutationRecordAddedNodes(record, list);
         else
             prDomMutationRecordRemovedNodes(record, list);
-        return ownedToJs(ctx, prJsDomNodeListClass, self, list, prDomNodeListDestroy);
+        return ownedToJs(ctx, prJsDomNodeListClass, recordObject, list, prDomNodeListDestroy);
     });
 }
 
@@ -2641,8 +2656,8 @@ enum {
 };
 typedef uint8_t DataMethod;
 
-JSValue dataMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomCharacterData* node = jsThis<PrDomCharacterData>(ctx, self, prJsDomCharacterDataClass);
+JSValue dataMethod(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv, int magic) {
+    PrDomCharacterData* node = jsThis<PrDomCharacterData>(ctx, nodeObject, prJsDomCharacterDataClass);
     if (node == nullptr)
         return JS_EXCEPTION;
     constexpr int kRequired[] = {2, 2, 2, 3};
@@ -2676,8 +2691,8 @@ JSValue dataMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
     return status == PrStatus_Ok ? JS_UNDEFINED : prJsDomThrow(ctx, status);
 }
 
-JSValue appendData(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomCharacterData* node = jsThis<PrDomCharacterData>(ctx, self, prJsDomCharacterDataClass);
+JSValue appendData(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv) {
+    PrDomCharacterData* node = jsThis<PrDomCharacterData>(ctx, nodeObject, prJsDomCharacterDataClass);
     StringArgument data = {ctx};
     if (node == nullptr || !jsArgCount(ctx, argc, 1) || !data.read(argv[0]))
         return JS_EXCEPTION;
@@ -2692,26 +2707,26 @@ uint32_t collectionLength(void* handle) {
     return prDomHtmlCollectionLength(static_cast<PrDomHtmlCollection*>(handle));
 }
 
-JSValue collectionItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index) {
+JSValue collectionItem(JSContext* ctx, JSValueConst object, void* handle, uint32_t index) {
     PrDomHtmlCollection* collection = static_cast<PrDomHtmlCollection*>(handle);
-    return jsWrapAs(ctx, prJsDomElementClass, self, prDomHtmlCollectionElementAt(collection, index), false);
+    return jsWrapAs(ctx, prJsDomElementClass, object, prDomHtmlCollectionElementAt(collection, index), false);
 }
 
 uint32_t listLength(void* handle) {
     return prDomNodeListLength(static_cast<PrDomNodeList*>(handle));
 }
 
-JSValue listItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index) {
-    return nodeToJs(ctx, self, prDomNodeListNodeAt(static_cast<PrDomNodeList*>(handle), index));
+JSValue listItem(JSContext* ctx, JSValueConst object, void* handle, uint32_t index) {
+    return nodeToJs(ctx, object, prDomNodeListNodeAt(static_cast<PrDomNodeList*>(handle), index));
 }
 
 bool collectionNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
     return jsNameAtoms(ctx, static_cast<const PrDomHtmlCollection*>(handle), prDomHtmlCollectionNames, out);
 }
 
-JSValue collectionNamed(JSContext* ctx, JSValueConst self, void* handle, PrStringView name) {
+JSValue collectionNamed(JSContext* ctx, JSValueConst object, void* handle, PrStringView name) {
     PrDomElement* element = prDomHtmlCollectionNamedItem(static_cast<PrDomHtmlCollection*>(handle), name);
-    return element != nullptr ? jsWrapAs(ctx, prJsDomElementClass, self, element, false) : JS_UNDEFINED;
+    return element != nullptr ? jsWrapAs(ctx, prJsDomElementClass, object, element, false) : JS_UNDEFINED;
 }
 
 constexpr JsIndexed kCollectionIndexed = {collectionLength, collectionItem, nullptr};
@@ -2720,12 +2735,12 @@ constexpr JsIndexed kCollectionIndexed = {collectionLength, collectionItem, null
 constexpr JsNamed kCollectionNamed = {collectionNames, collectionNamed, nullptr, nullptr, JsNamedFlag_Unenumerable};
 constexpr JsIndexed kListIndexed = {listLength, listItem, nullptr};
 
-JSValue namedItem(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomHtmlCollection* collection = jsThis<PrDomHtmlCollection>(ctx, self, prJsDomHtmlCollectionClass);
+JSValue namedItem(JSContext* ctx, JSValueConst collectionObject, int argc, JSValueConst* argv) {
+    PrDomHtmlCollection* collection = jsThis<PrDomHtmlCollection>(ctx, collectionObject, prJsDomHtmlCollectionClass);
     StringArgument name = {ctx};
     if (collection == nullptr || !jsArgCount(ctx, argc, 1) || !name.read(argv[0]))
         return JS_EXCEPTION;
-    return jsWrapAs(ctx, prJsDomElementClass, self, prDomHtmlCollectionNamedItem(collection, name.value()), false);
+    return jsWrapAs(ctx, prJsDomElementClass, collectionObject, prDomHtmlCollectionNamedItem(collection, name.value()), false);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -3499,8 +3514,8 @@ bool prJsDomEventHandlerCallback(JSContext* ctx, JSValueConst function, JSValueC
 }
 
 // The getter returns the callback that a script set, or null for any other value.
-JSValue prJsDomEventHandler(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, self, prJsDomEventTargetClass);
+JSValue prJsDomEventHandler(JSContext* ctx, JSValueConst targetObject, int magic) {
+    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, targetObject, prJsDomEventTargetClass);
     if (target == nullptr)
         return JS_EXCEPTION;
     PrDomEventHandlerCallback handler = prDomEventTargetEventHandler(target, PrDomEventHandler(magic));
@@ -3511,8 +3526,8 @@ JSValue prJsDomEventHandler(JSContext* ctx, JSValueConst self, int magic) {
 
 // An EventHandler is [LegacyTreatNonObjectAsNull] (webidl/#LegacyTreatNonObjectAsNull), so the setter treats any object
 // as a callback, and anything else as null.
-JSValue prJsDomSetEventHandler(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, self, prJsDomEventTargetClass);
+JSValue prJsDomSetEventHandler(JSContext* ctx, JSValueConst targetObject, JSValueConst input, int magic) {
+    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, targetObject, prJsDomEventTargetClass);
     if (target == nullptr)
         return JS_EXCEPTION;
     if (!JS_IsObject(input)) {
@@ -3520,7 +3535,7 @@ JSValue prJsDomSetEventHandler(JSContext* ctx, JSValueConst self, JSValueConst i
         return JS_UNDEFINED;
     }
     PrDomEventHandlerCallback handler;
-    if (!prJsDomEventHandlerCallback(ctx, input, self, &handler))
+    if (!prJsDomEventHandlerCallback(ctx, input, targetObject, &handler))
         return JS_EXCEPTION;
     prDomEventTargetSetEventHandler(target, PrDomEventHandler(magic), &handler);
     jsCallbackRelease(handler.context);

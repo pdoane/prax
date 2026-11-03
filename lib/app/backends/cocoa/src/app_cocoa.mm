@@ -860,8 +860,8 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;
     app->setClipboardText = setClipboardText;
-    app->browserCreate = [](PrApp* self, const PrAppBrowserDesc* desc, PrAppBrowser** out) {
-        return cocoaBrowserCreate(self, (__bridge void*)hostOf(self).view, desc, out);
+    app->browserCreate = [](PrApp* app, const PrAppBrowserDesc* desc, PrAppBrowser** out) {
+        return cocoaBrowserCreate(app, (__bridge void*)hostOf(app).view, desc, out);
     };
     app->browserDestroy = cocoaBrowserDestroy;
     app->browserResize = cocoaBrowserResize;

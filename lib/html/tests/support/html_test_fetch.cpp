@@ -9,17 +9,17 @@ namespace pr_impl {
 namespace {
 
 void receive(void* PR_NULLABLE context, PrFetchInterceptRequest* request) {
-    TestFetcher* self = static_cast<TestFetcher*>(context);
+    TestFetcher* fetcher = static_cast<TestFetcher*>(context);
     // The request waits until it is answered, which takes it out of `held`.
-    self->held.push_back(request);
-    if (self->answer)
-        self->answer(request);
+    fetcher->held.push_back(request);
+    if (fetcher->answer)
+        fetcher->answer(request);
 }
 
-void forget(TestFetcher* self, PrFetchInterceptRequest* request) {
-    for (size_t i = 0; i < self->held.size(); ++i) {
-        if (self->held[i] == request) {
-            self->held.erase(self->held.begin() + ptrdiff_t(i));
+void forget(TestFetcher* fetcher, PrFetchInterceptRequest* request) {
+    for (size_t i = 0; i < fetcher->held.size(); ++i) {
+        if (fetcher->held[i] == request) {
+            fetcher->held.erase(fetcher->held.begin() + ptrdiff_t(i));
             return;
         }
     }

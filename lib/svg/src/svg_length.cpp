@@ -265,101 +265,101 @@ void prSvgAnimatedLengthDestroy(PrSvgAnimatedLength* PR_NULLABLE length) {
     prMemoryFree(length);
 }
 
-PrSvgLength* prSvgAnimatedLengthBaseVal(const PrSvgAnimatedLength* self) {
+PrSvgLength* prSvgAnimatedLengthBaseVal(const PrSvgAnimatedLength* animated) {
     PrSvgLength* length = allocZeroed<PrSvgLength>();
-    prDomNodeRetain(prSvgElementAsNode(self->element));
-    length->element = self->element;
-    length->attribute = self->attribute;
+    prDomNodeRetain(prSvgElementAsNode(animated->element));
+    length->element = animated->element;
+    length->attribute = animated->attribute;
     return length;
 }
 
-PrSvgLength* prSvgAnimatedLengthAnimVal(const PrSvgAnimatedLength* self) {
-    PrSvgLength* length = prSvgAnimatedLengthBaseVal(self);
+PrSvgLength* prSvgAnimatedLengthAnimVal(const PrSvgAnimatedLength* animated) {
+    PrSvgLength* length = prSvgAnimatedLengthBaseVal(animated);
     length->readOnly = true;
     return length;
 }
 
-PrSvgLengthType prSvgLengthUnitType(const PrSvgLength* self) {
-    LengthValue value = valueOf(self);
+PrSvgLengthType prSvgLengthUnitType(const PrSvgLength* length) {
+    LengthValue value = valueOf(length);
     prStringReset(&value.text);
     return value.type;
 }
 
-float prSvgLengthValue(const PrSvgLength* self) {
-    LengthValue value = valueOf(self);
+float prSvgLengthValue(const PrSvgLength* svgLength) {
+    LengthValue value = valueOf(svgLength);
     float result = 0;
     if (value.type == PrSvgLengthType_Number) {
         result = value.factor;
     } else if (value.type == PrSvgLengthType_Unknown) {
         // Another unit of CSS resolves as SVG resolves the attribute.
         SvgLengthPercentage length{};
-        Basis basis = basisOf(self);
+        Basis basis = basisOf(svgLength);
         if (svgParseLength(prStringView(&value.text), nullptr, &length))
             result = svgLengthResolve(length, basis.percent);
     } else {
-        result = value.factor * unitLength(value.type, basisOf(self));
+        result = value.factor * unitLength(value.type, basisOf(svgLength));
     }
     prStringReset(&value.text);
     return result;
 }
 
-float prSvgLengthValueInSpecifiedUnits(const PrSvgLength* self) {
-    LengthValue value = valueOf(self);
+float prSvgLengthValueInSpecifiedUnits(const PrSvgLength* length) {
+    LengthValue value = valueOf(length);
     prStringReset(&value.text);
     return value.factor;
 }
 
-PrString prSvgLengthValueAsString(const PrSvgLength* self) {
-    LengthValue value = valueOf(self);
+PrString prSvgLengthValueAsString(const PrSvgLength* length) {
+    LengthValue value = valueOf(length);
     PrString text = serialize(value);
     prStringReset(&value.text);
     return text;
 }
 
-PrStatus prSvgLengthSetValue(PrSvgLength* self, float value) {
-    if (self->readOnly)
+PrStatus prSvgLengthSetValue(PrSvgLength* length, float value) {
+    if (length->readOnly)
         return PrStatus_ReadOnly;
-    setValue(self, LengthValue{.type = PrSvgLengthType_Number, .factor = value});
+    setValue(length, LengthValue{.type = PrSvgLengthType_Number, .factor = value});
     return PrStatus_Ok;
 }
 
-PrStatus prSvgLengthSetValueInSpecifiedUnits(PrSvgLength* self, float value) {
-    if (self->readOnly)
+PrStatus prSvgLengthSetValueInSpecifiedUnits(PrSvgLength* length, float value) {
+    if (length->readOnly)
         return PrStatus_ReadOnly;
-    LengthValue current = valueOf(self);
+    LengthValue current = valueOf(length);
     prStringReset(&current.text);
     // A value of another kind becomes a number.
     PrSvgLengthType type = current.type == PrSvgLengthType_Unknown ? PrSvgLengthType_Number : current.type;
-    setValue(self, LengthValue{.type = type, .factor = value});
+    setValue(length, LengthValue{.type = type, .factor = value});
     return PrStatus_Ok;
 }
 
-PrStatus prSvgLengthSetValueAsString(PrSvgLength* self, PrStringView text) {
-    if (self->readOnly)
+PrStatus prSvgLengthSetValueAsString(PrSvgLength* length, PrStringView text) {
+    if (length->readOnly)
         return PrStatus_ReadOnly;
     LengthValue value{};
     if (!parse(text, &value))
         return PrStatus_Syntax;
-    setValue(self, value);
+    setValue(length, value);
     return PrStatus_Ok;
 }
 
-PrStatus prSvgLengthNewValueSpecifiedUnits(PrSvgLength* self, PrSvgLengthType type, float value) {
-    if (self->readOnly)
+PrStatus prSvgLengthNewValueSpecifiedUnits(PrSvgLength* length, PrSvgLengthType type, float value) {
+    if (length->readOnly)
         return PrStatus_ReadOnly;
     if (type == PrSvgLengthType_Unknown || type >= countOf(kUnits))
         return PrStatus_NotSupported;
-    setValue(self, LengthValue{.type = type, .factor = value});
+    setValue(length, LengthValue{.type = type, .factor = value});
     return PrStatus_Ok;
 }
 
-PrStatus prSvgLengthConvertToSpecifiedUnits(PrSvgLength* self, PrSvgLengthType type) {
-    if (self->readOnly)
+PrStatus prSvgLengthConvertToSpecifiedUnits(PrSvgLength* length, PrSvgLengthType type) {
+    if (length->readOnly)
         return PrStatus_ReadOnly;
     if (type == PrSvgLengthType_Unknown || type >= countOf(kUnits))
         return PrStatus_NotSupported;
-    float user = prSvgLengthValue(self);
-    float unit = unitLength(type, basisOf(self));
-    setValue(self, LengthValue{.type = type, .factor = unit != 0 ? user / unit : 0});
+    float user = prSvgLengthValue(length);
+    float unit = unitLength(type, basisOf(length));
+    setValue(length, LengthValue{.type = type, .factor = unit != 0 ? user / unit : 0});
     return PrStatus_Ok;
 }

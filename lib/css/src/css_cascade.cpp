@@ -679,9 +679,9 @@ void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const Css
                 // The argument of ::slotted() reads the slotted element itself.
                 if (simple->pseudoElement == CssPseudoElement_SlottedFn && simple->argument != kCssSelectorNone) {
                     const CssSelectorList& slotted = selectors->arguments[simple->argument].selectors;
-                    Reach self{true, false, false, false, 0};
+                    Reach slottedReach{true, false, false, false, 0};
                     for (uint32_t i = 0; i < slotted.count; ++i)
-                        collectComplex(set, selectors, slotted.first + i, &self);
+                        collectComplex(set, selectors, slotted.first + i, &slottedReach);
                 }
                 continue;
             default:
@@ -2334,17 +2334,17 @@ CssAppearance usedAppearance(PrCssKeyword keyword, const PrDomElement* element, 
     return widget == DomWidget_Devolvable && devolved ? CssAppearance_Primitive : CssAppearance_Native;
 }
 
-// Returns the computed overflow of an axis whose cascaded value is `self`, given `other` in the other axis
+// Returns the computed overflow of an axis whose cascaded value is `keyword`, given `other` in the other axis
 // (css-overflow-3/#overflow-properties). visible computes to auto and clip to hidden if the other axis is neither
 // visible nor clip.
-PrCssKeyword computedOverflow(PrCssKeyword self, PrCssKeyword other) {
+PrCssKeyword computedOverflow(PrCssKeyword keyword, PrCssKeyword other) {
     if (other == PrCssKeyword_Visible || other == PrCssKeyword_Clip)
-        return self;
-    if (self == PrCssKeyword_Visible)
+        return keyword;
+    if (keyword == PrCssKeyword_Visible)
         return PrCssKeyword_Auto;
-    if (self == PrCssKeyword_Clip)
+    if (keyword == PrCssKeyword_Clip)
         return PrCssKeyword_Hidden;
-    return self;
+    return keyword;
 }
 
 // Returns the computed value of `match-parent` for `property`, which is text-align-all or text-align-last

@@ -59,13 +59,13 @@ constexpr JsReflectedKeywords kMethod = {kMethodKeywords, 3, "get", "get"};
 constexpr JsReflectedKeywords kFormMethod = {kMethodKeywords, 3, "", "get"};
 constexpr JsReflectedKeywords kColorSpace = {kColorSpaceKeywords, 2, "limited-srgb", "limited-srgb"};
 
-PrHtmlElement* PR_NULLABLE htmlThis(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+PrHtmlElement* PR_NULLABLE htmlThis(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlElement>(ctx, object, htmlElementClass);
 }
 
 // form, the element's form owner.
-JSValue elementForm(JSContext* ctx, JSValueConst self) {
-    PrHtmlElement* element = htmlThis(ctx, self);
+JSValue elementForm(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = htmlThis(ctx, elementObject);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrHtmlFormElement* form = prHtmlElementForm(element);
@@ -74,15 +74,15 @@ JSValue elementForm(JSContext* ctx, JSValueConst self) {
 }
 
 // labels, the same NodeList at each read, or null for an element that no label can label.
-JSValue elementLabels(JSContext* ctx, JSValueConst self) {
-    PrHtmlElement* element = htmlThis(ctx, self);
+JSValue elementLabels(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = htmlThis(ctx, elementObject);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomNodeList* list = prHtmlElementLabels(element);
     if (list == nullptr)
         return JS_NULL;
-    JSValue object = jsSameObject(ctx, self, "labels", [&] {
-        JSValue made = jsWrapAs(ctx, prJsDomNodeListClass, self, list, true);
+    JSValue object = jsSameObject(ctx, elementObject, "labels", [&] {
+        JSValue made = jsWrapAs(ctx, prJsDomNodeListClass, elementObject, list, true);
         if (JS_IsException(made))
             prDomNodeListDestroy(list);
         list = nullptr;
@@ -95,15 +95,15 @@ JSValue elementLabels(JSContext* ctx, JSValueConst self) {
 // action and formAction, which name the document's URL while the attribute is missing or empty. The setter is a
 // DOMString attribute's setter.
 template <JsLiteral Name>
-JSValue formActionUrl(JSContext* ctx, JSValueConst self) {
-    PrHtmlElement* element = htmlThis(ctx, self);
+JSValue formActionUrl(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = htmlThis(ctx, elementObject);
     return element != nullptr ? jsTakeString(ctx, prHtmlElementFormActionUrl(element, Name.text)) : JS_EXCEPTION;
 }
 
 // The type of an element whose type is its local name, such as a fieldset's.
 template <JsLiteral Type>
-JSValue fixedType(JSContext* ctx, JSValueConst self) {
-    return htmlThis(ctx, self) != nullptr ? jsFixedString(ctx, Type.text) : JS_EXCEPTION;
+JSValue fixedType(JSContext* ctx, JSValueConst object) {
+    return htmlThis(ctx, object) != nullptr ? jsFixedString(ctx, Type.text) : JS_EXCEPTION;
 }
 
 // The members of a submit button that override its form's (html/#form-submission-attributes).
@@ -116,17 +116,17 @@ JSValue fixedType(JSContext* ctx, JSValueConst self) {
 // ---------------------------------------------------------------------------------------------------------------------
 // RadioNodeList (html/#radionodelist) and HTMLFormControlsCollection (html/#htmlformcontrolscollection)
 
-PrDomNodeList* PR_NULLABLE nodeListThis(JSContext* ctx, JSValueConst self, JSClassID id) {
-    return jsThis<PrDomNodeList>(ctx, self, id);
+PrDomNodeList* PR_NULLABLE nodeListThis(JSContext* ctx, JSValueConst object, JSClassID id) {
+    return jsThis<PrDomNodeList>(ctx, object, id);
 }
 
 uint32_t radioLength(void* handle) {
     return prDomNodeListLength(static_cast<PrDomNodeList*>(handle));
 }
 
-JSValue radioItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index) {
+JSValue radioItem(JSContext* ctx, JSValueConst object, void* handle, uint32_t index) {
     PrDomNode* node = prDomNodeListNodeAt(static_cast<PrDomNodeList*>(handle), index);
-    return jsWrapAs(ctx, prJsDomNodeClass, self, node, false);
+    return jsWrapAs(ctx, prJsDomNodeClass, object, node, false);
 }
 
 constexpr JsIndexed kRadioIndexed = {radioLength, radioItem, nullptr};
@@ -150,8 +150,8 @@ PrHtmlInputElement* PR_NULLABLE findRadio(PrDomNodeList* list, PrStringView valu
 }
 
 // html/#dom-radionodelist-value: the value of the checked radio, or the empty string if none is checked.
-JSValue radioValue(JSContext* ctx, JSValueConst self) {
-    PrDomNodeList* list = nodeListThis(ctx, self, htmlRadioNodeListClass);
+JSValue radioValue(JSContext* ctx, JSValueConst listObject) {
+    PrDomNodeList* list = nodeListThis(ctx, listObject, htmlRadioNodeListClass);
     if (list == nullptr)
         return JS_EXCEPTION;
     PrHtmlInputElement* checked = findRadio(list, PrStringView{});
@@ -159,8 +159,8 @@ JSValue radioValue(JSContext* ctx, JSValueConst self) {
 }
 
 // Checks the first radio whose value is the given value.
-JSValue setRadioValue(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrDomNodeList* list = nodeListThis(ctx, self, htmlRadioNodeListClass);
+JSValue setRadioValue(JSContext* ctx, JSValueConst listObject, JSValueConst input) {
+    PrDomNodeList* list = nodeListThis(ctx, listObject, htmlRadioNodeListClass);
     StringArgument value = {ctx};
     if (list == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -173,14 +173,14 @@ uint32_t controlsLength(void* handle) {
     return prDomHtmlCollectionLength(static_cast<PrDomHtmlCollection*>(handle));
 }
 
-JSValue controlsItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index) {
+JSValue controlsItem(JSContext* ctx, JSValueConst object, void* handle, uint32_t index) {
     PrDomElement* element = prDomHtmlCollectionElementAt(static_cast<PrDomHtmlCollection*>(handle), index);
-    return jsWrapAs(ctx, prJsDomElementClass, self, element, false);
+    return jsWrapAs(ctx, prJsDomElementClass, object, element, false);
 }
 
 // html/#dom-htmlformcontrolscollection-nameditem: the one control of the name, or a RadioNodeList of several, or
 // undefined. A collection's controls are those of one form, which the first of them names.
-JSValue controlsNamed(JSContext* ctx, JSValueConst self, void* handle, PrStringView name) {
+JSValue controlsNamed(JSContext* ctx, JSValueConst jsObject, void* handle, PrStringView name) {
     PrDomHtmlCollection* collection = static_cast<PrDomHtmlCollection*>(handle);
     if (name.size == 0)
         return JS_UNDEFINED;
@@ -196,10 +196,10 @@ JSValue controlsNamed(JSContext* ctx, JSValueConst self, void* handle, PrStringV
     if (count == 0)
         return JS_UNDEFINED;
     if (count == 1)
-        return jsWrapAs(ctx, prJsDomElementClass, self, found, false);
+        return jsWrapAs(ctx, prJsDomElementClass, jsObject, found, false);
     PrHtmlFormElement* form = prHtmlElementForm(prHtmlElementQuery(prDomElementAsEventTarget(found)));
     PrDomNodeList* list = prHtmlFormElementRadioNodeList(form, name, false);
-    JSValue object = jsWrapAs(ctx, htmlRadioNodeListClass, self, list, true);
+    JSValue object = jsWrapAs(ctx, htmlRadioNodeListClass, jsObject, list, true);
     if (JS_IsException(object))
         prDomNodeListDestroy(list);
     return object;
@@ -215,30 +215,31 @@ constexpr JsIndexed kControlsIndexed = {controlsLength, controlsItem, nullptr};
 constexpr JsNamed kControlsNamed = {controlsNames, controlsNamed, nullptr, nullptr, JsNamedFlag_Unenumerable};
 
 // namedItem, which returns null where the named getter returns undefined.
-JSValue controlsNamedItem(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomHtmlCollection* collection = jsThis<PrDomHtmlCollection>(ctx, self, htmlFormControlsCollectionClass);
+JSValue controlsNamedItem(JSContext* ctx, JSValueConst collectionObject, int argc, JSValueConst* argv) {
+    PrDomHtmlCollection* collection =
+        jsThis<PrDomHtmlCollection>(ctx, collectionObject, htmlFormControlsCollectionClass);
     StringArgument name = {ctx};
     if (collection == nullptr || !jsArgCount(ctx, argc, 1) || !name.read(argv[0]))
         return JS_EXCEPTION;
-    JSValue value = controlsNamed(ctx, self, collection, name.value());
+    JSValue value = controlsNamed(ctx, collectionObject, collection, name.value());
     return JS_IsUndefined(value) ? JS_NULL : value;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLFormElement (html/#htmlformelement)
 
-PrHtmlFormElement* PR_NULLABLE formThis(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlFormElement>(ctx, self, htmlFormElementClass);
+PrHtmlFormElement* PR_NULLABLE formThis(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlFormElement>(ctx, object, htmlFormElementClass);
 }
 
 // elements, the same collection at each read.
-JSValue formElements(JSContext* ctx, JSValueConst self) {
-    PrHtmlFormElement* form = formThis(ctx, self);
+JSValue formElements(JSContext* ctx, JSValueConst formObject) {
+    PrHtmlFormElement* form = formThis(ctx, formObject);
     if (form == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "elements", [&] {
+    return jsSameObject(ctx, formObject, "elements", [&] {
         PrDomHtmlCollection* collection = prHtmlFormElementElements(form);
-        JSValue object = jsWrapAs(ctx, htmlFormControlsCollectionClass, self, collection, true);
+        JSValue object = jsWrapAs(ctx, htmlFormControlsCollectionClass, formObject, collection, true);
         if (JS_IsException(object))
             prDomHtmlCollectionDestroy(collection);
         return object;
@@ -252,15 +253,15 @@ uint32_t formLength(void* handle) {
     return length;
 }
 
-JSValue formItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index) {
+JSValue formItem(JSContext* ctx, JSValueConst object, void* handle, uint32_t index) {
     PrDomHtmlCollection* collection = prHtmlFormElementElements(static_cast<PrHtmlFormElement*>(handle));
     PrDomElement* element = prDomHtmlCollectionElementAt(collection, index);
     prDomHtmlCollectionDestroy(collection);
-    return jsWrapAs(ctx, prJsDomElementClass, self, element, false);
+    return jsWrapAs(ctx, prJsDomElementClass, object, element, false);
 }
 
-JSValue formLengthGetter(JSContext* ctx, JSValueConst self) {
-    PrHtmlFormElement* form = formThis(ctx, self);
+JSValue formLengthGetter(JSContext* ctx, JSValueConst formObject) {
+    PrHtmlFormElement* form = formThis(ctx, formObject);
     return form != nullptr ? JS_NewUint32(ctx, formLength(form)) : JS_EXCEPTION;
 }
 
@@ -283,20 +284,20 @@ bool formNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
 }
 
 // html/#dom-form-nameditem: the one element of the name, or a RadioNodeList of several, or undefined.
-JSValue formNamed(JSContext* ctx, JSValueConst self, void* handle, PrStringView name) {
+JSValue formNamed(JSContext* ctx, JSValueConst jsObject, void* handle, PrStringView name) {
     PrHtmlFormElement* form = static_cast<PrHtmlFormElement*>(handle);
     PrDomElement* element = nullptr;
     uint32_t count = prHtmlFormElementNamedItem(form, name, &element);
     if (count == 0)
         return JS_UNDEFINED;
     if (count == 1)
-        return jsWrapAs(ctx, prJsDomElementClass, self, element, false);
+        return jsWrapAs(ctx, prJsDomElementClass, jsObject, element, false);
     PrDomNodeList* list = prHtmlFormElementRadioNodeList(form, name, false);
     if (prDomNodeListLength(list) == 0) {
         prDomNodeListDestroy(list);
         list = prHtmlFormElementRadioNodeList(form, name, true);
     }
-    JSValue object = jsWrapAs(ctx, htmlRadioNodeListClass, self, list, true);
+    JSValue object = jsWrapAs(ctx, htmlRadioNodeListClass, jsObject, list, true);
     if (JS_IsException(object))
         prDomNodeListDestroy(list);
     return object;
@@ -311,13 +312,13 @@ constexpr JsNamed kFormNamed = {
 };
 
 // relList, the same DOMTokenList of the rel attribute at each read.
-JSValue formRelList(JSContext* ctx, JSValueConst self) {
-    PrHtmlFormElement* form = formThis(ctx, self);
+JSValue formRelList(JSContext* ctx, JSValueConst formObject) {
+    PrHtmlFormElement* form = formThis(ctx, formObject);
     if (form == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "relList", [&] {
+    return jsSameObject(ctx, formObject, "relList", [&] {
         PrDomTokenList* list = prDomTokenListCreate(prHtmlFormElementAsElement(form), "rel");
-        JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, self, list, true);
+        JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, formObject, list, true);
         if (JS_IsException(object))
             prDomTokenListDestroy(list);
         return object;
@@ -327,21 +328,21 @@ JSValue formRelList(JSContext* ctx, JSValueConst self) {
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLInputElement (html/#htmlinputelement)
 
-PrHtmlInputElement* PR_NULLABLE inputThis(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlInputElement>(ctx, self, htmlInputElementClass);
+PrHtmlInputElement* PR_NULLABLE inputThis(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlInputElement>(ctx, object, htmlInputElementClass);
 }
 
 // type, which reflects its attribute limited to the known values. Its setter is a DOMString attribute's setter.
-JSValue inputType(JSContext* ctx, JSValueConst self) {
-    PrHtmlInputElement* input = inputThis(ctx, self);
+JSValue inputType(JSContext* ctx, JSValueConst inputObject) {
+    PrHtmlInputElement* input = inputThis(ctx, inputObject);
     if (input == nullptr)
         return JS_EXCEPTION;
     return jsFixedString(ctx, prDomInputTypeKeyword(prHtmlInputElementType(input)));
 }
 
 // value, whose setter treats null as the empty string ([LegacyNullToEmptyString]).
-JSValue setInputValue(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue setInputValue(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     StringArgument value = {ctx};
     if (element == nullptr || !value.readNullable(input))
         return JS_EXCEPTION;
@@ -350,29 +351,29 @@ JSValue setInputValue(JSContext* ctx, JSValueConst self, JSValueConst input) {
     return jsDomExceptionThrow(ctx, "InvalidStateError");
 }
 
-JSValue setInputChecked(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue setInputChecked(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     if (element == nullptr)
         return JS_EXCEPTION;
     prHtmlInputElementSetChecked(element, JS_ToBool(ctx, input));
     return JS_UNDEFINED;
 }
 
-JSValue setInputIndeterminate(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue setInputIndeterminate(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     if (element == nullptr)
         return JS_EXCEPTION;
     prHtmlInputElementSetIndeterminate(element, JS_ToBool(ctx, input));
     return JS_UNDEFINED;
 }
 
-JSValue inputValueAsNumber(JSContext* ctx, JSValueConst self) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue inputValueAsNumber(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     return element != nullptr ? JS_NewFloat64(ctx, prHtmlInputElementValueAsNumber(element)) : JS_EXCEPTION;
 }
 
-JSValue setInputValueAsNumber(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue setInputValueAsNumber(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     double value = 0;
     if (element == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -384,8 +385,8 @@ JSValue setInputValueAsNumber(JSContext* ctx, JSValueConst self, JSValueConst in
 }
 
 // valueAsDate, a Date or null.
-JSValue inputValueAsDate(JSContext* ctx, JSValueConst self) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue inputValueAsDate(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     if (element == nullptr)
         return JS_EXCEPTION;
     double time = 0;
@@ -393,8 +394,8 @@ JSValue inputValueAsDate(JSContext* ctx, JSValueConst self) {
 }
 
 // The setter takes null or a Date, and an invalid Date or null empties the value.
-JSValue setInputValueAsDate(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue setInputValueAsDate(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     if (element == nullptr)
         return JS_EXCEPTION;
     double time = kNanF64;
@@ -410,8 +411,8 @@ JSValue setInputValueAsDate(JSContext* ctx, JSValueConst self, JSValueConst inpu
 }
 
 // stepUp and stepDown, selected by the magic, which take an optional long that defaults to 1.
-JSValue inputStep(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue inputStep(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv, int magic) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     int32_t n = 1;
     if (element == nullptr || (jsArgGiven(argc, argv, 0) && JS_ToInt32(ctx, &n, argv[0]) < 0))
         return JS_EXCEPTION;
@@ -419,56 +420,56 @@ JSValue inputStep(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "InvalidStateError");
 }
 
-JSValue inputList(JSContext* ctx, JSValueConst self) {
-    PrHtmlInputElement* element = inputThis(ctx, self);
+JSValue inputList(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlInputElement* element = inputThis(ctx, elementObject);
     if (element == nullptr)
         return JS_EXCEPTION;
     return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlInputElementList(element), false);
 }
 
 // files, which is null until the File API comes, and whose setter ignores null.
-JSValue inputFiles(JSContext* ctx, JSValueConst self) {
-    return inputThis(ctx, self) != nullptr ? JS_NULL : JS_EXCEPTION;
+JSValue inputFiles(JSContext* ctx, JSValueConst object) {
+    return inputThis(ctx, object) != nullptr ? JS_NULL : JS_EXCEPTION;
 }
 
-JSValue setInputFiles(JSContext* ctx, JSValueConst self, JSValueConst) {
-    return inputThis(ctx, self) != nullptr ? JS_UNDEFINED : JS_EXCEPTION;
+JSValue setInputFiles(JSContext* ctx, JSValueConst object, JSValueConst) {
+    return inputThis(ctx, object) != nullptr ? JS_UNDEFINED : JS_EXCEPTION;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLButtonElement (html/#htmlbuttonelement)
 
-JSValue buttonType(JSContext* ctx, JSValueConst self) {
-    PrHtmlButtonElement* button = jsThis<PrHtmlButtonElement>(ctx, self, htmlButtonElementClass);
+JSValue buttonType(JSContext* ctx, JSValueConst buttonObject) {
+    PrHtmlButtonElement* button = jsThis<PrHtmlButtonElement>(ctx, buttonObject, htmlButtonElementClass);
     return button != nullptr ? jsFixedString(ctx, prHtmlButtonElementType(button)) : JS_EXCEPTION;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLFieldSetElement (html/#htmlfieldsetelement) and HTMLLabelElement (html/#htmllabelelement)
 
-JSValue fieldSetElements(JSContext* ctx, JSValueConst self) {
-    PrHtmlFieldSetElement* fieldset = jsThis<PrHtmlFieldSetElement>(ctx, self, htmlFieldSetElementClass);
+JSValue fieldSetElements(JSContext* ctx, JSValueConst fieldsetObject) {
+    PrHtmlFieldSetElement* fieldset = jsThis<PrHtmlFieldSetElement>(ctx, fieldsetObject, htmlFieldSetElementClass);
     if (fieldset == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "elements", [&] {
+    return jsSameObject(ctx, fieldsetObject, "elements", [&] {
         PrDomHtmlCollection* collection = prHtmlFieldSetElementElements(fieldset);
-        JSValue object = jsWrapAs(ctx, prJsDomHtmlCollectionClass, self, collection, true);
+        JSValue object = jsWrapAs(ctx, prJsDomHtmlCollectionClass, fieldsetObject, collection, true);
         if (JS_IsException(object))
             prDomHtmlCollectionDestroy(collection);
         return object;
     });
 }
 
-JSValue labelControl(JSContext* ctx, JSValueConst self) {
-    PrHtmlLabelElement* label = jsThis<PrHtmlLabelElement>(ctx, self, htmlLabelElementClass);
+JSValue labelControl(JSContext* ctx, JSValueConst labelObject) {
+    PrHtmlLabelElement* label = jsThis<PrHtmlLabelElement>(ctx, labelObject, htmlLabelElementClass);
     if (label == nullptr)
         return JS_EXCEPTION;
     return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlLabelElementControl(label), false);
 }
 
 // form, the form owner of the labeled control (html/#dom-label-form).
-JSValue labelForm(JSContext* ctx, JSValueConst self) {
-    PrHtmlLabelElement* label = jsThis<PrHtmlLabelElement>(ctx, self, htmlLabelElementClass);
+JSValue labelForm(JSContext* ctx, JSValueConst labelObject) {
+    PrHtmlLabelElement* label = jsThis<PrHtmlLabelElement>(ctx, labelObject, htmlLabelElementClass);
     if (label == nullptr)
         return JS_EXCEPTION;
     PrDomElement* control = prHtmlLabelElementControl(label);
@@ -482,13 +483,13 @@ JSValue labelForm(JSContext* ctx, JSValueConst self) {
 // HTMLOutputElement (html/#htmloutputelement)
 
 // htmlFor, the same DOMTokenList of the for attribute at each read. Setting it sets the list's value ([PutForwards]).
-JSValue outputFor(JSContext* ctx, JSValueConst self) {
-    PrHtmlOutputElement* output = jsThis<PrHtmlOutputElement>(ctx, self, htmlOutputElementClass);
+JSValue outputFor(JSContext* ctx, JSValueConst outputObject) {
+    PrHtmlOutputElement* output = jsThis<PrHtmlOutputElement>(ctx, outputObject, htmlOutputElementClass);
     if (output == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "htmlFor", [&] {
+    return jsSameObject(ctx, outputObject, "htmlFor", [&] {
         PrDomTokenList* list = prDomTokenListCreate(prHtmlOutputElementAsElement(output), "for");
-        JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, self, list, true);
+        JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, outputObject, list, true);
         if (JS_IsException(object))
             prDomTokenListDestroy(list);
         return object;
@@ -499,8 +500,8 @@ JSValue outputFor(JSContext* ctx, JSValueConst self) {
 // HTMLProgressElement (html/#htmlprogresselement) and HTMLMeterElement (html/#htmlmeterelement)
 
 // The progress element's value, which is zero while it is indeterminate.
-JSValue progressValue(JSContext* ctx, JSValueConst self) {
-    PrHtmlProgressElement* progress = jsThis<PrHtmlProgressElement>(ctx, self, htmlProgressElementClass);
+JSValue progressValue(JSContext* ctx, JSValueConst progressObject) {
+    PrHtmlProgressElement* progress = jsThis<PrHtmlProgressElement>(ctx, progressObject, htmlProgressElementClass);
     if (progress == nullptr)
         return JS_EXCEPTION;
     return JS_NewFloat64(ctx, prHtmlProgressElementPosition(progress) < 0 ? 0 : prHtmlProgressElementValue(progress));
@@ -508,8 +509,8 @@ JSValue progressValue(JSContext* ctx, JSValueConst self) {
 
 // One of the meter's values.
 template <double PrHtmlMeterValues::* Value>
-JSValue meterValue(JSContext* ctx, JSValueConst self) {
-    PrHtmlMeterElement* meter = jsThis<PrHtmlMeterElement>(ctx, self, htmlMeterElementClass);
+JSValue meterValue(JSContext* ctx, JSValueConst meterObject) {
+    PrHtmlMeterElement* meter = jsThis<PrHtmlMeterElement>(ctx, meterObject, htmlMeterElementClass);
     if (meter == nullptr)
         return JS_EXCEPTION;
     PrHtmlMeterValues values = prHtmlMeterElementValues(meter);
@@ -519,8 +520,8 @@ JSValue meterValue(JSContext* ctx, JSValueConst self) {
 // The setter of a double attribute of a progress or a meter element, which throws a TypeError for a value that is not
 // finite.
 template <JsLiteral Name>
-JSValue setReflectedDouble(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlElement* element = htmlThis(ctx, self);
+JSValue setReflectedDouble(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlElement* element = htmlThis(ctx, elementObject);
     double value = 0;
     if (element == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -532,8 +533,8 @@ JSValue setReflectedDouble(JSContext* ctx, JSValueConst self, JSValueConst input
 // ---------------------------------------------------------------------------------------------------------------------
 // FormData (xhr/#interface-formdata)
 
-PrHtmlFormData* PR_NULLABLE formDataThis(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlFormData>(ctx, self, htmlFormDataClass);
+PrHtmlFormData* PR_NULLABLE formDataThis(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlFormData>(ctx, object, htmlFormDataClass);
 }
 
 void formDataRetain(void* handle) {
@@ -584,8 +585,8 @@ enum {
 typedef uint8_t FormDataMethod;
 
 // The methods that take a name, selected by the magic. The value of an entry is a string.
-JSValue formDataMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlFormData* data = formDataThis(ctx, self);
+JSValue formDataMethod(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv, int magic) {
+    PrHtmlFormData* data = formDataThis(ctx, object);
     bool pair = magic == FormDataMethod_Append || magic == FormDataMethod_Set;
     StringArgument name = {ctx};
     StringArgument value = {ctx};
@@ -615,8 +616,8 @@ JSValue formDataMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst
 }
 
 // Returns the [name, value] pair at the index argv[0], or undefined past the end.
-JSValue formDataEntryAt(JSContext* ctx, JSValueConst self, int, JSValueConst* argv) {
-    PrHtmlFormData* data = formDataThis(ctx, self);
+JSValue formDataEntryAt(JSContext* ctx, JSValueConst object, int, JSValueConst* argv) {
+    PrHtmlFormData* data = formDataThis(ctx, object);
     uint32_t index = 0;
     if (data == nullptr || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -628,16 +629,16 @@ JSValue formDataEntryAt(JSContext* ctx, JSValueConst self, int, JSValueConst* ar
 }
 
 // entries, keys and values, selected by the part of each entry that the magic names.
-JSValue formDataIterate(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    if (formDataThis(ctx, self) == nullptr)
+JSValue formDataIterate(JSContext* ctx, JSValueConst object, int, JSValueConst*, int magic) {
+    if (formDataThis(ctx, object) == nullptr)
         return JS_EXCEPTION;
-    return jsPairIterator(ctx, htmlFormDataIteratorClass, self, formDataEntryAt, JsMapPart(magic));
+    return jsPairIterator(ctx, htmlFormDataIteratorClass, object, formDataEntryAt, JsMapPart(magic));
 }
 
-JSValue formDataForEach(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    if (formDataThis(ctx, self) == nullptr)
+JSValue formDataForEach(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    if (formDataThis(ctx, object) == nullptr)
         return JS_EXCEPTION;
-    return jsPairForEach(ctx, self, formDataEntryAt, argc, argv);
+    return jsPairForEach(ctx, object, formDataEntryAt, argc, argv);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -735,8 +736,8 @@ JSValue commandConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
         prHtmlCommandEventCreate(type.value(), &init, command.value(), source));
 }
 
-JSValue submitter(JSContext* ctx, JSValueConst self) {
-    PrHtmlSubmitEvent* event = jsThis<PrHtmlSubmitEvent>(ctx, self, htmlSubmitEventClass);
+JSValue submitter(JSContext* ctx, JSValueConst eventObject) {
+    PrHtmlSubmitEvent* event = jsThis<PrHtmlSubmitEvent>(ctx, eventObject, htmlSubmitEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     PrHtmlElement* element = prHtmlSubmitEventSubmitter(event);
@@ -745,24 +746,24 @@ JSValue submitter(JSContext* ctx, JSValueConst self) {
 }
 
 // formData, the same object at each read.
-JSValue eventFormData(JSContext* ctx, JSValueConst self) {
-    PrHtmlFormDataEvent* event = jsThis<PrHtmlFormDataEvent>(ctx, self, htmlFormDataEventClass);
+JSValue eventFormData(JSContext* ctx, JSValueConst eventObject) {
+    PrHtmlFormDataEvent* event = jsThis<PrHtmlFormDataEvent>(ctx, eventObject, htmlFormDataEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "formData",
+    return jsSameObject(ctx, eventObject, "formData",
         [&] { return jsWrap(ctx, htmlFormDataClass, JS_UNDEFINED, prHtmlFormDataEventFormData(event), false); });
 }
 
 // source, of a ToggleEvent or a CommandEvent, selected by the magic.
-JSValue eventSource(JSContext* ctx, JSValueConst self, int magic) {
+JSValue eventSource(JSContext* ctx, JSValueConst eventObject, int magic) {
     PrDomElement* source = nullptr;
     if (magic == 0) {
-        PrHtmlToggleEvent* event = jsThis<PrHtmlToggleEvent>(ctx, self, htmlToggleEventClass);
+        PrHtmlToggleEvent* event = jsThis<PrHtmlToggleEvent>(ctx, eventObject, htmlToggleEventClass);
         if (event == nullptr)
             return JS_EXCEPTION;
         source = prHtmlToggleEventSource(event);
     } else {
-        PrHtmlCommandEvent* event = jsThis<PrHtmlCommandEvent>(ctx, self, htmlCommandEventClass);
+        PrHtmlCommandEvent* event = jsThis<PrHtmlCommandEvent>(ctx, eventObject, htmlCommandEventClass);
         if (event == nullptr)
             return JS_EXCEPTION;
         source = prHtmlCommandEventSource(event);

@@ -197,58 +197,58 @@ PrCssResizeObserver* prCssResizeObserverCreate(PrDomDocument* document, const Pr
     return observer;
 }
 
-void prCssResizeObserverRetain(PrCssResizeObserver* self) {
-    ++self->references;
+void prCssResizeObserverRetain(PrCssResizeObserver* observer) {
+    ++observer->references;
 }
 
-void prCssResizeObserverRelease(PrCssResizeObserver* PR_NULLABLE self) {
-    if (self == nullptr || --self->references != 0)
+void prCssResizeObserverRelease(PrCssResizeObserver* PR_NULLABLE observer) {
+    if (observer == nullptr || --observer->references != 0)
         return;
-    Array<PrCssResizeObserver* PR_NONNULL>& observers = cssDocumentRoot(self->document)->resizeObservers;
+    Array<PrCssResizeObserver* PR_NONNULL>& observers = cssDocumentRoot(observer->document)->resizeObservers;
     for (uint32_t i = 0; i < observers.count; ++i) {
-        if (observers.data[i] == self) {
+        if (observers.data[i] == observer) {
             observers.erase(i);
             break;
         }
     }
-    for (uint32_t i = 0; i < self->observations.count; ++i)
-        domNodeRelease(self->observations.data[i].target);
-    self->observations.reset();
-    if (self->callback.release != nullptr)
-        self->callback.release(self->callback.context);
-    domNodeRelease(self->document);
-    prMemoryFree(self);
+    for (uint32_t i = 0; i < observer->observations.count; ++i)
+        domNodeRelease(observer->observations.data[i].target);
+    observer->observations.reset();
+    if (observer->callback.release != nullptr)
+        observer->callback.release(observer->callback.context);
+    domNodeRelease(observer->document);
+    prMemoryFree(observer);
 }
 
-void prCssResizeObserverObserve(PrCssResizeObserver* self, PrDomElement* target, PrCssResizeObserverBox box) {
+void prCssResizeObserverObserve(PrCssResizeObserver* observer, PrDomElement* target, PrCssResizeObserverBox box) {
     // An observation that replaces one of the same target does not stop the observer from observing.
-    bool observing = self->observations.count != 0;
-    for (uint32_t i = 0; i < self->observations.count; ++i) {
-        if (self->observations.data[i].target == target) {
+    bool observing = observer->observations.count != 0;
+    for (uint32_t i = 0; i < observer->observations.count; ++i) {
+        if (observer->observations.data[i].target == target) {
             domNodeRelease(target);
-            self->observations.erase(i);
+            observer->observations.erase(i);
             break;
         }
     }
     domNodeRetain(target);
-    self->observations.push(CssResizeObservation{.target = target, .box = box, .lastReported = kNeverReported});
-    cssDocumentRoot(self->document)->resizeObservationsPending = true;
-    if (!observing && self->callback.observing != nullptr)
-        self->callback.observing(self->callback.context, self, true);
+    observer->observations.push(CssResizeObservation{.target = target, .box = box, .lastReported = kNeverReported});
+    cssDocumentRoot(observer->document)->resizeObservationsPending = true;
+    if (!observing && observer->callback.observing != nullptr)
+        observer->callback.observing(observer->callback.context, observer, true);
 }
 
-void prCssResizeObserverUnobserve(PrCssResizeObserver* self, PrDomElement* target) {
-    for (uint32_t i = 0; i < self->observations.count; ++i) {
-        if (self->observations.data[i].target == target) {
-            removeObservation(self, i);
+void prCssResizeObserverUnobserve(PrCssResizeObserver* observer, PrDomElement* target) {
+    for (uint32_t i = 0; i < observer->observations.count; ++i) {
+        if (observer->observations.data[i].target == target) {
+            removeObservation(observer, i);
             return;
         }
     }
 }
 
-void prCssResizeObserverDisconnect(PrCssResizeObserver* self) {
-    while (self->observations.count != 0)
-        removeObservation(self, self->observations.count - 1);
+void prCssResizeObserverDisconnect(PrCssResizeObserver* observer) {
+    while (observer->observations.count != 0)
+        removeObservation(observer, observer->observations.count - 1);
 }
 
 bool prCssDocumentResizeObservationsPending(const PrDomDocument* document) {

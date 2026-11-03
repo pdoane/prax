@@ -40,8 +40,8 @@ struct TestClient {
             .baseUrl = [](void*) { return prStringCopy("https://example.com/dir/page.html"); },
             .fetch =
                 [](void* context, const PrFetchClientRequest* request, PrFetchResponseFn done, void* doneContext) -> PrStatus {
-                    TestClient* self = static_cast<TestClient*>(context);
-                    if (self->refuses)
+                    TestClient* client = static_cast<TestClient*>(context);
+                    if (client->refuses)
                         return PrStatus_NotSupported;
                     Request fetch{
                         .url = std::string(request->url.data, request->url.size),
@@ -57,7 +57,7 @@ struct TestClient {
                         fetch.headers.push_back(std::string(request->headers[i].name.data,
                             request->headers[i].name.size) + ": " +
                             std::string(request->headers[i].value.data, request->headers[i].value.size));
-                    self->fetches.push_back(fetch);
+                    client->fetches.push_back(fetch);
                     return PrStatus_Ok;
                 },
             .cancelFetch = [](void* context, void* doneContext) {
@@ -67,11 +67,11 @@ struct TestClient {
                 }
             },
             .setTimeout = [](void* context, const PrXhrTask* task, uint32_t milliseconds) {
-                TestClient* self = static_cast<TestClient*>(context);
+                TestClient* client = static_cast<TestClient*>(context);
                 if (task->retain != nullptr)
                     task->retain(task->context);
-                self->timers.push_back(Timer{*task, milliseconds, false});
-                return int32_t(self->timers.size());
+                client->timers.push_back(Timer{*task, milliseconds, false});
+                return int32_t(client->timers.size());
             },
             .clearTimeout = [](void* context, int32_t id) {
                 Timer& timer = static_cast<TestClient*>(context)->timers[size_t(id - 1)];

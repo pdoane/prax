@@ -248,7 +248,7 @@ PrHtmlPage* prHtmlPageCreate(const PrHtmlHost* PR_NULLABLE host);
 
 // Destroys the page and its Window. First destroys the runtime of the Window's scripts, and every object that refers to
 // the Window, such as an event targeted at it. The document lives on while references to it remain.
-void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE self);
+void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE page);
 
 // Traverses the page's session history by `delta` entries (html/#traverse-the-history-by-a-delta), as a user's back and
 // forward buttons do. An entry of the window's document becomes current in a task, which sets the document's URL and
@@ -256,10 +256,10 @@ void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE self);
 // navigates the page to its URL (prHtmlPageNavigate), and the document that loads takes that entry and its state rather
 // than pushing one. A delta of 0 reloads the current entry's document in the same way. Does nothing for a delta past
 // either end.
-void prHtmlPageTraverse(PrHtmlPage* self, int32_t delta);
+void prHtmlPageTraverse(PrHtmlPage* page, int32_t delta);
 
 // Returns the page's Window, which the page owns.
-PrHtmlWindow* prHtmlPageWindow(PrHtmlPage* self);
+PrHtmlWindow* prHtmlPageWindow(PrHtmlPage* page);
 
 // Returns the page whose Window is `window`, or null once the window's document is no longer the page's current
 // document.
@@ -267,7 +267,7 @@ PrHtmlPage* PR_NULLABLE prHtmlWindowPage(PrHtmlWindow* window);
 
 // Returns the agent whose event loop runs the page's tasks (prDomAgentRunTask). This is the host's agent, or the one
 // that the page created.
-PrDomAgent* prHtmlPageAgent(PrHtmlPage* self);
+PrDomAgent* prHtmlPageAgent(PrHtmlPage* page);
 
 // Parses `source` into a new Document at `url`, runs its scripts, and fires the Window's load event. `headers` are the
 // response's headers, or null for none. The XML parser parses an XML MIME type (mimesniff/#xml-mime-type). Another
@@ -282,7 +282,7 @@ PrDomAgent* prHtmlPageAgent(PrHtmlPage* self);
 // The parse waits in tasks for each script that blocks it and is fetched, and the end of the load waits for whatever
 // delays it, as for a streamed load. A document that fetches nothing loads within this call. If the URL parser rejects
 // `url`, returns its status and leaves the current Document in place. Returns InvalidState during another load.
-PrStatus prHtmlPageLoad(PrHtmlPage* self, PrStringView source, PrStringView url,
+PrStatus prHtmlPageLoad(PrHtmlPage* page, PrStringView source, PrStringView url,
     const PrHtmlResponseHeaders* PR_NULLABLE headers);
 
 // Starts loading a new Document at `url` whose source arrives in pieces, as a network delivers it
@@ -290,9 +290,9 @@ PrStatus prHtmlPageLoad(PrHtmlPage* self, PrStringView source, PrStringView url,
 // Tasks of the event loop parse what has arrived, one slice at a time. Rendering opportunities come between those
 // tasks, so the document renders as it arrives. The parse stops (html/#the-end) in the task that parses the end of the
 // source. A media document is made at once, and ignores the pieces. Returns the same statuses as prHtmlPageLoad.
-PrStatus prHtmlPageBeginLoad(PrHtmlPage* self, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers);
-void prHtmlPageAppendLoad(PrHtmlPage* self, PrStringView bytes);
-void prHtmlPageEndLoad(PrHtmlPage* self);
+PrStatus prHtmlPageBeginLoad(PrHtmlPage* page, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers);
+void prHtmlPageAppendLoad(PrHtmlPage* page, PrStringView bytes);
+void prHtmlPageEndLoad(PrHtmlPage* page);
 
 // Navigates the page to the document at `url` (html/#navigate), an absolute URL that may have a fragment, as a user
 // does by entering an address: fetches it through the host's fetcher, from no document and so with no origin and no
@@ -302,14 +302,14 @@ void prHtmlPageEndLoad(PrHtmlPage* self);
 // (PrHtmlHost::loaded). Another navigation or load replaces a navigation in flight, and prHtmlPageIsFetching is true
 // until its response has arrived whole. Returns the URL parser's status if it rejects `url`, and InvalidState if the
 // host has no fetcher or another load is in progress.
-PrStatus prHtmlPageNavigate(PrHtmlPage* self, PrStringView url);
+PrStatus prHtmlPageNavigate(PrHtmlPage* page, PrStringView url);
 
 // Fetches the module graph at `url`, an absolute URL, as a script's import() does (html/#hostloadimportedmodule): each
 // module that the window's module map lacks is fetched and parsed with the host's parseModule, which the host must
 // have. Calls `done` with `context` in a task, with Ok once every module of the graph is parsed, or with the status of
 // a fetch that failed. If the window's document is replaced or the page destroyed first, `done` is called with Lost
 // during that call.
-void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn done, void* PR_NULLABLE context);
+void prHtmlPageImportModule(PrHtmlPage* page, PrStringView url, PrHtmlImportFn done, void* PR_NULLABLE context);
 
 // Fetches what `request` asks for a script of the window, through the host's fetcher. The window's document is the
 // request's client: the request has its origin, its URL as the referrer, and its base URL. Calls `done` with `context`
@@ -317,70 +317,70 @@ void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn d
 // destroyed first. The body is read whole before the response is passed. The fetch does not delay the document's load
 // event. Returns InvalidData, and never calls `done`, for a URL that does not parse or that has a username or a
 // password (fetch/#dom-request).
-PrStatus prHtmlPageFetch(PrHtmlPage* self, const PrFetchClientRequest* request, PrFetchResponseFn done,
+PrStatus prHtmlPageFetch(PrHtmlPage* page, const PrFetchClientRequest* request, PrFetchResponseFn done,
     void* PR_NULLABLE context);
 
 // Cancels the fetch that prHtmlPageFetch started with `context` and has not answered (fetch/#fetch-controller-abort).
 // The fetch stops if it still runs, and its `done` is never called. Does nothing if no such fetch waits.
-void prHtmlPageCancelFetch(PrHtmlPage* self, void* PR_NULLABLE context);
+void prHtmlPageCancelFetch(PrHtmlPage* page, void* PR_NULLABLE context);
 
 // Returns true while the page's navigation (prHtmlPageNavigate) waits for its response, which the current document
 // stays in place for.
-bool prHtmlPageIsNavigating(const PrHtmlPage* self);
+bool prHtmlPageIsNavigating(const PrHtmlPage* page);
 
 // Returns true while the page waits for the response to a fetch that it started (PrHtmlHost::fetcher), or for the whole
 // of its navigation's document (prHtmlPageNavigate).
-bool prHtmlPageIsFetching(const PrHtmlPage* self);
+bool prHtmlPageIsFetching(const PrHtmlPage* page);
 
 // Returns true if the Window's document is render-blocked (html/#render-blocked). Its first rendering waits until the
 // parser reaches its body, past any sheets that its head adds, and until the sheets that its parser added there arrive.
 // Its rendering is not updated in the meantime, and a host paints nothing of it.
-bool prHtmlPageIsRenderBlocked(PrHtmlPage* self);
+bool prHtmlPageIsRenderBlocked(PrHtmlPage* page);
 
 // Sets a media feature of the environment that the Window's media queries are evaluated against
 // (mediaqueries-5/#media). The feature is one of @media's descriptors, and `value` is written as in a query, such as
 // `1024px` for PrCssDescriptor_MediaWidth. The feature is not computed from others. Returns false, and leaves the
 // environment unchanged, if the feature does not accept `value`.
-bool prHtmlPageSetMediaFeature(PrHtmlPage* self, PrCssDescriptor feature, PrStringView value);
+bool prHtmlPageSetMediaFeature(PrHtmlPage* page, PrCssDescriptor feature, PrStringView value);
 
 // Sets the media type of that environment (mediaqueries-5/#media-types).
-void prHtmlPageSetMediaType(PrHtmlPage* self, PrCssMediaType type);
+void prHtmlPageSetMediaType(PrHtmlPage* page, PrCssMediaType type);
 
 // Sets the charset of an HTML document whose bytes, response and parent document give it none
 // (html/#encoding-sniffing-algorithm). It is windows-1252 until a host sets it, and the page's frames take it. The spec
 // suggests a default that depends on the user's locale.
-void prHtmlPageSetDefaultCharset(PrHtmlPage* self, PrCharset charset);
+void prHtmlPageSetDefaultCharset(PrHtmlPage* page, PrCharset charset);
 
 // Sets the extent of the viewport in CSS pixels, which is 800 by 600 until a host sets it. The window's media queries
 // see it, and the document is laid out in it, including the layout that a script's query brings up to date. A frame's
 // viewport is its iframe's content box, which its parent sets.
-void prHtmlPageSetViewport(PrHtmlPage* self, PrVec2 extent);
+void prHtmlPageSetViewport(PrHtmlPage* page, PrVec2 extent);
 
 // Sets the display that the document is shown on, which is prAppDisplayDefault until a host sets it. The media features
 // that describe a display follow it: resolution, color-gamut and dynamic-range. The layout snaps to its pixel ratio,
 // and colors resolve for its headroom. Only the styles that read the headroom are projected again when the headroom
 // alone changes. The page's frames are shown on the same display.
-void prHtmlPageSetDisplay(PrHtmlPage* self, const PrAppDisplay* display);
+void prHtmlPageSetDisplay(PrHtmlPage* page, const PrAppDisplay* display);
 
 // Sets the user's preferences, which are neutral until a host sets them. The user preference media features follow
 // them, below any override that script makes. The page's frames take the same preferences, except the preferred color
 // scheme, which is the scheme that a frame's iframe element uses (css-color-adjust-1/#color-scheme-page).
-void prHtmlPageSetUserPreferences(PrHtmlPage* self, const PrAppUserPreferences* preferences);
+void prHtmlPageSetUserPreferences(PrHtmlPage* page, const PrAppUserPreferences* preferences);
 
 // Sets whether the page is shown to the user (html/#system-visibility-state), which it is until a host sets it. The
 // page's frames take the same visibility. A change updates the visibility state of each window's document, which fires
 // visibilitychange at it in a task (html/#update-the-visibility-state).
-void prHtmlPageSetVisibility(PrHtmlPage* self, PrHtmlVisibility visibility);
+void prHtmlPageSetVisibility(PrHtmlPage* page, PrHtmlVisibility visibility);
 
 // Restyles the elements that can be in `states`, which are states that the host reports (PrHtmlHost::elementState), in
 // the window's document and in the documents of the page's frames. A host calls it once what it knows changes, as when
 // the user visits a URL that links point to, so that the elements match their selectors again.
-void prHtmlPageInvalidateHostStates(PrHtmlPage* self, PrDomHostState states);
+void prHtmlPageInvalidateHostStates(PrHtmlPage* page, PrDomHostState states);
 
 // Returns the presentation of the window's document. For each document that the page loads, it creates a presentation
 // with the user agent style sheet of html/#rendering, if its host gives a text font and a shaper. Returns null if the
 // host gives none. A new document replaces the presentation.
-PrCssPresentation* PR_NULLABLE prHtmlPagePresentation(PrHtmlPage* self);
+PrCssPresentation* PR_NULLABLE prHtmlPagePresentation(PrHtmlPage* page);
 
 // Brings a presentation up to date, as prCssPresentationUpdate does, together with what the browsing context draws in
 // its boxes: the content of the outermost svg elements of a page's presentation. Returns true if anything was laid out.
@@ -392,13 +392,13 @@ void prHtmlPresentationStart(PrCssPresentation* presentation, PrLayoutVec extent
 
 // Returns the time on the host's clock at which the Window's timeline starts (hr-time-3/#sec-time-origin). The
 // timeline's time, which the presentation's animations run on, is the clock's time minus this value.
-double prHtmlPageTimeOrigin(PrHtmlPage* self);
+double prHtmlPageTimeOrigin(PrHtmlPage* page);
 
 // Returns the URL of the icon that represents the window's document (html/#rel-icon), which a host fetches and shows
 // beside the page's title. It is the last link in tree order whose rel holds icon, skipping a link whose type the
 // host's image codec cannot decode. A document at an http: or https: URL with no such link has the icon at
 // /favicon.ico. Returns the null string for any other document. The caller releases the string with prStringReset.
-PrString prHtmlPageIconUrl(PrHtmlPage* self);
+PrString prHtmlPageIconUrl(PrHtmlPage* page);
 
 #if defined(__cplusplus)
 }

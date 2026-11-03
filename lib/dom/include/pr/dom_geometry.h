@@ -62,63 +62,63 @@ PrStatus prDomMatrixFromValues(const double* PR_NULLABLE values, uint32_t count,
 // Each function implements the DOMMatrix method of the same name.
 
 // Post-multiplies by `other` (geometry-1/#dom-dommatrix-multiplyself).
-void prDomMatrixMultiply(PrDomMatrix* self, const PrDomMatrix* other);
+void prDomMatrixMultiply(PrDomMatrix* matrix, const PrDomMatrix* other);
 
 // Pre-multiplies by `other` (geometry-1/#dom-dommatrix-premultiplyself).
-void prDomMatrixPreMultiply(PrDomMatrix* self, const PrDomMatrix* other);
+void prDomMatrixPreMultiply(PrDomMatrix* matrix, const PrDomMatrix* other);
 
 // Translates by (tx, ty, tz) (geometry-1/#dom-dommatrix-translateself).
-void prDomMatrixTranslate(PrDomMatrix* self, double tx, double ty, double tz);
+void prDomMatrixTranslate(PrDomMatrix* matrix, double tx, double ty, double tz);
 
 // Scales about the origin (ox, oy, oz) (geometry-1/#dom-dommatrix-scaleself).
-void prDomMatrixScale(PrDomMatrix* self, double sx, double sy, double sz, double ox, double oy, double oz);
+void prDomMatrixScale(PrDomMatrix* matrix, double sx, double sy, double sz, double ox, double oy, double oz);
 
 // Rotates about z, then y, then x, by angles in degrees (geometry-1/#dom-dommatrix-rotateself).
-void prDomMatrixRotate(PrDomMatrix* self, double x, double y, double z);
+void prDomMatrixRotate(PrDomMatrix* matrix, double x, double y, double z);
 
 // Rotates by the angle of the vector (x, y) (geometry-1/#dom-dommatrix-rotatefromvectorself).
-void prDomMatrixRotateFromVector(PrDomMatrix* self, double x, double y);
+void prDomMatrixRotateFromVector(PrDomMatrix* matrix, double x, double y);
 
 // Rotates by `angle` degrees about the axis (x, y, z) (geometry-1/#dom-dommatrix-rotateaxisangleself).
-void prDomMatrixRotateAxisAngle(PrDomMatrix* self, double x, double y, double z, double angle);
+void prDomMatrixRotateAxisAngle(PrDomMatrix* matrix, double x, double y, double z, double angle);
 
 // Skews along x or y by an angle in degrees (geometry-1/#dom-dommatrix-skewxself).
-void prDomMatrixSkewX(PrDomMatrix* self, double degrees);
-void prDomMatrixSkewY(PrDomMatrix* self, double degrees);
+void prDomMatrixSkewX(PrDomMatrix* matrix, double degrees);
+void prDomMatrixSkewY(PrDomMatrix* matrix, double degrees);
 
 // Inverts the matrix. If it has no inverse, sets every element to NaN and clears `is2D`
 // (geometry-1/#dom-dommatrix-invertself). Returns true if it had an inverse.
-bool prDomMatrixInvert(PrDomMatrix* self);
+bool prDomMatrixInvert(PrDomMatrix* matrix);
 
 // Sets element `index` of `m`, following the DOMMatrix attribute setters. Clears `is2D` for a value that a 2D matrix
 // cannot hold at that index.
-void prDomMatrixSetElement(PrDomMatrix* self, uint32_t index, double value);
+void prDomMatrixSetElement(PrDomMatrix* matrix, uint32_t index, double value);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Reading a matrix
 
 // Returns true if the matrix is the identity (geometry-1/#dom-dommatrixreadonly-isidentity).
-bool prDomMatrixIsIdentity(const PrDomMatrix* self);
+bool prDomMatrixIsIdentity(const PrDomMatrix* matrix);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Points, rectangles and quadrilaterals
 
-// Returns `self` transformed by `matrix` (geometry-1/#transform-a-point-with-a-matrix).
-PrDomPoint prDomPointMatrixTransform(const PrDomPoint* self, const PrDomMatrix* matrix);
+// Returns `point` transformed by `matrix` (geometry-1/#transform-a-point-with-a-matrix).
+PrDomPoint prDomPointMatrixTransform(const PrDomPoint* point, const PrDomMatrix* matrix);
 
 // Return the edges of a rectangle, whatever the sign of its size (geometry-1/#dom-domrectreadonly-top). Top and bottom
 // are NaN if y or the height is NaN. Right and left are NaN if x or the width is NaN.
-double prDomRectTop(const PrDomRect* self);
-double prDomRectRight(const PrDomRect* self);
-double prDomRectBottom(const PrDomRect* self);
-double prDomRectLeft(const PrDomRect* self);
+double prDomRectTop(const PrDomRect* rect);
+double prDomRectRight(const PrDomRect* rect);
+double prDomRectBottom(const PrDomRect* rect);
+double prDomRectLeft(const PrDomRect* rect);
 
 // Returns the quadrilateral of a rectangle's corners, clockwise from its origin (geometry-1/#dom-domquad-fromrect).
 PrDomQuad prDomQuadFromRect(const PrDomRect* rect);
 
 // Returns the smallest rectangle that contains every corner. Each coordinate is NaN if that coordinate of any corner is
 // NaN (geometry-1/#dom-domquad-getbounds).
-PrDomRect prDomQuadGetBounds(const PrDomQuad* self);
+PrDomRect prDomQuadGetBounds(const PrDomQuad* quad);
 
 #if defined(__cplusplus)
 }

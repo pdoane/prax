@@ -92,9 +92,9 @@ PrHtmlHost hostOf(Threaded* t) {
     host.agent = t->agent;
     host.fetcher = t->fetcher;
     host.execute = [](void* data, PrHtmlPage*, const PrHtmlScript* script) -> PrStatus {
-        Threaded* self = static_cast<Threaded*>(data);
-        std::lock_guard<std::mutex> lock(self->mutex);
-        self->log += std::string(script->source.data, script->source.size) + " ";
+        Threaded* threaded = static_cast<Threaded*>(data);
+        std::lock_guard<std::mutex> lock(threaded->mutex);
+        threaded->log += std::string(script->source.data, script->source.size) + " ";
         return PrStatus_Ok;
     };
     return host;

@@ -67,18 +67,18 @@ typedef struct PrCssResizeCallback {
 PrCssResizeObserver* prCssResizeObserverCreate(PrDomDocument* document, const PrCssResizeCallback* callback);
 
 // Adds or releases a reference. The last release frees the observer.
-void prCssResizeObserverRetain(PrCssResizeObserver* self);
-void prCssResizeObserverRelease(PrCssResizeObserver* PR_NULLABLE self);
+void prCssResizeObserverRetain(PrCssResizeObserver* observer);
+void prCssResizeObserverRelease(PrCssResizeObserver* PR_NULLABLE observer);
 
 // Observes `target`'s box `box`, in place of any observation of `target` that the observer had
 // (resize-observer-1/#dom-resizeobserver-observe). The first delivery reports the box's size, which is zero if the
 // element has no box.
-void prCssResizeObserverObserve(PrCssResizeObserver* self, PrDomElement* target, PrCssResizeObserverBox box);
+void prCssResizeObserverObserve(PrCssResizeObserver* observer, PrDomElement* target, PrCssResizeObserverBox box);
 
 // Stops observing `target` (resize-observer-1/#dom-resizeobserver-unobserve), or stops observing every element
 // (resize-observer-1/#dom-resizeobserver-disconnect).
-void prCssResizeObserverUnobserve(PrCssResizeObserver* self, PrDomElement* target);
-void prCssResizeObserverDisconnect(PrCssResizeObserver* self);
+void prCssResizeObserverUnobserve(PrCssResizeObserver* observer, PrDomElement* target);
+void prCssResizeObserverDisconnect(PrCssResizeObserver* observer);
 
 // Returns true if the next rendering update has observations to deliver that no change to the presentation asks for: an
 // observation that began since the last update, or one that the last update skipped. The observations of a box whose

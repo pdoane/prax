@@ -3265,10 +3265,10 @@ void addFeatures(PrCssPresentation* r, PrDomElement* element, const Array<uint32
 
 // Marks the elements that a change to the style of `element` reaches: the element, its siblings, its subtree, or the
 // descendants that carry one of `descendants`.
-void restyleReach(PrCssPresentation* r, PrDomElement* element, bool self, bool laterSiblings, bool siblings,
+void restyleReach(PrCssPresentation* r, PrDomElement* element, bool itself, bool laterSiblings, bool siblings,
         bool subtree, const Array<uint32_t>& descendants) {
     r->changed = true;
-    if (self)
+    if (itself)
         mark(element, DomStyleFlag_Self);
     if (subtree)
         mark(element, DomStyleFlag_Subtree);
@@ -5891,28 +5891,28 @@ bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint
 // difference to `out`.
 bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssComputedStyle* PR_NULLABLE parentStyle,
         bool parentBox, CssFontBases rootFont, Difference* out, PrLayoutNode& cursor) {
-    const PrDomNode* self = element;
+    const PrDomNode* domNode = element;
     uint32_t at = cssPresentationNodeEntry(r, element);
     if (at == kHashMissing || r->entries.data[at].style == nullptr)
-        return differs(out, self, "the element has no cached style");
+        return differs(out, domNode, "the element has no cached style");
     const CssComputedStyle* fresh = cascade(r, element, parentStyle, rootFont, true);
     // The style without animations is what the cascade gives. The style with them is what is presented and inherited.
     const CssComputedStyle* cached = r->entries.data[at].style;
     const CssComputedStyle* base = r->entries.data[at].base != nullptr ? r->entries.data[at].base : cached;
     bool same = cssCustomPropertiesEqual(fresh->custom, base->custom);
     if (!same)
-        differs(out, self, "custom properties");
+        differs(out, domNode, "custom properties");
     if (same && fresh->locale != base->locale)
-        same = differs(out, self, "the locale");
+        same = differs(out, domNode, "the locale");
     if (same && fresh->appearance != base->appearance)
-        same = differs(out, self, "the used appearance");
+        same = differs(out, domNode, "the used appearance");
     if (same && fresh->staticInline != base->staticInline)
-        same = differs(out, self, "whether its display was inline-level before it was blockified");
+        same = differs(out, domNode, "whether its display was inline-level before it was blockified");
     if (same && fresh->childrenAreItems != base->childrenAreItems)
-        same = differs(out, self, "whether its children are flex or grid items");
+        same = differs(out, domNode, "whether its children are flex or grid items");
     for (uint32_t g = 0; same && g < CssStyleGroup_Count; ++g) {
         if (fresh->groups[g] != base->groups[g]) {
-            same = differs(out, self, "the computed values of the style group ");
+            same = differs(out, domNode, "the computed values of the style group ");
             textAppend(&out->what, kGroupNames[g]);
             describeGroupDifference(&out->what, CssStyleGroup(g), base, fresh);
         }
@@ -5923,10 +5923,10 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
     bool box = (parentBox || isForeignRoot(element)) && generatesBox(element, cached);
     bool contents = parentBox && passesBoxes(element, cached);
     if (contents != r->entries.data[at].contents)
-        return differs(out, self, "whether its parent's box holds its children's boxes");
+        return differs(out, domNode, "whether its parent's box holds its children's boxes");
     PrLayoutNode node = r->entries.data[at].layoutNode;
     if (box != (node != kPrLayoutNodeNone))
-        return differs(out, self, box ? "the element should generate a box and has none" : "the element has a box it "
+        return differs(out, domNode, box ? "the element should generate a box and has none" : "the element has a box it "
             "should not generate");
     // The records of the root and the body hold the canvas's background, which projectCanvas decides.
     bool canvas = parentStyle == nullptr || element == domDocumentBody(r->document);
@@ -5934,20 +5934,20 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
         bool reads = false;
         PrLayoutStyleIndex record = project(r, cached, presentationOf(element), r->entries.data[at].composited, &reads);
         if (record != prLayoutNodeStyle(r->tree, node))
-            return differs(out, self, "the box's layout record");
+            return differs(out, domNode, "the box's layout record");
     }
     bool replaced = isReplaced(element);
     if (box) {
         PrLayoutNodeKind kind = prLayoutNodeKind(r->tree, node);
         if ((kind == PrLayoutNodeKind_Replaced) != replaced ||
                 (kind == PrLayoutNodeKind_SemiReplaced) != isSemiReplaced(element))
-            return differs(out, self, "the box's kind");
+            return differs(out, domNode, "the box's kind");
         if (replaced) {
             CssPresentationImageDrawing drawing = imageDrawingOf(r, cached);
             PrLayoutNaturalSize natural = prLayoutNodeNaturalSize(r->tree, node);
             PrLayoutNaturalSize expected = naturalOf(r, element, drawing.oriented);
             if (natural.width != expected.width || natural.height != expected.height)
-                return differs(out, self, "the replaced box's natural size");
+                return differs(out, domNode, "the replaced box's natural size");
             PrLayoutContent content = prLayoutNodeContent(r->tree, node);
             bool sized = expected.width.raw > 0 && expected.height.raw > 0 && embedOf(element) == 0;
             const PrDrawImage* picture = pictureOf(element, drawing.oriented);
@@ -5963,14 +5963,14 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
                     (content.kind == PrLayoutContentKind_Painter && !domIsOuterSvg(element) &&
                         (content.painter.context != vector.context ||
                             content.revision != element->state->vectorRevision)))
-                return differs(out, self, "the replaced box's content");
+                return differs(out, domNode, "the replaced box's content");
             if (content.kind == PrLayoutContentKind_Image &&
                     (content.limit != drawing.limit || content.rendering != drawing.rendering))
-                return differs(out, self, "how the replaced box's image is drawn");
+                return differs(out, domNode, "how the replaced box's image is drawn");
         }
     }
     if (box && (prLayoutNodeKind(r->tree, node) == PrLayoutNodeKind_LineBreak) != isLineBreak(element))
-        return differs(out, self, "the box's kind");
+        return differs(out, domNode, "the box's kind");
     box = box && holdsChildren(element);
     // The boxes of the children of an element of display contents are children of its parent's box, starting at the
     // place that `cursor` names.
@@ -6022,7 +6022,7 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
     if (!pseudoSame(kAfterPseudo))
         return false;
     if (!contents && expected != kPrLayoutNodeNone)
-        return differs(out, self, "the box has children that no child generates");
+        return differs(out, domNode, "the box has children that no child generates");
     return true;
 }
 
@@ -7609,6 +7609,6 @@ PrDomNode* PR_NULLABLE prCssPresentationHitTest(PrCssPresentation* presentation,
     return first;
 }
 
-PrCssStyleProperties* prCssElementComputedStyle(PrDomElement* self, PrStringView pseudoElement) {
-    return static_cast<PrCssStyleProperties*>(cssElementComputedStyle(self, pseudoElement));
+PrCssStyleProperties* prCssElementComputedStyle(PrDomElement* element, PrStringView pseudoElement) {
+    return static_cast<PrCssStyleProperties*>(cssElementComputedStyle(element, pseudoElement));
 }

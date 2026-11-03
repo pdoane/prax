@@ -94,13 +94,13 @@ bool isShape(const SvgNode& node) {
         node.kind == SvgNodeKind_Path;
 }
 
-// Calls `fn` with the tree, place and node of the geometry element `self`. Returns InvalidState if no tree draws it as
-// a shape.
+// Calls `fn` with the tree, place and node of the geometry element `element`. Returns InvalidState if no tree draws it
+// as a shape.
 template <typename Fn>
-PrStatus withShape(PrSvgElement* self, Fn fn) {
+PrStatus withShape(PrSvgElement* element, Fn fn) {
     SvgQuery query{};
     SvgPlace place{};
-    bool found = prSvgInterfaceIsGeometry(prSvgElementInterface(self)) && placedOf(self, &query, &place) &&
+    bool found = prSvgInterfaceIsGeometry(prSvgElementInterface(element)) && placedOf(element, &query, &place) &&
         isShape(query.tree->nodes.data[query.node]);
     if (found)
         fn(query.tree, place, query.node);
@@ -144,11 +144,11 @@ PrRect cellOf(const SvgTextCharacter& c) {
     return bounds;
 }
 
-// Calls `fn` with the character at `index` of `self`. Returns OutOfRange if there is none.
+// Calls `fn` with the character at `index` of `element`. Returns OutOfRange if there is none.
 template <typename Fn>
-PrStatus withCharacter(PrSvgElement* self, uint32_t index, Fn fn) {
+PrStatus withCharacter(PrSvgElement* element, uint32_t index, Fn fn) {
     TextQuery q{};
-    textOf(self, &q);
+    textOf(element, &q);
     uint32_t at = q.characters != nullptr ? characterAt(q, index) : kArrayMissing;
     if (at != kArrayMissing)
         fn(q.characters[at]);
@@ -192,8 +192,8 @@ PrSvgElement* PR_NULLABLE prSvgElementQuery(PrDomEventTarget* PR_NULLABLE object
     return element != nullptr && element->space == PrDomNamespace_Svg ? static_cast<PrSvgElement*>(element) : nullptr;
 }
 
-PrSvgElement* PR_NULLABLE prSvgElementOwnerSvgElement(PrSvgElement* self) {
-    for (PrDomNode* node = domNodeParent(self); node != nullptr; node = domNodeParent(node)) {
+PrSvgElement* PR_NULLABLE prSvgElementOwnerSvgElement(PrSvgElement* svgElement) {
+    for (PrDomNode* node = domNodeParent(svgElement); node != nullptr; node = domNodeParent(node)) {
         PrDomElement* element = domElementFromNode(node);
         if (element != nullptr && element->space == PrDomNamespace_Svg && element->tag == PrDomTag_Svg)
             return static_cast<PrSvgElement*>(element);
@@ -201,8 +201,8 @@ PrSvgElement* PR_NULLABLE prSvgElementOwnerSvgElement(PrSvgElement* self) {
     return nullptr;
 }
 
-PrSvgInterface prSvgElementInterface(const PrSvgElement* self) {
-    switch (self->tag) {
+PrSvgInterface prSvgElementInterface(const PrSvgElement* element) {
+    switch (element->tag) {
         case PrDomTag_A: return PrSvgInterface_A;
         case PrDomTag_Animate: return PrSvgInterface_Animate;
         case PrDomTag_AnimateMotion: return PrSvgInterface_AnimateMotion;
@@ -224,7 +224,7 @@ PrSvgInterface prSvgElementInterface(const PrSvgElement* self) {
         case PrDomTag_Symbol: return PrSvgInterface_Symbol;
         case PrDomTag_Use: return PrSvgInterface_Use;
         case PrDomTag_View: return PrSvgInterface_View;
-        default: return isTextContent(self) ? PrSvgInterface_TextContent : PrSvgInterface_Element;
+        default: return isTextContent(element) ? PrSvgInterface_TextContent : PrSvgInterface_Element;
     }
 }
 
@@ -236,13 +236,13 @@ PrSvgBoundingBoxOptions prSvgBoundingBoxOptionsDefault(void) {
     return PrSvgBoundingBoxOptions{.fill = true};
 }
 
-PrDomRect prSvgGraphicsElementGetBBox(PrSvgElement* self, const PrSvgBoundingBoxOptions* PR_NULLABLE options) {
+PrDomRect prSvgGraphicsElementGetBBox(PrSvgElement* element, const PrSvgBoundingBoxOptions* PR_NULLABLE options) {
     PrSvgBoundingBoxOptions own = options != nullptr ? *options : prSvgBoundingBoxOptionsDefault();
     PrRect box{};
-    if (isTextContent(self) && !(self->tag == PrDomTag_Text)) {
+    if (isTextContent(element) && !(element->tag == PrDomTag_Text)) {
         // A tspan or textPath measures the cells of its characters, in the text's user space.
         TextQuery q{};
-        textOf(self, &q);
+        textOf(element, &q);
         bool any = false;
         for (uint32_t i = q.start; q.characters != nullptr && i < q.end; ++i) {
             if (q.characters[i].units == 0 || q.characters[i].hidden)
@@ -256,26 +256,26 @@ PrDomRect prSvgGraphicsElementGetBBox(PrSvgElement* self, const PrSvgBoundingBox
     }
     SvgQuery query{};
     SvgPlace place{};
-    if (placedOf(self, &query, &place))
+    if (placedOf(element, &query, &place))
         box = svgNodeBox(query.tree, place, query.node, own);
     svgQueryEnd(&query);
     return domRectOf(box);
 }
 
-bool prSvgGraphicsElementGetCtm(PrSvgElement* self, PrDomMatrix* out) {
+bool prSvgGraphicsElementGetCtm(PrSvgElement* element, PrDomMatrix* out) {
     SvgQuery query{};
     SvgPlace place{};
-    bool found = placedOf(self, &query, &place);
+    bool found = placedOf(element, &query, &place);
     if (found)
         *out = matrixOf(place.ctm);
     svgQueryEnd(&query);
     return found;
 }
 
-bool prSvgGraphicsElementGetScreenCtm(PrSvgElement* self, PrDomMatrix* out) {
+bool prSvgGraphicsElementGetScreenCtm(PrSvgElement* element, PrDomMatrix* out) {
     SvgQuery query{};
     SvgPlace place{};
-    bool found = placedOf(self, &query, &place);
+    bool found = placedOf(element, &query, &place);
     if (found) {
         // The user space's origin and unit vectors, mapped to the viewport, give the affine transform.
         PrVec2 user[3] = {{0, 0}, {1, 0}, {0, 1}};
@@ -300,32 +300,32 @@ bool prSvgGraphicsElementGetScreenCtm(PrSvgElement* self, PrDomMatrix* out) {
     return found;
 }
 
-PrStatus prSvgGeometryElementIsPointInFill(PrSvgElement* self, PrDomPoint point, bool* out) {
+PrStatus prSvgGeometryElementIsPointInFill(PrSvgElement* element, PrDomPoint point, bool* out) {
     *out = false;
     PrVec2 at{float(point.x), float(point.y)};
-    return withShape(self, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
+    return withShape(element, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
         *out = isFiniteF64(point.x) && isFiniteF64(point.y) && svgShapeFillContains(tree, place, node, at);
     });
 }
 
-PrStatus prSvgGeometryElementIsPointInStroke(PrSvgElement* self, PrDomPoint point, bool* out) {
+PrStatus prSvgGeometryElementIsPointInStroke(PrSvgElement* element, PrDomPoint point, bool* out) {
     *out = false;
     PrVec2 at{float(point.x), float(point.y)};
-    return withShape(self, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
+    return withShape(element, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
         *out = isFiniteF64(point.x) && isFiniteF64(point.y) && svgShapeStrokeContains(tree, place, node, at);
     });
 }
 
-PrStatus prSvgGeometryElementGetTotalLength(PrSvgElement* self, float* out) {
+PrStatus prSvgGeometryElementGetTotalLength(PrSvgElement* element, float* out) {
     *out = 0;
-    return withShape(self, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
+    return withShape(element, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
         *out = svgShapeTotalLength(tree, place, node);
     });
 }
 
-PrStatus prSvgGeometryElementGetPointAtLength(PrSvgElement* self, float distance, PrDomPoint* out) {
+PrStatus prSvgGeometryElementGetPointAtLength(PrSvgElement* element, float distance, PrDomPoint* out) {
     *out = PrDomPoint{0, 0, 0, 1};
-    return withShape(self, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
+    return withShape(element, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
         PrVec2 point = svgShapePointAtLength(tree, place, node, distance);
         *out = PrDomPoint{double(point.x), double(point.y), 0, 1};
     });
@@ -368,18 +368,20 @@ void prSvgAnimatedStringDestroy(PrSvgAnimatedString* PR_NULLABLE string) {
     prMemoryFree(string);
 }
 
-PrStringView prSvgAnimatedStringBaseVal(const PrSvgAnimatedString* self) {
-    PrStringView value = self->name == "href" ? svgHref(self->element) : svgAttribute(self->element, self->name);
+PrStringView prSvgAnimatedStringBaseVal(const PrSvgAnimatedString* animated) {
+    PrDomElement* element = animated->element;
+    PrStringView name = animated->name;
+    PrStringView value = name == "href" ? svgHref(element) : svgAttribute(element, name);
     return value.data != nullptr ? value : "";
 }
 
-void prSvgAnimatedStringSetBaseVal(PrSvgAnimatedString* self, PrStringView value) {
-    domSetAttribute(self->element, PrDomNamespace_None, self->name, value);
+void prSvgAnimatedStringSetBaseVal(PrSvgAnimatedString* animated, PrStringView value) {
+    domSetAttribute(animated->element, PrDomNamespace_None, animated->name, value);
 }
 
-uint32_t prSvgTextContentElementGetNumberOfChars(PrSvgElement* self) {
+uint32_t prSvgTextContentElementGetNumberOfChars(PrSvgElement* element) {
     TextQuery q{};
-    textOf(self, &q);
+    textOf(element, &q);
     uint32_t units = 0;
     for (uint32_t i = q.start; i < q.end; ++i)
         units += q.characters[i].units;
@@ -387,9 +389,9 @@ uint32_t prSvgTextContentElementGetNumberOfChars(PrSvgElement* self) {
     return units;
 }
 
-float prSvgTextContentElementGetComputedTextLength(PrSvgElement* self) {
+float prSvgTextContentElementGetComputedTextLength(PrSvgElement* element) {
     TextQuery q{};
-    textOf(self, &q);
+    textOf(element, &q);
     float length = 0;
     for (uint32_t i = q.start; i < q.end; ++i)
         length += q.characters[i].advance;
@@ -397,9 +399,9 @@ float prSvgTextContentElementGetComputedTextLength(PrSvgElement* self) {
     return length;
 }
 
-PrStatus prSvgTextContentElementGetSubStringLength(PrSvgElement* self, uint32_t first, uint32_t count, float* out) {
+PrStatus prSvgTextContentElementGetSubStringLength(PrSvgElement* element, uint32_t first, uint32_t count, float* out) {
     TextQuery q{};
-    textOf(self, &q);
+    textOf(element, &q);
     uint32_t from = q.characters != nullptr ? characterAt(q, first) : kArrayMissing;
     *out = 0;
     if (from != kArrayMissing) {
@@ -416,30 +418,30 @@ PrStatus prSvgTextContentElementGetSubStringLength(PrSvgElement* self, uint32_t 
     return from != kArrayMissing ? PrStatus_Ok : PrStatus_OutOfRange;
 }
 
-PrStatus prSvgTextContentElementGetStartPositionOfChar(PrSvgElement* self, uint32_t index, PrDomPoint* out) {
-    return withCharacter(self, index, [&](const SvgTextCharacter& c) {
+PrStatus prSvgTextContentElementGetStartPositionOfChar(PrSvgElement* element, uint32_t index, PrDomPoint* out) {
+    return withCharacter(element, index, [&](const SvgTextCharacter& c) {
         *out = PrDomPoint{double(c.position.x), double(c.position.y), 0, 1};
     });
 }
 
-PrStatus prSvgTextContentElementGetEndPositionOfChar(PrSvgElement* self, uint32_t index, PrDomPoint* out) {
-    return withCharacter(self, index, [&](const SvgTextCharacter& c) {
+PrStatus prSvgTextContentElementGetEndPositionOfChar(PrSvgElement* element, uint32_t index, PrDomPoint* out) {
+    return withCharacter(element, index, [&](const SvgTextCharacter& c) {
         PrVec2 along = alongOf(c);
         *out = PrDomPoint{double(c.position.x + along.x * c.advance), double(c.position.y + along.y * c.advance), 0, 1};
     });
 }
 
-PrStatus prSvgTextContentElementGetExtentOfChar(PrSvgElement* self, uint32_t index, PrDomRect* out) {
-    return withCharacter(self, index, [&](const SvgTextCharacter& c) { *out = domRectOf(cellOf(c)); });
+PrStatus prSvgTextContentElementGetExtentOfChar(PrSvgElement* element, uint32_t index, PrDomRect* out) {
+    return withCharacter(element, index, [&](const SvgTextCharacter& c) { *out = domRectOf(cellOf(c)); });
 }
 
-PrStatus prSvgTextContentElementGetRotationOfChar(PrSvgElement* self, uint32_t index, float* out) {
-    return withCharacter(self, index, [&](const SvgTextCharacter& c) { *out = c.rotate; });
+PrStatus prSvgTextContentElementGetRotationOfChar(PrSvgElement* element, uint32_t index, float* out) {
+    return withCharacter(element, index, [&](const SvgTextCharacter& c) { *out = c.rotate; });
 }
 
-int32_t prSvgTextContentElementGetCharNumAtPosition(PrSvgElement* self, PrDomPoint point) {
+int32_t prSvgTextContentElementGetCharNumAtPosition(PrSvgElement* element, PrDomPoint point) {
     TextQuery q{};
-    textOf(self, &q);
+    textOf(element, &q);
     int32_t found = -1;
     uint32_t units = 0;
     for (uint32_t i = q.start; i < q.end && found < 0; ++i) {

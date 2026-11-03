@@ -125,62 +125,63 @@ PrDomAbortSignal* prDomAbortSignalCreateDependent(PrDomAbortSignal* PR_NONNULL c
     return result;
 }
 
-void prDomAbortSignalRetain(PrDomAbortSignal* self) {
-    domAbortSignalRetain(self);
+void prDomAbortSignalRetain(PrDomAbortSignal* signal) {
+    domAbortSignalRetain(signal);
 }
 
-void prDomAbortSignalRelease(PrDomAbortSignal* PR_NULLABLE self) {
-    domAbortSignalRelease(self);
+void prDomAbortSignalRelease(PrDomAbortSignal* PR_NULLABLE signal) {
+    domAbortSignalRelease(signal);
 }
 
-bool prDomAbortSignalAborted(const PrDomAbortSignal* self) {
-    return self->aborted;
+bool prDomAbortSignalAborted(const PrDomAbortSignal* signal) {
+    return signal->aborted;
 }
 
-void prDomAbortSignalSetReasonHandler(PrDomAbortSignal* self, PrDomAbortReasonFn PR_NULLABLE invoke, void* PR_NULLABLE context) {
-    self->reasonHandler = invoke;
-    self->reasonContext = context;
+void prDomAbortSignalSetReasonHandler(PrDomAbortSignal* signal, PrDomAbortReasonFn PR_NULLABLE invoke,
+        void* PR_NULLABLE context) {
+    signal->reasonHandler = invoke;
+    signal->reasonContext = context;
 }
 
-void prDomAbortSignalSignalAbort(PrDomAbortSignal* self, const void* PR_NULLABLE reason) {
-    if (self->aborted)
+void prDomAbortSignalSignalAbort(PrDomAbortSignal* signal, const void* PR_NULLABLE reason) {
+    if (signal->aborted)
         return;
-    setReason(self, reason);
+    setReason(signal, reason);
     // Every dependent is aborted before any listener runs, and each is held while the listeners run.
     Array<PrDomAbortSignal*> dependents;
-    for (uint32_t i = 0; i < self->dependents.count; ++i) {
-        PrDomAbortSignal* dependent = self->dependents.data[i];
+    for (uint32_t i = 0; i < signal->dependents.count; ++i) {
+        PrDomAbortSignal* dependent = signal->dependents.data[i];
         if (dependent->aborted)
             continue;
         setReason(dependent, reason);
         domAbortSignalRetain(dependent);
         dependents.push(dependent);
     }
-    domAbortSignalRetain(self);
-    runAbortSteps(self);
+    domAbortSignalRetain(signal);
+    runAbortSteps(signal);
     for (uint32_t i = 0; i < dependents.count; ++i) {
         runAbortSteps(dependents.data[i]);
         domAbortSignalRelease(dependents.data[i]);
     }
-    domAbortSignalRelease(self);
+    domAbortSignalRelease(signal);
     dependents.reset();
 }
 
-uint32_t prDomAbortSignalAdd(PrDomAbortSignal* self, const PrDomAbortAlgorithm* algorithm) {
-    if (self->aborted)
+uint32_t prDomAbortSignalAdd(PrDomAbortSignal* signal, const PrDomAbortAlgorithm* algorithm) {
+    if (signal->aborted)
         return 0;
     if (algorithm->retain != nullptr)
         algorithm->retain(algorithm->context);
-    uint32_t id = ++self->lastId;
-    self->algorithms.push({*algorithm, id});
+    uint32_t id = ++signal->lastId;
+    signal->algorithms.push({*algorithm, id});
     return id;
 }
 
-void prDomAbortSignalRemove(PrDomAbortSignal* self, uint32_t id) {
-    for (uint32_t i = 0; i < self->algorithms.count; ++i) {
-        if (self->algorithms.data[i].id == id) {
-            PrDomAbortAlgorithm algorithm = self->algorithms.data[i].algorithm;
-            self->algorithms.erase(i);
+void prDomAbortSignalRemove(PrDomAbortSignal* signal, uint32_t id) {
+    for (uint32_t i = 0; i < signal->algorithms.count; ++i) {
+        if (signal->algorithms.data[i].id == id) {
+            PrDomAbortAlgorithm algorithm = signal->algorithms.data[i].algorithm;
+            signal->algorithms.erase(i);
             release(algorithm);
             return;
         }
@@ -193,17 +194,17 @@ PrDomAbortController* prDomAbortControllerCreate(void) {
     return controller;
 }
 
-void prDomAbortControllerDestroy(PrDomAbortController* PR_NULLABLE self) {
-    if (self == nullptr)
+void prDomAbortControllerDestroy(PrDomAbortController* PR_NULLABLE controller) {
+    if (controller == nullptr)
         return;
-    domAbortSignalRelease(self->signal);
-    prMemoryFree(self);
+    domAbortSignalRelease(controller->signal);
+    prMemoryFree(controller);
 }
 
-PrDomAbortSignal* prDomAbortControllerSignal(PrDomAbortController* self) {
-    return self->signal;
+PrDomAbortSignal* prDomAbortControllerSignal(PrDomAbortController* controller) {
+    return controller->signal;
 }
 
-void prDomAbortControllerAbort(PrDomAbortController* self, const void* PR_NULLABLE reason) {
-    prDomAbortSignalSignalAbort(self->signal, reason);
+void prDomAbortControllerAbort(PrDomAbortController* controller, const void* PR_NULLABLE reason) {
+    prDomAbortSignalSignalAbort(controller->signal, reason);
 }

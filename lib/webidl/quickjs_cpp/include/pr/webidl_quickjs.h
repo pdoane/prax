@@ -168,8 +168,8 @@ bool jsBufferSource(JSContext* ctx, JSValueConst value, const uint8_t* PR_NULLAB
 // `length`. A class with an indexed setter has `setItem`, which returns false if it threw.
 struct JsIndexed {
     uint32_t (*length)(void* handle);
-    JSValue (*item)(JSContext* ctx, JSValueConst self, void* handle, uint32_t index);
-    bool (*PR_NULLABLE setItem)(JSContext* ctx, JSValueConst self, void* handle, uint32_t index, JSValueConst value);
+    JSValue (*item)(JSContext* ctx, JSValueConst object, void* handle, uint32_t index);
+    bool (*PR_NULLABLE setItem)(JSContext* ctx, JSValueConst object, void* handle, uint32_t index, JSValueConst value);
 };
 
 // How a class's named properties behave: whether they are found before the prototype's properties
@@ -186,9 +186,9 @@ struct JsNamed {
     bool (*names)(JSContext* ctx, void* handle, Array<JSAtom>* out);   // appends the supported names
 
     // Returns the value of `name`, or undefined for a name that is not supported.
-    JSValue (*item)(JSContext* ctx, JSValueConst self, void* handle, PrStringView name);
+    JSValue (*item)(JSContext* ctx, JSValueConst object, void* handle, PrStringView name);
 
-    bool (*PR_NULLABLE setItem)(JSContext* ctx, JSValueConst self, void* handle, PrStringView name, JSValueConst value);
+    bool (*PR_NULLABLE setItem)(JSContext* ctx, JSValueConst object, void* handle, PrStringView name, JSValueConst value);
     void (*PR_NULLABLE deleteItem)(void* handle, PrStringView name);
     JsNamedFlags flags;
 };
@@ -216,7 +216,7 @@ struct JsCollection {
     uint32_t (*version)(void* handle);
 
     // The platform object's entries: an array of its keys for a set, or of [key, value] arrays for a map.
-    JSValue (*entries)(JSContext* ctx, JSValueConst self, void* handle);
+    JSValue (*entries)(JSContext* ctx, JSValueConst object, void* handle);
 };
 
 // A constant of an interface (webidl/#js-constants), defined on its interface object and its prototype.
@@ -306,34 +306,34 @@ JSValue jsDefineClass(JSContext* ctx, const JsClassDefinition& definition);
 
 // A FrozenArray<DOMString> attribute's getter.
 template <const JSClassID* PR_NONNULL Id, auto Write>
-JSValue jsFrozenStringsGetter(JSContext* ctx, JSValueConst self) {
+JSValue jsFrozenStringsGetter(JSContext* ctx, JSValueConst jsObject) {
     using T = typename JsHandleOf<decltype(Write)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
+    T* object = jsThis<T>(ctx, jsObject, *Id);
     return object != nullptr ? jsStringArray(ctx, object, Write, true) : JS_EXCEPTION;
 }
 
 // A method that returns a sequence<DOMString>.
 template <const JSClassID* PR_NONNULL Id, auto Write>
-JSValue jsStringsMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
+JSValue jsStringsMethod(JSContext* ctx, JSValueConst jsObject, int, JSValueConst*) {
     using T = typename JsHandleOf<decltype(Write)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
+    T* object = jsThis<T>(ctx, jsObject, *Id);
     return object != nullptr ? jsStringArray(ctx, object, Write, false) : JS_EXCEPTION;
 }
 
 // The item(index) method of class `*Id`, whose indexed properties are `*Indexed`. Returns null past the last item.
 template <const JSClassID* PR_NONNULL Id, const JsIndexed* PR_NONNULL Indexed>
-JSValue jsItemMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    void* handle = jsThis<void>(ctx, self, *Id);
+JSValue jsItemMethod(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    void* handle = jsThis<void>(ctx, object, *Id);
     uint32_t index = 0;
     if (handle == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
-    return index < Indexed->length(handle) ? Indexed->item(ctx, self, handle, index) : JS_NULL;
+    return index < Indexed->length(handle) ? Indexed->item(ctx, object, handle, index) : JS_NULL;
 }
 
 // A [PutForwards] attribute's setter (webidl/#PutForwards), which sets `Forward` on the attribute's object.
 template <JsLiteral Attribute, JsLiteral Forward>
-JSValue jsPutForwards(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    JSValue target = JS_GetPropertyStr(ctx, self, Attribute.text);
+JSValue jsPutForwards(JSContext* ctx, JSValueConst targetObject, JSValueConst input) {
+    JSValue target = JS_GetPropertyStr(ctx, targetObject, Attribute.text);
     if (JS_IsException(target))
         return target;
     int set = JS_SetPropertyStr(ctx, target, Forward.text, JS_DupValue(ctx, input));

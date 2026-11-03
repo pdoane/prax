@@ -24,16 +24,16 @@ namespace pr_impl {
 
 // A DOMString attribute, which is the content attribute's value, or the empty string if there is no attribute.
 template <JsLiteral Name>
-JSValue jsReflectString(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue jsReflectString(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrStringView value = prDomElementGetAttribute(element, Name.text);
     return value.data != nullptr ? jsNewStringView(ctx, value) : jsFixedString(ctx, "");
 }
 template <JsLiteral Name>
-JSValue jsSetReflectString(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue jsSetReflectString(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument value = {ctx};
     if (element == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -44,8 +44,8 @@ JSValue jsSetReflectString(JSContext* ctx, JSValueConst self, JSValueConst input
 // A USVString attribute that reflects a URL, which is the content attribute parsed against the document base URL. Its
 // setter is a DOMString attribute's setter.
 template <JsLiteral Name>
-JSValue jsReflectUrl(JSContext* ctx, JSValueConst self) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue jsReflectUrl(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     return jsTakeString(ctx, prHtmlElementReflectedUrl(element, Name.text));
@@ -53,13 +53,13 @@ JSValue jsReflectUrl(JSContext* ctx, JSValueConst self) {
 
 // A boolean attribute, which is true if the content attribute is present.
 template <JsLiteral Name>
-JSValue jsReflectBool(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue jsReflectBool(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     return element != nullptr ? JS_NewBool(ctx, prDomElementHasAttribute(element, Name.text)) : JS_EXCEPTION;
 }
 template <JsLiteral Name>
-JSValue jsSetReflectBool(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue jsSetReflectBool(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     if (!JS_ToBool(ctx, input)) {
@@ -73,15 +73,15 @@ JSValue jsSetReflectBool(JSContext* ctx, JSValueConst self, JSValueConst input) 
 // An integer attribute of `Kind` with the default `Fallback`. A Positive or NonNegative attribute's setter throws an
 // "IndexSizeError" DOMException for a value outside its range.
 template <JsLiteral Name, PrHtmlReflectedInteger Kind, int64_t Fallback>
-JSValue jsReflectInteger(JSContext* ctx, JSValueConst self) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue jsReflectInteger(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     return JS_NewInt64(ctx, prHtmlElementReflectedInteger(element, Name.text, Kind, Fallback));
 }
 template <JsLiteral Name, PrHtmlReflectedInteger Kind, int64_t Fallback>
-JSValue jsSetReflectInteger(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue jsSetReflectInteger(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     int64_t value = 0;
@@ -113,8 +113,8 @@ struct JsReflectedKeywords {
 // A DOMString attribute limited to only known values. The value is the keyword that the content attribute matches ASCII
 // case-insensitively, or the default for a missing or an invalid value. Its setter is a DOMString attribute's setter.
 template <JsLiteral Name, const JsReflectedKeywords* PR_NONNULL Keywords>
-JSValue jsReflectEnumerated(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue jsReflectEnumerated(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrStringView value = prDomElementGetAttribute(element, Name.text);

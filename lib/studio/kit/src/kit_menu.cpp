@@ -311,8 +311,8 @@ PrLayoutNode floating(Kit& kit, uint64_t key, PrUiFlags flags, PrRect anchor, Pr
         float minWidth) {
     PrLayoutNode overlay = prUiOverlay(kit.ui);
     PrLayoutNode node = prUiElement(kit.ui, overlay, key, 0, flags);
-    PrRect self = boundsOf(kit, node);
-    PrVec2 extent{self.right - self.left, self.bottom - self.top};
+    PrRect bounds = boundsOf(kit, node);
+    PrVec2 extent{bounds.right - bounds.left, bounds.bottom - bounds.top};
     if (extent.x <= 0 && extent.y <= 0)
         prUiRequestFrame(kit.ui);
     PrVec2 at = placeFloating(boundsOf(kit, overlay), anchor, extent, offset);

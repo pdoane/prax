@@ -214,7 +214,7 @@ PrDomNode* PR_NULLABLE prCssPresentationHitTest(PrCssPresentation* presentation,
 // of each property that the engine renders, brought up to date as each is read. It is empty for an element whose
 // document has no presentation, and for a `pseudoElement` that starts with a colon but is not a pseudo-element
 // selector. A `pseudoElement` that does not start with a colon names the element.
-PrCssStyleProperties* prCssElementComputedStyle(PrDomElement* self, PrStringView pseudoElement);
+PrCssStyleProperties* prCssElementComputedStyle(PrDomElement* element, PrStringView pseudoElement);
 
 #if defined(__cplusplus)
 }

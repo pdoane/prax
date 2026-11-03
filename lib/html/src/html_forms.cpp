@@ -236,27 +236,27 @@ using namespace pr_impl;
 // ---------------------------------------------------------------------------------------------------------------------
 // Form-associated elements
 
-PrHtmlFormElement* PR_NULLABLE prHtmlElementForm(PrHtmlElement* self) {
-    if (domIsHtml(self, PrDomTag_Legend)) {
-        PrDomElement* parent = domElementFromNode(self->parent);
+PrHtmlFormElement* PR_NULLABLE prHtmlElementForm(PrHtmlElement* element) {
+    if (domIsHtml(element, PrDomTag_Legend)) {
+        PrDomElement* parent = domElementFromNode(element->parent);
         return domIsHtml(parent, PrDomTag_Fieldset) ? static_cast<PrHtmlFormElement*>(domFormOwner(parent)) : nullptr;
     }
-    return static_cast<PrHtmlFormElement*>(domFormOwner(self));
+    return static_cast<PrHtmlFormElement*>(domFormOwner(element));
 }
 
-PrDomNodeList* PR_NULLABLE prHtmlElementLabels(PrHtmlElement* self) {
-    if (!domIsLabelable(self))
+PrDomNodeList* PR_NULLABLE prHtmlElementLabels(PrHtmlElement* element) {
+    if (!domIsLabelable(element))
         return nullptr;
-    return domNodeListCreateFiltered(self, DomNodeListFilter_Labels, PrStringView{});
+    return domNodeListCreateFiltered(element, DomNodeListFilter_Labels, PrStringView{});
 }
 
-PrString prHtmlElementFormActionUrl(const PrHtmlElement* self, PrStringView name) {
-    PrStringView action = domAttributeValue(self, name);
+PrString prHtmlElementFormActionUrl(const PrHtmlElement* element, PrStringView name) {
+    PrStringView action = domAttributeValue(element, name);
     if (action.size == 0)
-        return prUrlSerialize(self->document->url, PrUrlSerialization_Whole);
+        return prUrlSerialize(element->document->url, PrUrlSerialization_Whole);
     PrUrl* url = nullptr;
     PrString out;
-    if (domDocumentParseUrl(self->document, action, &url) == PrStatus_Ok)
+    if (domDocumentParseUrl(element->document, action, &url) == PrStatus_Ok)
         out = prUrlSerialize(url, PrUrlSerialization_Whole);
     else
         out = prStringCopy(action);
@@ -271,21 +271,21 @@ PrHtmlFormElement* PR_NULLABLE prHtmlFormElementQuery(PrDomEventTarget* PR_NULLA
     return htmlElementQuery<PrHtmlFormElement>(object, PrDomTag_Form);
 }
 
-PrDomHtmlCollection* prHtmlFormElementElements(PrHtmlFormElement* self) {
-    return domHtmlCollectionCreate(self, DomCollectionFilter_FormControls, PrStringView{});
+PrDomHtmlCollection* prHtmlFormElementElements(PrHtmlFormElement* element) {
+    return domHtmlCollectionCreate(element, DomCollectionFilter_FormControls, PrStringView{});
 }
 
-PrDomNodeList* prHtmlFormElementRadioNodeList(PrHtmlFormElement* self, PrStringView name, bool images) {
-    return domNodeListCreateFiltered(self, images ? DomNodeListFilter_FormImages : DomNodeListFilter_Radio, name);
+PrDomNodeList* prHtmlFormElementRadioNodeList(PrHtmlFormElement* element, PrStringView name, bool images) {
+    return domNodeListCreateFiltered(element, images ? DomNodeListFilter_FormImages : DomNodeListFilter_Radio, name);
 }
 
-uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* self, PrStringView name, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
+uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* element, PrStringView name, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (name.size == 0)
         return 0;
     uint32_t count = 0;
     for (uint32_t pass = 0; pass < 2; ++pass) {
-        PrDomNodeList* list = prHtmlFormElementRadioNodeList(self, name, pass == 1);
+        PrDomNodeList* list = prHtmlFormElementRadioNodeList(element, name, pass == 1);
         count = domNodeListLength(list);
         if (count == 1)
             *out = domElementFromNode(domNodeListItem(list, 0));
@@ -294,15 +294,15 @@ uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* self, PrStringView name, 
             break;
     }
     if (count == 0) {
-        *out = domFormPastName(self, name);
+        *out = domFormPastName(element, name);
         return *out != nullptr ? 1 : 0;
     }
     if (count == 1)
-        domFormRememberName(self, name, *out);
+        domFormRememberName(element, name, *out);
     return count;
 }
 
-uint32_t prHtmlFormElementNames(PrHtmlFormElement* self, PrString* PR_NULLABLE items, uint32_t capacity) {
+uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrString* PR_NULLABLE items, uint32_t capacity) {
     // html/#the-form-element:supported-property-names: the names of the form's controls, then of its img elements, then
     // of its past names map, each element's ID before its name, in the tree order of their elements.
     struct Source {
@@ -312,10 +312,10 @@ uint32_t prHtmlFormElementNames(PrHtmlFormElement* self, PrString* PR_NULLABLE i
         uint32_t order;             // the place of the source in the list, among those of one element and rank
     };
     Array<Source> sources;
-    PrDomNode* root = domNodeRoot(self);
+    PrDomNode* root = domNodeRoot(formElement);
     for (PrDomNode* node = domNodeNext(root, root); node != nullptr; node = domNodeNext(root, node)) {
         PrDomElement* element = domElementFromNode(node);
-        if (element == nullptr || domFormOwner(element) != self)
+        if (element == nullptr || domFormOwner(element) != formElement)
             continue;
         bool listed = domIsListed(element) &&
             !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image);
@@ -324,7 +324,7 @@ uint32_t prHtmlFormElementNames(PrHtmlFormElement* self, PrString* PR_NULLABLE i
         sources.push(Source{domElementId(element), element, 0, sources.count});
         sources.push(Source{domAttributeValue(element, "name"), element, 1, sources.count});
     }
-    if (const DomForm* record = self->state != nullptr ? self->state->form : nullptr) {
+    if (const DomForm* record = formElement->state != nullptr ? formElement->state->form : nullptr) {
         for (uint32_t i = 0; i < record->pastNames.count; ++i)
             sources.push(Source{
                 prStringView(&record->pastNames.data[i].name), record->pastNames.data[i].element, 2,
@@ -359,97 +359,97 @@ PrHtmlInputElement* PR_NULLABLE prHtmlInputElementQuery(PrDomEventTarget* PR_NUL
     return htmlElementQuery<PrHtmlInputElement>(object, PrDomTag_Input);
 }
 
-PrDomInputType prHtmlInputElementType(const PrHtmlInputElement* self) {
-    return domElementInputType(self);
+PrDomInputType prHtmlInputElementType(const PrHtmlInputElement* element) {
+    return domElementInputType(element);
 }
 
-PrString prHtmlInputElementValue(const PrHtmlInputElement* self) {
+PrString prHtmlInputElementValue(const PrHtmlInputElement* element) {
     TextBuffer value;
-    domControlValue(self, &value);
+    domControlValue(element, &value);
     PrString out = stringOf(&value);
     textReset(&value);
     return out;
 }
 
-PrStatus prHtmlInputElementSetValue(PrHtmlInputElement* self, PrStringView value) {
-    return domControlSetValue(self, value);
+PrStatus prHtmlInputElementSetValue(PrHtmlInputElement* element, PrStringView value) {
+    return domControlSetValue(element, value);
 }
 
-bool prHtmlInputElementChecked(const PrHtmlInputElement* self) {
-    return domInputChecked(self);
+bool prHtmlInputElementChecked(const PrHtmlInputElement* element) {
+    return domInputChecked(element);
 }
 
-void prHtmlInputElementSetChecked(PrHtmlInputElement* self, bool value) {
-    domInputSetChecked(self, value, true);
+void prHtmlInputElementSetChecked(PrHtmlInputElement* element, bool value) {
+    domInputSetChecked(element, value, true);
 }
 
-bool prHtmlInputElementIndeterminate(const PrHtmlInputElement* self) {
-    return domInputIndeterminate(self);
+bool prHtmlInputElementIndeterminate(const PrHtmlInputElement* element) {
+    return domInputIndeterminate(element);
 }
 
-void prHtmlInputElementSetIndeterminate(PrHtmlInputElement* self, bool value) {
-    domInputSetIndeterminate(self, value);
+void prHtmlInputElementSetIndeterminate(PrHtmlInputElement* element, bool value) {
+    domInputSetIndeterminate(element, value);
 }
 
-double prHtmlInputElementValueAsNumber(const PrHtmlInputElement* self) {
-    if ((domInputApplies(domElementInputType(self)) & DomInputApplyFlag_ValueAsNumber) == 0)
+double prHtmlInputElementValueAsNumber(const PrHtmlInputElement* element) {
+    if ((domInputApplies(domElementInputType(element)) & DomInputApplyFlag_ValueAsNumber) == 0)
         return kNanF64;
     TextBuffer text;
-    domControlValue(self, &text);
+    domControlValue(element, &text);
     double value = kNanF64;
-    if (!domInputStringToNumber(self, textView(&text), &value))
+    if (!domInputStringToNumber(element, textView(&text), &value))
         value = kNanF64;
     textReset(&text);
     return value;
 }
 
-PrStatus prHtmlInputElementSetValueAsNumber(PrHtmlInputElement* self, double value) {
+PrStatus prHtmlInputElementSetValueAsNumber(PrHtmlInputElement* element, double value) {
     if (!isFiniteF64(value) && !isNanF64(value))
         return PrStatus_WrongType;
-    if ((domInputApplies(domElementInputType(self)) & DomInputApplyFlag_ValueAsNumber) == 0)
+    if ((domInputApplies(domElementInputType(element)) & DomInputApplyFlag_ValueAsNumber) == 0)
         return PrStatus_InvalidState;
     if (isNanF64(value))
-        return domControlSetValue(self, "");
+        return domControlSetValue(element, "");
     TextBuffer text;
-    domInputNumberToString(self, value, &text);
-    PrStatus status = domControlSetValue(self, textView(&text));
+    domInputNumberToString(element, value, &text);
+    PrStatus status = domControlSetValue(element, textView(&text));
     textReset(&text);
     return status;
 }
 
-bool prHtmlInputElementValueAsDate(const PrHtmlInputElement* self, double* out) {
-    if ((domInputApplies(domElementInputType(self)) & DomInputApplyFlag_ValueAsDate) == 0)
+bool prHtmlInputElementValueAsDate(const PrHtmlInputElement* element, double* out) {
+    if ((domInputApplies(domElementInputType(element)) & DomInputApplyFlag_ValueAsDate) == 0)
         return false;
     TextBuffer text;
-    domControlValue(self, &text);
-    bool converted = domInputStringToDate(self, textView(&text), out);
+    domControlValue(element, &text);
+    bool converted = domInputStringToDate(element, textView(&text), out);
     textReset(&text);
     return converted;
 }
 
-PrStatus prHtmlInputElementSetValueAsDate(PrHtmlInputElement* self, double time) {
-    if ((domInputApplies(domElementInputType(self)) & DomInputApplyFlag_ValueAsDate) == 0)
+PrStatus prHtmlInputElementSetValueAsDate(PrHtmlInputElement* element, double time) {
+    if ((domInputApplies(domElementInputType(element)) & DomInputApplyFlag_ValueAsDate) == 0)
         return PrStatus_InvalidState;
     if (!isFiniteF64(time))
-        return domControlSetValue(self, "");
+        return domControlSetValue(element, "");
     TextBuffer text;
-    domInputDateToString(self, time, &text);
-    PrStatus status = domControlSetValue(self, textView(&text));
+    domInputDateToString(element, time, &text);
+    PrStatus status = domControlSetValue(element, textView(&text));
     textReset(&text);
     return status;
 }
 
-PrStatus prHtmlInputElementStepUp(PrHtmlInputElement* self, int32_t n) {
-    return domInputStep(self, n, true);
+PrStatus prHtmlInputElementStepUp(PrHtmlInputElement* element, int32_t n) {
+    return domInputStep(element, n, true);
 }
 
-PrStatus prHtmlInputElementStepDown(PrHtmlInputElement* self, int32_t n) {
-    return domInputStep(self, n, false);
+PrStatus prHtmlInputElementStepDown(PrHtmlInputElement* element, int32_t n) {
+    return domInputStep(element, n, false);
 }
 
-PrDomElement* PR_NULLABLE prHtmlInputElementList(PrHtmlInputElement* self) {
+PrDomElement* PR_NULLABLE prHtmlInputElementList(PrHtmlInputElement* element) {
     // html/#attr-input-list: the attribute does not apply to these types.
-    switch (domElementInputType(self)) {
+    switch (domElementInputType(element)) {
         case PrDomInputType_Hidden:
         case PrDomInputType_Password:
         case PrDomInputType_Checkbox:
@@ -463,27 +463,27 @@ PrDomElement* PR_NULLABLE prHtmlInputElementList(PrHtmlInputElement* self) {
         default:
             break;
     }
-    PrStringView id = domAttributeValue(self, "list");
+    PrStringView id = domAttributeValue(element, "list");
     if (id.data == nullptr)
         return nullptr;
-    PrDomElement* found = domElementById(domNodeRoot(self), id);
+    PrDomElement* found = domElementById(domNodeRoot(element), id);
     return domIsHtml(found, PrDomTag_Datalist) ? found : nullptr;
 }
 
-uint32_t prHtmlInputElementWidth(const PrHtmlInputElement* self) {
-    return prHtmlInputElementType(self) == PrDomInputType_Image ? htmlImageDimension(self, true) : 0;
+uint32_t prHtmlInputElementWidth(const PrHtmlInputElement* element) {
+    return prHtmlInputElementType(element) == PrDomInputType_Image ? htmlImageDimension(element, true) : 0;
 }
 
-uint32_t prHtmlInputElementHeight(const PrHtmlInputElement* self) {
-    return prHtmlInputElementType(self) == PrDomInputType_Image ? htmlImageDimension(self, false) : 0;
+uint32_t prHtmlInputElementHeight(const PrHtmlInputElement* element) {
+    return prHtmlInputElementType(element) == PrDomInputType_Image ? htmlImageDimension(element, false) : 0;
 }
 
-void prHtmlInputElementSetWidth(PrHtmlInputElement* self, uint32_t value) {
-    htmlSetReflectedUnsigned(self, "width", value);
+void prHtmlInputElementSetWidth(PrHtmlInputElement* element, uint32_t value) {
+    htmlSetReflectedUnsigned(element, "width", value);
 }
 
-void prHtmlInputElementSetHeight(PrHtmlInputElement* self, uint32_t value) {
-    htmlSetReflectedUnsigned(self, "height", value);
+void prHtmlInputElementSetHeight(PrHtmlInputElement* element, uint32_t value) {
+    htmlSetReflectedUnsigned(element, "height", value);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -493,10 +493,10 @@ PrHtmlButtonElement* PR_NULLABLE prHtmlButtonElementQuery(PrDomEventTarget* PR_N
     return htmlElementQuery<PrHtmlButtonElement>(object, PrDomTag_Button);
 }
 
-PrStringView prHtmlButtonElementType(const PrHtmlButtonElement* self) {
-    if (domIsSubmitButton(self))
+PrStringView prHtmlButtonElementType(const PrHtmlButtonElement* element) {
+    if (domIsSubmitButton(element))
         return "submit";
-    DomButtonType type = domButtonType(domAttributeValue(self, "type"));
+    DomButtonType type = domButtonType(domAttributeValue(element, "type"));
     return type == DomButtonType_Auto ? PrStringView{"button"} : domButtonTypeKeyword(type);
 }
 
@@ -507,33 +507,33 @@ PrHtmlTextAreaElement* PR_NULLABLE prHtmlTextAreaElementQuery(PrDomEventTarget* 
     return htmlElementQuery<PrHtmlTextAreaElement>(object, PrDomTag_Textarea);
 }
 
-PrString prHtmlTextAreaElementValue(const PrHtmlTextAreaElement* self) {
+PrString prHtmlTextAreaElementValue(const PrHtmlTextAreaElement* element) {
     TextBuffer value;
-    domControlValue(self, &value);
+    domControlValue(element, &value);
     PrString out = stringOf(&value);
     textReset(&value);
     return out;
 }
 
-void prHtmlTextAreaElementSetValue(PrHtmlTextAreaElement* self, PrStringView value) {
-    domControlSetValue(self, value);
+void prHtmlTextAreaElementSetValue(PrHtmlTextAreaElement* element, PrStringView value) {
+    domControlSetValue(element, value);
 }
 
-PrString prHtmlTextAreaElementDefaultValue(const PrHtmlTextAreaElement* self) {
+PrString prHtmlTextAreaElementDefaultValue(const PrHtmlTextAreaElement* element) {
     TextBuffer value;
-    domTextareaDefaultValue(self, &value);
+    domTextareaDefaultValue(element, &value);
     PrString out = stringOf(&value);
     textReset(&value);
     return out;
 }
 
-void prHtmlTextAreaElementSetDefaultValue(PrHtmlTextAreaElement* self, PrStringView value) {
-    domStringReplaceAll(self, value);
+void prHtmlTextAreaElementSetDefaultValue(PrHtmlTextAreaElement* element, PrStringView value) {
+    domStringReplaceAll(element, value);
 }
 
-uint32_t prHtmlTextAreaElementTextLength(const PrHtmlTextAreaElement* self) {
+uint32_t prHtmlTextAreaElementTextLength(const PrHtmlTextAreaElement* element) {
     TextBuffer value;
-    domControlValue(self, &value);
+    domControlValue(element, &value);
     // A code point counts one UTF-16 code unit, and one past the Basic Multilingual Plane, which takes four bytes in
     // UTF-8, counts two.
     uint32_t length = 0;
@@ -561,12 +561,12 @@ PrHtmlLabelElement* PR_NULLABLE prHtmlLabelElementQuery(PrDomEventTarget* PR_NUL
     return htmlElementQuery<PrHtmlLabelElement>(object, PrDomTag_Label);
 }
 
-PrDomHtmlCollection* prHtmlFieldSetElementElements(PrHtmlFieldSetElement* self) {
-    return domHtmlCollectionCreate(self, DomCollectionFilter_FieldSetElements, PrStringView{});
+PrDomHtmlCollection* prHtmlFieldSetElementElements(PrHtmlFieldSetElement* element) {
+    return domHtmlCollectionCreate(element, DomCollectionFilter_FieldSetElements, PrStringView{});
 }
 
-PrDomElement* PR_NULLABLE prHtmlLabelElementControl(PrHtmlLabelElement* self) {
-    return const_cast<PrDomElement*>(domLabeledControl(self));
+PrDomElement* PR_NULLABLE prHtmlLabelElementControl(PrHtmlLabelElement* element) {
+    return const_cast<PrDomElement*>(domLabeledControl(element));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -576,28 +576,28 @@ PrHtmlOutputElement* PR_NULLABLE prHtmlOutputElementQuery(PrDomEventTarget* PR_N
     return htmlElementQuery<PrHtmlOutputElement>(object, PrDomTag_Output);
 }
 
-PrString prHtmlOutputElementValue(const PrHtmlOutputElement* self) {
-    return domNodeTextContent(self);
+PrString prHtmlOutputElementValue(const PrHtmlOutputElement* element) {
+    return domNodeTextContent(element);
 }
 
-void prHtmlOutputElementSetValue(PrHtmlOutputElement* self, PrStringView value) {
-    DomControl* control = domControlFromElement(self);
+void prHtmlOutputElementSetValue(PrHtmlOutputElement* element, PrStringView value) {
+    DomControl* control = domControlFromElement(element);
     if (prStringIsNull(&control->defaultOverride))
-        control->defaultOverride = domNodeTextContent(self);
-    domStringReplaceAll(self, value);
+        control->defaultOverride = domNodeTextContent(element);
+    domStringReplaceAll(element, value);
 }
 
-PrString prHtmlOutputElementDefaultValue(const PrHtmlOutputElement* self) {
-    const DomControl* control = domControl(self);
+PrString prHtmlOutputElementDefaultValue(const PrHtmlOutputElement* element) {
+    const DomControl* control = domControl(element);
     if (control == nullptr || prStringIsNull(&control->defaultOverride))
-        return domNodeTextContent(self);
+        return domNodeTextContent(element);
     return prStringClone(&control->defaultOverride);
 }
 
-void prHtmlOutputElementSetDefaultValue(PrHtmlOutputElement* self, PrStringView value) {
-    DomControl* control = domControlFromElement(self);
+void prHtmlOutputElementSetDefaultValue(PrHtmlOutputElement* element, PrStringView value) {
+    DomControl* control = domControlFromElement(element);
     if (prStringIsNull(&control->defaultOverride))
-        domStringReplaceAll(self, value);
+        domStringReplaceAll(element, value);
     else
         prStringReplace(&control->defaultOverride, value);
 }
@@ -613,50 +613,50 @@ PrHtmlMeterElement* PR_NULLABLE prHtmlMeterElementQuery(PrDomEventTarget* PR_NUL
     return htmlElementQuery<PrHtmlMeterElement>(object, PrDomTag_Meter);
 }
 
-double prHtmlProgressElementValue(const PrHtmlProgressElement* self) {
-    double value = parsedOr(self, "value", 0);
-    double max = prHtmlProgressElementMax(self);
+double prHtmlProgressElementValue(const PrHtmlProgressElement* element) {
+    double value = parsedOr(element, "value", 0);
+    double max = prHtmlProgressElementMax(element);
     return value < 0 ? 0 : value > max ? max : value;
 }
 
-double prHtmlProgressElementMax(const PrHtmlProgressElement* self) {
-    double max = parsedOr(self, "max", 1);
+double prHtmlProgressElementMax(const PrHtmlProgressElement* element) {
+    double max = parsedOr(element, "max", 1);
     return max > 0 ? max : 1;
 }
 
-double prHtmlProgressElementPosition(const PrHtmlProgressElement* self) {
-    if (domAttributeValue(self, "value").data == nullptr)
+double prHtmlProgressElementPosition(const PrHtmlProgressElement* element) {
+    if (domAttributeValue(element, "value").data == nullptr)
         return -1;
-    return prHtmlProgressElementValue(self) / prHtmlProgressElementMax(self);
+    return prHtmlProgressElementValue(element) / prHtmlProgressElementMax(element);
 }
 
-PrHtmlMeterValues prHtmlMeterElementValues(const PrHtmlMeterElement* self) {
+PrHtmlMeterValues prHtmlMeterElementValues(const PrHtmlMeterElement* element) {
     PrHtmlMeterValues values{};
-    values.min = parsedOr(self, "min", 0);
-    values.max = parsedOr(self, "max", 1);
+    values.min = parsedOr(element, "min", 0);
+    values.max = parsedOr(element, "max", 1);
     if (values.max < values.min)
         values.max = values.min;
-    values.value = parsedOr(self, "value", 0);
+    values.value = parsedOr(element, "value", 0);
     values.value = values.value < values.min ? values.min : values.value > values.max ? values.max : values.value;
-    values.low = parsedOr(self, "low", values.min);
+    values.low = parsedOr(element, "low", values.min);
     values.low = values.low < values.min ? values.min : values.low > values.max ? values.max : values.low;
-    values.high = parsedOr(self, "high", values.max);
+    values.high = parsedOr(element, "high", values.max);
     values.high = values.high < values.low ? values.low : values.high > values.max ? values.max : values.high;
-    values.optimum = parsedOr(self, "optimum", values.min + (values.max - values.min) / 2);
+    values.optimum = parsedOr(element, "optimum", values.min + (values.max - values.min) / 2);
     values.optimum =
         values.optimum < values.min   ? values.min : values.optimum > values.max ? values.max : values.optimum;
     return values;
 }
 
-PrStatus prHtmlElementSetReflectedDouble(PrHtmlElement* self, PrStringView name, double value) {
+PrStatus prHtmlElementSetReflectedDouble(PrHtmlElement* element, PrStringView name, double value) {
     if (!isFiniteF64(value))
         return PrStatus_WrongType;
     // html/#dom-progress-max is limited to only positive numbers.
-    if (domIsHtml(self, PrDomTag_Progress) && name == "max" && value <= 0)
+    if (domIsHtml(element, PrDomTag_Progress) && name == "max" && value <= 0)
         return PrStatus_Ok;
     TextBuffer text;
     domAppendFloat(&text, value);
-    domSetAttribute(self, PrDomNamespace_None, name, textView(&text));
+    domSetAttribute(element, PrDomNamespace_None, name, textView(&text));
     textReset(&text);
     return PrStatus_Ok;
 }
@@ -689,86 +689,86 @@ PrStatus prHtmlFormDataCreate(PrHtmlFormElement* PR_NULLABLE form, PrHtmlElement
     return PrStatus_Ok;
 }
 
-void prHtmlFormDataRetain(PrHtmlFormData* self) {
-    domEntryListRetain(self);
+void prHtmlFormDataRetain(PrHtmlFormData* formData) {
+    domEntryListRetain(formData);
 }
 
-void prHtmlFormDataRelease(PrHtmlFormData* PR_NULLABLE self) {
-    domEntryListRelease(self);
+void prHtmlFormDataRelease(PrHtmlFormData* PR_NULLABLE formData) {
+    domEntryListRelease(formData);
 }
 
-void prHtmlFormDataAppend(PrHtmlFormData* self, PrStringView name, PrStringView value) {
-    domEntryListAppend(self, name, value);
+void prHtmlFormDataAppend(PrHtmlFormData* formData, PrStringView name, PrStringView value) {
+    domEntryListAppend(formData, name, value);
 }
 
-void prHtmlFormDataDelete(PrHtmlFormData* self, PrStringView name) {
-    for (uint32_t i = self->entries.count; i-- != 0;) {
-        DomEntry& entry = self->entries.data[i];
+void prHtmlFormDataDelete(PrHtmlFormData* formData, PrStringView name) {
+    for (uint32_t i = formData->entries.count; i-- != 0;) {
+        DomEntry& entry = formData->entries.data[i];
         if (prStringView(&entry.name) == name) {
             prStringReset(&entry.name);
             prStringReset(&entry.value);
-            self->entries.erase(i);
+            formData->entries.erase(i);
         }
     }
 }
 
-PrStringView prHtmlFormDataGet(const PrHtmlFormData* self, PrStringView name) {
-    for (uint32_t i = 0; i < self->entries.count; ++i) {
-        if (prStringView(&self->entries.data[i].name) == name)
-            return prStringView(&self->entries.data[i].value);
+PrStringView prHtmlFormDataGet(const PrHtmlFormData* formData, PrStringView name) {
+    for (uint32_t i = 0; i < formData->entries.count; ++i) {
+        if (prStringView(&formData->entries.data[i].name) == name)
+            return prStringView(&formData->entries.data[i].value);
     }
     return {};
 }
 
-uint32_t prHtmlFormDataGetAll(const PrHtmlFormData* self, PrStringView name, PrStringView* PR_NULLABLE items,
+uint32_t prHtmlFormDataGetAll(const PrHtmlFormData* formData, PrStringView name, PrStringView* PR_NULLABLE items,
         uint32_t capacity) {
     uint32_t count = 0;
-    for (uint32_t i = 0; i < self->entries.count; ++i) {
-        if (prStringView(&self->entries.data[i].name) != name)
+    for (uint32_t i = 0; i < formData->entries.count; ++i) {
+        if (prStringView(&formData->entries.data[i].name) != name)
             continue;
         if (items != nullptr && count < capacity)
-            items[count] = prStringView(&self->entries.data[i].value);
+            items[count] = prStringView(&formData->entries.data[i].value);
         ++count;
     }
     return count;
 }
 
-bool prHtmlFormDataHas(const PrHtmlFormData* self, PrStringView name) {
-    for (uint32_t i = 0; i < self->entries.count; ++i) {
-        if (prStringView(&self->entries.data[i].name) == name)
+bool prHtmlFormDataHas(const PrHtmlFormData* formData, PrStringView name) {
+    for (uint32_t i = 0; i < formData->entries.count; ++i) {
+        if (prStringView(&formData->entries.data[i].name) == name)
             return true;
     }
     return false;
 }
 
-void prHtmlFormDataSet(PrHtmlFormData* self, PrStringView name, PrStringView value) {
-    uint32_t first = self->entries.count;
-    for (uint32_t i = self->entries.count; i-- != 0;) {
-        DomEntry& entry = self->entries.data[i];
+void prHtmlFormDataSet(PrHtmlFormData* formData, PrStringView name, PrStringView value) {
+    uint32_t first = formData->entries.count;
+    for (uint32_t i = formData->entries.count; i-- != 0;) {
+        DomEntry& entry = formData->entries.data[i];
         if (prStringView(&entry.name) != name)
             continue;
-        if (first != self->entries.count) {
-            prStringReset(&self->entries.data[first].name);
-            prStringReset(&self->entries.data[first].value);
-            self->entries.erase(first);
+        if (first != formData->entries.count) {
+            prStringReset(&formData->entries.data[first].name);
+            prStringReset(&formData->entries.data[first].value);
+            formData->entries.erase(first);
         }
         first = i;
     }
-    if (first == self->entries.count)
-        domEntryListAppend(self, name, value);
+    if (first == formData->entries.count)
+        domEntryListAppend(formData, name, value);
     else
-        prStringReplace(&self->entries.data[first].value, value);
+        prStringReplace(&formData->entries.data[first].value, value);
 }
 
-uint32_t prHtmlFormDataCount(const PrHtmlFormData* self) {
-    return self->entries.count;
+uint32_t prHtmlFormDataCount(const PrHtmlFormData* formData) {
+    return formData->entries.count;
 }
 
-bool prHtmlFormDataEntry(const PrHtmlFormData* self, uint32_t index, PrStringView* name, PrStringView* value) {
-    if (index >= self->entries.count)
+bool prHtmlFormDataEntry(const PrHtmlFormData* formData, uint32_t index, PrStringView* name, PrStringView* value) {
+    if (index >= formData->entries.count)
         return false;
-    *name = prStringView(&self->entries.data[index].name);
-    *value = prStringView(&self->entries.data[index].value);
+    *name = prStringView(&formData->entries.data[index].name);
+    *value = prStringView(&formData->entries.data[index].value);
     return true;
 }
 
@@ -832,31 +832,31 @@ PrHtmlCommandEvent* prHtmlCommandEventCreate(PrStringView type, const PrDomEvent
     return event;
 }
 
-PrHtmlElement* PR_NULLABLE prHtmlSubmitEventSubmitter(PrHtmlSubmitEvent* self) {
-    PrDomEventTarget* source = self->control != nullptr ? self->control->source : nullptr;
+PrHtmlElement* PR_NULLABLE prHtmlSubmitEventSubmitter(PrHtmlSubmitEvent* event) {
+    PrDomEventTarget* source = event->control != nullptr ? event->control->source : nullptr;
     return static_cast<PrHtmlElement*>(domElementFromNode(domNodeFromTarget(source)));
 }
 
-PrHtmlFormData* prHtmlFormDataEventFormData(PrHtmlFormDataEvent* self) {
-    return static_cast<PrHtmlFormData*>(self->control->entries);
+PrHtmlFormData* prHtmlFormDataEventFormData(PrHtmlFormDataEvent* event) {
+    return static_cast<PrHtmlFormData*>(event->control->entries);
 }
 
-PrStringView prHtmlToggleEventOldState(const PrHtmlToggleEvent* self) {
-    return prStringView(&self->control->oldState);
+PrStringView prHtmlToggleEventOldState(const PrHtmlToggleEvent* event) {
+    return prStringView(&event->control->oldState);
 }
 
-PrStringView prHtmlToggleEventNewState(const PrHtmlToggleEvent* self) {
-    return prStringView(&self->control->newState);
+PrStringView prHtmlToggleEventNewState(const PrHtmlToggleEvent* event) {
+    return prStringView(&event->control->newState);
 }
 
-PrStringView prHtmlCommandEventCommand(const PrHtmlCommandEvent* self) {
-    return prStringView(&self->control->command);
+PrStringView prHtmlCommandEventCommand(const PrHtmlCommandEvent* event) {
+    return prStringView(&event->control->command);
 }
 
-PrDomElement* PR_NULLABLE prHtmlToggleEventSource(PrHtmlToggleEvent* self) {
-    return retargetedSource(self);
+PrDomElement* PR_NULLABLE prHtmlToggleEventSource(PrHtmlToggleEvent* event) {
+    return retargetedSource(event);
 }
 
-PrDomElement* PR_NULLABLE prHtmlCommandEventSource(PrHtmlCommandEvent* self) {
-    return retargetedSource(self);
+PrDomElement* PR_NULLABLE prHtmlCommandEventSource(PrHtmlCommandEvent* event) {
+    return retargetedSource(event);
 }

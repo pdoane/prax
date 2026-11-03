@@ -116,20 +116,20 @@ PrGpuTexture createTable(PrGpuDevice* device, PrColorSpace gamut) {
 
 // Returns the pipeline for the pass's target's format, made the first time that format is drawn in. Returns zero if the
 // device makes none.
-PrGpuPipeline pipelineFor(PrDrawDisplay* self, PrGpuFormat format) {
-    if (self->pipeline.id != 0 && self->format == format)
-        return self->pipeline;
-    prGpuPipelineDestroy(self->device, self->pipeline);
-    PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(self->library);
+PrGpuPipeline pipelineFor(PrDrawDisplay* display, PrGpuFormat format) {
+    if (display->pipeline.id != 0 && display->format == format)
+        return display->pipeline;
+    prGpuPipelineDestroy(display->device, display->pipeline);
+    PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(display->library);
     desc.vertex = "wholeVertex";
     desc.fragment = "convertPixel";
     desc.formats.colorCount = 1;
     desc.formats.color[0] = format;
     desc.name = "display";
-    self->pipeline = PrGpuPipeline{};
-    prGpuPipelineCreateGraphics(self->device, &desc, &self->pipeline);
-    self->format = format;
-    return self->pipeline;
+    display->pipeline = PrGpuPipeline{};
+    prGpuPipelineCreateGraphics(display->device, &desc, &display->pipeline);
+    display->format = format;
+    return display->pipeline;
 }
 
 } // namespace
@@ -143,31 +143,30 @@ PrStatus prDrawDisplayCreate(PrGpuDevice* device, PrDrawDisplay* PR_NULLABLE* PR
     PrGpuShaderLibrary* library = nullptr;
     if (prGpuShaderLibraryCreate(device, kDrawDisplayShaders, sizeof(kDrawDisplayShaders), &library) != PrStatus_Ok)
         return PrStatus_NotSupported;
-    PrDrawDisplay* self = allocZeroed<PrDrawDisplay>();
-    self->device = device;
-    self->library = library;
+    PrDrawDisplay* display = allocZeroed<PrDrawDisplay>();
+    display->device = device;
+    display->library = library;
     for (uint32_t i = 0; i < 3; ++i)
-        self->tables[i] = createTable(device, kGamuts[i]);
-    *out = self;
+        display->tables[i] = createTable(device, kGamuts[i]);
+    *out = display;
     return PrStatus_Ok;
 }
 
 void prDrawDisplayDestroy(PrDrawDisplay* PR_NULLABLE display) {
-    PrDrawDisplay* self = display;
-    if (self == nullptr)
+    if (display == nullptr)
         return;
-    for (PrGpuTexture table : self->tables)
-        prGpuTextureDestroy(self->device, table);
-    prGpuPipelineDestroy(self->device, self->pipeline);
-    prGpuShaderLibraryDestroy(self->library);
-    prMemoryFree(self);
+    for (PrGpuTexture table : display->tables)
+        prGpuTextureDestroy(display->device, table);
+    prGpuPipelineDestroy(display->device, display->pipeline);
+    prGpuShaderLibraryDestroy(display->library);
+    prMemoryFree(display);
 }
 
-void prDrawDisplayDraw(PrDrawDisplay* self, PrGpuPass* pass, PrGpuTexture frame, const PrDrawDisplayDesc* desc) {
+void prDrawDisplayDraw(PrDrawDisplay* display, PrGpuPass* pass, PrGpuTexture frame, const PrDrawDisplayDesc* desc) {
     PrColorSpace gamut = gamutOf(desc->gamut);
     uint32_t index = gamut == PrColorSpace_Srgb ? 0 : gamut == PrColorSpace_DisplayP3 ? 1 : 2;
-    PrGpuPipeline pipeline = pipelineFor(self, prGpuPassFormats(pass).color[0]);
-    if (pipeline.id == 0 || self->tables[index].id == 0)
+    PrGpuPipeline pipeline = pipelineFor(display, prGpuPassFormats(pass).color[0]);
+    if (pipeline.id == 0 || display->tables[index].id == 0)
         return;
     DisplayArguments arguments{};
     writeMatrix(PrColorSpace_SrgbLinear, linearOf(gamut), arguments.toGamut);
@@ -182,7 +181,7 @@ void prDrawDisplayDraw(PrDrawDisplay* self, PrGpuPass* pass, PrGpuTexture frame,
         arguments.output = DisplayOutput_Encoded;
     arguments.pqWhite = kPqWhite;
     arguments.frame = frame.id;
-    arguments.table = self->tables[index].id;
+    arguments.table = display->tables[index].id;
     PrGpuCommands* commands = prGpuPassCommands(pass);
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuCommandsSetUniforms(commands, &arguments, sizeof(arguments));

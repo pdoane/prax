@@ -277,16 +277,16 @@ PrXhrProgressEvent* prXhrProgressEventCreate(PrStringView type, const PrXhrProgr
     return event;
 }
 
-bool prXhrProgressEventLengthComputable(const PrXhrProgressEvent* self) {
-    return static_cast<const XhrProgressData*>(self->extra)->lengthComputable;
+bool prXhrProgressEventLengthComputable(const PrXhrProgressEvent* event) {
+    return static_cast<const XhrProgressData*>(event->extra)->lengthComputable;
 }
 
-double prXhrProgressEventLoaded(const PrXhrProgressEvent* self) {
-    return static_cast<const XhrProgressData*>(self->extra)->loaded;
+double prXhrProgressEventLoaded(const PrXhrProgressEvent* event) {
+    return static_cast<const XhrProgressData*>(event->extra)->loaded;
 }
 
-double prXhrProgressEventTotal(const PrXhrProgressEvent* self) {
-    return static_cast<const XhrProgressData*>(self->extra)->total;
+double prXhrProgressEventTotal(const PrXhrProgressEvent* event) {
+    return static_cast<const XhrProgressData*>(event->extra)->total;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -314,36 +314,36 @@ PrXhr* prXhrCreate(const PrXhrDesc* desc) {
     return request;
 }
 
-void prXhrRetain(PrXhr* self) {
-    retainRequest(self);
+void prXhrRetain(PrXhr* xhr) {
+    retainRequest(xhr);
 }
 
-void prXhrRelease(PrXhr* PR_NULLABLE self) {
-    if (self != nullptr)
-        releaseRequest(self);
+void prXhrRelease(PrXhr* PR_NULLABLE xhr) {
+    if (xhr != nullptr)
+        releaseRequest(xhr);
 }
 
-void prXhrSetActivity(PrXhr* self, PrXhrActivityFn PR_NULLABLE activity, void* PR_NULLABLE context) {
-    self->activity = activity;
-    self->activityContext = context;
-    if (self->active && activity != nullptr)
-        activity(context, self, true);
+void prXhrSetActivity(PrXhr* xhr, PrXhrActivityFn PR_NULLABLE activity, void* PR_NULLABLE context) {
+    xhr->activity = activity;
+    xhr->activityContext = context;
+    if (xhr->active && activity != nullptr)
+        activity(context, xhr, true);
 }
 
-PrXhrUpload* prXhrUpload(PrXhr* self) {
-    return static_cast<PrXhrUpload*>(&self->upload);
+PrXhrUpload* prXhrUpload(PrXhr* xhr) {
+    return static_cast<PrXhrUpload*>(&xhr->upload);
 }
 
-PrXhrState prXhrReadyState(const PrXhr* self) {
-    return self->state;
+PrXhrState prXhrReadyState(const PrXhr* xhr) {
+    return xhr->state;
 }
 
-PrStatus prXhrOpen(PrXhr* self, PrStringView method, PrStringView url, bool async) {
+PrStatus prXhrOpen(PrXhr* xhr, PrStringView method, PrStringView url, bool async) {
     if (!prFetchIsMethod(method))
         return PrStatus_Syntax;
     if (prFetchIsForbiddenMethod(method))
         return PrStatus_NotAllowed;
-    PrString baseText = self->client.baseUrl(self->client.context);
+    PrString baseText = xhr->client.baseUrl(xhr->client.context);
     PrUrl* base = nullptr;
     PrUrl* parsed = nullptr;
     PrStatus status = prUrlCreate(prStringView(&baseText), nullptr, PrCharset_Utf8, &base);
@@ -357,90 +357,90 @@ PrStatus prXhrOpen(PrXhr* self, PrStringView method, PrStringView url, bool asyn
         prUrlDestroy(parsed);
         return PrStatus_NotSupported;
     }
-    ++self->generation;
-    stopFetch(self);
+    ++xhr->generation;
+    stopFetch(xhr);
     PrStringView normalized = prFetchNormalizeMethod(method);
-    prStringReset(&self->method);
+    prStringReset(&xhr->method);
     if (!(normalized == "GET"))
-        self->method = prStringCopy(normalized);
-    prStringReset(&self->url);
-    self->url = prUrlSerialize(parsed, PrUrlSerialization_Whole);
+        xhr->method = prStringCopy(normalized);
+    prStringReset(&xhr->url);
+    xhr->url = prUrlSerialize(parsed, PrUrlSerialization_Whole);
     prUrlDestroy(parsed);
-    headersReset(&self->requestHeaders);
-    resetResponse(self);
-    self->sendFlag = false;
-    self->uploadListener = false;
+    headersReset(&xhr->requestHeaders);
+    resetResponse(xhr);
+    xhr->sendFlag = false;
+    xhr->uploadListener = false;
     // A request that open() ends has no more pending activity, and fires nothing more.
-    setActive(self, false);
-    if (self->state != PrXhrState_Opened) {
-        self->state = PrXhrState_Opened;
-        fireReadyStateChange(self);
+    setActive(xhr, false);
+    if (xhr->state != PrXhrState_Opened) {
+        xhr->state = PrXhrState_Opened;
+        fireReadyStateChange(xhr);
     }
     return PrStatus_Ok;
 }
 
-PrStatus prXhrSetRequestHeader(PrXhr* self, PrStringView name, PrStringView value) {
-    if (self->state != PrXhrState_Opened || self->sendFlag)
+PrStatus prXhrSetRequestHeader(PrXhr* xhr, PrStringView name, PrStringView value) {
+    if (xhr->state != PrXhrState_Opened || xhr->sendFlag)
         return PrStatus_InvalidState;
     PrStringView normalized = prFetchNormalizeHeaderValue(value);
     if (!prFetchIsHeaderName(name) || !prFetchIsHeaderValue(normalized))
         return PrStatus_Syntax;
     if (!prFetchIsForbiddenRequestHeader(name, normalized))
-        combineHeader(&self->requestHeaders, name, normalized);
+        combineHeader(&xhr->requestHeaders, name, normalized);
     return PrStatus_Ok;
 }
 
-uint32_t prXhrTimeout(const PrXhr* self) {
-    return self->timeout;
+uint32_t prXhrTimeout(const PrXhr* xhr) {
+    return xhr->timeout;
 }
 
-void prXhrSetTimeout(PrXhr* self, uint32_t milliseconds) {
-    self->timeout = milliseconds;
+void prXhrSetTimeout(PrXhr* xhr, uint32_t milliseconds) {
+    xhr->timeout = milliseconds;
 }
 
-bool prXhrWithCredentials(const PrXhr* self) {
-    return self->withCredentials;
+bool prXhrWithCredentials(const PrXhr* xhr) {
+    return xhr->withCredentials;
 }
 
-PrStatus prXhrSetWithCredentials(PrXhr* self, bool withCredentials) {
-    if ((self->state != PrXhrState_Unsent && self->state != PrXhrState_Opened) || self->sendFlag)
+PrStatus prXhrSetWithCredentials(PrXhr* xhr, bool withCredentials) {
+    if ((xhr->state != PrXhrState_Unsent && xhr->state != PrXhrState_Opened) || xhr->sendFlag)
         return PrStatus_InvalidState;
-    self->withCredentials = withCredentials;
+    xhr->withCredentials = withCredentials;
     return PrStatus_Ok;
 }
 
-PrStatus prXhrSend(PrXhr* self, PrByteView body, PrStringView contentType) {
-    if (self->state != PrXhrState_Opened || self->sendFlag)
+PrStatus prXhrSend(PrXhr* xhr, PrByteView body, PrStringView contentType) {
+    if (xhr->state != PrXhrState_Opened || xhr->sendFlag)
         return PrStatus_InvalidState;
-    PrStringView method = prStringIsNull(&self->method) ? PrStringView("GET") : prStringView(&self->method);
+    PrStringView method = prStringIsNull(&xhr->method) ? PrStringView("GET") : prStringView(&xhr->method);
     if (method == "GET" || method == "HEAD")
         body = PrByteView{nullptr, 0};
     if (body.data != nullptr && contentType.data != nullptr &&
-            findHeader(self->requestHeaders, "Content-Type") == kArrayMissing)
-        self->requestHeaders.push(XhrHeader{prStringCopy("Content-Type"), prStringCopy(contentType)});
-    self->requestBytes = body.size;
-    self->uploadComplete = body.size == 0;
-    self->uploadListener = self->upload.listeners != nullptr;
-    self->sendFlag = true;
-    setActive(self, true);
-    uint32_t generation = self->generation;
-    fireProgress(self, "loadstart", 0, 0);
-    if (self->generation != generation || self->state != PrXhrState_Opened || !self->sendFlag)
+            findHeader(xhr->requestHeaders, "Content-Type") == kArrayMissing)
+        xhr->requestHeaders.push(XhrHeader{prStringCopy("Content-Type"), prStringCopy(contentType)});
+    xhr->requestBytes = body.size;
+    xhr->uploadComplete = body.size == 0;
+    xhr->uploadListener = xhr->upload.listeners != nullptr;
+    xhr->sendFlag = true;
+    setActive(xhr, true);
+    uint32_t generation = xhr->generation;
+    fireProgress(xhr, "loadstart", 0, 0);
+    if (xhr->generation != generation || xhr->state != PrXhrState_Opened || !xhr->sendFlag)
         return PrStatus_Ok;
-    if (self->uploadListener && !self->uploadComplete) {
-        fireProgress(&self->upload, "loadstart", 0, self->requestBytes);
-        if (self->generation != generation || self->state != PrXhrState_Opened || !self->sendFlag)
+    if (xhr->uploadListener && !xhr->uploadComplete) {
+        fireProgress(&xhr->upload, "loadstart", 0, xhr->requestBytes);
+        if (xhr->generation != generation || xhr->state != PrXhrState_Opened || !xhr->sendFlag)
             return PrStatus_Ok;
     }
     Array<PrFetchHeader> headers;
-    for (uint32_t i = 0; i < self->requestHeaders.count; ++i)
+    for (uint32_t i = 0; i < xhr->requestHeaders.count; ++i)
         headers.push(PrFetchHeader{
-            prStringView(&self->requestHeaders.data[i].name),
-            prStringView(&self->requestHeaders.data[i].value),
+            prStringView(&xhr->requestHeaders.data[i].name),
+            prStringView(&xhr->requestHeaders.data[i].value),
         });
     PrFetchClientRequest request{
-        .url = prStringView(&self->url),
-        .method = prStringView(&self->method),
+        .url = prStringView(&xhr->url),
+        .method = prStringView(&xhr->method),
         .headers = headers.data,
         .headerCount = headers.count,
         .body = body,
@@ -448,66 +448,66 @@ PrStatus prXhrSend(PrXhr* self, PrByteView body, PrStringView contentType) {
         .credentials = PrFetchCredentials_SameOrigin,
         .redirect = PrFetchRedirect_Follow,
     };
-    if (self->withCredentials)
+    if (xhr->withCredentials)
         request.credentials = PrFetchCredentials_Include;
-    if (self->client.fetch(self->client.context, &request, fetched, self) == PrStatus_Ok) {
-        retainRequest(self);
-        self->fetching = true;
-        if (self->timeout != 0)
-            setTimer(self, self->timeout);
+    if (xhr->client.fetch(xhr->client.context, &request, fetched, xhr) == PrStatus_Ok) {
+        retainRequest(xhr);
+        xhr->fetching = true;
+        if (xhr->timeout != 0)
+            setTimer(xhr, xhr->timeout);
     } else {
-        setTimer(self, 0);
+        setTimer(xhr, 0);
     }
     headers.reset();
     return PrStatus_Ok;
 }
 
-void prXhrAbort(PrXhr* self) {
-    stopFetch(self);
-    bool inFlight = (self->state == PrXhrState_Opened && self->sendFlag) || self->state == PrXhrState_HeadersReceived ||
-        self->state == PrXhrState_Loading;
-    ++self->generation;
+void prXhrAbort(PrXhr* xhr) {
+    stopFetch(xhr);
+    bool inFlight = (xhr->state == PrXhrState_Opened && xhr->sendFlag) || xhr->state == PrXhrState_HeadersReceived ||
+        xhr->state == PrXhrState_Loading;
+    ++xhr->generation;
     if (inFlight)
-        requestError(self, "abort");
-    if (self->state == PrXhrState_Done) {
-        self->state = PrXhrState_Unsent;
-        resetResponse(self);
+        requestError(xhr, "abort");
+    if (xhr->state == PrXhrState_Done) {
+        xhr->state = PrXhrState_Unsent;
+        resetResponse(xhr);
     }
-    setActive(self, false);
+    setActive(xhr, false);
 }
 
-PrStatus prXhrOverrideMimeType(PrXhr* self, PrStringView mime) {
-    if (self->state == PrXhrState_Loading || self->state == PrXhrState_Done)
+PrStatus prXhrOverrideMimeType(PrXhr* xhr, PrStringView mime) {
+    if (xhr->state == PrXhrState_Loading || xhr->state == PrXhrState_Done)
         return PrStatus_InvalidState;
-    prStringReset(&self->overrideMime);
+    prStringReset(&xhr->overrideMime);
     PrStringView essence = prMimeTypeEssence(mime);
-    self->overrideMime = prStringCopy(essence.size != 0 ? mime : PrStringView("application/octet-stream"));
+    xhr->overrideMime = prStringCopy(essence.size != 0 ? mime : PrStringView("application/octet-stream"));
     return PrStatus_Ok;
 }
 
-PrXhrResponseType prXhrResponseType(const PrXhr* self) {
-    return self->responseType;
+PrXhrResponseType prXhrResponseType(const PrXhr* xhr) {
+    return xhr->responseType;
 }
 
-PrStatus prXhrSetResponseType(PrXhr* self, PrXhrResponseType type) {
-    if (self->state == PrXhrState_Loading || self->state == PrXhrState_Done)
+PrStatus prXhrSetResponseType(PrXhr* xhr, PrXhrResponseType type) {
+    if (xhr->state == PrXhrState_Loading || xhr->state == PrXhrState_Done)
         return PrStatus_InvalidState;
-    self->responseType = type;
+    xhr->responseType = type;
     return PrStatus_Ok;
 }
 
-PrStringView prXhrResponseUrl(const PrXhr* self) {
-    return prStringIsNull(&self->responseUrl) ? PrStringView("") : prStringView(&self->responseUrl);
+PrStringView prXhrResponseUrl(const PrXhr* xhr) {
+    return prStringIsNull(&xhr->responseUrl) ? PrStringView("") : prStringView(&xhr->responseUrl);
 }
 
-uint16_t prXhrStatus(const PrXhr* self) {
-    return self->status;
+uint16_t prXhrStatus(const PrXhr* xhr) {
+    return xhr->status;
 }
 
-PrString prXhrResponseHeader(const PrXhr* self, PrStringView name) {
+PrString prXhrResponseHeader(const PrXhr* xhr, PrStringView name) {
     Array<XhrHeader> combined;
-    for (uint32_t i = 0; i < self->responseHeaders.count; ++i) {
-        const XhrHeader& header = self->responseHeaders.data[i];
+    for (uint32_t i = 0; i < xhr->responseHeaders.count; ++i) {
+        const XhrHeader& header = xhr->responseHeaders.data[i];
         if (asciiEqualsFold(prStringView(&header.name), name))
             combineHeader(&combined, name, prStringView(&header.value));
     }
@@ -521,12 +521,12 @@ PrString prXhrResponseHeader(const PrXhr* self, PrStringView name) {
     return result;
 }
 
-PrString prXhrResponseHeaders(const PrXhr* self) {
+PrString prXhrResponseHeaders(const PrXhr* xhr) {
     // The headers sorted by their lowercase names, with the values of each name combined
     // (fetch/#concept-header-list-sort-and-combine).
     Array<XhrHeader> sorted;
-    for (uint32_t i = 0; i < self->responseHeaders.count; ++i) {
-        const XhrHeader& header = self->responseHeaders.data[i];
+    for (uint32_t i = 0; i < xhr->responseHeaders.count; ++i) {
+        const XhrHeader& header = xhr->responseHeaders.data[i];
         TextBuffer lower;
         textAppend(&lower, prStringView(&header.name));
         asciiLower(lower.text.data, lower.text.count);
@@ -554,20 +554,20 @@ PrString prXhrResponseHeaders(const PrXhr* self) {
     return textTake(&text);
 }
 
-PrByteView prXhrResponseBody(const PrXhr* self) {
-    return PrByteView{self->body.data, self->body.count};
+PrByteView prXhrResponseBody(const PrXhr* xhr) {
+    return PrByteView{xhr->body.data, xhr->body.count};
 }
 
-PrString prXhrResponseText(const PrXhr* self) {
+PrString prXhrResponseText(const PrXhr* xhr) {
     // The final MIME type is the override, or else the response's Content-Type (xhr/#final-mime-type).
-    PrStringView mime = prStringView(&self->overrideMime);
-    if (prStringIsNull(&self->overrideMime)) {
-        uint32_t index = findHeader(self->responseHeaders, "Content-Type");
-        mime = index != kArrayMissing ? prStringView(&self->responseHeaders.data[index].value) : PrStringView("");
+    PrStringView mime = prStringView(&xhr->overrideMime);
+    if (prStringIsNull(&xhr->overrideMime)) {
+        uint32_t index = findHeader(xhr->responseHeaders, "Content-Type");
+        mime = index != kArrayMissing ? prStringView(&xhr->responseHeaders.data[index].value) : PrStringView("");
     }
     PrCharset charset = prCharsetFromMimeType(mime);
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset != PrCharset_None ? charset : PrCharset_Utf8, 0);
-    PrStringView bytes{reinterpret_cast<const char*>(self->body.data), self->body.count};
+    PrStringView bytes{reinterpret_cast<const char*>(xhr->body.data), xhr->body.count};
     PrString out = prStringNull();
     PrStringView text = prCharsetDecodeView(&decoder, bytes, PrCharsetInput_Final, &out);
     // A decode that copies nothing returns a view of the body.

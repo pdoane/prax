@@ -132,68 +132,68 @@ PrStatus prDomEventCreateUninitialized(PrDomEventKind kind, PrDomEvent* PR_NULLA
 bool prDomEventKindFromInterface(PrStringView interface, PrDomEventKind* out);
 
 // Adds or releases a reference. The last release frees the event.
-void prDomEventRetain(PrDomEvent* self);
-void prDomEventRelease(PrDomEvent* PR_NULLABLE self);
+void prDomEventRetain(PrDomEvent* event);
+void prDomEventRelease(PrDomEvent* PR_NULLABLE event);
 
 // Returns the event's type.
-PrStringView prDomEventType(const PrDomEvent* self);
+PrStringView prDomEventType(const PrDomEvent* event);
 
 // Return the target that the event was last dispatched to, and the target whose listeners are being invoked. Each is
 // null if there is none.
-PrDomEventTarget* PR_NULLABLE prDomEventTarget(PrDomEvent* self);
-PrDomEventTarget* PR_NULLABLE prDomEventCurrentTarget(PrDomEvent* self);
+PrDomEventTarget* PR_NULLABLE prDomEventTarget(PrDomEvent* event);
+PrDomEventTarget* PR_NULLABLE prDomEventCurrentTarget(PrDomEvent* event);
 
 // Writes the event path, from the target outward (dom/#dom-event-composedpath). The path is empty unless the event is
 // being dispatched. Writes up to `capacity` items to `items` and returns the total count.
-uint32_t prDomEventComposedPath(PrDomEvent* self, PrDomEventTarget* PR_NONNULL* PR_NULLABLE items, uint32_t capacity);
+uint32_t prDomEventComposedPath(PrDomEvent* event, PrDomEventTarget* PR_NONNULL* PR_NULLABLE items, uint32_t capacity);
 
 // Returns the phase of the event's dispatch.
-PrDomEventPhase prDomEventPhase(const PrDomEvent* self);
+PrDomEventPhase prDomEventPhase(const PrDomEvent* event);
 
 // Stops the event from propagating past the current target (dom/#dom-event-stoppropagation).
-void prDomEventStopPropagation(PrDomEvent* self);
+void prDomEventStopPropagation(PrDomEvent* event);
 
 // Returns true if propagation is stopped (dom/#dom-event-cancelbubble).
-bool prDomEventCancelBubble(const PrDomEvent* self);
+bool prDomEventCancelBubble(const PrDomEvent* event);
 
 // Stops propagation if `value` is true. False does nothing.
-void prDomEventSetCancelBubble(PrDomEvent* self, bool value);
+void prDomEventSetCancelBubble(PrDomEvent* event, bool value);
 
 // Stops propagation, and stops the listeners of the current target that have not run yet
 // (dom/#dom-event-stopimmediatepropagation).
-void prDomEventStopImmediatePropagation(PrDomEvent* self);
+void prDomEventStopImmediatePropagation(PrDomEvent* event);
 
 // Return true if the event bubbles, and true if it can be canceled.
-bool prDomEventBubbles(const PrDomEvent* self);
-bool prDomEventCancelable(const PrDomEvent* self);
+bool prDomEventBubbles(const PrDomEvent* event);
+bool prDomEventCancelable(const PrDomEvent* event);
 
 // Returns true if the event is not canceled (dom/#dom-event-returnvalue).
-bool prDomEventReturnValue(const PrDomEvent* self);
+bool prDomEventReturnValue(const PrDomEvent* event);
 
 // Cancels the event in the same way as prDomEventPreventDefault if `value` is false. True does nothing.
-void prDomEventSetReturnValue(PrDomEvent* self, bool value);
+void prDomEventSetReturnValue(PrDomEvent* event, bool value);
 
 // Cancels the event, unless it cannot be canceled or a passive listener is running (dom/#dom-event-preventdefault).
-void prDomEventPreventDefault(PrDomEvent* self);
+void prDomEventPreventDefault(PrDomEvent* event);
 
 // Returns true if the event is canceled.
-bool prDomEventDefaultPrevented(const PrDomEvent* self);
+bool prDomEventDefaultPrevented(const PrDomEvent* event);
 
 // Returns true if the event propagates from a shadow tree to the tree of its host (dom/#dom-event-composed).
-bool prDomEventComposed(const PrDomEvent* self);
+bool prDomEventComposed(const PrDomEvent* event);
 
 // Returns true if the engine fired the event, rather than a caller or a script (dom/#dom-event-istrusted).
-bool prDomEventIsTrusted(const PrDomEvent* self);
+bool prDomEventIsTrusted(const PrDomEvent* event);
 
 // Returns the time at which the event was created, in milliseconds of the engine's monotonic clock.
-double prDomEventTimeStamp(const PrDomEvent* self);
+double prDomEventTimeStamp(const PrDomEvent* event);
 
 // Sets the event's type, bubbles and cancelable, and clears its target and the flags of a previous dispatch
 // (dom/#dom-event-initevent). Does nothing while the event is being dispatched.
-void prDomEventInitEvent(PrDomEvent* self, PrStringView type, bool bubbles, bool cancelable);
+void prDomEventInitEvent(PrDomEvent* event, PrStringView type, bool bubbles, bool cancelable);
 
 // Returns the most specific interface that the event implements.
-PrDomEventKind prDomEventKind(const PrDomEvent* self);
+PrDomEventKind prDomEventKind(const PrDomEvent* event);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CustomEvent : Event (dom)
@@ -211,7 +211,7 @@ PrDomCustomEvent* prDomCustomEventCreate(PrStringView type, const PrDomEventInit
 
 // Initializes the event in the same way as prDomEventInitEvent (dom/#dom-customevent-initcustomevent). If this returns
 // true, the caller sets the detail. Returns false while the event is being dispatched.
-bool prDomCustomEventInitCustomEvent(PrDomCustomEvent* self, PrStringView type, bool bubbles, bool cancelable);
+bool prDomCustomEventInitCustomEvent(PrDomCustomEvent* event, PrStringView type, bool bubbles, bool cancelable);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // UIEvent : Event (uievents)
@@ -247,17 +247,17 @@ PrDomUiEvent* PR_NULLABLE prDomUiEventQuery(PrDomEvent* PR_NULLABLE object);
 PrDomUiEvent* prDomUiEventCreate(PrStringView type, const PrDomUiEventInit* PR_NULLABLE init);
 
 // Return the event's view, or null if it has none, and its detail.
-PrDomEventTarget* PR_NULLABLE prDomUiEventView(PrDomUiEvent* self);
-int32_t prDomUiEventDetail(const PrDomUiEvent* self);
+PrDomEventTarget* PR_NULLABLE prDomUiEventView(PrDomUiEvent* event);
+int32_t prDomUiEventDetail(const PrDomUiEvent* event);
 
 // Returns the legacy code of the event (uievents/#dom-uievent-which): one more than the button of a MouseEvent, the key
 // code of a KeyboardEvent, or its character code if it has no key code, and the value that the init gave any other
 // event.
-uint32_t prDomUiEventWhich(const PrDomUiEvent* self);
+uint32_t prDomUiEventWhich(const PrDomUiEvent* event);
 
 // Initializes the event with the steps of the legacy initUIEvent (uievents/#dom-uievent-inituievent), from the type,
 // bubbles, cancelable, view and detail of `init`. Does nothing while the event is being dispatched.
-void prDomUiEventInitUiEvent(PrDomUiEvent* self, PrStringView type, const PrDomUiEventInit* init);
+void prDomUiEventInitUiEvent(PrDomUiEvent* event, PrStringView type, const PrDomUiEventInit* init);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // FocusEvent : UIEvent (uievents)
@@ -290,7 +290,7 @@ PrDomFocusEvent* PR_NULLABLE prDomFocusEventQuery(PrDomEvent* PR_NULLABLE object
 PrDomFocusEvent* prDomFocusEventCreate(PrStringView type, const PrDomFocusEventInit* PR_NULLABLE init);
 
 // Returns the related target, as the current dispatch retargets it, or null if there is none.
-PrDomEventTarget* PR_NULLABLE prDomFocusEventRelatedTarget(PrDomFocusEvent* self);
+PrDomEventTarget* PR_NULLABLE prDomFocusEventRelatedTarget(PrDomFocusEvent* event);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // MouseEvent : UIEvent (pointerevents4)
@@ -364,12 +364,12 @@ PrDomMouseEvent* PR_NULLABLE prDomMouseEventQuery(PrDomEvent* PR_NULLABLE object
 PrDomMouseEvent* prDomMouseEventCreate(PrStringView type, const PrDomMouseEventInit* PR_NULLABLE init);
 
 // Returns the event's members, as its init gave them. The related target is retargeted by the current dispatch.
-PrDomMouseEventInit prDomMouseEventMembers(PrDomMouseEvent* self);
+PrDomMouseEventInit prDomMouseEventMembers(PrDomMouseEvent* event);
 
 // Initializes the event with the steps of the legacy initMouseEvent (pointerevents4/#dom-mouseevent-initmouseevent),
 // from every member of `init` except composed and buttons, which the event keeps. Does nothing while the event is being
 // dispatched.
-void prDomMouseEventInitMouseEvent(PrDomMouseEvent* self, PrStringView type, const PrDomMouseEventInit* init);
+void prDomMouseEventInitMouseEvent(PrDomMouseEvent* event, PrStringView type, const PrDomMouseEventInit* init);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // WheelEvent : MouseEvent (pointerevents4)
@@ -416,7 +416,7 @@ PrDomWheelEvent* PR_NULLABLE prDomWheelEventQuery(PrDomEvent* PR_NULLABLE object
 PrDomWheelEvent* prDomWheelEventCreate(PrStringView type, const PrDomWheelEventInit* PR_NULLABLE init);
 
 // Returns the event's members, as its init gave them. The related target is retargeted by the current dispatch.
-PrDomWheelEventInit prDomWheelEventMembers(PrDomWheelEvent* self);
+PrDomWheelEventInit prDomWheelEventMembers(PrDomWheelEvent* event);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // KeyboardEvent : UIEvent (uievents)
@@ -477,12 +477,12 @@ PrDomKeyboardEvent* PR_NULLABLE prDomKeyboardEventQuery(PrDomEvent* PR_NULLABLE 
 PrDomKeyboardEvent* prDomKeyboardEventCreate(PrStringView type, const PrDomKeyboardEventInit* PR_NULLABLE init);
 
 // Returns the event's members, as its init gave them. The key and the code are valid until the event changes.
-PrDomKeyboardEventInit prDomKeyboardEventMembers(PrDomKeyboardEvent* self);
+PrDomKeyboardEventInit prDomKeyboardEventMembers(PrDomKeyboardEvent* event);
 
 // Initializes the event with the steps of the legacy initKeyboardEvent (uievents/#dom-keyboardevent-initkeyboardevent),
 // from the type, bubbles, cancelable, view, key, location and modifiers of `init`. The event keeps its other members,
 // and its detail becomes zero. Does nothing while the event is being dispatched.
-void prDomKeyboardEventInitKeyboardEvent(PrDomKeyboardEvent* self, PrStringView type, const PrDomKeyboardEventInit* init);
+void prDomKeyboardEventInitKeyboardEvent(PrDomKeyboardEvent* event, PrStringView type, const PrDomKeyboardEventInit* init);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CompositionEvent : UIEvent (uievents)
@@ -500,12 +500,12 @@ PrDomCompositionEvent* prDomCompositionEventCreate(PrStringView type, const PrDo
     PrStringView data);
 
 // Returns the text that the input method generates, valid until the event changes.
-PrStringView prDomCompositionEventData(const PrDomCompositionEvent* self);
+PrStringView prDomCompositionEventData(const PrDomCompositionEvent* event);
 
 // Initializes the event with the steps of the legacy initCompositionEvent
 // (uievents/#dom-compositionevent-initcompositionevent), from the type, bubbles, cancelable and view of `init`, and
 // `data`. The event's detail becomes zero. Does nothing while the event is being dispatched.
-void prDomCompositionEventInitCompositionEvent(PrDomCompositionEvent* self, PrStringView type,
+void prDomCompositionEventInitCompositionEvent(PrDomCompositionEvent* event, PrStringView type,
     const PrDomUiEventInit* init, PrStringView data);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -559,26 +559,26 @@ PrDomEventTarget* prDomEventTargetCreate(void);
 // Adds or releases a reference to any event target. A reference to a node keeps its tree alive, in the same way as
 // prDomNodeRetain. The last release frees a standalone EventTarget. A reference to an object that a window presents as
 // a member, such as its Performance, is a reference to the window, which lives while references to it remain.
-void prDomEventTargetRetain(PrDomEventTarget* self);
-void prDomEventTargetRelease(PrDomEventTarget* PR_NULLABLE self);
+void prDomEventTargetRetain(PrDomEventTarget* target);
+void prDomEventTargetRelease(PrDomEventTarget* PR_NULLABLE target);
 
 // Returns the slot in which the script binding of the target's agent stores the target's script object. The slot is
 // null while the target has no object. The engine reads the slot only to decide whether to report a node's moves
 // (PrDomTreeCallback).
-void* PR_NULLABLE* PR_NONNULL prDomEventTargetBinding(PrDomEventTarget* self);
+void* PR_NULLABLE* PR_NONNULL prDomEventTargetBinding(PrDomEventTarget* target);
 
 // Add `callback` as a listener for `type` (dom/#add-an-event-listener), or remove it (dom/#remove-an-event-listener).
 // Adding does nothing if the same listener is registered for `type` with the same capture. A null callback does
 // nothing. Null options mean the defaults.
-void prDomEventTargetAddEventListener(PrDomEventTarget* self, PrStringView type,
+void prDomEventTargetAddEventListener(PrDomEventTarget* target, PrStringView type,
     const PrDomEventListener* PR_NULLABLE callback, const PrDomAddEventListenerOptions* PR_NULLABLE options);
-void prDomEventTargetRemoveEventListener(PrDomEventTarget* self, PrStringView type,
+void prDomEventTargetRemoveEventListener(PrDomEventTarget* target, PrStringView type,
     const PrDomEventListener* PR_NULLABLE callback, const PrDomEventListenerOptions* PR_NULLABLE options);
 
 // Dispatches `event` at the target as an untrusted event (dom/#dom-eventtarget-dispatchevent). If `out` is given,
 // writes true to it if no listener canceled the event. Returns InvalidState for an event that is being dispatched or is
 // not initialized.
-PrStatus prDomEventTargetDispatchEvent(PrDomEventTarget* self, PrDomEvent* event, bool* PR_NULLABLE out);
+PrStatus prDomEventTargetDispatchEvent(PrDomEventTarget* target, PrDomEvent* event, bool* PR_NULLABLE out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // EventHandler (html)
@@ -614,8 +614,8 @@ typedef struct PrDomEventHandlerCallback {
 // null. A null `callback` sets the handler to null. The WindowEventHandlers of a body or frameset element, and the
 // handlers that the Window reflects, belong to the element's Window
 // (html/#window-reflecting-body-element-event-handler-set). The setter does not set them if the element has no Window.
-PrDomEventHandlerCallback prDomEventTargetEventHandler(PrDomEventTarget* self, PrDomEventHandler handler);
-void prDomEventTargetSetEventHandler(PrDomEventTarget* self, PrDomEventHandler handler,
+PrDomEventHandlerCallback prDomEventTargetEventHandler(PrDomEventTarget* target, PrDomEventHandler handler);
+void prDomEventTargetSetEventHandler(PrDomEventTarget* eventTarget, PrDomEventHandler handler,
     const PrDomEventHandlerCallback* PR_NULLABLE callback);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -661,68 +661,68 @@ PrDomNode* PR_NULLABLE prDomNodeQuery(PrDomEventTarget* PR_NULLABLE object);
 // Adds or releases a reference. A reference to a node keeps its tree alive. A tree other than the document's own tree
 // keeps the document alive, whichever document that is after adoption. A tree is freed when its last reference is
 // released. A node removed from its tree with no references is freed immediately.
-void prDomNodeRetain(PrDomNode* self);
-void prDomNodeRelease(PrDomNode* PR_NULLABLE self);
+void prDomNodeRetain(PrDomNode* node);
+void prDomNodeRelease(PrDomNode* PR_NULLABLE node);
 
 // Returns the root of the node's tree: its document, or the unowned node that contains it.
-PrDomNode* prDomNodeTreeRoot(PrDomNode* self);
+PrDomNode* prDomNodeTreeRoot(PrDomNode* node);
 
 // Returns the node that holds the node in its tree: its parent, an attribute's element, or the host of template
 // contents or a shadow root. Returns null for the root.
-PrDomNode* PR_NULLABLE prDomNodeTreeParent(PrDomNode* self);
+PrDomNode* PR_NULLABLE prDomNodeTreeParent(PrDomNode* node);
 
 // Returns the node's type.
-PrDomNodeType prDomNodeType(const PrDomNode* self);
+PrDomNodeType prDomNodeType(const PrDomNode* node);
 
 // Returns the base URL of the node's document, serialized (dom/#dom-node-baseuri).
-PrString prDomNodeBaseUri(const PrDomNode* self);
+PrString prDomNodeBaseUri(const PrDomNode* node);
 
 // Returns true if the node's shadow-including root is a document (dom/#connected).
-bool prDomNodeIsConnected(const PrDomNode* self);
+bool prDomNodeIsConnected(const PrDomNode* node);
 
 // Returns the node's document, or null for a document.
-PrDomDocument* PR_NULLABLE prDomNodeOwnerDocument(PrDomNode* self);
+PrDomDocument* PR_NULLABLE prDomNodeOwnerDocument(PrDomNode* node);
 
 // Calls `visit` with the node, its shadow-including descendants (dom/#concept-shadow-including-descendant), and the
 // attributes of those that are elements. These are the nodes that move with it to another document.
-void prDomNodeVisitSubtree(PrDomNode* self, void (*visit)(void* PR_NULLABLE context, PrDomNode* node), void* PR_NULLABLE context);
+void prDomNodeVisitSubtree(PrDomNode* root, void (*visit)(void* PR_NULLABLE context, PrDomNode* node), void* PR_NULLABLE context);
 
 // Return the node's parent, and the parent if it is an element. Each is null if there is none. An attribute has no
 // parent.
-PrDomNode* PR_NULLABLE prDomNodeParentNode(PrDomNode* self);
-PrDomElement* PR_NULLABLE prDomNodeParentElement(PrDomNode* self);
+PrDomNode* PR_NULLABLE prDomNodeParentNode(PrDomNode* node);
+PrDomElement* PR_NULLABLE prDomNodeParentElement(PrDomNode* node);
 
 // Returns true if the node has children.
-bool prDomNodeHasChildNodes(const PrDomNode* self);
+bool prDomNodeHasChildNodes(const PrDomNode* node);
 
 // Return the node's first and last child, and its previous and next sibling. Each is null if there is none.
-PrDomNode* PR_NULLABLE prDomNodeFirstChild(PrDomNode* self);
-PrDomNode* PR_NULLABLE prDomNodeLastChild(PrDomNode* self);
-PrDomNode* PR_NULLABLE prDomNodePreviousSibling(PrDomNode* self);
-PrDomNode* PR_NULLABLE prDomNodeNextSibling(PrDomNode* self);
+PrDomNode* PR_NULLABLE prDomNodeFirstChild(PrDomNode* node);
+PrDomNode* PR_NULLABLE prDomNodeLastChild(PrDomNode* node);
+PrDomNode* PR_NULLABLE prDomNodePreviousSibling(PrDomNode* node);
+PrDomNode* PR_NULLABLE prDomNodeNextSibling(PrDomNode* node);
 
 // Returns the node's text content (dom/#dom-node-textcontent). This is the text of its descendants for an element or a
 // fragment, the value for an attribute or character data, and the null string for any other node.
-PrString prDomNodeTextContent(const PrDomNode* self);
+PrString prDomNodeTextContent(const PrDomNode* node);
 
 // Sets the node's text content. An element or a fragment gets a Text node of `value` as its only child, or no children
 // for the empty string. An attribute or character data gets `value` as its value. Any other node is unchanged.
-void prDomNodeSetTextContent(PrDomNode* self, PrStringView value);
+void prDomNodeSetTextContent(PrDomNode* node, PrStringView value);
 
 // Inserts `node` before `child`, or last for a null `child` (dom/#dom-node-insertbefore).
-PrStatus prDomNodeInsertBefore(PrDomNode* self, PrDomNode* node, PrDomNode* PR_NULLABLE child);
+PrStatus prDomNodeInsertBefore(PrDomNode* parent, PrDomNode* node, PrDomNode* PR_NULLABLE child);
 
 // Inserts `node` as the last child (dom/#dom-node-appendchild).
-PrStatus prDomNodeAppendChild(PrDomNode* self, PrDomNode* node);
+PrStatus prDomNodeAppendChild(PrDomNode* parent, PrDomNode* node);
 
 // Replaces `child` with `node` (dom/#dom-node-replacechild).
-PrStatus prDomNodeReplaceChild(PrDomNode* self, PrDomNode* node, PrDomNode* child);
+PrStatus prDomNodeReplaceChild(PrDomNode* parent, PrDomNode* node, PrDomNode* child);
 
 // Removes `child` (dom/#dom-node-removechild).
-PrStatus prDomNodeRemoveChild(PrDomNode* self, PrDomNode* child);
+PrStatus prDomNodeRemoveChild(PrDomNode* node, PrDomNode* child);
 
 // Returns the node's name (dom/#dom-node-nodename).
-PrString prDomNodeName(const PrDomNode* self);
+PrString prDomNodeName(const PrDomNode* node);
 
 // Returns the name shared by every node of `type` (dom/#dom-node-nodename). The text lives as long as the process.
 // Returns the null view for a type whose nodes each have their own name.
@@ -730,30 +730,30 @@ PrStringView prDomNodeTypeName(PrDomNodeType type);
 
 // Returns the node's value: an attribute's value or character data's data, and the null view for any other node
 // (dom/#dom-node-nodevalue).
-PrStringView prDomNodeValue(const PrDomNode* self);
+PrStringView prDomNodeValue(const PrDomNode* node);
 
 // Sets the node's value. Does nothing for a node that has no value. The null view sets the empty string.
-void prDomNodeSetValue(PrDomNode* self, PrStringView value);
+void prDomNodeSetValue(PrDomNode* node, PrStringView value);
 
 // Returns the root of the node or, if `composed` is set, its shadow-including root (dom/#dom-node-getrootnode).
-PrDomNode* prDomNodeGetRootNode(PrDomNode* self, bool composed);
+PrDomNode* prDomNodeGetRootNode(PrDomNode* node, bool composed);
 
 // Return true if `other` is the node or one of its descendants (dom/#dom-node-contains), and true if `other` is a node
 // equal to it (dom/#concept-node-equals). Both return false for null.
-bool prDomNodeContains(const PrDomNode* self, const PrDomNode* PR_NULLABLE other);
-bool prDomNodeIsEqualNode(const PrDomNode* self, const PrDomNode* PR_NULLABLE other);
+bool prDomNodeContains(const PrDomNode* node, const PrDomNode* PR_NULLABLE other);
+bool prDomNodeIsEqualNode(const PrDomNode* node, const PrDomNode* PR_NULLABLE other);
 
 // Returns the PrDomNodePosition bits that describe the position of `other` relative to the node
 // (dom/#dom-node-comparedocumentposition).
-PrDomNodePosition prDomNodeCompareDocumentPosition(const PrDomNode* self, const PrDomNode* other);
+PrDomNodePosition prDomNodeCompareDocumentPosition(const PrDomNode* node, const PrDomNode* other);
 
 // Removes the empty Text nodes among the node's descendants, and merges each run of adjacent Text nodes into the first
 // node of the run (dom/#dom-node-normalize).
-void prDomNodeNormalize(PrDomNode* self);
+void prDomNodeNormalize(PrDomNode* node);
 
 // Clones the node into its document, with its descendants if `deep` is set (dom/#dom-node-clonenode). The clone comes
 // with a reference that the caller releases. Returns NotSupported for a document or an attribute.
-PrStatus prDomNodeCloneNode(PrDomNode* self, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out);
+PrStatus prDomNodeCloneNode(PrDomNode* node, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out);
 
 // An argument of the methods that take nodes or strings (dom/#convert-nodes-into-a-node): the node, or the string if
 // the node is null. A string stands for a Text node with that data.
@@ -764,33 +764,33 @@ typedef struct PrDomNodeOrString {
 
 // Returns the first element among the node's descendants whose ID is `id`, or null. The node is a document or a
 // fragment (dom/#interface-nonelementparentnode).
-PrDomElement* PR_NULLABLE prDomNodeGetElementById(PrDomNode* self, PrStringView id);
+PrDomElement* PR_NULLABLE prDomNodeGetElementById(PrDomNode* node, PrStringView id);
 
 // Return the first and the last of the node's element children, and their number. The node is a document, fragment or
 // element (dom/#interface-parentnode).
-PrDomElement* PR_NULLABLE prDomNodeFirstElementChild(PrDomNode* self);
-PrDomElement* PR_NULLABLE prDomNodeLastElementChild(PrDomNode* self);
-uint32_t prDomNodeChildElementCount(const PrDomNode* self);
+PrDomElement* PR_NULLABLE prDomNodeFirstElementChild(PrDomNode* node);
+PrDomElement* PR_NULLABLE prDomNodeLastElementChild(PrDomNode* node);
+uint32_t prDomNodeChildElementCount(const PrDomNode* node);
 
 // Insert `nodes` before the first child (dom/#dom-parentnode-prepend), after the last child
 // (dom/#dom-parentnode-append), or in place of all the children (dom/#dom-parentnode-replacechildren).
-PrStatus prDomNodePrepend(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
-PrStatus prDomNodeAppend(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
-PrStatus prDomNodeReplaceChildren(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
+PrStatus prDomNodePrepend(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
+PrStatus prDomNodeAppend(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
+PrStatus prDomNodeReplaceChildren(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
 
 // Return the nearest previous and next sibling that is an element, or null. The node is an element or character data
 // (dom/#interface-nondocumenttypechildnode).
-PrDomElement* PR_NULLABLE prDomNodePreviousElementSibling(PrDomNode* self);
-PrDomElement* PR_NULLABLE prDomNodeNextElementSibling(PrDomNode* self);
+PrDomElement* PR_NULLABLE prDomNodePreviousElementSibling(PrDomNode* node);
+PrDomElement* PR_NULLABLE prDomNodeNextElementSibling(PrDomNode* node);
 
 // Insert `nodes` before the node (dom/#dom-childnode-before), after it (dom/#dom-childnode-after), or in its place
 // (dom/#dom-childnode-replacewith). The node is an element or character data (dom/#interface-childnode).
-PrStatus prDomNodeBefore(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
-PrStatus prDomNodeAfter(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
-PrStatus prDomNodeReplaceWith(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
+PrStatus prDomNodeBefore(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
+PrStatus prDomNodeAfter(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
+PrStatus prDomNodeReplaceWith(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
 
 // Removes the node from its parent, if it has one (dom/#dom-childnode-remove).
-void prDomNodeRemove(PrDomNode* self);
+void prDomNodeRemove(PrDomNode* node);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Document : Node (dom)
@@ -834,8 +834,8 @@ PrStatus prDomDocumentCreateXml(PrDomImplementation* implementation, PrStringVie
 PrDomDocument* prDomDocumentCreateHtml(PrDomImplementation* implementation, PrStringView title);
 
 // Adds or releases a reference to the document as a node (prDomNodeRetain).
-void prDomDocumentRetain(PrDomDocument* self);
-void prDomDocumentRelease(PrDomDocument* PR_NULLABLE self);
+void prDomDocumentRetain(PrDomDocument* document);
+void prDomDocumentRelease(PrDomDocument* PR_NULLABLE document);
 
 // The states of an element that only the application knows. The host reports them for an element on request
 // (PrHtmlHost::elementState). The engine decides which elements a state can apply to.
@@ -862,99 +862,99 @@ typedef struct PrDomTreeCallback {
 
 // Sets the document's tree callback, or clears it if `callback` is null. `held` of the new callback is called at once
 // for each node that the engine holds. The callback that it replaces is not called again.
-void prDomDocumentSetTreeCallback(PrDomDocument* self, const PrDomTreeCallback* PR_NULLABLE callback);
+void prDomDocumentSetTreeCallback(PrDomDocument* document, const PrDomTreeCallback* PR_NULLABLE callback);
 
 // Returns the document's URL, serialized (dom/#dom-document-url). It is also dom/#dom-document-documenturi.
-PrString prDomDocumentUrl(const PrDomDocument* self);
+PrString prDomDocumentUrl(const PrDomDocument* document);
 
 // Returns the document's content type (dom/#dom-document-contenttype).
-PrStringView prDomDocumentContentType(const PrDomDocument* self);
+PrStringView prDomDocumentContentType(const PrDomDocument* document);
 
 // Returns the name of the document's encoding (dom/#dom-document-characterset), which is UTF-8 unless a load decoded
 // the document from another charset. It is also dom/#dom-document-charset and dom/#dom-document-inputencoding.
-PrStringView prDomDocumentCharacterSet(const PrDomDocument* self);
+PrStringView prDomDocumentCharacterSet(const PrDomDocument* document);
 
 // Returns the document element, which is the first child that is an element, or null.
-PrDomElement* PR_NULLABLE prDomDocumentElement(PrDomDocument* self);
+PrDomElement* PR_NULLABLE prDomDocumentElement(PrDomDocument* document);
 
 // Clones `node` into the document, with its descendants if `deep` is set (dom/#dom-document-importnode). The clone is a
 // detached root that the caller owns. Returns NotSupported for a document or a shadow root, and sets `*out` to null.
-PrStatus prDomDocumentImportNode(PrDomDocument* self, PrDomNode* node, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out);
+PrStatus prDomDocumentImportNode(PrDomDocument* document, PrDomNode* node, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out);
 
 // Creates an element whose local name is `localName` (dom/#dom-document-createelement). An HTML document lowercases the
 // name. An HTML or XHTML document creates an HTML element, and any other document an element in no namespace. Returns
 // InvalidData if `localName` is not a valid element local name.
-PrStatus prDomElementCreate(PrDomDocument* self, PrStringView localName,
+PrStatus prDomElementCreate(PrDomDocument* document, PrStringView localName,
     const PrDomElementCreationOptions* PR_NULLABLE options, PrDomElement* PR_NULLABLE* PR_NONNULL out);
 
 // Creates an element in `namespaceUrl` named `qualifiedName` (dom/#dom-document-createelementns). The null view and the
 // empty string both mean no namespace. Returns InvalidData if `qualifiedName` is not a qualified name with a valid
 // element local name, and NotAllowed if `namespaceUrl` does not accept it (dom/#validate-and-extract).
-PrStatus prDomElementCreateNs(PrDomDocument* self, PrStringView namespaceUrl, PrStringView qualifiedName,
+PrStatus prDomElementCreateNs(PrDomDocument* document, PrStringView namespaceUrl, PrStringView qualifiedName,
     const PrDomElementCreationOptions* PR_NULLABLE options, PrDomElement* PR_NULLABLE* PR_NONNULL out);
 
 // Creates an attribute in no namespace whose local name is `localName` (dom/#dom-document-createattribute). An HTML
 // document lowercases the name. Returns InvalidData if `localName` is not a valid attribute local name.
-PrStatus prDomAttrCreate(PrDomDocument* self, PrStringView localName, PrDomAttr* PR_NULLABLE* PR_NONNULL out);
+PrStatus prDomAttrCreate(PrDomDocument* document, PrStringView localName, PrDomAttr* PR_NULLABLE* PR_NONNULL out);
 
 // Creates an attribute in `namespaceUrl` named `qualifiedName` (dom/#dom-document-createattributens). Fails in the same
 // cases as prDomElementCreateNs, applied to an attribute's name.
-PrStatus prDomAttrCreateNs(PrDomDocument* self, PrStringView namespaceUrl, PrStringView qualifiedName,
+PrStatus prDomAttrCreateNs(PrDomDocument* document, PrStringView namespaceUrl, PrStringView qualifiedName,
     PrDomAttr* PR_NULLABLE* PR_NONNULL out);
 
 // Create an empty fragment, and a Text node with `data`.
-PrDomDocumentFragment* prDomDocumentFragmentCreate(PrDomDocument* self);
-PrDomText* prDomTextCreate(PrDomDocument* self, PrStringView data);
+PrDomDocumentFragment* prDomDocumentFragmentCreate(PrDomDocument* document);
+PrDomText* prDomTextCreate(PrDomDocument* document, PrStringView data);
 
 // Creates a CDATA section with `data` (dom/#dom-document-createcdatasection). Returns NotSupported in an HTML document,
 // and InvalidData if the data contains "]]>".
-PrStatus prDomTextCreateCdataSection(PrDomDocument* self, PrStringView data, PrDomText* PR_NULLABLE* PR_NONNULL out);
+PrStatus prDomTextCreateCdataSection(PrDomDocument* document, PrStringView data, PrDomText* PR_NULLABLE* PR_NONNULL out);
 
 // Creates a comment with `data`.
-PrDomComment* prDomCommentCreate(PrDomDocument* self, PrStringView data);
+PrDomComment* prDomCommentCreate(PrDomDocument* document, PrStringView data);
 
 // Creates a processing instruction (dom/#dom-document-createprocessinginstruction). Returns InvalidData if `target` is
 // not an XML Name or `data` contains "?>".
-PrStatus prDomProcessingInstructionCreate(PrDomDocument* self, PrStringView target, PrStringView data,
+PrStatus prDomProcessingInstructionCreate(PrDomDocument* document, PrStringView target, PrStringView data,
     PrDomProcessingInstruction* PR_NULLABLE* PR_NONNULL out);
 
 // Returns the text of the document's title element, with ASCII whitespace stripped and collapsed, or the empty string
 // if there is no title element (html/#document.title).
-PrString prDomDocumentTitle(const PrDomDocument* self);
+PrString prDomDocumentTitle(const PrDomDocument* document);
 
 // Sets the text of the document's title element. Creates the element if the document element has a place for it, and
 // otherwise does nothing (html/#document.title).
-void prDomDocumentSetTitle(PrDomDocument* self, PrStringView value);
+void prDomDocumentSetTitle(PrDomDocument* document, PrStringView value);
 
 // Returns the body element, which is the first body or frameset child of an html document element, or null
 // (html/#dom-document-body).
-PrDomElement* PR_NULLABLE prDomDocumentBody(PrDomDocument* self);
+PrDomElement* PR_NULLABLE prDomDocumentBody(PrDomDocument* document);
 
 // Replaces the body element with `value`, or appends `value` to the document element if there is no body
 // (html/#dom-document-body). Returns NotAllowed if the value is not a body or frameset element, or if there is no
 // document element to append it to.
-PrStatus prDomDocumentSetBody(PrDomDocument* self, PrDomElement* PR_NULLABLE value);
+PrStatus prDomDocumentSetBody(PrDomDocument* document, PrDomElement* PR_NULLABLE value);
 
 // Returns the head element, which is the first head child of an html document element, or null
 // (html/#dom-document-head).
-PrDomElement* PR_NULLABLE prDomDocumentHead(PrDomDocument* self);
+PrDomElement* PR_NULLABLE prDomDocumentHead(PrDomDocument* document);
 
 // Returns the document's doctype, which is its first child that is a doctype, or null (dom/#dom-document-doctype).
-PrDomDocumentType* PR_NULLABLE prDomDocumentDoctype(PrDomDocument* self);
+PrDomDocumentType* PR_NULLABLE prDomDocumentDoctype(PrDomDocument* document);
 
 // Returns true if the document is in quirks mode (dom/#dom-document-compatmode). Script sees quirks mode as
 // "BackCompat", and any other mode as "CSS1Compat".
-bool prDomDocumentQuirks(const PrDomDocument* self);
+bool prDomDocumentQuirks(const PrDomDocument* document);
 
 // Returns the document's DOMImplementation, which is a view of the document.
-PrDomImplementation* prDomDocumentImplementation(PrDomDocument* self);
+PrDomImplementation* prDomDocumentImplementation(PrDomDocument* document);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // DOMImplementation (dom)
 
 // Creates a doctype in the document, which owns it (dom/#dom-domimplementation-createdocumenttype). Returns InvalidData
 // if `name` is not a valid doctype name.
-PrStatus prDomDocumentTypeCreate(PrDomImplementation* self, PrStringView name,
+PrStatus prDomDocumentTypeCreate(PrDomImplementation* implementation, PrStringView name,
     PrStringView publicId, PrStringView systemId, PrDomDocumentType* PR_NULLABLE* PR_NONNULL out);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -968,9 +968,9 @@ PR_HANDLE_UPCAST(DomDocumentType, DomEventTarget, EventTarget)
 PrDomDocumentType* PR_NULLABLE prDomDocumentTypeQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Return the doctype's name, public ID and system ID. An ID that the doctype lacks is the empty string.
-PrStringView prDomDocumentTypeName(const PrDomDocumentType* self);
-PrStringView prDomDocumentTypePublicId(const PrDomDocumentType* self);
-PrStringView prDomDocumentTypeSystemId(const PrDomDocumentType* self);
+PrStringView prDomDocumentTypeName(const PrDomDocumentType* doctype);
+PrStringView prDomDocumentTypePublicId(const PrDomDocumentType* doctype);
+PrStringView prDomDocumentTypeSystemId(const PrDomDocumentType* doctype);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // DocumentFragment : Node (dom)
@@ -1032,14 +1032,14 @@ PR_HANDLE_UPCAST(DomShadowRoot, DomEventTarget, EventTarget)
 PrDomShadowRoot* PR_NULLABLE prDomShadowRootQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Return the members of the ShadowRootInit that the shadow root was attached with.
-PrDomShadowRootMode prDomShadowRootMode(const PrDomShadowRoot* self);
-bool prDomShadowRootDelegatesFocus(const PrDomShadowRoot* self);
-PrDomSlotAssignmentMode prDomShadowRootSlotAssignment(const PrDomShadowRoot* self);
-bool prDomShadowRootClonable(const PrDomShadowRoot* self);
-bool prDomShadowRootSerializable(const PrDomShadowRoot* self);
+PrDomShadowRootMode prDomShadowRootMode(const PrDomShadowRoot* shadow);
+bool prDomShadowRootDelegatesFocus(const PrDomShadowRoot* shadow);
+PrDomSlotAssignmentMode prDomShadowRootSlotAssignment(const PrDomShadowRoot* shadow);
+bool prDomShadowRootClonable(const PrDomShadowRoot* shadow);
+bool prDomShadowRootSerializable(const PrDomShadowRoot* shadow);
 
 // Returns the element that hosts the shadow root.
-PrDomElement* prDomShadowRootHost(PrDomShadowRoot* self);
+PrDomElement* prDomShadowRootHost(PrDomShadowRoot* shadow);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Element : Node (dom)
@@ -1090,114 +1090,114 @@ PrStringView prDomInputTypeKeyword(PrDomInputType type);
 PrDomElement* PR_NULLABLE prDomElementQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Returns the element's local name.
-PrStringView prDomElementLocalName(const PrDomElement* self);
+PrStringView prDomElementLocalName(const PrDomElement* element);
 
 // Returns the element's local name as a tag, or PrDomTag_Unknown for a name that PrDomTag does not list. Only
 // prDomElementLocalName returns such a name.
-PrDomTag prDomElementTag(const PrDomElement* self);
+PrDomTag prDomElementTag(const PrDomElement* element);
 
 // Returns the element's namespace, or the null view for none.
-PrStringView prDomElementNamespaceUri(const PrDomElement* self);
+PrStringView prDomElementNamespaceUri(const PrDomElement* element);
 
 // Returns the element's namespace if the specs name it, or Other for a namespace that a script uses.
-PrDomNamespace prDomElementNamespace(const PrDomElement* self);
+PrDomNamespace prDomElementNamespace(const PrDomElement* element);
 
 // Returns the element's namespace prefix, or the null view for none.
-PrStringView prDomElementPrefix(const PrDomElement* self);
+PrStringView prDomElementPrefix(const PrDomElement* element);
 
 // Returns the element's qualified name, in ASCII uppercase for an HTML element in an HTML document
 // (dom/#dom-element-tagname).
-PrString prDomElementTagName(const PrDomElement* self);
+PrString prDomElementTagName(const PrDomElement* element);
 
 // Returns the tag that tagName names. Writes true to `uppercase` if tagName is in ASCII uppercase. Returns
 // PrDomTag_Unknown if tagName names no tag, as for an element with a prefix. Only prDomElementTagName returns such a
 // tagName.
-PrDomTag prDomElementTagNameTag(const PrDomElement* self, bool* uppercase);
+PrDomTag prDomElementTagNameTag(const PrDomElement* element, bool* uppercase);
 
 // Get and set the value of the element's id attribute. The getter returns the empty string if there is no id attribute.
 // The setter sets the attribute.
-PrStringView prDomElementId(const PrDomElement* self);
-void prDomElementSetId(PrDomElement* self, PrStringView value);
+PrStringView prDomElementId(const PrDomElement* element);
+void prDomElementSetId(PrDomElement* element, PrStringView value);
 
 // Get and set the value of the element's slot attribute, which is a slottable's name (dom/#slotable-name). The getter
 // returns the empty string if there is no slot attribute. The setter sets the attribute (dom/#dom-element-slot).
-PrStringView prDomElementSlot(const PrDomElement* self);
-void prDomElementSetSlot(PrDomElement* self, PrStringView value);
+PrStringView prDomElementSlot(const PrDomElement* element);
+void prDomElementSetSlot(PrDomElement* element, PrStringView value);
 
 // Get, set, remove and test for the first attribute whose qualified name is `qualifiedName`
 // (dom/#dom-element-getattribute and the methods after it). A missing attribute's value is the null view. Setting
 // returns InvalidData if the name is not a valid attribute local name, and adds an attribute in no namespace if the
 // element has none of that name. An HTML element in an HTML document lowercases the name it sets.
-PrStringView prDomElementGetAttribute(const PrDomElement* self, PrStringView qualifiedName);
-PrStatus prDomElementSetAttribute(PrDomElement* self, PrStringView qualifiedName, PrStringView value);
-void prDomElementRemoveAttribute(PrDomElement* self, PrStringView qualifiedName);
-bool prDomElementHasAttribute(const PrDomElement* self, PrStringView qualifiedName);
+PrStringView prDomElementGetAttribute(const PrDomElement* element, PrStringView qualifiedName);
+PrStatus prDomElementSetAttribute(PrDomElement* element, PrStringView qualifiedName, PrStringView value);
+void prDomElementRemoveAttribute(PrDomElement* element, PrStringView qualifiedName);
+bool prDomElementHasAttribute(const PrDomElement* element, PrStringView qualifiedName);
 
 // Returns true if the element has any attribute (dom/#dom-element-hasattributes).
-bool prDomElementHasAttributes(const PrDomElement* self);
+bool prDomElementHasAttributes(const PrDomElement* element);
 
 // Returns the value of the attribute in `namespaceUrl` whose local name is `localName`, or the null view if there is
 // none. The empty string means no namespace.
-PrStringView prDomElementGetAttributeNs(const PrDomElement* self, PrStringView namespaceUrl, PrStringView localName);
+PrStringView prDomElementGetAttributeNs(const PrDomElement* element, PrStringView namespaceUrl, PrStringView localName);
 
 // Sets the attribute in `namespaceUrl` named `qualifiedName` to `value` (dom/#dom-element-setattributens). Fails in the
 // same cases as prDomElementCreateNs, applied to an attribute's name.
-PrStatus prDomElementSetAttributeNs(PrDomElement* self, PrStringView namespaceUrl,
+PrStatus prDomElementSetAttributeNs(PrDomElement* element, PrStringView namespaceUrl,
     PrStringView qualifiedName, PrStringView value);
 
 // Remove, and test for, the attribute in `namespaceUrl` whose local name is `localName`. The empty string means no
 // namespace.
-void prDomElementRemoveAttributeNs(PrDomElement* self, PrStringView namespaceUrl, PrStringView localName);
-bool prDomElementHasAttributeNs(const PrDomElement* self, PrStringView namespaceUrl, PrStringView localName);
+void prDomElementRemoveAttributeNs(PrDomElement* element, PrStringView namespaceUrl, PrStringView localName);
+bool prDomElementHasAttributeNs(const PrDomElement* element, PrStringView namespaceUrl, PrStringView localName);
 
 // Writes the qualified names of the element's attributes, in order (dom/#dom-element-getattributenames). Writes up to
 // `capacity` names to `items`, which the caller releases, and returns the total count.
-uint32_t prDomElementGetAttributeNames(const PrDomElement* self, PrString* PR_NULLABLE items, uint32_t capacity);
+uint32_t prDomElementGetAttributeNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity);
 
 // Adds the attribute `qualifiedName` if the element lacks it, and removes it otherwise
 // (dom/#dom-element-toggleattribute). A non-null `force` adds the attribute if true and removes it if false. Writes
 // true if the element has the attribute afterward. Returns InvalidData if the name is not a valid attribute local name.
-PrStatus prDomElementToggleAttribute(PrDomElement* self, PrStringView qualifiedName,
+PrStatus prDomElementToggleAttribute(PrDomElement* element, PrStringView qualifiedName,
     const bool* PR_NULLABLE force, bool* PR_NULLABLE out);
 
 // Return the element's attributes as its NamedNodeMap presents them (dom/#concept-element-attribute): the count, and
 // the attribute at an index or null past the end.
-uint32_t prDomElementAttributeCount(const PrDomElement* self);
-PrDomAttr* PR_NULLABLE prDomElementAttributeAt(PrDomElement* self, uint32_t index);
+uint32_t prDomElementAttributeCount(const PrDomElement* element);
+PrDomAttr* PR_NULLABLE prDomElementAttributeAt(PrDomElement* element, uint32_t index);
 
 // Writes the supported property names of the element's NamedNodeMap (dom/#interface-namednodemap), which are the
 // qualified names of the element's attributes, each once. Names with an ASCII uppercase letter are excluded on an HTML
 // element in an HTML document. Writes up to `capacity` names to `items`, which the caller releases, and returns the
 // total count.
-uint32_t prDomElementNamedAttributeNames(const PrDomElement* self, PrString* PR_NULLABLE items, uint32_t capacity);
+uint32_t prDomElementNamedAttributeNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity);
 
 // Returns the first attribute whose qualified name is `qualifiedName`, or null
 // (dom/#concept-element-attributes-get-by-name).
-PrDomAttr* PR_NULLABLE prDomElementGetAttributeNode(PrDomElement* self, PrStringView qualifiedName);
+PrDomAttr* PR_NULLABLE prDomElementGetAttributeNode(PrDomElement* element, PrStringView qualifiedName);
 
 // Returns the attribute in `namespaceUrl` whose local name is `localName`, or null
 // (dom/#concept-element-attributes-get-by-namespace). The empty string means no namespace.
-PrDomAttr* PR_NULLABLE prDomElementGetAttributeNodeNs(PrDomElement* self, PrStringView namespaceUrl,
+PrDomAttr* PR_NULLABLE prDomElementGetAttributeNodeNs(PrDomElement* element, PrStringView namespaceUrl,
     PrStringView localName);
 
 // Puts `attr` on the element, in place of the attribute with its namespace and local name
 // (dom/#concept-element-attributes-set). Writes the replaced attribute, or null, with a reference that the caller
 // releases. Returns InvalidState if `attr` belongs to another element.
-PrStatus prDomElementSetAttributeNode(PrDomElement* self, PrDomAttr* attr, PrDomAttr* PR_NULLABLE* PR_NULLABLE out);
+PrStatus prDomElementSetAttributeNode(PrDomElement* element, PrDomAttr* attr, PrDomAttr* PR_NULLABLE* PR_NULLABLE out);
 
 // Removes `attr` from the element (dom/#dom-element-removeattributenode). Returns NotFound if `attr` does not belong to
 // the element.
-PrStatus prDomElementRemoveAttributeNode(PrDomElement* self, PrDomAttr* attr);
+PrStatus prDomElementRemoveAttributeNode(PrDomElement* element, PrDomAttr* attr);
 
 // Removes the first attribute whose qualified name is `qualifiedName` (dom/#dom-namednodemap-removenameditem). Writes
 // the removed attribute, with a reference that the caller releases. Returns NotFound if the element has no attribute of
 // that name.
-PrStatus prDomElementRemoveNamedAttribute(PrDomElement* self, PrStringView qualifiedName,
+PrStatus prDomElementRemoveNamedAttribute(PrDomElement* element, PrStringView qualifiedName,
     PrDomAttr* PR_NULLABLE* PR_NONNULL out);
 
 // Removes the attribute in `namespaceUrl` whose local name is `localName`, in the same way as
 // prDomElementRemoveNamedAttribute (dom/#dom-namednodemap-removenameditemns).
-PrStatus prDomElementRemoveNamedAttributeNs(PrDomElement* self, PrStringView namespaceUrl, PrStringView localName,
+PrStatus prDomElementRemoveNamedAttributeNs(PrDomElement* element, PrStringView namespaceUrl, PrStringView localName,
     PrDomAttr* PR_NULLABLE* PR_NONNULL out);
 
 // The position of an inserted node relative to an element (dom/#insert-adjacent).
@@ -1213,22 +1213,22 @@ typedef uint8_t PrDomInsertPosition;
 // dom/#dom-element-insertadjacenttext). Insert nothing if the position is outside an element with no parent.
 // prDomElementInsertAdjacentElement writes the inserted element, or null if nothing was inserted. Both fail in the same
 // cases as the other calls that change the tree.
-PrStatus prDomElementInsertAdjacentElement(PrDomElement* self, PrDomInsertPosition where, PrDomElement* element,
+PrStatus prDomElementInsertAdjacentElement(PrDomElement* target, PrDomInsertPosition where, PrDomElement* element,
     PrDomElement* PR_NULLABLE* PR_NULLABLE out);
-PrStatus prDomElementInsertAdjacentText(PrDomElement* self, PrDomInsertPosition where, PrStringView data);
+PrStatus prDomElementInsertAdjacentText(PrDomElement* element, PrDomInsertPosition where, PrStringView data);
 
 // Attaches a shadow root to the element (dom/#dom-element-attachshadow). Returns NotSupported if a shadow root cannot
 // be attached to the element (dom/#valid-shadow-host-name), or if it already has one.
-PrStatus prDomElementAttachShadow(PrDomElement* self, const PrDomShadowRootInit* init,
+PrStatus prDomElementAttachShadow(PrDomElement* element, const PrDomShadowRootInit* init,
     PrDomShadowRoot* PR_NULLABLE* PR_NONNULL out);
 
 // Returns the element's shadow root if it is open, and null otherwise (dom/#dom-element-shadowroot).
-PrDomShadowRoot* PR_NULLABLE prDomElementShadowRoot(PrDomElement* self);
+PrDomShadowRoot* PR_NULLABLE prDomElementShadowRoot(PrDomElement* element);
 
 // Get and set the value of the element's class attribute. The getter returns the empty string if there is no class
 // attribute. The setter sets the attribute.
-PrStringView prDomElementClassName(const PrDomElement* self);
-void prDomElementSetClassName(PrDomElement* self, PrStringView value);
+PrStringView prDomElementClassName(const PrDomElement* element);
+void prDomElementSetClassName(PrDomElement* element, PrStringView value);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Attr : Node (dom)
@@ -1243,29 +1243,29 @@ PR_HANDLE_UPCAST(DomAttr, DomEventTarget, EventTarget)
 PrDomAttr* PR_NULLABLE prDomAttrQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Returns the attribute's namespace, or the null view for none.
-PrStringView prDomAttrNamespaceUri(const PrDomAttr* self);
+PrStringView prDomAttrNamespaceUri(const PrDomAttr* attr);
 
 // Returns the attribute's namespace if the specs name it, or Other for a namespace that a script uses.
-PrDomNamespace prDomAttrNamespace(const PrDomAttr* self);
+PrDomNamespace prDomAttrNamespace(const PrDomAttr* attr);
 
 // Returns the attribute's namespace prefix, or the null view for none.
-PrStringView prDomAttrPrefix(const PrDomAttr* self);
+PrStringView prDomAttrPrefix(const PrDomAttr* attr);
 
 // Returns the attribute's local name.
-PrStringView prDomAttrLocalName(const PrDomAttr* self);
+PrStringView prDomAttrLocalName(const PrDomAttr* attr);
 
 // Returns the attribute's qualified name (dom/#concept-attribute-qualified-name).
-PrString prDomAttrName(const PrDomAttr* self);
+PrString prDomAttrName(const PrDomAttr* attr);
 
 // Returns the attribute's value.
-PrStringView prDomAttrValue(const PrDomAttr* self);
+PrStringView prDomAttrValue(const PrDomAttr* attr);
 
 // Sets the attribute's value, as a change to its element's attribute if it is on one
 // (dom/#set-an-existing-attribute-value).
-void prDomAttrSetValue(PrDomAttr* self, PrStringView value);
+void prDomAttrSetValue(PrDomAttr* attr, PrStringView value);
 
 // Returns the element that the attribute is on, or null.
-PrDomElement* PR_NULLABLE prDomAttrOwnerElement(PrDomAttr* self);
+PrDomElement* PR_NULLABLE prDomAttrOwnerElement(PrDomAttr* attr);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Slottable (dom)
@@ -1287,19 +1287,19 @@ PR_HANDLE_UPCAST(DomCharacterData, DomEventTarget, EventTarget)
 PrDomCharacterData* PR_NULLABLE prDomCharacterDataQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Get and set the node's data, and return its length in UTF-16 code units.
-PrStringView prDomCharacterDataData(const PrDomCharacterData* self);
-void prDomCharacterDataSetData(PrDomCharacterData* self, PrStringView value);
-uint32_t prDomCharacterDataLength(const PrDomCharacterData* self);
+PrStringView prDomCharacterDataData(const PrDomCharacterData* node);
+void prDomCharacterDataSetData(PrDomCharacterData* node, PrStringView value);
+uint32_t prDomCharacterDataLength(const PrDomCharacterData* node);
 
 // Read or edit the data (dom/#dom-characterdata-substringdata and the methods after it). In order, the functions write
 // the `count` code units at `offset` to `out`, append `data`, insert `data` at `offset`, delete the `count` code units
 // at `offset`, or replace them with `data`. Offsets and counts are in UTF-16 code units. Each returns OutOfRange for an
 // offset past the data.
-PrStatus prDomCharacterDataSubstringData(const PrDomCharacterData* self, uint32_t offset, uint32_t count, PrString* out);
-void prDomCharacterDataAppendData(PrDomCharacterData* self, PrStringView data);
-PrStatus prDomCharacterDataInsertData(PrDomCharacterData* self, uint32_t offset, PrStringView data);
-PrStatus prDomCharacterDataDeleteData(PrDomCharacterData* self, uint32_t offset, uint32_t count);
-PrStatus prDomCharacterDataReplaceData(PrDomCharacterData* self, uint32_t offset, uint32_t count, PrStringView data);
+PrStatus prDomCharacterDataSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrString* out);
+void prDomCharacterDataAppendData(PrDomCharacterData* node, PrStringView data);
+PrStatus prDomCharacterDataInsertData(PrDomCharacterData* node, uint32_t offset, PrStringView data);
+PrStatus prDomCharacterDataDeleteData(PrDomCharacterData* node, uint32_t offset, uint32_t count);
+PrStatus prDomCharacterDataReplaceData(PrDomCharacterData* node, uint32_t offset, uint32_t count, PrStringView data);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Text : CharacterData (dom)
@@ -1315,10 +1315,10 @@ PrDomText* PR_NULLABLE prDomTextQuery(PrDomEventTarget* PR_NULLABLE object);
 // Splits the node at `offset` (dom/#concept-text-split). Writes the new node, with a reference that the caller
 // releases. The new node follows the node if the node has a parent. Returns OutOfRange if `offset` is past the data's
 // length.
-PrStatus prDomTextSplitText(PrDomText* self, uint32_t offset, PrDomText* PR_NULLABLE* PR_NONNULL out);
+PrStatus prDomTextSplitText(PrDomText* text, uint32_t offset, PrDomText* PR_NULLABLE* PR_NONNULL out);
 
 // Returns the data of the node and of the contiguous Text siblings around it, in tree order (dom/#dom-text-wholetext).
-PrString prDomTextWholeText(const PrDomText* self);
+PrString prDomTextWholeText(const PrDomText* text);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Comment : CharacterData (dom)
@@ -1343,7 +1343,7 @@ PR_HANDLE_UPCAST(DomProcessingInstruction, DomEventTarget, EventTarget)
 PrDomProcessingInstruction* PR_NULLABLE prDomProcessingInstructionQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Returns the instruction's target.
-PrStringView prDomProcessingInstructionTarget(const PrDomProcessingInstruction* self);
+PrStringView prDomProcessingInstructionTarget(const PrDomProcessingInstruction* instruction);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLCollection (dom)
@@ -1360,20 +1360,20 @@ PrDomHtmlCollection* prDomHtmlCollectionCreateByClassName(PrDomNode* root, PrStr
 PrDomHtmlCollection* prDomHtmlCollectionCreateByTagName(PrDomNode* root, PrStringView qualifiedName);
 
 // Return the number of elements, and the element at `index` or null past the end.
-uint32_t prDomHtmlCollectionLength(const PrDomHtmlCollection* self);
-PrDomElement* PR_NULLABLE prDomHtmlCollectionElementAt(PrDomHtmlCollection* self, uint32_t index);
+uint32_t prDomHtmlCollectionLength(const PrDomHtmlCollection* collection);
+PrDomElement* PR_NULLABLE prDomHtmlCollectionElementAt(PrDomHtmlCollection* collection, uint32_t index);
 
 // Returns the first element whose ID is `name` or, for an HTML element, whose name attribute is `name`. Returns null if
 // there is none, and for the empty string (dom/#dom-htmlcollection-nameditem-key).
-PrDomElement* PR_NULLABLE prDomHtmlCollectionNamedItem(PrDomHtmlCollection* self, PrStringView name);
+PrDomElement* PR_NULLABLE prDomHtmlCollectionNamedItem(PrDomHtmlCollection* collection, PrStringView name);
 
 // Writes the collection's supported property names (dom/#ref-for-dfn-supported-property-names): for each element in
 // order, its ID, then its name attribute if it is an HTML element, each name once and none empty. Writes up to
 // `capacity` names to `items`, and returns the total count.
-uint32_t prDomHtmlCollectionNames(const PrDomHtmlCollection* self, PrStringView* PR_NULLABLE items, uint32_t capacity);
+uint32_t prDomHtmlCollectionNames(const PrDomHtmlCollection* collection, PrStringView* PR_NULLABLE items, uint32_t capacity);
 
 // Frees the collection.
-void prDomHtmlCollectionDestroy(PrDomHtmlCollection* PR_NULLABLE self);
+void prDomHtmlCollectionDestroy(PrDomHtmlCollection* PR_NULLABLE collection);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // NodeList (dom)
@@ -1388,11 +1388,11 @@ PrDomNodeList* prDomNodeListCreate(void);
 PrDomNodeList* prDomNodeListCreateChildNodes(PrDomNode* parent);
 
 // Return the node at `index` or null past the end, and the number of nodes.
-PrDomNode* PR_NULLABLE prDomNodeListNodeAt(PrDomNodeList* self, uint32_t index);
-uint32_t prDomNodeListLength(const PrDomNodeList* self);
+PrDomNode* PR_NULLABLE prDomNodeListNodeAt(PrDomNodeList* list, uint32_t index);
+uint32_t prDomNodeListLength(const PrDomNodeList* list);
 
 // Frees the list.
-void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE self);
+void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE list);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // DOMTokenList (dom)
@@ -1406,32 +1406,32 @@ void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE self);
 PrDomTokenList* prDomTokenListCreate(PrDomElement* element, PrStringView name);
 
 // Returns the number of tokens.
-uint32_t prDomTokenListLength(const PrDomTokenList* self);
+uint32_t prDomTokenListLength(const PrDomTokenList* list);
 
 // Returns the token at `index`, or the null view past the last token.
-PrStringView prDomTokenListItem(const PrDomTokenList* self, uint32_t index);
+PrStringView prDomTokenListItem(const PrDomTokenList* list, uint32_t index);
 
 // Returns true if the set holds `token`.
-bool prDomTokenListContains(const PrDomTokenList* self, PrStringView token);
+bool prDomTokenListContains(const PrDomTokenList* list, PrStringView token);
 
 // Add each of `tokens` that the set lacks to its end, or remove each of `tokens` from the set.
-PrStatus prDomTokenListAdd(PrDomTokenList* self, const PrStringView* PR_NULLABLE tokens, uint32_t count);
-PrStatus prDomTokenListRemove(PrDomTokenList* self, const PrStringView* PR_NULLABLE tokens, uint32_t count);
+PrStatus prDomTokenListAdd(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens, uint32_t count);
+PrStatus prDomTokenListRemove(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens, uint32_t count);
 
 // Adds `token` if the set lacks it, and removes it otherwise. A non-null `force` adds the token if true and removes it
 // if false. Writes true if the token is present afterward.
-PrStatus prDomTokenListToggle(PrDomTokenList* self, PrStringView token, const bool* PR_NULLABLE force, bool* out);
+PrStatus prDomTokenListToggle(PrDomTokenList* list, PrStringView token, const bool* PR_NULLABLE force, bool* out);
 
 // Replaces `token` with `newToken`. Writes true if `token` was present and replaced.
-PrStatus prDomTokenListReplace(PrDomTokenList* self, PrStringView token, PrStringView newToken, bool* out);
+PrStatus prDomTokenListReplace(PrDomTokenList* list, PrStringView token, PrStringView newToken, bool* out);
 
 // Get and set the attribute's value. The getter returns the empty string if there is no attribute. The setter sets the
 // attribute.
-PrStringView prDomTokenListValue(const PrDomTokenList* self);
-void prDomTokenListSetValue(PrDomTokenList* self, PrStringView value);
+PrStringView prDomTokenListValue(const PrDomTokenList* list);
+void prDomTokenListSetValue(PrDomTokenList* list, PrStringView value);
 
 // Frees the list.
-void prDomTokenListDestroy(PrDomTokenList* PR_NULLABLE self);
+void prDomTokenListDestroy(PrDomTokenList* PR_NULLABLE list);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // MutationObserver (dom)
@@ -1496,24 +1496,24 @@ typedef struct PrDomMutationCallback {
 PrDomMutationObserver* prDomMutationObserverCreate(const PrDomMutationCallback* callback);
 
 // Adds or releases a reference. The last release frees the observer and its records.
-void prDomMutationObserverRetain(PrDomMutationObserver* self);
-void prDomMutationObserverRelease(PrDomMutationObserver* PR_NULLABLE self);
+void prDomMutationObserverRetain(PrDomMutationObserver* observer);
+void prDomMutationObserverRelease(PrDomMutationObserver* PR_NULLABLE observer);
 
 // Registers the observer on `target` with `options`, and with `filter` as the attribute filter if the options have one
 // (dom/#dom-mutationobserver-observe). Returns InvalidData for options that observe nothing, or that request an old
 // value or a filter for something they do not observe.
-PrStatus prDomMutationObserverObserve(PrDomMutationObserver* self, PrDomNode* target,
+PrStatus prDomMutationObserverObserve(PrDomMutationObserver* observer, PrDomNode* target,
     const PrDomMutationObserverInit* options, const PrStringView* PR_NULLABLE filter, uint32_t filterCount);
 
 // Removes the observer's registrations, and drops its records (dom/#dom-mutationobserver-disconnect).
-void prDomMutationObserverDisconnect(PrDomMutationObserver* self);
+void prDomMutationObserverDisconnect(PrDomMutationObserver* observer);
 
 // Returns the number of records that the observer holds.
-uint32_t prDomMutationObserverRecordCount(const PrDomMutationObserver* self);
+uint32_t prDomMutationObserverRecordCount(const PrDomMutationObserver* observer);
 
 // Takes the oldest record into `record`, in place of what it held. Returns false, and leaves `record` unchanged, if the
 // observer holds no records.
-bool prDomMutationObserverTakeRecord(PrDomMutationObserver* self, PrDomMutationRecord* record);
+bool prDomMutationObserverTakeRecord(PrDomMutationObserver* observer, PrDomMutationRecord* record);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // MutationRecord (dom)
@@ -1525,24 +1525,24 @@ bool prDomMutationObserverTakeRecord(PrDomMutationObserver* self, PrDomMutationR
 PrDomMutationRecord* prDomMutationRecordCreate(void);
 
 // Frees the record.
-void prDomMutationRecordDestroy(PrDomMutationRecord* PR_NULLABLE self);
+void prDomMutationRecordDestroy(PrDomMutationRecord* PR_NULLABLE record);
 
 // Return the kind of change, and the node that changed.
-PrDomMutationType prDomMutationRecordType(const PrDomMutationRecord* self);
-PrDomNode* prDomMutationRecordTarget(PrDomMutationRecord* self);
+PrDomMutationType prDomMutationRecordType(const PrDomMutationRecord* record);
+PrDomNode* prDomMutationRecordTarget(PrDomMutationRecord* record);
 
 // Make `list` a snapshot of the nodes that the change added or removed, and return the siblings before and after those
 // nodes. Each sibling is null if there is none.
-void prDomMutationRecordAddedNodes(PrDomMutationRecord* self, PrDomNodeList* list);
-void prDomMutationRecordRemovedNodes(PrDomMutationRecord* self, PrDomNodeList* list);
-PrDomNode* PR_NULLABLE prDomMutationRecordPreviousSibling(PrDomMutationRecord* self);
-PrDomNode* PR_NULLABLE prDomMutationRecordNextSibling(PrDomMutationRecord* self);
+void prDomMutationRecordAddedNodes(PrDomMutationRecord* record, PrDomNodeList* list);
+void prDomMutationRecordRemovedNodes(PrDomMutationRecord* record, PrDomNodeList* list);
+PrDomNode* PR_NULLABLE prDomMutationRecordPreviousSibling(PrDomMutationRecord* record);
+PrDomNode* PR_NULLABLE prDomMutationRecordNextSibling(PrDomMutationRecord* record);
 
 // Return the changed attribute's local name and namespace, and the value before the change. Each is the null view if
 // the record has none.
-PrStringView prDomMutationRecordAttributeName(const PrDomMutationRecord* self);
-PrStringView prDomMutationRecordAttributeNamespace(const PrDomMutationRecord* self);
-PrStringView prDomMutationRecordOldValue(const PrDomMutationRecord* self);
+PrStringView prDomMutationRecordAttributeName(const PrDomMutationRecord* record);
+PrStringView prDomMutationRecordAttributeNamespace(const PrDomMutationRecord* record);
+PrStringView prDomMutationRecordOldValue(const PrDomMutationRecord* record);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // AbstractRange, StaticRange and Range (dom)
@@ -1561,27 +1561,27 @@ PrStatus prDomRangeCreateStatic(PrDomNode* startContainer, uint32_t startOffset,
     uint32_t endOffset, PrDomRange* PR_NULLABLE* PR_NONNULL out);
 
 // Adds or releases a reference. The last release frees the range.
-void prDomRangeRetain(PrDomRange* self);
-void prDomRangeRelease(PrDomRange* PR_NULLABLE self);
+void prDomRangeRetain(PrDomRange* range);
+void prDomRangeRelease(PrDomRange* PR_NULLABLE range);
 
 // Returns true if the range is live rather than static.
-bool prDomRangeIsLive(const PrDomRange* self);
+bool prDomRangeIsLive(const PrDomRange* range);
 
 // Return the node and offset of the range's start and of its end, and true if the two are the same point.
-PrDomNode* prDomRangeStartContainer(PrDomRange* self);
-uint32_t prDomRangeStartOffset(const PrDomRange* self);
-PrDomNode* prDomRangeEndContainer(PrDomRange* self);
-uint32_t prDomRangeEndOffset(const PrDomRange* self);
-bool prDomRangeCollapsed(const PrDomRange* self);
+PrDomNode* prDomRangeStartContainer(PrDomRange* range);
+uint32_t prDomRangeStartOffset(const PrDomRange* range);
+PrDomNode* prDomRangeEndContainer(PrDomRange* range);
+uint32_t prDomRangeEndOffset(const PrDomRange* range);
+bool prDomRangeCollapsed(const PrDomRange* range);
 
 // Returns the nearest node that contains both the start and the end (dom/#dom-range-commonancestorcontainer).
-PrDomNode* prDomRangeCommonAncestorContainer(PrDomRange* self);
+PrDomNode* prDomRangeCommonAncestorContainer(PrDomRange* range);
 
 // Set the start or the end (dom/#dom-range-setstart, dom/#dom-range-setend). If the range would then end before it
 // starts, or its points would be in different trees, the other point moves to the new one. Each returns WrongType for a
 // doctype, and OutOfRange for an offset past the node's length.
-PrStatus prDomRangeSetStart(PrDomRange* self, PrDomNode* node, uint32_t offset);
-PrStatus prDomRangeSetEnd(PrDomRange* self, PrDomNode* node, uint32_t offset);
+PrStatus prDomRangeSetStart(PrDomRange* range, PrDomNode* node, uint32_t offset);
+PrStatus prDomRangeSetEnd(PrDomRange* range, PrDomNode* node, uint32_t offset);
 
 // The position of a boundary point relative to a node (dom/#dom-range-setstartbefore and the methods after it).
 enum {
@@ -1594,16 +1594,16 @@ typedef uint8_t PrDomRangeSide;
 
 // Sets the start or the end, as `side` says, to just before or after `node` in its parent. Returns WrongType for a node
 // without a parent.
-PrStatus prDomRangeSetBeside(PrDomRange* self, PrDomRangeSide side, PrDomNode* node);
+PrStatus prDomRangeSetBeside(PrDomRange* range, PrDomRangeSide side, PrDomNode* node);
 
 // Collapses the range to its start if `toStart` is set, and to its end otherwise.
-void prDomRangeCollapse(PrDomRange* self, bool toStart);
+void prDomRangeCollapse(PrDomRange* range, bool toStart);
 
 // Set the range to `node` itself (dom/#dom-range-selectnode), or to the contents of `node`
 // (dom/#dom-range-selectnodecontents). Selecting a node returns WrongType for a node without a parent. Selecting the
 // contents returns WrongType for a doctype.
-PrStatus prDomRangeSelectNode(PrDomRange* self, PrDomNode* node);
-PrStatus prDomRangeSelectNodeContents(PrDomRange* self, PrDomNode* node);
+PrStatus prDomRangeSelectNode(PrDomRange* range, PrDomNode* node);
+PrStatus prDomRangeSelectNodeContents(PrDomRange* range, PrDomNode* node);
 
 // The boundary points that compareBoundaryPoints compares (dom/#dom-range-start_to_start and the constants after it).
 // The first word of a name is the source range's point, and the second is this range's.
@@ -1617,41 +1617,41 @@ typedef uint8_t PrDomRangeHow;
 
 // Writes -1, 0 or 1 if this range's point is before, equal to or after the source range's point
 // (dom/#dom-range-compareboundarypoints). Returns Foreign for a source with another root.
-PrStatus prDomRangeCompareBoundaryPoints(const PrDomRange* self, PrDomRangeHow how, const PrDomRange* source, int8_t* out);
+PrStatus prDomRangeCompareBoundaryPoints(const PrDomRange* range, PrDomRangeHow how, const PrDomRange* source, int8_t* out);
 
 // Removes the range's contents from the tree (dom/#dom-range-deletecontents).
-void prDomRangeDeleteContents(PrDomRange* self);
+void prDomRangeDeleteContents(PrDomRange* range);
 
 // Create a fragment of the range's contents, and move the contents into it (dom/#dom-range-extractcontents) or copy
 // them (dom/#dom-range-clonecontents). Write the fragment, with a reference that the caller releases. Each returns
 // NotAllowed if a doctype is contained.
-PrStatus prDomRangeExtractContents(PrDomRange* self, PrDomDocumentFragment* PR_NULLABLE* PR_NONNULL out);
-PrStatus prDomRangeCloneContents(PrDomRange* self, PrDomDocumentFragment* PR_NULLABLE* PR_NONNULL out);
+PrStatus prDomRangeExtractContents(PrDomRange* range, PrDomDocumentFragment* PR_NULLABLE* PR_NONNULL out);
+PrStatus prDomRangeCloneContents(PrDomRange* range, PrDomDocumentFragment* PR_NULLABLE* PR_NONNULL out);
 
 // Inserts `node` at the start of the range (dom/#dom-range-insertnode). Fails in the same cases as insertion, and also
 // returns NotAllowed for a start in a comment, a processing instruction or a detached text node.
-PrStatus prDomRangeInsertNode(PrDomRange* self, PrDomNode* node);
+PrStatus prDomRangeInsertNode(PrDomRange* range, PrDomNode* node);
 
 // Moves the range's contents into `node`, and inserts `node` in their place (dom/#dom-range-surroundcontents). Returns
 // InvalidState if a non-text node is partially contained, and WrongType for a document, doctype or fragment.
-PrStatus prDomRangeSurroundContents(PrDomRange* self, PrDomNode* node);
+PrStatus prDomRangeSurroundContents(PrDomRange* range, PrDomNode* node);
 
 // Creates a live range with the same boundary points, with a reference that the caller holds.
-PrDomRange* prDomRangeCloneRange(PrDomRange* self);
+PrDomRange* prDomRangeCloneRange(PrDomRange* range);
 
 // prDomRangeIsPointInRange writes true if the point is in the range (dom/#dom-range-ispointinrange).
 // prDomRangeComparePoint writes -1, 0 or 1 if the point is before, in or after the range (dom/#dom-range-comparepoint).
 // Each returns WrongType for a doctype and OutOfRange for an offset past the node's length. prDomRangeComparePoint also
 // returns Foreign for a node with another root.
-PrStatus prDomRangeIsPointInRange(const PrDomRange* self, PrDomNode* node, uint32_t offset, bool* out);
-PrStatus prDomRangeComparePoint(const PrDomRange* self, PrDomNode* node, uint32_t offset, int8_t* out);
+PrStatus prDomRangeIsPointInRange(const PrDomRange* range, PrDomNode* node, uint32_t offset, bool* out);
+PrStatus prDomRangeComparePoint(const PrDomRange* range, PrDomNode* node, uint32_t offset, int8_t* out);
 
 // Returns true if the range intersects `node` (dom/#dom-range-intersectsnode).
-bool prDomRangeIntersectsNode(const PrDomRange* self, PrDomNode* node);
+bool prDomRangeIntersectsNode(const PrDomRange* range, PrDomNode* node);
 
 // Returns the text within the range, from the Text nodes that it holds in whole or in part, in tree order
 // (dom/#dom-range-stringifier).
-PrString prDomRangeToString(const PrDomRange* self);
+PrString prDomRangeToString(const PrDomRange* range);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Selection (selection-api)
@@ -1665,25 +1665,25 @@ PrString prDomRangeToString(const PrDomRange* self);
 // call that gives it no new range leaves `range` unchanged.
 
 // Returns the selection that selection-api/#dom-document-getselection returns, creating it on first request.
-PrDomSelection* prDomDocumentSelection(PrDomDocument* self);
+PrDomSelection* prDomDocumentSelection(PrDomDocument* document);
 
 // Returns the document that the selection belongs to.
-PrDomDocument* prDomSelectionDocument(PrDomSelection* self);
+PrDomDocument* prDomSelectionDocument(PrDomSelection* selection);
 
 // Returns the selection's range, if it has one, wherever its boundary points are.
-PrDomRange* PR_NULLABLE prDomSelectionRange(PrDomSelection* self);
+PrDomRange* PR_NULLABLE prDomSelectionRange(PrDomSelection* selection);
 
 // Return the node and offset of the selection's anchor and focus (selection-api/#dfn-anchor), and true if the two are
 // the same point. The nodes are null and the offsets zero unless the range's boundary points are in the document tree.
 // A selection without such a range is collapsed.
-PrDomNode* PR_NULLABLE prDomSelectionAnchorNode(PrDomSelection* self);
-uint32_t prDomSelectionAnchorOffset(const PrDomSelection* self);
-PrDomNode* PR_NULLABLE prDomSelectionFocusNode(PrDomSelection* self);
-uint32_t prDomSelectionFocusOffset(const PrDomSelection* self);
-bool prDomSelectionIsCollapsed(const PrDomSelection* self);
+PrDomNode* PR_NULLABLE prDomSelectionAnchorNode(PrDomSelection* selection);
+uint32_t prDomSelectionAnchorOffset(const PrDomSelection* selection);
+PrDomNode* PR_NULLABLE prDomSelectionFocusNode(PrDomSelection* selection);
+uint32_t prDomSelectionFocusOffset(const PrDomSelection* selection);
+bool prDomSelectionIsCollapsed(const PrDomSelection* selection);
 
 // Returns the number of ranges in the selection: one if its range is in the document tree, and zero otherwise.
-uint32_t prDomSelectionRangeCount(const PrDomSelection* self);
+uint32_t prDomSelectionRangeCount(const PrDomSelection* selection);
 
 // The type of a selection (selection-api/#dom-selection-type).
 enum {
@@ -1694,7 +1694,7 @@ enum {
 typedef uint8_t PrDomSelectionType;
 
 // Returns the selection's type: None if its range count is zero, Caret if it is collapsed, and Range otherwise.
-PrDomSelectionType prDomSelectionType(const PrDomSelection* self);
+PrDomSelectionType prDomSelectionType(const PrDomSelection* selection);
 
 // The direction of a selection (selection-api/#dom-selection-direction).
 enum {
@@ -1705,58 +1705,58 @@ enum {
 typedef uint8_t PrDomSelectionDirection;
 
 // Returns the selection's direction, or None if it has no range.
-PrDomSelectionDirection prDomSelectionDirection(const PrDomSelection* self);
+PrDomSelectionDirection prDomSelectionDirection(const PrDomSelection* selection);
 
 // Writes the selection's range at `index` (selection-api/#dom-selection-getrangeat). Returns OutOfRange for an index
 // past the last.
-PrStatus prDomSelectionGetRangeAt(PrDomSelection* self, uint32_t index, PrDomRange* PR_NULLABLE* PR_NONNULL out);
+PrStatus prDomSelectionGetRangeAt(PrDomSelection* selection, uint32_t index, PrDomRange* PR_NULLABLE* PR_NONNULL out);
 
 // Makes `range` the selection's range if the selection has none and `range` is a live range whose root is the document
 // (selection-api/#dom-selection-addrange). Does nothing otherwise.
-void prDomSelectionAddRange(PrDomSelection* self, PrDomRange* range);
+void prDomSelectionAddRange(PrDomSelection* selection, PrDomRange* range);
 
 // Empties the selection if `range` is its range (selection-api/#dom-selection-removerange). Returns NotFound for a
 // range that is not the selection's.
-PrStatus prDomSelectionRemoveRange(PrDomSelection* self, const PrDomRange* range);
+PrStatus prDomSelectionRemoveRange(PrDomSelection* selection, const PrDomRange* range);
 
 // Empties the selection (selection-api/#dom-selection-removeallranges).
-void prDomSelectionRemoveAllRanges(PrDomSelection* self);
+void prDomSelectionRemoveAllRanges(PrDomSelection* selection);
 
 // Collapses the selection to the point at `offset` in `node`, or empties it for a null node
 // (selection-api/#dom-selection-collapse). Returns WrongType for a doctype, and OutOfRange for an offset past the
 // node's length.
-PrStatus prDomSelectionCollapse(PrDomSelection* self, PrDomNode* PR_NULLABLE node, uint32_t offset, PrDomRange* range);
+PrStatus prDomSelectionCollapse(PrDomSelection* selection, PrDomNode* PR_NULLABLE node, uint32_t offset, PrDomRange* range);
 
 // Collapse the selection to the start or the end of its range (selection-api/#dom-selection-collapsetostart,
 // selection-api/#dom-selection-collapsetoend). Each returns InvalidState for an empty selection.
-PrStatus prDomSelectionCollapseToStart(PrDomSelection* self, PrDomRange* range);
-PrStatus prDomSelectionCollapseToEnd(PrDomSelection* self, PrDomRange* range);
+PrStatus prDomSelectionCollapseToStart(PrDomSelection* selection, PrDomRange* range);
+PrStatus prDomSelectionCollapseToEnd(PrDomSelection* selection, PrDomRange* range);
 
 // Moves the focus to the point at `offset` in `node`, and keeps the anchor (selection-api/#dom-selection-extend).
 // Returns InvalidState for an empty selection, and otherwise fails in the same cases as collapse.
-PrStatus prDomSelectionExtend(PrDomSelection* self, PrDomNode* node, uint32_t offset, PrDomRange* range);
+PrStatus prDomSelectionExtend(PrDomSelection* selection, PrDomNode* node, uint32_t offset, PrDomRange* range);
 
 // Sets the anchor and the focus (selection-api/#dom-selection-setbaseandextent). Fails in the same cases as collapse.
-PrStatus prDomSelectionSetBaseAndExtent(PrDomSelection* self, PrDomNode* anchorNode,
+PrStatus prDomSelectionSetBaseAndExtent(PrDomSelection* selection, PrDomNode* anchorNode,
     uint32_t anchorOffset, PrDomNode* focusNode, uint32_t focusOffset, PrDomRange* range);
 
 // Selects the children of `node` (selection-api/#dom-selection-selectallchildren). Returns WrongType for a doctype.
-PrStatus prDomSelectionSelectAllChildren(PrDomSelection* self, PrDomNode* node, PrDomRange* range);
+PrStatus prDomSelectionSelectAllChildren(PrDomSelection* selection, PrDomNode* node, PrDomRange* range);
 
 // Removes the contents of the selection's range from the tree (selection-api/#dom-selection-deletefromdocument).
-void prDomSelectionDeleteFromDocument(PrDomSelection* self);
+void prDomSelectionDeleteFromDocument(PrDomSelection* selection);
 
 // Returns true if the selection's range contains `node` or, if `allowPartialContainment` is set, any part of it
 // (selection-api/#dom-selection-containsnode).
-bool prDomSelectionContainsNode(const PrDomSelection* self, PrDomNode* node, bool allowPartialContainment);
+bool prDomSelectionContainsNode(const PrDomSelection* selection, PrDomNode* node, bool allowPartialContainment);
 
 // Returns the text within the selection's range, or the empty string if there is no range.
-PrString prDomSelectionToString(const PrDomSelection* self);
+PrString prDomSelectionToString(const PrDomSelection* selection);
 
 // Writes the range with each boundary point moved out of the shadow trees whose roots are not in `roots`, as a static
 // range that the caller holds (selection-api/#dom-selection-getcomposedranges). Writes none for an empty selection.
 // Returns the number written, which is zero or one.
-uint32_t prDomSelectionComposedRanges(PrDomSelection* self, PrDomShadowRoot* const PR_NONNULL* PR_NULLABLE roots,
+uint32_t prDomSelectionComposedRanges(PrDomSelection* selection, PrDomShadowRoot* const PR_NONNULL* PR_NULLABLE roots,
     uint32_t count, PrDomRange* PR_NULLABLE* PR_NONNULL out);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1847,36 +1847,36 @@ bool prDomIsValidCustomElementName(PrStringView name);
 
 // Sets the registry that defines the document's custom elements, or clears it if `registry` is null. The document keeps
 // the pointer, not a copy.
-void prDomDocumentSetCustomElementRegistry(PrDomDocument* self, const PrDomCustomElementRegistry* PR_NULLABLE registry);
+void prDomDocumentSetCustomElementRegistry(PrDomDocument* document, const PrDomCustomElementRegistry* PR_NULLABLE registry);
 
 // Returns the element's custom element state.
-PrDomCustomElementState prDomElementCustomElementState(const PrDomElement* self);
+PrDomCustomElementState prDomElementCustomElementState(const PrDomElement* element);
 
 // Returns the element's custom element definition, or null if it has none
 // (dom/#concept-element-custom-element-definition).
-void* PR_NULLABLE prDomElementCustomElementDefinition(const PrDomElement* self);
+void* PR_NULLABLE prDomElementCustomElementDefinition(const PrDomElement* element);
 
 // Creates the element that an HTML element constructor creates when no element is being upgraded
 // (html/#html-element-constructors). The element has the definition's local name, is custom, and is defined by the
 // definition. The caller releases its reference.
-PrDomElement* prDomElementCreateCustom(PrDomDocument* self, PrStringView localName, void* definition);
+PrDomElement* prDomElementCreateCustom(PrDomDocument* document, PrStringView localName, void* definition);
 
 // Queues an upgrade reaction for each element of the document, in shadow-including tree order, that the definition of
 // `localName` defines. These are the upgrades of html/#dom-customelementregistry-define.
-void prDomDocumentUpgradeCandidates(PrDomDocument* self, PrStringView localName, void* definition);
+void prDomDocumentUpgradeCandidates(PrDomDocument* document, PrStringView localName, void* definition);
 
 // Tries to upgrade the node and its shadow-including descendants (html/#dom-customelementregistry-upgrade).
-void prDomNodeUpgrade(PrDomNode* self);
+void prDomNodeUpgrade(PrDomNode* node);
 
 // Returns the shadow root that the element hosts, open or closed, or null if there is none
 // (html/#dom-elementinternals-shadowroot).
-PrDomShadowRoot* PR_NULLABLE prDomElementHostedShadowRoot(PrDomElement* self);
+PrDomShadowRoot* PR_NULLABLE prDomElementHostedShadowRoot(PrDomElement* element);
 
 // prDomElementSetCustomState adds `state` to the element's custom state set (html/#customstateset) if `present` is set,
 // and removes it otherwise. prDomElementClearCustomStates clears the set. :state() matches the states in the set
 // (selectors-5/#state-pseudo).
-void prDomElementSetCustomState(PrDomElement* self, PrStringView state, bool present);
-void prDomElementClearCustomStates(PrDomElement* self);
+void prDomElementSetCustomState(PrDomElement* element, PrStringView state, bool present);
+void prDomElementClearCustomStates(PrDomElement* element);
 
 // Options for how an agent runs the rendering of its documents.
 typedef struct PrDomAgentOptions {
@@ -1899,13 +1899,13 @@ PrDomAgentOptions prDomAgentOptionsDefault(void);
 PrDomAgent* prDomAgentCreate(const PrDomAgentOptions* PR_NULLABLE options);
 
 // Frees the agent, and drops the reactions queued for a microtask. No [CEReactions] member may be running.
-void prDomAgentDestroy(PrDomAgent* PR_NULLABLE self);
+void prDomAgentDestroy(PrDomAgent* PR_NULLABLE agent);
 
 // Returns the number of milliseconds until a task of the agent's event loop (html/#event-loop) can run. Returns zero if
 // a task is queued or a timer or an animation frame is due, and -1 if there is none. The loop runs the tasks of every
 // window on the agent, including the windows of iframes. Deadlines use each window's clock. This call never waits or
 // invokes callbacks.
-double prDomAgentNextTaskDelay(PrDomAgent* self);
+double prDomAgentNextTaskDelay(PrDomAgent* agent);
 
 // Returns true if nothing is pending on the agent's event loop except work that may never end: the rendering updates
 // that animations want, the time updates of media that plays in a loop, and intervals, which run until a script clears
@@ -1913,17 +1913,17 @@ double prDomAgentNextTaskDelay(PrDomAgent* self);
 // animation frame request, no fetch that has not been answered, no scroll or animation event, no transition, no CSS
 // animation that runs to an end, and no document to reveal. A host that runs pages until they settle stops at idle,
 // because that work can run forever.
-bool prDomAgentIsIdle(PrDomAgent* self);
+bool prDomAgentIsIdle(PrDomAgent* agent);
 
 // Runs at most one task of the agent's event loop: a posted task, or else a task of a window whose task can run now.
 // The windows take turns. In a window, the task queued first runs, or else the earliest due timer or animation frame.
 // Returns true if a task ran, and does not wait. Returns false during a task, and for a window whose document is
 // loading, except when called from its settle hook.
-bool prDomAgentRunTask(PrDomAgent* self);
+bool prDomAgentRunTask(PrDomAgent* agent);
 
 // Runs at most one task as prDomAgentRunTask does, during a task too, which waits for it as a task does that spins the
 // event loop (html/#spin-the-event-loop). Returns true if a task ran.
-bool prDomAgentSpinTask(PrDomAgent* self);
+bool prDomAgentSpinTask(PrDomAgent* agent);
 
 // Called on the agent's thread with the context that prDomAgentPost was given.
 typedef void (*PrDomAgentTaskFn)(void* PR_NULLABLE context);
@@ -1931,7 +1931,7 @@ typedef void (*PrDomAgentTaskFn)(void* PR_NULLABLE context);
 // Queues `fn`, called with `context`, as a task of the agent's event loop, after the tasks posted before it. Any thread
 // may call it. prDomAgentNextTaskDelay is zero while a posted task waits, and prDomAgentRunTask runs the posted tasks
 // before the windows' tasks. prDomAgentDestroy runs the posted tasks that have not run.
-void prDomAgentPost(PrDomAgent* self, PrDomAgentTaskFn fn, void* PR_NULLABLE context);
+void prDomAgentPost(PrDomAgent* agent, PrDomAgentTaskFn fn, void* PR_NULLABLE context);
 
 // Called on the thread that posts a task to the agent, once the task is queued. It must not call the agent. A host that
 // sleeps until the agent's next task uses it to wake, so that the posted task runs.
@@ -1939,7 +1939,7 @@ typedef void (*PrDomAgentWakeFn)(void* PR_NULLABLE context);
 
 // Sets the function that is called from now on as each task is posted. Null means no function, which is the initial
 // state of an agent. Any thread may call it.
-void prDomAgentSetWake(PrDomAgent* self, PrDomAgentWakeFn PR_NULLABLE wake, void* PR_NULLABLE context);
+void prDomAgentSetWake(PrDomAgent* agent, PrDomAgentWakeFn PR_NULLABLE wake, void* PR_NULLABLE context);
 
 // Called on the agent's layout thread as it finishes the jobs that the presentations of its documents started
 // (prCssPresentationStart), at the point where waiting for them would no longer block. It must not call the agent or
@@ -1949,7 +1949,7 @@ typedef void (*PrDomAgentLayoutDoneFn)(void* PR_NULLABLE context);
 
 // Sets the function that is called from now on as the agent's layout thread finishes its jobs. Null means no function,
 // which is the initial state of an agent.
-void prDomAgentSetLayoutDone(PrDomAgent* self, PrDomAgentLayoutDoneFn PR_NULLABLE done, void* PR_NULLABLE context);
+void prDomAgentSetLayoutDone(PrDomAgent* agent, PrDomAgentLayoutDoneFn PR_NULLABLE done, void* PR_NULLABLE context);
 
 // Called on the agent's thread with the context that it was added with (prDomAgentAddCheckpoint, prDomAgentAddUpdate).
 typedef void (*PrDomAgentHookFn)(void* PR_NULLABLE context);
@@ -1957,36 +1957,36 @@ typedef void (*PrDomAgentHookFn)(void* PR_NULLABLE context);
 // Adds or removes a microtask checkpoint (html/#perform-a-microtask-checkpoint), which prDomAgentRun performs after
 // each task, in the order the checkpoints were added. A script engine adds one for each agent that its realms run on.
 // Call on the agent's thread.
-void prDomAgentAddCheckpoint(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context);
-void prDomAgentRemoveCheckpoint(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void prDomAgentAddCheckpoint(PrDomAgent* agent, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void prDomAgentRemoveCheckpoint(PrDomAgent* agent, PrDomAgentHookFn fn, void* PR_NULLABLE context);
 
 // Adds or removes an update, which prDomAgentRun calls once the tasks that it ran are done, in the order the updates
 // were added. A view adds one to bring its document's rendering to its host's screen. Call on the agent's thread.
-void prDomAgentAddUpdate(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context);
-void prDomAgentRemoveUpdate(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void prDomAgentAddUpdate(PrDomAgent* agent, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void prDomAgentRemoveUpdate(PrDomAgent* agent, PrDomAgentHookFn fn, void* PR_NULLABLE context);
 
 // Runs the tasks of the agent's event loop that can run, each followed by the checkpoints, until none can run or
 // `milliseconds` have passed, then calls the updates. A long load runs in turns of a few milliseconds each, so that
 // what it does reaches the screen as it goes, and a budget of zero runs one task. Returns true if a task ran. Call on
 // the agent's thread, outside any task.
-bool prDomAgentRun(PrDomAgent* self, double milliseconds);
+bool prDomAgentRun(PrDomAgent* agent, double milliseconds);
 
 // Waits on the agent's thread until a task can run, a task is posted, the agent's layout thread finishes its jobs,
 // prDomAgentWake is called, or `milliseconds` pass. A negative `milliseconds` waits without a limit. Returns false once
 // prDomAgentStop has been called, at once.
-bool prDomAgentWait(PrDomAgent* self, double milliseconds);
+bool prDomAgentWait(PrDomAgent* agent, double milliseconds);
 
 // Ends the agent's wait, or the next one if none is in progress. Any thread may call it, such as a host's window when
 // its frame starts.
-void prDomAgentWake(PrDomAgent* self);
+void prDomAgentWake(PrDomAgent* agent);
 
 // Ends the agent's waits from now on (prDomAgentWait). Any thread may call it.
-void prDomAgentStop(PrDomAgent* self);
+void prDomAgentStop(PrDomAgent* agent);
 
 // Push or pop the element queue of the host's own [CEReactions] member (html/#cereactions). The host pushes the queue
 // when the member starts, and pops it, running its reactions, when the member returns.
-void prDomAgentReactionsPush(PrDomAgent* self);
-void prDomAgentReactionsPop(PrDomAgent* self);
+void prDomAgentReactionsPush(PrDomAgent* agent);
+void prDomAgentReactionsPop(PrDomAgent* agent);
 
 #if defined(__cplusplus)
 }

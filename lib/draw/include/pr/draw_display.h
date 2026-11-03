@@ -41,7 +41,7 @@ void prDrawDisplayDestroy(PrDrawDisplay* PR_NULLABLE display);
 
 // Records a draw into `pass` that covers its target with `frame` mapped as `desc` says. `frame` holds lib/draw's colors
 // in half floats, at the top left, and may be larger than the target. It is in the accesses of shader reads.
-void prDrawDisplayDraw(PrDrawDisplay* self, PrGpuPass* pass, PrGpuTexture frame, const PrDrawDisplayDesc* desc);
+void prDrawDisplayDraw(PrDrawDisplay* display, PrGpuPass* pass, PrGpuTexture frame, const PrDrawDisplayDesc* desc);
 
 #if defined(__cplusplus)
 }

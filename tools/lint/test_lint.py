@@ -243,6 +243,21 @@ class Namespaces(unittest.TestCase):
         self.assertEqual(self.rules(lint.check_constant_names, 'lib/core/src/a.cpp', source),
                          [(1, 'constant-form')])
 
+    def test_a_parameter_is_not_named_self(self):
+        for source in ('void a(PrNode* self);\n', 'void a(int x, const PrNode* PR_NULLABLE self, int y) {}\n',
+                       'auto a = [](JSValueConst self) {};\n', 'void a(JSContext* ctx, JSValueConst thisValue);\n',
+'void a(int x,\n    PrNode* self);\n',
+                       'void a(void (*visit)(PrNode* self));\n', 'void a(bool self = false);\n'):
+            self.assertEqual([rule for _, rule in self.rules(lint.check_self_parameter, 'lib/core/src/a.cpp', source)],
+                             ['self-parameter'], source)
+        for source in ('[a send:self];\n', 'call(context, self);\n', 'call(a, &self);\n', 'call((__bridge void*)self);\n',
+                       'a.delegate = self;\n', 'PrLayoutAlignment self = a.alignSelf;\n', 'bool self;\n',
+                       'char c[] = "(int self)"; // (int self)\n'):
+            self.assertEqual(self.rules(lint.check_self_parameter, 'lib/core/src/a.mm', source), [], source)
+        for source in ('    PrPage* self = static_cast<PrPage*>(context);\n', 'const PrNode* self = a;\n'):
+            self.assertEqual([rule for _, rule in self.rules(lint.check_self_parameter, 'lib/core/src/a.cpp', source)],
+                             ['self-parameter'], source)
+
     def test_a_header_names_the_base_of_an_opaque_type(self):
         source = 'struct PrValue : pr_impl::Value {};\n'
         self.assertEqual(self.rules(lint.check_qualified, 'lib/core/src/a.h', source), [])

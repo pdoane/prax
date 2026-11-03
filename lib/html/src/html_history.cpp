@@ -214,56 +214,58 @@ PrHtmlSessionHistory* prHtmlSessionHistoryCreate(void) {
     return allocZeroed<PrHtmlSessionHistory>();
 }
 
-void prHtmlSessionHistoryDestroy(PrHtmlSessionHistory* PR_NULLABLE self) {
-    if (self == nullptr)
+void prHtmlSessionHistoryDestroy(PrHtmlSessionHistory* PR_NULLABLE history) {
+    if (history == nullptr)
         return;
-    htmlHistoryReset(self);
-    prMemoryFree(self);
+    htmlHistoryReset(history);
+    prMemoryFree(history);
 }
 
-uint32_t prHtmlSessionHistoryLength(const PrHtmlSessionHistory* self) {
-    return self->entries.count;
+uint32_t prHtmlSessionHistoryLength(const PrHtmlSessionHistory* history) {
+    return history->entries.count;
 }
 
-uint32_t prHtmlSessionHistoryIndex(const PrHtmlSessionHistory* self) {
-    return self->index;
+uint32_t prHtmlSessionHistoryIndex(const PrHtmlSessionHistory* history) {
+    return history->index;
 }
 
-PrStringView prHtmlSessionHistoryUrl(const PrHtmlSessionHistory* self, uint32_t index) {
-    return index < self->entries.count ? prStringView(&self->entries.data[index].url) : PrStringView{};
+PrStringView prHtmlSessionHistoryUrl(const PrHtmlSessionHistory* history, uint32_t index) {
+    if (index >= history->entries.count)
+        return PrStringView{};
+    return prStringView(&history->entries.data[index].url);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // History
 
-PrStatus prHtmlHistoryLength(const PrHtmlWindow* self, uint32_t* out) {
+PrStatus prHtmlHistoryLength(const PrHtmlWindow* window, uint32_t* out) {
     *out = 0;
-    if (!htmlWindowIsFullyActive(self))
+    if (!htmlWindowIsFullyActive(window))
         return PrStatus_NotAllowed;
     // A browsing context that has yet to load a document into a host's history still shows its initial about:blank.
-    *out = self->history->entries.count != 0 ? self->history->entries.count : 1;
+    *out = window->history->entries.count != 0 ? window->history->entries.count : 1;
     return PrStatus_Ok;
 }
 
-PrStatus prHtmlHistoryState(const PrHtmlWindow* self, PrStringView* out, uint32_t* generation) {
+PrStatus prHtmlHistoryState(const PrHtmlWindow* window, PrStringView* out, uint32_t* generation) {
     *out = PrStringView{};
-    *generation = self->historyGeneration;
-    if (!htmlWindowIsFullyActive(self))
+    *generation = window->historyGeneration;
+    if (!htmlWindowIsFullyActive(window))
         return PrStatus_NotAllowed;
-    const HtmlSessionHistory* history = self->history;
+    const HtmlSessionHistory* history = window->history;
     if (history->index < history->entries.count) {
         const HtmlHistoryEntry& entry = history->entries.data[history->index];
-        if (entry.document == self->historyDocument && !prStringIsNull(&entry.state))
+        if (entry.document == window->historyDocument && !prStringIsNull(&entry.state))
             *out = prStringView(&entry.state);
     }
     return PrStatus_Ok;
 }
 
-PrStatus prHtmlHistoryPushState(PrHtmlWindow* self, PrStringView serialized, PrStringView url,
+PrStatus prHtmlHistoryPushState(PrHtmlWindow* window, PrStringView serialized, PrStringView url,
         PrHtmlHistoryHandling handling) {
-    if (!htmlWindowIsFullyActive(self))
+    if (!htmlWindowIsFullyActive(window))
         return PrStatus_NotAllowed;
-    PrDomDocument* document = self->document;
+    PrDomDocument* document = window->document;
     PrUrl* newUrl = nullptr;
     if (url.size != 0) {
         PrUrl* base = domDocumentBaseUrl(document);
@@ -278,31 +280,31 @@ PrStatus prHtmlHistoryPushState(PrHtmlWindow* self, PrStringView serialized, PrS
         prUrlDestroy(document->url);
         document->url = newUrl;
     }
-    htmlHistoryUpdate(self, serialized.data != nullptr ? prStringCopy(serialized) : prStringNull(), handling);
+    htmlHistoryUpdate(window, serialized.data != nullptr ? prStringCopy(serialized) : prStringNull(), handling);
     return PrStatus_Ok;
 }
 
-PrStatus prHtmlHistoryGo(PrHtmlWindow* self, int32_t delta) {
-    if (!htmlWindowIsFullyActive(self))
+PrStatus prHtmlHistoryGo(PrHtmlWindow* window, int32_t delta) {
+    if (!htmlWindowIsFullyActive(window))
         return PrStatus_NotAllowed;
-    queueTraversal(self, delta);
+    queueTraversal(window, delta);
     return PrStatus_Ok;
 }
 
-PrStatus prHtmlHistoryScrollRestoration(const PrHtmlWindow* self, PrHtmlScrollRestoration* out) {
+PrStatus prHtmlHistoryScrollRestoration(const PrHtmlWindow* window, PrHtmlScrollRestoration* out) {
     *out = PrHtmlScrollRestoration_Auto;
-    if (!htmlWindowIsFullyActive(self))
+    if (!htmlWindowIsFullyActive(window))
         return PrStatus_NotAllowed;
-    const HtmlSessionHistory* history = self->history;
+    const HtmlSessionHistory* history = window->history;
     if (history->index < history->entries.count)
         *out = history->entries.data[history->index].scrollRestoration;
     return PrStatus_Ok;
 }
 
-PrStatus prHtmlHistorySetScrollRestoration(PrHtmlWindow* self, PrHtmlScrollRestoration mode) {
-    if (!htmlWindowIsFullyActive(self))
+PrStatus prHtmlHistorySetScrollRestoration(PrHtmlWindow* window, PrHtmlScrollRestoration mode) {
+    if (!htmlWindowIsFullyActive(window))
         return PrStatus_NotAllowed;
-    HtmlSessionHistory* history = self->history;
+    HtmlSessionHistory* history = window->history;
     if (history->index < history->entries.count)
         history->entries.data[history->index].scrollRestoration = mode;
     return PrStatus_Ok;
@@ -324,12 +326,12 @@ PrHtmlPopStateEvent* prHtmlPopStateEventCreate(PrStringView type, const PrDomEve
     return event;
 }
 
-bool prHtmlPopStateEventCarriesHistoryState(const PrHtmlPopStateEvent* self) {
-    return self->history->historyState;
+bool prHtmlPopStateEventCarriesHistoryState(const PrHtmlPopStateEvent* event) {
+    return event->history->historyState;
 }
 
-bool prHtmlPopStateEventHasUAVisualTransition(const PrHtmlPopStateEvent* self) {
-    return self->history->hasUAVisualTransition;
+bool prHtmlPopStateEventHasUAVisualTransition(const PrHtmlPopStateEvent* event) {
+    return event->history->hasUAVisualTransition;
 }
 
 PrHtmlHashChangeEvent* PR_NULLABLE prHtmlHashChangeEventQuery(PrDomEvent* PR_NULLABLE object) {
@@ -345,10 +347,10 @@ PrHtmlHashChangeEvent* prHtmlHashChangeEventCreate(PrStringView type, const PrDo
     return event;
 }
 
-PrStringView prHtmlHashChangeEventOldUrl(const PrHtmlHashChangeEvent* self) {
-    return prStringView(&self->history->oldUrl);
+PrStringView prHtmlHashChangeEventOldUrl(const PrHtmlHashChangeEvent* event) {
+    return prStringView(&event->history->oldUrl);
 }
 
-PrStringView prHtmlHashChangeEventNewUrl(const PrHtmlHashChangeEvent* self) {
-    return prStringView(&self->history->newUrl);
+PrStringView prHtmlHashChangeEventNewUrl(const PrHtmlHashChangeEvent* event) {
+    return prStringView(&event->history->newUrl);
 }

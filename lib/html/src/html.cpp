@@ -170,8 +170,8 @@ const CssMediaEnvironment* environmentOf(const PrHtmlPreferenceObject* preferenc
 }
 
 // Returns the state of a media element, which the window whose document is the element's document runs if there is one.
-HtmlMedia* mediaOf(const PrHtmlMediaElement* self) {
-    PrDomElement* element = const_cast<PrHtmlMediaElement*>(self);
+HtmlMedia* mediaOf(const PrHtmlMediaElement* mediaElement) {
+    PrDomElement* element = const_cast<PrHtmlMediaElement*>(mediaElement);
     HtmlMedia* running = htmlMediaRunning(element);
     return running != nullptr ? running : htmlMediaFromElement(element);
 }
@@ -465,9 +465,9 @@ PrHtmlElement* PR_NULLABLE prHtmlElementQuery(PrDomEventTarget* PR_NULLABLE obje
     return element != nullptr && element->space == PrDomNamespace_Html ? static_cast<PrHtmlElement*>(element) : nullptr;
 }
 
-PrHtmlDir prHtmlElementDir(const PrHtmlElement* self) {
+PrHtmlDir prHtmlElementDir(const PrHtmlElement* element) {
     // html/#dom-dir reflects the attribute, limited to its known values.
-    switch (domDir(domAttributeValue(self, "dir"))) {
+    switch (domDir(domAttributeValue(element, "dir"))) {
         case DomDir_Ltr: return PrHtmlDir_Ltr;
         case DomDir_Rtl: return PrHtmlDir_Rtl;
         case DomDir_Auto: return PrHtmlDir_Auto;
@@ -475,60 +475,60 @@ PrHtmlDir prHtmlElementDir(const PrHtmlElement* self) {
     }
 }
 
-void prHtmlElementSetDir(PrHtmlElement* self, PrStringView value) {
-    domSetAttribute(self, PrDomNamespace_None, "dir", value);
+void prHtmlElementSetDir(PrHtmlElement* element, PrStringView value) {
+    domSetAttribute(element, PrDomNamespace_None, "dir", value);
 }
 
-PrHtmlHidden prHtmlElementHidden(const PrHtmlElement* self) {
-    const PrDomAttr* hidden = domAttribute(self, PrDomNamespace_None, "hidden");
+PrHtmlHidden prHtmlElementHidden(const PrHtmlElement* element) {
+    const PrDomAttr* hidden = domAttribute(element, PrDomNamespace_None, "hidden");
     if (hidden == nullptr)
         return PrHtmlHidden_NotHidden;
     return asciiEqualsFold(prStringView(&hidden->value), "until-found") ? PrHtmlHidden_UntilFound : PrHtmlHidden_Hidden;
 }
 
-void prHtmlElementSetHidden(PrHtmlElement* self, PrHtmlHidden value) {
+void prHtmlElementSetHidden(PrHtmlElement* element, PrHtmlHidden value) {
     if (value == PrHtmlHidden_NotHidden)
-        domRemoveAttribute(self, PrDomNamespace_None, "hidden");
+        domRemoveAttribute(element, PrDomNamespace_None, "hidden");
     else
-        domSetAttribute(self, PrDomNamespace_None, "hidden", value == PrHtmlHidden_UntilFound ? "until-found" : "");
+        domSetAttribute(element, PrDomNamespace_None, "hidden", value == PrHtmlHidden_UntilFound ? "until-found" : "");
 }
 
-PrString prHtmlElementInnerText(const PrHtmlElement* self) {
+PrString prHtmlElementInnerText(const PrHtmlElement* element) {
     // html/#get-the-text-steps: the descendant text content of an element that is not being rendered.
-    return domNodeTextContent(self);
+    return domNodeTextContent(element);
 }
 
-void prHtmlElementSetInnerText(PrHtmlElement* self, PrStringView value) {
-    domReplaceAll(self, renderedTextFragment(self->document, value));
+void prHtmlElementSetInnerText(PrHtmlElement* element, PrStringView value) {
+    domReplaceAll(element, renderedTextFragment(element->document, value));
 }
 
-PrDomElement* PR_NULLABLE prHtmlElementOffsetParent(PrHtmlElement* self) {
-    return cssViewOffsetParent(self);
+PrDomElement* PR_NULLABLE prHtmlElementOffsetParent(PrHtmlElement* element) {
+    return cssViewOffsetParent(element);
 }
 
-int32_t prHtmlElementOffsetTop(PrHtmlElement* self) {
-    return int32_t(floorF64(cssViewOffsetRect(self).y + 0.5));
+int32_t prHtmlElementOffsetTop(PrHtmlElement* element) {
+    return int32_t(floorF64(cssViewOffsetRect(element).y + 0.5));
 }
 
-int32_t prHtmlElementOffsetLeft(PrHtmlElement* self) {
-    return int32_t(floorF64(cssViewOffsetRect(self).x + 0.5));
+int32_t prHtmlElementOffsetLeft(PrHtmlElement* element) {
+    return int32_t(floorF64(cssViewOffsetRect(element).x + 0.5));
 }
 
-int32_t prHtmlElementOffsetWidth(PrHtmlElement* self) {
-    return int32_t(floorF64(cssViewOffsetRect(self).width + 0.5));
+int32_t prHtmlElementOffsetWidth(PrHtmlElement* element) {
+    return int32_t(floorF64(cssViewOffsetRect(element).width + 0.5));
 }
 
-int32_t prHtmlElementOffsetHeight(PrHtmlElement* self) {
-    return int32_t(floorF64(cssViewOffsetRect(self).height + 0.5));
+int32_t prHtmlElementOffsetHeight(PrHtmlElement* element) {
+    return int32_t(floorF64(cssViewOffsetRect(element).height + 0.5));
 }
 
-PrString prHtmlElementReflectedUrl(const PrHtmlElement* self, PrStringView name) {
-    const PrDomAttr* attribute = domAttribute(self, PrDomNamespace_None, name);
+PrString prHtmlElementReflectedUrl(const PrHtmlElement* element, PrStringView name) {
+    const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, name);
     if (attribute == nullptr)
         return prStringEmpty();
     PrUrl* url = nullptr;
     PrString out;
-    if (domDocumentParseUrl(self->document, prStringView(&attribute->value), &url) == PrStatus_Ok)
+    if (domDocumentParseUrl(element->document, prStringView(&attribute->value), &url) == PrStatus_Ok)
         out = prUrlSerialize(url, PrUrlSerialization_Whole);
     else
         out = prStringClone(&attribute->value);
@@ -536,16 +536,16 @@ PrString prHtmlElementReflectedUrl(const PrHtmlElement* self, PrStringView name)
     return out;
 }
 
-int64_t prHtmlElementReflectedInteger(const PrHtmlElement* self, PrStringView name, PrHtmlReflectedInteger kind,
+int64_t prHtmlElementReflectedInteger(const PrHtmlElement* element, PrStringView name, PrHtmlReflectedInteger kind,
         int64_t fallback) {
     int64_t value = 0;
-    if (!domParseInteger(domAttributeValue(self, name), &value) || value < 0 || value > 2147483647 ||
+    if (!domParseInteger(domAttributeValue(element, name), &value) || value < 0 || value > 2147483647 ||
             (kind == PrHtmlReflectedInteger_Positive && value == 0))
         return fallback;
     return value;
 }
 
-PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* self, PrStringView name, PrHtmlReflectedInteger kind,
+PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* element, PrStringView name, PrHtmlReflectedInteger kind,
         int64_t value, int64_t fallback) {
     if ((kind == PrHtmlReflectedInteger_NonNegative && value < 0) || (kind == PrHtmlReflectedInteger_Positive && value == 0))
         return PrStatus_OutOfRange;
@@ -554,7 +554,7 @@ PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* self, PrStringView name
     if (set < 0)
         textAppendChar(&text, '-');
     textAppendU64(&text, uint64_t(set < 0 ? -set : set));
-    domSetAttribute(self, PrDomNamespace_None, name, textView(&text));
+    domSetAttribute(element, PrDomNamespace_None, name, textView(&text));
     textReset(&text);
     return PrStatus_Ok;
 }
@@ -616,86 +616,85 @@ PrHtmlDialogElement* PR_NULLABLE prHtmlDialogElementQuery(PrDomEventTarget* PR_N
     return htmlElementQuery<PrHtmlDialogElement>(object, PrDomTag_Dialog);
 }
 
-bool prHtmlDialogElementOpen(const PrHtmlDialogElement* self) {
-    return domAttribute(self, PrDomNamespace_None, "open") != nullptr;
+bool prHtmlDialogElementOpen(const PrHtmlDialogElement* element) {
+    return domAttribute(element, PrDomNamespace_None, "open") != nullptr;
 }
 
-void prHtmlDialogElementSetOpen(PrHtmlDialogElement* self, bool value) {
+void prHtmlDialogElementSetOpen(PrHtmlDialogElement* element, bool value) {
     if (value)
-        domSetAttribute(self, PrDomNamespace_None, "open", "");
+        domSetAttribute(element, PrDomNamespace_None, "open", "");
     else
-        domRemoveAttribute(self, PrDomNamespace_None, "open");
+        domRemoveAttribute(element, PrDomNamespace_None, "open");
 }
 
-PrStringView prHtmlDialogElementReturnValue(const PrHtmlDialogElement* self) {
-    const PrDomElement* element = self;
+PrStringView prHtmlDialogElementReturnValue(const PrHtmlDialogElement* element) {
     return element->state != nullptr ? prStringView(&element->state->returnValue) : "";
 }
 
-void prHtmlDialogElementSetReturnValue(PrHtmlDialogElement* self, PrStringView value) {
-    prStringReplace(&domElementState(self)->returnValue, value);
+void prHtmlDialogElementSetReturnValue(PrHtmlDialogElement* element, PrStringView value) {
+    prStringReplace(&domElementState(element)->returnValue, value);
 }
 
-PrStatus prHtmlDialogElementShow(PrHtmlDialogElement* self) {
-    bool modal = self->state != nullptr && self->state->modal;
-    if (prHtmlDialogElementOpen(self))
+PrStatus prHtmlDialogElementShow(PrHtmlDialogElement* element) {
+    bool modal = element->state != nullptr && element->state->modal;
+    if (prHtmlDialogElementOpen(element))
         return modal ? PrStatus_InvalidState : PrStatus_Ok;
-    prHtmlDialogElementSetOpen(self, true);
-    htmlFocusEndAutofocus(self->document);
+    prHtmlDialogElementSetOpen(element, true);
+    htmlFocusEndAutofocus(element->document);
     return PrStatus_Ok;
 }
 
-PrStatus prHtmlDialogElementShowModal(PrHtmlDialogElement* self) {
-    bool modal = self->state != nullptr && self->state->modal;
-    if (prHtmlDialogElementOpen(self))
+PrStatus prHtmlDialogElementShowModal(PrHtmlDialogElement* element) {
+    bool modal = element->state != nullptr && element->state->modal;
+    if (prHtmlDialogElementOpen(element))
         return modal ? PrStatus_Ok : PrStatus_InvalidState;
-    if (!domIsConnected(self))
+    if (!domIsConnected(element))
         return PrStatus_InvalidState;
-    prHtmlDialogElementSetOpen(self, true);
-    domElementState(self)->modal = true;
-    htmlFocusEndAutofocus(self->document);
+    prHtmlDialogElementSetOpen(element, true);
+    domElementState(element)->modal = true;
+    htmlFocusEndAutofocus(element->document);
     return PrStatus_Ok;
 }
 
-void prHtmlDialogElementClose(PrHtmlDialogElement* self, PrStringView result) {
-    if (!prHtmlDialogElementOpen(self))
+void prHtmlDialogElementClose(PrHtmlDialogElement* element, PrStringView result) {
+    if (!prHtmlDialogElementOpen(element))
         return;
-    prHtmlDialogElementSetOpen(self, false);
-    DomElementState* state = domElementState(self);
+    prHtmlDialogElementSetOpen(element, false);
+    DomElementState* state = domElementState(element);
     state->modal = false;
     if (result.data != nullptr)
         prStringReplace(&state->returnValue, result);
-    const DomDocumentHost* host = self->document->host;
+    const DomDocumentHost* host = element->document->host;
     if (host == nullptr)
         return;
     // The task holds the dialog.
-    domNodeHold(self);
+    domNodeHold(element);
     host->queueTask(host->context, [](void* data) {
         PrDomElement* dialog = static_cast<PrDomElement*>(data);
         domEventFire(dialog, "close");
         domNodeUnhold(dialog);
-    }, self, [](void* data) { domNodeUnhold(static_cast<PrDomElement*>(data)); });
+    }, element, [](void* data) { domNodeUnhold(static_cast<PrDomElement*>(data)); });
 }
 
-void prHtmlDialogElementRequestClose(PrHtmlDialogElement* self, PrStringView result) {
-    if (!prHtmlDialogElementOpen(self))
+void prHtmlDialogElementRequestClose(PrHtmlDialogElement* element, PrStringView result) {
+    if (!prHtmlDialogElementOpen(element))
         return;
     PrDomEventInit init = prDomEventInitDefault();
     init.cancelable = true;
-    if (domEventFire(self, "cancel", init))
-        prHtmlDialogElementClose(self, result);
+    if (domEventFire(element, "cancel", init))
+        prHtmlDialogElementClose(element, result);
 }
 
 PrHtmlIFrameElement* PR_NULLABLE prHtmlIFrameElementQuery(PrDomEventTarget* PR_NULLABLE object) {
     return htmlElementQuery<PrHtmlIFrameElement>(object, PrDomTag_Iframe);
 }
 
-PrHtmlWindow* PR_NULLABLE prHtmlIFrameElementContentWindow(PrHtmlIFrameElement* self) {
-    return htmlFrameWindow(self);
+PrHtmlWindow* PR_NULLABLE prHtmlIFrameElementContentWindow(PrHtmlIFrameElement* element) {
+    return htmlFrameWindow(element);
 }
 
-PrDomDocument* PR_NULLABLE prHtmlIFrameElementContentDocument(PrHtmlIFrameElement* self) {
-    PrHtmlWindow* window = htmlFrameWindow(self);
+PrDomDocument* PR_NULLABLE prHtmlIFrameElementContentDocument(PrHtmlIFrameElement* element) {
+    PrHtmlWindow* window = htmlFrameWindow(element);
     return window != nullptr ? window->document : nullptr;
 }
 
@@ -703,51 +702,51 @@ PrHtmlImageElement* PR_NULLABLE prHtmlImageElementQuery(PrDomEventTarget* PR_NUL
     return htmlElementQuery<PrHtmlImageElement>(object, PrDomTag_Img);
 }
 
-PrDomImageState prHtmlImageElementState(const PrHtmlImageElement* self) {
-    const DomElementState* state = self->state;
+PrDomImageState prHtmlImageElementState(const PrHtmlImageElement* element) {
+    const DomElementState* state = element->state;
     return state != nullptr ? state->image : PrDomImageState_Unavailable;
 }
 
-bool prHtmlImageElementComplete(const PrHtmlImageElement* self) {
-    const PrDomAttr* src = domAttribute(self, PrDomNamespace_None, "src");
+bool prHtmlImageElementComplete(const PrHtmlImageElement* element) {
+    const PrDomAttr* src = domAttribute(element, PrDomNamespace_None, "src");
     if (src == nullptr || prStringView(&src->value).size == 0)
         return true;
-    PrDomImageState state = prHtmlImageElementState(self);
+    PrDomImageState state = prHtmlImageElementState(element);
     return state == PrDomImageState_CompletelyAvailable || state == PrDomImageState_Broken;
 }
 
-PrStringView prHtmlImageElementCurrentSrc(const PrHtmlImageElement* self) {
-    const DomElementState* state = self->state;
+PrStringView prHtmlImageElementCurrentSrc(const PrHtmlImageElement* element) {
+    const DomElementState* state = element->state;
     return state != nullptr && !prStringIsNull(&state->imageUrl) ? prStringView(&state->imageUrl) : "";
 }
 
-uint32_t prHtmlImageElementNaturalWidth(const PrHtmlImageElement* self) {
-    return htmlImageDimension(self, true);
+uint32_t prHtmlImageElementNaturalWidth(const PrHtmlImageElement* element) {
+    return htmlImageDimension(element, true);
 }
 
-uint32_t prHtmlImageElementNaturalHeight(const PrHtmlImageElement* self) {
-    return htmlImageDimension(self, false);
+uint32_t prHtmlImageElementNaturalHeight(const PrHtmlImageElement* element) {
+    return htmlImageDimension(element, false);
 }
 
-uint32_t prHtmlImageElementWidth(const PrHtmlImageElement* self) {
-    return htmlImageDimension(self, true);
+uint32_t prHtmlImageElementWidth(const PrHtmlImageElement* element) {
+    return htmlImageDimension(element, true);
 }
 
-uint32_t prHtmlImageElementHeight(const PrHtmlImageElement* self) {
-    return htmlImageDimension(self, false);
+uint32_t prHtmlImageElementHeight(const PrHtmlImageElement* element) {
+    return htmlImageDimension(element, false);
 }
 
-void prHtmlImageElementSetWidth(PrHtmlImageElement* self, uint32_t value) {
-    htmlSetReflectedUnsigned(self, "width", value);
+void prHtmlImageElementSetWidth(PrHtmlImageElement* element, uint32_t value) {
+    htmlSetReflectedUnsigned(element, "width", value);
 }
 
-void prHtmlImageElementSetHeight(PrHtmlImageElement* self, uint32_t value) {
-    htmlSetReflectedUnsigned(self, "height", value);
+void prHtmlImageElementSetHeight(PrHtmlImageElement* element, uint32_t value) {
+    htmlSetReflectedUnsigned(element, "height", value);
 }
 
-bool prHtmlImageElementImageSource(PrHtmlImageElement* self, PrCanvasImageSource* out) {
+bool prHtmlImageElementImageSource(PrHtmlImageElement* element, PrCanvasImageSource* out) {
     *out = PrCanvasImageSource{};
-    const DomElementState* state = self->state;
+    const DomElementState* state = element->state;
     if (state == nullptr || state->image != PrDomImageState_CompletelyAvailable || state->picture == nullptr)
         return false;
     prDrawImageRetain(state->picture);
@@ -763,37 +762,37 @@ PrHtmlCanvasElement* PR_NULLABLE prHtmlCanvasElementQuery(PrDomEventTarget* PR_N
     return htmlElementQuery<PrHtmlCanvasElement>(object, PrDomTag_Canvas);
 }
 
-uint32_t prHtmlCanvasElementWidth(const PrHtmlCanvasElement* self) {
-    return domReflectedUnsigned(self, "width", 300);
+uint32_t prHtmlCanvasElementWidth(const PrHtmlCanvasElement* element) {
+    return domReflectedUnsigned(element, "width", 300);
 }
 
-uint32_t prHtmlCanvasElementHeight(const PrHtmlCanvasElement* self) {
-    return domReflectedUnsigned(self, "height", 150);
+uint32_t prHtmlCanvasElementHeight(const PrHtmlCanvasElement* element) {
+    return domReflectedUnsigned(element, "height", 150);
 }
 
-PrStatus prHtmlCanvasElementSetWidth(PrHtmlCanvasElement* self, uint32_t value) {
-    if (prHtmlCanvasElementContextMode(self) == PrHtmlCanvasContextMode_Placeholder)
+PrStatus prHtmlCanvasElementSetWidth(PrHtmlCanvasElement* element, uint32_t value) {
+    if (prHtmlCanvasElementContextMode(element) == PrHtmlCanvasContextMode_Placeholder)
         return PrStatus_InvalidState;
-    htmlSetReflectedUnsigned(self, "width", value, 300);
+    htmlSetReflectedUnsigned(element, "width", value, 300);
     return PrStatus_Ok;
 }
 
-PrStatus prHtmlCanvasElementSetHeight(PrHtmlCanvasElement* self, uint32_t value) {
-    if (prHtmlCanvasElementContextMode(self) == PrHtmlCanvasContextMode_Placeholder)
+PrStatus prHtmlCanvasElementSetHeight(PrHtmlCanvasElement* element, uint32_t value) {
+    if (prHtmlCanvasElementContextMode(element) == PrHtmlCanvasContextMode_Placeholder)
         return PrStatus_InvalidState;
-    htmlSetReflectedUnsigned(self, "height", value, 150);
+    htmlSetReflectedUnsigned(element, "height", value, 150);
     return PrStatus_Ok;
 }
 
-PrHtmlCanvasContextMode prHtmlCanvasElementContextMode(const PrHtmlCanvasElement* self) {
-    const HtmlCanvas* canvas = htmlCanvasFind(self);
+PrHtmlCanvasContextMode prHtmlCanvasElementContextMode(const PrHtmlCanvasElement* element) {
+    const HtmlCanvas* canvas = htmlCanvasFind(element);
     return canvas != nullptr ? canvas->mode : PrHtmlCanvasContextMode_None;
 }
 
-PrStatus prHtmlCanvasElementGetContext2D(PrHtmlCanvasElement* self, const PrCanvasSettings* PR_NULLABLE settings,
+PrStatus prHtmlCanvasElementGetContext2D(PrHtmlCanvasElement* element, const PrCanvasSettings* PR_NULLABLE settings,
         PrCanvas* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    HtmlCanvas* canvas = htmlCanvasFromElement(self);
+    HtmlCanvas* canvas = htmlCanvasFromElement(element);
     switch (canvas->mode) {
         case PrHtmlCanvasContextMode_Placeholder:
             return PrStatus_InvalidState;
@@ -806,12 +805,12 @@ PrStatus prHtmlCanvasElementGetContext2D(PrHtmlCanvasElement* self, const PrCanv
     }
 }
 
-PrStatus prHtmlCanvasElementToDataUrl(PrHtmlCanvasElement* self, PrStringView type, PrString* out) {
-    return htmlCanvasToDataUrl(self, type, out);
+PrStatus prHtmlCanvasElementToDataUrl(PrHtmlCanvasElement* element, PrStringView type, PrString* out) {
+    return htmlCanvasToDataUrl(element, type, out);
 }
 
-bool prHtmlCanvasElementImageSource(PrHtmlCanvasElement* self, PrCanvasImageSource* out) {
-    return htmlCanvasImageSource(self, out);
+bool prHtmlCanvasElementImageSource(PrHtmlCanvasElement* element, PrCanvasImageSource* out) {
+    return htmlCanvasImageSource(element, out);
 }
 
 PrHtmlAnchorElement* PR_NULLABLE prHtmlAnchorElementQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -822,11 +821,11 @@ PrHtmlAreaElement* PR_NULLABLE prHtmlAreaElementQuery(PrDomEventTarget* PR_NULLA
     return htmlElementQuery<PrHtmlAreaElement>(object, PrDomTag_Area);
 }
 
-PrString prHtmlHyperlinkComponent(const PrHtmlElement* self, PrUrlComponent component) {
-    PR_ASSERT(domIsHtml(self, PrDomTag_A) || domIsHtml(self, PrDomTag_Area));
-    PrUrl* url = hyperlinkUrl(self);
+PrString prHtmlHyperlinkComponent(const PrHtmlElement* element, PrUrlComponent component) {
+    PR_ASSERT(domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area));
+    PrUrl* url = hyperlinkUrl(element);
     if (url == nullptr) {
-        PrStringView href = domAttributeValue(self, "href");
+        PrStringView href = domAttributeValue(element, "href");
         if (component == PrUrlComponent_Href && href.data != nullptr)
             return prStringCopy(href);
         return component == PrUrlComponent_Protocol ? prStringExternal(":") : prStringEmpty();
@@ -836,13 +835,13 @@ PrString prHtmlHyperlinkComponent(const PrHtmlElement* self, PrUrlComponent comp
     return value;
 }
 
-PrStatus prHtmlHyperlinkSetComponent(PrHtmlElement* self, PrUrlComponent component, PrStringView value) {
-    PR_ASSERT(domIsHtml(self, PrDomTag_A) || domIsHtml(self, PrDomTag_Area));
+PrStatus prHtmlHyperlinkSetComponent(PrHtmlElement* element, PrUrlComponent component, PrStringView value) {
+    PR_ASSERT(domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area));
     if (component == PrUrlComponent_Origin)
         return PrStatus_ReadOnly;
     if (component == PrUrlComponent_Href)
-        return prDomElementSetAttribute(self, "href", value);
-    PrUrl* url = hyperlinkUrl(self);
+        return prDomElementSetAttribute(element, "href", value);
+    PrUrl* url = hyperlinkUrl(element);
     if (url == nullptr)
         return PrStatus_Ok;
     // A value that does not parse leaves the URL as it was, and the attribute is set to it all the same
@@ -850,7 +849,7 @@ PrStatus prHtmlHyperlinkSetComponent(PrHtmlElement* self, PrUrlComponent compone
     prUrlSetComponent(url, component, value);
     PrString href = prUrlSerialize(url, PrUrlSerialization_Whole);
     prUrlDestroy(url);
-    PrStatus status = prDomElementSetAttribute(self, "href", prStringView(&href));
+    PrStatus status = prDomElementSetAttribute(element, "href", prStringView(&href));
     prStringReset(&href);
     return status;
 }
@@ -859,12 +858,12 @@ PrHtmlBaseElement* PR_NULLABLE prHtmlBaseElementQuery(PrDomEventTarget* PR_NULLA
     return htmlElementQuery<PrHtmlBaseElement>(object, PrDomTag_Base);
 }
 
-PrString prHtmlBaseElementHref(const PrHtmlBaseElement* self) {
-    PrStringView href = domAttributeValue(self, "href");
+PrString prHtmlBaseElementHref(const PrHtmlBaseElement* element) {
+    PrStringView href = domAttributeValue(element, "href");
     if (href.data == nullptr)
         href = "";
     PrUrl* url = nullptr;
-    if (prUrlCreate(href, self->document->url, self->document->charset, &url) != PrStatus_Ok)
+    if (prUrlCreate(href, element->document->url, element->document->charset, &url) != PrStatus_Ok)
         return prStringCopy(href);
     PrString value = prUrlSerialize(url, PrUrlSerialization_Whole);
     prUrlDestroy(url);
@@ -875,8 +874,8 @@ PrHtmlLinkElement* PR_NULLABLE prHtmlLinkElementQuery(PrDomEventTarget* PR_NULLA
     return htmlElementQuery<PrHtmlLinkElement>(object, PrDomTag_Link);
 }
 
-PrCssStyleSheet* PR_NULLABLE prHtmlLinkElementSheet(PrHtmlLinkElement* self) {
-    return cssElementSheet(self);
+PrCssStyleSheet* PR_NULLABLE prHtmlLinkElementSheet(PrHtmlLinkElement* element) {
+    return cssElementSheet(element);
 }
 
 PrHtmlMetaElement* PR_NULLABLE prHtmlMetaElementQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -897,95 +896,95 @@ PrHtmlMediaElement* PR_NULLABLE prHtmlMediaElementQuery(PrDomEventTarget* PR_NUL
     return htmlElementQuery<PrHtmlMediaElement>(object, PrDomTag_Audio);
 }
 
-bool prHtmlMediaElementIsVideo(const PrHtmlMediaElement* self) {
-    return self->tag == PrDomTag_Video;
+bool prHtmlMediaElementIsVideo(const PrHtmlMediaElement* element) {
+    return element->tag == PrDomTag_Video;
 }
 
-PrHtmlMediaError prHtmlMediaElementError(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->error;
+PrHtmlMediaError prHtmlMediaElementError(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->error;
 }
 
-PrStringView prHtmlMediaElementErrorMessage(const PrHtmlMediaElement* self) {
-    return prStringView(&mediaOf(self)->errorMessage);
+PrStringView prHtmlMediaElementErrorMessage(const PrHtmlMediaElement* element) {
+    return prStringView(&mediaOf(element)->errorMessage);
 }
 
-PrStringView prHtmlMediaElementCurrentSrc(const PrHtmlMediaElement* self) {
-    return prStringView(&mediaOf(self)->currentSrc);
+PrStringView prHtmlMediaElementCurrentSrc(const PrHtmlMediaElement* element) {
+    return prStringView(&mediaOf(element)->currentSrc);
 }
 
-PrHtmlMediaNetworkState prHtmlMediaElementNetworkState(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->networkState;
+PrHtmlMediaNetworkState prHtmlMediaElementNetworkState(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->networkState;
 }
 
-PrHtmlMediaReadyState prHtmlMediaElementReadyState(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->readyState;
+PrHtmlMediaReadyState prHtmlMediaElementReadyState(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->readyState;
 }
 
-void prHtmlMediaElementLoad(PrHtmlMediaElement* self) {
-    htmlMediaLoad(mediaOf(self));
+void prHtmlMediaElementLoad(PrHtmlMediaElement* element) {
+    htmlMediaLoad(mediaOf(element));
 }
 
-PrHtmlCanPlay prHtmlMediaElementCanPlayType(const PrHtmlMediaElement* self, PrStringView type) {
-    return htmlCanPlayType(mediaOf(self)->window, type);
+PrHtmlCanPlay prHtmlMediaElementCanPlayType(const PrHtmlMediaElement* element, PrStringView type) {
+    return htmlCanPlayType(mediaOf(element)->window, type);
 }
 
-bool prHtmlMediaElementSeeking(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->seeking;
+bool prHtmlMediaElementSeeking(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->seeking;
 }
 
-double prHtmlMediaElementCurrentTime(PrHtmlMediaElement* self) {
-    return htmlMediaCurrentTime(mediaOf(self));
+double prHtmlMediaElementCurrentTime(PrHtmlMediaElement* element) {
+    return htmlMediaCurrentTime(mediaOf(element));
 }
 
-void prHtmlMediaElementSetCurrentTime(PrHtmlMediaElement* self, double seconds) {
-    htmlMediaSeek(mediaOf(self), seconds);
+void prHtmlMediaElementSetCurrentTime(PrHtmlMediaElement* element, double seconds) {
+    htmlMediaSeek(mediaOf(element), seconds);
 }
 
-void prHtmlMediaElementFastSeek(PrHtmlMediaElement* self, double seconds) {
-    prHtmlMediaElementSetCurrentTime(self, seconds);
+void prHtmlMediaElementFastSeek(PrHtmlMediaElement* element, double seconds) {
+    prHtmlMediaElementSetCurrentTime(element, seconds);
 }
 
-double prHtmlMediaElementDuration(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->duration;
+double prHtmlMediaElementDuration(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->duration;
 }
 
-bool prHtmlMediaElementPaused(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->paused;
+bool prHtmlMediaElementPaused(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->paused;
 }
 
-bool prHtmlMediaElementEnded(PrHtmlMediaElement* self) {
-    return htmlMediaEnded(mediaOf(self));
+bool prHtmlMediaElementEnded(PrHtmlMediaElement* element) {
+    return htmlMediaEnded(mediaOf(element));
 }
 
-double prHtmlMediaElementDefaultPlaybackRate(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->defaultRate;
+double prHtmlMediaElementDefaultPlaybackRate(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->defaultRate;
 }
 
-void prHtmlMediaElementSetDefaultPlaybackRate(PrHtmlMediaElement* self, double rate) {
-    htmlMediaSetRate(mediaOf(self), rate, true);
+void prHtmlMediaElementSetDefaultPlaybackRate(PrHtmlMediaElement* element, double rate) {
+    htmlMediaSetRate(mediaOf(element), rate, true);
 }
 
-double prHtmlMediaElementPlaybackRate(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->rate;
+double prHtmlMediaElementPlaybackRate(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->rate;
 }
 
-PrStatus prHtmlMediaElementSetPlaybackRate(PrHtmlMediaElement* self, double rate) {
+PrStatus prHtmlMediaElementSetPlaybackRate(PrHtmlMediaElement* element, double rate) {
     // html/#dom-media-playbackrate: the engine can play its timeline at any rate, forwards and backwards.
-    htmlMediaSetRate(mediaOf(self), rate, false);
+    htmlMediaSetRate(mediaOf(element), rate, false);
     return PrStatus_Ok;
 }
 
-bool prHtmlMediaElementPreservesPitch(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->preservesPitch;
+bool prHtmlMediaElementPreservesPitch(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->preservesPitch;
 }
 
-void prHtmlMediaElementSetPreservesPitch(PrHtmlMediaElement* self, bool preserves) {
-    mediaOf(self)->preservesPitch = preserves;
+void prHtmlMediaElementSetPreservesPitch(PrHtmlMediaElement* element, bool preserves) {
+    mediaOf(element)->preservesPitch = preserves;
 }
 
-uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* self, PrHtmlMediaRanges which,
+uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* element, PrHtmlMediaRanges which,
         double* PR_NULLABLE starts, double* PR_NULLABLE ends, uint32_t capacity) {
-    HtmlMedia* media = mediaOf(self);
+    HtmlMedia* media = mediaOf(element);
     if (which == PrHtmlMediaRanges_Played) {
         uint32_t count = media->played.count / 2;
         for (uint32_t i = 0; i < count && i < capacity; ++i) {
@@ -1004,8 +1003,8 @@ uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* self, PrHtmlMediaRanges wh
     return 1;
 }
 
-void prHtmlMediaElementPlay(PrHtmlMediaElement* self, const PrHtmlPlayPromise* promise) {
-    HtmlMedia* media = mediaOf(self);
+void prHtmlMediaElementPlay(PrHtmlMediaElement* element, const PrHtmlPlayPromise* promise) {
+    HtmlMedia* media = mediaOf(element);
     if (media->window == nullptr) {
         // An element that no window runs has no resource to play.
         promise->settle(promise->context, "NotSupportedError");
@@ -1015,44 +1014,44 @@ void prHtmlMediaElementPlay(PrHtmlMediaElement* self, const PrHtmlPlayPromise* p
     htmlMediaPlay(media, *promise);
 }
 
-void prHtmlMediaElementPause(PrHtmlMediaElement* self) {
-    htmlMediaPause(mediaOf(self));
+void prHtmlMediaElementPause(PrHtmlMediaElement* element) {
+    htmlMediaPause(mediaOf(element));
 }
 
-double prHtmlMediaElementVolume(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->volume;
+double prHtmlMediaElementVolume(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->volume;
 }
 
-PrStatus prHtmlMediaElementSetVolume(PrHtmlMediaElement* self, double volume) {
+PrStatus prHtmlMediaElementSetVolume(PrHtmlMediaElement* element, double volume) {
     if (volume < 0 || volume > 1)
         return PrStatus_OutOfRange;
-    htmlMediaSetVolume(mediaOf(self), volume, prHtmlMediaElementMuted(self));
+    htmlMediaSetVolume(mediaOf(element), volume, prHtmlMediaElementMuted(element));
     return PrStatus_Ok;
 }
 
-bool prHtmlMediaElementMuted(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
+bool prHtmlMediaElementMuted(const PrHtmlMediaElement* element) {
+    const HtmlMedia* media = mediaOf(element);
     if (media->mutedSet)
         return media->muted;
     // html/#dom-media-muted: an element follows its muted content attribute until a script sets muted.
-    return domAttribute(self, PrDomNamespace_None, "muted") != nullptr;
+    return domAttribute(element, PrDomNamespace_None, "muted") != nullptr;
 }
 
-void prHtmlMediaElementSetMuted(PrHtmlMediaElement* self, bool muted) {
-    HtmlMedia* media = mediaOf(self);
+void prHtmlMediaElementSetMuted(PrHtmlMediaElement* element, bool muted) {
+    HtmlMedia* media = mediaOf(element);
     htmlMediaSetVolume(media, media->volume, muted);
 }
 
-uint32_t prHtmlMediaElementVideoWidth(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->videoWidth;
+uint32_t prHtmlMediaElementVideoWidth(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->videoWidth;
 }
 
-uint32_t prHtmlMediaElementVideoHeight(const PrHtmlMediaElement* self) {
-    return mediaOf(self)->videoHeight;
+uint32_t prHtmlMediaElementVideoHeight(const PrHtmlMediaElement* element) {
+    return mediaOf(element)->videoHeight;
 }
 
-PrHtmlTrackList* prHtmlMediaElementTracks(PrHtmlMediaElement* self, PrHtmlTrackKind kind) {
-    HtmlMedia* media = mediaOf(self);
+PrHtmlTrackList* prHtmlMediaElementTracks(PrHtmlMediaElement* element, PrHtmlTrackKind kind) {
+    HtmlMedia* media = mediaOf(element);
     switch (kind) {
         case PrHtmlTrackKind_Audio: return static_cast<PrHtmlTrackList*>(&media->audioTracks);
         case PrHtmlTrackKind_Video: return static_cast<PrHtmlTrackList*>(&media->videoTracks);
@@ -1066,8 +1065,8 @@ PrHtmlTrackList* PR_NULLABLE prHtmlTrackListQuery(PrDomEventTarget* PR_NULLABLE 
     return list ? static_cast<PrHtmlTrackList*>(object) : nullptr;
 }
 
-PrHtmlTrackKind prHtmlTrackListKind(const PrHtmlTrackList* self) {
-    switch (self->type) {
+PrHtmlTrackKind prHtmlTrackListKind(const PrHtmlTrackList* list) {
+    switch (list->type) {
         case DomTargetType_AudioTrackList: return PrHtmlTrackKind_Audio;
         case DomTargetType_VideoTrackList: return PrHtmlTrackKind_Video;
         default: return PrHtmlTrackKind_Text;
@@ -1087,10 +1086,10 @@ PrHtmlSlotElement* PR_NULLABLE prHtmlSlotElementQuery(PrDomEventTarget* PR_NULLA
     return node != nullptr && domIsSlot(node) ? static_cast<PrHtmlSlotElement*>(domElementFromNode(node)) : nullptr;
 }
 
-uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* self, bool flatten, PrDomNode* PR_NONNULL* PR_NULLABLE items,
+uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* element, bool flatten, PrDomNode* PR_NONNULL* PR_NULLABLE items,
         uint32_t capacity) {
     Array<PrDomNode* PR_NONNULL> nodes;
-    domSlotAssignedNodes(self, flatten, &nodes);
+    domSlotAssignedNodes(element, flatten, &nodes);
     for (uint32_t i = 0; items != nullptr && i < nodes.count && i < capacity; ++i)
         items[i] = nodes.data[i];
     uint32_t count = nodes.count;
@@ -1098,33 +1097,33 @@ uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* self, bool flatten, P
     return count;
 }
 
-void prHtmlSlotElementAssign(PrHtmlSlotElement* self, PrDomNode* const PR_NONNULL* PR_NULLABLE nodes, uint32_t count) {
-    domSlotAssign(self, reinterpret_cast<PrDomNode* const*>(nodes), count);
+void prHtmlSlotElementAssign(PrHtmlSlotElement* element, PrDomNode* const PR_NONNULL* PR_NULLABLE nodes, uint32_t count) {
+    domSlotAssign(element, reinterpret_cast<PrDomNode* const*>(nodes), count);
 }
 
 PrHtmlScriptElement* PR_NULLABLE prHtmlScriptElementQuery(PrDomEventTarget* PR_NULLABLE object) {
     return htmlElementQuery<PrHtmlScriptElement>(object, PrDomTag_Script);
 }
 
-bool prHtmlScriptElementAsync(const PrHtmlScriptElement* self) {
-    bool forceAsync = (domScriptFlags(self) & DomScriptFlag_NotForceAsync) == 0;
-    return forceAsync || domAttributeValue(self, "async").data != nullptr;
+bool prHtmlScriptElementAsync(const PrHtmlScriptElement* element) {
+    bool forceAsync = (domScriptFlags(element) & DomScriptFlag_NotForceAsync) == 0;
+    return forceAsync || domAttributeValue(element, "async").data != nullptr;
 }
 
-void prHtmlScriptElementSetAsync(PrHtmlScriptElement* self, bool value) {
-    domScriptSetFlags(self, domScriptFlags(self) | DomScriptFlag_NotForceAsync);
+void prHtmlScriptElementSetAsync(PrHtmlScriptElement* element, bool value) {
+    domScriptSetFlags(element, domScriptFlags(element) | DomScriptFlag_NotForceAsync);
     if (value)
-        domSetAttribute(self, PrDomNamespace_None, "async", "");
+        domSetAttribute(element, PrDomNamespace_None, "async", "");
     else
-        domRemoveAttribute(self, PrDomNamespace_None, "async");
+        domRemoveAttribute(element, PrDomNamespace_None, "async");
 }
 
-PrString prHtmlScriptElementText(const PrHtmlScriptElement* self) {
-    return domChildTextContent(self);
+PrString prHtmlScriptElementText(const PrHtmlScriptElement* element) {
+    return domChildTextContent(element);
 }
 
-void prHtmlScriptElementSetText(PrHtmlScriptElement* self, PrStringView value) {
-    domStringReplaceAll(self, value);
+void prHtmlScriptElementSetText(PrHtmlScriptElement* element, PrStringView value) {
+    domStringReplaceAll(element, value);
 }
 
 bool prHtmlScriptElementSupports(PrStringView type) {
@@ -1135,20 +1134,20 @@ PrHtmlStyleElement* PR_NULLABLE prHtmlStyleElementQuery(PrDomEventTarget* PR_NUL
     return htmlElementQuery<PrHtmlStyleElement>(object, PrDomTag_Style);
 }
 
-PrCssStyleSheet* PR_NULLABLE prHtmlStyleElementSheet(PrHtmlStyleElement* self) {
-    return cssElementSheet(self);
+PrCssStyleSheet* PR_NULLABLE prHtmlStyleElementSheet(PrHtmlStyleElement* element) {
+    return cssElementSheet(element);
 }
 
 PrHtmlTemplateElement* PR_NULLABLE prHtmlTemplateElementQuery(PrDomEventTarget* PR_NULLABLE object) {
     return htmlElementQuery<PrHtmlTemplateElement>(object, PrDomTag_Template);
 }
 
-PrDomDocumentFragment* prHtmlTemplateElementContent(PrHtmlTemplateElement* self) {
-    return static_cast<PrDomDocumentFragment*>(domElementContents(self));
+PrDomDocumentFragment* prHtmlTemplateElementContent(PrHtmlTemplateElement* element) {
+    return static_cast<PrDomDocumentFragment*>(domElementContents(element));
 }
 
-bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* self, PrDomShadowRootMode* out) {
-    PrStringView mode = domAttributeValue(self, "shadowrootmode");
+bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* element, PrDomShadowRootMode* out) {
+    PrStringView mode = domAttributeValue(element, "shadowrootmode");
     if (asciiEqualsFold(mode, "open"))
         *out = PrDomShadowRootMode_Open;
     else if (asciiEqualsFold(mode, "closed"))
@@ -1158,8 +1157,8 @@ bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* self, PrDo
     return true;
 }
 
-PrDomSlotAssignmentMode prHtmlTemplateElementShadowRootSlotAssignment(const PrHtmlTemplateElement* self) {
-    PrStringView value = domAttributeValue(self, "shadowrootslotassignment");
+PrDomSlotAssignmentMode prHtmlTemplateElementShadowRootSlotAssignment(const PrHtmlTemplateElement* element) {
+    PrStringView value = domAttributeValue(element, "shadowrootslotassignment");
     return asciiEqualsFold(value, "manual") ? PrDomSlotAssignmentMode_Manual : PrDomSlotAssignmentMode_Named;
 }
 
@@ -1174,20 +1173,20 @@ PrHtmlErrorEvent* prHtmlErrorEventCreate(PrStringView type, const PrHtmlErrorEve
     return event;
 }
 
-PrStringView prHtmlErrorEventMessage(const PrHtmlErrorEvent* self) {
-    return prStringView(&self->error->message);
+PrStringView prHtmlErrorEventMessage(const PrHtmlErrorEvent* event) {
+    return prStringView(&event->error->message);
 }
 
-PrStringView prHtmlErrorEventFilename(const PrHtmlErrorEvent* self) {
-    return prStringView(&self->error->filename);
+PrStringView prHtmlErrorEventFilename(const PrHtmlErrorEvent* event) {
+    return prStringView(&event->error->filename);
 }
 
-uint32_t prHtmlErrorEventLineno(const PrHtmlErrorEvent* self) {
-    return self->error->lineno;
+uint32_t prHtmlErrorEventLineno(const PrHtmlErrorEvent* event) {
+    return event->error->lineno;
 }
 
-uint32_t prHtmlErrorEventColno(const PrHtmlErrorEvent* self) {
-    return self->error->colno;
+uint32_t prHtmlErrorEventColno(const PrHtmlErrorEvent* event) {
+    return event->error->colno;
 }
 
 PrHtmlMessageEvent* PR_NULLABLE prHtmlMessageEventQuery(PrDomEvent* PR_NULLABLE object) {
@@ -1206,21 +1205,21 @@ PrHtmlMessageEvent* prHtmlMessageEventCreate(PrStringView type, const PrHtmlMess
     return event;
 }
 
-PrStringView prHtmlMessageEventSerializedData(const PrHtmlMessageEvent* self) {
-    const PrString* data = &self->message->data;
+PrStringView prHtmlMessageEventSerializedData(const PrHtmlMessageEvent* event) {
+    const PrString* data = &event->message->data;
     return prStringIsNull(data) ? PrStringView{} : prStringView(data);
 }
 
-PrStringView prHtmlMessageEventOrigin(const PrHtmlMessageEvent* self) {
-    return prStringView(&self->message->origin);
+PrStringView prHtmlMessageEventOrigin(const PrHtmlMessageEvent* event) {
+    return prStringView(&event->message->origin);
 }
 
-PrStringView prHtmlMessageEventLastEventId(const PrHtmlMessageEvent* self) {
-    return prStringView(&self->message->lastEventId);
+PrStringView prHtmlMessageEventLastEventId(const PrHtmlMessageEvent* event) {
+    return prStringView(&event->message->lastEventId);
 }
 
-PrDomEventTarget* PR_NULLABLE prHtmlMessageEventSource(PrHtmlMessageEvent* self) {
-    return self->message->source;
+PrDomEventTarget* PR_NULLABLE prHtmlMessageEventSource(PrHtmlMessageEvent* event) {
+    return event->message->source;
 }
 
 PrHtmlPageRevealEvent* PR_NULLABLE prHtmlPageRevealEventQuery(PrDomEvent* PR_NULLABLE object) {
@@ -1259,25 +1258,25 @@ PrHtmlPreferenceObject* PR_NULLABLE prHtmlPreferenceObjectQuery(PrDomEventTarget
     return object != nullptr && object->type == DomTargetType_Preference ? static_cast<PrHtmlPreferenceObject*>(object) : nullptr;
 }
 
-PrHtmlPreferenceValue prHtmlPreferenceObjectOverride(const PrHtmlPreferenceObject* self) {
-    PrCssDescriptor feature = kPreferences[self->preference].feature;
-    return preferenceValueOf(environmentOf(self)->overrides[feature - kCssDescriptorMediaFirst].keyword);
+PrHtmlPreferenceValue prHtmlPreferenceObjectOverride(const PrHtmlPreferenceObject* preference) {
+    PrCssDescriptor feature = kPreferences[preference->preference].feature;
+    return preferenceValueOf(environmentOf(preference)->overrides[feature - kCssDescriptorMediaFirst].keyword);
 }
 
-PrHtmlPreferenceValue prHtmlPreferenceObjectValue(const PrHtmlPreferenceObject* self) {
-    return preferenceValueOf(cssMediaEnvironmentKeyword(environmentOf(self), kPreferences[self->preference].feature));
+PrHtmlPreferenceValue prHtmlPreferenceObjectValue(const PrHtmlPreferenceObject* preference) {
+    return preferenceValueOf(cssMediaEnvironmentKeyword(environmentOf(preference),
+        kPreferences[preference->preference].feature));
 }
 
-uint32_t prHtmlPreferenceObjectValidValues(const PrHtmlPreferenceObject* self, PrHtmlPreferenceValue* PR_NULLABLE items,
-        uint32_t capacity) {
-    const PreferenceFeature& feature = kPreferences[self->preference];
+uint32_t prHtmlPreferenceObjectValidValues(const PrHtmlPreferenceObject* preference,
+        PrHtmlPreferenceValue* PR_NULLABLE items, uint32_t capacity) {
+    const PreferenceFeature& feature = kPreferences[preference->preference];
     for (uint32_t i = 0; items != nullptr && i < feature.count && i < capacity; ++i)
         items[i] = feature.values[i];
     return feature.count;
 }
 
-void prHtmlPreferenceObjectClearOverride(PrHtmlPreferenceObject* self) {
-    PrHtmlPreferenceObject* preference = self;
+void prHtmlPreferenceObjectClearOverride(PrHtmlPreferenceObject* preference) {
     PrCssDescriptor feature = kPreferences[preference->preference].feature;
     CssMediaEnvironment* environment = &preference->window->media;
     if (environment->overrides[feature - kCssDescriptorMediaFirst].keyword == PrCssKeyword_Unknown)
@@ -1287,12 +1286,11 @@ void prHtmlPreferenceObjectClearOverride(PrHtmlPreferenceObject* self) {
     domEventFire(preference, "change");
 }
 
-PrStatus prHtmlPreferenceObjectRequestOverride(PrHtmlPreferenceObject* self, PrHtmlPreferenceValue value) {
+PrStatus prHtmlPreferenceObjectRequestOverride(PrHtmlPreferenceObject* preference, PrHtmlPreferenceValue value) {
     if (value == PrHtmlPreferenceValue_None) {
-        prHtmlPreferenceObjectClearOverride(self);
+        prHtmlPreferenceObjectClearOverride(preference);
         return PrStatus_Ok;
     }
-    PrHtmlPreferenceObject* preference = self;
     const PreferenceFeature& feature = kPreferences[preference->preference];
     for (uint32_t i = 0; i < feature.count; ++i) {
         if (value == feature.values[i]) {
@@ -1309,12 +1307,12 @@ PrHtmlPerformance* PR_NULLABLE prHtmlPerformanceQuery(PrDomEventTarget* PR_NULLA
     return object != nullptr && object->type == DomTargetType_Performance ? static_cast<PrHtmlPerformance*>(object) : nullptr;
 }
 
-double prHtmlPerformanceNow(const PrHtmlPerformance* self) {
-    return htmlWindowNow(self->window);
+double prHtmlPerformanceNow(const PrHtmlPerformance* performance) {
+    return htmlWindowNow(performance->window);
 }
 
-double prHtmlPerformanceTimeOrigin(const PrHtmlPerformance* self) {
-    return self->window->timeOriginWall;
+double prHtmlPerformanceTimeOrigin(const PrHtmlPerformance* performance) {
+    return performance->window->timeOriginWall;
 }
 
 PrStringView prHtmlOrientationTypeName(PrHtmlOrientationType type) {
@@ -1333,9 +1331,9 @@ PrHtmlScreenOrientation* PR_NULLABLE prHtmlScreenOrientationQuery(PrDomEventTarg
     return nullptr;
 }
 
-PrHtmlOrientationType prHtmlScreenOrientationType(const PrHtmlScreenOrientation* self) {
-    if (mediaInteger(self->window, PrCssDescriptor_MediaDeviceHeight) >
-            mediaInteger(self->window, PrCssDescriptor_MediaDeviceWidth))
+PrHtmlOrientationType prHtmlScreenOrientationType(const PrHtmlScreenOrientation* orientation) {
+    if (mediaInteger(orientation->window, PrCssDescriptor_MediaDeviceHeight) >
+            mediaInteger(orientation->window, PrCssDescriptor_MediaDeviceWidth))
         return PrHtmlOrientationType_PortraitPrimary;
     return PrHtmlOrientationType_LandscapePrimary;
 }
@@ -1350,15 +1348,15 @@ PrHtmlDocumentTimeline* prHtmlDocumentTimelineCreate(PrDomDocument* document, do
     return timeline;
 }
 
-void prHtmlDocumentTimelineDestroy(PrHtmlDocumentTimeline* PR_NULLABLE self) {
-    prMemoryFree(self);
+void prHtmlDocumentTimelineDestroy(PrHtmlDocumentTimeline* PR_NULLABLE timeline) {
+    prMemoryFree(timeline);
 }
 
-bool prHtmlDocumentTimelineCurrentTime(const PrHtmlDocumentTimeline* self, double* out) {
-    PrHtmlWindow* window = prHtmlDocumentDefaultView(self->document);
+bool prHtmlDocumentTimelineCurrentTime(const PrHtmlDocumentTimeline* timeline, double* out) {
+    PrHtmlWindow* window = prHtmlDocumentDefaultView(timeline->document);
     if (window == nullptr)
         return false;
-    *out = htmlWindowFrameTime(window) - self->originTime;
+    *out = htmlWindowFrameTime(window) - timeline->originTime;
     return true;
 }
 
@@ -1366,36 +1364,36 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowQuery(PrDomEventTarget* PR_NULLABLE object
     return object != nullptr && object->type == DomTargetType_Window ? static_cast<PrHtmlWindow*>(object) : nullptr;
 }
 
-PrDomDocument* prHtmlWindowDocument(PrHtmlWindow* self) {
-    return self->document;
+PrDomDocument* prHtmlWindowDocument(PrHtmlWindow* window) {
+    return window->document;
 }
 
-PrDomAgent* prHtmlWindowAgent(PrHtmlWindow* self) {
-    return self->agent;
+PrDomAgent* prHtmlWindowAgent(PrHtmlWindow* window) {
+    return window->agent;
 }
 
-void prHtmlWindowSetCustomElementRegistry(PrHtmlWindow* self, const PrDomCustomElementRegistry* PR_NULLABLE registry) {
-    self->customElements = registry;
-    self->document->customElements = registry;
+void prHtmlWindowSetCustomElementRegistry(PrHtmlWindow* window, const PrDomCustomElementRegistry* PR_NULLABLE registry) {
+    window->customElements = registry;
+    window->document->customElements = registry;
 }
 
-PrHtmlPreferenceObject* prHtmlWindowPreference(PrHtmlWindow* self, PrHtmlPreference preference) {
-    return static_cast<PrHtmlPreferenceObject*>(&self->preferences[preference]);
+PrHtmlPreferenceObject* prHtmlWindowPreference(PrHtmlWindow* window, PrHtmlPreference preference) {
+    return static_cast<PrHtmlPreferenceObject*>(&window->preferences[preference]);
 }
 
-PrHtmlPerformance* prHtmlWindowPerformance(PrHtmlWindow* self) {
-    return static_cast<PrHtmlPerformance*>(&self->performance);
+PrHtmlPerformance* prHtmlWindowPerformance(PrHtmlWindow* window) {
+    return static_cast<PrHtmlPerformance*>(&window->performance);
 }
 
-PrHtmlScreenOrientation* prHtmlWindowScreenOrientation(PrHtmlWindow* self) {
-    return static_cast<PrHtmlScreenOrientation*>(&self->orientation);
+PrHtmlScreenOrientation* prHtmlWindowScreenOrientation(PrHtmlWindow* window) {
+    return static_cast<PrHtmlScreenOrientation*>(&window->orientation);
 }
 
-PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* self) {
-    return self->parent;
+PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* window) {
+    return window->parent;
 }
 
-PrStatus prHtmlWindowPostMessage(PrHtmlWindow* self, PrHtmlWindow* source, PrStringView serialized,
+PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrStringView serialized,
         PrStringView targetOrigin) {
     PrString origin = prStringNull();
     if (targetOrigin == "/") {
@@ -1408,21 +1406,21 @@ PrStatus prHtmlWindowPostMessage(PrHtmlWindow* self, PrHtmlWindow* source, PrStr
         prUrlDestroy(url);
     }
     PostedMessage* posted = allocZeroed<PostedMessage>();
-    *posted = PostedMessage{self, source, prStringCopy(serialized), htmlWindowOrigin(source), origin};
-    htmlWindowQueueTask(self, deliverMessage, posted, dropMessage);
+    *posted = PostedMessage{window, source, prStringCopy(serialized), htmlWindowOrigin(source), origin};
+    htmlWindowQueueTask(window, deliverMessage, posted, dropMessage);
     return PrStatus_Ok;
 }
 
-PrString prHtmlWindowLocation(const PrHtmlWindow* self, PrUrlComponent component) {
-    return prUrlComponent(self->document->url, component);
+PrString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component) {
+    return prUrlComponent(window->document->url, component);
 }
 
-PrStatus prHtmlWindowSetLocation(PrHtmlWindow* self, PrUrlComponent component, PrStringView value,
+PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrUrlComponent component, PrStringView value,
         PrHtmlHistoryHandling handling) {
     // A document that is not fully active navigates nowhere (html/#navigate).
-    if (!htmlWindowIsFullyActive(self))
+    if (!htmlWindowIsFullyActive(window))
         return PrStatus_Ok;
-    PrDomDocument* document = self->document;
+    PrDomDocument* document = window->document;
     PrUrl* copy = nullptr;
     if (component == PrUrlComponent_Href) {
         PrStatus status = prUrlCreate(value, document->url, PrCharset_Utf8, &copy);
@@ -1450,7 +1448,7 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* self, PrUrlComponent component, P
         prUrlDestroy(copy);
         HtmlHistoryCommit commit =
             handling == PrHtmlHistoryHandling_Replace ? HtmlHistoryCommit_Replace : HtmlHistoryCommit_Push;
-        bool navigated = htmlPageNavigate(self, prStringView(&href), commit, self->history->index);
+        bool navigated = htmlPageNavigate(window, prStringView(&href), commit, window->history->index);
         prStringReset(&href);
         return navigated ? PrStatus_Ok : PrStatus_NotSupported;
     }
@@ -1463,67 +1461,67 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* self, PrUrlComponent component, P
     prStringReset(&next);
     prUrlDestroy(document->url);
     document->url = copy;
-    htmlHistoryUpdate(self, prStringNull(), handling);
-    htmlHistoryNotify(self, prStringView(&old));
+    htmlHistoryUpdate(window, prStringNull(), handling);
+    htmlHistoryNotify(window, prStringView(&old));
     prStringReset(&old);
-    htmlWindowScrollToFragment(self);
+    htmlWindowScrollToFragment(window);
     return PrStatus_Ok;
 }
 
-PrDomElement* PR_NULLABLE prHtmlWindowNamedItem(PrHtmlWindow* self, PrStringView name) {
-    return htmlWindowNamedObject(self, name);
+PrDomElement* PR_NULLABLE prHtmlWindowNamedItem(PrHtmlWindow* window, PrStringView name) {
+    return htmlWindowNamedObject(window, name);
 }
 
-PrCssMediaQueryList* prHtmlWindowMatchMedia(PrHtmlWindow* self, PrStringView query) {
-    return cssMediaQueryListCreate(&self->media, query);
+PrCssMediaQueryList* prHtmlWindowMatchMedia(PrHtmlWindow* window, PrStringView query) {
+    return cssMediaQueryListCreate(&window->media, query);
 }
 
-int32_t prHtmlWindowInnerWidth(PrHtmlWindow* self) {
-    PrLayoutVec extent = cssViewViewportExtent(self->document);
+int32_t prHtmlWindowInnerWidth(PrHtmlWindow* window) {
+    PrLayoutVec extent = cssViewViewportExtent(window->document);
     double width;
     if (extent.x.raw != 0 || extent.y.raw != 0)
         width = prLayoutUnitToPxDouble(extent.x);
     else
-        width = self->media.features[PrCssDescriptor_MediaWidth - kCssDescriptorMediaFirst].number;
+        width = window->media.features[PrCssDescriptor_MediaWidth - kCssDescriptorMediaFirst].number;
     return isFiniteF64(width) ? int32_t(floorF64(width + 0.5)) : 0;
 }
 
-int32_t prHtmlWindowInnerHeight(PrHtmlWindow* self) {
-    PrLayoutVec extent = cssViewViewportExtent(self->document);
+int32_t prHtmlWindowInnerHeight(PrHtmlWindow* window) {
+    PrLayoutVec extent = cssViewViewportExtent(window->document);
     double height;
     if (extent.x.raw != 0 || extent.y.raw != 0)
         height = prLayoutUnitToPxDouble(extent.y);
     else
-        height = self->media.features[PrCssDescriptor_MediaHeight - kCssDescriptorMediaFirst].number;
+        height = window->media.features[PrCssDescriptor_MediaHeight - kCssDescriptorMediaFirst].number;
     return isFiniteF64(height) ? int32_t(floorF64(height + 0.5)) : 0;
 }
 
-double prHtmlWindowDevicePixelRatio(PrHtmlWindow* self) {
-    return double(cssMediaEnvironmentPixelRatio(&self->media));
+double prHtmlWindowDevicePixelRatio(PrHtmlWindow* window) {
+    return double(cssMediaEnvironmentPixelRatio(&window->media));
 }
 
-int32_t prHtmlWindowScreenWidth(PrHtmlWindow* self) {
-    return mediaInteger(self, PrCssDescriptor_MediaDeviceWidth);
+int32_t prHtmlWindowScreenWidth(PrHtmlWindow* window) {
+    return mediaInteger(window, PrCssDescriptor_MediaDeviceWidth);
 }
 
-int32_t prHtmlWindowScreenHeight(PrHtmlWindow* self) {
-    return mediaInteger(self, PrCssDescriptor_MediaDeviceHeight);
+int32_t prHtmlWindowScreenHeight(PrHtmlWindow* window) {
+    return mediaInteger(window, PrCssDescriptor_MediaDeviceHeight);
 }
 
-int32_t prHtmlWindowScreenColorDepth(PrHtmlWindow* self) {
-    return mediaInteger(self, PrCssDescriptor_MediaColor) * 3;
+int32_t prHtmlWindowScreenColorDepth(PrHtmlWindow* window) {
+    return mediaInteger(window, PrCssDescriptor_MediaColor) * 3;
 }
 
-double prHtmlWindowScrollX(PrHtmlWindow* self) {
-    return prLayoutUnitToPxDouble(cssViewViewportScroll(self->document).x);
+double prHtmlWindowScrollX(PrHtmlWindow* window) {
+    return prLayoutUnitToPxDouble(cssViewViewportScroll(window->document).x);
 }
 
-double prHtmlWindowScrollY(PrHtmlWindow* self) {
-    return prLayoutUnitToPxDouble(cssViewViewportScroll(self->document).y);
+double prHtmlWindowScrollY(PrHtmlWindow* window) {
+    return prLayoutUnitToPxDouble(cssViewViewportScroll(window->document).y);
 }
 
-void prHtmlWindowScroll(PrHtmlWindow* self, const PrCssScrollToOptions* options) {
-    PrDomDocument* document = self->document;
+void prHtmlWindowScroll(PrHtmlWindow* window, const PrCssScrollToOptions* options) {
+    PrDomDocument* document = window->document;
     PrLayoutVec at = cssViewViewportScroll(document);
     auto units = [](double px) { return prLayoutUnitFromPxDouble(isFiniteF64(px) ? px : 0); };
     cssViewScrollViewport(document, PrLayoutVec{
@@ -1532,41 +1530,41 @@ void prHtmlWindowScroll(PrHtmlWindow* self, const PrCssScrollToOptions* options)
     });
 }
 
-void prHtmlWindowScrollBy(PrHtmlWindow* self, const PrCssScrollToOptions* options) {
+void prHtmlWindowScrollBy(PrHtmlWindow* window, const PrCssScrollToOptions* options) {
     auto units = [](double px) { return prLayoutUnitFromPxDouble(isFiniteF64(px) ? px : 0); };
     PrLayoutVec delta{
         options->hasLeft ? units(options->left) : PrLayoutUnit{0},
         options->hasTop ? units(options->top) : PrLayoutUnit{0},
     };
-    cssViewScrollViewportBy(self->document, delta);
+    cssViewScrollViewportBy(window->document, delta);
 }
 
-int32_t prHtmlWindowSetTimeout(PrHtmlWindow* self, const PrHtmlTimerHandler* handler, int32_t timeout, bool repeats) {
-    return htmlWindowSetTimeout(self, handler, timeout, repeats, false);
+int32_t prHtmlWindowSetTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler, int32_t timeout, bool repeats) {
+    return htmlWindowSetTimeout(window, handler, timeout, repeats, false);
 }
 
-void prHtmlWindowClearTimeout(PrHtmlWindow* self, int32_t id) {
-    htmlWindowClearTimeout(self, id);
+void prHtmlWindowClearTimeout(PrHtmlWindow* window, int32_t id) {
+    htmlWindowClearTimeout(window, id);
 }
 
-void prHtmlWindowRunAfterTimeout(PrHtmlWindow* self, const PrHtmlTimerHandler* handler, double milliseconds) {
-    htmlWindowRunAfterTimeout(self, handler, milliseconds);
+void prHtmlWindowRunAfterTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler, double milliseconds) {
+    htmlWindowRunAfterTimeout(window, handler, milliseconds);
 }
 
-uint32_t prHtmlWindowRequestAnimationFrame(PrHtmlWindow* self, const PrHtmlFrameRequestCallback* callback) {
-    return htmlWindowRequestAnimationFrame(self, callback);
+uint32_t prHtmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback) {
+    return htmlWindowRequestAnimationFrame(window, callback);
 }
 
-void prHtmlWindowCancelAnimationFrame(PrHtmlWindow* self, uint32_t handle) {
-    htmlWindowCancelAnimationFrame(self, handle);
+void prHtmlWindowCancelAnimationFrame(PrHtmlWindow* window, uint32_t handle) {
+    htmlWindowCancelAnimationFrame(window, handle);
 }
 
-bool prHtmlWindowReportError(PrHtmlWindow* self, PrHtmlErrorEvent* event) {
-    return dispatchReport(self, event);
+bool prHtmlWindowReportError(PrHtmlWindow* window, PrHtmlErrorEvent* event) {
+    return dispatchReport(window, event);
 }
 
-bool prHtmlWindowNotifyRejection(PrHtmlWindow* self, PrHtmlPromiseRejectionEvent* event) {
-    return dispatchReport(self, event);
+bool prHtmlWindowNotifyRejection(PrHtmlWindow* window, PrHtmlPromiseRejectionEvent* event) {
+    return dispatchReport(window, event);
 }
 
 PrHtmlNavigatorCompatibilityMode prHtmlNavigatorCompatibilityMode(const PrHtmlWindow* window) {

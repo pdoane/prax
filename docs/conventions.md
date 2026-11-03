@@ -97,6 +97,7 @@ tools/harness/                    what the harnesses, the tools and the librarie
 | pixel ratio | target pixels per px: `pixelRatio`, `targetPixelRatio`, `--pixel-ratio`. It is not a scale, which a transform has, nor a resolution, which is a media feature measured in dpi or dppx |
 | 2-vectors | `PrVec2` / `PrIVec2` / `PrUVec2`; the field or parameter name says what the vector means |
 | padding | `_pad`, or `_pad<N>` if there are several; `uint8_t[]` for a field, `uint8_t` for a bit-field |
+| parameter | named for what it is (`PrDomNode* node`), never `self`: this is not an object-oriented API, and a handle is a parameter like any other. The same holds for a local pointer, such as what a callback's context becomes. `lint.py` checks both (`self-parameter`). A binding's JS object is named for what it unwraps to (`imageData`, or `nodeObject` beside a `PrDomNode* node`), and `object` where it can be any class; `lint.py` rejects `thisValue` too |
 
 Past the tag, a name is the shortest that its domain recognizes, and that is a judgment for review rather than a
 rule. A module whose API is one object names that handle with its tag alone (`PrUi`, `PrCanvas`, `PrMarkdown`). A

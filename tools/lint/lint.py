@@ -516,6 +516,27 @@ def check_padding_names(report, path, text):
                    "padding field %s should be _pad" % match.group(1))
 
 
+# A parameter named self: a type or a qualifier stands before the name, and the end of the parameter after it. An
+# argument that passes Objective-C's self has no type before it.
+SELF_PARAMETER = re.compile(r"[(,]\s*[^(),;{}]*\w[\s*&]+(?:self|thisValue)\s*(?=[,)=])")
+
+# A local pointer named self, which stands for the object that a method's receiver would be.
+SELF_POINTER = re.compile(r"^[ \t]*(?:const\s+)?\w+\*\s*self\s*=", re.M)
+
+
+def check_self_parameter(report, path, text):
+    """The API is functions over data, not objects with methods, so a parameter, or a local that a callback's context
+    becomes, is named for what it is. Objective-C's own self is left alone, and so is a flag or a value for which self
+    is the domain's word, as in CSS's align-self."""
+    code = mask_non_code(text)
+    for match in SELF_PARAMETER.finditer(code):
+        report.add(path, line_of(text, match.end()), "self-parameter",
+                   "a parameter named for a method's receiver; name it for what it is, as this is not an object-oriented API")
+    for match in SELF_POINTER.finditer(code):
+        report.add(path, line_of(text, match.end()), "self-parameter",
+                   "a pointer named self; name it for what it is, as this is not an object-oriented API")
+
+
 def check_anonymous_namespace(report, path, text):
     """File-local code goes in one anonymous namespace per file, not behind `static`. Nothing in it reaches the linker,
     so nothing in it needs a prefix either."""
@@ -3015,6 +3036,7 @@ def check_any_source(path):
         text = f.read()
     if not is_generated(text):
         check_dangling_names(report, path, text, shared.defined)
+        check_self_parameter(report, path, text)
         check_line_length(report, path, text, c_literals(text))
         check_comment_columns(report, path, text)
         check_indentation(report, path, text)

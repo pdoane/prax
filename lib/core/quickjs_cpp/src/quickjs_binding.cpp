@@ -379,7 +379,7 @@ const Named* PR_NULLABLE findNamed(const Array<Named>* held, const char* name) {
 JsWrapperExtra* PR_NULLABLE extraOf(JsWrapper* wrapper, bool make) {
     if (wrapper->extra == nullptr && make) {
         wrapper->extra = allocZeroed<JsWrapperExtra>();
-        wrapper->extra->self = JS_UNDEFINED;
+        wrapper->extra->pinnedObject = JS_UNDEFINED;
     }
     return wrapper->extra;
 }
@@ -708,7 +708,7 @@ JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLAB
             }
         }
         if (wrapper->extra != nullptr)
-            wrapper->extra->self = JS_DupValue(ctx, object);
+            wrapper->extra->pinnedObject = JS_DupValue(ctx, object);
     }
     // What the class prepares belongs to every object, so it is defined before the object has its wrapper. Otherwise
     // the state hook would treat it as state.
@@ -724,15 +724,15 @@ JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLAB
     return object;
 }
 
-JSValue jsSameObject(JSContext* ctx, JSValueConst self, const char* name) {
-    const JsWrapperExtra* extra = extraOf(wrapperOf(self), false);
+JSValue jsSameObject(JSContext* ctx, JSValueConst object, const char* name) {
+    const JsWrapperExtra* extra = extraOf(wrapperOf(object), false);
     const JsNamedValue* held = extra != nullptr ? findNamed(&extra->sameObjects, name) : nullptr;
     return held != nullptr ? JS_DupValue(ctx, held->value) : JS_UNDEFINED;
 }
 
-void jsSetSameObject(JSContext* ctx, JSValueConst self, const char* name, JSValueConst value) {
-    becomeStateful(JS_GetRuntime(ctx), wrapperOf(self));
-    JsWrapperExtra* extra = extraOf(wrapperOf(self), true);
+void jsSetSameObject(JSContext* ctx, JSValueConst object, const char* name, JSValueConst value) {
+    becomeStateful(JS_GetRuntime(ctx), wrapperOf(object));
+    JsWrapperExtra* extra = extraOf(wrapperOf(object), true);
     JsNamedValue* held = findNamed(&extra->sameObjects, name);
     if (held == nullptr) {
         extra->sameObjects.push(JsNamedValue{name, JS_UNDEFINED});
@@ -773,12 +773,12 @@ bool jsHold(JSContext* ctx, JSValueConst owner, const char* name, JSValueConst v
     return ok;
 }
 
-void jsSetReference(JSContext* ctx, JSValueConst self, uint32_t index, JSValueConst value) {
-    JsWrapperExtra* extra = extraOf(wrapperOf(self), !JS_IsUndefined(value));
+void jsSetReference(JSContext* ctx, JSValueConst object, uint32_t index, JSValueConst value) {
+    JsWrapperExtra* extra = extraOf(wrapperOf(object), !JS_IsUndefined(value));
     if (extra == nullptr)
         return;
     if (!JS_IsUndefined(value))
-        becomeStateful(JS_GetRuntime(ctx), wrapperOf(self));
+        becomeStateful(JS_GetRuntime(ctx), wrapperOf(object));
     Array<JSValue>& references = extra->references;
     while (references.count <= index)
         references.push(JS_UNDEFINED);
@@ -787,8 +787,8 @@ void jsSetReference(JSContext* ctx, JSValueConst self, uint32_t index, JSValueCo
     JS_FreeValue(ctx, previous);
 }
 
-JSValue jsReference(JSContext* ctx, JSValueConst self, uint32_t index) {
-    JsWrapper* wrapper = wrapperOf(self);
+JSValue jsReference(JSContext* ctx, JSValueConst object, uint32_t index) {
+    JsWrapper* wrapper = wrapperOf(object);
     const JsWrapperExtra* extra = wrapper != nullptr ? extraOf(wrapper, false) : nullptr;
     if (extra == nullptr || index >= extra->references.count)
         return JS_UNDEFINED;
@@ -879,14 +879,14 @@ void jsWrapperDestroy(JSRuntime* runtime, JsWrapper* wrapper) {
         for (uint32_t i = 0; i < extra->references.count; ++i)
             JS_FreeValueRT(runtime, extra->references.data[i]);
         extra->references.reset();
-        JS_FreeValueRT(runtime, extra->self);
+        JS_FreeValueRT(runtime, extra->pinnedObject);
         prMemoryFree(extra);
     }
     prMemoryFree(wrapper);
 }
 
-void jsMark(JSRuntime* runtime, JSValueConst self, JSClassID id, JS_MarkFunc* mark) {
-    JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(self, id));
+void jsMark(JSRuntime* runtime, JSValueConst object, JSClassID id, JS_MarkFunc* mark) {
+    JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(object, id));
     if (wrapper == nullptr)
         return;
     if (wrapper->owner != nullptr)
@@ -903,8 +903,8 @@ void jsMark(JSRuntime* runtime, JSValueConst self, JSClassID id, JS_MarkFunc* ma
     for (const JsCallback* callback = extra->callbacks; callback != nullptr; callback = callback->next)
         JS_MarkValue(runtime, callback->value, mark);
     // The collector does not free a pinned object, except when the runtime is destroyed.
-    if (!JS_IsUndefined(extra->self) && wrappersOf(runtime)->destroying)
-        JS_MarkValue(runtime, extra->self, mark);
+    if (!JS_IsUndefined(extra->pinnedObject) && wrappersOf(runtime)->destroying)
+        JS_MarkValue(runtime, extra->pinnedObject, mark);
 }
 
 int jsIndexOf(JSContext* ctx, JSAtom name, uint32_t* out) {
@@ -1147,13 +1147,13 @@ void jsAddClassifier(JSRuntime* runtime, JSClassID id, JsClassify* classify) {
     record->classifiers[record->classifierCount++] = classify;
 }
 
-void jsSetOwner(JSContext* ctx, JSValueConst self, JSValueConst owner) {
+void jsSetOwner(JSContext* ctx, JSValueConst object, JSValueConst owner) {
     PR_ASSERT(JS_IsObject(owner) || JS_IsUndefined(owner) || JS_IsNull(owner));
     JSRuntime* runtime = JS_GetRuntime(ctx);
-    JsWrapper* wrapper = wrapperOf(self);
+    JsWrapper* wrapper = wrapperOf(object);
     // The new owner is referenced before the group releases the object, since the group's reference may be the only
-    // one. The previous owner is released last. `self` is the caller's value, so the object stays alive when the group
-    // releases it.
+    // one. The previous owner is released last. `object` is the caller's value, so the object stays alive when the
+    // group releases it.
     void* current = JS_IsObject(owner) ? JS_VALUE_GET_PTR(JS_DupValue(ctx, owner)) : nullptr;
     void* previous = wrapper->owner;
     if (wrapper->member) {
@@ -1188,16 +1188,16 @@ void jsPin(JSRuntime* runtime, JSClassID base, void* handle, bool pinned) {
     if (JsWrapper* wrapper = findWrapperOf(wrappers, handle, base)) {
         JsWrapperExtra* extra = extraOf(wrapper, pinned);
         if (pinned && extra->pins++ == 0) {
-            extra->self = JS_DupValueRT(runtime, objectOf(wrapper));
+            extra->pinnedObject = JS_DupValueRT(runtime, objectOf(wrapper));
         } else if (!pinned && extra != nullptr && extra->pins != 0 && --extra->pins == 0) {
             // Releasing its own reference may drop the object's last reference, while a running member may still return
             // it to script.
-            JSValue self = extra->self;
-            extra->self = JS_UNDEFINED;
+            JSValue object = extra->pinnedObject;
+            extra->pinnedObject = JS_UNDEFINED;
             if (wrappers->members != 0)
-                wrappers->unpinned.push(self);
+                wrappers->unpinned.push(object);
             else
-                JS_FreeValueRT(runtime, self);
+                JS_FreeValueRT(runtime, object);
         }
         return;
     }
@@ -1251,12 +1251,12 @@ void* jsRuntimeOwned(JSRuntime* runtime, const void* key, void* PR_NONNULL (* PR
     return value;
 }
 
-void jsValueFinalizer(JSRuntime* runtime, JSValue self) {
-    jsFinalize<void>(runtime, self, JS_GetClassID(self), [](void* held) { prMemoryFree(held); });
+void jsValueFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<void>(runtime, object, JS_GetClassID(object), [](void* held) { prMemoryFree(held); });
 }
 
-void jsValueMark(JSRuntime* runtime, JSValueConst self, JS_MarkFunc* mark) {
-    jsMark(runtime, self, JS_GetClassID(self), mark);
+void jsValueMark(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark) {
+    jsMark(runtime, object, JS_GetClassID(object), mark);
 }
 
 } // namespace pr

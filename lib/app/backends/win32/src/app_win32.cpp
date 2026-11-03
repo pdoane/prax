@@ -1451,8 +1451,8 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;
     app->setClipboardText = setClipboardText;
-    app->browserCreate = [](PrApp* self, const PrAppBrowserDesc* browserDesc, PrAppBrowser** out) {
-        return win32BrowserCreate(self, static_cast<Win32App*>(self)->window, browserDesc, out);
+    app->browserCreate = [](PrApp* base, const PrAppBrowserDesc* browserDesc, PrAppBrowser** out) {
+        return win32BrowserCreate(base, static_cast<Win32App*>(base)->window, browserDesc, out);
     };
     app->browserDestroy = win32BrowserDestroy;
     app->browserResize = win32BrowserResize;

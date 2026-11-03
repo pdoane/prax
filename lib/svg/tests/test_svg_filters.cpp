@@ -154,9 +154,9 @@ TEST_CASE("feImage draws an element moved by its subregion's origin, and a filte
         "<feImage href='#dot'/></filter>", "filter='url(#f)'"));
     CHECK(image.pixel(55, 55) == kGreen);
     CHECK(image.pixel(65, 55) == kWhite);
-    Drawing self(svgDocument("<filter id='f'><feImage href='#r'/></filter>"
+    Drawing selfReferencing(svgDocument("<filter id='f'><feImage href='#r'/></filter>"
         "<rect id='r' x='20' y='20' width='60' height='60' fill='green' filter='url(#f)'/>"));
-    CHECK(self.pixel(50, 50) == kWhite);
+    CHECK(selfReferencing.pixel(50, 50) == kWhite);
 }
 
 TEST_CASE("FillPaint is the element's fill over the whole filter region") {

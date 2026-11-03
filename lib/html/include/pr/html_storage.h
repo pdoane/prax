@@ -70,24 +70,24 @@ typedef struct PrHtmlStorage PrHtmlStorage;
 PrHtmlStorage* PR_NULLABLE prHtmlWindowStorage(PrHtmlWindow* window, PrHtmlStorageKind kind);
 
 // html/#dom-storage-length: the number of items.
-uint32_t prHtmlStorageLength(const PrHtmlStorage* self);
+uint32_t prHtmlStorageLength(const PrHtmlStorage* storage);
 
 // html/#dom-storage-key: the key of the item at `index`, or the null string past the end. The order of the keys is the
 // provider's, and stays the same while no item is added or removed.
-PrString prHtmlStorageKey(const PrHtmlStorage* self, uint32_t index);
+PrString prHtmlStorageKey(const PrHtmlStorage* storage, uint32_t index);
 
 // html/#dom-storage-getitem: the value of the item at `key`, or the null string if there is none.
-PrString prHtmlStorageGetItem(const PrHtmlStorage* self, PrStringView key);
+PrString prHtmlStorageGetItem(const PrHtmlStorage* storage, PrStringView key);
 
 // html/#dom-storage-setitem: sets the item at `key` to `value`. Returns Limit, and changes nothing, if the area's quota
 // would be exceeded.
-PrStatus prHtmlStorageSetItem(PrHtmlStorage* self, PrStringView key, PrStringView value);
+PrStatus prHtmlStorageSetItem(PrHtmlStorage* storage, PrStringView key, PrStringView value);
 
 // html/#dom-storage-removeitem: removes the item at `key`, if there is one.
-void prHtmlStorageRemoveItem(PrHtmlStorage* self, PrStringView key);
+void prHtmlStorageRemoveItem(PrHtmlStorage* storage, PrStringView key);
 
 // html/#dom-storage-clear: removes every item.
-void prHtmlStorageClear(PrHtmlStorage* self);
+void prHtmlStorageClear(PrHtmlStorage* storage);
 
 #if defined(__cplusplus)
 }

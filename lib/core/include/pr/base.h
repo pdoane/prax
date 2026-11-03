@@ -144,12 +144,12 @@ PR_ASSUME_NONNULL_BEGIN
 // interface name of the base. PR_HANDLE_UPCAST(DomText, DomNode, Node) defines prDomTextAsNode. An upcast returns the
 // same pointer, and null stays null.
 #define PR_HANDLE_UPCAST(Derived, Base, Name)                                               \
-    static inline Pr##Base* PR_NULLABLE pr##Derived##As##Name(Pr##Derived* PR_NULLABLE self) { \
-        return PR_POINTER_CAST(Pr##Base*, self);                                            \
+    static inline Pr##Base* PR_NULLABLE pr##Derived##As##Name(Pr##Derived* PR_NULLABLE derived) { \
+        return PR_POINTER_CAST(Pr##Base*, derived);                                         \
     }                                                                                       \
     static inline const Pr##Base* PR_NULLABLE pr##Derived##AsConst##Name(                   \
-        const Pr##Derived* PR_NULLABLE self) {                                              \
-        return PR_POINTER_CAST(const Pr##Base*, self);                                      \
+        const Pr##Derived* PR_NULLABLE derived) {                                           \
+        return PR_POINTER_CAST(const Pr##Base*, derived);                                   \
     }
 
 PR_ASSUME_NONNULL_END

@@ -311,24 +311,24 @@ JSValue imageDataConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
 }
 
 // Implements width and height, selected by the magic.
-JSValue imageDataExtent(JSContext* ctx, JSValueConst self, int magic) {
-    ImageDataValue* value = imageDataOf(ctx, self);
+JSValue imageDataExtent(JSContext* ctx, JSValueConst imageData, int magic) {
+    ImageDataValue* value = imageDataOf(ctx, imageData);
     if (value == nullptr)
         return JS_EXCEPTION;
     return JS_NewUint32(ctx, magic == 0 ? value->data.extent.x : value->data.extent.y);
 }
 
-JSValue imageDataData(JSContext* ctx, JSValueConst self) {
-    return imageDataOf(ctx, self) != nullptr ? jsReference(ctx, self, kDataSlot) : JS_EXCEPTION;
+JSValue imageDataData(JSContext* ctx, JSValueConst imageData) {
+    return imageDataOf(ctx, imageData) != nullptr ? jsReference(ctx, imageData, kDataSlot) : JS_EXCEPTION;
 }
 
-JSValue imageDataPixelFormat(JSContext* ctx, JSValueConst self) {
-    ImageDataValue* value = imageDataOf(ctx, self);
+JSValue imageDataPixelFormat(JSContext* ctx, JSValueConst imageData) {
+    ImageDataValue* value = imageDataOf(ctx, imageData);
     return value != nullptr ? JS_NewString(ctx, kPixelFormats[value->data.format]) : JS_EXCEPTION;
 }
 
-JSValue imageDataColorSpace(JSContext* ctx, JSValueConst self) {
-    ImageDataValue* value = imageDataOf(ctx, self);
+JSValue imageDataColorSpace(JSContext* ctx, JSValueConst imageData) {
+    ImageDataValue* value = imageDataOf(ctx, imageData);
     return value != nullptr ? JS_NewString(ctx, colorSpaceName(value->data.colorSpace)) : JS_EXCEPTION;
 }
 
@@ -360,8 +360,8 @@ JSValue path2DConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValu
     return jsConstructed(ctx, newTarget, object);
 }
 
-JSValue addPath(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvasPath2D* path = jsThis<PrCanvasPath2D>(ctx, self, path2DClass);
+JSValue addPath(JSContext* ctx, JSValueConst pathObject, int argc, JSValueConst* argv) {
+    PrCanvasPath2D* path = jsThis<PrCanvasPath2D>(ctx, pathObject, path2DClass);
     if (path == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrCanvasPath2D* other = pathOf(ctx, argv[0]);
@@ -409,8 +409,8 @@ JSValue pathResult(JSContext* ctx, PrStatus status) {
 }
 
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue closePath(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue closePath(JSContext* ctx, JSValueConst targetObject, int, JSValueConst*) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     if (target == nullptr)
         return JS_EXCEPTION;
     Methods->closePath(target);
@@ -419,8 +419,8 @@ JSValue closePath(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 
 // Implements moveTo and lineTo, selected by the magic.
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue pointTo(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue pointTo(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv, int magic) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     double n[2];
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 2, n))
         return JS_EXCEPTION;
@@ -429,8 +429,8 @@ JSValue pointTo(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
 }
 
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue quadraticCurveTo(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue quadraticCurveTo(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     double n[4];
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 4, n))
         return JS_EXCEPTION;
@@ -439,8 +439,8 @@ JSValue quadraticCurveTo(JSContext* ctx, JSValueConst self, int argc, JSValueCon
 }
 
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue bezierCurveTo(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue bezierCurveTo(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     double n[6];
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 6, n))
         return JS_EXCEPTION;
@@ -449,8 +449,8 @@ JSValue bezierCurveTo(JSContext* ctx, JSValueConst self, int argc, JSValueConst*
 }
 
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue arcTo(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue arcTo(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     double n[5];
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 5, n))
         return JS_EXCEPTION;
@@ -458,8 +458,8 @@ JSValue arcTo(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
 }
 
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue rect(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue rect(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     double n[4];
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 4, n))
         return JS_EXCEPTION;
@@ -484,8 +484,8 @@ bool readRadius(JSContext* ctx, JSValueConst value, PrDVec2* out) {
 }
 
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue roundRect(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue roundRect(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     double n[4];
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 4, n))
         return JS_EXCEPTION;
@@ -519,8 +519,8 @@ JSValue roundRect(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
 }
 
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue arc(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue arc(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     double n[5];
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 5, n))
         return JS_EXCEPTION;
@@ -529,8 +529,8 @@ JSValue arc(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
 }
 
 template <typename Handle, const PathMethods<Handle>* Methods>
-JSValue ellipse(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Handle* target = jsThis<Handle>(ctx, self, *Methods->id);
+JSValue ellipse(JSContext* ctx, JSValueConst targetObject, int argc, JSValueConst* argv) {
+    Handle* target = jsThis<Handle>(ctx, targetObject, *Methods->id);
     double n[7];
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 7, n))
         return JS_EXCEPTION;
@@ -552,8 +552,8 @@ JSValue ellipse(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv)
 // ---------------------------------------------------------------------------------------------------------------------
 // CanvasGradient and CanvasPattern
 
-JSValue addColorStop(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvasGradient* gradient = jsThis<PrCanvasGradient>(ctx, self, gradientClass);
+JSValue addColorStop(JSContext* ctx, JSValueConst gradientObject, int argc, JSValueConst* argv) {
+    PrCanvasGradient* gradient = jsThis<PrCanvasGradient>(ctx, gradientObject, gradientClass);
     double offset = 0;
     StringArgument color = {ctx};
     if (gradient == nullptr || !readFinite(ctx, argc, argv, 1, &offset) || !color.read(argv[1]))
@@ -565,8 +565,8 @@ JSValue addColorStop(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     }
 }
 
-JSValue patternSetTransform(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvasPattern* pattern = jsThis<PrCanvasPattern>(ctx, self, patternClass);
+JSValue patternSetTransform(JSContext* ctx, JSValueConst patternObject, int argc, JSValueConst* argv) {
+    PrCanvasPattern* pattern = jsThis<PrCanvasPattern>(ctx, patternObject, patternClass);
     PrDomMatrix matrix{};
     if (pattern == nullptr || !prJsDomMatrix2DInitRead(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &matrix))
         return JS_EXCEPTION;
@@ -651,16 +651,16 @@ Usability imageSourceOf(JSContext* ctx, JSValueConst value, PrCanvasImageSource*
 // ---------------------------------------------------------------------------------------------------------------------
 // CanvasRenderingContext2D
 
-PrCanvas* PR_NULLABLE contextOf(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrCanvas>(ctx, self, contextClass);
+PrCanvas* PR_NULLABLE contextOf(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrCanvas>(ctx, object, contextClass);
 }
 
-JSValue canvasOf(JSContext* ctx, JSValueConst self) {
-    return contextOf(ctx, self) != nullptr ? jsReference(ctx, self, kCanvasSlot) : JS_EXCEPTION;
+JSValue canvasOf(JSContext* ctx, JSValueConst canvasContext) {
+    return contextOf(ctx, canvasContext) != nullptr ? jsReference(ctx, canvasContext, kCanvasSlot) : JS_EXCEPTION;
 }
 
-JSValue getContextAttributes(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue getContextAttributes(JSContext* ctx, JSValueConst canvasContext, int, JSValueConst*) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     PrCanvasSettings settings = prCanvasGetContextAttributes(canvas);
@@ -675,8 +675,8 @@ JSValue getContextAttributes(JSContext* ctx, JSValueConst self, int, JSValueCons
 
 // Implements the methods that take no argument and return nothing, selected by the magic: save, restore, reset,
 // beginPath and resetTransform.
-JSValue noArguments(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue noArguments(JSContext* ctx, JSValueConst canvasContext, int, JSValueConst*, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     void (*const kMethods[])(PrCanvas*) = {
@@ -687,16 +687,16 @@ JSValue noArguments(JSContext* ctx, JSValueConst self, int, JSValueConst*, int m
     return JS_UNDEFINED;
 }
 
-JSValue isContextLost(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue isContextLost(JSContext* ctx, JSValueConst canvasContext, int, JSValueConst*) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     return canvas != nullptr ? JS_NewBool(ctx, prCanvasIsContextLost(canvas)) : JS_EXCEPTION;
 }
 
 // --- CanvasTransform ---
 
 // Implements scale and translate, selected by the magic.
-JSValue twoNumbers(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue twoNumbers(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     double n[2];
     if (canvas == nullptr || !readNumbers(ctx, argc, argv, 0, 2, n))
         return JS_EXCEPTION;
@@ -704,8 +704,8 @@ JSValue twoNumbers(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
     return JS_UNDEFINED;
 }
 
-JSValue rotate(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue rotate(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     double angle = 0;
     if (canvas == nullptr || !readNumbers(ctx, argc, argv, 0, 1, &angle))
         return JS_EXCEPTION;
@@ -713,8 +713,8 @@ JSValue rotate(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
     return JS_UNDEFINED;
 }
 
-JSValue transform(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue transform(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     double n[6];
     if (canvas == nullptr || !readNumbers(ctx, argc, argv, 0, 6, n))
         return JS_EXCEPTION;
@@ -722,8 +722,8 @@ JSValue transform(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
     return JS_UNDEFINED;
 }
 
-JSValue getTransform(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue getTransform(JSContext* ctx, JSValueConst canvasContext, int, JSValueConst*) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     PrDAffine2 t = prCanvasGetTransform(canvas);
@@ -735,8 +735,8 @@ JSValue getTransform(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 
 // setTransform(a, b, c, d, e, f) and setTransform(transform) (html/#dom-context-2d-settransform). Overload resolution
 // takes the six numbers for six or more arguments, the dictionary for fewer than two, and throws for any other count.
-JSValue setTransform(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue setTransform(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     if (argc >= 6) {
@@ -769,8 +769,8 @@ enum {
 };
 typedef uint8_t NumberAttribute;
 
-JSValue numberAttribute(JSContext* ctx, JSValueConst self, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue numberAttribute(JSContext* ctx, JSValueConst canvasContext, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
@@ -787,8 +787,8 @@ JSValue numberAttribute(JSContext* ctx, JSValueConst self, int magic) {
     }
 }
 
-JSValue setNumberAttribute(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue setNumberAttribute(JSContext* ctx, JSValueConst canvasContext, JSValueConst input, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     double value = 0;
     if (canvas == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -821,8 +821,8 @@ enum {
 };
 typedef uint8_t StringAttribute;
 
-JSValue stringAttribute(JSContext* ctx, JSValueConst self, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue stringAttribute(JSContext* ctx, JSValueConst canvasContext, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
@@ -841,8 +841,8 @@ JSValue stringAttribute(JSContext* ctx, JSValueConst self, int magic) {
     }
 }
 
-JSValue setStringAttribute(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue setStringAttribute(JSContext* ctx, JSValueConst canvasContext, JSValueConst input, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     StringArgument value = {ctx};
     if (canvas == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -868,13 +868,13 @@ JSValue setStringAttribute(JSContext* ctx, JSValueConst self, JSValueConst input
     return JS_UNDEFINED;
 }
 
-JSValue imageSmoothingEnabled(JSContext* ctx, JSValueConst self) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue imageSmoothingEnabled(JSContext* ctx, JSValueConst canvasContext) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     return canvas != nullptr ? JS_NewBool(ctx, prCanvasImageSmoothingEnabled(canvas)) : JS_EXCEPTION;
 }
 
-JSValue setImageSmoothingEnabled(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue setImageSmoothingEnabled(JSContext* ctx, JSValueConst canvasContext, JSValueConst input) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     prCanvasSetImageSmoothingEnabled(canvas, JS_ToBool(ctx, input) == 1);
@@ -917,8 +917,8 @@ constexpr EnumNames kEnumAttributes[] = {
     {kTextRenderings, countOf(kTextRenderings)},
 };
 
-JSValue enumAttribute(JSContext* ctx, JSValueConst self, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue enumAttribute(JSContext* ctx, JSValueConst canvasContext, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     uint32_t value = 0;
@@ -939,8 +939,8 @@ JSValue enumAttribute(JSContext* ctx, JSValueConst self, int magic) {
     return JS_NewString(ctx, kEnumAttributes[magic].names[value]);
 }
 
-JSValue setEnumAttribute(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue setEnumAttribute(JSContext* ctx, JSValueConst canvasContext, JSValueConst input, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     int32_t value = 0;
     if (canvas == nullptr || !readEnum(ctx, input, kEnumAttributes[magic].names, kEnumAttributes[magic].count, &value))
         return JS_EXCEPTION;
@@ -980,8 +980,8 @@ JSValue setEnumAttribute(JSContext* ctx, JSValueConst self, JSValueConst input, 
 // --- CanvasFillStrokeStyles ---
 
 // Implements fillStyle and strokeStyle, selected by the magic, which is a PrCanvasStyleRole.
-JSValue style(JSContext* ctx, JSValueConst self, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue style(JSContext* ctx, JSValueConst canvasContext, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     PrCanvasStyle value = prCanvasStyle(canvas, PrCanvasStyleRole(magic));
@@ -993,8 +993,8 @@ JSValue style(JSContext* ctx, JSValueConst self, int magic) {
 }
 
 // The value is a (DOMString or CanvasGradient or CanvasPattern) (webidl/#js-union).
-JSValue setStyle(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue setStyle(JSContext* ctx, JSValueConst canvasContext, JSValueConst input, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     PrCanvasStyleRole role = PrCanvasStyleRole(magic);
@@ -1013,16 +1013,16 @@ JSValue setStyle(JSContext* ctx, JSValueConst self, JSValueConst input, int magi
     return JS_UNDEFINED;
 }
 
-JSValue createLinearGradient(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue createLinearGradient(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     double n[4];
     if (canvas == nullptr || !readFinite(ctx, argc, argv, 4, n))
         return JS_EXCEPTION;
     return newGradient(ctx, prCanvasGradientCreateLinear(n[0], n[1], n[2], n[3]));
 }
 
-JSValue createRadialGradient(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue createRadialGradient(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     double n[6];
     if (canvas == nullptr || !readFinite(ctx, argc, argv, 6, n))
         return JS_EXCEPTION;
@@ -1032,16 +1032,16 @@ JSValue createRadialGradient(JSContext* ctx, JSValueConst self, int argc, JSValu
     return newGradient(ctx, gradient);
 }
 
-JSValue createConicGradient(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue createConicGradient(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     double n[3];
     if (canvas == nullptr || !readFinite(ctx, argc, argv, 3, n))
         return JS_EXCEPTION;
     return newGradient(ctx, prCanvasGradientCreateConic(n[0], n[1], n[2]));
 }
 
-JSValue createPattern(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue createPattern(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr || !jsArgCount(ctx, argc, 2))
         return JS_EXCEPTION;
     PrCanvasImageSource source{};
@@ -1078,8 +1078,8 @@ JSValue createPattern(JSContext* ctx, JSValueConst self, int argc, JSValueConst*
 // --- CanvasRect ---
 
 // Implements clearRect, fillRect and strokeRect, selected by the magic.
-JSValue rectangle(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue rectangle(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     double n[4];
     if (canvas == nullptr || !readNumbers(ctx, argc, argv, 0, 4, n))
         return JS_EXCEPTION;
@@ -1094,8 +1094,8 @@ JSValue rectangle(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
 // --- CanvasDrawPath ---
 
 // Implements fill and clip, selected by the magic: fill(fillRule) and fill(path, fillRule) (html/#dom-context-2d-fill).
-JSValue fillOrClip(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue fillOrClip(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     PrCanvasPath2D* path = argc > 0 ? pathOf(ctx, argv[0]) : nullptr;
@@ -1106,8 +1106,8 @@ JSValue fillOrClip(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
     return JS_UNDEFINED;
 }
 
-JSValue stroke(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue stroke(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     PrCanvasPath2D* path = argc > 0 ? pathOf(ctx, argv[0]) : nullptr;
@@ -1118,8 +1118,8 @@ JSValue stroke(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
 }
 
 // isPointInPath(x, y, fillRule) and isPointInPath(path, x, y, fillRule) (html/#dom-context-2d-ispointinpath).
-JSValue isPointInPath(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue isPointInPath(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     PrCanvasPath2D* path = argc > 0 ? pathOf(ctx, argv[0]) : nullptr;
@@ -1131,8 +1131,8 @@ JSValue isPointInPath(JSContext* ctx, JSValueConst self, int argc, JSValueConst*
     return JS_NewBool(ctx, prCanvasIsPointInPath(canvas, path, n[0], n[1], rule));
 }
 
-JSValue isPointInStroke(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue isPointInStroke(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     PrCanvasPath2D* path = argc > 0 ? pathOf(ctx, argv[0]) : nullptr;
@@ -1146,8 +1146,8 @@ JSValue isPointInStroke(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 
 // drawFocusIfNeeded(element) and drawFocusIfNeeded(path, element) (html/#dom-context-2d-drawfocusifneeded). The ring is
 // drawn if the element is focused and is a descendant of the context's canvas.
-JSValue drawFocusIfNeeded(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* context = contextOf(ctx, self);
+JSValue drawFocusIfNeeded(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* context = contextOf(ctx, canvasContext);
     if (context == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrCanvasPath2D* path = pathOf(ctx, argv[0]);
@@ -1156,7 +1156,7 @@ JSValue drawFocusIfNeeded(JSContext* ctx, JSValueConst self, int argc, JSValueCo
     PrDomElement* element = jsHandleAs<PrDomElement>(ctx, argv[path != nullptr ? 1 : 0], prJsDomElementClass);
     if (element == nullptr)
         return JS_ThrowTypeError(ctx, "Expected an Element");
-    JSValue canvasObject = jsReference(ctx, self, kCanvasSlot);
+    JSValue canvasObject = jsReference(ctx, canvasContext, kCanvasSlot);
     PrDomElement* canvas = jsHandleAs<PrDomElement>(ctx, canvasObject, prJsDomElementClass);
     JS_FreeValue(ctx, canvasObject);
     PrDomNode* node = prDomElementAsNode(element);
@@ -1172,8 +1172,8 @@ JSValue drawFocusIfNeeded(JSContext* ctx, JSValueConst self, int argc, JSValueCo
 // --- CanvasText ---
 
 // Implements fillText and strokeText, selected by the magic (html/#dom-context-2d-filltext).
-JSValue drawText(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue drawText(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv, int magic) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     StringArgument text = {ctx};
     double n[3];
     if (canvas == nullptr || !jsArgCount(ctx, argc, 3) || !text.read(argv[0]) || !readNumbers(ctx, argc, argv, 1, 2, n))
@@ -1185,8 +1185,8 @@ JSValue drawText(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv
     return JS_UNDEFINED;
 }
 
-JSValue measureText(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue measureText(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     StringArgument text = {ctx};
     if (canvas == nullptr || !jsArgCount(ctx, argc, 1) || !text.read(argv[0]))
         return JS_EXCEPTION;
@@ -1194,8 +1194,8 @@ JSValue measureText(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
 }
 
 // The attributes of TextMetrics (html/#textmetrics), in IDL order, by the magic of their getter.
-JSValue textMetric(JSContext* ctx, JSValueConst self, int magic) {
-    PrCanvasTextMetrics* metrics = jsValueOf<PrCanvasTextMetrics>(ctx, self, textMetricsClass, "TextMetrics");
+JSValue textMetric(JSContext* ctx, JSValueConst metricsObject, int magic) {
+    PrCanvasTextMetrics* metrics = jsValueOf<PrCanvasTextMetrics>(ctx, metricsObject, textMetricsClass, "TextMetrics");
     if (metrics == nullptr)
         return JS_EXCEPTION;
     const double values[] = {
@@ -1210,8 +1210,8 @@ JSValue textMetric(JSContext* ctx, JSValueConst self, int magic) {
 // --- CanvasDrawImage ---
 
 // drawImage with 3, 5 or 9 arguments (html/#dom-context-2d-drawimage). Overload resolution throws for any other count.
-JSValue drawImage(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue drawImage(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr || !jsArgCount(ctx, argc, 3))
         return JS_EXCEPTION;
     int count = argc >= 9 ? 9 : argc;
@@ -1264,8 +1264,8 @@ PrColorSpace contextSpace(const PrCanvas* canvas) {
 }
 
 // createImageData(sw, sh, settings) and createImageData(imagedata) (html/#dom-context-2d-createimagedata).
-JSValue createImageData(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue createImageData(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     if (argc == 1) {
@@ -1290,8 +1290,8 @@ JSValue createImageData(JSContext* ctx, JSValueConst self, int argc, JSValueCons
     return newImageData(ctx, extent, settings, contextSpace(canvas), JS_UNDEFINED);
 }
 
-JSValue getImageData(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue getImageData(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     int32_t n[4];
     ImageDataSettings settings{};
     if (canvas == nullptr || !enforceLongs(ctx, argc, argv, 0, 4, n) ||
@@ -1331,8 +1331,8 @@ JSValue getImageData(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 }
 
 // putImageData with 3 or 7 arguments (html/#dom-context-2d-putimagedata). Overload resolution throws for 4 to 6.
-JSValue putImageData(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue putImageData(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr || !jsArgCount(ctx, argc, 3))
         return JS_EXCEPTION;
     if (argc > 3 && argc < 7)
@@ -1358,8 +1358,8 @@ JSValue putImageData(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 
 // --- CanvasPathDrawingStyles ---
 
-JSValue setLineDash(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue setLineDash(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueConst* argv) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     Array<double> segments;
@@ -1377,8 +1377,8 @@ JSValue setLineDash(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
     return ok ? JS_UNDEFINED : JS_EXCEPTION;
 }
 
-JSValue getLineDash(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrCanvas* canvas = contextOf(ctx, self);
+JSValue getLineDash(JSContext* ctx, JSValueConst canvasContext, int, JSValueConst*) {
+    PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     uint32_t count = prCanvasLineDashCount(canvas);

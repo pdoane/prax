@@ -80,39 +80,39 @@ PrStatus urlParse(PrStringView input, const Url* PR_NULLABLE base, PrCharset cha
 PrStatus urlParseFrom(Url* url, PrStringView input, UrlState state);
 
 // Creates a copy of the URL without its query list.
-PrUrl* urlClone(const Url* self);
+PrUrl* urlClone(const Url* url);
 
 // Frees the URL and its query list.
-void urlDestroy(Url* PR_NULLABLE self);
+void urlDestroy(Url* PR_NULLABLE url);
 
 // Returns true if the URL's scheme is a special scheme (url/#special-scheme).
-bool urlIsSpecial(const Url* self);
+bool urlIsSpecial(const Url* url);
 
 // Returns true if the URL cannot have a username, password or port: its host is null or empty, or its scheme is `file`
 // (url/#cannot-have-a-username-password-port).
-bool urlCannotHaveCredentials(const Url* self);
+bool urlCannotHaveCredentials(const Url* url);
 
 // Returns the URL as text (url/#concept-url-serializer).
-PrString urlSerialize(const Url* self, PrUrlSerialization serialization);
+PrString urlSerialize(const Url* url, PrUrlSerialization serialization);
 
 // Returns the URL's origin as text (url/#concept-url-origin, html/#ascii-serialisation-of-an-origin).
-PrString urlOrigin(const Url* self);
+PrString urlOrigin(const Url* url);
 
 // Replaces the list with the pairs parsed from `input` (url/#concept-urlencoded-parser). The URL's query is unchanged.
-void urlSearchParamsParse(UrlSearchParams* self, PrStringView input);
+void urlSearchParamsParse(UrlSearchParams* params, PrStringView input);
 
 // Returns the list as `application/x-www-form-urlencoded` text (url/#concept-urlencoded-serializer).
-PrString urlSearchParamsSerialize(const UrlSearchParams* self);
+PrString urlSearchParamsSerialize(const UrlSearchParams* params);
 
 // Writes the list into the query of the URL that owns it, if any (url/#concept-urlsearchparams-update). An empty list
 // makes the query null.
-void urlSearchParamsUpdate(UrlSearchParams* self);
+void urlSearchParamsUpdate(UrlSearchParams* params);
 
 // Removes every pair and keeps the storage.
-void urlSearchParamsClear(UrlSearchParams* self);
+void urlSearchParamsClear(UrlSearchParams* params);
 
 // Frees the list.
-void urlSearchParamsDestroy(UrlSearchParams* PR_NULLABLE self);
+void urlSearchParamsDestroy(UrlSearchParams* PR_NULLABLE params);
 
 } // namespace pr_impl
 

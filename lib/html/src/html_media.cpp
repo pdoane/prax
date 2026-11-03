@@ -328,8 +328,8 @@ void reachedEnd(HtmlMedia* media) {
     }
     MediaTask* task = newTask(media);
     task->event = "timeupdate";
-    task->run = [](MediaTask* self) {
-        HtmlMedia* ended = self->media;
+    task->run = [](MediaTask* task) {
+        HtmlMedia* ended = task->media;
         if (!ended->paused) {
             ended->paused = true;
             updateFlags(ended);
@@ -417,8 +417,8 @@ void setReadyState(HtmlMedia* media, PrHtmlMediaReadyState state) {
 void sourceFailed(HtmlMedia* media, PrStringView message) {
     MediaTask* task = newTask(media);
     prStringReplace(&media->errorMessage, message);
-    task->run = [](MediaTask* self) {
-        HtmlMedia* failed = self->media;
+    task->run = [](MediaTask* task) {
+        HtmlMedia* failed = task->media;
         failed->error = PrHtmlMediaError_SrcNotSupported;
         failed->networkState = PrHtmlMediaNetworkState_NoSource;
         domEventFire(failed->element, "error");
@@ -909,10 +909,10 @@ void htmlMediaSeek(HtmlMedia* media, double seconds) {
     // The media data is at the new position once the task that follows the seeking event runs.
     MediaTask* done = newTask(media);
     done->seekCount = ++media->seeks;
-    done->run = [](MediaTask* self) {
+    done->run = [](MediaTask* task) {
         // If a later seek has started, its own task ends the seeking instead.
-        HtmlMedia* seeked = self->media;
-        if (self->seekCount != seeked->seeks)
+        HtmlMedia* seeked = task->media;
+        if (task->seekCount != seeked->seeks)
             return;
         seeked->seeking = false;
         seeked->since = prTimeMonotonicMilliseconds();

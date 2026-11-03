@@ -517,7 +517,7 @@ bool isCurrent(const LayoutState& state, const LayoutInlineShaping& shaping, uin
     LayoutItemIndex item = 0;              // the next atomic inline's item is at or past it
     bool same = true;
     // Visits `node` as collect does, and returns the last sibling that collect took with it.
-    auto visit = [&](auto& self, LayoutNodeIndex node) -> LayoutNodeIndex {
+    auto visit = [&](auto& recurse, LayoutNodeIndex node) -> LayoutNodeIndex {
         const LayoutTreeNode& n = layoutTreeNode(state.tree, node);
         same = same && at < shaping.nodes.count && shaping.nodes.data[at] == node;
         ++at;
@@ -554,7 +554,7 @@ bool isCurrent(const LayoutState& state, const LayoutInlineShaping& shaping, uin
         if (!same || none || n.kind == PrLayoutNodeKind_Text)
             return node;
         for (uint32_t c = n.first; c != kPrLayoutNodeNone && same; c = layoutTreeNode(state.tree, c).next)
-            c = self(self, c);
+            c = recurse(recurse, c);
         return node;
     };
     for (uint32_t c = first; same; c = layoutTreeNode(state.tree, c).next) {

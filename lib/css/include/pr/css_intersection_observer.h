@@ -91,37 +91,37 @@ PrStatus prCssIntersectionObserverCreate(PrDomDocument* document, const PrCssInt
     const PrCssIntersectionCallback* callback, PrCssIntersectionObserver* PR_NULLABLE* PR_NONNULL out);
 
 // Adds or releases a reference. The last release frees the observer and its queued entries.
-void prCssIntersectionObserverRetain(PrCssIntersectionObserver* self);
-void prCssIntersectionObserverRelease(PrCssIntersectionObserver* PR_NULLABLE self);
+void prCssIntersectionObserverRetain(PrCssIntersectionObserver* observer);
+void prCssIntersectionObserverRelease(PrCssIntersectionObserver* PR_NULLABLE observer);
 
 // Return the observer's root, or null for the document's viewport
 // (intersection-observer/#dom-intersectionobserver-root), its least time between updates, and whether it tracks
 // visibility.
-PrDomNode* PR_NULLABLE prCssIntersectionObserverRoot(const PrCssIntersectionObserver* self);
-int32_t prCssIntersectionObserverDelay(const PrCssIntersectionObserver* self);
-bool prCssIntersectionObserverTrackVisibility(const PrCssIntersectionObserver* self);
+PrDomNode* PR_NULLABLE prCssIntersectionObserverRoot(const PrCssIntersectionObserver* observer);
+int32_t prCssIntersectionObserverDelay(const PrCssIntersectionObserver* observer);
+bool prCssIntersectionObserverTrackVisibility(const PrCssIntersectionObserver* observer);
 
 // Return the margins, each as its four offsets serialized (intersection-observer/#dom-intersectionobserver-rootmargin).
-PrString prCssIntersectionObserverRootMargin(const PrCssIntersectionObserver* self);
-PrString prCssIntersectionObserverScrollMargin(const PrCssIntersectionObserver* self);
+PrString prCssIntersectionObserverRootMargin(const PrCssIntersectionObserver* observer);
+PrString prCssIntersectionObserverScrollMargin(const PrCssIntersectionObserver* observer);
 
 // Returns the thresholds in ascending order, valid while the observer lives, and writes their number to `count`.
-const double* prCssIntersectionObserverThresholds(const PrCssIntersectionObserver* self, uint32_t* count);
+const double* prCssIntersectionObserverThresholds(const PrCssIntersectionObserver* observer, uint32_t* count);
 
 // Observes `target`, unless the observer observes it already (intersection-observer/#observe-target-element). The next
 // rendering update reports its intersection.
-void prCssIntersectionObserverObserve(PrCssIntersectionObserver* self, PrDomElement* target);
+void prCssIntersectionObserverObserve(PrCssIntersectionObserver* observer, PrDomElement* target);
 
 // Stops observing `target` (intersection-observer/#unobserve-target-element), or stops observing every element
 // (intersection-observer/#dom-intersectionobserver-disconnect). Entries already queued stay queued.
-void prCssIntersectionObserverUnobserve(PrCssIntersectionObserver* self, PrDomElement* target);
-void prCssIntersectionObserverDisconnect(PrCssIntersectionObserver* self);
+void prCssIntersectionObserverUnobserve(PrCssIntersectionObserver* observer, PrDomElement* target);
+void prCssIntersectionObserverDisconnect(PrCssIntersectionObserver* observer);
 
 // Takes up to `capacity` of the oldest queued entries into `out` and returns how many it took
 // (intersection-observer/#dom-intersectionobserver-takerecords). Each entry taken holds a reference to its target,
 // which the caller releases. A caller takes them all by calling until it takes none.
-uint32_t prCssIntersectionObserverTakeRecords(PrCssIntersectionObserver* self, PrCssIntersectionObserverEntry* out,
-    uint32_t capacity);
+uint32_t prCssIntersectionObserverTakeRecords(PrCssIntersectionObserver* observer,
+    PrCssIntersectionObserverEntry* out, uint32_t capacity);
 
 // Returns true if an observer of the document observes an element whose intersection no rendering update has computed
 // yet (intersection-observer/#pending-initial-observation), so that the next rendering update must run.

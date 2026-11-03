@@ -189,10 +189,10 @@ TEST_CASE("a pattern takes the attributes and the content that it lacks from its
 }
 
 TEST_CASE("a pattern inside its own tile paints its fallback, and patterns that paint each other nest to a bounded depth") {
-    Drawing self(svgDocument("<pattern id='p' width='20' height='20' patternUnits='userSpaceOnUse'>"
+    Drawing selfReferencing(svgDocument("<pattern id='p' width='20' height='20' patternUnits='userSpaceOnUse'>"
         "<rect width='10' height='10' fill='url(#p) #ff0000'/></pattern>"
         "<rect width='100' height='100' fill='url(#p)'/>"));
-    std::vector<Drawn> tile = tileOf(self);
+    std::vector<Drawn> tile = tileOf(selfReferencing);
     REQUIRE(tile.size() == 1);
     CHECK(!tile[0].brushed);
     CHECK(tile[0].color.r == 1.0f);

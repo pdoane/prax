@@ -39,8 +39,8 @@ void resetLabeled(Array<Labeled>* list) {
     list->reset();
 }
 
-void consoleFinalizer(JSRuntime*, JSValue self) {
-    ConsoleState* state = static_cast<ConsoleState*>(JS_GetOpaque(self, consoleClass));
+void consoleFinalizer(JSRuntime*, JSValue stateObject) {
+    ConsoleState* state = static_cast<ConsoleState*>(JS_GetOpaque(stateObject, consoleClass));
     if (state == nullptr)
         return;
     resetLabeled(&state->counts);

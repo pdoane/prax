@@ -122,8 +122,8 @@ void headersDestroy(JsHeaders* headers) {
     prMemoryFree(headers);
 }
 
-JsHeaders* PR_NULLABLE headersOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<JsHeaders>(ctx, self, headersClass, "Headers");
+JsHeaders* PR_NULLABLE headersOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<JsHeaders>(ctx, object, headersClass, "Headers");
 }
 
 uint32_t findHeader(const JsHeaders* headers, PrStringView name, uint32_t from = 0) {
@@ -300,8 +300,8 @@ enum {
 typedef uint8_t Method;
 
 // The methods of Headers that take a name, selected by the magic.
-JSValue nameMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    JsHeaders* headers = headersOf(ctx, self);
+JSValue nameMethod(JSContext* ctx, JSValueConst headersObject, int argc, JSValueConst* argv, int magic) {
+    JsHeaders* headers = headersOf(ctx, headersObject);
     bool pair = magic == Method_Append || magic == Method_Set;
     if (headers == nullptr || !jsArgCount(ctx, argc, pair ? 2 : 1))
         return JS_EXCEPTION;
@@ -362,8 +362,8 @@ JSValue nameMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
 }
 
 // fetch/#dom-headers-getsetcookie
-JSValue getSetCookie(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    JsHeaders* headers = headersOf(ctx, self);
+JSValue getSetCookie(JSContext* ctx, JSValueConst headersObject, int, JSValueConst*) {
+    JsHeaders* headers = headersOf(ctx, headersObject);
     if (headers == nullptr)
         return JS_EXCEPTION;
     JSValue all = JS_NewArray(ctx);
@@ -381,8 +381,8 @@ struct SortedHeader {
 };
 
 // Returns the [name, value] pair at the index argv[0] of the sorted and combined list, or undefined past the end.
-JSValue entryAt(JSContext* ctx, JSValueConst self, int, JSValueConst* argv) {
-    JsHeaders* headers = headersOf(ctx, self);
+JSValue entryAt(JSContext* ctx, JSValueConst headersObject, int, JSValueConst* argv) {
+    JsHeaders* headers = headersOf(ctx, headersObject);
     uint32_t index = 0;
     if (headers == nullptr || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -416,24 +416,24 @@ JSValue entryAt(JSContext* ctx, JSValueConst self, int, JSValueConst* argv) {
     return result;
 }
 
-JSValue iterate(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    if (headersOf(ctx, self) == nullptr)
+JSValue iterate(JSContext* ctx, JSValueConst headers, int, JSValueConst*, int magic) {
+    if (headersOf(ctx, headers) == nullptr)
         return JS_EXCEPTION;
-    return jsPairIterator(ctx, headersIteratorClass, self, entryAt, JsMapPart(magic));
+    return jsPairIterator(ctx, headersIteratorClass, headers, entryAt, JsMapPart(magic));
 }
 
-JSValue forEachMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    if (headersOf(ctx, self) == nullptr)
+JSValue forEachMethod(JSContext* ctx, JSValueConst headers, int argc, JSValueConst* argv) {
+    if (headersOf(ctx, headers) == nullptr)
         return JS_EXCEPTION;
-    return jsPairForEach(ctx, self, entryAt, argc, argv);
+    return jsPairForEach(ctx, headers, entryAt, argc, argv);
 }
 
-void headersFinalizer(JSRuntime* runtime, JSValue self) {
-    jsFinalize<JsHeaders>(runtime, self, headersClass, headersDestroy);
+void headersFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<JsHeaders>(runtime, object, headersClass, headersDestroy);
 }
 
-void headersMark(JSRuntime* runtime, JSValueConst self, JS_MarkFunc* mark) {
-    jsMark(runtime, self, headersClass, mark);
+void headersMark(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark) {
+    jsMark(runtime, object, headersClass, mark);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -561,8 +561,8 @@ void responseDestroy(JsResponse* response) {
     prMemoryFree(response);
 }
 
-JsResponse* PR_NULLABLE responseOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<JsResponse>(ctx, self, responseClass, "Response");
+JsResponse* PR_NULLABLE responseOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<JsResponse>(ctx, object, responseClass, "Response");
 }
 
 // Returns a Response object of `response`, with `headers` as its Headers. Takes ownership of both.
@@ -583,8 +583,8 @@ JSValue newResponse(JSContext* ctx, JsResponse* response, JsHeaders* headers) {
     return object;
 }
 
-JsHeaders* headersOfResponse(JSContext* ctx, JSValueConst self) {
-    JSValue held = jsSameObject(ctx, self, "headers");
+JsHeaders* headersOfResponse(JSContext* ctx, JSValueConst object) {
+    JSValue held = jsSameObject(ctx, object, "headers");
     JsHeaders* headers = jsHandleAs<JsHeaders>(ctx, held, headersClass);
     JS_FreeValue(ctx, held);
     return headers;
@@ -719,8 +719,8 @@ JSValue jsonStatic(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
 }
 
 // fetch/#dom-response-type
-JSValue typeGet(JSContext* ctx, JSValueConst self) {
-    JsResponse* response = responseOf(ctx, self);
+JSValue typeGet(JSContext* ctx, JSValueConst responseObject) {
+    JsResponse* response = responseOf(ctx, responseObject);
     if (response == nullptr)
         return JS_EXCEPTION;
     if (response->error)
@@ -736,48 +736,48 @@ JSValue typeGet(JSContext* ctx, JSValueConst self) {
     return jsFixedString(ctx, "basic");
 }
 
-JSValue urlGet(JSContext* ctx, JSValueConst self) {
-    JsResponse* response = responseOf(ctx, self);
+JSValue urlGet(JSContext* ctx, JSValueConst responseObject) {
+    JsResponse* response = responseOf(ctx, responseObject);
     if (response == nullptr)
         return JS_EXCEPTION;
     PrStringView url = prStringView(&response->url);
     return JS_NewStringLen(ctx, url.data != nullptr ? url.data : "", url.size);
 }
 
-JSValue statusGet(JSContext* ctx, JSValueConst self) {
-    JsResponse* response = responseOf(ctx, self);
+JSValue statusGet(JSContext* ctx, JSValueConst responseObject) {
+    JsResponse* response = responseOf(ctx, responseObject);
     return response != nullptr ? JS_NewUint32(ctx, response->status) : JS_EXCEPTION;
 }
 
 // fetch/#dom-response-ok
-JSValue okGet(JSContext* ctx, JSValueConst self) {
-    JsResponse* response = responseOf(ctx, self);
+JSValue okGet(JSContext* ctx, JSValueConst responseObject) {
+    JsResponse* response = responseOf(ctx, responseObject);
     return response != nullptr ? JS_NewBool(ctx, prFetchIsOkStatus(response->status)) : JS_EXCEPTION;
 }
 
-JSValue statusTextGet(JSContext* ctx, JSValueConst self) {
-    JsResponse* response = responseOf(ctx, self);
+JSValue statusTextGet(JSContext* ctx, JSValueConst responseObject) {
+    JsResponse* response = responseOf(ctx, responseObject);
     return response != nullptr ? newByteString(ctx, prStringView(&response->statusText)) : JS_EXCEPTION;
 }
 
-JSValue headersGet(JSContext* ctx, JSValueConst self) {
-    if (responseOf(ctx, self) == nullptr)
+JSValue headersGet(JSContext* ctx, JSValueConst response) {
+    if (responseOf(ctx, response) == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "headers");
+    return jsSameObject(ctx, response, "headers");
 }
 
-JSValue bodyUsedGet(JSContext* ctx, JSValueConst self) {
-    JsResponse* response = responseOf(ctx, self);
+JSValue bodyUsedGet(JSContext* ctx, JSValueConst responseObject) {
+    JsResponse* response = responseOf(ctx, responseObject);
     return response != nullptr ? JS_NewBool(ctx, response->body.used) : JS_EXCEPTION;
 }
 
 // text(), json(), arrayBuffer() and bytes(), selected by the magic. A body that its signal errored rejects with the
 // signal's reason, however often it is read.
-JSValue readMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    JsResponse* response = responseOf(ctx, self);
+JSValue readMethod(JSContext* ctx, JSValueConst responseObject, int, JSValueConst*, int magic) {
+    JsResponse* response = responseOf(ctx, responseObject);
     if (response == nullptr)
         return rejectWithException(ctx);
-    JSValue signal = jsSameObject(ctx, self, "signal");
+    JSValue signal = jsSameObject(ctx, responseObject, "signal");
     JSValue reason = prJsDomAbortSignalReason(ctx, signal);
     JS_FreeValue(ctx, signal);
     if (!JS_IsUndefined(reason) && response->body.present) {
@@ -790,13 +790,13 @@ JSValue readMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*, int ma
 }
 
 // fetch/#dom-response-clone
-JSValue cloneMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    JsResponse* response = responseOf(ctx, self);
+JSValue cloneMethod(JSContext* ctx, JSValueConst responseObject, int, JSValueConst*) {
+    JsResponse* response = responseOf(ctx, responseObject);
     if (response == nullptr)
         return JS_EXCEPTION;
     if (response->body.used)
         return JS_ThrowTypeError(ctx, "The body has already been read");
-    JsHeaders* original = headersOfResponse(ctx, self);
+    JsHeaders* original = headersOfResponse(ctx, responseObject);
     JsHeaders* headers = headersCreate(original->guard);
     for (uint32_t i = 0; i < original->names.count; ++i) {
         headers->names.push(prStringCopy(prStringView(&original->names.data[i])));
@@ -816,19 +816,19 @@ JSValue cloneMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
         clone->body.bytes.append(response->body.bytes.data, response->body.bytes.count);
     // The clone's body is a branch of the same stream (fetch/#concept-body-clone), which the same abort errors.
     JSValue object = newResponse(ctx, clone, headers);
-    JSValue signal = jsSameObject(ctx, self, "signal");
+    JSValue signal = jsSameObject(ctx, responseObject, "signal");
     if (!JS_IsException(object) && !JS_IsUndefined(signal))
         jsSetSameObject(ctx, object, "signal", signal);
     JS_FreeValue(ctx, signal);
     return object;
 }
 
-void responseFinalizer(JSRuntime* runtime, JSValue self) {
-    jsFinalize<JsResponse>(runtime, self, responseClass, responseDestroy);
+void responseFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<JsResponse>(runtime, object, responseClass, responseDestroy);
 }
 
-void responseMark(JSRuntime* runtime, JSValueConst self, JS_MarkFunc* mark) {
-    jsMark(runtime, self, responseClass, mark);
+void responseMark(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark) {
+    jsMark(runtime, object, responseClass, mark);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

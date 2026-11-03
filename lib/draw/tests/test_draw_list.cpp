@@ -564,11 +564,11 @@ TEST_CASE("a list that would reference itself does not") {
     CHECK(prDrawListCommandCount(list) == 2);
 
     // A source of the list freezes the list. Each call below would draw the list into itself, and records nothing.
-    PrDrawSource self = prDrawSourceList(list, PrRect{0, 0, 1, 1});
-    PrDrawBrush brush = prDrawBrushImage(self, PrRect{0, 0, 1, 1}, PrDrawSampling_Linear);
+    PrDrawSource source = prDrawSourceList(list, PrRect{0, 0, 1, 1});
+    PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 1, 1}, PrDrawSampling_Linear);
     prDrawListRect(list, PrRect{0, 0, 1, 1}, {.brush = &brush});
     PrDrawNineSlice slices{};
-    prDrawListNineSlice(list, self, &slices, PrRect{0, 0, 1, 1}, PrDrawSampling_Linear, {.color = PrColor{1, 1, 1, 1}});
+    prDrawListNineSlice(list, source, &slices, PrRect{0, 0, 1, 1}, PrDrawSampling_Linear, {.color = PrColor{1, 1, 1, 1}});
     PrDrawBorder border{};
     for (PrDrawBorderSide& side : border.sides)
         side = PrDrawBorderSide{1, PrDrawBorderStyle_Solid, PrColor{1, 1, 1, 1}, &brush, 0};

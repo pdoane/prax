@@ -912,81 +912,81 @@ PrStatus urlParseFrom(Url* url, PrStringView input, UrlState state) {
     return parse(url, input, nullptr, state, true, PrCharset_Utf8);
 }
 
-PrUrl* urlClone(const Url* self) {
+PrUrl* urlClone(const Url* url) {
     PrUrl* result = alloc<PrUrl>();
-    *result = PrUrl{*self};
-    result->scheme = prStringClone(&self->scheme);
-    result->username = prStringClone(&self->username);
-    result->password = prStringClone(&self->password);
-    result->host = prStringClone(&self->host);
-    result->path = prStringClone(&self->path);
-    result->query = prStringClone(&self->query);
-    result->fragment = prStringClone(&self->fragment);
+    *result = PrUrl{*url};
+    result->scheme = prStringClone(&url->scheme);
+    result->username = prStringClone(&url->username);
+    result->password = prStringClone(&url->password);
+    result->host = prStringClone(&url->host);
+    result->path = prStringClone(&url->path);
+    result->query = prStringClone(&url->query);
+    result->fragment = prStringClone(&url->fragment);
     result->searchParams = nullptr;
     return result;
 }
 
-void urlDestroy(Url* PR_NULLABLE self) {
-    if (self == nullptr)
+void urlDestroy(Url* PR_NULLABLE url) {
+    if (url == nullptr)
         return;
-    urlSearchParamsDestroy(self->searchParams);
-    prStringReset(&self->scheme);
-    prStringReset(&self->username);
-    prStringReset(&self->password);
-    prStringReset(&self->host);
-    prStringReset(&self->path);
-    prStringReset(&self->query);
-    prStringReset(&self->fragment);
-    prMemoryFree(self);
+    urlSearchParamsDestroy(url->searchParams);
+    prStringReset(&url->scheme);
+    prStringReset(&url->username);
+    prStringReset(&url->password);
+    prStringReset(&url->host);
+    prStringReset(&url->path);
+    prStringReset(&url->query);
+    prStringReset(&url->fragment);
+    prMemoryFree(url);
 }
 
-bool urlIsSpecial(const Url* self) {
-    return urlScheme(prStringView(&self->scheme)) != UrlScheme_None;
+bool urlIsSpecial(const Url* url) {
+    return urlScheme(prStringView(&url->scheme)) != UrlScheme_None;
 }
 
-bool urlCannotHaveCredentials(const Url* self) {
-    return prStringIsEmpty(&self->host) || urlScheme(prStringView(&self->scheme)) == UrlScheme_File;
+bool urlCannotHaveCredentials(const Url* url) {
+    return prStringIsEmpty(&url->host) || urlScheme(prStringView(&url->scheme)) == UrlScheme_File;
 }
 
-PrString urlSerialize(const Url* self, PrUrlSerialization serialization) {
+PrString urlSerialize(const Url* url, PrUrlSerialization serialization) {
     TextBuffer out;
-    textAppend(&out, prStringView(&self->scheme));
+    textAppend(&out, prStringView(&url->scheme));
     textAppendChar(&out, ':');
-    PrStringView path = prStringView(&self->path);
-    if (!prStringIsNull(&self->host)) {
+    PrStringView path = prStringView(&url->path);
+    if (!prStringIsNull(&url->host)) {
         textAppend(&out, "//");
-        if (includesCredentials(self)) {
-            textAppend(&out, prStringView(&self->username));
-            if (!prStringIsEmpty(&self->password)) {
+        if (includesCredentials(url)) {
+            textAppend(&out, prStringView(&url->username));
+            if (!prStringIsEmpty(&url->password)) {
                 textAppendChar(&out, ':');
-                textAppend(&out, prStringView(&self->password));
+                textAppend(&out, prStringView(&url->password));
             }
             textAppendChar(&out, '@');
         }
-        textAppend(&out, prStringView(&self->host));
-        if (self->hasPort) {
+        textAppend(&out, prStringView(&url->host));
+        if (url->hasPort) {
             textAppendChar(&out, ':');
-            textAppendU64(&out, self->port);
+            textAppendU64(&out, url->port);
         }
-    } else if (!self->opaquePath && stringStartsWith(path, "//")) {
+    } else if (!url->opaquePath && stringStartsWith(path, "//")) {
         textAppend(&out, "/.");
     }
     textAppend(&out, path);
-    if (!prStringIsNull(&self->query)) {
+    if (!prStringIsNull(&url->query)) {
         textAppendChar(&out, '?');
-        textAppend(&out, prStringView(&self->query));
+        textAppend(&out, prStringView(&url->query));
     }
-    if (serialization != PrUrlSerialization_ExcludeFragment && !prStringIsNull(&self->fragment)) {
+    if (serialization != PrUrlSerialization_ExcludeFragment && !prStringIsNull(&url->fragment)) {
         textAppendChar(&out, '#');
-        textAppend(&out, prStringView(&self->fragment));
+        textAppend(&out, prStringView(&url->fragment));
     }
     return textTake(&out);
 }
 
-PrString urlOrigin(const Url* self) {
-    if (prStringView(&self->scheme) == "blob") {
+PrString urlOrigin(const Url* url) {
+    if (prStringView(&url->scheme) == "blob") {
         PrUrl* pathUrl = nullptr;
-        urlParse(prStringView(&self->path), nullptr, PrCharset_Utf8, &pathUrl);
+        urlParse(prStringView(&url->path), nullptr, PrCharset_Utf8, &pathUrl);
         UrlScheme inner = pathUrl != nullptr ? urlScheme(prStringView(&pathUrl->scheme)) : UrlScheme_None;
         PrString origin;
         if (inner == UrlScheme_Http || inner == UrlScheme_Https)
@@ -996,22 +996,22 @@ PrString urlOrigin(const Url* self) {
         urlDestroy(pathUrl);
         return origin;
     }
-    UrlScheme scheme = urlScheme(prStringView(&self->scheme));
+    UrlScheme scheme = urlScheme(prStringView(&url->scheme));
     if (scheme == UrlScheme_None || scheme == UrlScheme_File)
         return prStringCopy("null");
     TextBuffer out;
-    textAppend(&out, prStringView(&self->scheme));
+    textAppend(&out, prStringView(&url->scheme));
     textAppend(&out, "://");
-    textAppend(&out, prStringView(&self->host));
-    if (self->hasPort) {
+    textAppend(&out, prStringView(&url->host));
+    if (url->hasPort) {
         textAppendChar(&out, ':');
-        textAppendU64(&out, self->port);
+        textAppendU64(&out, url->port);
     }
     return textTake(&out);
 }
 
-void urlSearchParamsParse(UrlSearchParams* self, PrStringView input) {
-    urlSearchParamsClear(self);
+void urlSearchParamsParse(UrlSearchParams* params, PrStringView input) {
+    urlSearchParamsClear(params);
     TextBuffer bytes;
     for (size_t first = 0; first < input.size;) {
         PrStringView rest = stringSlice(input, first, input.size - first);
@@ -1022,48 +1022,48 @@ void urlSearchParamsParse(UrlSearchParams* self, PrStringView input) {
         size_t equals = stringFind(sequence, '=');
         PrStringView value = equals != sequence.size ? stringSlice(sequence, equals + 1, sequence.size - equals - 1) : "";
         PrString name = formDecode(&bytes, stringSlice(sequence, 0, equals));
-        self->pairs.push(UrlPair{name, formDecode(&bytes, value)});
+        params->pairs.push(UrlPair{name, formDecode(&bytes, value)});
     }
     textReset(&bytes);
 }
 
-PrString urlSearchParamsSerialize(const UrlSearchParams* self) {
+PrString urlSearchParamsSerialize(const UrlSearchParams* params) {
     TextBuffer out;
-    for (uint32_t i = 0; i < self->pairs.count; ++i) {
+    for (uint32_t i = 0; i < params->pairs.count; ++i) {
         if (i != 0)
             textAppendChar(&out, '&');
-        formEncode(&out, prStringView(&self->pairs.data[i].name));
+        formEncode(&out, prStringView(&params->pairs.data[i].name));
         textAppendChar(&out, '=');
-        formEncode(&out, prStringView(&self->pairs.data[i].value));
+        formEncode(&out, prStringView(&params->pairs.data[i].value));
     }
     return textTake(&out);
 }
 
-void urlSearchParamsUpdate(UrlSearchParams* self) {
-    if (self->url == nullptr)
+void urlSearchParamsUpdate(UrlSearchParams* params) {
+    if (params->url == nullptr)
         return;
-    PrString query = urlSearchParamsSerialize(self);
-    prStringReset(&self->url->query);
+    PrString query = urlSearchParamsSerialize(params);
+    prStringReset(&params->url->query);
     if (!prStringIsEmpty(&query))
-        self->url->query = query;
+        params->url->query = query;
     else
         prStringReset(&query);
 }
 
-void urlSearchParamsClear(UrlSearchParams* self) {
-    for (uint32_t i = 0; i < self->pairs.count; ++i) {
-        prStringReset(&self->pairs.data[i].name);
-        prStringReset(&self->pairs.data[i].value);
+void urlSearchParamsClear(UrlSearchParams* params) {
+    for (uint32_t i = 0; i < params->pairs.count; ++i) {
+        prStringReset(&params->pairs.data[i].name);
+        prStringReset(&params->pairs.data[i].value);
     }
-    self->pairs.count = 0;
+    params->pairs.count = 0;
 }
 
-void urlSearchParamsDestroy(UrlSearchParams* PR_NULLABLE self) {
-    if (self == nullptr)
+void urlSearchParamsDestroy(UrlSearchParams* PR_NULLABLE params) {
+    if (params == nullptr)
         return;
-    urlSearchParamsClear(self);
-    self->pairs.reset();
-    prMemoryFree(self);
+    urlSearchParamsClear(params);
+    params->pairs.reset();
+    prMemoryFree(params);
 }
 
 } // namespace pr_impl

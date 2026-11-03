@@ -27,13 +27,13 @@ extern JSClassID prJsCssMediaQueryListClass;
 // Get the attributes of ElementCSSInlineStyle (cssom-1/#the-elementcssinlinestyle-mixin). `style` is a [SameObject,
 // PutForwards=cssText] CSSStyleProperties. `attributeStyleMap` is a [SameObject] StylePropertyMap
 // (css-typed-om-1/#dom-elementcssinlinestyle-attributestylemap).
-JSValue prJsCssInlineStyle(JSContext* ctx, JSValueConst self);
-JSValue prJsCssSetInlineStyle(JSContext* ctx, JSValueConst self, JSValueConst input);
-JSValue prJsCssAttributeStyleMap(JSContext* ctx, JSValueConst self);
+JSValue prJsCssInlineStyle(JSContext* ctx, JSValueConst elementObject);
+JSValue prJsCssSetInlineStyle(JSContext* ctx, JSValueConst object, JSValueConst input);
+JSValue prJsCssAttributeStyleMap(JSContext* ctx, JSValueConst elementObject);
 
 // Returns the FontFaceSet of a Document (css-font-loading-3/#dom-fontfacesource-fonts). The document's object holds the
 // set's object. From the first call on, the binding is notified of the document's font loads.
-JSValue prJsCssFonts(JSContext* ctx, JSValueConst self);
+JSValue prJsCssFonts(JSContext* ctx, JSValueConst documentObject);
 
 // The style and attributeStyleMap properties, for the property list of a class that includes ElementCSSInlineStyle.
 #define PR_JS_CSS_INLINE_STYLE                                                                        \

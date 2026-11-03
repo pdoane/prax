@@ -31,12 +31,12 @@ struct LaterHost {
         host.context = this;
         host.fetcher = fetcher.fetcher;
         host.execute = [](void* data, PrHtmlPage*, const PrHtmlScript* script) -> PrStatus {
-            LaterHost* self = static_cast<LaterHost*>(data);
+            LaterHost* laterHost = static_cast<LaterHost*>(data);
             if (script->kind == PrHtmlScriptKind_Module) {
-                const std::string& source = self->modules.sources[script->module];
-                self->log += source.substr(source.rfind('\n') + 1) + " ";
+                const std::string& source = laterHost->modules.sources[script->module];
+                laterHost->log += source.substr(source.rfind('\n') + 1) + " ";
             } else {
-                self->log += std::string(script->source.data, script->source.size) + " ";
+                laterHost->log += std::string(script->source.data, script->source.size) + " ";
             }
             return PrStatus_Ok;
         };
@@ -1103,8 +1103,8 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
         std::vector<PrStatus> statuses;
         std::vector<std::string> received;
         static void done(void* PR_NULLABLE data, const PrFetchResponse* response) {
-            Responses* self = static_cast<Responses*>(data);
-            self->statuses.push_back(response->status);
+            Responses* responses = static_cast<Responses*>(data);
+            responses->statuses.push_back(response->status);
             PrStringView url = response->url.data != nullptr ? response->url : PrStringView{""};
             std::string text = std::to_string(response->responseStatus) + " " + std::string(url.data, url.size) + " ";
             for (uint32_t i = 0; i < response->headerCount; ++i) {
@@ -1113,7 +1113,7 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
             }
             if (response->body.size != 0)
                 text += std::string(reinterpret_cast<const char*>(response->body.data), response->body.size);
-            self->received.push_back(text);
+            responses->received.push_back(text);
         }
     } responses;
     LaterHost later;

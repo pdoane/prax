@@ -58,9 +58,9 @@ PrFontSet* fontsOfFiles() {
         d.weightMin = d.weightMax = weight;
         addFile(fileSet, d, "NotoSans.ttf");
     }
-    PrFontFaceDescriptor self = prFontFaceDescriptorDefault();
+    PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     for (const char* file : {"NotoSans.ttf", "NotoSerif.ttf", "Literata.ttf", "RobotoFlex.ttf"})
-        addFile(fileSet, self, file);
+        addFile(fileSet, descriptor, file);
     return fileSet;
 }
 

@@ -240,10 +240,10 @@ bool readSupportedType(JSContext* ctx, JSValueConst value, PrHtmlDomParserSuppor
     return false;
 }
 
-JSValue parseFromString(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue parseFromString(JSContext* ctx, JSValueConst jsObject, int argc, JSValueConst* argv) {
     StringArgument source = {ctx};
     PrHtmlDomParserSupportedType type = {};
-    if (jsThis<uint8_t>(ctx, self, htmlDomParserClass) == nullptr || !jsArgCount(ctx, argc, 2) ||
+    if (jsThis<uint8_t>(ctx, jsObject, htmlDomParserClass) == nullptr || !jsArgCount(ctx, argc, 2) ||
             !source.read(argv[0]) || !readSupportedType(ctx, argv[1], &type))
         return JS_EXCEPTION;
     PrDomDocument* document = prHtmlDomParserParseFromString(source.value(), type);
@@ -257,16 +257,16 @@ JSValue parseFromString(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 // Element (html/#dom-parsing-and-serialization)
 
 // innerHTML and outerHTML, selected by the magic.
-JSValue markup(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue markup(JSContext* ctx, JSValueConst elementObject, int magic) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     return jsTakeString(ctx, magic == 0 ? prHtmlInnerHtml(prDomElementAsNode(element)) : prHtmlOuterHtml(element));
 }
 
 // The setters, which treat null as the empty string ([LegacyNullToEmptyString]).
-JSValue setMarkup(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue setMarkup(JSContext* ctx, JSValueConst elementObject, JSValueConst input, int magic) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument value = {ctx};
     if (element == nullptr || !value.readNullable(input))
         return JS_EXCEPTION;
@@ -278,8 +278,8 @@ JSValue setMarkup(JSContext* ctx, JSValueConst self, JSValueConst input, int mag
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "NoModificationAllowedError");
 }
 
-JSValue insertAdjacentHtml(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue insertAdjacentHtml(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     PrDomInsertPosition where = PrDomInsertPosition_BeforeBegin;
     StringArgument markup = {ctx};
     if (element == nullptr || !jsArgCount(ctx, argc, 2) ||
@@ -292,15 +292,15 @@ JSValue insertAdjacentHtml(JSContext* ctx, JSValueConst self, int argc, JSValueC
 }
 
 // ShadowRoot's innerHTML (html/#dom-shadowroot-innerhtml). Its setter treats null as the empty string.
-JSValue shadowMarkup(JSContext* ctx, JSValueConst self) {
-    PrDomShadowRoot* shadow = jsThis<PrDomShadowRoot>(ctx, self, prJsDomShadowRootClass);
+JSValue shadowMarkup(JSContext* ctx, JSValueConst shadowObject) {
+    PrDomShadowRoot* shadow = jsThis<PrDomShadowRoot>(ctx, shadowObject, prJsDomShadowRootClass);
     if (shadow == nullptr)
         return JS_EXCEPTION;
     return jsTakeString(ctx, prHtmlInnerHtml(prDomShadowRootAsNode(shadow)));
 }
 
-JSValue setShadowMarkup(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrDomShadowRoot* shadow = jsThis<PrDomShadowRoot>(ctx, self, prJsDomShadowRootClass);
+JSValue setShadowMarkup(JSContext* ctx, JSValueConst shadowObject, JSValueConst input) {
+    PrDomShadowRoot* shadow = jsThis<PrDomShadowRoot>(ctx, shadowObject, prJsDomShadowRootClass);
     StringArgument value = {ctx};
     if (shadow == nullptr || !value.readNullable(input))
         return JS_EXCEPTION;
@@ -311,14 +311,14 @@ JSValue setShadowMarkup(JSContext* ctx, JSValueConst self, JSValueConst input) {
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLElement's dir and hidden (html/#dom-dir, html/#dom-hidden)
 
-JSValue dir(JSContext* ctx, JSValueConst self) {
+JSValue dir(JSContext* ctx, JSValueConst elementObject) {
     constexpr PrStringView kDirs[] = {"", "ltr", "rtl", "auto"};
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     return element != nullptr ? jsFixedString(ctx, kDirs[prHtmlElementDir(element)]) : JS_EXCEPTION;
 }
 
-JSValue setDir(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue setDir(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     StringArgument value = {ctx};
     if (element == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -327,16 +327,16 @@ JSValue setDir(JSContext* ctx, JSValueConst self, JSValueConst input) {
 }
 
 // offsetParent (cssom-view-1/#dom-htmlelement-offsetparent).
-JSValue offsetParent(JSContext* ctx, JSValueConst self) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue offsetParent(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     if (element != nullptr)
         return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlElementOffsetParent(element), false);
     return JS_EXCEPTION;
 }
 
 // offsetTop, offsetLeft, offsetWidth and offsetHeight, selected by the magic.
-JSValue offsetGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue offsetGet(JSContext* ctx, JSValueConst elementObject, int magic) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     int32_t (*const offsets[])(PrHtmlElement*) = {
@@ -347,8 +347,8 @@ JSValue offsetGet(JSContext* ctx, JSValueConst self, int magic) {
 }
 
 // hidden, a (boolean or unrestricted double or DOMString), which is true, false or "until-found".
-JSValue hidden(JSContext* ctx, JSValueConst self) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue hidden(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrHtmlHidden state = prHtmlElementHidden(element);
@@ -357,8 +357,8 @@ JSValue hidden(JSContext* ctx, JSValueConst self) {
     return JS_NewBool(ctx, state == PrHtmlHidden_Hidden);
 }
 
-JSValue setHidden(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue setHidden(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrHtmlHidden state = JS_ToBool(ctx, input) ? PrHtmlHidden_Hidden : PrHtmlHidden_NotHidden;
@@ -377,8 +377,8 @@ JSValue setHidden(JSContext* ctx, JSValueConst self, JSValueConst input) {
 // Focus (html/#focus)
 
 // focus, blur and tabIndex, of an HTML, SVG or MathML element (html/#htmlorsvgelement).
-JSValue elementFocus(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue elementFocus(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     bool present = false;
     PrHtmlFocusOptions options = prHtmlFocusOptionsDefault();
     JSValueConst dictionary = argc > 0 ? argv[0] : JS_UNDEFINED;
@@ -390,16 +390,16 @@ JSValue elementFocus(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     return JS_UNDEFINED;
 }
 
-JSValue elementBlur(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue elementBlur(JSContext* ctx, JSValueConst elementObject, int, JSValueConst*) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     prHtmlBlur(element);
     return JS_UNDEFINED;
 }
 
-JSValue setTabIndex(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue setTabIndex(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     int32_t value = 0;
     if (element == nullptr || JS_ToInt32(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -441,16 +441,17 @@ constexpr JsNamed kDataset = {
 };
 
 // html/#dom-dataset, of an HTML, SVG or MathML element.
-JSValue dataset(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue dataset(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "dataset", [&] { return jsWrap(ctx, htmlDomStringMapClass, self, element, false); });
+    return jsSameObject(ctx, elementObject, "dataset",
+        [&] { return jsWrap(ctx, htmlDomStringMapClass, elementObject, element, false); });
 }
 
 // activeElement, of a Document or a ShadowRoot.
-JSValue activeElement(JSContext* ctx, JSValueConst self) {
-    PrDomNode* root = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
+JSValue activeElement(JSContext* ctx, JSValueConst rootObject) {
+    PrDomNode* root = jsThis<PrDomNode>(ctx, rootObject, prJsDomNodeClass);
     if (root == nullptr)
         return JS_EXCEPTION;
     return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlActiveElement(root), false);
@@ -458,29 +459,29 @@ JSValue activeElement(JSContext* ctx, JSValueConst self) {
 
 // The getter of a document's collection of the PrHtmlDocumentCollection `magic`, which returns the same object at each
 // call. plugins returns the object that embeds does (html/#dom-document-plugins).
-JSValue documentCollection(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentCollection(JSContext* ctx, JSValueConst documentObject, int magic) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     constexpr const char* kNames[] = {"images", "embeds", "links", "forms", "scripts", "anchors"};
     PrHtmlDocumentCollection kind = PrHtmlDocumentCollection(magic);
-    return jsSameObject(ctx, self, kNames[kind], [&] {
+    return jsSameObject(ctx, documentObject, kNames[kind], [&] {
         PrDomHtmlCollection* collection = prHtmlDocumentCollection(document, kind);
-        JSValue object = jsWrapAs(ctx, prJsDomHtmlCollectionClass, self, collection, true);
+        JSValue object = jsWrapAs(ctx, prJsDomHtmlCollectionClass, documentObject, collection, true);
         if (JS_IsException(object))
             prDomHtmlCollectionDestroy(collection);
         return object;
     });
 }
 
-JSValue hasFocus(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue hasFocus(JSContext* ctx, JSValueConst documentObject, int, JSValueConst*) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     return document != nullptr ? JS_NewBool(ctx, prHtmlDocumentHasFocus(document)) : JS_EXCEPTION;
 }
 
 // visibilityState (html/#dom-document-visibilitystate) and hidden (html/#dom-document-hidden), selected by the magic.
-JSValue documentVisibility(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentVisibility(JSContext* ctx, JSValueConst documentObject, int magic) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     bool visible = prHtmlDocumentVisibilityState(document) == PrHtmlVisibility_Visible;
@@ -492,13 +493,13 @@ JSValue documentVisibility(JSContext* ctx, JSValueConst self, int magic) {
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLDialogElement (html/#htmldialogelement)
 
-JSValue dialogOpen(JSContext* ctx, JSValueConst self) {
-    PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, self, htmlDialogElementClass);
+JSValue dialogOpen(JSContext* ctx, JSValueConst dialogObject) {
+    PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, dialogObject, htmlDialogElementClass);
     return dialog != nullptr ? JS_NewBool(ctx, prHtmlDialogElementOpen(dialog)) : JS_EXCEPTION;
 }
 
-JSValue setDialogOpen(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, self, htmlDialogElementClass);
+JSValue setDialogOpen(JSContext* ctx, JSValueConst dialogObject, JSValueConst input) {
+    PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, dialogObject, htmlDialogElementClass);
     if (dialog == nullptr)
         return JS_EXCEPTION;
     prHtmlDialogElementSetOpen(dialog, JS_ToBool(ctx, input));
@@ -506,8 +507,8 @@ JSValue setDialogOpen(JSContext* ctx, JSValueConst self, JSValueConst input) {
 }
 
 // show and showModal, selected by the magic.
-JSValue dialogShow(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, self, htmlDialogElementClass);
+JSValue dialogShow(JSContext* ctx, JSValueConst dialogObject, int, JSValueConst*, int magic) {
+    PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, dialogObject, htmlDialogElementClass);
     if (dialog == nullptr)
         return JS_EXCEPTION;
     PrStatus status = magic == 0 ? prHtmlDialogElementShow(dialog) : prHtmlDialogElementShowModal(dialog);
@@ -515,8 +516,8 @@ JSValue dialogShow(JSContext* ctx, JSValueConst self, int, JSValueConst*, int ma
 }
 
 // close and requestClose, selected by the magic. If the optional result is omitted, the return value is unchanged.
-JSValue dialogClose(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, self, htmlDialogElementClass);
+JSValue dialogClose(JSContext* ctx, JSValueConst dialogObject, int argc, JSValueConst* argv, int magic) {
+    PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, dialogObject, htmlDialogElementClass);
     StringArgument result = {ctx, PrStringView{}};
     if (dialog == nullptr || (jsArgGiven(argc, argv, 0) && !result.read(argv[0])))
         return JS_EXCEPTION;
@@ -530,13 +531,13 @@ JSValue dialogClose(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLIFrameElement (html/#htmliframeelement)
 
-JSValue contentWindow(JSContext* ctx, JSValueConst self) {
-    PrHtmlIFrameElement* frame = jsThis<PrHtmlIFrameElement>(ctx, self, htmlIFrameElementClass);
+JSValue contentWindow(JSContext* ctx, JSValueConst frameObject) {
+    PrHtmlIFrameElement* frame = jsThis<PrHtmlIFrameElement>(ctx, frameObject, htmlIFrameElementClass);
     return frame != nullptr ? globalOf(ctx, prHtmlIFrameElementContentWindow(frame)) : JS_EXCEPTION;
 }
 
-JSValue contentDocument(JSContext* ctx, JSValueConst self) {
-    PrHtmlIFrameElement* frame = jsThis<PrHtmlIFrameElement>(ctx, self, htmlIFrameElementClass);
+JSValue contentDocument(JSContext* ctx, JSValueConst frameObject) {
+    PrHtmlIFrameElement* frame = jsThis<PrHtmlIFrameElement>(ctx, frameObject, htmlIFrameElementClass);
     if (frame == nullptr)
         return JS_EXCEPTION;
     PrDomDocument* document = prHtmlIFrameElementContentDocument(frame);
@@ -547,8 +548,8 @@ JSValue contentDocument(JSContext* ctx, JSValueConst self) {
 // HTMLImageElement (html/#htmlimageelement)
 
 // html/#dom-img-decode: the image is fetched whenever its source changes, so the promise settles immediately.
-JSValue imageDecode(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlImageElement* image = jsThis<PrHtmlImageElement>(ctx, self, htmlImageElementClass);
+JSValue imageDecode(JSContext* ctx, JSValueConst imageObject, int, JSValueConst*) {
+    PrHtmlImageElement* image = jsThis<PrHtmlImageElement>(ctx, imageObject, htmlImageElementClass);
     if (image == nullptr)
         return JS_EXCEPTION;
     bool available = prHtmlImageElementState(image) == PrDomImageState_CompletelyAvailable;
@@ -597,8 +598,8 @@ void defineImageFactory(JSContext* ctx, JSValueConst constructor) {
 // HTMLCanvasElement (html/#htmlcanvaselement)
 
 // Implements the setters of width and height, selected by the magic, which throw for a placeholder canvas.
-JSValue setCanvasDimension(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrHtmlCanvasElement* canvas = jsThis<PrHtmlCanvasElement>(ctx, self, htmlCanvasElementClass);
+JSValue setCanvasDimension(JSContext* ctx, JSValueConst canvasObject, JSValueConst input, int magic) {
+    PrHtmlCanvasElement* canvas = jsThis<PrHtmlCanvasElement>(ctx, canvasObject, htmlCanvasElementClass);
     uint32_t value = 0;
     if (canvas == nullptr || JS_ToUint32(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -606,8 +607,8 @@ JSValue setCanvasDimension(JSContext* ctx, JSValueConst self, JSValueConst input
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "InvalidStateError");
 }
 
-JSValue canvasDimension(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlCanvasElement* canvas = jsThis<PrHtmlCanvasElement>(ctx, self, htmlCanvasElementClass);
+JSValue canvasDimension(JSContext* ctx, JSValueConst canvasObject, int magic) {
+    PrHtmlCanvasElement* canvas = jsThis<PrHtmlCanvasElement>(ctx, canvasObject, htmlCanvasElementClass);
     if (canvas == nullptr)
         return JS_EXCEPTION;
     return JS_NewUint32(ctx, magic == 0 ? prHtmlCanvasElementWidth(canvas) : prHtmlCanvasElementHeight(canvas));
@@ -615,8 +616,8 @@ JSValue canvasDimension(JSContext* ctx, JSValueConst self, int magic) {
 
 // html/#dom-canvas-getcontext. The engine makes 2D contexts, and every other context ID gives null. The context's
 // object is the same each time, and the canvas's object holds it.
-JSValue canvasGetContext(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlCanvasElement* canvas = jsThis<PrHtmlCanvasElement>(ctx, self, htmlCanvasElementClass);
+JSValue canvasGetContext(JSContext* ctx, JSValueConst canvasObject, int argc, JSValueConst* argv) {
+    PrHtmlCanvasElement* canvas = jsThis<PrHtmlCanvasElement>(ctx, canvasObject, htmlCanvasElementClass);
     StringArgument id = {ctx};
     if (canvas == nullptr || !jsArgCount(ctx, argc, 1) || !id.read(argv[0]))
         return JS_EXCEPTION;
@@ -632,12 +633,13 @@ JSValue canvasGetContext(JSContext* ctx, JSValueConst self, int argc, JSValueCon
     PrCanvas* context = nullptr;
     if (prHtmlCanvasElementGetContext2D(canvas, &settings, &context) != PrStatus_Ok || context == nullptr)
         return JS_NULL;
-    return jsSameObject(ctx, self, "context2d", [&] { return prJsCanvasRenderingContext2DNew(ctx, context, self); });
+    return jsSameObject(ctx, canvasObject, "context2d",
+        [&] { return prJsCanvasRenderingContext2DNew(ctx, context, canvasObject); });
 }
 
 // html/#dom-canvas-todataurl. The quality is not read: the engine encodes no type that has one.
-JSValue canvasToDataUrl(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlCanvasElement* canvas = jsThis<PrHtmlCanvasElement>(ctx, self, htmlCanvasElementClass);
+JSValue canvasToDataUrl(JSContext* ctx, JSValueConst canvasObject, int argc, JSValueConst* argv) {
+    PrHtmlCanvasElement* canvas = jsThis<PrHtmlCanvasElement>(ctx, canvasObject, htmlCanvasElementClass);
     StringArgument type = {.ctx = ctx, .fallback = "image/png"};
     if (canvas == nullptr || (jsArgGiven(argc, argv, 0) && !type.read(argv[0])))
         return JS_EXCEPTION;
@@ -676,21 +678,21 @@ void timeRangesDestroy(TimeRangesValue* PR_NULLABLE ranges) {
     prMemoryFree(ranges);
 }
 
-PrHtmlMediaElement* PR_NULLABLE mediaThis(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlMediaElement>(ctx, self, htmlMediaElementClass);
+PrHtmlMediaElement* PR_NULLABLE mediaThis(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlMediaElement>(ctx, object, htmlMediaElementClass);
 }
 
 // The element's error, as the same object while the error is unchanged.
-JSValue mediaError(JSContext* ctx, JSValueConst self) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaError(JSContext* ctx, JSValueConst mediaObject) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     PrHtmlMediaError code = prHtmlMediaElementError(media);
     if (code == PrHtmlMediaError_None) {
-        jsSetSameObject(ctx, self, "[[MediaError]]", JS_UNDEFINED);
+        jsSetSameObject(ctx, mediaObject, "[[MediaError]]", JS_UNDEFINED);
         return JS_NULL;
     }
-    JSValue held = jsSameObject(ctx, self, "[[MediaError]]");
+    JSValue held = jsSameObject(ctx, mediaObject, "[[MediaError]]");
     MediaErrorValue* value = static_cast<MediaErrorValue*>(jsHandleIn(ctx, held, htmlMediaErrorClass));
     if (value != nullptr && value->code == code)
         return held;
@@ -702,24 +704,24 @@ JSValue mediaError(JSContext* ctx, JSValueConst self) {
         mediaErrorDestroy(error);
         return object;
     }
-    jsSetSameObject(ctx, self, "[[MediaError]]", object);
+    jsSetSameObject(ctx, mediaObject, "[[MediaError]]", object);
     return object;
 }
 
-JSValue mediaErrorCode(JSContext* ctx, JSValueConst self) {
-    MediaErrorValue* error = jsThis<MediaErrorValue>(ctx, self, htmlMediaErrorClass);
+JSValue mediaErrorCode(JSContext* ctx, JSValueConst errorObject) {
+    MediaErrorValue* error = jsThis<MediaErrorValue>(ctx, errorObject, htmlMediaErrorClass);
     return error != nullptr ? JS_NewUint32(ctx, error->code) : JS_EXCEPTION;
 }
 
-JSValue mediaErrorMessage(JSContext* ctx, JSValueConst self) {
-    MediaErrorValue* error = jsThis<MediaErrorValue>(ctx, self, htmlMediaErrorClass);
+JSValue mediaErrorMessage(JSContext* ctx, JSValueConst errorObject) {
+    MediaErrorValue* error = jsThis<MediaErrorValue>(ctx, errorObject, htmlMediaErrorClass);
     return error != nullptr ? jsNewString(ctx, &error->message) : JS_EXCEPTION;
 }
 
 // buffered, played and seekable, selected by the magic, which is the PrHtmlMediaRanges. Each read returns a new
 // TimeRanges (html/#dom-media-buffered).
-JSValue mediaRanges(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaRanges(JSContext* ctx, JSValueConst mediaObject, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     uint32_t count = prHtmlMediaElementRanges(media, PrHtmlMediaRanges(magic), nullptr, nullptr, 0);
@@ -741,14 +743,14 @@ JSValue mediaRanges(JSContext* ctx, JSValueConst self, int magic) {
     return object;
 }
 
-JSValue timeRangesLength(JSContext* ctx, JSValueConst self) {
-    TimeRangesValue* ranges = jsThis<TimeRangesValue>(ctx, self, htmlTimeRangesClass);
+JSValue timeRangesLength(JSContext* ctx, JSValueConst rangesObject) {
+    TimeRangesValue* ranges = jsThis<TimeRangesValue>(ctx, rangesObject, htmlTimeRangesClass);
     return ranges != nullptr ? JS_NewUint32(ctx, ranges->bounds.count / 2) : JS_EXCEPTION;
 }
 
 // start and end, selected by the magic. Throws IndexSizeError for an index past the last range.
-JSValue timeRangesBound(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    TimeRangesValue* ranges = jsThis<TimeRangesValue>(ctx, self, htmlTimeRangesClass);
+JSValue timeRangesBound(JSContext* ctx, JSValueConst rangesObject, int argc, JSValueConst* argv, int magic) {
+    TimeRangesValue* ranges = jsThis<TimeRangesValue>(ctx, rangesObject, htmlTimeRangesClass);
     uint32_t index = 0;
     if (ranges == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -758,16 +760,16 @@ JSValue timeRangesBound(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 }
 
 // The unsigned short attributes of a media element, selected by the magic: networkState and readyState.
-JSValue mediaState(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaState(JSContext* ctx, JSValueConst mediaObject, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     return JS_NewUint32(ctx, magic == 0 ? prHtmlMediaElementNetworkState(media) : prHtmlMediaElementReadyState(media));
 }
 
 // The boolean attributes, selected by the magic: seeking, paused, ended, muted and preservesPitch.
-JSValue mediaFlag(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaFlag(JSContext* ctx, JSValueConst mediaObject, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
@@ -779,8 +781,8 @@ JSValue mediaFlag(JSContext* ctx, JSValueConst self, int magic) {
     }
 }
 
-JSValue setMediaFlag(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue setMediaFlag(JSContext* ctx, JSValueConst mediaObject, JSValueConst input, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     bool value = JS_ToBool(ctx, input) != 0;
@@ -792,8 +794,8 @@ JSValue setMediaFlag(JSContext* ctx, JSValueConst self, JSValueConst input, int 
 }
 
 // The double attributes, selected by the magic: currentTime, duration, defaultPlaybackRate, playbackRate and volume.
-JSValue mediaNumber(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaNumber(JSContext* ctx, JSValueConst mediaObject, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
@@ -805,8 +807,8 @@ JSValue mediaNumber(JSContext* ctx, JSValueConst self, int magic) {
     }
 }
 
-JSValue setMediaNumber(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue setMediaNumber(JSContext* ctx, JSValueConst mediaObject, JSValueConst input, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     double value = 0;
     if (media == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -827,23 +829,23 @@ JSValue setMediaNumber(JSContext* ctx, JSValueConst self, JSValueConst input, in
     return JS_UNDEFINED;
 }
 
-JSValue mediaCurrentSrc(JSContext* ctx, JSValueConst self) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaCurrentSrc(JSContext* ctx, JSValueConst mediaObject) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     return jsNewStringView(ctx, prHtmlMediaElementCurrentSrc(media));
 }
 
-JSValue mediaLoad(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaLoad(JSContext* ctx, JSValueConst mediaObject, int, JSValueConst*) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     prHtmlMediaElementLoad(media);
     return JS_UNDEFINED;
 }
 
-JSValue mediaCanPlayType(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaCanPlayType(JSContext* ctx, JSValueConst mediaObject, int argc, JSValueConst* argv) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     StringArgument type = {ctx};
     if (media == nullptr || !jsArgCount(ctx, argc, 1) || !type.read(argv[0]))
         return JS_EXCEPTION;
@@ -851,8 +853,8 @@ JSValue mediaCanPlayType(JSContext* ctx, JSValueConst self, int argc, JSValueCon
     return jsFixedString(ctx, kResults[prHtmlMediaElementCanPlayType(media, type.value())]);
 }
 
-JSValue mediaFastSeek(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaFastSeek(JSContext* ctx, JSValueConst mediaObject, int argc, JSValueConst* argv) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     double time = 0;
     if (media == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToFloat64(ctx, &time, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -863,8 +865,8 @@ JSValue mediaFastSeek(JSContext* ctx, JSValueConst self, int argc, JSValueConst*
 }
 
 // html/#dom-media-getstartdate: the timeline has no offset from a date, so this returns NaN.
-JSValue mediaStartDate(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (mediaThis(ctx, self) == nullptr)
+JSValue mediaStartDate(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (mediaThis(ctx, object) == nullptr)
         return JS_EXCEPTION;
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue date = JS_GetPropertyStr(ctx, global, "Date");
@@ -900,8 +902,8 @@ void releasePlay(void* PR_NULLABLE context) {
 }
 
 // html/#dom-media-play
-JSValue mediaPlay(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaPlay(JSContext* ctx, JSValueConst mediaObject, int, JSValueConst*) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     JSValue functions[2];
@@ -920,8 +922,8 @@ JSValue mediaPlay(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     return promise;
 }
 
-JSValue mediaPause(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaPause(JSContext* ctx, JSValueConst mediaObject, int, JSValueConst*) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     prHtmlMediaElementPause(media);
@@ -933,8 +935,8 @@ constexpr PrStringView kMediaEnumerated[] = {"crossorigin", "preload", "loading"
 
 // An enumerated attribute of a media element (html/#enumerated-attribute), selected by the magic: crossOrigin, whose
 // missing value is null (html/#cors-settings-attribute), preload, and loading (html/#lazy-loading-attributes).
-JSValue mediaEnumerated(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue mediaEnumerated(JSContext* ctx, JSValueConst elementObject, int magic) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrStringView text = prDomElementGetAttribute(element, kMediaEnumerated[magic]);
@@ -949,8 +951,8 @@ JSValue mediaEnumerated(JSContext* ctx, JSValueConst self, int magic) {
     return result != nullptr ? JS_NewString(ctx, result) : JS_NULL;
 }
 
-JSValue setMediaEnumerated(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue setMediaEnumerated(JSContext* ctx, JSValueConst elementObject, JSValueConst input, int magic) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     if (magic == 0 && JS_IsNull(input)) {
@@ -965,8 +967,8 @@ JSValue setMediaEnumerated(JSContext* ctx, JSValueConst self, JSValueConst input
 }
 
 // videoWidth and videoHeight, selected by the magic.
-JSValue videoSize(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue videoSize(JSContext* ctx, JSValueConst mediaObject, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     return JS_NewUint32(ctx, magic == 0 ? prHtmlMediaElementVideoWidth(media) : prHtmlMediaElementVideoHeight(media));
@@ -974,43 +976,43 @@ JSValue videoSize(JSContext* ctx, JSValueConst self, int magic) {
 
 // [SameObject] textTracks, audioTracks and videoTracks, selected by the magic, a PrHtmlTrackKind. The element's object
 // holds the list's object, which keeps the element's object alive.
-JSValue mediaTracks(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlMediaElement* media = mediaThis(ctx, self);
+JSValue mediaTracks(JSContext* ctx, JSValueConst mediaObject, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
     if (media == nullptr)
         return JS_EXCEPTION;
     constexpr const char* kNames[] = {"textTracks", "audioTracks", "videoTracks"};
     PrHtmlTrackKind kind = PrHtmlTrackKind(magic);
-    return jsSameObject(ctx, self, kNames[kind], [&] {
+    return jsSameObject(ctx, mediaObject, kNames[kind], [&] {
         PrHtmlTrackList* list = prHtmlMediaElementTracks(media, kind);
-        return jsWrap(ctx, trackListClass(kind), self, prHtmlTrackListAsEventTarget(list), false);
+        return jsWrap(ctx, trackListClass(kind), mediaObject, prHtmlTrackListAsEventTarget(list), false);
     });
 }
 
-// Returns `self` as a track list of any kind, or null with an exception pending.
-PrHtmlTrackList* PR_NULLABLE trackListThis(JSContext* ctx, JSValueConst self) {
-    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, self, prJsDomEventTargetClass);
+// Returns `targetObject` as a track list of any kind, or null with an exception pending.
+PrHtmlTrackList* PR_NULLABLE trackListThis(JSContext* ctx, JSValueConst targetObject) {
+    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, targetObject, prJsDomEventTargetClass);
     PrHtmlTrackList* list = prHtmlTrackListQuery(target);
     if (target != nullptr && list == nullptr)
         JS_ThrowTypeError(ctx, "Illegal invocation");
     return list;
 }
 
-JSValue trackListLength(JSContext* ctx, JSValueConst self) {
-    PrHtmlTrackList* list = trackListThis(ctx, self);
+JSValue trackListLength(JSContext* ctx, JSValueConst listObject) {
+    PrHtmlTrackList* list = trackListThis(ctx, listObject);
     return list != nullptr ? JS_NewUint32(ctx, prHtmlTrackListLength(list)) : JS_EXCEPTION;
 }
 
 // getTrackById (html/#dom-texttracklist-gettrackbyid and the others): the list's track whose id is the argument, or
 // null.
-JSValue trackListGetTrackById(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue trackListGetTrackById(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
     StringArgument id = {ctx};
-    if (trackListThis(ctx, self) == nullptr || !jsArgCount(ctx, argc, 1) || !id.read(argv[0]))
+    if (trackListThis(ctx, object) == nullptr || !jsArgCount(ctx, argc, 1) || !id.read(argv[0]))
         return JS_EXCEPTION;
     return JS_NULL;
 }
 
-JSValue trackListSelectedIndex(JSContext* ctx, JSValueConst self) {
-    PrHtmlTrackList* list = trackListThis(ctx, self);
+JSValue trackListSelectedIndex(JSContext* ctx, JSValueConst listObject) {
+    PrHtmlTrackList* list = trackListThis(ctx, listObject);
     return list != nullptr ? JS_NewInt32(ctx, prHtmlTrackListSelectedIndex(list)) : JS_EXCEPTION;
 }
 
@@ -1018,8 +1020,8 @@ JSValue trackListSelectedIndex(JSContext* ctx, JSValueConst self) {
 // HTMLSlotElement (html/#htmlslotelement)
 
 // assignedNodes(options) and assignedElements(options). The magic says whether only elements are returned.
-JSValue slotAssigned(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlSlotElement* slot = jsThis<PrHtmlSlotElement>(ctx, self, htmlSlotElementClass);
+JSValue slotAssigned(JSContext* ctx, JSValueConst slotObject, int argc, JSValueConst* argv, int magic) {
+    PrHtmlSlotElement* slot = jsThis<PrHtmlSlotElement>(ctx, slotObject, htmlSlotElementClass);
     bool present = false;
     bool flatten = false;
     JSValueConst options = argc > 0 ? argv[0] : JS_UNDEFINED;
@@ -1041,8 +1043,8 @@ JSValue slotAssigned(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 }
 
 // assign(...nodes), of elements and text nodes.
-JSValue slotAssign(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlSlotElement* slot = jsThis<PrHtmlSlotElement>(ctx, self, htmlSlotElementClass);
+JSValue slotAssign(JSContext* ctx, JSValueConst slotObject, int argc, JSValueConst* argv) {
+    PrHtmlSlotElement* slot = jsThis<PrHtmlSlotElement>(ctx, slotObject, htmlSlotElementClass);
     if (slot == nullptr)
         return JS_EXCEPTION;
     Array<PrDomNode* PR_NONNULL> nodes;
@@ -1063,8 +1065,8 @@ JSValue slotAssign(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLTemplateElement's shadow root attributes (html/#dom-template-shadowrootmode)
 
-JSValue shadowRootMode(JSContext* ctx, JSValueConst self, int) {
-    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
+JSValue shadowRootMode(JSContext* ctx, JSValueConst elementObject, int) {
+    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, elementObject, htmlTemplateElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomShadowRootMode mode = PrDomShadowRootMode_Open;
@@ -1073,8 +1075,8 @@ JSValue shadowRootMode(JSContext* ctx, JSValueConst self, int) {
     return jsFixedString(ctx, mode == PrDomShadowRootMode_Open ? "open" : "closed");
 }
 
-JSValue shadowRootSlotAssignment(JSContext* ctx, JSValueConst self, int) {
-    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
+JSValue shadowRootSlotAssignment(JSContext* ctx, JSValueConst elementObject, int) {
+    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, elementObject, htmlTemplateElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     bool manual = prHtmlTemplateElementShadowRootSlotAssignment(element) == PrDomSlotAssignmentMode_Manual;
@@ -1082,9 +1084,9 @@ JSValue shadowRootSlotAssignment(JSContext* ctx, JSValueConst self, int) {
 }
 
 // The setters, which set the attribute to the given string.
-JSValue setAttributeString(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
+JSValue setAttributeString(JSContext* ctx, JSValueConst elementObject, JSValueConst input, int magic) {
     constexpr PrStringView kNames[] = {"shadowrootmode", "shadowrootslotassignment"};
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument value = {ctx};
     if (element == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -1095,15 +1097,15 @@ JSValue setAttributeString(JSContext* ctx, JSValueConst self, JSValueConst input
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLHyperlinkElementUtils (html/#api-for-a-and-area-elements), each attribute named by its PrUrlComponent
 
-JSValue hyperlinkComponent(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue hyperlinkComponent(JSContext* ctx, JSValueConst elementObject, int magic) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     return jsTakeString(ctx, prHtmlHyperlinkComponent(element, PrUrlComponent(magic)));
 }
 
-JSValue setHyperlinkComponent(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
+JSValue setHyperlinkComponent(JSContext* ctx, JSValueConst elementObject, JSValueConst input, int magic) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
     StringArgument value = {ctx};
     if (element == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -1112,16 +1114,16 @@ JSValue setHyperlinkComponent(JSContext* ctx, JSValueConst self, JSValueConst in
 }
 
 // The stringifier, which is the href attribute.
-JSValue hyperlinkToString(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    return hyperlinkComponent(ctx, self, PrUrlComponent_Href);
+JSValue hyperlinkToString(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    return hyperlinkComponent(ctx, object, PrUrlComponent_Href);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLBaseElement (html/#htmlbaseelement)
 
 // The href attribute's getter. Its setter is the same as a DOMString attribute's setter.
-JSValue baseHref(JSContext* ctx, JSValueConst self) {
-    PrHtmlBaseElement* element = jsThis<PrHtmlBaseElement>(ctx, self, htmlBaseElementClass);
+JSValue baseHref(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlBaseElement* element = jsThis<PrHtmlBaseElement>(ctx, elementObject, htmlBaseElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     return jsTakeString(ctx, prHtmlBaseElementHref(element));
@@ -1130,32 +1132,32 @@ JSValue baseHref(JSContext* ctx, JSValueConst self) {
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLLinkElement (html/#htmllinkelement)
 
-JSValue linkSheet(JSContext* ctx, JSValueConst self) {
-    PrHtmlLinkElement* element = jsThis<PrHtmlLinkElement>(ctx, self, htmlLinkElementClass);
+JSValue linkSheet(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlLinkElement* element = jsThis<PrHtmlLinkElement>(ctx, elementObject, htmlLinkElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsWrap(ctx, prJsCssStyleSheetClass, self, prHtmlLinkElementSheet(element), false);
+    return jsWrap(ctx, prJsCssStyleSheetClass, elementObject, prHtmlLinkElementSheet(element), false);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLStyleElement (html/#htmlstyleelement)
 
-JSValue sheet(JSContext* ctx, JSValueConst self) {
-    PrHtmlStyleElement* element = jsThis<PrHtmlStyleElement>(ctx, self, htmlStyleElementClass);
+JSValue sheet(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlStyleElement* element = jsThis<PrHtmlStyleElement>(ctx, elementObject, htmlStyleElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsWrap(ctx, prJsCssStyleSheetClass, self, prHtmlStyleElementSheet(element), false);
+    return jsWrap(ctx, prJsCssStyleSheetClass, elementObject, prHtmlStyleElementSheet(element), false);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLTemplateElement (html/#htmltemplateelement)
 
-JSValue content(JSContext* ctx, JSValueConst self) {
-    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
+JSValue content(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, elementObject, htmlTemplateElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomDocumentFragment* fragment = prHtmlTemplateElementContent(element);
-    return jsWrapAs(ctx, prJsDomNodeClass, self, prDomDocumentFragmentAsNode(fragment), false);
+    return jsWrapAs(ctx, prJsDomNodeClass, elementObject, prDomDocumentFragmentAsNode(fragment), false);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1200,10 +1202,10 @@ JSValue errorEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JS
     return jsConstructed(ctx, newTarget, object);
 }
 
-JSValue errorValue(JSContext* ctx, JSValueConst self) {
-    if (jsThis<PrHtmlErrorEvent>(ctx, self, htmlErrorEventClass) == nullptr)
+JSValue errorValue(JSContext* ctx, JSValueConst object) {
+    if (jsThis<PrHtmlErrorEvent>(ctx, object, htmlErrorEventClass) == nullptr)
         return JS_EXCEPTION;
-    return jsReference(ctx, self, kErrorSlot);
+    return jsReference(ctx, object, kErrorSlot);
 }
 
 // html/#report-an-exception at the global's window, as an ErrorEvent that holds the exception. If no listener cancels
@@ -1334,11 +1336,11 @@ JSValue messageConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
 }
 
 // data: the value that the event was created with, or the message that it carries, deserialized once in this realm.
-JSValue messageData(JSContext* ctx, JSValueConst self) {
-    PrHtmlMessageEvent* event = jsThis<PrHtmlMessageEvent>(ctx, self, htmlMessageEventClass);
+JSValue messageData(JSContext* ctx, JSValueConst eventObject) {
+    PrHtmlMessageEvent* event = jsThis<PrHtmlMessageEvent>(ctx, eventObject, htmlMessageEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
-    JSValue data = jsReference(ctx, self, MessageSlot_Data);
+    JSValue data = jsReference(ctx, eventObject, MessageSlot_Data);
     if (!JS_IsUndefined(data))
         return data;
     PrStringView bytes = prHtmlMessageEventSerializedData(event);
@@ -1347,12 +1349,12 @@ JSValue messageData(JSContext* ctx, JSValueConst self) {
     data = JS_ReadObject(ctx, reinterpret_cast<const uint8_t*>(bytes.data), bytes.size, kSerializeFlags);
     if (JS_IsException(data))
         return data;
-    jsSetReference(ctx, self, MessageSlot_Data, data);
+    jsSetReference(ctx, eventObject, MessageSlot_Data, data);
     return data;
 }
 
-JSValue messageSource(JSContext* ctx, JSValueConst self) {
-    PrHtmlMessageEvent* event = jsThis<PrHtmlMessageEvent>(ctx, self, htmlMessageEventClass);
+JSValue messageSource(JSContext* ctx, JSValueConst eventObject) {
+    PrHtmlMessageEvent* event = jsThis<PrHtmlMessageEvent>(ctx, eventObject, htmlMessageEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     PrDomEventTarget* source = prHtmlMessageEventSource(event);
@@ -1360,23 +1362,23 @@ JSValue messageSource(JSContext* ctx, JSValueConst self) {
 }
 
 // ports, a FrozenArray of the ports that a message transferred. No message transfers ports here.
-JSValue messagePorts(JSContext* ctx, JSValueConst self) {
-    if (jsThis<PrHtmlMessageEvent>(ctx, self, htmlMessageEventClass) == nullptr)
+JSValue messagePorts(JSContext* ctx, JSValueConst portsObject) {
+    if (jsThis<PrHtmlMessageEvent>(ctx, portsObject, htmlMessageEventClass) == nullptr)
         return JS_EXCEPTION;
-    JSValue ports = jsReference(ctx, self, MessageSlot_Ports);
+    JSValue ports = jsReference(ctx, portsObject, MessageSlot_Ports);
     if (!JS_IsUndefined(ports))
         return ports;
     ports = JS_NewArray(ctx);
     JS_FreezeObject(ctx, ports);
-    jsSetReference(ctx, self, MessageSlot_Ports, ports);
+    jsSetReference(ctx, portsObject, MessageSlot_Ports, ports);
     return ports;
 }
 
 // postMessage(message, targetOrigin) and postMessage(message, options). The source is the window of the incumbent
 // realm. A message that the engine cannot serialize throws a DataCloneError, and a target origin that is not a URL
 // throws a SyntaxError.
-JSValue postMessage(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue postMessage(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     PrHtmlWindow* source = globalWindow(jsIncumbentRealm(ctx));
     StringArgument targetOrigin = {ctx, "/"};
     if (window == nullptr || source == nullptr || !jsArgCount(ctx, argc, 1))
@@ -1428,8 +1430,8 @@ JSValue pageRevealConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JS
     return jsConstructed(ctx, newTarget, object);
 }
 
-JSValue pageRevealViewTransition(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlPageRevealEvent>(ctx, self, htmlPageRevealEventClass) != nullptr ? JS_NULL : JS_EXCEPTION;
+JSValue pageRevealViewTransition(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlPageRevealEvent>(ctx, object, htmlPageRevealEventClass) != nullptr ? JS_NULL : JS_EXCEPTION;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1484,10 +1486,10 @@ JSValue rejectionConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
 }
 
 // promise and reason, selected by the magic, which is the slot.
-JSValue rejectionMember(JSContext* ctx, JSValueConst self, int magic) {
-    if (jsThis<PrHtmlPromiseRejectionEvent>(ctx, self, htmlPromiseRejectionEventClass) == nullptr)
+JSValue rejectionMember(JSContext* ctx, JSValueConst object, int magic) {
+    if (jsThis<PrHtmlPromiseRejectionEvent>(ctx, object, htmlPromiseRejectionEventClass) == nullptr)
         return JS_EXCEPTION;
-    return jsReference(ctx, self, uint32_t(magic));
+    return jsReference(ctx, object, uint32_t(magic));
 }
 
 // html/#the-hostpromiserejectiontracker-implementation: a promise rejected with no handler is added to the window's
@@ -1530,8 +1532,8 @@ void trackRejection(JSContext* ctx, JSValueConst promise, JSValueConst reason, b
 // ---------------------------------------------------------------------------------------------------------------------
 // Window (html/#window)
 
-JSValue document(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue document(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     // The receiver may be the global, whose prototype is the window's object.
@@ -1555,8 +1557,8 @@ JSValue document(JSContext* ctx, JSValueConst self) {
 
 // cssom-1/#dom-window-getcomputedstyle: returns the element's computed style, which keeps the element alive. A
 // pseudo-element has no style of its own here.
-JSValue getComputedStyle(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue getComputedStyle(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomElement* element = jsValueOf<PrDomElement>(ctx, argv[0], prJsDomElementClass, "an Element");
@@ -1569,22 +1571,23 @@ JSValue getComputedStyle(JSContext* ctx, JSValueConst self, int argc, JSValueCon
     return jsWrap(ctx, prJsCssStylePropertiesClass, argv[0], prCssElementComputedStyle(element, pseudoElement.value()), false);
 }
 
-JSValue matchMedia(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue matchMedia(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     StringArgument query = {ctx};
     if (window == nullptr || !jsArgCount(ctx, argc, 1) || !query.read(argv[0]))
         return JS_EXCEPTION;
     PrCssMediaQueryList* list = prHtmlWindowMatchMedia(window, query.value());
-    JSValue object = jsWrap(ctx, prJsCssMediaQueryListClass, self, list, true);
+    JSValue object = jsWrap(ctx, prJsCssMediaQueryListClass, windowObject, list, true);
     if (JS_IsException(object))
         prCssMediaQueryListRelease(list);
     return object;
 }
 
 // html/#dom-btoa: the base64 of the bytes that the string's code units are. A code unit above U+00FF is not a byte.
-JSValue btoa(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue btoa(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
     StringArgument data = {ctx};
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass) == nullptr || !jsArgCount(ctx, argc, 1) || !data.read(argv[0]))
+    if (jsThis<PrHtmlWindow>(ctx, object, htmlWindowClass) == nullptr || !jsArgCount(ctx, argc, 1) ||
+            !data.read(argv[0]))
         return JS_EXCEPTION;
     PrStringView text = data.value();
     TextBuffer bytes;
@@ -1608,9 +1611,10 @@ JSValue btoa(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
 }
 
 // html/#dom-atob: the bytes that the forgiving-base64 decode of the string gives, each as a code unit.
-JSValue atob(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue atob(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
     StringArgument data = {ctx};
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass) == nullptr || !jsArgCount(ctx, argc, 1) || !data.read(argv[0]))
+    if (jsThis<PrHtmlWindow>(ctx, object, htmlWindowClass) == nullptr || !jsArgCount(ctx, argc, 1) ||
+            !data.read(argv[0]))
         return JS_EXCEPTION;
     PrStringView text = data.value();
     size_t capacity = base64DecodedCapacity(text.size);
@@ -1684,8 +1688,8 @@ JSValue timerFunction(JSContext* ctx, int argc, JSValueConst* argv) {
 }
 
 // html/#dom-settimeout: setTimeout and setInterval, whose magic is 1 for an interval.
-JSValue setTimeout(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue setTimeout(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     int32_t timeout = 0;
@@ -1704,8 +1708,8 @@ JSValue setTimeout(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
     return JS_NewInt32(ctx, prHtmlWindowSetTimeout(window, handler.get(), timeout, magic != 0));
 }
 
-JSValue clearTimeout(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue clearTimeout(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     int32_t id = 0;
     if (window == nullptr || (jsArgGiven(argc, argv, 0) && JS_ToInt32(ctx, &id, argv[0]) < 0))
         return JS_EXCEPTION;
@@ -1755,16 +1759,16 @@ void invokeFrame(void* PR_NULLABLE context, double now) {
     callWithGlobal(callback, 1, &time);
 }
 
-JSValue requestAnimationFrame(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue requestAnimationFrame(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     CallbackArgument<PrHtmlFrameRequestCallback> callback = {ctx, JS_UNDEFINED};
     if (window == nullptr || !jsArgCount(ctx, argc, 1) || !callback.readFunction(argv[0], invokeFrame))
         return JS_EXCEPTION;
     return JS_NewUint32(ctx, prHtmlWindowRequestAnimationFrame(window, callback.get()));
 }
 
-JSValue cancelAnimationFrame(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue cancelAnimationFrame(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     uint32_t handle = 0;
     if (window == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &handle, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -1777,8 +1781,8 @@ constexpr int kParentMagic = 7;
 
 // html/#dom-parent and html/#dom-top, selected by the magic. Returns the global of the window's parent for
 // kParentMagic, and otherwise of its outermost ancestor. Returns the window's own global if it has no such ancestor.
-JSValue ancestor(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue ancestor(JSContext* ctx, JSValueConst windowObject, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     for (PrHtmlWindow* parent = prHtmlWindowParent(window); parent != nullptr; parent = prHtmlWindowParent(window)) {
@@ -1791,8 +1795,8 @@ JSValue ancestor(JSContext* ctx, JSValueConst self, int magic) {
 
 // [Replaceable] performance (hr-time-3/#the-performance-attribute). The window owns it, and the window's object holds
 // its object.
-JSValue performance(JSContext* ctx, JSValueConst self, int) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue performance(JSContext* ctx, JSValueConst windowObject, int) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     JSValue holder = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
@@ -1811,21 +1815,21 @@ JSValue performance(JSContext* ctx, JSValueConst self, int) {
 
 // A [Replaceable] attribute's setter (webidl/#Replaceable): the value becomes an own property of the receiver, named by
 // the attribute that the magic selects.
-JSValue setReplaceable(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
+JSValue setReplaceable(JSContext* ctx, JSValueConst object, JSValueConst input, int magic) {
     constexpr const char* kNames[] = {
         "performance", "innerWidth",  "innerHeight", "scrollX",
         "scrollY",     "pageXOffset", "pageYOffset", "parent",
         "devicePixelRatio",
     };
-    if (JS_DefinePropertyValueStr(ctx, self, kNames[magic], JS_DupValue(ctx, input), JS_PROP_C_W_E) < 0)
+    if (JS_DefinePropertyValueStr(ctx, object, kNames[magic], JS_DupValue(ctx, input), JS_PROP_C_W_E) < 0)
         return JS_EXCEPTION;
     return JS_UNDEFINED;
 }
 
 // The [Replaceable] measures of the viewport (cssom-view-1/#extensions-to-the-window-interface), selected by the magic
 // by which setReplaceable names them.
-JSValue viewportGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue viewportGet(JSContext* ctx, JSValueConst windowObject, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
@@ -1840,8 +1844,8 @@ JSValue viewportGet(JSContext* ctx, JSValueConst self, int magic) {
 
 // scroll and scrollTo for magic 0, and scrollBy for 1 (cssom-view-1/#dom-window-scroll). Each scroll completes as soon
 // as it is made.
-JSValue windowScroll(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue windowScroll(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     PrCssScrollToOptions options{};
     if (window == nullptr || !prJsCssScrollToOptionsRead(ctx, argc, argv, &options))
         return prJsCssScrollPromise(ctx, false);
@@ -1852,14 +1856,14 @@ JSValue windowScroll(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     return prJsCssScrollPromise(ctx, true);
 }
 
-JSValue performanceNow(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlPerformance* performance = jsThis<PrHtmlPerformance>(ctx, self, htmlPerformanceClass);
+JSValue performanceNow(JSContext* ctx, JSValueConst performanceObject, int, JSValueConst*) {
+    PrHtmlPerformance* performance = jsThis<PrHtmlPerformance>(ctx, performanceObject, htmlPerformanceClass);
     return performance != nullptr ? JS_NewFloat64(ctx, prHtmlPerformanceNow(performance)) : JS_EXCEPTION;
 }
 
 // hr-time-3/#dom-performance-tojson: an object of its attributes, of which there is only timeOrigin.
-JSValue performanceToJson(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlPerformance* performance = jsThis<PrHtmlPerformance>(ctx, self, htmlPerformanceClass);
+JSValue performanceToJson(JSContext* ctx, JSValueConst performanceObject, int, JSValueConst*) {
+    PrHtmlPerformance* performance = jsThis<PrHtmlPerformance>(ctx, performanceObject, htmlPerformanceClass);
     if (performance == nullptr)
         return JS_EXCEPTION;
     JSValue object = JS_NewObject(ctx);
@@ -1870,8 +1874,8 @@ JSValue performanceToJson(JSContext* ctx, JSValueConst self, int, JSValueConst*)
 // ---------------------------------------------------------------------------------------------------------------------
 // AnimationTimeline and DocumentTimeline (web-animations-1/#the-animationtimeline-interface)
 
-JSValue timelineCurrentTime(JSContext* ctx, JSValueConst self) {
-    PrHtmlDocumentTimeline* timeline = jsThis<PrHtmlDocumentTimeline>(ctx, self, htmlAnimationTimelineClass);
+JSValue timelineCurrentTime(JSContext* ctx, JSValueConst timelineObject) {
+    PrHtmlDocumentTimeline* timeline = jsThis<PrHtmlDocumentTimeline>(ctx, timelineObject, htmlAnimationTimelineClass);
     if (timeline == nullptr)
         return JS_EXCEPTION;
     double time = 0;
@@ -1879,8 +1883,9 @@ JSValue timelineCurrentTime(JSContext* ctx, JSValueConst self) {
 }
 
 // duration (web-animations-2/#dom-animationtimeline-duration). A document timeline has none.
-JSValue timelineDuration(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlDocumentTimeline>(ctx, self, htmlAnimationTimelineClass) != nullptr ? JS_NULL : JS_EXCEPTION;
+JSValue timelineDuration(JSContext* ctx, JSValueConst timelineObject) {
+    PrHtmlDocumentTimeline* timeline = jsThis<PrHtmlDocumentTimeline>(ctx, timelineObject, htmlAnimationTimelineClass);
+    return timeline != nullptr ? JS_NULL : JS_EXCEPTION;
 }
 
 // Creates a timeline of `document`, whose object keeps the document's object alive.
@@ -1911,15 +1916,15 @@ JSValue timelineConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
 
 // [SameObject] timeline (web-animations-1/#dom-document-timeline): the document's default timeline, whose origin time
 // is zero.
-JSValue documentTimeline(JSContext* ctx, JSValueConst self) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentTimeline(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "timeline", [&] { return timelineOf(ctx, self, document, 0); });
+    return jsSameObject(ctx, documentObject, "timeline", [&] { return timelineOf(ctx, documentObject, document, 0); });
 }
 
-JSValue navigator(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue navigator(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     JSValue object = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
@@ -1931,8 +1936,8 @@ JSValue navigator(JSContext* ctx, JSValueConst self) {
 }
 
 // [SameObject] screen (cssom-view-1/#dom-window-screen): a view of the window.
-JSValue screen(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue screen(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     JSValue object = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
@@ -1951,8 +1956,8 @@ enum {
 };
 typedef int ScreenMeasure;
 
-JSValue screenMeasure(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlScreenClass);
+JSValue screenMeasure(JSContext* ctx, JSValueConst windowObject, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlScreenClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     switch (ScreenMeasure(magic)) {
@@ -1964,8 +1969,8 @@ JSValue screenMeasure(JSContext* ctx, JSValueConst self, int magic) {
 
 // [SameObject] orientation (screen-orientation/#dom-screen-orientation). The window owns it, and the window's object
 // holds its object.
-JSValue screenOrientation(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlScreenClass);
+JSValue screenOrientation(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlScreenClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     JSValue holder = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
@@ -1983,22 +1988,24 @@ JSValue screenOrientation(JSContext* ctx, JSValueConst self) {
     return object;
 }
 
-JSValue orientationType(JSContext* ctx, JSValueConst self) {
-    PrHtmlScreenOrientation* orientation = jsThis<PrHtmlScreenOrientation>(ctx, self, htmlScreenOrientationClass);
+JSValue orientationType(JSContext* ctx, JSValueConst orientationObject) {
+    PrHtmlScreenOrientation* orientation =
+        jsThis<PrHtmlScreenOrientation>(ctx, orientationObject, htmlScreenOrientationClass);
     if (orientation != nullptr)
         return jsFixedString(ctx, prHtmlOrientationTypeName(prHtmlScreenOrientationType(orientation)));
     return JS_EXCEPTION;
 }
 
-JSValue orientationAngle(JSContext* ctx, JSValueConst self) {
-    PrHtmlScreenOrientation* orientation = jsThis<PrHtmlScreenOrientation>(ctx, self, htmlScreenOrientationClass);
+JSValue orientationAngle(JSContext* ctx, JSValueConst orientationObject) {
+    PrHtmlScreenOrientation* orientation =
+        jsThis<PrHtmlScreenOrientation>(ctx, orientationObject, htmlScreenOrientationClass);
     return orientation != nullptr ? JS_NewUint32(ctx, prHtmlScreenOrientationAngle(orientation)) : JS_EXCEPTION;
 }
 
 // lock (screen-orientation/#dom-screenorientation-lock): rejects with NotSupportedError, since a document cannot lock
 // the orientation.
-JSValue orientationLock(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (jsThis<PrHtmlScreenOrientation>(ctx, self, htmlScreenOrientationClass) == nullptr)
+JSValue orientationLock(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (jsThis<PrHtmlScreenOrientation>(ctx, object, htmlScreenOrientationClass) == nullptr)
         return JS_EXCEPTION;
     JSValue error = jsDomExceptionNew(ctx, "NotSupportedError");
     JSValue promise = jsSettledPromise(ctx, error, true);
@@ -2007,8 +2014,8 @@ JSValue orientationLock(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 }
 
 // unlock (screen-orientation/#dom-screenorientation-unlock): does nothing, since the orientation is never locked.
-JSValue orientationUnlock(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (jsThis<PrHtmlScreenOrientation>(ctx, self, htmlScreenOrientationClass) == nullptr)
+JSValue orientationUnlock(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (jsThis<PrHtmlScreenOrientation>(ctx, object, htmlScreenOrientationClass) == nullptr)
         return JS_EXCEPTION;
     return JS_UNDEFINED;
 }
@@ -2033,19 +2040,19 @@ JSValue selectionOf(JSContext* ctx, PrDomDocument* document) {
     return held;
 }
 
-JSValue documentGetSelection(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentGetSelection(JSContext* ctx, JSValueConst documentObject, int, JSValueConst*) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     return document != nullptr ? selectionOf(ctx, document) : JS_EXCEPTION;
 }
 
-JSValue windowGetSelection(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue windowGetSelection(JSContext* ctx, JSValueConst windowObject, int, JSValueConst*) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     return window != nullptr ? selectionOf(ctx, prHtmlWindowDocument(window)) : JS_EXCEPTION;
 }
 
 // html/#dom-window-customelements, held by the window's own object.
-JSValue windowCustomElements(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue windowCustomElements(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     JSValue object = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
@@ -2067,8 +2074,8 @@ JSValue locationOf(JSContext* ctx, PrHtmlWindow* window) {
     return result;
 }
 
-JSValue windowLocation(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue windowLocation(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     return window != nullptr ? locationOf(ctx, window) : JS_EXCEPTION;
 }
 
@@ -2080,8 +2087,8 @@ JSValue locationStatus(JSContext* ctx, PrStatus status) {
 }
 
 // [PutForwards=href]
-JSValue setWindowLocation(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue setWindowLocation(JSContext* ctx, JSValueConst windowObject, JSValueConst input) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     StringArgument value = {ctx};
     if (window == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -2091,34 +2098,34 @@ JSValue setWindowLocation(JSContext* ctx, JSValueConst self, JSValueConst input)
 
 // html/#dom-document-location: the Location of the window whose document this is, or null for a document with no
 // window.
-JSValue documentLocation(JSContext* ctx, JSValueConst self) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentLocation(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
     return window != nullptr ? locationOf(ctx, window) : JS_NULL;
 }
 
-JSValue defaultView(JSContext* ctx, JSValueConst self) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue defaultView(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     return document != nullptr ? globalOf(ctx, prHtmlDocumentDefaultView(document)) : JS_EXCEPTION;
 }
 
 // open(), which returns the document, and open(url, name, features), which is window.open(). The engine opens no
 // windows.
-JSValue documentOpen(JSContext* ctx, JSValueConst self, int argc, JSValueConst*) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentOpen(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst*) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     if (argc > 2)
         return jsDomExceptionThrow(ctx, "NotSupportedError");
     PrStatus status = prHtmlDocumentOpen(document);
-    return status == PrStatus_Ok ? JS_DupValue(ctx, self) : jsDomExceptionThrow(ctx, "InvalidStateError");
+    return status == PrStatus_Ok ? JS_DupValue(ctx, documentObject) : jsDomExceptionThrow(ctx, "InvalidStateError");
 }
 
 // write(...text) and writeln(...text). The magic says whether a line feed follows.
-JSValue documentWrite(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentWrite(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv, int magic) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     TextBuffer text;
@@ -2139,8 +2146,8 @@ JSValue documentWrite(JSContext* ctx, JSValueConst self, int argc, JSValueConst*
     return status == PrStatus_Ok ? JS_UNDEFINED : JS_EXCEPTION;
 }
 
-JSValue documentClose(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue documentClose(JSContext* ctx, JSValueConst documentObject, int, JSValueConst*) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     PrStatus status = prHtmlDocumentClose(document);
@@ -2149,8 +2156,8 @@ JSValue documentClose(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     return status == PrStatus_Ok ? JS_UNDEFINED : JS_EXCEPTION;
 }
 
-JSValue readyState(JSContext* ctx, JSValueConst self) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue readyState(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     constexpr PrStringView kStates[] = {"loading", "interactive", "complete"};
@@ -2159,36 +2166,36 @@ JSValue readyState(JSContext* ctx, JSValueConst self) {
 
 // html/#dom-document-cookie, as for a user agent that blocks every cookie: a document reads no cookies and its writes
 // are ignored. The value is still converted to a string, which may run script and throw.
-JSValue documentCookie(JSContext* ctx, JSValueConst self) {
-    if (jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass) == nullptr)
+JSValue documentCookie(JSContext* ctx, JSValueConst object) {
+    if (jsThis<PrDomDocument>(ctx, object, prJsDomDocumentClass) == nullptr)
         return JS_EXCEPTION;
     return jsFixedString(ctx, "");
 }
 
-JSValue setDocumentCookie(JSContext* ctx, JSValueConst self, JSValueConst input) {
+JSValue setDocumentCookie(JSContext* ctx, JSValueConst object, JSValueConst input) {
     StringArgument value = {ctx};
-    if (jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass) == nullptr || !value.read(input))
+    if (jsThis<PrDomDocument>(ctx, object, prJsDomDocumentClass) == nullptr || !value.read(input))
         return JS_EXCEPTION;
     return JS_UNDEFINED;
 }
 
-JSValue currentScript(JSContext* ctx, JSValueConst self) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+JSValue currentScript(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
     return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlDocumentCurrentScript(document), false);
 }
 
 // The attributes, selected by the magic, which is the PrUrlComponent.
-JSValue locationGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlLocationClass);
+JSValue locationGet(JSContext* ctx, JSValueConst windowObject, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlLocationClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     return jsTakeString(ctx, prHtmlWindowLocation(window, PrUrlComponent(magic)));
 }
 
-JSValue locationSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlLocationClass);
+JSValue locationSet(JSContext* ctx, JSValueConst windowObject, JSValueConst input, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlLocationClass);
     StringArgument value = {ctx};
     if (window == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -2198,8 +2205,8 @@ JSValue locationSet(JSContext* ctx, JSValueConst self, JSValueConst input, int m
 
 // assign and replace, which navigate in the same way as setting href, and reload, which loads the document again.
 // Selected by the magic.
-JSValue locationNavigate(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlLocationClass);
+JSValue locationNavigate(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlLocationClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     // html/#dom-location-reload reloads the document, as a traversal by 0 does.
@@ -2214,8 +2221,8 @@ JSValue locationNavigate(JSContext* ctx, JSValueConst self, int argc, JSValueCon
     return locationStatus(ctx, prHtmlWindowSetLocation(window, PrUrlComponent_Href, value.value(), handling));
 }
 
-JSValue locationToString(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    return locationGet(ctx, self, PrUrlComponent_Href);
+JSValue locationToString(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    return locationGet(ctx, object, PrUrlComponent_Href);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2244,8 +2251,8 @@ JSValue historyOf(JSContext* ctx, PrHtmlWindow* window) {
     return result;
 }
 
-JSValue windowHistory(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue windowHistory(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     return window != nullptr ? historyOf(ctx, window) : JS_EXCEPTION;
 }
 
@@ -2274,8 +2281,8 @@ JSValue historyStateOf(JSContext* ctx, JSValueConst history, PrHtmlWindow* windo
     return state;
 }
 
-JSValue historyLength(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlHistoryClass);
+JSValue historyLength(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlHistoryClass);
     uint32_t length = 0;
     if (window == nullptr)
         return JS_EXCEPTION;
@@ -2283,13 +2290,13 @@ JSValue historyLength(JSContext* ctx, JSValueConst self) {
     return status == PrStatus_Ok ? JS_NewUint32(ctx, length) : historyStatus(ctx, status);
 }
 
-JSValue historyState(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlHistoryClass);
-    return window != nullptr ? historyStateOf(ctx, self, window) : JS_EXCEPTION;
+JSValue historyState(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlHistoryClass);
+    return window != nullptr ? historyStateOf(ctx, windowObject, window) : JS_EXCEPTION;
 }
 
-JSValue historyScrollRestoration(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlHistoryClass);
+JSValue historyScrollRestoration(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlHistoryClass);
     PrHtmlScrollRestoration mode = PrHtmlScrollRestoration_Auto;
     if (window == nullptr)
         return JS_EXCEPTION;
@@ -2300,8 +2307,8 @@ JSValue historyScrollRestoration(JSContext* ctx, JSValueConst self) {
 }
 
 // A value that is not one of ScrollRestoration's is ignored (webidl/#es-attributes).
-JSValue setHistoryScrollRestoration(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlHistoryClass);
+JSValue setHistoryScrollRestoration(JSContext* ctx, JSValueConst windowObject, JSValueConst input) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlHistoryClass);
     StringArgument value = {ctx};
     if (window == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -2313,8 +2320,8 @@ JSValue setHistoryScrollRestoration(JSContext* ctx, JSValueConst self, JSValueCo
 }
 
 // go(delta), back() and forward(), whose magic is 0, -1 and 1. go's delta is a long.
-JSValue historyGo(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlHistoryClass);
+JSValue historyGo(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlHistoryClass);
     int32_t delta = magic;
     if (window == nullptr || (magic == 0 && jsArgGiven(argc, argv, 0) && JS_ToInt32(ctx, &delta, argv[0]) < 0))
         return JS_EXCEPTION;
@@ -2322,8 +2329,8 @@ JSValue historyGo(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
 }
 
 // pushState(data, unused, url) and replaceState(data, unused, url), whose magic is the PrHtmlHistoryHandling.
-JSValue historyPushState(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlHistoryClass);
+JSValue historyPushState(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlHistoryClass);
     StringArgument unused = {ctx};
     StringArgument url = {ctx, PrStringView{}};
     if (window == nullptr || !jsArgCount(ctx, argc, 2) || !unused.read(argv[1]) ||
@@ -2385,11 +2392,11 @@ JSValue popStateConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
 
 // state: the value that the event was created with, or, for a popstate that the engine fired, the history state of the
 // realm's window when it is first read.
-JSValue popStateState(JSContext* ctx, JSValueConst self) {
-    PrHtmlPopStateEvent* event = jsThis<PrHtmlPopStateEvent>(ctx, self, htmlPopStateEventClass);
+JSValue popStateState(JSContext* ctx, JSValueConst eventObject) {
+    PrHtmlPopStateEvent* event = jsThis<PrHtmlPopStateEvent>(ctx, eventObject, htmlPopStateEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
-    JSValue state = jsReference(ctx, self, PopStateSlot_State);
+    JSValue state = jsReference(ctx, eventObject, PopStateSlot_State);
     if (!JS_IsUndefined(state) || !prHtmlPopStateEventCarriesHistoryState(event))
         return JS_IsUndefined(state) ? JS_NULL : state;
     PrHtmlWindow* window = globalWindow(ctx);
@@ -2402,7 +2409,7 @@ JSValue popStateState(JSContext* ctx, JSValueConst self) {
         JS_FreeValue(ctx, JS_GetException(ctx));
         state = JS_NULL;
     }
-    jsSetReference(ctx, self, PopStateSlot_State, state);
+    jsSetReference(ctx, eventObject, PopStateSlot_State, state);
     return state;
 }
 
@@ -2433,8 +2440,8 @@ JSValue hashChangeConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JS
 constexpr size_t kCryptoMaxRandomBytes = 65536;
 
 // [SameObject] crypto (webcrypto-2/#dom-windoworworkerglobalscope-crypto): a view of the window.
-JSValue crypto(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue crypto(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     JSValue object = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
@@ -2447,8 +2454,8 @@ JSValue crypto(JSContext* ctx, JSValueConst self) {
 
 // getRandomValues(array) fills an integer typed array with random bytes and returns it. Any other array throws a
 // TypeMismatchError, and an array of more than 65536 bytes throws a QuotaExceededError.
-JSValue cryptoGetRandomValues(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlCryptoClass) == nullptr || !jsArgCount(ctx, argc, 1))
+JSValue cryptoGetRandomValues(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    if (jsThis<PrHtmlWindow>(ctx, object, htmlCryptoClass) == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     int type = JS_GetTypedArrayType(argv[0]);
     if (type < 0)
@@ -2472,8 +2479,8 @@ JSValue cryptoGetRandomValues(JSContext* ctx, JSValueConst self, int argc, JSVal
 
 // randomUUID() returns a version 4 UUID (rfc 9562, section 5.4) in lowercase hexadecimal, as
 // webcrypto-2/#Crypto-method-randomUUID serializes it.
-JSValue cryptoRandomUuid(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlCryptoClass) == nullptr)
+JSValue cryptoRandomUuid(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (jsThis<PrHtmlWindow>(ctx, object, htmlCryptoClass) == nullptr)
         return JS_EXCEPTION;
     uint8_t bytes[16];
     prRandomBytes(bytes, sizeof(bytes));
@@ -2513,8 +2520,8 @@ enum {
 };
 typedef int NavigatorString;
 
-JSValue navigatorString(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass);
+JSValue navigatorString(JSContext* ctx, JSValueConst windowObject, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlNavigatorClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     switch (NavigatorString(magic)) {
@@ -2532,10 +2539,10 @@ JSValue navigatorString(JSContext* ctx, JSValueConst self, int magic) {
 }
 
 // languages (html/#dom-navigator-languages): the same frozen array each time, until the languages change.
-JSValue navigatorLanguages(JSContext* ctx, JSValueConst self) {
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass) == nullptr)
+JSValue navigatorLanguages(JSContext* ctx, JSValueConst object) {
+    if (jsThis<PrHtmlWindow>(ctx, object, htmlNavigatorClass) == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "languages", [&] {
+    return jsSameObject(ctx, object, "languages", [&] {
         JSValue array = JS_NewArray(ctx);
         JS_SetPropertyUint32(ctx, array, 0, jsFixedString(ctx, kNavigatorLanguage));
         JS_FreezeObject(ctx, array);
@@ -2555,74 +2562,74 @@ enum {
 };
 typedef int NavigatorFlag;
 
-JSValue navigatorFlag(JSContext* ctx, JSValueConst self, int magic) {
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass) == nullptr)
+JSValue navigatorFlag(JSContext* ctx, JSValueConst object, int magic) {
+    if (jsThis<PrHtmlWindow>(ctx, object, htmlNavigatorClass) == nullptr)
         return JS_EXCEPTION;
     NavigatorFlag flag = NavigatorFlag(magic);
     return JS_NewBool(ctx, flag == NavigatorFlag_OnLine || flag == NavigatorFlag_CookieEnabled);
 }
 
 // javaEnabled (html/#dom-navigator-javaenabled): false, as HTML requires.
-JSValue navigatorJavaEnabled(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    return jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass) != nullptr ? JS_FALSE : JS_EXCEPTION;
+JSValue navigatorJavaEnabled(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    return jsThis<PrHtmlWindow>(ctx, object, htmlNavigatorClass) != nullptr ? JS_FALSE : JS_EXCEPTION;
 }
 
 // hardwareConcurrency (html/#dom-navigator-hardwareconcurrency): the logical processors that the system has.
-JSValue navigatorHardwareConcurrency(JSContext* ctx, JSValueConst self) {
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass) == nullptr)
+JSValue navigatorHardwareConcurrency(JSContext* ctx, JSValueConst object) {
+    if (jsThis<PrHtmlWindow>(ctx, object, htmlNavigatorClass) == nullptr)
         return JS_EXCEPTION;
     return JS_NewUint32(ctx, prThreadHardwareCount());
 }
 
 // maxTouchPoints (pointerevents4/#dom-navigator-maxtouchpoints): zero, since the window takes no touches.
-JSValue navigatorMaxTouchPoints(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass) != nullptr ? JS_NewInt32(ctx, 0) : JS_EXCEPTION;
+JSValue navigatorMaxTouchPoints(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlWindow>(ctx, object, htmlNavigatorClass) != nullptr ? JS_NewInt32(ctx, 0) : JS_EXCEPTION;
 }
 
 // [SameObject] preferences: a view of the navigator's window.
-JSValue preferences(JSContext* ctx, JSValueConst self) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass);
+JSValue preferences(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlNavigatorClass);
     if (window == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "preferences", [&] {
-        return jsWrap(ctx, htmlPreferenceManagerClass, self, window, false);
+    return jsSameObject(ctx, windowObject, "preferences", [&] {
+        return jsWrap(ctx, htmlPreferenceManagerClass, windowObject, window, false);
     });
 }
 
 // colorScheme and the manager's other preferences, selected by the magic, which is the PrHtmlPreference. The manager's
 // object holds each preference's object, in the slot that the magic selects, because the window fires change at a
 // preference and the preference's object owns its listeners.
-JSValue preference(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlPreferenceManagerClass);
+JSValue preference(JSContext* ctx, JSValueConst windowObject, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlPreferenceManagerClass);
     if (window == nullptr)
         return JS_EXCEPTION;
-    JSValue held = jsReference(ctx, self, uint32_t(magic));
+    JSValue held = jsReference(ctx, windowObject, uint32_t(magic));
     if (!JS_IsUndefined(held))
         return held;
     PrHtmlPreferenceObject* object = prHtmlWindowPreference(window, PrHtmlPreference(magic));
-    JSValue made = jsWrap(ctx, htmlPreferenceObjectClass, self, object, false);
+    JSValue made = jsWrap(ctx, htmlPreferenceObjectClass, windowObject, object, false);
     if (!JS_IsException(made))
-        jsSetReference(ctx, self, uint32_t(magic), made);
+        jsSetReference(ctx, windowObject, uint32_t(magic), made);
     return made;
 }
 
-JSValue preferenceOverride(JSContext* ctx, JSValueConst self) {
-    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+JSValue preferenceOverride(JSContext* ctx, JSValueConst jsObject) {
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, jsObject, htmlPreferenceObjectClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     PrHtmlPreferenceValue value = prHtmlPreferenceObjectOverride(object);
     return value != PrHtmlPreferenceValue_None ? jsFixedString(ctx, prHtmlPreferenceValueName(value)) : JS_NULL;
 }
 
-JSValue preferenceValue(JSContext* ctx, JSValueConst self) {
-    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+JSValue preferenceValue(JSContext* ctx, JSValueConst jsObject) {
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, jsObject, htmlPreferenceObjectClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     return jsFixedString(ctx, prHtmlPreferenceValueName(prHtmlPreferenceObjectValue(object)));
 }
 
-JSValue validValues(JSContext* ctx, JSValueConst self) {
-    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+JSValue validValues(JSContext* ctx, JSValueConst jsObject) {
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, jsObject, htmlPreferenceObjectClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     PrHtmlPreferenceValue items[PrHtmlPreferenceValue_Count];
@@ -2635,8 +2642,8 @@ JSValue validValues(JSContext* ctx, JSValueConst self) {
     return array;
 }
 
-JSValue clearOverride(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+JSValue clearOverride(JSContext* ctx, JSValueConst jsObject, int, JSValueConst*) {
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, jsObject, htmlPreferenceObjectClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     prHtmlPreferenceObjectClearOverride(object);
@@ -2644,8 +2651,8 @@ JSValue clearOverride(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 }
 
 // requestOverride. Its promise rejects with a NotSupportedError for a value that the preference does not accept.
-JSValue requestOverride(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+JSValue requestOverride(JSContext* ctx, JSValueConst jsObject, int argc, JSValueConst* argv) {
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, jsObject, htmlPreferenceObjectClass);
     StringArgument value = {ctx, PrStringView{}};
     if (object == nullptr || !jsArgCount(ctx, argc, 1) || !value.readNullable(argv[0]))
         return JS_EXCEPTION;
@@ -2718,8 +2725,8 @@ void defineNamedProperties(JSContext* ctx) {
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLScriptElement (html/#htmlscriptelement)
 
-JSValue setScriptAsync(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrHtmlScriptElement* script = jsThis<PrHtmlScriptElement>(ctx, self, htmlScriptElementClass);
+JSValue setScriptAsync(JSContext* ctx, JSValueConst scriptObject, JSValueConst input) {
+    PrHtmlScriptElement* script = jsThis<PrHtmlScriptElement>(ctx, scriptObject, htmlScriptElementClass);
     if (script == nullptr)
         return JS_EXCEPTION;
     prHtmlScriptElementSetAsync(script, JS_ToBool(ctx, input) != 0);
@@ -2736,13 +2743,13 @@ JSValue scriptSupports(JSContext* ctx, JSValueConst, int argc, JSValueConst* arg
 // ---------------------------------------------------------------------------------------------------------------------
 // Storage (html/#storage-2), whose handle is the window's PrHtmlStorage
 
-PrHtmlStorage* PR_NULLABLE storageOf(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlStorage>(ctx, self, htmlStorageClass);
+PrHtmlStorage* PR_NULLABLE storageOf(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlStorage>(ctx, object, htmlStorageClass);
 }
 
 // html/#dom-localstorage and html/#dom-sessionstorage, selected by the magic, which is the PrHtmlStorageKind.
-JSValue windowStorage(JSContext* ctx, JSValueConst self, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
+JSValue windowStorage(JSContext* ctx, JSValueConst windowObject, int magic) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     PrHtmlStorage* storage = prHtmlWindowStorage(window, PrHtmlStorageKind(magic));
@@ -2755,8 +2762,8 @@ JSValue windowStorage(JSContext* ctx, JSValueConst self, int magic) {
     return result;
 }
 
-JSValue storageLength(JSContext* ctx, JSValueConst self) {
-    PrHtmlStorage* storage = storageOf(ctx, self);
+JSValue storageLength(JSContext* ctx, JSValueConst storageObject) {
+    PrHtmlStorage* storage = storageOf(ctx, storageObject);
     return storage != nullptr ? JS_NewUint32(ctx, prHtmlStorageLength(storage)) : JS_EXCEPTION;
 }
 
@@ -2765,16 +2772,16 @@ JSValue nullableString(JSContext* ctx, PrString value) {
     return prStringIsNull(&value) ? JS_NULL : jsTakeString(ctx, value);
 }
 
-JSValue storageKey(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlStorage* storage = storageOf(ctx, self);
+JSValue storageKey(JSContext* ctx, JSValueConst storageObject, int argc, JSValueConst* argv) {
+    PrHtmlStorage* storage = storageOf(ctx, storageObject);
     uint32_t index = 0;
     if (storage == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
     return nullableString(ctx, prHtmlStorageKey(storage, index));
 }
 
-JSValue storageGetItem(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlStorage* storage = storageOf(ctx, self);
+JSValue storageGetItem(JSContext* ctx, JSValueConst storageObject, int argc, JSValueConst* argv) {
+    PrHtmlStorage* storage = storageOf(ctx, storageObject);
     StringArgument key = {ctx};
     if (storage == nullptr || !jsArgCount(ctx, argc, 1) || !key.read(argv[0]))
         return JS_EXCEPTION;
@@ -2789,8 +2796,8 @@ bool setStorageItem(JSContext* ctx, PrHtmlStorage* storage, PrStringView key, Pr
     return false;
 }
 
-JSValue storageSetItem(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlStorage* storage = storageOf(ctx, self);
+JSValue storageSetItem(JSContext* ctx, JSValueConst storageObject, int argc, JSValueConst* argv) {
+    PrHtmlStorage* storage = storageOf(ctx, storageObject);
     StringArgument key = {ctx};
     StringArgument value = {ctx};
     if (storage == nullptr || !jsArgCount(ctx, argc, 2) || !key.read(argv[0]) || !value.read(argv[1]))
@@ -2798,8 +2805,8 @@ JSValue storageSetItem(JSContext* ctx, JSValueConst self, int argc, JSValueConst
     return setStorageItem(ctx, storage, key.value(), value.value()) ? JS_UNDEFINED : JS_EXCEPTION;
 }
 
-JSValue storageRemoveItem(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlStorage* storage = storageOf(ctx, self);
+JSValue storageRemoveItem(JSContext* ctx, JSValueConst storageObject, int argc, JSValueConst* argv) {
+    PrHtmlStorage* storage = storageOf(ctx, storageObject);
     StringArgument key = {ctx};
     if (storage == nullptr || !jsArgCount(ctx, argc, 1) || !key.read(argv[0]))
         return JS_EXCEPTION;
@@ -2807,8 +2814,8 @@ JSValue storageRemoveItem(JSContext* ctx, JSValueConst self, int argc, JSValueCo
     return JS_UNDEFINED;
 }
 
-JSValue storageClear(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlStorage* storage = storageOf(ctx, self);
+JSValue storageClear(JSContext* ctx, JSValueConst storageObject, int, JSValueConst*) {
+    PrHtmlStorage* storage = storageOf(ctx, storageObject);
     if (storage == nullptr)
         return JS_EXCEPTION;
     prHtmlStorageClear(storage);

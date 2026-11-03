@@ -284,8 +284,8 @@ bool callbackOf(JSContext* ctx, JSValueConst prototype, JSValueConst holder, con
 }
 
 // html/#dom-customelementregistry-define
-JSValue define(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Registry* registry = jsThis<Registry>(ctx, self, registryClass);
+JSValue define(JSContext* ctx, JSValueConst registryObject, int argc, JSValueConst* argv) {
+    Registry* registry = jsThis<Registry>(ctx, registryObject, registryClass);
     StringArgument name = {ctx};
     if (registry == nullptr || !jsArgCount(ctx, argc, 2) || !name.read(argv[0]))
         return JS_EXCEPTION;
@@ -364,7 +364,7 @@ JSValue define(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
     JS_SetPropertyStr(ctx, holder, "stack", JS_NewArray(ctx));
     definition->name = prStringCopy(name.value());
     definition->index = registry->definitions.count;
-    JSValue definitions = jsReference(ctx, self, kDefinitionsSlot);
+    JSValue definitions = jsReference(ctx, registryObject, kDefinitionsSlot);
     JS_SetPropertyUint32(ctx, definitions, definition->index, holder);
     JS_FreeValue(ctx, definitions);
     registry->definitions.push(definition);
@@ -373,7 +373,7 @@ JSValue define(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
     // whenDefined returned for the name.
     PrDomDocument* document = prHtmlWindowDocument(registry->window);
     prDomDocumentUpgradeCandidates(document, name.value(), definition);
-    JSValue promises = jsReference(ctx, self, kPromisesSlot);
+    JSValue promises = jsReference(ctx, registryObject, kPromisesSlot);
     JSAtom key = JS_NewAtomLen(ctx, name.value().data, name.value().size);
     JSValue pending = JS_GetProperty(ctx, promises, key);
     if (JS_IsObject(pending)) {
@@ -390,8 +390,8 @@ JSValue define(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
 }
 
 // html/#dom-customelementregistry-get
-JSValue get(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Registry* registry = jsThis<Registry>(ctx, self, registryClass);
+JSValue get(JSContext* ctx, JSValueConst registryObject, int argc, JSValueConst* argv) {
+    Registry* registry = jsThis<Registry>(ctx, registryObject, registryClass);
     StringArgument name = {ctx};
     if (registry == nullptr || !jsArgCount(ctx, argc, 1) || !name.read(argv[0]))
         return JS_EXCEPTION;
@@ -400,8 +400,8 @@ JSValue get(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
 }
 
 // html/#dom-customelementregistry-getname
-JSValue getName(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Registry* registry = jsThis<Registry>(ctx, self, registryClass);
+JSValue getName(JSContext* ctx, JSValueConst registryObject, int argc, JSValueConst* argv) {
+    Registry* registry = jsThis<Registry>(ctx, registryObject, registryClass);
     if (registry == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     if (!JS_IsFunction(ctx, argv[0]))
@@ -411,8 +411,8 @@ JSValue getName(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv)
 }
 
 // html/#dom-customelementregistry-whendefined
-JSValue whenDefined(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    Registry* registry = jsThis<Registry>(ctx, self, registryClass);
+JSValue whenDefined(JSContext* ctx, JSValueConst registryObject, int argc, JSValueConst* argv) {
+    Registry* registry = jsThis<Registry>(ctx, registryObject, registryClass);
     StringArgument name = {ctx};
     if (registry == nullptr || !jsArgCount(ctx, argc, 1) || !name.read(argv[0]))
         return JS_EXCEPTION;
@@ -428,7 +428,7 @@ JSValue whenDefined(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
         JS_FreeValue(ctx, constructor);
         return promise;
     }
-    JSValue promises = jsReference(ctx, self, kPromisesSlot);
+    JSValue promises = jsReference(ctx, registryObject, kPromisesSlot);
     JSAtom key = JS_NewAtomLen(ctx, name.value().data, name.value().size);
     JSValue pending = JS_GetProperty(ctx, promises, key);
     if (!JS_IsObject(pending)) {
@@ -449,8 +449,8 @@ JSValue whenDefined(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
 }
 
 // html/#dom-customelementregistry-upgrade
-JSValue upgradeTree(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    if (jsThis<Registry>(ctx, self, registryClass) == nullptr || !jsArgCount(ctx, argc, 1))
+JSValue upgradeTree(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    if (jsThis<Registry>(ctx, object, registryClass) == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomNode* root = jsHandleAs<PrDomNode>(ctx, argv[0], prJsDomNodeClass);
     if (root == nullptr)
@@ -462,22 +462,24 @@ JSValue upgradeTree(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
 // ---------------------------------------------------------------------------------------------------------------------
 // ElementInternals and CustomStateSet (html/#elementinternals, html/#customstateset)
 
-JSValue internalsShadowRoot(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, internalsClass);
+JSValue internalsShadowRoot(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, internalsClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomShadowRoot* shadow = prDomElementHostedShadowRoot(element);
-    return shadow != nullptr ? prJsDomWrapEventTarget(ctx, self, prDomNodeAsEventTarget(prDomShadowRootAsNode(shadow))) : JS_NULL;
+    if (shadow == nullptr)
+        return JS_NULL;
+    return prJsDomWrapEventTarget(ctx, elementObject, prDomNodeAsEventTarget(prDomShadowRootAsNode(shadow)));
 }
 
 // html/#dom-elementinternals-states. The set belongs to the internals object, and mirrors each change to the element so
 // that :state() matches.
-JSValue internalsStates(JSContext* ctx, JSValueConst self) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, internalsClass);
+JSValue internalsStates(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, internalsClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "states", [&] {
-        JSValue set = jsWrap(ctx, stateSetClass, self, element, false);
+    return jsSameObject(ctx, elementObject, "states", [&] {
+        JSValue set = jsWrap(ctx, stateSetClass, elementObject, element, false);
         if (!JS_IsException(set)) {
             JSValue global = JS_GetGlobalObject(ctx);
             JSValue constructor = JS_GetPropertyStr(ctx, global, "Set");
@@ -493,20 +495,20 @@ JSValue internalsStates(JSContext* ctx, JSValueConst self) {
 
 // The members of a form-associated custom element's internals (html/#form-associated-custom-elements). A custom element
 // that is not form-associated lacks them, so they throw NotSupportedError.
-JSValue internalsFormMember(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (jsThis<PrDomElement>(ctx, self, internalsClass) == nullptr)
+JSValue internalsFormMember(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (jsThis<PrDomElement>(ctx, object, internalsClass) == nullptr)
         return JS_EXCEPTION;
     return jsDomExceptionThrow(ctx, "NotSupportedError");
 }
 
-JSValue internalsFormGetter(JSContext* ctx, JSValueConst self) {
-    return internalsFormMember(ctx, self, 0, nullptr);
+JSValue internalsFormGetter(JSContext* ctx, JSValueConst object) {
+    return internalsFormMember(ctx, object, 0, nullptr);
 }
 
 // Returns the set that a CustomStateSet holds.
-JSValue stateSet(JSContext* ctx, JSValueConst self, PrDomElement** element) {
-    *element = jsThis<PrDomElement>(ctx, self, stateSetClass);
-    return *element != nullptr ? jsReference(ctx, self, 0) : JS_EXCEPTION;
+JSValue stateSet(JSContext* ctx, JSValueConst elementObject, PrDomElement** element) {
+    *element = jsThis<PrDomElement>(ctx, elementObject, stateSetClass);
+    return *element != nullptr ? jsReference(ctx, elementObject, 0) : JS_EXCEPTION;
 }
 
 // Calls the set's Set method `name` with the arguments.
@@ -518,9 +520,9 @@ JSValue callSet(JSContext* ctx, JSValueConst set, const char* name, int argc, JS
 }
 
 // add, delete and clear, selected by the magic. They change the element's states as they change the set.
-JSValue stateChange(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
+JSValue stateChange(JSContext* ctx, JSValueConst setObject, int argc, JSValueConst* argv, int magic) {
     PrDomElement* element = nullptr;
-    JSValue set = stateSet(ctx, self, &element);
+    JSValue set = stateSet(ctx, setObject, &element);
     if (JS_IsException(set))
         return set;
     StringArgument state = {ctx};
@@ -539,16 +541,16 @@ JSValue stateChange(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
         prDomElementSetCustomState(element, state.value(), magic == 0);
     if (magic == 0 && !JS_IsException(result)) {
         JS_FreeValue(ctx, result);
-        return JS_DupValue(ctx, self);
+        return JS_DupValue(ctx, setObject);
     }
     return result;
 }
 
 // has, forEach, entries, keys, values and size, selected by the name that the magic gives. The set's own methods
 // implement them.
-JSValue stateRead(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
+JSValue stateRead(JSContext* ctx, JSValueConst setObject, int argc, JSValueConst* argv, int magic) {
     PrDomElement* element = nullptr;
-    JSValue set = stateSet(ctx, self, &element);
+    JSValue set = stateSet(ctx, setObject, &element);
     if (JS_IsException(set))
         return set;
     constexpr const char* kMethods[] = {"has", "forEach", "entries", "keys", "values"};
@@ -557,9 +559,9 @@ JSValue stateRead(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
     return result;
 }
 
-JSValue stateSize(JSContext* ctx, JSValueConst self) {
+JSValue stateSize(JSContext* ctx, JSValueConst setObject) {
     PrDomElement* element = nullptr;
-    JSValue set = stateSet(ctx, self, &element);
+    JSValue set = stateSet(ctx, setObject, &element);
     if (JS_IsException(set))
         return set;
     JSValue size = JS_GetPropertyStr(ctx, set, "size");
@@ -710,22 +712,22 @@ JSValue jsCustomElementsConstruct(JSContext* ctx, JSValueConst newTarget, int, J
     return element;
 }
 
-JSValue jsCustomElementsAttachInternals(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
+JSValue jsCustomElementsAttachInternals(JSContext* ctx, JSValueConst elementObject, int, JSValueConst*) {
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     Registry* registry = currentRegistry(ctx);
     Definition* definition = registry != nullptr ? definitionNamed(registry, prDomElementLocalName(element)) : nullptr;
-    JSValue attached = jsSameObject(ctx, self, "[[Internals]]");
+    JSValue attached = jsSameObject(ctx, elementObject, "[[Internals]]");
     bool already = !JS_IsUndefined(attached);
     JS_FreeValue(ctx, attached);
     PrDomCustomElementState state = prDomElementCustomElementState(element);
     if (definition == nullptr || definition->disableInternals || already ||
             (state != PrDomCustomElementState_Precustomized && state != PrDomCustomElementState_Custom))
         return jsDomExceptionThrow(ctx, "NotSupportedError");
-    JSValue internals = jsWrap(ctx, internalsClass, self, element, false);
+    JSValue internals = jsWrap(ctx, internalsClass, elementObject, element, false);
     if (!JS_IsException(internals))
-        jsSetSameObject(ctx, self, "[[Internals]]", internals);
+        jsSetSameObject(ctx, elementObject, "[[Internals]]", internals);
     return internals;
 }
 

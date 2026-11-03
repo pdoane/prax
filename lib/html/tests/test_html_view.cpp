@@ -121,8 +121,8 @@ struct Viewed {
         PrHtmlHost host = prHtmlHostDefault();
         host.context = this;
         host.elementState =
-                [](void* self, PrHtmlPage*, const PrDomElement* element, PrDomHostState wanted) -> PrDomHostState {
-            bool visited = element == static_cast<Viewed*>(self)->visited;
+                [](void* context, PrHtmlPage*, const PrDomElement* element, PrDomHostState wanted) -> PrDomHostState {
+            bool visited = element == static_cast<Viewed*>(context)->visited;
             return visited ? PrDomHostState(wanted & PrDomHostState_Visited) : PrDomHostState(0);
         };
         host.font = defaultFont;
@@ -139,12 +139,12 @@ struct Viewed {
         PrLayoutCompositorDesc compositorDesc{
             .context = this,
             .now = [](void* PR_NULLABLE) { return 0.0; },
-            .present = [](void* PR_NULLABLE self, PrDrawList* list, PrColor16) {
-                Viewed* viewed = static_cast<Viewed*>(self);
+            .present = [](void* PR_NULLABLE context, PrDrawList* list, PrColor16) {
+                Viewed* viewed = static_cast<Viewed*>(context);
                 ++viewed->presented;
                 viewed->pixels = presentation(list);
             },
-            .wantFrame = [](void* PR_NULLABLE self) { ++static_cast<Viewed*>(self)->wanted; },
+            .wantFrame = [](void* PR_NULLABLE context) { ++static_cast<Viewed*>(context)->wanted; },
             .canvasFilled = true,
         };
         compositor = prLayoutCompositorCreate(&compositorDesc);
@@ -267,7 +267,7 @@ struct HeardKeys {
 PrDomEventListener keyRecorder(HeardKeys* heard) {
     return PrDomEventListener{
         [](void* context, PrDomEvent* event) {
-            HeardKeys* self = static_cast<HeardKeys*>(context);
+            HeardKeys* heardKeys = static_cast<HeardKeys*>(context);
             PrStringView type = prDomEventType(event);
             std::string line(type.data, type.size);
             if (PrDomKeyboardEvent* key = prDomKeyboardEventQuery(event)) {
@@ -282,8 +282,8 @@ PrDomEventListener keyRecorder(HeardKeys* heard) {
             }
             if (!prDomEventIsTrusted(event))
                 line += " untrusted";
-            self->events.push_back(line);
-            if (self->cancelKeydown && line.rfind("keydown", 0) == 0)
+            heardKeys->events.push_back(line);
+            if (heardKeys->cancelKeydown && line.rfind("keydown", 0) == 0)
                 prDomEventPreventDefault(event);
         },
         heard,
@@ -347,7 +347,7 @@ struct HeardWheels {
 PrDomEventListener wheelRecorder(HeardWheels* heard) {
     return PrDomEventListener{
         [](void* context, PrDomEvent* event) {
-            HeardWheels* self = static_cast<HeardWheels*>(context);
+            HeardWheels* heardWheels = static_cast<HeardWheels*>(context);
             PrDomWheelEvent* wheel = prDomWheelEventQuery(event);
             REQUIRE(wheel != nullptr);
             PrDomElement* target = prDomElementQuery(prDomEventTarget(event));
@@ -355,8 +355,8 @@ PrDomEventListener wheelRecorder(HeardWheels* heard) {
             std::string line(id.data != nullptr ? id.data : "", id.size);
             line += " " + std::to_string(int(prDomWheelEventMembers(wheel).deltaY));
             line += prDomEventCancelable(event) ? " cancelable" : "";
-            self->events.push_back(line);
-            if (self->cancel)
+            heardWheels->events.push_back(line);
+            if (heardWheels->cancel)
                 prDomEventPreventDefault(event);
         },
         heard,

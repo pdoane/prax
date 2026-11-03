@@ -211,9 +211,9 @@ struct SetHeard {
         prDomNodeRetain(prDomDocumentAsNode(document));
         PrCssFontCallback callback = {
             nullptr,
-            [](void* self, PrDomDocument*, PrCssFontFaceSet* set) {
+            [](void* context, PrDomDocument*, PrCssFontFaceSet* set) {
                 bool loading = prCssFontFaceSetStatus(set) == PrCssFontFaceSetLoadStatus_Loading;
-                static_cast<Heard*>(self)->said.push_back(loading ? "set loading" : "set loaded");
+                static_cast<Heard*>(context)->said.push_back(loading ? "set loading" : "set loaded");
             },
             &heard,
         };

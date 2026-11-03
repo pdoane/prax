@@ -62,10 +62,10 @@ PrLayoutNode root20(Fixture& f) {
 // ---------------------------------------------------------------------------------------------------------------------
 // justify-self in block flow, and semi-replaced boxes
 
-// Returns an alignment group with justify-self `self` and justify-items `items`.
-PrLayoutFlexStyle justified(PrLayoutAlignment self, PrLayoutAlignment items = PrLayoutAlignment_Normal) {
+// Returns an alignment group with justify-self `alignment` and justify-items `items`.
+PrLayoutFlexStyle justified(PrLayoutAlignment alignment, PrLayoutAlignment items = PrLayoutAlignment_Normal) {
     PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
-    flex.justifySelf = self;
+    flex.justifySelf = alignment;
     flex.justifyItems = items;
     return flex;
 }

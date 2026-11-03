@@ -1764,11 +1764,11 @@ JSValue reifyFirst(JSContext* ctx, const PrCssValue* value, const PrCssDeclarati
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSStyleValue (css-typed-om-1/#cssstylevalue)
 
-JSValue toString(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (styleValueOf(ctx, self) == nullptr && typedIn(ctx, self, cssTransformComponentClass) == nullptr)
+JSValue toString(JSContext* ctx, JSValueConst styleValue, int, JSValueConst*) {
+    if (styleValueOf(ctx, styleValue) == nullptr && typedIn(ctx, styleValue, cssTransformComponentClass) == nullptr)
         return JS_EXCEPTION;
     TextBuffer text;
-    JSValue result = serializeValue(ctx, self, &text) ? jsNewStringView(ctx, textView(&text)) : JS_EXCEPTION;
+    JSValue result = serializeValue(ctx, styleValue, &text) ? jsNewStringView(ctx, textView(&text)) : JS_EXCEPTION;
     textReset(&text);
     return result;
 }
@@ -1831,14 +1831,14 @@ JSValue textConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
     return construct(ctx, newTarget, cssVariableReferenceValueClass, fields, &fallback, 1);
 }
 
-JSValue textGet(JSContext* ctx, JSValueConst self) {
-    TypedObject* object = typedOf(self);
+JSValue textGet(JSContext* ctx, JSValueConst typedObject) {
+    TypedObject* object = typedOf(typedObject);
     return object != nullptr ? jsNewString(ctx, &object->text) : JS_ThrowTypeError(ctx, "Illegal invocation");
 }
 
 // Sets a keyword's value, or a variable reference's name.
-JSValue textSet(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    TypedObject* object = typedOf(self);
+JSValue textSet(JSContext* ctx, JSValueConst typedObject, JSValueConst input) {
+    TypedObject* object = typedOf(typedObject);
     StringArgument text = {ctx};
     if (object == nullptr)
         return JS_ThrowTypeError(ctx, "Illegal invocation");
@@ -1846,7 +1846,7 @@ JSValue textSet(JSContext* ctx, JSValueConst self, JSValueConst input) {
         return JS_EXCEPTION;
     PrString previous = object->text;
     object->text = prStringCopy(text.value());
-    if (!valid(ctx, self)) {
+    if (!valid(ctx, typedObject)) {
         prStringReset(&object->text);
         object->text = previous;
         return JS_EXCEPTION;
@@ -1895,22 +1895,22 @@ JSValue unparsedConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
 // Held objects, and the indexed properties of an unparsed value's segments, a numeric array's values and a transform
 // value's components
 
-// Returns the object that `self` holds at the index that `magic` gives, or null if there is none.
-JSValue heldGet(JSContext* ctx, JSValueConst self, int magic) {
-    if (typedOf(self) == nullptr)
+// Returns the object that `typedObject` holds at the index that `magic` gives, or null if there is none.
+JSValue heldGet(JSContext* ctx, JSValueConst typedObject, int magic) {
+    if (typedOf(typedObject) == nullptr)
         return JS_ThrowTypeError(ctx, "Illegal invocation");
-    JSValue held = jsReference(ctx, self, uint32_t(magic & 0xff));
+    JSValue held = jsReference(ctx, typedObject, uint32_t(magic & 0xff));
     return JS_IsUndefined(held) ? JS_NULL : held;
 }
 
-// Replaces the object that `self` holds at `index` with `value`. Keeps the replacement if `self` is then allowed by its
-// setters, and throws a TypeError if not.
-bool replaceHeld(JSContext* ctx, JSValueConst self, uint32_t index, JSValueConst value) {
-    JSValue previous = jsReference(ctx, self, index);
-    jsSetReference(ctx, self, index, value);
-    bool ok = valid(ctx, self);
+// Replaces the object that `previousObject` holds at `index` with `value`. Keeps the replacement if `previousObject` is
+// then allowed by its setters, and throws a TypeError if not.
+bool replaceHeld(JSContext* ctx, JSValueConst previousObject, uint32_t index, JSValueConst value) {
+    JSValue previous = jsReference(ctx, previousObject, index);
+    jsSetReference(ctx, previousObject, index, value);
+    bool ok = valid(ctx, previousObject);
     if (!ok)
-        jsSetReference(ctx, self, index, previous);
+        jsSetReference(ctx, previousObject, index, previous);
     JS_FreeValue(ctx, previous);
     return ok;
 }
@@ -1919,13 +1919,13 @@ bool replaceHeld(JSContext* ctx, JSValueConst self, uint32_t index, JSValueConst
 // converts a number to a CSSUnitValue.
 constexpr int kNumberish = 1 << 8;
 
-JSValue heldSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    if (typedOf(self) == nullptr)
+JSValue heldSet(JSContext* ctx, JSValueConst okObject, JSValueConst input, int magic) {
+    if (typedOf(okObject) == nullptr)
         return JS_ThrowTypeError(ctx, "Illegal invocation");
     JSValue value = rectified(ctx, input, (magic & kNumberish) != 0 ? Rectify_Numberish : Rectify_None);
     if (JS_IsException(value))
         return value;
-    bool ok = replaceHeld(ctx, self, uint32_t(magic & 0xff), value);
+    bool ok = replaceHeld(ctx, okObject, uint32_t(magic & 0xff), value);
     JS_FreeValue(ctx, value);
     return ok ? JS_UNDEFINED : JS_EXCEPTION;
 }
@@ -1934,14 +1934,14 @@ uint32_t heldLength(void* handle) {
     return static_cast<TypedObject*>(handle)->references;
 }
 
-JSValue heldItem(JSContext* ctx, JSValueConst self, void*, uint32_t index) {
-    return jsReference(ctx, self, index);
+JSValue heldItem(JSContext* ctx, JSValueConst object, void*, uint32_t index) {
+    return jsReference(ctx, object, index);
 }
 
 // Sets an item at `index` of a css-typed-om-1/#cssunparsedvalue, or appends one at the index after the last: a segment
 // of an unparsed value, or a component of a transform value. A segment can make a value contain itself. Only flattening
 // detects that, as a value that is too deep.
-bool heldSetItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index, JSValueConst value) {
+bool heldSetItem(JSContext* ctx, JSValueConst jsObject, void* handle, uint32_t index, JSValueConst value) {
     TypedObject* object = static_cast<TypedObject*>(handle);
     if (index > object->references) {
         JS_ThrowRangeError(ctx, "Index out of range");
@@ -1954,7 +1954,7 @@ bool heldSetItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index
     JSValue item = object->kind == TypedKind_Unparsed ? segmentOf(ctx, value) : JS_DupValue(ctx, value);
     bool ok = !JS_IsException(item);
     if (ok) {
-        jsSetReference(ctx, self, index, item);
+        jsSetReference(ctx, jsObject, index, item);
         if (index == object->references)
             ++object->references;
     }
@@ -1965,8 +1965,8 @@ bool heldSetItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index
 constexpr JsIndexed kReadIndexed = {heldLength, heldItem, nullptr};
 constexpr JsIndexed kWriteIndexed = {heldLength, heldItem, heldSetItem};
 
-JSValue lengthGet(JSContext* ctx, JSValueConst self) {
-    TypedObject* object = typedOf(self);
+JSValue lengthGet(JSContext* ctx, JSValueConst typedObject) {
+    TypedObject* object = typedOf(typedObject);
     return object != nullptr ? JS_NewUint32(ctx, object->references) : JS_ThrowTypeError(ctx, "Illegal invocation");
 }
 
@@ -2005,21 +2005,21 @@ JSValue opposite(JSContext* ctx, JSValue value, bool invert) {
     return result;
 }
 
-// Gathers the operands of `self` combined with the arguments by `operation`. `self` is flattened into its operands if a
-// sum is added to or a product is multiplied. Each argument is rectified as a numeric value, negated if it is
-// subtracted, and inverted if it divides.
-bool gatherOperands(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, Operation operation, Values* out) {
-    const TypedObject* object = typedOf(self);
+// Gathers the operands of `typedObject` combined with the arguments by `operation`. `typedObject` is flattened into its
+// operands if a sum is added to or a product is multiplied. Each argument is rectified as a numeric value, negated if
+// it is subtracted, and inverted if it divides.
+bool gatherOperands(JSContext* ctx, JSValueConst typedObject, int argc, JSValueConst* argv, Operation operation, Values* out) {
+    const TypedObject* object = typedOf(typedObject);
     bool sum = operation == Operation_Add || operation == Operation_Sub;
     bool product = operation == Operation_Mul || operation == Operation_Div;
     if ((sum && object->kind == TypedKind_Sum) || (product && object->kind == TypedKind_Product)) {
         Values children = heldValues(ctx);
-        if (!children.read(self, object))
+        if (!children.read(typedObject, object))
             return false;
         for (uint32_t i = 0; i < children.values->count; ++i)
             out->add(JS_DupValue(ctx, children.values->data[i]));
     } else {
-        out->add(JS_DupValue(ctx, self));
+        out->add(JS_DupValue(ctx, typedObject));
     }
     for (int i = 0; i < argc; ++i) {
         JSValue operand = rectified(ctx, argv[i], Rectify_Numberish);
@@ -2037,12 +2037,12 @@ bool gatherOperands(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
 
 // Implements add, sub, mul, div, min and max, selected by the magic, which is the Operation
 // (css-typed-om-1/#dom-cssnumericvalue-add and the methods after it).
-JSValue combine(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
+JSValue combine(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv, int magic) {
     Operation operation = Operation(magic);
-    if (typedIn(ctx, self, cssNumericValueClass) == nullptr)
+    if (typedIn(ctx, object, cssNumericValueClass) == nullptr)
         return JS_EXCEPTION;
     Values operands = heldValues(ctx);
-    if (!gatherOperands(ctx, self, argc, argv, operation, &operands))
+    if (!gatherOperands(ctx, object, argc, argv, operation, &operands))
         return JS_EXCEPTION;
     uint32_t count = operands.values->count;
     const TypedObject* first = typedOf(operands.values->data[0]);
@@ -2093,11 +2093,11 @@ JSValue combine(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
     return math;
 }
 
-JSValue equals(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    if (typedIn(ctx, self, cssNumericValueClass) == nullptr)
+JSValue equals(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    if (typedIn(ctx, object, cssNumericValueClass) == nullptr)
         return JS_EXCEPTION;
     Tree tree = heldTree(ctx);
-    if (!flattenNumeric(ctx, self, tree.value))
+    if (!flattenNumeric(ctx, object, tree.value))
         return JS_EXCEPTION;
     bool equal = true;
     for (int i = 0; i < argc; ++i) {
@@ -2127,12 +2127,13 @@ bool unitArgument(JSContext* ctx, JSValueConst value, PrCssUnit* out) {
     return true;
 }
 
-JSValue to(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue to(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
     PrCssUnit unit;
-    if (typedIn(ctx, self, cssNumericValueClass) == nullptr || !jsArgCount(ctx, argc, 1) || !unitArgument(ctx, argv[0], &unit))
+    if (typedIn(ctx, object, cssNumericValueClass) == nullptr || !jsArgCount(ctx, argc, 1) ||
+            !unitArgument(ctx, argv[0], &unit))
         return JS_EXCEPTION;
     Tree tree = heldTree(ctx);
-    if (!flattenNumeric(ctx, self, tree.value))
+    if (!flattenNumeric(ctx, object, tree.value))
         return JS_EXCEPTION;
     PrCssNumericType type;
     double number = 0;
@@ -2141,8 +2142,8 @@ JSValue to(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     return newUnit(ctx, number, unit);
 }
 
-JSValue toSum(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    if (typedIn(ctx, self, cssNumericValueClass) == nullptr)
+JSValue toSum(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    if (typedIn(ctx, object, cssNumericValueClass) == nullptr)
         return JS_EXCEPTION;
     Array<PrCssUnit> units;
     bool ok = true;
@@ -2158,7 +2159,7 @@ JSValue toSum(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
             units.push(unit);
     }
     Tree tree = heldTree(ctx);
-    ok = ok && flattenNumeric(ctx, self, tree.value);
+    ok = ok && flattenNumeric(ctx, object, tree.value);
     Tree sum = heldTree(ctx);
     PrStatus status = ok ? prCssValueToSum(tree.value, 0, units.data, units.count, sum.value) : PrStatus_Ok;
     units.reset();
@@ -2172,8 +2173,8 @@ JSValue toSum(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
 
 // css-typed-om-1/#dom-cssnumericvalue-type, as a CSSNumericType dictionary: the type that the value has kept since it
 // was created.
-JSValue type(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    const TypedObject* object = typedIn(ctx, self, cssNumericValueClass);
+JSValue type(JSContext* ctx, JSValueConst jsObject, int, JSValueConst*) {
+    const TypedObject* object = typedIn(ctx, jsObject, cssNumericValueClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     if (!object->hasType)
@@ -2222,13 +2223,13 @@ JSValue unitConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
     return construct(ctx, newTarget, cssUnitValueClass, typedFields(TypedKind_Unit, unit, number));
 }
 
-JSValue numberGet(JSContext* ctx, JSValueConst self) {
-    TypedObject* object = typedIn(ctx, self, cssUnitValueClass);
+JSValue numberGet(JSContext* ctx, JSValueConst jsObject) {
+    TypedObject* object = typedIn(ctx, jsObject, cssUnitValueClass);
     return object != nullptr ? JS_NewFloat64(ctx, object->number) : JS_EXCEPTION;
 }
 
-JSValue numberSet(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    TypedObject* object = typedIn(ctx, self, cssUnitValueClass);
+JSValue numberSet(JSContext* ctx, JSValueConst jsObject, JSValueConst input) {
+    TypedObject* object = typedIn(ctx, jsObject, cssUnitValueClass);
     double number = 0;
     if (object == nullptr || JS_ToFloat64(ctx, &number, input) < 0)
         return JS_EXCEPTION;
@@ -2238,14 +2239,14 @@ JSValue numberSet(JSContext* ctx, JSValueConst self, JSValueConst input) {
     return JS_UNDEFINED;
 }
 
-JSValue unitGet(JSContext* ctx, JSValueConst self) {
-    TypedObject* object = typedIn(ctx, self, cssUnitValueClass);
+JSValue unitGet(JSContext* ctx, JSValueConst jsObject) {
+    TypedObject* object = typedIn(ctx, jsObject, cssUnitValueClass);
     return object != nullptr ? jsNewStringView(ctx, prCssUnitName(object->unit)) : JS_EXCEPTION;
 }
 
 // css-typed-om-1/#enumdef-cssmathoperator
-JSValue operatorGet(JSContext* ctx, JSValueConst self) {
-    TypedObject* object = typedIn(ctx, self, cssMathValueClass);
+JSValue operatorGet(JSContext* ctx, JSValueConst jsObject) {
+    TypedObject* object = typedIn(ctx, jsObject, cssMathValueClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     constexpr PrStringView kOperators[] = {"sum",    "product", "negate", "invert", "min",     "max", "clamp"};
@@ -2318,13 +2319,13 @@ JSValue transformConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
 }
 
 // Returns true if each component of a transform value is 2D.
-JSValue transformIs2D(JSContext* ctx, JSValueConst self) {
-    TypedObject* object = typedIn(ctx, self, cssTransformValueClass);
+JSValue transformIs2D(JSContext* ctx, JSValueConst componentObject) {
+    TypedObject* object = typedIn(ctx, componentObject, cssTransformValueClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     bool flat = true;
     for (uint32_t i = 0; flat && i < object->references; ++i) {
-        JSValue component = jsReference(ctx, self, i);
+        JSValue component = jsReference(ctx, componentObject, i);
         TypedObject* held = typedOf(component);
         flat = held != nullptr && held->is2D;
         JS_FreeValue(ctx, component);
@@ -2332,15 +2333,15 @@ JSValue transformIs2D(JSContext* ctx, JSValueConst self) {
     return JS_NewBool(ctx, flat);
 }
 
-JSValue componentIs2D(JSContext* ctx, JSValueConst self) {
-    TypedObject* object = typedIn(ctx, self, cssTransformComponentClass);
+JSValue componentIs2D(JSContext* ctx, JSValueConst jsObject) {
+    TypedObject* object = typedIn(ctx, jsObject, cssTransformComponentClass);
     return object != nullptr ? JS_NewBool(ctx, object->is2D) : JS_EXCEPTION;
 }
 
 // Setting is2D on a skew or a perspective does nothing. A skew is always 2D, and a perspective never is
 // (css-typed-om-1/#dom-cssskew-is2d, css-typed-om-1/#dom-cssperspective-is2d).
-JSValue setComponentIs2D(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    TypedObject* object = typedIn(ctx, self, cssTransformComponentClass);
+JSValue setComponentIs2D(JSContext* ctx, JSValueConst jsObject, JSValueConst input) {
+    TypedObject* object = typedIn(ctx, jsObject, cssTransformComponentClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     bool fixed = object->kind == TypedKind_Skew || object->kind == TypedKind_SkewX ||
@@ -2364,16 +2365,16 @@ bool componentMatrix(JSContext* ctx, JSValueConst component, PrDomMatrix* out) {
 }
 
 // css-typed-om-1/#dom-csstransformvalue-tomatrix, and a component's toMatrix.
-JSValue toMatrix(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    const TypedObject* object = typedOf(self);
+JSValue toMatrix(JSContext* ctx, JSValueConst typedObject, int, JSValueConst*) {
+    const TypedObject* object = typedOf(typedObject);
     if (object == nullptr || (object->kind != TypedKind_Transform && !isComponent(object->kind)))
         return JS_ThrowTypeError(ctx, "Illegal invocation");
     PrDomMatrix matrix = prDomMatrixIdentity();
     bool ok = true;
     if (object->kind != TypedKind_Transform) {
-        ok = componentMatrix(ctx, self, &matrix);
+        ok = componentMatrix(ctx, typedObject, &matrix);
     } else {
-        ok = eachChild(ctx, self, object, [&](JSValueConst component) {
+        ok = eachChild(ctx, typedObject, object, [&](JSValueConst component) {
             PrDomMatrix next;
             if (!componentMatrix(ctx, component, &next))
                 return false;
@@ -2436,16 +2437,16 @@ JSValue matrixConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValu
     return construct(ctx, newTarget, cssMatrixComponentClass, typedFields(TypedKind_Matrix, PrCssUnit_Number, 0, is2D), &held, 1);
 }
 
-JSValue matrixGet(JSContext* ctx, JSValueConst self) {
-    return typedIn(ctx, self, cssMatrixComponentClass) != nullptr ? jsReference(ctx, self, 0) : JS_EXCEPTION;
+JSValue matrixGet(JSContext* ctx, JSValueConst object) {
+    return typedIn(ctx, object, cssMatrixComponentClass) != nullptr ? jsReference(ctx, object, 0) : JS_EXCEPTION;
 }
 
-JSValue matrixSet(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    if (typedIn(ctx, self, cssMatrixComponentClass) == nullptr)
+JSValue matrixSet(JSContext* ctx, JSValueConst object, JSValueConst input) {
+    if (typedIn(ctx, object, cssMatrixComponentClass) == nullptr)
         return JS_EXCEPTION;
     if (!prJsDomMatrixIsMutable(ctx, input))
         return JS_ThrowTypeError(ctx, "Expected a DOMMatrix");
-    jsSetReference(ctx, self, 0, input);
+    jsSetReference(ctx, object, 0, input);
     return JS_UNDEFINED;
 }
 
@@ -2619,8 +2620,8 @@ JSValue colorFunctionConstruct(JSContext* ctx, JSValueConst newTarget, int argc,
 
 // The setter of a color value's channel or alpha, held at the index that `magic` gives. A CSSColor holds its color
 // space, channels and alpha at 0, 1 and 2.
-JSValue colorSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    TypedObject* object = typedIn(ctx, self, cssColorValueClass);
+JSValue colorSet(JSContext* ctx, JSValueConst channelsObject, JSValueConst input, int magic) {
+    TypedObject* object = typedIn(ctx, channelsObject, cssColorValueClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     uint32_t index = uint32_t(magic);
@@ -2629,7 +2630,7 @@ JSValue colorSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magi
         value = colorChannel(ctx, input, channelType(object->colorFunction, index),
             colorIdl(object->colorFunction, index, index == 3));
     } else if (index == 1) {
-        JSValue channels = jsReference(ctx, self, 1);
+        JSValue channels = jsReference(ctx, channelsObject, 1);
         bool ok = jsObservableArraySet(ctx, channels, input);
         JS_FreeValue(ctx, channels);
         return ok ? JS_UNDEFINED : JS_EXCEPTION;
@@ -2646,7 +2647,7 @@ JSValue colorSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magi
     }
     if (JS_IsException(value))
         return value;
-    jsSetReference(ctx, self, index, value);
+    jsSetReference(ctx, channelsObject, index, value);
     JS_FreeValue(ctx, value);
     return JS_UNDEFINED;
 }
@@ -2675,8 +2676,8 @@ JSValue parseColor(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
 // declaration block
 
 // Implements get, getAll and has, selected by the magic.
-JSValue mapGet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
+JSValue mapGet(JSContext* ctx, JSValueConst mapObject, int argc, JSValueConst* argv, int magic) {
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, mapObject, stylePropertyMapReadOnlyClass);
     PropertyArgument property = {};
     if (map == nullptr || !jsArgCount(ctx, argc, 1) || !property.read(ctx, argv[0]))
         return JS_EXCEPTION;
@@ -2690,8 +2691,8 @@ JSValue mapGet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, 
     return JS_NewBool(ctx, prCssValueSize(value.value) != 0);
 }
 
-JSValue mapSize(JSContext* ctx, JSValueConst self) {
-    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
+JSValue mapSize(JSContext* ctx, JSValueConst mapObject) {
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, mapObject, stylePropertyMapReadOnlyClass);
     return map != nullptr ? JS_NewUint32(ctx, prCssStyleDeclarationLength(map)) : JS_EXCEPTION;
 }
 
@@ -2721,20 +2722,20 @@ JSValue mapEntries(JSContext* ctx, PrCssStyleDeclaration* map) {
 }
 
 // Implements entries, keys and values, selected by the magic, which is the JsMapPart.
-JSValue mapIterate(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
+JSValue mapIterate(JSContext* ctx, JSValueConst mapObject, int, JSValueConst*, int magic) {
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, mapObject, stylePropertyMapReadOnlyClass);
     if (map == nullptr)
         return JS_EXCEPTION;
     JSValue entries = mapEntries(ctx, map);
     return JS_IsException(entries) ? entries : jsMapIterate(ctx, entries, JsMapPart(magic));
 }
 
-JSValue mapForEach(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
+JSValue mapForEach(JSContext* ctx, JSValueConst mapObject, int argc, JSValueConst* argv) {
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, mapObject, stylePropertyMapReadOnlyClass);
     if (map == nullptr)
         return JS_EXCEPTION;
     JSValue entries = mapEntries(ctx, map);
-    return JS_IsException(entries) ? entries : jsMapForEach(ctx, self, entries, argc, argv);
+    return JS_IsException(entries) ? entries : jsMapForEach(ctx, mapObject, entries, argc, argv);
 }
 
 // Returns true if two declaration names name the same property.
@@ -2757,8 +2758,8 @@ bool holdsTokens(const PrCssValue* value) {
 
 // Implements set and append, selected by the magic. Each value is a CSSStyleValue, or a string parsed for the property
 // (css-typed-om-1/#dom-stylepropertymap-set, css-typed-om-1/#dom-stylepropertymap-append).
-JSValue mapSet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, prJsCssStylePropertyMapClass);
+JSValue mapSet(JSContext* ctx, JSValueConst mapObject, int argc, JSValueConst* argv, int magic) {
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, mapObject, prJsCssStylePropertyMapClass);
     PropertyArgument property = {};
     if (map == nullptr || !jsArgCount(ctx, argc, 1) || !property.read(ctx, argv[0]))
         return JS_EXCEPTION;
@@ -2803,8 +2804,8 @@ JSValue mapSet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, 
     return JS_UNDEFINED;
 }
 
-JSValue mapDelete(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, prJsCssStylePropertyMapClass);
+JSValue mapDelete(JSContext* ctx, JSValueConst mapObject, int argc, JSValueConst* argv) {
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, mapObject, prJsCssStylePropertyMapClass);
     PropertyArgument property = {};
     if (map == nullptr || !jsArgCount(ctx, argc, 1) || !property.read(ctx, argv[0]))
         return JS_EXCEPTION;
@@ -2812,8 +2813,8 @@ JSValue mapDelete(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
     return JS_UNDEFINED;
 }
 
-JSValue mapClear(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, prJsCssStylePropertyMapClass);
+JSValue mapClear(JSContext* ctx, JSValueConst mapObject, int, JSValueConst*) {
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, mapObject, prJsCssStylePropertyMapClass);
     if (map == nullptr)
         return JS_EXCEPTION;
     prCssStyleDeclarationSetCssText(map, "");

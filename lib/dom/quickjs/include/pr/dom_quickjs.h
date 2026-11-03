@@ -124,8 +124,8 @@ bool prJsDomEventHandlerCallback(JSContext* ctx, JSValueConst function, JSValueC
 
 // The getter and setter of an event handler IDL attribute (html/#event-handler-idl-attributes). The magic is the
 // attribute's PrDomEventHandler.
-JSValue prJsDomEventHandler(JSContext* ctx, JSValueConst self, int magic);
-JSValue prJsDomSetEventHandler(JSContext* ctx, JSValueConst self, JSValueConst input, int magic);
+JSValue prJsDomEventHandler(JSContext* ctx, JSValueConst targetObject, int magic);
+JSValue prJsDomSetEventHandler(JSContext* ctx, JSValueConst targetObject, JSValueConst input, int magic);
 
 // The entry of a prototype's member list that is the event handler IDL attribute `name`.
 #define PR_JS_DOM_EVENT_HANDLER(name) \

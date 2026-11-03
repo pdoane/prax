@@ -30,8 +30,8 @@ struct JsTextEncoder {
     uint8_t _pad;
 };
 
-JsTextDecoder* PR_NULLABLE decoderOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<JsTextDecoder>(ctx, self, textDecoderClass, "TextDecoder");
+JsTextDecoder* PR_NULLABLE decoderOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<JsTextDecoder>(ctx, object, textDecoderClass, "TextDecoder");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -59,8 +59,8 @@ JSValue constructDecoder(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
 }
 
 // encoding/#dom-textdecoder-decode
-JSValue decodeMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    JsTextDecoder* decoder = decoderOf(ctx, self);
+JSValue decodeMethod(JSContext* ctx, JSValueConst decoderObject, int argc, JSValueConst* argv) {
+    JsTextDecoder* decoder = decoderOf(ctx, decoderObject);
     if (decoder == nullptr)
         return JS_EXCEPTION;
     const uint8_t* data = nullptr;
@@ -91,8 +91,8 @@ JSValue decodeMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 }
 
 // encoding/#dom-textdecoder-encoding: the name of the decoder's charset in lowercase.
-JSValue encodingGet(JSContext* ctx, JSValueConst self) {
-    JsTextDecoder* decoder = decoderOf(ctx, self);
+JSValue encodingGet(JSContext* ctx, JSValueConst decoderObject) {
+    JsTextDecoder* decoder = decoderOf(ctx, decoderObject);
     if (decoder == nullptr)
         return JS_EXCEPTION;
     TextBuffer name;
@@ -104,8 +104,8 @@ JSValue encodingGet(JSContext* ctx, JSValueConst self) {
 }
 
 // encoding/#dom-textdecoder-fatal and encoding/#dom-textdecoder-ignorebom, by the flag that the magic names.
-JSValue flagGet(JSContext* ctx, JSValueConst self, int magic) {
-    JsTextDecoder* decoder = decoderOf(ctx, self);
+JSValue flagGet(JSContext* ctx, JSValueConst decoderObject, int magic) {
+    JsTextDecoder* decoder = decoderOf(ctx, decoderObject);
     if (decoder == nullptr)
         return JS_EXCEPTION;
     return JS_NewBool(ctx, (decoder->decoder.flags & magic) != 0);
@@ -119,19 +119,19 @@ JSValue constructEncoder(JSContext* ctx, JSValueConst newTarget, int, JSValueCon
     return jsConstructed(ctx, newTarget, jsNewValue(ctx, textEncoderClass, JsTextEncoder{}));
 }
 
-bool isEncoder(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<JsTextEncoder>(ctx, self, textEncoderClass, "TextEncoder") != nullptr;
+bool isEncoder(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<JsTextEncoder>(ctx, object, textEncoderClass, "TextEncoder") != nullptr;
 }
 
 // encoding/#dom-textencoder-encoding
-JSValue encoderEncodingGet(JSContext* ctx, JSValueConst self) {
-    return isEncoder(ctx, self) ? JS_NewString(ctx, "utf-8") : JS_EXCEPTION;
+JSValue encoderEncodingGet(JSContext* ctx, JSValueConst object) {
+    return isEncoder(ctx, object) ? JS_NewString(ctx, "utf-8") : JS_EXCEPTION;
 }
 
 // encoding/#dom-textencoder-encode. The string reads as a USVString, which is UTF-8 already.
-JSValue encodeMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue encodeMethod(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
     StringArgument input = {ctx};
-    if (!isEncoder(ctx, self) || (jsArgGiven(argc, argv, 0) && !input.read(argv[0])))
+    if (!isEncoder(ctx, object) || (jsArgGiven(argc, argv, 0) && !input.read(argv[0])))
         return JS_EXCEPTION;
     PrStringView text = input.value();
     return JS_NewUint8ArrayCopy(ctx, reinterpret_cast<const uint8_t*>(text.data), text.size);
@@ -139,9 +139,9 @@ JSValue encodeMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 
 // encoding/#dom-textencoder-encodeinto. Writes the code points of the source that fit in the destination whole, and
 // returns how many UTF-16 code units of the source it read and how many bytes it wrote.
-JSValue encodeIntoMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue encodeIntoMethod(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
     StringArgument source = {ctx};
-    if (!isEncoder(ctx, self) || !jsArgCount(ctx, argc, 2) || !source.read(argv[0]))
+    if (!isEncoder(ctx, object) || !jsArgCount(ctx, argc, 2) || !source.read(argv[0]))
         return JS_EXCEPTION;
     if (JS_GetTypedArrayType(argv[1]) != JS_TYPED_ARRAY_UINT8)
         return JS_ThrowTypeError(ctx, "The provided value is not of type 'Uint8Array'");

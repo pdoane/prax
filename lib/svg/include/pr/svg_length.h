@@ -61,36 +61,36 @@ void prSvgAnimatedLengthDestroy(PrSvgAnimatedLength* PR_NULLABLE length);
 
 // Returns the length that reflects the attribute's base value, or its animated value, which is read only. The caller
 // frees it with prSvgLengthDestroy.
-PrSvgLength* prSvgAnimatedLengthBaseVal(const PrSvgAnimatedLength* self);
-PrSvgLength* prSvgAnimatedLengthAnimVal(const PrSvgAnimatedLength* self);
+PrSvgLength* prSvgAnimatedLengthBaseVal(const PrSvgAnimatedLength* animated);
+PrSvgLength* prSvgAnimatedLengthAnimVal(const PrSvgAnimatedLength* animated);
 
 // Returns the type of the length's value (SVG2/types.html#__svg__SVGLength__unitType).
-PrSvgLengthType prSvgLengthUnitType(const PrSvgLength* self);
+PrSvgLengthType prSvgLengthUnitType(const PrSvgLength* length);
 
 // Returns the length in user units, with percentages of its element's viewport along the attribute's direction and
 // font-relative units of its element's font, or of 100 and the initial font size if it is detached
 // (SVG2/types.html#__svg__SVGLength__value). The value of a length whose element no tree draws resolves percentages
 // against 0.
-float prSvgLengthValue(const PrSvgLength* self);
+float prSvgLengthValue(const PrSvgLength* svgLength);
 
 // Returns the number before the unit, or 0 for a value of another kind
 // (SVG2/types.html#__svg__SVGLength__valueInSpecifiedUnits).
-float prSvgLengthValueInSpecifiedUnits(const PrSvgLength* self);
+float prSvgLengthValueInSpecifiedUnits(const PrSvgLength* length);
 
 // Returns the value as a string (SVG2/types.html#__svg__SVGLength__valueAsString). The caller releases it.
-PrString prSvgLengthValueAsString(const PrSvgLength* self);
+PrString prSvgLengthValueAsString(const PrSvgLength* length);
 
 // Sets the value in user units as a number, the number before the unit, or the value from a string, and writes a
 // reflected attribute again. Returns ReadOnly for an animated value, and Syntax for a string that is not a length.
-PrStatus prSvgLengthSetValue(PrSvgLength* self, float value);
-PrStatus prSvgLengthSetValueInSpecifiedUnits(PrSvgLength* self, float value);
-PrStatus prSvgLengthSetValueAsString(PrSvgLength* self, PrStringView text);
+PrStatus prSvgLengthSetValue(PrSvgLength* length, float value);
+PrStatus prSvgLengthSetValueInSpecifiedUnits(PrSvgLength* length, float value);
+PrStatus prSvgLengthSetValueAsString(PrSvgLength* length, PrStringView text);
 
 // Sets the value to `value` in `type`, or converts it to `type` and keeps its value in user units
 // (SVG2/types.html#__svg__SVGLength__newValueSpecifiedUnits). Returns ReadOnly for an animated value, and NotSupported
 // for Unknown or a type that is not one.
-PrStatus prSvgLengthNewValueSpecifiedUnits(PrSvgLength* self, PrSvgLengthType type, float value);
-PrStatus prSvgLengthConvertToSpecifiedUnits(PrSvgLength* self, PrSvgLengthType type);
+PrStatus prSvgLengthNewValueSpecifiedUnits(PrSvgLength* length, PrSvgLengthType type, float value);
+PrStatus prSvgLengthConvertToSpecifiedUnits(PrSvgLength* length, PrSvgLengthType type);
 
 #if defined(__cplusplus)
 }

@@ -19,8 +19,8 @@ struct Handler {
 
 JSClassID handlerClass;
 
-void handlerFinalize(JSRuntime* runtime, JSValue self) {
-    Handler* handler = static_cast<Handler*>(JS_GetOpaque(self, handlerClass));
+void handlerFinalize(JSRuntime* runtime, JSValue handlerObject) {
+    Handler* handler = static_cast<Handler*>(JS_GetOpaque(handlerObject, handlerClass));
     if (handler == nullptr)
         return;
     JS_FreeValueRT(runtime, handler->owner);
@@ -30,8 +30,8 @@ void handlerFinalize(JSRuntime* runtime, JSValue self) {
     prMemoryFree(handler);
 }
 
-void handlerMark(JSRuntime* runtime, JSValueConst self, JS_MarkFunc* mark) {
-    Handler* handler = static_cast<Handler*>(JS_GetOpaque(self, handlerClass));
+void handlerMark(JSRuntime* runtime, JSValueConst handlerObject, JS_MarkFunc* mark) {
+    Handler* handler = static_cast<Handler*>(JS_GetOpaque(handlerObject, handlerClass));
     if (handler == nullptr)
         return;
     JS_MarkValue(runtime, handler->owner, mark);
@@ -219,8 +219,8 @@ JSValue ownKeys(JSContext* ctx, Handler* handler, JSValueConst reflect, JSValueC
 }
 
 // A trap of webidl/#js-observable-array-abstract-operations, selected by the magic, with the handler as `this`.
-JSValue trap(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
-    Handler* handler = static_cast<Handler*>(JS_GetOpaque(self, handlerClass));
+JSValue trap(JSContext* ctx, JSValueConst handlerObject, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
+    Handler* handler = static_cast<Handler*>(JS_GetOpaque(handlerObject, handlerClass));
     if (handler == nullptr || argc < 1)
         return JS_ThrowTypeError(ctx, "Illegal invocation");
     JSValueConst reflect = data[0];

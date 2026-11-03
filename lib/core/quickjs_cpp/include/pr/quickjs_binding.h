@@ -53,7 +53,7 @@ struct JsWrapperExtra {
 
     // The object itself while it is pinned (jsPin), which keeps it alive when script cannot reach it. Undefined
     // otherwise.
-    JSValue self;
+    JSValue pinnedObject;
 
     JsCallback* PR_NULLABLE callbacks;  // the callbacks registered through it, which it traces
     uint32_t pins;                      // how many times its handle is pinned
@@ -237,21 +237,21 @@ void jsEnqueueNative(JSContext* ctx, void (*run)(void* data), void* data);
 JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLABLE handle,
     bool ownsHandle, void (*PR_NULLABLE retain)(void*) = nullptr);
 
-// Reads or stores the value of the [SameObject] attribute `name` of `self`, an object of a bound class. The value is
-// undefined until stored. `self` keeps the value alive, and storing one makes `self` stateful.
-JSValue jsSameObject(JSContext* ctx, JSValueConst self, const char* name);
-void jsSetSameObject(JSContext* ctx, JSValueConst self, const char* name, JSValueConst value);
+// Reads or stores the value of the [SameObject] attribute `name` of `object`, an object of a bound class. The value is
+// undefined until stored. `object` keeps the value alive, and storing one makes `object` stateful.
+JSValue jsSameObject(JSContext* ctx, JSValueConst object, const char* name);
+void jsSetSameObject(JSContext* ctx, JSValueConst object, const char* name, JSValueConst value);
 
-// Returns the value of the [SameObject] attribute `name` of `self`. If no value is stored, stores and returns the value
-// that `make` returns. A result that is not an object is not stored.
+// Returns the value of the [SameObject] attribute `name` of `object`. If no value is stored, stores and returns the
+// value that `make` returns. A result that is not an object is not stored.
 template <typename Make>
-JSValue jsSameObject(JSContext* ctx, JSValueConst self, const char* name, Make make) {
-    JSValue held = jsSameObject(ctx, self, name);
+JSValue jsSameObject(JSContext* ctx, JSValueConst object, const char* name, Make make) {
+    JSValue held = jsSameObject(ctx, object, name);
     if (!JS_IsUndefined(held))
         return held;
     JSValue value = make();
     if (JS_IsObject(value))
-        jsSetSameObject(ctx, self, name, value);
+        jsSetSameObject(ctx, object, name, value);
     return value;
 }
 
@@ -262,10 +262,10 @@ JSValue jsSameObject(JSContext* ctx, JSValueConst self, const char* name, Make m
 bool jsHold(JSContext* ctx, JSValueConst owner, const char* name, JSValueConst value, bool hold);
 
 // Stores `value` in the wrapper's reference `index`, which the collector traces with the wrapper.
-void jsSetReference(JSContext* ctx, JSValueConst self, uint32_t index, JSValueConst value);
+void jsSetReference(JSContext* ctx, JSValueConst object, uint32_t index, JSValueConst value);
 
 // Returns the value in the wrapper's reference `index`, or undefined if it was never set.
-JSValue jsReference(JSContext* ctx, JSValueConst self, uint32_t index);
+JSValue jsReference(JSContext* ctx, JSValueConst object, uint32_t index);
 
 // Returns `text` as a JS value, or null for the null string.
 JSValue jsNewString(JSContext* ctx, const PrString* text);
@@ -342,8 +342,8 @@ void jsWrapperDestroy(JSRuntime* runtime, JsWrapper* wrapper);
 // Finalizes an object of class `id`. Detaches the callbacks registered through the object, and passes an owned handle
 // to `cleanup`, or to the class's release if `cleanup` is null. Then releases the wrapper's JS values.
 template <typename Handle>
-void jsFinalize(JSRuntime* runtime, JSValue self, JSClassID id, void (*PR_NULLABLE cleanup)(Handle* PR_NONNULL)) {
-    JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(self, id));
+void jsFinalize(JSRuntime* runtime, JSValue object, JSClassID id, void (*PR_NULLABLE cleanup)(Handle* PR_NONNULL)) {
+    JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(object, id));
     if (wrapper == nullptr)
         return;
 
@@ -359,7 +359,7 @@ void jsFinalize(JSRuntime* runtime, JSValue self, JSClassID id, void (*PR_NULLAB
 
 // The mark function of class `id`. Traces every JS value that the object holds. The collector counts each value that a
 // mark reports as one reference.
-void jsMark(JSRuntime* runtime, JSValueConst self, JSClassID id, JS_MarkFunc* mark);
+void jsMark(JSRuntime* runtime, JSValueConst object, JSClassID id, JS_MarkFunc* mark);
 
 // If `name` is an array index, writes it to `*out` and returns 1. Returns 0 for any other property name, and -1 for an
 // exception.
@@ -510,12 +510,12 @@ Handle* PR_NULLABLE jsHandleAs(JSContext* ctx, JSValueConst value, JSClassID bas
 // Returns the handle of the global object, if its class is `base` or derives from it.
 void* PR_NULLABLE jsGlobalHandleIn(JSContext* ctx, JSClassID base);
 
-// Returns the handle that `self` holds as a `base`. A call with no receiver, or with the global object as its receiver,
-// uses the global's handle. Otherwise returns null and throws a TypeError.
+// Returns the handle that `object` holds as a `base`. A call with no receiver, or with the global object as its
+// receiver, uses the global's handle. Otherwise returns null and throws a TypeError.
 template <typename Handle>
-Handle* PR_NULLABLE jsThis(JSContext* ctx, JSValueConst self, JSClassID base) {
-    void* handle = jsHandleIn(ctx, self, base);
-    if (handle == nullptr && jsIsGlobal(ctx, self))
+Handle* PR_NULLABLE jsThis(JSContext* ctx, JSValueConst object, JSClassID base) {
+    void* handle = jsHandleIn(ctx, object, base);
+    if (handle == nullptr && jsIsGlobal(ctx, object))
         handle = jsGlobalHandleIn(ctx, base);
     if (handle == nullptr)
         JS_ThrowTypeError(ctx, "Illegal invocation");
@@ -530,8 +530,8 @@ typedef JSClassID JsClassify(void* handle);
 // many contexts bind it. The first classifier that returns another class decides.
 void jsAddClassifier(JSRuntime* runtime, JSClassID id, JsClassify* classify);
 
-// Replaces the object that `self` keeps alive as its owner, removing `self` from any group it is in.
-void jsSetOwner(JSContext* ctx, JSValueConst self, JSValueConst owner);
+// Replaces the object that `object` keeps alive as its owner, removing `object` from any group it is in.
+void jsSetOwner(JSContext* ctx, JSValueConst object, JSValueConst owner);
 
 // Makes `member` an object of `group`, removing it from any group it is in.
 //
@@ -594,8 +594,8 @@ T* PR_NULLABLE jsValueOf(JSContext* ctx, JSValueConst object, JSClassID base, co
 }
 
 // The finalizer and the mark function of a value class.
-void jsValueFinalizer(JSRuntime* runtime, JSValue self);
-void jsValueMark(JSRuntime* runtime, JSValueConst self, JS_MarkFunc* mark);
+void jsValueFinalizer(JSRuntime* runtime, JSValue object);
+void jsValueMark(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Members
@@ -617,28 +617,28 @@ struct JsHandleOf<R (*PR_NONNULL)(const T* PR_NONNULL, A...)> {
 
 // The finalizer, which passes a handle that the object owns to `Cleanup`.
 template <const JSClassID* PR_NONNULL Id, auto Cleanup>
-void jsFinalizer(JSRuntime* runtime, JSValue self) {
+void jsFinalizer(JSRuntime* runtime, JSValue object) {
     using T = typename JsHandleOf<decltype(Cleanup)>::Type;
-    jsFinalize<T>(runtime, self, *Id, [](T* handle) { Cleanup(handle); });
+    jsFinalize<T>(runtime, object, *Id, [](T* handle) { Cleanup(handle); });
 }
 
 // The finalizer of a class whose handles the object never owns.
 template <const JSClassID* PR_NONNULL Id>
-void jsViewFinalizer(JSRuntime* runtime, JSValue self) {
-    jsFinalize<void>(runtime, self, *Id, nullptr);
+void jsViewFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<void>(runtime, object, *Id, nullptr);
 }
 
 // The mark function of class `*Id`.
 template <const JSClassID* PR_NONNULL Id>
-void jsMarker(JSRuntime* runtime, JSValueConst self, JS_MarkFunc* mark) {
-    jsMark(runtime, self, *Id, mark);
+void jsMarker(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark) {
+    jsMark(runtime, object, *Id, mark);
 }
 
 // The getter of a DOMString attribute. `Get` returns an owned string, which the getter frees, or a view.
 template <const JSClassID* PR_NONNULL Id, auto Get>
-JSValue jsStringGetter(JSContext* ctx, JSValueConst self) {
+JSValue jsStringGetter(JSContext* ctx, JSValueConst jsObject) {
     using T = typename JsHandleOf<decltype(Get)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
+    T* object = jsThis<T>(ctx, jsObject, *Id);
     if (object == nullptr)
         return JS_EXCEPTION;
     return jsResultString(ctx, Get(object));
@@ -647,9 +647,9 @@ JSValue jsStringGetter(JSContext* ctx, JSValueConst self) {
 // The setter of a DOMString attribute. If `Nullable` is true, null reads as the empty string, as for a nullable or
 // [LegacyNullToEmptyString] attribute.
 template <const JSClassID* PR_NONNULL Id, auto Set, bool Nullable = false>
-JSValue jsStringSetter(JSContext* ctx, JSValueConst self, JSValueConst input) {
+JSValue jsStringSetter(JSContext* ctx, JSValueConst jsObject, JSValueConst input) {
     using T = typename JsHandleOf<decltype(Set)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
+    T* object = jsThis<T>(ctx, jsObject, *Id);
     StringArgument value = {ctx};
     if (object == nullptr || !(Nullable ? value.readNullable(input) : value.read(input)))
         return JS_EXCEPTION;
@@ -659,25 +659,25 @@ JSValue jsStringSetter(JSContext* ctx, JSValueConst self, JSValueConst input) {
 
 // A boolean attribute's getter.
 template <const JSClassID* PR_NONNULL Id, auto Get>
-JSValue jsBoolGetter(JSContext* ctx, JSValueConst self) {
+JSValue jsBoolGetter(JSContext* ctx, JSValueConst jsObject) {
     using T = typename JsHandleOf<decltype(Get)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
+    T* object = jsThis<T>(ctx, jsObject, *Id);
     return object != nullptr ? JS_NewBool(ctx, Get(object)) : JS_EXCEPTION;
 }
 
 // A numeric attribute's getter. The value converts to a double.
 template <const JSClassID* PR_NONNULL Id, auto Get>
-JSValue jsNumberGetter(JSContext* ctx, JSValueConst self) {
+JSValue jsNumberGetter(JSContext* ctx, JSValueConst jsObject) {
     using T = typename JsHandleOf<decltype(Get)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
+    T* object = jsThis<T>(ctx, jsObject, *Id);
     return object != nullptr ? JS_NewFloat64(ctx, double(Get(object))) : JS_EXCEPTION;
 }
 
 // The setter of an attribute whose value converts by ToUint32.
 template <const JSClassID* PR_NONNULL Id, auto Set>
-JSValue jsUint32Setter(JSContext* ctx, JSValueConst self, JSValueConst input) {
+JSValue jsUint32Setter(JSContext* ctx, JSValueConst jsObject, JSValueConst input) {
     using T = typename JsHandleOf<decltype(Set)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
+    T* object = jsThis<T>(ctx, jsObject, *Id);
     uint32_t value = 0;
     if (object == nullptr || JS_ToUint32(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -716,21 +716,21 @@ struct JsLiteral {
 // The getter of the [SameObject] attribute `Name`, which returns an object of class `*As` or of a class derived from
 // it. The object keeps the receiver alive.
 template <const JSClassID* PR_NONNULL Id, auto Get, const JSClassID* PR_NONNULL As, JsLiteral Name>
-JSValue jsSameObjectGetter(JSContext* ctx, JSValueConst self) {
+JSValue jsSameObjectGetter(JSContext* ctx, JSValueConst jsObject) {
     using T = typename JsHandleOf<decltype(Get)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
+    T* object = jsThis<T>(ctx, jsObject, *Id);
     if (object == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, Name.text, [&] { return jsWrapAs(ctx, *As, self, Get(object), false); });
+    return jsSameObject(ctx, jsObject, Name.text, [&] { return jsWrapAs(ctx, *As, jsObject, Get(object), false); });
 }
 
 // An attribute's getter, which returns an object of class `*As` or of a class derived from it. The object keeps the
 // receiver alive.
 template <const JSClassID* PR_NONNULL Id, auto Get, const JSClassID* PR_NONNULL As>
-JSValue jsObjectGetter(JSContext* ctx, JSValueConst self) {
+JSValue jsObjectGetter(JSContext* ctx, JSValueConst jsObject) {
     using T = typename JsHandleOf<decltype(Get)>::Type;
-    T* object = jsThis<T>(ctx, self, *Id);
-    return object != nullptr ? jsWrapAs(ctx, *As, self, Get(object), false) : JS_EXCEPTION;
+    T* object = jsThis<T>(ctx, jsObject, *Id);
+    return object != nullptr ? jsWrapAs(ctx, *As, jsObject, Get(object), false) : JS_EXCEPTION;
 }
 
 } // namespace pr

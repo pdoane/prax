@@ -45,8 +45,8 @@ JSClassID classifyElement(void* handle) {
     return *kInterfaceClasses[prSvgElementInterface(svg)];
 }
 
-PrSvgElement* PR_NULLABLE textContentOf(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrSvgElement>(ctx, self, prJsSvgTextContentElementClass);
+PrSvgElement* PR_NULLABLE textContentOf(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrSvgElement>(ctx, object, prJsSvgTextContentElementClass);
 }
 
 // Reads argument `index` as an unsigned long (webidl/#js-unsigned-long), which must be given.
@@ -78,8 +78,8 @@ bool readMember(JSContext* ctx, JSValueConst dictionary, const char* name, bool 
 }
 
 // Implements getBBox (SVG2/types.html#__svg__SVGGraphicsElement__getBBox) and its SVGBoundingBoxOptions argument.
-JSValue getBBox(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrSvgElement* element = jsThis<PrSvgElement>(ctx, self, prJsSvgGraphicsElementClass);
+JSValue getBBox(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrSvgElement* element = jsThis<PrSvgElement>(ctx, elementObject, prJsSvgGraphicsElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrSvgBoundingBoxOptions options = prSvgBoundingBoxOptionsDefault();
@@ -97,8 +97,8 @@ JSValue getBBox(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv)
 }
 
 // Implements getCTM and getScreenCTM, selected by the magic. A transform that cannot be found is null.
-JSValue getCtm(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrSvgElement* element = jsThis<PrSvgElement>(ctx, self, prJsSvgGraphicsElementClass);
+JSValue getCtm(JSContext* ctx, JSValueConst elementObject, int, JSValueConst*, int magic) {
+    PrSvgElement* element = jsThis<PrSvgElement>(ctx, elementObject, prJsSvgGraphicsElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomMatrix matrix = prDomMatrixIdentity();
@@ -119,8 +119,8 @@ JSValue orInvalidState(JSContext* ctx, PrStatus status, JSValue value) {
 }
 
 // Implements isPointInFill and isPointInStroke, selected by the magic.
-JSValue isPointIn(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrSvgElement* element = jsThis<PrSvgElement>(ctx, self, prJsSvgGeometryElementClass);
+JSValue isPointIn(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv, int magic) {
+    PrSvgElement* element = jsThis<PrSvgElement>(ctx, elementObject, prJsSvgGeometryElementClass);
     PrDomPoint point{0, 0, 0, 1};
     if (element == nullptr || !prJsDomPointInitRead(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &point))
         return JS_EXCEPTION;
@@ -133,8 +133,8 @@ JSValue isPointIn(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
     return orInvalidState(ctx, status, JS_NewBool(ctx, inside));
 }
 
-JSValue getTotalLength(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrSvgElement* element = jsThis<PrSvgElement>(ctx, self, prJsSvgGeometryElementClass);
+JSValue getTotalLength(JSContext* ctx, JSValueConst elementObject, int, JSValueConst*) {
+    PrSvgElement* element = jsThis<PrSvgElement>(ctx, elementObject, prJsSvgGeometryElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     float length = 0;
@@ -142,8 +142,8 @@ JSValue getTotalLength(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     return orInvalidState(ctx, status, JS_NewFloat64(ctx, double(length)));
 }
 
-JSValue getPointAtLength(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrSvgElement* element = jsThis<PrSvgElement>(ctx, self, prJsSvgGeometryElementClass);
+JSValue getPointAtLength(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrSvgElement* element = jsThis<PrSvgElement>(ctx, elementObject, prJsSvgGeometryElementClass);
     double distance = 0;
     if (element == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToFloat64(ctx, &distance, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -193,8 +193,8 @@ bool floatOf(JSContext* ctx, JSValueConst value, float* out) {
 }
 
 // Implements the setters of value and valueInSpecifiedUnits, selected by the magic.
-JSValue setLengthNumber(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrSvgLength* length = jsThis<PrSvgLength>(ctx, self, prJsSvgLengthClass);
+JSValue setLengthNumber(JSContext* ctx, JSValueConst lengthObject, JSValueConst input, int magic) {
+    PrSvgLength* length = jsThis<PrSvgLength>(ctx, lengthObject, prJsSvgLengthClass);
     float value = 0;
     if (length == nullptr || !floatOf(ctx, input, &value))
         return JS_EXCEPTION;
@@ -203,15 +203,15 @@ JSValue setLengthNumber(JSContext* ctx, JSValueConst self, JSValueConst input, i
     return lengthResult(ctx, prSvgLengthSetValueInSpecifiedUnits(length, value));
 }
 
-JSValue lengthValue(JSContext* ctx, JSValueConst self, int magic) {
-    PrSvgLength* length = jsThis<PrSvgLength>(ctx, self, prJsSvgLengthClass);
+JSValue lengthValue(JSContext* ctx, JSValueConst lengthObject, int magic) {
+    PrSvgLength* length = jsThis<PrSvgLength>(ctx, lengthObject, prJsSvgLengthClass);
     if (length == nullptr)
         return JS_EXCEPTION;
     return JS_NewFloat64(ctx, double(magic == 0 ? prSvgLengthValue(length) : prSvgLengthValueInSpecifiedUnits(length)));
 }
 
-JSValue setValueAsString(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrSvgLength* length = jsThis<PrSvgLength>(ctx, self, prJsSvgLengthClass);
+JSValue setValueAsString(JSContext* ctx, JSValueConst lengthObject, JSValueConst input) {
+    PrSvgLength* length = jsThis<PrSvgLength>(ctx, lengthObject, prJsSvgLengthClass);
     PrStringView text{};
     if (length == nullptr || !jsReadString(ctx, input, &text))
         return JS_EXCEPTION;
@@ -219,8 +219,8 @@ JSValue setValueAsString(JSContext* ctx, JSValueConst self, JSValueConst input) 
 }
 
 // Implements newValueSpecifiedUnits and convertToSpecifiedUnits, selected by the magic.
-JSValue specifyUnits(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrSvgLength* length = jsThis<PrSvgLength>(ctx, self, prJsSvgLengthClass);
+JSValue specifyUnits(JSContext* ctx, JSValueConst lengthObject, int argc, JSValueConst* argv, int magic) {
+    PrSvgLength* length = jsThis<PrSvgLength>(ctx, lengthObject, prJsSvgLengthClass);
     uint32_t type = 0;
     float value = 0;
     if (length == nullptr || !indexOf(ctx, argc, argv, 0, &type) ||
@@ -234,13 +234,13 @@ JSValue specifyUnits(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 }
 
 // Implements baseVal and animVal, selected by the magic, each the same object every time.
-JSValue animatedLengthValue(JSContext* ctx, JSValueConst self, int magic) {
-    PrSvgAnimatedLength* animated = jsThis<PrSvgAnimatedLength>(ctx, self, prJsSvgAnimatedLengthClass);
+JSValue animatedLengthValue(JSContext* ctx, JSValueConst animatedObject, int magic) {
+    PrSvgAnimatedLength* animated = jsThis<PrSvgAnimatedLength>(ctx, animatedObject, prJsSvgAnimatedLengthClass);
     if (animated == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, magic == 0 ? "baseVal" : "animVal", [&] {
+    return jsSameObject(ctx, animatedObject, magic == 0 ? "baseVal" : "animVal", [&] {
         PrSvgLength* length = magic == 0 ? prSvgAnimatedLengthBaseVal(animated) : prSvgAnimatedLengthAnimVal(animated);
-        JSValue object = jsWrap(ctx, prJsSvgLengthClass, self, length, true);
+        JSValue object = jsWrap(ctx, prJsSvgLengthClass, animatedObject, length, true);
         if (JS_IsException(object))
             prSvgLengthDestroy(length);
         return object;
@@ -255,24 +255,24 @@ constexpr const char* kLengthNames[] = {
 
 // Implements the getter of the SVGAnimatedLength member that the magic names. The getter returns the same object every
 // time.
-JSValue animatedLength(JSContext* ctx, JSValueConst self, int magic) {
-    PrSvgElement* element = jsThis<PrSvgElement>(ctx, self, prJsSvgElementClass);
+JSValue animatedLength(JSContext* ctx, JSValueConst elementObject, int magic) {
+    PrSvgElement* element = jsThis<PrSvgElement>(ctx, elementObject, prJsSvgElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     const char* name = kLengthNames[magic];
-    return jsSameObject(ctx, self, name, [&] {
+    return jsSameObject(ctx, elementObject, name, [&] {
         PrSvgAnimatedLength* animated = prSvgAnimatedLengthCreate(element, name);
         if (animated == nullptr)
             return JS_UNDEFINED;
-        JSValue object = jsWrap(ctx, prJsSvgAnimatedLengthClass, self, animated, true);
+        JSValue object = jsWrap(ctx, prJsSvgAnimatedLengthClass, elementObject, animated, true);
         if (JS_IsException(object))
             prSvgAnimatedLengthDestroy(animated);
         return object;
     });
 }
 
-JSValue createSvgLength(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (jsThis<PrSvgElement>(ctx, self, prJsSvgSvgElementClass) == nullptr)
+JSValue createSvgLength(JSContext* ctx, JSValueConst jsObject, int, JSValueConst*) {
+    if (jsThis<PrSvgElement>(ctx, jsObject, prJsSvgSvgElementClass) == nullptr)
         return JS_EXCEPTION;
     PrSvgLength* length = prSvgLengthCreate();
     JSValue object = jsWrap(ctx, prJsSvgLengthClass, JS_NULL, length, true);
@@ -289,29 +289,29 @@ JSValue createSvgLength(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 // The names of the string attributes that the element interfaces reflect, which the magic of their getters indexes.
 constexpr const char* kStringNames[] = {"href", "target"};
 
-JSValue animatedString(JSContext* ctx, JSValueConst self, int magic) {
-    PrSvgElement* element = jsThis<PrSvgElement>(ctx, self, prJsSvgElementClass);
+JSValue animatedString(JSContext* ctx, JSValueConst elementObject, int magic) {
+    PrSvgElement* element = jsThis<PrSvgElement>(ctx, elementObject, prJsSvgElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     const char* name = kStringNames[magic];
-    return jsSameObject(ctx, self, name, [&] {
+    return jsSameObject(ctx, elementObject, name, [&] {
         PrSvgAnimatedString* animated = prSvgAnimatedStringCreate(element, name);
         if (animated == nullptr)
             return JS_UNDEFINED;
-        JSValue object = jsWrap(ctx, prJsSvgAnimatedStringClass, self, animated, true);
+        JSValue object = jsWrap(ctx, prJsSvgAnimatedStringClass, elementObject, animated, true);
         if (JS_IsException(object))
             prSvgAnimatedStringDestroy(animated);
         return object;
     });
 }
 
-JSValue animatedStringValue(JSContext* ctx, JSValueConst self) {
-    PrSvgAnimatedString* animated = jsThis<PrSvgAnimatedString>(ctx, self, prJsSvgAnimatedStringClass);
+JSValue animatedStringValue(JSContext* ctx, JSValueConst animatedObject) {
+    PrSvgAnimatedString* animated = jsThis<PrSvgAnimatedString>(ctx, animatedObject, prJsSvgAnimatedStringClass);
     return animated != nullptr ? jsNewStringView(ctx, prSvgAnimatedStringBaseVal(animated)) : JS_EXCEPTION;
 }
 
-JSValue setAnimatedStringValue(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrSvgAnimatedString* animated = jsThis<PrSvgAnimatedString>(ctx, self, prJsSvgAnimatedStringClass);
+JSValue setAnimatedStringValue(JSContext* ctx, JSValueConst animatedObject, JSValueConst input) {
+    PrSvgAnimatedString* animated = jsThis<PrSvgAnimatedString>(ctx, animatedObject, prJsSvgAnimatedStringClass);
     PrStringView text{};
     if (animated == nullptr || !jsReadString(ctx, input, &text))
         return JS_EXCEPTION;
@@ -322,20 +322,20 @@ JSValue setAnimatedStringValue(JSContext* ctx, JSValueConst self, JSValueConst i
 // ---------------------------------------------------------------------------------------------------------------------
 // SVGTextContentElement
 
-JSValue getNumberOfChars(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrSvgElement* element = textContentOf(ctx, self);
+JSValue getNumberOfChars(JSContext* ctx, JSValueConst textContent, int, JSValueConst*) {
+    PrSvgElement* element = textContentOf(ctx, textContent);
     return element != nullptr ? JS_NewInt64(ctx, prSvgTextContentElementGetNumberOfChars(element)) : JS_EXCEPTION;
 }
 
-JSValue getComputedTextLength(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrSvgElement* element = textContentOf(ctx, self);
+JSValue getComputedTextLength(JSContext* ctx, JSValueConst textContent, int, JSValueConst*) {
+    PrSvgElement* element = textContentOf(ctx, textContent);
     if (element == nullptr)
         return JS_EXCEPTION;
     return JS_NewFloat64(ctx, double(prSvgTextContentElementGetComputedTextLength(element)));
 }
 
-JSValue getSubStringLength(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrSvgElement* element = textContentOf(ctx, self);
+JSValue getSubStringLength(JSContext* ctx, JSValueConst textContent, int argc, JSValueConst* argv) {
+    PrSvgElement* element = textContentOf(ctx, textContent);
     uint32_t first = 0;
     uint32_t count = 0;
     if (element == nullptr || !indexOf(ctx, argc, argv, 0, &first) || !indexOf(ctx, argc, argv, 1, &count))
@@ -346,8 +346,8 @@ JSValue getSubStringLength(JSContext* ctx, JSValueConst self, int argc, JSValueC
 }
 
 // Implements getStartPositionOfChar and getEndPositionOfChar, selected by the magic.
-JSValue getPositionOfChar(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrSvgElement* element = textContentOf(ctx, self);
+JSValue getPositionOfChar(JSContext* ctx, JSValueConst textContent, int argc, JSValueConst* argv, int magic) {
+    PrSvgElement* element = textContentOf(ctx, textContent);
     uint32_t index = 0;
     if (element == nullptr || !indexOf(ctx, argc, argv, 0, &index))
         return JS_EXCEPTION;
@@ -362,8 +362,8 @@ JSValue getPositionOfChar(JSContext* ctx, JSValueConst self, int argc, JSValueCo
     return prJsDomPointNew(ctx, point);
 }
 
-JSValue getExtentOfChar(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrSvgElement* element = textContentOf(ctx, self);
+JSValue getExtentOfChar(JSContext* ctx, JSValueConst textContent, int argc, JSValueConst* argv) {
+    PrSvgElement* element = textContentOf(ctx, textContent);
     uint32_t index = 0;
     if (element == nullptr || !indexOf(ctx, argc, argv, 0, &index))
         return JS_EXCEPTION;
@@ -373,8 +373,8 @@ JSValue getExtentOfChar(JSContext* ctx, JSValueConst self, int argc, JSValueCons
     return prJsDomRectNew(ctx, rect);
 }
 
-JSValue getRotationOfChar(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrSvgElement* element = textContentOf(ctx, self);
+JSValue getRotationOfChar(JSContext* ctx, JSValueConst textContent, int argc, JSValueConst* argv) {
+    PrSvgElement* element = textContentOf(ctx, textContent);
     uint32_t index = 0;
     if (element == nullptr || !indexOf(ctx, argc, argv, 0, &index))
         return JS_EXCEPTION;
@@ -383,8 +383,8 @@ JSValue getRotationOfChar(JSContext* ctx, JSValueConst self, int argc, JSValueCo
     return orIndexSize(ctx, status, JS_NewFloat64(ctx, double(rotation)));
 }
 
-JSValue getCharNumAtPosition(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrSvgElement* element = textContentOf(ctx, self);
+JSValue getCharNumAtPosition(JSContext* ctx, JSValueConst textContent, int argc, JSValueConst* argv) {
+    PrSvgElement* element = textContentOf(ctx, textContent);
     PrDomPoint point{};
     if (element == nullptr || !prJsDomPointInitRead(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &point))
         return JS_EXCEPTION;
@@ -396,20 +396,20 @@ JSValue getCharNumAtPosition(JSContext* ctx, JSValueConst self, int argc, JSValu
 
 // The factories of SVGSVGElement (SVG2/struct.html#__svg__SVGSVGElement__createSVGPoint): a new, detached point, matrix
 // or rect, of the geometry interfaces that SVGPoint, SVGMatrix and SVGRect name.
-JSValue createSvgPoint(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (jsThis<PrSvgElement>(ctx, self, prJsSvgSvgElementClass) == nullptr)
+JSValue createSvgPoint(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (jsThis<PrSvgElement>(ctx, object, prJsSvgSvgElementClass) == nullptr)
         return JS_EXCEPTION;
     return prJsDomPointNew(ctx, PrDomPoint{0, 0, 0, 1});
 }
 
-JSValue createSvgMatrix(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (jsThis<PrSvgElement>(ctx, self, prJsSvgSvgElementClass) == nullptr)
+JSValue createSvgMatrix(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (jsThis<PrSvgElement>(ctx, object, prJsSvgSvgElementClass) == nullptr)
         return JS_EXCEPTION;
     return prJsDomMatrixNew(ctx, prDomMatrixIdentity());
 }
 
-JSValue createSvgRect(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (jsThis<PrSvgElement>(ctx, self, prJsSvgSvgElementClass) == nullptr)
+JSValue createSvgRect(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (jsThis<PrSvgElement>(ctx, object, prJsSvgSvgElementClass) == nullptr)
         return JS_EXCEPTION;
     return prJsDomRectNew(ctx, PrDomRect{});
 }

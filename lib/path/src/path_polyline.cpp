@@ -111,10 +111,10 @@ void buildBands(const Array<PathGridPiece>& pieces, bool vertical, Bands& bands)
     sizes.reset();
 }
 
-// Writes how much each region winds on the side of piece `self` from which a ray from its midpoint exits. The ray runs
+// Writes how much each region winds on the side of piece `piece` from which a ray from its midpoint exits. The ray runs
 // toward +x, or toward +y for a horizontal piece. Coordinates are doubled, so that the midpoint is on the grid.
-void windingBeside(const Array<PathGridPiece>& pieces, const Bands& bands, uint32_t self, bool vertical, int32_t* out) {
-    const PathGridPiece& s = pieces.data[self];
+void windingBeside(const Array<PathGridPiece>& pieces, const Bands& bands, uint32_t piece, bool vertical, int32_t* out) {
+    const PathGridPiece& s = pieces.data[piece];
     PathGridPoint m{s.lo.x + s.hi.x, s.lo.y + s.hi.y};
     int64_t along = vertical ? m.x : m.y;
     int64_t band = (along / 2 - bands.origin) / bands.size;
@@ -122,7 +122,7 @@ void windingBeside(const Array<PathGridPiece>& pieces, const Bands& bands, uint3
     out[0] = out[1] = 0;
     for (uint32_t k = bands.starts.data[band]; k < bands.starts.data[band + 1]; ++k) {
         uint32_t i = bands.pieces.data[k];
-        if (i == self)
+        if (i == piece)
             continue;
         const PathGridPiece& p = pieces.data[i];
         PathGridPoint a{2 * p.lo.x, 2 * p.lo.y};

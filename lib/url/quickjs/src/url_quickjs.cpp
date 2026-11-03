@@ -17,12 +17,12 @@ JSClassID urlClass;
 JSClassID urlSearchParamsClass;
 JSClassID urlSearchParamsIteratorClass;
 
-PrUrl* PR_NULLABLE urlOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<PrUrl>(ctx, self, urlClass, "URL");
+PrUrl* PR_NULLABLE urlOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<PrUrl>(ctx, object, urlClass, "URL");
 }
 
-PrUrlSearchParams* PR_NULLABLE paramsOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<PrUrlSearchParams>(ctx, self, urlSearchParamsClass, "URLSearchParams");
+PrUrlSearchParams* PR_NULLABLE paramsOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<PrUrlSearchParams>(ctx, object, urlSearchParamsClass, "URLSearchParams");
 }
 
 // Returns `text` as a JavaScript string, or the empty string if `text` is null.
@@ -84,14 +84,14 @@ JSValue parseStatic(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, 
 }
 
 // The getter steps of url/#url-class for the component that the magic names.
-JSValue componentGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrUrl* url = urlOf(ctx, self);
+JSValue componentGet(JSContext* ctx, JSValueConst urlObject, int magic) {
+    PrUrl* url = urlOf(ctx, urlObject);
     return url != nullptr ? jsTakeString(ctx, prUrlComponent(url, PrUrlComponent(magic))) : JS_EXCEPTION;
 }
 
 // The setter steps of url/#url-class. href's setter throws a TypeError for a URL that does not parse.
-JSValue componentSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrUrl* url = urlOf(ctx, self);
+JSValue componentSet(JSContext* ctx, JSValueConst urlObject, JSValueConst input, int magic) {
+    PrUrl* url = urlOf(ctx, urlObject);
     StringArgument value = {ctx};
     if (url == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -100,30 +100,30 @@ JSValue componentSet(JSContext* ctx, JSValueConst self, JSValueConst input, int 
     return JS_UNDEFINED;
 }
 
-JSValue hrefMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    return componentGet(ctx, self, PrUrlComponent_Href);
+JSValue hrefMethod(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    return componentGet(ctx, object, PrUrlComponent_Href);
 }
 
 // url/#dom-url-searchparams: the URL's query object, [SameObject]. It keeps the URL alive.
-JSValue searchParamsGet(JSContext* ctx, JSValueConst self) {
-    PrUrl* url = urlOf(ctx, self);
+JSValue searchParamsGet(JSContext* ctx, JSValueConst urlObject) {
+    PrUrl* url = urlOf(ctx, urlObject);
     if (url == nullptr)
         return JS_EXCEPTION;
-    JSValue held = jsSameObject(ctx, self, "searchParams");
+    JSValue held = jsSameObject(ctx, urlObject, "searchParams");
     if (!JS_IsUndefined(held))
         return held;
-    JSValue params = jsWrap(ctx, urlSearchParamsClass, self, prUrlSearchParams(url), false);
+    JSValue params = jsWrap(ctx, urlSearchParamsClass, urlObject, prUrlSearchParams(url), false);
     if (!JS_IsException(params))
-        jsSetSameObject(ctx, self, "searchParams", params);
+        jsSetSameObject(ctx, urlObject, "searchParams", params);
     return params;
 }
 
-void urlFinalizer(JSRuntime* runtime, JSValue self) {
-    jsFinalize<PrUrl>(runtime, self, urlClass, prUrlDestroy);
+void urlFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<PrUrl>(runtime, object, urlClass, prUrlDestroy);
 }
 
-void urlMark(JSRuntime* runtime, JSValueConst self, JS_MarkFunc* mark) {
-    jsMark(runtime, self, urlClass, mark);
+void urlMark(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark) {
+    jsMark(runtime, object, urlClass, mark);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -239,8 +239,8 @@ JSValue constructParams(JSContext* ctx, JSValueConst newTarget, int argc, JSValu
     return jsConstructed(ctx, newTarget, object);
 }
 
-JSValue sizeGet(JSContext* ctx, JSValueConst self) {
-    PrUrlSearchParams* params = paramsOf(ctx, self);
+JSValue sizeGet(JSContext* ctx, JSValueConst paramsObject) {
+    PrUrlSearchParams* params = paramsOf(ctx, paramsObject);
     return params != nullptr ? JS_NewUint32(ctx, prUrlSearchParamsSize(params)) : JS_EXCEPTION;
 }
 
@@ -269,8 +269,8 @@ enum {
 typedef uint8_t Method;
 
 // The methods of URLSearchParams that take a name, selected by the magic.
-JSValue nameMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrUrlSearchParams* params = paramsOf(ctx, self);
+JSValue nameMethod(JSContext* ctx, JSValueConst paramsObject, int argc, JSValueConst* argv, int magic) {
+    PrUrlSearchParams* params = paramsOf(ctx, paramsObject);
     NameValue arguments = {{ctx}, {ctx, PrStringView{}}};
     bool pair = magic == Method_Append || magic == Method_Set;
     bool withValue = pair || magic == Method_Delete || magic == Method_Has;
@@ -297,22 +297,22 @@ JSValue nameMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
     return JS_UNDEFINED;
 }
 
-JSValue sortMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrUrlSearchParams* params = paramsOf(ctx, self);
+JSValue sortMethod(JSContext* ctx, JSValueConst paramsObject, int, JSValueConst*) {
+    PrUrlSearchParams* params = paramsOf(ctx, paramsObject);
     if (params == nullptr)
         return JS_EXCEPTION;
     prUrlSearchParamsSort(params);
     return JS_UNDEFINED;
 }
 
-JSValue toStringMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrUrlSearchParams* params = paramsOf(ctx, self);
+JSValue toStringMethod(JSContext* ctx, JSValueConst paramsObject, int, JSValueConst*) {
+    PrUrlSearchParams* params = paramsOf(ctx, paramsObject);
     return params != nullptr ? jsTakeString(ctx, prUrlSearchParamsToString(params)) : JS_EXCEPTION;
 }
 
 // Returns the [name, value] pair at the index argv[0], or undefined past the end.
-JSValue entryAt(JSContext* ctx, JSValueConst self, int, JSValueConst* argv) {
-    PrUrlSearchParams* params = paramsOf(ctx, self);
+JSValue entryAt(JSContext* ctx, JSValueConst paramsObject, int, JSValueConst* argv) {
+    PrUrlSearchParams* params = paramsOf(ctx, paramsObject);
     uint32_t index = 0;
     if (params == nullptr || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
@@ -323,24 +323,24 @@ JSValue entryAt(JSContext* ctx, JSValueConst self, int, JSValueConst* argv) {
 }
 
 // entries, keys and values, selected by the part of each entry that the magic names.
-JSValue iterate(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    if (paramsOf(ctx, self) == nullptr)
+JSValue iterate(JSContext* ctx, JSValueConst params, int, JSValueConst*, int magic) {
+    if (paramsOf(ctx, params) == nullptr)
         return JS_EXCEPTION;
-    return jsPairIterator(ctx, urlSearchParamsIteratorClass, self, entryAt, JsMapPart(magic));
+    return jsPairIterator(ctx, urlSearchParamsIteratorClass, params, entryAt, JsMapPart(magic));
 }
 
-JSValue forEachMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    if (paramsOf(ctx, self) == nullptr)
+JSValue forEachMethod(JSContext* ctx, JSValueConst params, int argc, JSValueConst* argv) {
+    if (paramsOf(ctx, params) == nullptr)
         return JS_EXCEPTION;
-    return jsPairForEach(ctx, self, entryAt, argc, argv);
+    return jsPairForEach(ctx, params, entryAt, argc, argv);
 }
 
-void paramsFinalizer(JSRuntime* runtime, JSValue self) {
-    jsFinalize<PrUrlSearchParams>(runtime, self, urlSearchParamsClass, prUrlSearchParamsDestroy);
+void paramsFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<PrUrlSearchParams>(runtime, object, urlSearchParamsClass, prUrlSearchParamsDestroy);
 }
 
-void paramsMark(JSRuntime* runtime, JSValueConst self, JS_MarkFunc* mark) {
-    jsMark(runtime, self, urlSearchParamsClass, mark);
+void paramsMark(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark) {
+    jsMark(runtime, object, urlSearchParamsClass, mark);
 }
 
 #define PR_COMPONENT(name, component) \

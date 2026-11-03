@@ -45,22 +45,21 @@ bool lessUtf16(PrStringView a, PrStringView b) {
     return i == a.size && j != b.size;
 }
 
-void appendPair(UrlSearchParams* self, PrStringView name, PrStringView value) {
-    self->pairs.push(UrlPair{prStringCopy(name), prStringCopy(value)});
+void appendPair(UrlSearchParams* params, PrStringView name, PrStringView value) {
+    params->pairs.push(UrlPair{prStringCopy(name), prStringCopy(value)});
 }
 
-void erasePair(UrlSearchParams* self, uint32_t index) {
-    prStringReset(&self->pairs.data[index].name);
-    prStringReset(&self->pairs.data[index].value);
-    self->pairs.erase(index);
+void erasePair(UrlSearchParams* params, uint32_t index) {
+    prStringReset(&params->pairs.data[index].name);
+    prStringReset(&params->pairs.data[index].value);
+    params->pairs.erase(index);
 }
 
-PrStatus setHref(PrUrl* self, PrStringView value) {
+PrStatus setHref(PrUrl* url, PrStringView value) {
     PrUrl* parsed = nullptr;
     PrStatus status = urlParse(value, nullptr, PrCharset_Utf8, &parsed);
     if (status != PrStatus_Ok)
         return status;
-    Url* url = self;
     PrUrlSearchParams* params = url->searchParams;
     url->searchParams = nullptr;
     Url previous = *url;
@@ -73,11 +72,11 @@ PrStatus setHref(PrUrl* self, PrStringView value) {
     return PrStatus_Ok;
 }
 
-void setProtocol(PrUrl* self, PrStringView value) {
+void setProtocol(PrUrl* url, PrStringView value) {
     TextBuffer input;
     textAppend(&input, value);
     textAppendChar(&input, ':');
-    urlParseFrom(self, textView(&input), UrlState_SchemeStart);
+    urlParseFrom(url, textView(&input), UrlState_SchemeStart);
     textReset(&input);
 }
 
@@ -91,35 +90,33 @@ void setCredential(Url* url, PrString* credential, PrStringView value) {
     *credential = textTake(&encoded);
 }
 
-void setHost(PrUrl* self, PrStringView value) {
-    if (!self->opaquePath)
-        urlParseFrom(self, value, UrlState_Host);
+void setHost(PrUrl* url, PrStringView value) {
+    if (!url->opaquePath)
+        urlParseFrom(url, value, UrlState_Host);
 }
 
-void setHostname(PrUrl* self, PrStringView value) {
-    if (!self->opaquePath)
-        urlParseFrom(self, value, UrlState_Hostname);
+void setHostname(PrUrl* url, PrStringView value) {
+    if (!url->opaquePath)
+        urlParseFrom(url, value, UrlState_Hostname);
 }
 
-void setPort(PrUrl* self, PrStringView value) {
-    if (urlCannotHaveCredentials(self))
+void setPort(PrUrl* url, PrStringView value) {
+    if (urlCannotHaveCredentials(url))
         return;
     if (value.size == 0)
-        self->hasPort = false;
+        url->hasPort = false;
     else
-        urlParseFrom(self, value, UrlState_Port);
+        urlParseFrom(url, value, UrlState_Port);
 }
 
-void setPathname(PrUrl* self, PrStringView value) {
-    Url* url = self;
+void setPathname(PrUrl* url, PrStringView value) {
     if (url->opaquePath)
         return;
     prStringReset(&url->path);
     urlParseFrom(url, value, UrlState_PathStart);
 }
 
-void setSearch(PrUrl* self, PrStringView value) {
-    Url* url = self;
+void setSearch(PrUrl* url, PrStringView value) {
     prStringReset(&url->query);
     PrStringView input = withoutPrefix(value, '?');
     if (value.size != 0) {
@@ -130,8 +127,7 @@ void setSearch(PrUrl* self, PrStringView value) {
         urlSearchParamsParse(url->searchParams, value.size != 0 ? input : "");
 }
 
-void setHash(PrUrl* self, PrStringView value) {
-    Url* url = self;
+void setHash(PrUrl* url, PrStringView value) {
     prStringReset(&url->fragment);
     if (value.size == 0)
         return;
@@ -150,24 +146,24 @@ PrStatus prUrlCreate(PrStringView input, const PrUrl* PR_NULLABLE base, PrCharse
     return urlParse(input, base, prCharsetOutput(charset), out);
 }
 
-PrUrl* prUrlClone(const PrUrl* self) {
-    return urlClone(self);
+PrUrl* prUrlClone(const PrUrl* url) {
+    return urlClone(url);
 }
 
-void prUrlDestroy(PrUrl* PR_NULLABLE self) {
-    urlDestroy(self);
+void prUrlDestroy(PrUrl* PR_NULLABLE url) {
+    urlDestroy(url);
 }
 
-PrString prUrlSerialize(const PrUrl* self, PrUrlSerialization serialization) {
-    return urlSerialize(self, serialization);
+PrString prUrlSerialize(const PrUrl* url, PrUrlSerialization serialization) {
+    return urlSerialize(url, serialization);
 }
 
-PrString prUrlOrigin(const PrUrl* self) {
-    return urlOrigin(self);
+PrString prUrlOrigin(const PrUrl* url) {
+    return urlOrigin(url);
 }
 
-bool prUrlHasSameOrigin(const PrUrl* self, const PrUrl* other) {
-    PrString a = urlOrigin(self);
+bool prUrlHasSameOrigin(const PrUrl* url, const PrUrl* other) {
+    PrString a = urlOrigin(url);
     PrString b = urlOrigin(other);
     bool same = prStringView(&a) == prStringView(&b) && prStringView(&a) != "null";
     prStringReset(&a);
@@ -175,40 +171,39 @@ bool prUrlHasSameOrigin(const PrUrl* self, const PrUrl* other) {
     return same;
 }
 
-PrStringView prUrlScheme(const PrUrl* self) {
-    return prStringView(&self->scheme);
+PrStringView prUrlScheme(const PrUrl* url) {
+    return prStringView(&url->scheme);
 }
 
-PrStringView prUrlUsername(const PrUrl* self) {
-    return prStringView(&self->username);
+PrStringView prUrlUsername(const PrUrl* url) {
+    return prStringView(&url->username);
 }
 
-PrStringView prUrlPassword(const PrUrl* self) {
-    return prStringView(&self->password);
+PrStringView prUrlPassword(const PrUrl* url) {
+    return prStringView(&url->password);
 }
 
-PrStringView prUrlHost(const PrUrl* self) {
-    return prStringView(&self->host);
+PrStringView prUrlHost(const PrUrl* url) {
+    return prStringView(&url->host);
 }
 
-PrStringView prUrlPath(const PrUrl* self) {
-    return prStringView(&self->path);
+PrStringView prUrlPath(const PrUrl* url) {
+    return prStringView(&url->path);
 }
 
-PrStringView prUrlQuery(const PrUrl* self) {
-    return prStringView(&self->query);
+PrStringView prUrlQuery(const PrUrl* url) {
+    return prStringView(&url->query);
 }
 
-PrStringView prUrlFragment(const PrUrl* self) {
-    return prStringView(&self->fragment);
+PrStringView prUrlFragment(const PrUrl* url) {
+    return prStringView(&url->fragment);
 }
 
-int32_t prUrlPort(const PrUrl* self) {
-    return self->hasPort ? int32_t(self->port) : -1;
+int32_t prUrlPort(const PrUrl* url) {
+    return url->hasPort ? int32_t(url->port) : -1;
 }
 
-PrString prUrlComponent(const PrUrl* self, PrUrlComponent component) {
-    const Url* url = self;
+PrString prUrlComponent(const PrUrl* url, PrUrlComponent component) {
     TextBuffer text;
     PrStringView host = prStringView(&url->host);
     switch (component) {
@@ -256,66 +251,65 @@ PrString prUrlComponent(const PrUrl* self, PrUrlComponent component) {
     return textTake(&text);
 }
 
-PrStatus prUrlSetComponent(PrUrl* self, PrUrlComponent component, PrStringView value) {
+PrStatus prUrlSetComponent(PrUrl* url, PrUrlComponent component, PrStringView value) {
     switch (component) {
-        case PrUrlComponent_Href: return setHref(self, value);
+        case PrUrlComponent_Href: return setHref(url, value);
         case PrUrlComponent_Origin: return PrStatus_ReadOnly;
-        case PrUrlComponent_Protocol: setProtocol(self, value); break;
-        case PrUrlComponent_Username: setCredential(self, &self->username, value); break;
-        case PrUrlComponent_Password: setCredential(self, &self->password, value); break;
-        case PrUrlComponent_Host: setHost(self, value); break;
-        case PrUrlComponent_Hostname: setHostname(self, value); break;
-        case PrUrlComponent_Port: setPort(self, value); break;
-        case PrUrlComponent_Pathname: setPathname(self, value); break;
-        case PrUrlComponent_Search: setSearch(self, value); break;
-        default: setHash(self, value); break;
+        case PrUrlComponent_Protocol: setProtocol(url, value); break;
+        case PrUrlComponent_Username: setCredential(url, &url->username, value); break;
+        case PrUrlComponent_Password: setCredential(url, &url->password, value); break;
+        case PrUrlComponent_Host: setHost(url, value); break;
+        case PrUrlComponent_Hostname: setHostname(url, value); break;
+        case PrUrlComponent_Port: setPort(url, value); break;
+        case PrUrlComponent_Pathname: setPathname(url, value); break;
+        case PrUrlComponent_Search: setSearch(url, value); break;
+        default: setHash(url, value); break;
     }
     return PrStatus_Ok;
 }
 
-PrUrlSearchParams* prUrlSearchParams(PrUrl* self) {
-    if (self->searchParams == nullptr) {
-        self->searchParams = allocZeroed<PrUrlSearchParams>();
-        self->searchParams->url = self;
-        urlSearchParamsParse(self->searchParams, prStringView(&self->query));
+PrUrlSearchParams* prUrlSearchParams(PrUrl* url) {
+    if (url->searchParams == nullptr) {
+        url->searchParams = allocZeroed<PrUrlSearchParams>();
+        url->searchParams->url = url;
+        urlSearchParamsParse(url->searchParams, prStringView(&url->query));
     }
-    return self->searchParams;
+    return url->searchParams;
 }
 
 PrUrlSearchParams* prUrlSearchParamsCreate(void) {
     return allocZeroed<PrUrlSearchParams>();
 }
 
-void prUrlSearchParamsDestroy(PrUrlSearchParams* PR_NULLABLE self) {
-    PR_ASSERT(self == nullptr || self->url == nullptr);
-    urlSearchParamsDestroy(self);
+void prUrlSearchParamsDestroy(PrUrlSearchParams* PR_NULLABLE params) {
+    PR_ASSERT(params == nullptr || params->url == nullptr);
+    urlSearchParamsDestroy(params);
 }
 
-void prUrlSearchParamsParse(PrUrlSearchParams* self, PrStringView input) {
-    urlSearchParamsParse(self, input);
-    urlSearchParamsUpdate(self);
+void prUrlSearchParamsParse(PrUrlSearchParams* params, PrStringView input) {
+    urlSearchParamsParse(params, input);
+    urlSearchParamsUpdate(params);
 }
 
-PrString prUrlSearchParamsToString(const PrUrlSearchParams* self) {
-    return urlSearchParamsSerialize(self);
+PrString prUrlSearchParamsToString(const PrUrlSearchParams* params) {
+    return urlSearchParamsSerialize(params);
 }
 
-uint32_t prUrlSearchParamsSize(const PrUrlSearchParams* self) {
-    return self->pairs.count;
+uint32_t prUrlSearchParamsSize(const PrUrlSearchParams* params) {
+    return params->pairs.count;
 }
 
-PrStringView prUrlSearchParamsNameAt(const PrUrlSearchParams* self, uint32_t index) {
-    PR_ASSERT(index < self->pairs.count);
-    return prStringView(&self->pairs.data[index].name);
+PrStringView prUrlSearchParamsNameAt(const PrUrlSearchParams* params, uint32_t index) {
+    PR_ASSERT(index < params->pairs.count);
+    return prStringView(&params->pairs.data[index].name);
 }
 
-PrStringView prUrlSearchParamsValueAt(const PrUrlSearchParams* self, uint32_t index) {
-    PR_ASSERT(index < self->pairs.count);
-    return prStringView(&self->pairs.data[index].value);
+PrStringView prUrlSearchParamsValueAt(const PrUrlSearchParams* params, uint32_t index) {
+    PR_ASSERT(index < params->pairs.count);
+    return prStringView(&params->pairs.data[index].value);
 }
 
-PrStringView prUrlSearchParamsGet(const PrUrlSearchParams* self, PrStringView name) {
-    const UrlSearchParams* params = self;
+PrStringView prUrlSearchParamsGet(const PrUrlSearchParams* params, PrStringView name) {
     for (uint32_t i = 0; i < params->pairs.count; ++i) {
         if (matches(&params->pairs.data[i], name, PrStringView{}))
             return prStringView(&params->pairs.data[i].value);
@@ -323,8 +317,7 @@ PrStringView prUrlSearchParamsGet(const PrUrlSearchParams* self, PrStringView na
     return PrStringView{};
 }
 
-bool prUrlSearchParamsHas(const PrUrlSearchParams* self, PrStringView name, PrStringView value) {
-    const UrlSearchParams* params = self;
+bool prUrlSearchParamsHas(const PrUrlSearchParams* params, PrStringView name, PrStringView value) {
     for (uint32_t i = 0; i < params->pairs.count; ++i) {
         if (matches(&params->pairs.data[i], name, value))
             return true;
@@ -332,13 +325,12 @@ bool prUrlSearchParamsHas(const PrUrlSearchParams* self, PrStringView name, PrSt
     return false;
 }
 
-void prUrlSearchParamsAppend(PrUrlSearchParams* self, PrStringView name, PrStringView value) {
-    appendPair(self, name, value);
-    urlSearchParamsUpdate(self);
+void prUrlSearchParamsAppend(PrUrlSearchParams* params, PrStringView name, PrStringView value) {
+    appendPair(params, name, value);
+    urlSearchParamsUpdate(params);
 }
 
-void prUrlSearchParamsDelete(PrUrlSearchParams* self, PrStringView name, PrStringView value) {
-    UrlSearchParams* params = self;
+void prUrlSearchParamsDelete(PrUrlSearchParams* params, PrStringView name, PrStringView value) {
     for (uint32_t i = params->pairs.count; i != 0; --i) {
         if (matches(&params->pairs.data[i - 1], name, value))
             erasePair(params, i - 1);
@@ -346,8 +338,7 @@ void prUrlSearchParamsDelete(PrUrlSearchParams* self, PrStringView name, PrStrin
     urlSearchParamsUpdate(params);
 }
 
-void prUrlSearchParamsSet(PrUrlSearchParams* self, PrStringView name, PrStringView value) {
-    UrlSearchParams* params = self;
+void prUrlSearchParamsSet(PrUrlSearchParams* params, PrStringView name, PrStringView value) {
     bool found = false;
     for (uint32_t i = 0; i < params->pairs.count;) {
         UrlPair* pair = &params->pairs.data[i];
@@ -366,8 +357,8 @@ void prUrlSearchParamsSet(PrUrlSearchParams* self, PrStringView name, PrStringVi
     urlSearchParamsUpdate(params);
 }
 
-void prUrlSearchParamsSort(PrUrlSearchParams* self) {
-    Array<UrlPair>* pairs = &self->pairs;
+void prUrlSearchParamsSort(PrUrlSearchParams* params) {
+    Array<UrlPair>* pairs = &params->pairs;
     for (uint32_t i = 1; i < pairs->count; ++i) {
         UrlPair pair = pairs->data[i];
         uint32_t j = i;
@@ -375,5 +366,5 @@ void prUrlSearchParamsSort(PrUrlSearchParams* self) {
             pairs->data[j] = pairs->data[j - 1];
         pairs->data[j] = pair;
     }
-    urlSearchParamsUpdate(self);
+    urlSearchParamsUpdate(params);
 }

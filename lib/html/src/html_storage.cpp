@@ -192,39 +192,39 @@ PrHtmlStorage* PR_NULLABLE prHtmlWindowStorage(PrHtmlWindow* window, PrHtmlStora
     return storage->area != nullptr ? storage : nullptr;
 }
 
-uint32_t prHtmlStorageLength(const PrHtmlStorage* self) {
-    return prStorageCount(self->area);
+uint32_t prHtmlStorageLength(const PrHtmlStorage* storage) {
+    return prStorageCount(storage->area);
 }
 
-PrString prHtmlStorageKey(const PrHtmlStorage* self, uint32_t index) {
-    return prStorageKey(self->area, index);
+PrString prHtmlStorageKey(const PrHtmlStorage* storage, uint32_t index) {
+    return prStorageKey(storage->area, index);
 }
 
-PrString prHtmlStorageGetItem(const PrHtmlStorage* self, PrStringView key) {
+PrString prHtmlStorageGetItem(const PrHtmlStorage* storage, PrStringView key) {
     PrStorageRecord record{};
-    if (!prStorageRead(self->area, key, &record))
+    if (!prStorageRead(storage->area, key, &record))
         return prStringNull();
     PrString value = prStringCopy(PrStringView{reinterpret_cast<const char*>(record.bytes.data), record.bytes.size});
-    prStorageRecordRelease(self->area, &record);
+    prStorageRecordRelease(storage->area, &record);
     return value;
 }
 
-PrStatus prHtmlStorageSetItem(PrHtmlStorage* self, PrStringView key, PrStringView value) {
+PrStatus prHtmlStorageSetItem(PrHtmlStorage* storage, PrStringView key, PrStringView value) {
     PrStorageRecord record{};
-    if (prStorageRead(self->area, key, &record)) {
+    if (prStorageRead(storage->area, key, &record)) {
         bool same = PrStringView{reinterpret_cast<const char*>(record.bytes.data), record.bytes.size} == value;
-        prStorageRecordRelease(self->area, &record);
+        prStorageRecordRelease(storage->area, &record);
         if (same)
             return PrStatus_Ok;
     }
     PrByteView bytes{reinterpret_cast<const uint8_t*>(value.data), value.size};
-    return prStorageWrite(self->area, key, bytes) ? PrStatus_Ok : PrStatus_Limit;
+    return prStorageWrite(storage->area, key, bytes) ? PrStatus_Ok : PrStatus_Limit;
 }
 
-void prHtmlStorageRemoveItem(PrHtmlStorage* self, PrStringView key) {
-    prStorageRemove(self->area, key);
+void prHtmlStorageRemoveItem(PrHtmlStorage* storage, PrStringView key) {
+    prStorageRemove(storage->area, key);
 }
 
-void prHtmlStorageClear(PrHtmlStorage* self) {
-    prStorageClear(self->area);
+void prHtmlStorageClear(PrHtmlStorage* storage) {
+    prStorageClear(storage->area);
 }

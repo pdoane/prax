@@ -221,12 +221,12 @@ void selectRange(PrDomSelection* selection, PrDomRange* given, DomBoundary start
 
 // Collapses the selection's range to its start or its end. `range` is set to that point and becomes the selection's
 // range.
-PrStatus collapseTo(PrDomSelection* self, PrDomRange* range, bool start) {
-    const PrDomRange* current = domSelectionRange(self);
+PrStatus collapseTo(PrDomSelection* selection, PrDomRange* range, bool start) {
+    const PrDomRange* current = domSelectionRange(selection);
     if (current == nullptr)
         return PrStatus_InvalidState;
     DomBoundary point = start ? current->start : current->end;
-    selectRange(self, range, point, point, PrDomSelectionDirection_None);
+    selectRange(selection, range, point, point, PrDomSelectionDirection_None);
     return PrStatus_Ok;
 }
 
@@ -321,97 +321,97 @@ bool prDomEventKindFromInterface(PrStringView interface, PrDomEventKind* out) {
     return false;
 }
 
-void prDomEventRetain(PrDomEvent* self) {
-    domEventRetain(self);
+void prDomEventRetain(PrDomEvent* event) {
+    domEventRetain(event);
 }
 
-void prDomEventRelease(PrDomEvent* PR_NULLABLE self) {
-    domEventRelease(self);
+void prDomEventRelease(PrDomEvent* PR_NULLABLE event) {
+    domEventRelease(event);
 }
 
-PrStringView prDomEventType(const PrDomEvent* self) {
-    return prStringView(&self->type);
+PrStringView prDomEventType(const PrDomEvent* event) {
+    return prStringView(&event->type);
 }
 
-PrDomEventTarget* PR_NULLABLE prDomEventTarget(PrDomEvent* self) {
-    return self->target;
+PrDomEventTarget* PR_NULLABLE prDomEventTarget(PrDomEvent* event) {
+    return event->target;
 }
 
-PrDomEventTarget* PR_NULLABLE prDomEventCurrentTarget(PrDomEvent* self) {
-    return self->currentTarget;
+PrDomEventTarget* PR_NULLABLE prDomEventCurrentTarget(PrDomEvent* event) {
+    return event->currentTarget;
 }
 
-uint32_t prDomEventComposedPath(PrDomEvent* self, PrDomEventTarget* PR_NONNULL* PR_NULLABLE items, uint32_t capacity) {
-    for (uint32_t i = 0; items != nullptr && i < self->path.count && i < capacity; ++i)
-        items[i] = self->path.data[i];
-    return self->path.count;
+uint32_t prDomEventComposedPath(PrDomEvent* event, PrDomEventTarget* PR_NONNULL* PR_NULLABLE items, uint32_t capacity) {
+    for (uint32_t i = 0; items != nullptr && i < event->path.count && i < capacity; ++i)
+        items[i] = event->path.data[i];
+    return event->path.count;
 }
 
-PrDomEventPhase prDomEventPhase(const PrDomEvent* self) {
-    return self->phase;
+PrDomEventPhase prDomEventPhase(const PrDomEvent* event) {
+    return event->phase;
 }
 
-void prDomEventStopPropagation(PrDomEvent* self) {
-    self->stopPropagation = true;
+void prDomEventStopPropagation(PrDomEvent* event) {
+    event->stopPropagation = true;
 }
 
-bool prDomEventCancelBubble(const PrDomEvent* self) {
-    return self->stopPropagation;
+bool prDomEventCancelBubble(const PrDomEvent* event) {
+    return event->stopPropagation;
 }
 
-void prDomEventSetCancelBubble(PrDomEvent* self, bool value) {
+void prDomEventSetCancelBubble(PrDomEvent* event, bool value) {
     if (value)
-        self->stopPropagation = true;
+        event->stopPropagation = true;
 }
 
-void prDomEventStopImmediatePropagation(PrDomEvent* self) {
-    self->stopPropagation = true;
-    self->stopImmediatePropagation = true;
+void prDomEventStopImmediatePropagation(PrDomEvent* event) {
+    event->stopPropagation = true;
+    event->stopImmediatePropagation = true;
 }
 
-bool prDomEventBubbles(const PrDomEvent* self) {
-    return self->bubbles;
+bool prDomEventBubbles(const PrDomEvent* event) {
+    return event->bubbles;
 }
 
-bool prDomEventCancelable(const PrDomEvent* self) {
-    return self->cancelable;
+bool prDomEventCancelable(const PrDomEvent* event) {
+    return event->cancelable;
 }
 
-bool prDomEventReturnValue(const PrDomEvent* self) {
-    return !self->canceled;
+bool prDomEventReturnValue(const PrDomEvent* event) {
+    return !event->canceled;
 }
 
-void prDomEventSetReturnValue(PrDomEvent* self, bool value) {
+void prDomEventSetReturnValue(PrDomEvent* event, bool value) {
     if (!value)
-        domEventCancel(self);
+        domEventCancel(event);
 }
 
-void prDomEventPreventDefault(PrDomEvent* self) {
-    domEventCancel(self);
+void prDomEventPreventDefault(PrDomEvent* event) {
+    domEventCancel(event);
 }
 
-bool prDomEventDefaultPrevented(const PrDomEvent* self) {
-    return self->canceled;
+bool prDomEventDefaultPrevented(const PrDomEvent* event) {
+    return event->canceled;
 }
 
-bool prDomEventComposed(const PrDomEvent* self) {
-    return self->composed;
+bool prDomEventComposed(const PrDomEvent* event) {
+    return event->composed;
 }
 
-bool prDomEventIsTrusted(const PrDomEvent* self) {
-    return self->trusted;
+bool prDomEventIsTrusted(const PrDomEvent* event) {
+    return event->trusted;
 }
 
-double prDomEventTimeStamp(const PrDomEvent* self) {
-    return self->timeStamp;
+double prDomEventTimeStamp(const PrDomEvent* event) {
+    return event->timeStamp;
 }
 
-void prDomEventInitEvent(PrDomEvent* self, PrStringView type, bool bubbles, bool cancelable) {
-    domEventInitialize(self, type, bubbles, cancelable);
+void prDomEventInitEvent(PrDomEvent* event, PrStringView type, bool bubbles, bool cancelable) {
+    domEventInitialize(event, type, bubbles, cancelable);
 }
 
-PrDomEventKind prDomEventKind(const PrDomEvent* self) {
-    return self->kind;
+PrDomEventKind prDomEventKind(const PrDomEvent* event) {
+    return event->kind;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -426,10 +426,10 @@ PrDomCustomEvent* prDomCustomEventCreate(PrStringView type, const PrDomEventInit
     return domEventCreate<PrDomCustomEvent>(type, values, PrDomEventKind_Custom);
 }
 
-bool prDomCustomEventInitCustomEvent(PrDomCustomEvent* self, PrStringView type, bool bubbles, bool cancelable) {
-    if (self->dispatching)
+bool prDomCustomEventInitCustomEvent(PrDomCustomEvent* event, PrStringView type, bool bubbles, bool cancelable) {
+    if (event->dispatching)
         return false;
-    domEventInitialize(self, type, bubbles, cancelable);
+    domEventInitialize(event, type, bubbles, cancelable);
     return true;
 }
 
@@ -450,34 +450,34 @@ PrDomUiEvent* prDomUiEventCreate(PrStringView type, const PrDomUiEventInit* PR_N
     return event;
 }
 
-PrDomEventTarget* PR_NULLABLE prDomUiEventView(PrDomUiEvent* self) {
-    return self->view;
+PrDomEventTarget* PR_NULLABLE prDomUiEventView(PrDomUiEvent* event) {
+    return event->view;
 }
 
-int32_t prDomUiEventDetail(const PrDomUiEvent* self) {
-    return self->detail;
+int32_t prDomUiEventDetail(const PrDomUiEvent* event) {
+    return event->detail;
 }
 
-uint32_t prDomUiEventWhich(const PrDomUiEvent* self) {
-    switch (self->kind) {
+uint32_t prDomUiEventWhich(const PrDomUiEvent* event) {
+    switch (event->kind) {
         case PrDomEventKind_Mouse:
         case PrDomEventKind_Wheel:
-            return self->mouse != nullptr ? uint32_t(self->mouse->button + 1) : 1;
+            return event->mouse != nullptr ? uint32_t(event->mouse->button + 1) : 1;
         case PrDomEventKind_Keyboard:
-            if (self->keyboard == nullptr)
+            if (event->keyboard == nullptr)
                 return 0;
-            return self->keyboard->keyCode != 0 ? self->keyboard->keyCode : self->keyboard->charCode;
+            return event->keyboard->keyCode != 0 ? event->keyboard->keyCode : event->keyboard->charCode;
         default:
-            return self->which;
+            return event->which;
     }
 }
 
-void prDomUiEventInitUiEvent(PrDomUiEvent* self, PrStringView type, const PrDomUiEventInit* init) {
-    if (self->dispatching)
+void prDomUiEventInitUiEvent(PrDomUiEvent* event, PrStringView type, const PrDomUiEventInit* init) {
+    if (event->dispatching)
         return;
-    domEventInitialize(self, type, init->event.bubbles, init->event.cancelable);
-    self->view = init->view;
-    self->detail = init->detail;
+    domEventInitialize(event, type, init->event.bubbles, init->event.cancelable);
+    event->view = init->view;
+    event->detail = init->detail;
 }
 
 PrDomFocusEvent* PR_NULLABLE prDomFocusEventQuery(PrDomEvent* PR_NULLABLE object) {
@@ -493,8 +493,8 @@ PrDomFocusEvent* prDomFocusEventCreate(PrStringView type, const PrDomFocusEventI
     return event;
 }
 
-PrDomEventTarget* PR_NULLABLE prDomFocusEventRelatedTarget(PrDomFocusEvent* self) {
-    return self->relatedTarget;
+PrDomEventTarget* PR_NULLABLE prDomFocusEventRelatedTarget(PrDomFocusEvent* event) {
+    return event->relatedTarget;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -533,16 +533,16 @@ PrDomMouseEvent* prDomMouseEventCreate(PrStringView type, const PrDomMouseEventI
     return event;
 }
 
-PrDomMouseEventInit prDomMouseEventMembers(PrDomMouseEvent* self) {
+PrDomMouseEventInit prDomMouseEventMembers(PrDomMouseEvent* event) {
     PrDomMouseEventInit members = prDomMouseEventInitDefault();
-    members.ui.event.bubbles = self->bubbles;
-    members.ui.event.cancelable = self->cancelable;
-    members.ui.event.composed = self->composed;
-    members.ui.view = self->view;
-    members.ui.detail = self->detail;
-    members.ui.which = self->which;
-    members.relatedTarget = self->relatedTarget;
-    if (const DomMouseEventData* mouse = self->mouse) {
+    members.ui.event.bubbles = event->bubbles;
+    members.ui.event.cancelable = event->cancelable;
+    members.ui.event.composed = event->composed;
+    members.ui.view = event->view;
+    members.ui.detail = event->detail;
+    members.ui.which = event->which;
+    members.relatedTarget = event->relatedTarget;
+    if (const DomMouseEventData* mouse = event->mouse) {
         members.modifiers = mouse->modifiers;
         members.screenX = mouse->screenX;
         members.screenY = mouse->screenY;
@@ -554,13 +554,13 @@ PrDomMouseEventInit prDomMouseEventMembers(PrDomMouseEvent* self) {
     return members;
 }
 
-void prDomMouseEventInitMouseEvent(PrDomMouseEvent* self, PrStringView type, const PrDomMouseEventInit* init) {
-    if (self->dispatching)
+void prDomMouseEventInitMouseEvent(PrDomMouseEvent* event, PrStringView type, const PrDomMouseEventInit* init) {
+    if (event->dispatching)
         return;
-    domEventInitialize(self, type, init->ui.event.bubbles, init->ui.event.cancelable);
+    domEventInitialize(event, type, init->ui.event.bubbles, init->ui.event.cancelable);
     PrDomMouseEventInit members = *init;
-    members.buttons = self->mouse != nullptr ? self->mouse->buttons : 0;
-    setMouseMembers(self, members);
+    members.buttons = event->mouse != nullptr ? event->mouse->buttons : 0;
+    setMouseMembers(event, members);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -579,13 +579,13 @@ PrDomWheelEvent* prDomWheelEventCreate(PrStringView type, const PrDomWheelEventI
     return event;
 }
 
-PrDomWheelEventInit prDomWheelEventMembers(PrDomWheelEvent* self) {
+PrDomWheelEventInit prDomWheelEventMembers(PrDomWheelEvent* event) {
     PrDomWheelEventInit members = prDomWheelEventInitDefault();
-    members.mouse = prDomMouseEventMembers(self);
-    members.deltaX = self->wheel->deltaX;
-    members.deltaY = self->wheel->deltaY;
-    members.deltaZ = self->wheel->deltaZ;
-    members.deltaMode = self->wheel->deltaMode;
+    members.mouse = prDomMouseEventMembers(event);
+    members.deltaX = event->wheel->deltaX;
+    members.deltaY = event->wheel->deltaY;
+    members.deltaZ = event->wheel->deltaZ;
+    members.deltaMode = event->wheel->deltaMode;
     return members;
 }
 
@@ -612,15 +612,15 @@ PrDomKeyboardEvent* prDomKeyboardEventCreate(PrStringView type, const PrDomKeybo
     return event;
 }
 
-PrDomKeyboardEventInit prDomKeyboardEventMembers(PrDomKeyboardEvent* self) {
+PrDomKeyboardEventInit prDomKeyboardEventMembers(PrDomKeyboardEvent* event) {
     PrDomKeyboardEventInit members = prDomKeyboardEventInitDefault();
-    members.ui.event.bubbles = self->bubbles;
-    members.ui.event.cancelable = self->cancelable;
-    members.ui.event.composed = self->composed;
-    members.ui.view = self->view;
-    members.ui.detail = self->detail;
-    members.ui.which = self->which;
-    if (const DomKeyboardEventData* keyboard = self->keyboard) {
+    members.ui.event.bubbles = event->bubbles;
+    members.ui.event.cancelable = event->cancelable;
+    members.ui.event.composed = event->composed;
+    members.ui.view = event->view;
+    members.ui.detail = event->detail;
+    members.ui.which = event->which;
+    if (const DomKeyboardEventData* keyboard = event->keyboard) {
         members.modifiers = keyboard->modifiers;
         members.key = prStringView(&keyboard->key);
         members.code = prStringView(&keyboard->code);
@@ -633,13 +633,13 @@ PrDomKeyboardEventInit prDomKeyboardEventMembers(PrDomKeyboardEvent* self) {
     return members;
 }
 
-void prDomKeyboardEventInitKeyboardEvent(PrDomKeyboardEvent* self, PrStringView type, const PrDomKeyboardEventInit* init) {
-    if (self->dispatching)
+void prDomKeyboardEventInitKeyboardEvent(PrDomKeyboardEvent* event, PrStringView type, const PrDomKeyboardEventInit* init) {
+    if (event->dispatching)
         return;
-    domEventInitialize(self, type, init->ui.event.bubbles, init->ui.event.cancelable);
-    self->view = init->ui.view;
-    self->detail = 0;
-    DomKeyboardEventData* keyboard = keyboardOf(self);
+    domEventInitialize(event, type, init->ui.event.bubbles, init->ui.event.cancelable);
+    event->view = init->ui.view;
+    event->detail = 0;
+    DomKeyboardEventData* keyboard = keyboardOf(event);
     prStringReplace(&keyboard->key, init->key);
     keyboard->location = init->location;
     keyboard->modifiers = init->modifiers;
@@ -664,18 +664,18 @@ PrDomCompositionEvent* prDomCompositionEventCreate(PrStringView type, const PrDo
     return event;
 }
 
-PrStringView prDomCompositionEventData(const PrDomCompositionEvent* self) {
-    return prStringView(&self->composition);
+PrStringView prDomCompositionEventData(const PrDomCompositionEvent* event) {
+    return prStringView(&event->composition);
 }
 
-void prDomCompositionEventInitCompositionEvent(PrDomCompositionEvent* self, PrStringView type,
+void prDomCompositionEventInitCompositionEvent(PrDomCompositionEvent* event, PrStringView type,
         const PrDomUiEventInit* init, PrStringView data) {
-    if (self->dispatching)
+    if (event->dispatching)
         return;
-    domEventInitialize(self, type, init->event.bubbles, init->event.cancelable);
-    self->view = init->view;
-    self->detail = 0;
-    prStringReplace(&self->composition, data);
+    domEventInitialize(event, type, init->event.bubbles, init->event.cancelable);
+    event->view = init->view;
+    event->detail = 0;
+    prStringReplace(&event->composition, data);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -691,36 +691,36 @@ PrDomEventTarget* prDomEventTargetCreate(void) {
     return target;
 }
 
-void prDomEventTargetRetain(PrDomEventTarget* self) {
-    domEventTargetRetain(self);
+void prDomEventTargetRetain(PrDomEventTarget* target) {
+    domEventTargetRetain(target);
 }
 
-void prDomEventTargetRelease(PrDomEventTarget* PR_NULLABLE self) {
-    domEventTargetRelease(self);
+void prDomEventTargetRelease(PrDomEventTarget* PR_NULLABLE target) {
+    domEventTargetRelease(target);
 }
 
-void* PR_NULLABLE* PR_NONNULL prDomEventTargetBinding(PrDomEventTarget* self) {
-    return &self->binding;
+void* PR_NULLABLE* PR_NONNULL prDomEventTargetBinding(PrDomEventTarget* target) {
+    return &target->binding;
 }
 
-void prDomEventTargetAddEventListener(PrDomEventTarget* self, PrStringView type,
+void prDomEventTargetAddEventListener(PrDomEventTarget* target, PrStringView type,
         const PrDomEventListener* PR_NULLABLE callback, const PrDomAddEventListenerOptions* PR_NULLABLE options) {
     if (callback != nullptr)
-        domListenerAdd(self, type, callback, options);
+        domListenerAdd(target, type, callback, options);
 }
 
-void prDomEventTargetRemoveEventListener(PrDomEventTarget* self, PrStringView type,
+void prDomEventTargetRemoveEventListener(PrDomEventTarget* target, PrStringView type,
         const PrDomEventListener* PR_NULLABLE callback, const PrDomEventListenerOptions* PR_NULLABLE options) {
     if (callback != nullptr)
-        domListenerRemove(self, type, callback, options != nullptr && options->capture);
+        domListenerRemove(target, type, callback, options != nullptr && options->capture);
 }
 
 // dom/#dom-eventtarget-dispatchevent, which marks the event untrusted.
-PrStatus prDomEventTargetDispatchEvent(PrDomEventTarget* self, PrDomEvent* event, bool* PR_NULLABLE out) {
+PrStatus prDomEventTargetDispatchEvent(PrDomEventTarget* target, PrDomEvent* event, bool* PR_NULLABLE out) {
     if (event->dispatching || !event->initialized)
         return PrStatus_InvalidState;
     event->trusted = false;
-    bool proceed = domEventDispatch(self, event);
+    bool proceed = domEventDispatch(target, event);
     if (out != nullptr)
         *out = proceed;
     return PrStatus_Ok;
@@ -729,14 +729,14 @@ PrStatus prDomEventTargetDispatchEvent(PrDomEventTarget* self, PrDomEvent* event
 // ---------------------------------------------------------------------------------------------------------------------
 // EventHandler
 
-PrDomEventHandlerCallback prDomEventTargetEventHandler(PrDomEventTarget* self, PrDomEventHandler handler) {
-    PrDomEventTarget* target = domEventHandlerTarget(self, handler);
-    return target != nullptr ? domEventHandler(target, handler) : PrDomEventHandlerCallback{};
+PrDomEventHandlerCallback prDomEventTargetEventHandler(PrDomEventTarget* target, PrDomEventHandler handler) {
+    PrDomEventTarget* handlerTarget = domEventHandlerTarget(target, handler);
+    return handlerTarget != nullptr ? domEventHandler(handlerTarget, handler) : PrDomEventHandlerCallback{};
 }
 
-void prDomEventTargetSetEventHandler(PrDomEventTarget* self, PrDomEventHandler handler,
+void prDomEventTargetSetEventHandler(PrDomEventTarget* eventTarget, PrDomEventHandler handler,
         const PrDomEventHandlerCallback* PR_NULLABLE callback) {
-    if (PrDomEventTarget* target = domEventHandlerTarget(self, handler))
+    if (PrDomEventTarget* target = domEventHandlerTarget(eventTarget, handler))
         domSetEventHandler(target, handler, callback);
 }
 
@@ -747,115 +747,115 @@ PrDomNode* PR_NULLABLE prDomNodeQuery(PrDomEventTarget* PR_NULLABLE object) {
     return domNodeFromTarget(object);
 }
 
-void prDomNodeRetain(PrDomNode* self) {
-    domNodeRetain(self);
+void prDomNodeRetain(PrDomNode* node) {
+    domNodeRetain(node);
 }
 
-void prDomNodeRelease(PrDomNode* PR_NULLABLE self) {
-    domNodeRelease(self);
+void prDomNodeRelease(PrDomNode* PR_NULLABLE node) {
+    domNodeRelease(node);
 }
 
-PrDomNode* prDomNodeTreeRoot(PrDomNode* self) {
-    return domTreeRoot(self);
+PrDomNode* prDomNodeTreeRoot(PrDomNode* node) {
+    return domTreeRoot(node);
 }
 
-PrDomNode* PR_NULLABLE prDomNodeTreeParent(PrDomNode* self) {
-    return domNodeOwner(self);
+PrDomNode* PR_NULLABLE prDomNodeTreeParent(PrDomNode* node) {
+    return domNodeOwner(node);
 }
 
-PrDomNodeType prDomNodeType(const PrDomNode* self) {
-    return self->type;
+PrDomNodeType prDomNodeType(const PrDomNode* node) {
+    return node->type;
 }
 
-PrString prDomNodeBaseUri(const PrDomNode* self) {
-    PrUrl* base = domDocumentBaseUrl(self->document);
+PrString prDomNodeBaseUri(const PrDomNode* node) {
+    PrUrl* base = domDocumentBaseUrl(node->document);
     PrString result = prUrlSerialize(base, PrUrlSerialization_Whole);
     prUrlDestroy(base);
     return result;
 }
 
-bool prDomNodeIsConnected(const PrDomNode* self) {
-    return domIsConnected(self);
+bool prDomNodeIsConnected(const PrDomNode* node) {
+    return domIsConnected(node);
 }
 
-PrDomDocument* PR_NULLABLE prDomNodeOwnerDocument(PrDomNode* self) {
-    return self->type != PrDomNodeType_Document ? self->document : nullptr;
+PrDomDocument* PR_NULLABLE prDomNodeOwnerDocument(PrDomNode* node) {
+    return node->type != PrDomNodeType_Document ? node->document : nullptr;
 }
 
-void prDomNodeVisitSubtree(PrDomNode* self, void (*visit)(void* PR_NULLABLE context, PrDomNode* node),
+void prDomNodeVisitSubtree(PrDomNode* root, void (*visit)(void* PR_NULLABLE context, PrDomNode* node),
         void* PR_NULLABLE context) {
     struct Visit {
         void (*visit)(void* PR_NULLABLE context, PrDomNode* node);
         void* PR_NULLABLE context;
     } state = {visit, context};
-    domVisitSubtree(self, [](void* data, PrDomNode* node) {
+    domVisitSubtree(root, [](void* data, PrDomNode* node) {
         Visit* given = static_cast<Visit*>(data);
         given->visit(given->context, node);
     }, &state);
 }
 
-PrDomNode* PR_NULLABLE prDomNodeParentNode(PrDomNode* self) {
-    return domNodeParent(self);
+PrDomNode* PR_NULLABLE prDomNodeParentNode(PrDomNode* node) {
+    return domNodeParent(node);
 }
 
-PrDomElement* PR_NULLABLE prDomNodeParentElement(PrDomNode* self) {
-    return domElementFromNode(domNodeParent(self));
+PrDomElement* PR_NULLABLE prDomNodeParentElement(PrDomNode* node) {
+    return domElementFromNode(domNodeParent(node));
 }
 
-bool prDomNodeHasChildNodes(const PrDomNode* self) {
-    return self->first != nullptr;
+bool prDomNodeHasChildNodes(const PrDomNode* node) {
+    return node->first != nullptr;
 }
 
-PrDomNode* PR_NULLABLE prDomNodeFirstChild(PrDomNode* self) {
-    return self->first;
+PrDomNode* PR_NULLABLE prDomNodeFirstChild(PrDomNode* node) {
+    return node->first;
 }
 
-PrDomNode* PR_NULLABLE prDomNodeLastChild(PrDomNode* self) {
-    return self->last;
+PrDomNode* PR_NULLABLE prDomNodeLastChild(PrDomNode* node) {
+    return node->last;
 }
 
-PrDomNode* PR_NULLABLE prDomNodePreviousSibling(PrDomNode* self) {
-    return domNodeParent(self) != nullptr ? self->previous : nullptr;
+PrDomNode* PR_NULLABLE prDomNodePreviousSibling(PrDomNode* node) {
+    return domNodeParent(node) != nullptr ? node->previous : nullptr;
 }
 
-PrDomNode* PR_NULLABLE prDomNodeNextSibling(PrDomNode* self) {
-    return domNodeParent(self) != nullptr ? self->next : nullptr;
+PrDomNode* PR_NULLABLE prDomNodeNextSibling(PrDomNode* node) {
+    return domNodeParent(node) != nullptr ? node->next : nullptr;
 }
 
-PrString prDomNodeTextContent(const PrDomNode* self) {
-    return domNodeTextContent(self);
+PrString prDomNodeTextContent(const PrDomNode* node) {
+    return domNodeTextContent(node);
 }
 
-void prDomNodeSetTextContent(PrDomNode* self, PrStringView value) {
-    domSetTextContent(self, value);
+void prDomNodeSetTextContent(PrDomNode* node, PrStringView value) {
+    domSetTextContent(node, value);
 }
 
-PrStatus prDomNodeInsertBefore(PrDomNode* self, PrDomNode* node, PrDomNode* PR_NULLABLE child) {
-    return domPreInsert(self, node, child);
+PrStatus prDomNodeInsertBefore(PrDomNode* parent, PrDomNode* node, PrDomNode* PR_NULLABLE child) {
+    return domPreInsert(parent, node, child);
 }
 
-PrStatus prDomNodeAppendChild(PrDomNode* self, PrDomNode* node) {
-    return domPreInsert(self, node, nullptr);
+PrStatus prDomNodeAppendChild(PrDomNode* parent, PrDomNode* node) {
+    return domPreInsert(parent, node, nullptr);
 }
 
-PrStatus prDomNodeReplaceChild(PrDomNode* self, PrDomNode* node, PrDomNode* child) {
-    return domReplace(self, node, child);
+PrStatus prDomNodeReplaceChild(PrDomNode* parent, PrDomNode* node, PrDomNode* child) {
+    return domReplace(parent, node, child);
 }
 
-PrStatus prDomNodeRemoveChild(PrDomNode* self, PrDomNode* child) {
-    return domPreRemove(self, child);
+PrStatus prDomNodeRemoveChild(PrDomNode* node, PrDomNode* child) {
+    return domPreRemove(node, child);
 }
 
-PrString prDomNodeName(const PrDomNode* self) {
-    switch (self->type) {
-        case PrDomNodeType_Element: return domElementTagName(static_cast<const PrDomElement*>(self));
-        case PrDomNodeType_Attribute: return attributeQualifiedName(static_cast<const PrDomAttr*>(self));
+PrString prDomNodeName(const PrDomNode* node) {
+    switch (node->type) {
+        case PrDomNodeType_Element: return domElementTagName(static_cast<const PrDomElement*>(node));
+        case PrDomNodeType_Attribute: return attributeQualifiedName(static_cast<const PrDomAttr*>(node));
         case PrDomNodeType_ProcessingInstruction:
-            return prStringClone(&static_cast<const PrDomProcessingInstruction*>(self)->target);
+            return prStringClone(&static_cast<const PrDomProcessingInstruction*>(node)->target);
         case PrDomNodeType_DocumentType:
-            return prStringClone(&static_cast<const PrDomDocumentType*>(self)->name);
+            return prStringClone(&static_cast<const PrDomDocumentType*>(node)->name);
         default: {
-            PrStringView name = prDomNodeTypeName(self->type);
+            PrStringView name = prDomNodeTypeName(node->type);
             return name.data != nullptr ? prStringExternal(name) : prStringEmpty();
         }
     }
@@ -872,48 +872,48 @@ PrStringView prDomNodeTypeName(PrDomNodeType type) {
     }
 }
 
-PrStringView prDomNodeValue(const PrDomNode* self) {
-    switch (self->type) {
-        case PrDomNodeType_Attribute: return prStringView(&static_cast<const PrDomAttr*>(self)->value);
+PrStringView prDomNodeValue(const PrDomNode* node) {
+    switch (node->type) {
+        case PrDomNodeType_Attribute: return prStringView(&static_cast<const PrDomAttr*>(node)->value);
         case PrDomNodeType_Text:
         case PrDomNodeType_CdataSection:
         case PrDomNodeType_ProcessingInstruction:
         case PrDomNodeType_Comment:
-            return prStringView(&static_cast<const PrDomCharacterData*>(self)->data);
+            return prStringView(&static_cast<const PrDomCharacterData*>(node)->data);
         default: return {};
     }
 }
 
-void prDomNodeSetValue(PrDomNode* self, PrStringView value) {
+void prDomNodeSetValue(PrDomNode* node, PrStringView value) {
     // The node's value is its text content, if it has one.
-    if (self->type != PrDomNodeType_Element && self->type != PrDomNodeType_Document &&
-            self->type != PrDomNodeType_DocumentFragment && self->type != PrDomNodeType_DocumentType)
-        domSetTextContent(self, value);
+    if (node->type != PrDomNodeType_Element && node->type != PrDomNodeType_Document &&
+            node->type != PrDomNodeType_DocumentFragment && node->type != PrDomNodeType_DocumentType)
+        domSetTextContent(node, value);
 }
 
-PrDomNode* prDomNodeGetRootNode(PrDomNode* self, bool composed) {
-    return const_cast<PrDomNode*>(composed ? domShadowIncludingRoot(self) : domNodeRoot(self));
+PrDomNode* prDomNodeGetRootNode(PrDomNode* node, bool composed) {
+    return const_cast<PrDomNode*>(composed ? domShadowIncludingRoot(node) : domNodeRoot(node));
 }
 
-bool prDomNodeContains(const PrDomNode* self, const PrDomNode* PR_NULLABLE other) {
+bool prDomNodeContains(const PrDomNode* node, const PrDomNode* PR_NULLABLE other) {
     for (const PrDomNode* ancestor = other; ancestor != nullptr; ancestor = domNodeParent(ancestor)) {
-        if (ancestor == self)
+        if (ancestor == node)
             return true;
     }
     return false;
 }
 
-bool prDomNodeIsEqualNode(const PrDomNode* self, const PrDomNode* PR_NULLABLE other) {
-    return other != nullptr && domNodeEquals(self, other);
+bool prDomNodeIsEqualNode(const PrDomNode* node, const PrDomNode* PR_NULLABLE other) {
+    return other != nullptr && domNodeEquals(node, other);
 }
 
-PrDomNodePosition prDomNodeCompareDocumentPosition(const PrDomNode* self, const PrDomNode* other) {
+PrDomNodePosition prDomNodeCompareDocumentPosition(const PrDomNode* node, const PrDomNode* other) {
     const PrDomNode* node1 = other;
-    if (node1 == self)
+    if (node1 == node)
         return 0;
     // dom/#dom-node-comparedocumentposition: an attribute stands for its element. Two attributes of one element are
     // ordered by the element's attribute list.
-    const PrDomNode* node2 = self;
+    const PrDomNode* node2 = node;
     const PrDomAttr* attr1 = node1->type == PrDomNodeType_Attribute ? static_cast<const PrDomAttr*>(node1) : nullptr;
     const PrDomAttr* attr2 = node2->type == PrDomNodeType_Attribute ? static_cast<const PrDomAttr*>(node2) : nullptr;
     if (attr1 != nullptr)
@@ -945,81 +945,81 @@ PrDomNodePosition prDomNodeCompareDocumentPosition(const PrDomNode* self, const 
     return domBoundaryCompare(first, second) < 0 ? PrDomNodePosition_Preceding : PrDomNodePosition_Following;
 }
 
-void prDomNodeNormalize(PrDomNode* self) {
-    domNormalize(self);
+void prDomNodeNormalize(PrDomNode* node) {
+    domNormalize(node);
 }
 
-PrStatus prDomNodeCloneNode(PrDomNode* self, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out) {
-    PrDomNode* clone = made(domClone(self, self->document, deep));
+PrStatus prDomNodeCloneNode(PrDomNode* node, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out) {
+    PrDomNode* clone = made(domClone(node, node->document, deep));
     *out = clone;
     return clone != nullptr ? PrStatus_Ok : PrStatus_NotSupported;
 }
 
-PrDomElement* PR_NULLABLE prDomNodeGetElementById(PrDomNode* self, PrStringView id) {
-    return domElementById(self, id);
+PrDomElement* PR_NULLABLE prDomNodeGetElementById(PrDomNode* node, PrStringView id) {
+    return domElementById(node, id);
 }
 
-PrDomElement* PR_NULLABLE prDomNodeFirstElementChild(PrDomNode* self) {
-    PrDomNode* child = self->first;
+PrDomElement* PR_NULLABLE prDomNodeFirstElementChild(PrDomNode* node) {
+    PrDomNode* child = node->first;
     while (child != nullptr && child->type != PrDomNodeType_Element)
         child = child->next;
     return domElementFromNode(child);
 }
 
-PrDomElement* PR_NULLABLE prDomNodeLastElementChild(PrDomNode* self) {
-    PrDomNode* child = self->last;
+PrDomElement* PR_NULLABLE prDomNodeLastElementChild(PrDomNode* node) {
+    PrDomNode* child = node->last;
     while (child != nullptr && child->type != PrDomNodeType_Element)
         child = child->previous;
     return domElementFromNode(child);
 }
 
-uint32_t prDomNodeChildElementCount(const PrDomNode* self) {
+uint32_t prDomNodeChildElementCount(const PrDomNode* node) {
     uint32_t count = 0;
-    for (const PrDomNode* child = self->first; child != nullptr; child = child->next)
+    for (const PrDomNode* child = node->first; child != nullptr; child = child->next)
         count += child->type == PrDomNodeType_Element;
     return count;
 }
 
-PrStatus prDomNodePrepend(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
-    return domPrepend(self, nodes, count);
+PrStatus prDomNodePrepend(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
+    return domPrepend(node, nodes, count);
 }
 
-PrStatus prDomNodeAppend(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
-    return domAppend(self, nodes, count);
+PrStatus prDomNodeAppend(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
+    return domAppend(node, nodes, count);
 }
 
-PrStatus prDomNodeReplaceChildren(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
-    return domReplaceChildren(self, nodes, count);
+PrStatus prDomNodeReplaceChildren(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
+    return domReplaceChildren(node, nodes, count);
 }
 
-PrDomElement* PR_NULLABLE prDomNodePreviousElementSibling(PrDomNode* self) {
-    PrDomNode* sibling = self->parent != nullptr ? self->previous : nullptr;
+PrDomElement* PR_NULLABLE prDomNodePreviousElementSibling(PrDomNode* node) {
+    PrDomNode* sibling = node->parent != nullptr ? node->previous : nullptr;
     while (sibling != nullptr && sibling->type != PrDomNodeType_Element)
         sibling = sibling->previous;
     return domElementFromNode(sibling);
 }
 
-PrDomElement* PR_NULLABLE prDomNodeNextElementSibling(PrDomNode* self) {
-    PrDomNode* sibling = self->parent != nullptr ? self->next : nullptr;
+PrDomElement* PR_NULLABLE prDomNodeNextElementSibling(PrDomNode* node) {
+    PrDomNode* sibling = node->parent != nullptr ? node->next : nullptr;
     while (sibling != nullptr && sibling->type != PrDomNodeType_Element)
         sibling = sibling->next;
     return domElementFromNode(sibling);
 }
 
-PrStatus prDomNodeBefore(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
-    return domBefore(self, nodes, count);
+PrStatus prDomNodeBefore(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
+    return domBefore(node, nodes, count);
 }
 
-PrStatus prDomNodeAfter(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
-    return domAfter(self, nodes, count);
+PrStatus prDomNodeAfter(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
+    return domAfter(node, nodes, count);
 }
 
-PrStatus prDomNodeReplaceWith(PrDomNode* self, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
-    return domReplaceWith(self, nodes, count);
+PrStatus prDomNodeReplaceWith(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
+    return domReplaceWith(node, nodes, count);
 }
 
-void prDomNodeRemove(PrDomNode* self) {
-    domRemoveFromParent(self);
+void prDomNodeRemove(PrDomNode* node) {
+    domRemoveFromParent(node);
 }
 
 PrDomDocument* PR_NULLABLE prDomDocumentQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -1078,46 +1078,45 @@ PrDomDocument* prDomDocumentCreateHtml(PrDomImplementation* implementation, PrSt
     return document;
 }
 
-void prDomDocumentRetain(PrDomDocument* self) {
-    domNodeRetain(self);
+void prDomDocumentRetain(PrDomDocument* document) {
+    domNodeRetain(document);
 }
 
-void prDomDocumentRelease(PrDomDocument* PR_NULLABLE self) {
-    domNodeRelease(self);
+void prDomDocumentRelease(PrDomDocument* PR_NULLABLE document) {
+    domNodeRelease(document);
 }
 
-void prDomDocumentSetTreeCallback(PrDomDocument* self, const PrDomTreeCallback* PR_NULLABLE callback) {
-    domDocumentSetTreeCallback(self, callback != nullptr ? *callback : PrDomTreeCallback{});
+void prDomDocumentSetTreeCallback(PrDomDocument* document, const PrDomTreeCallback* PR_NULLABLE callback) {
+    domDocumentSetTreeCallback(document, callback != nullptr ? *callback : PrDomTreeCallback{});
 }
 
-PrString prDomDocumentUrl(const PrDomDocument* self) {
-    return prUrlSerialize(self->url, PrUrlSerialization_Whole);
+PrString prDomDocumentUrl(const PrDomDocument* document) {
+    return prUrlSerialize(document->url, PrUrlSerialization_Whole);
 }
 
-PrStringView prDomDocumentContentType(const PrDomDocument* self) {
-    return prStringView(&self->contentType);
+PrStringView prDomDocumentContentType(const PrDomDocument* document) {
+    return prStringView(&document->contentType);
 }
 
-PrStringView prDomDocumentCharacterSet(const PrDomDocument* self) {
-    return prCharsetName(self->charset);
+PrStringView prDomDocumentCharacterSet(const PrDomDocument* document) {
+    return prCharsetName(document->charset);
 }
 
-PrDomElement* PR_NULLABLE prDomDocumentElement(PrDomDocument* self) {
-    return domDocumentElement(self);
+PrDomElement* PR_NULLABLE prDomDocumentElement(PrDomDocument* document) {
+    return domDocumentElement(document);
 }
 
-PrStatus prDomDocumentImportNode(PrDomDocument* self, PrDomNode* node, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out) {
-    PrDomNode* clone = domNodeShadowRoot(node) == nullptr ? made(domClone(node, self, deep)) : nullptr;
+PrStatus prDomDocumentImportNode(PrDomDocument* document, PrDomNode* node, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out) {
+    PrDomNode* clone = domNodeShadowRoot(node) == nullptr ? made(domClone(node, document, deep)) : nullptr;
     *out = clone;
     return clone != nullptr ? PrStatus_Ok : PrStatus_NotSupported;
 }
 
-PrStatus prDomElementCreate(PrDomDocument* self, PrStringView localName,
+PrStatus prDomElementCreate(PrDomDocument* document, PrStringView localName,
         const PrDomElementCreationOptions* PR_NULLABLE options, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
     if (!domIsValidElementLocalName(localName))
         return PrStatus_InvalidData;
     // An HTML document lowercases the name. An HTML or XHTML document creates an HTML element.
-    PrDomDocument* document = self;
     TextBuffer buffer;
     PrStringView name = lowered(localName, document->kind == DomDocumentKind_Html, &buffer);
     bool html = document->kind == DomDocumentKind_Html ||
@@ -1140,93 +1139,93 @@ PrStatus prDomElementCreate(PrDomDocument* self, PrStringView localName,
     return PrStatus_Ok;
 }
 
-PrStatus prDomElementCreateNs(PrDomDocument* self, PrStringView namespaceUrl, PrStringView qualifiedName,
+PrStatus prDomElementCreateNs(PrDomDocument* document, PrStringView namespaceUrl, PrStringView qualifiedName,
         const PrDomElementCreationOptions* PR_NULLABLE options, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     DomNamespaceId space = PrDomNamespace_None;
     PrStringView prefix = {};
     PrStringView local = {};
-    PrStatus status = validateAndExtract(self, namespaceUrl, qualifiedName, true, &space, &prefix, &local);
+    PrStatus status = validateAndExtract(document, namespaceUrl, qualifiedName, true, &space, &prefix, &local);
     if (status != PrStatus_Ok)
         return status;
     PrDomElement* element = nullptr;
     if (space == PrDomNamespace_Html) {
         bool held = false;
-        element = made(domElementCreateHtml(self, domTagFromText(local), local,
+        element = made(domElementCreateHtml(document, domTagFromText(local), local,
             options != nullptr ? options->is : PrStringView{}, true, &held));
         if (held)
             domNodeUnhold(element);
         if (prefix.data != nullptr)
             domElementState(element)->prefix = prStringCopy(prefix);
     } else {
-        element = made(domElementCreateNs(self, space, prefix, local));
+        element = made(domElementCreateNs(document, space, prefix, local));
     }
     *out = element;
     return status;
 }
 
-PrStatus prDomAttrCreate(PrDomDocument* self, PrStringView localName, PrDomAttr* PR_NULLABLE* PR_NONNULL out) {
+PrStatus prDomAttrCreate(PrDomDocument* document, PrStringView localName, PrDomAttr* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (!domIsValidAttributeLocalName(localName))
         return PrStatus_InvalidData;
     TextBuffer buffer;
-    PrStringView name = lowered(localName, self->kind == DomDocumentKind_Html, &buffer);
-    *out = made(domAttrCreate(self, PrDomNamespace_None, PrStringView{}, name, ""));
+    PrStringView name = lowered(localName, document->kind == DomDocumentKind_Html, &buffer);
+    *out = made(domAttrCreate(document, PrDomNamespace_None, PrStringView{}, name, ""));
     textReset(&buffer);
     return PrStatus_Ok;
 }
 
-PrStatus prDomAttrCreateNs(PrDomDocument* self, PrStringView namespaceUrl, PrStringView qualifiedName,
+PrStatus prDomAttrCreateNs(PrDomDocument* document, PrStringView namespaceUrl, PrStringView qualifiedName,
         PrDomAttr* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     DomNamespaceId space = PrDomNamespace_None;
     PrStringView prefix = {};
     PrStringView local = {};
-    PrStatus status = validateAndExtract(self, namespaceUrl, qualifiedName, false, &space, &prefix, &local);
+    PrStatus status = validateAndExtract(document, namespaceUrl, qualifiedName, false, &space, &prefix, &local);
     if (status == PrStatus_Ok)
-        *out = made(domAttrCreate(self, space, prefix, local, ""));
+        *out = made(domAttrCreate(document, space, prefix, local, ""));
     return status;
 }
 
-PrDomDocumentFragment* prDomDocumentFragmentCreate(PrDomDocument* self) {
-    return made(domDocumentFragmentCreate(self));
+PrDomDocumentFragment* prDomDocumentFragmentCreate(PrDomDocument* document) {
+    return made(domDocumentFragmentCreate(document));
 }
 
-PrDomText* prDomTextCreate(PrDomDocument* self, PrStringView data) {
-    return made(domTextCreate(self, data));
+PrDomText* prDomTextCreate(PrDomDocument* document, PrStringView data) {
+    return made(domTextCreate(document, data));
 }
 
-PrStatus prDomTextCreateCdataSection(PrDomDocument* self, PrStringView data, PrDomText* PR_NULLABLE* PR_NONNULL out) {
+PrStatus prDomTextCreateCdataSection(PrDomDocument* document, PrStringView data, PrDomText* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (self->kind == DomDocumentKind_Html)
+    if (document->kind == DomDocumentKind_Html)
         return PrStatus_NotSupported;
     if (stringContains(data, "]]>"))
         return PrStatus_InvalidData;
-    *out = made(domTextCreateCdataSection(self, data));
+    *out = made(domTextCreateCdataSection(document, data));
     return PrStatus_Ok;
 }
 
-PrDomComment* prDomCommentCreate(PrDomDocument* self, PrStringView data) {
-    return made(domCommentCreate(self, data));
+PrDomComment* prDomCommentCreate(PrDomDocument* document, PrStringView data) {
+    return made(domCommentCreate(document, data));
 }
 
-PrStatus prDomProcessingInstructionCreate(PrDomDocument* self, PrStringView target, PrStringView data,
+PrStatus prDomProcessingInstructionCreate(PrDomDocument* document, PrStringView target, PrStringView data,
         PrDomProcessingInstruction* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (!prXmlIsName(target) || stringContains(data, "?>"))
         return PrStatus_InvalidData;
-    *out = made(domProcessingInstructionCreate(self, target, data));
+    *out = made(domProcessingInstructionCreate(document, target, data));
     return PrStatus_Ok;
 }
 
 // html/#document.title
-PrString prDomDocumentTitle(const PrDomDocument* self) {
-    const PrDomElement* root = domDocumentElement(self);
+PrString prDomDocumentTitle(const PrDomDocument* document) {
+    const PrDomElement* root = domDocumentElement(document);
     const PrDomElement* title;
     if (isSvgRoot(root))
         title = firstElement(root, PrDomNamespace_Svg, PrDomTag_Title, true);
     else
-        title = firstElement(self, PrDomNamespace_Html, PrDomTag_Title, false);
+        title = firstElement(document, PrDomNamespace_Html, PrDomTag_Title, false);
     if (title == nullptr)
         return prStringEmpty();
     PrString text = domChildTextContent(title);
@@ -1235,22 +1234,22 @@ PrString prDomDocumentTitle(const PrDomDocument* self) {
     return result;
 }
 
-void prDomDocumentSetTitle(PrDomDocument* self, PrStringView value) {
-    PrDomElement* root = domDocumentElement(self);
+void prDomDocumentSetTitle(PrDomDocument* document, PrStringView value) {
+    PrDomElement* root = domDocumentElement(document);
     PrDomElement* title = nullptr;
     if (isSvgRoot(root)) {
         title = firstElement(root, PrDomNamespace_Svg, PrDomTag_Title, true);
         if (title == nullptr) {
-            title = domElementCreate(self, PrDomNamespace_Svg, PrDomTag_Title, "title");
+            title = domElementCreate(document, PrDomNamespace_Svg, PrDomTag_Title, "title");
             domInsert(root, title, root->first);
         }
     } else if (root != nullptr && root->space == PrDomNamespace_Html) {
-        title = firstElement(self, PrDomNamespace_Html, PrDomTag_Title, false);
-        PrDomElement* head = domDocumentHead(self);
+        title = firstElement(document, PrDomNamespace_Html, PrDomTag_Title, false);
+        PrDomElement* head = domDocumentHead(document);
         if (title == nullptr && head == nullptr)
             return;
         if (title == nullptr) {
-            title = domElementCreate(self, PrDomNamespace_Html, PrDomTag_Title, "title");
+            title = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Title, "title");
             domInsert(head, title, nullptr);
         }
     } else {
@@ -1259,43 +1258,43 @@ void prDomDocumentSetTitle(PrDomDocument* self, PrStringView value) {
     domStringReplaceAll(title, value);
 }
 
-PrDomElement* PR_NULLABLE prDomDocumentBody(PrDomDocument* self) {
-    return domDocumentBody(self);
+PrDomElement* PR_NULLABLE prDomDocumentBody(PrDomDocument* document) {
+    return domDocumentBody(document);
 }
 
-PrStatus prDomDocumentSetBody(PrDomDocument* self, PrDomElement* PR_NULLABLE value) {
+PrStatus prDomDocumentSetBody(PrDomDocument* document, PrDomElement* PR_NULLABLE value) {
     if (!domIsHtml(value, PrDomTag_Body) && !domIsHtml(value, PrDomTag_Frameset))
         return PrStatus_NotAllowed;
-    PrDomElement* body = domDocumentBody(self);
+    PrDomElement* body = domDocumentBody(document);
     if (value == body)
         return PrStatus_Ok;
     if (body != nullptr)
         return domReplace(body->parent, value, body);
-    PrDomElement* root = domDocumentElement(self);
+    PrDomElement* root = domDocumentElement(document);
     return root != nullptr ? domPreInsert(root, value, nullptr) : PrStatus_NotAllowed;
 }
 
-PrDomElement* PR_NULLABLE prDomDocumentHead(PrDomDocument* self) {
-    return domDocumentHead(self);
+PrDomElement* PR_NULLABLE prDomDocumentHead(PrDomDocument* document) {
+    return domDocumentHead(document);
 }
 
-PrDomDocumentType* PR_NULLABLE prDomDocumentDoctype(PrDomDocument* self) {
-    for (PrDomNode* child = self->first; child != nullptr; child = child->next) {
+PrDomDocumentType* PR_NULLABLE prDomDocumentDoctype(PrDomDocument* document) {
+    for (PrDomNode* child = document->first; child != nullptr; child = child->next) {
         if (child->type == PrDomNodeType_DocumentType)
             return static_cast<PrDomDocumentType*>(child);
     }
     return nullptr;
 }
 
-bool prDomDocumentQuirks(const PrDomDocument* self) {
-    return self->quirks == DomQuirks_Yes;
+bool prDomDocumentQuirks(const PrDomDocument* document) {
+    return document->quirks == DomQuirks_Yes;
 }
 
-PrDomImplementation* prDomDocumentImplementation(PrDomDocument* self) {
-    return static_cast<PrDomImplementation*>(self);
+PrDomImplementation* prDomDocumentImplementation(PrDomDocument* document) {
+    return static_cast<PrDomImplementation*>(document);
 }
 
-PrStatus prDomDocumentTypeCreate(PrDomImplementation* self, PrStringView name,
+PrStatus prDomDocumentTypeCreate(PrDomImplementation* implementation, PrStringView name,
         PrStringView publicId, PrStringView systemId, PrDomDocumentType* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     // dom/#valid-doctype-name: no ASCII whitespace, U+0000 or '>'.
@@ -1303,7 +1302,7 @@ PrStatus prDomDocumentTypeCreate(PrDomImplementation* self, PrStringView name,
         if (asciiIsSpace(name.data[i]) || name.data[i] == '\0' || name.data[i] == '>')
             return PrStatus_InvalidData;
     }
-    *out = made(domDocumentTypeCreate(self, name, publicId, systemId));
+    *out = made(domDocumentTypeCreate(implementation, name, publicId, systemId));
     return PrStatus_Ok;
 }
 
@@ -1311,18 +1310,18 @@ PrDomDocumentType* PR_NULLABLE prDomDocumentTypeQuery(PrDomEventTarget* PR_NULLA
     return nodeOfType<PrDomDocumentType>(object, PrDomNodeType_DocumentType);
 }
 
-PrStringView prDomDocumentTypeName(const PrDomDocumentType* self) {
-    return prStringView(&self->name);
+PrStringView prDomDocumentTypeName(const PrDomDocumentType* doctype) {
+    return prStringView(&doctype->name);
 }
 
 // A doctype that the parser created without an identifier holds the null string, which script sees as the empty string.
-PrStringView prDomDocumentTypePublicId(const PrDomDocumentType* self) {
-    const PrString* id = &self->publicId;
+PrStringView prDomDocumentTypePublicId(const PrDomDocumentType* doctype) {
+    const PrString* id = &doctype->publicId;
     return prStringIsNull(id) ? "" : prStringView(id);
 }
 
-PrStringView prDomDocumentTypeSystemId(const PrDomDocumentType* self) {
-    const PrString* id = &self->systemId;
+PrStringView prDomDocumentTypeSystemId(const PrDomDocumentType* doctype) {
+    const PrString* id = &doctype->systemId;
     return prStringIsNull(id) ? "" : prStringView(id);
 }
 
@@ -1334,28 +1333,28 @@ PrDomShadowRoot* PR_NULLABLE prDomShadowRootQuery(PrDomEventTarget* PR_NULLABLE 
     return domNodeShadowRoot(domNodeFromTarget(object));
 }
 
-PrDomShadowRootMode prDomShadowRootMode(const PrDomShadowRoot* self) {
-    return self->mode;
+PrDomShadowRootMode prDomShadowRootMode(const PrDomShadowRoot* shadow) {
+    return shadow->mode;
 }
 
-bool prDomShadowRootDelegatesFocus(const PrDomShadowRoot* self) {
-    return self->delegatesFocus;
+bool prDomShadowRootDelegatesFocus(const PrDomShadowRoot* shadow) {
+    return shadow->delegatesFocus;
 }
 
-PrDomSlotAssignmentMode prDomShadowRootSlotAssignment(const PrDomShadowRoot* self) {
-    return self->slotAssignment;
+PrDomSlotAssignmentMode prDomShadowRootSlotAssignment(const PrDomShadowRoot* shadow) {
+    return shadow->slotAssignment;
 }
 
-bool prDomShadowRootClonable(const PrDomShadowRoot* self) {
-    return self->clonable;
+bool prDomShadowRootClonable(const PrDomShadowRoot* shadow) {
+    return shadow->clonable;
 }
 
-bool prDomShadowRootSerializable(const PrDomShadowRoot* self) {
-    return self->serializable;
+bool prDomShadowRootSerializable(const PrDomShadowRoot* shadow) {
+    return shadow->serializable;
 }
 
-PrDomElement* prDomShadowRootHost(PrDomShadowRoot* self) {
-    return self->host;
+PrDomElement* prDomShadowRootHost(PrDomShadowRoot* shadow) {
+    return shadow->host;
 }
 
 PrStringView prDomNamespaceUrl(PrDomNamespace space) {
@@ -1378,118 +1377,116 @@ PrDomElement* PR_NULLABLE prDomElementQuery(PrDomEventTarget* PR_NULLABLE object
     return nodeOfType<PrDomElement>(object, PrDomNodeType_Element);
 }
 
-PrStringView prDomElementLocalName(const PrDomElement* self) {
-    return domElementName(self);
+PrStringView prDomElementLocalName(const PrDomElement* element) {
+    return domElementName(element);
 }
 
-PrDomTag prDomElementTag(const PrDomElement* self) {
-    return domElementTag(self);
+PrDomTag prDomElementTag(const PrDomElement* element) {
+    return domElementTag(element);
 }
 
-PrStringView prDomElementNamespaceUri(const PrDomElement* self) {
-    return domNamespaceUrl(self->document, self->space);
+PrStringView prDomElementNamespaceUri(const PrDomElement* element) {
+    return domNamespaceUrl(element->document, element->space);
 }
 
-PrDomNamespace prDomElementNamespace(const PrDomElement* self) {
-    DomNamespaceId space = self->space;
+PrDomNamespace prDomElementNamespace(const PrDomElement* element) {
+    DomNamespaceId space = element->space;
     return space < PrDomNamespace_Other ? PrDomNamespace(space) : PrDomNamespace_Other;
 }
 
-PrStringView prDomElementPrefix(const PrDomElement* self) {
-    const PrDomElement* element = self;
+PrStringView prDomElementPrefix(const PrDomElement* element) {
     return element->state != nullptr ? prStringView(&element->state->prefix) : PrStringView{};
 }
 
-PrString prDomElementTagName(const PrDomElement* self) {
-    return domElementTagName(self);
+PrString prDomElementTagName(const PrDomElement* element) {
+    return domElementTagName(element);
 }
 
-PrDomTag prDomElementTagNameTag(const PrDomElement* self, bool* uppercase) {
-    const PrDomElement* element = self;
+PrDomTag prDomElementTagNameTag(const PrDomElement* element, bool* uppercase) {
     *uppercase = domIsHtmlInHtmlDocument(element);
     bool prefixed = element->state != nullptr && !prStringIsNull(&element->state->prefix);
     return prefixed ? PrDomTag_Unknown : domElementTag(element);
 }
 
-PrStringView prDomElementId(const PrDomElement* self) {
-    PrStringView id = domElementId(self);
+PrStringView prDomElementId(const PrDomElement* element) {
+    PrStringView id = domElementId(element);
     return id.data != nullptr ? id : "";
 }
 
-void prDomElementSetId(PrDomElement* self, PrStringView value) {
-    domSetAttribute(self, PrDomNamespace_None, "id", value);
+void prDomElementSetId(PrDomElement* element, PrStringView value) {
+    domSetAttribute(element, PrDomNamespace_None, "id", value);
 }
 
-PrStringView prDomElementSlot(const PrDomElement* self) {
-    PrStringView slot = domAttributeValue(self, "slot");
+PrStringView prDomElementSlot(const PrDomElement* element) {
+    PrStringView slot = domAttributeValue(element, "slot");
     return slot.data != nullptr ? slot : "";
 }
 
-void prDomElementSetSlot(PrDomElement* self, PrStringView value) {
-    domSetAttribute(self, PrDomNamespace_None, "slot", value);
+void prDomElementSetSlot(PrDomElement* element, PrStringView value) {
+    domSetAttribute(element, PrDomNamespace_None, "slot", value);
 }
 
-PrStringView prDomElementGetAttribute(const PrDomElement* self, PrStringView qualifiedName) {
-    const PrDomAttr* attribute = domAttributeByName(self, qualifiedName);
+PrStringView prDomElementGetAttribute(const PrDomElement* element, PrStringView qualifiedName) {
+    const PrDomAttr* attribute = domAttributeByName(element, qualifiedName);
     return attribute != nullptr ? prStringView(&attribute->value) : PrStringView{};
 }
 
-PrStatus prDomElementSetAttribute(PrDomElement* self, PrStringView qualifiedName, PrStringView value) {
+PrStatus prDomElementSetAttribute(PrDomElement* element, PrStringView qualifiedName, PrStringView value) {
     if (!domIsValidAttributeLocalName(qualifiedName))
         return PrStatus_InvalidData;
     TextBuffer buffer;
-    PrStringView name = lowered(qualifiedName, domIsHtmlInHtmlDocument(self), &buffer);
+    PrStringView name = lowered(qualifiedName, domIsHtmlInHtmlDocument(element), &buffer);
     // dom/#dom-element-setattribute: sets the attribute with that qualified name, whatever its namespace, or else adds
     // a new attribute in no namespace.
-    if (PrDomAttr* attribute = domAttributeByName(self, name))
-        domSetAttribute(self, attribute->space, prStringView(&attribute->name), value);
+    if (PrDomAttr* attribute = domAttributeByName(element, name))
+        domSetAttribute(element, attribute->space, prStringView(&attribute->name), value);
     else
-        domSetAttribute(self, PrDomNamespace_None, name, value);
+        domSetAttribute(element, PrDomNamespace_None, name, value);
     textReset(&buffer);
     return PrStatus_Ok;
 }
 
-void prDomElementRemoveAttribute(PrDomElement* self, PrStringView qualifiedName) {
-    if (PrDomAttr* attribute = domAttributeByName(self, qualifiedName))
-        domRemoveAttributeNode(self, attribute);
+void prDomElementRemoveAttribute(PrDomElement* element, PrStringView qualifiedName) {
+    if (PrDomAttr* attribute = domAttributeByName(element, qualifiedName))
+        domRemoveAttributeNode(element, attribute);
 }
 
-bool prDomElementHasAttribute(const PrDomElement* self, PrStringView qualifiedName) {
-    return domAttributeByName(self, qualifiedName) != nullptr;
+bool prDomElementHasAttribute(const PrDomElement* element, PrStringView qualifiedName) {
+    return domAttributeByName(element, qualifiedName) != nullptr;
 }
 
-bool prDomElementHasAttributes(const PrDomElement* self) {
-    return self->firstAttribute != nullptr;
+bool prDomElementHasAttributes(const PrDomElement* element) {
+    return element->firstAttribute != nullptr;
 }
 
-PrStringView prDomElementGetAttributeNs(const PrDomElement* self, PrStringView namespaceUrl, PrStringView localName) {
-    const PrDomAttr* attribute = attributeNs(self, namespaceUrl, localName);
+PrStringView prDomElementGetAttributeNs(const PrDomElement* element, PrStringView namespaceUrl, PrStringView localName) {
+    const PrDomAttr* attribute = attributeNs(element, namespaceUrl, localName);
     return attribute != nullptr ? prStringView(&attribute->value) : PrStringView{};
 }
 
-PrStatus prDomElementSetAttributeNs(PrDomElement* self, PrStringView namespaceUrl,
+PrStatus prDomElementSetAttributeNs(PrDomElement* element, PrStringView namespaceUrl,
         PrStringView qualifiedName, PrStringView value) {
     DomNamespaceId space = PrDomNamespace_None;
     PrStringView prefix = {};
     PrStringView local = {};
-    PrStatus status = validateAndExtract(self->document, namespaceUrl, qualifiedName, false, &space, &prefix, &local);
+    PrStatus status = validateAndExtract(element->document, namespaceUrl, qualifiedName, false, &space, &prefix, &local);
     if (status == PrStatus_Ok)
-        domSetAttributeNs(self, space, prefix, local, value);
+        domSetAttributeNs(element, space, prefix, local, value);
     return status;
 }
 
-void prDomElementRemoveAttributeNs(PrDomElement* self, PrStringView namespaceUrl, PrStringView localName) {
-    if (PrDomAttr* attribute = attributeNs(self, namespaceUrl, localName))
-        domRemoveAttributeNode(self, attribute);
+void prDomElementRemoveAttributeNs(PrDomElement* element, PrStringView namespaceUrl, PrStringView localName) {
+    if (PrDomAttr* attribute = attributeNs(element, namespaceUrl, localName))
+        domRemoveAttributeNode(element, attribute);
 }
 
-bool prDomElementHasAttributeNs(const PrDomElement* self, PrStringView namespaceUrl, PrStringView localName) {
-    return attributeNs(self, namespaceUrl, localName) != nullptr;
+bool prDomElementHasAttributeNs(const PrDomElement* element, PrStringView namespaceUrl, PrStringView localName) {
+    return attributeNs(element, namespaceUrl, localName) != nullptr;
 }
 
-uint32_t prDomElementGetAttributeNames(const PrDomElement* self, PrString* PR_NULLABLE items, uint32_t capacity) {
+uint32_t prDomElementGetAttributeNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity) {
     uint32_t count = 0;
-    for (const PrDomAttr* attribute = self->firstAttribute; attribute != nullptr;
+    for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
             attribute = static_cast<const PrDomAttr*>(attribute->next), ++count) {
         if (count < capacity)
             items[count] = attributeQualifiedName(attribute);
@@ -1497,19 +1494,19 @@ uint32_t prDomElementGetAttributeNames(const PrDomElement* self, PrString* PR_NU
     return count;
 }
 
-PrStatus prDomElementToggleAttribute(PrDomElement* self, PrStringView qualifiedName,
+PrStatus prDomElementToggleAttribute(PrDomElement* element, PrStringView qualifiedName,
         const bool* PR_NULLABLE force, bool* PR_NULLABLE out) {
     if (!domIsValidAttributeLocalName(qualifiedName))
         return PrStatus_InvalidData;
     TextBuffer buffer;
-    PrStringView name = lowered(qualifiedName, domIsHtmlInHtmlDocument(self), &buffer);
-    PrDomAttr* attribute = domAttributeByName(self, name);
+    PrStringView name = lowered(qualifiedName, domIsHtmlInHtmlDocument(element), &buffer);
+    PrDomAttr* attribute = domAttributeByName(element, name);
     bool present = attribute != nullptr;
     if (attribute == nullptr && (force == nullptr || *force)) {
-        domAppendAttribute(self, domAttrCreate(self->document, PrDomNamespace_None, PrStringView{}, name, ""));
+        domAppendAttribute(element, domAttrCreate(element->document, PrDomNamespace_None, PrStringView{}, name, ""));
         present = true;
     } else if (attribute != nullptr && (force == nullptr || !*force)) {
-        domRemoveAttributeNode(self, attribute);
+        domRemoveAttributeNode(element, attribute);
         present = false;
     }
     textReset(&buffer);
@@ -1518,21 +1515,21 @@ PrStatus prDomElementToggleAttribute(PrDomElement* self, PrStringView qualifiedN
     return PrStatus_Ok;
 }
 
-uint32_t prDomElementAttributeCount(const PrDomElement* self) {
-    return domElementAttributeCount(self);
+uint32_t prDomElementAttributeCount(const PrDomElement* element) {
+    return domElementAttributeCount(element);
 }
 
-PrDomAttr* PR_NULLABLE prDomElementAttributeAt(PrDomElement* self, uint32_t index) {
-    PrDomAttr* attribute = self->firstAttribute;
+PrDomAttr* PR_NULLABLE prDomElementAttributeAt(PrDomElement* element, uint32_t index) {
+    PrDomAttr* attribute = element->firstAttribute;
     for (; attribute != nullptr && index != 0; --index)
         attribute = static_cast<PrDomAttr*>(attribute->next);
     return attribute;
 }
 
-uint32_t prDomElementNamedAttributeNames(const PrDomElement* self, PrString* PR_NULLABLE items, uint32_t capacity) {
-    bool html = domIsHtmlInHtmlDocument(self);
+uint32_t prDomElementNamedAttributeNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity) {
+    bool html = domIsHtmlInHtmlDocument(element);
     uint32_t count = 0;
-    for (const PrDomAttr* attribute = self->firstAttribute; attribute != nullptr;
+    for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
             attribute = static_cast<const PrDomAttr*>(attribute->next)) {
         PrString name = attributeQualifiedName(attribute);
         PrStringView view = prStringView(&name);
@@ -1540,7 +1537,7 @@ uint32_t prDomElementNamedAttributeNames(const PrDomElement* self, PrString* PR_
         for (size_t i = 0; html && keep && i < view.size; ++i)
             keep = !asciiIsUpper(view.data[i]);
         // If an earlier attribute has the same name, the name belongs to that attribute.
-        for (const PrDomAttr* before = self->firstAttribute; keep && before != attribute;
+        for (const PrDomAttr* before = element->firstAttribute; keep && before != attribute;
                 before = static_cast<const PrDomAttr*>(before->next)) {
             PrString earlier = attributeQualifiedName(before);
             keep = prStringView(&earlier) != view;
@@ -1555,22 +1552,22 @@ uint32_t prDomElementNamedAttributeNames(const PrDomElement* self, PrString* PR_
     return count;
 }
 
-PrDomAttr* PR_NULLABLE prDomElementGetAttributeNode(PrDomElement* self, PrStringView qualifiedName) {
-    return domAttributeByName(self, qualifiedName);
+PrDomAttr* PR_NULLABLE prDomElementGetAttributeNode(PrDomElement* element, PrStringView qualifiedName) {
+    return domAttributeByName(element, qualifiedName);
 }
 
-PrDomAttr* PR_NULLABLE prDomElementGetAttributeNodeNs(PrDomElement* self, PrStringView namespaceUrl,
+PrDomAttr* PR_NULLABLE prDomElementGetAttributeNodeNs(PrDomElement* element, PrStringView namespaceUrl,
         PrStringView localName) {
-    return attributeNs(self, namespaceUrl, localName);
+    return attributeNs(element, namespaceUrl, localName);
 }
 
-PrStatus prDomElementSetAttributeNode(PrDomElement* self, PrDomAttr* attr, PrDomAttr* PR_NULLABLE* PR_NULLABLE out) {
+PrStatus prDomElementSetAttributeNode(PrDomElement* element, PrDomAttr* attr, PrDomAttr* PR_NULLABLE* PR_NULLABLE out) {
     PrDomAttr* attribute = attr;
     if (out != nullptr)
         *out = nullptr;
-    if (attribute->parent != nullptr && attribute->parent != self)
+    if (attribute->parent != nullptr && attribute->parent != element)
         return PrStatus_InvalidState;
-    PrDomAttr* old = attributeNs(self, domNamespaceUrl(attribute->document, attribute->space),
+    PrDomAttr* old = attributeNs(element, domNamespaceUrl(attribute->document, attribute->space),
         prStringView(&attribute->name));
     if (old == attribute) {
         if (out != nullptr) {
@@ -1582,69 +1579,69 @@ PrStatus prDomElementSetAttributeNode(PrDomElement* self, PrDomAttr* attr, PrDom
     if (old != nullptr && out != nullptr)
         domNodeRetain(old);
     if (old != nullptr)
-        domReplaceAttribute(self, old, attribute);
+        domReplaceAttribute(element, old, attribute);
     else
-        domAppendAttribute(self, attribute);
+        domAppendAttribute(element, attribute);
     if (out != nullptr)
         *out = old;
     return PrStatus_Ok;
 }
 
-PrStatus prDomElementRemoveAttributeNode(PrDomElement* self, PrDomAttr* attr) {
-    if (attr->parent != self)
+PrStatus prDomElementRemoveAttributeNode(PrDomElement* element, PrDomAttr* attr) {
+    if (attr->parent != element)
         return PrStatus_NotFound;
-    domRemoveAttributeNode(self, attr);
+    domRemoveAttributeNode(element, attr);
     return PrStatus_Ok;
 }
 
-PrStatus prDomElementRemoveNamedAttribute(PrDomElement* self, PrStringView qualifiedName,
+PrStatus prDomElementRemoveNamedAttribute(PrDomElement* element, PrStringView qualifiedName,
         PrDomAttr* PR_NULLABLE* PR_NONNULL out) {
-    return removeNamed(self, domAttributeByName(self, qualifiedName), out);
+    return removeNamed(element, domAttributeByName(element, qualifiedName), out);
 }
 
-PrStatus prDomElementRemoveNamedAttributeNs(PrDomElement* self, PrStringView namespaceUrl, PrStringView localName,
+PrStatus prDomElementRemoveNamedAttributeNs(PrDomElement* element, PrStringView namespaceUrl, PrStringView localName,
         PrDomAttr* PR_NULLABLE* PR_NONNULL out) {
-    return removeNamed(self, attributeNs(self, namespaceUrl, localName), out);
+    return removeNamed(element, attributeNs(element, namespaceUrl, localName), out);
 }
 
-PrStatus prDomElementInsertAdjacentElement(PrDomElement* self, PrDomInsertPosition where, PrDomElement* element,
+PrStatus prDomElementInsertAdjacentElement(PrDomElement* target, PrDomInsertPosition where, PrDomElement* element,
         PrDomElement* PR_NULLABLE* PR_NULLABLE out) {
     bool inserted = false;
-    PrStatus status = insertAdjacent(self, where, element, &inserted);
+    PrStatus status = insertAdjacent(target, where, element, &inserted);
     if (out != nullptr)
         *out = status == PrStatus_Ok && inserted ? element : nullptr;
     return status;
 }
 
-PrStatus prDomElementInsertAdjacentText(PrDomElement* self, PrDomInsertPosition where, PrStringView data) {
-    PrDomText* text = domTextCreate(self->document, data);
+PrStatus prDomElementInsertAdjacentText(PrDomElement* element, PrDomInsertPosition where, PrStringView data) {
+    PrDomText* text = domTextCreate(element->document, data);
     bool inserted = false;
-    PrStatus status = insertAdjacent(self, where, text, &inserted);
+    PrStatus status = insertAdjacent(element, where, text, &inserted);
     if (!inserted || status != PrStatus_Ok)
         domDropTree(text);
     return status;
 }
 
-PrStatus prDomElementAttachShadow(PrDomElement* self, const PrDomShadowRootInit* init,
+PrStatus prDomElementAttachShadow(PrDomElement* element, const PrDomShadowRootInit* init,
         PrDomShadowRoot* PR_NULLABLE* PR_NONNULL out) {
     PrDomShadowRoot* shadow = nullptr;
-    PrStatus status = domAttachShadow(self, init, &shadow);
+    PrStatus status = domAttachShadow(element, init, &shadow);
     *out = shadow;
     return status;
 }
 
-PrDomShadowRoot* PR_NULLABLE prDomElementShadowRoot(PrDomElement* self) {
-    PrDomShadowRoot* shadow = domShadowRootOfHost(self);
+PrDomShadowRoot* PR_NULLABLE prDomElementShadowRoot(PrDomElement* element) {
+    PrDomShadowRoot* shadow = domShadowRootOfHost(element);
     return shadow != nullptr && shadow->mode == PrDomShadowRootMode_Open ? shadow : nullptr;
 }
 
-PrStringView prDomElementClassName(const PrDomElement* self) {
-    const PrDomAttr* attribute = domAttribute(self, PrDomNamespace_None, "class");
+PrStringView prDomElementClassName(const PrDomElement* element) {
+    const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "class");
     return attribute != nullptr ? prStringView(&attribute->value) : "";
 }
 
-void prDomElementSetClassName(PrDomElement* self, PrStringView value) {
-    domSetAttribute(self, PrDomNamespace_None, "class", value);
+void prDomElementSetClassName(PrDomElement* element, PrStringView value) {
+    domSetAttribute(element, PrDomNamespace_None, "class", value);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1654,37 +1651,37 @@ PrDomAttr* PR_NULLABLE prDomAttrQuery(PrDomEventTarget* PR_NULLABLE object) {
     return attrOf(domNodeFromTarget(object));
 }
 
-PrStringView prDomAttrNamespaceUri(const PrDomAttr* self) {
-    return domNamespaceUrl(self->document, self->space);
+PrStringView prDomAttrNamespaceUri(const PrDomAttr* attr) {
+    return domNamespaceUrl(attr->document, attr->space);
 }
 
-PrDomNamespace prDomAttrNamespace(const PrDomAttr* self) {
-    DomNamespaceId space = self->space;
+PrDomNamespace prDomAttrNamespace(const PrDomAttr* attr) {
+    DomNamespaceId space = attr->space;
     return space < PrDomNamespace_Other ? PrDomNamespace(space) : PrDomNamespace_Other;
 }
 
-PrStringView prDomAttrPrefix(const PrDomAttr* self) {
-    return domAttributePrefix(self);
+PrStringView prDomAttrPrefix(const PrDomAttr* attr) {
+    return domAttributePrefix(attr);
 }
 
-PrStringView prDomAttrLocalName(const PrDomAttr* self) {
-    return prStringView(&self->name);
+PrStringView prDomAttrLocalName(const PrDomAttr* attr) {
+    return prStringView(&attr->name);
 }
 
-PrString prDomAttrName(const PrDomAttr* self) {
-    return attributeQualifiedName(self);
+PrString prDomAttrName(const PrDomAttr* attr) {
+    return attributeQualifiedName(attr);
 }
 
-PrStringView prDomAttrValue(const PrDomAttr* self) {
-    return prStringView(&self->value);
+PrStringView prDomAttrValue(const PrDomAttr* attr) {
+    return prStringView(&attr->value);
 }
 
-void prDomAttrSetValue(PrDomAttr* self, PrStringView value) {
-    domSetAttributeValue(self, value);
+void prDomAttrSetValue(PrDomAttr* attr, PrStringView value) {
+    domSetAttributeValue(attr, value);
 }
 
-PrDomElement* PR_NULLABLE prDomAttrOwnerElement(PrDomAttr* self) {
-    return domElementFromNode(self->parent);
+PrDomElement* PR_NULLABLE prDomAttrOwnerElement(PrDomAttr* attr) {
+    return domElementFromNode(attr->parent);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1711,36 +1708,36 @@ PrDomCharacterData* PR_NULLABLE prDomCharacterDataQuery(PrDomEventTarget* PR_NUL
     }
 }
 
-PrStringView prDomCharacterDataData(const PrDomCharacterData* self) {
-    return prStringView(&self->data);
+PrStringView prDomCharacterDataData(const PrDomCharacterData* node) {
+    return prStringView(&node->data);
 }
 
-void prDomCharacterDataSetData(PrDomCharacterData* self, PrStringView value) {
-    domSetData(self, value);
+void prDomCharacterDataSetData(PrDomCharacterData* node, PrStringView value) {
+    domSetData(node, value);
 }
 
-uint32_t prDomCharacterDataLength(const PrDomCharacterData* self) {
-    return domCharacterDataLength(self);
+uint32_t prDomCharacterDataLength(const PrDomCharacterData* node) {
+    return domCharacterDataLength(node);
 }
 
-PrStatus prDomCharacterDataSubstringData(const PrDomCharacterData* self, uint32_t offset, uint32_t count, PrString* out) {
-    return domSubstringData(self, offset, count, out);
+PrStatus prDomCharacterDataSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrString* out) {
+    return domSubstringData(node, offset, count, out);
 }
 
-void prDomCharacterDataAppendData(PrDomCharacterData* self, PrStringView data) {
-    domReplaceData(self, domCharacterDataLength(self), 0, data);
+void prDomCharacterDataAppendData(PrDomCharacterData* node, PrStringView data) {
+    domReplaceData(node, domCharacterDataLength(node), 0, data);
 }
 
-PrStatus prDomCharacterDataInsertData(PrDomCharacterData* self, uint32_t offset, PrStringView data) {
-    return domReplaceData(self, offset, 0, data);
+PrStatus prDomCharacterDataInsertData(PrDomCharacterData* node, uint32_t offset, PrStringView data) {
+    return domReplaceData(node, offset, 0, data);
 }
 
-PrStatus prDomCharacterDataDeleteData(PrDomCharacterData* self, uint32_t offset, uint32_t count) {
-    return domReplaceData(self, offset, count, "");
+PrStatus prDomCharacterDataDeleteData(PrDomCharacterData* node, uint32_t offset, uint32_t count) {
+    return domReplaceData(node, offset, count, "");
 }
 
-PrStatus prDomCharacterDataReplaceData(PrDomCharacterData* self, uint32_t offset, uint32_t count, PrStringView data) {
-    return domReplaceData(self, offset, count, data);
+PrStatus prDomCharacterDataReplaceData(PrDomCharacterData* node, uint32_t offset, uint32_t count, PrStringView data) {
+    return domReplaceData(node, offset, count, data);
 }
 
 PrDomText* PR_NULLABLE prDomTextQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -1750,16 +1747,16 @@ PrDomText* PR_NULLABLE prDomTextQuery(PrDomEventTarget* PR_NULLABLE object) {
 }
 
 // dom/#concept-text-split
-PrStatus prDomTextSplitText(PrDomText* self, uint32_t offset, PrDomText* PR_NULLABLE* PR_NONNULL out) {
-    PrDomText* created = domSplitText(self, offset);
+PrStatus prDomTextSplitText(PrDomText* text, uint32_t offset, PrDomText* PR_NULLABLE* PR_NONNULL out) {
+    PrDomText* created = domSplitText(text, offset);
     if (out != nullptr)
         *out = made(created);
     return created != nullptr ? PrStatus_Ok : PrStatus_OutOfRange;
 }
 
 // dom/#dom-text-wholetext: the data of the contiguous Text nodes, in tree order.
-PrString prDomTextWholeText(const PrDomText* self) {
-    const PrDomNode* first = self;
+PrString prDomTextWholeText(const PrDomText* text) {
+    const PrDomNode* first = text;
     while (first->previous != nullptr && first->parent != nullptr && domIsText(first->previous))
         first = first->previous;
     TextBuffer out;
@@ -1776,8 +1773,8 @@ PrDomProcessingInstruction* PR_NULLABLE prDomProcessingInstructionQuery(PrDomEve
     return nodeOfType<PrDomProcessingInstruction>(object, PrDomNodeType_ProcessingInstruction);
 }
 
-PrStringView prDomProcessingInstructionTarget(const PrDomProcessingInstruction* self) {
-    return prStringView(&self->target);
+PrStringView prDomProcessingInstructionTarget(const PrDomProcessingInstruction* instruction) {
+    return prStringView(&instruction->target);
 }
 
 PrDomHtmlCollection* prDomHtmlCollectionCreateChildren(PrDomNode* parent) {
@@ -1792,21 +1789,22 @@ PrDomHtmlCollection* prDomHtmlCollectionCreateByTagName(PrDomNode* root, PrStrin
     return domHtmlCollectionCreate(root, DomCollectionFilter_QualifiedName, qualifiedName);
 }
 
-uint32_t prDomHtmlCollectionLength(const PrDomHtmlCollection* self) {
-    return domHtmlCollectionLength(self);
+uint32_t prDomHtmlCollectionLength(const PrDomHtmlCollection* collection) {
+    return domHtmlCollectionLength(collection);
 }
 
-PrDomElement* PR_NULLABLE prDomHtmlCollectionElementAt(PrDomHtmlCollection* self, uint32_t index) {
-    return domHtmlCollectionItem(self, index);
+PrDomElement* PR_NULLABLE prDomHtmlCollectionElementAt(PrDomHtmlCollection* collection, uint32_t index) {
+    return domHtmlCollectionItem(collection, index);
 }
 
-PrDomElement* PR_NULLABLE prDomHtmlCollectionNamedItem(PrDomHtmlCollection* self, PrStringView name) {
-    return domHtmlCollectionNamedItem(self, name);
+PrDomElement* PR_NULLABLE prDomHtmlCollectionNamedItem(PrDomHtmlCollection* collection, PrStringView name) {
+    return domHtmlCollectionNamedItem(collection, name);
 }
 
-uint32_t prDomHtmlCollectionNames(const PrDomHtmlCollection* self, PrStringView* PR_NULLABLE items, uint32_t capacity) {
+uint32_t prDomHtmlCollectionNames(const PrDomHtmlCollection* collection, PrStringView* PR_NULLABLE items,
+        uint32_t capacity) {
     Array<PrStringView> names;
-    domHtmlCollectionNames(self, &names);
+    domHtmlCollectionNames(collection, &names);
     for (uint32_t i = 0; i < names.count && i < capacity; ++i)
         items[i] = names.data[i];
     uint32_t count = names.count;
@@ -1814,8 +1812,8 @@ uint32_t prDomHtmlCollectionNames(const PrDomHtmlCollection* self, PrStringView*
     return count;
 }
 
-void prDomHtmlCollectionDestroy(PrDomHtmlCollection* PR_NULLABLE self) {
-    domHtmlCollectionDestroy(self);
+void prDomHtmlCollectionDestroy(PrDomHtmlCollection* PR_NULLABLE collection) {
+    domHtmlCollectionDestroy(collection);
 }
 
 PrDomNodeList* prDomNodeListCreate(void) {
@@ -1826,16 +1824,16 @@ PrDomNodeList* prDomNodeListCreateChildNodes(PrDomNode* parent) {
     return domNodeListCreate(parent);
 }
 
-PrDomNode* PR_NULLABLE prDomNodeListNodeAt(PrDomNodeList* self, uint32_t index) {
-    return domNodeListItem(self, index);
+PrDomNode* PR_NULLABLE prDomNodeListNodeAt(PrDomNodeList* list, uint32_t index) {
+    return domNodeListItem(list, index);
 }
 
-uint32_t prDomNodeListLength(const PrDomNodeList* self) {
-    return domNodeListLength(self);
+uint32_t prDomNodeListLength(const PrDomNodeList* list) {
+    return domNodeListLength(list);
 }
 
-void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE self) {
-    domNodeListDestroy(self);
+void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE list) {
+    domNodeListDestroy(list);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1845,44 +1843,44 @@ PrDomTokenList* prDomTokenListCreate(PrDomElement* element, PrStringView name) {
     return domTokenListCreate(element, name);
 }
 
-uint32_t prDomTokenListLength(const PrDomTokenList* self) {
-    return domTokenListLength(self);
+uint32_t prDomTokenListLength(const PrDomTokenList* list) {
+    return domTokenListLength(list);
 }
 
-PrStringView prDomTokenListItem(const PrDomTokenList* self, uint32_t index) {
-    return domTokenListItem(self, index);
+PrStringView prDomTokenListItem(const PrDomTokenList* list, uint32_t index) {
+    return domTokenListItem(list, index);
 }
 
-bool prDomTokenListContains(const PrDomTokenList* self, PrStringView token) {
-    return domTokenListContains(self, token);
+bool prDomTokenListContains(const PrDomTokenList* list, PrStringView token) {
+    return domTokenListContains(list, token);
 }
 
-PrStatus prDomTokenListAdd(PrDomTokenList* self, const PrStringView* PR_NULLABLE tokens, uint32_t count) {
-    return domTokenListAdd(self, tokens, count);
+PrStatus prDomTokenListAdd(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens, uint32_t count) {
+    return domTokenListAdd(list, tokens, count);
 }
 
-PrStatus prDomTokenListRemove(PrDomTokenList* self, const PrStringView* PR_NULLABLE tokens, uint32_t count) {
-    return domTokenListRemove(self, tokens, count);
+PrStatus prDomTokenListRemove(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens, uint32_t count) {
+    return domTokenListRemove(list, tokens, count);
 }
 
-PrStatus prDomTokenListToggle(PrDomTokenList* self, PrStringView token, const bool* PR_NULLABLE force, bool* out) {
-    return domTokenListToggle(self, token, force, out);
+PrStatus prDomTokenListToggle(PrDomTokenList* list, PrStringView token, const bool* PR_NULLABLE force, bool* out) {
+    return domTokenListToggle(list, token, force, out);
 }
 
-PrStatus prDomTokenListReplace(PrDomTokenList* self, PrStringView token, PrStringView newToken, bool* out) {
-    return domTokenListReplace(self, token, newToken, out);
+PrStatus prDomTokenListReplace(PrDomTokenList* list, PrStringView token, PrStringView newToken, bool* out) {
+    return domTokenListReplace(list, token, newToken, out);
 }
 
-PrStringView prDomTokenListValue(const PrDomTokenList* self) {
-    return domTokenListValue(self);
+PrStringView prDomTokenListValue(const PrDomTokenList* list) {
+    return domTokenListValue(list);
 }
 
-void prDomTokenListSetValue(PrDomTokenList* self, PrStringView value) {
-    domTokenListSetValue(self, value);
+void prDomTokenListSetValue(PrDomTokenList* list, PrStringView value) {
+    domTokenListSetValue(list, value);
 }
 
-void prDomTokenListDestroy(PrDomTokenList* PR_NULLABLE self) {
-    domTokenListDestroy(self);
+void prDomTokenListDestroy(PrDomTokenList* PR_NULLABLE list) {
+    domTokenListDestroy(list);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1892,29 +1890,29 @@ PrDomMutationObserver* prDomMutationObserverCreate(const PrDomMutationCallback* 
     return domMutationObserverCreate(callback);
 }
 
-void prDomMutationObserverRetain(PrDomMutationObserver* self) {
-    domMutationObserverRetain(self);
+void prDomMutationObserverRetain(PrDomMutationObserver* observer) {
+    domMutationObserverRetain(observer);
 }
 
-void prDomMutationObserverRelease(PrDomMutationObserver* PR_NULLABLE self) {
-    domMutationObserverRelease(self);
+void prDomMutationObserverRelease(PrDomMutationObserver* PR_NULLABLE observer) {
+    domMutationObserverRelease(observer);
 }
 
-PrStatus prDomMutationObserverObserve(PrDomMutationObserver* self, PrDomNode* target,
+PrStatus prDomMutationObserverObserve(PrDomMutationObserver* observer, PrDomNode* target,
         const PrDomMutationObserverInit* options, const PrStringView* PR_NULLABLE filter, uint32_t filterCount) {
-    return domMutationObserverObserve(self, target, options, filter, filterCount);
+    return domMutationObserverObserve(observer, target, options, filter, filterCount);
 }
 
-void prDomMutationObserverDisconnect(PrDomMutationObserver* self) {
-    domMutationObserverDisconnect(self);
+void prDomMutationObserverDisconnect(PrDomMutationObserver* observer) {
+    domMutationObserverDisconnect(observer);
 }
 
-uint32_t prDomMutationObserverRecordCount(const PrDomMutationObserver* self) {
-    return self->records.count;
+uint32_t prDomMutationObserverRecordCount(const PrDomMutationObserver* observer) {
+    return observer->records.count;
 }
 
-bool prDomMutationObserverTakeRecord(PrDomMutationObserver* self, PrDomMutationRecord* record) {
-    return domMutationObserverTake(self, record);
+bool prDomMutationObserverTakeRecord(PrDomMutationObserver* observer, PrDomMutationRecord* record) {
+    return domMutationObserverTake(observer, record);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1924,44 +1922,44 @@ PrDomMutationRecord* prDomMutationRecordCreate(void) {
     return allocZeroed<PrDomMutationRecord>();
 }
 
-void prDomMutationRecordDestroy(PrDomMutationRecord* PR_NULLABLE self) {
-    domMutationRecordDestroy(self);
+void prDomMutationRecordDestroy(PrDomMutationRecord* PR_NULLABLE record) {
+    domMutationRecordDestroy(record);
 }
 
-PrDomMutationType prDomMutationRecordType(const PrDomMutationRecord* self) {
-    return self->type;
+PrDomMutationType prDomMutationRecordType(const PrDomMutationRecord* record) {
+    return record->type;
 }
 
-PrDomNode* prDomMutationRecordTarget(PrDomMutationRecord* self) {
-    return self->target;
+PrDomNode* prDomMutationRecordTarget(PrDomMutationRecord* record) {
+    return record->target;
 }
 
-void prDomMutationRecordAddedNodes(PrDomMutationRecord* self, PrDomNodeList* list) {
-    domNodeListAssign(list, self->added.data, self->added.count);
+void prDomMutationRecordAddedNodes(PrDomMutationRecord* record, PrDomNodeList* list) {
+    domNodeListAssign(list, record->added.data, record->added.count);
 }
 
-void prDomMutationRecordRemovedNodes(PrDomMutationRecord* self, PrDomNodeList* list) {
-    domNodeListAssign(list, self->removed.data, self->removed.count);
+void prDomMutationRecordRemovedNodes(PrDomMutationRecord* record, PrDomNodeList* list) {
+    domNodeListAssign(list, record->removed.data, record->removed.count);
 }
 
-PrDomNode* PR_NULLABLE prDomMutationRecordPreviousSibling(PrDomMutationRecord* self) {
-    return self->previous;
+PrDomNode* PR_NULLABLE prDomMutationRecordPreviousSibling(PrDomMutationRecord* record) {
+    return record->previous;
 }
 
-PrDomNode* PR_NULLABLE prDomMutationRecordNextSibling(PrDomMutationRecord* self) {
-    return self->next;
+PrDomNode* PR_NULLABLE prDomMutationRecordNextSibling(PrDomMutationRecord* record) {
+    return record->next;
 }
 
-PrStringView prDomMutationRecordAttributeName(const PrDomMutationRecord* self) {
-    return prStringView(&self->attributeName);
+PrStringView prDomMutationRecordAttributeName(const PrDomMutationRecord* record) {
+    return prStringView(&record->attributeName);
 }
 
-PrStringView prDomMutationRecordAttributeNamespace(const PrDomMutationRecord* self) {
-    return prStringView(&self->attributeNamespace);
+PrStringView prDomMutationRecordAttributeNamespace(const PrDomMutationRecord* record) {
+    return prStringView(&record->attributeNamespace);
 }
 
-PrStringView prDomMutationRecordOldValue(const PrDomMutationRecord* self) {
-    return prStringView(&self->oldValue);
+PrStringView prDomMutationRecordOldValue(const PrDomMutationRecord* record) {
+    return prStringView(&record->oldValue);
 }
 
 PrDomRange* prDomRangeCreate(PrDomDocument* document) {
@@ -1980,312 +1978,312 @@ PrStatus prDomRangeCreateStatic(PrDomNode* startContainer, uint32_t startOffset,
     return PrStatus_Ok;
 }
 
-void prDomRangeRetain(PrDomRange* self) {
-    domRangeRetain(self);
+void prDomRangeRetain(PrDomRange* range) {
+    domRangeRetain(range);
 }
 
-void prDomRangeRelease(PrDomRange* PR_NULLABLE self) {
-    domRangeRelease(self);
+void prDomRangeRelease(PrDomRange* PR_NULLABLE range) {
+    domRangeRelease(range);
 }
 
-bool prDomRangeIsLive(const PrDomRange* self) {
-    return self->document != nullptr;
+bool prDomRangeIsLive(const PrDomRange* range) {
+    return range->document != nullptr;
 }
 
-PrDomNode* prDomRangeStartContainer(PrDomRange* self) {
-    return self->start.node;
+PrDomNode* prDomRangeStartContainer(PrDomRange* range) {
+    return range->start.node;
 }
 
-uint32_t prDomRangeStartOffset(const PrDomRange* self) {
-    return self->start.offset;
+uint32_t prDomRangeStartOffset(const PrDomRange* range) {
+    return range->start.offset;
 }
 
-PrDomNode* prDomRangeEndContainer(PrDomRange* self) {
-    return self->end.node;
+PrDomNode* prDomRangeEndContainer(PrDomRange* range) {
+    return range->end.node;
 }
 
-uint32_t prDomRangeEndOffset(const PrDomRange* self) {
-    return self->end.offset;
+uint32_t prDomRangeEndOffset(const PrDomRange* range) {
+    return range->end.offset;
 }
 
-bool prDomRangeCollapsed(const PrDomRange* self) {
-    return domRangeCollapsed(self);
+bool prDomRangeCollapsed(const PrDomRange* range) {
+    return domRangeCollapsed(range);
 }
 
-PrDomNode* prDomRangeCommonAncestorContainer(PrDomRange* self) {
-    PrDomNode* container = self->start.node;
-    while (!domIsInclusiveAncestor(container, self->end.node))
+PrDomNode* prDomRangeCommonAncestorContainer(PrDomRange* range) {
+    PrDomNode* container = range->start.node;
+    while (!domIsInclusiveAncestor(container, range->end.node))
         container = domNodeParent(container);
     return container;
 }
 
-PrStatus prDomRangeSetStart(PrDomRange* self, PrDomNode* node, uint32_t offset) {
-    return changed(self, domRangeSetStart(self, node, offset));
+PrStatus prDomRangeSetStart(PrDomRange* range, PrDomNode* node, uint32_t offset) {
+    return changed(range, domRangeSetStart(range, node, offset));
 }
 
-PrStatus prDomRangeSetEnd(PrDomRange* self, PrDomNode* node, uint32_t offset) {
-    return changed(self, domRangeSetEnd(self, node, offset));
+PrStatus prDomRangeSetEnd(PrDomRange* range, PrDomNode* node, uint32_t offset) {
+    return changed(range, domRangeSetEnd(range, node, offset));
 }
 
-PrStatus prDomRangeSetBeside(PrDomRange* self, PrDomRangeSide side, PrDomNode* node) {
+PrStatus prDomRangeSetBeside(PrDomRange* range, PrDomRangeSide side, PrDomNode* node) {
     PrDomNode* parent = domNodeParent(node);
     if (parent == nullptr)
         return PrStatus_WrongType;
     bool after = side == PrDomRangeSide_StartAfter || side == PrDomRangeSide_EndAfter;
     uint32_t offset = domNodeIndex(node) + (after ? 1 : 0);
     bool start = side == PrDomRangeSide_StartBefore || side == PrDomRangeSide_StartAfter;
-    return changed(self, start ? domRangeSetStart(self, parent, offset) : domRangeSetEnd(self, parent, offset));
+    return changed(range, start ? domRangeSetStart(range, parent, offset) : domRangeSetEnd(range, parent, offset));
 }
 
-void prDomRangeCollapse(PrDomRange* self, bool toStart) {
-    domRangeCollapse(self, toStart);
-    changed(self, PrStatus_Ok);
+void prDomRangeCollapse(PrDomRange* range, bool toStart) {
+    domRangeCollapse(range, toStart);
+    changed(range, PrStatus_Ok);
 }
 
-PrStatus prDomRangeSelectNode(PrDomRange* self, PrDomNode* node) {
-    return changed(self, domRangeSelect(self, node));
+PrStatus prDomRangeSelectNode(PrDomRange* range, PrDomNode* node) {
+    return changed(range, domRangeSelect(range, node));
 }
 
-PrStatus prDomRangeSelectNodeContents(PrDomRange* self, PrDomNode* node) {
-    return changed(self, domRangeSelectContents(self, node));
+PrStatus prDomRangeSelectNodeContents(PrDomRange* range, PrDomNode* node) {
+    return changed(range, domRangeSelectContents(range, node));
 }
 
-PrStatus prDomRangeCompareBoundaryPoints(const PrDomRange* self, PrDomRangeHow how, const PrDomRange* source, int8_t* out) {
-    if (domRangeRoot(self) != domRangeRoot(source))
+PrStatus prDomRangeCompareBoundaryPoints(const PrDomRange* range, PrDomRangeHow how, const PrDomRange* source, int8_t* out) {
+    if (domRangeRoot(range) != domRangeRoot(source))
         return PrStatus_Foreign;
     bool start = how == PrDomRangeHow_StartToStart || how == PrDomRangeHow_EndToStart;
     bool otherStart = how == PrDomRangeHow_StartToStart || how == PrDomRangeHow_StartToEnd;
-    DomBoundary point = start ? self->start : self->end;
+    DomBoundary point = start ? range->start : range->end;
     DomBoundary otherPoint = otherStart ? source->start : source->end;
     *out = int8_t(domBoundaryCompare(point, otherPoint));
     return PrStatus_Ok;
 }
 
-void prDomRangeDeleteContents(PrDomRange* self) {
-    domRangeDelete(self);
-    changed(self, PrStatus_Ok);
+void prDomRangeDeleteContents(PrDomRange* range) {
+    domRangeDelete(range);
+    changed(range, PrStatus_Ok);
 }
 
-PrStatus prDomRangeExtractContents(PrDomRange* self, PrDomDocumentFragment* PR_NULLABLE* PR_NONNULL out) {
-    return rangeContents(self, true, out);
+PrStatus prDomRangeExtractContents(PrDomRange* range, PrDomDocumentFragment* PR_NULLABLE* PR_NONNULL out) {
+    return rangeContents(range, true, out);
 }
 
-PrStatus prDomRangeCloneContents(PrDomRange* self, PrDomDocumentFragment* PR_NULLABLE* PR_NONNULL out) {
-    return rangeContents(self, false, out);
+PrStatus prDomRangeCloneContents(PrDomRange* range, PrDomDocumentFragment* PR_NULLABLE* PR_NONNULL out) {
+    return rangeContents(range, false, out);
 }
 
-PrStatus prDomRangeInsertNode(PrDomRange* self, PrDomNode* node) {
-    return changed(self, domRangeInsert(self, node));
+PrStatus prDomRangeInsertNode(PrDomRange* range, PrDomNode* node) {
+    return changed(range, domRangeInsert(range, node));
 }
 
-PrStatus prDomRangeSurroundContents(PrDomRange* self, PrDomNode* node) {
-    return changed(self, domRangeSurround(self, node));
+PrStatus prDomRangeSurroundContents(PrDomRange* range, PrDomNode* node) {
+    return changed(range, domRangeSurround(range, node));
 }
 
-PrDomRange* prDomRangeCloneRange(PrDomRange* self) {
-    PrDomRange* copy = domRangeCreate(self->start.node->document);
-    domRangeSetStart(copy, self->start.node, self->start.offset);
-    domRangeSetEnd(copy, self->end.node, self->end.offset);
+PrDomRange* prDomRangeCloneRange(PrDomRange* range) {
+    PrDomRange* copy = domRangeCreate(range->start.node->document);
+    domRangeSetStart(copy, range->start.node, range->start.offset);
+    domRangeSetEnd(copy, range->end.node, range->end.offset);
     return copy;
 }
 
-PrStatus prDomRangeIsPointInRange(const PrDomRange* self, PrDomNode* node, uint32_t offset, bool* out) {
+PrStatus prDomRangeIsPointInRange(const PrDomRange* range, PrDomNode* node, uint32_t offset, bool* out) {
     *out = false;
-    if (domNodeRoot(node) != domRangeRoot(self))
+    if (domNodeRoot(node) != domRangeRoot(range))
         return PrStatus_Ok;
     PrStatus status = domCheckBoundaryPoint(node, offset);
     if (status != PrStatus_Ok)
         return status;
     DomBoundary boundary = {node, offset};
-    *out = domBoundaryCompare(boundary, self->start) >= 0 && domBoundaryCompare(boundary, self->end) <= 0;
+    *out = domBoundaryCompare(boundary, range->start) >= 0 && domBoundaryCompare(boundary, range->end) <= 0;
     return PrStatus_Ok;
 }
 
-PrStatus prDomRangeComparePoint(const PrDomRange* self, PrDomNode* node, uint32_t offset, int8_t* out) {
-    if (domNodeRoot(node) != domRangeRoot(self))
+PrStatus prDomRangeComparePoint(const PrDomRange* range, PrDomNode* node, uint32_t offset, int8_t* out) {
+    if (domNodeRoot(node) != domRangeRoot(range))
         return PrStatus_Foreign;
     PrStatus status = domCheckBoundaryPoint(node, offset);
     if (status != PrStatus_Ok)
         return status;
     DomBoundary boundary = {node, offset};
-    *out = domBoundaryCompare(boundary, self->start) < 0 ? -1 : domBoundaryCompare(boundary, self->end) > 0 ? 1 : 0;
+    *out = domBoundaryCompare(boundary, range->start) < 0 ? -1 : domBoundaryCompare(boundary, range->end) > 0 ? 1 : 0;
     return PrStatus_Ok;
 }
 
-bool prDomRangeIntersectsNode(const PrDomRange* self, PrDomNode* node) {
-    if (domNodeRoot(node) != domRangeRoot(self))
+bool prDomRangeIntersectsNode(const PrDomRange* range, PrDomNode* node) {
+    if (domNodeRoot(node) != domRangeRoot(range))
         return false;
     PrDomNode* parent = domNodeParent(node);
     if (parent == nullptr)
         return true;
     uint32_t offset = domNodeIndex(node);
-    return domBoundaryCompare(DomBoundary{parent, offset}, self->end) < 0 &&
-        domBoundaryCompare(DomBoundary{parent, offset + 1}, self->start) > 0;
+    return domBoundaryCompare(DomBoundary{parent, offset}, range->end) < 0 &&
+        domBoundaryCompare(DomBoundary{parent, offset + 1}, range->start) > 0;
 }
 
-PrString prDomRangeToString(const PrDomRange* self) {
-    return domRangeString(self);
+PrString prDomRangeToString(const PrDomRange* range) {
+    return domRangeString(range);
 }
 
-PrDomSelection* prDomDocumentSelection(PrDomDocument* self) {
-    return domDocumentSelection(self);
+PrDomSelection* prDomDocumentSelection(PrDomDocument* document) {
+    return domDocumentSelection(document);
 }
 
-PrDomDocument* prDomSelectionDocument(PrDomSelection* self) {
-    return self->document;
+PrDomDocument* prDomSelectionDocument(PrDomSelection* selection) {
+    return selection->document;
 }
 
-PrDomRange* PR_NULLABLE prDomSelectionRange(PrDomSelection* self) {
-    return domSelectionRange(self);
+PrDomRange* PR_NULLABLE prDomSelectionRange(PrDomSelection* selection) {
+    return domSelectionRange(selection);
 }
 
-PrDomNode* PR_NULLABLE prDomSelectionAnchorNode(PrDomSelection* self) {
+PrDomNode* PR_NULLABLE prDomSelectionAnchorNode(PrDomSelection* selection) {
     DomBoundary point;
-    return domSelectionAnchor(self, &point) ? point.node : nullptr;
+    return domSelectionAnchor(selection, &point) ? point.node : nullptr;
 }
 
-uint32_t prDomSelectionAnchorOffset(const PrDomSelection* self) {
+uint32_t prDomSelectionAnchorOffset(const PrDomSelection* selection) {
     DomBoundary point;
-    return domSelectionAnchor(self, &point) ? point.offset : 0;
+    return domSelectionAnchor(selection, &point) ? point.offset : 0;
 }
 
-PrDomNode* PR_NULLABLE prDomSelectionFocusNode(PrDomSelection* self) {
+PrDomNode* PR_NULLABLE prDomSelectionFocusNode(PrDomSelection* selection) {
     DomBoundary point;
-    return domSelectionFocus(self, &point) ? point.node : nullptr;
+    return domSelectionFocus(selection, &point) ? point.node : nullptr;
 }
 
-uint32_t prDomSelectionFocusOffset(const PrDomSelection* self) {
+uint32_t prDomSelectionFocusOffset(const PrDomSelection* selection) {
     DomBoundary point;
-    return domSelectionFocus(self, &point) ? point.offset : 0;
+    return domSelectionFocus(selection, &point) ? point.offset : 0;
 }
 
-bool prDomSelectionIsCollapsed(const PrDomSelection* self) {
+bool prDomSelectionIsCollapsed(const PrDomSelection* selection) {
     DomBoundary anchor;
     DomBoundary focus;
-    if (!domSelectionAnchor(self, &anchor))
+    if (!domSelectionAnchor(selection, &anchor))
         return true;
-    domSelectionFocus(self, &focus);
+    domSelectionFocus(selection, &focus);
     return anchor.node == focus.node && anchor.offset == focus.offset;
 }
 
-uint32_t prDomSelectionRangeCount(const PrDomSelection* self) {
+uint32_t prDomSelectionRangeCount(const PrDomSelection* selection) {
     DomBoundary anchor;
-    return domSelectionAnchor(self, &anchor) ? 1 : 0;
+    return domSelectionAnchor(selection, &anchor) ? 1 : 0;
 }
 
-PrDomSelectionType prDomSelectionType(const PrDomSelection* self) {
-    if (prDomSelectionRangeCount(self) == 0)
+PrDomSelectionType prDomSelectionType(const PrDomSelection* selection) {
+    if (prDomSelectionRangeCount(selection) == 0)
         return PrDomSelectionType_None;
-    return prDomSelectionIsCollapsed(self) ? PrDomSelectionType_Caret : PrDomSelectionType_Range;
+    return prDomSelectionIsCollapsed(selection) ? PrDomSelectionType_Caret : PrDomSelectionType_Range;
 }
 
-PrDomSelectionDirection prDomSelectionDirection(const PrDomSelection* self) {
-    return domSelectionRange(self) != nullptr ? self->direction : PrDomSelectionDirection_None;
+PrDomSelectionDirection prDomSelectionDirection(const PrDomSelection* selection) {
+    return domSelectionRange(selection) != nullptr ? selection->direction : PrDomSelectionDirection_None;
 }
 
-PrStatus prDomSelectionGetRangeAt(PrDomSelection* self, uint32_t index, PrDomRange* PR_NULLABLE* PR_NONNULL out) {
+PrStatus prDomSelectionGetRangeAt(PrDomSelection* selection, uint32_t index, PrDomRange* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (index != 0 || prDomSelectionRangeCount(self) == 0)
+    if (index != 0 || prDomSelectionRangeCount(selection) == 0)
         return PrStatus_OutOfRange;
-    *out = domSelectionRange(self);
+    *out = domSelectionRange(selection);
     return PrStatus_Ok;
 }
 
-void prDomSelectionAddRange(PrDomSelection* self, PrDomRange* range) {
-    if (range->document == nullptr || domRangeRoot(range) != self->document || domSelectionRange(self) != nullptr)
+void prDomSelectionAddRange(PrDomSelection* selection, PrDomRange* range) {
+    if (range->document == nullptr || domRangeRoot(range) != selection->document || domSelectionRange(selection) != nullptr)
         return;
-    domSelectionSetRange(self, range, PrDomSelectionDirection_None);
+    domSelectionSetRange(selection, range, PrDomSelectionDirection_None);
 }
 
-PrStatus prDomSelectionRemoveRange(PrDomSelection* self, const PrDomRange* range) {
-    if (domSelectionRange(self) == nullptr || domSelectionRange(self) != range)
+PrStatus prDomSelectionRemoveRange(PrDomSelection* selection, const PrDomRange* range) {
+    if (domSelectionRange(selection) == nullptr || domSelectionRange(selection) != range)
         return PrStatus_NotFound;
-    domSelectionSetRange(self, nullptr, PrDomSelectionDirection_None);
+    domSelectionSetRange(selection, nullptr, PrDomSelectionDirection_None);
     return PrStatus_Ok;
 }
 
-void prDomSelectionRemoveAllRanges(PrDomSelection* self) {
-    domSelectionSetRange(self, nullptr, PrDomSelectionDirection_None);
+void prDomSelectionRemoveAllRanges(PrDomSelection* selection) {
+    domSelectionSetRange(selection, nullptr, PrDomSelectionDirection_None);
 }
 
-PrStatus prDomSelectionCollapse(PrDomSelection* self, PrDomNode* PR_NULLABLE node, uint32_t offset, PrDomRange* range) {
+PrStatus prDomSelectionCollapse(PrDomSelection* selection, PrDomNode* PR_NULLABLE node, uint32_t offset, PrDomRange* range) {
     if (node == nullptr) {
-        prDomSelectionRemoveAllRanges(self);
+        prDomSelectionRemoveAllRanges(selection);
         return PrStatus_Ok;
     }
     PrStatus status = domCheckBoundaryPoint(node, offset);
-    if (status != PrStatus_Ok || !inSelectionDocument(self, node))
+    if (status != PrStatus_Ok || !inSelectionDocument(selection, node))
         return status;
-    selectRange(self, range, DomBoundary{node, offset}, DomBoundary{node, offset}, PrDomSelectionDirection_None);
+    selectRange(selection, range, DomBoundary{node, offset}, DomBoundary{node, offset}, PrDomSelectionDirection_None);
     return PrStatus_Ok;
 }
 
-PrStatus prDomSelectionCollapseToStart(PrDomSelection* self, PrDomRange* range) {
-    return collapseTo(self, range, true);
+PrStatus prDomSelectionCollapseToStart(PrDomSelection* selection, PrDomRange* range) {
+    return collapseTo(selection, range, true);
 }
 
-PrStatus prDomSelectionCollapseToEnd(PrDomSelection* self, PrDomRange* range) {
-    return collapseTo(self, range, false);
+PrStatus prDomSelectionCollapseToEnd(PrDomSelection* selection, PrDomRange* range) {
+    return collapseTo(selection, range, false);
 }
 
-PrStatus prDomSelectionExtend(PrDomSelection* self, PrDomNode* node, uint32_t offset, PrDomRange* range) {
-    if (!inSelectionDocument(self, node))
+PrStatus prDomSelectionExtend(PrDomSelection* selection, PrDomNode* node, uint32_t offset, PrDomRange* range) {
+    if (!inSelectionDocument(selection, node))
         return PrStatus_Ok;
-    if (domSelectionRange(self) == nullptr)
+    if (domSelectionRange(selection) == nullptr)
         return PrStatus_InvalidState;
     PrStatus status = domCheckBoundaryPoint(node, offset);
     if (status != PrStatus_Ok)
         return status;
     DomBoundary anchor;
-    if (self->direction == PrDomSelectionDirection_Backwards)
-        anchor = domSelectionRange(self)->end;
+    if (selection->direction == PrDomSelectionDirection_Backwards)
+        anchor = domSelectionRange(selection)->end;
     else
-        anchor = domSelectionRange(self)->start;
+        anchor = domSelectionRange(selection)->start;
     DomBoundary focus = {node, offset};
-    if (domNodeRoot(node) != domRangeRoot(domSelectionRange(self))) {
-        selectRange(self, range, focus, focus, PrDomSelectionDirection_Forwards);
+    if (domNodeRoot(node) != domRangeRoot(domSelectionRange(selection))) {
+        selectRange(selection, range, focus, focus, PrDomSelectionDirection_Forwards);
         return PrStatus_Ok;
     }
     bool backwards = domBoundaryCompare(focus, anchor) < 0;
-    selectRange(self, range, backwards ? focus : anchor, backwards ? anchor : focus,
+    selectRange(selection, range, backwards ? focus : anchor, backwards ? anchor : focus,
         backwards ? PrDomSelectionDirection_Backwards : PrDomSelectionDirection_Forwards);
     return PrStatus_Ok;
 }
 
-PrStatus prDomSelectionSetBaseAndExtent(PrDomSelection* self, PrDomNode* anchorNode,
+PrStatus prDomSelectionSetBaseAndExtent(PrDomSelection* selection, PrDomNode* anchorNode,
         uint32_t anchorOffset, PrDomNode* focusNode, uint32_t focusOffset, PrDomRange* range) {
     if (anchorOffset > domNodeLength(anchorNode) || focusOffset > domNodeLength(focusNode))
         return PrStatus_OutOfRange;
-    if (!inSelectionDocument(self, anchorNode) || !inSelectionDocument(self, focusNode))
+    if (!inSelectionDocument(selection, anchorNode) || !inSelectionDocument(selection, focusNode))
         return PrStatus_Ok;
     DomBoundary anchor = {anchorNode, anchorOffset};
     DomBoundary focus = {focusNode, focusOffset};
     bool backwards = domNodeRoot(anchorNode) == domNodeRoot(focusNode) && domBoundaryCompare(focus, anchor) < 0;
-    selectRange(self, range, backwards ? focus : anchor, backwards ? anchor : focus,
+    selectRange(selection, range, backwards ? focus : anchor, backwards ? anchor : focus,
         backwards ? PrDomSelectionDirection_Backwards : PrDomSelectionDirection_Forwards);
     return PrStatus_Ok;
 }
 
-PrStatus prDomSelectionSelectAllChildren(PrDomSelection* self, PrDomNode* node, PrDomRange* range) {
+PrStatus prDomSelectionSelectAllChildren(PrDomSelection* selection, PrDomNode* node, PrDomRange* range) {
     if (node->type == PrDomNodeType_DocumentType)
         return PrStatus_WrongType;
-    if (domNodeRoot(node) != self->document)
+    if (domNodeRoot(node) != selection->document)
         return PrStatus_Ok;
     uint32_t count = 0;
     for (const PrDomNode* child = node->first; child != nullptr; child = child->next)
         ++count;
-    selectRange(self, range, DomBoundary{node, 0}, DomBoundary{node, count}, PrDomSelectionDirection_Forwards);
+    selectRange(selection, range, DomBoundary{node, 0}, DomBoundary{node, count}, PrDomSelectionDirection_Forwards);
     return PrStatus_Ok;
 }
 
-void prDomSelectionDeleteFromDocument(PrDomSelection* self) {
-    if (domSelectionRange(self) != nullptr)
-        prDomRangeDeleteContents(domSelectionRange(self));
+void prDomSelectionDeleteFromDocument(PrDomSelection* selection) {
+    if (domSelectionRange(selection) != nullptr)
+        prDomRangeDeleteContents(domSelectionRange(selection));
 }
 
-bool prDomSelectionContainsNode(const PrDomSelection* self, PrDomNode* node, bool allowPartialContainment) {
-    const PrDomRange* range = domSelectionRange(self);
-    if (range == nullptr || domNodeRoot(node) != self->document || domRangeRoot(range) != self->document)
+bool prDomSelectionContainsNode(const PrDomSelection* selection, PrDomNode* node, bool allowPartialContainment) {
+    const PrDomRange* range = domSelectionRange(selection);
+    if (range == nullptr || domNodeRoot(node) != selection->document || domRangeRoot(range) != selection->document)
         return false;
     DomBoundary first = {node, 0};
     DomBoundary last = {node, domNodeLength(node)};
@@ -2294,14 +2292,14 @@ bool prDomSelectionContainsNode(const PrDomSelection* self, PrDomNode* node, boo
     return domBoundaryCompare(range->start, first) <= 0 && domBoundaryCompare(range->end, last) >= 0;
 }
 
-PrString prDomSelectionToString(const PrDomSelection* self) {
-    return domSelectionRange(self) != nullptr ? domRangeString(domSelectionRange(self)) : prStringEmpty();
+PrString prDomSelectionToString(const PrDomSelection* selection) {
+    return domSelectionRange(selection) != nullptr ? domRangeString(domSelectionRange(selection)) : prStringEmpty();
 }
 
-uint32_t prDomSelectionComposedRanges(PrDomSelection* self, PrDomShadowRoot* const PR_NONNULL* PR_NULLABLE roots,
+uint32_t prDomSelectionComposedRanges(PrDomSelection* selection, PrDomShadowRoot* const PR_NONNULL* PR_NULLABLE roots,
         uint32_t count, PrDomRange* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (domSelectionRange(self) == nullptr)
+    if (domSelectionRange(selection) == nullptr)
         return 0;
     // A boundary point moves out of each shadow tree that is neither one of the roots nor an ancestor of one.
     auto hostOf = [](const PrDomNode* node) -> const PrDomNode* {
@@ -2327,8 +2325,8 @@ uint32_t prDomSelectionComposedRanges(PrDomSelection* self, PrDomShadowRoot* con
         }
         return point;
     };
-    DomBoundary start = rescope(domSelectionRange(self)->start, 0);
-    DomBoundary end = rescope(domSelectionRange(self)->end, 1);
+    DomBoundary start = rescope(domSelectionRange(selection)->start, 0);
+    DomBoundary end = rescope(domSelectionRange(selection)->end, 1);
     if (start.node == nullptr || end.node == nullptr)
         return 0;
     *out = domStaticRangeCreate(start, end);
@@ -2339,47 +2337,48 @@ bool prDomIsValidCustomElementName(PrStringView name) {
     return domIsValidCustomElementName(name);
 }
 
-void prDomDocumentSetCustomElementRegistry(PrDomDocument* self, const PrDomCustomElementRegistry* PR_NULLABLE registry) {
-    self->customElements = registry;
+void prDomDocumentSetCustomElementRegistry(PrDomDocument* document,
+        const PrDomCustomElementRegistry* PR_NULLABLE registry) {
+    document->customElements = registry;
 }
 
-PrDomCustomElementState prDomElementCustomElementState(const PrDomElement* self) {
-    return self->customState;
+PrDomCustomElementState prDomElementCustomElementState(const PrDomElement* element) {
+    return element->customState;
 }
 
-void* PR_NULLABLE prDomElementCustomElementDefinition(const PrDomElement* self) {
-    return self->state != nullptr && self->state->custom != nullptr ? self->state->custom->definition : nullptr;
+void* PR_NULLABLE prDomElementCustomElementDefinition(const PrDomElement* element) {
+    return element->state != nullptr && element->state->custom != nullptr ? element->state->custom->definition : nullptr;
 }
 
-PrDomElement* prDomElementCreateCustom(PrDomDocument* self, PrStringView localName, void* definition) {
-    PrDomElement* element = domElementCreate(self, PrDomNamespace_Html, domTagFromText(localName), localName);
+PrDomElement* prDomElementCreateCustom(PrDomDocument* document, PrStringView localName, void* definition) {
+    PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, domTagFromText(localName), localName);
     element->customState = PrDomCustomElementState_Custom;
     DomElementState* state = domElementState(element);
     state->custom = allocZeroed<DomCustomElement>();
     state->custom->is = prStringNull();
     state->custom->definition = definition;
-    state->custom->registry = self->customElements;
-    if (self->customElements != nullptr)
-        domCustomConstructed(self->customElements->agent, element);
+    state->custom->registry = document->customElements;
+    if (document->customElements != nullptr)
+        domCustomConstructed(document->customElements->agent, element);
     return made(element);
 }
 
-void prDomDocumentUpgradeCandidates(PrDomDocument* self, PrStringView localName, void* definition) {
-    domCustomUpgradeCandidates(self, localName, definition);
+void prDomDocumentUpgradeCandidates(PrDomDocument* document, PrStringView localName, void* definition) {
+    domCustomUpgradeCandidates(document, localName, definition);
 }
 
-void prDomNodeUpgrade(PrDomNode* self) {
-    domCustomUpgradeTree(self);
+void prDomNodeUpgrade(PrDomNode* node) {
+    domCustomUpgradeTree(node);
 }
 
-PrDomShadowRoot* PR_NULLABLE prDomElementHostedShadowRoot(PrDomElement* self) {
-    return domShadowRootOfHost(self);
+PrDomShadowRoot* PR_NULLABLE prDomElementHostedShadowRoot(PrDomElement* element) {
+    return domShadowRootOfHost(element);
 }
 
-void prDomElementSetCustomState(PrDomElement* self, PrStringView state, bool present) {
-    if (domCustomHasState(self, state) == present)
+void prDomElementSetCustomState(PrDomElement* element, PrStringView state, bool present) {
+    if (domCustomHasState(element, state) == present)
         return;
-    Array<PrString>& states = domCustomElementFromElement(self)->states;
+    Array<PrString>& states = domCustomElementFromElement(element)->states;
     if (present) {
         states.push(prStringCopy(state));
     } else {
@@ -2391,11 +2390,10 @@ void prDomElementSetCustomState(PrDomElement* self, PrStringView state, bool pre
             }
         }
     }
-    domNotifyStatesChanged(self);
+    domNotifyStatesChanged(element);
 }
 
-void prDomElementClearCustomStates(PrDomElement* self) {
-    PrDomElement* element = self;
+void prDomElementClearCustomStates(PrDomElement* element) {
     if (element->state == nullptr || element->state->custom == nullptr || element->state->custom->states.count == 0)
         return;
     stringsClear(&element->state->custom->states);
@@ -2415,76 +2413,76 @@ PrDomAgent* prDomAgentCreate(const PrDomAgentOptions* PR_NULLABLE options) {
     return agent;
 }
 
-void prDomAgentDestroy(PrDomAgent* PR_NULLABLE self) {
-    domAgentDestroy(self);
+void prDomAgentDestroy(PrDomAgent* PR_NULLABLE agent) {
+    domAgentDestroy(agent);
 }
 
-double prDomAgentNextTaskDelay(PrDomAgent* self) {
-    return domAgentNextTaskDelay(self);
+double prDomAgentNextTaskDelay(PrDomAgent* agent) {
+    return domAgentNextTaskDelay(agent);
 }
 
-bool prDomAgentIsIdle(PrDomAgent* self) {
-    return domAgentIsIdle(self);
+bool prDomAgentIsIdle(PrDomAgent* agent) {
+    return domAgentIsIdle(agent);
 }
 
-bool prDomAgentRunTask(PrDomAgent* self) {
-    return domAgentRunTask(self);
+bool prDomAgentRunTask(PrDomAgent* agent) {
+    return domAgentRunTask(agent);
 }
 
-bool prDomAgentSpinTask(PrDomAgent* self) {
-    return domAgentSpinTask(self);
+bool prDomAgentSpinTask(PrDomAgent* agent) {
+    return domAgentSpinTask(agent);
 }
 
-void prDomAgentPost(PrDomAgent* self, PrDomAgentTaskFn fn, void* PR_NULLABLE context) {
-    domAgentPost(self, fn, context);
+void prDomAgentPost(PrDomAgent* agent, PrDomAgentTaskFn fn, void* PR_NULLABLE context) {
+    domAgentPost(agent, fn, context);
 }
 
-void prDomAgentSetWake(PrDomAgent* self, PrDomAgentWakeFn PR_NULLABLE wake, void* PR_NULLABLE context) {
-    domAgentSetWake(self, wake, context);
+void prDomAgentSetWake(PrDomAgent* agent, PrDomAgentWakeFn PR_NULLABLE wake, void* PR_NULLABLE context) {
+    domAgentSetWake(agent, wake, context);
 }
 
-void prDomAgentSetLayoutDone(PrDomAgent* self, PrDomAgentLayoutDoneFn PR_NULLABLE done, void* PR_NULLABLE context) {
-    self->layoutDone = done;
-    self->layoutDoneContext = context;
+void prDomAgentSetLayoutDone(PrDomAgent* agent, PrDomAgentLayoutDoneFn PR_NULLABLE done, void* PR_NULLABLE context) {
+    agent->layoutDone = done;
+    agent->layoutDoneContext = context;
 }
 
-void prDomAgentAddCheckpoint(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
-    domAgentAddHook(&self->checkpoints, fn, context);
+void prDomAgentAddCheckpoint(PrDomAgent* agent, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    domAgentAddHook(&agent->checkpoints, fn, context);
 }
 
-void prDomAgentRemoveCheckpoint(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
-    domAgentRemoveHook(&self->checkpoints, fn, context);
+void prDomAgentRemoveCheckpoint(PrDomAgent* agent, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    domAgentRemoveHook(&agent->checkpoints, fn, context);
 }
 
-void prDomAgentAddUpdate(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
-    domAgentAddHook(&self->updates, fn, context);
+void prDomAgentAddUpdate(PrDomAgent* agent, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    domAgentAddHook(&agent->updates, fn, context);
 }
 
-void prDomAgentRemoveUpdate(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
-    domAgentRemoveHook(&self->updates, fn, context);
+void prDomAgentRemoveUpdate(PrDomAgent* agent, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    domAgentRemoveHook(&agent->updates, fn, context);
 }
 
-bool prDomAgentRun(PrDomAgent* self, double milliseconds) {
-    return domAgentRun(self, milliseconds);
+bool prDomAgentRun(PrDomAgent* agent, double milliseconds) {
+    return domAgentRun(agent, milliseconds);
 }
 
-bool prDomAgentWait(PrDomAgent* self, double milliseconds) {
-    return domAgentWait(self, milliseconds);
+bool prDomAgentWait(PrDomAgent* agent, double milliseconds) {
+    return domAgentWait(agent, milliseconds);
 }
 
-void prDomAgentWake(PrDomAgent* self) {
-    domAgentWake(self);
+void prDomAgentWake(PrDomAgent* agent) {
+    domAgentWake(agent);
 }
 
-void prDomAgentStop(PrDomAgent* self) {
-    domAgentStop(self);
+void prDomAgentStop(PrDomAgent* agent) {
+    domAgentStop(agent);
 }
 
-void prDomAgentReactionsPush(PrDomAgent* self) {
-    domCustomReactionsPush(self);
+void prDomAgentReactionsPush(PrDomAgent* agent) {
+    domCustomReactionsPush(agent);
 }
 
-void prDomAgentReactionsPop(PrDomAgent* self) {
-    domCustomReactionsPop(self);
+void prDomAgentReactionsPop(PrDomAgent* agent) {
+    domCustomReactionsPop(agent);
 }
 

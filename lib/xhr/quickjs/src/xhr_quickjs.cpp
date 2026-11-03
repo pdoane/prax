@@ -44,8 +44,8 @@ JSValue result(JSContext* ctx, PrStatus status) {
 }
 
 // Drops the response's object, which the next read makes again.
-void forgetResponse(JSContext* ctx, JSValueConst self) {
-    jsSetReference(ctx, self, XhrSlot_Response, JS_UNDEFINED);
+void forgetResponse(JSContext* ctx, JSValueConst object) {
+    jsSetReference(ctx, object, XhrSlot_Response, JS_UNDEFINED);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -117,8 +117,8 @@ JSValue progressConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
 }
 
 // The attributes of a ProgressEvent, selected by the magic: lengthComputable, then loaded and total.
-JSValue progressGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrXhrProgressEvent* event = prXhrProgressEventQuery(jsThis<PrDomEvent>(ctx, self, xhrProgressEventClass));
+JSValue progressGet(JSContext* ctx, JSValueConst object, int magic) {
+    PrXhrProgressEvent* event = prXhrProgressEventQuery(jsThis<PrDomEvent>(ctx, object, xhrProgressEventClass));
     if (event == nullptr)
         return JS_EXCEPTION;
     switch (magic) {
@@ -131,8 +131,8 @@ JSValue progressGet(JSContext* ctx, JSValueConst self, int magic) {
 // ---------------------------------------------------------------------------------------------------------------------
 // XMLHttpRequest (xhr/#interface-xmlhttprequest)
 
-PrXhr* PR_NULLABLE requestOf(JSContext* ctx, JSValueConst self) {
-    return prXhrQuery(jsThis<PrDomEventTarget>(ctx, self, xhrClass));
+PrXhr* PR_NULLABLE requestOf(JSContext* ctx, JSValueConst object) {
+    return prXhrQuery(jsThis<PrDomEventTarget>(ctx, object, xhrClass));
 }
 
 // The request of the global's window. Throws a TypeError for a global without a window.
@@ -160,25 +160,25 @@ JSValue xhrConstruct(JSContext* ctx, JSValueConst newTarget, int, JSValueConst*)
     return jsConstructed(ctx, newTarget, object);
 }
 
-JSValue xhrReadyState(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrReadyState(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     return request != nullptr ? JS_NewInt32(ctx, prXhrReadyState(request)) : JS_EXCEPTION;
 }
 
 // open(method, url, async, username, password). A username or a password is not taken from the arguments.
-JSValue xhrOpen(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrOpen(JSContext* ctx, JSValueConst requestObject, int argc, JSValueConst* argv) {
+    PrXhr* request = requestOf(ctx, requestObject);
     StringArgument method = {ctx};
     StringArgument url = {ctx};
     if (request == nullptr || !jsArgCount(ctx, argc, 2) || !method.read(argv[0]) || !url.read(argv[1]))
         return JS_EXCEPTION;
     bool async = argc < 3 || JS_ToBool(ctx, argv[2]) != 0;
-    forgetResponse(ctx, self);
+    forgetResponse(ctx, requestObject);
     return result(ctx, prXhrOpen(request, method.value(), url.value(), async));
 }
 
-JSValue xhrSetRequestHeader(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrSetRequestHeader(JSContext* ctx, JSValueConst requestObject, int argc, JSValueConst* argv) {
+    PrXhr* request = requestOf(ctx, requestObject);
     StringArgument name = {ctx};
     StringArgument value = {ctx};
     if (request == nullptr || !jsArgCount(ctx, argc, 2) || !name.read(argv[0]) || !value.read(argv[1]))
@@ -186,13 +186,13 @@ JSValue xhrSetRequestHeader(JSContext* ctx, JSValueConst self, int argc, JSValue
     return result(ctx, prXhrSetRequestHeader(request, name.value(), value.value()));
 }
 
-JSValue xhrTimeout(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrTimeout(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     return request != nullptr ? JS_NewUint32(ctx, prXhrTimeout(request)) : JS_EXCEPTION;
 }
 
-JSValue xhrSetTimeout(JSContext* ctx, JSValueConst self, JSValueConst value) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrSetTimeout(JSContext* ctx, JSValueConst requestObject, JSValueConst value) {
+    PrXhr* request = requestOf(ctx, requestObject);
     uint32_t milliseconds = 0;
     if (request == nullptr || JS_ToUint32(ctx, &milliseconds, value) < 0)
         return JS_EXCEPTION;
@@ -200,32 +200,32 @@ JSValue xhrSetTimeout(JSContext* ctx, JSValueConst self, JSValueConst value) {
     return JS_UNDEFINED;
 }
 
-JSValue xhrWithCredentials(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrWithCredentials(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     return request != nullptr ? JS_NewBool(ctx, prXhrWithCredentials(request)) : JS_EXCEPTION;
 }
 
-JSValue xhrSetWithCredentials(JSContext* ctx, JSValueConst self, JSValueConst value) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrSetWithCredentials(JSContext* ctx, JSValueConst requestObject, JSValueConst value) {
+    PrXhr* request = requestOf(ctx, requestObject);
     if (request == nullptr)
         return JS_EXCEPTION;
     return result(ctx, prXhrSetWithCredentials(request, JS_ToBool(ctx, value) != 0));
 }
 
 // [SameObject] upload: a view of the request's upload, which the request's object holds.
-JSValue xhrUpload(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrUpload(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     if (request == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "upload", [&] {
-        return jsWrap(ctx, xhrUploadClass, self, prXhrUploadAsEventTarget(prXhrUpload(request)), false);
+    return jsSameObject(ctx, requestObject, "upload", [&] {
+        return jsWrap(ctx, xhrUploadClass, requestObject, prXhrUploadAsEventTarget(prXhrUpload(request)), false);
     });
 }
 
 // send(body) with the body converted as fetch/#concept-bodyinit-extract extracts it: a string as UTF-8 text, a
 // BufferSource as its bytes, and URLSearchParams as a form. Any other object is sent as its string.
-JSValue xhrSend(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrSend(JSContext* ctx, JSValueConst requestObject, int argc, JSValueConst* argv) {
+    PrXhr* request = requestOf(ctx, requestObject);
     if (request == nullptr)
         return JS_EXCEPTION;
     JSValueConst body = argc > 0 ? argv[0] : JS_UNDEFINED;
@@ -250,52 +250,52 @@ JSValue xhrSend(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv)
         bytes = PrByteView{reinterpret_cast<const uint8_t*>(view.data != nullptr ? view.data : ""), view.size};
         contentType = "text/plain;charset=UTF-8";
     }
-    forgetResponse(ctx, self);
+    forgetResponse(ctx, requestObject);
     prXhrSetActivity(request, activity, JS_GetRuntime(ctx));
     PrStatus status = prXhrSend(request, bytes, contentType);
     prStringReset(&form);
     return result(ctx, status);
 }
 
-JSValue xhrAbort(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrAbort(JSContext* ctx, JSValueConst requestObject, int, JSValueConst*) {
+    PrXhr* request = requestOf(ctx, requestObject);
     if (request == nullptr)
         return JS_EXCEPTION;
-    forgetResponse(ctx, self);
+    forgetResponse(ctx, requestObject);
     prXhrAbort(request);
     return JS_UNDEFINED;
 }
 
-JSValue xhrResponseUrl(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrResponseUrl(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     return request != nullptr ? jsNewStringView(ctx, prXhrResponseUrl(request)) : JS_EXCEPTION;
 }
 
-JSValue xhrStatus(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrStatus(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     return request != nullptr ? JS_NewInt32(ctx, prXhrStatus(request)) : JS_EXCEPTION;
 }
 
 // statusText: the response's status message, which the fetch does not report, so it is empty.
-JSValue xhrStatusText(JSContext* ctx, JSValueConst self) {
-    return requestOf(ctx, self) != nullptr ? jsFixedString(ctx, "") : JS_EXCEPTION;
+JSValue xhrStatusText(JSContext* ctx, JSValueConst request) {
+    return requestOf(ctx, request) != nullptr ? jsFixedString(ctx, "") : JS_EXCEPTION;
 }
 
-JSValue xhrGetResponseHeader(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrGetResponseHeader(JSContext* ctx, JSValueConst requestObject, int argc, JSValueConst* argv) {
+    PrXhr* request = requestOf(ctx, requestObject);
     StringArgument name = {ctx};
     if (request == nullptr || !jsArgCount(ctx, argc, 1) || !name.read(argv[0]))
         return JS_EXCEPTION;
     return jsTakeString(ctx, prXhrResponseHeader(request, name.value()));
 }
 
-JSValue xhrGetAllResponseHeaders(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrGetAllResponseHeaders(JSContext* ctx, JSValueConst requestObject, int, JSValueConst*) {
+    PrXhr* request = requestOf(ctx, requestObject);
     return request != nullptr ? jsTakeString(ctx, prXhrResponseHeaders(request)) : JS_EXCEPTION;
 }
 
-JSValue xhrOverrideMimeType(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrOverrideMimeType(JSContext* ctx, JSValueConst requestObject, int argc, JSValueConst* argv) {
+    PrXhr* request = requestOf(ctx, requestObject);
     StringArgument mime = {ctx};
     if (request == nullptr || !jsArgCount(ctx, argc, 1) || !mime.read(argv[0]))
         return JS_EXCEPTION;
@@ -305,14 +305,14 @@ JSValue xhrOverrideMimeType(JSContext* ctx, JSValueConst self, int argc, JSValue
 // The names of XMLHttpRequestResponseType, by PrXhrResponseType.
 constexpr const char* kResponseTypes[] = {"", "arraybuffer", "blob", "document", "json", "text"};
 
-JSValue xhrResponseType(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrResponseType(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     return request != nullptr ? jsFixedString(ctx, kResponseTypes[prXhrResponseType(request)]) : JS_EXCEPTION;
 }
 
 // A value that names no response type is ignored, as an enumeration attribute ignores it (webidl/#es-enumeration).
-JSValue xhrSetResponseType(JSContext* ctx, JSValueConst self, JSValueConst value) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrSetResponseType(JSContext* ctx, JSValueConst requestObject, JSValueConst value) {
+    PrXhr* request = requestOf(ctx, requestObject);
     StringArgument name = {ctx};
     if (request == nullptr || !name.read(value))
         return JS_EXCEPTION;
@@ -324,8 +324,8 @@ JSValue xhrSetResponseType(JSContext* ctx, JSValueConst self, JSValueConst value
 }
 
 // responseText (xhr/#dom-xmlhttprequest-responsetext): the text that has arrived, or the empty string before it loads.
-JSValue xhrResponseText(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrResponseText(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     if (request == nullptr)
         return JS_EXCEPTION;
     PrXhrResponseType type = prXhrResponseType(request);
@@ -365,21 +365,21 @@ JSValue responseObject(JSContext* ctx, PrXhr* request) {
 }
 
 // response (xhr/#dom-xmlhttprequest-response).
-JSValue xhrResponse(JSContext* ctx, JSValueConst self) {
-    PrXhr* request = requestOf(ctx, self);
+JSValue xhrResponse(JSContext* ctx, JSValueConst requestObject) {
+    PrXhr* request = requestOf(ctx, requestObject);
     if (request == nullptr)
         return JS_EXCEPTION;
     PrXhrResponseType type = prXhrResponseType(request);
     if (type == PrXhrResponseType_Empty || type == PrXhrResponseType_Text)
-        return xhrResponseText(ctx, self);
+        return xhrResponseText(ctx, requestObject);
     if (prXhrReadyState(request) != PrXhrState_Done)
         return JS_NULL;
-    JSValue held = jsReference(ctx, self, XhrSlot_Response);
+    JSValue held = jsReference(ctx, requestObject, XhrSlot_Response);
     if (!JS_IsUndefined(held))
         return held;
     JSValue made = responseObject(ctx, request);
     if (!JS_IsException(made))
-        jsSetReference(ctx, self, XhrSlot_Response, made);
+        jsSetReference(ctx, requestObject, XhrSlot_Response, made);
     return made;
 }
 

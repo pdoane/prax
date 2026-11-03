@@ -33,13 +33,13 @@ typedef struct PrHtmlHashChangeEvent PrHtmlHashChangeEvent;
 
 // Creates an empty session history, and destroys one. The browsing contexts that use it must be destroyed first.
 PrHtmlSessionHistory* prHtmlSessionHistoryCreate(void);
-void prHtmlSessionHistoryDestroy(PrHtmlSessionHistory* PR_NULLABLE self);
+void prHtmlSessionHistoryDestroy(PrHtmlSessionHistory* PR_NULLABLE history);
 
 // Returns the number of entries, the index of the current one, and the URL of the entry at `index`, or the null view
 // past the end.
-uint32_t prHtmlSessionHistoryLength(const PrHtmlSessionHistory* self);
-uint32_t prHtmlSessionHistoryIndex(const PrHtmlSessionHistory* self);
-PrStringView prHtmlSessionHistoryUrl(const PrHtmlSessionHistory* self, uint32_t index);
+uint32_t prHtmlSessionHistoryLength(const PrHtmlSessionHistory* history);
+uint32_t prHtmlSessionHistoryIndex(const PrHtmlSessionHistory* history);
+PrStringView prHtmlSessionHistoryUrl(const PrHtmlSessionHistory* history, uint32_t index);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // History (html/#the-history-interface), over the session history of the window's browsing context
@@ -54,24 +54,24 @@ enum {
 typedef uint8_t PrHtmlScrollRestoration;
 
 // html/#dom-history-length: the number of entries.
-PrStatus prHtmlHistoryLength(const PrHtmlWindow* self, uint32_t* out);
+PrStatus prHtmlHistoryLength(const PrHtmlWindow* window, uint32_t* out);
 
 // html/#dom-history-state: the current entry's state, as the bytes that a script serialized it to
 // (html/#structuredserializeforstorage), or the null view for null. `generation` changes each time the history state is
 // set (html/#restore-the-history-object-state), so that a binding deserializes it once for each time.
-PrStatus prHtmlHistoryState(const PrHtmlWindow* self, PrStringView* out, uint32_t* generation);
+PrStatus prHtmlHistoryState(const PrHtmlWindow* window, PrStringView* out, uint32_t* generation);
 
 // html/#dom-history-pushstate and html/#dom-history-replacestate: `serialized` is the state, or the null view for null,
 // and `url` the URL to change to, or the null view or the empty string for the document's. Returns Syntax for a URL
 // that does not parse, and NotAllowed for one that the document cannot have (html/#can-have-its-url-rewritten).
-PrStatus prHtmlHistoryPushState(PrHtmlWindow* self, PrStringView serialized, PrStringView url, PrHtmlHistoryHandling handling);
+PrStatus prHtmlHistoryPushState(PrHtmlWindow* window, PrStringView serialized, PrStringView url, PrHtmlHistoryHandling handling);
 
 // html/#dom-history-go: traverses the session history by `delta` in a task, as prHtmlPageTraverse does.
-PrStatus prHtmlHistoryGo(PrHtmlWindow* self, int32_t delta);
+PrStatus prHtmlHistoryGo(PrHtmlWindow* window, int32_t delta);
 
 // html/#dom-history-scroll-restoration: the scroll restoration mode of the current entry.
-PrStatus prHtmlHistoryScrollRestoration(const PrHtmlWindow* self, PrHtmlScrollRestoration* out);
-PrStatus prHtmlHistorySetScrollRestoration(PrHtmlWindow* self, PrHtmlScrollRestoration mode);
+PrStatus prHtmlHistoryScrollRestoration(const PrHtmlWindow* window, PrHtmlScrollRestoration* out);
+PrStatus prHtmlHistorySetScrollRestoration(PrHtmlWindow* window, PrHtmlScrollRestoration mode);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // PopStateEvent : Event (html)
@@ -91,10 +91,10 @@ PrHtmlPopStateEvent* prHtmlPopStateEventCreate(PrStringView type, const PrDomEve
     bool hasUAVisualTransition);
 
 // Returns true if the engine fired the event, which then carries its window's history state.
-bool prHtmlPopStateEventCarriesHistoryState(const PrHtmlPopStateEvent* self);
+bool prHtmlPopStateEventCarriesHistoryState(const PrHtmlPopStateEvent* event);
 
 // html/#dom-popstateevent-hasuavisualtransition
-bool prHtmlPopStateEventHasUAVisualTransition(const PrHtmlPopStateEvent* self);
+bool prHtmlPopStateEventHasUAVisualTransition(const PrHtmlPopStateEvent* event);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HashChangeEvent : Event (html)
@@ -110,8 +110,8 @@ PrHtmlHashChangeEvent* prHtmlHashChangeEventCreate(PrStringView type, const PrDo
     PrStringView oldUrl, PrStringView newUrl);
 
 // html/#dom-hashchangeevent-oldurl and html/#dom-hashchangeevent-newurl
-PrStringView prHtmlHashChangeEventOldUrl(const PrHtmlHashChangeEvent* self);
-PrStringView prHtmlHashChangeEventNewUrl(const PrHtmlHashChangeEvent* self);
+PrStringView prHtmlHashChangeEventOldUrl(const PrHtmlHashChangeEvent* event);
+PrStringView prHtmlHashChangeEventNewUrl(const PrHtmlHashChangeEvent* event);
 
 #if defined(__cplusplus)
 }

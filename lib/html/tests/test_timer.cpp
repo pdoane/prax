@@ -49,9 +49,9 @@ TEST_CASE("an interval runs again with its id until it is cleared, by its own ha
         int calls;
     } clearing{window, 0, 0};
     auto clear = [](void* data) {
-        Clearing* self = static_cast<Clearing*>(data);
-        if (++self->calls == 2)
-            prHtmlWindowClearTimeout(self->window, self->id);
+        Clearing* clearing = static_cast<Clearing*>(data);
+        if (++clearing->calls == 2)
+            prHtmlWindowClearTimeout(clearing->window, clearing->id);
     };
     PrHtmlTimerHandler clearer{clear, &clearing, nullptr, nullptr};
     clearing.id = prHtmlWindowSetTimeout(window, &clearer, 0, true);

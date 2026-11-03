@@ -35,12 +35,12 @@ JSClassID classOf(int magic) {
     return magic == 0 ? prJsDomMatrixReadOnlyClass : prJsDomMatrixClass;
 }
 
-PrDomMatrix* PR_NULLABLE readOnlyOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<PrDomMatrix>(ctx, self, prJsDomMatrixReadOnlyClass, "DOMMatrixReadOnly");
+PrDomMatrix* PR_NULLABLE readOnlyOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<PrDomMatrix>(ctx, object, prJsDomMatrixReadOnlyClass, "DOMMatrixReadOnly");
 }
 
-PrDomMatrix* PR_NULLABLE mutableOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<PrDomMatrix>(ctx, self, prJsDomMatrixClass, "DOMMatrix");
+PrDomMatrix* PR_NULLABLE mutableOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<PrDomMatrix>(ctx, object, prJsDomMatrixClass, "DOMMatrix");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -242,22 +242,22 @@ constexpr Operation kOperations[] = {
 };
 
 // Implements a read-only method, which returns a new DOMMatrix with the operation applied to a copy.
-JSValue applyToCopy(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
+JSValue applyToCopy(JSContext* ctx, JSValueConst matrix, int argc, JSValueConst* argv, int magic) {
     Arguments arguments = {};
-    if (readOnlyOf(ctx, self) == nullptr || !kOperations[magic].read(ctx, argc, argv, &arguments))
+    if (readOnlyOf(ctx, matrix) == nullptr || !kOperations[magic].read(ctx, argc, argv, &arguments))
         return JS_EXCEPTION;
-    PrDomMatrix copy = *readOnlyOf(ctx, self);
+    PrDomMatrix copy = *readOnlyOf(ctx, matrix);
     kOperations[magic].apply(&copy, &arguments);
     return jsNewValue(ctx, prJsDomMatrixClass, copy);
 }
 
 // Implements a DOMMatrix Self method, which applies the operation in place and returns the matrix.
-JSValue applyToSelf(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
+JSValue applyToSelf(JSContext* ctx, JSValueConst matrix, int argc, JSValueConst* argv, int magic) {
     Arguments arguments = {};
-    if (mutableOf(ctx, self) == nullptr || !kOperations[magic].read(ctx, argc, argv, &arguments))
+    if (mutableOf(ctx, matrix) == nullptr || !kOperations[magic].read(ctx, argc, argv, &arguments))
         return JS_EXCEPTION;
-    kOperations[magic].apply(mutableOf(ctx, self), &arguments);
-    return JS_DupValue(ctx, self);
+    kOperations[magic].apply(mutableOf(ctx, matrix), &arguments);
+    return JS_DupValue(ctx, matrix);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -315,32 +315,32 @@ JSValue fromFloatArray(JSContext* ctx, JSValueConst, int argc, JSValueConst* arg
 // Attributes and the rest of DOMMatrixReadOnly
 
 // Implements a to f, and m11 to m44, selected by the index of their element.
-JSValue elementGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomMatrix* matrix = readOnlyOf(ctx, self);
+JSValue elementGet(JSContext* ctx, JSValueConst matrixObject, int magic) {
+    PrDomMatrix* matrix = readOnlyOf(ctx, matrixObject);
     return matrix != nullptr ? JS_NewFloat64(ctx, matrix->m[magic]) : JS_EXCEPTION;
 }
 
-JSValue elementSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
+JSValue elementSet(JSContext* ctx, JSValueConst matrix, JSValueConst input, int magic) {
     double value = 0;
-    if (mutableOf(ctx, self) == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
+    if (mutableOf(ctx, matrix) == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
-    prDomMatrixSetElement(mutableOf(ctx, self), uint32_t(magic), value);
+    prDomMatrixSetElement(mutableOf(ctx, matrix), uint32_t(magic), value);
     return JS_UNDEFINED;
 }
 
-JSValue is2DGet(JSContext* ctx, JSValueConst self) {
-    PrDomMatrix* matrix = readOnlyOf(ctx, self);
+JSValue is2DGet(JSContext* ctx, JSValueConst matrixObject) {
+    PrDomMatrix* matrix = readOnlyOf(ctx, matrixObject);
     return matrix != nullptr ? JS_NewBool(ctx, matrix->is2D) : JS_EXCEPTION;
 }
 
-JSValue isIdentityGet(JSContext* ctx, JSValueConst self) {
-    PrDomMatrix* matrix = readOnlyOf(ctx, self);
+JSValue isIdentityGet(JSContext* ctx, JSValueConst matrixObject) {
+    PrDomMatrix* matrix = readOnlyOf(ctx, matrixObject);
     return matrix != nullptr ? JS_NewBool(ctx, prDomMatrixIsIdentity(matrix)) : JS_EXCEPTION;
 }
 
 // Implements toFloat32Array and toFloat64Array, selected by the magic.
-JSValue toFloatArray(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrDomMatrix* matrix = readOnlyOf(ctx, self);
+JSValue toFloatArray(JSContext* ctx, JSValueConst matrixObject, int, JSValueConst*, int magic) {
+    PrDomMatrix* matrix = readOnlyOf(ctx, matrixObject);
     if (matrix == nullptr)
         return JS_EXCEPTION;
     return jsNewFloatArray(ctx, magic != 0 ? JS_TYPED_ARRAY_FLOAT64 : JS_TYPED_ARRAY_FLOAT32, matrix->m, 16);
@@ -359,8 +359,8 @@ constexpr MatrixAttribute kAttributes[] = {
 };
 
 // webidl/#default-tojson-steps
-JSValue toJson(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomMatrix* matrix = readOnlyOf(ctx, self);
+JSValue toJson(JSContext* ctx, JSValueConst matrixObject, int, JSValueConst*) {
+    PrDomMatrix* matrix = readOnlyOf(ctx, matrixObject);
     if (matrix == nullptr)
         return JS_EXCEPTION;
     JSValue result = JS_NewObject(ctx);
@@ -379,8 +379,8 @@ JSClassID pointClassOf(int magic) {
     return magic == 0 ? domPointReadOnlyClass : domPointClass;
 }
 
-PrDomPoint* PR_NULLABLE pointOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<PrDomPoint>(ctx, self, domPointReadOnlyClass, "DOMPointReadOnly");
+PrDomPoint* PR_NULLABLE pointOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<PrDomPoint>(ctx, object, domPointReadOnlyClass, "DOMPointReadOnly");
 }
 
 // geometry-1/#dom-dompointreadonly-dompointreadonly
@@ -402,13 +402,13 @@ JSValue fromPoint(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, in
 }
 
 // Implements x, y, z and w, selected by their offset in PrDomPoint.
-JSValue pointGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomPoint* point = pointOf(ctx, self);
+JSValue pointGet(JSContext* ctx, JSValueConst pointObject, int magic) {
+    PrDomPoint* point = pointOf(ctx, pointObject);
     return point != nullptr ? JS_NewFloat64(ctx, (&point->x)[magic]) : JS_EXCEPTION;
 }
 
-JSValue pointSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrDomPoint* point = jsValueOf<PrDomPoint>(ctx, self, domPointClass, "DOMPoint");
+JSValue pointSet(JSContext* ctx, JSValueConst pointObject, JSValueConst input, int magic) {
+    PrDomPoint* point = jsValueOf<PrDomPoint>(ctx, pointObject, domPointClass, "DOMPoint");
     double value = 0;
     if (point == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -417,23 +417,23 @@ JSValue pointSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magi
 }
 
 // geometry-1/#dom-dompointreadonly-matrixtransform
-JSValue matrixTransform(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue matrixTransform(JSContext* ctx, JSValueConst point, int argc, JSValueConst* argv) {
     PrDomMatrix matrix;
-    if (pointOf(ctx, self) == nullptr || !matrixFromInit(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &matrix))
+    if (pointOf(ctx, point) == nullptr || !matrixFromInit(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &matrix))
         return JS_EXCEPTION;
-    return jsNewValue(ctx, domPointClass, prDomPointMatrixTransform(pointOf(ctx, self), &matrix));
+    return jsNewValue(ctx, domPointClass, prDomPointMatrixTransform(pointOf(ctx, point), &matrix));
 }
 
 // geometry-1/#dom-dommatrixreadonly-transformpoint
-JSValue transformPoint(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+JSValue transformPoint(JSContext* ctx, JSValueConst matrix, int argc, JSValueConst* argv) {
     PrDomPoint point;
-    if (readOnlyOf(ctx, self) == nullptr || !prJsDomPointInitRead(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &point))
+    if (readOnlyOf(ctx, matrix) == nullptr || !prJsDomPointInitRead(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &point))
         return JS_EXCEPTION;
-    return jsNewValue(ctx, domPointClass, prDomPointMatrixTransform(&point, readOnlyOf(ctx, self)));
+    return jsNewValue(ctx, domPointClass, prDomPointMatrixTransform(&point, readOnlyOf(ctx, matrix)));
 }
 
-JSValue pointToJson(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomPoint* point = pointOf(ctx, self);
+JSValue pointToJson(JSContext* ctx, JSValueConst pointObject, int, JSValueConst*) {
+    PrDomPoint* point = pointOf(ctx, pointObject);
     if (point == nullptr)
         return JS_EXCEPTION;
     JSValue result = JS_NewObject(ctx);
@@ -463,8 +463,8 @@ JSClassID rectClassOf(int magic) {
     return magic == 0 ? domRectReadOnlyClass : domRectClass;
 }
 
-PrDomRect* PR_NULLABLE rectOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<PrDomRect>(ctx, self, domRectReadOnlyClass, "DOMRectReadOnly");
+PrDomRect* PR_NULLABLE rectOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<PrDomRect>(ctx, object, domRectReadOnlyClass, "DOMRectReadOnly");
 }
 
 // geometry-1/#dom-domrectreadonly-domrectreadonly
@@ -486,13 +486,13 @@ JSValue fromRect(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int
 }
 
 // Implements x, y, width and height, selected by their offset in PrDomRect.
-JSValue rectGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomRect* rect = rectOf(ctx, self);
+JSValue rectGet(JSContext* ctx, JSValueConst rectObject, int magic) {
+    PrDomRect* rect = rectOf(ctx, rectObject);
     return rect != nullptr ? JS_NewFloat64(ctx, (&rect->x)[magic]) : JS_EXCEPTION;
 }
 
-JSValue rectSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrDomRect* rect = jsValueOf<PrDomRect>(ctx, self, domRectClass, "DOMRect");
+JSValue rectSet(JSContext* ctx, JSValueConst rectObject, JSValueConst input, int magic) {
+    PrDomRect* rect = jsValueOf<PrDomRect>(ctx, rectObject, domRectClass, "DOMRect");
     double value = 0;
     if (rect == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
@@ -503,13 +503,13 @@ JSValue rectSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic
 // The functions that compute the edges, in the order in which the interface declares them.
 constexpr double (*kEdges[])(const PrDomRect*) = {prDomRectTop, prDomRectRight, prDomRectBottom, prDomRectLeft};
 
-JSValue edgeGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrDomRect* rect = rectOf(ctx, self);
+JSValue edgeGet(JSContext* ctx, JSValueConst rectObject, int magic) {
+    PrDomRect* rect = rectOf(ctx, rectObject);
     return rect != nullptr ? JS_NewFloat64(ctx, kEdges[magic](rect)) : JS_EXCEPTION;
 }
 
-JSValue rectToJson(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrDomRect* rect = rectOf(ctx, self);
+JSValue rectToJson(JSContext* ctx, JSValueConst rectObject, int, JSValueConst*) {
+    PrDomRect* rect = rectOf(ctx, rectObject);
     if (rect == nullptr)
         return JS_EXCEPTION;
     JSValue result = JS_NewObject(ctx);
@@ -559,8 +559,8 @@ JSValue newQuad(JSContext* ctx, const PrDomQuad& quad) {
     return result;
 }
 
-QuadCorners* PR_NULLABLE quadOf(JSContext* ctx, JSValueConst self) {
-    return jsValueOf<QuadCorners>(ctx, self, domQuadClass, "DOMQuad");
+QuadCorners* PR_NULLABLE quadOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<QuadCorners>(ctx, object, domQuadClass, "DOMQuad");
 }
 
 // geometry-1/#dom-domquad-domquad
@@ -598,15 +598,15 @@ JSValue quadFromQuad(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
     return newQuad(ctx, quad);
 }
 
-JSValue cornerGet(JSContext* ctx, JSValueConst self, int magic) {
-    if (quadOf(ctx, self) == nullptr)
+JSValue cornerGet(JSContext* ctx, JSValueConst quad, int magic) {
+    if (quadOf(ctx, quad) == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, kCorners[magic]);
+    return jsSameObject(ctx, quad, kCorners[magic]);
 }
 
 // geometry-1/#dom-domquad-getbounds
-JSValue getBounds(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    QuadCorners* corners = quadOf(ctx, self);
+JSValue getBounds(JSContext* ctx, JSValueConst quadObject, int, JSValueConst*) {
+    QuadCorners* corners = quadOf(ctx, quadObject);
     if (corners == nullptr)
         return JS_EXCEPTION;
     PrDomQuad quad;
@@ -615,12 +615,12 @@ JSValue getBounds(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     return jsNewValue(ctx, domRectClass, prDomQuadGetBounds(&quad));
 }
 
-JSValue quadToJson(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (quadOf(ctx, self) == nullptr)
+JSValue quadToJson(JSContext* ctx, JSValueConst quad, int, JSValueConst*) {
+    if (quadOf(ctx, quad) == nullptr)
         return JS_EXCEPTION;
     JSValue result = JS_NewObject(ctx);
     for (const char* corner : kCorners)
-        JS_SetPropertyStr(ctx, result, corner, jsSameObject(ctx, self, corner));
+        JS_SetPropertyStr(ctx, result, corner, jsSameObject(ctx, quad, corner));
     return result;
 }
 
@@ -783,8 +783,8 @@ uint32_t rectListLength(void* handle) {
     return *static_cast<uint32_t*>(handle);
 }
 
-JSValue rectListItem(JSContext* ctx, JSValueConst self, void*, uint32_t index) {
-    JSValue rects = rectsOf(ctx, self);
+JSValue rectListItem(JSContext* ctx, JSValueConst rectsObject, void*, uint32_t index) {
+    JSValue rects = rectsOf(ctx, rectsObject);
     JSValue item = JS_GetPropertyUint32(ctx, rects, index);
     JS_FreeValue(ctx, rects);
     return item;
@@ -792,13 +792,13 @@ JSValue rectListItem(JSContext* ctx, JSValueConst self, void*, uint32_t index) {
 
 constexpr JsIndexed kRectListIndexed = {rectListLength, rectListItem, nullptr};
 
-JSValue rectListLengthGet(JSContext* ctx, JSValueConst self) {
-    uint32_t* count = jsValueOf<uint32_t>(ctx, self, domRectListClass, "DOMRectList");
+JSValue rectListLengthGet(JSContext* ctx, JSValueConst countObject) {
+    uint32_t* count = jsValueOf<uint32_t>(ctx, countObject, domRectListClass, "DOMRectList");
     return count != nullptr ? JS_NewUint32(ctx, *count) : JS_EXCEPTION;
 }
 
-JSValue rectListItemMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    uint32_t* count = jsValueOf<uint32_t>(ctx, self, domRectListClass, "DOMRectList");
+JSValue rectListItemMethod(JSContext* ctx, JSValueConst countObject, int argc, JSValueConst* argv) {
+    uint32_t* count = jsValueOf<uint32_t>(ctx, countObject, domRectListClass, "DOMRectList");
     double index = 0;
     if (count == nullptr || !jsArgCount(ctx, argc, 1) || !jsArgNumber(ctx, argc, argv, 0, 0, &index))
         return JS_EXCEPTION;
@@ -807,7 +807,7 @@ JSValue rectListItemMethod(JSContext* ctx, JSValueConst self, int argc, JSValueC
     if (wrapped < 0)
         wrapped += 4294967296.0;
     uint32_t at = uint32_t(wrapped);
-    return at < *count ? rectListItem(ctx, self, count, at) : JS_NULL;
+    return at < *count ? rectListItem(ctx, countObject, count, at) : JS_NULL;
 }
 
 constexpr JSCFunctionListEntry kDomRectListProto[] = {
