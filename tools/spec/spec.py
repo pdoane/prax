@@ -35,7 +35,9 @@ WHATWG = {"html": "source", "dom": None, "url": None, "fetch": None, "encoding":
 # W3C specifications in repositories of their own, each with the path of its source in its repository.
 W3C = {"uievents": "main/index.bs", "uievents-key": "gh-pages/index.html", "uievents-code": "gh-pages/index.html",
        "input-events": "gh-pages/index.html", "pointerevents": "gh-pages/index.html",
-       "intersection-observer": "main/index.bs"}
+       "intersection-observer": "main/index.bs", "hr-time": "main/index.bs", "performance-timeline": "main/index.bs",
+       "user-timing": "main/index.bs", "navigation-timing": "main/index.bs", "resource-timing": "main/index.bs",
+       "server-timing": "main/index.bs"}
 
 # The repositories of the W3C specifications whose repository is not named for the specification.
 W3C_REPOSITORIES = {"intersection-observer": "IntersectionObserver"}

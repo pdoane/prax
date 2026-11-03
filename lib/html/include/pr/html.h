@@ -1207,6 +1207,11 @@ PrHtmlPreferenceObject* prHtmlWindowPreference(PrHtmlWindow* window, PrHtmlPrefe
 // Returns the window's clock (hr-time-3/#the-performance-attribute).
 PrHtmlPerformance* prHtmlWindowPerformance(PrHtmlWindow* window);
 
+// The current time that the window's dates read, in milliseconds since 1970: the host's wall clock
+// (PrHtmlHost::wallNow), or else the wall time of the window's time origin plus the time since then on the host's clock
+// (PrHtmlHost::now). Dates then advance with the window's timers, also on a clock that the host runs itself.
+double prHtmlWindowCurrentTime(const PrHtmlWindow* window);
+
 // Returns the orientation of the window's screen (screen-orientation/#dom-screen-orientation).
 PrHtmlScreenOrientation* prHtmlWindowScreenOrientation(PrHtmlWindow* window);
 

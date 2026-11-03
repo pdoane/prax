@@ -205,7 +205,9 @@ void fetchImports(PrDomElement* element, CssSheetData* sheet, const PrUrl* base,
         PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
         prUrlDestroy(url);
         ++style->fetching;
-        DomFetchRequest asked{prStringView(&request), DomFetchDestination_Style, DomCorsSettings_NoCors};
+        DomFetchRequest asked{
+            prStringView(&request), DomFetchDestination_Style, DomCorsSettings_NoCors, DomFetchInitiator_Css,
+        };
         host->fetch(host->context, &asked, sheetFetched, fetch, dropSheetFetch);
         prStringReset(&request);
     }
@@ -464,7 +466,7 @@ void cssOwnerFetch(PrDomElement* element, const PrUrl* url, DomCorsSettings cors
     fetch->alternate = alternate;
     PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     style->fetching = 1;
-    DomFetchRequest asked{prStringView(&request), DomFetchDestination_Style, cors};
+    DomFetchRequest asked{prStringView(&request), DomFetchDestination_Style, cors, DomFetchInitiator_Link};
     host->fetch(host->context, &asked, sheetFetched, fetch, dropSheetFetch);
     prStringReset(&request);
 }
@@ -524,7 +526,9 @@ void cssXmlStylesheetInserted(PrDomNode* node) {
         fetch->media = prStringCopy(media);
     PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(url);
-    DomFetchRequest asked{prStringView(&request), DomFetchDestination_Style, DomCorsSettings_NoCors};
+    DomFetchRequest asked{
+        prStringView(&request), DomFetchDestination_Style, DomCorsSettings_NoCors, DomFetchInitiator_Other,
+    };
     host->fetch(host->context, &asked, instructionSheetFetchedAndDropped, fetch, dropInstructionFetch);
     prStringReset(&request);
 }

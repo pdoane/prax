@@ -31,11 +31,13 @@
 #include "html/quickjs/src/html_elements_quickjs.h"
 #include "html/quickjs/src/html_forms_quickjs.h"
 #include "html/quickjs/src/html_message_quickjs.h"
+#include "html/quickjs/src/html_performance_quickjs.h"
 #include "html/quickjs/src/html_reflect_quickjs.h"
 
 namespace pr_impl {
 
 JSClassID htmlElementClass;
+JSClassID htmlPerformanceClass;
 
 namespace {
 
@@ -81,7 +83,6 @@ JSClassID htmlPopStateEventClass;
 JSClassID htmlHashChangeEventClass;
 JSClassID htmlPreferenceManagerClass;
 JSClassID htmlPreferenceObjectClass;
-JSClassID htmlPerformanceClass;
 JSClassID htmlStorageClass;
 JSClassID htmlAnimationTimelineClass;
 JSClassID htmlDocumentTimelineClass;
@@ -946,7 +947,8 @@ JSValue mediaPause(JSContext* ctx, JSValueConst mediaObject, int, JSValueConst*)
     return JS_UNDEFINED;
 }
 
-// The content attributes of the enumerated attributes of a media element, indexed by the magic.
+// The content attributes of the enumerated attributes of a media element, indexed by the magic. crossOrigin also serves
+// the image, link and script elements.
 constexpr PrStringView kMediaEnumerated[] = {"crossorigin", "preload", "loading"};
 
 // An enumerated attribute of a media element (html/#enumerated-attribute), selected by the magic: crossOrigin, whose
@@ -2121,13 +2123,21 @@ JSValue performanceNow(JSContext* ctx, JSValueConst performanceObject, int, JSVa
     return performance != nullptr ? JS_NewFloat64(ctx, prHtmlPerformanceNow(performance)) : JS_EXCEPTION;
 }
 
-// hr-time-3/#dom-performance-tojson: an object of its attributes, of which there is only timeOrigin.
+// hr-time-3/#dom-performance-tojson: an object of its attributes.
 JSValue performanceToJson(JSContext* ctx, JSValueConst performanceObject, int, JSValueConst*) {
     PrHtmlPerformance* performance = jsThis<PrHtmlPerformance>(ctx, performanceObject, htmlPerformanceClass);
     if (performance == nullptr)
         return JS_EXCEPTION;
     JSValue object = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, object, "timeOrigin", JS_NewFloat64(ctx, prHtmlPerformanceTimeOrigin(performance)));
+    constexpr const char* kMembers[] = {"timing", "navigation"};
+    for (const char* name : kMembers) {
+        JSValue member = JS_GetPropertyStr(ctx, performanceObject, name);
+        JSValue method = JS_GetPropertyStr(ctx, member, "toJSON");
+        JS_SetPropertyStr(ctx, object, name, JS_Call(ctx, method, member, 0, nullptr));
+        JS_FreeValue(ctx, method);
+        JS_FreeValue(ctx, member);
+    }
     return object;
 }
 
@@ -3306,6 +3316,7 @@ constexpr JSCFunctionListEntry kIFrameElementProto[] = {
 
 constexpr JSCFunctionListEntry kImageElementProto[] = {
     PR_JS_TAG("HTMLImageElement"),
+    PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
     PR_REFLECT_STRING("alt", "alt"),
     PR_REFLECT_URL("src", "src"),
     PR_REFLECT_STRING("srcset", "srcset"),
@@ -3384,6 +3395,7 @@ constexpr JSCFunctionListEntry kBaseElementProto[] = {
 
 constexpr JSCFunctionListEntry kLinkElementProto[] = {
     PR_JS_TAG("HTMLLinkElement"),
+    PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
     PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
     PR_REFLECT_STRING("charset", "charset"),
     PR_REFLECT_STRING("rev", "rev"),
@@ -3551,6 +3563,7 @@ constexpr JSCFunctionListEntry kSlotElementProto[] = {
 
 constexpr JSCFunctionListEntry kScriptElementProto[] = {
     PR_JS_TAG("HTMLScriptElement"),
+    PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
     PR_REFLECT_URL("src", "src"),
     PR_REFLECT_STRING("type", "type"),
     PR_REFLECT_BOOL("noModule", "nomodule"),
@@ -4034,6 +4047,7 @@ void jsHtmlBind(JSContext* ctx) {
     jsHtmlFormsBind(ctx);
     jsHtmlElementsBind(ctx);
     jsHtmlMessageBind(ctx);
+    jsHtmlPerformanceBind(ctx);
     // The members that HTML adds to the classes of other modules.
     struct Extension {
         JSClassID id;

@@ -138,6 +138,7 @@ void preload(PrDomElement* element, const DomDocumentHost* host) {
     DomFetchRequest asked{
         prStringView(&request), destination,
         domCorsSettings(domAttributeValue(element, "crossorigin")),
+        DomFetchInitiator_Link,
     };
     host->fetch(host->context, &asked, preloadFetched, fetch, dropPreloadFetch);
     prStringReset(&request);

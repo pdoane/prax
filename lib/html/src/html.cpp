@@ -1530,6 +1530,12 @@ PrHtmlPerformance* prHtmlWindowPerformance(PrHtmlWindow* window) {
     return static_cast<PrHtmlPerformance*>(&window->performance);
 }
 
+double prHtmlWindowCurrentTime(const PrHtmlWindow* window) {
+    if (window->wallClock != nullptr)
+        return window->wallClock(window->clockContext);
+    return window->timeOriginWall + htmlWindowNow(window);
+}
+
 PrHtmlScreenOrientation* prHtmlWindowScreenOrientation(PrHtmlWindow* window) {
     return static_cast<PrHtmlScreenOrientation*>(&window->orientation);
 }

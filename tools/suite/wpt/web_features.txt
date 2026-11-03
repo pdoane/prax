@@ -67,6 +67,7 @@ bdi                                              build
 bdo                                              build
 before-after                                     build
 beforeunload                                     build
+bfcache-blocking-reasons                         open
 blocking-render                                  build
 border-image                                     build
 border-radius                                    build
@@ -397,6 +398,7 @@ multi-column                                     build
 mutationobserver                                 build
 named-color                                      build
 namespace                                        build
+navigation-timing                                build
 nesting                                          build
 not                                              build
 nth-child                                        build
@@ -439,6 +441,7 @@ paint-order                                      build
 parse-html-unsafe                                build
 path-shape                                       build
 pdf-viewer                                       open
+performance                                      build
 physical-properties                              build
 picture                                          build
 ping                                             build
@@ -486,6 +489,8 @@ requestclose                                     build
 requestidlecallback                              build
 resize                                           build
 resize-observer                                  build
+resource-size                                    build
+resource-timing                                  build
 revert-value                                     build
 rex                                              build
 rgb                                              build
@@ -527,6 +532,7 @@ select                                           build
 selection                                        build
 selection-api                                    build
 selectors                                        build
+server-timing                                    build
 setinterval                                      build
 settimeout                                       build
 shadow-dom                                       build

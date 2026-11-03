@@ -447,6 +447,7 @@ PrStatus prXhrSend(PrXhr* xhr, PrByteView body, PrStringView contentType) {
         .mode = PrFetchMode_Cors,
         .credentials = PrFetchCredentials_SameOrigin,
         .redirect = PrFetchRedirect_Follow,
+        .initiator = PrFetchInitiator_XmlHttpRequest,
     };
     if (xhr->withCredentials)
         request.credentials = PrFetchCredentials_Include;

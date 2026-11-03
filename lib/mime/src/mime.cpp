@@ -121,3 +121,15 @@ bool prMimeTypeIsXml(PrStringView type) {
     return asciiEqualsFold(essence, "text/xml") || asciiEqualsFold(essence, "application/xml") ||
         asciiEndsWithFold(essence, "+xml");
 }
+
+PrStringView prMimeTypeMinimize(PrStringView essence) {
+    if (prMimeTypeIsJavaScript(essence))
+        return "text/javascript";
+    if (essence == "application/json" || essence == "text/json" || asciiEndsWithFold(essence, "+json"))
+        return "application/json";
+    if (essence == "image/svg+xml")
+        return essence;
+    if (prMimeTypeIsXml(essence))
+        return "application/xml";
+    return essence;
+}

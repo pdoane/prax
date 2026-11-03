@@ -98,6 +98,37 @@ enum {
 };
 typedef uint8_t PrFetchResponseType;
 
+// How the HTTP cache took part in a response (resource-timing/#performanceresourcetiming-cache-mode).
+enum {
+    PrFetchCacheState_None,         // the network answered
+    PrFetchCacheState_Local,        // the cache answered without asking the network
+    PrFetchCacheState_Validated,    // the cache answered once the network confirmed its entry
+};
+typedef uint8_t PrFetchCacheState;
+
+// A fetch's measurements (fetch/#fetch-timing-info, fetch/#response-body-info). Each moment is on the clock of
+// prTimeMonotonicMilliseconds, and is 0 if it has not happened or the fetcher does not measure it. The moments of a
+// connection are not measured.
+typedef struct PrFetchTiming {
+    double startTime;
+    double redirectStart;
+    double redirectEnd;
+    double postRedirectStart;
+    double requestStart;
+    double responseStart;
+    double endTime;
+
+    // The ALPN ID of the connection, valid for the life of the program, or the null view for none.
+    PrStringView nextHopProtocol;
+
+    uint64_t encodedBodySize;       // the bytes of the body as they arrived, before its content codings are decoded
+    uint64_t decodedBodySize;
+    uint32_t redirectCount;
+    PrFetchCacheState cacheState;
+    bool timingAllowPassed;         // true if every response passed the TAO check (fetch/#concept-tao-check)
+    bool crossOriginRedirect;       // true if a redirect led from one origin to another
+} PrFetchTiming;
+
 // What happened to a fetch. Each event is delivered once, except Readable.
 enum {
     PrFetchEvent_Response,      // the response's status and headers arrived
@@ -109,6 +140,32 @@ typedef uint8_t PrFetchEvent;
 
 // Called on the network's loop with each event of `fetch`.
 typedef void (*PrFetchFn)(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent event);
+
+// What caused a request (fetch/#request-initiator-type), which Resource Timing reports.
+enum {
+    PrFetchInitiator_Other,
+    PrFetchInitiator_Audio,
+    PrFetchInitiator_Beacon,
+    PrFetchInitiator_Css,
+    PrFetchInitiator_Embed,
+    PrFetchInitiator_Fetch,
+    PrFetchInitiator_Frame,
+    PrFetchInitiator_Iframe,
+    PrFetchInitiator_Image,
+    PrFetchInitiator_Img,
+    PrFetchInitiator_Input,
+    PrFetchInitiator_Link,
+    PrFetchInitiator_Navigation,
+    PrFetchInitiator_Object,
+    PrFetchInitiator_Script,
+    PrFetchInitiator_Track,
+    PrFetchInitiator_Video,
+    PrFetchInitiator_XmlHttpRequest,
+};
+typedef uint8_t PrFetchInitiator;
+
+// Returns the name of `initiator` as initiatorType spells it.
+PrStringView prFetchInitiatorName(PrFetchInitiator initiator);
 
 // A request (fetch/#concept-request).
 typedef struct PrFetchRequestDesc {
@@ -143,7 +200,8 @@ struct PrFetch {
 
 // The start of every source's state: the function table of its backend, then its network and its default User-Agent.
 // Each member of the table implements the public function of the same name. A null `fetchResponseType` means that every
-// response is Basic. Callers use the functions below, never these members.
+// response is Basic, and a null `fetchTiming` that the fetcher measures nothing. Callers use the functions below, never
+// these members.
 struct PrFetchNetwork {
     void (*destroy)(PrFetchNetwork* fetcher);
     PrStatus (*fetchCreate)(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetchFn PR_NULLABLE event,
@@ -156,6 +214,7 @@ struct PrFetchNetwork {
     PrFetchHeader (*fetchHeader)(const PrFetchNetwork* fetcher, const PrFetch* fetch, uint32_t index);
     size_t (*fetchRead)(PrFetchNetwork* fetcher, PrFetch* fetch, uint8_t* output, size_t capacity);
     PrNetError (*fetchError)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
+    PrFetchTiming (*PR_NULLABLE fetchTiming)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
 
     PrNet* net;                 // the network whose loop runs the fetches' callbacks
 
@@ -252,6 +311,9 @@ size_t prFetchRead(PrFetch* fetch, uint8_t* PR_NULLABLE output, size_t capacity)
 // Returns why the fetch failed, or None if it has not.
 PrNetError prFetchError(const PrFetch* fetch);
 
+// Returns the fetch's measurements so far. All are zero for a fetcher that does not measure.
+PrFetchTiming prFetchTiming(const PrFetch* fetch);
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Whole responses
 
@@ -294,6 +356,7 @@ typedef struct PrFetchClientRequest {
     PrFetchMode mode;                           // any mode but Navigate
     PrFetchCredentials credentials;
     PrFetchRedirect redirect;
+    PrFetchInitiator initiator;
 } PrFetchClientRequest;
 
 // ---------------------------------------------------------------------------------------------------------------------

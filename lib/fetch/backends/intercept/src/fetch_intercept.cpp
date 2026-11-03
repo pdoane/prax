@@ -6,6 +6,7 @@
 #include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
+#include "pr/time.h"
 #include "pr/url.h"
 
 namespace pr_impl {
@@ -84,6 +85,7 @@ struct InterceptFetch : PrFetch, PrFetchInterceptRequest {
     uint32_t contentStart;
     PrNetError error;
     PrFetch* PR_NULLABLE passed;
+    PrFetchTiming timing;       // the measurements of a request that the host answers
 };
 
 InterceptFetcher* fetcherOf(InterceptFetch* fetch) {
@@ -174,6 +176,8 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     fetch->desc.referrer = prStringView(&fetch->referrer);
     fetch->desc.headers = fetch->requestHeaders.views.data;
     fetch->desc.body = PrByteView{fetch->requestBody.data, fetch->requestBody.count};
+    fetch->timing.startTime = prTimeMonotonicMilliseconds();
+    fetch->timing.postRedirectStart = fetch->timing.startTime;
     // The hold of the task that asks the host.
     fetch->holds = 1;
     prNetPost(base->net, ask, fetch);
@@ -241,6 +245,11 @@ size_t fetchRead(PrFetchNetwork*, PrFetch* handle, uint8_t* output, size_t capac
     return taken;
 }
 
+PrFetchTiming fetchTiming(const PrFetchNetwork*, const PrFetch* handle) {
+    const InterceptFetch* fetch = static_cast<const InterceptFetch*>(handle);
+    return fetch->passed != nullptr ? prFetchTiming(fetch->passed) : fetch->timing;
+}
+
 PrNetError fetchError(const PrFetchNetwork*, const PrFetch* handle) {
     const InterceptFetch* fetch = static_cast<const InterceptFetch*>(handle);
     if (fetch->passed != nullptr)
@@ -267,6 +276,7 @@ PrFetchNetwork* prFetchInterceptCreate(const PrFetchInterceptDesc* desc) {
     fetcher->fetchHeader = fetchHeader;
     fetcher->fetchRead = fetchRead;
     fetcher->fetchError = fetchError;
+    fetcher->fetchTiming = fetchTiming;
     fetcher->net = desc->net;
     fetcher->request = desc->request;
     fetcher->context = desc->context;
@@ -295,9 +305,15 @@ void prFetchInterceptRequestRespond(PrFetchInterceptRequest* request, const PrFe
     headersCopy(&fetch->response, response->headers, response->headerCount);
     if (response->body.size != 0)
         fetch->content.append(response->body.data, uint32_t(response->body.size));
+    fetch->timing.requestStart = prTimeMonotonicMilliseconds();
+    fetch->timing.responseStart = fetch->timing.requestStart;
+    fetch->timing.encodedBodySize = response->body.size;
+    fetch->timing.decodedBodySize = response->body.size;
+    fetch->timing.timingAllowPassed = response->type == PrFetchResponseType_Basic;
     deliver(fetch, PrFetchEvent_Response);
     if (fetch->content.count != 0)
         deliver(fetch, PrFetchEvent_Readable);
+    fetch->timing.endTime = prTimeMonotonicMilliseconds();
     deliver(fetch, PrFetchEvent_End);
     release(fetch);
 }
@@ -307,6 +323,7 @@ void prFetchInterceptRequestFail(PrFetchInterceptRequest* request, PrNetError er
     PR_ASSERT(fetch->state == InterceptState_Asked && error != PrNetError_None);
     fetch->state = InterceptState_Failed;
     fetch->error = error;
+    fetch->timing.endTime = prTimeMonotonicMilliseconds();
     deliver(fetch, PrFetchEvent_Fail);
     release(fetch);
 }

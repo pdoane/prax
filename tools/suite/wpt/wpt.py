@@ -100,6 +100,8 @@ SUITES = {
     "infrastructure": ("infrastructure",),
     "mathml": ("mathml",),
     "networking": ("fetch", "cors", "FileAPI", "streams", "websockets"),
+    "performance": ("hr-time", "performance-timeline", "user-timing", "navigation-timing", "resource-timing",
+                    "server-timing"),
     "svg": ("svg",),
     "url": ("url",),
     "xhr": ("xhr",),

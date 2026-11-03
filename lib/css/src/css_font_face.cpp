@@ -485,7 +485,9 @@ void fetchNext(CssFontLoad* load) {
             domNodeRetain(document);
             PrString request = prStringClone(&source->url);
             // A font is fetched with CORS (css-fonts-4/#font-fetching-requirements).
-            DomFetchRequest asked{prStringView(&request), DomFetchDestination_Font, DomCorsSettings_Anonymous};
+            DomFetchRequest asked{
+                prStringView(&request), DomFetchDestination_Font, DomCorsSettings_Anonymous, DomFetchInitiator_Css,
+            };
             host->fetch(host->context, &asked, sourceFetched, fetch, dropFetch);
             prStringReset(&request);
             return;

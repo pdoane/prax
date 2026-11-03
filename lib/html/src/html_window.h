@@ -116,7 +116,8 @@ struct HtmlWindow : DomCountedTarget {
     // The requests that the running frame took over. A canceled request has a null invoke.
     Array<HtmlFrameRequest> frameRunning;
 
-    double (*PR_NULLABLE clock)(void* PR_NULLABLE context);   // the host's clock, or null for the system's
+    double (*PR_NULLABLE clock)(void* PR_NULLABLE context);     // the host's clock, or null for the system's
+    double (*PR_NULLABLE wallClock)(void* PR_NULLABLE context); // the host's wall clock (PrHtmlHost::wallNow), or null
     void* PR_NULLABLE clockContext;
     PrHtmlAnimationFrames animationFrames;                   // which animation frames the host's event loop runs
     void (*PR_NULLABLE rendered)(void* PR_NULLABLE context); // called after each rendering update, or null
@@ -191,6 +192,10 @@ PrHtmlWindow* htmlWindowCreate(void);
 // Restarts the window's clock, as for the global object of a new document. The new time origin is the current time, and
 // so is the time of the last rendering opportunity.
 void htmlWindowStartClock(PrHtmlWindow* window);
+
+// Moves the window's time origin back by `elapsed` milliseconds, to the start of the navigation of its document
+// (hr-time-3/#sec-time-origin). Frame times stay where they are.
+void htmlWindowBackdateClock(PrHtmlWindow* window, double elapsed);
 
 // Returns the milliseconds since the window's time origin, coarsened (hr-time-3/#dfn-coarsen-time)
 // (hr-time-3/#dom-performance-now).

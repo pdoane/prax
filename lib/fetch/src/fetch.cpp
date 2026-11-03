@@ -100,6 +100,15 @@ bool anyListItem(PrStringView value, Visit visit) {
 
 using namespace pr_impl;
 
+PrStringView prFetchInitiatorName(PrFetchInitiator initiator) {
+    constexpr PrStringView kNames[] = {
+        "other", "audio", "beacon", "css", "embed", "fetch", "frame", "iframe", "image", "img", "input", "link",
+        "navigation", "object", "script", "track", "video", "xmlhttprequest",
+    };
+    PR_ASSERT(initiator <= PrFetchInitiator_XmlHttpRequest);
+    return kNames[initiator];
+}
+
 PrFetchNetworkBackend prFetchNetworkBackendFromName(PrStringView name) {
     for (PrFetchNetworkBackend backend = 0; backend < PrFetchNetworkBackend_Count; ++backend) {
         if (asciiEqualsFold(kBackendNames[backend], name))
@@ -198,6 +207,12 @@ size_t prFetchRead(PrFetch* fetch, uint8_t* PR_NULLABLE output, size_t capacity)
 
 PrNetError prFetchError(const PrFetch* fetch) {
     return fetch->fetcher->fetchError(fetch->fetcher, fetch);
+}
+
+PrFetchTiming prFetchTiming(const PrFetch* fetch) {
+    if (fetch->fetcher->fetchTiming == nullptr)
+        return PrFetchTiming{};
+    return fetch->fetcher->fetchTiming(fetch->fetcher, fetch);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

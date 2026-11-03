@@ -16,6 +16,8 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+struct HtmlTimeline;
+
 // A user preference that a script can override (mediaqueries-5/#preferenceobject).
 struct HtmlPreferenceObject : DomPartTarget {
     PrHtmlWindow* window;       // the owner, as the window
@@ -24,7 +26,8 @@ struct HtmlPreferenceObject : DomPartTarget {
 
 // The clock of a window's scripts (hr-time-3/#sec-performance).
 struct HtmlPerformance : DomPartTarget {
-    PrHtmlWindow* window;       // the owner, as the window
+    PrHtmlWindow* window;               // the owner, as the window
+    HtmlTimeline* PR_NULLABLE timeline; // created with the first entry or observer
 };
 
 // The orientation of a window's screen (screen-orientation/#screenorientation-interface).

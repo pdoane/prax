@@ -76,6 +76,7 @@ struct PrHttp {
     PrHttpHeader (*exchangeHeader)(const PrHttp* http, const PrHttpExchange* exchange, uint32_t index);
     size_t (*exchangeRead)(PrHttp* http, PrHttpExchange* exchange, uint8_t* output, size_t capacity);
     PrNetError (*exchangeError)(const PrHttp* http, const PrHttpExchange* exchange);
+    PrStringView (*exchangeProtocol)(const PrHttp* http, const PrHttpExchange* exchange);
 
     PrNet* net;                 // the network whose loop runs the exchanges' callbacks
 };
@@ -162,6 +163,10 @@ size_t prHttpExchangeRead(PrHttpExchange* exchange, uint8_t* PR_NULLABLE output,
 
 // Returns why the exchange failed, or None if it has not.
 PrNetError prHttpExchangeError(const PrHttpExchange* exchange);
+
+// Returns the ALPN protocol ID of the exchange's connection (rfc 7301), such as "http/1.1". The view is valid for the
+// life of the program.
+PrStringView prHttpExchangeProtocol(const PrHttpExchange* exchange);
 
 #if defined(__cplusplus)
 }

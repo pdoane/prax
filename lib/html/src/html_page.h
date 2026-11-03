@@ -21,6 +21,7 @@
 #include "dom/src/dom_xml.h"
 #include "html/src/html_charset.h"
 #include "html/src/html_parser.h"
+#include "html/src/html_performance.h"
 #include "html/src/html_window.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -59,6 +60,8 @@ struct HtmlFetch {
     bool delaysLoad;            // true if its document's load event waits for it (html/#delay-the-load-event)
     bool answered;              // true once the response arrived, and a task of the window waits to use it
     bool cancelled;             // true once the script's fetch was cancelled, whose callback is then never called
+    PrFetchInitiator initiator;
+    HtmlFetchAnchor anchor;
 
     // The request, which the agent's thread writes before it posts the fetch to the loop.
     PrDomAgent* agent;
@@ -84,6 +87,10 @@ struct HtmlFetch {
     PrString contentLanguage;
     PrString responseUrl;                   // the response's URL, after the redirects that the fetch followed
     Array<HtmlFetchHeader> responseHeaders; // a script's fetch's, unfiltered
+    PrString contentEncoding;
+    PrString serverTiming;
+    PrFetchTiming timing;
+    PrNetError error;
 
     PrMutex lock;
     bool dropped;               // true once the browsing context no longer waits for the fetch
@@ -100,6 +107,14 @@ struct HtmlFetch {
 // fetch still runs is cancelled by a task on the loop. The page, the loop, and each piece in flight hold a reference,
 // and the last one frees the load.
 struct HtmlDocumentLoad {
+    // The measurements of the fetch that the agent's thread has received, and what the navigation's entry reports.
+    HtmlFetchAnchor anchor;
+    PrFetchTiming timing;
+    uint16_t responseStatus;
+    PrString contentType;
+    PrString contentEncoding;
+    PrString serverTiming;
+
     PrHtmlPage* PR_NULLABLE page;           // the agent's side: null once the page no longer waits for the load
     PrDomAgent* agent;
     PrFetchNetwork* fetcher;
@@ -171,9 +186,11 @@ struct HtmlPage {
     HtmlParser parser;          // the parse that an HTML load runs
     DomXmlBuilder xml;          // the parse that an XML load runs, whose parser is null outside one
     PrHtmlHost host;
-    DomDocumentHost documentHost;               // the host through which the window's document fetches and queues tasks
-    HtmlFetch* PR_NULLABLE fetches;             // the fetches that it waits for, newest first
-    HtmlDocumentLoad* PR_NULLABLE documentLoad; // the navigation's fetch of its next document (prHtmlPageNavigate)
+    DomDocumentHost documentHost;                 // the host through which the window's document fetches and queues
+                                                  // tasks
+    HtmlFetch* PR_NULLABLE fetches;               // the fetches that it waits for, newest first
+    const HtmlFetch* PR_NULLABLE completingFetch; // the fetch whose callback is running
+    HtmlDocumentLoad* PR_NULLABLE documentLoad;   // the navigation's fetch of its next document (prHtmlPageNavigate)
 
     // The failure of the navigation whose error document is loading, which the end of the load reports in its place
     // (PrHtmlHost::loaded), or Ok.

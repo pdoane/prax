@@ -145,6 +145,10 @@ typedef struct PrHtmlHost {
     // (html/#initialise-the-document-object).
     void (*PR_NULLABLE windowOpened)(void* PR_NULLABLE context, PrHtmlPage* page);
 
+    // Called when a document commits, once its window's time origin is set and before any of its content runs. A host
+    // that steps a clock of its own advances it here, since a document's scripts run after its time origin.
+    void (*PR_NULLABLE documentCommitted)(void* PR_NULLABLE context, PrHtmlPage* page);
+
     // Called before the page's window closes: before the window of a document that a navigation commits takes its
     // place, and before the page is destroyed. A closed window runs nothing, and lives while references to it remain
     // (prDomEventTargetRetain).
@@ -206,6 +210,11 @@ typedef struct PrHtmlHost {
     // deterministically.
     double (*PR_NULLABLE now)(void* PR_NULLABLE context);
 
+    // The wall clock that the window's dates read, in milliseconds since 1970 (prHtmlWindowCurrentTime). If null, it is
+    // the wall time of the window's time origin plus the time since then on `now`. A host that steps `now` gives a wall
+    // clock that also moves while a script runs, so that a script that waits on dates in a loop ends.
+    double (*PR_NULLABLE wallNow)(void* PR_NULLABLE context);
+
     // Which animation frames the event loop runs. An iframe's page uses the value from its own host.
     PrHtmlAnimationFrames animationFrames;
 
@@ -249,6 +258,8 @@ static inline PrHtmlHost prHtmlHostDefault(void) {
     value.sessionStorage = NULL;
     value.sessionHistory = NULL;
     value.now = NULL;
+    value.wallNow = NULL;
+    value.documentCommitted = NULL;
     value.animationFrames = PrHtmlAnimationFrames_All;
     value.navigatorCompatibilityMode = PrHtmlNavigatorCompatibilityMode_Gecko;
     value.rendered = NULL;

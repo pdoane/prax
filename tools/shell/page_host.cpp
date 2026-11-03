@@ -123,6 +123,15 @@ struct HostState {
     // if the clock is virtual, and is null if the pages run on the system's clock.
     double virtualTime = 0;
     double* PR_NULLABLE now = nullptr;
+
+    // The wall clock that the pages' dates read with a virtual clock (wallNow). It is the virtual clock's time plus the
+    // system's time since the virtual clock last moved, so that a script that waits on dates in a loop ends, and it
+    // never goes back. Each is in milliseconds: the wall time and virtual time at which the host started, the system's
+    // monotonic time at which the virtual clock last moved, and the last wall time read.
+    double wallStart = 0;
+    double virtualStart = 0;
+    double movedAt = 0;
+    double lastWall = 0;
     bool allFrames = false;                     // run every animation frame, rather than the observed ones
 
     bool verify = false;                        // check each page's presentation after its rendering updates
@@ -215,9 +224,30 @@ bool runFile(JSContext* ctx, const char* path, bool window = false) {
     return ok;
 }
 
+// The virtual time that a document's commit takes, in milliseconds, which puts its scripts after its time origin.
+constexpr double kCommitDuration = 1;
+
+// Advances the virtual clock by `delay` milliseconds.
+void moveClock(HostState& host, double delay) {
+    *host.now += delay;
+    host.movedAt = prTimeMonotonicMilliseconds();
+}
+
+void committedHtml(void* context, PrHtmlPage*) {
+    moveClock(*static_cast<Page*>(context)->host, kCommitDuration);
+}
+
 // Returns the virtual clock's time.
 double virtualNow(void* context) {
     return *static_cast<Page*>(context)->host->now;
+}
+
+// Returns the wall clock's time on a virtual clock (HostState::wallStart).
+double virtualWallNow(void* context) {
+    HostState& host = *static_cast<Page*>(context)->host;
+    double wall = host.wallStart + (*host.now - host.virtualStart) + (prTimeMonotonicMilliseconds() - host.movedAt);
+    host.lastWall = wall > host.lastWall ? wall : host.lastWall;
+    return host.lastWall;
 }
 
 bool sleepMilliseconds(double delay) {
@@ -240,7 +270,7 @@ constexpr uint64_t kCacheBytes = 64 * 1024 * 1024;
 bool waitMilliseconds(HostState& host, double delay) {
     if (host.now == nullptr)
         return sleepMilliseconds(delay);
-    *host.now += delay;
+    moveClock(host, delay);
     return true;
 }
 
@@ -560,6 +590,8 @@ PrHtmlHost startPage(HostState& state, const std::string& name, const std::strin
     // that are observed.
     if (state.now != nullptr) {
         host.now = virtualNow;
+        host.wallNow = virtualWallNow;
+        host.documentCommitted = committedHtml;
         host.animationFrames = state.allFrames ? PrHtmlAnimationFrames_All : PrHtmlAnimationFrames_Observed;
     }
     host.frame = startFrame;
@@ -753,6 +785,10 @@ void startRun(HostState& s) {
     s.agent = prDomAgentCreate(&options);
     prDomAgentSetWake(s.agent, wakeHost, &s);
     s.virtualTime = prTimeMonotonicMilliseconds();
+    s.virtualStart = s.virtualTime;
+    s.movedAt = s.virtualTime;
+    s.wallStart = prTimeWallMilliseconds();
+    s.lastWall = s.wallStart;
     s.awaitingRender = false;
     PrHtmlStorageProviderDesc storage{.quotaBytes = kPrHtmlStorageQuotaBytes};
     s.localStorage = prHtmlStorageProviderCreate(&storage);
@@ -1007,10 +1043,10 @@ void PageHost::advance(double until) {
         if (delay < 0 || *s.now + delay > until) {
             if (*s.now >= until)
                 return;
-            *s.now = until;
+            moveClock(s, until - *s.now);
             continue;
         }
-        *s.now += delay;
+        moveClock(s, delay);
         if (!prDomAgentRun(s.agent, 0))
             return;
     }

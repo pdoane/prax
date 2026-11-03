@@ -314,7 +314,10 @@ void updatePoster(HtmlMedia* media) {
     domNodeHold(media->element);
     PosterFetch* fetch = alloc<PosterFetch>();
     *fetch = PosterFetch{media, media->posters};
-    DomFetchRequest asked{prStringView(&request), DomFetchDestination_Image, DomCorsSettings_NoCors};
+    DomFetchRequest asked{
+        prStringView(&request), DomFetchDestination_Image, DomCorsSettings_NoCors,
+        DomFetchInitiator_Video,
+    };
     host->fetch(host->context, &asked, posterFetched, fetch, dropPosterFetch);
     prStringReset(&request);
     prUrlDestroy(url);
@@ -516,6 +519,7 @@ void fetchCandidate(HtmlMedia* media, const PrUrl* url, PrDomElement* PR_NULLABL
     DomFetchRequest asked{
         prStringView(&request), DomFetchDestination_Media,
         domCorsSettings(domAttributeValue(media->element, "crossorigin")),
+        DomFetchInitiator(media->element->tag == PrDomTag_Video ? DomFetchInitiator_Video : DomFetchInitiator_Audio),
     };
     host->fetch(host->context, &asked, candidateFetched, fetch, dropTask);
     prStringReset(&request);

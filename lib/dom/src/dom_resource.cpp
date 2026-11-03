@@ -120,7 +120,9 @@ void load(PrDomDocument* document, uint32_t index) {
     fetch->index = index;
     // The URL is copied, since a result that arrives during the call may grow the list that holds it.
     PrString request = prStringClone(&resource.url);
-    DomFetchRequest asked{prStringView(&request), DomFetchDestination_Image, DomCorsSettings_NoCors};
+    DomFetchRequest asked{
+        prStringView(&request), DomFetchDestination_Image, DomCorsSettings_NoCors, DomFetchInitiator_Css,
+    };
     host->fetch(host->context, &asked, fetchedAndDropped, fetch, dropFetch);
     prStringReset(&request);
 }

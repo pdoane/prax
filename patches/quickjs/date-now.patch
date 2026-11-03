@@ -1,0 +1,70 @@
+diff --git a/quickjs.c b/quickjs.c
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -241,6 +241,7 @@ struct JSRuntime {
+     JSMallocFunctions mf;
+     JSMallocState malloc_state;
+     const char *rt_info;
++    JSDateNowFunc *date_now_func;
+ 
+     int atom_hash_size; /* power of two */
+     int atom_count;
+@@ -50649,11 +50650,23 @@ static JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
+     return js_new_string8_len(ctx, buf, pos);
+ }
+ 
+-/* OS dependent: return the UTC time in ms since 1970. */
+-static int64_t date_now(void) {
++/* the UTC time in ms since 1970: the runtime's function's, or else the OS's */
++static int64_t date_now(JSContext *ctx) {
++    if (ctx->rt->date_now_func)
++        return ctx->rt->date_now_func(ctx);
+     return js__gettimeofday_us() / 1000;
+ }
+ 
++void JS_SetDateNowFunc(JSRuntime *rt, JSDateNowFunc *func)
++{
++    rt->date_now_func = func;
++}
++
++int64_t JS_DateNow(JSContext *ctx)
++{
++    return date_now(ctx);
++}
++
+ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
+                                    int argc, JSValueConst *argv)
+ {
+@@ -50668,7 +50681,7 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
+     }
+     n = argc;
+     if (n == 0) {
+-        val = date_now();
++        val = date_now(ctx);
+     } else if (n == 1) {
+         JSValue v, dv;
+         if (JS_VALUE_GET_TAG(argv[0]) == JS_TAG_OBJECT) {
+@@ -51209,7 +51222,7 @@ static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
+                            int argc, JSValueConst *argv)
+ {
+     // now()
+-    return js_int64(date_now());
++    return js_int64(date_now(ctx));
+ }
+ 
+ static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,
+diff --git a/quickjs.h b/quickjs.h
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -413,6 +413,11 @@ typedef struct JSGCObjectHeader JSGCObjectHeader;
+ JS_EXTERN JSRuntime *JS_NewRuntime(void);
+ /* info lifetime must exceed that of rt */
+ JS_EXTERN void JS_SetRuntimeInfo(JSRuntime *rt, const char *info);
++/* The current time that Date reads in a realm, in ms since 1970, or NULL for the OS's clock */
++typedef int64_t JSDateNowFunc(JSContext *ctx);
++JS_EXTERN void JS_SetDateNowFunc(JSRuntime *rt, JSDateNowFunc *func);
++/* The current time that Date reads in the realm */
++JS_EXTERN int64_t JS_DateNow(JSContext *ctx);
+ /* use 0 to disable memory limit */
+ JS_EXTERN void JS_SetMemoryLimit(JSRuntime *rt, size_t limit);
+ JS_EXTERN void JS_SetDumpFlags(JSRuntime *rt, uint64_t flags);

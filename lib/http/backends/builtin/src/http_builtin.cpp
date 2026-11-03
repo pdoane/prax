@@ -938,6 +938,10 @@ PrNetError exchangeError(const PrHttp*, const PrHttpExchange* handle) {
     return static_cast<const Exchange*>(handle)->error;
 }
 
+PrStringView exchangeProtocol(const PrHttp*, const PrHttpExchange*) {
+    return kProtocols[0];
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -954,6 +958,7 @@ PrHttp* prHttpBuiltinCreate(const PrHttpDesc* desc) {
     http->exchangeHeader = exchangeHeader;
     http->exchangeRead = exchangeRead;
     http->exchangeError = exchangeError;
+    http->exchangeProtocol = exchangeProtocol;
     http->net = desc->net;
     http->tls = desc->tls;
     http->anchors = desc->anchors;

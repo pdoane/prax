@@ -139,6 +139,8 @@ struct BuiltinFetch : PrFetch {
     double requested;
     bool storing;
     Array<uint8_t> stored;
+
+    PrFetchTiming timing;
 };
 
 void freeFetch(BuiltinFetch* fetch) {
@@ -166,6 +168,14 @@ BuiltinFetcher* fetcherOf(BuiltinFetch* fetch) {
 }
 
 void deliver(BuiltinFetch* fetch, PrFetchEvent event) {
+    double now = prTimeMonotonicMilliseconds();
+    if (event == PrFetchEvent_Response) {
+        // An answer that no exchange received, as the cache's or a local one is, starts here.
+        fetch->timing.requestStart = fetch->timing.requestStart != 0 ? fetch->timing.requestStart : now;
+        fetch->timing.responseStart = fetch->timing.responseStart != 0 ? fetch->timing.responseStart : now;
+    } else if (event == PrFetchEvent_End || event == PrFetchEvent_Fail) {
+        fetch->timing.endTime = now;
+    }
     if (!fetch->dead && fetch->event != nullptr)
         fetch->event(fetch->context, fetch, event);
 }
@@ -473,6 +483,7 @@ bool headerTokens(const HeaderList* list, PrStringView name, Array<PrStringView>
 // Appends `bytes` to the body, decoded if the response has a content coding, and to the cache's copy. Returns false if
 // they do not decode.
 bool appendBody(BuiltinFetch* fetch, PrByteView bytes, bool final) {
+    fetch->timing.encodedBodySize += bytes.size;
     if (fetch->contentStart != 0 && fetch->contentStart == fetch->content.count) {
         fetch->content.clear();
         fetch->contentStart = 0;
@@ -502,8 +513,9 @@ bool appendBody(BuiltinFetch* fetch, PrByteView bytes, bool final) {
             }
         }
     }
+    uint32_t added = fetch->content.count - before;
+    fetch->timing.decodedBodySize += added;
     if (fetch->storing) {
-        uint32_t added = fetch->content.count - before;
         if (fetch->stored.count + added > kCacheMaxBodyBytes) {
             fetch->storing = false;
             fetch->stored.reset();
@@ -627,6 +639,8 @@ bool followRedirect(BuiltinFetch* fetch) {
     if (!isSameOrigin(prStringView(&nextOrigin), prStringView(&baseOrigin)) &&
             !isSameOrigin(prStringView(&fetch->origin), prStringView(&baseOrigin)))
         fetch->taintedOrigin = true;
+    fetch->timing.crossOriginRedirect = fetch->timing.crossOriginRedirect ||
+        !isSameOrigin(prStringView(&nextOrigin), prStringView(&baseOrigin));
     prStringReset(&baseOrigin);
     prStringReset(&nextOrigin);
     prUrlDestroy(base);
@@ -636,6 +650,15 @@ bool followRedirect(BuiltinFetch* fetch) {
         return true;
     }
     ++fetch->redirects;
+    double now = prTimeMonotonicMilliseconds();
+    fetch->timing.redirectCount = fetch->redirects;
+    fetch->timing.redirectStart =
+        fetch->timing.redirectStart != 0 ? fetch->timing.redirectStart : fetch->timing.startTime;
+    fetch->timing.redirectEnd = now;
+    fetch->timing.postRedirectStart = now;
+    fetch->timing.requestStart = 0;
+    fetch->timing.responseStart = 0;
+    fetch->timing.cacheState = PrFetchCacheState_None;
     prStringReset(&fetch->url);
     fetch->url = prUrlSerialize(next, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(next);
@@ -660,9 +683,40 @@ PrFetchResponseType typeOf(const BuiltinFetch* fetch) {
     return fetch->tainting;
 }
 
+// Returns true if the response passes the TAO check (fetch/#concept-tao-check).
+bool passesTimingAllow(const BuiltinFetch* fetch) {
+    if (!fetch->timing.timingAllowPassed)
+        return false;
+    for (uint32_t i = 0; i < fetch->response.names.count; ++i) {
+        if (!asciiEqualsFold(prStringView(&fetch->response.names.data[i]), "timing-allow-origin"))
+            continue;
+        PrStringView values = prStringView(&fetch->response.values.data[i]);
+        size_t start = 0;
+        while (start <= values.size) {
+            size_t end = start;
+            while (end < values.size && values.data[end] != ',')
+                ++end;
+            PrStringView value = stringTrim(stringSlice(values, start, end - start));
+            if (value == "*" || value == serializedOrigin(fetch))
+                return true;
+            start = end + 1;
+        }
+    }
+    if (fetch->mode == PrFetchMode_Navigate) {
+        PrUrl* current = nullptr;
+        prUrlCreate(prStringView(&fetch->url), nullptr, PrCharset_Utf8, &current);
+        bool same = current != nullptr && isSameOriginAs(fetch, current);
+        prUrlDestroy(current);
+        if (!same)
+            return false;
+    }
+    return fetch->tainting == PrFetchResponseType_Basic;
+}
+
 // Returns true if the response may be received: a CORS request's response passes the CORS check, and fails the fetch
 // otherwise.
 bool admits(BuiltinFetch* fetch) {
+    fetch->timing.timingAllowPassed = passesTimingAllow(fetch);
     if (fetch->tainting != PrFetchResponseType_Cors || passesCors(fetch, &fetch->response))
         return true;
     fail(fetch, PrNetError_Blocked);
@@ -682,6 +736,8 @@ void answerFromCache(BuiltinFetch* fetch, const FetchCachedResponse* entry) {
     fetch->type = typeOf(fetch);
     fetch->state = FetchState_Body;
     fetch->content.append(entry->body.data, uint32_t(entry->body.size));
+    fetch->timing.encodedBodySize = entry->body.size;
+    fetch->timing.decodedBodySize = entry->body.size;
     deliver(fetch, PrFetchEvent_Response);
     if (entry->body.size != 0)
         deliver(fetch, PrFetchEvent_Readable);
@@ -706,7 +762,10 @@ bool lookUp(BuiltinFetch* fetch, const Array<PrFetchHeader>& sent) {
     if (fetchCacheRead(record.bytes, &entry) && fetchCacheVaryMatches(&entry, sent.data, sent.count)) {
         FetchCacheControl control = fetchCacheControlFromHeaders(entry.headers.data, entry.headers.count);
         double age = fetchCacheAge(&entry, prTimeWallMilliseconds());
-        if (!asked.noCache && !control.noCache && age < fetchCacheLifetime(&entry)) {
+        // A request's max-age limits the age of the response that it accepts (rfc 9111 section 5.2.1.1).
+        bool tooOld = asked.hasMaxAge && age >= asked.maxAge * 1000;
+        if (!asked.noCache && !control.noCache && !tooOld && age < fetchCacheLifetime(&entry)) {
+            fetch->timing.cacheState = PrFetchCacheState_Local;
             answerFromCache(fetch, &entry);
             answered = true;
         } else {
@@ -746,6 +805,7 @@ void request(BuiltinFetch* fetch, const PrUrl* current) {
         headersAdd(&fetch->sent, "Accept-Encoding", "gzip, deflate, br");
     Array<PrFetchHeader> sent{};
     headersView(&fetch->sent, &sent);
+    fetch->timing.requestStart = prTimeMonotonicMilliseconds();
     bool answered = lookUp(fetch, sent);
     sent.reset();
     if (answered)
@@ -821,6 +881,7 @@ void answerRevalidated(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     TextBuffer record{};
     fetchCacheWrite(&entry, &record);
     dropExchange(fetch);
+    fetch->timing.cacheState = PrFetchCacheState_Validated;
     answerFromCache(fetch, &entry);
     PrStringView bytes = textView(&record);
     prStorageWrite(fetcher->cache, prStringView(&fetch->url),
@@ -834,6 +895,8 @@ void answerRevalidated(BuiltinFetch* fetch, PrHttpExchange* exchange) {
 // Receives the response that the exchange's head carried.
 void receiveResponse(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     BuiltinFetcher* fetcher = fetcherOf(fetch);
+    fetch->timing.responseStart = prTimeMonotonicMilliseconds();
+    fetch->timing.nextHopProtocol = prHttpExchangeProtocol(exchange);
     fetch->status = prHttpExchangeStatus(exchange);
     if (fetch->status == 304 && fetch->revalidated.handle != nullptr) {
         answerRevalidated(fetch, exchange);
@@ -1206,6 +1269,9 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
         return PrStatus_InvalidData;
     }
     BuiltinFetch* fetch = allocZeroed<BuiltinFetch>();
+    fetch->timing.startTime = prTimeMonotonicMilliseconds();
+    fetch->timing.postRedirectStart = fetch->timing.startTime;
+    fetch->timing.timingAllowPassed = true;
     if (referrer != nullptr)
         fetch->referrer = prUrlSerialize(referrer, PrUrlSerialization_Whole);
     prUrlDestroy(referrer);
@@ -1292,6 +1358,10 @@ PrNetError fetchError(const PrFetchNetwork*, const PrFetch* handle) {
     return static_cast<const BuiltinFetch*>(handle)->error;
 }
 
+PrFetchTiming fetchTiming(const PrFetchNetwork*, const PrFetch* handle) {
+    return static_cast<const BuiltinFetch*>(handle)->timing;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1310,6 +1380,7 @@ PrFetchNetwork* prFetchBuiltinCreate(const PrFetchNetworkDesc* desc) {
     fetcher->fetchHeader = fetchHeader;
     fetcher->fetchRead = fetchRead;
     fetcher->fetchError = fetchError;
+    fetcher->fetchTiming = fetchTiming;
     PR_ASSERT(desc->http == nullptr || desc->http->net == desc->net);
     fetcher->net = desc->net;
     fetcher->http = desc->http;

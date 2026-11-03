@@ -17,6 +17,7 @@ void jsHtmlBind(JSContext* ctx);
 
 // The class of HTMLElement, which classes of other modules derive from.
 extern JSClassID htmlElementClass;
+extern JSClassID htmlPerformanceClass;
 
 // Returns the window of the context's global, or null if it has none.
 PrHtmlWindow* PR_NULLABLE jsHtmlGlobalWindow(JSContext* ctx);

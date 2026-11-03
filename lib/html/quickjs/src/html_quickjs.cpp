@@ -5,6 +5,7 @@
 #include "pr/dom_abort.h"
 #include "pr/dom_quickjs.h"
 #include "pr/fetch_quickjs.h"
+#include "pr/float.h"
 #include "pr/html.h"
 #include "pr/mem.h"
 #include "pr/quickjs_binding.h"
@@ -12,6 +13,7 @@
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/thread.h"
+#include "pr/time.h"
 #include "pr/url.h"
 #include "pr/webidl_quickjs.h"
 
@@ -100,6 +102,16 @@ bool engineCheckpoint(JsHtmlEngine* engine);
 
 JsHtmlRealm* realmOf(JSContext* ctx) {
     return static_cast<JsHtmlRealm*>(JS_GetContextOpaque(ctx));
+}
+
+// The current time that Date reads in a realm: its window's (prHtmlWindowCurrentTime), or the system's for a realm
+// without a page.
+int64_t dateNow(JSContext* ctx) {
+    JsHtmlRealm* realm = realmOf(ctx);
+    double now = prTimeWallMilliseconds();
+    if (realm != nullptr && realm->page != nullptr)
+        now = prHtmlWindowCurrentTime(prHtmlPageWindow(realm->page));
+    return int64_t(floorF64(now));
 }
 
 // Removes the fetch's abort steps from its signal, and frees its values.
@@ -216,6 +228,7 @@ JSValue fetchMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) 
             .mode = request.mode,
             .credentials = request.credentials,
             .redirect = request.redirect,
+            .initiator = PrFetchInitiator_Fetch,
         };
         if (prHtmlPageFetch(realm->page, &desc, fetched, fetch) == PrStatus_Ok) {
             realm->fetches.push(fetch);
@@ -802,6 +815,11 @@ void windowOpened(void* context, PrHtmlPage* page) {
         realm->host.windowOpened(realm->host.context, page);
 }
 
+void documentCommitted(void* context, PrHtmlPage* page) {
+    const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
+    host.documentCommitted(host.context, page);
+}
+
 void windowClosed(void* context, PrHtmlPage* page) {
     const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
     if (host.windowClosed != nullptr)
@@ -843,6 +861,11 @@ double now(void* context) {
     return host.now(host.context);
 }
 
+double wallNow(void* context) {
+    const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
+    return host.wallNow(host.context);
+}
+
 void rendered(void* context, PrHtmlPage* page) {
     const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
     host.rendered(host.context, page);
@@ -864,11 +887,13 @@ PrHtmlHost engineHost(JsHtmlEngine* engine, const PrHtmlHost* host, bool scripti
     result.frame = host->frame != nullptr ? frame : nullptr;
     result.windowOpened = windowOpened;
     result.windowClosed = windowClosed;
+    result.documentCommitted = host->documentCommitted != nullptr ? documentCommitted : nullptr;
     result.closed = closed;
     result.openWindow = host->openWindow != nullptr ? openWindow : nullptr;
     result.loaded = host->loaded != nullptr ? loaded : nullptr;
     result.elementState = host->elementState != nullptr ? elementState : nullptr;
     result.now = host->now != nullptr ? now : nullptr;
+    result.wallNow = host->wallNow != nullptr ? wallNow : nullptr;
     result.rendered = host->rendered != nullptr ? rendered : nullptr;
     return result;
 }
@@ -912,6 +937,7 @@ PrJsHtmlEngine* prJsHtmlEngineCreate(const PrJsHtmlEngineDesc* desc) {
     engine->desc.binds = nullptr;
     engine->desc.bindCount = 0;
     engine->runtime = jsRuntimeCreate();
+    JS_SetDateNowFunc(engine->runtime, dateNow);
     prJsHtmlConsoleSetPrinter(engine->runtime, desc->console);
     JS_SetModuleLoaderFunc(engine->runtime, normalizeModule, loadModule, nullptr);
     JS_SetModuleImportFunc(engine->runtime, importModule);

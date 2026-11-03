@@ -90,6 +90,7 @@ struct Probe {
     std::vector<PrFetchEvent> events;
     uint16_t status;
     PrFetchResponseType responseType;
+    PrFetchTiming timing;
     std::string responseUrl;
     std::string type;
     std::string received;
@@ -113,6 +114,7 @@ void probeEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent event) {
         probe->received.append(reinterpret_cast<const char*>(chunk), got);
     if (event == PrFetchEvent_End || event == PrFetchEvent_Fail) {
         probe->error = prFetchError(fetch);
+        probe->timing = prFetchTiming(fetch);
         prFetchDestroy(fetch);
         probe->fetch = nullptr;
         netLatchOpen(&probe->done);
@@ -621,6 +623,44 @@ TEST_CASE("fetch: a request sends as much of its referrer as its policy allows, 
     Probe secure{.origin = "https://example.com", .referrer = "https://example.com/page"};
     run(&fixture, &secure, urlOf(fixture, "/headers"), PrFetchRedirect_Follow, "POST");
     CHECK(secure.received == "Origin: null\nReferer: https://example.com/\n");
+    reset(&fixture);
+}
+
+TEST_CASE("fetch: a fetcher measures a fetch in order, and a body's size") {
+    Fixture fixture{};
+    if (!open(&fixture))
+        return;
+    Probe probe{.origin = originOf(fixture)};
+    run(&fixture, &probe, urlOf(fixture, "/cors?origin=null"));
+    PrFetchTiming timing = probe.timing;
+    CHECK(timing.startTime > 0);
+    CHECK(timing.postRedirectStart >= timing.startTime);
+    CHECK(timing.requestStart >= timing.postRedirectStart);
+    CHECK(timing.responseStart >= timing.requestStart);
+    CHECK(timing.endTime >= timing.responseStart);
+    CHECK(timing.redirectCount == 0);
+    CHECK(timing.redirectStart == 0);
+    CHECK(timing.cacheState == PrFetchCacheState_None);
+    CHECK(timing.timingAllowPassed);
+    CHECK_FALSE(timing.crossOriginRedirect);
+    CHECK(timing.nextHopProtocol == "http/1.1");
+    CHECK(timing.decodedBodySize == probe.received.size());
+    reset(&fixture);
+}
+
+TEST_CASE("fetch: a redirect to another origin is measured, and fails the TAO check") {
+    Fixture fixture{};
+    if (!open(&fixture))
+        return;
+    std::string origin = originOf(fixture);
+    Probe probe{.mode = PrFetchMode_Cors, .origin = origin};
+    run(&fixture, &probe, urlOf(fixture, "/cors?origin=" + origin + "&to=" + otherUrlOf(fixture, "/cors?origin=null")));
+    CHECK(probe.timing.redirectCount == 1);
+    CHECK(probe.timing.redirectStart == probe.timing.startTime);
+    CHECK(probe.timing.redirectEnd >= probe.timing.redirectStart);
+    CHECK(probe.timing.postRedirectStart == probe.timing.redirectEnd);
+    CHECK(probe.timing.crossOriginRedirect);
+    CHECK_FALSE(probe.timing.timingAllowPassed);
     reset(&fixture);
 }
 

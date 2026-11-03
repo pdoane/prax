@@ -11,6 +11,7 @@ pr_library(html INCLUDE include
     src/html_focus.cpp
     src/html_forms.cpp
     src/html_message.cpp
+    src/html_performance.cpp
     src/html_history.cpp
     src/html_hints.cpp
     src/html_image.cpp
@@ -40,6 +41,7 @@ if (PR_JS)
         quickjs/src/html_elements_quickjs.cpp
         quickjs/src/html_forms_quickjs.cpp
         quickjs/src/html_message_quickjs.cpp
+        quickjs/src/html_performance_quickjs.cpp
         quickjs/src/html_console_quickjs.cpp
         quickjs/src/html_quickjs.cpp
     )

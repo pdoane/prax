@@ -101,3 +101,7 @@ size_t prHttpExchangeRead(PrHttpExchange* exchange, uint8_t* PR_NULLABLE output,
 PrNetError prHttpExchangeError(const PrHttpExchange* exchange) {
     return exchange->http->exchangeError(exchange->http, exchange);
 }
+
+PrStringView prHttpExchangeProtocol(const PrHttpExchange* exchange) {
+    return exchange->http->exchangeProtocol(exchange->http, exchange);
+}

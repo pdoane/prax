@@ -27,6 +27,10 @@ bool prMimeTypeIsJavaScript(PrStringView essence);
 // Returns true if the MIME type `type` is an XML MIME type (mimesniff/#xml-mime-type).
 bool prMimeTypeIsXml(PrStringView type);
 
+// Returns the minimized form of a lowercase essence (mimesniff/#minimize-a-supported-mime-type), which reveals only
+// what kind of resource it names. The view is `essence` itself or a literal.
+PrStringView prMimeTypeMinimize(PrStringView essence);
+
 #if defined(__cplusplus)
 }
 #endif

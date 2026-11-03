@@ -20,6 +20,7 @@
 #include "pr/svg_render.h"
 #include "pr/text_buffer.h"
 #include "pr/text_font.h"
+#include "pr/time.h"
 #include "pr/url.h"
 #include "pr/url_data.h"
 #include "pr/url_percent.h"
@@ -172,6 +173,8 @@ void releaseFetch(HtmlFetch* fetch) {
     fetch->body.reset();
     prStringReset(&fetch->contentType);
     prStringReset(&fetch->contentLanguage);
+    prStringReset(&fetch->contentEncoding);
+    prStringReset(&fetch->serverTiming);
     prStringReset(&fetch->responseUrl);
     prMutexReset(&fetch->lock);
     prMemoryFree(fetch);
@@ -218,8 +221,38 @@ void completeScriptFetch(HtmlFetch* fetch) {
     textReset(&exposed);
 }
 
+HtmlResourceReport reportOf(const HtmlFetch* fetch) {
+    return HtmlResourceReport{
+        .url = prStringView(&fetch->url),
+        .initiator = fetch->initiator,
+        .timing = fetch->timing,
+        .anchor = fetch->anchor,
+        .responseType = fetch->responseType,
+        .responseStatus = fetch->responseStatus,
+        .contentType = prStringView(&fetch->contentType),
+        .contentEncoding = prStringView(&fetch->contentEncoding),
+        .serverTiming = prStringView(&fetch->serverTiming),
+    };
+}
+
+// Reports the finished fetch to the timeline of its window. A fetch that a CORS check blocked has no entry
+// (resource-timing/#resources-included-in-the-performanceresourcetiming-interface). The container of a document that a
+// redirect brought from another origin learns nothing of its response.
+void reportFetch(HtmlFetch* fetch) {
+    PrHtmlPage* page = fetch->page;
+    bool fetched = fetch->responseStatus != 0 || fetch->error != PrNetError_None;
+    if (page == nullptr || fetch->fetcher == nullptr || !fetched || fetch->error == PrNetError_Blocked)
+        return;
+    HtmlResourceReport report = reportOf(fetch);
+    bool frame = fetch->destination == DomFetchDestination_Document || fetch->destination == DomFetchDestination_Object;
+    if (frame && fetch->timing.crossOriginRedirect)
+        report.responseType = PrFetchResponseType_Opaque;
+    htmlPerformanceMarkResource(page->window, &report);
+}
+
 // Passes the response to the fetch's callback, and releases the agent's reference.
 void completeFetch(HtmlFetch* fetch) {
+    reportFetch(fetch);
     unlinkFetch(fetch);
     if (fetch->scriptDone != nullptr) {
         if (!fetch->cancelled)
@@ -235,7 +268,13 @@ void completeFetch(HtmlFetch* fetch) {
         prStringView(&fetch->contentLanguage), prStringView(&fetch->responseUrl),
         fetch->responseType == PrFetchResponseType_Opaque,
     };
+    // A frame's document, which the callback may commit, takes the timing of this fetch (documentFetchReport).
+    PrHtmlPage* page = fetch->page;
+    if (page != nullptr)
+        page->completingFetch = fetch;
     fetch->done(fetch->data, &result);
+    if (page != nullptr)
+        page->completingFetch = nullptr;
     releaseFetch(fetch);
 }
 
@@ -342,6 +381,24 @@ void readBody(HtmlFetch* fetch, PrFetch* handle) {
         fetch->body.append(chunk, uint32_t(got));
 }
 
+// Returns the response's Server-Timing headers joined by commas, or the null string for none.
+PrString serverTimingOf(const PrFetch* fetch) {
+    TextBuffer joined{};
+    bool any = false;
+    for (uint32_t i = 0; i < prFetchHeaderCount(fetch); ++i) {
+        PrFetchHeader header = prFetchHeader(fetch, i);
+        if (!asciiEqualsFold(header.name, "server-timing"))
+            continue;
+        if (any)
+            textAppend(&joined, ",");
+        textAppend(&joined, header.value);
+        any = true;
+    }
+    PrString result = any ? prStringCopy(textView(&joined)) : prStringNull();
+    textReset(&joined);
+    return result;
+}
+
 // Receives the fetch's events on the loop.
 void fetchEvent(void* PR_NULLABLE context, PrFetch* handle, PrFetchEvent event) {
     HtmlFetch* fetch = static_cast<HtmlFetch*>(context);
@@ -349,10 +406,14 @@ void fetchEvent(void* PR_NULLABLE context, PrFetch* handle, PrFetchEvent event) 
         case PrFetchEvent_Response: {
             PrStringView type = prFetchHeaderValue(handle, "content-type");
             PrStringView language = prFetchHeaderValue(handle, "content-language");
+            PrStringView encoding = prFetchHeaderValue(handle, "content-encoding");
             if (type.data != nullptr)
                 fetch->contentType = prStringCopy(type);
             if (language.data != nullptr)
                 fetch->contentLanguage = prStringCopy(language);
+            if (encoding.data != nullptr)
+                fetch->contentEncoding = prStringCopy(encoding);
+            fetch->serverTiming = serverTimingOf(handle);
             fetch->responseUrl = prStringCopy(prFetchUrl(handle));
             fetch->responseType = prFetchResponseType(handle);
             if (fetch->scriptDone != nullptr) {
@@ -370,11 +431,14 @@ void fetchEvent(void* PR_NULLABLE context, PrFetch* handle, PrFetchEvent event) 
         case PrFetchEvent_End: {
             readBody(fetch, handle);
             fetch->responseStatus = prFetchStatus(handle);
+            fetch->timing = prFetchTiming(handle);
             bool ok = prFetchIsOkStatus(fetch->responseStatus);
             finishOnLoop(fetch, ok || !needsOkStatus(fetch->destination) ? PrStatus_Ok : PrStatus_NotFound);
             break;
         }
         case PrFetchEvent_Fail:
+            fetch->timing = prFetchTiming(handle);
+            fetch->error = prFetchError(handle);
             finishOnLoop(fetch, PrStatus_Io);
             break;
     }
@@ -490,6 +554,7 @@ HtmlFetch* createFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination d
     if (settings.delaysLoad)
         ++page->delayingFetches;
     fetch->destination = destination;
+    fetch->anchor = htmlPerformanceFetchAnchor(page->window);
     fetch->delaysLoad = settings.delaysLoad;
     fetch->agent = page->window->agent;
     fetch->fetcher = page->host.fetcher;
@@ -521,7 +586,7 @@ void answerFetch(HtmlFetch* fetch, PrStatus status) {
 // and the result. The result of a data: URL, or a network error for a context without a fetcher, is passed during this
 // call. Any other result is passed in a task once the response arrives. If the context drops the fetch first, it calls
 // `drop` with `data` instead.
-void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destination,
+void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destination, PrFetchInitiator initiator,
         FetchSettings settings, DomFetchFn done, void* PR_NULLABLE data, void (*PR_NULLABLE drop)(void* PR_NULLABLE data)) {
     if (asciiStartsWithFold(url, "data:") || page->host.fetcher == nullptr) {
         PrString body = {};
@@ -540,6 +605,7 @@ void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destinat
         return;
     }
     HtmlFetch* fetch = createFetch(page, url, destination, settings);
+    fetch->initiator = initiator;
     fetch->done = done;
     fetch->data = data;
     fetch->drop = drop;
@@ -550,8 +616,25 @@ void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destinat
 void fetchHost(void* PR_NULLABLE context, const DomFetchRequest* request, DomFetchFn done, void* PR_NULLABLE data,
         void (*PR_NULLABLE drop)(void* PR_NULLABLE data)) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(context);
-    startFetch(page, request->url, request->destination, fetchSettingsOf(request->destination, request->cors), done,
-        data, drop);
+    PrFetchInitiator initiator = PrFetchInitiator_Other;
+    switch (request->initiator) {
+        case DomFetchInitiator_Other:
+            break;
+        case DomFetchInitiator_Css:
+            initiator = PrFetchInitiator_Css;
+            break;
+        case DomFetchInitiator_Link:
+            initiator = PrFetchInitiator_Link;
+            break;
+        case DomFetchInitiator_Audio:
+            initiator = PrFetchInitiator_Audio;
+            break;
+        case DomFetchInitiator_Video:
+            initiator = PrFetchInitiator_Video;
+            break;
+    }
+    startFetch(page, request->url, request->destination, initiator,
+        fetchSettingsOf(request->destination, request->cors), done, data, drop);
 }
 
 // Frees the script, or leaves it to the fetch that refers to it, which frees it when the fetch is answered.
@@ -673,7 +756,8 @@ void fetchModule(PrHtmlPage* page, HtmlModuleIndex index) {
     FetchSettings mode{PrFetchMode_Cors, module.credentials, false};
     ModuleFetch* fetch = allocZeroed<ModuleFetch>();
     *fetch = ModuleFetch{page, index};
-    startFetch(page, prStringView(&request), DomFetchDestination_Script, mode, moduleFetched, fetch, dropModuleFetch);
+    startFetch(page, prStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script, mode, moduleFetched,
+        fetch, dropModuleFetch);
     prStringReset(&request);
 }
 
@@ -873,7 +957,8 @@ void fetchScript(PrHtmlPage* page, PreparedScript* script, PrStringView src, con
     prUrlDestroy(resource);
     script->fetching = true;
     FetchSettings mode = scriptSettingsOf(script->element, script->kind);
-    startFetch(page, prStringView(&request), DomFetchDestination_Script, mode, scriptFetched, script, dropScriptFetch);
+    startFetch(page, prStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script, mode, scriptFetched,
+        script, dropScriptFetch);
     prStringReset(&request);
 }
 
@@ -1422,6 +1507,7 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
         EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(resolved, PrUrlSerialization_Whole));
         PrString request = prUrlSerialize(resolved, PrUrlSerialization_ExcludeFragment);
         startFetch(page, prStringView(&request), DomFetchDestination_Document,
+            element->tag == PrDomTag_Frame ? PrFetchInitiator_Frame : PrFetchInitiator_Iframe,
             fetchSettingsOf(DomFetchDestination_Document, DomCorsSettings_NoCors), frameFetched, fetch, dropEmbedFetch);
         prStringReset(&request);
     } else {
@@ -1628,6 +1714,7 @@ void updateImage(PrHtmlPage* page, PrDomElement* element, PrStringView source, d
         } else {
             EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(url, PrUrlSerialization_Whole));
             startFetch(page, prStringView(&request), DomFetchDestination_Image,
+                element->tag == PrDomTag_Input ? PrFetchInitiator_Input : PrFetchInitiator_Img,
                 fetchSettingsOf(DomFetchDestination_Image, corsOf(element)), imageFetched, fetch, dropEmbedFetch);
         }
         prStringReset(&request);
@@ -1728,6 +1815,7 @@ void objectChanged(PrHtmlPage* page, PrDomElement* element) {
         EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(url, PrUrlSerialization_Whole));
         PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
         startFetch(page, prStringView(&request), DomFetchDestination_Object,
+            element->tag == PrDomTag_Embed ? PrFetchInitiator_Embed : PrFetchInitiator_Object,
             fetchSettingsOf(DomFetchDestination_Object, DomCorsSettings_NoCors), objectFetched, fetch, dropEmbedFetch);
         prStringReset(&request);
     } else {
@@ -2000,8 +2088,11 @@ void continueEnd(PrHtmlPage* page) {
     }
     if (!page->contentLoaded) {
         page->contentLoaded = true;
-        if (page->endStatus == PrStatus_Ok)
+        if (page->endStatus == PrStatus_Ok) {
+            htmlPerformanceLoadMoment(page->window, PrHtmlPerformanceMoment_DomContentLoadedEventStart);
             domEventFire(document, "DOMContentLoaded", {.bubbles = true});
+            htmlPerformanceLoadMoment(page->window, PrHtmlPerformanceMoment_DomContentLoadedEventEnd);
+        }
         if (page->endStatus == PrStatus_Ok && page->settleAtEnd && page->host.settle != nullptr) {
             page->settling = true;
             page->endStatus = page->host.settle(page->host.context, page);
@@ -2031,8 +2122,12 @@ void continueEnd(PrHtmlPage* page) {
     if (page->endStatus == PrStatus_Ok) {
         fireElementEvents(page);
         // The load event is fired at the window with the legacy target override flag, so its target is the document.
+        htmlPerformanceLoadMoment(page->window, PrHtmlPerformanceMoment_DomComplete);
         setReadiness(document, DomReadiness_Complete);
+        htmlPerformanceLoadMoment(page->window, PrHtmlPerformanceMoment_LoadEventStart);
         domEventFire(page->window, "load", {}, document);
+        htmlPerformanceLoadMoment(page->window, PrHtmlPerformanceMoment_LoadEventEnd);
+        htmlPerformanceQueueNavigation(page->window);
     }
     frameLoadEnded(page);
 }
@@ -2041,6 +2136,7 @@ void continueEnd(PrHtmlPage* page) {
 // as far as it can (continueEnd). Returns the failure of a script that it ran, or `status`, the status of the parse. A
 // parse that a script started does not settle, since that script is still running.
 PrStatus finishParse(PrHtmlPage* page, PrStatus status, bool settle) {
+    htmlPerformanceLoadMoment(page->window, PrHtmlPerformanceMoment_DomInteractive);
     setReadiness(page->window->document, DomReadiness_Interactive);
     page->ending = true;
     page->contentLoaded = false;
@@ -2086,6 +2182,7 @@ void rendered(void* context);
 // callback. Starts the window's clock.
 void shareWithWindow(PrHtmlPage* page, PrHtmlWindow* window) {
     window->clock = page->host.now;
+    window->wallClock = page->host.wallNow;
     window->clockContext = page->host.context;
     window->storage[PrHtmlStorageKind_Local].provider = page->host.localStorage;
     window->storage[PrHtmlStorageKind_Session].provider = page->host.sessionStorage;
@@ -2106,6 +2203,7 @@ void shareWithWindow(PrHtmlPage* page, PrHtmlWindow* window) {
 // Closes the page's window. Its host learns of it first, and then the window's tasks, timers, media, listeners and
 // storage objects go. The window lives on while references to it remain.
 void closeWindow(PrHtmlPage* page) {
+    htmlPerformanceReset(&page->window->performance);
     if (page->host.windowClosed != nullptr)
         page->host.windowClosed(page->host.context, page);
     PrHtmlWindow* window = page->window;
@@ -2153,6 +2251,9 @@ void replaceWindow(PrHtmlPage* page) {
     domEventTargetRelease(closed);
 }
 
+// Returns the measurements of the fetch that is loading the page's document so far. Returns false if no fetch is.
+bool documentFetchReport(PrHtmlPage* page, HtmlResourceReport* out);
+
 // Starts a new document at `url` for a load of a response with `headers`. The window's last document is discarded, and
 // the new document is loading. A response without a Content-Type is HTML.
 PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers) {
@@ -2195,10 +2296,25 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
     document->url = documentUrl;
     // The document takes its entry in the session history, and the history state is the entry's.
     PrString committed = prUrlSerialize(documentUrl, PrUrlSerialization_Whole);
+    HtmlSessionHistory* history = page->window->history;
+    PrHtmlNavigationType navigationType = PrHtmlNavigationType_Navigate;
+    if (history->commit == HtmlHistoryCommit_Traverse)
+        navigationType =
+            history->target == history->index ? PrHtmlNavigationType_Reload : PrHtmlNavigationType_BackForward;
     page->window->historyDocument = htmlHistoryCommit(page->window->history, prStringView(&committed), false);
     ++page->window->historyGeneration;
-    prStringReset(&committed);
     htmlWindowStartClock(page->window);
+    HtmlResourceReport report{};
+    bool fetched = documentFetchReport(page, &report);
+    if (fetched) {
+        // The time origin is the start of the navigation, which the fetch began.
+        htmlWindowBackdateClock(page->window, htmlWindowClock(page->window) - report.anchor.clock);
+        report.anchor.windowTime = 0;
+    }
+    htmlPerformanceBeginNavigation(page->window, prStringView(&committed), fetched ? &report : nullptr, navigationType);
+    prStringReset(&committed);
+    if (page->host.documentCommitted != nullptr)
+        page->host.documentCommitted(page->host.context, page);
     page->window->revealing = true;
     document->kind = prMimeTypeIsXml(contentType) ? DomDocumentKind_Xml : DomDocumentKind_Html;
     TextBuffer essence;
@@ -2770,6 +2886,10 @@ struct DocumentLoadPiece {
     PrString contentLanguage;
     TextBuffer bytes;           // Body
     PrNetError error;           // Fail: PrNetError_None for a URL that the fetcher does not take
+    PrString contentEncoding;   // Head
+    PrString serverTiming;      // Head: the Server-Timing headers joined by commas
+    uint16_t responseStatus;    // Head
+    PrFetchTiming timing;       // Head and End: the fetch's measurements so far
 };
 
 void releaseDocumentLoad(HtmlDocumentLoad* load) {
@@ -2777,6 +2897,9 @@ void releaseDocumentLoad(HtmlDocumentLoad* load) {
         return;
     prStringReset(&load->url);
     prStringReset(&load->origin);
+    prStringReset(&load->contentType);
+    prStringReset(&load->contentEncoding);
+    prStringReset(&load->serverTiming);
     prMutexReset(&load->lock);
     prMemoryFree(load);
 }
@@ -2785,6 +2908,8 @@ void freePiece(DocumentLoadPiece* piece) {
     prStringReset(&piece->url);
     prStringReset(&piece->contentType);
     prStringReset(&piece->contentLanguage);
+    prStringReset(&piece->contentEncoding);
+    prStringReset(&piece->serverTiming);
     textReset(&piece->bytes);
     prMemoryFree(piece);
 }
@@ -2853,6 +2978,14 @@ void receivePiece(void* PR_NULLABLE data) {
         switch (piece->kind) {
             case LoadPiece_Head: {
                 load->responded = true;
+                load->timing = piece->timing;
+                prStringReset(&load->contentType);
+                load->contentType = prStringCopy(prStringView(&piece->contentType));
+                prStringReset(&load->contentEncoding);
+                load->contentEncoding = prStringCopy(prStringView(&piece->contentEncoding));
+                prStringReset(&load->serverTiming);
+                load->serverTiming = prStringCopy(prStringView(&piece->serverTiming));
+                load->responseStatus = piece->responseStatus;
                 PrHtmlResponseHeaders headers{
                     .contentType = prStringView(&piece->contentType),
                     .contentLanguage = prStringView(&piece->contentLanguage),
@@ -2868,10 +3001,17 @@ void receivePiece(void* PR_NULLABLE data) {
             case LoadPiece_Body:
                 prHtmlPageAppendLoad(page, textView(&piece->bytes));
                 break;
-            case LoadPiece_End:
+            case LoadPiece_End: {
+                load->timing = piece->timing;
+                HtmlResourceReport report{};
+                if (documentFetchReport(page, &report)) {
+                    report.anchor.windowTime = 0;
+                    htmlPerformanceEndNavigationFetch(page->window, &report);
+                }
                 endDocumentLoad(page);
                 prHtmlPageEndLoad(page);
                 break;
+            }
             case LoadPiece_Fail: {
                 PrString url = prStringCopy(prStringView(&load->url));
                 endDocumentLoad(page);
@@ -2946,21 +3086,30 @@ void documentLoadEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent e
             textReset(&url);
             PrStringView type = prFetchHeaderValue(fetch, "content-type");
             PrStringView language = prFetchHeaderValue(fetch, "content-language");
+            PrStringView encoding = prFetchHeaderValue(fetch, "content-encoding");
             if (type.data != nullptr)
                 piece->contentType = prStringCopy(type);
             if (language.data != nullptr)
                 piece->contentLanguage = prStringCopy(language);
+            if (encoding.data != nullptr)
+                piece->contentEncoding = prStringCopy(encoding);
+            piece->serverTiming = serverTimingOf(fetch);
+            piece->responseStatus = prFetchStatus(fetch);
+            piece->timing = prFetchTiming(fetch);
             postPiece(load, piece);
             break;
         }
         case PrFetchEvent_Readable:
             postBody(load, fetch);
             break;
-        case PrFetchEvent_End:
+        case PrFetchEvent_End: {
             postBody(load, fetch);
-            postPiece(load, newPiece(LoadPiece_End));
+            DocumentLoadPiece* piece = newPiece(LoadPiece_End);
+            piece->timing = prFetchTiming(fetch);
+            postPiece(load, piece);
             endLoadOnLoop(load);
             break;
+        }
         case PrFetchEvent_Fail: {
             DocumentLoadPiece* piece = newPiece(LoadPiece_Fail);
             piece->error = prFetchError(fetch);
@@ -3080,6 +3229,33 @@ void queueVisibilityChange(PrHtmlWindow* window) {
 
 // Navigates the page to the document at `url`, as prHtmlPageNavigate describes, with a fetch from `origin`: a
 // document's serialized origin, or the null view for a navigation that the user started.
+bool documentFetchReport(PrHtmlPage* page, HtmlResourceReport* out) {
+    HtmlDocumentLoad* load = page->documentLoad;
+    if (load == nullptr) {
+        PrHtmlWindow* parent = page->window->parent;
+        PrHtmlPage* holder = parent != nullptr ? htmlDocumentPage(parent->document) : nullptr;
+        const HtmlFetch* fetch = holder != nullptr ? holder->completingFetch : nullptr;
+        if (fetch == nullptr || fetch->destination != DomFetchDestination_Document)
+            return false;
+        *out = reportOf(fetch);
+        out->initiator = PrFetchInitiator_Navigation;
+        out->responseType = PrFetchResponseType_Basic;
+        return true;
+    }
+    *out = HtmlResourceReport{
+        .url = prStringView(&load->url),
+        .initiator = PrFetchInitiator_Navigation,
+        .timing = load->timing,
+        .anchor = load->anchor,
+        .responseType = PrFetchResponseType_Basic,
+        .responseStatus = load->responseStatus,
+        .contentType = prStringView(&load->contentType),
+        .contentEncoding = prStringView(&load->contentEncoding),
+        .serverTiming = prStringView(&load->serverTiming),
+    };
+    return true;
+}
+
 PrStatus startNavigation(PrHtmlPage* page, PrStringView url, PrStringView origin) {
     if (page->host.fetcher == nullptr || page->loading || page->runningScript || page->window->streaming)
         return PrStatus_InvalidState;
@@ -3095,6 +3271,7 @@ PrStatus startNavigation(PrHtmlPage* page, PrStringView url, PrStringView origin
     load->fetcher = page->host.fetcher;
     load->url = prStringCopy(url);
     load->origin = prStringCopy(origin);
+    load->anchor = htmlPerformanceFetchAnchor(page->window);
     prMutexInit(&load->lock);
     load->references.store(2);
     page->documentLoad = load;
@@ -3533,6 +3710,7 @@ PrStatus prHtmlPageFetch(PrHtmlPage* page, const PrFetchClientRequest* request, 
     FetchSettings settings{request->mode, request->credentials, false};
     HtmlFetch* fetch = createFetch(page, prStringView(&url), DomFetchDestination_Empty, settings);
     prStringReset(&url);
+    fetch->initiator = request->initiator;
     fetch->scriptDone = done;
     fetch->data = context;
     fetch->redirect = request->redirect;

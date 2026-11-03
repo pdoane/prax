@@ -556,6 +556,11 @@ void htmlWindowStartClock(PrHtmlWindow* window) {
     window->lastFrame = window->timeOrigin;
 }
 
+void htmlWindowBackdateClock(PrHtmlWindow* window, double elapsed) {
+    window->timeOrigin -= elapsed;
+    window->timeOriginWall -= elapsed;
+}
+
 double htmlWindowNow(const PrHtmlWindow* window) {
     return coarsen(htmlWindowClock(window) - window->timeOrigin);
 }

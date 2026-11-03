@@ -258,6 +258,47 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.splitlines(), ["f true", "f", "second"])
 
+    def test_the_performance_timeline_keeps_entries_and_reports_the_navigation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>const a = performance.mark('a', {startTime: 1, detail: {n: 5}});\n"
+                                   "const found = performance.getEntriesByName('a')[0];\n"
+                                   "print(found === a, found.detail.n, found.detail === a.detail);\n"
+                                   "const m = performance.measure('m', 'a', 'a'); print(m.name, m.duration, m.detail);\n"
+                                   "const nav = performance.getEntriesByType('navigation')[0];\n"
+                                   "print(nav.entryType, nav.type, nav.initiatorType, nav.loadEventEnd);\n"
+                                   "print(performance.timing.navigationStart > 0, performance.timing.loadEventEnd);\n"
+                                   "print(PerformanceObserver.supportedEntryTypes === PerformanceObserver.supportedEntryTypes);\n"
+                                   "for (const call of [() => performance.mark('navigationStart'),\n"
+                                   "    () => performance.measure('x', 'nope'),\n"
+                                   "    () => performance.measure('x', 'navigationStart', 'loadEventEnd')]) {\n"
+                                   "  try { call(); } catch (e) { print(e.name); }\n"
+                                   "}\n"
+                                   "new PerformanceObserver((list, o, options) => {\n"
+                                   "  print('seen', list.getEntries().map((e) => e.name).join(), options.droppedEntriesCount);\n"
+                                   "  o.disconnect();\n"
+                                   "}).observe({type: 'mark', buffered: true});</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), [
+                "true 5 true",
+                "m 0 null",
+                "navigation navigate navigation 0",
+                "true 0",
+                "true",
+                "SyntaxError",
+                "SyntaxError",
+                "InvalidAccessError",
+                "seen a 0",
+            ])
+
+    def test_a_page_exits_with_a_performance_observer_still_registered(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>new PerformanceObserver(() => {}).observe({type: 'mark'});\n"
+                                   "print('registered');</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["registered"])
+
     def test_a_message_channel_transfers_a_port_and_buffers_between_realms(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

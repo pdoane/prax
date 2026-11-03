@@ -1510,7 +1510,7 @@ CssPresentationImage* PR_NULLABLE imageOf(PrCssPresentation* r, PrStringView ref
     // The fetch is of the URL without its fragment, which decoding reads.
     PrStringView fragment = domUrlFragment(view);
     PrStringView request{view.data, fragment.data != nullptr ? size_t(fragment.data - 1 - view.data) : view.size};
-    DomFetchRequest asked{request, DomFetchDestination_Image, DomCorsSettings_NoCors};
+    DomFetchRequest asked{request, DomFetchDestination_Image, DomCorsSettings_NoCors, DomFetchInitiator_Css};
     host->fetch(host->context, &asked, imageFetchedAndDropped, fetch, dropImageFetch);
     return &r->images.data[at];
 }

@@ -87,14 +87,26 @@ enum {
 };
 typedef uint8_t DomFetchDestination;
 
+// What in a document causes a fetch, for those causes that the document's styles and media know of
+// (fetch/#request-initiator-type). The browsing context knows the others.
+enum {
+    DomFetchInitiator_Other,
+    DomFetchInitiator_Css,
+    DomFetchInitiator_Link,
+    DomFetchInitiator_Audio,
+    DomFetchInitiator_Video,
+};
+typedef uint8_t DomFetchInitiator;
+
 // A fetch that a document asks of its browsing context (html/#create-a-potential-cors-request): the absolute URL of the
-// resource, without its fragment, what it is for, and the CORS settings that decide its mode and credentials. A fetch
-// for an element takes the element's CORS settings attribute. A frame's or an object's document is fetched as a
-// navigation, whatever its settings.
+// resource, without its fragment, what it is for, the CORS settings that decide its mode and credentials, and what
+// caused it. A fetch for an element takes the element's CORS settings attribute. A frame's or an object's document is
+// fetched as a navigation, whatever its settings.
 struct DomFetchRequest {
     PrStringView url;
     DomFetchDestination destination;
     DomCorsSettings cors;
+    DomFetchInitiator initiator;
 };
 
 // The result of a fetch: the resource's bytes and its MIME type, or a network error for a status other than Ok. The
