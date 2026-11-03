@@ -155,7 +155,8 @@ TEST_CASE("a backend's name names it, in any case") {
     CHECK(prGpuBackendFromName("Metal") == PrGpuBackend_Metal);
     CHECK(prGpuBackendFromName("opengl") == PrGpuBackend_Count);
     CHECK(prGpuBackendIsBuilt(PrGpuBackend_Default) == (prGpuBackendIsBuilt(PrGpuBackend_Metal) ||
-        prGpuBackendIsBuilt(PrGpuBackend_Vulkan) || prGpuBackendIsBuilt(PrGpuBackend_D3d12)));
+        prGpuBackendIsBuilt(PrGpuBackend_Metal4) || prGpuBackendIsBuilt(PrGpuBackend_Vulkan) ||
+        prGpuBackendIsBuilt(PrGpuBackend_D3d12)));
 }
 
 TEST_CASE("a device reports its backend and limits") {

@@ -11,7 +11,9 @@
 #include <cstring>
 #include <vector>
 
+#import <AppKit/AppKit.h>
 #import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
 
 namespace pr_impl {
 
@@ -34,7 +36,7 @@ struct Uniforms {
 };
 
 // A device on the system's default Metal device, and the test shaders. A test that finds no device that supports Metal
-// 4 skips.
+// 3 skips.
 struct Fixture {
     PrGpuDevice* device = nullptr;
     PrGpuShaderLibrary* library = nullptr;
@@ -44,7 +46,7 @@ struct Fixture {
         options.validation = true;
         PrStatus status = prGpuMetalCreate(&options, &device);
         if (status == PrStatus_NotSupported) {
-            MESSAGE("no Metal device that supports Metal 4");
+            MESSAGE("no Metal device that supports Metal 3");
             return;
         }
         REQUIRE(status == PrStatus_Ok);
@@ -102,19 +104,30 @@ struct Fixture {
     }
 };
 
-// A host's own use of Metal on the device's MTLDevice: a command buffer that it begins and ends.
+// A host's own use of Metal on the device's queue: a command buffer that the device's submission commits.
 struct HostMetal {
-    id<MTLDevice> device;
-    id<MTL4CommandAllocator> allocator;
-    id<MTL4CommandBuffer> buffer;
+    id<MTLCommandBuffer> buffer;
 
     explicit HostMetal(PrGpuDevice* gpu) {
-        device = (__bridge id<MTLDevice>)prGpuMetalDevice(gpu);
-        allocator = [device newCommandAllocator];
-        buffer = [device newCommandBuffer];
-        [buffer beginCommandBufferWithAllocator:allocator];
+        buffer = [(__bridge id<MTLCommandQueue>)prGpuMetalQueue(gpu) commandBuffer];
     }
 };
+
+// Clears the swap chain's next drawable and presents it.
+PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
+    PrGpuTexture texture{};
+    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &texture) == PrStatus_Ok);
+    PrGpuCommands* commands = nullptr;
+    REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
+    prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
+        PrGpuAccessFlag_ColorAttachment);
+    PrGpuPassDesc desc = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0, 1, 0, 1});
+    prGpuPassEnd(prGpuPassBegin(commands, &desc));
+    prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+        PrGpuAccessFlag_Present);
+    prGpuSwapChainPresent(swapChain, commands);
+    return prGpuCommandsSubmit(commands);
+}
 
 } // namespace
 
@@ -144,7 +157,6 @@ TEST_CASE("metal records into the host's command buffer, around the host's own w
     prGpuCommandsDispatch(commands, PrGpuExtent{1, 1, 1});
     // The device's state ends with its encoder, so the host sets nothing again.
     CHECK(prGpuHostStateSync(commands) == 0);
-    [host.buffer endCommandBuffer];
     PrGpuFence fence = prGpuCommandsSubmit(commands);
     prGpuDeviceWait(f.device, fence);
     CHECK(prGpuDeviceIsComplete(f.device, fence));
@@ -170,12 +182,12 @@ TEST_CASE("metal draws into the host's pass, and says which of the pass's state 
     prGpuHostStateSync(commands);
 
     // The host begins its pass, which clears the target to blue, and the device draws the upper half red into it.
-    MTL4RenderPassDescriptor* rp = [MTL4RenderPassDescriptor new];
+    MTLRenderPassDescriptor* rp = [MTLRenderPassDescriptor new];
     rp.colorAttachments[0].texture = (__bridge id<MTLTexture>)prGpuMetalTexture(f.device, target);
     rp.colorAttachments[0].loadAction = MTLLoadActionClear;
     rp.colorAttachments[0].storeAction = MTLStoreActionStore;
     rp.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 1, 1);
-    id<MTL4RenderCommandEncoder> encoder = [host.buffer renderCommandEncoderWithDescriptor:rp];
+    id<MTLRenderCommandEncoder> encoder = [host.buffer renderCommandEncoderWithDescriptor:rp];
     PrGpuPassDesc passDesc{};
     passDesc.host = (__bridge void*)encoder;
     passDesc.hostFormats.colorCount = 1;
@@ -198,7 +210,6 @@ TEST_CASE("metal draws into the host's pass, and says which of the pass's state 
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
         PrGpuAccessFlag_CopyRead);
     prGpuHostStateSync(commands);
-    [host.buffer endCommandBuffer];
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
     prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
@@ -207,4 +218,38 @@ TEST_CASE("metal draws into the host's pass, and says which of the pass's state 
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
     prGpuPipelineDestroy(f.device, pipeline);
     prGpuTextureDestroy(f.device, target);
+}
+
+TEST_CASE("metal presents frames, with the transaction always unless threaded") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    @autoreleasepool {
+        NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
+        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
+        PrGpuSwapChain* transactional = nullptr;
+        REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &transactional) == PrStatus_Ok);
+        CAMetalLayer* layer = (CAMetalLayer*)view.layer;
+        CHECK(layer.presentsWithTransaction);
+        for (int frame = 0; frame < 4; ++frame) {
+            PrGpuFence fence = presentFrame(f.device, transactional);
+            CHECK(layer.presentsWithTransaction == true);
+            prGpuDeviceWait(f.device, fence);
+        }
+        prGpuSwapChainDestroy(transactional);
+
+        NSView* threadedView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
+        PrAppSurface threadedSurface{PrAppSurfaceKind_NsView, (__bridge void*)threadedView};
+        desc.flags = PrGpuSwapChainFlag_Threaded;
+        PrGpuSwapChain* threaded = nullptr;
+        REQUIRE(prGpuSwapChainCreate(f.device, &threadedSurface, &desc, &threaded) == PrStatus_Ok);
+        CAMetalLayer* threadedLayer = (CAMetalLayer*)threadedView.layer;
+        for (int frame = 0; frame < 4; ++frame) {
+            PrGpuFence fence = presentFrame(f.device, threaded);
+            CHECK_FALSE(threadedLayer.presentsWithTransaction);
+            prGpuDeviceWait(f.device, fence);
+        }
+        prGpuSwapChainDestroy(threaded);
+    }
 }

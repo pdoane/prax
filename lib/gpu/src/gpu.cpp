@@ -14,6 +14,9 @@
 #if defined(PR_GPU_HAS_METAL)
 #include "pr/gpu_metal.h"
 #endif
+#if defined(PR_GPU_HAS_METAL4)
+#include "pr/gpu_metal4.h"
+#endif
 #if defined(PR_GPU_HAS_VULKAN)
 #include "pr/gpu_vulkan.h"
 #endif
@@ -188,13 +191,16 @@ void submittedDone(void* PR_NULLABLE context, double seconds) {
     *static_cast<double*>(context) = seconds;
 }
 
-constexpr PrStringView kBackendNames[PrGpuBackend_Count] = {"default", "metal", "vulkan", "d3d12"};
+constexpr PrStringView kBackendNames[PrGpuBackend_Count] = {"default", "metal", "metal4", "vulkan", "d3d12"};
 
 // The backends that the build has, the platform's own first, which Default creates the first of, and then Default, so
 // that a build without backends creates none.
 constexpr PrGpuBackend kBuilt[] = {
 #if defined(PR_GPU_HAS_METAL)
     PrGpuBackend_Metal,
+#endif
+#if defined(PR_GPU_HAS_METAL4)
+    PrGpuBackend_Metal4,
 #endif
 #if defined(PR_GPU_HAS_D3D12)
     PrGpuBackend_D3d12,
@@ -254,6 +260,13 @@ PrStatus prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NU
             PrGpuMetalOptions metal = prGpuMetalOptionsDefault();
             metal.validation = o.validation;
             return prGpuMetalCreate(&metal, out);
+        }
+#endif
+#if defined(PR_GPU_HAS_METAL4)
+        case PrGpuBackend_Metal4: {
+            PrGpuMetal4Options metal = prGpuMetal4OptionsDefault();
+            metal.validation = o.validation;
+            return prGpuMetal4Create(&metal, out);
         }
 #endif
 #if defined(PR_GPU_HAS_VULKAN)

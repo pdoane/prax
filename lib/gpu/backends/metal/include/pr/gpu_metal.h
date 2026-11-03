@@ -1,4 +1,5 @@
-// The Metal GPU backend, on Metal 4.
+// The Metal GPU backend, on Metal 3, which is the default Metal backend. pr/gpu_metal4.h is the same interface on Metal
+// 4.
 //
 // The native objects cross this header as untyped pointers. A caller bridges them to their Objective-C types, such as
 // `id<MTLDevice>`.
@@ -23,22 +24,27 @@ extern "C" {
 // The Metal objects that a device is created over.
 typedef struct PrGpuMetalOptions {
     void* PR_NULLABLE device;   // the host's id<MTLDevice>; null for the system's default
-    void* PR_NULLABLE queue;    // the host's id<MTL4CommandQueue> on the device; null to create one
+    void* PR_NULLABLE queue;    // the host's id<MTLCommandQueue> on the device; null to create one
     bool validation;            // labels objects for Metal's validation, which the environment turns on
 } PrGpuMetalOptions;
 
 // Returns the default options: the system's default device, with a queue of the device's own.
 PrGpuMetalOptions prGpuMetalOptionsDefault(void);
 
-// Creates a device over Metal 4. The device retains the host's Metal device and queue. Null `options` means the
-// defaults. Returns NotSupported if the system has no Metal device that supports Metal 4. On failure, `*out` is null.
+// Creates a device over Metal 3. The device retains the host's Metal device and queue. Null `options` means the
+// defaults. Returns NotSupported if the system has no Metal device that supports Metal 3. On failure, `*out` is null.
 PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
 
-// Return the native objects of the device, valid while it lives: its id<MTLDevice>, its id<MTL4CommandQueue>, and the
+// Return the native objects of the device, valid while it lives: its id<MTLDevice>, its id<MTLCommandQueue>, and the
 // id<MTLResidencySet> that holds its resources.
 void* prGpuMetalDevice(const PrGpuDevice* device);
 void* prGpuMetalQueue(const PrGpuDevice* device);
 void* prGpuMetalResidencySet(const PrGpuDevice* device);
+
+// Returns the id<MTLFence> that orders the device's encoders, valid while the device lives. An encoder of the host's on
+// the device's queue that shares resources with the device waits on the fence at its start, and updates it at its end.
+// A pass of the host's that the device draws in does this through prGpuPassBegin and prGpuPassEnd.
+void* prGpuMetalOrderFence(const PrGpuDevice* device);
 
 // Returns the id<MTLTexture> of a texture, valid while the texture lives.
 void* prGpuMetalTexture(const PrGpuDevice* device, PrGpuTexture texture);
@@ -47,8 +53,9 @@ void* prGpuMetalTexture(const PrGpuDevice* device, PrGpuTexture texture);
 // keeps what the texture holds. `usage` says how the device may use it. Returns Limit if the device has no handle left.
 PrStatus prGpuMetalTextureWrap(PrGpuDevice* device, void* texture, PrGpuTextureUsageFlags usage, PrGpuTexture* out);
 
-// A command buffer that records into the host's native one passes its id<MTL4CommandBuffer>, begun and not yet ended,
-// as PrGpuCommandsOptions::native. A pass of the host's passes its id<MTL4RenderCommandEncoder> as PrGpuPassDesc::host.
+// A command buffer that records into the host's native one passes its id<MTLCommandBuffer>, not yet committed, as
+// PrGpuCommandsOptions::native. A pass of the host's passes its id<MTLRenderCommandEncoder>, before its first draw, as
+// PrGpuPassDesc::host, and the host ends the encoder after prGpuPassEnd.
 
 #if defined(__cplusplus)
 }

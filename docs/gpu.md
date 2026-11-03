@@ -6,19 +6,21 @@ each backend runs it on one graphics API.
 
 | backend | API | on by default |
 | --- | --- | --- |
-| `metal` | Metal 4 | macOS (`PR_GPU_METAL`) |
+| `metal` | Metal 3, the default on macOS | macOS (`PR_GPU_METAL`) |
+| `metal4` | Metal 4, kept for experiments | macOS (`PR_GPU_METAL4`) |
 | `d3d12` | Direct3D 12, shader model 6.6, enhanced barriers | Windows (`PR_GPU_D3D12`) |
 | `vulkan` | Vulkan 1.3, with mutable descriptors and push descriptors | Linux and Android (`PR_GPU_VULKAN`) |
 
 The library holds the backends that the build turns on, and builds with none of them for a host that brings its own
 (`pr/gpu_backend.h`). `prGpuDeviceCreate` creates a device by a backend, or by `PrGpuBackend_Default`: the platform's
 own if the build has it. A backend's header creates one over the host's native device and queue (`pr/gpu_metal.h`,
-`pr/gpu_d3d12.h`, `pr/gpu_vulkan.h`). The environment variable `PR_GPU_BACKEND` (`metal`, `d3d12` or `vulkan`) chooses
-the backend that Default creates, so a program and its tests run on any backend that the build has.
+`pr/gpu_metal4.h`, `pr/gpu_d3d12.h`, `pr/gpu_vulkan.h`). The environment variable `PR_GPU_BACKEND` (`metal`, `metal4`,
+`d3d12` or `vulkan`) chooses the backend that Default creates, so a program and its tests run on any backend that the
+build has.
 
 ## The model
 
-The interface is bindless, with explicit barriers, because Metal 4, Direct3D 12 and Vulkan all work best that way and
+The interface is bindless, with explicit barriers, because Metal, Direct3D 12 and Vulkan all work best that way and
 a 3D renderer needs it.
 
 - **Handles are heap slots.** A buffer, a texture or a sampler is a `uint32_t` that is its identity and its slot in
@@ -36,9 +38,9 @@ a 3D renderer needs it.
   arrays are of 4-vectors, or of structures whose size is a multiple of 16 bytes. The shader build checks each
   library's root data against C's layout and fails on a difference.
 - **The device tracks no states.** A barrier names a resource's accesses before and after it, and the caller knows
-  them. Each backend derives what its API needs from the accesses: Metal 4's stage barriers, and the sync, access and
-  image layout of Direct3D 12's enhanced barriers and Vulkan's synchronization2. A texture begins in the accesses of
-  `ShaderRead`.
+  them. Each backend derives what its API needs from the accesses: Metal 3's chain of fences, Metal 4's stage
+  barriers, and the sync, access and image layout of Direct3D 12's enhanced barriers and Vulkan's synchronization2. A
+  texture begins in the accesses of `ShaderRead`.
 - **Lifetimes need no thought.** An object may be destroyed as soon as the work that uses it is recorded. The device
   keeps it until every command buffer that began before the destruction is done.
 - **One timeline.** Each submission returns a fence, and fences rise in the order of submission. A command buffer that
@@ -103,7 +105,7 @@ again between the host's work and the device's.
 `gpu_tests` runs every test on each backend that the build has and the system has a device for, with validation, and
 tests each backend's embedding with the same shaders: recording into the host's command buffers and drawing in its
 passes. It runs under Metal's API validation, which it turns on with `MTL_DEBUG_LAYER` unless the environment sets it,
-and tests a window's swap chain on Vulkan. The renderers'
+and tests a window's swap chain on Vulkan and a view's on Metal. The renderers'
 tests compare their images with the `cpu` backend's ([draw.md](draw.md)), on the backend that `PR_GPU_BACKEND` chooses.
 `PR_D3D12_DEBUG=1` and `PR_VULKAN_DEBUG=1` turn on Direct3D 12's debug layer and Vulkan's validation layer for a device
 that is made without asking for validation, and write their errors to the standard error.

@@ -55,6 +55,7 @@ typedef uint64_t PrGpuFence;
 enum {
     PrGpuBackend_Default,
     PrGpuBackend_Metal,
+    PrGpuBackend_Metal4,
     PrGpuBackend_Vulkan,
     PrGpuBackend_D3d12,
     PrGpuBackend_Count,

@@ -114,7 +114,8 @@ platform supports.
 | --- | --- | --- | --- | --- |
 | app | `PR_APP_COCOA` | Cocoa | Apple platforms | on |
 | app | `PR_APP_WIN32` | Win32 | Windows | on |
-| gpu | `PR_GPU_METAL` | Metal 4 | Apple platforms | on |
+| gpu | `PR_GPU_METAL` | Metal 3 | Apple platforms | on |
+| gpu | `PR_GPU_METAL4` | Metal 4, for experiments | Apple platforms | on |
 | gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
 | gpu | `PR_GPU_VULKAN` | Vulkan | every platform | on for Linux and Android |
 | net | `PR_NET_SOCKETS` | BSD sockets, or Winsock on Windows | every platform | on |
