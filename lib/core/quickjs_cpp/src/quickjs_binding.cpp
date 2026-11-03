@@ -644,6 +644,9 @@ void jsLeaveRealm(JSContext* ctx) {
 }
 
 JSContext* jsIncumbentRealm(JSContext* ctx) {
+    JSContext* caller = JS_GetCallerRealm(ctx);
+    if (caller != nullptr)
+        return caller;
     JsWrappers* wrappers = wrappersOf(JS_GetRuntime(ctx));
     return wrappers->realms.count != 0 ? wrappers->realms.last() : ctx;
 }

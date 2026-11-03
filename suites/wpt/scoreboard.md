@@ -142,9 +142,9 @@ of a change to it is what the change did.
 | dom/abort                        |       9/9 |        40/40 |  100.0% |
 | dom/collections                  |     12/12 |        50/56 |   89.2% |
 | dom/crashtests                   |       4/4 |          4/4 |  100.0% |
-| dom/events                       |   192/202 |      574/837 |   68.5% |
+| dom/events                       |   194/202 |      578/839 |   68.8% |
 | dom/lists                        |       5/5 |      185/189 |   97.8% |
-| dom/nodes                        |   399/404 |  13541/15295 |   88.5% |
+| dom/nodes                        |   399/404 |  13542/15295 |   88.5% |
 | dom/ranges                       |     72/72 |  44512/44706 |   99.5% |
 | dom/traversal                    |     18/18 |    1600/1608 |   99.5% |
 | domparsing                       |     46/46 |      257/597 |   43.0% |
@@ -168,7 +168,7 @@ of a change to it is what the change did.
 | selection/textcontrols           |       7/9 |        11/78 |   14.1% |
 | shadow-dom                       |    98/100 |      673/788 |   85.4% |
 | shadow-dom/crashtests            |     25/25 |        25/25 |  100.0% |
-| shadow-dom/declarative           |     24/57 |     133/7788 |    1.7% |
+| shadow-dom/declarative           |     25/57 |     135/7790 |    1.7% |
 | shadow-dom/focus                 |     39/40 |       99/111 |   89.1% |
 | shadow-dom/focus-navigation      |     45/45 |        43/89 |   48.3% |
 | shadow-dom/leaktests             |       4/4 |        10/16 |   62.5% |
@@ -187,7 +187,7 @@ of a change to it is what the change did.
 | uievents/textInput               |       5/7 |         1/21 |    4.7% |
 | webidl                           |       2/2 |      159/192 |   82.8% |
 | webidl/ecmascript-binding        |     42/43 |      214/314 |   68.1% |
-| **total**                        | 1644/1877 | 98980/115937 |   85.3% |
+| **total**                        | 1647/1877 | 98987/115941 |   85.3% |
 
 ## encoding
 
@@ -217,12 +217,12 @@ of a change to it is what the change did.
 | focus                                               |     17/43 |         10/51 |   19.6% |
 | gif                                                 |       1/1 |           0/1 |    0.0% |
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
-| html/browsers                                       |   550/769 |      465/2244 |   20.7% |
+| html/browsers                                       |   565/769 |      504/2262 |   22.2% |
 | html/canvas                                         | 2645/2876 |     1735/5247 |   33.0% |
-| html/dom                                            |   345/353 |   60700/66757 |   90.9% |
+| html/dom                                            |   345/353 |   60711/66758 |   90.9% |
 | html/editing                                        |   125/254 |       522/848 |   61.5% |
 | html/embedded-content                               |       1/1 |           0/2 |    0.0% |
-| html/infrastructure                                 |   113/148 |       495/806 |   61.4% |
+| html/infrastructure                                 |   119/148 |       508/821 |   61.8% |
 | html/interaction                                    |   198/201 |       394/765 |   51.5% |
 | html/links                                          |       6/7 |           4/7 |   57.1% |
 | html/meta                                           |       0/1 |           0/1 |    0.0% |
@@ -230,11 +230,11 @@ of a change to it is what the change did.
 | html/rendering                                      |   479/481 |   10566/11499 |   91.8% |
 | html/scripting                                      |       3/3 |           0/4 |    0.0% |
 | html/select                                         |       2/2 |           5/6 |   83.3% |
-| html/semantics                                      | 2432/2909 |    9230/19676 |   46.9% |
+| html/semantics                                      | 2515/2909 |    9259/19679 |   47.0% |
 | html/syntax                                         |   249/250 |     6682/6914 |   96.6% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
-| html/user-activation                                |      9/21 |          3/28 |   10.7% |
-| html/webappapis                                     |   288/329 |     2080/2516 |   82.6% |
+| html/user-activation                                |     13/21 |         24/38 |   63.1% |
+| html/webappapis                                     |   289/329 |     2081/2516 |   82.7% |
 | inert                                               |     25/29 |        53/112 |   47.3% |
 | png                                                 |       4/4 |           3/4 |   75.0% |
 | png/apng                                            |     29/29 |         10/29 |   34.4% |
@@ -262,7 +262,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8213/9505 | 124922/155854 |   80.1% |
+| **total**                                           | 8322/9505 | 125036/155901 |   80.2% |
 
 ## infrastructure
 
@@ -382,13 +382,13 @@ of a change to it is what the change did.
 
 | Module    | Files |      Tests | Passing |
 |-----------|------:|-----------:|--------:|
-| url       | 48/49 | 9767/10031 |   97.3% |
-| **total** | 48/49 | 9767/10031 |   97.3% |
+| url       | 49/49 | 9770/10036 |   97.3% |
+| **total** | 49/49 | 9770/10036 |   97.3% |
 
 ## xhr
 
 | Module       |   Files |    Tests | Passing |
 |--------------|--------:|---------:|--------:|
-| xhr          | 290/335 | 766/1412 |   54.2% |
+| xhr          | 292/335 | 764/1412 |   54.1% |
 | xhr/formdata |   17/18 |    62/78 |   79.4% |
-| **total**    | 307/353 | 828/1490 |   55.5% |
+| **total**    | 309/353 | 826/1490 |   55.4% |

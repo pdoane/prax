@@ -966,8 +966,9 @@ TEST_CASE("a location of another document navigates the page from a task, and a 
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(page, "<p id=top>", "https://example.test/start", nullptr) == PrStatus_Ok);
     PrHtmlWindow* window = prHtmlPageWindow(page);
-    CHECK(prHtmlWindowSetLocation(window, PrUrlComponent_Hash, "top", PrHtmlHistoryHandling_Push) == PrStatus_Ok);
-    CHECK(prHtmlWindowSetLocation(window, PrUrlComponent_Href, "next?q=1#part", PrHtmlHistoryHandling_Push) ==
+    CHECK(prHtmlWindowSetLocation(window, window, PrUrlComponent_Hash, "top", PrHtmlHistoryHandling_Push) ==
+        PrStatus_Ok);
+    CHECK(prHtmlWindowSetLocation(window, window, PrUrlComponent_Href, "next?q=1#part", PrHtmlHistoryHandling_Push) ==
         PrStatus_Ok);
     CHECK(later.waitingFor("next?q=1") == 0);
     later.settle(page);
@@ -983,8 +984,8 @@ TEST_CASE("a location of another document navigates the page from a task, and a 
     PrHtmlHost bare = prHtmlHostDefault();
     page = prHtmlPageCreate(&bare);
     REQUIRE(prHtmlPageLoad(page, "<p>", "https://example.test/start", nullptr) == PrStatus_Ok);
-    CHECK(prHtmlWindowSetLocation(prHtmlPageWindow(page), PrUrlComponent_Href, "other", PrHtmlHistoryHandling_Push) ==
-        PrStatus_NotSupported);
+    CHECK(prHtmlWindowSetLocation(prHtmlPageWindow(page), prHtmlPageWindow(page), PrUrlComponent_Href, "other",
+        PrHtmlHistoryHandling_Push) == PrStatus_NotSupported);
     prHtmlPageDestroy(page);
 }
 
@@ -1010,13 +1011,51 @@ TEST_CASE("a navigation that a document starts is fetched from its origin, and t
     };
     REQUIRE(prHtmlPageNavigate(page, "https://example.test/a") == PrStatus_Ok);
     CHECK(originOf("/a") == "<none>");
-    REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(page), PrUrlComponent_Href, "https://other.test/b",
+    REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(page), prHtmlPageWindow(page), PrUrlComponent_Href, "https://other.test/b",
         PrHtmlHistoryHandling_Push) == PrStatus_Ok);
     CHECK(originOf("/b") == "https://example.test");
     prHtmlPageTraverse(page, -1);
     CHECK(originOf("/a") == "<none>");
     prHtmlPageDestroy(page);
     prHtmlSessionHistoryDestroy(history);
+}
+
+TEST_CASE("a hyperlink whose target names no browsing context needs the user's activation for a new one") {
+    struct Opened {
+        std::vector<std::string> urls;
+    } opened;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.context = &opened;
+    host.openWindow = [](void* context, PrHtmlPage*, PrStringView url) {
+        static_cast<Opened*>(context)->urls.emplace_back(url.data, url.size);
+    };
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(page, "<a id=blank target=_BLANK href=one></a><a id=unknown target=nowhere href=two></a>"
+        "<a id=dangling target=\"x\n<\" href=three></a><a id=script target=_blank href=\"javascript:1\"></a>",
+        "https://example.test/", nullptr) == PrStatus_Ok);
+    PrHtmlWindow* window = prHtmlPageWindow(page);
+    PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(window));
+    auto click = [&](const char* id) {
+        prHtmlElementClick(prHtmlElementQuery(prDomElementAsEventTarget(prDomNodeGetElementById(root, id))));
+    };
+    click("blank");
+    CHECK(opened.urls.empty());
+    CHECK(!prHtmlWindowHasStickyActivation(window));
+    for (const char* id : {"blank", "unknown", "dangling"}) {
+        prHtmlWindowNotifyUserActivation(window);
+        CHECK(prHtmlWindowHasTransientActivation(window));
+        click(id);
+        CHECK(!prHtmlWindowHasTransientActivation(window));
+        CHECK(prHtmlWindowHasStickyActivation(window));
+    }
+    click("blank");
+    prHtmlWindowNotifyUserActivation(window);
+    click("script");
+    CHECK(prHtmlWindowHasTransientActivation(window));
+    CHECK(opened.urls == std::vector<std::string>{
+        "https://example.test/one", "https://example.test/two", "https://example.test/three",
+    });
+    prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a page's session history keeps each document's entries, and going to another document's navigates") {
@@ -1042,7 +1081,8 @@ TEST_CASE("a page's session history keeps each document's entries, and going to 
     arrive("/b");
     PrHtmlWindow* window = prHtmlPageWindow(page);
     // A fragment navigation and pushState add entries for the same document.
-    REQUIRE(prHtmlWindowSetLocation(window, PrUrlComponent_Hash, "x", PrHtmlHistoryHandling_Push) == PrStatus_Ok);
+    REQUIRE(prHtmlWindowSetLocation(window, window, PrUrlComponent_Hash, "x", PrHtmlHistoryHandling_Push) ==
+        PrStatus_Ok);
     REQUIRE(prHtmlHistoryPushState(window, "state", "c", PrHtmlHistoryHandling_Push) == PrStatus_Ok);
     CHECK(prHtmlSessionHistoryLength(history) == 4);
     CHECK(prHtmlSessionHistoryIndex(history) == 3);
@@ -1078,8 +1118,8 @@ TEST_CASE("a page's session history keeps each document's entries, and going to 
     CHECK(std::string(state.data, state.size) == "state");
 
     // A navigation that replaces drops nothing, and the document that loads takes the current entry with no state.
-    REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(page), PrUrlComponent_Href, "d", PrHtmlHistoryHandling_Replace) ==
-        PrStatus_Ok);
+    REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(page), prHtmlPageWindow(page), PrUrlComponent_Href, "d",
+        PrHtmlHistoryHandling_Replace) == PrStatus_Ok);
     arrive("/d");
     CHECK(prHtmlSessionHistoryLength(history) == 4);
     CHECK(url(3) == "https://example.test/d");
@@ -1252,6 +1292,32 @@ TEST_CASE("a script's fetch that is cancelled stops, and is never answered") {
     prHtmlPageDestroy(page);
     CHECK(waited == 0);
     CHECK(inlined == 0);
+}
+
+TEST_CASE("a navigation stops a document that is still loading, unless its URL does not parse") {
+    LaterHost later;
+    PrHtmlHost host = later.host();
+    host.execute = nullptr;
+    host.parseModule = nullptr;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    PrHtmlResponseHeaders headers{.contentType = "text/html;charset=utf-8"};
+    REQUIRE(prHtmlPageBeginLoad(page, "https://example.test/long.html", &headers) == PrStatus_Ok);
+    prHtmlPageAppendLoad(page, "<!doctype html><p id=first>");
+    later.settle(page);
+    CHECK(has(page, "first"));
+
+    CHECK(prHtmlPageNavigate(page, "not a url") != PrStatus_Ok);
+    prHtmlPageAppendLoad(page, "<p id=second>");
+    later.settle(page);
+    CHECK(has(page, "second"));
+
+    REQUIRE(prHtmlPageNavigate(page, "https://example.test/next.html") == PrStatus_Ok);
+    later.settle(page);
+    later.answer("/next.html", "<!doctype html><p id=next>", 200, "text/html");
+    later.settle(page);
+    CHECK(has(page, "next"));
+    CHECK_FALSE(has(page, "first"));
+    prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a navigation fetches its document, keeps the current one until the response, and loads it at the URL") {

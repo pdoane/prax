@@ -1563,7 +1563,7 @@ PrString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent compone
     return prUrlComponent(window->document->url, component);
 }
 
-PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrUrlComponent component, PrStringView value,
+PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrHtmlWindow* source, PrUrlComponent component, PrStringView value,
         PrHtmlHistoryHandling handling) {
     // A document that is not fully active navigates nowhere (html/#navigate).
     if (!htmlWindowIsFullyActive(window))
@@ -1571,7 +1571,7 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrUrlComponent component,
     PrDomDocument* document = window->document;
     PrUrl* copy = nullptr;
     if (component == PrUrlComponent_Href) {
-        PrStatus status = prUrlCreate(value, document->url, PrCharset_Utf8, &copy);
+        PrStatus status = prUrlCreate(value, source->document->url, PrCharset_Utf8, &copy);
         if (status != PrStatus_Ok)
             return PrStatus_Syntax;
     } else {
@@ -1596,7 +1596,7 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrUrlComponent component,
         prUrlDestroy(copy);
         HtmlHistoryCommit commit =
             handling == PrHtmlHistoryHandling_Replace ? HtmlHistoryCommit_Replace : HtmlHistoryCommit_Push;
-        bool navigated = htmlPageNavigate(window, prStringView(&href), commit, window->history->index);
+        bool navigated = htmlPageNavigate(window, source, prStringView(&href), commit, window->history->index);
         prStringReset(&href);
         return navigated ? PrStatus_Ok : PrStatus_NotSupported;
     }
@@ -1614,6 +1614,34 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrUrlComponent component,
     prStringReset(&old);
     htmlWindowScrollToFragment(window);
     return PrStatus_Ok;
+}
+
+PrString prHtmlWindowName(const PrHtmlWindow* window) {
+    const PrHtmlPage* page = htmlDocumentPage(window->document);
+    bool named = page != nullptr && page->window == window && prStringView(&page->targetName).data != nullptr;
+    return named ? prStringClone(&page->targetName) : prStringCopy("");
+}
+
+void prHtmlWindowSetName(PrHtmlWindow* window, PrStringView name) {
+    PrHtmlPage* page = htmlDocumentPage(window->document);
+    if (page != nullptr && page->window == window)
+        prStringReplace(&page->targetName, name);
+}
+
+void prHtmlWindowNotifyUserActivation(PrHtmlWindow* window) {
+    double now = htmlWindowClock(window);
+    for (PrHtmlWindow* at = window; at != nullptr; at = at->parent)
+        at->lastActivation = now;
+    htmlWindowNotifyDescendants(window, now);
+}
+
+bool prHtmlWindowHasStickyActivation(const PrHtmlWindow* window) {
+    return htmlWindowClock(window) >= window->lastActivation;
+}
+
+bool prHtmlWindowHasTransientActivation(const PrHtmlWindow* window) {
+    double now = htmlWindowClock(window);
+    return now >= window->lastActivation && now < window->lastActivation + kHtmlTransientActivationDuration;
 }
 
 PrDomElement* PR_NULLABLE prHtmlWindowNamedItem(PrHtmlWindow* window, PrStringView name) {

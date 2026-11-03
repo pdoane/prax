@@ -55,6 +55,15 @@ PrDomHostState linkState(void* context, PrHtmlPage*, const PrDomElement* element
     return visited ? PrDomHostState_Visited : PrDomHostState(0);
 }
 
+// Asks the window's thread to show a hyperlink's URL in a new tab.
+void openWindow(void* context, PrHtmlPage*, PrStringView url) {
+    Tab& tab = *static_cast<Tab*>(context);
+    prMutexLock(&tab.mutex);
+    tab.opened.emplace_back(url.data, url.size);
+    prMutexUnlock(&tab.mutex);
+    browserWantFrame(*tab.browser);
+}
+
 // Returns the host of a tab's page, before the script engine takes it. The tab's iframes share its session history.
 PrHtmlHost pageHost(Tab& tab) {
     Browser& b = *tab.browser;
@@ -62,6 +71,7 @@ PrHtmlHost pageHost(Tab& tab) {
     host.context = &tab;
     host.fetcher = b.fetcher;
     host.frame = frameHost;
+    host.openWindow = openWindow;
     host.elementState = linkState;
     host.agent = b.agent;
     host.font = b.font;
@@ -457,18 +467,23 @@ void tabTraverse(Tab& tab, int32_t delta) {
 
 bool tabsRefresh(Browser& b) {
     bool changed = false;
+    std::vector<std::string> opened;
     for (Tab* tab : b.tabs) {
         prMutexLock(&tab->mutex);
         bool taken = tab->changed;
         if (taken)
             tab->info = tab->published;
         tab->changed = false;
+        opened.insert(opened.end(), tab->opened.begin(), tab->opened.end());
+        tab->opened.clear();
         prMutexUnlock(&tab->mutex);
         if (taken)
             record(b, *tab);
         changed = changed || taken;
     }
-    return changed;
+    for (const std::string& url : opened)
+        tabOpenNext(b, url);
+    return changed || !opened.empty();
 }
 
 void tabsForget(Browser& b, PrStringView url) {

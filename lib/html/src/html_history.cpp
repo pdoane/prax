@@ -79,7 +79,7 @@ void traverse(void* data) {
     HtmlHistoryEntry& entry = history->entries.data[target];
     // A reload, or an entry of another document, loads its document through the host.
     if (delta == 0 || entry.document != window->historyDocument) {
-        htmlPageNavigate(window, prStringView(&entry.url), HtmlHistoryCommit_Traverse, uint32_t(target));
+        htmlPageNavigate(window, nullptr, prStringView(&entry.url), HtmlHistoryCommit_Traverse, uint32_t(target));
         return;
     }
     PrUrl* url = nullptr;

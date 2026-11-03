@@ -3593,7 +3593,8 @@ TEST_CASE("a click on a link to a fragment scrolls to the element it names, whic
     click(byId("held"), PrDomEventKind_Mouse);
     CHECK(prHtmlWindowScrollY(window) > 2000.0);
     CHECK_FALSE(target(byId("x")));
-    CHECK(prHtmlWindowSetLocation(window, PrUrlComponent_Hash, "top", PrHtmlHistoryHandling_Push) == PrStatus_Ok);
+    CHECK(prHtmlWindowSetLocation(window, window, PrUrlComponent_Hash, "top", PrHtmlHistoryHandling_Push) ==
+        PrStatus_Ok);
     CHECK(prHtmlWindowScrollY(window) == 0.0);
     prHtmlPageDestroy(page);
 }

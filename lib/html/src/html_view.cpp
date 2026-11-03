@@ -604,6 +604,14 @@ PrDomUiEventInit inputInit(const PrDomElement* target, bool cancelable) {
     return init;
 }
 
+// Records the user's interaction with the document of `element`, before the activation triggering input event fires
+// (html/#activation-triggering-input-event).
+void notifyActivation(const PrDomElement* element) {
+    PrHtmlWindow* window = prHtmlDocumentDefaultView(element->document);
+    if (window != nullptr)
+        prHtmlWindowNotifyUserActivation(window);
+}
+
 // Fires a MouseEvent of `type` at `element` for the pointer's action, at `point` in the viewport of the element's
 // document.
 bool fireMouse(HtmlView* v, PrStringView type, PrDomElement* element, PrVec2 point, const PrAppEvent* event) {
@@ -912,6 +920,8 @@ PrHtmlViewEventResult keyDown(HtmlView* v, const PrAppEvent* event) {
     v->keyModifiers = modifiersOf(event->modifiers);
     if (!isModifierKey(event->key))
         htmlFocusKey(target->document);
+    if (event->key != PrAppKey_Escape)
+        notifyActivation(target);
     if (!fireKey(target, "keydown", keyInit(v, target, event)))
         return PrHtmlViewEventResult_Canceled;
     // A key that the input method takes types through the composition.
@@ -1348,6 +1358,7 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
             view->buttons = uint16_t(view->buttons | buttonBit(button));
             designate(view, element, prHtmlDocumentSetActive);
             // A press that no listener cancels moves the focus (html/#focus-processing-model).
+            notifyActivation(element);
             if (fireMouse(view, "mousedown", element, hit.point, event))
                 htmlFocusPress(element);
             if (button == 0) {

@@ -219,13 +219,14 @@ void jsRuntimeDestroy(JSRuntime* PR_NULLABLE runtime);
 void jsCallbackLink(JSRuntime* runtime, JsCallback* callback, JSValueConst owner);
 void jsCallbackUnlink(JsCallback* callback);
 
-// Enters and leaves the realm of a script or callback that the host runs. A function called from another realm runs in
-// its own realm. The innermost realm entered is the one that called it, the incumbent realm. A promise job that the
-// engine runs does not enter a realm.
+// Enters and leaves the realm of a script or callback that the host runs. A promise job that the engine runs does not
+// enter a realm.
 void jsEnterRealm(JSContext* ctx);
 void jsLeaveRealm(JSContext* ctx);
 
-// Returns the innermost realm entered, or `ctx` if there is none.
+// Returns the incumbent realm of a native function, which is the realm of the innermost script function on the stack. A
+// function called from another realm runs in its own realm, so `ctx` can differ from it. If no script function is on
+// the stack, returns the innermost realm entered, or else `ctx`.
 JSContext* jsIncumbentRealm(JSContext* ctx);
 
 // Queues `run` with `data` as a microtask, in the queue of the engine's promise jobs.

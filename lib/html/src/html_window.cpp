@@ -317,6 +317,59 @@ void freeWindow(DomCountedTarget* target) {
     prMemoryFree(window);
 }
 
+// Returns the window whose document's URL gives the window's document its origin. Two windows with the same source
+// share an origin even if it is opaque, whose serialization does not distinguish one from another.
+const PrHtmlWindow* originSource(const PrHtmlWindow* window) {
+    while (window->parent != nullptr) {
+        PrString href = prUrlSerialize(window->document->url, PrUrlSerialization_ExcludeFragment);
+        bool inherits = prStringView(&href) == "about:blank" || prStringView(&href) == "about:srcdoc";
+        prStringReset(&href);
+        if (!inherits)
+            break;
+        window = window->parent;
+    }
+    return window;
+}
+
+// Sets the last activation timestamp of the descendants of `window` that have the origin of `origin` to `now`.
+void notifyDescendants(PrHtmlWindow* window, const PrHtmlWindow* origin, double now) {
+    for (uint32_t i = 0; i < window->frames.count; ++i) {
+        PrHtmlWindow* frame = window->frames.data[i].window;
+        if (htmlWindowIsSameOrigin(frame, origin))
+            frame->lastActivation = now;
+        notifyDescendants(frame, origin, now);
+    }
+}
+
+void consumeActivation(PrHtmlWindow* window) {
+    if (window->lastActivation != kInfinityF64)
+        window->lastActivation = -kInfinityF64;
+    for (uint32_t i = 0; i < window->frames.count; ++i)
+        consumeActivation(window->frames.data[i].window);
+}
+
+// Returns the target of a hyperlink (html/#get-an-element's-target): its target attribute, or else that of the first
+// base element that has one. A value that looks like dangling markup means a new browsing context.
+PrStringView hyperlinkTarget(const PrDomDocument* document, const PrDomElement* element) {
+    PrStringView target = domAttributeValue(element, "target");
+    if (target.data == nullptr && document->baseElements != 0) {
+        const PrDomNode* node = domNodeNext(document, document);
+        while (target.data == nullptr && node != nullptr) {
+            const PrDomElement* base = domElementFromNode(node);
+            if (base != nullptr && domIsHtml(base, PrDomTag_Base))
+                target = domAttributeValue(base, "target");
+            node = domNodeNext(document, node);
+        }
+    }
+    bool hasBreak = false;
+    bool hasLess = false;
+    for (size_t i = 0; i < target.size; ++i) {
+        hasBreak = hasBreak || target.data[i] == '\t' || target.data[i] == '\n' || target.data[i] == '\r';
+        hasLess = hasLess || target.data[i] == '<';
+    }
+    return hasBreak && hasLess ? PrStringView{"_blank"} : target;
+}
+
 } // namespace
 
 int32_t htmlWindowSetTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler, int32_t timeout, bool repeats,
@@ -381,6 +434,7 @@ PrHtmlWindow* htmlWindowCreate(void) {
     window->type = DomTargetType_Window;
     window->references = 1;
     window->destroy = freeWindow;
+    window->lastActivation = kInfinityF64;
     for (PrHtmlPreference preference = 0; preference < PrHtmlPreference_Count; ++preference) {
         PrHtmlPreferenceObject& object = window->preferences[preference];
         object.type = DomTargetType_Preference;
@@ -424,15 +478,29 @@ void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* da
 }
 
 PrString htmlWindowOrigin(const PrHtmlWindow* window) {
-    while (window->parent != nullptr) {
-        PrString href = prUrlSerialize(window->document->url, PrUrlSerialization_Whole);
-        bool inherits = prStringView(&href) == "about:blank" || prStringView(&href) == "about:srcdoc";
-        prStringReset(&href);
-        if (!inherits)
-            break;
-        window = window->parent;
-    }
-    return prUrlOrigin(window->document->url);
+    return prUrlOrigin(originSource(window)->document->url);
+}
+
+bool htmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b) {
+    if (originSource(a) == originSource(b))
+        return true;
+    PrString originA = htmlWindowOrigin(a);
+    PrString originB = htmlWindowOrigin(b);
+    bool same = prStringView(&originA) == prStringView(&originB) && prStringView(&originA) != "null";
+    prStringReset(&originA);
+    prStringReset(&originB);
+    return same;
+}
+
+void htmlWindowNotifyDescendants(PrHtmlWindow* window, double now) {
+    notifyDescendants(window, window, now);
+}
+
+void htmlWindowConsumeActivation(PrHtmlWindow* window) {
+    PrHtmlWindow* top = window;
+    while (top->parent != nullptr)
+        top = top->parent;
+    consumeActivation(top);
 }
 
 uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback) {
@@ -630,7 +698,11 @@ void htmlWindowFollowHyperlink(PrHtmlWindow* window, PrDomElement* element) {
         return;
     PrString text = prUrlSerialize(url, PrUrlSerialization_Whole);
     prUrlDestroy(url);
-    prHtmlWindowSetLocation(window, PrUrlComponent_Href, prStringView(&text), PrHtmlHistoryHandling_Push);
+    PrHtmlWindow* target = htmlPageChooseTarget(window, hyperlinkTarget(document, element));
+    if (target != nullptr)
+        prHtmlWindowSetLocation(target, window, PrUrlComponent_Href, prStringView(&text), PrHtmlHistoryHandling_Push);
+    else
+        htmlPageOpenWindow(window, prStringView(&text));
     prStringReset(&text);
 }
 

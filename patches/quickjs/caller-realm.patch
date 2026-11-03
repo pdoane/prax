@@ -1,0 +1,33 @@
+diff --git a/quickjs.c b/quickjs.c
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -14390,7 +14390,22 @@ static JSValueConst JS_GetActiveFunction(JSContext *ctx)
+ {
+     return ctx->rt->current_stack_frame->cur_func;
+ }
+
++/* the realm of the innermost script function on the stack, or NULL if none runs */
++JSContext *JS_GetCallerRealm(JSContext *ctx)
++{
++    JSStackFrame *sf;
++
++    for (sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
++        if (JS_VALUE_GET_TAG(sf->cur_func) == JS_TAG_OBJECT) {
++            JSObject *p = JS_VALUE_GET_OBJ(sf->cur_func);
++            if (js_class_has_bytecode(p->class_id))
++                return p->u.func.function_bytecode->realm;
++        }
++    }
++    return NULL;
++}
++
+ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf,
+                              int var_idx, bool is_arg)
+ {
+diff --git a/quickjs.h b/quickjs.h
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -444,2 +444,3 @@
+ JS_EXTERN JSRuntime *JS_GetRuntime(JSContext *ctx);
++JS_EXTERN JSContext *JS_GetCallerRealm(JSContext *ctx);
+ JS_EXTERN void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj);

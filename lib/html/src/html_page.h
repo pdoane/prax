@@ -216,6 +216,9 @@ struct HtmlPage {
     uint32_t pendingNavigation; // the id of the navigation that waits for its task, or zero
     uint32_t navigations;       // the ids that navigations have taken
 
+    // The target name (html/#nav-target). An iframe's page takes it from the iframe's name attribute.
+    PrString targetName;
+
     bool settleAtEnd;           // true if the end calls the host's settle hook
     PrStatus endStatus;         // the failure of a script, which ends the load
     uint32_t locationAt;        // the input offset that `line` and `column` count up to
@@ -309,10 +312,19 @@ PrHtmlPage* PR_NULLABLE htmlDocumentPage(const PrDomDocument* document);
 uint64_t htmlPageEmbed(const PrHtmlPage* page);
 
 // Navigates the browsing context whose current window is `window` to the document at `url` (html/#navigate), through
-// its host, from a task. Returns false, and does nothing, if the window is not its browsing context's current window or
-// the host does not navigate.
-bool htmlPageNavigate(PrHtmlWindow* window, PrStringView url,
+// its host, from a task. `source` is the window that starts the navigation, whose origin fetches the document, or null
+// for a traversal of the session history. A javascript: URL runs only if `source` has the origin of `window`. Any call
+// but a traversal replaces the ongoing navigation of the browsing context. Returns false, and does nothing, if the
+// window is not its browsing context's current window or the host does not navigate.
+bool htmlPageNavigate(PrHtmlWindow* window, const PrHtmlWindow* PR_NULLABLE source, PrStringView url,
     HtmlHistoryCommit commit = HtmlHistoryCommit_Push, uint32_t target = 0);
+
+// Returns the window of the browsing context that `name` chooses for a hyperlink of `window`
+// (html/#the-rules-for-choosing-a-navigable), or null if the link needs a new top-level browsing context.
+PrHtmlWindow* PR_NULLABLE htmlPageChooseTarget(PrHtmlWindow* window, PrStringView name);
+
+// Asks the host of the window's page to show `url` in a new top-level browsing context (PrHtmlHost::openWindow).
+void htmlPageOpenWindow(PrHtmlWindow* window, PrStringView url);
 
 // Sets the preferred color scheme of the browsing context of an iframe of `parent` to the scheme that the iframe uses
 // in the presentation of `parent`'s document, as of its last update (css-color-adjust-1/#color-scheme-page). Changes

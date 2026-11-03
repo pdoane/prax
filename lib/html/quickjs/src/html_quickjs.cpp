@@ -706,6 +706,30 @@ bool compile(void* context, PrHtmlPage*, PrDomEventTarget* target, PrDomElement*
     return realm->engine != nullptr && jsHtmlCompileEventHandler(realm->ctx, target, element, handler, body, out);
 }
 
+bool evaluate(void* context, PrHtmlPage*, PrStringView source, PrString* out) {
+    JsHtmlRealm* realm = static_cast<JsHtmlRealm*>(context);
+    if (realm->engine == nullptr)
+        return false;
+    JSContext* ctx = realm->ctx;
+    TextBuffer text;
+    evalText(source, 1, &text);
+    PrStringView eval = textView(&text);
+    JSEvalOptions options{JS_EVAL_OPTIONS_VERSION, JS_EVAL_TYPE_GLOBAL, "javascript:", 1};
+    jsEnterRealm(ctx);
+    JSValue result = JS_Eval2(ctx, eval.data, eval.size - 1, &options);
+    jsLeaveRealm(ctx);
+    textReset(&text);
+    if (JS_IsException(result))
+        jsReportException(ctx);
+    PrStringView value = {};
+    bool isString = JS_IsString(result) && jsReadString(ctx, result, &value);
+    if (isString)
+        *out = prStringCopy(value);
+    JS_FreeValue(ctx, result);
+    engineCheckpoint(realm->engine);
+    return isString;
+}
+
 void microtask(void* context, PrHtmlPage*, void (*run)(void* data), void* data) {
     JsHtmlRealm* realm = static_cast<JsHtmlRealm*>(context);
     if (realm->engine != nullptr)
@@ -804,6 +828,11 @@ PrDomHostState elementState(void* context, PrHtmlPage* page, const PrDomElement*
     return host.elementState(host.context, page, element, wanted);
 }
 
+void openWindow(void* context, PrHtmlPage* page, PrStringView url) {
+    const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
+    host.openWindow(host.context, page, url);
+}
+
 void loaded(void* context, PrHtmlPage* page, PrStatus status) {
     const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
     host.loaded(host.context, page, status);
@@ -830,11 +859,13 @@ PrHtmlHost engineHost(JsHtmlEngine* engine, const PrHtmlHost* host, bool scripti
     result.parseModule = realm->scripting ? parseModule : nullptr;
     result.settle = settle;
     result.compile = compile;
+    result.evaluate = realm->scripting ? evaluate : nullptr;
     result.microtask = microtask;
     result.frame = host->frame != nullptr ? frame : nullptr;
     result.windowOpened = windowOpened;
     result.windowClosed = windowClosed;
     result.closed = closed;
+    result.openWindow = host->openWindow != nullptr ? openWindow : nullptr;
     result.loaded = host->loaded != nullptr ? loaded : nullptr;
     result.elementState = host->elementState != nullptr ? elementState : nullptr;
     result.now = host->now != nullptr ? now : nullptr;

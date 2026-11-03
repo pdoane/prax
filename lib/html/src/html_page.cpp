@@ -22,6 +22,7 @@
 #include "pr/text_font.h"
 #include "pr/url.h"
 #include "pr/url_data.h"
+#include "pr/url_percent.h"
 
 #include "css/src/css_font_face.h"
 #include "css/src/css_hints.h"
@@ -1319,6 +1320,7 @@ void attachFrame(PrHtmlPage* page, PrDomElement* element, PrStringView source, P
     PrHtmlPage* child = prHtmlPageCreate(&childHost);
     child->window->parent = window;
     child->initialBlank = kind == FrameDocument_InitialBlank;
+    child->targetName = prStringCopy(domAttributeValue(element, "name"));
     child->defaultCharset = page->defaultCharset;
     prHtmlPageSetDisplay(child, &page->display);
     prHtmlPageSetUserPreferences(child, &page->preferences);
@@ -1356,12 +1358,8 @@ void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     dropEmbedFetch(fetch);
 }
 
-// Handles a change to an iframe's frame (html/#the-iframe-element). An iframe connected in the window's document
-// contains a new browsing context, navigated to what its attributes name. This is its srcdoc, or the resource that its
-// src names, fetched through its document's browsing context, or else about:blank. Any other iframe contains no
-// browsing context. Its load event follows html/#iframe-load-event-steps. Returns true if `url` is, ignoring fragments,
-// the URL of the page's document or of a document around it. A nested document with such a URL would hold another copy
-// of its container, without end (html/#process-the-iframe-attributes).
+// Returns true if `url` is, ignoring fragments, the URL of the page's document or of a document around it. A nested
+// document with such a URL would hold another copy of its container, without end (html/#process-the-iframe-attributes).
 bool loadsItself(const PrHtmlPage* page, const PrUrl* url) {
     PrString wanted = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     bool found = false;
@@ -1377,18 +1375,57 @@ bool loadsItself(const PrHtmlPage* page, const PrUrl* url) {
     return found;
 }
 
+// Returns the window of the browsing context that the iframe holds, or null.
+PrHtmlWindow* PR_NULLABLE frameWindow(const PrHtmlPage* page, const PrDomElement* element) {
+    for (uint32_t i = 0; i < page->window->frames.count; ++i) {
+        if (page->window->frames.data[i].container == element)
+            return page->window->frames.data[i].window;
+    }
+    return nullptr;
+}
+
+// Returns true if `url` matches about:blank (html/#matches-about:blank), which an iframe shows with no fetch.
+bool isBlank(const PrUrl* url) {
+    return prUrlScheme(url) == "about" && prUrlPath(url) == "blank";
+}
+
+// Handles a change to an iframe's frame (html/#the-iframe-element). An iframe connected in the window's document
+// contains a browsing context, navigated to what its attributes name. This is its srcdoc, or the resource that its src
+// names, fetched through its document's browsing context, or else about:blank. Any other iframe contains no browsing
+// context. Its load event follows html/#iframe-load-event-steps.
 void frameChanged(PrHtmlPage* page, PrDomElement* element) {
-    ++domElementState(element)->generation;
-    dropFrame(page, element);
-    if (!inWindow(page, element))
-        return;
     PrStringView srcdoc = domAttributeValue(element, "srcdoc");
     PrStringView src = domAttributeValue(element, "src");
     PrUrl* resolved = nullptr;
+    bool parsed = srcdoc.data == nullptr && src.size != 0 &&
+        domDocumentParseUrl(page->window->document, src, &resolved) == PrStatus_Ok;
+    // A javascript: URL navigates the browsing context that the iframe holds, and its document stays unless the script
+    // replaces it (html/#process-the-iframe-attributes). A new iframe holds an about:blank with its container's origin.
+    if (parsed && prUrlScheme(resolved) == "javascript" && inWindow(page, element)) {
+        PrHtmlWindow* child = frameWindow(page, element);
+        if (child == nullptr) {
+            attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{});
+            child = frameWindow(page, element);
+        }
+        PrString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
+        htmlPageNavigate(child, page->window, prStringView(&href), HtmlHistoryCommit_Replace, child->history->index);
+        prStringReset(&href);
+        prUrlDestroy(resolved);
+        return;
+    }
+    ++domElementState(element)->generation;
+    dropFrame(page, element);
+    if (!inWindow(page, element)) {
+        prUrlDestroy(resolved);
+        return;
+    }
     if (srcdoc.data != nullptr) {
         attachFrame(page, element, srcdoc, "about:srcdoc", PrHtmlResponseHeaders{});
-    } else if (src.size != 0 && domDocumentParseUrl(page->window->document, src, &resolved) == PrStatus_Ok &&
-            !loadsItself(page, resolved)) {
+    } else if (parsed && isBlank(resolved)) {
+        PrString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
+        attachFrame(page, element, "", prStringView(&href), PrHtmlResponseHeaders{});
+        prStringReset(&href);
+    } else if (parsed && !loadsItself(page, resolved)) {
         attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{}, FrameDocument_InitialBlank);
         page->children.data[page->children.count - 1]->awaitingSource = true;
         EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(resolved, PrUrlSerialization_Whole));
@@ -1720,6 +1757,14 @@ bool activates(void* PR_NULLABLE, const PrDomElement* element) {
     return !prHtmlElementIsContentEditable(prHtmlElementQuery(prDomNodeAsEventTarget(node)));
 }
 
+// Gives the browsing context of an iframe the iframe's new name (html/#the-iframe-element).
+void frameNameChanged(PrHtmlPage* page, const PrDomElement* element) {
+    PrHtmlWindow* window = frameWindow(page, element);
+    PrHtmlPage* child = window != nullptr ? htmlDocumentPage(window->document) : nullptr;
+    if (child != nullptr)
+        prStringReplace(&child->targetName, domAttributeValue(element, "name"));
+}
+
 void activate(void* PR_NULLABLE context, PrDomElement* element, PrDomEvent*) {
     htmlWindowFollowHyperlink(static_cast<PrHtmlPage*>(context)->window, element);
 }
@@ -1740,6 +1785,8 @@ void embedChanged(void* PR_NULLABLE context, PrDomElement* element, PrStringView
         case PrDomTag_Iframe:
             if (connection || attribute == "src" || attribute == "srcdoc")
                 frameChanged(page, element);
+            else if (attribute == "name")
+                frameNameChanged(page, element);
             return;
         case PrDomTag_Object:
             if (connection || attribute == "data" || attribute == "type")
@@ -2129,6 +2176,15 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
         page->scriptCreated = false;
     }
     if (page->loaded) {
+        // html/#resetBCName: a top-level browsing context loses its name when it commits a document of another origin.
+        if (page->window->parent == nullptr) {
+            PrString before = prUrlOrigin(page->window->document->url);
+            PrString after = prUrlOrigin(documentUrl);
+            if (prStringView(&before) != prStringView(&after) || prStringView(&before) == "null")
+                prStringReset(&page->targetName);
+            prStringReset(&before);
+            prStringReset(&after);
+        }
         dropMarkdown(page);
         dropFetches(page);
         domXmlBuilderReset(&page->xml);
@@ -2594,6 +2650,43 @@ void rendered(void* context) {
     page->host.rendered(page->host.context, page);
 }
 
+// The start of a serialized javascript: URL.
+constexpr PrStringView kJavascriptScheme = "javascript:";
+
+// Returns true if `url`, which is serialized, has the javascript scheme.
+bool hasJavascriptScheme(PrStringView url) {
+    return url.size >= kJavascriptScheme.size && PrStringView{url.data, kJavascriptScheme.size} == kJavascriptScheme;
+}
+
+// Returns true if `window`'s browsing context has the target name `name`.
+bool hasTargetName(const PrHtmlWindow* window, PrStringView name) {
+    const PrHtmlPage* page = htmlDocumentPage(window->document);
+    return page != nullptr && prStringView(&page->targetName) == name;
+}
+
+// Returns true if `source` is familiar with `window` (html/#familiar-with): their documents have the same origin, or
+// `source` has the origin of an ancestor of `window`. This keeps a page from navigating unrelated frames by name.
+bool isFamiliar(const PrHtmlWindow* source, const PrHtmlWindow* window) {
+    for (const PrHtmlWindow* at = window; at != nullptr; at = at->parent) {
+        if (htmlWindowIsSameOrigin(source, at))
+            return true;
+    }
+    return false;
+}
+
+// Returns the first window in the tree of `root`, in tree order, that has the target name `name` and with which
+// `source` is familiar, or null.
+PrHtmlWindow* PR_NULLABLE findTarget(const PrHtmlWindow* source, PrHtmlWindow* root, PrStringView name) {
+    if (hasTargetName(root, name) && isFamiliar(source, root))
+        return root;
+    for (uint32_t i = 0; i < root->frames.count; ++i) {
+        PrHtmlWindow* found = findTarget(source, root->frames.data[i].window, name);
+        if (found != nullptr)
+            return found;
+    }
+    return nullptr;
+}
+
 // A navigation that a task hands to the host.
 struct Navigation {
     PrHtmlPage* page;
@@ -2602,6 +2695,8 @@ struct Navigation {
     PrString origin;            // the origin of the document that started the navigation (HtmlDocumentLoad::origin)
     HtmlHistoryCommit commit;   // how the document that the navigation loads takes its entry
     uint32_t target;
+    bool javascript;            // true if the URL's scheme is javascript
+    bool sameOrigin;            // true if the document that started the navigation shares the origin of the page
 };
 
 void dropNavigation(void* data) {
@@ -2614,6 +2709,52 @@ void dropNavigation(void* data) {
 void abortDocument(PrHtmlPage* page);
 PrStatus startNavigation(PrHtmlPage* page, PrStringView url, PrStringView origin);
 
+// Stops waiting for the page's document load. Its pieces in flight find no page, and its fetch is cancelled on the loop
+// if it still runs.
+void dropDocumentLoad(PrHtmlPage* page);
+
+// Returns true if the page's browsing context is still in the tree of its parent.
+bool isAttached(const PrHtmlPage* page) {
+    const PrHtmlWindow* parent = page->window->parent;
+    if (parent == nullptr)
+        return true;
+    for (uint32_t i = 0; i < parent->frames.count; ++i) {
+        if (parent->frames.data[i].window == page->window)
+            return true;
+    }
+    return false;
+}
+
+// Runs a javascript: URL in the page's document (html/#navigate-to-a-javascript:-url). A string that the script
+// completes with becomes the markup of a new document at the same URL, which replaces the current entry. Any other
+// completion leaves the document in place. A navigation that the script starts takes precedence over the string.
+void runJavascriptUrl(PrHtmlPage* page, const Navigation* navigation) {
+    dropDocumentLoad(page);
+    if (!navigation->sameOrigin || page->host.evaluate == nullptr)
+        return;
+    PrStringView url = prStringView(&navigation->url);
+    PrStringView encoded = {url.data + kJavascriptScheme.size, url.size - kJavascriptScheme.size};
+    TextBuffer decoded{};
+    textReserve(&decoded, uint32_t(encoded.size));
+    decoded.text.count = uint32_t(prUrlPercentDecode(encoded, decoded.text.data, encoded.size));
+    PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
+    PrString text = {};
+    PrStringView source = prCharsetDecodeView(&decoder, textView(&decoded), PrCharsetInput_Final, &text);
+    PrString result = {};
+    bool isDocument = page->host.evaluate(page->host.context, page, source, &result);
+    prStringReset(&text);
+    textReset(&decoded);
+    if (isDocument && page->pendingNavigation == 0 && isAttached(page) && !page->loading) {
+        PrString documentUrl = prDomDocumentUrl(page->window->document);
+        PrHtmlResponseHeaders headers{.contentType = "text/html;charset=utf-8"};
+        abortDocument(page);
+        htmlHistoryExpect(page->window->history, HtmlHistoryCommit_Replace, page->window->history->index);
+        prHtmlPageLoad(page, prStringView(&result), prStringView(&documentUrl), &headers);
+        prStringReset(&documentUrl);
+    }
+    prStringReset(&result);
+}
+
 // Navigates the page to another document (html/#navigate), from the task that htmlPageNavigate queued. A document that
 // is still loading stops (html/#abort-a-document).
 void runNavigation(void* data) {
@@ -2621,9 +2762,13 @@ void runNavigation(void* data) {
     PrHtmlPage* page = navigation->page;
     if (page->pendingNavigation == navigation->id) {
         page->pendingNavigation = 0;
-        abortDocument(page);
-        htmlHistoryExpect(page->window->history, navigation->commit, navigation->target);
-        startNavigation(page, prStringView(&navigation->url), prStringView(&navigation->origin));
+        if (navigation->javascript) {
+            runJavascriptUrl(page, navigation);
+        } else {
+            abortDocument(page);
+            htmlHistoryExpect(page->window->history, navigation->commit, navigation->target);
+            startNavigation(page, prStringView(&navigation->url), prStringView(&navigation->origin));
+        }
     }
     dropNavigation(navigation);
 }
@@ -2711,10 +2856,6 @@ void loadFailure(PrHtmlPage* page, PrStringView url, PrNetError error) {
     page->navigationFailure = PrStatus_Ok;
     textReset(&html);
 }
-
-// Stops waiting for the page's document load. Its pieces in flight find no page, and its fetch is cancelled on the loop
-// if it still runs.
-void dropDocumentLoad(PrHtmlPage* page);
 
 // Ends the load's part on the agent, once its fetch has ended or failed.
 void endDocumentLoad(PrHtmlPage* page) {
@@ -2894,18 +3035,35 @@ void dropDocumentLoad(PrHtmlPage* page) {
     prNetPost(load->fetcher->net, cancelLoadOnLoop, load);
 }
 
+// Cancels the fetch of an iframe's source that its container's document runs, which would otherwise replace the
+// browsing context. The document that replaces the initial about:blank then fires load at the iframe.
+void cancelFrameSource(PrHtmlPage* page) {
+    if (!page->awaitingSource)
+        return;
+    page->awaitingSource = false;
+    page->initialBlank = false;
+    PrDomElement* container = htmlFrameContainer(page->window->document);
+    if (container == nullptr)
+        return;
+    ++domElementState(container)->generation;
+    // The cancelled fetch no longer delays the load event of the container's document.
+    PrHtmlPage* holder = htmlDocumentPage(container->document);
+    if (holder == nullptr)
+        return;
+    for (HtmlFetch* fetch = holder->fetches; fetch != nullptr; fetch = fetch->next) {
+        if (fetch->answered || fetch->done != frameFetched || static_cast<EmbedFetch*>(fetch->data)->element != container)
+            continue;
+        dropFetch(fetch);
+        queueAdvance(holder);
+        return;
+    }
+}
+
 // html/#nav-stop: the navigable's ongoing navigation is cancelled, and its document stops loading what it waits for
-// (html/#abort-a-document). An iframe's source that its container's document fetches no longer replaces it.
+// (html/#abort-a-document).
 void stopLoading(PrHtmlPage* page) {
     page->pendingNavigation = 0;
-    if (page->awaitingSource) {
-        page->awaitingSource = false;
-        PrHtmlWindow* parent = page->window->parent;
-        for (uint32_t i = 0; parent != nullptr && i < parent->frames.count; ++i) {
-            if (parent->frames.data[i].window == page->window)
-                ++domElementState(parent->frames.data[i].container)->generation;
-        }
-    }
+    cancelFrameSource(page);
     dropDocumentLoad(page);
     dropFetches(page);
 }
@@ -3050,21 +3208,61 @@ uint64_t htmlPageEmbed(const PrHtmlPage* page) {
     return uint64_t(uintptr_t(page));
 }
 
-bool htmlPageNavigate(PrHtmlWindow* window, PrStringView url, HtmlHistoryCommit commit, uint32_t target) {
+bool htmlPageNavigate(PrHtmlWindow* window, const PrHtmlWindow* PR_NULLABLE source, PrStringView url,
+        HtmlHistoryCommit commit, uint32_t target) {
     PrHtmlPage* page = htmlDocumentPage(window->document);
-    if (page == nullptr || page->window != window || page->host.fetcher == nullptr)
+    if (page == nullptr || page->window != window)
         return false;
+    bool javascript = hasJavascriptScheme(url);
+    if (!javascript && page->host.fetcher == nullptr)
+        return false;
+    // A traversal does not replace the ongoing navigation of the iframe's source.
+    if (source != nullptr)
+        cancelFrameSource(page);
     Navigation* navigation = allocZeroed<Navigation>();
     navigation->page = page;
     navigation->id = page->pendingNavigation = ++page->navigations;
     navigation->url = prStringCopy(url);
     // A traversal loads an entry that the session history holds already, as the user's back and forward buttons do, so
     // it reaches no URL that the user's navigations did not. Any other navigation is the document's own.
-    navigation->origin = commit == HtmlHistoryCommit_Traverse ? prStringNull() : htmlWindowOrigin(window);
+    navigation->origin = source == nullptr ? prStringNull() : htmlWindowOrigin(source);
     navigation->commit = commit;
     navigation->target = target;
+    navigation->javascript = javascript;
+    // The task belongs to the window, and a closed window runs no tasks, so the answer holds until the task runs.
+    navigation->sameOrigin = source != nullptr && htmlWindowIsSameOrigin(source, window);
     htmlWindowQueueTask(window, runNavigation, navigation, dropNavigation);
     return true;
+}
+
+PrHtmlWindow* PR_NULLABLE htmlPageChooseTarget(PrHtmlWindow* window, PrStringView name) {
+    if (name.size == 0 || asciiEqualsFold(name, "_self"))
+        return window;
+    PrHtmlWindow* top = window;
+    while (top->parent != nullptr)
+        top = top->parent;
+    if (asciiEqualsFold(name, "_parent"))
+        return window->parent != nullptr ? window->parent : window;
+    if (asciiEqualsFold(name, "_top"))
+        return top;
+    if (asciiEqualsFold(name, "_blank"))
+        return nullptr;
+    for (PrHtmlWindow* ancestor = window; ancestor != nullptr; ancestor = ancestor->parent) {
+        if (hasTargetName(ancestor, name))
+            return ancestor;
+    }
+    return findTarget(window, top, name);
+}
+
+void htmlPageOpenWindow(PrHtmlWindow* window, PrStringView url) {
+    PrHtmlPage* page = htmlDocumentPage(window->document);
+    if (page == nullptr || page->host.openWindow == nullptr || hasJavascriptScheme(url))
+        return;
+    // html/#popup-blocker: a new top-level browsing context needs the user's recent interaction, and uses it up.
+    if (!prHtmlWindowHasTransientActivation(window))
+        return;
+    htmlWindowConsumeActivation(window);
+    page->host.openWindow(page->host.context, page, url);
 }
 
 void htmlPageFollowFrameScheme(PrHtmlPage* parent, PrHtmlPage* page) {
@@ -3177,6 +3375,7 @@ void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE page) {
     domAgentRemoveGlobal(page->window->agent, page);
     if (page->scriptCreated)
         htmlParserReset(&page->parser);
+    prStringReset(&page->targetName);
     for (uint32_t i = 0; i < page->children.count; ++i)
         prHtmlPageDestroy(page->children.data[i]);
     page->children.reset();
@@ -3311,6 +3510,15 @@ void prHtmlPageEndLoad(PrHtmlPage* page) {
 }
 
 PrStatus prHtmlPageNavigate(PrHtmlPage* page, PrStringView url) {
+    if (page->loading || page->runningScript)
+        return PrStatus_InvalidState;
+    // A URL that does not parse leaves a document that is still loading in place.
+    PrUrl* parsed = nullptr;
+    PrStatus status = prUrlCreate(url, nullptr, PrCharset_Utf8, &parsed);
+    prUrlDestroy(parsed);
+    if (status != PrStatus_Ok)
+        return status;
+    abortDocument(page);
     return startNavigation(page, url, PrStringView{});
 }
 

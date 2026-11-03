@@ -110,6 +110,7 @@ struct Tab {
     // thread takes it.
     PrMutex mutex{};
     TabInfo published;
+    std::vector<std::string> opened;    // the URLs that the page's hyperlinks asked to show in new tabs
     bool changed = false;
 
     // The page's thread's state. `pending` is the URL of the navigation that the window asked for, which the chrome

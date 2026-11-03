@@ -1218,10 +1218,31 @@ typedef uint8_t PrHtmlHistoryHandling;
 // document's URL only in its fragment is a fragment navigation (html/#navigate-fragid): its entry becomes current, and
 // popstate fires, then hashchange if the fragment changed. A navigation to the URL that the document has already
 // replaces its entry. Any other URL navigates the window's page to another document from a task (prHtmlPageNavigate),
-// whose entry the document's commit pushes or replaces. An href is parsed against the document's URL. Returns Syntax if
-// it does not parse, and NotSupported for a URL of another document if the page's host has no fetcher.
-PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrUrlComponent component, PrStringView value,
+// whose entry the document's commit pushes or replaces. `source` is the window that starts the navigation. An href is
+// parsed against the URL of its document, and the navigation is fetched from its origin. A javascript: URL runs in
+// `self` if `source` has the same origin (html/#navigate-to-a-javascript:-url). Returns Syntax if the href does not
+// parse, and NotSupported for a URL of another document if the page's host has no fetcher.
+PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrHtmlWindow* source, PrUrlComponent component, PrStringView value,
     PrHtmlHistoryHandling handling);
+
+// The target name of the window's browsing context (html/#nav-target), which hyperlinks name in their target attribute.
+// The name outlives the window's document. The caller releases the returned string with prStringReset.
+PrString prHtmlWindowName(const PrHtmlWindow* window);
+
+// Sets the target name of the window's browsing context. Does nothing if the window is no longer current in it.
+void prHtmlWindowSetName(PrHtmlWindow* window, PrStringView name);
+
+// Records that the user interacted with the window's document (html/#activation-notification), for the window, its
+// ancestors, and its descendants of the same origin. The view does this for the input that it receives. A host that
+// routes input to a document by other means calls it before dispatching an activation triggering input event.
+void prHtmlWindowNotifyUserActivation(PrHtmlWindow* window);
+
+// Returns true if the user has ever interacted with the window's document (html/#sticky-activation).
+bool prHtmlWindowHasStickyActivation(const PrHtmlWindow* window);
+
+// Returns true if the user interacted with the window's document recently, and no API has consumed that interaction
+// since (html/#transient-activation).
+bool prHtmlWindowHasTransientActivation(const PrHtmlWindow* window);
 
 // Returns the first element in tree order that is a named object for `name` (html/#named-access-on-the-window-object),
 // or null if there is none.

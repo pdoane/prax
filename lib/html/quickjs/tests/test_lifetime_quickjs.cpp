@@ -1,7 +1,9 @@
 #include "pr/css_quickjs.h"
 #include "pr/dom_geometry_quickjs.h"
 #include "pr/dom_quickjs.h"
+#include "pr/html.h"
 #include "pr/html_page.h"
+#include "pr/html_quickjs.h"
 #include "pr/mathml_quickjs.h"
 #include "pr/memory.h"
 #include "pr/quickjs_binding.h"
@@ -316,4 +318,25 @@ TEST_CASE("a tree whose objects hold no state is freed as script lets go of it, 
         size_t before = page.liveUncollected(churn);
         CHECK(page.liveUncollected(churn) == before);
     }
+}
+
+TEST_CASE("the engine passes a hyperlink's request for a new browsing context to the host, with its context") {
+    std::string opened;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.context = &opened;
+    host.openWindow = [](void* context, PrHtmlPage*, PrStringView url) {
+        static_cast<std::string*>(context)->assign(url.data, url.size);
+    };
+    PrJsHtmlEngineDesc desc{};
+    PrJsHtmlEngine* engine = prJsHtmlEngineCreate(&desc);
+    PrHtmlHost scripted = prJsHtmlEngineHost(engine, &host, PrJsHtmlScripting_Enabled);
+    PrHtmlPage* page = prHtmlPageCreate(&scripted);
+    REQUIRE(prHtmlPageLoad(page, "<a id=a target=_blank href=next></a>", "https://example.test/", nullptr) ==
+        PrStatus_Ok);
+    PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
+    prHtmlWindowNotifyUserActivation(prHtmlPageWindow(page));
+    prHtmlElementClick(prHtmlElementQuery(prDomElementAsEventTarget(prDomNodeGetElementById(root, "a"))));
+    CHECK(opened == "https://example.test/next");
+    prHtmlPageDestroy(page);
+    prJsHtmlEngineDestroy(engine);
 }

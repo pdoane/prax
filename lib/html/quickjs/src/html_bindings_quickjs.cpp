@@ -65,6 +65,7 @@ JSClassID htmlMessageEventClass;
 JSClassID htmlPageRevealEventClass;
 JSClassID htmlWindowClass;
 JSClassID htmlNavigatorClass;
+JSClassID htmlUserActivationClass;
 JSClassID htmlScreenClass;
 JSClassID htmlScreenOrientationClass;
 JSClassID htmlTextTrackListClass;
@@ -2194,11 +2195,26 @@ JSValue locationStatus(JSContext* ctx, PrStatus status) {
 // [PutForwards=href]
 JSValue setWindowLocation(JSContext* ctx, JSValueConst windowObject, JSValueConst input) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+    PrHtmlWindow* source = globalWindow(jsIncumbentRealm(ctx));
+    StringArgument value = {ctx};
+    if (window == nullptr || source == nullptr || !value.read(input))
+        return JS_EXCEPTION;
+    return locationStatus(
+        ctx, prHtmlWindowSetLocation(window, source, PrUrlComponent_Href, value.value(), PrHtmlHistoryHandling_Push));
+}
+
+JSValue windowName(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+    return window != nullptr ? jsTakeString(ctx, prHtmlWindowName(window)) : JS_EXCEPTION;
+}
+
+JSValue setWindowName(JSContext* ctx, JSValueConst windowObject, JSValueConst input) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     StringArgument value = {ctx};
     if (window == nullptr || !value.read(input))
         return JS_EXCEPTION;
-    return locationStatus(
-        ctx, prHtmlWindowSetLocation(window, PrUrlComponent_Href, value.value(), PrHtmlHistoryHandling_Push));
+    prHtmlWindowSetName(window, value.value());
+    return JS_UNDEFINED;
 }
 
 // html/#dom-document-location: the Location of the window whose document this is, or null for a document with no
@@ -2301,10 +2317,11 @@ JSValue locationGet(JSContext* ctx, JSValueConst windowObject, int magic) {
 
 JSValue locationSet(JSContext* ctx, JSValueConst windowObject, JSValueConst input, int magic) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlLocationClass);
+    PrHtmlWindow* source = globalWindow(jsIncumbentRealm(ctx));
     StringArgument value = {ctx};
-    if (window == nullptr || !value.read(input))
+    if (window == nullptr || source == nullptr || !value.read(input))
         return JS_EXCEPTION;
-    return locationStatus(ctx, prHtmlWindowSetLocation(window, PrUrlComponent(magic), value.value(),
+    return locationStatus(ctx, prHtmlWindowSetLocation(window, source, PrUrlComponent(magic), value.value(),
         PrHtmlHistoryHandling_Push));
 }
 
@@ -2319,11 +2336,12 @@ JSValue locationNavigate(JSContext* ctx, JSValueConst windowObject, int argc, JS
         prHtmlHistoryGo(window, 0);
         return JS_UNDEFINED;
     }
+    PrHtmlWindow* source = globalWindow(jsIncumbentRealm(ctx));
     StringArgument value = {ctx};
-    if (!jsArgCount(ctx, argc, 1) || !value.read(argv[0]))
+    if (source == nullptr || !jsArgCount(ctx, argc, 1) || !value.read(argv[0]))
         return JS_EXCEPTION;
     PrHtmlHistoryHandling handling = magic == 1 ? PrHtmlHistoryHandling_Replace : PrHtmlHistoryHandling_Push;
-    return locationStatus(ctx, prHtmlWindowSetLocation(window, PrUrlComponent_Href, value.value(), handling));
+    return locationStatus(ctx, prHtmlWindowSetLocation(window, source, PrUrlComponent_Href, value.value(), handling));
 }
 
 JSValue locationToString(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
@@ -2672,6 +2690,27 @@ JSValue navigatorFlag(JSContext* ctx, JSValueConst object, int magic) {
         return JS_EXCEPTION;
     NavigatorFlag flag = NavigatorFlag(magic);
     return JS_NewBool(ctx, flag == NavigatorFlag_OnLine || flag == NavigatorFlag_CookieEnabled);
+}
+
+// userActivation (html/#dom-navigator-useractivation): a view of the window, held as the [SameObject] member of its
+// Navigator.
+JSValue navigatorUserActivation(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlNavigatorClass);
+    if (window == nullptr)
+        return JS_EXCEPTION;
+    return jsSameObject(ctx, windowObject, "userActivation", [&] {
+        return jsWrap(ctx, htmlUserActivationClass, windowObject, window, false);
+    });
+}
+
+JSValue userActivationHasBeenActive(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlUserActivationClass);
+    return window != nullptr ? JS_NewBool(ctx, prHtmlWindowHasStickyActivation(window)) : JS_EXCEPTION;
+}
+
+JSValue userActivationIsActive(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlUserActivationClass);
+    return window != nullptr ? JS_NewBool(ctx, prHtmlWindowHasTransientActivation(window)) : JS_EXCEPTION;
 }
 
 // javaEnabled (html/#dom-navigator-javaenabled): false, as HTML requires.
@@ -3410,6 +3449,12 @@ constexpr JSCFunctionListEntry kHashChangeEventProto[] = {
     PR_JS_GET("newURL", (jsStringGetter<&htmlHashChangeEventClass, prHtmlHashChangeEventNewUrl>)),
 };
 
+constexpr JSCFunctionListEntry kUserActivationProto[] = {
+    PR_JS_TAG("UserActivation"),
+    PR_JS_GET("hasBeenActive", userActivationHasBeenActive),
+    PR_JS_GET("isActive", userActivationIsActive),
+};
+
 constexpr JSCFunctionListEntry kNavigatorProto[] = {
     PR_JS_TAG("Navigator"),
     PR_JS_MAGIC_GET("appCodeName", navigatorString, NavigatorString_AppCodeName),
@@ -3424,6 +3469,7 @@ constexpr JSCFunctionListEntry kNavigatorProto[] = {
     PR_JS_MAGIC_GET("language", navigatorString, NavigatorString_Language),
     PR_JS_GET("languages", navigatorLanguages),
     PR_JS_MAGIC_GET("onLine", navigatorFlag, NavigatorFlag_OnLine),
+    PR_JS_GET("userActivation", navigatorUserActivation),
     PR_JS_MAGIC_GET("cookieEnabled", navigatorFlag, NavigatorFlag_CookieEnabled),
     PR_JS_MAGIC_GET("pdfViewerEnabled", navigatorFlag, NavigatorFlag_PdfViewerEnabled),
     PR_JS_MAGIC_GET("webdriver", navigatorFlag, NavigatorFlag_Webdriver),
@@ -3545,6 +3591,7 @@ constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_MAGIC_GET_SET("parent", ancestor, setReplaceable, kParentMagic),
     PR_JS_MAGIC_GET("top", ancestor, 0),
     PR_JS_GET_SET("location", windowLocation, setWindowLocation),
+    PR_JS_GET_SET("name", windowName, setWindowName),
     PR_JS_GET("history", windowHistory),
     PR_JS_MAGIC_GET("localStorage", windowStorage, PrHtmlStorageKind_Local),
     PR_JS_MAGIC_GET("sessionStorage", windowStorage, PrHtmlStorageKind_Session),
@@ -3708,6 +3755,10 @@ constexpr JsClassDefinition kClasses[] = {
         .named = &kStorageNamed,
     },
     {PR_JS_CLASS("Location", htmlLocationClass, jsViewFinalizer<&htmlLocationClass>, kLocationProto)},
+    {
+        PR_JS_CLASS("UserActivation", htmlUserActivationClass, jsViewFinalizer<&htmlUserActivationClass>,
+            kUserActivationProto)
+    },
     {PR_JS_CLASS("History", htmlHistoryClass, jsViewFinalizer<&htmlHistoryClass>, kHistoryProto)},
     {
         PR_JS_CLASS("PopStateEvent", htmlPopStateEventClass, jsViewFinalizer<&htmlPopStateEventClass>,

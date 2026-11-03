@@ -205,6 +205,59 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, "5\n")
 
+    def test_a_javascript_url_runs_in_the_page_and_a_string_result_replaces_the_document(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><a id=a href=\"javascript:print('ran%20it'),void%200\"></a>"
+                                   "<a id=b href=\"javascript:'<script>print(1+1)</script>'\"></a>"
+                                   "<script>a.click(); print('first');\n"
+                                   "setTimeout(() => b.click());</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["first", "ran it", "2"])
+
+    def test_an_iframe_source_runs_a_javascript_url_in_its_about_blank(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><iframe src=\"javascript:parent.print(location.href)\"></iframe>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "about:blank\n")
+
+    def test_a_location_assignment_while_the_parent_parses_navigates_the_iframe(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><iframe id=i src=\"about:blank\"></iframe><script>\n"
+                                   "i.contentWindow.location = \"javascript:parent.print('arrived')\";</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "arrived\n")
+
+    def test_a_javascript_url_decodes_invalid_utf8_as_replacement_characters(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><a id=a href=\"javascript:print('%FF'.codePointAt(0))\"></a>"
+                                   "<script>a.click();</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "65533\n")
+
+    def test_a_top_level_navigation_to_another_origin_clears_the_window_name(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>name = 'kept'; print(name);\n"
+                                   "location = \"data:text/html,<script>print('[' + name + ']')</scr\" + \"ipt>\";"
+                                   "</script>", "--network")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["kept", "[]"])
+
+    def test_a_hyperlink_target_chooses_a_named_browsing_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><base target=f><iframe id=first name=f></iframe><iframe id=g></iframe>"
+                                   "<a id=a href=\"javascript:parent.print(name)\"></a><script>\n"
+                                   "print(first.contentWindow.name, name === '');\n"
+                                   "g.contentWindow.name = 'second'; a.click();\n"
+                                   "a.target = 'second'; a.click();</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["f true", "f", "second"])
+
     def test_template_contents_are_inert_and_their_observers_still_run(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

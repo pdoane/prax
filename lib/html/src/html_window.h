@@ -89,6 +89,10 @@ struct HtmlWindow : DomCountedTarget {
     PrStringView userAgent;
     PrHtmlNavigatorCompatibilityMode navigatorCompatibilityMode;
 
+    // The clock's time of the last activation notification (html/#last-activation-timestamp). It is positive infinity
+    // until the first notification, and negative infinity once an API consumes the activation.
+    double lastActivation;
+
     bool inErrorReportingMode;                // true during an error event's dispatch (html/#report-an-exception)
 
     // The canvases whose bitmaps changed since they were last shown, which the next rendering update shows. Each holds
@@ -186,6 +190,19 @@ void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* da
 // window for a document at about:blank or about:srcdoc.
 PrString htmlWindowOrigin(const PrHtmlWindow* window);
 
+// Returns true if two windows' documents have the same origin (html/#same-origin).
+bool htmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b);
+
+// How long an activation notification gives a window transient activation, in milliseconds
+// (html/#transient-activation-duration).
+constexpr double kHtmlTransientActivationDuration = 5000;
+
+// Sets the last activation timestamp of the descendants of `window` that have its origin to `now`.
+void htmlWindowNotifyDescendants(PrHtmlWindow* window, double now);
+
+// Consumes the transient activation of every window in the tree of `window` (html/#consume-user-activation).
+void htmlWindowConsumeActivation(PrHtmlWindow* window);
+
 // Requests that `callback` run at the next rendering opportunity, and returns the request's handle.
 uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback);
 
@@ -236,8 +253,8 @@ PrDomElement* PR_NULLABLE htmlWindowNamedObject(PrHtmlWindow* window, PrStringVi
 // element (html/#scroll-to-the-fragment-identifier).
 void htmlWindowScrollToFragment(PrHtmlWindow* window);
 
-// Follows the hyperlink of the a or area element `element` of the window's document (html/#following-hyperlinks-2). A
-// URL of the document with a fragment navigates to that fragment.
+// Follows the hyperlink of the a or area element `element` of the window's document (html/#following-hyperlinks-2) in
+// the browsing context that its target chooses. A URL of the document with a fragment navigates to that fragment.
 void htmlWindowFollowHyperlink(PrHtmlWindow* window, PrDomElement* element);
 
 } // namespace pr_impl

@@ -120,6 +120,12 @@ typedef struct PrHtmlHost {
         PrDomEventTarget* target, PrDomElement* element, PrDomEventHandler handler, PrStringView body,
         PrDomEventHandlerCallback* out);
 
+    // Runs `source`, the script of a javascript: URL, as a classic script in the page's realm
+    // (html/#evaluate-a-javascript:-url), and reports any error that it throws. Returns true and writes the value to
+    // `out` if the script completes with a string, which the caller releases with prStringReset. Null runs no
+    // javascript: URLs.
+    bool (*PR_NULLABLE evaluate)(void* PR_NULLABLE context, PrHtmlPage* page, PrStringView source, PrString* out);
+
     // Queues `run`, called with `data`, as a microtask (html/#queue-a-microtask). The host runs it along with its
     // script engine's jobs. If null, no microtasks run.
     void (*PR_NULLABLE microtask)(void* PR_NULLABLE context, PrHtmlPage* page, void (*PR_NONNULL run)(void* data), void* data);
@@ -127,6 +133,12 @@ typedef struct PrHtmlHost {
     // Sets `child` to the host of a page that is about to be created for an iframe of `parent`. `child` starts as the
     // default host. Null gives each such page the default host, which runs no scripts.
     void (*PR_NULLABLE frame)(void* PR_NULLABLE context, PrHtmlPage* parent, struct PrHtmlHost* child);
+
+    // Asks the host to show `url` in a new top-level browsing context with no opener, because a hyperlink's target
+    // names no browsing context that the page can reach (html/#the-rules-for-choosing-a-navigable). The call is made
+    // from the page's event loop. It consumes the window's transient activation, and a window without one makes no call
+    // (html/#popup-blocker). If null, such a hyperlink does nothing.
+    void (*PR_NULLABLE openWindow)(void* PR_NULLABLE context, PrHtmlPage* page, PrStringView url);
 
     // Called when the page's window opens, which prHtmlPageWindow then returns: once the page is created, before
     // anything loads in it, and each time a navigation commits a document, which has a window of its own
@@ -218,6 +230,8 @@ static inline PrHtmlHost prHtmlHostDefault(void) {
     value.parseModule = NULL;
     value.settle = NULL;
     value.compile = NULL;
+    value.evaluate = NULL;
+    value.openWindow = NULL;
     value.microtask = NULL;
     value.frame = NULL;
     value.windowOpened = NULL;
@@ -300,8 +314,9 @@ void prHtmlPageEndLoad(PrHtmlPage* page);
 // with the response's headers. The current document stays until the response arrives. A network error, or a URL that
 // the fetcher does not take, loads a document that says why in its place, and the end of that load reports Io
 // (PrHtmlHost::loaded). Another navigation or load replaces a navigation in flight, and prHtmlPageIsFetching is true
-// until its response has arrived whole. Returns the URL parser's status if it rejects `url`, and InvalidState if the
-// host has no fetcher or another load is in progress.
+// until its response has arrived whole. A document that is still loading stops (html/#abort-a-document). Returns the
+// URL parser's status if it rejects `url`, and leaves that document loading. Returns InvalidState if the host has no
+// fetcher, or the call comes from a script of the page or from within a load of the page.
 PrStatus prHtmlPageNavigate(PrHtmlPage* page, PrStringView url);
 
 // Fetches the module graph at `url`, an absolute URL, as a script's import() does (html/#hostloadimportedmodule): each
