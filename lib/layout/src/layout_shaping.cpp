@@ -19,7 +19,7 @@ namespace {
 // Collecting
 
 // Appends a byte of collected text, what it is as white space, and the offset in its node's text that it comes from.
-void pushByte(LayoutInlineShaping& t, char c, LayoutSpaceFlags spaces, uint32_t source = 0) {
+void pushByte(LayoutInlineShaping& t, char c, PrTextSpaceFlags spaces, uint32_t source = 0) {
     t.text.push(c);
     t.spaces.push(spaces);
     t.sources.push(source);
@@ -34,7 +34,7 @@ uint32_t segmentStart(const LayoutInlineShaping& t) {
 // Removes a collapsible space at the end of the segment so far, along with the items that then end past the text
 // (css-text-3/#white-space-phase-1: a collapsible space before a preserved segment break).
 void dropCollapsibleSpace(LayoutInlineShaping& t) {
-    if (t.text.count == segmentStart(t) || (t.spaces.last() & LayoutSpaceFlag_Collapsible) == 0)
+    if (t.text.count == segmentStart(t) || (t.spaces.last() & PrTextSpaceFlag_Collapsible) == 0)
         return;
     uint32_t end = t.text.count - 1;
     t.text.pop();
@@ -66,9 +66,9 @@ void collectText(LayoutInlineShaping& t, PrStringView text, const PrLayoutFontSt
     // Preserved spaces at the end of a line hang if the line may wrap, except with break-spaces, which wraps after
     // them.
     bool wraps = font.textWrapMode == PrLayoutTextWrapMode_Wrap;
-    LayoutSpaceFlags wrapping = wraps ? LayoutSpaceFlag_Wraps : LayoutSpaceFlags(0);
-    LayoutSpaceFlags preserved =
-        LayoutSpaceFlags(wrapping | (wraps && collapse != PrLayoutWhiteSpaceCollapse_BreakSpaces ? LayoutSpaceFlag_Hangs : 0));
+    PrTextSpaceFlags wrapping = wraps ? PrTextSpaceFlag_Wraps : PrTextSpaceFlags(0);
+    PrTextSpaceFlags preserved =
+        PrTextSpaceFlags(wrapping | (wraps && collapse != PrLayoutWhiteSpaceCollapse_BreakSpaces ? PrTextSpaceFlag_Hangs : 0));
     for (size_t i = 0; i < text.size; ++i) {
         char c = text.data[i] == '\r' || text.data[i] == '\f' ? ' ' : text.data[i];
         uint32_t source = uint32_t(i);
@@ -83,15 +83,15 @@ void collectText(LayoutInlineShaping& t, PrStringView text, const PrLayoutFontSt
             if (keepSpaces) {
                 // A segment break that is not preserved becomes a space here, and that space is preserved.
                 bool tab = c == '\t';
-                pushByte(t, tab ? '\t' : ' ', LayoutSpaceFlags(preserved | (tab ? LayoutSpaceFlag_Tab : 0)), source);
+                pushByte(t, tab ? '\t' : ' ', PrTextSpaceFlags(preserved | (tab ? PrTextSpaceFlag_Tab : 0)), source);
                 t.tabs = t.tabs || tab;
                 space = false;
             } else if (!space) {
-                pushByte(t, ' ', LayoutSpaceFlag_Collapsible | wrapping, source);
+                pushByte(t, ' ', PrTextSpaceFlag_Collapsible | wrapping, source);
                 space = true;
             } else if (t.spaces.count > segmentStart(t)) {
                 // A space collapsed into the space before it shares that space's opportunity.
-                t.spaces.last() = LayoutSpaceFlags(t.spaces.last() | wrapping);
+                t.spaces.last() = PrTextSpaceFlags(t.spaces.last() | wrapping);
             }
         } else {
             pushByte(t, c, 0, source);
@@ -355,10 +355,10 @@ void transformText(const LayoutState& state, LayoutInlineShaping& t) {
     if (firstItem == t.items.count)
         return;
     Array<char> text = t.text;
-    Array<LayoutSpaceFlags> spaces = t.spaces;
+    Array<PrTextSpaceFlags> spaces = t.spaces;
     Array<uint32_t> sources = t.sources;
     t.text = Array<char>{};
-    t.spaces = Array<LayoutSpaceFlags>{};
+    t.spaces = Array<PrTextSpaceFlags>{};
     t.sources = Array<uint32_t>{};
     t.text.reserve(text.count);
     t.spaces.reserve(text.count);
@@ -580,247 +580,9 @@ LayoutInlineShaping* PR_NULLABLE shapingOf(LayoutState& state, uint32_t first) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Shaping
 
-// Removes the soft wrap opportunities at which text may not wrap, and adds one after each space of text that breaks
-// spaces (css-text-3/#line-breaking). An opportunity after white space exists if that space's box, or the box of a
-// space collapsed into it, allows wrapping. Any other opportunity follows the text-wrap-mode of the nearest box that
-// holds the text on both its sides, or of the root inline box if no inline box does (css-text-4/#text-wrap-mode). Text
-// in a record of its own is in a box of that record, which holds the opportunities within the text.
-void wrapBreaks(const LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapingScratch& s) {
-    const PrLayoutFontStyle& root = layoutTableAt(styles->font, t.containerFont);
-    Array<uint32_t>& open = s.open;
-    open.clear();
-    auto fontAt = [&](uint32_t depth) -> const PrLayoutFontStyle& {
-        return depth == 0 ? root : layoutTableAt(styles->font, t.items.data[open.data[depth - 1]].font);
-    };
-    // An opportunity after white space belongs to that space. Any other opportunity belongs to the nearest box that
-    // holds both sides.
-    auto settle = [&](uint32_t b, const PrLayoutFontStyle& holder) {
-        if (t.breakAt.data[b] != PrUnicodeLineBreak_Allowed)
-            return;
-        LayoutSpaceFlags before = t.spaces.data[b - 1];
-        bool space = (before & (LayoutSpaceFlag_Collapsible | LayoutSpaceFlag_Hangs | LayoutSpaceFlag_Tab)) != 0 ||
-            t.text.data[b - 1] == ' ';
-        bool wraps = space ? (before & LayoutSpaceFlag_Wraps) != 0 : holder.textWrapMode == PrLayoutTextWrapMode_Wrap;
-        if (!wraps)
-            t.breakAt.data[b] = PrUnicodeLineBreak_Prohibited;
-    };
-    bool before = false;            // true if some text of the segment precedes
-    uint32_t shallowest = 0;        // the smallest number of inline boxes open since that text
-    for (uint32_t i = 0; i < t.items.count; ++i) {
-        const LayoutInlineItem& item = t.items.data[i];
-        if (item.kind == LayoutInlineItemKind_Block)
-            before = false;
-        if (item.kind == LayoutInlineItemKind_Open) {
-            open.push(i);
-            continue;
-        }
-        if (item.kind == LayoutInlineItemKind_Close) {
-            open.pop();
-            shallowest = shallowest < open.count ? shallowest : open.count;
-            continue;
-        }
-        if ((item.kind != LayoutInlineItemKind_Text && item.kind != LayoutInlineItemKind_Atomic) || item.start == item.end)
-            continue;
-        if (before)
-            settle(item.start, fontAt(shallowest));
-        bool text = item.kind == LayoutInlineItemKind_Text;
-        const PrLayoutFontStyle& font = text ? layoutTableAt(styles->font, item.font) : fontAt(open.count);
-        bool breakSpaces = text && font.whiteSpaceCollapse == PrLayoutWhiteSpaceCollapse_BreakSpaces;
-        for (uint32_t b = item.start + 1; b <= item.end; ++b) {
-            if (breakSpaces && (t.text.data[b - 1] == ' ' || t.text.data[b - 1] == '\t') &&
-                    t.breakAt.data[b] == PrUnicodeLineBreak_Prohibited)
-                t.breakAt.data[b] = PrUnicodeLineBreak_Allowed;
-            if (b < item.end)
-                settle(b, font);
-        }
-        before = true;
-        shallowest = open.count;
-    }
-}
-
-// Returns true if a soft wrap opportunity stands between an atomic inline and the code point `codePoint` beside it
-// (css-text-3/#line-break-details). One stands beside every code point except those of the GL, WJ and ZWJ classes, and
-// also beside U+00A0 NO-BREAK SPACE.
-bool wrapsBesideAtomic(uint32_t codePoint) {
-    PrUnicodeLineBreakFlags flags = 0;
-    PrUnicodeLineBreakClass c = prUnicodeLineBreakClass(codePoint, &flags);
-    return codePoint == 0xA0 ||
-        (c != PrUnicodeLineBreakClass_GL && c != PrUnicodeLineBreakClass_WJ && c != PrUnicodeLineBreakClass_ZWJ);
-}
-
-// Returns true if the code point `codePoint`, which follows an atomic inline, takes a soft wrap opportunity before it.
-// A space does not, because UAX14 puts the opportunity after the space so that no line starts with it. A hard break
-// does not, because no opportunity stands before one (LB6).
-bool wrapsBeforeAfterAtomic(uint32_t codePoint) {
-    PrUnicodeLineBreakFlags flags = 0;
-    PrUnicodeLineBreakClass c = prUnicodeLineBreakClass(codePoint, &flags);
-    return c != PrUnicodeLineBreakClass_SP && c != PrUnicodeLineBreakClass_BK && c != PrUnicodeLineBreakClass_CR &&
-        c != PrUnicodeLineBreakClass_LF && c != PrUnicodeLineBreakClass_NL && wrapsBesideAtomic(codePoint);
-}
-
-// Adds a soft wrap opportunity before and after each atomic inline. None is added beside a code point of its segment
-// that suppresses it under UAX14 (wrapsBesideAtomic), at a forced break, or before a space or a hard break
-// (wrapsBeforeAfterAtomic). The code points are the text's, and `codeEnds` holds the byte at which each one ends.
-void atomicBreaks(LayoutInlineShaping& t, const LayoutShapingScratch& s) {
-    uint32_t at = 0;                // the code point that ends past the atomic inline's start
-    for (uint32_t k = 0; k < t.segments.count; ++k) {
-        const LayoutInlineSegment& segment = t.segments.data[k];
-        for (uint32_t i = segment.itemStart; i < segment.itemEnd; ++i) {
-            const LayoutInlineItem& item = t.items.data[i];
-            if (item.kind != LayoutInlineItemKind_Atomic)
-                continue;
-            while (at < s.codeEnds.count && s.codeEnds.data[at] <= item.start)
-                ++at;
-            if (item.start != segment.byteStart && t.breakAt.data[item.start] != PrUnicodeLineBreak_Mandatory &&
-                    wrapsBesideAtomic(s.codePoints.data[at - 1]))
-                t.breakAt.data[item.start] = PrUnicodeLineBreak_Allowed;
-            while (at < s.codeEnds.count && s.codeEnds.data[at] <= item.end)
-                ++at;
-            if (item.end != segment.byteEnd && t.breakAt.data[item.end] != PrUnicodeLineBreak_Mandatory &&
-                    wrapsBeforeAfterAtomic(s.codePoints.data[at]))
-                t.breakAt.data[item.end] = PrUnicodeLineBreak_Allowed;
-        }
-    }
-}
-
-// Returns how the text of `item` breaks within words: as its font group says, but without the opportunities that
-// overflow-wrap and word-break's break-word add if the text does not wrap. Anything else is not text.
-PrTextBreakStyle breakStyleOf(const LayoutStyles* styles, const LayoutInlineItem& item) {
-    if (item.kind != LayoutInlineItemKind_Text)
-        return PrTextBreakStyle{};
-    const PrLayoutFontStyle& font = layoutTableAt(styles->font, item.font);
-    if (font.textWrapMode == PrLayoutTextWrapMode_Nowrap)
-        return PrTextBreakStyle{
-            font.wordBreak == PrTextWordBreak_BreakWord ? PrTextWordBreak(PrTextWordBreak_Normal) : font.wordBreak,
-            PrTextOverflowWrap_Normal,
-        };
-    return PrTextBreakStyle{font.wordBreak, font.overflowWrap};
-}
-
-// Writes the style of each of `count` code points of the text of `t`, which end at `base` plus `ends`, to `out`.
-void fillBreakStyles(const LayoutStyles* styles, const LayoutInlineShaping& t, uint32_t base, const uint32_t* ends,
-        PrTextBreakStyle* out, uint32_t count) {
-    uint32_t at = 0;
-    for (uint32_t i = 0; i < t.items.count && at < count; ++i) {
-        const LayoutInlineItem& item = t.items.data[i];
-        PrTextBreakStyle style = breakStyleOf(styles, item);
-        while (at < count && base + ends[at] <= item.start)
-            out[at++] = PrTextBreakStyle{};
-        while (at < count && base + ends[at] <= item.end)
-            out[at++] = style;
-    }
-    while (at < count)
-        out[at++] = PrTextBreakStyle{};
-}
-
-// Finds the break opportunities between the bytes of the text, where the text's styles allow them. These are the
-// opportunities of UAX14 (unicode_line_break.h), found over each segment's code points alone, which force a break after
-// a preserved segment break and at the end of a segment, and the opportunities beside atomic inlines (atomicBreaks).
-void findBreaks(const LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapingScratch& s) {
-    PrStringView text{t.text.data, t.text.count};
-    s.codePoints.clear();
-    s.codeEnds.clear();
-    for (size_t at = 0; at < text.size;) {
-        uint32_t codePoint = 0;
-        at += prUtf8Decode(text, at, &codePoint);
-        s.codePoints.push(codePoint);
-        s.codeEnds.push(uint32_t(at));
-    }
-    s.breaks.clear();
-    s.breaks.reserve(s.codePoints.count);
-    s.breaks.count = s.codePoints.count;
-    uint32_t first = 0;             // the segment's first code point
-    for (uint32_t k = 0; k < t.segments.count; ++k) {
-        const LayoutInlineSegment& segment = t.segments.data[k];
-        uint32_t end = first;
-        while (end < s.codeEnds.count && s.codeEnds.data[end] <= segment.byteEnd)
-            ++end;
-        if (end != first)
-            prUnicodeLineBreaks(s.codePoints.data + first, end - first, s.breaks.data + first);
-        first = end;
-    }
-    // word-break and overflow-wrap: anywhere tailor the opportunities of the text that declares them during collection,
-    // because they change its intrinsic sizes. overflow-wrap: break-word alone is left until a word fits no line.
-    bool tailored = false;
-    bool wraps = false;
-    for (uint32_t i = 0; i < t.items.count && !tailored; ++i) {
-        PrTextBreakStyle style = breakStyleOf(styles, t.items.data[i]);
-        tailored = style.wordBreak != PrTextWordBreak_Normal || style.overflowWrap == PrTextOverflowWrap_Anywhere;
-        wraps = wraps || style.overflowWrap == PrTextOverflowWrap_BreakWord;
-    }
-    t.emergency.clear();
-    t.wrapsWords = wraps && !tailored;
-    if (tailored) {
-        s.breakStyles.clear();
-        s.breakStyles.resize(s.codePoints.count);
-        fillBreakStyles(styles, t, 0, s.codeEnds.data, s.breakStyles.data, s.codeEnds.count);
-        s.emergency.resize(s.codePoints.count);
-        PrTextBreakDesc desc{text, s.codePoints.data, s.codeEnds.data, s.breakStyles.data, s.codePoints.count};
-        prTextBreaksTailor(&desc, s.breaks.data, s.emergency.data);
-        t.emergency.resize(t.text.count + 1);
-        memZero(t.emergency.data, t.emergency.count * sizeof(PrTextEmergency));
-        for (uint32_t i = 0; i < s.codePoints.count; ++i)
-            t.emergency.data[s.codeEnds.data[i]] = s.emergency.data[i];
-    }
-    t.breakAt.clear();
-    t.breakAt.reserve(t.text.count + 1);
-    t.breakAt.count = t.text.count + 1;
-    memZero(t.breakAt.data, t.breakAt.count * sizeof(PrUnicodeLineBreak));
-    for (uint32_t i = 0; i < s.codePoints.count; ++i)
-        t.breakAt.data[s.codeEnds.data[i]] = s.breaks.data[i];
-    atomicBreaks(t, s);
-    wrapBreaks(styles, t, s);
-}
-
-// Shapes `run`, the `index`th run of `t`, in `font` at `size` px, drawn at `ratio` target pixels per px, and in
-// `locale`, with the forms and features of `features`, and with its context around it. Appends its glyphs, and adds
-// their advances to the advances of their bytes. An upright run is shaped top to bottom. A run at an odd level is
-// shaped right to left and its glyphs are appended reversed, so that every run's clusters ascend. If its face has no
-// vertical metrics, each typographic character unit advances by the face's ascent and descent as layout rounds them,
-// `across` (css-writing-modes-4/#vertical-font-features), rather than by the unrounded sum that shaping synthesizes.
-void shapeRun(LayoutInlineShaping& t, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer,
-        LayoutShapingRun& run, uint32_t index, const PrFont* font, float size, float ratio, PrLocale locale,
-        const LayoutFaceMetrics& metrics, const PrTextFeatureSet* PR_NULLABLE features) {
-    PR_ASSERT(shaper != nullptr); // text needs a shaper (PrLayoutTreeDesc)
-    run.glyphStart = t.glyphs.count;
-    run.glyphEnd = t.glyphs.count;
-    PrTextRun shaped{};
-    shaped.font = font;
-    shaped.text = PrStringView{t.text.data + run.start, run.end - run.start};
-    shaped.before = PrStringView{t.text.data + run.contextStart, run.start - run.contextStart};
-    shaped.after = PrStringView{t.text.data + run.end, run.contextEnd - run.end};
-    bool rightToLeft = (run.level & 1) != 0;
-    shaped.direction = rightToLeft ? PrTextDirection_Rtl : PrTextDirection_Ltr;
-    shaped.axis = run.upright ? PrTextAxis_Vertical : PrTextAxis_Horizontal;
-    shaped.script = run.script;
-    shaped.locale = locale;
-    shaped.pixelsPerEm = size * ratio;
-    prTextFeatureSetApply(features, &shaped);
-    if (prTextShaperShape(shaper, &shaped, buffer) != PrStatus_Ok)
-        return;
-    const PrTextGlyph* glyphs = prTextGlyphBufferGlyphs(buffer);
-    uint32_t glyphCount = prTextGlyphBufferGlyphCount(buffer);
-    float across = prLayoutUnitToPx(metrics.ascent + metrics.descent);
-    bool synthesized = run.upright && !metrics.vertical;
-    for (uint32_t k = 0; k < glyphCount; ++k) {
-        uint32_t g = rightToLeft ? glyphCount - 1 - k : k;
-        LayoutInlineGlyph glyph{};
-        glyph.cluster = run.start + glyphs[g].cluster;
-        glyph.run = index;
-        glyph.advance = (run.upright ? glyphs[g].advance.y : glyphs[g].advance.x) * size;
-        if (synthesized && glyph.advance != 0)
-            glyph.advance = across;
-        glyph.offset = glyphs[g].offset * size;
-        glyph.id = glyphs[g].id;
-        t.glyphs.push(glyph);
-        t.advance.data[glyph.cluster] += glyph.advance;
-    }
-    run.glyphEnd = t.glyphs.count;
-}
-
 // Returns the advance of `text` shaped alone in `font` at `size` px, drawn at `ratio` target pixels per px, in
-// `locale`. The advance is down the line if `upright` is true, in a face of `metrics`, in the same way that shapeRun
-// advances it.
+// `locale`. The advance is down the line if `upright` is true, in a face of `metrics`, in the same way that a shaped
+// run advances it.
 float advanceOf(PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer, const PrFont* font, float size,
         float ratio, PrLocale locale, PrStringView text, bool upright, const LayoutFaceMetrics& metrics) {
     PR_ASSERT(shaper != nullptr); // text needs a shaper (PrLayoutTreeDesc)
@@ -851,6 +613,7 @@ void measureTabs(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextG
     const LayoutFontFaces& faces = layoutFontFacesOfGroup(styles, t.containerFont);
     if (!t.tabs || faces.firstFace == kLayoutFaceNone)
         return;
+    layoutFontFacesMeasureNew(styles, t.containerFont);
     const PrFont* font = layoutFaceFont(faces, faces.firstFace);
     const PrLayoutFontStyle& group = layoutTableAt(styles->font, t.containerFont);
     float size = prLayoutUnitToPx(faces.size);
@@ -863,43 +626,14 @@ void measureTabs(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextG
     t.tabMinimum = advanceOf(shaper, buffer, font, size, ratio, locale, "0", digitUpright, metrics) / 2;
 }
 
-// Itemizes the shaping's text, shapes each of its runs into glyphs with `shaper` into `buffer`, and gives each text
-// item the glyphs whose clusters start in its bytes. Itemizing matches and measures in `styles` the faces that its
-// clusters need (layoutItemize). Returns true if it resolved bidi levels. A context of only atomic inlines shapes no
-// run and needs no shaper.
+// Has lib/text itemize, shape and find the break opportunities of the shaping's text, and gives each text item the
+// glyphs whose clusters start in its bytes. Doing so matches and measures in `styles` the faces that its clusters need
+// (layoutItemize). Returns true if it resolved bidi levels. A context of only atomic inlines shapes no run and needs no
+// shaper.
 bool shape(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer, LayoutInlineShaping& t,
         LayoutShapingScratch& s) {
-    bool leveled = layoutItemize(styles, t, s);
-    t.glyphs.clear();
-    t.advance.clear();
-    t.advance.reserve(t.text.count);
-    t.advance.count = t.text.count;
-    memZero(t.advance.data, t.advance.count * sizeof(float));
-    for (uint32_t r = 0; r < t.runs.count; ++r) {
-        LayoutShapingRun& run = t.runs.data[r];
-        const LayoutFontFaces& faces = layoutFontFacesOfGroup(styles, run.font);
-        if (run.face == kLayoutFaceNone)
-            continue;
-        float size = prLayoutUnitToPx(faces.size);
-        shapeRun(t, shaper, buffer, run, r, layoutFaceFont(faces, run.face), size, styles->targetPixelRatio,
-            prTextFontLocale(faces.font), faces.metrics.data[run.face], layoutTableAt(styles->font, run.font).features);
-    }
-    // Glyphs are in ascending cluster order across the runs.
-    t.reach.clear();
-    t.reach.reserve(t.text.count + 1);
-    t.reach.count = t.text.count + 1;
-    t.glyphAt.clear();
-    t.glyphAt.reserve(t.text.count + 1);
-    t.glyphAt.count = t.text.count + 1;
-    t.reach.data[0] = 0;
-    uint32_t at = 0;
-    for (uint32_t b = 0; b <= t.text.count; ++b) {
-        if (b != 0)
-            t.reach.data[b] = t.reach.data[b - 1] + double(t.advance.data[b - 1]);
-        while (at < t.glyphs.count && t.glyphs.data[at].cluster < b)
-            ++at;
-        t.glyphAt.data[b] = at;
-    }
+    measureTabs(styles, shaper, buffer, t);
+    bool leveled = layoutItemize(styles, shaper, t, s);
     // Runs are in text order and their glyphs in ascending cluster order, so each item's glyphs are consecutive. The
     // items, in text order, therefore take their glyphs and first runs in one pass.
     uint32_t g = 0;
@@ -915,8 +649,8 @@ bool shape(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBu
             continue;
         while (item.runEnd < t.runs.count && t.runs.data[item.runEnd].start < item.end)
             ++item.runEnd;
-        item.glyphStart = t.glyphAt.data[item.start];
-        item.glyphEnd = g = t.glyphAt.data[item.end];
+        item.glyphStart = t.info.glyphAt[item.start];
+        item.glyphEnd = g = t.info.glyphAt[item.end];
         // Glyphs are in text order, so a run's glyphs among the item's glyphs are where their ranges overlap.
         for (uint32_t k = item.runStart; k < item.runEnd && !item.fallback; ++k) {
             const LayoutShapingRun& run = t.runs.data[k];
@@ -924,13 +658,11 @@ bool shape(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBu
             item.fallback = meets && run.face != layoutFontFacesOfGroup(styles, run.font).firstFace;
         }
     }
-    measureTabs(styles, shaper, buffer, t);
     return leveled;
 }
 
-// Finds the break opportunities of the text that a shaping collected, and shapes it.
+// Shapes the text that a shaping collected.
 void shapeText(LayoutState& state, LayoutInlineShaping& t) {
-    findBreaks(state.styles, t, *state.scratch->shaping);
     if (shape(state.styles, state.styles->shaper, state.scratch->glyphs, t, *state.scratch->shaping))
         ++state.stats->inlinesLeveled;
     if (t.firstLine != nullptr)
@@ -1038,22 +770,15 @@ void layoutShapingReset(LayoutInlineShaping& shaping) {
     releaseFonts(shaping);
     shaping.fonts.reset();
     shaping.runs.reset();
-    shaping.levels.reset();
-    shaping.paragraphs.reset();
     shaping.splits.reset();
-    shaping.marks.reset();
+    prTextShapingDestroy(shaping.shaped);
+    shaping.shaped = nullptr;
     shaping.nodes.reset();
     shaping.text.reset();
     shaping.spaces.reset();
     shaping.sources.reset();
     shaping.items.reset();
     shaping.segments.reset();
-    shaping.breakAt.reset();
-    shaping.emergency.reset();
-    shaping.advance.reset();
-    shaping.reach.reset();
-    shaping.glyphAt.reset();
-    shaping.glyphs.reset();
 }
 
 void layoutShapingDestroy(LayoutInlineShaping* PR_NULLABLE shaping) {
@@ -1064,16 +789,9 @@ void layoutShapingDestroy(LayoutInlineShaping* PR_NULLABLE shaping) {
 }
 
 void layoutShapingScratchReset(LayoutShapingScratch& scratch) {
-    scratch.codePoints.reset();
-    scratch.codeEnds.reset();
-    scratch.breaks.reset();
-    scratch.breakStyles.reset();
-    scratch.emergency.reset();
-    scratch.open.reset();
+    prTextShapingScratchDestroy(scratch.text);
+    scratch.text = nullptr;
     scratch.pieces.reset();
-    scratch.unshaped.reset();
-    prTextItemsDestroy(scratch.items);
-    scratch.items = nullptr;
     scratch.classes.reset();
     scratch.bidiLevels.reset();
     scratch.bidiOpen.reset();
@@ -1085,45 +803,6 @@ void layoutShapingScratchReset(LayoutShapingScratch& scratch) {
     scratch.boxBytes.reset();
     scratch.positions.reset();
     scratch.lineLevels.reset();
-}
-
-void layoutWordBreaks(const LayoutStyles* styles, const LayoutInlineShaping& t, uint32_t start, uint32_t end,
-        LayoutWordScratch& s) {
-    if (s.end == end && s.start <= start)
-        return;
-    s.start = start;
-    s.end = end;
-    PrStringView word{t.text.data + start, end - start};
-    s.codePoints.clear();
-    s.ends.clear();
-    for (size_t at = 0; at < word.size;) {
-        uint32_t codePoint = 0;
-        at += prUtf8Decode(word, at, &codePoint);
-        s.codePoints.push(codePoint);
-        s.ends.push(uint32_t(at));
-    }
-    uint32_t count = s.codePoints.count;
-    s.styles.resize(count);
-    fillBreakStyles(styles, t, start, s.ends.data, s.styles.data, count);
-    s.breaks.resize(count);
-    for (uint32_t i = 0; i < count; ++i)
-        s.breaks.data[i] = t.breakAt.data[start + s.ends.data[i]];
-    s.emergency.resize(count);
-    PrTextBreakDesc desc{word, s.codePoints.data, s.ends.data, s.styles.data, count};
-    prTextBreaksTailor(&desc, s.breaks.data, s.emergency.data);
-    s.atByte.resize(end - start + 1);
-    memZero(s.atByte.data, s.atByte.count * sizeof(PrTextEmergency));
-    for (uint32_t i = 0; i < count; ++i)
-        s.atByte.data[s.ends.data[i]] = s.emergency.data[i];
-}
-
-void layoutWordScratchReset(LayoutWordScratch& s) {
-    s.codePoints.reset();
-    s.ends.reset();
-    s.styles.reset();
-    s.breaks.reset();
-    s.emergency.reset();
-    s.atByte.reset();
 }
 
 const LayoutInlineShaping& layoutShaping(LayoutState& state, LayoutInlineShaping& fresh, uint32_t first, uint32_t last) {

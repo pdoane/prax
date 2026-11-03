@@ -129,13 +129,27 @@ range in one piece's style, face, script, level and orientation, with the text a
 context. Each producer keeps what is its own: layout its lines, tabs and line reordering, SVG its chunks, positions and
 SVG fonts, and Lottie its animators.
 
+## Shapings (`pr/text_shaping.h`)
+
+A shaping holds what a text's lines need that does not depend on their width: its runs, glyphs, advances and break
+opportunities. Any host can use it, and it needs no layout tree. A flexbox's measure function can set text through a
+shaping alone.
+
+- The host describes the text as pieces (`pr/text_itemize.h`), each with its text font, features and break style. An
+  object is a piece, and the host gives its advance (`prTextShapingPositions`).
+- The host measures and breaks one line at a time (`prTextShapingLineWidth`, `prTextShapingBreakLine`), so each line
+  can have its own width. It reads the text's intrinsic widths from `prTextShapingIntrinsic`.
+- A shaping holds what it derives from the text, not the text. The host passes the text to each call that reads it.
+- What differs between hosts is an option, not a hook. A piece says whether lines wrap in it and whether they may break
+  after any space, each byte of white space says what a line's end does to it, and the host chooses where lines may
+  break beside objects and gives the tab stops. Layout's inline formatting is a host, and it describes its items this way.
+
 ## Text layouts (`pr/text_layout.h`)
 
-A text layout is text set in lines, for a producer that sets text outside layout's inline formatting: a UI's label, a
-text field, or a drawing's caption. It itemizes the text in its text font and shapes each run once. It breaks lines
-greedily at UAX #14's opportunities, with the white space that a line ends in hanging past its width, orders each
-line's pieces by UAX #9's rules for a line (L1, L2), and aligns the line. It gives glyph runs (`PrFontGlyphRun`), the
-lines that they are on, caret stops at grapheme clusters, a caret's position, and the stop nearest to a point.
+A text layout is text set in lines in one width and one font, for a producer that needs nothing more: a UI's label, a
+text field, or a drawing's caption. It is a host of a shaping. It breaks lines greedily, with the white space at the end
+of a line hanging past its width, and aligns each line. It gives glyph runs (`PrFontGlyphRun`), the lines that they are
+on, caret stops at grapheme clusters, a caret's position, and the stop nearest to a point.
 
 A glyph run belongs to `lib/font`, not to text or draw: text places glyph runs and draw records them, and neither
 depends on the other. A producer that shapes runs itself places a glyph buffer as a glyph run

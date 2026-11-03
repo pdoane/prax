@@ -2,6 +2,7 @@
 #include "pr/text_font.h"
 #include "pr/text_itemize.h"
 #include "pr/text_layout.h"
+#include "pr/text_shaping.h"
 #include "pr/text_transform.h"
 
 int prTestTextCApi(void);

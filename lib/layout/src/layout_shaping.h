@@ -8,6 +8,9 @@
 // inline or a float does not invalidate the shaping, because its own cache lays it out. Before a layout, the runs that
 // the layout will lay out again are shaped together, ahead of it.
 //
+// lib/text itemizes and shapes the text, and finds its break opportunities (pr/text_shaping.h). A shaping describes its
+// items to lib/text, one piece for each, and reads the results through it.
+//
 // A shaping is immutable once shaped. Layout and measurement resolve each item's style and sizes into scratch memory of
 // their own.
 
@@ -16,6 +19,7 @@
 #include "pr/array.h"
 #include "pr/text_break.h"
 #include "pr/text_itemize.h"
+#include "pr/text_shaping.h"
 #include "pr/unicode_bidi.h"
 #include "pr/unicode_line_break.h"
 
@@ -84,29 +88,6 @@ inline const PrLayoutBoxStyle& layoutInlineItemBox(const LayoutStyles* styles, c
         PrLayoutStyleIndex style) {
     return item.wraps ? layoutAnonymousTableStyle() : layoutBoxStyle(styles, style);
 }
-
-// What a byte of the collected text is as white space (css-text-3/#white-space-phase-2).
-enum {
-    LayoutSpaceFlag_Collapsible = 1 << 0,   // a collapsible space, removed if a line ends after it
-    LayoutSpaceFlag_Hangs = 1 << 1,         // a preserved space or tab that hangs if a line ends after it
-    LayoutSpaceFlag_Tab = 1 << 2,           // a preserved tab, which advances to the next tab stop
-
-    // White space that a line may wrap after, as the text-wrap-mode of its box, or of a space collapsed into it, says
-    // (css-text-3/#line-breaking). The opportunity that a space creates belongs to its own box, and a collapsed space
-    // keeps its own.
-    LayoutSpaceFlag_Wraps = 1 << 3,
-};
-typedef uint8_t LayoutSpaceFlags;
-
-// A shaped glyph, in pixels. Its advance is along the line, which is downward for an upright glyph. Its offset places
-// its origin from the pen. For an upright glyph, the offset is from its vertical origin, on the run's central baseline.
-struct LayoutInlineGlyph {
-    uint32_t cluster;               // the byte of the collapsed text it was shaped from
-    uint32_t run;                   // the shaping run it was shaped in
-    float advance;
-    PrVec2 offset;
-    uint16_t id;
-};
 
 // A shaping run: the unit that shaping works in (css-text-3/#boundary-shaping). It is a maximal range of a segment's
 // text in one shaping style, face, script and orientation, with no boundary between its bytes that interrupts shaping,
@@ -180,7 +161,7 @@ struct LayoutInlineShaping {
     Array<char> text;
     Array<LayoutInlineItem> items;
     Array<LayoutInlineSegment> segments; // at least one, in order
-    Array<LayoutSpaceFlags> spaces;      // by byte
+    Array<PrTextSpaceFlags> spaces;      // by byte
 
     // By byte: the offset in its node's text of the character that the byte was collected from, which queries and
     // painting map positions in the text through. A space that white space collapsing kept stands for the first space
@@ -195,39 +176,18 @@ struct LayoutInlineShaping {
     float tabSize;
     float tabMinimum;
 
-    Array<PrUnicodeLineBreak> breakAt;     // by byte: the opportunity at that offset, past the byte before it
+    // The text as lib/text shapes it, whose pieces are the items, one for one, and what that holds.
+    PrTextShaping* PR_NULLABLE shaped;
+    PrTextShapingInfo info;
 
-    // By byte: the emergency opportunity that overflow-wrap or word-break adds at that offset (prTextBreaksTailor). A
-    // line takes one only if no opportunity of `breakAt` lets it fit. Empty unless some text's word-break is not normal
-    // or its overflow-wrap is anywhere.
-    Array<PrTextEmergency> emergency;
-
-    // True if `emergency` is empty but some text's overflow-wrap is break-word. The opportunities of break-word count
-    // for no intrinsic size, so a line finds them only when a word fits on no line (layoutWordBreaks). Text that
-    // declares break-word costs nothing while its words fit.
-    bool wrapsWords;
-    Array<float> advance;           // by byte: the advance of the glyphs shaped from it
-    Array<double> reach;            // by byte and one past the last: the advance of the bytes before it, summed exactly
-    Array<uint32_t> glyphAt;        // by byte and one past the last: the first glyph shaped from it or a later byte
     Array<LayoutShapingRun> runs;   // in the text's order
 
-    // Its bidi levels, if some byte's or paragraph's level is odd, so that lines reorder (`bidi`). Otherwise every
-    // level is even, lines are placed in text order, and neither `levels` nor `paragraphs` is filled.
+    // True if some byte's or paragraph's level is odd, so that lines reorder. Otherwise every level is even, and lines
+    // are placed in text order.
     bool bidi;
-    Array<uint8_t> levels;                  // by byte, as UAX9 resolves them before the rules of a line (L1)
-
-    // The bidi paragraphs (css-writing-modes-4/#bidi-algo), in order, covering every segment: each one's bytes, through
-    // the forced break that ends it, and its embedding level.
-    Array<PrTextParagraph> paragraphs;
 
     Array<LayoutBidiSplit> splits;          // sorted by Open item, then byte
 
-    // By item: for the Open and Close items of a box that isolates, the level to which its isolate initiator or
-    // terminator resolves at the item's position. The mark keeps what is outside the box from joining what is inside in
-    // reordering. kLayoutMarkNone for any other item.
-    Array<uint8_t> marks;
-
-    Array<LayoutInlineGlyph> glyphs;
     uint32_t last;                  // the context's last node, a sibling of its first
 
     // The collection that filled it, unique among its tree's collections (LayoutCache::collections). A record of the
@@ -241,15 +201,8 @@ void layoutShapingDestroy(LayoutInlineShaping* PR_NULLABLE shaping);
 
 // The scratch memory that finding breaks, itemizing and shaping use while they run.
 struct LayoutShapingScratch {
-    Array<uint32_t> codePoints;
-    Array<uint32_t> codeEnds;       // the byte past each code point
-    Array<PrUnicodeLineBreak> breaks;
-    Array<PrTextBreakStyle> breakStyles; // by code point: how its text breaks within words
-    Array<PrTextEmergency> emergency;    // by code point: the opportunity that overflow-wrap adds after it
-    Array<uint32_t> open;                // the Open items around the item that finding breaks has reached
-    Array<PrTextPiece> pieces;           // the items as itemization takes them, one for one
-    Array<bool> unshaped;                // by byte: true for a preserved tab, which shaping sets nothing for
-    PrTextItems* PR_NULLABLE items;      // itemization's results
+    PrTextShapingScratch* PR_NULLABLE text;
+    Array<PrTextPiece> pieces;           // the items as lib/text takes them, one for one
     Array<PrUnicodeBidiClass> classes;   // a paragraph's bidi classes, for its line levels
     Array<uint8_t> bidiLevels;           // their levels
     Array<uint32_t> bidiOpen;            // the Open items of the boxes open across paragraphs, outermost first
@@ -265,28 +218,6 @@ struct LayoutShapingScratch {
 
 // Frees the scratch memory.
 void layoutShapingScratchReset(LayoutShapingScratch& scratch);
-
-// The memory that finding the opportunities inside a word reuses (layoutWordBreaks).
-struct LayoutWordScratch {
-    Array<uint32_t> codePoints;
-    Array<uint32_t> ends;              // the byte past each code point, from the word's first
-    Array<PrTextBreakStyle> styles;    // by code point
-    Array<PrUnicodeLineBreak> breaks;  // by code point
-    Array<PrTextEmergency> emergency;  // by code point
-    Array<PrTextEmergency> atByte;     // by byte from the word's first and one past its last: the opportunity there
-    uint32_t start;                    // the word's bytes in the text, or none if `end` is 0
-    uint32_t end;
-};
-
-// Finds the opportunities that overflow-wrap adds inside the text of `t` from `start` to `end`, for a shaping that
-// leaves them to its lines (LayoutInlineShaping::wrapsWords). Fills `s.atByte`, unless it already holds a word of `t`
-// that ends at `end` and starts no later than `start`, so that the lines that break one long word find it once. A
-// layout of other text must first set `s.end` to 0.
-void layoutWordBreaks(const LayoutStyles* styles, const LayoutInlineShaping& t, uint32_t start, uint32_t end,
-    LayoutWordScratch& s);
-
-// Frees the memory.
-void layoutWordScratchReset(LayoutWordScratch& s);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Shaping

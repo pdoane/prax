@@ -26,7 +26,7 @@ void paragraphLevels(const LayoutInlineShaping& t, LayoutShapingScratch& s, cons
         uint32_t codePoint = 0;
         uint32_t size = prUtf8Decode(text, at, &codePoint);
         s.classes.push(prUnicodeBidiClass(codePoint));
-        s.bidiLevels.push(t.levels.data[at]);
+        s.bidiLevels.push(t.info.levels[at]);
         at += size;
     }
     prUnicodeBidiLineLevels(s.classes.data, s.classes.count, paragraph.level, s.bidiLevels.data);
@@ -68,8 +68,8 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
     Array<uint32_t>& boxes = s.boxBytes;
     open.clear();
     LayoutItemIndex item = 0;
-    for (uint32_t k = 0; k < t.paragraphs.count; ++k) {
-        const PrTextParagraph& paragraph = t.paragraphs.data[k];
+    for (uint32_t k = 0; k < t.info.paragraphCount; ++k) {
+        const PrTextParagraph& paragraph = t.info.paragraphs[k];
         paragraphLevels(t, s, paragraph);
         auto levelAt = [&](uint32_t b) { return s.lineLevels.data[b - paragraph.start]; };
         s.unitStarts.clear();
@@ -80,7 +80,7 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
         first.resize(open.count);
         memZero(first.data, open.count * sizeof(uint32_t));
         Units units{.s = s, .fresh = true};
-        bool last = k + 1 == t.paragraphs.count;
+        bool last = k + 1 == t.info.paragraphCount;
         for (bool more = true; more && item < t.items.count;) {
             const LayoutInlineItem& it = t.items.data[item];
             if (it.start > paragraph.end || (it.start == paragraph.end && !last))
@@ -102,13 +102,13 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
                 case LayoutInlineItemKind_Open:
                     open.push(item);
                     first.push(s.unitStarts.count);
-                    if (t.marks.data[item] != kLayoutMarkNone)
-                        units.push(it.start, t.marks.data[item]);
+                    if (t.info.marks[item] != kLayoutMarkNone)
+                        units.push(it.start, t.info.marks[item]);
                     units.fresh = true;
                     break;
                 case LayoutInlineItemKind_Close:
-                    if (t.marks.data[item] != kLayoutMarkNone)
-                        units.push(it.start, t.marks.data[item]);
+                    if (t.info.marks[item] != kLayoutMarkNone)
+                        units.push(it.start, t.info.marks[item]);
                     units.fresh = true;
                     if (open.count != 0) {
                         boxes.push(open.last());
@@ -178,9 +178,9 @@ uint32_t layoutBidiSplitsBefore(const LayoutInlineShaping& t, uint32_t open, uin
 }
 
 const PrTextParagraph& layoutBidiParagraphAt(const LayoutInlineShaping& t, uint32_t byte) {
-    PR_ASSERT(t.bidi && t.paragraphs.count != 0);
-    const PrTextParagraph* paragraphs = t.paragraphs.data;
-    uint32_t after = partitionPoint(1, t.paragraphs.count, [&](uint32_t i) { return paragraphs[i].start <= byte; });
+    PR_ASSERT(t.bidi && t.info.paragraphCount != 0);
+    const PrTextParagraph* paragraphs = t.info.paragraphs;
+    uint32_t after = partitionPoint(1, t.info.paragraphCount, [&](uint32_t i) { return paragraphs[i].start <= byte; });
     return paragraphs[after - 1];
 }
 

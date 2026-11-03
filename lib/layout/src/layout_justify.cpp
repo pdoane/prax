@@ -37,13 +37,13 @@ PR_NOINLINE void layoutJustifyFind(LayoutState& state, LayoutJustifier& justifie
     Array<LayoutJustifyOpportunity>& opportunities = justifier.opportunities;
     opportunities.clear();
     uint32_t stop = line.end;
-    while (stop > line.from.byte && ((t.spaces.data[stop - 1] & (LayoutSpaceFlag_Collapsible | LayoutSpaceFlag_Hangs)) != 0 ||
+    while (stop > line.from.byte && ((t.spaces.data[stop - 1] & (PrTextSpaceFlag_Collapsible | PrTextSpaceFlag_Hangs)) != 0 ||
             t.text.data[stop - 1] == '\n'))
         --stop;
     // The last tab may be in the white space that ends the line, which leaves nothing to stretch.
     uint32_t from = line.from.byte;
     for (uint32_t b = line.from.byte; t.tabs && b < line.end; ++b) {
-        if ((t.spaces.data[b] & LayoutSpaceFlag_Tab) != 0)
+        if ((t.spaces.data[b] & PrTextSpaceFlag_Tab) != 0)
             from = b + 1;
     }
     // The boxes open around the text. Depth zero is the root inline box.
@@ -99,9 +99,9 @@ PR_NOINLINE void layoutJustifyFind(LayoutState& state, LayoutJustifier& justifie
             uint32_t codePoint = 0;
             prUtf8Decode(text, b, &codePoint);
             if (previous && b >= from) {
-                while (g < it.glyphEnd && t.glyphs.data[g].cluster < b)
+                while (g < it.glyphEnd && t.info.glyphs[g].cluster < b)
                     ++g;
-                bool unsplit = b == it.start || (g < it.glyphEnd && t.glyphs.data[g].cluster == b);
+                bool unsplit = b == it.start || (g < it.glyphEnd && t.info.glyphs[g].cluster == b);
                 bool cursive = isCursiveLetter(previousCode) && isCursiveLetter(codePoint);
                 if (unsplit && !cursive && fontAt(shallowest).textJustify == PrLayoutTextJustify_InterCharacter)
                     add(b, true);

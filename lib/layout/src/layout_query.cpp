@@ -611,10 +611,10 @@ void renderedAppendTextNode(RenderedWalk& walk, LayoutNodeIndex node) {
     const LayoutInlineItem& item = shaping.items.data[found.item];
     uint32_t start = item.start;
     uint32_t end = item.end;
-    if (start < end && (shaping.spaces.data[start] & LayoutSpaceFlag_Collapsible) != 0 &&
+    if (start < end && (shaping.spaces.data[start] & PrTextSpaceFlag_Collapsible) != 0 &&
             startsLine(shaping, found.item, start))
         ++start;
-    if (start < end && (shaping.spaces.data[end - 1] & LayoutSpaceFlag_Collapsible) != 0 &&
+    if (start < end && (shaping.spaces.data[end - 1] & PrTextSpaceFlag_Collapsible) != 0 &&
             endsLine(shaping, found.item, end))
         --end;
     renderedAppend(walk, PrStringView{shaping.text.data + start, end - start});

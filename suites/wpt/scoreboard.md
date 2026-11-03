@@ -218,7 +218,7 @@ of a change to it is what the change did.
 | gif                                                 |       1/1 |           0/1 |    0.0% |
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
 | html/browsers                                       |   566/769 |      602/2349 |   25.6% |
-| html/canvas                                         | 2651/2876 |     1738/5247 |   33.1% |
+| html/canvas                                         | 2652/2876 |     1739/5247 |   33.1% |
 | html/dom                                            |   346/353 |   60927/66758 |   91.2% |
 | html/editing                                        |   125/254 |       522/848 |   61.5% |
 | html/embedded-content                               |       1/1 |           0/2 |    0.0% |
@@ -263,7 +263,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8378/9525 | 126050/157051 |   80.2% |
+| **total**                                           | 8379/9525 | 126051/157051 |   80.2% |
 
 ## infrastructure
 

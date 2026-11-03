@@ -153,6 +153,7 @@ struct LayoutInlineFrame {
     Array<LayoutAtomic> atomics;
 
     Array<float> position;          // by byte: the width of what precedes it on one unbroken line (measure)
+    Array<float> pieceAdvances;     // by LayoutItemIndex: `advances` in px, as lib/text reads it (measure)
     Array<uint32_t> open;           // the Open items of the inline boxes open on the line being made, outermost first
     LayoutLineContent line;         // the content of the line being broken or made
     bool lineCollected;             // true if `line` holds a line of the segment being laid out
@@ -210,7 +211,7 @@ struct LayoutInlineFrame {
     Array<PrLayoutUnit> maxAdvances;    // by LayoutItemIndex: its advance at max-content
     Array<bool> clearing;               // by byte: true if a float that clears comes before it
 
-    LayoutWordScratch words;            // the opportunities inside a word that fits no line (breakWord)
+    PrTextWordBreaks* PR_NULLABLE words; // the opportunities inside a word that fits no line (breakLine)
 };
 
 // The frames of inline layout, one for each depth of nesting. Each frame is made the first time a layout reaches its
@@ -252,6 +253,7 @@ void destroyFrame(LayoutInlineFrame* f) {
     f->edges.reset();
     f->atomics.reset();
     f->position.reset();
+    f->pieceAdvances.reset();
     f->open.reset();
     layoutLineContentReset(f->line);
     f->floats.placed.reset();
@@ -292,7 +294,7 @@ void destroyFrame(LayoutInlineFrame* f) {
     f->leafRanges.reset();
     f->maxAdvances.reset();
     f->clearing.reset();
-    layoutWordScratchReset(f->words);
+    prTextWordBreaksDestroy(f->words);
     prMemoryFree(f);
 }
 
@@ -491,144 +493,32 @@ void startFloats(LayoutInlineFloats& floats, const LayoutInlineShaping& t) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Measuring
 
-// How far the width of a line may exceed its space and still fit, to allow for the error of summing advances.
-constexpr float kFitTolerance = 1.0f / 64;
-
-// Finds the position of each byte offset of the segment of the frame along one unbroken line, with `advances` by item.
-// The position is the sum of the advances of the bytes before it and of the items around those bytes. The start of a
-// box goes with the byte after it, and its end with the byte before it. An item at either end of the segment goes with
-// the nearest byte of the segment, so an empty box there counts toward the piece beside it. A segment with no bytes has
-// one position, zero.
+// Finds the position of each byte offset of the segment of the frame along one unbroken line, with `advances` by item
+// (prTextShapingPositions).
 void measure(const LayoutInlineShaping& t, LayoutInlineFrame& f, const PrLayoutUnit* advances) {
-    uint32_t start = f.segment.byteStart;
-    uint32_t size = f.segment.byteEnd - start;
-    f.position.clear();
-    f.position.reserve(t.text.count + 1);
-    f.position.count = t.text.count + 1;
-    // Indexed from the start of the segment.
-    float* position = f.position.data + start;
-    const float* advance = t.advance.data + start;
-    memZero(position, (size + 1) * sizeof(float));
-    for (uint32_t i = f.segment.itemStart; i < f.segment.itemEnd && size != 0; ++i) {
-        const LayoutInlineItem& item = t.items.data[i];
-        uint32_t at = item.start - start;
-        // position[b + 1] holds what goes with byte b.
-        if (item.kind == LayoutInlineItemKind_Open || item.kind == LayoutInlineItemKind_Atomic ||
-                item.kind == LayoutInlineItemKind_Float)
-            position[at < size ? at + 1 : size] += prLayoutUnitToPx(advances[i]);
-        else if (item.kind == LayoutInlineItemKind_Close)
-            position[at > 0 ? at : 1] += prLayoutUnitToPx(advances[i]);
-    }
-    float x = 0;
-    for (uint32_t b = 0; b <= size; ++b) {
-        x += position[b];
-        if (b != 0)
-            x += advance[b - 1];
-        position[b] = x;
-    }
+    const LayoutInlineSegment& s = f.segment;
+    f.position.resize(t.text.count + 1);
+    f.pieceAdvances.resize(t.items.count);
+    for (uint32_t i = s.itemStart; i < s.itemEnd; ++i)
+        f.pieceAdvances.data[i] = prLayoutUnitToPx(advances[i]);
+    PrTextShapingSegment segment{s.byteStart, s.byteEnd, s.itemStart, s.itemEnd};
+    prTextShapingPositions(t.shaped, &segment, f.pieceAdvances.data, f.position.data);
 }
-
-// Returns how far a preserved tab advances from `x`, measured along its line from the starting content edge of the
-// block (css-text-3/#tab-size-property). It advances to the next tab stop, or to the one after that if the next is
-// nearer than the minimum tab advance.
-float tabAdvance(const LayoutInlineShaping& t, float x) {
-    if (t.tabSize <= 0)
-        return 0;
-    float stop = (floorF32(x / t.tabSize) + 1) * t.tabSize;
-    if (stop - x < t.tabMinimum)
-        stop += t.tabSize;
-    return stop - x;
-}
-
-// Measures a line from its first byte as it extends one byte at a time. The width includes the advances of the bytes
-// and of the items along the line, and each preserved tab up to its tab stop. The width leaves out the white space that
-// ends the line and collapses or hangs (css-text-3/#white-space-phase-2). `origin` is the offset of the start of the
-// line from the starting content edge of the block, which tab stops are measured from.
-struct LinePen {
-    const LayoutInlineShaping& t;
-    const LayoutInlineFrame& f;
-    float origin;
-    uint32_t at;                    // the byte measured to
-    float x;                        // the width of the bytes before it
-    float trailing;                 // the advance of the trailing white space that collapses or hangs
-
-    // Extends the line to `end`.
-    void to(uint32_t end) {
-        for (; at < end; ++at) {
-            float step = f.position.data[at + 1] - f.position.data[at];
-            float advance = t.advance.data[at];
-            LayoutSpaceFlags spaces = t.spaces.data[at];
-            x += step;
-            if ((spaces & LayoutSpaceFlag_Tab) != 0) {
-                advance = tabAdvance(t, origin + x);
-                x += advance;
-            }
-            bool hangs = (spaces & (LayoutSpaceFlag_Collapsible | LayoutSpaceFlag_Hangs)) != 0;
-            trailing = hangs ? trailing + advance : 0;
-        }
-    }
-
-    // Returns the width of the line so far, less what hangs.
-    float width() const { return x - trailing; }
-};
 
 // Returns the width of the line from `start` to `end`, which starts `origin` from the starting content edge of the
 // block.
 float widthOf(const LayoutInlineShaping& t, const LayoutInlineFrame& f, uint32_t start, uint32_t end, float origin) {
-    LinePen pen{.t = t, .f = f, .origin = origin, .at = start};
-    pen.to(end);
-    return pen.width();
+    PrTextShapingLine line{.start = start, .end = end, .origin = origin, .positions = f.position.data};
+    return prTextShapingLineWidth(t.shaped, &line);
 }
 
-// Returns the end of a line that starts at `start`, `origin` from the starting content edge of the block, and that no
-// opportunity before `end` lets fit in `inlineSize`. The end is the last opportunity that overflow-wrap adds before
-// `end` and that fits, or the first one it adds if none fits, or `end` if it adds none. The shaping holds those
-// opportunities (LayoutInlineShaping::emergency), or this call finds them (LayoutInlineShaping::wrapsWords).
-uint32_t breakWord(const LayoutStyles* styles, const LayoutInlineShaping& t, LayoutInlineFrame& f, uint32_t start,
-        float origin, float inlineSize, uint32_t end) {
-    const PrTextEmergency* emergency = nullptr;
-    uint32_t base = 0;
-    if (t.emergency.count != 0) {
-        emergency = t.emergency.data;
-    } else if (t.wrapsWords) {
-        layoutWordBreaks(styles, t, start, end, f.words);
-        emergency = f.words.atByte.data;
-        base = f.words.start;
-    } else {
-        return end;
-    }
-    uint32_t rescue = 0;
-    LinePen pen{.t = t, .f = f, .origin = origin, .at = start};
-    for (uint32_t b = start + 1; b < end; ++b) {
-        if (emergency[b - base] == PrTextEmergency_None || t.breakAt.data[b] != PrUnicodeLineBreak_Prohibited)
-            continue;
-        pen.to(b);
-        if (pen.width() > inlineSize + kFitTolerance)
-            return rescue != 0 ? rescue : b;
-        rescue = b;
-    }
-    return rescue != 0 ? rescue : end;
-}
-
-// Returns the end of the line that starts at `start`, `origin` from the starting content edge of the block. The line is
-// broken greedily, no wider than `inlineSize` if possible, before the end of the segment of the frame. It breaks at the
-// last opportunity that fits, or, if none fits, where breakWord says.
-uint32_t breakLine(const LayoutStyles* styles, const LayoutInlineShaping& t, LayoutInlineFrame& f, uint32_t start,
-        float origin, float inlineSize) {
-    uint32_t size = f.segment.byteEnd;
-    uint32_t fits = 0;
-    LinePen pen{.t = t, .f = f, .origin = origin, .at = start};
-    for (uint32_t b = start + 1; b <= size; ++b) {
-        if (t.breakAt.data[b] == PrUnicodeLineBreak_Prohibited)
-            continue;
-        pen.to(b);
-        if (pen.width() > inlineSize + kFitTolerance)
-            return fits != 0 ? fits : breakWord(styles, t, f, start, origin, inlineSize, b);
-        fits = b;
-        if (t.breakAt.data[b] == PrUnicodeLineBreak_Mandatory && b != size)
-            return b;
-    }
-    return fits != 0 ? fits : size;
+// Returns the end of the line that starts at `start`, `origin` from the starting content edge of the block, broken
+// greedily in `inlineSize` before the end of the segment of the frame.
+uint32_t breakLine(const LayoutInlineShaping& t, LayoutInlineFrame& f, uint32_t start, float origin, float inlineSize) {
+    if (f.words == nullptr)
+        f.words = prTextWordBreaksCreate();
+    PrTextShapingLine line{.start = start, .end = f.segment.byteEnd, .origin = origin, .positions = f.position.data};
+    return prTextShapingBreakLine(t.shaped, PrStringView{t.text.data, t.text.count}, &line, inlineSize, f.words);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -672,7 +562,7 @@ LayoutLineStart collectLine(const LayoutInlineShaping& t, LayoutInlineFrame& f, 
     line.items.clear();
     bool final = isFinal(t, s, at.byte, end);
     uint32_t drawn = end;
-    while (drawn > at.byte && (t.spaces.data[drawn - 1] & LayoutSpaceFlag_Collapsible) != 0)
+    while (drawn > at.byte && (t.spaces.data[drawn - 1] & PrTextSpaceFlag_Collapsible) != 0)
         --drawn;
     LayoutItemIndex item = at.item;
     uint32_t consumed = at.consumed;
@@ -829,7 +719,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
     // shares.
     PrLayoutUnit lo{kLayoutUnitMax};
     PrLayoutUnit hi{-kLayoutUnitMax};
-    bool upright = t.runs.data[t.glyphs.data[g].run].upright;
+    bool upright = t.runs.data[t.info.glyphs[g].run].upright;
     auto faceOf = [&](const LayoutShapingRun& run, uint32_t end) {
         PR_ASSERT(run.upright == upright);
         const LayoutFontFaces& group = layoutFontFacesOfGroup(state.styles, run.font);
@@ -856,13 +746,13 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
     const LayoutFragmentFontRange* ranges = &singleRange;
     uint32_t rangeCount = 1;
     bool reversed = (leaf.level & 1) != 0;
-    if (t.glyphs.data[glyphEnd - 1].run == t.glyphs.data[g].run) {
-        single = faceOf(t.runs.data[t.glyphs.data[g].run], glyphEnd);
+    if (t.info.glyphs[glyphEnd - 1].run == t.info.glyphs[g].run) {
+        single = faceOf(t.runs.data[t.info.glyphs[g].run], glyphEnd);
     } else {
         Array<LayoutLeafFace>& pieces = f.leafFaces;
         pieces.clear();
         for (uint32_t i = g; i < glyphEnd;) {
-            const LayoutShapingRun& run = t.runs.data[t.glyphs.data[i].run];
+            const LayoutShapingRun& run = t.runs.data[t.info.glyphs[i].run];
             uint32_t end = run.glyphEnd < glyphEnd ? run.glyphEnd : glyphEnd;
             pieces.push(faceOf(run, end));
             i = end;
@@ -917,7 +807,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
     uint32_t lineEnd = f.line.end < item.end ? f.line.end : item.end;
     bool trailing = to < lineEnd;
     for (uint32_t b = to; trailing && b < lineEnd; ++b)
-        trailing = (t.spaces.data[b] & LayoutSpaceFlag_Collapsible) != 0;
+        trailing = (t.spaces.data[b] & PrTextSpaceFlag_Collapsible) != 0;
     text->text.end = sourceEnd(state, t, item, trailing ? lineEnd : to);
     LayoutCaretStop* stops = layoutFragmentTextStops(text);
     const uint32_t* sources = t.sources.data;
@@ -944,7 +834,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
     bool plain = first == last && !upright && !reversed;
     uint32_t k = 0;
     PrFontGlyph* out = text->text.glyphs;
-    const LayoutInlineGlyph* in = t.glyphs.data + g;
+    const PrTextShapedGlyph* in = t.info.glyphs + g;
     for (uint32_t j = 0; plain && j < faceCount; ++j) {
         float across = faces[j].across;
         uint32_t end = faces[j].glyphEnd - g;
@@ -959,7 +849,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
     uint32_t j = reversed ? faceCount - 1 : 0;
     for (k = 0; !plain && k < glyphEnd - g; ++k) {
         uint32_t i = reversed ? glyphEnd - 1 - k : g + k;
-        const LayoutInlineGlyph& glyph = t.glyphs.data[i];
+        const PrTextShapedGlyph& glyph = t.info.glyphs[i];
         if (!reversed) {
             while (i >= faces[j].glyphEnd)
                 ++j;
@@ -975,7 +865,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
         // A cluster's line-left edge is at its first glyph in placement order, which is its last in the order of the
         // text if the leaf is reversed.
         uint32_t beside = reversed ? i + 1 : i - 1;
-        if (k == 0 || t.glyphs.data[beside].cluster != glyph.cluster)
+        if (k == 0 || t.info.glyphs[beside].cluster != glyph.cluster)
             stops[stop++] = LayoutCaretStop{sources[glyph.cluster], along};
         float across = faces[j].across;
         PrVec2 at;
@@ -1096,7 +986,7 @@ void lineLevels(LayoutInlineFrame& f, const LayoutInlineShaping& t, uint32_t sta
         uint32_t codePoint = 0;
         uint32_t size = uint32_t(prUtf8Decode(text, at, &codePoint));
         f.lineClasses.push(prUnicodeBidiClass(codePoint));
-        f.lineCodeLevels.push(t.levels.data[at]);
+        f.lineCodeLevels.push(t.info.levels[at]);
         at += size;
     }
     prUnicodeBidiLineLevels(f.lineClasses.data, f.lineClasses.count, paragraph, f.lineCodeLevels.data);
@@ -1125,11 +1015,11 @@ void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const Layout
     // The run that holds the first byte of the item on the line, or the first run past it.
     uint32_t r = partitionPoint(item.runStart, item.runEnd, [&](uint32_t i) { return t.runs.data[i].end <= on.from; });
     auto levelAt = [&](uint32_t b) { return levels ? f.lineLevels.data[b - lineStart] : uint8_t(0); };
-    auto tab = [&](uint32_t b) { return (t.spaces.data[b] & LayoutSpaceFlag_Tab) != 0; };
+    auto tab = [&](uint32_t b) { return (t.spaces.data[b] & PrTextSpaceFlag_Tab) != 0; };
     for (uint32_t b = on.from; b < on.to;) {
         if (t.tabs && tab(b)) {
-            float advance = tabAdvance(t, *logical);
-            uint32_t g = t.glyphAt.data[b];
+            float advance = prTextShapingTabAdvance(t.shaped, *logical);
+            uint32_t g = t.info.glyphAt[b];
             f.leaves.push(LayoutLineLeaf{
                 on.item, b, b + 1, prLayoutUnitFromPxCeil(advance), advance, g, g,
                 LayoutLineLeafKind_Tab, levelAt(b), b >= hang, false,
@@ -1139,7 +1029,7 @@ void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const Layout
             continue;
         }
         if (t.text.data[b] == '\n') {
-            uint32_t g = t.glyphAt.data[b];
+            uint32_t g = t.info.glyphAt[b];
             f.leaves.push(LayoutLineLeaf{
                 on.item, b, b + 1, kLayoutUnitZero, 0, g, g, LayoutLineLeafKind_Break,
                 levelAt(b), false, false,
@@ -1170,9 +1060,9 @@ void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const Layout
             e = at;
         }
         // Its advance in units is found once the leaves of the line are in visual order.
-        float pen = float(t.reach.data[e] - t.reach.data[b]);
+        float pen = float(t.info.reach[e] - t.info.reach[b]);
         f.leaves.push(LayoutLineLeaf{
-            on.item, b, e, kLayoutUnitZero, pen, t.glyphAt.data[b], t.glyphAt.data[e],
+            on.item, b, e, kLayoutUnitZero, pen, t.info.glyphAt[b], t.info.glyphAt[e],
             LayoutLineLeafKind_Text, levelAt(b), b >= hang, false,
         });
         *logical += pen;
@@ -1296,10 +1186,10 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     uint32_t hang = UINT32_MAX;
     if (aligns) {
         uint32_t drawn = end;
-        while (drawn > line.from.byte && (t.spaces.data[drawn - 1] & LayoutSpaceFlag_Collapsible) != 0)
+        while (drawn > line.from.byte && (t.spaces.data[drawn - 1] & PrTextSpaceFlag_Collapsible) != 0)
             --drawn;
         hang = drawn;
-        while (hang > line.from.byte && (t.spaces.data[hang - 1] & LayoutSpaceFlag_Hangs) != 0)
+        while (hang > line.from.byte && (t.spaces.data[hang - 1] & PrTextSpaceFlag_Hangs) != 0)
             --hang;
     }
 
@@ -1338,11 +1228,11 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     // The start and end of an isolating box are empty leaves at the levels of its isolate initiator and terminator.
     // They keep what is outside the box from joining what is inside it in reordering.
     auto isolateMark = [&](LayoutItemIndex item) {
-        if (t.bidi && t.marks.data[item] != kLayoutMarkNone) {
+        if (t.bidi && t.info.marks[item] != kLayoutMarkNone) {
             uint32_t byte = t.items.data[item].start;
             f.leaves.push(LayoutLineLeaf{
                 item, byte, byte, kLayoutUnitZero, 0, 0, 0, LayoutLineLeafKind_Empty,
-                t.marks.data[item], false, false,
+                t.info.marks[item], false, false,
             });
         }
     };
@@ -1779,7 +1669,7 @@ uint32_t breakBesideFloats(LayoutState& state, LayoutInlineFrame& f, const Layou
     float width = prLayoutUnitToPx(span.right - span.left) - indentPx;
     for (uint32_t next = floats.next.data[at.item];;) {
         float origin = originOf(span, space, bfc) + indentPx;
-        uint32_t end = breakLine(state.styles, t, f, at.byte, origin, width);
+        uint32_t end = breakLine(t, f, at.byte, origin, width);
         while (next < f.segment.itemEnd && floats.placed.data[next])
             next = floats.next.data[next + 1];
         if (next >= f.segment.itemEnd || !isOnLine(t, at.byte, end, t.items.data[next].start))
@@ -1790,7 +1680,7 @@ uint32_t breakBesideFloats(LayoutState& state, LayoutInlineFrame& f, const Layou
         float before = position > at.byte ? widthOf(t, f, at.byte, position, origin) : 0;
         float inlineSize = prLayoutUnitToPx(layoutAtomicMarginBox(f.atomics.data[item], space.mode).inlineSize);
         if (floats.deferred.count == 0 && floats.forced.find(item) == kArrayMissing &&
-                (before <= 0 || before + inlineSize <= width + kFitTolerance)) {
+                (before <= 0 || before + inlineSize <= width + kPrTextLineFitTolerance)) {
             floats.onLine.push(LayoutInlinePlaced{item, placeFloat(state, f, item, y, space, bfc)});
             span = layoutExclusionsAvailable(bfc.containing, y, h);
             width = prLayoutUnitToPx(span.right - span.left) - indentPx;
@@ -1851,12 +1741,12 @@ LineFit fitLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShap
         float indentPx = prLayoutUnitToPx(indent);
         float width = prLayoutUnitToPx(fit.span.right - fit.span.left) - indentPx;
         float piece = fit.span.free ? 0 : widthOf(t, f, at.byte, fit.end, originOf(fit.span, space, bfc) + indentPx);
-        if (!fit.span.free && piece > width + kFitTolerance) {
+        if (!fit.span.free && piece > width + kPrTextLineFitTolerance) {
             for (uint32_t i = 0; i < floats.onLine.count; ++i)
                 pushFloat(state, f, floats.onLine.data[i].item, floats.onLine.data[i].box, space, bfc);
             floats.onLine.clear();
             mark = exclusions.mark;
-            float needed = maxF32(0, piece + indentPx - kFitTolerance);
+            float needed = maxF32(0, piece + indentPx - kPrTextLineFitTolerance);
             fit.y = layoutExclusionsFirstFit(bfc.containing, fit.y, h, prLayoutUnitFromPxCeil(needed)).y;
             continue;
         }
@@ -2004,7 +1894,8 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
     bool afterForced = false;
     openAcross(t, f);
     f.lineCollected = false;
-    f.words.end = 0;
+    if (f.words != nullptr)
+        prTextWordBreaksClear(f.words);
     // Lays out the line from `at` with the frame `lf` and the shaping `lt`, beside the strut `ls`.
     auto layLine = [&](LayoutInlineFrame& lf, const LayoutInlineShaping& lt, const LineStrut& ls) {
         LayoutLineStart lineFrom = at;
@@ -2058,7 +1949,8 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
         const LayoutInlineShaping& lt = *t.firstLine;
         PrLayoutStyleIndex lineStyle = layoutNodeLineStyle(state.tree, container);
         LayoutInlineFrame& lf = enterFrame(state.scratch);
-        lf.words.end = 0;
+        if (lf.words != nullptr)
+            prTextWordBreaksClear(lf.words);
         lf.segment = f.segment;
         resolveItems(state, lf, lt, space);
         startFloats(lf.floats, lt);
@@ -2120,7 +2012,7 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
     float indent = prLayoutUnitToPx(layoutResolve(state.styles, font.textIndent, kLayoutUnitZero));
     auto indentAt = [&](uint32_t start) {
         bool first = start == segment.byteStart;
-        bool afterForced = !first && t.breakAt.data[start] == PrUnicodeLineBreak_Mandatory;
+        bool afterForced = !first && t.info.breaks[start] == PrUnicodeLineBreak_Mandatory;
         return indents(font, first && firstFormatted, afterForced) ? indent : 0;
     };
 
@@ -2194,10 +2086,10 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
         float width = 0;
         uint32_t start = segment.byteStart;
         for (uint32_t b = segment.byteStart + 1; b <= segment.byteEnd; ++b) {
-            PrUnicodeLineBreak at = t.breakAt.data[b];
+            PrUnicodeLineBreak at = t.info.breaks[b];
             // overflow-wrap: anywhere's opportunities count at min-content (css-text-4/#valdef-overflow-wrap-anywhere).
-            if (soft && at == PrUnicodeLineBreak_Prohibited && t.emergency.count != 0 &&
-                    t.emergency.data[b] == PrTextEmergency_Anywhere)
+            if (soft && at == PrUnicodeLineBreak_Prohibited && t.info.emergency != nullptr &&
+                    t.info.emergency[b] == PrTextEmergency_Anywhere)
                 at = PrUnicodeLineBreak_Allowed;
             // A float that clears ends the run of floats beside the line before it.
             bool last = b == segment.byteEnd;
@@ -2223,10 +2115,10 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
     const LayoutInlineShaping* lt = t.firstLine;
     if (firstFormatted && lt != nullptr && segment.itemStart == 0 && segment.byteEnd != segment.byteStart) {
         uint32_t piece = segment.byteStart + 1;
-        while (piece < segment.byteEnd && lt->breakAt.data[piece] == PrUnicodeLineBreak_Prohibited)
+        while (piece < segment.byteEnd && lt->info.breaks[piece] == PrUnicodeLineBreak_Prohibited)
             ++piece;
         uint32_t line = piece;
-        while (line < segment.byteEnd && lt->breakAt.data[line] != PrUnicodeLineBreak_Mandatory)
+        while (line < segment.byteEnd && lt->info.breaks[line] != PrUnicodeLineBreak_Mandatory)
             ++line;
         float lineIndent = indentAt(segment.byteStart);
         measure(*lt, f, f.advances.data);

@@ -29,7 +29,7 @@ bool layoutSameShapingStyle(const LayoutStyles* styles, uint32_t a, uint32_t b);
 // script, orientation, bidi level and face. Also resolves `t.levels`, `t.paragraphs`, `t.marks` and `t.splits`
 // (layoutBidiFindSplits). A paragraph ends at the bounds of a segment and at each forced break. Returns true if any
 // bidi level was resolved.
-bool layoutItemize(LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapingScratch& s);
+bool layoutItemize(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, LayoutInlineShaping& t, LayoutShapingScratch& s);
 
 } // namespace pr_impl
 

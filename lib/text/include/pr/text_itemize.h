@@ -18,6 +18,7 @@
 #include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text.h"
+#include "pr/text_break.h"
 #include "pr/text_font.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -76,6 +77,17 @@ typedef struct PrTextPiece {
     uint32_t end;
     PrTextFont* PR_NULLABLE font;       // Text: the text font that its clusters are set in, or null for none
     uint32_t style;                     // Text: the producer's style; a run has one style, and its pieces one font
+
+    // Text: the features that shaping applies, or null for the defaults, and how the text breaks within words. A
+    // shaping reads these (pr/text_shaping.h), and itemization does not.
+    const PrTextFeatureSet* PR_NULLABLE features;
+    PrTextBreakStyle breakStyle;
+
+    // Text: the size that the text is set at, in px, or zero for the size of its text font.
+    float size;
+
+    bool noWrap;                        // Text, Open: true if lines do not wrap inside it
+    bool breakSpaces;                   // Text: true if a line may break after any space or tab
 } PrTextPiece;
 
 // The input of an itemization: the text, its pieces, and the direction and unicode-bidi of its container, which set the

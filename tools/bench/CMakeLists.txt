@@ -45,6 +45,12 @@ if (PR_CARGO)
     )
     target_include_directories(flex_bench PRIVATE ${PROJECT_SOURCE_DIR})
     target_link_libraries(flex_bench PRIVATE prax::layout harness yoga flex_bench_taffy pr_warnings)
+
+    # A check that Yoga can set Prax text. It links lib/text and no layout, so it fails if the library comes to need one.
+    add_executable(text_yoga_check flex_bench/text_yoga_check.cpp)
+    target_link_libraries(text_yoga_check PRIVATE prax::font prax::text yoga pr_warnings)
+    target_compile_definitions(text_yoga_check PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    add_test(NAME text_yoga_check COMMAND text_yoga_check)
 endif()
 
 if (PR_JS)

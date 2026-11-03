@@ -275,7 +275,7 @@ PR_NOINLINE LayoutLineExtent layoutTextOnLineSearch(LayoutState& state, const La
         return extent;
     PrLayoutAlignmentBaseline dominant = layoutDominantBaseline(layoutFontStyle(state.styles, style));
     for (uint32_t g = item.glyphStart; g < item.glyphEnd; ++g) {
-        const LayoutInlineGlyph& glyph = t.glyphs.data[g];
+        const PrTextShapedGlyph& glyph = t.info.glyphs[g];
         // A run's face is among the faces of the run's own font group, which has the same shaping style as the item.
         const LayoutShapingRun& run = t.runs.data[glyph.run];
         const LayoutFontFaces& faces = layoutFontFacesOfGroup(state.styles, run.font);

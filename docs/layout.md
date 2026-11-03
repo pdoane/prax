@@ -788,10 +788,10 @@ breaks, across lines or at a bidi split, so painting reads no writing mode.
   and of breaking (`PrTextWordBreak`, `PrTextOverflowWrap`, `pr/text_break.h`). Breaks are UAX #14's opportunities,
   tailored by lib/text (`prTextBreaksTailor`) only if some text in the context asks for it. word-break's break-all
   and keep-all change the opportunities themselves. overflow-wrap, and word-break's break-word, add emergency
-  opportunities between grapheme clusters (`LayoutInlineShaping::emergency`). A line takes the last emergency
+  opportunities between grapheme clusters (`PrTextShapingInfo::emergency`). A line takes the last emergency
   opportunity that fits, and only if no ordinary opportunity fits. Only the opportunities of `anywhere` count for the
   min-content size. So a context whose text asks only for `break-word` finds its opportunities when a word fits no
-  line (`layoutWordBreaks`). Text that does not wrap takes none.
+  line (`prTextShapingBreakLine`). Text that does not wrap takes none.
 - The first formatted line of a block container is laid out in the records that the producer gives for that line
   (`prLayoutNodeSetFirstLineStyle`). The context then has a second shaping, collected in those records
   (`LayoutInlineShaping::firstLine`). It has the same text and items, and only their font groups differ. The first line
