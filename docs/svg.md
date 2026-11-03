@@ -75,7 +75,11 @@ servers live as the last sweep kept and no paint references it.
 
 `prCssPresentationVerify` compares each tree with a fresh build (`svgTreeSame`), node by node.
 
-Text is laid out by `svg_text.h`, and SVG fonts come from SVG 1.1's font elements (`svg_font.h`).
+Text is laid out by `svg_text.h`, and SVG fonts come from SVG 1.1's font elements (`svg_font.h`). They belong to the
+document, not to a build: the document's changes keep its faces in tree order, and a font is read when text first needs
+it, until a change under it. A tree records the families that its text looked up, found or not, and a change to a family
+builds again only the trees that read it. A font in another document that a `font-face-uri` names is kept by that
+document, and a build that finds no font remembers that only for itself, since another build's host may load it.
 
 ## Geometry and vector effects
 

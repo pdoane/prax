@@ -33,18 +33,10 @@
 
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_node.h"
+#include "svg/src/svg_document.h"
 #include "svg/src/svg_font.h"
 
 namespace pr_impl {
-
-// An SVG font that a font-face names for a family, loaded when text first needs it.
-struct SvgFontFace {
-    PrStringView family;
-    const PrDomElement* face;           // the font-face element
-    Array<PrFontCodePointRange> ranges; // its unicode-range; empty means every code point
-    SvgFont* PR_NULLABLE font;          // null until resolved, or if no font was found
-    bool resolved;                      // true once `font` has been looked for
-};
 
 // A host text font, keyed by the families, the style and the locale that it was made for.
 struct SvgHostFont {
@@ -52,10 +44,15 @@ struct SvgHostFont {
     PrTextFont* font;
 };
 
+// What one build found of a face whose font its document does not keep: a font in a document that the host loads, or
+// none, which another build's host may yet load.
+struct SvgLoadedFace {
+    const SvgFontFace* face;
+    const SvgFont* PR_NULLABLE font;
+};
+
 struct SvgTextFonts {
-    Array<SvgFontFace> faces;           // gathered when text first needs a family
-    bool gathered;
-    Array<SvgFont*> fonts;              // the SVG fonts loaded so far
+    Array<SvgLoadedFace> loaded;
     Array<SvgHostFont> hosts;
     PrTextGlyphBuffer* PR_NULLABLE glyphs;  // the buffer that shaping fills, created when text first shapes
 };
@@ -235,7 +232,7 @@ struct Positioned {
 
 // The font that a character is set in: one of the document's SVG fonts or a host font.
 struct Font {
-    SvgFont* PR_NULLABLE svg;
+    const SvgFont* PR_NULLABLE svg;
     const PrFont* PR_NULLABLE host;
 
     bool operator==(const Font& other) const { return svg == other.svg && host == other.host; }
@@ -303,6 +300,7 @@ struct TextPath {
 
 struct Layout {
     SvgBuilder* b;
+    SvgDocumentFonts* documentFonts;    // the SVG fonts of the text's document
     bool instance;                      // the text is in a use element's shadow tree
     Array<char> text;
     Array<TextPath> paths;
@@ -728,49 +726,6 @@ SvgTextFonts& fontsOf(Layout& t) {
     return *t.b->fonts;
 }
 
-// Reads the family of a font-face's font-family attribute, the first of its list, without quotes.
-bool firstFamily(PrStringView list, PrStringView* family) {
-    size_t i = 0;
-    while (i < list.size && (asciiIsSpace(list.data[i]) || list.data[i] == ','))
-        ++i;
-    if (i >= list.size)
-        return false;
-    char quote = list.data[i];
-    if (quote == '"' || quote == '\'') {
-        size_t start = ++i;
-        while (i < list.size && list.data[i] != quote)
-            ++i;
-        *family = PrStringView{list.data + start, i - start};
-        return true;
-    }
-    size_t start = i;
-    while (i < list.size && list.data[i] != ',')
-        ++i;
-    *family = stringTrimEnd(stringSlice(list, start, i - start));
-    return true;
-}
-
-// Gathers the document's font-face elements that name SVG fonts. Their fonts are found when a family first needs them.
-void gatherFaces(Layout& t, const PrDomElement* from) {
-    SvgTextFonts& fonts = fontsOf(t);
-    fonts.gathered = true;
-    t.b->tree->readsSvgFonts = true;
-    PrDomNode* document = const_cast<PrDomNode*>(static_cast<const PrDomNode*>(from->document));
-    for (PrDomNode* node = domNodeNext(document, document); node != nullptr; node = domNodeNext(document, node)) {
-        const PrDomElement* e = domElementFromNode(node);
-        if (e == nullptr || !svgIs(e, PrDomTag_FontFace))
-            continue;
-        SvgFontFace face{};
-        if (!firstFamily(svgAttribute(e, "font-family"), &face.family))
-            continue;
-        face.face = e;
-        PrStringView ranges = svgAttribute(e, "unicode-range");
-        if (ranges.data != nullptr && !svgParseUnicodeRange(ranges, &face.ranges))
-            face.ranges.clear();
-        fonts.faces.push(face);
-    }
-}
-
 // Returns the font element that a font-face-uri names, in this document or in one that the host loads.
 const PrDomElement* PR_NULLABLE fontOfUri(Layout& t, const PrDomElement* uri) {
     PrStringView href = svgHref(uri);
@@ -804,16 +759,21 @@ const PrDomElement* PR_NULLABLE fontOfUri(Layout& t, const PrDomElement* uri) {
 }
 
 // Returns the SVG font of a face: the font that contains the face, or the font that its font-face-uri names
-// (SVG11/fonts.html#FontFaceElement).
-SvgFont* PR_NULLABLE fontOfFace(Layout& t, SvgFontFace& face) {
+// (SVG11/fonts.html#FontFaceElement). A font is kept by the fonts of its own document, and a face keeps only one of its
+// own document's.
+const SvgFont* PR_NULLABLE fontOfFace(Layout& t, SvgDocumentFonts* documentFonts, SvgFontFace& face) {
     if (face.resolved)
         return face.font;
-    face.resolved = true;
+    SvgTextFonts& fonts = fontsOf(t);
+    for (uint32_t i = 0; i < fonts.loaded.count; ++i) {
+        if (fonts.loaded.data[i].face == &face)
+            return fonts.loaded.data[i].font;
+    }
     const PrDomElement* font = nullptr;
-    const PrDomElement* parent = domElementFromNode(face.face->parent);
+    const PrDomElement* parent = domElementFromNode(face.element->parent);
     if (parent != nullptr && svgIs(parent, PrDomTag_Font))
         font = parent;
-    for (const PrDomNode* src = face.face->first; src != nullptr && font == nullptr; src = src->next) {
+    for (const PrDomNode* src = face.element->first; src != nullptr && font == nullptr; src = src->next) {
         const PrDomElement* s = domElementFromNode(src);
         if (s == nullptr || !svgIs(s, PrDomTag_FontFaceSrc))
             continue;
@@ -823,18 +783,14 @@ SvgFont* PR_NULLABLE fontOfFace(Layout& t, SvgFontFace& face) {
                 font = fontOfUri(t, u);
         }
     }
-    if (font == nullptr)
-        return nullptr;
-    SvgTextFonts& fonts = fontsOf(t);
-    for (uint32_t i = 0; i < fonts.fonts.count; ++i) {
-        SvgFont* loaded = fonts.fonts.data[i];
-        if (loaded->element == font)
-            return face.font = loaded;
+    if (font == nullptr || font->document != face.element->document) {
+        const SvgFont* loaded = font != nullptr ? svgDocumentFontsLoad(svgDocumentFonts(font->document), font) : nullptr;
+        fonts.loaded.push(SvgLoadedFace{&face, loaded});
+        return loaded;
     }
-    SvgFont* loaded = allocZeroed<SvgFont>();
-    svgFontLoad(font, loaded);
-    fonts.fonts.push(loaded);
-    return face.font = loaded;
+    face.resolved = true;
+    face.font = svgDocumentFontsLoad(documentFonts, font);
+    return face.font;
 }
 
 // Returns the host's text font for the span's style. Each text font is created once per build.
@@ -909,17 +865,21 @@ Font fontFor(Layout& t, const Char& c, const Span& span, PrStringView cluster) {
     uint32_t codePoint = 0;
     prUtf8Decode(text, c.offset, &codePoint);
     Font first{};
-    SvgTextFonts& fonts = fontsOf(t);
+    SvgDocumentFonts* documentFonts = t.documentFonts;
     for (uint32_t f = 0; f < span.style.familyCount; ++f) {
         const Family& family = t.families.data[span.style.firstFamily + f];
         if (family.generic != PrFontGeneric_None)
             continue;
         PrStringView name = familyName(t, family);
-        for (uint32_t i = 0; i < fonts.faces.count; ++i) {
-            SvgFontFace& face = fonts.faces.data[i];
-            if (!asciiEqualsFold(face.family, name))
+        uint32_t hash = svgFontFamilyHash(name);
+        Array<uint32_t>& reads = t.b->tree->fontFamilies;
+        if (reads.find(hash) == kArrayMissing)
+            reads.push(hash);
+        for (uint32_t i = 0; i < documentFonts->faces.count; ++i) {
+            SvgFontFace& face = documentFonts->faces.data[i];
+            if (face.familyHash != hash || !asciiEqualsFold(prStringView(&face.family), name))
                 continue;
-            SvgFont* font = fontOfFace(t, face);
+            const SvgFont* font = fontOfFace(t, documentFonts, face);
             if (font == nullptr)
                 continue;
             if (first.svg == nullptr)
@@ -1844,8 +1804,7 @@ void dropRemoved(Layout& t) {
 // decoration declared outside the text element is painted with the fill and stroke of the text element
 // (SVG11/text.html#TextDecorationProperties).
 void beginLayout(Layout& t, const PrDomElement* text, const CssComputedStyle* style) {
-    if (t.b->fonts == nullptr || !t.b->fonts->gathered)
-        gatherFaces(t, text);
+    t.documentFonts = svgDocumentFonts(text->document);
     TextStyle textStyle = textStyleOf(t, text, style, nullptr);
     textStyle.decorationCount = 0;
     textStyle.textAlign = Anchor_Start;
@@ -2870,17 +2829,7 @@ void svgTextDestroy(SvgTree* tree, SvgText* PR_NULLABLE text) {
 void svgTextFontsDestroy(SvgTextFonts* PR_NULLABLE fonts) {
     if (fonts == nullptr)
         return;
-    for (uint32_t i = 0; i < fonts->fonts.count; ++i) {
-        SvgFont* font = fonts->fonts.data[i];
-        svgFontReset(font);
-        prMemoryFree(font);
-    }
-    fonts->fonts.reset();
-    for (uint32_t i = 0; i < fonts->faces.count; ++i) {
-        SvgFontFace& face = fonts->faces.data[i];
-        face.ranges.reset();
-    }
-    fonts->faces.reset();
+    fonts->loaded.reset();
     for (uint32_t i = 0; i < fonts->hosts.count; ++i) {
         SvgHostFont& host = fonts->hosts.data[i];
         host.key.reset();

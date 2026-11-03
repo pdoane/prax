@@ -15,8 +15,10 @@
 #include "css/src/css_root.h"
 #include "dom/src/dom_flat.h"
 #include "svg/src/svg_cascade.h"
+#include "svg/src/svg_document.h"
 #include "svg/src/svg_draw.h"
 #include "svg/src/svg_filter.h"
+#include "svg/src/svg_font.h"
 #include "svg/src/svg_image.h"
 #include "svg/src/svg_query.h"
 
@@ -536,6 +538,21 @@ void idsChanged(SvgPresentation* state) {
     }
 }
 
+// Notes that the document's SVG fonts of a family may have changed, for the content that reads the family.
+void fontFamilyChanged(void* PR_NULLABLE context, uint32_t familyHash) {
+    SvgPresentation* state = static_cast<SvgPresentation*>(context);
+    SvgReferences& references = state->references;
+    if (references.named && svgTreeNoteFontFamily(&references.tree, familyHash, &references.changes))
+        reproject(state);
+    uint32_t count = 0;
+    CssPresentationSvg* const* svgs = cssPresentationSvgs(state->presentation, &count);
+    for (uint32_t i = 0; i < count; ++i) {
+        SvgContent* content = static_cast<SvgContent*>(svgs[i]->content);
+        if (content != nullptr && svgTreeNoteFontFamily(&content->tree, familyHash, &content->changes))
+            stale(state, svgs[i]);
+    }
+}
+
 // Notes that everything that the references and the content read may have changed.
 void invalidate(SvgPresentation* state) {
     if (state->references.named) {
@@ -647,6 +664,7 @@ SvgPresentation* svgPresentationCreate(PrCssPresentation* presentation) {
     state->resolver = CssPresentationReferences{.reference = referencesReference, .context = state};
     cssPresentationSetSvgState(presentation, state);
     cssPresentationSetReferences(presentation, &state->resolver);
+    svgDocumentFontsSetChanged(svgDocumentFonts(state->document), fontFamilyChanged, state);
     return state;
 }
 
@@ -655,6 +673,7 @@ void svgPresentationDestroy(SvgPresentation* PR_NULLABLE state) {
         return;
     if (state->follows)
         domDocumentUnsubscribe(state->document, &kFollowHooks);
+    svgDocumentFontsSetChanged(svgDocumentFonts(state->document), nullptr, nullptr);
     referencesReset(&state->references);
     prMemoryFree(state);
 }

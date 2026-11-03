@@ -1,14 +1,17 @@
 // The browser example: a web browser in a window, with tabs, whose pages' scripts run, rendered through lib/layout and
 // lib/draw, inside chrome built with Studio Kit.
 //
-// Usage: browser [--cache <directory>] [--stats] [<url | path | search>...]
+// Usage: browser [--cache <directory>] [--stats] [--trace] [<url | path | search>...]
 //
 // Each argument opens a tab, read as the address bar reads its text (addressResolve). With none, the browser opens a
 // tab on the start page. The network is lib/net's sockets, with the platform's TLS, under lib/http and lib/fetch, and
 // an HTTP cache on disk, where the platform keeps a user's caches or in the directory that --cache names, as pr_shell's
 // --cache does. Local storage, the favorites and the history are on disk too, where the platform keeps a user's data.
 // --stats prints, once a second, how many frames the window presented, the time that the window's thread and the GPU
-// spent on each, and the work that the renderer prepared for the last.
+// spent on each, and the work that the renderer prepared for the last. Each navigation that the address bar or an
+// argument starts prints how long it took to settle: until its document is complete and the last scene shows all of it.
+// --trace prints each viewport that the window asks for and the page sees, each layout job as it starts and ends, and
+// how long the viewport's changes took to settle, with the jobs that they took and those laid out at a replaced size.
 //
 // main() is the composition root. Each tab is a page (pr/html_page.h), the navigable that loads each document, with its
 // view (pr/html_view.h) and a compositor of its own. One script engine (pr/html_quickjs.h) runs the scripts of every
@@ -220,8 +223,10 @@ int main(int argc, char** argv) {
             b.cacheDirectory = argv[++at];
         } else if (argument == "--stats") {
             b.stats = true;
+        } else if (argument == "--trace") {
+            b.trace = true;
         } else if (argument.rfind("--", 0) == 0) {
-            fprintf(stderr, "usage: browser [--cache <directory>] [--stats] [<url | path | search>...]\n");
+            fprintf(stderr, "usage: browser [--cache <directory>] [--stats] [--trace] [<url | path | search>...]\n");
             return 2;
         } else {
             std::string url = addressResolve(argument);

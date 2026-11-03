@@ -2,6 +2,7 @@
 
 #include "svg/src/svg_font.h"
 
+#include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/float.h"
 #include "pr/number_list.h"
@@ -164,6 +165,131 @@ void readGlyph(const PrDomElement* element, float fallbackAdvance, SvgGlyph* out
     *out = glyph;
 }
 
+// Reads the family of a font-face's font-family attribute, the first of its list, without quotes.
+bool firstFamily(PrStringView list, PrStringView* family) {
+    size_t i = 0;
+    while (i < list.size && (asciiIsSpace(list.data[i]) || list.data[i] == ','))
+        ++i;
+    if (i >= list.size)
+        return false;
+    char quote = list.data[i];
+    if (quote == '"' || quote == '\'') {
+        size_t start = ++i;
+        while (i < list.size && list.data[i] != quote)
+            ++i;
+        *family = PrStringView{list.data + start, i - start};
+        return true;
+    }
+    size_t start = i;
+    while (i < list.size && list.data[i] != ',')
+        ++i;
+    *family = stringTrimEnd(stringSlice(list, start, i - start));
+    return true;
+}
+
+void noteFamily(const SvgDocumentFonts* fonts, uint32_t hash) {
+    if (fonts->changed != nullptr)
+        fonts->changed(fonts->changedContext, hash);
+}
+
+void resetFace(SvgFontFace* face) {
+    prStringReset(&face->family);
+    face->ranges.reset();
+}
+
+// Adds a font-face element of the document's tree, if it names a family, where tree order puts it.
+void addFace(SvgDocumentFonts* fonts, const PrDomElement* element) {
+    PrStringView family{};
+    if (domNodeRoot(element) != fonts->document || !firstFamily(svgAttribute(element, "font-family"), &family))
+        return;
+    SvgFontFace face{};
+    face.family = prStringCopy(family);
+    face.familyHash = svgFontFamilyHash(family);
+    face.element = element;
+    PrStringView ranges = svgAttribute(element, "unicode-range");
+    if (ranges.data != nullptr && !svgParseUnicodeRange(ranges, &face.ranges))
+        face.ranges.clear();
+    uint32_t at = fonts->faces.count;
+    while (at > 0 && domNodePrecedes(element, fonts->faces.data[at - 1].element))
+        --at;
+    fonts->faces.insert(at, face);
+    noteFamily(fonts, face.familyHash);
+}
+
+void removeFace(SvgDocumentFonts* fonts, const PrDomElement* element) {
+    for (uint32_t i = 0; i < fonts->faces.count; ++i) {
+        SvgFontFace& face = fonts->faces.data[i];
+        if (face.element != element)
+            continue;
+        uint32_t hash = face.familyHash;
+        resetFace(&face);
+        fonts->faces.erase(i);
+        noteFamily(fonts, hash);
+        return;
+    }
+}
+
+// Forgets what was read of the font element `element`, and what the faces found of it.
+void forgetFont(SvgDocumentFonts* fonts, const PrDomElement* element) {
+    for (uint32_t i = 0; i < fonts->fonts.count; ++i) {
+        SvgFont* font = fonts->fonts.data[i];
+        if (font->element != element)
+            continue;
+        for (uint32_t k = 0; k < fonts->faces.count; ++k) {
+            SvgFontFace& face = fonts->faces.data[k];
+            if (face.font == font) {
+                face.font = nullptr;
+                face.resolved = false;
+                noteFamily(fonts, face.familyHash);
+            }
+        }
+        svgFontReset(font);
+        prMemoryFree(font);
+        fonts->fonts.erase(i);
+        break;
+    }
+    // A face inside the font names it whether or not text has read it yet.
+    for (uint32_t k = 0; k < fonts->faces.count; ++k) {
+        const SvgFontFace& face = fonts->faces.data[k];
+        if (face.element->parent == element)
+            noteFamily(fonts, face.familyHash);
+    }
+}
+
+// Looks again for the fonts of the faces that name theirs by a font-face-uri, which may name another element now.
+void retargetUris(SvgDocumentFonts* fonts) {
+    for (uint32_t i = 0; i < fonts->faces.count; ++i) {
+        SvgFontFace& face = fonts->faces.data[i];
+        const PrDomElement* parent = domElementFromNode(face.element->parent);
+        if (parent != nullptr && svgIs(parent, PrDomTag_Font))
+            continue;
+        face.font = nullptr;
+        face.resolved = false;
+        noteFamily(fonts, face.familyHash);
+    }
+}
+
+// Notes a change at `element` or under it: of the font or the face around it, whose glyphs or sources it may be.
+void changedAt(SvgDocumentFonts* fonts, const PrDomElement* PR_NULLABLE element) {
+    for (const PrDomElement* at = element; at != nullptr && at->space == PrDomNamespace_Svg;
+            at = domElementFromNode(at->parent)) {
+        if (at->tag == PrDomTag_Font) {
+            forgetFont(fonts, at);
+            return;
+        }
+        if (at->tag == PrDomTag_FontFace) {
+            for (uint32_t i = 0; i < fonts->faces.count; ++i) {
+                SvgFontFace& face = fonts->faces.data[i];
+                if (face.element == at) {
+                    face.font = nullptr;
+                    face.resolved = false;
+                    noteFamily(fonts, face.familyHash);
+                }
+            }
+        }
+    }
+}
+
 } // namespace
 
 void svgFontLoad(const PrDomElement* font, SvgFont* out) {
@@ -268,6 +394,102 @@ float svgFontKerning(const SvgFont& font, uint32_t first, uint32_t second) {
             return kern.k;
     }
     return 0;
+}
+
+SvgDocumentFonts* svgDocumentFontsCreate(PrDomDocument* document) {
+    SvgDocumentFonts* fonts = allocZeroed<SvgDocumentFonts>();
+    fonts->document = document;
+    svgDocumentFontsInserted(fonts, document);
+    return fonts;
+}
+
+void svgDocumentFontsDestroy(SvgDocumentFonts* fonts) {
+    for (uint32_t i = 0; i < fonts->fonts.count; ++i) {
+        svgFontReset(fonts->fonts.data[i]);
+        prMemoryFree(fonts->fonts.data[i]);
+    }
+    fonts->fonts.reset();
+    for (uint32_t i = 0; i < fonts->faces.count; ++i)
+        resetFace(&fonts->faces.data[i]);
+    fonts->faces.reset();
+    prMemoryFree(fonts);
+}
+
+void svgDocumentFontsInserted(SvgDocumentFonts* fonts, PrDomNode* node) {
+    bool named = false;
+    for (PrDomNode* at = node; at != nullptr; at = domNodeNext(node, at)) {
+        const PrDomElement* element = domElementFromNode(at);
+        if (element == nullptr || element->space != PrDomNamespace_Svg)
+            continue;
+        if (element->tag == PrDomTag_FontFace)
+            addFace(fonts, element);
+        named = named || element->tag == PrDomTag_Font;
+    }
+    if (fonts->faces.count == 0)
+        return;
+    if (named)
+        retargetUris(fonts);
+    if (node->parent != nullptr)
+        changedAt(fonts, domElementFromNode(node->parent));
+}
+
+void svgDocumentFontsRemoving(SvgDocumentFonts* fonts, PrDomNode* node) {
+    if (fonts->faces.count == 0 && fonts->fonts.count == 0)
+        return;
+    for (PrDomNode* at = node; at != nullptr; at = domNodeNext(node, at)) {
+        const PrDomElement* element = domElementFromNode(at);
+        if (element == nullptr || element->space != PrDomNamespace_Svg)
+            continue;
+        if (element->tag == PrDomTag_FontFace)
+            removeFace(fonts, element);
+        else if (element->tag == PrDomTag_Font)
+            forgetFont(fonts, element);
+    }
+    if (node->parent != nullptr)
+        changedAt(fonts, domElementFromNode(node->parent));
+}
+
+void svgDocumentFontsAttributeChanged(SvgDocumentFonts* fonts, const PrDomElement* element, PrStringView name) {
+    if (element->space != PrDomNamespace_Svg || !domIsConnected(element))
+        return;
+    if (element->tag == PrDomTag_FontFace && (name == "font-family" || name == "unicode-range")) {
+        removeFace(fonts, element);
+        addFace(fonts, element);
+    }
+    if (fonts->faces.count == 0)
+        return;
+    if (element->tag == PrDomTag_Font && name == "id")
+        retargetUris(fonts);
+    changedAt(fonts, element);
+}
+
+void svgDocumentFontsResourceLoaded(SvgDocumentFonts* fonts) {
+    retargetUris(fonts);
+}
+
+void svgDocumentFontsSetChanged(SvgDocumentFonts* fonts, SvgFontFamilyChangedFn PR_NULLABLE changed, void* PR_NULLABLE context) {
+    fonts->changed = changed;
+    fonts->changedContext = context;
+}
+
+const SvgFont* svgDocumentFontsLoad(SvgDocumentFonts* fonts, const PrDomElement* element) {
+    for (uint32_t i = 0; i < fonts->fonts.count; ++i) {
+        if (fonts->fonts.data[i]->element == element)
+            return fonts->fonts.data[i];
+    }
+    SvgFont* font = allocZeroed<SvgFont>();
+    svgFontLoad(element, font);
+    fonts->fonts.push(font);
+    return font;
+}
+
+uint32_t svgFontFamilyHash(PrStringView family) {
+    uint32_t hash = 2166136261u;
+    for (size_t i = 0; i < family.size; ++i) {
+        char c = family.data[i];
+        hash = (hash ^ uint8_t(c >= 'A' && c <= 'Z' ? c + 32 : c)) * 16777619u;
+    }
+    return hash;
 }
 
 bool svgParseUnicodeRange(PrStringView text, Array<PrFontCodePointRange>* out) {

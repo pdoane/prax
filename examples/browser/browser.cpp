@@ -256,6 +256,9 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
         PrAppFrame shown = *f;
         shown.extent = PrVec2{(page.right - page.left) / tab->zoom, (page.bottom - page.top) / tab->zoom};
         shown.display.pixelRatio = ratio * tab->zoom;
+        if (b.trace && (shown.extent.x != b.pageWindow.extent.x || shown.extent.y != b.pageWindow.extent.y))
+            fprintf(stderr, "[%.3f] window asks for viewport %.0fx%.0f\n", prTimeMonotonicMilliseconds() / 1000,
+                double(shown.extent.x), double(shown.extent.y));
         b.pageWindow = shown;
         prHtmlViewPostFrame(view, &shown);
         prLayoutCompositorFrame(tab->compositor);

@@ -2,6 +2,7 @@
 pr_library(svg INCLUDE include
     src/svg.cpp
     src/svg_cascade.cpp
+    src/svg_document.cpp
     src/svg_draw.cpp
     src/svg_filter.cpp
     src/svg_font.cpp

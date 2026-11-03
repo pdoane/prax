@@ -300,7 +300,8 @@ struct DomIdEntry {
     PrString id;
     uint32_t hash;
     uint32_t count;                    // number of elements with the ID
-    PrDomElement* PR_NULLABLE element; // the element if `count` is one, or null if it is not yet known
+    uint32_t moves;                    // DomIds::moves when `element` was found
+    PrDomElement* PR_NULLABLE element; // the first of the elements in tree order, or null if it is not yet known
 };
 
 // The connected elements of the tree of a document or a shadow root, by ID. The entries are updated as elements are
@@ -308,6 +309,7 @@ struct DomIdEntry {
 struct DomIds {
     Array<DomIdEntry> entries;
     HashIndex index;
+    uint32_t moves;                    // number of moves within the tree, each of which may change an order of elements
 };
 
 // Returns the first element in tree order among the descendants of `root` whose ID is `id`. Returns null for an empty

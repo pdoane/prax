@@ -11,6 +11,7 @@
 #include "dom/src/dom_hooks.h"
 #include "dom/src/dom_node.h"
 #include "dom/src/dom_tag.h"
+#include "svg/src/svg_document.h"
 #include "svg/src/svg_hints.h"
 #include "svg/src/svg_render.h"
 #include "svg/src/svg_text.h"
@@ -165,11 +166,6 @@ constexpr CssBoxProvider kBoxes = {
             out->kind = CssBoxKind_Replaced;
     },
     .reads = [](const PrDomElement*, PrStringView) { return false; },
-};
-
-// The changes to a document that SVG follows (dom_hooks.h).
-constexpr DomDocumentHooks kDocumentHooks = {
-    .documentCreated = [](void*, PrDomDocument* created) { prSvgEnable(created); },
 };
 
 } // namespace
@@ -462,7 +458,7 @@ int32_t prSvgTextContentElementGetCharNumAtPosition(PrSvgElement* element, PrDom
 
 void prSvgEnable(PrDomDocument* document) {
     prCssEnable(document);
-    if (!domDocumentSubscribe(document, &kDocumentHooks, nullptr))
+    if (!svgDocumentFollow(document))
         return;
     cssHintsProvide(document, PrDomNamespace_Svg, svgHints());
     cssBoxesProvide(document, PrDomNamespace_Svg, &kBoxes);

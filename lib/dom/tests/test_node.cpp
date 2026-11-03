@@ -548,6 +548,53 @@ TEST_CASE("references counted together are counted as each would be alone") {
     CHECK(prMemoryLiveCount() == before);
 }
 
+TEST_CASE("the first element of a duplicated ID follows the tree's changes") {
+    size_t before = prMemoryLiveCount();
+    PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
+    PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Html, "");
+    domAttach(document, html, nullptr);
+    auto withId = [&](PrDomElement* parent, PrDomNode* PR_NULLABLE at) {
+        PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "");
+        domSetAttribute(element, PrDomNamespace_None, "id", "x");
+        domInsert(parent, element, at);
+        return element;
+    };
+    PrDomElement* a = withId(html, nullptr);
+    CHECK(domElementById(document, "x") == a);
+
+    // Added last, added first, and an ID set on an ancestor of the first.
+    PrDomElement* b = withId(html, nullptr);
+    CHECK(domElementById(document, "x") == a);
+    PrDomElement* c = withId(html, a);
+    CHECK(domElementById(document, "x") == c);
+    PrDomElement* holder = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "");
+    domInsert(html, holder, c);
+    domInsert(holder, c, nullptr);
+    CHECK(domElementById(document, "x") == c);
+    domSetAttribute(holder, PrDomNamespace_None, "id", "x");
+    CHECK(domElementById(document, "x") == holder);
+    domRemoveAttribute(holder, PrDomNamespace_None, "id");
+    CHECK(domElementById(document, "x") == c);
+
+    // A move within the tree reorders elements without adding or removing any of them, also when an ancestor moves.
+    domInsert(html, holder, nullptr);
+    CHECK(domElementById(document, "x") == a);
+    domInsert(html, b, a);
+    CHECK(domElementById(document, "x") == b);
+
+    // Removing the first leaves the next, and a lookup after resolving finds the same element.
+    domDetach(b);
+    domResolveIds(document);
+    CHECK(domElementById(document, "x") == a);
+    domInsert(html, b, nullptr);
+    domInsert(html, b, a);
+    domResolveIds(document);
+    CHECK(domElementById(document, "x") == b);
+
+    domDocumentRelease(document);
+    CHECK(prMemoryLiveCount() == before);
+}
+
 TEST_CASE("a tree keeps its elements by ID as they connect, move, change and leave") {
     size_t before = prMemoryLiveCount();
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);

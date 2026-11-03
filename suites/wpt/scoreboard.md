@@ -230,7 +230,7 @@ of a change to it is what the change did.
 | html/rendering                                      |   478/481 |   10549/11491 |   91.8% |
 | html/scripting                                      |       3/3 |           0/4 |    0.0% |
 | html/select                                         |       2/2 |           1/6 |   16.6% |
-| html/semantics                                      | 2442/2909 |    7879/19649 |   40.0% |
+| html/semantics                                      | 2441/2909 |    7878/19649 |   40.0% |
 | html/syntax                                         |   249/250 |     6636/6914 |   95.9% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
 | html/user-activation                                |      9/21 |          3/28 |   10.7% |
@@ -262,7 +262,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8260/9505 | 108522/155864 |   69.6% |
+| **total**                                           | 8259/9505 | 108521/155864 |   69.6% |
 
 ## infrastructure
 

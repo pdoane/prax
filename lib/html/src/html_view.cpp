@@ -10,11 +10,14 @@
 #include "pr/html.h"
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
+#include "pr/layout_worker.h"
 #include "pr/text_buffer.h"
+#include "pr/time.h"
 #include "pr/utf8.h"
 
 #include "css/src/css_presentation.h"
 #include "css/src/css_serialize.h"
+#include "dom/src/dom_agent.h"
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_event.h"
 #include "dom/src/dom_node.h"
@@ -38,6 +41,9 @@ struct ViewFrame {
 // (html/#the-iframe-element).
 constexpr PrVec2 kFrameExtent{300, 150};
 
+// The least time between the hit tests that keep the cursor up to date with the scenes, in milliseconds.
+constexpr double kCursorInterval = 100;
+
 // The part of a view that other threads post to (prHtmlViewPostEvent). The view holds a reference, and so does each
 // post that has not run. The view clears `view` as it is destroyed, on the agent's thread, where the posts run.
 struct ViewInbox {
@@ -46,6 +52,8 @@ struct ViewInbox {
     PrHtmlPage* page;
     PrDomAgent* agent;
     PrLayoutCompositor* PR_NULLABLE compositor;
+    PrHtmlViewUpdatedFn PR_NULLABLE updated;
+    void* PR_NULLABLE updatedContext;
 };
 
 struct HtmlView {
@@ -58,6 +66,7 @@ struct HtmlView {
     PrVec2 extent;                               // in CSS pixels
     bool posted;                                 // true if the presentation has a job whose scene the view has not
                                                  // committed
+    PrVec2 jobExtent;                            // the viewport of the last job posted
     bool changed;                                // true if the viewport or the presentation changed since the last job
                                                  // started
     uint32_t scrollsTaken;                       // the value that prLayoutCompositorTakeScrolls last returned
@@ -73,11 +82,13 @@ struct HtmlView {
     // pressed element.
     PrVec2 pointer;
     bool pointed;                   // true once the pointer has been over the view
+    bool cursorStale;               // true if a committed scene may have changed the cursor under the pointer
+    double cursorTested;            // when the hit test for the last such scene ran
     bool hoverDue;                  // true if the pointer moved, or the document scrolled under it, since last hovering
     PrDomElement* PR_NULLABLE hovered;
     PrDomElement* PR_NULLABLE pressed;
     uint16_t buttons;               // the buttons held, as bits of MouseEvent's buttons
-    PrAppCursor cursor;             // the cursor at the pointer, as of the last hover or commit
+    PrAppCursor cursor;             // the cursor at the pointer, as of the last hover or the last hit test of a commit
 
     // The keyboard's state: the code and modifiers of the last key pressed, and the element that Space pressed, which
     // the view holds.
@@ -1118,7 +1129,10 @@ ViewPost* newPost(ViewInbox* inbox, ViewPostKind kind, size_t size) {
 
 // The view's update after each run of the agent's tasks.
 void updateView(void* PR_NULLABLE context) {
-    prHtmlViewUpdate(static_cast<PrHtmlView*>(context));
+    ViewInbox* inbox = static_cast<ViewInbox*>(context);
+    PrHtmlViewUpdate update = prHtmlViewUpdate(inbox->view);
+    if (inbox->updated != nullptr)
+        inbox->updated(inbox->updatedContext, &update);
 }
 
 } // namespace
@@ -1143,9 +1157,11 @@ PrHtmlView* prHtmlViewCreate(const PrHtmlViewDesc* desc) {
     v->inbox->view = v;
     v->inbox->page = v->page;
     v->inbox->agent = prHtmlPageAgent(v->page);
+    v->inbox->updated = desc->updated;
+    v->inbox->updatedContext = desc->updatedContext;
     v->inbox->compositor = v->compositor;
     if (v->compositor != nullptr)
-        prDomAgentAddUpdate(v->inbox->agent, updateView, v);
+        prDomAgentAddUpdate(v->inbox->agent, updateView, v->inbox);
     return v;
 }
 
@@ -1153,7 +1169,7 @@ void prHtmlViewDestroy(PrHtmlView* PR_NULLABLE view) {
     if (view == nullptr)
         return;
     if (view->compositor != nullptr)
-        prDomAgentRemoveUpdate(view->inbox->agent, updateView, view);
+        prDomAgentRemoveUpdate(view->inbox->agent, updateView, view->inbox);
     view->inbox->view = nullptr;
     releaseInbox(view->inbox);
     prHtmlViewWait(view);
@@ -1186,7 +1202,7 @@ void prHtmlViewSetUserPreferences(PrHtmlView* view, const PrAppUserPreferences* 
 }
 
 PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
-    PrHtmlViewUpdate update{};
+    PrHtmlViewUpdate update{.extent = view->extent};
     // The offsets that the compositor scrolled to reach the documents now, and the scenes of the next jobs show them.
     if (view->compositor != nullptr) {
         uint32_t taken = prLayoutCompositorTakeScrolls(view->compositor, applyScroll, view);
@@ -1194,8 +1210,12 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
         view->scrollsTaken = taken;
     }
     PrCssPresentation* presentation = presentationOf(view);
-    if (presentation == nullptr || prHtmlPageIsRenderBlocked(view->page) || prCssPresentationIsBusy(presentation))
+    if (presentation == nullptr || prHtmlPageIsRenderBlocked(view->page))
         return update;
+    if (prCssPresentationIsBusy(presentation)) {
+        update.busy = true;
+        return update;
+    }
     // The moves since the last update, and the scrolls under the pointer, cause one hover, in the next job.
     if (view->hoverDue)
         hover(view);
@@ -1211,29 +1231,46 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
     if (view->posted) {
         view->posted = false;
         update.layout = prLayoutTreeStats(prCssPresentationTree(presentation));
+        update.committedExtent = view->jobExtent;
+        update.committedMillis = prLayoutWorkerJobTime(domAgentLayoutWorker(view->inbox->agent),
+            prCssPresentationTree(presentation));
         float ratio = view->page->display.pixelRatio;
         update.committed = commitScene(view, presentation, 0, prAffine2Scale(PrVec2{ratio, ratio}));
         for (uint32_t i = 0; i < view->frames.count; ++i) {
             ViewFrame& frame = view->frames.data[i];
             PrCssPresentation* inner = frame.posted ? frameRender(view, frame) : nullptr;
             frame.posted = false;
-            if (inner != nullptr)
+            if (inner != nullptr) {
+                update.framesBlocks += prLayoutTreeStats(prCssPresentationTree(inner)).blocksLaidOut;
                 commitScene(view, inner, frame.embed, prAffine2Identity());
+            }
         }
         // A new scene can put a box with another cursor under a pointer that has not moved, or change the cursor of the
         // box there.
-        if (view->pointed)
-            view->cursor = cursorOf(hitAt(view, view->pointer));
+        view->cursorStale = view->pointed;
     }
     findFrames(view);
-    bool current = !view->changed && prCssPresentationIsCurrent(presentation);
-    for (uint32_t i = 0; i < view->frames.count && current; ++i) {
+    update.startedForView = view->changed;
+    update.startedForPage = !prCssPresentationIsCurrent(presentation);
+    for (uint32_t i = 0; i < view->frames.count; ++i) {
         PrCssPresentation* inner = frameRender(view, view->frames.data[i]);
-        current = inner == nullptr || prHtmlPageIsRenderBlocked(view->frames.data[i].page) ||
-            prCssPresentationIsCurrent(inner);
+        if (inner != nullptr && !prHtmlPageIsRenderBlocked(view->frames.data[i].page) &&
+                !prCssPresentationIsCurrent(inner))
+            ++update.startedForFrames;
     }
-    if (current)
+    bool current = !update.startedForView && !update.startedForPage && update.startedForFrames == 0;
+    // A hit test walks the boxes, so scenes that follow each other closely, as a load's do, share one. The last of them
+    // always takes one, since no scene follows it.
+    double time = prTimeMonotonicMilliseconds();
+    if (view->cursorStale && (current || time - view->cursorTested >= kCursorInterval)) {
+        view->cursorStale = false;
+        view->cursorTested = time;
+        view->cursor = cursorOf(hitAt(view, view->pointer));
+    }
+    if (current) {
+        update.current = true;
         return update;
+    }
     // Every document's changes go into the tree before any job is posted, so that the jobs run back to back.
     htmlPresentationPrepareJob(presentation, prLayoutVecFromPx(view->extent));
     for (uint32_t i = 0; i < view->frames.count; ++i) {
@@ -1247,10 +1284,18 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
     update.style = prCssPresentationStats(presentation);
     for (uint32_t i = 0; i < view->frames.count; ++i) {
         const ViewFrame& frame = view->frames.data[i];
-        if (frame.posted)
-            cssPresentationPostJob(prHtmlPagePresentation(frame.page), prLayoutVecFromPx(frame.extent));
+        if (frame.posted) {
+            PrCssPresentation* inner = prHtmlPagePresentation(frame.page);
+            cssPresentationPostJob(inner, prLayoutVecFromPx(frame.extent));
+            PrCssPresentationStats stats = prCssPresentationStats(inner);
+            update.framesStyled += stats.elementsStyled;
+            update.framesAnimated += stats.elementsAnimated;
+        }
     }
     update.started = true;
+    update.busy = true;
+    update.startMillis = prTimeMonotonicMilliseconds() - time;
+    view->jobExtent = view->extent;
     view->posted = true;
     view->changed = false;
     return update;

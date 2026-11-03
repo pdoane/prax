@@ -32,7 +32,7 @@ constexpr uint32_t kChunkBytes = 16 * 1024;
 constexpr uint32_t kMaxRedirects = 20;
 
 // The largest body that the cache stores. A larger one is fetched and not stored.
-constexpr uint32_t kCacheMaxBodyBytes = 16 * 1024 * 1024;
+constexpr uint32_t kCacheMaxBodyBytes = 64 * 1024 * 1024;
 
 struct BuiltinFetcher : PrFetchNetwork {
     PrHttp* PR_NULLABLE http;

@@ -113,10 +113,20 @@ struct Tab {
     bool changed = false;
 
     // The page's thread's state. `pending` is the URL of the navigation that the window asked for, which the chrome
-    // shows until the page's document is the new one.
+    // shows until the page's document is the new one. `loadStarted` is when that navigation started, and 0 once its
+    // load has been reported.
     PrHtmlSessionHistory* PR_NULLABLE history = nullptr;
     PrHtmlPage* PR_NULLABLE page = nullptr;
     std::string pending;
+    double loadStarted = 0;
+
+    // The page's thread's account of a viewport's changes under --trace: the viewport last seen, when the first of the
+    // changes that have not settled arrived, and the jobs that they took and those laid out at a viewport already
+    // replaced.
+    PrVec2 traceExtent{};
+    double traceResized = 0;
+    uint32_t traceJobs = 0;
+    uint32_t traceStale = 0;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -156,6 +166,7 @@ struct Browser {
     std::vector<std::string> addresses;     // the URLs that open first, a tab each
     std::string cacheDirectory;             // the HTTP cache's directory, or empty for the platform's cache directory
     bool stats = false;                     // true to print the frames' statistics once a second
+    bool trace = false;                     // true to print what the views do with their layout jobs
 
     // What every page shares: text, images, media, storage, the network, the agent whose event loop runs the pages, and
     // the script engine of the agent.

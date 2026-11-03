@@ -488,7 +488,7 @@ int main(int argc, char** argv) {
     row(first, "load longest compositor frame", longestCompositor);
     row(first, "load longest presentation", longestRender);
     row(first, "load presentation busy", b.jobsTook);
-    row(first, "load hover", loadHovers.times.empty() ? 0 : loadHovers.times[loadHovers.times.size() / 2]);
+    row(first, "load hover", loadHovers);
 
     // Scrolls the viewport through the document on the compositor, to each position once and then again.
     PrLayoutScrollInfo info{};

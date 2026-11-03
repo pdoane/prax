@@ -103,6 +103,24 @@ uint32_t findId(const DomIds* ids, PrStringView id, uint32_t hash) {
     });
 }
 
+// Returns true if `entry` knows the first of its elements. A move within the tree does not reach a lone element's
+// entry, since the element stays the first wherever it moves, and makes what the entry knew of several elements out of
+// date.
+bool firstKnown(const DomIds* ids, const DomIdEntry* entry) {
+    return entry->element != nullptr && (entry->count == 1 || entry->moves == ids->moves);
+}
+
+// Returns true if every other node of the tree precedes `element`, which is where a parser adds an element.
+bool isLastInTree(const PrDomElement* element) {
+    if (element->first != nullptr)
+        return false;
+    for (const PrDomNode* node = element; node != nullptr; node = node->parent) {
+        if (node->next != nullptr)
+            return false;
+    }
+    return true;
+}
+
 void idsDestroy(DomIds* PR_NULLABLE ids) {
     if (ids == nullptr)
         return;
@@ -125,12 +143,17 @@ PR_NOINLINE void addId(PrDomNode* root, PrDomElement* element, PrStringView id) 
     uint32_t hash = idHash(id);
     uint32_t at = findId(ids, id, hash);
     if (at != kHashMissing) {
-        ++ids->entries.data[at].count;
-        ids->entries.data[at].element = nullptr;
+        // An element added after every other leaves the first as it was. Any other may be the new first.
+        DomIdEntry* entry = &ids->entries.data[at];
+        bool stays = firstKnown(ids, entry) && isLastInTree(element);
+        ++entry->count;
+        entry->moves = ids->moves;
+        if (!stays)
+            entry->element = nullptr;
         return;
     }
     ids->index.insert(hash, ids->entries.count);
-    ids->entries.push(DomIdEntry{prStringCopy(id), hash, 1, element});
+    ids->entries.push(DomIdEntry{prStringCopy(id), hash, 1, ids->moves, element});
 }
 
 // Removes one element from those with the ID `id` in the tree whose root is `root`.
@@ -144,7 +167,7 @@ PR_NOINLINE void removeId(PrDomNode* root, PrStringView id) {
     uint32_t at = findId(ids, id, hash);
     PR_ASSERT(at != kHashMissing);
     DomIdEntry* entry = &ids->entries.data[at];
-    // If two elements had the ID, finding which one is left takes a walk, which the next lookup performs.
+    // If two elements had the ID, finding the first of those left takes a walk, which the next lookup performs.
     entry->element = nullptr;
     if (--entry->count != 0)
         return;
@@ -2001,32 +2024,48 @@ uint32_t domElementsById(PrDomNode* root, PrStringView id, PrDomElement* PR_NULL
     if (at == kHashMissing)
         return 0;
     DomIdEntry* entry = &ids->entries.data[at];
-    if (entry->element == nullptr) {
-        for (PrDomNode* node = domNodeNext(root, root); node != nullptr && *first == nullptr; node = domNodeNext(root, node)) {
+    if (!firstKnown(ids, entry)) {
+        PrDomElement* found = nullptr;
+        for (PrDomNode* node = domNodeNext(root, root); node != nullptr && found == nullptr; node = domNodeNext(root, node)) {
             PrDomElement* element = domElementFromNode(node);
             if (element != nullptr && domElementId(element) == id)
-                *first = element;
+                found = element;
         }
-        PR_ASSERT(*first != nullptr);
-        // A lone element stays the first wherever it moves.
-        if (entry->count == 1)
-            entry->element = *first;
+        PR_ASSERT(found != nullptr);
+        entry->element = found;
+        entry->moves = ids->moves;
     }
-    if (entry->element != nullptr)
-        *first = entry->element;
+    *first = entry->element;
     return entry->count;
 }
 
 void domResolveIds(PrDomNode* root) {
     PR_ASSERT(domKeepsIds(root));
     DomIds* ids = *idsOf(root);
-    for (uint32_t i = 0; ids != nullptr && i < ids->entries.count; ++i) {
+    if (ids == nullptr)
+        return;
+    // One walk finds every first that is missing, since it meets the elements of each ID in tree order.
+    uint32_t missing = 0;
+    for (uint32_t i = 0; i < ids->entries.count; ++i) {
         DomIdEntry* entry = &ids->entries.data[i];
-        if (entry->count == 1 && entry->element == nullptr) {
-            PrDomElement* first = nullptr;
-            domElementsById(root, prStringView(&entry->id), &first);
+        if (!firstKnown(ids, entry)) {
+            entry->element = nullptr;
+            entry->moves = ids->moves;
+            ++missing;
         }
     }
+    for (PrDomNode* node = domNodeNext(root, root); node != nullptr && missing != 0; node = domNodeNext(root, node)) {
+        PrDomElement* element = domElementFromNode(node);
+        if (element == nullptr || (element->flags & DomNodeFlag_Id) == 0)
+            continue;
+        PrStringView id = domElementId(element);
+        uint32_t at = findId(ids, id, idHash(id));
+        if (at != kHashMissing && ids->entries.data[at].element == nullptr) {
+            ids->entries.data[at].element = element;
+            --missing;
+        }
+    }
+    PR_ASSERT(missing == 0);
 }
 
 void domAutofocusInserted(PrDomElement* element) {
@@ -2066,8 +2105,11 @@ void domAttach(PrDomNode* parent, PrDomNode* child, PrDomNode* PR_NULLABLE befor
             PrDomNode* to = domNodeRoot(parent);
             if (from != to && domIsConnected(child))
                 moveIds(child, from, to);
-            else if (domIsConnected(child))
+            else if (domIsConnected(child)) {
+                if (DomIds** ids = idsOf(to); ids != nullptr && *ids != nullptr)
+                    ++(*ids)->moves;
                 domUsesMoved(child);
+            }
             treeMoved(child);
             return;
         }

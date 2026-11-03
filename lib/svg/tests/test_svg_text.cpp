@@ -9,6 +9,7 @@
 #include "pr/text_kb.h"
 
 #include "dom/src/dom_node.h"
+#include "svg/src/svg_document.h"
 #include "svg/src/svg_font.h"
 
 #include "doctest/doctest.h"
@@ -208,6 +209,35 @@ TEST_CASE("an SVG font matches the first glyph in document order, by language, a
     CHECK(svg.glyphs.data[kSvgMissingGlyph].advance == 700.0f);
     svgFontReset(&svg);
     prDomDocumentRelease(document);
+}
+
+TEST_CASE("a document reads each SVG font once and follows the changes to its faces") {
+    SquaresText text("<text id='t' font-family='Squares'>a</text>");
+    SvgDocumentFonts* fonts = svgDocumentFonts(text.document);
+    REQUIRE(fonts->faces.count == 1);
+    const PrDomElement* element = domElementFromNode(fonts->faces.data[0].element->parent);
+    REQUIRE(element != nullptr);
+    const SvgFont* read = svgDocumentFontsLoad(fonts, element);
+    CHECK(svgDocumentFontsLoad(fonts, element) == read);
+    CHECK(fonts->fonts.count == 1);
+
+    // Drawing reads the font that the document keeps.
+    CHECK(text.at(0).x == 0.0f);
+    CHECK(fonts->fonts.count == 1);
+
+    // A face enters and leaves with its element, in tree order.
+    PrDomElement* face = domElementCreate(text.document, PrDomNamespace_Svg, PrDomTag_FontFace, "");
+    prDomElementSetAttribute(face, "font-family", "Earlier");
+    PrDomNode* root = prDomElementAsNode(prDomDocumentElement(text.document));
+    prDomNodeInsertBefore(root, prDomElementAsNode(face), prDomNodeFirstChild(root));
+    REQUIRE(fonts->faces.count == 2);
+    CHECK(fonts->faces.data[0].element == face);
+    // A move within the tree keeps one face for the element, where it now is.
+    prDomNodeAppendChild(root, prDomElementAsNode(face));
+    REQUIRE(fonts->faces.count == 2);
+    CHECK(fonts->faces.data[1].element == face);
+    prDomNodeRemoveChild(root, prDomElementAsNode(face));
+    CHECK(fonts->faces.count == 1);
 }
 
 TEST_CASE("text in an SVG font draws its glyphs kerned, anchored and y up from the baseline") {

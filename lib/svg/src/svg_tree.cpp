@@ -2179,7 +2179,7 @@ void svgTreeReset(SvgTree* tree) {
     tree->cascades.reset();
     tree->watched = 0;
     tree->sweptResources = 0;
-    tree->readsSvgFonts = false;
+    tree->fontFamilies.reset();
     tree->readsBackdrop = false;
 }
 
@@ -2290,11 +2290,6 @@ bool svgTreeNoteChange(const SvgTree* tree, const PrDomElement* element, SvgChan
     bool noted = false;
     for (const PrDomElement* at = element; at != nullptr && at->space == PrDomNamespace_Svg;
             at = domElementFromNode(domFlatParent(at))) {
-        // Text found the document's SVG fonts by family, and a change to any of them may change which it finds.
-        if (tree->readsSvgFonts && (at->tag == PrDomTag_Font || at->tag == PrDomTag_FontFace)) {
-            changes->all = true;
-            return true;
-        }
         // The dependents that read a subtree that the change is in.
         if ((tree->watched & watchBit(at)) == 0)
             continue;
@@ -2307,6 +2302,13 @@ bool svgTreeNoteChange(const SvgTree* tree, const PrDomElement* element, SvgChan
         }
     }
     return (under && noteLocal(tree, element, change, name, changes)) || noted;
+}
+
+bool svgTreeNoteFontFamily(const SvgTree* tree, uint32_t familyHash, SvgChanges* changes) {
+    if (tree->fontFamilies.find(familyHash) == kArrayMissing)
+        return false;
+    changes->all = true;
+    return true;
 }
 
 bool svgTreeNoteIds(const SvgTree* tree, SvgChanges* changes) {

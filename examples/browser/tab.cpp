@@ -6,6 +6,7 @@
 
 #include "examples/browser/tab.h"
 
+#include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/html.h"
 #include "pr/time.h"
@@ -81,8 +82,49 @@ PrHtmlVisibility visibilityOf(bool shown) {
 
 void navigate(Tab& tab, const std::string& url) {
     tab.pending = url;
+    tab.loadStarted = prTimeMonotonicMilliseconds();
     if (prHtmlPageNavigate(tab.page, url) != PrStatus_Ok)
         fprintf(stderr, "browser: cannot navigate to %s\n", url.c_str());
+}
+
+// Prints, under --trace, what a tab's view did with its jobs, and how long a viewport's changes took to settle.
+void traceUpdate(void* PR_NULLABLE context, const PrHtmlViewUpdate* update) {
+    Tab& tab = *static_cast<Tab*>(context);
+    double now = prTimeMonotonicMilliseconds();
+    if (update->extent.x != tab.traceExtent.x || update->extent.y != tab.traceExtent.y) {
+        fprintf(stderr, "[%.3f] page sees viewport %.0fx%.0f\n", now / 1000, double(update->extent.x),
+            double(update->extent.y));
+        tab.traceExtent = update->extent;
+        if (tab.traceResized == 0)
+            tab.traceResized = now;
+    }
+    if (update->committed) {
+        bool stale = update->committedExtent.x != update->extent.x || update->committedExtent.y != update->extent.y;
+        fprintf(stderr, "[%.3f] job done at %.0fx%.0f%s in %.1f ms: %u blocks laid out, %u reused, %u lines broken; frames %u blocks\n",
+            now / 1000, double(update->committedExtent.x), double(update->committedExtent.y), stale ? " (stale)" : "",
+            update->committedMillis, update->layout.blocksLaidOut, update->layout.blocksReused,
+            update->layout.linesBroken, update->framesBlocks);
+        if (tab.traceResized != 0 && stale)
+            ++tab.traceStale;
+    }
+    if (update->started) {
+        fprintf(stderr,
+            "[%.3f] job start at %.0fx%.0f for%s%s%s (%u), prepared in %.1f ms: %u elements styled, %u animated; "
+                "frames %u styled, %u animated\n",
+            now / 1000, double(update->extent.x), double(update->extent.y), update->startedForView ? " view" : "",
+            update->startedForPage ? " page" : "", update->startedForFrames != 0 ? " frames" : "",
+            update->startedForFrames, update->startMillis, update->style.elementsStyled, update->style.elementsAnimated,
+            update->framesStyled, update->framesAnimated);
+        if (tab.traceResized != 0)
+            ++tab.traceJobs;
+    }
+    if (update->current && tab.traceResized != 0) {
+        fprintf(stderr, "[%.3f] viewport settled %.1f ms after it changed: %u jobs, %u stale\n", now / 1000,
+            now - tab.traceResized, tab.traceJobs, tab.traceStale);
+        tab.traceResized = 0;
+        tab.traceJobs = 0;
+        tab.traceStale = 0;
+    }
 }
 
 // Opens a tab's page at the extent of `window`, with its view, and navigates it to `url` unless it is empty.
@@ -95,7 +137,13 @@ void openPage(Browser& b, Tab& tab, const PrAppFrame& window, bool shown, const 
     prHtmlPageSetDisplay(tab.page, &window.display);
     prHtmlPageSetUserPreferences(tab.page, &window.preferences);
     prHtmlPageSetVisibility(tab.page, visibilityOf(shown));
-    PrHtmlViewDesc view{.page = tab.page, .compositor = tab.compositor, .jobBudget = kJobBudget};
+    PrHtmlViewDesc view{
+        .page = tab.page,
+        .compositor = tab.compositor,
+        .jobBudget = kJobBudget,
+        .updated = b.trace ? traceUpdate : nullptr,
+        .updatedContext = &tab,
+    };
     tab.view.store(prHtmlViewCreate(&view));
     b.open.push_back(&tab);
     if (!url.empty())
@@ -233,6 +281,21 @@ bool sameDocument(const TabInfo& a, const TabInfo& b) {
         a.canGoBack == b.canGoBack && a.canGoForward == b.canGoForward;
 }
 
+// Prints how long a navigation took to settle, once its document is complete and the last scene shows all of it. Until
+// then, background work takes turns with input on the page's thread and the layout thread.
+void reportLoad(Tab& tab, const TabInfo& info) {
+    if (tab.loadStarted == 0 || info.loading)
+        return;
+    PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(tab.page));
+    const PrCssPresentation* presentation = prHtmlPagePresentation(tab.page);
+    if (prHtmlDocumentReadyState(document) != PrHtmlDocumentReadyState_Complete || presentation == nullptr ||
+            prCssPresentationIsBusy(presentation) || !prCssPresentationIsCurrent(presentation))
+        return;
+    fprintf(stderr, "browser: %s settled in %.2f s\n", info.url.c_str(),
+        (prTimeMonotonicMilliseconds() - tab.loadStarted) / 1000);
+    tab.loadStarted = 0;
+}
+
 // Publishes what changed of each open tab since the last run, and asks the window for a frame to show it.
 void publish(Browser& b) {
     bool changed = false;
@@ -241,6 +304,7 @@ void publish(Browser& b) {
         // shows the last document's icon until then. Only this thread writes what is published, so it reads it without
         // the mutex.
         TabInfo info = infoOf(*tab);
+        reportLoad(*tab, info);
         info.iconUrl = tab->published.iconUrl;
         if (!info.loading && !sameDocument(info, tab->published))
             info.iconUrl = taken(prHtmlPageIconUrl(tab->page));

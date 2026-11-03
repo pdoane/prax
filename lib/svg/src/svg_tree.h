@@ -673,7 +673,7 @@ struct SvgTree {
     uint32_t sweptResources;
 
     uint32_t update;                    // the number of builds and updates so far
-    bool readsSvgFonts;                 // text was set in the document's SVG fonts, which it found by family
+    Array<uint32_t> fontFamilies;       // the families that the text looked up (svgFontFamilyHash), found or not
 
     // True if a node blends with what lies beneath it, or a filter reads what lies beneath as its background. Each
     // build and update sets it. The root, an outermost svg element, then draws as an isolated group
@@ -806,6 +806,9 @@ struct SvgChanges {
 // name for Attribute. Returns true if the tree needs an update.
 bool svgTreeNoteChange(const SvgTree* tree, const PrDomElement* element, SvgChange change, PrStringView name,
     bool under, SvgChanges* changes);
+
+// Notes that the document's SVG fonts of a family may have changed. Returns true if the tree needs an update.
+bool svgTreeNoteFontFamily(const SvgTree* tree, uint32_t familyHash, SvgChanges* changes);
 
 // Notes that what the document's IDs name may have changed, as it may when an element with an ID enters or leaves the
 // document. Returns true if the tree needs an update.

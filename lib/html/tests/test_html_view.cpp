@@ -239,6 +239,16 @@ struct ViewedSvg : Viewed {
     PrDomNode* node(const char* id) { return prDomElementAsNode(byId(id)); }
 };
 
+// Two svg elements whose text is set in the SVG fonts Used and Other, and a font that no text reads.
+constexpr const char* kSvgFonts =
+    "<svg width='100' height='100'><font id='used' horiz-adv-x='500'><font-face font-family='Used'/>"
+    "<glyph id='glyph' unicode='a' d='M0 0h100v100z'/></font>"
+    "<font id='unread' horiz-adv-x='500'><font-face id='unread-face' font-family='Unread'/>"
+    "<glyph id='unread-glyph' unicode='a' d='M0 0h100v100z'/></font>"
+    "<text id='used-text' y='10' font-family='Used'>a</text></svg>"
+    "<svg width='100' height='100'><text y='10' font-family='Other'>a</text><rect width='1' height='1'/>"
+    "<rect width='2' height='2'/><rect width='3' height='3'/><rect width='4' height='4'/></svg>";
+
 // The types of the events heard, in order.
 struct Heard {
     std::vector<std::string> types;
@@ -376,6 +386,33 @@ PrAppEvent wheelAt(PrVec2 at, float pixels, double time) {
 } // namespace pr_impl
 
 using namespace pr_impl;
+
+TEST_CASE("a change to an SVG font rebuilds only the text that reads its family") {
+    ViewedSvg viewed(kSvgFonts);
+    uint32_t nodes = viewed.update();
+    CHECK(nodes == 0);
+
+    // No text reads this family, whatever happens to its font.
+    viewed.set("unread-glyph", "horiz-adv-x", "900");
+    CHECK(viewed.update() == 0);
+    viewed.set("unread-face", "unicode-range", "U+0061");
+    CHECK(viewed.update() == 0);
+
+    // The glyphs of the font that the first element's text reads, and not the second element, which has more nodes.
+    viewed.set("glyph", "horiz-adv-x", "900");
+    uint32_t used = viewed.update();
+    CHECK(used != 0);
+    CHECK(used < 6);
+
+    // A face takes the name of a family that text looked for and did not find.
+    viewed.set("unread-face", "font-family", "Other");
+    uint32_t other = viewed.update();
+    CHECK(other > used);
+
+    // Removing the font takes it from the text that reads it.
+    prDomNodeRemoveChild(prDomNodeParentNode(viewed.node("used")), viewed.node("used"));
+    CHECK(viewed.update() != 0);
+}
 
 TEST_CASE("a view commits each job's scene to its compositor, and starts a job only where something changed") {
     Viewed page("<style>body { margin: 0 } #a { height: 10px }</style><div id=a></div>");

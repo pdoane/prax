@@ -9,13 +9,12 @@
 #include "pr/dom.h"
 #include "pr/font_set.h"
 #include "pr/path.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
-
-// An element of a document (dom/src/dom_node.h).
 
 // The form of an Arabic character that a glyph draws (SVG11/fonts.html#GlyphElementArabicFormAttribute). A character's
 // form depends on which sides it joins on, and that depends on its joining type and the joining types of its neighbors.
@@ -92,6 +91,48 @@ uint32_t svgFontMatch(const SvgFont& font, PrStringView text, size_t pos, PrStri
 // that of the first hkern whose `u1` or `g1` names `first` and whose `u2` or `g2` names `second`
 // (SVG11/fonts.html#KernElements).
 float svgFontKerning(const SvgFont& font, uint32_t first, uint32_t second);
+
+// A font-face element of a document's tree, which names an SVG font for a family (SVG11/fonts.html#FontFaceElement).
+struct SvgFontFace {
+    PrString family;
+    uint32_t familyHash;                // svgFontFamilyHash of `family`
+    const PrDomElement* element;
+    Array<PrFontCodePointRange> ranges; // its unicode-range; empty means every code point
+    const SvgFont* PR_NULLABLE font;    // its font, once found, if the face's document holds it
+    bool resolved;                      // true once `font` is found
+};
+
+// Called with the hash of a family (svgFontFamilyHash) whose faces or fonts may have changed.
+typedef void (*SvgFontFamilyChangedFn)(void* PR_NULLABLE context, uint32_t familyHash);
+
+// The SVG fonts of a document. The document's changes keep the faces current, and a font element is read once, when
+// text first needs it, until a change under it. No font outlives its document.
+struct SvgDocumentFonts {
+    PrDomDocument* document;
+    Array<SvgFontFace> faces;           // in tree order
+    Array<SvgFont*> fonts;
+    SvgFontFamilyChangedFn PR_NULLABLE changed;
+    void* PR_NULLABLE changedContext;
+};
+
+// Makes the fonts of `document` from the font-face elements that it holds, and frees them.
+SvgDocumentFonts* svgDocumentFontsCreate(PrDomDocument* document);
+void svgDocumentFontsDestroy(SvgDocumentFonts* fonts);
+
+// Keep the fonts current with the document's changes (dom_hooks.h).
+void svgDocumentFontsInserted(SvgDocumentFonts* fonts, PrDomNode* node);
+void svgDocumentFontsRemoving(SvgDocumentFonts* fonts, PrDomNode* node);
+void svgDocumentFontsAttributeChanged(SvgDocumentFonts* fonts, const PrDomElement* element, PrStringView name);
+void svgDocumentFontsResourceLoaded(SvgDocumentFonts* fonts);
+
+// Sets who is told of a family's changes. A document's presentation is the one that keeps trees built from its fonts.
+void svgDocumentFontsSetChanged(SvgDocumentFonts* fonts, SvgFontFamilyChangedFn PR_NULLABLE changed, void* PR_NULLABLE context);
+
+// Returns the font of the font element `element` of the document, read the first time that it is asked for.
+const SvgFont* svgDocumentFontsLoad(SvgDocumentFonts* fonts, const PrDomElement* element);
+
+// Returns what identifies a family, whose names match ignoring ASCII case.
+uint32_t svgFontFamilyHash(PrStringView family);
 
 // Replaces `out` with the ranges of a unicode-range. The text is a comma-separated list of ranges of code points, each
 // starting with `U+`. A `?` stands for every hex digit. Returns false if `text` does not parse.

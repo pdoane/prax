@@ -34,6 +34,29 @@ extern "C" {
 // The presentation of a browsing context's document.
 typedef struct PrHtmlView PrHtmlView;
 
+// The result of an update.
+typedef struct PrHtmlViewUpdate {
+    bool committed;                 // true if a scene was committed to the compositor
+    bool started;                   // true if a job started on the agent's layout thread
+    bool busy;                      // true if a job is running on the agent's layout thread after the update
+    bool current;                   // true if the last scene shows every change, and no job runs or needs to start
+    PrVec2 extent;                  // the viewport now, which a job started by this update lays out in
+    PrVec2 committedExtent;         // if committed, the viewport that the committed scene was laid out in
+    double committedMillis;         // if committed, how long the committed job took on the layout thread
+    double startMillis;             // if started, how long this thread took to prepare and post the job
+    bool startedForView;            // if started, the viewport, the frames' sizes or the pixel ratio changed
+    bool startedForPage;            // if started, the window's document has changes that the last scene lacks
+    uint32_t startedForFrames;      // if started, the iframes whose documents have changes that their scenes lack
+    uint32_t framesStyled;          // if started, the elements styled in the iframes' documents
+    uint32_t framesAnimated;        // if started, the elements whose animations were sampled in those documents
+    uint32_t framesBlocks;          // if committed, the block boxes laid out in the iframes' documents
+    PrLayoutTreeStats layout;       // if committed, the statistics of the job that recorded the scene
+    PrCssPresentationStats style;   // if started, the statistics of bringing the job's styles and boxes up to date
+} PrHtmlViewUpdate;
+
+// Called on the agent's thread with the result of each update that the view's agent runs (prDomAgentAddUpdate).
+typedef void (*PrHtmlViewUpdatedFn)(void* PR_NULLABLE context, const PrHtmlViewUpdate* update);
+
 // Parameters for creating a view.
 typedef struct PrHtmlViewDesc {
     // The browsing context to present, which must outlive the view. Its host gives it a text font and a shaper.
@@ -51,6 +74,10 @@ typedef struct PrHtmlViewDesc {
     // as its render pass's clear does, so that the list records no fill for the canvas
     // (PrLayoutScenePlayOptions::canvasFilled). A host that presents through the compositor says so to the compositor.
     bool canvasFilled;
+
+    // Told of each update that the agent runs, if not null. This is for a host that reports what the view's jobs did.
+    PrHtmlViewUpdatedFn PR_NULLABLE updated;
+    void* PR_NULLABLE updatedContext;
 } PrHtmlViewDesc;
 
 // Creates a view of the browsing context's documents, in the page's viewport (prHtmlPageSetViewport). The view follows
@@ -69,14 +96,6 @@ void prHtmlViewSetViewport(PrHtmlView* view, PrVec2 extent);
 // prHtmlPageSetUserPreferences). Scenes are committed and painted at the display's pixel ratio.
 void prHtmlViewSetDisplay(PrHtmlView* view, const PrAppDisplay* display);
 void prHtmlViewSetUserPreferences(PrHtmlView* view, const PrAppUserPreferences* preferences);
-
-// The result of an update.
-typedef struct PrHtmlViewUpdate {
-    bool committed;                 // true if a scene was committed to the compositor
-    bool started;                   // true if a job started on the agent's layout thread
-    PrLayoutTreeStats layout;       // if committed, the statistics of the job that recorded the scene
-    PrCssPresentationStats style;   // if started, the statistics of bringing the job's styles and boxes up to date
-} PrHtmlViewUpdate;
 
 // Advances the view's rendering without waiting. The scroll offsets that the compositor applied are passed to the
 // document immediately. The rest of the update is skipped if the document is render-blocked or the agent's layout
@@ -99,11 +118,12 @@ void prHtmlViewWait(PrHtmlView* view);
 PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list);
 
 // Returns the cursor that the document under the pointer shows there (css-ui-4/#cursor), for the host to show with
-// prAppSetCursor. The view finds it again at each hover and at each commit of a scene. It reads the cursor property of
-// the element hit, in the innermost document under the pointer. The view shows no cursor images, so the cursor is the
-// keyword that ends the property's value. The value auto shows the text cursor over an editable element, and over text
-// that the user can select: text that user-select does not exclude, outside any widget other than a text control. Auto
-// shows the arrow anywhere else. The cursor is the arrow until the pointer has been over the view.
+// prAppSetCursor. The view finds it again at each hover, and after a commit of a scene, at most every so often while
+// scenes follow each other and always after the last of them. It reads the cursor property of the element hit, in the
+// innermost document under the pointer. The view shows no cursor images, so the cursor is the keyword that ends the
+// property's value. The value auto shows the text cursor over an editable element, and over text that the user can
+// select: text that user-select does not exclude, outside any widget other than a text control. Auto shows the arrow
+// anywhere else. The cursor is the arrow until the pointer has been over the view.
 PrAppCursor prHtmlViewCursor(const PrHtmlView* view);
 
 // What the host did with an event before passing it to the view.
