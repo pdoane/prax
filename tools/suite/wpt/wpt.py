@@ -96,7 +96,7 @@ SUITES = {
             "intersection-observer"),
     "encoding": ("encoding",),
     "html": ("html", "custom-elements", "focus", "inert", "quirks", "html-ruby-extensions", "png", "apng", "gif",
-             "webstorage", "workers", "webmessaging"),
+             "webstorage", "workers", "webmessaging", "requestidlecallback"),
     "infrastructure": ("infrastructure",),
     "mathml": ("mathml",),
     "networking": ("fetch", "cors", "FileAPI", "streams", "websockets"),

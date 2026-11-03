@@ -371,6 +371,9 @@ void domEventRelease(PrDomEvent* PR_NULLABLE event) {
         prStringReset(&event->message->data);
         prStringReset(&event->message->origin);
         prStringReset(&event->message->lastEventId);
+        for (uint32_t i = 0; i < event->message->ports.count; ++i)
+            domEventTargetRelease(event->message->ports.data[i]);
+        event->message->ports.reset();
         prMemoryFree(event->message);
     }
     if (event->history != nullptr) {

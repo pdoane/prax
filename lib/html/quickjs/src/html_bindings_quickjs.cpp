@@ -27,8 +27,10 @@
 #include "pr/webidl_quickjs.h"
 
 #include "html/quickjs/src/custom_elements_quickjs.h"
+#include "html/quickjs/src/html_clone_quickjs.h"
 #include "html/quickjs/src/html_elements_quickjs.h"
 #include "html/quickjs/src/html_forms_quickjs.h"
+#include "html/quickjs/src/html_message_quickjs.h"
 #include "html/quickjs/src/html_reflect_quickjs.h"
 
 namespace pr_impl {
@@ -66,6 +68,7 @@ JSClassID htmlPageRevealEventClass;
 JSClassID htmlWindowClass;
 JSClassID htmlNavigatorClass;
 JSClassID htmlUserActivationClass;
+JSClassID htmlIdleDeadlineClass;
 JSClassID htmlScreenClass;
 JSClassID htmlScreenOrientationClass;
 JSClassID htmlTextTrackListClass;
@@ -166,6 +169,8 @@ JSClassID classifyEventTarget(void* handle) {
         return htmlScreenOrientationClass;
     if (PrHtmlTrackList* list = prHtmlTrackListQuery(target))
         return trackListClass(prHtmlTrackListKind(list));
+    if (prHtmlMessagePortQuery(target) != nullptr)
+        return htmlMessagePortClass;
     return prJsDomEventTargetClass;
 }
 
@@ -1383,8 +1388,6 @@ enum {
 };
 typedef uint8_t MessageSlot;
 
-constexpr int kSerializeFlags = JS_WRITE_OBJ_REFERENCE;
-
 // MessageEventInit (html/#messageeventinit), after EventInit: data, lastEventId, origin, ports and source. The source
 // is a window or null.
 JSValue messageConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
@@ -1397,6 +1400,7 @@ JSValue messageConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
     if (!jsArgCount(ctx, argc, 1) || !type.read(argv[0]) || !jsDictionary(ctx, dictionary, &present))
         return JS_EXCEPTION;
     JSValue data = JS_NULL;
+    JSValue ports = JS_UNDEFINED;
     if (present) {
         if (!prJsDomEventInitRead(ctx, dictionary, &init.event))
             return JS_EXCEPTION;
@@ -1415,15 +1419,39 @@ JSValue messageConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
             PrHtmlWindow* window = jsHandleAs<PrHtmlWindow>(ctx, source, htmlWindowClass);
             if (window == nullptr && jsIsGlobal(ctx, source))
                 window = globalWindow(ctx);
-            if (window == nullptr) {
-                JS_ThrowTypeError(ctx, "source is not a window");
-                ok = false;
-            } else {
+            PrHtmlMessagePort* port = jsHtmlMessagePortOf(ctx, source);
+            if (window != nullptr) {
                 init.source = prHtmlWindowAsEventTarget(window);
+            } else if (port != nullptr) {
+                init.source = prHtmlMessagePortAsEventTarget(port);
+            } else {
+                JS_ThrowTypeError(ctx, "source is not a window or a port");
+                ok = false;
             }
         }
         JS_FreeValue(ctx, source);
+        if (ok) {
+            JSValue given = JS_GetPropertyStr(ctx, dictionary, "ports");
+            ok = !JS_IsException(given);
+            if (ok && !JS_IsUndefined(given)) {
+                ports = JS_NewArray(ctx);
+                uint32_t count = 0;
+                ok = jsSequence(ctx, given, [&](JSValue item) {
+                    bool isPort = jsHtmlMessagePortOf(ctx, item) != nullptr;
+                    if (isPort)
+                        JS_SetPropertyUint32(ctx, ports, count++, item);
+                    else
+                        JS_FreeValue(ctx, item);
+                    if (!isPort)
+                        JS_ThrowTypeError(ctx, "A message event's ports are not all MessagePorts");
+                    return isPort;
+                });
+                JS_FreezeObject(ctx, ports);
+            }
+            JS_FreeValue(ctx, given);
+        }
         if (!ok) {
+            JS_FreeValue(ctx, ports);
             JS_FreeValue(ctx, data);
             return JS_EXCEPTION;
         }
@@ -1436,9 +1464,31 @@ JSValue messageConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
         prDomEventRelease(prHtmlMessageEventAsEvent(event));
     } else {
         jsSetReference(ctx, object, MessageSlot_Data, data);
+        if (!JS_IsUndefined(ports))
+            jsSetReference(ctx, object, MessageSlot_Ports, ports);
     }
     JS_FreeValue(ctx, data);
+    JS_FreeValue(ctx, ports);
     return jsConstructed(ctx, newTarget, object);
+}
+
+// Returns the frozen array of the event's ports, whose transfer finishes in this realm the first time it is read.
+JSValue messagePortsOf(JSContext* ctx, JSValueConst portsObject, PrHtmlMessageEvent* event) {
+    JSValue ports = jsReference(ctx, portsObject, MessageSlot_Ports);
+    if (!JS_IsUndefined(ports))
+        return ports;
+    Array<PrHtmlMessagePort*> list;
+    for (uint32_t i = 0; i < prHtmlMessageEventPortCount(event); ++i)
+        list.push(prHtmlMessageEventPort(event, i));
+    PrHtmlWindow* window = globalWindow(ctx);
+    if (window == nullptr && list.count != 0) {
+        list.reset();
+        return JS_ThrowTypeError(ctx, "A message's ports need a window");
+    }
+    ports = jsHtmlMessagePortsAdopt(ctx, list.data, list.count, window);
+    list.reset();
+    jsSetReference(ctx, portsObject, MessageSlot_Ports, ports);
+    return ports;
 }
 
 // data: the value that the event was created with, or the message that it carries, deserialized once in this realm.
@@ -1452,7 +1502,11 @@ JSValue messageData(JSContext* ctx, JSValueConst eventObject) {
     PrStringView bytes = prHtmlMessageEventSerializedData(event);
     if (bytes.data == nullptr)
         return JS_NULL;
-    data = JS_ReadObject(ctx, reinterpret_cast<const uint8_t*>(bytes.data), bytes.size, kSerializeFlags);
+    JSValue ports = messagePortsOf(ctx, eventObject, event);
+    if (JS_IsException(ports))
+        return ports;
+    data = jsHtmlDeserialize(ctx, bytes, ports);
+    JS_FreeValue(ctx, ports);
     if (JS_IsException(data))
         return data;
     jsSetReference(ctx, eventObject, MessageSlot_Data, data);
@@ -1464,46 +1518,52 @@ JSValue messageSource(JSContext* ctx, JSValueConst eventObject) {
     if (event == nullptr)
         return JS_EXCEPTION;
     PrDomEventTarget* source = prHtmlMessageEventSource(event);
-    return source != nullptr ? globalOf(ctx, prHtmlWindowQuery(source)) : JS_NULL;
+    if (source == nullptr)
+        return JS_NULL;
+    PrHtmlWindow* window = prHtmlWindowQuery(source);
+    return window != nullptr ? globalOf(ctx, window) : jsWrap(ctx, htmlMessagePortClass, JS_UNDEFINED, source, false);
 }
 
-// ports, a FrozenArray of the ports that a message transferred. No message transfers ports here.
-JSValue messagePorts(JSContext* ctx, JSValueConst portsObject) {
-    if (jsThis<PrHtmlMessageEvent>(ctx, portsObject, htmlMessageEventClass) == nullptr)
-        return JS_EXCEPTION;
-    JSValue ports = jsReference(ctx, portsObject, MessageSlot_Ports);
-    if (!JS_IsUndefined(ports))
-        return ports;
-    ports = JS_NewArray(ctx);
-    JS_FreezeObject(ctx, ports);
-    jsSetReference(ctx, portsObject, MessageSlot_Ports, ports);
-    return ports;
+// ports, a FrozenArray of the ports that a message transferred, or that the event was created with.
+JSValue messagePorts(JSContext* ctx, JSValueConst eventObject) {
+    PrHtmlMessageEvent* event = jsThis<PrHtmlMessageEvent>(ctx, eventObject, htmlMessageEventClass);
+    return event != nullptr ? messagePortsOf(ctx, eventObject, event) : JS_EXCEPTION;
 }
 
-// postMessage(message, targetOrigin) and postMessage(message, options). The source is the window of the incumbent
-// realm. A message that the engine cannot serialize throws a DataCloneError, and a target origin that is not a URL
-// throws a SyntaxError.
+// postMessage(message, targetOrigin, transfer) and postMessage(message, options). The source is the window of the
+// incumbent realm. A message that the engine cannot serialize throws a DataCloneError, and a target origin that is not
+// a URL throws a SyntaxError.
 JSValue postMessage(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     PrHtmlWindow* source = globalWindow(jsIncumbentRealm(ctx));
     StringArgument targetOrigin = {ctx, "/"};
     if (window == nullptr || source == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
+    Array<JSValue> transfer;
+    bool ok = true;
     if (argc > 1 && JS_IsObject(argv[1])) {
-        if (!jsDictString(ctx, argv[1], "targetOrigin", &targetOrigin))
-            return JS_EXCEPTION;
-    } else if (argc > 1 && !JS_IsUndefined(argv[1]) && !targetOrigin.read(argv[1])) {
+        ok = jsDictString(ctx, argv[1], "targetOrigin", &targetOrigin) && jsHtmlTransferOption(ctx, argv[1], &transfer);
+    } else {
+        ok = !(argc > 1 && !JS_IsUndefined(argv[1]) && !targetOrigin.read(argv[1])) &&
+            !(argc > 2 && !JS_IsUndefined(argv[2]) && !jsHtmlTransferRead(ctx, argv[2], &transfer));
+    }
+    JsHtmlSerialized message{};
+    ok = ok && jsHtmlSerialize(ctx, argv[0], &transfer, nullptr, &message);
+    jsHtmlTransferReset(ctx, &transfer);
+    if (!ok)
         return JS_EXCEPTION;
-    }
-    size_t size = 0;
-    uint8_t* bytes = JS_WriteObject(ctx, &size, argv[0], kSerializeFlags);
-    if (bytes == nullptr) {
-        JS_FreeValue(ctx, JS_GetException(ctx));
-        return jsDomExceptionThrow(ctx, "DataCloneError");
-    }
-    PrStatus status = prHtmlWindowPostMessage(window, source, PrStringView{reinterpret_cast<const char*>(bytes), size},
+    Array<PrDomEventTarget*> ports;
+    for (uint32_t i = 0; i < message.ports.count; ++i)
+        ports.push(prHtmlMessagePortAsEventTarget(message.ports.data[i]));
+    PrStatus status = prHtmlWindowPostMessage(window, source, prStringView(&message.bytes), ports.data, ports.count,
         targetOrigin.value());
-    js_free(ctx, bytes);
+    if (status != PrStatus_Ok) {
+        for (uint32_t i = 0; i < ports.count; ++i)
+            prDomEventTargetRelease(ports.data[i]);
+    }
+    ports.reset();
+    message.ports.reset();
+    prStringReset(&message.bytes);
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "SyntaxError");
 }
 
@@ -1873,6 +1933,100 @@ JSValue requestAnimationFrame(JSContext* ctx, JSValueConst windowObject, int arg
     return JS_NewUint32(ctx, prHtmlWindowRequestAnimationFrame(window, callback.get()));
 }
 
+// structuredClone(value, options) (html/#dom-structuredclone).
+JSValue structuredClone(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+    if (window == nullptr || !jsArgCount(ctx, argc, 1))
+        return JS_EXCEPTION;
+    Array<JSValue> transfer;
+    bool present = false;
+    JSValueConst options = argc > 1 ? argv[1] : JS_UNDEFINED;
+    bool ok = jsDictionary(ctx, options, &present) && (!present || jsHtmlTransferOption(ctx, options, &transfer));
+    JsHtmlSerialized message{};
+    ok = ok && jsHtmlSerialize(ctx, argv[0], &transfer, nullptr, &message);
+    jsHtmlTransferReset(ctx, &transfer);
+    if (!ok)
+        return JS_EXCEPTION;
+    JSValue ports = jsHtmlMessagePortsAdopt(ctx, message.ports.data, message.ports.count, window);
+    JSValue clone = jsHtmlDeserialize(ctx, prStringView(&message.bytes), ports);
+    JS_FreeValue(ctx, ports);
+    jsHtmlSerializedReset(&message);
+    return clone;
+}
+
+// IdleDeadline (requestidlecallback/#the-idledeadline-interface). It holds its window, whose clock it reads.
+struct HtmlIdleDeadline {
+    PrHtmlWindow* window;
+    double deadline;
+    bool didTimeout;
+};
+
+void freeIdleDeadline(HtmlIdleDeadline* PR_NULLABLE deadline) {
+    if (deadline == nullptr)
+        return;
+    prDomEventTargetRelease(prHtmlWindowAsEventTarget(deadline->window));
+    prMemoryFree(deadline);
+}
+
+JSValue idleDeadlineTimeRemaining(JSContext* ctx, JSValueConst deadlineObject, int, JSValueConst*) {
+    HtmlIdleDeadline* deadline = jsThis<HtmlIdleDeadline>(ctx, deadlineObject, htmlIdleDeadlineClass);
+    if (deadline == nullptr)
+        return JS_EXCEPTION;
+    if (deadline->didTimeout)
+        return JS_NewFloat64(ctx, 0);
+    return JS_NewFloat64(ctx, prHtmlWindowIdleTimeRemaining(deadline->window, deadline->deadline));
+}
+
+JSValue idleDeadlineDidTimeout(JSContext* ctx, JSValueConst deadlineObject) {
+    HtmlIdleDeadline* deadline = jsThis<HtmlIdleDeadline>(ctx, deadlineObject, htmlIdleDeadlineClass);
+    return deadline != nullptr ? JS_NewBool(ctx, deadline->didTimeout) : JS_EXCEPTION;
+}
+
+constexpr JSCFunctionListEntry kIdleDeadlineProto[] = {
+    PR_JS_TAG("IdleDeadline"),
+    PR_JS_METHOD("timeRemaining", 0, idleDeadlineTimeRemaining),
+    PR_JS_GET("didTimeout", idleDeadlineDidTimeout),
+};
+
+void invokeIdle(void* PR_NULLABLE context, double end, bool didTimeout) {
+    JsCallback* callback = static_cast<JsCallback*>(context);
+    JSContext* ctx = callback->ctx;
+    PrHtmlWindow* window = globalWindow(ctx);
+    if (window == nullptr)
+        return;
+    HtmlIdleDeadline* deadline = allocZeroed<HtmlIdleDeadline>();
+    *deadline = HtmlIdleDeadline{window, end, didTimeout};
+    prDomEventTargetRetain(prHtmlWindowAsEventTarget(window));
+    JSValue object = jsWrap(ctx, htmlIdleDeadlineClass, JS_UNDEFINED, deadline, true);
+    callWithGlobal(callback, 1, &object);
+    JS_FreeValue(ctx, object);
+}
+
+// requestIdleCallback(callback, options) (requestidlecallback/#the-requestidlecallback-method).
+JSValue requestIdleCallback(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+    CallbackArgument<PrHtmlIdleRequestCallback> callback = {ctx, JS_UNDEFINED};
+    if (window == nullptr || !jsArgCount(ctx, argc, 1) || !callback.readFunction(argv[0], invokeIdle))
+        return JS_EXCEPTION;
+    uint32_t timeout = 0;
+    bool present = false;
+    JSValueConst options = argc > 1 ? argv[1] : JS_UNDEFINED;
+    if (!jsDictionary(ctx, options, &present))
+        return JS_EXCEPTION;
+    if (present && !jsDictUint32(ctx, options, "timeout", &timeout))
+        return JS_EXCEPTION;
+    return JS_NewUint32(ctx, prHtmlWindowRequestIdleCallback(window, callback.get(), timeout));
+}
+
+JSValue cancelIdleCallback(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+    uint32_t handle = 0;
+    if (window == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &handle, argv[0]) < 0)
+        return JS_EXCEPTION;
+    prHtmlWindowCancelIdleCallback(window, handle);
+    return JS_UNDEFINED;
+}
+
 JSValue cancelAnimationFrame(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     uint32_t handle = 0;
@@ -1925,7 +2079,7 @@ JSValue setReplaceable(JSContext* ctx, JSValueConst object, JSValueConst input, 
     constexpr const char* kNames[] = {
         "performance", "innerWidth",  "innerHeight", "scrollX",
         "scrollY",     "pageXOffset", "pageYOffset", "parent",
-        "devicePixelRatio",
+        "devicePixelRatio", "length",
     };
     if (JS_DefinePropertyValueStr(ctx, object, kNames[magic], JS_DupValue(ctx, input), JS_PROP_C_W_E) < 0)
         return JS_EXCEPTION;
@@ -2192,7 +2346,13 @@ JSValue locationStatus(JSContext* ctx, PrStatus status) {
     return jsDomExceptionThrow(ctx, status == PrStatus_Syntax ? "SyntaxError" : "NotSupportedError");
 }
 
-// [PutForwards=href]
+// [PutForwards=href] [Replaceable] length (html/#dom-length): the number of the window's document-tree child
+// navigables.
+JSValue windowLength(JSContext* ctx, JSValueConst windowObject, int) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+    return window != nullptr ? JS_NewUint32(ctx, prHtmlWindowLength(window)) : JS_EXCEPTION;
+}
+
 JSValue setWindowLocation(JSContext* ctx, JSValueConst windowObject, JSValueConst input) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     PrHtmlWindow* source = globalWindow(jsIncumbentRealm(ctx));
@@ -2396,7 +2556,7 @@ JSValue historyStateOf(JSContext* ctx, JSValueConst history, PrHtmlWindow* windo
     if (bytes.data == nullptr)
         state = JS_NULL;
     else
-        state = JS_ReadObject(ctx, reinterpret_cast<const uint8_t*>(bytes.data), bytes.size, kSerializeFlags);
+        state = jsHtmlDeserialize(ctx, bytes, JS_UNDEFINED);
     if (JS_IsException(state))
         return state;
     jsSetReference(ctx, history, HistorySlot_State, state);
@@ -2459,19 +2619,12 @@ JSValue historyPushState(JSContext* ctx, JSValueConst windowObject, int argc, JS
     if (window == nullptr || !jsArgCount(ctx, argc, 2) || !unused.read(argv[1]) ||
             (jsArgGiven(argc, argv, 2) && !url.readNullable(argv[2])))
         return JS_EXCEPTION;
-    size_t size = 0;
-    uint8_t* bytes = nullptr;
-    if (!JS_IsNull(argv[0])) {
-        bytes = JS_WriteObject(ctx, &size, argv[0], kSerializeFlags);
-        if (bytes == nullptr) {
-            JS_FreeValue(ctx, JS_GetException(ctx));
-            return jsDomExceptionThrow(ctx, "DataCloneError");
-        }
-    }
-    PrStatus status = prHtmlHistoryPushState(
-        window, bytes != nullptr ? PrStringView{reinterpret_cast<const char*>(bytes), size} : PrStringView{},
+    JsHtmlSerialized state{};
+    if (!JS_IsNull(argv[0]) && !jsHtmlSerialize(ctx, argv[0], nullptr, nullptr, &state))
+        return JS_EXCEPTION;
+    PrStatus status = prHtmlHistoryPushState(window, JS_IsNull(argv[0]) ? PrStringView{} : prStringView(&state.bytes),
         url.value(), PrHtmlHistoryHandling(magic));
-    js_free(ctx, bytes);
+    jsHtmlSerializedReset(&state);
     return historyStatus(ctx, status);
 }
 
@@ -2813,12 +2966,21 @@ JSValue requestOverride(JSContext* ctx, JSValueConst jsObject, int argc, JSValue
     return promise;
 }
 
+// Returns true if `text` is an array index in canonical form, and writes it to `out`.
+bool arrayIndexOf(PrStringView text, uint32_t* out) {
+    uint64_t value = 0;
+    if ((text.size > 1 && text.data[0] == '0') || !parseU64(text.data, text.size, &value) || value >= 0xffffffffu)
+        return false;
+    *out = uint32_t(value);
+    return true;
+}
+
 // The Window's named properties object (html/#named-access-on-the-window-object). Its own properties are the elements
 // that the global's window names.
 int namedProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, JSValueConst, JSAtom atom) {
     PrHtmlWindow* window = globalWindow(ctx);
     JSValue key = JS_AtomToValue(ctx, atom);
-    if (window == nullptr || !JS_IsString(key)) {
+    if (window == nullptr || JS_IsSymbol(key)) {
         JS_FreeValue(ctx, key);
         return 0;
     }
@@ -2827,9 +2989,23 @@ int namedProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, JSValu
     JS_FreeValue(ctx, key);
     if (!read)
         return -1;
+    // html/#accessing-other-browsing-contexts: an array index names a frame, and nothing else.
+    uint32_t index = 0;
+    PrHtmlWindow* frame = nullptr;
+    if (arrayIndexOf(name.value(), &index)) {
+        frame = prHtmlWindowFrame(window, index);
+        if (frame == nullptr)
+            return 0;
+    } else {
+        frame = prHtmlWindowFrameFromName(window, name.value());
+    }
 
     JSValue global = JS_GetGlobalObject(ctx);
-    JSValue value = jsWrapAs(ctx, prJsDomElementClass, global, prHtmlWindowNamedItem(window, name.value()), false);
+    JSValue value;
+    if (frame != nullptr)
+        value = globalOf(ctx, frame);
+    else
+        value = jsWrapAs(ctx, prJsDomElementClass, global, prHtmlWindowNamedItem(window, name.value()), false);
     JS_FreeValue(ctx, global);
     if (JS_IsException(value))
         return -1;
@@ -3581,6 +3757,7 @@ constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_MAGIC_GET_SET("innerWidth", viewportGet, setReplaceable, 1),
     PR_JS_MAGIC_GET_SET("innerHeight", viewportGet, setReplaceable, 2),
     PR_JS_MAGIC_GET_SET("devicePixelRatio", viewportGet, setReplaceable, 8),
+    PR_JS_MAGIC_GET_SET("length", windowLength, setReplaceable, 9),
     PR_JS_MAGIC_GET_SET("scrollX", viewportGet, setReplaceable, 3),
     PR_JS_MAGIC_GET_SET("scrollY", viewportGet, setReplaceable, 4),
     PR_JS_MAGIC_GET_SET("pageXOffset", viewportGet, setReplaceable, 5),
@@ -3605,6 +3782,9 @@ constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_METHOD("clearInterval", 0, clearTimeout),
     PR_JS_METHOD("requestAnimationFrame", 1, requestAnimationFrame),
     PR_JS_METHOD("cancelAnimationFrame", 1, cancelAnimationFrame),
+    PR_JS_METHOD("requestIdleCallback", 1, requestIdleCallback),
+    PR_JS_METHOD("cancelIdleCallback", 1, cancelIdleCallback),
+    PR_JS_METHOD("structuredClone", 1, structuredClone),
     PR_JS_DOM_GLOBAL_EVENT_HANDLER_MEMBERS PR_JS_DOM_WINDOW_EVENT_HANDLER_MEMBERS
 };
 
@@ -3754,6 +3934,10 @@ constexpr JsClassDefinition kClasses[] = {
         PR_JS_CLASS("Storage", htmlStorageClass, jsViewFinalizer<&htmlStorageClass>, kStorageProto),
         .named = &kStorageNamed,
     },
+    {
+        PR_JS_CLASS("IdleDeadline", htmlIdleDeadlineClass, (jsFinalizer<&htmlIdleDeadlineClass, freeIdleDeadline>),
+            kIdleDeadlineProto)
+    },
     {PR_JS_CLASS("Location", htmlLocationClass, jsViewFinalizer<&htmlLocationClass>, kLocationProto)},
     {
         PR_JS_CLASS("UserActivation", htmlUserActivationClass, jsViewFinalizer<&htmlUserActivationClass>,
@@ -3849,6 +4033,7 @@ void jsHtmlBind(JSContext* ctx) {
     }
     jsHtmlFormsBind(ctx);
     jsHtmlElementsBind(ctx);
+    jsHtmlMessageBind(ctx);
     // The members that HTML adds to the classes of other modules.
     struct Extension {
         JSClassID id;
@@ -3895,6 +4080,10 @@ void jsHtmlBind(JSContext* ctx) {
     prJsDomSetGlobalDocument(runtime, &kGlobalDocument);
     jsSetExceptionReporter(runtime, &kReporter);
     JS_SetHostPromiseRejectionTracker(runtime, trackRejection, nullptr);
+}
+
+PrHtmlWindow* PR_NULLABLE jsHtmlGlobalWindow(JSContext* ctx) {
+    return globalWindow(ctx);
 }
 
 bool jsHtmlSetGlobal(JSContext* ctx, PrHtmlWindow* handle) {

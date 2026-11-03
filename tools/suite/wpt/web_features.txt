@@ -483,6 +483,7 @@ rem                                              build
 request-animation-frame                          build
 request-animation-frame-workers                  build
 requestclose                                     build
+requestidlecallback                              build
 resize                                           build
 resize-observer                                  build
 revert-value                                     build

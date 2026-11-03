@@ -18,6 +18,9 @@ void jsHtmlBind(JSContext* ctx);
 // The class of HTMLElement, which classes of other modules derive from.
 extern JSClassID htmlElementClass;
 
+// Returns the window of the context's global, or null if it has none.
+PrHtmlWindow* PR_NULLABLE jsHtmlGlobalWindow(JSContext* ctx);
+
 // Makes `handle` the window of the context's global, with the window's custom element registry. Returns false, with an
 // exception pending, if the runtime already runs the windows of another agent. The host owns the window, and must keep
 // it alive until the runtime is destroyed. The runtime's finalizers access the window.

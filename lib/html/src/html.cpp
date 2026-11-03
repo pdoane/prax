@@ -29,6 +29,7 @@
 #include "html/src/html_focus.h"
 #include "html/src/html_interface.h"
 #include "html/src/html_media.h"
+#include "html/src/html_message.h"
 #include "html/src/html_page.h"
 #include "html/src/html_parser.h"
 #include "html/src/html_serialize.h"
@@ -53,14 +54,14 @@ struct HtmlDocumentTimeline {
 struct PostedMessage {
     PrHtmlWindow* target;
     PrHtmlWindow* source;
-    PrString data;
+    HtmlMessage message;
     PrString sourceOrigin;
     PrString targetOrigin;
 };
 
 void dropMessage(void* data) {
     PostedMessage* posted = static_cast<PostedMessage*>(data);
-    prStringReset(&posted->data);
+    htmlMessageReset(&posted->message);
     prStringReset(&posted->sourceOrigin);
     prStringReset(&posted->targetOrigin);
     prMemoryFree(posted);
@@ -75,15 +76,9 @@ void deliverMessage(void* data) {
         prStringView(&origin) == prStringView(&posted->targetOrigin);
     prStringReset(&origin);
     if (matches) {
-        PrHtmlMessageEvent* event =
-            domEventCreate<PrHtmlMessageEvent>("message", prDomEventInitDefault(), PrDomEventKind_Message);
-        event->trusted = true;
-        event->message = allocZeroed<DomMessageEventData>();
-        *event->message = DomMessageEventData{posted->data, posted->sourceOrigin, prStringEmpty(), posted->source};
-        posted->data = prStringNull();
+        htmlFireMessage(prHtmlWindowAsEventTarget(posted->target), &posted->message, posted->sourceOrigin,
+            posted->source);
         posted->sourceOrigin = prStringNull();
-        domEventDispatch(posted->target, event);
-        domEventRelease(event);
     }
     dropMessage(posted);
 }
@@ -1346,9 +1341,11 @@ PrHtmlMessageEvent* prHtmlMessageEventCreate(PrStringView type, const PrHtmlMess
     PrHtmlMessageEvent* event = domEventCreate<PrHtmlMessageEvent>(type, values.event, PrDomEventKind_Message);
     event->message = allocZeroed<DomMessageEventData>();
     *event->message = DomMessageEventData{
-        prStringNull(), prStringCopy(values.origin),
-        prStringCopy(values.lastEventId),
-        values.source,
+        .data = prStringNull(),
+        .origin = prStringCopy(values.origin),
+        .lastEventId = prStringCopy(values.lastEventId),
+        .source = values.source,
+        .ports = {},
     };
     return event;
 }
@@ -1542,7 +1539,7 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* window) {
 }
 
 PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrStringView serialized,
-        PrStringView targetOrigin) {
+        PrDomEventTarget* PR_NONNULL const* PR_NULLABLE ports, uint32_t portCount, PrStringView targetOrigin) {
     PrString origin = prStringNull();
     if (targetOrigin == "/") {
         origin = htmlWindowOrigin(source);
@@ -1554,7 +1551,9 @@ PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrS
         prUrlDestroy(url);
     }
     PostedMessage* posted = allocZeroed<PostedMessage>();
-    *posted = PostedMessage{window, source, prStringCopy(serialized), htmlWindowOrigin(source), origin};
+    *posted = PostedMessage{window, source, HtmlMessage{.data = prStringCopy(serialized)}, htmlWindowOrigin(source), origin};
+    for (uint32_t i = 0; i < portCount; ++i)
+        posted->message.ports.push(ports[i]);
     htmlWindowQueueTask(window, deliverMessage, posted, dropMessage);
     return PrStatus_Ok;
 }
@@ -1642,6 +1641,36 @@ bool prHtmlWindowHasStickyActivation(const PrHtmlWindow* window) {
 bool prHtmlWindowHasTransientActivation(const PrHtmlWindow* window) {
     double now = htmlWindowClock(window);
     return now >= window->lastActivation && now < window->lastActivation + kHtmlTransientActivationDuration;
+}
+
+uint32_t prHtmlWindowLength(const PrHtmlWindow* window) {
+    return window->frames.count;
+}
+
+PrHtmlWindow* PR_NULLABLE prHtmlWindowFrame(PrHtmlWindow* window, uint32_t index) {
+    return htmlWindowFrameInTreeOrder(window, index);
+}
+
+PrHtmlWindow* PR_NULLABLE prHtmlWindowFrameFromName(PrHtmlWindow* window, PrStringView name) {
+    if (name.size == 0)
+        return nullptr;
+    // A global's every unresolved name comes here, so the names are compared before the frames are ordered.
+    const HtmlFrame* first = nullptr;
+    for (uint32_t i = 0; i < window->frames.count; ++i) {
+        const HtmlFrame* frame = &window->frames.data[i];
+        const PrHtmlPage* page = htmlDocumentPage(frame->window->document);
+        if (page == nullptr || prStringView(&page->targetName) != name)
+            continue;
+        if (first == nullptr) {
+            first = frame;
+            continue;
+        }
+        PrDomNode* current = prDomElementAsNode(first->container);
+        if ((prDomNodeCompareDocumentPosition(current, prDomElementAsNode(frame->container)) &
+                PrDomNodePosition_Preceding) != 0)
+            first = frame;
+    }
+    return first != nullptr && htmlWindowIsSameOrigin(first->window, window) ? first->window : nullptr;
 }
 
 PrDomElement* PR_NULLABLE prHtmlWindowNamedItem(PrHtmlWindow* window, PrStringView name) {
@@ -1733,6 +1762,18 @@ uint32_t prHtmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFra
 
 void prHtmlWindowCancelAnimationFrame(PrHtmlWindow* window, uint32_t handle) {
     htmlWindowCancelAnimationFrame(window, handle);
+}
+
+uint32_t prHtmlWindowRequestIdleCallback(PrHtmlWindow* window, const PrHtmlIdleRequestCallback* callback, uint32_t timeout) {
+    return htmlWindowRequestIdleCallback(window, callback, timeout);
+}
+
+void prHtmlWindowCancelIdleCallback(PrHtmlWindow* window, uint32_t handle) {
+    htmlWindowCancelIdleCallback(window, handle);
+}
+
+double prHtmlWindowIdleTimeRemaining(const PrHtmlWindow* window, double deadline) {
+    return htmlWindowIdleTimeRemaining(window, deadline);
 }
 
 bool prHtmlWindowReportError(PrHtmlWindow* window, PrHtmlErrorEvent* event) {

@@ -114,6 +114,9 @@ struct DomMessageEventData {
     PrString origin;
     PrString lastEventId;
     PrDomEventTarget* PR_NULLABLE source;
+
+    // The ports that the message transferred, each with a reference.
+    Array<PrDomEventTarget* PR_NONNULL> ports;
 };
 
 // The data of a PopStateEvent or a HashChangeEvent (html/#popstateevent, html/#hashchangeevent).

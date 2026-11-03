@@ -26,10 +26,12 @@ enum {
     DomTargetType_AbortSignal,              // an AbortSignal (dom/#interface-AbortSignal)
 
     // Reference-counted targets: a Window (html/#the-window-object), a MediaQueryList
-    // (cssom-view-1/#the-mediaquerylist-interface) and an XMLHttpRequest (xhr/#interface-xmlhttprequest).
+    // (cssom-view-1/#the-mediaquerylist-interface), an XMLHttpRequest (xhr/#interface-xmlhttprequest) and a MessagePort
+    // (html/#message-ports).
     DomTargetType_Window = DomTargetTypeFlag_Counted | 0x100,
     DomTargetType_MediaQueryList,
     DomTargetType_XmlHttpRequest,
+    DomTargetType_MessagePort,
 
     // Parts of other targets: a PreferenceObject (mediaqueries-5/#preferenceobject), a Performance
     // (hr-time-3/#sec-performance), a ScreenOrientation (screen-orientation/#screenorientation-interface), an

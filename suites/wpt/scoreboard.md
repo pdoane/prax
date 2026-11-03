@@ -115,16 +115,16 @@ of a change to it is what the change did.
 | css/css-writing-modes            |   1234/1234 |     1282/1555 |   82.4% |
 | css/css-zoom                     |         1/1 |           1/1 |  100.0% |
 | css/cssom                        |     282/283 |     3395/4403 |   77.1% |
-| css/cssom-view                   |     229/237 |     1349/2578 |   52.3% |
+| css/cssom-view                   |     229/237 |     1353/2578 |   52.4% |
 | css/fetching                     |         1/1 |           0/4 |    0.0% |
 | css/fill-stroke                  |       11/11 |       283/410 |   69.0% |
 | css/filter-effects               |     387/392 |     2067/3308 |   62.4% |
-| css/geometry                     |       28/28 |     1169/1203 |   97.1% |
+| css/geometry                     |       28/28 |     1170/1203 |   97.2% |
 | css/mediaqueries                 |       94/94 |       441/478 |   92.2% |
 | css/motion                       |     148/148 |     3882/5061 |   76.7% |
 | css/printing                     |         6/6 |           4/6 |   66.6% |
 | css/selectors                    |     517/527 |     5763/6068 |   94.9% |
-| resize-observer                  |       35/39 |       106/135 |   78.5% |
+| resize-observer                  |       36/39 |       106/135 |   78.5% |
 | web-animations                   |         1/1 |        61/218 |   27.9% |
 | web-animations/animation-model   |       29/34 |         5/156 |    3.2% |
 | web-animations/animation-trigger |         3/3 |           0/3 |    0.0% |
@@ -132,7 +132,7 @@ of a change to it is what the change did.
 | web-animations/interfaces        |       45/47 |        80/834 |    9.5% |
 | web-animations/responsive        |       40/46 |         0/105 |    0.0% |
 | web-animations/timing-model      |       25/34 |         2/402 |    0.4% |
-| **total**                        | 31759/32090 | 153433/208895 |   73.4% |
+| **total**                        | 31760/32090 | 153438/208895 |   73.4% |
 
 ## dom
 
@@ -144,14 +144,14 @@ of a change to it is what the change did.
 | dom/crashtests                   |       4/4 |          4/4 |  100.0% |
 | dom/events                       |   194/202 |      578/839 |   68.8% |
 | dom/lists                        |       5/5 |      185/189 |   97.8% |
-| dom/nodes                        |   399/404 |  13542/15295 |   88.5% |
+| dom/nodes                        |   400/404 |  13556/15295 |   88.6% |
 | dom/ranges                       |     72/72 |  44512/44706 |   99.5% |
 | dom/traversal                    |     18/18 |    1600/1608 |   99.5% |
 | domparsing                       |     46/46 |      257/597 |   43.0% |
 | domparsing/tentative             |     25/36 |      42/1104 |    3.8% |
 | input-events                     |     30/34 |     114/3248 |    3.5% |
-| intersection-observer            |   108/113 |      283/346 |   81.7% |
-| pointerevents                    |    98/228 |      195/670 |   29.1% |
+| intersection-observer            |   109/113 |      283/346 |   81.7% |
+| pointerevents                    |    98/228 |      195/667 |   29.2% |
 | pointerevents/bugs               |       1/2 |          0/2 |    0.0% |
 | pointerevents/compat             |     10/15 |         6/52 |   11.5% |
 | pointerevents/crashtests         |       1/1 |          1/1 |  100.0% |
@@ -173,7 +173,7 @@ of a change to it is what the change did.
 | shadow-dom/focus-navigation      |     45/45 |        43/89 |   48.3% |
 | shadow-dom/leaktests             |       4/4 |        10/16 |   62.5% |
 | shadow-dom/reference-target      |     14/15 |        1/635 |    0.1% |
-| shadow-dom/untriaged             |     59/59 |      242/256 |   94.5% |
+| shadow-dom/untriaged             |     59/59 |      241/256 |   94.1% |
 | uievents                         |       4/4 |      135/174 |   77.5% |
 | uievents/click                   |       3/7 |          3/7 |   42.8% |
 | uievents/constructors            |       2/2 |        16/21 |   76.1% |
@@ -185,28 +185,28 @@ of a change to it is what the change did.
 | uievents/mouse                   |     21/23 |       21/140 |   15.0% |
 | uievents/order-of-events         |     11/16 |         9/17 |   52.9% |
 | uievents/textInput               |       5/7 |         1/21 |    4.7% |
-| webidl                           |       2/2 |      159/192 |   82.8% |
+| webidl                           |       2/2 |      166/192 |   86.4% |
 | webidl/ecmascript-binding        |     42/43 |      214/314 |   68.1% |
-| **total**                        | 1647/1877 | 98987/115941 |   85.3% |
+| **total**                        | 1649/1877 | 99007/115938 |   85.3% |
 
 ## encoding
 
 | Module                      |    Files |         Tests | Passing |
 |-----------------------------|---------:|--------------:|--------:|
-| encoding                    |    49/50 |   11944/12040 |   99.2% |
+| encoding                    |    50/50 |   11947/12042 |   99.2% |
 | encoding/legacy-mb-japanese |  264/482 | 244033/244252 |   99.9% |
 | encoding/legacy-mb-korean   |  227/435 | 213752/213960 |   99.9% |
 | encoding/legacy-mb-schinese |      4/4 |       660/660 |  100.0% |
 | encoding/legacy-mb-tchinese |  126/283 | 119248/119405 |   99.8% |
 | encoding/streams            |    12/14 |         1/113 |    0.8% |
-| **total**                   | 682/1268 | 589638/590430 |   99.8% |
+| **total**                   | 683/1268 | 589641/590432 |   99.8% |
 
 ## html
 
 | Module                                              |     Files |         Tests | Passing |
 |-----------------------------------------------------|----------:|--------------:|--------:|
 | apng                                                |       2/2 |           1/2 |   50.0% |
-| custom-elements                                     |     41/43 |       309/628 |   49.2% |
+| custom-elements                                     |     42/43 |       309/632 |   48.8% |
 | custom-elements/form-associated                     |     19/24 |          8/86 |    9.3% |
 | custom-elements/htmlconstructor                     |       1/1 |          2/10 |   20.0% |
 | custom-elements/parser                              |     10/11 |         20/32 |   62.5% |
@@ -217,24 +217,24 @@ of a change to it is what the change did.
 | focus                                               |     17/43 |         10/51 |   19.6% |
 | gif                                                 |       1/1 |           0/1 |    0.0% |
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
-| html/browsers                                       |   565/769 |      504/2262 |   22.2% |
+| html/browsers                                       |   563/769 |      552/2309 |   23.9% |
 | html/canvas                                         | 2645/2876 |     1735/5247 |   33.0% |
-| html/dom                                            |   345/353 |   60711/66758 |   90.9% |
+| html/dom                                            |   345/353 |   60731/66758 |   90.9% |
 | html/editing                                        |   125/254 |       522/848 |   61.5% |
 | html/embedded-content                               |       1/1 |           0/2 |    0.0% |
-| html/infrastructure                                 |   119/148 |       508/821 |   61.8% |
-| html/interaction                                    |   198/201 |       394/765 |   51.5% |
+| html/infrastructure                                 |   121/148 |       542/825 |   65.6% |
+| html/interaction                                    |   199/201 |       396/765 |   51.7% |
 | html/links                                          |       6/7 |           4/7 |   57.1% |
 | html/meta                                           |       0/1 |           0/1 |    0.0% |
 | html/obsolete                                       |     20/20 |         48/60 |   80.0% |
-| html/rendering                                      |   479/481 |   10566/11499 |   91.8% |
+| html/rendering                                      |   479/481 |   10567/11499 |   91.8% |
 | html/scripting                                      |       3/3 |           0/4 |    0.0% |
 | html/select                                         |       2/2 |           5/6 |   83.3% |
-| html/semantics                                      | 2515/2909 |    9259/19679 |   47.0% |
+| html/semantics                                      | 2518/2909 |    9270/19679 |   47.1% |
 | html/syntax                                         |   249/250 |     6682/6914 |   96.6% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
-| html/user-activation                                |     13/21 |         24/38 |   63.1% |
-| html/webappapis                                     |   289/329 |     2081/2516 |   82.7% |
+| html/user-activation                                |     13/21 |         32/46 |   69.5% |
+| html/webappapis                                     |   295/329 |     2092/2517 |   83.1% |
 | inert                                               |     25/29 |        53/112 |   47.3% |
 | png                                                 |       4/4 |           3/4 |   75.0% |
 | png/apng                                            |     29/29 |         10/29 |   34.4% |
@@ -245,15 +245,16 @@ of a change to it is what the change did.
 | quirks/historical                                   |       2/2 |           2/2 |  100.0% |
 | quirks/text-decoration-doesnt-propagate-into-tables |       2/2 |           2/2 |  100.0% |
 | quirks/unitless-length                              |       6/6 |     4637/4819 |   96.2% |
-| webmessaging                                        |     38/47 |         33/61 |   54.0% |
+| requestidlecallback                                 |     18/20 |         48/57 |   84.2% |
+| webmessaging                                        |     42/47 |         54/64 |   84.3% |
 | webmessaging/broadcastchannel                       |      7/12 |          0/45 |    0.0% |
-| webmessaging/message-channels                       |     14/14 |          0/25 |    0.0% |
+| webmessaging/message-channels                       |     11/14 |         13/23 |   56.5% |
 | webmessaging/multi-globals                          |       4/4 |           0/4 |    0.0% |
-| webmessaging/with-options                           |       9/9 |           7/9 |   77.7% |
-| webmessaging/with-ports                             |     24/24 |         27/39 |   69.2% |
-| webmessaging/without-ports                          |     26/27 |         29/41 |   70.7% |
-| webstorage                                          |     39/54 |     1231/1285 |   95.7% |
-| workers                                             |    89/112 |        18/226 |    7.9% |
+| webmessaging/with-options                           |       9/9 |           9/9 |  100.0% |
+| webmessaging/with-ports                             |     23/24 |         37/39 |   94.8% |
+| webmessaging/without-ports                          |     25/27 |         38/41 |   92.6% |
+| webstorage                                          |     38/54 |     1231/1285 |   95.7% |
+| workers                                             |    89/112 |        23/226 |   10.1% |
 | workers/baseurl                                     |       3/7 |           0/7 |    0.0% |
 | workers/constructors                                |     31/32 |          1/59 |    1.6% |
 | workers/examples                                    |       0/3 |           0/3 |    0.0% |
@@ -262,7 +263,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8322/9505 | 125036/155901 |   80.2% |
+| **total**                                           | 8349/9525 | 125279/156023 |   80.2% |
 
 ## infrastructure
 
@@ -312,7 +313,7 @@ of a change to it is what the change did.
 | fetch/content-encoding             |    13/13 |      7/36 |   19.4% |
 | fetch/content-length               |      4/4 |     26/40 |   65.0% |
 | fetch/content-type                 |      4/4 |    31/154 |   20.1% |
-| fetch/corb                         |    19/22 |     30/85 |   35.2% |
+| fetch/corb                         |    20/22 |     30/85 |   35.2% |
 | fetch/cross-origin-resource-policy |      9/9 |     27/48 |   56.2% |
 | fetch/data-urls                    |      3/3 |   120/161 |   74.5% |
 | fetch/h1-parsing                   |    20/20 |    93/234 |   39.7% |
@@ -346,7 +347,7 @@ of a change to it is what the change did.
 | websockets/security                |      4/4 |       2/4 |   50.0% |
 | websockets/stream                  |    21/21 |     0/159 |    0.0% |
 | websockets/unload-a-document       |    11/11 |      0/11 |    0.0% |
-| **total**                          | 928/1174 | 2513/9647 |   26.0% |
+| **total**                          | 929/1174 | 2513/9647 |   26.0% |
 
 ## svg
 
@@ -382,13 +383,13 @@ of a change to it is what the change did.
 
 | Module    | Files |      Tests | Passing |
 |-----------|------:|-----------:|--------:|
-| url       | 49/49 | 9770/10036 |   97.3% |
-| **total** | 49/49 | 9770/10036 |   97.3% |
+| url       | 49/49 | 9772/10036 |   97.3% |
+| **total** | 49/49 | 9772/10036 |   97.3% |
 
 ## xhr
 
 | Module       |   Files |    Tests | Passing |
 |--------------|--------:|---------:|--------:|
-| xhr          | 292/335 | 764/1412 |   54.1% |
+| xhr          | 291/335 | 765/1412 |   54.1% |
 | xhr/formdata |   17/18 |    62/78 |   79.4% |
-| **total**    | 309/353 | 826/1490 |   55.4% |
+| **total**    | 308/353 | 827/1490 |   55.5% |

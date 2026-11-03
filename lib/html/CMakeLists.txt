@@ -10,6 +10,7 @@ pr_library(html INCLUDE include
     src/html_error.cpp
     src/html_focus.cpp
     src/html_forms.cpp
+    src/html_message.cpp
     src/html_history.cpp
     src/html_hints.cpp
     src/html_image.cpp
@@ -35,8 +36,10 @@ if (PR_JS)
     pr_library(html_quickjs INCLUDE quickjs/include
         quickjs/src/custom_elements_quickjs.cpp
         quickjs/src/html_bindings_quickjs.cpp
+        quickjs/src/html_clone_quickjs.cpp
         quickjs/src/html_elements_quickjs.cpp
         quickjs/src/html_forms_quickjs.cpp
+        quickjs/src/html_message_quickjs.cpp
         quickjs/src/html_console_quickjs.cpp
         quickjs/src/html_quickjs.cpp
     )

@@ -58,6 +58,11 @@ void release(const PrHtmlFrameRequestCallback& callback) {
         callback.release(callback.context);
 }
 
+void release(const PrHtmlIdleRequestCallback& callback) {
+    if (callback.release != nullptr)
+        callback.release(callback.context);
+}
+
 // Coarsens a time to 100 microseconds, as hr-time-3/#dfn-coarsen-time specifies for a context that is not cross-origin
 // isolated.
 double coarsen(double milliseconds) {
@@ -233,25 +238,118 @@ bool runQueued(PrHtmlWindow* window) {
     return true;
 }
 
-// Runs at most one task of the window: a queued task, or else the earliest due timer or animation frame. A task that
-// spins the event loop runs one during its own, and is still running afterward.
+// The queued tasks that run in a row while a timer or an animation frame is due.
+constexpr uint32_t kMaxQueuedRun = 16;
+
+// The longest idle period (requestidlecallback/#start-an-idle-period-algorithm), in milliseconds.
+constexpr double kIdleMaxPeriod = 50;
+
+// A request's timeout, which a timer of the window runs.
+struct IdleTimeout {
+    PrHtmlWindow* window;
+    uint32_t handle;
+};
+
+// Returns the first time after which the idle period must yield: `deadline`, or a timer of the page's own, or an
+// animation frame that the window wants. A request's own timeout does not end an idle period.
+double idleCap(const PrHtmlWindow* window, double deadline);
+
+// Removes the request `handle` from `list` and writes it to `out`. Returns false if the list does not hold it.
+bool takeIdleRequest(Array<HtmlIdleRequest>* list, uint32_t handle, HtmlIdleRequest* out) {
+    for (uint32_t i = 0; i < list->count; ++i) {
+        if (list->data[i].handle == handle) {
+            *out = list->data[i];
+            list->erase(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+void invokeIdle(PrHtmlWindow* window, const HtmlIdleRequest& request, double deadline, bool didTimeout) {
+    bool running = window->runningIdle;
+    window->runningIdle = true;
+    request.callback.invoke(request.callback.context, deadline, didTimeout);
+    window->runningIdle = running;
+    release(request.callback);
+}
+
+// Runs a request whose timeout passed (requestidlecallback/#invoke-idle-callback-timeout-algorithm).
+void idleTimedOut(void* PR_NULLABLE context) {
+    IdleTimeout* timeout = static_cast<IdleTimeout*>(context);
+    PrHtmlWindow* window = timeout->window;
+    HtmlIdleRequest request{};
+    if (takeIdleRequest(&window->idleRequests, timeout->handle, &request) ||
+            takeIdleRequest(&window->idleRunnable, timeout->handle, &request)) {
+        request.timer = 0;
+        invokeIdle(window, request, htmlWindowClock(window), true);
+    }
+}
+
+// Runs an idle callback, if the event loop has nothing else to do. An idle period starts if none is running or the
+// current one has run out of requests, and takes the requests made so far. Returns false if no callback ran.
+bool runIdle(PrHtmlWindow* window, double now) {
+    if (window->idleRunnable.count == 0 && window->idleRequests.count == 0)
+        return false;
+    if (window->idleRunnable.count == 0 || now >= window->idleDeadline) {
+        window->idleDeadline = idleCap(window, now + kIdleMaxPeriod);
+        for (uint32_t i = 0; i < window->idleRequests.count; ++i)
+            window->idleRunnable.push(window->idleRequests.data[i]);
+        window->idleRequests.clear();
+    }
+    if (window->idleRunnable.count == 0 || now >= window->idleDeadline)
+        return false;
+    HtmlIdleRequest request = window->idleRunnable.data[0];
+    window->idleRunnable.erase(0);
+    if (request.timer != 0)
+        htmlWindowClearTimeout(window, request.timer);
+    bool outer = window->runningTask;
+    window->runningTask = true;
+    invokeIdle(window, request, window->idleDeadline, false);
+    window->runningTask = outer;
+    return true;
+}
+
+double idleCap(const PrHtmlWindow* window, double deadline) {
+    for (uint32_t i = 0; i < window->timers.count; ++i) {
+        const HtmlTimer& timer = window->timers.data[i];
+        if (timer.handler.invoke != idleTimedOut && timer.deadline < deadline)
+            deadline = timer.deadline;
+    }
+    if (wantsFrame(window) && frameDue(window) < deadline)
+        deadline = frameDue(window);
+    return deadline;
+}
+
+// Runs at most one task of the window: a queued task, or else the earliest due timer or animation frame, or else an
+// idle callback. A task that spins the event loop runs one during its own, and is still running afterward.
 bool runNextTask(PrHtmlWindow* window) {
-    if (runQueued(window))
+    // A queued task runs first, unless a long run of them has gone by, so that tasks that queue each other do not
+    // starve what is due.
+    if (window->queuedRun < kMaxQueuedRun && runQueued(window)) {
+        ++window->queuedRun;
         return true;
+    }
     uint32_t index = nextTimerIndex(window);
     double now = htmlWindowClock(window);
     bool timer = index != window->timers.count && window->timers.data[index].deadline <= now;
     double frameAt = frameDue(window);
     bool frame = wantsFrame(window) && frameAt <= now;
     bool outer = window->runningTask;
+    window->queuedRun = 0;
     if (frame && (!timer || frameAt <= window->timers.data[index].deadline)) {
         window->runningTask = true;
         runFrame(window, now);
         window->runningTask = outer;
         return true;
     }
-    if (!timer)
-        return false;
+    if (!timer) {
+        if (runQueued(window)) {
+            window->queuedRun = 1;
+            return true;
+        }
+        return runIdle(window, now);
+    }
 
     // Take ownership before invoking, because the callback may cancel or add other timers. An interval that its handler
     // did not clear is set again with the same id (html/#timer-initialisation-steps).
@@ -503,6 +601,41 @@ void htmlWindowConsumeActivation(PrHtmlWindow* window) {
     consumeActivation(top);
 }
 
+uint32_t htmlWindowRequestIdleCallback(PrHtmlWindow* window, const PrHtmlIdleRequestCallback* callback, uint32_t timeout) {
+    uint32_t handle = ++window->nextIdleHandle;
+    if (callback->retain != nullptr)
+        callback->retain(callback->context);
+    HtmlIdleRequest request{.callback = *callback, .handle = handle, .timer = 0, .endless = window->runningIdle};
+    if (timeout > 0) {
+        IdleTimeout* context = allocZeroed<IdleTimeout>();
+        *context = IdleTimeout{window, handle};
+        PrHtmlTimerHandler handler{
+            .invoke = idleTimedOut,
+            .context = context,
+            .retain = nullptr,
+            .release = [](void* PR_NULLABLE data) { prMemoryFree(data); },
+        };
+        int32_t clamped = timeout > 0x7fffffffu ? 0x7fffffff : int32_t(timeout);
+        request.timer = htmlWindowSetTimeout(window, &handler, clamped, false, true);
+    }
+    window->idleRequests.push(request);
+    return handle;
+}
+
+void htmlWindowCancelIdleCallback(PrHtmlWindow* window, uint32_t handle) {
+    HtmlIdleRequest request{};
+    if (!takeIdleRequest(&window->idleRequests, handle, &request) && !takeIdleRequest(&window->idleRunnable, handle, &request))
+        return;
+    if (request.timer != 0)
+        htmlWindowClearTimeout(window, request.timer);
+    release(request.callback);
+}
+
+double htmlWindowIdleTimeRemaining(const PrHtmlWindow* window, double deadline) {
+    double remaining = idleCap(window, deadline) - htmlWindowClock(window);
+    return remaining > 0 ? remaining : 0;
+}
+
 uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback) {
     uint32_t handle = ++window->nextFrameHandle;
     if (callback->retain != nullptr)
@@ -541,6 +674,12 @@ void htmlWindowClearTasks(PrHtmlWindow* window) {
     for (uint32_t i = 0; i < window->frameRequests.count; ++i)
         release(window->frameRequests.data[i].callback);
     window->frameRequests.reset();
+    for (uint32_t i = 0; i < window->idleRequests.count; ++i)
+        release(window->idleRequests.data[i].callback);
+    for (uint32_t i = 0; i < window->idleRunnable.count; ++i)
+        release(window->idleRunnable.data[i].callback);
+    window->idleRequests.reset();
+    window->idleRunnable.reset();
     while (window->timers.count != 0) {
         PrHtmlTimerHandler handler = window->timers.last().handler;
         window->timers.erase(window->timers.count - 1);
@@ -553,6 +692,14 @@ bool htmlWindowIsIdle(const PrHtmlWindow* window) {
     for (uint32_t i = 0; i < window->timers.count; ++i) {
         // An interval, like an endless timer, runs until something ends it, which may never happen.
         if (!window->timers.data[i].endless && window->timers.data[i].interval < 0)
+            return false;
+    }
+    for (uint32_t i = 0; i < window->idleRequests.count; ++i) {
+        if (!window->idleRequests.data[i].endless)
+            return false;
+    }
+    for (uint32_t i = 0; i < window->idleRunnable.count; ++i) {
+        if (!window->idleRunnable.data[i].endless)
             return false;
     }
     PrCssPresentation* presentation = presentationOf(window);
@@ -573,7 +720,7 @@ bool htmlWindowIsFullyActive(const PrHtmlWindow* window) {
 }
 
 double htmlWindowNextTaskDelay(const PrHtmlWindow* window) {
-    if (window->taskHead != window->tasks.count)
+    if (window->taskHead != window->tasks.count || window->idleRequests.count != 0 || window->idleRunnable.count != 0)
         return 0;
     uint32_t index = nextTimerIndex(window);
     bool frame = wantsFrame(window);
@@ -625,6 +772,24 @@ PrDomElement* PR_NULLABLE htmlFrameContainer(const PrDomDocument* document) {
         const HtmlFrame& frame = window->parent->frames.data[i];
         if (frame.window == window)
             return frame.container;
+    }
+    return nullptr;
+}
+
+PrHtmlWindow* PR_NULLABLE htmlWindowFrameInTreeOrder(const PrHtmlWindow* window, uint32_t index) {
+    if (index >= window->frames.count)
+        return nullptr;
+    // The frame at `index` has that many frames before it.
+    for (uint32_t i = 0; i < window->frames.count; ++i) {
+        PrDomNode* node = prDomElementAsNode(window->frames.data[i].container);
+        uint32_t before = 0;
+        for (uint32_t k = 0; k < window->frames.count; ++k) {
+            PrDomNode* other = prDomElementAsNode(window->frames.data[k].container);
+            if (k != i && (prDomNodeCompareDocumentPosition(node, other) & PrDomNodePosition_Preceding) != 0)
+                ++before;
+        }
+        if (before == index)
+            return window->frames.data[i].window;
     }
     return nullptr;
 }

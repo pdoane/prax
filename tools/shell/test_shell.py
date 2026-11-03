@@ -258,6 +258,46 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.splitlines(), ["f true", "f", "second"])
 
+    def test_a_message_channel_transfers_a_port_and_buffers_between_realms(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><iframe srcdoc=\"<script>onmessage = e => {"
+                                   "e.ports[0].postMessage(new Uint8Array(e.data.buffer).length);"
+                                   "};</script>\"></iframe><script>\n"
+                                   "onload = () => {\n"
+                                   "const channel = new MessageChannel();\n"
+                                   "channel.port1.onmessage = e => print('reply', e.data);\n"
+                                   "const buffer = new ArrayBuffer(4);\n"
+                                   "window[0].postMessage({buffer}, '*', [channel.port2, buffer]);\n"
+                                   "print(window.length, buffer.byteLength);\n"
+                                   "};</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["1 0", "reply 4"])
+
+    def test_structured_clone_keeps_graphs_and_rejects_what_it_cannot_serialize(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>\n"
+                                   "const o = {get a() { return 7; }, m: new Map([[1, 2]]), e: new RangeError('x')};\n"
+                                   "o.self = o;\n"
+                                   "const c = structuredClone(o);\n"
+                                   "print(c.a, c.m.get(1), c.e instanceof RangeError, c.e.message, c.self === c);\n"
+                                   "try { structuredClone(() => 1); } catch (e) { print(e.name); }\n"
+                                   "</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["7 2 true x true", "DataCloneError"])
+
+    def test_an_idle_callback_runs_after_other_work_and_a_cancelled_one_does_not(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>\n"
+                                   "requestIdleCallback(d => print('idle', d.didTimeout, d.timeRemaining() > 0));\n"
+                                   "cancelIdleCallback(requestIdleCallback(() => print('cancelled')));\n"
+                                   "setTimeout(() => print('timer'));\n"
+                                   "</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["timer", "idle false true"])
+
     def test_template_contents_are_inert_and_their_observers_still_run(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

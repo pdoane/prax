@@ -1,0 +1,147 @@
+diff --git a/quickjs.c b/quickjs.c
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -47807,8 +47807,85 @@
+ static int JS_WriteSet(BCWriterState *s, struct JSMapState *map_state)
+ {
+     return js_map_write(s, map_state, MAGIC_SET);
+ }
+ 
++/* What structured serialization treats an object as. */
++int JS_GetCloneKind(JSValueConst v)
++{
++    JSClassID id;
++
++    if (JS_VALUE_GET_TAG(v) != JS_TAG_OBJECT)
++        return JS_CLONE_OTHER;
++    id = JS_VALUE_GET_OBJ(v)->class_id;
++    if (id >= JS_CLASS_UINT8C_ARRAY && id <= JS_CLASS_FLOAT64_ARRAY)
++        return JS_CLONE_TYPED_ARRAY;
++    switch (id) {
++    case JS_CLASS_OBJECT: return JS_CLONE_PLAIN;
++    case JS_CLASS_ARRAY: return JS_CLONE_ARRAY;
++    case JS_CLASS_NUMBER:
++    case JS_CLASS_STRING:
++    case JS_CLASS_BOOLEAN:
++    case JS_CLASS_BIG_INT:
++    case JS_CLASS_DATE:
++    case JS_CLASS_REGEXP: return JS_CLONE_LEAF;
++    case JS_CLASS_MAP: return JS_CLONE_MAP;
++    case JS_CLASS_SET: return JS_CLONE_SET;
++    case JS_CLASS_ARRAY_BUFFER: return JS_CLONE_ARRAY_BUFFER;
++    case JS_CLASS_DATAVIEW: return JS_CLONE_DATA_VIEW;
++    case JS_CLASS_ERROR: return JS_CLONE_ERROR;
++    default: return JS_CLONE_OTHER;
++    }
++}
++
++/* A new, empty Map or Set of the realm, which no script can intercept. */
++JSValue JS_NewMapObject(JSContext *ctx, bool is_set)
++{
++    return js_map_constructor(ctx, JS_UNDEFINED, 0, NULL, is_set ? MAGIC_SET : 0);
++}
++
++/* Appends an entry to a Map or a Set that JS_NewMapObject made. */
++int JS_MapAppend(JSContext *ctx, JSValueConst map, JSValueConst key, JSValueConst value)
++{
++    JSObject *p = JS_VALUE_GET_OBJ(map);
++    JSMapState *s = p->u.map_state;
++    JSMapRecord *mr = map_add_record(ctx, s, key);
++
++    if (!mr)
++        return -1;
++    mr->value = js_dup(value);
++    return 0;
++}
++
++/* The entries of a Map or a Set as a flat array of key, value, key, value. */
++JSValue JS_MapEntries(JSContext *ctx, JSValueConst map)
++{
++    JSObject *p = JS_VALUE_GET_OBJ(map);
++    JSMapState *s = p->u.map_state;
++    struct list_head *el;
++    uint32_t i = 0;
++    JSValue array = JS_NewArray(ctx);
++
++    if (JS_IsException(array))
++        return array;
++    list_for_each(el, &s->records) {
++        JSMapRecord *mr = list_entry(el, JSMapRecord, link);
++        if (mr->empty)
++            continue;
++        if (JS_SetPropertyUint32(ctx, array, i++, js_dup(mr->key)) < 0 ||
++            JS_SetPropertyUint32(ctx, array, i++, js_dup(mr->value)) < 0) {
++            JS_FreeValue(ctx, array);
++            return JS_EXCEPTION;
++        }
++    }
++    return array;
++}
++
++/* A new error of the realm: EvalError, RangeError, ReferenceError, SyntaxError, TypeError or URIError by `index`. */
++JSValue JS_NewNativeError(JSContext *ctx, int index)
++{
++    return JS_NewObjectProtoClass(ctx, ctx->native_error_proto[index], JS_CLASS_ERROR);
++}
++
+ static int js_setlike_get_size(JSContext *ctx, JSValueConst setlike,
+                                int64_t *pout)
+ {
+@@ -54536,6 +54536,30 @@
+     return js_uint32(ta->length);
+ }
+ 
++/* The buffer of a DataView or a typed array, with its offset and its length in bytes. A length that tracks the buffer
++   sets `track`. */
++JSValue JS_GetViewBuffer(JSContext *ctx, JSValueConst obj, size_t *offset, size_t *length, bool *track)
++{
++    JSObject *p = JS_VALUE_GET_OBJ(obj);
++    JSTypedArray *ta = p->u.typed_array;
++
++    *offset = ta->offset;
++    *length = ta->length;
++    *track = ta->track_rab;
++    return js_dup(JS_MKPTR(JS_TAG_OBJECT, ta->buffer));
++}
++
++/* A new DataView of the realm, which no script can intercept. */
++JSValue JS_NewDataView(JSContext *ctx, JSValueConst buffer, size_t offset, size_t length, bool track)
++{
++    JSValueConst args[3];
++
++    args[0] = buffer;
++    args[1] = js_uint32((uint32_t)offset);
++    args[2] = js_uint32((uint32_t)length);
++    return js_dataview_constructor(ctx, JS_UNDEFINED, track ? 2 : 3, args);
++}
++
+ static JSValue js_dataview_get_byteOffset(JSContext *ctx, JSValueConst this_val)
+ {
+     JSTypedArray *ta;
+diff --git a/quickjs.h b/quickjs.h
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -824,3 +824,23 @@
+ JS_EXTERN bool JS_IsMap(JSValueConst val);
++/* What structured serialization treats an object as (JS_GetCloneKind). */
++enum {
++    JS_CLONE_OTHER,
++    JS_CLONE_PLAIN,
++    JS_CLONE_ARRAY,
++    JS_CLONE_LEAF,
++    JS_CLONE_MAP,
++    JS_CLONE_SET,
++    JS_CLONE_ARRAY_BUFFER,
++    JS_CLONE_TYPED_ARRAY,
++    JS_CLONE_DATA_VIEW,
++    JS_CLONE_ERROR,
++};
++JS_EXTERN int JS_GetCloneKind(JSValueConst v);
++JS_EXTERN JSValue JS_NewMapObject(JSContext *ctx, bool is_set);
++JS_EXTERN int JS_MapAppend(JSContext *ctx, JSValueConst map, JSValueConst key, JSValueConst value);
++JS_EXTERN JSValue JS_MapEntries(JSContext *ctx, JSValueConst map);
++JS_EXTERN JSValue JS_NewNativeError(JSContext *ctx, int index);
++JS_EXTERN JSValue JS_GetViewBuffer(JSContext *ctx, JSValueConst obj, size_t *offset, size_t *length, bool *track);
++JS_EXTERN JSValue JS_NewDataView(JSContext *ctx, JSValueConst buffer, size_t offset, size_t length, bool track);
+ 
+ JS_EXTERN JSValue JS_NewArray(JSContext *ctx);

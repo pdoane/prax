@@ -47,6 +47,7 @@ typedef struct PrHtmlMessageEvent PrHtmlMessageEvent;
 typedef struct PrHtmlPageRevealEvent PrHtmlPageRevealEvent;
 typedef struct PrHtmlTimerHandler PrHtmlTimerHandler;
 typedef struct PrHtmlFrameRequestCallback PrHtmlFrameRequestCallback;
+typedef struct PrHtmlIdleRequestCallback PrHtmlIdleRequestCallback;
 typedef struct PrHtmlWindow PrHtmlWindow;
 typedef struct PrHtmlPreferenceObject PrHtmlPreferenceObject;
 typedef struct PrHtmlPerformance PrHtmlPerformance;
@@ -1034,6 +1035,22 @@ struct PrHtmlFrameRequestCallback {
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
+// IdleRequestCallback (requestidlecallback)
+
+// Called in an idle period that ends at `deadline`, on the window's clock, or with `didTimeout` true if the request's
+// timeout passed first.
+typedef void (*PrHtmlIdleRequestFn)(void* PR_NULLABLE context, double deadline, bool didTimeout);
+
+// The function that an idle request calls, with its context. A request keeps a copy of its callback, and calls `retain`
+// and `release` on the copy's context if they are given.
+struct PrHtmlIdleRequestCallback {
+    PrHtmlIdleRequestFn invoke;
+    void* PR_NULLABLE context;
+    void (*PR_NULLABLE retain)(void* PR_NULLABLE context);
+    void (*PR_NULLABLE release)(void* PR_NULLABLE context);
+};
+
+// ---------------------------------------------------------------------------------------------------------------------
 // PreferenceObject : EventTarget (mediaqueries)
 //
 // A user preference that a script can override (mediaqueries-5/#auto-pref). A query then sees the overridden value of
@@ -1198,11 +1215,12 @@ PrHtmlScreenOrientation* prHtmlWindowScreenOrientation(PrHtmlWindow* window);
 PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* window);
 
 // Queues a message event at the window from `source` (html/#window-post-message-steps). The event's data is
-// `serialized`, the bytes that a script serialized the message to. `targetOrigin` is "*" for any origin, "/" for the
-// origin of `source`, or a URL whose origin the window's document must have. The event is dropped if the document's
-// origin does not match. Returns Syntax if `targetOrigin` is none of those.
+// `serialized`, the bytes that a script serialized the message to, and it carries `ports`, the ports that the message
+// transfers (PrHtmlMessagePort), of which the call takes a reference to each. `targetOrigin` is "*" for any origin, "/"
+// for the origin of `source`, or a URL whose origin the window's document must have. The event is dropped if the
+// document's origin does not match. Returns Syntax if `targetOrigin` is none of those.
 PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrStringView serialized,
-    PrStringView targetOrigin);
+    PrDomEventTarget* PR_NONNULL const* PR_NULLABLE ports, uint32_t portCount, PrStringView targetOrigin);
 
 // Returns a component of the URL of the window's document (html/#the-location-interface).
 PrString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component);
@@ -1243,6 +1261,15 @@ bool prHtmlWindowHasStickyActivation(const PrHtmlWindow* window);
 // Returns true if the user interacted with the window's document recently, and no API has consumed that interaction
 // since (html/#transient-activation).
 bool prHtmlWindowHasTransientActivation(const PrHtmlWindow* window);
+
+// Returns the number of the window's document-tree child navigables, or one of their windows, in the tree order of
+// their containers (html/#dom-length, html/#accessing-other-browsing-contexts).
+uint32_t prHtmlWindowLength(const PrHtmlWindow* window);
+PrHtmlWindow* PR_NULLABLE prHtmlWindowFrame(PrHtmlWindow* window, uint32_t index);
+
+// Returns the window of the first child navigable in tree order whose target name is `name`, or null if there is none
+// or its document has another origin (html/#document-tree-child-navigable-target-name-property-set).
+PrHtmlWindow* PR_NULLABLE prHtmlWindowFrameFromName(PrHtmlWindow* window, PrStringView name);
 
 // Returns the first element in tree order that is a named object for `name` (html/#named-access-on-the-window-object),
 // or null if there is none.
@@ -1298,6 +1325,17 @@ void prHtmlWindowRunAfterTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler*
 // releases its callback.
 uint32_t prHtmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback);
 void prHtmlWindowCancelAnimationFrame(PrHtmlWindow* window, uint32_t handle);
+
+// Runs `callback` in an idle period of the window's event loop, and retains a copy of it
+// (requestidlecallback/#the-requestidlecallback-method). If `timeout` is positive, the callback runs after that many
+// milliseconds if no idle period has come by then. Returns the request's handle, which is never zero.
+uint32_t prHtmlWindowRequestIdleCallback(PrHtmlWindow* window, const PrHtmlIdleRequestCallback* callback, uint32_t timeout);
+void prHtmlWindowCancelIdleCallback(PrHtmlWindow* window, uint32_t handle);
+
+// Returns the milliseconds left before `deadline`, which an idle callback received, or before a timer or an animation
+// frame that has since become due first (requestidlecallback/#dom-idledeadline-timeremaining). The result is never
+// negative.
+double prHtmlWindowIdleTimeRemaining(const PrHtmlWindow* window, double deadline);
 
 // Dispatches `event` at the window as a trusted event (html/#report-an-exception). `event` must be an ErrorEvent that
 // the caller made cancelable. Returns true if no listener canceled it, which means that the exception still needs to be

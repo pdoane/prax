@@ -60,6 +60,14 @@ struct HtmlFrame {
     PrHtmlWindow* window;
 };
 
+// A request for an idle callback (requestidlecallback/#the-requestidlecallback-method).
+struct HtmlIdleRequest {
+    PrHtmlIdleRequestCallback callback;
+    uint32_t handle;
+    int32_t timer;      // the timer of the request's timeout, or zero if it has none
+    bool endless;       // true if an idle callback made the request, which a loop of callbacks can repeat forever
+};
+
 // The Window of a browsing context (html/#the-window-object). It is reference counted (DomCountedTarget): its page
 // holds a reference while the window is its page's, and the script objects of the window and of its members hold
 // references too, so that a window that its page has closed outlives the objects that name it.
@@ -102,6 +110,7 @@ struct HtmlWindow : DomCountedTarget {
     Array<HtmlTask> tasks;                    // in the order in which they were queued
     uint32_t taskHead;                        // the first task that has not run
     uint32_t delayingTasks;                   // the number of pending tasks that delay the load event
+    uint32_t queuedRun;                       // the queued tasks that have run since anything else did
     Array<HtmlFrameRequest> frameRequests;    // in the order in which they were requested
 
     // The requests that the running frame took over. A canceled request has a null invoke.
@@ -127,6 +136,16 @@ struct HtmlWindow : DomCountedTarget {
 
     int32_t nextTimerId;       // the id that the last timer was given
     uint32_t nextFrameHandle;  // the handle that the last frame request was given
+
+    // The idle requests (requestidlecallback/#start-an-idle-period-algorithm). A request waits in `idleRequests` until
+    // an idle period starts, which moves it to `idleRunnable`, so that a request made in an idle period waits for the
+    // next one.
+    Array<HtmlIdleRequest> idleRequests;
+    Array<HtmlIdleRequest> idleRunnable;
+    uint32_t nextIdleHandle;
+    double idleDeadline;       // the end of the current idle period, on the clock
+    bool runningIdle;          // true during an idle callback
+
     bool runningTask;          // true while a task or a timer's handler is on the stack
 
     // The timer whose handler is running, or 0, its nesting level, and whether the handler cleared it, which ends an
@@ -203,6 +222,11 @@ void htmlWindowNotifyDescendants(PrHtmlWindow* window, double now);
 // Consumes the transient activation of every window in the tree of `window` (html/#consume-user-activation).
 void htmlWindowConsumeActivation(PrHtmlWindow* window);
 
+// Implements prHtmlWindowRequestIdleCallback, prHtmlWindowCancelIdleCallback and prHtmlWindowIdleTimeRemaining.
+uint32_t htmlWindowRequestIdleCallback(PrHtmlWindow* window, const PrHtmlIdleRequestCallback* callback, uint32_t timeout);
+void htmlWindowCancelIdleCallback(PrHtmlWindow* window, uint32_t handle);
+double htmlWindowIdleTimeRemaining(const PrHtmlWindow* window, double deadline);
+
 // Requests that `callback` run at the next rendering opportunity, and returns the request's handle.
 uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback);
 
@@ -243,6 +267,9 @@ PrHtmlWindow* PR_NULLABLE htmlFrameWindow(const PrDomElement* container);
 // Returns the element that contains the browsing context of `document`, such as its iframe, or null for a top-level
 // document or a document that its browsing context no longer shows.
 PrDomElement* PR_NULLABLE htmlFrameContainer(const PrDomDocument* document);
+
+// Returns the window of the frame at `index` among the window's frames in the tree order of their containers.
+PrHtmlWindow* PR_NULLABLE htmlWindowFrameInTreeOrder(const PrHtmlWindow* window, uint32_t index);
 
 // Returns the first element in tree order that is a named object for `name` (html/#named-access-on-the-window-object).
 // Such an element has the id `name`, or is an HTML embed, form, img or object element whose name attribute is `name`.

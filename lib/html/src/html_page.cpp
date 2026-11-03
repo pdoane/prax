@@ -1375,15 +1375,6 @@ bool loadsItself(const PrHtmlPage* page, const PrUrl* url) {
     return found;
 }
 
-// Returns the window of the browsing context that the iframe holds, or null.
-PrHtmlWindow* PR_NULLABLE frameWindow(const PrHtmlPage* page, const PrDomElement* element) {
-    for (uint32_t i = 0; i < page->window->frames.count; ++i) {
-        if (page->window->frames.data[i].container == element)
-            return page->window->frames.data[i].window;
-    }
-    return nullptr;
-}
-
 // Returns true if `url` matches about:blank (html/#matches-about:blank), which an iframe shows with no fetch.
 bool isBlank(const PrUrl* url) {
     return prUrlScheme(url) == "about" && prUrlPath(url) == "blank";
@@ -1402,10 +1393,10 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
     // A javascript: URL navigates the browsing context that the iframe holds, and its document stays unless the script
     // replaces it (html/#process-the-iframe-attributes). A new iframe holds an about:blank with its container's origin.
     if (parsed && prUrlScheme(resolved) == "javascript" && inWindow(page, element)) {
-        PrHtmlWindow* child = frameWindow(page, element);
+        PrHtmlWindow* child = htmlFrameWindow(element);
         if (child == nullptr) {
             attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{});
-            child = frameWindow(page, element);
+            child = htmlFrameWindow(element);
         }
         PrString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
         htmlPageNavigate(child, page->window, prStringView(&href), HtmlHistoryCommit_Replace, child->history->index);
@@ -1758,8 +1749,8 @@ bool activates(void* PR_NULLABLE, const PrDomElement* element) {
 }
 
 // Gives the browsing context of an iframe the iframe's new name (html/#the-iframe-element).
-void frameNameChanged(PrHtmlPage* page, const PrDomElement* element) {
-    PrHtmlWindow* window = frameWindow(page, element);
+void frameNameChanged(const PrDomElement* element) {
+    PrHtmlWindow* window = htmlFrameWindow(element);
     PrHtmlPage* child = window != nullptr ? htmlDocumentPage(window->document) : nullptr;
     if (child != nullptr)
         prStringReplace(&child->targetName, domAttributeValue(element, "name"));
@@ -1786,7 +1777,7 @@ void embedChanged(void* PR_NULLABLE context, PrDomElement* element, PrStringView
             if (connection || attribute == "src" || attribute == "srcdoc")
                 frameChanged(page, element);
             else if (attribute == "name")
-                frameNameChanged(page, element);
+                frameNameChanged(element);
             return;
         case PrDomTag_Object:
             if (connection || attribute == "data" || attribute == "type")
@@ -2713,18 +2704,6 @@ PrStatus startNavigation(PrHtmlPage* page, PrStringView url, PrStringView origin
 // if it still runs.
 void dropDocumentLoad(PrHtmlPage* page);
 
-// Returns true if the page's browsing context is still in the tree of its parent.
-bool isAttached(const PrHtmlPage* page) {
-    const PrHtmlWindow* parent = page->window->parent;
-    if (parent == nullptr)
-        return true;
-    for (uint32_t i = 0; i < parent->frames.count; ++i) {
-        if (parent->frames.data[i].window == page->window)
-            return true;
-    }
-    return false;
-}
-
 // Runs a javascript: URL in the page's document (html/#navigate-to-a-javascript:-url). A string that the script
 // completes with becomes the markup of a new document at the same URL, which replaces the current entry. Any other
 // completion leaves the document in place. A navigation that the script starts takes precedence over the string.
@@ -2744,7 +2723,7 @@ void runJavascriptUrl(PrHtmlPage* page, const Navigation* navigation) {
     bool isDocument = page->host.evaluate(page->host.context, page, source, &result);
     prStringReset(&text);
     textReset(&decoded);
-    if (isDocument && page->pendingNavigation == 0 && isAttached(page) && !page->loading) {
+    if (isDocument && page->pendingNavigation == 0 && htmlWindowIsFullyActive(page->window) && !page->loading) {
         PrString documentUrl = prDomDocumentUrl(page->window->document);
         PrHtmlResponseHeaders headers{.contentType = "text/html;charset=utf-8"};
         abortDocument(page);
