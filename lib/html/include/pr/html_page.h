@@ -6,6 +6,7 @@
 
 #include "pr/app_display.h"
 #include "pr/app_user_preferences.h"
+#include "pr/audio_mixer.h"
 #include "pr/byte_view.h"
 #include "pr/charset.h"
 #include "pr/css_presentation.h"
@@ -186,6 +187,10 @@ typedef struct PrHtmlHost {
     // The codec that reads the media resources of video and audio elements, and decodes the frames of their video,
     // which must outlive the page. If null, no media resource plays. If null, an iframe's page uses its parent's codec.
     PrMediaCodec* PR_NULLABLE media;
+
+    // The mixer that plays the audio of video and audio elements, which must outlive the page. If null, media elements
+    // play without sound, on the clock. If null, an iframe's page uses its parent's mixer.
+    PrAudioMixer* PR_NULLABLE mixer;
 
     // The device that the renderer presenting the documents renders on, or null if that renderer renders in memory. It
     // must outlive the page. The page keeps content that the renderer draws into on that device, such as the bitmaps of

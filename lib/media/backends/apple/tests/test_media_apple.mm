@@ -96,6 +96,74 @@ bool waitForFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
     return false;
 }
 
+// Returns an AAC file of `seconds` of a sine at `frequency`, or nothing if the system cannot encode one.
+std::vector<uint8_t> encodeTone(double frequency, double seconds) {
+    @autoreleasepool {
+        NSString* path = [NSTemporaryDirectory()
+            stringByAppendingPathComponent:[NSString stringWithFormat:@"prax-tone-%@.m4a", NSUUID.UUID.UUIDString]];
+        NSURL* url = [NSURL fileURLWithPath:path];
+        NSDictionary* settings = @{
+            AVFormatIDKey: @(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: @44100,
+            AVNumberOfChannelsKey: @1,
+        };
+        NSError* error = nil;
+        std::vector<uint8_t> bytes;
+        {
+            AVAudioFile* file = [[AVAudioFile alloc] initForWriting:url settings:settings error:&error];
+            if (file == nil)
+                return {};
+            AVAudioFormat* format = file.processingFormat;
+            AVAudioFrameCount frames = AVAudioFrameCount(seconds * format.sampleRate);
+            AVAudioPCMBuffer* buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:format frameCapacity:frames];
+            buffer.frameLength = frames;
+            for (AVAudioFrameCount i = 0; i < frames; ++i)
+                buffer.floatChannelData[0][i] = float(0.5 * sin(2 * M_PI * frequency * i / format.sampleRate));
+            if (![file writeFromBuffer:buffer error:&error])
+                return {};
+        }
+        NSData* data = [NSData dataWithContentsOfURL:url];
+        [NSFileManager.defaultManager removeItemAtURL:url error:nil];
+        if (data != nil) {
+            const uint8_t* start = static_cast<const uint8_t*>(data.bytes);
+            bytes.assign(start, start + data.length);
+        }
+        return bytes;
+    }
+}
+
+// Reads the decoder's audio until `frames` frames arrive or the audio ends, waiting between reads. Writes where the
+// first frame lies to `time`.
+std::vector<float> readAudio(PrMediaDecoder* decoder, uint32_t frames, double* time) {
+    std::vector<float> samples(frames);
+    uint32_t got = 0;
+    bool timed = false;
+    for (int waits = 0; got < frames && waits < 2000;) {
+        PrMediaAudioChunk chunk = prMediaDecoderAudioRead(decoder, samples.data() + got, frames - got);
+        if (chunk.ended)
+            break;
+        if (chunk.frames == 0) {
+            prThreadSleep(1);
+            ++waits;
+            continue;
+        }
+        if (!timed)
+            *time = chunk.time;
+        timed = true;
+        got += chunk.frames;
+    }
+    samples.resize(got);
+    return samples;
+}
+
+// The frequency of the samples at `rate`, by their crossings of zero.
+double frequencyOf(const std::vector<float>& samples, double rate) {
+    uint32_t crossings = 0;
+    for (size_t i = 1; i < samples.size(); ++i)
+        crossings += (samples[i - 1] < 0) != (samples[i] < 0) ? 1 : 0;
+    return double(crossings) / 2 / (double(samples.size()) / rate);
+}
+
 // Returns the red level at the frame's center.
 uint8_t centerRed(const PrMediaFrame& frame) {
     return frame.pixels.data[(frame.pixels.extent.y / 2) * frame.pixels.stride + (frame.pixels.extent.x / 2) * 4 + 2];
@@ -106,6 +174,36 @@ uint8_t centerRed(const PrMediaFrame& frame) {
 } // namespace pr_impl
 
 using namespace pr_impl;
+
+TEST_CASE("the AVFoundation codec decodes AAC at the rate asked for, and seeks in it") {
+    std::vector<uint8_t> bytes = encodeTone(1000, 2);
+    REQUIRE(!bytes.empty());
+    PrMediaCodec* codec = prMediaAppleCreate();
+    PrMediaDecoder* decoder = nullptr;
+    PrMediaInfo info{};
+    REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
+    CHECK(info.hasAudio);
+    CHECK(!info.hasVideo);
+    REQUIRE(prMediaDecoderAudioStart(decoder, 48000, 1, 0));
+    double time = -1;
+    std::vector<float> samples = readAudio(decoder, 24000, &time);
+    REQUIRE(samples.size() == 24000);
+    CHECK(time == doctest::Approx(0).epsilon(0.05));
+    CHECK(frequencyOf(samples, 48000) == doctest::Approx(1000).epsilon(0.02));
+
+    prMediaDecoderAudioSeek(decoder, 1.5);
+    samples = readAudio(decoder, 12000, &time);
+    REQUIRE(samples.size() == 12000);
+    CHECK(time == doctest::Approx(1.5).epsilon(0.01));
+
+    // Reading to the end reports the end.
+    samples = readAudio(decoder, 96000, &time);
+    CHECK(samples.size() < 24000);
+    float nothing = 0;
+    CHECK(prMediaDecoderAudioRead(decoder, &nothing, 1).ended);
+    prMediaDecoderDestroy(decoder);
+    prMediaCodecDestroy(codec);
+}
 
 TEST_CASE("the AVFoundation codec reads a movie from memory and decodes the frame that shows at each time") {
     std::vector<uint8_t> bytes = encodeMovie();

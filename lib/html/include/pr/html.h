@@ -634,8 +634,9 @@ PrHtmlSourceElement* PR_NULLABLE prHtmlSourceElementQuery(PrDomEventTarget* PR_N
 // The interface of the video and audio elements (html/#htmlvideoelement, html/#htmlaudioelement). The engine plays a
 // media resource as a timeline, which the host's media codec reads (PrHtmlHost::media). A resource is supported if the
 // codec reads it. Its media data is available as soon as it is fetched. A video element shows the frame at its playback
-// position, where the codec decodes frames, or else its poster frame. A media element plays only if its document is its
-// window's document.
+// position, where the codec decodes frames, or else its poster frame. The host's mixer plays its audio
+// (PrHtmlHost::mixer), and its timeline follows that audio while it plays. A media element plays only if its document
+// is its window's document.
 
 // An HTMLMediaElement as each interface it inherits from.
 PR_HANDLE_UPCAST(HtmlMediaElement, HtmlElement, HtmlElement)

@@ -91,6 +91,7 @@ struct HtmlWindow : DomCountedTarget {
     PrImageCodec* PR_NULLABLE images;
 
     PrMediaCodec* PR_NULLABLE mediaCodec;     // reads the resources of its document's media elements, or null
+    PrAudioMixer* PR_NULLABLE mixer;          // plays the audio of its document's media elements, or null
 
     // The default User-Agent value of the host's fetcher (prFetchNetworkUserAgent), or empty without one, and the
     // navigator compatibility mode of the host.

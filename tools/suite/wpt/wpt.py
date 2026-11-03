@@ -104,6 +104,7 @@ SUITES = {
                     "server-timing"),
     "svg": ("svg",),
     "url": ("url",),
+    "webaudio": ("webaudio",),
     "xhr": ("xhr",),
 }
 # The directories inside a suite's that no suite runs.

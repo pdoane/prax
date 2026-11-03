@@ -252,7 +252,7 @@ of a change to it is what the change did.
 | webmessaging/multi-globals                          |       4/4 |           0/4 |    0.0% |
 | webmessaging/with-options                           |       9/9 |           9/9 |  100.0% |
 | webmessaging/with-ports                             |     23/24 |         37/39 |   94.8% |
-| webmessaging/without-ports                          |     25/27 |         37/41 |   90.2% |
+| webmessaging/without-ports                          |     25/27 |         38/41 |   92.6% |
 | webstorage                                          |     38/54 |     1231/1285 |   95.7% |
 | workers                                             |    89/112 |        23/226 |   10.1% |
 | workers/baseurl                                     |       3/7 |           0/7 |    0.0% |
@@ -263,7 +263,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8371/9525 | 126038/157051 |   80.2% |
+| **total**                                           | 8371/9525 | 126039/157051 |   80.2% |
 
 ## infrastructure
 
@@ -407,6 +407,14 @@ of a change to it is what the change did.
 |-----------|------:|-----------:|--------:|
 | url       | 49/49 | 9772/10036 |   97.3% |
 | **total** | 49/49 | 9772/10036 |   97.3% |
+
+## webaudio
+
+| Module                 |   Files |    Tests | Passing |
+|------------------------|--------:|---------:|--------:|
+| webaudio               |     2/2 |  15/1173 |    1.2% |
+| webaudio/the-audio-api | 302/350 | 706/1774 |   39.7% |
+| **total**              | 304/352 | 721/2947 |   24.4% |
 
 ## xhr
 

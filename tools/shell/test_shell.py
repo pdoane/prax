@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Integration tests for browsing-context resource loading in pr_shell."""
 
+import math
 import os
 from pathlib import Path
 import socket
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 import zlib
@@ -29,6 +31,46 @@ def mp4(seconds, width, height):
     return box(b"ftyp", b"isom" + bytes(4)) + box(b"moov", box(b"mvhd", header) + trak)
 
 
+def wave(tones, rate=48000):
+    """Returns a WAVE file of 16-bit mono samples that plays each (frequency, seconds) of `tones` in turn."""
+    samples = bytearray()
+    for frequency, seconds in tones:
+        for i in range(int(seconds * rate)):
+            samples += struct.pack("<h", int(16000 * math.sin(2 * math.pi * frequency * i / rate)))
+    fmt = struct.pack("<HHIIHH", 1, 1, rate, rate * 2, 2, 16)
+    return b"RIFF" + struct.pack("<I", 36 + len(samples)) + b"WAVE" + \
+        b"fmt " + struct.pack("<I", 16) + fmt + b"data" + struct.pack("<I", len(samples)) + bytes(samples)
+
+
+def played(path):
+    """Returns the first channel of the audio that a run wrote, and its sample rate."""
+    data = Path(path).read_bytes()
+    rate, = struct.unpack_from("<I", data, 24)
+    channels, = struct.unpack_from("<H", data, 22)
+    samples = struct.unpack_from("<%df" % ((len(data) - 44) // 4), data, 44)
+    return samples[::channels], rate
+
+
+def loudness(samples):
+    """Returns the root mean square of the samples."""
+    return math.sqrt(sum(s * s for s in samples) / len(samples)) if samples else 0
+
+
+def frequency(samples, rate):
+    """Returns the frequency of the samples, by their crossings of zero."""
+    crossings = sum(1 for a, b in zip(samples, samples[1:]) if (a < 0) != (b < 0))
+    return crossings / 2 / (len(samples) / rate) if samples else 0
+
+
+def sounding(samples, rate):
+    """Returns the samples from the first sound on, which begins when the page's audio does."""
+    window = rate // 100
+    for at in range(0, len(samples), window):
+        if loudness(samples[at:at + window]) > 0.01:
+            return samples[at:]
+    return []
+
+
 def png(width, height):
     """Returns a PNG of `width` by `height` opaque gray pixels."""
     def chunk(kind, payload):
@@ -50,6 +92,107 @@ class HtmlHostTests(unittest.TestCase):
         page.parent.mkdir(exist_ok=True)
         page.write_text(source)
         return subprocess.run([SHELL, *options, "--html", str(page)], capture_output=True, encoding="utf-8", timeout=10)
+
+    def run_audio(self, root, tones, script, attributes=""):
+        """Runs a page with an audio element of `tones`, which `script` drives, and returns what the page played."""
+        (root / "pages").mkdir(exist_ok=True)
+        (root / "pages" / "tone.wav").write_bytes(wave(tones))
+        written = root / "written.wav"
+        result = self.run_page(root,
+            "<audio id=a src=tone.wav %s></audio><script>%s</script>" % (attributes, script),
+            "--media", "apple", "--audio", "memory", "--audio-write", str(written), "--timeout", "15000")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        samples, rate = played(written)
+        return result.stdout, samples, rate
+
+    @unittest.skipUnless(sys.platform == "darwin", "reads audio with the AVFoundation codec")
+    def test_an_audio_element_plays_its_resource_and_its_timeline_follows_the_sound(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out, samples, rate = self.run_audio(Path(directory), [(1000, 1)],
+                "a.addEventListener('ended', () => print('ended', a.currentTime.toFixed(1)));a.play();")
+            self.assertEqual(out.strip(), "ended 1.0")
+            sound = sounding(samples, rate)
+            self.assertAlmostEqual(len(sound) / rate, 1, delta=0.3)
+            middle = sound[rate // 4:rate // 2]
+            self.assertAlmostEqual(loudness(middle), 16000 / 32768 / math.sqrt(2), delta=0.03)
+            self.assertAlmostEqual(frequency(middle, rate), 1000, delta=20)
+
+    @unittest.skipUnless(sys.platform == "darwin", "reads audio with the AVFoundation codec")
+    def test_a_muted_audio_element_is_silent_and_its_volume_scales_its_sound(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, samples, rate = self.run_audio(Path(directory), [(1000, 0.5)], "a.play();", "muted")
+            self.assertLess(loudness(samples), 0.001)
+        with tempfile.TemporaryDirectory() as directory:
+            _, samples, rate = self.run_audio(Path(directory), [(1000, 1)], "a.volume = 0.5;a.play();")
+            middle = sounding(samples, rate)[rate // 4:rate // 2]
+            self.assertAlmostEqual(loudness(middle), 16000 / 32768 / math.sqrt(2) / 2, delta=0.02)
+
+    @unittest.skipUnless(sys.platform == "darwin", "reads audio with the AVFoundation codec")
+    def test_a_seek_moves_the_sound_and_a_pause_silences_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out, samples, rate = self.run_audio(Path(directory), [(500, 1), (2000, 1)],
+                "a.addEventListener('canplay', () => { a.currentTime = 1; a.play(); }, {once: true});"
+                "a.addEventListener('ended', () => print('ended'));")
+            self.assertEqual(out.strip(), "ended")
+            sound = sounding(samples, rate)
+            self.assertAlmostEqual(frequency(sound[rate // 4:rate // 2], rate), 2000, delta=40)
+        with tempfile.TemporaryDirectory() as directory:
+            out, samples, rate = self.run_audio(Path(directory), [(1000, 1)],
+                "a.addEventListener('canplay', async () => {"
+                "  await a.play();"
+                "  await new Promise(r => setTimeout(r, 300)); a.pause(); const at = a.currentTime;"
+                "  await new Promise(r => setTimeout(r, 400)); print(a.currentTime === at); a.play();"
+                "}, {once: true});"
+                "a.addEventListener('ended', () => print('ended'));")
+            self.assertEqual(out.split(), ["true", "ended"])
+            sound = sounding(samples, rate)
+            # The pause is a stretch of silence inside the sound.
+            windows = [loudness(sound[at:at + rate // 100]) for at in range(0, len(sound), rate // 100)]
+            quiet = [i for i, level in enumerate(windows) if level < 0.001]
+            first = quiet[0] if quiet else len(windows)
+            self.assertGreater(sum(1 for i in quiet if first <= i < first + 30), 25)
+            self.assertTrue(any(level > 0.1 for level in windows[first + 30:]))
+
+    @unittest.skipUnless(sys.platform == "darwin", "reads audio with the AVFoundation codec")
+    def test_removing_an_iframe_stops_the_sound_of_its_page(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pages").mkdir()
+            (root / "pages" / "tone.wav").write_bytes(wave([(1000, 5)]))
+            (root / "pages" / "child.html").write_text(
+                "<iframe src=grandchild.html></iframe><audio id=a src=tone.wav></audio><script>"
+                "a.addEventListener('canplay', async () => { await a.play(); parent.postMessage('on', '*'); });"
+                "</script>")
+            (root / "pages" / "grandchild.html").write_text("<audio id=a src=tone.wav autoplay></audio>")
+            written = root / "written.wav"
+            result = self.run_page(root,
+                "<div id=d><iframe src=child.html></iframe></div><script>"
+                "addEventListener('message', async () => {"
+                "  await new Promise(r => setTimeout(r, 500)); d.innerHTML = '';"
+                "  await new Promise(r => setTimeout(r, 700)); print('removed');"
+                "});</script>",
+                "--media", "apple", "--audio", "memory", "--audio-write", str(written), "--timeout", "15000")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), "removed")
+            samples, rate = played(written)
+            self.assertGreater(loudness(samples[rate // 4:rate // 2]), 0.1)
+            # The sound ends at the removal, half a second after it began, and the page runs on for 0.7 seconds.
+            self.assertLess(len(sounding(samples, rate)) / rate, 0.9)
+
+    @unittest.skipUnless(sys.platform == "darwin", "reads audio with the AVFoundation codec")
+    def test_a_playback_rate_keeps_the_pitch_unless_told_otherwise(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out, samples, rate = self.run_audio(Path(directory), [(1000, 2)],
+                "a.playbackRate = 2;a.addEventListener('ended', () => print('ended'));a.play();")
+            self.assertEqual(out.strip(), "ended")
+            sound = sounding(samples, rate)
+            self.assertAlmostEqual(len(sound) / rate, 1, delta=0.3)
+            self.assertAlmostEqual(frequency(sound[rate // 8:rate // 2], rate), 1000, delta=30)
+        with tempfile.TemporaryDirectory() as directory:
+            _, samples, rate = self.run_audio(Path(directory), [(1000, 2)],
+                "a.preservesPitch = false;a.playbackRate = 2;a.play();")
+            sound = sounding(samples, rate)
+            self.assertAlmostEqual(frequency(sound[rate // 8:rate // 2], rate), 2000, delta=40)
 
     def test_a_local_page_loads_at_its_file_url_and_resolves_encoded_resources(self):
         with tempfile.TemporaryDirectory() as directory:

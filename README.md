@@ -28,7 +28,7 @@ The libraries, by area. The first comment of each library's `CMakeLists.txt` say
 | area | libraries |
 | --- | --- |
 | Foundation | `core`, `task`, `cache`, `storage`, `webidl` |
-| System | `app`, `gpu`, `media` |
+| System | `app`, `gpu`, `audio`, `media` |
 | Networking | `net`, `tls`, `http`, `websocket`, `fetch`, `xhr`, `url`, `mime` |
 | Data | `json`, `xml`, `compress`, `image`, `color`, `geom`, `charset`, `locale`, `unicode`, `html_entity` |
 | Text | `font`, `font_bundle`, `text` |
@@ -129,6 +129,9 @@ platform supports.
 | task pool | `PR_TASK_BUILTIN` | Prax | every platform | on |
 | compression | `PR_COMPRESS_BUILTIN` | Prax | every platform | on |
 | image codecs | `PR_IMAGE_BUILTIN` | Prax | every platform | on |
+| audio | `PR_AUDIO_MEMORY` | output kept in memory, for a run without a device | every platform | on |
+| audio | `PR_AUDIO_APPLE` | Core Audio | Apple platforms | on |
+| audio | `PR_AUDIO_WINDOWS` | WASAPI | Windows | on |
 | media | `PR_MEDIA_BUILTIN` | Prax | every platform | on |
 | media | `PR_MEDIA_APPLE` | AVFoundation | Apple platforms | on |
 | media | `PR_MEDIA_WINDOWS` | Media Foundation | Windows | on |

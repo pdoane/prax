@@ -1,7 +1,7 @@
-// Media: reading audio and video resources, and decoding the frames of their video.
+// Media: reading audio and video resources, and decoding their audio and the frames of their video.
 //
 // A codec may be used from any number of threads at once. A decoder is used by one thread at a time, and decodes ahead
-// on threads of its own.
+// on threads of its own. The exception is prMediaDecoderAudioRead, which one other thread may call at any time.
 
 #pragma once
 
@@ -51,14 +51,22 @@ typedef struct PrMediaFrame {
     bool current;
 } PrMediaFrame;
 
+// Samples of a resource's audio that one read gave.
+typedef struct PrMediaAudioChunk {
+    uint32_t frames;
+    double time;            // where the first frame lies on the resource's timeline, in seconds
+    bool ended;             // no frames follow until the decoder seeks
+} PrMediaAudioChunk;
+
 // The start of every decoder's state. `codec` is the codec that created the decoder.
 struct PrMediaDecoder {
     PrMediaCodec* codec;
 };
 
 // The function table of a codec, placed at the start of the backend's state. Each function member implements the public
-// function of the same name. A null `destroy` means there is nothing to free, and a null `decoderFrame` that the codec
-// decodes no frames. Callers use the functions below, never these members.
+// function of the same name. A null `destroy` means there is nothing to free, a null `decoderFrame` that the codec
+// decodes no frames, and a null `decoderAudioStart` that it decodes no audio, and then `decoderAudioSeek` and
+// `decoderAudioRead` are null too. Callers use the functions below, never these members.
 struct PrMediaCodec {
     void (*PR_NULLABLE destroy)(PrMediaCodec* codec);
     PrMediaSupport (*supportsType)(PrMediaCodec* codec, PrStringView type);
@@ -66,6 +74,11 @@ struct PrMediaCodec {
         PrMediaInfo* info);
     void (*decoderDestroy)(PrMediaCodec* codec, PrMediaDecoder* decoder);
     bool (*PR_NULLABLE decoderFrame)(PrMediaCodec* codec, PrMediaDecoder* decoder, double seconds, PrMediaFrame* out);
+    bool (*PR_NULLABLE decoderAudioStart)(PrMediaCodec* codec, PrMediaDecoder* decoder, uint32_t sampleRate,
+        uint32_t channels, double seconds);
+    void (*PR_NULLABLE decoderAudioSeek)(PrMediaCodec* codec, PrMediaDecoder* decoder, double seconds);
+    PrMediaAudioChunk (*PR_NULLABLE decoderAudioRead)(PrMediaCodec* codec, PrMediaDecoder* decoder, float* samples,
+        uint32_t frames);
 };
 
 // The library's backends of codecs, which the build turns on (README.md), and Default, the platform's own or else the
@@ -118,6 +131,20 @@ bool prMediaDecoderHasFrames(const PrMediaDecoder* decoder);
 // threads, so that a later call returns the frame that shows there. A time before what the decoder kept, or far past
 // what it reached, seeks.
 bool prMediaDecoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out);
+
+// Starts decoding the resource's first audio track from `seconds` on a thread of the decoder's own, converted to
+// `sampleRate` and `channels`. A decoder starts at most once. Returns false if the codec decodes no audio, or the
+// resource has none that it decodes.
+bool prMediaDecoderAudioStart(PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds);
+
+// Continues the audio from `seconds`. The audio must have started. Reads return nothing until samples from there are
+// decoded.
+void prMediaDecoderAudioSeek(PrMediaDecoder* decoder, double seconds);
+
+// Writes up to `frames` frames of interleaved samples to `samples`. The audio must have started. The call does not wait
+// or allocate, so a real-time thread may make it, while other calls on the decoder run. Destroying the decoder must not
+// overlap it.
+PrMediaAudioChunk prMediaDecoderAudioRead(PrMediaDecoder* decoder, float* samples, uint32_t frames);
 
 #if defined(__cplusplus)
 }

@@ -115,7 +115,7 @@ target_link_libraries(browser PRIVATE browser_model prax::app prax::html_quickjs
                                       prax::charset_quickjs prax::svg_quickjs prax::mathml_quickjs
                                       prax::studio_kit prax::studio_command prax::ui
                                       prax::text prax::font_bundle prax::font
-                                      prax::draw prax::gpu prax::image prax::media
+                                      prax::audio prax::draw prax::gpu prax::image prax::media
                                       prax::compress prax::fetch prax::html prax::css prax::dom prax::layout
                                       prax::net prax::http prax::tls prax::storage prax::cache
                                       prax::task prax::core_cpp)

@@ -111,6 +111,10 @@ void openShared(Browser& b) {
     b.compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
     b.images = prImageCodecCreate(PrImageCodecBackend_Default, b.compress);
     b.media = prMediaCodecCreate(PrMediaCodecBackend_Default);
+    // Without an output device, pages play without sound.
+    b.audioOutput = prAudioOutputCreate(PrAudioOutputBackend_Default, PrAudioFormat{48000, 2});
+    if (b.audioOutput != nullptr)
+        b.mixer = prAudioMixerCreate(b.audioOutput);
     b.io = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
 
     // The cache, local storage, the favorites and the history are on disk where the platform keeps a user's, so that
@@ -180,6 +184,8 @@ void closeShared(Browser& b) {
     prTaskPoolDestroy(b.io);
     prImageCodecDestroy(b.images);
     prMediaCodecDestroy(b.media);
+    prAudioMixerDestroy(b.mixer);
+    prAudioOutputDestroy(b.audioOutput);
     prCompressCodecDestroy(b.compress);
     prTextFontRelease(b.font);
     prTextShaperDestroy(b.shaper);

@@ -11,6 +11,8 @@
 #include "pr/mutex.h"
 #include "pr/thread.h"
 
+#include "media/backends/shared/src/media_shared_audio.h"
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -83,6 +85,13 @@ struct WindowsDecoder : PrMediaDecoder {
 
     // The user's alone: the buffer of the frame last returned, retained and locked.
     IMFMediaBuffer* shown;
+
+    // The audio, which a reader of its own decodes, so that seeking it does not disturb the frames.
+    IMFSourceReader* PR_NULLABLE audioReader;
+    DWORD audioStream;
+    MediaAudioQueue queue;
+    PrThread audioThread;
+    bool audioStarted;
 };
 
 // A decoder that a codec of a MIME type's codecs parameter (rfc6381) needs.
@@ -340,6 +349,58 @@ void decodeFrames(WindowsDecoder* d) {
     prMutexUnlock(&d->mutex);
 }
 
+// Decodes the audio into the queue, and starts over at each seek, until the decoder stops.
+void decodeAudio(WindowsDecoder* d) {
+    MediaAudioQueue* queue = &d->queue;
+    while (!queue->stopping.load()) {
+        uint32_t seek = queue->seekWanted.load();
+        double seconds = queue->seekSeconds.load();
+        bool moved = seekReader(d->audioReader, seconds);
+        bool begun = false;
+        while (moved && !mediaAudioQueueInterrupted(queue, seek)) {
+            DWORD flags = 0;
+            LONGLONG ticks = 0;
+            IMFSample* sample = nullptr;
+            HRESULT result = d->audioReader->ReadSample(d->audioStream, 0, nullptr, &flags, &ticks, &sample);
+            bool finished = FAILED(result) || (flags & MF_SOURCE_READERF_ENDOFSTREAM) != 0;
+            IMFMediaBuffer* buffer = nullptr;
+            if (!finished && sample != nullptr && FAILED(sample->ConvertToContiguousBuffer(&buffer)))
+                buffer = nullptr;
+            bool written = true;
+            if (buffer != nullptr) {
+                BYTE* data = nullptr;
+                DWORD length = 0;
+                if (SUCCEEDED(buffer->Lock(&data, nullptr, &length))) {
+                    uint32_t frames = length / DWORD(queue->channels * sizeof(float));
+                    double time = double(ticks) / kTicksPerSecond;
+                    // A seek lands on a packet's boundary, so the frames before the time asked for are dropped.
+                    uint32_t skip = 0;
+                    if (time < seconds) {
+                        double extra = (seconds - time) * queue->sampleRate;
+                        skip = extra >= frames ? frames : uint32_t(extra);
+                    }
+                    if (skip != frames) {
+                        if (!begun)
+                            mediaAudioQueueBegin(queue, seek, time + double(skip) / queue->sampleRate);
+                        begun = true;
+                        written = mediaAudioQueueWrite(queue, seek,
+                            reinterpret_cast<const float*>(data) + size_t(skip) * queue->channels, frames - skip);
+                    }
+                    buffer->Unlock();
+                }
+                buffer->Release();
+            }
+            if (sample != nullptr)
+                sample->Release();
+            if (finished || !written)
+                break;
+        }
+        if (!begun)
+            mediaAudioQueueBegin(queue, seek, seconds);
+        mediaAudioQueueFinish(queue, seek);
+    }
+}
+
 // Returns true if the system has a decoder of what a part of a codecs parameter names.
 bool hasDecoder(PrStringView codec) {
     for (const CodecProbe& probe : kCodecProbes) {
@@ -418,16 +479,19 @@ HRESULT readerCreate(PrByteView bytes, const wchar_t* container, IMFSourceReader
     return result;
 }
 
-// Writes what the reader's streams hold to `info`, and the first video stream to `videoStream`.
-void readStreams(IMFSourceReader* reader, PrMediaInfo* info, DWORD* videoStream) {
+// Writes what the reader's streams hold to `info`, and the first video and audio streams to `videoStream` and
+// `audioStream`.
+void readStreams(IMFSourceReader* reader, PrMediaInfo* info, DWORD* videoStream, DWORD* audioStream) {
     for (DWORD stream = 0;; ++stream) {
         IMFMediaType* type = nullptr;
         if (FAILED(reader->GetNativeMediaType(stream, 0, &type)))
             return;
         GUID major{};
         if (SUCCEEDED(type->GetGUID(MF_MT_MAJOR_TYPE, &major))) {
-            if (major == MFMediaType_Audio)
+            if (major == MFMediaType_Audio && !info->hasAudio) {
                 info->hasAudio = true;
+                *audioStream = stream;
+            }
             if (major == MFMediaType_Video && !info->hasVideo) {
                 info->hasVideo = true;
                 info->videoExtent = displayExtent(type);
@@ -457,6 +521,35 @@ HRESULT selectVideo(IMFSourceReader* reader, DWORD stream) {
     return result;
 }
 
+// Selects only the audio stream, and asks the reader for it as interleaved floats at `sampleRate` and `channels`.
+HRESULT selectAudio(IMFSourceReader* reader, DWORD stream, uint32_t sampleRate, uint32_t channels) {
+    HRESULT result = reader->SetStreamSelection(DWORD(MF_SOURCE_READER_ALL_STREAMS), FALSE);
+    if (SUCCEEDED(result))
+        result = reader->SetStreamSelection(stream, TRUE);
+    IMFMediaType* type = nullptr;
+    if (SUCCEEDED(result))
+        result = MFCreateMediaType(&type);
+    if (SUCCEEDED(result))
+        result = type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
+    if (SUCCEEDED(result))
+        result = type->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_Float);
+    if (SUCCEEDED(result))
+        result = type->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, sampleRate);
+    if (SUCCEEDED(result))
+        result = type->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, channels);
+    if (SUCCEEDED(result))
+        result = type->SetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, 32);
+    if (SUCCEEDED(result))
+        result = type->SetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT, UINT32(channels * sizeof(float)));
+    if (SUCCEEDED(result))
+        result = type->SetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, UINT32(sampleRate * channels * sizeof(float)));
+    if (SUCCEEDED(result))
+        result = reader->SetCurrentMediaType(stream, nullptr, type);
+    if (type != nullptr)
+        type->Release();
+    return result;
+}
+
 PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
     const wchar_t* container = containerType(bytes);
     if (container == nullptr || bytes.size > UINT32_MAX)
@@ -466,7 +559,8 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
     if (FAILED(result))
         return statusFromResult(result);
     DWORD videoStream = 0;
-    readStreams(reader, info, &videoStream);
+    DWORD audioStream = 0;
+    readStreams(reader, info, &videoStream, &audioStream);
     if (!info->hasVideo && !info->hasAudio) {
         reader->Release();
         return PrStatus_InvalidData;
@@ -491,6 +585,9 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
         PropVariantClear(&duration);
     }
     WindowsDecoder* d = allocZeroed<WindowsDecoder>();
+    if (info->hasAudio && FAILED(readerCreate(bytes, container, &d->audioReader)))
+        d->audioReader = nullptr;
+    d->audioStream = audioStream;
     d->reader = reader;
     d->videoStream = videoStream;
     d->hasVideo = info->hasVideo;
@@ -510,6 +607,13 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
 
 void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
     WindowsDecoder* d = static_cast<WindowsDecoder*>(decoder);
+    if (d->audioStarted) {
+        d->queue.stopping.store(true);
+        prThreadJoin(&d->audioThread);
+        mediaAudioQueueReset(&d->queue);
+    }
+    if (d->audioReader != nullptr)
+        d->audioReader->Release();
     if (d->hasVideo) {
         prMutexLock(&d->mutex);
         d->stopping = true;
@@ -587,6 +691,24 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
     return true;
 }
 
+bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
+    WindowsDecoder* d = static_cast<WindowsDecoder*>(decoder);
+    if (d->audioReader == nullptr || FAILED(selectAudio(d->audioReader, d->audioStream, sampleRate, channels)))
+        return false;
+    mediaAudioQueueInit(&d->queue, sampleRate, channels, seconds);
+    d->audioStarted = true;
+    prThreadStart(&d->audioThread, [](void* context) { decodeAudio(static_cast<WindowsDecoder*>(context)); }, d);
+    return true;
+}
+
+void decoderAudioSeek(PrMediaCodec*, PrMediaDecoder* decoder, double seconds) {
+    mediaAudioQueueSeek(&static_cast<WindowsDecoder*>(decoder)->queue, seconds);
+}
+
+PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float* samples, uint32_t frames) {
+    return mediaAudioQueueRead(&static_cast<WindowsDecoder*>(decoder)->queue, samples, frames);
+}
+
 void destroy(PrMediaCodec* codec) {
     WindowsCodec* windows = static_cast<WindowsCodec*>(codec);
     MFShutdown();
@@ -614,6 +736,9 @@ PrMediaCodec* PR_NULLABLE prMediaWindowsCreate(void) {
     codec->decoderCreate = decoderCreate;
     codec->decoderDestroy = decoderDestroy;
     codec->decoderFrame = decoderFrame;
+    codec->decoderAudioStart = decoderAudioStart;
+    codec->decoderAudioSeek = decoderAudioSeek;
+    codec->decoderAudioRead = decoderAudioRead;
     codec->apartment = apartment;
     return codec;
 }

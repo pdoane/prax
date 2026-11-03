@@ -1,4 +1,4 @@
-// Media: reading audio and video resources, and decoding the frames of their video.
+// Media: reading audio and video resources, and decoding their audio and the frames of their video.
 
 #include "pr/media.h"
 
@@ -114,4 +114,17 @@ bool prMediaDecoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* 
         return false;
     }
     return codec->decoderFrame(codec, decoder, seconds, out);
+}
+
+bool prMediaDecoderAudioStart(PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
+    PrMediaCodec* codec = decoder->codec;
+    return codec->decoderAudioStart != nullptr && codec->decoderAudioStart(codec, decoder, sampleRate, channels, seconds);
+}
+
+void prMediaDecoderAudioSeek(PrMediaDecoder* decoder, double seconds) {
+    decoder->codec->decoderAudioSeek(decoder->codec, decoder, seconds);
+}
+
+PrMediaAudioChunk prMediaDecoderAudioRead(PrMediaDecoder* decoder, float* samples, uint32_t frames) {
+    return decoder->codec->decoderAudioRead(decoder->codec, decoder, samples, frames);
 }

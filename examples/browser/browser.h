@@ -12,6 +12,7 @@
 #pragma once
 
 #include "pr/app.h"
+#include "pr/audio_mixer.h"
 #include "pr/base.h"
 #include "pr/cache.h"
 #include "pr/command.h"
@@ -177,6 +178,8 @@ struct Browser {
     PrCompressCodec* PR_NULLABLE compress = nullptr;
     PrImageCodec* PR_NULLABLE images = nullptr;
     PrMediaCodec* PR_NULLABLE media = nullptr;
+    PrAudioOutput* PR_NULLABLE audioOutput = nullptr;
+    PrAudioMixer* PR_NULLABLE mixer = nullptr;
     PrTaskPool* PR_NULLABLE io = nullptr;      // writes the files of the cache and of local storage
     PrTaskPool* PR_NULLABLE workers = nullptr; // threads that share the agent's work with the page's thread, such as
                                                // restyles

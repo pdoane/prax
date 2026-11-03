@@ -5,10 +5,13 @@
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
 #include "pr/thread.h"
+
+#include "media/backends/shared/src/media_shared_audio.h"
 
 #import <AVFoundation/AVFoundation.h>
 #import <CoreVideo/CoreVideo.h>
@@ -51,6 +54,7 @@
 @property(nonatomic, strong) PrMediaAppleLoader* loader;
 @property(nonatomic, strong) dispatch_queue_t queue;    // where the loader serves the asset
 @property(nonatomic, strong) AVAssetTrack* video;       // nil for a resource without video
+@property(nonatomic, strong) AVAssetTrack* audio;       // nil for a resource without audio
 @end
 
 @implementation PrMediaAppleSource
@@ -95,6 +99,11 @@ struct AppleDecoder : PrMediaDecoder {
 
     // The user's alone: the buffer of the frame last returned, retained and with its base address locked.
     CVPixelBufferRef shown;
+
+    // The audio, from when it starts.
+    MediaAudioQueue queue;
+    PrThread audioThread;
+    bool audioStarted;
 };
 
 PrMediaAppleSource* sourceOf(const AppleDecoder* decoder) {
@@ -213,6 +222,91 @@ void decodeFrames(AppleDecoder* d) {
     }
 }
 
+// Returns a reader of the audio track's samples as interleaved floats from `seconds` on, started, or nil if it cannot
+// read them.
+AVAssetReaderTrackOutput* PR_NULLABLE startReadingAudio(PrMediaAppleSource* source, const MediaAudioQueue* queue,
+        double seconds, AVAssetReader* PR_NULLABLE __strong* out) {
+    NSError* error = nil;
+    AVAssetReader* reader = [[AVAssetReader alloc] initWithAsset:source.asset error:&error];
+    if (reader == nil)
+        return nil;
+    reader.timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(seconds, 90000), kCMTimePositiveInfinity);
+    AudioChannelLayout layout{};
+    layout.mChannelLayoutTag = queue->channels == 1 ? kAudioChannelLayoutTag_Mono : kAudioChannelLayoutTag_Stereo;
+    NSDictionary* settings = @{
+        AVFormatIDKey: @(kAudioFormatLinearPCM),
+        AVSampleRateKey: @(queue->sampleRate),
+        AVNumberOfChannelsKey: @(queue->channels),
+        AVChannelLayoutKey: [NSData dataWithBytes:&layout length:sizeof(layout)],
+        AVLinearPCMBitDepthKey: @32,
+        AVLinearPCMIsFloatKey: @YES,
+        AVLinearPCMIsBigEndianKey: @NO,
+        AVLinearPCMIsNonInterleaved: @NO,
+    };
+    AVAssetReaderTrackOutput* output = [[AVAssetReaderTrackOutput alloc] initWithTrack:source.audio
+        outputSettings:settings];
+    output.alwaysCopiesSampleData = NO;
+    if (![reader canAddOutput:output])
+        return nil;
+    [reader addOutput:output];
+    if (![reader startReading])
+        return nil;
+    *out = reader;
+    return output;
+}
+
+// Decodes the audio into the queue, and starts over at each seek, until the decoder stops.
+void decodeAudio(AppleDecoder* d) {
+    MediaAudioQueue* queue = &d->queue;
+    Array<float> samples{};
+    PrMediaAppleSource* source = sourceOf(d);
+    while (!queue->stopping.load()) {
+        uint32_t seek = queue->seekWanted.load();
+        double seconds = queue->seekSeconds.load();
+        @autoreleasepool {
+            AVAssetReader* reader = nil;
+            AVAssetReaderTrackOutput* output = startReadingAudio(source, queue, seconds, &reader);
+            bool begun = false;
+            while (output != nil && !mediaAudioQueueInterrupted(queue, seek)) {
+                CMSampleBufferRef sample = nullptr;
+                @autoreleasepool {
+                    sample = [output copyNextSampleBuffer];
+                }
+                if (sample == nullptr)
+                    break;
+                uint32_t frames = uint32_t(CMSampleBufferGetNumSamples(sample));
+                double time = secondsOf(CMSampleBufferGetPresentationTimeStamp(sample));
+                samples.resize(frames * queue->channels);
+                CMBlockBufferRef block = CMSampleBufferGetDataBuffer(sample);
+                bool copied = block != nullptr && CMBlockBufferCopyDataBytes(block, 0,
+                    size_t(samples.count) * sizeof(float), samples.data) == kCMBlockBufferNoErr;
+                CFRelease(sample);
+                if (!copied || isNanF64(time))
+                    continue;
+                // A reader starts at a packet's boundary, so the frames before the time asked for are dropped.
+                uint32_t skip = 0;
+                if (time < seconds) {
+                    double extra = (seconds - time) * queue->sampleRate;
+                    skip = extra >= frames ? frames : uint32_t(extra);
+                }
+                if (skip == frames)
+                    continue;
+                if (!begun) {
+                    mediaAudioQueueBegin(queue, seek, time + double(skip) / queue->sampleRate);
+                    begun = true;
+                }
+                if (!mediaAudioQueueWrite(queue, seek, samples.data + size_t(skip) * queue->channels, frames - skip))
+                    break;
+            }
+            if (!begun)
+                mediaAudioQueueBegin(queue, seek, seconds);
+            [reader cancelReading];
+        }
+        mediaAudioQueueFinish(queue, seek);
+    }
+    samples.reset();
+}
+
 PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
     NSString* text = [[NSString alloc] initWithBytes:type.data length:type.size encoding:NSUTF8StringEncoding];
     if (text == nil || ![AVURLAsset isPlayableExtendedMIMEType:text])
@@ -255,8 +349,11 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
         info->duration = duration;
         NSArray<AVAssetTrack*>* tracks = source.asset.tracks;
         for (AVAssetTrack* track in tracks) {
-            if ([track.mediaType isEqualToString:AVMediaTypeAudio])
+            if ([track.mediaType isEqualToString:AVMediaTypeAudio]) {
                 info->hasAudio = true;
+                if (source.audio == nil)
+                    source.audio = track;
+            }
             if (![track.mediaType isEqualToString:AVMediaTypeVideo] || source.video != nil)
                 continue;
             if (!loadValues(track, @[@"naturalSize", @"preferredTransform"]))
@@ -288,6 +385,11 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
 
 void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
     AppleDecoder* d = static_cast<AppleDecoder*>(decoder);
+    if (d->audioStarted) {
+        d->queue.stopping.store(true);
+        prThreadJoin(&d->audioThread);
+        mediaAudioQueueReset(&d->queue);
+    }
     if (sourceOf(d).video != nil) {
         prMutexLock(&d->mutex);
         d->stopping = true;
@@ -365,11 +467,33 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
     return pixels != nullptr;
 }
 
+bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
+    AppleDecoder* d = static_cast<AppleDecoder*>(decoder);
+    PR_ASSERT(!d->audioStarted);
+    if (sourceOf(d).audio == nil || channels > 2)
+        return false;
+    mediaAudioQueueInit(&d->queue, sampleRate, channels, seconds);
+    d->audioStarted = true;
+    prThreadStart(&d->audioThread, [](void* context) { decodeAudio(static_cast<AppleDecoder*>(context)); }, d);
+    return true;
+}
+
+void decoderAudioSeek(PrMediaCodec*, PrMediaDecoder* decoder, double seconds) {
+    mediaAudioQueueSeek(&static_cast<AppleDecoder*>(decoder)->queue, seconds);
+}
+
+PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float* samples, uint32_t frames) {
+    return mediaAudioQueueRead(&static_cast<AppleDecoder*>(decoder)->queue, samples, frames);
+}
+
 constexpr PrMediaCodec kApple = {
     .supportsType = supportsType,
     .decoderCreate = decoderCreate,
     .decoderDestroy = decoderDestroy,
     .decoderFrame = decoderFrame,
+    .decoderAudioStart = decoderAudioStart,
+    .decoderAudioSeek = decoderAudioSeek,
+    .decoderAudioRead = decoderAudioRead,
 };
 
 } // namespace

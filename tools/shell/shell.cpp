@@ -39,7 +39,9 @@
 // --shaper shapes the pages' text with the shaper of lib/text that it names, the default shaper otherwise, --hinting
 // hints their fonts as the hinting that it names with the default hinter, none by default, and --media reads their
 // media resources with the codec of lib/media that it names, the built-in codec otherwise, which decodes no frames.
-// Each sets the process's backend, so a served run (--serve) uses the backends that the process started with.
+// --audio plays their media elements' audio on the output of lib/audio that it names, and on none otherwise, and
+// --audio-write writes what a memory output rendered to the WAVE file that it names when the run ends. Each sets the
+// process's backend, so a served run (--serve) uses the backends that the process started with.
 //
 // --restyle-threads N restyles on N threads, including the event loop's own thread, as
 // PrDomAgentOptions::restyleThreads describes: 0, the default, means one thread per core, and 1 means the event loop's
@@ -56,8 +58,11 @@
 // failure does not change the exit status, so a runner reads the pages' own results as it would without --verify.
 
 #include "pr/assert.h"
+#include "pr/audio_memory.h"
+#include "pr/audio_mixer.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_renderer.h"
+#include "pr/file.h"
 #include "pr/float.h"
 #include "pr/font_hinter.h"
 #include "pr/media.h"
@@ -237,6 +242,40 @@ bool network(PageHost& host, Run& run) {
     return run.network;
 }
 
+// The format that a run plays audio in.
+constexpr uint32_t kAudioSampleRate = 48000;
+constexpr uint32_t kAudioChannels = 2;
+
+// Writes what a stopped memory output rendered to `path`, as a WAVE file of 32-bit floats. Returns false if the file is
+// not written.
+bool writeAudio(const PrAudioOutput* output, const std::string& path) {
+    uint64_t frames = prAudioMemoryFrameCount(output);
+    PrAudioFormat format = prAudioOutputFormat(output);
+    uint32_t dataSize = uint32_t(frames * format.channels * sizeof(float));
+    std::string file;
+    auto text = [&file](const char* value) { file.append(value, 4); };
+    auto word = [&file](uint32_t value, int bytes) {
+        for (int i = 0; i < bytes; ++i)
+            file.push_back(char((value >> (8 * i)) & 0xff));
+    };
+    text("RIFF");
+    word(36 + dataSize, 4);
+    text("WAVE");
+    text("fmt ");
+    word(16, 4);
+    word(3, 2); // WAVE_FORMAT_IEEE_FLOAT
+    word(format.channels, 2);
+    word(format.sampleRate, 4);
+    word(format.sampleRate * format.channels * uint32_t(sizeof(float)), 4);
+    word(format.channels * uint32_t(sizeof(float)), 2);
+    word(32, 2);
+    text("data");
+    word(dataSize, 4);
+    if (dataSize != 0)
+        file.append(reinterpret_cast<const char*>(prAudioMemorySamples(output)), dataSize);
+    return prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(file.data()), file.size()});
+}
+
 // Applies the arguments of a run to the host, loading its pages and running its scripts in order.
 void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
     for (size_t i = 0; run.ok && i < args.size(); ++i) {
@@ -246,7 +285,8 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
             option == "--write" || option == "--reference" || option == "--html" ||
             option == "--viewport" || option == "--pixel-ratio" || option == "--renderer" ||
             option == "--timeout" || option == "--restyle-threads" || option == "--shaper" || option == "--media" ||
-            option == "--hinting" || option == "--ca" || option == "--capture-wait" || option == "--cache";
+            option == "--audio" || option == "--audio-write" || option == "--hinting" || option == "--ca" ||
+            option == "--capture-wait" || option == "--cache";
         if ((takesOne && i + 1 >= args.size()) || (takesTwo && i + 2 >= args.size())) {
             fprintf(stderr, "%s needs %s\n", option.c_str(), takesTwo ? "two arguments" : "an argument");
             run.ok = false;
@@ -288,7 +328,8 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 run.write = value;
             } else if (option == "--reference") {
                 run.references.push_back(value);
-            } else if (option == "--shaper" || option == "--hinting" || option == "--media") {
+            } else if (option == "--shaper" || option == "--hinting" || option == "--media" || option == "--audio" ||
+                    option == "--audio-write") {
                 // main reads these options, before the host is created.
             } else if (option == "--restyle-threads") {
                 char* end = nullptr;
@@ -444,6 +485,8 @@ int main(int argc, char** argv) {
     PrTextShaperBackend chosen = PrTextShaperBackend_Default;
     PrFontHinting hinting = PrFontHinting_None;
     PrMediaCodecBackend media = PrMediaCodecBackend_Builtin;
+    PrAudioOutputBackend audio = PrAudioOutputBackend_Count;
+    std::string audioPath;
     for (size_t i = 0; i + 1 < args.size(); ++i) {
         if (args[i] == "--shaper") {
             chosen = prTextShaperBackendFromName(args[i + 1]);
@@ -457,6 +500,14 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "--media names no media codec that the build has: %s\n", args[i + 1].c_str());
                 return 2;
             }
+        } else if (args[i] == "--audio") {
+            audio = prAudioOutputBackendFromName(args[i + 1]);
+            if (!prAudioOutputBackendIsBuilt(audio)) {
+                fprintf(stderr, "--audio names no audio output that the build has: %s\n", args[i + 1].c_str());
+                return 2;
+            }
+        } else if (args[i] == "--audio-write") {
+            audioPath = args[i + 1];
         } else if (args[i] == "--hinting") {
             hinting = prFontHintingFromName(args[i + 1]);
             if (hinting == PrFontHinting_Count) {
@@ -469,7 +520,13 @@ int main(int argc, char** argv) {
         prTextShaperDestroy);
     std::unique_ptr<PrMediaCodec, decltype(&prMediaCodecDestroy)> mediaCodec(prMediaCodecCreate(media),
         prMediaCodecDestroy);
-    PageHost host(shaper.get(), mediaCodec.get());
+    PrAudioOutput* audioOutput = nullptr;
+    if (audio != PrAudioOutputBackend_Count)
+        audioOutput = prAudioOutputCreate(audio, PrAudioFormat{kAudioSampleRate, kAudioChannels});
+    std::unique_ptr<PrAudioOutput, decltype(&prAudioOutputDestroy)> audioOutputOwner(audioOutput, prAudioOutputDestroy);
+    PrAudioMixer* mixer = audioOutput != nullptr ? prAudioMixerCreate(audioOutput) : nullptr;
+    std::unique_ptr<PrAudioMixer, decltype(&prAudioMixerDestroy)> mixerOwner(mixer, prAudioMixerDestroy);
+    PageHost host(shaper.get(), mediaCodec.get(), mixer);
     // The hinter lives as long as the process, because the fonts that name it are kept.
     host.setHinting(hinting, hinting != PrFontHinting_None ? prFontHinterCreate(PrFontHinterBackend_Default) : nullptr);
     Run run;
@@ -482,5 +539,13 @@ int main(int argc, char** argv) {
     renderers.cpu = prDrawCpuCreate(&cpuOptions);
     int status = !run.ok ? 1 : run.serve ? serve(host, run, renderers) : finish(host, run, renderers);
     renderers.reset();
+    if (!audioPath.empty() && audio == PrAudioOutputBackend_Memory && audioOutput != nullptr) {
+        // The output stops here because the pages that play on it live until the host goes.
+        prAudioOutputStop(audioOutput);
+        if (!writeAudio(audioOutput, audioPath)) {
+            fprintf(stderr, "cannot write %s\n", audioPath.c_str());
+            status = status != 0 ? status : 1;
+        }
+    }
     return status;
 }

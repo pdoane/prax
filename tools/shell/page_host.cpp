@@ -77,6 +77,7 @@ struct HostState {
     PrCompressCodec* compress = nullptr;
     PrImageCodec* images = nullptr;            // decodes the images of every page
     PrMediaCodec* PR_NULLABLE media = nullptr; // reads the media resources of every page, or null
+    PrAudioMixer* PR_NULLABLE mixer = nullptr; // plays the audio of every page, or null
 
     // The device that presents the pages, or null if they are presented in memory.
     PrGpuDevice* PR_NULLABLE device = nullptr;
@@ -581,6 +582,7 @@ PrHtmlHost startPage(HostState& state, const std::string& name, const std::strin
     host.shaper = state.shaper;
     host.images = state.images;
     host.media = state.media;
+    host.mixer = state.mixer;
     host.device = state.device;
     host.compress = state.compress;
     host.fetcher = state.fetcher;
@@ -929,7 +931,8 @@ bool readPemCertificate(const std::filesystem::path& path, std::string* out) {
 
 } // namespace
 
-PageHost::PageHost(PrTextShaper* shaper, PrMediaCodec* PR_NULLABLE media) : state_(std::make_unique<HostState>()) {
+PageHost::PageHost(PrTextShaper* shaper, PrMediaCodec* PR_NULLABLE media, PrAudioMixer* PR_NULLABLE mixer) :
+        state_(std::make_unique<HostState>()) {
     HostState& s = *state_;
     s.fonts = prFontSetCreate(nullptr);
     prFontBundleInstall(s.fonts, PrFontBundle_Standard14, PR_FONT_BUNDLE_DIR);
@@ -939,6 +942,7 @@ PageHost::PageHost(PrTextShaper* shaper, PrMediaCodec* PR_NULLABLE media) : stat
     s.compress = prCompressBuiltinCreate();
     s.images = prImageBuiltinCreate(s.compress);
     s.media = media;
+    s.mixer = mixer;
     startRun(s);
 }
 

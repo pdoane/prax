@@ -141,11 +141,36 @@ void addPlayed(HtmlMedia* media, double start, double end) {
     ranges.insert(at + 1, end);
 }
 
-// Returns the current playback position, which advances with the clock while the element plays.
+// Returns true if the element's audio can play at its rate. At any other rate, the element plays without sound.
+bool audioPlaysAtRate(const HtmlMedia* media) {
+    return media->rate >= kPrAudioSourceMinRate && media->rate <= kPrAudioSourceMaxRate;
+}
+
+// The longest that the position advances past the audio's last report, in milliseconds. Past it the audio has stalled,
+// and so does the position.
+constexpr double kAudioClockHoldMilliseconds = 200;
+
+// Returns the current playback position, which advances with the element's audio while that plays and has not ended,
+// and otherwise with the clock.
 double currentPosition(const HtmlMedia* media) {
     if (!potentiallyPlaying(media))
         return media->position;
-    double position = media->position + (prTimeMonotonicMilliseconds() - media->since) / 1000 * media->rate;
+    double position = 0;
+    PrAudioClock clock{};
+    bool followsAudio = media->source != nullptr && audioPlaysAtRate(media);
+    if (followsAudio) {
+        clock = prAudioSourceClock(media->source);
+        followsAudio = !clock.ended;
+    }
+    if (followsAudio) {
+        // The position holds until the audio begins, and never falls behind where it last settled.
+        double elapsed = prTimeMonotonicMilliseconds() - clock.stamp;
+        elapsed = elapsed > kAudioClockHoldMilliseconds ? kAudioClockHoldMilliseconds : elapsed;
+        position = clock.valid ? clock.position + elapsed / 1000 * media->rate : media->position;
+        position = position < media->position ? media->position : position;
+    } else {
+        position = media->position + (prTimeMonotonicMilliseconds() - media->since) / 1000 * media->rate;
+    }
     if (!isNanF64(media->duration) && position > media->duration)
         position = media->duration;
     return position < 0 ? 0 : position;
@@ -196,6 +221,9 @@ void pictureChanged(HtmlMedia* media) {
 
 // Releases the resource's decoder and its decoded frame.
 void closeResource(HtmlMedia* media) {
+    // The source reads the decoder, so it goes first.
+    prAudioSourceDestroy(media->source);
+    media->source = nullptr;
     prMediaDecoderDestroy(media->decoder);
     media->decoder = nullptr;
     prDrawImageRelease(media->frame);
@@ -355,8 +383,20 @@ void timerFired(void* PR_NULLABLE context) {
     schedule(media);
 }
 
+// Brings what the element's audio plays into line with the element's state.
+void updateAudio(HtmlMedia* media) {
+    if (media->source == nullptr)
+        return;
+    bool audible = audioPlaysAtRate(media);
+    prAudioSourceSetPlaying(media->source, audible && potentiallyPlaying(media));
+    prAudioSourceSetGain(media->source, isMuted(media) ? 0 : float(media->volume));
+    if (audible)
+        prAudioSourceSetRate(media->source, media->rate, media->preservesPitch);
+}
+
 // Sets the timer for the next timeupdate, or for the end if that comes first, while the element plays.
 void schedule(HtmlMedia* media) {
+    updateAudio(media);
     if (media->timer != 0) {
         htmlWindowClearTimeout(media->window, media->timer);
         media->timer = 0;
@@ -433,13 +473,29 @@ void sourceFailed(HtmlMedia* media, PrStringView message) {
 
 // html/#concept-media-load-resource, once the resource has arrived. The window's codec reads its metadata, and then all
 // of its data, which the engine has as soon as the resource is fetched. Returns false for a resource that the codec
-// does not read.
+// does not read. Starts playing the resource's audio, if the window has a mixer and the codec decodes the audio.
+// Without a source, the element's timeline follows the clock.
+void startAudio(HtmlMedia* media, const PrMediaInfo& info) {
+    PrAudioMixer* mixer = media->window != nullptr ? media->window->mixer : nullptr;
+    if (mixer == nullptr || !info.hasAudio)
+        return;
+    PrAudioFormat format = prAudioMixerFormat(mixer);
+    if (!prMediaDecoderAudioStart(media->decoder, format.sampleRate, format.channels, media->position))
+        return;
+    PrAudioSourceReadFn read = [](void* context, float* samples, uint32_t frames) {
+        PrMediaAudioChunk chunk = prMediaDecoderAudioRead(static_cast<PrMediaDecoder*>(context), samples, frames);
+        return PrAudioChunk{.frames = chunk.frames, .time = chunk.time, .ended = chunk.ended};
+    };
+    media->source = prAudioSourceCreate(mixer, read, media->decoder);
+}
+
 bool resourceArrived(HtmlMedia* media, PrStringView body) {
     PrMediaCodec* codec = media->window != nullptr ? media->window->mediaCodec : nullptr;
     PrMediaInfo info{};
     PrByteView bytes{reinterpret_cast<const uint8_t*>(body.data), body.size};
     if (codec == nullptr || prMediaDecoderCreate(codec, bytes, &media->decoder, &info) != PrStatus_Ok)
         return false;
+    startAudio(media, info);
     media->duration = info.duration;
     queueEvent(media, "durationchange");
     if (info.videoExtent.x != 0 && info.videoExtent.y != 0 && media->element->tag == PrDomTag_Video) {
@@ -833,6 +889,7 @@ void htmlMediaChanged(PrDomElement* element, PrStringView attribute) {
             updatePoster(media);
     } else if (attribute == "muted") {
         updateFlags(media);
+        updateAudio(media);
     } else if (!connection) {
         // html/#location-of-the-media-resource: setting or changing src loads the element. Removing it does not.
         if (domAttribute(element, PrDomNamespace_None, "src") != nullptr)
@@ -910,6 +967,10 @@ void htmlMediaSeek(HtmlMedia* media, double seconds) {
     queueTask(start);
     media->position = seconds;
     media->since = prTimeMonotonicMilliseconds();
+    if (media->source != nullptr) {
+        prMediaDecoderAudioSeek(media->decoder, seconds);
+        prAudioSourceReset(media->source);
+    }
     // The media data is at the new position once the task that follows the seeking event runs.
     MediaTask* done = newTask(media);
     done->seekCount = ++media->seeks;
@@ -969,6 +1030,12 @@ void htmlMediaSetVolume(HtmlMedia* media, double volume, bool muted) {
     media->mutedSet = true;
     queueEvent(media, "volumechange");
     updateFlags(media);
+    updateAudio(media);
+}
+
+void htmlMediaSetPreservesPitch(HtmlMedia* media, bool preserves) {
+    media->preservesPitch = preserves;
+    updateAudio(media);
 }
 
 PrHtmlCanPlay htmlCanPlayType(const PrHtmlWindow* PR_NULLABLE window, PrStringView type) {

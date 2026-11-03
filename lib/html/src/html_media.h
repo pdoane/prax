@@ -5,13 +5,15 @@
 // A window runs the media elements of its document. The window's clock advances the playback of each element along its
 // media timeline, and the host's media codec reads each resource and decodes the frames of its video
 // (PrHtmlHost::media). A video element shows the frame at its playback position, or its poster frame
-// (html/#the-video-element), as the picture of its element state, which each rendering update brings up to date. An
-// element's state lives as long as the element. A window runs it while the element's document is the window's document,
-// and the state returns to its initial playback state when no window runs it.
+// (html/#the-video-element), as the picture of its element state, which each rendering update brings up to date. The
+// host's mixer plays each resource's audio (PrHtmlHost::mixer), and an element's timeline follows that audio while it
+// plays. An element's state lives as long as the element. A window runs it while the element's document is the window's
+// document, and the state returns to its initial playback state when no window runs it.
 
 #pragma once
 
 #include "pr/array.h"
+#include "pr/audio_mixer.h"
 #include "pr/dom.h"
 #include "pr/draw_image.h"
 #include "pr/html.h"
@@ -70,6 +72,7 @@ struct HtmlMedia {
     // serial of the frame (PrMediaFrame::serial), and the generation of the poster's fetch, so that the result of an
     // earlier fetch is dropped.
     PrMediaDecoder* PR_NULLABLE decoder;     // the resource of the current load, or null
+    PrAudioSource* PR_NULLABLE source;       // plays the audio of `decoder`, or null if nothing does
     const PrDrawImage* PR_NULLABLE frame;
     const PrDrawImage* PR_NULLABLE poster;
     uint64_t frameSerial;
@@ -117,6 +120,7 @@ void htmlMediaPlay(HtmlMedia* media, const PrHtmlPlayPromise& promise);
 void htmlMediaPause(HtmlMedia* media);
 void htmlMediaSetRate(HtmlMedia* media, double rate, bool isDefault);
 void htmlMediaSetVolume(HtmlMedia* media, double volume, bool muted);
+void htmlMediaSetPreservesPitch(HtmlMedia* media, bool preserves);
 
 // Returns how likely the window's codec is to play a resource of the MIME type `type`
 // (html/#dom-navigator-canplaytype). No resource plays without a window or a codec.

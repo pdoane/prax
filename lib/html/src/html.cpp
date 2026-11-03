@@ -1183,7 +1183,7 @@ bool prHtmlMediaElementPreservesPitch(const PrHtmlMediaElement* element) {
 }
 
 void prHtmlMediaElementSetPreservesPitch(PrHtmlMediaElement* element, bool preserves) {
-    mediaOf(element)->preservesPitch = preserves;
+    htmlMediaSetPreservesPitch(mediaOf(element), preserves);
 }
 
 uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* element, PrHtmlMediaRanges which,

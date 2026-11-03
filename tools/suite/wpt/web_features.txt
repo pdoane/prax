@@ -38,6 +38,7 @@ async-iterable-streams                           build
 attr                                             build
 attr-contents                                    build
 audio                                            build
+audio-worklet                                    build
 autocapitalize                                   build
 autocorrect                                      build
 autofill                                         build
@@ -411,6 +412,7 @@ object-fit                                       build
 object-position                                  build
 object-view-box                                  build
 observable                                       open
+offline-audio-context                            build
 offscreen-canvas                                 build
 oklab                                            build
 online                                           build
@@ -648,6 +650,7 @@ viewport-units                                   build
 visibility                                       build
 wbr                                              build
 web-animations                                   build
+web-audio                                        build
 websockets                                       build
 wheel-events                                     build
 where                                            build

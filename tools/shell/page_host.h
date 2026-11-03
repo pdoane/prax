@@ -16,6 +16,7 @@
 #include "pr/app.h"
 #include "pr/app_display.h"
 #include "pr/app_user_preferences.h"
+#include "pr/audio_mixer.h"
 #include "pr/draw_list.h"
 #include "pr/font.h"
 #include "pr/media.h"
@@ -44,9 +45,10 @@ struct HostState;
 // A host of pages, as this header describes.
 class PageHost {
 public:
-    // Creates a host whose pages' text is shaped by `shaper`, and whose media resources `media` reads, or none plays if
-    // it is null. Each must outlive the host.
-    PageHost(PrTextShaper* shaper, PrMediaCodec* PR_NULLABLE media);
+    // Creates a host whose pages' text is shaped by `shaper`, whose media resources `media` reads, or none plays if it
+    // is null, and whose media elements' audio `mixer` plays, or they play without sound if it is null. Each must
+    // outlive the host.
+    PageHost(PrTextShaper* shaper, PrMediaCodec* PR_NULLABLE media, PrAudioMixer* PR_NULLABLE mixer);
     ~PageHost();
     PageHost(const PageHost&) = delete;
     PageHost& operator=(const PageHost&) = delete;

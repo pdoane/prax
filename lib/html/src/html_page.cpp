@@ -1358,8 +1358,16 @@ void frameViewport(PrHtmlPage* child, const PrDomElement* element) {
     prHtmlPageSetViewport(child, PrVec2{float(sizes[0]), float(sizes[1])});
 }
 
-// Releases the frame that the element holds, if any. The browsing context that it held is discarded: its tasks no
-// longer run, and it lives on until this context is destroyed.
+// Discards the page's browsing context and those nested in it (html/#destroy-a-child-navigable): their tasks no longer
+// run and their media stops. Each page lives on until its parent is destroyed.
+void discardPage(PrHtmlPage* page) {
+    domAgentRemoveGlobal(page->window->agent, page);
+    htmlMediaReset(page->window);
+    for (uint32_t i = 0; i < page->children.count; ++i)
+        discardPage(page->children.data[i]);
+}
+
+// Releases the frame that the element holds, if any, and discards the browsing context that it held.
 void dropFrame(PrHtmlPage* page, PrDomElement* element) {
     PrHtmlWindow* window = page->window;
     for (uint32_t i = 0; i < window->frames.count; ++i) {
@@ -1368,7 +1376,7 @@ void dropFrame(PrHtmlPage* page, PrDomElement* element) {
         for (uint32_t k = 0; k < page->children.count; ++k) {
             PrHtmlPage* child = page->children.data[k];
             if (child->window == window->frames.data[i].window)
-                domAgentRemoveGlobal(child->window->agent, child);
+                discardPage(child);
         }
         window->frames.erase(i);
         // A load that waited for the frame's document no longer does.
@@ -1407,6 +1415,8 @@ void attachFrame(PrHtmlPage* page, PrDomElement* element, PrStringView source, P
         childHost.images = page->host.images;
     if (childHost.media == nullptr)
         childHost.media = page->host.media;
+    if (childHost.mixer == nullptr)
+        childHost.mixer = page->host.mixer;
     if (childHost.compress == nullptr)
         childHost.compress = page->host.compress;
     if (childHost.fetcher == nullptr)
@@ -2215,6 +2225,7 @@ void shareWithWindow(PrHtmlPage* page, PrHtmlWindow* window) {
     window->device = page->host.device;
     window->images = page->host.images;
     window->mediaCodec = page->host.media;
+    window->mixer = page->host.mixer;
     if (page->host.fetcher != nullptr)
         window->userAgent = prFetchNetworkUserAgent(page->host.fetcher);
     window->navigatorCompatibilityMode = page->host.navigatorCompatibilityMode;

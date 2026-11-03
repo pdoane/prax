@@ -16,7 +16,7 @@ if (PR_MEDIA_APPLE)
     pr_headers(pr_media PUBLIC backends/apple/include)
     target_compile_definitions(pr_media PRIVATE PR_MEDIA_HAS_APPLE)
     target_link_libraries(pr_media PUBLIC "-framework AVFoundation" "-framework CoreMedia" "-framework CoreVideo"
-        "-framework CoreGraphics" "-framework Foundation")
+        "-framework CoreGraphics" "-framework Foundation" "-framework AudioToolbox")
 endif()
 
 if (PR_MEDIA_WINDOWS)
