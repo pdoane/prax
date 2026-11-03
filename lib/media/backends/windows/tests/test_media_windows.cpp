@@ -141,7 +141,7 @@ TEST_CASE("the Media Foundation codec reads a movie from memory and decodes the 
     REQUIRE(!bytes.empty());
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
-    REQUIRE(prMediaDecoderCreate(codec, PrByteView{bytes.data(), bytes.size()}, &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
     CHECK(info.hasVideo);
     CHECK(!info.hasAudio);
     CHECK(info.videoExtent.x == kWidth);
@@ -183,11 +183,10 @@ TEST_CASE("the Media Foundation codec reads a movie from memory and decodes the 
 
     // Bytes that are no container that Media Foundation reads are not supported, and a container's start is corrupt.
     std::vector<uint8_t> noise(256, 0x5a);
-    CHECK(prMediaDecoderCreate(codec, PrByteView{noise.data(), noise.size()}, &decoder, &info) ==
-        PrStatus_NotSupported);
+    CHECK(prMediaDecoderCreate(codec, noise, &decoder, &info) == PrStatus_NotSupported);
     CHECK(decoder == nullptr);
     std::vector<uint8_t> truncated(bytes.begin(), bytes.begin() + 16);
-    CHECK(prMediaDecoderCreate(codec, PrByteView{truncated.data(), truncated.size()}, &decoder, &info) != PrStatus_Ok);
+    CHECK(prMediaDecoderCreate(codec, truncated, &decoder, &info) != PrStatus_Ok);
     CHECK(decoder == nullptr);
     prMediaCodecDestroy(codec);
 }
@@ -201,7 +200,7 @@ TEST_CASE("the Media Foundation codec decodes for a thread in a single-threaded 
         std::vector<uint8_t> bytes = encodeMovie();
         PrMediaDecoder* decoder = nullptr;
         PrMediaInfo info{};
-        if (prMediaDecoderCreate(codec, PrByteView{bytes.data(), bytes.size()}, &decoder, &info) == PrStatus_Ok) {
+        if (prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok) {
             PrMediaFrame frame{};
             *static_cast<bool*>(context) = waitForFrame(decoder, 5.5 / kFramesPerSecond, &frame);
             prMediaDecoderDestroy(decoder);

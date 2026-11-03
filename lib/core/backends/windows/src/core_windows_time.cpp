@@ -40,5 +40,6 @@ double prCoreWindowsTimeLocalOffsetMilliseconds(double wall) {
             !SystemTimeToFileTime(&local, &localTime))
         return 0;
     uint64_t localTicks = (uint64_t(localTime.dwHighDateTime) << 32) | localTime.dwLowDateTime;
-    return double(int64_t(localTicks) - ticks) / 1e4;
+    // A SYSTEMTIME holds whole milliseconds, so the local time has lost what `ticks` holds below them.
+    return double(int64_t(localTicks) - (ticks - ticks % 10000)) / 1e4;
 }
