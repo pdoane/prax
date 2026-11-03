@@ -188,7 +188,9 @@ void pushChild(LayoutState& state, const Container& c, Flow& flow, const LayoutR
     PrLayoutUnit by = c.origin.blockOffset + at.blockOffset;
     if ((result.flags & LayoutResultFlag_FirstBaseline) != 0 && !flow.first.present)
         flow.first = FlowBaseline{result.fragment, by, kLayoutBaselineSynthesized, true};
-    if ((result.flags & LayoutResultFlag_Scrolls) == 0) {
+    // The field of a semi-replaced element scrolls as part of it, and its text is the element's baseline.
+    bool field = layoutTreeNode(state.tree, c.node).kind == PrLayoutNodeKind_SemiReplaced;
+    if ((result.flags & LayoutResultFlag_Scrolls) == 0 || field) {
         bool table = (result.fragment->flags & LayoutFragmentFlag_Table) != 0;
         if ((result.flags & LayoutResultFlag_LastBaseline) != 0 && !table)
             flow.last = FlowBaseline{result.fragment, by, kLayoutBaselineSynthesized, true};
@@ -782,9 +784,12 @@ PR_NOINLINE PrLayoutUnit contentShift(const LayoutState& state, const Container&
         }
     }
     // A box in its parent's context has placed its floats there, where its content would leave them behind.
-    if (free <= kLayoutUnitZero || c.runFirst != kPrLayoutNodeNone || c.inContext)
+    if (c.runFirst != kPrLayoutNodeNone || c.inContext)
         return kLayoutUnitZero;
     const PrLayoutFlexStyle& flex = layoutFlexStyle(state.styles, layoutTreeNode(state.tree, c.node).style);
+    // Content that overflows stays at the start, where it can be reached, unless the alignment is unsafe.
+    if (free <= kLayoutUnitZero && (flex.alignContent & PrLayoutAlignmentFlag_Unsafe) == 0)
+        return kLayoutUnitZero;
     switch (PrLayoutAlignment(flex.alignContent & kPrLayoutAlignmentValueMask)) {
         case PrLayoutAlignment_Center:
         case PrLayoutAlignment_SpaceAround:
@@ -889,8 +894,9 @@ LayoutFlowOutcome layoutFlowContent(LayoutState& state, const LayoutFlowInput& i
     }
     outcome.first = setOf(flow.first, LayoutBaselineEdge_First);
     outcome.last = setOf(flow.last, LayoutBaselineEdge_Last);
-    // Content in a block size that its style or its container fixes is aligned in it.
-    if (input.fixedBlock) {
+    // Content in a block size that its style or its container fixes is aligned in it, and so is the content of a
+    // semi-replaced element, which is centered in what its minimum block size leaves.
+    if (input.fixedBlock || layoutTreeNode(state.tree, c.node).kind == PrLayoutNodeKind_SemiReplaced) {
         PrLayoutUnit free = ending.blockSize - input.axis.edges - ending.contentBlock;
         outcome.shift = contentShift(state, c, space, *input.box, free, outcome.first,
             c.origin.blockOffset + ending.contentBlock);

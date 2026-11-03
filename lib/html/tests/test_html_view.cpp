@@ -1,10 +1,12 @@
 #include "pr/checksum.h"
 #include "pr/compress_builtin.h"
+#include "pr/css_presentation.h"
 #include "pr/css_view.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/html.h"
+#include "pr/html_forms.h"
 #include "pr/html_page.h"
 #include "pr/html_view.h"
 #include "pr/image_builtin.h"
@@ -84,7 +86,7 @@ std::vector<uint8_t> withOrientation(const std::vector<uint8_t>& png, uint8_t or
     return out;
 }
 
-// A page in a browsing context, presented by a view to a compositor without a thread of its own, over Tinos.
+// A page in a browsing context, presented by a view to a compositor without a thread of its own, over Tinos. The
 struct Viewed {
     PrFontSet* fonts = prFontSetCreate(nullptr);
     PrTextShaper* shaper = prTextHarfBuzzCreate();
@@ -381,6 +383,63 @@ PrAppEvent wheelAt(PrVec2 at, float pixels, double time) {
     return PrAppEvent{.kind = PrAppEventKind_Scroll, .position = at, .delta = PrVec2{0, pixels}, .time = time};
 }
 
+// The edits heard at a textarea, each as its type, input type, data and whether it is composing, and its value after
+// it. A listener cancels each beforeinput while `cancel` is set.
+struct HeardEdits {
+    std::vector<std::string> events;
+    bool cancel = false;
+};
+
+PrDomEventListener editRecorder(HeardEdits* heard) {
+    return PrDomEventListener{
+        [](void* context, PrDomEvent* event) {
+            HeardEdits* heard = static_cast<HeardEdits*>(context);
+            PrStringView type = prDomEventType(event);
+            std::string line(type.data, type.size);
+            if (PrDomInputEvent* input = prDomInputEventQuery(event)) {
+                PrStringView kind = prDomInputEventInputType(input);
+                PrStringView data = prDomInputEventData(input);
+                line += " " + std::string(kind.data, kind.size) + " [" + std::string(data.data, data.size) + "]";
+                if (prDomInputEventIsComposing(input))
+                    line += " composing";
+                if (heard->cancel && prDomEventCancelable(event))
+                    prDomEventPreventDefault(event);
+            }
+            heard->events.push_back(line);
+        },
+        heard,
+        0,
+        nullptr,
+        nullptr,
+    };
+}
+
+std::string valueOf(PrDomElement* element) {
+    PrDomEventTarget* target = prDomNodeAsEventTarget(prDomElementAsNode(element));
+    PrString value = prHtmlTextAreaElementValue(prHtmlTextAreaElementQuery(target));
+    std::string out(prStringView(&value).data, prStringView(&value).size);
+    prStringReset(&value);
+    return out;
+}
+
+// A textarea with focus and a recorder on its edits, and the caret at the end of its text.
+struct EditedArea {
+    Viewed page;
+    PrDomElement* area;
+    HeardEdits heard;
+    PrDomEventListener listener;
+
+    explicit EditedArea(const char* markup) : page(markup) {
+        area = page.byId("t");
+        listener = editRecorder(&heard);
+        for (const char* type : {"beforeinput", "input", "compositionstart", "compositionupdate", "compositionend"})
+            prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(area)), type, &listener, nullptr);
+        prHtmlFocus(area, nullptr);
+        uint32_t end = uint32_t(valueOf(area).size());
+        prHtmlTextControlSetSelectionRange(area, end, end, PrDomSelectionDirection_None);
+    }
+};
+
 } // namespace
 
 } // namespace pr_impl
@@ -606,6 +665,431 @@ TEST_CASE("the first focusable element with autofocus is focused at the next ren
     prDomElementSetAttribute(page.byId("input"), "autofocus", "");
     frame();
     CHECK(prHtmlActiveElement(root) != page.byId("input"));
+}
+
+TEST_CASE("typing in a textarea fires beforeinput and input around the edit") {
+    EditedArea e("<textarea id=t>ab</textarea>");
+    send(e.page.view, press('C', PrAppKeyCode_KeyC, "c"));
+    CHECK(valueOf(e.area) == "abc");
+    CHECK(e.heard.events == std::vector<std::string>{"beforeinput insertText [c]", "input insertText [c]"});
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 3);
+}
+
+TEST_CASE("a canceled beforeinput leaves a textarea's value as it was") {
+    EditedArea e("<textarea id=t>ab</textarea>");
+    e.heard.cancel = true;
+    send(e.page.view, press('C', PrAppKeyCode_KeyC, "c"));
+    CHECK(valueOf(e.area) == "ab");
+    CHECK(e.heard.events == std::vector<std::string>{"beforeinput insertText [c]"});
+}
+
+TEST_CASE("Left and Right move as a right-to-left textarea shows its text") {
+    for (const char* dir : {"rtl", "auto"}) {
+        std::string html = std::string("<meta charset=utf-8><textarea id=t dir=") + dir +
+            ">\xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d</textarea>";
+        EditedArea e(html.c_str());
+        CHECK(prHtmlTextControlSelectionStart(e.area) == 4);
+        send(e.page.view, press(PrAppKey_Right, PrAppKeyCode_ArrowRight, ""));
+        CHECK(prHtmlTextControlSelectionStart(e.area) == 3);
+        send(e.page.view, press(PrAppKey_Left, PrAppKeyCode_ArrowLeft, ""));
+        CHECK(prHtmlTextControlSelectionStart(e.area) == 4);
+        send(e.page.view, press(PrAppKey_Home, PrAppKeyCode_Home, ""));
+        CHECK(prHtmlTextControlSelectionStart(e.area) == 0);
+    }
+}
+
+TEST_CASE("the arrows run through a textarea's text in order, whatever its direction shows") {
+    EditedArea e("<meta charset=utf-8><textarea id=t>abc \xd7\x90\xd7\x91\xd7\x92 def</textarea>");
+    prHtmlTextControlSetSelectionRange(e.area, 3, 3, PrDomSelectionDirection_None);
+    for (uint32_t expected = 4; expected <= 8; ++expected) {
+        send(e.page.view, press(PrAppKey_Right, PrAppKeyCode_ArrowRight, ""));
+        CHECK(prHtmlTextControlSelectionStart(e.area) == expected);
+    }
+    send(e.page.view, press(PrAppKey_Left, PrAppKeyCode_ArrowLeft, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 7);
+}
+
+TEST_CASE("each paragraph of a textarea with dir=auto decides which way its arrows go") {
+    EditedArea e("<meta charset=utf-8><textarea id=t dir=auto>abc\n\xd7\x90\xd7\x91\xd7\x92</textarea>");
+    prHtmlTextControlSetSelectionRange(e.area, 5, 5, PrDomSelectionDirection_None);
+    send(e.page.view, press(PrAppKey_Right, PrAppKeyCode_ArrowRight, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 4);
+    prHtmlTextControlSetSelectionRange(e.area, 1, 1, PrDomSelectionDirection_None);
+    send(e.page.view, press(PrAppKey_Right, PrAppKeyCode_ArrowRight, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 2);
+}
+
+TEST_CASE("a masked right-to-left input moves as it shows, and a word motion goes to its end") {
+    EditedArea e("<input id=t type=password dir=rtl value=abc>");
+    prHtmlTextControlSetSelectionRange(e.area, 3, 3, PrDomSelectionDirection_None);
+    send(e.page.view, press(PrAppKey_Right, PrAppKeyCode_ArrowRight, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 2);
+    std::vector<PrAppEvent> word = press(PrAppKey_Right, PrAppKeyCode_ArrowRight, "");
+    for (PrAppEvent& event : word)
+        event.modifiers = PrAppModifierFlag_Alt;
+    send(e.page.view, word);
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 0);
+}
+
+TEST_CASE("a textarea under a transform keeps its column between lines") {
+    EditedArea e("<textarea id=t style='transform: translateX(50px) rotate(10deg) scale(2)'>abc\ndef\nghi</textarea>");
+    prHtmlTextControlSetSelectionRange(e.area, 1, 1, PrDomSelectionDirection_None);
+    send(e.page.view, press(PrAppKey_Down, PrAppKeyCode_ArrowDown, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 5);
+    send(e.page.view, press(PrAppKey_Down, PrAppKeyCode_ArrowDown, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 9);
+}
+
+TEST_CASE("the arrows follow the lines of a vertical textarea") {
+    EditedArea e("<textarea id=t style='writing-mode: vertical-rl'>abc\ndef</textarea>");
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 7);
+    send(e.page.view, press(PrAppKey_Up, PrAppKeyCode_ArrowUp, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 6);
+    send(e.page.view, press(PrAppKey_Right, PrAppKeyCode_ArrowRight, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 2);
+    send(e.page.view, press(PrAppKey_Left, PrAppKeyCode_ArrowLeft, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 6);
+}
+
+TEST_CASE("Backspace in a textarea takes one code point, and an emoji sequence whole") {
+    EditedArea hebrew("<meta charset=utf-8><textarea id=t>\xd7\xa9\xd6\xb8</textarea>");
+    send(hebrew.page.view, press(PrAppKey_Backspace, PrAppKeyCode_Backspace, ""));
+    CHECK(valueOf(hebrew.area) == "\xd7\xa9");
+    EditedArea latin("<meta charset=utf-8><textarea id=t>e\xcc\x81</textarea>");
+    send(latin.page.view, press(PrAppKey_Backspace, PrAppKeyCode_Backspace, ""));
+    CHECK(valueOf(latin.area) == "e");
+    EditedArea emoji("<meta charset=utf-8><textarea id=t>\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x92\xbb</textarea>");
+    send(emoji.page.view, press(PrAppKey_Backspace, PrAppKeyCode_Backspace, ""));
+    CHECK(valueOf(emoji.area) == "");
+}
+
+TEST_CASE("keys move in a textarea by grapheme cluster, and Enter inserts a line break") {
+    EditedArea e("<meta charset=utf-8><textarea id=t>ae\xcc\x81z</textarea>");
+    send(e.page.view, press(PrAppKey_Left, PrAppKeyCode_ArrowLeft, ""));
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 3);
+    send(e.page.view, press(PrAppKey_Backspace, PrAppKeyCode_Backspace, ""));
+    CHECK(valueOf(e.area) == "aez");
+    send(e.page.view, press(PrAppKey_Enter, PrAppKeyCode_Enter, ""));
+    CHECK(valueOf(e.area) == "ae\nz");
+    send(e.page.view, press(PrAppKey_Delete, PrAppKeyCode_Delete, ""));
+    CHECK(valueOf(e.area) == "ae\n");
+}
+
+TEST_CASE("undo reverts a run of typing in a textarea, and setting the value empties the history") {
+    EditedArea e("<textarea id=t>a</textarea>");
+    send(e.page.view, press('B', PrAppKeyCode_KeyB, "b"));
+    send(e.page.view, press('C', PrAppKeyCode_KeyC, "c"));
+    CHECK(valueOf(e.area) == "abc");
+    send(e.page.view, press('Z', PrAppKeyCode_KeyZ, "", PrAppModifierFlag_Super));
+    CHECK(valueOf(e.area) == "a");
+    send(e.page.view, press('Z', PrAppKeyCode_KeyZ, "", PrAppModifierFlag_Super | PrAppModifierFlag_Shift));
+    CHECK(valueOf(e.area) == "abc");
+
+    PrHtmlTextAreaElement* area = prHtmlTextAreaElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(e.area)));
+    prHtmlTextAreaElementSetValue(area, "set");
+    send(e.page.view, press('Z', PrAppKeyCode_KeyZ, "", PrAppModifierFlag_Super));
+    CHECK(valueOf(e.area) == "set");
+}
+
+TEST_CASE("a composition marks its text in a textarea, and commits it once, ahead of compositionend") {
+    EditedArea e("<textarea id=t>a</textarea>");
+    PrAppEvent update{.kind = PrAppEventKind_CompositionUpdate, .text = "k"};
+    prHtmlViewEvent(e.page.view, &update, 0);
+    CHECK(valueOf(e.area) == "ak");
+    update.text = "\xe3\x81\x8b";
+    prHtmlViewEvent(e.page.view, &update, 0);
+    CHECK(valueOf(e.area) == "a\xe3\x81\x8b");
+    PrAppEvent end{.kind = PrAppEventKind_CompositionEnd, .text = "\xe3\x81\x8b"};
+    prHtmlViewEvent(e.page.view, &end, 0);
+    PrAppEvent committed{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"};
+    prHtmlViewEvent(e.page.view, &committed, 0);
+    CHECK(valueOf(e.area) == "a\xe3\x81\x8b");
+    CHECK(e.heard.events == std::vector<std::string>{
+        "compositionstart",
+        "compositionupdate",
+        "beforeinput insertCompositionText [k] composing",
+        "input insertCompositionText [k] composing",
+        "compositionupdate",
+        "beforeinput insertCompositionText [\xe3\x81\x8b] composing",
+        "input insertCompositionText [\xe3\x81\x8b] composing",
+        "beforeinput insertCompositionText [] composing",
+        "input insertCompositionText [] composing",
+        "beforeinput insertText [\xe3\x81\x8b]",
+        "input insertText [\xe3\x81\x8b]",
+        "compositionend",
+    });
+    // Only the commit is a step of the history.
+    send(e.page.view, press('Z', PrAppKeyCode_KeyZ, "", PrAppModifierFlag_Super));
+    CHECK(valueOf(e.area) == "a");
+}
+
+TEST_CASE("a drag in a textarea extends its selection from the press") {
+    EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40>abcdefghij</textarea>");
+    e.page.settle();
+    clickAt(e.page, PrVec2{6, 8});
+    uint32_t start = prHtmlTextControlSelectionStart(e.area);
+    PrAppEvent event{.kind = PrAppEventKind_PointerDown, .position = PrVec2{6, 8}};
+    prHtmlViewEvent(e.page.view, &event, 0);
+    event.kind = PrAppEventKind_PointerMove;
+    event.position = PrVec2{60, 8};
+    prHtmlViewEvent(e.page.view, &event, 0);
+    CHECK(prHtmlTextControlSelectionStart(e.area) == start);
+    CHECK(prHtmlTextControlSelectionEnd(e.area) > start);
+}
+
+TEST_CASE("a text control's multi-click selects a word, a line, and the text") {
+    EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40>alpha beta\ngamma</textarea>");
+    e.page.settle();
+    for (uint32_t clicks : {2u, 3u, 4u}) {
+        CAPTURE(clicks);
+        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = 1, .position = PrVec2{10, 8}};
+        prHtmlViewEvent(e.page.view, &event, 0);
+        event.kind = PrAppEventKind_PointerUp;
+        prHtmlViewEvent(e.page.view, &event, 0);
+        event.kind = PrAppEventKind_PointerDown;
+        event.clicks = clicks;
+        prHtmlViewEvent(e.page.view, &event, 0);
+        event.kind = PrAppEventKind_PointerUp;
+        prHtmlViewEvent(e.page.view, &event, 0);
+        CHECK(prHtmlTextControlSelectionStart(e.area) == 0);
+        CHECK(prHtmlTextControlSelectionEnd(e.area) == (clicks == 2 ? 5 : clicks == 3 ? 10 : 16));
+    }
+}
+
+TEST_CASE("the keys of a text control move by line and by word, and delete by word") {
+    EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40 rows=3>one two\nthree</textarea>");
+    e.page.settle();
+    auto key = [&](PrAppKey k, PrAppModifierFlags modifiers = 0) {
+        PrAppEvent event{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .key = k};
+        prHtmlViewEvent(e.page.view, &event, 0);
+        event.kind = PrAppEventKind_KeyUp;
+        prHtmlViewEvent(e.page.view, &event, 0);
+    };
+    prHtmlTextControlSetSelectionRange(e.area, 0, 0, PrDomSelectionDirection_None);
+    key(PrAppKey_Down);
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 8);
+    key(PrAppKey_Up);
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 0);
+    key(PrAppKey_Right, PrAppModifierFlag_Alt);
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 3);
+    key(PrAppKey_Right, PrAppModifierFlag_Alt | PrAppModifierFlag_Shift);
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 3);
+    CHECK(prHtmlTextControlSelectionEnd(e.area) == 7);
+    key(PrAppKey_End, PrAppModifierFlag_Control);
+    CHECK(prHtmlTextControlSelectionStart(e.area) == 13);
+    key(PrAppKey_Backspace, PrAppModifierFlag_Alt);
+    CHECK(valueOf(e.area) == "one two\n");
+}
+
+TEST_CASE("a view asks for frames until a selection that a press made is shown, with no caret to blink") {
+    EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40>alpha beta</textarea>");
+    e.page.settle();
+    for (uint32_t clicks : {1u, 2u}) {
+        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = clicks, .position = PrVec2{10, 8}};
+        prHtmlViewEvent(e.page.view, &event, 0);
+        event.kind = PrAppEventKind_PointerUp;
+        prHtmlViewEvent(e.page.view, &event, 0);
+    }
+    CHECK(prHtmlTextControlSelectionEnd(e.area) > prHtmlTextControlSelectionStart(e.area));
+    // The press is a change, then a job, and then the job's scene, which shows the selection.
+    CHECK(prHtmlViewOutput(e.page.view).wantsFrame);
+    e.page.settle();
+    CHECK(prHtmlViewOutput(e.page.view).wantsFrame);
+    e.page.settle();
+    CHECK(!prHtmlViewOutput(e.page.view).wantsFrame);
+}
+
+TEST_CASE("typing keeps the caret in view") {
+    EditedArea e("<style>body { margin: 0 }</style><input id=t style='width: 40px'>");
+    e.page.settle();
+    e.page.settle();
+    CHECK(prCssElementScrollLeft(e.area) == 0);
+    for (char c : std::string("a long value that overflows the field")) {
+        char text[2] = {c, 0};
+        send(e.page.view, press(PrAppKey(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c), PrAppKeyCode_KeyA, text));
+        e.page.settle();
+        e.page.settle();
+    }
+    CHECK(prCssElementScrollLeft(e.area) > 0);
+    // The caret stands at the end, within the rounding of the integer widths.
+    CHECK(prCssElementScrollLeft(e.area) >= prCssElementScrollWidth(e.area) - prCssElementClientWidth(e.area) - 1);
+}
+
+TEST_CASE("a textarea scrolls to a caret that typing moves past its last line") {
+    EditedArea e("<style>body { margin: 0 }</style><textarea id=t rows=2></textarea>");
+    e.page.settle();
+    e.page.settle();
+    for (uint32_t i = 0; i < 8; ++i) {
+        send(e.page.view, press(PrAppKey_Enter, PrAppKeyCode_Enter, ""));
+        e.page.settle();
+        e.page.settle();
+    }
+    CHECK(prCssElementScrollTop(e.area) > 0);
+}
+
+TEST_CASE("a host that paints the document itself shows a selection at once, with no update and no pointer move") {
+    EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40>alpha beta</textarea>");
+    e.page.settle();
+    e.page.settle();
+    PrCssPresentation* presentation = prHtmlPagePresentation(e.page.page);
+    PrLayoutNode text = prCssPresentationFieldText(presentation, e.area);
+    PrLayoutTree* tree = prCssPresentationTree(presentation);
+    REQUIRE(text != kPrLayoutNodeNone);
+    for (uint32_t clicks : {1u, 2u}) {
+        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = clicks, .position = PrVec2{10, 8}};
+        prHtmlViewEvent(e.page.view, &event, 0);
+        event.kind = PrAppEventKind_PointerUp;
+        prHtmlViewEvent(e.page.view, &event, 0);
+    }
+    REQUIRE(prHtmlTextControlSelectionEnd(e.area) == 5);
+    CHECK(prLayoutNodeHighlights(tree, text, nullptr, 0) == 0);
+    PrDrawList* list = prDrawListCreate();
+    prHtmlViewPaint(e.page.view, list);
+    prDrawListRelease(list);
+    CHECK(prLayoutNodeHighlights(tree, text, nullptr, 0) == 1);
+    CHECK(!prHtmlViewOutput(e.page.view).wantsFrame);
+}
+
+TEST_CASE("a caret asks for frames to blink by, and comes into view as it moves") {
+    EditedArea e("<style>body { margin: 0 }</style><input id=t style='width: 40px' value='a long value that overflows'>");
+    e.page.settle();
+    CHECK(prHtmlViewOutput(e.page.view).wantsFrame);
+    PrAppEvent event{.kind = PrAppEventKind_KeyDown, .key = PrAppKey_End};
+    prHtmlViewEvent(e.page.view, &event, 0);
+    e.page.settle();
+    e.page.settle();
+    CHECK(prCssElementScrollLeft(e.area) > 0);
+    prHtmlTextControlSelect(e.area);
+    e.page.settle();
+    e.page.settle();
+    CHECK(!prHtmlViewOutput(e.page.view).wantsFrame);
+}
+
+TEST_CASE("an empty control shows its placeholder, until it has a value") {
+    EditedArea e("<textarea id=t placeholder='Say something'></textarea>");
+    e.page.settle();
+    PrCssPresentation* presentation = prHtmlPagePresentation(e.page.page);
+    PrLayoutNode text = prCssPresentationFieldText(presentation, e.area);
+    REQUIRE(text != kPrLayoutNodeNone);
+    CHECK(prLayoutNodeText(prCssPresentationTree(presentation), text) == "Say something");
+    send(e.page.view, press('H', PrAppKeyCode_KeyH, "h"));
+    e.page.settle();
+    text = prCssPresentationFieldText(presentation, e.area);
+    CHECK(prLayoutNodeText(prCssPresentationTree(presentation), text) == "h");
+}
+
+TEST_CASE("a password field shows a mark for each code point, unless input-security is none") {
+    EditedArea e("<meta charset=utf-8><input id=t type=password value='h\xc3\xa9y'>");
+    e.page.settle();
+    PrCssPresentation* presentation = prHtmlPagePresentation(e.page.page);
+    PrLayoutNode text = prCssPresentationFieldText(presentation, e.area);
+    REQUIRE(text != kPrLayoutNodeNone);
+    CHECK(prLayoutNodeText(prCssPresentationTree(presentation), text) == "\xe2\x80\xa2\xe2\x80\xa2\xe2\x80\xa2");
+    CHECK(prCssPresentationFieldMasked(presentation, e.area));
+    CHECK(prHtmlViewOutput(e.page.view).hasTextInput);
+    EditedArea plain("<style>input { input-security: none }</style><input id=t type=password value=hey>");
+    plain.page.settle();
+    presentation = prHtmlPagePresentation(plain.page.page);
+    text = prCssPresentationFieldText(presentation, plain.area);
+    CHECK(prLayoutNodeText(prCssPresentationTree(presentation), text) == "hey");
+}
+
+TEST_CASE("::selection colors what a text control has selected") {
+    EditedArea e("<style>textarea::selection { color: rgb(255, 0, 0); background-color: rgb(0, 0, 255) }</style>"
+        "<textarea id=t>abc</textarea>");
+    e.page.settle();
+    PrColor16 color{};
+    PrColor16 background{};
+    prCssPresentationSelectionColors(prHtmlPagePresentation(e.page.page), e.area, &color, &background);
+    PrColor red = prColorFromColor16(color);
+    PrColor blue = prColorFromColor16(background);
+    CHECK(red.r == doctest::Approx(1));
+    CHECK(red.b == doctest::Approx(0));
+    CHECK(blue.b == doctest::Approx(1));
+    CHECK(blue.r == doctest::Approx(0));
+}
+
+TEST_CASE("cut, copy and paste use the clipboard, and fire events that can take them over") {
+    static std::string clipboard;
+    static uint32_t requested;
+    PrApp app{};
+    app.setClipboardText = [](PrApp*, PrStringView text) -> PrStatus {
+        clipboard = std::string(text.data, text.size);
+        return PrStatus_Ok;
+    };
+    app.requestClipboardText = [](PrApp*) { ++requested; };
+    EditedArea e("<textarea id=t>one two</textarea>");
+    prHtmlViewSetApp(e.page.view, &app);
+    e.page.settle();
+    auto command = [&](PrAppKey key) {
+        PrAppEvent event{.kind = PrAppEventKind_KeyDown, .modifiers = PrAppModifierFlag_Super, .key = key};
+        prHtmlViewEvent(e.page.view, &event, 0);
+        event.kind = PrAppEventKind_KeyUp;
+        prHtmlViewEvent(e.page.view, &event, 0);
+    };
+    prHtmlTextControlSetSelectionRange(e.area, 0, 3, PrDomSelectionDirection_None);
+    command('C');
+    CHECK(clipboard == "one");
+    CHECK(valueOf(e.area) == "one two");
+    command('X');
+    CHECK(clipboard == "one");
+    CHECK(valueOf(e.area) == " two");
+    prHtmlTextControlSetSelectionRange(e.area, 0, 0, PrDomSelectionDirection_None);
+    uint32_t before = requested;
+    command('V');
+    CHECK(requested == before + 1);
+    PrAppEvent arrived{.kind = PrAppEventKind_Clipboard, .text = "pasted"};
+    prHtmlViewEvent(e.page.view, &arrived, 0);
+    CHECK(valueOf(e.area) == "pasted two");
+
+    // A listener takes over a copy by canceling it and setting the event's data, and refuses a paste by canceling it.
+    PrDomEventListener takeOver{
+        [](void*, PrDomEvent* event) {
+            if (PrDomClipboardEvent* fired = prDomClipboardEventQuery(event))
+                prDomDataTransferSetText(prDomClipboardEventClipboardData(fired), "theirs");
+            prDomEventPreventDefault(event);
+        },
+        nullptr,
+        0,
+        nullptr,
+        nullptr,
+    };
+    PrDomEventTarget* target = prDomNodeAsEventTarget(prDomElementAsNode(e.area));
+    prDomEventTargetAddEventListener(target, "copy", &takeOver, nullptr);
+    prDomEventTargetAddEventListener(target, "cut", &takeOver, nullptr);
+    prDomEventTargetAddEventListener(target, "paste", &takeOver, nullptr);
+    prHtmlTextControlSetSelectionRange(e.area, 0, 6, PrDomSelectionDirection_None);
+    command('C');
+    CHECK(clipboard == "theirs");
+    command('X');
+    CHECK(valueOf(e.area) == "pasted two");
+    command('V');
+    prHtmlViewEvent(e.page.view, &arrived, 0);
+    CHECK(valueOf(e.area) == "pasted two");
+}
+
+TEST_CASE("a read-only textarea takes no text") {
+    EditedArea e("<textarea id=t readonly>ab</textarea>");
+    send(e.page.view, press('C', PrAppKeyCode_KeyC, "c"));
+    CHECK(valueOf(e.area) == "ab");
+}
+
+TEST_CASE("a textarea shows its value, not its children, and the view reports where its caret stands") {
+    EditedArea e("<style>body { margin: 0 }</style><textarea id=t rows=3>ab</textarea>");
+    PrHtmlTextAreaElement* area = prHtmlTextAreaElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(e.area)));
+    e.page.settle();
+    prHtmlTextAreaElementSetValue(area, "changed");
+    e.page.settle();
+    PrCssPresentation* presentation = prHtmlPagePresentation(e.page.page);
+    PrLayoutNode text = prCssPresentationFieldText(presentation, e.area);
+    REQUIRE(text != kPrLayoutNodeNone);
+    CHECK(prLayoutNodeText(prCssPresentationTree(presentation), text) == "changed");
+    e.page.settle();
+    PrRect rect{};
+    PrAppOutput output = prHtmlViewOutput(e.page.view);
+    CHECK(output.hasTextInput);
+    rect = output.textInput;
+    CHECK(rect.left > 0);
 }
 
 TEST_CASE("without a focused element, keys go to the body") {

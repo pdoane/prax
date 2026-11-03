@@ -197,6 +197,16 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
     }
 }
 
+// Moves the caret to the end of the text, with nothing selected and no direction.
+void collapseAtEnd(DomControl* control) {
+    if (control->view == nullptr)
+        return;
+    uint32_t end = prTextEditBufferSize(control->text);
+    PrTextEditSelection caret{.anchor = end, .caret = end};
+    prTextEditViewSetSelections(control->view, &caret, 1);
+    control->selectionDirection = PrDomSelectionDirection_None;
+}
+
 // Tells what depends on a control's value that it changed.
 void valueChanged(PrDomElement* element) {
     domNotifyStatesChanged(element);
@@ -209,9 +219,9 @@ void setSanitized(PrDomElement* input, PrStringView text) {
     appendSanitized(input, text, &sanitized);
     PrStringView value = textView(&sanitized);
     const DomControl* existing = domControl(input);
-    PrStringView old = existing != nullptr ? prStringView(&existing->value) : "";
+    PrStringView old = existing != nullptr ? domControlText(existing) : "";
     if (old != value) {
-        prStringReplace(&domControlFromElement(input)->value, value);
+        domControlSetText(domControlFromElement(input), value);
         valueChanged(input);
     }
     textReset(&sanitized);
@@ -221,7 +231,7 @@ void setSanitized(PrDomElement* input, PrStringView text) {
 void sanitize(PrDomElement* input) {
     const DomControl* control = domControl(input);
     if (control != nullptr && control->dirtyValue) {
-        PrString value = prStringClone(&control->value);
+        PrString value = prStringCopy(domControlText(control));
         setSanitized(input, prStringView(&value));
         prStringReset(&value);
     } else {
@@ -576,12 +586,48 @@ DomValueMode domInputValueMode(PrDomInputType type) {
     }
 }
 
+PrStringView domControlText(const DomControl* control) {
+    return control->text != nullptr ? prTextEditBufferText(control->text) : "";
+}
+
+void domControlSetText(DomControl* control, PrStringView text) {
+    if (control->text == nullptr) {
+        control->text = prTextEditBufferCreate(text);
+        control->view = prTextEditViewCreate(control->text);
+        return;
+    }
+    if (domControlText(control) == text)
+        return;
+    // A selection stays at its offsets, clamped to the text, rather than following a whole replacement.
+    PrTextEditSelection selection = prTextEditViewSelections(control->view)[0];
+    prTextEditBufferSetText(control->text, text);
+    prTextEditViewSetSelections(control->view, &selection, 1);
+}
+
+DomControl* domTextControlSync(PrDomElement* element) {
+    DomControl* control = domControlFromElement(element);
+    if (domIsHtml(element, PrDomTag_Textarea) && !control->dirtyValue) {
+        TextBuffer value;
+        domControlValue(element, &value);
+        // A change of the default value moves the caret to the start.
+        if (control->text != nullptr && domControlText(control) != textView(&value)) {
+            PrTextEditSelection start{};
+            prTextEditViewSetSelections(control->view, &start, 1);
+        }
+        domControlSetText(control, textView(&value));
+        textReset(&value);
+    }
+    if (control->text == nullptr)
+        domControlSetText(control, "");
+    return control;
+}
+
 void domControlValue(const PrDomElement* element, TextBuffer* out) {
     textClear(out);
     if (domIsHtml(element, PrDomTag_Textarea)) {
         const DomControl* control = domControl(element);
         if (control != nullptr && control->dirtyValue) {
-            appendNormalizingNewlines(out, prStringView(&control->value));
+            textAppend(out, domControlText(control));
         } else {
             TextBuffer raw;
             appendChildText(element, &raw);
@@ -596,7 +642,7 @@ void domControlValue(const PrDomElement* element, TextBuffer* out) {
         case DomValueMode_Value: {
             const DomControl* control = domControl(element);
             if (control != nullptr)
-                textAppend(out, prStringView(&control->value));
+                textAppend(out, domControlText(control));
             return;
         }
         case DomValueMode_Default:
@@ -616,7 +662,7 @@ bool domControlValueEmpty(const PrDomElement* element) {
     if (domIsHtml(element, PrDomTag_Textarea)) {
         const DomControl* control = domControl(element);
         if (control != nullptr && control->dirtyValue)
-            return prStringIsEmpty(&control->value);
+            return domControlText(control).size == 0;
         for (const PrDomNode* child = element->first; child != nullptr; child = child->next) {
             if (domIsText(child) && !prStringIsEmpty(&static_cast<const PrDomCharacterData*>(child)->data))
                 return false;
@@ -628,7 +674,7 @@ bool domControlValueEmpty(const PrDomElement* element) {
     switch (domInputValueMode(domElementInputType(element))) {
         case DomValueMode_Value: {
             const DomControl* control = domControl(element);
-            return control == nullptr || prStringIsEmpty(&control->value);
+            return control == nullptr || domControlText(control).size == 0;
         }
         case DomValueMode_Default:
             return domAttributeValue(element, "value").size == 0;
@@ -644,18 +690,33 @@ bool domControlValueEmpty(const PrDomElement* element) {
 
 PrStatus domControlSetValue(PrDomElement* element, PrStringView value) {
     if (domIsHtml(element, PrDomTag_Textarea)) {
-        DomControl* control = domControlFromElement(element);
-        prStringReplace(&control->value, value);
+        // The caret moves to the end of a value that the setter changes (html/#dom-textarea-value).
+        TextBuffer normalized;
+        appendNormalizingNewlines(&normalized, value);
+        DomControl* control = domTextControlSync(element);
+        bool changed = domControlText(control) != textView(&normalized);
+        domControlSetText(control, textView(&normalized));
         control->dirtyValue = true;
+        if (changed)
+            collapseAtEnd(control);
+        textReset(&normalized);
         valueChanged(element);
         return PrStatus_Ok;
     }
     PR_ASSERT(isInput(element));
     switch (domInputValueMode(domElementInputType(element))) {
-        case DomValueMode_Value:
-            domControlFromElement(element)->dirtyValue = true;
+        case DomValueMode_Value: {
+            // The caret moves to the end of a value that the setter changes (html/#dom-input-value-value).
+            DomControl* control = domControlFromElement(element);
+            TextBuffer before;
+            textAppend(&before, domControlText(control));
+            control->dirtyValue = true;
             setSanitized(element, value);
+            if (domControlText(control) != textView(&before))
+                collapseAtEnd(control);
+            textReset(&before);
             return PrStatus_Ok;
+        }
         case DomValueMode_Default:
         case DomValueMode_DefaultOn:
             domSetAttribute(element, PrDomNamespace_None, "value", value);
@@ -1035,16 +1096,16 @@ void domControlAttributeChanged(PrDomElement* element, PrStringView name, PrStri
         DomValueMode previous = domInputValueMode(domInputType(oldValue));
         DomControl* control = domControlFromElement(element);
         if (previous == DomValueMode_Value && (mode == DomValueMode_Default || mode == DomValueMode_DefaultOn)) {
-            if (!prStringIsEmpty(&control->value)) {
-                PrString value = prStringClone(&control->value);
+            if (domControlText(control).size != 0) {
+                PrString value = prStringCopy(domControlText(control));
                 domSetAttribute(element, PrDomNamespace_None, "value", prStringView(&value));
                 prStringReset(&value);
             }
         } else if (previous != DomValueMode_Value && mode == DomValueMode_Value) {
-            prStringReset(&control->value);
+            domControlSetText(control, "");
             control->dirtyValue = false;
         } else if (previous != DomValueMode_Filename && mode == DomValueMode_Filename) {
-            prStringReset(&control->value);
+            domControlSetText(control, "");
         }
         if (mode == DomValueMode_Value)
             sanitize(element);
@@ -1084,7 +1145,7 @@ void domControlCloned(const PrDomElement* element, PrDomElement* clone) {
     if (control == nullptr || (!isInput(element) && !domIsHtml(element, PrDomTag_Textarea)))
         return;
     DomControl* copy = domControlFromElement(clone);
-    prStringReplace(&copy->value, prStringView(&control->value));
+    domControlSetText(copy, domControlText(control));
     copy->dirtyValue = control->dirtyValue;
     copy->checked = control->checked;
     copy->dirtyChecked = control->dirtyChecked;
@@ -1100,7 +1161,9 @@ void domControlDestroy(PrDomElement* element) {
     if (DomControl* control = state->control) {
         if (control->form != nullptr)
             removeFromForm(control->form, element);
-        prStringReset(&control->value);
+        prTextEditHistoryDestroy(control->history);
+        prTextEditViewDestroy(control->view);
+        prTextEditBufferDestroy(control->text);
         prStringReset(&control->defaultOverride);
         prMemoryFree(control);
         state->control = nullptr;

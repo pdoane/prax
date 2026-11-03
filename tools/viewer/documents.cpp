@@ -251,9 +251,12 @@ void input(Loaded& loaded, const PrAppEvent& event) {
         htmlInput(*loaded.html, event);
 }
 
-PrAppOutput output(Loaded& loaded) {
+PrAppOutput output(Loaded& loaded, PrApp* app, double time) {
     std::lock_guard<std::mutex> lock(loaded.mutex);
-    return loaded.html != nullptr ? htmlOutput(*loaded.html) : PrAppOutput{};
+    if (loaded.html == nullptr)
+        return PrAppOutput{};
+    htmlSetApp(*loaded.html, app);
+    return htmlOutput(*loaded.html, time);
 }
 
 const std::vector<Document>& Collection::documents() const {

@@ -313,6 +313,8 @@ enum {
     CssPseudo_AfterMarker,
     CssPseudo_FirstLine,
     CssPseudo_FirstLetter,
+    CssPseudo_Placeholder,          // what a text control's ::field-content takes while its placeholder shows
+    CssPseudo_Selection,            // the colors of what a text control has selected
     CssPseudo_Count,
 };
 typedef uint8_t CssPseudo;

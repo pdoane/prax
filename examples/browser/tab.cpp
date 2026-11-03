@@ -155,7 +155,9 @@ void openPage(Browser& b, Tab& tab, const PrAppFrame& window, bool shown, const 
         .updated = b.trace ? traceUpdate : nullptr,
         .updatedContext = &tab,
     };
-    tab.view.store(prHtmlViewCreate(&view));
+    PrHtmlView* made = prHtmlViewCreate(&view);
+    prHtmlViewSetApp(made, b.app);
+    tab.view.store(made);
     b.open.push_back(&tab);
     if (!url.empty())
         navigate(tab, url);

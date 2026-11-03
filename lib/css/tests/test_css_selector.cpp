@@ -332,5 +332,6 @@ TEST_CASE("a selector styles its element, a pseudo-element that the cascade comp
     CHECK(pseudoOf("p::first-line") == CssPseudo_FirstLine);
     CHECK(pseudoOf("p:first-letter") == CssPseudo_FirstLetter);
     CHECK(pseudoOf("p::first-letter:hover") == CssPseudo_Count);
-    CHECK(pseudoOf("p::selection") == CssPseudo_Count);
+    CHECK(pseudoOf("p::selection") == CssPseudo_Selection);
+    CHECK(pseudoOf("p::target-text") == CssPseudo_Count);
 }

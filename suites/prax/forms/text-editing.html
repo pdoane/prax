@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text editing</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+.wide { inline-size: 250px; }
+#selected::selection { color: white; background-color: seagreen; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Text editing</h1>
+  <p>Double-click for a word, and triple-click for a line. Cut, copy and paste, and undo. A one-line field scrolls to its caret.</p>
+</header>
+
+<section>
+  <h2>Words</h2>
+  <label><span class=cap>Japanese: a double-click takes each script's run</span><textarea class=wide rows=2>カタカナと漢字をひらがなで書く。Latin 123</textarea></label>
+  <label><span class=cap>English: contractions and numbers stay whole</span><textarea class=wide rows=2>Don't stop at 3.14 or the_end.</textarea></label>
+</section>
+
+<section>
+  <h2>Placeholders</h2>
+  <label><span class=cap>textarea</span><textarea class=wide rows=2 placeholder="What to make"></textarea></label>
+  <label><span class=cap>one line, which scrolls as you type</span><input class=wide placeholder="What to avoid"></label>
+</section>
+
+<section>
+  <h2>Passwords</h2>
+  <label><span class=cap>masked</span><input class=wide type=password value="hunter2"></label>
+  <label><span class=cap>input-security: none</span><input class=wide type=password value="hunter2" style="input-security: none"></label>
+</section>
+
+<section>
+  <h2>Selection colors</h2>
+  <label><span class=cap>::selection</span><textarea class=wide rows=2 id=selected>Select this text</textarea></label>
+</section>
+</body>
+</html>

@@ -9,7 +9,9 @@
 #include "pr/layout_query.h"
 #include "pr/mem.h"
 #include "pr/text_edit.h"
-#include "pr/unicode_grapheme.h"
+#include "pr/text_edit_command.h"
+#include "pr/text_edit_layout.h"
+#include "pr/text_edit_motion.h"
 
 namespace pr_impl {
 
@@ -17,15 +19,6 @@ namespace {
 
 // The key under which an edit keeps its state on its control.
 constexpr char kUiTextEditOwner = 0;
-
-// The unit that a run of presses selects, and that a drag after it keeps whole.
-enum : uint8_t {
-    TextUnit_Character,
-    TextUnit_Word,
-    TextUnit_Line,
-    TextUnit_All,
-};
-typedef uint8_t TextUnit;
 
 // What an edit keeps between rounds.
 struct TextEditState {
@@ -43,7 +36,7 @@ struct TextEditState {
     // The unit that the press selected, around where the press landed.
     uint32_t unitLow;
     uint32_t unitHigh;
-    TextUnit unit;
+    PrTextEditUnit unit;
 
     PrLayoutTextAffinity affinity;  // where the caret stands at a soft wrap
     float column;                   // the x in viewport px that Up and Down keep, if `hasColumn`
@@ -58,12 +51,6 @@ struct TextEditState {
 
 // The period of the caret's blink, in seconds, half of it shown.
 constexpr double kBlinkSeconds = 1.0;
-
-// How many steps of half a line Up and Down take, at most, to find the next line.
-constexpr uint32_t kLineSearchSteps = 8;
-
-// How far left or right of the caret a point lies to reach the ends of its line, in px.
-constexpr float kLineReach = 1.0e6f;
 
 // Ends the editing of the text, and frees what held it.
 void closeBuffer(TextEditState& state) {
@@ -95,114 +82,6 @@ void destroyState(void* state) {
 TextEditState& stateOf(PrUi* ui, PrLayoutNode control) {
     return *static_cast<TextEditState*>(
         prUiStateWithDestroy(ui, control, &kUiTextEditOwner, 0, sizeof(TextEditState), destroyState));
-}
-
-bool isContinuation(char byte) {
-    return (uint8_t(byte) & 0xc0) == 0x80;
-}
-
-// Returns `at` clamped to the text and moved back to the start of the code point it is in.
-uint32_t clampOffset(PrStringView text, uint32_t at) {
-    at = at < text.size ? at : uint32_t(text.size);
-    while (at > 0 && at < text.size && isContinuation(text.data[at]))
-        --at;
-    return at;
-}
-
-// Returns the start of the line of the text that holds `at`, after the line feed before it.
-uint32_t lineStart(PrStringView text, uint32_t at) {
-    while (at > 0 && text.data[at - 1] != '\n')
-        --at;
-    return at;
-}
-
-// Returns the end of the line of the text that holds `at`, at the line feed after it.
-uint32_t lineEnd(PrStringView text, uint32_t at) {
-    while (at < text.size && text.data[at] != '\n')
-        ++at;
-    return at;
-}
-
-// Returns the boundary of the grapheme cluster after `at`, or the end of the text.
-uint32_t nextGrapheme(PrStringView text, uint32_t at) {
-    if (at >= text.size)
-        return uint32_t(text.size);
-    // Clusters never cross a line feed, so the clusters of a line are found from its start.
-    uint32_t b = lineStart(text, at);
-    while (b <= at)
-        b = uint32_t(prUnicodeGraphemeNext(text, b));
-    return b;
-}
-
-// Returns the boundary of the grapheme cluster before `at`, or the start of the text.
-uint32_t previousGrapheme(PrStringView text, uint32_t at) {
-    if (at == 0)
-        return 0;
-    uint32_t start = lineStart(text, at);
-    if (start == at)
-        return at - 1;
-    uint32_t b = start;
-    for (;;) {
-        uint32_t next = uint32_t(prUnicodeGraphemeNext(text, b));
-        if (next >= at)
-            return b;
-        b = next;
-    }
-}
-
-// Returns true if the byte belongs to a word: an ASCII letter, digit or underscore, or a byte of a non-ASCII character.
-bool isWordByte(char byte) {
-    uint8_t value = uint8_t(byte);
-    return value >= 0x80 || (value >= '0' && value <= '9') || (value >= 'A' && value <= 'Z') ||
-        (value >= 'a' && value <= 'z') || value == '_';
-}
-
-// Returns where a word motion leftward from `at` ends: past the bytes outside words before it, then past the word.
-uint32_t wordLeft(PrStringView text, uint32_t at) {
-    while (at > 0 && !isWordByte(text.data[at - 1]))
-        --at;
-    while (at > 0 && isWordByte(text.data[at - 1]))
-        --at;
-    return at;
-}
-
-// Returns where a word motion rightward from `at` ends.
-uint32_t wordRight(PrStringView text, uint32_t at) {
-    while (at < text.size && !isWordByte(text.data[at]))
-        ++at;
-    while (at < text.size && isWordByte(text.data[at]))
-        ++at;
-    return at;
-}
-
-// Writes the bytes of `unit` around `at`: the word or the run of bytes outside words, the line, or the whole text.
-void unitAround(PrStringView text, uint32_t at, TextUnit unit, uint32_t* low, uint32_t* high) {
-    switch (unit) {
-        case TextUnit_Word: {
-            bool word = at < text.size ? isWordByte(text.data[at]) : at > 0 && isWordByte(text.data[at - 1]);
-            uint32_t lo = at;
-            while (lo > 0 && isWordByte(text.data[lo - 1]) == word && text.data[lo - 1] != '\n')
-                --lo;
-            uint32_t hi = at;
-            while (hi < text.size && isWordByte(text.data[hi]) == word && text.data[hi] != '\n')
-                ++hi;
-            *low = lo;
-            *high = hi;
-            return;
-        }
-        case TextUnit_Line:
-            *low = lineStart(text, at);
-            *high = lineEnd(text, at);
-            return;
-        case TextUnit_All:
-            *low = 0;
-            *high = uint32_t(text.size);
-            return;
-        default:
-            *low = at;
-            *high = at;
-            return;
-    }
 }
 
 // An edit in the round being built: its description, its state, and the context.
@@ -334,22 +213,10 @@ struct TextEditor {
 
     // Returns the position nearest `point` in viewport px, and the affinity that puts the caret on the line under it.
     bool positionAt(PrVec2 point, uint32_t* out, PrLayoutTextAffinity* side) {
-        PrLayoutTextPosition position{};
-        if (!prLayoutTextPositionFromPoint(tree, node, prLayoutVecFromPx(point), &position))
+        uint32_t at = 0;
+        if (!prLayoutTextOffsetNear(tree, node, prLayoutVecFromPx(point), &at, side))
             return false;
-        PrStringView t = text();
-        *out = clampOffset(t, position.offset);
-        // A position at a soft wrap stands at the end of the line above if the point is nearer that line.
-        *side = PrLayoutTextAffinity_Downstream;
-        PrRect down{};
-        PrRect up{};
-        if (caretAt(*out, PrLayoutTextAffinity_Downstream, &down) && caretAt(*out, PrLayoutTextAffinity_Upstream,
-                &up) && down.top != up.top) {
-            float downDistance = absF32((down.top + down.bottom) / 2 - point.y);
-            float upDistance = absF32((up.top + up.bottom) / 2 - point.y);
-            if (upDistance < downDistance)
-                *side = PrLayoutTextAffinity_Upstream;
-        }
+        *out = prTextEditCodePointStart(text(), at);
         return true;
     }
 
@@ -362,142 +229,67 @@ struct TextEditor {
         return true;
     }
 
-    // Writes the positions at the ends of the line that the caret is on.
-    bool lineEnds(uint32_t* start, uint32_t* end) {
-        PrRect rect{};
-        if (!caretAt(caret, affinity, &rect))
-            return false;
-        float y = (rect.top + rect.bottom) / 2;
-        uint32_t a = 0;
-        uint32_t b = 0;
-        PrLayoutTextAffinity ignored = 0;
-        if (!positionAt(PrVec2{rect.left - kLineReach, y}, &a, &ignored) ||
-                !positionAt(PrVec2{rect.left + kLineReach, y}, &b, &ignored))
-            return false;
-        *start = a < b ? a : b;
-        *end = a < b ? b : a;
-        return true;
-    }
-
-    // Moves the caret to the line above or below, at the column it keeps, or to the end of the text if there is none.
-    void moveLine(bool down, bool extend) {
+    // Carries out a motion of the caret, and returns false if the edit does not take it.
+    bool move(PrTextEditCommand command, bool extend) {
         PrStringView t = text();
-        PrRect rect{};
-        if (!caretAt(caret, affinity, &rect)) {
-            moveTo(down ? uint32_t(t.size) : 0, extend);
-            return;
+        PrTextEditGeometry geometry = prTextEditGeometryFromLayoutText(tree, node, t);
+        PrTextEditPosition at{node, caret, affinity};
+        PrTextEditMotion motion = prTextEditMotionFromCommand(&geometry, at, command, desc.arrowMotion);
+        bool between = motion == PrTextEditMotion_LinePrevious || motion == PrTextEditMotion_LineNext;
+        if (motion != PrTextEditMotion_None && (multiline || !between)) {
+            PrTextEditSelection s{
+                .anchor = anchor,
+                .caret = caret,
+                .goal = column,
+                .hasGoal = hasColumn,
+                .affinity = affinity,
+            };
+            PrTextEditSelectionMove kind = extend ? PrTextEditSelectionMove_Extend : PrTextEditSelectionMove_Collapse;
+            s = prTextEditSelectionMove(&geometry, node, s, motion, kind);
+            anchor = s.anchor;
+            caret = s.caret;
+            affinity = s.affinity;
+            column = s.goal;
+            hasColumn = s.hasGoal;
+            moved = true;
         }
-        float kept = hasColumn ? column : rect.left;
-        float step = (rect.bottom - rect.top) / 2;
-        step = step > 1 ? step : 1;
-        float y = down ? rect.bottom : rect.top;
-        for (uint32_t i = 0; i < kLineSearchSteps; ++i) {
-            y += down ? step : -step;
-            uint32_t at = 0;
-            PrLayoutTextAffinity side = 0;
-            PrRect found{};
-            if (!positionAt(PrVec2{kept, y}, &at, &side) || !caretAt(at, side, &found))
-                break;
-            // A line's content area may overlap the next line's, so a line is told by the top of its caret.
-            bool past = down ? found.top > rect.top + 0.5f : found.top < rect.top - 0.5f;
-            if (past) {
-                moveTo(at, extend, side);
-                column = kept;
-                hasColumn = true;
-                return;
-            }
-        }
-        moveTo(down ? uint32_t(t.size) : 0, extend);
+        prTextEditGeometryReset(&geometry);
+        return motion != PrTextEditMotion_None;
     }
 
     void key(const PrAppEvent& e) {
         PrStringView t = text();
-        PrAppModifierFlags modifiers = PrAppModifierFlags(e.modifiers & ~PrAppModifierFlag_CapsLock);
-        bool extend = (modifiers & PrAppModifierFlag_Shift) != 0;
-        bool command = (modifiers & PrAppModifierFlag_Super) != 0;
-        bool control = (modifiers & PrAppModifierFlag_Control) != 0;
-        bool byWord = (modifiers & (PrAppModifierFlag_Alt | PrAppModifierFlag_Control)) != 0;
+        bool extend = false;
+        PrTextEditCommand command = prTextEditCommandFromKey(&e, &extend);
         bool selected = anchor != caret;
-        switch (e.key) {
-            case PrAppKey_Left:
-            case PrAppKey_Right: {
-                bool right = e.key == PrAppKey_Right;
-                uint32_t start = 0;
-                uint32_t end = 0;
-                if (command && multiline && lineEnds(&start, &end))
-                    moveTo(right ? end : start, extend,
-                        right ? PrLayoutTextAffinity_Upstream : PrLayoutTextAffinity_Downstream);
-                else if (command)
-                    moveTo(right ? lineEnd(t, caret) : lineStart(t, caret), extend);
-                else if (byWord)
-                    moveTo(right ? wordRight(t, caret) : wordLeft(t, caret), extend);
-                else if (selected && !extend)
-                    moveTo(right ? high() : low(), false);
-                else
-                    moveTo(right ? nextGrapheme(t, caret) : previousGrapheme(t, caret), extend);
-                return;
-            }
-            case PrAppKey_Home:
-            case PrAppKey_End: {
-                bool end = e.key == PrAppKey_End;
-                uint32_t first = 0;
-                uint32_t last = uint32_t(t.size);
-                if (!command && !control && multiline && !lineEnds(&first, &last)) {
-                    first = lineStart(t, caret);
-                    last = lineEnd(t, caret);
-                }
-                moveTo(end ? last : first, extend,
-                    end ? PrLayoutTextAffinity_Upstream : PrLayoutTextAffinity_Downstream);
-                return;
-            }
-            case PrAppKey_Up:
-            case PrAppKey_Down: {
-                bool down = e.key == PrAppKey_Down;
-                if (!multiline)
-                    return;
-                if (command) {
-                    moveTo(down ? uint32_t(t.size) : 0, extend);
-                    return;
-                }
-                if (selected && !extend) {
-                    moveTo(down ? high() : low(), false);
-                    return;
-                }
-                moveLine(down, extend);
-                return;
-            }
-            case PrAppKey_Backspace:
-                erase(byWord ? wordLeft(t, caret) : previousGrapheme(t, caret));
-                return;
-            case PrAppKey_Delete:
-                erase(byWord ? wordRight(t, caret) : nextGrapheme(t, caret));
-                return;
-            case PrAppKey_Enter:
+        if (move(command, extend))
+            return;
+        switch (command) {
+            case PrTextEditCommand_DeleteBackward: erase(prTextEditBackspaceStart(t, caret)); return;
+            case PrTextEditCommand_DeleteForward: erase(prTextEditClusterAfter(t, caret)); return;
+            case PrTextEditCommand_DeleteWordBefore: erase(prTextEditWordBefore(t, caret)); return;
+            case PrTextEditCommand_DeleteWordAfter: erase(prTextEditWordAfter(t, caret)); return;
+            case PrTextEditCommand_InsertLineBreak:
                 if (multiline)
                     insert("\n", true, PrTextEditOrigin_Local, PrTextEditMerge_None);
                 return;
-            default:
-                break;
-        }
-        if (!command && !control)
-            return;
-        PrApp* app = prUiApp(ui);
-        switch (e.key) {
-            case 'A':
+            case PrTextEditCommand_SelectAll:
                 anchor = 0;
                 moveTo(uint32_t(t.size), true);
                 return;
-            case 'C':
-            case 'X':
+            case PrTextEditCommand_Copy:
+            case PrTextEditCommand_Cut: {
+                PrApp* app = prUiApp(ui);
                 if (!selected)
                     return;
                 if (app != nullptr)
                     prAppSetClipboardText(app, PrStringView{t.data + low(), high() - low()});
-                if (e.key == 'X')
+                if (command == PrTextEditCommand_Cut)
                     erase(caret);
                 return;
-            case 'V':
-                if (app != nullptr) {
+            }
+            case PrTextEditCommand_Paste:
+                if (PrApp* app = prUiApp(ui)) {
                     prAppRequestClipboardText(app);
                     state.pasting = true;
                 }
@@ -524,35 +316,35 @@ struct TextEditor {
             // A drag keeps whole the unit that the press selected.
             uint32_t low = 0;
             uint32_t high = 0;
-            unitAround(t, at, state.unit, &low, &high);
+            prTextEditUnitAround(t, at, state.unit, &low, &high);
             if (at < state.unitLow) {
                 anchor = state.unitHigh;
                 moveTo(low, true, side);
             } else {
                 anchor = state.unitLow;
-                moveTo(state.unit == TextUnit_Character ? at : high, true, side);
+                moveTo(state.unit == PrTextEditUnit_Character ? at : high, true, side);
             }
             return;
         }
         state.dragging = true;
         if ((e.modifiers & PrAppModifierFlag_Shift) != 0) {
-            state.unit = TextUnit_Character;
+            state.unit = PrTextEditUnit_Character;
             state.unitLow = state.unitHigh = anchor;
             moveTo(at, true, side);
             return;
         }
         uint32_t presses = prUiPressCount(ui, 0);
         if (presses <= 1)
-            state.unit = TextUnit_Character;
+            state.unit = PrTextEditUnit_Character;
         else if (presses == 2)
-            state.unit = TextUnit_Word;
+            state.unit = PrTextEditUnit_Word;
         else if (presses == 3 && multiline)
-            state.unit = TextUnit_Line;
+            state.unit = PrTextEditUnit_Line;
         else
-            state.unit = TextUnit_All;
-        unitAround(t, at, state.unit, &state.unitLow, &state.unitHigh);
+            state.unit = PrTextEditUnit_All;
+        prTextEditUnitAround(t, at, state.unit, &state.unitLow, &state.unitHigh);
         anchor = state.unitLow;
-        moveTo(state.unit == TextUnit_Character ? at : state.unitHigh, true, side);
+        moveTo(state.unit == PrTextEditUnit_Character ? at : state.unitHigh, true, side);
     }
 
     // Replaces the text being composed, or the selection, with an update's text, and marks what it inserted. An update
@@ -590,10 +382,17 @@ struct TextEditor {
                 prUiKeyPressed(ui, desc.control, key, modifiers | PrAppModifierFlag_Shift);
             }
         }
+        // Up and Down run along the line where lines are vertical, even in a one-line edit.
+        PrTextEditGeometry geometry = prTextEditGeometryFromLayoutText(tree, node, text());
+        PrTextEditLine line{};
+        bool vertical = geometry.line(geometry.context, PrTextEditPosition{node, caret, affinity},
+            PrTextEditLineStep_Same, &line) && line.flow != PrTextEditFlow_HorizontalTb;
+        prTextEditGeometryReset(&geometry);
         static const PrAppKey kLines[] = {PrAppKey_Up, PrAppKey_Down};
-        static const PrAppModifierFlags kLineModifiers[] = {0, PrAppModifierFlag_Super};
-        for (uint32_t i = 0; multiline && i < 2; ++i) {
-            for (PrAppModifierFlags modifiers : kLineModifiers) {
+        for (uint32_t i = 0; (multiline || vertical) && i < 2; ++i) {
+            for (PrAppModifierFlags modifiers : kMoveModifiers) {
+                if (!vertical && modifiers != 0 && modifiers != PrAppModifierFlag_Super)
+                    continue;
                 prUiKeyPressed(ui, desc.control, kLines[i], modifiers);
                 prUiKeyPressed(ui, desc.control, kLines[i], modifiers | PrAppModifierFlag_Shift);
             }
@@ -654,8 +453,8 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
     }
     PrStringView text = editor.text();
     editor.loadSelection();
-    editor.anchor = clampOffset(text, editor.anchor);
-    editor.caret = clampOffset(text, editor.caret);
+    editor.anchor = prTextEditCodePointStart(text, editor.anchor);
+    editor.caret = prTextEditCodePointStart(text, editor.caret);
     if (state.markEnd > text.size || state.markStart > state.markEnd)
         state.markStart = state.markEnd = 0;
     editor.node = prLayoutTreeFrameText(editor.tree, desc->parent, 0, editor.shown());

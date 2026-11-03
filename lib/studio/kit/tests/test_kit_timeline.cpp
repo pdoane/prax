@@ -192,7 +192,7 @@ TEST_CASE("Delete asks to remove the selection, and a double press on an empty l
     f.frame();
     CHECK(scene.removals == 1);
     f.click(scene.at(6, 1));
-    f.click(scene.at(6, 1));
+    f.click(scene.at(6, 1), 0, 2);
     f.frame();
     CHECK(scene.additions == 1);
     CHECK(scene.added == false);

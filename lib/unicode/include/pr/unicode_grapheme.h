@@ -18,6 +18,11 @@ extern "C" {
 // starts. `text.size` for the last cluster. `at` is a boundary: zero, or a value that an earlier call returned.
 size_t prUnicodeGraphemeNext(PrStringView text, size_t at);
 
+// The byte offset where the word segment that starts at byte `at` of `text` ends, by the word boundaries of the same
+// report, which is where the next segment starts. A segment is a word, a run of spaces, or a single other character.
+// `text.size` for the last. `at` is a boundary: zero, or a value that an earlier call returned.
+size_t prUnicodeWordNext(PrStringView text, size_t at);
+
 #if defined(__cplusplus)
 }
 #endif

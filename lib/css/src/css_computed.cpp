@@ -64,7 +64,7 @@ CssPseudo computedTarget(PrStringView pseudoElement) {
         }
         if (only) {
             pseudo = cssSelectorPseudo(selectors, selectors->list.first);
-            if (pseudo == CssPseudo_Count)
+            if (pseudo == CssPseudo_Count || pseudo == CssPseudo_Placeholder || pseudo == CssPseudo_Selection)
                 pseudo = CssPseudo_None;
         }
     }

@@ -322,6 +322,7 @@ typedef struct PrAppEvent {
     PrAppModifierFlags modifiers;
     uint8_t button;             // pointer buttons: 0 for the primary one
     bool repeat;                // KeyDown: true if the event repeats a held key
+    uint32_t clicks;            // PointerDown: the presses of a multi-click, by the user's system settings, counting it
     PrAppKey key;               // KeyDown, KeyUp
     PrAppKeyCode code;          // KeyDown, KeyUp
     PrAppScrollUnit scrollUnit; // Scroll
@@ -522,10 +523,10 @@ PrStatus prAppSurface(PrApp* app, PrAppSurface* out);
 // open it.
 PrStatus prAppOpenUrl(PrApp* app, PrStringView url);
 
-// Requests the clipboard's text. A Clipboard event delivers it later, never during this call.
+// Requests the clipboard's text. A Clipboard event delivers it later, never during this call. Any thread may call it.
 void prAppRequestClipboardText(PrApp* app);
 
-// Replaces the clipboard's contents with `text`. Returns Io if the system refuses.
+// Replaces the clipboard's contents with `text`. Returns Io if the system refuses. Any thread may call it.
 PrStatus prAppSetClipboardText(PrApp* app, PrStringView text);
 
 // ---------------------------------------------------------------------------------------------------------------------

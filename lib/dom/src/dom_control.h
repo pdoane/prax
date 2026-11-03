@@ -18,6 +18,7 @@
 #include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
+#include "pr/text_edit.h"
 
 #include "dom/src/dom_node.h"
 
@@ -27,7 +28,18 @@ namespace pr_impl {
 
 // The state of a form-associated element. A textarea's value is its raw value (html/#concept-textarea-raw-value).
 struct DomControl {
-    PrString value;                     // html/#concept-fe-value, for an input in the value mode or a dirty textarea
+    // The text of a text control, created when the control first holds a value. It holds an input's value in the value
+    // mode. It holds a textarea's raw value if the textarea is dirty, and otherwise follows the child text content.
+    PrTextEditBuffer* PR_NULLABLE text;
+    PrTextEditView* PR_NULLABLE view;       // holds the selection in `text`, as bytes (html/#textFieldSelection)
+    PrTextEditHistory* PR_NULLABLE history; // the user's edits, from the first of them
+
+    // The text that an input method is composing, which the next update replaces. Empty if none is.
+    uint32_t markStart;
+    uint32_t markEnd;
+
+    PrDomSelectionDirection selectionDirection;
+    bool selectQueued;                  // a task to fire select is queued (html/#textFieldSelection)
     PrString defaultOverride;           // html/#concept-output-default-value-override, or the null string for none
     PrDomElement* PR_NULLABLE form;     // html/#form-owner, which lists the element among its controls
     bool dirtyValue;                    // html/#concept-fe-dirty
@@ -134,6 +146,15 @@ PrDomInputType domElementInputType(const PrDomElement* input);
 
 // Returns the value mode of the input type `type`.
 DomValueMode domInputValueMode(PrDomInputType type);
+
+// Returns the text of a text control, valid until the text changes. Text of no value is empty.
+PrStringView domControlText(const DomControl* control);
+
+// Replaces the text of a text control, and keeps the selection at its offsets, clamped to the text.
+void domControlSetText(DomControl* control, PrStringView text);
+
+// Returns the state of the text control `element`, with its text current with its API value.
+DomControl* domTextControlSync(PrDomElement* element);
 
 // Writes the value of a form control (html/#concept-fe-value) to `out`, which it clears first: an input's value in the
 // value mode, its value attribute in the default modes, or for a textarea its API value

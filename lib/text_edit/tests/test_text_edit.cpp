@@ -1,4 +1,5 @@
 #include "pr/text_edit.h"
+#include "pr/text_edit_command.h"
 
 #include "doctest/doctest.h"
 
@@ -750,4 +751,64 @@ TEST_CASE("many edits at scattered places agree with a plain string") {
     for (uint32_t line = 0; line < starts.size(); ++line)
         CHECK(prTextEditBufferLineStart(b, line) == starts[line]);
     prTextEditBufferDestroy(b);
+}
+
+TEST_CASE("an editor's units follow its text's clusters, words and lines") {
+    PrStringView text = "one two\nthree";
+    CHECK(prTextEditWordAfter(text, 0) == 3);
+    CHECK(prTextEditWordAfter(text, 3) == 7);
+    CHECK(prTextEditWordBefore(text, 7) == 4);
+    CHECK(prTextEditLineStart(text, 10) == 8);
+    CHECK(prTextEditLineEnd(text, 2) == 7);
+    uint32_t low = 0;
+    uint32_t high = 0;
+    prTextEditUnitAround(text, 5, PrTextEditUnit_Word, &low, &high);
+    CHECK(low == 4);
+    CHECK(high == 7);
+    prTextEditUnitAround(text, 9, PrTextEditUnit_Line, &low, &high);
+    CHECK(low == 8);
+    CHECK(high == 13);
+    PrStringView accent = "e\xcc\x81x";
+    CHECK(prTextEditClusterAfter(accent, 0) == 3);
+    CHECK(prTextEditClusterBefore(accent, 3) == 0);
+}
+
+TEST_CASE("a key press names a command") {
+    bool extend = false;
+    PrAppEvent left{.kind = PrAppEventKind_KeyDown, .key = PrAppKey_Left};
+    CHECK(prTextEditCommandFromKey(&left, &extend) == PrTextEditCommand_Left);
+    CHECK(!extend);
+    left.modifiers = PrAppModifierFlag_Alt | PrAppModifierFlag_Shift;
+    CHECK(prTextEditCommandFromKey(&left, &extend) == PrTextEditCommand_WordLeft);
+    CHECK(extend);
+    PrAppEvent undo{.kind = PrAppEventKind_KeyDown, .modifiers = PrAppModifierFlag_Super, .key = 'Z'};
+    CHECK(prTextEditCommandFromKey(&undo, &extend) == PrTextEditCommand_Undo);
+    undo.modifiers = PrAppModifierFlag_Super | PrAppModifierFlag_Shift;
+    CHECK(prTextEditCommandFromKey(&undo, &extend) == PrTextEditCommand_Redo);
+    PrAppEvent letter{.kind = PrAppEventKind_KeyDown, .key = 'Z'};
+    CHECK(prTextEditCommandFromKey(&letter, &extend) == PrTextEditCommand_None);
+}
+
+TEST_CASE("an editor's words are UAX #29's, with runs of Han and of Hiragana whole") {
+    uint32_t low = 0;
+    uint32_t high = 0;
+    PrStringView english = "don't stop, 3.14 now";
+    prTextEditUnitAround(english, 1, PrTextEditUnit_Word, &low, &high);
+    CHECK(low == 0);
+    CHECK(high == 5);
+    prTextEditUnitAround(english, 13, PrTextEditUnit_Word, &low, &high);
+    CHECK(low == 12);
+    CHECK(high == 16);
+    CHECK(prTextEditWordAfter(english, 0) == 5);
+    CHECK(prTextEditWordBefore(english, 12) == 6);
+    // Katakana, then Han, then Hiragana: each script's run is its own word.
+    PrStringView japanese = "\xe3\x82\xab\xe3\x82\xbf\xe6\xbc\xa2\xe5\xad\x97\xe3\x81\xb2\xe3\x82\x89";
+    prTextEditUnitAround(japanese, 0, PrTextEditUnit_Word, &low, &high);
+    CHECK(low == 0);
+    CHECK(high == 6);
+    prTextEditUnitAround(japanese, 6, PrTextEditUnit_Word, &low, &high);
+    CHECK(low == 6);
+    CHECK(high == 12);
+    CHECK(prTextEditWordAfter(japanese, 12) == 18);
+    CHECK(prTextEditWordBefore(japanese, 18) == 12);
 }

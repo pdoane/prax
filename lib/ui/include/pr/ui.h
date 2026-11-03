@@ -258,8 +258,8 @@ bool prUiClicked(const PrUi* ui, PrLayoutNode node, uint8_t button);
 PrAppModifierFlags prUiPressModifiers(const PrUi* ui, uint8_t button);
 
 // Returns the number of presses in the sequence that the most recent press of `button` ends: 1 for a single press, 2
-// for the second press of a double press, and so on. A press continues the sequence if it lands on the node that
-// captured the press before it, within half a second and 4 px of it.
+// for the second press of a double press, and so on. A press continues the sequence if the application reports a
+// multi-click (PrAppEvent::clicks) and it lands on the node that captured the press before it.
 uint32_t prUiPressCount(const PrUi* ui, uint8_t button);
 
 // Returns true if `button` was pressed in the current round outside the node and its descendants.

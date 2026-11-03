@@ -59,6 +59,10 @@ float layoutTextCaretAlong(const LayoutTree* tree, const LayoutFragment* fragmen
     uint32_t count = fragment->text.stopCount;
     for (uint32_t i = 0; i < count; ++i) {
         Cluster c = clusterAt(fragment, i, length);
+        // A transform can make several glyphs of one source byte, as of a German sharp S, which leaves clusters with no
+        // bytes. The offset stands before the first of them.
+        if (offset == c.start)
+            return reversed ? c.right : c.left;
         if (offset < c.start || offset >= c.end)
             continue;
         float fraction = float(offset - c.start) / float(c.end - c.start);

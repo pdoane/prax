@@ -121,8 +121,8 @@ struct KitFixture {
     void move(PrVec2 at) {
         push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = at});
     }
-    void click(PrVec2 at, PrAppModifierFlags modifiers = 0) {
-        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .position = at});
+    void click(PrVec2 at, PrAppModifierFlags modifiers = 0, uint32_t clicks = 1) {
+        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .clicks = clicks, .position = at});
         push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .position = at});
     }
     void key(PrAppKey key, PrAppModifierFlags modifiers = 0) {

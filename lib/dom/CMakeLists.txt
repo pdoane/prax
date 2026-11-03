@@ -28,7 +28,7 @@ pr_library(dom INCLUDE include
     src/dom_xml.cpp
 )
 target_link_libraries(pr_dom PUBLIC prax::core prax::url prax::xml prax::layout prax::draw
-                                    prax::task prax::color
+                                    prax::task prax::color prax::text_edit
                              PRIVATE prax::core_cpp prax::charset prax::unicode prax::compress prax::image)
 
 if (PR_JS)

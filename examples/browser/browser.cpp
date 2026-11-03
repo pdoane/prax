@@ -300,6 +300,11 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
                 return;
             }
             [[fallthrough]];
+        case PrAppEventKind_Clipboard:
+            // Whichever asked for the clipboard's text takes it.
+            if (view != nullptr)
+                prHtmlViewPostEvent(view, e);
+            break;
         case PrAppEventKind_KeyUp:
         case PrAppEventKind_Text:
         case PrAppEventKind_CompositionUpdate:

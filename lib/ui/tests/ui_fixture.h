@@ -126,8 +126,8 @@ struct UiFixture {
     void up(float x, float y, uint8_t button = 0) {
         push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .button = button, .position = PrVec2{x, y}});
     }
-    void press(float x, float y, uint8_t button = 0) {
-        down(x, y, button);
+    void press(float x, float y, uint8_t button = 0, uint32_t clicks = 1) {
+        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .button = button, .clicks = clicks, .position = PrVec2{x, y}});
         up(x, y, button);
     }
     void key(PrAppKey key, PrAppModifierFlags modifiers = 0) {

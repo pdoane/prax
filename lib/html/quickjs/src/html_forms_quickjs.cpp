@@ -805,8 +805,194 @@ constexpr JSCFunctionListEntry kRadioNodeListProto[] = {
     PR_JS_GET_SET("value", radioValue, setRadioValue),
 };
 
+// The selection members of a text control (html/#textFieldSelection), which an HTMLInputElement and an
+// HTMLTextAreaElement share. A member of a type that it does not apply to returns null or throws.
+PrDomElement* PR_NULLABLE textControlThis(JSContext* ctx, JSValueConst inputObject) {
+    if (PrHtmlInputElement* input = jsThis<PrHtmlInputElement>(ctx, inputObject, htmlInputElementClass))
+        return prHtmlInputElementAsElement(input);
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    PrHtmlTextAreaElement* area = jsThis<PrHtmlTextAreaElement>(ctx, inputObject, htmlTextAreaElementClass);
+    return area != nullptr ? prHtmlTextAreaElementAsElement(area) : nullptr;
+}
+
+PrStringView selectionDirectionName(PrDomSelectionDirection direction) {
+    switch (direction) {
+        case PrDomSelectionDirection_Forwards: return "forward";
+        case PrDomSelectionDirection_Backwards: return "backward";
+        default: return "none";
+    }
+}
+
+// Returns the direction that `name` names. A name that is not a direction is none (html/#set-the-selection-range).
+PrDomSelectionDirection selectionDirectionFromName(PrStringView name) {
+    if (name == "forward")
+        return PrDomSelectionDirection_Forwards;
+    if (name == "backward")
+        return PrDomSelectionDirection_Backwards;
+    return PrDomSelectionDirection_None;
+}
+
+JSValue textControlSelectionStart(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    if (!prHtmlTextControlSelectionApplies(element))
+        return JS_NULL;
+    return JS_NewUint32(ctx, prHtmlTextControlSelectionStart(element));
+}
+
+JSValue textControlSelectionEnd(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    if (!prHtmlTextControlSelectionApplies(element))
+        return JS_NULL;
+    return JS_NewUint32(ctx, prHtmlTextControlSelectionEnd(element));
+}
+
+JSValue textControlSelectionDirection(JSContext* ctx, JSValueConst elementObject) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    if (!prHtmlTextControlSelectionApplies(element))
+        return JS_NULL;
+    return jsNewStringView(ctx, selectionDirectionName(prHtmlTextControlSelectionDirection(element)));
+}
+
+// Reads a [Nullable] unsigned long, whose null is 0.
+bool readOffset(JSContext* ctx, JSValueConst input, uint32_t* out) {
+    *out = 0;
+    return JS_IsNull(input) || JS_ToUint32(ctx, out, input) >= 0;
+}
+
+JSValue setTextControlSelectionStart(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    uint32_t start = 0;
+    if (element == nullptr || !readOffset(ctx, input, &start))
+        return JS_EXCEPTION;
+    if (!prHtmlTextControlSelectionApplies(element))
+        return jsDomExceptionThrow(ctx, "InvalidStateError");
+    uint32_t end = prHtmlTextControlSelectionEnd(element);
+    prHtmlTextControlSetSelectionRange(element, start, end > start ? end : start,
+        prHtmlTextControlSelectionDirection(element));
+    return JS_UNDEFINED;
+}
+
+JSValue setTextControlSelectionEnd(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    uint32_t end = 0;
+    if (element == nullptr || !readOffset(ctx, input, &end))
+        return JS_EXCEPTION;
+    if (!prHtmlTextControlSelectionApplies(element))
+        return jsDomExceptionThrow(ctx, "InvalidStateError");
+    prHtmlTextControlSetSelectionRange(element, prHtmlTextControlSelectionStart(element), end,
+        prHtmlTextControlSelectionDirection(element));
+    return JS_UNDEFINED;
+}
+
+JSValue setTextControlSelectionDirection(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    JsString name{};
+    if (!JS_IsNull(input) && !jsStringRead(ctx, input, &name))
+        return JS_EXCEPTION;
+    PrDomSelectionDirection direction = selectionDirectionFromName(jsStringView(&name));
+    jsStringReset(ctx, &name);
+    if (!prHtmlTextControlSelectionApplies(element))
+        return jsDomExceptionThrow(ctx, "InvalidStateError");
+    prHtmlTextControlSetSelectionRange(element, prHtmlTextControlSelectionStart(element),
+        prHtmlTextControlSelectionEnd(element), direction);
+    return JS_UNDEFINED;
+}
+
+JSValue textControlSelect(JSContext* ctx, JSValueConst elementObject, int, JSValueConst*) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    prHtmlTextControlSelect(element);
+    return JS_UNDEFINED;
+}
+
+JSValue textControlSetSelectionRange(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    uint32_t start = 0;
+    uint32_t end = 0;
+    if (element == nullptr || JS_ToUint32(ctx, &start, argv[0]) < 0 || JS_ToUint32(ctx, &end, argv[1]) < 0)
+        return JS_EXCEPTION;
+    JsString name{};
+    if (jsArgGiven(argc, argv, 2) && !jsStringRead(ctx, argv[2], &name))
+        return JS_EXCEPTION;
+    PrDomSelectionDirection direction = selectionDirectionFromName(jsStringView(&name));
+    jsStringReset(ctx, &name);
+    if (!prHtmlTextControlSelectionApplies(element))
+        return jsDomExceptionThrow(ctx, "InvalidStateError");
+    prHtmlTextControlSetSelectionRange(element, start, end, direction);
+    return JS_UNDEFINED;
+}
+
+JSValue textControlSetRangeText(JSContext* ctx, JSValueConst elementObject, int argc, JSValueConst* argv) {
+    PrDomElement* element = textControlThis(ctx, elementObject);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    if (argc == 0)
+        return JS_ThrowTypeError(ctx, "not enough arguments");
+    JsString replacement{};
+    if (!jsStringRead(ctx, argv[0], &replacement))
+        return JS_EXCEPTION;
+    JSValue result = JS_UNDEFINED;
+    uint32_t start = 0;
+    uint32_t end = 0;
+    PrHtmlSelectionMode mode = PrHtmlSelectionMode_Preserve;
+    bool ranged = argc >= 3;
+    if (argc == 2) {
+        result = JS_ThrowTypeError(ctx, "not enough arguments");
+    } else if (ranged && (JS_ToUint32(ctx, &start, argv[1]) < 0 || JS_ToUint32(ctx, &end, argv[2]) < 0)) {
+        result = JS_EXCEPTION;
+    } else if (jsArgGiven(argc, argv, 3)) {
+        JsString name{};
+        if (!jsStringRead(ctx, argv[3], &name)) {
+            result = JS_EXCEPTION;
+        } else {
+            PrStringView text = jsStringView(&name);
+            if (text == "select")
+                mode = PrHtmlSelectionMode_Select;
+            else if (text == "start")
+                mode = PrHtmlSelectionMode_Start;
+            else if (text == "end")
+                mode = PrHtmlSelectionMode_End;
+            else if (text != "preserve")
+                result = JS_ThrowTypeError(ctx, "not a SelectionMode");
+            jsStringReset(ctx, &name);
+        }
+    }
+    if (JS_IsUndefined(result)) {
+        if (!prHtmlTextControlSelectionApplies(element)) {
+            result = jsDomExceptionThrow(ctx, "InvalidStateError");
+        } else {
+            if (!ranged) {
+                start = prHtmlTextControlSelectionStart(element);
+                end = prHtmlTextControlSelectionEnd(element);
+            }
+            if (prHtmlTextControlSetRangeText(element, jsStringView(&replacement), start, end, mode) != PrStatus_Ok)
+                result = jsDomExceptionThrow(ctx, "IndexSizeError");
+        }
+    }
+    jsStringReset(ctx, &replacement);
+    return result;
+}
+
+#define PR_TEXT_CONTROL_SELECTION \
+    PR_JS_GET_SET("selectionStart", textControlSelectionStart, setTextControlSelectionStart), \
+    PR_JS_GET_SET("selectionEnd", textControlSelectionEnd, setTextControlSelectionEnd), \
+    PR_JS_GET_SET("selectionDirection", textControlSelectionDirection, setTextControlSelectionDirection), \
+    PR_JS_METHOD("select", 0, textControlSelect), \
+    PR_JS_METHOD("setSelectionRange", 2, textControlSetSelectionRange), \
+    PR_JS_METHOD("setRangeText", 1, textControlSetRangeText)
+
 constexpr JSCFunctionListEntry kInputElementProto[] = {
     PR_JS_TAG("HTMLInputElement"),
+    PR_TEXT_CONTROL_SELECTION,
     PR_REFLECT_STRING("accept", "accept"),
     PR_REFLECT_BOOL("alpha", "alpha"),
     PR_REFLECT_STRING("alt", "alt"),
@@ -863,6 +1049,7 @@ constexpr JSCFunctionListEntry kButtonElementProto[] = {
 
 constexpr JSCFunctionListEntry kTextAreaElementProto[] = {
     PR_JS_TAG("HTMLTextAreaElement"),
+    PR_TEXT_CONTROL_SELECTION,
     PR_REFLECT_INTEGER("cols", "cols", PrHtmlReflectedInteger_Positive, 20),
     PR_REFLECT_STRING("dirName", "dirname"),
     PR_REFLECT_BOOL("disabled", "disabled"),

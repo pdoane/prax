@@ -50,6 +50,46 @@ TEST_CASE("grapheme clusters break as every case of GraphemeBreakTest.txt says")
     CHECK(cases > 700);
 }
 
+TEST_CASE("word segments break as every case of WordBreakTest.txt says") {
+    std::string path = std::string(PR_UNICODE_DIR) + "/WordBreakTest.txt";
+    FILE* file = std::fopen(path.c_str(), "r");
+    REQUIRE(file != nullptr);
+    char line[4096];
+    uint32_t cases = 0;
+    while (std::fgets(line, sizeof(line), file) != nullptr) {
+        std::string data = line;
+        data = data.substr(0, data.find('#'));
+        if (data.find_first_not_of(" \t\r\n") == std::string::npos)
+            continue;
+        // "÷ 0020 × 0308 ÷": the text, and the byte offsets of its breaks.
+        std::istringstream in(data);
+        std::string token;
+        std::string text;
+        std::vector<size_t> expected;
+        while (in >> token) {
+            if (token == "\xc3\xb7") {
+                if (!text.empty())
+                    expected.push_back(text.size());
+            } else if (token != "\xc3\x97") {
+                char bytes[kPrUtf8MaxBytes];
+                uint32_t length = prUtf8Encode(uint32_t(std::stoul(token, nullptr, 16)), bytes);
+                text.append(bytes, length);
+            }
+        }
+        std::vector<size_t> actual;
+        PrStringView view{text.data(), text.size()};
+        for (size_t at = 0; at < text.size();) {
+            at = prUnicodeWordNext(view, at);
+            actual.push_back(at);
+        }
+        INFO(data);
+        CHECK(actual == expected);
+        ++cases;
+    }
+    std::fclose(file);
+    CHECK(cases > 1000);
+}
+
 TEST_CASE("joining types read from the database") {
     CHECK(prUnicodeJoiningType(0x0628) == PrUnicodeJoiningType_Dual);           // ARABIC LETTER BEH
     CHECK(prUnicodeJoiningType(0x0627) == PrUnicodeJoiningType_Right);          // ARABIC LETTER ALEF

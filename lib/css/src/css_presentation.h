@@ -619,6 +619,9 @@ void cssPresentationWheelListenersChanged(PrCssPresentation* presentation, PrDom
 // whether the element is defined as a custom element (:defined), and its custom states (:state()).
 void cssPresentationStatesChanged(PrCssPresentation* presentation, PrDomElement* element);
 
+// Tells the presentation that the value of the text control `element` changed, so that its ::field-content shows it.
+void cssPresentationFieldChanged(PrCssPresentation* presentation, PrDomElement* element);
+
 // Restyles the elements that a change to the host's answers for `states` can reach (DomDocumentHost::elementState).
 // Links are invalidated as a change of their href is, because their :link and :visited depend on it.
 void cssPresentationHostStatesChanged(PrCssPresentation* presentation, PrDomHostState states);

@@ -29,7 +29,8 @@ pr_library(html INCLUDE include
     src/html_window.cpp
     src/html_xml.cpp
 )
-target_link_libraries(pr_html PUBLIC prax::app prax::audio prax::color prax::canvas prax::gpu prax::charset prax::css prax::dom
+target_link_libraries(pr_html PUBLIC prax::text_edit prax::unicode prax::audio
+                                      prax::app prax::color prax::canvas prax::gpu prax::charset prax::css prax::dom
                                       prax::fetch prax::svg prax::url prax::image prax::media prax::draw prax::layout
                                      prax::markdown prax::storage prax::task
                               PRIVATE prax::core_cpp prax::mathml prax::net prax::html_entity prax::text prax::locale prax::mime)

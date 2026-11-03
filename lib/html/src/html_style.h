@@ -163,7 +163,18 @@ constexpr char kHtmlStyle[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
     " [type=image i], [type=reset i], [type=button i], [type=range i], [type=color i], [type=date i], [type=month i],"
     " [type=week i], [type=time i], [type=datetime-local i], [type=number i])) { border: 1px solid ButtonBorder;"
     " padding: 2px 3px; background-color: Field; color: FieldText; }\n"
-    "input::field-content { display: block; min-block-size: 1lh; }\n"
+    "input::field-content, input::placeholder { display: block; min-block-size: 1lh; unicode-bidi: inherit;"
+    " white-space: pre; overflow: hidden; }\n"
+    "textarea { border: 1px solid ButtonBorder; padding: 2px 3px; background-color: Field; color: FieldText; overflow: auto; }\n"
+    "textarea::field-content, textarea::placeholder { display: block; min-block-size: 1lh; unicode-bidi: inherit; }\n"
+    // A control's ::field-content takes the rules of ::placeholder while its placeholder shows. The rule for the state
+    // is what restyles the control when the state changes.
+    ":placeholder-shown { text-overflow: ellipsis; }\n"
+    // A placeholder sits in its control's line and flow, whatever a page asks.
+    "::placeholder { color: GrayText; line-height: initial !important; writing-mode: inherit !important;"
+    " direction: inherit !important; text-orientation: inherit !important; }\n"
+    "::selection { color: HighlightText; background-color: Highlight; }\n"
+    "input:disabled, textarea:disabled { color: GrayText; }\n"
     // html/#the-hr-element-2
     "hr { color: gray; border-style: inset; border-width: 1px; margin-block: 0.5em; margin-inline: auto; overflow: hidden; }\n"
     // html/#the-fieldset-and-legend-elements

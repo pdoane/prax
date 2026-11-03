@@ -8,7 +8,7 @@ of a change to it is what the change did.
 
 | Module                           |       Files |         Tests | Passing |
 |----------------------------------|------------:|--------------:|--------:|
-| compat                           |       38/38 |       103/163 |   63.1% |
+| compat                           |       38/38 |       102/163 |   62.5% |
 | css/CSS2                         |       14/14 |         14/14 |  100.0% |
 | css/CSS2/abspos                  |       32/32 |         28/33 |   84.8% |
 | css/CSS2/backgrounds             |     336/336 |       329/336 |   97.9% |
@@ -54,8 +54,8 @@ of a change to it is what the change did.
 | css/css-borders                  |     181/181 |     1233/1670 |   73.8% |
 | css/css-box                      |     148/148 |      708/1132 |   62.5% |
 | css/css-break                    |   1186/1187 |      677/1852 |   36.5% |
-| css/css-cascade                  |     150/150 |      787/1089 |   72.2% |
-| css/css-color                    |     375/376 |   11505/12968 |   88.7% |
+| css/css-cascade                  |     150/150 |      789/1091 |   72.3% |
+| css/css-color                    |     375/376 |   11507/12968 |   88.7% |
 | css/css-color-adjust             |       36/36 |       155/191 |   81.1% |
 | css/css-color-hdr                |         4/4 |        56/116 |   48.2% |
 | css/css-conditional              |     465/467 |     2481/3447 |   71.9% |
@@ -65,7 +65,7 @@ of a change to it is what the change did.
 | css/css-display                  |     248/249 |       534/776 |   68.8% |
 | css/css-easing                   |       14/14 |        86/158 |   54.4% |
 | css/css-env                      |       11/11 |         12/53 |   22.6% |
-| css/css-flexbox                  |   1409/1409 |     5122/5791 |   88.4% |
+| css/css-flexbox                  |   1409/1409 |     5124/5791 |   88.4% |
 | css/css-font-loading             |       32/32 |       180/249 |   72.2% |
 | css/css-fonts                    |     555/556 |     7236/9044 |   80.0% |
 | css/css-forced-color-adjust      |         4/4 |          9/14 |   64.2% |
@@ -75,7 +75,7 @@ of a change to it is what the change did.
 | css/css-highlight-api            |     134/134 |       195/290 |   67.2% |
 | css/css-image-animation          |       23/23 |         13/27 |   48.1% |
 | css/css-images                   |     506/508 |     2577/4061 |   63.4% |
-| css/css-inline                   |     248/248 |      626/1044 |   59.9% |
+| css/css-inline                   |     248/248 |      666/1044 |   63.7% |
 | css/css-lists                    |     224/224 |      919/1159 |   79.2% |
 | css/css-logical                  |       91/92 |     1141/1371 |   83.2% |
 | css/css-masking                  |     480/551 |     5008/6847 |   73.1% |
@@ -83,38 +83,38 @@ of a change to it is what the change did.
 | css/css-motion-path              |         1/1 |           1/1 |  100.0% |
 | css/css-multicol                 |     713/713 |     1415/2224 |   63.6% |
 | css/css-nesting                  |       47/47 |       105/149 |   70.4% |
-| css/css-overflow                 |     684/686 |      747/1488 |   50.2% |
+| css/css-overflow                 |     685/686 |      752/1488 |   50.5% |
 | css/css-overscroll-behavior      |       11/12 |         78/96 |   81.2% |
 | css/css-page                     |       41/41 |       125/168 |   74.4% |
 | css/css-parser-api               |         1/1 |          5/71 |    7.0% |
-| css/css-position                 |     373/385 |     1389/1767 |   78.6% |
+| css/css-position                 |     374/385 |     1389/1767 |   78.6% |
 | css/css-properties-values-api    |     123/123 |      686/1393 |   49.2% |
-| css/css-pseudo                   |     339/342 |      695/1126 |   61.7% |
+| css/css-pseudo                   |     339/342 |      700/1126 |   62.1% |
 | css/css-ruby                     |     178/178 |       118/247 |   47.7% |
-| css/css-scroll-anchoring         |       77/78 |         86/98 |   87.7% |
+| css/css-scroll-anchoring         |       78/78 |         88/98 |   89.7% |
 | css/css-scroll-snap              |     181/197 |       366/838 |   43.6% |
-| css/css-scrollbars               |       57/57 |        60/115 |   52.1% |
-| css/css-shadow                   |     202/203 |       330/480 |   68.7% |
+| css/css-scrollbars               |       57/57 |        61/115 |   53.0% |
+| css/css-shadow                   |     202/203 |       328/480 |   68.3% |
 | css/css-shapes                   |     382/382 |     4673/7752 |   60.2% |
 | css/css-size-adjust              |         5/5 |       165/215 |   76.7% |
-| css/css-sizing                   |     761/762 |     5057/6549 |   77.2% |
+| css/css-sizing                   |     761/762 |     5069/6549 |   77.4% |
 | css/css-style-attr               |       16/16 |         14/16 |   87.5% |
 | css/css-syntax                   |       50/50 |       376/446 |   84.3% |
 | css/css-tables                   |     337/337 |      907/1110 |   81.7% |
-| css/css-text                     |   1866/1877 |     4202/6185 |   67.9% |
+| css/css-text                     |   1866/1877 |     4222/6185 |   68.2% |
 | css/css-text-decor               |     365/365 |     1200/1693 |   70.8% |
 | css/css-transforms               |     896/922 |     4229/6326 |   66.8% |
 | css/css-transitions              |     131/142 |     1000/1510 |   66.2% |
 | css/css-typed-om                 |     370/372 |    9291/12919 |   71.9% |
-| css/css-ui                       |   1075/1076 |     2058/2899 |   70.9% |
+| css/css-ui                       |   1076/1076 |     2075/2899 |   71.5% |
 | css/css-values                   |     510/510 |    5296/10348 |   51.1% |
 | css/css-variables                |     249/249 |       577/774 |   74.5% |
 | css/css-view-transitions         |     451/494 |     1194/1753 |   68.1% |
 | css/css-viewport                 |     134/137 |       446/676 |   65.9% |
 | css/css-will-change              |       53/53 |       186/221 |   84.1% |
-| css/css-writing-modes            |   1234/1234 |     1282/1555 |   82.4% |
+| css/css-writing-modes            |   1234/1234 |     1296/1555 |   83.3% |
 | css/css-zoom                     |         1/1 |           1/1 |  100.0% |
-| css/cssom                        |     282/283 |     3396/4403 |   77.1% |
+| css/cssom                        |     282/283 |     3397/4403 |   77.1% |
 | css/cssom-view                   |     229/237 |     1357/2578 |   52.6% |
 | css/fetching                     |         0/1 |           1/1 |  100.0% |
 | css/fill-stroke                  |       11/11 |       283/410 |   69.0% |
@@ -123,7 +123,7 @@ of a change to it is what the change did.
 | css/mediaqueries                 |       94/94 |       441/478 |   92.2% |
 | css/motion                       |     148/148 |     3882/5061 |   76.7% |
 | css/printing                     |         6/6 |           4/6 |   66.6% |
-| css/selectors                    |     517/527 |     5763/6068 |   94.9% |
+| css/selectors                    |     517/527 |     5770/6068 |   95.0% |
 | resize-observer                  |       36/39 |       106/135 |   78.5% |
 | web-animations                   |         1/1 |        61/218 |   27.9% |
 | web-animations/animation-model   |       29/34 |         5/156 |    3.2% |
@@ -132,7 +132,7 @@ of a change to it is what the change did.
 | web-animations/interfaces        |       45/47 |        80/834 |    9.5% |
 | web-animations/responsive        |       40/46 |         0/105 |    0.0% |
 | web-animations/timing-model      |       25/34 |         2/402 |    0.4% |
-| **total**                        | 31761/32090 | 153445/208892 |   73.4% |
+| **total**                        | 31765/32090 | 153572/208894 |   73.5% |
 
 ## dom
 
@@ -142,14 +142,14 @@ of a change to it is what the change did.
 | dom/abort                        |       9/9 |         40/40 |  100.0% |
 | dom/collections                  |     12/12 |         50/56 |   89.2% |
 | dom/crashtests                   |       4/4 |           4/4 |  100.0% |
-| dom/events                       |   194/202 |       578/839 |   68.8% |
+| dom/events                       |   195/202 |       583/843 |   69.1% |
 | dom/lists                        |       5/5 |       185/189 |   97.8% |
 | dom/nodes                        |   400/404 |   14574/15295 |   95.2% |
 | dom/ranges                       |     72/72 |   44512/44706 |   99.5% |
 | dom/traversal                    |     18/18 |     1600/1608 |   99.5% |
 | domparsing                       |     46/46 |       257/597 |   43.0% |
 | domparsing/tentative             |     25/36 |       42/1104 |    3.8% |
-| input-events                     |     30/34 |      114/3248 |    3.5% |
+| input-events                     |     32/34 |      118/3248 |    3.6% |
 | intersection-observer            |   109/113 |       283/346 |   81.7% |
 | pointerevents                    |    98/228 |       195/667 |   29.2% |
 | pointerevents/bugs               |       1/2 |           0/2 |    0.0% |
@@ -158,14 +158,14 @@ of a change to it is what the change did.
 | pointerevents/parsing            |       3/3 |          9/15 |   60.0% |
 | pointerevents/persistentDeviceId |       2/3 |           1/4 |   25.0% |
 | pointerevents/pointerlock        |       3/8 |           0/8 |    0.0% |
-| selection                        |     93/94 |   33724/33850 |   99.6% |
+| selection                        |     92/94 |   33737/33844 |   99.6% |
 | selection/anonymous              |       3/3 |         13/13 |  100.0% |
 | selection/bidi                   |       3/3 |         18/92 |   19.5% |
 | selection/caret                  |       7/7 |         13/31 |   41.9% |
 | selection/contenteditable        |     12/12 |        18/252 |    7.1% |
 | selection/crashtests             |     35/35 |         35/35 |  100.0% |
 | selection/shadow-dom             |     23/23 |        81/120 |   67.5% |
-| selection/textcontrols           |       7/9 |         11/78 |   14.1% |
+| selection/textcontrols           |       7/9 |         27/75 |   36.0% |
 | shadow-dom                       |    98/100 |       673/788 |   85.4% |
 | shadow-dom/crashtests            |     25/25 |         25/25 |  100.0% |
 | shadow-dom/declarative           |     25/57 |      135/7790 |    1.7% |
@@ -174,20 +174,20 @@ of a change to it is what the change did.
 | shadow-dom/leaktests             |       4/4 |         10/16 |   62.5% |
 | shadow-dom/reference-target      |     14/15 |         1/635 |    0.1% |
 | shadow-dom/untriaged             |     59/59 |       241/256 |   94.1% |
-| uievents                         |       4/4 |       135/174 |   77.5% |
+| uievents                         |       4/4 |       154/174 |   88.5% |
 | uievents/click                   |       3/7 |           3/7 |   42.8% |
-| uievents/constructors            |       2/2 |         16/21 |   76.1% |
+| uievents/constructors            |       2/2 |         21/21 |  100.0% |
 | uievents/focusevents             |       1/1 |           2/2 |  100.0% |
 | uievents/interface               |       2/3 |           0/6 |    0.0% |
-| uievents/keyboard                |       6/6 |         16/17 |   94.1% |
+| uievents/keyboard                |       6/6 |         17/17 |  100.0% |
 | uievents/legacy                  |       1/1 |           4/4 |  100.0% |
 | uievents/legacy-domevents-tests  |       4/4 |           4/5 |   80.0% |
 | uievents/mouse                   |     21/23 |        21/140 |   15.0% |
 | uievents/order-of-events         |     11/16 |          9/17 |   52.9% |
-| uievents/textInput               |       5/7 |          1/21 |    4.7% |
+| uievents/textInput               |       5/7 |          7/22 |   31.8% |
 | webidl                           |       2/2 |       167/192 |   86.9% |
 | webidl/ecmascript-binding        |     42/43 |       227/314 |   72.2% |
-| **total**                        | 1649/1877 | 100039/115938 |   86.2% |
+| **total**                        | 1651/1877 | 100108/115934 |   86.3% |
 
 ## encoding
 
@@ -219,18 +219,18 @@ of a change to it is what the change did.
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
 | html/browsers                                       |   566/769 |      602/2349 |   25.6% |
 | html/canvas                                         | 2652/2876 |     1739/5247 |   33.1% |
-| html/dom                                            |   346/353 |   60927/66758 |   91.2% |
-| html/editing                                        |   125/254 |       522/848 |   61.5% |
+| html/dom                                            |   346/353 |   61178/66758 |   91.6% |
+| html/editing                                        |   124/254 |       525/846 |   62.0% |
 | html/embedded-content                               |       1/1 |           0/2 |    0.0% |
 | html/infrastructure                                 |   128/148 |      810/1145 |   70.7% |
 | html/interaction                                    |   199/201 |       396/765 |   51.7% |
 | html/links                                          |       6/7 |           4/7 |   57.1% |
 | html/meta                                           |       0/1 |           0/1 |    0.0% |
 | html/obsolete                                       |     20/20 |         48/60 |   80.0% |
-| html/rendering                                      |   479/481 |   10567/11499 |   91.8% |
+| html/rendering                                      |   479/481 |   10604/11499 |   92.2% |
 | html/scripting                                      |       3/3 |           0/4 |    0.0% |
 | html/select                                         |       2/2 |           5/6 |   83.3% |
-| html/semantics                                      | 2525/2909 |    9366/19953 |   46.9% |
+| html/semantics                                      | 2527/2909 |   10541/20026 |   52.6% |
 | html/syntax                                         |   249/250 |     6682/6914 |   96.6% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
 | html/user-activation                                |     13/21 |         32/46 |   69.5% |
@@ -263,7 +263,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8379/9525 | 126051/157051 |   80.2% |
+| **total**                                           | 8380/9525 | 127517/157122 |   81.1% |
 
 ## infrastructure
 
@@ -277,11 +277,11 @@ of a change to it is what the change did.
 | infrastructure/expected-fail |   10/15 |    3/20 |   15.0% |
 | infrastructure/reftest       |   33/35 |   22/35 |   62.8% |
 | infrastructure/server        |   15/15 |   33/64 |   51.5% |
-| infrastructure/testdriver    |   46/61 |   16/91 |   17.5% |
+| infrastructure/testdriver    |   46/61 |   20/91 |   21.9% |
 | infrastructure/testharness   |     2/2 |     3/5 |   60.0% |
 | infrastructure/window        |     2/2 |     1/2 |   50.0% |
 | infrastructure/wpt-metadata  |     6/6 |     0/6 |    0.0% |
-| **total**                    | 131/155 | 106/257 |   41.2% |
+| **total**                    | 131/155 | 110/257 |   42.8% |
 
 ## mathml
 
@@ -290,8 +290,8 @@ of a change to it is what the change did.
 | mathml                     |     1/1 |     77/89 |   86.5% |
 | mathml/crashtests          | 114/114 |   114/114 |  100.0% |
 | mathml/presentation-markup | 305/305 |  230/1047 |   21.9% |
-| mathml/relations           | 174/176 |  827/2456 |   33.6% |
-| **total**                  | 594/596 | 1248/3706 |   33.6% |
+| mathml/relations           | 174/176 |  830/2456 |   33.7% |
+| **total**                  | 594/596 | 1251/3706 |   33.7% |
 
 ## media-source
 

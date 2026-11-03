@@ -1463,6 +1463,8 @@ PrStringView cssPseudoName(CssPseudo pseudo) {
         case CssPseudo_After: return "::after";
         case CssPseudo_Marker: return "::marker";
         case CssPseudo_FieldContent: return "::field-content";
+        case CssPseudo_Placeholder: return "::placeholder";
+        case CssPseudo_Selection: return "::selection";
         case CssPseudo_BeforeMarker: return "::before::marker";
         case CssPseudo_AfterMarker: return "::after::marker";
         case CssPseudo_FirstLine: return "::first-line";
@@ -1503,6 +1505,10 @@ CssPseudo cssSelectorPseudo(const PrCssSelectors* selectors, uint32_t complex) {
                 return CssPseudo_FirstLetter;
             case CssPseudoElement_FieldContent:
                 return CssPseudo_FieldContent;
+            case CssPseudoElement_Placeholder:
+                return CssPseudo_Placeholder;
+            case CssPseudoElement_Selection:
+                return CssPseudo_Selection;
             default:
                 return CssPseudo_Count;
         }

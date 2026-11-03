@@ -10,40 +10,41 @@ namespace {
 
 constexpr PrCssProperty kFontProperties[] = {
     PrCssProperty_FontFamily, PrCssProperty_FontSize, PrCssProperty_FontStyle, PrCssProperty_FontWeight,
-    PrCssProperty_FontWidth, PrCssProperty_LineHeight, PrCssProperty_WritingMode, PrCssProperty_Direction,
-    PrCssProperty_WhiteSpaceCollapse, PrCssProperty_TextWrapMode, PrCssProperty_TextIndent, PrCssProperty_TextAlignAll,
-    PrCssProperty_TextAlignLast, PrCssProperty_TextJustify, PrCssProperty_TextOrientation,
-    PrCssProperty_DominantBaseline, PrCssProperty_LetterSpacing, PrCssProperty_WordSpacing, PrCssProperty_TextTransform,
+    PrCssProperty_FontWidth, PrCssProperty_LineHeight, PrCssProperty_DominantBaseline, PrCssProperty_WritingMode,
+    PrCssProperty_Direction, PrCssProperty_TextOrientation, PrCssProperty_WhiteSpaceCollapse,
+    PrCssProperty_TextWrapMode, PrCssProperty_TextAlignAll, PrCssProperty_TextAlignLast, PrCssProperty_TextJustify,
+    PrCssProperty_TextIndent, PrCssProperty_LetterSpacing, PrCssProperty_WordSpacing, PrCssProperty_TextTransform,
 };
 
 // The inherited properties that painting reads, and those that decide how a box takes the pointer: whether it is a
 // target, and the cursor that it shows.
 constexpr PrCssProperty kColorProperties[] = {
-    PrCssProperty_Color, PrCssProperty_Visibility, PrCssProperty_DynamicRangeLimit, PrCssProperty_ImageRendering,
-    PrCssProperty_ImageOrientation, PrCssProperty_ColorScheme, PrCssProperty_AccentColor, PrCssProperty_Interactivity,
-    PrCssProperty_PointerEvents, PrCssProperty_Cursor,
+    PrCssProperty_Color, PrCssProperty_AccentColor, PrCssProperty_CaretColor, PrCssProperty_ColorScheme,
+    PrCssProperty_DynamicRangeLimit, PrCssProperty_ImageRendering, PrCssProperty_ImageOrientation,
+    PrCssProperty_Visibility, PrCssProperty_Interactivity, PrCssProperty_PointerEvents, PrCssProperty_Cursor,
 };
 
 constexpr PrCssProperty kBoxProperties[] = {
-    PrCssProperty_Display, PrCssProperty_Position, PrCssProperty_BoxSizing, PrCssProperty_Width, PrCssProperty_Height,
-    PrCssProperty_MinWidth, PrCssProperty_MinHeight, PrCssProperty_MaxWidth, PrCssProperty_MaxHeight,
-    PrCssProperty_AspectRatio, PrCssProperty_MarginTop, PrCssProperty_MarginRight, PrCssProperty_MarginBottom,
-    PrCssProperty_MarginLeft, PrCssProperty_PaddingTop, PrCssProperty_PaddingRight, PrCssProperty_PaddingBottom,
-    PrCssProperty_PaddingLeft, PrCssProperty_Top, PrCssProperty_Right, PrCssProperty_Bottom, PrCssProperty_Left,
-    PrCssProperty_OverflowX, PrCssProperty_OverflowY, PrCssProperty_BorderTopWidth, PrCssProperty_BorderRightWidth,
-    PrCssProperty_BorderBottomWidth, PrCssProperty_BorderLeftWidth, PrCssProperty_Float, PrCssProperty_Clear,
-    PrCssProperty_BaselineSource, PrCssProperty_AlignmentBaseline, PrCssProperty_BaselineShift,
-    PrCssProperty_UnicodeBidi, PrCssProperty_Contain, PrCssProperty_ContentVisibility, PrCssProperty_ContainerType,
-    PrCssProperty_TableLayout, PrCssProperty_OverflowAnchor, PrCssProperty_TextOverflow,
-    PrCssProperty_ContainIntrinsicWidth, PrCssProperty_ContainIntrinsicHeight, PrCssProperty_FieldSizing,
-    PrCssProperty_OverscrollBehaviorX, PrCssProperty_OverscrollBehaviorY,
+    PrCssProperty_Display, PrCssProperty_Position, PrCssProperty_Float, PrCssProperty_Clear, PrCssProperty_Top,
+    PrCssProperty_Right, PrCssProperty_Bottom, PrCssProperty_Left, PrCssProperty_BoxSizing, PrCssProperty_Width,
+    PrCssProperty_Height, PrCssProperty_MinWidth, PrCssProperty_MinHeight, PrCssProperty_MaxWidth,
+    PrCssProperty_MaxHeight, PrCssProperty_AspectRatio, PrCssProperty_FieldSizing, PrCssProperty_ContainIntrinsicWidth,
+    PrCssProperty_ContainIntrinsicHeight, PrCssProperty_MarginTop, PrCssProperty_MarginRight,
+    PrCssProperty_MarginBottom, PrCssProperty_MarginLeft, PrCssProperty_BorderTopWidth, PrCssProperty_BorderRightWidth,
+    PrCssProperty_BorderBottomWidth, PrCssProperty_BorderLeftWidth, PrCssProperty_PaddingTop,
+    PrCssProperty_PaddingRight, PrCssProperty_PaddingBottom, PrCssProperty_PaddingLeft, PrCssProperty_OverflowX,
+    PrCssProperty_OverflowY, PrCssProperty_TextOverflow, PrCssProperty_OverflowAnchor,
+    PrCssProperty_OverscrollBehaviorX, PrCssProperty_OverscrollBehaviorY, PrCssProperty_Contain,
+    PrCssProperty_ContentVisibility, PrCssProperty_ContainerType, PrCssProperty_BaselineSource,
+    PrCssProperty_AlignmentBaseline, PrCssProperty_BaselineShift, PrCssProperty_UnicodeBidi, PrCssProperty_TableLayout,
+    PrCssProperty_InputSecurity,
 };
 
 constexpr PrCssProperty kFlexProperties[] = {
     PrCssProperty_FlexDirection, PrCssProperty_FlexWrap, PrCssProperty_FlexGrow, PrCssProperty_FlexShrink,
     PrCssProperty_FlexBasis, PrCssProperty_Order, PrCssProperty_RowGap, PrCssProperty_ColumnGap,
-    PrCssProperty_JustifyContent, PrCssProperty_AlignItems, PrCssProperty_AlignContent, PrCssProperty_AlignSelf,
-    PrCssProperty_JustifyItems, PrCssProperty_JustifySelf,
+    PrCssProperty_JustifyContent, PrCssProperty_JustifyItems, PrCssProperty_JustifySelf, PrCssProperty_AlignContent,
+    PrCssProperty_AlignItems, PrCssProperty_AlignSelf,
 };
 
 constexpr PrCssProperty kDecorationProperties[] = {
@@ -68,19 +69,19 @@ constexpr PrCssProperty kBackgroundProperties[] = {
 };
 
 constexpr PrCssProperty kEffectProperties[] = {
-    PrCssProperty_Opacity, PrCssProperty_Transform, PrCssProperty_TransformOrigin, PrCssProperty_ZIndex,
-    PrCssProperty_Translate, PrCssProperty_Rotate, PrCssProperty_Scale, PrCssProperty_TransformBox,
-    PrCssProperty_Perspective, PrCssProperty_PerspectiveOrigin, PrCssProperty_BackfaceVisibility,
-    PrCssProperty_WillChange,
+    PrCssProperty_Opacity, PrCssProperty_ZIndex, PrCssProperty_WillChange, PrCssProperty_Transform,
+    PrCssProperty_Translate, PrCssProperty_Rotate, PrCssProperty_Scale, PrCssProperty_TransformOrigin,
+    PrCssProperty_TransformBox, PrCssProperty_Perspective, PrCssProperty_PerspectiveOrigin,
+    PrCssProperty_BackfaceVisibility,
 };
 
 // Few elements clip, mask, filter or blend, so clip paths, mask layers, mask borders, filters and blending are a group
 // of their own (css-masking-1, filter-effects-1, compositing-1), apart from the effects that more elements declare.
 constexpr PrCssProperty kCompositingProperties[] = {
-    PrCssProperty_ClipPath, PrCssProperty_Clip, PrCssProperty_MaskImage, PrCssProperty_MaskMode,
+    PrCssProperty_ClipPath, PrCssProperty_Clip, PrCssProperty_Filter, PrCssProperty_BackdropFilter,
+    PrCssProperty_MixBlendMode, PrCssProperty_Isolation, PrCssProperty_MaskImage, PrCssProperty_MaskMode,
     PrCssProperty_MaskRepeat, PrCssProperty_MaskPosition, PrCssProperty_MaskSize, PrCssProperty_MaskOrigin,
-    PrCssProperty_MaskClip, PrCssProperty_MaskComposite, PrCssProperty_Filter, PrCssProperty_BackdropFilter,
-    PrCssProperty_MixBlendMode, PrCssProperty_Isolation, PrCssProperty_MaskBorderSource, PrCssProperty_MaskBorderMode,
+    PrCssProperty_MaskClip, PrCssProperty_MaskComposite, PrCssProperty_MaskBorderSource, PrCssProperty_MaskBorderMode,
     PrCssProperty_MaskBorderSlice, PrCssProperty_MaskBorderWidth, PrCssProperty_MaskBorderOutset,
     PrCssProperty_MaskBorderRepeat,
 };
@@ -109,22 +110,22 @@ constexpr PrCssProperty kListProperties[] = {
 // SVG's inherited properties: how shapes and text are filled, stroked, marked and rendered. An HTML element declares
 // none of them, so its style shares its parent's group.
 constexpr PrCssProperty kSvgProperties[] = {
-    PrCssProperty_Fill, PrCssProperty_FillRule, PrCssProperty_FillOpacity, PrCssProperty_Stroke,
+    PrCssProperty_Fill, PrCssProperty_FillRule, PrCssProperty_FillOpacity, PrCssProperty_ClipRule, PrCssProperty_Stroke,
     PrCssProperty_StrokeOpacity, PrCssProperty_StrokeWidth, PrCssProperty_StrokeLinecap, PrCssProperty_StrokeLinejoin,
     PrCssProperty_StrokeMiterlimit, PrCssProperty_StrokeDasharray, PrCssProperty_StrokeDashoffset,
-    PrCssProperty_MarkerStart, PrCssProperty_MarkerMid, PrCssProperty_MarkerEnd, PrCssProperty_PaintOrder,
-    PrCssProperty_ClipRule, PrCssProperty_ColorInterpolation, PrCssProperty_ColorInterpolationFilters,
-    PrCssProperty_ShapeRendering, PrCssProperty_TextRendering, PrCssProperty_TextAnchor,
+    PrCssProperty_PaintOrder, PrCssProperty_MarkerStart, PrCssProperty_MarkerMid, PrCssProperty_MarkerEnd,
+    PrCssProperty_ColorInterpolation, PrCssProperty_ColorInterpolationFilters, PrCssProperty_ShapeRendering,
+    PrCssProperty_TextRendering, PrCssProperty_TextAnchor,
 };
 
 // The geometry properties (SVG2/geometry.html), and the properties that only one kind of element reads: a gradient
 // stop's color, a filter primitive's flood and light, a mask's type, and a graphic's vector effect. Each shape declares
 // its own geometry, so these groups are seldom shared between shapes, and are kept apart from the inherited ones.
 constexpr PrCssProperty kSvgGeometryProperties[] = {
-    PrCssProperty_Cx, PrCssProperty_Cy, PrCssProperty_R, PrCssProperty_Rx, PrCssProperty_Ry, PrCssProperty_X,
-    PrCssProperty_Y, PrCssProperty_D, PrCssProperty_VectorEffect, PrCssProperty_StopColor, PrCssProperty_StopOpacity,
-    PrCssProperty_FloodColor, PrCssProperty_FloodOpacity, PrCssProperty_LightingColor, PrCssProperty_MaskType,
-    PrCssProperty_PathLength,
+    PrCssProperty_X, PrCssProperty_Y, PrCssProperty_Cx, PrCssProperty_Cy, PrCssProperty_R, PrCssProperty_Rx,
+    PrCssProperty_Ry, PrCssProperty_D, PrCssProperty_PathLength, PrCssProperty_VectorEffect, PrCssProperty_StopColor,
+    PrCssProperty_StopOpacity, PrCssProperty_FloodColor, PrCssProperty_FloodOpacity, PrCssProperty_LightingColor,
+    PrCssProperty_MaskType,
 };
 
 // The inherited properties of tables. Few elements declare them, so most styles share their parent's group.
@@ -154,8 +155,8 @@ constexpr PrCssProperty kGridProperties[] = {
 
 extern const CssStyleGroupProperties kCssStyleGroupProperties[CssStyleGroup_Count] = {
     {kFontProperties, 19},         // Font
-    {kColorProperties, 10},        // Color
-    {kBoxProperties, 45},          // Box
+    {kColorProperties, 11},        // Color
+    {kBoxProperties, 46},          // Box
     {kFlexProperties, 14},         // Flex
     {kDecorationProperties, 18},   // Decoration
     {kBackgroundProperties, 17},   // Background
@@ -183,11 +184,11 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // -webkit-text-stroke-color
     {CssStyleGroup_Count, 0},         // -webkit-text-stroke-width
     {CssStyleGroup_Count, 0},         // -webkit-user-select
-    {CssStyleGroup_Color, 6},         // accent-color
-    {CssStyleGroup_Flex, 10},         // align-content
-    {CssStyleGroup_Flex, 9},          // align-items
-    {CssStyleGroup_Flex, 11},         // align-self
-    {CssStyleGroup_Box, 31},          // alignment-baseline
+    {CssStyleGroup_Color, 1},         // accent-color
+    {CssStyleGroup_Flex, 11},         // align-content
+    {CssStyleGroup_Flex, 12},         // align-items
+    {CssStyleGroup_Flex, 13},         // align-self
+    {CssStyleGroup_Box, 41},          // alignment-baseline
     {CssStyleGroup_Count, 0},         // all
     {CssStyleGroup_Count, 0},         // anchor-name
     {CssStyleGroup_Count, 0},         // anchor-scope
@@ -210,9 +211,9 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Animation, 7},     // animation-timing-function
     {CssStyleGroup_Count, 0},         // animation-trigger
     {CssStyleGroup_Generated, 4},     // appearance
-    {CssStyleGroup_Box, 9},           // aspect-ratio
-    {CssStyleGroup_Compositing, 11},  // backdrop-filter
-    {CssStyleGroup_Effect, 10},       // backface-visibility
+    {CssStyleGroup_Box, 15},          // aspect-ratio
+    {CssStyleGroup_Compositing, 3},   // backdrop-filter
+    {CssStyleGroup_Effect, 11},       // backface-visibility
     {CssStyleGroup_Count, 0},         // background
     {CssStyleGroup_Background, 6},    // background-attachment
     {CssStyleGroup_Background, 16},   // background-blend-mode
@@ -231,8 +232,8 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // background-repeat-x
     {CssStyleGroup_Count, 0},         // background-repeat-y
     {CssStyleGroup_Background, 4},    // background-size
-    {CssStyleGroup_Box, 32},          // baseline-shift
-    {CssStyleGroup_Box, 30},          // baseline-source
+    {CssStyleGroup_Box, 42},          // baseline-shift
+    {CssStyleGroup_Box, 40},          // baseline-source
     {CssStyleGroup_Count, 0},         // block-ellipsis
     {CssStyleGroup_Count, 0},         // block-size
     {CssStyleGroup_Count, 0},         // block-step
@@ -268,7 +269,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // border-bottom-radius
     {CssStyleGroup_Background, 10},   // border-bottom-right-radius
     {CssStyleGroup_Decoration, 6},    // border-bottom-style
-    {CssStyleGroup_Box, 26},          // border-bottom-width
+    {CssStyleGroup_Box, 25},          // border-bottom-width
     {CssStyleGroup_Count, 0},         // border-boundary
     {CssStyleGroup_Count, 0},         // border-clip
     {CssStyleGroup_Table, 0},         // border-collapse
@@ -303,7 +304,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Decoration, 3},    // border-left-color
     {CssStyleGroup_Count, 0},         // border-left-radius
     {CssStyleGroup_Decoration, 7},    // border-left-style
-    {CssStyleGroup_Box, 27},          // border-left-width
+    {CssStyleGroup_Box, 26},          // border-left-width
     {CssStyleGroup_Count, 0},         // border-limit
     {CssStyleGroup_Count, 0},         // border-radius
     {CssStyleGroup_Count, 0},         // border-right
@@ -311,7 +312,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Decoration, 1},    // border-right-color
     {CssStyleGroup_Count, 0},         // border-right-radius
     {CssStyleGroup_Decoration, 5},    // border-right-style
-    {CssStyleGroup_Box, 25},          // border-right-width
+    {CssStyleGroup_Box, 24},          // border-right-width
     {CssStyleGroup_Count, 0},         // border-shape
     {CssStyleGroup_Table, 1},         // border-spacing
     {CssStyleGroup_Count, 0},         // border-start-end-radius
@@ -324,9 +325,9 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // border-top-radius
     {CssStyleGroup_Background, 9},    // border-top-right-radius
     {CssStyleGroup_Decoration, 4},    // border-top-style
-    {CssStyleGroup_Box, 24},          // border-top-width
+    {CssStyleGroup_Box, 23},          // border-top-width
     {CssStyleGroup_Count, 0},         // border-width
-    {CssStyleGroup_Box, 20},          // bottom
+    {CssStyleGroup_Box, 6},           // bottom
     {CssStyleGroup_Count, 0},         // box-decoration-break
     {CssStyleGroup_Count, 0},         // box-shadow
     {CssStyleGroup_Count, 0},         // box-shadow-blur
@@ -334,7 +335,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // box-shadow-offset
     {CssStyleGroup_Count, 0},         // box-shadow-position
     {CssStyleGroup_Count, 0},         // box-shadow-spread
-    {CssStyleGroup_Box, 2},           // box-sizing
+    {CssStyleGroup_Box, 8},           // box-sizing
     {CssStyleGroup_Count, 0},         // box-snap
     {CssStyleGroup_Count, 0},         // break-after
     {CssStyleGroup_Count, 0},         // break-before
@@ -342,17 +343,17 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Table, 2},         // caption-side
     {CssStyleGroup_Count, 0},         // caret
     {CssStyleGroup_Count, 0},         // caret-animation
-    {CssStyleGroup_Count, 0},         // caret-color
+    {CssStyleGroup_Color, 2},         // caret-color
     {CssStyleGroup_Count, 0},         // caret-shape
-    {CssStyleGroup_Box, 29},          // clear
+    {CssStyleGroup_Box, 3},           // clear
     {CssStyleGroup_Compositing, 1},   // clip
     {CssStyleGroup_Compositing, 0},   // clip-path
-    {CssStyleGroup_Svg, 15},          // clip-rule
+    {CssStyleGroup_Svg, 3},           // clip-rule
     {CssStyleGroup_Color, 0},         // color
     {CssStyleGroup_Count, 0},         // color-adjust
     {CssStyleGroup_Svg, 16},          // color-interpolation
     {CssStyleGroup_Svg, 17},          // color-interpolation-filters
-    {CssStyleGroup_Color, 5},         // color-scheme
+    {CssStyleGroup_Color, 3},         // color-scheme
     {CssStyleGroup_Count, 0},         // column-count
     {CssStyleGroup_Count, 0},         // column-fill
     {CssStyleGroup_Flex, 7},          // column-gap
@@ -376,17 +377,17 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // column-width
     {CssStyleGroup_Count, 0},         // column-wrap
     {CssStyleGroup_Count, 0},         // columns
-    {CssStyleGroup_Box, 34},          // contain
+    {CssStyleGroup_Box, 37},          // contain
     {CssStyleGroup_Count, 0},         // contain-intrinsic-block-size
-    {CssStyleGroup_Box, 41},          // contain-intrinsic-height
+    {CssStyleGroup_Box, 18},          // contain-intrinsic-height
     {CssStyleGroup_Count, 0},         // contain-intrinsic-inline-size
     {CssStyleGroup_Count, 0},         // contain-intrinsic-size
-    {CssStyleGroup_Box, 40},          // contain-intrinsic-width
+    {CssStyleGroup_Box, 17},          // contain-intrinsic-width
     {CssStyleGroup_Count, 0},         // container
     {CssStyleGroup_Count, 0},         // container-name
-    {CssStyleGroup_Box, 36},          // container-type
+    {CssStyleGroup_Box, 39},          // container-type
     {CssStyleGroup_Generated, 0},     // content
-    {CssStyleGroup_Box, 35},          // content-visibility
+    {CssStyleGroup_Box, 38},          // content-visibility
     {CssStyleGroup_Count, 0},         // continue
     {CssStyleGroup_Count, 0},         // copy-into
     {CssStyleGroup_Count, 0},         // corner
@@ -429,19 +430,19 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // cue
     {CssStyleGroup_Count, 0},         // cue-after
     {CssStyleGroup_Count, 0},         // cue-before
-    {CssStyleGroup_Color, 9},         // cursor
-    {CssStyleGroup_SvgGeometry, 0},   // cx
-    {CssStyleGroup_SvgGeometry, 1},   // cy
+    {CssStyleGroup_Color, 10},        // cursor
+    {CssStyleGroup_SvgGeometry, 2},   // cx
+    {CssStyleGroup_SvgGeometry, 3},   // cy
     {CssStyleGroup_SvgGeometry, 7},   // d
-    {CssStyleGroup_Font, 7},          // direction
+    {CssStyleGroup_Font, 8},          // direction
     {CssStyleGroup_Box, 0},           // display
-    {CssStyleGroup_Font, 15},         // dominant-baseline
-    {CssStyleGroup_Color, 2},         // dynamic-range-limit
+    {CssStyleGroup_Font, 6},          // dominant-baseline
+    {CssStyleGroup_Color, 4},         // dynamic-range-limit
     {CssStyleGroup_Table, 3},         // empty-cells
     {CssStyleGroup_Count, 0},         // event-trigger
     {CssStyleGroup_Count, 0},         // event-trigger-name
     {CssStyleGroup_Count, 0},         // event-trigger-source
-    {CssStyleGroup_Box, 42},          // field-sizing
+    {CssStyleGroup_Box, 16},          // field-sizing
     {CssStyleGroup_Svg, 0},           // fill
     {CssStyleGroup_Count, 0},         // fill-break
     {CssStyleGroup_Count, 0},         // fill-color
@@ -452,7 +453,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // fill-repeat
     {CssStyleGroup_Svg, 1},           // fill-rule
     {CssStyleGroup_Count, 0},         // fill-size
-    {CssStyleGroup_Compositing, 10},  // filter
+    {CssStyleGroup_Compositing, 2},   // filter
     {CssStyleGroup_Count, 0},         // flex
     {CssStyleGroup_Flex, 4},          // flex-basis
     {CssStyleGroup_Flex, 0},          // flex-direction
@@ -461,12 +462,12 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // flex-line-count
     {CssStyleGroup_Flex, 3},          // flex-shrink
     {CssStyleGroup_Flex, 1},          // flex-wrap
-    {CssStyleGroup_Box, 28},          // float
+    {CssStyleGroup_Box, 2},           // float
     {CssStyleGroup_Count, 0},         // float-defer
     {CssStyleGroup_Count, 0},         // float-offset
     {CssStyleGroup_Count, 0},         // float-reference
-    {CssStyleGroup_SvgGeometry, 11},  // flood-color
-    {CssStyleGroup_SvgGeometry, 12},  // flood-opacity
+    {CssStyleGroup_SvgGeometry, 12},  // flood-color
+    {CssStyleGroup_SvgGeometry, 13},  // flood-opacity
     {CssStyleGroup_Count, 0},         // flow-from
     {CssStyleGroup_Count, 0},         // flow-into
     {CssStyleGroup_Count, 0},         // flow-tolerance
@@ -518,7 +519,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Grid, 0},          // grid-template-columns
     {CssStyleGroup_Grid, 1},          // grid-template-rows
     {CssStyleGroup_Count, 0},         // hanging-punctuation
-    {CssStyleGroup_Box, 4},           // height
+    {CssStyleGroup_Box, 10},          // height
     {CssStyleGroup_Count, 0},         // hyphenate-character
     {CssStyleGroup_Count, 0},         // hyphenate-limit-chars
     {CssStyleGroup_Count, 0},         // hyphenate-limit-last
@@ -526,15 +527,15 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // hyphenate-limit-zone
     {CssStyleGroup_Count, 0},         // hyphens
     {CssStyleGroup_Count, 0},         // image-animation
-    {CssStyleGroup_Color, 4},         // image-orientation
-    {CssStyleGroup_Color, 3},         // image-rendering
+    {CssStyleGroup_Color, 6},         // image-orientation
+    {CssStyleGroup_Color, 5},         // image-rendering
     {CssStyleGroup_Count, 0},         // image-resolution
     {CssStyleGroup_Count, 0},         // initial-letter
     {CssStyleGroup_Count, 0},         // initial-letter-align
     {CssStyleGroup_Count, 0},         // initial-letter-wrap
     {CssStyleGroup_Count, 0},         // inline-size
     {CssStyleGroup_Count, 0},         // inline-sizing
-    {CssStyleGroup_Count, 0},         // input-security
+    {CssStyleGroup_Box, 45},          // input-security
     {CssStyleGroup_Count, 0},         // inset
     {CssStyleGroup_Count, 0},         // inset-block
     {CssStyleGroup_Count, 0},         // inset-block-end
@@ -542,18 +543,18 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // inset-inline
     {CssStyleGroup_Count, 0},         // inset-inline-end
     {CssStyleGroup_Count, 0},         // inset-inline-start
-    {CssStyleGroup_Color, 7},         // interactivity
+    {CssStyleGroup_Color, 8},         // interactivity
     {CssStyleGroup_Count, 0},         // interest-delay
     {CssStyleGroup_Count, 0},         // interest-delay-end
     {CssStyleGroup_Count, 0},         // interest-delay-start
     {CssStyleGroup_Count, 0},         // interpolate-size
-    {CssStyleGroup_Compositing, 13},  // isolation
+    {CssStyleGroup_Compositing, 5},   // isolation
     {CssStyleGroup_Flex, 8},          // justify-content
-    {CssStyleGroup_Flex, 12},         // justify-items
-    {CssStyleGroup_Flex, 13},         // justify-self
-    {CssStyleGroup_Box, 21},          // left
+    {CssStyleGroup_Flex, 9},          // justify-items
+    {CssStyleGroup_Flex, 10},         // justify-self
+    {CssStyleGroup_Box, 7},           // left
     {CssStyleGroup_Font, 16},         // letter-spacing
-    {CssStyleGroup_SvgGeometry, 13},  // lighting-color
+    {CssStyleGroup_SvgGeometry, 14},  // lighting-color
     {CssStyleGroup_Count, 0},         // line-break
     {CssStyleGroup_Count, 0},         // line-clamp
     {CssStyleGroup_Count, 0},         // line-fit-edge
@@ -571,20 +572,20 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // margin-block
     {CssStyleGroup_Count, 0},         // margin-block-end
     {CssStyleGroup_Count, 0},         // margin-block-start
-    {CssStyleGroup_Box, 12},          // margin-bottom
+    {CssStyleGroup_Box, 21},          // margin-bottom
     {CssStyleGroup_Count, 0},         // margin-break
     {CssStyleGroup_Count, 0},         // margin-inline
     {CssStyleGroup_Count, 0},         // margin-inline-end
     {CssStyleGroup_Count, 0},         // margin-inline-start
-    {CssStyleGroup_Box, 13},          // margin-left
-    {CssStyleGroup_Box, 11},          // margin-right
-    {CssStyleGroup_Box, 10},          // margin-top
+    {CssStyleGroup_Box, 22},          // margin-left
+    {CssStyleGroup_Box, 20},          // margin-right
+    {CssStyleGroup_Box, 19},          // margin-top
     {CssStyleGroup_Count, 0},         // margin-trim
     {CssStyleGroup_Count, 0},         // marker
-    {CssStyleGroup_Svg, 13},          // marker-end
-    {CssStyleGroup_Svg, 12},          // marker-mid
+    {CssStyleGroup_Svg, 15},          // marker-end
+    {CssStyleGroup_Svg, 14},          // marker-mid
     {CssStyleGroup_Count, 0},         // marker-side
-    {CssStyleGroup_Svg, 11},          // marker-start
+    {CssStyleGroup_Svg, 13},          // marker-start
     {CssStyleGroup_Count, 0},         // mask
     {CssStyleGroup_Count, 0},         // mask-border
     {CssStyleGroup_Compositing, 15},  // mask-border-mode
@@ -593,31 +594,31 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Compositing, 16},  // mask-border-slice
     {CssStyleGroup_Compositing, 14},  // mask-border-source
     {CssStyleGroup_Compositing, 17},  // mask-border-width
-    {CssStyleGroup_Compositing, 8},   // mask-clip
-    {CssStyleGroup_Compositing, 9},   // mask-composite
-    {CssStyleGroup_Compositing, 2},   // mask-image
-    {CssStyleGroup_Compositing, 3},   // mask-mode
-    {CssStyleGroup_Compositing, 7},   // mask-origin
-    {CssStyleGroup_Compositing, 5},   // mask-position
-    {CssStyleGroup_Compositing, 4},   // mask-repeat
-    {CssStyleGroup_Compositing, 6},   // mask-size
-    {CssStyleGroup_SvgGeometry, 14},  // mask-type
+    {CssStyleGroup_Compositing, 12},  // mask-clip
+    {CssStyleGroup_Compositing, 13},  // mask-composite
+    {CssStyleGroup_Compositing, 6},   // mask-image
+    {CssStyleGroup_Compositing, 7},   // mask-mode
+    {CssStyleGroup_Compositing, 11},  // mask-origin
+    {CssStyleGroup_Compositing, 9},   // mask-position
+    {CssStyleGroup_Compositing, 8},   // mask-repeat
+    {CssStyleGroup_Compositing, 10},  // mask-size
+    {CssStyleGroup_SvgGeometry, 15},  // mask-type
     {CssStyleGroup_Count, 0},         // math-depth
     {CssStyleGroup_Count, 0},         // math-shift
     {CssStyleGroup_Count, 0},         // math-style
     {CssStyleGroup_Count, 0},         // max-block-size
-    {CssStyleGroup_Box, 8},           // max-height
+    {CssStyleGroup_Box, 14},          // max-height
     {CssStyleGroup_Count, 0},         // max-inline-size
     {CssStyleGroup_Count, 0},         // max-lines
     {CssStyleGroup_Count, 0},         // max-size
-    {CssStyleGroup_Box, 7},           // max-width
+    {CssStyleGroup_Box, 13},          // max-width
     {CssStyleGroup_Count, 0},         // min-block-size
-    {CssStyleGroup_Box, 6},           // min-height
+    {CssStyleGroup_Box, 12},          // min-height
     {CssStyleGroup_Count, 0},         // min-inline-size
     {CssStyleGroup_Count, 0},         // min-intrinsic-sizing
     {CssStyleGroup_Count, 0},         // min-size
-    {CssStyleGroup_Box, 5},           // min-width
-    {CssStyleGroup_Compositing, 12},  // mix-blend-mode
+    {CssStyleGroup_Box, 11},          // min-width
+    {CssStyleGroup_Compositing, 4},   // mix-blend-mode
     {CssStyleGroup_Count, 0},         // nav-down
     {CssStyleGroup_Count, 0},         // nav-left
     {CssStyleGroup_Count, 0},         // nav-right
@@ -640,7 +641,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Decoration, 11},   // outline-style
     {CssStyleGroup_Decoration, 12},   // outline-width
     {CssStyleGroup_Count, 0},         // overflow
-    {CssStyleGroup_Box, 38},          // overflow-anchor
+    {CssStyleGroup_Box, 34},          // overflow-anchor
     {CssStyleGroup_Count, 0},         // overflow-block
     {CssStyleGroup_Count, 0},         // overflow-clip-margin
     {CssStyleGroup_Count, 0},         // overflow-clip-margin-block
@@ -655,40 +656,40 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // overflow-clip-margin-top
     {CssStyleGroup_Count, 0},         // overflow-inline
     {CssStyleGroup_Typography, 11},   // overflow-wrap
-    {CssStyleGroup_Box, 22},          // overflow-x
-    {CssStyleGroup_Box, 23},          // overflow-y
+    {CssStyleGroup_Box, 31},          // overflow-x
+    {CssStyleGroup_Box, 32},          // overflow-y
     {CssStyleGroup_Count, 0},         // overlay
     {CssStyleGroup_Count, 0},         // overscroll-behavior
     {CssStyleGroup_Count, 0},         // overscroll-behavior-block
     {CssStyleGroup_Count, 0},         // overscroll-behavior-inline
-    {CssStyleGroup_Box, 43},          // overscroll-behavior-x
-    {CssStyleGroup_Box, 44},          // overscroll-behavior-y
+    {CssStyleGroup_Box, 35},          // overscroll-behavior-x
+    {CssStyleGroup_Box, 36},          // overscroll-behavior-y
     {CssStyleGroup_Count, 0},         // padding
     {CssStyleGroup_Count, 0},         // padding-block
     {CssStyleGroup_Count, 0},         // padding-block-end
     {CssStyleGroup_Count, 0},         // padding-block-start
-    {CssStyleGroup_Box, 16},          // padding-bottom
+    {CssStyleGroup_Box, 29},          // padding-bottom
     {CssStyleGroup_Count, 0},         // padding-inline
     {CssStyleGroup_Count, 0},         // padding-inline-end
     {CssStyleGroup_Count, 0},         // padding-inline-start
-    {CssStyleGroup_Box, 17},          // padding-left
-    {CssStyleGroup_Box, 15},          // padding-right
-    {CssStyleGroup_Box, 14},          // padding-top
+    {CssStyleGroup_Box, 30},          // padding-left
+    {CssStyleGroup_Box, 28},          // padding-right
+    {CssStyleGroup_Box, 27},          // padding-top
     {CssStyleGroup_Count, 0},         // page
     {CssStyleGroup_Count, 0},         // page-break-after
     {CssStyleGroup_Count, 0},         // page-break-before
     {CssStyleGroup_Count, 0},         // page-break-inside
-    {CssStyleGroup_Svg, 14},          // paint-order
-    {CssStyleGroup_SvgGeometry, 15},  // path-length
+    {CssStyleGroup_Svg, 12},          // paint-order
+    {CssStyleGroup_SvgGeometry, 8},   // path-length
     {CssStyleGroup_Count, 0},         // pause
     {CssStyleGroup_Count, 0},         // pause-after
     {CssStyleGroup_Count, 0},         // pause-before
-    {CssStyleGroup_Effect, 8},        // perspective
-    {CssStyleGroup_Effect, 9},        // perspective-origin
+    {CssStyleGroup_Effect, 9},        // perspective
+    {CssStyleGroup_Effect, 10},       // perspective-origin
     {CssStyleGroup_Count, 0},         // place-content
     {CssStyleGroup_Count, 0},         // place-items
     {CssStyleGroup_Count, 0},         // place-self
-    {CssStyleGroup_Color, 8},         // pointer-events
+    {CssStyleGroup_Color, 9},         // pointer-events
     {CssStyleGroup_Count, 0},         // pointer-timeline
     {CssStyleGroup_Count, 0},         // pointer-timeline-axis
     {CssStyleGroup_Count, 0},         // pointer-timeline-name
@@ -701,7 +702,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // position-visibility
     {CssStyleGroup_Count, 0},         // print-color-adjust
     {CssStyleGroup_List, 3},          // quotes
-    {CssStyleGroup_SvgGeometry, 2},   // r
+    {CssStyleGroup_SvgGeometry, 4},   // r
     {CssStyleGroup_Count, 0},         // reading-flow
     {CssStyleGroup_Count, 0},         // reading-order
     {CssStyleGroup_Count, 0},         // region-fragment
@@ -709,7 +710,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // rest
     {CssStyleGroup_Count, 0},         // rest-after
     {CssStyleGroup_Count, 0},         // rest-before
-    {CssStyleGroup_Box, 19},          // right
+    {CssStyleGroup_Box, 5},           // right
     {CssStyleGroup_Effect, 5},        // rotate
     {CssStyleGroup_Flex, 6},          // row-gap
     {CssStyleGroup_Count, 0},         // row-rule
@@ -743,8 +744,8 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // rule-style
     {CssStyleGroup_Count, 0},         // rule-visibility-items
     {CssStyleGroup_Count, 0},         // rule-width
-    {CssStyleGroup_SvgGeometry, 3},   // rx
-    {CssStyleGroup_SvgGeometry, 4},   // ry
+    {CssStyleGroup_SvgGeometry, 5},   // rx
+    {CssStyleGroup_SvgGeometry, 6},   // ry
     {CssStyleGroup_Effect, 6},        // scale
     {CssStyleGroup_Count, 0},         // scroll-axis-lock
     {CssStyleGroup_Count, 0},         // scroll-behavior
@@ -795,10 +796,10 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // spatial-navigation-function
     {CssStyleGroup_Count, 0},         // speak
     {CssStyleGroup_Count, 0},         // speak-as
-    {CssStyleGroup_SvgGeometry, 9},   // stop-color
-    {CssStyleGroup_SvgGeometry, 10},  // stop-opacity
+    {CssStyleGroup_SvgGeometry, 10},  // stop-color
+    {CssStyleGroup_SvgGeometry, 11},  // stop-opacity
     {CssStyleGroup_Count, 0},         // string-set
-    {CssStyleGroup_Svg, 3},           // stroke
+    {CssStyleGroup_Svg, 4},           // stroke
     {CssStyleGroup_Count, 0},         // stroke-align
     {CssStyleGroup_Count, 0},         // stroke-alignment
     {CssStyleGroup_Count, 0},         // stroke-break
@@ -806,24 +807,24 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // stroke-dash-corner
     {CssStyleGroup_Count, 0},         // stroke-dash-justify
     {CssStyleGroup_Count, 0},         // stroke-dashadjust
-    {CssStyleGroup_Svg, 9},           // stroke-dasharray
+    {CssStyleGroup_Svg, 10},          // stroke-dasharray
     {CssStyleGroup_Count, 0},         // stroke-dashcorner
-    {CssStyleGroup_Svg, 10},          // stroke-dashoffset
+    {CssStyleGroup_Svg, 11},          // stroke-dashoffset
     {CssStyleGroup_Count, 0},         // stroke-image
-    {CssStyleGroup_Svg, 6},           // stroke-linecap
-    {CssStyleGroup_Svg, 7},           // stroke-linejoin
-    {CssStyleGroup_Svg, 8},           // stroke-miterlimit
-    {CssStyleGroup_Svg, 4},           // stroke-opacity
+    {CssStyleGroup_Svg, 7},           // stroke-linecap
+    {CssStyleGroup_Svg, 8},           // stroke-linejoin
+    {CssStyleGroup_Svg, 9},           // stroke-miterlimit
+    {CssStyleGroup_Svg, 5},           // stroke-opacity
     {CssStyleGroup_Count, 0},         // stroke-origin
     {CssStyleGroup_Count, 0},         // stroke-position
     {CssStyleGroup_Count, 0},         // stroke-repeat
     {CssStyleGroup_Count, 0},         // stroke-size
-    {CssStyleGroup_Svg, 5},           // stroke-width
+    {CssStyleGroup_Svg, 6},           // stroke-width
     {CssStyleGroup_Count, 0},         // tab-size
-    {CssStyleGroup_Box, 37},          // table-layout
+    {CssStyleGroup_Box, 44},          // table-layout
     {CssStyleGroup_Count, 0},         // text-align
-    {CssStyleGroup_Font, 11},         // text-align-all
-    {CssStyleGroup_Font, 12},         // text-align-last
+    {CssStyleGroup_Font, 12},         // text-align-all
+    {CssStyleGroup_Font, 13},         // text-align-last
     {CssStyleGroup_Svg, 20},          // text-anchor
     {CssStyleGroup_Count, 0},         // text-autospace
     {CssStyleGroup_Count, 0},         // text-box
@@ -848,10 +849,10 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // text-emphasis-style
     {CssStyleGroup_Count, 0},         // text-fit
     {CssStyleGroup_Count, 0},         // text-group-align
-    {CssStyleGroup_Font, 10},         // text-indent
-    {CssStyleGroup_Font, 13},         // text-justify
-    {CssStyleGroup_Font, 14},         // text-orientation
-    {CssStyleGroup_Box, 39},          // text-overflow
+    {CssStyleGroup_Font, 15},         // text-indent
+    {CssStyleGroup_Font, 14},         // text-justify
+    {CssStyleGroup_Font, 9},          // text-orientation
+    {CssStyleGroup_Box, 33},          // text-overflow
     {CssStyleGroup_Svg, 19},          // text-rendering
     {CssStyleGroup_Count, 0},         // text-shadow
     {CssStyleGroup_Count, 0},         // text-size-adjust
@@ -861,7 +862,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // text-underline-offset
     {CssStyleGroup_Count, 0},         // text-underline-position
     {CssStyleGroup_Count, 0},         // text-wrap
-    {CssStyleGroup_Font, 9},          // text-wrap-mode
+    {CssStyleGroup_Font, 11},         // text-wrap-mode
     {CssStyleGroup_Count, 0},         // text-wrap-style
     {CssStyleGroup_Count, 0},         // timeline-scope
     {CssStyleGroup_Count, 0},         // timeline-trigger
@@ -873,11 +874,11 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // timeline-trigger-active-range-start
     {CssStyleGroup_Count, 0},         // timeline-trigger-name
     {CssStyleGroup_Count, 0},         // timeline-trigger-source
-    {CssStyleGroup_Box, 18},          // top
+    {CssStyleGroup_Box, 4},           // top
     {CssStyleGroup_Count, 0},         // touch-action
-    {CssStyleGroup_Effect, 1},        // transform
-    {CssStyleGroup_Effect, 7},        // transform-box
-    {CssStyleGroup_Effect, 2},        // transform-origin
+    {CssStyleGroup_Effect, 3},        // transform
+    {CssStyleGroup_Effect, 8},        // transform-box
+    {CssStyleGroup_Effect, 7},        // transform-origin
     {CssStyleGroup_Count, 0},         // transform-style
     {CssStyleGroup_Count, 0},         // transition
     {CssStyleGroup_Animation, 4},     // transition-behavior
@@ -887,9 +888,9 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Animation, 2},     // transition-timing-function
     {CssStyleGroup_Effect, 4},        // translate
     {CssStyleGroup_Count, 0},         // trigger-scope
-    {CssStyleGroup_Box, 33},          // unicode-bidi
+    {CssStyleGroup_Box, 43},          // unicode-bidi
     {CssStyleGroup_Generated, 5},     // user-select
-    {CssStyleGroup_SvgGeometry, 8},   // vector-effect
+    {CssStyleGroup_SvgGeometry, 9},   // vector-effect
     {CssStyleGroup_Count, 0},         // vertical-align
     {CssStyleGroup_Count, 0},         // view-timeline
     {CssStyleGroup_Count, 0},         // view-timeline-axis
@@ -899,7 +900,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // view-transition-group
     {CssStyleGroup_Count, 0},         // view-transition-name
     {CssStyleGroup_Count, 0},         // view-transition-scope
-    {CssStyleGroup_Color, 1},         // visibility
+    {CssStyleGroup_Color, 7},         // visibility
     {CssStyleGroup_Count, 0},         // voice-balance
     {CssStyleGroup_Count, 0},         // voice-duration
     {CssStyleGroup_Count, 0},         // voice-family
@@ -909,11 +910,11 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // voice-stress
     {CssStyleGroup_Count, 0},         // voice-volume
     {CssStyleGroup_Count, 0},         // white-space
-    {CssStyleGroup_Font, 8},          // white-space-collapse
+    {CssStyleGroup_Font, 10},         // white-space-collapse
     {CssStyleGroup_Count, 0},         // white-space-trim
     {CssStyleGroup_Count, 0},         // widows
-    {CssStyleGroup_Box, 3},           // width
-    {CssStyleGroup_Effect, 11},       // will-change
+    {CssStyleGroup_Box, 9},           // width
+    {CssStyleGroup_Effect, 2},        // will-change
     {CssStyleGroup_Count, 0},         // window-drag
     {CssStyleGroup_Typography, 10},   // word-break
     {CssStyleGroup_Count, 0},         // word-space-transform
@@ -923,10 +924,10 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // wrap-flow
     {CssStyleGroup_Count, 0},         // wrap-inside
     {CssStyleGroup_Count, 0},         // wrap-through
-    {CssStyleGroup_Font, 6},          // writing-mode
-    {CssStyleGroup_SvgGeometry, 5},   // x
-    {CssStyleGroup_SvgGeometry, 6},   // y
-    {CssStyleGroup_Effect, 3},        // z-index
+    {CssStyleGroup_Font, 7},          // writing-mode
+    {CssStyleGroup_SvgGeometry, 0},   // x
+    {CssStyleGroup_SvgGeometry, 1},   // y
+    {CssStyleGroup_Effect, 1},        // z-index
     {CssStyleGroup_Count, 0},         // zoom
     {CssStyleGroup_Count, 0},         // -webkit-align-content
     {CssStyleGroup_Count, 0},         // -webkit-align-items

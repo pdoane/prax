@@ -33,6 +33,30 @@ enum {
 };
 typedef uint8_t PrUnicodeGraphemeBreak;
 
+// Word_Break, of UAX #29.
+enum {
+    PrUnicodeWordBreak_Other,
+    PrUnicodeWordBreak_CR,
+    PrUnicodeWordBreak_LF,
+    PrUnicodeWordBreak_Newline,
+    PrUnicodeWordBreak_Extend,
+    PrUnicodeWordBreak_ZWJ,
+    PrUnicodeWordBreak_Format,
+    PrUnicodeWordBreak_Katakana,
+    PrUnicodeWordBreak_HebrewLetter,
+    PrUnicodeWordBreak_ALetter,
+    PrUnicodeWordBreak_SingleQuote,
+    PrUnicodeWordBreak_DoubleQuote,
+    PrUnicodeWordBreak_MidNumLet,
+    PrUnicodeWordBreak_MidLetter,
+    PrUnicodeWordBreak_MidNum,
+    PrUnicodeWordBreak_Numeric,
+    PrUnicodeWordBreak_ExtendNumLet,
+    PrUnicodeWordBreak_RegionalIndicator,
+    PrUnicodeWordBreak_WSegSpace,
+};
+typedef uint8_t PrUnicodeWordBreak;
+
 // Indic_Conjunct_Break.
 enum {
     PrUnicodeIndicConjunctBreak_None,
@@ -121,6 +145,7 @@ typedef uint8_t PrUnicodeGeneralCategory;
 
 // Return the Grapheme_Cluster_Break, Indic_Conjunct_Break and binary properties of `codePoint`.
 PrUnicodeGraphemeBreak prUnicodeGraphemeBreak(uint32_t codePoint);
+PrUnicodeWordBreak prUnicodeWordBreak(uint32_t codePoint);
 PrUnicodeIndicConjunctBreak prUnicodeIndicConjunctBreak(uint32_t codePoint);
 PrUnicodeFlags prUnicodeFlags(uint32_t codePoint);
 

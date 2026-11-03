@@ -306,6 +306,8 @@ JSClassID classifyEvent(void* handle) {
         case PrDomEventKind_Wheel: return prJsDomWheelEventClass;
         case PrDomEventKind_Keyboard: return prJsDomKeyboardEventClass;
         case PrDomEventKind_Composition: return prJsDomCompositionEventClass;
+        case PrDomEventKind_Input: return prJsDomInputEventClass;
+        case PrDomEventKind_Clipboard: return prJsDomClipboardEventClass;
         case PrDomEventKind_Ui: return prJsDomUiEventClass;
         default: return prJsDomEventClass;
     }
@@ -875,6 +877,126 @@ JSValue compositionEventConstruct(JSContext* ctx, JSValueConst newTarget, int ar
         prDomCompositionEventAsEvent(prDomCompositionEventCreate(type.value(), &init, data.value())),
         prDomEventRelease);
     return jsConstructed(ctx, newTarget, object);
+}
+
+// uievents/#dom-inputevent-inputevent
+JSValue clipboardEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
+    StringArgument type = {ctx};
+    bool present = false;
+    PrDomUiEventInit init = prDomUiEventInitDefault();
+    JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
+    if (!jsArgCount(ctx, argc, 1) || !type.read(argv[0]) || !jsDictionary(ctx, dictionary, &present) ||
+            !uiInitRead(ctx, dictionary, present, &init))
+        return JS_EXCEPTION;
+    JSValue object = ownedToJs(ctx, prJsDomClipboardEventClass, JS_UNDEFINED,
+        prDomClipboardEventAsEvent(prDomClipboardEventCreate(type.value(), &init.event, PrStringView{})),
+        prDomEventRelease);
+    return jsConstructed(ctx, newTarget, object);
+}
+
+JSValue clipboardEventClipboardData(JSContext* ctx, JSValueConst eventObject) {
+    PrDomClipboardEvent* event = jsThis<PrDomClipboardEvent>(ctx, eventObject, prJsDomClipboardEventClass);
+    if (event == nullptr)
+        return JS_EXCEPTION;
+    PrDomDataTransfer* transfer = prDomClipboardEventClipboardData(event);
+    prDomDataTransferRetain(transfer);
+    return ownedToJs(ctx, prJsDomDataTransferClass, eventObject, transfer, prDomDataTransferRelease);
+}
+
+// Returns true if `format` names the transfer's text (html/#dom-datatransfer-getdata): "text" stands for text/plain.
+bool namesText(PrStringView format) {
+    return asciiEqualsFold(format, "text") || asciiEqualsFold(format, "text/plain");
+}
+
+JSValue dataTransferGetData(JSContext* ctx, JSValueConst transferObject, int argc, JSValueConst* argv) {
+    PrDomDataTransfer* transfer = jsThis<PrDomDataTransfer>(ctx, transferObject, prJsDomDataTransferClass);
+    StringArgument format = {ctx};
+    if (transfer == nullptr || !jsArgCount(ctx, argc, 1) || !format.read(argv[0]))
+        return JS_EXCEPTION;
+    return jsNewStringView(ctx, namesText(format.value()) ? prDomDataTransferText(transfer) : PrStringView{});
+}
+
+JSValue dataTransferSetData(JSContext* ctx, JSValueConst transferObject, int argc, JSValueConst* argv) {
+    PrDomDataTransfer* transfer = jsThis<PrDomDataTransfer>(ctx, transferObject, prJsDomDataTransferClass);
+    StringArgument format = {ctx};
+    StringArgument data = {ctx};
+    if (transfer == nullptr || !jsArgCount(ctx, argc, 2) || !format.read(argv[0]) || !data.read(argv[1]))
+        return JS_EXCEPTION;
+    if (namesText(format.value()))
+        prDomDataTransferSetText(transfer, data.value());
+    return JS_UNDEFINED;
+}
+
+JSValue dataTransferClearData(JSContext* ctx, JSValueConst transferObject, int, JSValueConst*) {
+    PrDomDataTransfer* transfer = jsThis<PrDomDataTransfer>(ctx, transferObject, prJsDomDataTransferClass);
+    if (transfer == nullptr)
+        return JS_EXCEPTION;
+    prDomDataTransferClear(transfer);
+    return JS_UNDEFINED;
+}
+
+JSValue dataTransferTypes(JSContext* ctx, JSValueConst transferObject) {
+    PrDomDataTransfer* transfer = jsThis<PrDomDataTransfer>(ctx, transferObject, prJsDomDataTransferClass);
+    if (transfer == nullptr)
+        return JS_EXCEPTION;
+    JSValue array = JS_NewArray(ctx);
+    if (prDomDataTransferHasText(transfer))
+        JS_SetPropertyUint32(ctx, array, 0, JS_NewString(ctx, "text/plain"));
+    return array;
+}
+
+JSValue inputEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
+    StringArgument type = {ctx};
+    StringArgument data = {ctx};
+    StringArgument inputType = {ctx};
+    bool present = false;
+    PrDomUiEventInit init = prDomUiEventInitDefault();
+    JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
+    if (!jsArgCount(ctx, argc, 1) || !type.read(argv[0]) || !jsDictionary(ctx, dictionary, &present) ||
+            !uiInitRead(ctx, dictionary, present, &init))
+        return JS_EXCEPTION;
+    bool composing = false;
+    PrStringView dataView{};
+    if (present) {
+        JSValue value = JS_GetPropertyStr(ctx, dictionary, "data");
+        bool given = !JS_IsUndefined(value) && !JS_IsNull(value);
+        bool read = !given || data.read(value);
+        JS_FreeValue(ctx, value);
+        if (!read || !jsDictString(ctx, dictionary, "inputType", &inputType))
+            return JS_EXCEPTION;
+        if (given)
+            dataView = data.value();
+        JSValue isComposing = JS_GetPropertyStr(ctx, dictionary, "isComposing");
+        composing = JS_ToBool(ctx, isComposing) != 0;
+        JS_FreeValue(ctx, isComposing);
+    }
+    JSValue object = ownedToJs(ctx, prJsDomInputEventClass, JS_UNDEFINED,
+        prDomInputEventAsEvent(prDomInputEventCreate(type.value(), &init, dataView, inputType.value(), composing)),
+        prDomEventRelease);
+    return jsConstructed(ctx, newTarget, object);
+}
+
+JSValue inputEventData(JSContext* ctx, JSValueConst eventObject) {
+    PrDomInputEvent* event = jsThis<PrDomInputEvent>(ctx, eventObject, prJsDomInputEventClass);
+    if (event == nullptr)
+        return JS_EXCEPTION;
+    PrStringView data = prDomInputEventData(event);
+    return data.data != nullptr ? jsNewStringView(ctx, data) : JS_NULL;
+}
+
+JSValue inputEventInputType(JSContext* ctx, JSValueConst eventObject) {
+    PrDomInputEvent* event = jsThis<PrDomInputEvent>(ctx, eventObject, prJsDomInputEventClass);
+    return event != nullptr ? jsNewStringView(ctx, prDomInputEventInputType(event)) : JS_EXCEPTION;
+}
+
+JSValue inputEventIsComposing(JSContext* ctx, JSValueConst eventObject) {
+    PrDomInputEvent* event = jsThis<PrDomInputEvent>(ctx, eventObject, prJsDomInputEventClass);
+    return event != nullptr ? JS_NewBool(ctx, prDomInputEventIsComposing(event)) : JS_EXCEPTION;
+}
+
+// input-events-2/#dom-inputevent-gettargetranges. A text control's input event has no target ranges.
+JSValue inputEventGetTargetRanges(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    return jsThis<PrDomInputEvent>(ctx, object, prJsDomInputEventClass) != nullptr ? JS_NewArray(ctx) : JS_EXCEPTION;
 }
 
 JSValue compositionData(JSContext* ctx, JSValueConst eventObject) {
@@ -3109,6 +3231,27 @@ constexpr JSCFunctionListEntry kKeyboardEventProto[] = {
     PR_JS_METHOD("initKeyboardEvent", 1, keyboardInitKeyboardEvent),
 };
 
+constexpr JSCFunctionListEntry kClipboardEventProto[] = {
+    PR_JS_TAG("ClipboardEvent"),
+    PR_JS_GET("clipboardData", clipboardEventClipboardData),
+};
+
+constexpr JSCFunctionListEntry kDataTransferProto[] = {
+    PR_JS_TAG("DataTransfer"),
+    PR_JS_GET("types", dataTransferTypes),
+    PR_JS_METHOD("getData", 1, dataTransferGetData),
+    PR_JS_METHOD("setData", 2, dataTransferSetData),
+    PR_JS_METHOD("clearData", 0, dataTransferClearData),
+};
+
+constexpr JSCFunctionListEntry kInputEventProto[] = {
+    PR_JS_TAG("InputEvent"),
+    PR_JS_GET("data", inputEventData),
+    PR_JS_GET("inputType", inputEventInputType),
+    PR_JS_GET("isComposing", inputEventIsComposing),
+    PR_JS_METHOD("getTargetRanges", 0, inputEventGetTargetRanges),
+};
+
 constexpr JSCFunctionListEntry kCompositionEventProto[] = {
     PR_JS_TAG("CompositionEvent"),
     PR_JS_GET("data", compositionData),
@@ -3515,6 +3658,23 @@ constexpr JsClassDefinition kClasses[] = {
         .base = &prJsDomUiEventClass,
     },
     {
+        PR_JS_CLASS("ClipboardEvent", prJsDomClipboardEventClass, jsViewFinalizer<&prJsDomClipboardEventClass>,
+            kClipboardEventProto),
+        .constructor = clipboardEventConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("DataTransfer", prJsDomDataTransferClass,
+            (jsFinalizer<&prJsDomDataTransferClass, prDomDataTransferRelease>), kDataTransferProto),
+    },
+    {
+        PR_JS_CLASS("InputEvent", prJsDomInputEventClass, jsViewFinalizer<&prJsDomInputEventClass>, kInputEventProto),
+        .constructor = inputEventConstruct,
+        .length = 1,
+        .base = &prJsDomUiEventClass,
+    },
+    {
         PR_JS_CLASS("CompositionEvent", prJsDomCompositionEventClass, jsViewFinalizer<&prJsDomCompositionEventClass>,
             kCompositionEventProto),
         .constructor = compositionEventConstruct,
@@ -3678,6 +3838,9 @@ JSClassID prJsDomMouseEventClass;
 JSClassID prJsDomWheelEventClass;
 JSClassID prJsDomKeyboardEventClass;
 JSClassID prJsDomCompositionEventClass;
+JSClassID prJsDomInputEventClass;
+JSClassID prJsDomClipboardEventClass;
+JSClassID prJsDomDataTransferClass;
 JSClassID prJsDomEventTargetClass;
 JSClassID prJsDomAbortSignalClass;
 JSClassID prJsDomNodeClass;

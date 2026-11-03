@@ -91,6 +91,12 @@ struct Win32App : PrApp {
     bool inSizeMove;            // the user moves or resizes the window, in the system's modal loop
     bool composing;             // an input method composes text
     double lastFrame;
+
+    // The last press, which the next continues as a multi-click by the system's settings.
+    double clickTime;
+    POINT clickPoint;
+    uint8_t clickButton;
+    uint32_t clicks;
     HWND window;
     PrAppCursor shape;          // the pointer's shape over the client area
     HCURSOR PR_NULLABLE cursor; // the system's cursor for `shape`, or null to hide the pointer
@@ -647,8 +653,19 @@ void deliverPointer(Win32App* app, UINT message, WPARAM wParam, LPARAM lParam) {
     }
     app->pointer = event.position;
     uint8_t bit = uint8_t(1u << event.button);
-    if (event.kind == PrAppEventKind_PointerDown)
+    if (event.kind == PrAppEventKind_PointerDown) {
         app->buttons |= bit;
+        POINT at{int16_t(LOWORD(lParam)), int16_t(HIWORD(lParam))};
+        bool continues = app->clicks != 0 && event.button == app->clickButton &&
+            event.time - app->clickTime <= double(GetDoubleClickTime()) / 1000 &&
+            abs(at.x - app->clickPoint.x) <= GetSystemMetrics(SM_CXDOUBLECLK) / 2 &&
+            abs(at.y - app->clickPoint.y) <= GetSystemMetrics(SM_CYDOUBLECLK) / 2;
+        app->clicks = continues ? app->clicks + 1 : 1;
+        app->clickTime = event.time;
+        app->clickPoint = at;
+        app->clickButton = event.button;
+        event.clicks = app->clicks;
+    }
     else if (event.kind == PrAppEventKind_PointerUp)
         app->buttons &= uint8_t(~bit);
     // The window captures the pointer while a button is down, so that a drag reports its moves and its release outside

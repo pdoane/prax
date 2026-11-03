@@ -190,6 +190,43 @@ void prHtmlTextAreaElementSetDefaultValue(PrHtmlTextAreaElement* element, PrStri
 uint32_t prHtmlTextAreaElementTextLength(const PrHtmlTextAreaElement* element);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Text control selection (html/#textFieldSelection)
+//
+// These apply to a textarea and to an input of a type that they apply to. Offsets are in UTF-16 code units, as the
+// specification defines them. An offset inside a surrogate pair stands at the start of its code point.
+
+// How setRangeText leaves the selection (html/#selectionmode).
+enum {
+    PrHtmlSelectionMode_Preserve,
+    PrHtmlSelectionMode_Select,
+    PrHtmlSelectionMode_Start,
+    PrHtmlSelectionMode_End,
+};
+typedef uint8_t PrHtmlSelectionMode;
+
+// Returns true if selectionStart, selectionEnd, selectionDirection, setRangeText and setSelectionRange apply to
+// `element`.
+bool prHtmlTextControlSelectionApplies(const PrDomElement* element);
+
+// Returns the bounds and the direction of the selection. Each requires that the selection applies.
+uint32_t prHtmlTextControlSelectionStart(PrDomElement* element);
+uint32_t prHtmlTextControlSelectionEnd(PrDomElement* element);
+PrDomSelectionDirection prHtmlTextControlSelectionDirection(PrDomElement* element);
+
+// Sets the selection (html/#set-the-selection-range), and queues a select event if the selection changed. Each requires
+// that the selection applies.
+void prHtmlTextControlSetSelectionRange(PrDomElement* element, uint32_t start, uint32_t end,
+    PrDomSelectionDirection direction);
+
+// Selects all of the text (html/#textFieldSelection), if the element has a selection.
+void prHtmlTextControlSelect(PrDomElement* element);
+
+// Replaces the units from `start` to `end` with `replacement` (html/#textFieldSelection), and sets the selection as
+// `mode` says. Returns OutOfRange if `start` is past `end`. Requires that the selection applies.
+PrStatus prHtmlTextControlSetRangeText(PrDomElement* element, PrStringView replacement, uint32_t start, uint32_t end,
+    PrHtmlSelectionMode mode);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // HTMLFieldSetElement, HTMLLegendElement and HTMLLabelElement : HTMLElement (html)
 
 // Each interface as each interface it inherits from.

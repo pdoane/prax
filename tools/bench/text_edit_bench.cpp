@@ -10,8 +10,14 @@
 // profiler.
 
 #include "pr/assert.h"
+#include "pr/font_set.h"
+#include "pr/layout_style.h"
+#include "pr/layout_tree.h"
 #include "pr/string_view.h"
 #include "pr/text_edit.h"
+#include "pr/text_edit_layout.h"
+#include "pr/text_edit_motion.h"
+#include "pr/text_harfbuzz.h"
 
 #include "tools/harness/harness.h"
 
@@ -95,6 +101,59 @@ struct Case {
     void (*run)(Work*);
 };
 
+// The numbers of lines of the documents that a tree shows whole, for the cost of a motion through layout. A motion's
+// cost follows what the tree shows, so a window of rows holds it down at larger scales.
+constexpr uint32_t kShownLines[] = {100, 10000};
+
+// Measures the motions of a caret in the middle of `document`, shown in one text node, and writes their rows.
+void measureMotion(const std::string& document, uint32_t lines, bool& first) {
+    PrFontSet* fonts = prFontSetCreate(nullptr);
+    PrTextShaper* shaper = prTextHarfBuzzCreate();
+    const PrFont* PR_NULLABLE face = nullptr;
+    std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
+    if (prFontCreateFromFile(path, 0, nullptr, &face) != PrStatus_Ok)
+        PR_FATAL("cannot open Arimo");
+    PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
+    prFontSetAdd(fonts, &descriptor, face);
+    prFontRelease(face);
+    prFontSetSetDefaultFamily(fonts, prFontFamilyFromName("Arimo"));
+    PrTextFontDesc fontDesc{.set = fonts, .style = prFontStyleDefault()};
+    PrTextFont* font = prTextFontCreate(&fontDesc);
+    PrLayoutTreeDesc treeDesc{.font = font, .shaper = shaper, .targetPixelRatio = 1};
+    PrLayoutTree* tree = prLayoutTreeCreate(&treeDesc);
+    PrLayoutFontStyle fontStyle = prLayoutFontStyleDefault();
+    fontStyle.font = font;
+    fontStyle.whiteSpaceCollapse = PrLayoutWhiteSpaceCollapse_Preserve;
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Block;
+    PrLayoutStyle record = prLayoutStyleDefault();
+    record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
+    record.groups[PrLayoutGroup_Font] = prLayoutFontStyleIntern(tree, &fontStyle);
+    PrLayoutNode root = prLayoutNodeCreateElement(tree, kPrLayoutNodeNone, prLayoutStyleIntern(tree, &record));
+    PrLayoutNode text = prLayoutNodeCreateText(tree, root, document);
+    PrLayoutRoot viewport{root, prLayoutVecFromPx(PrVec2{800, 600})};
+    prLayoutTreeLayout(tree, &viewport, 1);
+    PrTextEditSelection caret{.anchor = uint32_t(document.size() / 2), .caret = uint32_t(document.size() / 2)};
+    // A press makes its own geometry, whose answers last only as long as it does.
+    auto report = [&](const char* label, PrTextEditMotion motion) {
+        std::string name = std::to_string(lines) + " lines " + label;
+        HarnessCounters cost = harnessMeasure([&] {
+            PrTextEditGeometry geometry = prTextEditGeometryFromLayoutText(tree, text, document);
+            prTextEditSelectionMove(&geometry, text, caret, motion, PrTextEditSelectionMove_Collapse);
+            prTextEditGeometryReset(&geometry);
+        });
+        harnessWriteCase(first, name.c_str(), cost);
+        first = false;
+    };
+    report("motion logical", PrTextEditMotion_ClusterAfter);
+    report("motion visual", PrTextEditMotion_Right);
+    report("motion next line", PrTextEditMotion_LineNext);
+    prLayoutTreeDestroy(tree);
+    prTextFontRelease(font);
+    prTextShaperDestroy(shaper);
+    prFontSetDestroy(fonts);
+}
+
 constexpr Case kCases[] = {
     {"type at caret", typeAtCaret},
     {"split line", splitLine},
@@ -157,6 +216,10 @@ int main(int argc, char** argv) {
         }
         prTextEditViewDestroy(w.view);
         prTextEditBufferDestroy(w.buffer);
+    }
+    for (uint32_t lines : kShownLines) {
+        if (only.size == 0)
+            measureMotion(makeDocument(lines), lines, first);
     }
     if (only.size == 0)
         printf("\n]\n");

@@ -112,6 +112,23 @@ bool measuresViewport(const PrDomElement* element) {
     return (element == domDocumentElement(document) && !quirks) || (element == domDocumentBody(document) && quirks);
 }
 
+// Returns the box that scrolls for the element: its own, or the field of a one-line text control, which is what scrolls
+// there (lib/html's sheet).
+PrLayoutNode scrollBoxOf(PrCssPresentation* presentation, const PrDomElement* element) {
+    if (domIsHtml(element, PrDomTag_Input)) {
+        PrLayoutNode text = prCssPresentationFieldText(presentation, element);
+        if (text != kPrLayoutNodeNone)
+            return prLayoutNodeParent(cssPresentationOwnTree(presentation), text);
+    }
+    return cssPresentationBox(presentation, element);
+}
+
+// Writes the scrolling of the box that scrolls for the element (scrollBoxOf). Returns false if it has no such box.
+bool scrollerInfoOf(PrCssPresentation* presentation, const PrDomElement* element, PrLayoutScrollInfo* out) {
+    PrLayoutNode box = scrollBoxOf(presentation, element);
+    return box != kPrLayoutNodeNone && prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), box, out);
+}
+
 // Writes the scrolling of the element's block box. Returns false if the element generates no block box.
 bool scrollInfoOf(PrCssPresentation* presentation, PrDomElement* element, PrLayoutScrollInfo* out) {
     PrLayoutNode box = cssPresentationBox(presentation, element);
@@ -131,7 +148,7 @@ void scrollElement(PrDomElement* element, const PrCssScrollToOptions* options, b
     if (scrolling == Scrolling_Viewport)
         node = PrLayoutNode(kPrLayoutNodeNone);
     else
-        node = cssPresentationBox(presentation, element);
+        node = scrollBoxOf(presentation, element);
     if (scrolling == Scrolling_Own && node == kPrLayoutNodeNone)
         return;
     PrLayoutScrollInfo info{};
@@ -403,7 +420,7 @@ double prCssElementScrollLeft(PrDomElement* element) {
             break;
     }
     PrLayoutScrollInfo info{};
-    return scrollInfoOf(presentation, element, &info) ? px(info.offset.x) : 0;
+    return scrollerInfoOf(presentation, element, &info) ? px(info.offset.x) : 0;
 }
 
 void prCssElementSetScrollTop(PrDomElement* element, double value) {
@@ -491,8 +508,15 @@ int32_t prCssElementScrollWidth(PrDomElement* element) {
     if (measuresViewport(element))
         found = prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info);
     else
-        found = scrollInfoOf(presentation, element, &info);
-    return found ? integer(px(info.content.right - info.content.left)) : 0;
+        found = scrollerInfoOf(presentation, element, &info);
+    if (!found)
+        return 0;
+    PrLayoutUnit width = info.content.right - info.content.left;
+    // A field scrolls inside the element, whose padding the width includes as it does the element's client width.
+    PrLayoutScrollInfo own{};
+    if (!measuresViewport(element) && scrollInfoOf(presentation, element, &own))
+        width = width + own.portExtent.x - info.portExtent.x;
+    return integer(px(width));
 }
 
 int32_t prCssElementScrollHeight(PrDomElement* element) {

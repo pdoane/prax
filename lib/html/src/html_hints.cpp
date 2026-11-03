@@ -627,10 +627,21 @@ void addOwn(TextBuffer* out, const PrDomElement* element) {
             addDimension(out, element, "height", "height", Zero_Keep);
             addSpaces(out, element);
             break;
-        case PrDomTag_Textarea:
+        case PrDomTag_Textarea: {
             if (asciiEqualsFold(domAttributeValue(element, "wrap"), "off"))
                 cssHintAdd(out, "white-space", "pre");
+            // The box is `rows` lines tall (html/#the-textarea-element-2).
+            int64_t rows = 0;
+            if (!domParseInteger(domAttributeValue(element, "rows"), &rows) || rows < 1)
+                rows = 2;
+            TextBuffer height;
+            textAppend(&height, "calc(");
+            textAppendU64(&height, uint64_t(rows));
+            textAppend(&height, "lh)");
+            cssHintAdd(out, "block-size", textView(&height));
+            textReset(&height);
             break;
+        }
         default:
             if (isHeading(element))
                 addTextAlign(out, element, Center_Center);
@@ -670,7 +681,7 @@ bool mapsOwn(const PrDomElement* element, PrStringView name) {
     switch (element->tag) {
         case PrDomTag_Body: return oneOf(name, kBody);
         case PrDomTag_Pre:
-        case PrDomTag_Textarea: return name == "wrap";
+        case PrDomTag_Textarea: return name == "wrap" || name == "rows";
         case PrDomTag_Div:
         case PrDomTag_P:
         case PrDomTag_Caption: return name == "align";

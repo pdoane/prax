@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Textarea</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+.styled textarea { border: 2px solid #c0477a; border-radius: 8px; background: #fbe4ee; color: #6b1d3d; padding: 4px; }
+.wide { inline-size: 250px; }
+.log { block-size: 3lh; overflow: hidden; margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Textarea</h1>
+  <p>Click to place the caret, drag to select, and type. An input method's text composes in the box, with its window at the caret.</p>
+</header>
+
+<section>
+  <h2>States</h2>
+<table class=grid>
+  <tr><th></th><th>auto</th><th>none</th><th>base</th><th>author-styled</th></tr>
+  <tr><th scope=row>empty</th><td><textarea cols=10 rows=2 placeholder=Notes></textarea></td><td class=none><textarea cols=10 rows=2 placeholder=Notes></textarea></td><td class=base><textarea cols=10 rows=2 placeholder=Notes></textarea></td><td class=styled><textarea cols=10 rows=2 placeholder=Notes></textarea></td></tr>
+  <tr><th scope=row>with text</th><td><textarea cols=10 rows=2>Some notes</textarea></td><td class=none><textarea cols=10 rows=2>Some notes</textarea></td><td class=base><textarea cols=10 rows=2>Some notes</textarea></td><td class=styled><textarea cols=10 rows=2>Some notes</textarea></td></tr>
+  <tr><th scope=row>read-only</th><td><textarea cols=10 rows=2 readonly>Read only</textarea></td><td class=none><textarea cols=10 rows=2 readonly>Read only</textarea></td><td class=base><textarea cols=10 rows=2 readonly>Read only</textarea></td><td class=styled><textarea cols=10 rows=2 readonly>Read only</textarea></td></tr>
+  <tr><th scope=row>disabled</th><td><textarea cols=10 rows=2 disabled>Disabled</textarea></td><td class=none><textarea cols=10 rows=2 disabled>Disabled</textarea></td><td class=base><textarea cols=10 rows=2 disabled>Disabled</textarea></td><td class=styled><textarea cols=10 rows=2 disabled>Disabled</textarea></td></tr>
+</table>
+</section>
+
+<section>
+  <h2>Editing</h2>
+<div class=strip>
+  <label><span class=cap>wraps at its width</span><textarea class="wide watched" rows=3 id=wrapping>A longer line of text that wraps at the width of the box, so that a caret moves between its lines.</textarea></label>
+  <label><span class=cap>wrap=off</span><textarea class="wide watched" rows=3 wrap=off id=unwrapped>A longer line of text that stays on one line, past the width of the box.</textarea></label>
+  <label><span class=cap>clusters and scripts, dir=auto</span><textarea class="wide watched" rows=3 dir=auto id=scripts>e&#x301; &#x1F469;&#x200D;&#x1F469;&#x200D;&#x1F467; 日本語 한국어 ไทย
+שלום עולם Hello عربي</textarea></label>
+  <label><span class=cap>a listener cancels each beforeinput</span><textarea class="wide watched" rows=3 id=canceled>Typing here changes nothing.</textarea></label>
+</div>
+<p id=state class=log style="block-size: auto">Nothing edited yet.</p>
+<p id=events class=log></p>
+</section>
+
+<section>
+  <h2>In context</h2>
+<div class=panels>
+  <div class="panel light"><span class=cap>light</span><textarea cols=6 rows=1>Text</textarea></div>
+  <div class="panel dark"><span class=cap>dark</span><textarea cols=6 rows=1>Text</textarea></div>
+  <div class="panel large"><span class=cap>font-size: 24px</span><textarea cols=5 rows=1 style="font-size: inherit">Text</textarea></div>
+  <div class=panel dir=rtl><span class=cap>rtl</span><textarea cols=6 rows=1>نص عربي</textarea></div>
+  <div class="panel vertical"><span class=cap>vertical-lr</span><textarea cols=4 rows=1>縦書きの文章</textarea></div>
+</div>
+</section>
+
+<script>
+const state = document.getElementById('state');
+const events = document.getElementById('events');
+const lines = [];
+
+function report(control) {
+  state.textContent = `${control.id}: selection ${control.selectionStart} to ${control.selectionEnd}, ${control.selectionDirection}; length ${control.value.length}`;
+}
+
+function heard(event) {
+  const kind = event.inputType ? ` ${event.inputType}` : '';
+  const data = event.data ? ` "${event.data}"` : '';
+  const composing = event.isComposing ? ' composing' : '';
+  lines.unshift(`${event.target.id}: ${event.type}${kind}${data}${composing}`);
+  lines.length = Math.min(lines.length, 3);
+  events.textContent = lines.join('\n');
+  report(event.target);
+}
+
+for (const control of document.querySelectorAll('.watched')) {
+  for (const type of ['beforeinput', 'input', 'select', 'compositionstart', 'compositionupdate', 'compositionend'])
+    control.addEventListener(type, heard);
+  for (const type of ['keyup', 'mouseup'])
+    control.addEventListener(type, () => report(control));
+}
+document.getElementById('canceled').addEventListener('beforeinput', event => event.preventDefault());
+</script>
+</body>
+</html>

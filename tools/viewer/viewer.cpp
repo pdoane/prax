@@ -1024,7 +1024,7 @@ bool inside(PrRect r, float x, float y) {
 }
 
 // Returns the panel's output with that of the page that holds the keyboard, where its pane shows it.
-PrAppOutput pageOutput(Viewer& v, const PrAppOutput& panel) {
+PrAppOutput pageOutput(Viewer& v, const PrAppOutput& panel, double time) {
     uint32_t index = v.pagePane;
     if (!v.pageKeys)
         return panel;
@@ -1034,7 +1034,10 @@ PrAppOutput pageOutput(Viewer& v, const PrAppOutput& panel) {
     PrRect rect = paneShownRect(v, index);
     float zoom = zoomFor(v, rect, PrVec2{source.docWidth, source.docHeight});
     PrRect at = placed(v, rect, source.docWidth, source.docHeight, zoom);
-    PrAppOutput page = prAppOutputPlaced(output(*source.loaded), PrVec2{at.left, at.top}, zoom);
+    PrAppOutput page = prAppOutputPlaced(output(*source.loaded, v.app, time), PrVec2{at.left, at.top}, zoom);
+    // A caret that blinks changes the page's render.
+    if (page.wantsFrame)
+        v.panes[index]->touch();
     return prAppOutputMerge(panel, page, inside(rect, v.pointerX, v.pointerY));
 }
 
@@ -1239,7 +1242,7 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     // Every refresh shows the panes' latest renders and takes them, which paces the panes' continuous rendering.
     PrAppOutput panel = uiOutput(v.ui);
     panel.wantsFrame = true;
-    return pageOutput(v, panel);
+    return pageOutput(v, panel, frame->time);
 }
 
 // Zooms both renders by `factor` about the point, which stays fixed in its pane.
@@ -1366,6 +1369,7 @@ bool toPage(Viewer& v, const PrAppEvent& event) {
         case PrAppEventKind_KeyDown:
         case PrAppEventKind_KeyUp:
         case PrAppEventKind_Text:
+        case PrAppEventKind_Clipboard:
         case PrAppEventKind_CompositionUpdate:
         case PrAppEventKind_CompositionEnd: {
             const PaneSource& source = v.panes[v.pagePane]->source();

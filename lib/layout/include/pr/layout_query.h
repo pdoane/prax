@@ -11,6 +11,7 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/string_view.h"
+#include "pr/text.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -161,6 +162,69 @@ PrString prLayoutNodeRenderedText(PrLayoutTree* tree, PrLayoutNode root, const P
 // nearest the point across lines, and the nearest position on it the nearest along it. Returns false if the last layout
 // drew none of their text, or if the point does not reach the plane of any line that holds it.
 bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point, PrLayoutTextPosition* out);
+
+// Writes the offset nearest `point` in the text node `text`, in viewport coordinates as painted, and the affinity that
+// puts a caret there on the line nearer the point: a position at a soft wrap stands on either line. Returns false as
+// prLayoutTextPositionFromPoint does.
+bool prLayoutTextOffsetNear(PrLayoutTree* tree, PrLayoutNode text, PrLayoutVec point, uint32_t* offset,
+    PrLayoutTextAffinity* affinity);
+
+// Which line a query of lines answers for, relative to the line that holds a position.
+enum {
+    PrLayoutLineStep_Same,
+    PrLayoutLineStep_Next,          // the following line in content order
+    PrLayoutLineStep_Previous,
+};
+typedef uint8_t PrLayoutLineStep;
+
+// A place on a visual line where a caret can stand: a grapheme cluster's edge, or the end of the line. A run of white
+// space that collapsed to one space has a place at each end only.
+typedef struct PrLayoutLineStop {
+    PrLayoutTextPosition position;
+    PrLayoutTextAffinity affinity;
+
+    // The distance along the line in the line-right direction, in px of layout coordinates, from an origin that all the
+    // lines of a block share. A goal in these units survives transforms and scrolling.
+    float along;
+} PrLayoutLineStop;
+
+// What decides how a line's text runs: the writing mode of the block container that holds it, and the direction of its
+// paragraph, which is the container's unless unicode-bidi: plaintext takes it from the paragraph's own text.
+typedef struct PrLayoutLineInfo {
+    PrTextDirection direction;
+    PrLayoutWritingMode writingMode;
+
+    // The stops of a query of lines that come first and last in the order of the text.
+    uint32_t startStop;
+    uint32_t endStop;
+} PrLayoutLineInfo;
+
+// Writes the direction and the writing mode of the line that would hold `offset` of the text node `text` to `info`,
+// leaving its stops zero. It reads only the styles and the text, so it holds for text that changed since the last
+// layout.
+void prLayoutNodeLineInfo(const PrLayoutTree* tree, PrLayoutNode text, uint32_t offset, PrLayoutLineInfo* info);
+
+// Writes the stops of a line of the text of `root` or its descendants to `out`, up to `capacity`, in order of `along`,
+// and returns the total count. The line is the one that holds `position` at `affinity`, or a line next to it, by
+// `step`. Where two parts of the text meet, the line has a stop at the same `along` for each part. Lines are in content
+// order, and a line holding nothing but a br has no stops, so it is not among them. Returns zero if there is no such
+// line, or if the text of `position`'s node changed since the last layout. The cost is proportional to the number of
+// text fragments of `root`.
+uint32_t prLayoutLineStops(PrLayoutTree* tree, PrLayoutNode root, PrLayoutTextPosition position,
+    PrLayoutTextAffinity affinity, PrLayoutLineStep step, PrLayoutLineInfo* PR_NULLABLE info,
+    PrLayoutLineStop* PR_NULLABLE out, uint32_t capacity);
+
+// Returns the text node after or before `text` in the content of `root` that the last layout placed, or
+// kPrLayoutNodeNone if there is none. Writes whether no block boundary, br or replaced element separates them to
+// `contiguous`, so that a word or a cluster can span the two.
+PrLayoutNode prLayoutNodeTextNext(const PrLayoutTree* tree, PrLayoutNode root, PrLayoutNode text, bool* contiguous);
+PrLayoutNode prLayoutNodeTextPrevious(const PrLayoutTree* tree, PrLayoutNode root, PrLayoutNode text, bool* contiguous);
+
+// Finds the nearest scroll container around `from` that must move to bring `rect`, in viewport coordinates as painted,
+// into view, by as little as it can. Writes the offset to scroll it to, and moves `rect` with it, and returns it, or
+// returns kPrLayoutNodeNone if no container must move. A caller scrolls the container and repeats from it. Uses the
+// geometry of the last layout.
+PrLayoutNode prLayoutNodeRevealStep(PrLayoutTree* tree, PrLayoutNode from, PrLayoutRect* rect, PrLayoutVec* offset);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Containing blocks

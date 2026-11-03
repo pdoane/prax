@@ -811,7 +811,8 @@ REPEATABLE_LIST = {
 # their slots, whether they inherit, which part of the engine reads them, and why they are a group of their own. The
 # groups partition the longhands that the engine computes. Which group a property joins is the engine's choice: values
 # that change together, and that the same part of the engine reads, share a group, so that a style that changes none of
-# them shares the group with its parent or the initial style.
+# them shares the group with its parent or the initial style. Within a group, related properties sit together, since
+# what reads one tends to read the others.
 StyleGroup = collections.namedtuple("StyleGroup", "name inherited reader note properties")
 
 STYLE_GROUPS = [
@@ -819,9 +820,9 @@ STYLE_GROUPS = [
         "Font", True, "read by layout",
         "",
         [
-            "font-family", "font-size", "font-style", "font-weight", "font-width", "line-height", "writing-mode",
-            "direction", "white-space-collapse", "text-wrap-mode", "text-indent", "text-align-all", "text-align-last",
-            "text-justify", "text-orientation", "dominant-baseline", "letter-spacing", "word-spacing",
+            "font-family", "font-size", "font-style", "font-weight", "font-width", "line-height", "dominant-baseline",
+            "writing-mode", "direction", "text-orientation", "white-space-collapse", "text-wrap-mode",
+            "text-align-all", "text-align-last", "text-justify", "text-indent", "letter-spacing", "word-spacing",
             "text-transform",
         ]),
     StyleGroup(
@@ -829,28 +830,28 @@ STYLE_GROUPS = [
         ("The inherited properties that painting reads, and those that decide how a box takes the pointer: whether it "
          "is a target, and the cursor that it shows."),
         [
-            "color", "visibility", "dynamic-range-limit", "image-rendering", "image-orientation", "color-scheme",
-            "accent-color", "interactivity", "pointer-events", "cursor",
+            "color", "accent-color", "caret-color", "color-scheme", "dynamic-range-limit", "image-rendering",
+            "image-orientation", "visibility", "interactivity", "pointer-events", "cursor",
         ]),
     StyleGroup(
         "Box", False, "read by layout",
         "",
         [
-            "display", "position", "box-sizing", "width", "height", "min-width", "min-height", "max-width",
-            "max-height", "aspect-ratio", "margin-top", "margin-right", "margin-bottom", "margin-left", "padding-top",
-            "padding-right", "padding-bottom", "padding-left", "top", "right", "bottom", "left", "overflow-x",
-            "overflow-y", "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
-            "float", "clear", "baseline-source", "alignment-baseline", "baseline-shift", "unicode-bidi", "contain",
-            "content-visibility", "container-type", "table-layout", "overflow-anchor", "text-overflow",
-            "contain-intrinsic-width", "contain-intrinsic-height", "field-sizing", "overscroll-behavior-x",
-            "overscroll-behavior-y",
+            "display", "position", "float", "clear", "top", "right", "bottom", "left", "box-sizing", "width", "height",
+            "min-width", "min-height", "max-width", "max-height", "aspect-ratio", "field-sizing",
+            "contain-intrinsic-width", "contain-intrinsic-height", "margin-top", "margin-right", "margin-bottom",
+            "margin-left", "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
+            "padding-top", "padding-right", "padding-bottom", "padding-left", "overflow-x", "overflow-y",
+            "text-overflow", "overflow-anchor", "overscroll-behavior-x", "overscroll-behavior-y", "contain",
+            "content-visibility", "container-type", "baseline-source", "alignment-baseline", "baseline-shift",
+            "unicode-bidi", "table-layout", "input-security",
         ]),
     StyleGroup(
         "Flex", False, "read by layout: flex layout and box alignment",
         "",
         [
             "flex-direction", "flex-wrap", "flex-grow", "flex-shrink", "flex-basis", "order", "row-gap", "column-gap",
-            "justify-content", "align-items", "align-content", "align-self", "justify-items", "justify-self",
+            "justify-content", "justify-items", "justify-self", "align-content", "align-items", "align-self",
         ]),
     StyleGroup(
         "Decoration", False, "read by painting",
@@ -877,8 +878,8 @@ STYLE_GROUPS = [
         "Effect", False, "read by compositing: opacity, transforms and stacking",
         "",
         [
-            "opacity", "transform", "transform-origin", "z-index", "translate", "rotate", "scale", "transform-box",
-            "perspective", "perspective-origin", "backface-visibility", "will-change",
+            "opacity", "z-index", "will-change", "transform", "translate", "rotate", "scale", "transform-origin",
+            "transform-box", "perspective", "perspective-origin", "backface-visibility",
         ]),
     StyleGroup(
         "Compositing", False, "read by compositing: clip paths, masks, filters and blending",
@@ -886,8 +887,8 @@ STYLE_GROUPS = [
          "a group of their own (css-masking-1, filter-effects-1, compositing-1), apart from the effects that more "
          "elements declare."),
         [
-            "clip-path", "clip", "mask-image", "mask-mode", "mask-repeat", "mask-position", "mask-size", "mask-origin",
-            "mask-clip", "mask-composite", "filter", "backdrop-filter", "mix-blend-mode", "isolation",
+            "clip-path", "clip", "filter", "backdrop-filter", "mix-blend-mode", "isolation", "mask-image", "mask-mode",
+            "mask-repeat", "mask-position", "mask-size", "mask-origin", "mask-clip", "mask-composite",
             "mask-border-source", "mask-border-mode", "mask-border-slice", "mask-border-width", "mask-border-outset",
             "mask-border-repeat",
         ]),
@@ -920,9 +921,9 @@ STYLE_GROUPS = [
         ("SVG's inherited properties: how shapes and text are filled, stroked, marked and rendered. An HTML element "
          "declares none of them, so its style shares its parent's group."),
         [
-            "fill", "fill-rule", "fill-opacity", "stroke", "stroke-opacity", "stroke-width", "stroke-linecap",
-            "stroke-linejoin", "stroke-miterlimit", "stroke-dasharray", "stroke-dashoffset", "marker-start",
-            "marker-mid", "marker-end", "paint-order", "clip-rule", "color-interpolation",
+            "fill", "fill-rule", "fill-opacity", "clip-rule", "stroke", "stroke-opacity", "stroke-width",
+            "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-dasharray", "stroke-dashoffset",
+            "paint-order", "marker-start", "marker-mid", "marker-end", "color-interpolation",
             "color-interpolation-filters", "shape-rendering", "text-rendering", "text-anchor",
         ]),
     StyleGroup(
@@ -932,8 +933,8 @@ STYLE_GROUPS = [
          "Each shape declares its own geometry, so these groups are seldom shared between shapes, and are kept apart "
          "from the inherited ones."),
         [
-            "cx", "cy", "r", "rx", "ry", "x", "y", "d", "vector-effect", "stop-color", "stop-opacity", "flood-color",
-            "flood-opacity", "lighting-color", "mask-type", "path-length",
+            "x", "y", "cx", "cy", "r", "rx", "ry", "d", "path-length", "vector-effect", "stop-color", "stop-opacity",
+            "flood-color", "flood-opacity", "lighting-color", "mask-type",
         ]),
     StyleGroup(
         "Table", True, "read by layout: how a table's borders and captions are laid out",
@@ -976,8 +977,8 @@ NOT_COMPUTED = {
     "border-image-outset", "border-image-repeat", "border-image-slice", "border-image-source", "border-image-width",
     "border-left-clip", "border-limit", "border-right-clip", "border-shape", "border-top-clip", "box-decoration-break",
     "box-shadow", "box-shadow-blur", "box-shadow-color", "box-shadow-offset", "box-shadow-position",
-    "box-shadow-spread", "box-snap", "break-after", "break-before", "break-inside", "caret-animation", "caret-color",
-    "caret-shape", "column-count", "column-fill", "column-height", "column-rule-break", "column-rule-color",
+    "box-shadow-spread", "box-snap", "break-after", "break-before", "break-inside", "caret-animation", "caret-shape",
+    "column-count", "column-fill", "column-height", "column-rule-break", "column-rule-color",
     "column-rule-inset-cap-end", "column-rule-inset-cap-start", "column-rule-inset-junction-end",
     "column-rule-inset-junction-start", "column-rule-style", "column-rule-visibility-items", "column-rule-width",
     "column-span", "column-width", "column-wrap", "container-name", "continue", "copy-into", "corner",
@@ -991,8 +992,8 @@ NOT_COMPUTED = {
     "font-variant-emoji", "font-variation-settings", "footnote-display", "footnote-policy", "forced-color-adjust",
     "frame-sizing", "hanging-punctuation", "hyphenate-character", "hyphenate-limit-chars", "hyphenate-limit-last",
     "hyphenate-limit-lines", "hyphenate-limit-zone", "hyphens", "image-animation", "image-resolution",
-    "initial-letter", "initial-letter-align", "initial-letter-wrap", "inline-sizing", "input-security",
-    "interest-delay-end", "interest-delay-start", "interpolate-size", "line-break", "line-clamp", "line-fit-edge",
+    "initial-letter", "initial-letter-align", "initial-letter-wrap", "inline-sizing", "interest-delay-end",
+    "interest-delay-start", "interpolate-size", "line-break", "line-clamp", "line-fit-edge",
     "line-grid", "line-height-step", "line-padding", "line-snap", "link-parameters", "margin-break", "margin-trim",
     "marker-side", "math-depth", "math-shift", "math-style", "max-lines", "min-intrinsic-sizing", "nav-down",
     "nav-left", "nav-right", "nav-up", "object-view-box", "offset-anchor", "offset-distance", "offset-path",

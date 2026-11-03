@@ -3,7 +3,7 @@
 
 A probe page holds cases, each a figure with data-case, data-what and data-measure, and measures them once its fonts
 have loaded. It writes its results as one JSON object, {"dpr": ..., "cases": {case: [value, ...]}}, posts it to the
-URL that its ?post= parameter names, and logs it to the console. A plan keeps its probe pages beside it.
+URL that its ?post= parameter names, and logs it to the console.
 
 Each browser loads the page from a server for the checkout, as the browser benchmarks do (tools/browsers/browsers.py):
 Chrome at a pixel ratio of two and of one, WebKit in the build's own host, and Firefox. WebKit and Firefox run at the
@@ -32,6 +32,14 @@ With --pixel-ratio <pixels per px>, every browser and the engine run at that man
 display's, so that a fractional ratio such as 1.5 can be compared. Chrome then runs once, at the ratio, and each
 screenshot has the ratio's pixels per CSS pixel.
 
+With --keys, a browser presses the keys that the page asks for, as trusted input, for what only input can show, such as
+a caret's motion. The page defines probeKey(), which returns the next key as {key, modifiers}, or null once it has set
+window.probeReport to its results. A key is named as KeyboardEvent.key names it, and a modifier is Alt, Control, Meta or
+Shift. Chrome runs through the DevTools protocol, with the editing commands that macOS's key bindings give it, Firefox
+through Marionette, Safari through safaridriver with --safari, and the engine through the shell's sendInput. The build's
+WebKit host takes no input, so its column is left out. --no-key-commands leaves macOS's commands out, which shows what
+Chrome's own key map does, as on other systems.
+
 Usage: python3 -m tools.browsers.probe --build <directory> <page> [--browser NAME]... [--timeout S] [--json]
                               [--screenshot <directory>] [--scan] [--viewport WxH] [--pixel-ratio <pixels per px>]
 """
@@ -49,6 +57,7 @@ import time
 
 from tools.bench import common
 from tools.browsers import browsers
+from tools.browsers import websocket
 
 # The columns that a run measures: a name, the browser that measures it, and the arguments that it adds to the
 # browser's own.
@@ -152,11 +161,39 @@ def shell_pixel_ratio(pixel_ratio):
     return ["--pixel-ratio", "%g" % pixel_ratio] if pixel_ratio is not None else []
 
 
-def run_engine(page, directory, viewport, pixel_ratio=None):
-    """Returns what pr_shell logged when it ran the page at `viewport`, or None. The console prints on stderr."""
+# A prelude that presses the keys that a page asks for through the shell's input, and logs what the page reports. The
+# modifiers are the flags of PrAppEvent.
+ENGINE_KEYS = """
+addEventListener("load", async () => {
+    const flags = {Shift: 1, Control: 2, Alt: 4, Meta: 8};
+    for (let step = probeKey(); step !== null; step = probeKey()) {
+        const modifiers = (step.modifiers || []).reduce((all, name) => all | flags[name], 0);
+        const event = {key: step.key, code: step.key, modifiers};
+        await sendInput([{type: "keyDown", ...event}, {type: "keyUp", ...event}]);
+    }
+    console.log(JSON.stringify(probeReport));
+    stopRun();
+});
+"""
+
+
+def run_engine(page, directory, viewport, pixel_ratio=None, keys=False):
+    """Returns what pr_shell logged when it ran the page at `viewport`, or None. The console prints on stderr. With
+    `keys`, the shell presses the keys that the page asks for."""
     shell = common.binary(directory, "pr_shell")
-    done = subprocess.run([shell, "--viewport", viewport] + shell_pixel_ratio(pixel_ratio) + ["--html", page],
-                          capture_output=True, text=True)
+    prelude = []
+    script = None
+    if keys:
+        script = tempfile.NamedTemporaryFile("w", suffix=".js", delete=False)
+        script.write(ENGINE_KEYS)
+        script.close()
+        prelude = ["--prelude", script.name]
+    try:
+        done = subprocess.run([shell, "--viewport", viewport] + shell_pixel_ratio(pixel_ratio) + prelude
+                              + ["--html", page], capture_output=True, text=True)
+    finally:
+        if script is not None:
+            os.remove(script.name)
     for line in reversed((done.stdout + done.stderr).splitlines()):
         line = line.strip()
         if line.startswith("{") and '"cases"' in line:
@@ -376,6 +413,187 @@ class SafariDriver:
             self.process.kill()
 
 
+# The WebDriver code points of the keys that a page may ask for, and of the modifiers.
+WEBDRIVER_KEYS = {
+    "ArrowLeft": "\ue012",
+    "ArrowUp": "\ue013",
+    "ArrowRight": "\ue014",
+    "ArrowDown": "\ue015",
+    "Home": "\ue011",
+    "End": "\ue010",
+    "Backspace": "\ue003",
+    "Delete": "\ue017",
+    "Alt": "\ue00a",
+    "Control": "\ue009",
+    "Meta": "\ue03d",
+    "Shift": "\ue008",
+}
+
+# The virtual key codes of those keys in the DevTools protocol, and the bits of its modifiers.
+CHROME_KEY_CODES = {"ArrowLeft": 37, "ArrowUp": 38, "ArrowRight": 39, "ArrowDown": 40, "Home": 36, "End": 35,
+                    "Backspace": 8, "Delete": 46}
+CHROME_MODIFIERS = {"Alt": 1, "Control": 2, "Meta": 4, "Shift": 8}
+
+# The editing commands that macOS's standard key bindings give each key, by its modifier, which a window's text input
+# sends with a key press and the DevTools protocol does not.
+MAC_COMMANDS = {
+    ("ArrowLeft", ""): "moveLeft",
+    ("ArrowRight", ""): "moveRight",
+    ("ArrowUp", ""): "moveUp",
+    ("ArrowDown", ""): "moveDown",
+    ("ArrowLeft", "Alt"): "moveWordLeft",
+    ("ArrowRight", "Alt"): "moveWordRight",
+    ("ArrowLeft", "Meta"): "moveToLeftEndOfLine",
+    ("ArrowRight", "Meta"): "moveToRightEndOfLine",
+    ("ArrowUp", "Meta"): "moveToBeginningOfDocument",
+    ("ArrowDown", "Meta"): "moveToEndOfDocument",
+    ("Backspace", ""): "deleteBackward",
+    ("Delete", ""): "deleteForward",
+    ("Home", ""): "scrollToBeginningOfDocument",
+    ("End", ""): "scrollToEndOfDocument",
+}
+
+
+def webdriver_actions(key, modifiers):
+    """Returns the WebDriver actions that press `key` with `modifiers` held."""
+    held = [WEBDRIVER_KEYS[m] for m in modifiers]
+    code = WEBDRIVER_KEYS[key]
+    events = [{"type": "keyDown", "value": v} for v in held + [code]]
+    events += [{"type": "keyUp", "value": v} for v in [code] + held[::-1]]
+    return [{"type": "key", "id": "keyboard", "actions": events}]
+
+
+class ChromeKeys:
+    """Chrome with a page at `url`, driven through the DevTools protocol."""
+
+    def __init__(self, browser, url, directory, profile, timeout, commands):
+        import urllib.request
+        self.commands = commands
+        port = free_port()
+        self.process = subprocess.Popen([browser.path(directory), "--headless", "--user-data-dir=" + profile,
+                                         "--remote-debugging-port=%d" % port, url],
+                                        env=dict(os.environ, **browser.environment), stdout=subprocess.DEVNULL,
+                                        stderr=subprocess.DEVNULL)
+        deadline = time.monotonic() + timeout
+        target = None
+        while target is None:
+            try:
+                with urllib.request.urlopen("http://127.0.0.1:%d/json/list" % port, timeout=1) as response:
+                    pages = [t for t in json.loads(response.read()) if t["type"] == "page"]
+                    target = pages[0]["webSocketDebuggerUrl"] if pages else None
+            except OSError:
+                pass
+            if target is None:
+                if time.monotonic() > deadline:
+                    raise RuntimeError("Chrome offered no page")
+                time.sleep(0.1)
+        self.connection = websocket.connect(target, timeout)
+        self.id = 0
+        self.call("Emulation.setFocusEmulationEnabled", {"enabled": True})
+
+    def call(self, method, parameters=None):
+        self.id += 1
+        self.connection.send(json.dumps({"id": self.id, "method": method, "params": parameters or {}}))
+        while True:
+            answer = json.loads(self.connection.receive())
+            if answer.get("id") == self.id:
+                if "error" in answer:
+                    raise RuntimeError("%s: %s" % (method, answer["error"]))
+                return answer["result"]
+
+    def evaluate(self, source):
+        return self.call("Runtime.evaluate", {"expression": source, "returnByValue": True})["result"].get("value")
+
+    def press(self, key, modifiers):
+        bits = sum(CHROME_MODIFIERS[m] for m in modifiers)
+        code = CHROME_KEY_CODES[key]
+        down = {"type": "rawKeyDown", "key": key, "code": key, "windowsVirtualKeyCode": code, "modifiers": bits}
+        command = MAC_COMMANDS.get((key, "+".join(modifiers)))
+        if self.commands and sys.platform == "darwin" and command is not None:
+            down["commands"] = [command]
+        self.call("Input.dispatchKeyEvent", down)
+        self.call("Input.dispatchKeyEvent", {"type": "keyUp", "key": key, "code": key, "windowsVirtualKeyCode": code,
+                                             "modifiers": bits})
+
+    def close(self):
+        self.connection.close()
+        self.process.terminate()
+        self.process.wait(10)
+
+
+class FirefoxKeys:
+    """Firefox with a page at `url`, driven through Marionette."""
+
+    def __init__(self, browser, url, directory, profile, timeout):
+        port = free_port()
+        browser.profile(profile, dict(preferences_of("firefox", None), **{"marionette.port": port}))
+        self.process = subprocess.Popen([browser.path(directory), "--headless", "--marionette", "-no-remote", "-profile",
+                                         profile], env=dict(os.environ, **browser.environment),
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.client = Marionette(port, timeout)
+        self.client.call("WebDriver:NewSession", {"capabilities": {}})
+        self.client.call("WebDriver:Navigate", {"url": url})
+
+    def evaluate(self, source):
+        return self.client.call("WebDriver:ExecuteScript", {"script": "return (%s);" % source, "args": []})["value"]
+
+    def press(self, key, modifiers):
+        self.client.call("WebDriver:PerformActions", {"actions": webdriver_actions(key, modifiers)})
+        self.client.call("WebDriver:ReleaseActions")
+
+    def close(self):
+        self.process.terminate()
+        self.process.wait(10)
+
+
+class SafariKeys:
+    """Safari with a page at `url`, driven through safaridriver."""
+
+    def __init__(self, url, timeout):
+        self.driver = SafariDriver(timeout)
+        self.driver.call("POST", "/url", {"url": url})
+
+    def evaluate(self, source):
+        return self.driver.script("return (%s);" % source)
+
+    def press(self, key, modifiers):
+        self.driver.call("POST", "/actions", {"actions": webdriver_actions(key, modifiers)})
+        self.driver.call("DELETE", "/actions")
+
+    def close(self):
+        self.driver.close()
+
+
+def run_keys(name, url, timeout, directory, commands):
+    """Returns what browser `name` reported after pressing the keys that the page at `url` asked for, or None."""
+    profile = tempfile.mkdtemp(prefix="probe-%s-" % name)
+    driver = None
+    try:
+        if name == "chrome":
+            driver = ChromeKeys(browsers.BROWSERS[name], url, directory, profile, timeout, commands)
+        elif name == "firefox":
+            driver = FirefoxKeys(browsers.BROWSERS[name], url, directory, profile, timeout)
+        else:
+            driver = SafariKeys(url, timeout)
+        deadline = time.monotonic() + timeout
+        while driver.evaluate("typeof window.probeKey") != "function":
+            if time.monotonic() > deadline:
+                raise RuntimeError("the page defined no probeKey")
+            time.sleep(0.1)
+        while True:
+            step = driver.evaluate("window.probeKey()")
+            if step is None:
+                return json.loads(driver.evaluate("JSON.stringify(window.probeReport)"))
+            driver.press(step["key"], step.get("modifiers", []))
+    except (OSError, RuntimeError, ValueError, websocket.Error) as error:
+        print("  %s did not run: %s" % (name, error), file=sys.stderr)
+        return None
+    finally:
+        if driver is not None:
+            driver.close()
+        shutil.rmtree(profile, ignore_errors=True)
+
+
 # safaridriver runs one session at a time, so the threads that capture pages take turns with Safari.
 SAFARI_LOCK = threading.Lock()
 
@@ -531,6 +749,8 @@ def main():
                         help="the viewport the page is laid out in; suites/prax's pages are 600x800")
     parser.add_argument("--scan", action="store_true",
                         help="read the screenshots along the scanlines that the page's figures name")
+    parser.add_argument("--keys", action="store_true", help="press the keys that the page asks for, as trusted input")
+    parser.add_argument("--no-key-commands", action="store_true", help="with --keys, send Chrome no macOS commands")
     parser.add_argument("--pixel-ratio", type=float, metavar="PIXELS",
                         help="pixels per CSS pixel in every column, in place of the display's")
     options = parser.parse_args()
@@ -573,7 +793,15 @@ def main():
         elif os.path.exists(path):
             print(path)
         return 0
-    url = "http://127.0.0.1:%d%s?post=/report" % (server.server_address[1], browsers.url_of(page))
+    if options.keys:
+        # One Chrome column is enough for input, and the build's WebKit host takes none.
+        columns = [c for c in columns if c[0] != "C1" and c[1] != "webkit"]
+    # A page that asks for keys reports through its driver, so it needs no server, and may stand outside the checkout.
+    if options.keys and os.path.relpath(page, common.ROOT).startswith(".."):
+        url = "file://" + page
+    else:
+        query = "" if options.keys else "?post=/report"
+        url = "http://127.0.0.1:%d%s%s" % (server.server_address[1], browsers.url_of(page), query)
     reports = {}
     versions = []
     for column, name, extra in columns:
@@ -581,12 +809,15 @@ def main():
             print("  %s is not installed" % name, file=sys.stderr)
             continue
         print("  %s" % column, file=sys.stderr, flush=True)
-        report = run_browser(server, name, extra, url, options.timeout, options.build, options.pixel_ratio)
+        if options.keys:
+            report = run_keys(name, url, options.timeout, options.build, not options.no_key_commands)
+        else:
+            report = run_browser(server, name, extra, url, options.timeout, options.build, options.pixel_ratio)
         if report is not None:
             reports[column] = report
             versions.append("%s %s at %s" % (name, version(name), report.get("dpr")))
     print("  E", file=sys.stderr, flush=True)
-    engine = run_engine(page, options.build, options.viewport, options.pixel_ratio)
+    engine = run_engine(page, options.build, options.viewport, options.pixel_ratio, options.keys)
     if engine is not None:
         reports["E"] = engine
 

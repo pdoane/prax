@@ -356,7 +356,9 @@ CHECKOUTS = {
             "extracted/DerivedBidiClass.txt", "extracted/DerivedJoiningType.txt", "BidiBrackets.txt", "BidiTest.txt",
             "BidiCharacterTest.txt", "LineBreak.txt", "auxiliary/LineBreakTest.txt", "EastAsianWidth.txt",
             "extracted/DerivedGeneralCategory.txt", "auxiliary/GraphemeBreakProperty.txt",
-            "auxiliary/GraphemeBreakTest.txt", "emoji/emoji-data.txt", "DerivedCoreProperties.txt", "PropList.txt",
+            "auxiliary/GraphemeBreakTest.txt",
+            "auxiliary/WordBreakProperty.txt", "auxiliary/WordBreakTest.txt",
+            "emoji/emoji-data.txt", "DerivedCoreProperties.txt", "PropList.txt",
             "UnicodeData.txt", "SpecialCasing.txt", "CaseFolding.txt", "Scripts.txt", "VerticalOrientation.txt",
             "PropertyValueAliases.txt", "CompositionExclusions.txt", "NormalizationTest.txt")] + [
         ("IdnaMappingTable.txt", "https://www.unicode.org/Public/17.0.0/idna/IdnaMappingTable.txt"),

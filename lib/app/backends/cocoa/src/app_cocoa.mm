@@ -21,6 +21,7 @@
 @property(nonatomic, strong) NSCursor* cursor;
 @property(nonatomic) NSRect textInputRect;      // where the caret stands, from the top left of the view
 @property(nonatomic, copy) NSString* marked;    // the text that an input method composes, or nil
+@property(nonatomic) NSRange markedSelection;   // the selection within the marked text
 @end
 
 @interface PrCocoaHost : NSObject <NSApplicationDelegate, NSWindowDelegate>
@@ -481,8 +482,10 @@ using namespace pr_impl;
     }
     [self.host pointerAt:event.position];
     // A button that the window released as it stopped being the key window reports no release of its own.
-    if (kind == PrAppEventKind_PointerDown)
+    if (kind == PrAppEventKind_PointerDown) {
+        event.clicks = uint32_t(source.clickCount);
         [self.host pointerDown:event.button];
+    }
     else if (kind == PrAppEventKind_PointerUp && ![self.host pointerUp:event.button])
         return;
     [self.host deliver:event];
@@ -603,6 +606,7 @@ using namespace pr_impl;
         return;
     }
     self.marked = text;
+    self.markedSelection = selectedRange;
     [self deliverText:text kind:PrAppEventKind_CompositionUpdate selection:selectedRange];
 }
 - (void)unmarkText {
@@ -610,7 +614,7 @@ using namespace pr_impl;
         [self commit:self.marked];
 }
 - (NSRange)selectedRange {
-    return NSMakeRange(0, 0);
+    return self.marked != nil ? self.markedSelection : NSMakeRange(NSNotFound, 0);
 }
 - (NSRange)markedRange {
     return self.marked != nil ? NSMakeRange(0, self.marked.length) : NSMakeRange(NSNotFound, 0);
@@ -618,17 +622,23 @@ using namespace pr_impl;
 - (BOOL)hasMarkedText {
     return self.marked != nil;
 }
+// Of the program's text, the view knows only the marked text.
 - (NSAttributedString*)attributedSubstringForProposedRange:(NSRange)range actualRange:(NSRangePointer)actualRange {
-    (void)range;
-    (void)actualRange;
-    return nil;
+    if (self.marked == nil)
+        return nil;
+    NSRange known = NSIntersectionRange(range, NSMakeRange(0, self.marked.length));
+    if (known.length == 0)
+        return nil;
+    if (actualRange != nullptr)
+        *actualRange = known;
+    return [[NSAttributedString alloc] initWithString:[self.marked substringWithRange:known]];
 }
 - (NSArray<NSAttributedStringKey>*)validAttributesForMarkedText {
-    return @[];
+    return @[ NSUnderlineStyleAttributeName, NSUnderlineColorAttributeName, NSMarkedClauseSegmentAttributeName ];
 }
 - (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(NSRangePointer)actualRange {
-    (void)range;
-    (void)actualRange;
+    if (actualRange != nullptr)
+        *actualRange = range;
     NSRect caret = self.textInputRect;
     if (!self.isFlipped)
         caret.origin.y = self.bounds.size.height - caret.origin.y - caret.size.height;

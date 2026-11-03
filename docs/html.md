@@ -243,3 +243,15 @@ client's canvas (layout.md). A frame's canvas has that color only if its root's 
 A style element contributes a sheet if its root is the document and its type is absent, empty or `text/css` (ASCII
 case-insensitive), and it contributes the sheet before the next parser script runs. The document's sheet list is in
 the tree order of the owner nodes, not in discovery order, because foster parenting can reorder them.
+
+## Text controls
+
+A `<textarea>` or a text `<input>` shows its value in `::field-content`, the box that scrolls. While a control is empty
+its placeholder shows in that box, which then takes the rules of `::placeholder`, so the caret needs no special case. A
+password shows a mark for each code point unless `input-security` is `none`, and the view maps between the offsets of
+what it shows and those of the value.
+
+The view runs the user's motions and edits (`pr/text_edit_command.h`), and reports the caret to the window
+(`prHtmlViewOutput`). `::selection` colors the selection. Cut, copy and paste fire their events, whose listeners can take
+them over through `clipboardData`. The clipboard belongs to the application that the host gives the view
+(`prHtmlViewSetApp`), and a paste's text comes back as a Clipboard event that the host passes on.

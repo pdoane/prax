@@ -2714,6 +2714,7 @@ bool cssIsColorProperty(PrCssProperty property) {
     switch (property) {
         case PrCssProperty_Color:
         case PrCssProperty_AccentColor:
+        case PrCssProperty_CaretColor:
         case PrCssProperty_BackgroundColor:
         case PrCssProperty_BorderTopColor:
         case PrCssProperty_BorderRightColor:

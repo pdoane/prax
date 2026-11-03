@@ -193,6 +193,29 @@ TEST_CASE("on a vertical line, a caret lies across the line and moves down") {
     CHECK(b.caret(3).top > b.caret(2).top);
 }
 
+TEST_CASE("a line's stops run along it, with a stop for each part where a level boundary divides the line") {
+    // Three Latin letters and a space, then three Hebrew letters of two bytes each.
+    Block b("abc \xd7\x90\xd7\x91\xd7\x92");
+    PrLayoutLineStop stops[16];
+    PrLayoutTextPosition at{b.text, 0};
+    uint32_t count = prLayoutLineStops(b.f.tree, b.root, at, PrLayoutTextAffinity_Downstream, PrLayoutLineStep_Same,
+        nullptr, stops, 16);
+    const uint32_t offsets[] = {0, 1, 2, 3, 4, 10, 8, 6, 4};
+    REQUIRE(count == 9);
+    for (uint32_t i = 0; i < count; ++i) {
+        CHECK(stops[i].position.offset == offsets[i]);
+        if (i > 0) {
+            CHECK(stops[i].along >= stops[i - 1].along - 0.05f);
+        }
+    }
+    // The boundary's offset stands with the Latin at one end of the Hebrew, and with the Hebrew at the other.
+    CHECK(stops[4].affinity == PrLayoutTextAffinity_Upstream);
+    CHECK(stops[8].affinity == PrLayoutTextAffinity_Downstream);
+    CHECK(stops[8].along > stops[4].along);
+    CHECK(prLayoutLineStops(b.f.tree, b.root, at, PrLayoutTextAffinity_Downstream, PrLayoutLineStep_Next, nullptr,
+        nullptr, 0) == 0);
+}
+
 TEST_CASE("the position nearest a point: the nearer edge of the character under it, on the nearest line") {
     Block b("ab\n\ncd");
     PrRect a = b.caret(0);

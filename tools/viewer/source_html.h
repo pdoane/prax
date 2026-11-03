@@ -42,8 +42,12 @@ void drawHtml(HtmlSource& html, PrDrawList* list, float width, float height, con
 // the page's viewport, in CSS pixels.
 void htmlInput(HtmlSource& html, const PrAppEvent& event);
 
-// Returns what the page's view reports to the window, in CSS pixels of the page's viewport.
-PrAppOutput htmlOutput(HtmlSource& html);
+// Returns what the page's view reports to the window, in CSS pixels of the page's viewport, at `time` of the window's
+// clock.
+PrAppOutput htmlOutput(HtmlSource& html, double time);
+
+// Gives the page the application whose clipboard its text controls use.
+void htmlSetApp(HtmlSource& html, PrApp* app);
 
 } // namespace viewer
 

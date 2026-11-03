@@ -11,6 +11,7 @@
 #include "doctest/doctest.h"
 
 #include <string>
+#include <vector>
 
 using namespace harness;
 
@@ -151,6 +152,62 @@ TEST_CASE("Shift extends the selection, typing replaces it, and Command-A select
     CHECK(kitVerified(e.f.tree));
 }
 
+TEST_CASE("the arrows run through a field's text in order, across a change of direction") {
+    // Three Latin letters and a space, then three Hebrew letters of two bytes each, then a space and a letter.
+    Edited e("abc \xd7\x90\xd7\x91\xd7\x92 z");
+    e.focus();
+    e.f.key(PrAppKey_Home);
+    e.f.frame();
+    const uint32_t offsets[] = {1, 2, 3, 4, 6, 8, 10, 11, 12};
+    for (uint32_t expected : offsets) {
+        e.f.key(PrAppKey_Right);
+        e.f.frame();
+        CHECK(e.selection().caret == expected);
+    }
+    e.f.key(PrAppKey_Backspace);
+    e.f.frame();
+    CHECK(e.text == "abc \xd7\x90\xd7\x91\xd7\x92 ");
+}
+
+TEST_CASE("an edit's description chooses how its arrows move at a change of direction") {
+    struct Case {
+        PrTextEditArrowMotion motion;
+        std::vector<uint32_t> offsets;
+    };
+    const Case cases[] = {
+        {PrTextEditArrowMotion_LogicalStops, {1, 2, 3, 4, 4, 6, 8, 10, 10, 11, 12}},
+        {PrTextEditArrowMotion_Visual, {1, 2, 3, 4, 8, 6, 4, 11, 12}},
+    };
+    for (const Case& c : cases) {
+        KitFixture f;
+        std::string text = "abc \xd7\x90\xd7\x91\xd7\x92 z";
+        PrLayoutNode control = kPrLayoutNodeNone;
+        f.build = [&](PrLayoutNode ground) {
+            control = prKitBox(f.kit, ground, {}, {.place = {.width = prKitPx(200)}});
+            prUiAddFlags(f.ui, control, PrUiFlag_Pressable | PrUiFlag_Focusable);
+            if (prUiFocus(f.ui) != control)
+                prUiSetFocus(f.ui, control);
+            // A label's element gives the edit's text a font.
+            PrLayoutNode label = prKitLabel(f.kit, control, {.text = ""}, {});
+            PrUiTextEditDesc edit{.control = control, .parent = label, .value = text, .arrowMotion = c.motion};
+            prUiTextEdit(f.ui, &edit);
+            PrStringView changed{};
+            if (prUiTextEditChanged(f.ui, control, &changed))
+                text.assign(changed.data, changed.size);
+        };
+        f.frame();
+        f.frame();
+        REQUIRE(prUiFocus(f.ui) == control);
+        f.key(PrAppKey_Home);
+        f.frame();
+        for (uint32_t expected : c.offsets) {
+            f.key(PrAppKey_Right);
+            f.frame();
+            CHECK(prUiTextEditSelection(f.ui, control).caret == expected);
+        }
+    }
+}
+
 TEST_CASE("the caret moves over a grapheme cluster as a whole") {
     // e and a combining acute accent, then a family emoji of four people joined by zero-width joiners.
     Edited e("e\xcc\x81" "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
@@ -162,10 +219,11 @@ TEST_CASE("the caret moves over a grapheme cluster as a whole") {
     CHECK(e.selection().caret == 3);
     e.f.key(PrAppKey_Backspace);
     e.f.frame();
-    CHECK(e.text == "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
+    // Backspace corrects the accent, and leaves the letter.
+    CHECK(e.text == "e\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
     e.f.key(PrAppKey_Delete);
     e.f.frame();
-    CHECK(e.text.empty());
+    CHECK(e.text == "e");
 }
 
 TEST_CASE("a press places the caret at the nearer edge of the character under it, and a double press selects a word") {
@@ -184,7 +242,7 @@ TEST_CASE("a press places the caret at the nearer edge of the character under it
     PrVec2 beta{prLayoutUnitToPx(caret.left), start.y};
     e.f.click(beta);
     e.f.frame();
-    e.f.click(beta);
+    e.f.click(beta, 0, 2);
     e.f.frame();
     CHECK(e.selection().anchor == 6);
     CHECK(e.selection().caret == 10);

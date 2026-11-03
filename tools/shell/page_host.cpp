@@ -831,6 +831,7 @@ PrHtmlView* viewOf(Page* page) {
     if (page->view == nullptr) {
         PrHtmlViewDesc desc{.page = page->htmlPage};
         page->view = prHtmlViewCreate(&desc);
+        prHtmlViewSetCaretHidden(page->view, true);
         prHtmlViewSetViewport(page->view, page->viewport);
     }
     return page->view;
@@ -1258,8 +1259,18 @@ void PageHost::input(Page* page, const PrAppEvent& event) {
     dispatchEvent(*state_, page, event);
 }
 
-PrAppOutput PageHost::output(Page* page) {
-    return page->htmlPage != nullptr ? prHtmlViewOutput(viewOf(page)) : PrAppOutput{};
+PrAppOutput PageHost::output(Page* page, double time) {
+    if (page->htmlPage == nullptr)
+        return PrAppOutput{};
+    prHtmlViewSetTime(viewOf(page), time);
+    return prHtmlViewOutput(viewOf(page));
+}
+
+void PageHost::setInteractive(Page* page, PrApp* app) {
+    if (page->htmlPage == nullptr)
+        return;
+    prHtmlViewSetApp(viewOf(page), app);
+    prHtmlViewSetCaretHidden(viewOf(page), false);
 }
 
 bool PageHost::finished(const Page* page) {
@@ -1302,7 +1313,7 @@ bool PageHost::paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, c
     prHtmlViewSetViewport(view, viewport);
     prHtmlViewSetDisplay(view, &display);
     prHtmlViewSetUserPreferences(view, &preferences);
-    prHtmlViewPaint(view, list);
+    prHtmlViewPrepare(view);
     // A paint that computes a style for the first time starts the fetches of the images that the style names. The
     // responses are used in tasks, which run before the page is painted again with them. A page whose styles were
     // computed before its load ended had its load wait for them instead.
@@ -1320,9 +1331,10 @@ bool PageHost::paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, c
         }
         if (!ran)
             break;
-        prDrawListClear(list);
-        prHtmlViewPaint(view, list);
+        prHtmlViewPrepare(view);
     }
+    // The list is the caller's, with what the caller has recorded in it, so the document is recorded in it once.
+    prHtmlViewPaint(view, list);
     return true;
 }
 

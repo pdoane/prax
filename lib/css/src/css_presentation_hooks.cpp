@@ -47,8 +47,10 @@ constexpr DomDocumentHooks kDomHooks = {
             cssPresentationWheelListenersChanged(presentationOf(context), element);
     },
     .statesChanged = [](void* PR_NULLABLE context, PrDomElement* element) {
-        if (domIsConnected(element))
+        if (domIsConnected(element)) {
             cssPresentationStatesChanged(presentationOf(context), element);
+            cssPresentationFieldChanged(presentationOf(context), element);
+        }
     },
     .metaChanged = [](void* PR_NULLABLE context, PrDomDocument*) { cssPresentationMetaChanged(presentationOf(context)); },
     .resourceLoaded =

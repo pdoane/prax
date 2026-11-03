@@ -181,6 +181,22 @@ PrDomNode* PR_NULLABLE prCssPresentationNode(const PrCssPresentation* presentati
 // kPrLayoutNodeNone if `node` generates no box.
 PrLayoutNode prCssPresentationLayoutNode(const PrCssPresentation* presentation, const PrDomNode* node);
 
+// Returns the text node that shows the value of the text control `element`, as of the last update, or
+// kPrLayoutNodeNone. Its offsets are bytes of the value.
+PrLayoutNode prCssPresentationFieldText(const PrCssPresentation* presentation, const PrDomElement* element);
+
+// Returns true if the text control `element` shows marks in place of its value, which is what its field's text holds:
+// one mark of three bytes for each code point.
+bool prCssPresentationFieldMasked(const PrCssPresentation* presentation, const PrDomElement* element);
+
+// Writes the colors that `element`'s ::selection gives what it has selected, which are transparent if no rule styles it
+// (css-pseudo-4/#highlight-styling).
+void prCssPresentationSelectionColors(PrCssPresentation* presentation, const PrDomElement* element, PrColor16* color,
+    PrColor16* background);
+
+// Returns the color of the caret in `element`: its caret-color, where auto is its color (css-ui-4/#caret-color).
+PrColor16 prCssPresentationCaretColor(PrCssPresentation* presentation, const PrDomElement* element);
+
 // Scrolls the scroll container of layout `node`, or the viewport for kPrLayoutNodeNone, to `offset` clamped to its
 // range, in the same way as a user scroll. The scroll and scrollend events fire at the next rendering update. A host
 // uses this to apply offsets that its compositor scrolled to (prLayoutCompositorTakeScrolls). Does nothing if `node` is
@@ -196,6 +212,10 @@ void prCssPresentationSetScroll(PrCssPresentation* presentation, PrLayoutNode no
 // compositor (prCssPresentationTakeScrolls). Returns the part of `delta` that passes on past the viewport, which the
 // containers around a frame's document take next.
 PrLayoutVec prCssPresentationScrollFrom(PrCssPresentation* presentation, PrLayoutNode node, PrLayoutVec delta);
+
+// Scrolls the containers around `node`, as the document's own scrolls do, to bring `rect`, in viewport coordinates as
+// painted, into view (prLayoutNodeRevealStep).
+void prCssPresentationReveal(PrCssPresentation* presentation, PrLayoutNode node, PrLayoutRect rect);
 
 // Writes to `out` up to `capacity` of the offsets that the document's own scrolls set since the last call, one for each
 // container, for the host to give its compositor (prLayoutCompositorSetScrolls). Returns the number written. The host

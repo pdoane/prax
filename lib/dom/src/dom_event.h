@@ -153,7 +153,10 @@ struct DomEvent {
     DomMouseEventData* PR_NULLABLE mouse;         // data of a MouseEvent, or null for one that createEvent made
     DomWheelEventData* PR_NULLABLE wheel;         // data of a WheelEvent, or null for any other event
     DomKeyboardEventData* PR_NULLABLE keyboard;   // data of a KeyboardEvent, or null for one that createEvent made
-    PrString composition;                         // data attribute of a CompositionEvent
+    PrString composition;                         // data attribute of a CompositionEvent or an InputEvent
+    PrString inputType;                           // inputType attribute of an InputEvent
+    PrDomDataTransfer* PR_NULLABLE transfer;      // clipboardData attribute of a ClipboardEvent
+    bool isComposing;                             // isComposing attribute of an InputEvent
     PrDomEventTarget* PR_NULLABLE related;        // related target that the event was given
     PrDomEventTarget* PR_NULLABLE relatedTarget;  // `related`, retargeted the same way as the target
     PrDomEventTarget* PR_NULLABLE view;           // a UIEvent's Window
@@ -318,6 +321,8 @@ struct PrDomMouseEvent : PrDomUiEvent {};
 struct PrDomWheelEvent : PrDomMouseEvent {};
 struct PrDomKeyboardEvent : PrDomUiEvent {};
 struct PrDomCompositionEvent : PrDomUiEvent {};
+struct PrDomInputEvent : PrDomUiEvent {};
+struct PrDomClipboardEvent : PrDomEvent {};
 struct PrCssAnimationEvent : PrDomEvent {};
 struct PrCssTransitionEvent : PrDomEvent {};
 struct PrCssFontFaceSetLoadEvent : PrDomEvent {};

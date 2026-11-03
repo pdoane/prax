@@ -37,6 +37,9 @@ typedef struct PrDomMouseEvent PrDomMouseEvent;
 typedef struct PrDomWheelEvent PrDomWheelEvent;
 typedef struct PrDomKeyboardEvent PrDomKeyboardEvent;
 typedef struct PrDomCompositionEvent PrDomCompositionEvent;
+typedef struct PrDomInputEvent PrDomInputEvent;
+typedef struct PrDomClipboardEvent PrDomClipboardEvent;
+typedef struct PrDomDataTransfer PrDomDataTransfer;
 typedef struct PrDomEventListener PrDomEventListener;
 typedef struct PrDomEventTarget PrDomEventTarget;
 typedef struct PrDomAbortSignal PrDomAbortSignal;
@@ -109,6 +112,8 @@ enum {
     PrDomEventKind_Wheel,              // pointerevents4/#interface-wheelevent
     PrDomEventKind_Keyboard,           // uievents/#interface-keyboardevent
     PrDomEventKind_Composition,        // uievents/#interface-compositionevent
+    PrDomEventKind_Input,              // uievents/#interface-inputevent
+    PrDomEventKind_Clipboard,          // clipboard-apis/#clipboardevent
     PrDomEventKind_PopState,           // html/#popstateevent
     PrDomEventKind_HashChange,         // html/#hashchangeevent
     PrDomEventKind_Submit,             // html/#submitevent
@@ -485,6 +490,50 @@ PrDomKeyboardEventInit prDomKeyboardEventMembers(PrDomKeyboardEvent* event);
 void prDomKeyboardEventInitKeyboardEvent(PrDomKeyboardEvent* event, PrStringView type, const PrDomKeyboardEventInit* init);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// ClipboardEvent : Event, and its DataTransfer (clipboard-apis)
+//
+// The transfer holds the event's text, as text/plain.
+
+// Converts a ClipboardEvent to the interface that it inherits from.
+PR_HANDLE_UPCAST(DomClipboardEvent, DomEvent, Event)
+
+// Returns an Event as a ClipboardEvent, or null if it is not one.
+PrDomClipboardEvent* PR_NULLABLE prDomClipboardEventQuery(PrDomEvent* PR_NULLABLE object);
+
+// Creates a ClipboardEvent of `type` whose transfer holds `text`.
+PrDomClipboardEvent* prDomClipboardEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init, PrStringView text);
+
+// Returns the event's transfer, which the event holds a reference to.
+PrDomDataTransfer* prDomClipboardEventClipboardData(const PrDomClipboardEvent* event);
+
+// Adds or releases a reference to the transfer.
+void prDomDataTransferRetain(PrDomDataTransfer* transfer);
+void prDomDataTransferRelease(PrDomDataTransfer* PR_NULLABLE transfer);
+
+// Returns or replaces the transfer's text. A transfer has text once it is set, even to an empty string.
+PrStringView prDomDataTransferText(const PrDomDataTransfer* transfer);
+bool prDomDataTransferHasText(const PrDomDataTransfer* transfer);
+void prDomDataTransferSetText(PrDomDataTransfer* transfer, PrStringView text);
+void prDomDataTransferClear(PrDomDataTransfer* transfer);
+
+// InputEvent : UIEvent (uievents)
+
+// Converts an InputEvent to each interface that it inherits from.
+PR_HANDLE_UPCAST(DomInputEvent, DomUiEvent, UiEvent)
+PR_HANDLE_UPCAST(DomInputEvent, DomEvent, Event)
+
+// Returns an Event as an InputEvent, or null if it is not one.
+PrDomInputEvent* PR_NULLABLE prDomInputEventQuery(PrDomEvent* PR_NULLABLE object);
+
+// Creates an InputEvent of `type` (uievents/#dictdef-inputeventinit). A null `data` is a null data attribute.
+PrDomInputEvent* prDomInputEventCreate(PrStringView type, const PrDomUiEventInit* PR_NULLABLE init, PrStringView data,
+    PrStringView inputType, bool isComposing);
+
+// The attributes of the event. `data` is the null view if the event has no data.
+PrStringView prDomInputEventData(const PrDomInputEvent* event);
+PrStringView prDomInputEventInputType(const PrDomInputEvent* event);
+bool prDomInputEventIsComposing(const PrDomInputEvent* event);
+
 // CompositionEvent : UIEvent (uievents)
 
 // Converts a CompositionEvent to each interface that it inherits from.

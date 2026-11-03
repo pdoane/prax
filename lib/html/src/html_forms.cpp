@@ -14,6 +14,7 @@
 #include "pr/sort.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
+#include "pr/text_edit.h"
 #include "pr/url.h"
 
 #include "dom/src/dom_attribute.h"
@@ -21,6 +22,7 @@
 #include "dom/src/dom_control.h"
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_event.h"
+#include "dom/src/dom_hooks.h"
 #include "dom/src/dom_microsyntax.h"
 #include "dom/src/dom_node.h"
 #include "dom/src/dom_range.h"
@@ -193,6 +195,125 @@ PrDomElement* PR_NULLABLE retargetedSource(PrDomEvent* event) {
     return domElementFromNode(domNodeFromTarget(domRetarget(source, event->currentTarget)));
 }
 
+// Returns the number of UTF-16 code units in `text`.
+uint32_t unitsOf(PrStringView text) {
+    uint32_t units = 0;
+    for (size_t i = 0; i < text.size; ++i) {
+        uint8_t byte = uint8_t(text.data[i]);
+        if ((byte & 0xc0) != 0x80)
+            units += byte >= 0xf0 ? 2 : 1;
+    }
+    return units;
+}
+
+// Returns the byte of `text` at `units` UTF-16 code units, or its end. A unit inside a surrogate pair stands at the
+// start of its code point.
+uint32_t byteFromUnits(PrStringView text, uint32_t units) {
+    uint32_t seen = 0;
+    for (size_t i = 0; i < text.size; ++i) {
+        uint8_t byte = uint8_t(text.data[i]);
+        if ((byte & 0xc0) == 0x80)
+            continue;
+        seen += byte >= 0xf0 ? 2 : 1;
+        if (seen > units)
+            return uint32_t(i);
+    }
+    return uint32_t(text.size);
+}
+
+void dropSelect(void* data) {
+    PrDomElement* element = static_cast<PrDomElement*>(data);
+    domControlFromElement(element)->selectQueued = false;
+    domNodeUnhold(element);
+}
+
+void fireSelect(void* data) {
+    PrDomElement* element = static_cast<PrDomElement*>(data);
+    domControlFromElement(element)->selectQueued = false;
+    PrDomEventInit init = prDomEventInitDefault();
+    init.bubbles = true;
+    domEventFire(prDomNodeAsEventTarget(prDomElementAsNode(element)), "select", init);
+    domNodeUnhold(element);
+}
+
+// Queues the select event of `element`, unless one is already queued (html/#textFieldSelection).
+void queueSelect(PrDomElement* element, DomControl* control) {
+    const DomDocumentHost* host = element->document->host;
+    if (control->selectQueued || host == nullptr)
+        return;
+    control->selectQueued = true;
+    domNodeHold(element);
+    host->queueTask(host->context, fireSelect, element, dropSelect);
+}
+
+PrTextEditSelection selectionOf(const DomControl* control) {
+    return prTextEditViewSelections(control->view)[0];
+}
+
+uint32_t lowOf(const PrTextEditSelection& s) {
+    return s.anchor < s.caret ? s.anchor : s.caret;
+}
+
+uint32_t highOf(const PrTextEditSelection& s) {
+    return s.anchor < s.caret ? s.caret : s.anchor;
+}
+
+// Sets the selection in bytes of the text, which are clamped as the specification clamps units. Returns true if the
+// selection changed.
+bool setSelectionBytes(DomControl* control, uint32_t start, uint32_t end, PrDomSelectionDirection direction) {
+    uint32_t size = uint32_t(domControlText(control).size);
+    end = end < size ? end : size;
+    start = start < end ? start : end;
+    PrTextEditSelection was = selectionOf(control);
+    bool changed = lowOf(was) != start || highOf(was) != end || control->selectionDirection != direction;
+    bool backward = direction == PrDomSelectionDirection_Backwards;
+    PrTextEditSelection next{.anchor = backward ? end : start, .caret = backward ? start : end};
+    prTextEditViewSetSelections(control->view, &next, 1);
+    control->selectionDirection = direction;
+    return changed;
+}
+
+// Fires a beforeinput or input of an edit. Returns true if no listener canceled it.
+bool fireInput(PrDomElement* element, PrStringView type, PrStringView data, PrStringView inputType, bool composing,
+        bool cancelable) {
+    PrDomUiEventInit init = prDomUiEventInitDefault();
+    init.event.bubbles = true;
+    init.event.cancelable = cancelable;
+    init.event.composed = true;
+    PrDomInputEvent* event = prDomInputEventCreate(type, &init, data, inputType, composing);
+    prDomInputEventAsEvent(event)->trusted = true;
+    bool proceed = domEventDispatch(prDomNodeAsEventTarget(prDomElementAsNode(element)), prDomInputEventAsEvent(event));
+    prDomEventRelease(prDomInputEventAsEvent(event));
+    return proceed;
+}
+
+// Applies one replacement as the user's edit, with the events around it. The selection of the view lands after the new
+// text.
+bool editControl(PrDomElement* element, uint32_t start, uint32_t end, PrStringView text, PrStringView inputType,
+        PrTextEditOrigin origin, PrTextEditMerge merge) {
+    bool composing = origin == PrTextEditOrigin_Composition;
+    PrString data = prStringCopy(text);
+    bool proceed = fireInput(element, "beforeinput", prStringView(&data), inputType, composing, !composing);
+    // A listener may have changed the control or removed it, so the edit reads the state after the event.
+    DomControl* control = domTextControlSync(element);
+    uint32_t size = uint32_t(domControlText(control).size);
+    bool applied = false;
+    if (proceed && start <= size && end <= size) {
+        if (control->history == nullptr)
+            control->history = prTextEditHistoryCreate(control->text);
+        PrTextEditChange change{.start = start, .end = end, .text = prStringView(&data)};
+        applied = prTextEditViewApply(control->view, &change, 1, origin, merge);
+        control->dirtyValue = true;
+        control->selectionDirection = PrDomSelectionDirection_None;
+    }
+    if (applied) {
+        domNotifyStatesChanged(element);
+        fireInput(element, "input", prStringView(&data), inputType, composing, false);
+    }
+    prStringReset(&data);
+    return applied;
+}
+
 } // namespace
 
 void htmlColorWellValue(const PrDomElement* input, PrStringView text, TextBuffer* out) {
@@ -228,6 +349,79 @@ void htmlColorWellValue(const PrDomElement* input, PrStringView text, TextBuffer
     PrString serialized = prCssUsedColorSerialize(&result, serialization);
     textAppend(out, prStringView(&serialized));
     prStringReset(&serialized);
+}
+
+bool htmlTextControlIsEditable(const PrDomElement* element) {
+    if (!prHtmlTextControlSelectionApplies(element))
+        return false;
+    return domAttributeValue(element, "disabled").data == nullptr && domAttributeValue(element, "readonly").data == nullptr;
+}
+
+bool htmlTextControlInsert(PrDomElement* element, PrStringView text, PrStringView inputType) {
+    const DomControl* control = domTextControlSync(element);
+    PrTextEditSelection s = selectionOf(control);
+    PrTextEditMerge merge = text == "\n" ? PrTextEditMerge_None : PrTextEditMerge_Typing;
+    return editControl(element, lowOf(s), highOf(s), text, inputType, PrTextEditOrigin_Local, merge);
+}
+
+bool htmlTextControlDelete(PrDomElement* element, uint32_t at, PrStringView inputType) {
+    const DomControl* control = domTextControlSync(element);
+    PrTextEditSelection s = selectionOf(control);
+    if (s.anchor != s.caret)
+        return editControl(element, lowOf(s), highOf(s), "", inputType, PrTextEditOrigin_Local, PrTextEditMerge_None);
+    if (at == s.caret)
+        return false;
+    uint32_t low = at < s.caret ? at : s.caret;
+    uint32_t high = at < s.caret ? s.caret : at;
+    return editControl(element, low, high, "", inputType, PrTextEditOrigin_Local, PrTextEditMerge_Deleting);
+}
+
+void htmlTextControlCompose(PrDomElement* element, PrStringView text) {
+    DomControl* control = domTextControlSync(element);
+    PrTextEditSelection s = selectionOf(control);
+    uint32_t start = control->markEnd > control->markStart ? control->markStart : lowOf(s);
+    uint32_t end = control->markEnd > control->markStart ? control->markEnd : highOf(s);
+    if (start == end && text.size == 0)
+        return;
+    if (editControl(element, start, end, text, "insertCompositionText", PrTextEditOrigin_Composition,
+            PrTextEditMerge_None)) {
+        control->markStart = start;
+        control->markEnd = start + uint32_t(text.size);
+    }
+}
+
+bool htmlTextControlUndo(PrDomElement* element, bool redo) {
+    DomControl* control = domTextControlSync(element);
+    PrStringView inputType = "historyUndo";
+    if (redo)
+        inputType = "historyRedo";
+    if (control->history == nullptr)
+        return false;
+    if (redo ? !prTextEditHistoryCanRedo(control->history) : !prTextEditHistoryCanUndo(control->history))
+        return false;
+    if (!fireInput(element, "beforeinput", PrStringView{}, inputType, false, true))
+        return false;
+    bool applied = false;
+    if (redo)
+        applied = prTextEditHistoryRedo(control->history, control->view);
+    else
+        applied = prTextEditHistoryUndo(control->history, control->view);
+    if (applied) {
+        domNotifyStatesChanged(element);
+        fireInput(element, "input", PrStringView{}, inputType, false, false);
+    }
+    return applied;
+}
+
+void htmlTextControlSetSelection(PrDomElement* element, const PrTextEditSelection& selection) {
+    DomControl* control = domTextControlSync(element);
+    PrTextEditSelection s = selectionOf(control);
+    prTextEditViewSetSelections(control->view, &selection, 1);
+    PrTextEditSelection next = selectionOf(control);
+    bool backward = next.caret < next.anchor;
+    control->selectionDirection = backward ? PrDomSelectionDirection_Backwards : PrDomSelectionDirection_Forwards;
+    if (next.anchor != next.caret && (next.anchor != s.anchor || next.caret != s.caret))
+        queueSelect(element, control);
 }
 
 } // namespace pr_impl
@@ -545,6 +739,101 @@ uint32_t prHtmlTextAreaElementTextLength(const PrHtmlTextAreaElement* element) {
     }
     textReset(&value);
     return length;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Text control selection
+
+bool prHtmlTextControlSelectionApplies(const PrDomElement* element) {
+    if (domIsHtml(element, PrDomTag_Textarea))
+        return true;
+    if (!domIsHtml(element, PrDomTag_Input))
+        return false;
+    PrDomInputType type = domInputType(domAttributeValue(element, "type"));
+    return type == PrDomInputType_Text || type == PrDomInputType_Search || type == PrDomInputType_Url ||
+        type == PrDomInputType_Tel || type == PrDomInputType_Password;
+}
+
+uint32_t prHtmlTextControlSelectionStart(PrDomElement* element) {
+    const DomControl* control = domTextControlSync(element);
+    PrStringView text = domControlText(control);
+    return unitsOf(PrStringView{text.data, lowOf(selectionOf(control))});
+}
+
+uint32_t prHtmlTextControlSelectionEnd(PrDomElement* element) {
+    const DomControl* control = domTextControlSync(element);
+    PrStringView text = domControlText(control);
+    return unitsOf(PrStringView{text.data, highOf(selectionOf(control))});
+}
+
+PrDomSelectionDirection prHtmlTextControlSelectionDirection(PrDomElement* element) {
+    return domTextControlSync(element)->selectionDirection;
+}
+
+void prHtmlTextControlSetSelectionRange(PrDomElement* element, uint32_t start, uint32_t end,
+        PrDomSelectionDirection direction) {
+    DomControl* control = domTextControlSync(element);
+    PrStringView text = domControlText(control);
+    if (setSelectionBytes(control, byteFromUnits(text, start), byteFromUnits(text, end), direction))
+        queueSelect(element, control);
+}
+
+void prHtmlTextControlSelect(PrDomElement* element) {
+    if (!prHtmlTextControlSelectionApplies(element))
+        return;
+    DomControl* control = domTextControlSync(element);
+    if (setSelectionBytes(control, 0, uint32_t(domControlText(control).size), PrDomSelectionDirection_None))
+        queueSelect(element, control);
+}
+
+PrStatus prHtmlTextControlSetRangeText(PrDomElement* element, PrStringView replacement, uint32_t start, uint32_t end,
+        PrHtmlSelectionMode mode) {
+    if (start > end)
+        return PrStatus_OutOfRange;
+    DomControl* control = domTextControlSync(element);
+    PrStringView text = domControlText(control);
+    uint32_t low = byteFromUnits(text, start);
+    uint32_t high = byteFromUnits(text, end);
+    PrTextEditSelection was = selectionOf(control);
+    uint32_t selectionStart = lowOf(was);
+    uint32_t selectionEnd = highOf(was);
+
+    // Replacement text is the value's, so an input's sanitization applies by the same rule as its setter.
+    PrTextEditChange change{.start = low, .end = high, .text = replacement};
+    prTextEditBufferApply(control->text, &change, 1, PrTextEditOrigin_Program);
+    control->dirtyValue = true;
+    domNotifyStatesChanged(element);
+
+    int64_t delta = int64_t(replacement.size) - int64_t(high - low);
+    uint32_t newEnd = low + uint32_t(replacement.size);
+    switch (mode) {
+        case PrHtmlSelectionMode_Select:
+            selectionStart = low;
+            selectionEnd = newEnd;
+            break;
+        case PrHtmlSelectionMode_Start:
+            selectionStart = selectionEnd = low;
+            break;
+        case PrHtmlSelectionMode_End:
+            selectionStart = selectionEnd = newEnd;
+            break;
+        default:
+            if (selectionStart > high)
+                selectionStart = uint32_t(int64_t(selectionStart) + delta);
+            else if (selectionStart > low)
+                selectionStart = low;
+            if (selectionEnd > high)
+                selectionEnd = uint32_t(int64_t(selectionEnd) + delta);
+            else if (selectionEnd > low)
+                selectionEnd = newEnd;
+            break;
+    }
+    // The edit already moved the selection, so what changed is measured from before it.
+    setSelectionBytes(control, selectionStart, selectionEnd, control->selectionDirection);
+    PrTextEditSelection now = selectionOf(control);
+    if (lowOf(now) != lowOf(was) || highOf(now) != highOf(was))
+        queueSelect(element, control);
+    return PrStatus_Ok;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

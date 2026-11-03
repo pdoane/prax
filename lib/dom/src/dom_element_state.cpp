@@ -45,19 +45,6 @@ const PrDomNode* PR_NULLABLE flatTreeParent(const PrDomNode* node) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Direction (html/#the-directionality)
 
-// Returns the strong type of the first strong code point of the text children of `element`.
-PrUnicodeBidiStrong childTextStrong(const PrDomElement* element) {
-    for (const PrDomNode* child = element->first; child != nullptr; child = child->next) {
-        if (!domIsText(child))
-            continue;
-        PrUnicodeBidiStrong strong =
-            prUnicodeBidiFirstStrong(prStringView(&static_cast<const PrDomText*>(child)->data));
-        if (strong != PrUnicodeBidiStrong_None)
-            return strong;
-    }
-    return PrUnicodeBidiStrong_None;
-}
-
 // Returns true if html/#contained-text-auto-directionality skips `element` and its descendants.
 bool skipsDirection(const PrDomElement* element) {
     if (element->space != PrDomNamespace_Html)
@@ -73,11 +60,20 @@ bool skipsDirection(const PrDomElement* element) {
     }
 }
 
+// Returns the first strong direction of the value of a control.
+PrUnicodeBidiStrong valueStrong(const PrDomElement* element) {
+    TextBuffer value;
+    domControlValue(element, &value);
+    PrUnicodeBidiStrong strong = prUnicodeBidiFirstStrong(textView(&value));
+    textReset(&value);
+    return strong;
+}
+
 // html/#auto-directionality: returns true if the auto directionality is 'rtl'. If the auto directionality is null, the
 // directionality is 'ltr'.
 bool autoRtl(const PrDomElement* element) {
     if (domIsHtml(element, PrDomTag_Textarea))
-        return childTextStrong(element) == PrUnicodeBidiStrong_Right;
+        return valueStrong(element) == PrUnicodeBidiStrong_Right;
     if (domIsHtml(element, PrDomTag_Input)) {
         switch (inputType(element)) {
             case PrDomInputType_Hidden:
@@ -90,7 +86,7 @@ bool autoRtl(const PrDomElement* element) {
             case PrDomInputType_Submit:
             case PrDomInputType_Reset:
             case PrDomInputType_Button:
-                return prUnicodeBidiFirstStrong(domAttributeValue(element, "value")) == PrUnicodeBidiStrong_Right;
+                return valueStrong(element) == PrUnicodeBidiStrong_Right;
             default:
                 break;
         }

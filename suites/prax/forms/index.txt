@@ -10,5 +10,7 @@ meter.html
 color.html
 details.html
 details-styled.html
+textarea.html
+text-editing.html
 labels.html
 form.html

@@ -408,34 +408,24 @@ TEST_CASE("a click reports the modifiers its press was made with") {
     CHECK(seen == PrAppModifierFlag_Shift);
 }
 
-TEST_CASE("presses in quick succession on one node count up as a sequence, which a pause or a move ends") {
+TEST_CASE("a multi-click that the application reports counts on the node that it began on") {
     UiFixture f;
-    PrLayoutNode left = kPrLayoutNodeNone;
     f.build = [&] {
-        left = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
+        f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
         f.box(f.root, 100, 0, 50, 50, PrUiFlag_Pressable);
     };
     f.frame();
     f.press(10, 10);
     f.frame();
     CHECK(prUiPressCount(f.ui, 0) == 1);
-    f.press(11, 10);
+    f.press(11, 10, 0, 2);
     f.frame();
     CHECK(prUiPressCount(f.ui, 0) == 2);
-    f.press(11, 11);
+    f.press(11, 11, 0, 3);
     f.frame();
     CHECK(prUiPressCount(f.ui, 0) == 3);
-    // Another node, a press too far away, and a pause each start a new sequence.
-    f.press(110, 10);
-    f.frame();
-    CHECK(prUiPressCount(f.ui, 0) == 1);
-    f.press(10, 10);
-    f.frame();
-    f.press(20, 10);
-    f.frame();
-    CHECK(prUiPressCount(f.ui, 0) == 1);
-    f.frame(1.0);
-    f.press(20, 10);
+    // Another node starts a new sequence, whatever the application counted.
+    f.press(110, 10, 0, 4);
     f.frame();
     CHECK(prUiPressCount(f.ui, 0) == 1);
 }

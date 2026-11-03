@@ -148,8 +148,9 @@ bool takesInput(const Loaded& loaded);
 // input's effect from its next draw on.
 void input(Loaded& loaded, const PrAppEvent& event);
 
-// Returns what a document that takes input reports to the window, in its own px.
-PrAppOutput output(Loaded& loaded);
+// Returns what a document that takes input reports to the window, in its own px, at `time` of the window's clock, and
+// gives it the application whose clipboard it uses.
+PrAppOutput output(Loaded& loaded, PrApp* app, double time);
 
 // A named, ordered set of documents, listed on first access. If a view fits the documents to a pane rather than giving
 // them the pane's size, they lay out for `width` by `height` logical pixels.

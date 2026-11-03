@@ -101,9 +101,6 @@ void traits(const PrDomElement* element, CssBoxTraits* out) {
             out->natural.width = prLayoutUnitFromPxDouble(300);
             out->natural.height = prLayoutUnitFromPxDouble(54);
             break;
-        case PrDomTag_Textarea:
-            out->flags |= CssBoxTraitFlag_ChildrenAreValue;
-            break;
         case PrDomTag_Details:
             // A closed details element shows only its first summary child (html/#the-details-and-summary-elements).
             if (!domHasAttribute(element, "open")) {
@@ -136,6 +133,11 @@ void traits(const PrDomElement* element, CssBoxTraits* out) {
                 out->characters = clampedAttribute(element, "size", 1, 0xffff, 20);
             }
             break;
+        case PrDomTag_Textarea:
+            out->kind = CssBoxKind_TextField;
+            out->flags |= CssBoxTraitFlag_ChildrenAreValue;
+            out->characters = clampedAttribute(element, "cols", 1, 0xffff, 20);
+            break;
         case PrDomTag_Td:
         case PrDomTag_Th:
             out->flags |= CssBoxTraitFlag_Spans;
@@ -162,6 +164,7 @@ bool reads(const PrDomElement* element, PrStringView name) {
         case PrDomTag_Col: case PrDomTag_Colgroup: return name == "span";
         case PrDomTag_Input: return name == "size";
         case PrDomTag_Details: return name == "open";
+        case PrDomTag_Textarea: return name == "cols";
         default: return false;
     }
 }

@@ -402,6 +402,8 @@ void domEventRelease(PrDomEvent* PR_NULLABLE event) {
         prMemoryFree(event->keyboard);
     }
     prStringReset(&event->composition);
+    prDomDataTransferRelease(event->transfer);
+    prStringReset(&event->inputType);
     event->path.reset();
     if (event->extra != nullptr)
         event->extra->destroy(event->extra);

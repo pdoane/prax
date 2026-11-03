@@ -7,6 +7,8 @@
 #include "pr/search.h"
 #include "pr/sort.h"
 #include "pr/text_buffer.h"
+#include "pr/unicode_bidi.h"
+#include "pr/unicode_grapheme.h"
 
 #include "layout/src/layout_cache.h"
 #include "layout/src/layout_effects.h"
@@ -356,6 +358,7 @@ struct PlacedText {
     const LayoutFragment* fragment;
     PrLayoutVec offset;
     PrLayoutRect line;
+    const LayoutFragment* lineFragment;
 };
 
 // Calls `fn` with each text fragment of the text `node`, in content order and in its block container's content. Its
@@ -368,7 +371,7 @@ void eachText(LayoutNodeIndex node, const LayoutFragment* container, LayoutPiece
         for (uint32_t k = 0; k < line->childCount; ++k) {
             const LayoutChild& child = line->children[k];
             if (child.fragment->kind == LayoutFragmentKind_Text && child.fragment->node == node)
-                fn(PlacedText{child.fragment, offset + child.offset, lineRect});
+                fn(PlacedText{child.fragment, offset + child.offset, lineRect, line});
         }
     };
     // A text that the last layout gave no fragment keeps a placement from an older layout, which may name a line that
@@ -731,6 +734,169 @@ void renderedCollectChildren(RenderedWalk& walk, LayoutNodeIndex node) {
     for (LayoutNodeIndex child = layoutTreeNode(walk.tree, node).first; child != kPrLayoutNodeNone;
             child = layoutTreeNode(walk.tree, child).next)
         renderedCollect(walk, child);
+}
+
+bool caretPx(PrLayoutTree* tree, PrLayoutNode text, uint32_t offset, PrLayoutTextAffinity affinity, PrRect* out) {
+    PrLayoutRect rect{};
+    if (!prLayoutNodeTextCaret(tree, text, offset, affinity, PrLayoutCoordinates_Viewport, &rect))
+        return false;
+    *out = prLayoutRectToPx(rect);
+    return true;
+}
+
+// Returns the node after `at` in the preorder of the subtree of `top`, or kPrLayoutNodeNone at its end.
+LayoutNodeIndex subtreeNext(const LayoutTree* tree, LayoutNodeIndex at, LayoutNodeIndex top) {
+    const LayoutTreeNode& n = layoutTreeNode(tree, at);
+    if (n.first != kPrLayoutNodeNone)
+        return n.first;
+    while (at != top && layoutTreeNode(tree, at).next == kPrLayoutNodeNone)
+        at = layoutTreeNode(tree, at).parent;
+    return at == top ? LayoutNodeIndex(kPrLayoutNodeNone) : layoutTreeNode(tree, at).next;
+}
+
+// Returns the node before `at` in the preorder of the subtree of `top`, or kPrLayoutNodeNone at its start.
+LayoutNodeIndex subtreePrevious(const LayoutTree* tree, LayoutNodeIndex at, LayoutNodeIndex top) {
+    if (at == top)
+        return kPrLayoutNodeNone;
+    LayoutNodeIndex before = layoutTreeNode(tree, at).previous;
+    if (before == kPrLayoutNodeNone)
+        return layoutTreeNode(tree, at).parent;
+    while (layoutTreeNode(tree, before).last != kPrLayoutNodeNone)
+        before = layoutTreeNode(tree, before).last;
+    return before;
+}
+
+// A text fragment on a line of a query of lines, and where its line-left edge stands along the line.
+struct LinePiece {
+    const LayoutFragment* fragment;
+    LayoutNodeIndex node;
+    uint32_t line;                  // by the order of the query's lines
+    float along;
+};
+
+// The identity of a line box in a query of lines: a fragment can be placed more than once.
+struct LineKey {
+    const LayoutFragment* fragment;
+    PrLayoutRect rect;
+    LayoutNodeIndex container;
+};
+
+// Returns where the line-left edge of `rect`, the box of a fragment in layout coordinates, stands along its line, with
+// `along` growing in the line-right direction.
+float lineLeftAlong(const LayoutTree* tree, const LayoutFragment* fragment, const PrLayoutRect& rect) {
+    if (!layoutStyleTraits(tree->styles, layoutFragmentStyle(tree, fragment)).vertical)
+        return prLayoutUnitToPx(rect.left);
+    if (fragment->turn == LayoutTextTurn_CounterClockwise)
+        return -prLayoutUnitToPx(rect.bottom);
+    return prLayoutUnitToPx(rect.top);
+}
+
+// Returns true if the fragment has a stop at the boundary `at`: a cluster inside a run of collapsed white space is not
+// a place of its own, since a caret's move there would not show.
+bool isLineStop(const LayoutFragment* fragment, PrStringView text, uint32_t at) {
+    if (at >= fragment->text.end || at >= text.size)
+        return true;
+    char c = text.data[at];
+    if (c != ' ' && c != '\t' && c != '\n')
+        return true;
+    const LayoutCaretStop* stops = layoutFragmentTextStops(fragment);
+    for (uint32_t i = 0; i < fragment->text.stopCount; ++i) {
+        if (stops[i].byte == at)
+            return true;
+    }
+    return false;
+}
+
+// How near two stops stand, in px, to be one place: fragments are each placed in layout units.
+constexpr float kLineStopSamePlace = 0.05f;
+
+// Appends the stops of the fragment of `piece`, in order of `along`. A stop at a position that the last stop has, at
+// the same place, is one stop, which stands with the text after it.
+void appendLineStops(const PrLayoutTree* tree, const LinePiece& piece, Array<PrLayoutLineStop>& out) {
+    const LayoutFragment* fragment = piece.fragment;
+    PrLayoutNode name = layoutNodeName(tree, piece.node);
+    PrStringView all = prLayoutNodeText(tree, name);
+    uint32_t start = layoutTextStart(fragment);
+    uint32_t end = fragment->text.end < all.size ? fragment->text.end : uint32_t(all.size);
+    bool lone = (fragment->flags & LayoutFragmentFlag_Break) != 0;
+    uint32_t first = out.count;
+    PrStringView view{all.data, end};
+    for (uint32_t b = start;;) {
+        if (lone || isLineStop(fragment, all, b)) {
+            PrLayoutTextAffinity affinity = PrLayoutTextAffinity_Downstream;
+            if (!lone && b == end && b > start)
+                affinity = PrLayoutTextAffinity_Upstream;
+            float along = piece.along + layoutTextCaretAlong(tree, fragment, b);
+            out.push(PrLayoutLineStop{{name, b}, affinity, along});
+        }
+        if (lone || b >= end)
+            break;
+        b = uint32_t(prUnicodeGraphemeNext(view, b));
+    }
+    if ((fragment->flags & LayoutFragmentFlag_Reversed) != 0) {
+        for (uint32_t i = first, j = out.count; i + 1 < j; ++i) {
+            --j;
+            PrLayoutLineStop kept = out.data[i];
+            out.data[i] = out.data[j];
+            out.data[j] = kept;
+        }
+    }
+    if (first != 0 && first < out.count) {
+        const PrLayoutLineStop& before = out.data[first - 1];
+        PrLayoutLineStop& after = out.data[first];
+        // One place has one `along`, though each fragment is placed in layout units.
+        if (absF32(before.along - after.along) < kLineStopSamePlace)
+            after.along = before.along;
+        if (before.position.node == after.position.node && before.position.offset == after.position.offset &&
+                before.along == after.along) {
+            out.data[first - 1].affinity = PrLayoutTextAffinity_Downstream;
+            for (uint32_t i = first + 1; i < out.count; ++i)
+                out.data[i - 1] = out.data[i];
+            --out.count;
+        }
+    }
+}
+
+// Returns the direction of the paragraph around `position` under unicode-bidi: plaintext, which its first strong
+// character decides (css-writing-modes-4/#unicode-bidi), or `fallback` if it has none.
+PrTextDirection plaintextDirection(const PrLayoutTree* tree, PrLayoutTextPosition position, PrTextDirection fallback) {
+    PrStringView text = prLayoutNodeText(tree, position.node);
+    uint32_t start = position.offset < text.size ? position.offset : uint32_t(text.size);
+    while (start > 0 && text.data[start - 1] != '\n')
+        --start;
+    uint32_t end = start;
+    while (end < text.size && text.data[end] != '\n')
+        ++end;
+    switch (prUnicodeBidiFirstStrong(PrStringView{text.data + start, end - start})) {
+        case PrUnicodeBidiStrong_Left: return PrTextDirection_Ltr;
+        case PrUnicodeBidiStrong_Right: return PrTextDirection_Rtl;
+        default: return fallback;
+    }
+}
+
+// Returns the text node next to `text` in the subtree of `root`, walking by `step`. Writes whether nothing that
+// separates lines lies between them to `contiguous`.
+template <typename Step>
+PrLayoutNode adjacentText(const PrLayoutTree* tree, PrLayoutNode root, PrLayoutNode text, bool* contiguous, Step step) {
+    *contiguous = false;
+    if (!prLayoutNodeIsValid(tree, root) || !prLayoutNodeIsValid(tree, text))
+        return kPrLayoutNodeNone;
+    LayoutNodeIndex top = uint32_t(root);
+    LayoutNodeIndex from = uint32_t(text);
+    bool separated = false;
+    for (LayoutNodeIndex at = step(tree, from, top); at != kPrLayoutNodeNone; at = step(tree, at, top)) {
+        PrLayoutNodeKind kind = layoutTreeNode(tree, at).kind;
+        if (kind == PrLayoutNodeKind_Text) {
+            if (!laidOut(tree, at) || layoutCachePlacement(tree->cache, at).parent == kPrLayoutNodeNone)
+                continue;
+            *contiguous = !separated &&
+                layoutCachePlacement(tree->cache, at).parent == layoutCachePlacement(tree->cache, from).parent;
+            return layoutNodeName(tree, at);
+        }
+        if (kind == PrLayoutNodeKind_LineBreak || !layoutIsInlineBox(tree, at))
+            separated = true;
+    }
+    return kPrLayoutNodeNone;
 }
 
 } // namespace
@@ -1160,19 +1326,217 @@ bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayo
             *out = PrLayoutTextPosition{layoutNodeName(tree, at), layoutTextOffsetAt(tree, fragment, float(into))};
             found = true;
         }
-        // The next node of the subtree in preorder.
-        const LayoutTreeNode& n = layoutTreeNode(tree, at);
-        if (n.first != kPrLayoutNodeNone) {
-            at = n.first;
-            continue;
-        }
-        while (at != top && layoutTreeNode(tree, at).next == kPrLayoutNodeNone)
-            at = layoutTreeNode(tree, at).parent;
-        at = at == top ? kPrLayoutNodeNone : layoutTreeNode(tree, at).next;
+        at = subtreeNext(tree, at, top);
     }
     pieces.reset();
     stages.reset();
     return found;
+}
+
+bool prLayoutTextOffsetNear(PrLayoutTree* tree, PrLayoutNode text, PrLayoutVec point, uint32_t* offset,
+        PrLayoutTextAffinity* affinity) {
+    PrLayoutTextPosition position{};
+    if (!prLayoutTextPositionFromPoint(tree, text, point, &position))
+        return false;
+    *offset = position.offset;
+    *affinity = PrLayoutTextAffinity_Downstream;
+    PrRect down{};
+    PrRect up{};
+    if (caretPx(tree, text, position.offset, PrLayoutTextAffinity_Downstream, &down) &&
+            caretPx(tree, text, position.offset, PrLayoutTextAffinity_Upstream, &up) && down.top != up.top) {
+        float y = prLayoutUnitToPx(point.y);
+        float toDown = (down.top + down.bottom) / 2 - y;
+        float toUp = (up.top + up.bottom) / 2 - y;
+        if (toUp * toUp < toDown * toDown)
+            *affinity = PrLayoutTextAffinity_Upstream;
+    }
+    return true;
+}
+
+void prLayoutNodeLineInfo(const PrLayoutTree* tree, PrLayoutNode text, uint32_t offset, PrLayoutLineInfo* info) {
+    *info = PrLayoutLineInfo{};
+    if (!prLayoutNodeIsValid(tree, text))
+        return;
+    LayoutNodeIndex at = layoutTreeNode(tree, uint32_t(text)).parent;
+    while (at != kPrLayoutNodeNone && layoutIsInlineBox(tree, at))
+        at = layoutTreeNode(tree, at).parent;
+    if (at == kPrLayoutNodeNone)
+        return;
+    PrLayoutStyleIndex style = layoutTreeNode(tree, at).style;
+    const PrLayoutFontStyle& font = layoutFontStyle(tree->styles, style);
+    info->direction = font.direction;
+    info->writingMode = font.writingMode;
+    if (layoutBoxStyle(tree->styles, style).unicodeBidi == PrTextBidi_Plaintext)
+        info->direction = plaintextDirection(tree, PrLayoutTextPosition{text, offset}, font.direction);
+}
+
+uint32_t prLayoutLineStops(PrLayoutTree* tree, PrLayoutNode root, PrLayoutTextPosition position,
+        PrLayoutTextAffinity affinity, PrLayoutLineStep step, PrLayoutLineInfo* PR_NULLABLE info,
+        PrLayoutLineStop* PR_NULLABLE out, uint32_t capacity) {
+    if (!prLayoutNodeIsValid(tree, root) || !prLayoutNodeIsValid(tree, position.node))
+        return 0;
+    if ((layoutTreeNode(tree, uint32_t(position.node)).dirty & LayoutDirtyFlag_Self) != 0)
+        return 0;
+    Array<LinePiece> pieces;
+    Array<LineKey> lines;
+    Array<PrLayoutLineStop> stops;
+    uint32_t held = UINT32_MAX;
+    uint32_t nearest = UINT32_MAX;
+    LayoutNodeIndex wanted = uint32_t(position.node);
+    LayoutNodeIndex top = uint32_t(root);
+    for (LayoutNodeIndex at = top; at != kPrLayoutNodeNone; at = subtreeNext(tree, at, top)) {
+        Mapping m{.transform = prDAffine2Identity()};
+        bool firstOfNode = true;
+        textPieces(tree, at, m, [&](const PlacedText& piece) {
+            LineKey key{piece.lineFragment, mapped(m, piece.line), layoutCachePlacement(tree->cache, at).parent};
+            auto same = [&](const LineKey& k) {
+                return k.fragment == key.fragment && k.container == key.container && k.rect.left == key.rect.left &&
+                    k.rect.top == key.rect.top;
+            };
+            // Only the first fragment of a node can join a line that is not the last, as text after an inline-block
+            // does.
+            uint32_t line = lines.count;
+            if (lines.count != 0 && same(lines.data[lines.count - 1]))
+                line = lines.count - 1;
+            for (uint32_t i = lines.count; firstOfNode && line == lines.count && i-- != 0;) {
+                if (same(lines.data[i]))
+                    line = i;
+            }
+            firstOfNode = false;
+            if (line == lines.count)
+                lines.push(key);
+            PrLayoutRect rect = mapped(m, layoutRectAt(piece.offset, piece.fragment->extent));
+            pieces.push(LinePiece{piece.fragment, at, line, lineLeftAlong(tree, piece.fragment, rect)});
+            if (at == wanted) {
+                uint32_t distance = caretDistance(piece.fragment, position.offset, affinity);
+                if (distance < nearest) {
+                    nearest = distance;
+                    held = line;
+                }
+            }
+        });
+    }
+    uint32_t target = held;
+    if (held != UINT32_MAX && step == PrLayoutLineStep_Next)
+        target = held + 1 < lines.count ? held + 1 : UINT32_MAX;
+    else if (held != UINT32_MAX && step == PrLayoutLineStep_Previous)
+        target = held > 0 ? held - 1 : UINT32_MAX;
+    if (target != UINT32_MAX) {
+        Array<LinePiece> onLine;
+        Array<LayoutNodeIndex> order;       // the nodes of the line, in content order
+        for (uint32_t i = 0; i < pieces.count; ++i) {
+            if (pieces.data[i].line != target)
+                continue;
+            onLine.push(pieces.data[i]);
+            if (order.count == 0 || order.data[order.count - 1] != pieces.data[i].node)
+                order.push(pieces.data[i].node);
+        }
+        // A line's children are in tree order, each at its visual place. A fragment with no extent comes first of those
+        // that start at one place, so that the text it ends comes after it on a line that runs leftward.
+        auto length = [&](const LinePiece& piece) { return layoutTextLength(tree, piece.fragment); };
+        for (uint32_t i = 1; i < onLine.count; ++i) {
+            LinePiece piece = onLine.data[i];
+            uint32_t j = i;
+            for (; j > 0; --j) {
+                const LinePiece& before = onLine.data[j - 1];
+                if (before.along < piece.along || (before.along == piece.along && length(before) <= length(piece)))
+                    break;
+                onLine.data[j] = before;
+            }
+            onLine.data[j] = piece;
+        }
+        for (uint32_t i = 0; i < onLine.count; ++i)
+            appendLineStops(tree, onLine.data[i], stops);
+        onLine.reset();
+        // The first and last stops in the order of the text, each standing with the text of its line.
+        uint64_t lowest = UINT64_MAX;
+        uint64_t highest = 0;
+        uint32_t startStop = 0;
+        uint32_t endStop = 0;
+        for (uint32_t i = 0; i < stops.count; ++i) {
+            uint32_t rank = 0;
+            while (rank + 1 < order.count && layoutNodeName(tree, order.data[rank]) != stops.data[i].position.node)
+                ++rank;
+            uint64_t key = (uint64_t(rank) << 32) | stops.data[i].position.offset;
+            if (key < lowest || (key == lowest && stops.data[i].affinity == PrLayoutTextAffinity_Downstream)) {
+                lowest = key;
+                startStop = i;
+            }
+            if (key > highest || (key == highest && stops.data[i].affinity == PrLayoutTextAffinity_Upstream)) {
+                highest = key;
+                endStop = i;
+            }
+        }
+        order.reset();
+        if (info != nullptr) {
+            PrLayoutStyleIndex style = layoutTreeNode(tree, lines.data[target].container).style;
+            const PrLayoutFontStyle& font = layoutFontStyle(tree->styles, style);
+            *info = PrLayoutLineInfo{
+                .direction = font.direction,
+                .writingMode = font.writingMode,
+                .startStop = startStop,
+                .endStop = endStop,
+            };
+            if (layoutBoxStyle(tree->styles, style).unicodeBidi == PrTextBidi_Plaintext && stops.count != 0)
+                info->direction = plaintextDirection(tree, stops.data[0].position, font.direction);
+        }
+    }
+    for (uint32_t i = 0; i < stops.count && i < capacity; ++i)
+        out[i] = stops.data[i];
+    uint32_t count = stops.count;
+    pieces.reset();
+    lines.reset();
+    stops.reset();
+    return count;
+}
+
+PrLayoutNode prLayoutNodeTextNext(const PrLayoutTree* tree, PrLayoutNode root, PrLayoutNode text, bool* contiguous) {
+    return adjacentText(tree, root, text, contiguous, subtreeNext);
+}
+
+PrLayoutNode prLayoutNodeTextPrevious(const PrLayoutTree* tree, PrLayoutNode root, PrLayoutNode text, bool* contiguous) {
+    return adjacentText(tree, root, text, contiguous, subtreePrevious);
+}
+
+PrLayoutNode prLayoutNodeRevealStep(PrLayoutTree* tree, PrLayoutNode from, PrLayoutRect* rect, PrLayoutVec* offset) {
+    if (!prLayoutNodeIsValid(tree, from))
+        return kPrLayoutNodeNone;
+    for (PrLayoutNode at = prLayoutNodeParent(tree, from); at != kPrLayoutNodeNone; at = prLayoutNodeParent(tree, at)) {
+        PrLayoutScrollInfo info{};
+        if (!prLayoutNodeScrollInfo(tree, at, &info) || !info.scrollContainer)
+            continue;
+        // The scrollport in viewport coordinates: the container's border box less its borders.
+        PrLayoutRect port = prLayoutNodeBounds(tree, at, PrLayoutCoordinates_Viewport);
+        port.left.raw += prLayoutNodeBorderWidth(tree, at, PrRectSide_Left).raw;
+        port.top.raw += prLayoutNodeBorderWidth(tree, at, PrRectSide_Top).raw;
+        port.right.raw = port.left.raw + info.portExtent.x.raw;
+        port.bottom.raw = port.top.raw + info.portExtent.y.raw;
+        auto shift = [](int32_t lo, int32_t hi, int32_t portLo, int32_t portHi) -> int32_t {
+            if (lo < portLo)
+                return lo - portLo;
+            if (hi > portHi)
+                return hi - portHi < lo - portLo ? hi - portHi : lo - portLo;
+            return 0;
+        };
+        int32_t dx = shift(rect->left.raw, rect->right.raw, port.left.raw, port.right.raw);
+        int32_t dy = shift(rect->top.raw, rect->bottom.raw, port.top.raw, port.bottom.raw);
+        if (dx == 0 && dy == 0)
+            continue;
+        auto clamp = [](int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; };
+        *offset = PrLayoutVec{
+            PrLayoutUnit{clamp(info.offset.x.raw + dx, info.range.left.raw, info.range.right.raw)},
+            PrLayoutUnit{clamp(info.offset.y.raw + dy, info.range.top.raw, info.range.bottom.raw)},
+        };
+        // The rectangle moves with the content that the container scrolled, for the containers around it.
+        int32_t movedX = offset->x.raw - info.offset.x.raw;
+        int32_t movedY = offset->y.raw - info.offset.y.raw;
+        rect->left.raw -= movedX;
+        rect->right.raw -= movedX;
+        rect->top.raw -= movedY;
+        rect->bottom.raw -= movedY;
+        return at;
+    }
+    return kPrLayoutNodeNone;
 }
 
 bool prLayoutNodeHoldsAbsolute(const PrLayoutTree* tree, PrLayoutNode node) {

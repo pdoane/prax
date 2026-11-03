@@ -24,11 +24,6 @@ constexpr uint32_t kUiNone = 0xffffffffu;
 // The pointer buttons the context tracks.
 constexpr uint32_t kUiButtons = 8;
 
-// How long after a press, and how near it, the next press on the same node continues its sequence, as a double press
-// does.
-constexpr double kMultiPressSeconds = 0.5;
-constexpr float kMultiPressDistance = 4;
-
 // The maximum number of nodes that a hit test returns to the router, topmost first. It is enough to pass every
 // transparent node over a point.
 constexpr uint32_t kUiHitCapacity = 64;
@@ -694,12 +689,9 @@ void route(Ui* ui, const PrAppEvent& e) {
                 slotOf(ui, at).pressRound = ui->roundId;
             PrLayoutNode target = innermost(ui, ui->hovered, PrUiFlag_Pressable);
             UiButton& b = ui->buttons[e.button];
-            float dx = e.position.x - b.origin.x;
-            float dy = e.position.y - b.origin.y;
-            bool sequence = b.presses != 0 && target != kPrLayoutNodeNone && target == b.pressed &&
-                ui->time - b.pressTime <= kMultiPressSeconds &&
-                dx * dx + dy * dy <= kMultiPressDistance * kMultiPressDistance;
-            uint32_t presses = sequence ? b.presses + 1 : 1;
+            // A multi-click continues only on the node that it began on.
+            bool sequence = target != kPrLayoutNodeNone && target == b.pressed && e.clicks > 1;
+            uint32_t presses = sequence ? e.clicks : 1;
             b = UiButton{
                 .capture = target,
                 .node = target,
@@ -1754,42 +1746,7 @@ void prUiReveal(PrUi* ui, PrLayoutNode node) {
 }
 
 void prUiRevealRect(PrUi* ui, PrLayoutNode node, PrLayoutRect rect) {
-    if (!prLayoutNodeIsValid(ui->tree, node))
-        return;
-    for (PrLayoutNode at = prLayoutNodeParent(ui->tree, node); at != kPrLayoutNodeNone;
-            at = prLayoutNodeParent(ui->tree, at)) {
-        PrLayoutScrollInfo info{};
-        if (!prLayoutNodeScrollInfo(ui->tree, at, &info) || !info.scrollContainer)
-            continue;
-        // The scrollport in viewport coordinates: the container's border box less its borders.
-        PrLayoutRect port = prLayoutNodeBounds(ui->tree, at, PrLayoutCoordinates_Viewport);
-        port.left.raw += prLayoutNodeBorderWidth(ui->tree, at, PrRectSide_Left).raw;
-        port.top.raw += prLayoutNodeBorderWidth(ui->tree, at, PrRectSide_Top).raw;
-        port.right.raw = port.left.raw + info.portExtent.x.raw;
-        port.bottom.raw = port.top.raw + info.portExtent.y.raw;
-        auto shift = [](int32_t lo, int32_t hi, int32_t portLo, int32_t portHi) -> int32_t {
-            if (lo < portLo)
-                return lo - portLo;
-            if (hi > portHi)
-                return hi - portHi < lo - portLo ? hi - portHi : lo - portLo;
-            return 0;
-        };
-        int32_t dx = shift(rect.left.raw, rect.right.raw, port.left.raw, port.right.raw);
-        int32_t dy = shift(rect.top.raw, rect.bottom.raw, port.top.raw, port.bottom.raw);
-        if (dx == 0 && dy == 0)
-            continue;
-        auto clamp = [](int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; };
-        PrLayoutVec offset{
-            PrLayoutUnit{clamp(info.offset.x.raw + dx, info.range.left.raw, info.range.right.raw)},
-            PrLayoutUnit{clamp(info.offset.y.raw + dy, info.range.top.raw, info.range.bottom.raw)},
-        };
-        prLayoutNodeSetScroll(ui->tree, at, offset);
-        // The rectangle moves with the content that the container scrolled, for the containers around it.
-        int32_t movedX = offset.x.raw - info.offset.x.raw;
-        int32_t movedY = offset.y.raw - info.offset.y.raw;
-        rect.left.raw -= movedX;
-        rect.right.raw -= movedX;
-        rect.top.raw -= movedY;
-        rect.bottom.raw -= movedY;
-    }
+    PrLayoutVec offset{};
+    while ((node = prLayoutNodeRevealStep(ui->tree, node, &rect, &offset)) != kPrLayoutNodeNone)
+        prLayoutNodeSetScroll(ui->tree, node, offset);
 }

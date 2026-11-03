@@ -7,21 +7,30 @@
 #include "pr/ascii.h"
 #include "pr/atomic.h"
 #include "pr/draw_list.h"
+#include "pr/float.h"
 #include "pr/html.h"
+#include "pr/html_forms.h"
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_worker.h"
 #include "pr/text_buffer.h"
+#include "pr/text_edit.h"
+#include "pr/text_edit_command.h"
+#include "pr/text_edit_layout.h"
+#include "pr/text_edit_motion.h"
 #include "pr/time.h"
+#include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
 
 #include "css/src/css_presentation.h"
 #include "css/src/css_serialize.h"
 #include "dom/src/dom_agent.h"
+#include "dom/src/dom_control.h"
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_event.h"
 #include "dom/src/dom_node.h"
 #include "html/src/html_focus.h"
+#include "html/src/html_forms.h"
 #include "html/src/html_page.h"
 #include "html/src/html_window.h"
 
@@ -95,6 +104,36 @@ struct HtmlView {
     PrAppKeyCode keyCode;
     PrDomModifiers keyModifiers;
     PrDomElement* PR_NULLABLE spaced;
+
+    // The tree and the text node that show the focused text control's selection and caret, the caret's offset, and
+    // where the caret stands.
+    PrLayoutTree* PR_NULLABLE caretTree;
+    PrCssPresentation* PR_NULLABLE caretPresentation;   // the presentation of `caretTree`
+    PrLayoutNode caretNode;
+    uint32_t caretOffset;
+    uint32_t caretAnchor;
+    uint32_t caretShownAt;          // the caret's offset in the text that the field shows
+    PrLayoutTextAffinity caretAffinity;
+    PrRect textInput;
+    bool hasTextInput;
+    bool caretCollapsed;            // true if the control has a caret rather than a selection
+    bool caretShown;                // true if the caret stands in the on part of its blink
+    bool caretHidden;               // true if the host keeps the caret out of renders
+    bool reveal;                    // true if the user moved the caret, which comes into view
+    bool revealPosted;              // true if the job posted last holds that caret, and brings it into view
+    double time;                    // the time of the last frame
+    double caretActivity;           // when the user last moved the caret, which its blink counts from
+
+    // The presses of the sequence of the last press of the primary button, and what it selected in a text control.
+    uint32_t presses;
+    const PrDomElement* PR_NULLABLE pressElement;   // compared only: it may be gone
+    PrTextEditUnit unit;
+    uint32_t unitLow;
+    uint32_t unitHigh;
+
+    PrApp* PR_NULLABLE app;         // whose clipboard the view reads and writes
+    bool pasting;                   // true if a paste asked for the clipboard's text, which a Clipboard event brings
+
     bool typing;                    // true from a keydown that no listener canceled until its text or its release
     bool composing;                 // true during an input method's composition
     bool committing;                // true from the end of a composition until the text that it commits
@@ -617,7 +656,7 @@ void notifyActivation(const PrDomElement* element) {
 bool fireMouse(HtmlView* v, PrStringView type, PrDomElement* element, PrVec2 point, const PrAppEvent* event) {
     PrDomMouseEventInit init = prDomMouseEventInitDefault();
     init.ui = inputInit(element, true);
-    init.ui.detail = 1;
+    init.ui.detail = (type == "mousedown" || type == "mouseup") && v->presses != 0 ? int32_t(v->presses) : 1;
     init.screenX = double(event->position.x);
     init.screenY = double(event->position.y);
     init.clientX = double(point.x);
@@ -805,6 +844,9 @@ bool takesScrollKeys(const PrDomElement* element) {
 // The distance that a key scrolls by a line, in CSS pixels. cssom-view-1 leaves it to the user agent.
 constexpr float kScrollKeyLine = 40;
 
+// How long a caret's blink takes.
+constexpr double kCaretBlinkSeconds = 1.0;
+
 // The ways in which a key scrolls.
 enum {
     KeyScroll_None,
@@ -879,12 +921,201 @@ void scrollByKey(HtmlView* v, PrDomElement* element, const PrAppEvent* event) {
     }
 }
 
+// How a clipboard event is fired: it bubbles, can be canceled and crosses shadow roots.
+constexpr PrDomEventInit kClipboardInit{.bubbles = true, .cancelable = true, .composed = true};
+
+// Returns the node that shows the text of the control `element`, and its tree, or kPrLayoutNodeNone if it is not shown.
+PrLayoutNode fieldTextOf(HtmlView* v, const PrDomElement* element, PrLayoutTree** tree) {
+    PrCssPresentation* shown = presentationOfDocument(v, element->document);
+    if (shown == nullptr)
+        return kPrLayoutNodeNone;
+    *tree = prCssPresentationTree(shown);
+    return prCssPresentationFieldText(shown, element);
+}
+
+// Returns the offset in what a masked control shows of the offset `at` in its value, with a mark of three bytes for
+// each code point. The offset is unchanged in a control that shows its value.
+uint32_t shownOffset(bool masked, PrStringView text, uint32_t at) {
+    if (!masked)
+        return at;
+    uint32_t shown = 0;
+    for (uint32_t i = 0; i < at && i < text.size; ++i)
+        shown += (uint8_t(text.data[i]) & 0xc0) != 0x80 ? 3 : 0;
+    return shown;
+}
+
+// Returns the offset in the value of the offset `at` in what a control shows, as shownOffset maps the other way.
+uint32_t valueOffset(bool masked, PrStringView text, uint32_t at) {
+    if (!masked)
+        return at;
+    uint32_t marks = at / 3;
+    uint32_t i = 0;
+    for (; i < text.size; ++i) {
+        if ((uint8_t(text.data[i]) & 0xc0) != 0x80 && marks-- == 0)
+            break;
+    }
+    return i;
+}
+
+// Marks the caret of the focused control as moved by the user at `time`: it shows at once, and comes into view.
+void caretMoved(HtmlView* v, double time) {
+    v->changed = true;
+    v->reveal = true;
+    v->caretActivity = time;
+}
+
+// Carries out a command that moves the caret of the text control `target`, and returns false if it is not such a
+// command. A control that is not shown has its text's lines. Masked text shows neither its bytes nor its words, so its
+// lines are those of its text in the direction that the control shows, and a motion by word goes to the end of the
+// text.
+bool moveCaret(PrLayoutTree* PR_NULLABLE tree, PrLayoutNode node, PrDomElement* target, PrStringView text,
+        PrTextEditSelection s, PrTextEditCommand command, bool extend, bool multiline, bool secret) {
+    bool shown = node != kPrLayoutNodeNone && !secret;
+    PrTextEditGeometry geometry{};
+    if (shown) {
+        geometry = prTextEditGeometryFromLayoutText(tree, node, text);
+    } else {
+        PrLayoutLineInfo info{};
+        if (node != kPrLayoutNodeNone)
+            prLayoutNodeLineInfo(tree, node, 0, &info);
+        geometry = prTextEditGeometryFromText(text, info.direction);
+    }
+    PrTextEditPosition at{node, s.caret, s.affinity};
+    PrTextEditMotion motion = prTextEditMotionFromCommand(&geometry, at, command, PrTextEditArrowMotion_Logical);
+    if (secret) {
+        switch (motion) {
+            case PrTextEditMotion_WordLeft: motion = PrTextEditMotion_LineLeft; break;
+            case PrTextEditMotion_WordRight: motion = PrTextEditMotion_LineRight; break;
+            default: break;
+        }
+    }
+    bool between = motion == PrTextEditMotion_LinePrevious || motion == PrTextEditMotion_LineNext;
+    if (motion != PrTextEditMotion_None && (multiline || !between)) {
+        PrTextEditSelectionMove kind = extend ? PrTextEditSelectionMove_Extend : PrTextEditSelectionMove_Collapse;
+        htmlTextControlSetSelection(target, prTextEditSelectionMove(&geometry, node, s, motion, kind));
+    }
+    prTextEditGeometryReset(&geometry);
+    return motion != PrTextEditMotion_None;
+}
+
+// Runs what a key does in an editable text control, and returns true if it does anything. A shortcut that the control
+// does not take goes on to the document's defaults.
+bool editKey(HtmlView* v, PrDomElement* target, const PrAppEvent* event) {
+    const DomControl* control = domTextControlSync(target);
+    PrStringView text = domControlText(control);
+    PrTextEditSelection s = prTextEditViewSelections(control->view)[0];
+    bool extend = false;
+    PrTextEditCommand command = prTextEditCommandFromKey(event, &extend);
+    if (command == PrTextEditCommand_None)
+        return false;
+    bool multiline = domIsHtml(target, PrDomTag_Textarea);
+    uint32_t low = s.anchor < s.caret ? s.anchor : s.caret;
+    uint32_t high = s.anchor < s.caret ? s.caret : s.anchor;
+    bool selected = s.anchor != s.caret;
+    PrLayoutTree* tree = nullptr;
+    PrLayoutNode node = fieldTextOf(v, target, &tree);
+    bool secret = domInputType(domAttributeValue(target, "type")) == PrDomInputType_Password && !multiline;
+    if (moveCaret(tree, node, target, text, s, command, extend, multiline, secret)) {
+        caretMoved(v, event->time);
+        return true;
+    }
+    switch (command) {
+        case PrTextEditCommand_DeleteBackward:
+            htmlTextControlDelete(target, prTextEditBackspaceStart(text, s.caret), "deleteContentBackward");
+            break;
+        case PrTextEditCommand_DeleteForward:
+            htmlTextControlDelete(target, prTextEditClusterAfter(text, s.caret), "deleteContentForward");
+            break;
+        case PrTextEditCommand_DeleteWordBefore:
+            htmlTextControlDelete(target, secret ? 0 : prTextEditWordBefore(text, s.caret), "deleteWordBackward");
+            break;
+        case PrTextEditCommand_DeleteWordAfter:
+            htmlTextControlDelete(target, secret ? uint32_t(text.size) : prTextEditWordAfter(text, s.caret),
+                "deleteWordForward");
+            break;
+        case PrTextEditCommand_InsertLineBreak:
+            if (!multiline)
+                return false;
+            if (fireKeypress(v, target, "Enter", '\r'))
+                htmlTextControlInsert(target, "\n", "insertLineBreak");
+            break;
+        case PrTextEditCommand_SelectAll:
+            prHtmlTextControlSelect(target);
+            break;
+        case PrTextEditCommand_Copy:
+        case PrTextEditCommand_Cut:
+            if (!selected || secret)
+                break;
+            {
+                // A listener that cancels the event writes the clipboard itself, through its data, and a cut leaves the
+                // selection alone (clipboard-apis/#copy-action).
+                bool cut = command == PrTextEditCommand_Cut;
+                PrStringView type = cut ? "cut" : "copy";
+                PrDomClipboardEvent* fired = prDomClipboardEventCreate(type, &kClipboardInit, PrStringView{});
+                bool proceed = dispatchTrusted(prDomNodeAsEventTarget(prDomElementAsNode(target)),
+                    prDomClipboardEventAsEvent(fired));
+                PrDomDataTransfer* data = prDomClipboardEventClipboardData(fired);
+                if (v->app != nullptr && proceed)
+                    prAppSetClipboardText(v->app, PrStringView{text.data + low, high - low});
+                else if (v->app != nullptr && prDomDataTransferHasText(data))
+                    prAppSetClipboardText(v->app, prDomDataTransferText(data));
+                prDomEventRelease(prDomClipboardEventAsEvent(fired));
+                if (proceed && cut)
+                    htmlTextControlDelete(target, s.caret, "deleteByCut");
+            }
+            break;
+        case PrTextEditCommand_Paste:
+            if (v->app != nullptr) {
+                v->pasting = true;
+                prAppRequestClipboardText(v->app);
+            }
+            break;
+        case PrTextEditCommand_Undo: htmlTextControlUndo(target, false); break;
+        case PrTextEditCommand_Redo: htmlTextControlUndo(target, true); break;
+        default: return false;
+    }
+    caretMoved(v, event->time);
+    return true;
+}
+
+// Inserts the text of a Clipboard event that a paste asked for, unless a listener of paste cancels it
+// (clipboard-apis/#paste-action). Line endings become line feeds, and a one-line control drops them.
+void pasted(HtmlView* v, const PrAppEvent* event) {
+    if (!v->pasting)
+        return;
+    v->pasting = false;
+    PrDomElement* target = keyTarget(v);
+    if (target == nullptr || target != target->document->focused || !htmlTextControlIsEditable(target))
+        return;
+    PrDomClipboardEvent* paste = prDomClipboardEventCreate("paste", &kClipboardInit, event->text);
+    PrDomEventTarget* at = prDomNodeAsEventTarget(prDomElementAsNode(target));
+    bool proceed = dispatchTrusted(at, prDomClipboardEventAsEvent(paste));
+    prDomEventRelease(prDomClipboardEventAsEvent(paste));
+    if (!proceed)
+        return;
+    bool multiline = domIsHtml(target, PrDomTag_Textarea);
+    TextBuffer text{};
+    for (size_t i = 0; i < event->text.size; ++i) {
+        char c = event->text.data[i];
+        if (c == '\r' && i + 1 < event->text.size && event->text.data[i + 1] == '\n')
+            continue;
+        c = c == '\r' ? '\n' : c;
+        if (c != '\n' || multiline)
+            textAppend(&text, PrStringView{&c, 1});
+    }
+    htmlTextControlInsert(target, textView(&text), "insertFromPaste");
+    textReset(&text);
+    caretMoved(v, event->time);
+}
+
 // Runs the default actions of a keydown that no listener canceled, and returns what the document did with the key. Tab
 // and Shift+Tab move the focus. Enter fires its keypress, then follows a link or activates a button. Space presses a
 // button, which its release activates. The keys that scroll do.
 PrHtmlViewEventResult keyDefault(HtmlView* v, PrDomElement* target, const PrAppEvent* event) {
     PrDomModifiers modifiers = modifiersOf(event->modifiers);
     bool focused = target == target->document->focused;
+    if (focused && htmlTextControlIsEditable(target) && editKey(v, target, event))
+        return PrHtmlViewEventResult_Handled;
     if (event->key == PrAppKey_Tab &&
             (event->modifiers & (PrAppModifierFlag_Control | PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) == 0) {
         bool back = (event->modifiers & PrAppModifierFlag_Shift) != 0;
@@ -970,6 +1201,10 @@ PrHtmlViewEventResult typed(HtmlView* v, const PrAppEvent* event) {
             proceed = fireKeypress(v, target, PrStringView{event->text.data + at, length}, codePoint) && proceed;
         at += length;
     }
+    if (proceed && target == target->document->focused && htmlTextControlIsEditable(target)) {
+        htmlTextControlInsert(target, event->text, "insertText");
+        caretMoved(v, event->time);
+    }
     return proceed ? PrHtmlViewEventResult_Handled : PrHtmlViewEventResult_Canceled;
 }
 
@@ -997,12 +1232,26 @@ PrHtmlViewEventResult compose(HtmlView* v, const PrAppEvent* event) {
             fireComposition(target, "compositionstart", "");
         }
         fireComposition(target, "compositionupdate", event->text);
+        if (htmlTextControlIsEditable(target)) {
+            htmlTextControlCompose(target, event->text);
+            caretMoved(v, event->time);
+        }
         return PrHtmlViewEventResult_Handled;
     }
     if (!v->composing)
         return PrHtmlViewEventResult_Ignored;
     v->composing = false;
     v->committing = event->text.size != 0;
+    // The marked text leaves as a composition, and the committed text enters as the user's edit, ahead of
+    // compositionend (uievents/#events-composition-order).
+    if (htmlTextControlIsEditable(target)) {
+        htmlTextControlCompose(target, "");
+        DomControl* control = domControlFromElement(target);
+        control->markStart = control->markEnd = 0;
+        if (event->text.size != 0)
+            htmlTextControlInsert(target, event->text, "insertText");
+        caretMoved(v, event->time);
+    }
     fireComposition(target, "compositionend", event->text);
     return PrHtmlViewEventResult_Handled;
 }
@@ -1118,6 +1367,7 @@ void applyPost(void* PR_NULLABLE context) {
                 prHtmlViewSetViewport(view, post->frame.extent);
                 prHtmlViewSetDisplay(view, &post->frame.display);
                 prHtmlViewSetUserPreferences(view, &post->frame.preferences);
+                prHtmlViewSetTime(view, post->frame.time);
                 break;
             case ViewPostKind_Traverse:
                 prHtmlPageTraverse(post->inbox->page, post->delta);
@@ -1143,6 +1393,157 @@ void updateView(void* PR_NULLABLE context) {
     PrHtmlViewUpdate update = prHtmlViewUpdate(inbox->view);
     if (inbox->updated != nullptr)
         inbox->updated(inbox->updatedContext, &update);
+}
+
+// Runs a press of the primary button in the editable text control `element`, at `point` in its document's viewport: one
+// press places the caret, two select a word, three a line, and four the text. Shift extends the selection.
+void pressText(HtmlView* v, PrDomElement* element, PrVec2 point, const PrAppEvent* event) {
+    PrLayoutTree* tree = nullptr;
+    PrLayoutNode node = fieldTextOf(v, element, &tree);
+    uint32_t offset = 0;
+    PrLayoutTextAffinity side = 0;
+    if (node == kPrLayoutNodeNone || !prLayoutTextOffsetNear(tree, node, prLayoutVecFromPx(point), &offset, &side))
+        return;
+    const DomControl* control = domTextControlSync(element);
+    PrStringView text = domControlText(control);
+    PrCssPresentation* shown = presentationOfDocument(v, element->document);
+    bool masked = prCssPresentationFieldMasked(shown, element);
+    uint32_t at = prTextEditCodePointStart(text, valueOffset(masked, text, offset));
+    PrTextEditSelection s = prTextEditViewSelections(control->view)[0];
+    if ((event->modifiers & PrAppModifierFlag_Shift) != 0) {
+        v->unit = PrTextEditUnit_Character;
+        v->unitLow = v->unitHigh = s.anchor;
+        htmlTextControlSetSelection(element, PrTextEditSelection{.anchor = s.anchor, .caret = at, .affinity = side});
+    } else {
+        bool multiline = domIsHtml(element, PrDomTag_Textarea);
+        v->unit = PrTextEditUnit_All;
+        if (v->presses <= 1)
+            v->unit = PrTextEditUnit_Character;
+        else if (masked)
+            v->unit = PrTextEditUnit_All;
+        else if (v->presses == 2)
+            v->unit = PrTextEditUnit_Word;
+        else if (v->presses == 3 && multiline)
+            v->unit = PrTextEditUnit_Line;
+        prTextEditUnitAround(text, at, v->unit, &v->unitLow, &v->unitHigh);
+        uint32_t caret = v->unit == PrTextEditUnit_Character ? at : v->unitHigh;
+        htmlTextControlSetSelection(element, PrTextEditSelection{.anchor = v->unitLow, .caret = caret, .affinity = side});
+    }
+    caretMoved(v, event->time);
+}
+
+// Extends the selection of the control that a press began in to `point` in its document's viewport, keeping whole the
+// unit that the press selected.
+void dragText(HtmlView* v, PrDomElement* element, PrVec2 point, double time) {
+    PrLayoutTree* tree = nullptr;
+    PrLayoutNode node = fieldTextOf(v, element, &tree);
+    uint32_t offset = 0;
+    PrLayoutTextAffinity side = 0;
+    if (node == kPrLayoutNodeNone || !prLayoutTextOffsetNear(tree, node, prLayoutVecFromPx(point), &offset, &side))
+        return;
+    PrStringView text = domControlText(domTextControlSync(element));
+    bool masked = prCssPresentationFieldMasked(presentationOfDocument(v, element->document), element);
+    uint32_t at = prTextEditCodePointStart(text, valueOffset(masked, text, offset));
+    uint32_t low = 0;
+    uint32_t high = 0;
+    prTextEditUnitAround(text, at, v->unit, &low, &high);
+    PrTextEditSelection next{.affinity = side};
+    if (at < v->unitLow) {
+        next.anchor = v->unitHigh;
+        next.caret = low;
+    } else {
+        next.anchor = v->unitLow;
+        next.caret = v->unit == PrTextEditUnit_Character ? at : high;
+    }
+    htmlTextControlSetSelection(element, next);
+    caretMoved(v, time);
+}
+
+// Finds where the caret of the text control being edited stands in the last layout.
+void placeTextInput(HtmlView* v) {
+    v->hasTextInput = false;
+    PrLayoutRect rect{};
+    if (v->caretTree != nullptr && prLayoutNodeIsValid(v->caretTree, v->caretNode) &&
+            prLayoutNodeTextCaret(v->caretTree, v->caretNode, v->caretShownAt, v->caretAffinity,
+                PrLayoutCoordinates_Viewport, &rect)) {
+        v->textInput = prLayoutRectToPx(rect);
+        v->hasTextInput = true;
+    }
+}
+
+// Returns true if the caret stands in the on part of its blink. The clock is the time of the last frame, so a host that
+// posts no frames sees a steady caret.
+bool caretBlinksOn(const HtmlView* v) {
+    if (v->page->preferences.reducedMotion)
+        return true;
+    double phase = v->time - v->caretActivity;
+    return phase <= 0 || phase - kCaretBlinkSeconds * floorF64(phase / kCaretBlinkSeconds) < kCaretBlinkSeconds / 2;
+}
+
+// Shows the selection and the caret of the focused editable text control, and clears those of the last one.
+void showTextControl(HtmlView* v) {
+    PrDomElement* target = keyTarget(v);
+    bool editing = target != nullptr && target == target->document->focused && htmlTextControlIsEditable(target);
+    PrCssPresentation* shown = editing ? presentationOfDocument(v, target->document) : nullptr;
+    PrLayoutNode node = shown != nullptr ? prCssPresentationFieldText(shown, target) : kPrLayoutNodeNone;
+    PrLayoutTree* tree = shown != nullptr ? prCssPresentationTree(shown) : nullptr;
+    if (v->caretTree != nullptr && (v->caretTree != tree || v->caretNode != node)) {
+        prLayoutTreeSetCaret(v->caretTree, nullptr);
+        if (v->caretNode != kPrLayoutNodeNone && prLayoutNodeIsValid(v->caretTree, v->caretNode))
+            prLayoutNodeSetHighlights(v->caretTree, v->caretNode, nullptr, 0);
+    }
+    v->caretTree = node != kPrLayoutNodeNone ? tree : nullptr;
+    v->caretPresentation = node != kPrLayoutNodeNone ? shown : nullptr;
+    v->caretNode = node;
+    v->hasTextInput = false;
+    if (node == kPrLayoutNodeNone)
+        return;
+    const DomControl* control = domTextControlSync(target);
+    PrTextEditSelection s = prTextEditViewSelections(control->view)[0];
+    bool masked = prCssPresentationFieldMasked(shown, target);
+    PrStringView text = domControlText(control);
+    v->caretShownAt = shownOffset(masked, text, s.caret);
+    v->caretShown = caretBlinksOn(v);
+    v->caretCollapsed = s.anchor == s.caret;
+    v->caretAffinity = s.affinity;
+    if (s.anchor != s.caret) {
+        PrColor16 color{};
+        PrColor16 background{};
+        prCssPresentationSelectionColors(shown, target, &color, &background);
+        PrLayoutHighlight selection{
+            .start = shownOffset(masked, text, s.anchor < s.caret ? s.anchor : s.caret),
+            .end = shownOffset(masked, text, s.anchor < s.caret ? s.caret : s.anchor),
+            .color = color,
+            .background = background,
+        };
+        prLayoutNodeSetHighlights(tree, node, &selection, 1);
+        prLayoutTreeSetCaret(tree, nullptr);
+    } else {
+        prLayoutNodeSetHighlights(tree, node, nullptr, 0);
+        PrLayoutCaret caret{
+            .position = {node, v->caretShownAt},
+            .affinity = s.affinity,
+            .color = prCssPresentationCaretColor(shown, target),
+        };
+        prLayoutTreeSetCaret(tree, v->caretShown && !v->caretHidden ? &caret : nullptr);
+    }
+    v->caretOffset = s.caret;
+    v->caretAnchor = s.anchor;
+    v->revealPosted = v->reveal;
+    v->reveal = false;
+    placeTextInput(v);
+}
+
+// Brings the caret that the user moved into view, once a layout holds it (revealPosted).
+void revealCaret(HtmlView* v) {
+    PrLayoutRect rect{};
+    if (!v->revealPosted || v->caretTree == nullptr || !prLayoutNodeIsValid(v->caretTree, v->caretNode) ||
+            !prLayoutNodeTextCaret(v->caretTree, v->caretNode, v->caretShownAt, v->caretAffinity,
+                PrLayoutCoordinates_Viewport, &rect))
+        return;
+    v->revealPosted = false;
+    rect.right = rect.left + prLayoutUnitFromPx(1);
+    prCssPresentationReveal(v->caretPresentation, v->caretNode, rect);
 }
 
 } // namespace
@@ -1213,6 +1614,15 @@ void prHtmlViewSetUserPreferences(PrHtmlView* view, const PrAppUserPreferences* 
 
 PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
     PrHtmlViewUpdate update{.extent = view->extent};
+    // The caret's blink is a change of what the view shows, and so is a selection that a script set.
+    if (view->caretTree != nullptr && view->caretCollapsed && caretBlinksOn(view) != view->caretShown)
+        view->changed = true;
+    PrDomElement* edited = keyTarget(view);
+    if (view->caretTree != nullptr && edited != nullptr && htmlTextControlIsEditable(edited)) {
+        PrTextEditSelection s = prTextEditViewSelections(domTextControlSync(edited)->view)[0];
+        if (s.anchor != view->caretAnchor || s.caret != view->caretOffset)
+            view->changed = true;
+    }
     // The offsets that the compositor scrolled to reach the documents now, and the scenes of the next jobs show them.
     if (view->compositor != nullptr) {
         uint32_t taken = prLayoutCompositorTakeScrolls(view->compositor, applyScroll, view);
@@ -1258,6 +1668,8 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
         // A new scene can put a box with another cursor under a pointer that has not moved, or change the cursor of the
         // box there.
         view->cursorStale = view->pointed;
+        placeTextInput(view);
+        revealCaret(view);
     }
     findFrames(view);
     update.startedForView = view->changed;
@@ -1290,6 +1702,7 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
         if (frame.posted)
             htmlPresentationPrepareJob(inner, prLayoutVecFromPx(frame.extent));
     }
+    showTextControl(view);
     cssPresentationPostJob(presentation, prLayoutVecFromPx(view->extent));
     update.style = prCssPresentationStats(presentation);
     for (uint32_t i = 0; i < view->frames.count; ++i) {
@@ -1311,6 +1724,19 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
     return update;
 }
 
+void prHtmlViewSetApp(PrHtmlView* view, PrApp* PR_NULLABLE app) {
+    view->app = app;
+}
+
+void prHtmlViewSetCaretHidden(PrHtmlView* view, bool hidden) {
+    view->changed = view->changed || view->caretHidden != hidden;
+    view->caretHidden = hidden;
+}
+
+void prHtmlViewSetTime(PrHtmlView* view, double time) {
+    view->time = time;
+}
+
 void prHtmlViewWait(PrHtmlView* view) {
     if (PrCssPresentation* presentation = presentationOf(view))
         prCssPresentationWait(presentation);
@@ -1320,13 +1746,36 @@ PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list) {
     PrCssPresentation* presentation = presentationOf(view);
     if (presentation == nullptr || prHtmlPageIsRenderBlocked(view->page))
         return PrColor16{};
-    findFrames(view);
-    prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(view->extent));
+    prHtmlViewPrepare(view);
     return playTree(view, presentation, list, view->canvasFilled);
 }
 
+void prHtmlViewPrepare(PrHtmlView* view) {
+    PrCssPresentation* presentation = presentationOf(view);
+    if (presentation == nullptr || prHtmlPageIsRenderBlocked(view->page))
+        return;
+    findFrames(view);
+    // A host that paints the document itself takes what updates give a compositor here: the layout, and then the
+    // control's caret and selection and the scroll that reveals the caret, which the layout must hold.
+    PrLayoutVec extent = prLayoutVecFromPx(view->extent);
+    prHtmlPresentationUpdate(presentation, extent);
+    showTextControl(view);
+    revealCaret(view);
+    prHtmlPresentationUpdate(presentation, extent);
+    view->changed = false;
+    view->posted = false;
+}
+
 PrAppOutput prHtmlViewOutput(const PrHtmlView* view) {
-    return PrAppOutput{.cursor = view->cursor};
+    // A blinking caret needs frames, and so does a change or a job that a later update takes to the window.
+    bool blinks = view->hasTextInput && view->caretCollapsed && !view->caretHidden &&
+        !view->page->preferences.reducedMotion;
+    return PrAppOutput{
+        .cursor = view->cursor,
+        .wantsFrame = blinks || view->changed || view->posted,
+        .hasTextInput = view->hasTextInput,
+        .textInput = view->textInput,
+    };
 }
 
 PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event, PrHtmlViewEventFlags flags) {
@@ -1340,10 +1789,17 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
         case PrAppEventKind_CompositionUpdate:
         case PrAppEventKind_CompositionEnd:
             return compose(view, event);
+        case PrAppEventKind_Clipboard:
+            pasted(view, event);
+            return PrHtmlViewEventResult_Handled;
         case PrAppEventKind_PointerMove:
             view->pointer = event->position;
             view->pointed = true;
             view->hoverDue = true;
+            // A drag from a press in an editable text control extends its selection.
+            if ((view->buttons & buttonBit(0)) != 0 && view->pressed != nullptr &&
+                    htmlTextControlIsEditable(view->pressed))
+                dragText(view, view->pressed, event->position, event->time);
             return PrHtmlViewEventResult_Handled;
         case PrAppEventKind_Scroll:
             return wheel(view, event, flags);
@@ -1357,10 +1813,18 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
             int16_t button = mouseButtonOf(event->button);
             view->buttons = uint16_t(view->buttons | buttonBit(button));
             designate(view, element, prHtmlDocumentSetActive);
+            if (button == 0) {
+                // A multi-click continues only on the element that it began on.
+                view->presses = element == view->pressElement && event->clicks > 1 ? event->clicks : 1;
+                view->pressElement = element;
+            }
             // A press that no listener cancels moves the focus (html/#focus-processing-model).
             notifyActivation(element);
-            if (fireMouse(view, "mousedown", element, hit.point, event))
+            if (fireMouse(view, "mousedown", element, hit.point, event)) {
                 htmlFocusPress(element);
+                if (button == 0 && htmlTextControlIsEditable(element))
+                    pressText(view, element, hit.point, event);
+            }
             if (button == 0) {
                 release(view);
                 view->pressed = element;

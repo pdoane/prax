@@ -29,6 +29,7 @@
 #include "pr/layout_tree.h"
 #include "pr/string_view.h"
 #include "pr/text_edit.h"
+#include "pr/text_edit_motion.h"
 #include "pr/ui.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -59,6 +60,7 @@ typedef struct PrUiTextEditDesc {
     PrTextEditBuffer* PR_NULLABLE buffer;
 
     PrUiTextEditFlags flags;
+    PrTextEditArrowMotion arrowMotion;
 
     // The background of the selected text and the color of the caret. The selected text keeps its color.
     PrColor16 selection;

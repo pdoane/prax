@@ -1519,6 +1519,23 @@ TEST_CASE("a multi-line row collects its items into lines, which wrap-reverse st
     CHECK(s.top(items[2]) - s.top(r) == 20.0f);
 }
 
+TEST_CASE("align-content centers a block container's content, past its start only if the alignment is unsafe") {
+    for (bool unsafe : {false, true}) {
+        CAPTURE(unsafe);
+        Stage s;
+        Styled box{block(), prLayoutFlexStyleDefault()};
+        box.first.display = PrLayoutDisplay_FlowRoot;
+        box.first.height = prLayoutLengthPx(10);
+        box.second.alignContent = PrLayoutAlignment(PrLayoutAlignment_Center | (unsafe ? PrLayoutAlignmentFlag_Unsafe : 0));
+        PrLayoutNode container = s.add(s.root, box);
+        Styled child{block(), prLayoutFlexStyleDefault()};
+        child.first.height = prLayoutLengthPx(30);
+        PrLayoutNode content = s.add(container, child);
+        s.layout();
+        CHECK(s.top(content) - s.top(container) == (unsafe ? -10 : 0));
+    }
+}
+
 TEST_CASE("align-content places a multi-line container's lines, and stretches them to its cross size") {
     struct Expected {
         PrLayoutAlignment value;

@@ -70,6 +70,11 @@ GRAPHEME = ["Other", "CR", "LF", "Control", "Extend", "ZWJ", "Regional_Indicator
             "SpacingMark", "L", "V", "T", "LV", "LVT"]
 GRAPHEME_MEMBER = {name: "PrUnicodeGraphemeBreak_" + name.replace("_", "") for name in GRAPHEME}
 
+# The Word_Break values, in PrUnicodeWordBreak's order.
+WORD = ["Other", "CR", "LF", "Newline", "Extend", "ZWJ", "Format", "Katakana", "Hebrew_Letter", "ALetter", "Single_Quote",
+        "Double_Quote", "MidNumLet", "MidLetter", "MidNum", "Numeric", "ExtendNumLet", "Regional_Indicator", "WSegSpace"]
+WORD_MEMBER = {name: "PrUnicodeWordBreak_" + name.replace("_", "") for name in WORD}
+
 INCB = {"None": "PrUnicodeIndicConjunctBreak_None", "Linker": "PrUnicodeIndicConjunctBreak_Linker",
         "Consonant": "PrUnicodeIndicConjunctBreak_Consonant", "Extend": "PrUnicodeIndicConjunctBreak_Extend"}
 
@@ -612,6 +617,7 @@ def emit_line_break(path, ucd):
 
 def emit_data(path, ucd):
     grapheme = fill("Other", ranges(os.path.join(ucd, "GraphemeBreakProperty.txt")))
+    word = fill("Other", ranges(os.path.join(ucd, "WordBreakProperty.txt")))
     incb = fill("None", ranges(os.path.join(ucd, "DerivedCoreProperties.txt"), "InCB"))
     flags = [0] * (MAX_CODE_POINT + 1)
     for first, last, value in ranges(os.path.join(ucd, "emoji", "emoji-data.txt")
@@ -658,16 +664,19 @@ def emit_data(path, ucd):
         classes[code_point] = value
 
     grapheme_index = {name: i for i, name in enumerate(GRAPHEME)}
+    word_index = {name: i for i, name in enumerate(WORD)}
     incb_index = {name: i for i, name in enumerate(INCB)}
     joining_members = list(dict.fromkeys(JOINING.values()))
     head = [DATA_BANNER, '\n#include "pr/unicode.h"\n\n#include "pr/count_of.h"\n'
             '#include "pr/search.h"\n\n#include "unicode/src/unicode_staged.h"\n']
     body = ["\nnamespace {\n",
             "\n" + enum_order([GRAPHEME_MEMBER[name] for name in GRAPHEME])
+            + enum_order([WORD_MEMBER[name] for name in WORD])
             + enum_order(list(INCB.values())) + enum_order(joining_members) + enum_order(list(VERTICAL.values()))
             + enum_order(["PrUnicodeGeneralCategory_" + name for _, name in GENERAL_CATEGORIES]),
             "\n// Each property's value for every code point.\n",
             staged("Grapheme", [grapheme_index[v] for v in grapheme], "uint8_t", "%d", 32),
+            staged("Word", [word_index[v] for v in word], "uint8_t", "%d", 32),
             staged("IndicConjunct", [incb_index[v] for v in incb], "uint8_t", "%d", 32),
             staged("Flag", flags, "uint16_t", "0x%04x", 12),
             staged("Script", [script_index[codes[v]] for v in scripts], "uint8_t", "%d", 24),
@@ -711,6 +720,8 @@ def emit_data(path, ucd):
             "\n} // namespace\n",
             "\nPrUnicodeGraphemeBreak prUnicodeGraphemeBreak(uint32_t codePoint) {\n"
             "    return PrUnicodeGraphemeBreak(unicodeStagedValue(kGraphemeTop, kGraphemeMiddle, kGraphemeLeaves, codePoint));\n}\n",
+            "\nPrUnicodeWordBreak prUnicodeWordBreak(uint32_t codePoint) {\n"
+            "    return PrUnicodeWordBreak(unicodeStagedValue(kWordTop, kWordMiddle, kWordLeaves, codePoint));\n}\n",
             "\nPrUnicodeIndicConjunctBreak prUnicodeIndicConjunctBreak(uint32_t codePoint) {\n"
             "    return PrUnicodeIndicConjunctBreak(unicodeStagedValue(kIndicConjunctTop, kIndicConjunctMiddle, kIndicConjunctLeaves,\n"
             "                                          codePoint));\n}\n",

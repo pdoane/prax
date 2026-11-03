@@ -104,6 +104,18 @@ void prHtmlViewSetUserPreferences(PrHtmlView* view, const PrAppUserPreferences* 
 // if the document, its scroll offsets or the viewport changed since the last job.
 PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view);
 
+// Sets the application whose clipboard a text control's cut, copy and paste use, which must outlive the view. With
+// none, they do nothing. A paste's text comes back as a Clipboard event, which the host passes to the view.
+void prHtmlViewSetApp(PrHtmlView* view, PrApp* PR_NULLABLE app);
+
+// Sets whether a text control's caret is shown, which it is by default. A host that compares renders hides it, as a
+// test runner does, since a screenshot of a blinking caret says nothing about the page.
+void prHtmlViewSetCaretHidden(PrHtmlView* view, bool hidden);
+
+// Sets the time that a text control's caret blinks by, in seconds of the clock that events carry. A posted frame sets
+// it (prHtmlViewPostFrame). A caret that no time reaches is steady.
+void prHtmlViewSetTime(PrHtmlView* view, double time);
+
 // Waits for the agent's layout thread to finish its jobs.
 void prHtmlViewWait(PrHtmlView* view);
 
@@ -117,6 +129,11 @@ void prHtmlViewWait(PrHtmlView* view);
 // (PrHtmlViewDesc::canvasFilled), or transparent while the document is render-blocked.
 PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list);
 
+// Brings the document up to date for prHtmlViewPaint without recording it: its styles and layout, and a text control's
+// caret and selection. Computing a style starts the fetches that it names. A host runs what those fetches deliver, and
+// repeats this until they deliver nothing, so that it records the document once.
+void prHtmlViewPrepare(PrHtmlView* view);
+
 // Returns what the view reports to the window, in viewport px, which a host places (prAppOutputPlaced). The cursor is
 // what the document under the pointer shows there (css-ui-4/#cursor). The view finds it again at each hover, and after
 // a commit of a scene, at most every so often while scenes follow each other and always after the last of them. It
@@ -125,6 +142,8 @@ PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list);
 // editable element, and over text that the user can select: text that user-select does not exclude, outside any widget
 // other than a text control. Auto shows the arrow anywhere else. The cursor is the arrow until the pointer has been
 // over the view.
+//
+// The text input is where a focused text control's caret stands in the last layout.
 PrAppOutput prHtmlViewOutput(const PrHtmlView* view);
 
 // What the host did with an event before passing it to the view.

@@ -220,6 +220,43 @@ editors share it. It has no dependency on UI or layout, and it is tested without
   composition stays out of it until it commits. Runs of typing or deletion join one step if they continue from where the
   last step left the selections.
 
+A text control in a document holds its value in a buffer for its life, and its selection in a view of that buffer, as
+bytes. Script reads and sets the selection in UTF-16 code units, and the binding converts. `beforeinput` runs ahead of an
+edit, outside the transaction, because a listener may change the control. Its `::field-content` shows the value.
+
+### Commands and units (`pr/text_edit_command.h`)
+
+Every editor shares what a key press asks for and what it moves by, so that keys and motions mean one thing everywhere. A
+key press names a command by the platform's bindings (`prTextEditCommandFromKey`), and the editor decides how to carry it
+out: a text field in lib/ui by its own edit, and a form control by way of `beforeinput`.
+
+Words are the word segments of UAX #29 that hold a letter or a number, and a run of Han or of Hiragana is one word,
+since the report ends a word at each of those characters. Backspace removes one code point of a grapheme cluster, so
+that a writer can correct a mark or a vowel, and takes whole a cluster that means one thing only as a whole: an emoji
+sequence, a flag, a keycap, or a character with a variation selector. Forward Delete and motion take the cluster.
+
+### Motion (`pr/text_edit_motion.h`)
+
+A key names an arrow as it lies on the screen, and the flow of the caret's line says whether that arrow runs along the
+line or between lines. Motion works in positions, a node and an offset, over an interface to geometry
+(`PrTextEditGeometry`), so that flat text and a tree of nodes share one set of rules, and tables of cases run without a
+window.
+
+- **The arrows along a line** have three behaviors in bidi text (`PrTextEditArrowMotion`), which differ only at a change
+  of direction. Logical, the default, runs through the text in order, and the arrow that points the way the paragraph
+  runs goes forward, so the caret jumps at the change. LogicalStops adds a stop there, which reaches both of the places
+  that the offset has. Visual walks the line's stops in order of their place along it. No motion stops twice at one
+  place, and a press past a soft wrap moves past the offset.
+- **Words and the ends of a line** go by the paragraph's direction and the order of the text, so the end of a line is
+  its last offset, wherever that shows. Words span the nodes of a paragraph.
+- **A collapsing motion** goes to the end of the selection on its side, by the paragraph's direction. Between lines, it
+  moves on from there.
+- **Between lines**, the goal is a position along the line in layout coordinates (`prLayoutLineStops`), so it holds under
+  transforms and in every writing mode.
+
+`pr/text_edit_layout.h` answers the interface from a layout tree. Text that no layout shows as it stands, such as masked
+text, uses its bytes' lines (`prTextEditGeometryFromText`).
+
 ## Languages and scripts (`pr/locale.h`)
 
 This section describes how the engine names languages, scripts and regions, which tags are legal, where the data comes

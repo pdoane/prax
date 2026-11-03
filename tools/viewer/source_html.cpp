@@ -131,8 +131,13 @@ void htmlInput(HtmlSource& html, const PrAppEvent& event) {
         html.host.input(html.page, event);
 }
 
-PrAppOutput htmlOutput(HtmlSource& html) {
-    return html.page != nullptr ? html.host.output(html.page) : PrAppOutput{};
+PrAppOutput htmlOutput(HtmlSource& html, double time) {
+    return html.page != nullptr ? html.host.output(html.page, time) : PrAppOutput{};
+}
+
+void htmlSetApp(HtmlSource& html, PrApp* app) {
+    if (html.page != nullptr)
+        html.host.setInteractive(html.page, app);
 }
 
 } // namespace viewer

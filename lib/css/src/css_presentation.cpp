@@ -52,6 +52,7 @@
 #include "css/src/css_unit.h"
 #include "dom/src/dom_attribute.h"
 #include "dom/src/dom_class.h"
+#include "dom/src/dom_control.h"
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_flat.h"
 #include "dom/src/dom_microsyntax.h"
@@ -4042,8 +4043,10 @@ void applyFirsts(PrCssPresentation* r) {
         uint32_t i = order.data[o];
         CssPresentationFirsts& firsts = r->firsts.data[i];
         uint32_t at = cssPresentationNodeEntry(r, firsts.element);
+        // A text field's text is not its content, so neither pseudo-element reaches it (csswg-drafts/issues/13926).
         if (at == kHashMissing || !r->entries.data[at].boxed || r->entries.data[at].layoutNode == kPrLayoutNodeNone ||
-                r->entries.data[at].style == nullptr || !isBlockContainer(r->entries.data[at].style))
+                r->entries.data[at].style == nullptr || !isBlockContainer(r->entries.data[at].style) ||
+                isTextField(firsts.element))
             continue;
         PrLayoutNode box = r->entries.data[at].layoutNode;
         bool reached = false;
@@ -4446,6 +4449,26 @@ bool generatesPseudo(const PrDomElement* element, CssPseudo pseudo, const CssCom
         display != PrCssKeyword_TableColumn && display != PrCssKeyword_TableColumnGroup;
 }
 
+// What a masked control shows for each code point of its value.
+constexpr PrStringView kPasswordMark = "\xe2\x80\xa2";
+
+// Returns true if the text control shows marks in place of its value, as input-security decides.
+bool isMasked(const PrCssPresentation* r, const PrDomElement* element) {
+    bool input = domIsHtml(element, PrDomTag_Input);
+    if (!input || domInputType(domAttributeValue(element, "type")) != PrDomInputType_Password)
+        return false;
+    uint32_t at = cssPresentationNodeEntry(r, element);
+    const CssComputedStyle* style = at != kHashMissing ? r->entries.data[at].style : nullptr;
+    return style == nullptr || cssComputedFirstKeyword(style, PrCssProperty_InputSecurity) != PrCssKeyword_None;
+}
+
+// Returns what a pseudo-element's rules are filed under: a text control's ::field-content takes those of ::placeholder
+// while its placeholder shows.
+CssPseudo cascadedPseudo(const PrDomElement* element, CssPseudo kind) {
+    bool shown = domElementPlaceholderShown(element) && domAttributeValue(element, "placeholder").size != 0;
+    return kind == CssPseudo_FieldContent && shown ? CssPseudo_Placeholder : kind;
+}
+
 // Calls `text` with each run of the text of a pseudo-element's content (css-content-3/#content-property), and `image`
 // with each image between them, as its computed value. Strings are text, and so are counter(), counters(), open-quote
 // and close-quote, whose texts `counters` holds in order. The content ends at the alternative text after a `/`, which
@@ -4456,10 +4479,50 @@ bool generatesPseudo(const PrDomElement* element, CssPseudo pseudo, const CssCom
 // has no image or the image failed to load (css-lists-3/#content-property). The marker image may be a generated image.
 // A light-dark() image is the image that the used color scheme picks, and a none that it picks is a transparent image
 // (css-color-5/#light-dark), whose value is the keyword none. Sets `readsOutside` if the pick read the user's preferred
-// scheme.
+// scheme. Gives the text that the ::field-content of `field` shows: its value, with a space after a value that is empty
+// or ends in a line feed, so that the line that a caret stands on has text to place it. An empty control shows its
+// placeholder, on one line in a one-line control. A masked control shows a mark for each code point of its value.
+template <typename Text>
+void fieldText(const PrDomElement* field, bool masked, Text text) {
+    bool line = domIsHtml(field, PrDomTag_Input);
+    PrStringView placeholder = domAttributeValue(field, "placeholder");
+    if (domElementPlaceholderShown(field) && placeholder.size != 0) {
+        TextBuffer shown{};
+        for (size_t i = 0; i < placeholder.size; ++i) {
+            char c = placeholder.data[i];
+            if (!line || (c != '\n' && c != '\r'))
+                textAppend(&shown, PrStringView{&c, 1});
+        }
+        text(textView(&shown));
+        textReset(&shown);
+        return;
+    }
+    TextBuffer value{};
+    domControlValue(field, &value);
+    if (value.text.count == 0 || value.text.data[value.text.count - 1] == '\n')
+        textAppend(&value, " ");
+    if (masked && value.text.count != 0 && value.text.data[0] != ' ') {
+        TextBuffer marks{};
+        for (uint32_t i = 0; i < value.text.count; ++i) {
+            if ((uint8_t(value.text.data[i]) & 0xc0) != 0x80)
+                textAppend(&marks, kPasswordMark);
+        }
+        text(textView(&marks));
+        textReset(&marks);
+    } else {
+        text(textView(&value));
+    }
+    textReset(&value);
+}
+
 template <typename Text, typename Image>
 void eachGenerated(PrCssPresentation* r, const CssComputedStyle* style, CssPseudo pseudo,
-        const CssCountingTexts& counters, bool* readsOutside, Text text, Image image) {
+        const PrDomElement* PR_NULLABLE originating, const CssCountingTexts& counters, bool* readsOutside, Text text,
+        Image image) {
+    if (pseudo == CssPseudo_FieldContent && originating != nullptr) {
+        fieldText(originating, isMasked(r, originating), text);
+        return;
+    }
     CssValueRun content = cssComputedValue(style, PrCssProperty_Content);
     auto counterText = [&](uint32_t at) {
         uint32_t start = at == 0 ? 0 : counters.ends.data[at - 1];
@@ -4588,7 +4651,8 @@ void applyGenerated(PrCssPresentation* r, CssPresentationEntry& entry) {
     bool isMarker = cssPseudoIsMarker(pseudo->pseudo);
     PrLayoutStyleIndex record = kPrLayoutStyleNone;
     bool reads = false;
-    eachGenerated(r, entry.style, pseudo->pseudo, pseudo->counters, &reads,
+    const PrDomElement* originating = domElementFromNode(pseudo->parent);
+    eachGenerated(r, entry.style, pseudo->pseudo, originating, pseudo->counters, &reads,
         [&](PrStringView text) { prLayoutNodeCreateText(r->tree, box, text); }, [&](CssValueRun value) {
             // A generated image, or a transparent image, which paints nothing.
             bool generated = generatedImage(value);
@@ -4694,7 +4758,7 @@ bool visitPseudo(Walk& w, uint32_t at, uint32_t which, CssPseudo kind, PrDomElem
             .viewport = viewportOf(r),
             .fresh = false,
             .matched = nullptr,
-            .pseudo = kind,
+            .pseudo = cascadedPseudo(element, kind),
         };
         base = cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
     } else if (!restyle && !suppressed && kept) {
@@ -5042,6 +5106,8 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
     bool replaced = traits.kind == CssBoxKind_Replaced;
     bool semiReplaced = traits.kind == CssBoxKind_Button || traits.kind == CssBoxKind_TextField;
     bool childBox = (box && !replaced && traits.kind != CssBoxKind_LineBreak) || contents;
+    // A text control's children are its default value, which its ::field-content shows, and they have no boxes.
+    bool nodeBoxes = childBox && traits.kind != CssBoxKind_TextField;
     bool boxChanged = false;
     bool made = false;
     // The parent reconciles whether its box holds this element's children's boxes in the element's place.
@@ -5117,7 +5183,7 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
     // the element for them. Children that are already in are visited as usual.
     bool held = false;
     auto showsBox = [&](const PrDomNode* child) {
-        return childBox && ((traits.flags & CssBoxTraitFlag_ShowsOneChild) == 0 || child == traits.shownChild);
+        return nodeBoxes && ((traits.flags & CssBoxTraitFlag_ShowsOneChild) == 0 || child == traits.shownChild);
     };
     domFlatEach(element, [&](PrDomNode* child) PR_FORCE_INLINE_LAMBDA {
         if (!every && child->pending == 0)
@@ -5130,7 +5196,7 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
                 held = true;
                 return;
             }
-            bool unseen = entry == kHashMissing || (childBox && !r->entries.data[entry].boxed && made);
+            bool unseen = entry == kHashMissing || (nodeBoxes && !r->entries.data[entry].boxed && made);
             if (marked || unseen || checking || change != ParentChange_None || w.all || made || subtree)
                 children |= visitElement(w, e, style, change, subtree, childRematch, showsBox(child));
         } else if (domIsText(child)) {
@@ -5478,6 +5544,10 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
     // A color's resolved value is its used value: a keyword resolves to sRGB, written with rgb(), and a function that
     // reads the element resolves in its own space (cssom-1/#resolved-values).
     CssValueRun computed = cssComputedValue(style, property);
+    // A caret-color of auto is the element's color (css-ui-4/#caret-color).
+    bool automatic = computed.count == 1 && cssValueIsKeyword(computed.values, PrCssKeyword_Auto);
+    if (property == PrCssProperty_CaretColor && automatic)
+        computed = cssComputedValue(style, PrCssProperty_Color);
     // light-dark() resolves to the color that the used color scheme chooses (css-color-5/#light-dark), which resolves
     // as if it were written alone.
     while (cssIsColorProperty(property) && computed.count != 0 &&
@@ -5831,7 +5901,7 @@ bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint
             .viewport = viewportOf(r),
             .fresh = true,
             .matched = nullptr,
-            .pseudo = kind,
+            .pseudo = cascadedPseudo(element, kind),
         };
         fresh = cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
     }
@@ -5892,7 +5962,7 @@ bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint
         }
         bool content = true;
         bool contentReads = false;
-        eachGenerated(r, cached, kind, pseudo->counters, &contentReads, [&](PrStringView text) {
+        eachGenerated(r, cached, kind, element, pseudo->counters, &contentReads, [&](PrStringView text) {
             content = content && run != kPrLayoutNodeNone && prLayoutNodeText(r->tree, run) == text;
             run = run != kPrLayoutNodeNone ? prLayoutNodeNextSibling(r->tree, run) : run;
         }, [&](CssValueRun value) {
@@ -6030,7 +6100,7 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
     while (PrDomNode* child = domFlatNext(children)) {
         PrDomElement* e = domElementFromNode(child);
         if (e != nullptr) {
-            if (!verifyElement(r, e, cached, box, rootFont, out, expected))
+            if (!verifyElement(r, e, cached, box && !isTextField(element), rootFont, out, expected))
                 return false;
         } else if (!domIsText(child)) {
             continue;
@@ -6880,6 +6950,28 @@ void cssPresentationStatesChanged(PrCssPresentation* presentation, PrDomElement*
         invalidate(presentation, element, cssFeatureHash(CssFeature_State, ""));
 }
 
+void cssPresentationFieldChanged(PrCssPresentation* presentation, PrDomElement* element) {
+    if (!isTextField(element))
+        return;
+    uint32_t at = cssPresentationNodeEntry(presentation, element);
+    if (at == kHashMissing)
+        return;
+    CssPresentationPseudo* pseudo = presentation->entries.data[at].pseudos[kFieldContentPseudo];
+    uint32_t own = pseudo != nullptr ? cssPresentationNodeEntry(presentation, pseudo) : kHashMissing;
+    if (own != kHashMissing && presentation->entries.data[own].boxed)
+        queueBox(presentation, own, CssPresentationBoxOp_Content);
+    // The value of a control decides its automatic direction.
+    if (automaticDirection(element)) {
+        if (presentation->entries.data[at].direction == CssPresentationDirection_Unknown) {
+            invalidate(presentation, element, cssFeatureHash(CssFeature_Attribute, "dir"));
+        } else if (!presentation->entries.data[at].directionQueued) {
+            presentation->entries.data[at].directionQueued = true;
+            presentation->directionQueue.push(at);
+            presentation->changed = true;
+        }
+    }
+}
+
 void cssPresentationHostStatesChanged(PrCssPresentation* presentation, PrDomHostState states) {
     // An element that the presentation has not styled takes the host's answers when it is first styled.
     for (uint32_t i = 0; i < presentation->entries.count; ++i) {
@@ -7601,6 +7693,53 @@ PrLayoutNode prCssPresentationLayoutNode(const PrCssPresentation* presentation, 
     return layoutNodeOf(presentation, node);
 }
 
+PrLayoutNode prCssPresentationFieldText(const PrCssPresentation* presentation, const PrDomElement* element) {
+    uint32_t at = cssPresentationNodeEntry(presentation, element);
+    if (at == kHashMissing)
+        return kPrLayoutNodeNone;
+    const CssPresentationPseudo* pseudo = presentation->entries.data[at].pseudos[kFieldContentPseudo];
+    uint32_t own = pseudo != nullptr ? cssPresentationNodeEntry(presentation, pseudo) : kHashMissing;
+    if (own == kHashMissing || !presentation->entries.data[own].boxed)
+        return kPrLayoutNodeNone;
+    return prLayoutNodeFirstChild(presentation->tree, presentation->entries.data[own].layoutNode);
+}
+
+bool prCssPresentationFieldMasked(const PrCssPresentation* presentation, const PrDomElement* element) {
+    return isMasked(presentation, element);
+}
+
+void prCssPresentationSelectionColors(PrCssPresentation* presentation, const PrDomElement* element, PrColor16* color,
+        PrColor16* background) {
+    *color = PrColor16{};
+    *background = PrColor16{};
+    uint32_t at = cssPresentationNodeEntry(presentation, element);
+    const CssComputedStyle* parent = at != kHashMissing ? presentation->entries.data[at].style : nullptr;
+    if (parent == nullptr)
+        return;
+    const CssComputedStyle* style = cascadeFirst(presentation, element, CssPseudo_Selection, parent);
+    if (style == nullptr)
+        return;
+    CssColorEnvironment environment = colorEnvironmentOf(presentation, 0, nullptr);
+    *color = prColor16FromColor(cssStyleColor(style, environment));
+    PrColor fill{};
+    CssColorContext colors = cssStyleColorContext(style, environment);
+    if (cssResolveColor(cssComputedValue(style, PrCssProperty_BackgroundColor), 0, colors, &fill))
+        *background = prColor16FromColor(fill);
+    cssComputedStyleRelease(style);
+}
+
+PrColor16 prCssPresentationCaretColor(PrCssPresentation* presentation, const PrDomElement* element) {
+    uint32_t at = cssPresentationNodeEntry(presentation, element);
+    const CssComputedStyle* style = at != kHashMissing ? presentation->entries.data[at].style : nullptr;
+    if (style == nullptr)
+        return prColor16FromColor(PrColor{0, 0, 0, 1});
+    CssColorEnvironment environment = colorEnvironmentOf(presentation, 0, nullptr);
+    PrColor color = cssStyleColor(style, environment);
+    if (cssComputedFirstKeyword(style, PrCssProperty_CaretColor) != PrCssKeyword_Auto)
+        cssResolveColor(cssComputedValue(style, PrCssProperty_CaretColor), 0, cssStyleColorContext(style, environment), &color);
+    return prColor16FromColor(color);
+}
+
 void prCssPresentationSetScroll(PrCssPresentation* presentation, PrLayoutNode node, PrLayoutVec offset) {
     if (prCssPresentationIsBusy(presentation)) {
         presentation->pendingScrolls.push(PrLayoutSceneScroll{node, offset});
@@ -7643,6 +7782,13 @@ PrLayoutVec prCssPresentationScrollFrom(PrCssPresentation* presentation, PrLayou
             return rest;
         container = prLayoutNodeScrollContainer(tree, container);
     }
+}
+
+void prCssPresentationReveal(PrCssPresentation* presentation, PrLayoutNode node, PrLayoutRect rect) {
+    own(presentation);
+    PrLayoutVec offset{};
+    while ((node = prLayoutNodeRevealStep(presentation->tree, node, &rect, &offset)) != kPrLayoutNodeNone)
+        scrollTree(presentation, node, offset, CssPresentationScrollBy_Document);
 }
 
 uint32_t prCssPresentationTakeScrolls(PrCssPresentation* presentation, PrLayoutSceneScroll* PR_NULLABLE out,

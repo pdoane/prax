@@ -457,6 +457,7 @@ bool prDomCustomEventInitCustomEvent(PrDomCustomEvent* event, PrStringView type,
 PrDomUiEvent* PR_NULLABLE prDomUiEventQuery(PrDomEvent* PR_NULLABLE object) {
     bool ui = object != nullptr && (object->kind == PrDomEventKind_Ui || object->kind == PrDomEventKind_Focus ||
         object->kind == PrDomEventKind_Mouse || object->kind == PrDomEventKind_Wheel ||
+        object->kind == PrDomEventKind_Input ||
         object->kind == PrDomEventKind_Keyboard || object->kind == PrDomEventKind_Composition);
     return ui ? static_cast<PrDomUiEvent*>(object) : nullptr;
 }
@@ -661,6 +662,94 @@ void prDomKeyboardEventInitKeyboardEvent(PrDomKeyboardEvent* event, PrStringView
     prStringReplace(&keyboard->key, init->key);
     keyboard->location = init->location;
     keyboard->modifiers = init->modifiers;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// InputEvent
+
+struct PrDomDataTransfer {
+    uint32_t references;
+    PrString text;
+    bool hasText;
+};
+
+PrDomClipboardEvent* PR_NULLABLE prDomClipboardEventQuery(PrDomEvent* PR_NULLABLE object) {
+    if (object == nullptr || object->kind != PrDomEventKind_Clipboard)
+        return nullptr;
+    return static_cast<PrDomClipboardEvent*>(object);
+}
+
+PrDomClipboardEvent* prDomClipboardEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init, PrStringView text) {
+    PrDomEventInit values = init != nullptr ? *init : prDomEventInitDefault();
+    PrDomClipboardEvent* event = domEventCreate<PrDomClipboardEvent>(type, values, PrDomEventKind_Clipboard);
+    event->transfer = allocZeroed<PrDomDataTransfer>();
+    event->transfer->references = 1;
+    event->transfer->text = prStringCopy(text);
+    event->transfer->hasText = text.size != 0;
+    return event;
+}
+
+PrDomDataTransfer* prDomClipboardEventClipboardData(const PrDomClipboardEvent* event) {
+    return event->transfer;
+}
+
+void prDomDataTransferRetain(PrDomDataTransfer* transfer) {
+    ++transfer->references;
+}
+
+void prDomDataTransferRelease(PrDomDataTransfer* PR_NULLABLE transfer) {
+    if (transfer == nullptr || --transfer->references != 0)
+        return;
+    prStringReset(&transfer->text);
+    prMemoryFree(transfer);
+}
+
+PrStringView prDomDataTransferText(const PrDomDataTransfer* transfer) {
+    return prStringView(&transfer->text);
+}
+
+bool prDomDataTransferHasText(const PrDomDataTransfer* transfer) {
+    return transfer->hasText;
+}
+
+void prDomDataTransferSetText(PrDomDataTransfer* transfer, PrStringView text) {
+    prStringReset(&transfer->text);
+    transfer->text = prStringCopy(text);
+    transfer->hasText = true;
+}
+
+void prDomDataTransferClear(PrDomDataTransfer* transfer) {
+    prStringReset(&transfer->text);
+    transfer->hasText = false;
+}
+
+PrDomInputEvent* PR_NULLABLE prDomInputEventQuery(PrDomEvent* PR_NULLABLE object) {
+    if (object == nullptr || object->kind != PrDomEventKind_Input)
+        return nullptr;
+    return static_cast<PrDomInputEvent*>(object);
+}
+
+PrDomInputEvent* prDomInputEventCreate(PrStringView type, const PrDomUiEventInit* PR_NULLABLE init, PrStringView data,
+        PrStringView inputType, bool isComposing) {
+    PrDomUiEventInit values = init != nullptr ? *init : prDomUiEventInitDefault();
+    PrDomInputEvent* event = domEventCreate<PrDomInputEvent>(type, values.event, PrDomEventKind_Input);
+    setUiMembers(event, values);
+    event->composition = prStringCopy(data);
+    event->inputType = prStringCopy(inputType);
+    event->isComposing = isComposing;
+    return event;
+}
+
+PrStringView prDomInputEventData(const PrDomInputEvent* event) {
+    return prStringView(&event->composition);
+}
+
+PrStringView prDomInputEventInputType(const PrDomInputEvent* event) {
+    return prStringView(&event->inputType);
+}
+
+bool prDomInputEventIsComposing(const PrDomInputEvent* event) {
+    return event->isComposing;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

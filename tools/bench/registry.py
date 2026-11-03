@@ -130,8 +130,9 @@ BENCHES = [
           sources=[os.path.join(TESTS, "html", "tests", "list_bench.cpp")]),
     Bench("ui", "immediate-mode frames: trees declared whole every frame, unchanged, changed, scrolled and cold",
           ["ui_bench", "editor_bench"], fetch=["fonts"], run=engine.ui),
-    Bench("text-edit", "editing a text of 100, 10,000 and 1,000,000 lines: at the caret, far away, and with undo",
-          ["text_edit_bench"], run=engine.text_edit,
+    Bench("text-edit", "editing a text of 100, 10,000 and 1,000,000 lines: at the caret, far away, and with undo; and moving a "
+          "caret through layout",
+          ["text_edit_bench"], fetch=["fonts"], run=engine.text_edit,
           sources=[os.path.join(common.ROOT, "tools", "bench", "text_edit_bench.cpp")]),
     Bench("flex", "trees of flex boxes in lib/layout, Yoga and Taffy: built, laid out, resized, changed and unchanged",
           ["flex_bench"], run=engine.flex, options=engine.flex_options,
