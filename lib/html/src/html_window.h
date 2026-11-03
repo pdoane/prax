@@ -89,6 +89,8 @@ struct HtmlWindow : DomCountedTarget {
     PrStringView userAgent;
     PrHtmlNavigatorCompatibilityMode navigatorCompatibilityMode;
 
+    bool inErrorReportingMode;                // true during an error event's dispatch (html/#report-an-exception)
+
     // The canvases whose bitmaps changed since they were last shown, which the next rendering update shows. Each holds
     // its element (domNodeHold).
     Array<PrDomElement*> canvases;

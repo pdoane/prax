@@ -1290,9 +1290,11 @@ JSValue insertion(JSContext* ctx, JSValueConst parentObject, int argc, JSValueCo
     PrDomNode* node = nodeArgument(ctx, argv[0]);
     if (node == nullptr)
         return JS_EXCEPTION;
-    // insertBefore's child may be null, and replaceChild's may not.
+    // insertBefore's child is nullable, so undefined converts to null (webidl/#es-nullable-type). replaceChild's is not
+    // nullable.
     PrDomNode* second = nullptr;
-    if (magic == Insertion_ReplaceChild || (magic == Insertion_InsertBefore && !JS_IsNull(argv[1]))) {
+    bool childGiven = required == 2 && !JS_IsNull(argv[1]) && !JS_IsUndefined(argv[1]);
+    if (magic == Insertion_ReplaceChild || childGiven) {
         second = nodeArgument(ctx, argv[1]);
         if (second == nullptr)
             return JS_EXCEPTION;

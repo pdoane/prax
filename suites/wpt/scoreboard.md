@@ -144,7 +144,7 @@ of a change to it is what the change did.
 | dom/crashtests                   |       4/4 |          4/4 |  100.0% |
 | dom/events                       |   190/202 |      481/794 |   60.5% |
 | dom/lists                        |       5/5 |      182/189 |   96.2% |
-| dom/nodes                        |   398/404 |  13354/15289 |   87.3% |
+| dom/nodes                        |   398/404 |  13355/15289 |   87.3% |
 | dom/ranges                       |     72/72 |  44512/44706 |   99.5% |
 | dom/traversal                    |     16/18 |        1/847 |    0.1% |
 | domparsing                       |     46/46 |      254/597 |   42.5% |
@@ -187,7 +187,7 @@ of a change to it is what the change did.
 | uievents/textInput               |       5/7 |         1/21 |    4.7% |
 | webidl                           |       2/2 |      159/192 |   82.8% |
 | webidl/ecmascript-binding        |     42/43 |      197/314 |   62.7% |
-| **total**                        | 1637/1877 | 96874/115083 |   84.1% |
+| **total**                        | 1637/1877 | 96875/115083 |   84.1% |
 
 ## encoding
 
@@ -206,12 +206,12 @@ of a change to it is what the change did.
 | Module                                              |     Files |         Tests | Passing |
 |-----------------------------------------------------|----------:|--------------:|--------:|
 | apng                                                |       2/2 |           1/2 |   50.0% |
-| custom-elements                                     |     41/43 |       287/628 |   45.7% |
+| custom-elements                                     |     41/43 |       298/628 |   47.4% |
 | custom-elements/form-associated                     |     19/24 |          8/86 |    9.3% |
 | custom-elements/htmlconstructor                     |       1/1 |          2/10 |   20.0% |
 | custom-elements/parser                              |     10/11 |         16/32 |   50.0% |
-| custom-elements/reactions                           |     29/29 |       167/331 |   50.4% |
-| custom-elements/registries                          |     32/39 |     1939/2312 |   83.8% |
+| custom-elements/reactions                           |     29/29 |       175/331 |   52.8% |
+| custom-elements/registries                          |     32/39 |     1940/2312 |   83.9% |
 | custom-elements/state                               |       4/5 |         24/26 |   92.3% |
 | custom-elements/upgrading                           |       4/5 |         18/23 |   78.2% |
 | focus                                               |     17/43 |         10/51 |   19.6% |
@@ -230,16 +230,16 @@ of a change to it is what the change did.
 | html/rendering                                      |   478/481 |   10549/11491 |   91.8% |
 | html/scripting                                      |       3/3 |           0/4 |    0.0% |
 | html/select                                         |       2/2 |           1/6 |   16.6% |
-| html/semantics                                      | 2441/2909 |    7866/19649 |   40.0% |
+| html/semantics                                      | 2442/2909 |    7879/19649 |   40.0% |
 | html/syntax                                         |   249/250 |     6636/6914 |   95.9% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
 | html/user-activation                                |      9/21 |          3/28 |   10.7% |
-| html/webappapis                                     |   286/329 |     1768/2519 |   70.1% |
+| html/webappapis                                     |   288/329 |     1770/2519 |   70.2% |
 | inert                                               |     25/29 |        37/112 |   33.0% |
 | png                                                 |       4/4 |           3/4 |   75.0% |
 | png/apng                                            |     29/29 |         10/29 |   34.4% |
 | png/errors                                          |       3/3 |           3/3 |  100.0% |
-| quirks                                              |     35/35 |        48/130 |   36.9% |
+| quirks                                              |     35/35 |        49/130 |   37.6% |
 | quirks/crashtests                                   |       1/1 |           1/1 |  100.0% |
 | quirks/hashless-hex-color                           |       3/3 |     1974/2060 |   95.8% |
 | quirks/historical                                   |       2/2 |           2/2 |  100.0% |
@@ -262,7 +262,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8257/9505 | 108486/155864 |   69.6% |
+| **total**                                           | 8260/9505 | 108522/155864 |   69.6% |
 
 ## infrastructure
 
@@ -389,6 +389,6 @@ of a change to it is what the change did.
 
 | Module       |   Files |    Tests | Passing |
 |--------------|--------:|---------:|--------:|
-| xhr          | 289/335 | 765/1411 |   54.2% |
+| xhr          | 290/335 | 766/1412 |   54.2% |
 | xhr/formdata |   17/18 |    61/78 |   78.2% |
-| **total**    | 306/353 | 826/1489 |   55.4% |
+| **total**    | 307/353 | 827/1490 |   55.5% |

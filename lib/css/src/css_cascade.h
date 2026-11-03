@@ -345,7 +345,7 @@ struct CssMatchedStyle {
 // The number of slots in the cache, and the number that one hash may use: a set of kCssMatchedWays slots. A new style
 // evicts the least recently used slot of its set. An element that alternates between two sets of entries whose hashes
 // map to the same set has a style cached for each.
-constexpr uint32_t kCssMatchedStyles = 256;
+constexpr uint32_t kCssMatchedStyles = 1024;
 constexpr uint32_t kCssMatchedWays = 4;
 
 // A computed group, cached by what it was computed from: the kind of group, the declarations that won its properties,
@@ -369,7 +369,7 @@ struct CssCachedGroup {
 };
 
 // The number of slots in the cache of computed groups. A group evicts the group whose key hashes to the same slot.
-constexpr uint32_t kCssCachedGroups = 512;
+constexpr uint32_t kCssCachedGroups = 4096;
 
 // The size of the Bloom filter of the features of an element's ancestors, in 64-bit words.
 constexpr uint32_t kCssAncestorFilterWords = 64;

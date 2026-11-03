@@ -110,7 +110,7 @@ void signalSlotChange(PrDomElement* slot) {
             return;
     }
     slots->signals.push(slot);
-    const DomDocumentHost* host = document->host;
+    const DomDocumentHost* host = domDocumentMicrotaskHost(document);
     if (slots->token != nullptr || host == nullptr)
         return;
     DomSlotsToken* token = allocZeroed<DomSlotsToken>();

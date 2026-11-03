@@ -98,6 +98,27 @@ class HtmlHostTests(unittest.TestCase):
             self.assertIn("SyntaxError", result.stderr)
             self.assertIn(url(Path(directory) / "pages" / "test.html") + ":3:", result.stderr)
 
+    def test_an_error_listener_that_throws_is_reported_and_not_dispatched_again(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>let calls = 0;\n"
+                                   "addEventListener('error', () => { ++calls; throw new Error('listener'); });\n"
+                                   "setTimeout(() => print('calls', calls));\n"
+                                   "throw new Error('script');</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "calls 1\n")
+            self.assertIn("Error: listener", result.stderr)
+            self.assertIn("Error: script", result.stderr)
+
+    def test_insert_before_reads_an_undefined_child_as_null(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><body><p></p><script>const added = document.createElement('i');\n"
+                                   "document.body.insertBefore(added, undefined);\n"
+                                   "print(document.body.lastChild === added);</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "true\n")
+
     def test_a_run_that_times_out_still_writes_its_screenshot(self):
         with tempfile.TemporaryDirectory() as directory:
             screenshot = Path(directory) / "page.png"
@@ -109,6 +130,39 @@ class HtmlHostTests(unittest.TestCase):
                                        "--network", "--timeout", "200", "--screenshot", str(screenshot))
             self.assertEqual(result.returncode, 124, result.stderr)
             self.assertTrue(screenshot.exists())
+
+    def test_a_style_property_setter_runs_the_reactions_it_queues_before_it_returns(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><x-a id=x style='color: red'></x-a><script>const seen = [];\n"
+                                   "customElements.define('x-a', class extends HTMLElement {\n"
+                                   "  static get observedAttributes() { return ['style']; }\n"
+                                   "  attributeChangedCallback(n, old, value) {\n"
+                                   "    if (seen.length > 8) return;\n"
+                                   "    seen.push(value);\n"
+                                   "    if (old === null) this.style.opacity = '0.5';\n"
+                                   "    if (old !== value) this.style = value;\n"
+                                   "  }\n"
+                                   "});\n"
+                                   "print(seen.length);</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "5\n")
+
+    def test_template_contents_are_inert_and_their_observers_still_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><template id=t><x-e a=1></x-e></template><script>\n"
+                                   "customElements.define('x-e', class extends HTMLElement {\n"
+                                   "constructor() { super(); print('constructed'); }});\n"
+                                   "const c = t.content;\n"
+                                   "print(c.ownerDocument !== document, c.ownerDocument.defaultView);\n"
+                                   "c.cloneNode(true);\n"
+                                   "new MutationObserver(r => print('records', r.length)).observe(c, {subtree: true, attributes: true});\n"
+                                   "c.firstChild.setAttribute('a', '2');\n"
+                                   "document.importNode(c, true);\n"
+                                   "</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["true null", "constructed", "records 1"])
 
     def test_modules_defer_resolve_imports_and_share_external_instances(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -55,6 +55,11 @@ typedef struct PrJsHtmlEngine PrJsHtmlEngine;
 // Creates an engine. The runtime runs the browsing contexts of one agent.
 PrJsHtmlEngine* prJsHtmlEngineCreate(const PrJsHtmlEngineDesc* desc);
 
+// Measures the engine's stack limit from the calling thread, which runs scripts from now on. A host that creates the
+// engine on another thread calls this first. The limit is an address on one thread's stack, and a script's deep
+// recursion would otherwise overflow the stack instead of throwing a RangeError.
+void prJsHtmlEngineAttachThread(PrJsHtmlEngine* engine);
+
 // Destroys the engine's realms and runtime. The browsing contexts that it runs scripts for are destroyed after it,
 // since its objects' finalizers reach their windows. Their hosts run no scripts once the engine is gone.
 void prJsHtmlEngineDestroy(PrJsHtmlEngine* PR_NULLABLE engine);

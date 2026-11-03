@@ -13,7 +13,8 @@ namespace pr_impl {
 namespace {
 
 size_t treeCount(PrDomDocument* document, PrDomNode* node) {
-    CHECK(node->document == document);
+    // The contents of a template are in the inert document of the template's document.
+    CHECK((node->document == document || node->document == document->templateDocument));
     size_t count = 1;
     PrDomNode* previous = nullptr;
     for (PrDomNode* child = node->first; child != nullptr; child = child->next) {
@@ -70,6 +71,8 @@ TEST_CASE("a removed node with no references is freed with its tree") {
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Html, "");
     domAttach(document, html, nullptr);
+    // The inert document of the template below lasts as long as the document.
+    domDocumentTemplateDocument(document);
     size_t before = prMemoryLiveCount();
     PrDomElement* div = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "");
     domSetAttribute(div, PrDomNamespace_None, "id", "an id longer than inline string storage");
@@ -160,13 +163,29 @@ TEST_CASE("the connected flag follows insertion and removal, into shadow trees")
     domNodeRelease(document);
 }
 
+TEST_CASE("a node that leaves the contents of a template for its host's tree is adopted") {
+    PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
+    PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Html, "");
+    domAttach(document, html, nullptr);
+    PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Template, "");
+    domAttach(html, element, nullptr);
+    PrDomNode* contents = domElementContents(element);
+    CHECK(contents->document == domDocumentTemplateDocument(document));
+    PrDomText* text = domTextCreate(contents->document, "moved");
+    domAttach(contents, text, nullptr);
+    domInsert(html, contents, nullptr);
+    CHECK(text->parent == html);
+    CHECK(text->document == document);
+    domNodeRelease(document);
+}
+
 TEST_CASE("an adopted subtree keeps its addresses after its old document is gone") {
     PrDomDocument* source = domDocumentCreate(DomDocumentKind_Html);
     PrDomDocument* target = domDocumentCreate(DomDocumentKind_Html);
     PrDomElement* element = domElementCreate(source, PrDomNamespace_Html, PrDomTag_Template, "");
     PrDomNode* contents = domElementContents(element);
     REQUIRE(contents != nullptr);
-    PrDomText* text = domTextCreate(source, "a text payload longer than inline string storage");
+    PrDomText* text = domTextCreate(contents->document, "a text payload longer than inline string storage");
     domAttach(contents, text, nullptr);
     domSetAttribute(element, PrDomNamespace_None, "name", "a value longer than inline string storage");
     const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "name");
@@ -178,14 +197,16 @@ TEST_CASE("an adopted subtree keeps its addresses after its old document is gone
     domAdopt(target, element);
     CHECK(ownedCount(source) == 1);
     CHECK(ownedCount(target) == 5);
-    CHECK(contents->document == target);
+    PrDomDocument* inert = domDocumentTemplateDocument(target);
+    CHECK(inert != target);
+    CHECK(contents->document == inert);
     domNodeRelease(source);
 
     CHECK(element->document == target);
     CHECK(domElementContents(element) == contents);
-    CHECK(contents->document == target);
+    CHECK(contents->document == inert);
     CHECK(contents->first == text);
-    CHECK(text->document == target);
+    CHECK(text->document == inert);
     CHECK(prStringView(&text->data) == "a text payload longer than inline string storage");
     CHECK(domAttribute(element, PrDomNamespace_None, "name") == attribute);
     CHECK(attribute->document == target);

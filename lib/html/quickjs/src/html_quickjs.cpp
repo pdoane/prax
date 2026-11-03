@@ -893,6 +893,10 @@ PrJsHtmlEngine* prJsHtmlEngineCreate(const PrJsHtmlEngineDesc* desc) {
     return engine;
 }
 
+void prJsHtmlEngineAttachThread(PrJsHtmlEngine* engine) {
+    JS_UpdateStackTop(engine->runtime);
+}
+
 void prJsHtmlEngineDestroy(PrJsHtmlEngine* PR_NULLABLE engine) {
     if (engine == nullptr)
         return;

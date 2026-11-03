@@ -147,10 +147,10 @@ PrStringView tokensText(const PrDomTokenList* list) {
     return attribute != nullptr ? prStringView(&attribute->value) : "";
 }
 
-TokenSet readTokens(const PrDomTokenList* list) {
-    TokenSet set = {prStringCopy(tokensText(list)), {}};
-    domOrderedSetParse(prStringView(&set.text), &set.tokens);
-    return set;
+// Fills `set` in place, because its tokens are views of its text, whose bytes may be held inside the PrString.
+void readTokens(const PrDomTokenList* list, TokenSet* set) {
+    set->text = prStringCopy(tokensText(list));
+    domOrderedSetParse(prStringView(&set->text), &set->tokens);
 }
 
 // dom/#concept-dtl-update. Leaves an element with no attribute and no tokens unchanged.
@@ -424,7 +424,8 @@ PrStatus domTokenListAdd(PrDomTokenList* list, const PrStringView* PR_NULLABLE t
     PrStatus status = validate(tokens, count);
     if (status != PrStatus_Ok)
         return status;
-    TokenSet set = readTokens(list);
+    TokenSet set;
+    readTokens(list, &set);
     for (uint32_t i = 0; i < count; ++i) {
         if (set.find(tokens[i]) == set.tokens.count)
             set.tokens.push(tokens[i]);
@@ -438,7 +439,8 @@ PrStatus domTokenListRemove(PrDomTokenList* list, const PrStringView* PR_NULLABL
     PrStatus status = validate(tokens, count);
     if (status != PrStatus_Ok)
         return status;
-    TokenSet set = readTokens(list);
+    TokenSet set;
+    readTokens(list, &set);
     for (uint32_t i = 0; i < count; ++i) {
         uint32_t at = set.find(tokens[i]);
         if (at < set.tokens.count)
@@ -453,7 +455,8 @@ PrStatus domTokenListToggle(PrDomTokenList* list, PrStringView token, const bool
     PrStatus status = validate(token);
     if (status != PrStatus_Ok)
         return status;
-    TokenSet set = readTokens(list);
+    TokenSet set;
+    readTokens(list, &set);
     uint32_t at = set.find(token);
     bool present = at < set.tokens.count;
     if (present && (force == nullptr || !*force)) {
@@ -478,7 +481,8 @@ PrStatus domTokenListReplace(PrDomTokenList* list, PrStringView token, PrStringV
         status = validate(newToken);
     if (status != PrStatus_Ok)
         return status;
-    TokenSet set = readTokens(list);
+    TokenSet set;
+    readTokens(list, &set);
     uint32_t at = set.find(token);
     *out = at < set.tokens.count;
     if (*out) {

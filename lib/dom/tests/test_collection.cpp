@@ -70,3 +70,24 @@ TEST_CASE("a foreign element matches its tag name as written, and a named item i
     prDomHtmlCollectionDestroy(empty);
     domNodeRelease(document);
 }
+
+TEST_CASE("a token list reads a value short enough to be held inline, and toggles by it") {
+    PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
+    PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "");
+    domSetAttribute(element, PrDomNamespace_None, "class", "a b");
+    PrDomTokenList* list = prDomTokenListCreate(element, "class");
+    bool on = false;
+    const bool yes = true;
+    const bool no = false;
+    CHECK(prDomTokenListToggle(list, "a", &yes, &on) == PrStatus_Ok);
+    CHECK(on);
+    CHECK(domAttributeValue(element, "class") == "a b");
+    CHECK(prDomTokenListToggle(list, "c", nullptr, &on) == PrStatus_Ok);
+    CHECK(on);
+    CHECK(domAttributeValue(element, "class") == "a b c");
+    CHECK(prDomTokenListToggle(list, "a", &no, &on) == PrStatus_Ok);
+    CHECK(!on);
+    CHECK(domAttributeValue(element, "class") == "b c");
+    prDomTokenListDestroy(list);
+    domNodeRelease(document);
+}

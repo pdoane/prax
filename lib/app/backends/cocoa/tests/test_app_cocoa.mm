@@ -118,6 +118,9 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
 }
 
 TEST_CASE("a browser loads a page, runs a script in it and captures it at two pixels per CSS pixel") {
+    // A capture waits for the screen's frames, which stop while the display is off.
+    if (CGDisplayIsAsleep(CGMainDisplayID()))
+        return;
     Browse browse;
     PrAppDesc appDesc{.title = "Browser test", .extent = {64, 32}, .headless = true};
     browse.app = prAppCocoaCreate(&appDesc);

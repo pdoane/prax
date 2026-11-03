@@ -142,7 +142,7 @@ void queueRecord(PrDomNode* target, PrDomMutationType type, PrStringView name, P
         record->oldValue = interested.data[i].oldValue ? prStringCopy(oldValue) : prStringNull();
         observer->records.push(record);
         // dom/#queue-a-mutation-observer-compound-microtask
-        const DomDocumentHost* host = document->host;
+        const DomDocumentHost* host = domDocumentMicrotaskHost(document);
         if (!observer->pending && host != nullptr && host->queueMicrotask(host->context, notify, observer)) {
             observer->pending = true;
             domMutationObserverRetain(observer);

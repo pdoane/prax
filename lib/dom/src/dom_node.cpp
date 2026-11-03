@@ -211,10 +211,10 @@ T* make(PrDomDocument* document, PrDomNodeType type) {
     return object;
 }
 
-// Creates a fragment that `host` owns, which is its template contents or the shadow root that it hosts.
+// Creates a fragment in `document` that `host` owns, which is its template contents or the shadow root that it hosts.
 template <typename T>
-T* makeOwned(PrDomElement* host) {
-    T* fragment = make<T>(host->document, PrDomNodeType_DocumentFragment);
+T* makeOwned(PrDomDocument* document, PrDomElement* host) {
+    T* fragment = make<T>(document, PrDomNodeType_DocumentFragment);
     removeDetached(fragment);
     fragment->host = host;
     return fragment;
@@ -652,6 +652,8 @@ DomNamespaceId transferNamespace(PrDomDocument* document, const PrDomNode* node,
 void adoptTree(PrDomDocument* document, PrDomNode* node, uint32_t* moved);
 
 // Moves `node` and the nodes that it owns to `document`, and adds the number of live ranges moved with them to `moved`.
+void adoptContents(PrDomDocument* document, PrDomNode* contents);
+
 void transferDocument(PrDomDocument* document, PrDomNode* node, uint32_t* moved) {
     node->space = transferNamespace(document, node, node->space);
     if (node->type == PrDomNodeType_Attribute) {
@@ -678,7 +680,7 @@ void transferDocument(PrDomDocument* document, PrDomNode* node, uint32_t* moved)
             attribute->document = document;
         }
         if (domElementContents(element) != nullptr && domNodeOwner(domElementContents(element)) == element)
-            adoptTree(document, domElementContents(element), moved);
+            adoptContents(domDocumentTemplateDocument(document), domElementContents(element));
         if (PrDomShadowRoot* shadow = domShadowRootOfHost(element)) {
             domSlotsEnable(document);
             adoptTree(document, shadow, moved);
@@ -695,6 +697,31 @@ void adoptTree(PrDomDocument* document, PrDomNode* node, uint32_t* moved) {
     transferDocument(document, node, moved);
     if (from->ranges != nullptr)
         *moved += domRangesAdopted(from, node);
+}
+
+// Moves what `from` records about the nodes that just moved to `document`: their holds and their observers.
+void moveRecords(PrDomDocument* from, PrDomDocument* document) {
+    Array<PrDomNode* PR_NONNULL>& holds = from->holds;
+    for (uint32_t i = holds.count; i-- != 0;) {
+        if (holds.data[i]->document == document) {
+            document->holds.push(holds.data[i]);
+            holds.data[i] = holds.data[--holds.count];
+        }
+    }
+    domMutationObserversAdopted(from, document);
+}
+
+// Moves the contents of a template to the inert document of the document that its template moved to
+// (html/#template-adopting-steps). The live ranges in the contents hold the inert document that they are in.
+void adoptContents(PrDomDocument* document, PrDomNode* contents) {
+    PrDomDocument* from = contents->document;
+    if (from == document)
+        return;
+    uint32_t moved = 0;
+    adoptTree(document, contents, &moved);
+    moveRecords(from, document);
+    document->retained += moved;
+    from->retained -= moved;
 }
 
 // Returns the attribute of `element` in `space` named `name` or, if `lowered` is set, named the ASCII lowercase of
@@ -1243,7 +1270,13 @@ void destroyDocument(PrDomDocument* document) {
     if (document->localNames != nullptr)
         atomTableReset(document->localNames);
     prMemoryFree(document->localNames);
+    // The inert document outlives the contents of the templates that were just destroyed.
+    PrDomDocument* inert = document->templateDocument;
     prMemoryFree(document);
+    if (inert != nullptr && inert != document) {
+        inert->templateOwner = nullptr;
+        domDocumentRelease(inert);
+    }
 }
 
 // dom/#concept-element-attributes-append for a new attribute, created on the element rather than first as its own root.
@@ -1332,6 +1365,21 @@ PrDomDocument* domDocumentCreate(DomDocumentKind kind) {
     document->charset = PrCharset_Utf8;
     prUrlCreate("about:blank", nullptr, PrCharset_Utf8, &document->url);
     return document;
+}
+
+PrDomDocument* domDocumentTemplateDocument(PrDomDocument* document) {
+    if (document->templateDocument == nullptr) {
+        PrDomDocument* inert = domDocumentCreate(document->kind);
+        inert->templateDocument = inert;
+        inert->templateOwner = document;
+        domNotifyDocumentCreated(document, inert);
+        document->templateDocument = inert;
+    }
+    return document->templateDocument;
+}
+
+const DomDocumentHost* PR_NULLABLE domDocumentMicrotaskHost(const PrDomDocument* document) {
+    return document->templateOwner != nullptr ? document->templateOwner->host : document->host;
 }
 
 void domNodeRetain(PrDomNode* node) {
@@ -1523,7 +1571,7 @@ PrDomElement* domElementCreate(PrDomDocument* document, DomNamespaceId space, Pr
         document->options = true;
     domControlCreated(element);
     if (space == PrDomNamespace_Html && tag == PrDomTag_Template)
-        domElementState(element)->contents = makeOwned<PrDomDocumentFragment>(element);
+        domElementState(element)->contents = makeOwned<PrDomDocumentFragment>(domDocumentTemplateDocument(document), element);
     return element;
 }
 
@@ -1577,7 +1625,7 @@ PrStatus domAttachShadow(PrDomElement* host, const PrDomShadowRootInit* init, Pr
     *out = nullptr;
     if (!isShadowHost(host) || domShadowRootOfHost(host) != nullptr)
         return PrStatus_NotSupported;
-    PrDomShadowRoot* shadow = makeOwned<PrDomShadowRoot>(host);
+    PrDomShadowRoot* shadow = makeOwned<PrDomShadowRoot>(host->document, host);
     shadow->flags = DomNodeFlag_ShadowRoot;
     if (domIsConnected(host))
         shadow->flags |= DomNodeFlag_Connected;
@@ -1596,7 +1644,7 @@ PrStatus domAttachShadow(PrDomElement* host, const PrDomShadowRootInit* init, Pr
 
 PrDomShadowRoot* domAttachUseShadow(PrDomElement* use) {
     PR_ASSERT(use->space == PrDomNamespace_Svg && use->tag == PrDomTag_Use && domShadowRootOfHost(use) == nullptr);
-    PrDomShadowRoot* shadow = makeOwned<PrDomShadowRoot>(use);
+    PrDomShadowRoot* shadow = makeOwned<PrDomShadowRoot>(use->document, use);
     shadow->flags = DomNodeFlag_ShadowRoot;
     if (domIsConnected(use))
         shadow->flags |= DomNodeFlag_Connected;
@@ -1710,8 +1758,9 @@ PrDomNode* PR_NULLABLE domClone(const PrDomNode* node, PrDomDocument* document, 
                 domScriptSetFlags(clone, domScriptFlags(element) & DomScriptFlag_Started);
             domControlCloned(element, clone);
             if (deep && domElementContents(element) != nullptr && domElementContents(clone) != nullptr) {
+                PrDomNode* contents = domElementContents(clone);
                 for (const PrDomNode* child = domElementContents(element)->first; child != nullptr; child = child->next)
-                    domAttach(domElementContents(clone), domClone(child, document, true), nullptr);
+                    domAttach(contents, domClone(child, contents->document, true), nullptr);
             }
             copy = clone;
             break;
@@ -2000,8 +2049,9 @@ void domAttach(PrDomNode* parent, PrDomNode* child, PrDomNode* PR_NULLABLE befor
     PR_ASSERT(before == nullptr || before->parent == parent);
     if (child->parent != nullptr) {
         // A move within one tree moves the child's references from one line of ancestors to another. The root's count,
-        // on which the tree's lifetime depends, is unchanged.
-        if (domTreeRoot(child) == domTreeRoot(parent)) {
+        // on which the tree's lifetime depends, is unchanged. The contents of a template count toward the tree of their
+        // host, but are in another document, so a move out of them adopts the child.
+        if (domTreeRoot(child) == domTreeRoot(parent) && child->document == parent->document) {
             uint32_t count = child->retained;
             PrDomNode* previous = child->parent;
             PrDomNode* from = domNodeRoot(previous);
@@ -2054,15 +2104,7 @@ void domAdopt(PrDomDocument* document, PrDomNode* node) {
     uint32_t moved = 0;
     adoptTree(document, node, &moved);
     addDetached(node);
-    // The holds on the tree's nodes move with them.
-    Array<PrDomNode* PR_NONNULL>& holds = from->holds;
-    for (uint32_t i = holds.count; i-- != 0;) {
-        if (holds.data[i]->document == document) {
-            document->holds.push(holds.data[i]);
-            holds.data[i] = holds.data[--holds.count];
-        }
-    }
-    domMutationObserversAdopted(from, document);
+    moveRecords(from, document);
     // The live ranges in the tree, and the tree itself if anything references it, hold the document.
     if (node->retained != 0)
         ++moved;

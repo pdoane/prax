@@ -31,7 +31,7 @@ static_assert(sizeof(DomText) == 128);
 static_assert(sizeof(DomComment) == 128);
 static_assert(sizeof(DomProcessingInstruction) == 160);
 static_assert(sizeof(DomDocumentType) == 192);
-static_assert(sizeof(DomDocument) == 584);
+static_assert(sizeof(DomDocument) == 600);
 
 // Returns the fragment that a template element holds (html/#the-template-element), or null for any other element.
 inline PrDomNode* PR_NULLABLE domElementContents(const PrDomElement* element) {
@@ -55,6 +55,15 @@ inline uint32_t domElementAttributeCount(const PrDomElement* element) {
 
 // Creates a document of `kind` with the initial content type of that kind, and one reference that the caller holds.
 PrDomDocument* domDocumentCreate(DomDocumentKind kind);
+
+// Returns the inert document that holds the contents of the templates of `document`
+// (html/#appropriate-template-contents-owner-document). It has no browsing context, so nothing in it loads, runs or
+// upgrades.
+PrDomDocument* domDocumentTemplateDocument(PrDomDocument* document);
+
+// Returns the host that queues microtasks for `document`, or null if it has none. An inert document has no browsing
+// context, but observers and slots of the contents of a template run on the event loop of the template's document.
+const DomDocumentHost* PR_NULLABLE domDocumentMicrotaskHost(const PrDomDocument* document);
 
 // Adds or releases a counted reference. A reference to a node keeps its tree alive. A tree other than the document's
 // own tree keeps the document alive. The last release frees the tree.

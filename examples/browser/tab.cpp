@@ -418,6 +418,7 @@ void tabsForget(Browser& b, PrStringView url) {
 }
 
 void tabsRun(Browser& b) {
+    prJsHtmlEngineAttachThread(b.engine);
     while (prDomAgentWait(b.agent, -1)) {
         prDomAgentRun(b.agent, kTaskBudget);
         publish(b);

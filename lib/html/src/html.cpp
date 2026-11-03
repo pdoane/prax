@@ -1560,7 +1560,14 @@ void prHtmlWindowCancelAnimationFrame(PrHtmlWindow* window, uint32_t handle) {
 }
 
 bool prHtmlWindowReportError(PrHtmlWindow* window, PrHtmlErrorEvent* event) {
-    return dispatchReport(window, event);
+    // An exception that an error listener throws is not dispatched again, which would never end if the listener always
+    // throws.
+    if (window->inErrorReportingMode)
+        return true;
+    window->inErrorReportingMode = true;
+    bool notHandled = dispatchReport(window, event);
+    window->inErrorReportingMode = false;
+    return notHandled;
 }
 
 bool prHtmlWindowNotifyRejection(PrHtmlWindow* window, PrHtmlPromiseRejectionEvent* event) {

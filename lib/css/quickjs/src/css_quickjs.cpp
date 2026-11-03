@@ -866,7 +866,8 @@ void defineAttribute(JSContext* ctx, JSValueConst proto, const char* name, size_
     JSCFunctionType get;
     get.getter_magic = JsCallScoped<attributeGet>::call;
     JSCFunctionType set;
-    set.setter_magic = JsCallScoped<attributeSet>::call;
+    // The attribute is [CEReactions], so its setter runs in the member scope.
+    set.setter_magic = JsCallScoped<JsScoped<attributeSet>::call>::call;
     JS_DefinePropertyGetSet(ctx, proto, atom, JS_NewCFunction2(ctx, get.generic, "get", 0, JS_CFUNC_getter_magic, magic),
         JS_NewCFunction2(ctx, set.generic, "set", 1, JS_CFUNC_setter_magic, magic),
         JS_PROP_ENUMERABLE | JS_PROP_CONFIGURABLE);

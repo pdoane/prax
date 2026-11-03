@@ -258,6 +258,15 @@ struct DomDocument : PrDomNode {
     PrString languageHeader;
 
     PrDomNode* PR_NULLABLE detached;                            // roots of the document's other trees
+
+    // The inert document that holds the contents of this document's templates, created by the first template
+    // (html/#appropriate-template-contents-owner-document). The document holds a reference to it. An inert document
+    // names itself, and holds no reference.
+    PrDomDocument* PR_NULLABLE templateDocument;
+
+    // The document that this inert document holds template contents for, uncounted, which clears this when it goes.
+    PrDomDocument* PR_NULLABLE templateOwner;
+
     DomDocumentSubscriber subscribers[kDomDocumentSubscribers]; // what follows its changes (dom_hooks.h)
     CssRoot* PR_NULLABLE style;
     DomIds* PR_NULLABLE ids;           // created by the first connected element with an ID

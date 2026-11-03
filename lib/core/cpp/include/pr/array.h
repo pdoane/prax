@@ -88,6 +88,15 @@ struct Array {
         count = newCount;
     }
 
+    // Gives an array with no storage `newCount` elements of zeroed bytes. A large array that is touched sparsely costs
+    // only what it touches.
+    void resizeZeroed(uint32_t newCount) {
+        PR_ASSERT(data == nullptr);
+        data = static_cast<T*>(prMemoryAllocZeroed(size_t(newCount) * sizeof(T)));
+        count = newCount;
+        capacity = newCount;
+    }
+
     // Returns the index of the first element equal to `value`, or kArrayMissing if there is none.
     uint32_t find(const T& value) const {
         for (uint32_t i = 0; i < count; ++i) {

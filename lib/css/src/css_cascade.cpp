@@ -1301,10 +1301,14 @@ void forgetMatched(CssMatchedStyle& cached) {
 }
 
 void forgetMatchedStyles(CssCascadeScratch& s) {
-    for (uint32_t i = 0; i < s.matchedStyles.count; ++i)
-        forgetMatched(s.matchedStyles.data[i]);
+    for (uint32_t i = 0; i < s.matchedStyles.count; ++i) {
+        if (s.matchedStyles.data[i].hash != 0)
+            forgetMatched(s.matchedStyles.data[i]);
+    }
     for (uint32_t i = 0; i < s.cachedGroups.count; ++i) {
         CssCachedGroup& cached = s.cachedGroups.data[i];
+        if (cached.hash == 0)
+            continue;
         cssStyleValuesRelease(cached.values);
         cssStyleValuesRelease(cached.parentValues);
         cached.values = nullptr;
@@ -1315,11 +1319,8 @@ void forgetMatchedStyles(CssCascadeScratch& s) {
 
 // Returns the set of kCssMatchedWays slots for the entries that the element matched, whose hash is `hash`.
 CssMatchedStyle* matchedSet(CssCascadeScratch& s, uint32_t hash) {
-    if (s.matchedStyles.count == 0) {
-        s.matchedStyles.reserve(kCssMatchedStyles);
-        for (uint32_t i = 0; i < kCssMatchedStyles; ++i)
-            s.matchedStyles.emplace() = CssMatchedStyle{};
-    }
+    if (s.matchedStyles.count == 0)
+        s.matchedStyles.resizeZeroed(kCssMatchedStyles);
     return s.matchedStyles.data + hash % (kCssMatchedStyles / kCssMatchedWays) * kCssMatchedWays;
 }
 
@@ -2724,11 +2725,8 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
         key.push(uint64_t(uintptr_t(winner.declaration)) ^ uint64_t(winner.longhand) << 48);
     }
     uint64_t hash = hashBytes(key.data, sizeof(uint64_t) * key.count, kMatchedSeed) | 1;
-    if (s.cachedGroups.count == 0) {
-        s.cachedGroups.reserve(kCssCachedGroups);
-        for (uint32_t i = 0; i < kCssCachedGroups; ++i)
-            s.cachedGroups.emplace() = CssCachedGroup{};
-    }
+    if (s.cachedGroups.count == 0)
+        s.cachedGroups.resizeZeroed(kCssCachedGroups);
     CssCachedGroup& cached = s.cachedGroups.data[hash % kCssCachedGroups];
     const CssStyleValues* parentValues = root ? nullptr : input.parent->groups[group];
     bool hit = cached.hash == hash && cached.key.count == key.count &&

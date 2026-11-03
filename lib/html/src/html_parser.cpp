@@ -589,6 +589,15 @@ void clearFormattingToMarker(Tree* t) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Inserting nodes (html/#creating-and-inserting-nodes)
 
+// Returns the document of the node that the parser creates next, which is its intended parent's document
+// (html/#create-an-element-for-the-token). The contents of a template are in an inert document.
+PrDomDocument* creationDocument(const HtmlParser* p) {
+    if (p->open.count == 0)
+        return p->document;
+    PrDomElement* parent = p->open.last();
+    return domIsHtml(parent, PrDomTag_Template) ? domElementContents(parent)->document : parent->document;
+}
+
 PrDomNode* templateContents(PrDomElement* element) {
     PrDomNode* contents = domElementContents(element);
     PR_ASSERT(contents != nullptr);
@@ -730,7 +739,8 @@ void insertAt(PrDomNode* parent, PrDomNode* node, PrDomNode* PR_NULLABLE before)
 // of the entry's element and the tag's attributes.
 PrDomElement* remake(HtmlParser* p, const HtmlFormatting& entry) {
     const PrDomElement* like = entry.element;
-    PrDomElement* element = domElementCreate(p->document, like->space, domElementTag(like), domElementName(like));
+    PrDomDocument* document = creationDocument(p);
+    PrDomElement* element = domElementCreate(document, like->space, domElementTag(like), domElementName(like));
     for (uint32_t i = 0; i < entry.attributeCount; ++i)
         domSetAttribute(element, PrDomNamespace_None, prStringView(&entry.attributes[i].name),
             prStringView(&entry.attributes[i].value));
@@ -750,23 +760,24 @@ PrDomElement* insertElement(Tree* t, DomNamespaceId space, PrDomTag tag, PrStrin
         // html/#create-an-element-for-the-token: an element that a definition creates outside a fragment parse is
         // constructed immediately, and its reactions run before the parser continues.
         PrStringView is = tokenAttribute(t, "is");
-        const PrDomCustomElementRegistry* registry = t->p->document->customElements;
+        PrDomDocument* document = creationDocument(t->p);
+        const PrDomCustomElementRegistry* registry = document->customElements;
         bool script = registry != nullptr && t->p->context == nullptr && registry->lookup(registry->context,
             local.data != nullptr ? local : domTagName(tag), is) != nullptr;
         if (script) {
-            ++t->p->document->throwOnDynamicMarkupInsertion;
+            ++document->throwOnDynamicMarkupInsertion;
             domCustomReactionsPush(registry->agent);
         }
-        element = domElementCreateHtml(t->p->document, tag, local.data != nullptr ? local : domTagName(tag), is, script,
+        element = domElementCreateHtml(document, tag, local.data != nullptr ? local : domTagName(tag), is, script,
             &constructed);
         domNodeRetain(element);
         addAttributes(t, element, space);
         if (script) {
             domCustomReactionsPop(registry->agent);
-            --t->p->document->throwOnDynamicMarkupInsertion;
+            --document->throwOnDynamicMarkupInsertion;
         }
     } else {
-        element = domElementCreate(t->p->document, space, tag, local);
+        element = domElementCreate(creationDocument(t->p), space, tag, local);
         domNodeRetain(element);
         addAttributes(t, element, space);
     }
@@ -860,7 +871,7 @@ bool attachDeclarativeShadow(Tree* t) {
         return false;
     }
     shadow->declarative = true;
-    PrDomElement* element = domElementCreate(t->p->document, PrDomNamespace_Html, PrDomTag_Template, PrStringView{});
+    PrDomElement* element = domElementCreate(host->document, PrDomNamespace_Html, PrDomTag_Template, PrStringView{});
     addAttributes(t, element, PrDomNamespace_Html);
     domTemplateNameShadow(element, shadow);
     pushHeld(&t->p->open, element);
@@ -912,7 +923,7 @@ void processSvgScript(Tree* t, PrDomElement* script) {
 
 // An element that the tree builder creates itself. It has no attributes, because no token named it.
 PrDomElement* insertBare(Tree* t, PrDomTag tag) {
-    PrDomElement* element = domElementCreate(t->p->document, PrDomNamespace_Html, tag, PrStringView{});
+    PrDomElement* element = domElementCreate(creationDocument(t->p), PrDomNamespace_Html, tag, PrStringView{});
     insertNode(t, element, nullptr);
     pushHeld(&t->p->open, element);
     return element;
@@ -930,7 +941,7 @@ void insertText(Tree* t, PrStringView data) {
     }
     if (parent->type == PrDomNodeType_Document)
         return;
-    domAttach(parent, domTextCreate(t->p->document, data), before);
+    domAttach(parent, domTextCreate(parent->document, data), before);
 }
 
 // What a mode does with the whitespace at the start of a character token (html/#parsing-main-inhtml).
@@ -970,11 +981,12 @@ void takeSpaceOnly(Tree* t, SpaceRule rule) {
 }
 
 void insertComment(Tree* t, PrDomNode* PR_NULLABLE into) {
-    insertNode(t, domCommentCreate(t->p->document, text(t, t->token.data)), into);
+    insertNode(t, domCommentCreate(creationDocument(t->p), text(t, t->token.data)), into);
 }
 
 void insertProcessingInstruction(Tree* t, PrDomNode* PR_NULLABLE into) {
-    insertNode(t, domProcessingInstructionCreate(t->p->document, text(t, t->token.name), text(t, t->token.data)), into);
+    PrDomDocument* document = creationDocument(t->p);
+    insertNode(t, domProcessingInstructionCreate(document, text(t, t->token.name), text(t, t->token.data)), into);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
