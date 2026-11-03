@@ -77,9 +77,10 @@ and the match carries them from round to round at no cost.
 Several component libraries can build one tree, each with its own widgets and appearance. What one library makes and
 another must meet belongs to the context, so that no library owns it:
 
-- **Keys.** A library makes a node's key under a base node (`prUiKey`, `prUiKeyIndex`), so an item keys under its
-  container whichever library made each. A key that a frame gives twice is a caller's error. Layout reports both
-  nodes (`prLayoutTreeDuplicateKeys`), and each round of the next frame outlines them in the overlay.
+- **Keys.** A node needs a key only if it moves or comes and goes among its siblings. A library makes a `PrUiKey`
+  under a base node (`prUiKey`, `prUiKeyIndex`), so an item keys under its container whichever library made each. A
+  key that a frame gives twice is a caller's error. Layout reports both nodes (`prLayoutTreeDuplicateKeys`), and each
+  round of the next frame outlines them in the overlay.
 - **The overlay.** What floats over the application, such as a menu, a tooltip or a drag's ghost, is created under
   the round's overlay (`prUiOverlay`), a layer over the root above everything in flow. The context creates it under
   the root in the first round that asks for it.

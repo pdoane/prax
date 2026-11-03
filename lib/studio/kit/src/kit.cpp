@@ -19,7 +19,7 @@ constexpr double kHoverOut = 0.12;
 constexpr double kPress = 0.05;
 
 // Makes the text fonts of the theme's roles from its font set, and releases those of the previous theme.
-void makeFonts(Kit& kit) {
+void makeFonts(PrKit& kit) {
     for (PrTextFont*& font : kit.fonts) {
         prTextFontRelease(font);
         font = nullptr;
@@ -45,44 +45,44 @@ void makeFonts(Kit& kit) {
 }
 
 // Makes the kit's looks from its theme's palette.
-void makeLooks(Kit& kit) {
+void makeLooks(PrKit& kit) {
     const PrKitPalette& p = kit.theme.palette;
     PrColor clear{0, 0, 0, 0};
-    auto look = [&](KitLookId id, PrColor rest, PrColor hover, PrColor press, PrColor border, PrColor text, PrColor icon) {
+    auto look = [&](PrKitLookId id, PrColor rest, PrColor hover, PrColor press, PrColor border, PrColor text, PrColor icon) {
         bool eases = !memEquals(&rest, &hover, sizeof rest) || !memEquals(&rest, &press, sizeof rest);
-        kit.looks[id] = KitLook{.fill = {rest, hover, press}, .border = border, .text = text, .icon = icon, .eases = eases};
+        kit.looks[id] = PrKitLook{.fill = {rest, hover, press}, .border = border, .text = text, .icon = icon, .eases = eases};
     };
-    look(KitLookId_Button, p.bg3, p.bg4, p.bg2, p.line2, p.text1, p.text2);
-    look(KitLookId_ButtonPrimary, p.accent, p.accentHover, p.accentPress, p.accent, p.accentText, p.textInverse);
-    look(KitLookId_ButtonGhost, clear, p.bg3, p.bg4, clear, p.text2, p.text2);
-    look(KitLookId_ButtonDanger, p.bg3, p.bg4, p.bg2, p.line2, p.danger, p.text2);
-    look(KitLookId_ButtonSelected, p.accentWeak, p.accentWeak, p.accentWeak, clear, p.accent, p.accent);
+    look(PrKitLookId_Button, p.bg3, p.bg4, p.bg2, p.line2, p.text1, p.text2);
+    look(PrKitLookId_ButtonPrimary, p.accent, p.accentHover, p.accentPress, p.accent, p.accentText, p.textInverse);
+    look(PrKitLookId_ButtonGhost, clear, p.bg3, p.bg4, clear, p.text2, p.text2);
+    look(PrKitLookId_ButtonDanger, p.bg3, p.bg4, p.bg2, p.line2, p.danger, p.text2);
+    look(PrKitLookId_ButtonSelected, p.accentWeak, p.accentWeak, p.accentWeak, clear, p.accent, p.accent);
     // A disabled control keeps its shape and loses its color: a quiet fill, or none for a ghost, and faint text.
-    look(KitLookId_ButtonDisabled, p.bg2, p.bg2, p.bg2, p.line1, p.text4, p.text4);
-    look(KitLookId_ButtonGhostDisabled, clear, clear, clear, clear, p.text4, p.text4);
-    look(KitLookId_Selectable, clear, p.bg3, p.bg3, clear, p.text1, p.text2);
-    look(KitLookId_SelectableSelected, p.accentWeak, p.accentWeak, p.accentWeak, clear, p.text1, p.accent);
-    look(KitLookId_Plain, clear, p.bg4, p.bg2, clear, p.text3, p.text3);
-    look(KitLookId_Quiet, clear, p.bg3, p.bg4, clear, p.text3, p.text3);
-    look(KitLookId_Tab, clear, p.bg2, p.bg3, clear, p.text3, p.text3);
-    look(KitLookId_TabChosen, clear, clear, clear, p.accent, p.text1, p.text1);
-    look(KitLookId_TabDisabled, clear, clear, clear, clear, p.text4, p.text4);
-    look(KitLookId_TabChosenDisabled, clear, clear, clear, p.accent, p.text4, p.text4);
-    look(KitLookId_Segment, clear, p.bg3, p.bg4, clear, p.text2, p.text2);
-    look(KitLookId_SegmentChosen, p.bg4, p.bg4, p.bg4, p.line3, p.text1, p.text1);
-    look(KitLookId_SegmentDisabled, clear, clear, clear, clear, p.text4, p.text4);
-    look(KitLookId_SegmentChosenDisabled, p.bg4, p.bg4, p.bg4, p.line3, p.text4, p.text4);
-    look(KitLookId_Check, p.bg2, p.bg3, p.bg4, p.line3, p.text1, p.textInverse);
-    look(KitLookId_CheckOn, p.accent, p.accentHover, p.accentPress, p.accent, p.text1, p.textInverse);
-    look(KitLookId_CheckDisabled, p.bg2, p.bg2, p.bg2, p.line3, p.text4, p.textInverse);
-    look(KitLookId_CheckOnDisabled, p.bg4, p.bg4, p.bg4, p.bg4, p.text4, p.textInverse);
-    look(KitLookId_Rail, p.bg3, p.bg4, p.bg4, p.line3, p.text1, p.text2);
-    look(KitLookId_RailDisabled, p.bg3, p.bg3, p.bg3, p.line3, p.text4, p.text2);
-    look(KitLookId_Radio, p.bg2, p.bg3, p.bg4, p.line3, p.text1, p.text2);
-    look(KitLookId_RadioOn, p.bg2, p.bg3, p.bg4, p.accent, p.text1, p.text2);
-    look(KitLookId_RadioOnDisabled, p.bg2, p.bg2, p.bg2, p.bg4, p.text4, p.text2);
+    look(PrKitLookId_ButtonDisabled, p.bg2, p.bg2, p.bg2, p.line1, p.text4, p.text4);
+    look(PrKitLookId_ButtonGhostDisabled, clear, clear, clear, clear, p.text4, p.text4);
+    look(PrKitLookId_Selectable, clear, p.bg3, p.bg3, clear, p.text1, p.text2);
+    look(PrKitLookId_SelectableSelected, p.accentWeak, p.accentWeak, p.accentWeak, clear, p.text1, p.accent);
+    look(PrKitLookId_Plain, clear, p.bg4, p.bg2, clear, p.text3, p.text3);
+    look(PrKitLookId_Quiet, clear, p.bg3, p.bg4, clear, p.text3, p.text3);
+    look(PrKitLookId_Tab, clear, p.bg2, p.bg3, clear, p.text3, p.text3);
+    look(PrKitLookId_TabChosen, clear, clear, clear, p.accent, p.text1, p.text1);
+    look(PrKitLookId_TabDisabled, clear, clear, clear, clear, p.text4, p.text4);
+    look(PrKitLookId_TabChosenDisabled, clear, clear, clear, p.accent, p.text4, p.text4);
+    look(PrKitLookId_Segment, clear, p.bg3, p.bg4, clear, p.text2, p.text2);
+    look(PrKitLookId_SegmentChosen, p.bg4, p.bg4, p.bg4, p.line3, p.text1, p.text1);
+    look(PrKitLookId_SegmentDisabled, clear, clear, clear, clear, p.text4, p.text4);
+    look(PrKitLookId_SegmentChosenDisabled, p.bg4, p.bg4, p.bg4, p.line3, p.text4, p.text4);
+    look(PrKitLookId_Check, p.bg2, p.bg3, p.bg4, p.line3, p.text1, p.textInverse);
+    look(PrKitLookId_CheckOn, p.accent, p.accentHover, p.accentPress, p.accent, p.text1, p.textInverse);
+    look(PrKitLookId_CheckDisabled, p.bg2, p.bg2, p.bg2, p.line3, p.text4, p.textInverse);
+    look(PrKitLookId_CheckOnDisabled, p.bg4, p.bg4, p.bg4, p.bg4, p.text4, p.textInverse);
+    look(PrKitLookId_Rail, p.bg3, p.bg4, p.bg4, p.line3, p.text1, p.text2);
+    look(PrKitLookId_RailDisabled, p.bg3, p.bg3, p.bg3, p.line3, p.text4, p.text2);
+    look(PrKitLookId_Radio, p.bg2, p.bg3, p.bg4, p.line3, p.text1, p.text2);
+    look(PrKitLookId_RadioOn, p.bg2, p.bg3, p.bg4, p.accent, p.text1, p.text2);
+    look(PrKitLookId_RadioOnDisabled, p.bg2, p.bg2, p.bg2, p.bg4, p.text4, p.text2);
     // A row of a list marks the pointer at once, so that a pointer moving down a list leaves no trail.
-    kit.looks[KitLookId_Selectable].eases = false;
+    kit.looks[PrKitLookId_Selectable].eases = false;
 }
 
 // What a placed record is made from: the record it places, and the placement.
@@ -95,26 +95,26 @@ PR_NO_PADDING_END
 
 } // namespace
 
-void KitBlock::make(const Kit&, PrLayoutBoxStyle& box) const {
+void KitBlock::make(const PrKit&, PrLayoutBoxStyle& box) const {
     box.display = PrLayoutDisplay_Block;
 }
 
-void KitShrinkable::make(const Kit&, PrLayoutBoxStyle& box) const {
+void KitShrinkable::make(const PrKit&, PrLayoutBoxStyle& box) const {
     box.display = PrLayoutDisplay_Block;
     box.minWidth = prLayoutLengthPx(0);
     box.minHeight = prLayoutLengthPx(0);
 }
 
-void KitFixed::make(const Kit&, PrLayoutFlexStyle& flex) const {
+void KitFixed::make(const PrKit&, PrLayoutFlexStyle& flex) const {
     flex.shrink = 0;
 }
 
-void KitGrow::make(const Kit&, PrLayoutFlexStyle& flex) const {
+void KitGrow::make(const PrKit&, PrLayoutFlexStyle& flex) const {
     flex.grow = 1;
     flex.basis = prLayoutLengthPx(0);
 }
 
-void KitFont::make(const Kit& kit, PrLayoutFontStyle& font) const {
+void KitFont::make(const PrKit& kit, PrLayoutFontStyle& font) const {
     const PrKitType& type = kit.theme.types[role];
     font.font = kit.fonts[role];
     font.lineHeight = prLayoutLineHeightPx(type.lineHeight);
@@ -128,20 +128,20 @@ void KitFont::make(const Kit& kit, PrLayoutFontStyle& font) const {
     font.textAlign = font.textAlignLast = kAlign[align];
 }
 
-void KitInk::make(const Kit&, PrLayoutColorStyle& value) const {
+void KitInk::make(const PrKit&, PrLayoutColorStyle& value) const {
     value.color = kitColor16(color);
 }
 
-void KitColors::make(const Kit&, PrLayoutDecorationStyle& decoration) const {
+void KitColors::make(const PrKit&, PrLayoutDecorationStyle& decoration) const {
     decoration.background = kitColor16(background);
     kitSetBorderColor(decoration, border);
 }
 
-void KitToneInk::make(const Kit& kit, PrLayoutColorStyle& color) const {
+void KitToneInk::make(const PrKit& kit, PrLayoutColorStyle& color) const {
     color.color = kitColor16(kitToneColor(kit, tone));
 }
 
-void KitContainerBox::make(const Kit&, PrLayoutBoxStyle& box) const {
+void KitContainerBox::make(const PrKit&, PrLayoutBoxStyle& box) const {
     box.display = PrLayoutDisplay_Flex;
     kitSetPadding(box, style.padding);
     switch (style.overflow) {
@@ -166,7 +166,7 @@ void KitContainerBox::make(const Kit&, PrLayoutBoxStyle& box) const {
     kitPlaceBox(box, style.place);
 }
 
-void KitContainerFlex::make(const Kit&, PrLayoutFlexStyle& value) const {
+void KitContainerFlex::make(const PrKit&, PrLayoutFlexStyle& value) const {
     value.direction = direction == PrKitDirection_Row ? PrLayoutFlexDirection_Row : PrLayoutFlexDirection_Column;
     value.wrap = wrap ? PrLayoutFlexWrap_Wrap : PrLayoutFlexWrap_NoWrap;
     static const PrLayoutAlignment kJustify[] = {
@@ -184,12 +184,12 @@ void KitContainerFlex::make(const Kit&, PrLayoutFlexStyle& value) const {
     kitPlaceFlex(value, PrKitPlace{.flex = flex, .align = alignSelf, .weight = weight});
 }
 
-void KitPlacedBox::make(const Kit& kit, PrLayoutBoxStyle& box) const {
+void KitPlacedBox::make(const PrKit& kit, PrLayoutBoxStyle& box) const {
     box = prLayoutBoxStyleRecord(kit.tree, base);
     kitPlaceBox(box, place);
 }
 
-void KitPlacedFlex::make(const Kit& kit, PrLayoutFlexStyle& flex) const {
+void KitPlacedFlex::make(const PrKit& kit, PrLayoutFlexStyle& flex) const {
     flex = prLayoutFlexStyleRecord(kit.tree, base);
     kitPlaceFlex(flex, place);
 }
@@ -275,7 +275,7 @@ void kitPlaceFlex(PrLayoutFlexStyle& flex, const PrKitPlace& place) {
         flex.alignSelf = kAlign[place.align];
 }
 
-PrLayoutNode kitBoxNode(Kit& kit, PrLayoutNode parent, PrKitBox box, PrKitOverflow overflow, PrLayoutStyleIndex style) {
+PrLayoutNode kitBoxNode(PrKit& kit, PrLayoutNode parent, PrKitBox box, PrKitOverflow overflow, PrLayoutStyleIndex style) {
     PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, box.key, style);
     PrUiFlags flags = overflow == PrKitOverflow_Scroll || overflow == PrKitOverflow_ScrollY ? PrUiFlag_Scrollable : 0;
     if (box.disabled)
@@ -285,11 +285,11 @@ PrLayoutNode kitBoxNode(Kit& kit, PrLayoutNode parent, PrKitBox box, PrKitOverfl
     return node;
 }
 
-KitControl kitControl(Kit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool disabled) {
+KitControl kitControl(PrKit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool disabled) {
     return kitControlFromNode(kit, prLayoutTreeFrameElement(kit.tree, parent, key, 0), flags, disabled);
 }
 
-KitControl kitControlFromNode(Kit& kit, PrLayoutNode node, PrUiFlags flags, bool disabled) {
+KitControl kitControlFromNode(PrKit& kit, PrLayoutNode node, PrUiFlags flags, bool disabled) {
     if (disabled)
         flags |= PrUiFlag_Disabled;
     prUiSetFlags(kit.ui, node, flags);
@@ -307,11 +307,11 @@ KitControl kitControlFromNode(Kit& kit, PrLayoutNode node, PrUiFlags flags, bool
     return c;
 }
 
-void KitFill::make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
-    const KitLook& l = kit.looks[look];
+void KitFill::make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {
+    const PrKitLook& l = kit.looks[look];
     PrColor fill = l.fill[state];
     if (hover > 0 || press > 0)
-        fill = kitMix(kitMix(l.fill[KitState_Rest], l.fill[KitState_Hover], hover), l.fill[KitState_Press], press);
+        fill = kitMix(kitMix(l.fill[PrKitState_Rest], l.fill[PrKitState_Hover], hover), l.fill[PrKitState_Press], press);
     decoration.background = kitColor16(fill);
     kitSetBorderColor(decoration, l.border);
     if (ring) {
@@ -322,8 +322,8 @@ void KitFill::make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
     }
 }
 
-KitDress kitDress(const Kit& kit, const KitControl& control, KitLookId look) {
-    KitState state = KitState_Rest;
+KitDress kitDress(const PrKit& kit, const KitControl& control, PrKitLookId look) {
+    PrKitState state = PrKitState_Rest;
     bool settled = kitSettled(kit, control, look, &state);
     KitFill fill{
         .look = look,
@@ -335,25 +335,25 @@ KitDress kitDress(const Kit& kit, const KitControl& control, KitLookId look) {
     return KitDress{.fill = fill, .ink = KitInk{.color = kit.looks[look].text}};
 }
 
-bool kitSettled(const Kit& kit, const KitControl& control, KitLookId look, KitState* state) {
+bool kitSettled(const PrKit& kit, const KitControl& control, PrKitLookId look, PrKitState* state) {
     if (!kit.looks[look].eases) {
-        *state = control.down ? KitState_Press : control.over ? KitState_Hover : KitState_Rest;
+        *state = control.down ? PrKitState_Press : control.over ? PrKitState_Hover : PrKitState_Rest;
         return true;
     }
     bool settled = (control.hover == 0 || control.hover == 1) && (control.press == 0 || control.press == 1);
-    *state = control.press == 1 ? KitState_Press : control.hover == 1 ? KitState_Hover : KitState_Rest;
+    *state = control.press == 1 ? PrKitState_Press : control.hover == 1 ? PrKitState_Hover : PrKitState_Rest;
     return settled;
 }
 
-void kitSignal(Kit& kit, PrLayoutNode node, KitSignals signals) {
+void kitSignal(PrKit& kit, PrLayoutNode node, KitSignals signals) {
     prUiSignal(kit.ui, node, &kKitOwner, signals);
 }
 
-bool kitSignaled(const Kit& kit, PrLayoutNode node, KitSignals signals) {
+bool kitSignaled(const PrKit& kit, PrLayoutNode node, KitSignals signals) {
     return prUiSignaled(kit.ui, node, &kKitOwner, signals);
 }
 
-bool kitSetFlags(Kit& kit, PrLayoutNode node, PrUiFlags flags) {
+bool kitSetFlags(PrKit& kit, PrLayoutNode node, PrUiFlags flags) {
     prUiSetFlags(kit.ui, node, flags);
     return prUiIsDisabled(kit.ui, node);
 }
@@ -385,7 +385,7 @@ PrColor kitMix(PrColor from, PrColor to, float t) {
     return PrColor{mix(from.r, to.r), mix(from.g, to.g), mix(from.b, to.b), a};
 }
 
-PrColor kitToneColor(const Kit& kit, PrKitTone tone) {
+PrColor kitToneColor(const PrKit& kit, PrKitTone tone) {
     const PrKitPalette& p = kit.theme.palette;
     switch (tone) {
         case PrKitTone_Secondary:
@@ -417,31 +417,31 @@ PrColor kitToneColor(const Kit& kit, PrKitTone tone) {
     }
 }
 
-PrKitTone kitTextTone(const Kit& kit, PrKitTextRole role, PrKitTone tone) {
+PrKitTone kitTextTone(const PrKit& kit, PrKitTextRole role, PrKitTone tone) {
     if (tone != PrKitTone_Auto)
         return tone;
     PrKitTone own = kit.theme.types[role].tone;
     return own != PrKitTone_Auto ? own : PrKitTone(PrKitTone_Primary);
 }
 
-PrKitWrap kitTextWrap(const Kit& kit, PrKitTextRole role, PrKitWrap wrap) {
+PrKitWrap kitTextWrap(const PrKit& kit, PrKitTextRole role, PrKitWrap wrap) {
     if (wrap != PrKitWrap_Auto)
         return wrap;
     PrKitWrap own = kit.theme.types[role].wrap;
     return own != PrKitWrap_Auto ? own : PrKitWrap(PrKitWrap_Wrap);
 }
 
-float kitHoverFactor(Kit& kit, PrLayoutNode node) {
+float kitHoverFactor(PrKit& kit, PrLayoutNode node) {
     bool over = prUiIsHovered(kit.ui, node) && (prUiFlags(kit.ui, node) & PrUiFlag_Disabled) == 0;
     return prUiTween(kit.ui, node, &kKitOwner, KitStateKey_Hover, over ? 1.0f : 0.0f, over ? kHoverIn : kHoverOut, nullptr);
 }
 
-float kitPressFactor(Kit& kit, PrLayoutNode node) {
+float kitPressFactor(PrKit& kit, PrLayoutNode node) {
     bool down = prUiIsPressed(kit.ui, node, 0);
     return prUiTween(kit.ui, node, &kKitOwner, KitStateKey_Press, down ? 1.0f : 0.0f, kPress, nullptr);
 }
 
-PrVec2 kitExtent(const Kit& kit, PrLayoutNode node) {
+PrVec2 kitExtent(const PrKit& kit, PrLayoutNode node) {
     PrLayoutRect box = prLayoutNodeBounds(kit.tree, node, PrLayoutCoordinates_Layout);
     return prLayoutVecToPx(PrLayoutVec{box.right - box.left, box.bottom - box.top});
 }
@@ -474,35 +474,19 @@ PrKit* prKitCreate(PrUi* ui, const PrKitTheme* theme) {
 void prKitDestroy(PrKit* PR_NULLABLE kit) {
     if (kit == nullptr)
         return;
-    prUiForget(kit->ui, static_cast<Kit*>(kit));
+    prUiForget(kit->ui, kit);
     for (PrTextFont* font : kit->fonts)
         prTextFontRelease(font);
     for (PrPath* path : kit->icons)
         prPathDestroy(path);
-    for (uint32_t i = 0; i < kit->painted.count; ++i)
-        prMemoryFree(kit->painted.data[i]);
-    kit->painted.reset();
-    kit->paintedIndex.reset();
     prMemoryFree(kit);
 }
 
 void prKitSetTheme(PrKit* kit, const PrKitTheme* theme) {
-    prUiForget(kit->ui, static_cast<Kit*>(kit));
+    prUiForget(kit->ui, kit);
     kit->theme = *theme;
     makeFonts(*kit);
     makeLooks(*kit);
-}
-
-const PrKitTheme* prKitTheme(const PrKit* kit) {
-    return &kit->theme;
-}
-
-PrUi* prKitUi(const PrKit* kit) {
-    return kit->ui;
-}
-
-PrLayoutTree* prKitTree(const PrKit* kit) {
-    return kit->tree;
 }
 
 bool prKitActivated(const PrKit* kit, PrLayoutNode node) {
@@ -516,7 +500,7 @@ bool prKitRemoved(const PrKit* kit, PrLayoutNode node) {
 void prKitPlace(PrKit* kit, PrLayoutNode node, const PrKitPlace* place) {
     // The node's record with its box and flex groups placed, and the rest the record's own. The memo keys the placed
     // record by the record it was placed from, to which its entry holds a reference.
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrLayoutTree* tree = k.tree;
     Placement key{.base = prLayoutTreeFrameStyle(tree, node), .place = *place};
     const void* type = uiTypeId<Placement>();

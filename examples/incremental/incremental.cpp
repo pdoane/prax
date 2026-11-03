@@ -677,7 +677,7 @@ std::string statusOf(const Stream& s) {
 // Declares the round: a bar of the stream's controls, the pane that shows the page, and the status line.
 void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     Stream& s = *static_cast<Stream*>(context);
-    PrLayoutTree* tree = prKitTree(kit);
+    PrLayoutTree* tree = kit->tree;
     PrKitSurfaceStyle header{
         .box = {
             .direction = PrKitDirection_Row,
@@ -692,9 +692,9 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     PrKitTextStyle title{.role = PrKitTextRole_Heading};
     prKitLabel(kit, bar, {.text = "Incremental"}, title);
 
-    PrLayoutNode samples = prKitSegmented(kit, bar, {.key = 1}, {});
+    PrLayoutNode samples = prKitSegmented(kit, bar, {}, {});
     for (Sample sample = 0; sample < Sample_Count; ++sample) {
-        PrKitChoice choice{.key = sample + 1, .label = kSampleLabels[sample], .selected = s.sample == sample};
+        PrKitChoice choice{.label = kSampleLabels[sample], .selected = s.sample == sample};
         if (prKitActivated(kit, prKitSegment(kit, samples, choice)) && s.sample != sample) {
             s.sample = sample;
             restart(s);
@@ -713,7 +713,6 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     int written = std::snprintf(label, sizeof label, "%.0f bytes/s", double(s.rate));
     prKitLabel(kit, bar, {.text = PrStringView{label, size_t(std::max(written, 0))}}, meta);
     PrLayoutNode rate = prKitSlider(kit, bar, {
-        .key = 2,
         .value = prKitScalarF32(&s.rate),
         .min = kMinRate,
         .max = kMaxRate,
@@ -723,7 +722,6 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     written = std::snprintf(label, sizeof label, "%.0f bytes a piece", double(std::round(s.chunk)));
     prKitLabel(kit, bar, {.text = PrStringView{label, size_t(std::max(written, 0))}}, meta);
     PrLayoutNode chunk = prKitSlider(kit, bar, {
-        .key = 3,
         .value = prKitScalarF32(&s.chunk),
         .min = kMinChunk,
         .max = kMaxChunk,

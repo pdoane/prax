@@ -49,7 +49,7 @@ constexpr float kArrangeRowGap = 24;
 // The canvas: a box that clips what is drawn and placed on it, in the viewport's ground.
 struct CanvasBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Relative;
         box.overflowX = box.overflowY = PrLayoutOverflow_Clip;
@@ -63,7 +63,7 @@ struct LayerBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     bool fills;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.inset[PrRectSide_Left] = prLayoutLengthPx(0);
@@ -83,7 +83,7 @@ struct WorldEffects {
     float zoom;
     PrVec2 offset;
 
-    void make(const Kit&, PrLayoutEffectStyle& effects) const {
+    void make(const PrKit&, PrLayoutEffectStyle& effects) const {
         effects.originX = prLayoutLengthPx(0);
         effects.originY = prLayoutLengthPx(0);
         effects.transform = prLayoutTransformFromAffine2(
@@ -102,7 +102,7 @@ struct RectBox {
     bool column;
     uint8_t _pad[3];
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = column ? PrLayoutDisplay_Flex : PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         if (column)
@@ -117,7 +117,7 @@ struct RectBox {
 PR_NO_PADDING_END
 struct NodeFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = PrLayoutFlexDirection_Column;
     }
 };
@@ -125,7 +125,7 @@ struct NodeFlex {
 // A node's header: a row of its title and meta, on a raised ground.
 struct HeaderBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.height = prLayoutLengthPx(kHeaderHeight);
@@ -135,7 +135,7 @@ struct HeaderBox {
 };
 struct HeaderFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(kPrKitSpace3);
     }
@@ -144,7 +144,7 @@ struct HeaderFlex {
 // A row of a node's ports: an input's label at its start and an output's at its end, and the port squares on its edges.
 struct PortRowBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.position = PrLayoutPosition_Relative;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
@@ -154,7 +154,7 @@ struct PortRowBox {
 };
 struct PortRowFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.justifyContent = PrLayoutAlignment_SpaceBetween;
     }
@@ -163,7 +163,7 @@ struct PortRowFlex {
 // A node's body: the room under its ports, a column that clips what the caller puts in it.
 struct BodyBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.minHeight = prLayoutLengthPx(0);
@@ -173,7 +173,7 @@ struct BodyBox {
 };
 struct BodyFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = PrLayoutFlexDirection_Column;
         flex.grow = 1;
         flex.basis = prLayoutLengthPx(0);
@@ -186,7 +186,7 @@ struct PortBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     bool input;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.inset[PrRectSide_Top] = prLayoutLengthPx((kPortRow - kPortSize) / 2);
@@ -223,7 +223,7 @@ struct GraphState {
 };
 
 // Returns the color of a port's type.
-PrColor typeColor(const Kit& kit, const PrKitGraph& g, uint32_t type) {
+PrColor typeColor(const PrKit& kit, const PrKitGraph& g, uint32_t type) {
     return g.typeColors != nullptr && type < g.typeCount ? g.typeColors[type] : kit.theme.palette.accent;
 }
 
@@ -282,7 +282,7 @@ float bendOf(PrVec2 from, PrVec2 to, float zoom) {
 }
 
 // Finds a wire's ends on the canvas. Returns false if it names no port of the model.
-bool wireCurve(const Kit& kit, const PrKitGraph& g, const PrKitGraphWire& wire, WireCurve* out) {
+bool wireCurve(const PrKit& kit, const PrKitGraph& g, const PrKitGraphWire& wire, WireCurve* out) {
     const PrKitGraphNode* from = nullptr;
     const PrKitGraphNode* to = nullptr;
     uint32_t output = 0;
@@ -380,7 +380,7 @@ uint64_t drawingHash(const PrKitGraph& g, const GraphState& state, PrVec2 extent
 }
 
 // Records the canvas's grid, its wires, and the wire that a drag runs.
-void drawCanvas(Kit& kit, const PrKitGraph& g, const GraphState& state, PrVec2 extent, PrDrawList* list) {
+void drawCanvas(PrKit& kit, const PrKitGraph& g, const GraphState& state, PrVec2 extent, PrDrawList* list) {
     const PrKitPalette& p = kit.theme.palette;
     const PrKitGraphView& view = *g.view;
     float spacing = kGridSpacing * view.zoom;
@@ -418,7 +418,7 @@ void drawCanvas(Kit& kit, const PrKitGraph& g, const GraphState& state, PrVec2 e
 }
 
 // Creates a node's port square at the edge of its row, in the color of its type.
-PrLayoutNode portSquare(Kit& kit, PrLayoutNode row, PrKitGraphSide side, PrColor color) {
+PrLayoutNode portSquare(PrKit& kit, PrLayoutNode row, PrKitGraphSide side, PrColor color) {
     PrLayoutStyleIndex record = kitStyle(kit, PortBox{.input = side == PrKitGraphSide_Input},
         KitColors{.background = color, .border = kit.theme.palette.bg1});
     PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, row, 0, record);
@@ -428,7 +428,7 @@ PrLayoutNode portSquare(Kit& kit, PrLayoutNode row, PrKitGraphSide side, PrColor
 }
 
 // Opens the gesture of a drag, if it is not open.
-void openGesture(Kit& kit, PrLayoutNode canvas, GraphState& state) {
+void openGesture(PrKit& kit, PrLayoutNode canvas, GraphState& state) {
     if (state.live)
         return;
     state.live = true;
@@ -470,7 +470,7 @@ struct GraphRound {
 };
 
 // Returns the round's context of the graph whose canvas is `graph`, or null if the round created no such graph.
-const GraphRound* PR_NULLABLE graphRound(const Kit& kit, PrLayoutNode graph) {
+const GraphRound* PR_NULLABLE graphRound(const PrKit& kit, PrLayoutNode graph) {
     PrLayoutNode provider = kPrLayoutNodeNone;
     const void* round = prUiContext(kit.ui, graph, &kKitOwner, KitContext_Graph, &provider);
     return provider == graph ? static_cast<const GraphRound*>(round) : nullptr;
@@ -486,7 +486,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
     const PrKitGraph& g = graph;
     PR_ASSERT(g.view != nullptr && g.view->zoom > 0);
     PR_ASSERT(g.nodes != nullptr || g.nodeCount == 0);
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrUi* ui = k.ui;
     PrLayoutTree* tree = k.tree;
     const PrKitPalette& p = k.theme.palette;

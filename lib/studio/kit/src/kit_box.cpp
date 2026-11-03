@@ -24,7 +24,7 @@ struct BoxBox {
     Positioning positioning;
     uint8_t _pad[3];
 
-    void make(const Kit& kit, PrLayoutBoxStyle& box) const {
+    void make(const PrKit& kit, PrLayoutBoxStyle& box) const {
         KitContainerBox{.style = style}.make(kit, box);
         if (positioning == Positioning_Stack) {
             box.position = PrLayoutPosition_Relative;
@@ -37,7 +37,7 @@ struct BoxBox {
 };
 PR_NO_PADDING_END
 
-PrLayoutNode positioned(Kit& kit, PrLayoutNode parent, PrKitBox box, const PrKitBoxStyle& style,
+PrLayoutNode positioned(PrKit& kit, PrLayoutNode parent, PrKitBox box, const PrKitBoxStyle& style,
         Positioning positioning) {
     PrLayoutStyleIndex record =
         kitStyle(kit, BoxBox{.style = style, .positioning = positioning}, kitContainerFlex(style));
@@ -52,7 +52,7 @@ struct PlaneBox {
     bool zIndexed;
     uint8_t _pad[3];
 
-    void make(const Kit& kit, PrLayoutBoxStyle& box) const {
+    void make(const PrKit& kit, PrLayoutBoxStyle& box) const {
         KitContainerBox{.style = style}.make(kit, box);
         box.transformed = 1;
         box.zIndexed = zIndexed ? 1 : 0;
@@ -71,7 +71,7 @@ struct PlaneEffects {
     bool backfaceHidden;
     uint8_t _pad[2];
 
-    void make(const Kit&, PrLayoutEffectStyle& effects) const {
+    void make(const PrKit&, PrLayoutEffectStyle& effects) const {
         if (transformed)
             effects.transform = PrLayoutTransform{.matrix = transform};
         if (perspective > 0)
@@ -86,7 +86,7 @@ PR_NO_PADDING_END
 // alignment stretches it across.
 struct DividerBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.minWidth = prLayoutLengthPx(1);
         box.minHeight = prLayoutLengthPx(1);
@@ -94,14 +94,14 @@ struct DividerBox {
 };
 struct DividerFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.shrink = 0;
         flex.alignSelf = PrLayoutAlignment_Stretch;
     }
 };
 struct DividerFill {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Decoration;
-    void make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
+    void make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {
         decoration.background = kitColor16(kit.theme.palette.line1);
     }
 };

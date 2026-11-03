@@ -10,9 +10,9 @@ namespace pr_impl {
 namespace {
 
 // The look of each PrKitButtonVariant.
-constexpr KitLookId kVariantLooks[] = {
-    KitLookId_Button, KitLookId_ButtonPrimary, KitLookId_ButtonGhost,
-    KitLookId_ButtonDanger,
+constexpr PrKitLookId kVariantLooks[] = {
+    PrKitLookId_Button, PrKitLookId_ButtonPrimary, PrKitLookId_ButtonGhost,
+    PrKitLookId_ButtonDanger,
 };
 
 // The size of a button's icon by PrKitControlSize, which grows with the button.
@@ -33,10 +33,10 @@ float endPadding(PrKitControlSize size) {
 }
 
 // Returns the look of a button of `variant`: toggled on if `selected`, and quiet if `disabled`.
-KitLookId buttonLook(PrKitButtonVariant variant, bool selected, bool disabled) {
+PrKitLookId buttonLook(PrKitButtonVariant variant, bool selected, bool disabled) {
     if (disabled)
-        return variant == PrKitButtonVariant_Ghost ? KitLookId_ButtonGhostDisabled : KitLookId_ButtonDisabled;
-    return selected ? KitLookId_ButtonSelected : kVariantLooks[variant];
+        return variant == PrKitButtonVariant_Ghost ? PrKitLookId_ButtonGhostDisabled : PrKitLookId_ButtonDisabled;
+    return selected ? PrKitLookId_ButtonSelected : kVariantLooks[variant];
 }
 
 // A button's box: as tall as its size, as wide as tall if it shows an icon alone, and bordered unless it shares a
@@ -48,7 +48,7 @@ struct ButtonBox {
     bool square;
     bool grouped;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         float height = kitControlHeight(size);
         float ends = square ? 0 : endPadding(size);
         box.display = PrLayoutDisplay_Flex;
@@ -66,7 +66,7 @@ PR_NO_PADDING_END
 // A button's flex: its icon and label centered, apart by a gap, and the button never shrinks.
 struct ButtonFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.justifyContent = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(kPrKitSpace3);
@@ -88,7 +88,7 @@ struct GroupContext {
     uint8_t unused;
 };
 
-bool inGroup(const Kit& kit, PrLayoutNode parent) {
+bool inGroup(const PrKit& kit, PrLayoutNode parent) {
     PrLayoutNode provider = kPrLayoutNodeNone;
     return kitContext<GroupContext>(kit, parent, KitContext_ButtonGroup, &provider) != nullptr && provider == parent;
 }
@@ -97,14 +97,14 @@ bool inGroup(const Kit& kit, PrLayoutNode parent) {
 // them.
 struct GroupBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         kitSetBorderWidth(box, 1);
     }
 };
 struct GroupFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Stretch;
         flex.columnGap = prLayoutLengthPx(1);
         flex.shrink = 0;
@@ -125,7 +125,7 @@ struct TagBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     Tag tag;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         switch (tag) {
@@ -155,7 +155,7 @@ struct TagFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     Tag tag;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.shrink = 0;
         if (tag == Tag_Status)
@@ -183,7 +183,7 @@ PrColor washOf(PrColor color, float alpha) {
 }
 
 // Makes a tag of `text` in the record of its groups.
-PrLayoutNode tag(Kit& kit, PrLayoutNode parent, uint64_t key, PrStringView text, Tag tag, PrColor ink, KitColors colors) {
+PrLayoutNode tag(PrKit& kit, PrLayoutNode parent, uint64_t key, PrStringView text, Tag tag, PrColor ink, KitColors colors) {
     PrLayoutStyleIndex record =
         kitStyle(kit, TagBox{.tag = tag}, TagFlex{.tag = tag}, tagFont(tag), KitInk{.color = ink}, colors);
     PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, record);
@@ -201,14 +201,14 @@ constexpr PrKitTone kBadgeTones[] = {
 // A chip's remove control: a square as tall as the smallest control, which centers its icon.
 struct RemoveBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.width = box.height = prLayoutLengthPx(kPrKitHeightXxs);
     }
 };
 struct RemoveFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.justifyContent = PrLayoutAlignment_Center;
     }
@@ -221,14 +221,14 @@ struct RemoveFlex {
 using namespace pr_impl;
 
 PrLayoutNode prKitButton(PrKit* kit, PrLayoutNode parent, PrKitButton button, PrKitButtonStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     KitControl c = kitControl(k, parent, button.key, PrUiFlag_Pressable | PrUiFlag_Focusable, button.disabled);
     ButtonBox box{
         .size = style.size,
         .square = button.text.size == 0 && button.icon != PrKitIconKind_None,
         .grouped = inGroup(k, parent),
     };
-    KitLookId look = buttonLook(style.variant, button.selected, c.disabled);
+    PrKitLookId look = buttonLook(style.variant, button.selected, c.disabled);
     KitDress dress = kitDress(k, c, look);
     prLayoutTreeFrameSetStyle(k.tree, c.node,
         kitStyle(k, box, ButtonFlex{}, buttonFont(style.size), dress.fill, dress.ink));
@@ -256,14 +256,14 @@ PrLayoutNode prKitStatus(PrKit* kit, PrLayoutNode parent, PrKitStatus status, Pr
 }
 
 PrLayoutNode prKitChip(PrKit* kit, PrLayoutNode parent, PrKitChip chip) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     PrLayoutNode node =
         tag(k, parent, chip.key, chip.label, Tag_Chip, p.text1, KitColors{.background = p.bg3, .border = p.line2});
     if (!chip.removable)
         return node;
     KitControl remove = kitControl(k, node, 0, PrUiFlag_Pressable, chip.disabled);
-    KitLookId look = remove.disabled ? KitLookId_ButtonGhostDisabled : KitLookId_Plain;
+    PrKitLookId look = remove.disabled ? PrKitLookId_ButtonGhostDisabled : PrKitLookId_Plain;
     prLayoutTreeFrameSetStyle(k.tree, remove.node,
         kitStyle(k, RemoveBox{}, RemoveFlex{}, kitDress(k, remove, look).fill));
     kitIcon(k, remove.node, 0, PrKitIconKind_Close, 10, k.looks[look].icon);
@@ -273,7 +273,7 @@ PrLayoutNode prKitChip(PrKit* kit, PrLayoutNode parent, PrKitChip chip) {
 }
 
 PrLayoutNode prKitButtonGroup(PrKit* kit, PrLayoutNode parent, PrKitButtonGroup group) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     PrLayoutStyleIndex record = kitStyle(k, GroupBox{}, GroupFlex{}, KitColors{.background = p.line2, .border = p.line2});
     PrLayoutNode node =

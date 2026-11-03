@@ -29,7 +29,7 @@ KitFont lineFont(PrKitTextRole role) {
 // A stat tile: a padded, bordered column of its label, value and note.
 struct TileBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         kitSetPadding(box, prKitEdgesXY(kPrKitSpace4, kPrKitSpace5));
         kitSetBorderWidth(box, 1);
@@ -37,7 +37,7 @@ struct TileBox {
 };
 struct TileFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = PrLayoutFlexDirection_Column;
         flex.rowGap = prLayoutLengthPx(kPrKitSpace2);
         flex.shrink = 0;
@@ -47,7 +47,7 @@ struct TileFlex {
 // A log line: a row at least an extra small control tall, with a rule below it.
 struct LineBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.minHeight = prLayoutLengthPx(kPrKitHeightXs);
@@ -57,7 +57,7 @@ struct LineBox {
 };
 struct LineFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(kPrKitSpace3);
         flex.shrink = 0;
@@ -70,7 +70,7 @@ struct ColumnBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float width;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.width = prLayoutLengthPx(width);
         box.overflowX = box.overflowY = PrLayoutOverflow_Clip;
@@ -81,7 +81,7 @@ PR_NO_PADDING_END
 // A log line's message, which takes the room the line leaves and clips its text.
 struct MessageBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.minWidth = prLayoutLengthPx(0);
         box.overflowX = box.overflowY = PrLayoutOverflow_Clip;
@@ -89,7 +89,7 @@ struct MessageBox {
 };
 
 // Creates a node of `record` under `parent`, with `text` in it if it is not empty.
-PrLayoutNode part(Kit& kit, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex record, PrStringView text) {
+PrLayoutNode part(PrKit& kit, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex record, PrStringView text) {
     PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, record);
     if (text.size != 0)
         prLayoutTreeFrameText(kit.tree, node, 0, text);
@@ -103,7 +103,7 @@ PrLayoutNode part(Kit& kit, PrLayoutNode parent, uint64_t key, PrLayoutStyleInde
 using namespace pr_impl;
 
 PrLayoutNode prKitStatTile(PrKit* kit, PrLayoutNode parent, PrKitStatTile tile) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     PrLayoutStyleIndex tileRecord = kitStyle(k, TileBox{}, TileFlex{}, KitColors{.background = p.bg1, .border = p.line1});
     PrLayoutNode card = part(k, parent, tile.key, tileRecord, PrStringView{});
@@ -122,7 +122,7 @@ PrLayoutNode prKitStatTile(PrKit* kit, PrLayoutNode parent, PrKitStatTile tile) 
 PrLayoutNode prKitLogLine(PrKit* kit, PrLayoutNode parent, PrKitLogLine line) {
     PR_ASSERT(line.level <= PrKitLogLevel_Error);
     static const PrStringView kTags[] = {"INFO", "WARN", "ERROR"};
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     // A warning or an error washes its line in its tone.
     PrColor wash{0, 0, 0, 0};

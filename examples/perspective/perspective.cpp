@@ -178,8 +178,8 @@ PrMatrix4 panelTransform(float tilt, float turn, float depth, float scale) {
 }
 
 void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const PrMatrix4& transform) {
-    PrUi* ui = prKitUi(kit);
-    PrLayoutTree* tree = prKitTree(kit);
+    PrUi* ui = kit->ui;
+    PrLayoutTree* tree = kit->tree;
     const PanelText& text = kPanelText[index];
     // The panel's content is a layer, which takes no room, so the panel's height is given.
     PrKitPlaneStyle plane{
@@ -237,10 +237,10 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
 // Declares the round: a header with the backdrop's toggle, and the row of panels in perspective.
 void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     Panels& p = *static_cast<Panels*>(context);
-    const PrKitPalette& palette = prKitTheme(kit)->palette;
+    const PrKitPalette& palette = kit->theme.palette;
     p.glass = PrColor{palette.bg1.r, palette.bg1.g, palette.bg1.b, 0.5f};
     p.rim = palette.line2;
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
 
     PrKitSurfaceStyle header{
         .box = {
@@ -284,7 +284,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     PrVec2 pointer{};
     float reach = 0;
     float lift = 0;
-    PrRect viewport = prLayoutRectToPx(prLayoutNodeBounds(prKitTree(kit), ground, PrLayoutCoordinates_Viewport));
+    PrRect viewport = prLayoutRectToPx(prLayoutNodeBounds(kit->tree, ground, PrLayoutCoordinates_Viewport));
     extent = PrVec2{viewport.right - viewport.left, viewport.bottom - viewport.top};
     if (prUiPointer(ui, &pointer) && extent.x > 1 && extent.y > 1) {
         reach = pointer.x / extent.x - 0.5f;

@@ -13,9 +13,9 @@ A widget takes its parent, its content and its style, and returns the node that 
 PrLayoutNode prKitButton(PrKit* kit, PrLayoutNode parent, PrKitButton button, PrKitButtonStyle style);
 ```
 
-- The content holds what the call shows and binds: the widget's key first, then its text, its values and the pointers
-  that it writes. The style holds the few choices that the design system offers for the widget's look, such as a
-  variant or a size. A widget with no choices takes no style.
+- The content holds what the call shows and binds: the widget's key, if it needs one, then its text, its values and
+  the pointers that it writes. The style holds the few choices that the design system offers for the widget's look,
+  such as a variant or a size. A widget with no choices takes no style.
 - Both are passed by value, and zero is the default in every field, so a C caller writes a compound literal and a C++
   caller a braced list. A style is usually a constant that an application names once and passes to many calls.
 - A library is opinionated. Each widget takes the parameters that its design calls for and no more. Anything else is
@@ -64,11 +64,12 @@ widget's own content can disable it alone. A library keeps no stack of scopes in
 
 ## Keys and identity
 
-A node with key 0 is matched by its parent and its place among its parent's unkeyed children of its kind, which suits
-content that does not move. A keyed node is matched by its key wherever a round creates it, which is what rows that
-reorder and panels that come and go need.
+Most widgets leave the key out. A node with no key is matched by its parent and its tree index among its parent's
+unkeyed children of its kind, which suits content that does not move. A keyed node is matched by its key wherever a
+round creates it, which is what rows that reorder and panels that come and go need.
 
-- A key is unique in the tree. A library makes one from a base and a local name or index (`prUiKey`, `prUiKeyIndex`).
+- A key is a `PrUiKey`, and `prUiKey` and `prUiKeyIndex` are what make one, from a base and a local name or index. It
+  is unique in the tree, so a number is not a key.
   The base is identified by its own key if it has one, and otherwise by its node, which layout keeps while it matches
   the node. Items of a container make their keys under the container, so two containers never share one, whichever
   libraries made them.

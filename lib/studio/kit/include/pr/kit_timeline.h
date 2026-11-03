@@ -63,7 +63,7 @@ typedef struct PrKitTimelineSnap {
 // drag on an empty part of a track selects the blocks that its rectangle touches, and a click there clears the
 // selection. Each drag is one gesture.
 typedef struct PrKitTimeline {
-    uint64_t key;
+    PrUiKey key;
     const PrKitTimelineTrack* PR_NULLABLE tracks;
     uint32_t trackCount;
     PrKitTimelineBlock* PR_NULLABLE blocks;

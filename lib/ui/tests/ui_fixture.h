@@ -78,7 +78,7 @@ struct UiFixture {
     }
 
     // Creates an absolutely positioned box of `w` by `h` px at `x`, `y` in its parent, with `flags`.
-    PrLayoutNode box(PrLayoutNode parent, float x, float y, float w, float h, PrUiFlags flags = 0, uint64_t key = 0,
+    PrLayoutNode box(PrLayoutNode parent, float x, float y, float w, float h, PrUiFlags flags = 0, PrUiKey key = 0,
             int32_t zIndex = 0, bool zIndexed = false) {
         PrLayoutBoxStyle b = prLayoutBoxStyleDefault();
         b.display = PrLayoutDisplay_Block;

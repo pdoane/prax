@@ -1303,6 +1303,18 @@ void prUiRequestMotion(PrUi* ui, PrLayoutNode node) {
         prUiRequestFrame(ui);
 }
 
+PrUiKey prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name) {
+    return hashMixKeys(baseIdentity(ui, base), hashBytes(name.data, name.size, 0x6e616d65ull));
+}
+
+PrUiKey prUiKeyIndex(const PrUi* ui, PrLayoutNode base, uint64_t index) {
+    return hashMixKeys(baseIdentity(ui, base), hashMixKeys(index, 0x696e646578ull));
+}
+
+PrUiKey prUiKeyIndex2(const PrUi* ui, PrLayoutNode base, uint64_t first, uint64_t second) {
+    return hashMixKeys(baseIdentity(ui, base), hashMixKeys(hashMixKeys(first, second), 0x696e64657832ull));
+}
+
 void prUiSetFlags(PrUi* ui, PrLayoutNode node, PrUiFlags flags) {
     setFlags(ui, node, flags);
 }
@@ -1316,7 +1328,7 @@ PrUiFlags prUiFlags(const PrUi* ui, PrLayoutNode node) {
     return s != nullptr && s->flagsRound == ui->roundId ? s->flags : PrUiFlags(0);
 }
 
-PrLayoutNode prUiElement(PrUi* ui, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style, PrUiFlags flags) {
+PrLayoutNode prUiElement(PrUi* ui, PrLayoutNode parent, PrUiKey key, PrLayoutStyleIndex style, PrUiFlags flags) {
     PrLayoutNode node = prLayoutTreeFrameElement(ui->tree, parent, key, style);
     if (flags != 0)
         prUiSetFlags(ui, node, flags);
@@ -1326,14 +1338,6 @@ PrLayoutNode prUiElement(PrUi* ui, PrLayoutNode parent, uint64_t key, PrLayoutSt
 bool prUiIsDisabled(PrUi* ui, PrLayoutNode node) {
     PR_ASSERT(ui->building);
     return disabledWithin(ui, node);
-}
-
-uint64_t prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name) {
-    return hashMixKeys(baseIdentity(ui, base), hashBytes(name.data, name.size, 0x6e616d65ull));
-}
-
-uint64_t prUiKeyIndex(const PrUi* ui, PrLayoutNode base, uint64_t index) {
-    return hashMixKeys(baseIdentity(ui, base), hashMixKeys(index, 0x696e646578ull));
 }
 
 PrLayoutNode prUiOverlay(PrUi* ui) {

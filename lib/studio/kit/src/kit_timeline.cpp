@@ -43,13 +43,13 @@ constexpr float kTickSteps[] = {0.01f, 0.025f, 0.05f, 0.1f, 0.25f, 0.5f, 1, 2, 5
 // The timeline's frame: a column of its header and its tracks.
 struct FrameBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
     }
 };
 struct FrameFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = PrLayoutFlexDirection_Column;
         flex.shrink = 0;
     }
@@ -61,7 +61,7 @@ struct BandBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float height;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.height = prLayoutLengthPx(height);
@@ -73,7 +73,7 @@ PR_NO_PADDING_END
 // The header's corner or a track's name: the gutter, a row that clips, with a rule at its end.
 struct GutterBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.width = prLayoutLengthPx(kGutterWidth);
@@ -84,7 +84,7 @@ struct GutterBox {
 };
 struct GutterFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.shrink = 0;
         flex.alignItems = PrLayoutAlignment_Center;
     }
@@ -93,7 +93,7 @@ struct GutterFlex {
 // The ruler or a lane: the room the gutter leaves, which positions and clips what is placed on it.
 struct LaneBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Relative;
         box.minWidth = prLayoutLengthPx(0);
@@ -113,7 +113,7 @@ struct SpanBox {
     bool framed;
     uint8_t _pad[3];
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
@@ -131,7 +131,7 @@ struct LineBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float percent;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.inset[PrRectSide_Left] = prLayoutLengthPercent(percent);
@@ -149,7 +149,7 @@ struct MarkBox {
     float top;
     float size;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.inset[PrRectSide_Left] = prLayoutLengthPercent(percent);
@@ -163,7 +163,7 @@ struct MarkBox {
 // A mark turned by a quarter of a right angle into a diamond.
 struct DiamondEffects {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Effect;
-    void make(const Kit&, PrLayoutEffectStyle& effects) const {
+    void make(const PrKit&, PrLayoutEffectStyle& effects) const {
         effects.transform = prLayoutTransformFromAffine2(prAffine2Rotate(kPiF32 / 4));
     }
 };
@@ -173,7 +173,7 @@ struct TickLabelBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float percent;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.inset[PrRectSide_Left] = prLayoutLengthPercent(percent);
@@ -270,19 +270,19 @@ Snapped snapTime(const PrKitTimeline& t, const Span& span, float time, bool scru
 }
 
 // Creates a span in `parent` (SpanBox) with `fill` and, if `edge` is not clear, a 1 px frame of it.
-PrLayoutNode spanBox(Kit& kit, PrLayoutNode parent, float left, float width, float top, float bottom, PrColor fill,
+PrLayoutNode spanBox(PrKit& kit, PrLayoutNode parent, float left, float width, float top, float bottom, PrColor fill,
         PrColor edge) {
     SpanBox box{.left = left, .width = width, .top = top, .bottom = bottom, .framed = edge.a > 0};
     return prLayoutTreeFrameElement(kit.tree, parent, 0, kitStyle(kit, box, KitColors{.background = fill, .border = edge}));
 }
 
 // Creates a line at `percent` of `parent`'s width (LineBox).
-void line(Kit& kit, PrLayoutNode parent, float percent, PrColor color) {
+void line(PrKit& kit, PrLayoutNode parent, float percent, PrColor color) {
     prLayoutTreeFrameElement(kit.tree, parent, 0, kitStyle(kit, LineBox{.percent = percent}, KitColors{.background = color}));
 }
 
 // Creates a mark at `percent` of `parent`'s width (MarkBox), a diamond if `diamond` is true.
-void mark(Kit& kit, PrLayoutNode parent, float percent, float top, float size, PrColor color, bool diamond) {
+void mark(PrKit& kit, PrLayoutNode parent, float percent, float top, float size, PrColor color, bool diamond) {
     MarkBox box{.percent = percent, .top = top, .size = size};
     KitColors fill{.background = color};
     PrLayoutStyleIndex record = diamond ? kitStyle(kit, box, fill, DiamondEffects{}) : kitStyle(kit, box, fill);
@@ -290,7 +290,7 @@ void mark(Kit& kit, PrLayoutNode parent, float percent, float top, float size, P
 }
 
 // Creates the ruler's ticks and their labels, at the finest step that leaves room between them.
-void ticks(Kit& kit, PrLayoutNode ruler, const Span& span) {
+void ticks(PrKit& kit, PrLayoutNode ruler, const Span& span) {
     const PrKitPalette& p = kit.theme.palette;
     float step = kTickSteps[countOf(kTickSteps) - 1];
     for (float s : kTickSteps) {
@@ -332,7 +332,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
     const PrKitTimeline& t = timeline;
     PR_ASSERT(t.view != nullptr && t.view->end > t.view->start);
     PR_ASSERT(t.blocks != nullptr || t.blockCount == 0);
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrUi* ui = k.ui;
     const PrKitPalette& p = k.theme.palette;
     float trackHeight = style.trackHeight > 0 ? style.trackHeight : kTrackHeight;

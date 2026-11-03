@@ -18,7 +18,7 @@ extern "C" {
 // What a stat tile shows: a caption, a reading in large numerals, and a note under it in `noteTone`, such as the change
 // since the last reading or the budget that the reading is against. An empty note shows nothing.
 typedef struct PrKitStatTile {
-    uint64_t key;
+    PrUiKey key;
     PrStringView label;
     PrStringView value;
     PrStringView note;
@@ -42,7 +42,7 @@ typedef uint8_t PrKitLogLevel;
 // What a log line shows: when it was logged, its severity, its message, and what logged it. An empty time or source
 // shows nothing in its place.
 typedef struct PrKitLogLine {
-    uint64_t key;
+    PrUiKey key;
     PrStringView time;
     PrStringView message;
     PrStringView source;

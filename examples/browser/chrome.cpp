@@ -518,9 +518,11 @@ void buildStart(Browser& b, PrLayoutNode root) {
 // removes the visit. A middle click or a click with the command modifier opens the page in a new tab. `offset` is the
 // local time zone's offset at the visit. Returns true if the user asked to remove the visit.
 bool historyRow(Browser& b, PrLayoutNode list, const Visit& visit, double offset) {
-    uint64_t key = std::hash<std::string>{}(visit.url);
-    PrLayoutNode row =
-        prKitBox(b.kit, list, {.key = key}, {.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = 4});
+    PrLayoutNode row = prKitBox(b.kit, list, {.key = prUiKey(b.kit->ui, list, visit.url)}, {
+        .direction = PrKitDirection_Row,
+        .align = PrKitAlign_Center,
+        .gap = 4,
+    });
     PrKitBoxStyle style{
         .direction = PrKitDirection_Row,
         .align = PrKitAlign_Center,

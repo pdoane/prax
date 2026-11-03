@@ -1555,6 +1555,7 @@ uint32_t prLayoutTreeTakeScrollAdjustments(PrLayoutTree* tree, PrLayoutScrollAdj
 }
 
 void prLayoutTreeLayout(PrLayoutTree* tree, const PrLayoutRoot* roots, uint32_t count) {
+    PR_ASSERT(tree->styles->targetPixelRatio > 0);
     PR_ASSERT(count >= 1);
     LayoutTree* t = tree;
     t->stats = PrLayoutTreeStats{};

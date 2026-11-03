@@ -75,7 +75,7 @@ constexpr SidebarEntry kSidebar[] = {
 void findActiveSection(PrKit* kit, GalleryState& state) {
     if (state.contentView == kPrLayoutNodeNone)
         return;
-    PrLayoutTree* tree = prKitTree(kit);
+    PrLayoutTree* tree = kit->tree;
     PrLayoutRect view = prLayoutNodeBounds(tree, state.contentView, PrLayoutCoordinates_Viewport);
     PrLayoutUnit slack = prLayoutUnitFromPx(kActiveSlack);
     uint32_t active = 0;
@@ -105,7 +105,7 @@ void sidebarRow(PrKit* kit, PrLayoutNode list, const SidebarEntry& entry, Galler
     fillLabel(kit, node, entry.label, label);
     prKitLabel(kit, node, {.text = entry.number}, active ? kMetaAccent : kMeta);
     if (prKitActivated(kit, node) && state.sectionAnchor[entry.section] != kPrLayoutNodeNone)
-        prUiReveal(prKitUi(kit), state.sectionAnchor[entry.section]);
+        prUiReveal(kit->ui, state.sectionAnchor[entry.section]);
 }
 
 void buildSidebar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
@@ -142,12 +142,12 @@ PrLayoutNode sectionAnchor(PrKit* kit, PrLayoutNode content, GalleryState& state
     state.sectionAnchor[id] = section;
     // The reveal waits for the section's first layout, whose geometry it scrolls by.
     if (state.reveal == id) {
-        PrLayoutRect laid = prLayoutNodeBounds(prKitTree(kit), section, PrLayoutCoordinates_Viewport);
+        PrLayoutRect laid = prLayoutNodeBounds(kit->tree, section, PrLayoutCoordinates_Viewport);
         if (laid.bottom.raw > laid.top.raw) {
-            prUiReveal(prKitUi(kit), section);
+            prUiReveal(kit->ui, section);
             state.reveal = Section_Count;
         } else {
-            prUiRequestFrame(prKitUi(kit));
+            prUiRequestFrame(kit->ui);
         }
     }
     return section;

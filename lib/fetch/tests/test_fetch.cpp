@@ -744,11 +744,13 @@ TEST_CASE("fetch: a load destroyed before its response arrives delivers nothing"
     prConditionInit(&owner.posted);
     Delivery early{};
     Delivery late{};
-    PrFetchRequestDesc request{.url = urlOf(fixture, "/large")};
+    std::string largeUrl = urlOf(fixture, "/large");
+    PrFetchRequestDesc request{.url = largeUrl};
     PrFetchLoadDesc desc{.post = postToOwner, .queue = &owner, .done = delivered, .context = &early};
     prFetchLoadDestroy(prFetchLoadCreate(fixture.fetcher, &request, &desc));
     // A load whose response is posted to the owner before the owner destroys it.
-    PrFetchRequestDesc hello{.url = urlOf(fixture, "/hello")};
+    std::string helloUrl = urlOf(fixture, "/hello");
+    PrFetchRequestDesc hello{.url = helloUrl};
     desc.context = &late;
     late.load = prFetchLoadCreate(fixture.fetcher, &hello, &desc);
     prMutexLock(&owner.mutex);

@@ -106,7 +106,7 @@ typedef struct PrKitNumberRange {
 // The content of a numeric field: the value that it shows and edits. `precision` is the number of fraction digits that
 // a float shows, or two for zero. An integer shows none.
 typedef struct PrKitNumber {
-    uint64_t key;
+    PrUiKey key;
     PrKitScalar value;
     PrKitNumberRange range;
     PrStringView axis;              // a tag before the value, such as a vector's X
@@ -130,7 +130,7 @@ PrLayoutNode prKitNumberField(PrKit* kit, PrLayoutNode parent, PrKitNumber numbe
 // The content of a vector field: `count` components, from two to four, starting at `value`, each in `range`. Unless
 // `untagged` is true, the components are tagged X, Y, Z and W in the axis tones.
 typedef struct PrKitVector {
-    uint64_t key;
+    PrUiKey key;
     PrKitScalar value;
     uint32_t count;
     PrKitNumberRange range;
@@ -155,7 +155,7 @@ typedef struct PrKitFieldStyle {
 
 // What a text field edits and shows.
 typedef struct PrKitTextField {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
     PrTextEditBuffer* PR_NULLABLE buffer; // holds the text instead of `text`, for a caller that owns a buffer
     PrStringView placeholder;             // shown faint while the text is empty
@@ -179,7 +179,7 @@ PrLayoutNode prKitTextField(PrKit* kit, PrLayoutNode parent, PrKitTextField fiel
 
 // What a text area edits and shows: text that wraps at the area's width, and `rows` lines of room, or 3 for zero.
 typedef struct PrKitTextArea {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
     PrTextEditBuffer* PR_NULLABLE buffer;   // holds the text instead of `text`, for a caller that owns a buffer
     PrStringView placeholder;
@@ -223,7 +223,7 @@ typedef uint8_t PrKitSliderScale;
 // What a slider edits: `value` between `min` and `max`, or between 0 and 1 if both are zero. `step` is the change from
 // one key press, as a fraction of the track, or a hundredth for zero.
 typedef struct PrKitSlider {
-    uint64_t key;
+    PrUiKey key;
     PrKitScalar value;
     double min;
     double max;
@@ -249,7 +249,7 @@ PrLayoutNode prKitSlider(PrKit* kit, PrLayoutNode parent, PrKitSlider slider, Pr
 // A group of an inspector's rows under a header that discloses them. `open` is the caller's flag, which an activation
 // of the header flips. If `open` is null, the kit keeps a flag for the group, which starts open.
 typedef struct PrKitInspectorGroup {
-    uint64_t key;
+    PrUiKey key;
     PrStringView name;
     PrStringView badge;             // a tag after the name, or empty for none
     PrKitBadgeVariant badgeVariant;
@@ -262,7 +262,7 @@ PrLayoutNode prKitInspectorGroup(PrKit* kit, PrLayoutNode parent, PrKitInspector
 
 // The content of an inspector row: its label.
 typedef struct PrKitInspectorRow {
-    uint64_t key;
+    PrUiKey key;
     PrStringView label;
 } PrKitInspectorRow;
 
@@ -278,7 +278,7 @@ PrLayoutNode prKitInspectorRow(PrKit* kit, PrLayoutNode parent, PrKitInspectorRo
 // A field that refers to an asset: the asset's name beside a thumbnail. The thumbnail is the icon, or a square of
 // `tint` if the alpha of `tint` is above zero. The field is a drop target for payloads (pr/ui.h) of `kind`.
 typedef struct PrKitAssetField {
-    uint64_t key;
+    PrUiKey key;
     PrStringView name;
     PrKitIconKind icon;
     PrColor tint;

@@ -41,7 +41,7 @@ constexpr PrKitButtonStyle kDanger = {.variant = PrKitButtonVariant_Danger};
 PrStringView format(char* buffer, size_t size, const char* text, ...) PR_PRINTF_FORMAT(3, 4);
 
 // Creates a card: a box on the panel ground with a rule on every side, laid out as `box` says.
-PrLayoutNode card(PrKit* kit, PrLayoutNode parent, uint64_t key, const PrKitBoxStyle& box);
+PrLayoutNode card(PrKit* kit, PrLayoutNode parent, const PrKitBoxStyle& box);
 
 // Creates a label of `text` in `style` that takes the room its parent leaves.
 PrLayoutNode fillLabel(PrKit* kit, PrLayoutNode parent, PrStringView text, const PrKitTextStyle& style);

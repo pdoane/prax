@@ -71,7 +71,7 @@ typedef struct PrKitGraphView {
 // same type asks to wire them. A click on a wire selects it, a drag on empty canvas selects the nodes that its
 // rectangle touches, and a click there clears the selection. Each drag is one gesture.
 typedef struct PrKitGraph {
-    uint64_t key;
+    PrUiKey key;
     PrKitGraphNode* PR_NULLABLE nodes;
     uint32_t nodeCount;
     PrKitGraphWire* PR_NULLABLE wires;

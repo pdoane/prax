@@ -145,8 +145,8 @@ void buildSelect(PrKit* kit, PrLayoutNode section, MenuState& state) {
 
 // Creates the context menu's items: verbs, a row of tag colors, a check item and a destructive verb.
 void buildContextMenuItems(PrKit* kit, PrLayoutNode menu, MenuState& state) {
-    const PrKitPalette& palette = prKitTheme(kit)->palette;
-    PrUi* ui = prKitUi(kit);
+    const PrKitPalette& palette = kit->theme.palette;
+    PrUi* ui = kit->ui;
     prKitMenuLabel(kit, menu, {.text = "EDIT"});
     for (const ContextVerb& verb : kEditVerbs) {
         PrKitMenuItem item{.text = verb.label, .shortcut = verb.shortcut};
@@ -248,7 +248,7 @@ void buildPalette(PrKit* kit, PrLayoutNode section, PaletteState& palette) {
             .shortcut = command.shortcut != nullptr ? command.shortcut : PrStringView{},
             .icon = command.icon,
         };
-        if (prUiActivated(prKitUi(kit), prKitCommandItem(kit, list, item)))
+        if (prUiActivated(kit->ui, prKitCommandItem(kit, list, item)))
             palette.active = shown[i];
     }
     prKitCommandPaletteFooter(kit, list);
@@ -373,7 +373,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         if (prKitTextChanged(kit, field, &text))
             inputs.command.assign(text.data, text.size);
         // The field leaves Enter to its caller, which submits the line.
-        PrUiEvents events = prUiEvents(prKitUi(kit), field);
+        PrUiEvents events = prUiEvents(kit->ui, field);
         for (uint32_t i = 0; i < events.count; ++i) {
             if (events.events[i].kind == PrAppEventKind_KeyDown && events.events[i].key == PrAppKey_Enter)
                 submitCommand(inputs);
@@ -565,7 +565,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrLayoutNode panel = demoPanel(kit, section, "EDIT LIFECYCLE", "SINK . UNDO . REDO", false);
         PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_End, .gap = kPrKitSpace6};
         PrLayoutNode row = prKitBox(kit, panel, {}, line);
-        prUiSetEditSink(prKitUi(kit), row, undoEdit, &undo);
+        prUiSetEditSink(kit->ui, row, undoEdit, &undo);
         PrKitBoxStyle cell{.gap = kPrKitSpace2};
         cell.place.flex = PrKitFlex_Fill;
         PrLayoutNode strength = prKitBox(kit, row, {}, cell);
@@ -666,7 +666,10 @@ void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrLayoutNode strip = prKitTabStrip(kit, panel, {.reorderable = true}, {});
         for (uint32_t i = 0; i < 5; ++i) {
             const PanelTab& shown = all[tabs.panelOrder[i]];
-            PrLayoutNode tab = prKitTab(kit, strip, {.key = tabs.panelOrder[i] + 1u, .selected = tabs.panel == i});
+            PrLayoutNode tab = prKitTab(kit, strip, {
+                .key = prUiKeyIndex(kit->ui, strip, tabs.panelOrder[i]),
+                .selected = tabs.panel == i,
+            });
             prKitTabLabel(kit, tab, {.text = shown.label});
             if (shown.badge != nullptr)
                 prKitBadge(kit, tab, {.text = shown.badge}, {.variant = PrKitBadgeVariant_Warning});

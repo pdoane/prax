@@ -40,7 +40,7 @@ typedef struct PrKitButtonStyle {
 // What a button shows: an icon, text, or both, as wide as it is tall if it shows an icon alone. `selected` toggles the
 // button on, as for a toolbar's tool.
 typedef struct PrKitButton {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
     PrKitIconKind icon;
     bool selected;
@@ -63,7 +63,7 @@ typedef uint8_t PrKitBadgeVariant;
 
 // A small tag of text, and how it looks.
 typedef struct PrKitBadge {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
 } PrKitBadge;
 typedef struct PrKitBadgeStyle {
@@ -75,7 +75,7 @@ PrLayoutNode prKitBadge(PrKit* kit, PrLayoutNode parent, PrKitBadge badge, PrKit
 
 // A key cap, in the style of a shortcut in a menu.
 typedef struct PrKitKbd {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
 } PrKitKbd;
 
@@ -85,7 +85,7 @@ PrLayoutNode prKitKbd(PrKit* kit, PrLayoutNode parent, PrKitKbd kbd);
 // A status: one or two characters in a pill washed in its tone, such as the M, A and D of a file's state in version
 // control.
 typedef struct PrKitStatus {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
 } PrKitStatus;
 typedef struct PrKitStatusStyle {
@@ -100,7 +100,7 @@ PrLayoutNode prKitStatus(PrKit* kit, PrLayoutNode parent, PrKitStatus status, Pr
 
 // What a chip shows: a label, and a control that removes it if `removable` is true.
 typedef struct PrKitChip {
-    uint64_t key;
+    PrUiKey key;
     PrStringView label;
     bool removable;
     bool disabled;
@@ -114,7 +114,7 @@ PrLayoutNode prKitChip(PrKit* kit, PrLayoutNode parent, PrKitChip chip);
 
 // A row of buttons that share one border, divided by a rule between each two of them.
 typedef struct PrKitButtonGroup {
-    uint64_t key;
+    PrUiKey key;
     bool disabled;
 } PrKitButtonGroup;
 

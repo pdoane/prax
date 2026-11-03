@@ -53,7 +53,7 @@ PrLayoutNode prKitSurface(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitSu
 // A box that the pointer selects, such as a row of a navigation list or a cell of a grid of choices: drawn on the
 // select ground while `selected` is true, on the raised ground while the pointer is over it, and on none otherwise.
 typedef struct PrKitSelectable {
-    uint64_t key;
+    PrUiKey key;
     bool selected;
     bool disabled;
 } PrKitSelectable;
@@ -65,7 +65,7 @@ PrLayoutNode prKitSelectable(PrKit* kit, PrLayoutNode parent, PrKitSelectable se
 // A panel's header: a bar on the header ground with a rule below it, which shows the title in the caption role, then
 // `meta`, if any, faint at its end.
 typedef struct PrKitPanelHeader {
-    uint64_t key;
+    PrUiKey key;
     PrStringView title;
     PrStringView meta;
 } PrKitPanelHeader;
@@ -75,7 +75,7 @@ PrLayoutNode prKitPanelHeader(PrKit* kit, PrLayoutNode parent, PrKitPanelHeader 
 
 // A square filled with `color` and ringed in the theme's rule color, and its side in px.
 typedef struct PrKitSwatch {
-    uint64_t key;
+    PrUiKey key;
     PrColor color;
 } PrKitSwatch;
 typedef struct PrKitSwatchStyle {

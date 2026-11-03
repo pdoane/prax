@@ -28,7 +28,7 @@ static const float kPrKitSplitBand = 5.0f;
 // The content of a split: panes that divide its box by weight. A pane's share of the box, less its bands, is its weight
 // divided by the total of the weights.
 typedef struct PrKitSplit {
-    uint64_t key;
+    PrUiKey key;
     uint32_t count;                 // the number of panes, at least one
     float* weights;                 // one per pane, which a drag of a band writes
 } PrKitSplit;
@@ -162,7 +162,7 @@ typedef PrKitDockTab (*PrKitDockDescribeFn)(void* PR_NULLABLE context, PrKitDock
 
 // The content of a dock's view: the dock's model, and the function that says what each panel's tab shows.
 typedef struct PrKitDockView {
-    uint64_t key;
+    PrUiKey key;
     PrKitDock* dock;
     PrKitDockDescribeFn describe;
     void* PR_NULLABLE context;

@@ -90,7 +90,7 @@ void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     };
     PrLayoutNode view =
         prKitTreeView(kit, panel, content, {.place = {.height = prKitPx(300), .flex = PrKitFlex_Fixed}});
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         uint32_t key = tree.keys[i];
@@ -264,9 +264,9 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitButton content{.text = kAssetChips[i].name, .icon = kAssetChips[i].icon};
         PrKitButtonStyle small{.size = PrKitControlSize_Sm};
         PrLayoutNode chip = prKitButton(kit, row, content, small);
-        prUiDragStart(prKitUi(kit), chip, kDragThreshold, kDragAssetChip, i);
+        prUiDragStart(kit->ui, chip, kDragThreshold, kDragAssetChip, i);
     }
-    const PrUiPayload* carried = prUiDragging(prKitUi(kit));
+    const PrUiPayload* carried = prUiDragging(kit->ui);
     if (carried != nullptr && carried->kind == kDragAssetChip && carried->value < countOf(kAssetChips)) {
         PrKitDragGhost ghost{.text = kAssetChips[carried->value].name, .icon = kAssetChips[carried->value].icon};
         prKitDragGhost(kit, ghost);

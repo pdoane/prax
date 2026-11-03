@@ -3,8 +3,8 @@
 #include "studio/kit/src/kit_icon.h"
 
 #include "pr/alloc.h"
+#include "pr/atomic.h"
 #include "pr/draw_list.h"
-#include "pr/hash.h"
 #include "pr/layout_unit.h"
 #include "pr/mem.h"
 #include "pr/path_data.h"
@@ -26,12 +26,20 @@ struct IconBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float size;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.width = box.height = prLayoutLengthPx(size);
     }
 };
 PR_NO_PADDING_END
+
+// What an icon's box draws, which the tree holds a reference to while it uses it.
+struct KitPainted {
+    Atomic<uint32_t> references;
+    const PrPath* path;
+    PrColor color;
+    bool stroked;
+};
 
 // Draws an icon's path over its content box, scaled from the grid.
 void paintIcon(void* PR_NULLABLE context, PrVec2 size, PrDrawList* list) {
@@ -50,50 +58,54 @@ void paintIcon(void* PR_NULLABLE context, PrVec2 size, PrDrawList* list) {
     prDrawListPopTransform(list);
 }
 
-// Returns the painter context of a path drawn in a color. The context is made on first use and kept while the kit
-// lives, so that the node that draws it keeps the same content from round to round.
-const KitPainted* paintedOf(Kit& kit, const PrPath* path, PrColor color, bool stroked) {
-    KitPainted key{.path = path, .color = color, .stroked = stroked};
-    uint64_t pointer = uint64_t(reinterpret_cast<uintptr_t>(path));
-    uint32_t hash = uint32_t(hashBytes(&key.color, sizeof key.color, pointer * 2 + (stroked ? 1 : 0)));
-    uint32_t at = kit.paintedIndex.find(hash, [&](uint32_t i) {
-        const KitPainted* p = kit.painted.data[i];
-        return p->path == path && p->stroked == stroked && memEquals(&p->color, &color, sizeof color);
-    });
-    if (at != kHashMissing)
-        return kit.painted.data[at];
-    KitPainted* made = alloc<KitPainted>();
-    *made = key;
-    kit.paintedIndex.insert(hash, kit.painted.count);
-    kit.painted.push(made);
-    return made;
+void retainPainted(void* PR_NULLABLE context) {
+    static_cast<KitPainted*>(context)->references.fetchAddRelaxed(1);
 }
 
-// Makes a box that draws `painted` in a square of `size` px, or 16 px for zero.
-PrLayoutNode iconBox(Kit& kit, PrLayoutNode parent, uint64_t key, const KitPainted* painted, float size) {
+void releasePainted(void* PR_NULLABLE context) {
+    KitPainted* painted = static_cast<KitPainted*>(context);
+    if (painted->references.fetchSub(1) == 1)
+        prMemoryFree(painted);
+}
+
+// Makes a box that draws a path in a color, in a square of `size` px, or 16 px for zero. A node keeps what it drew
+// until that changes, so the box keeps the same content from round to round.
+PrLayoutNode iconBox(PrKit& kit, PrLayoutNode parent, uint64_t key, const PrPath* path, PrColor color, bool stroked,
+        float size) {
     size = size > 0 ? size : 16;
     PrLayoutTree* tree = kit.tree;
     PrLayoutNode node = prLayoutTreeFrameReplaced(tree, parent, key, kitStyle(kit, IconBox{.size = size}, KitFixed{}));
     PrLayoutNaturalSize natural{.width = prLayoutUnitFromPx(size), .height = prLayoutUnitFromPx(size), .ratio = 1};
     prLayoutTreeFrameSetNaturalSize(tree, node, natural);
+    PrLayoutContent was = prLayoutNodeContent(tree, node);
+    if (was.kind == PrLayoutContentKind_Painter && was.painter.paint == paintIcon) {
+        const KitPainted* drawn = static_cast<const KitPainted*>(was.painter.context);
+        if (drawn->path == path && drawn->stroked == stroked && memEquals(&drawn->color, &color, sizeof color))
+            return node;
+    }
+    KitPainted* made = allocZeroed<KitPainted>();
+    made->references.store(1);
+    made->path = path;
+    made->color = color;
+    made->stroked = stroked;
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_Painter;
-    content.painter.paint = paintIcon;
-    content.painter.context = const_cast<KitPainted*>(painted);
+    content.painter = PrLayoutPainter{paintIcon, made, retainPainted, releasePainted};
     prLayoutTreeFrameSetContent(tree, node, &content);
+    releasePainted(made);
     return node;
 }
 
 } // namespace
 
-PrLayoutNode kitIcon(Kit& kit, PrLayoutNode parent, uint64_t key, PrKitIconKind icon, float size, PrColor color) {
+PrLayoutNode kitIcon(PrKit& kit, PrLayoutNode parent, uint64_t key, PrKitIconKind icon, float size, PrColor color) {
     PR_ASSERT(icon < PrKitIconKind_Count);
     PrPath*& path = kit.icons[icon];
     if (path == nullptr) {
         path = prPathCreate();
         prPathAppendData(path, kKitIconData[icon].path);
     }
-    return iconBox(kit, parent, key, paintedOf(kit, path, color, !kKitIconData[icon].filled), size);
+    return iconBox(kit, parent, key, path, color, !kKitIconData[icon].filled, size);
 }
 
 } // namespace pr_impl
@@ -113,5 +125,5 @@ PrLayoutNode prKitIcon(PrKit* kit, PrLayoutNode parent, PrKitIcon icon, PrKitIco
 }
 
 PrLayoutNode prKitPathIcon(PrKit* kit, PrLayoutNode parent, PrKitPathIcon icon, PrKitIconStyle style) {
-    return iconBox(*kit, parent, icon.key, paintedOf(*kit, icon.path, icon.color, icon.stroked), style.size);
+    return iconBox(*kit, parent, icon.key, icon.path, icon.color, icon.stroked, style.size);
 }

@@ -56,7 +56,7 @@ void commandButton(PrKit* kit, PrLayoutNode parent, Commands& commands, PrString
     PrCommandIndex index = prCommandRegistryFind(commands.registry, id);
     bool disabled = index == kPrCommandMissing ||
         (prCommandRegistryState(commands.registry, index) & PrCommandStateFlag_Disabled) != 0;
-    PrKitButton button{.key = prUiKey(prKitUi(kit), parent, id), .text = text, .icon = icon, .disabled = disabled};
+    PrKitButton button{.key = prUiKey(kit->ui, parent, id), .text = text, .icon = icon, .disabled = disabled};
     PrLayoutNode node = prKitButton(kit, parent, button, {.variant = variant, .size = PrKitControlSize_Sm});
     if (!text.size && index != kPrCommandMissing)
         prKitTooltip(kit, node, {.text = prCommandRegistryCommand(commands.registry, index).title});
@@ -151,7 +151,7 @@ void buildLoras(PrKit* kit, PrLayoutNode parent, AppState& state) {
     for (size_t i = 0; i < loras.size();) {
         // An adapter's row is keyed by its name, so that its controls keep their state as the rows around it change.
         PrKitBoxStyle style{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = kPrKitSpace3};
-        PrLayoutNode line = prKitBox(kit, parent, {.key = prUiKey(prKitUi(kit), parent, loras[i].name)}, style);
+        PrLayoutNode line = prKitBox(kit, parent, {.key = prUiKey(kit->ui, parent, loras[i].name)}, style);
         bool conflict = loraConflicts(state, loras[i].name);
         prKitLabel(kit, line, {.text = loras[i].name},
             textStyle(PrKitTextRole_BodySmall, conflict ? PrKitTone_Warning : PrKitTone_Primary));
@@ -268,7 +268,7 @@ void buildSampling(PrKit* kit, PrLayoutNode parent, AppState& state) {
 }
 
 void buildParameters(PrKit* kit, PrLayoutNode content, AppState& state, Commands& commands) {
-    prCommandScope(prKitUi(kit), content, commands.registry, commands.keymap, kContextParameters);
+    prCommandScope(kit->ui, content, commands.registry, commands.keymap, kContextParameters);
     PrKitBoxStyle scroll{
         .direction = PrKitDirection_Column,
         .overflow = PrKitOverflow_ScrollY,
@@ -356,7 +356,7 @@ void buildRecord(PrKit* kit, PrLayoutNode stack, AppState& state) {
 }
 
 void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& commands) {
-    prCommandScope(prKitUi(kit), content, commands.registry, commands.keymap, kContextGallery);
+    prCommandScope(kit->ui, content, commands.registry, commands.keymap, kContextGallery);
     PrKitSurfaceStyle bar{
         .box = {
             .direction = PrKitDirection_Row,
@@ -435,7 +435,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
 }
 
 void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& commands) {
-    prCommandScope(prKitUi(kit), content, commands.registry, commands.keymap, kContextGallery);
+    prCommandScope(kit->ui, content, commands.registry, commands.keymap, kContextGallery);
     Gallery& gallery = state.gallery;
     if (gallery.entries.empty()) {
         prKitEmptyState(kit, content, {
@@ -600,7 +600,7 @@ void viewReset(View& view) {
 
 void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
     AppState& state = *commands.shell->state;
-    prCommandScope(prKitUi(kit), root, commands.registry, commands.keymap, "");
+    prCommandScope(kit->ui, root, commands.registry, commands.keymap, "");
     PrLayoutNode bar = prKitMenuBar(kit, root, {});
     buildMenus(kit, bar, commands);
     if (commands.shell->paletteRequested) {

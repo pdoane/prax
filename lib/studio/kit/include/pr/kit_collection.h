@@ -65,7 +65,7 @@ void prKitSelectionApply(const PrKitSelectionEdit* edit, bool* selected, uint32_
 // by a tile. Space toggles the lead. Command or Control with A selects every row. An unbound view shows rows and takes
 // no keys.
 typedef struct PrKitListView {
-    uint64_t key;
+    PrUiKey key;
     uint32_t count;
     PrKitSelection* PR_NULLABLE selection;
 } PrKitListView;
@@ -143,7 +143,7 @@ PrLayoutNode prKitTileLabel(PrKit* kit, PrLayoutNode tile, PrKitLabel label);
 
 // The content of an empty list's notice: an icon, if any, above a title, above a hint, if any.
 typedef struct PrKitEmptyState {
-    uint64_t key;
+    PrUiKey key;
     PrKitIconKind icon;
     PrStringView title;
     PrStringView hint;
@@ -191,7 +191,7 @@ typedef struct PrKitTreeDrop {
 // other row. If `dragKind` is nonzero, rows drag as payloads of that kind that carry their items, and take drops of
 // that kind.
 typedef struct PrKitTreeView {
-    uint64_t key;
+    PrUiKey key;
     uint32_t count;
     PrKitSelection* PR_NULLABLE selection;
     const PrKitTreeItem* PR_NULLABLE items;
@@ -221,7 +221,7 @@ PrKitDropZone prKitDropZone(PrKit* kit, PrLayoutNode node);
 // The content of a row's visibility toggle: an eye, which is closed if `hidden` is true. The toggle is shown if the row
 // is hidden or `revealed` is true, as it is while the pointer is over the row.
 typedef struct PrKitVisibilityToggle {
-    uint64_t key;
+    PrUiKey key;
     bool hidden;
     bool revealed;
 } PrKitVisibilityToggle;
@@ -258,7 +258,7 @@ typedef struct PrKitTableSort {
 // that its rows edit as a list view's rows do, and the sort that its headings edit. A table bound to a sort marks the
 // sorted column's heading.
 typedef struct PrKitTable {
-    uint64_t key;
+    PrUiKey key;
     uint32_t count;
     PrKitSelection* PR_NULLABLE selection;
     const PrKitTableColumn* columns;

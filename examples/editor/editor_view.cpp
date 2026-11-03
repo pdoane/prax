@@ -190,7 +190,7 @@ void buildMenuBar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
 
 // Declares the command palette over the window while it is open. Its trigger is the root, which claims Cmd K.
 void buildPalette(PrKit* kit, PrLayoutNode root, EditorState& editor) {
-    if (prUiKeyPressed(prKitUi(kit), root, 'K', PrAppModifierFlag_Super))
+    if (prUiKeyPressed(kit->ui, root, 'K', PrAppModifierFlag_Super))
         editor.paletteOpen = !editor.paletteOpen;
     prKitSetOpen(kit, root, editor.paletteOpen);
     uint32_t count = 0;
@@ -341,7 +341,7 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         .dragKind = kDragEntity,
     };
     PrLayoutNode view = prKitTreeView(kit, panel, content, {.place = {.flex = PrKitFlex_Fill}});
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         Entity& entity = *editor.find(editor.sceneRows[i]);
@@ -407,7 +407,7 @@ void buildProjectPanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         .padding = prKitEdgesAll(kPrKitSpace3),
     };
     PrLayoutNode cells = prKitBox(kit, body, {}, grid);
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
     for (uint32_t i = 0; i < countOf(kAssets); ++i) {
         bool selected = editor.selectedAsset == i;
         PrKitSurfaceStyle cell{.ground = PrKitGround(selected ? PrKitGround_Select : PrKitGround_None)};
@@ -521,11 +521,11 @@ void paintViewport(void* context, PrVec2 size, PrDrawList* list) {
 
 // Selects the entity that a click on the viewport lands nearest, if one is within reach.
 void pickEntity(PrKit* kit, PrLayoutNode viewport, EditorState& editor) {
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
     PrVec2 pointer{};
     if (!prUiClicked(ui, viewport, 0) || !prUiPointer(ui, &pointer))
         return;
-    PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(prKitTree(kit), viewport, PrLayoutCoordinates_Viewport));
+    PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(kit->tree, viewport, PrLayoutCoordinates_Viewport));
     PrVec2 size{bounds.right - bounds.left, bounds.bottom - bounds.top};
     PrVec2 local{pointer.x - bounds.left, pointer.y - bounds.top};
     float reach = pixelsPerMeter(size) * 1.5f;
@@ -562,7 +562,7 @@ PrLayoutNode renderModeButton(PrKit* kit, PrLayoutNode parent, EditorState& edit
 
 void buildViewport(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     // The level fills the viewport, drawn by a painter, and the HUD's layer stands over it.
-    PrLayoutTree* tree = prKitTree(kit);
+    PrLayoutTree* tree = kit->tree;
     PrKitBoxStyle stack{.overflow = PrKitOverflow_Clip};
     stack.place.flex = PrKitFlex_Fill;
     PrLayoutNode viewport = prKitStack(kit, panel, {}, stack);
@@ -574,7 +574,7 @@ void buildViewport(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     content.painter.paint = paintViewport;
     content.painter.context = &editor;
     prLayoutTreeFrameSetContent(tree, picture, &content);
-    prUiSetFlags(prKitUi(kit), picture, PrUiFlag_Pressable);
+    prUiSetFlags(kit->ui, picture, PrUiFlag_Pressable);
     pickEntity(kit, picture, editor);
 
     // The HUD is a library of the editor's own that shares the tree and the context with the kit. Its panels hold kit
@@ -751,12 +751,16 @@ void countEdit(void* context, PrLayoutNode, PrUiEditPhase phase) {
 } // namespace
 
 void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
-    prUiSetEditSink(prKitUi(kit), ground, countEdit, &editor);
+    prUiSetEditSink(kit->ui, ground, countEdit, &editor);
     buildMenuBar(kit, ground, editor);
     buildToolbar(kit, ground, editor);
     if (editor.dock == nullptr)
         editor.dock = makeDock();
-    PrLayoutNode dock = prKitDockBuild(kit, ground, {.key = 0xd0c, .dock = editor.dock, .describe = describePanel});
+    PrLayoutNode dock = prKitDockBuild(kit, ground, {
+        .key = prUiKey(kit->ui, ground, "dock"),
+        .dock = editor.dock,
+        .describe = describePanel,
+    });
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, dock, &fill);
     for (uint32_t i = 0; i < prKitDockPaneCount(editor.dock); ++i) {
@@ -771,7 +775,7 @@ void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
         }
     }
     buildStatusBar(kit, ground, editor);
-    buildPalette(kit, prLayoutTreeRoot(prKitTree(kit)), editor);
+    buildPalette(kit, prLayoutTreeRoot(kit->tree), editor);
 }
 
 } // namespace editor

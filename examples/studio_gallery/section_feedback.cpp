@@ -114,7 +114,7 @@ void sectionProgress(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     }
     // The bake follows the round's time, and moves in the frames that the moving widgets beside it ask for.
     if (progress.running) {
-        double turns = prUiCurrentRound(prKitUi(kit))->time * 0.25;
+        double turns = prUiCurrentRound(kit->ui)->time * 0.25;
         progress.bake = float(turns - double(int64_t(turns)));
     }
 }
@@ -215,7 +215,7 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         if (content != kPrLayoutNodeNone) {
             PrKitBoxStyle box{.gap = kPrKitSpace4, .padding = prKitEdgesAll(kPrKitSpace8)};
             box.place.width = prKitPx(360);
-            PrLayoutNode frame = card(kit, content, 0, box);
+            PrLayoutNode frame = card(kit, content, box);
             PrLayoutNode heading = prKitBox(kit, frame, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
             prKitIcon(kit, heading, {.icon = PrKitIconKind_Info}, {.size = 16, .tone = PrKitTone_Accent});
             prKitLabel(kit, heading, {.text = "A frame of the caller's own"}, kStrong);
@@ -346,7 +346,7 @@ void sectionKeys(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     const char* const labels[] = {"Transform", "Mesh Renderer", "Rigidbody"};
     for (uint32_t i = 0; i < 3; ++i) {
         const char* name = i == 2 && state.keys.duplicate ? names[0] : names[i];
-        uint64_t key = prUiKey(prKitUi(kit), rows, name);
+        PrUiKey key = prUiKey(kit->ui, rows, name);
         PrKitSurfaceStyle row{.ground = PrKitGround_Raised};
         row.box.padding = prKitEdgesXY(kPrKitSpace3, kPrKitSpace4);
         PrLayoutNode card = prKitSurface(kit, rows, {.key = key}, row);

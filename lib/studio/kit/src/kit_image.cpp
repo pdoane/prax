@@ -24,7 +24,7 @@ struct ImageFill {
     PrKitAlign alignY;
     uint8_t _pad;
 
-    void make(const Kit&, PrLayoutDecorationStyle& decoration) const {
+    void make(const PrKit&, PrLayoutDecorationStyle& decoration) const {
         static const PrLayoutObjectFit kFits[] = {
             PrLayoutObjectFit_Fill, PrLayoutObjectFit_Contain,
             PrLayoutObjectFit_Cover, PrLayoutObjectFit_None,

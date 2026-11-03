@@ -13,76 +13,6 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// The icons of the set.
-enum {
-    PrKitIconKind_None,
-    PrKitIconKind_ChevronUp,
-    PrKitIconKind_ChevronDown,
-    PrKitIconKind_ChevronLeft,
-    PrKitIconKind_ChevronRight,
-    PrKitIconKind_CaretRight,
-    PrKitIconKind_ArrowLeft,
-    PrKitIconKind_ArrowRight,
-    PrKitIconKind_Swap,
-    PrKitIconKind_Undo,
-    PrKitIconKind_Redo,
-    PrKitIconKind_Cursor,
-    PrKitIconKind_Move,
-    PrKitIconKind_Rotate,
-    PrKitIconKind_Scale,
-    PrKitIconKind_Magnet,
-    PrKitIconKind_Play,
-    PrKitIconKind_Pause,
-    PrKitIconKind_Stop,
-    PrKitIconKind_Step,
-    PrKitIconKind_StepOver,
-    PrKitIconKind_StepInto,
-    PrKitIconKind_StepOut,
-    PrKitIconKind_Restart,
-    PrKitIconKind_Detach,
-    PrKitIconKind_Close,
-    PrKitIconKind_Plus,
-    PrKitIconKind_Minus,
-    PrKitIconKind_Search,
-    PrKitIconKind_Filter,
-    PrKitIconKind_Settings,
-    PrKitIconKind_Trash,
-    PrKitIconKind_More,
-    PrKitIconKind_DotsV,
-    PrKitIconKind_Grid,
-    PrKitIconKind_Eye,
-    PrKitIconKind_EyeOff,
-    PrKitIconKind_Lock,
-    PrKitIconKind_Unlock,
-    PrKitIconKind_Star,
-    PrKitIconKind_Quote,
-    PrKitIconKind_Hash,
-    PrKitIconKind_Ratio,
-    PrKitIconKind_Asterisk,
-    PrKitIconKind_Folder,
-    PrKitIconKind_FolderOpen,
-    PrKitIconKind_Repository,
-    PrKitIconKind_Worktree,
-    PrKitIconKind_Branch,
-    PrKitIconKind_Cube,
-    PrKitIconKind_Sphere,
-    PrKitIconKind_Light,
-    PrKitIconKind_Camera,
-    PrKitIconKind_Script,
-    PrKitIconKind_Audio,
-    PrKitIconKind_Image,
-    PrKitIconKind_Terrain,
-    PrKitIconKind_Link,
-    PrKitIconKind_Target,
-    PrKitIconKind_Check,
-    PrKitIconKind_Alert,
-    PrKitIconKind_Info,
-    PrKitIconKind_Spinner,
-    PrKitIconKind_Atlas,
-    PrKitIconKind_Count,
-};
-typedef uint16_t PrKitIconKind;
-
 // Returns the icon's name, as Lucide names it.
 PrStringView prKitIconName(PrKitIconKind icon);
 
@@ -100,7 +30,7 @@ PR_NO_PADDING_END
 
 // An icon of the set.
 typedef struct PrKitIcon {
-    uint64_t key;
+    PrUiKey key;
     PrKitIconKind icon;
 } PrKitIcon;
 
@@ -110,7 +40,7 @@ PrLayoutNode prKitIcon(PrKit* kit, PrLayoutNode parent, PrKitIcon icon, PrKitIco
 // An icon of the caller's: `path`, on the set's grid of 24 units, in `color`, stroked at the set's stroke width if
 // `stroked` is true and filled otherwise. `path` must outlive every round that draws it.
 typedef struct PrKitPathIcon {
-    uint64_t key;
+    PrUiKey key;
     const PrPath* path;
     PrColor color;
     bool stroked;

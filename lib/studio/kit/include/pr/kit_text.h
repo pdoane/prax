@@ -33,7 +33,7 @@ PR_NO_PADDING_END
 
 // A label: one string in one style.
 typedef struct PrKitLabel {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
 } PrKitLabel;
 
@@ -49,7 +49,7 @@ typedef struct PrKitTextRun {
 
 // A paragraph of `count` runs, on lines that its style wraps and aligns. A run may break across lines.
 typedef struct PrKitText {
-    uint64_t key;
+    PrUiKey key;
     const PrKitTextRun* PR_NULLABLE runs;
     uint32_t count;
 } PrKitText;

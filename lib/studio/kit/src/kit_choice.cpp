@@ -70,7 +70,7 @@ KitFont choiceFont(PrKitTextRole role) {
 // A tab strip: a row that its caret is placed in, which gives way to its parent, with a rule below it.
 struct StripBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.position = PrLayoutPosition_Relative;
         box.minWidth = prLayoutLengthPx(0);
@@ -85,7 +85,7 @@ struct TabBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     PrKitControlSize size;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.height = prLayoutLengthPx(kitControlHeight(size) + 4);
@@ -96,7 +96,7 @@ struct TabBox {
 PR_NO_PADDING_END
 struct TabFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(kPrKitSpace3);
         flex.shrink = 0;
@@ -109,7 +109,7 @@ struct CaretBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float left;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.width = prLayoutLengthPx(2);
@@ -126,7 +126,7 @@ struct TrackBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     PrKitControlSize size;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.height = prLayoutLengthPx(kitControlHeight(size));
@@ -138,7 +138,7 @@ struct TrackBox {
 PR_NO_PADDING_END
 struct TrackFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Stretch;
         flex.shrink = 0;
     }
@@ -147,7 +147,7 @@ struct TrackFlex {
 // A segment: a bordered share of its track, which centers its icon and label.
 struct SegmentBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.minWidth = prLayoutLengthPx(0);
@@ -157,7 +157,7 @@ struct SegmentBox {
 };
 struct SegmentFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.grow = 1;
         flex.basis = prLayoutLengthPx(0);
         flex.alignItems = PrLayoutAlignment_Center;
@@ -172,7 +172,7 @@ struct GroupFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     PrKitDirection direction;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = direction == PrKitDirection_Row ? PrLayoutFlexDirection_Row : PrLayoutFlexDirection_Column;
         flex.alignItems = PrLayoutAlignment_FlexStart;
         flex.rowGap = prLayoutLengthPx(0);
@@ -184,7 +184,7 @@ PR_NO_PADDING_END
 // A flex container of the display's default, for a part that sets nothing else in its box.
 struct FlexBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
     }
 };
@@ -195,7 +195,7 @@ struct RowBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     PrKitControlSize size;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.height = prLayoutLengthPx(kitControlHeight(size));
     }
@@ -203,7 +203,7 @@ struct RowBox {
 PR_NO_PADDING_END
 struct RowFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(kPrKitSpace4);
         flex.shrink = 0;
@@ -220,7 +220,7 @@ struct GlyphBox {
     bool bordered;
     uint8_t _pad[3];
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.width = prLayoutLengthPx(width);
@@ -234,7 +234,7 @@ struct GlyphFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     bool atStart;                   // the content sits at the start, as a toggle's knob does
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.shrink = 0;
         flex.alignItems = PrLayoutAlignment_Center;
         flex.justifyContent = atStart ? PrLayoutAlignment_FlexStart : PrLayoutAlignment_Center;
@@ -248,7 +248,7 @@ struct KnobEffects {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Effect;
     float travel;
 
-    void make(const Kit&, PrLayoutEffectStyle& effects) const {
+    void make(const PrKit&, PrLayoutEffectStyle& effects) const {
         if (travel != 0)
             effects.transform = prLayoutTransformFromAffine2(prAffine2Translate(PrVec2{travel * kKnobTravel, 0}));
     }
@@ -261,7 +261,7 @@ struct BarBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     bool clips;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.height = prLayoutLengthPx(kBarHeight);
         box.minWidth = prLayoutLengthPx(0);
@@ -273,7 +273,7 @@ struct BarFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     float gap;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Stretch;
         if (gap > 0)
             flex.columnGap = prLayoutLengthPx(gap);
@@ -287,7 +287,7 @@ struct RunBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float percent;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.width = prLayoutLengthPercent(percent);
     }
@@ -302,7 +302,7 @@ struct RunEffects {
     float scale;
     float offset;
 
-    void make(const Kit&, PrLayoutEffectStyle& effects) const {
+    void make(const PrKit&, PrLayoutEffectStyle& effects) const {
         effects.originX = prLayoutLengthPercent(0);
         if (scale != 1)
             effects.transform = prLayoutTransformFromAffine2(prAffine2Scale(PrVec2{scale, 1}));
@@ -315,7 +315,7 @@ PR_NO_PADDING_END
 // A meter's cell: a share of the meter that gives way to it.
 struct CellBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.minWidth = prLayoutLengthPx(0);
     }
@@ -327,7 +327,7 @@ struct SpinnerBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float size;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.width = box.height = prLayoutLengthPx(size);
     }
@@ -340,7 +340,7 @@ struct SpinnerEffects {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Effect;
     uint32_t step;
 
-    void make(const Kit&, PrLayoutEffectStyle& effects) const {
+    void make(const PrKit&, PrLayoutEffectStyle& effects) const {
         effects.transform = prLayoutTransformFromAffine2(prAffine2Rotate(kTurn * float(step) / float(kSpinSteps)));
     }
 };
@@ -374,7 +374,7 @@ struct Strip {
 };
 
 // Provides a choice container's context on `node`, and returns it.
-Strip& provideStrip(Kit& kit, PrLayoutNode node, StripKind kind, PrKitChoiceStyle style) {
+Strip& provideStrip(PrKit& kit, PrLayoutNode node, StripKind kind, PrKitChoiceStyle style) {
     Strip& strip = kitProvide<Strip>(kit, node, KitContext_Strip);
     bool column = kind == StripKind_Radios && style.direction != PrKitDirection_Row;
     strip.style = style;
@@ -387,23 +387,17 @@ Strip& provideStrip(Kit& kit, PrLayoutNode node, StripKind kind, PrKitChoiceStyl
 
 // Returns the context of the container of `kind` that an item created under `parent` belongs to. The item's parent must
 // be the container itself.
-Strip& stripOf(Kit& kit, PrLayoutNode parent, StripKind kind) {
+Strip& stripOf(PrKit& kit, PrLayoutNode parent, StripKind kind) {
     PrLayoutNode provider = kPrLayoutNodeNone;
     Strip* strip = kitContext<Strip>(kit, parent, KitContext_Strip, &provider);
     PR_ASSERT(strip != nullptr && provider == parent && strip->kind == kind);
     return *strip;
 }
 
-// Returns the key of an item of the container `strip`, made under the container (prUiKeyIndex), so items of two
-// containers never share a key.
-uint64_t itemKey(const Kit& kit, PrLayoutNode strip, uint64_t item) {
-    return item != 0 ? prUiKeyIndex(kit.ui, strip, item) : 0;
-}
-
 // Handles the arrow keys of a container's item, and counts the item. An arrow key pressed while the item has focus
 // moves the focus to the neighboring item. The neighbor is activated in the next round, so the caller selects it as it
 // would after a click.
-void stripItem(Kit& kit, Strip& strip, const KitControl& item) {
+void stripItem(PrKit& kit, Strip& strip, const KitControl& item) {
     PrUi* ui = kit.ui;
     if (strip.focusNext) {
         prUiSetFocus(ui, item.node);
@@ -423,21 +417,21 @@ void stripItem(Kit& kit, Strip& strip, const KitControl& item) {
 }
 
 // Returns true if a widget created under `parent` is disabled.
-bool disabledUnder(Kit& kit, PrLayoutNode parent) {
+bool disabledUnder(PrKit& kit, PrLayoutNode parent) {
     return parent != kPrLayoutNodeNone && prUiIsDisabled(kit.ui, parent);
 }
 
 // Returns the look of a checkbox's box or a toggle's track, by whether it is on and whether it is disabled.
-KitLookId checkLook(bool rail, bool on, bool disabled) {
+PrKitLookId checkLook(bool rail, bool on, bool disabled) {
     if (on)
-        return disabled ? KitLookId_CheckOnDisabled : KitLookId_CheckOn;
+        return disabled ? PrKitLookId_CheckOnDisabled : PrKitLookId_CheckOn;
     if (rail)
-        return disabled ? KitLookId_RailDisabled : KitLookId_Rail;
-    return disabled ? KitLookId_CheckDisabled : KitLookId_Check;
+        return disabled ? PrKitLookId_RailDisabled : PrKitLookId_Rail;
+    return disabled ? PrKitLookId_CheckDisabled : PrKitLookId_Check;
 }
 
 // Returns the record of a checkbox's, toggle's or radio's row of `size`.
-PrLayoutStyleIndex rowStyle(Kit& kit, PrKitControlSize size, bool disabled) {
+PrLayoutStyleIndex rowStyle(PrKit& kit, PrKitControlSize size, bool disabled) {
     const PrKitPalette& p = kit.theme.palette;
     return kitStyle(kit, RowBox{.size = size}, RowFlex{}, choiceFont(PrKitTextRole_Body),
         KitInk{.color = disabled ? p.text4 : p.text1});
@@ -446,7 +440,7 @@ PrLayoutStyleIndex rowStyle(Kit& kit, PrKitControlSize size, bool disabled) {
 // Creates the row of a checkbox or a toggle, and flips its flag if the row is activated.
 PrLayoutNode checkRow(PrKit* kit, PrLayoutNode parent, const PrKitCheck& check, PrKitControlSize size, bool rail) {
     PR_ASSERT(check.value != nullptr);
-    Kit& k = *kit;
+    PrKit& k = *kit;
     KitControl row = kitControl(k, parent, check.key, PrUiFlag_Pressable | PrUiFlag_Focusable, check.disabled);
     prLayoutTreeFrameSetStyle(k.tree, row.node, rowStyle(k, size, row.disabled));
     bool on = *check.value;
@@ -498,7 +492,7 @@ struct TabStripState {
 using namespace pr_impl;
 
 PrLayoutNode prKitSegmented(PrKit* kit, PrLayoutNode parent, PrKitChoices choices, PrKitChoiceStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     PrLayoutStyleIndex record =
         kitStyle(k, TrackBox{.size = style.size}, TrackFlex{}, KitColors{.background = p.bg2, .border = p.line2});
@@ -509,16 +503,15 @@ PrLayoutNode prKitSegmented(PrKit* kit, PrLayoutNode parent, PrKitChoices choice
 }
 
 PrLayoutNode prKitSegment(PrKit* kit, PrLayoutNode segmented, PrKitChoice choice) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     Strip& strip = stripOf(k, segmented, StripKind_Segmented);
-    KitControl cell = kitControl(k, segmented, itemKey(k, segmented, choice.key),
-        PrUiFlag_Pressable | PrUiFlag_Focusable, choice.disabled);
+    KitControl cell = kitControl(k, segmented, choice.key, PrUiFlag_Pressable | PrUiFlag_Focusable, choice.disabled);
     bool on = choice.selected;
-    KitLookId look;
+    PrKitLookId look;
     if (cell.disabled)
-        look = (on ? KitLookId_SegmentChosenDisabled : KitLookId_SegmentDisabled);
+        look = (on ? PrKitLookId_SegmentChosenDisabled : PrKitLookId_SegmentDisabled);
     else
-        look = (on ? KitLookId_SegmentChosen : KitLookId_Segment);
+        look = (on ? PrKitLookId_SegmentChosen : PrKitLookId_Segment);
     KitDress dress = kitDress(k, cell, look);
     prLayoutTreeFrameSetStyle(k.tree, cell.node,
         kitStyle(k, SegmentBox{}, SegmentFlex{}, choiceFont(PrKitTextRole_BodySmall), dress.fill, dress.ink));
@@ -533,7 +526,7 @@ PrLayoutNode prKitSegment(PrKit* kit, PrLayoutNode segmented, PrKitChoice choice
 }
 
 PrLayoutNode prKitRadioGroup(PrKit* kit, PrLayoutNode parent, PrKitChoices choices, PrKitChoiceStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrLayoutNode group = kitBoxNode(k, parent, PrKitBox{.key = choices.key, .disabled = choices.disabled},
         PrKitOverflow_Visible, kitStyle(k, FlexBox{}, GroupFlex{.direction = style.direction}));
     provideStrip(k, group, StripKind_Radios, style);
@@ -541,18 +534,17 @@ PrLayoutNode prKitRadioGroup(PrKit* kit, PrLayoutNode parent, PrKitChoices choic
 }
 
 PrLayoutNode prKitRadio(PrKit* kit, PrLayoutNode group, PrKitChoice choice) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     Strip& strip = stripOf(k, group, StripKind_Radios);
-    KitControl option = kitControl(k, group, itemKey(k, group, choice.key), PrUiFlag_Pressable | PrUiFlag_Focusable,
-        choice.disabled);
+    KitControl option = kitControl(k, group, choice.key, PrUiFlag_Pressable | PrUiFlag_Focusable, choice.disabled);
     prLayoutTreeFrameSetStyle(k.tree, option.node, rowStyle(k, strip.style.size, option.disabled));
     bool on = choice.selected;
-    KitLookId look;
+    PrKitLookId look;
     if (option.disabled)
-        look = (on ? KitLookId_RadioOnDisabled : KitLookId_CheckDisabled);
+        look = (on ? PrKitLookId_RadioOnDisabled : PrKitLookId_CheckDisabled);
     else
-        look = (on ? KitLookId_RadioOn : KitLookId_Radio);
+        look = (on ? PrKitLookId_RadioOn : PrKitLookId_Radio);
     PrLayoutStyleIndex ringRecord = kitStyle(k, GlyphBox{.width = kGlyph, .height = kGlyph, .bordered = true},
         GlyphFlex{}, kitDress(k, option, look).fill);
     PrLayoutNode ring = prLayoutTreeFrameElement(k.tree, option.node, 0, ringRecord);
@@ -579,7 +571,7 @@ PrLayoutNode prKitToggle(PrKit* kit, PrLayoutNode parent, PrKitCheck check, PrKi
 }
 
 PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip, PrKitChoiceStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     PrUi* ui = k.ui;
     PrLayoutNode node =
@@ -642,16 +634,15 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
 }
 
 PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     Strip& s = stripOf(k, strip, StripKind_Tabs);
-    KitControl cell =
-        kitControl(k, strip, itemKey(k, strip, tab.key), PrUiFlag_Pressable | PrUiFlag_Focusable, tab.disabled);
+    KitControl cell = kitControl(k, strip, tab.key, PrUiFlag_Pressable | PrUiFlag_Focusable, tab.disabled);
     bool on = tab.selected;
-    KitLookId look;
+    PrKitLookId look;
     if (cell.disabled)
-        look = (on ? KitLookId_TabChosenDisabled : KitLookId_TabDisabled);
+        look = (on ? PrKitLookId_TabChosenDisabled : PrKitLookId_TabDisabled);
     else
-        look = (on ? KitLookId_TabChosen : KitLookId_Tab);
+        look = (on ? PrKitLookId_TabChosen : PrKitLookId_Tab);
     KitDress dress = kitDress(k, cell, look);
     prLayoutTreeFrameSetStyle(k.tree, cell.node,
         kitStyle(k, TabBox{.size = s.style.size}, TabFlex{}, choiceFont(PrKitTextRole_Body), dress.fill, dress.ink));
@@ -667,10 +658,10 @@ PrLayoutNode prKitTabLabel(PrKit* kit, PrLayoutNode tab, PrKitLabel label) {
 }
 
 PrLayoutNode prKitTabClose(PrKit* kit, PrLayoutNode tab) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     KitControl close = kitControl(k, tab, 0, PrUiFlag_Pressable, false);
     PrLayoutStyleIndex record = kitStyle(k, GlyphBox{.width = kPrKitHeightXxs, .height = kPrKitHeightXxs}, GlyphFlex{},
-        kitDress(k, close, KitLookId_Quiet).fill);
+        kitDress(k, close, PrKitLookId_Quiet).fill);
     prLayoutTreeFrameSetStyle(k.tree, close.node, record);
     PrKitTone tone = close.over ? PrKitTone_Primary : PrKitTone_Muted;
     prKitIcon(kit, close.node, {.icon = PrKitIconKind_Close}, {.size = 10, .tone = tone});
@@ -687,7 +678,7 @@ bool prKitMoved(const PrKit* kit, PrLayoutNode strip, uint32_t* from, uint32_t* 
 }
 
 PrLayoutNode prKitProgress(PrKit* kit, PrLayoutNode parent, PrKitProgress progress) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     KitColors fill{.background = disabledUnder(k, parent) ? p.text4 : p.accent};
     PrLayoutStyleIndex barRecord = kitStyle(k, BarBox{.clips = true}, BarFlex{}, KitColors{.background = p.bg4});
@@ -710,7 +701,7 @@ PrLayoutNode prKitProgress(PrKit* kit, PrLayoutNode parent, PrKitProgress progre
 }
 
 PrLayoutNode prKitMeter(PrKit* kit, PrLayoutNode parent, PrKitMeter meter, PrKitMeterStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     bool disabled = disabledUnder(k, parent);
     float high = meter.low == 0 && meter.high == 0 ? 1 : meter.high;
@@ -728,7 +719,7 @@ PrLayoutNode prKitMeter(PrKit* kit, PrLayoutNode parent, PrKitMeter meter, PrKit
 }
 
 PrLayoutNode prKitSpinner(PrKit* kit, PrLayoutNode parent, PrKitSpinner spinner, PrKitSpinnerStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     float size = style.size > 0 ? style.size : kSpinnerSize;
     // The spinner turns by its transform, one step at a time, so that a turn composites without painting the icon
     // again, and each step's effects are kept.

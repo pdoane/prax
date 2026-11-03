@@ -62,7 +62,7 @@ struct ListScene {
     }
 
     void build(PrLayoutNode ground) {
-        PrKitListView list{.key = 1, .count = count, .selection = bound ? &selection : nullptr};
+        PrKitListView list{.count = count, .selection = bound ? &selection : nullptr};
         PrLayoutNode view = prKitListView(f.kit, ground, list,
             {.rowHeight = kRowHeight, .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}});
         rows = rowsOf(f, view);
@@ -138,7 +138,6 @@ struct TreeScene {
     void build(PrLayoutNode ground) {
         order();
         PrKitTreeView tree{
-            .key = 2,
             .count = uint32_t(items.size()),
             .selection = &selection,
             .items = items.data(),
@@ -213,14 +212,7 @@ struct TableScene {
             {.label = "TYPE", .width = 80, .sortable = true},
             {.label = "SIZE", .width = 60, .align = PrKitTextAlign_End},
         };
-        PrKitTable table{
-            .key = 1,
-            .count = kRows,
-            .selection = &selection,
-            .columns = columns,
-            .columnCount = 3,
-            .sort = &sort,
-        };
+        PrKitTable table{.count = kRows, .selection = &selection, .columns = columns, .columnCount = 3, .sort = &sort};
         PrKitListViewStyle style{
             .rowHeight = kRowHeight,
             .place = {.width = prKitPx(width), .height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed},
@@ -277,7 +269,7 @@ struct GridScene {
             .tileWidth = 100,
             .place = {.width = prKitPx(410), .height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed},
         };
-        PrLayoutNode view = prKitListView(f.kit, ground, {.key = 1, .count = kTiles, .selection = &selection}, style);
+        PrLayoutNode view = prKitListView(f.kit, ground, {.count = kTiles, .selection = &selection}, style);
         rows = rowsOf(f, view);
         for (uint32_t i = rows.first; i < rows.first + rows.count; ++i) {
             tiles[i] = prKitListTile(f.kit, view, {.index = i, .item = i, .selected = selected[i]});
@@ -782,7 +774,7 @@ TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
             .tileWidth = 100,
             .place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed},
         };
-        PrLayoutNode view = prKitListView(f.kit, ground, {.key = 1, .count = 1}, style);
+        PrLayoutNode view = prKitListView(f.kit, ground, {.count = 1}, style);
         tile = prKitListTile(f.kit, view, {.index = 0, .item = 7});
         prKitTileImage(f.kit, tile, {.image = image});
         prKitTileLabel(f.kit, tile, {.text = "fox.png"});

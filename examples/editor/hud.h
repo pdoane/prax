@@ -27,7 +27,7 @@ void hudDestroy(Hud* PR_NULLABLE hud);
 
 // A layer over its parent, which holds panels in its corners and lets the pointer through to what it covers.
 struct HudLayer {
-    uint64_t key;
+    PrUiKey key;
 };
 
 // Creates a layer under `parent`, which must be a containing block for positioned boxes.
@@ -44,7 +44,7 @@ typedef uint8_t HudCorner;
 
 // A panel, which lays out what it holds in a column, or in a row if `row` is true.
 struct HudPanel {
-    uint64_t key;
+    PrUiKey key;
     HudCorner corner;
     bool row;
 };
@@ -55,7 +55,7 @@ PrLayoutNode hudPanel(Hud* hud, PrLayoutNode layer, HudPanel panel);
 
 // A reading: a dim label and a bright value.
 struct HudReadout {
-    uint64_t key;
+    PrUiKey key;
     PrStringView label;
     PrStringView value;
 };
@@ -65,7 +65,7 @@ PrLayoutNode hudReadout(Hud* hud, PrLayoutNode parent, HudReadout readout);
 
 // A switch bound to `value`, which shows `label` lit while the value is true.
 struct HudSwitch {
-    uint64_t key;
+    PrUiKey key;
     PrStringView label;
     bool* value;
 };

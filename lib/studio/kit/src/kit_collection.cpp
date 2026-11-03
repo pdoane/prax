@@ -67,7 +67,7 @@ struct RowBox {
     float indent;
     float minWidth;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.height = prLayoutLengthPx(height);
@@ -85,7 +85,7 @@ struct RowFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     RowKind kind;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.shrink = 0;
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(kind == RowKind_List ? kRowGap : kColumnGap);
@@ -101,7 +101,7 @@ struct RowFill {
     PrKitDropZone drop;
     RowKind kind;
 
-    void make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
+    void make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {
         const PrKitPalette& p = kit.theme.palette;
         PrColor clear{0, 0, 0, 0};
         PrColor colors[PrRectSide_Count] = {clear, clear, clear, clear};
@@ -142,7 +142,7 @@ struct TileBox {
     float width;                    // a percentage of the row's width
     float height;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.width = prLayoutLengthPercent(width);
@@ -154,7 +154,7 @@ struct TileBox {
 PR_NO_PADDING_END
 struct TileFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = PrLayoutFlexDirection_Column;
         flex.rowGap = prLayoutLengthPx(kPrKitSpace2);
         flex.shrink = 0;
@@ -164,14 +164,14 @@ struct TileFlex {
 // A tile's thumbnail, which fills the room over the label and centers its icon.
 struct ThumbBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.minHeight = prLayoutLengthPx(0);
     }
 };
 struct ThumbFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.grow = 1;
         flex.basis = prLayoutLengthPx(0);
         flex.alignItems = PrLayoutAlignment_Center;
@@ -182,14 +182,14 @@ struct ThumbFlex {
 // A square cell in a row that centers its icon: a disclosure or a visibility toggle.
 struct CellBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.width = box.height = prLayoutLengthPx(kPrKitHeightXxs);
     }
 };
 struct CellFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.shrink = 0;
         flex.alignItems = PrLayoutAlignment_Center;
         flex.justifyContent = PrLayoutAlignment_Center;
@@ -217,7 +217,7 @@ struct ColumnBox {
     bool fills;
     uint8_t _pad[3];
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.overflowX = box.overflowY = PrLayoutOverflow_Clip;
         if (fills)
@@ -232,7 +232,7 @@ struct ColumnFlex {
     PrKitTextAlign align;
     uint8_t _pad[3];
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         if (align == PrKitTextAlign_End)
             flex.justifyContent = PrLayoutAlignment_FlexEnd;
@@ -253,7 +253,7 @@ PR_NO_PADDING_END
 // The port of a table's header, which follows the rows' sideways scroll.
 struct HeaderPortBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.overflowX = box.overflowY = PrLayoutOverflow_Hidden;
     }
@@ -270,7 +270,7 @@ struct ContentBox {
     bool tiles;
     uint8_t _pad[3];
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = tiles ? PrLayoutDisplay_Flex : PrLayoutDisplay_Block;
         if (minWidth > 0)
             box.minWidth = prLayoutLengthPx(minWidth);
@@ -282,7 +282,7 @@ struct ContentFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     bool tiles;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.shrink = 0;
         if (tiles)
             flex.wrap = PrLayoutFlexWrap_Wrap;
@@ -302,7 +302,8 @@ float tableMinWidth(const PrKitTableColumn* columns, uint32_t count) {
 PrLayoutNode columnElement(PrKit* kit, PrLayoutNode parent, uint64_t key, const PrKitTableColumn& c) {
     bool fills = c.flex == PrKitFlex_Fill;
     ColumnFlex flex{.weight = fills ? (c.weight > 0 ? c.weight : 1) : 0, .align = c.align};
-    return prLayoutTreeFrameElement(kit->tree, parent, key, kitStyle(*kit, ColumnBox{.width = c.width, .fills = fills}, flex));
+    ColumnBox box{.width = c.width, .fills = fills};
+    return prLayoutTreeFrameElement(kit->tree, parent, key, kitStyle(*kit, box, flex));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -461,7 +462,7 @@ PrKitSelectionEdit applyKey(PrKitSelection& selection, uint32_t count, uint32_t 
 
 // Returns where a drop on `node` lands, from which third of its box the pointer was over at the last layout
 // (prKitDropZone).
-PrKitDropZone dropZoneOf(Kit& kit, PrLayoutNode node) {
+PrKitDropZone dropZoneOf(PrKit& kit, PrLayoutNode node) {
     // The pointer is measured in the row's own plane, so that the zones hold under a transform.
     PrVec2 pointer{};
     PrVec2 at{};
@@ -498,14 +499,14 @@ struct View {
 };
 
 // Returns the context of the view that `view` names. Rows are created under the view itself.
-View& viewOf(Kit& kit, PrLayoutNode view) {
+View& viewOf(PrKit& kit, PrLayoutNode view) {
     PrLayoutNode provider = kPrLayoutNodeNone;
     View* v = kitContext<View>(kit, view, KitContext_View, &provider);
     PR_ASSERT(v != nullptr && provider == view);
     return *v;
 }
 
-const View* PR_NULLABLE findView(const Kit& kit, PrLayoutNode view) {
+const View* PR_NULLABLE findView(const PrKit& kit, PrLayoutNode view) {
     PrLayoutNode provider = kPrLayoutNodeNone;
     const View* v = kitContext<View>(kit, view, KitContext_View, &provider);
     return provider == view ? v : nullptr;
@@ -522,7 +523,7 @@ struct ViewShape {
 // Creates the scroll container of a view of `count` rows in `style`, under `parent`, and fills `v` with its window,
 // applying the round's keys to `v.selection`. If `v.items` is set, the view is a tree view and writes its fold. Returns
 // the scroll container.
-PrLayoutNode listView(Kit& kit, PrLayoutNode parent, uint64_t key, uint32_t count, const PrKitListViewStyle& style,
+PrLayoutNode listView(PrKit& kit, PrLayoutNode parent, PrUiKey key, uint32_t count, const PrKitListViewStyle& style,
         const ViewShape& shape, View& v) {
     float rowHeight = style.rowHeight > 0 ? style.rowHeight : kPrKitHeightSm;
     PrUi* ui = kit.ui;
@@ -615,26 +616,26 @@ struct ItemCell {
 };
 
 // Returns true if the row or tile that `node` was created under is selected.
-bool itemSelected(const Kit& kit, PrLayoutNode node) {
+bool itemSelected(const PrKit& kit, PrLayoutNode node) {
     const ItemCell* item = kitContext<ItemCell>(kit, node, KitContext_Item);
     return item != nullptr && item->selected;
 }
 
 // Creates a tile's thumbnail box on a ground of `tint`, or of the theme's raised ground if `tint` is fully transparent.
-PrLayoutNode tileThumbnail(Kit& kit, PrLayoutNode tile, PrColor tint) {
+PrLayoutNode tileThumbnail(PrKit& kit, PrLayoutNode tile, PrColor tint) {
     KitColors ground{.background = tint.a > 0 ? tint : kit.theme.palette.bg3};
     return prLayoutTreeFrameElement(kit.tree, tile, 0, kitStyle(kit, ThumbBox{}, ThumbFlex{}, ground));
 }
 
 // Applies a click on the node of row or tile `index` to the view's selection.
-void applyClick(Kit& kit, View& v, uint32_t index, PrLayoutNode node) {
+void applyClick(PrKit& kit, View& v, uint32_t index, PrLayoutNode node) {
     if (v.selection != nullptr && prUiClicked(kit.ui, node, 0))
         v.edit = clickEdit(*v.selection, index, pointerModifiers(kit.ui, node));
 }
 
 // Creates the element of a view's row, keyed by `item` under the view, and indented by `indent` px, and applies a click
 // on it to the view's selection. A row of a tree view that drags marks where a payload of its kind would land on it.
-PrLayoutNode rowElement(Kit& kit, PrLayoutNode view, View& v, uint32_t index, uint64_t item, bool selected, float indent) {
+PrLayoutNode rowElement(PrKit& kit, PrLayoutNode view, View& v, uint32_t index, uint64_t item, bool selected, float indent) {
     RowKind kind = v.minWidth > 0 ? RowKind_Table : RowKind_List;
     PrUi* ui = kit.ui;
     PrLayoutTree* tree = kit.tree;
@@ -694,7 +695,7 @@ void prKitSelectionApply(const PrKitSelectionEdit* edit, bool* selected, uint32_
 }
 
 PrLayoutNode prKitListView(PrKit* kit, PrLayoutNode parent, PrKitListView list, PrKitListViewStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     View v{.selection = list.selection};
     PrLayoutNode view = listView(k, parent, list.key, list.count, style, ViewShape{.place = style.place}, v);
     kitProvide<View>(k, view, KitContext_View) = v;
@@ -739,7 +740,7 @@ PrLayoutNode prKitRowMeta(PrKit* kit, PrLayoutNode row, PrKitLabel label) {
 }
 
 PrLayoutNode prKitListTile(PrKit* kit, PrLayoutNode view, PrKitTile tile) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     View& v = viewOf(k, view);
     PR_ASSERT(tile.index >= v.first && tile.index < v.first + v.count);
     PrUi* ui = k.ui;
@@ -813,7 +814,7 @@ PrLayoutNode prKitEmptyState(PrKit* kit, PrLayoutNode parent, PrKitEmptyState em
 
 PrLayoutNode prKitTreeView(PrKit* kit, PrLayoutNode parent, PrKitTreeView tree, PrKitListViewStyle style) {
     PR_ASSERT(tree.items != nullptr || tree.count == 0);
-    Kit& k = *kit;
+    PrKit& k = *kit;
     View v{.selection = tree.selection, .items = tree.items, .dragKind = tree.dragKind};
     PrLayoutNode view = listView(k, parent, tree.key, tree.count, style, ViewShape{.place = style.place}, v);
     kitProvide<View>(k, view, KitContext_View) = v;
@@ -821,7 +822,7 @@ PrLayoutNode prKitTreeView(PrKit* kit, PrLayoutNode parent, PrKitTreeView tree, 
 }
 
 PrLayoutNode prKitTreeRow(PrKit* kit, PrLayoutNode view, PrKitRow row) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     View& v = viewOf(k, view);
     PR_ASSERT(v.items != nullptr && row.index < v.first + v.count);
     PrUi* ui = k.ui;
@@ -880,7 +881,7 @@ PrLayoutNode prKitVisibilityToggle(PrKit* kit, PrLayoutNode parent, PrKitVisibil
 
 PrLayoutNode prKitTable(PrKit* kit, PrLayoutNode parent, PrKitTable table, PrKitListViewStyle style) {
     PR_ASSERT(table.columns != nullptr || table.columnCount == 0);
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrUi* ui = k.ui;
     PrLayoutTree* tree = k.tree;
     PrKitBoxStyle box{};

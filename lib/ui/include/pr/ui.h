@@ -110,6 +110,35 @@ void prUiRequestFrame(PrUi* ui);
 void prUiRequestMotion(PrUi* ui, PrLayoutNode node);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Node keys
+//
+// Most nodes need no key: left zero, a node is identified by its tree index among its parent's unkeyed children of its
+// kind. A key gives a node an identity that holds while its siblings change, for rows that reorder and panels that come
+// and go (pr/layout_frame.h). Every library on a context makes its keys with prUiKey and prUiKeyIndex. Keys made under
+// different bases differ, so one library's items never collide with another's, and an item of one library can be keyed
+// under a container of another.
+//
+// A key that a frame gives twice is a caller's error. Layout makes the second node without the key and reports both
+// nodes (prLayoutTreeDuplicateKeys), and each round of the next frame outlines both in the overlay.
+
+// A node's key, which prUiKey, prUiKeyIndex and prUiKeyIndex2 make. Zero is no key. Nonzero keys are unique in the
+// whole tree, so a number chosen for one parent collides with the same number chosen for another. A key made under a
+// base is local to that base, and a base of kPrLayoutNodeNone makes a key for the whole tree.
+typedef uint64_t PrUiKey;
+
+// Returns a key made from `name`, or from `index`, under the node `base`. Keys made under one base differ for different
+// names and indices, and keys made from one name differ for different bases. A base that has a key is identified by its
+// key. A base without one is identified by its node, which stays the same while layout matches the node from round to
+// round. A base of kPrLayoutNodeNone makes a key for the whole tree, for a node that keeps its identity wherever it is
+// created. The result is never zero.
+PrUiKey prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name);
+PrUiKey prUiKeyIndex(const PrUi* ui, PrLayoutNode base, uint64_t index);
+
+// Returns a key made from two numbers under the node `base`, for a library's several kinds of items of one base: the
+// kind and the item. It differs from the keys of prUiKey and prUiKeyIndex under the base.
+PrUiKey prUiKeyIndex2(const PrUi* ui, PrLayoutNode base, uint64_t first, uint64_t second);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Nodes
 
 // The input a node accepts.
@@ -143,29 +172,11 @@ void prUiAddFlags(PrUi* ui, PrLayoutNode node, PrUiFlags flags);
 PrUiFlags prUiFlags(const PrUi* ui, PrLayoutNode node);
 
 // Creates an element with prLayoutTreeFrameElement and sets its input flags.
-PrLayoutNode prUiElement(PrUi* ui, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style, PrUiFlags flags);
+PrLayoutNode prUiElement(PrUi* ui, PrLayoutNode parent, PrUiKey key, PrLayoutStyleIndex style, PrUiFlags flags);
 
 // Returns true if a node created in the current round is disabled, by its own flags or those of a node that it was
 // created under.
 bool prUiIsDisabled(PrUi* ui, PrLayoutNode node);
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Node keys
-//
-// A node's key gives it an identity that holds while its siblings change (pr/layout_frame.h). Every library on a
-// context makes its keys with these functions. Keys made under different bases differ, so one library's items never
-// collide with another's, and an item of one library can be keyed under a container of another.
-//
-// A key that a frame gives twice is a caller's error. Layout makes the second node without the key and reports both
-// nodes (prLayoutTreeDuplicateKeys), and each round of the next frame outlines both in the overlay.
-
-// Returns a key made from `name`, or from `index`, under the node `base`. Keys made under one base differ for different
-// names and indices, and keys made from one name differ for different bases. A base that has a key is identified by its
-// key. A base without one is identified by its node, which stays the same while layout matches the node from round to
-// round. A base of kPrLayoutNodeNone makes a key for the whole tree, for a node that keeps its identity wherever it is
-// created. The result is never 0.
-uint64_t prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name);
-uint64_t prUiKeyIndex(const PrUi* ui, PrLayoutNode base, uint64_t index);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Overlay

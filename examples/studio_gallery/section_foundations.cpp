@@ -134,7 +134,7 @@ PrColor shade(PrColor color, float amount) {
 
 // Creates a band of `band`'s color over its name and caption.
 void rampCell(PrKit* kit, PrLayoutNode parent, PrStringView name, PrColor band, PrStringView note) {
-    PrLayoutNode cell = card(kit, parent, 0, PrKitBoxStyle{});
+    PrLayoutNode cell = card(kit, parent, PrKitBoxStyle{});
     PrLayoutNode swatch = prKitSwatch(kit, cell, {.color = band}, {.size = kBandHeight});
     PrKitPlace wide{.width = prKitFill(), .flex = PrKitFlex_Fixed};
     prKitPlace(kit, swatch, &wide);
@@ -176,7 +176,7 @@ void pane(PrKit* kit, PrLayoutNode parent, PrKitGround ground, PrStringView labe
 
 void sectionPrinciples(PrKit* kit, PrLayoutNode parent) {
     PrLayoutNode section = sectionFrame(kit, parent, "00", "Principles", "Six commitments the system answers to.", {});
-    PrLayoutNode frame = card(kit, section, 0, PrKitBoxStyle{});
+    PrLayoutNode frame = card(kit, section, PrKitBoxStyle{});
     Grid grid = gridBegin(kit, frame, 3, 0, true);
     for (const Principle& principle : kPrinciples) {
         PrKitBoxStyle body{.gap = kPrKitSpace3, .padding = prKitEdgesAll(kPrKitSpace5)};
@@ -189,7 +189,7 @@ void sectionPrinciples(PrKit* kit, PrLayoutNode parent) {
 }
 
 void sectionColor(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
-    const PrKitPalette& palette = prKitTheme(kit)->palette;
+    const PrKitPalette& palette = kit->theme.palette;
     PrLayoutNode section = sectionFrame(kit, parent, "01", "Color", "Low-saturation neutrals. One signature accent.",
         "The neutral ramp reads as a tool rather than a toy. The accent carries selection, focus and the primary "
             "action, and nothing else; the semantic colors are reserved for state.");
@@ -210,7 +210,7 @@ void sectionColor(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrLayoutNode panel = demoPanel(kit, section, "COLOR PICKER", "HSV . OKLCH . RAMP", false);
         PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_Start, .gap = kPrKitSpace8};
         PrLayoutNode row = prKitBox(kit, panel, {}, line);
-        PrKitColorPicker picker{.color = &state.color, .gamut = prUiDisplay(prKitUi(kit)).gamut};
+        PrKitColorPicker picker{.color = &state.color, .gamut = prUiDisplay(kit->ui).gamut};
         prKitColorPicker(kit, row, picker);
         PrLayoutNode fields = prKitBox(kit, row, {}, {.gap = kPrKitSpace3});
         PrKitPlace fixed{.width = prKitPx(220), .flex = PrKitFlex_Fixed};
@@ -233,7 +233,6 @@ void sectionColor(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             PrLayoutNode column = prKitBox(kit, row, {}, {.gap = kPrKitSpace2});
             prKitLabel(kit, column, {.text = names[i]}, kStrong);
             PrKitColorPicker picker{
-                .key = i + 1,
                 .color = &state.gamutColors[i],
                 .mode = PrKitColorMode_Oklch,
                 .gamut = gamuts[i],
@@ -309,7 +308,7 @@ void sectionType(PrKit* kit, PrLayoutNode parent) {
 }
 
 void sectionSpace(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
-    const PrKitPalette& palette = prKitTheme(kit)->palette;
+    const PrKitPalette& palette = kit->theme.palette;
     PrLayoutNode section = sectionFrame(kit, parent, "03", "Space & Grid",
         "A two-pixel base: dense, consistent, predictable.", {});
     Grid columns = gridBegin(kit, section, 2, kPrKitSpace4, false);

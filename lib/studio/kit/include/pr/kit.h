@@ -16,9 +16,11 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/kit_icon_kind.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_tree.h"
+#include "pr/path.h"
 #include "pr/ui.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -30,8 +32,17 @@ extern "C" {
 // ---------------------------------------------------------------------------------------------------------------------
 // Kits
 
-// The widgets of one theme, for one context.
-typedef struct PrKit PrKit;
+// The widgets of one theme, for one context. Callers read these fields and do not change them. prKitSetTheme changes
+// the theme, because the kit derives its fonts and the looks of its widgets from it. The kit parses an icon's path as
+// the icon is first drawn.
+typedef struct PrKit {
+    PrUi* ui;                                               // the context that the kit creates in
+    PrLayoutTree* tree;                                     // the context's tree
+    PrKitTheme theme;
+    PrTextFont* PR_NULLABLE fonts[PrKitTextRole_Count];     // by PrKitTextRole
+    PrKitLook looks[PrKitLookId_Count];                     // by PrKitLookId
+    PrPath* PR_NULLABLE icons[PrKitIconKind_Count];         // by PrKitIconKind
+} PrKit;
 
 // Creates a kit for `ui` with `theme`, which the kit copies. `ui` must outlive the kit.
 PrKit* prKitCreate(PrUi* ui, const PrKitTheme* theme);
@@ -42,11 +53,6 @@ void prKitDestroy(PrKit* PR_NULLABLE kit);
 // Sets the kit's theme, which the kit copies. Call between rounds. The next round declares every widget in the new
 // theme.
 void prKitSetTheme(PrKit* kit, const PrKitTheme* theme);
-
-// Returns the kit's theme, context and tree.
-const PrKitTheme* prKitTheme(const PrKit* kit);
-PrUi* prKitUi(const PrKit* kit);
-PrLayoutTree* prKitTree(const PrKit* kit);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Events

@@ -41,7 +41,7 @@ typedef uint8_t PrKitOverflow;
 // What a box holds apart from how it looks: its identity, and whether the widgets made under it are disabled. A
 // disabled box shows what it holds, which takes no input.
 typedef struct PrKitBox {
-    uint64_t key;
+    PrUiKey key;
     bool disabled;
 } PrKitBox;
 
@@ -76,7 +76,7 @@ PrLayoutNode prKitLayer(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitBoxS
 // created directly under it, so a row of panels that share one eye is a plane with a perspective that holds a plane for
 // each panel. A plane is a stacking context, and the containing block of the layers in it.
 typedef struct PrKitPlane {
-    uint64_t key;
+    PrUiKey key;
     bool disabled;
 
     // The plane's transform, about its center, in px, or null for none. A transform is a value that moves, so the
@@ -110,7 +110,7 @@ PrLayoutNode prKitPlane(PrKit* kit, PrLayoutNode parent, PrKitPlane plane, PrKit
 
 // An empty box that takes the room its parent has left along its axis.
 typedef struct PrKitSpacer {
-    uint64_t key;
+    PrUiKey key;
 } PrKitSpacer;
 
 // Creates a spacer under `parent`.
@@ -118,7 +118,7 @@ PrLayoutNode prKitSpacer(PrKit* kit, PrLayoutNode parent, PrKitSpacer spacer);
 
 // A one px rule across its parent's axis, which separates its siblings. In a row, the rule is vertical.
 typedef struct PrKitDivider {
-    uint64_t key;
+    PrUiKey key;
 } PrKitDivider;
 
 // Creates a divider under `parent`.

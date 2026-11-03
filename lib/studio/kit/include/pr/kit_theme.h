@@ -131,6 +131,69 @@ typedef struct PrKitType {
 } PrKitType;
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Looks
+//
+// A look is the colors of a control in each of its states. The kit makes its looks from the theme's palette when the
+// theme is set, so the palette's colors are named in one place, and a widget names the look it is drawn in.
+
+// The states of a control that its look gives a fill for. A control blends between them as its hover and press ease.
+enum {
+    PrKitState_Rest,
+    PrKitState_Hover,
+    PrKitState_Press,
+    PrKitState_Count,
+};
+typedef uint8_t PrKitState;
+
+// The looks of the kit's controls.
+enum {
+    PrKitLookId_Button,
+    PrKitLookId_ButtonPrimary,
+    PrKitLookId_ButtonGhost,
+    PrKitLookId_ButtonDanger,
+    PrKitLookId_ButtonSelected,         // a button toggled on, as a toolbar's tool
+    PrKitLookId_ButtonDisabled,
+    PrKitLookId_ButtonGhostDisabled,
+    PrKitLookId_Selectable,             // a box that the pointer selects, at rest
+    PrKitLookId_SelectableSelected,
+    PrKitLookId_Plain,                  // a part drawn only while hovered or pressed, as a chip's remove control
+    PrKitLookId_Quiet,                  // the same, a step lighter, as a tab's close control
+
+    // A tab, which draws its rule below it in the accent while chosen, and a segment of a segmented control.
+    PrKitLookId_Tab,
+    PrKitLookId_TabChosen,
+    PrKitLookId_TabDisabled,
+    PrKitLookId_TabChosenDisabled,
+    PrKitLookId_Segment,
+    PrKitLookId_SegmentChosen,
+    PrKitLookId_SegmentDisabled,
+    PrKitLookId_SegmentChosenDisabled,
+
+    // The glyphs of a checkbox, a toggle's track and a radio, off and on, enabled and disabled.
+    PrKitLookId_Check,
+    PrKitLookId_CheckOn,
+    PrKitLookId_CheckDisabled,
+    PrKitLookId_CheckOnDisabled,
+    PrKitLookId_Rail,
+    PrKitLookId_RailDisabled,
+    PrKitLookId_Radio,
+    PrKitLookId_RadioOn,
+    PrKitLookId_RadioOnDisabled,
+    PrKitLookId_Count,
+};
+typedef uint16_t PrKitLookId;
+
+// The fills of a look in each state, its border, and the colors of its text and its icons. A look that eases fades its
+// fill between states; one that does not takes each state's fill at once, as does a look whose states share one fill.
+typedef struct PrKitLook {
+    PrColor fill[PrKitState_Count];
+    PrColor border;
+    PrColor text;
+    PrColor icon;
+    bool eases;
+} PrKitLook;
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Themes
 
 // What a kit draws with. `fonts` must outlive every kit that the theme is set on. An empty family name uses the set's

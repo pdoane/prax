@@ -34,13 +34,13 @@ typedef struct PrKitChoiceStyle {
 
 // A segmented control or a radio group.
 typedef struct PrKitChoices {
-    uint64_t key;
+    PrUiKey key;
     bool disabled;                  // true to disable every item in the container
 } PrKitChoices;
 
 // A segment or a radio. It shows a label, an icon, or both.
 typedef struct PrKitChoice {
-    uint64_t key;                   // identity within the container, or 0 to match by position
+    PrUiKey key;                   // identity within the container, or 0 to match by position
     PrStringView label;
     PrKitIconKind icon;
     bool selected;
@@ -60,7 +60,7 @@ PrLayoutNode prKitRadio(PrKit* kit, PrLayoutNode group, PrKitChoice choice);
 // The content of a checkbox or a toggle: the flag that it reads and flips, and its label. The label is empty if the
 // caller places its own content beside the control.
 typedef struct PrKitCheck {
-    uint64_t key;
+    PrUiKey key;
     bool* value;
     PrStringView label;
     bool disabled;
@@ -77,14 +77,14 @@ PrLayoutNode prKitToggle(PrKit* kit, PrLayoutNode parent, PrKitCheck check, PrKi
 // The content of a tab strip. If the strip is reorderable, the user can drag a tab to another place in it, and an
 // accent caret marks where the tab will go.
 typedef struct PrKitTabStrip {
-    uint64_t key;
+    PrUiKey key;
     bool disabled;                  // true to disable every tab in the strip
     bool reorderable;
 } PrKitTabStrip;
 
 // One tab in a strip: its identity and its state.
 typedef struct PrKitTab {
-    uint64_t key;                   // identity within the strip, or 0 to match by position
+    PrUiKey key;                   // identity within the strip, or 0 to match by position
     bool selected;
     bool disabled;
 } PrKitTab;
@@ -115,7 +115,7 @@ bool prKitMoved(const PrKit* kit, PrLayoutNode strip, uint32_t* from, uint32_t* 
 // The content of a progress bar. `value` is the fraction of the task that is done, clamped to the range 0 to 1. An
 // indeterminate bar ignores `value` and shows a band that sweeps across its track.
 typedef struct PrKitProgress {
-    uint64_t key;
+    PrUiKey key;
     float value;
     bool indeterminate;
 } PrKitProgress;
@@ -129,7 +129,7 @@ enum { kPrKitMeterSegments = 12 };
 
 // The content of a meter: a reading between `low` and `high`. If both `low` and `high` are zero, the range is 0 to 1.
 typedef struct PrKitMeter {
-    uint64_t key;
+    PrUiKey key;
     float value;
     float low;
     float high;
@@ -146,7 +146,7 @@ PrLayoutNode prKitMeter(PrKit* kit, PrLayoutNode parent, PrKitMeter meter, PrKit
 
 // The content of a spinner.
 typedef struct PrKitSpinner {
-    uint64_t key;
+    PrUiKey key;
 } PrKitSpinner;
 
 // The style of a spinner: the side of its square in px. Zero is 16 px.

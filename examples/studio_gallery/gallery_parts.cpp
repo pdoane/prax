@@ -27,9 +27,9 @@ PrStringView format(char* buffer, size_t size, const char* text, ...) {
     return PrStringView{buffer, length};
 }
 
-PrLayoutNode card(PrKit* kit, PrLayoutNode parent, uint64_t key, const PrKitBoxStyle& box) {
+PrLayoutNode card(PrKit* kit, PrLayoutNode parent, const PrKitBoxStyle& box) {
     PrKitSurfaceStyle surface{.box = box, .ground = PrKitGround_Panel, .rules = PrKitRuleFlag_All};
-    return prKitSurface(kit, parent, {.key = key}, surface);
+    return prKitSurface(kit, parent, {}, surface);
 }
 
 PrLayoutNode fillLabel(PrKit* kit, PrLayoutNode parent, PrStringView text, const PrKitTextStyle& style) {
@@ -77,7 +77,7 @@ PrLayoutNode sectionFrame(PrKit* kit, PrLayoutNode parent, PrStringView number, 
 }
 
 PrLayoutNode demoPanel(PrKit* kit, PrLayoutNode parent, PrStringView title, PrStringView tags, bool bare) {
-    PrLayoutNode frame = card(kit, parent, 0, PrKitBoxStyle{});
+    PrLayoutNode frame = card(kit, parent, PrKitBoxStyle{});
     PrKitSurfaceStyle header{.ground = PrKitGround_Header, .rules = PrKitRuleFlag_Bottom};
     header.box.direction = PrKitDirection_Row;
     header.box.align = PrKitAlign_Center;

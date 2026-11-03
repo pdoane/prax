@@ -354,6 +354,9 @@ void writeUsedBox(LayoutStyles* styles, uint32_t index) {
             static_cast<PrLayoutBoxStyle*>(prMemoryAlloc(sizeof(PrLayoutBoxStyle) * kLayoutTableBlock)));
     PrLayoutBoxStyle& used = styles->usedBox.data[index / kLayoutTableBlock][index % kLayoutTableBlock];
     used = layoutTableAt(styles->box, index);
+    // Without a ratio there is nothing to snap to. Setting the ratio writes every used box again.
+    if (styles->targetPixelRatio == 0)
+        return;
     for (PrLayoutUnit& width : used.border)
         width = layoutBorderWidth(styles, width);
 }
@@ -575,8 +578,9 @@ LayoutStyles* layoutStylesCreate(PrTextFont* PR_NULLABLE font, PrTextShaper* PR_
     c->defaultFont = font;
     c->shaper = shaper;
     c->metricsGeneration = 1;
-    PR_ASSERT(targetPixelRatio > 0 && isFiniteF32(targetPixelRatio));
-    setTargetPixelRatio(c, targetPixelRatio);
+    PR_ASSERT(targetPixelRatio >= 0 && isFiniteF32(targetPixelRatio));
+    if (targetPixelRatio > 0)
+        setTargetPixelRatio(c, targetPixelRatio);
     PrLayoutFontStyle fontGroup = prLayoutFontStyleDefault();
     PrLayoutColorStyle color = prLayoutColorStyleDefault();
     PrLayoutBoxStyle box = prLayoutBoxStyleDefault();

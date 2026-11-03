@@ -297,14 +297,14 @@ typedef uint8_t Part;
 // The picker: a column of its rows, the picker's width.
 struct PickerBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.width = prLayoutLengthPx(kPickerWidth);
     }
 };
 struct PickerFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = PrLayoutFlexDirection_Column;
         flex.rowGap = prLayoutLengthPx(kPrKitSpace4);
         flex.shrink = 0;
@@ -317,7 +317,7 @@ struct PickerRowBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float height;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         if (height > 0)
             box.height = prLayoutLengthPx(height);
@@ -327,7 +327,7 @@ struct PickerRowFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     float gap;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(gap);
         flex.shrink = 0;
@@ -339,7 +339,7 @@ struct AreaBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float width;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Relative;
         box.width = prLayoutLengthPx(width);
@@ -352,7 +352,7 @@ PR_NO_PADDING_END
 // The replaced element that holds an area's drawing, as large as the area.
 struct FillBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.width = prLayoutLengthPercent(100);
         box.height = prLayoutLengthPercent(100);
@@ -360,7 +360,7 @@ struct FillBox {
 };
 
 // Returns the record of a part of the picker.
-PrLayoutStyleIndex partStyle(Kit& kit, Part part) {
+PrLayoutStyleIndex partStyle(PrKit& kit, Part part) {
     switch (part) {
         case Part_Picker:
             return kitStyle(kit, PickerBox{}, PickerFlex{});
@@ -375,7 +375,7 @@ PrLayoutStyleIndex partStyle(Kit& kit, Part part) {
     }
 }
 
-PrLayoutNode part(Kit& kit, PrLayoutNode parent, uint64_t key, Part part) {
+PrLayoutNode part(PrKit& kit, PrLayoutNode parent, uint64_t key, Part part) {
     return prLayoutTreeFrameElement(kit.tree, parent, key, partStyle(kit, part));
 }
 
@@ -389,7 +389,7 @@ struct MarkerBox {
     bool bar;
     uint8_t _pad[3];
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
@@ -414,7 +414,7 @@ PR_NO_PADDING_END
 // A marker's decoration: a white border, outlined in the app's ground so that it shows over any color.
 struct MarkerFill {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Decoration;
-    void make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
+    void make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {
         kitSetBorderColor(decoration, PrColor{1, 1, 1, 1});
         decoration.outlineColor = kitColor16(kit.theme.palette.bg0);
         decoration.outlineStyle = PrDrawBorderStyle_Solid;
@@ -428,7 +428,7 @@ struct ToneBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     bool chosen;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.height = prLayoutLengthPercent(100);
@@ -442,7 +442,7 @@ struct FieldBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     PrKitControlSize size;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.height = prLayoutLengthPx(kitControlHeight(size));
@@ -454,7 +454,7 @@ struct RingFill {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Decoration;
     bool ring;
 
-    void make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
+    void make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {
         if (!ring)
             return;
         decoration.outlineColor = kitColor16(kit.theme.palette.accent);
@@ -471,7 +471,7 @@ PR_NO_PADDING_END
 // Sets the drawing of a replaced element `extent` px in size, which `draw` makes, unless `*drawn` is `key` and the
 // element holds a drawing already. Writes `key` to `*drawn`.
 template <typename Draw>
-void setDrawing(Kit& kit, PrLayoutNode node, PrVec2 extent, uint64_t key, uint64_t* drawn, Draw draw) {
+void setDrawing(PrKit& kit, PrLayoutNode node, PrVec2 extent, uint64_t key, uint64_t* drawn, Draw draw) {
     PrLayoutNaturalSize natural{
         .width = prLayoutUnitFromPx(extent.x),
         .height = prLayoutUnitFromPx(extent.y),
@@ -533,7 +533,7 @@ struct Sampled {
 // Draws a perceptual plane over `extent`: an image of its samples, each the nearest color that `gamut` holds, and a
 // line along the edge of the gamut. If the gamut is wider than sRGB, a dashed line marks where sRGB ends inside it. The
 // image holds half floats, so that colors past sRGB reach a target that shows them.
-void drawSampled(Kit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrColorSpace gamut) {
+void drawSampled(PrKit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrColorSpace gamut) {
     Array<PrFloat16> pixels;
     pixels.resize(kSamples * kSamples * 4);
     for (uint32_t y = 0; y < kSamples; ++y) {
@@ -595,7 +595,7 @@ void drawSampled(Kit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrCol
 
 // Creates a marker centered at `x` and `y`, fractions of `area`'s width and height: a ring for a plane, or a bar across
 // a strip if `bar` is true.
-void marker(Kit& kit, PrLayoutNode area, float x, float y, bool bar) {
+void marker(PrKit& kit, PrLayoutNode area, float x, float y, bool bar) {
     prLayoutTreeFrameElement(kit.tree, area, 0, kitStyle(kit, MarkerBox{.x = x, .y = y, .bar = bar}, MarkerFill{}));
 }
 
@@ -608,7 +608,7 @@ struct Area {
     bool active;                    // the pointer is still down
 };
 
-Area area(Kit& kit, PrLayoutNode parent, Part partId) {
+Area area(PrKit& kit, PrLayoutNode parent, Part partId) {
     Area a{};
     a.node = part(kit, parent, 0, partId);
     bool disabled = kitSetFlags(kit, a.node, PrUiFlag_Pressable);
@@ -631,7 +631,7 @@ Area area(Kit& kit, PrLayoutNode parent, Part partId) {
 
 // Creates the plane of the open mode and the strips beside it, applies their drags to the coordinates, and writes the
 // color that they compose, as one gesture of `picker` for each drag.
-void planeRow(Kit& kit, PrLayoutNode node, PickerState& s, PrColor* color, bool opaque) {
+void planeRow(PrKit& kit, PrLayoutNode node, PickerState& s, PrColor* color, bool opaque) {
     bool perceptual = s.tab == PrKitColorMode_Oklch;
     PrLayoutNode row = part(kit, node, 0, Part_Row);
     Area plane = area(kit, row, Part_Plane);
@@ -723,7 +723,7 @@ void planeRow(Kit& kit, PrLayoutNode node, PickerState& s, PrColor* color, bool 
 }
 
 // Creates the ramp's plane, whose drags set the ramp's hue and chroma without writing the color.
-void rampPlane(Kit& kit, PrLayoutNode node, PickerState& s) {
+void rampPlane(PrKit& kit, PrLayoutNode node, PickerState& s) {
     PrLayoutNode row = part(kit, node, 0, Part_Row);
     Area plane = area(kit, row, Part_Wide);
     if (plane.placed) {
@@ -759,12 +759,12 @@ void rampTones(PrKit* kit, PrLayoutNode node, const PickerState& s, PrColor* col
 
 // Sets a sink on `row` that passes the gestures of the fields under it nowhere. The fields write the picker's own
 // copies of its values, and the picker reports each edit of the color as a gesture of its own.
-void quiet(Kit& kit, PrLayoutNode row) {
+void quiet(PrKit& kit, PrLayoutNode row) {
     prUiSetEditSink(kit.ui, row, nullptr, nullptr);
 }
 
 // Writes `made` to the color as one gesture of `node`, if it differs, and reads it back into the picker.
-void writeEdit(Kit& kit, PrLayoutNode node, PickerState& s, PrColor* color, PrColor made) {
+void writeEdit(PrKit& kit, PrLayoutNode node, PickerState& s, PrColor* color, PrColor made) {
     if (!sameColor(made, *color))
         kitEditOnce(kit, node, [&] { *color = made; });
     s.written = made;

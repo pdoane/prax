@@ -305,7 +305,7 @@ TEST_CASE("controls on a plane turned in perspective take input where they are d
             },
             .perspective = distance,
         };
-        stage = prKitPlane(f.kit, ground, {.key = 1}, outer);
+        stage = prKitPlane(f.kit, ground, {}, outer);
         PrKitPlaneStyle inner{
             .box = {
                 .align = PrKitAlign_Start,
@@ -314,11 +314,11 @@ TEST_CASE("controls on a plane turned in perspective take input where they are d
                 .place = {.width = prKitPx(240), .align = PrKitAlign_Start},
             },
         };
-        panel = prKitPlane(f.kit, stage, {.key = 2, .transform = &turn}, inner);
-        slider = prKitSlider(f.kit, panel, {.key = 3, .value = prKitScalarF32(&value), .min = 0, .max = 10}, {});
+        panel = prKitPlane(f.kit, stage, {.transform = &turn}, inner);
+        slider = prKitSlider(f.kit, panel, {.value = prKitScalarF32(&value), .min = 0, .max = 10}, {});
         PrKitPlace fill{.align = PrKitAlign_Stretch};
         prKitPlace(f.kit, slider, &fill);
-        button = prKitButton(f.kit, panel, {.key = 4, .text = "Press"}, {});
+        button = prKitButton(f.kit, panel, {.text = "Press"}, {});
         activated = activated || prKitActivated(f.kit, button);
     };
     f.frame();
@@ -364,14 +364,13 @@ TEST_CASE("a plane that hides its back takes no input while it shows it, and a p
             .box = {.place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed,}},
             .perspective = 300,
         };
-        stage = prKitPlane(f.kit, ground, {.key = 1}, outer);
+        stage = prKitPlane(f.kit, ground, {}, outer);
         PrKitBoxStyle cover{.place = {.width = prKitPercent(100), .height = prKitPercent(100)}};
-        back = prKitPlane(f.kit, prKitStack(f.kit, stage, {.key = 2}, cover), {.key = 3}, {.box = cover, .zIndex = level});
+        back = prKitPlane(f.kit, prKitStack(f.kit, stage, {}, cover), {}, {.box = cover, .zIndex = level});
         // The layer that holds the front plane lets the pointer through to what is under it.
-        PrLayoutNode layer = prKitLayer(f.kit, stage, {.key = 4}, cover);
+        PrLayoutNode layer = prKitLayer(f.kit, stage, {}, cover);
         prUiSetFlags(f.ui, layer, PrUiFlag_Transparent);
-        front = prKitPlane(f.kit, layer, {.key = 5, .transform = hidden ? &flip : nullptr},
-            {.box = cover, .backfaceHidden = true});
+        front = prKitPlane(f.kit, layer, {.transform = hidden ? &flip : nullptr}, {.box = cover, .backfaceHidden = true});
         for (PrLayoutNode node : {back, front}) {
             prUiSetFlags(f.ui, node, PrUiFlag_Pressable);
             if (prUiClicked(f.ui, node, 0))

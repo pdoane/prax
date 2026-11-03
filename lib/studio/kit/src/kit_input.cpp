@@ -157,7 +157,7 @@ void setRule(PrLayoutDecorationStyle& decoration, PrRectSide side, PrColor color
     decoration.borderColor[side] = kitColor16(color);
     decoration.borderStyle[side] = PrDrawBorderStyle_Solid;
 }
-void setRing(PrLayoutDecorationStyle& decoration, const Kit& kit) {
+void setRing(PrLayoutDecorationStyle& decoration, const PrKit& kit) {
     decoration.outlineColor = kitColor16(kit.theme.palette.accent);
     decoration.outlineStyle = PrDrawBorderStyle_Solid;
     decoration.outlineWidth = prLayoutUnitFromPx(1);
@@ -170,7 +170,7 @@ struct InputBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     PartRecipe recipe;
 
-    void make(const Kit& kit, PrLayoutBoxStyle& box) const {
+    void make(const PrKit& kit, PrLayoutBoxStyle& box) const {
         bool inRow = (recipe.flags & PartFlag_InRow) != 0;
         float height = kitControlHeight(recipe.size);
         box.display = PrLayoutDisplay_Block;
@@ -302,7 +302,7 @@ struct InputFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     PartRecipe recipe;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         bool inRow = (recipe.flags & PartFlag_InRow) != 0;
         // A flex row centers its children across it, apart by its gap.
         auto row = [&](float gap) {
@@ -398,7 +398,7 @@ struct InputFill {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Decoration;
     PartRecipe recipe;
 
-    void make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
+    void make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {
         const PrKitPalette& p = kit.theme.palette;
         const PrColor clear{0, 0, 0, 0};
         bool disabled = (recipe.flags & PartFlag_Disabled) != 0;
@@ -479,7 +479,7 @@ struct SliderRunBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float percent;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.width = prLayoutLengthPercent(percent);
         box.height = prLayoutLengthPercent(100);
@@ -489,7 +489,7 @@ struct SliderKnobBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float percent;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.position = PrLayoutPosition_Absolute;
         box.inset[PrRectSide_Left] = prLayoutLengthPercent(percent);
@@ -505,7 +505,7 @@ struct TintFill {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Decoration;
     PrColor tint;
 
-    void make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
+    void make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {
         decoration.background = kitColor16(tint);
         setRule(decoration, PrRectSide_Right, kit.theme.palette.line1);
     }
@@ -513,7 +513,7 @@ struct TintFill {
 PR_NO_PADDING_END
 
 // Returns true if a part sets text of its own, and writes its font and ink if so.
-bool partText(const Kit& kit, const PartRecipe& recipe, KitFont* font, KitInk* ink) {
+bool partText(const PrKit& kit, const PartRecipe& recipe, KitFont* font, KitInk* ink) {
     const PrKitPalette& p = kit.theme.palette;
     bool disabled = (recipe.flags & PartFlag_Disabled) != 0;
     PrKitTextRole role = PrKitTextRole_Body;
@@ -558,7 +558,7 @@ bool partText(const Kit& kit, const PartRecipe& recipe, KitFont* font, KitInk* i
 }
 
 // Returns the record of a part.
-PrLayoutStyleIndex partStyle(Kit& kit, PartRecipe recipe) {
+PrLayoutStyleIndex partStyle(PrKit& kit, PartRecipe recipe) {
     KitFont font{};
     KitInk ink{};
     if (partText(kit, recipe, &font, &ink))
@@ -567,19 +567,19 @@ PrLayoutStyleIndex partStyle(Kit& kit, PartRecipe recipe) {
 }
 
 // Creates an element with a part's record under `parent`.
-PrLayoutNode part(Kit& kit, PrLayoutNode parent, uint64_t key, PartRecipe recipe) {
+PrLayoutNode part(PrKit& kit, PrLayoutNode parent, uint64_t key, PartRecipe recipe) {
     return prLayoutTreeFrameElement(kit.tree, parent, key, partStyle(kit, recipe));
 }
 
 // Creates an element with a part's record that holds `text`.
-PrLayoutNode textPart(Kit& kit, PrLayoutNode parent, uint64_t key, PartRecipe recipe, PrStringView text) {
+PrLayoutNode textPart(PrKit& kit, PrLayoutNode parent, uint64_t key, PartRecipe recipe, PrStringView text) {
     PrLayoutNode node = part(kit, parent, key, recipe);
     prLayoutTreeFrameText(kit.tree, node, 0, text);
     return node;
 }
 
 // Returns true if `parent`, which is a node that the round created, lays out its children in a row.
-bool isRow(const Kit& kit, PrLayoutNode parent) {
+bool isRow(const PrKit& kit, PrLayoutNode parent) {
     PrLayoutStyle style = prLayoutStyleRecord(kit.tree, prLayoutTreeFrameStyle(kit.tree, parent));
     PrLayoutBoxStyle box = prLayoutBoxStyleRecord(kit.tree, style.groups[PrLayoutGroup_Box]);
     if (box.display != PrLayoutDisplay_Flex && box.display != PrLayoutDisplay_InlineFlex)
@@ -589,7 +589,7 @@ bool isRow(const Kit& kit, PrLayoutNode parent) {
 }
 
 // Returns the state that a pressable node is drawn in, from the round's input.
-uint8_t pointerState(const Kit& kit, PrLayoutNode node, bool disabled) {
+uint8_t pointerState(const PrKit& kit, PrLayoutNode node, bool disabled) {
     if (disabled)
         return PartState_Rest;
     if (prUiIsPressed(kit.ui, node, 0))
@@ -597,7 +597,7 @@ uint8_t pointerState(const Kit& kit, PrLayoutNode node, bool disabled) {
     return prUiIsHovered(kit.ui, node) ? PartState_Hover : PartState_Rest;
 }
 
-bool ringed(const Kit& kit, PrLayoutNode node) {
+bool ringed(const PrKit& kit, PrLayoutNode node) {
     return prUiIsFocusVisible(kit.ui) && prUiFocus(kit.ui) == node;
 }
 
@@ -607,7 +607,7 @@ PrUiFlags editFlags(PrUiFlags flags, bool disabled) {
 }
 
 // Creates an element under `parent` that takes `flags`, and writes whether it is disabled to `disabled`.
-PrLayoutNode control(Kit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool* disabled) {
+PrLayoutNode control(PrKit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool* disabled) {
     PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, 0);
     *disabled = kitSetFlags(kit, node, flags);
     return node;
@@ -617,7 +617,7 @@ PrLayoutNode control(Kit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flag
 // Edit gestures
 
 // Begins a gesture on `node` if none is open, as recorded by `live`.
-void beginEdit(const Kit& kit, PrLayoutNode node, bool* live) {
+void beginEdit(const PrKit& kit, PrLayoutNode node, bool* live) {
     if (*live)
         return;
     *live = true;
@@ -625,7 +625,7 @@ void beginEdit(const Kit& kit, PrLayoutNode node, bool* live) {
 }
 
 // Commits the gesture open on `node`, if any.
-void commitEdit(const Kit& kit, PrLayoutNode node, bool* live) {
+void commitEdit(const PrKit& kit, PrLayoutNode node, bool* live) {
     if (!*live)
         return;
     *live = false;
@@ -783,7 +783,7 @@ PrKitScalar scalarAt(PrKitScalar s, uint32_t index) {
 }
 
 // Writes `value` if it changes what the binding holds, and reports the change.
-void scalarWrite(const Kit& kit, PrLayoutNode node, PrKitScalar s, double value) {
+void scalarWrite(const PrKit& kit, PrLayoutNode node, PrKitScalar s, double value) {
     if (scalarQuantize(s.kind, value) == scalarLoad(s))
         return;
     scalarStore(s, value);
@@ -850,7 +850,7 @@ uint32_t formatNumber(double value, uint32_t precision, char* out) {
 }
 
 // Returns the modifiers of the last pointer event that the round routed to `node`, or none.
-PrAppModifierFlags pointerModifiers(const Kit& kit, PrLayoutNode node) {
+PrAppModifierFlags pointerModifiers(const PrKit& kit, PrLayoutNode node) {
     PrUiEvents events = prUiEvents(kit.ui, node);
     PrAppModifierFlags modifiers = 0;
     for (uint32_t i = 0; i < events.count; ++i) {
@@ -864,7 +864,7 @@ PrAppModifierFlags pointerModifiers(const Kit& kit, PrLayoutNode node) {
 // Returns the px that a scrub moved in the round from `from`, with each event's motion scaled by that event's
 // modifiers. Motion is measured along the node's own x axis, so that a scrub on a turned or scaled panel follows the
 // pointer over the field. A position that does not reach the node's plane adds no motion.
-double scrubbed(const Kit& kit, PrLayoutNode node, PrVec2 from, PrVec2 to) {
+double scrubbed(const PrKit& kit, PrLayoutNode node, PrVec2 from, PrVec2 to) {
     PrVec2 local{};
     bool known = prUiLocalPoint(kit.ui, node, from, &local);
     float at = local.x;
@@ -903,7 +903,7 @@ struct NumberState {
 };
 
 // Applies the round's scrub to `number`.
-void scrub(const Kit& kit, PrLayoutNode node, const PrKitNumber& number, const NumberBounds& bounds, NumberState& state) {
+void scrub(const PrKit& kit, PrLayoutNode node, const PrKitNumber& number, const NumberBounds& bounds, NumberState& state) {
     PrUiDrag drag{};
     bool dragging = prUiDrag(kit.ui, node, 0, kScrubThreshold, &drag);
     if (dragging && drag.moved && (drag.active || drag.released)) {
@@ -928,7 +928,7 @@ void scrub(const Kit& kit, PrLayoutNode node, const PrKitNumber& number, const N
 }
 
 // Applies the round's key presses to `number`, each as its own gesture.
-void nudge(const Kit& kit, PrLayoutNode node, const PrKitNumber& number, const NumberBounds& bounds) {
+void nudge(const PrKit& kit, PrLayoutNode node, const PrKitNumber& number, const NumberBounds& bounds) {
     if (prUiFocus(kit.ui) != node)
         return;
     static const PrAppKey kKeys[] = {PrAppKey_Up, PrAppKey_Down};
@@ -950,7 +950,7 @@ void nudge(const Kit& kit, PrLayoutNode node, const PrKitNumber& number, const N
     }
 }
 
-PrLayoutNode numberField(Kit& kit, PrLayoutNode parent, const PrKitNumber& number, const PrKitNumberStyle& style) {
+PrLayoutNode numberField(PrKit& kit, PrLayoutNode parent, const PrKitNumber& number, const PrKitNumberStyle& style) {
     PR_ASSERT(number.value.at != nullptr);
     bool inRow = isRow(kit, parent);
     bool disabled = false;
@@ -1006,7 +1006,7 @@ struct TextState {
 
 // Replaces the whole text with `value`, which stays valid for the round, as one gesture on `node`, and puts the caret
 // at its end.
-void replaceText(Kit& kit, PrLayoutNode node, PrTextEditBuffer* PR_NULLABLE buffer, PrStringView value) {
+void replaceText(PrKit& kit, PrLayoutNode node, PrTextEditBuffer* PR_NULLABLE buffer, PrStringView value) {
     kitEditOnce(kit, node, [&] {
         kitReportText(kit, node, value);
         if (buffer != nullptr) {
@@ -1020,7 +1020,7 @@ void replaceText(Kit& kit, PrLayoutNode node, PrTextEditBuffer* PR_NULLABLE buff
 
 // Recalls the history's earlier line with Up and its later line with Down, while the field has focus. Past the latest
 // line is the line being typed, which starts empty. Returns the text that the field shows in this round.
-PrStringView recall(Kit& kit, PrLayoutNode node, const PrKitTextField& field, TextState& state) {
+PrStringView recall(PrKit& kit, PrLayoutNode node, const PrKitTextField& field, TextState& state) {
     bool up = prUiKeyPressed(kit.ui, node, PrAppKey_Up, 0);
     bool down = prUiKeyPressed(kit.ui, node, PrAppKey_Down, 0);
     uint32_t count = field.historyCount;
@@ -1042,7 +1042,7 @@ PrStringView recall(Kit& kit, PrLayoutNode node, const PrKitTextField& field, Te
 
 // Creates the element that holds the text of an edit on `control`, runs the edit, and creates the placeholder after the
 // text while the text is empty.
-void editedText(Kit& kit, PrLayoutNode control, PrStringView text, PrTextEditBuffer* PR_NULLABLE buffer,
+void editedText(PrKit& kit, PrLayoutNode control, PrStringView text, PrTextEditBuffer* PR_NULLABLE buffer,
         PrStringView placeholder, const PrKitFieldStyle& style, bool disabled, bool area, PrUiTextEditFlags flags) {
     const PrKitPalette& p = kit.theme.palette;
     uint8_t textFlags = uint8_t((disabled ? PartFlag_Disabled : 0) | (style.mono ? PartFlag_Mono : 0) |
@@ -1076,8 +1076,8 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
     PrStringView text = field.buffer != nullptr ? prTextEditBufferText(field.buffer) : field.text;
     bool inRow = isRow(*kit, parent);
     bool disabled = false;
-    PrLayoutNode node =
-        control(*kit, parent, field.key, editFlags(PrUiFlag_Pressable | PrUiFlag_Focusable, field.disabled), &disabled);
+    PrUiFlags editing = editFlags(PrUiFlag_Pressable | PrUiFlag_Focusable, field.disabled);
+    PrLayoutNode node = control(*kit, parent, field.key, editing, &disabled);
     TextState* state = static_cast<TextState*>(prUiState(kit->ui, node, &kKitOwner, StateKey_Text, sizeof(TextState)));
     bool focused = prUiFocus(kit->ui) == node;
     *arrived = focused && !state->focused;
@@ -1138,7 +1138,7 @@ double sliderFractionAt(double low, double high, bool ratio, double value) {
 }
 
 // Applies the round's key presses to a slider at `fraction` of its track, each as its own gesture.
-void sliderKeys(const Kit& kit, PrLayoutNode node, const PrKitSlider& slider, double low, double high, bool ratio,
+void sliderKeys(const PrKit& kit, PrLayoutNode node, const PrKitSlider& slider, double low, double high, bool ratio,
         double fraction) {
     if (prUiFocus(kit.ui) != node)
         return;
@@ -1166,7 +1166,7 @@ void sliderKeys(const Kit& kit, PrLayoutNode node, const PrKitSlider& slider, do
     }
 }
 
-PrLayoutNode sliderControl(Kit& kit, PrLayoutNode parent, const PrKitSlider& content, const PrKitSliderStyle& style) {
+PrLayoutNode sliderControl(PrKit& kit, PrLayoutNode parent, const PrKitSlider& content, const PrKitSliderStyle& style) {
     PR_ASSERT(content.value.at != nullptr);
     const PrKitPalette& p = kit.theme.palette;
     bool ratio = content.scale == PrKitSliderScale_Ratio;
@@ -1241,7 +1241,7 @@ PrLayoutNode prKitNumberField(PrKit* kit, PrLayoutNode parent, PrKitNumber numbe
 
 PrLayoutNode prKitVectorField(PrKit* kit, PrLayoutNode parent, PrKitVector vector, PrKitNumberStyle style) {
     PR_ASSERT(vector.count >= 2 && vector.count <= 4 && vector.value.at != nullptr);
-    Kit& k = *kit;
+    PrKit& k = *kit;
     uint8_t flags = isRow(k, parent) ? PartFlag_InRow : 0;
     PrLayoutNode row = part(k, parent, vector.key, PartRecipe{.part = Part_Vector, .flags = flags});
     if (vector.disabled)
@@ -1264,11 +1264,11 @@ PrLayoutNode prKitTextField(PrKit* kit, PrLayoutNode parent, PrKitTextField fiel
 }
 
 PrLayoutNode prKitTextArea(PrKit* kit, PrLayoutNode parent, PrKitTextArea area, PrKitFieldStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     bool inRow = isRow(k, parent);
     bool disabled = false;
-    PrLayoutNode node =
-        control(k, parent, area.key, editFlags(PrUiFlag_Pressable | PrUiFlag_Focusable, area.disabled), &disabled);
+    PrUiFlags editing = editFlags(PrUiFlag_Pressable | PrUiFlag_Focusable, area.disabled);
+    PrLayoutNode node = control(k, parent, area.key, editing, &disabled);
     if (!disabled)
         prUiSetCursor(k.ui, node, PrAppCursor_Text);
     bool focused = prUiFocus(k.ui) == node;
@@ -1380,7 +1380,7 @@ PrLayoutNode prKitInspectorRow(PrKit* kit, PrLayoutNode parent, PrKitInspectorRo
 }
 
 PrLayoutNode prKitAssetField(PrKit* kit, PrLayoutNode parent, PrKitAssetField field) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     bool inRow = isRow(k, parent);
     PrLayoutNode node = prLayoutTreeFrameElement(k.tree, parent, field.key, 0);
     if (field.disabled)

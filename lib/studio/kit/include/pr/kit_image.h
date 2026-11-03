@@ -23,7 +23,7 @@ typedef uint8_t PrKitImageFit;
 
 // The content of an image widget: the image that it shows.
 typedef struct PrKitImage {
-    uint64_t key;
+    PrUiKey key;
     const PrDrawImage* image;
 } PrKitImage;
 

@@ -19,7 +19,7 @@ extern "C" {
 
 // The content of a color field: the color that it shows and edits.
 typedef struct PrKitColorField {
-    uint64_t key;
+    PrUiKey key;
     PrColor* color;
     bool disabled;
 } PrKitColorField;
@@ -48,7 +48,7 @@ typedef uint8_t PrKitColorMode;
 // on; its tabs choose another, which the picker keeps. `gamut` is the RGB space that its perceptual planes work in,
 // which a picker for the display's colors takes from the display (prUiDisplay).
 typedef struct PrKitColorPicker {
-    uint64_t key;
+    PrUiKey key;
     PrColor* color;
     PrKitColorMode mode;
     PrColorSpace gamut;

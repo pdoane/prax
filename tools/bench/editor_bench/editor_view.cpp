@@ -246,7 +246,7 @@ constexpr CommandDef kCommands[] = {
 // Declares the command palette over the screen while it is open. The palette's trigger is the root, which claims Cmd K
 // to open it.
 void buildPalette(PrKit* kit, PrLayoutNode root, EditorState& editor) {
-    if (prUiKeyPressed(prKitUi(kit), root, 'K', PrAppModifierFlag_Super))
+    if (prUiKeyPressed(kit->ui, root, 'K', PrAppModifierFlag_Super))
         editor.paletteOpen = !editor.paletteOpen;
     prKitSetOpen(kit, root, editor.paletteOpen);
     constexpr uint32_t count = countOf(kCommands);
@@ -382,7 +382,7 @@ void buildScenePanel(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         .dragKind = kDragSceneRow,
     };
     PrLayoutNode view = prKitTreeView(kit, parent, content, {.place = {.flex = PrKitFlex_Fill}});
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         EntityId id = editor.sceneRows[i];
@@ -429,7 +429,7 @@ constexpr AssetDef kAssets[] = {
 };
 
 void buildAssetGrid(PrKit* kit, PrLayoutNode parent, EditorState& editor, uint32_t count) {
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
     PrKitBoxStyle grid{
         .direction = PrKitDirection_Row,
         .overflow = PrKitOverflow_Clip,
@@ -495,7 +495,7 @@ void paintGrid(void* context, PrVec2 size, PrDrawList* list) {
 }
 
 void buildViewport(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
-    PrLayoutTree* tree = prKitTree(kit);
+    PrLayoutTree* tree = kit->tree;
     PrLayoutNode header = prKitPanelHeader(kit, parent, {.title = "VIEWPORT"});
     const char* tabs[] = {"Scene", "Game", "Animator"};
     segmented(kit, header, tabs, 3, &editor.viewportTab, PrKitControlSize_Xs);
@@ -602,7 +602,7 @@ void buildInspector(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     PrKitBoxStyle scroll{.overflow = PrKitOverflow_ScrollY};
     scroll.place.flex = PrKitFlex_Fill;
     PrLayoutNode body = prKitBox(kit, parent, {}, scroll);
-    prUiSetFlags(prKitUi(kit), body, PrUiFlag_Scrollable);
+    prUiSetFlags(kit->ui, body, PrUiFlag_Scrollable);
     if (sel == nullptr)
         return;
     PrKitInspectorGroup transformGroup{
@@ -736,12 +736,16 @@ void countEdit(void* context, PrLayoutNode, PrUiEditPhase phase) {
 } // namespace
 
 void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
-    prUiSetEditSink(prKitUi(kit), ground, countEdit, &editor);
+    prUiSetEditSink(kit->ui, ground, countEdit, &editor);
     buildMenubar(kit, ground, editor);
     buildToolbar(kit, ground, editor);
     if (editor.dock == nullptr)
         editor.dock = makeDock();
-    PrLayoutNode dock = prKitDockBuild(kit, ground, {.key = 0xd0c, .dock = editor.dock, .describe = describePanel});
+    PrLayoutNode dock = prKitDockBuild(kit, ground, {
+        .key = prUiKey(kit->ui, ground, "dock"),
+        .dock = editor.dock,
+        .describe = describePanel,
+    });
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, dock, &fill);
     for (uint32_t i = 0; i < prKitDockPaneCount(editor.dock); ++i) {
@@ -767,7 +771,7 @@ void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
         }
     }
     buildStatusBar(kit, ground, editor);
-    buildPalette(kit, prLayoutTreeRoot(prKitTree(kit)), editor);
+    buildPalette(kit, prLayoutTreeRoot(kit->tree), editor);
 }
 
 void editorAttach(void* context, editor_bench::Host& host) {

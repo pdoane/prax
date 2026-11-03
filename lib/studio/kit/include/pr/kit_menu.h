@@ -43,7 +43,7 @@ bool prKitToggleOpen(PrKit* kit, PrLayoutNode trigger);
 
 // The content of a popover.
 typedef struct PrKitPopover {
-    uint64_t key;
+    PrUiKey key;
 } PrKitPopover;
 
 // The placement of a popover against its trigger. Zero places it flush with the trigger's bottom left corner, as wide
@@ -63,7 +63,7 @@ PrLayoutNode prKitPopover(PrKit* kit, PrLayoutNode trigger, PrKitPopover popover
 
 // The content of a menu.
 typedef struct PrKitMenu {
-    uint64_t key;
+    PrUiKey key;
 } PrKitMenu;
 
 // The width of a menu and how it takes the keyboard. Zero makes the menu as wide as its widest item, and makes it hold
@@ -82,7 +82,7 @@ PrLayoutNode prKitMenu(PrKit* kit, PrLayoutNode parent, PrKitMenu menu, PrKitMen
 
 // The content of a caption above a group of a menu's items.
 typedef struct PrKitMenuLabel {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
 } PrKitMenuLabel;
 
@@ -91,7 +91,7 @@ PrLayoutNode prKitMenuLabel(PrKit* kit, PrLayoutNode menu, PrKitMenuLabel label)
 
 // The content of a menu item. Every item has a check column, so that the text of a menu's items lines up.
 typedef struct PrKitMenuItem {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
     PrStringView shortcut;          // shown in a key cap at the item's end; empty for none
     PrKitIconKind icon;             // shown before the text
@@ -117,7 +117,7 @@ PrLayoutNode prKitMenuItem(PrKit* kit, PrLayoutNode menu, PrKitMenuItem item, Pr
 
 // The content of a rule between groups of a menu's items.
 typedef struct PrKitMenuSeparator {
-    uint64_t key;
+    PrUiKey key;
 } PrKitMenuSeparator;
 
 // Creates a rule between groups of a menu's items.
@@ -128,7 +128,7 @@ PrLayoutNode prKitMenuSeparator(PrKit* kit, PrLayoutNode menu, PrKitMenuSeparato
 
 // The content of a select: the label and icon of the chosen option. An empty label shows no option chosen.
 typedef struct PrKitSelect {
-    uint64_t key;
+    PrUiKey key;
     PrStringView label;
     PrKitIconKind icon;
     bool disabled;
@@ -155,7 +155,7 @@ enum { kPrKitMenuBarMaxItems = 32 };
 
 // The content of an application's menu bar.
 typedef struct PrKitMenuBar {
-    uint64_t key;
+    PrUiKey key;
 } PrKitMenuBar;
 
 // Creates an application's menu bar: a row on the header ground with a rule below it. While one of its items is open,
@@ -164,7 +164,7 @@ PrLayoutNode prKitMenuBar(PrKit* kit, PrLayoutNode parent, PrKitMenuBar bar);
 
 // The content of an item of a menu bar.
 typedef struct PrKitMenuBarItem {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
     bool disabled;
 } PrKitMenuBarItem;
@@ -182,7 +182,7 @@ void prKitCloseContextMenu(PrKit* kit, PrLayoutNode host);
 
 // The content of a context menu.
 typedef struct PrKitContextMenu {
-    uint64_t key;
+    PrUiKey key;
 } PrKitContextMenu;
 
 // Creates the context menu of `host`, which is a node that the current round created, and returns its menu. Returns
@@ -199,7 +199,7 @@ static const double kPrKitTooltipDelay = 0.5;
 
 // The content of a tooltip.
 typedef struct PrKitTooltip {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
     PrStringView shortcut;          // shown in a key cap after the text; empty for none
 } PrKitTooltip;
@@ -214,7 +214,7 @@ PrLayoutNode prKitTooltip(PrKit* kit, PrLayoutNode anchor, PrKitTooltip tooltip)
 
 // The content of the ghost of a dragged payload. `key` is unique among the ghosts of the payload's source.
 typedef struct PrKitDragGhost {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
     PrKitIconKind icon;
 } PrKitDragGhost;
@@ -235,7 +235,7 @@ typedef uint8_t PrKitModalPlacement;
 
 // The content of a modal.
 typedef struct PrKitModal {
-    uint64_t key;
+    PrUiKey key;
 } PrKitModal;
 
 // The placement of a modal. Zero is centered.
@@ -252,7 +252,7 @@ PrLayoutNode prKitModal(PrKit* kit, PrLayoutNode trigger, PrKitModal modal, PrKi
 
 // The content of a dialog.
 typedef struct PrKitDialog {
-    uint64_t key;
+    PrUiKey key;
     PrStringView title;
 } PrKitDialog;
 
@@ -275,7 +275,7 @@ PrLayoutNode prKitDialogFooter(PrKit* kit, PrLayoutNode body);
 
 // The content of a command palette.
 typedef struct PrKitCommandPalette {
-    uint64_t key;
+    PrUiKey key;
     PrStringView prompt;            // faint text in the search row while the query is empty
     uint32_t count;                 // number of items that the caller creates in the palette's list
 
@@ -292,7 +292,7 @@ PrLayoutNode prKitCommandPalette(PrKit* kit, PrLayoutNode trigger, PrKitCommandP
 
 // The content of an item in a command palette.
 typedef struct PrKitCommandItem {
-    uint64_t key;
+    PrUiKey key;
     PrStringView text;
     PrStringView category;          // shown faint after the text; empty for none
     PrStringView shortcut;          // shown in a key cap at the item's end; empty for none

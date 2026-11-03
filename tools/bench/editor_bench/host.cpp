@@ -65,7 +65,7 @@ void hostClose(Host& host) {
 }
 
 void hostReset(Host& host) {
-    PrKitTheme theme = *prKitTheme(host.kit);
+    PrKitTheme theme = host.kit->theme;
     destroyTree(host);
     createTree(host, theme);
 }

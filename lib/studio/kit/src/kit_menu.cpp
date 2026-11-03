@@ -108,23 +108,23 @@ struct SelectState {
     bool revealed;
 };
 
-OpenState& openOf(Kit& kit, PrLayoutNode trigger) {
+OpenState& openOf(PrKit& kit, PrLayoutNode trigger) {
     PR_ASSERT(trigger != kPrLayoutNodeNone);
     return kitState<OpenState>(kit, trigger, MenuStateKey_Open);
 }
 
-ContextState& contextOf(Kit& kit, PrLayoutNode host) {
+ContextState& contextOf(PrKit& kit, PrLayoutNode host) {
     PR_ASSERT(host != kPrLayoutNodeNone);
     return kitState<ContextState>(kit, host, MenuStateKey_Context);
 }
 
 // Returns the closer of the floating surface that `node` is in, or null if it is in none.
-const Closer* PR_NULLABLE closerOf(Kit& kit, PrLayoutNode node) {
+const Closer* PR_NULLABLE closerOf(PrKit& kit, PrLayoutNode node) {
     return kitContext<Closer>(kit, node, KitContext_Closer);
 }
 
 // Closes the floating widget that `closer` names, if any, and requests the frame that removes it.
-void close(Kit& kit, const Closer* PR_NULLABLE closer) {
+void close(PrKit& kit, const Closer* PR_NULLABLE closer) {
     if (closer == nullptr || closer->node == kPrLayoutNodeNone)
         return;
     if (closer->key == MenuStateKey_Context)
@@ -142,7 +142,7 @@ struct Item {
 
 // Creates an item under `parent` that takes `flags`. The item is disabled if `disabled` is true, or if a container that
 // it is created under is. An enabled item shows the hand cursor.
-Item itemNode(Kit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool disabled) {
+Item itemNode(PrKit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool disabled) {
     PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, 0);
     bool off = kitSetFlags(kit, node, disabled ? flags | PrUiFlag_Disabled : flags);
     if (!off)
@@ -151,23 +151,23 @@ Item itemNode(Kit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool
 }
 
 // Returns the key of a node that floats from `from`. The key is unique in the tree.
-uint64_t floatKey(PrLayoutNode from, uint64_t kind, uint64_t key) {
-    return hashMixKeys(hashMixKeys(from, kind), key);
+PrUiKey floatKey(const PrUi* ui, PrLayoutNode from, uint64_t kind, PrUiKey key) {
+    return prUiKeyIndex2(ui, from, kind, key);
 }
 
-PrRect boundsOf(Kit& kit, PrLayoutNode node) {
+PrRect boundsOf(PrKit& kit, PrLayoutNode node) {
     return prLayoutRectToPx(prLayoutNodeBounds(kit.tree, node, PrLayoutCoordinates_Viewport));
 }
 
 // Returns true if the node had a box in the last layout.
-bool laidOut(Kit& kit, PrLayoutNode node) {
+bool laidOut(PrKit& kit, PrLayoutNode node) {
     PrRect r = boundsOf(kit, node);
     return r.right > r.left || r.bottom > r.top;
 }
 
 // Returns true if the round dismisses a floating node shown in the last round: by Escape, claimed on the node or on
 // `from`, or by a primary press outside both. Claims Escape on both for the next round.
-bool dismissed(Kit& kit, PrLayoutNode surface, PrLayoutNode from) {
+bool dismissed(PrKit& kit, PrLayoutNode surface, PrLayoutNode from) {
     bool escape = prUiKeyPressed(kit.ui, from, PrAppKey_Escape, 0);
     if (surface == kPrLayoutNodeNone)
         return escape;
@@ -209,7 +209,7 @@ struct RowBox {
     bool clips;
     uint8_t _pad;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         if (height > 0)
@@ -237,7 +237,7 @@ struct RowFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     float gap;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(gap);
         flex.shrink = 0;
@@ -249,7 +249,7 @@ struct ColumnFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     bool fixed;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = PrLayoutFlexDirection_Column;
         flex.alignItems = PrLayoutAlignment_Stretch;
         if (fixed)
@@ -277,7 +277,7 @@ struct FloatBox {
     float left;
     float top;
 
-    void make(const Kit& kit, PrLayoutBoxStyle& box) const {
+    void make(const PrKit& kit, PrLayoutBoxStyle& box) const {
         if (look == FloatLook_Tooltip)
             RowBox{.padding = prKitEdgesXY(kPrKitSpace1, kPrKitSpace3), .bordered = true}.make(kit, box);
         else if (look == FloatLook_Ghost)
@@ -299,7 +299,7 @@ struct FloatEffects {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Effect;
     float opacity;
 
-    void make(const Kit&, PrLayoutEffectStyle& effects) const {
+    void make(const PrKit&, PrLayoutEffectStyle& effects) const {
         effects.opacity = opacity;
     }
 };
@@ -307,7 +307,7 @@ PR_NO_PADDING_END
 
 // Creates a node under the overlay in `look`, at least `minWidth` px wide, placed against `anchor` by `offset`. A node
 // that has not been laid out yet has no extent to place by, so it requests the frame that places it.
-PrLayoutNode floating(Kit& kit, uint64_t key, PrUiFlags flags, PrRect anchor, PrVec2 offset, FloatLook look,
+PrLayoutNode floating(PrKit& kit, PrUiKey key, PrUiFlags flags, PrRect anchor, PrVec2 offset, FloatLook look,
         float minWidth) {
     PrLayoutNode overlay = prUiOverlay(kit.ui);
     PrLayoutNode node = prUiElement(kit.ui, overlay, key, 0, flags);
@@ -339,7 +339,7 @@ struct MenuBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float minWidth;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         kitSetPadding(box, prKitEdgesXY(kPrKitSpace1, 0));
         if (minWidth > 0)
@@ -351,7 +351,7 @@ PR_NO_PADDING_END
 // A menu item's check column, which holds its check mark.
 struct CheckBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.width = box.height = prLayoutLengthPx(kItemIcon);
     }
@@ -360,7 +360,7 @@ struct CheckBox {
 // A menu's caption, padded for its place among the items.
 struct MenuLabelBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         kitSetPadding(box, PrKitEdges{kPrKitSpace2, kPrKitSpace4, kPrKitSpace1, kPrKitSpace4});
     }
@@ -369,7 +369,7 @@ struct MenuLabelBox {
 // A rule one px tall between a menu's items.
 struct SeparatorBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.height = prLayoutLengthPx(1);
         box.margin[PrRectSide_Top] = prLayoutLengthPx(kPrKitSpace1);
@@ -387,7 +387,7 @@ typedef uint8_t ItemState;
 
 // Returns the fill of a menu item or a command item lit in `state`, which is the accent's wash, deeper while pressed or
 // while the palette's selected item is hovered.
-PrColor itemFill(const Kit& kit, ItemState state, bool selected) {
+PrColor itemFill(const PrKit& kit, ItemState state, bool selected) {
     const PrKitPalette& p = kit.theme.palette;
     PrColor clear{0, 0, 0, 0};
     PrColor deep = kitMix(p.accentWeak, p.accent, 0.25f);
@@ -403,7 +403,7 @@ PrColor itemFill(const Kit& kit, ItemState state, bool selected) {
 
 // Returns the state that an item is lit in: pressed, under the pointer or with visible focus, or at rest. The wash is
 // full in the round in which the pointer arrives, so that a pointer crossing a menu lights each item that it passes.
-ItemState itemState(Kit& kit, PrLayoutNode node, bool disabled) {
+ItemState itemState(PrKit& kit, PrLayoutNode node, bool disabled) {
     if (disabled)
         return ItemState_Rest;
     if (prUiIsPressed(kit.ui, node, 0))
@@ -414,7 +414,7 @@ ItemState itemState(Kit& kit, PrLayoutNode node, bool disabled) {
 
 // Holds the keyboard in an open menu. Moves focus onto the menu's first item once the menu has been laid out, and
 // between its items with Up and Down.
-void holdKeyboard(Kit& kit, PrLayoutNode menu) {
+void holdKeyboard(PrKit& kit, PrLayoutNode menu) {
     bool down = prUiKeyPressed(kit.ui, menu, PrAppKey_Down, 0);
     bool up = prUiKeyPressed(kit.ui, menu, PrAppKey_Up, 0);
     if (!prUiIsFocusWithin(kit.ui, menu)) {
@@ -439,7 +439,7 @@ struct SelectFill {
     bool ring;                      // shows the focus ring
     bool disabled;
 
-    void make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
+    void make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {
         const PrKitPalette& p = kit.theme.palette;
         const PrColor fills[] = {p.bg2, p.bg3, p.bg4};
         decoration.background = kitColor16(disabled ? p.bg2 : fills[state]);
@@ -457,7 +457,7 @@ PR_NO_PADDING_END
 // The box that holds a select's list: a column that scrolls past its greatest height.
 struct SelectListBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.maxHeight = prLayoutLengthPx(kSelectListHeight);
         box.overflowX = PrLayoutOverflow_Hidden;
@@ -471,14 +471,14 @@ struct SelectListBox {
 // A menu bar: a row of its items, which stretch across it, with a rule below it.
 struct BarBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.border[PrRectSide_Bottom] = prLayoutUnitFromPx(1);
     }
 };
 struct BarFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Stretch;
         flex.shrink = 0;
     }
@@ -496,7 +496,7 @@ struct ScrimBox {
     bool top;
     uint8_t _pad[3];
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.position = PrLayoutPosition_Absolute;
         for (uint32_t side = 0; side < PrRectSide_Count; ++side)
@@ -509,7 +509,7 @@ struct ScrimFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     bool top;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = PrLayoutFlexDirection_Column;
         flex.alignItems = PrLayoutAlignment_Center;
         flex.justifyContent = top ? PrLayoutAlignment_FlexStart : PrLayoutAlignment_Center;
@@ -521,7 +521,7 @@ struct CardBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float width;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.width = prLayoutLengthPx(width);
@@ -533,19 +533,19 @@ PR_NO_PADDING_END
 // A flex container of the display's default, for a part that sets nothing else in its box.
 struct FlexBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
     }
 };
 
 // Returns the record of a card `width` px wide.
-PrLayoutStyleIndex cardStyle(Kit& kit, float width) {
+PrLayoutStyleIndex cardStyle(PrKit& kit, float width) {
     const PrKitPalette& p = kit.theme.palette;
     return kitStyle(kit, CardBox{.width = width}, ColumnFlex{.fixed = true}, KitColors{.background = p.bg1, .border = p.line3});
 }
 
 // Returns the record of a row of a modal, ruled on the sides that `rules` names in the faintest line color.
-PrLayoutStyleIndex ruledRow(Kit& kit, RowBox box, float gap, PrColor fill) {
+PrLayoutStyleIndex ruledRow(PrKit& kit, RowBox box, float gap, PrColor fill) {
     return kitStyle(kit, box, RowFlex{.gap = gap}, KitColors{.background = fill, .border = kit.theme.palette.line1});
 }
 
@@ -581,8 +581,8 @@ PrLayoutNode prKitPopover(PrKit* kit, PrLayoutNode trigger, PrKitPopover popover
         state.surface = kPrLayoutNodeNone;
         return kPrLayoutNodeNone;
     }
-    PrLayoutNode node = floating(*kit, floatKey(trigger, FloatKind_Popover, popover.key), 0, boundsOf(*kit, trigger),
-        style.offset, FloatLook_Surface, style.minWidth);
+    PrLayoutNode node = floating(*kit, floatKey(kit->ui, trigger, FloatKind_Popover, popover.key), 0,
+        boundsOf(*kit, trigger), style.offset, FloatLook_Surface, style.minWidth);
     if (state.surface != node)
         prUiKeyPressed(kit->ui, node, PrAppKey_Escape, 0);
     state.surface = node;
@@ -608,7 +608,7 @@ PrLayoutNode prKitMenuLabel(PrKit* kit, PrLayoutNode menu, PrKitMenuLabel label)
 }
 
 PrLayoutNode prKitMenuItem(PrKit* kit, PrLayoutNode menu, PrKitMenuItem item, PrKitMenuItemStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     Item row = itemNode(k, menu, item.key, PrUiFlag_Pressable | PrUiFlag_Focusable, item.disabled);
     bool disabled = row.disabled;
     RowBox box{.height = kPrKitHeightMd, .padding = prKitEdgesXY(0, kPrKitSpace4)};
@@ -650,12 +650,12 @@ PrLayoutNode prKitMenuItem(PrKit* kit, PrLayoutNode menu, PrKitMenuItem item, Pr
 }
 
 PrLayoutNode prKitMenuSeparator(PrKit* kit, PrLayoutNode menu, PrKitMenuSeparator separator) {
-    return prLayoutTreeFrameElement(kit->tree, menu, separator.key, kitStyle(*kit, SeparatorBox{}, KitFixed{},
-        KitColors{.background = kit->theme.palette.line1}));
+    KitColors colors{.background = kit->theme.palette.line1};
+    return prLayoutTreeFrameElement(kit->tree, menu, separator.key, kitStyle(*kit, SeparatorBox{}, KitFixed{}, colors));
 }
 
 PrLayoutNode prKitSelect(PrKit* kit, PrLayoutNode parent, PrKitSelect select, PrKitChoiceStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrUi* ui = k.ui;
     Item field = itemNode(k, parent, select.key, PrUiFlag_Pressable | PrUiFlag_Focusable, select.disabled);
     bool disabled = field.disabled;
@@ -698,7 +698,7 @@ PrLayoutNode prKitSelect(PrKit* kit, PrLayoutNode parent, PrKitSelect select, Pr
 }
 
 PrLayoutNode prKitSelectMenu(PrKit* kit, PrLayoutNode select) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrRect bounds = boundsOf(k, select);
     PrLayoutNode popover =
         prKitPopover(kit, select, {}, {.offset = PrVec2{0, 2}, .minWidth = bounds.right - bounds.left});
@@ -749,7 +749,7 @@ PrLayoutNode prKitMenuBar(PrKit* kit, PrLayoutNode parent, PrKitMenuBar bar) {
 }
 
 PrLayoutNode prKitMenuBarItem(PrKit* kit, PrLayoutNode bar, PrKitMenuBarItem item) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     Item entry = itemNode(k, bar, item.key, PrUiFlag_Pressable | PrUiFlag_Focusable, item.disabled);
     if (prUiActivated(k.ui, entry.node))
         prKitToggleOpen(kit, entry.node);
@@ -803,7 +803,7 @@ PrLayoutNode prKitContextMenu(PrKit* kit, PrLayoutNode host, PrKitContextMenu me
         return kPrLayoutNodeNone;
     }
     PrRect at{state.point.x, state.point.y, state.point.x, state.point.y};
-    PrLayoutNode surface = floating(*kit, floatKey(host, FloatKind_Context, menu.key), 0, at, PrVec2{},
+    PrLayoutNode surface = floating(*kit, floatKey(kit->ui, host, FloatKind_Context, menu.key), 0, at, PrVec2{},
         FloatLook_Surface, 0);
     if (state.surface != surface)
         prUiKeyPressed(ui, surface, PrAppKey_Escape, 0);
@@ -821,7 +821,7 @@ PrLayoutNode prKitTooltip(PrKit* kit, PrLayoutNode anchor, PrKitTooltip tooltip)
         prUiRequestFrame(ui);
         return kPrLayoutNodeNone;
     }
-    PrLayoutNode node = floating(*kit, floatKey(anchor, FloatKind_Tooltip, tooltip.key),
+    PrLayoutNode node = floating(*kit, floatKey(kit->ui, anchor, FloatKind_Tooltip, tooltip.key),
         PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, boundsOf(*kit, anchor),
         PrVec2{0, kPrKitSpace2}, FloatLook_Tooltip, 0);
     PrKitTextStyle text{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap, .preserve = true};
@@ -837,7 +837,7 @@ PrLayoutNode prKitDragGhost(PrKit* kit, PrKitDragGhost ghost) {
     if (payload == nullptr || !prUiPointer(kit->ui, &pointer))
         return kPrLayoutNodeNone;
     PrRect at{pointer.x, pointer.y, pointer.x, pointer.y};
-    PrLayoutNode node = floating(*kit, floatKey(payload->source, FloatKind_Ghost, ghost.key),
+    PrLayoutNode node = floating(*kit, floatKey(kit->ui, payload->source, FloatKind_Ghost, ghost.key),
         PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, at,
         PrVec2{kPrKitSpace6, kPrKitSpace6 - kPrKitHeightSm / 2}, FloatLook_Ghost, 0);
     if (ghost.icon != PrKitIconKind_None)
@@ -863,8 +863,8 @@ PrLayoutNode prKitModal(PrKit* kit, PrLayoutNode trigger, PrKitModal modal, PrKi
     bool top = style.placement == PrKitModalPlacement_Top;
     ScrimBox scrim{.inset = top ? (style.inset > 0 ? style.inset : kModalInset) : 0, .top = top};
     PrLayoutStyleIndex record = kitStyle(*kit, scrim, ScrimFlex{.top = top}, KitColors{.background = kScrim});
-    PrLayoutNode node =
-        prLayoutTreeFrameElement(kit->tree, prUiOverlay(ui), floatKey(trigger, FloatKind_Modal, modal.key), record);
+    PrUiKey key = floatKey(kit->ui, trigger, FloatKind_Modal, modal.key);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, prUiOverlay(ui), key, record);
     PrLayoutNode content =
         prUiElement(ui, node, 0, kitStyle(*kit, FlexBox{}, ColumnFlex{.fixed = true}), PrUiFlag_FocusScope);
     if (state.surface != content)
@@ -883,8 +883,8 @@ PrLayoutNode prKitDialog(PrKit* kit, PrLayoutNode trigger, PrKitDialog dialog, P
     PrLayoutNode content = prKitModal(kit, trigger, {.key = dialog.key}, style.modal);
     if (content == kPrLayoutNodeNone)
         return kPrLayoutNodeNone;
-    PrLayoutNode frame =
-        prLayoutTreeFrameElement(kit->tree, content, 0, cardStyle(*kit, style.width > 0 ? style.width : kDialogWidth));
+    float width = style.width > 0 ? style.width : kDialogWidth;
+    PrLayoutNode frame = prLayoutTreeFrameElement(kit->tree, content, 0, cardStyle(*kit, width));
     RowBox headerBox{.padding = prKitEdgesXY(kPrKitSpace4, kPrKitSpace5), .rules = PrKitRuleFlag_Bottom};
     PrLayoutNode header = prLayoutTreeFrameElement(kit->tree, frame, 0,
         ruledRow(*kit, headerBox, kPrKitSpace4, kit->theme.palette.bg2));
@@ -966,7 +966,7 @@ PrLayoutNode prKitCommandPalette(PrKit* kit, PrLayoutNode trigger, PrKitCommandP
 }
 
 PrLayoutNode prKitCommandItem(PrKit* kit, PrLayoutNode list, PrKitCommandItem item) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrUi* ui = k.ui;
     PrLayoutNode provider = kPrLayoutNodeNone;
     Palette* palette = kitContext<Palette>(k, list, KitContext_Palette, &provider);

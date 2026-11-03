@@ -40,7 +40,7 @@ extern "C" {
 typedef struct PrLayoutTreeDesc {
     PrTextFont* PR_NULLABLE font;       // the text font of a font group that names none
     PrTextShaper* PR_NULLABLE shaper;
-    float targetPixelRatio;             // target pixels per px, which font metrics snap to; finite and above zero
+    float targetPixelRatio;             // target pixels per px, which font metrics snap to; zero if not yet known
 } PrLayoutTreeDesc;
 
 // Creates an empty tree whose tables of records and groups hold only their defaults. One thread uses a tree at a time.
@@ -49,8 +49,9 @@ PrLayoutTree* prLayoutTreeCreate(const PrLayoutTreeDesc* desc);
 // Destroys the tree, its nodes, and what it interned.
 void prLayoutTreeDestroy(PrLayoutTree* PR_NULLABLE tree);
 
-// Sets or returns the target pixels per px that the tree's font metrics and leading snap to, finite and above zero.
-// Setting a new ratio lays the tree out again at its next layout.
+// Sets or returns the target pixels per px that the tree's font metrics and leading snap to, finite and above zero. A
+// tree created without one returns zero until it is set, and must have one by its first layout. Setting a new ratio
+// lays the tree out again at its next layout.
 void prLayoutTreeSetTargetPixelRatio(PrLayoutTree* tree, float ratio);
 float prLayoutTreeTargetPixelRatio(const PrLayoutTree* tree);
 

@@ -78,7 +78,7 @@ struct BandBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     PrKitDirection direction;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         (direction == PrKitDirection_Row ? box.width : box.height) = prLayoutLengthPx(kPrKitSplitBand);
     }
@@ -87,7 +87,7 @@ struct BandFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     PrKitDirection direction;
 
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.direction = direction == PrKitDirection_Row ? PrLayoutFlexDirection_Row : PrLayoutFlexDirection_Column;
         flex.justifyContent = PrLayoutAlignment_Center;
         flex.shrink = 0;
@@ -99,7 +99,7 @@ struct BandRuleBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     PrKitDirection direction;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         (direction == PrKitDirection_Row ? box.width : box.height) = prLayoutLengthPx(1);
     }
@@ -107,7 +107,7 @@ struct BandRuleBox {
 PR_NO_PADDING_END
 
 // Creates the band between two panes of a split along `direction`.
-PrLayoutNode splitBand(Kit& kit, PrLayoutNode box, PrKitDirection direction) {
+PrLayoutNode splitBand(PrKit& kit, PrLayoutNode box, PrKitDirection direction) {
     PrLayoutNode band = prUiElement(kit.ui, box, 0, 0, PrUiFlag_Pressable);
     bool enabled = (prUiFlags(kit.ui, band) & PrUiFlag_Disabled) == 0;
     BandState state = BandState_Rest;
@@ -153,7 +153,7 @@ struct PaneFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
     float grow;
 
-    void make(const Kit& kit, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit& kit, PrLayoutFlexStyle& flex) const {
         kitContainerFlex(PrKitBoxStyle{}).make(kit, flex);
         flex.grow = grow;
         flex.shrink = 1;
@@ -163,14 +163,14 @@ struct PaneFlex {
 PR_NO_PADDING_END
 
 // Returns the record of a pane that grows by `grow`.
-PrLayoutStyleIndex paneStyle(Kit& kit, float grow) {
+PrLayoutStyleIndex paneStyle(PrKit& kit, float grow) {
     return kitStyle(kit, KitContainerBox{.style = {.overflow = PrKitOverflow_Clip}}, PaneFlex{.grow = grow});
 }
 
 // Returns the motion of `drag` in the round along `box`'s own x axis if `across` is set, or its y axis otherwise, so
 // that a band follows the pointer under a transform of the box. Returns zero if either end of the motion does not reach
 // the box's plane.
-float motionIn(const Kit& kit, PrLayoutNode box, const PrUiDrag& drag, bool across) {
+float motionIn(const PrKit& kit, PrLayoutNode box, const PrUiDrag& drag, bool across) {
     PrVec2 from{};
     PrVec2 to{};
     PrVec2 start{drag.position.x - drag.delta.x, drag.position.y - drag.delta.y};
@@ -181,7 +181,7 @@ float motionIn(const Kit& kit, PrLayoutNode box, const PrUiDrag& drag, bool acro
 
 // Creates `count` panes under a split's `box`, with a band between each pair. Applies the round's drag of each band to
 // `weights`, then sizes the panes by the weights. Writes the panes to `panes`.
-void splitPanes(Kit& kit, PrLayoutNode box, PrKitDirection direction, float* weights, uint32_t count, float minShare,
+void splitPanes(PrKit& kit, PrLayoutNode box, PrKitDirection direction, float* weights, uint32_t count, float minShare,
         PrLayoutNode* panes) {
     PrLayoutTree* tree = kit.tree;
     PrVec2 size = kitExtent(kit, box);
@@ -531,7 +531,7 @@ typedef uint64_t DockKey;
 // A dock's tab: a row that clips its title, with a rule at its end.
 struct DockTabBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
         box.minWidth = prLayoutLengthPx(0);
@@ -542,7 +542,7 @@ struct DockTabBox {
 };
 struct DockTabFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    void make(const Kit&, PrLayoutFlexStyle& flex) const {
+    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(kPrKitSpace2);
     }
@@ -562,7 +562,7 @@ struct DockFloatBox {
     bool padded;
     uint8_t _pad;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = padded ? PrLayoutDisplay_Flex : PrLayoutDisplay_Block;
         if (padded)
             kitSetPadding(box, prKitEdgesXY(kPrKitSpace1, kPrKitSpace3));
@@ -599,7 +599,7 @@ struct DockBuild {
     Dock* dock;
     PrKitDockDescribeFn describe;
     void* PR_NULLABLE context;
-    uint64_t key;
+    PrLayoutNode node;              // the dock's area, which its nodes are keyed under
     PrRect area;                    // the dock's box at the last layout
     PrVec2 pointer;
     bool dragging;                  // true if a tab is in flight
@@ -609,12 +609,12 @@ struct DockBuild {
     PrRect markRect;
 };
 
-PrRect boundsOf(Kit& kit, PrLayoutNode node) {
+PrRect boundsOf(PrKit& kit, PrLayoutNode node) {
     return prLayoutRectToPx(prLayoutNodeBounds(kit.tree, node, PrLayoutCoordinates_Viewport));
 }
 
-uint64_t keyOf(const DockBuild& b, DockKey salt, uint64_t item) {
-    return hashMixKeys(hashMixKeys(b.key, salt), item);
+PrUiKey keyOf(const DockBuild& b, DockKey salt, uint64_t item) {
+    return prUiKeyIndex2(b.kit->ui, b.node, salt, item);
 }
 
 // Resolves a drop at `pointer` over a leaf's `content`, in the dock's `area`. Near the dock's border, the drop takes a
@@ -836,7 +836,7 @@ void buildNode(DockBuild& b, PrLayoutNode parent, PrKitDockNode id) {
 // Creates the overlay's boxes for a tab in flight: the area that its drop would fill, where it would insert, and its
 // title.
 void buildFloating(DockBuild& b, PrKitDockPanelId dragged) {
-    Kit& kit = *b.kit;
+    PrKit& kit = *b.kit;
     PrLayoutNode overlay = prUiOverlay(kit.ui);
     const PrKitPalette& p = kit.theme.palette;
     auto box = [](PrRect rect, bool sized) {
@@ -1036,7 +1036,6 @@ PrLayoutNode prKitDockBuild(PrKit* kit, PrLayoutNode parent, PrKitDockView view)
     PrKitDock* dock = view.dock;
     PrKitDockDescribeFn describe = view.describe;
     void* context = view.context;
-    uint64_t key = view.key;
     // The staged rearrangements are applied in order. One whose panel or leaf an earlier one removed does nothing.
     for (uint32_t i = 0; i < dock->staged.count; ++i)
         applyOp(*dock, dock->staged.data[i]);
@@ -1046,11 +1045,11 @@ PrLayoutNode prKitDockBuild(PrKit* kit, PrLayoutNode parent, PrKitDockView view)
     PrKitBoxStyle box{};
     box.overflow = PrKitOverflow_Clip;
     box.place.flex = PrKitFlex_Fill;
-    PrLayoutNode area = prKitBox(kit, parent, {.key = key}, box);
+    PrLayoutNode area = prKitBox(kit, parent, {.key = view.key}, box);
 
     PrKitDockPanelId dragged = panelOf(prUiDragging(kit->ui));
-    // The dock's nodes are keyed from its area's node, which is unique in the tree.
-    DockBuild b{.kit = kit, .dock = dock, .describe = describe, .context = context, .key = area};
+    // The dock's nodes are keyed under its area.
+    DockBuild b{.kit = kit, .dock = dock, .describe = describe, .context = context, .node = area};
     b.area = boundsOf(*kit, area);
     b.dragging = dragged != 0;
     prUiPointer(kit->ui, &b.pointer);

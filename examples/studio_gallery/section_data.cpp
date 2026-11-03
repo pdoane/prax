@@ -191,13 +191,13 @@ void sectionCollections(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         const char* const verbs[] = {"Open", "Reveal in Finder"};
         for (const char* verb : verbs) {
             PrKitMenuItem item{.text = verb};
-            if (prUiActivated(prKitUi(kit), prKitMenuItem(kit, menu, item, {})))
+            if (prUiActivated(kit->ui, prKitMenuItem(kit, menu, item, {})))
                 collections.verb = verb;
         }
         prKitMenuSeparator(kit, menu, {});
         PrKitMenuItem remove{.text = "Delete"};
         PrKitMenuItemStyle danger{.variant = PrKitMenuItemVariant_Danger};
-        if (prUiActivated(prKitUi(kit), prKitMenuItem(kit, menu, remove, danger)))
+        if (prUiActivated(kit->ui, prKitMenuItem(kit, menu, remove, danger)))
             collections.verb = "Delete";
     }
 
@@ -224,7 +224,7 @@ void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             "edit sink, which is what Undo steps back.");
 
     // The playhead runs through the loop while the clip plays.
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
     if (timeline.playing) {
         timeline.playhead += float(prUiCurrentRound(ui)->delta);
         if (timeline.playhead >= timeline.loop.end)
@@ -287,7 +287,7 @@ void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             .playhead = timeline.snapPlayhead,
         },
     };
-    prUiSetEditSink(prKitUi(kit), panel, timelineEdit, &timeline);
+    prUiSetEditSink(kit->ui, panel, timelineEdit, &timeline);
     PrLayoutNode clip = prKitTimeline(kit, panel, view, {.trackHeight = 30});
     if (prKitRemoved(kit, clip)) {
         std::vector<PrKitTimelineBlock> kept;
@@ -338,7 +338,7 @@ void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             "move it and every node selected with it; drag from a port to a port of the same type to wire them, and "
             "an unlike pair refuses. Drag on empty canvas to select, click a wire to pick it, and Delete removes "
             "what is selected. The wheel pans, and Cmd with the wheel zooms.");
-    PrUi* ui = prKitUi(kit);
+    PrUi* ui = kit->ui;
 
     PrKitSurfaceStyle strip{.rules = PrKitRuleFlag_Bottom};
     strip.box.direction = PrKitDirection_Row;

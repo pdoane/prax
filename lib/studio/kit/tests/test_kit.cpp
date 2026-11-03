@@ -152,10 +152,11 @@ TEST_CASE("a widget that holds still keeps its record past the cache's age, when
     f.build = [&](PrLayoutNode ground) {
         // The first widget of the round follows the overlay, which the screen made first, so the label is not first. A
         // box ahead of the label moves it to another position in the round, where the memo holds nothing for it.
-        prKitBox(f.kit, ground, {.key = 1}, {});
+        prKitBox(f.kit, ground, {}, {});
         if (shifted)
-            prKitBox(f.kit, ground, {.key = 2}, {});
-        label = prKitLabel(f.kit, ground, {.key = 3, .text = "Still"}, {.tone = PrKitTone_Accent});
+            prKitBox(f.kit, ground, {}, {});
+        label = prKitLabel(f.kit, ground, {.key = prUiKey(f.kit->ui, ground, "label"), .text = "Still"},
+            {.tone = PrKitTone_Accent});
     };
     f.frame();
     PrLayoutStyleIndex record = prLayoutNodeStyle(f.tree, label);
@@ -233,4 +234,23 @@ TEST_CASE("a fade from clear to a color keeps the color's channels, and only its
     // Between opaque colors, the blend is the plain one.
     PrColor mid = kitMix(PrColor{0, 0, 0, 1}, PrColor{1, 1, 1, 1}, 0.25f);
     CHECK(mid.r == doctest::Approx(0.25));
+}
+
+TEST_CASE("an icon keeps what it draws until that changes, and the tree holds it") {
+    KitFixture f;
+    PrPath* path = prPathCreate();
+    PrColor color{1, 0, 0, 1};
+    PrLayoutNode icon = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode ground) {
+        icon = prKitPathIcon(f.kit, ground, {.path = path, .color = color}, {});
+    };
+    f.frame();
+    PrLayoutPainter first = prLayoutNodeContent(f.tree, icon).painter;
+    CHECK(first.release != nullptr);
+    f.frame();
+    CHECK(prLayoutNodeContent(f.tree, icon).painter.context == first.context);
+    color = PrColor{0, 1, 0, 1};
+    f.frame();
+    CHECK(prLayoutNodeContent(f.tree, icon).painter.context != first.context);
+    prPathDestroy(path);
 }

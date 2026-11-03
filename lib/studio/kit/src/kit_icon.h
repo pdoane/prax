@@ -11,7 +11,7 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr_impl {
 
 // Makes an icon of the set under `parent`: a square of `size` px, or 16 px for zero, that draws `icon` in `color`.
-PrLayoutNode kitIcon(Kit& kit, PrLayoutNode parent, uint64_t key, PrKitIconKind icon, float size, PrColor color);
+PrLayoutNode kitIcon(PrKit& kit, PrLayoutNode parent, uint64_t key, PrKitIconKind icon, float size, PrColor color);
 
 } // namespace pr_impl
 

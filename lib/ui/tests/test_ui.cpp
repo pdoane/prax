@@ -151,8 +151,8 @@ TEST_CASE("the pointer hits what paints on top: a later sibling, and a box of a 
     bool raised = false;
     PrLayoutNode clicked = kPrLayoutNodeNone;
     f.build = [&] {
-        under = f.box(f.root, 0, 0, 100, 100, PrUiFlag_Pressable, 1, raised ? 5 : 0, raised);
-        over = f.box(f.root, 50, 50, 100, 100, PrUiFlag_Pressable, 2);
+        under = f.box(f.root, 0, 0, 100, 100, PrUiFlag_Pressable, 0, raised ? 5 : 0, raised);
+        over = f.box(f.root, 50, 50, 100, 100, PrUiFlag_Pressable);
         for (PrLayoutNode node : {under, over}) {
             if (prUiClicked(f.ui, node, 0))
                 clicked = node;
@@ -199,8 +199,8 @@ TEST_CASE("a press goes to a node turned in perspective where it is drawn, and m
     };
     PrLayoutTransform turn = prLayoutTransformListTransform(&list);
     f.build = [&] {
-        stage = prUiElement(f.ui, f.root, 1, styled(200, nullptr), PrUiFlag_Pressable);
-        card = prUiElement(f.ui, stage, 2, styled(0, &turn), PrUiFlag_Pressable);
+        stage = prUiElement(f.ui, f.root, 0, styled(200, nullptr), PrUiFlag_Pressable);
+        card = prUiElement(f.ui, stage, 0, styled(0, &turn), PrUiFlag_Pressable);
         for (PrLayoutNode node : {stage, card}) {
             if (prUiClicked(f.ui, node, 0))
                 clicked = node;
@@ -751,7 +751,7 @@ TEST_CASE("state is kept while every round asks for it, by owner and key, and mo
         PrLayoutNode list = f.box(f.root, 0, 0, 400, 400);
         counters.clear();
         for (uint64_t key : keys) {
-            PrLayoutNode row = f.box(list, 0, 0, 10, 10, 0, key);
+            PrLayoutNode row = f.box(list, 0, 0, 10, 10, 0, prUiKeyIndex(f.ui, list, key));
             if (!ask)
                 continue;
             int* kit = static_cast<int*>(prUiState(f.ui, row, &kitOwner, 7, sizeof(int)));
@@ -954,7 +954,7 @@ TEST_CASE("the node that holds a press keeps its cursor while the pointer leaves
 
 TEST_CASE("keys made under one base differ by name and index, and keys of one name differ by base") {
     UiFixture f;
-    uint64_t keys[6] = {};
+    PrUiKey keys[8] = {};
     f.build = [&] {
         PrLayoutNode keyed = f.box(f.root, 0, 0, 10, 10, 0, prUiKey(f.ui, kPrLayoutNodeNone, "panel"));
         PrLayoutNode unkeyed = f.box(f.root, 0, 0, 10, 10);
@@ -965,19 +965,21 @@ TEST_CASE("keys made under one base differ by name and index, and keys of one na
         keys[3] = prUiKey(f.ui, keyed, "column");
         keys[4] = prUiKeyIndex(f.ui, keyed, 1);
         keys[5] = prUiKeyIndex(f.ui, keyed, 2);
+        keys[6] = prUiKeyIndex2(f.ui, keyed, 1, 2);
+        keys[7] = prUiKeyIndex2(f.ui, keyed, 2, 1);
     };
     f.frame();
-    for (uint32_t i = 0; i < 6; ++i) {
+    for (uint32_t i = 0; i < 8; ++i) {
         CHECK(keys[i] != 0);
-        for (uint32_t j = i + 1; j < 6; ++j)
+        for (uint32_t j = i + 1; j < 8; ++j)
             CHECK(keys[i] != keys[j]);
     }
     // A base's identity holds from round to round, so the keys made under it do too.
-    uint64_t before[6];
-    for (uint32_t i = 0; i < 6; ++i)
+    PrUiKey before[8];
+    for (uint32_t i = 0; i < 8; ++i)
         before[i] = keys[i];
     f.frame();
-    for (uint32_t i = 0; i < 6; ++i)
+    for (uint32_t i = 0; i < 8; ++i)
         CHECK(keys[i] == before[i]);
 }
 
@@ -1083,7 +1085,7 @@ TEST_CASE("a key that a frame gives twice is outlined on both nodes in the next 
     bool twice = true;
     PrLayoutNode rows[2] = {};
     f.build = [&] {
-        uint64_t key = prUiKey(f.ui, kPrLayoutNodeNone, "row");
+        PrUiKey key = prUiKey(f.ui, kPrLayoutNodeNone, "row");
         rows[0] = f.box(f.root, 0, 0, 100, 20, 0, key);
         rows[1] = f.box(f.root, 0, 30, 100, 20, 0, twice ? key : 0);
     };

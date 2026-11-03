@@ -47,7 +47,11 @@ struct DockFixture : KitFixture {
     DockFixture() {
         seed(dock);
         build = [this](PrLayoutNode ground) {
-            area = prKitDockBuild(kit, ground, {.key = 7, .dock = dock, .describe = describe});
+            area = prKitDockBuild(kit, ground, {
+                .key = prUiKey(kit->ui, ground, "dock"),
+                .dock = dock,
+                .describe = describe,
+            });
             panes.clear();
             for (uint32_t i = 0; i < prKitDockPaneCount(dock); ++i) {
                 PrKitDockPane pane = prKitDockPane(dock, i);
@@ -256,7 +260,11 @@ TEST_CASE("clicking a tab opens its panel") {
     PrKitDockNode inspector = prKitDockPanelLeaf(f.dock, kInspector);
     prKitDockAddPanel(f.dock, inspector, kProject + 100);
     f.build = [&](PrLayoutNode ground) {
-        prKitDockBuild(f.kit, ground, {.key = 7, .dock = f.dock, .describe = describeLeaf});
+        prKitDockBuild(f.kit, ground, {
+            .key = prUiKey(f.kit->ui, ground, "dock"),
+            .dock = f.dock,
+            .describe = describeLeaf,
+        });
     };
     // The second tab is open, and the first tab sits at the strip's start.
     f.frame();

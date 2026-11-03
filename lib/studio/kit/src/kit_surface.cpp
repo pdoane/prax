@@ -10,7 +10,7 @@ namespace pr_impl {
 
 namespace {
 
-PrColor groundColor(const Kit& kit, PrKitGround ground) {
+PrColor groundColor(const PrKit& kit, PrKitGround ground) {
     const PrKitPalette& p = kit.theme.palette;
     switch (ground) {
         case PrKitGround_App:
@@ -40,7 +40,7 @@ struct SurfaceBox {
     PrKitRuleFlags rules;
     uint8_t _pad[3];
 
-    void make(const Kit& kit, PrLayoutBoxStyle& box) const {
+    void make(const PrKit& kit, PrLayoutBoxStyle& box) const {
         KitContainerBox{.style = style}.make(kit, box);
         static const PrKitRuleFlags kRules[PrRectSide_Count] = {
             PrKitRuleFlag_Top, PrKitRuleFlag_Right,
@@ -55,7 +55,7 @@ struct SurfaceBox {
 PR_NO_PADDING_END
 
 // Returns a surface's colors: its ground, and its rules', which are the HUD's border on the HUD ground.
-KitColors surfaceColors(const Kit& kit, PrKitGround ground) {
+KitColors surfaceColors(const PrKit& kit, PrKitGround ground) {
     const PrKitPalette& p = kit.theme.palette;
     return KitColors{
         .background = groundColor(kit, ground),
@@ -64,7 +64,7 @@ KitColors surfaceColors(const Kit& kit, PrKitGround ground) {
 }
 
 // Returns the record of a surface in `style`.
-PrLayoutStyleIndex surfaceStyle(Kit& kit, const PrKitSurfaceStyle& style) {
+PrLayoutStyleIndex surfaceStyle(PrKit& kit, const PrKitSurfaceStyle& style) {
     return kitStyle(kit, SurfaceBox{.style = style.box, .rules = style.rules}, kitContainerFlex(style.box),
         surfaceColors(kit, style.ground));
 }
@@ -97,7 +97,7 @@ struct SwatchBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     float size;
 
-    void make(const Kit&, PrLayoutBoxStyle& box) const {
+    void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Block;
         box.width = box.height = prLayoutLengthPx(size);
         kitSetBorderWidth(box, 1);
@@ -116,11 +116,11 @@ PrLayoutNode prKitSurface(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitSu
 }
 
 PrLayoutNode prKitSelectable(PrKit* kit, PrLayoutNode parent, PrKitSelectable selectable, PrKitBoxStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrLayoutNode node = kitBoxNode(k, parent, PrKitBox{.key = selectable.key}, style.overflow, 0);
     KitControl c = kitControlFromNode(k, node, prUiFlags(k.ui, node) | PrUiFlag_Pressable | PrUiFlag_Focusable,
         selectable.disabled);
-    KitLookId look = selectable.selected ? KitLookId_SelectableSelected : KitLookId_Selectable;
+    PrKitLookId look = selectable.selected ? PrKitLookId_SelectableSelected : PrKitLookId_Selectable;
     PrLayoutStyleIndex record =
         kitStyle(k, KitContainerBox{.style = style}, kitContainerFlex(style), kitDress(k, c, look).fill);
     prLayoutTreeFrameSetStyle(k.tree, node, record);
@@ -128,7 +128,7 @@ PrLayoutNode prKitSelectable(PrKit* kit, PrLayoutNode parent, PrKitSelectable se
 }
 
 PrLayoutNode prKitPanelHeader(PrKit* kit, PrLayoutNode parent, PrKitPanelHeader header) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrLayoutNode bar =
         kitBoxNode(k, parent, PrKitBox{.key = header.key}, PrKitOverflow_Visible, surfaceStyle(k, headerBar()));
     prKitLabel(kit, bar, PrKitLabel{.text = header.title}, kHeaderTitle);
@@ -139,7 +139,7 @@ PrLayoutNode prKitPanelHeader(PrKit* kit, PrLayoutNode parent, PrKitPanelHeader 
 }
 
 PrLayoutNode prKitSwatch(PrKit* kit, PrLayoutNode parent, PrKitSwatch swatch, PrKitSwatchStyle style) {
-    Kit& k = *kit;
+    PrKit& k = *kit;
     PrLayoutStyleIndex record = kitStyle(k, SwatchBox{.size = style.size}, KitFixed{},
         KitColors{.background = swatch.color, .border = k.theme.palette.line2});
     return prLayoutTreeFrameElement(k.tree, parent, swatch.key, record);
