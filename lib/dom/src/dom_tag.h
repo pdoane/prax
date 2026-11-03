@@ -31,6 +31,9 @@ constexpr size_t kDomTagWords = bitsetWords(PrDomTag_Count);
 // (css_boxes.h).
 extern const uint64_t kDomTagsHtmlBoxes[kDomTagWords];
 
+// The HTML elements that two line breaks set apart in their rendered text (css_boxes.h).
+extern const uint64_t kDomTagsHtmlParagraphs[kDomTagWords];
+
 // The SVG elements whose markup decides more of their boxes than their style does, which SVG's provider answers for
 // (css_boxes.h).
 extern const uint64_t kDomTagsSvgBoxes[kDomTagWords];

@@ -299,3 +299,18 @@ TEST_CASE("a frame's highlights and caret last until a frame that does not set t
     CHECK(prLayoutNodeHighlights(f.tree, text, nullptr, 0) == 0);
     CHECK(!prLayoutTreeCaret(f.tree, &caret));
 }
+
+TEST_CASE("rendered text: white space is processed, and removed only at the edges of a line") {
+    auto renderedOf = [](const char* value, PrLayoutWhiteSpaceCollapse collapse, float width = 400) {
+        Block b(value, width, collapse);
+        PrString text = prLayoutNodeRenderedText(b.f.tree, b.root, nullptr);
+        std::string copy(prStringView(&text).data, prStringView(&text).size);
+        prStringReset(&text);
+        return copy;
+    };
+    CHECK(renderedOf("  a  \n b  ", PrLayoutWhiteSpaceCollapse_Collapse) == "a b");
+    CHECK(renderedOf("  a  \n b  ", PrLayoutWhiteSpaceCollapse_Preserve) == "  a  \n b  ");
+    CHECK(renderedOf(" a \n b ", PrLayoutWhiteSpaceCollapse_PreserveBreaks) == "a\nb");
+    // A line that wraps keeps its collapsible space.
+    CHECK(renderedOf("aaaa bbbb", PrLayoutWhiteSpaceCollapse_Collapse, 60) == "aaaa bbbb");
+}

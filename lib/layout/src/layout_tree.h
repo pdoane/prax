@@ -72,9 +72,10 @@ struct LayoutTreeNode {
 
     uint32_t generation;            // raised when the node is freed, so that its old names name nothing (PrLayoutNode)
     PrLayoutNodeKind kind;
-    LayoutDirtyFlags dirty;
-    bool live : 1;                  // true if the index names a node rather than a freed slot
-    bool readsViewport : 1;         // its layout or intrinsic sizes read the viewport's extent, and it is listed
+    LayoutDirtyFlags dirty : 4;
+    PrLayoutRenderedFlags rendered : 4;
+    bool live : 1;                 // true if the index names a node rather than a freed slot
+    bool readsViewport : 1;        // its layout or intrinsic sizes read the viewport's extent, and it is listed
 
     // Element, Replaced, LineBreak: true if its record's writing mode is vertical. Layout reads this for every box it
     // reaches without reading the record.
@@ -165,6 +166,10 @@ struct LayoutReplaced {
     PrLayoutImageRendering rendering; // Image
     uint64_t embed;                   // Embed: its id
     uint64_t revision;                // PrLayoutContent::revision
+
+    // PrLayoutContent::text
+    PrString (*PR_NULLABLE text)(void* PR_NULLABLE textContext);
+    void* PR_NULLABLE textContext;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

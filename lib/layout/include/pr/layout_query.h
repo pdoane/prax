@@ -141,6 +141,21 @@ bool prLayoutNodeTextCaret(PrLayoutTree* tree, PrLayoutNode text, uint32_t offse
 uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint32_t start, uint32_t end,
     PrLayoutCoordinates coordinates, PrLayoutRect* PR_NULLABLE out, uint32_t capacity);
 
+// What prLayoutNodeRenderedText asks of the document, for what depends on the node whose text is read.
+typedef struct PrLayoutRenderedTextDesc {
+    void* PR_NULLABLE context;
+
+    // Returns true if `node` is no part of the text. Null keeps every node.
+    bool (*PR_NULLABLE skips)(void* PR_NULLABLE context, PrLayoutNode node);
+} PrLayoutRenderedTextDesc;
+
+// Returns the text of the children of `root` as the last layout holds it, with white space processed and text
+// transformed, and with line breaks and tabs between its boxes (html/#rendered-text-collection-steps). A collapsible
+// space is removed at the start and the end of a segment and next to a forced line break, and is kept where a line
+// wraps. The caller releases the string. The first query after a layout indexes every text node, and later queries are
+// linear in the nodes of `root`.
+PrString prLayoutNodeRenderedText(PrLayoutTree* tree, PrLayoutNode root, const PrLayoutRenderedTextDesc* PR_NULLABLE desc);
+
 // Writes the position in the text of `root` or its descendants, in the last layout, nearest `point` in viewport
 // coordinates as painted, to `out` (cssom-view-1/#dom-document-caretpositionfrompoint). The nearest line is the one
 // nearest the point across lines, and the nearest position on it the nearest along it. Returns false if the last layout

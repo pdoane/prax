@@ -664,6 +664,9 @@ const CssComputedStyle* PR_NULLABLE cssPresentationStyle(const PrCssPresentation
 // new element included, as a synchronous query does.
 bool cssPresentationIsInteractive(PrCssPresentation* presentation, const PrDomElement* element);
 
+// Returns the node of the document that the box `box` presents, or null for an anonymous box.
+const PrDomNode* PR_NULLABLE cssPresentationBoxNode(const PrCssPresentation* presentation, PrLayoutNode box);
+
 // Returns the style of `element` matched where it is, but inheriting from `parent`, as an element of a use element's
 // shadow tree inherits (SVG2/struct.html#UseElement). `element` may be outside the document, as such a tree's elements
 // are. The caller holds one reference. Called on the presentation's thread, outside a restyle.

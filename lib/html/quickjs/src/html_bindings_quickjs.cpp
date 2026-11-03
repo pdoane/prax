@@ -1129,6 +1129,16 @@ JSValue baseHref(JSContext* ctx, JSValueConst elementObject) {
     return jsTakeString(ctx, prHtmlBaseElementHref(element));
 }
 
+// html/#dom-outertext, whose setter treats null as the empty string.
+JSValue setOuterText(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    StringArgument value = {ctx, ""};
+    if (element == nullptr || !value.readNullable(input))
+        return JS_EXCEPTION;
+    PrStatus status = prHtmlElementSetOuterText(element, value.value());
+    return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "NoModificationAllowedError");
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLLinkElement (html/#htmllinkelement)
 
@@ -2932,6 +2942,7 @@ constexpr JSCFunctionListEntry kElementProto[] = {
     // html/#dom-innertext, whose setter treats null as the empty string.
     PR_JS_GET_SET("innerText", (jsStringGetter<&htmlElementClass, prHtmlElementInnerText>),
         (jsStringSetter<&htmlElementClass, prHtmlElementSetInnerText, true>)),
+    PR_JS_GET_SET("outerText", (jsStringGetter<&htmlElementClass, prHtmlElementInnerText>), setOuterText),
     PR_REFLECT_STRING("title", "title"),
     PR_REFLECT_STRING("lang", "lang"),
     PR_JS_GET_SET("dir", dir, setDir),

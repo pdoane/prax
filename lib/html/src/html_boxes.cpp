@@ -64,14 +64,14 @@ bool unboxes(const PrDomElement* element) {
 // the rest of its row group (html/#attr-tdth-colspan, html/#attr-tdth-rowspan). A column or column group spans 1 to
 // 1000 columns (html/#attr-col-span).
 void traits(const PrDomElement* element, CssBoxTraits* out) {
-    out->unboxes = unboxes(element);
+    out->flags = unboxes(element) ? CssBoxTraitFlag_Unboxes : 0;
     switch (element->tag) {
         case PrDomTag_Img:
             out->kind = CssBoxKind_Replaced;
             break;
         case PrDomTag_Iframe:
             out->kind = CssBoxKind_Replaced;
-            out->sized = true;
+            out->flags |= CssBoxTraitFlag_Sized;
             out->natural = prLayoutNaturalSizeNone();
             break;
         case PrDomTag_Object: {
@@ -84,8 +84,7 @@ void traits(const PrDomElement* element, CssBoxTraits* out) {
             // The video's natural size is its resource's or its poster frame's, which its state records, and it has
             // none without either (html/#the-video-element).
             out->kind = CssBoxKind_Replaced;
-            out->holdsFallback = true;
-            out->sized = true;
+            out->flags |= CssBoxTraitFlag_HoldsFallback | CssBoxTraitFlag_Sized;
             out->natural = prLayoutNaturalSizeNone();
             const DomElementState* state = element->state;
             if (state != nullptr && state->image == PrDomImageState_CompletelyAvailable) {
@@ -94,10 +93,33 @@ void traits(const PrDomElement* element, CssBoxTraits* out) {
             }
             break;
         }
+        case PrDomTag_Audio:
+            // The natural size of the controls that a shown audio element has (html/#the-audio-element).
+            out->kind = CssBoxKind_Replaced;
+            out->flags |= CssBoxTraitFlag_HoldsFallback | CssBoxTraitFlag_Sized;
+            out->natural = prLayoutNaturalSizeNone();
+            out->natural.width = prLayoutUnitFromPxDouble(300);
+            out->natural.height = prLayoutUnitFromPxDouble(54);
+            break;
+        case PrDomTag_Textarea:
+            out->flags |= CssBoxTraitFlag_ChildrenAreValue;
+            break;
+        case PrDomTag_Details:
+            // A closed details element shows only its first summary child (html/#the-details-and-summary-elements).
+            if (!domHasAttribute(element, "open")) {
+                out->flags |= CssBoxTraitFlag_ShowsOneChild;
+                for (const PrDomNode* child = element->first; child != nullptr; child = child->next) {
+                    const PrDomElement* summary = domElementFromNode(child);
+                    if (summary != nullptr && domIsHtml(summary, PrDomTag_Summary)) {
+                        out->shownChild = child;
+                        break;
+                    }
+                }
+            }
+            break;
         case PrDomTag_Canvas:
             out->kind = canvasReplaced(element) ? CssBoxKind_Replaced : CssBoxKind_Normal;
-            out->holdsFallback = true;
-            out->sized = true;
+            out->flags |= CssBoxTraitFlag_HoldsFallback | CssBoxTraitFlag_Sized;
             out->natural = prLayoutNaturalSizeNone();
             out->natural.width = prLayoutUnitFromPxDouble(domReflectedUnsigned(element, "width", 300));
             out->natural.height = prLayoutUnitFromPxDouble(domReflectedUnsigned(element, "height", 150));
@@ -116,18 +138,18 @@ void traits(const PrDomElement* element, CssBoxTraits* out) {
             break;
         case PrDomTag_Td:
         case PrDomTag_Th:
-            out->spans = true;
+            out->flags |= CssBoxTraitFlag_Spans;
             out->columnSpan = clampedAttribute(element, "colspan", 1, kPrLayoutTableMaxColumnSpan, 1);
             out->rowSpan = clampedAttribute(element, "rowspan", 0, kPrLayoutTableMaxRowSpan, 1);
             break;
         case PrDomTag_Col:
         case PrDomTag_Colgroup:
-            out->spans = true;
+            out->flags |= CssBoxTraitFlag_Spans;
             out->columnSpan = clampedAttribute(element, "span", 1, kPrLayoutTableMaxColumnSpan, 1);
             out->rowSpan = 1;
             break;
         case PrDomTag_Bdi:
-            out->autoDirection = true;
+            out->flags |= CssBoxTraitFlag_AutoDirection;
             break;
         default:
             break;
@@ -139,6 +161,7 @@ bool reads(const PrDomElement* element, PrStringView name) {
         case PrDomTag_Td: case PrDomTag_Th: return name == "colspan" || name == "rowspan";
         case PrDomTag_Col: case PrDomTag_Colgroup: return name == "span";
         case PrDomTag_Input: return name == "size";
+        case PrDomTag_Details: return name == "open";
         default: return false;
     }
 }
@@ -151,6 +174,7 @@ constexpr CssBoxProvider kProvider = {
     .tags = kDomTagsHtmlBoxes,
     .traits = traits,
     .reads = reads,
+    .paragraphs = kDomTagsHtmlParagraphs,
     .pageSchemes = pageSchemesOf,
 };
 

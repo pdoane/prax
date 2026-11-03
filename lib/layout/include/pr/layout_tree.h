@@ -219,6 +219,18 @@ bool prLayoutTreeCaret(const PrLayoutTree* tree, PrLayoutCaret* out);
 // ---------------------------------------------------------------------------------------------------------------------
 // Keys
 
+// What a node is to the rendered text steps (html/#rendered-text-collection-steps), which its box does not say.
+enum {
+    PrLayoutRenderedFlag_Skipped = 1u << 0,         // no part of the text, as generated content is
+    PrLayoutRenderedFlag_ChildrenSkipped = 1u << 1, // its children are no part of the text, as a control's value is
+    PrLayoutRenderedFlag_Paragraph = 1u << 2,       // two line breaks set it apart, whatever its box
+    PrLayoutRenderedFlag_Inline = 1u << 3,          // part of the text around it, whatever its box
+};
+typedef uint8_t PrLayoutRenderedFlags;
+
+// Sets what `node` is to the rendered text steps. This does not affect layout.
+void prLayoutNodeSetRendered(PrLayoutTree* tree, PrLayoutNode node, PrLayoutRenderedFlags flags);
+
 // Sets or returns the client's key for a node. The tree stores keys but never interprets them. Zero, the initial value,
 // means no key; a nonzero key must be unique within the tree.
 void prLayoutNodeSetKey(PrLayoutTree* tree, PrLayoutNode node, uint64_t key);
@@ -263,6 +275,11 @@ typedef struct PrLayoutContent {
     // A number that the client changes whenever the content draws something else while its other members stay the same,
     // as a painter's drawing does. Content set again at another revision is drawn again.
     uint64_t revision;
+
+    // Returns the text of the element, which has no text in the tree, for the rendered text steps. The caller releases
+    // the string. Called with `textContext`, only as the text is read. Null gives no text.
+    PrString (*PR_NULLABLE text)(void* PR_NULLABLE textContext);
+    void* PR_NULLABLE textContext;
 } PrLayoutContent;
 
 // Sets a replaced element's natural dimensions or its content. Natural dimensions invalidate layout; content

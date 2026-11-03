@@ -87,6 +87,17 @@ void deliverMessage(void* data) {
     dropMessage(posted);
 }
 
+// html/#merge-with-the-next-text-node: if `node` and its next sibling are Text nodes, moves the sibling's data to the
+// end of `node` and removes the sibling.
+void htmlMergeWithNextText(PrDomNode* node) {
+    PrDomNode* next = node->next;
+    if (node->type != PrDomNodeType_Text || next == nullptr || next->type != PrDomNodeType_Text)
+        return;
+    domAppendData(static_cast<PrDomCharacterData*>(node),
+        prStringView(&static_cast<const PrDomCharacterData*>(next)->data));
+    domRemoveFromParent(next);
+}
+
 // html/#rendered-text-fragment: creates runs of text between line breaks, and a br element for each break. CR LF counts
 // as one break.
 PrDomNode* renderedTextFragment(PrDomDocument* document, PrStringView input) {
@@ -494,12 +505,34 @@ void prHtmlElementSetHidden(PrHtmlElement* element, PrHtmlHidden value) {
 }
 
 PrString prHtmlElementInnerText(const PrHtmlElement* element) {
+    PrHtmlElement* mutableElement = const_cast<PrHtmlElement*>(element);
     // html/#get-the-text-steps: the descendant text content of an element that is not being rendered.
-    return domNodeTextContent(element);
+    return cssViewIsRendered(mutableElement) ? cssViewRenderedText(mutableElement) : domNodeTextContent(element);
 }
 
 void prHtmlElementSetInnerText(PrHtmlElement* element, PrStringView value) {
     domReplaceAll(element, renderedTextFragment(element->document, value));
+}
+
+PrStatus prHtmlElementSetOuterText(PrHtmlElement* element, PrStringView value) {
+    PrDomNode* parent = element->parent;
+    if (parent == nullptr)
+        return PrStatus_NotAllowed;
+    PrDomNode* next = element->next;
+    PrDomNode* previous = element->previous;
+    PrDomNode* fragment = renderedTextFragment(element->document, value);
+    // html/#dom-outertext: a value with no text leaves an empty text node in the element's place.
+    if (fragment->first == nullptr)
+        domAttach(fragment, domTextCreate(element->document, ""), nullptr);
+    PrStatus status = domReplace(parent, fragment, element);
+    if (status != PrStatus_Ok)
+        return status;
+    // Text nodes next to the new content merge with it (html/#merge-with-the-next-text-node).
+    if (next != nullptr && next->previous != nullptr)
+        htmlMergeWithNextText(next->previous);
+    if (previous != nullptr)
+        htmlMergeWithNextText(previous);
+    return PrStatus_Ok;
 }
 
 PrDomElement* PR_NULLABLE prHtmlElementOffsetParent(PrHtmlElement* element) {

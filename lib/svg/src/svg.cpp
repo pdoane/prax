@@ -157,6 +157,32 @@ PrStatus withCharacter(PrSvgElement* element, uint32_t index, Fn fn) {
     return at != kArrayMissing ? PrStatus_Ok : PrStatus_OutOfRange;
 }
 
+// Appends the text of the text elements under `node` that are rendered. No container that is never rendered holds them
+// (SVG2/render.html#TermNeverRenderedElement). A text element's white space is stripped and collapsed.
+void appendRenderedText(const PrDomNode* node, bool inText, TextBuffer* out) {
+    for (const PrDomNode* child = node->first; child != nullptr; child = child->next) {
+        if (domIsText(child)) {
+            if (inText)
+                textAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
+            continue;
+        }
+        const PrDomElement* element = domElementFromNode(child);
+        if (element == nullptr || element->space != PrDomNamespace_Svg)
+            continue;
+        switch (element->tag) {
+            case PrDomTag_Defs:
+            case PrDomTag_ClipPath:
+            case PrDomTag_Mask:
+            case PrDomTag_Marker:
+            case PrDomTag_Pattern:
+            case PrDomTag_Symbol:
+                break;
+            default:
+                appendRenderedText(element, inText || element->tag == PrDomTag_Text, out);
+        }
+    }
+}
+
 // What SVG's elements give their boxes (css_boxes.h): an outermost svg element is replaced by its drawing
 // (SVG2/render.html#TermReplacedElement).
 constexpr CssBoxProvider kBoxes = {
@@ -166,6 +192,11 @@ constexpr CssBoxProvider kBoxes = {
             out->kind = CssBoxKind_Replaced;
     },
     .reads = [](const PrDomElement*, PrStringView) { return false; },
+    .replacedText = [](void* PR_NULLABLE element) {
+        TextBuffer text;
+        appendRenderedText(static_cast<const PrDomElement*>(element), false, &text);
+        return textTake(&text);
+    },
 };
 
 } // namespace

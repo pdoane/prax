@@ -13,6 +13,7 @@
 #include "pr/layout_tree.h"
 
 #include "css/src/css_animation.h"
+#include "css/src/css_boxes.h"
 #include "css/src/css_presentation.h"
 #include "css/src/css_presentation_hooks.h"
 #include "css/src/css_root.h"
@@ -152,6 +153,19 @@ bool firstBox(PrCssPresentation* presentation, const PrDomElement* element, PrLa
         prLayoutNodeBoxes(cssPresentationOwnTree(presentation), box, PrLayoutCoordinates_Positioned, out, 1) != 0;
 }
 
+// What decides whether a box belongs to the text of an element.
+struct RenderedRoot {
+    const PrCssPresentation* presentation;
+    const PrDomNode* root;      // the root of the tree of the element
+};
+
+// The steps read the children of nodes, so the content of a shadow tree in the flat tree is not part of the text.
+bool inOtherTree(void* PR_NULLABLE context, PrLayoutNode box) {
+    const RenderedRoot* at = static_cast<const RenderedRoot*>(context);
+    const PrDomNode* node = cssPresentationBoxNode(at->presentation, box);
+    return node != nullptr && domNodeRoot(node) != at->root;
+}
+
 } // namespace
 
 PrLayoutVec cssViewViewportExtent(PrDomDocument* document) {
@@ -177,6 +191,29 @@ void cssViewScrollViewport(PrDomDocument* document, PrLayoutVec offset) {
 
 void cssViewScrollViewportBy(PrDomDocument* document, PrLayoutVec delta) {
     cssViewScrollViewport(document, cssViewViewportScroll(document) + delta);
+}
+
+bool cssViewIsRendered(PrDomElement* element) {
+    PrCssPresentation* presentation = presentationFor(element);
+    if (presentation == nullptr)
+        return false;
+    // A box that the last layout placed nothing for, as content that is laid out when it paints has none yet, is not
+    // read.
+    PrLayoutNode box = cssPresentationBox(presentation, element);
+    return box != kPrLayoutNodeNone && prLayoutNodeBoxes(cssPresentationOwnTree(presentation), box,
+        PrLayoutCoordinates_Layout, nullptr, 0) != 0;
+}
+
+PrString cssViewRenderedText(PrDomElement* element) {
+    PrCssPresentation* presentation = presentationFor(element);
+    PR_ASSERT(presentation != nullptr);
+    RenderedRoot root{presentation, domNodeRoot(element)};
+    PrLayoutRenderedTextDesc desc{
+        .context = &root,
+        .skips = element->document->slots != nullptr ? inOtherTree : nullptr,
+    };
+    PrLayoutTree* tree = cssPresentationOwnTree(presentation);
+    return prLayoutNodeRenderedText(tree, cssPresentationBox(presentation, element), &desc);
 }
 
 PrDomElement* PR_NULLABLE cssViewOffsetParent(PrDomElement* element) {

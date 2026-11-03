@@ -131,6 +131,16 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 124, result.stderr)
             self.assertTrue(screenshot.exists())
 
+    def test_inner_text_reads_the_rendered_text_of_an_element_that_is_rendered(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><div id=a>x   y<p>z</p><span style='display:none'>hidden</span>"
+                                   "<span style='text-transform:uppercase'>u</span></div>"
+                                   "<div id=b style='display:none'>x   y</div>"
+                                   "<script>print(JSON.stringify(a.innerText), JSON.stringify(b.innerText));</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, '"x y\\n\\nz\\n\\nU" "x   y"\n')
+
     def test_a_style_property_setter_runs_the_reactions_it_queues_before_it_returns(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

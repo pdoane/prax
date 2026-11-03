@@ -136,8 +136,10 @@ HANDLER_BANNER = gen_common.banner(__file__, gen_common.WEBREF_SOURCE, gen_commo
 TAG_SETS = [
     ("kDomTagsHtmlBoxes", "The HTML elements whose markup decides more of their boxes than their style does, which "
      "HTML's provider answers for (css_boxes.h).",
-     ["audio", "bdi", "br", "button", "canvas", "col", "colgroup", "embed", "frame", "frameset", "iframe", "img",
-      "input", "meter", "object", "progress", "select", "td", "textarea", "th", "video", "wbr"]),
+     ["audio", "bdi", "br", "button", "canvas", "col", "colgroup", "details", "embed", "frame", "frameset", "iframe",
+      "img", "input", "meter", "object", "progress", "select", "td", "textarea", "th", "video", "wbr"]),
+    ("kDomTagsHtmlParagraphs", "The HTML elements that two line breaks set apart in their rendered text (css_boxes.h).",
+     ["p"]),
     ("kDomTagsSvgBoxes", "The SVG elements whose markup decides more of their boxes than their style does, which "
      "SVG's provider answers for (css_boxes.h).",
      ["svg"]),

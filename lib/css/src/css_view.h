@@ -23,6 +23,13 @@ PrLayoutVec cssViewViewportScroll(PrDomDocument* document);
 void cssViewScrollViewport(PrDomDocument* document, PrLayoutVec offset);
 void cssViewScrollViewportBy(PrDomDocument* document, PrLayoutVec delta);
 
+// Returns true if the element is being rendered (html/#being-rendered), as of a layout that this call brings up to
+// date.
+bool cssViewIsRendered(PrDomElement* element);
+
+// Returns the text of an element that is being rendered (html/#get-the-text-steps).
+PrString cssViewRenderedText(PrDomElement* element);
+
 // Returns the element that an HTML element's offsets are measured from (cssom-view-1/#dom-htmlelement-offsetparent), or
 // null.
 PrDomElement* PR_NULLABLE cssViewOffsetParent(PrDomElement* element);

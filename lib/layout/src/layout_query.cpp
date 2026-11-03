@@ -6,9 +6,11 @@
 #include "pr/mem.h"
 #include "pr/search.h"
 #include "pr/sort.h"
+#include "pr/text_buffer.h"
 
 #include "layout/src/layout_cache.h"
 #include "layout/src/layout_effects.h"
+#include "layout/src/layout_shaping.h"
 #include "layout/src/layout_sticky.h"
 #include "layout/src/layout_text_position.h"
 #include "layout/src/layout_walk.h"
@@ -514,6 +516,223 @@ const LayoutFragment* PR_NULLABLE placedBoxOf(const PrLayoutTree* tree, PrLayout
     return layoutCachePlaced(t->cache, index);
 }
 
+// Fills the index of each text node's item from the shapings of the tree's contexts.
+void indexRenderedItems(LayoutTree* tree) {
+    LayoutQueries& queries = tree->queries;
+    queries.rendered.clear();
+    queries.renderedLayouts = tree->layouts;
+    for (uint32_t i = 0; i < tree->shapings.count; ++i) {
+        const LayoutInlineShaping* shaping = tree->shapings.data[i];
+        if (shaping == nullptr)
+            continue;
+        for (uint32_t k = 0; k < shaping->items.count; ++k) {
+            const LayoutInlineItem& item = shaping->items.data[k];
+            if (item.kind != LayoutInlineItemKind_Text)
+                continue;
+            while (queries.rendered.count <= item.node)
+                queries.rendered.push(LayoutRenderedItem{});
+            queries.rendered.data[item.node] = LayoutRenderedItem{shaping, k};
+        }
+    }
+}
+
+// Returns true if nothing that a line holds comes before byte `byte` of item `at` on its line: the segment starts
+// there, or a forced break comes before it.
+bool startsLine(const LayoutInlineShaping& shaping, uint32_t at, uint32_t byte) {
+    if (byte > shaping.items.data[at].start)
+        return shaping.text.data[byte - 1] == '\n';
+    for (uint32_t i = at; i-- != 0;) {
+        const LayoutInlineItem& item = shaping.items.data[i];
+        switch (item.kind) {
+            case LayoutInlineItemKind_Text:
+                if (item.end > item.start)
+                    return shaping.text.data[item.end - 1] == '\n';
+                break;
+            case LayoutInlineItemKind_Atomic: return false;
+            case LayoutInlineItemKind_Break:
+            case LayoutInlineItemKind_Block: return true;
+            default: break;
+        }
+    }
+    return true;
+}
+
+// Returns true if nothing that a line holds comes at byte `byte` or after it, past item `at`: the segment ends there,
+// or a forced break comes next.
+bool endsLine(const LayoutInlineShaping& shaping, uint32_t at, uint32_t byte) {
+    if (byte < shaping.items.data[at].end)
+        return shaping.text.data[byte] == '\n';
+    for (uint32_t i = at + 1; i < shaping.items.count; ++i) {
+        const LayoutInlineItem& item = shaping.items.data[i];
+        switch (item.kind) {
+            case LayoutInlineItemKind_Text:
+                if (item.end > item.start)
+                    return shaping.text.data[item.start] == '\n';
+                break;
+            case LayoutInlineItemKind_Atomic: return false;
+            case LayoutInlineItemKind_Break:
+            case LayoutInlineItemKind_Block: return true;
+            default: break;
+        }
+    }
+    return true;
+}
+
+// What the rendered text steps have produced. A run of required line breaks waits until text follows it, so that none
+// stands at the start or the end of the result.
+struct RenderedWalk {
+    LayoutTree* tree;
+    PrLayoutRenderedTextDesc desc;
+    TextBuffer out;
+    uint32_t breaks;
+};
+
+void renderedAppend(RenderedWalk& walk, PrStringView text) {
+    if (text.size == 0)
+        return;
+    if (textView(&walk.out).size != 0) {
+        for (uint32_t i = 0; i < walk.breaks; ++i)
+            textAppendChar(&walk.out, '\n');
+    }
+    walk.breaks = 0;
+    textAppend(&walk.out, text);
+}
+
+void renderedRequireBreaks(RenderedWalk& walk, uint32_t breaks) {
+    walk.breaks = breaks > walk.breaks ? breaks : walk.breaks;
+}
+
+void renderedAppendTextNode(RenderedWalk& walk, LayoutNodeIndex node) {
+    const LayoutQueries& queries = walk.tree->queries;
+    if (node >= queries.rendered.count || queries.rendered.data[node].shaping == nullptr)
+        return;
+    const LayoutRenderedItem& found = queries.rendered.data[node];
+    const LayoutInlineShaping& shaping = *found.shaping;
+    const LayoutInlineItem& item = shaping.items.data[found.item];
+    uint32_t start = item.start;
+    uint32_t end = item.end;
+    if (start < end && (shaping.spaces.data[start] & LayoutSpaceFlag_Collapsible) != 0 &&
+            startsLine(shaping, found.item, start))
+        ++start;
+    if (start < end && (shaping.spaces.data[end - 1] & LayoutSpaceFlag_Collapsible) != 0 &&
+            endsLine(shaping, found.item, end))
+        --end;
+    renderedAppend(walk, PrStringView{shaping.text.data + start, end - start});
+}
+
+PrLayoutDisplay renderedDisplay(const LayoutTree* tree, LayoutNodeIndex node) {
+    const LayoutTreeNode& n = layoutTreeNode(tree, node);
+    return layoutKindIsElement(n.kind) ? layoutBoxStyle(tree->styles, n.style).display : PrLayoutDisplay_Inline;
+}
+
+bool isTableRowGroup(PrLayoutDisplay display) {
+    return display == PrLayoutDisplay_TableRowGroup || display == PrLayoutDisplay_TableHeaderGroup ||
+        display == PrLayoutDisplay_TableFooterGroup;
+}
+
+// Returns true if a sibling after `node` has the display `display`.
+bool hasLaterSibling(const LayoutTree* tree, LayoutNodeIndex node, PrLayoutDisplay display) {
+    for (LayoutNodeIndex at = layoutTreeNode(tree, node).next; at != kPrLayoutNodeNone; at =
+            layoutTreeNode(tree, at).next) {
+        if (renderedDisplay(tree, at) == display)
+            return true;
+    }
+    return false;
+}
+
+// Returns true if a row follows `row` in its table, in its row group or in a later one.
+bool hasLaterRow(const LayoutTree* tree, LayoutNodeIndex row) {
+    if (hasLaterSibling(tree, row, PrLayoutDisplay_TableRow))
+        return true;
+    LayoutNodeIndex group = layoutTreeNode(tree, row).parent;
+    if (group == kPrLayoutNodeNone || !isTableRowGroup(renderedDisplay(tree, group)))
+        return false;
+    for (LayoutNodeIndex at = layoutTreeNode(tree, group).next; at != kPrLayoutNodeNone;
+            at = layoutTreeNode(tree, at).next) {
+        PrLayoutDisplay display = renderedDisplay(tree, at);
+        if (display == PrLayoutDisplay_TableRow)
+            return true;
+        if (isTableRowGroup(display) && layoutTreeNode(tree, at).first != kPrLayoutNodeNone)
+            return true;
+    }
+    return false;
+}
+
+// Returns true if the box of an element is block-level or a table caption, or is out of flow, which blockifies it.
+bool rendersAsBlock(const LayoutTree* tree, LayoutNodeIndex node) {
+    const LayoutTreeNode& n = layoutTreeNode(tree, node);
+    const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, n.style);
+    if (n.positioned || box.floating != PrLayoutFloat_None || box.display == PrLayoutDisplay_TableCaption)
+        return true;
+    return !prLayoutDisplayIsInlineLevel(box.display) && !prLayoutDisplayIsLayoutInternal(box.display);
+}
+
+void renderedCollectChildren(RenderedWalk& walk, LayoutNodeIndex node);
+
+// html/#rendered-text-collection-steps, for a node that the tree holds. A node without a box in the tree, as display:
+// none gives, is not rendered, and display: contents gives its children to its parent.
+void renderedCollect(RenderedWalk& walk, LayoutNodeIndex node) {
+    LayoutTree* tree = walk.tree;
+    const LayoutTreeNode& n = layoutTreeNode(tree, node);
+    if ((n.rendered & PrLayoutRenderedFlag_Skipped) != 0 ||
+            (walk.desc.skips != nullptr && walk.desc.skips(walk.desc.context, layoutNodeName(tree, node))))
+        return;
+    LayoutNodeIndex parent = n.parent;
+    bool visible = parent == kPrLayoutNodeNone ||
+        layoutColorStyle(tree->styles, layoutTreeNode(tree, parent).style).visibility == PrLayoutVisibility_Visible;
+    switch (n.kind) {
+        case PrLayoutNodeKind_Text:
+            if (visible)
+                renderedAppendTextNode(walk, node);
+            return;
+        case PrLayoutNodeKind_LineBreak:
+            if (visible)
+                renderedAppend(walk, "\n");
+            return;
+        case PrLayoutNodeKind_Replaced: {
+            uint32_t breaks = rendersAsBlock(tree, node) ? 1 : 0;
+            renderedRequireBreaks(walk, breaks);
+            const LayoutReplaced& replaced = layoutReplaced(tree, node);
+            if (replaced.text != nullptr) {
+                PrString text = replaced.text(replaced.textContext);
+                renderedAppend(walk, prStringView(&text));
+                prStringReset(&text);
+            }
+            renderedRequireBreaks(walk, breaks);
+            return;
+        }
+        default:
+            break;
+    }
+    PrLayoutDisplay display = layoutBoxStyle(tree->styles, n.style).display;
+    if (display == PrLayoutDisplay_None || display == PrLayoutDisplay_Marker)
+        return;
+    if (layoutColorStyle(tree->styles, n.style).visibility != PrLayoutVisibility_Visible) {
+        renderedCollectChildren(walk, node);
+        return;
+    }
+    uint32_t breaks = 0;
+    if ((n.rendered & PrLayoutRenderedFlag_Paragraph) != 0)
+        breaks = 2;
+    else if ((n.rendered & PrLayoutRenderedFlag_Inline) == 0 && rendersAsBlock(tree, node))
+        breaks = 1;
+    renderedRequireBreaks(walk, breaks);
+    renderedCollectChildren(walk, node);
+    if (display == PrLayoutDisplay_TableCell && hasLaterSibling(tree, node, PrLayoutDisplay_TableCell))
+        renderedAppend(walk, "\t");
+    else if (display == PrLayoutDisplay_TableRow && hasLaterRow(tree, node))
+        renderedAppend(walk, "\n");
+    renderedRequireBreaks(walk, breaks);
+}
+
+void renderedCollectChildren(RenderedWalk& walk, LayoutNodeIndex node) {
+    if ((layoutTreeNode(walk.tree, node).rendered & PrLayoutRenderedFlag_ChildrenSkipped) != 0)
+        return;
+    for (LayoutNodeIndex child = layoutTreeNode(walk.tree, node).first; child != kPrLayoutNodeNone;
+            child = layoutTreeNode(walk.tree, child).next)
+        renderedCollect(walk, child);
+}
+
 } // namespace
 
 bool layoutNodeLaidOut(const LayoutTree* tree, LayoutNodeIndex node) {
@@ -536,6 +755,7 @@ const LayoutFragment* PR_NULLABLE layoutCaretFragment(const LayoutTree* tree, La
 }
 
 void layoutQueriesReset(LayoutQueries& queries) {
+    queries.rendered.reset();
     queries.boxes.reset();
     clearHitBounds(queries);
     queries.hitBounds.reset();
@@ -874,6 +1094,16 @@ uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint3
     for (uint32_t i = 0; i < boxes.count && i < capacity; ++i)
         out[i] = boxes.data[i];
     return boxes.count;
+}
+
+PrString prLayoutNodeRenderedText(PrLayoutTree* tree, PrLayoutNode root, const PrLayoutRenderedTextDesc* PR_NULLABLE desc) {
+    if (!prLayoutNodeIsValid(tree, root))
+        return prStringEmpty();
+    if (tree->queries.renderedLayouts != tree->layouts || tree->queries.rendered.count == 0)
+        indexRenderedItems(tree);
+    RenderedWalk walk{.tree = tree, .desc = desc != nullptr ? *desc : PrLayoutRenderedTextDesc{}};
+    renderedCollectChildren(walk, layoutNodeIndex(tree, root));
+    return textTake(&walk.out);
 }
 
 bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point, PrLayoutTextPosition* out) {

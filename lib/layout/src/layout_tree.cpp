@@ -1422,6 +1422,10 @@ bool prLayoutTreeCaret(const PrLayoutTree* tree, PrLayoutCaret* out) {
     return true;
 }
 
+void prLayoutNodeSetRendered(PrLayoutTree* tree, PrLayoutNode node, PrLayoutRenderedFlags flags) {
+    tree->nodes.data[layoutNodeIndex(tree, node)].rendered = flags;
+}
+
 void prLayoutNodeSetKey(PrLayoutTree* tree, PrLayoutNode node, uint64_t key) {
     PR_ASSERT(!tree->frame.open);
     layoutTreeSetKey(tree, layoutNodeIndex(tree, node), key);
@@ -1480,6 +1484,8 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
     r.content = list;
     r.embed = content->kind == PrLayoutContentKind_Embed ? content->embed : 0;
     r.revision = content->revision;
+    r.text = content->text;
+    r.textContext = content->textContext;
     PR_ASSERT(content->kind != PrLayoutContentKind_Embed || r.embed != 0);
     nodeAt(t, index).paintChanged = t->paint.paints;
     markPainted(t, index, false);
@@ -1494,6 +1500,8 @@ PrLayoutContent prLayoutNodeContent(const PrLayoutTree* tree, PrLayoutNode repla
     PrLayoutContent content{};
     content.kind = n.contentKind;
     content.revision = n.revision;
+    content.text = n.text;
+    content.textContext = n.textContext;
     if (n.contentKind == PrLayoutContentKind_DrawList) {
         content.list = n.content;
     } else if (n.contentKind == PrLayoutContentKind_Painter) {

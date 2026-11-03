@@ -176,14 +176,22 @@ PrDomTag domTagFromText(PrStringView text) {
 
 const uint64_t kDomTagsHtmlBoxes[kDomTagWords] = {
     // PrDomTag_Audio, PrDomTag_Bdi, PrDomTag_Br, PrDomTag_Button, PrDomTag_Canvas, PrDomTag_Col, PrDomTag_Colgroup,
-    // PrDomTag_Embed
-    UINT64_C(0x0080003038220000),
+    // PrDomTag_Details, PrDomTag_Embed
+    UINT64_C(0x0080403038220000),
     // PrDomTag_Frame, PrDomTag_Frameset, PrDomTag_Iframe, PrDomTag_Img, PrDomTag_Input
     UINT64_C(0x000d0000c0000000),
     // PrDomTag_Meter, PrDomTag_Object, PrDomTag_Progress
     UINT64_C(0x0400100000000800),
     // PrDomTag_Select, PrDomTag_Td, PrDomTag_Textarea, PrDomTag_Th, PrDomTag_Video, PrDomTag_Wbr
     UINT64_C(0x0012001220000100),
+};
+
+const uint64_t kDomTagsHtmlParagraphs[kDomTagWords] = {
+    UINT64_C(0x0000000000000000),
+    UINT64_C(0x0000000000000000),
+    // PrDomTag_P
+    UINT64_C(0x0002000000000000),
+    UINT64_C(0x0000000000000000),
 };
 
 const uint64_t kDomTagsSvgBoxes[kDomTagWords] = {

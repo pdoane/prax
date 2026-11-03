@@ -515,9 +515,9 @@ PR_FORCE_INLINE bool find(LayoutState& state, LayoutNodeIndex node, const Layout
             return true;
     }
     // A change out of flow below it was for its holder to lay out.
-    LayoutDirtyFlags& dirty = state.tree->nodes.data[node].dirty;
-    if (dirty != 0)
-        dirty = 0;
+    LayoutTreeNode& reused = state.tree->nodes.data[node];
+    if (reused.dirty != 0)
+        reused.dirty = 0;
     // A result taken at a different available size becomes the result at this size, which the next layout of the box
     // compares.
     if (resolved != nullptr) {

@@ -1176,6 +1176,14 @@ bool isSemiReplaced(const PrDomNode* node) {
     return kind == CssBoxKind_Button || kind == CssBoxKind_TextField;
 }
 
+// Returns what the element is to the rendered text steps.
+PrLayoutRenderedFlags renderedFlagsOf(const PrDomElement* element) {
+    PrLayoutRenderedFlags flags = cssBoxIsParagraph(element) ? PrLayoutRenderedFlag_Paragraph : 0;
+    if ((cssBoxTraits(element).flags & CssBoxTraitFlag_ChildrenAreValue) != 0)
+        flags |= PrLayoutRenderedFlag_ChildrenSkipped;
+    return flags;
+}
+
 // Returns the presentation of an element that is neither the root nor the body.
 Presentation presentationOf(const PrDomNode* node) {
     const PrDomElement* element = domElementFromNode(node);
@@ -1183,7 +1191,7 @@ Presentation presentationOf(const PrDomNode* node) {
     return Presentation{
         .buttonLayout = traits.kind == CssBoxKind_Button,
         .replaced = traits.kind == CssBoxKind_Replaced,
-        .spans = traits.spans,
+        .spans = (traits.flags & CssBoxTraitFlag_Spans) != 0,
         .columnSpan = traits.columnSpan,
         .rowSpan = traits.rowSpan,
         .characters = traits.characters,
@@ -2621,7 +2629,7 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
 
 // Returns true if display: contents makes the element generate no box at all, the same as display: none.
 bool unboxesToNothing(const PrDomElement* element) {
-    return cssBoxTraits(element).unboxes;
+    return (cssBoxTraits(element).flags & CssBoxTraitFlag_Unboxes) != 0;
 }
 
 // Returns true if the element, styled by `style`, generates a box, assuming that its parent has a box for its
@@ -2700,7 +2708,7 @@ PrLayoutNaturalSize naturalOf(PrCssPresentation* r, const PrDomElement* element,
     if (embedOf(element) != 0)
         return size;
     CssBoxTraits traits = cssBoxTraits(element);
-    if (traits.sized)
+    if ((traits.flags & CssBoxTraitFlag_Sized) != 0)
         return traits.natural;
     if (domIsOuterSvg(element)) {
         const CssPresentationSvg* svg = svgFind(r, element);
@@ -2826,6 +2834,10 @@ void applyContent(PrCssPresentation* r, const PrDomElement* element, PrLayoutNod
         content.kind = PrLayoutContentKind_Painter;
         content.painter = element->state->vector;
         content.revision = element->state->vectorRevision;
+    }
+    if (const CssBoxProvider* provider = cssBoxProviderOf(element)) {
+        content.text = provider->replacedText;
+        content.textContext = const_cast<PrDomElement*>(element);
     }
     prLayoutNodeSetContent(r->tree, box, &content);
 }
@@ -3398,7 +3410,8 @@ void invalidate(PrCssPresentation* r, PrDomElement* element, uint32_t hash) {
 // (html/#the-directionality).
 bool automaticDirection(const PrDomElement* element) {
     PrStringView dir = domAttributeValue(element, "dir");
-    return asciiEqualsFold(dir, "auto") || (dir.data == nullptr && cssBoxTraits(element).autoDirection);
+    return asciiEqualsFold(dir, "auto") ||
+        (dir.data == nullptr && (cssBoxTraits(element).flags & CssBoxTraitFlag_AutoDirection) != 0);
 }
 
 // Restyles what :dir() reads after a change to the text or children under `node`. A change can affect the direction of
@@ -4071,6 +4084,7 @@ void applyFirsts(PrCssPresentation* r) {
         firsts.letterEnd = uint32_t(letter.end);
         firsts.letterSource = letter.box;
         firsts.letterBox = prLayoutNodeCreateElement(r->tree, kPrLayoutNodeNone, record);
+        prLayoutNodeSetRendered(r->tree, firsts.letterBox, PrLayoutRenderedFlag_Inline);
         prLayoutNodeCreateText(r->tree, firsts.letterBox,
             PrStringView{letter.text.data + letter.start, letter.end - letter.start});
         prLayoutTreeInsert(r->tree, holder, firsts.letterBox, letter.box);
@@ -5092,6 +5106,9 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
     // Once the walk may take in no more new elements, the remaining new children wait for a later update, which visits
     // the element for them. Children that are already in are visited as usual.
     bool held = false;
+    auto showsBox = [&](const PrDomNode* child) {
+        return childBox && ((traits.flags & CssBoxTraitFlag_ShowsOneChild) == 0 || child == traits.shownChild);
+    };
     domFlatEach(element, [&](PrDomNode* child) PR_FORCE_INLINE_LAMBDA {
         if (!every && child->pending == 0)
             return;
@@ -5105,14 +5122,14 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
             }
             bool unseen = entry == kHashMissing || (childBox && !r->entries.data[entry].boxed && made);
             if (marked || unseen || checking || change != ParentChange_None || w.all || made || subtree)
-                children |= visitElement(w, e, style, change, subtree, childRematch, childBox);
+                children |= visitElement(w, e, style, change, subtree, childRematch, showsBox(child));
         } else if (domIsText(child)) {
             // New text waits if a new element before it waits. Text costs the walk nothing of its own.
             bool fresh = cssPresentationNodeEntry(r, child) == kHashMissing;
             if (fresh && held)
                 return;
             if (made || child->pending != 0 || w.all || fresh)
-                children |= visitText(w, child, childBox);
+                children |= visitText(w, child, showsBox(child));
         }
     });
     if (held)
@@ -5173,7 +5190,7 @@ bool neverRendered(const PrDomElement* element) {
 const PrDomElement* PR_NULLABLE fallbackAround(const PrDomElement* element) {
     for (const PrDomElement* at = domElementFromNode(element->parent); at != nullptr;
             at = domElementFromNode(at->parent)) {
-        if (cssBoxTraits(at).holdsFallback)
+        if ((cssBoxTraits(at).flags & CssBoxTraitFlag_HoldsFallback) != 0)
             return at;
     }
     return nullptr;
@@ -6496,6 +6513,7 @@ void applyBoxes(PrCssPresentation* r) {
             PrLayoutNode box = kPrLayoutNodeNone;
             if (isPseudo(node)) {
                 box = prLayoutNodeCreateElement(r->tree, kPrLayoutNodeNone, projectEntry(r, entry));
+                prLayoutNodeSetRendered(r->tree, box, PrLayoutRenderedFlag_Skipped);
             } else if (domIsText(node)) {
                 box = prLayoutNodeCreateText(r->tree, kPrLayoutNodeNone,
                     prStringView(&static_cast<PrDomCharacterData*>(node)->data));
@@ -6508,6 +6526,7 @@ void applyBoxes(PrCssPresentation* r) {
                 box = prLayoutNodeCreateSemiReplaced(r->tree, kPrLayoutNodeNone, projectEntry(r, entry));
             } else {
                 box = prLayoutNodeCreateElement(r->tree, kPrLayoutNodeNone, projectEntry(r, entry));
+                prLayoutNodeSetRendered(r->tree, box, renderedFlagsOf(static_cast<PrDomElement*>(node)));
             }
             present(r, box, node);
             r->entries.data[at].layoutNode = box;
@@ -6732,7 +6751,8 @@ void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomEleme
         if (at != kHashMissing && presentation->entries.data[at].node != nullptr) {
             presentation->entries.data[at].reprojectPending = true;
             presentation->changed = true;
-            mark(element, DomStyleFlag_Self);
+            // The traits may decide which children generate boxes.
+            mark(element, DomStyleFlag_Self | DomStyleFlag_Subtree);
         }
     }
     if (name == "class") {
@@ -6981,6 +7001,11 @@ const CssComputedStyle* PR_NULLABLE cssPresentationStyle(const PrCssPresentation
 bool cssPresentationIsInteractive(PrCssPresentation* presentation, const PrDomElement* element) {
     restyle(presentation, presentation->extent, RestyleReach_All);
     return interactive(presentation, element);
+}
+
+const PrDomNode* PR_NULLABLE cssPresentationBoxNode(const PrCssPresentation* presentation, PrLayoutNode box) {
+    const PrDomNode* node = presented(presentation, box);
+    return node != nullptr && !isPseudo(node) ? node : nullptr;
 }
 
 const CssComputedStyle* cssPresentationStyleUnder(PrCssPresentation* presentation, const PrDomElement* element,

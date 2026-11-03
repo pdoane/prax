@@ -26,6 +26,14 @@ struct LayoutHitBound {
     PrLayoutRect bounds;
 };
 
+struct LayoutInlineShaping;
+
+// The item of a text node in the shaping of its context.
+struct LayoutRenderedItem {
+    const LayoutInlineShaping* PR_NULLABLE shaping;
+    uint32_t item;
+};
+
 // The geometry queries' caches.
 struct LayoutQueries {
     Array<PrLayoutRect> boxes;      // scratch: a query's boxes
@@ -35,6 +43,10 @@ struct LayoutQueries {
     uint32_t hitEffects;            // the tree's effects epoch that they were found for
     Array<LayoutHitBound> hitBounds;
     HashIndex hitIndex;             // by the fragment's pointer
+
+    // Where each text node's item is, as of the layout `renderedLayouts` counts (prLayoutNodeRenderedText).
+    uint32_t renderedLayouts;
+    Array<LayoutRenderedItem> rendered;     // by LayoutNodeIndex
 };
 
 // Returns true if the node is in the tree's last layout: neither it nor any of its ancestors is absent from it, up to a

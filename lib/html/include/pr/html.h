@@ -254,13 +254,17 @@ PrHtmlHidden prHtmlElementHidden(const PrHtmlElement* element);
 // Sets the hidden attribute to `value`, or removes it for NotHidden (html/#dom-hidden).
 void prHtmlElementSetHidden(PrHtmlElement* element, PrHtmlHidden value);
 
-// Returns the text of the element's descendants, computed as for an element that is not being rendered
-// (html/#dom-innertext).
+// Returns the text of the element as it is rendered, or its descendants' text if it is not being rendered
+// (html/#dom-innertext). This brings the layout up to date.
 PrString prHtmlElementInnerText(const PrHtmlElement* element);
 
 // Replaces the element's children with `value`: a text node for each run of text, and a br element for each line break
 // between them.
 void prHtmlElementSetInnerText(PrHtmlElement* element, PrStringView value);
+
+// Replaces the element with what prHtmlElementSetInnerText would make its children, merging adjacent text
+// (html/#dom-outertext). Returns NotAllowed if the element has no parent.
+PrStatus prHtmlElementSetOuterText(PrHtmlElement* element, PrStringView value);
 
 // Returns the element that the element's offsets are measured from (cssom-view-1/#dom-htmlelement-offsetparent). This
 // is its nearest positioned ancestor, or the body. Returns null if the element generates no box, is the root or the

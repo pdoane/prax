@@ -39,31 +39,49 @@ enum {
 };
 typedef uint8_t CssBoxKind;
 
-// What an element gives its box beyond its computed style.
-struct CssBoxTraits {
-    CssBoxKind kind;
-
+// What an element's box does beyond its kind.
+enum {
     // display: contents makes the element generate no box at all, as display: none does (css-display-3/#unbox-html).
-    bool unboxes;
+    CssBoxTraitFlag_Unboxes = 1u << 0,
 
     // The element's children are fallback content, which is not shown and takes no input while the element is
     // (html/#fallback-content).
-    bool holdsFallback;
+    CssBoxTraitFlag_HoldsFallback = 1u << 1,
+
+    // The element's children are a control's value, which a text box shows and the rendered text steps do not read
+    // (html/#rendered-text-collection-steps).
+    CssBoxTraitFlag_ChildrenAreValue = 1u << 2,
+
+    // Of the element's children only `shownChild`, or none if it is null, generates boxes.
+    CssBoxTraitFlag_ShowsOneChild = 1u << 3,
 
     // The element's direction is auto unless a dir attribute says otherwise (html/#the-directionality).
-    bool autoDirection;
+    CssBoxTraitFlag_AutoDirection = 1u << 4,
 
-    // The columns and rows that the element spans as a table cell, column or column group, if `spans` is set.
-    bool spans;
+    // `columnSpan` and `rowSpan` apply.
+    CssBoxTraitFlag_Spans = 1u << 5,
+
+    // `natural` applies.
+    CssBoxTraitFlag_Sized = 1u << 6,
+};
+typedef uint8_t CssBoxTraitFlags;
+
+// What an element gives its box beyond its computed style.
+struct CssBoxTraits {
+    CssBoxKind kind;
+    CssBoxTraitFlags flags;
+
+    // The columns and rows that the element spans as a table cell, column or column group.
     uint16_t columnSpan;
     uint16_t rowSpan;
 
     // The inline size of a text field in characters, or 0.
     uint16_t characters;
 
+    const PrDomNode* PR_NULLABLE shownChild;
+
     // The natural dimensions of a replaced element that the element decides, as a canvas's attributes and a video's
-    // resource do, if `sized` is set. Otherwise a replaced element's are its image's.
-    bool sized;
+    // resource do. Otherwise a replaced element's are its image's.
     PrLayoutNaturalSize natural;
 };
 
@@ -80,6 +98,14 @@ struct CssBoxProvider {
     // Returns true if a change to the element's attribute `name`, in no namespace, may change its traits.
     bool (*PR_NONNULL reads)(const PrDomElement* element, PrStringView name);
 
+    // Returns the text of a replaced element, given as its context, which its box does not hold
+    // (PrLayoutContent::text). Null for a namespace whose replaced elements have none.
+    PrString (*PR_NULLABLE replacedText)(void* PR_NULLABLE element);
+
+    // The tags of the elements that two line breaks set apart in their rendered text, whatever their boxes
+    // (html/#rendered-text-collection-steps), a set that gen_dom.py builds. Null for a namespace with none.
+    const uint64_t* PR_NULLABLE paragraphs;
+
     // Returns the color schemes that the document's page supports, as the namespace's elements give them, such as
     // HTML's meta elements (css-color-adjust-1/#color-scheme-page). Null for a namespace whose elements give none.
     CssColorSchemeFlags (*PR_NULLABLE pageSchemes)(PrDomDocument* document);
@@ -91,13 +117,16 @@ void cssBoxesProvide(PrDomDocument* document, DomNamespaceId space, const CssBox
 // Returns the color schemes that the document's page supports, as the first provider that gives them says, or none.
 CssColorSchemeFlags cssPageSchemes(PrDomDocument* document);
 
+// Returns the provider of the element's namespace, or null if it has none.
+inline const CssBoxProvider* PR_NULLABLE cssBoxProviderOfNamespace(const PrDomElement* element) {
+    const CssRoot* root = element->document->style;
+    return root != nullptr && element->space < kCssProviderNamespaces ? root->boxProviders[element->space] : nullptr;
+}
+
 // Returns the provider of the element's namespace if the element's tag is one that it answers for, or else null.
 inline const CssBoxProvider* PR_NULLABLE cssBoxProviderOf(const PrDomElement* element) {
-    const CssRoot* root = element->document->style;
-    if (root == nullptr || element->space >= kCssProviderNamespaces || element->tag >= PrDomTag_Count)
-        return nullptr;
-    const CssBoxProvider* provider = root->boxProviders[element->space];
-    return provider != nullptr && bitsetTest(provider->tags, element->tag) ? provider : nullptr;
+    const CssBoxProvider* provider = cssBoxProviderOfNamespace(element);
+    return provider != nullptr && element->tag < PrDomTag_Count && bitsetTest(provider->tags, element->tag) ? provider : nullptr;
 }
 
 // Returns what the element gives its box, as its namespace's provider says. An element of a namespace without one gives
@@ -107,6 +136,13 @@ inline CssBoxTraits cssBoxTraits(const PrDomElement* element) {
     if (const CssBoxProvider* provider = cssBoxProviderOf(element))
         provider->traits(element, &traits);
     return traits;
+}
+
+// Returns true if the element is a paragraph, as its namespace's provider says.
+inline bool cssBoxIsParagraph(const PrDomElement* element) {
+    const CssBoxProvider* provider = cssBoxProviderOfNamespace(element);
+    return provider != nullptr && provider->paragraphs != nullptr && element->tag < PrDomTag_Count &&
+        bitsetTest(provider->paragraphs, element->tag);
 }
 
 // Returns true if a change to the element's attribute `name`, in no namespace, may change what it gives its box.
