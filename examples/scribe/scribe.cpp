@@ -97,7 +97,7 @@ bool buildMenus(Scribe& s, PrLayoutNode root) {
             if (id[0] == 0)
                 prKitMenuSeparator(s.kit, list, {});
             else
-                prCommandMenuItem(s.kit, list, s.commands, s.keymap, id);
+                prCommandMenuItem(s.kit, list, s.commands, s.keymap, id, {});
         }
     }
     return open;

@@ -94,6 +94,62 @@ void adjustWeight(Shell& s, int steps) {
     prUiTextEditSetSelection(ui, s.promptFields[field], PrUiTextSelection{.anchor = edit.begin, .caret = written});
 }
 
+// The parameters of alchemy.insertEmbedding and alchemy.use.
+constexpr PrCommandParam kInsertEmbedding[] = {
+    {.name = "name", .kind = PrCommandParamKind_String, .required = true, .description = "A part of an embedding's name"},
+    {.name = "negative", .kind = PrCommandParamKind_Bool, .description = "Insert into the negative prompt"},
+};
+constexpr PrCommandParam kUse[] = {
+    {
+        .name = "operation",
+        .kind = PrCommandParamKind_Number,
+        .required = true,
+        .description = "The operation of the record, from the oldest",
+    },
+    {
+        .name = "what",
+        .kind = PrCommandParamKind_String,
+        .required = true,
+        .description = "prompt, negative, promptLine, negativeLine, model, loras, sampling, aspect, seed, strength, "
+            "upscale, outpaint, detector, source or all",
+    },
+    {.name = "line", .kind = PrCommandParamKind_Number, .description = "The line of promptLine or negativeLine"},
+};
+
+void runInsertEmbedding(Shell& s, const PrCommandArgs* args) {
+    PrStringView part = prCommandArgsString(args, "name", "");
+    for (const std::string& name : s.state->catalog.embeddings) {
+        if (asciiContainsFold(name, part)) {
+            insertEmbedding(s, prCommandArgsBool(args, "negative", false) ? 1 : 0, name);
+            return;
+        }
+    }
+    setStatus(*s.state, "No embedding on the server matches that name.");
+}
+
+void runUse(Shell& s, const PrCommandArgs* args) {
+    UseWhat what = parseUseWhat(prCommandArgsString(args, "what", ""));
+    double operation = prCommandArgsNumber(args, "operation", -1);
+    double line = prCommandArgsNumber(args, "line", 0);
+    if (what == UseWhat_Count || operation < 0 || line < 0 ||
+            !useRecorded(*s.state, uint32_t(operation), what, uint32_t(line)))
+        setStatus(*s.state, "The record does not state that.");
+}
+
+void copyImage(Shell& s) {
+    std::vector<uint8_t> pixels;
+    PrUVec2 extent = selectedPixels(*s.state, &pixels);
+    bool copied = extent.x != 0 && s.app != nullptr &&
+        prAppSetClipboardImage(s.app, PrPixelView{pixels.data(), size_t(extent.x) * 4, extent}) == PrStatus_Ok;
+    setStatus(*s.state, copied ? "Copied the image." : "The image could not be copied.");
+}
+
+void pasteImage(Shell& s) {
+    openImport(*s.state);
+    if (s.app != nullptr)
+        prAppRequestClipboardImage(s.app);
+}
+
 void setMode(Shell& s, OperationMode mode) {
     s.state->mode = mode;
 }
@@ -311,6 +367,22 @@ constexpr CommandSpec kSpecs[] = {
         .description = "Reports the connection, the status line, the runs in flight and the selected image.",
     },
 
+    {
+        .id = "alchemy.insertEmbedding",
+        .title = "Insert Embedding",
+        .category = "Prompt",
+        .run = runInsertEmbedding,
+        .params = kInsertEmbedding,
+        .paramCount = uint32_t(countOf(kInsertEmbedding)),
+        .description = "Writes the token of the first embedding whose name holds `name` into a prompt.",
+    },
+    {
+        .id = "alchemy.configureServer",
+        .title = "Server...",
+        .category = "Server",
+        .run = [](Shell& s, const PrCommandArgs*) { s.state->serverOpen = true; },
+    },
+
     // The gallery.
     {
         .id = "alchemy.back",
@@ -380,6 +452,52 @@ constexpr CommandSpec kSpecs[] = {
         .state = whenRecorded,
     },
     {
+        .id = "alchemy.use",
+        .title = "Use Recorded Settings",
+        .category = "Image",
+        .run = runUse,
+        .state = whenRecorded,
+        .params = kUse,
+        .paramCount = uint32_t(countOf(kUse)),
+        .flags = PrCommandFlag_Hidden,
+        .description = "Carries a group of one operation of the selected image's record into the parameters.",
+    },
+    {
+        .id = "alchemy.copyImage",
+        .title = "Copy Image",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { copyImage(s); },
+        .state = whenSelected,
+        .chord = "Cmd C",
+        .context = kContextGallery,
+    },
+    {
+        .id = "alchemy.importImage",
+        .title = "Import Image...",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { openImport(*s.state); },
+    },
+    {
+        .id = "alchemy.pasteImage",
+        .title = "Paste Image...",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { pasteImage(s); },
+        .chord = "Cmd V",
+        .context = kContextGallery,
+    },
+    {
+        .id = "alchemy.revealSource",
+        .title = "Reveal the Source in the Browser",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) {
+            gallerySelect(s.state->gallery, galleryIndexOf(s.state->gallery, s.state->params.sourcePath));
+        },
+        .state = [](Shell& s) {
+            const Gallery& gallery = s.state->gallery;
+            return disabledUnless(galleryIndexOf(gallery, s.state->params.sourcePath) < gallery.entries.size());
+        },
+    },
+    {
         .id = "alchemy.deleteImage",
         .title = "Delete Image...",
         .category = "Image",
@@ -407,7 +525,7 @@ constexpr CommandSpec kSpecs[] = {
     // The view.
     {
         .id = "alchemy.toggleInfo",
-        .title = "Show the Record",
+        .title = "Image Info",
         .category = "View",
         .run = [](Shell& s, const PrCommandArgs*) { s.state->showInfo = !s.state->showInfo; },
         .state = [](Shell& s) { return checkedIf(s.state->showInfo); },
@@ -416,7 +534,7 @@ constexpr CommandSpec kSpecs[] = {
     },
     {
         .id = "alchemy.togglePreview",
-        .title = "Show Previews",
+        .title = "Live Preview",
         .category = "View",
         .run = [](Shell& s, const PrCommandArgs*) { s.state->showPreview = !s.state->showPreview; },
         .state = [](Shell& s) { return checkedIf(s.state->showPreview); },
@@ -480,6 +598,10 @@ Commands* commandsCreate(Shell* shell) {
         if (spec.chord != nullptr && prCommandChordParse(spec.chord, &chord))
             prCommandKeymapBind(commands->keymap, chord, spec.id, spec.context, spec.kind);
     }
+    // The dialog of an import takes the same paste as the gallery.
+    PrCommandChord paste{};
+    if (prCommandChordParse("Cmd V", &paste))
+        prCommandKeymapBind(commands->keymap, paste, "alchemy.pasteImage", kContextImport, PrCommandBindingKind_Normal);
     return commands;
 }
 
@@ -490,6 +612,26 @@ void commandsDestroy(Commands* PR_NULLABLE commands) {
     prCommandRegistryDestroy(commands->registry);
     delete[] commands->contexts;
     delete commands;
+}
+
+void insertEmbedding(Shell& shell, int field, PrStringView filename) {
+    std::string& text = promptText(shell, field);
+    uint32_t start = uint32_t(text.size());
+    uint32_t end = start;
+    PrLayoutNode node = shell.promptFields[field];
+    bool placed = shell.ui != nullptr && node != kPrLayoutNodeNone && shell.promptTouched[field];
+    if (placed) {
+        PrUiTextSelection selection = prUiTextEditSelection(shell.ui, node);
+        start = std::min(std::min(selection.anchor, selection.caret), start);
+        end = std::min(std::max(selection.anchor, selection.caret), end);
+    }
+    std::string token = embeddingInsertText(text, start, end, filename);
+    text.replace(start, end - start, token);
+    if (shell.ui != nullptr && node != kPrLayoutNodeNone) {
+        uint32_t caret = start + uint32_t(token.size());
+        prUiTextEditSetSelection(shell.ui, node, PrUiTextSelection{.anchor = caret, .caret = caret});
+        prUiSetFocus(shell.ui, node);
+    }
 }
 
 void runCommand(const Commands& commands, PrStringView id) {

@@ -14,6 +14,9 @@ namespace pr_impl {
 
 namespace {
 
+// How long a tile's image takes to grow or settle as the pointer enters or leaves the tile.
+constexpr double kTileZoomSeconds = 0.12;
+
 // The number of rows that a window declares past each edge of the scrollport, so that a scroll shows declared rows
 // while the next round declares the rows that it reaches.
 constexpr uint32_t kOverscan = 2;
@@ -167,6 +170,8 @@ struct ThumbBox {
     void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.minHeight = prLayoutLengthPx(0);
+        box.overflowX = PrLayoutOverflow_Clip;
+        box.overflowY = PrLayoutOverflow_Clip;
     }
 };
 struct ThumbFlex {
@@ -762,11 +767,19 @@ PrLayoutNode prKitListTile(PrKit* kit, PrLayoutNode view, PrKitTile tile) {
     return node;
 }
 
-PrLayoutNode prKitTileImage(PrKit* kit, PrLayoutNode tile, PrKitImage image) {
+PrLayoutNode prKitTileImage(PrKit* kit, PrLayoutNode tile, PrKitImage image, PrKitTileImageStyle style) {
     PrLayoutNode thumbnail = tileThumbnail(*kit, tile, PrColor{0, 0, 0, 0});
+    float zoom = 0;
+    if (style.hoverZoom > 0) {
+        static const char kOwner = 0;
+        float target = prUiIsHovered(kit->ui, tile) ? 1.0f : 0.0f;
+        zoom = prUiTween(kit->ui, thumbnail, &kOwner, 0, target, kTileZoomSeconds, nullptr) * style.hoverZoom;
+    }
+    // The thumbnail centers the image, so that it grows evenly past every edge.
+    float percent = 100.0f * (1.0f + zoom);
     PrKitImageStyle cover{
         .fit = PrKitImageFit_Cover,
-        .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
+        .place = {.width = prKitPercent(percent), .height = prKitPercent(percent), .flex = PrKitFlex_Fixed},
     };
     prKitImage(kit, thumbnail, image, cover);
     return thumbnail;

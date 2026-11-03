@@ -114,8 +114,9 @@ if (PR_DEVELOP)
         alchemy/tests/test_prompt_text.cpp
         alchemy/tests/test_provenance.cpp
         alchemy/tests/test_recipes.cpp
+        alchemy/tests/test_state.cpp
     )
-    target_link_libraries(alchemy_studio_tests PRIVATE prax::json)
+    target_link_libraries(alchemy_studio_tests PRIVATE prax::json prax::image prax::compress)
 
     # The client's tests, which talk to the fake ComfyUI server of tools/harness/net_peer.py.
     pr_net_tests(alchemy_comfy_tests alchemy/tests/test_comfy_client.cpp)

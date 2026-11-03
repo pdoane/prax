@@ -776,7 +776,7 @@ TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
         };
         PrLayoutNode view = prKitListView(f.kit, ground, {.count = 1}, style);
         tile = prKitListTile(f.kit, view, {.index = 0, .item = 7});
-        prKitTileImage(f.kit, tile, {.image = image});
+        prKitTileImage(f.kit, tile, {.image = image}, {});
         prKitTileLabel(f.kit, tile, {.text = "fox.png"});
     };
     f.frame();
@@ -791,6 +791,57 @@ TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
     CHECK(prRectWidth(imageBounds) == doctest::Approx(prRectWidth(thumbBounds)));
     CHECK(prRectHeight(imageBounds) == doctest::Approx(prRectHeight(thumbBounds)));
     CHECK(kitVerified(f.tree));
+    f.build = nullptr;
+    f.frame();
+    prDrawImageRelease(image);
+}
+
+TEST_CASE("a tile's image grows inside its thumbnail under the pointer, and a tile answers a secondary click") {
+    KitFixture f;
+    uint8_t pixels[4] = {255, 0, 0, 255};
+    PrDrawImageDesc desc{
+        .pixels = {pixels, 4, {1, 1}},
+        .format = PrPixelFormat_Rgba8,
+        .alpha = PrDrawAlpha_Straight,
+        .space = PrColorSpace_Srgb,
+    };
+    const PrDrawImage* image = nullptr;
+    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    PrLayoutNode tile = kPrLayoutNodeNone;
+    bool secondary = false;
+    f.build = [&](PrLayoutNode ground) {
+        PrKitListViewStyle style{
+            .rowHeight = 80,
+            .tileWidth = 100,
+            .place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed},
+        };
+        PrLayoutNode view = prKitListView(f.kit, ground, {.key = 1, .count = 1}, style);
+        tile = prKitListTile(f.kit, view, {.index = 0, .item = 7});
+        prKitTileImage(f.kit, tile, {.image = image}, {.hoverZoom = 0.5f});
+        secondary = prUiClicked(f.ui, tile, 1) || secondary;
+    };
+    f.frame();
+    f.frame();
+    PrLayoutNode thumb = prLayoutNodeFirstChild(f.tree, tile);
+    PrRect before = f.bounds(thumb);
+    CHECK(prRectWidth(f.bounds(prLayoutNodeFirstChild(f.tree, thumb))) == doctest::Approx(prRectWidth(before)));
+
+    PrVec2 at = f.center(tile);
+    f.move(at);
+    for (int i = 0; i < 30; ++i)
+        f.frame();
+    thumb = prLayoutNodeFirstChild(f.tree, tile);
+    PrRect grown = f.bounds(prLayoutNodeFirstChild(f.tree, thumb));
+    CHECK(prRectWidth(f.bounds(thumb)) == doctest::Approx(prRectWidth(before)));
+    CHECK(prRectWidth(grown) == doctest::Approx(prRectWidth(before) * 1.5f));
+    // It grows evenly past the thumbnail's edges.
+    CHECK((grown.left + grown.right) / 2 == doctest::Approx((before.left + before.right) / 2));
+
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .button = 1, .position = at});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .button = 1, .position = at});
+    f.frame();
+    CHECK(secondary);
+
     f.build = nullptr;
     f.frame();
     prDrawImageRelease(image);

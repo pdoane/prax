@@ -33,6 +33,11 @@ void prCommandScope(PrUi* ui, PrLayoutNode node, const PrCommandRegistry* regist
 // and whether it is disabled. Running it closes the menu. Returns kPrLayoutNodeNone, and creates nothing, if the
 // registry has no such command.
 PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandRegistry* registry,
+    const PrCommandKeymap* keymap, PrStringView commandId, PrKitMenuItemStyle style);
+
+// Creates the tooltip of `anchor` (prKitTooltip), which shows the title of the command `commandId` and the chord of its
+// first binding. Returns none until it shows, or if the registry has no such command.
+PrLayoutNode prCommandTooltip(PrKit* kit, PrLayoutNode anchor, const PrCommandRegistry* registry,
     const PrCommandKeymap* keymap, PrStringView commandId);
 
 // Returns true if `title` and `category` match `query`: each word of the query, in any case, is in one of them. An

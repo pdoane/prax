@@ -133,9 +133,16 @@ typedef struct PrKitTile {
 // from the tile's parts below or any of the kit's widgets: a thumbnail, then a label.
 PrLayoutNode prKitListTile(PrKit* kit, PrLayoutNode view, PrKitTile tile);
 
+// How a tile's image answers the pointer. `hoverZoom` is the fraction by which the image grows, easing, while the
+// pointer is over the tile. The image grows inside its thumbnail, which keeps its size and clips it. Zero leaves the
+// image still.
+typedef struct PrKitTileImageStyle {
+    float hoverZoom;
+} PrKitTileImageStyle;
+
 // Create a tile's thumbnail: `image` fitted to cover it, or `icon` on a ground of `tint`, or of the theme's raised
 // ground if `tint` is fully transparent.
-PrLayoutNode prKitTileImage(PrKit* kit, PrLayoutNode tile, PrKitImage image);
+PrLayoutNode prKitTileImage(PrKit* kit, PrLayoutNode tile, PrKitImage image, PrKitTileImageStyle style);
 PrLayoutNode prKitTileIcon(PrKit* kit, PrLayoutNode tile, PrKitIcon icon, PrColor tint);
 
 // Creates a tile's label: one centered line that clips, brighter while the tile is selected.

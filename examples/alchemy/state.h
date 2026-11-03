@@ -157,6 +157,38 @@ struct ModelSurvey {
     uint32_t generation = 0;    // the count of catalogs, so that a survey of an older one stops
 };
 
+// An import into the gallery: the image that it would add, which a paste stages for the dialog to show, and what the
+// last paste found if it found no image.
+struct ImportPrompt {
+    bool open = false;
+    const PrDrawImage* PR_NULLABLE image = nullptr;
+    std::string message;
+};
+
+// The groups of an operation's inputs that the record's verbs carry into the parameters.
+enum {
+    UseWhat_Prompt,
+    UseWhat_Negative,
+    UseWhat_PromptLine,     // a line of the prompt, which joins the prompt being written
+    UseWhat_NegativeLine,
+    UseWhat_Model,
+    UseWhat_Loras,
+    UseWhat_Sampling,
+    UseWhat_Aspect,
+    UseWhat_Seed,
+    UseWhat_Strength,
+    UseWhat_Upscale,
+    UseWhat_Outpaint,
+    UseWhat_Detector,
+    UseWhat_Source,
+    UseWhat_All,
+    UseWhat_Count,
+};
+typedef uint8_t UseWhat;
+
+// Returns the group that `name` names as commands spell it, or Count if it names none.
+UseWhat parseUseWhat(PrStringView name);
+
 // The state of the application.
 struct AppState {
     // The services, which main() owns.
@@ -168,6 +200,7 @@ struct AppState {
 
     // The server.
     std::string server = "http://127.0.0.1:8188";
+    std::string connectedServer;    // the address that the last connection went to
     ConnectionState connection = ConnectionState_Disconnected;
     uint32_t queueRemaining = 0;
     std::string status;
@@ -208,6 +241,11 @@ struct AppState {
     std::string selectedRecordPath;
     uint32_t selectedRecordRevision = 0;
     bool selectedRecordRead = false;
+    std::vector<bool> recordOpen;   // by operation of the selected record: its row shows what it states
+
+    // The dialog of the server's address, and the dialog of an import.
+    bool serverOpen = false;
+    ImportPrompt import;
 
     // The confirmation that a delete asks for, and the images that it names.
     bool deleteOpen = false;
@@ -272,6 +310,10 @@ bool useSeed(AppState& state);
 bool useAspect(AppState& state);
 bool useAll(AppState& state);
 
+// Carries a group of operation `operation` of the selected image's record, counted from the oldest, into the
+// parameters. `line` picks the line of a line's group. Returns false if the operation does not state the group.
+bool useRecorded(AppState& state, uint32_t operation, UseWhat what, uint32_t line = 0);
+
 // Holds the selected image as the source of the runs, or holds none.
 bool useAsSource(AppState& state);
 void clearSource(AppState& state);
@@ -279,6 +321,20 @@ void clearSource(AppState& state);
 // Opens the confirmation of deleting the selected images, or deletes the images that it names.
 void requestDelete(AppState& state);
 void confirmDelete(AppState& state);
+
+// Opens the import's dialog, closes it and forgets what it staged, or stages the image of `pixels`, which are
+// straight-alpha sRGB Rgba8. Empty pixels leave what was staged, and say that the clipboard held no image.
+void openImport(AppState& state);
+void closeImport(AppState& state);
+void stageImport(AppState& state, PrPixelView pixels);
+
+// Adds the staged image to the gallery, selects it, and closes the dialog. Returns false, and says why in the dialog,
+// if the image could not be written.
+bool confirmImport(AppState& state);
+
+// Writes the selected image's pixels, as displayed, to `pixels` as straight-alpha sRGB Rgba8 rows, and returns their
+// extent, or zero if no image is selected or its file cannot be read.
+PrUVec2 selectedPixels(AppState& state, std::vector<uint8_t>* pixels);
 
 // Draws a seed below 2^53, so that the seed field shows it exactly.
 uint64_t drawSeed(AppState& state);

@@ -5,6 +5,7 @@
 #include "pr/ascii.h"
 #include "pr/file.h"
 
+#include "examples/alchemy/prompt_text.h"
 #include "examples/alchemy/text.h"
 
 #include <algorithm>
@@ -419,6 +420,46 @@ const ProvenanceOp* PR_NULLABLE newestWhere(AppState& state, Predicate wanted) {
     return nullptr;
 }
 
+void useLoras(AppState& state, const ProvenanceOp& op) {
+    GenerateParams& p = state.params;
+    p.loras.clear();
+    for (const ProvenanceLora& lora : op.loras) {
+        if (std::find(state.catalog.loras.begin(), state.catalog.loras.end(), lora.name) != state.catalog.loras.end())
+            p.loras.push_back({lora.name, lora.weight});
+    }
+}
+
+void useSampling(AppState& state, const ProvenanceOp& op) {
+    GenerateParams& p = state.params;
+    p.sampler = chooseName(state.catalog.samplers, op.sampler, "");
+    p.scheduler = chooseName(state.catalog.schedulers, op.scheduler, "");
+    if (op.steps != 0)
+        p.steps = op.steps;
+    if (op.cfg != 0)
+        p.cfg = op.cfg;
+}
+
+void useAllOf(AppState& state, const ProvenanceOp& op) {
+    GenerateParams& p = state.params;
+    p.prompt = op.prompt;
+    p.negativePrompt = op.negative;
+    p.checkpoint = chooseName(state.catalog.checkpoints, op.checkpoint, "");
+    useLoras(state, op);
+    useSampling(state, op);
+    p.seed = op.seed;
+    p.seedLocked = true;
+    if (op.width != 0 && op.height != 0 && !adoptExactSize(state.dims, {op.width, op.height})) {
+        setCustomSize(state.dims, true);
+        state.dims.size = {op.width, op.height};
+    }
+}
+
+// Returns the line `index` of `text`, or the empty view.
+PrStringView lineOf(PrStringView text, uint32_t index) {
+    std::vector<PrStringView> lines = promptLines(text);
+    return index < lines.size() ? lines[index] : PrStringView("");
+}
+
 } // namespace
 
 PrStringView modeName(OperationMode mode) {
@@ -446,7 +487,20 @@ bool modeSamples(OperationMode mode) {
     return mode != OperationMode_Upscale;
 }
 
+UseWhat parseUseWhat(PrStringView name) {
+    static const char* const kNames[UseWhat_Count] = {
+        "prompt", "negative", "promptLine", "negativeLine", "model", "loras", "sampling", "aspect", "seed", "strength",
+        "upscale", "outpaint", "detector", "source", "all",
+    };
+    for (UseWhat what = 0; what < UseWhat_Count; ++what) {
+        if (name == kNames[what])
+            return what;
+    }
+    return UseWhat_Count;
+}
+
 void stateReset(AppState& state) {
+    closeImport(state);
     dropPreview(state);
     // A survey still on the pool stops at its next name.
     std::lock_guard<std::mutex> lock(state.survey.mutex);
@@ -465,6 +519,7 @@ void connectServer(AppState& state) {
     dropPreview(state);
     state.connection = ConnectionState_Connecting;
     setStatus(state, "Connecting to " + state.server + "...");
+    state.connectedServer = state.server;
     comfyConnect(state.client, state.server);
 }
 
@@ -625,6 +680,10 @@ const ProvenanceRecord* PR_NULLABLE selectedRecord(AppState& state) {
         state.selectedRecord = ProvenanceRecord{};
         std::string bytes = readFile(entry->path);
         provenanceRead(bytesOf(bytes), state.compress, &state.selectedRecord);
+        // The run that produced the image opens first, since it is what the record is asked about.
+        state.recordOpen.assign(state.selectedRecord.operations.size(), false);
+        if (!state.recordOpen.empty())
+            state.recordOpen.back() = true;
     }
     return state.selectedRecord.operations.empty() ? nullptr : &state.selectedRecord;
 }
@@ -709,28 +768,102 @@ bool useAll(AppState& state) {
     const ProvenanceOp* op = newestWhere(state, canSampleFrom);
     if (op == nullptr)
         return false;
-    GenerateParams& p = state.params;
-    p.prompt = op->prompt;
-    p.negativePrompt = op->negative;
-    p.checkpoint = chooseName(state.catalog.checkpoints, op->checkpoint, "");
-    p.sampler = chooseName(state.catalog.samplers, op->sampler, "");
-    p.scheduler = chooseName(state.catalog.schedulers, op->scheduler, "");
-    p.loras.clear();
-    for (const ProvenanceLora& lora : op->loras) {
-        if (std::find(state.catalog.loras.begin(), state.catalog.loras.end(), lora.name) != state.catalog.loras.end())
-            p.loras.push_back({lora.name, lora.weight});
-    }
-    if (op->steps != 0)
-        p.steps = op->steps;
-    if (op->cfg != 0)
-        p.cfg = op->cfg;
-    p.seed = op->seed;
-    p.seedLocked = true;
-    if (op->width != 0 && op->height != 0 && !adoptExactSize(state.dims, {op->width, op->height})) {
-        setCustomSize(state.dims, true);
-        state.dims.size = {op->width, op->height};
-    }
+    useAllOf(state, *op);
     return true;
+}
+
+bool useRecorded(AppState& state, uint32_t operation, UseWhat what, uint32_t line) {
+    const ProvenanceRecord* record = selectedRecord(state);
+    if (record == nullptr || operation >= record->operations.size())
+        return false;
+    const ProvenanceOp& op = record->operations[operation];
+    GenerateParams& p = state.params;
+    switch (what) {
+        case UseWhat_Prompt:
+            if (op.prompt.empty())
+                return false;
+            p.prompt = op.prompt;
+            return true;
+        case UseWhat_Negative:
+            if (op.negative.empty())
+                return false;
+            p.negativePrompt = op.negative;
+            return true;
+        case UseWhat_PromptLine:
+        case UseWhat_NegativeLine: {
+            bool positive = what == UseWhat_PromptLine;
+            PrStringView text = lineOf(positive ? op.prompt : op.negative, line);
+            if (text.size == 0)
+                return false;
+            std::string& into = positive ? p.prompt : p.negativePrompt;
+            into = promptAppendLine(into, text);
+            return true;
+        }
+        case UseWhat_Model:
+            if (op.checkpoint.empty())
+                return false;
+            p.checkpoint = chooseName(state.catalog.checkpoints, op.checkpoint, "");
+            return true;
+        case UseWhat_Loras:
+            if (op.loras.empty())
+                return false;
+            useLoras(state, op);
+            return true;
+        case UseWhat_Sampling:
+            if (!provenanceSamples(op))
+                return false;
+            useSampling(state, op);
+            return true;
+        case UseWhat_Aspect:
+            if (op.width == 0 || op.height == 0)
+                return false;
+            applyAspectRatio(state.dims, {op.width, op.height});
+            return true;
+        case UseWhat_Seed:
+            if (!provenanceSamples(op))
+                return false;
+            p.seed = op.seed;
+            p.seedLocked = true;
+            return true;
+        case UseWhat_Strength:
+            if (op.strength == 0)
+                return false;
+            p.strength = op.strength;
+            return true;
+        case UseWhat_Upscale:
+            if (op.upscaleModel.empty())
+                return false;
+            state.upscale.model = chooseName(state.catalog.upscaleModels, op.upscaleModel, "");
+            if (op.factor != 0)
+                state.upscale.factor = op.factor;
+            return true;
+        case UseWhat_Outpaint:
+            if (op.direction.empty())
+                return false;
+            state.outpaint.direction = parseDirection(op.direction, state.outpaint.direction);
+            state.outpaint.amount = op.amount;
+            state.outpaint.crossfade = op.crossfade;
+            state.outpaint.growMask = op.growMask;
+            state.outpaint.context = op.context;
+            return true;
+        case UseWhat_Detector:
+            if (op.detector.empty())
+                return false;
+            state.detail.detector = op.detector;
+            return true;
+        case UseWhat_Source:
+            if (op.source.empty())
+                return false;
+            p.sourcePath = op.source;
+            return true;
+        case UseWhat_All:
+            if (!provenanceSamples(op))
+                return false;
+            useAllOf(state, op);
+            return true;
+        default:
+            return false;
+    }
 }
 
 bool useAsSource(AppState& state) {
@@ -758,6 +891,78 @@ void confirmDelete(AppState& state) {
     setStatus(state, "Deleted " + std::to_string(removed) + (removed == 1 ? " image." : " images."));
     state.deleteOpen = false;
     state.deletePaths.clear();
+}
+
+void openImport(AppState& state) {
+    state.import.open = true;
+}
+
+void closeImport(AppState& state) {
+    prDrawImageRelease(state.import.image);
+    state.import = ImportPrompt{};
+}
+
+void stageImport(AppState& state, PrPixelView pixels) {
+    state.import.open = true;
+    if (pixels.extent.x == 0 || pixels.extent.y == 0) {
+        state.import.message = "The clipboard holds no image.";
+        return;
+    }
+    PrDrawImageDesc desc{
+        .pixels = pixels,
+        .format = PrPixelFormat_Rgba8,
+        .alpha = PrDrawAlpha_Straight,
+        .space = PrColorSpace_Srgb,
+    };
+    const PrDrawImage* image = nullptr;
+    if (prDrawImageCreate(&desc, &image) != PrStatus_Ok) {
+        state.import.message = "The clipboard's image is too large.";
+        return;
+    }
+    prDrawImageRelease(state.import.image);
+    state.import.image = image;
+    state.import.message.clear();
+}
+
+bool confirmImport(AppState& state) {
+    if (state.import.image == nullptr)
+        return false;
+    PrPixelView pixels = prDrawImagePixels(state.import.image);
+    size_t size = 0;
+    prImageCodecEncode(state.codec, "image/png", pixels, nullptr, 0, &size);
+    std::string png(size, '\0');
+    std::string saved;
+    bool encoded = prImageCodecEncode(state.codec, "image/png", pixels, reinterpret_cast<uint8_t*>(png.data()), size,
+        &size) == PrStatus_Ok;
+    if (!encoded || !gallerySave(state.gallery, "Imported.png", png, &saved)) {
+        state.import.message = "The image could not be written to the gallery.";
+        return false;
+    }
+    setStatus(state, "Imported " + stringOf(pathFilename(saved)) + ".");
+    closeImport(state);
+    return true;
+}
+
+PrUVec2 selectedPixels(AppState& state, std::vector<uint8_t>* pixels) {
+    const GalleryEntry* entry = gallerySelected(state.gallery);
+    if (entry == nullptr)
+        return PrUVec2{0, 0};
+    std::string bytes = readFile(entry->path);
+    PrImageSource source{};
+    source.memory = bytesOf(bytes);
+    PrImageDecoder* decoder = prImageDecoderCreate(state.codec);
+    PrUVec2 extent{0, 0};
+    if (prImageDecoderOpen(decoder, source, nullptr) == PrStatus_Ok) {
+        const PrImageInfo* info = prImageDecoderInfo(decoder);
+        bool swaps = prImageOrientationSwapsAxes(info->orientation);
+        PrUVec2 shown = swaps ? PrUVec2{info->extent.y, info->extent.x} : info->extent;
+        pixels->resize(size_t(shown.x) * shown.y * 4);
+        PrPixels into{pixels->data(), size_t(shown.x) * 4, shown};
+        if (prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, info->orientation, into) == PrStatus_Ok)
+            extent = shown;
+    }
+    prImageDecoderDestroy(decoder);
+    return extent;
 }
 
 uint64_t drawSeed(AppState& state) {

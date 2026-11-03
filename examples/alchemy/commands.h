@@ -17,9 +17,10 @@ PR_ASSUME_NONNULL_BEGIN
 namespace alchemy {
 
 // The contexts of the key bindings, which the view puts on its panels: the application's own, which applies everywhere,
-// the parameters panel, and the panels that show the gallery.
+// the parameters panel, the panels that show the gallery, and the dialog of an import.
 constexpr PrStringView kContextParameters = "parameters";
 constexpr PrStringView kContextGallery = "gallery";
+constexpr PrStringView kContextImport = "import";
 
 // What the commands act on besides the state: the window's context, and the requests that the view takes up.
 struct Shell {
@@ -29,6 +30,9 @@ struct Shell {
 
     // The prompt fields as the last build made them, which the weight commands edit while one has focus.
     PrLayoutNode promptFields[2] = {kPrLayoutNodeNone, kPrLayoutNodeNone};
+
+    // Whether each prompt field has held focus, and so has a caret that the user placed.
+    bool promptTouched[2] = {false, false};
 
     bool paletteRequested = false;
 };
@@ -47,6 +51,10 @@ struct Commands {
 // Creates the commands of `shell`, binding each one's chords, or frees them.
 Commands* commandsCreate(Shell* shell);
 void commandsDestroy(Commands* PR_NULLABLE commands);
+
+// Writes the token of the embedding `filename` into prompt field `field`, 0 for the prompt and 1 for the negative: over
+// the selection of a field that the user has placed a caret in, and at the end of any other. The caret lands after it.
+void insertEmbedding(Shell& shell, int field, PrStringView filename);
 
 // Runs the command `id`, as a button does.
 void runCommand(const Commands& commands, PrStringView id);

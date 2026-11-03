@@ -60,7 +60,7 @@ void prCommandScope(PrUi* ui, PrLayoutNode node, const PrCommandRegistry* regist
 }
 
 PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandRegistry* registry,
-        const PrCommandKeymap* keymap, PrStringView commandId) {
+        const PrCommandKeymap* keymap, PrStringView commandId, PrKitMenuItemStyle style) {
     PrCommandIndex index = prCommandRegistryFind(registry, commandId);
     if (index == kPrCommandMissing)
         return kPrLayoutNodeNone;
@@ -73,10 +73,22 @@ PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandReg
         .checked = (state & PrCommandStateFlag_Checked) != 0,
         .disabled = (state & PrCommandStateFlag_Disabled) != 0 || !isOffered(registry, index),
     };
-    PrLayoutNode node = prKitMenuItem(kit, menu, item, {});
+    PrLayoutNode node = prKitMenuItem(kit, menu, item, style);
     prStringReset(&shortcut);
     if (prKitActivated(kit, node))
         runFromSurface(registry, index);
+    return node;
+}
+
+PrLayoutNode prCommandTooltip(PrKit* kit, PrLayoutNode anchor, const PrCommandRegistry* registry,
+        const PrCommandKeymap* keymap, PrStringView commandId) {
+    PrCommandIndex index = prCommandRegistryFind(registry, commandId);
+    if (index == kPrCommandMissing)
+        return kPrLayoutNodeNone;
+    PrString shortcut = shortcutOf(keymap, commandId);
+    PrKitTooltip tooltip{.text = prCommandRegistryCommand(registry, index).title, .shortcut = prStringView(&shortcut)};
+    PrLayoutNode node = prKitTooltip(kit, anchor, tooltip);
+    prStringReset(&shortcut);
     return node;
 }
 

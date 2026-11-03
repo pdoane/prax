@@ -32,9 +32,11 @@
 #include "examples/alchemy/text.h"
 #include "examples/alchemy/view.h"
 
+#include <algorithm>
 #include <atomic>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <vector>
 
 namespace {
@@ -73,7 +75,10 @@ struct Window {
 
     // The file that $ALCHEMY_CAPTURE names, which a frame drawn $ALCHEMY_CAPTURE_SECONDS after the start is written to
     // as a PNG, rendered on the CPU, before the application quits. It lets a script see the interface without a screen.
+    // $ALCHEMY_CAPTURE_COMMANDS names commands, separated by commas, that run halfway to the frame, to bring up what
+    // the capture should show.
     const char* PR_NULLABLE capturePath = nullptr;
+    const char* PR_NULLABLE captureCommands = nullptr;
     double captureSeconds = 5;
     double startTime = -1;
 };
@@ -238,6 +243,15 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* f) {
         render(w, extent, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a});
     if (w.startTime < 0)
         w.startTime = f->time;
+    if (w.captureCommands != nullptr && f->time - w.startTime >= w.captureSeconds / 2) {
+        std::string commands = w.captureCommands;
+        w.captureCommands = nullptr;
+        for (size_t at = 0; at <= commands.size();) {
+            size_t end = std::min(commands.find(',', at), commands.size());
+            runCommand(*w.commands, commands.substr(at, end - at));
+            at = end + 1;
+        }
+    }
     if (w.capturePath != nullptr && f->time - w.startTime >= w.captureSeconds && extent.x != 0) {
         if (!capture(w, w.capturePath, extent, canvas))
             fprintf(stderr, "alchemy: could not write %s\n", w.capturePath);
@@ -254,7 +268,10 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* f) {
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {
     Window& w = *static_cast<Window*>(context);
-    prUiPushEvent(w.ui, e);
+    if (e->kind == PrAppEventKind_ClipboardImage)
+        stageImport(w.state, e->pixels);
+    else
+        prUiPushEvent(w.ui, e);
     prAppRequestFrame(app);
 }
 
@@ -300,6 +317,7 @@ int main() {
     if (const char* server = getenv("ALCHEMY_SERVER"))
         w.state.server = server;
     w.capturePath = getenv("ALCHEMY_CAPTURE");
+    w.captureCommands = getenv("ALCHEMY_CAPTURE_COMMANDS");
     if (const char* seconds = getenv("ALCHEMY_CAPTURE_SECONDS"))
         w.captureSeconds = atof(seconds);
     galleryOpen(w.state.gallery, galleryDirectory());

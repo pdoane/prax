@@ -195,8 +195,8 @@ TEST_CASE("a command's menu item shows its title, chord and check, and runs it")
         if (popover == kPrLayoutNodeNone)
             return;
         PrLayoutNode menu = prKitMenu(f.kit, popover, {}, {});
-        item = prCommandMenuItem(f.kit, menu, c.registry, c.keymap, "view.grid");
-        missing = prCommandMenuItem(f.kit, menu, c.registry, c.keymap, "view.none");
+        item = prCommandMenuItem(f.kit, menu, c.registry, c.keymap, "view.grid", {});
+        missing = prCommandMenuItem(f.kit, menu, c.registry, c.keymap, "view.none", {});
     };
     f.frame();
     prKitSetOpen(f.kit, trigger, true);

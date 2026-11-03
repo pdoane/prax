@@ -149,7 +149,7 @@ PrLayoutNode toolButton(Browser& b, PrLayoutNode toolbar, PrKitIconKind icon, Pr
 
 // Creates a menu item that runs the command `id`.
 void commandItem(Browser& b, PrLayoutNode menu, PrStringView id) {
-    prCommandMenuItem(b.kit, menu, b.commands, b.keymap, id);
+    prCommandMenuItem(b.kit, menu, b.commands, b.keymap, id, {});
 }
 
 // Returns true if a press asks a link in the chrome, such as a favorite, to open in a new tab rather than the active
