@@ -38,9 +38,10 @@ enum {
     PrAppEventKind_Scroll,
     PrAppEventKind_KeyDown,
     PrAppEventKind_KeyUp,
-    PrAppEventKind_Text,        // text typed, as UTF-8
-    PrAppEventKind_Clipboard,   // the clipboard's text, in response to a request or a paste
-    PrAppEventKind_Wake,        // prAppWake was called
+    PrAppEventKind_Text,           // text typed, as UTF-8
+    PrAppEventKind_Clipboard,      // the clipboard's text, in response to a request or a paste
+    PrAppEventKind_ClipboardImage, // the clipboard's image, in response to a request
+    PrAppEventKind_Wake,           // prAppWake was called
 
     // An input method's composition. An update gives the whole text being composed, and the first update starts a
     // composition. The end gives the text that the composition commits, which is empty if it was canceled. The text
@@ -309,7 +310,7 @@ typedef struct PrAppTextRange {
 
 // An input event. `kind` decides which fields apply. Positions are in the window's logical pixels, from its top left. A
 // scroll's delta is positive right and down, in the unit that the device reports (prAppEventScrollPixels resolves it).
-// `text` is valid only while the event is delivered.
+// `text` and `pixels` are valid only while the event is delivered.
 //
 // A key carries `key`, its meaning, and `code`, its position. Its `text` is the character that it types with Shift and
 // a layout's third level (AltGr, Option) applied and Control and Command not: `a` for A and for Control+A, `A` for
@@ -330,6 +331,7 @@ typedef struct PrAppEvent {
     PrVec2 delta;               // Scroll
     PrStringView text;          // KeyDown, KeyUp, Text, Clipboard, CompositionUpdate, CompositionEnd
     PrAppTextRange selection;   // CompositionUpdate: the part of the text that the input method selects
+    PrPixelView pixels;         // ClipboardImage: straight-alpha sRGB Rgba8, empty if the clipboard holds no image
     double time;                // seconds, from a monotonic clock
 } PrAppEvent;
 
@@ -468,6 +470,8 @@ struct PrApp {
     PrStatus (*openUrl)(PrApp* app, PrStringView url);
     void (*requestClipboardText)(PrApp* app);
     PrStatus (*setClipboardText)(PrApp* app, PrStringView text);
+    void (*requestClipboardImage)(PrApp* app);
+    PrStatus (*setClipboardImage)(PrApp* app, PrPixelView pixels);
     PrStatus (*PR_NULLABLE browserCreate)(PrApp* app, const PrAppBrowserDesc* desc,
         PrAppBrowser* PR_NULLABLE* PR_NONNULL out);
     void (*PR_NULLABLE browserDestroy)(PrApp* app, PrAppBrowser* browser);
@@ -534,6 +538,13 @@ void prAppRequestClipboardText(PrApp* app);
 
 // Replaces the clipboard's contents with `text`. Returns Io if the system refuses. Any thread may call it.
 PrStatus prAppSetClipboardText(PrApp* app, PrStringView text);
+
+// Requests the clipboard's image. A ClipboardImage event delivers it later, never during this call.
+void prAppRequestClipboardImage(PrApp* app);
+
+// Replaces the clipboard's contents with the image of `pixels`, which are straight-alpha sRGB Rgba8 of nonzero size.
+// Returns Io if the system refuses.
+PrStatus prAppSetClipboardImage(PrApp* app, PrPixelView pixels);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Browsers

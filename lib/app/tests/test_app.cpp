@@ -46,6 +46,8 @@ void createFake(FakeApp& fake) {
     fake.record.openUrl = [](PrApp*, PrStringView) -> PrStatus { return PrStatus_Ok; };
     fake.record.requestClipboardText = [](PrApp* app) { fakeOf(app).calls.push_back("clipboard"); };
     fake.record.setClipboardText = [](PrApp*, PrStringView) -> PrStatus { return PrStatus_Ok; };
+    fake.record.requestClipboardImage = [](PrApp* app) { fakeOf(app).calls.push_back("clipboard image"); };
+    fake.record.setClipboardImage = [](PrApp*, PrPixelView) -> PrStatus { return PrStatus_Ok; };
 }
 
 } // namespace
@@ -92,6 +94,7 @@ TEST_CASE("the interface passes calls through") {
     prAppWake(app);
     prAppSetTitle(app, "Title");
     prAppRequestClipboardText(app);
+    prAppRequestClipboardImage(app);
     prAppStop(app);
     PrAppSurface surface{};
     CHECK(prAppSurface(app, &surface) == PrStatus_InvalidState);
@@ -101,7 +104,9 @@ TEST_CASE("the interface passes calls through") {
     CHECK(browser == nullptr);
     prAppDestroy(app);
     prAppDestroy(nullptr);
-    CHECK(fake.calls == std::vector<std::string>{"frame", "wake", "title", "clipboard", "stop", "destroy"});
+    CHECK(fake.calls == std::vector<std::string>{
+        "frame", "wake", "title", "clipboard", "clipboard image", "stop", "destroy",
+    });
 }
 
 TEST_CASE("named keys and codes take the names of UI Events") {

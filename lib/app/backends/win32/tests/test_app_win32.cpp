@@ -590,6 +590,59 @@ TEST_CASE("the clipboard's text arrives after the request, never during it") {
     CHECK(clip.received == "h\xC3\xA9llo \xF0\x9F\x98\x80");
 }
 
+TEST_CASE("the clipboard's image arrives after the request, never during it, as it was set") {
+    struct Clip {
+        std::string saved;
+        std::vector<uint8_t> received;
+        PrUVec2 extent{};
+        bool requesting = false;
+        bool duringRequest = false;
+        PrStatus set = PrStatus_Io;
+    } clip;
+    clip.saved = clipboardText();
+    PrAppDesc appDesc{.title = "Win32 test", .extent = {64, 32}, .headless = true};
+    PrApp* app = prAppWin32Create(&appDesc);
+    PrAppHandler handler{
+        &clip,
+        [](void* context, PrApp* app, const PrAppFrame*) {
+            Clip& c = *static_cast<Clip*>(context);
+            static const uint8_t kPixels[] = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 128};
+            c.set = prAppSetClipboardImage(app, PrPixelView{kPixels, 8, PrUVec2{2, 2}});
+            c.requesting = true;
+            prAppRequestClipboardImage(app);
+            c.requesting = false;
+        },
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
+        [](void* context, PrApp* app, const PrAppEvent* event) {
+            Clip& c = *static_cast<Clip*>(context);
+            if (event->kind != PrAppEventKind_ClipboardImage)
+                return;
+            c.duringRequest = c.requesting;
+            c.extent = event->pixels.extent;
+            for (uint32_t y = 0; y < c.extent.y; ++y) {
+                const uint8_t* row = event->pixels.data + y * event->pixels.stride;
+                c.received.insert(c.received.end(), row, row + size_t(c.extent.x) * 4);
+            }
+            // The user's clipboard is put back.
+            prAppSetClipboardText(app, c.saved);
+            prAppStop(app);
+        },
+        [](void*, PrApp*) {},
+    };
+    prAppRun(app, &handler);
+    prAppDestroy(app);
+    CHECK(clip.set == PrStatus_Ok);
+    CHECK(!clip.duringRequest);
+    REQUIRE(clip.extent.x == 2);
+    REQUIRE(clip.extent.y == 2);
+    // The rows keep their order, and the opaque colors and the alpha come back as they went.
+    CHECK(clip.received[0] == 255);
+    CHECK(clip.received[1] == 0);
+    CHECK(clip.received[4 + 1] == 255);
+    CHECK(clip.received[8 + 2] == 255);
+    CHECK(clip.received[12 + 3] == 128);
+}
+
 TEST_CASE("text that is not a URL does not open") {
     PrAppDesc appDesc{.title = "Win32 test", .extent = {64, 32}, .headless = true};
     PrApp* app = prAppWin32Create(&appDesc);

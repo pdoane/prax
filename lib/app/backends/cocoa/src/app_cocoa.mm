@@ -57,7 +57,8 @@ namespace pr_impl {
 
 namespace {
 
-// An event that arrived while a callback ran, which waits for the callback to return, with its own copy of its text.
+// An event that arrived while a callback ran, which waits for the callback to return, with its own copy of its text or
+// pixels.
 struct HeldEvent {
     PrAppEvent event;
     Array<char> text;
@@ -430,6 +431,77 @@ PrStatus setClipboardText(PrApp*, PrStringView text) {
     return [board setString:string forType:NSPasteboardTypeString] ? PrStatus_Ok : PrStatus_Io;
 }
 
+// Returns the image that the pasteboard holds or names, as an image file copied in the Finder does, as straight-alpha
+// sRGB Rgba8 rows in `pixels`, and its extent, or a zero extent if it holds none.
+PrUVec2 pasteboardPixels(NSPasteboard* board, NSMutableData* pixels) {
+    if (![NSImage canInitWithPasteboard:board])
+        return PrUVec2{0, 0};
+    NSImage* image = [[NSImage alloc] initWithPasteboard:board];
+    CGImageRef source = image != nil ? [image CGImageForProposedRect:nil context:nil hints:nil] : nullptr;
+    if (source == nullptr)
+        return PrUVec2{0, 0};
+    size_t width = CGImageGetWidth(source);
+    size_t height = CGImageGetHeight(source);
+    pixels.length = width * height * 4;
+    uint8_t* rows = static_cast<uint8_t*>(pixels.mutableBytes);
+    CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGContextRef context = CGBitmapContextCreate(rows, width, height, 8, width * 4, space,
+        kCGImageAlphaPremultipliedLast);
+    CGColorSpaceRelease(space);
+    if (context == nullptr)
+        return PrUVec2{0, 0};
+    CGContextSetBlendMode(context, kCGBlendModeCopy);
+    CGContextDrawImage(context, CGRectMake(0, 0, CGFloat(width), CGFloat(height)), source);
+    CGContextRelease(context);
+    // Core Graphics draws only into premultiplied pixels.
+    for (size_t i = 0; i < width * height * 4; i += 4) {
+        uint32_t alpha = rows[i + 3];
+        if (alpha == 0 || alpha == 255)
+            continue;
+        for (size_t channel = 0; channel < 3; ++channel) {
+            uint32_t straight = (rows[i + channel] * 255u + alpha / 2) / alpha;
+            rows[i + channel] = uint8_t(straight < 255 ? straight : 255);
+        }
+    }
+    return PrUVec2{uint32_t(width), uint32_t(height)};
+}
+
+void requestClipboardImage(PrApp* app) {
+    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSMutableData* pixels = [NSMutableData data];
+        PrUVec2 extent = pasteboardPixels(NSPasteboard.generalPasteboard, pixels);
+        PrAppEvent event{};
+        event.kind = PrAppEventKind_ClipboardImage;
+        event.time = NSProcessInfo.processInfo.systemUptime;
+        event.pixels = PrPixelView{static_cast<const uint8_t*>(pixels.bytes), size_t(extent.x) * 4, extent};
+        [(__bridge PrCocoaHost*)cocoa->host deliver:event];
+    });
+}
+
+PrStatus setClipboardImage(PrApp*, PrPixelView pixels) {
+    NSBitmapImageRep* rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:nullptr
+        pixelsWide:NSInteger(pixels.extent.x) pixelsHigh:NSInteger(pixels.extent.y) bitsPerSample:8 samplesPerPixel:4
+        hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace bitmapFormat:NSBitmapFormatAlphaNonpremultiplied
+        bytesPerRow:NSInteger(pixels.extent.x) * 4 bitsPerPixel:32];
+    if (rep == nil)
+        return PrStatus_Io;
+    for (uint32_t y = 0; y < pixels.extent.y; ++y)
+        memCopy(rep.bitmapData + size_t(y) * size_t(rep.bytesPerRow), pixels.data + y * pixels.stride,
+            size_t(pixels.extent.x) * 4);
+    rep = [rep bitmapImageRepByRetaggingWithColorSpace:NSColorSpace.sRGBColorSpace];
+    NSData* png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+    NSData* tiff = rep.TIFFRepresentation;
+    if (png == nil || tiff == nil)
+        return PrStatus_Io;
+    // Programs that read only one of the two find the type they know.
+    NSPasteboard* board = NSPasteboard.generalPasteboard;
+    [board clearContents];
+    BOOL written = [board setData:png forType:NSPasteboardTypePNG];
+    written = [board setData:tiff forType:NSPasteboardTypeTIFF] && written;
+    return written ? PrStatus_Ok : PrStatus_Io;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -688,6 +760,8 @@ using namespace pr_impl;
             _held.data[i].text.data != nullptr ? _held.data[i].text.data : "",
             _held.data[i].text.count,
         };
+        if (event.kind == PrAppEventKind_ClipboardImage)
+            event.pixels.data = reinterpret_cast<const uint8_t*>(_held.data[i].text.data);
         [self callEvent:event];
     }
     for (uint32_t i = 0; i < _held.count; ++i)
@@ -702,6 +776,10 @@ using namespace pr_impl;
         HeldEvent held{.event = event};
         if (event.text.size != 0)
             held.text.append(event.text.data, uint32_t(event.text.size));
+        if (event.kind == PrAppEventKind_ClipboardImage && event.pixels.extent.y != 0) {
+            held.text.append(reinterpret_cast<const char*>(event.pixels.data),
+                uint32_t(event.pixels.stride * event.pixels.extent.y));
+        }
         _held.push(held);
         return;
     }
@@ -907,8 +985,10 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;
     app->setClipboardText = setClipboardText;
-    app->browserCreate = [](PrApp* app, const PrAppBrowserDesc* desc, PrAppBrowser** out) {
-        return cocoaBrowserCreate(app, (__bridge void*)hostOf(app).view, desc, out);
+    app->requestClipboardImage = requestClipboardImage;
+    app->setClipboardImage = setClipboardImage;
+    app->browserCreate = [](PrApp* base, const PrAppBrowserDesc* desc, PrAppBrowser** out) {
+        return cocoaBrowserCreate(base, (__bridge void*)hostOf(base).view, desc, out);
     };
     app->browserDestroy = cocoaBrowserDestroy;
     app->browserResize = cocoaBrowserResize;

@@ -31,7 +31,8 @@ namespace {
 // The messages that the backend posts to its own window.
 constexpr UINT kMessageFrame = WM_APP + 0;      // the pacer saw the display refresh
 constexpr UINT kMessageWake = WM_APP + 1;
-constexpr UINT kMessageClipboard = WM_APP + 2;  // the program requested the clipboard's text
+constexpr UINT kMessageClipboard = WM_APP + 2;      // the program requested the clipboard's text
+constexpr UINT kMessageClipboardImage = WM_APP + 3; // the program requested the clipboard's image
 
 // The timer that times the frames of a window that is not composed, and its period.
 constexpr UINT_PTR kTimerFrame = 1;
@@ -62,7 +63,8 @@ struct KeyText {
     wchar_t units[8];
 };
 
-// An event that arrived while a callback ran, which waits for the callback to return, with its own copy of its text.
+// An event that arrived while a callback ran, which waits for the callback to return, with its own copy of its text or
+// pixels.
 struct HeldEvent {
     PrAppEvent event;
     Array<char> text;
@@ -315,6 +317,8 @@ void endCallback(Win32App* app) {
             app->held.data[i].text.data != nullptr ? app->held.data[i].text.data : "",
             app->held.data[i].text.count,
         };
+        if (event.kind == PrAppEventKind_ClipboardImage)
+            event.pixels.data = reinterpret_cast<const uint8_t*>(app->held.data[i].text.data);
         callEvent(app, event);
     }
     for (uint32_t i = 0; i < app->held.count; ++i)
@@ -330,6 +334,10 @@ void deliver(Win32App* app, const PrAppEvent& event) {
         HeldEvent held{.event = event};
         if (event.text.size != 0)
             held.text.append(event.text.data, uint32_t(event.text.size));
+        if (event.kind == PrAppEventKind_ClipboardImage && event.pixels.extent.y != 0) {
+            held.text.append(reinterpret_cast<const char*>(event.pixels.data),
+                uint32_t(event.pixels.stride * event.pixels.extent.y));
+        }
         app->held.push(held);
         return;
     }
@@ -957,6 +965,70 @@ void deliverClipboard(Win32App* app) {
     deliver(app, event);
 }
 
+// Reads a device-independent bitmap of `size` bytes as straight-alpha Rgba8 rows into `out`. Returns its extent, or
+// zero for a form that it does not read. It reads 24 bits, and 32 bits with no masks or with the masks of BGRA.
+PrUVec2 dibPixels(const uint8_t* bytes, size_t size, Array<uint8_t>& out) {
+    if (size < sizeof(BITMAPINFOHEADER))
+        return PrUVec2{0, 0};
+    BITMAPINFOHEADER header;
+    memCopy(&header, bytes, sizeof(header));
+    bool bitfields = header.biCompression == BI_BITFIELDS;
+    bool readable = header.biPlanes == 1 && (header.biCompression == BI_RGB || bitfields) &&
+        (header.biBitCount == 32 || (header.biBitCount == 24 && !bitfields));
+    if (!readable || header.biWidth <= 0 || header.biHeight == 0 || header.biHeight == INT32_MIN)
+        return PrUVec2{0, 0};
+    size_t width = size_t(header.biWidth);
+    size_t height = size_t(header.biHeight < 0 ? -header.biHeight : header.biHeight);
+    size_t offset = header.biSize + header.biClrUsed * sizeof(RGBQUAD);
+    // A header of the first version keeps its masks after it. The later versions hold them within.
+    if (bitfields && header.biSize == sizeof(BITMAPINFOHEADER))
+        offset += 3 * sizeof(DWORD);
+    size_t stride = ((width * header.biBitCount + 31) / 32) * 4;
+    if (offset > size || stride * height > size - offset)
+        return PrUVec2{0, 0};
+    out.resize(uint32_t(width * height * 4));
+    // A 32-bit bitmap with no masks leaves its alpha undefined, and most programs write zero there.
+    bool hasAlpha = false;
+    if (header.biBitCount == 32) {
+        for (size_t i = offset + 3; i < offset + stride * height && !hasAlpha; i += 4)
+            hasAlpha = bytes[i] != 0;
+    }
+    for (size_t y = 0; y < height; ++y) {
+        size_t sourceRow = header.biHeight < 0 ? y : height - 1 - y;
+        const uint8_t* from = bytes + offset + sourceRow * stride;
+        uint8_t* to = out.data + y * width * 4;
+        for (size_t x = 0; x < width; ++x) {
+            to[x * 4] = from[2];
+            to[x * 4 + 1] = from[1];
+            to[x * 4 + 2] = from[0];
+            to[x * 4 + 3] = hasAlpha ? from[3] : 255;
+            from += header.biBitCount / 8;
+        }
+    }
+    return PrUVec2{uint32_t(width), uint32_t(height)};
+}
+
+void deliverClipboardImage(Win32App* app) {
+    Array<uint8_t> pixels{};
+    PrUVec2 extent{0, 0};
+    if (openClipboard(app->window)) {
+        // The system makes a CF_DIB of a CF_DIBV5 and the reverse, and either of a CF_BITMAP.
+        HANDLE data = GetClipboardData(CF_DIBV5);
+        const uint8_t* bytes = data != nullptr ? static_cast<const uint8_t*>(GlobalLock(data)) : nullptr;
+        if (bytes != nullptr) {
+            extent = dibPixels(bytes, GlobalSize(data), pixels);
+            GlobalUnlock(data);
+        }
+        CloseClipboard();
+    }
+    PrAppEvent event{};
+    event.kind = PrAppEventKind_ClipboardImage;
+    event.time = secondsNow();
+    event.pixels = PrPixelView{pixels.data, size_t(extent.x) * 4, extent};
+    deliver(app, event);
+    pixels.reset();
+}
+
 LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
     if (message == WM_NCCREATE) {
         const CREATESTRUCTW* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
@@ -1067,6 +1139,9 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         }
         case kMessageClipboard:
             deliverClipboard(app);
+            return 0;
+        case kMessageClipboardImage:
+            deliverClipboardImage(app);
             return 0;
         case WM_CAPTURECHANGED:
             if (reinterpret_cast<HWND>(lParam) != window)
@@ -1477,6 +1552,66 @@ PrStatus setClipboardText(PrApp* base, PrStringView text) {
     return set ? PrStatus_Ok : PrStatus_Io;
 }
 
+void requestClipboardImage(PrApp* base) {
+    Win32App* app = static_cast<Win32App*>(base);
+    if (app->window != nullptr)
+        PostMessageW(app->window, kMessageClipboardImage, 0, 0);
+}
+
+PrStatus setClipboardImage(PrApp* base, PrPixelView pixels) {
+    Win32App* app = static_cast<Win32App*>(base);
+    // The clipboard takes data only from an owner window, which exists during a run.
+    if (app->window == nullptr)
+        return PrStatus_Io;
+    size_t rowBytes = size_t(pixels.extent.x) * 4;
+    size_t bytes = sizeof(BITMAPV5HEADER) + rowBytes * pixels.extent.y;
+    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    if (memory == nullptr)
+        return PrStatus_Io;
+    uint8_t* at = static_cast<uint8_t*>(GlobalLock(memory));
+    if (at == nullptr) {
+        GlobalFree(memory);
+        return PrStatus_Io;
+    }
+    BITMAPV5HEADER header{};
+    header.bV5Size = sizeof(header);
+    header.bV5Width = LONG(pixels.extent.x);
+    header.bV5Height = LONG(pixels.extent.y);
+    header.bV5Planes = 1;
+    header.bV5BitCount = 32;
+    header.bV5Compression = BI_BITFIELDS;
+    header.bV5SizeImage = DWORD(rowBytes * pixels.extent.y);
+    header.bV5RedMask = 0x00FF0000;
+    header.bV5GreenMask = 0x0000FF00;
+    header.bV5BlueMask = 0x000000FF;
+    header.bV5AlphaMask = 0xFF000000;
+    header.bV5CSType = LCS_sRGB;
+    header.bV5Intent = LCS_GM_IMAGES;
+    memCopy(at, &header, sizeof(header));
+    // A bitmap with a positive height holds its rows from the bottom up.
+    for (uint32_t y = 0; y < pixels.extent.y; ++y) {
+        const uint8_t* from = pixels.data + y * pixels.stride;
+        uint8_t* to = at + sizeof(header) + size_t(pixels.extent.y - 1 - y) * rowBytes;
+        for (uint32_t x = 0; x < pixels.extent.x; ++x) {
+            to[x * 4] = from[x * 4 + 2];
+            to[x * 4 + 1] = from[x * 4 + 1];
+            to[x * 4 + 2] = from[x * 4];
+            to[x * 4 + 3] = from[x * 4 + 3];
+        }
+    }
+    GlobalUnlock(memory);
+    if (!openClipboard(app->window)) {
+        GlobalFree(memory);
+        return PrStatus_Io;
+    }
+    // The clipboard owns the memory once it takes it.
+    bool set = EmptyClipboard() && SetClipboardData(CF_DIBV5, memory) != nullptr;
+    CloseClipboard();
+    if (!set)
+        GlobalFree(memory);
+    return set ? PrStatus_Ok : PrStatus_Io;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1500,6 +1635,8 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;
     app->setClipboardText = setClipboardText;
+    app->requestClipboardImage = requestClipboardImage;
+    app->setClipboardImage = setClipboardImage;
     app->browserCreate = [](PrApp* base, const PrAppBrowserDesc* browserDesc, PrAppBrowser** out) {
         return win32BrowserCreate(base, static_cast<Win32App*>(base)->window, browserDesc, out);
     };

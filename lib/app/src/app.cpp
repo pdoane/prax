@@ -191,6 +191,15 @@ PrStatus prAppSetClipboardText(PrApp* app, PrStringView text) {
     return app->setClipboardText(app, text);
 }
 
+void prAppRequestClipboardImage(PrApp* app) {
+    app->requestClipboardImage(app);
+}
+
+PrStatus prAppSetClipboardImage(PrApp* app, PrPixelView pixels) {
+    PR_ASSERT(pixels.extent.x != 0 && pixels.extent.y != 0);
+    return app->setClipboardImage(app, pixels);
+}
+
 PrStatus prAppBrowserCreate(PrApp* app, const PrAppBrowserDesc* desc, PrAppBrowser* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (app->browserCreate == nullptr)
