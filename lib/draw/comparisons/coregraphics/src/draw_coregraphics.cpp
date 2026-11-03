@@ -10,7 +10,6 @@
 #include "pr/draw_coregraphics.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_glyph.h"
@@ -21,6 +20,7 @@
 #include "pr/hash.h"
 #include "pr/hash_index.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include <CoreGraphics/CoreGraphics.h>
@@ -63,11 +63,11 @@ struct CgBackend : PrDrawRenderer {
     CGColorSpaceRef srgb;
     CGColorSpaceRef extended;
     CGColorSpaceRef gray;
-    Array<CachedImage> images;
+    RawArray<CachedImage> images;
     KeyIndex imageIndex;                // `images`, by id
     PrDrawGlyphCache* glyphs;
-    Array<CachedFont> fonts;
-    Array<SizedFont> sized;
+    RawArray<CachedFont> fonts;
+    RawArray<SizedFont> sized;
     uint64_t render;
 };
 
@@ -92,16 +92,16 @@ struct Renderer {
     CGAffineTransform target;                   // the context's transform for target pixels
     const PrPixels* PR_NULLABLE pixels;         // the target's pixels, which WritePixels writes
     PrPixelFormat format;                       // the target's pixel format
-    Array<Push> pushes;
+    RawArray<Push> pushes;
     uint32_t collapsed;                         // number of open transform pushes that are collapsed
     PrPath* shape;
     PrPath* extra;
     PrPathPolyline outline;                         // a border's piece or a decoration
-    Array<CGFloat> dashes;
-    Array<PrDrawRampPiece> rampPieces;
-    Array<PrColor> ramp;
-    Array<CGFloat> components;          // a conic gradient's colors, straight
-    Array<CGFloat> locations;           // where a conic gradient's colors are
+    RawArray<CGFloat> dashes;
+    RawArray<PrDrawRampPiece> rampPieces;
+    RawArray<PrColor> ramp;
+    RawArray<CGFloat> components;          // a conic gradient's colors, straight
+    RawArray<CGFloat> locations;           // where a conic gradient's colors are
 };
 
 CGAffineTransform affineOf(PrAffine2 t) {
@@ -804,7 +804,7 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
     float width = prRectWidth(area);
     float height = prRectHeight(area);
     uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
-    Array<PrDrawImageRect> pieces;
+    RawArray<PrDrawImageRect> pieces;
     pieces.reserve(count);
     pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, pieces.data, count);
     drawImageRects(r, c, pieces.data, pieces.count);

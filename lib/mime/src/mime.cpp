@@ -60,8 +60,8 @@ PrStringView prMimeTypeEssence(PrStringView type) {
     return stringTrimBy(prStringSlice(type, 0, prStringFindByte(type, ';')), prAsciiIsHttpSpace);
 }
 
-bool prMimeTypeParameter(PrStringView type, PrStringView name, PrString* out) {
-    *out = prStringNull();
+bool prMimeTypeParameter(PrStringView type, PrStringView name, PrRawString* out) {
+    *out = prRawStringNull();
     PrStringView text = stringTrimBy(type, prAsciiIsHttpSpace);
     size_t slash = prStringFindByte(text, '/');
     size_t semicolon = prStringFindByte(text, ';');

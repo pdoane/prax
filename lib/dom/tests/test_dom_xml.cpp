@@ -21,10 +21,10 @@ std::string textOf(PrStringView text) {
     return std::string(text.size != 0 ? text.data : "", text.size);
 }
 
-std::string take(PrString value) {
-    PrStringView view = prStringView(&value);
+std::string take(PrRawString value) {
+    PrStringView view = prRawStringView(&value);
     std::string text(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(&value);
+    prRawStringReset(&value);
     return text;
 }
 

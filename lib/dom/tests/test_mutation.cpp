@@ -89,8 +89,8 @@ TEST_CASE("a mutation observer is told of the changes it observes in one microta
     domSetAttribute(parent, PrDomNamespace_None, "id", "a");
     domSetAttribute(parent, PrDomNamespace_None, "id", "b");
     REQUIRE(observer->records.count == 2);
-    CHECK(prStringIsNull(&observer->records.data[0]->oldValue));
-    CHECK(prStringView(&observer->records.data[1]->oldValue) == "a");
+    CHECK(prRawStringIsNull(&observer->records.data[0]->oldValue));
+    CHECK(prRawStringView(&observer->records.data[1]->oldValue) == "a");
     CHECK(microtasks.queued.size() == 1);
 
     // Replacing every child produces one record of the nodes that it removed and added.

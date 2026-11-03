@@ -1023,8 +1023,8 @@ CssValueRun entryOf(CssValueRun run, uint32_t k) {
 // takes a single entry, or none, on every layer. After layerOf, `texts` holds their serializations.
 struct Layer {
     PrTextBuffer text = {};
-    Array<uint32_t> ends;
-    Array<PrStringView> texts;
+    RawArray<uint32_t> ends;
+    RawArray<PrStringView> texts;
 };
 
 void layerOf(Layer* layer, const Longhands* l, uint64_t listed, uint32_t k) {

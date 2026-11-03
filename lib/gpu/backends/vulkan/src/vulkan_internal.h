@@ -13,11 +13,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/gpu_backend.h"
 #include "pr/gpu_vulkan.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/reserved_array.h"
 #include "pr/thread.h"
 
@@ -230,7 +230,7 @@ struct VulkanResource {
     PrGpuTextureDesc textureDesc;
     uint8_t firstLevel;         // the level and layer of the image that a view starts at
     uint16_t firstLayer;
-    Array<VulkanAttachmentView> attachments;
+    RawArray<VulkanAttachmentView> attachments;
 };
 
 // A sampler, by its slot.
@@ -355,14 +355,14 @@ struct VulkanCommands : PrGpuCommands {
     PrGpuHostStateFlags changed;    // the state that the device changed since the last sync
 
     // The stream: the chunks that the command buffer took, the last of which it fills.
-    Array<VulkanStreamChunk> chunks;
+    RawArray<VulkanStreamChunk> chunks;
     uint64_t streamUsed;
 
-    Array<VulkanDoneCall> done;
-    Array<VulkanPresent> presents;
-    Array<uint32_t> pages;          // the staging pages of the uploads that the command buffer copies
-    VulkanCommandSlot upload;       // the command buffer that copies the uploads ahead of this one, if any
-    Array<uint8_t> scratch;         // the stream's bytes once the device is lost, which the GPU never reads
+    RawArray<VulkanDoneCall> done;
+    RawArray<VulkanPresent> presents;
+    RawArray<uint32_t> pages;          // the staging pages of the uploads that the command buffer copies
+    VulkanCommandSlot upload;          // the command buffer that copies the uploads ahead of this one, if any
+    RawArray<uint8_t> scratch;         // the stream's bytes once the device is lost, which the GPU never reads
     VulkanPass pass;
 
     // The texture that holds the copy of the target, which a draw that reads its target samples on a device without
@@ -392,7 +392,7 @@ struct VulkanSwapChain : PrGpuSwapChain {
     VkPresentModeKHR presentMode;
     VkImageUsageFlags usage;
     VkExtent2D extent;              // the extent that the last acquire asked for, which the images may clamp
-    Array<VulkanSwapImage> images;
+    RawArray<VulkanSwapImage> images;
     VkSemaphore PR_NULLABLE acquired[kSwapChainFrames]; // used in turn, one for each frame in flight
     PrGpuFence frameFences[kSwapChainFrames];           // the fence of the frame that last used each of `acquired`
     uint32_t frame;
@@ -440,19 +440,19 @@ struct VulkanDevice : PrGpuDevice {
     // Guards everything below.
     PrMutex mutex;
     ReservedArray<VulkanResource> resources;    // by slot
-    Array<uint32_t> freeSlots;
+    RawArray<uint32_t> freeSlots;
     uint32_t nextSlot;
-    Array<VulkanSampler> samplers;              // by slot less firstSampler
+    RawArray<VulkanSampler> samplers;           // by slot less firstSampler
     ReservedArray<VulkanPipeline> pipelines;    // by id less one
-    Array<uint32_t> freePipelines;
-    Array<VulkanStreamChunk> freeChunks;
-    Array<VulkanCommandSlot> freeCommandSlots;
-    Array<VulkanCommands*> freeCommands;
-    Array<VulkanStagingPage> pages;             // by index; a page with no buffer is free
-    uint32_t openPage;                          // the page that uploads fill, or UINT32_MAX
-    Array<VulkanUpload> uploads;                // waiting for a command buffer
-    Array<VulkanRetired> retired;
-    Array<uint64_t> openSerials;                // of the command buffers begun and not yet done
+    RawArray<uint32_t> freePipelines;
+    RawArray<VulkanStreamChunk> freeChunks;
+    RawArray<VulkanCommandSlot> freeCommandSlots;
+    RawArray<VulkanCommands*> freeCommands;
+    RawArray<VulkanStagingPage> pages;             // by index; a page with no buffer is free
+    uint32_t openPage;                             // the page that uploads fill, or UINT32_MAX
+    RawArray<VulkanUpload> uploads;                // waiting for a command buffer
+    RawArray<VulkanRetired> retired;
+    RawArray<uint64_t> openSerials;                // of the command buffers begun and not yet done
     uint64_t nextSerial;
     uint64_t issued;                            // the fence of the last submission
 
@@ -463,7 +463,7 @@ struct VulkanDevice : PrGpuDevice {
     // `doneMutex` guards them, `stopping` and raising `reached`. `pendingSignal` wakes the thread for a new command
     // buffer or to stop, and `reachedSignal` wakes the threads that wait for a fence.
     PrMutex doneMutex;
-    Array<VulkanCommands*> pending;
+    RawArray<VulkanCommands*> pending;
     PrCondition pendingSignal;
     PrCondition reachedSignal;
     Atomic<uint64_t> reached;                   // the fence of the last command buffer that is retired

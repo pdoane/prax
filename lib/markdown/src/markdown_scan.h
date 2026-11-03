@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -70,7 +70,7 @@ size_t markdownScanLinkTitle(PrStringView text, size_t start, MarkdownSpan* out)
 
 // Appends the raw HTML `html` to `out` with the '<' of each tag that GFM disallows written as "&lt;", so that the tag
 // reads as text (gfm/#disallowed-raw-html-extension).
-void markdownAppendFilteredHtml(PrStringView html, Array<char>* out);
+void markdownAppendFilteredHtml(PrStringView html, RawArray<char>* out);
 
 // Returns true if the destination `destination` has a scheme that can run code or read local files: javascript:,
 // vbscript:, file:, or data: other than a PNG, GIF, JPEG or WebP image's (PrMarkdownDestinations_Safe).
@@ -81,15 +81,15 @@ size_t markdownSkipSpaceAndLineEnding(PrStringView text, size_t start);
 
 // Decodes the character reference at `start` in `text`, whose '&' is at `start`, and appends its UTF-8 to `out`
 // (commonmark/#entity-and-numeric-character-references). Returns its length, or 0 if no valid reference starts there.
-size_t markdownDecodeReference(PrStringView text, size_t start, Array<char>* out);
+size_t markdownDecodeReference(PrStringView text, size_t start, RawArray<char>* out);
 
 // Appends `text` to `out` with its backslash escapes and character references decoded.
-void markdownAppendDecoded(PrStringView text, Array<char>* out);
+void markdownAppendDecoded(PrStringView text, RawArray<char>* out);
 
 // Appends the normalized form of the link label `label` to `out`: case folded, with each run of whitespace made one
 // space, and with no whitespace at either end (commonmark/#matches). Returns false and appends nothing if the label is
 // only whitespace, which no reference matches.
-bool markdownAppendNormalizedLabel(PrStringView label, Array<char>* out);
+bool markdownAppendNormalizedLabel(PrStringView label, RawArray<char>* out);
 
 } // namespace pr_impl
 

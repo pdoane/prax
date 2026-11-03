@@ -3,13 +3,13 @@
 
 #include "pr/kit_graph.h"
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/draw_list.h"
 #include "pr/float.h"
 #include "pr/hash.h"
 #include "pr/kit_text.h"
 #include "pr/path.h"
+#include "pr/raw_array.h"
 
 #include "studio/kit/src/kit.h"
 
@@ -540,7 +540,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
     bool ended = false;
     // The selected nodes are drawn over the others, so that a node that a drag moves stays in front of the nodes it
     // passes. The order is fixed before a press in the round changes the selection.
-    Array<uint32_t> order;
+    RawArray<uint32_t> order;
     for (uint32_t pass = 0; pass < 2; ++pass) {
         for (uint32_t i = 0; i < g.nodeCount; ++i) {
             if (g.nodes[i].selected == (pass == 1))
@@ -793,7 +793,7 @@ void prKitGraphArrange(PrKitGraphNode* nodes, uint32_t nodeCount, const PrKitGra
     // A node's column is one past the furthest column that feeds it. Each pass settles at least one more node along
     // every path, so as many passes as there are nodes settle every column that a cycle does not raise without end; a
     // pass beyond that would only follow a cycle, which is ignored.
-    Array<uint32_t> columns;
+    RawArray<uint32_t> columns;
     for (uint32_t i = 0; i < nodeCount; ++i)
         columns.push(0);
     auto indexOf = [&](uint64_t id) {

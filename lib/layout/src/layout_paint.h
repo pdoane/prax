@@ -16,10 +16,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/draw.h"
 #include "pr/hash_index.h"
 #include "pr/layout_query.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_background.h"
 #include "layout/src/layout_fragment.h"
@@ -178,13 +178,13 @@ struct LayoutPaintFixed {
 // and names the containers around it by node. Appending the part to another recording at its place there therefore
 // gives the same result as recording it in place.
 struct LayoutPaintRecording {
-    Array<LayoutPaintSegment> segments;
-    Array<LayoutPaintScroll> scrolls;
-    Array<LayoutPaintLayer> layers;       // in painting order
-    Array<LayoutPaintSlot> slots;         // in painting order
-    Array<LayoutPaintRegion> regions;
-    Array<LayoutPaintListed> lists;
-    Array<LayoutPaintFixed> fixed;        // in the order of their segments
+    RawArray<LayoutPaintSegment> segments;
+    RawArray<LayoutPaintScroll> scrolls;
+    RawArray<LayoutPaintLayer> layers;       // in painting order
+    RawArray<LayoutPaintSlot> slots;         // in painting order
+    RawArray<LayoutPaintRegion> regions;
+    RawArray<LayoutPaintListed> lists;
+    RawArray<LayoutPaintFixed> fixed;        // in the order of their segments
 };
 
 // The recording of a box with a layer of its own (the root, or a stacking context with effects). It holds the box's
@@ -200,11 +200,11 @@ struct LayoutPaintChunk : LayoutPaintRecording {
     // The fragment of the box, or of an inline box's container, which the chunk holds a reference to.
     const LayoutFragment* fragment;
 
-    LayoutPieceAt opening;          // the line of an inline box's opening part
-    Array<LayoutPaintPlaced> outer; // boxes placed through boxes outside it; each holds a fragment reference
-    uint32_t recorded;              // the paint that recorded it, as LayoutPaintCache::paints counts it
-    uint32_t painted;               // the paint that last used it
-    bool root;                      // true for the root's chunk, whose background the canvas takes
+    LayoutPieceAt opening;             // the line of an inline box's opening part
+    RawArray<LayoutPaintPlaced> outer; // boxes placed through boxes outside it; each holds a fragment reference
+    uint32_t recorded;                 // the paint that recorded it, as LayoutPaintCache::paints counts it
+    uint32_t painted;                  // the paint that last used it
+    bool root;                         // true for the root's chunk, whose background the canvas takes
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -249,24 +249,24 @@ struct LayoutPaintRun {
     // The children it recorded, each holding a reference to its fragment, and each offset from the first child. The run
     // is current while the box holds the same fragments at the same offsets from one another, and nothing they read has
     // changed.
-    Array<LayoutChild> children;
+    RawArray<LayoutChild> children;
 
     // The boxes of a list it recorded, each placed relative to the first and holding a reference to its fragment. The
     // run is current while all of the following hold: the list holds the same boxes with the same fragments, at the
     // same offsets from one another, in the container that the walk is in; the lists it painted from are the ones it
     // found; and nothing the boxes read has changed.
-    Array<LayoutPaintPlaced> entries;
+    RawArray<LayoutPaintPlaced> entries;
     uint32_t layouts;               // LayoutTree::layouts when it recorded the boxes
     uint32_t placed;                // LayoutCache::placed when it recorded them
 };
 
 // The recordings that paints reuse.
 struct LayoutPaintCache {
-    Array<LayoutPaintChunk> chunks;
-    Array<uint32_t> byNode;         // the chunk of each node, or kPaintChunkNone
-    Array<LayoutPaintSub> subs;
+    RawArray<LayoutPaintChunk> chunks;
+    RawArray<uint32_t> byNode;         // the chunk of each node, or kPaintChunkNone
+    RawArray<LayoutPaintSub> subs;
     HashIndex subIndex;             // `subs` by fragment
-    Array<LayoutPaintRun> runs;
+    RawArray<LayoutPaintRun> runs;
     HashIndex runIndex;             // `runs` by node, phase and index
     uint32_t paints;                // number of paints made, including the one in progress
 };

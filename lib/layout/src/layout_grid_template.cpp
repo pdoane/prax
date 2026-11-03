@@ -15,7 +15,7 @@ namespace {
 constexpr uint64_t kGridTemplateSeed = 0x6a09e667bb67ae85ull;
 
 // Appends `size` bytes from `bytes` to `key`.
-void appendKey(Array<uint8_t>& key, const void* PR_NULLABLE bytes, size_t size) {
+void appendKey(RawArray<uint8_t>& key, const void* PR_NULLABLE bytes, size_t size) {
     if (size == 0)
         return;
     uint32_t at = key.count;
@@ -24,7 +24,7 @@ void appendKey(Array<uint8_t>& key, const void* PR_NULLABLE bytes, size_t size) 
 }
 
 // Appends a count to `key`, so that lists of different lengths have different keys.
-void appendCount(Array<uint8_t>& key, uint32_t count) {
+void appendCount(RawArray<uint8_t>& key, uint32_t count) {
     appendKey(key, &count, sizeof count);
 }
 
@@ -42,7 +42,7 @@ T* PR_NULLABLE copyOf(const T* PR_NULLABLE items, uint32_t count) {
 // entry's index. A new entry takes the key and goes in the table's index and candidates. Frees `key` if an entry holds
 // it already.
 template <typename Entry, typename Make>
-uint32_t intern(LayoutGridTable<Entry>& table, Array<uint8_t>& key, Make make) {
+uint32_t intern(LayoutGridTable<Entry>& table, RawArray<uint8_t>& key, Make make) {
     uint32_t hash = uint32_t(prHashBytes(key.data, key.count, kGridTemplateSeed));
     uint32_t found = table.index.find(hash, [&](uint32_t i) {
         const Entry& e = table.entries.data[i];
@@ -153,7 +153,7 @@ PrLayoutGridTracksIndex layoutGridTemplatesInternTracks(LayoutGridTemplates* tem
     uint32_t repeatStart = repeat != PrLayoutGridRepeat_None ? list.repeatStart : 0;
     uint32_t repeatCount = repeat != PrLayoutGridRepeat_None ? list.repeatCount : 0;
     uint32_t repeatNameCount = repeat != PrLayoutGridRepeat_None ? list.repeatNameCount : 0;
-    Array<uint8_t> key;
+    RawArray<uint8_t> key;
     appendCount(key, list.trackCount);
     appendKey(key, list.tracks, sizeof(PrLayoutGridTrack) * list.trackCount);
     appendCount(key, list.nameCount);
@@ -181,7 +181,7 @@ PrLayoutGridAreasIndex layoutGridTemplatesInternAreas(LayoutGridTemplates* templ
     if (areas.rowCount == 0 || areas.columnCount == 0)
         return kPrLayoutGridAreasNone;
     PR_ASSERT(areas.rowCount <= kPrLayoutGridMaxLine && areas.columnCount <= kPrLayoutGridMaxLine);
-    Array<uint8_t> key;
+    RawArray<uint8_t> key;
     appendCount(key, areas.rowCount);
     appendCount(key, areas.columnCount);
     appendCount(key, areas.areaCount);
@@ -202,7 +202,7 @@ PrLayoutGridName layoutGridTemplatesInternName(LayoutGridTemplates* templates, P
     if (templates->forms.data[atom].start == kPrLayoutGridNameNone) {
         // The forms are interned as names of their own, but are given no forms of their own unless they are interned as
         // themselves.
-        Array<char> text;
+        RawArray<char> text;
         text.resize(uint32_t(name.size) + 6);
         prMemCopy(text.data, name.data, name.size);
         prMemCopy(text.data + name.size, "-start", 6);

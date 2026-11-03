@@ -3,11 +3,11 @@
 #include "pr/draw_filter.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/float.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "draw/src/draw_list.h"
@@ -35,12 +35,12 @@ PrAffine4 colorMatrix(const float rows[3][3]) {
 
 // The nodes and the data that they point to. A builder owns them while it builds, and the filter owns them afterward.
 struct Graph {
-    Array<PrDrawFilterNode> nodes;
-    Array<float*> floats;             // tables and kernels, one allocation each
-    Array<PrDrawFilterInput*> inputs; // merge inputs
-    Array<PrDrawColorStop*> stops;    // progressive blur brushes' stops
-    Array<const PrDrawImage*> images; // holds one reference to each image
-    Array<const PrDrawList*> lists;
+    RawArray<PrDrawFilterNode> nodes;
+    RawArray<float*> floats;             // tables and kernels, one allocation each
+    RawArray<PrDrawFilterInput*> inputs; // merge inputs
+    RawArray<PrDrawColorStop*> stops;    // progressive blur brushes' stops
+    RawArray<const PrDrawImage*> images; // holds one reference to each image
+    RawArray<const PrDrawList*> lists;
     PrRect region;
 };
 

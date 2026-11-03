@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/layout_tree.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_exclusion.h"
 #include "layout/src/layout_fragment.h"
@@ -65,11 +65,11 @@ inline bool layoutCellSpacesEqual(const LayoutCellSpace& a, const LayoutCellSpac
 struct LayoutCacheContext {
     LayoutFloorRead clearanceRead[2];   // the floors it read
     LayoutFloorRead lastTopRead;
-    bool clearance;                 // true if its border box was put at a clearance floor
-    Array<LayoutExclusion> view;    // the floats that existed when it began, in the range it read, clipped to it
-    Array<LayoutExclusion> placed;  // the floats that its subtree placed, in placement order
-    PrLayoutVec fallback;           // the fallback of its space (LayoutSpace::fallback)
-    LayoutLineExtent marker;        // the outside markers of its space (LayoutSpace::marker)
+    bool clearance;                   // true if its border box was put at a clearance floor
+    RawArray<LayoutExclusion> view;   // the floats that existed when it began, in the range it read, clipped to it
+    RawArray<LayoutExclusion> placed; // the floats that its subtree placed, in placement order
+    PrLayoutVec fallback;             // the fallback of its space (LayoutSpace::fallback)
+    LayoutLineExtent marker;          // the outside markers of its space (LayoutSpace::marker)
 
     LayoutCellSpace cell;           // the inputs from the cell's table (LayoutSpace::cell)
 };
@@ -258,8 +258,8 @@ struct LayoutLineRecord {
     PrLayoutUnit firstBaseline;
     PrLayoutUnit lastBaseline;
 
-    Array<LayoutLogicalChild> lines;    // the record holds a reference to each line
-    Array<LayoutLineAtomic> atomics;    // by LayoutItemIndex
+    RawArray<LayoutLogicalChild> lines;    // the record holds a reference to each line
+    RawArray<LayoutLineAtomic> atomics;    // by LayoutItemIndex
 };
 
 // The last placement of a box out of flow by its holder: the containing block and static position it was placed
@@ -307,38 +307,38 @@ struct LayoutPositioned {
 
 // The layout cache of a tree.
 struct LayoutCache {
-    Array<LayoutCacheEntry> entries;        // by LayoutNodeIndex
-    Array<LayoutCacheContext> contexts;     // context records of the entries; the first is unused
-    Array<uint32_t> freeContexts;           // records that no entry holds, each with its storage retained
-    Array<LayoutIntrinsicEntry> intrinsics; // by LayoutNodeIndex, grown as measurement first reaches a node
-    Array<LayoutAbsoluteEntry> absolutes;   // placement records of the entries; the first is unused
-    Array<LayoutPlacement> placements;      // by LayoutNodeIndex, grown as layout first places a node
+    RawArray<LayoutCacheEntry> entries;        // by LayoutNodeIndex
+    RawArray<LayoutCacheContext> contexts;     // context records of the entries; the first is unused
+    RawArray<uint32_t> freeContexts;           // records that no entry holds, each with its storage retained
+    RawArray<LayoutIntrinsicEntry> intrinsics; // by LayoutNodeIndex, grown as measurement first reaches a node
+    RawArray<LayoutAbsoluteEntry> absolutes;   // placement records of the entries; the first is unused
+    RawArray<LayoutPlacement> placements;      // by LayoutNodeIndex, grown as layout first places a node
 
     // The measurements of the boxes that were measured. `measureAt` holds, by LayoutNodeIndex, the first of the
     // kLayoutMeasureSlots records of each box, or kLayoutMeasureNone, and grows as measurement first reaches a node.
     // `measures` holds the records, and `freeMeasures` the free runs of them. The records of a box hold answers only
     // while its intrinsic entry is `measured`. Invalidation clears that flag in the same entry as the sizes, and the
     // next store for the box clears the records that the change left behind.
-    Array<uint32_t> measureAt;
-    Array<LayoutMeasureRecord> measures;
-    Array<uint32_t> freeMeasures;
+    RawArray<uint32_t> measureAt;
+    RawArray<LayoutMeasureRecord> measures;
+    RawArray<uint32_t> freeMeasures;
 
     // `lines` holds, by the first node of each inline formatting context, the lines it last laid out, or null.
     // `collections` counts the shapings collected so far, and so names each collection
     // (LayoutInlineShaping::collected).
-    Array<LayoutLineRecord* PR_NULLABLE> lines;
+    RawArray<LayoutLineRecord* PR_NULLABLE> lines;
     uint32_t collections;
 
     // The fragments that left the final tree during the current layout, with the anonymous boxes and line content in
     // them. A fragment leaves when its placement is replaced or its node is forgotten. The caches keyed by fragment
     // drop their entries for these fragments when the layout ends.
-    Array<const LayoutFragment*> retired;
+    RawArray<const LayoutFragment*> retired;
 
     // The memoized positions and containers of the boxes, which reads fill. A memo is current while `placed` equals the
     // version it records. Layout increments `placed` when the placement of a box changes, and the tree increments it
     // when a style that a memo reads changes.
-    mutable Array<LayoutPositioned> positioned;  // by LayoutNodeIndex
-    mutable Array<LayoutNodeIndex> unpositioned; // the boxes whose memos a read is filling, innermost first
+    mutable RawArray<LayoutPositioned> positioned;  // by LayoutNodeIndex
+    mutable RawArray<LayoutNodeIndex> unpositioned; // the boxes whose memos a read is filling, innermost first
     uint32_t placed;
 
     uint32_t published;             // the placements recorded since the count was last cleared

@@ -9,7 +9,6 @@
 #include "pr/draw_cpu.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_glyph.h"
@@ -21,6 +20,7 @@
 #include "pr/hash_index.h"
 #include "pr/mem.h"
 #include "pr/path_rasterizer.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "draw/backends/cpu/src/cpu_filter.h"
@@ -124,8 +124,8 @@ struct Frame {
 // A gradient's ramp, created once per render for each brush that needs one. Its storage is kept for later renders.
 struct Ramp {
     const PrDrawBrush* brush;
-    Array<PrDrawRampPiece> pieces;
-    Array<PrColor> colors;          // premultiplied, without a color
+    RawArray<PrDrawRampPiece> pieces;
+    RawArray<PrColor> colors;          // premultiplied, without a color
 };
 
 struct CpuBackend;
@@ -138,14 +138,14 @@ struct Renderer {
     uint32_t depth;
     bool used;                      // true if the render in progress uses it
     CpuTarget target;
-    Array<PrDrawTransform> transforms;
-    Array<Clip> clips;
-    Array<Frame> frames;
-    Array<Array<uint8_t>> clipMasks;    // for each clip in `clips`
-    Array<Array<uint8_t>> layers;       // groups' offscreens, by the group's index in `frames`
-    Array<Array<uint8_t>> unders;       // Frame::under's pixels, likewise
-    Array<Array<uint8_t>> seen;         // a projected group's offscreen over what lies beneath it, likewise
-    Array<uint8_t> copy;                // a target's pixels, copied as a texture's texels
+    RawArray<PrDrawTransform> transforms;
+    RawArray<Clip> clips;
+    RawArray<Frame> frames;
+    RawArray<RawArray<uint8_t>> clipMasks;    // for each clip in `clips`
+    RawArray<RawArray<uint8_t>> layers;       // groups' offscreens, by the group's index in `frames`
+    RawArray<RawArray<uint8_t>> unders;       // Frame::under's pixels, likewise
+    RawArray<RawArray<uint8_t>> seen;         // a projected group's offscreen over what lies beneath it, likewise
+    RawArray<uint8_t> copy;                   // a target's pixels, copied as a texture's texels
     PrPathRasterizer* rasterizer;
     PrPath* shape;
     PrPath* extra;
@@ -154,12 +154,12 @@ struct Renderer {
     PrPathPolyline fill;                    // a stroke's outlines (prDrawLowerStroke)
     PrPathPolyline aligned;
     PrPathPolyline region;
-    Array<uint8_t> coverage;
-    Array<uint8_t> second;
-    Array<Ramp> ramps;                  // the first `rampCount` are this render's
+    RawArray<uint8_t> coverage;
+    RawArray<uint8_t> second;
+    RawArray<Ramp> ramps;                  // the first `rampCount` are this render's
     uint32_t rampCount;
     HashIndex rampIndex;                // this render's ramps, by the inputs that decide their colors
-    Array<PrDrawImageRect> pieces;
+    RawArray<PrDrawImageRect> pieces;
 };
 
 // The backend, and the state that it keeps between renders: textures of images and lists, the lists that color glyphs
@@ -168,7 +168,7 @@ struct CpuBackend : PrDrawRenderer {
     bool glyphPhases;                   // PrDrawCpuOptions
     CpuTextureCache textures;
     PrDrawGlyphCache* glyphs;
-    Array<Renderer*> renderers;         // for each depth of nesting
+    RawArray<Renderer*> renderers;         // for each depth of nesting
 };
 
 // A frame: the list that it renders once there are pixels.
@@ -188,10 +188,10 @@ const Clip& currentClip(const Renderer& r) {
 }
 
 // Returns room for `size` bytes in the storage at `index` of `pool`.
-uint8_t* pooled(Array<Array<uint8_t>>& pool, uint32_t index, size_t size) {
+uint8_t* pooled(RawArray<RawArray<uint8_t>>& pool, uint32_t index, size_t size) {
     while (pool.count <= index)
-        pool.push(Array<uint8_t>{});
-    Array<uint8_t>& storage = pool.data[index];
+        pool.push(RawArray<uint8_t>{});
+    RawArray<uint8_t>& storage = pool.data[index];
     if (storage.capacity < size) {
         storage.reset();
         storage.reserve(uint32_t(size != 0 ? size : 1));
@@ -199,7 +199,7 @@ uint8_t* pooled(Array<Array<uint8_t>>& pool, uint32_t index, size_t size) {
     return storage.data;
 }
 
-void resetPool(Array<Array<uint8_t>>& pool) {
+void resetPool(RawArray<RawArray<uint8_t>>& pool) {
     for (uint32_t i = 0; i < pool.count; ++i)
         pool.data[i].reset();
     pool.reset();
@@ -271,7 +271,7 @@ PrPathCoverage coverageOf(bool antialias) {
 }
 
 // Returns room in `storage` for a mask over `box`.
-CpuCoverage maskOver(Array<uint8_t>& storage, PrIRect box) {
+CpuCoverage maskOver(RawArray<uint8_t>& storage, PrIRect box) {
     size_t size = size_t(prIRectWidth(box)) * prIRectHeight(box);
     if (storage.capacity < size) {
         storage.reset();
@@ -704,7 +704,7 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
     uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
     if (count == 0)
         return;
-    Array<PrDrawImageRect>& pieces = r.pieces;
+    RawArray<PrDrawImageRect>& pieces = r.pieces;
     pieces.clear();
     pieces.reserve(count);
     pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, pieces.data, count);
@@ -884,7 +884,7 @@ PrIRect deviceBoxOf(Renderer& r, const PrDrawTransform& x, PrRect rect) {
 // Makes a paint of a target's pixels, sampled between pixels at the placement, over its box and transparent outside it.
 // The caller resets the texture's levels. The texels are the target's own if it is RGBA with packed rows, and otherwise
 // are copied into `storage`.
-void targetPaint(const CpuTarget& target, Array<uint8_t>& storage, const CpuPlacement& placement,
+void targetPaint(const CpuTarget& target, RawArray<uint8_t>& storage, const CpuPlacement& placement,
         CpuTexture* texture, CpuPaint* paint) {
     uint32_t width = prIRectWidth(target.box);
     uint32_t height = prIRectHeight(target.box);

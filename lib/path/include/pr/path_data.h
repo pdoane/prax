@@ -5,8 +5,8 @@
 
 #include "pr/base.h"
 #include "pr/path.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -61,7 +61,7 @@ void prPathDataMakeAbsolute(PrPathDataCommand* PR_NULLABLE commands, uint32_t co
 // Appends `commands` to `out` as path data: each letter followed by its arguments, separated by spaces. A closepath is
 // written as Z. Each number is written with the fewest digits that parse back to it, and an arc's flag is written as 1
 // if it is above zero.
-void prPathDataWrite(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, PrString* out);
+void prPathDataWrite(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, PrRawString* out);
 
 #if defined(__cplusplus)
 }

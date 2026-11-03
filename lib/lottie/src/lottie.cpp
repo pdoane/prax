@@ -5,8 +5,8 @@
 #include "pr/lottie.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
+#include "pr/raw_array.h"
 
 #include "lottie/src/lottie_eval.h"
 #include "lottie/src/lottie_model.h"

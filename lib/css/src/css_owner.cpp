@@ -28,7 +28,7 @@ CssRoot* scopeOf(PrDomElement* element) {
 // Inserts the element's new sheet into the list of its tree, in tree order of the owner nodes.
 void insertStyleSheet(PrDomElement* element, PrCssStyleSheet* sheet) {
     CssRoot* scope = scopeOf(element);
-    Array<PrCssStyleSheet* PR_NONNULL>& sheets = scope->sheets.sheets;
+    RawArray<PrCssStyleSheet* PR_NONNULL>& sheets = scope->sheets.sheets;
     uint32_t index = sheets.count;
     // Parsed sheets usually append, so earlier owners are compared only when needed.
     while (index != 0 && domNodePrecedes(sheet->ownerNode, sheets.data[index - 1]->ownerNode))
@@ -46,7 +46,7 @@ void removeStyleSheet(PrDomElement* element) {
     if (style == nullptr || style->sheet == nullptr)
         return;
     PrCssStyleSheet* sheet = style->sheet;
-    Array<PrCssStyleSheet* PR_NONNULL>& sheets = style->scope->sheets.sheets;
+    RawArray<PrCssStyleSheet* PR_NONNULL>& sheets = style->scope->sheets.sheets;
     for (uint32_t i = 0; i < sheets.count; ++i) {
         if (sheets.data[i] == sheet) {
             sheets.erase(i);
@@ -64,10 +64,10 @@ void removeStyleSheet(PrDomElement* element) {
 void takeOwnerAttributes(PrCssStyleSheet* sheet, PrDomElement* element) {
     sheet->ownerNode = element;
     const PrDomAttr* title = domAttribute(element, PrDomNamespace_None, "title");
-    sheet->title = title != nullptr ? prStringClone(&title->value) : prStringEmpty();
+    sheet->title = title != nullptr ? prRawStringClone(&title->value) : prRawStringEmpty();
     const PrDomAttr* media = domAttribute(element, PrDomNamespace_None, "media");
     if (media != nullptr)
-        cssMediaListParse(&sheet->media, prStringView(&media->value));
+        cssMediaListParse(&sheet->media, prRawStringView(&media->value));
 }
 
 // Fires load or error at a style element for one update of its block. Releases the element that the task held.
@@ -98,7 +98,7 @@ void setBlocking(PrDomElement* element, bool blocking) {
     style->blocking = blocking;
     PrDomDocument* document = element->document;
     style->blocksRendering = blocking && document->kind == DomDocumentKind_Html && domDocumentBody(document) == nullptr;
-    Array<PrDomElement* PR_NONNULL>& set = cssDocumentRoot(document)->blocking;
+    RawArray<PrDomElement* PR_NONNULL>& set = cssDocumentRoot(document)->blocking;
     if (blocking)
         set.push(element);
     else
@@ -113,8 +113,8 @@ struct SheetFetch {
     PrDomElement* element;
     uint32_t generation;
     CssRuleData* PR_NULLABLE rule;   // import rule, which the fetch holds, or null for the owner's own sheet
-    PrString href;                   // URL fetched, which the sheet's imports resolve against
-    Array<PrString> importing;       // URLs of the sheets that import this one, outermost first
+    PrRawString href;                // URL fetched, which the sheet's imports resolve against
+    RawArray<PrRawString> importing; // URLs of the sheets that import this one, outermost first
     PrCharset environment;           // the charset that the sheet decodes in unless its bytes or response name another
     bool alternate;                  // the owner's own sheet is an alternate one (cssom-1/#css-style-sheet-set)
 };
@@ -122,9 +122,9 @@ struct SheetFetch {
 void freeSheetFetch(SheetFetch* fetch) {
     domNodeUnhold(fetch->element);
     cssRuleDataRelease(fetch->rule);
-    prStringReset(&fetch->href);
+    prRawStringReset(&fetch->href);
     for (uint32_t i = 0; i < fetch->importing.count; ++i)
-        prStringReset(&fetch->importing.data[i]);
+        prRawStringReset(&fetch->importing.data[i]);
     fetch->importing.reset();
     prMemoryFree(fetch);
 }
@@ -162,7 +162,7 @@ void fetchDone(PrDomElement* element, bool loaded) {
 // sheet, resolving against `base`. A rule holds no sheet if its URL does not parse, or if it would import a sheet into
 // itself or into a sheet that imports it. `importing` holds the URLs of those importing sheets. A URL that does not
 // parse or load makes the element's event an error.
-void fetchImports(PrDomElement* element, CssSheetData* sheet, const PrUrl* base, const Array<PrString>& importing,
+void fetchImports(PrDomElement* element, CssSheetData* sheet, const PrUrl* base, const RawArray<PrRawString>& importing,
         PrCharset environment) {
     const DomDocumentHost* host = element->document->host;
     CssElementStyle* style = cssElementStyle(element);
@@ -183,12 +183,12 @@ void fetchImports(PrDomElement* element, CssSheetData* sheet, const PrUrl* base,
             style->importFailed = true;
             continue;
         }
-        PrString href = prUrlSerialize(url, PrUrlSerialization_Whole);
+        PrRawString href = prUrlSerialize(url, PrUrlSerialization_Whole);
         bool cycle = false;
         for (uint32_t k = 0; k < importing.count && !cycle; ++k)
-            cycle = prStringView(&importing.data[k]) == prStringView(&href);
+            cycle = prRawStringView(&importing.data[k]) == prRawStringView(&href);
         if (cycle) {
-            prStringReset(&href);
+            prRawStringReset(&href);
             prUrlDestroy(url);
             continue;
         }
@@ -200,16 +200,16 @@ void fetchImports(PrDomElement* element, CssSheetData* sheet, const PrUrl* base,
         fetch->rule = rule;
         fetch->href = href;
         for (uint32_t k = 0; k < importing.count; ++k)
-            fetch->importing.push(prStringClone(&importing.data[k]));
+            fetch->importing.push(prRawStringClone(&importing.data[k]));
         fetch->environment = environment;
-        PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+        PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
         prUrlDestroy(url);
         ++style->fetching;
         DomFetchRequest asked{
-            prStringView(&request), DomFetchDestination_Style, DomCorsSettings_NoCors, DomFetchInitiator_Css,
+            prRawStringView(&request), DomFetchDestination_Style, DomCorsSettings_NoCors, DomFetchInitiator_Css,
         };
         host->fetch(host->context, &asked, sheetFetched, fetch, dropSheetFetch);
-        prStringReset(&request);
+        prRawStringReset(&request);
     }
     fetchDone(element, true);
 }
@@ -225,7 +225,7 @@ void sheetFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     // The sheet decodes in its fetch's charset unless its bytes or response name another
     // (css-syntax-3/#determine-the-fallback-encoding). An imported sheet decodes in that charset too, in place of its
     // parent sheet's.
-    PrString decoded = {};
+    PrRawString decoded = {};
     PrStringView text;
     if (loaded)
         text = cssDecodeBytes(result->body, prCharsetFromMimeType(result->contentType), fetch->environment, &decoded);
@@ -234,27 +234,27 @@ void sheetFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     CssSheetData* sheet = nullptr;
     if (loaded && fetch->rule != nullptr && fetch->rule->imported == nullptr) {
         sheet = cssSheetDataCreate();
-        sheet->href = prStringClone(&fetch->href);
+        sheet->href = prRawStringClone(&fetch->href);
         cssSheetDataParse(sheet, text, nullptr, CssOrigin_Author);
         fetch->rule->imported = sheet;
         cssDocumentStyleChanged(element->document);
     } else if (loaded && fetch->rule == nullptr && current) {
         // The owner's own sheet. An alternate sheet with a title starts disabled (cssom-1/#css-style-sheet-set).
         PrCssStyleSheet* own = cssStyleSheetCreate(cssSheetDataCreate());
-        own->href = prStringClone(&fetch->href);
-        own->data->href = prStringClone(&fetch->href);
+        own->href = prRawStringClone(&fetch->href);
+        own->data->href = prRawStringClone(&fetch->href);
         takeOwnerAttributes(own, element);
-        own->disabled = fetch->alternate && !prStringIsEmpty(&own->title);
+        own->disabled = fetch->alternate && !prRawStringIsEmpty(&own->title);
         cssStyleSheetReplace(own, text);
         insertStyleSheet(element, own);
         sheet = own->data;
     }
-    prStringReset(&decoded);
+    prRawStringReset(&decoded);
     if (current) {
         if (sheet != nullptr) {
             PrUrl* base = nullptr;
-            fetch->importing.push(prStringClone(&fetch->href));
-            if (prUrlCreate(prStringView(&fetch->href), nullptr, PrCharset_Utf8, &base) == PrStatus_Ok)
+            fetch->importing.push(prRawStringClone(&fetch->href));
+            if (prUrlCreate(prRawStringView(&fetch->href), nullptr, PrCharset_Utf8, &base) == PrStatus_Ok)
                 fetchImports(element, sheet, base, fetch->importing, fetch->environment);
             prUrlDestroy(base);
         } else if (!loaded && fetch->rule != nullptr) {
@@ -268,17 +268,17 @@ void sheetFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
 // A fetch for the sheet of an xml-stylesheet processing instruction. It holds a reference to the instruction.
 struct InstructionFetch {
     PrDomNode* instruction;
-    PrString href;                  // the URL fetched
-    PrString title;                 // the title pseudo-attribute, or the null string
-    PrString media;                 // the media pseudo-attribute, or the null string
+    PrRawString href;                  // the URL fetched
+    PrRawString title;                 // the title pseudo-attribute, or the null string
+    PrRawString media;                 // the media pseudo-attribute, or the null string
 };
 
 void dropInstructionFetch(void* PR_NULLABLE data) {
     InstructionFetch* fetch = static_cast<InstructionFetch*>(data);
     domNodeRelease(fetch->instruction);
-    prStringReset(&fetch->href);
-    prStringReset(&fetch->title);
-    prStringReset(&fetch->media);
+    prRawStringReset(&fetch->href);
+    prRawStringReset(&fetch->title);
+    prRawStringReset(&fetch->media);
     prMemoryFree(fetch);
 }
 
@@ -290,19 +290,19 @@ void instructionSheetFetched(void* PR_NULLABLE data, const DomFetchResult* resul
     PrDomDocument* document = instruction->document;
     if (result->status != PrStatus_Ok || instruction->parent == nullptr)
         return;
-    PrString decoded = {};
+    PrRawString decoded = {};
     PrStringView text = cssDecodeBytes(result->body, prCharsetFromMimeType(result->contentType), document->charset, &decoded);
     PrCssStyleSheet* sheet = cssStyleSheetCreate(cssSheetDataCreate());
-    sheet->href = prStringClone(&fetch->href);
-    sheet->data->href = prStringClone(&fetch->href);
+    sheet->href = prRawStringClone(&fetch->href);
+    sheet->data->href = prRawStringClone(&fetch->href);
     sheet->ownerNode = instruction;
-    sheet->title = prStringIsNull(&fetch->title) ? prStringEmpty() : prStringClone(&fetch->title);
-    if (!prStringIsNull(&fetch->media))
-        cssMediaListParse(&sheet->media, prStringView(&fetch->media));
+    sheet->title = prRawStringIsNull(&fetch->title) ? prRawStringEmpty() : prRawStringClone(&fetch->title);
+    if (!prRawStringIsNull(&fetch->media))
+        cssMediaListParse(&sheet->media, prRawStringView(&fetch->media));
     cssStyleSheetReplace(sheet, text);
-    prStringReset(&decoded);
+    prRawStringReset(&decoded);
     CssRoot* scope = cssDocumentRoot(document);
-    Array<PrCssStyleSheet* PR_NONNULL>& sheets = scope->sheets.sheets;
+    RawArray<PrCssStyleSheet* PR_NONNULL>& sheets = scope->sheets.sheets;
     uint32_t index = sheets.count;
     while (index != 0 && domNodePrecedes(instruction, sheets.data[index - 1]->ownerNode))
         --index;
@@ -360,10 +360,10 @@ constexpr uint64_t kSheetCacheSeed = 0x243f6a8885a308d3ull;
 // Returns the data shared by style elements of the document with `text`, with a reference that the caller holds.
 // Returns null if the document keeps no such data. The entry found becomes the most recently used.
 CssSheetData* PR_NULLABLE cachedSheet(CssRoot* style, PrStringView text, uint64_t hash) {
-    Array<CssSheetCacheEntry>& cache = style->cache;
+    RawArray<CssSheetCacheEntry>& cache = style->cache;
     for (uint32_t i = cache.count; i-- != 0;) {
         CssSheetCacheEntry entry = cache.data[i];
-        if (entry.hash != hash || prStringView(&entry.text) != text)
+        if (entry.hash != hash || prRawStringView(&entry.text) != text)
             continue;
         cache.erase(i);
         cache.push(entry);
@@ -376,14 +376,14 @@ CssSheetData* PR_NULLABLE cachedSheet(CssRoot* style, PrStringView text, uint64_
 // Keeps `data` for another style element of the document with `text`. Evicts the least recently used entry if the cache
 // is full.
 void cacheSheet(CssRoot* style, PrStringView text, uint64_t hash, CssSheetData* data) {
-    Array<CssSheetCacheEntry>& cache = style->cache;
+    RawArray<CssSheetCacheEntry>& cache = style->cache;
     if (cache.count == kCssSheetCacheSize) {
-        prStringReset(&cache.data[0].text);
+        prRawStringReset(&cache.data[0].text);
         cssSheetDataRelease(cache.data[0].data);
         cache.erase(0);
     }
     cssSheetDataRetain(data);
-    cache.push(CssSheetCacheEntry{hash, prStringCopy(text), data});
+    cache.push(CssSheetCacheEntry{hash, prRawStringCopy(text), data});
 }
 
 } // namespace
@@ -409,8 +409,8 @@ void cssStyleBlockUpdate(PrDomElement* element, DomInsertedBy by) {
 
     // A sheet with the same text as another style element of the document shares its data.
     CssRoot* cache = cssDocumentRoot(document);
-    PrString text = domChildTextContent(element);
-    PrStringView view = prStringView(&text);
+    PrRawString text = domChildTextContent(element);
+    PrStringView view = prRawStringView(&text);
     uint64_t hash = nameHash(view.data, view.size, kSheetCacheSeed);
     CssSheetData* data = cachedSheet(cache, view, hash);
     PrCssStyleSheet* sheet = cssStyleSheetCreate(data != nullptr ? data : cssSheetDataCreate());
@@ -419,7 +419,7 @@ void cssStyleBlockUpdate(PrDomElement* element, DomInsertedBy by) {
         if (!cssSheetDataImports(sheet->data))
             cacheSheet(cache, view, hash, sheet->data);
     }
-    prStringReset(&text);
+    prRawStringReset(&text);
     takeOwnerAttributes(sheet, element);
     insertStyleSheet(element, sheet);
     // Once the imports are obtained, the element fires load (html/#update-a-style-block). A sheet that the parser
@@ -430,7 +430,7 @@ void cssStyleBlockUpdate(PrDomElement* element, DomInsertedBy by) {
         setBlocking(element, true);
     cssElementStyle(element)->settled = styleSettled;
     PrUrl* base = domDocumentBaseUrl(document);
-    Array<PrString> importing;
+    RawArray<PrRawString> importing;
     fetchImports(element, sheet->data, base, importing, document->charset);
     importing.reset();
     prUrlDestroy(base);
@@ -464,19 +464,19 @@ void cssOwnerFetch(PrDomElement* element, const PrUrl* url, DomCorsSettings cors
     fetch->href = prUrlSerialize(url, PrUrlSerialization_Whole);
     fetch->environment = environment;
     fetch->alternate = alternate;
-    PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     style->fetching = 1;
     DomFetchRequest asked{
-        prStringView(&request), DomFetchDestination_Style, cors, DomFetchInitiator_Link,
+        prRawStringView(&request), DomFetchDestination_Style, cors, DomFetchInitiator_Link,
         domAttributeValue(element, "referrerpolicy"),
     };
     host->fetch(host->context, &asked, sheetFetched, fetch, dropSheetFetch);
-    prStringReset(&request);
+    prRawStringReset(&request);
 }
 
 bool cssOwnerTypeIsCss(const PrDomElement* element) {
     const PrDomAttr* type = domAttribute(element, PrDomNamespace_None, "type");
-    return type == nullptr || prStringIsEmpty(&type->value) || prAsciiEqualsFold(prStringView(&type->value), "text/css");
+    return type == nullptr || prRawStringIsEmpty(&type->value) || prAsciiEqualsFold(prRawStringView(&type->value), "text/css");
 }
 
 void cssOwnerMediaChanged(PrDomElement* element, PrStringView value) {
@@ -495,14 +495,14 @@ void cssXmlStylesheetInserted(PrDomNode* node) {
     const DomProcessingInstruction* instruction = static_cast<const DomProcessingInstruction*>(node);
     PrDomDocument* document = node->document;
     const DomDocumentHost* host = document->host;
-    if (host == nullptr || prStringView(&instruction->target) != "xml-stylesheet")
+    if (host == nullptr || prRawStringView(&instruction->target) != "xml-stylesheet")
         return;
     // Only an instruction in the prolog, before the document element, gives a sheet.
     for (const PrDomNode* at = document->first; at != node; at = at->next) {
         if (at->type == PrDomNodeType_Element)
             return;
     }
-    PrStringView data = prStringView(&instruction->data);
+    PrStringView data = prRawStringView(&instruction->data);
     PrStringView href{};
     PrStringView type{};
     PrStringView alternate{};
@@ -524,16 +524,16 @@ void cssXmlStylesheetInserted(PrDomNode* node) {
     PrStringView title{};
     PrStringView media{};
     if (pseudoAttribute(data, "title", &title))
-        fetch->title = prStringCopy(title);
+        fetch->title = prRawStringCopy(title);
     if (pseudoAttribute(data, "media", &media))
-        fetch->media = prStringCopy(media);
-    PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+        fetch->media = prRawStringCopy(media);
+    PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(url);
     DomFetchRequest asked{
-        prStringView(&request), DomFetchDestination_Style, DomCorsSettings_NoCors, DomFetchInitiator_Other,
+        prRawStringView(&request), DomFetchDestination_Style, DomCorsSettings_NoCors, DomFetchInitiator_Other,
     };
     host->fetch(host->context, &asked, instructionSheetFetchedAndDropped, fetch, dropInstructionFetch);
-    prStringReset(&request);
+    prRawStringReset(&request);
 }
 
 bool cssDocumentHasBlockingSheet(const PrDomDocument* document) {

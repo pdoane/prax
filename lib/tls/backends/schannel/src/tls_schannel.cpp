@@ -3,10 +3,10 @@
 #include "pr/tls_schannel.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 
 #include "tls/backends/shared/src/tls_shared.h"
@@ -59,7 +59,7 @@ struct SchannelTls : PrTls {
     PrThread verifier;
     PrMutex mutex;
     PrCondition jobsChanged;
-    Array<VerifyJob*> jobs;
+    RawArray<VerifyJob*> jobs;
     bool stopping;
 };
 
@@ -75,9 +75,9 @@ struct Session : TlsSharedSession {
     PCCERT_CONTEXT PR_NULLABLE certificate; // the certificate that the server presented, once it is verified
     VerifyJob* PR_NULLABLE job;
     SecPkgContext_StreamSizes sizes;
-    Array<uint8_t> incoming;
+    RawArray<uint8_t> incoming;
     uint32_t incomingStart;
-    Array<uint8_t> sealed;          // the records of one write, as EncryptMessage seals them
+    RawArray<uint8_t> sealed;       // the records of one write, as EncryptMessage seals them
     bool negotiating;               // true while an open session hands a message after the handshake to SChannel
 };
 
@@ -565,8 +565,8 @@ PrStatus openAnchors(const PrTlsSessionDesc* desc, HCERTSTORE PR_NULLABLE* PR_NO
 }
 
 // Writes the session's protocols to `out` as the SEC_APPLICATION_PROTOCOLS that SChannel reads, offered with ALPN.
-void protocolsOf(const PrTlsSessionDesc* desc, Array<uint8_t>* out) {
-    Array<uint8_t> wire{};
+void protocolsOf(const PrTlsSessionDesc* desc, RawArray<uint8_t>* out) {
+    RawArray<uint8_t> wire{};
     for (uint32_t i = 0; i < desc->protocolCount; ++i) {
         PrStringView protocol = desc->protocols[i];
         PR_ASSERT(protocol.size != 0 && protocol.size <= kProtocolMaxBytes);
@@ -589,7 +589,7 @@ void protocolsOf(const PrTlsSessionDesc* desc, Array<uint8_t>* out) {
 
 // Starts the handshake: makes the context, with the client's first flight, which the transport queues until it opens.
 void startHandshake(Session* session, const PrTlsSessionDesc* desc) {
-    Array<uint8_t> protocols{};
+    RawArray<uint8_t> protocols{};
     SecBuffer input{0, SECBUFFER_APPLICATION_PROTOCOLS, nullptr};
     SecBufferDesc inputDesc{SECBUFFER_VERSION, 1, &input};
     if (desc->protocolCount != 0) {

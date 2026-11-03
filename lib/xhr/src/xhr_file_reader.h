@@ -18,8 +18,8 @@ struct XhrFileReader : DomCountedTarget {
     void* PR_NULLABLE context;
     const PrFetchBlob* PR_NULLABLE blob;    // the blob of the read under way
     const PrFetchBlob* PR_NULLABLE result;  // the blob of an ArrayBuffer result
-    PrString encoding;
-    PrString text;
+    PrRawString encoding;
+    PrRawString text;
     uint32_t resultVersion;
     uint32_t generation;                    // changes when a read ends, which its waiting tasks then see
     uint32_t tasks;                         // the tasks that are queued

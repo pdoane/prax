@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/dom.h"
 #include "pr/layout_worker.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -43,17 +43,17 @@ struct DomAgentTask {
 // (html/#custom-element-reactions-stack), or on its backup element queue, is held (domNodeHold) until its reactions
 // have run.
 struct DomAgent {
-    Array<Array<PrDomElement* PR_NONNULL>> queues;
-    Array<PrDomElement* PR_NONNULL> backup;
+    RawArray<RawArray<PrDomElement* PR_NONNULL>> queues;
+    RawArray<PrDomElement* PR_NONNULL> backup;
 
     // The elements that HTML element constructors created during a synchronous construction. Each is held until the
     // construction is done.
-    Array<PrDomElement* PR_NONNULL> constructed;
+    RawArray<PrDomElement* PR_NONNULL> constructed;
 
     uint32_t constructing;   // number of synchronous constructions running
     bool processingBackup;   // html/#processing-the-backup-element-queue
 
-    Array<DomAgentGlobal> globals;          // globals on the event loop, in the order they were added
+    RawArray<DomAgentGlobal> globals;       // globals on the event loop, in the order they were added
     uint32_t nextGlobal;                    // global to look for a task in first next time, so that each takes its turn
     bool runningTask;
 
@@ -66,10 +66,10 @@ struct DomAgent {
     // agent's thread takes the posted tasks into `taken` and runs them from `takenAt`. `postedCount` counts the tasks
     // posted that have not run.
     PrMutex postMutex;
-    Array<DomAgentTask> posted;
+    RawArray<DomAgentTask> posted;
     PrDomAgentWakeFn PR_NULLABLE wake;
     void* PR_NULLABLE wakeContext;
-    Array<DomAgentTask> taken;
+    RawArray<DomAgentTask> taken;
     uint32_t takenAt;
     Atomic<uint32_t> postedCount;
 
@@ -80,8 +80,8 @@ struct DomAgent {
     bool stopped;
 
     // The hooks of prDomAgentRun, in the order they were added. Only the agent's thread reaches them.
-    Array<DomAgentTask> checkpoints;
-    Array<DomAgentTask> updates;
+    RawArray<DomAgentTask> checkpoints;
+    RawArray<DomAgentTask> updates;
 };
 
 // Initializes an agent whose storage is zeroed, with `options`.
@@ -104,8 +104,8 @@ void domAgentPost(PrDomAgent* agent, PrDomAgentTaskFn fn, void* PR_NULLABLE cont
 void domAgentSetWake(PrDomAgent* agent, PrDomAgentWakeFn PR_NULLABLE wake, void* PR_NULLABLE context);
 
 // Adds a hook to `hooks`, or removes the hook with `fn` and `context`.
-void domAgentAddHook(Array<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context);
-void domAgentRemoveHook(Array<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void domAgentAddHook(RawArray<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void domAgentRemoveHook(RawArray<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context);
 
 // Run, wait for, wake and stop the agent's event loop. prDomAgentRun, prDomAgentWait, prDomAgentWake and prDomAgentStop
 // describe their contracts.

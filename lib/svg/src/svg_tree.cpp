@@ -126,7 +126,7 @@ bool laysOutText(PrStringView name) {
 
 // Adds `item` to `items` in a free slot if there is one, and returns its index.
 template <typename T>
-uint32_t take(Array<T>& items, Array<uint32_t>& free, const T& item) {
+uint32_t take(RawArray<T>& items, RawArray<uint32_t>& free, const T& item) {
     if (free.count == 0) {
         items.push(item);
         return items.count - 1;
@@ -155,8 +155,8 @@ void freeReferences(SvgTree* tree, uint32_t first) {
     for (uint32_t at = first; at != kArrayMissing;) {
         SvgReference& reference = tree->references.data[at];
         uint32_t next = reference.next;
-        prStringReset(&reference.id);
-        prStringReset(&reference.document);
+        prRawStringReset(&reference.id);
+        prRawStringReset(&reference.document);
         domNodeRelease(const_cast<PrDomElement*>(reference.target));
         domNodeRelease(const_cast<PrDomNode*>(reference.scope));
         reference = SvgReference{.node = kSvgNodeNone, .resource = kSvgResourceNone, .next = kArrayMissing};
@@ -174,8 +174,8 @@ void record(SvgBuilder& b, PrStringView id, const PrDomElement* PR_NULLABLE targ
     if (b.ownerResource == kSvgResourceNone && b.owner == kSvgNodeNone)
         return;
     SvgReference reference{
-        .id = id.data != nullptr ? prStringCopy(id) : PrString{},
-        .document = document.data != nullptr ? prStringCopy(document) : PrString{},
+        .id = id.data != nullptr ? prRawStringCopy(id) : PrRawString{},
+        .document = document.data != nullptr ? prRawStringCopy(document) : PrRawString{},
         .target = target,
         .scope = scope,
         .node = b.ownerResource == kSvgResourceNone ? b.owner : kSvgNodeNone,
@@ -210,13 +210,13 @@ const PrDomElement* PR_NULLABLE findInScope(const PrDomNode* PR_NULLABLE scope, 
 // Returns true if a reference names another element than the one that it named when it was recorded, in `document`, the
 // tree's own document. A reference without an ID or a document names no element by them.
 bool retargeted(const SvgReference& reference, const PrDomNode* document) {
-    if (!prStringIsNull(&reference.document)) {
-        DomReference other{.external = true, .url = reference.document, .fragment = prStringView(&reference.id)};
+    if (!prRawStringIsNull(&reference.document)) {
+        DomReference other{.external = true, .url = reference.document, .fragment = prRawStringView(&reference.id)};
         return domReferenceTarget(const_cast<PrDomDocument*>(document->document), other) != reference.target;
     }
-    if (prStringView(&reference.id).size == 0)
+    if (prRawStringView(&reference.id).size == 0)
         return false;
-    return findInScope(reference.scope, document, prStringView(&reference.id)) != reference.target;
+    return findInScope(reference.scope, document, prRawStringView(&reference.id)) != reference.target;
 }
 
 // Returns the cascade that styles the elements of `document`, another document than the build's, made the first time
@@ -330,7 +330,7 @@ void freeNode(SvgTree* tree, SvgNodeIndex index) {
 // Unlinks a node from its parent and frees it and its descendants.
 void freeSubtree(SvgTree* tree, SvgNodeIndex index) {
     unlink(tree, index);
-    Array<SvgNodeIndex> stack;
+    RawArray<SvgNodeIndex> stack;
     stack.push(index);
     while (stack.count != 0) {
         SvgNodeIndex at = stack.last();
@@ -409,10 +409,10 @@ void sweepResources(SvgTree* tree) {
     uint32_t live = tree->resources.count - tree->freeResources.count;
     if (live <= 2 * tree->sweptResources + 8)
         return;
-    Array<bool> used;
+    RawArray<bool> used;
     used.resize(tree->resources.count);
     prMemZero(used.data, used.count * sizeof(bool));
-    Array<SvgResourceIndex> holders;    // the resources found used, whose content is yet to be marked
+    RawArray<SvgResourceIndex> holders;    // the resources found used, whose content is yet to be marked
     auto use = [&](SvgResourceIndex index) {
         if (index == kSvgResourceNone || used.data[index])
             return;
@@ -448,7 +448,7 @@ void sweepResources(SvgTree* tree) {
             }
         }
     };
-    Array<SvgNodeIndex> stack;
+    RawArray<SvgNodeIndex> stack;
     auto markSubtree = [&](SvgNodeIndex root) {
         stack.push(root);
         while (stack.count != 0) {
@@ -539,7 +539,7 @@ PrLayoutLength treelessPosition(void* PR_NULLABLE, CssValueRun run, uint32_t ind
 
 // Writes the gradient of a computed mask-image item to `layer`, with its colors resolved for `style`.
 void readGradient(SvgBuilder& b, const CssComputedStyle* style, CssValueRun image, SvgMaskLayer* layer) {
-    Array<PrLayoutColorStop> stops;
+    RawArray<PrLayoutColorStop> stops;
     CssColorContext colors = cssStyleColorContext(style, b.build->environment);
     cssGradientFromValue(image, 0, colors, 0, CssLayoutLengths{treelessLength, treelessPosition, nullptr}, stops,
         &layer->gradient);
@@ -556,8 +556,8 @@ void readGradient(SvgBuilder& b, const CssComputedStyle* style, CssValueRun imag
 // resolved. A URL that names no filter element ignores the whole list (filter-effects-1/#FilterProperty), which leaves
 // `out` empty.
 void readFilters(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style, CssValueRun filter,
-        Array<SvgFilterItem>* out) {
-    Array<CssFilterFunction> functions;
+        RawArray<SvgFilterItem>* out) {
+    RawArray<CssFilterFunction> functions;
     cssFilterFunctions(filter, cssStyleColorContext(style, b.build->environment), &functions);
     for (uint32_t i = 0; i < functions.count; ++i) {
         SvgFilterItem item{.function = functions.data[i], .filter = kSvgResourceNone};
@@ -799,7 +799,7 @@ PrAffine2 chainTransform(SvgBuilder& b, const PrDomElement* const* chain, uint32
 // nondecreasing, and colors are multiplied by their stop-opacity (SVG2/pservers.html#StopElement). The stops of a
 // template are the gradient's shadow tree, whose clones inherit from the gradient, not from the template.
 void addStops(SvgBuilder& b, const PrDomElement* const* chain, uint32_t count, const CssComputedStyle* host,
-        Array<PrDrawColorStop>* stops) {
+        RawArray<PrDrawColorStop>* stops) {
     for (uint32_t i = 0; i < count && stops->count == 0; ++i) {
         float last = 0;
         for (const PrDomNode* child = chain[i]->first; child != nullptr; child = child->next) {
@@ -858,7 +858,7 @@ void buildGradient(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* el
         g.x2 = coordinate("x2", SvgLengthPercentage{0, 100});
         g.y2 = coordinate("y2", SvgLengthPercentage{});
     }
-    Array<PrDrawColorStop> stops;
+    RawArray<PrDrawColorStop> stops;
     addStops(b, chain, count, own, &stops);
     if (stops.count != 0) {
         g.stops = static_cast<PrDrawColorStop*>(prMemoryAlloc(stops.count * sizeof(PrDrawColorStop)));
@@ -1401,7 +1401,7 @@ SvgNodeIndex buildElement(SvgBuilder& b, const PrDomElement* e, const CssCompute
             case PrDomTag_Polygon:
             case PrDomTag_Path: {
                 SvgNode shape{};
-                Array<PrPathDataCommand> commands;
+                RawArray<PrPathDataCommand> commands;
                 if (!svgReadShape(e, style, &shape, &commands)) {
                     commands.reset();
                     break;
@@ -2059,7 +2059,7 @@ bool readsBackdrop(const SvgTree* tree) {
 // descendants do. Otherwise writes the first difference to `difference`.
 bool sameSubtree(const SvgTree* tree, SvgNodeIndex root, const SvgTree* expected, SvgNodeIndex expectedRoot,
         PrTextBuffer* difference) {
-    Array<SvgNodeIndex> stack;
+    RawArray<SvgNodeIndex> stack;
     stack.push(root);
     stack.push(expectedRoot);
     bool same = true;
@@ -2165,8 +2165,8 @@ void svgTreeReset(SvgTree* tree) {
     tree->freeResources.reset();
     for (uint32_t i = 0; i < tree->references.count; ++i) {
         SvgReference& reference = tree->references.data[i];
-        prStringReset(&reference.id);
-        prStringReset(&reference.document);
+        prRawStringReset(&reference.id);
+        prRawStringReset(&reference.document);
         domNodeRelease(const_cast<PrDomElement*>(reference.target));
         domNodeRelease(const_cast<PrDomNode*>(reference.scope));
     }
@@ -2196,8 +2196,8 @@ void svgTreeDetach(SvgTree* tree) {
     }
     for (uint32_t i = 0; i < tree->references.count; ++i) {
         SvgReference& reference = tree->references.data[i];
-        prStringReset(&reference.id);
-        prStringReset(&reference.document);
+        prRawStringReset(&reference.id);
+        prRawStringReset(&reference.document);
         domNodeRelease(const_cast<PrDomElement*>(reference.target));
         domNodeRelease(const_cast<PrDomNode*>(reference.scope));
     }
@@ -2214,7 +2214,7 @@ SvgNodeIndex svgTreeNodeFromElement(const SvgTree* tree, const PrDomElement* ele
 }
 
 bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, SvgNode* node,
-        Array<PrPathDataCommand>* commands) {
+        RawArray<PrPathDataCommand>* commands) {
     const PrDomElement* e = element;
     switch (e->space == PrDomNamespace_Svg ? e->tag : PrDomTag_Count) {
         case PrDomTag_Rect: {
@@ -2266,7 +2266,7 @@ bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, Sv
             node->kind = SvgNodeKind_Path;
             // The points up to the first number that does not parse, without a lone coordinate at the end
             // (SVG2/shapes.html#PolylineElement).
-            Array<float> numbers;
+            RawArray<float> numbers;
             svgParseNumbers(svgAttribute(e, "points"), &numbers);
             for (uint32_t i = 0; i + 1 < numbers.count; i += 2)
                 commands->push(PrPathDataCommand{
@@ -2336,7 +2336,7 @@ SvgUpdate svgTreeUpdate(SvgTree* tree, const PrDomElement* element, SvgChanges* 
         uint32_t rank;
         SvgDirt dirt;
     };
-    Array<Ordered> order;
+    RawArray<Ordered> order;
     for (uint32_t i = 0; !whole && i < changes->dirt.count; ++i) {
         SvgDirt dirt = changes->dirt.data[i];
         bool node = dirt.work != SvgWork_Resource;
@@ -2587,10 +2587,10 @@ bool svgPathSame(const PrPath* path, const PrPath* expected) {
         prMemEquals(prPathPoints(path), prPathPoints(expected), points * sizeof(PrVec2));
 }
 
-void svgMarkerVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, Array<SvgVertex>* out) {
+void svgMarkerVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, RawArray<SvgVertex>* out) {
     if (count == 0)
         return;
-    Array<PrPathDataVertex> path;
+    RawArray<PrPathDataVertex> path;
     path.resize(count);
     const PrPathDataVertex* vertices = path.data;
     prPathDataVertices(commands, count, path.data);
@@ -2646,8 +2646,8 @@ const PrDomElement* PR_NULLABLE svgBuildReference(SvgBuilder& b, const PrDomElem
             return nullptr;
         }
         const PrDomElement* target = domReferenceTarget(from->document, reference);
-        record(b, reference.fragment, target, nullptr, content, prStringView(&reference.url));
-        prStringReset(&reference.url);
+        record(b, reference.fragment, target, nullptr, content, prRawStringView(&reference.url));
+        prRawStringReset(&reference.url);
         return target;
     }
     if (url.size < 2)
@@ -2764,7 +2764,7 @@ PrStringView svgHref(const PrDomElement* element) {
     if (href.data == nullptr) {
         const PrDomAttr* xlink = domAttribute(element, PrDomNamespace_XLink, "href");
         if (xlink != nullptr)
-            href = prStringView(&xlink->value);
+            href = prRawStringView(&xlink->value);
     }
     return href;
 }

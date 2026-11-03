@@ -32,8 +32,8 @@
 namespace pr_impl {
 namespace {
 
-PrString stringOf(const PrTextBuffer* text) {
-    return prStringCopy(prTextBufferView(text));
+PrRawString stringOf(const PrTextBuffer* text) {
+    return prRawStringCopy(prTextBufferView(text));
 }
 
 // Returns the number that `name` of `element` parses to by the rules for parsing floating-point number values, or
@@ -106,7 +106,7 @@ void appendEntries(DomEntryList* list, PrDomElement* field, const PrDomElement* 
         return;
     PrTextBuffer value = {};
     if (domIsHtml(field, PrDomTag_Select)) {
-        Array<PrDomElement* PR_NONNULL> options;
+        RawArray<PrDomElement* PR_NONNULL> options;
         domSelectOptions(field, &options);
         for (uint32_t i = 0; i < options.count; ++i) {
             if (!domOptionSelected(options.data[i]) || domOptionDisabled(options.data[i]))
@@ -142,7 +142,7 @@ DomEntryList* PR_NULLABLE constructEntryList(PrHtmlFormElement* form, PrHtmlElem
         return nullptr;
     record->constructingEntryList = true;
     // The controls are the form's submittable elements in the form's tree, in tree order.
-    Array<PrDomNode* PR_NONNULL> controls;
+    RawArray<PrDomNode* PR_NONNULL> controls;
     PrDomNode* root = domNodeRoot(form);
     for (PrDomNode* node = domNodeNext(root, root); node != nullptr; node = domNodeNext(root, node)) {
         PrDomElement* element = domElementFromNode(node);
@@ -171,8 +171,8 @@ DomEntryList* PR_NULLABLE constructEntryList(PrHtmlFormElement* form, PrHtmlElem
 
     DomEntryList* clone = domEntryListCreate();
     for (uint32_t i = 0; i < list->entries.count; ++i)
-        domEntryListAppend(clone, prStringView(&list->entries.data[i].name),
-            prStringView(&list->entries.data[i].value));
+        domEntryListAppend(clone, prRawStringView(&list->entries.data[i].name),
+            prRawStringView(&list->entries.data[i].value));
     domEntryListRelease(list);
     return clone;
 }
@@ -292,8 +292,8 @@ bool fireInput(PrDomElement* element, PrStringView type, PrStringView data, PrSt
 bool editControl(PrDomElement* element, uint32_t start, uint32_t end, PrStringView text, PrStringView inputType,
         PrTextEditOrigin origin, PrTextEditMerge merge) {
     bool composing = origin == PrTextEditOrigin_Composition;
-    PrString data = prStringCopy(text);
-    bool proceed = fireInput(element, "beforeinput", prStringView(&data), inputType, composing, !composing);
+    PrRawString data = prRawStringCopy(text);
+    bool proceed = fireInput(element, "beforeinput", prRawStringView(&data), inputType, composing, !composing);
     // A listener may have changed the control or removed it, so the edit reads the state after the event.
     DomControl* control = domTextControlSync(element);
     uint32_t size = uint32_t(domControlText(control).size);
@@ -301,16 +301,16 @@ bool editControl(PrDomElement* element, uint32_t start, uint32_t end, PrStringVi
     if (proceed && start <= size && end <= size) {
         if (control->history == nullptr)
             control->history = prTextEditHistoryCreate(control->text);
-        PrTextEditChange change{.start = start, .end = end, .text = prStringView(&data)};
+        PrTextEditChange change{.start = start, .end = end, .text = prRawStringView(&data)};
         applied = prTextEditViewApply(control->view, &change, 1, origin, merge);
         control->dirtyValue = true;
         control->selectionDirection = PrDomSelectionDirection_None;
     }
     if (applied) {
         domNotifyStatesChanged(element);
-        fireInput(element, "input", prStringView(&data), inputType, composing, false);
+        fireInput(element, "input", prRawStringView(&data), inputType, composing, false);
     }
-    prStringReset(&data);
+    prRawStringReset(&data);
     return applied;
 }
 
@@ -346,9 +346,9 @@ void htmlColorWellValue(const PrDomElement* input, PrStringView text, PrTextBuff
             serialization = PrCssColorSerialization_HtmlCompatible;
         }
     }
-    PrString serialized = prCssUsedColorSerialize(&result, serialization);
-    prTextBufferAppend(out, prStringView(&serialized));
-    prStringReset(&serialized);
+    PrRawString serialized = prCssUsedColorSerialize(&result, serialization);
+    prTextBufferAppend(out, prRawStringView(&serialized));
+    prRawStringReset(&serialized);
 }
 
 bool htmlTextControlIsEditable(const PrDomElement* element) {
@@ -445,16 +445,16 @@ PrDomNodeList* PR_NULLABLE prHtmlElementLabels(PrHtmlElement* element) {
     return domNodeListCreateFiltered(element, DomNodeListFilter_Labels, PrStringView{});
 }
 
-PrString prHtmlElementFormActionUrl(const PrHtmlElement* element, PrStringView name) {
+PrRawString prHtmlElementFormActionUrl(const PrHtmlElement* element, PrStringView name) {
     PrStringView action = domAttributeValue(element, name);
     if (action.size == 0)
         return prUrlSerialize(element->document->url, PrUrlSerialization_Whole);
     PrUrl* url = nullptr;
-    PrString out;
+    PrRawString out;
     if (domDocumentParseUrl(element->document, action, &url) == PrStatus_Ok)
         out = prUrlSerialize(url, PrUrlSerialization_Whole);
     else
-        out = prStringCopy(action);
+        out = prRawStringCopy(action);
     prUrlDestroy(url);
     return out;
 }
@@ -497,7 +497,7 @@ uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* element, PrStringView nam
     return count;
 }
 
-uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrString* PR_NULLABLE items, uint32_t capacity) {
+uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrRawString* PR_NULLABLE items, uint32_t capacity) {
     // html/#the-form-element:supported-property-names: the names of the form's controls, then of its img elements, then
     // of its past names map, each element's ID before its name, in the tree order of their elements.
     struct Source {
@@ -506,7 +506,7 @@ uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrString* PR_NUL
         uint32_t rank;              // 0 for an ID, 1 for a name, 2 for a past name
         uint32_t order;             // the place of the source in the list, among those of one element and rank
     };
-    Array<Source> sources;
+    RawArray<Source> sources;
     PrDomNode* root = domNodeRoot(formElement);
     for (PrDomNode* node = domNodeNext(root, root); node != nullptr; node = domNodeNext(root, node)) {
         PrDomElement* element = domElementFromNode(node);
@@ -522,7 +522,7 @@ uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrString* PR_NUL
     if (const DomForm* record = formElement->state != nullptr ? formElement->state->form : nullptr) {
         for (uint32_t i = 0; i < record->pastNames.count; ++i)
             sources.push(Source{
-                prStringView(&record->pastNames.data[i].name), record->pastNames.data[i].element, 2,
+                prRawStringView(&record->pastNames.data[i].name), record->pastNames.data[i].element, 2,
                 sources.count,
             });
     }
@@ -540,7 +540,7 @@ uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrString* PR_NUL
         if (seen)
             continue;
         if (items != nullptr && count < capacity)
-            items[count] = prStringCopy(name);
+            items[count] = prRawStringCopy(name);
         ++count;
     }
     sources.reset();
@@ -558,10 +558,10 @@ PrDomInputType prHtmlInputElementType(const PrHtmlInputElement* element) {
     return domElementInputType(element);
 }
 
-PrString prHtmlInputElementValue(const PrHtmlInputElement* element) {
+PrRawString prHtmlInputElementValue(const PrHtmlInputElement* element) {
     PrTextBuffer value = {};
     domControlValue(element, &value);
-    PrString out = stringOf(&value);
+    PrRawString out = stringOf(&value);
     prTextBufferReset(&value);
     return out;
 }
@@ -702,10 +702,10 @@ PrHtmlTextAreaElement* PR_NULLABLE prHtmlTextAreaElementQuery(PrDomEventTarget* 
     return htmlElementQuery<PrHtmlTextAreaElement>(object, PrDomTag_Textarea);
 }
 
-PrString prHtmlTextAreaElementValue(const PrHtmlTextAreaElement* element) {
+PrRawString prHtmlTextAreaElementValue(const PrHtmlTextAreaElement* element) {
     PrTextBuffer value = {};
     domControlValue(element, &value);
-    PrString out = stringOf(&value);
+    PrRawString out = stringOf(&value);
     prTextBufferReset(&value);
     return out;
 }
@@ -714,10 +714,10 @@ void prHtmlTextAreaElementSetValue(PrHtmlTextAreaElement* element, PrStringView 
     domControlSetValue(element, value);
 }
 
-PrString prHtmlTextAreaElementDefaultValue(const PrHtmlTextAreaElement* element) {
+PrRawString prHtmlTextAreaElementDefaultValue(const PrHtmlTextAreaElement* element) {
     PrTextBuffer value = {};
     domTextareaDefaultValue(element, &value);
-    PrString out = stringOf(&value);
+    PrRawString out = stringOf(&value);
     prTextBufferReset(&value);
     return out;
 }
@@ -866,30 +866,30 @@ PrHtmlOutputElement* PR_NULLABLE prHtmlOutputElementQuery(PrDomEventTarget* PR_N
     return htmlElementQuery<PrHtmlOutputElement>(object, PrDomTag_Output);
 }
 
-PrString prHtmlOutputElementValue(const PrHtmlOutputElement* element) {
+PrRawString prHtmlOutputElementValue(const PrHtmlOutputElement* element) {
     return domNodeTextContent(element);
 }
 
 void prHtmlOutputElementSetValue(PrHtmlOutputElement* element, PrStringView value) {
     DomControl* control = domControlFromElement(element);
-    if (prStringIsNull(&control->defaultOverride))
+    if (prRawStringIsNull(&control->defaultOverride))
         control->defaultOverride = domNodeTextContent(element);
     domStringReplaceAll(element, value);
 }
 
-PrString prHtmlOutputElementDefaultValue(const PrHtmlOutputElement* element) {
+PrRawString prHtmlOutputElementDefaultValue(const PrHtmlOutputElement* element) {
     const DomControl* control = domControl(element);
-    if (control == nullptr || prStringIsNull(&control->defaultOverride))
+    if (control == nullptr || prRawStringIsNull(&control->defaultOverride))
         return domNodeTextContent(element);
-    return prStringClone(&control->defaultOverride);
+    return prRawStringClone(&control->defaultOverride);
 }
 
 void prHtmlOutputElementSetDefaultValue(PrHtmlOutputElement* element, PrStringView value) {
     DomControl* control = domControlFromElement(element);
-    if (prStringIsNull(&control->defaultOverride))
+    if (prRawStringIsNull(&control->defaultOverride))
         domStringReplaceAll(element, value);
     else
-        prStringReplace(&control->defaultOverride, value);
+        prRawStringReplace(&control->defaultOverride, value);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -994,9 +994,9 @@ void prHtmlFormDataAppend(PrHtmlFormData* formData, PrStringView name, PrStringV
 void prHtmlFormDataDelete(PrHtmlFormData* formData, PrStringView name) {
     for (uint32_t i = formData->entries.count; i-- != 0;) {
         DomEntry& entry = formData->entries.data[i];
-        if (prStringView(&entry.name) == name) {
-            prStringReset(&entry.name);
-            prStringReset(&entry.value);
+        if (prRawStringView(&entry.name) == name) {
+            prRawStringReset(&entry.name);
+            prRawStringReset(&entry.value);
             formData->entries.erase(i);
         }
     }
@@ -1004,8 +1004,8 @@ void prHtmlFormDataDelete(PrHtmlFormData* formData, PrStringView name) {
 
 PrStringView prHtmlFormDataGet(const PrHtmlFormData* formData, PrStringView name) {
     for (uint32_t i = 0; i < formData->entries.count; ++i) {
-        if (prStringView(&formData->entries.data[i].name) == name)
-            return prStringView(&formData->entries.data[i].value);
+        if (prRawStringView(&formData->entries.data[i].name) == name)
+            return prRawStringView(&formData->entries.data[i].value);
     }
     return {};
 }
@@ -1014,10 +1014,10 @@ uint32_t prHtmlFormDataGetAll(const PrHtmlFormData* formData, PrStringView name,
         uint32_t capacity) {
     uint32_t count = 0;
     for (uint32_t i = 0; i < formData->entries.count; ++i) {
-        if (prStringView(&formData->entries.data[i].name) != name)
+        if (prRawStringView(&formData->entries.data[i].name) != name)
             continue;
         if (items != nullptr && count < capacity)
-            items[count] = prStringView(&formData->entries.data[i].value);
+            items[count] = prRawStringView(&formData->entries.data[i].value);
         ++count;
     }
     return count;
@@ -1025,7 +1025,7 @@ uint32_t prHtmlFormDataGetAll(const PrHtmlFormData* formData, PrStringView name,
 
 bool prHtmlFormDataHas(const PrHtmlFormData* formData, PrStringView name) {
     for (uint32_t i = 0; i < formData->entries.count; ++i) {
-        if (prStringView(&formData->entries.data[i].name) == name)
+        if (prRawStringView(&formData->entries.data[i].name) == name)
             return true;
     }
     return false;
@@ -1035,11 +1035,11 @@ void prHtmlFormDataSet(PrHtmlFormData* formData, PrStringView name, PrStringView
     uint32_t first = formData->entries.count;
     for (uint32_t i = formData->entries.count; i-- != 0;) {
         DomEntry& entry = formData->entries.data[i];
-        if (prStringView(&entry.name) != name)
+        if (prRawStringView(&entry.name) != name)
             continue;
         if (first != formData->entries.count) {
-            prStringReset(&formData->entries.data[first].name);
-            prStringReset(&formData->entries.data[first].value);
+            prRawStringReset(&formData->entries.data[first].name);
+            prRawStringReset(&formData->entries.data[first].value);
             formData->entries.erase(first);
         }
         first = i;
@@ -1047,7 +1047,7 @@ void prHtmlFormDataSet(PrHtmlFormData* formData, PrStringView name, PrStringView
     if (first == formData->entries.count)
         domEntryListAppend(formData, name, value);
     else
-        prStringReplace(&formData->entries.data[first].value, value);
+        prRawStringReplace(&formData->entries.data[first].value, value);
 }
 
 uint32_t prHtmlFormDataCount(const PrHtmlFormData* formData) {
@@ -1057,8 +1057,8 @@ uint32_t prHtmlFormDataCount(const PrHtmlFormData* formData) {
 bool prHtmlFormDataEntry(const PrHtmlFormData* formData, uint32_t index, PrStringView* name, PrStringView* value) {
     if (index >= formData->entries.count)
         return false;
-    *name = prStringView(&formData->entries.data[index].name);
-    *value = prStringView(&formData->entries.data[index].value);
+    *name = prRawStringView(&formData->entries.data[index].name);
+    *value = prRawStringView(&formData->entries.data[index].value);
     return true;
 }
 
@@ -1104,8 +1104,8 @@ PrHtmlToggleEvent* prHtmlToggleEventCreate(PrStringView type, const PrDomEventIn
     PrHtmlToggleEvent* event = domEventCreate<PrHtmlToggleEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_Toggle);
     DomControlEventData* data = controlDataOf(event);
-    data->oldState = prStringCopy(oldState);
-    data->newState = prStringCopy(newState);
+    data->oldState = prRawStringCopy(oldState);
+    data->newState = prRawStringCopy(newState);
     if (source != nullptr)
         domEventTargetAssign(&data->source, prDomElementAsEventTarget(source));
     return event;
@@ -1116,7 +1116,7 @@ PrHtmlCommandEvent* prHtmlCommandEventCreate(PrStringView type, const PrDomEvent
     PrHtmlCommandEvent* event = domEventCreate<PrHtmlCommandEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_Command);
     DomControlEventData* data = controlDataOf(event);
-    data->command = prStringCopy(command);
+    data->command = prRawStringCopy(command);
     if (source != nullptr)
         domEventTargetAssign(&data->source, prDomElementAsEventTarget(source));
     return event;
@@ -1132,15 +1132,15 @@ PrHtmlFormData* prHtmlFormDataEventFormData(PrHtmlFormDataEvent* event) {
 }
 
 PrStringView prHtmlToggleEventOldState(const PrHtmlToggleEvent* event) {
-    return prStringView(&event->control->oldState);
+    return prRawStringView(&event->control->oldState);
 }
 
 PrStringView prHtmlToggleEventNewState(const PrHtmlToggleEvent* event) {
-    return prStringView(&event->control->newState);
+    return prRawStringView(&event->control->newState);
 }
 
 PrStringView prHtmlCommandEventCommand(const PrHtmlCommandEvent* event) {
-    return prStringView(&event->control->command);
+    return prRawStringView(&event->control->command);
 }
 
 PrDomElement* PR_NULLABLE prHtmlToggleEventSource(PrHtmlToggleEvent* event) {
@@ -1168,7 +1168,7 @@ PrDomHtmlCollection* prHtmlSelectElementSelectedOptions(PrHtmlSelectElement* sel
 }
 
 uint32_t prHtmlSelectElementLength(PrHtmlSelectElement* select) {
-    Array<PrDomElement* PR_NONNULL> options;
+    RawArray<PrDomElement* PR_NONNULL> options;
     domSelectOptions(select, &options);
     uint32_t length = options.count;
     options.reset();
@@ -1178,7 +1178,7 @@ uint32_t prHtmlSelectElementLength(PrHtmlSelectElement* select) {
 void prHtmlSelectElementSetLength(PrHtmlSelectElement* select, uint32_t length) {
     if (length > 100000)
         return;
-    Array<PrDomElement* PR_NONNULL> options;
+    RawArray<PrDomElement* PR_NONNULL> options;
     domSelectOptions(select, &options);
     for (uint32_t i = options.count; i < length; ++i)
         domInsert(select, domElementCreate(select->document, PrDomNamespace_Html, PrDomTag_Option, "option"), nullptr);
@@ -1188,7 +1188,7 @@ void prHtmlSelectElementSetLength(PrHtmlSelectElement* select, uint32_t length) 
 }
 
 PrHtmlOptionElement* PR_NULLABLE prHtmlSelectElementItem(PrHtmlSelectElement* select, uint32_t index) {
-    Array<PrDomElement* PR_NONNULL> options;
+    RawArray<PrDomElement* PR_NONNULL> options;
     domSelectOptions(select, &options);
     PrDomElement* option = index < options.count ? options.data[index] : nullptr;
     options.reset();
@@ -1238,10 +1238,10 @@ void prHtmlSelectElementSetSelectedIndex(PrHtmlSelectElement* select, int32_t in
     domSelectSetSelectedIndex(select, index);
 }
 
-PrString prHtmlSelectElementValue(PrHtmlSelectElement* select) {
+PrRawString prHtmlSelectElementValue(PrHtmlSelectElement* select) {
     int32_t index = domSelectSelectedIndex(select);
     if (index < 0)
-        return prStringEmpty();
+        return prRawStringEmpty();
     return prHtmlOptionElementValue(prHtmlSelectElementItem(select, uint32_t(index)));
 }
 
@@ -1272,7 +1272,7 @@ PrHtmlFormElement* PR_NULLABLE prHtmlOptionElementForm(PrHtmlOptionElement* opti
     return select != nullptr ? prHtmlElementForm(static_cast<PrHtmlElement*>(select)) : nullptr;
 }
 
-PrString prHtmlOptionElementText(const PrHtmlOptionElement* option) {
+PrRawString prHtmlOptionElementText(const PrHtmlOptionElement* option) {
     PrTextBuffer text = {};
     domOptionText(option, &text);
     return prTextBufferTake(&text);
@@ -1282,15 +1282,15 @@ void prHtmlOptionElementSetText(PrHtmlOptionElement* option, PrStringView value)
     prDomNodeSetTextContent(option, value);
 }
 
-PrString prHtmlOptionElementValue(const PrHtmlOptionElement* option) {
+PrRawString prHtmlOptionElementValue(const PrHtmlOptionElement* option) {
     PrTextBuffer text = {};
     domOptionValue(option, &text);
     return prTextBufferTake(&text);
 }
 
-PrString prHtmlOptionElementLabel(const PrHtmlOptionElement* option) {
+PrRawString prHtmlOptionElementLabel(const PrHtmlOptionElement* option) {
     PrStringView label = domAttributeValue(option, "label");
-    return label.size != 0 ? prStringCopy(label) : prHtmlOptionElementText(option);
+    return label.size != 0 ? prRawStringCopy(label) : prHtmlOptionElementText(option);
 }
 
 bool prHtmlOptionElementSelected(const PrHtmlOptionElement* option) {
@@ -1305,7 +1305,7 @@ uint32_t prHtmlOptionElementIndex(PrHtmlOptionElement* option) {
     PrDomElement* select = domNearestAncestorSelect(option);
     if (select == nullptr)
         return 0;
-    Array<PrDomElement* PR_NONNULL> options;
+    RawArray<PrDomElement* PR_NONNULL> options;
     domSelectOptions(select, &options);
     uint32_t index = options.find(option);
     options.reset();

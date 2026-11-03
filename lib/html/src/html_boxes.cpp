@@ -196,7 +196,7 @@ CssColorSchemeFlags htmlPageSchemes(PrDomDocument* document) {
         const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "content");
         if (attribute == nullptr)
             continue;
-        PrStringView content = prStringView(&attribute->value);
+        PrStringView content = prRawStringView(&attribute->value);
         if (!cssDeclarationSupported(cssPropertyDeclaredName(PrCssProperty_ColorScheme), content))
             continue;
         CssColorSchemeFlags schemes = 0;

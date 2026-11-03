@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/markdown.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -56,8 +56,8 @@ struct MarkdownTreeNode {
 
 // A tree under construction, whose root is node 0. The root stands for the document and is not walked.
 struct MarkdownTree {
-    Array<MarkdownTreeNode> nodes;      // by MarkdownNodeIndex
-    Array<char> text;
+    RawArray<MarkdownTreeNode> nodes;      // by MarkdownNodeIndex
+    RawArray<char> text;
 };
 
 // A node as a document stores it: in document order, followed by its descendants up to `end`.
@@ -98,7 +98,7 @@ inline PrStringView markdownTreeText(const MarkdownTree* tree, MarkdownRange ran
 
 // Appends the nodes under the root of `tree` to `out` in document order. Adjacent Text nodes of one kind whose ranges
 // are adjacent in the text become one node. The ends of the nodes are positions in `out`.
-void markdownTreeFlatten(const MarkdownTree* tree, Array<MarkdownNode>* out);
+void markdownTreeFlatten(const MarkdownTree* tree, RawArray<MarkdownNode>* out);
 
 } // namespace pr_impl
 

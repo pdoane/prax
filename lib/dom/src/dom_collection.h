@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -75,7 +75,7 @@ struct DomCollectionCache {
 // tree. The collection holds a reference to its root.
 struct DomHtmlCollection {
     PrDomNode* root;
-    PrString text;                  // the qualified name, or the class names
+    PrRawString text;                  // the qualified name, or the class names
     DomCollectionFilter filter;
     mutable DomCollectionCache cache;
 };
@@ -94,7 +94,7 @@ PrDomElement* PR_NULLABLE domHtmlCollectionNamedItem(const PrDomHtmlCollection* 
 // Appends the collection's supported property names (dom/#ref-for-dfn-supported-property-names) to `out`: for each
 // element in order, its ID, then its name attribute if it is an HTML element, each name once and none empty. The views
 // are valid until the elements' attributes change.
-void domHtmlCollectionNames(const PrDomHtmlCollection* collection, Array<PrStringView>* out);
+void domHtmlCollectionNames(const PrDomHtmlCollection* collection, RawArray<PrStringView>* out);
 
 // Frees the collection, and releases its reference to its root.
 void domHtmlCollectionDestroy(PrDomHtmlCollection* PR_NULLABLE collection);
@@ -116,8 +116,8 @@ typedef uint8_t DomNodeListFilter;
 // parent, or to each of its nodes.
 struct DomNodeList {
     PrDomNode* PR_NULLABLE parent;
-    Array<PrDomNode* PR_NONNULL> nodes;
-    PrString name;                          // the name of a radio node list
+    RawArray<PrDomNode* PR_NONNULL> nodes;
+    PrRawString name;                          // the name of a radio node list
     DomNodeListFilter filter;
     mutable DomCollectionCache cache;       // cache for a live list
 };
@@ -145,7 +145,7 @@ void domNodeListDestroy(PrDomNodeList* PR_NULLABLE list);
 // whitespace. It then changes nothing.
 struct DomTokenList {
     PrDomElement* element;
-    PrString name;
+    PrRawString name;
 
     // The attribute's supported tokens (dom/#concept-supported-tokens) in ASCII lowercase, which outlive the list. Null
     // if the attribute defines none.
@@ -185,7 +185,7 @@ void domTokenListSetValue(PrDomTokenList* list, PrStringView value);
 
 // Writes the tokens of `text`, split on ASCII whitespace, without repeats after the first occurrence
 // (dom/#concept-ordered-set-parser). The views point into `text`.
-void domOrderedSetParse(PrStringView text, Array<PrStringView>* out);
+void domOrderedSetParse(PrStringView text, RawArray<PrStringView>* out);
 
 } // namespace pr_impl
 

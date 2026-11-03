@@ -6,8 +6,8 @@
 #include "pr/path_measure.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/vec.h"
 
@@ -40,10 +40,10 @@ struct Segment {
 struct PathMeasure {
     PrPathPolyline flat;                // what a path flattens to before it is measured
     float length;
-    Array<PrVec2> points;
-    Array<float> along;             // arc length of each point from the start of its contour
-    Array<Contour> contours;
-    Array<Segment> segments;
+    RawArray<PrVec2> points;
+    RawArray<float> along;             // arc length of each point from the start of its contour
+    RawArray<Contour> contours;
+    RawArray<Segment> segments;
     PrRect bounds;
     uint32_t columns;
     uint32_t rows;
@@ -51,8 +51,8 @@ struct PathMeasure {
     float cellHeight;
 
     // For each cell, the start of its segments in `cellSegments`, plus one entry past the last cell.
-    Array<uint32_t> cellStart;
-    Array<uint32_t> cellSegments;
+    RawArray<uint32_t> cellStart;
+    RawArray<uint32_t> cellSegments;
 };
 
 float distanceBetween(PrVec2 a, PrVec2 b) {

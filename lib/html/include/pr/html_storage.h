@@ -8,8 +8,8 @@
 
 #include "pr/base.h"
 #include "pr/html.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/task.h"
 
@@ -74,10 +74,10 @@ uint32_t prHtmlStorageLength(const PrHtmlStorage* storage);
 
 // html/#dom-storage-key: the key of the item at `index`, or the null string past the end. The order of the keys is the
 // provider's, and stays the same while no item is added or removed.
-PrString prHtmlStorageKey(const PrHtmlStorage* storage, uint32_t index);
+PrRawString prHtmlStorageKey(const PrHtmlStorage* storage, uint32_t index);
 
 // html/#dom-storage-getitem: the value of the item at `key`, or the null string if there is none.
-PrString prHtmlStorageGetItem(const PrHtmlStorage* storage, PrStringView key);
+PrRawString prHtmlStorageGetItem(const PrHtmlStorage* storage, PrStringView key);
 
 // html/#dom-storage-setitem: sets the item at `key` to `value`. Returns Limit, and changes nothing, if the area's quota
 // would be exceeded.

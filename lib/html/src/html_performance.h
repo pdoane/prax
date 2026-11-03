@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/html_performance.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -12,8 +12,8 @@ namespace pr_impl {
 
 // A metric of a Server-Timing header (server-timing/#the-performanceservertiming-interface).
 struct HtmlServerMetric {
-    PrString name;
-    PrString description;
+    PrRawString name;
+    PrRawString description;
     double duration;
 };
 
@@ -24,8 +24,8 @@ struct HtmlPerformanceEntry {
     PrHtmlPerformanceEntryType type;
     PrHtmlNavigationType navigationType;
     uint32_t redirectCount;
-    PrString name;
-    PrString detail;
+    PrRawString name;
+    PrRawString detail;
     double startTime;
     double duration;
 
@@ -38,24 +38,24 @@ struct HtmlPerformanceEntry {
     uint64_t transferSize;
     uint64_t encodedBodySize;
     uint64_t decodedBodySize;
-    PrString contentType;
-    PrString contentEncoding;
+    PrRawString contentType;
+    PrRawString contentEncoding;
     PrStringView nextHopProtocol;
-    Array<HtmlServerMetric> serverTiming;
+    RawArray<HtmlServerMetric> serverTiming;
 };
 
 // An immutable list of entries, as an observer receives them.
 struct HtmlPerformanceEntryList {
     uint32_t references;
-    Array<PrHtmlPerformanceEntry*> entries;     // each with a reference
+    RawArray<PrHtmlPerformanceEntry*> entries;     // each with a reference
 };
 
 // The entries of each type, the resource entries that wait for room, and the registered observers, each with a
 // reference. Each buffer is in the order that its entries were added.
 struct HtmlTimeline {
-    Array<PrHtmlPerformanceEntry*> buffers[PrHtmlPerformanceEntryType_Count];   // by PrHtmlPerformanceEntryType
-    Array<PrHtmlPerformanceEntry*> secondaryResources;
-    Array<PrHtmlPerformanceObserver*> observers;
+    RawArray<PrHtmlPerformanceEntry*> buffers[PrHtmlPerformanceEntryType_Count];   // by PrHtmlPerformanceEntryType
+    RawArray<PrHtmlPerformanceEntry*> secondaryResources;
+    RawArray<PrHtmlPerformanceObserver*> observers;
     PrHtmlPerformanceEntry* PR_NULLABLE navigation;     // the entry of the window's document, in its buffer
     uint64_t droppedResources;
     uint32_t resourceLimit;
@@ -69,7 +69,7 @@ struct HtmlPerformanceObserver {
     uint32_t references;
     PrHtmlPerformance* PR_NULLABLE performance;     // null once the window's timeline is reset
     PrHtmlPerformanceObserverCallback callback;
-    Array<PrHtmlPerformanceEntry*> records;         // each with a reference
+    RawArray<PrHtmlPerformanceEntry*> records;      // each with a reference
     uint32_t types;                                 // one bit for each observed PrHtmlPerformanceEntryType
     PrHtmlPerformanceObserverMode mode;
     bool requiresDropped;

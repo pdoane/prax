@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/hash_index.h"
 #include "pr/kit.h"
 #include "pr/kit_box.h"
@@ -12,6 +11,7 @@
 #include "pr/layout_frame.h"
 #include "pr/layout_style.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/text_font.h"
 #include "pr/ui_records.h"
 

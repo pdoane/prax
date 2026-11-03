@@ -40,13 +40,13 @@ void setHeadroom(PrHtmlPage* page, float headroom) {
 
 // Verifies the presentation's incremental work, and reports the first difference if there is one.
 bool verified(PrCssPresentation* presentation) {
-    PrString report{};
+    PrRawString report{};
     bool same = prCssPresentationVerify(presentation, &report);
     if (!same) {
-        PrStringView what = prStringView(&report);
+        PrStringView what = prRawStringView(&report);
         MESSAGE(std::string(what.data, what.size));
     }
-    prStringReset(&report);
+    prRawStringReset(&report);
     return same;
 }
 
@@ -214,9 +214,9 @@ PrCssPresentationStats update(Page& page) {
 std::string resolved(Page& page, const char* id, PrCssProperty property, const char* pseudoElement = "") {
     PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
     PrCssStyleProperties* computed = prCssElementComputedStyle(byId(page, id), pseudoElement);
-    PrString read = prCssStyleDeclarationGetPropertyValue(prCssStylePropertiesAsCssStyleDeclaration(computed), &name);
-    std::string value(prStringView(&read).data, prStringView(&read).size);
-    prStringReset(&read);
+    PrRawString read = prCssStyleDeclarationGetPropertyValue(prCssStylePropertiesAsCssStyleDeclaration(computed), &name);
+    std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
+    prRawStringReset(&read);
     return value;
 }
 
@@ -366,10 +366,10 @@ PrDomElement* inShadow(PrDomShadowRoot* shadow, const char* selector) {
 // Returns the resolved value of `property` of `element`, as a script reads it.
 std::string resolvedOf(PrDomElement* element, PrCssProperty property) {
     PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
-    PrString read = prCssStyleDeclarationGetPropertyValue(
+    PrRawString read = prCssStyleDeclarationGetPropertyValue(
         prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(element, "")), &name);
-    std::string value(prStringView(&read).data, prStringView(&read).size);
-    prStringReset(&read);
+    std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
+    prRawStringReset(&read);
     return value;
 }
 
@@ -419,9 +419,9 @@ std::pair<std::string, std::string> paintedAtTwoTimes(const char* html) {
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaint(view, list);
         prHtmlViewDestroy(view);
-        PrString dump = prDrawListDump(list);
-        std::string text(prStringView(&dump).data, prStringView(&dump).size);
-        prStringReset(&dump);
+        PrRawString dump = prDrawListDump(list);
+        std::string text(prRawStringView(&dump).data, prRawStringView(&dump).size);
+        prRawStringReset(&dump);
         prDrawListRelease(list);
         return text;
     };
@@ -510,9 +510,9 @@ TEST_CASE("a computed style gives the element's custom properties, read one at a
             prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(byId(page, id), ""));
         PrCssDeclarationName name{};
         REQUIRE(prCssStyleDeclarationNameFromText(computed, text, &name));
-        PrString read = prCssStyleDeclarationGetPropertyValue(computed, &name);
-        std::string value(prStringView(&read).data, prStringView(&read).size);
-        prStringReset(&read);
+        PrRawString read = prCssStyleDeclarationGetPropertyValue(computed, &name);
+        std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
+        prRawStringReset(&read);
         prCssDeclarationNameReset(&name);
         return value;
     };
@@ -522,10 +522,10 @@ TEST_CASE("a computed style gives the element's custom properties, read one at a
     CHECK(custom("b", "--blur") == "20px");
     CHECK(custom("b", "--own") == "x");
     CHECK(custom("a", "--own").empty());
-    PrString text = prCssStyleDeclarationCssText(
+    PrRawString text = prCssStyleDeclarationCssText(
         prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(byId(page, "b"), "")));
-    std::string listed(prStringView(&text).data, prStringView(&text).size);
-    prStringReset(&text);
+    std::string listed(prRawStringView(&text).data, prRawStringView(&text).size);
+    prRawStringReset(&text);
     CHECK(listed.find("--own: x;") != std::string::npos);
     CHECK(listed.find("--blur: 20px;") > listed.find("width:"));
 }
@@ -1950,10 +1950,10 @@ TEST_CASE("border widths resolve snapped to whole target pixels, and one under a
         PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(document), id);
         REQUIRE(element != nullptr);
         PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
-        PrString read = prCssStyleDeclarationGetPropertyValue(
+        PrRawString read = prCssStyleDeclarationGetPropertyValue(
             prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(element, PrStringView{})), &name);
-        std::string value(prStringView(&read).data, prStringView(&read).size);
-        prStringReset(&read);
+        std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
+        prRawStringReset(&read);
         return value;
     };
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
@@ -3216,9 +3216,9 @@ TEST_CASE("a transition repaints, relayouts or composites as its property says, 
     PrCssDeclarationName name = prCssDeclarationNameFromProperty(PrCssProperty_Opacity);
     PrCssStyleDeclaration* computed =
         prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(byId(page, "fade"), PrStringView{}));
-    PrString read = prCssStyleDeclarationGetPropertyValue(computed, &name);
-    CHECK(std::string(prStringView(&read).data, prStringView(&read).size) == "0.5");
-    prStringReset(&read);
+    PrRawString read = prCssStyleDeclarationGetPropertyValue(computed, &name);
+    CHECK(std::string(prRawStringView(&read).data, prRawStringView(&read).size) == "0.5");
+    prRawStringReset(&read);
     // A change midway transitions from the current value.
     prDomElementSetAttribute(byId(page, "fade"), "class", "");
     frame(page, 2500);
@@ -3571,9 +3571,9 @@ TEST_CASE("a click on a link to a fragment scrolls to the element it names, whic
     CHECK(scrolled > 1000.0);
     CHECK(prCssElementGetBoundingClientRect(byId("x")).y == 0.0);
     CHECK(target(byId("x")));
-    PrString hash = prHtmlWindowLocation(window, PrUrlComponent_Hash);
-    CHECK(std::string(prStringView(&hash).data, prStringView(&hash).size) == "#x");
-    prStringReset(&hash);
+    PrRawString hash = prHtmlWindowLocation(window, PrUrlComponent_Hash);
+    CHECK(std::string(prRawStringView(&hash).data, prRawStringView(&hash).size) == "#x");
+    prRawStringReset(&hash);
 
     // A click that a listener cancels follows nothing.
     PrDomEventListener cancel{
@@ -3879,9 +3879,9 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     REQUIRE(count == 2);
     CHECK(sorted[0] == 0.0);
     CHECK(sorted[1] == 0.5);
-    PrString margin = prCssIntersectionObserverRootMargin(observer);
-    CHECK(std::string(prStringView(&margin).data, prStringView(&margin).size) == "0px 0px 0px 0px");
-    prStringReset(&margin);
+    PrRawString margin = prCssIntersectionObserverRootMargin(observer);
+    CHECK(std::string(prRawStringView(&margin).data, prRawStringView(&margin).size) == "0px 0px 0px 0px");
+    prRawStringReset(&margin);
     prCssIntersectionObserverObserve(observer, target);
     CHECK_FALSE(prDomAgentIsIdle(prHtmlPageAgent(page)));
     clock.now = 20;

@@ -5,7 +5,6 @@
 
 #include "pr/align.h"
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
@@ -14,6 +13,7 @@
 #include "pr/layout_style.h"
 #include "pr/layout_unit.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -164,8 +164,8 @@ struct UiGroupEntry {
 // the only place where a group is found by its value.
 struct UiGroups {
     HashIndex index;
-    Array<UiGroupEntry> entries;
-    Array<uint8_t> bytes;
+    RawArray<UiGroupEntry> entries;
+    RawArray<uint8_t> bytes;
 };
 
 // The number of rounds without a lookup after which a group is released.
@@ -190,8 +190,8 @@ struct UiMemoEntry {
 // The memo: the parts that the last frame's lookups named, and the records that they returned, indexed by where in the
 // round each lookup was made.
 struct UiMemo {
-    Array<UiMemoEntry> entries;     // by slot, kUiMemoCalls to a slot, then by the lookup's place among the slot's
-    Array<uint8_t> bytes;
+    RawArray<UiMemoEntry> entries;     // by slot, kUiMemoCalls to a slot, then by the lookup's place among the slot's
+    RawArray<uint8_t> bytes;
     uint32_t slot;                  // the slot of the round's last lookup, or kPrLayoutFrameCursorEnd
     uint32_t calls;                 // the number of lookups made at `slot` before the last
     uint32_t at;                    // the entry that prUiMemoKeep fills for the last lookup, or kUiNone
@@ -228,13 +228,13 @@ struct Ui {
 
     // --- Nodes ---
 
-    Array<UiSlot> slots;            // by slot
-    Array<UiState> states;          // indexed by state; freed entries are listed in freeStates
-    Array<uint32_t> freeStates;
+    RawArray<UiSlot> slots;            // by slot
+    RawArray<UiState> states;          // indexed by state; freed entries are listed in freeStates
+    RawArray<uint32_t> freeStates;
 
     // The round's contexts, and the blocks of their storage, which the next round reuses.
-    Array<UiContext> contexts;
-    Array<UiBlock> blocks;
+    RawArray<UiContext> contexts;
+    RawArray<UiBlock> blocks;
     uint32_t block;                 // the block that the next context's storage comes from
     uint32_t blockUsed;             // bytes used of that block
 
@@ -253,11 +253,11 @@ struct Ui {
 
     // --- Input ---
 
-    Array<UiQueued> queue;
-    Array<char> queueText;
+    RawArray<UiQueued> queue;
+    RawArray<char> queueText;
     uint32_t consumed;              // number of queued events routed in the running frame
-    Array<UiRouted> routed;         // events routed in the current round, grouped by node once routing ends
-    Array<PrAppEvent> events;       // the events of `routed`, in the same order
+    RawArray<UiRouted> routed;      // events routed in the current round, grouped by node once routing ends
+    RawArray<PrAppEvent> events;    // the events of `routed`, in the same order
     bool transitioned;              // true if the current round routed a press, a release or a key press
 
     // --- Pointer ---
@@ -271,26 +271,29 @@ struct Ui {
     PrRect textInput;               // the caret of the text being edited, if hasTextInput
     bool hasTextInput;
     PrAppCursor cursor;
-    Array<UiWheel> wheels;
+    RawArray<UiWheel> wheels;
     UiCarry payload;
     PrLayoutNode dropOver;          // the innermost of the previous round's drop targets under the pointer
     PrLayoutNode dropped;           // the drop target in the current round, or none
     PrUiPayload droppedPayload;
-    Array<PrLayoutNode> dropTargets;     // drop targets made by the current round's build (prUiIsDropTarget)
-    Array<PrLayoutNode> lastDropTargets; // drop targets made by the previous build; drops in this round land on them
+    RawArray<PrLayoutNode> dropTargets;     // drop targets made by the current round's build (prUiIsDropTarget)
+    RawArray<PrLayoutNode> lastDropTargets; // drop targets made by the previous build; drops in this round land on them
 
     // --- Keys and focus ---
 
-    Array<UiClaim> claims;          // keys claimed by the current round's build (prUiKeyPressed)
-    Array<UiClaim> lastClaims;      // keys claimed by the previous build; key presses in this round are routed by them
-    UiClaim keyed;                  // the claim that received this round's key press; its node is none if there is none
+    RawArray<UiClaim> claims;          // keys claimed by the current round's build (prUiKeyPressed)
+    RawArray<UiClaim> lastClaims;      // keys claimed by the previous build; key presses in this round are routed by
+                                       // them
+    UiClaim keyed;                     // the claim that received this round's key press; its node is none if there is
+                                       // none
     PrLayoutNode focus;
     PrLayoutNode focusRequest;
     bool focusRequested;
     bool focusVisible;
-    PrLayoutNode keyActivated;       // the node activated by Enter or Space
-    Array<PrLayoutNode> activations; // nodes activated in this round, which prUiActivate marked in the previous round
-    Array<PrLayoutNode> nextActivations;
+    PrLayoutNode keyActivated;          // the node activated by Enter or Space
+    RawArray<PrLayoutNode> activations; // nodes activated in this round, which prUiActivate marked in the previous
+                                        // round
+    RawArray<PrLayoutNode> nextActivations;
 
     // --- Records ---
 
@@ -1036,7 +1039,7 @@ void beginRound(Ui* ui, uint32_t index, const PrUiFrameDesc* desc) {
         if (!button.dragging)
             button.node = kPrLayoutNodeNone;
     }
-    Array<PrLayoutNode> swap = ui->activations;
+    RawArray<PrLayoutNode> swap = ui->activations;
     ui->activations = ui->nextActivations;
     ui->nextActivations = swap;
     ui->nextActivations.clear();
@@ -1099,11 +1102,11 @@ void endRound(Ui* ui) {
         }
     }
     sweepStates(ui);
-    Array<UiClaim> claims = ui->lastClaims;
+    RawArray<UiClaim> claims = ui->lastClaims;
     ui->lastClaims = ui->claims;
     ui->claims = claims;
     ui->claims.clear();
-    Array<PrLayoutNode> targets = ui->lastDropTargets;
+    RawArray<PrLayoutNode> targets = ui->lastDropTargets;
     ui->lastDropTargets = ui->dropTargets;
     ui->dropTargets = targets;
     ui->dropTargets.clear();
@@ -1113,7 +1116,7 @@ void endRound(Ui* ui) {
 // Orders the round's routed events by node, so that the events of each node form one contiguous range. Each node's
 // events stay in the order they were routed.
 void groupRouted(Ui* ui) {
-    Array<UiRouted>& routed = ui->routed;
+    RawArray<UiRouted>& routed = ui->routed;
     for (uint32_t i = 1; i < routed.count; ++i) {
         UiRouted moving = routed.data[i];
         uint32_t at = i;

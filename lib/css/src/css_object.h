@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_object_member.h"
@@ -39,9 +39,9 @@ struct CssRule {
 
     PrCssRule* PR_NULLABLE parent;          // cssom-1/#concept-css-rule-parent-css-rule
     uint32_t references;
-    uint32_t retained;                      // references to the rule's tree, if the rule is a root
-    Array<PrCssRule* PR_NULLABLE> children; // objects of the rules in the block, by index, created on first access
-    PrCssStyleSheet* PR_NULLABLE imported;  // @import: the object of the imported sheet, created on first access
+    uint32_t retained;                         // references to the rule's tree, if the rule is a root
+    RawArray<PrCssRule* PR_NULLABLE> children; // objects of the rules in the block, by index, created on first access
+    PrCssStyleSheet* PR_NULLABLE imported;     // @import: the object of the imported sheet, created on first access
 
     // @font-face: the rule's CSS-connected FontFace, created on first access. The rule holds a reference to it.
     PrCssFontFace* PR_NULLABLE face;
@@ -54,12 +54,12 @@ struct CssRule {
 // A CSS style sheet (cssom-1/#css-style-sheet). An element owns its sheet, and an @import rule owns the sheet it
 // imports. Any other sheet is the root of its own tree.
 struct CssStyleSheet {
-    CssSheetData* data;                   // the data that the sheet presents; the sheet holds a reference to it
-    Array<PrCssRule* PR_NULLABLE> rules;  // objects of the sheet's rules, by index, created on first access
+    CssSheetData* data;                     // the data that the sheet presents; the sheet holds a reference to it
+    RawArray<PrCssRule* PR_NULLABLE> rules; // objects of the sheet's rules, by index, created on first access
     PrDomNode* PR_NULLABLE ownerNode;
     PrCssRule* PR_NULLABLE ownerRule;
-    PrString href;
-    PrString title;
+    PrRawString href;
+    PrRawString title;
 
     // The sheet's media (cssom-1/#concept-css-style-sheet-media). An imported sheet uses its rule's media instead.
     CssMediaQueries media;
@@ -78,7 +78,7 @@ struct CssStyleSheet {
 
 // A live, ordered view of the sheets of a document or of a shadow root. The sheets' owner nodes own them.
 struct CssStyleSheetList {
-    Array<PrCssStyleSheet* PR_NONNULL> sheets;
+    RawArray<PrCssStyleSheet* PR_NONNULL> sheets;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -117,7 +117,7 @@ PrCssRule* cssRuleChild(PrCssRule* rule, uint32_t index);
 
 // cssRuleListData returns the data of the rules in the list's holder. cssRuleListItem returns the object of the rule at
 // `index`.
-const Array<CssRuleData* PR_NONNULL>& cssRuleListData(const PrCssRuleList* list);
+const RawArray<CssRuleData* PR_NONNULL>& cssRuleListData(const PrCssRuleList* list);
 PrCssRule* cssRuleListItem(PrCssRuleList* list, uint32_t index);
 
 // Returns the sheet that an @import rule imports, or null if it loaded none.
@@ -129,7 +129,7 @@ CssParserSlot cssRuleParser(PrCssRule* rule);
 
 // Links in `out` the data that `rule` and the objects of its enclosing rules present, one link per level from `rule`
 // outward. Returns the first link, or null if `rule` is null.
-const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule, Array<CssRuleChain>* out);
+const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule, RawArray<CssRuleChain>* out);
 
 // Returns the declarations of a declaration block.
 const CssDeclarationBlock* cssStyleDeclarationBlock(const PrCssStyleDeclaration* declaration);

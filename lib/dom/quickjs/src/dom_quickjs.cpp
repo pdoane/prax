@@ -83,7 +83,7 @@ JSValue madeToJs(JSContext* ctx, JSValueConst owner, PrDomNode* PR_NULLABLE node
 void place(JSContext* ctx, JSValueConst object, PrDomNode* node) {
     if (PrDomNode* parent = prDomNodeTreeParent(node)) {
         // Ancestors without an object get one, from the top down, and each joins the object above it.
-        Array<PrDomNode* PR_NONNULL> missing;
+        RawArray<PrDomNode* PR_NONNULL> missing;
         JSValue group = jsWrapperOf(ctx, prJsDomNodeClass, parent);
         for (PrDomNode* at = parent; JS_IsUndefined(group);) {
             missing.push(at);
@@ -272,7 +272,7 @@ JSValue ownedToJs(JSContext* ctx, JSClassID id, JSValueConst jsObject, T* handle
 // The (Node or DOMString)... argument of the ParentNode and ChildNode methods (dom/#convert-nodes-into-a-node). The
 // call's scope holds the values and their strings.
 struct NodesArgument {
-    Array<PrDomNodeOrString> values;
+    RawArray<PrDomNodeOrString> values;
 
     bool read(JSContext* ctx, int argc, JSValueConst* argv) {
         bool read = true;
@@ -385,7 +385,7 @@ JSValue composedPath(JSContext* ctx, JSValueConst eventObject, int, JSValueConst
     PrDomEvent* event = jsThis<PrDomEvent>(ctx, eventObject, prJsDomEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
-    Array<PrDomEventTarget*> items;
+    RawArray<PrDomEventTarget*> items;
     items.reserve(prDomEventComposedPath(event, nullptr, 0));
     items.count = prDomEventComposedPath(event, items.data, items.capacity);
     JSValue array = JS_NewArray(ctx);
@@ -1243,8 +1243,8 @@ JSValue signalAbort(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) 
 JSValue signalAny(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     if (!jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
-    Array<PrDomAbortSignal*> signals;
-    Array<JSValue> objects;
+    RawArray<PrDomAbortSignal*> signals;
+    RawArray<JSValue> objects;
     bool ok = jsSequence(ctx, argv[0], [&](JSValue item) {
         PrDomAbortSignal* signal = jsHandleAs<PrDomAbortSignal>(ctx, item, prJsDomAbortSignalClass);
         if (signal == nullptr) {
@@ -2212,7 +2212,7 @@ JSValue attributeMapItem(JSContext* ctx, JSValueConst object, void* handle, uint
     return attrToJs(ctx, object, prDomElementAttributeAt(static_cast<PrDomElement*>(handle), index));
 }
 
-bool attributeMapNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
+bool attributeMapNames(JSContext* ctx, void* handle, RawArray<JSAtom>* out) {
     return jsNameAtoms(ctx, static_cast<const PrDomElement*>(handle), prDomElementNamedAttributeNames, out);
 }
 
@@ -2376,7 +2376,7 @@ JSValue tokenChange(JSContext* ctx, JSValueConst listObject, int argc, JSValueCo
     PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, listObject, prJsDomTokenListClass);
     if (list == nullptr)
         return JS_EXCEPTION;
-    Array<PrStringView> tokens;
+    RawArray<PrStringView> tokens;
     bool read = true;
     for (int i = 0; read && i < argc; ++i) {
         PrStringView token = {};
@@ -2833,7 +2833,7 @@ JSValue selectionGetComposedRanges(JSContext* ctx, JSValueConst selectionObject,
     PrDomSelection* selection = selectionThis(ctx, selectionObject);
     if (selection == nullptr)
         return JS_EXCEPTION;
-    Array<PrDomShadowRoot*> roots;
+    RawArray<PrDomShadowRoot*> roots;
     bool ok = true;
     auto addRoot = [&](JSValueConst value) {
         PrDomShadowRoot* root = jsHandleAs<PrDomShadowRoot>(ctx, value, prJsDomShadowRootClass);
@@ -2939,7 +2939,7 @@ JSValue observe(JSContext* ctx, JSValueConst observerObject, int argc, JSValueCo
     PrDomMutationObserverInit init = prDomMutationObserverInitDefault();
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
     bool present = false;
-    Array<PrStringView> filter;
+    RawArray<PrStringView> filter;
     // MutationObserverInit's members in lexicographic order (dom/#dictdef-mutationobserverinit).
     bool read = jsDictionary(ctx, dictionary, &present);
     if (read && present) {
@@ -3041,7 +3041,7 @@ JSValue dataMethod(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueCon
     PrStatus status = PrStatus_Ok;
     switch (DataMethod(magic)) {
         case DataMethod_Substring: {
-            PrString text = {};
+            PrRawString text = {};
             status = prDomCharacterDataSubstringData(node, offset, count, &text);
             if (status != PrStatus_Ok)
                 break;
@@ -3087,7 +3087,7 @@ JSValue listItem(JSContext* ctx, JSValueConst object, void* handle, uint32_t ind
     return nodeToJs(ctx, object, prDomNodeListNodeAt(static_cast<PrDomNodeList*>(handle), index));
 }
 
-bool collectionNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
+bool collectionNames(JSContext* ctx, void* handle, RawArray<JSAtom>* out) {
     return jsNameAtoms(ctx, static_cast<const PrDomHtmlCollection*>(handle), prDomHtmlCollectionNames, out);
 }
 

@@ -146,7 +146,7 @@ bool sameName(const char* a, const char* b) {
     return a[i] == b[i];
 }
 
-bool hasExtension(const Array<VkExtensionProperties>& extensions, const char* name) {
+bool hasExtension(const RawArray<VkExtensionProperties>& extensions, const char* name) {
     for (uint32_t i = 0; i < extensions.count; ++i) {
         if (sameName(extensions.data[i].extensionName, name))
             return true;
@@ -199,10 +199,10 @@ PrStatus createInstance(VulkanDevice* d, bool validation) {
         return PrStatus_NotSupported;
     uint32_t count = 0;
     d->vk.EnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
-    Array<VkExtensionProperties> available;
+    RawArray<VkExtensionProperties> available;
     available.resize(count);
     d->vk.EnumerateInstanceExtensionProperties(nullptr, &count, available.data);
-    Array<const char*> extensions;
+    RawArray<const char*> extensions;
     const char* surface = vulkanSurfaceExtension();
     if (surface != nullptr && hasExtension(available, VK_KHR_SURFACE_EXTENSION_NAME) &&
             hasExtension(available, surface)) {
@@ -216,10 +216,10 @@ PrStatus createInstance(VulkanDevice* d, bool validation) {
         extensions.push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     available.reset();
 
-    Array<const char*> layers;
+    RawArray<const char*> layers;
     if (validation) {
         d->vk.EnumerateInstanceLayerProperties(&count, nullptr);
-        Array<VkLayerProperties> found;
+        RawArray<VkLayerProperties> found;
         found.resize(count);
         d->vk.EnumerateInstanceLayerProperties(&count, found.data);
         for (uint32_t i = 0; i < found.count; ++i) {
@@ -263,7 +263,7 @@ PrStatus createInstance(VulkanDevice* d, bool validation) {
 }
 
 // Returns the device's extensions.
-void deviceExtensions(VulkanDevice* d, VkPhysicalDevice physical, Array<VkExtensionProperties>& out) {
+void deviceExtensions(VulkanDevice* d, VkPhysicalDevice physical, RawArray<VkExtensionProperties>& out) {
     uint32_t count = 0;
     d->vk.EnumerateDeviceExtensionProperties(physical, nullptr, &count, nullptr);
     out.resize(count);
@@ -274,7 +274,7 @@ void deviceExtensions(VulkanDevice* d, VkPhysicalDevice physical, Array<VkExtens
 uint32_t queueFamilyOf(VulkanDevice* d, VkPhysicalDevice physical) {
     uint32_t count = 0;
     d->vk.GetPhysicalDeviceQueueFamilyProperties(physical, &count, nullptr);
-    Array<VkQueueFamilyProperties> families;
+    RawArray<VkQueueFamilyProperties> families;
     families.resize(count);
     d->vk.GetPhysicalDeviceQueueFamilyProperties(physical, &count, families.data);
     uint32_t found = UINT32_MAX;
@@ -293,7 +293,7 @@ bool suitable(VulkanDevice* d, VkPhysicalDevice physical) {
     d->vk.GetPhysicalDeviceProperties(physical, &properties);
     if (properties.apiVersion < VK_API_VERSION_1_3 || queueFamilyOf(d, physical) == UINT32_MAX)
         return false;
-    Array<VkExtensionProperties> extensions;
+    RawArray<VkExtensionProperties> extensions;
     deviceExtensions(d, physical, extensions);
     bool found = true;
     for (const char* name : kRequiredExtensions)
@@ -316,7 +316,7 @@ PrStatus pickAdapter(VulkanDevice* d, int32_t index) {
     d->vk.EnumeratePhysicalDevices(d->instance, &count, nullptr);
     if (count == 0)
         return PrStatus_NotFound;
-    Array<VkPhysicalDevice> adapters;
+    RawArray<VkPhysicalDevice> adapters;
     adapters.resize(count);
     d->vk.EnumeratePhysicalDevices(d->instance, &count, adapters.data);
     VkPhysicalDevice chosen = VK_NULL_HANDLE;
@@ -348,9 +348,9 @@ PrStatus pickAdapter(VulkanDevice* d, int32_t index) {
 // optional extensions that the adapter has.
 PrStatus createDevice(VulkanDevice* d) {
     d->queueFamily = queueFamilyOf(d, d->physical);
-    Array<VkExtensionProperties> available;
+    RawArray<VkExtensionProperties> available;
     deviceExtensions(d, d->physical, available);
-    Array<const char*> extensions;
+    RawArray<const char*> extensions;
     for (const char* name : kRequiredExtensions)
         extensions.push(name);
     for (const char* name : kOptionalExtensions) {

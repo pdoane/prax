@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/geom.h"
 #include "pr/path.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -49,7 +49,7 @@ bool svgParseTransform(PrStringView text, PrAffine2* out);
 
 // Replaces `out` with the numbers of the list in `text`, which white space or commas separate, up to the first number
 // that does not parse. Returns false if a number did not parse.
-bool svgParseNumbers(PrStringView text, Array<float>* out);
+bool svgParseNumbers(PrStringView text, RawArray<float>* out);
 
 } // namespace pr_impl
 

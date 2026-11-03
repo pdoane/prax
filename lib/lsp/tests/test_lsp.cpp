@@ -117,10 +117,10 @@ void keepHover(void* PR_NULLABLE context, const PrLspResponse* response) {
     Answer& answer = *static_cast<Answer*>(context);
     answer.called = true;
     answer.errorCode = response->errorCode;
-    PrString text = prLspHoverText(response->json, response->result);
-    PrStringView view = prStringView(&text);
+    PrRawString text = prLspHoverText(response->json, response->result);
+    PrStringView view = prRawStringView(&text);
     answer.text.assign(view.data, view.size);
-    prStringReset(&text);
+    prRawStringReset(&text);
 }
 
 constexpr const char* kIncremental = "{\"positionEncoding\":\"utf-8\",\"textDocumentSync\":{\"openClose\":true,"
@@ -358,9 +358,9 @@ TEST_CASE("lsp: a cancelled request's callback is not called") {
 TEST_CASE("lsp: hover text, locations and completions read from each form a result may take") {
     PrJson* json = prJsonCreate();
     REQUIRE(prJsonParse(json, "{\"contents\":[\"first\",{\"language\":\"cpp\",\"value\":\"int a\"}]}", nullptr));
-    PrString text = prLspHoverText(json, 0);
-    CHECK(prStringView(&text) == "first\n\nint a");
-    prStringReset(&text);
+    PrRawString text = prLspHoverText(json, 0);
+    CHECK(prRawStringView(&text) == "first\n\nint a");
+    prRawStringReset(&text);
 
     REQUIRE(prJsonParse(json, "[{\"targetUri\":\"file:///b.h\",\"targetRange\":{\"start\":{\"line\":1,\"character\":0},"
         "\"end\":{\"line\":3,\"character\":1}},\"targetSelectionRange\":{\"start\":{\"line\":1,\"character\":4},"
@@ -451,15 +451,15 @@ TEST_CASE("lsp: shutting down asks the server to shut down, then to exit") {
 }
 
 TEST_CASE("lsp: a path and its file URI convert both ways") {
-    PrString uri = prLspUriFromPath("/a b/c%d/é.cpp");
-    CHECK(prStringView(&uri) == "file:///a%20b/c%25d/%C3%A9.cpp");
-    PrString path = prLspPathFromUri(prStringView(&uri));
-    CHECK(prStringView(&path) == "/a b/c%d/é.cpp");
-    prStringReset(&uri);
-    prStringReset(&path);
+    PrRawString uri = prLspUriFromPath("/a b/c%d/é.cpp");
+    CHECK(prRawStringView(&uri) == "file:///a%20b/c%25d/%C3%A9.cpp");
+    PrRawString path = prLspPathFromUri(prRawStringView(&uri));
+    CHECK(prRawStringView(&path) == "/a b/c%d/é.cpp");
+    prRawStringReset(&uri);
+    prRawStringReset(&path);
     path = prLspPathFromUri("file://localhost/x");
-    CHECK(prStringView(&path) == "/x");
-    prStringReset(&path);
+    CHECK(prRawStringView(&path) == "/x");
+    prRawStringReset(&path);
     path = prLspPathFromUri("https://example.com/x");
-    CHECK(prStringIsNull(&path));
+    CHECK(prRawStringIsNull(&path));
 }

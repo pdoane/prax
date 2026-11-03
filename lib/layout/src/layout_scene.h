@@ -13,9 +13,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/layout_scene.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_effects.h"
 #include "layout/src/layout_paint.h"
@@ -135,15 +135,15 @@ struct LayoutSceneCanvasRun {
 // A scene. The viewport's scroll is its first scroll container, which holds the root's layer.
 struct LayoutScene {
     mutable Atomic<uint32_t> references; // changes behind const, as an immutable scene's holders come and go
-    Array<LayoutSceneLayer> layers;      // the root's first, each layer before its subtree
-    Array<LayoutSceneTransform> transforms;
-    Array<LayoutResolvedEffects> effects; // the resolved clip paths, masks, filters and blending of layers
-    Array<LayoutSceneContainer> scrolls;
-    Array<LayoutSticky> stickies;          // what decides the offsets of the sticky boxes
-    Array<LayoutSceneSegment> segments;
-    Array<PrLayoutRect> fixedClips;       // the clips of the segments fixed to the viewport (LayoutPaintFixed)
-    Array<LayoutSceneSlot> slots;         // each layer's run in painting order
-    Array<LayoutSceneRegion> regions;     // each layer's run
+    RawArray<LayoutSceneLayer> layers;   // the root's first, each layer before its subtree
+    RawArray<LayoutSceneTransform> transforms;
+    RawArray<LayoutResolvedEffects> effects; // the resolved clip paths, masks, filters and blending of layers
+    RawArray<LayoutSceneContainer> scrolls;
+    RawArray<LayoutSticky> stickies;          // what decides the offsets of the sticky boxes
+    RawArray<LayoutSceneSegment> segments;
+    RawArray<PrLayoutRect> fixedClips;       // the clips of the segments fixed to the viewport (LayoutPaintFixed)
+    RawArray<LayoutSceneSlot> slots;         // each layer's run in painting order
+    RawArray<LayoutSceneRegion> regions;     // each layer's run
 
     // Whether a wheel anywhere over the viewport waits, as the tree's value was set (prLayoutTreeViewportWheelEvents).
     PrLayoutWheelEvents viewportWheelEvents;
@@ -155,13 +155,13 @@ struct LayoutScene {
 
     // The moves that scroll anchoring made to the tree's offsets since the scene before this one
     // (prLayoutSceneScrollAdjustments).
-    Array<PrLayoutScrollAdjustment> adjustments;
+    RawArray<PrLayoutScrollAdjustment> adjustments;
 
     // The root's background layers over the canvas, from the bottom up, and what they were drawn from: the root's
     // decoration, the root's border box `canvasBorder`, and the viewport's extent `canvasViewport`. A new scene reuses
     // the runs of the previous scene if all of these are unchanged. The decoration names its background layers by an
     // index, and a later entry may reuse the index, so the layers' hash is compared as well.
-    Array<LayoutSceneCanvasRun> canvasRuns;
+    RawArray<LayoutSceneCanvasRun> canvasRuns;
     PrLayoutDecorationStyle canvasDecoration;
     uint32_t canvasLayersHash;
     PrLayoutRect canvasBorder;
@@ -189,7 +189,7 @@ void layoutSceneDestroy(LayoutScene* scene);
 // that time, and returns the number of tracks that set a value. A transform is sampled with the extent of its layer's
 // reference box.
 uint32_t layoutSceneSampleTracks(const LayoutScene* scene, const PrLayoutTrack* PR_NULLABLE tracks, uint32_t count,
-    double time, Array<PrLayoutSceneEffect>& out);
+    double time, RawArray<PrLayoutSceneEffect>& out);
 
 // Returns the scroll container of the scene that presents `node`, or kPaintScrollNone.
 uint32_t layoutSceneNodeScroll(const LayoutScene* scene, PrLayoutNode node);
@@ -200,7 +200,7 @@ uint32_t layoutSceneNodeScroll(const LayoutScene* scene, PrLayoutNode node);
 // its scroll container's, and a box that only clips has none. The cost is proportional to the number of containers if
 // `scrolls` follows the scene's order, as a tree's offsets do (prLayoutSceneScrolls), and to their product otherwise.
 void layoutSceneScrollOffsets(const LayoutScene* scene, const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count,
-    float pixelRatio, Array<PrLayoutVec>& out);
+    float pixelRatio, RawArray<PrLayoutVec>& out);
 
 // What a user's scroll at a point of a scene meets first: the innermost scroll container of the topmost layer,
 // container or slot at the point. If the scroll meets a slot, it also holds the slot and the point in the space of the

@@ -7,7 +7,7 @@
 
 #include "pr/base.h"
 #include "pr/draw_list.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -125,7 +125,7 @@ uint32_t prDrawCommandGroupEnd(const PrDrawCommand* commands, uint32_t count, ui
 
 // Returns the commands as text, one per line, for tests and diagnostics. The commands of an embedded list follow the
 // Embed command, indented one level deeper.
-PrString prDrawListDump(const PrDrawList* list);
+PrRawString prDrawListDump(const PrDrawList* list);
 
 #if defined(__cplusplus)
 }

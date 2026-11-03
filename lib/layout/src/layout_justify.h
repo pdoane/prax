@@ -28,8 +28,8 @@ inline bool operator<(uint32_t byte, const LayoutJustifyOpportunity& opportunity
 
 // The justification state of the line being built.
 struct LayoutJustifier {
-    Array<LayoutJustifyOpportunity> opportunities;  // in order
-    Array<uint32_t> open;                           // scratch: the Open items around the text being read
+    RawArray<LayoutJustifyOpportunity> opportunities;  // in order
+    RawArray<uint32_t> open;                           // scratch: the Open items around the text being read
 };
 
 // Frees the memory that a justifier holds.

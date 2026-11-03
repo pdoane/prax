@@ -777,7 +777,7 @@ void clearPool(CssSelectorPool* pool) {
 
 // Copies the records to `*at`, and moves `*at` past them.
 template <typename T>
-T* place(char** at, const Array<T>& records) {
+T* place(char** at, const RawArray<T>& records) {
     T* out = reinterpret_cast<T*>(*at);
     size_t size = sizeof(T) * records.count;
     if (size != 0)
@@ -1406,7 +1406,7 @@ void serializeComplex(PrTextBuffer* out, const PrCssSelectors* selectors, const 
         prTextBufferAppendChar(out, ' ');
     }
 
-    Array<uint32_t> written = {};
+    RawArray<uint32_t> written = {};
     for (uint32_t i = last + 1; i-- > complex->compound;) {
         const CssCompoundSelector* compound = &selectors->compounds[i];
         if (i != last)

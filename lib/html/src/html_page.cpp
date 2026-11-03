@@ -55,9 +55,9 @@ namespace pr_impl {
 // whose fetch failed has the null string as its source.
 struct PreparedScript {
     PrDomElement* element;
-    PrString source;
-    PrString url;
-    PrString baseUrl;
+    PrRawString source;
+    PrRawString url;
+    PrRawString baseUrl;
     PrHtmlScriptKind kind;
     bool external;
     bool ready;                 // html/#ready-to-be-parser-executed: its source is available, or its fetch failed
@@ -74,7 +74,7 @@ namespace {
 // Returns true if the document's content type is Markdown's (RFC 7763). A Markdown document is an HTML document that
 // the context builds from the Markdown, and it runs no script.
 bool isMarkdownDocument(const PrDomDocument* document) {
-    return prStringView(&document->contentType) == "text/markdown";
+    return prRawStringView(&document->contentType) == "text/markdown";
 }
 
 // Returns the options that parse Markdown of the content type `type`. Its variant parameter (RFC 7763) chooses
@@ -82,14 +82,14 @@ bool isMarkdownDocument(const PrDomDocument* document) {
 // or none, is parsed with the extensions that GitHub renders.
 PrMarkdownOptions markdownOptionsOf(PrStringView type) {
     PrMarkdownOptions options = prMarkdownOptionsDefault();
-    PrString variant = prStringNull();
+    PrRawString variant = prRawStringNull();
     if (prMimeTypeParameter(type, "variant", &variant)) {
-        if (prAsciiEqualsFold(prStringView(&variant), "CommonMark"))
+        if (prAsciiEqualsFold(prRawStringView(&variant), "CommonMark"))
             options.extensions = 0;
-        else if (prAsciiEqualsFold(prStringView(&variant), "GFM"))
+        else if (prAsciiEqualsFold(prRawStringView(&variant), "GFM"))
             options.extensions = PrMarkdownExtensionFlag_Gfm;
     }
-    prStringReset(&variant);
+    prRawStringReset(&variant);
     return options;
 }
 
@@ -152,10 +152,10 @@ void unlinkFetch(HtmlFetch* fetch) {
     fetch->page = nullptr;
 }
 
-void resetHeaders(Array<HtmlFetchHeader>* headers) {
+void resetHeaders(RawArray<HtmlFetchHeader>* headers) {
     for (uint32_t i = 0; i < headers->count; ++i) {
-        prStringReset(&headers->data[i].name);
-        prStringReset(&headers->data[i].value);
+        prRawStringReset(&headers->data[i].name);
+        prRawStringReset(&headers->data[i].value);
     }
     headers->reset();
 }
@@ -164,21 +164,21 @@ void resetHeaders(Array<HtmlFetchHeader>* headers) {
 void releaseFetch(HtmlFetch* fetch) {
     if (fetch->references.fetchSub(1) != 1)
         return;
-    prStringReset(&fetch->url);
-    prStringReset(&fetch->origin);
-    prStringReset(&fetch->referrer);
-    prStringReset(&fetch->method);
+    prRawStringReset(&fetch->url);
+    prRawStringReset(&fetch->origin);
+    prRawStringReset(&fetch->referrer);
+    prRawStringReset(&fetch->method);
     resetHeaders(&fetch->requestHeaders);
     fetch->requestBody.reset();
     resetHeaders(&fetch->responseHeaders);
     fetch->body.reset();
-    prStringReset(&fetch->contentType);
-    prStringReset(&fetch->contentLanguage);
-    prStringReset(&fetch->contentEncoding);
-    prStringReset(&fetch->serverTiming);
-    prStringReset(&fetch->sentReferrer);
-    prStringReset(&fetch->responseReferrerPolicy);
-    prStringReset(&fetch->responseUrl);
+    prRawStringReset(&fetch->contentType);
+    prRawStringReset(&fetch->contentLanguage);
+    prRawStringReset(&fetch->contentEncoding);
+    prRawStringReset(&fetch->serverTiming);
+    prRawStringReset(&fetch->sentReferrer);
+    prRawStringReset(&fetch->responseReferrerPolicy);
+    prRawStringReset(&fetch->responseUrl);
     prMutexReset(&fetch->lock);
     prMemoryFree(fetch);
 }
@@ -186,7 +186,7 @@ void releaseFetch(HtmlFetch* fetch) {
 // Passes a script's fetch's response to its callback, filtered as its type says (fetch/#concept-filtered-response).
 void completeScriptFetch(HtmlFetch* fetch) {
     PrFetchResponse response{.status = fetch->status, .type = fetch->responseType};
-    Array<PrFetchHeader> headers;
+    RawArray<PrFetchHeader> headers;
     PrTextBuffer exposed = {};
     bool opaque = fetch->responseType == PrFetchResponseType_Opaque ||
         fetch->responseType == PrFetchResponseType_OpaqueRedirect;
@@ -194,24 +194,24 @@ void completeScriptFetch(HtmlFetch* fetch) {
         // A CORS response exposes the headers that its Access-Control-Expose-Headers lines list, together.
         for (uint32_t i = 0; i < fetch->responseHeaders.count; ++i) {
             const HtmlFetchHeader& header = fetch->responseHeaders.data[i];
-            if (prAsciiEqualsFold(prStringView(&header.name), "access-control-expose-headers")) {
+            if (prAsciiEqualsFold(prRawStringView(&header.name), "access-control-expose-headers")) {
                 if (prTextBufferView(&exposed).size != 0)
                     prTextBufferAppend(&exposed, ", ");
-                prTextBufferAppend(&exposed, prStringView(&header.value));
+                prTextBufferAppend(&exposed, prRawStringView(&header.value));
             }
         }
         for (uint32_t i = 0; i < fetch->responseHeaders.count; ++i) {
-            PrStringView name = prStringView(&fetch->responseHeaders.data[i].name);
+            PrStringView name = prRawStringView(&fetch->responseHeaders.data[i].name);
             bool shown;
             if (fetch->responseType == PrFetchResponseType_Cors)
                 shown = prFetchIsCorsExposedHeader(name, prTextBufferView(&exposed), fetch->credentials);
             else
                 shown = !prFetchIsForbiddenResponseHeaderName(name);
             if (shown)
-                headers.push(PrFetchHeader{name, prStringView(&fetch->responseHeaders.data[i].value)});
+                headers.push(PrFetchHeader{name, prRawStringView(&fetch->responseHeaders.data[i].value)});
         }
         response.responseStatus = fetch->responseStatus;
-        response.url = prStringView(&fetch->responseUrl);
+        response.url = prRawStringView(&fetch->responseUrl);
         response.headers = headers.data;
         response.headerCount = headers.count;
         response.body = PrByteView{
@@ -226,16 +226,16 @@ void completeScriptFetch(HtmlFetch* fetch) {
 
 HtmlResourceReport reportOf(const HtmlFetch* fetch) {
     return HtmlResourceReport{
-        .url = prStringView(&fetch->url),
+        .url = prRawStringView(&fetch->url),
         .initiator = fetch->initiator,
         .timing = fetch->timing,
         .anchor = fetch->anchor,
         .responseType = fetch->responseType,
         .responseStatus = fetch->responseStatus,
-        .contentType = prStringView(&fetch->contentType),
-        .contentEncoding = prStringView(&fetch->contentEncoding),
-        .serverTiming = prStringView(&fetch->serverTiming),
-        .sentReferrer = prStringView(&fetch->sentReferrer),
+        .contentType = prRawStringView(&fetch->contentType),
+        .contentEncoding = prRawStringView(&fetch->contentEncoding),
+        .serverTiming = prRawStringView(&fetch->serverTiming),
+        .sentReferrer = prRawStringView(&fetch->sentReferrer),
     };
 }
 
@@ -268,8 +268,8 @@ void completeFetch(HtmlFetch* fetch) {
     if (fetch->status == PrStatus_Ok && body.data == nullptr)
         body = "";
     DomFetchResult result{
-        fetch->status, fetch->responseStatus, body, prStringView(&fetch->contentType),
-        prStringView(&fetch->contentLanguage), prStringView(&fetch->responseUrl),
+        fetch->status, fetch->responseStatus, body, prRawStringView(&fetch->contentType),
+        prRawStringView(&fetch->contentLanguage), prRawStringView(&fetch->responseUrl),
         fetch->responseType == PrFetchResponseType_Opaque,
     };
     // A frame's document, which the callback may commit, takes the timing of this fetch (documentFetchReport).
@@ -386,7 +386,7 @@ void readBody(HtmlFetch* fetch, PrFetch* handle) {
 }
 
 // Returns the values of the response's headers named `name` joined by commas, or the null string for none.
-PrString headersJoined(const PrFetch* fetch, PrStringView name) {
+PrRawString headersJoined(const PrFetch* fetch, PrStringView name) {
     PrTextBuffer joined{};
     bool any = false;
     for (uint32_t i = 0; i < prFetchHeaderCount(fetch); ++i) {
@@ -398,12 +398,12 @@ PrString headersJoined(const PrFetch* fetch, PrStringView name) {
         prTextBufferAppend(&joined, header.value);
         any = true;
     }
-    PrString result = any ? prStringCopy(prTextBufferView(&joined)) : prStringNull();
+    PrRawString result = any ? prRawStringCopy(prTextBufferView(&joined)) : prRawStringNull();
     prTextBufferReset(&joined);
     return result;
 }
 
-PrString serverTimingOf(const PrFetch* fetch) {
+PrRawString serverTimingOf(const PrFetch* fetch) {
     return headersJoined(fetch, "server-timing");
 }
 
@@ -416,22 +416,23 @@ void fetchEvent(void* PR_NULLABLE context, PrFetch* handle, PrFetchEvent event) 
             PrStringView language = prFetchHeaderValue(handle, "content-language");
             PrStringView encoding = prFetchHeaderValue(handle, "content-encoding");
             if (type.data != nullptr)
-                fetch->contentType = prStringCopy(type);
+                fetch->contentType = prRawStringCopy(type);
             if (language.data != nullptr)
-                fetch->contentLanguage = prStringCopy(language);
+                fetch->contentLanguage = prRawStringCopy(language);
             if (encoding.data != nullptr)
-                fetch->contentEncoding = prStringCopy(encoding);
+                fetch->contentEncoding = prRawStringCopy(encoding);
             fetch->serverTiming = serverTimingOf(handle);
             fetch->responseReferrerPolicy = headersJoined(handle, "referrer-policy");
             if (prFetchSentReferrer(handle).data != nullptr)
-                fetch->sentReferrer = prStringCopy(prFetchSentReferrer(handle));
-            fetch->responseUrl = prStringCopy(prFetchUrl(handle));
+                fetch->sentReferrer = prRawStringCopy(prFetchSentReferrer(handle));
+            fetch->responseUrl = prRawStringCopy(prFetchUrl(handle));
             fetch->responseType = prFetchResponseType(handle);
             if (fetch->scriptDone != nullptr) {
                 uint32_t count = prFetchHeaderCount(handle);
                 for (uint32_t i = 0; i < count; ++i) {
                     PrFetchHeader header = prFetchHeader(handle, i);
-                    fetch->responseHeaders.push(HtmlFetchHeader{prStringCopy(header.name), prStringCopy(header.value)});
+                    HtmlFetchHeader copied = {prRawStringCopy(header.name), prRawStringCopy(header.value)};
+                    fetch->responseHeaders.push(copied);
                 }
             }
             break;
@@ -485,14 +486,14 @@ void beginOnLoop(void* PR_NULLABLE data) {
     prMutexUnlock(&fetch->lock);
     if (dropped)
         return;
-    Array<PrFetchHeader> headers;
+    RawArray<PrFetchHeader> headers;
     for (uint32_t i = 0; i < fetch->requestHeaders.count; ++i) {
         const HtmlFetchHeader& header = fetch->requestHeaders.data[i];
-        headers.push(PrFetchHeader{prStringView(&header.name), prStringView(&header.value)});
+        headers.push(PrFetchHeader{prRawStringView(&header.name), prRawStringView(&header.value)});
     }
     PrFetchRequestDesc desc{
-        .url = prStringView(&fetch->url),
-        .method = prStringView(&fetch->method),
+        .url = prRawStringView(&fetch->url),
+        .method = prRawStringView(&fetch->method),
         .headers = headers.data,
         .headerCount = headers.count,
         .body = PrByteView{fetch->requestBody.data, fetch->requestBody.count},
@@ -500,8 +501,8 @@ void beginOnLoop(void* PR_NULLABLE data) {
         .mode = fetch->mode,
         .credentials = fetch->credentials,
         .redirect = fetch->redirect,
-        .origin = prStringView(&fetch->origin),
-        .referrer = prStringView(&fetch->referrer),
+        .origin = prRawStringView(&fetch->origin),
+        .referrer = prRawStringView(&fetch->referrer),
         .referrerPolicy = fetch->referrerPolicy,
     };
     PrStatus status = prFetchCreate(fetch->fetcher, &desc, fetchEvent, fetch, &fetch->fetch);
@@ -570,7 +571,7 @@ HtmlFetch* createFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination d
     fetch->delaysLoad = settings.delaysLoad;
     fetch->agent = page->window->agent;
     fetch->fetcher = page->host.fetcher;
-    fetch->url = prStringCopy(url);
+    fetch->url = prRawStringCopy(url);
     fetch->origin = htmlWindowOrigin(page->window);
     fetch->referrer = prUrlSerialize(page->window->document->url, PrUrlSerialization_Whole);
     fetch->referrerPolicy = page->window->document->referrerPolicy;
@@ -603,19 +604,19 @@ void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destinat
         PrStringView referrerPolicy, FetchSettings settings, DomFetchFn done, void* PR_NULLABLE data,
         void (*PR_NULLABLE drop)(void* PR_NULLABLE data)) {
     if (prAsciiStartsWithFold(url, "data:") || page->host.fetcher == nullptr) {
-        PrString body = {};
-        PrString contentType = {};
+        PrRawString body = {};
+        PrRawString contentType = {};
         PrStatus status = PrStatus_NotSupported;
         if (prAsciiStartsWithFold(url, "data:"))
             status = prUrlProcessData(url, &body, &contentType);
         DomFetchResult result{
-            status, uint16_t(status == PrStatus_Ok ? 200 : 0), prStringView(&body),
-            prStringView(&contentType), PrStringView{nullptr, 0},
+            status, uint16_t(status == PrStatus_Ok ? 200 : 0), prRawStringView(&body),
+            prRawStringView(&contentType), PrStringView{nullptr, 0},
             status == PrStatus_Ok ? url : PrStringView{nullptr, 0}, false,
         };
         done(data, &result);
-        prStringReset(&body);
-        prStringReset(&contentType);
+        prRawStringReset(&body);
+        prRawStringReset(&contentType);
         return;
     }
     HtmlFetch* fetch = createFetch(page, url, destination, settings);
@@ -659,17 +660,17 @@ void releaseScript(PreparedScript* script) {
     if (script->fetching)
         return;
     domNodeUnhold(script->element);
-    prStringReset(&script->source);
-    prStringReset(&script->url);
-    prStringReset(&script->baseUrl);
+    prRawStringReset(&script->source);
+    prRawStringReset(&script->url);
+    prRawStringReset(&script->baseUrl);
     prMemoryFree(script);
 }
 
 // Returns the module of the window's module map at `url`, or kArrayMissing.
 HtmlModuleIndex findModule(const PrHtmlPage* page, PrStringView url) {
     for (HtmlModuleIndex i = 0; i < page->modules.count; ++i) {
-        const PrString& key = page->modules.data[i].url;
-        if (!prStringIsNull(&key) && prStringView(&key) == url)
+        const PrRawString& key = page->modules.data[i].url;
+        if (!prRawStringIsNull(&key) && prRawStringView(&key) == url)
             return i;
     }
     return kArrayMissing;
@@ -679,11 +680,11 @@ HtmlModuleIndex findModule(const PrHtmlPage* page, PrStringView url) {
 // (html/#fetch-the-descendants-of-and-link-a-module-script), or else Fetching while a module of it is being fetched, or
 // else Parsed.
 HtmlModuleState moduleGraphState(const PrHtmlPage* page, HtmlModuleIndex root) {
-    Array<bool> reached;
+    RawArray<bool> reached;
     reached.resize(page->modules.count);
     for (uint32_t i = 0; i < reached.count; ++i)
         reached.data[i] = false;
-    Array<HtmlModuleIndex> pending;
+    RawArray<HtmlModuleIndex> pending;
     pending.push(root);
     reached.data[root] = true;
     HtmlModuleState state = HtmlModuleState_Parsed;
@@ -737,24 +738,24 @@ void moduleFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     if (!domFetchIsOk(result) || !prMimeTypeIsJavaScript(prMimeTypeEssence(result->contentType))) {
         page->modules.data[index].state = HtmlModuleState_Failed;
     } else {
-        PrString decoded = {};
+        PrRawString decoded = {};
         PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
         PrStringView text = prCharsetDecodeView(&decoder, result->body, PrCharsetInput_Final, &decoded);
-        PrString url = prStringClone(&page->modules.data[index].url);
-        PrString base = result->url.data != nullptr ? prStringCopy(result->url) : prStringClone(&url);
+        PrRawString url = prRawStringClone(&page->modules.data[index].url);
+        PrRawString base = result->url.data != nullptr ? prRawStringCopy(result->url) : prRawStringClone(&url);
         PrHtmlScript script{
             .source = text.data != nullptr ? text : "",
-            .url = prStringView(&url),
-            .baseUrl = prStringView(&base),
+            .url = prRawStringView(&url),
+            .baseUrl = prRawStringView(&base),
             .kind = PrHtmlScriptKind_Module,
             .external = true,
             .line = 1,
             .column = 1,
         };
         parseModule(page, index, script);
-        prStringReset(&url);
-        prStringReset(&base);
-        prStringReset(&decoded);
+        prRawStringReset(&url);
+        prRawStringReset(&base);
+        prRawStringReset(&decoded);
     }
     queueModules(page);
 }
@@ -767,44 +768,44 @@ void dropModuleFetch(void* PR_NULLABLE data) {
 // load event: a module script does, while it waits to run, and an import() does not.
 void fetchModule(PrHtmlPage* page, HtmlModuleIndex index) {
     const HtmlModule& module = page->modules.data[index];
-    PrStringView url = prStringView(&module.url);
-    PrString request = prStringCopy(prStringSlice(url, 0, prStringFindByte(url, '#')));
+    PrStringView url = prRawStringView(&module.url);
+    PrRawString request = prRawStringCopy(prStringSlice(url, 0, prStringFindByte(url, '#')));
     FetchSettings mode{PrFetchMode_Cors, module.credentials, false};
     ModuleFetch* fetch = allocZeroed<ModuleFetch>();
     *fetch = ModuleFetch{page, index};
-    startFetch(page, prStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script,
+    startFetch(page, prRawStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script,
         PrStringView{nullptr, 0}, mode, moduleFetched, fetch, dropModuleFetch);
-    prStringReset(&request);
+    prRawStringReset(&request);
 }
 
 // Returns the module of the map at `url`, which is added if the map lacks it. A module that is added appends its index
 // to `added`, and its fetch is the caller's to start.
-HtmlModuleIndex addModule(PrHtmlPage* page, PrStringView url, PrFetchCredentials credentials, Array<HtmlModuleIndex>* added) {
+HtmlModuleIndex addModule(PrHtmlPage* page, PrStringView url, PrFetchCredentials credentials, RawArray<HtmlModuleIndex>* added) {
     HtmlModuleIndex index = findModule(page, url);
     if (index != kArrayMissing)
         return index;
     index = page->modules.count;
-    page->modules.push(HtmlModule{.url = prStringCopy(url), .credentials = credentials});
+    page->modules.push(HtmlModule{.url = prRawStringCopy(url), .credentials = credentials});
     added->push(index);
     return index;
 }
 
 void collectRequest(void* PR_NULLABLE context, PrStringView url) {
-    static_cast<Array<PrString>*>(context)->push(prStringCopy(url));
+    static_cast<RawArray<PrRawString>*>(context)->push(prRawStringCopy(url));
 }
 
 // Parses `script` into the module at `index` with the host, records the modules that it imports, and fetches those that
 // the map lacks (html/#fetch-the-descendants-of-and-link-a-module-script). The fetches start once the module's imports
 // are recorded, since the fetch of a data: URL is answered during the call that starts it.
 void parseModule(PrHtmlPage* page, HtmlModuleIndex index, const PrHtmlScript& script) {
-    Array<PrString> requests;
+    RawArray<PrRawString> requests;
     uint32_t record = page->host.parseModule(page->host.context, page, &script, collectRequest, &requests);
     PrFetchCredentials credentials = page->modules.data[index].credentials;
-    Array<HtmlModuleIndex> added;
+    RawArray<HtmlModuleIndex> added;
     uint32_t first = page->moduleRequests.count;
     for (uint32_t i = 0; i < requests.count; ++i) {
-        page->moduleRequests.push(addModule(page, prStringView(&requests.data[i]), credentials, &added));
-        prStringReset(&requests.data[i]);
+        page->moduleRequests.push(addModule(page, prRawStringView(&requests.data[i]), credentials, &added));
+        prRawStringReset(&requests.data[i]);
     }
     requests.reset();
     HtmlModule& module = page->modules.data[index];
@@ -855,7 +856,7 @@ void waitForModules(PrHtmlPage* page, PreparedScript* script, HtmlModuleIndex ro
 // Empties the module map, once the fetches of its modules are dropped, when the window's document is replaced or the
 // context destroyed. An import() that waits is called with Lost.
 void dropModules(PrHtmlPage* page) {
-    Array<HtmlModuleWait> waits = page->moduleWaits;
+    RawArray<HtmlModuleWait> waits = page->moduleWaits;
     page->moduleWaits = {};
     for (uint32_t i = 0; i < waits.count; ++i) {
         if (waits.data[i].script == nullptr)
@@ -863,7 +864,7 @@ void dropModules(PrHtmlPage* page) {
     }
     waits.reset();
     for (uint32_t i = 0; i < page->modules.count; ++i)
-        prStringReset(&page->modules.data[i].url);
+        prRawStringReset(&page->modules.data[i].url);
     page->modules.reset();
     page->moduleRequests.reset();
 }
@@ -871,13 +872,16 @@ void dropModules(PrHtmlPage* page) {
 // html/#execute-the-script-element
 PrStatus executeScript(PrHtmlPage* page, const PreparedScript* prepared) {
     bool module = prepared->kind == PrHtmlScriptKind_Module;
-    if (module ? moduleGraphState(page, prepared->module) == HtmlModuleState_Failed : prStringIsNull(&prepared->source)) {
+    bool failed = prRawStringIsNull(&prepared->source);
+    if (module)
+        failed = moduleGraphState(page, prepared->module) == HtmlModuleState_Failed;
+    if (failed) {
         domEventFire(prepared->element, "error");
         return PrStatus_Ok;
     }
     PrHtmlScript script{
-        prStringView(&prepared->source), prStringView(&prepared->url),
-        prStringView(&prepared->baseUrl), prepared->kind, prepared->external,
+        prRawStringView(&prepared->source), prRawStringView(&prepared->url),
+        prRawStringView(&prepared->baseUrl), prepared->kind, prepared->external,
         prepared->line, prepared->column,
         module ? page->modules.data[prepared->module].record : 0,
     };
@@ -918,12 +922,12 @@ void scriptFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
         PrCharsetDecoder decoder = prCharsetDecoderMake(charset, 0);
         PrStringView text = prCharsetDecodeView(&decoder, body, PrCharsetInput_Final, &script->source);
         // Text that decoded in place is still the response's, which the fetch frees.
-        if (prStringIsNull(&script->source))
-            script->source = prStringCopy(text.data != nullptr ? text : "");
+        if (prRawStringIsNull(&script->source))
+            script->source = prRawStringCopy(text.data != nullptr ? text : "");
         // A classic script's imports resolve against its response's URL, after redirects, or against about:blank if its
         // errors are muted, as a cross-origin script fetched without CORS has them (html/#creating-a-classic-script).
         if (script->kind == PrHtmlScriptKind_Classic && (result->url.data != nullptr || result->opaque))
-            prStringReplace(&script->baseUrl, result->opaque ? PrStringView{"about:blank"} : result->url);
+            prRawStringReplace(&script->baseUrl, result->opaque ? PrStringView{"about:blank"} : result->url);
     }
     if (script->released)
         releaseScript(script);
@@ -947,12 +951,12 @@ void fetchScript(PrHtmlPage* page, PreparedScript* script, PrStringView src, con
         return;
     }
     script->url = prUrlSerialize(resource, PrUrlSerialization_Whole);
-    script->baseUrl = prStringClone(&script->url);
+    script->baseUrl = prRawStringClone(&script->url);
     if (script->kind == PrHtmlScriptKind_Module) {
         prUrlDestroy(resource);
-        Array<HtmlModuleIndex> added;
+        RawArray<HtmlModuleIndex> added;
         FetchSettings mode = scriptSettingsOf(script->element, script->kind);
-        HtmlModuleIndex root = addModule(page, prStringView(&script->url), mode.credentials, &added);
+        HtmlModuleIndex root = addModule(page, prRawStringView(&script->url), mode.credentials, &added);
         if (added.count != 0)
             fetchModule(page, root);
         added.reset();
@@ -969,13 +973,13 @@ void fetchScript(PrHtmlPage* page, PreparedScript* script, PrStringView src, con
         script->charset = named;
     else
         script->charset = prCharsetOutput(page->window->document->charset);
-    PrString request = prUrlSerialize(resource, PrUrlSerialization_ExcludeFragment);
+    PrRawString request = prUrlSerialize(resource, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(resource);
     script->fetching = true;
     FetchSettings mode = scriptSettingsOf(script->element, script->kind);
-    startFetch(page, prStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script,
+    startFetch(page, prRawStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script,
         domAttributeValue(script->element, "referrerpolicy"), mode, scriptFetched, script, dropScriptFetch);
-    prStringReset(&request);
+    prRawStringReset(&request);
 }
 
 // Returns the attribute that names an external script's source: an HTML script's src, or an SVG script's href, or its
@@ -987,7 +991,7 @@ PrStringView scriptSource(const PrDomElement* element) {
     if (href.data != nullptr)
         return href;
     const PrDomAttr* xlink = domAttribute(element, PrDomNamespace_XLink, "href");
-    return xlink != nullptr ? prStringView(&xlink->value) : PrStringView{};
+    return xlink != nullptr ? prRawStringView(&xlink->value) : PrStringView{};
 }
 
 // Pauses the parse of the window's document, which its HTML or XML parser runs.
@@ -1023,22 +1027,22 @@ PrStatus prepareScriptAt(PrHtmlPage* page, PrDomElement* element, uint32_t line,
         left &= ~DomScriptFlag_NotForceAsync;
     domScriptSetFlags(element, left);
     PrStringView src = scriptSource(element);
-    PrString text = src.data == nullptr ? domNodeTextContent(element) : PrString{};
+    PrRawString text = src.data == nullptr ? domNodeTextContent(element) : PrRawString{};
     PrHtmlScriptKind kind = PrHtmlScriptKind_Classic;
-    if (src.data == nullptr && prStringIsEmpty(&text)) {
-        prStringReset(&text);
+    if (src.data == nullptr && prRawStringIsEmpty(&text)) {
+        prRawStringReset(&text);
         domScriptSetFlags(element, flags);
         return PrStatus_Ok;
     }
     if (!domIsConnected(element) || !scriptKind(element, &kind)) {
-        prStringReset(&text);
+        prRawStringReset(&text);
         return PrStatus_Ok;
     }
     domScriptSetFlags(element, flags | DomScriptFlag_Started);
     bool forceAsync = (flags & DomScriptFlag_NotForceAsync) == 0;
     if ((kind == PrHtmlScriptKind_Classic && domAttributeValue(element, "nomodule").data != nullptr) ||
             (kind == PrHtmlScriptKind_Module && page->host.parseModule == nullptr)) {
-        prStringReset(&text);
+        prRawStringReset(&text);
         return PrStatus_Ok;
     }
     domNodeHold(element);
@@ -1065,9 +1069,9 @@ PrStatus prepareScriptAt(PrHtmlPage* page, PrDomElement* element, uint32_t line,
             FetchSettings mode = scriptSettingsOf(element, script->kind);
             page->modules.push(HtmlModule{.credentials = mode.credentials});
             PrHtmlScript parsed{
-                .source = prStringView(&script->source),
-                .url = prStringView(&script->url),
-                .baseUrl = prStringView(&script->baseUrl),
+                .source = prRawStringView(&script->source),
+                .url = prRawStringView(&script->url),
+                .baseUrl = prRawStringView(&script->baseUrl),
                 .kind = PrHtmlScriptKind_Module,
                 .line = line,
                 .column = column,
@@ -1213,11 +1217,11 @@ bool changeEncoding(void* data, PrCharset charset) {
     PrCharsetInput input = whole || page->streamFlushed ? PrCharsetInput_Final : PrCharsetInput_Partial;
     PrCharsetDecoder before = prCharsetDecoderMake(current, 0);
     PrCharsetDecoder after = prCharsetDecoderMake(charset, 0);
-    PrString first = {};
-    PrString second = {};
+    PrRawString first = {};
+    PrRawString second = {};
     bool same = prCharsetDecodeView(&before, decoded, input, &first) == prCharsetDecodeView(&after, decoded, input, &second);
-    prStringReset(&first);
-    prStringReset(&second);
+    prRawStringReset(&first);
+    prRawStringReset(&second);
     if (!same) {
         page->reparse = charset;
         return true;
@@ -1320,10 +1324,10 @@ struct EmbedFetch {
     PrHtmlPage* page;
     PrDomElement* element;
     uint32_t generation;
-    PrString url;               // the URL that it fetches, serialized with its fragment
+    PrRawString url;               // the URL that it fetches, serialized with its fragment
 };
 
-EmbedFetch* newEmbedFetch(PrHtmlPage* page, PrDomElement* element, PrString url) {
+EmbedFetch* newEmbedFetch(PrHtmlPage* page, PrDomElement* element, PrRawString url) {
     EmbedFetch* fetch = allocZeroed<EmbedFetch>();
     domNodeHold(element);
     *fetch = EmbedFetch{page, element, domElementState(element)->generation, url};
@@ -1333,7 +1337,7 @@ EmbedFetch* newEmbedFetch(PrHtmlPage* page, PrDomElement* element, PrString url)
 void dropEmbedFetch(void* PR_NULLABLE data) {
     EmbedFetch* fetch = static_cast<EmbedFetch*>(data);
     domNodeUnhold(fetch->element);
-    prStringReset(&fetch->url);
+    prRawStringReset(&fetch->url);
     prMemoryFree(fetch);
 }
 
@@ -1432,7 +1436,7 @@ void attachFrame(PrHtmlPage* page, PrDomElement* element, PrStringView source, P
     PrHtmlPage* child = prHtmlPageCreate(&childHost);
     child->window->parent = window;
     child->initialBlank = kind == FrameDocument_InitialBlank;
-    child->targetName = prStringCopy(domAttributeValue(element, "name"));
+    child->targetName = prRawStringCopy(domAttributeValue(element, "name"));
     child->defaultCharset = page->defaultCharset;
     prHtmlPageSetDisplay(child, &page->display);
     prHtmlPageSetUserPreferences(child, &page->preferences);
@@ -1459,7 +1463,7 @@ bool inWindow(const PrHtmlPage* page, PrDomElement* element) {
 // Returns the Referrer-Policy of the response whose callback is running, or the null view.
 PrStringView referrerPolicyOfFetch(const PrHtmlPage* page) {
     const HtmlFetch* fetch = page->completingFetch;
-    return fetch != nullptr ? prStringView(&fetch->responseReferrerPolicy) : PrStringView{nullptr, 0};
+    return fetch != nullptr ? prRawStringView(&fetch->responseReferrerPolicy) : PrStringView{nullptr, 0};
 }
 
 void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
@@ -1473,7 +1477,7 @@ void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             };
         // The document replaces the initial about:blank, as a navigation of the iframe's browsing context would.
         dropFrame(fetch->page, fetch->element);
-        attachFrame(fetch->page, fetch->element, loaded ? result->body : "", prStringView(&fetch->url), headers);
+        attachFrame(fetch->page, fetch->element, loaded ? result->body : "", prRawStringView(&fetch->url), headers);
     }
     dropEmbedFetch(fetch);
 }
@@ -1481,17 +1485,17 @@ void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
 // Returns true if `url` is, ignoring fragments, the URL of the page's document or of a document around it. A nested
 // document with such a URL would hold another copy of its container, without end (html/#process-the-iframe-attributes).
 bool loadsItself(const PrHtmlPage* page, const PrUrl* url) {
-    PrString wanted = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    PrRawString wanted = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     bool found = false;
     for (const PrHtmlWindow* window = page->window; window != nullptr && !found; window = window->parent) {
-        PrString at = prDomDocumentUrl(window->document);
-        PrStringView view = prStringView(&at);
+        PrRawString at = prDomDocumentUrl(window->document);
+        PrStringView view = prRawStringView(&at);
         PrStringView fragment = domUrlFragment(view);
         size_t length = fragment.data != nullptr ? view.size - fragment.size - 1 : view.size;
-        found = PrStringView{view.data, length} == prStringView(&wanted);
-        prStringReset(&at);
+        found = PrStringView{view.data, length} == prRawStringView(&wanted);
+        prRawStringReset(&at);
     }
-    prStringReset(&wanted);
+    prRawStringReset(&wanted);
     return found;
 }
 
@@ -1518,9 +1522,9 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
             attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{});
             child = htmlFrameWindow(element);
         }
-        PrString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
-        htmlPageNavigate(child, page->window, prStringView(&href), HtmlHistoryCommit_Replace, child->history->index);
-        prStringReset(&href);
+        PrRawString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
+        htmlPageNavigate(child, page->window, prRawStringView(&href), HtmlHistoryCommit_Replace, child->history->index);
+        prRawStringReset(&href);
         prUrlDestroy(resolved);
         return;
     }
@@ -1533,19 +1537,19 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
     if (srcdoc.data != nullptr) {
         attachFrame(page, element, srcdoc, "about:srcdoc", PrHtmlResponseHeaders{});
     } else if (parsed && isBlank(resolved)) {
-        PrString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
-        attachFrame(page, element, "", prStringView(&href), PrHtmlResponseHeaders{});
-        prStringReset(&href);
+        PrRawString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
+        attachFrame(page, element, "", prRawStringView(&href), PrHtmlResponseHeaders{});
+        prRawStringReset(&href);
     } else if (parsed && !loadsItself(page, resolved)) {
         attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{}, FrameDocument_InitialBlank);
         page->children.data[page->children.count - 1]->awaitingSource = true;
         EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(resolved, PrUrlSerialization_Whole));
-        PrString request = prUrlSerialize(resolved, PrUrlSerialization_ExcludeFragment);
-        startFetch(page, prStringView(&request), DomFetchDestination_Document,
+        PrRawString request = prUrlSerialize(resolved, PrUrlSerialization_ExcludeFragment);
+        startFetch(page, prRawStringView(&request), DomFetchDestination_Document,
             element->tag == PrDomTag_Frame ? PrFetchInitiator_Frame : PrFetchInitiator_Iframe,
             domAttributeValue(element, "referrerpolicy"),
             fetchSettingsOf(DomFetchDestination_Document, DomCorsSettings_NoCors), frameFetched, fetch, dropEmbedFetch);
-        prStringReset(&request);
+        prRawStringReset(&request);
     } else {
         attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{});
     }
@@ -1560,10 +1564,10 @@ const PrSvgImage* PR_NULLABLE svgImageOf(PrStringView bytes, PrStringView fragme
 bool loadSecureImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url, PrSvgLoadedImage* out) {
     (void)from;
     PrImageCodec* codec = static_cast<PrImageCodec*>(context);
-    PrString body{};
-    PrString type{};
+    PrRawString body{};
+    PrRawString type{};
     if (prUrlProcessData(url, &body, &type) == PrStatus_Ok) {
-        PrStringView bytes = prStringView(&body);
+        PrStringView bytes = prRawStringView(&body);
         if (htmlImageIsSvg(bytes)) {
             out->svg = svgImageOf(bytes, domUrlFragment(url), codec);
         } else if (codec != nullptr) {
@@ -1571,8 +1575,8 @@ bool loadSecureImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringVie
             prDrawImageCreateFromBytes(codec, view, &out->raster, nullptr);
         }
     }
-    prStringReset(&body);
-    prStringReset(&type);
+    prRawStringReset(&body);
+    prRawStringReset(&type);
     return out->raster != nullptr || out->svg != nullptr;
 }
 
@@ -1580,12 +1584,12 @@ bool loadSecureImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringVie
 // if the bytes do not parse as an SVG document. The image is its own document, which loads only the images of data:
 // URLs, with `codec`.
 const PrSvgImage* PR_NULLABLE svgImageOf(PrStringView bytes, PrStringView fragment, PrImageCodec* PR_NULLABLE codec) {
-    PrString decoded = {};
+    PrRawString decoded = {};
     PrCharset charset = PrCharset_None;
     PrDomDocument* document = prDomParseXml(domXmlDecode(bytes, PrCharset_None, &decoded, &charset), "image/svg+xml", nullptr);
     prCssEnable(document);
     prSvgEnable(document);
-    prStringReset(&decoded);
+    prRawStringReset(&decoded);
     document->charset = charset;
     PrDomElement* root = prDomDocumentElement(document);
     PrSvgElement* svg = root != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(root)) : nullptr;
@@ -1660,7 +1664,8 @@ void showImage(PrHtmlPage* page, PrDomElement* element, PrStringView bytes) {
     prLayoutPainterRelease(state->vector);
     state->vector = PrLayoutPainter{};
     if (state->image == PrDomImageState_CompletelyAvailable && htmlImageIsSvg(bytes)) {
-        state->vector = svgPainter(page, bytes, domUrlFragment(prStringView(&state->imageUrl)), &state->vectorNatural);
+        PrStringView fragment = domUrlFragment(prRawStringView(&state->imageUrl));
+        state->vector = svgPainter(page, bytes, fragment, &state->vectorNatural);
     } else if (state->image == PrDomImageState_CompletelyAvailable && page->host.images != nullptr) {
         PrByteView view{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size};
         PrImageOrientation orientation = PrImageOrientation_Identity;
@@ -1686,7 +1691,7 @@ void showImage(PrHtmlPage* page, PrDomElement* element, PrStringView bytes) {
 // fetched none.
 const HtmlAvailableImage* PR_NULLABLE availableImage(const PrHtmlPage* page, PrStringView url) {
     for (uint32_t i = 0; i < page->availableImages.count; ++i) {
-        if (prStringView(&page->availableImages.data[i].url) == url)
+        if (prRawStringView(&page->availableImages.data[i].url) == url)
             return &page->availableImages.data[i];
     }
     return nullptr;
@@ -1694,8 +1699,8 @@ const HtmlAvailableImage* PR_NULLABLE availableImage(const PrHtmlPage* page, PrS
 
 void dropAvailableImages(PrHtmlPage* page) {
     for (uint32_t i = 0; i < page->availableImages.count; ++i) {
-        prStringReset(&page->availableImages.data[i].url);
-        prStringReset(&page->availableImages.data[i].bytes);
+        prRawStringReset(&page->availableImages.data[i].url);
+        prRawStringReset(&page->availableImages.data[i].bytes);
     }
     page->availableImages.reset();
 }
@@ -1707,10 +1712,12 @@ void imageFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
         bool loaded = result->status == PrStatus_Ok &&
             htmlImageSize(result->body, &state->naturalWidth, &state->naturalHeight);
         correctForDensity(state);
-        PrStringView url = prStringView(&fetch->url);
+        PrStringView url = prRawStringView(&fetch->url);
         PrStringView request = prStringSlice(url, 0, prStringFindByte(url, '#'));
-        if (loaded && availableImage(fetch->page, request) == nullptr)
-            fetch->page->availableImages.push(HtmlAvailableImage{prStringCopy(request), prStringCopy(result->body)});
+        if (loaded && availableImage(fetch->page, request) == nullptr) {
+            HtmlAvailableImage available = {prRawStringCopy(request), prRawStringCopy(result->body)};
+            fetch->page->availableImages.push(available);
+        }
         if (loaded)
             state->image = PrDomImageState_CompletelyAvailable;
         showImage(fetch->page, fetch->element, loaded ? result->body : PrStringView{});
@@ -1727,7 +1734,7 @@ void updateImage(PrHtmlPage* page, PrDomElement* element, PrStringView source, d
     DomElementState* state = domElementState(element);
     ++state->generation;
     state->density = density;
-    prStringReset(&state->imageUrl);
+    prRawStringReset(&state->imageUrl);
     state->image = PrDomImageState_Broken;
     state->naturalWidth = 0;
     state->naturalHeight = 0;
@@ -1740,21 +1747,21 @@ void updateImage(PrHtmlPage* page, PrDomElement* element, PrStringView source, d
     PrUrl* url = nullptr;
     if (domDocumentParseUrl(element->document, source, &url) == PrStatus_Ok) {
         state->imageUrl = prUrlSerialize(url, PrUrlSerialization_Whole);
-        PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
-        if (const HtmlAvailableImage* available = availableImage(page, prStringView(&request))) {
-            htmlImageSize(prStringView(&available->bytes), &state->naturalWidth, &state->naturalHeight);
+        PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+        if (const HtmlAvailableImage* available = availableImage(page, prRawStringView(&request))) {
+            htmlImageSize(prRawStringView(&available->bytes), &state->naturalWidth, &state->naturalHeight);
             correctForDensity(state);
             state->image = PrDomImageState_CompletelyAvailable;
-            showImage(page, element, prStringView(&available->bytes));
+            showImage(page, element, prRawStringView(&available->bytes));
             queueElementEvent(page, element, false);
         } else {
             EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(url, PrUrlSerialization_Whole));
-            startFetch(page, prStringView(&request), DomFetchDestination_Image,
+            startFetch(page, prRawStringView(&request), DomFetchDestination_Image,
                 element->tag == PrDomTag_Input ? PrFetchInitiator_Input : PrFetchInitiator_Img,
                 domAttributeValue(element, "referrerpolicy"),
                 fetchSettingsOf(DomFetchDestination_Image, corsOf(element)), imageFetched, fetch, dropEmbedFetch);
         }
-        prStringReset(&request);
+        prRawStringReset(&request);
     } else {
         queueElementEvent(page, element, true);
     }
@@ -1797,9 +1804,9 @@ void updateSvgImage(PrHtmlPage* page, PrDomElement* element) {
     PrStringView source = svgImageSource(element);
     PrUrl* url = nullptr;
     if (source.size != 0 && domDocumentParseUrl(element->document, source, &url) == PrStatus_Ok) {
-        PrString whole = prUrlSerialize(url, PrUrlSerialization_Whole);
-        bool same = element->state != nullptr && prStringView(&element->state->imageUrl) == prStringView(&whole);
-        prStringReset(&whole);
+        PrRawString whole = prUrlSerialize(url, PrUrlSerialization_Whole);
+        bool same = element->state != nullptr && prRawStringView(&element->state->imageUrl) == prRawStringView(&whole);
+        prRawStringReset(&whole);
         prUrlDestroy(url);
         if (same)
             return;
@@ -1827,7 +1834,7 @@ void objectFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             showImage(fetch->page, element, decoded ? result->body : PrStringView{});
             queueElementEvent(fetch->page, element, !decoded);
         } else if (prAsciiEqualsFold(essence, "text/html") || prMimeTypeIsXml(essence)) {
-            attachFrame(fetch->page, element, result->body, prStringView(&fetch->url),
+            attachFrame(fetch->page, element, result->body, prRawStringView(&fetch->url),
                 PrHtmlResponseHeaders{essence, result->contentLanguage, PrStringView{nullptr, 0}});
         }
     }
@@ -1850,12 +1857,12 @@ void objectChanged(PrHtmlPage* page, PrDomElement* element) {
     PrUrl* url = nullptr;
     if (domDocumentParseUrl(element->document, data, &url) == PrStatus_Ok && !loadsItself(page, url)) {
         EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(url, PrUrlSerialization_Whole));
-        PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
-        startFetch(page, prStringView(&request), DomFetchDestination_Object,
+        PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+        startFetch(page, prRawStringView(&request), DomFetchDestination_Object,
             element->tag == PrDomTag_Embed ? PrFetchInitiator_Embed : PrFetchInitiator_Object,
             domAttributeValue(element, "referrerpolicy"),
             fetchSettingsOf(DomFetchDestination_Object, DomCorsSettings_NoCors), objectFetched, fetch, dropEmbedFetch);
-        prStringReset(&request);
+        prRawStringReset(&request);
     } else {
         queueElementEvent(page, element, true);
     }
@@ -1879,7 +1886,7 @@ void frameNameChanged(const PrDomElement* element) {
     PrHtmlWindow* window = htmlFrameWindow(element);
     PrHtmlPage* child = window != nullptr ? htmlDocumentPage(window->document) : nullptr;
     if (child != nullptr)
-        prStringReplace(&child->targetName, domAttributeValue(element, "name"));
+        prRawStringReplace(&child->targetName, domAttributeValue(element, "name"));
 }
 
 void activate(void* PR_NULLABLE context, PrDomElement* element, PrDomEvent*) {
@@ -2260,7 +2267,7 @@ void closeWindow(PrHtmlPage* page) {
     window->performance.listeners = nullptr;
     domListenersDestroy(window->orientation.listeners);
     window->orientation.listeners = nullptr;
-    prStringReset(&window->referrer);
+    prRawStringReset(&window->referrer);
     for (PrHtmlStorage& storage : window->storage)
         htmlStorageReset(&storage);
 }
@@ -2311,12 +2318,12 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
     if (page->loaded) {
         // html/#resetBCName: a top-level browsing context loses its name when it commits a document of another origin.
         if (page->window->parent == nullptr) {
-            PrString before = prUrlOrigin(page->window->document->url);
-            PrString after = prUrlOrigin(documentUrl);
-            if (prStringView(&before) != prStringView(&after) || prStringView(&before) == "null")
-                prStringReset(&page->targetName);
-            prStringReset(&before);
-            prStringReset(&after);
+            PrRawString before = prUrlOrigin(page->window->document->url);
+            PrRawString after = prUrlOrigin(documentUrl);
+            if (prRawStringView(&before) != prRawStringView(&after) || prRawStringView(&before) == "null")
+                prRawStringReset(&page->targetName);
+            prRawStringReset(&before);
+            prRawStringReset(&after);
         }
         dropMarkdown(page);
         dropFetches(page);
@@ -2336,13 +2343,13 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
     prUrlDestroy(document->url);
     document->url = documentUrl;
     // The document takes its entry in the session history, and the history state is the entry's.
-    PrString committed = prUrlSerialize(documentUrl, PrUrlSerialization_Whole);
+    PrRawString committed = prUrlSerialize(documentUrl, PrUrlSerialization_Whole);
     HtmlSessionHistory* history = page->window->history;
     PrHtmlNavigationType navigationType = PrHtmlNavigationType_Navigate;
     if (history->commit == HtmlHistoryCommit_Traverse)
         navigationType =
             history->target == history->index ? PrHtmlNavigationType_Reload : PrHtmlNavigationType_BackForward;
-    page->window->historyDocument = htmlHistoryCommit(page->window->history, prStringView(&committed), false);
+    page->window->historyDocument = htmlHistoryCommit(page->window->history, prRawStringView(&committed), false);
     ++page->window->historyGeneration;
     htmlWindowStartClock(page->window);
     HtmlResourceReport report{};
@@ -2352,12 +2359,13 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
         htmlWindowBackdateClock(page->window, htmlWindowClock(page->window) - report.anchor.clock);
         report.anchor.windowTime = 0;
     }
-    htmlPerformanceBeginNavigation(page->window, prStringView(&committed), fetched ? &report : nullptr, navigationType);
+    PrStringView committedUrl = prRawStringView(&committed);
+    htmlPerformanceBeginNavigation(page->window, committedUrl, fetched ? &report : nullptr, navigationType);
     // The document's referrer is what its request sent. A srcdoc document's is its container's URL.
-    prStringReset(&page->window->referrer);
+    prRawStringReset(&page->window->referrer);
     if (fetched && report.sentReferrer.data != nullptr)
-        page->window->referrer = prStringCopy(report.sentReferrer);
-    else if (!fetched && page->window->parent != nullptr && prStringView(&committed) == "about:srcdoc")
+        page->window->referrer = prRawStringCopy(report.sentReferrer);
+    else if (!fetched && page->window->parent != nullptr && prRawStringView(&committed) == "about:srcdoc")
         page->window->referrer = prUrlSerialize(page->window->parent->document->url, PrUrlSerialization_Whole);
     // A response's policy is the document's (html/#initialise-the-document-object).
     document->referrerPolicy = PrFetchReferrerPolicy_Default;
@@ -2370,7 +2378,7 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
             policyStart = at + 1;
         }
     }
-    prStringReset(&committed);
+    prRawStringReset(&committed);
     if (page->host.documentCommitted != nullptr)
         page->host.documentCommitted(page->host.context, page);
     page->window->revealing = true;
@@ -2378,14 +2386,14 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
     PrTextBuffer essence = {};
     prTextBufferAppend(&essence, prMimeTypeEssence(contentType));
     prTextBufferAsciiLower(&essence);
-    prStringReset(&document->contentType);
+    prRawStringReset(&document->contentType);
     document->contentType = prTextBufferTake(&essence);
     page->markdownOptions = markdownOptionsOf(contentType);
-    prStringReset(&document->languagePragma);
-    prStringReset(&document->languageHeader);
+    prRawStringReset(&document->languagePragma);
+    prRawStringReset(&document->languageHeader);
     PrStringView language = firstLanguage(given.contentLanguage);
     if (language.data != nullptr)
-        document->languageHeader = prStringCopy(language);
+        document->languageHeader = prRawStringCopy(language);
     page->locationAt = 0;
     page->line = 1;
     page->column = 1;
@@ -2423,9 +2431,9 @@ PrStatus loadMediaDocument(PrHtmlPage* page, PrDomTag tag) {
     PrDomElement* body = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Body, PrStringView{});
     domInsert(html, body, nullptr);
     PrDomElement* host = domElementCreate(document, PrDomNamespace_Html, tag, PrStringView{});
-    PrString source = prUrlSerialize(document->url, PrUrlSerialization_Whole);
-    domSetAttribute(host, PrDomNamespace_None, "src", prStringView(&source));
-    prStringReset(&source);
+    PrRawString source = prUrlSerialize(document->url, PrUrlSerialization_Whole);
+    domSetAttribute(host, PrDomNamespace_None, "src", prRawStringView(&source));
+    prRawStringReset(&source);
     domInsert(body, host, nullptr);
     PrStatus status = finishParse(page, PrStatus_Ok, true);
     page->loading = false;
@@ -2472,15 +2480,15 @@ PrStatus restartDocument(PrHtmlPage* page) {
     PrCharset charset = page->reparse;
     page->reparse = PrCharset_None;
     PrDomDocument* old = page->window->document;
-    PrString url = prUrlSerialize(old->url, PrUrlSerialization_Whole);
-    PrString contentType = prStringClone(&old->contentType);
-    PrString language = prStringClone(&old->languageHeader);
-    PrHtmlResponseHeaders headers = {prStringView(&contentType), prStringView(&language), PrStringView{nullptr, 0}};
+    PrRawString url = prUrlSerialize(old->url, PrUrlSerialization_Whole);
+    PrRawString contentType = prRawStringClone(&old->contentType);
+    PrRawString language = prRawStringClone(&old->languageHeader);
+    PrHtmlResponseHeaders headers = {prRawStringView(&contentType), prRawStringView(&language), PrStringView{nullptr, 0}};
     htmlParserReset(&page->parser);
-    PrStatus status = beginDocument(page, prStringView(&url), &headers);
-    prStringReset(&url);
-    prStringReset(&contentType);
-    prStringReset(&language);
+    PrStatus status = beginDocument(page, prRawStringView(&url), &headers);
+    prRawStringReset(&url);
+    prRawStringReset(&contentType);
+    prRawStringReset(&language);
     if (status == PrStatus_Ok)
         startDecoder(page, charset, HtmlConfidence_Certain);
     return status;
@@ -2489,13 +2497,13 @@ PrStatus restartDocument(PrHtmlPage* page) {
 // Parses the whole source of a load as HTML, decoded in the load's charset.
 void parseHtmlSource(PrHtmlPage* page, PrStringView source) {
     startParser(page, page->window->document);
-    PrString decoded = {};
+    PrRawString decoded = {};
     page->loadSource = source;
     page->parsing = true;
     htmlParse(&page->parser, prCharsetDecodeView(&page->decoder, source, PrCharsetInput_Final, &decoded));
     page->parsing = false;
     page->loadSource = PrStringView{nullptr, 0};
-    prStringReset(&decoded);
+    prRawStringReset(&decoded);
 }
 
 // The maximum number of bytes of a streamed document that one task parses, so that rendering opportunities come between
@@ -2565,7 +2573,7 @@ void parseMarkdownStream(PrHtmlPage* page, PrStringView input) {
         end = uint32_t(input.size);
     bool last = page->streamEnded && end == input.size;
     if (end > page->streamRead || (last && !page->streamFlushed)) {
-        PrString decoded = {};
+        PrRawString decoded = {};
         PrStringView text = prCharsetDecodeView(&page->decoder, prStringSlice(input, page->streamRead,
             end - page->streamRead), last ? PrCharsetInput_Final : PrCharsetInput_Partial, &decoded);
         page->streamRead = end;
@@ -2575,7 +2583,7 @@ void parseMarkdownStream(PrHtmlPage* page, PrStringView input) {
         if (last)
             htmlMarkdownBuilderEnd(page->markdown);
         page->parsing = false;
-        prStringReset(&decoded);
+        prRawStringReset(&decoded);
     }
     if (last) {
         dropMarkdown(page);
@@ -2614,7 +2622,7 @@ void parseXmlStream(PrHtmlPage* page, PrStringView input) {
         end = uint32_t(input.size);
     bool last = page->streamEnded && end == input.size;
     if (end > page->streamRead || (last && !page->streamFlushed)) {
-        PrString decoded = {};
+        PrRawString decoded = {};
         PrStringView text = prCharsetDecodeView(&page->decoder, prStringSlice(input, page->streamRead,
             end - page->streamRead), last ? PrCharsetInput_Final : PrCharsetInput_Partial, &decoded);
         page->streamRead = end;
@@ -2622,7 +2630,7 @@ void parseXmlStream(PrHtmlPage* page, PrStringView input) {
         prXmlParserAppend(page->xml.parser, text);
         if (last)
             prXmlParserEnd(page->xml.parser);
-        prStringReset(&decoded);
+        prRawStringReset(&decoded);
     }
     continueXml(page);
 }
@@ -2660,7 +2668,7 @@ void parseStream(void* data) {
         end = uint32_t(input.size);
     bool last = page->streamEnded && end == input.size;
     if (end > page->streamRead || (last && !page->streamFlushed)) {
-        PrString decoded = {};
+        PrRawString decoded = {};
         PrStringView text = prCharsetDecodeView(&page->decoder, prStringSlice(input, page->streamRead,
             end - page->streamRead), last ? PrCharsetInput_Final : PrCharsetInput_Partial, &decoded);
         page->streamRead = end;
@@ -2668,7 +2676,7 @@ void parseStream(void* data) {
         page->parsing = true;
         htmlParserAppend(&page->parser, text);
         page->parsing = false;
-        prStringReset(&decoded);
+        prRawStringReset(&decoded);
         if (page->reparse != PrCharset_None) {
             restartStream(page);
             return;
@@ -2826,7 +2834,7 @@ bool hasJavascriptScheme(PrStringView url) {
 // Returns true if `window`'s browsing context has the target name `name`.
 bool hasTargetName(const PrHtmlWindow* window, PrStringView name) {
     const PrHtmlPage* page = htmlDocumentPage(window->document);
-    return page != nullptr && prStringView(&page->targetName) == name;
+    return page != nullptr && prRawStringView(&page->targetName) == name;
 }
 
 // Returns true if `source` is familiar with `window` (html/#familiar-with): their documents have the same origin, or
@@ -2856,21 +2864,21 @@ PrHtmlWindow* PR_NULLABLE findTarget(const PrHtmlWindow* source, PrHtmlWindow* r
 struct Navigation {
     PrHtmlPage* page;
     uint32_t id;
-    PrString url;
-    PrString origin;            // the origin of the document that started the navigation (HtmlDocumentLoad::origin)
+    PrRawString url;
+    PrRawString origin;         // the origin of the document that started the navigation (HtmlDocumentLoad::origin)
     HtmlHistoryCommit commit;   // how the document that the navigation loads takes its entry
     uint32_t target;
     bool javascript;            // true if the URL's scheme is javascript
-    PrString referrer;          // the URL of the document that started the navigation, or the null string
+    PrRawString referrer;       // the URL of the document that started the navigation, or the null string
     PrFetchReferrerPolicy referrerPolicy;
     bool sameOrigin;            // true if the document that started the navigation shares the origin of the page
 };
 
 void dropNavigation(void* data) {
     Navigation* navigation = static_cast<Navigation*>(data);
-    prStringReset(&navigation->url);
-    prStringReset(&navigation->origin);
-    prStringReset(&navigation->referrer);
+    prRawStringReset(&navigation->url);
+    prRawStringReset(&navigation->origin);
+    prRawStringReset(&navigation->referrer);
     prMemoryFree(navigation);
 }
 
@@ -2888,27 +2896,27 @@ void runJavascriptUrl(PrHtmlPage* page, const Navigation* navigation) {
     dropDocumentLoad(page);
     if (!navigation->sameOrigin || page->host.evaluate == nullptr)
         return;
-    PrStringView url = prStringView(&navigation->url);
+    PrStringView url = prRawStringView(&navigation->url);
     PrStringView encoded = {url.data + kJavascriptScheme.size, url.size - kJavascriptScheme.size};
     PrTextBuffer decoded{};
     prTextBufferReserve(&decoded, uint32_t(encoded.size));
     decoded.size = uint32_t(prUrlPercentDecode(encoded, decoded.data, encoded.size));
     PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
-    PrString text = {};
+    PrRawString text = {};
     PrStringView source = prCharsetDecodeView(&decoder, prTextBufferView(&decoded), PrCharsetInput_Final, &text);
-    PrString result = {};
+    PrRawString result = {};
     bool isDocument = page->host.evaluate(page->host.context, page, source, &result);
-    prStringReset(&text);
+    prRawStringReset(&text);
     prTextBufferReset(&decoded);
     if (isDocument && page->pendingNavigation == 0 && htmlWindowIsFullyActive(page->window) && !page->loading) {
-        PrString documentUrl = prDomDocumentUrl(page->window->document);
+        PrRawString documentUrl = prDomDocumentUrl(page->window->document);
         PrHtmlResponseHeaders headers{.contentType = "text/html;charset=utf-8"};
         abortDocument(page);
         htmlHistoryExpect(page->window->history, HtmlHistoryCommit_Replace, page->window->history->index);
-        prHtmlPageLoad(page, prStringView(&result), prStringView(&documentUrl), &headers);
-        prStringReset(&documentUrl);
+        prHtmlPageLoad(page, prRawStringView(&result), prRawStringView(&documentUrl), &headers);
+        prRawStringReset(&documentUrl);
     }
-    prStringReset(&result);
+    prRawStringReset(&result);
 }
 
 // Navigates the page to another document (html/#navigate), from the task that htmlPageNavigate queued. A document that
@@ -2923,11 +2931,11 @@ void runNavigation(void* data) {
         } else {
             abortDocument(page);
             htmlHistoryExpect(page->window->history, navigation->commit, navigation->target);
-            prStringReset(&page->nextReferrer);
+            prRawStringReset(&page->nextReferrer);
             page->nextReferrer = navigation->referrer;
             page->nextReferrerPolicy = navigation->referrerPolicy;
-            navigation->referrer = prStringNull();
-            startNavigation(page, prStringView(&navigation->url), prStringView(&navigation->origin));
+            navigation->referrer = prRawStringNull();
+            startNavigation(page, prRawStringView(&navigation->url), prRawStringView(&navigation->origin));
         }
     }
     dropNavigation(navigation);
@@ -2946,41 +2954,41 @@ typedef uint8_t LoadPiece;
 struct DocumentLoadPiece {
     HtmlDocumentLoad* load;
     LoadPiece kind;
-    PrString url;               // Head: the response's URL, with the fragment that the navigation asked for
-    PrString contentType;       // Head: the headers' values, or the null string for a header that is absent
-    PrString contentLanguage;
-    PrTextBuffer bytes;         // Body
-    PrNetError error;           // Fail: PrNetError_None for a URL that the fetcher does not take
-    PrString contentEncoding;   // Head
-    PrString serverTiming;      // Head: the Server-Timing headers joined by commas
-    PrString referrerPolicy;    // Head: the Referrer-Policy headers joined by commas
-    PrString sentReferrer;      // Head: the referrer that the request sent
-    uint16_t responseStatus;    // Head
-    PrFetchTiming timing;       // Head and End: the fetch's measurements so far
+    PrRawString url;               // Head: the response's URL, with the fragment that the navigation asked for
+    PrRawString contentType;       // Head: the headers' values, or the null string for a header that is absent
+    PrRawString contentLanguage;
+    PrTextBuffer bytes;          // Body
+    PrNetError error;            // Fail: PrNetError_None for a URL that the fetcher does not take
+    PrRawString contentEncoding; // Head
+    PrRawString serverTiming;    // Head: the Server-Timing headers joined by commas
+    PrRawString referrerPolicy;  // Head: the Referrer-Policy headers joined by commas
+    PrRawString sentReferrer;    // Head: the referrer that the request sent
+    uint16_t responseStatus;     // Head
+    PrFetchTiming timing;        // Head and End: the fetch's measurements so far
 };
 
 void releaseDocumentLoad(HtmlDocumentLoad* load) {
     if (load->references.fetchSub(1) != 1)
         return;
-    prStringReset(&load->url);
-    prStringReset(&load->origin);
-    prStringReset(&load->contentType);
-    prStringReset(&load->contentEncoding);
-    prStringReset(&load->serverTiming);
-    prStringReset(&load->referrer);
-    prStringReset(&load->sentReferrer);
+    prRawStringReset(&load->url);
+    prRawStringReset(&load->origin);
+    prRawStringReset(&load->contentType);
+    prRawStringReset(&load->contentEncoding);
+    prRawStringReset(&load->serverTiming);
+    prRawStringReset(&load->referrer);
+    prRawStringReset(&load->sentReferrer);
     prMutexReset(&load->lock);
     prMemoryFree(load);
 }
 
 void freePiece(DocumentLoadPiece* piece) {
-    prStringReset(&piece->url);
-    prStringReset(&piece->contentType);
-    prStringReset(&piece->contentLanguage);
-    prStringReset(&piece->contentEncoding);
-    prStringReset(&piece->serverTiming);
-    prStringReset(&piece->referrerPolicy);
-    prStringReset(&piece->sentReferrer);
+    prRawStringReset(&piece->url);
+    prRawStringReset(&piece->contentType);
+    prRawStringReset(&piece->contentLanguage);
+    prRawStringReset(&piece->contentEncoding);
+    prRawStringReset(&piece->serverTiming);
+    prRawStringReset(&piece->referrerPolicy);
+    prRawStringReset(&piece->sentReferrer);
     prTextBufferReset(&piece->bytes);
     prMemoryFree(piece);
 }
@@ -3050,25 +3058,25 @@ void receivePiece(void* PR_NULLABLE data) {
             case LoadPiece_Head: {
                 load->responded = true;
                 load->timing = piece->timing;
-                prStringReset(&load->contentType);
-                load->contentType = prStringCopy(prStringView(&piece->contentType));
-                prStringReset(&load->contentEncoding);
-                load->contentEncoding = prStringCopy(prStringView(&piece->contentEncoding));
-                prStringReset(&load->serverTiming);
-                load->serverTiming = prStringCopy(prStringView(&piece->serverTiming));
+                prRawStringReset(&load->contentType);
+                load->contentType = prRawStringCopy(prRawStringView(&piece->contentType));
+                prRawStringReset(&load->contentEncoding);
+                load->contentEncoding = prRawStringCopy(prRawStringView(&piece->contentEncoding));
+                prRawStringReset(&load->serverTiming);
+                load->serverTiming = prRawStringCopy(prRawStringView(&piece->serverTiming));
                 load->responseStatus = piece->responseStatus;
-                prStringReset(&load->sentReferrer);
-                load->sentReferrer = prStringClone(&piece->sentReferrer);
+                prRawStringReset(&load->sentReferrer);
+                load->sentReferrer = prRawStringClone(&piece->sentReferrer);
                 PrHtmlResponseHeaders headers{
-                    .contentType = prStringView(&piece->contentType),
-                    .contentLanguage = prStringView(&piece->contentLanguage),
-                    .referrerPolicy = prStringView(&piece->referrerPolicy),
+                    .contentType = prRawStringView(&piece->contentType),
+                    .contentLanguage = prRawStringView(&piece->contentLanguage),
+                    .referrerPolicy = prRawStringView(&piece->referrerPolicy),
                 };
-                if (htmlPageBeginStreamedLoad(page, prStringView(&piece->url), &headers) != PrStatus_Ok) {
-                    PrString url = prStringCopy(prStringView(&load->url));
+                if (htmlPageBeginStreamedLoad(page, prRawStringView(&piece->url), &headers) != PrStatus_Ok) {
+                    PrRawString url = prRawStringCopy(prRawStringView(&load->url));
                     dropDocumentLoad(page);
-                    loadFailure(page, prStringView(&url), PrNetError_None);
-                    prStringReset(&url);
+                    loadFailure(page, prRawStringView(&url), PrNetError_None);
+                    prRawStringReset(&url);
                 }
                 break;
             }
@@ -3087,10 +3095,10 @@ void receivePiece(void* PR_NULLABLE data) {
                 break;
             }
             case LoadPiece_Fail: {
-                PrString url = prStringCopy(prStringView(&load->url));
+                PrRawString url = prRawStringCopy(prRawStringView(&load->url));
                 endDocumentLoad(page);
-                loadFailure(page, prStringView(&url), piece->error);
-                prStringReset(&url);
+                loadFailure(page, prRawStringView(&url), piece->error);
+                prRawStringReset(&url);
                 break;
             }
         }
@@ -3149,28 +3157,28 @@ void documentLoadEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent e
             // The document's URL keeps the fragment that the navigation asked for, which the response's URL has not.
             PrTextBuffer url{};
             prTextBufferAppend(&url, prFetchUrl(fetch));
-            PrStringView asked = prStringView(&load->url);
+            PrStringView asked = prRawStringView(&load->url);
             for (size_t i = 0; i < asked.size; ++i) {
                 if (asked.data[i] == '#') {
                     prTextBufferAppend(&url, PrStringView{asked.data + i, asked.size - i});
                     break;
                 }
             }
-            piece->url = prStringCopy(prTextBufferView(&url));
+            piece->url = prRawStringCopy(prTextBufferView(&url));
             prTextBufferReset(&url);
             PrStringView type = prFetchHeaderValue(fetch, "content-type");
             PrStringView language = prFetchHeaderValue(fetch, "content-language");
             PrStringView encoding = prFetchHeaderValue(fetch, "content-encoding");
             if (type.data != nullptr)
-                piece->contentType = prStringCopy(type);
+                piece->contentType = prRawStringCopy(type);
             if (language.data != nullptr)
-                piece->contentLanguage = prStringCopy(language);
+                piece->contentLanguage = prRawStringCopy(language);
             if (encoding.data != nullptr)
-                piece->contentEncoding = prStringCopy(encoding);
+                piece->contentEncoding = prRawStringCopy(encoding);
             piece->serverTiming = serverTimingOf(fetch);
             piece->referrerPolicy = headersJoined(fetch, "referrer-policy");
             if (prFetchSentReferrer(fetch).data != nullptr)
-                piece->sentReferrer = prStringCopy(prFetchSentReferrer(fetch));
+                piece->sentReferrer = prRawStringCopy(prFetchSentReferrer(fetch));
             piece->responseStatus = prFetchStatus(fetch);
             piece->timing = prFetchTiming(fetch);
             postPiece(load, piece);
@@ -3207,12 +3215,12 @@ void beginLoadOnLoop(void* PR_NULLABLE data) {
     if (dropped)
         return;
     PrFetchRequestDesc desc{
-        .url = prStringView(&load->url),
+        .url = prRawStringView(&load->url),
         .destination = PrFetchDestination_Document,
         .mode = PrFetchMode_Navigate,
         .credentials = PrFetchCredentials_Include,
-        .origin = prStringView(&load->origin),
-        .referrer = prStringView(&load->referrer),
+        .origin = prRawStringView(&load->origin),
+        .referrer = prRawStringView(&load->referrer),
         .referrerPolicy = load->referrerPolicy,
     };
     if (prFetchCreate(load->fetcher, &desc, documentLoadEvent, load, &load->fetch) != PrStatus_Ok) {
@@ -3322,16 +3330,16 @@ bool documentFetchReport(PrHtmlPage* page, HtmlResourceReport* out) {
         return true;
     }
     *out = HtmlResourceReport{
-        .url = prStringView(&load->url),
+        .url = prRawStringView(&load->url),
         .initiator = PrFetchInitiator_Navigation,
         .timing = load->timing,
         .anchor = load->anchor,
         .responseType = PrFetchResponseType_Basic,
         .responseStatus = load->responseStatus,
-        .contentType = prStringView(&load->contentType),
-        .contentEncoding = prStringView(&load->contentEncoding),
-        .serverTiming = prStringView(&load->serverTiming),
-        .sentReferrer = prStringView(&load->sentReferrer),
+        .contentType = prRawStringView(&load->contentType),
+        .contentEncoding = prRawStringView(&load->contentEncoding),
+        .serverTiming = prRawStringView(&load->serverTiming),
+        .sentReferrer = prRawStringView(&load->sentReferrer),
     };
     return true;
 }
@@ -3349,12 +3357,12 @@ PrStatus startNavigation(PrHtmlPage* page, PrStringView url, PrStringView origin
     load->page = page;
     load->agent = page->window->agent;
     load->fetcher = page->host.fetcher;
-    load->url = prStringCopy(url);
-    load->origin = prStringCopy(origin);
+    load->url = prRawStringCopy(url);
+    load->origin = prRawStringCopy(origin);
     load->anchor = htmlPerformanceFetchAnchor(page->window);
     load->referrer = page->nextReferrer;
     load->referrerPolicy = page->nextReferrerPolicy;
-    page->nextReferrer = prStringNull();
+    page->nextReferrer = prRawStringNull();
     page->nextReferrerPolicy = PrFetchReferrerPolicy_Default;
     prMutexInit(&load->lock);
     load->references.store(2);
@@ -3427,7 +3435,7 @@ PrStatus htmlDocumentClose(PrDomDocument* document) {
     return runScriptCreated(page, closeStep, PrStringView{});
 }
 
-void htmlPageFrames(PrHtmlPage* page, Array<PrHtmlPage*>* out) {
+void htmlPageFrames(PrHtmlPage* page, RawArray<PrHtmlPage*>* out) {
     for (uint32_t i = 0; i < page->window->frames.count; ++i) {
         for (uint32_t k = 0; k < page->children.count; ++k) {
             if (page->children.data[k]->window == page->window->frames.data[i].window)
@@ -3462,10 +3470,10 @@ bool htmlPageNavigate(PrHtmlWindow* window, const PrHtmlWindow* PR_NULLABLE sour
     Navigation* navigation = allocZeroed<Navigation>();
     navigation->page = page;
     navigation->id = page->pendingNavigation = ++page->navigations;
-    navigation->url = prStringCopy(url);
+    navigation->url = prRawStringCopy(url);
     // A traversal loads an entry that the session history holds already, as the user's back and forward buttons do, so
     // it reaches no URL that the user's navigations did not. Any other navigation is the document's own.
-    navigation->origin = source == nullptr ? prStringNull() : htmlWindowOrigin(source);
+    navigation->origin = source == nullptr ? prRawStringNull() : htmlWindowOrigin(source);
     if (source != nullptr) {
         navigation->referrer = prUrlSerialize(source->document->url, PrUrlSerialization_Whole);
         navigation->referrerPolicy = source->document->referrerPolicy;
@@ -3539,7 +3547,7 @@ PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* page, PrStringView url, const PrH
     PrStatus status = beginDocument(page, url, headers);
     if (status != PrStatus_Ok)
         return status;
-    PrDomTag media = mediaHostOf(prStringView(&page->window->document->contentType));
+    PrDomTag media = mediaHostOf(prRawStringView(&page->window->document->contentType));
     if (media != PrDomTag_Unknown)
         return loadMediaDocument(page, media);
     page->window->streaming = true;
@@ -3619,7 +3627,7 @@ void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE page) {
     domAgentRemoveGlobal(page->window->agent, page);
     if (page->scriptCreated)
         htmlParserReset(&page->parser);
-    prStringReset(&page->targetName);
+    prRawStringReset(&page->targetName);
     for (uint32_t i = 0; i < page->children.count; ++i)
         prHtmlPageDestroy(page->children.data[i]);
     page->children.reset();
@@ -3675,7 +3683,7 @@ PrStatus prHtmlPageLoad(PrHtmlPage* page, PrStringView source, PrStringView url,
     if (status != PrStatus_Ok)
         return status;
     PrDomDocument* document = page->window->document;
-    PrDomTag media = mediaHostOf(prStringView(&document->contentType));
+    PrDomTag media = mediaHostOf(prRawStringView(&document->contentType));
     if (media != PrDomTag_Unknown)
         return loadMediaDocument(page, media);
     page->loading = true;
@@ -3683,10 +3691,10 @@ PrStatus prHtmlPageLoad(PrHtmlPage* page, PrStringView source, PrStringView url,
     page->reparse = PrCharset_None;
     if (document->kind == DomDocumentKind_Xml) {
         startXmlParser(page);
-        PrString decoded = {};
+        PrRawString decoded = {};
         prXmlParserAppend(page->xml.parser, domXmlDecode(source, page->transportCharset, &decoded, &document->charset));
         prXmlParserEnd(page->xml.parser);
-        prStringReset(&decoded);
+        prRawStringReset(&decoded);
         status = runXmlParser(page);
         if (!prXmlParserIsEnded(page->xml.parser)) {
             // The parse waits for a script, and continues in tasks once the script runs.
@@ -3696,7 +3704,7 @@ PrStatus prHtmlPageLoad(PrHtmlPage* page, PrStringView source, PrStringView url,
         domXmlBuilderReset(&page->xml);
     } else if (isMarkdownDocument(document)) {
         startDecoder(page, markdownCharsetOf(page, source), HtmlConfidence_Certain);
-        PrString decoded = {};
+        PrRawString decoded = {};
         HtmlMarkdownBuilder builder;
         htmlMarkdownBuilderInitDocument(&builder, document, HtmlParseFlag_DeclarativeShadowRoots,
             &page->markdownOptions);
@@ -3706,7 +3714,7 @@ PrStatus prHtmlPageLoad(PrHtmlPage* page, PrStringView source, PrStringView url,
         htmlMarkdownBuilderEnd(&builder);
         page->parsing = false;
         htmlMarkdownBuilderReset(&builder);
-        prStringReset(&decoded);
+        prRawStringReset(&decoded);
     } else {
         sniffCharset(page, source, true);
         parseHtmlSource(page, source);
@@ -3770,7 +3778,7 @@ void prHtmlPageImportModule(PrHtmlPage* page, PrStringView url, PrHtmlImportFn d
     PR_ASSERT(page->host.parseModule != nullptr);
     // An import() fetches with the credentials of the default script fetch options
     // (html/#default-script-fetch-options).
-    Array<HtmlModuleIndex> added;
+    RawArray<HtmlModuleIndex> added;
     HtmlModuleIndex root = addModule(page, url, PrFetchCredentials_SameOrigin, &added);
     if (added.count != 0)
         fetchModule(page, root);
@@ -3793,47 +3801,47 @@ PrStatus prHtmlPageFetch(PrHtmlPage* page, const PrFetchClientRequest* request, 
         prUrlDestroy(parsed);
         return PrStatus_InvalidData;
     }
-    PrString url = prUrlSerialize(parsed, PrUrlSerialization_ExcludeFragment);
+    PrRawString url = prUrlSerialize(parsed, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(parsed);
     FetchSettings settings{request->mode, request->credentials, false};
-    HtmlFetch* fetch = createFetch(page, prStringView(&url), DomFetchDestination_Empty, settings);
-    prStringReset(&url);
+    HtmlFetch* fetch = createFetch(page, prRawStringView(&url), DomFetchDestination_Empty, settings);
+    prRawStringReset(&url);
     fetch->initiator = request->initiator;
     if (request->referrerPolicy != PrFetchReferrerPolicy_Default)
         fetch->referrerPolicy = request->referrerPolicy;
     if (request->referrer.data != nullptr) {
-        prStringReset(&fetch->referrer);
+        prRawStringReset(&fetch->referrer);
         if (request->referrer.size != 0)
-            fetch->referrer = prStringCopy(request->referrer);
+            fetch->referrer = prRawStringCopy(request->referrer);
     }
     fetch->scriptDone = done;
     fetch->data = context;
     fetch->redirect = request->redirect;
     if (request->method.data != nullptr)
-        fetch->method = prStringCopy(request->method);
+        fetch->method = prRawStringCopy(request->method);
     for (uint32_t i = 0; i < request->headerCount; ++i) {
         fetch->requestHeaders.push(HtmlFetchHeader{
-            prStringCopy(request->headers[i].name),
-            prStringCopy(request->headers[i].value),
+            prRawStringCopy(request->headers[i].name),
+            prRawStringCopy(request->headers[i].value),
         });
     }
     if (request->body.size != 0)
         fetch->requestBody.append(request->body.data, uint32_t(request->body.size));
     // A data: URL is answered whatever the method (fetch/#scheme-fetch), as a document's is, but in a task.
-    if (prAsciiStartsWithFold(prStringView(&fetch->url), "data:")) {
-        PrString body = {};
-        status = prUrlProcessData(prStringView(&fetch->url), &body, &fetch->contentType);
+    if (prAsciiStartsWithFold(prRawStringView(&fetch->url), "data:")) {
+        PrRawString body = {};
+        status = prUrlProcessData(prRawStringView(&fetch->url), &body, &fetch->contentType);
         if (status == PrStatus_Ok) {
             fetch->responseStatus = 200;
-            fetch->responseUrl = prStringCopy(prStringView(&fetch->url));
-            fetch->body.append(reinterpret_cast<const uint8_t*>(prStringView(&body).data),
-                uint32_t(prStringView(&body).size));
+            fetch->responseUrl = prRawStringCopy(prRawStringView(&fetch->url));
+            fetch->body.append(reinterpret_cast<const uint8_t*>(prRawStringView(&body).data),
+                uint32_t(prRawStringView(&body).size));
             fetch->responseHeaders.push(HtmlFetchHeader{
-                prStringCopy("Content-Type"),
-                prStringCopy(prStringView(&fetch->contentType)),
+                prRawStringCopy("Content-Type"),
+                prRawStringCopy(prRawStringView(&fetch->contentType)),
             });
         }
-        prStringReset(&body);
+        prRawStringReset(&body);
         answerFetch(fetch, status == PrStatus_Ok ? PrStatus_Ok : PrStatus_InvalidData);
     } else if (fetch->fetcher == nullptr) {
         answerFetch(fetch, PrStatus_NotSupported);
@@ -3969,10 +3977,10 @@ double prHtmlPageTimeOrigin(PrHtmlPage* page) {
     return page->window->timeOrigin;
 }
 
-PrString prHtmlPageIconUrl(PrHtmlPage* page) {
+PrRawString prHtmlPageIconUrl(PrHtmlPage* page) {
     const PrDomDocument* document = page->window->document;
-    PrString found = htmlLinkIconUrl(document, page->host.images);
-    if (!prStringIsNull(&found) || document->url == nullptr)
+    PrRawString found = htmlLinkIconUrl(document, page->host.images);
+    if (!prRawStringIsNull(&found) || document->url == nullptr)
         return found;
     PrStringView scheme = prUrlScheme(document->url);
     if (scheme != "http" && scheme != "https")

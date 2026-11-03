@@ -16,11 +16,11 @@
 
 #include "pr/align.h"
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
 #include "pr/hash_index.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 #include "draw/backends/fragment/src/kDrawFragmentShaders.h"
 
@@ -122,11 +122,11 @@ struct FragmentFrameState {
     const FragmentFrame* frame;
     FragmentUniforms uniforms;
     bool prepared;
-    Array<PrGpuTexture> textures;   // the frame's table, by index, zero for a texture that is gone
-    Array<uint32_t> layers;         // for each of the frame's layers, its index in the pool, or kArrayMissing if not
-                                    // from the pool
-    Array<PrGpuTexture> hostLayers; // for each of the frame's layers, the host's texture if it is one, or zero
-    KeyIndex layerIds;              // the frame's layers, by their textures
+    RawArray<PrGpuTexture> textures;   // the frame's table, by index, zero for a texture that is gone
+    RawArray<uint32_t> layers;         // for each of the frame's layers, its index in the pool, or kArrayMissing if not
+                                       // from the pool
+    RawArray<PrGpuTexture> hostLayers; // for each of the frame's layers, the host's texture if it is one, or zero
+    KeyIndex layerIds;                 // the frame's layers, by their textures
 };
 
 struct FragmentDevice {
@@ -134,11 +134,11 @@ struct FragmentDevice {
     PrGpuShaderLibrary* library;
     bool orderedReads;              // the device's reads of the target are ordered within a draw
     uint32_t samplers[kFragmentSamplers];
-    Array<FragmentPipeline> pipelines;
-    Array<FragmentOwnTexture> textures;
+    RawArray<FragmentPipeline> pipelines;
+    RawArray<FragmentOwnTexture> textures;
     KeyIndex textureIds;            // `textures`, by id
-    Array<FragmentFrameState> frames;
-    Array<FragmentPooledLayer> pool;
+    RawArray<FragmentFrameState> frames;
+    RawArray<FragmentPooledLayer> pool;
     uint64_t prepares;
 };
 

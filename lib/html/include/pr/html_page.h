@@ -124,9 +124,9 @@ typedef struct PrHtmlHost {
 
     // Runs `source`, the script of a javascript: URL, as a classic script in the page's realm
     // (html/#evaluate-a-javascript:-url), and reports any error that it throws. Returns true and writes the value to
-    // `out` if the script completes with a string, which the caller releases with prStringReset. Null runs no
+    // `out` if the script completes with a string, which the caller releases with prRawStringReset. Null runs no
     // javascript: URLs.
-    bool (*PR_NULLABLE evaluate)(void* PR_NULLABLE context, PrHtmlPage* page, PrStringView source, PrString* out);
+    bool (*PR_NULLABLE evaluate)(void* PR_NULLABLE context, PrHtmlPage* page, PrStringView source, PrRawString* out);
 
     // Queues `run`, called with `data`, as a microtask (html/#queue-a-microtask). The host runs it along with its
     // script engine's jobs. If null, no microtasks run.
@@ -433,8 +433,8 @@ double prHtmlPageTimeOrigin(PrHtmlPage* page);
 // Returns the URL of the icon that represents the window's document (html/#rel-icon), which a host fetches and shows
 // beside the page's title. It is the last link in tree order whose rel holds icon, skipping a link whose type the
 // host's image codec cannot decode. A document at an http: or https: URL with no such link has the icon at
-// /favicon.ico. Returns the null string for any other document. The caller releases the string with prStringReset.
-PrString prHtmlPageIconUrl(PrHtmlPage* page);
+// /favicon.ico. Returns the null string for any other document. The caller releases the string with prRawStringReset.
+PrRawString prHtmlPageIconUrl(PrHtmlPage* page);
 
 #if defined(__cplusplus)
 }

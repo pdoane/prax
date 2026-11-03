@@ -49,23 +49,23 @@ bool isHexDigit(int c) {
     return c != kEof && prAsciiIsHexDigit(char(c));
 }
 
-void assign(PrString* target, const PrString* value) {
-    prStringReplace(target, prStringView(value));
+void assign(PrRawString* target, const PrRawString* value) {
+    prRawStringReplace(target, prRawStringView(value));
 }
 
-void appendEncoded(PrString* target, PrStringView text, PrUrlPercentEncodeSet set) {
+void appendEncoded(PrRawString* target, PrStringView text, PrUrlPercentEncodeSet set) {
     PrTextBuffer encoded = {};
     urlAppendPercentEncoded(&encoded, text, set);
-    prStringAppend(target, prTextBufferView(&encoded));
+    prRawStringAppend(target, prTextBufferView(&encoded));
     prTextBufferReset(&encoded);
 }
 
 bool includesCredentials(const Url* url) {
-    return !prStringIsEmpty(&url->username) || !prStringIsEmpty(&url->password);
+    return !prRawStringIsEmpty(&url->username) || !prRawStringIsEmpty(&url->password);
 }
 
-bool isEmptyHost(const PrString* host) {
-    return !prStringIsNull(host) && prStringIsEmpty(host);
+bool isEmptyHost(const PrRawString* host) {
+    return !prRawStringIsNull(host) && prRawStringIsEmpty(host);
 }
 
 // url/#windows-drive-letter
@@ -304,12 +304,12 @@ PrStatus domainToAscii(PrTextBuffer* domain) {
     if (ascii) {
         prTextBufferAsciiLower(domain);
     } else {
-        PrString converted{};
+        PrRawString converted{};
         if (!prUnicodeIdnaToAscii(text, PrUnicodeIdnaFlag_CheckBidi | PrUnicodeIdnaFlag_CheckJoiners, &converted))
             return PrStatus_Syntax;
         prTextBufferClear(domain);
-        prTextBufferAppend(domain, prStringView(&converted));
-        prStringReset(&converted);
+        prTextBufferAppend(domain, prRawStringView(&converted));
+        prRawStringReset(&converted);
     }
     text = prTextBufferView(domain);
     if (text.size == 0)
@@ -322,7 +322,7 @@ PrStatus domainToAscii(PrTextBuffer* domain) {
 }
 
 // url/#concept-host-parser. On success, writes the serialized host to `out`.
-PrStatus parseHost(PrStringView input, bool opaque, PrString* out) {
+PrStatus parseHost(PrStringView input, bool opaque, PrRawString* out) {
     PrTextBuffer host = {};
     PrStatus status = PrStatus_Ok;
     if (input.size != 0 && input.data[0] == '[') {
@@ -354,7 +354,7 @@ PrStatus parseHost(PrStringView input, bool opaque, PrString* out) {
         }
     }
     if (status == PrStatus_Ok) {
-        prStringReset(out);
+        prRawStringReset(out);
         *out = prTextBufferTake(&host);
     }
     prTextBufferReset(&host);
@@ -385,7 +385,7 @@ bool isSpecial(const Parser* p) {
 }
 
 void setScheme(Parser* p, PrStringView scheme) {
-    prStringReplace(&p->url->scheme, scheme);
+    prRawStringReplace(&p->url->scheme, scheme);
     p->scheme = urlScheme(scheme);
 }
 
@@ -400,7 +400,7 @@ void takeAuthority(Parser* p) {
 
 void takePath(Parser* p) {
     prTextBufferClear(&p->path);
-    prTextBufferAppend(&p->path, prStringView(&p->base->path));
+    prTextBufferAppend(&p->path, prRawStringView(&p->base->path));
 }
 
 void appendSegment(Parser* p, PrStringView segment) {
@@ -427,12 +427,12 @@ void shorten(Parser* p) {
 }
 
 void startQuery(Parser* p) {
-    prStringReplace(&p->url->query, "");
+    prRawStringReplace(&p->url->query, "");
     p->state = UrlState_Query;
 }
 
 void startFragment(Parser* p) {
-    prStringReplace(&p->url->fragment, "");
+    prRawStringReplace(&p->url->fragment, "");
     p->state = UrlState_Fragment;
 }
 
@@ -481,7 +481,7 @@ PrStatus run(Parser* p) {
                     if (p->scheme == UrlScheme_File) {
                         p->state = UrlState_File;
                     } else if (isSpecial(p) && p->base != nullptr &&
-                            prStringView(&p->base->scheme) == prStringView(&url->scheme)) {
+                            prRawStringView(&p->base->scheme) == prRawStringView(&url->scheme)) {
                         p->state = UrlState_SpecialRelativeOrAuthority;
                     } else if (isSpecial(p)) {
                         p->state = UrlState_SpecialAuthoritySlashes;
@@ -506,13 +506,13 @@ PrStatus run(Parser* p) {
                 if (p->base == nullptr || (p->base->opaquePath && c != '#'))
                     return PrStatus_Syntax;
                 if (p->base->opaquePath) {
-                    setScheme(p, prStringView(&p->base->scheme));
+                    setScheme(p, prRawStringView(&p->base->scheme));
                     takePath(p);
                     url->opaquePath = true;
                     assign(&url->query, &p->base->query);
                     startFragment(p);
                 } else {
-                    bool file = urlScheme(prStringView(&p->base->scheme)) == UrlScheme_File;
+                    bool file = urlScheme(prRawStringView(&p->base->scheme)) == UrlScheme_File;
                     p->state = file ? UrlState_File : UrlState_Relative;
                     --p->pointer;
                 }
@@ -538,7 +538,7 @@ PrStatus run(Parser* p) {
                 break;
 
             case UrlState_Relative:
-                setScheme(p, prStringView(&p->base->scheme));
+                setScheme(p, prRawStringView(&p->base->scheme));
                 if (c == '/' || (isSpecial(p) && c == '\\')) {
                     p->state = UrlState_RelativeSlash;
                     break;
@@ -551,7 +551,7 @@ PrStatus run(Parser* p) {
                 } else if (c == '#') {
                     startFragment(p);
                 } else if (c != kEof) {
-                    prStringReset(&url->query);
+                    prRawStringReset(&url->query);
                     shorten(p);
                     p->state = UrlState_Path;
                     --p->pointer;
@@ -677,10 +677,10 @@ PrStatus run(Parser* p) {
 
             case UrlState_File:
                 setScheme(p, "file");
-                prStringReplace(&url->host, "");
+                prRawStringReplace(&url->host, "");
                 if (c == '/' || c == '\\') {
                     p->state = UrlState_FileSlash;
-                } else if (p->base != nullptr && urlScheme(prStringView(&p->base->scheme)) == UrlScheme_File) {
+                } else if (p->base != nullptr && urlScheme(prRawStringView(&p->base->scheme)) == UrlScheme_File) {
                     assign(&url->host, &p->base->host);
                     takePath(p);
                     assign(&url->query, &p->base->query);
@@ -689,7 +689,7 @@ PrStatus run(Parser* p) {
                     } else if (c == '#') {
                         startFragment(p);
                     } else if (c != kEof) {
-                        prStringReset(&url->query);
+                        prRawStringReset(&url->query);
                         if (!startsWithDriveLetter(fromPointer(p)))
                             shorten(p);
                         else
@@ -708,9 +708,9 @@ PrStatus run(Parser* p) {
                     p->state = UrlState_FileHost;
                     break;
                 }
-                if (p->base != nullptr && urlScheme(prStringView(&p->base->scheme)) == UrlScheme_File) {
+                if (p->base != nullptr && urlScheme(prRawStringView(&p->base->scheme)) == UrlScheme_File) {
                     assign(&url->host, &p->base->host);
-                    PrStringView drive = firstSegment(prStringView(&p->base->path));
+                    PrStringView drive = firstSegment(prRawStringView(&p->base->path));
                     if (!startsWithDriveLetter(fromPointer(p)) && isNormalizedDriveLetter(drive))
                         appendSegment(p, drive);
                 }
@@ -725,7 +725,7 @@ PrStatus run(Parser* p) {
                         // The buffer carries over into the path state.
                         p->state = UrlState_Path;
                     } else if (p->buffer.size == 0) {
-                        prStringReplace(&url->host, "");
+                        prRawStringReplace(&url->host, "");
                         if (p->hasOverride)
                             return PrStatus_Ok;
                         p->state = UrlState_PathStart;
@@ -733,8 +733,8 @@ PrStatus run(Parser* p) {
                         PrStatus status = parseHost(prTextBufferView(&p->buffer), !special, &url->host);
                         if (status != PrStatus_Ok)
                             return status;
-                        if (prStringView(&url->host) == "localhost")
-                            prStringReplace(&url->host, "");
+                        if (prRawStringView(&url->host) == "localhost")
+                            prRawStringReplace(&url->host, "");
                         if (p->hasOverride)
                             return PrStatus_Ok;
                         prTextBufferClear(&p->buffer);
@@ -758,7 +758,7 @@ PrStatus run(Parser* p) {
                     p->state = UrlState_Path;
                     if (c != '/')
                         --p->pointer;
-                } else if (p->hasOverride && prStringIsNull(&url->host)) {
+                } else if (p->hasOverride && prRawStringIsNull(&url->host)) {
                     appendSegment(p, "");
                 }
                 break;
@@ -813,7 +813,7 @@ PrStatus run(Parser* p) {
                     if (special)
                         querySet = PrUrlPercentEncodeSet_SpecialQuery;
                     urlAppendPercentEncodedIn(&encoded, prTextBufferView(&p->buffer), queryCharset, querySet);
-                    prStringAppend(&url->query, prTextBufferView(&encoded));
+                    prRawStringAppend(&url->query, prTextBufferView(&encoded));
                     prTextBufferReset(&encoded);
                     prTextBufferClear(&p->buffer);
                     if (c == '#')
@@ -829,7 +829,7 @@ PrStatus run(Parser* p) {
                     urlAppendPercentEncoded(&p->buffer, prStringSlice(p->input, p->pointer, 1),
                         PrUrlPercentEncodeSet_Fragment);
                 else
-                    prStringAppend(&url->fragment, prTextBufferView(&p->buffer));
+                    prRawStringAppend(&url->fragment, prTextBufferView(&p->buffer));
                 break;
         }
         if (p->pointer == p->input.size)
@@ -858,13 +858,13 @@ PrStatus parse(Url* url, PrStringView input, const Url* PR_NULLABLE base, UrlSta
     p.base = base;
     p.url = url;
     p.state = state;
-    p.scheme = urlScheme(prStringView(&url->scheme));
+    p.scheme = urlScheme(prRawStringView(&url->scheme));
     p.hasOverride = hasOverride;
     p.override = state;
     p.charset = charset;
-    prTextBufferAppend(&p.path, prStringView(&url->path));
+    prTextBufferAppend(&p.path, prRawStringView(&url->path));
     PrStatus status = run(&p);
-    prStringReset(&url->path);
+    prRawStringReset(&url->path);
     url->path = prTextBufferTake(&p.path);
     prTextBufferReset(&p.buffer);
     prTextBufferReset(&cleaned);
@@ -876,7 +876,7 @@ bool isC0ControlOrSpace(char c) {
 }
 
 // Decodes a name or value for url/#concept-urlencoded-parser, using `bytes` as scratch.
-PrString formDecode(PrTextBuffer* bytes, PrStringView text) {
+PrRawString formDecode(PrTextBuffer* bytes, PrStringView text) {
     prTextBufferClear(bytes);
     prTextBufferAppend(bytes, text);
     for (uint32_t i = 0; i < bytes->size; ++i) {
@@ -922,13 +922,13 @@ PrStatus urlParseFrom(Url* url, PrStringView input, UrlState state) {
 PrUrl* urlClone(const Url* url) {
     PrUrl* result = alloc<PrUrl>();
     *result = PrUrl{*url};
-    result->scheme = prStringClone(&url->scheme);
-    result->username = prStringClone(&url->username);
-    result->password = prStringClone(&url->password);
-    result->host = prStringClone(&url->host);
-    result->path = prStringClone(&url->path);
-    result->query = prStringClone(&url->query);
-    result->fragment = prStringClone(&url->fragment);
+    result->scheme = prRawStringClone(&url->scheme);
+    result->username = prRawStringClone(&url->username);
+    result->password = prRawStringClone(&url->password);
+    result->host = prRawStringClone(&url->host);
+    result->path = prRawStringClone(&url->path);
+    result->query = prRawStringClone(&url->query);
+    result->fragment = prRawStringClone(&url->fragment);
     result->searchParams = nullptr;
     return result;
 }
@@ -937,40 +937,40 @@ void urlDestroy(Url* PR_NULLABLE url) {
     if (url == nullptr)
         return;
     urlSearchParamsDestroy(url->searchParams);
-    prStringReset(&url->scheme);
-    prStringReset(&url->username);
-    prStringReset(&url->password);
-    prStringReset(&url->host);
-    prStringReset(&url->path);
-    prStringReset(&url->query);
-    prStringReset(&url->fragment);
+    prRawStringReset(&url->scheme);
+    prRawStringReset(&url->username);
+    prRawStringReset(&url->password);
+    prRawStringReset(&url->host);
+    prRawStringReset(&url->path);
+    prRawStringReset(&url->query);
+    prRawStringReset(&url->fragment);
     prMemoryFree(url);
 }
 
 bool urlIsSpecial(const Url* url) {
-    return urlScheme(prStringView(&url->scheme)) != UrlScheme_None;
+    return urlScheme(prRawStringView(&url->scheme)) != UrlScheme_None;
 }
 
 bool urlCannotHaveCredentials(const Url* url) {
-    return prStringIsEmpty(&url->host) || urlScheme(prStringView(&url->scheme)) == UrlScheme_File;
+    return prRawStringIsEmpty(&url->host) || urlScheme(prRawStringView(&url->scheme)) == UrlScheme_File;
 }
 
-PrString urlSerialize(const Url* url, PrUrlSerialization serialization) {
+PrRawString urlSerialize(const Url* url, PrUrlSerialization serialization) {
     PrTextBuffer out = {};
-    prTextBufferAppend(&out, prStringView(&url->scheme));
+    prTextBufferAppend(&out, prRawStringView(&url->scheme));
     prTextBufferAppendChar(&out, ':');
-    PrStringView path = prStringView(&url->path);
-    if (!prStringIsNull(&url->host)) {
+    PrStringView path = prRawStringView(&url->path);
+    if (!prRawStringIsNull(&url->host)) {
         prTextBufferAppend(&out, "//");
         if (includesCredentials(url)) {
-            prTextBufferAppend(&out, prStringView(&url->username));
-            if (!prStringIsEmpty(&url->password)) {
+            prTextBufferAppend(&out, prRawStringView(&url->username));
+            if (!prRawStringIsEmpty(&url->password)) {
                 prTextBufferAppendChar(&out, ':');
-                prTextBufferAppend(&out, prStringView(&url->password));
+                prTextBufferAppend(&out, prRawStringView(&url->password));
             }
             prTextBufferAppendChar(&out, '@');
         }
-        prTextBufferAppend(&out, prStringView(&url->host));
+        prTextBufferAppend(&out, prRawStringView(&url->host));
         if (url->hasPort) {
             prTextBufferAppendChar(&out, ':');
             prTextBufferAppendU64(&out, url->port, 10);
@@ -979,37 +979,37 @@ PrString urlSerialize(const Url* url, PrUrlSerialization serialization) {
         prTextBufferAppend(&out, "/.");
     }
     prTextBufferAppend(&out, path);
-    if (!prStringIsNull(&url->query)) {
+    if (!prRawStringIsNull(&url->query)) {
         prTextBufferAppendChar(&out, '?');
-        prTextBufferAppend(&out, prStringView(&url->query));
+        prTextBufferAppend(&out, prRawStringView(&url->query));
     }
-    if (serialization != PrUrlSerialization_ExcludeFragment && !prStringIsNull(&url->fragment)) {
+    if (serialization != PrUrlSerialization_ExcludeFragment && !prRawStringIsNull(&url->fragment)) {
         prTextBufferAppendChar(&out, '#');
-        prTextBufferAppend(&out, prStringView(&url->fragment));
+        prTextBufferAppend(&out, prRawStringView(&url->fragment));
     }
     return prTextBufferTake(&out);
 }
 
-PrString urlOrigin(const Url* url) {
-    if (prStringView(&url->scheme) == "blob") {
+PrRawString urlOrigin(const Url* url) {
+    if (prRawStringView(&url->scheme) == "blob") {
         PrUrl* pathUrl = nullptr;
-        urlParse(prStringView(&url->path), nullptr, PrCharset_Utf8, &pathUrl);
-        UrlScheme inner = pathUrl != nullptr ? urlScheme(prStringView(&pathUrl->scheme)) : UrlScheme_None;
-        PrString origin;
+        urlParse(prRawStringView(&url->path), nullptr, PrCharset_Utf8, &pathUrl);
+        UrlScheme inner = pathUrl != nullptr ? urlScheme(prRawStringView(&pathUrl->scheme)) : UrlScheme_None;
+        PrRawString origin;
         if (inner == UrlScheme_Http || inner == UrlScheme_Https)
             origin = urlOrigin(pathUrl);
         else
-            origin = prStringCopy("null");
+            origin = prRawStringCopy("null");
         urlDestroy(pathUrl);
         return origin;
     }
-    UrlScheme scheme = urlScheme(prStringView(&url->scheme));
+    UrlScheme scheme = urlScheme(prRawStringView(&url->scheme));
     if (scheme == UrlScheme_None || scheme == UrlScheme_File)
-        return prStringCopy("null");
+        return prRawStringCopy("null");
     PrTextBuffer out = {};
-    prTextBufferAppend(&out, prStringView(&url->scheme));
+    prTextBufferAppend(&out, prRawStringView(&url->scheme));
     prTextBufferAppend(&out, "://");
-    prTextBufferAppend(&out, prStringView(&url->host));
+    prTextBufferAppend(&out, prRawStringView(&url->host));
     if (url->hasPort) {
         prTextBufferAppendChar(&out, ':');
         prTextBufferAppendU64(&out, url->port, 10);
@@ -1028,20 +1028,20 @@ void urlSearchParamsParse(UrlSearchParams* params, PrStringView input) {
             continue;
         size_t equals = prStringFindByte(sequence, '=');
         PrStringView value = equals != sequence.size ? prStringSlice(sequence, equals + 1, sequence.size - equals - 1) : "";
-        PrString name = formDecode(&bytes, prStringSlice(sequence, 0, equals));
+        PrRawString name = formDecode(&bytes, prStringSlice(sequence, 0, equals));
         params->pairs.push(UrlPair{name, formDecode(&bytes, value)});
     }
     prTextBufferReset(&bytes);
 }
 
-PrString urlSearchParamsSerialize(const UrlSearchParams* params) {
+PrRawString urlSearchParamsSerialize(const UrlSearchParams* params) {
     PrTextBuffer out = {};
     for (uint32_t i = 0; i < params->pairs.count; ++i) {
         if (i != 0)
             prTextBufferAppendChar(&out, '&');
-        formEncode(&out, prStringView(&params->pairs.data[i].name));
+        formEncode(&out, prRawStringView(&params->pairs.data[i].name));
         prTextBufferAppendChar(&out, '=');
-        formEncode(&out, prStringView(&params->pairs.data[i].value));
+        formEncode(&out, prRawStringView(&params->pairs.data[i].value));
     }
     return prTextBufferTake(&out);
 }
@@ -1049,18 +1049,18 @@ PrString urlSearchParamsSerialize(const UrlSearchParams* params) {
 void urlSearchParamsUpdate(UrlSearchParams* params) {
     if (params->url == nullptr)
         return;
-    PrString query = urlSearchParamsSerialize(params);
-    prStringReset(&params->url->query);
-    if (!prStringIsEmpty(&query))
+    PrRawString query = urlSearchParamsSerialize(params);
+    prRawStringReset(&params->url->query);
+    if (!prRawStringIsEmpty(&query))
         params->url->query = query;
     else
-        prStringReset(&query);
+        prRawStringReset(&query);
 }
 
 void urlSearchParamsClear(UrlSearchParams* params) {
     for (uint32_t i = 0; i < params->pairs.count; ++i) {
-        prStringReset(&params->pairs.data[i].name);
-        prStringReset(&params->pairs.data[i].value);
+        prRawStringReset(&params->pairs.data[i].name);
+        prRawStringReset(&params->pairs.data[i].value);
     }
     params->pairs.count = 0;
 }

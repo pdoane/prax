@@ -3,11 +3,11 @@
 #pragma once
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/count_of.h"
 #include "pr/hash_index.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_ops.h"
 #include "pr/string_view.h"
 
@@ -46,10 +46,10 @@ struct JsNamedValue {
 
 // The rarely used data of an object of a bound class.
 struct JsWrapperExtra {
-    Array<JsNamedValue> sameObjects;    // the values of its [SameObject] attributes
+    RawArray<JsNamedValue> sameObjects;    // the values of its [SameObject] attributes
 
     // The objects that the native value holds, by slot (jsSetReference). Undefined for an unset slot.
-    Array<JSValue> references;
+    RawArray<JSValue> references;
 
     // The object itself while it is pinned (jsPin), which keeps it alive when script cannot reach it. Undefined
     // otherwise.
@@ -88,7 +88,7 @@ enum {
     JsHeldKind_CString,   // `cstring`, which JS_FreeCString releases
     JsHeldKind_Bytes,     // `bytes`, which prMemoryFree releases
     JsHeldKind_Value,     // `value`, which JS_FreeValue releases
-    JsHeldKind_String,    // `string`, which prStringReset releases
+    JsHeldKind_String,    // `string`, which prRawStringReset releases
     JsHeldKind_Custom,    // `custom.data`, which `custom.release` releases
 };
 typedef uint8_t JsHeldKind;
@@ -100,7 +100,7 @@ struct JsHeld {
         const char* PR_NULLABLE cstring;
         void* PR_NULLABLE bytes;
         JSValue value;
-        PrString string;
+        PrRawString string;
         struct {
             void (*PR_NONNULL release)(JSContext* ctx, void* PR_NULLABLE data);
             void* PR_NULLABLE data;
@@ -120,7 +120,7 @@ JsHeld* jsHeldAt(JSContext* ctx, uint32_t index);
 
 // Holds the allocation `bytes`, or `string`, until the call's scope ends.
 uint32_t jsHoldBytes(JSContext* ctx, void* PR_NULLABLE bytes);
-uint32_t jsHoldString(JSContext* ctx, PrString string);
+uint32_t jsHoldString(JSContext* ctx, PrRawString string);
 
 // Holds `data` until the call's scope ends, when `release` releases it.
 uint32_t jsHoldCustom(JSContext* ctx, void (*PR_NONNULL release)(JSContext* ctx, void* PR_NULLABLE data),
@@ -269,10 +269,10 @@ void jsSetReference(JSContext* ctx, JSValueConst object, uint32_t index, JSValue
 JSValue jsReference(JSContext* ctx, JSValueConst object, uint32_t index);
 
 // Returns `text` as a JS value, or null for the null string.
-JSValue jsNewString(JSContext* ctx, const PrString* text);
+JSValue jsNewString(JSContext* ctx, const PrRawString* text);
 
 // Returns `text` as a JS value, or null for the null string. Frees `text`.
-JSValue jsTakeString(JSContext* ctx, PrString text);
+JSValue jsTakeString(JSContext* ctx, PrRawString text);
 
 // Returns the runtime's single JS string for `text`. The string lives as long as the process, and is meant for text
 // such as a literal or the name of an enumeration member. Every call for the same text returns the same string.
@@ -282,16 +282,16 @@ JSValue jsFixedString(JSContext* ctx, PrStringView text);
 JSValue jsNewStringView(JSContext* ctx, PrStringView text);
 
 // The text of a string that a C function returns or writes, which is an owned string or a view.
-inline PrStringView jsStringText(const PrString& text) {
-    return prStringView(&text);
+inline PrStringView jsStringText(const PrRawString& text) {
+    return prRawStringView(&text);
 }
 inline PrStringView jsStringText(PrStringView text) {
     return text;
 }
 
 // Frees a string that a C function returns or writes, if it is owned.
-inline void jsStringRelease(PrString* text) {
-    prStringReset(text);
+inline void jsStringRelease(PrRawString* text) {
+    prRawStringReset(text);
 }
 inline void jsStringRelease(PrStringView*) {}
 
@@ -308,8 +308,8 @@ JSValue jsResultString(JSContext* ctx, S text) {
 // cannot be made.
 template <typename T, typename S>
 bool jsNameAtoms(JSContext* ctx, const T* PR_NONNULL handle,
-        uint32_t (*PR_NONNULL names)(const T* PR_NONNULL, S* PR_NULLABLE, uint32_t), Array<JSAtom>* out) {
-    Array<S> strings;
+        uint32_t (*PR_NONNULL names)(const T* PR_NONNULL, S* PR_NULLABLE, uint32_t), RawArray<JSAtom>* out) {
+    RawArray<S> strings;
     strings.reserve(names(handle, nullptr, 0));
     strings.count = names(handle, strings.data, strings.capacity);
     bool ok = true;
@@ -691,7 +691,7 @@ JSValue jsUint32Setter(JSContext* ctx, JSValueConst jsObject, JSValueConst input
 template <typename T, typename S>
 JSValue jsStringArray(JSContext* ctx, const T* PR_NONNULL handle,
         uint32_t (*PR_NONNULL write)(const T* PR_NONNULL, S* PR_NULLABLE, uint32_t), bool frozen) {
-    Array<S> items;
+    RawArray<S> items;
     items.reserve(write(handle, nullptr, 0));
     items.count = write(handle, items.data, items.capacity);
     JSValue array = JS_NewArray(ctx);

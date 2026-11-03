@@ -8,13 +8,13 @@
 #include "pr/media_segment.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/mime.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -160,15 +160,15 @@ constexpr uint32_t kSampleNonSync = 0x10000;
 
 struct MediaSegmentParser {
     PrMediaByteStream format;
-    Array<uint8_t> pending;         // bytes that the parser has not consumed
+    RawArray<uint8_t> pending;      // bytes that the parser has not consumed
     bool initialized;               // an initialization segment has been read
-    Array<Mp4Track> tracks;
+    RawArray<Mp4Track> tracks;
     double duration;
-    Array<char> text;               // the tracks' codec strings and languages
-    Array<uint8_t> configs;         // the tracks' configuration records
-    Array<PrMediaTrackInfo> infos;
-    Array<PrMediaCodedFrame> frames;
-    Array<Mp4Sample> samples;
+    RawArray<char> text;               // the tracks' codec strings and languages
+    RawArray<uint8_t> configs;         // the tracks' configuration records
+    RawArray<PrMediaTrackInfo> infos;
+    RawArray<PrMediaCodedFrame> frames;
+    RawArray<Mp4Sample> samples;
 };
 
 // Appends `text` to the parser's text and returns its offset.

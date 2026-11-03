@@ -210,8 +210,8 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
 // scene's space.
 struct Frames {
     const LayoutScene* scene;
-    Array<SceneLayerIndex> frame;   // by SceneLayerIndex
-    Array<PrLayoutVec> origin;      // by SceneLayerIndex
+    RawArray<SceneLayerIndex> frame;   // by SceneLayerIndex
+    RawArray<PrLayoutVec> origin;      // by SceneLayerIndex
 
     void reset() {
         frame.reset();
@@ -332,10 +332,10 @@ struct Player {
     // The containers whose clips and scroll offsets are pushed, outermost first. Consecutive pieces in the same
     // containers share them. `scope` is the index at which the containers pushed inside the innermost layer's effects
     // begin, and a piece inside those effects closes only these containers.
-    Array<uint32_t> open;
+    RawArray<uint32_t> open;
     uint32_t scope;
 
-    Array<uint32_t> chain;          // scratch: a piece's containers, innermost first
+    RawArray<uint32_t> chain;          // scratch: a piece's containers, innermost first
 
     void reset() {
         frames.reset();
@@ -703,7 +703,7 @@ struct ScrollFinder {
 // draw nothing. A background whose layers blend is one run: an isolated group of the root's background color and its
 // layers (compositing-1/#background-blend-mode), in which a fixed layer is placed as if it scrolled.
 void canvasLayers(LayoutTree* tree, const LayoutFragment* root, PrLayoutRect border, PrLayoutRect canvas,
-        PrLayoutVec viewport, Array<LayoutSceneCanvasRun>& runs) {
+        PrLayoutVec viewport, RawArray<LayoutSceneCanvasRun>& runs) {
     PrLayoutStyleIndex style = layoutTreeNode(tree, root->node).style;
     const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(tree->styles, style);
     const LayoutBackground& layers = layoutBackgroundAt(&tree->styles->backgrounds, decoration.backgroundLayers);
@@ -772,7 +772,7 @@ PrDrawList* drawRoot(LayoutTree* tree, const LayoutLaidRoot& root) {
     });
     addLayer(tree, scene, top.fragment->node, top.fragment, LayoutPieceAt{kLayoutPieceNone, kLayoutPieceNone},
         top.offset, false, kPaintScrollNone, 0, 0, 0);
-    Array<PrLayoutSceneScroll> scrolls;
+    RawArray<PrLayoutSceneScroll> scrolls;
     scrolls.resize(prLayoutSceneScrolls(static_cast<const PrLayoutTree*>(tree), scene, nullptr, 0));
     prLayoutSceneScrolls(static_cast<const PrLayoutTree*>(tree), scene, scrolls.data, scrolls.count);
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
@@ -841,7 +841,7 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
     PrLayoutScene* scene = allocZeroed<PrLayoutScene>();
     scene->references.storeRelaxed(1);
     // The scene's boxes are where anchoring's moves since the last scene place them, so the moves go with it.
-    Array<PrLayoutScrollAdjustment>& unscened = tree->anchoring.unscened;
+    RawArray<PrLayoutScrollAdjustment>& unscened = tree->anchoring.unscened;
     scene->adjustments = unscened;
     unscened = {};
     scene->pixelRatio = tree->styles->targetPixelRatio;
@@ -914,7 +914,7 @@ void layoutScenePlay(const LayoutScene* scene, PrDrawList* list, const PrLayoutS
     if (scene->layers.count == 0)
         return;
     // A container scrolls by whole target pixels, so that a scroll moves what it shows by whole pixels.
-    Array<PrLayoutVec> offsets;
+    RawArray<PrLayoutVec> offsets;
     layoutSceneScrollOffsets(scene, options.scrolls, options.scrollCount, scene->pixelRatio, offsets);
     Player player{
         .scene = scene,
@@ -957,7 +957,7 @@ void layoutSceneDestroy(LayoutScene* scene) {
 }
 
 uint32_t layoutSceneSampleTracks(const LayoutScene* scene, const PrLayoutTrack* PR_NULLABLE tracks, uint32_t count,
-        double time, Array<PrLayoutSceneEffect>& out) {
+        double time, RawArray<PrLayoutSceneEffect>& out) {
     uint32_t start = out.count;
     uint32_t sampled = 0;
     for (uint32_t i = 0; i < count; ++i) {
@@ -1008,7 +1008,7 @@ uint32_t layoutSceneNodeScroll(const LayoutScene* scene, PrLayoutNode node) {
 }
 
 void layoutSceneScrollOffsets(const LayoutScene* scene, const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count,
-        float pixelRatio, Array<PrLayoutVec>& out) {
+        float pixelRatio, RawArray<PrLayoutVec>& out) {
     out.resize(scene->scrolls.count);
     double ratio = double(pixelRatio);
     // Offsets given in the scene's order are each found at the next position. Offsets in any other order are searched
@@ -1114,7 +1114,7 @@ PrLayoutScenePlayOptions prLayoutScenePlayOptionsDefault(void) {
 
 uint32_t prLayoutSceneSampleTracks(const PrLayoutScene* scene, const PrLayoutTrack* PR_NULLABLE tracks,
         uint32_t trackCount, double time, PrLayoutSceneEffect* PR_NULLABLE out, uint32_t capacity) {
-    Array<PrLayoutSceneEffect> effects;
+    RawArray<PrLayoutSceneEffect> effects;
     layoutSceneSampleTracks(scene, tracks, trackCount, time, effects);
     for (uint32_t i = 0; i < effects.count && i < capacity; ++i)
         out[i] = effects.data[i];
@@ -1194,7 +1194,7 @@ uint32_t prLayoutSceneScrolls(const PrLayoutTree* tree, const PrLayoutScene* sce
 
 void prLayoutTreePaint(PrLayoutTree* tree, PrDrawList* list) {
     const PrLayoutScene* scene = layoutScene(tree);
-    Array<PrLayoutSceneScroll> scrolls;
+    RawArray<PrLayoutSceneScroll> scrolls;
     scrolls.resize(prLayoutSceneScrolls(tree, scene, nullptr, 0));
     prLayoutSceneScrolls(tree, scene, scrolls.data, scrolls.count);
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();

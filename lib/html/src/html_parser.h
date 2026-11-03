@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/charset_names.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
@@ -79,8 +79,8 @@ typedef uint8_t HtmlParseFlags;
 
 // An attribute of the start tag that a formatting element was created for, as written in the tag.
 struct HtmlTokenAttribute {
-    PrString name;
-    PrString value;
+    PrRawString name;
+    PrRawString value;
 };
 
 // An entry of the list of active formatting elements. The entry holds a reference to its element, and keeps the
@@ -97,10 +97,10 @@ struct HtmlFormatting {
 struct HtmlParser {
     HtmlTokenizer tokenizer;
     PrDomDocument* document;
-    Array<HtmlError> errors;
-    Array<PrDomElement* PR_NONNULL> open;       // html/#the-stack-of-open-elements
-    Array<HtmlFormatting> formatting;           // html/#the-list-of-active-formatting-elements
-    Array<HtmlInsertionMode> templateModes;     // html/#stack-of-template-insertion-modes
+    RawArray<HtmlError> errors;
+    RawArray<PrDomElement* PR_NONNULL> open;       // html/#the-stack-of-open-elements
+    RawArray<HtmlFormatting> formatting;           // html/#the-list-of-active-formatting-elements
+    RawArray<HtmlInsertionMode> templateModes;     // html/#stack-of-template-insertion-modes
 
     // The characters that html/#parsing-main-intabletext holds until it knows where they go.
     PrTextBuffer pending = {};

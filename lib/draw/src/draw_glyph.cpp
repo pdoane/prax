@@ -4,12 +4,12 @@
 #include "draw/src/draw_glyph.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 namespace pr_impl {
@@ -25,11 +25,11 @@ struct GlyphPainter {
     const PrFont* font;
     PrDrawList* list;
     PrPath* outline;
-    Array<uint16_t> clips;              // the glyph of each open clip
-    Array<bool> pushed;                 // true for each open clip that was pushed
-    Array<PrAffine2> transforms;        // each open transform, composed with the transforms outside it, to ems
-    Array<PrDrawColorStop> stops;
-    Array<PrDrawColorStop> conic;            // a conic gradient's stops over the whole turn
+    RawArray<uint16_t> clips;              // the glyph of each open clip
+    RawArray<bool> pushed;                 // true for each open clip that was pushed
+    RawArray<PrAffine2> transforms;        // each open transform, composed with the transforms outside it, to ems
+    RawArray<PrDrawColorStop> stops;
+    RawArray<PrDrawColorStop> conic;            // a conic gradient's stops over the whole turn
 };
 
 // The maximum number of stops that a conic gradient's repetitions may use over the full turn.
@@ -47,7 +47,7 @@ float extendOf(PrFontExtend extend, float t) {
 }
 
 // Returns the color at `t` of stops fitted to [0, 1], mixed premultiplied.
-PrColor stopColorAt(const Array<PrDrawColorStop>& stops, float t) {
+PrColor stopColorAt(const RawArray<PrDrawColorStop>& stops, float t) {
     uint32_t i = 0;
     while (i + 1 < stops.count && stops.data[i + 1].offset <= t)
         ++i;
@@ -317,7 +317,7 @@ struct GlyphEntry {
 };
 
 struct DrawGlyphCache {
-    Array<GlyphEntry> entries;
+    RawArray<GlyphEntry> entries;
     HashIndex index;
     uint64_t use;
     PrDrawGlyphDecoder* PR_NULLABLE decoder;

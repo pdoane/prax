@@ -3,15 +3,15 @@
 #include "pr/media_source.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/sort.h"
-#include "pr/string.h"
 
 namespace pr_impl {
 
@@ -55,7 +55,7 @@ struct BufferFrame {
 struct TrackBuffer {
     uint32_t id;
     PrMediaTrackKind kind;
-    Array<BufferFrame> frames;
+    RawArray<BufferFrame> frames;
     double lastDecode;              // NaN while unset
     double lastDuration;            // NaN while unset
     double highestEnd;              // NaN while unset
@@ -83,16 +83,16 @@ struct MediaSourceBuffer {
     double groupStart;              // NaN while unset
     double groupEnd;
     PrMediaTimeRange appendWindow;
-    Array<TrackBuffer> tracks;
+    RawArray<TrackBuffer> tracks;
     bool initialized;               // the first initialization segment has been received
     size_t quota;
     size_t bytes;                   // of every frame held
 
-    Array<TrackCopy> copies;
-    Array<char> text;
-    Array<uint8_t> configs;
+    RawArray<TrackCopy> copies;
+    RawArray<char> text;
+    RawArray<uint8_t> configs;
 
-    Array<uint32_t> order;          // scratch: the order in which a segment's frames are processed
+    RawArray<uint32_t> order;          // scratch: the order in which a segment's frames are processed
 
     // The append in progress: its callback, and whether an initialization segment failed the checks.
     PrMediaSourceInitFn init;
@@ -352,7 +352,7 @@ void codedFramesReceived(void* context, const PrMediaCodedFrame* frames, uint32_
 }
 
 // Writes the track's ranges, merged across gaps no longer than its longest frame.
-void trackRanges(const TrackBuffer* track, Array<PrMediaTimeRange>* out) {
+void trackRanges(const TrackBuffer* track, RawArray<PrMediaTimeRange>* out) {
     out->clear();
     for (uint32_t i = 0; i < track->frames.count; ++i) {
         const BufferFrame& frame = track->frames.data[i];
@@ -488,9 +488,9 @@ uint32_t prMediaSourceBufferBuffered(const PrMediaSourceBuffer* buffer, bool end
         return 0;
     PrMediaSourceBuffer* b = const_cast<PrMediaSourceBuffer*>(buffer);
     double highest = prMediaSourceBufferHighestEnd(buffer);
-    Array<PrMediaTimeRange> result{};
-    Array<PrMediaTimeRange> ranges{};
-    Array<PrMediaTimeRange> next{};
+    RawArray<PrMediaTimeRange> result{};
+    RawArray<PrMediaTimeRange> ranges{};
+    RawArray<PrMediaTimeRange> next{};
     // The intersection starts as one range from zero to the highest end, which each track's ranges narrow.
     result.push(PrMediaTimeRange{0, highest});
     for (uint32_t t = 0; t < b->tracks.count; ++t) {
@@ -510,7 +510,7 @@ uint32_t prMediaSourceBufferBuffered(const PrMediaSourceBuffer* buffer, bool end
             else
                 ++k;
         }
-        Array<PrMediaTimeRange> swap = result;
+        RawArray<PrMediaTimeRange> swap = result;
         result = next;
         next = swap;
     }

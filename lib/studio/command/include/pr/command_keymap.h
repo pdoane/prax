@@ -11,7 +11,7 @@
 
 #include "pr/app.h"
 #include "pr/base.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -43,8 +43,8 @@ bool prCommandChordParse(PrStringView text, PrCommandChord* out);
 
 // Returns the chord as the platform shows a shortcut: symbols in the order that Apple's menus use, such as ⇧⌘P, on
 // Apple's platforms, and words joined by plus signs, such as Ctrl+Shift+P, elsewhere. The caller releases the string
-// with prStringReset.
-PrString prCommandChordText(PrCommandChord chord);
+// with prRawStringReset.
+PrRawString prCommandChordText(PrCommandChord chord);
 
 // Where a binding takes its chord from. A Normal binding takes only what the focused widget leaves: a text field keeps
 // the arrows and the edit chords that it claims. An Override binding takes its chord ahead of every widget, so that it

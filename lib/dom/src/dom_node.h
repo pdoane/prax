@@ -216,7 +216,7 @@ PrDomNode* PR_NULLABLE domClone(const PrDomNode* node, PrDomDocument* document, 
 
 // Returns the text content of the node (dom/#dom-node-textcontent). This is the text of its descendants for an element
 // or a fragment, the value for an attribute or character data, and the null string for any other node.
-PrString domNodeTextContent(const PrDomNode* node);
+PrRawString domNodeTextContent(const PrDomNode* node);
 
 // Returns true if `a` and `b` are equal (dom/#concept-node-equals).
 bool domNodeEquals(const PrDomNode* a, const PrDomNode* b);
@@ -297,7 +297,7 @@ PrDomElement* PR_NULLABLE domDocumentBody(PrDomDocument* document);
 
 // One ID that connected elements of a tree have (dom/#concept-id), and the elements that have it.
 struct DomIdEntry {
-    PrString id;
+    PrRawString id;
     uint32_t hash;
     uint32_t count;                    // number of elements with the ID
     uint32_t moves;                    // DomIds::moves when `element` was found
@@ -307,7 +307,7 @@ struct DomIdEntry {
 // The connected elements of the tree of a document or a shadow root, by ID. The entries are updated as elements are
 // connected and disconnected, and as their IDs change.
 struct DomIds {
-    Array<DomIdEntry> entries;
+    RawArray<DomIdEntry> entries;
     HashIndex index;
     uint32_t moves;                    // number of moves within the tree, each of which may change an order of elements
 };
@@ -342,12 +342,12 @@ void domAutofocusInserted(PrDomElement* element);
 // it first. If `stepped` is given, the elements that the attachment connects and that have insertion steps are added to
 // it, for the caller to run.
 void domAttach(PrDomNode* parent, PrDomNode* child, PrDomNode* PR_NULLABLE before,
-    Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped = nullptr);
+    RawArray<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped = nullptr);
 
 // Unlinks `child` from its parent and siblings, and keeps its descendants. The child becomes the root of its own tree,
 // which takes the references to it. Neither tree is freed, whatever references it is left with. If `stepped` is given,
 // the disconnected elements that have removing steps are added to it.
-void domDetach(PrDomNode* child, Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped = nullptr);
+void domDetach(PrDomNode* child, RawArray<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped = nullptr);
 
 // Transfers a root's tree, including attributes and template contents, to `document` without moving nodes. The
 // references to the tree and to the live ranges in it move with the tree. The root stays a root. The old document is
@@ -418,7 +418,7 @@ void domRemoveFromParent(PrDomNode* node);
 void domSetTextContent(PrDomNode* node, PrStringView value);
 
 // Returns the data of the node's Text children, in order (dom/#concept-child-text-content).
-PrString domChildTextContent(const PrDomNode* node);
+PrRawString domChildTextContent(const PrDomNode* node);
 
 // Replaces the whole of the node's data with `value` (dom/#concept-cd-replace). The null view sets the empty string.
 void domSetData(PrDomCharacterData* node, PrStringView value);
@@ -493,7 +493,7 @@ PrStringView domElementId(const PrDomElement* element);
 
 // Returns the element's qualified name (dom/#concept-element-qualified-name). This is its local name, preceded by its
 // prefix and a colon if it has a prefix.
-PrString domElementQualifiedName(const PrDomElement* element);
+PrRawString domElementQualifiedName(const PrDomElement* element);
 
 // Returns true if the element is an HTML element in an HTML document. The names that a script or a selector gives for
 // such an element are lowercased before they are compared or written.
@@ -502,7 +502,7 @@ inline bool domIsHtmlInHtmlDocument(const PrDomElement* element) {
 }
 
 // Returns the element's HTML-uppercased qualified name (dom/#element-html-uppercased-qualified-name).
-PrString domElementTagName(const PrDomElement* element);
+PrRawString domElementTagName(const PrDomElement* element);
 
 // Returns the length of the node's data in UTF-16 code units (dom/#interface-characterdata).
 uint32_t domCharacterDataLength(const PrDomCharacterData* node);
@@ -513,7 +513,7 @@ uint32_t domCharacterDataLength(const PrDomCharacterData* node);
 
 // Writes `count` code units of the data from `offset`, or as many as there are (dom/#concept-cd-substring). Returns
 // OutOfRange if `offset` is past the data's length.
-PrStatus domSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrString* out);
+PrStatus domSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrRawString* out);
 
 // Replaces `count` code units of the data from `offset` with `data` (dom/#concept-cd-replace). Returns OutOfRange if
 // `offset` is past the data's length.

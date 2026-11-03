@@ -154,15 +154,15 @@ void writePath(TokenWriter* w, uint32_t index) {
     uint32_t start = cssPathDataStart(w->run, index);
     for (uint32_t child = index + 1; child < start; child += w->run.values[child].next)
         writeTree(w, child);
-    Array<PrPathDataCommand> commands;
+    RawArray<PrPathDataCommand> commands;
     cssPathCommands(w->run, index, &commands);
-    PrString data = prStringNull();
-    prStringAppend(&data, "\"");
+    PrRawString data = prRawStringNull();
+    prRawStringAppend(&data, "\"");
     prPathDataWrite(commands.data, commands.count, &data);
-    prStringAppend(&data, "\"");
-    addToken(w, CssTokenKind_String, prStringView(&data));
+    prRawStringAppend(&data, "\"");
+    addToken(w, CssTokenKind_String, prRawStringView(&data));
     closeFunction(w, open);
-    prStringReset(&data);
+    prRawStringReset(&data);
     commands.reset();
 }
 

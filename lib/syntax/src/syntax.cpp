@@ -3,10 +3,10 @@
 #include "pr/syntax.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/atom_table.h"
+#include "pr/raw_array.h"
 #include "pr/regex.h"
 
 namespace pr_impl {
@@ -16,8 +16,8 @@ namespace {
 // The languages that a registry holds, and the category names that its trees have given, each an atom that is its
 // PrSyntaxCategory.
 struct SyntaxRegistry {
-    Array<const PrSyntaxLanguage*> languages;
-    Array<PrRegex*> namePatterns;   // by index of `languages`: its name pattern, or null for none
+    RawArray<const PrSyntaxLanguage*> languages;
+    RawArray<PrRegex*> namePatterns;   // by index of `languages`: its name pattern, or null for none
     AtomTable categories;
 };
 

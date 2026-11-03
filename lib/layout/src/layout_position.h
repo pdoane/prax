@@ -54,7 +54,7 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
 // out against the initial containing block or the viewport, which has size `extent` at the origin in the root's writing
 // mode `mode`. Appends their fragments to `out`.
 void layoutViewportHold(LayoutState& state, const LayoutFragment* root, PrLayoutVec at, PrLayoutVec extent,
-    LayoutMode mode, Array<LayoutChild>& out);
+    LayoutMode mode, RawArray<LayoutChild>& out);
 
 } // namespace pr_impl
 

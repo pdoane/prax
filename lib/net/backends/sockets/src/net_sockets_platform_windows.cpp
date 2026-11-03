@@ -104,7 +104,7 @@ SOCKET openWake() {
 // WSAPoll waits only on sockets, so a datagram that the socket sends to itself wakes it.
 struct SocketsSystem {
     SOCKET wake;
-    Array<WSAPOLLFD> polls;
+    RawArray<WSAPOLLFD> polls;
 };
 
 SocketsSystem* socketsSystemCreate() {
@@ -230,7 +230,7 @@ void socketsShutdownSend(SocketsHandle socket) {
     shutdown(SOCKET(socket), SD_SEND);
 }
 
-PrNetError socketsResolve(const char* host, uint16_t port, Array<SocketsAddress>* out) {
+PrNetError socketsResolve(const char* host, uint16_t port, RawArray<SocketsAddress>* out) {
     wchar_t wide[kHostMaxBytes + 1];
     if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, host, -1, wide, int(countOf(wide))) == 0)
         return PrNetError_NameNotResolved;

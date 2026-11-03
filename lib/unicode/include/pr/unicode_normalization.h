@@ -5,7 +5,7 @@
 #pragma once
 
 #include "pr/base.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -22,8 +22,8 @@ enum {
 typedef uint8_t PrUnicodeNormalForm;
 
 // Returns `text` in `form`. `text` is UTF-8 that may be ill-formed, and each ill-formed sequence becomes U+FFFD. The
-// caller releases the result with prStringReset.
-PrString prUnicodeNormalize(PrStringView text, PrUnicodeNormalForm form);
+// caller releases the result with prRawStringReset.
+PrRawString prUnicodeNormalize(PrStringView text, PrUnicodeNormalForm form);
 
 // Returns true if `text` is well-formed UTF-8 that is in `form`.
 bool prUnicodeIsNormalized(PrStringView text, PrUnicodeNormalForm form);

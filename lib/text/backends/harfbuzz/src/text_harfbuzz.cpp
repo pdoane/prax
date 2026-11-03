@@ -6,7 +6,7 @@
 #include "pr/text_harfbuzz.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "hb.h"
@@ -46,7 +46,7 @@ void createFont(PrTextShaper*, void* face, const PrFont* font, void* state) {
     out->hb = hb_font_create(static_cast<HbFace*>(face)->hb);
     int scale = int(out->unitsPerEm);
     hb_font_set_scale(out->hb, scale, scale);
-    Array<hb_variation_t> variations;
+    RawArray<hb_variation_t> variations;
     for (uint32_t i = 0; i < prFontAxisCount(font); ++i)
         variations.push(hb_variation_t{prFontAxis(font, i).tag, prFontAxisValue(font, i)});
     if (variations.count != 0)
@@ -60,8 +60,8 @@ void destroyFont(PrTextShaper*, void* state) {
 
 struct HbBackend : PrTextShaper {
     hb_buffer_t* buffer;
-    Array<hb_feature_t> features;
-    Array<char> text;                   // the run, with its context on either side
+    RawArray<hb_feature_t> features;
+    RawArray<char> text;                   // the run, with its context on either side
 };
 
 bool startsCodePoint(char byte) {

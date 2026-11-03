@@ -40,7 +40,7 @@ namespace pr_impl {
 
 // A host text font, keyed by the families, the style and the locale that it was made for.
 struct SvgHostFont {
-    Array<char> key;
+    RawArray<char> key;
     PrTextFont* font;
 };
 
@@ -52,8 +52,8 @@ struct SvgLoadedFace {
 };
 
 struct SvgTextFonts {
-    Array<SvgLoadedFace> loaded;
-    Array<SvgHostFont> hosts;
+    RawArray<SvgLoadedFace> loaded;
+    RawArray<SvgHostFont> hosts;
     PrTextGlyphBuffer* PR_NULLABLE glyphs;  // the buffer that shaping fills, created when text first shapes
 };
 
@@ -71,15 +71,15 @@ struct SvgTextPiece {
 };
 
 struct SvgText {
-    Array<SvgPaints> paints;            // the paints of the text's elements, whose strokes the text owns
-    Array<SvgTextPiece> pieces;         // each paints with a copy of one of `paints`
-    Array<PrFontGlyph> glyphs;
-    Array<PrAffine2> transforms;
+    RawArray<SvgPaints> paints;            // the paints of the text's elements, whose strokes the text owns
+    RawArray<SvgTextPiece> pieces;         // each paints with a copy of one of `paints`
+    RawArray<PrFontGlyph> glyphs;
+    RawArray<PrAffine2> transforms;
     PrRect bounds;
     bool clipped;                       // true if the pieces draw inside `clip`, as text-overflow: clip asks
     PrRect clip;
-    Array<SvgTextCharacter> characters;
-    Array<SvgTextElement> elements;     // the text element first, then its descendants in tree order
+    RawArray<SvgTextCharacter> characters;
+    RawArray<SvgTextElement> elements;     // the text element first, then its descendants in tree order
 };
 
 namespace {
@@ -302,24 +302,24 @@ struct Layout {
     SvgBuilder* b;
     SvgDocumentFonts* documentFonts;    // the SVG fonts of the text's document
     bool instance;                      // the text is in a use element's shadow tree
-    Array<char> text;
-    Array<TextPath> paths;
-    Array<Span> spans;
-    Array<Family> families;
+    RawArray<char> text;
+    RawArray<TextPath> paths;
+    RawArray<Span> spans;
+    RawArray<Family> families;
     PrTextBuffer familyNames = {};
-    Array<Char> chars;
-    Array<Positioned> positioned;
-    Array<Run> runs;
-    Array<Glyph> glyphs;
-    Array<float> values;
-    Array<SvgRunGlyph> svgGlyphs;
-    Array<PrTextFeatureSet*> featureSets; // what the spans' font properties ask of shaping (TextStyle::features)
-    Array<PrTextPiece> pieces;            // the characters in the form that itemization reads
+    RawArray<Char> chars;
+    RawArray<Positioned> positioned;
+    RawArray<Run> runs;
+    RawArray<Glyph> glyphs;
+    RawArray<float> values;
+    RawArray<SvgRunGlyph> svgGlyphs;
+    RawArray<PrTextFeatureSet*> featureSets; // what the spans' font properties ask of shaping (TextStyle::features)
+    RawArray<PrTextPiece> pieces;            // the characters in the form that itemization reads
     PrTextItems* PR_NULLABLE items;
-    Array<uint32_t> codePoints;
-    Array<uint8_t> levels;
-    Array<uint32_t> order;
-    Array<uint32_t> spanStack;
+    RawArray<uint32_t> codePoints;
+    RawArray<uint8_t> levels;
+    RawArray<uint32_t> order;
+    RawArray<uint32_t> spanStack;
     bool area;                          // a textArea's layout, whose tbreak elements break lines
 
     // Vertical text is laid out as horizontal text in a frame turned a quarter turn, which `toPage` turns back once the
@@ -494,7 +494,7 @@ TextStyle textStyleOf(Layout& t, const PrDomElement* e, const CssComputedStyle* 
     // (SVG11/text.html#TextDecorationProperties).
     addDecoration(s, svgStyleLines(style), s.paints);
     PrTextBuffer names{};
-    Array<PrFontFamily> families;
+    RawArray<PrFontFamily> families;
     cssFontFamilies(cssComputedValue(style, PrCssProperty_FontFamily), &names, &families);
     s.firstFamily = t.families.count;
     s.familyCount = families.count;
@@ -611,7 +611,7 @@ void collect(Layout& t, const PrDomElement* element, uint32_t span) {
     for (const PrDomNode* child = element->first; child != nullptr; child = child->next) {
         if (domIsText(child)) {
             const PrDomCharacterData* text = static_cast<const PrDomCharacterData*>(child);
-            appendText(t, prStringView(&text->data), span);
+            appendText(t, prRawStringView(&text->data), span);
             continue;
         }
         const PrDomElement* e = domElementFromNode(child);
@@ -799,7 +799,7 @@ PrTextFont* PR_NULLABLE hostFonts(Layout& t, const Span& span) {
     if (options.fonts == nullptr || options.shaper == nullptr)
         return nullptr;
     const TextStyle& style = span.style;
-    Array<char> key;
+    RawArray<char> key;
     auto append = [&](const void* bytes, size_t size) { key.append(static_cast<const char*>(bytes), uint32_t(size)); };
     for (uint32_t i = 0; i < style.familyCount; ++i) {
         const Family& family = t.families.data[style.firstFamily + i];
@@ -820,7 +820,7 @@ PrTextFont* PR_NULLABLE hostFonts(Layout& t, const Span& span) {
             return host.font;
         }
     }
-    Array<PrFontFamily> families;
+    RawArray<PrFontFamily> families;
     for (uint32_t i = 0; i < style.familyCount; ++i) {
         const Family& family = t.families.data[style.firstFamily + i];
         if (family.generic != PrFontGeneric_None)
@@ -872,12 +872,12 @@ Font fontFor(Layout& t, const Char& c, const Span& span, PrStringView cluster) {
             continue;
         PrStringView name = familyName(t, family);
         uint32_t hash = svgFontFamilyHash(name);
-        Array<uint32_t>& reads = t.b->tree->fontFamilies;
+        RawArray<uint32_t>& reads = t.b->tree->fontFamilies;
         if (reads.find(hash) == kArrayMissing)
             reads.push(hash);
         for (uint32_t i = 0; i < documentFonts->faces.count; ++i) {
             SvgFontFace& face = documentFonts->faces.data[i];
-            if (face.familyHash != hash || !prAsciiEqualsFold(prStringView(&face.family), name))
+            if (face.familyHash != hash || !prAsciiEqualsFold(prRawStringView(&face.family), name))
                 continue;
             const SvgFont* font = fontOfFace(t, documentFonts, face);
             if (font == nullptr)
@@ -1129,7 +1129,7 @@ PrPath* PR_NULLABLE textPathOf(Layout& t, const PrDomElement* element, float* pa
     const PrDomElement* target = svgBuildHref(*t.b, element, true);
     const CssComputedStyle* style = target != nullptr ? svgBuildStyle(*t.b, target) : nullptr;
     SvgNode shape{};
-    Array<PrPathDataCommand> commands;
+    RawArray<PrPathDataCommand> commands;
     if (style != nullptr && svgReadShape(target, style, &shape, &commands)) {
         if (shape.kind != SvgNodeKind_Path)
             svgShapeCommands(shape, t.b->viewport, &commands);
@@ -1767,8 +1767,8 @@ void layoutReset(Layout& t) {
 // remains.
 void dropRemoved(Layout& t) {
     // By the index of a character before dropping: the characters before it that remain.
-    Array<uint32_t> kept;
-    Array<char> text;
+    RawArray<uint32_t> kept;
+    RawArray<char> text;
     uint32_t count = 0;
     for (uint32_t i = 0; i < t.chars.count; ++i) {
         kept.push(count);
@@ -1811,7 +1811,7 @@ void beginLayout(Layout& t, const PrDomElement* text, const CssComputedStyle* st
     textStyle.displayAlign = Anchor_Start;
     // The ancestors' SVG Tiny alignments, and their decorations, reach the text. An outermost svg element is an atomic
     // inline, which no decoration crosses (css-text-decor-3/#line-decoration), so the ancestors end with it.
-    Array<const PrDomElement*> ancestors;
+    RawArray<const PrDomElement*> ancestors;
     for (const PrDomElement* e = t.instance ? nullptr : domElementFromNode(text->parent);
             e != nullptr && e->space == PrDomNamespace_Svg; e = domElementFromNode(e->parent))
         ancestors.push(e);
@@ -2001,7 +2001,7 @@ void recordCharacters(Layout& t) {
         out.characters.push(character);
     }
     // A character takes the position of its typographic character's first glyph, and the advance of all of them.
-    Array<bool> placed;
+    RawArray<bool> placed;
     for (uint32_t i = 0; i < t.chars.count; ++i)
         placed.push(false);
     for (uint32_t r = 0; r < t.runs.count; ++r) {
@@ -2068,7 +2068,7 @@ void recordCharacters(Layout& t) {
 
 // Writes the advance of each character in a single-line layout, and the ascent and descent of its font. Line breaking
 // and the heights of lines measure these.
-void measureChars(Layout& t, Array<float>* advances, Array<float>* ascents, Array<float>* descents) {
+void measureChars(Layout& t, RawArray<float>* advances, RawArray<float>* ascents, RawArray<float>* descents) {
     advances->clear();
     ascents->clear();
     descents->clear();
@@ -2098,13 +2098,13 @@ void measureChars(Layout& t, Array<float>* advances, Array<float>* ascents, Arra
 // A word that no opportunity lets fit breaks at the last opportunity that its overflow-wrap adds and that fits, as SVG
 // Tiny's textArea breaks any word; otherwise it overflows the line. The spaces that end a line hang past it. A first
 // line that `firstEnd` gives ends there. Returns the start of each line, with the end last.
-void breakLines(Layout& t, const Array<float>& advances, float width, Array<uint32_t>* starts,
+void breakLines(Layout& t, const RawArray<float>& advances, float width, RawArray<uint32_t>* starts,
         uint32_t firstEnd = kArrayMissing) {
     PrStringView text{t.text.data, t.text.count};
     uint32_t count = t.chars.count;
     t.codePoints.clear();
-    Array<uint32_t> ends;
-    Array<PrTextBreakStyle> styles;
+    RawArray<uint32_t> ends;
+    RawArray<PrTextBreakStyle> styles;
     for (uint32_t i = 0; i < count; ++i) {
         const Char& c = t.chars.data[i];
         uint32_t codePoint = 0;
@@ -2119,7 +2119,7 @@ void breakLines(Layout& t, const Array<float>& advances, float width, Array<uint
     t.levels.clear();
     for (uint32_t i = 0; i < count; ++i)
         t.levels.push(0);
-    Array<PrTextEmergency> emergency;
+    RawArray<PrTextEmergency> emergency;
     emergency.resize(count);
     prUnicodeLineBreaks(t.codePoints.data, count, t.levels.data);
     PrTextBreakDesc desc{text, t.codePoints.data, ends.data, styles.data, count};
@@ -2193,10 +2193,10 @@ bool hasForcedBreaks(const Layout& t) {
 // reaches from the highest top of these boxes to the lowest bottom, and the next line starts at its bottom. A line that
 // has a position of its own stays there, and the lines after it follow it. Writes the start of each line to `starts`,
 // with the end last, and ends the first line at `firstEnd` if it is given.
-void setLines(Layout& t, float width, Array<uint32_t>& starts, uint32_t firstEnd = kArrayMissing) {
-    Array<float> advances;
-    Array<float> ascents;
-    Array<float> descents;
+void setLines(Layout& t, float width, RawArray<uint32_t>& starts, uint32_t firstEnd = kArrayMissing) {
+    RawArray<float> advances;
+    RawArray<float> ascents;
+    RawArray<float> descents;
     measureChars(t, &advances, &ascents, &descents);
     breakLines(t, advances, width, &starts, firstEnd);
     const Char& first = t.chars.data[0];
@@ -2308,7 +2308,7 @@ void toPage(Layout& t) {
 // first line.
 void addLineParts(Layout& t, const CssComputedStyle* line) {
     uint32_t count = t.spans.count;
-    Array<uint32_t> parts;
+    RawArray<uint32_t> parts;
     for (uint32_t i = 0; i < count; ++i) {
         Span part = t.spans.data[i];
         // The line's own part sits between the text and its content.
@@ -2381,8 +2381,8 @@ struct CharPlace {
 // Breaks the text into lines as setLines does, for a text whose first line or first letter has a style of its own. The
 // first line is found with every character set as if on it. The characters after it go back to their elements' spans,
 // with which the lines after it are found.
-void setStyledLines(Layout& t, float width, Array<uint32_t>& lines) {
-    Array<CharPlace> places;
+void setStyledLines(Layout& t, float width, RawArray<uint32_t>& lines) {
+    RawArray<CharPlace> places;
     for (uint32_t i = 0; i < t.chars.count; ++i)
         places.push(CharPlace{t.chars.data[i].x, t.chars.data[i].y, t.chars.data[i].hidden});
     setLines(t, width, lines);
@@ -2407,7 +2407,7 @@ void setStyledLines(Layout& t, float width, Array<uint32_t>& lines) {
 // extent. For ellipsis, an overflowing line hides the glyphs at its end that leave no room for an ellipsis, which
 // follows the last glyph that remains, in the text element's style. The characters as recorded, and the bounds, are
 // those of the text without it.
-void overflowLines(Layout& t, const CssComputedStyle* style, float inlineSize, const Array<uint32_t>& lines) {
+void overflowLines(Layout& t, const CssComputedStyle* style, float inlineSize, const RawArray<uint32_t>& lines) {
     PrCssKeyword overflow = svgStyleKeyword(style, PrCssProperty_TextOverflow);
     if (overflow != PrCssKeyword_Clip && overflow != PrCssKeyword_Ellipsis)
         return;
@@ -2521,7 +2521,7 @@ void layoutText(Layout& t, const PrDomElement* text, const CssComputedStyle* sty
     itemize(t);
     buildRuns(t);
     // Text that wraps or holds forced line breaks is set as one line, broken into lines, and set again.
-    Array<uint32_t> lines;
+    RawArray<uint32_t> lines;
     if (wraps || hasForcedBreaks(t)) {
         placeRuns(t);
         if (styled)
@@ -2559,9 +2559,9 @@ void layoutTextArea(Layout& t, const PrDomElement* area, const CssComputedStyle*
     itemize(t);
     buildRuns(t);
     placeRuns(t);
-    Array<float> advances;
-    Array<float> ascents;
-    Array<float> descents;
+    RawArray<float> advances;
+    RawArray<float> ascents;
+    RawArray<float> descents;
     measureChars(t, &advances, &ascents, &descents);
     const TextStyle& own = t.spans.data[0].style;
     SvgLengthPercentage none{-1, 0};
@@ -2571,14 +2571,14 @@ void layoutTextArea(Layout& t, const PrDomElement* area, const CssComputedStyle*
     float y = svgLengthResolve(svgAttributeLength(area, "y", SvgLengthPercentage{}, style), percentBase(t, SvgAxis_Y));
     float width = widthLength.px < 0 ? -1 : svgLengthResolve(widthLength, percentBase(t, SvgAxis_X));
     float height = heightLength.px < 0 ? -1 : svgLengthResolve(heightLength, percentBase(t, SvgAxis_Y));
-    Array<uint32_t> starts;
+    RawArray<uint32_t> starts;
     breakLines(t, advances, width, &starts);
 
     // Each line's baseline is a line-increment below the previous one, and the first is that far below the top. If
     // line-increment is auto, the increment is the line's largest font size
     // (SVGTiny12/text.html#LineIncrementProperty). A line whose baseline falls below the height is not drawn, and
     // neither is any line after it.
-    Array<float> baselines;
+    RawArray<float> baselines;
     float baseline = y;
     float bottom = y;
     uint32_t lines = starts.count - 1;

@@ -5,7 +5,6 @@
 
 #include "pr/css_quickjs.h"
 
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/count_of.h"
 #include "pr/css.h"
@@ -19,6 +18,7 @@
 #include "pr/mem.h"
 #include "pr/quickjs_binding.h"
 #include "pr/quickjs_callback.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/webidl_quickjs.h"
 
@@ -375,7 +375,7 @@ JSValue containerConditions(JSContext* ctx, JSValueConst ruleObject) {
     PrCssContainerRule* rule = jsThis<PrCssContainerRule>(ctx, ruleObject, cssContainerRuleClass);
     if (rule == nullptr)
         return JS_EXCEPTION;
-    Array<PrCssContainerCondition> items;
+    RawArray<PrCssContainerCondition> items;
     items.reserve(prCssContainerRuleConditions(rule, nullptr, 0));
     items.count = prCssContainerRuleConditions(rule, items.data, items.capacity);
     JSValue array = JS_NewArray(ctx);
@@ -449,14 +449,14 @@ JSValue keyframesMethod(JSContext* ctx, JSValueConst ruleObject, int argc, JSVal
 }
 
 // The parameters of a function or mixin (css-mixins-1/#dictdef-functionparameter).
-JSValue parametersToJs(JSContext* ctx, Array<PrCssFunctionParameter>* items) {
+JSValue parametersToJs(JSContext* ctx, RawArray<PrCssFunctionParameter>* items) {
     JSValue array = JS_NewArray(ctx);
     for (uint32_t i = 0; i < items->count; ++i) {
         PrCssFunctionParameter* item = &items->data[i];
         JSValue parameter = JS_NewObject(ctx);
         JS_SetPropertyStr(ctx, parameter, "name", jsNewString(ctx, &item->name));
         JS_SetPropertyStr(ctx, parameter, "type", jsNewString(ctx, &item->type));
-        if (!prStringIsNull(&item->defaultValue))
+        if (!prRawStringIsNull(&item->defaultValue))
             JS_SetPropertyStr(ctx, parameter, "defaultValue", jsNewString(ctx, &item->defaultValue));
         JS_SetPropertyUint32(ctx, array, i, parameter);
         prCssFunctionParameterReset(item);
@@ -471,7 +471,7 @@ JSValue getParameters(JSContext* ctx, JSValueConst ruleObject, int, JSValueConst
     T* rule = jsThis<T>(ctx, ruleObject, *Id);
     if (rule == nullptr)
         return JS_EXCEPTION;
-    Array<PrCssFunctionParameter> items;
+    RawArray<PrCssFunctionParameter> items;
     items.reserve(Write(rule, nullptr, 0));
     items.count = Write(rule, items.data, items.capacity);
     return parametersToJs(ctx, &items);
@@ -494,7 +494,7 @@ JSValue customMediaQuery(JSContext* ctx, JSValueConst ruleObject) {
 // Returns the sequence of unsigned longs that a map function writes, as an array.
 template <typename Write>
 JSValue valuesToJs(JSContext* ctx, Write write) {
-    Array<uint32_t> items;
+    RawArray<uint32_t> items;
     items.reserve(write(nullptr, 0));
     items.count = write(items.data, items.capacity);
     JSValue array = JS_NewArray(ctx);
@@ -669,7 +669,7 @@ JSValue propertyMethod(JSContext* ctx, JSValueConst declarationsObject, int argc
         case PropertyMethod_GetPriority:
             return jsFixedString(ctx, prCssStyleDeclarationIsImportant(declarations, &property.name) ? "important" : "");
         case PropertyMethod_Remove: {
-            PrString removed = {};
+            PrRawString removed = {};
             PrStatus status = prCssStyleDeclarationRemoveProperty(declarations, &property.name, &removed);
             return status == PrStatus_Ok ? jsTakeString(ctx, removed) : cssThrow(ctx, status);
         }
@@ -1497,7 +1497,7 @@ JSValue setLoad(JSContext* ctx, JSValueConst setObject, int argc, JSValueConst* 
         JS_FreeValue(ctx, error);
         return promise;
     }
-    Array<PrCssFontFace* PR_NONNULL> faces;
+    RawArray<PrCssFontFace* PR_NONNULL> faces;
     faces.reserve(count);
     prCssFontFaceSetLoad(set, document, font.value(), faces.data, count, &count);
     JSValue promises = JS_NewArray(ctx);
@@ -1542,7 +1542,7 @@ JSValue fontEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
     PrCssFontFaceSetLoadEventInit init = prCssFontFaceSetLoadEventInitDefault();
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
     bool present = false;
-    Array<PrCssFontFace* PR_NONNULL> faces;
+    RawArray<PrCssFontFace* PR_NONNULL> faces;
     bool read = jsDictionary(ctx, dictionary, &present);
     // The members of FontFaceSetLoadEventInit are read after those of EventInit (webidl/#js-dictionary).
     if (read && present) {
@@ -1664,7 +1664,7 @@ JSValue fontEventFaces(JSContext* ctx, JSValueConst eventObject) {
         return JS_EXCEPTION;
     return jsSameObject(ctx, eventObject, "fontfaces", [&] {
         uint32_t count = prCssFontFaceSetLoadEventFontFaces(event, nullptr, 0);
-        Array<PrCssFontFace* PR_NONNULL> faces;
+        RawArray<PrCssFontFace* PR_NONNULL> faces;
         faces.reserve(count);
         faces.count = prCssFontFaceSetLoadEventFontFaces(event, faces.data, count);
         JSValue array = JS_NewArray(ctx);
@@ -2397,7 +2397,7 @@ void invokeIntersectionObserver(void* PR_NULLABLE context, PrCssIntersectionObse
 }
 
 // Reads a restricted double (webidl/#js-double). Throws a TypeError for a value that is not finite.
-bool readThreshold(JSContext* ctx, JSValueConst value, Array<double>* out) {
+bool readThreshold(JSContext* ctx, JSValueConst value, RawArray<double>* out) {
     double number = 0;
     if (JS_ToFloat64(ctx, &number, value) < 0)
         return false;
@@ -2412,7 +2412,7 @@ bool readThreshold(JSContext* ctx, JSValueConst value, Array<double>* out) {
 // Reads the members of an IntersectionObserverInit (intersection-observer/#dictdef-intersectionobserverinit) in
 // lexicographic order. The init's strings and thresholds stay valid while `margins` and `thresholds` live.
 bool readIntersectionInit(JSContext* ctx, JSValueConst dictionary, PrCssIntersectionObserverInit* init,
-        StringArgument margins[2], Array<double>* thresholds) {
+        StringArgument margins[2], RawArray<double>* thresholds) {
     bool present = false;
     if (!jsDictionary(ctx, dictionary, &present))
         return false;
@@ -2481,7 +2481,7 @@ JSValue intersectionObserverConstruct(JSContext* ctx, JSValueConst newTarget, in
         return JS_EXCEPTION;
     PrCssIntersectionObserverInit init = prCssIntersectionObserverInitDefault();
     StringArgument margins[2] = {{ctx}, {ctx}};
-    Array<double> thresholds;
+    RawArray<double> thresholds;
     bool read = readIntersectionInit(ctx, argc > 1 ? argv[1] : JS_UNDEFINED, &init, margins, &thresholds);
     PrDomDocument* document = read ? prJsDomGlobalDocument(ctx) : nullptr;
     if (document == nullptr) {
@@ -2665,7 +2665,7 @@ JSValue matrixToString(JSContext* ctx, JSValueConst matrixObject, int, JSValueCo
     PrDomMatrix* matrix = prJsDomMatrixFromValue(ctx, matrixObject);
     if (matrix == nullptr)
         return JS_EXCEPTION;
-    PrString text = {};
+    PrRawString text = {};
     if (prCssMatrixToString(matrix, &text) != PrStatus_Ok)
         return jsDomExceptionThrow(ctx, "InvalidStateError");
     return jsTakeString(ctx, text);
@@ -2919,7 +2919,7 @@ JSValue getClientRects(JSContext* ctx, JSValueConst elementObject, int, JSValueC
     if (element == nullptr)
         return JS_EXCEPTION;
     uint32_t count = prCssElementGetClientRects(element, nullptr, 0);
-    Array<PrDomRect> rects;
+    RawArray<PrDomRect> rects;
     rects.resize(count);
     prCssElementGetClientRects(element, rects.data, count);
     JSValue list = prJsDomRectListNew(ctx, rects.data, count);
@@ -3069,7 +3069,7 @@ JSValue elementsFromPoint(JSContext* ctx, JSValueConst documentObject, int argc,
     if (document == nullptr || !pointArguments(ctx, argc, argv, &x, &y))
         return JS_EXCEPTION;
     uint32_t count = prCssDocumentElementsFromPoint(document, x, y, nullptr, 0);
-    Array<PrDomElement*> elements;
+    RawArray<PrDomElement*> elements;
     elements.resize(count);
     prCssDocumentElementsFromPoint(document, x, y, elements.data, count);
     JSValue array = JS_NewArray(ctx);

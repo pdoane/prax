@@ -50,7 +50,7 @@ uint32_t lineCount(float difference, float scale, float tolerance) {
 // cubed of the amount for a full step, and moving the one end of the chord that moves balances it. A single line keeps
 // its chord.
 template <typename At>
-void flattenArea(uint32_t count, Array<PrVec2>& out, At at) {
+void flattenArea(uint32_t count, RawArray<PrVec2>& out, At at) {
     if (count < 2)
         return;
     constexpr float kEnd = 0.70710678f;
@@ -77,7 +77,7 @@ uint32_t pathCubicLineCount(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float to
     return lineCount(prF32Max(length(second1), length(second2)), 0.75f, tolerance);
 }
 
-void pathFlattenQuadLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, uint32_t count, Array<PrVec2>& out) {
+void pathFlattenQuadLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, uint32_t count, RawArray<PrVec2>& out) {
     for (uint32_t i = 1; i < count; ++i) {
         float t = float(i) / float(count);
         float u = 1 - t;
@@ -89,7 +89,7 @@ void pathFlattenQuadLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, uint32_t count, Array
     out.push(p2);
 }
 
-void pathFlattenCubicLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, uint32_t count, Array<PrVec2>& out) {
+void pathFlattenCubicLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, uint32_t count, RawArray<PrVec2>& out) {
     for (uint32_t i = 1; i < count; ++i) {
         float t = float(i) / float(count);
         float u = 1 - t;
@@ -102,15 +102,15 @@ void pathFlattenCubicLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, uint32_t 
     out.push(p3);
 }
 
-void pathFlattenQuad(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, Array<PrVec2>& out) {
+void pathFlattenQuad(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, RawArray<PrVec2>& out) {
     pathFlattenQuadLines(p0, p1, p2, pathQuadLineCount(p0, p1, p2, tolerance), out);
 }
 
-void pathFlattenCubic(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, Array<PrVec2>& out) {
+void pathFlattenCubic(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, RawArray<PrVec2>& out) {
     pathFlattenCubicLines(p0, p1, p2, p3, pathCubicLineCount(p0, p1, p2, p3, tolerance), out);
 }
 
-void pathFlattenQuadArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, Array<PrVec2>& out) {
+void pathFlattenQuadArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, RawArray<PrVec2>& out) {
     PrVec2 second{2 * (p0.x - 2 * p1.x + p2.x), 2 * (p0.y - 2 * p1.y + p2.y)};
     flattenArea(pathQuadLineCount(p0, p1, p2, tolerance), out, [&](float t, PrVec2* tangent, PrVec2* curvature) {
         float u = 1 - t;
@@ -121,7 +121,7 @@ void pathFlattenQuadArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, Array
     out.push(p2);
 }
 
-void pathFlattenCubicArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, Array<PrVec2>& out) {
+void pathFlattenCubicArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, RawArray<PrVec2>& out) {
     flattenArea(pathCubicLineCount(p0, p1, p2, p3, tolerance), out, [&](float t, PrVec2* tangent, PrVec2* curvature) {
         float u = 1 - t;
         *tangent = PrVec2{

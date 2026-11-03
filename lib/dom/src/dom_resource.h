@@ -35,7 +35,7 @@ typedef PrDomDocument* PR_NULLABLE (*DomResourceLoadFn)(void* PR_NULLABLE contex
 // A reference split into the document that it names and the fragment that names an element there.
 struct DomReference {
     bool external;              // the URL names a document other than the one that holds the reference
-    PrString url;               // External: the other document's URL without its fragment, absolute if it resolves
+    PrRawString url;            // External: the other document's URL without its fragment, absolute if it resolves
     PrStringView fragment;      // the fragment without its `#`, a view into the reference, or the null view if none
 };
 
@@ -43,7 +43,7 @@ struct DomReference {
 // (SVG2/linking.html#processingURL-absolute). A reference of a fragment alone, or whose URL equals the document's base
 // URL but for the fragment, names the document itself. A reference that does not parse against the base URL, such as a
 // relative reference against about:blank, names another document by the URL as written. Returns false if the reference
-// is empty. The caller releases `out->url` with prStringReset.
+// is empty. The caller releases `out->url` with prRawStringReset.
 bool domReferenceSplit(const PrDomDocument* document, PrStringView reference, DomReference* out);
 
 // Returns the resource document that `url`, an absolute URL without a fragment, names for `document`. Returns null

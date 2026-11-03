@@ -106,13 +106,13 @@ struct Layout {
     LottieAnimation* a;
     const PrLottieOptions* options;
     PrTextGlyphBuffer* glyphs;
-    Array<PrTextFont* PR_NULLABLE> textFonts; // for each of the animation's fonts, or null
-    Array<FaceFont> faceFonts;                // the faces of the text fonts that runs are set in, and their fonts
-    PrTextItems* PR_NULLABLE items;           // a paragraph's runs
-    Array<CharKey> shapes;                    // the glyph shapes, sorted
-    Array<Measured> measured;                 // the document's characters
-    Array<PrFontGlyph> measuredGlyphs;
-    Array<PrAffine2> measuredTransforms;     // one per measured glyph, about its origin
+    RawArray<PrTextFont* PR_NULLABLE> textFonts; // for each of the animation's fonts, or null
+    RawArray<FaceFont> faceFonts;                // the faces of the text fonts that runs are set in, and their fonts
+    PrTextItems* PR_NULLABLE items;              // a paragraph's runs
+    RawArray<CharKey> shapes;                    // the glyph shapes, sorted
+    RawArray<Measured> measured;                 // the document's characters
+    RawArray<PrFontGlyph> measuredGlyphs;
+    RawArray<PrAffine2> measuredTransforms;     // one per measured glyph, about its origin
 };
 
 // Returns the glyph shape that the animation provides for the character in the font, taking the first one listed. If
@@ -151,7 +151,7 @@ uint32_t fontOfFace(Layout& t, uint32_t textFont, uint32_t face) {
 
 // Measures the document's characters into `t.measured`. Each paragraph between line breaks is shaped as one run, and
 // each glyph goes to the character that its cluster is in.
-void measureCharacters(Layout& t, const LottieTextDocument& d, PrStringView text, const Array<LottieString>& chars) {
+void measureCharacters(Layout& t, const LottieTextDocument& d, PrStringView text, const RawArray<LottieString>& chars) {
     LottieAnimation& a = *t.a;
     const LottieFont* font = d.font != kLottieNone ? &a.textFonts.data[d.font] : nullptr;
     t.measured.clear();
@@ -244,7 +244,7 @@ void measureCharacters(Layout& t, const LottieTextDocument& d, PrStringView text
 
 // Splits the document's text into the characters that animators move: grapheme clusters, with each line break as a
 // character of its own. Appends them to `out` as runs of `text`.
-void characters(PrStringView text, Array<LottieString>& out) {
+void characters(PrStringView text, RawArray<LottieString>& out) {
     size_t at = 0;
     while (at < text.size) {
         size_t next = prUnicodeGraphemeNext(text, at);
@@ -261,7 +261,7 @@ void characters(PrStringView text, Array<LottieString>& out) {
 void layoutDocument(Layout& t, LottieTextDocument& d, const LottieLayer& layer) {
     LottieAnimation& a = *t.a;
     PrStringView text = lottieString(a, d.text);
-    Array<LottieString> chars;
+    RawArray<LottieString> chars;
     characters(text, chars);
     auto charAt = [&](uint32_t i) { return prStringSlice(text, chars.data[i].offset, chars.data[i].size); };
     measureCharacters(t, d, text, chars);
@@ -271,7 +271,7 @@ void layoutDocument(Layout& t, LottieTextDocument& d, const LottieLayer& layer) 
 
     // Paragraph text breaks where a letter would exceed the box's width: at the last space, or before the letter if the
     // line has no space. Each break is an empty character of its own.
-    Array<bool> breaks;
+    RawArray<bool> breaks;
     for (uint32_t i = 0; i < chars.count; ++i)
         breaks.push(false);
     if (d.box) {
@@ -607,7 +607,7 @@ void lottieDrawText(LottieRender& r, const LottieLayer& layer, double frame) {
         ++which;
     const LottieTextDocument& d = a.documents.data[layer.first + which];
     uint32_t n = layer.animatorCount;
-    Array<Animated> animated;
+    RawArray<Animated> animated;
     for (uint32_t j = 0; j < n; ++j) {
         const LottieTextAnimator& t = a.animators.data[layer.animators + j];
         Animated v{};
@@ -643,7 +643,7 @@ void lottieDrawText(LottieRender& r, const LottieLayer& layer, double frame) {
     float yOff = d.size * 1.2f * 0.714f;
 
     // The amount by which tracking animators move each letter of a justified line.
-    Array<float> justified;
+    RawArray<float> justified;
     for (uint32_t i = 0; i < d.letterCount; ++i)
         justified.push(0);
     if (d.justify == 1 || d.justify == 2) {

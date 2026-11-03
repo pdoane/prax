@@ -6,7 +6,7 @@
 
 #include "pr/unicode_line_break.h"
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -275,8 +275,8 @@ void prUnicodeLineBreaks(const uint32_t* codePoints, uint32_t count, PrUnicodeLi
     if (count == 0)
         return;
     // LB1, then LB9 and LB10: each combining sequence is treated as its base, and a mark with no base as alphabetic.
-    Array<Base> bases;
-    Array<uint8_t> joiners;         // whether each code point is a ZWJ (LB8a)
+    RawArray<Base> bases;
+    RawArray<uint8_t> joiners;         // whether each code point is a ZWJ (LB8a)
     for (uint32_t i = 0; i < count; ++i) {
         // The lookup writes the flags, so it runs before they are read.
         PrUnicodeLineBreakFlags flags = 0;

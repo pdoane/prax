@@ -3,7 +3,7 @@
 
 #include "pr/ui_text_view.h"
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/text_edit.h"
 #include "pr/text_edit_command.h"
 
@@ -90,7 +90,7 @@ void pointerEvent(PrUi* ui, PrTextView* view, TextViewState& state, const PrAppE
 
 // Inserts text from outside the program, with its line endings and tabs, and without its other control characters.
 void insertOutside(PrTextView* view, PrStringView text, PrTextEditMerge merge) {
-    Array<char> clean;
+    RawArray<char> clean;
     clean.resize(uint32_t(text.size));
     clean.count = prTextEditInputNormalize(text, PrTextEditInputFlag_LineFeeds | PrTextEditInputFlag_Tabs, clean.data);
     prTextViewInsert(view, PrStringView{clean.data, clean.count}, merge);

@@ -22,7 +22,7 @@ bool runPosted(PrDomAgent* agent) {
         agent->taken.clear();
         agent->takenAt = 0;
         prMutexLock(&agent->postMutex);
-        Array<DomAgentTask> swapped = agent->taken;
+        RawArray<DomAgentTask> swapped = agent->taken;
         agent->taken = agent->posted;
         agent->posted = swapped;
         prMutexUnlock(&agent->postMutex);
@@ -155,11 +155,11 @@ void domAgentSetWake(PrDomAgent* agent, PrDomAgentWakeFn PR_NULLABLE wake, void*
     prMutexUnlock(&agent->postMutex);
 }
 
-void domAgentAddHook(Array<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+void domAgentAddHook(RawArray<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
     hooks->push(DomAgentTask{fn, context});
 }
 
-void domAgentRemoveHook(Array<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+void domAgentRemoveHook(RawArray<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
     for (uint32_t i = 0; i < hooks->count; ++i) {
         if (hooks->data[i].fn == fn && hooks->data[i].context == context) {
             hooks->erase(i);

@@ -18,7 +18,7 @@
 #include "pr/base.h"
 #include "pr/byte_view.h"
 #include "pr/json.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text_edit.h"
 
@@ -239,8 +239,8 @@ PrLspRequest prLspDocumentCompletion(PrLspDocument* document, uint32_t offset, P
 // Results
 
 // Returns the text of a hover result, its parts separated by a blank line, or the empty string if it has none. The
-// caller releases it with prStringReset.
-PrString prLspHoverText(const PrJson* json, PrJsonValueIndex result);
+// caller releases it with prRawStringReset.
+PrRawString prLspHoverText(const PrJson* json, PrJsonValueIndex result);
 
 // A range of a file. Its URI is valid as long as the JSON that it was read from.
 typedef struct PrLspLocation {
@@ -270,11 +270,11 @@ uint32_t prLspCompletions(const PrJson* json, PrJsonValueIndex result, PrLspComp
 // ---------------------------------------------------------------------------------------------------------------------
 // URIs
 
-// Returns the file URI of `path`, an absolute path. The caller releases it with prStringReset.
-PrString prLspUriFromPath(PrStringView path);
+// Returns the file URI of `path`, an absolute path. The caller releases it with prRawStringReset.
+PrRawString prLspUriFromPath(PrStringView path);
 
-// Returns the path of a file URI, or the null string if `uri` is not one. The caller releases it with prStringReset.
-PrString prLspPathFromUri(PrStringView uri);
+// Returns the path of a file URI, or the null string if `uri` is not one. The caller releases it with prRawStringReset.
+PrRawString prLspPathFromUri(PrStringView uri);
 
 #if defined(__cplusplus)
 }

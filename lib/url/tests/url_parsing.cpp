@@ -24,44 +24,44 @@ void writeField(PrTextBuffer* out, const char* name, PrStringView value) {
     harnessWriteString(out, value);
 }
 
-void writeTaken(PrTextBuffer* out, const char* name, PrString value) {
-    writeField(out, name, prStringView(&value));
-    prStringReset(&value);
+void writeTaken(PrTextBuffer* out, const char* name, PrRawString value) {
+    writeField(out, name, prRawStringView(&value));
+    prRawStringReset(&value);
 }
 
 // Returns the component after `prefix`, as the search and hash getters write it.
-PrString prefixed(PrStringView prefix, const PrString* component) {
+PrRawString prefixed(PrStringView prefix, const PrRawString* component) {
     PrTextBuffer text = {};
-    if (!prStringIsEmpty(component)) {
+    if (!prRawStringIsEmpty(component)) {
         prTextBufferAppend(&text, prefix);
-        prTextBufferAppend(&text, prStringView(component));
+        prTextBufferAppend(&text, prRawStringView(component));
     }
     return prTextBufferTake(&text);
 }
 
 void writeUrl(PrTextBuffer* out, const Url* url) {
     writeTaken(out, "href", urlSerialize(url, PrUrlSerialization_Whole));
-    PrString protocol = prStringClone(&url->scheme);
-    prStringAppend(&protocol, ":");
+    PrRawString protocol = prRawStringClone(&url->scheme);
+    prRawStringAppend(&protocol, ":");
     writeTaken(out, "protocol", protocol);
-    writeField(out, "username", prStringView(&url->username));
-    writeField(out, "password", prStringView(&url->password));
-    writeField(out, "hostname", prStringView(&url->host));
+    writeField(out, "username", prRawStringView(&url->username));
+    writeField(out, "password", prRawStringView(&url->password));
+    writeField(out, "hostname", prRawStringView(&url->host));
     PrTextBuffer port = {};
     if (url->hasPort)
         prTextBufferAppendU64(&port, url->port, 10);
     writeField(out, "port", prTextBufferView(&port));
     prTextBufferReset(&port);
-    writeField(out, "pathname", prStringView(&url->path));
+    writeField(out, "pathname", prRawStringView(&url->path));
     writeTaken(out, "search", prefixed("?", &url->query));
     writeTaken(out, "hash", prefixed("#", &url->fragment));
 
-    PrString href = urlSerialize(url, PrUrlSerialization_Whole);
+    PrRawString href = urlSerialize(url, PrUrlSerialization_Whole);
     PrUrl* reparsed = nullptr;
-    if (urlParse(prStringView(&href), nullptr, PrCharset_Utf8, &reparsed) == PrStatus_Ok)
+    if (urlParse(prRawStringView(&href), nullptr, PrCharset_Utf8, &reparsed) == PrStatus_Ok)
         writeTaken(out, "reparsed", urlSerialize(reparsed, PrUrlSerialization_Whole));
     urlDestroy(reparsed);
-    prStringReset(&href);
+    prRawStringReset(&href);
 }
 
 // Reads the base length in the field. Returns false for `-`.

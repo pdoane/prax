@@ -132,9 +132,9 @@ struct Editor {
 
 // Writes `text` to a file of `name` in a folder of the tests' own, and returns its path.
 std::string writeFile(const std::string& name, const std::string& text) {
-    PrString cache = prFileCacheDirectory();
-    std::string folder = std::string(prStringView(&cache).data, prStringView(&cache).size) + "/prax-tests/text_editor";
-    prStringReset(&cache);
+    PrRawString cache = prFileCacheDirectory();
+    std::string folder = std::string(prRawStringView(&cache).data, prRawStringView(&cache).size) + "/prax-tests/text_editor";
+    prRawStringReset(&cache);
     REQUIRE(prFileCreateDirectory(folder));
     std::string path = folder + "/" + name;
     REQUIRE(prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()}));

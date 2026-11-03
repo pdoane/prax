@@ -205,7 +205,7 @@ JSValue controlsNamed(JSContext* ctx, JSValueConst jsObject, void* handle, PrStr
     return object;
 }
 
-bool controlsNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
+bool controlsNames(JSContext* ctx, void* handle, RawArray<JSAtom>* out) {
     return jsNameAtoms(ctx, static_cast<const PrDomHtmlCollection*>(handle), prDomHtmlCollectionNames, out);
 }
 
@@ -265,19 +265,19 @@ JSValue formLengthGetter(JSContext* ctx, JSValueConst formObject) {
     return form != nullptr ? JS_NewUint32(ctx, formLength(form)) : JS_EXCEPTION;
 }
 
-bool formNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
+bool formNames(JSContext* ctx, void* handle, RawArray<JSAtom>* out) {
     PrHtmlFormElement* form = static_cast<PrHtmlFormElement*>(handle);
-    Array<PrString> names;
+    RawArray<PrRawString> names;
     names.reserve(prHtmlFormElementNames(form, nullptr, 0));
     names.count = prHtmlFormElementNames(form, names.data, names.capacity);
     bool ok = true;
     for (uint32_t i = 0; i < names.count; ++i) {
-        PrStringView name = prStringView(&names.data[i]);
+        PrStringView name = prRawStringView(&names.data[i]);
         JSAtom atom = ok ? JS_NewAtomLen(ctx, name.data, name.size) : JS_ATOM_NULL;
         ok = ok && atom != JS_ATOM_NULL;
         if (atom != JS_ATOM_NULL)
             out->push(atom);
-        prStringReset(&names.data[i]);
+        prRawStringReset(&names.data[i]);
     }
     names.reset();
     return ok;
@@ -600,7 +600,7 @@ JSValue formDataMethod(JSContext* ctx, JSValueConst object, int argc, JSValueCon
             return jsNewStringView(ctx, prHtmlFormDataGet(data, name.value()));
         }
         case FormDataMethod_GetAll: {
-            Array<PrStringView> values;
+            RawArray<PrStringView> values;
             values.reserve(prHtmlFormDataGetAll(data, name.value(), nullptr, 0));
             values.count = prHtmlFormDataGetAll(data, name.value(), values.data, values.capacity);
             JSValue all = JS_NewArray(ctx);

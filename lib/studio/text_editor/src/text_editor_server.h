@@ -4,11 +4,11 @@
 #pragma once
 
 #include "pr/app.h"
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/lsp.h"
 #include "pr/process.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/text_editor.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -17,19 +17,19 @@ namespace pr_impl {
 
 // A server that the application added: the languages that it serves, and the program that runs it.
 struct TextEditorServerConfig {
-    Array<PrString> languages;
-    PrString program;
-    Array<PrString> arguments;
+    RawArray<PrRawString> languages;
+    PrRawString program;
+    RawArray<PrRawString> arguments;
 };
 
 // A server that runs for one workspace.
 struct TextEditorServer {
     uint32_t config;                // by index of the editor's configs
-    PrString root;                  // the workspace's folder
+    PrRawString root;               // the workspace's folder
     PrProcess* PR_NULLABLE process; // null if the program could not start
     PrLspClient* client;
-    PrString message;              // what the server last asked the user to see (window/showMessage), or empty
-    Array<uint8_t> chunk;
+    PrRawString message;              // what the server last asked the user to see (window/showMessage), or empty
+    RawArray<uint8_t> chunk;
 };
 
 // Starts the server of `config` for the workspace at `root` by `launcher`, whose threads wake `app`. A program that

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/geom.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -50,7 +50,7 @@ struct PathGrid {
 };
 
 // Returns a grid over the extent of every point in the `count` arrays of `arrays`.
-PathGrid pathGridOver(const Array<PrVec2>* PR_NONNULL const* PR_NONNULL arrays, uint32_t count);
+PathGrid pathGridOver(const RawArray<PrVec2>* PR_NONNULL const* PR_NONNULL arrays, uint32_t count);
 
 // Converts `p` from the plane to `grid`, and from `grid` back to the plane.
 PathGridPoint pathGridSnap(const PathGrid& grid, PrVec2 p);
@@ -65,12 +65,12 @@ struct PathGridEdge {
 
 // Appends to `edges` the edges of the rings in `points`, snapped to `grid` and marked with `owner`. Each entry of
 // `ends` is the end of a ring in `points`. An edge that snaps to a point is left out.
-void pathGridAddEdges(const PathGrid& grid, const Array<PrVec2>& points, const Array<uint32_t>& ends,
-    uint8_t owner, Array<PathGridEdge>& edges);
+void pathGridAddEdges(const PathGrid& grid, const RawArray<PrVec2>& points, const RawArray<uint32_t>& ends,
+    uint8_t owner, RawArray<PathGridEdge>& edges);
 
 // Splits each edge where another edge meets it, other than at a shared end. A split rounds its point to the grid, which
 // can move an edge onto another, so splitting repeats a bounded number of times.
-void pathGridSplitEdges(Array<PathGridEdge>& edges);
+void pathGridSplitEdges(RawArray<PathGridEdge>& edges);
 
 // A piece of the arrangement, from its lesser end to its greater end by pathGridBeforeX. `winding` holds how much each
 // region winds across the piece, counting edges that run from `lo` to `hi` as +1.
@@ -82,7 +82,7 @@ struct PathGridPiece {
 
 // Appends to `out` the pieces of the split `edges`, with coincident edges merged, and sorts `out` by the ends of its
 // pieces.
-void pathGridMergePieces(const Array<PathGridEdge>& edges, Array<PathGridPiece>& out);
+void pathGridMergePieces(const RawArray<PathGridEdge>& edges, RawArray<PathGridPiece>& out);
 
 } // namespace pr_impl
 

@@ -52,10 +52,10 @@ std::string textOf(PrStringView text) {
     return std::string(text.size != 0 ? text.data : "", text.size);
 }
 
-std::string take(PrString string) {
-    PrStringView view = prStringView(&string);
+std::string take(PrRawString string) {
+    PrStringView view = prRawStringView(&string);
     std::string text(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(&string);
+    prRawStringReset(&string);
     return text;
 }
 
@@ -249,12 +249,12 @@ void update(PrHtmlPage* page) {
 // Brings the presentation up to date and checks it against a full recomputation.
 void verifyUpdate(PrHtmlPage* page) {
     update(page);
-    PrString report = prStringNull();
+    PrRawString report = prRawStringNull();
     bool same = prCssPresentationVerify(prHtmlPagePresentation(page), &report);
     if (!same)
         MESSAGE(take(report));
     else
-        prStringReset(&report);
+        prRawStringReset(&report);
     CHECK(same);
 }
 

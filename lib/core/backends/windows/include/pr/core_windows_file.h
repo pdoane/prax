@@ -38,8 +38,8 @@ bool prCoreWindowsFileRemove(PrStringView path);
 bool prCoreWindowsFileCreateDirectory(PrStringView path);
 
 // Return the directories of the user's caches and data, as prFileCacheDirectory and prFileDataDirectory do.
-PrString prCoreWindowsFileCacheDirectory(void);
-PrString prCoreWindowsFileDataDirectory(void);
+PrRawString prCoreWindowsFileCacheDirectory(void);
+PrRawString prCoreWindowsFileDataDirectory(void);
 
 #if defined(__cplusplus)
 }

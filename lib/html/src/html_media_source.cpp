@@ -199,11 +199,11 @@ bool codecsSupported(const PrHtmlWindow* window, const PrMediaInitSegment* segme
         if (track.kind == PrMediaTrackKind_Other)
             continue;
         PrStringView prefix = track.kind == PrMediaTrackKind_Audio ? "audio/mp4; codecs=\"" : "video/mp4; codecs=\"";
-        PrString type = prStringCopy(prefix);
-        prStringAppend(&type, track.codec);
-        prStringAppend(&type, "\"");
-        bool supported = prMediaCodecSupportsSourceType(codec, prStringView(&type)) != PrMediaSupport_No;
-        prStringReset(&type);
+        PrRawString type = prRawStringCopy(prefix);
+        prRawStringAppend(&type, track.codec);
+        prRawStringAppend(&type, "\"");
+        bool supported = prMediaCodecSupportsSourceType(codec, prRawStringView(&type)) != PrMediaSupport_No;
+        prRawStringReset(&type);
         if (!supported)
             return false;
     }
@@ -384,7 +384,7 @@ bool supported(const PrHtmlWindow* window, PrStringView type, PrMediaByteStream*
 PrHtmlMediaSource* PR_NULLABLE htmlMediaSourceFromUrl(PrHtmlWindow* window, PrStringView url) {
     for (uint32_t i = 0; i < window->mediaSources.count; ++i) {
         const HtmlMediaSourceUrl& entry = window->mediaSources.data[i];
-        if (prStringView(&entry.url) == url)
+        if (prRawStringView(&entry.url) == url)
             return entry.source;
     }
     return nullptr;
@@ -392,7 +392,7 @@ PrHtmlMediaSource* PR_NULLABLE htmlMediaSourceFromUrl(PrHtmlWindow* window, PrSt
 
 void htmlMediaSourceUrlsReset(PrHtmlWindow* window) {
     for (uint32_t i = 0; i < window->mediaSources.count; ++i) {
-        prStringReset(&window->mediaSources.data[i].url);
+        prRawStringReset(&window->mediaSources.data[i].url);
         prDomEventTargetRelease(targetOf(window->mediaSources.data[i].source));
     }
     window->mediaSources.reset();
@@ -401,9 +401,9 @@ void htmlMediaSourceUrlsReset(PrHtmlWindow* window) {
 void htmlMediaSourceRevokeUrl(PrHtmlWindow* window, PrStringView url) {
     for (uint32_t i = 0; i < window->mediaSources.count; ++i) {
         HtmlMediaSourceUrl& entry = window->mediaSources.data[i];
-        if (prStringView(&entry.url) != url)
+        if (prRawStringView(&entry.url) != url)
             continue;
-        prStringReset(&entry.url);
+        prRawStringReset(&entry.url);
         prDomEventTargetRelease(targetOf(entry.source));
         window->mediaSources.erase(i);
         return;
@@ -438,15 +438,15 @@ void htmlMediaSourceDetach(PrHtmlMediaSource* source) {
     prDomEventTargetRelease(targetOf(source));
 }
 
-void htmlMediaSourceBuffered(const PrHtmlMediaSource* source, Array<PrMediaTimeRange>* out) {
+void htmlMediaSourceBuffered(const PrHtmlMediaSource* source, RawArray<PrMediaTimeRange>* out) {
     out->clear();
     const HtmlSourceBufferList& active = source->activeSourceBuffers;
     if (active.buffers.count == 0)
         return;
     bool ended = source->readyState == PrHtmlMediaSourceReadyState_Ended;
     // The intersection of every active buffer's ranges (media-source-2/#htmlmediaelement-extensions-buffered).
-    Array<PrMediaTimeRange> ranges{};
-    Array<PrMediaTimeRange> next{};
+    RawArray<PrMediaTimeRange> ranges{};
+    RawArray<PrMediaTimeRange> next{};
     for (uint32_t b = 0; b < active.buffers.count; ++b) {
         const PrHtmlSourceBuffer* buffer = active.buffers.data[b];
         if (buffer->buffer == nullptr)
@@ -481,7 +481,7 @@ void htmlMediaSourceBuffered(const PrHtmlMediaSource* source, Array<PrMediaTimeR
     next.reset();
 }
 
-void htmlMediaSourceSeekable(const PrHtmlMediaSource* source, Array<PrMediaTimeRange>* out) {
+void htmlMediaSourceSeekable(const PrHtmlMediaSource* source, RawArray<PrMediaTimeRange>* out) {
     out->clear();
     if (prF64IsNan(source->duration))
         return;
@@ -490,7 +490,7 @@ void htmlMediaSourceSeekable(const PrHtmlMediaSource* source, Array<PrMediaTimeR
         return;
     }
     // A live source can seek within its live seekable range and what it has buffered.
-    Array<PrMediaTimeRange> buffered{};
+    RawArray<PrMediaTimeRange> buffered{};
     htmlMediaSourceBuffered(source, &buffered);
     if (!prF64IsNan(source->liveStart)) {
         double start = source->liveStart;
@@ -565,12 +565,12 @@ bool prHtmlMediaSourceIsTypeSupported(const PrHtmlWindow* window, PrStringView t
     return supported(window, type, &format);
 }
 
-PrString prHtmlMediaSourceUrlCreate(PrHtmlWindow* window, PrHtmlMediaSource* source) {
-    PrString origin = htmlWindowOrigin(window);
-    PrString url = prFetchBlobUrlGenerate(prStringView(&origin));
-    prStringReset(&origin);
+PrRawString prHtmlMediaSourceUrlCreate(PrHtmlWindow* window, PrHtmlMediaSource* source) {
+    PrRawString origin = htmlWindowOrigin(window);
+    PrRawString url = prFetchBlobUrlGenerate(prRawStringView(&origin));
+    prRawStringReset(&origin);
     retainTarget(targetOf(source));
-    window->mediaSources.push(HtmlMediaSourceUrl{prStringClone(&url), source});
+    window->mediaSources.push(HtmlMediaSourceUrl{prRawStringClone(&url), source});
     return url;
 }
 
@@ -595,7 +595,7 @@ PrStatus prHtmlMediaSourceSetDuration(PrHtmlMediaSource* source, double duration
         PrMediaTimeRange ranges[1];
         uint32_t count = prMediaSourceBufferBuffered(buffer->buffer, false, nullptr, 0);
         if (count != 0) {
-            Array<PrMediaTimeRange> all{};
+            RawArray<PrMediaTimeRange> all{};
             all.resize(count);
             prMediaSourceBufferBuffered(buffer->buffer, false, all.data, count);
             ranges[0] = all.last();

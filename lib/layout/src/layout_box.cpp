@@ -145,7 +145,7 @@ const LayoutPositioned& positioned(const LayoutTree* tree, LayoutNodeIndex node)
         for (uint32_t i = from; i < cache.positioned.count; ++i)
             cache.positioned.data[i] = LayoutPositioned{};
     }
-    Array<LayoutNodeIndex>& path = cache.unpositioned;
+    RawArray<LayoutNodeIndex>& path = cache.unpositioned;
     path.clear();
     for (LayoutNodeIndex at = node; at != kPrLayoutNodeNone && !current(at); at =
             layoutCachePlacement(cache, at).parent)

@@ -219,10 +219,10 @@ TEST_CASE("a projected group is copied, dumped and bounded by its projected plan
     CHECK(near(bounds.bottom, landed.bottom));
     CHECK(!prDrawListWritesPixels(list));
 
-    PrString text = prDrawListDump(list);
-    PrStringView view = prStringView(&text);
+    PrRawString text = prDrawListDump(list);
+    PrStringView view = prRawStringView(&text);
     std::string dumped(view.data, view.size);
-    prStringReset(&text);
+    prRawStringReset(&text);
     CHECK(dumped.find("push-group -20 -20 20 20 opacity 1 projection 1 -0.358") == 0);
     prDrawListRelease(list);
 }

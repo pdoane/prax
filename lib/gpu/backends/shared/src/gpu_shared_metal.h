@@ -16,10 +16,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/gpu_backend.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 
 #include "gpu/backends/shared/src/gpu_shared_upload.h"
@@ -164,10 +164,10 @@ struct GpuMetalCommands : PrGpuCommands {
     GpuMetalPass* PR_NULLABLE pass;     // the open pass
     PrGpuHostStateFlags changed;        // the host's pass's state changed since the last sync
     uint32_t pipeline;                  // the pipeline of dispatches and draws
-    Array<GpuMetalBlock> blocks;        // the blocks of the stream
-    Array<GpuMetalDrawable> drawables;
-    Array<GpuMetalDone> dones;
-    Array<void*> scratch;               // what the stream gave out once the device had no memory left
+    RawArray<GpuMetalBlock> blocks;     // the blocks of the stream
+    RawArray<GpuMetalDrawable> drawables;
+    RawArray<GpuMetalDone> dones;
+    RawArray<void*> scratch;               // what the stream gave out once the device had no memory left
 };
 
 // A pass of either API.
@@ -207,7 +207,7 @@ struct GpuMetalDevice : PrGpuDevice {
     Atomic<uint64_t> done;                  // the fence of the last submission that is done
     PrMutex doneMutex;                      // guards raising `done`, for doneSignal
     PrCondition doneSignal;                 // broadcast when `done` rises
-    Array<PrGpuFence> doneAhead;            // the fences that completed ahead of one before them, under doneMutex
+    RawArray<PrGpuFence> doneAhead;         // the fences that completed ahead of one before them, under doneMutex
     id<MTLResidencySet> residency;          // retained
     id<MTLBuffer> resourceHeap;             // retained
     id<MTLBuffer> samplerHeap;              // retained
@@ -227,24 +227,24 @@ struct GpuMetalDevice : PrGpuDevice {
     GpuMetalResource* resources;                          // by slot
     id<MTLSamplerState> PR_NULLABLE* PR_NONNULL samplers; // by slot
     GpuMetalPipeline* pipelines;                          // by id
-    Array<uint32_t> freeResources;
+    RawArray<uint32_t> freeResources;
     uint32_t nextResource;
     uint32_t nextSampler;
-    Array<uint32_t> freePipelines;
+    RawArray<uint32_t> freePipelines;
     uint32_t nextPipeline;
     bool residencyDirty;
 
     PrGpuFence submitted;                   // the last fence that a submission returned
     uint64_t serial;                        // the serial of the next command buffer
-    Array<GpuMetalInFlight> inFlight;       // in the order of their submission
-    Array<GpuMetalRetired> retired;
-    Array<GpuMetalHeld> held;
-    Array<GpuMetalBlock> streamBlocks;      // free
-    Array<GpuMetalBlock> stagingBlocks;     // free
+    RawArray<GpuMetalInFlight> inFlight;    // in the order of their submission
+    RawArray<GpuMetalRetired> retired;
+    RawArray<GpuMetalHeld> held;
+    RawArray<GpuMetalBlock> streamBlocks;      // free
+    RawArray<GpuMetalBlock> stagingBlocks;     // free
 
     // The staging blocks and buffer copies of the open batch of uploads, and the serial of its command buffer.
     uint64_t uploadSerial;
-    Array<GpuMetalBlock> uploadBlocks;
+    RawArray<GpuMetalBlock> uploadBlocks;
     GpuSharedUploadBatch uploadBatch;
 };
 

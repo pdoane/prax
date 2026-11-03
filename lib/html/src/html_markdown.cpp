@@ -27,9 +27,9 @@ void feed(void* PR_NULLABLE context, const PrMarkdownHtmlEvent* event) {
     HtmlTokenizer* tokenizer = &b->parser.tokenizer;
     bool tag = event->kind == PrMarkdownHtmlEventKind_StartTag || event->kind == PrMarkdownHtmlEventKind_EndTag;
     if (event->kind == PrMarkdownHtmlEventKind_Html || !htmlTokenizerIsIdle(tokenizer)) {
-        prStringReplace(&b->html, "");
+        prRawStringReplace(&b->html, "");
         prMarkdownHtmlEventAppendText(event, &b->html);
-        PrStringView html = prStringView(&b->html);
+        PrStringView html = prRawStringView(&b->html);
         if (html.size != 0)
             htmlParserAppend(&b->parser, html);
         return;
@@ -236,7 +236,7 @@ void htmlMarkdownBuilderReset(HtmlMarkdownBuilder* builder) {
     htmlParserReset(&builder->parser);
     prMarkdownDestroy(builder->markdown);
     builder->markdown = nullptr;
-    prStringReset(&builder->html);
+    prRawStringReset(&builder->html);
     domNodeRelease(builder->element);
     domNodeRelease(builder->document);
     builder->element = nullptr;

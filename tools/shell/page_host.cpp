@@ -468,10 +468,10 @@ void loadedHtml(void* context, PrHtmlPage* htmlPage, PrStatus status) {
     PrDomElement* element = prDomDocumentElement(prHtmlWindowDocument(prHtmlPageWindow(htmlPage)));
     if (element != nullptr && prDomElementNamespace(element) == PrDomNamespace_Other) {
         if (prDomElementLocalName(element) == "parsererror") {
-            PrString message = prDomNodeTextContent(prDomElementAsNode(element));
-            PrStringView view = prStringView(&message);
+            PrRawString message = prDomNodeTextContent(prDomElementAsNode(element));
+            PrStringView view = prRawStringView(&message);
             fprintf(stderr, "%s: %.*s\n", run->name.c_str(), int(view.size), view.data);
-            prStringReset(&message);
+            prRawStringReset(&message);
             run->ok = false;
         }
     }
@@ -488,13 +488,13 @@ void loadedHtml(void* context, PrHtmlPage* htmlPage, PrStatus status) {
 void verifyRender(Page* run, PrCssPresentation* presentation) {
     if (run->verifyFailed)
         return;
-    PrString report{};
+    PrRawString report{};
     if (!prCssPresentationVerify(presentation, &report)) {
         run->verifyFailed = true;
-        PrStringView what = prStringView(&report);
+        PrStringView what = prRawStringView(&report);
         fprintf(stderr, "%s: presentation verify: %.*s\n", run->name.c_str(), int(what.size), what.data);
     }
-    prStringReset(&report);
+    prRawStringReset(&report);
 }
 
 void renderedHtml(void* context, PrHtmlPage* htmlPage) {
@@ -881,14 +881,14 @@ void addCaptured(HostState& s, PrStringView location, const std::filesystem::pat
     PrUrl* url = nullptr;
     if (location.data == nullptr || prUrlCreate(location, nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
         return;
-    PrString serialized = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
-    PrStringView href = prStringView(&serialized);
+    PrRawString serialized = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    PrStringView href = prRawStringView(&serialized);
     std::lock_guard<std::mutex> lock(s.servedLock);
     s.captured[std::string(href.data, href.size)] = {
         file,
         std::string(type.data != nullptr ? type.data : "", type.size),
     };
-    prStringReset(&serialized);
+    prRawStringReset(&serialized);
     prUrlDestroy(url);
 }
 

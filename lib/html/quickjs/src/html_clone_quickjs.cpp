@@ -54,9 +54,9 @@ constexpr uint32_t kErrorNameCount = countOf(kErrorNames);
 struct CloneWriter {
     JSContext* ctx;
     PrTextBuffer out = {};
-    Array<void*> objects;       // the objects met so far, by number
+    RawArray<void*> objects;    // the objects met so far, by number
     HashIndex index;            // positions in `objects`
-    const Array<JSValue>* PR_NULLABLE transfer;
+    const RawArray<JSValue>* PR_NULLABLE transfer;
     uint32_t depth;
 };
 
@@ -384,7 +384,7 @@ struct CloneReader {
     const char* at;
     const char* end;
     JSValueConst ports;
-    Array<JSValue> memory;      // the objects read so far, by number, each with a reference
+    RawArray<JSValue> memory;      // the objects read so far, by number, each with a reference
 };
 
 bool getBytes(CloneReader* r, void* out, size_t size) {
@@ -608,7 +608,7 @@ JSValue readValue(CloneReader* r) {
 }
 
 // Checks the transfer list before anything runs (html/#structuredserializewithtransfer).
-bool checkTransfer(JSContext* ctx, const Array<JSValue>* transfer, const PrHtmlMessagePort* PR_NULLABLE sender) {
+bool checkTransfer(JSContext* ctx, const RawArray<JSValue>* transfer, const PrHtmlMessagePort* PR_NULLABLE sender) {
     for (uint32_t i = 0; i < transfer->count; ++i) {
         JSValueConst item = transfer->data[i];
         for (uint32_t k = 0; k < i; ++k) {
@@ -634,7 +634,7 @@ bool checkTransfer(JSContext* ctx, const Array<JSValue>* transfer, const PrHtmlM
 
 } // namespace
 
-bool jsHtmlTransferRead(JSContext* ctx, JSValueConst sequence, Array<JSValue>* out) {
+bool jsHtmlTransferRead(JSContext* ctx, JSValueConst sequence, RawArray<JSValue>* out) {
     bool ok = jsSequence(ctx, sequence, [&](JSValue item) {
         if (!JS_IsObject(item)) {
             JS_FreeValue(ctx, item);
@@ -647,20 +647,20 @@ bool jsHtmlTransferRead(JSContext* ctx, JSValueConst sequence, Array<JSValue>* o
     return ok;
 }
 
-bool jsHtmlTransferOption(JSContext* ctx, JSValueConst options, Array<JSValue>* out) {
+bool jsHtmlTransferOption(JSContext* ctx, JSValueConst options, RawArray<JSValue>* out) {
     JSValue list = JS_GetPropertyStr(ctx, options, "transfer");
     bool ok = !JS_IsException(list) && (JS_IsUndefined(list) || jsHtmlTransferRead(ctx, list, out));
     JS_FreeValue(ctx, list);
     return ok;
 }
 
-void jsHtmlTransferReset(JSContext* ctx, Array<JSValue>* transfer) {
+void jsHtmlTransferReset(JSContext* ctx, RawArray<JSValue>* transfer) {
     for (uint32_t i = 0; i < transfer->count; ++i)
         JS_FreeValue(ctx, transfer->data[i]);
     transfer->reset();
 }
 
-bool jsHtmlSerialize(JSContext* ctx, JSValueConst value, const Array<JSValue>* PR_NULLABLE transfer,
+bool jsHtmlSerialize(JSContext* ctx, JSValueConst value, const RawArray<JSValue>* PR_NULLABLE transfer,
         const PrHtmlMessagePort* PR_NULLABLE sender, JsHtmlSerialized* out) {
     if (transfer != nullptr && !checkTransfer(ctx, transfer, sender))
         return false;
@@ -684,7 +684,7 @@ bool jsHtmlSerialize(JSContext* ctx, JSValueConst value, const Array<JSValue>* P
 }
 
 void jsHtmlSerializedReset(JsHtmlSerialized* serialized) {
-    prStringReset(&serialized->bytes);
+    prRawStringReset(&serialized->bytes);
     for (uint32_t i = 0; i < serialized->ports.count; ++i)
         prDomEventTargetRelease(prHtmlMessagePortAsEventTarget(serialized->ports.data[i]));
     serialized->ports.reset();

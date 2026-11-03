@@ -10,8 +10,8 @@
 #include "pr/font_set.h"
 #include "pr/geom.h"
 #include "pr/locale.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/vec.h"
 

@@ -23,8 +23,8 @@ struct LayoutFlexLine;
 // Scratch memory that flex layout keeps between layouts: the items and lines of the containers being laid out,
 // innermost last.
 struct LayoutFlexScratch {
-    Array<LayoutFlexItem> items;
-    Array<LayoutFlexLine> lines;
+    RawArray<LayoutFlexItem> items;
+    RawArray<LayoutFlexLine> lines;
 };
 
 // Creates empty scratch memory, and frees it.

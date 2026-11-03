@@ -7,11 +7,11 @@
 #include "pr/text_edit.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/sort.h"
 
@@ -44,35 +44,35 @@ struct TextEditBuffer {
     uint32_t lineGapStart;
     uint32_t lineGapEnd;
 
-    Array<AnchorSlot> anchors;
-    Array<uint32_t> freeAnchors;
-    Array<TextEditView*> views;
-    Array<TextEditStream*> streams;
+    RawArray<AnchorSlot> anchors;
+    RawArray<uint32_t> freeAnchors;
+    RawArray<TextEditView*> views;
+    RawArray<TextEditStream*> streams;
     TextEditHistory* PR_NULLABLE history;
 
     // The style runs, none if all the text is of style zero, and scratch memory for rebuilding them.
-    Array<PrTextEditStyleRun> runs;
-    Array<PrTextEditStyleRun> runsScratch;
+    RawArray<PrTextEditStyleRun> runs;
+    RawArray<PrTextEditStyleRun> runsScratch;
 
     PrTextEditProposeFn PR_NULLABLE propose;
     void* PR_NULLABLE proposeContext;
 
     // The records that some stream has not read, of which the first has the sequence number `recordBase`.
-    Array<PrTextEditRecord> records;
+    RawArray<PrTextEditRecord> records;
     uint64_t recordBase;
 
     // The new text of those records. A stored record's text holds no pointer, because the bytes can move.
-    Array<char> recordBytes;
-    Array<uint32_t> recordTexts;    // the offset in `recordBytes` of the text of each of `records`
+    RawArray<char> recordBytes;
+    RawArray<uint32_t> recordTexts;    // the offset in `recordBytes` of the text of each of `records`
 
     // Scratch memory of a transaction.
-    Array<PrTextEditChange> changes;
-    Array<int64_t> shifts;          // the change in length before each change, and in total
+    RawArray<PrTextEditChange> changes;
+    RawArray<int64_t> shifts;          // the change in length before each change, and in total
 };
 
 struct TextEditView {
     TextEditBuffer* PR_NULLABLE buffer;
-    Array<PrTextEditSelection> selections;
+    RawArray<PrTextEditSelection> selections;
 
     // The style that the view's next local insertion takes, if `hasTyping`.
     PrTextEditStyle typing;
@@ -103,19 +103,19 @@ struct StepStyle {
 // One step of a history: how to replace the text that the step left with the text that it found, the styles to give
 // that text, and the selections on each side of it. A step with no changes changes only styles.
 struct HistoryStep {
-    Array<StepChange> changes;
-    Array<char> bytes;
-    Array<StepStyle> styles;
-    Array<PrTextEditSelection> before;
-    Array<PrTextEditSelection> after;
+    RawArray<StepChange> changes;
+    RawArray<char> bytes;
+    RawArray<StepStyle> styles;
+    RawArray<PrTextEditSelection> before;
+    RawArray<PrTextEditSelection> after;
     PrTextEditMerge merge;
     bool sealed;                    // nothing may join the step
 };
 
 struct TextEditHistory {
     TextEditBuffer* PR_NULLABLE buffer;
-    Array<HistoryStep> undo;
-    Array<HistoryStep> redo;
+    RawArray<HistoryStep> undo;
+    RawArray<HistoryStep> redo;
     bool applying;                  // the history is applying a step, and records nothing
 };
 
@@ -254,12 +254,12 @@ void replaceBytes(TextEditBuffer* b, uint32_t start, uint32_t end, PrStringView 
 PrTextEditStyle styleAt(const TextEditBuffer* b, uint32_t offset) {
     if (b->runs.count == 0)
         return 0;
-    const Array<PrTextEditStyleRun>& runs = b->runs;
+    const RawArray<PrTextEditStyleRun>& runs = b->runs;
     return runs.data[partitionPoint(1, runs.count, [&](uint32_t i) { return runs.data[i].start <= offset; }) - 1].style;
 }
 
 // Appends a run, unless the last run has its style. A run that would hold nothing gives way to it.
-void pushRun(Array<PrTextEditStyleRun>& runs, uint32_t start, PrTextEditStyle style) {
+void pushRun(RawArray<PrTextEditStyleRun>& runs, uint32_t start, PrTextEditStyle style) {
     if (runs.count != 0 && runs.last().start == start)
         runs.pop();
     if (runs.count == 0 || runs.last().style != style)
@@ -273,7 +273,7 @@ void spliceRuns(TextEditBuffer* b, uint32_t start, uint32_t end, uint32_t size, 
         return;
     uint32_t total = sizeOf(b);
     PrTextEditStyle after = styleAt(b, end);
-    Array<PrTextEditStyleRun>& out = b->runsScratch;
+    RawArray<PrTextEditStyleRun>& out = b->runsScratch;
     out.clear();
     if (b->runs.count == 0 && start != 0)
         out.push(PrTextEditStyleRun{0, 0});
@@ -289,7 +289,7 @@ void spliceRuns(TextEditBuffer* b, uint32_t start, uint32_t end, uint32_t size, 
         if (run.start > end)
             pushRun(out, run.start - end + start + size, run.style);
     }
-    Array<PrTextEditStyleRun> kept = b->runs;
+    RawArray<PrTextEditStyleRun> kept = b->runs;
     b->runs = out;
     b->runsScratch = kept;
     if (b->runs.count == 1 && b->runs.data[0].style == 0)
@@ -303,8 +303,8 @@ PrTextEditStyle insertedStyle(const TextEditBuffer* b, uint32_t start, uint32_t 
 
 // Appends the styles of the bytes from `start` to `end`. A buffer with no runs has none to restore, since the text at
 // the time of a restore has the same runs as now.
-void captureStyles(const TextEditBuffer* b, uint32_t start, uint32_t end, Array<StepStyle>& out) {
-    const Array<PrTextEditStyleRun>& runs = b->runs;
+void captureStyles(const TextEditBuffer* b, uint32_t start, uint32_t end, RawArray<StepStyle>& out) {
+    const RawArray<PrTextEditStyleRun>& runs = b->runs;
     for (uint32_t i = 0; i < runs.count; ++i) {
         uint32_t from = runs.data[i].start;
         uint32_t to = i + 1 < runs.count ? runs.data[i + 1].start : sizeOf(b);
@@ -378,7 +378,7 @@ bool selectionsJoin(const PrTextEditSelection& was, const PrTextEditSelection& n
 }
 
 // Sorts `selections` by position and joins those that overlap, with the primary selection last.
-void normalizeSelections(Array<PrTextEditSelection>& selections) {
+void normalizeSelections(RawArray<PrTextEditSelection>& selections) {
     if (selections.count < 2)
         return;
     PrTextEditSelection primary = selections.last();
@@ -451,7 +451,7 @@ void resetStep(HistoryStep& step) {
     step.after.reset();
 }
 
-void clearSteps(Array<HistoryStep>& steps) {
+void clearSteps(RawArray<HistoryStep>& steps) {
     for (uint32_t i = 0; i < steps.count; ++i)
         resetStep(steps.data[i]);
     steps.clear();
@@ -643,14 +643,15 @@ bool applyTransaction(TextEditBuffer* b, TextEditView* PR_NULLABLE view, const P
 
 // Applies the last step of `from` and pushes the step that reverts it onto `to`. Gives the view the selections that the
 // step restores.
-bool applyStep(TextEditHistory* history, TextEditView* PR_NULLABLE view, Array<HistoryStep>& from, Array<HistoryStep>& to) {
+bool applyStep(TextEditHistory* history, TextEditView* PR_NULLABLE view, RawArray<HistoryStep>& from,
+        RawArray<HistoryStep>& to) {
     TextEditBuffer* b = history->buffer;
     if (b == nullptr || from.count == 0)
         return false;
     HistoryStep step = from.last();
     from.pop();
 
-    Array<PrTextEditChange> changes;
+    RawArray<PrTextEditChange> changes;
     for (uint32_t i = 0; i < step.changes.count; ++i) {
         const StepChange& c = step.changes.data[i];
         changes.push(PrTextEditChange{
@@ -959,7 +960,7 @@ bool prTextEditViewInsert(PrTextEditView* view, PrStringView text, PrTextEditOri
     TextEditBuffer* b = view->buffer;
     if (b == nullptr)
         return false;
-    Array<PrTextEditChange> changes;
+    RawArray<PrTextEditChange> changes;
     for (uint32_t i = 0; i < view->selections.count; ++i) {
         const PrTextEditSelection& s = view->selections.data[i];
         changes.push(PrTextEditChange{.start = lowOf(s), .end = highOf(s), .text = text});

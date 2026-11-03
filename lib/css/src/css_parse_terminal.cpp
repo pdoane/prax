@@ -1029,7 +1029,7 @@ bool cssParseString(const CssMatcher* m) {
 // <path-data>: a string of SVG path data (SVG2/paths.html#PathDataBNF), held as its commands up to the first error
 // (SVG2/paths.html#PathDataErrorHandling), as css_path.h describes.
 bool cssParsePathData(const CssMatcher* m) {
-    Array<char> text;
+    RawArray<char> text;
     PrStringView data{};
     if (const CssValueNode* given = givenValue(m->ts)) {
         if (given->kind != PrCssValueKind_String)
@@ -1042,7 +1042,7 @@ bool cssParsePathData(const CssMatcher* m) {
     } else {
         return false;
     }
-    Array<PrPathDataCommand> commands;
+    RawArray<PrPathDataCommand> commands;
     commands.resize(prPathDataParse(data, nullptr, 0));
     prPathDataParse(data, commands.data, commands.count);
     cssValuePoolAddPathData(m->pool, commands.data, commands.count);

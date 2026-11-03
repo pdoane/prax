@@ -354,17 +354,17 @@ void transformText(const LayoutState& state, LayoutInlineShaping& t) {
         ++firstItem;
     if (firstItem == t.items.count)
         return;
-    Array<char> text = t.text;
-    Array<PrTextSpaceFlags> spaces = t.spaces;
-    Array<uint32_t> sources = t.sources;
-    t.text = Array<char>{};
-    t.spaces = Array<PrTextSpaceFlags>{};
-    t.sources = Array<uint32_t>{};
+    RawArray<char> text = t.text;
+    RawArray<PrTextSpaceFlags> spaces = t.spaces;
+    RawArray<uint32_t> sources = t.sources;
+    t.text = RawArray<char>{};
+    t.spaces = RawArray<PrTextSpaceFlags>{};
+    t.sources = RawArray<uint32_t>{};
     t.text.reserve(text.count);
     t.spaces.reserve(text.count);
     t.sources.reserve(text.count);
     // By byte of the text before the transforms, and one past the last: the byte it moved to.
-    Array<uint32_t> moved{};
+    RawArray<uint32_t> moved{};
     moved.resize(text.count + 1);
     uint32_t copied = 0;
     auto copyTo = [&](uint32_t end) {
@@ -569,7 +569,7 @@ bool isCurrent(const LayoutState& state, const LayoutInlineShaping& shaping, uin
 LayoutInlineShaping* PR_NULLABLE shapingOf(LayoutState& state, uint32_t first) {
     if (!state.reuse)
         return nullptr;
-    Array<LayoutInlineShaping* PR_NULLABLE>& shapings = state.tree->shapings;
+    RawArray<LayoutInlineShaping* PR_NULLABLE>& shapings = state.tree->shapings;
     while (shapings.count <= first)
         shapings.push(nullptr);
     if (shapings.data[first] == nullptr)
@@ -674,7 +674,7 @@ void shapeText(LayoutState& state, LayoutInlineShaping& t) {
 
 // Collects the context from `first` through `last` into the shaping that `first` caches if that shaping is not current,
 // and appends the shaping to `jobs`.
-void prepareContext(LayoutState& state, uint32_t first, uint32_t last, Array<LayoutInlineShaping*>& jobs) {
+void prepareContext(LayoutState& state, uint32_t first, uint32_t last, RawArray<LayoutInlineShaping*>& jobs) {
     LayoutInlineShaping* cached = shapingOf(state, first);
     if (cached == nullptr || (cached->nodes.count != 0 && isCurrent(state, *cached, first, last)))
         return;
@@ -682,12 +682,12 @@ void prepareContext(LayoutState& state, uint32_t first, uint32_t last, Array<Lay
     jobs.push(cached);
 }
 
-void prepareContainer(LayoutState& state, LayoutNodeIndex node, Array<LayoutInlineShaping*>& jobs);
+void prepareContainer(LayoutState& state, LayoutNodeIndex node, RawArray<LayoutInlineShaping*>& jobs);
 
 // Calls prepareContainer with each changed node laid out apart (an inline-block, a float, or a block-level box in an
 // inline box) among the inline-level siblings from `first` through `last` and in the inline boxes among them. A change
 // marks its ancestors, so the walk enters only the marked inline boxes.
-void prepareAtomics(LayoutState& state, uint32_t first, uint32_t last, Array<LayoutInlineShaping*>& jobs) {
+void prepareAtomics(LayoutState& state, uint32_t first, uint32_t last, RawArray<LayoutInlineShaping*>& jobs) {
     for (uint32_t c = first;; c = layoutTreeNode(state.tree, c).next) {
         const LayoutTreeNode& n = layoutTreeNode(state.tree, c);
         if (n.dirty != 0 && layoutKindIsElement(n.kind)) {
@@ -704,7 +704,7 @@ void prepareAtomics(LayoutState& state, uint32_t first, uint32_t last, Array<Lay
 
 // Collects the contexts of the changed parts in the run of table parts from `first` through `last`, which an anonymous
 // table wraps.
-void prepareParts(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last, Array<LayoutInlineShaping*>& jobs) {
+void prepareParts(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last, RawArray<LayoutInlineShaping*>& jobs) {
     for (uint32_t c = first;; c = layoutTreeNode(state.tree, c).next) {
         const LayoutTreeNode& n = layoutTreeNode(state.tree, c);
         if (n.dirty != 0 && layoutChildKind(state.tree, c) == LayoutChildKind_TablePart)
@@ -717,7 +717,7 @@ void prepareParts(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex las
 // Collects the inline formatting contexts whose shaping is not current in the run of siblings from `first` through
 // `last`, and those of the changed boxes laid out apart in the run. The run is the content of a block container or of
 // an anonymous box.
-void prepareRun(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last, Array<LayoutInlineShaping*>& jobs) {
+void prepareRun(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last, RawArray<LayoutInlineShaping*>& jobs) {
     layoutEachChildIn(state.tree, first, last, [&](uint32_t child, const PrLayoutBoxStyle&) {
         if (layoutTreeNode(state.tree, child).dirty != 0)
             prepareContainer(state, child, jobs);
@@ -732,7 +732,7 @@ void prepareRun(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
 // Collects the inline formatting contexts in the block container, flex or grid container or table `node` whose shaping
 // is not current, and those of the changed block containers, inline-blocks, floats, outside markers, captions and cells
 // in it.
-void prepareContainer(LayoutState& state, LayoutNodeIndex node, Array<LayoutInlineShaping*>& jobs) {
+void prepareContainer(LayoutState& state, LayoutNodeIndex node, RawArray<LayoutInlineShaping*>& jobs) {
     LayoutChildren children = layoutTreeNode(state.tree, node).children;
     if (children == LayoutChildren_Table) {
         layoutEachTableBox(state.tree, node, [&](uint32_t child) {
@@ -821,7 +821,7 @@ const LayoutInlineShaping& layoutShaping(LayoutState& state, LayoutInlineShaping
 void layoutShapeAhead(LayoutState& state, uint32_t root) {
     if (!state.reuse || root == kPrLayoutNodeNone || layoutTreeNode(state.tree, root).dirty == 0)
         return;
-    Array<LayoutInlineShaping*>& jobs = state.scratch->shapings;
+    RawArray<LayoutInlineShaping*>& jobs = state.scratch->shapings;
     jobs.clear();
     prepareContainer(state, root, jobs);
     for (uint32_t i = 0; i < jobs.count; ++i)

@@ -11,45 +11,45 @@ namespace pr_impl {
 
 namespace {
 
-void appendText(PrString* out, const char* text) {
+void appendText(PrRawString* out, const char* text) {
     size_t size = 0;
     while (text[size] != 0)
         ++size;
-    prStringAppend(out, PrStringView{text, size});
+    prRawStringAppend(out, PrStringView{text, size});
 }
 
-void appendNumbers(PrString* out, const float* values, uint32_t count) {
+void appendNumbers(PrRawString* out, const float* values, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         char text[kPrF64TextMaxBytes + 1];
         text[0] = ' ';
         size_t size = prF64Format(double(values[i]), text + 1);
-        prStringAppend(out, PrStringView{text, size + 1});
+        prRawStringAppend(out, PrStringView{text, size + 1});
     }
 }
 
-void appendNumber(PrString* out, float value) {
+void appendNumber(PrRawString* out, float value) {
     appendNumbers(out, &value, 1);
 }
 
-void appendPoints(PrString* out, const PrVec2* points, uint32_t count) {
+void appendPoints(PrRawString* out, const PrVec2* points, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         float values[2] = {points[i].x, points[i].y};
         appendNumbers(out, values, 2);
     }
 }
 
-void appendRect(PrString* out, PrRect rect) {
+void appendRect(PrRawString* out, PrRect rect) {
     float values[4] = {rect.left, rect.top, rect.right, rect.bottom};
     appendNumbers(out, values, 4);
 }
 
-void appendColor(PrString* out, const char* label, PrColor c) {
+void appendColor(PrRawString* out, const char* label, PrColor c) {
     float values[4] = {c.r, c.g, c.b, c.a};
     appendText(out, label);
     appendNumbers(out, values, 4);
 }
 
-void appendCorners(PrString* out, const PrCorner* corners) {
+void appendCorners(PrRawString* out, const PrCorner* corners) {
     appendText(out, " corners");
     for (uint32_t i = 0; i < 4; ++i) {
         float values[3] = {corners[i].radii.x, corners[i].radii.y, corners[i].shape};
@@ -57,7 +57,7 @@ void appendCorners(PrString* out, const PrCorner* corners) {
     }
 }
 
-void appendPath(PrString* out, const PrPath* path) {
+void appendPath(PrRawString* out, const PrPath* path) {
     constexpr const char* kVerbName[] = {" M", " L", " Q", " C", " Z"};
     constexpr uint32_t kVerbPoints[] = {1, 1, 2, 3, 0};
     const PrPathVerb* verbs = prPathVerbs(path);
@@ -70,11 +70,11 @@ void appendPath(PrString* out, const PrPath* path) {
     }
 }
 
-void appendRule(PrString* out, PrPathFillRule rule) {
+void appendRule(PrRawString* out, PrPathFillRule rule) {
     appendText(out, rule == PrPathFillRule_EvenOdd ? " evenodd" : " nonzero");
 }
 
-void appendBrush(PrString* out, const PrDrawBrush* brush) {
+void appendBrush(PrRawString* out, const PrDrawBrush* brush) {
     constexpr const char* kKind[] = {" linear", " radial", " conic", " diamond", " image"};
     appendText(out, " brush");
     appendText(out, kKind[brush->kind]);
@@ -85,7 +85,7 @@ void appendBrush(PrString* out, const PrDrawBrush* brush) {
     }
 }
 
-void appendPaintState(PrString* out, const PrDrawCommand& command) {
+void appendPaintState(PrRawString* out, const PrDrawCommand& command) {
     if (command.stroke != nullptr) {
         constexpr const char* kJoin[] = {" miter", " miter-clip", " round", " bevel", " arcs"};
         constexpr const char* kCap[] = {" butt", " round", " square", " triangle"};
@@ -137,7 +137,7 @@ void appendPaintState(PrString* out, const PrDrawCommand& command) {
         appendText(out, " snapped");
 }
 
-void appendShadow(PrString* out, const PrDrawShadow* s) {
+void appendShadow(PrRawString* out, const PrDrawShadow* s) {
     appendRect(out, s->shape.rect);
     appendCorners(out, s->shape.corners);
     appendText(out, " offset");
@@ -150,7 +150,7 @@ void appendShadow(PrString* out, const PrDrawShadow* s) {
         appendText(out, " non-scaling");
 }
 
-void dumpCommand(PrString* out, const PrDrawCommand& command) {
+void dumpCommand(PrRawString* out, const PrDrawCommand& command) {
     switch (command.kind) {
         case PrDrawCommandKind_Clear:
             appendColor(out, "clear", command.color);
@@ -395,8 +395,8 @@ void dumpCommand(PrString* out, const PrDrawCommand& command) {
 
 // Appends the list's commands at `depth`. The commands of each embedded list follow its Embed command, one level
 // deeper.
-void dumpList(PrString* out, const PrDrawList* list, uint32_t depth) {
-    const Array<PrDrawCommand>& commands = drawListCommands(list);
+void dumpList(PrRawString* out, const PrDrawList* list, uint32_t depth) {
+    const RawArray<PrDrawCommand>& commands = drawListCommands(list);
     for (uint32_t i = 0; i < commands.count; ++i) {
         for (uint32_t k = 0; k < depth; ++k)
             appendText(out, "  ");
@@ -431,8 +431,8 @@ uint32_t prDrawCommandGroupEnd(const PrDrawCommand* commands, uint32_t count, ui
     return count;
 }
 
-PrString prDrawListDump(const PrDrawList* list) {
-    PrString out = prStringEmpty();
+PrRawString prDrawListDump(const PrDrawList* list) {
+    PrRawString out = prRawStringEmpty();
     dumpList(&out, list, 0);
     return out;
 }

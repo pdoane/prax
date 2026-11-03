@@ -7,8 +7,8 @@
 
 #include "pr/path_stroke.h"
 
-#include "pr/array.h"
 #include "pr/float.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "path/src/flatten.h"
@@ -51,13 +51,13 @@ struct Stroker {
     float tolerance;
     float maxTurn;              // the largest angle that one flattened step of a curve may turn through
     PrPathPolyline* out;
-    Array<float> pattern;
+    RawArray<float> pattern;
     float patternLength;
-    Array<Vertex> contour;
-    Array<Vertex> piece;
-    Array<Vertex> first;        // the first dash of a closed contour, kept to join its last dash
-    Array<PrVec2> curve;
-    Array<PrVec2> loop;
+    RawArray<Vertex> contour;
+    RawArray<Vertex> piece;
+    RawArray<Vertex> first;        // the first dash of a closed contour, kept to join its last dash
+    RawArray<PrVec2> curve;
+    RawArray<PrVec2> loop;
 };
 
 float dot(PrVec2 a, PrVec2 b) {
@@ -148,7 +148,7 @@ void pushArc(Stroker& s, PrVec2 center, PrVec2 from, float angle) {
 
 // Emits the loop as a closed contour, if it encloses any area.
 void emit(Stroker& s) {
-    Array<PrVec2>& p = s.loop;
+    RawArray<PrVec2>& p = s.loop;
     if (p.count > 1 && length(p.last() - p.data[0]) < kCoincident)
         p.pop();
     float area = 0;
@@ -416,7 +416,7 @@ void strokeClosed(Stroker& s, const Vertex* v, uint32_t n) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Contours
 
-void appendVertex(Array<Vertex>& vertices, const Vertex& vertex) {
+void appendVertex(RawArray<Vertex>& vertices, const Vertex& vertex) {
     if (vertices.count != 0) {
         Vertex& last = vertices.last();
         if (length(vertex.point - last.point) < kCoincident) {
@@ -459,7 +459,7 @@ void addCurve(Stroker& s, float curveOut, float curveIn) {
 // Sets the arc length and half widths of each vertex, and adds a vertex wherever a profile point falls between two
 // vertices. Returns the length of the contour.
 float measure(Stroker& s, bool closed) {
-    Array<Vertex>& v = s.contour;
+    RawArray<Vertex>& v = s.contour;
     float along = 0;
     for (uint32_t i = 0; i < v.count; ++i) {
         if (i != 0)
@@ -469,7 +469,7 @@ float measure(Stroker& s, bool closed) {
     float total = along + (closed ? segmentLength(v.last(), v.data[0]) : 0);
     const PrPathStroke* style = s.style;
     if (style->profile != nullptr && total > 0) {
-        Array<Vertex> split;
+        RawArray<Vertex> split;
         uint32_t next = 0;
         for (uint32_t i = 0; i < v.count; ++i) {
             const Vertex& a = v.data[i];
@@ -512,8 +512,8 @@ void finishPiece(Stroker& s, PrVec2 direction, bool atStart, bool atEnd, bool cl
 // Cuts the contour into dashes and strokes each.
 void dashContour(Stroker& s, bool closed, float total) {
     const PrPathStroke* style = s.style;
-    Array<float>& pattern = s.pattern;
-    Array<Vertex>& v = s.contour;
+    RawArray<float>& pattern = s.pattern;
+    RawArray<Vertex>& v = s.contour;
     if (closed) {
         Vertex end = v.data[0];
         end.along = total;
@@ -602,7 +602,7 @@ void dashContour(Stroker& s, bool closed, float total) {
 }
 
 void strokeContour(Stroker& s, bool closed) {
-    Array<Vertex>& v = s.contour;
+    RawArray<Vertex>& v = s.contour;
     if (closed && v.count > 1 && length(v.last().point - v.data[0].point) < kCoincident) {
         v.data[0].curveIn = v.last().curveIn;
         v.data[0].corner = true;

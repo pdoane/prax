@@ -105,7 +105,7 @@ PrStatus rebuild(VulkanDevice* d, VulkanSwapChain* s, VkExtent2D requested) {
 
     uint32_t count = 0;
     d->vk.GetSwapchainImagesKHR(d->device, created, &count, nullptr);
-    Array<VkImage> handles;
+    RawArray<VkImage> handles;
     handles.resize(count);
     d->vk.GetSwapchainImagesKHR(d->device, created, &count, handles.data);
     PrGpuTextureUsageFlags usage = PrGpuTextureUsageFlag_RenderTarget;
@@ -135,7 +135,7 @@ PrStatus rebuild(VulkanDevice* d, VulkanSwapChain* s, VkExtent2D requested) {
 void chooseFormat(VulkanDevice* d, VulkanSwapChain* s, PrGpuSwapChainIntent intent) {
     uint32_t count = 0;
     d->vk.GetPhysicalDeviceSurfaceFormatsKHR(d->physical, s->surface, &count, nullptr);
-    Array<VkSurfaceFormatKHR> formats;
+    RawArray<VkSurfaceFormatKHR> formats;
     formats.resize(count);
     d->vk.GetPhysicalDeviceSurfaceFormatsKHR(d->physical, s->surface, &count, formats.data);
     struct Choice {

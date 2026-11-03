@@ -4,7 +4,6 @@
 #include "draw/src/draw_list.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/bitset.h"
@@ -15,6 +14,7 @@
 #include "pr/draw_projection.h"
 #include "pr/float.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "draw/src/identity.h"
@@ -348,8 +348,8 @@ PrRect glyphRunBounds(const PrFontGlyphRun* run) {
 // Returns the bounds of commands as they play, using the transforms and clips that they push. The commands close every
 // scope that they open.
 PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
-    Array<PrDAffine2> transforms;
-    Array<PrRect> clips;
+    RawArray<PrDAffine2> transforms;
+    RawArray<PrRect> clips;
     transforms.push(prDAffine2Identity());
     clips.push(kUnbounded);
     PrRect bounds{0, 0, 0, 0};
@@ -649,7 +649,7 @@ void popGroup(DrawList* list) {
     uint32_t push = list->groups.last();
     list->groups.pop();
     pop(list, PrDrawCommandKind_PushGroup, PrDrawCommandKind_PopGroup);
-    Array<PrDrawCommand>& commands = list->recording.commands;
+    RawArray<PrDrawCommand>& commands = list->recording.commands;
     const PrDrawCommand* contents = commands.data + push + 1;
     uint32_t count = commands.count - push - 2;
     // The list owns the side copy of the group, which nothing has read yet.
@@ -729,7 +729,7 @@ void drawListFreeze(DrawList* list) {
     }
 }
 
-const Array<PrDrawCommand>& drawListCommands(const DrawList* list) {
+const RawArray<PrDrawCommand>& drawListCommands(const DrawList* list) {
     return list->recording.commands;
 }
 

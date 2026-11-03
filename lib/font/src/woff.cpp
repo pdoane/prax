@@ -135,7 +135,7 @@ constexpr size_t kWoffEntrySize = 20;
 
 // Writes the font file that the WOFF file holds: its table directory, then each table, four-byte aligned, decompressed
 // if the WOFF file compressed it.
-PrStatus decodeWoff(PrByteView woff, PrCompressCodec* codec, Array<uint8_t>* out) {
+PrStatus decodeWoff(PrByteView woff, PrCompressCodec* codec, RawArray<uint8_t>* out) {
     const uint8_t* in = woff.data;
     if (woff.size < kWoffHeaderSize)
         return PrStatus_InvalidData;
@@ -254,12 +254,12 @@ struct Woff2File {
     uint32_t flavor;
     bool collection;
     uint32_t collectionVersion;
-    Array<Woff2Table> tables;
-    Array<Woff2Font> fonts;
-    Array<Woff2TableIndex> fontTables;  // by Woff2Font::first plus the index of the table in the font
-    Array<uint8_t> block;               // the decompressed table data
-    Array<uint8_t> rebuilt;             // the reconstructed glyf, loca and hmtx tables
-    Array<int16_t> xMins;               // by glyph, for each glyf table from its Woff2Table::xMinsStart
+    RawArray<Woff2Table> tables;
+    RawArray<Woff2Font> fonts;
+    RawArray<Woff2TableIndex> fontTables;  // by Woff2Font::first plus the index of the table in the font
+    RawArray<uint8_t> block;               // the decompressed table data
+    RawArray<uint8_t> rebuilt;             // the reconstructed glyf, loca and hmtx tables
+    RawArray<int16_t> xMins;               // by glyph, for each glyf table from its Woff2Table::xMinsStart
 };
 
 void resetFile(Woff2File& file) {
@@ -491,7 +491,7 @@ struct GlyfStreams {
 
 // Appends a point coordinate stream of a simple glyph: each delta of `deltas` that is not zero, in one byte if its
 // magnitude fits and in two otherwise.
-void appendCoordinates(Array<uint8_t>& out, const int32_t* deltas, uint32_t count) {
+void appendCoordinates(RawArray<uint8_t>& out, const int32_t* deltas, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         const int32_t delta = deltas[i];
         if (delta == 0)
@@ -508,9 +508,9 @@ void appendCoordinates(Array<uint8_t>& out, const int32_t* deltas, uint32_t coun
 
 // Scratch storage for the points of a simple glyph.
 struct GlyphPoints {
-    Array<int32_t> dx;          // for each point
-    Array<int32_t> dy;          // for each point
-    Array<uint8_t> flags;       // the reconstructed flags, run-length encoded
+    RawArray<int32_t> dx;          // for each point
+    RawArray<int32_t> dy;          // for each point
+    RawArray<uint8_t> flags;       // the reconstructed flags, run-length encoded
 };
 
 void resetPoints(GlyphPoints& points) {
@@ -520,7 +520,7 @@ void resetPoints(GlyphPoints& points) {
 }
 
 // Appends the simple glyph `glyph` of `contours` contours to `glyf` and sets `xMin` to the x of its box.
-bool rebuildSimpleGlyph(GlyfStreams& s, uint32_t glyph, int16_t contours, GlyphPoints& points, Array<uint8_t>& glyf,
+bool rebuildSimpleGlyph(GlyfStreams& s, uint32_t glyph, int16_t contours, GlyphPoints& points, RawArray<uint8_t>& glyf,
         int16_t* xMin) {
     const uint32_t header = glyf.count;
     glyf.resize(header + 10 + 2 * uint32_t(contours));
@@ -609,7 +609,7 @@ bool rebuildSimpleGlyph(GlyfStreams& s, uint32_t glyph, int16_t contours, GlyphP
 }
 
 // Appends the composite glyph `glyph` to `glyf`, and sets `xMin` to the x of its box, which a composite glyph gives.
-bool rebuildCompositeGlyph(GlyfStreams& s, uint32_t glyph, Array<uint8_t>& glyf, int16_t* xMin) {
+bool rebuildCompositeGlyph(GlyfStreams& s, uint32_t glyph, RawArray<uint8_t>& glyf, int16_t* xMin) {
     if (!bitAt(s.boxBits, glyph))
         return false;
     uint8_t header[10];
@@ -654,8 +654,8 @@ bool rebuildCompositeGlyph(GlyfStreams& s, uint32_t glyph, Array<uint8_t>& glyf,
 // Reconstructs a glyf table and its loca from the transformed glyf table `data` (woff2 5.1, 5.3), and appends each
 // glyph's x minimum to `file.xMins`. `locaLength` is the origLength of the loca table, which the glyph count and the
 // loca format determine.
-bool rebuildGlyf(Woff2File& file, const uint8_t* data, uint32_t size, uint32_t locaLength, Array<uint8_t>& glyf,
-        Array<uint8_t>& loca) {
+bool rebuildGlyf(Woff2File& file, const uint8_t* data, uint32_t size, uint32_t locaLength, RawArray<uint8_t>& glyf,
+        RawArray<uint8_t>& loca) {
     Reader header = readerOf(data, size);
     readU16(header); // reserved
     const uint16_t options = readU16(header);
@@ -689,7 +689,7 @@ bool rebuildGlyf(Woff2File& file, const uint8_t* data, uint32_t size, uint32_t l
 
     const uint32_t xMinsStart = file.xMins.count;
     file.xMins.resize(xMinsStart + glyphCount);
-    Array<uint32_t> offsets;
+    RawArray<uint32_t> offsets;
     offsets.resize(uint32_t(glyphCount) + 1);
     GlyphPoints points{};
     bool valid = true;
@@ -765,7 +765,7 @@ Woff2TableIndex findTable(const Woff2File& file, const Woff2Font& font, uint32_t
 }
 
 // Moves `bytes` to the end of the rebuilt tables as the reconstruction of `table`.
-void keepRebuilt(Woff2File& file, Woff2Table& table, const Array<uint8_t>& bytes) {
+void keepRebuilt(Woff2File& file, Woff2Table& table, const RawArray<uint8_t>& bytes) {
     table.rebuilt = true;
     table.start = file.rebuilt.count;
     table.size = bytes.count;
@@ -799,7 +799,7 @@ bool rebuildHmtx(Woff2File& file, const Woff2Font& font, const Woff2Table& glyf,
     if (r.failed || r.at != r.size)
         return false;
 
-    Array<uint8_t> out;
+    RawArray<uint8_t> out;
     out.resize(4 * uint32_t(metricCount) + 2 * (uint32_t(glyphCount) - metricCount));
     for (uint32_t i = 0; i < metricCount; ++i) {
         prMemCopy(out.data + 4 * i, advances + 2 * i, 2);
@@ -839,7 +839,7 @@ bool readFontXMins(Woff2File& file, const Woff2Font& font, Woff2Table& glyf, con
 // Reconstructs the transformed tables of a font. A transformed glyf and its loca are a pair: both are transformed or
 // neither is, and the loca follows the glyf in the directory, immediately in a collection (woff2 4.2, 5.5). A table
 // that fonts of a collection share is reconstructed once.
-bool rebuildFont(Woff2File& file, const Woff2Font& font, Array<uint8_t>& glyf, Array<uint8_t>& loca) {
+bool rebuildFont(Woff2File& file, const Woff2Font& font, RawArray<uint8_t>& glyf, RawArray<uint8_t>& loca) {
     const Woff2TableIndex glyfIndex = findTable(file, font, kTagGlyf);
     const Woff2TableIndex locaIndex = findTable(file, font, kTagLoca);
     const Woff2TableIndex hmtxIndex = findTable(file, font, kTagHmtx);
@@ -882,8 +882,8 @@ bool rebuildTables(Woff2File& file) {
         table.start = table.source;
         table.size = table.length;
     }
-    Array<uint8_t> glyf;
-    Array<uint8_t> loca;
+    RawArray<uint8_t> glyf;
+    RawArray<uint8_t> loca;
     bool valid = true;
     for (uint32_t f = 0; f < file.fonts.count && valid; ++f)
         valid = rebuildFont(file, file.fonts.data[f], glyf, loca);
@@ -894,7 +894,7 @@ bool rebuildTables(Woff2File& file) {
 
 // Writes the font file: the header of a collection, the offset table of each font, then each table once, four-byte
 // aligned, with its checksum, and the checksum adjustment of each font in its head (woff2 5).
-bool writeFont(Woff2File& file, Array<uint8_t>* out) {
+bool writeFont(Woff2File& file, RawArray<uint8_t>* out) {
     const uint32_t fontCount = file.fonts.count;
     uint64_t size = file.collection ? 12 + 4 * uint64_t(fontCount) : 0;
     for (uint32_t f = 0; f < fontCount; ++f)
@@ -944,7 +944,7 @@ bool writeFont(Woff2File& file, Array<uint8_t>* out) {
         uint8_t* offsetTable = font + at;
         writeOffsetTable(offsetTable, entry.flavor, uint16_t(entry.count));
         // The records, sorted by tag. The tags are unique.
-        Array<Woff2TableIndex> sorted;
+        RawArray<Woff2TableIndex> sorted;
         sorted.append(file.fontTables.data + entry.first, entry.count);
         for (uint32_t i = 1; i < sorted.count; ++i) {
             const Woff2TableIndex moving = sorted.data[i];
@@ -980,7 +980,7 @@ bool writeFont(Woff2File& file, Array<uint8_t>* out) {
     return true;
 }
 
-PrStatus decodeWoff2(PrByteView bytes, PrCompressCodec* codec, Array<uint8_t>* out) {
+PrStatus decodeWoff2(PrByteView bytes, PrCompressCodec* codec, RawArray<uint8_t>* out) {
     Woff2File file{};
     PrByteView compressed{};
     PrStatus status = PrStatus_InvalidData;
@@ -995,7 +995,7 @@ PrStatus decodeWoff2(PrByteView bytes, PrCompressCodec* codec, Array<uint8_t>* o
 
 } // namespace
 
-PrStatus woffDecode(PrByteView bytes, PrCompressCodec* codec, Array<uint8_t>* out) {
+PrStatus woffDecode(PrByteView bytes, PrCompressCodec* codec, RawArray<uint8_t>* out) {
     PR_ASSERT(out->count == 0);
     if (bytes.size < 4)
         return PrStatus_InvalidData;

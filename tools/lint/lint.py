@@ -1623,6 +1623,43 @@ def check_allocation(report, path, text):
                    "%s is forbidden; use alloc<T>/prMemoryFree" % match.group(0))
 
 
+# The headers of core's managed layer, as they are included: types that construct, copy and destroy their contents,
+# which applications and tests use. An implementation in lib/ manages memory explicitly, so it includes none of them.
+MANAGED = set()
+
+
+def is_implementation(path):
+    """Returns true for a file of a library's implementation: under lib, and not a test."""
+    return posix(path).startswith(posix(os.path.join(ROOT, "lib")) + "/") and not is_test(path)
+
+
+def is_managed_header(path):
+    """Returns true for a header of the managed layer, which applications and tests use."""
+    return any(posix(path).endswith("/lib/core/cpp/include/" + name) for name in MANAGED)
+
+
+def check_destructors(report, path, text):
+    """An implementation manages memory explicitly: an owner resets what it owns, and no type runs code when it goes
+    away. So a file of lib declares no destructor, except a header of the managed layer."""
+    if not is_implementation(path) or is_managed_header(path):
+        return
+    code = mask_non_code(text)
+    for match in re.finditer(r"^[ \t]*(?:virtual[ \t]+)?(?:\w+::)?~[ \t]*(\w+)[ \t]*\([ \t]*\)", code, re.M):
+        report.add(path, line_of(text, match.start(1)), "destructor",
+                   "~%s is a destructor; an implementation resets what it owns explicitly" % match.group(1))
+
+
+def check_managed_includes(report, path, text):
+    """The managed layer is for applications and tests. A file of lib includes none of its headers, apart from the
+    headers of the layer itself."""
+    if not is_implementation(path) or is_managed_header(path):
+        return
+    for match in re.finditer(r'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', text, re.M):
+        if match.group(1) in MANAGED:
+            report.add(path, line_of(text, match.start()), "managed-include",
+                       "%s is the managed layer's, which applications and tests use" % match.group(1))
+
+
 ALIASES = ("u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "f64",
            "usize", "isize")
 
@@ -2499,8 +2536,8 @@ def check_homes(report, headers, sources, texts):
 TAGS = {
     "lib/core": ("Adler32", "Ascii", "Base64", "ByteView", "Condition", "Core", "Crash", "Crc32", "DVec2", "F32",
                  "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory", "Mutex", "Pixel", "Pixels",
-                 "Random", "Sha1", "Status", "String", "TextBuffer", "Thread", "Time", "U64", "UVec2", "Utf8", "Vec2",
-                 "Vec3", "Vmem"),
+                 "Random", "RawString", "Sha1", "Status", "String", "TextBuffer", "Thread", "Time", "U64", "UVec2",
+                 "Utf8", "Vec2", "Vec3", "Vmem"),
     "lib/geom": ("Affine2", "Affine4", "Corner", "DAffine2", "DMatrix3", "DMatrix4", "IRect", "Matrix3", "Matrix4",
                  "Rect"),
     "lib/locale": ("Language", "Locale", "Region", "Script"),
@@ -3027,6 +3064,8 @@ def check_code_file(path):
         check_binding_includes(report, path, text)
     if not is_application(path):
         check_allocation(report, path, text)
+        check_destructors(report, path, text)
+        check_managed_includes(report, path, text)
         if not is_test(path) and not is_program(text):
             check_stdlib(report, path, text)
         if header:

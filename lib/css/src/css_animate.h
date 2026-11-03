@@ -15,11 +15,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/layout_animation.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_animation.h"
@@ -74,7 +74,7 @@ struct CssAnimateKeyframe {
 // animation-name list, and the keyframes of the @keyframes rule that the item names, computed for the target.
 struct CssRunningAnimation {
     const PrDomNode* target;
-    PrString name;
+    PrRawString name;
     PrLayoutTiming timing;          // on the presentation's timeline
     bool matched;                   // scratch: true if an item of the target's list names the animation
     bool composited;                // true if the keyframes set only opacity and transform, which a compositor runs
@@ -82,8 +82,8 @@ struct CssRunningAnimation {
     AnimationPhase phase;           // phase as the animation's events last saw it
     double iteration;               // iteration that the events last saw, in the active phase
     CssValueList easing;
-    CssValuePool values;                 // values of the keyframes
-    Array<CssAnimateKeyframe> keyframes; // in order of offset, and of appearance among equal offsets
+    CssValuePool values;                    // values of the keyframes
+    RawArray<CssAnimateKeyframe> keyframes; // in order of offset, and of appearance among equal offsets
 };
 
 // A TransitionEvent or an AnimationEvent that is due at the next rendering update. It holds its element (domNodeHold),
@@ -92,7 +92,7 @@ struct CssAnimateEvent {
     const PrDomElement* element;
     CssPseudo pseudo;               // the animated pseudo-element, or CssPseudo_None for the element
     PrStringView type;              // a literal
-    PrString name;                  // the property, or the animation's name
+    PrRawString name;               // the property, or the animation's name
     double elapsedTime;             // in seconds
     double scheduled;               // time of the event on the presentation's timeline, which orders the events
     bool transition;
@@ -101,15 +101,15 @@ struct CssAnimateEvent {
 // A presentation's animations, by target.
 struct CssAnimateState {
     double time;                    // current time of the presentation's timeline, in milliseconds
-    Array<CssRunningTransition> transitions;
-    Array<CssRunningAnimation> animations;
-    CssValuePool scratch;            // values that an application overrides
-    Array<PrCssProperty> overridden; // property of each override; its value is the span at the same index
-    Array<CssValueSpan> overrides;
-    Array<PrLayoutTrack> tracks;    // tracks that cssAnimateTracks made last
-    Array<PrLayoutKeyframe> keyframes;
-    Array<CssAnimateEvent> events; // in the order they were found
-    bool recordsEvents;            // true if a window updates the presentation's rendering and fires its events
+    RawArray<CssRunningTransition> transitions;
+    RawArray<CssRunningAnimation> animations;
+    CssValuePool scratch;               // values that an application overrides
+    RawArray<PrCssProperty> overridden; // property of each override; its value is the span at the same index
+    RawArray<CssValueSpan> overrides;
+    RawArray<PrLayoutTrack> tracks;    // tracks that cssAnimateTracks made last
+    RawArray<PrLayoutKeyframe> keyframes;
+    RawArray<CssAnimateEvent> events; // in the order they were found
+    bool recordsEvents;               // true if a window updates the presentation's rendering and fires its events
 };
 
 // The context that a target's animations compute relative to. A pseudo-element's parent style is the style of what
@@ -147,7 +147,7 @@ typedef const CssComputedStyle* PR_NULLABLE (*AnimationBaseFn)(const PrCssPresen
 // Makes a track of the effect of each composited animation on the box of its target's layout node, which `layoutNode`
 // gives. Each value is computed against the target's base style, which `baseOf` gives. Returns the tracks, which stay
 // valid until the next call.
-const Array<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, AnimationNodeFn layoutNode,
+const RawArray<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, AnimationNodeFn layoutNode,
     AnimationBaseFn baseOf);
 
 // Returns true if the target has a transition or a CSS animation.

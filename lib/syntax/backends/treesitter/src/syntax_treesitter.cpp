@@ -4,13 +4,13 @@
 #include "pr/syntax_treesitter.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/regex.h"
 #include "pr/sort.h"
-#include "pr/string.h"
 #include "pr/time.h"
 
 #include "tree_sitter/api.h"
@@ -34,7 +34,7 @@ struct TreeSitterTest {
     bool negated;
     uint32_t capture;               // by the query's capture index
     uint32_t otherCapture;          // for Eq of two captures, or UINT32_MAX
-    Array<PrString> strings;        // the string of Eq, or the strings of AnyOf
+    RawArray<PrRawString> strings;  // the string of Eq, or the strings of AnyOf
     PrRegex* PR_NULLABLE regex;     // of Match, or null for a pattern that does not compile, which matches nothing
 };
 
@@ -42,8 +42,8 @@ struct TreeSitterTest {
 // of a capture, and its content leaves out the ranges of the content node's children unless it includes them. A
 // combined pattern's matches are one document of its language.
 struct TreeSitterPattern {
-    Array<TreeSitterTest> tests;
-    PrString injectionLanguage;     // #set! injection.language, or null
+    RawArray<TreeSitterTest> tests;
+    PrRawString injectionLanguage;  // #set! injection.language, or null
     bool combined;                  // #set! injection.combined
     bool includeChildren;           // #set! injection.include-children
 };
@@ -51,19 +51,19 @@ struct TreeSitterPattern {
 // A compiled query, and the predicates of each of its patterns.
 struct TreeSitterQuery {
     TSQuery* PR_NULLABLE query;
-    Array<TreeSitterPattern> patterns;      // by index of the query's patterns
+    RawArray<TreeSitterPattern> patterns;   // by index of the query's patterns
     uint32_t contentCapture;                // @injection.content, or UINT32_MAX
     uint32_t languageCapture;               // @injection.language, or UINT32_MAX
 };
 
 // A language over a grammar.
 struct TreeSitterLanguage : PrSyntaxLanguage {
-    PrString ownName;
-    PrString ownNamePattern;
-    Array<PrString> ownExtensions;
-    Array<PrString> ownFileNames;
-    Array<PrStringView> extensionViews;
-    Array<PrStringView> fileNameViews;
+    PrRawString ownName;
+    PrRawString ownNamePattern;
+    RawArray<PrRawString> ownExtensions;
+    RawArray<PrRawString> ownFileNames;
+    RawArray<PrStringView> extensionViews;
+    RawArray<PrStringView> fileNameViews;
     const TSLanguage* grammar;
     TreeSitterQuery highlights;
     TreeSitterQuery injections;
@@ -85,7 +85,7 @@ struct TreeSitterLayer {
     uint8_t depth;
     bool edited;                    // an edit since the parse touched the ranges
     bool used;                      // by the query that runs
-    Array<TSRange> ranges;          // their bytes moved by the edits since the parse, and their points as parsed
+    RawArray<TSRange> ranges;       // their bytes moved by the edits since the parse, and their points as parsed
     TSTree* tree;
 };
 
@@ -106,18 +106,18 @@ struct TreeSitterTree : PrSyntaxTree {
 
     // By the capture index of a language's highlights query: the registry's category. A tree keeps one map for its own
     // language and one for each language that it has injected.
-    Array<const TreeSitterLanguage*> mappedLanguages;
-    Array<Array<PrSyntaxCategory>> categoryMaps;
+    RawArray<const TreeSitterLanguage*> mappedLanguages;
+    RawArray<RawArray<PrSyntaxCategory>> categoryMaps;
 
     // A parser for each language that the tree has injected, which parses each range afresh.
-    Array<const TreeSitterLanguage*> injectedLanguages;
-    Array<TSParser*> injectedParsers;
-    Array<TreeSitterLayer> layers;
+    RawArray<const TreeSitterLanguage*> injectedLanguages;
+    RawArray<TSParser*> injectedParsers;
+    RawArray<TreeSitterLayer> layers;
 
-    Array<TreeSitterItem> items;
-    Array<uint32_t> active;         // by index of `items`
-    Array<uint32_t> bounds;
-    Array<char> text;
+    RawArray<TreeSitterItem> items;
+    RawArray<uint32_t> active;         // by index of `items`
+    RawArray<uint32_t> bounds;
+    RawArray<char> text;
 };
 
 void* allocate(size_t size) {
@@ -179,7 +179,7 @@ void readPredicates(TreeSitterQuery& q) {
                     if (steps[i + 2].type == TSQueryPredicateStepTypeCapture)
                         test.otherCapture = steps[i + 2].value_id;
                     else
-                        test.strings.push(prStringCopy(stringAt(i + 2)));
+                        test.strings.push(prRawStringCopy(stringAt(i + 2)));
                     kept = true;
                 } else if ((name == "match?" || name == "not-match?") && hasCapture && end == i + 3 &&
                         steps[i + 2].type == TSQueryPredicateStepTypeString) {
@@ -193,11 +193,11 @@ void readPredicates(TreeSitterQuery& q) {
                     test.negated = name == "not-any-of?";
                     test.capture = steps[i + 1].value_id;
                     for (uint32_t k = i + 2; k < end; ++k)
-                        test.strings.push(prStringCopy(stringAt(k)));
+                        test.strings.push(prRawStringCopy(stringAt(k)));
                     kept = true;
                 } else if (name == "set!" && end == i + 3 && steps[i + 1].type == TSQueryPredicateStepTypeString &&
                         stringAt(i + 1) == "injection.language") {
-                    q.patterns.data[p].injectionLanguage = prStringCopy(stringAt(i + 2));
+                    q.patterns.data[p].injectionLanguage = prRawStringCopy(stringAt(i + 2));
                 } else if (name == "set!" && end == i + 2 && steps[i + 1].type == TSQueryPredicateStepTypeString) {
                     if (stringAt(i + 1) == "injection.combined")
                         q.patterns.data[p].combined = true;
@@ -242,12 +242,12 @@ void resetQuery(TreeSitterQuery& q) {
         for (uint32_t t = 0; t < pattern.tests.count; ++t) {
             TreeSitterTest& test = pattern.tests.data[t];
             for (uint32_t s = 0; s < test.strings.count; ++s)
-                prStringReset(&test.strings.data[s]);
+                prRawStringReset(&test.strings.data[s]);
             test.strings.reset();
             prRegexDestroy(test.regex);
         }
         pattern.tests.reset();
-        prStringReset(&pattern.injectionLanguage);
+        prRawStringReset(&pattern.injectionLanguage);
     }
     q.patterns.reset();
     if (q.query != nullptr)
@@ -308,16 +308,16 @@ bool passes(TreeSitterTree* h, const TreeSitterQuery& q, const TSQueryMatch& mat
         bool holds = false;
         if (test.kind == TreeSitterTestKind_Eq && test.otherCapture != UINT32_MAX) {
             TSNode other = captured(match, test.otherCapture);
-            PrString first = prStringCopy(textOf(h, node));
-            holds = !ts_node_is_null(other) && prStringView(&first) == textOf(h, other);
-            prStringReset(&first);
+            PrRawString first = prRawStringCopy(textOf(h, node));
+            holds = !ts_node_is_null(other) && prRawStringView(&first) == textOf(h, other);
+            prRawStringReset(&first);
         } else {
             PrStringView text = textOf(h, node);
             if (test.kind == TreeSitterTestKind_Match) {
                 holds = test.regex != nullptr && prRegexSearch(test.regex, text, nullptr, 0);
             } else {
                 for (uint32_t s = 0; s < test.strings.count && !holds; ++s)
-                    holds = prStringView(&test.strings.data[s]) == text;
+                    holds = prRawStringView(&test.strings.data[s]) == text;
             }
         }
         if (holds == test.negated)
@@ -327,12 +327,12 @@ bool passes(TreeSitterTree* h, const TreeSitterQuery& q, const TSQueryMatch& mat
 }
 
 // Returns the map from the capture indices of `language`'s highlights query to the registry's categories.
-const Array<PrSyntaxCategory>& categoryMapOf(TreeSitterTree* h, const TreeSitterLanguage* language) {
+const RawArray<PrSyntaxCategory>& categoryMapOf(TreeSitterTree* h, const TreeSitterLanguage* language) {
     for (uint32_t i = 0; i < h->mappedLanguages.count; ++i) {
         if (h->mappedLanguages.data[i] == language)
             return h->categoryMaps.data[i];
     }
-    Array<PrSyntaxCategory> map;
+    RawArray<PrSyntaxCategory> map;
     if (language->highlights.query != nullptr) {
         uint32_t count = ts_query_capture_count(language->highlights.query);
         map.resize(count);
@@ -353,7 +353,7 @@ void addCaptures(TreeSitterTree* h, const TreeSitterLanguage* language, TSNode r
     const TreeSitterQuery& q = language->highlights;
     if (q.query == nullptr)
         return;
-    const Array<PrSyntaxCategory>& map = categoryMapOf(h, language);
+    const RawArray<PrSyntaxCategory>& map = categoryMapOf(h, language);
     ts_query_cursor_set_byte_range(h->cursor, start, end);
     ts_query_cursor_exec(h->cursor, q.query, root);
     TSQueryMatch match{};
@@ -387,7 +387,7 @@ struct TreeSitterInjection {
     const TreeSitterLanguage* language;
     uint32_t pattern;               // of the host's injections query
     bool combined;
-    Array<TSRange> ranges;
+    RawArray<TSRange> ranges;
 };
 
 // Returns the tree's parser of an injected language.
@@ -404,7 +404,7 @@ TSParser* parserFor(TreeSitterTree* h, const TreeSitterLanguage* language) {
 }
 
 // Returns true if two sets of ranges cover the same bytes.
-bool sameBytes(const Array<TSRange>& a, const Array<TSRange>& b) {
+bool sameBytes(const RawArray<TSRange>& a, const RawArray<TSRange>& b) {
     if (a.count != b.count)
         return false;
     for (uint32_t i = 0; i < a.count; ++i) {
@@ -417,7 +417,7 @@ bool sameBytes(const Array<TSRange>& a, const Array<TSRange>& b) {
 // Returns the tree of `language` over `ranges` at `depth`: the layer of the last query over the same bytes, a layer
 // over ranges that overlap them, parsed again incrementally, or a new parse. Returns null if the parse fails.
 TSTree* PR_NULLABLE layerTree(TreeSitterTree* h, const TreeSitterLanguage* language, uint8_t depth,
-        const Array<TSRange>& ranges) {
+        const RawArray<TSRange>& ranges) {
     uint32_t first = ranges.data[0].start_byte;
     uint32_t last = ranges.last().end_byte;
     TreeSitterLayer* layer = nullptr;
@@ -494,7 +494,7 @@ void dropUnusedLayers(TreeSitterTree* h) {
 
 // Adds the ranges of an injection's content node: the whole node, or the stretches between its named children. A
 // grammar's anonymous children are its punctuation, as Markdown's are, which belongs to the injected text.
-void addContent(Array<TSRange>& ranges, TSNode content, bool includeChildren) {
+void addContent(RawArray<TSRange>& ranges, TSNode content, bool includeChildren) {
     TSRange whole{
         ts_node_start_point(content), ts_node_end_point(content), ts_node_start_byte(content),
         ts_node_end_byte(content),
@@ -525,17 +525,17 @@ void addContent(Array<TSRange>& ranges, TSNode content, bool includeChildren) {
 // capture names, or null if the registry has no tree-sitter language of that name.
 const TreeSitterLanguage* PR_NULLABLE injectedLanguageOf(TreeSitterTree* h, const TreeSitterQuery& q,
         const TSQueryMatch& match) {
-    PrStringView name = prStringView(&q.patterns.data[match.pattern_index].injectionLanguage);
-    PrString fromText{};
+    PrStringView name = prRawStringView(&q.patterns.data[match.pattern_index].injectionLanguage);
+    PrRawString fromText{};
     if (name.size == 0 && q.languageCapture != UINT32_MAX) {
         TSNode named = captured(match, q.languageCapture);
         if (!ts_node_is_null(named)) {
-            fromText = prStringCopy(textOf(h, named));
-            name = prStringView(&fromText);
+            fromText = prRawStringCopy(textOf(h, named));
+            name = prRawStringView(&fromText);
         }
     }
     const PrSyntaxLanguage* language = name.size != 0 ? prSyntaxRegistryFind(h->registry, name) : nullptr;
-    prStringReset(&fromText);
+    prRawStringReset(&fromText);
     if (language == nullptr || !isTreeSitter(language))
         return nullptr;
     return static_cast<const TreeSitterLanguage*>(language);
@@ -548,7 +548,7 @@ void inject(TreeSitterTree* h, const TreeSitterLanguage* host, TSNode root, uint
     if (q.query == nullptr || q.contentCapture == UINT32_MAX || depth > kMaxInjectionDepth)
         return;
     // The matches are read first, since parsing an injection and adding its categories use cursors of their own.
-    Array<TreeSitterInjection> found;
+    RawArray<TreeSitterInjection> found;
     TSQueryCursor* cursor = ts_query_cursor_new();
     ts_query_cursor_set_byte_range(cursor, start, end);
     ts_query_cursor_exec(cursor, q.query, root);
@@ -577,7 +577,7 @@ void inject(TreeSitterTree* h, const TreeSitterLanguage* host, TSNode root, uint
     for (uint32_t i = 0; i < found.count; ++i) {
         TreeSitterInjection& injection = found.data[i];
         // A parse takes its ranges in order, without overlap.
-        Array<TSRange>& ranges = injection.ranges;
+        RawArray<TSRange>& ranges = injection.ranges;
         sortItems(ranges.data, ranges.count,
             [](const TSRange& a, const TSRange& b) { return a.start_byte < b.start_byte; });
         uint32_t kept = 0;
@@ -613,7 +613,7 @@ bool outranks(const TreeSitterItem& a, const TreeSitterItem& b) {
 // Writes the items as spans that do not overlap, each piece of the text named by the item that outranks the others over
 // it.
 uint32_t flatten(TreeSitterTree* h, PrSyntaxSpan* PR_NULLABLE out, uint32_t capacity) {
-    Array<TreeSitterItem>& items = h->items;
+    RawArray<TreeSitterItem>& items = h->items;
     // By start, so that a sweep adds each item where it begins.
     sortItems(items.data, items.count, [](const TreeSitterItem& a, const TreeSitterItem& b) { return a.start < b.start; });
     h->bounds.clear();
@@ -797,18 +797,18 @@ using namespace pr_impl;
 const PrSyntaxLanguage* prSyntaxTreeSitterLanguageCreate(const PrSyntaxTreeSitterDesc* desc) {
     useAllocator();
     TreeSitterLanguage* l = allocZeroed<TreeSitterLanguage>();
-    l->ownName = prStringCopy(desc->name);
-    l->name = prStringView(&l->ownName);
-    l->ownNamePattern = prStringCopy(desc->namePattern);
-    l->namePattern = prStringView(&l->ownNamePattern);
+    l->ownName = prRawStringCopy(desc->name);
+    l->name = prRawStringView(&l->ownName);
+    l->ownNamePattern = prRawStringCopy(desc->namePattern);
+    l->namePattern = prRawStringView(&l->ownNamePattern);
     for (uint32_t i = 0; i < desc->extensionCount; ++i)
-        l->ownExtensions.push(prStringCopy(desc->extensions[i]));
+        l->ownExtensions.push(prRawStringCopy(desc->extensions[i]));
     for (uint32_t i = 0; i < desc->fileNameCount; ++i)
-        l->ownFileNames.push(prStringCopy(desc->fileNames[i]));
+        l->ownFileNames.push(prRawStringCopy(desc->fileNames[i]));
     for (uint32_t i = 0; i < l->ownExtensions.count; ++i)
-        l->extensionViews.push(prStringView(&l->ownExtensions.data[i]));
+        l->extensionViews.push(prRawStringView(&l->ownExtensions.data[i]));
     for (uint32_t i = 0; i < l->ownFileNames.count; ++i)
-        l->fileNameViews.push(prStringView(&l->ownFileNames.data[i]));
+        l->fileNameViews.push(prRawStringView(&l->ownFileNames.data[i]));
     l->extensions = l->extensionViews.data;
     l->extensionCount = l->extensionViews.count;
     l->fileNames = l->fileNameViews.data;
@@ -826,12 +826,12 @@ void prSyntaxTreeSitterLanguageDestroy(const PrSyntaxLanguage* PR_NULLABLE langu
     TreeSitterLanguage* l = const_cast<TreeSitterLanguage*>(static_cast<const TreeSitterLanguage*>(language));
     resetQuery(l->highlights);
     resetQuery(l->injections);
-    prStringReset(&l->ownName);
-    prStringReset(&l->ownNamePattern);
+    prRawStringReset(&l->ownName);
+    prRawStringReset(&l->ownNamePattern);
     for (uint32_t i = 0; i < l->ownExtensions.count; ++i)
-        prStringReset(&l->ownExtensions.data[i]);
+        prRawStringReset(&l->ownExtensions.data[i]);
     for (uint32_t i = 0; i < l->ownFileNames.count; ++i)
-        prStringReset(&l->ownFileNames.data[i]);
+        prRawStringReset(&l->ownFileNames.data[i]);
     l->ownExtensions.reset();
     l->ownFileNames.reset();
     l->extensionViews.reset();

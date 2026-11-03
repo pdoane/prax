@@ -178,12 +178,12 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
     size_t hash = prStringFindByte(url, '#');
     PrStringView fragment = hash < url.size ? prStringSlice(url, hash + 1, url.size - hash - 1) : PrStringView{};
     PrStringView address = prStringSlice(url, 0, hash);
-    PrString body{};
-    PrString type{};
+    PrRawString body{};
+    PrRawString type{};
     if (prUrlProcessData(address, &body, &type) == PrStatus_Ok) {
-        std::string bytes(prStringView(&body).data, prStringView(&body).size);
-        prStringReset(&body);
-        prStringReset(&type);
+        std::string bytes(prRawStringView(&body).data, prRawStringView(&body).size);
+        prRawStringReset(&body);
+        prRawStringReset(&type);
         return decodeImage(images, std::move(bytes), fragment, out);
     }
     if (images.documents == nullptr)

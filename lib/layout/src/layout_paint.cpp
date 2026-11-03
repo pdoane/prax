@@ -76,7 +76,7 @@ void resetRecording(LayoutPaintRecording& recording) {
 }
 
 // Releases the fragments of the boxes that a recording placed from outside it, and frees the list.
-void releaseOuter(Array<LayoutPaintPlaced>& outer) {
+void releaseOuter(RawArray<LayoutPaintPlaced>& outer) {
     for (uint32_t i = 0; i < outer.count; ++i)
         layoutFragmentRelease(outer.data[i].fragment);
     outer.reset();
@@ -181,7 +181,7 @@ bool changedSince(const LayoutTree* tree, const LayoutFragment* fragment, uint32
 }
 
 // Returns true if each list in `lists` still has the version that the recording found.
-bool listsCurrent(const LayoutTree* tree, const Array<LayoutPaintListed>& lists) {
+bool listsCurrent(const LayoutTree* tree, const RawArray<LayoutPaintListed>& lists) {
     for (uint32_t i = 0; i < lists.count; ++i) {
         if (!layoutStackingListIs(tree, lists.data[i].context, lists.data[i].version))
             return false;
@@ -371,7 +371,7 @@ struct Painter : LayoutWalkVisitor {
     // The containers that the walk is in, innermost last. The containers around the chunk's box come first, then the
     // chunk's own containers. Each is named by its node (PaintRefKind_Container), or is the chunk's own space, the
     // space of the layer around it, or none.
-    Array<LayoutPaintContainerRef> stack;
+    RawArray<LayoutPaintContainerRef> stack;
 
     // The containers whose content the open recordings record. Each belongs to the innermost recording that first
     // entered it, and records how many parts were open around it there and its index in that recording's containers.
@@ -380,7 +380,7 @@ struct Painter : LayoutWalkVisitor {
         uint32_t depth;
         uint32_t index;
     };
-    Array<Opened> opened;
+    RawArray<Opened> opened;
     HashIndex openedIndex;          // `opened` by node
 
     // The batch of commands being recorded. The list embeds the batch once it is full or the list ends, so that a
@@ -401,7 +401,7 @@ struct Painter : LayoutWalkVisitor {
         PrLayoutRect rect;
         PrLayoutRect groupRect;
     };
-    Array<GridColumn> columns;
+    RawArray<GridColumn> columns;
 
     // A part being recorded separately, to be cached: a block subtree, a run of a box's children, or a run of a list's
     // boxes. A part that places a box through a box outside it records the placed box's position separately from the
@@ -426,13 +426,13 @@ struct Painter : LayoutWalkVisitor {
         uint32_t count;
         PrLayoutVec first;
     };
-    Array<Subtree> subtrees;        // innermost last
+    RawArray<Subtree> subtrees;        // innermost last
 
     // The containers of a part being appended, as named by the recording it is appended to.
-    Array<LayoutPaintContainerRef> mapped;
+    RawArray<LayoutPaintContainerRef> mapped;
 
     // Emptied recordings of parts that were not cached. A part being recorded takes its storage from them.
-    Array<LayoutPaintRecording> spare;
+    RawArray<LayoutPaintRecording> spare;
 
     // Scratch: the stretch along a text fragment's line that each of its highlights covers, in px, empty if it covers
     // none of it, and the cuts where a stretch starts or ends.
@@ -441,12 +441,12 @@ struct Painter : LayoutWalkVisitor {
         float hi;
         uint32_t range;             // by index of the node's highlights
     };
-    Array<HighlightStretch> highlightStretches;
-    Array<uint32_t> highlightsReaching;
-    Array<float> highlightCuts;
+    RawArray<HighlightStretch> highlightStretches;
+    RawArray<uint32_t> highlightsReaching;
+    RawArray<float> highlightCuts;
 
     // By caret of the tree: the fragment that holds the caret, once `caretsSearched` is true.
-    Array<const LayoutFragment*> caretFragments;
+    RawArray<const LayoutFragment*> caretFragments;
     bool caretsSearched;
 
     // Returns the reference by which the chunk names the content of its root's viewport: its own space in the root's
@@ -500,7 +500,7 @@ struct Painter : LayoutWalkVisitor {
 
     // Names the containers around the chunk's box, given by `chain` outermost first (layoutContainerChain). The last is
     // named as the chunk's own space, and the others as a recording around the chunk names them.
-    void startIn(const Array<LayoutNodeIndex>& chain) {
+    void startIn(const RawArray<LayoutNodeIndex>& chain) {
         for (uint32_t i = 0; i + 1 < chain.count; ++i)
             if (chain.data[i] == kLayoutContainerViewport)
                 stack.push(viewportRef());
@@ -1256,7 +1256,7 @@ struct Painter : LayoutWalkVisitor {
     // records as it would without one, so what a caret costs does not grow with its text. The search for the carets'
     // fragments runs once, since it visits the fragments of their nodes.
     void caretSlots(const LayoutFragment* fragment, PrLayoutVec at) {
-        const Array<PrLayoutCaret>& carets = tree->carets.carets;
+        const RawArray<PrLayoutCaret>& carets = tree->carets.carets;
         if (carets.count == 0)
             return;
         if (!caretsSearched) {
@@ -1679,7 +1679,7 @@ struct Painter : LayoutWalkVisitor {
             return n.content;
         }
         PrDrawList* drawing = prDrawListCreate();
-        Array<LayoutRootReader>& readers = tree->rootReaders;
+        RawArray<LayoutRootReader>& readers = tree->rootReaders;
         for (uint32_t i = readers.count; i-- > 0;) {
             if (readers.data[i].replaced == node)
                 readers.erase(i);
@@ -1856,7 +1856,7 @@ struct Painter : LayoutWalkVisitor {
             ++stats->commandsRecorded;
             ++batched;
         };
-        Array<HighlightStretch>& stretches = highlightStretches;
+        RawArray<HighlightStretch>& stretches = highlightStretches;
         stretches.clear();
         // Only the ranges that reach the fragment matter, which keeps the cost of a long text's many lines in
         // proportion to its ranges.
@@ -1879,7 +1879,7 @@ struct Painter : LayoutWalkVisitor {
         }
         // The cuts along the line where a highlight starts or ends divide it into stretches of one color each. A
         // stretch is painted in the color of the last highlight that covers it, or in the text's own.
-        Array<float>& cuts = highlightCuts;
+        RawArray<float>& cuts = highlightCuts;
         cuts.clear();
         cuts.push(-kPrF32Infinity);
         for (uint32_t i = 0; i < stretches.count; ++i) {
@@ -2103,7 +2103,7 @@ void record(LayoutTree* tree, LayoutPaintChunk& chunk, const LayoutFragment* fra
         .current = layoutPaintOwn(kPaintScrollNone),
     };
     LayoutWalk<Painter> w{.tree = tree, .styles = tree->styles, .visitor = painter};
-    Array<LayoutNodeIndex> around;
+    RawArray<LayoutNodeIndex> around;
     layoutContainerChain(tree, layoutNodeContainer(tree, chunk.node), around);
     painter.startIn(around);
     around.reset();
@@ -2174,12 +2174,12 @@ bool sameRecording(const LayoutPaintChunk& a, const LayoutPaintChunk& b) {
     }
     bool same = true;
     for (uint32_t i = 0; i < a.segments.count && same; ++i) {
-        PrString x = prDrawListDump(a.segments.data[i].list);
-        PrString y = prDrawListDump(b.segments.data[i].list);
+        PrRawString x = prDrawListDump(a.segments.data[i].list);
+        PrRawString y = prDrawListDump(b.segments.data[i].list);
         same = a.segments.data[i].scroll == b.segments.data[i].scroll &&
-            a.segments.data[i].offset == b.segments.data[i].offset && prStringView(&x) == prStringView(&y);
-        prStringReset(&x);
-        prStringReset(&y);
+            a.segments.data[i].offset == b.segments.data[i].offset && prRawStringView(&x) == prRawStringView(&y);
+        prRawStringReset(&x);
+        prRawStringReset(&y);
     }
     return same;
 }

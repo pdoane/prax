@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/html_media_source.h"
 #include "pr/media_source.h"
+#include "pr/raw_array.h"
 
 #include "dom/src/dom_event.h"
 #include "html/src/html_media.h"
@@ -16,7 +16,7 @@ namespace pr_impl {
 
 // A SourceBufferList (media-source-2/#sourcebufferlist). It holds a reference to each of its buffers.
 struct HtmlSourceBufferList : DomPartTarget {
-    Array<PrHtmlSourceBuffer*> buffers;
+    RawArray<PrHtmlSourceBuffer*> buffers;
 };
 
 // What a SourceBuffer is doing between updatestart and updateend.
@@ -35,7 +35,7 @@ struct HtmlSourceBuffer : DomCountedTarget {
     PrMediaSourceBuffer* PR_NULLABLE buffer;
     HtmlSourceUpdate update;
     uint32_t updates;               // the number of updates started, so that a task of an aborted one does nothing
-    Array<uint8_t> input;           // the bytes of the append in progress
+    RawArray<uint8_t> input;        // the bytes of the append in progress
     double removeStart;
     double removeEnd;
     bool firstInit;                 // media-source-2/#dfn-first-initialization-segment-received-flag
@@ -74,10 +74,10 @@ bool htmlMediaSourceAttach(PrHtmlMediaSource* source, HtmlMedia* media);
 void htmlMediaSourceDetach(PrHtmlMediaSource* source);
 
 // Writes the ranges that the element has buffered (media-source-2/#htmlmediaelement-extensions-buffered).
-void htmlMediaSourceBuffered(const PrHtmlMediaSource* source, Array<PrMediaTimeRange>* out);
+void htmlMediaSourceBuffered(const PrHtmlMediaSource* source, RawArray<PrMediaTimeRange>* out);
 
 // Writes the ranges that the element can seek to (media-source-2/#htmlmediaelement-extensions-seekable).
-void htmlMediaSourceSeekable(const PrHtmlMediaSource* source, Array<PrMediaTimeRange>* out);
+void htmlMediaSourceSeekable(const PrHtmlMediaSource* source, RawArray<PrMediaTimeRange>* out);
 
 // Returns true if the source has ended, so that the element plays to the end of what is buffered.
 bool htmlMediaSourceHasEnded(const PrHtmlMediaSource* source);

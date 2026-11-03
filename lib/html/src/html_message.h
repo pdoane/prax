@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/html_message.h"
+#include "pr/raw_array.h"
 
 #include "dom/src/dom_event.h"
 
@@ -17,8 +17,8 @@ namespace pr_impl {
 
 // A message on its way: its serialized bytes, and the ports that it transfers, each with a reference.
 struct HtmlMessage {
-    PrString data;
-    Array<PrDomEventTarget* PR_NONNULL> ports;
+    PrRawString data;
+    RawArray<PrDomEventTarget* PR_NONNULL> ports;
 };
 
 // One end of a channel.
@@ -30,7 +30,7 @@ struct HtmlMessagePort : DomCountedTarget {
 
     // The port message queue (html/#port-message-queue), in the order the messages were posted. A started port queues
     // one task for each message, which takes the first message that remains.
-    Array<HtmlMessage> queue;
+    RawArray<HtmlMessage> queue;
     uint32_t queueHead;
 
     uint32_t scheduled;                     // the tasks that will deliver a message
@@ -43,7 +43,7 @@ void htmlMessageReset(HtmlMessage* message);
 
 // Fires a trusted message event at `target` (html/#messageevent). The event takes the message's bytes and ports, and
 // `origin`.
-void htmlFireMessage(PrDomEventTarget* target, HtmlMessage* message, PrString origin, PrHtmlWindow* PR_NULLABLE source);
+void htmlFireMessage(PrDomEventTarget* target, HtmlMessage* message, PrRawString origin, PrHtmlWindow* PR_NULLABLE source);
 
 } // namespace pr_impl
 

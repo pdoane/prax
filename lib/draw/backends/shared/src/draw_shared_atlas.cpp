@@ -9,7 +9,6 @@
 #include "pr/draw_shared_atlas.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/draw_glyph.h"
 #include "pr/draw_lower.h"
 #include "pr/float.h"
@@ -20,6 +19,7 @@
 #include "pr/path_polyline.h"
 #include "pr/path_rasterizer.h"
 #include "pr/path_stroke.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 namespace pr_impl {
@@ -45,7 +45,7 @@ struct Shelf {
 
 struct Page {
     uint8_t* texels;
-    Array<Shelf> shelves;
+    RawArray<Shelf> shelves;
     uint32_t top;               // the row where the next shelf starts
     uint64_t lastFound;         // the generation in which an entry on the page was last found
     uint32_t dirtyLeft;         // texels changed since they were last taken; empty if right <= left
@@ -113,8 +113,8 @@ struct DrawAtlas {
     uint64_t generation;        // advanced by prDrawAtlasNext
     uint64_t rasterizations;
     uint64_t clears;
-    Array<Page> pages;
-    Array<Entry> entries;
+    RawArray<Page> pages;
+    RawArray<Entry> entries;
     HashIndex entryIndex;
     PrPathRasterizer* rasterizer;
     PrPath* shape;
@@ -150,7 +150,7 @@ uint32_t addPage(DrawAtlas* a) {
     uint32_t size = a->options.size;
     Page page{};
     page.texels = static_cast<uint8_t*>(prMemoryAllocZeroed(size_t(size) * size));
-    page.shelves = Array<Shelf>{};
+    page.shelves = RawArray<Shelf>{};
     uint32_t index = a->pages.count;
     uint32_t solid = keptRows(a, index);
     for (uint32_t y = 0; y < solid; ++y)

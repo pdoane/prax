@@ -31,9 +31,9 @@ std::string textOf(PrHtmlPage* page, const char* id) {
     PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(document), id);
     if (element == nullptr)
         return "missing";
-    PrString text = prDomNodeTextContent(prDomElementAsNode(element));
-    std::string result(prStringView(&text).data, prStringView(&text).size);
-    prStringReset(&text);
+    PrRawString text = prDomNodeTextContent(prDomElementAsNode(element));
+    std::string result(prRawStringView(&text).data, prRawStringView(&text).size);
+    prRawStringReset(&text);
     return result;
 }
 
@@ -121,9 +121,9 @@ TEST_CASE("a byte order mark decides the charset and is not text") {
     CHECK(charsetOf(page) == "UTF-8");
     CHECK(textOf(page, "p") == "\xC3\xA9");
     PrDomElement* body = prDomDocumentBody(prHtmlWindowDocument(prHtmlPageWindow(page)));
-    PrString text = prDomNodeTextContent(prDomElementAsNode(body));
-    CHECK(prStringView(&text) == "\xC3\xA9");
-    prStringReset(&text);
+    PrRawString text = prDomNodeTextContent(prDomElementAsNode(body));
+    CHECK(prRawStringView(&text) == "\xC3\xA9");
+    prRawStringReset(&text);
     prHtmlPageDestroy(page);
 
     std::string utf16("\xFF\xFE<\0p\0 \0i\0d\0=\0p\0>\0\x30\x04", 20);

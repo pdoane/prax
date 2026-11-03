@@ -39,7 +39,7 @@ bool isUnchanging(const uint32_t* PR_NULLABLE codePoints, uint32_t count) {
     return true;
 }
 
-void appendDecomposition(Array<uint32_t>* out, uint32_t codePoint) {
+void appendDecomposition(RawArray<uint32_t>* out, uint32_t codePoint) {
     if (codePoint - kSyllableFirst < kSyllableCount) {
         uint32_t index = codePoint - kSyllableFirst;
         out->push(kLeadFirst + index / kSyllablesPerLead);
@@ -57,7 +57,7 @@ void appendDecomposition(Array<uint32_t>* out, uint32_t codePoint) {
 }
 
 // Sorts each run of non-starters by combining class, keeping the order of code points of the same class.
-void reorder(Array<uint32_t>* text) {
+void reorder(RawArray<uint32_t>* text) {
     for (uint32_t i = 1; i < text->count; ++i) {
         uint32_t codePoint = text->data[i];
         uint8_t combining = prUnicodeCombiningClass(codePoint);
@@ -88,7 +88,7 @@ bool composes(uint32_t first, uint32_t second, uint32_t* composite) {
 // Composes each code point that is not blocked from the last starter with it, in canonically ordered text. A code point
 // is blocked if a code point between them has a combining class of zero or of at least its own. In ordered text, the
 // last code point kept carries the highest class between them.
-void compose(Array<uint32_t>* text) {
+void compose(RawArray<uint32_t>* text) {
     uint32_t starter = kStarterNone;
     uint8_t lastCombining = 0;
     uint32_t kept = 0;
@@ -109,7 +109,7 @@ void compose(Array<uint32_t>* text) {
     text->count = kept;
 }
 
-void appendDecoded(Array<uint32_t>* out, PrStringView text) {
+void appendDecoded(RawArray<uint32_t>* out, PrStringView text) {
     for (size_t at = 0; at < text.size;) {
         uint32_t codePoint;
         at += prUtf8Decode(text, at, &codePoint);
@@ -119,10 +119,10 @@ void appendDecoded(Array<uint32_t>* out, PrStringView text) {
 
 } // namespace
 
-void unicodeNormalize(Array<uint32_t>* codePoints, PrUnicodeNormalForm form) {
+void unicodeNormalize(RawArray<uint32_t>* codePoints, PrUnicodeNormalForm form) {
     if (isUnchanging(codePoints->data, codePoints->count))
         return;
-    Array<uint32_t> normalized{};
+    RawArray<uint32_t> normalized{};
     for (uint32_t i = 0; i < codePoints->count; ++i)
         appendDecomposition(&normalized, codePoints->data[i]);
     reorder(&normalized);
@@ -135,7 +135,7 @@ void unicodeNormalize(Array<uint32_t>* codePoints, PrUnicodeNormalForm form) {
 bool unicodeIsNormalized(const uint32_t* PR_NULLABLE codePoints, uint32_t count, PrUnicodeNormalForm form) {
     if (isUnchanging(codePoints, count))
         return true;
-    Array<uint32_t> normalized{};
+    RawArray<uint32_t> normalized{};
     normalized.append(codePoints, count);
     unicodeNormalize(&normalized, form);
     bool same = normalized.count == count;
@@ -149,8 +149,8 @@ bool unicodeIsNormalized(const uint32_t* PR_NULLABLE codePoints, uint32_t count,
 
 using namespace pr_impl;
 
-PrString prUnicodeNormalize(PrStringView text, PrUnicodeNormalForm form) {
-    Array<uint32_t> codePoints{};
+PrRawString prUnicodeNormalize(PrStringView text, PrUnicodeNormalForm form) {
+    RawArray<uint32_t> codePoints{};
     appendDecoded(&codePoints, text);
     unicodeNormalize(&codePoints, form);
     PrTextBuffer out = {};
@@ -163,7 +163,7 @@ PrString prUnicodeNormalize(PrStringView text, PrUnicodeNormalForm form) {
 bool prUnicodeIsNormalized(PrStringView text, PrUnicodeNormalForm form) {
     if (prUtf8Validate(text) != text.size)
         return false;
-    Array<uint32_t> codePoints{};
+    RawArray<uint32_t> codePoints{};
     appendDecoded(&codePoints, text);
     bool normalized = unicodeIsNormalized(codePoints.data, codePoints.count, form);
     codePoints.reset();

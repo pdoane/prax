@@ -12,17 +12,17 @@ namespace {
 
 // The body and the MIME type of a data: URL, or "error" for a URL that does not decode.
 std::string processed(PrStringView url) {
-    PrString body{};
-    PrString type{};
+    PrRawString body{};
+    PrRawString type{};
     PrStatus status = prUrlProcessData(url, &body, &type);
     std::string result;
     if (status != PrStatus_Ok)
         result = "error";
     else
-        result = std::string(prStringView(&type).data, prStringView(&type).size) + "|" +
-            std::string(prStringView(&body).data, prStringView(&body).size);
-    prStringReset(&body);
-    prStringReset(&type);
+        result = std::string(prRawStringView(&type).data, prRawStringView(&type).size) + "|" +
+            std::string(prRawStringView(&body).data, prRawStringView(&body).size);
+    prRawStringReset(&body);
+    prRawStringReset(&type);
     return result;
 }
 

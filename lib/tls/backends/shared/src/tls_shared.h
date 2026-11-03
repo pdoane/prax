@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/net.h"
+#include "pr/raw_array.h"
 #include "pr/tls.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -56,9 +56,9 @@ struct TlsSharedSession : PrTlsSession {
     PrTlsFailure failure;
     PrTlsVersion version;
     PrStringView protocol;          // points into the engine's state, which lives as long as the session
-    Array<uint8_t> received;
+    RawArray<uint8_t> received;
     uint32_t receivedStart;
-    Array<uint8_t> unsent;
+    RawArray<uint8_t> unsent;
     uint32_t holds;
     bool finishing;
     bool finished;

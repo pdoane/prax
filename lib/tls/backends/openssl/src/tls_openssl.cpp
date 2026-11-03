@@ -3,9 +3,9 @@
 #include "pr/tls_openssl.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 #include "tls/backends/shared/src/tls_shared.h"
 
@@ -247,7 +247,7 @@ PrStatus configure(SSL* ssl, const PrTlsSessionDesc* desc) {
         return PrStatus_InvalidData;
     }
     if (desc->protocolCount != 0) {
-        Array<uint8_t> wire{};
+        RawArray<uint8_t> wire{};
         for (uint32_t i = 0; i < desc->protocolCount; ++i) {
             PrStringView protocol = desc->protocols[i];
             PR_ASSERT(protocol.size != 0 && protocol.size <= 255);

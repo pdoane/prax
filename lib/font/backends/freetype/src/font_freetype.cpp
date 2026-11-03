@@ -7,10 +7,10 @@
 #include "pr/font_freetype.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 
 #include "freetype/freetype.h"
 #include "freetype/ftmm.h"
@@ -46,7 +46,7 @@ struct FreeTypeHinter : PrFontHinter {
     PrMutex mutex;
     FT_MemoryRec_ memory;
     FT_Library library;
-    Array<Face*> faces;
+    RawArray<Face*> faces;
 };
 
 void* ftAlloc(FT_Memory, long size) {
@@ -87,7 +87,7 @@ Face* faceOf(FreeTypeHinter* hinter, const PrFont* font) {
     }
     uint32_t axes = prFontAxisCount(font);
     if (axes != 0 && FT_HAS_MULTIPLE_MASTERS(face->face)) {
-        Array<FT_Fixed> coords;
+        RawArray<FT_Fixed> coords;
         for (uint32_t i = 0; i < axes; ++i)
             coords.push(FT_Fixed(prF32Round(prFontAxisValue(font, i) * 65536)));
         FT_Set_Var_Design_Coordinates(face->face, coords.count, coords.data);

@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/draw_list.h"
 #include "pr/draw_lower.h"
 #include "pr/draw_renderer.h"
 #include "pr/hash_index.h"
 #include "pr/path_measure.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -137,12 +137,12 @@ struct CpuTexture {
     bool fromList;              // true if it holds what a list draws instead of an image's texels
     bool ready;                 // List: true if it was rendered in this render
     uint64_t lastUsed;          // the render that last used the texture
-    Array<CpuTextureLevel> levels;
+    RawArray<CpuTextureLevel> levels;
 };
 
 // Textures kept between renders, and dropped when a render does not use them.
 struct CpuTextureCache {
-    Array<CpuTexture*> textures;
+    RawArray<CpuTexture*> textures;
     KeyIndex images;            // the textures of images, by image id
     uint64_t render;
 };

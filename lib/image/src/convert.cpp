@@ -1,12 +1,12 @@
 #include "image/src/convert.h"
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/color_profile.h"
 #include "pr/color_space.h"
 #include "pr/float.h"
 #include "pr/float16.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 namespace {
@@ -213,7 +213,7 @@ struct ProfileConversion {
     PrColorSpace space;
     uint32_t channels;
     uint32_t points;            // grid points along each input, or 0 to convert directly
-    Array<float> table;         // three channels for each grid point, the first input varying slowest
+    RawArray<float> table;      // three channels for each grid point, the first input varying slowest
 
     void direct(const double* in, double out[3]) const {
         double xyz[3];

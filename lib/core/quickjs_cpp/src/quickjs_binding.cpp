@@ -200,20 +200,20 @@ struct FixedStrings {
 struct JsWrappers {
     WrapperTable table;
     FixedStrings fixed;
-    Array<JsClassRecord> classes;     // for each class id
-    Array<JsRuntimeEntry> data;
-    JsCallback* PR_NULLABLE callbacks;    // every callback alive
-    Array<JSContext* PR_NONNULL> realms;  // entered, innermost last
+    RawArray<JsClassRecord> classes;     // for each class id
+    RawArray<JsRuntimeEntry> data;
+    JsCallback* PR_NULLABLE callbacks;      // every callback alive
+    RawArray<JSContext* PR_NONNULL> realms; // entered, innermost last
     const JsMemberScope* PR_NULLABLE scope;
     void* PR_NULLABLE scopeContext;
-    Array<void*> pending;                 // handles pinned with no object, once for each pin
+    RawArray<void*> pending;                 // handles pinned with no object, once for each pin
 
     // The objects whose last pin was removed during a member call. Each holds itself until the outermost call returns.
-    Array<JSValue> unpinned;
+    RawArray<JSValue> unpinned;
 
     uint32_t members;                     // the number of member calls running
-    Array<JsHeld> held;                   // the values that running calls hold, innermost last
-    Array<uint32_t> calls;                // the start of each call's entries in `held`, innermost last
+    RawArray<JsHeld> held;                // the values that running calls hold, innermost last
+    RawArray<uint32_t> calls;             // the start of each call's entries in `held`, innermost last
     bool destroying;                      // the runtime is being freed, and pins keep no objects alive
 };
 
@@ -352,7 +352,7 @@ void objectState(JSRuntime* runtime, JSValueConst object) {
 
 // Returns the entry stored under `name`. Names are compared by address first, since a name is usually the same literal.
 template <typename Named>
-Named* PR_NULLABLE findNamed(Array<Named>* held, const char* name) {
+Named* PR_NULLABLE findNamed(RawArray<Named>* held, const char* name) {
     for (uint32_t i = 0; i < held->count; ++i) {
         if (held->data[i].name == name)
             return &held->data[i];
@@ -371,8 +371,8 @@ Named* PR_NULLABLE findNamed(Array<Named>* held, const char* name) {
 }
 
 template <typename Named>
-const Named* PR_NULLABLE findNamed(const Array<Named>* held, const char* name) {
-    return findNamed(const_cast<Array<Named>*>(held), name);
+const Named* PR_NULLABLE findNamed(const RawArray<Named>* held, const char* name) {
+    return findNamed(const_cast<RawArray<Named>*>(held), name);
 }
 
 // Returns the object's rarely used data, which is created if `make` is set.
@@ -421,7 +421,7 @@ void jsCallLeave(JSContext* ctx) {
             case JsHeldKind_CString: JS_FreeCString(ctx, held.cstring); break;
             case JsHeldKind_Bytes: prMemoryFree(held.bytes); break;
             case JsHeldKind_Value: JS_FreeValue(ctx, held.value); break;
-            case JsHeldKind_String: prStringReset(&held.string); break;
+            case JsHeldKind_String: prRawStringReset(&held.string); break;
             case JsHeldKind_Custom: held.custom.release(ctx, held.custom.data); break;
             default: break;
         }
@@ -446,7 +446,7 @@ uint32_t jsHoldBytes(JSContext* ctx, void* PR_NULLABLE bytes) {
     return jsHold(ctx, held);
 }
 
-uint32_t jsHoldString(JSContext* ctx, PrString string) {
+uint32_t jsHoldString(JSContext* ctx, PrRawString string) {
     JsHeld held = {};
     held.kind = JsHeldKind_String;
     held.string = string;
@@ -564,7 +564,7 @@ void jsRuntimeDestroy(JSRuntime* PR_NULLABLE runtime) {
     // Freeing a value runs finalizers that release other callbacks, so every value is removed from the list before any
     // is freed. A callback that native code still holds outlives the runtime, detached. Its release frees only the
     // callback.
-    Array<JSValue> values;
+    RawArray<JSValue> values;
     for (JsCallback* callback = wrappers->callbacks; callback != nullptr;) {
         JsCallback* next = callback->next;
         values.push(callback->value);
@@ -782,7 +782,7 @@ void jsSetReference(JSContext* ctx, JSValueConst object, uint32_t index, JSValue
         return;
     if (!JS_IsUndefined(value))
         becomeStateful(JS_GetRuntime(ctx), wrapperOf(object));
-    Array<JSValue>& references = extra->references;
+    RawArray<JSValue>& references = extra->references;
     while (references.count <= index)
         references.push(JS_UNDEFINED);
     JSValue previous = references.data[index];
@@ -798,13 +798,13 @@ JSValue jsReference(JSContext* ctx, JSValueConst object, uint32_t index) {
     return JS_DupValue(ctx, extra->references.data[index]);
 }
 
-JSValue jsNewString(JSContext* ctx, const PrString* text) {
-    return jsNewStringView(ctx, prStringView(text));
+JSValue jsNewString(JSContext* ctx, const PrRawString* text) {
+    return jsNewStringView(ctx, prRawStringView(text));
 }
 
-JSValue jsTakeString(JSContext* ctx, PrString text) {
+JSValue jsTakeString(JSContext* ctx, PrRawString text) {
     JSValue value = jsNewString(ctx, &text);
-    prStringReset(&text);
+    prRawStringReset(&text);
     return value;
 }
 
@@ -963,7 +963,7 @@ JSValue jsIllegalConstructor(JSContext* ctx, JSValueConst, int, JSValueConst* PR
 
 JSValue jsNewFloatArray(JSContext* ctx, JSTypedArrayEnum type, const double* values, uint32_t count) {
     PR_ASSERT(type == JS_TYPED_ARRAY_FLOAT32 || type == JS_TYPED_ARRAY_FLOAT64);
-    Array<uint8_t> bytes;
+    RawArray<uint8_t> bytes;
     if (type == JS_TYPED_ARRAY_FLOAT32) {
         bytes.reserve(count * uint32_t(sizeof(float)));
         for (uint32_t i = 0; i < count; ++i) {

@@ -3,8 +3,8 @@
 
 #include "pr/unicode_bidi.h"
 
-#include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/raw_array.h"
 #include "pr/utf8.h"
 
 namespace pr_impl {
@@ -82,19 +82,19 @@ struct Paragraph {
     const uint32_t* PR_NULLABLE codePoints;
     uint8_t* levels;
     uint8_t level;
-    Array<PrUnicodeBidiClass> types;        // the type of each character, as the rules resolve it
-    Array<uint32_t> kept;                   // the characters that X9 keeps, in order
-    Array<uint8_t> embedding;               // the explicit level of each kept character
+    RawArray<PrUnicodeBidiClass> types;        // the type of each character, as the rules resolve it
+    RawArray<uint32_t> kept;                   // the characters that X9 keeps, in order
+    RawArray<uint8_t> embedding;               // the explicit level of each kept character
 
     // For each kept character, the index in `kept` of its matching PDI or isolate initiator, or kArrayMissing.
-    Array<uint32_t> matching;
+    RawArray<uint32_t> matching;
 
-    Array<uint32_t> runStarts;              // the level runs, as the index in `kept` where each starts
-    Array<uint32_t> runOf;                  // for each kept character, its level run
-    Array<uint32_t> sequence;               // an isolating run sequence, as indices of `kept`
-    Array<uint32_t> openers;                // N0's stack, as positions in `sequence`
-    Array<uint32_t> openerKeys;
-    Array<uint32_t> pairs;                  // N0's pairs, opener then closer, by opener
+    RawArray<uint32_t> runStarts;              // the level runs, as the index in `kept` where each starts
+    RawArray<uint32_t> runOf;                  // for each kept character, its level run
+    RawArray<uint32_t> sequence;               // an isolating run sequence, as indices of `kept`
+    RawArray<uint32_t> openers;                // N0's stack, as positions in `sequence`
+    RawArray<uint32_t> openerKeys;
+    RawArray<uint32_t> pairs;                  // N0's pairs, opener then closer, by opener
 };
 
 // Computes the explicit levels and directions (X1 through X8) into `p.levels` and `p.types`.
@@ -528,7 +528,7 @@ void prUnicodeBidiReorder(const uint8_t* levels, uint32_t count, uint32_t* order
             break;
         }
     }
-    Array<uint8_t> effective;
+    RawArray<uint8_t> effective;
     uint8_t highest = 0;
     uint8_t lowestOdd = kPrUnicodeBidiMaxDepth + 2;
     uint8_t previous = first;

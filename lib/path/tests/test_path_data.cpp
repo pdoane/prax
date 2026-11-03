@@ -151,22 +151,22 @@ TEST_CASE("each command's vertex has the path's directions through its segment")
 TEST_CASE("path data written from commands reads back as the same commands") {
     PrPathDataCommand commands[8];
     uint32_t count = prPathDataParse("m 10 20 l 40 50 z l 40 60 z t 70 130", commands, 8);
-    PrString text = prStringNull();
+    PrRawString text = prRawStringNull();
     prPathDataWrite(commands, count, &text);
-    CHECK(prStringView(&text) == "m 10 20 l 40 50 Z l 40 60 Z t 70 130");
+    CHECK(prRawStringView(&text) == "m 10 20 l 40 50 Z l 40 60 Z t 70 130");
 
     // In absolute coordinates, a closepath returns to the start of its subpath.
     prPathDataMakeAbsolute(commands, count);
-    prStringReplace(&text, "");
+    prRawStringReplace(&text, "");
     prPathDataWrite(commands, count, &text);
-    CHECK(prStringView(&text) == "M 10 20 L 50 70 Z L 50 80 Z T 80 150");
+    CHECK(prRawStringView(&text) == "M 10 20 L 50 70 Z L 50 80 Z T 80 150");
 
     // Numbers take the fewest digits that read back to them, and a flag above zero is 1.
     count = prPathDataParse("M 0.1 -2.5e-3 A 1 2 3 1 0 4 5", commands, 8);
     commands[1].arguments[3] = 0.25f;
     commands[1].arguments[4] = -1;
-    prStringReplace(&text, "");
+    prRawStringReplace(&text, "");
     prPathDataWrite(commands, count, &text);
-    CHECK(prStringView(&text) == "M 0.1 -0.0025 A 1 2 3 1 0 4 5");
-    prStringReset(&text);
+    CHECK(prRawStringView(&text) == "M 0.1 -0.0025 A 1 2 3 1 0 4 5");
+    prRawStringReset(&text);
 }

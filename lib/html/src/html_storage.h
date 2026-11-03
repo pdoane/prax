@@ -5,8 +5,8 @@
 #pragma once
 
 #include "pr/html_storage.h"
+#include "pr/raw_string.h"
 #include "pr/storage.h"
-#include "pr/string.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -16,7 +16,7 @@ namespace pr_impl {
 // window's document when the area was last asked for. A new document of another origin finds its own area.
 struct HtmlStorage {
     PrHtmlStorageProvider* PR_NULLABLE provider;
-    PrString origin;
+    PrRawString origin;
     PrStorage* PR_NULLABLE area;
 };
 

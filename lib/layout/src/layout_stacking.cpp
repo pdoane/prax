@@ -18,7 +18,7 @@ namespace {
 // in tree order: `node` if it paints whole, and the boxes inside it unless it makes a stacking context of its own. A
 // node absent from the final tree, and everything it holds, contributes none (layoutIsAbsent). A fresh search also
 // visits the nodes that do not lead to a box that paints whole.
-void collect(const LayoutTree* tree, LayoutNodeIndex node, bool fresh, Array<LayoutStackedBox>& out) {
+void collect(const LayoutTree* tree, LayoutNodeIndex node, bool fresh, RawArray<LayoutStackedBox>& out) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     if ((!fresh && !n.leadsWhole) || n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak ||
             layoutIsAbsent(tree, node))
@@ -38,12 +38,12 @@ struct FoundBox {
 };
 
 // Sets `out` to the list of the stacking context `context`, found from the box tree.
-void findList(const LayoutTree* tree, LayoutNodeIndex context, bool fresh, Array<LayoutStackedBox>& out, uint32_t* zero) {
+void findList(const LayoutTree* tree, LayoutNodeIndex context, bool fresh, RawArray<LayoutStackedBox>& out, uint32_t* zero) {
     out.clear();
     for (LayoutNodeIndex child = layoutTreeNode(tree, context).first; child != kPrLayoutNodeNone;
             child = layoutTreeNode(tree, child).next)
         collect(tree, child, fresh, out);
-    Array<FoundBox> found;
+    RawArray<FoundBox> found;
     for (uint32_t i = 0; i < out.count; ++i)
         found.push(FoundBox{out.data[i], i});
     sortItems(found.data, found.count, [](const FoundBox& a, const FoundBox& b) {
@@ -280,7 +280,7 @@ void layoutStackingReset(LayoutStacking& stacking) {
 
 uint32_t layoutStackingVerify(const LayoutTree* tree) {
     const LayoutStacking& stacking = tree->stacking;
-    Array<LayoutStackedBox> boxes;
+    RawArray<LayoutStackedBox> boxes;
     LayoutNodeIndex differs = kPrLayoutNodeNone;
     for (uint32_t i = 0; i < stacking.lists.count && differs == kPrLayoutNodeNone; ++i) {
         const LayoutStackingList& list = stacking.lists.data[i];

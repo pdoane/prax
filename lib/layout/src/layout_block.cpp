@@ -579,7 +579,7 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
     // Building it lays out the boxes out of flow that the box holds, in the fallback that its content is given, so
     // their reads are the box's own. A measurement builds no fragment. The run of an anonymous item holds no box out of
     // flow, because a box out of flow ends a run.
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     uint32_t mark = children.count;
     Content content{};
     LayoutFragment* fragment = nullptr;
@@ -993,7 +993,7 @@ const LayoutFragment* layoutViewport(LayoutState& state, uint32_t root, PrLayout
     PrLayoutVec at = layoutPhysicalOffset(mode, offset + layoutRelativeOffset(state.styles, box, space), size, initial);
     // Holds the boxes out of flow that no box in the root holds, after the root: absolutely positioned boxes in the
     // initial containing block, and fixed boxes in the viewport (css-position-3/#def-cb).
-    Array<LayoutChild> held;
+    RawArray<LayoutChild> held;
     layoutViewportHold(state, result.fragment, at, extent, mode, held);
     LayoutFragment* viewport = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, 1 + held.count);
     viewport->extent = extent;

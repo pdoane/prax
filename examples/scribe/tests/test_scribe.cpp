@@ -363,9 +363,9 @@ TEST_CASE("Save waits for the load to finish") {
     std::string program;
     while (program.size() < (1u << 20))
         program += "int value = 1;\n";
-    PrString cache = prFileCacheDirectory();
-    std::string folder = std::string(prStringView(&cache).data, prStringView(&cache).size) + "/prax-tests/scribe";
-    prStringReset(&cache);
+    PrRawString cache = prFileCacheDirectory();
+    std::string folder = std::string(prRawStringView(&cache).data, prRawStringView(&cache).size) + "/prax-tests/scribe";
+    prRawStringReset(&cache);
     REQUIRE(prFileCreateDirectory(folder));
     std::string path = folder + "/big.c";
     REQUIRE(prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(program.data()), program.size()}));

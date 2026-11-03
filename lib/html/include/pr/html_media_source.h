@@ -12,8 +12,8 @@
 #include "pr/dom.h"
 #include "pr/html.h"
 #include "pr/media_source.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -65,7 +65,7 @@ bool prHtmlMediaSourceIsTypeSupported(const PrHtmlWindow* window, PrStringView t
 
 // Creates a blob URL that names the media source, for the window's origin, which lasts until it is revoked or the
 // window closes (media-source-2/#mediasource-object-url). No fetch reads it.
-PrString prHtmlMediaSourceUrlCreate(PrHtmlWindow* window, PrHtmlMediaSource* source);
+PrRawString prHtmlMediaSourceUrlCreate(PrHtmlWindow* window, PrHtmlMediaSource* source);
 
 // The source's state: closed until an element attaches it, open while script appends, and ended once script says that
 // it has appended everything (media-source-2/#dom-mediasource-readystate).

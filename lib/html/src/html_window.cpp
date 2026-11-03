@@ -256,7 +256,7 @@ struct IdleTimeout {
 double idleCap(const PrHtmlWindow* window, double deadline);
 
 // Removes the request `handle` from `list` and writes it to `out`. Returns false if the list does not hold it.
-bool takeIdleRequest(Array<HtmlIdleRequest>* list, uint32_t handle, HtmlIdleRequest* out) {
+bool takeIdleRequest(RawArray<HtmlIdleRequest>* list, uint32_t handle, HtmlIdleRequest* out) {
     for (uint32_t i = 0; i < list->count; ++i) {
         if (list->data[i].handle == handle) {
             *out = list->data[i];
@@ -420,9 +420,9 @@ void freeWindow(DomCountedTarget* target) {
 // share an origin even if it is opaque, whose serialization does not distinguish one from another.
 const PrHtmlWindow* originSource(const PrHtmlWindow* window) {
     while (window->parent != nullptr) {
-        PrString href = prUrlSerialize(window->document->url, PrUrlSerialization_ExcludeFragment);
-        bool inherits = prStringView(&href) == "about:blank" || prStringView(&href) == "about:srcdoc";
-        prStringReset(&href);
+        PrRawString href = prUrlSerialize(window->document->url, PrUrlSerialization_ExcludeFragment);
+        bool inherits = prRawStringView(&href) == "about:blank" || prRawStringView(&href) == "about:srcdoc";
+        prRawStringReset(&href);
         if (!inherits)
             break;
         window = window->parent;
@@ -565,13 +565,14 @@ void htmlWindowBackdateClock(PrHtmlWindow* window, double elapsed) {
 void htmlWindowRevokeObjectUrls(PrHtmlWindow* window) {
     htmlMediaSourceUrlsReset(window);
     PrHtmlPage* page = htmlDocumentPage(window->document);
-    PrString origin = htmlWindowOrigin(window);
+    PrRawString origin = htmlWindowOrigin(window);
     for (uint32_t i = 0; i < window->objectUrls.count; ++i) {
+        PrStringView url = prRawStringView(&window->objectUrls.data[i]);
         if (page != nullptr && page->host.fetcher != nullptr)
-            prFetchBlobUrlRevoke(page->host.fetcher, prStringView(&window->objectUrls.data[i]), prStringView(&origin));
-        prStringReset(&window->objectUrls.data[i]);
+            prFetchBlobUrlRevoke(page->host.fetcher, url, prRawStringView(&origin));
+        prRawStringReset(&window->objectUrls.data[i]);
     }
-    prStringReset(&origin);
+    prRawStringReset(&origin);
     window->objectUrls.reset();
 }
 
@@ -594,18 +595,18 @@ void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* da
     window->delayingTasks += delaysLoad ? 1 : 0;
 }
 
-PrString htmlWindowOrigin(const PrHtmlWindow* window) {
+PrRawString htmlWindowOrigin(const PrHtmlWindow* window) {
     return prUrlOrigin(originSource(window)->document->url);
 }
 
 bool htmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b) {
     if (originSource(a) == originSource(b))
         return true;
-    PrString originA = htmlWindowOrigin(a);
-    PrString originB = htmlWindowOrigin(b);
-    bool same = prStringView(&originA) == prStringView(&originB) && prStringView(&originA) != "null";
-    prStringReset(&originA);
-    prStringReset(&originB);
+    PrRawString originA = htmlWindowOrigin(a);
+    PrRawString originB = htmlWindowOrigin(b);
+    bool same = prRawStringView(&originA) == prRawStringView(&originB) && prRawStringView(&originA) != "null";
+    prRawStringReset(&originA);
+    prRawStringReset(&originB);
     return same;
 }
 
@@ -831,7 +832,7 @@ PrDomElement* PR_NULLABLE htmlWindowNamedObject(PrHtmlWindow* window, PrStringVi
             case PrDomTag_Img:
             case PrDomTag_Object: {
                 const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "name");
-                if (attribute != nullptr && prStringView(&attribute->value) == name)
+                if (attribute != nullptr && prRawStringView(&attribute->value) == name)
                     return element;
                 break;
             }
@@ -880,14 +881,15 @@ void htmlWindowFollowHyperlink(PrHtmlWindow* window, PrDomElement* element) {
     PrStatus status = domDocumentParseUrl(document, href, &url);
     if (status != PrStatus_Ok)
         return;
-    PrString text = prUrlSerialize(url, PrUrlSerialization_Whole);
+    PrRawString text = prUrlSerialize(url, PrUrlSerialization_Whole);
     prUrlDestroy(url);
     PrHtmlWindow* target = htmlPageChooseTarget(window, hyperlinkTarget(document, element));
     if (target != nullptr)
-        prHtmlWindowSetLocation(target, window, PrUrlComponent_Href, prStringView(&text), PrHtmlHistoryHandling_Push);
+        prHtmlWindowSetLocation(target, window, PrUrlComponent_Href, prRawStringView(&text),
+            PrHtmlHistoryHandling_Push);
     else
-        htmlPageOpenWindow(window, prStringView(&text));
-    prStringReset(&text);
+        htmlPageOpenWindow(window, prRawStringView(&text));
+    prRawStringReset(&text);
 }
 
 } // namespace pr_impl

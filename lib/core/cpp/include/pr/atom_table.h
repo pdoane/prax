@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -35,11 +35,11 @@ struct AtomSlot {
 // A table of atoms. An atom stays valid as long as the table holds it. The table only adds atoms, and clearing it
 // forgets every atom at once. Text is stored in pages of kAtomPageSize bytes, so the text of an atom never moves.
 struct AtomTable {
-    Array<AtomEntry> atoms;             // by atom
+    RawArray<AtomEntry> atoms;             // by atom
     AtomSlot* PR_NULLABLE slots;
     uint32_t mask;                      // the number of slots minus one, or zero if there are no slots
-    Array<char* PR_NONNULL> pages;      // each kAtomPageSize bytes, of which the first `page` are full
-    Array<char* PR_NONNULL> large;      // the texts longer than a page
+    RawArray<char* PR_NONNULL> pages;   // each kAtomPageSize bytes, of which the first `page` are full
+    RawArray<char* PR_NONNULL> large;   // the texts longer than a page
     uint32_t page;                      // the page being filled, or `pages.count` if there is none
     uint32_t used;                      // the number of bytes filled in the page being filled
     uint32_t largeBytes;                // the total size in bytes of the texts longer than a page

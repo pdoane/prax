@@ -5,15 +5,15 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/dom.h"
 #include "pr/fetch.h"
 #include "pr/html_page.h"
 #include "pr/markdown.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 #include "pr/vec.h"
@@ -34,8 +34,8 @@ struct SvgPresentation;
 
 // A header of a request or a response that a fetch keeps.
 struct HtmlFetchHeader {
-    PrString name;
-    PrString value;
+    PrRawString name;
+    PrRawString value;
 };
 
 // A fetch that a browsing context runs through its host's fetcher. The agent's thread makes it and uses its response.
@@ -66,16 +66,16 @@ struct HtmlFetch {
     // The request, which the agent's thread writes before it posts the fetch to the loop.
     PrDomAgent* agent;
     PrFetchNetwork* PR_NULLABLE fetcher; // null for a fetch that the browsing context answers itself
-    PrString url;
-    PrString origin;
-    PrString referrer;
+    PrRawString url;
+    PrRawString origin;
+    PrRawString referrer;
     PrFetchMode mode;
     PrFetchCredentials credentials;
     PrFetchRedirect redirect;
     PrFetchReferrerPolicy referrerPolicy;
-    PrString method;            // the null string for GET
-    Array<HtmlFetchHeader> requestHeaders;
-    Array<uint8_t> requestBody;
+    PrRawString method;            // the null string for GET
+    RawArray<HtmlFetchHeader> requestHeaders;
+    RawArray<uint8_t> requestBody;
 
     // The loop's side: the fetch while it runs, and the response, which the agent's thread reads once it is posted.
     PrFetch* PR_NULLABLE fetch;
@@ -83,15 +83,15 @@ struct HtmlFetch {
     PrStatus status;            // Ok for a response, or the status of a network error
     uint16_t responseStatus;    // the response's status, or 0 for a network error
     PrFetchResponseType responseType;
-    Array<uint8_t> body;
-    PrString contentType;
-    PrString contentLanguage;
-    PrString responseUrl;                   // the response's URL, after the redirects that the fetch followed
-    Array<HtmlFetchHeader> responseHeaders; // a script's fetch's, unfiltered
-    PrString contentEncoding;
-    PrString serverTiming;
-    PrString sentReferrer;
-    PrString responseReferrerPolicy;        // the Referrer-Policy headers joined by commas
+    RawArray<uint8_t> body;
+    PrRawString contentType;
+    PrRawString contentLanguage;
+    PrRawString responseUrl;                   // the response's URL, after the redirects that the fetch followed
+    RawArray<HtmlFetchHeader> responseHeaders; // a script's fetch's, unfiltered
+    PrRawString contentEncoding;
+    PrRawString serverTiming;
+    PrRawString sentReferrer;
+    PrRawString responseReferrerPolicy;        // the Referrer-Policy headers joined by commas
     PrFetchTiming timing;
     PrNetError error;
 
@@ -114,23 +114,23 @@ struct HtmlDocumentLoad {
     HtmlFetchAnchor anchor;
     PrFetchTiming timing;
     uint16_t responseStatus;
-    PrString contentType;
-    PrString contentEncoding;
-    PrString serverTiming;
+    PrRawString contentType;
+    PrRawString contentEncoding;
+    PrRawString serverTiming;
 
     // The referrer that the navigation sends, and its policy, and what the fetch sent once its policy applied.
-    PrString referrer;
+    PrRawString referrer;
     PrFetchReferrerPolicy referrerPolicy;
-    PrString sentReferrer;
+    PrRawString sentReferrer;
 
     PrHtmlPage* PR_NULLABLE page;           // the agent's side: null once the page no longer waits for the load
     PrDomAgent* agent;
     PrFetchNetwork* fetcher;
-    PrString url;                           // as the navigation asked for it, with its fragment
+    PrRawString url;                           // as the navigation asked for it, with its fragment
 
     // The serialized origin of the document that started the navigation, which the fetch is from, or the null string
     // for a navigation that the user started, whose fetch has no client.
-    PrString origin;
+    PrRawString origin;
 
     PrFetch* PR_NULLABLE fetch;             // the loop's side, while the fetch runs
     bool loopDone;                          // true once the fetch ended on the loop, or was cancelled there
@@ -144,8 +144,8 @@ struct HtmlDocumentLoad {
 // An image that the document fetched and decoded (html/#list-of-available-images): the URL that it was fetched at,
 // without its fragment, and its bytes.
 struct HtmlAvailableImage {
-    PrString url;
-    PrString bytes;
+    PrRawString url;
+    PrRawString bytes;
 };
 
 // A module of a window's module map (html/#module-map), by its index in the browsing context's modules.
@@ -162,7 +162,7 @@ typedef uint8_t HtmlModuleState;
 // A module of the module map, or an inline module script's module, which the map does not key. Once parsed, the module
 // names the modules that it imports, each of which the map holds.
 struct HtmlModule {
-    PrString url;                       // the key, or the null string for an inline module script's
+    PrRawString url;                       // the key, or the null string for an inline module script's
     HtmlModuleState state;
     PrFetchCredentials credentials;     // the credentials mode of its fetch, which its imports' fetches take
     uint32_t record;                    // the host's number for the parsed module (PrHtmlScript::module)
@@ -198,7 +198,7 @@ struct HtmlPage {
                                                   // tasks
     HtmlFetch* PR_NULLABLE fetches;               // the fetches that it waits for, newest first
     const HtmlFetch* PR_NULLABLE completingFetch; // the fetch whose callback is running
-    PrString nextReferrer;                        // what the next startNavigation sends, or the null string for none
+    PrRawString nextReferrer;                     // what the next startNavigation sends, or the null string for none
     PrFetchReferrerPolicy nextReferrerPolicy;
     HtmlDocumentLoad* PR_NULLABLE documentLoad;   // the navigation's fetch of its next document (prHtmlPageNavigate)
 
@@ -208,21 +208,21 @@ struct HtmlPage {
     uint32_t delayingFetches;         // the number of those fetches that its document's load event waits for
 
     // html/#list-of-scripts-that-will-execute-when-the-document-has-finished-parsing
-    Array<PreparedScript* PR_NONNULL> deferred;
+    RawArray<PreparedScript* PR_NONNULL> deferred;
 
-    Array<PreparedScript* PR_NONNULL> soon;   // html/#set-of-scripts-that-will-execute-as-soon-as-possible
+    RawArray<PreparedScript* PR_NONNULL> soon;   // html/#set-of-scripts-that-will-execute-as-soon-as-possible
 
     // html/#list-of-scripts-that-will-execute-in-order-as-soon-as-possible
-    Array<PreparedScript* PR_NONNULL> inOrder;
+    RawArray<PreparedScript* PR_NONNULL> inOrder;
     PreparedScript* PR_NULLABLE blocking;     // html/#pending-parsing-blocking-script
     bool advanceQueued;                       // true if a task to run what has become ready is queued
 
     // The window's module map, the modules that each module imports, and the graphs that wait to be fetched. A task
     // settles the waits whose graphs a fetch completed (modulesQueued), so that no import() completes during the call
     // that asked for it.
-    Array<HtmlModule> modules;
-    Array<HtmlModuleIndex> moduleRequests;
-    Array<HtmlModuleWait> moduleWaits;
+    RawArray<HtmlModule> modules;
+    RawArray<HtmlModuleIndex> moduleRequests;
+    RawArray<HtmlModuleWait> moduleWaits;
     bool modulesQueued;
 
     // True if the parse has stopped and the end (html/#the-end) is waiting for deferred scripts or for whatever delays
@@ -244,7 +244,7 @@ struct HtmlPage {
     uint32_t navigations;       // the ids that navigations have taken
 
     // The target name (html/#nav-target). An iframe's page takes it from the iframe's name attribute.
-    PrString targetName;
+    PrRawString targetName;
 
     bool settleAtEnd;           // true if the end calls the host's settle hook
     PrStatus endStatus;         // the failure of a script, which ends the load
@@ -297,7 +297,7 @@ struct HtmlPage {
     PrMarkdownOptions markdownOptions;
 
     // The browsing contexts of its iframes, current and discarded. The context owns them.
-    Array<PrHtmlPage* PR_NONNULL> children;
+    RawArray<PrHtmlPage* PR_NONNULL> children;
 
     PrCssPresentation* PR_NULLABLE presentation;    // the window document's presentation, if the host gives fonts
     SvgPresentation* PR_NULLABLE svg;               // what lib/svg keeps for the presentation
@@ -313,11 +313,11 @@ struct HtmlPage {
     // is laid out in. A frame's is its iframe's content box once the parent lays the iframe out.
     PrVec2 viewport;
 
-    Array<HtmlElementEvent> elementEvents;     // events for its document's embedded content, in the order queued
-    Array<HtmlAvailableImage> availableImages; // the images of its document that an img shows at once
-    bool ownsAgent;                            // true if the context owns its window's agent and destroys it with
-                                               // itself
-    bool ownsHistory;                          // true if the context owns its window's session history
+    RawArray<HtmlElementEvent> elementEvents;     // events for its document's embedded content, in the order queued
+    RawArray<HtmlAvailableImage> availableImages; // the images of its document that an img shows at once
+    bool ownsAgent;                               // true if the context owns its window's agent and destroys it with
+                                                  // itself
+    bool ownsHistory;                             // true if the context owns its window's session history
 };
 
 // The dynamic markup insertion methods of a document (html/#dynamic-markup-insertion), which its browsing context
@@ -329,7 +329,7 @@ PrStatus htmlDocumentClose(PrDomDocument* document);
 
 // Appends to `out` the browsing contexts of the iframes of the context's window that show their content, in the order
 // in which the window holds them.
-void htmlPageFrames(PrHtmlPage* page, Array<PrHtmlPage*>* out);
+void htmlPageFrames(PrHtmlPage* page, RawArray<PrHtmlPage*>* out);
 
 // Returns the browsing context whose current document is `document`, or null for any other document.
 PrHtmlPage* PR_NULLABLE htmlDocumentPage(const PrDomDocument* document);

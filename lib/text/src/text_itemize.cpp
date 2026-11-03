@@ -9,11 +9,11 @@
 #include "pr/text_itemize.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/locale_common.h"
 #include "pr/locale_full.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/unicode.h"
 #include "pr/unicode_bidi.h"
 #include "pr/unicode_grapheme.h"
@@ -25,23 +25,23 @@ namespace {
 constexpr uint32_t kNone = 0xffffffffu;
 
 struct TextItems {
-    Array<uint8_t> levels;
-    Array<PrTextParagraph> paragraphs;
-    Array<uint8_t> marks;
-    Array<PrScript> scripts;
-    Array<bool> upright;
-    Array<PrTextItemRun> runs;
+    RawArray<uint8_t> levels;
+    RawArray<PrTextParagraph> paragraphs;
+    RawArray<uint8_t> marks;
+    RawArray<PrScript> scripts;
+    RawArray<bool> upright;
+    RawArray<PrTextItemRun> runs;
     bool leveled;
 
     // Scratch.
-    Array<uint32_t> brackets;           // pairs: the key of a bracket and the byte at which it opened
-    Array<PrUnicodeBidiClass> classes;
-    Array<uint32_t> codePoints;
-    Array<uint32_t> bytes;              // for each class, the byte of its character, or kNone for a control
-    Array<uint32_t> markOf;             // for each class, the piece that marks its control, or kNone
-    Array<uint8_t> resolved;
-    Array<uint32_t> open;               // the Open pieces whose controls are open
-    Array<uint32_t> faces;              // by byte
+    RawArray<uint32_t> brackets;           // pairs: the key of a bracket and the byte at which it opened
+    RawArray<PrUnicodeBidiClass> classes;
+    RawArray<uint32_t> codePoints;
+    RawArray<uint32_t> bytes;              // for each class, the byte of its character, or kNone for a control
+    RawArray<uint32_t> markOf;             // for each class, the piece that marks its control, or kNone
+    RawArray<uint8_t> resolved;
+    RawArray<uint32_t> open;               // the Open pieces whose controls are open
+    RawArray<uint32_t> faces;              // by byte
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

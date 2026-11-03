@@ -63,7 +63,7 @@ wchar_t* wideString(PrStringView text) {
 
 // Appends `argument` to `line` as CommandLineToArgvW reads it back: quoted if it is empty or holds a space, a tab or a
 // quote, with each quote escaped and the backslashes before a quote doubled.
-void appendArgument(Array<wchar_t>* line, PrStringView argument) {
+void appendArgument(RawArray<wchar_t>* line, PrStringView argument) {
     wchar_t* wide = wideString(argument);
     size_t length = 0;
     while (wide[length] != 0)
@@ -352,7 +352,7 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     startup.StartupInfo.hStdError = childError;
     startup.lpAttributeList = list;
 
-    Array<wchar_t> line;
+    RawArray<wchar_t> line;
     appendArgument(&line, desc->program);
     for (uint32_t i = 0; i < desc->argumentCount; ++i)
         appendArgument(&line, desc->arguments[i]);

@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/byte_view.h"
 #include "pr/fetch.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 
@@ -36,8 +36,8 @@ struct FetchCachedResponse {
     uint16_t status;
     double requested;
     double received;
-    Array<PrFetchHeader> headers;
-    Array<PrFetchHeader> varied;    // each header that Vary names, with the request's value or the null view
+    RawArray<PrFetchHeader> headers;
+    RawArray<PrFetchHeader> varied;    // each header that Vary names, with the request's value or the null view
     PrByteView body;
 };
 

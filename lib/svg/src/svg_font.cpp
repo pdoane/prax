@@ -193,7 +193,7 @@ void noteFamily(const SvgDocumentFonts* fonts, uint32_t hash) {
 }
 
 void resetFace(SvgFontFace* face) {
-    prStringReset(&face->family);
+    prRawStringReset(&face->family);
     face->ranges.reset();
 }
 
@@ -203,7 +203,7 @@ void addFace(SvgDocumentFonts* fonts, const PrDomElement* element) {
     if (domNodeRoot(element) != fonts->document || !firstFamily(svgAttribute(element, "font-family"), &family))
         return;
     SvgFontFace face{};
-    face.family = prStringCopy(family);
+    face.family = prRawStringCopy(family);
     face.familyHash = svgFontFamilyHash(family);
     face.element = element;
     PrStringView ranges = svgAttribute(element, "unicode-range");
@@ -492,7 +492,7 @@ uint32_t svgFontFamilyHash(PrStringView family) {
     return hash;
 }
 
-bool svgParseUnicodeRange(PrStringView text, Array<PrFontCodePointRange>* out) {
+bool svgParseUnicodeRange(PrStringView text, RawArray<PrFontCodePointRange>* out) {
     out->clear();
     bool valid = true;
     anyItem(text, [&](PrStringView item) {

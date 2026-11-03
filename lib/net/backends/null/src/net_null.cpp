@@ -3,9 +3,9 @@
 #include "pr/net_null.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -18,16 +18,16 @@ struct Task {
 
 // `mutex` guards `tasks`, which other threads post to. The loop alone reaches the rest.
 struct NullNet : PrNet {
-    Array<Task> running;
+    RawArray<Task> running;
     bool inRun;                 // true while prNetNullRun is on the stack
     PrMutex mutex;
-    Array<Task> tasks;
+    RawArray<Task> tasks;
 };
 
 // Runs the tasks posted so far. Returns true if one ran.
 bool runPosted(NullNet* network) {
     prMutexLock(&network->mutex);
-    Array<Task> swapped = network->tasks;
+    RawArray<Task> swapped = network->tasks;
     network->tasks = network->running;
     network->running = swapped;
     prMutexUnlock(&network->mutex);

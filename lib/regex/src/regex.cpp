@@ -4,9 +4,9 @@
 #include "pr/regex.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/raw_array.h"
 #include "pr/utf8.h"
 
 namespace pr_impl {
@@ -49,9 +49,9 @@ struct RuneClass {
 
 // What a pattern compiles to.
 struct Program {
-    Array<Step> steps;
-    Array<RuneRange> ranges;
-    Array<RuneClass> classes;
+    RawArray<Step> steps;
+    RawArray<RuneRange> ranges;
+    RawArray<RuneClass> classes;
     uint32_t groups;                // with group 0
 };
 
@@ -128,7 +128,7 @@ struct Parser {
     size_t at;
     uint32_t depth;
     Program* program;
-    Array<Node> nodes;
+    RawArray<Node> nodes;
     PrStatus status;
 
     void fail(PrStatus failure) {
@@ -458,8 +458,8 @@ struct Parser {
 // groups and quantifiers recurses.
 struct Compiler {
     Program* program;
-    const Array<Node>* nodes;
-    Array<uint32_t> chain;
+    const RawArray<Node>* nodes;
+    RawArray<uint32_t> chain;
     PrStatus status;
 
     uint32_t here() const { return program->steps.count; }
@@ -592,9 +592,9 @@ struct Compiler {
 // The threads at one offset of the text, in the order of preference, each with its slots, and the generation that last
 // reached each step, so that a step takes one thread at an offset: the one that the pattern prefers.
 struct Threads {
-    Array<uint32_t> steps;
-    Array<uint32_t> slots;          // `slotCount` for each thread, in turn
-    Array<uint32_t> seen;           // by index of the program's steps
+    RawArray<uint32_t> steps;
+    RawArray<uint32_t> slots;          // `slotCount` for each thread, in turn
+    RawArray<uint32_t> seen;           // by index of the program's steps
     uint32_t generation;
 };
 
@@ -613,9 +613,9 @@ struct Matcher {
     bool whole;                     // the match starts at the start of the text and ends at its end
     uint32_t slotCount;
     Threads lists[2];
-    Array<uint32_t> work;
-    Array<uint32_t> best;
-    Array<Visit> stack;
+    RawArray<uint32_t> work;
+    RawArray<uint32_t> best;
+    RawArray<Visit> stack;
     bool matched;
 
     // Adds the threads that the steps from `start` reach at `offset` without taking a code point, with `slots`, in the

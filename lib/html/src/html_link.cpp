@@ -30,7 +30,7 @@ bool relHolds(const PrDomElement* element, PrStringView keyword) {
     const PrDomAttr* rel = domAttribute(element, PrDomNamespace_None, "rel");
     if (rel == nullptr)
         return false;
-    PrStringView text = prStringView(&rel->value);
+    PrStringView text = prRawStringView(&rel->value);
     size_t at = 0;
     while (at < text.size) {
         while (at < text.size && prAsciiIsSpace(text.data[at]))
@@ -133,16 +133,16 @@ void preload(PrDomElement* element, const DomDocumentHost* host) {
     domNodeHold(element);
     fetch->element = element;
     fetch->generation = cssElementStyle(element)->generation;
-    PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(url);
     DomFetchRequest asked{
-        prStringView(&request), destination,
+        prRawStringView(&request), destination,
         domCorsSettings(domAttributeValue(element, "crossorigin")),
         DomFetchInitiator_Link,
         domAttributeValue(element, "referrerpolicy"),
     };
     host->fetch(host->context, &asked, preloadFetched, fetch, dropPreloadFetch);
-    prStringReset(&request);
+    prRawStringReset(&request);
 }
 
 } // namespace
@@ -167,10 +167,10 @@ void htmlLinkUpdate(PrDomElement* element, DomInsertedBy by) {
     // A disabled link obtains no sheet (html/#attr-link-disabled).
     if (host == nullptr || !domIsConnected(element) || !relHolds(element, "stylesheet") ||
             href == nullptr || domAttribute(element, PrDomNamespace_None, "disabled") != nullptr ||
-            prStringIsEmpty(&href->value) || !cssOwnerTypeIsCss(element))
+            prRawStringIsEmpty(&href->value) || !cssOwnerTypeIsCss(element))
         return;
     PrUrl* url = nullptr;
-    PrStatus parsed = domDocumentParseUrl(document, prStringView(&href->value), &url);
+    PrStatus parsed = domDocumentParseUrl(document, prRawStringView(&href->value), &url);
     if (parsed != PrStatus_Ok) {
         prUrlDestroy(url);
         queueLinkEvent(host, element, HtmlLinkEvent_Error);
@@ -195,8 +195,8 @@ void htmlLinkAttributeChanged(PrDomElement* element, PrStringView name) {
         htmlLinkUpdate(element);
 }
 
-PrString htmlLinkIconUrl(const PrDomDocument* document, PrImageCodec* PR_NULLABLE codec) {
-    PrString found = prStringNull();
+PrRawString htmlLinkIconUrl(const PrDomDocument* document, PrImageCodec* PR_NULLABLE codec) {
+    PrRawString found = prRawStringNull();
     for (const PrDomNode* node = document->first; node != nullptr; node = domNodeNext(document, node)) {
         const PrDomElement* element = domElementFromNode(node);
         if (element == nullptr || !domIsHtml(element, PrDomTag_Link) || !relHolds(element, "icon"))
@@ -217,7 +217,7 @@ PrString htmlLinkIconUrl(const PrDomDocument* document, PrImageCodec* PR_NULLABL
         }
         PrUrl* url = nullptr;
         if (domDocumentParseUrl(document, href, &url) == PrStatus_Ok) {
-            prStringReset(&found);
+            prRawStringReset(&found);
             found = prUrlSerialize(url, PrUrlSerialization_Whole);
         }
         prUrlDestroy(url);

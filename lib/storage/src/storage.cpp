@@ -41,6 +41,6 @@ uint32_t prStorageCount(const PrStorage* storage) {
     return storage->count(storage);
 }
 
-PrString prStorageKey(const PrStorage* storage, uint32_t position) {
+PrRawString prStorageKey(const PrStorage* storage, uint32_t position) {
     return storage->key(storage, position);
 }

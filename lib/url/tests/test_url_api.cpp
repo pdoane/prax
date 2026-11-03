@@ -14,9 +14,9 @@ std::string text(PrStringView view) {
     return std::string(view.data != nullptr ? view.data : "", view.size);
 }
 
-std::string take(PrString value) {
-    std::string result = text(prStringView(&value));
-    prStringReset(&value);
+std::string take(PrRawString value) {
+    std::string result = text(prRawStringView(&value));
+    prRawStringReset(&value);
     return result;
 }
 
@@ -84,9 +84,9 @@ TEST_CASE("a query is percent-encoded in the charset of the document that a URL 
     auto parsed = [](PrStringView input, PrCharset charset) {
         PrUrl* url = nullptr;
         REQUIRE(prUrlCreate(input, nullptr, charset, &url) == PrStatus_Ok);
-        PrString text = prUrlSerialize(url, PrUrlSerialization_Whole);
-        std::string result(prStringView(&text).data, prStringView(&text).size);
-        prStringReset(&text);
+        PrRawString text = prUrlSerialize(url, PrUrlSerialization_Whole);
+        std::string result(prRawStringView(&text).data, prRawStringView(&text).size);
+        prRawStringReset(&text);
         prUrlDestroy(url);
         return result;
     };

@@ -181,7 +181,7 @@ bool containsFold(PrStringView text, PrStringView needle) {
     return prAsciiContainsFold(text, needle);
 }
 
-void appendCodePoint(Array<char>* out, uint32_t codePoint) {
+void appendCodePoint(RawArray<char>* out, uint32_t codePoint) {
     char bytes[kPrUtf8MaxBytes];
     out->append(bytes, prUtf8Encode(codePoint, bytes));
 }
@@ -446,7 +446,7 @@ size_t markdownScanLinkTitle(PrStringView text, size_t start, MarkdownSpan* out)
     return 0;
 }
 
-void markdownAppendFilteredHtml(PrStringView html, Array<char>* out) {
+void markdownAppendFilteredHtml(PrStringView html, RawArray<char>* out) {
     static const char* const kDisallowed[] = {
         "title", "textarea", "style", "xmp", "iframe", "noembed", "noframes", "script", "plaintext",
     };
@@ -492,7 +492,7 @@ size_t markdownSkipSpaceAndLineEnding(PrStringView text, size_t start) {
     return end;
 }
 
-size_t markdownDecodeReference(PrStringView text, size_t start, Array<char>* out) {
+size_t markdownDecodeReference(PrStringView text, size_t start, RawArray<char>* out) {
     if (at(text, start) != '&')
         return 0;
     if (at(text, start + 1) == '#') {
@@ -523,7 +523,7 @@ size_t markdownDecodeReference(PrStringView text, size_t start, Array<char>* out
     return end + 1 - start;
 }
 
-void markdownAppendDecoded(PrStringView text, Array<char>* out) {
+void markdownAppendDecoded(PrStringView text, RawArray<char>* out) {
     size_t run = 0;
     size_t index = 0;
     while (index < text.size) {
@@ -551,7 +551,7 @@ void markdownAppendDecoded(PrStringView text, Array<char>* out) {
     out->append(text.data + run, uint32_t(index - run));
 }
 
-bool markdownAppendNormalizedLabel(PrStringView label, Array<char>* out) {
+bool markdownAppendNormalizedLabel(PrStringView label, RawArray<char>* out) {
     uint32_t mark = out->count;
     bool space = false;
     size_t index = 0;

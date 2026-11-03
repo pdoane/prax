@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/layout_style.h"
+#include "pr/raw_array.h"
 
 #include "css/src/css_style.h"
 #include "css/src/css_value.h"
@@ -31,7 +31,7 @@ struct CssLayoutLengths {
 // caller points `out->stops` at them. The colors resolve in `colors`, and are limited to `cap` times SDR white if `cap`
 // is above zero.
 void cssGradientFromValue(CssValueRun run, uint32_t index, const CssColorContext& colors, float cap,
-    const CssLayoutLengths& lengths, Array<PrLayoutColorStop>& stops, PrLayoutGradient* out);
+    const CssLayoutLengths& lengths, RawArray<PrLayoutColorStop>& stops, PrLayoutGradient* out);
 
 // Returns true if the computed <image> `run` is a gradient (css-images-4/#gradients).
 bool cssIsGradient(CssValueRun run);

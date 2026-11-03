@@ -142,7 +142,7 @@ bool layoutInOwningInline(const LayoutTree* tree, LayoutNodeIndex node);
 // Appends to `out` the containers that a node whose container is `container` (layoutNodeContainer) paints in, outermost
 // first: the viewport's content, as kLayoutContainerViewport, and the boxes that clip or stick around the node. Appends
 // none of them for kLayoutContainerOutside.
-void layoutContainerChain(const LayoutTree* tree, LayoutNodeIndex container, Array<LayoutNodeIndex>& out);
+void layoutContainerChain(const LayoutTree* tree, LayoutNodeIndex container, RawArray<LayoutNodeIndex>& out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Visitors
@@ -286,9 +286,9 @@ struct LayoutWalk {
     const LayoutTree* tree;
     const LayoutStyles* styles;
     Visitor& visitor;
-    Array<LayoutWalkContainer> containers; // entered, outermost first
-    Array<LayoutNodeIndex> chain;          // scratch: the containers a box of a list paints in
-    LayoutWalkPlace place;                 // where the walk is among a container's lines
+    RawArray<LayoutWalkContainer> containers; // entered, outermost first
+    RawArray<LayoutNodeIndex> chain;          // scratch: the containers a box of a list paints in
+    LayoutWalkPlace place;                    // where the walk is among a container's lines
 
     // Frees the walk's storage.
     void release() {
@@ -392,7 +392,7 @@ struct LayoutWalk {
     // in the viewport's content as laid out, and at `origin` in the `base` containers, which the context's list started
     // in. Returns how far that moves what the context places, relative to where `origin` puts it, whatever containers
     // an earlier box of the list left the walk in.
-    PrLayoutVec enterChain(const Array<LayoutNodeIndex>& to, const Array<LayoutWalkContainer>& base, PrLayoutVec origin,
+    PrLayoutVec enterChain(const RawArray<LayoutNodeIndex>& to, const RawArray<LayoutWalkContainer>& base, PrLayoutVec origin,
             PrLayoutVec reference) {
         uint32_t kept = 0;
         while (kept < containers.count && kept < to.count && containers.data[kept].node == to.data[kept])
@@ -527,8 +527,8 @@ struct LayoutWalk {
         uint32_t end = negative ? list.zero : list.count;
         if (first == end)
             return;
-        Array<LayoutNodeIndex> around;
-        Array<LayoutWalkContainer> base;
+        RawArray<LayoutNodeIndex> around;
+        RawArray<LayoutWalkContainer> base;
         for (uint32_t i = 0; i < containers.count; ++i) {
             around.push(containers.data[i].node);
             base.push(containers.data[i]);
@@ -576,7 +576,7 @@ struct LayoutWalk {
 
     // Visits the box `node` of a stacking context's list, whose reference box is at `origin` in the containers the list
     // is painted in and at `reference` in the viewport's content as laid out, whole in its own containers.
-    void paintEntry(LayoutNodeIndex node, const Array<LayoutWalkContainer>& base, PrLayoutVec origin,
+    void paintEntry(LayoutNodeIndex node, const RawArray<LayoutWalkContainer>& base, PrLayoutVec origin,
             PrLayoutVec reference) {
         bool inlineBox = layoutIsInlineBox(tree, node);
         LayoutPositioned positioned = inlineBox ? layoutNodePositioned(tree, node) : layoutBoxPositioned(tree, node);

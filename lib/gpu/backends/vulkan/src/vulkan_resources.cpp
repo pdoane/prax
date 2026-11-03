@@ -867,7 +867,7 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
     dependency.pMemoryBarriers = &before;
     d->vk.CmdPipelineBarrier2(buffer, &dependency);
 
-    Array<uint32_t> written;
+    RawArray<uint32_t> written;
     VkMemoryBarrier2 between{};
     between.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
     between.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT | VK_PIPELINE_STAGE_2_CLEAR_BIT;

@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/hash_index.h"
+#include "pr/raw_array.h"
 #include "pr/text.h"
 
 #include "layout/src/layout_cache.h"
@@ -298,27 +298,28 @@ struct LayoutIntrinsicMemo {
 
 // The scratch memory a tree keeps between layouts.
 struct LayoutScratch {
-    Array<LayoutLogicalChild> children; // the children of fragments being made, innermost last
+    RawArray<LayoutLogicalChild> children; // the children of fragments being made, innermost last
 
     // The boxes out of flow that the holders being made gathered, the fragments of those they hold, and the containing
     // blocks of inline boxes that they found, each innermost last.
-    Array<LayoutPending> pending;
-    Array<LayoutChild> held;
-    Array<LayoutInlineBlock> inlineBlocks;
+    RawArray<LayoutPending> pending;
+    RawArray<LayoutChild> held;
+    RawArray<LayoutInlineBlock> inlineBlocks;
 
     PrTextGlyphBuffer* glyphs;
     LayoutShapingScratch* shaping;
-    LayoutInlineScratch* PR_NULLABLE inlines;  // made the first time a layout reaches an inline formatting context
-    Array<LayoutInlineShaping*> shapings;      // the inline formatting contexts layoutShapeAhead shapes
-    Array<LayoutHandoff> handoffs;             // the running layout's handoffs, released at its end (layoutEndLayout)
-    HashIndex handoffIndex;                    // the handoffs not yet taken, by KeyIndex::hashOf their node
-    Array<LayoutMemo> memos;                   // the running layout's memos, which its end empties (layoutEndLayout)
-    HashIndex memoIndex;                       // the memos by KeyIndex::hashOf their node
-    Array<LayoutIntrinsicMemo> intrinsicMemos; // the running layout's intrinsic memos, which its end empties
-    HashIndex intrinsicMemoIndex;              // the intrinsic memos by KeyIndex::hashOf their node
-    LayoutFlexScratch* PR_NULLABLE flex;       // made the first time a layout reaches a flex container
-    LayoutTableScratch* PR_NULLABLE table;     // created the first time that a layout reaches a table
-    LayoutGridScratch* PR_NULLABLE grid;       // made the first time a layout reaches a grid container
+    LayoutInlineScratch* PR_NULLABLE inlines;     // made the first time a layout reaches an inline formatting context
+    RawArray<LayoutInlineShaping*> shapings;      // the inline formatting contexts layoutShapeAhead shapes
+    RawArray<LayoutHandoff> handoffs;             // the running layout's handoffs, released at its end
+                                                  // (layoutEndLayout)
+    HashIndex handoffIndex;                       // the handoffs not yet taken, by KeyIndex::hashOf their node
+    RawArray<LayoutMemo> memos;                   // the running layout's memos, which its end empties (layoutEndLayout)
+    HashIndex memoIndex;                          // the memos by KeyIndex::hashOf their node
+    RawArray<LayoutIntrinsicMemo> intrinsicMemos; // the running layout's intrinsic memos, which its end empties
+    HashIndex intrinsicMemoIndex;                 // the intrinsic memos by KeyIndex::hashOf their node
+    LayoutFlexScratch* PR_NULLABLE flex;          // made the first time a layout reaches a flex container
+    LayoutTableScratch* PR_NULLABLE table;        // created the first time that a layout reaches a table
+    LayoutGridScratch* PR_NULLABLE grid;          // made the first time a layout reaches a grid container
 };
 
 // Creates empty scratch memory, and frees it.

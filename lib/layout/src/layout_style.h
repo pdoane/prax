@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/hash_index.h"
 #include "pr/layout_style.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text_font.h"
 
@@ -29,17 +29,17 @@ constexpr uint32_t kLayoutTableBlock = 256;
 // default and is never freed. An interned entry is in `index`, by its value's hash, and a created one is not.
 template <typename T>
 struct LayoutTable {
-    Array<T*> blocks;
-    Array<uint32_t> references;     // by index: the records naming a group, or the nodes and callers naming a record
-    Array<uint32_t> hashes;         // by index, for an interned entry
-    Array<bool> indexed;            // by index: true for an interned entry
-    Array<uint32_t> free;           // freed indices, which interning reuses
+    RawArray<T*> blocks;
+    RawArray<uint32_t> references;     // by index: the records naming a group, or the nodes and callers naming a record
+    RawArray<uint32_t> hashes;         // by index, for an interned entry
+    RawArray<bool> indexed;            // by index: true for an interned entry
+    RawArray<uint32_t> free;           // freed indices, which interning reuses
     HashIndex index;
 
     // Indices whose references may have fallen to none: each entry created since the last collect, and each entry whose
     // references fell to none since. Every live entry with no references is listed, so collecting reads the list and
     // not the table. An index may be listed more than once, or may have gained references since.
-    Array<uint32_t> candidates;
+    RawArray<uint32_t> candidates;
 };
 
 // Returns the entry at `index` of the table.
@@ -81,7 +81,7 @@ constexpr LayoutFaceIndex kLayoutFaceNone = 0xffff;
 struct LayoutFontFaces {
     PrTextFont* PR_NULLABLE font;           // the group's text font, or the tree's default; found on first use
     PrLayoutUnit size;                      // its text font's size, which layout reads when it reads the group's size
-    Array<LayoutFaceMetrics> metrics;       // by LayoutFaceIndex, one for each face
+    RawArray<LayoutFaceMetrics> metrics;    // by LayoutFaceIndex, one for each face
 
     // The first available face (prTextFontFirst) and its metrics. The group's strut and the lengths it gives are based
     // on this face, or on shares of the size if the group has none.
@@ -130,7 +130,7 @@ struct LayoutStyles {
     // The box groups as layout reads them, by PrLayoutGroupIndex in blocks as `box` keeps them: each a copy of its
     // group with its border widths snapped as border widths at the target pixel ratio. Snapping once, as a group is
     // added or the ratio changes, keeps it off layout's reads, and `box` keeps the values that interning compares.
-    Array<PrLayoutBoxStyle*> usedBox;
+    RawArray<PrLayoutBoxStyle*> usedBox;
     LayoutTable<PrLayoutDecorationStyle> decoration;
     LayoutTable<PrLayoutEffectStyle> effects;
     LayoutTable<PrLayoutFlexStyle> flex;
@@ -140,7 +140,7 @@ struct LayoutStyles {
     LayoutTable<PrLayoutStyle> style;
 
     // By PrLayoutStyleIndex, set as each record is interned.
-    Array<LayoutStyleTraits> traits;
+    RawArray<LayoutStyleTraits> traits;
 
     LayoutCompounds compounds;      // the compounds that the groups' words name
     LayoutBackgrounds backgrounds;  // the background layers that the decoration groups name
@@ -156,9 +156,9 @@ struct LayoutStyles {
     uint32_t stickyGroups;
     uint32_t wholeTableParts;
 
-    Array<LayoutFontFaces> faces;   // by PrLayoutGroupIndex, made on first use
-    float targetPixelRatio;         // target pixels per px, which font metrics and leading snap to
-    int32_t targetPixelUnits;       // the units in a target pixel if whole, and 0 otherwise
+    RawArray<LayoutFontFaces> faces; // by PrLayoutGroupIndex, made on first use
+    float targetPixelRatio;          // target pixels per px, which font metrics and leading snap to
+    int32_t targetPixelUnits;        // the units in a target pixel if whole, and 0 otherwise
 
     // What text is shaped with. Only text needs it (PrLayoutTreeDesc).
     PrTextShaper* PR_NULLABLE shaper;
@@ -174,7 +174,7 @@ struct LayoutStyles {
     // font changes only with its set, and one that joined may be behind its set, so bringing the text fonts up to date
     // reads them only if a set's version moved or a text font joined. If nothing changed, it costs one comparison per
     // set.
-    Array<LayoutFontSetUse> fontSets;
+    RawArray<LayoutFontSetUse> fontSets;
     bool fontJoined;
 };
 
@@ -304,7 +304,7 @@ inline const PrFont* layoutFaceFont(const LayoutFontFaces& faces, uint32_t face)
 // Brings the groups' text fonts up to date with their sets (prTextFontUpdate). Sets in `changed`, a bit set indexed by
 // PrLayoutGroupIndex that it sizes to the groups that have faces, the groups whose text fonts' answers changed. Their
 // face indices are no longer valid, and their faces are found again at their next use. Returns true if any changed.
-bool layoutSyncFonts(LayoutStyles* styles, Array<uint64_t>* changed);
+bool layoutSyncFonts(LayoutStyles* styles, RawArray<uint64_t>* changed);
 
 // Returns the faces and line extent of the font group at `group`, or of the group of the record `style`, matched on
 // first use.

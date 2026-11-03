@@ -6,8 +6,8 @@
 #include "pr/text_simple.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/locale.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/utf8.h"
 #include "pr/vec.h"
@@ -134,14 +134,15 @@ struct SimpleFace {
 struct KernConfig {
     uint32_t script;
     uint32_t language;
-    Array<uint32_t> lookups;            // offsets of the lookups within GPOS, in lookup order
+    RawArray<uint32_t> lookups;            // offsets of the lookups within GPOS, in lookup order
     bool fromKernTable;
 };
 
 struct SimpleFont {
     float unitsPerEm;
-    Array<float> coords;                // the design point, normalized; empty at the default, at which nothing varies
-    Array<KernConfig> configs;
+    RawArray<float> coords;                // the design point, normalized; empty at the default, at which nothing
+                                           // varies
+    RawArray<KernConfig> configs;
 };
 
 bool createFace(PrTextShaper*, const PrFont* font, void* state) {
@@ -357,7 +358,7 @@ const KernConfig& configFor(const SimpleFace& face, SimpleFont& font, PrScript s
             langSys = langSysOf(scripts, kDflt, languages, languageCount);
         if (langSys.size == 0)
             langSys = langSysOf(scripts, kLatn, languages, languageCount);
-        Array<uint16_t> indices;
+        RawArray<uint16_t> indices;
         uint32_t featureCount = langSys.uint16At(4);
         for (uint32_t f = 0; f < featureCount; ++f) {
             uint16_t feature = langSys.uint16At(6 + f * 2);

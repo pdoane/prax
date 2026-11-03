@@ -36,13 +36,13 @@ void setHeadroom(PrHtmlView* view, float headroom) {
 
 // Verifies the presentation's incremental work, and reports the first difference if there is one.
 bool verified(PrCssPresentation* presentation) {
-    PrString report{};
+    PrRawString report{};
     bool same = prCssPresentationVerify(presentation, &report);
     if (!same) {
-        PrStringView what = prStringView(&report);
+        PrStringView what = prRawStringView(&report);
         MESSAGE(std::string(what.data, what.size));
     }
-    prStringReset(&report);
+    prRawStringReset(&report);
     return same;
 }
 
@@ -416,9 +416,9 @@ PrDomEventListener editRecorder(HeardEdits* heard) {
 
 std::string valueOf(PrDomElement* element) {
     PrDomEventTarget* target = prDomNodeAsEventTarget(prDomElementAsNode(element));
-    PrString value = prHtmlTextAreaElementValue(prHtmlTextAreaElementQuery(target));
-    std::string out(prStringView(&value).data, prStringView(&value).size);
-    prStringReset(&value);
+    PrRawString value = prHtmlTextAreaElementValue(prHtmlTextAreaElementQuery(target));
+    std::string out(prRawStringView(&value).data, prRawStringView(&value).size);
+    prRawStringReset(&value);
     return out;
 }
 
@@ -2071,10 +2071,10 @@ TEST_CASE("an imported sheet applies in the layer that it names, unless its supp
     page.settle();
     auto resolved = [&](const char* id, PrCssProperty property) {
         PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
-        PrString read = prCssStyleDeclarationGetPropertyValue(
+        PrRawString read = prCssStyleDeclarationGetPropertyValue(
             prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(page.byId(id), "")), &name);
-        std::string value(prStringView(&read).data, prStringView(&read).size);
-        prStringReset(&read);
+        std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
+        prRawStringReset(&read);
         return value;
     };
     // The unlayered import wins over the layered one. The import whose condition fails is fetched, and applies nothing.

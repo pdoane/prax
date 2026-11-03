@@ -17,7 +17,7 @@
 #include "pr/color.h"
 #include "pr/geom.h"
 #include "pr/layout_tree.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text_edit.h"
 #include "pr/text_edit_command.h"
@@ -184,8 +184,8 @@ void prTextViewInsert(PrTextView* view, PrStringView text, PrTextEditMerge merge
 void prTextViewEraseSelection(PrTextView* view);
 
 // Returns the text that the selections hold, in the order of the document, with a line feed between selections. The
-// caller releases it with prStringReset.
-PrString prTextViewSelectedText(const PrTextView* view);
+// caller releases it with prRawStringReset.
+PrRawString prTextViewSelectedText(const PrTextView* view);
 
 // Adds a caret on the visual line after or before the primary caret, at its goal along the line, which becomes the
 // primary selection. Does nothing if there is no such line, or for PrTextEditLineStep_Same.

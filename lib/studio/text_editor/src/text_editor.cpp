@@ -4,7 +4,6 @@
 #include "pr/text_editor.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #include "pr/file.h"
@@ -19,7 +18,8 @@
 #include "pr/layout_query.h"
 #include "pr/lsp.h"
 #include "pr/mem.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_ops.h"
 #include "pr/text_edit_command.h"
 #include "pr/text_estimate.h"
@@ -72,7 +72,7 @@ struct TextEditor;
 struct TextEditorDocument {
     PrTextEditorDocument* handle;
     TextEditor* editor;
-    PrString path;                  // null for a text of no file
+    PrRawString path;               // null for a text of no file
     bool crlf;                      // the file ended its lines with CR LF, which saving restores
     uint64_t savedVersion;          // the version of the text that the file holds
     PrTextEditBuffer* buffer;
@@ -86,13 +86,14 @@ struct TextEditorDocument {
     // The text that streams into the document as it loads: the file, mapped, or a copy of the text that it was given,
     // and how much of it the buffer holds. The document is loading until the buffer holds all of it.
     PrFileMapping mapping;
-    Array<char> source;
+    RawArray<char> source;
     uint32_t loaded;
     bool loading;
-    Array<char> piece;              // the piece that the last load step appended, with its line endings made line feeds
+    RawArray<char> piece;              // the piece that the last load step appended, with its line endings made line
+                                       // feeds
 
     // The syntax's spans of the last window, which a frame reuses while the text, the window and the syntax hold.
-    Array<PrSyntaxSpan> spans;
+    RawArray<PrSyntaxSpan> spans;
     uint64_t spansVersion;
     uint64_t spansChanges;
     uint32_t spansStart;
@@ -112,8 +113,8 @@ struct TextEditorDocument {
     bool listed;                    // the editor's list of documents holds it, as it holds every document of its host
 
     // The breakpoints, as anchors at the starts of their lines, and the lines that the session was last sent.
-    Array<PrTextEditAnchor> breakpoints;
-    Array<uint32_t> sentLines;
+    RawArray<PrTextEditAnchor> breakpoints;
+    RawArray<uint32_t> sentLines;
     bool sent;
 };
 
@@ -290,7 +291,7 @@ struct TextEditor {
     PrCommandKeymap* keymap;
     PrTextEditorOptions options;
 
-    Array<TextEditorDocument*> documents;
+    RawArray<TextEditorDocument*> documents;
     TextEditorDocument* PR_NULLABLE shown;
     bool focusAsked;                // the next frame gives the text focus
 
@@ -299,28 +300,28 @@ struct TextEditor {
     TextEditorDebugConfig debugger;
     TextEditorDebugSession* PR_NULLABLE debug;
     uint64_t debugStops;
-    Array<uint32_t> breakpointLines;            // of the shown document, for a frame's gutter
+    RawArray<uint32_t> breakpointLines;         // of the shown document, for a frame's gutter
     PrLayoutStyleIndex breakpointStyle;         // the record of a number on a line with a breakpoint
 
     // The comparisons, and the one that shows beside its new document, which is the one that shows.
-    Array<TextEditorDiff*> diffs;
+    RawArray<TextEditorDiff*> diffs;
     TextEditorDiff* PR_NULLABLE diff;
 
-    Array<TextEditorServerConfig> configs;
-    Array<TextEditorServer*> servers;
+    RawArray<TextEditorServerConfig> configs;
+    RawArray<TextEditorServer*> servers;
 
     // By PrSyntaxCategory: the color of its text, or zero alpha for none, in the theme that `dark` says.
-    Array<PrColor16> categoryColors;
+    RawArray<PrColor16> categoryColors;
     bool dark;
 
     PrLayoutNode port;              // the element that shows the text, in the last frame
     PrLayoutNode holder;
-    PrString status;                // what the last command had to say
-    PrString statusShown;
+    PrRawString status;                // what the last command had to say
+    PrRawString statusShown;
 
     // A hover that the server answered, and where: it shows while the caret stays there and the text holds.
     PrLspRequest hoverRequest;
-    PrString hoverText;
+    PrRawString hoverText;
     TextEditorDocument* PR_NULLABLE hoverDocument;
     uint32_t hoverOffset;
     uint64_t hoverVersion;
@@ -332,7 +333,7 @@ struct TextEditor {
     PrTextEstimator* PR_NULLABLE estimator;
     PrLayoutStyleIndex numberStyle;
     PrLayoutStyleIndex numberStyles[PrLspSeverity_Hint + 1];   // by PrLspSeverity: a number's record on such a line
-    Array<LineSeverity> lineSeverities;
+    RawArray<LineSeverity> lineSeverities;
     GutterSide gutters[TextEditorDiffSide_Count];               // the gutters' contexts: the old side has no severities
 
     ChoiceContext keyContexts[countOf(kKeyCommands)];
@@ -346,7 +347,7 @@ TextEditor& editorOf(void* PR_NULLABLE context) {
 }
 
 void setStatus(TextEditor* editor, PrStringView text) {
-    prStringReplace(&editor->status, text);
+    prRawStringReplace(&editor->status, text);
 }
 
 PrStringView sourceOf(const TextEditorDocument* document) {
@@ -364,25 +365,25 @@ PrStringView folderOf(PrStringView path) {
 }
 
 // Returns the workspace of the file at `path`: the nearest folder above it that holds .git, or its own folder. The
-// caller releases it with prStringReset.
-PrString workspaceOf(PrStringView path) {
+// caller releases it with prRawStringReset.
+PrRawString workspaceOf(PrStringView path) {
     PrStringView folder = folderOf(path);
-    PrString probe = prStringEmpty();
+    PrRawString probe = prRawStringEmpty();
     for (PrStringView at = folder; at.size != 0;) {
-        prStringReplace(&probe, at);
-        prStringAppend(&probe, "/.git");
+        prRawStringReplace(&probe, at);
+        prRawStringAppend(&probe, "/.git");
         PrFileInfo info{};
-        if (prFileInfo(prStringView(&probe), &info)) {
-            prStringReset(&probe);
-            return prStringCopy(at);
+        if (prFileInfo(prRawStringView(&probe), &info)) {
+            prRawStringReset(&probe);
+            return prRawStringCopy(at);
         }
         PrStringView up = folderOf(at);
         if (up.size >= at.size)
             break;
         at = up;
     }
-    prStringReset(&probe);
-    return prStringCopy(folder);
+    prRawStringReset(&probe);
+    return prRawStringCopy(folder);
 }
 
 // Returns the config of the server that serves `language`, or -1.
@@ -390,7 +391,7 @@ int32_t configOf(const TextEditor* editor, PrStringView language) {
     for (uint32_t i = editor->configs.count; i-- > 0;) {
         const TextEditorServerConfig& config = editor->configs.data[i];
         for (uint32_t k = 0; k < config.languages.count; ++k) {
-            if (prStringView(&config.languages.data[k]) == language)
+            if (prRawStringView(&config.languages.data[k]) == language)
                 return int32_t(i);
         }
     }
@@ -399,26 +400,26 @@ int32_t configOf(const TextEditor* editor, PrStringView language) {
 
 // Tells the document's language server of it, starting the server for its workspace if none runs.
 void attachServer(TextEditor* editor, TextEditorDocument* document) {
-    if (document->lsp != nullptr || document->language == nullptr || prStringIsNull(&document->path))
+    if (document->lsp != nullptr || document->language == nullptr || prRawStringIsNull(&document->path))
         return;
     int32_t config = configOf(editor, document->language->name);
     if (config < 0)
         return;
-    PrString root = workspaceOf(prStringView(&document->path));
+    PrRawString root = workspaceOf(prRawStringView(&document->path));
     TextEditorServer* server = nullptr;
     for (uint32_t i = 0; i < editor->servers.count && server == nullptr; ++i) {
         TextEditorServer* running = editor->servers.data[i];
-        if (running->config == uint32_t(config) && prStringView(&running->root) == prStringView(&root))
+        if (running->config == uint32_t(config) && prRawStringView(&running->root) == prRawStringView(&root))
             server = running;
     }
     if (server == nullptr) {
-        server = textEditorServerCreate(editor->configs.data[config], uint32_t(config), prStringView(&root),
+        server = textEditorServerCreate(editor->configs.data[config], uint32_t(config), prRawStringView(&root),
             editor->launcher, editor->app);
         editor->servers.push(server);
     }
-    prStringReset(&root);
+    prRawStringReset(&root);
     document->server = server;
-    document->lsp = prLspDocumentCreate(server->client, document->buffer, prStringView(&document->path),
+    document->lsp = prLspDocumentCreate(server->client, document->buffer, prRawStringView(&document->path),
         document->language->name);
 }
 
@@ -526,7 +527,7 @@ void stepChange(TextEditor* editor, bool forward) {
     }
     TextEditorDocument* young = diff->young;
     uint32_t line = prTextEditBufferPointFromOffset(young->buffer, caretOf(young)).line;
-    const Array<PrTextDiffChange>& changes = diff->model.changes;
+    const RawArray<PrTextDiffChange>& changes = diff->model.changes;
     uint32_t chosen = forward ? 0 : changes.count - 1;
     for (uint32_t i = 0; i < changes.count; ++i) {
         uint32_t k = forward ? i : changes.count - 1 - i;
@@ -543,13 +544,13 @@ void stepChange(TextEditor* editor, bool forward) {
 
 TextEditorDocument* PR_NULLABLE documentFromPath(const TextEditor* editor, PrStringView path) {
     for (uint32_t i = 0; i < editor->documents.count; ++i) {
-        if (prStringView(&editor->documents.data[i]->path) == path)
+        if (prRawStringView(&editor->documents.data[i]->path) == path)
             return editor->documents.data[i];
     }
     // A path from elsewhere, as a language server's URI gives one, may spell a document's file another way.
     for (uint32_t i = 0; i < editor->documents.count; ++i) {
-        const PrString& own = editor->documents.data[i]->path;
-        if (!prStringIsNull(&own) && prFileSame(prStringView(&own), path))
+        const PrRawString& own = editor->documents.data[i]->path;
+        if (!prRawStringIsNull(&own) && prFileSame(prRawStringView(&own), path))
             return editor->documents.data[i];
     }
     return nullptr;
@@ -557,21 +558,21 @@ TextEditorDocument* PR_NULLABLE documentFromPath(const TextEditor* editor, PrStr
 
 // Writes the document to its file, with the line endings that the file had.
 PrStatus saveDocument(TextEditorDocument* document) {
-    if (prStringIsNull(&document->path) || document->loading)
+    if (prRawStringIsNull(&document->path) || document->loading)
         return PrStatus_InvalidState;
     PrStringView text = prTextEditBufferText(document->buffer);
     bool ok = false;
     if (document->crlf) {
-        Array<uint8_t> restored;
+        RawArray<uint8_t> restored;
         for (size_t i = 0; i < text.size; ++i) {
             if (text.data[i] == '\n')
                 restored.push('\r');
             restored.push(uint8_t(text.data[i]));
         }
-        ok = prFileWrite(prStringView(&document->path), PrByteView{restored.data, restored.count});
+        ok = prFileWrite(prRawStringView(&document->path), PrByteView{restored.data, restored.count});
         restored.reset();
     } else {
-        ok = prFileWrite(prStringView(&document->path),
+        ok = prFileWrite(prRawStringView(&document->path),
             PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size});
     }
     if (!ok)
@@ -596,7 +597,7 @@ PrLayoutStyleIndex record(PrLayoutTree* tree, const PrLayoutBoxStyle& box,
 
 // Writes the lines of the document's breakpoints to `out`, in order, and drops the breakpoints whose lines were
 // removed.
-void breakpointLinesOf(TextEditorDocument* document, Array<uint32_t>& out) {
+void breakpointLinesOf(TextEditorDocument* document, RawArray<uint32_t>& out) {
     out.clear();
     for (uint32_t i = 0; i < document->breakpoints.count;) {
         PrTextEditAnchor anchor = document->breakpoints.data[i];
@@ -639,17 +640,17 @@ void toggleBreakpoint(TextEditorDocument* document, uint32_t line) {
 void syncBreakpoints(TextEditor* editor) {
     if (editor->debug == nullptr)
         return;
-    Array<uint32_t> lines;
+    RawArray<uint32_t> lines;
     for (uint32_t i = 0; i < editor->documents.count; ++i) {
         TextEditorDocument* document = editor->documents.data[i];
-        if (prStringIsNull(&document->path))
+        if (prRawStringIsNull(&document->path))
             continue;
         breakpointLinesOf(document, lines);
         bool same = document->sent && lines.count == document->sentLines.count &&
             prMemEquals(lines.data, document->sentLines.data, lines.count * sizeof(uint32_t));
         if (same)
             continue;
-        prDapClientSetBreakpoints(editor->debug->client, prStringView(&document->path), lines.data, lines.count);
+        prDapClientSetBreakpoints(editor->debug->client, prRawStringView(&document->path), lines.data, lines.count);
         document->sentLines.clear();
         if (lines.count != 0)
             document->sentLines.append(lines.data, lines.count);
@@ -697,15 +698,15 @@ void revealStop(TextEditor* editor) {
         return;
     editor->debugStops = editor->debug->stops;
     const TextEditorDebugFrame* frame = stoppedFrame(editor);
-    if (frame == nullptr || prStringIsEmpty(&frame->path))
+    if (frame == nullptr || prRawStringIsEmpty(&frame->path))
         return;
-    TextEditorDocument* document = documentFromPath(editor, prStringView(&frame->path));
+    TextEditorDocument* document = documentFromPath(editor, prRawStringView(&frame->path));
     if (document == nullptr) {
-        PrTextEditorDocumentDesc desc{.path = prStringView(&frame->path)};
+        PrTextEditorDocumentDesc desc{.path = prRawStringView(&frame->path)};
         PrTextEditorDocument* opened = nullptr;
         if (prTextEditorDocumentCreate(editor->handle, &desc, &opened) != PrStatus_Ok)
             return;
-        document = documentFromPath(editor, prStringView(&frame->path));
+        document = documentFromPath(editor, prRawStringView(&frame->path));
     }
     showDocument(editor, document);
     document->revealPending = true;
@@ -718,7 +719,7 @@ void revealStop(TextEditor* editor) {
 PrColor16 executionLineColor(void* PR_NULLABLE context, uint32_t line) {
     const TextEditorDocument* document = static_cast<const TextEditorDocument*>(context);
     const TextEditorDebugFrame* frame = stoppedFrame(document->editor);
-    if (frame == nullptr || frame->line != line || prStringView(&frame->path) != prStringView(&document->path))
+    if (frame == nullptr || frame->line != line || prRawStringView(&frame->path) != prRawStringView(&document->path))
         return PrColor16{};
     PrColor color = document->editor->kit->theme.palette.warning;
     color.a = 0.22f;
@@ -773,47 +774,48 @@ void buildDebugPanel(TextEditor* editor, PrLayoutNode parent, float top, PrVec2 
 
     PrTextEditorDebugState state = textEditorDebugState(session);
     PrLayoutNode stack = debugColumn(editor, panel, "CALL STACK");
-    PrString line = prStringEmpty();
-    prStringAppend(&line, debugStateText(state));
+    PrRawString line = prRawStringEmpty();
+    prRawStringAppend(&line, debugStateText(state));
     PrStringView reason = prDapClientStopReason(session->client);
     if (reason.size != 0) {
-        prStringAppend(&line, ": ");
-        prStringAppend(&line, reason);
+        prRawStringAppend(&line, ": ");
+        prRawStringAppend(&line, reason);
     }
     if (state == PrTextEditorDebugState_Ended && prDapClientExitCode(session->client) >= 0) {
         char digits[kPrU64TextMaxBytes];
-        prStringAppend(&line, ", exit code ");
-        prStringAppend(&line, PrStringView{digits, prU64Format(uint64_t(prDapClientExitCode(session->client)), digits, 10)});
+        prRawStringAppend(&line, ", exit code ");
+        uint64_t code = uint64_t(prDapClientExitCode(session->client));
+        prRawStringAppend(&line, PrStringView{digits, prU64Format(code, digits, 10)});
     }
-    debugLine(editor, stack, prStringView(&line));
+    debugLine(editor, stack, prRawStringView(&line));
     bool stopped = state == PrTextEditorDebugState_Stopped;
     for (uint32_t i = 0; stopped && i < session->frames.count && i < kDebugPanelRows; ++i) {
         const TextEditorDebugFrame& frame = session->frames.data[i];
-        prStringReplace(&line, prStringView(&frame.name));
-        if (!prStringIsEmpty(&frame.path)) {
-            PrStringView path = prStringView(&frame.path);
+        prRawStringReplace(&line, prRawStringView(&frame.name));
+        if (!prRawStringIsEmpty(&frame.path)) {
+            PrStringView path = prRawStringView(&frame.path);
             size_t slash = prStringFindLastByte(path, '/');
-            prStringAppend(&line, "  ");
-            prStringAppend(&line, slash != path.size ? prStringSlice(path, slash + 1, path.size - slash - 1) : path);
+            prRawStringAppend(&line, "  ");
+            prRawStringAppend(&line, slash != path.size ? prStringSlice(path, slash + 1, path.size - slash - 1) : path);
             char digits[kPrU64TextMaxBytes];
-            prStringAppend(&line, ":");
-            prStringAppend(&line, PrStringView{digits, prU64Format(uint64_t(frame.line) + 1, digits, 10)});
+            prRawStringAppend(&line, ":");
+            prRawStringAppend(&line, PrStringView{digits, prU64Format(uint64_t(frame.line) + 1, digits, 10)});
         }
-        debugLine(editor, stack, prStringView(&line));
+        debugLine(editor, stack, prRawStringView(&line));
     }
     PrLayoutNode variables = debugColumn(editor, panel, "VARIABLES");
     for (uint32_t i = 0; stopped && i < session->variables.count && i < kDebugPanelRows; ++i) {
         const TextEditorDebugVariable& variable = session->variables.data[i];
-        prStringReplace(&line, prStringView(&variable.name));
-        prStringAppend(&line, " = ");
-        prStringAppend(&line, prStringView(&variable.value));
-        debugLine(editor, variables, prStringView(&line));
+        prRawStringReplace(&line, prRawStringView(&variable.name));
+        prRawStringAppend(&line, " = ");
+        prRawStringAppend(&line, prRawStringView(&variable.value));
+        debugLine(editor, variables, prRawStringView(&line));
     }
     PrLayoutNode output = debugColumn(editor, panel, "OUTPUT");
     uint32_t first = session->output.count > kDebugPanelRows ? session->output.count - kDebugPanelRows : 0;
     for (uint32_t i = first; i < session->output.count; ++i)
-        debugLine(editor, output, prStringView(&session->output.data[i]));
-    prStringReset(&line);
+        debugLine(editor, output, prRawStringView(&session->output.data[i]));
+    prRawStringReset(&line);
 }
 
 // Language servers
@@ -832,13 +834,13 @@ void hoverAnswered(void* PR_NULLABLE context, const PrLspResponse* response) {
     if (response->request != editor->hoverRequest)
         return;
     editor->hoverRequest = kPrLspRequestNone;
-    PrString text = prLspHoverText(response->json, response->result);
-    if (prStringIsEmpty(&text)) {
+    PrRawString text = prLspHoverText(response->json, response->result);
+    if (prRawStringIsEmpty(&text)) {
         setStatus(editor, "nothing to show here");
-        prStringReset(&text);
+        prRawStringReset(&text);
         return;
     }
-    prStringReset(&editor->hoverText);
+    prRawStringReset(&editor->hoverText);
     editor->hoverText = text;
     editor->hoverOpening = true;
 }
@@ -853,8 +855,8 @@ void definitionAnswered(void* PR_NULLABLE context, const PrLspResponse* response
         setStatus(editor, "no definition found");
         return;
     }
-    PrString path = prLspPathFromUri(location.uri);
-    if (prStringIsNull(&path)) {
+    PrRawString path = prLspPathFromUri(location.uri);
+    if (prRawStringIsNull(&path)) {
         setStatus(editor, "the definition is not in a file");
         return;
     }
@@ -862,18 +864,18 @@ void definitionAnswered(void* PR_NULLABLE context, const PrLspResponse* response
     TextEditorDocument* asked = editor->definitionDocument;
     if (asked != nullptr && asked->server != nullptr)
         encoding = prLspClientEncoding(asked->server->client);
-    TextEditorDocument* target = documentFromPath(editor, prStringView(&path));
+    TextEditorDocument* target = documentFromPath(editor, prRawStringView(&path));
     if (target == nullptr) {
-        PrTextEditorDocumentDesc desc{.path = prStringView(&path)};
+        PrTextEditorDocumentDesc desc{.path = prRawStringView(&path)};
         PrTextEditorDocument* opened = nullptr;
         if (prTextEditorDocumentCreate(editor->handle, &desc, &opened) != PrStatus_Ok) {
             setStatus(editor, "the definition's file cannot be read");
-            prStringReset(&path);
+            prRawStringReset(&path);
             return;
         }
-        target = documentFromPath(editor, prStringView(&path));
+        target = documentFromPath(editor, prRawStringView(&path));
     }
-    prStringReset(&path);
+    prRawStringReset(&path);
     target->revealPending = true;
     target->revealPosition = location.range.start;
     target->revealEncoding = encoding;
@@ -991,19 +993,19 @@ void registerCommands(TextEditor* e) {
         TextEditor& editor = editorOf(c);
         if (editor.shown == nullptr)
             return;
-        PrString text = prTextViewSelectedText(editor.shown->view);
-        if (editor.app != nullptr && prStringView(&text).size != 0)
-            prAppSetClipboardText(editor.app, prStringView(&text));
-        prStringReset(&text);
+        PrRawString text = prTextViewSelectedText(editor.shown->view);
+        if (editor.app != nullptr && prRawStringView(&text).size != 0)
+            prAppSetClipboardText(editor.app, prRawStringView(&text));
+        prRawStringReset(&text);
     }, e, needsDocument);
     addCommand(e, "edit.cut", "Cut", "Cmd X", [](void* c, const PrCommandArgs*) {
         TextEditor& editor = editorOf(c);
         if (editor.shown == nullptr)
             return;
-        PrString text = prTextViewSelectedText(editor.shown->view);
-        if (editor.app != nullptr && prStringView(&text).size != 0)
-            prAppSetClipboardText(editor.app, prStringView(&text));
-        prStringReset(&text);
+        PrRawString text = prTextViewSelectedText(editor.shown->view);
+        if (editor.app != nullptr && prRawStringView(&text).size != 0)
+            prAppSetClipboardText(editor.app, prRawStringView(&text));
+        prRawStringReset(&text);
         prTextViewEraseSelection(editor.shown->view);
     }, e, needsDocument);
     addCommand(e, "edit.paste", "Paste", "Cmd V", [](void* c, const PrCommandArgs*) {
@@ -1020,7 +1022,7 @@ void registerCommands(TextEditor* e) {
     }, e, [](void* c) -> PrCommandStateFlags {
         const TextEditorDocument* document = editorOf(c).shown;
         // A file that is still loading would be saved cut short.
-        bool savable = document != nullptr && !prStringIsNull(&document->path) && !document->loading;
+        bool savable = document != nullptr && !prRawStringIsNull(&document->path) && !document->loading;
         return savable ? 0 : PrCommandStateFlag_Disabled;
     });
     addCommand(e, "view.toggleWrap", "Word Wrap", "Alt Z", [](void* c, const PrCommandArgs*) {
@@ -1069,7 +1071,7 @@ void registerCommands(TextEditor* e) {
         editor.hoverDocument = document;
         editor.hoverOffset = caretOf(document);
         editor.hoverVersion = prTextEditBufferVersion(document->buffer);
-        prStringReplace(&editor.hoverText, "");
+        prRawStringReplace(&editor.hoverText, "");
         editor.hoverRequest = prLspDocumentHover(document->lsp, editor.hoverOffset, hoverAnswered, &editor);
     }, e, needsServer);
     addCommand(e, "language.definition", "Go to Definition", "F12", [](void* c, const PrCommandArgs*) {
@@ -1132,17 +1134,17 @@ void registerCommands(TextEditor* e) {
     addCommand(e, "diff.compareSaved", "Compare with Saved", nullptr, [](void* c, const PrCommandArgs*) {
         TextEditor& editor = editorOf(c);
         TextEditorDocument* young = editor.shown;
-        if (young == nullptr || prStringIsNull(&young->path) || young->loading)
+        if (young == nullptr || prRawStringIsNull(&young->path) || young->loading)
             return;
         // The saved text is a document of no file of its own, which the file's name gives the same language.
         PrFileMapping mapping{};
-        if (!prFileMap(prStringView(&young->path), &mapping)) {
+        if (!prFileMap(prRawStringView(&young->path), &mapping)) {
             setStatus(&editor, "the saved file cannot be read");
             return;
         }
         PrTextEditorDocumentDesc desc{
             .text = PrStringView{reinterpret_cast<const char*>(mapping.data), mapping.size},
-            .name = prStringView(&young->path),
+            .name = prRawStringView(&young->path),
             .readOnly = true,
         };
         PrTextEditorDocument* saved = nullptr;
@@ -1159,7 +1161,7 @@ void registerCommands(TextEditor* e) {
         editor.diff->ownsOld = true;
     }, e, [](void* c) -> PrCommandStateFlags {
         const TextEditorDocument* document = editorOf(c).shown;
-        bool comparable = document != nullptr && !prStringIsNull(&document->path) && !document->loading;
+        bool comparable = document != nullptr && !prRawStringIsNull(&document->path) && !document->loading;
         return comparable ? 0 : PrCommandStateFlag_Disabled;
     });
     addCommand(e, "diff.close", "Close Comparison", nullptr, [](void* c, const PrCommandArgs*) {
@@ -1240,8 +1242,8 @@ uint32_t diagnosticSpans(void* PR_NULLABLE context, uint32_t start, uint32_t end
         uint32_t end;
         PrLspSeverity severity;
     };
-    Array<Reach> reaches;
-    Array<uint32_t> cuts;
+    RawArray<Reach> reaches;
+    RawArray<uint32_t> cuts;
     uint32_t count = prLspDocumentDiagnosticCount(document->lsp);
     uint32_t size = prTextEditBufferSize(document->buffer);
     for (uint32_t i = 0; i < count; ++i) {
@@ -1448,7 +1450,7 @@ void buildHover(TextEditor* editor, TextEditorDocument* document, PrLayoutNode h
         editor->hoverDocument = nullptr;
         return;
     }
-    if (prStringIsEmpty(&editor->hoverText))
+    if (prRawStringIsEmpty(&editor->hoverText))
         return;
     PrLayoutTree* tree = prUiTree(editor->ui);
     PrRect box = prLayoutRectToPx(prLayoutNodeBounds(tree, holder, PrLayoutCoordinates_Viewport));
@@ -1474,7 +1476,7 @@ void buildHover(TextEditor* editor, TextEditorDocument* document, PrLayoutNode h
     textBox.display = PrLayoutDisplay_Block;
     textBox.maxWidth = prLayoutLengthPx(kHoverMaxWidth);
     PrLayoutNode column = prLayoutTreeFrameElement(tree, popover, 0, record(tree, textBox));
-    prKitLabel(editor->kit, column, {.text = prStringView(&editor->hoverText)},
+    prKitLabel(editor->kit, column, {.text = prRawStringView(&editor->hoverText)},
         {.role = PrKitTextRole_Mono, .wrap = PrKitWrap_Wrap, .preserve = true});
 }
 
@@ -1620,7 +1622,7 @@ void freeDocument(TextEditorDocument* document) {
     prTextViewDestroy(document->view);
     prTextEditHistoryDestroy(document->history);
     prTextEditBufferDestroy(document->buffer);
-    prStringReset(&document->path);
+    prRawStringReset(&document->path);
     document->source.reset();
     document->piece.reset();
     document->spans.reset();
@@ -1653,9 +1655,9 @@ PrTextEditor* prTextEditorCreate(const PrTextEditorDesc* desc) {
     editor->options = prTextEditorOptionsDefault();
     editor->port = kPrLayoutNodeNone;
     editor->holder = kPrLayoutNodeNone;
-    editor->status = prStringEmpty();
-    editor->statusShown = prStringEmpty();
-    editor->hoverText = prStringEmpty();
+    editor->status = prRawStringEmpty();
+    editor->statusShown = prRawStringEmpty();
+    editor->hoverText = prRawStringEmpty();
     editor->dark = true;
     registerCommands(editor);
     return editor;
@@ -1665,11 +1667,11 @@ void prTextEditorDestroy(PrTextEditor* PR_NULLABLE editor) {
     if (editor == nullptr)
         return;
     stopDebugging(editor);
-    prStringReset(&editor->debugger.program);
-    prStringReset(&editor->debugger.adapterId);
-    prStringReset(&editor->debugger.launch);
+    prRawStringReset(&editor->debugger.program);
+    prRawStringReset(&editor->debugger.adapterId);
+    prRawStringReset(&editor->debugger.launch);
     for (uint32_t i = 0; i < editor->debugger.arguments.count; ++i)
-        prStringReset(&editor->debugger.arguments.data[i]);
+        prRawStringReset(&editor->debugger.arguments.data[i]);
     editor->debugger.arguments.reset();
     editor->breakpointLines.reset();
     while (editor->diffs.count != 0)
@@ -1684,21 +1686,21 @@ void prTextEditorDestroy(PrTextEditor* PR_NULLABLE editor) {
     for (uint32_t i = 0; i < editor->configs.count; ++i) {
         TextEditorServerConfig& config = editor->configs.data[i];
         for (uint32_t k = 0; k < config.languages.count; ++k)
-            prStringReset(&config.languages.data[k]);
+            prRawStringReset(&config.languages.data[k]);
         for (uint32_t k = 0; k < config.arguments.count; ++k)
-            prStringReset(&config.arguments.data[k]);
+            prRawStringReset(&config.arguments.data[k]);
         config.languages.reset();
         config.arguments.reset();
-        prStringReset(&config.program);
+        prRawStringReset(&config.program);
     }
     editor->configs.reset();
     prTextEstimatorDestroy(editor->estimator);
     prTextFontRelease(editor->font);
     editor->categoryColors.reset();
     editor->lineSeverities.reset();
-    prStringReset(&editor->status);
-    prStringReset(&editor->statusShown);
-    prStringReset(&editor->hoverText);
+    prRawStringReset(&editor->status);
+    prRawStringReset(&editor->statusShown);
+    prRawStringReset(&editor->hoverText);
     prMemoryFree(editor);
 }
 
@@ -1719,10 +1721,10 @@ void prTextEditorSetOptions(PrTextEditor* editor, const PrTextEditorOptions* opt
 void prTextEditorAddServer(PrTextEditor* editor, const PrTextEditorServerDesc* desc) {
     TextEditorServerConfig config{};
     for (uint32_t i = 0; i < desc->languageCount; ++i)
-        config.languages.push(prStringCopy(desc->languages[i]));
-    config.program = prStringCopy(desc->program);
+        config.languages.push(prRawStringCopy(desc->languages[i]));
+    config.program = prRawStringCopy(desc->program);
     for (uint32_t i = 0; i < desc->argumentCount; ++i)
-        config.arguments.push(prStringCopy(desc->arguments[i]));
+        config.arguments.push(prRawStringCopy(desc->arguments[i]));
     editor->configs.push(config);
 }
 
@@ -1732,9 +1734,9 @@ void prTextEditorFrame(PrTextEditor* editor, PrLayoutNode parent, PrVec2 extent)
     for (uint32_t i = 0; i < editor->servers.count; ++i) {
         TextEditorServer* server = editor->servers.data[i];
         textEditorServerPump(server);
-        if (!prStringIsEmpty(&server->message)) {
-            setStatus(editor, prStringView(&server->message));
-            prStringReplace(&server->message, "");
+        if (!prRawStringIsEmpty(&server->message)) {
+            setStatus(editor, prRawStringView(&server->message));
+            prRawStringReplace(&server->message, "");
         }
     }
     for (uint32_t i = 0; i < editor->documents.count; ++i) {
@@ -1786,7 +1788,7 @@ void prTextEditorFrame(PrTextEditor* editor, PrLayoutNode parent, PrVec2 extent)
         colors.bytes[TextEditorDiffSide_New] = prColor16FromColor(added);
         if (textEditorDiffModelUpdate(&diff->model, diff->old->buffer, document->buffer, colors, kLineHeight)) {
             for (uint32_t side = 0; side < TextEditorDiffSide_Count; ++side) {
-                const Array<PrTextViewGap>& gaps = diff->model.sides[side].gaps;
+                const RawArray<PrTextViewGap>& gaps = diff->model.sides[side].gaps;
                 TextEditorDocument* shown = side == TextEditorDiffSide_Old ? diff->old : document;
                 prTextViewSetGaps(shown->view, gaps.data, gaps.count);
             }
@@ -1872,12 +1874,12 @@ PrLayoutNode prTextEditorTextNode(const PrTextEditor* editor) {
 
 PrStringView prTextEditorStatus(const PrTextEditor* editor) {
     PrTextEditor* e = const_cast<PrTextEditor*>(editor);
-    if (!prStringIsEmpty(&e->status))
-        return prStringView(&e->status);
-    prStringReplace(&e->statusShown, "");
+    if (!prRawStringIsEmpty(&e->status))
+        return prRawStringView(&e->status);
+    prRawStringReplace(&e->statusShown, "");
     const TextEditorDocument* document = e->shown;
     if (document == nullptr || document->lsp == nullptr)
-        return prStringView(&e->statusShown);
+        return prRawStringView(&e->statusShown);
     // The worst diagnostic that holds the caret.
     uint32_t caret = caretOf(document);
     uint32_t count = prLspDocumentDiagnosticCount(document->lsp);
@@ -1893,10 +1895,10 @@ PrStringView prTextEditorStatus(const PrTextEditor* editor) {
     }
     if (found) {
         const char* kinds[] = {"", "error: ", "warning: ", "note: ", "hint: "};
-        prStringAppend(&e->statusShown, kinds[shown.severity]);
-        prStringAppend(&e->statusShown, shown.message);
+        prRawStringAppend(&e->statusShown, kinds[shown.severity]);
+        prRawStringAppend(&e->statusShown, shown.message);
     }
-    return prStringView(&e->statusShown);
+    return prRawStringView(&e->statusShown);
 }
 
 PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocumentDesc* desc,
@@ -1928,7 +1930,7 @@ PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocu
     document->handle = document;
     document->editor = editor;
     document->listed = true;
-    document->path = desc->path.data != nullptr ? prStringCopy(desc->path) : prStringNull();
+    document->path = desc->path.data != nullptr ? prRawStringCopy(desc->path) : prRawStringNull();
     document->crlf = crlf;
     document->buffer = prTextEditBufferCreate("");
     document->readOnly = desc->readOnly;
@@ -2013,7 +2015,7 @@ PrTextEditHistory* prTextEditorDocumentHistory(const PrTextEditorDocument* docum
 }
 
 PrStringView prTextEditorDocumentPath(const PrTextEditorDocument* document) {
-    return prStringView(&document->path);
+    return prRawStringView(&document->path);
 }
 
 const PrSyntaxLanguage* PR_NULLABLE prTextEditorDocumentLanguage(const PrTextEditorDocument* document) {
@@ -2096,14 +2098,14 @@ PrTextDiffChange prTextEditorDiffChange(const PrTextEditorDiff* diff, uint32_t i
 
 void prTextEditorSetDebugger(PrTextEditor* editor, const PrTextEditorDebuggerDesc* desc) {
     TextEditorDebugConfig& config = editor->debugger;
-    prStringReplace(&config.program, desc->program);
-    prStringReplace(&config.adapterId, desc->adapterId);
-    prStringReplace(&config.launch, desc->launch);
+    prRawStringReplace(&config.program, desc->program);
+    prRawStringReplace(&config.adapterId, desc->adapterId);
+    prRawStringReplace(&config.launch, desc->launch);
     for (uint32_t i = 0; i < config.arguments.count; ++i)
-        prStringReset(&config.arguments.data[i]);
+        prRawStringReset(&config.arguments.data[i]);
     config.arguments.clear();
     for (uint32_t i = 0; i < desc->argumentCount; ++i)
-        config.arguments.push(prStringCopy(desc->arguments[i]));
+        config.arguments.push(prRawStringCopy(desc->arguments[i]));
     editor->hasDebugger = true;
 }
 
@@ -2113,7 +2115,7 @@ PrTextEditorDebugInfo prTextEditorDebugInfo(const PrTextEditor* editor) {
     PrTextEditorDebugInfo info{.state = textEditorDebugState(editor->debug), .path = ""};
     const TextEditorDebugFrame* frame = stoppedFrame(editor);
     if (frame != nullptr) {
-        info.path = prStringView(&frame->path);
+        info.path = prRawStringView(&frame->path);
         info.line = frame->line;
     }
     return info;
@@ -2129,7 +2131,7 @@ void prTextEditorDebugStop(PrTextEditor* editor) {
 
 uint32_t prTextEditorDocumentBreakpoints(const PrTextEditorDocument* document, uint32_t* PR_NULLABLE out,
         uint32_t capacity) {
-    Array<uint32_t> lines;
+    RawArray<uint32_t> lines;
     breakpointLinesOf(const_cast<PrTextEditorDocument*>(document), lines);
     for (uint32_t i = 0; i < lines.count && i < capacity; ++i)
         out[i] = lines.data[i];

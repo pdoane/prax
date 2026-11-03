@@ -11,7 +11,7 @@
 
 #include "pr/dom.h"
 #include "pr/integer.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 

@@ -74,7 +74,7 @@ void freePipeline(GpuMetalDevice* d, uint32_t id) {
 // Returns a block of shared memory of at least `size` bytes, from the free blocks or new, or one without a buffer if
 // the device has no memory or slot for it. A block larger than `blockSize` is made for its size. The caller holds the
 // mutex.
-GpuMetalBlock blockTake(GpuMetalDevice* d, Array<GpuMetalBlock>& free, uint64_t blockSize, uint64_t size) {
+GpuMetalBlock blockTake(GpuMetalDevice* d, RawArray<GpuMetalBlock>& free, uint64_t blockSize, uint64_t size) {
     for (uint32_t i = 0; i < free.count; ++i) {
         if (free.data[i].buffer.length >= size) {
             GpuMetalBlock block = free.data[i];
@@ -1092,7 +1092,7 @@ void gpuMetalEncodeCopyTextureToBuffer(const GpuMetalDevice* d, id encoder, PrGp
 }
 
 void gpuMetalEncodeUploadCopies(const GpuMetalDevice* d, id encoder) {
-    const Array<GpuSharedUploadCopy>& copies = d->uploadBatch.copies;
+    const RawArray<GpuSharedUploadCopy>& copies = d->uploadBatch.copies;
     for (uint32_t i = 0; i < copies.count; ++i) {
         const GpuSharedUploadCopy& c = copies.data[i];
         if (c.size != 0)

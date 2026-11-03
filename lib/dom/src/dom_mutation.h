@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "dom/src/dom_node.h"
@@ -20,26 +20,26 @@ struct DomMutationObserver;
 struct DomMutationRecord {
     PrDomMutationType type;
     PrDomNode* target;
-    Array<PrDomNode* PR_NONNULL> added;
-    Array<PrDomNode* PR_NONNULL> removed;
+    RawArray<PrDomNode* PR_NONNULL> added;
+    RawArray<PrDomNode* PR_NONNULL> removed;
     PrDomNode* PR_NULLABLE previous;
     PrDomNode* PR_NULLABLE next;
-    PrString attributeName;       // the null string for a record of another type
-    PrString attributeNamespace;  // the null string for no namespace
-    PrString oldValue;            // the null string if the observer did not ask for it
+    PrRawString attributeName;       // the null string for a record of another type
+    PrRawString attributeNamespace;  // the null string for no namespace
+    PrRawString oldValue;            // the null string if the observer did not ask for it
 };
 
 // The registration of an observer on a node (dom/#registered-observer). The registration holds a reference to the node.
 struct DomObserverRegistration {
     PrDomNode* node;
     PrDomMutationObserverInit options;
-    Array<PrString> attributeFilter;
+    RawArray<PrRawString> attributeFilter;
 };
 
 // The observers registered on a document's nodes. The document holds no references to them. Each observer holds a
 // reference to the documents that list it, and removes itself from each list before releasing the reference.
 struct DomMutationObservers {
-    Array<PrDomMutationObserver* PR_NONNULL> observers;
+    RawArray<PrDomMutationObserver* PR_NONNULL> observers;
     uint32_t suppressed;                    // number of mutation algorithms running with their records suppressed
 };
 
@@ -47,9 +47,9 @@ struct DomMutationObservers {
 // reference.
 struct DomMutationObserver {
     PrDomMutationCallback callback;
-    Array<DomObserverRegistration> registrations;
-    Array<PrDomMutationRecord* PR_NONNULL> records;
-    Array<PrDomDocument* PR_NONNULL> documents;   // documents that list the observer, with a reference to each
+    RawArray<DomObserverRegistration> registrations;
+    RawArray<PrDomMutationRecord* PR_NONNULL> records;
+    RawArray<PrDomDocument* PR_NONNULL> documents;   // documents that list the observer, with a reference to each
     uint32_t references;
     bool pending;                                // true if a microtask is queued to deliver the records
 };

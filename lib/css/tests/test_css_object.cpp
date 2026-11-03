@@ -628,10 +628,10 @@ TEST_CASE("a declaration block is found, set and removed by name") {
     CHECK(cssDeclarationBlockSet(style, named(style, "color"), "blue", true, nullptr) == CssEditResult_Changed);
     CHECK(declarations(style) == "color: blue !important; --y: z; width: 1px;");
 
-    PrString removed = {};
+    PrRawString removed = {};
     cssDeclarationBlockRemove(style, named(style, "width"), &removed);
     CHECK(textOf(removed) == "1px");
-    prStringReset(&removed);
+    prRawStringReset(&removed);
     CHECK(declarations(style) == "color: blue !important; --y: z;");
 
     // Setting an empty value removes the declaration (cssom-1/#dom-cssstyledeclaration-setproperty).

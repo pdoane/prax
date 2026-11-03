@@ -61,12 +61,12 @@ CssColor filledFrom(const CssColor& color, const CssColor& other) {
 // with (css-color-4/#interpolation-missing). A stop that mixes with two stops that differ there becomes two stops at
 // its position, one for each side.
 void gradientStopsOf(const CssLayoutLengths& lengths, CssValueRun run, uint32_t first, uint32_t end, bool conic,
-        PrColorSpace space, const CssColorContext& colors, float cap, Array<PrLayoutColorStop>& out) {
+        PrColorSpace space, const CssColorContext& colors, float cap, RawArray<PrLayoutColorStop>& out) {
     struct Stop {
         PrLayoutColorStop stop;
         CssColor color;
     };
-    Array<Stop> stops;
+    RawArray<Stop> stops;
     uint32_t i = first;
     while (i < end) {
         uint32_t itemEnd = i;
@@ -167,7 +167,7 @@ bool startsPrelude(const CssValueNode* value) {
 } // namespace
 
 void cssGradientFromValue(CssValueRun run, uint32_t index, const CssColorContext& colors, float cap,
-        const CssLayoutLengths& lengths, Array<PrLayoutColorStop>& stops, PrLayoutGradient* out) {
+        const CssLayoutLengths& lengths, RawArray<PrLayoutColorStop>& stops, PrLayoutGradient* out) {
     PrLayoutGradient g = prLayoutGradientDefault();
     PrCssKeyword function = cssValueKeyword(&run.values[index]);
     switch (function) {

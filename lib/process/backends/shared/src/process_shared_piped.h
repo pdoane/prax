@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/mutex.h"
 #include "pr/process.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -22,7 +22,7 @@ constexpr uint32_t kProcessReadChunkBytes = 64 * 1024;
 
 // Bytes that arrived on a stream: `bytes` from `start` holds what was not read.
 struct ProcessReceived {
-    Array<uint8_t> bytes;
+    RawArray<uint8_t> bytes;
     uint32_t start;
     bool ended;                     // the pipe reached its end, or the stream is not a pipe
 };
@@ -41,7 +41,7 @@ struct ProcessPiped : PrProcess {
 
     PrMutex mutex;
     ProcessReceived received[2];    // by PrProcessStream
-    Array<uint8_t> queued;          // written and not yet sent, from `queuedStart`
+    RawArray<uint8_t> queued;       // written and not yet sent, from `queuedStart`
     uint32_t queuedStart;
     bool inputClosing;              // the caller closed the input, which closes once what is queued is sent
     bool inputBroken;               // the process stopped reading its input, so writes are dropped

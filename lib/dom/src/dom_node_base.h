@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/draw_image.h"
 #include "pr/hash_index.h"
 #include "pr/image.h"
 #include "pr/layout_tree.h"
 #include "pr/name_table.h"
+#include "pr/raw_array.h"
 #include "pr/url.h"
 
 #include "dom/src/dom_class.h"
@@ -62,8 +62,8 @@ typedef uint8_t DomMediaFlags;
 struct DomElementState {
     PrDomShadowRoot* PR_NULLABLE shadowRoot; // shadow root that the element hosts (dom/#concept-element-shadow-root)
     PrDomNode* PR_NULLABLE contents;         // fragment that a template element holds (html/#the-template-element)
-    PrString prefix;                         // dom/#concept-element-namespace-prefix, or the null string for none
-    PrString returnValue;                    // html/#dom-dialog-returnvalue
+    PrRawString prefix;                      // dom/#concept-element-namespace-prefix, or the null string for none
+    PrRawString returnValue;                 // html/#dom-dialog-returnvalue
     bool modal;                              // html/#is-modal
     bool clicking;                           // html/#click-in-progress-flag
 
@@ -72,7 +72,7 @@ struct DomElementState {
     uint32_t generation;
 
     PrDomImageState image;                // state of an image's current request (html/#current-request)
-    PrString imageUrl;                    // URL of the current request, or the null string for none
+    PrRawString imageUrl;                 // URL of the current request, or the null string for none
     DomSlot* PR_NULLABLE slot;            // state of a slot (dom/#concept-slot), created on first assignment
     DomCustomElement* PR_NULLABLE custom; // custom element data, created on first use
     DomControl* PR_NULLABLE control;      // state of a form-associated element (dom_control.h)

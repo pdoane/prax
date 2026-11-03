@@ -3,11 +3,11 @@
 #include "xhr/src/xhr.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/charset.h"
 #include "pr/fetch.h"
 #include "pr/mime.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/url.h"
@@ -18,10 +18,10 @@ namespace pr_impl {
 
 namespace {
 
-void headersReset(Array<XhrHeader>* headers) {
+void headersReset(RawArray<XhrHeader>* headers) {
     for (uint32_t i = 0; i < headers->count; ++i) {
-        prStringReset(&headers->data[i].name);
-        prStringReset(&headers->data[i].value);
+        prRawStringReset(&headers->data[i].name);
+        prRawStringReset(&headers->data[i].value);
     }
     headers->clear();
 }
@@ -29,7 +29,7 @@ void headersReset(Array<XhrHeader>* headers) {
 // Empties the response.
 void resetResponse(Xhr* request) {
     request->status = 0;
-    prStringReset(&request->responseUrl);
+    prRawStringReset(&request->responseUrl);
     headersReset(&request->responseHeaders);
     request->body.clear();
 }
@@ -37,11 +37,11 @@ void resetResponse(Xhr* request) {
 void destroyRequest(DomCountedTarget* target) {
     Xhr* request = static_cast<Xhr*>(target);
     PR_ASSERT(!request->fetching && request->timer == 0);
-    prStringReset(&request->method);
-    prStringReset(&request->url);
+    prRawStringReset(&request->method);
+    prRawStringReset(&request->url);
     headersReset(&request->requestHeaders);
     request->requestHeaders.reset();
-    prStringReset(&request->overrideMime);
+    prRawStringReset(&request->overrideMime);
     resetResponse(request);
     request->responseHeaders.reset();
     request->body.reset();
@@ -140,11 +140,11 @@ void requestError(Xhr* request, PrStringView type) {
 void receive(Xhr* request, const PrFetchResponse* response) {
     uint32_t generation = request->generation;
     request->status = response->responseStatus;
-    request->responseUrl = prStringCopy(response->url);
+    request->responseUrl = prRawStringCopy(response->url);
     for (uint32_t i = 0; i < response->headerCount; ++i)
         request->responseHeaders.push(XhrHeader{
-            prStringCopy(response->headers[i].name),
-            prStringCopy(response->headers[i].value),
+            prRawStringCopy(response->headers[i].name),
+            prRawStringCopy(response->headers[i].value),
         });
     if (response->body.size != 0)
         request->body.append(response->body.data, uint32_t(response->body.size));
@@ -226,9 +226,9 @@ void setTimer(Xhr* request, uint32_t milliseconds) {
 }
 
 // Returns the index of the header named `name`, or kArrayMissing.
-uint32_t findHeader(const Array<XhrHeader>& headers, PrStringView name) {
+uint32_t findHeader(const RawArray<XhrHeader>& headers, PrStringView name) {
     for (uint32_t i = 0; i < headers.count; ++i) {
-        if (prAsciiEqualsFold(prStringView(&headers.data[i].name), name))
+        if (prAsciiEqualsFold(prRawStringView(&headers.data[i].name), name))
             return i;
     }
     return kArrayMissing;
@@ -236,17 +236,17 @@ uint32_t findHeader(const Array<XhrHeader>& headers, PrStringView name) {
 
 // Appends `value` to the header `name`, combined with the value that the list has for it
 // (fetch/#concept-header-list-combine).
-void combineHeader(Array<XhrHeader>* headers, PrStringView name, PrStringView value) {
+void combineHeader(RawArray<XhrHeader>* headers, PrStringView name, PrStringView value) {
     uint32_t index = findHeader(*headers, name);
     if (index == kArrayMissing) {
-        headers->push(XhrHeader{prStringCopy(name), prStringCopy(value)});
+        headers->push(XhrHeader{prRawStringCopy(name), prRawStringCopy(value)});
         return;
     }
     PrTextBuffer combined = {};
-    prTextBufferAppend(&combined, prStringView(&headers->data[index].value));
+    prTextBufferAppend(&combined, prRawStringView(&headers->data[index].value));
     prTextBufferAppend(&combined, ", ");
     prTextBufferAppend(&combined, value);
-    prStringReset(&headers->data[index].value);
+    prRawStringReset(&headers->data[index].value);
     headers->data[index].value = prTextBufferTake(&combined);
 }
 
@@ -343,11 +343,11 @@ PrStatus prXhrOpen(PrXhr* xhr, PrStringView method, PrStringView url, bool async
         return PrStatus_Syntax;
     if (prFetchIsForbiddenMethod(method))
         return PrStatus_NotAllowed;
-    PrString baseText = xhr->client.baseUrl(xhr->client.context);
+    PrRawString baseText = xhr->client.baseUrl(xhr->client.context);
     PrUrl* base = nullptr;
     PrUrl* parsed = nullptr;
-    PrStatus status = prUrlCreate(prStringView(&baseText), nullptr, PrCharset_Utf8, &base);
-    prStringReset(&baseText);
+    PrStatus status = prUrlCreate(prRawStringView(&baseText), nullptr, PrCharset_Utf8, &base);
+    prRawStringReset(&baseText);
     if (status == PrStatus_Ok)
         status = prUrlCreate(url, base, PrCharset_Utf8, &parsed);
     prUrlDestroy(base);
@@ -360,10 +360,10 @@ PrStatus prXhrOpen(PrXhr* xhr, PrStringView method, PrStringView url, bool async
     ++xhr->generation;
     stopFetch(xhr);
     PrStringView normalized = prFetchNormalizeMethod(method);
-    prStringReset(&xhr->method);
+    prRawStringReset(&xhr->method);
     if (!(normalized == "GET"))
-        xhr->method = prStringCopy(normalized);
-    prStringReset(&xhr->url);
+        xhr->method = prRawStringCopy(normalized);
+    prRawStringReset(&xhr->url);
     xhr->url = prUrlSerialize(parsed, PrUrlSerialization_Whole);
     prUrlDestroy(parsed);
     headersReset(&xhr->requestHeaders);
@@ -412,12 +412,12 @@ PrStatus prXhrSetWithCredentials(PrXhr* xhr, bool withCredentials) {
 PrStatus prXhrSend(PrXhr* xhr, PrByteView body, PrStringView contentType) {
     if (xhr->state != PrXhrState_Opened || xhr->sendFlag)
         return PrStatus_InvalidState;
-    PrStringView method = prStringIsNull(&xhr->method) ? PrStringView("GET") : prStringView(&xhr->method);
+    PrStringView method = prRawStringIsNull(&xhr->method) ? PrStringView("GET") : prRawStringView(&xhr->method);
     if (method == "GET" || method == "HEAD")
         body = PrByteView{nullptr, 0};
     if (body.data != nullptr && contentType.data != nullptr &&
             findHeader(xhr->requestHeaders, "Content-Type") == kArrayMissing)
-        xhr->requestHeaders.push(XhrHeader{prStringCopy("Content-Type"), prStringCopy(contentType)});
+        xhr->requestHeaders.push(XhrHeader{prRawStringCopy("Content-Type"), prRawStringCopy(contentType)});
     xhr->requestBytes = body.size;
     xhr->uploadComplete = body.size == 0;
     xhr->uploadListener = xhr->upload.listeners != nullptr;
@@ -432,15 +432,15 @@ PrStatus prXhrSend(PrXhr* xhr, PrByteView body, PrStringView contentType) {
         if (xhr->generation != generation || xhr->state != PrXhrState_Opened || !xhr->sendFlag)
             return PrStatus_Ok;
     }
-    Array<PrFetchHeader> headers;
+    RawArray<PrFetchHeader> headers;
     for (uint32_t i = 0; i < xhr->requestHeaders.count; ++i)
         headers.push(PrFetchHeader{
-            prStringView(&xhr->requestHeaders.data[i].name),
-            prStringView(&xhr->requestHeaders.data[i].value),
+            prRawStringView(&xhr->requestHeaders.data[i].name),
+            prRawStringView(&xhr->requestHeaders.data[i].value),
         });
     PrFetchClientRequest request{
-        .url = prStringView(&xhr->url),
-        .method = prStringView(&xhr->method),
+        .url = prRawStringView(&xhr->url),
+        .method = prRawStringView(&xhr->method),
         .headers = headers.data,
         .headerCount = headers.count,
         .body = body,
@@ -480,9 +480,9 @@ void prXhrAbort(PrXhr* xhr) {
 PrStatus prXhrOverrideMimeType(PrXhr* xhr, PrStringView mime) {
     if (xhr->state == PrXhrState_Loading || xhr->state == PrXhrState_Done)
         return PrStatus_InvalidState;
-    prStringReset(&xhr->overrideMime);
+    prRawStringReset(&xhr->overrideMime);
     PrStringView essence = prMimeTypeEssence(mime);
-    xhr->overrideMime = prStringCopy(essence.size != 0 ? mime : PrStringView("application/octet-stream"));
+    xhr->overrideMime = prRawStringCopy(essence.size != 0 ? mime : PrStringView("application/octet-stream"));
     return PrStatus_Ok;
 }
 
@@ -498,45 +498,45 @@ PrStatus prXhrSetResponseType(PrXhr* xhr, PrXhrResponseType type) {
 }
 
 PrStringView prXhrResponseUrl(const PrXhr* xhr) {
-    return prStringIsNull(&xhr->responseUrl) ? PrStringView("") : prStringView(&xhr->responseUrl);
+    return prRawStringIsNull(&xhr->responseUrl) ? PrStringView("") : prRawStringView(&xhr->responseUrl);
 }
 
 uint16_t prXhrStatus(const PrXhr* xhr) {
     return xhr->status;
 }
 
-PrString prXhrResponseHeader(const PrXhr* xhr, PrStringView name) {
-    Array<XhrHeader> combined;
+PrRawString prXhrResponseHeader(const PrXhr* xhr, PrStringView name) {
+    RawArray<XhrHeader> combined;
     for (uint32_t i = 0; i < xhr->responseHeaders.count; ++i) {
         const XhrHeader& header = xhr->responseHeaders.data[i];
-        if (prAsciiEqualsFold(prStringView(&header.name), name))
-            combineHeader(&combined, name, prStringView(&header.value));
+        if (prAsciiEqualsFold(prRawStringView(&header.name), name))
+            combineHeader(&combined, name, prRawStringView(&header.value));
     }
-    PrString result = prStringNull();
+    PrRawString result = prRawStringNull();
     if (combined.count != 0) {
         result = combined.data[0].value;
-        combined.data[0].value = prStringNull();
+        combined.data[0].value = prRawStringNull();
     }
     headersReset(&combined);
     combined.reset();
     return result;
 }
 
-PrString prXhrResponseHeaders(const PrXhr* xhr) {
+PrRawString prXhrResponseHeaders(const PrXhr* xhr) {
     // The headers sorted by their lowercase names, with the values of each name combined
     // (fetch/#concept-header-list-sort-and-combine).
-    Array<XhrHeader> sorted;
+    RawArray<XhrHeader> sorted;
     for (uint32_t i = 0; i < xhr->responseHeaders.count; ++i) {
         const XhrHeader& header = xhr->responseHeaders.data[i];
         PrTextBuffer lower = {};
-        prTextBufferAppend(&lower, prStringView(&header.name));
+        prTextBufferAppend(&lower, prRawStringView(&header.name));
         prAsciiLowerText(lower.data, lower.size);
-        combineHeader(&sorted, prTextBufferView(&lower), prStringView(&header.value));
+        combineHeader(&sorted, prTextBufferView(&lower), prRawStringView(&header.value));
         prTextBufferReset(&lower);
     }
     for (uint32_t i = 1; i < sorted.count; ++i) {
         for (uint32_t j = i; j > 0; --j) {
-            if (prStringCompare(prStringView(&sorted.data[j].name), prStringView(&sorted.data[j - 1].name)) >= 0)
+            if (prStringCompare(prRawStringView(&sorted.data[j].name), prRawStringView(&sorted.data[j - 1].name)) >= 0)
                 break;
             XhrHeader swap = sorted.data[j];
             sorted.data[j] = sorted.data[j - 1];
@@ -545,9 +545,9 @@ PrString prXhrResponseHeaders(const PrXhr* xhr) {
     }
     PrTextBuffer text = {};
     for (uint32_t i = 0; i < sorted.count; ++i) {
-        prTextBufferAppend(&text, prStringView(&sorted.data[i].name));
+        prTextBufferAppend(&text, prRawStringView(&sorted.data[i].name));
         prTextBufferAppend(&text, ": ");
-        prTextBufferAppend(&text, prStringView(&sorted.data[i].value));
+        prTextBufferAppend(&text, prRawStringView(&sorted.data[i].value));
         prTextBufferAppend(&text, "\r\n");
     }
     headersReset(&sorted);
@@ -560,21 +560,21 @@ PrByteView prXhrResponseBody(const PrXhr* xhr) {
 }
 
 PrStringView prXhrFinalMimeType(const PrXhr* object) {
-    if (!prStringIsNull(&object->overrideMime))
-        return prStringView(&object->overrideMime);
+    if (!prRawStringIsNull(&object->overrideMime))
+        return prRawStringView(&object->overrideMime);
     uint32_t index = findHeader(object->responseHeaders, "Content-Type");
-    return index != kArrayMissing ? prStringView(&object->responseHeaders.data[index].value) : PrStringView{nullptr, 0};
+    return index != kArrayMissing ? prRawStringView(&object->responseHeaders.data[index].value) : PrStringView{nullptr, 0};
 }
 
-PrString prXhrResponseText(const PrXhr* xhr) {
+PrRawString prXhrResponseText(const PrXhr* xhr) {
     PrStringView mime = prXhrFinalMimeType(xhr);
     PrCharset charset = prCharsetFromMimeType(mime.data != nullptr ? mime : PrStringView{""});
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset != PrCharset_None ? charset : PrCharset_Utf8, 0);
     PrStringView bytes{reinterpret_cast<const char*>(xhr->body.data), xhr->body.count};
-    PrString out = prStringNull();
+    PrRawString out = prRawStringNull();
     PrStringView text = prCharsetDecodeView(&decoder, bytes, PrCharsetInput_Final, &out);
     // A decode that copies nothing returns a view of the body.
-    if (prStringIsNull(&out))
-        return prStringCopy(text.data != nullptr ? text : PrStringView(""));
+    if (prRawStringIsNull(&out))
+        return prRawStringCopy(text.data != nullptr ? text : PrStringView(""));
     return out;
 }

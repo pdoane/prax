@@ -8,9 +8,9 @@
 #include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/mem.h"
+#include "pr/raw_string.h"
 #include "pr/search.h"
 #include "pr/sort.h"
-#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
@@ -32,7 +32,7 @@ LayoutTreeNode& nodeAt(LayoutTree* tree, LayoutNodeIndex node) {
 }
 
 // Removes `node` from `list`, which holds it once.
-void unlist(Array<uint32_t>& list, LayoutNodeIndex node) {
+void unlist(RawArray<uint32_t>& list, LayoutNodeIndex node) {
     for (uint32_t i = 0; i < list.count; ++i) {
         if (list.data[i] == node) {
             list.data[i] = list.last();
@@ -128,7 +128,7 @@ void releaseKind(LayoutTree* tree, LayoutTreeNode& n) {
     else if (n.listed)
         dropFirstLine(tree, LayoutNodeIndex(&n - tree->nodes.data));
     if (n.kind == PrLayoutNodeKind_Text) {
-        prStringReset(&tree->texts.data[n.text]);
+        prRawStringReset(&tree->texts.data[n.text]);
         tree->freeTexts.push(n.text);
     }
     if (n.kind == PrLayoutNodeKind_Replaced) {
@@ -472,7 +472,7 @@ bool takeRoots(LayoutTree* tree, const PrLayoutRoot* roots, uint32_t count) {
             layoutStackingStaleAll(tree);
         return changed;
     }
-    Array<LayoutLaidRoot> taken;
+    RawArray<LayoutLaidRoot> taken;
     for (uint32_t i = 1; i < count; ++i) {
         LayoutNodeIndex node = layoutNodeIndex(tree, roots[i].node);
         PR_ASSERT(node != kPrLayoutNodeNone && node != viewport && isRoot(node));
@@ -785,7 +785,7 @@ LayoutNodeIndex layoutTreeCreateNode(LayoutTree* tree, PrLayoutNodeKind kind) {
             entry = tree->freeTexts.last();
             tree->freeTexts.pop();
         } else {
-            tree->texts.emplace() = PrString{};
+            tree->texts.emplace() = PrRawString{};
         }
         n.style = kPrLayoutStyleNone;
         n.text = entry;
@@ -1095,9 +1095,9 @@ const LayoutHighlights* PR_NULLABLE layoutTextHighlights(const LayoutTree* tree,
     return at != kHashMissing ? &tree->highlights.data[at] : nullptr;
 }
 
-void layoutHighlightsReaching(const LayoutHighlights* highlights, uint32_t start, uint32_t end, Array<uint32_t>& out) {
+void layoutHighlightsReaching(const LayoutHighlights* highlights, uint32_t start, uint32_t end, RawArray<uint32_t>& out) {
     out.clear();
-    const Array<uint32_t>& order = highlights->byStart;
+    const RawArray<uint32_t>& order = highlights->byStart;
     const PrLayoutHighlight* ranges = highlights->ranges.data;
     // The ranges that begin before `end` come first in the order, and those before the first whose reach passes `start`
     // all end at or before it.
@@ -1301,7 +1301,7 @@ PrLayoutNode prLayoutNodeCreateText(PrLayoutTree* tree, PrLayoutNode parent, PrS
     LayoutTree* t = tree;
     LayoutNodeIndex at = layoutNodeIndex(t, parent);
     LayoutNodeIndex node = layoutTreeCreateNode(t, PrLayoutNodeKind_Text);
-    t->texts.data[t->nodes.data[node].text] = prStringCopy(text);
+    t->texts.data[t->nodes.data[node].text] = prRawStringCopy(text);
     appendNew(t, at, node);
     return layoutNodeName(t, node);
 }
@@ -1394,9 +1394,9 @@ void prLayoutNodeSetText(PrLayoutTree* tree, PrLayoutNode text, PrStringView val
     uint32_t index = layoutNodeIndex(t, text);
     LayoutTreeNode& n = nodeAt(t, index);
     PR_ASSERT(n.kind == PrLayoutNodeKind_Text);
-    if (prStringView(&t->texts.data[n.text]) == value)
+    if (prRawStringView(&t->texts.data[n.text]) == value)
         return;
-    prStringReplace(&t->texts.data[n.text], value);
+    prRawStringReplace(&t->texts.data[n.text], value);
     markDirty(t, index);
     markPainted(t, index, false);
 }
@@ -1464,7 +1464,7 @@ void prLayoutTreeSetCarets(PrLayoutTree* tree, const PrLayoutCaret* PR_NULLABLE 
 }
 
 uint32_t prLayoutTreeCarets(const PrLayoutTree* tree, PrLayoutCaret* PR_NULLABLE out, uint32_t capacity) {
-    const Array<PrLayoutCaret>& carets = tree->carets.carets;
+    const RawArray<PrLayoutCaret>& carets = tree->carets.carets;
     for (uint32_t i = 0; i < carets.count && i < capacity; ++i)
         out[i] = carets.data[i];
     return carets.count;
@@ -1605,7 +1605,7 @@ PrLayoutVec prLayoutNodeScroll(const PrLayoutTree* tree, PrLayoutNode element) {
 
 uint32_t prLayoutTreeTakeScrollAdjustments(PrLayoutTree* tree, PrLayoutScrollAdjustment* PR_NULLABLE out,
         uint32_t capacity) {
-    Array<PrLayoutScrollAdjustment>& untaken = tree->anchoring.untaken;
+    RawArray<PrLayoutScrollAdjustment>& untaken = tree->anchoring.untaken;
     uint32_t count = untaken.count < capacity ? untaken.count : capacity;
     for (uint32_t i = 0; i < count; ++i)
         out[i] = untaken.data[i];

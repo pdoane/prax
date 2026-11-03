@@ -117,8 +117,8 @@ void buildDeep(PrCssValue* value) {
 
 // Serializes a value and releases the result at once.
 void serialize(const PrCssValue* value) {
-    PrString written = prCssValueSerialize(value, 0, prCssValueSize(value));
-    prStringReset(&written);
+    PrRawString written = prCssValueSerialize(value, 0, prCssValueSize(value));
+    prRawStringReset(&written);
 }
 
 void setValue(Work* w, PrCssProperty property, const PrCssValue* value) {

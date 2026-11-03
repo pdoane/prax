@@ -70,7 +70,7 @@ bool wouldBlock(int code) {
 // A pipe whose read end wakes the poll, and the poll's entries in the system's form, the pipe first.
 struct SocketsSystem {
     int wake[2];
-    Array<pollfd> polls;
+    RawArray<pollfd> polls;
 };
 
 SocketsSystem* socketsSystemCreate() {
@@ -185,7 +185,7 @@ void socketsShutdownSend(SocketsHandle socket) {
     shutdown(int(socket), SHUT_WR);
 }
 
-PrNetError socketsResolve(const char* host, uint16_t port, Array<SocketsAddress>* out) {
+PrNetError socketsResolve(const char* host, uint16_t port, RawArray<SocketsAddress>* out) {
     char service[8];
     uint32_t digits = 0;
     char reversed[8];

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/color.h"
 #include "pr/draw_list.h"
 #include "pr/lottie.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/vec.h"
 
@@ -489,29 +489,29 @@ struct LottieAnimation {
     mutable LottieExpressions* PR_NULLABLE expressions;
     mutable uint32_t expressionDepth;
 
-    Array<LottieNode> nodes;            // the root first
-    Array<LottieImage> images;
-    Array<LottieComp> comps;            // the root first
-    Array<LottieLayer> layers;
-    Array<LottieItem> items;
-    Array<LottieTransform> transforms;
-    Array<LottieDash> dashes;
-    Array<LottieMask> masks;
-    Array<LottieProperty> properties;
-    Array<LottieKeyframe> keyframes;
-    Array<float> numbers;               // the pool of values
-    Array<LottieEffect> effects;
-    Array<uint32_t> effectValues;       // properties
-    Array<char> strings;
-    Array<LottieFont> textFonts;
-    Array<const PrFont*> fonts;         // the animation holds a reference to each
-    Array<LottieCharShape> charShapes;
-    Array<LottieTextDocument> documents;
-    Array<LottieTextAnimator> animators;
-    Array<LottieLetter> letters;
-    Array<uint32_t> letterIndexes;
-    Array<PrFontGlyph> textGlyphs;
-    Array<PrAffine2> textTransforms;
+    RawArray<LottieNode> nodes;            // the root first
+    RawArray<LottieImage> images;
+    RawArray<LottieComp> comps;            // the root first
+    RawArray<LottieLayer> layers;
+    RawArray<LottieItem> items;
+    RawArray<LottieTransform> transforms;
+    RawArray<LottieDash> dashes;
+    RawArray<LottieMask> masks;
+    RawArray<LottieProperty> properties;
+    RawArray<LottieKeyframe> keyframes;
+    RawArray<float> numbers;               // the pool of values
+    RawArray<LottieEffect> effects;
+    RawArray<uint32_t> effectValues;       // properties
+    RawArray<char> strings;
+    RawArray<LottieFont> textFonts;
+    RawArray<const PrFont*> fonts;         // the animation holds a reference to each
+    RawArray<LottieCharShape> charShapes;
+    RawArray<LottieTextDocument> documents;
+    RawArray<LottieTextAnimator> animators;
+    RawArray<LottieLetter> letters;
+    RawArray<uint32_t> letterIndexes;
+    RawArray<PrFontGlyph> textGlyphs;
+    RawArray<PrAffine2> textTransforms;
 };
 
 // Returns the text of `s`.

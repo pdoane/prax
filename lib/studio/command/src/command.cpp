@@ -3,8 +3,8 @@
 #include "pr/command.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 
 namespace pr_impl {
@@ -14,10 +14,10 @@ namespace {
 // A command, with copies of its views. Each command is allocated alone, so that the views of its strings, which may
 // hold their bytes inline, stay valid as the registry grows.
 struct Command {
-    PrString id;
-    PrString title;
-    PrString category;
-    PrString description;
+    PrRawString id;
+    PrRawString title;
+    PrRawString category;
+    PrRawString description;
     PrCommandFlags flags;
     PrCommandRunFn run;
     PrCommandStateFn PR_NULLABLE state;
@@ -26,15 +26,15 @@ struct Command {
     // The parameters, as views of `paramText`, which holds each parameter's name and then its description.
     uint32_t paramCount;
     PrCommandParam* PR_NULLABLE params;
-    PrString* PR_NULLABLE paramText;
+    PrRawString* PR_NULLABLE paramText;
 };
 
 struct CommandRegistry {
-    Array<Command*> commands;   // by PrCommandIndex
+    RawArray<Command*> commands;   // by PrCommandIndex
 };
 
-PrStringView viewOf(const PrString& string) {
-    return prStringView(&string);
+PrStringView viewOf(const PrRawString& string) {
+    return prRawStringView(&string);
 }
 
 const Command& commandAt(const CommandRegistry* registry, PrCommandIndex index) {
@@ -60,7 +60,7 @@ bool hasKind(PrJsonKind kind, PrCommandParamKind param) {
 
 // Writes to `error`, if it is not null, the sentence "The command <id> <problem> "<name>"<detail>.", leaving out the
 // name if it is null.
-void explain(PrString* PR_NULLABLE error, PrStringView id, PrStringView problem, PrStringView name = {},
+void explain(PrRawString* PR_NULLABLE error, PrStringView id, PrStringView problem, PrStringView name = {},
         PrStringView detail = {}) {
     if (error == nullptr)
         return;
@@ -76,7 +76,7 @@ void explain(PrString* PR_NULLABLE error, PrStringView id, PrStringView problem,
     }
     prTextBufferAppend(&text, detail);
     prTextBufferAppendChar(&text, '.');
-    prStringReset(error);
+    prRawStringReset(error);
     *error = prTextBufferCopy(&text);
     prTextBufferReset(&text);
 }
@@ -98,7 +98,7 @@ const PrCommandParam* PR_NULLABLE paramOf(const Command& command, PrStringView n
 }
 
 // Checks the arguments of a run against the parameters of `command`, and explains the first mismatch.
-PrStatus checkArgs(const Command& command, const PrCommandArgs* args, PrString* PR_NULLABLE error) {
+PrStatus checkArgs(const Command& command, const PrCommandArgs* args, PrRawString* PR_NULLABLE error) {
     PrStringView id = viewOf(command.id);
     const PrJson* document = args->document;
     if (document != nullptr) {
@@ -135,12 +135,12 @@ PrStatus checkArgs(const Command& command, const PrCommandArgs* args, PrString* 
 }
 
 void freeCommand(Command* command) {
-    prStringReset(&command->id);
-    prStringReset(&command->title);
-    prStringReset(&command->category);
-    prStringReset(&command->description);
+    prRawStringReset(&command->id);
+    prRawStringReset(&command->title);
+    prRawStringReset(&command->category);
+    prRawStringReset(&command->description);
     for (uint32_t i = 0; i < 2 * command->paramCount; ++i)
-        prStringReset(&command->paramText[i]);
+        prRawStringReset(&command->paramText[i]);
     prMemoryFree(command->paramText);
     prMemoryFree(command->params);
     prMemoryFree(command);
@@ -173,25 +173,25 @@ void prCommandRegistryAdd(PrCommandRegistry* registry, const PrCommandDesc* desc
     PR_ASSERT(desc->params != nullptr || desc->paramCount == 0);
     PR_ASSERT(desc->run != nullptr);
     Command* command = allocZeroed<Command>();
-    command->id = prStringCopy(desc->id);
-    command->title = prStringCopy(desc->title);
-    command->category = prStringCopy(desc->category);
-    command->description = prStringCopy(desc->description);
+    command->id = prRawStringCopy(desc->id);
+    command->title = prRawStringCopy(desc->title);
+    command->category = prRawStringCopy(desc->category);
+    command->description = prRawStringCopy(desc->description);
     command->flags = desc->flags;
     command->run = desc->run;
     command->state = desc->state;
     command->context = desc->context;
     command->paramCount = desc->paramCount;
     if (desc->paramCount != 0) {
-        command->paramText = static_cast<PrString*>(prMemoryAllocZeroed(2 * desc->paramCount * sizeof(PrString)));
+        command->paramText = static_cast<PrRawString*>(prMemoryAllocZeroed(2 * desc->paramCount * sizeof(PrRawString)));
         command->params = static_cast<PrCommandParam*>(prMemoryAlloc(desc->paramCount * sizeof(PrCommandParam)));
     }
     for (uint32_t i = 0; i < desc->paramCount; ++i) {
         const PrCommandParam& param = desc->params[i];
         for (uint32_t k = 0; k < i; ++k)
             PR_ASSERT(desc->params[k].name != param.name);
-        command->paramText[2 * i] = prStringCopy(param.name);
-        command->paramText[2 * i + 1] = prStringCopy(param.description);
+        command->paramText[2 * i] = prRawStringCopy(param.name);
+        command->paramText[2 * i + 1] = prRawStringCopy(param.description);
         command->params[i] = PrCommandParam{
             .name = viewOf(command->paramText[2 * i]),
             .kind = param.kind,
@@ -245,7 +245,7 @@ bool prCommandRegistryIsDirect(const PrCommandRegistry* registry, PrCommandIndex
 }
 
 PrStatus prCommandRegistryRun(const PrCommandRegistry* registry, PrStringView id, const PrCommandArgs* PR_NULLABLE args,
-        PrString* PR_NULLABLE error) {
+        PrRawString* PR_NULLABLE error) {
     PrCommandIndex index = prCommandRegistryFind(registry, id);
     if (index == kPrCommandMissing) {
         explain(error, id, "does not exist");

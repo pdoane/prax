@@ -2,11 +2,11 @@
 
 #include "pr/ui_text_edit.h"
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/text_edit.h"
 #include "pr/text_edit_command.h"
 #include "pr/text_edit_layout.h"
@@ -85,14 +85,14 @@ struct TextEditor {
     PrUi* ui;
     PrLayoutTree* tree;
     const PrUiTextEditDesc& desc;
-    PrLayoutNode node;                 // the first text node
-    Array<PrTextEditLayoutRun> pieces; // the text nodes, each with where its text starts in the text
-    Array<PrLayoutNode> boxes;         // the inline box of each of `pieces`, if the text has style runs
+    PrLayoutNode node;                    // the first text node
+    RawArray<PrTextEditLayoutRun> pieces; // the text nodes, each with where its text starts in the text
+    RawArray<PrLayoutNode> boxes;         // the inline box of each of `pieces`, if the text has style runs
     TextEditState& state;
     bool multiline;
     bool changed;
     bool moved;
-    Array<char> scratch;
+    RawArray<char> scratch;
 
     // The selection, as this round moves it.
     uint32_t anchor;

@@ -37,16 +37,16 @@ void writeToAdapter(void* PR_NULLABLE context, PrByteView bytes) {
 
 void clearFrames(TextEditorDebugSession* session) {
     for (uint32_t i = 0; i < session->frames.count; ++i) {
-        prStringReset(&session->frames.data[i].name);
-        prStringReset(&session->frames.data[i].path);
+        prRawStringReset(&session->frames.data[i].name);
+        prRawStringReset(&session->frames.data[i].path);
     }
     session->frames.clear();
 }
 
 void clearVariables(TextEditorDebugSession* session) {
     for (uint32_t i = 0; i < session->variables.count; ++i) {
-        prStringReset(&session->variables.data[i].name);
-        prStringReset(&session->variables.data[i].value);
+        prRawStringReset(&session->variables.data[i].name);
+        prRawStringReset(&session->variables.data[i].value);
     }
     session->variables.clear();
 }
@@ -55,15 +55,15 @@ void clearVariables(TextEditorDebugSession* session) {
 void keepOutput(TextEditorDebugSession* session, PrStringView text) {
     for (size_t i = 0; i < text.size; ++i) {
         if (text.data[i] != '\n') {
-            prStringAppend(&session->partial, PrStringView{text.data + i, 1});
+            prRawStringAppend(&session->partial, PrStringView{text.data + i, 1});
             continue;
         }
         if (session->output.count == kOutputMaxLines) {
-            prStringReset(&session->output.data[0]);
+            prRawStringReset(&session->output.data[0]);
             session->output.erase(0);
         }
         session->output.push(session->partial);
-        session->partial = prStringEmpty();
+        session->partial = prRawStringEmpty();
     }
 }
 
@@ -88,8 +88,8 @@ void variablesAnswered(void* PR_NULLABLE context, const PrDapResponse* response)
     count = count < kVariablesMax ? count : kVariablesMax;
     for (uint32_t i = 0; i < count; ++i)
         session->variables.push(TextEditorDebugVariable{
-            prStringCopy(variables[i].name),
-            prStringCopy(variables[i].value),
+            prRawStringCopy(variables[i].name),
+            prRawStringCopy(variables[i].value),
         });
 }
 
@@ -106,15 +106,15 @@ void stackAnswered(void* PR_NULLABLE context, const PrDapResponse* response) {
     clearVariables(session);
     if (response->success) {
         uint32_t count = prDapFrames(response->json, response->body, nullptr, 0);
-        Array<PrDapFrame> frames;
+        RawArray<PrDapFrame> frames;
         frames.resize(count);
         prDapFrames(response->json, response->body, frames.data, count);
         for (uint32_t i = 0; i < count; ++i) {
             const PrDapFrame& frame = frames.data[i];
             session->frames.push(TextEditorDebugFrame{
                 .id = frame.id,
-                .name = prStringCopy(frame.name),
-                .path = prStringCopy(frame.path),
+                .name = prRawStringCopy(frame.name),
+                .path = prRawStringCopy(frame.path),
                 .line = frame.line,
             });
         }
@@ -130,12 +130,12 @@ void stackAnswered(void* PR_NULLABLE context, const PrDapResponse* response) {
 TextEditorDebugSession* textEditorDebugCreate(const TextEditorDebugConfig& config,
         PrProcessLauncher* PR_NULLABLE launcher, PrApp* PR_NULLABLE app) {
     TextEditorDebugSession* session = allocZeroed<TextEditorDebugSession>();
-    session->partial = prStringEmpty();
-    Array<PrStringView> arguments;
+    session->partial = prRawStringEmpty();
+    RawArray<PrStringView> arguments;
     for (uint32_t i = 0; i < config.arguments.count; ++i)
-        arguments.push(prStringView(&config.arguments.data[i]));
+        arguments.push(prRawStringView(&config.arguments.data[i]));
     PrProcessDesc process{
-        .program = prStringView(&config.program),
+        .program = prRawStringView(&config.program),
         .arguments = arguments.data,
         .argumentCount = arguments.count,
         .errors = PrProcessErrors_Discard,
@@ -147,7 +147,7 @@ TextEditorDebugSession* textEditorDebugCreate(const TextEditorDebugConfig& confi
         session->process = started;
     arguments.reset();
     PrDapClientDesc client{
-        .adapterId = prStringView(&config.adapterId),
+        .adapterId = prRawStringView(&config.adapterId),
         .clientName = "Prax Studio",
         .write = writeToAdapter,
         .writeContext = session,
@@ -155,7 +155,7 @@ TextEditorDebugSession* textEditorDebugCreate(const TextEditorDebugConfig& confi
         .eventContext = session,
     };
     session->client = prDapClientCreate(&client);
-    prDapClientLaunch(session->client, prStringView(&config.launch));
+    prDapClientLaunch(session->client, prRawStringView(&config.launch));
     return session;
 }
 
@@ -175,9 +175,9 @@ void textEditorDebugDestroy(TextEditorDebugSession* session) {
     session->frames.reset();
     session->variables.reset();
     for (uint32_t i = 0; i < session->output.count; ++i)
-        prStringReset(&session->output.data[i]);
+        prRawStringReset(&session->output.data[i]);
     session->output.reset();
-    prStringReset(&session->partial);
+    prRawStringReset(&session->partial);
     session->chunk.reset();
     prMemoryFree(session);
 }

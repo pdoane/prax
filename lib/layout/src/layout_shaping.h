@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/text_break.h"
 #include "pr/text_itemize.h"
 #include "pr/text_shaping.h"
@@ -154,20 +154,20 @@ struct LayoutInlineShaping {
     // (layoutFontRetain). Its runs index the groups' faces, so collection must not free a group and reuse its index
     // while the tree caches the shaping. `styles` releases them.
     LayoutStyles* PR_NULLABLE styles;
-    Array<uint32_t> fonts;
+    RawArray<uint32_t> fonts;
 
     PrTextBidi containerBidi;  // the container's unicode-bidi, which its paragraphs' levels read
-    Array<uint32_t> nodes;
-    Array<char> text;
-    Array<LayoutInlineItem> items;
-    Array<LayoutInlineSegment> segments; // at least one, in order
-    Array<PrTextSpaceFlags> spaces;      // by byte
+    RawArray<uint32_t> nodes;
+    RawArray<char> text;
+    RawArray<LayoutInlineItem> items;
+    RawArray<LayoutInlineSegment> segments; // at least one, in order
+    RawArray<PrTextSpaceFlags> spaces;      // by byte
 
     // By byte: the offset in its node's text of the character that the byte was collected from, which queries and
     // painting map positions in the text through. A space that white space collapsing kept stands for the first space
     // of its run, and each byte that a text-transform made stands for the character it replaced. A byte that no text
     // node holds, such as an atomic inline's, is 0.
-    Array<uint32_t> sources;
+    RawArray<uint32_t> sources;
     bool tabs;                           // true if some byte is a preserved tab
 
     // If it has tabs, in px: the distance between tab stops, which is eight spaces of the container's font
@@ -180,13 +180,13 @@ struct LayoutInlineShaping {
     PrTextShaping* PR_NULLABLE shaped;
     PrTextShapingInfo info;
 
-    Array<LayoutShapingRun> runs;   // in the text's order
+    RawArray<LayoutShapingRun> runs;   // in the text's order
 
     // True if some byte's or paragraph's level is odd, so that lines reorder. Otherwise every level is even, and lines
     // are placed in text order.
     bool bidi;
 
-    Array<LayoutBidiSplit> splits;          // sorted by Open item, then byte
+    RawArray<LayoutBidiSplit> splits;          // sorted by Open item, then byte
 
     uint32_t last;                  // the context's last node, a sibling of its first
 
@@ -202,18 +202,18 @@ void layoutShapingDestroy(LayoutInlineShaping* PR_NULLABLE shaping);
 // The scratch memory that finding breaks, itemizing and shaping use while they run.
 struct LayoutShapingScratch {
     PrTextShapingScratch* PR_NULLABLE text;
-    Array<PrTextPiece> pieces;           // the items as lib/text takes them, one for one
-    Array<PrUnicodeBidiClass> classes;   // a paragraph's bidi classes, for its line levels
-    Array<uint8_t> bidiLevels;           // their levels
-    Array<uint32_t> bidiOpen;            // the Open items of the boxes open across paragraphs, outermost first
-    Array<uint32_t> unitStarts;          // a paragraph's units of one level and the same boxes, by their first byte
-    Array<uint8_t> unitLevels;
-    Array<uint32_t> unitOrder;      // by visual position: the unit there
-    Array<uint32_t> unitVisual;     // by unit: its visual position
-    Array<uint32_t> unitRuns;       // the first unit of each box open in a paragraph
-    Array<uint32_t> positions;      // scratch: the visual positions of a box's units
-    Array<uint32_t> boxBytes;       // each box's Open item and its units in a paragraph
-    Array<uint8_t> lineLevels;      // a paragraph's levels with L1, by byte
+    RawArray<PrTextPiece> pieces;           // the items as lib/text takes them, one for one
+    RawArray<PrUnicodeBidiClass> classes;   // a paragraph's bidi classes, for its line levels
+    RawArray<uint8_t> bidiLevels;           // their levels
+    RawArray<uint32_t> bidiOpen;            // the Open items of the boxes open across paragraphs, outermost first
+    RawArray<uint32_t> unitStarts;          // a paragraph's units of one level and the same boxes, by their first byte
+    RawArray<uint8_t> unitLevels;
+    RawArray<uint32_t> unitOrder;      // by visual position: the unit there
+    RawArray<uint32_t> unitVisual;     // by unit: its visual position
+    RawArray<uint32_t> unitRuns;       // the first unit of each box open in a paragraph
+    RawArray<uint32_t> positions;      // scratch: the visual positions of a box's units
+    RawArray<uint32_t> boxBytes;       // each box's Open item and its units in a paragraph
+    RawArray<uint8_t> lineLevels;      // a paragraph's levels with L1, by byte
 };
 
 // Frees the scratch memory.

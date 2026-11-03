@@ -12,9 +12,9 @@
 
 using namespace pr_impl;
 
-PrStatus prUrlProcessData(PrStringView url, PrString* body, PrString* mimeType) {
-    *body = PrString{};
-    *mimeType = PrString{};
+PrStatus prUrlProcessData(PrStringView url, PrRawString* body, PrRawString* mimeType) {
+    *body = PrRawString{};
+    *mimeType = PrRawString{};
     if (!prAsciiStartsWithFold(url, "data:"))
         return PrStatus_NotFound;
     PrStringView input = prStringSlice(url, 5, url.size - 5);
@@ -39,8 +39,8 @@ PrStatus prUrlProcessData(PrStringView url, PrString* body, PrString* mimeType) 
         prTextBufferReset(&decoded);
         return PrStatus_NotFound;
     }
-    *mimeType = prStringCopy(mime.size != 0 ? mime : "text/plain;charset=US-ASCII");
-    *body = prStringCopy(PrStringView{decoded.data != nullptr ? decoded.data : "", size});
+    *mimeType = prRawStringCopy(mime.size != 0 ? mime : "text/plain;charset=US-ASCII");
+    *body = prRawStringCopy(PrStringView{decoded.data != nullptr ? decoded.data : "", size});
     prTextBufferReset(&decoded);
     return PrStatus_Ok;
 }

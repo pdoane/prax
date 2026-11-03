@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/draw.h"
 #include "pr/geom.h"
 #include "pr/layout_style.h"
 #include "pr/path.h"
+#include "pr/raw_array.h"
 
 #include "css/src/css_value.h"
 
@@ -54,7 +54,7 @@ bool cssIsBasicShape(CssValueRun run, uint32_t index);
 // points `out->path` at it. A computed value holds xywh() and rect() as inset()
 // (css-shapes-1/#basic-shape-computed-values), so they are not converted here. Returns false if the value is not a
 // basic shape that the engine draws, such as shape().
-bool cssShapeFromValue(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, Array<PrLayoutLength>& points,
+bool cssShapeFromValue(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, RawArray<PrLayoutLength>& points,
     PrPath* path, PrLayoutShape* out);
 
 // Appends the outline of the computed basic shape at `index` of `run`, resolved in the reference box `box`, to `out`,

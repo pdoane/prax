@@ -29,24 +29,24 @@ void fireProgress(PrXhrFileReader* reader, PrStringView type, uint64_t loaded, u
 // Decodes a Text read's bytes (FileAPI/#blob-package-data): a byte order mark decides first, then the label that the
 // read gave, then the blob's type, then UTF-8.
 void decodeText(PrXhrFileReader* reader, PrByteView bytes) {
-    PrCharset charset = prCharsetFromLabel(prStringView(&reader->encoding));
+    PrCharset charset = prCharsetFromLabel(prRawStringView(&reader->encoding));
     if (charset == PrCharset_None)
         charset = prCharsetFromMimeType(prFetchBlobType(reader->blob));
     if (charset == PrCharset_None)
         charset = PrCharset_Utf8;
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset, 0);
-    PrString decoded = prStringNull();
+    PrRawString decoded = prRawStringNull();
     PrStringView text =
         prCharsetDecodeView(&decoder, PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size},
             PrCharsetInput_Final, &decoded);
-    reader->text = prStringCopy(text);
-    prStringReset(&decoded);
+    reader->text = prRawStringCopy(text);
+    prRawStringReset(&decoded);
 }
 
 // Packages the read's bytes as its format (FileAPI/#blob-package-data).
 void packageResult(PrXhrFileReader* reader) {
     PrByteView bytes = prFetchBlobBytes(reader->blob);
-    prStringReset(&reader->text);
+    prRawStringReset(&reader->text);
     switch (reader->format) {
         case PrXhrFileReaderFormat_ArrayBuffer:
             break;
@@ -54,7 +54,7 @@ void packageResult(PrXhrFileReader* reader) {
             PrTextBuffer text{};
             for (size_t i = 0; i < bytes.size; ++i)
                 prTextBufferAppendCodePoint(&text, bytes.data[i]);
-            reader->text = prStringCopy(prTextBufferView(&text));
+            reader->text = prRawStringCopy(prTextBufferView(&text));
             prTextBufferReset(&text);
             break;
         }
@@ -73,7 +73,7 @@ void packageResult(PrXhrFileReader* reader) {
             prBase64Encode(input, encoded, size);
             prTextBufferAppend(&text, PrStringView{encoded, size});
             prMemoryFree(encoded);
-            reader->text = prStringCopy(prTextBufferView(&text));
+            reader->text = prRawStringCopy(prTextBufferView(&text));
             prTextBufferReset(&text);
             break;
         }
@@ -147,8 +147,8 @@ void destroyReader(DomCountedTarget* target) {
     PrXhrFileReader* reader = static_cast<PrXhrFileReader*>(target);
     prFetchBlobRelease(reader->blob);
     prFetchBlobRelease(reader->result);
-    prStringReset(&reader->encoding);
-    prStringReset(&reader->text);
+    prRawStringReset(&reader->encoding);
+    prRawStringReset(&reader->text);
     domListenersDestroy(reader->listeners);
     prMemoryFree(reader);
 }
@@ -182,9 +182,9 @@ bool prXhrFileReaderRead(PrXhrFileReader* reader, const PrFetchBlob* blob, PrXhr
     prFetchBlobRelease(reader->blob);
     reader->blob = blob;
     reader->format = format;
-    prStringReset(&reader->encoding);
+    prRawStringReset(&reader->encoding);
     if (encoding.data != nullptr)
-        reader->encoding = prStringCopy(encoding);
+        reader->encoding = prRawStringCopy(encoding);
     ++reader->generation;
     queueStep(reader, ReadStep_Start);
     return true;
@@ -227,5 +227,5 @@ PrByteView prXhrFileReaderResultBytes(const PrXhrFileReader* reader) {
 }
 
 PrStringView prXhrFileReaderResultText(const PrXhrFileReader* reader) {
-    return prStringView(&reader->text);
+    return prRawStringView(&reader->text);
 }

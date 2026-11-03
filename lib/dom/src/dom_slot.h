@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/hash_index.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "dom/src/dom_node.h"
@@ -19,8 +19,8 @@ namespace pr_impl {
 // the slot's shadow root assigns manually, the slot also lists the nodes that a script assigned to it, without holding
 // references to them.
 struct DomSlot {
-    Array<PrDomNode* PR_NONNULL> assigned;   // dom/#slot-assigned-nodes
-    Array<PrDomNode* PR_NONNULL> manual;     // html/#manually-assigned-nodes
+    RawArray<PrDomNode* PR_NONNULL> assigned;   // dom/#slot-assigned-nodes
+    RawArray<PrDomNode* PR_NONNULL> manual;     // html/#manually-assigned-nodes
 };
 
 // The link from a queued slotchange microtask to the document whose slots the microtask fires at. The document clears
@@ -38,13 +38,13 @@ struct DomSlotted {
 // The state that a document keeps about its slots once it has a shadow root. Before that, none of its nodes is slotted,
 // and the mutation algorithms skip the slot steps.
 struct DomSlots {
-    Array<PrDomElement* PR_NONNULL> signals;   // dom/#signal-slot-list, in the order signaled
-    Array<PrDomElement* PR_NONNULL> manual;    // slots with manually assigned nodes
-    DomSlotsToken* PR_NULLABLE token;          // link of the microtask queued to fire slotchange at the slots
+    RawArray<PrDomElement* PR_NONNULL> signals;   // dom/#signal-slot-list, in the order signaled
+    RawArray<PrDomElement* PR_NONNULL> manual;    // slots with manually assigned nodes
+    DomSlotsToken* PR_NULLABLE token;             // link of the microtask queued to fire slotchange at the slots
 
     // The assigned slot of each node that has one, which the presentation reads for every node it walks or marks. A
     // node is listed while it has DomNodeFlag_Slotted.
-    Array<DomSlotted> slotted;
+    RawArray<DomSlotted> slotted;
     HashIndex slottedIndex;                    // `slotted` by prHashPointer of the node
 
     // The document has a shadow root whose sheets style its tree alone, which a rule set tests scopes for. A use
@@ -74,7 +74,7 @@ PrDomNode* const PR_NONNULL* PR_NULLABLE domSlotAssigned(const PrDomElement* slo
 
 // Appends the slot's assigned nodes (dom/#slot-assigned-nodes) to `out`, flattened if `flatten` is set
 // (dom/#find-flattened-slotables).
-void domSlotAssignedNodes(const PrDomElement* slot, bool flatten, Array<PrDomNode* PR_NONNULL>* out);
+void domSlotAssignedNodes(const PrDomElement* slot, bool flatten, RawArray<PrDomNode* PR_NONNULL>* out);
 
 // Returns true if the slot's assigned nodes flatten to at least one node (css-shadow-1/#selectordef-has-slotted).
 bool domSlotHasSlotted(const PrDomElement* slot);

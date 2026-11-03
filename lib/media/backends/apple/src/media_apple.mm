@@ -3,7 +3,6 @@
 #include "pr/media_apple.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
@@ -12,6 +11,7 @@
 #include "pr/memory.h"
 #include "pr/mime.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 
 #import <AVFoundation/AVFoundation.h>
@@ -90,13 +90,13 @@ struct AppleDecoder : PrMediaDecoder {
     PrCondition wake;
 
     // Guarded by `mutex`.
-    Array<AppleFrame> frames;   // decoded, in time order, from the last at or before `wanted` on
-    double wanted;              // the time last asked for
-    double seekTo;              // a time to restart decoding at, or NaN
-    double start;               // the time that decoding last started at
-    double through;             // the time of the last frame decoded since then, or -infinity
-    bool dropped;               // frames decoded since `start` were dropped from the front
-    bool ended;                 // every frame since `start` is decoded
+    RawArray<AppleFrame> frames; // decoded, in time order, from the last at or before `wanted` on
+    double wanted;               // the time last asked for
+    double seekTo;               // a time to restart decoding at, or NaN
+    double start;                // the time that decoding last started at
+    double through;              // the time of the last frame decoded since then, or -infinity
+    bool dropped;                // frames decoded since `start` were dropped from the front
+    bool ended;                  // every frame since `start` is decoded
     bool stopping;
     uint64_t serials;
 
@@ -135,7 +135,7 @@ NSString* PR_NULLABLE containerType(PrByteView bytes) {
 }
 
 // Releases the frames, and empties the list.
-void releaseFrames(Array<AppleFrame>* frames) {
+void releaseFrames(RawArray<AppleFrame>* frames) {
     for (uint32_t i = 0; i < frames->count; ++i)
         CVPixelBufferRelease(frames->data[i].buffer);
     frames->clear();
@@ -262,7 +262,7 @@ AVAssetReaderTrackOutput* PR_NULLABLE startReadingAudio(PrMediaAppleSource* sour
 // Decodes the audio into the queue, and starts over at each seek, until the decoder stops.
 void decodeAudio(AppleDecoder* d) {
     PrMediaAudioQueue* queue = d->queue;
-    Array<float> samples{};
+    RawArray<float> samples{};
     PrMediaAppleSource* source = sourceOf(d);
     while (!prMediaAudioQueueIsStopping(queue)) {
         PrMediaAudioSeek request = prMediaAudioQueueRequest(queue);
@@ -507,7 +507,7 @@ struct AppleSampleAudio : PrMediaSampleDecoder {
     AudioConverterRef converter;
     uint32_t inputChannels;
     uint32_t channels;
-    Array<float> output;
+    RawArray<float> output;
 
     // The frame being decoded, which the converter's input callback gives it once.
     const PrMediaBufferedFrame* PR_NULLABLE input;
@@ -633,7 +633,7 @@ void readAudioConfig(PrByteView config, uint32_t* sampleRate, uint32_t* channels
 }
 
 // Appends an MPEG-4 descriptor's tag and length, in four bytes of seven bits each (ISO/IEC 14496-1, 8.3.3).
-void appendDescriptor(Array<uint8_t>* out, uint8_t tag, uint32_t length) {
+void appendDescriptor(RawArray<uint8_t>* out, uint8_t tag, uint32_t length) {
     out->push(tag);
     out->push(uint8_t(0x80 | ((length >> 21) & 0x7f)));
     out->push(uint8_t(0x80 | ((length >> 14) & 0x7f)));
@@ -643,7 +643,7 @@ void appendDescriptor(Array<uint8_t>* out, uint8_t tag, uint32_t length) {
 
 // Writes the ES descriptor of an AAC stream whose AudioSpecificConfig is `config`, which the converter takes as its
 // magic cookie, as an esds box holds it.
-void esdsOf(PrByteView config, Array<uint8_t>* out) {
+void esdsOf(PrByteView config, RawArray<uint8_t>* out) {
     uint32_t specific = uint32_t(config.size);
     uint32_t decoderConfig = 13 + 5 + specific;
     uint32_t elementary = 3 + 5 + decoderConfig + 5 + 1;
@@ -687,7 +687,7 @@ PrStatus audioDecoderCreate(const PrMediaTrackInfo* track, uint32_t sampleRate, 
     if (AudioConverterNew(&input, &output, &converter) != noErr)
         return PrStatus_NotSupported;
     if (aac && track->config.size != 0) {
-        Array<uint8_t> cookie{};
+        RawArray<uint8_t> cookie{};
         esdsOf(track->config, &cookie);
         AudioConverterSetProperty(converter, kAudioConverterDecompressionMagicCookie, cookie.count, cookie.data);
         cookie.reset();
@@ -751,10 +751,10 @@ bool audioDecode(AppleSampleAudio* d, const PrMediaBufferedFrame* frame, const P
 }
 
 PrMediaSupport supportsSourceType(PrMediaCodec*, PrStringView type) {
-    PrString parameter{};
+    PrRawString parameter{};
     if (!prMimeTypeParameter(type, "codecs", &parameter))
         return PrMediaSupport_Maybe;
-    PrStringView codecs = prStringView(&parameter);
+    PrStringView codecs = prRawStringView(&parameter);
     PrMediaSupport support = PrMediaSupport_Probably;
     size_t from = 0;
     while (from <= codecs.size && support != PrMediaSupport_No) {
@@ -773,7 +773,7 @@ PrMediaSupport supportsSourceType(PrMediaCodec*, PrStringView type) {
             support = PrMediaSupport_No;
         from = end + 1;
     }
-    prStringReset(&parameter);
+    prRawStringReset(&parameter);
     return support;
 }
 

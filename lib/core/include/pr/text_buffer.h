@@ -6,7 +6,7 @@
 #include "pr/base.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/utf8.h"
 
@@ -37,7 +37,7 @@ void prTextBufferReset(PrTextBuffer* buffer);
 
 // Returns the text as a string that the caller owns. The buffer is left empty, with no storage. If the text does not
 // fit inline, the string takes the storage of the buffer.
-PrString prTextBufferTake(PrTextBuffer* buffer);
+PrRawString prTextBufferTake(PrTextBuffer* buffer);
 
 // Appends the bytes of `text`.
 static inline void prTextBufferAppend(PrTextBuffer* buffer, PrStringView text) {
@@ -115,8 +115,8 @@ static inline void prTextBufferClear(PrTextBuffer* buffer) {
 }
 
 // Returns a copy of the text, as a string that the caller owns. The buffer is unchanged.
-static inline PrString prTextBufferCopy(const PrTextBuffer* buffer) {
-    return prStringCopy(prTextBufferView(buffer));
+static inline PrRawString prTextBufferCopy(const PrTextBuffer* buffer) {
+    return prRawStringCopy(prTextBufferView(buffer));
 }
 
 #if defined(__cplusplus)

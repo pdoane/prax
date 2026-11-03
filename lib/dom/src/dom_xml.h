@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/dom_xml.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -37,7 +37,7 @@ struct DomXmlBuilder {
     const DomXmlEntities* PR_NULLABLE entities;
     PrXmlHandler handler;
     PrXmlParser* parser;            // the parse, whose input the builder's user appends and runs
-    Array<PrDomElement*> open;
+    RawArray<PrDomElement*> open;
 };
 
 // Starts a parse into `document`, which must have no children. `entities` must outlive the builder.
@@ -61,7 +61,7 @@ bool domXmlCharset(PrStringView bytes, PrCharset transport, bool complete, PrCha
 
 // Returns the text of an XML document's bytes as UTF-8, and sets `*outCharset` to the charset that decoded them
 // (domXmlCharset). The text is a view of `bytes` if they decode to themselves, and is otherwise appended to `out`.
-PrStringView domXmlDecode(PrStringView bytes, PrCharset transport, PrString* out, PrCharset* outCharset);
+PrStringView domXmlDecode(PrStringView bytes, PrCharset transport, PrRawString* out, PrCharset* outCharset);
 
 } // namespace pr_impl
 

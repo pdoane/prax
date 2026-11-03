@@ -4,11 +4,11 @@
 
 #include "pr/html_console_quickjs.h"
 
-#include "pr/array.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/memory.h"
 #include "pr/quickjs_binding.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/time.h"
@@ -22,20 +22,20 @@ constexpr int kPrinterKey = 0;
 
 // The count of a label, or the start time of its timer.
 struct Labeled {
-    PrString label;
+    PrRawString label;
     double value;
 };
 
 // The state of a realm's console: console/#count-map, console/#timer-table and the depth of console/#group-stack.
 struct ConsoleState {
-    Array<Labeled> counts;
-    Array<Labeled> timers;
+    RawArray<Labeled> counts;
+    RawArray<Labeled> timers;
     uint32_t depth;
 };
 
-void resetLabeled(Array<Labeled>* list) {
+void resetLabeled(RawArray<Labeled>* list) {
     for (uint32_t i = 0; i < list->count; ++i)
-        prStringReset(&list->data[i].label);
+        prRawStringReset(&list->data[i].label);
     list->reset();
 }
 
@@ -48,9 +48,9 @@ void consoleFinalizer(JSRuntime*, JSValue stateObject) {
     prMemoryFree(state);
 }
 
-Labeled* PR_NULLABLE findLabel(Array<Labeled>* list, PrStringView label) {
+Labeled* PR_NULLABLE findLabel(RawArray<Labeled>* list, PrStringView label) {
     for (uint32_t i = 0; i < list->count; ++i) {
-        if (prStringView(&list->data[i].label) == label)
+        if (prRawStringView(&list->data[i].label) == label)
             return &list->data[i];
     }
     return nullptr;
@@ -219,7 +219,7 @@ JSValue countMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, 
     if (magic == 0) {
         if (found == nullptr) {
             found = &state->counts.emplace();
-            *found = Labeled{prStringCopy(label.value()), 0};
+            *found = Labeled{prRawStringCopy(label.value()), 0};
         }
         found->value += 1;
         prTextBufferAppend(&text, ": ");
@@ -259,7 +259,7 @@ JSValue timeMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, i
     PrTextBuffer text = {};
     prTextBufferAppend(&text, label.value());
     if (magic == 0 && found == nullptr) {
-        state->timers.push({prStringCopy(label.value()), prTimeMonotonicMilliseconds()});
+        state->timers.push({prRawStringCopy(label.value()), prTimeMonotonicMilliseconds()});
     } else if (magic == 0 || found == nullptr) {
         prTextBufferAppend(&text, magic == 0 ? ": timer already exists" : ": no such timer");
         print(ctx, PrJsHtmlConsoleLevel_Warn, state->depth, prTextBufferView(&text));
@@ -268,7 +268,7 @@ JSValue timeMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, i
         appendNumber(ctx, &text, prTimeMonotonicMilliseconds() - found->value);
         prTextBufferAppend(&text, " ms");
         if (magic == 2) {
-            prStringReset(&found->label);
+            prRawStringReset(&found->label);
             state->timers.erase(uint32_t(found - state->timers.data));
         }
         logger(ctx, state, PrJsHtmlConsoleLevel_Info, prTextBufferView(&text), magic == 1 && argc > 1 ? argc - 1 : 0, argv + 1);

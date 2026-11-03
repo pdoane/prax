@@ -10,10 +10,10 @@
 #include "draw/backends/cpu/src/cpu_filter.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/color_space.h"
 #include "pr/float.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 namespace {
@@ -46,10 +46,10 @@ struct Evaluation {
     Image source;
     Image sourceAlpha;
     Image backdrop;
-    Array<Image> results;
-    Array<PrIRect> regions;     // the region of each result, in the offscreen's pixels relative to its origin
-    Array<float> line;
-    Array<float> scratch;
+    RawArray<Image> results;
+    RawArray<PrIRect> regions;     // the region of each result, in the offscreen's pixels relative to its origin
+    RawArray<float> line;
+    RawArray<float> scratch;
 };
 
 size_t pixelCount(const Evaluation& e) {
@@ -182,7 +182,7 @@ void blurImage(Evaluation& e, Image& image, float sigmaX, float sigmaY, PrImageE
 }
 
 // Replaces each value with the smallest or largest of its channel within `radius` pixels along one axis.
-void morphLine(float* values, uint32_t count, size_t stride, int32_t radius, PrDrawMorphologyOp op, Array<float>& scratch) {
+void morphLine(float* values, uint32_t count, size_t stride, int32_t radius, PrDrawMorphologyOp op, RawArray<float>& scratch) {
     scratch.clear();
     scratch.reserve(count);
     for (uint32_t i = 0; i < count; ++i)
@@ -737,7 +737,7 @@ void turbulenceNode(const Evaluation& e, const PrDrawFilterNode& node, PrRect gr
 }
 
 void progressiveBlur(Evaluation& e, const PrDrawFilterNode& node, const Image& in, Image& out) {
-    Array<float> alpha;
+    RawArray<float> alpha;
     alpha.reserve(uint32_t(pixelCount(e)));
     alpha.count = uint32_t(pixelCount(e));
     const PrIRect& box = e.layer->box;
@@ -1046,7 +1046,7 @@ void cpuBlurCoverage(const CpuCoverage& coverage, float sigmaX, float sigmaY) {
     uint32_t height = prIRectHeight(coverage.box);
     if (width == 0 || height == 0 || coverage.data == nullptr)
         return;
-    Array<float> values;
+    RawArray<float> values;
     values.reserve(width * height);
     values.count = width * height;
     for (uint32_t y = 0; y < height; ++y) {

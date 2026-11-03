@@ -13,13 +13,13 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/geom.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 #include "dom/src/dom_node.h"
@@ -103,7 +103,7 @@ struct CssPresentationSvgContentFunctions {
 
     // Returns true if the content, as last brought up to date, matches content built from scratch. Writes the first
     // difference to `report` otherwise, replacing its contents.
-    bool (*PR_NONNULL verify)(void* content, PrString* report);
+    bool (*PR_NONNULL verify)(void* content, PrRawString* report);
 
     // Frees the content. The presentation calls it once no box draws the content.
     void (*PR_NONNULL release)(void* content);
@@ -121,7 +121,7 @@ struct CssPresentationSvg {
     // the content draws, and the extent of the box that the content was brought up to date for, which hit testing and
     // the queries of its elements map through.
     PrLayoutNaturalSize natural;
-    Array<CssPresentationSvgForeignObject> foreignObjects;
+    RawArray<CssPresentationSvgForeignObject> foreignObjects;
     PrLayoutVec extent;
 
     // The content needs bringing up to date: it is new, or its box's extent changed.

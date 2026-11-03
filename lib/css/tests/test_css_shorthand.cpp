@@ -284,7 +284,7 @@ TEST_CASE("setProperty sets each longhand where it is, and removeProperty remove
     CHECK_FALSE(cssDeclarationBlockImportant(&block.style, named(&block.style, "margin")));
     CHECK(block.value("margin") == "");
 
-    PrString removed = prStringNull();
+    PrRawString removed = prRawStringNull();
     CHECK(cssDeclarationBlockRemove(&block.style, named(&block.style, "margin"), &removed) == CssEditResult_Changed);
     CHECK(take(removed) == "");
     CHECK(block.text() == "color: red;");

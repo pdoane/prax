@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/hash_index.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "layout/src/layout_anchor.h"
@@ -132,17 +132,17 @@ struct LayoutFirstLine {
 struct LayoutHighlights {
     LayoutNodeIndex node;
     uint32_t frame;
-    Array<PrLayoutHighlight> ranges;
+    RawArray<PrLayoutHighlight> ranges;
 
     // The ranges in order of their starts, by index of `ranges`, and the furthest end of the ranges up to each place in
     // that order, so that a part of the text finds the ranges that reach it without reading the others.
-    Array<uint32_t> byStart;
-    Array<uint32_t> reach;
+    RawArray<uint32_t> byStart;
+    RawArray<uint32_t> reach;
 };
 
 // The carets that a tree paints (prLayoutTreeSetCarets), and the frame that set them, or 0 if no frame did.
 struct LayoutTreeCarets {
-    Array<PrLayoutCaret> carets;
+    RawArray<PrLayoutCaret> carets;
     uint32_t frame;
     bool hidden;                    // the carets paint nothing (prLayoutTreeSetCaretsHidden)
 };
@@ -173,7 +173,7 @@ struct LayoutReplaced {
     uint64_t revision;                // PrLayoutContent::revision
 
     // PrLayoutContent::text
-    PrString (*PR_NULLABLE text)(void* PR_NULLABLE textContext);
+    PrRawString (*PR_NULLABLE text)(void* PR_NULLABLE textContext);
     void* PR_NULLABLE textContext;
 };
 
@@ -213,17 +213,17 @@ struct LayoutTree {
 
     // --- Nodes ---
 
-    Array<LayoutTreeNode> nodes;    // by LayoutNodeIndex; the first is unused
-    LayoutNodeIndex freeNodes;      // the first freed node, or kPrLayoutNodeNone
-    Array<LayoutReplaced> replaced; // of the replaced nodes, which name their entries
-    Array<uint32_t> freeReplaced;   // entries that no node names
-    Array<PrString> texts;          // of the text nodes, which name their entries
-    Array<uint32_t> freeTexts;      // entries that no node names
-    HashIndex keys;                 // the nodes that have keys, by their keys
-    LayoutNodeIndex root;           // the viewport's root in the last layout, or kPrLayoutNodeNone
-    PrLayoutNode rootName;          // the handle of `root`, which a layout given the same root compares
-    PrLayoutVec viewportScroll;     // as set, or as scroll anchoring moved it
-    PrColor16 canvasColor;          // the canvas beneath the viewport's root, straight alpha, as set
+    RawArray<LayoutTreeNode> nodes;    // by LayoutNodeIndex; the first is unused
+    LayoutNodeIndex freeNodes;         // the first freed node, or kPrLayoutNodeNone
+    RawArray<LayoutReplaced> replaced; // of the replaced nodes, which name their entries
+    RawArray<uint32_t> freeReplaced;   // entries that no node names
+    RawArray<PrRawString> texts;       // of the text nodes, which name their entries
+    RawArray<uint32_t> freeTexts;      // entries that no node names
+    HashIndex keys;                    // the nodes that have keys, by their keys
+    LayoutNodeIndex root;              // the viewport's root in the last layout, or kPrLayoutNodeNone
+    PrLayoutNode rootName;             // the handle of `root`, which a layout given the same root compares
+    PrLayoutVec viewportScroll;        // as set, or as scroll anchoring moved it
+    PrColor16 canvasColor;             // the canvas beneath the viewport's root, straight alpha, as set
     PrLayoutWheelEvents viewportWheelEvents;
     LayoutFrame frame;
 
@@ -236,37 +236,37 @@ struct LayoutTree {
     LayoutInputFlags laidOutFor;
     LayoutInputFlags paintedFor;
 
-    uint32_t effects;               // raised when a node's effects change, which layout does not see
-    uint32_t metricsGeneration;     // the styles' metrics generation at the last layout, which all laid-out boxes use
-    Array<uint64_t> changedFonts;   // scratch: a bit set of the font groups whose answers changed (layoutSyncFonts)
+    uint32_t effects;                // raised when a node's effects change, which layout does not see
+    uint32_t metricsGeneration;      // the styles' metrics generation at the last layout, which all laid-out boxes use
+    RawArray<uint64_t> changedFonts; // scratch: a bit set of the font groups whose answers changed (layoutSyncFonts)
 
     // The nodes whose layout or intrinsic sizes read the viewport's extent, which no space carries. A change of the
     // extent marks each of them dirty.
-    Array<uint32_t> viewportReaders;
+    RawArray<uint32_t> viewportReaders;
 
     // The boxes that have a background layer fixed to the viewport (LayoutTreeNode::fixedBackground). Their recordings
     // depend on the viewport's extent, so a change of the extent marks each of them painted.
-    Array<uint32_t> viewportPainters;
+    RawArray<uint32_t> viewportPainters;
 
     // --- Layout ---
 
     const LayoutFragment* PR_NULLABLE fragment; // the viewport's fragment from the last layout, held by the tree
     PrLayoutVec viewport;                       // the extent the last layout was given
-    Array<LayoutLaidRoot> roots;                // the last layout's other roots, in the order it was given them
+    RawArray<LayoutLaidRoot> roots;             // the last layout's other roots, in the order it was given them
     uint32_t layouts;                           // raised by each layout that changes the fragments
     LayoutCache cache;
 
     // By the first node of each inline formatting context: the shaping of its text, which does not depend on its width,
     // or null.
-    Array<LayoutInlineShaping* PR_NULLABLE> shapings;
+    RawArray<LayoutInlineShaping* PR_NULLABLE> shapings;
 
     // The records of the elements that have one for the first formatted line (prLayoutNodeSetFirstLineStyle), indexed
     // by node. Few elements have one.
-    Array<LayoutFirstLine> firstLines;
+    RawArray<LayoutFirstLine> firstLines;
     HashIndex firstLineIndex;
 
     // The highlights of the text nodes that have them, indexed by node, and the caret. Few nodes have highlights.
-    Array<LayoutHighlights> highlights;
+    RawArray<LayoutHighlights> highlights;
     HashIndex highlightIndex;
     LayoutTreeCarets carets;
 
@@ -281,7 +281,7 @@ struct LayoutTree {
 
     // The roots that replaced nodes' painters drew in their last drawings, and the replaced node whose painter runs, or
     // kPrLayoutNodeNone. A paint that draws a root again draws again the replaced nodes that drew it.
-    mutable Array<LayoutRootReader> rootReaders;
+    mutable RawArray<LayoutRootReader> rootReaders;
     mutable LayoutNodeIndex painting;
 
     LayoutAnchoring anchoring;
@@ -365,7 +365,7 @@ inline PrLayoutVec layoutNodeScroll(const LayoutTree* tree, LayoutNodeIndex node
 inline PrStringView layoutNodeText(const LayoutTree* tree, LayoutNodeIndex node) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     PR_ASSERT(n.kind == PrLayoutNodeKind_Text);
-    return prStringView(&tree->texts.data[n.text]);
+    return prRawStringView(&tree->texts.data[n.text]);
 }
 
 // Returns what the replaced node `node` holds beyond a node.
@@ -402,7 +402,7 @@ const LayoutHighlights* PR_NULLABLE layoutTextHighlights(const LayoutTree* tree,
 
 // Writes to `out` the indices of the ranges of `highlights` that reach the bytes from `start` to `end`, in paint order.
 // The cost follows the number of ranges that begin before `end` and reach past the last range that ends before `start`.
-void layoutHighlightsReaching(const LayoutHighlights* highlights, uint32_t start, uint32_t end, Array<uint32_t>& out);
+void layoutHighlightsReaching(const LayoutHighlights* highlights, uint32_t start, uint32_t end, RawArray<uint32_t>& out);
 
 // Sets the highlights of the text `node` (prLayoutNodeSetHighlights) on behalf of `frame`, or of no frame for 0.
 void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLayoutHighlight* PR_NULLABLE highlights,

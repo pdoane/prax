@@ -1,8 +1,8 @@
 #include "pr/text_edit_layout.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -17,8 +17,8 @@ struct LayoutLines {
     const PrTextEditLayoutRun* PR_NULLABLE runs;    // the nodes of flat text, or `ownRun`
     uint32_t runCount;
     PrTextEditLayoutRun ownRun;
-    Array<PrLayoutLineStop> found;
-    Array<PrTextEditLineStop> stops;
+    RawArray<PrLayoutLineStop> found;
+    RawArray<PrTextEditLineStop> stops;
 
     // The answer to the last question, which motion asks several times for each press. The text does not change while a
     // geometry is in use.

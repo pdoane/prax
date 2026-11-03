@@ -99,8 +99,8 @@ typedef uint8_t Guard;
 
 // A header list (fetch/#concept-header-list) and its guard. Names keep the case of the first header of each name.
 struct JsHeaders {
-    Array<PrString> names;
-    Array<PrString> values;
+    RawArray<PrRawString> names;
+    RawArray<PrRawString> values;
     Guard guard;
 };
 
@@ -112,8 +112,8 @@ JsHeaders* headersCreate(Guard guard) {
 
 void headersClear(JsHeaders* headers) {
     for (uint32_t i = 0; i < headers->names.count; ++i) {
-        prStringReset(&headers->names.data[i]);
-        prStringReset(&headers->values.data[i]);
+        prRawStringReset(&headers->names.data[i]);
+        prRawStringReset(&headers->values.data[i]);
     }
     headers->names.clear();
     headers->values.clear();
@@ -132,7 +132,7 @@ JsHeaders* PR_NULLABLE headersOf(JSContext* ctx, JSValueConst object) {
 
 uint32_t findHeader(const JsHeaders* headers, PrStringView name, uint32_t from = 0) {
     for (uint32_t i = from; i < headers->names.count; ++i) {
-        if (prAsciiEqualsFold(prStringView(&headers->names.data[i]), name))
+        if (prAsciiEqualsFold(prRawStringView(&headers->names.data[i]), name))
             return i;
     }
     return kArrayMissing;
@@ -145,7 +145,7 @@ bool combinedValue(const JsHeaders* headers, PrStringView name, PrTextBuffer* ou
     for (uint32_t i = findHeader(headers, name); i != kArrayMissing; i = findHeader(headers, name, i + 1)) {
         if (found)
             prTextBufferAppend(out, ", ");
-        prTextBufferAppend(out, prStringView(&headers->values.data[i]));
+        prTextBufferAppend(out, prRawStringView(&headers->values.data[i]));
         found = true;
     }
     return found;
@@ -153,14 +153,14 @@ bool combinedValue(const JsHeaders* headers, PrStringView name, PrTextBuffer* ou
 
 void appendHeader(JsHeaders* headers, PrStringView name, PrStringView value) {
     uint32_t first = findHeader(headers, name);
-    headers->names.push(prStringCopy(first != kArrayMissing ? prStringView(&headers->names.data[first]) : name));
-    headers->values.push(prStringCopy(value));
+    headers->names.push(prRawStringCopy(first != kArrayMissing ? prRawStringView(&headers->names.data[first]) : name));
+    headers->values.push(prRawStringCopy(value));
 }
 
 void eraseHeaders(JsHeaders* headers, PrStringView name, uint32_t from = 0) {
     for (uint32_t i = findHeader(headers, name, from); i != kArrayMissing; i = findHeader(headers, name, i)) {
-        prStringReset(&headers->names.data[i]);
-        prStringReset(&headers->values.data[i]);
+        prRawStringReset(&headers->names.data[i]);
+        prRawStringReset(&headers->values.data[i]);
         headers->names.erase(i);
         headers->values.erase(i);
     }
@@ -226,7 +226,7 @@ bool headersFill(JSContext* ctx, JsHeaders* headers, JSValueConst init) {
         return false;
     if (!JS_IsNull(method) && !JS_IsUndefined(method)) {
         // Every pair is converted before any is appended.
-        Array<PrStringView> pairs;
+        RawArray<PrStringView> pairs;
         bool ok = jsIterate(ctx, init, method, [&](JSValue item) {
             uint32_t count = 0;
             PrStringView pair[2] = {};
@@ -354,7 +354,7 @@ JSValue nameMethod(JSContext* ctx, JSValueConst headersObject, int argc, JSValue
             if (first == kArrayMissing) {
                 appendHeader(headers, name, value);
             } else {
-                prStringReplace(&headers->values.data[first], value);
+                prRawStringReplace(&headers->values.data[first], value);
                 eraseHeaders(headers, name, first + 1);
             }
             if (headers->guard == Guard_RequestNoCors)
@@ -373,7 +373,7 @@ JSValue getSetCookie(JSContext* ctx, JSValueConst headersObject, int, JSValueCon
     JSValue all = JS_NewArray(ctx);
     uint32_t count = 0;
     for (uint32_t i = findHeader(headers, "set-cookie"); i != kArrayMissing; i = findHeader(headers, "set-cookie", i + 1))
-        JS_SetPropertyUint32(ctx, all, count++, newByteString(ctx, prStringView(&headers->values.data[i])));
+        JS_SetPropertyUint32(ctx, all, count++, newByteString(ctx, prRawStringView(&headers->values.data[i])));
     return all;
 }
 
@@ -390,9 +390,9 @@ JSValue entryAt(JSContext* ctx, JSValueConst headersObject, int, JSValueConst* a
     uint32_t index = 0;
     if (headers == nullptr || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
-    Array<SortedHeader> sorted;
+    RawArray<SortedHeader> sorted;
     for (uint32_t i = 0; i < headers->names.count; ++i) {
-        PrStringView name = prStringView(&headers->names.data[i]);
+        PrStringView name = prRawStringView(&headers->names.data[i]);
         bool setCookie = prAsciiEqualsFold(name, "set-cookie");
         if (!setCookie && findHeader(headers, name) != i)
             continue;
@@ -409,7 +409,7 @@ JSValue entryAt(JSContext* ctx, JSValueConst headersObject, int, JSValueConst* a
         prTextBufferAsciiLower(&name);
         PrTextBuffer value = {};
         if (entry.setCookie != kArrayMissing)
-            prTextBufferAppend(&value, prStringView(&headers->values.data[entry.setCookie]));
+            prTextBufferAppend(&value, prRawStringView(&headers->values.data[entry.setCookie]));
         else
             combinedValue(headers, entry.name, &value);
         JSValue nameString = newByteString(ctx, prTextBufferView(&name));
@@ -447,7 +447,7 @@ void headersMark(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark) {
 
 // A body with its bytes (fetch/#concept-body), or the null body.
 struct Body {
-    Array<uint8_t> bytes;
+    RawArray<uint8_t> bytes;
     bool present;               // false for the null body
     bool used;                  // true once a read consumed it (fetch/#dom-body-bodyused)
 };
@@ -474,14 +474,14 @@ bool extractBody(JSContext* ctx, JSValueConst init, ExtractedBody* out) {
     }
     PrStringView text;
     if (PrUrlSearchParams* params = prJsUrlSearchParamsFromValue(ctx, init)) {
-        PrString serialized = prUrlSearchParamsToString(params);
-        text = prStringView(&serialized);
+        PrRawString serialized = prUrlSearchParamsToString(params);
+        text = prRawStringView(&serialized);
         uint8_t* bytes = static_cast<uint8_t*>(prMemoryAlloc(text.size != 0 ? text.size : 1));
         if (text.size != 0)
             prMemCopy(bytes, text.data, text.size);
         jsHoldBytes(ctx, bytes);
         *out = ExtractedBody{PrByteView{bytes, text.size}, "application/x-www-form-urlencoded;charset=UTF-8"};
-        prStringReset(&serialized);
+        prRawStringReset(&serialized);
         return true;
     }
     if (!jsReadString(ctx, init, &text))
@@ -533,7 +533,7 @@ JSValue consume(JSContext* ctx, Body* body, Read read, PrStringView type) {
         case Read_Json: {
             // encoding/#utf-8-decode, which removes a byte order mark. JSON parsing needs a NUL after the text.
             PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
-            PrString decoded = {};
+            PrRawString decoded = {};
             PrStringView text = prCharsetDecodeView(&decoder, bytes, PrCharsetInput_Final, &decoded);
             if (read == Read_Text) {
                 result = JS_NewStringLen(ctx, text.data != nullptr ? text.data : "", text.size);
@@ -544,7 +544,7 @@ JSValue consume(JSContext* ctx, Body* body, Read read, PrStringView type) {
                 result = JS_ParseJSON(ctx, prTextBufferView(&source).data, text.size, "<json>");
                 prTextBufferReset(&source);
             }
-            prStringReset(&decoded);
+            prRawStringReset(&decoded);
             break;
         }
     }
@@ -564,14 +564,14 @@ struct JsResponse {
     bool error;                 // a network error, whose type is "error"
     bool constructed;           // made by script, whose type is "default"
     uint16_t status;
-    PrString statusText;
-    PrString url;               // the null string for a response without a URL
+    PrRawString statusText;
+    PrRawString url;               // the null string for a response without a URL
     Body body;
 };
 
 void responseDestroy(JsResponse* response) {
-    prStringReset(&response->statusText);
-    prStringReset(&response->url);
+    prRawStringReset(&response->statusText);
+    prRawStringReset(&response->url);
     response->body.bytes.reset();
     prMemoryFree(response);
 }
@@ -666,7 +666,7 @@ bool initializeResponse(JSContext* ctx, JsResponse* response, JsHeaders* headers
         return false;
     }
     response->status = uint16_t(status);
-    response->statusText = prStringCopy(statusText);
+    response->statusText = prRawStringCopy(statusText);
     if (!JS_IsUndefined(headersInit) && !headersFill(ctx, headers, headersInit))
         return false;
     if (body != nullptr) {
@@ -755,7 +755,7 @@ JSValue urlGet(JSContext* ctx, JSValueConst responseObject) {
     JsResponse* response = responseOf(ctx, responseObject);
     if (response == nullptr)
         return JS_EXCEPTION;
-    PrStringView url = prStringView(&response->url);
+    PrStringView url = prRawStringView(&response->url);
     return JS_NewStringLen(ctx, url.data != nullptr ? url.data : "", url.size);
 }
 
@@ -772,7 +772,7 @@ JSValue okGet(JSContext* ctx, JSValueConst responseObject) {
 
 JSValue statusTextGet(JSContext* ctx, JSValueConst responseObject) {
     JsResponse* response = responseOf(ctx, responseObject);
-    return response != nullptr ? newByteString(ctx, prStringView(&response->statusText)) : JS_EXCEPTION;
+    return response != nullptr ? newByteString(ctx, prRawStringView(&response->statusText)) : JS_EXCEPTION;
 }
 
 JSValue headersGet(JSContext* ctx, JSValueConst response) {
@@ -820,8 +820,8 @@ JSValue cloneMethod(JSContext* ctx, JSValueConst responseObject, int, JSValueCon
     JsHeaders* original = headersOfResponse(ctx, responseObject);
     JsHeaders* headers = headersCreate(original->guard);
     for (uint32_t i = 0; i < original->names.count; ++i) {
-        headers->names.push(prStringCopy(prStringView(&original->names.data[i])));
-        headers->values.push(prStringCopy(prStringView(&original->values.data[i])));
+        headers->names.push(prRawStringCopy(prRawStringView(&original->names.data[i])));
+        headers->values.push(prRawStringCopy(prRawStringView(&original->values.data[i])));
     }
     JsResponse* clone = allocZeroed<JsResponse>();
     *clone = JsResponse{
@@ -829,8 +829,8 @@ JSValue cloneMethod(JSContext* ctx, JSValueConst responseObject, int, JSValueCon
         .error = response->error,
         .constructed = response->constructed,
         .status = response->status,
-        .statusText = prStringCopy(prStringView(&response->statusText)),
-        .url = prStringCopy(prStringView(&response->url)),
+        .statusText = prRawStringCopy(prRawStringView(&response->statusText)),
+        .url = prRawStringCopy(prRawStringView(&response->url)),
     };
     clone->body.present = response->body.present;
     if (response->body.bytes.count != 0)
@@ -893,10 +893,10 @@ constexpr PrStringView kRedirectNames[] = {"follow", "error", "manual"};
 // A request object (fetch/#request-class). Its headers and its signal are the objects that it holds as `headers` and
 // `signal`.
 struct JsRequest {
-    PrString url;
-    PrString method;
-    PrString referrer;          // as PrJsFetchRequest holds it
-    PrString integrity;
+    PrRawString url;
+    PrRawString method;
+    PrRawString referrer;          // as PrJsFetchRequest holds it
+    PrRawString integrity;
     PrFetchMode mode;
     PrFetchCredentials credentials;
     PrFetchRedirect redirect;
@@ -907,10 +907,10 @@ struct JsRequest {
 };
 
 void requestDestroy(JsRequest* request) {
-    prStringReset(&request->url);
-    prStringReset(&request->method);
-    prStringReset(&request->referrer);
-    prStringReset(&request->integrity);
+    prRawStringReset(&request->url);
+    prRawStringReset(&request->method);
+    prRawStringReset(&request->referrer);
+    prRawStringReset(&request->integrity);
     request->body.bytes.reset();
     prMemoryFree(request);
 }
@@ -951,19 +951,19 @@ JSValue newRequest(JSContext* ctx, JsRequest* request, JsHeaders* headers, JSVal
 JSValue constructRequest(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     if (!jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
-    PrString base = baseUrlOf != nullptr ? baseUrlOf(ctx) : prStringNull();
+    PrRawString base = baseUrlOf != nullptr ? baseUrlOf(ctx) : prRawStringNull();
     PrJsFetchRequest read = {.signal = JS_UNDEFINED};
-    bool ok = prJsFetchRequestRead(ctx, argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, prStringView(&base), &read);
-    prStringReset(&base);
+    bool ok = prJsFetchRequestRead(ctx, argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, prRawStringView(&base), &read);
+    prRawStringReset(&base);
     if (!ok) {
         prJsFetchRequestReset(&read);
         return JS_EXCEPTION;
     }
     JsRequest* request = allocZeroed<JsRequest>();
-    request->url = prStringCopy(read.url);
-    request->method = prStringCopy(read.method.data != nullptr ? read.method : PrStringView{"GET"});
-    request->referrer = prStringClone(&read.referrer);
-    request->integrity = prStringClone(&read.integrity);
+    request->url = prRawStringCopy(read.url);
+    request->method = prRawStringCopy(read.method.data != nullptr ? read.method : PrStringView{"GET"});
+    request->referrer = prRawStringClone(&read.referrer);
+    request->integrity = prRawStringClone(&read.integrity);
     request->mode = read.mode;
     request->credentials = read.credentials;
     request->redirect = read.redirect;
@@ -988,11 +988,11 @@ JSValue requestString(JSContext* ctx, JSValueConst requestObject, PrStringView (
 }
 
 JSValue requestUrl(JSContext* ctx, JSValueConst object) {
-    return requestString(ctx, object, [](const JsRequest* r) { return prStringView(&r->url); });
+    return requestString(ctx, object, [](const JsRequest* r) { return prRawStringView(&r->url); });
 }
 
 JSValue requestMethod(JSContext* ctx, JSValueConst object) {
-    return requestString(ctx, object, [](const JsRequest* r) { return prStringView(&r->method); });
+    return requestString(ctx, object, [](const JsRequest* r) { return prRawStringView(&r->method); });
 }
 
 JSValue requestMode(JSContext* ctx, JSValueConst object) {
@@ -1018,17 +1018,17 @@ JSValue requestReferrerPolicy(JSContext* ctx, JSValueConst object) {
 // fetch/#dom-request-referrer: the empty string for no referrer, and about:client for the client's.
 JSValue requestReferrer(JSContext* ctx, JSValueConst object) {
     return requestString(ctx, object, [](const JsRequest* r) -> PrStringView {
-        if (prStringIsNull(&r->referrer))
+        if (prRawStringIsNull(&r->referrer))
             return "about:client";
-        return prStringView(&r->referrer);
+        return prRawStringView(&r->referrer);
     });
 }
 
 JSValue requestIntegrity(JSContext* ctx, JSValueConst object) {
     return requestString(ctx, object, [](const JsRequest* r) -> PrStringView {
-        if (prStringIsNull(&r->integrity))
+        if (prRawStringIsNull(&r->integrity))
             return "";
-        return prStringView(&r->integrity);
+        return prRawStringView(&r->integrity);
     });
 }
 
@@ -1097,10 +1097,10 @@ JSValue requestClone(JSContext* ctx, JSValueConst requestObject, int, JSValueCon
     if (request->body.used)
         return JS_ThrowTypeError(ctx, "The body has already been read");
     JsRequest* clone = allocZeroed<JsRequest>();
-    clone->url = prStringClone(&request->url);
-    clone->method = prStringClone(&request->method);
-    clone->referrer = prStringClone(&request->referrer);
-    clone->integrity = prStringClone(&request->integrity);
+    clone->url = prRawStringClone(&request->url);
+    clone->method = prRawStringClone(&request->method);
+    clone->referrer = prRawStringClone(&request->referrer);
+    clone->integrity = prRawStringClone(&request->integrity);
     clone->mode = request->mode;
     clone->credentials = request->credentials;
     clone->redirect = request->redirect;
@@ -1113,7 +1113,7 @@ JSValue requestClone(JSContext* ctx, JSValueConst requestObject, int, JSValueCon
     JsHeaders* original = headersOfResponse(ctx, requestObject);
     JsHeaders* headers = headersCreate(original->guard);
     for (uint32_t i = 0; i < original->names.count; ++i)
-        appendHeader(headers, prStringView(&original->names.data[i]), prStringView(&original->values.data[i]));
+        appendHeader(headers, prRawStringView(&original->names.data[i]), prRawStringView(&original->values.data[i]));
     JSValue signal = requestSignal(ctx, requestObject);
     JSValue object = newRequest(ctx, clone, headers, signal);
     JS_FreeValue(ctx, signal);
@@ -1244,16 +1244,16 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
     if (baseUrl.data != nullptr)
         prUrlCreate(baseUrl, nullptr, PrCharset_Utf8, &base);
     if (source != nullptr) {
-        out->parsedUrl = prStringClone(&source->url);
+        out->parsedUrl = prRawStringClone(&source->url);
         out->mode = source->mode;
         out->credentials = source->credentials;
         out->redirect = source->redirect;
         out->referrerPolicy = source->referrerPolicy;
-        out->referrer = prStringClone(&source->referrer);
-        out->integrity = prStringClone(&source->integrity);
+        out->referrer = prRawStringClone(&source->referrer);
+        out->integrity = prRawStringClone(&source->integrity);
         out->cache = source->cache;
         out->keepalive = source->keepalive;
-        PrStringView sourceMethod = prStringView(&source->method);
+        PrStringView sourceMethod = prRawStringView(&source->method);
         char* methodBytes = static_cast<char*>(prMemoryAlloc(sourceMethod.size));
         prMemCopy(methodBytes, sourceMethod.data, sourceMethod.size);
         jsHoldBytes(ctx, methodBytes);
@@ -1285,7 +1285,7 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             return false;
         }
     }
-    out->url = prStringView(&out->parsedUrl);
+    out->url = prRawStringView(&out->parsedUrl);
     bool present = false;
     if (!jsDictionary(ctx, init, &present)) {
         prUrlDestroy(base);
@@ -1323,8 +1323,8 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             PrStringView integrity;
             ok = jsReadString(ctx, value, &integrity);
             if (ok) {
-                prStringReset(&out->integrity);
-                out->integrity = prStringCopy(integrity);
+                prRawStringReset(&out->integrity);
+                out->integrity = prRawStringCopy(integrity);
             }
         }
         ok = ok && readMember(ctx, init, "keepalive", &value);
@@ -1368,21 +1368,21 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             // fetch/#dom-request: a URL of another origin, and about:client, stand for the client's referrer.
             PrStringView referrer;
             ok = jsReadString(ctx, value, &referrer);
-            prStringReset(&out->referrer);
+            prRawStringReset(&out->referrer);
             if (ok && referrer.size == 0) {
-                out->referrer = prStringEmpty();
+                out->referrer = prRawStringEmpty();
             } else if (ok) {
                 PrUrl* parsed = nullptr;
                 if (prUrlCreate(referrer, base, PrCharset_Utf8, &parsed) != PrStatus_Ok) {
                     JS_ThrowTypeError(ctx, "Invalid referrer");
                     ok = false;
                 } else if (prUrlScheme(parsed) != "about" || prUrlPath(parsed) != "client") {
-                    PrString from = prUrlOrigin(parsed);
-                    PrString own = base != nullptr ? prUrlOrigin(base) : prStringNull();
-                    if (prStringView(&from) == prStringView(&own))
+                    PrRawString from = prUrlOrigin(parsed);
+                    PrRawString own = base != nullptr ? prUrlOrigin(base) : prRawStringNull();
+                    if (prRawStringView(&from) == prRawStringView(&own))
                         out->referrer = prUrlSerialize(parsed, PrUrlSerialization_Whole);
-                    prStringReset(&from);
-                    prStringReset(&own);
+                    prRawStringReset(&from);
+                    prRawStringReset(&own);
                 }
                 prUrlDestroy(parsed);
             }
@@ -1409,8 +1409,10 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
     if (ok && source != nullptr) {
         if (!headersGiven) {
             JsHeaders* original = headersOfResponse(ctx, input);
-            for (uint32_t i = 0; original != nullptr && i < original->names.count; ++i)
-                appendHeader(headers, prStringView(&original->names.data[i]), prStringView(&original->values.data[i]));
+            for (uint32_t i = 0; original != nullptr && i < original->names.count; ++i) {
+                PrStringView value = prRawStringView(&original->values.data[i]);
+                appendHeader(headers, prRawStringView(&original->names.data[i]), value);
+            }
         }
         if (!hasBody && source->body.present) {
             if (source->body.used) {
@@ -1431,13 +1433,13 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             ok = false;
         }
         for (uint32_t i = 0; ok && i < headers->names.count;) {
-            PrStringView name = prStringView(&headers->names.data[i]);
-            if (prFetchIsNoCorsSafelistedRequestHeader(name, prStringView(&headers->values.data[i]))) {
+            PrStringView name = prRawStringView(&headers->names.data[i]);
+            if (prFetchIsNoCorsSafelistedRequestHeader(name, prRawStringView(&headers->values.data[i]))) {
                 ++i;
                 continue;
             }
-            prStringReset(&headers->names.data[i]);
-            prStringReset(&headers->values.data[i]);
+            prRawStringReset(&headers->names.data[i]);
+            prRawStringReset(&headers->values.data[i]);
             headers->names.erase(i);
             headers->values.erase(i);
         }
@@ -1452,7 +1454,7 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
         // The headers and the body are copied into one block, which the views then point into.
         uint32_t size = uint32_t(body.bytes.size);
         for (uint32_t i = 0; i < headers->names.count; ++i)
-            size += prStringView(&headers->names.data[i]).size + prStringView(&headers->values.data[i]).size;
+            size += prRawStringView(&headers->names.data[i]).size + prRawStringView(&headers->values.data[i]).size;
         out->bytes = size != 0 ? static_cast<uint8_t*>(prMemoryAlloc(size)) : nullptr;
         uint32_t used = 0;
         auto copy = [&](PrStringView text) {
@@ -1468,8 +1470,8 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
         else
             out->headers = nullptr;
         for (uint32_t i = 0; i < headers->names.count; ++i) {
-            PrStringView name = copy(prStringView(&headers->names.data[i]));
-            out->headers[i] = PrFetchHeader{name, copy(prStringView(&headers->values.data[i]))};
+            PrStringView name = copy(prRawStringView(&headers->names.data[i]));
+            out->headers[i] = PrFetchHeader{name, copy(prRawStringView(&headers->values.data[i]))};
         }
         PrStringView bytes = copy(PrStringView{reinterpret_cast<const char*>(body.bytes.data), body.bytes.size});
         out->body = PrByteView{prStringBytes(bytes), bytes.size};
@@ -1480,9 +1482,9 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
 }
 
 void prJsFetchRequestReset(PrJsFetchRequest* request) {
-    prStringReset(&request->parsedUrl);
-    prStringReset(&request->referrer);
-    prStringReset(&request->integrity);
+    prRawStringReset(&request->parsedUrl);
+    prRawStringReset(&request->referrer);
+    prRawStringReset(&request->integrity);
     prMemoryFree(request->headers);
     prMemoryFree(request->bytes);
 }
@@ -1499,14 +1501,14 @@ bool prJsFetchBodyExtract(JSContext* ctx, JSValueConst value, PrByteView* bytes,
 JSValue prJsFetchResponseNew(JSContext* ctx, const PrJsFetchResponseDesc* desc) {
     JsHeaders* headers = headersCreate(Guard_Immutable);
     for (uint32_t i = 0; i < desc->headerCount; ++i) {
-        headers->names.push(prStringCopy(desc->headers[i].name));
-        headers->values.push(prStringCopy(desc->headers[i].value));
+        headers->names.push(prRawStringCopy(desc->headers[i].name));
+        headers->values.push(prRawStringCopy(desc->headers[i].value));
     }
     JsResponse* response = allocZeroed<JsResponse>();
     response->type = desc->type;
     response->status = desc->status;
     if (desc->url.data != nullptr)
-        response->url = prStringCopy(desc->url);
+        response->url = prRawStringCopy(desc->url);
     response->body.present = desc->type != PrFetchResponseType_Opaque &&
         desc->type != PrFetchResponseType_OpaqueRedirect && !isNullBodyStatus(desc->status);
     if (desc->body.size != 0)

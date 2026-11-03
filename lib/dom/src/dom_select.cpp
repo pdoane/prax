@@ -217,7 +217,7 @@ void domOptionText(const PrDomElement* option, PrTextBuffer* out) {
             continue;
         }
         if (domIsText(node)) {
-            PrStringView data = prStringView(&static_cast<const PrDomCharacterData*>(node)->data);
+            PrStringView data = prRawStringView(&static_cast<const PrDomCharacterData*>(node)->data);
             for (size_t i = 0; i < data.size; ++i) {
                 if (prAsciiIsSpace(data.data[i])) {
                     space = true;
@@ -281,7 +281,7 @@ void domSelectSetValue(PrDomElement* select, PrStringView value) {
     domSelectUpdateSelectedContent(select);
 }
 
-void domSelectOptions(PrDomElement* select, Array<PrDomElement* PR_NONNULL>* out) {
+void domSelectOptions(PrDomElement* select, RawArray<PrDomElement* PR_NONNULL>* out) {
     eachOption(select, [&](PrDomElement* option) { out->push(option); });
 }
 

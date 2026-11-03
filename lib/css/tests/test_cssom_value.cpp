@@ -91,10 +91,10 @@ struct Value {
     }
 };
 
-std::string take(PrString text) {
-    PrStringView view = prStringView(&text);
+std::string take(PrRawString text) {
+    PrStringView view = prRawStringView(&text);
     std::string result(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(&text);
+    prRawStringReset(&text);
     return result;
 }
 
@@ -366,7 +366,7 @@ TEST_CASE("parsing gives the value a declaration of the text holds") {
     CHECK(prCssValueParseColor("1px", values) == PrStatus_Syntax);
 
     // A custom property's value is its tokens, and so is a value that a var() reaches.
-    const PrCssDeclarationName custom = {PrCssProperty_Count, PrCssDescriptor_None, prStringExternal("--x")};
+    const PrCssDeclarationName custom = {PrCssProperty_Count, PrCssDescriptor_None, prRawStringExternal("--x")};
     REQUIRE(prCssValueParse(&custom, " a var(--y, b)", values) == PrStatus_Ok);
     CHECK(kindAt(values, 0) == PrCssValueKind_Tokens);
     prCssValueClear(values);
@@ -385,7 +385,7 @@ TEST_CASE("parsing gives the value a declaration of the text holds") {
     CHECK(serializeAll(values) == std::vector<std::string>{"1px"});
 
     // A descriptor is not a property, and these values are for properties.
-    const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc, prStringNull()};
+    const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc, prRawStringNull()};
     CHECK(prCssValueParse(&src, "1px", values) == PrStatus_InvalidData);
     CHECK(prCssValueParseNumeric("auto", values) == PrStatus_Syntax);
     REQUIRE(prCssValueParseNumeric(" 1px ", values) == PrStatus_Ok);
@@ -480,14 +480,14 @@ TEST_CASE("a value declared is matched by its type, not by the text it would be 
     CHECK(property(block, PrCssProperty_Color) == "rgba(255, 0, 0, 0.5)");
 
     // A custom property's value is the tokens that the value is written as.
-    const PrCssDeclarationName custom = {PrCssProperty_Count, PrCssDescriptor_None, prStringExternal("--x")};
+    const PrCssDeclarationName custom = {PrCssProperty_Count, PrCssDescriptor_None, prRawStringExternal("--x")};
     REQUIRE(prCssStyleDeclarationSetValue(block, &custom, sum, false) == PrStatus_Ok);
     REQUIRE(prCssStyleDeclarationValue(block, &custom, got) == PrStatus_Ok);
     CHECK(kindAt(got, 0) == PrCssValueKind_Tokens);
     CHECK(serialize(got) == "calc(1px + 2px)");
     prCssValueClear(got);
 
-    const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc, prStringNull()};
+    const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc, prRawStringNull()};
     CHECK(prCssStyleDeclarationValue(block, &src, got) == PrStatus_InvalidData);
     prCssStyleSheetRelease(sheet);
 }

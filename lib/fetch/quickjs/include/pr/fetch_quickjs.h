@@ -10,7 +10,7 @@
 
 #include "pr/byte_view.h"
 #include "pr/fetch.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 #include "quickjs.h"
@@ -26,7 +26,7 @@ void prJsFetchBind(JSContext* ctx);
 
 // Returns the API base URL of the realm (html/#api-base-url), or the null string for none, which Request's constructor
 // parses against.
-typedef PrString (*PrJsFetchBaseUrlFn)(JSContext* ctx);
+typedef PrRawString (*PrJsFetchBaseUrlFn)(JSContext* ctx);
 
 // Sets how the layer finds a realm's base URL, in every realm. The module that knows the global sets it.
 void prJsFetchSetBaseUrl(PrJsFetchBaseUrlFn fn);
@@ -35,7 +35,7 @@ void prJsFetchSetBaseUrl(PrJsFetchBaseUrlFn fn);
 // call's scope, by `parsedUrl`, or by `bytes`. prJsFetchRequestReset frees what the request owns.
 typedef struct PrJsFetchRequest {
     PrStringView url;                       // parsed against the base URL, and serialized
-    PrString parsedUrl;                     // the storage of the URL
+    PrRawString parsedUrl;                  // the storage of the URL
     PrStringView method;                    // normalized, or the null view for GET
 
     // The request's headers, which the request owns.
@@ -47,8 +47,8 @@ typedef struct PrJsFetchRequest {
     PrFetchCredentials credentials;
     PrFetchRedirect redirect;
     PrFetchReferrerPolicy referrerPolicy;
-    PrString referrer;                      // a URL, the empty string for none, or the null string for the client's
-    PrString integrity;
+    PrRawString referrer;                      // a URL, the empty string for none, or the null string for the client's
+    PrRawString integrity;
     uint8_t cache;                          // the index of the request's cache mode (fetch/#requestcache)
     bool keepalive;
     bool hasBody;                           // false for the null body, and true for an empty body

@@ -4,10 +4,10 @@
 #include "pr/layout_worker.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/layout_style.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 
@@ -34,9 +34,9 @@ struct LayoutWorker {
     PrThread thread;
     mutable PrMutex mutex;
     PrCondition changed;            // signaled when a job is posted, the jobs finish, or the worker is told to end
-    Array<WorkerJob> jobs;          // posted, in order, from `next`
+    RawArray<WorkerJob> jobs;       // posted, in order, from `next`
     uint32_t next;
-    Array<WorkerResult> results;
+    RawArray<WorkerResult> results;
     PrLayoutWorkerDoneFn PR_NULLABLE done;
     void* PR_NULLABLE doneContext;
     bool running;                   // true if a posted job has not finished

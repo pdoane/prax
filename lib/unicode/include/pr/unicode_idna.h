@@ -6,7 +6,7 @@
 #pragma once
 
 #include "pr/base.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -33,13 +33,13 @@ typedef uint8_t PrUnicodeIdnaFlags;
 
 // Converts `domain` to its ASCII form (UTS #46 ToASCII). Returns false if the conversion records an error, and writes
 // the null string to `*out` in that case. `domain` is UTF-8, and an ill-formed sequence is an error. The caller
-// releases the result with prStringReset.
-bool prUnicodeIdnaToAscii(PrStringView domain, PrUnicodeIdnaFlags flags, PrString* out);
+// releases the result with prRawStringReset.
+bool prUnicodeIdnaToAscii(PrStringView domain, PrUnicodeIdnaFlags flags, PrRawString* out);
 
 // Converts `domain` to its Unicode form (UTS #46 ToUnicode). Returns false if the conversion records an error. The
 // result is written to `*out` either way. The VerifyDnsLength flag does not apply. The caller releases the result with
-// prStringReset.
-bool prUnicodeIdnaToUnicode(PrStringView domain, PrUnicodeIdnaFlags flags, PrString* out);
+// prRawStringReset.
+bool prUnicodeIdnaToUnicode(PrStringView domain, PrUnicodeIdnaFlags flags, PrRawString* out);
 
 #if defined(__cplusplus)
 }

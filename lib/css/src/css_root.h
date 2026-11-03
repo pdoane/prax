@@ -82,10 +82,10 @@ void cssElementStyleDestroy(CssElementStyle* PR_NULLABLE style);
 
 // A custom property registered by CSS.registerProperty (css-properties-values-api-1/#registered-custom-property).
 struct CssRegisteredProperty {
-    PrString name;
-    PrString syntax;                  // syntax as it was given
-    PrString initialValue;            // the null string if none was given
-    CssSyntaxDefinition definition;   // result of parsing `syntax`
+    PrRawString name;
+    PrRawString syntax;                  // syntax as it was given
+    PrRawString initialValue;            // the null string if none was given
+    CssSyntaxDefinition definition;      // result of parsing `syntax`
     bool inherits;
 };
 
@@ -115,38 +115,38 @@ struct CssRoot {
 
     // The registered custom properties (css-properties-values-api-1/#dom-window-registeredpropertyset-slot), in the
     // order in which they were registered.
-    Array<CssRegisteredProperty> registered;
+    RawArray<CssRegisteredProperty> registered;
 
-    PrCssFontFaceSet* PR_NULLABLE fonts;            // css-font-loading-3/#document-font-face-set, created on first use
-    PrCssFontCallback fontCallback;                 // notified of font loads, or a null faceStatus for none
-    uint64_t fontsVersion;                          // incremented when a face's status or the set's faces change
-    uint64_t fontSetVersion;                        // incremented when the faces added to the set change
-    bool fontsReconcileQueued;                      // true if a task will bring the set up to date with its source
-    Array<CssFontSource* PR_NONNULL> fontSources;   // sources that the faces load from, each holding a reference
-    uint64_t fontSourceUses;                        // number of loads that used a source
-    PrCssHighlightRegistry* PR_NULLABLE highlights; // css-highlight-api-1/#highlight-registry, created on first use
+    PrCssFontFaceSet* PR_NULLABLE fonts;             // css-font-loading-3/#document-font-face-set, created on first use
+    PrCssFontCallback fontCallback;                  // notified of font loads, or a null faceStatus for none
+    uint64_t fontsVersion;                           // incremented when a face's status or the set's faces change
+    uint64_t fontSetVersion;                         // incremented when the faces added to the set change
+    bool fontsReconcileQueued;                       // true if a task will bring the set up to date with its source
+    RawArray<CssFontSource* PR_NONNULL> fontSources; // sources that the faces load from, each holding a reference
+    uint64_t fontSourceUses;                         // number of loads that used a source
+    PrCssHighlightRegistry* PR_NULLABLE highlights;  // css-highlight-api-1/#highlight-registry, created on first use
 
     // For a document, its resize observers in the order that they were created
     // (resize-observer-1/#dom-document-resizeobservers-slot). The list holds no references. Each observer holds a
     // reference to the document, and removes itself from the list when it is freed.
-    Array<PrCssResizeObserver* PR_NONNULL> resizeObservers;
+    RawArray<PrCssResizeObserver* PR_NONNULL> resizeObservers;
     bool resizeObservationsPending;                 // the next rendering update has an observation to deliver
 
     // For a document, its intersection observers in the order that they were created. The list holds no references.
     // Each observer holds a reference to the document, and removes itself from the list when it is freed.
-    Array<PrCssIntersectionObserver* PR_NONNULL> intersectionObservers;
+    RawArray<PrCssIntersectionObserver* PR_NONNULL> intersectionObservers;
     bool intersectionTaskQueued;                    // intersection-observer/#document-intersectionobservertaskqueued
 
     // The sheets of the document's style elements that import no sheet, kept for reuse, least recently used first.
-    Array<CssSheetCacheEntry> cache;
+    RawArray<CssSheetCacheEntry> cache;
 
     // For a document, the sheets of its xml-stylesheet processing instructions, which they own
     // (cssXmlStylesheetInserted).
-    Array<PrCssStyleSheet* PR_NONNULL> instructionSheets;
+    RawArray<PrCssStyleSheet* PR_NONNULL> instructionSheets;
 
     // For a document, the style and link elements that its parser inserted and whose sheets it still fetches. They
     // block its scripts (html/#script-blocking-style-sheet-set) and its rendering (html/#render-blocking-element-set).
-    Array<PrDomElement* PR_NONNULL> blocking;
+    RawArray<PrDomElement* PR_NONNULL> blocking;
 
     // For a document, the providers of the hints of its elements (css_hints.h) and of what they give their boxes
     // (css_boxes.h), by namespace, or null for none.

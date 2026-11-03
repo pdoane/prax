@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/image.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -26,7 +26,7 @@ struct HtmlImageCandidate {
 
 // Appends the candidates of a srcset attribute's value to `out`, skipping those whose descriptors are in error
 // (html/#parse-a-srcset-attribute).
-void htmlParseSrcset(PrStringView value, Array<HtmlImageCandidate>* out);
+void htmlParseSrcset(PrStringView value, RawArray<HtmlImageCandidate>* out);
 
 // What an img element's source is selected for: the environment that media conditions are evaluated against, the
 // display's device pixels per CSS pixel, the viewport's width and the initial font size in CSS pixels, which a sizes

@@ -111,6 +111,36 @@ class CompilerAttributes(unittest.TestCase):
         self.assertEqual(self.rules("#define PR_COLD __attribute__((cold))\n", lint.ATTRIBUTE_HEADER), [])
 
 
+class ManagedLayer(unittest.TestCase):
+    def rules(self, path, source):
+        report = lint.Report()
+        full = os.path.join(lint.ROOT, path)
+        lint.check_destructors(report, full, source)
+        lint.check_managed_includes(report, full, source)
+        return [rule for _, _, rule, _ in report.problems]
+
+    def test_an_implementation_declares_no_destructor(self):
+        self.assertEqual(self.rules("lib/font/src/a.cpp", "struct A {\n    ~A() { f(); }\n};\n"), ["destructor"])
+        self.assertEqual(self.rules("lib/font/src/a.cpp", "Owner::~Owner() {}\n"), ["destructor"])
+        self.assertEqual(self.rules("lib/font/src/a.cpp", "    virtual ~Base() = default;\n"), ["destructor"])
+
+    def test_bitwise_not_and_comments_are_not_destructors(self):
+        self.assertEqual(self.rules("lib/font/src/a.cpp", "    x = ~mask();\n    // ~A() in a comment\n"), [])
+
+    def test_tests_and_applications_may_destroy(self):
+        self.assertEqual(self.rules("lib/font/tests/test_a.cpp", "struct A {\n    ~A() {}\n};\n"), [])
+        self.assertEqual(self.rules("examples/a/a.cpp", "struct A {\n    ~A() {}\n};\n"), [])
+
+    def test_only_applications_tests_and_the_layer_include_its_headers(self):
+        with patch.object(lint, "MANAGED", {"pr/array.h"}):
+            self.assertEqual(self.rules("lib/font/src/a.cpp", '#include "pr/array.h"\n'), ["managed-include"])
+            self.assertEqual(self.rules("lib/font/tests/test_a.cpp", '#include "pr/array.h"\n'), [])
+            self.assertEqual(self.rules("examples/a/a.cpp", '#include "pr/array.h"\n'), [])
+            self.assertEqual(self.rules("lib/core/cpp/include/pr/string.h",
+                                        '#include "pr/array.h"\n'), ["managed-include"])
+            self.assertEqual(self.rules("lib/core/cpp/include/pr/array.h", "    ~Array() { reset(); }\n"), [])
+
+
 class Builtins(unittest.TestCase):
     def rules(self, source, path="lib/core/src/a.cpp"):
         report = lint.Report()

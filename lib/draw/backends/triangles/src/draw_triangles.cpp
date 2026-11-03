@@ -14,7 +14,6 @@
 #include "pr/draw_triangles.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_glyph.h"
 #include "pr/draw_lower.h"
@@ -26,6 +25,7 @@
 #include "pr/path_measure.h"
 #include "pr/path_polyline.h"
 #include "pr/path_tessellator.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "draw/backends/triangles/src/draw_triangles_device.h"
@@ -88,16 +88,16 @@ struct CachedRamp {
 struct Triangles {
     uint32_t atlasSize;
     PrDrawAtlas* atlas;
-    Array<uint32_t> pageTextures;       // the texture of each atlas page
+    RawArray<uint32_t> pageTextures;    // the texture of each atlas page
     uint32_t pagesCreated;              // number of atlas pages whose textures the host has
     PrDrawGlyphCache* lists;
     PrPathTessellator* tessellator;
     PrPathPolyline polyline;
     uint64_t build;
     uint32_t nextTexture;
-    Array<CachedImage> images;
+    RawArray<CachedImage> images;
     KeyIndex imageIndex;                // `images`, by id
-    Array<CachedRamp*> ramps;           // owned; the first `rampCount` belong to this build
+    RawArray<CachedRamp*> ramps;        // owned; the first `rampCount` belong to this build
     uint32_t rampCount;                 // valid until the build ends, while the list's brushes stay put
     HashIndex rampIndex;                // this build's ramps, by the inputs that decide their colors
     PrPath* shape;
@@ -122,12 +122,12 @@ struct PendingTexels {
 
 // The storage that one frame's arrays point into. A backend keeps the storage of destroyed frames for the next frames.
 struct FrameStorage {
-    Array<TrianglesVertex> vertices;
-    Array<uint32_t> indices;
-    Array<TrianglesDraw> draws;
-    Array<TrianglesTextureRequest> requests;
-    Array<uint8_t> texels;
-    Array<PendingTexels> pending;
+    RawArray<TrianglesVertex> vertices;
+    RawArray<uint32_t> indices;
+    RawArray<TrianglesDraw> draws;
+    RawArray<TrianglesTextureRequest> requests;
+    RawArray<uint8_t> texels;
+    RawArray<PendingTexels> pending;
     uint32_t pathFills;                 // number of paths that the build tessellated
 };
 
@@ -150,7 +150,7 @@ struct MapSegment {
 
 // A stroke whose brush is mapped along it or across it.
 struct StrokeMap {
-    Array<MapSegment> segments;
+    RawArray<MapSegment> segments;
     PrAffine2 unitToBrush;       // the unit square to brush space
     PrDrawStrokeMapping mapping;
     float reach;                // how far from its centerline the stroke's outline can be, in target pixels
@@ -175,11 +175,11 @@ struct Walk {
     Triangles* t;
     FrameStorage* b;
     PrIRect target;
-    Array<PrDrawTransform> transforms;
-    Array<Clip> clips;          // innermost last
-    Array<ClipOutline> outlines;
-    Array<PrVec2> clipPoints;
-    Array<float> opacities;     // the groups' opacities multiplied, innermost last
+    RawArray<PrDrawTransform> transforms;
+    RawArray<Clip> clips;          // innermost last
+    RawArray<ClipOutline> outlines;
+    RawArray<PrVec2> clipPoints;
+    RawArray<float> opacities;     // the groups' opacities multiplied, innermost last
     StrokeMap map;
     bool mapped;                // true if `map` places the paint of what is drawing
 };
@@ -292,7 +292,7 @@ PrVec2 sourceSize(const PrDrawSource& source) {
 
 // Continues the last draw if it has the same texture, sampler and scissor, and starts one otherwise.
 void useDraw(Walk& w, DrawTexture texture, TrianglesSampler sampler, const PrIRect& clip) {
-    Array<TrianglesDraw>& draws = w.b->draws;
+    RawArray<TrianglesDraw>& draws = w.b->draws;
     TrianglesDraw draw{texture.hostTexture, texture.texture, sampler, clip, w.b->indices.count, 0};
     if (draws.count != 0) {
         TrianglesDraw& last = draws.last();
@@ -439,8 +439,8 @@ const CachedRamp* rampOf(Triangles* t, const PrDrawBrush* brush, PrColor color) 
     r.brush = brush;
     r.color = color;
     // The colors are the ramp's at even steps of the parameter, from which findBreaks chooses where vertices go.
-    Array<PrDrawRampPiece> pieces{};
-    Array<PrColor> colors{};
+    RawArray<PrDrawRampPiece> pieces{};
+    RawArray<PrColor> colors{};
     pieces.resize(prDrawGradientRampMaxPieces(brush->stopCount));
     colors.resize(prDrawGradientRampMaxColors(brush->stopCount, kRampSize));
     pieces.resize(prDrawGradientRamp(brush, color, PrColorSpace_Srgb, kRampSize, pieces.data, colors.data));
@@ -1485,7 +1485,7 @@ constexpr uint32_t kShadowCornerPoints = 8;
 
 // Appends the outline of the rectangle with fitted corners, with kShadowCornerPoints points along each corner,
 // clockwise from the top left. A square corner repeats its point.
-void cornerOutline(PrRect r, const PrCorner corners[4], PrAffine2 transform, Array<PrVec2>& out) {
+void cornerOutline(PrRect r, const PrCorner corners[4], PrAffine2 transform, RawArray<PrVec2>& out) {
     struct Frame {
         PrVec2 start;
         PrVec2 before;
@@ -1526,7 +1526,7 @@ void cornerOutline(PrRect r, const PrCorner corners[4], PrAffine2 transform, Arr
 
 // Draws the triangle cut to the convex outline. The outline's inside is on the side where `sign` times the turn is
 // positive.
-void drawCut(Walk& w, const Piece triangle[3], const Array<PrVec2>& outline, float sign, const Paint& paint) {
+void drawCut(Walk& w, const Piece triangle[3], const RawArray<PrVec2>& outline, float sign, const Paint& paint) {
     Piece polygon[kMaxPiece];
     prMemCopy(polygon, triangle, sizeof(Piece) * 3);
     uint32_t count = keepInside(polygon, 3, outline.data, outline.count, sign);
@@ -1576,7 +1576,7 @@ void drawShadow(Walk& w, const PrDrawCommand& c) {
         for (PrCorner& corner : innerShape.corners)
             corner = PrCorner{{0, 0}, 1};
     }
-    Array<PrVec2> ring;
+    RawArray<PrVec2> ring;
     cornerOutline(innerRect, innerShape.corners, shifted, ring);
     uint32_t n = ring.count;
     cornerOutline(outerShape.rect, outerShape.corners, shifted, ring);
@@ -1585,9 +1585,9 @@ void drawShadow(Walk& w, const PrDrawCommand& c) {
 
     if (kind != PrDrawShadowKind_Inner) {
         // A fan from the middle over the inner outline, and the band from the inner outline out to the outer one.
-        Array<PrVec2> points;
-        Array<float> coverage;
-        Array<uint32_t> indices;
+        RawArray<PrVec2> points;
+        RawArray<float> coverage;
+        RawArray<uint32_t> indices;
         points.push(prAffine2MapPoint(shifted, prRectCenter(innerRect)));
         coverage.push(peak);
         for (uint32_t i = 0; i < ring.count; ++i) {
@@ -1609,7 +1609,7 @@ void drawShadow(Walk& w, const PrDrawCommand& c) {
     }
 
     // The opening's outline, which cuts everything else.
-    Array<PrVec2> opening;
+    RawArray<PrVec2> opening;
     PrCornerRect fitted = prCornerRectFit(c.shadow->shape);
     cornerOutline(fitted.rect, fitted.corners, device, opening);
     double area = 0;
@@ -1717,7 +1717,7 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
     const PrRect& area = c.nineSlice.source.rect;
     uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{prRectWidth(area), prRectHeight(area)},
         c.nineSlice.destination, nullptr, 0);
-    Array<PrDrawImageRect> rects;
+    RawArray<PrDrawImageRect> rects;
     rects.reserve(count);
     rects.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{prRectWidth(area), prRectHeight(area)},
         c.nineSlice.destination, rects.data, count);
@@ -1838,7 +1838,7 @@ void drawGlyphs(Walk& w, const PrDrawCommand& c) {
 
 // Appends the outline of a path in target pixels to `out` as one convex contour. Returns a sign such that the inside is
 // on the side where the sign times the turn is positive. Returns 0 if the outline is not one convex contour.
-float convexOutline(const PrPathPolyline& device, Array<PrVec2>& out) {
+float convexOutline(const PrPathPolyline& device, RawArray<PrVec2>& out) {
     if (device.contourCount != 1)
         return 0;
     const PrVec2* p = device.points;

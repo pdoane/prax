@@ -3,13 +3,13 @@
 #include "pr/kit_dock.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/hash.h"
 #include "pr/kit_button.h"
 #include "pr/kit_surface.h"
 #include "pr/kit_text.h"
 #include "pr/layout_query.h"
+#include "pr/raw_array.h"
 
 #include "studio/kit/src/kit.h"
 
@@ -17,9 +17,9 @@ namespace pr_impl {
 
 // One split or leaf of a dock's tree. A removed node keeps its arrays' storage for the next node that takes its id.
 struct DockNode {
-    Array<PrKitDockNode> children;  // Split: its children, in order along its axis
-    Array<float> weights;           // Split: its children's shares, by child index, summing to one
-    Array<PrKitDockPanelId> tabs;   // Leaf: its panels, in the order of its tab strip
+    RawArray<PrKitDockNode> children;  // Split: its children, in order along its axis
+    RawArray<float> weights;           // Split: its children's shares, by child index, summing to one
+    RawArray<PrKitDockPanelId> tabs;   // Leaf: its panels, in the order of its tab strip
     PrKitDockNode parent;
     uint32_t active;                // a leaf's open tab
     PrKitDockKind kind;
@@ -47,11 +47,11 @@ struct DockOp {
 
 // A dock's tree, the rearrangements staged against it, and what its last build declared.
 struct Dock {
-    Array<DockNode> nodes;          // by PrKitDockNode; the first entry stands for none and is never alive
-    Array<PrKitDockNode> spare;     // removed nodes, whose ids new nodes take
-    Array<DockOp> staged;
-    Array<PrKitDockPane> panes;     // the open panels that the last build declared, in tree order
-    Array<PrLayoutNode> scratch;    // the build's nodes for the splits and strips that it is inside, innermost last
+    RawArray<DockNode> nodes;          // by PrKitDockNode; the first entry stands for none and is never alive
+    RawArray<PrKitDockNode> spare;     // removed nodes, whose ids new nodes take
+    RawArray<DockOp> staged;
+    RawArray<PrKitDockPane> panes;     // the open panels that the last build declared, in tree order
+    RawArray<PrLayoutNode> scratch;    // the build's nodes for the splits and strips that it is inside, innermost last
     PrKitDockNode root;
     PrKitDockNode primary;
 };
@@ -824,7 +824,7 @@ void buildNode(DockBuild& b, PrLayoutNode parent, PrKitDockNode id) {
     box.place.flex = PrKitFlex_Fill;
     PrLayoutNode split = prKitBox(b.kit, parent, {}, box);
     uint32_t count = node.children.count;
-    Array<PrLayoutNode>& scratch = b.dock->scratch;
+    RawArray<PrLayoutNode>& scratch = b.dock->scratch;
     uint32_t base = scratch.count;
     scratch.resize(base + count);
     splitPanes(*b.kit, split, node.direction, node.weights.data, count, kDockMinShare, scratch.data + base);

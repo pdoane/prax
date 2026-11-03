@@ -11,7 +11,7 @@
 #include "pr/kit_button.h"
 #include "pr/kit_icon.h"
 #include "pr/kit_text.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text_edit.h"
 #include "pr/ui_text_edit.h"

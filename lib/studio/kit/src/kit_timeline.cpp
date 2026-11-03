@@ -2,11 +2,11 @@
 
 #include "pr/kit_timeline.h"
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/kit_text.h"
+#include "pr/raw_array.h"
 
 #include "studio/kit/src/kit.h"
 
@@ -390,7 +390,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
     bool ended = false;
     // The time that the round's drag snapped to a source, which a guide marks across the lanes.
     Snapped guide{};
-    Array<PrLayoutNode> lanes;
+    RawArray<PrLayoutNode> lanes;
     if (editable && t.playhead != nullptr && prUiDrag(ui, ruler, 0, 0, &drag) && (drag.active || drag.released)) {
         PrVec2 at{};
         if (span.width > 0 && prUiLocalPoint(ui, ruler, drag.position, &at)) {

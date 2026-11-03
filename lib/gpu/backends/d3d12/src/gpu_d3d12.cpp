@@ -27,13 +27,13 @@
 
 #include "pr/align.h"
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/gpu_backend.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/thread.h"
 
@@ -146,7 +146,7 @@ struct D3d12Pipeline {
 
 // A batch of uploads, and the buffers that it wrote.
 struct D3d12UploadBatch : GpuSharedUploadBatch {
-    Array<uint32_t> written;
+    RawArray<uint32_t> written;
 };
 
 // Empties the batch, keeping its storage.
@@ -244,11 +244,11 @@ struct D3d12Commands : PrGpuCommands {
     D3d12Pass* PR_NULLABLE pass;            // the open pass
     D3d12List list;                         // a null allocator for the host's command list
     D3d12AttachmentHeaps attachments;
-    uint32_t pipeline;                      // the pipeline of dispatches and draws
-    Array<D3d12Block> blocks;               // the blocks of the stream
-    Array<D3d12SwapChain*> presents;        // the swap chains that present once the command buffer is executed
-    Array<D3d12Done> dones;
-    Array<void*> scratch;                   // what the stream gave out once the device had no memory left
+    uint32_t pipeline;                         // the pipeline of dispatches and draws
+    RawArray<D3d12Block> blocks;               // the blocks of the stream
+    RawArray<D3d12SwapChain*> presents;        // the swap chains that present once the command buffer is executed
+    RawArray<D3d12Done> dones;
+    RawArray<void*> scratch;                // what the stream gave out once the device had no memory left
     uint32_t timestamp;                     // the slot of the timestamps, or kTimestampPairs
 
     // The root data, as set, and the bind points that have yet to take it.
@@ -317,34 +317,34 @@ struct D3d12Device : PrGpuDevice {
     PrMutex doneMutex;
     PrCondition doneSignal;                 // broadcast when `done` rises
     PrCondition pendingSignal;              // signaled when a submission is added
-    Array<D3d12Submission> pending;         // in the order of their fences
+    RawArray<D3d12Submission> pending;      // in the order of their fences
     bool stopping;
 
     // The mutex guards everything below. The tables have fixed capacities, so that recording reads them without it.
     PrMutex mutex;
     D3d12Resource* resources;               // by slot
     D3d12Pipeline* pipelines;               // by id
-    Array<uint32_t> freeResources;
+    RawArray<uint32_t> freeResources;
     uint32_t nextResource;
     uint32_t nextSampler;
-    Array<uint32_t> freePipelines;
+    RawArray<uint32_t> freePipelines;
     uint32_t nextPipeline;
-    Array<uint32_t> freeTimestamps;
+    RawArray<uint32_t> freeTimestamps;
 
     PrGpuFence submitted;                   // the last fence that a submission returned
     uint64_t serial;                        // the serial of the next command buffer
-    Array<D3d12InFlight> inFlight;          // in the order of their submission
-    Array<D3d12Retired> retired;
-    Array<D3d12Held> held;
-    Array<D3d12List> lists;                      // free, with their allocators reset
-    Array<D3d12AttachmentHeaps> attachmentHeaps; // free
-    Array<D3d12Block> streamBlocks;              // free
-    Array<D3d12Block> stagingBlocks;             // free
+    RawArray<D3d12InFlight> inFlight;       // in the order of their submission
+    RawArray<D3d12Retired> retired;
+    RawArray<D3d12Held> held;
+    RawArray<D3d12List> lists;                      // free, with their allocators reset
+    RawArray<D3d12AttachmentHeaps> attachmentHeaps; // free
+    RawArray<D3d12Block> streamBlocks;              // free
+    RawArray<D3d12Block> stagingBlocks;             // free
 
     // The open batch of uploads: its command list, the staging blocks that it reads, and its copies.
     D3d12List uploads;                      // a null list while no batch is open
     uint64_t uploadSerial;
-    Array<D3d12Block> uploadBlocks;
+    RawArray<D3d12Block> uploadBlocks;
     D3d12UploadBatch uploadBatch;
 };
 
@@ -801,7 +801,7 @@ void writeBufferView(D3d12Device* d, ID3D12Resource* buffer, uint64_t size, uint
 // Returns a block of upload memory of at least `size` bytes, from the free blocks or new, or one without a buffer if
 // the device has no memory or slot for it. A block larger than `blockSize` is made for its size. The caller holds the
 // mutex.
-D3d12Block takeBlock(D3d12Device* d, Array<D3d12Block>& free, uint64_t blockSize, uint64_t size) {
+D3d12Block takeBlock(D3d12Device* d, RawArray<D3d12Block>& free, uint64_t blockSize, uint64_t size) {
     for (uint32_t i = 0; i < free.count; ++i) {
         if (free.data[i].length >= size) {
             D3d12Block block = free.data[i];
@@ -1146,7 +1146,7 @@ void submitUploads(D3d12Device* d) {
     if (d->uploads.list == nullptr)
         return;
     ID3D12GraphicsCommandList7* list = d->uploads.list;
-    const Array<GpuSharedUploadCopy>& copies = d->uploadBatch.copies;
+    const RawArray<GpuSharedUploadCopy>& copies = d->uploadBatch.copies;
     for (uint32_t i = 0; i < copies.count; ++i) {
         const GpuSharedUploadCopy& c = copies.data[i];
         if (c.size != 0)

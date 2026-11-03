@@ -196,7 +196,7 @@ PrStringView svgRunUrl(CssValueRun run) {
     return run.count != 0 ? urlAt(run, 0) : PrStringView{};
 }
 
-void svgStylePathCommands(const CssComputedStyle* style, Array<PrPathDataCommand>* out) {
+void svgStylePathCommands(const CssComputedStyle* style, RawArray<PrPathDataCommand>* out) {
     CssValueRun d = cssComputedValue(style, PrCssProperty_D);
     if (d.count != 0 && d.values[0].kind == PrCssValueKind_Function)
         cssPathCommands(d, 0, out);

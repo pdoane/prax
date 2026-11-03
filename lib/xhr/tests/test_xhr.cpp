@@ -37,7 +37,7 @@ struct TestClient {
     PrXhrClient client() {
         return PrXhrClient{
             .context = this,
-            .baseUrl = [](void*) { return prStringCopy("https://example.com/dir/page.html"); },
+            .baseUrl = [](void*) { return prRawStringCopy("https://example.com/dir/page.html"); },
             .fetch =
                 [](void* context, const PrFetchClientRequest* request, PrFetchResponseFn done, void* doneContext) -> PrStatus {
                     TestClient* client = static_cast<TestClient*>(context);
@@ -153,10 +153,10 @@ PrXhr* createRequest(TestClient* client, Activity* activity = nullptr) {
     return request;
 }
 
-std::string take(PrString text) {
-    PrStringView view = prStringView(&text);
+std::string take(PrRawString text) {
+    PrStringView view = prRawStringView(&text);
     std::string result = view.data != nullptr ? std::string(view.data, view.size) : std::string("(null)");
-    prStringReset(&text);
+    prRawStringReset(&text);
     return result;
 }
 

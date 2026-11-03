@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/markdown.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "markdown/src/markdown_inline.h"
@@ -86,12 +86,12 @@ struct MarkdownParsedDefinition {
 
 // The state of a parse of blocks, kept between parses for its storage.
 struct MarkdownBlockParser {
-    Array<MarkdownParseBlock> blocks;   // by MarkdownBlockIndex
-    Array<char> content;
-    Array<char> line;
-    Array<char> text;
-    Array<MarkdownParsedDefinition> definitions;
-    Array<PrMarkdownAlignment> alignments;
+    RawArray<MarkdownParseBlock> blocks;   // by MarkdownBlockIndex
+    RawArray<char> content;
+    RawArray<char> line;
+    RawArray<char> text;
+    RawArray<MarkdownParsedDefinition> definitions;
+    RawArray<PrMarkdownAlignment> alignments;
 
     // Where the final blocks of the last parse end: the offset in the source of the first tentative child of the root,
     // or after the last complete line if every child is final, and the number of children before that offset.

@@ -83,10 +83,10 @@ std::vector<const PrFont*> paintedFonts(Fixture& f) {
 
 // Returns the family of a font, such as "Noto Sans SC".
 std::string familyOf(const PrFont* font) {
-    PrString family = prFontFamilyName(font);
-    PrStringView view = prStringView(&family);
+    PrRawString family = prFontFamilyName(font);
+    PrStringView view = prRawStringView(&family);
     std::string out(view.data, view.size);
-    prStringReset(&family);
+    prRawStringReset(&family);
     return out;
 }
 

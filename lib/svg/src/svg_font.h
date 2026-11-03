@@ -5,11 +5,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/font_set.h"
 #include "pr/path.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -67,8 +67,8 @@ struct SvgFont {
     float overlineThickness;
     float strikethroughPosition;
     float strikethroughThickness;
-    Array<SvgGlyph> glyphs;     // missing-glyph first, then the glyphs in document order
-    Array<SvgKern> kerns;
+    RawArray<SvgGlyph> glyphs;     // missing-glyph first, then the glyphs in document order
+    RawArray<SvgKern> kerns;
 };
 
 // The index of the glyph that a font's missing-glyph element defines.
@@ -94,12 +94,12 @@ float svgFontKerning(const SvgFont& font, uint32_t first, uint32_t second);
 
 // A font-face element of a document's tree, which names an SVG font for a family (SVG11/fonts.html#FontFaceElement).
 struct SvgFontFace {
-    PrString family;
+    PrRawString family;
     uint32_t familyHash;                // svgFontFamilyHash of `family`
     const PrDomElement* element;
-    Array<PrFontCodePointRange> ranges; // its unicode-range; empty means every code point
-    const SvgFont* PR_NULLABLE font;    // its font, once found, if the face's document holds it
-    bool resolved;                      // true once `font` is found
+    RawArray<PrFontCodePointRange> ranges; // its unicode-range; empty means every code point
+    const SvgFont* PR_NULLABLE font;       // its font, once found, if the face's document holds it
+    bool resolved;                         // true once `font` is found
 };
 
 // Called with the hash of a family (svgFontFamilyHash) whose faces or fonts may have changed.
@@ -109,8 +109,8 @@ typedef void (*SvgFontFamilyChangedFn)(void* PR_NULLABLE context, uint32_t famil
 // text first needs it, until a change under it. No font outlives its document.
 struct SvgDocumentFonts {
     PrDomDocument* document;
-    Array<SvgFontFace> faces;           // in tree order
-    Array<SvgFont*> fonts;
+    RawArray<SvgFontFace> faces;           // in tree order
+    RawArray<SvgFont*> fonts;
     SvgFontFamilyChangedFn PR_NULLABLE changed;
     void* PR_NULLABLE changedContext;
 };
@@ -136,7 +136,7 @@ uint32_t svgFontFamilyHash(PrStringView family);
 
 // Replaces `out` with the ranges of a unicode-range. The text is a comma-separated list of ranges of code points, each
 // starting with `U+`. A `?` stands for every hex digit. Returns false if `text` does not parse.
-bool svgParseUnicodeRange(PrStringView text, Array<PrFontCodePointRange>* out);
+bool svgParseUnicodeRange(PrStringView text, RawArray<PrFontCodePointRange>* out);
 
 } // namespace pr_impl
 

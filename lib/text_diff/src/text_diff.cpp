@@ -24,19 +24,19 @@ typedef uint8_t TextDiffSide;
 struct TextDiff {
     PrTextDiffOptions options;
     TextDiffSequence sequence;
-    Array<PrTextDiffChange> changes;
-    Array<PrTextDiffLineChange> lineChanges;
+    RawArray<PrTextDiffChange> changes;
+    RawArray<PrTextDiffLineChange> lineChanges;
 
     // By side: the keys of the lines, or of the characters of a line, and the byte offset of each character, with the
     // line's size last.
-    Array<uint64_t> keys[TextDiffSide_Count];
-    Array<uint32_t> offsets[TextDiffSide_Count];
-    Array<PrTextDiffChange> characters;                          // the changes of characters of a pair of lines
+    RawArray<uint64_t> keys[TextDiffSide_Count];
+    RawArray<uint32_t> offsets[TextDiffSide_Count];
+    RawArray<PrTextDiffChange> characters;                       // the changes of characters of a pair of lines
     const PrTextDiffText* PR_NULLABLE texts[TextDiffSide_Count]; // during a comparison
 };
 
 // Writes a hash of each line of `text` to `keys`, FNV-1a over its bytes.
-void hashLines(const PrTextDiffText* text, Array<uint64_t>& keys) {
+void hashLines(const PrTextDiffText* text, RawArray<uint64_t>& keys) {
     keys.resize(text->lineCount);
     for (uint32_t line = 0; line < text->lineCount; ++line) {
         PrStringView bytes = text->line(text->context, line);
@@ -56,7 +56,7 @@ bool sameLines(void* PR_NULLABLE context, uint32_t a, uint32_t b) {
 
 // Writes a key of each character of `line` to `keys`, which its bytes make, and the offset of each to `offsets`, with
 // the line's size last. An ill-formed byte is a character of its own.
-void keyCharacters(PrStringView line, Array<uint64_t>& keys, Array<uint32_t>& offsets) {
+void keyCharacters(PrStringView line, RawArray<uint64_t>& keys, RawArray<uint32_t>& offsets) {
     keys.clear();
     offsets.clear();
     for (size_t at = 0; at < line.size;) {

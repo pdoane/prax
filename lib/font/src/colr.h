@@ -3,11 +3,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/color.h"
 #include "pr/font.h"
 #include "pr/geom.h"
+#include "pr/raw_array.h"
 
 #include "font/src/sfnt.h"
 
@@ -54,8 +54,8 @@ struct ColrWalk {
     uint32_t overrideCount;
     PrColor foreground;             // the text color, which the palette index 0xFFFF asks for
     float unitsPerEm;               // the font units in an em of the result
-    Array<ColrStep> steps;
-    Array<PrFontColorStop> stops;
+    RawArray<ColrStep> steps;
+    RawArray<PrFontColorStop> stops;
 };
 
 // Opens the color tables of the face. A face without COLR opens with no color glyphs.

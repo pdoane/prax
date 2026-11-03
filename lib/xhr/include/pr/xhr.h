@@ -11,8 +11,8 @@
 #include "pr/byte_view.h"
 #include "pr/dom.h"
 #include "pr/fetch.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -105,8 +105,8 @@ typedef struct PrXhrClient {
     void* PR_NULLABLE context;
 
     // Returns the client's API base URL (html/#api-base-url), serialized, which a request's URL parses against. The
-    // caller releases the string with prStringReset.
-    PrString (*baseUrl)(void* PR_NULLABLE context);
+    // caller releases the string with prRawStringReset.
+    PrRawString (*baseUrl)(void* PR_NULLABLE context);
 
     // Fetches `request` from the client (PrFetchClientRequest), and calls `done` with `doneContext` once, later than
     // this call. A response with the status Lost says that the client went away. Returns a status other than Ok, and
@@ -213,12 +213,12 @@ PrStringView prXhrResponseUrl(const PrXhr* xhr);
 uint16_t prXhrStatus(const PrXhr* xhr);
 
 // Returns the response's values of the header `name`, joined with ", " (xhr/#dom-xmlhttprequest-getresponseheader), or
-// the null string if the response has no such header. The caller releases the string with prStringReset.
-PrString prXhrResponseHeader(const PrXhr* xhr, PrStringView name);
+// the null string if the response has no such header. The caller releases the string with prRawStringReset.
+PrRawString prXhrResponseHeader(const PrXhr* xhr, PrStringView name);
 
 // Returns the response's headers, each as "name: value" and a CRLF, with lowercase names in order and the values of a
-// name joined (xhr/#dom-xmlhttprequest-getallresponseheaders). The caller releases the string with prStringReset.
-PrString prXhrResponseHeaders(const PrXhr* xhr);
+// name joined (xhr/#dom-xmlhttprequest-getallresponseheaders). The caller releases the string with prRawStringReset.
+PrRawString prXhrResponseHeaders(const PrXhr* xhr);
 
 // Returns the bytes of the response's body that arrived, or the empty view before the response is loading and after a
 // network error. The view is valid until the request is opened again.
@@ -229,8 +229,8 @@ PrByteView prXhrResponseBody(const PrXhr* xhr);
 PrStringView prXhrFinalMimeType(const PrXhr* object);
 
 // Returns the response's body decoded as text (xhr/#text-response), in the charset that the final MIME type names, or
-// UTF-8. The caller releases the string with prStringReset.
-PrString prXhrResponseText(const PrXhr* xhr);
+// UTF-8. The caller releases the string with prRawStringReset.
+PrRawString prXhrResponseText(const PrXhr* xhr);
 
 #if defined(__cplusplus)
 }

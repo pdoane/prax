@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/path_data.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 
 #include "css/src/css_value.h"
@@ -27,7 +27,7 @@ void cssValuePoolAddPathData(CssValuePool* pool, const PrPathDataCommand* PR_NUL
 uint32_t cssPathDataStart(CssValueRun run, uint32_t index);
 
 // Appends to `out` the commands of the path() at `index` of `run`.
-void cssPathCommands(CssValueRun run, uint32_t index, Array<PrPathDataCommand>* out);
+void cssPathCommands(CssValueRun run, uint32_t index, RawArray<PrPathDataCommand>* out);
 
 // Adds the path() at `index` of `run` with its commands in absolute coordinates.
 void cssValuePoolAddAbsolutePath(CssValuePool* pool, CssValueRun run, uint32_t index);

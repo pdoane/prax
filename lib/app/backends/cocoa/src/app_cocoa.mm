@@ -3,10 +3,10 @@
 #include "pr/app_cocoa.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "app/backends/cocoa/src/cocoa_browser.h"
@@ -61,7 +61,7 @@ namespace {
 // pixels.
 struct HeldEvent {
     PrAppEvent event;
-    Array<char> text;
+    RawArray<char> text;
 };
 
 // What a key that is down reports, so that the window can release it when it stops being the key window.
@@ -731,7 +731,7 @@ using namespace pr_impl;
 @implementation PrCocoaHost {
     // The events that arrived during the running callback, in order. A callback that runs a run loop of its own, as a
     // modal panel does, has events delivered within it, and they wait here, so that no callback nests in another.
-    Array<HeldEvent> _held;
+    RawArray<HeldEvent> _held;
 
     // The pointer buttons that are down, by bit of PrAppEvent::button, where the pointer last was, and the keys that
     // are down, by their position. The window releases them when it stops being the key window, as the releases then go

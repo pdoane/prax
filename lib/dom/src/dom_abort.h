@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom_abort.h"
+#include "pr/raw_array.h"
 
 #include "dom/src/dom_event_target.h"
 
@@ -23,13 +23,13 @@ struct DomAbortEntry {
 struct DomAbortSignal : PrDomEventTarget {
     uint32_t references;
     uint32_t lastId;                        // the id of the last algorithm added
-    Array<DomAbortEntry> algorithms;        // in the order they were added
+    RawArray<DomAbortEntry> algorithms;     // in the order they were added
 
     // The signals that a dependent signal follows, and the dependent signals that follow this one, each in the order
     // they were linked (dom/#abortsignal-source-signals, dom/#abortsignal-dependent-signals). Neither list holds
     // references. A signal leaves the lists of the others when it is freed.
-    Array<PrDomAbortSignal*> sources;
-    Array<PrDomAbortSignal*> dependents;
+    RawArray<PrDomAbortSignal*> sources;
+    RawArray<PrDomAbortSignal*> dependents;
 
     PrDomAbortReasonFn PR_NULLABLE reasonHandler;
     void* PR_NULLABLE reasonContext;

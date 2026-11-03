@@ -17,10 +17,10 @@ namespace {
 // The text of `bytes` decoded whole by a new decoder of `charset`, or "error" if a fatal decoder fails.
 std::string decoded(PrCharset charset, const std::string& bytes, PrCharsetDecoderFlags flags = 0) {
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset, flags);
-    PrString out{};
+    PrRawString out{};
     PrStringView text = prCharsetDecodeView(&decoder, {bytes.data(), bytes.size()}, PrCharsetInput_Final, &out);
     std::string result = text.data == nullptr ? "error" : std::string(text.data, text.size);
-    prStringReset(&out);
+    prRawStringReset(&out);
     return result;
 }
 
@@ -48,10 +48,10 @@ std::string decodedInParts(PrCharset charset, const std::string& bytes, size_t s
 // Returns true if decoding `bytes` gives a view of them, starting `offset` bytes in, without copying them.
 bool decodesInPlace(PrCharset charset, const std::string& bytes, size_t offset = 0) {
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset, 0);
-    PrString out{};
+    PrRawString out{};
     PrStringView text = prCharsetDecodeView(&decoder, {bytes.data(), bytes.size()}, PrCharsetInput_Final, &out);
-    bool inPlace = prStringIsNull(&out) && text.data == bytes.data() + offset && text.size == bytes.size() - offset;
-    prStringReset(&out);
+    bool inPlace = prRawStringIsNull(&out) && text.data == bytes.data() + offset && text.size == bytes.size() - offset;
+    prRawStringReset(&out);
     return inPlace;
 }
 

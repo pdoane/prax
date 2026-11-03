@@ -66,8 +66,8 @@ void freeSheet(PrCssStyleSheet* sheet) {
     }
     sheet->rules.reset();
     cssSheetDataRelease(sheet->data);
-    prStringReset(&sheet->href);
-    prStringReset(&sheet->title);
+    prRawStringReset(&sheet->href);
+    prRawStringReset(&sheet->title);
     cssValueListReset(&sheet->media.queries);
     if (sheet->parser != nullptr) {
         cssParserReset(sheet->parser);
@@ -170,7 +170,7 @@ void ownData(PrCssStyleSheet* sheet, Notify notify = Notify_Document) {
 }
 
 // Returns the index of `object` in `objects`.
-uint32_t indexOf(const Array<PrCssRule* PR_NULLABLE>& objects, const PrCssRule* object) {
+uint32_t indexOf(const RawArray<PrCssRule* PR_NULLABLE>& objects, const PrCssRule* object) {
     uint32_t index = 0;
     while (objects.data[index] != object)
         ++index;
@@ -185,7 +185,7 @@ bool sharedRule(const CssRuleData* rule, bool listed, bool presented) {
 
 // Returns a copy of the rule at `index` of `list`, or of the rule of `object` if the rule is in no list. The copy
 // replaces the original in both the list and the object.
-CssRuleData* copyInto(Array<CssRuleData* PR_NONNULL>* PR_NULLABLE list, uint32_t index, PrCssRule* PR_NULLABLE object) {
+CssRuleData* copyInto(RawArray<CssRuleData* PR_NONNULL>* PR_NULLABLE list, uint32_t index, PrCssRule* PR_NULLABLE object) {
     PR_ASSERT(list != nullptr || object != nullptr);
     CssRuleData* copy = cssRuleDataCopy(list != nullptr ? list->data[index] : object->data);
     if (object != nullptr) {
@@ -203,8 +203,8 @@ CssRuleData* copyInto(Array<CssRuleData* PR_NONNULL>* PR_NULLABLE list, uint32_t
 // Returns the data that `rule` presents, made exclusive to its tree. The data of the enclosing rules and of its sheet
 // is made exclusive first.
 CssRuleData* ownRule(PrCssRule* rule, Notify notify = Notify_Document) {
-    Array<CssRuleData* PR_NONNULL>* list = nullptr;
-    const Array<PrCssRule* PR_NULLABLE>* objects = nullptr;
+    RawArray<CssRuleData* PR_NONNULL>* list = nullptr;
+    const RawArray<PrCssRule* PR_NULLABLE>* objects = nullptr;
     if (rule->parent != nullptr) {
         list = &ownRule(rule->parent, notify)->children;
         objects = &rule->parent->children;
@@ -308,8 +308,8 @@ PrCssStyleSheet* cssStyleSheetCreate(CssSheetData* data) {
     sheet->data = data;
     for (uint32_t i = 0; i < data->rules.count; ++i)
         sheet->rules.push(nullptr);
-    sheet->href = prStringNull();
-    sheet->title = prStringNull();
+    sheet->href = prRawStringNull();
+    sheet->title = prRawStringNull();
     sheet->cssRules = PrCssRuleList{{sheet, nullptr}};
     sheet->mediaList = PrCssMediaList{{sheet, nullptr}};
     return sheet;
@@ -434,7 +434,7 @@ PrCssRule* cssRuleChild(PrCssRule* rule, uint32_t index) {
     return rule->children.data[index];
 }
 
-const Array<CssRuleData* PR_NONNULL>& cssRuleListData(const PrCssRuleList* list) {
+const RawArray<CssRuleData* PR_NONNULL>& cssRuleListData(const PrCssRuleList* list) {
     return list->sheet != nullptr ? list->sheet->data->rules : list->rule->data->children;
 }
 
@@ -447,8 +447,8 @@ PrCssStyleSheet* PR_NULLABLE cssImportRuleSheet(PrCssRule* rule) {
         CssSheetData* data = rule->data->imported;
         cssSheetDataRetain(data);
         PrCssStyleSheet* sheet = cssStyleSheetCreate(data);
-        sheet->href = prStringClone(&data->href);
-        sheet->title = prStringEmpty();
+        sheet->href = prRawStringClone(&data->href);
+        sheet->title = prRawStringEmpty();
         sheet->ownerRule = rule;
         rule->imported = sheet;
     }
@@ -459,7 +459,7 @@ CssParserSlot cssRuleParser(PrCssRule* rule) {
     return rule->sheet != nullptr ? &rule->sheet->parser : nullptr;
 }
 
-const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule, Array<CssRuleChain>* out) {
+const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule, RawArray<CssRuleChain>* out) {
     uint32_t depth = 0;
     for (const PrCssRule* at = rule; at != nullptr; at = at->parent)
         ++depth;
@@ -541,12 +541,12 @@ void cssStyleSheetReplace(PrCssStyleSheet* sheet, PrStringView text) {
     // rules continue to present their old data. A change through one of them copies that data first.
     if (shared(sheet)) {
         CssSheetData* data = cssSheetDataCreate();
-        data->href = prStringClone(&sheet->data->href);
+        data->href = prRawStringClone(&sheet->data->href);
         cssSheetDataRelease(sheet->data);
         sheet->data = data;
     }
     // The objects of the old rules are removed first, so that each removes its own reference.
-    Array<PrCssRule* PR_NULLABLE> taken = sheet->rules;
+    RawArray<PrCssRule* PR_NULLABLE> taken = sheet->rules;
     sheet->rules = {};
     cssSheetDataParse(sheet->data, text, &sheet->parser, CssOrigin_Author);
     for (uint32_t i = 0; i < sheet->data->rules.count; ++i)
@@ -575,7 +575,7 @@ PrStatus cssStyleSheetInsertRule(PrCssStyleSheet* sheet, PrStringView text, uint
 PrStatus cssRuleInsertRule(PrCssRule* rule, PrStringView text, uint32_t index) {
     CssEdit edit;
     cssEditBegin(&edit, cssRuleParser(rule));
-    Array<CssRuleChain> chain;
+    RawArray<CssRuleChain> chain;
     PrStatus status = cssRuleListPrepareInsert(&edit, rule->sheet != nullptr ? rule->sheet->data : nullptr,
         cssRuleChain(rule, &chain), text, index);
     chain.reset();

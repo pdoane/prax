@@ -209,7 +209,7 @@ void holdKeywordForms(PrCssProperty property, CssValuePool* pool, uint32_t first
     if (run.count == 0)
         return;
 
-    Array<CssValueNode>* values = &pool->values;
+    RawArray<CssValueNode>* values = &pool->values;
     for (uint32_t item = first; item < values->count; ++item) {
         uint64_t written = 0;
         uint32_t keywords = 0;
@@ -242,7 +242,7 @@ void holdKeywordForms(PrCssProperty property, CssValuePool* pool, uint32_t first
 // <angle>", and one about an axis "parallel with the x or y axes [...] as the appropriate keyword". The angle is
 // negated if the axis points the other way.
 void foldRotate(CssValuePool* pool, uint32_t first) {
-    Array<CssValueNode>* values = &pool->values;
+    RawArray<CssValueNode>* values = &pool->values;
     uint32_t count = values->count - first;
     CssValueNode* angle = &values->data[values->count - 1];
     if (count == 2 && cssValueIsKeyword(&values->data[first], PrCssKeyword_Z)) {

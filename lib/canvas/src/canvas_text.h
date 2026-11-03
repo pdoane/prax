@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/canvas.h"
 #include "pr/css.h"
 #include "pr/font.h"
 #include "pr/font_set.h"
 #include "pr/locale.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text.h"
 #include "pr/text_buffer.h"
@@ -57,9 +57,9 @@ struct CanvasTextStyle {
 // keeps its storage from one text to the next.
 struct CanvasText {
     PrTextLayout* layout;
-    PrTextBuffer prepared = {};     // the text with its whitespace made spaces
-    Array<PrFontGlyph> glyphs;      // every run's glyphs, spaced and placed from the anchor point
-    Array<PrFontGlyphRun> runs;     // each a range of `glyphs`
+    PrTextBuffer prepared = {};        // the text with its whitespace made spaces
+    RawArray<PrFontGlyph> glyphs;      // every run's glyphs, spaced and placed from the anchor point
+    RawArray<PrFontGlyphRun> runs;     // each a range of `glyphs`
 
     double width;                   // the advance of the inline box
     PrRect ink;                     // the bounds of the glyphs' outlines, or empty for none

@@ -3,12 +3,12 @@
 #include "pr/markdown.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
 #include "pr/sort.h"
 #include "pr/string_ops.h"
 #include "pr/string_trim.h"
@@ -37,14 +37,14 @@ struct MarkdownFootnoteMark {
 struct MarkdownTopBlock {
     uint32_t sourceStart;           // the offset in the source of the block's first line
     uint32_t sourceEnd;             // the offset in the source of the line after the block's last line
-    Array<MarkdownNode> nodes;
-    Array<char> text;
+    RawArray<MarkdownNode> nodes;
+    RawArray<char> text;
     bool resolved;                  // true if the block was built again for a late reference since the last change
 
     // The block's footnote definitions and references in document order, and where its references' resolutions start in
     // the document's footnote uses. A reference's `start` value is its position among the block's references.
-    Array<MarkdownFootnoteMark> footnoteMarks;
-    Array<char> footnoteLabels;
+    RawArray<MarkdownFootnoteMark> footnoteMarks;
+    RawArray<char> footnoteLabels;
     uint32_t firstUse;
 
     // The block's headings, whose `start` values are their positions among them, and where their ids start in the
@@ -95,8 +95,8 @@ struct MarkdownDefinitionEntry {
 
 // Link reference definitions in document order. A label's first definition is the one that matches it.
 struct MarkdownDefinitions {
-    Array<MarkdownDefinitionEntry> entries;
-    Array<char> text;
+    RawArray<MarkdownDefinitionEntry> entries;
+    RawArray<char> text;
     HashIndex index;                // by hash, over entries
 };
 
@@ -109,12 +109,12 @@ struct MarkdownLookup {
 
 struct Markdown {
     PrMarkdownOptions options;
-    Array<char> source;
+    RawArray<char> source;
     bool ended;
 
     // The blocks of the document are the first `blockCount` of `blocks`. The slots after them keep their storage for
     // the blocks that a later parse makes.
-    Array<MarkdownTopBlock> blocks;
+    RawArray<MarkdownTopBlock> blocks;
     uint32_t blockCount;
     uint32_t finalCount;
     uint32_t tailStart;             // the offset in the source where the tentative blocks start
@@ -122,7 +122,7 @@ struct Markdown {
     // The definitions in final blocks, and those in tentative blocks, which are found again by each parse.
     MarkdownDefinitions definitions;
     MarkdownDefinitions tailDefinitions;
-    Array<MarkdownLookup> lookups;
+    RawArray<MarkdownLookup> lookups;
     uint32_t building;              // the block whose inlines are being parsed, which a lookup is recorded for
 
     // The changes since the client last took them: the blocks from `changedFrom` on were replaced, and the blocks in
@@ -130,34 +130,34 @@ struct Markdown {
     // changes that a take made and has not yet written.
     uint32_t reportedCount;
     uint32_t changedFrom;
-    Array<uint32_t> resolvedBlocks;
-    Array<PrMarkdownChange> queue;
+    RawArray<uint32_t> resolvedBlocks;
+    RawArray<PrMarkdownChange> queue;
     uint32_t queueHead;
 
     // The resolution of each footnote reference, by position in document order, and the footnotes by number less 1,
     // from the last pass over the document and the pass before it. The definitions are the pass's index of labels.
-    Array<MarkdownFootnoteUse> uses;
-    Array<MarkdownFootnoteUse> previousUses;
-    Array<MarkdownFootnote> footnotes;
-    Array<MarkdownFootnote> previousFootnotes;
-    Array<MarkdownFootnoteDefinition> footnoteDefinitions;
+    RawArray<MarkdownFootnoteUse> uses;
+    RawArray<MarkdownFootnoteUse> previousUses;
+    RawArray<MarkdownFootnote> footnotes;
+    RawArray<MarkdownFootnote> previousFootnotes;
+    RawArray<MarkdownFootnoteDefinition> footnoteDefinitions;
     HashIndex footnoteIndex;        // by hash, over footnoteDefinitions
     bool footnotesChanged;
 
     // The id of each heading, by position in document order, as ranges of the id text, from the last pass over the
     // document and the pass before it. The slugs are the pass's index of the ids that headings took.
-    Array<MarkdownRange> ids;
-    Array<MarkdownRange> previousIds;
-    Array<char> idText;
-    Array<char> previousIdText;
-    Array<MarkdownSlug> slugs;
-    Array<char> slugText;
+    RawArray<MarkdownRange> ids;
+    RawArray<MarkdownRange> previousIds;
+    RawArray<char> idText;
+    RawArray<char> previousIdText;
+    RawArray<MarkdownSlug> slugs;
+    RawArray<char> slugText;
     HashIndex slugIndex;            // by hash, over slugs
 
     MarkdownBlockParser blockParser;
     MarkdownInlineParser inlineParser;
     MarkdownTree tree;
-    Array<uint32_t> changedHashes;
+    RawArray<uint32_t> changedHashes;
 };
 
 uint32_t hashOf(PrStringView label) {
@@ -252,8 +252,8 @@ MarkdownTopBlock& addBlock(Markdown* document) {
     return block;
 }
 
-void swapText(Array<char>* a, Array<char>* b) {
-    Array<char> held = *a;
+void swapText(RawArray<char>* a, RawArray<char>* b) {
+    RawArray<char> held = *a;
     *a = *b;
     *b = held;
 }
@@ -376,7 +376,7 @@ void removeLookups(Markdown* document, Removes removes) {
     document->lookups.resize(kept);
 }
 
-bool hasHash(const Array<uint32_t>& hashes, uint32_t hash) {
+bool hasHash(const RawArray<uint32_t>& hashes, uint32_t hash) {
     for (uint32_t i = 0; i < hashes.count; ++i) {
         if (hashes.data[i] == hash)
             return true;
@@ -389,7 +389,7 @@ bool hasHash(const Array<uint32_t>& hashes, uint32_t hash) {
 void resolveLate(Markdown* document, uint32_t before) {
     if (document->changedHashes.count == 0)
         return;
-    Array<uint32_t> rebuilt;
+    RawArray<uint32_t> rebuilt;
     for (uint32_t i = 0; i < document->lookups.count; ++i) {
         const MarkdownLookup& lookup = document->lookups.data[i];
         if (lookup.block < before && hasHash(document->changedHashes, lookup.hash) &&
@@ -417,8 +417,8 @@ PrStringView footnoteLabel(const MarkdownTopBlock& block, const MarkdownFootnote
 }
 
 template <typename T>
-void swapArrays(Array<T>* a, Array<T>* b) {
-    Array<T> held = *a;
+void swapArrays(RawArray<T>* a, RawArray<T>* b) {
+    RawArray<T> held = *a;
     *a = *b;
     *b = held;
 }
@@ -528,7 +528,7 @@ void resolveHeadingIds(Markdown* document, uint32_t rebuiltFrom) {
         document->slugIndex.insert(hash, document->slugs.count);
         document->slugs.push(MarkdownSlug{hash, range, 0});
     };
-    Array<char> numbered;
+    RawArray<char> numbered;
     for (uint32_t b = 0; b < document->blockCount; ++b) {
         MarkdownTopBlock& block = document->blocks.data[b];
         uint32_t previousFirst = block.firstHeading;
@@ -749,7 +749,7 @@ void fillStep(const Markdown* document, const MarkdownTopBlock& block, const Mar
 // Walks the nodes of `block` from `first` up to `end`, and leaves out the footnote definitions among them.
 void walkNodes(const Markdown* document, const MarkdownTopBlock& block, uint32_t first, uint32_t end,
         PrMarkdownStepFn fn, void* PR_NULLABLE context) {
-    Array<uint32_t> open;
+    RawArray<uint32_t> open;
     PrMarkdownStep step;
     uint32_t i = first;
     while (true) {

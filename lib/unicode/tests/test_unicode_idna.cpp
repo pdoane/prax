@@ -70,10 +70,10 @@ bool hasError(const std::string& column, bool fallback, const std::vector<std::s
     return false;
 }
 
-std::string taken(PrString* text) {
-    PrStringView view = prStringView(text);
+std::string taken(PrRawString* text) {
+    PrStringView view = prRawStringView(text);
     std::string out(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(text);
+    prRawStringReset(text);
     return out;
 }
 
@@ -109,7 +109,7 @@ TEST_CASE("conversions are as every case of IdnaTestV2.txt says") {
         std::string toAsciiT = value(columns[5], toAsciiN);
         bool asciiTError = hasError(columns[6], asciiNError, {});
 
-        PrString out{};
+        PrRawString out{};
         bool unicodeValid = prUnicodeIdnaToUnicode(source, PrUnicodeIdnaFlag_Strict, &out);
         std::string unicode = taken(&out);
         bool asciiNValid = prUnicodeIdnaToAscii(source, PrUnicodeIdnaFlag_Strict, &out);
@@ -131,11 +131,11 @@ TEST_CASE("conversions are as every case of IdnaTestV2.txt says") {
 }
 
 TEST_CASE("the URL Standard's flags accept what its host parser does") {
-    PrString out{};
+    PrRawString out{};
     CHECK(prUnicodeIdnaToAscii("Bu\xcc\x88" "cher.de", PrUnicodeIdnaFlag_CheckBidi | PrUnicodeIdnaFlag_CheckJoiners, &out));
     CHECK(taken(&out) == "xn--bcher-kva.de");
     CHECK(prUnicodeIdnaToAscii("a_b.\xe2\x98\x95", PrUnicodeIdnaFlag_CheckBidi | PrUnicodeIdnaFlag_CheckJoiners, &out));
     CHECK(taken(&out) == "a_b.xn--53h");
     CHECK(!prUnicodeIdnaToAscii("xn--a.\xc3\x9f", PrUnicodeIdnaFlag_CheckBidi | PrUnicodeIdnaFlag_CheckJoiners, &out));
-    CHECK(prStringIsNull(&out));
+    CHECK(prRawStringIsNull(&out));
 }

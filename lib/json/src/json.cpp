@@ -3,10 +3,10 @@
 #include "pr/json.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/float.h"
 #include "pr/float_convert.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
@@ -29,8 +29,8 @@ struct JsonValue {
 // A document's values in document order, and the unescaped bytes of its strings. The value after an array or object is
 // at `index + 1 + span`.
 struct Json {
-    Array<JsonValue> values;    // by PrJsonValueIndex
-    Array<char> text;
+    RawArray<JsonValue> values;    // by PrJsonValueIndex
+    RawArray<char> text;
 };
 
 struct Reader {
@@ -118,7 +118,7 @@ int32_t hexUnit(Reader& r) {
     return unit;
 }
 
-void appendCodePoint(Array<char>& text, uint32_t codePoint) {
+void appendCodePoint(RawArray<char>& text, uint32_t codePoint) {
     char bytes[kPrUtf8MaxBytes];
     text.append(bytes, prUtf8Encode(codePoint, bytes));
 }
@@ -126,7 +126,7 @@ void appendCodePoint(Array<char>& text, uint32_t codePoint) {
 // Reads a string at the reader's quote into the document's text.
 bool string(Reader& r) {
     ++r.at;
-    Array<char>& text = r.document->text;
+    RawArray<char>& text = r.document->text;
     uint32_t offset = uint32_t(text.count);
     while (true) {
         size_t run = r.at;
@@ -220,7 +220,7 @@ bool scalar(Reader& r) {
 }
 
 bool read(Reader& r) {
-    Array<uint32_t> open;  // the open arrays and objects, innermost last
+    RawArray<uint32_t> open;  // the open arrays and objects, innermost last
     bool ok = true;
     bool closed = false;
     while (ok) {
@@ -317,7 +317,7 @@ struct JsonWriterOpen {
 // JSON text under construction, and the containers that are open in it.
 struct JsonWriter {
     PrTextBuffer text = {};
-    Array<JsonWriterOpen> open; // innermost last
+    RawArray<JsonWriterOpen> open; // innermost last
     bool hasRoot;
 };
 

@@ -48,10 +48,10 @@ const PrCommandParam kParams[] = {
     {.name = "loud", .kind = PrCommandParamKind_Bool},
 };
 
-std::string stringOf(PrString* string) {
-    PrStringView view = prStringView(string);
+std::string stringOf(PrRawString* string) {
+    PrStringView view = prRawStringView(string);
     std::string out(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(string);
+    prRawStringReset(string);
     return out;
 }
 
@@ -61,7 +61,7 @@ PrStatus runWith(const PrCommandRegistry* registry, const char* id, const char* 
     PrJson* document = prJsonCreate();
     REQUIRE(prJsonParse(document, text, nullptr));
     PrCommandArgs args{.document = document, .object = 0, .result = result};
-    PrString why = prStringNull();
+    PrRawString why = prRawStringNull();
     PrStatus status = prCommandRegistryRun(registry, id, &args, &why);
     std::string explained = stringOf(&why);
     if (error != nullptr)
@@ -184,7 +184,7 @@ TEST_CASE("a chord reads from modifiers and a key, and shows as the platform sho
     for (const char* bad : {"", "Cmd", "Cmd Shift", "P Cmd", "Hyper P", "Cmd PP"})
         CHECK_FALSE(prCommandChordParse(bad, &chord));
 
-    PrString text = prCommandChordText(chordOf("Cmd Shift P"));
+    PrRawString text = prCommandChordText(chordOf("Cmd Shift P"));
 #if defined(__APPLE__)
     CHECK(stringOf(&text) == "\xE2\x87\xA7\xE2\x8C\x98P");
 #else

@@ -26,14 +26,14 @@ struct Named {
 
 // What a filter's build collects before the filter owns it.
 struct FilterParts {
-    Array<SvgPrimitive> primitives;
-    Array<float> numbers;
-    Array<SvgFilterInput> merges;
-    Array<Named> names;
-    Array<float> scratch;
+    RawArray<SvgPrimitive> primitives;
+    RawArray<float> numbers;
+    RawArray<SvgFilterInput> merges;
+    RawArray<Named> names;
+    RawArray<float> scratch;
 
     // True for each primitive whose result is tainted (filter-effects-1/#tainted-filter-primitives), by primitive.
-    Array<bool> tainted;
+    RawArray<bool> tainted;
 };
 
 // Returns true if an input is tainted: every source is, and so is the result of a tainted primitive.
@@ -133,7 +133,7 @@ bool isPrimitive(const PrDomElement* e) {
 
 // Parses the attribute `name` as a list of numbers into `numbers`. Returns false if the attribute is missing or a
 // number does not parse.
-bool numbersOf(const PrDomElement* e, PrStringView name, Array<float>* numbers) {
+bool numbersOf(const PrDomElement* e, PrStringView name, RawArray<float>* numbers) {
     PrStringView text = svgAttribute(e, name);
     numbers->clear();
     return text.data != nullptr && svgParseNumbers(text, numbers);
@@ -612,8 +612,8 @@ struct Graph {
     PrDrawFilterInput sources[6];
 
     // The node of each primitive's result, and the subregion that it produces in, in user space.
-    Array<PrDrawFilterInput> results;
-    Array<PrRect> subregions;
+    RawArray<PrDrawFilterInput> results;
+    RawArray<PrRect> subregions;
 };
 
 // Returns a length along an axis in the filter's primitive units: user units, or a fraction of the bounding box.
@@ -918,7 +918,7 @@ PrDrawFilterInput primitiveNode(Graph& g, const SvgPrimitive& p, PrRect subregio
         }
         case SvgPrimitiveKind_Merge: {
             node.kind = PrDrawFilterKind_Merge;
-            Array<PrDrawFilterInput> inputs;
+            RawArray<PrDrawFilterInput> inputs;
             for (uint32_t i = 0; i < p.merge.count; ++i)
                 inputs.push(inputNode(g, f.merges[p.merge.first + i]));
             node.merge = PrDrawFilterMerge{.inputs = inputs.data, .inputCount = inputs.count};

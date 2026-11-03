@@ -7,7 +7,7 @@
 
 #include "pr/base.h"
 #include "pr/font.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -84,7 +84,7 @@ float sfntMetricDelta(const Sfnt& sfnt, uint32_t tag, SfntCoords coords);
 
 // Returns a name from the name table by id, as UTF-8, preferring a Windows Unicode English record. Returns the null
 // string if there is none.
-PrString sfntName(const Sfnt& sfnt, uint16_t id);
+PrRawString sfntName(const Sfnt& sfnt, uint16_t id);
 
 // Gets a baseline of the horizontal axis of the BASE table, in font units above the origin, at the coordinates. It is
 // the value of the script if the script has one, and otherwise the value of the first script that does. Returns false
@@ -100,7 +100,7 @@ uint32_t sfntScriptTags(const Sfnt& sfnt, uint32_t* PR_NULLABLE out, uint32_t ca
 void sfntDescribe(const Sfnt& sfnt, PrFontInfo* out);
 
 // Returns the family name that matching reads: the typographic family if the name table has one.
-PrString sfntFamily(const Sfnt& sfnt);
+PrRawString sfntFamily(const Sfnt& sfnt);
 
 // A subtable of the cmap table, which maps code points to glyphs. Reading one changes nothing, so any number of threads
 // may read it at once.

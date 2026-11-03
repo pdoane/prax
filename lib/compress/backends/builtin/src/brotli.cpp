@@ -3,9 +3,9 @@
 #include "compress/backends/builtin/src/brotli.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 #include "compress/backends/builtin/src/brotli_tables.h"
 
@@ -207,11 +207,11 @@ struct BrotliState {
     uint8_t modes[256];             // by literal block type
     uint32_t literalTrees;
     uint32_t distanceTrees;
-    Array<uint8_t> literalMap;      // for each literal block type and context
-    Array<uint8_t> distanceMap;     // for each distance block type and context
+    RawArray<uint8_t> literalMap;      // for each literal block type and context
+    RawArray<uint8_t> distanceMap;     // for each distance block type and context
 
     // The context map being read.
-    Array<uint8_t>* PR_NULLABLE map;
+    RawArray<uint8_t>* PR_NULLABLE map;
     uint32_t mapTrees;
     uint32_t rleMax;
 
@@ -221,8 +221,8 @@ struct BrotliState {
     PrefixEntry lengthCode[kRootSize];
 
     // The tables of the meta-block, and the offset of each slot's table within them.
-    Array<PrefixEntry> tables;
-    Array<uint32_t> slots;          // by slot
+    RawArray<PrefixEntry> tables;
+    RawArray<uint32_t> slots;          // by slot
 
     // The command being decoded.
     uint32_t insertLeft;
@@ -1150,7 +1150,7 @@ BrotliStep step(BrotliState& d, BitReader& r, BrotliOutput& out) {
             return BrotliStep_Ok;
         }
         case BrotliPhase_MapValues: {
-            Array<uint8_t>& map = *d.map;
+            RawArray<uint8_t>& map = *d.map;
             if (d.index == map.count) {
                 d.phase = BrotliPhase_MapImtf;
                 return BrotliStep_Ok;
@@ -1182,7 +1182,7 @@ BrotliStep step(BrotliState& d, BitReader& r, BrotliOutput& out) {
                 uint8_t order[256];
                 for (uint32_t i = 0; i < 256; ++i)
                     order[i] = uint8_t(i);
-                Array<uint8_t>& map = *d.map;
+                RawArray<uint8_t>& map = *d.map;
                 for (uint32_t i = 0; i < map.count; ++i) {
                     const uint8_t index = map.data[i];
                     const uint8_t moved = order[index];

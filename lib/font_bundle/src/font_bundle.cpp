@@ -169,12 +169,12 @@ uint32_t namedIndex(const Bundle& bundle, const char* file) {
 
 // Adds the font file `file` of `directory` to `set`. Returns false if it does not load.
 bool add(PrFontSet* set, PrStringView directory, const char* file) {
-    PrString path = prStringCopy(directory);
-    prStringAppend(&path, "/");
-    prStringAppend(&path, file);
+    PrRawString path = prRawStringCopy(directory);
+    prRawStringAppend(&path, "/");
+    prRawStringAppend(&path, file);
     const PrFont* PR_NULLABLE font = nullptr;
-    PrStatus status = prFontCreateFromFile(prStringView(&path), 0, nullptr, &font);
-    prStringReset(&path);
+    PrStatus status = prFontCreateFromFile(prRawStringView(&path), 0, nullptr, &font);
+    prRawStringReset(&path);
     if (status != PrStatus_Ok)
         return false;
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();

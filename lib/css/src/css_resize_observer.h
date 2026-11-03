@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css_resize_observer.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -29,7 +29,7 @@ struct CssResizeObserver {
     uint32_t references;
     PrDomDocument* document;                    // holds a reference
     PrCssResizeCallback callback;
-    Array<CssResizeObservation> observations;
+    RawArray<CssResizeObservation> observations;
 
     // True if the last gather found a size that changed, for a target no deeper than the gather's depth
     // (resize-observer-1/#dom-resizeobserver-skippedtargets-slot).

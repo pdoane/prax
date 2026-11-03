@@ -8,8 +8,8 @@
 #include "pr/draw.h"
 #include "pr/image.h"
 #include "pr/pixels.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN

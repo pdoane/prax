@@ -211,8 +211,8 @@ bool isModifier(LottieItemKind kind) {
 
 // The styles and modifiers in effect as items are found, innermost last.
 struct Active {
-    Array<uint32_t> styles;
-    Array<uint32_t> modifiers;
+    RawArray<uint32_t> styles;
+    RawArray<uint32_t> modifiers;
     bool merged;                // true if a merge was found, so that the styles above it draw nothing
 };
 

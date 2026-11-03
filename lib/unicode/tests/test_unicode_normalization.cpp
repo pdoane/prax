@@ -23,10 +23,10 @@ std::string utf8(const std::vector<uint32_t>& codePoints) {
 }
 
 std::string normalize(const std::string& text, PrUnicodeNormalForm form) {
-    PrString normalized = prUnicodeNormalize(text, form);
-    PrStringView view = prStringView(&normalized);
+    PrRawString normalized = prUnicodeNormalize(text, form);
+    PrStringView view = prRawStringView(&normalized);
     std::string out(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(&normalized);
+    prRawStringReset(&normalized);
     return out;
 }
 

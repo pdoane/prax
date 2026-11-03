@@ -15,7 +15,6 @@
 #include "pr/draw_fragment.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/color_space.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_glyph.h"
@@ -31,6 +30,7 @@
 #include "pr/path_polyline.h"
 #include "pr/path_sparse.h"
 #include "pr/path_tessellator.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "draw/backends/fragment/src/draw_fragment_device.h"
@@ -119,11 +119,11 @@ struct PreparedList {
     bool never;
 
     // The kept records, and the texture numbers that the instances name by index plus one.
-    Array<FragmentInstance> instances;
-    Array<float> values;
-    Array<FragmentPaint> paints;
-    Array<FragmentClip> clips;
-    Array<uint32_t> tables;
+    RawArray<FragmentInstance> instances;
+    RawArray<float> values;
+    RawArray<FragmentPaint> paints;
+    RawArray<FragmentClip> clips;
+    RawArray<uint32_t> tables;
 };
 
 // The clip of an instance that reads the clip in force where the list was embedded.
@@ -135,7 +135,7 @@ struct Fragment {
     // list's id. A list takes the entry of another list whose hash it shares. The table grows when a build embeds more
     // than a quarter of its entries.
     PrDrawFragmentEmbeds embeds;
-    Array<PreparedList> prepared;
+    RawArray<PreparedList> prepared;
     uint32_t embedded;                  // the lists that the build in progress embedded
 
     PrDrawFragmentPaths paths;
@@ -145,14 +145,14 @@ struct Fragment {
     PrPathSparseRasterizer* sparse;
     PrPathPolyline polyline;
     PrDrawAtlas* atlas;
-    Array<uint32_t> pageTextures;       // the texture of each atlas page
-    Array<uint32_t> cursors;            // the position of each cell's next segment as a map's grid fills
-    uint32_t pagesCreated;              // number of atlas pages whose textures the host has
+    RawArray<uint32_t> pageTextures;       // the texture of each atlas page
+    RawArray<uint32_t> cursors;            // the position of each cell's next segment as a map's grid fills
+    uint32_t pagesCreated;                 // number of atlas pages whose textures the host has
     uint64_t build;
     uint32_t nextTexture;
-    Array<CachedImage> images;
+    RawArray<CachedImage> images;
     KeyIndex imageIndex;                // `images`, by imageKey
-    Array<CachedRamp> ramps;            // this build's ramps; the list's brushes stay put until the build ends
+    RawArray<CachedRamp> ramps;         // this build's ramps; the list's brushes stay put until the build ends
     HashIndex rampIndex;                // `ramps`, by the inputs that decide their colors
     HashIndex tableIndex;               // this build's texture table, by its entries
     KeyIndex layerIndex;                // this build's layers, by their textures
@@ -176,31 +176,31 @@ struct PendingTexels {
 
 // The storage that one frame's arrays point into. A backend keeps the storage of destroyed frames for the next frames.
 struct FrameStorage {
-    Array<FragmentInstance> instances;
-    Array<float> values;
-    Array<uint8_t> coverage;
-    Array<float> tileData;
-    Array<FragmentPaint> paints;
-    Array<FragmentClip> clips;
-    Array<uint32_t> clipShapes;
-    Array<FragmentClipShape> shapes;
-    Array<FragmentPiece> pieces;
-    Array<FragmentMap> maps;
-    Array<float> mapData;
-    Array<uint32_t> mapIndices;
-    Array<PrColor16> rampTables;
-    Array<uint32_t> rampCells;
-    Array<PrDrawRampPiece> rampPieces;
-    Array<PrColor16> rampColors;
-    Array<FragmentTexture> textures;
-    Array<PrDrawTextureId> hostTextures;
-    Array<FragmentLayer> layers;
-    Array<FragmentPass> passes;
-    Array<FragmentFilter> filters;
-    Array<float> filterData;
-    Array<FragmentTextureRequest> requests;
-    Array<uint8_t> texels;
-    Array<PendingTexels> pending;
+    RawArray<FragmentInstance> instances;
+    RawArray<float> values;
+    RawArray<uint8_t> coverage;
+    RawArray<float> tileData;
+    RawArray<FragmentPaint> paints;
+    RawArray<FragmentClip> clips;
+    RawArray<uint32_t> clipShapes;
+    RawArray<FragmentClipShape> shapes;
+    RawArray<FragmentPiece> pieces;
+    RawArray<FragmentMap> maps;
+    RawArray<float> mapData;
+    RawArray<uint32_t> mapIndices;
+    RawArray<PrColor16> rampTables;
+    RawArray<uint32_t> rampCells;
+    RawArray<PrDrawRampPiece> rampPieces;
+    RawArray<PrColor16> rampColors;
+    RawArray<FragmentTexture> textures;
+    RawArray<PrDrawTextureId> hostTextures;
+    RawArray<FragmentLayer> layers;
+    RawArray<FragmentPass> passes;
+    RawArray<FragmentFilter> filters;
+    RawArray<float> filterData;
+    RawArray<FragmentTextureRequest> requests;
+    RawArray<uint8_t> texels;
+    RawArray<PendingTexels> pending;
     uint32_t pathFills;                 // number of paths whose coverage the build prepared
     uint32_t beneath;                   // the layer beneath the target, as its index plus one, or zero
 };
@@ -265,18 +265,18 @@ struct Walk {
     FrameStorage* b;
     PrIRect target;
     bool extended;              // true if the target keeps colors outside [0, 1]
-    Array<PrDrawTransform> transforms;
-    Array<Clip> clips;          // innermost last
-    Array<uint32_t> clipShapes; // the clips' shapes, each an index into the frame's shapes
-    Array<float> opacities;     // the product of the opacities of groups without layers, innermost last
-    Array<uint32_t> layers;     // the layers drawn into, each its index plus one, innermost last; zero is the target
-    Array<bool> knockouts;      // true for each of `layers` that belongs to a knockout group
+    RawArray<PrDrawTransform> transforms;
+    RawArray<Clip> clips;          // innermost last
+    RawArray<uint32_t> clipShapes; // the clips' shapes, each an index into the frame's shapes
+    RawArray<float> opacities;     // the product of the opacities of groups without layers, innermost last
+    RawArray<uint32_t> layers;     // the layers drawn into, each its index plus one, innermost last; zero is the target
+    RawArray<bool> knockouts;      // true for each of `layers` that belongs to a knockout group
 
     // For each of `layers`, true if the walk keeps the bounds of what has been drawn into it so far in `drawn`. Only
     // the list's own layer and projected groups' layers need them.
-    Array<bool> tracks;
-    Array<PrIRect> drawn;
-    Array<GroupFrame> groups;
+    RawArray<bool> tracks;
+    RawArray<PrIRect> drawn;
+    RawArray<GroupFrame> groups;
     uint32_t pass;              // the pass being built
     PrDrawComposite composite;  // the operator that the records being made composite by
     PrDrawBlendMode blendMode;
@@ -285,8 +285,8 @@ struct Walk {
     // The layer that the list draws into, as its index plus one, or zero for the target. That layer is entered first
     // and stays entered while the list draws, so its entry in `drawn` is the second.
     uint32_t root;
-    Array<Stacked> stacked;
-    Array<PrColor> rampColors;  // a ramp's colors before they are recorded
+    RawArray<Stacked> stacked;
+    RawArray<PrColor> rampColors;  // a ramp's colors before they are recorded
 };
 
 const Clip& clipOf(const Walk& w) {
@@ -397,10 +397,10 @@ uint32_t rampOf(Walk& w, const PrDrawBrush* brush, PrColor color) {
     if (found != kHashMissing)
         return f->ramps.data[found].index;
     f->rampIndex.insert(hash, f->ramps.count);
-    Array<PrDrawRampPiece>& pieces = w.b->rampPieces;
+    RawArray<PrDrawRampPiece>& pieces = w.b->rampPieces;
     const uint32_t first = pieces.count;
     pieces.resize(first + prDrawGradientRampMaxPieces(brush->stopCount));
-    Array<PrColor>& colors = w.rampColors;
+    RawArray<PrColor>& colors = w.rampColors;
     colors.resize(prDrawGradientRampMaxColors(brush->stopCount, kFragmentRampResolution));
     uint32_t count =
         prDrawGradientRamp(brush, color, PrColorSpace_Srgb, kFragmentRampResolution, pieces.data + first, colors.data);
@@ -463,7 +463,7 @@ PrIRect targetBox(const Walk& w) {
 // for none. The entry reads the texture over the entry that `under` names, or over the color if `under` is zero. The
 // entry is added on first use. A layer's entry holds the layer's position.
 uint32_t tableEntry(Walk& w, uint32_t texture, uint32_t under, PrColor16 color) {
-    Array<FragmentTexture>& table = w.b->textures;
+    RawArray<FragmentTexture>& table = w.b->textures;
     FragmentTexture entry{};
     entry.texture = texture;
     entry.under = under;
@@ -828,7 +828,7 @@ void drawShaped(Walk& w, FragmentCoverage kind, PrAffine2 toDevice, PrRect bound
     i.flags = kind;
     i.data = w.b->values.count;
     if (emit(w, i, ink, prIRectRoundOut(prAffine2MapRect(toDevice, bounds)))) {
-        Array<float>& values = w.b->values;
+        RawArray<float>& values = w.b->values;
         uint32_t at = values.count;
         values.reserve(at + uint32_t(sizeof(Record) / sizeof(float)));
         values.count = at + uint32_t(sizeof(Record) / sizeof(float));
@@ -1436,7 +1436,7 @@ void binSegments(Walk& w, FragmentMap& m, uint32_t segmentCount, PrRect bounds) 
     m.columns = uint32_t(prF32Max(prF32Ceil(extentX / m.cellSize), 1));
     m.rows = uint32_t(prF32Max(prF32Ceil(extentY / m.cellSize), 1));
     uint32_t cells = m.columns * m.rows;
-    Array<uint32_t>& indices = w.b->mapIndices;
+    RawArray<uint32_t>& indices = w.b->mapIndices;
     m.cells = indices.count;
     indices.reserve(indices.count + cells + 1);
     indices.count += cells + 1;
@@ -1465,7 +1465,7 @@ void binSegments(Walk& w, FragmentMap& m, uint32_t segmentCount, PrRect bounds) 
     for (uint32_t cell = 0; cell < cells; ++cell)
         starts[cell + 1] += starts[cell];
     uint32_t total = starts[cells] - base;
-    Array<uint32_t>& cursors = w.f->cursors;
+    RawArray<uint32_t>& cursors = w.f->cursors;
     cursors.clear();
     cursors.append(starts, cells);
     indices.reserve(indices.count + total);
@@ -1500,7 +1500,7 @@ bool mapStroke(Walk& w, const PrDrawCommand& c, StrokeMapping* out) {
     m.width = stroke.shape.width * scale;
     // A stroke narrower than a pixel is drawn a pixel wide.
     m.reach = prDrawStrokeReach(&stroke) * prF32Max(stroke.shape.width * scale, 1) + 2;
-    Array<float>& data = w.b->mapData;
+    RawArray<float>& data = w.b->mapData;
     m.segments = data.count;
     PrRect bounds{kPrF32Infinity, kPrF32Infinity, -kPrF32Infinity, -kPrF32Infinity};
     float longest = 0;
@@ -1741,7 +1741,7 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
         c.nineSlice.destination, nullptr, 0);
     if (count == 0 || prIRectIsEmpty(clipOf(w).box))
         return;
-    Array<PrDrawImageRect> rects;
+    RawArray<PrDrawImageRect> rects;
     rects.reserve(count);
     rects.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{prRectWidth(area), prRectHeight(area)},
         c.nineSlice.destination, rects.data, count);
@@ -2224,8 +2224,8 @@ struct FilterRun {
     uint32_t sourceAlpha;       // created on first use
     uint32_t backdrop;          // zero if there is none
     uint32_t empty;             // a transparent layer, created on first use
-    Array<uint32_t> results;
-    Array<PrIRect> regions;     // the region of each result
+    RawArray<uint32_t> results;
+    RawArray<PrIRect> regions;  // the region of each result
     PrRect graph;               // the area where the graph produces output, in the group's space
 };
 
@@ -2403,7 +2403,7 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
         }
         case PrDrawFilterKind_ComponentTransfer: {
             FragmentFilter step = stepOf(FragmentFilterOp_Transfer, flags);
-            Array<float> data;
+            RawArray<float> data;
             for (const PrDrawTransfer& t : node.transfer) {
                 bool tabled = t.kind == PrDrawTransferKind_Table || t.kind == PrDrawTransferKind_Discrete;
                 uint32_t count = tabled ? t.valueCount : 0;
@@ -2521,7 +2521,7 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
             };
             PrImageNoise* noise = alloc<PrImageNoise>();
             prImageNoise(t.seed, noise);
-            Array<float> data;
+            RawArray<float> data;
             data.append(head, 15);
             for (int32_t v : noise->lattice)
                 data.push(float(v));

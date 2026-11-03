@@ -43,7 +43,7 @@ struct SvgReferences {
     PrCssPresentation* presentation;
     SvgTree tree;
     SvgChanges changes;
-    Array<SvgReferenceSource*> sources;     // by SvgResourceIndex, or null
+    RawArray<SvgReferenceSource*> sources;     // by SvgResourceIndex, or null
 
     // The number of times that the resources were built again, which a source takes as its version, so that a group
     // that names it compares unequal once what it draws has changed.
@@ -215,7 +215,7 @@ bool sizedByViewBox(const SvgTree& tree) {
 
 // Brings the content up to date for a box of `extent`, and writes to `foreign` the foreignObject elements whose content
 // it draws. A foreignObject with no layout root, or whose rectangle has no area, is not among them.
-CssPresentationSvgUpdate contentUpdate(SvgContent* content, PrVec2 extent, Array<CssPresentationSvgForeignObject>* foreign) {
+CssPresentationSvgUpdate contentUpdate(SvgContent* content, PrVec2 extent, RawArray<CssPresentationSvgForeignObject>* foreign) {
     // The tree's text resolves its percentages against the extent, unless a viewBox gives the root a size of its own.
     const SvgTree& tree = content->tree;
     if (extent.x != content->extent.x || extent.y != content->extent.y) {
@@ -248,7 +248,7 @@ void contentPaint(void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
 
 uint32_t contentHitTest(const void* content, PrVec2 point, CssPresentationSvgHit* PR_NULLABLE out, uint32_t capacity) {
     const SvgContent* own = static_cast<const SvgContent*>(content);
-    Array<CssPresentationSvgHit> hits;
+    RawArray<CssPresentationSvgHit> hits;
     hits.resize(svgTreeHitTest(&own->tree, own->extent, nullptr, point, nullptr, 0));
     svgTreeHitTest(&own->tree, own->extent, nullptr, point, hits.data, hits.count);
     for (uint32_t i = 0; i < hits.count && i < capacity; ++i)
@@ -280,7 +280,7 @@ PrLayoutNaturalSize layoutNaturalOf(PrSvgNaturalSize natural) {
     return size;
 }
 
-bool contentVerify(void* content, PrString* report) {
+bool contentVerify(void* content, PrRawString* report) {
     SvgContent* own = static_cast<SvgContent*>(content);
     // Changes noted since the last update are the next update's to bring in.
     if (contentPending(own))
@@ -292,7 +292,7 @@ bool contentVerify(void* content, PrString* report) {
     PrTextBuffer difference{};
     bool same = svgTreeSame(&own->tree, &expected, &difference);
     if (!same) {
-        prStringReset(report);
+        prRawStringReset(report);
         *report = prTextBufferCopy(&difference);
     }
     prTextBufferReset(&difference);
@@ -695,7 +695,7 @@ bool svgPresentationUpdate(PrCssPresentation* presentation) {
         invalidate(state);
     uint32_t count = 0;
     CssPresentationSvg* const* svgs = cssPresentationSvgs(presentation, &count);
-    Array<CssPresentationSvgForeignObject> foreign;
+    RawArray<CssPresentationSvgForeignObject> foreign;
     for (uint32_t i = 0; i < count; ++i) {
         CssPresentationSvg* svg = svgs[i];
         if (svg->content == nullptr) {

@@ -215,7 +215,7 @@ LayoutNodeIndex examine(LayoutTree* tree, LayoutNodeIndex first, const Container
         LayoutNodeIndex resume;
         bool selectable;
     };
-    Array<Frame> stack;
+    RawArray<Frame> stack;
     LayoutNodeIndex chosen = kPrLayoutNodeNone;
     LayoutNodeIndex next = first;
     while (chosen == kPrLayoutNodeNone) {
@@ -291,7 +291,7 @@ bool suppressed(const LayoutTree* tree, LayoutNodeIndex anchor, LayoutNodeIndex 
         if (at == container)
             break;
     }
-    const Array<LayoutNodeIndex>& repositioned = tree->anchoring.repositioned;
+    const RawArray<LayoutNodeIndex>& repositioned = tree->anchoring.repositioned;
     for (uint32_t i = 0; i < repositioned.count; ++i) {
         LayoutNodeIndex node = repositioned.data[i];
         if (node < tree->nodes.count && tree->nodes.data[node].live && isWithin(tree, node, container))
@@ -301,7 +301,7 @@ bool suppressed(const LayoutTree* tree, LayoutNodeIndex anchor, LayoutNodeIndex 
 }
 
 // Adds `delta` to the move of `container` in `moves`.
-void addMove(Array<PrLayoutScrollAdjustment>& moves, PrLayoutNode container, PrLayoutVec delta) {
+void addMove(RawArray<PrLayoutScrollAdjustment>& moves, PrLayoutNode container, PrLayoutVec delta) {
     for (uint32_t i = 0; i < moves.count; ++i) {
         if (moves.data[i].node == container) {
             moves.data[i].delta = moves.data[i].delta + delta;

@@ -73,10 +73,10 @@ bool prFileCreateDirectory(PrStringView path) {
     return path.size != 0 && PR_PLATFORM_FILE_CREATE_DIRECTORY(path);
 }
 
-PrString prFileCacheDirectory(void) {
+PrRawString prFileCacheDirectory(void) {
     return PR_PLATFORM_FILE_CACHE_DIRECTORY();
 }
 
-PrString prFileDataDirectory(void) {
+PrRawString prFileDataDirectory(void) {
     return PR_PLATFORM_FILE_DATA_DIRECTORY();
 }

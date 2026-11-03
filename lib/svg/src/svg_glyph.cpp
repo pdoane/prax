@@ -5,12 +5,12 @@
 #include "pr/svg_glyph.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/css.h"
 #include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/dom_xml.h"
 #include "pr/draw_commands.h"
+#include "pr/raw_array.h"
 #include "pr/svg.h"
 #include "pr/svg_render.h"
 
@@ -35,11 +35,11 @@ struct ParsedDocument {
 struct SvgDecoder : PrDrawGlyphDecoder {
     PrImageCodec* PR_NULLABLE imageCodec;
     PrCompressCodec* PR_NULLABLE compressCodec;
-    Array<ParsedDocument> documents;
+    RawArray<ParsedDocument> documents;
     uint64_t clock;
-    Array<uint8_t> inflated;
-    Array<char> text;                       // the palette's custom properties, with names and values end to end
-    Array<PrSvgCustomProperty> properties;
+    RawArray<uint8_t> inflated;
+    RawArray<char> text;                       // the palette's custom properties, with names and values end to end
+    RawArray<PrSvgCustomProperty> properties;
 };
 
 // Returns the document's text: its bytes, inflated if they are gzip-compressed. Returns the null view if they cannot be
@@ -103,12 +103,12 @@ PrDomDocument* PR_NULLABLE documentOf(SvgDecoder& d, const PrFont* font, const P
     return document;
 }
 
-void appendText(Array<char>& out, const char* text) {
+void appendText(RawArray<char>& out, const char* text) {
     while (*text != 0)
         out.push(*text++);
 }
 
-void appendNumber(Array<char>& out, uint32_t value) {
+void appendNumber(RawArray<char>& out, uint32_t value) {
     char digits[10];
     uint32_t count = 0;
     do {
@@ -119,7 +119,7 @@ void appendNumber(Array<char>& out, uint32_t value) {
         out.push(digits[--count]);
 }
 
-void appendHex(Array<char>& out, float channel) {
+void appendHex(RawArray<char>& out, float channel) {
     const char* digits = "0123456789abcdef";
     float clamped = channel < 0 ? 0 : channel > 1 ? 1 : channel;
     uint32_t byte = uint32_t(clamped * 255 + 0.5f);
@@ -133,7 +133,7 @@ void paletteProperties(SvgDecoder& d, const PrFont* font, const PrFontPalette* P
     d.text.clear();
     d.properties.clear();
     // The names and values are written first, and views of them are taken once the text no longer grows.
-    Array<uint32_t> starts;
+    RawArray<uint32_t> starts;
     for (uint32_t i = 0; i < count; ++i) {
         starts.push(d.text.count);
         appendText(d.text, "--color");
@@ -181,7 +181,7 @@ bool decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, flo
     if (document == nullptr)
         return false;
     // The glyph is the element whose id is "glyph" followed by the glyph's id.
-    Array<char> name;
+    RawArray<char> name;
     appendText(name, "glyph");
     appendNumber(name, glyph);
     PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(document), PrStringView{name.data, name.count});

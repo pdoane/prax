@@ -67,9 +67,9 @@ PrLayoutBoxStyle perspectiveBox() {
 uint32_t projectedGroups(PrLayoutTree* tree) {
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(tree, list);
-    PrString dump = prDrawListDump(list);
-    std::string text(prStringView(&dump).data, prStringView(&dump).size);
-    prStringReset(&dump);
+    PrRawString dump = prDrawListDump(list);
+    std::string text(prRawStringView(&dump).data, prRawStringView(&dump).size);
+    prRawStringReset(&dump);
     prDrawListRelease(list);
     uint32_t count = 0;
     for (size_t at = text.find(" projection"); at != std::string::npos; at = text.find(" projection", at + 1))
@@ -1034,9 +1034,10 @@ TEST_CASE("a compositor's 3D transform plays through its layer's projection, wit
     options.effectCount = 1;
     PrDrawList* list = prDrawListCreate();
     prLayoutScenePlay(scene, list, &options);
-    PrString dump = prDrawListDump(list);
-    CHECK(std::string(prStringView(&dump).data, prStringView(&dump).size).find(" projection") != std::string::npos);
-    prStringReset(&dump);
+    PrRawString dump = prDrawListDump(list);
+    PrStringView text = prRawStringView(&dump);
+    CHECK(std::string(text.data, text.size).find(" projection") != std::string::npos);
+    prRawStringReset(&dump);
     prDrawListRelease(list);
     prLayoutSceneRelease(scene);
 }

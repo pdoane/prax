@@ -900,7 +900,7 @@ void addFeatureBlocks(CssRuleData* rule) {
 // their at-rules were first written.
 void mergeBlock(CssParser* parser, CssRuleData* rule, CssRuleData* earlier, const CssRuleData* written) {
     if (earlier->style.count == 0 && written->style.count != 0) {
-        Array<CssRuleData* PR_NONNULL>* blocks = &rule->children;
+        RawArray<CssRuleData* PR_NONNULL>* blocks = &rule->children;
         uint32_t held = 0;
         while (blocks->data[held]->style.count != 0)
             ++held;
@@ -1257,7 +1257,7 @@ void addSheetRules(CssSheetData* sheet, CssParser* parser, const CssTokenStream*
 
 // Recomputes the specificity of the style rules in `rules` and in the group rules among them. In those rules, `&`
 // represents `parent`.
-void respecify(const Array<CssRuleData* PR_NONNULL>& rules, const PrCssSelectors* parent) {
+void respecify(const RawArray<CssRuleData* PR_NONNULL>& rules, const PrCssSelectors* parent) {
     for (uint32_t i = 0; i < rules.count; ++i) {
         CssRuleData* rule = rules.data[i];
         if (rule->kind == CssRuleDataKind_Style)
@@ -1289,8 +1289,8 @@ struct Listing {
     CssDeclarationItem* PR_NULLABLE items;
 
     CssDeclarationItem held[kListingHeld];
-    Array<CssDeclarationItem> more;
-    Array<uint32_t> positions;                   // item position by property, used past kListingHeld items
+    RawArray<CssDeclarationItem> more;
+    RawArray<uint32_t> positions;                   // item position by property, used past kListingHeld items
 };
 
 void listDeclarations(const CssDeclarationBlock* block, Listing* out) {
@@ -1357,7 +1357,7 @@ constexpr uint32_t kLonghandsHeld = 32;
 // The values of the longhands of a shorthand, in canonical order, when all are declared with the same importance.
 struct LonghandValues {
     CssValueRun held[kLonghandsHeld];
-    Array<CssValueRun> more;
+    RawArray<CssValueRun> more;
     const CssValueRun* values;
     PrCssProperty pending;     // the shorthand that the first value is pending on, or PrCssProperty_Count if none
     bool mixed;                // true if some value is not pending on `pending`
@@ -1750,7 +1750,7 @@ uint32_t cssFeatureBlock(const CssRuleData* rule, CssAtRule type) {
 CssSheetData* cssSheetDataCreate() {
     CssSheetData* sheet = allocZeroed<CssSheetData>();
     sheet->references = 1;
-    sheet->href = prStringNull();
+    sheet->href = prRawStringNull();
     return sheet;
 }
 
@@ -1764,7 +1764,7 @@ void cssSheetDataRelease(CssSheetData* PR_NULLABLE sheet) {
     for (uint32_t i = 0; i < sheet->rules.count; ++i)
         cssRuleDataRelease(sheet->rules.data[i]);
     sheet->rules.reset();
-    prStringReset(&sheet->href);
+    prRawStringReset(&sheet->href);
     prMemoryFree(sheet);
 }
 
@@ -1805,7 +1805,7 @@ CssRuleData* cssRuleDataCopy(const CssRuleData* rule) {
 
 CssSheetData* cssSheetDataCopy(const CssSheetData* sheet) {
     CssSheetData* copy = cssSheetDataCreate();
-    copy->href = prStringClone(&sheet->href);
+    copy->href = prRawStringClone(&sheet->href);
     copy->rules.reserve(sheet->rules.count);
     for (uint32_t i = 0; i < sheet->rules.count; ++i) {
         cssRuleDataRetain(sheet->rules.data[i]);
@@ -2087,7 +2087,7 @@ bool cssNameFromText(CssAtRule rule, PrStringView text, CssDeclaredName* out) {
 }
 
 bool cssDeclaredNameFromName(CssAtRule rule, const PrCssDeclarationName* name, CssDeclaredName* out) {
-    PrStringView author = prStringView(&name->author);
+    PrStringView author = prRawStringView(&name->author);
     if (author.data != nullptr)
         return authorName(rule, author, out);
     if (name->descriptor != PrCssDescriptor_None) {
@@ -2249,7 +2249,7 @@ CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclara
 }
 
 CssEditResult cssDeclarationBlockPrepareRemove(CssEdit* edit, const CssDeclarationBlock* block,
-        const CssDeclaredName& name, PrString* PR_NULLABLE out) {
+        const CssDeclaredName& name, PrRawString* PR_NULLABLE out) {
     if (out != nullptr) {
         PrTextBuffer text = {};
         cssSerializePropertyValue(&text, block, name);
@@ -2300,7 +2300,8 @@ CssEditResult cssDeclarationBlockSetValue(CssDeclarationBlock* block, const CssD
     return result;
 }
 
-CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDeclaredName& name, PrString* PR_NULLABLE out) {
+CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDeclaredName& name,
+        PrRawString* PR_NULLABLE out) {
     CssEdit edit;
     cssEditBegin(&edit, nullptr);
     CssEditResult result = cssDeclarationBlockPrepareRemove(&edit, block, name, out);
@@ -2381,7 +2382,7 @@ bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssVa
 
 PrStatus cssRuleListPrepareInsert(CssEdit* edit, const CssSheetData* PR_NULLABLE sheet,
         const CssRuleChain* PR_NULLABLE parent, PrStringView text, uint32_t index) {
-    const Array<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->rule->children : &sheet->rules;
+    const RawArray<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->rule->children : &sheet->rules;
     if (index > list->count)
         return PrStatus_OutOfRange;
 
@@ -2454,7 +2455,7 @@ PrStatus cssRuleListPrepareInsert(CssEdit* edit, const CssSheetData* PR_NULLABLE
 }
 
 void cssRuleListCommitInsert(CssEdit* edit, CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent) {
-    Array<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->children : &sheet->rules;
+    RawArray<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->children : &sheet->rules;
     list->insert(edit->index, edit->rule);
     edit->rule = nullptr;
 }
@@ -2472,7 +2473,7 @@ PrStatus cssRuleListInsert(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULL
 }
 
 PrStatus cssRuleListRemovable(const CssSheetData* PR_NULLABLE sheet, const CssRuleData* PR_NULLABLE parent, uint32_t index) {
-    const Array<CssRuleData* PR_NONNULL>& list = parent != nullptr ? parent->children : sheet->rules;
+    const RawArray<CssRuleData* PR_NONNULL>& list = parent != nullptr ? parent->children : sheet->rules;
     if (index >= list.count)
         return PrStatus_OutOfRange;
 
@@ -2487,13 +2488,13 @@ PrStatus cssRuleListRemovable(const CssSheetData* PR_NULLABLE sheet, const CssRu
 }
 
 void cssRuleListRemove(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent, uint32_t index) {
-    Array<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->children : &sheet->rules;
+    RawArray<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->children : &sheet->rules;
     CssRuleData* rule = list->data[index];
     list->erase(index);
     cssRuleDataRelease(rule);
 }
 
-void cssRuleListReplace(Array<CssRuleData* PR_NONNULL>* list, uint32_t index, CssRuleData* rule) {
+void cssRuleListReplace(RawArray<CssRuleData* PR_NONNULL>* list, uint32_t index, CssRuleData* rule) {
     CssRuleData* held = list->data[index];
     list->data[index] = rule;
     cssRuleDataRelease(held);
@@ -2596,7 +2597,7 @@ void cssSerializeRule(PrTextBuffer* out, const CssRuleData* rule) {
     }
 }
 
-void cssSerializeRuleList(PrTextBuffer* out, const Array<CssRuleData* PR_NONNULL>& rules) {
+void cssSerializeRuleList(PrTextBuffer* out, const RawArray<CssRuleData* PR_NONNULL>& rules) {
     for (uint32_t i = 0; i < rules.count; ++i) {
         if (i != 0)
             prTextBufferAppendChar(out, '\n');

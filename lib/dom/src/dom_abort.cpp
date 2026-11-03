@@ -148,7 +148,7 @@ void prDomAbortSignalSignalAbort(PrDomAbortSignal* signal, const void* PR_NULLAB
         return;
     setReason(signal, reason);
     // Every dependent is aborted before any listener runs, and each is held while the listeners run.
-    Array<PrDomAbortSignal*> dependents;
+    RawArray<PrDomAbortSignal*> dependents;
     for (uint32_t i = 0; i < signal->dependents.count; ++i) {
         PrDomAbortSignal* dependent = signal->dependents.data[i];
         if (dependent->aborted)

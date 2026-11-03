@@ -122,8 +122,8 @@ PrCanvas* htmlCanvasCreateContext2D(HtmlCanvas* canvas, const PrCanvasSettings& 
     return canvas->context;
 }
 
-PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString* out) {
-    *out = prStringNull();
+PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrRawString* out) {
+    *out = prRawStringNull();
     const HtmlCanvas* canvas = htmlCanvasFind(element);
     PrCanvas* context = canvas != nullptr ? canvas->context : nullptr;
     if (context != nullptr && !prCanvasIsOriginClean(context))
@@ -138,10 +138,10 @@ PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString*
     // A bitmap without pixels, or one that cannot be serialized, is the empty data: URL (html/#dom-canvas-todataurl).
     if (extent.x == 0 || extent.y == 0 || extent.x > kPrCanvasBitmapMaxSize || extent.y > kPrCanvasBitmapMaxSize ||
             codec == nullptr) {
-        *out = prStringCopy("data:,");
+        *out = prRawStringCopy("data:,");
         return PrStatus_Ok;
     }
-    Array<uint8_t> pixels;
+    RawArray<uint8_t> pixels;
     pixels.resize(extent.x * extent.y * 4);
     prMemZero(pixels.data, pixels.count);
     if (context != nullptr) {
@@ -165,11 +165,11 @@ PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString*
         if (prImageCodecEncode(codec, prTextBufferView(&mime), view, nullptr, 0, &size) != PrStatus_Ok) {
             prTextBufferReset(&mime);
             pixels.reset();
-            *out = prStringCopy("data:,");
+            *out = prRawStringCopy("data:,");
             return PrStatus_Ok;
         }
     }
-    Array<uint8_t> file;
+    RawArray<uint8_t> file;
     file.resize(uint32_t(size));
     prImageCodecEncode(codec, prTextBufferView(&mime), view, file.data, size, &size);
     PrStringView bytes{reinterpret_cast<const char*>(file.data), size};
@@ -206,7 +206,7 @@ bool htmlCanvasImageSource(PrDomElement* element, PrCanvasImageSource* out) {
     PrUVec2 extent{domReflectedUnsigned(element, "width", 300), domReflectedUnsigned(element, "height", 150)};
     if (extent.x == 0 || extent.y == 0 || extent.x > kPrCanvasBitmapMaxSize || extent.y > kPrCanvasBitmapMaxSize)
         return false;
-    Array<uint8_t> pixels;
+    RawArray<uint8_t> pixels;
     pixels.resize(extent.x * extent.y * 4);
     prMemZero(pixels.data, pixels.count);
     PrDrawImageDesc desc{
@@ -237,7 +237,7 @@ void htmlCanvasChanged(PrDomElement* element, PrStringView attribute) {
 }
 
 void htmlCanvasShow(PrHtmlWindow* window) {
-    Array<PrDomElement*> canvases = window->canvases;
+    RawArray<PrDomElement*> canvases = window->canvases;
     window->canvases = {};
     for (uint32_t i = 0; i < canvases.count; ++i) {
         PrDomElement* element = canvases.data[i];

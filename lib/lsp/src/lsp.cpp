@@ -4,11 +4,11 @@
 #include "pr/lsp.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/utf8.h"
 
@@ -66,12 +66,12 @@ struct LspDocument {
     // change's old end is a position in the text before it, which only this copy still has.
     PrTextEditBuffer* PR_NULLABLE replica;
 
-    PrString uri;
-    PrString languageId;
+    PrRawString uri;
+    PrRawString languageId;
     int32_t version;
     bool opened;                    // the server was told of the document
-    Array<LspDiagnosticRecord> diagnostics;
-    Array<char> strings;
+    RawArray<LspDiagnosticRecord> diagnostics;
+    RawArray<char> strings;
     uint64_t diagnosticChanges;
 };
 
@@ -80,9 +80,9 @@ struct LspClient {
     void* PR_NULLABLE writeContext;
     PrLspMessageFn PR_NULLABLE message;
     void* PR_NULLABLE messageContext;
-    PrString rootUri;               // null if the client has no workspace
-    PrString rootName;
-    PrString clientName;
+    PrRawString rootUri;               // null if the client has no workspace
+    PrRawString rootName;
+    PrRawString clientName;
 
     PrLspClientState state;
     bool shutdownAsked;             // the host asked to shut down while the client initialized
@@ -90,10 +90,10 @@ struct LspClient {
     PrLspRequest nextRequest;
     PrLspRequest initializeRequest;
     PrLspRequest shutdownRequest;
-    Array<LspPending> pending;
-    Array<LspDocument*> documents;
+    RawArray<LspPending> pending;
+    RawArray<LspDocument*> documents;
 
-    PrString serverName;
+    PrRawString serverName;
     PrLspCapabilityFlags capabilities;
     PrLspEncoding encoding;
     SyncKind syncKind;
@@ -101,13 +101,13 @@ struct LspClient {
     bool save;                      // the server is told when documents are saved
     bool saveText;                  // and is sent their text then
 
-    Array<uint8_t> received;        // what arrived and was not handled, from `receivedStart`
+    RawArray<uint8_t> received;        // what arrived and was not handled, from `receivedStart`
     uint32_t receivedStart;
     PrJson* json;                   // the message being handled
     PrJson* params;                 // the params that a host gave as text
     PrJsonWriter* writer;
-    Array<uint8_t> frame;
-    Array<char> text;               // a document's text, copied whole
+    RawArray<uint8_t> frame;
+    RawArray<char> text;               // a document's text, copied whole
 };
 
 // Writing
@@ -185,7 +185,7 @@ void writePosition(PrJsonWriter* writer, PrLspPosition position) {
 void writeDocumentId(PrJsonWriter* writer, const LspDocument* document) {
     prJsonWriterKey(writer, "textDocument");
     prJsonWriterBeginObject(writer);
-    writeKeyString(writer, "uri", prStringView(&document->uri));
+    writeKeyString(writer, "uri", prRawStringView(&document->uri));
     prJsonWriterEndObject(writer);
 }
 
@@ -317,8 +317,8 @@ void openDocument(LspDocument* document) {
     prJsonWriterBeginObject(client->writer);
     prJsonWriterKey(client->writer, "textDocument");
     prJsonWriterBeginObject(client->writer);
-    writeKeyString(client->writer, "uri", prStringView(&document->uri));
-    writeKeyString(client->writer, "languageId", prStringView(&document->languageId));
+    writeKeyString(client->writer, "uri", prRawStringView(&document->uri));
+    writeKeyString(client->writer, "languageId", prRawStringView(&document->languageId));
     prJsonWriterKey(client->writer, "version");
     prJsonWriterNumber(client->writer, double(document->version));
     writeKeyString(client->writer, "text", copyText(client, document->buffer));
@@ -335,7 +335,7 @@ void beginChange(LspDocument* document) {
     prJsonWriterBeginObject(client->writer);
     prJsonWriterKey(client->writer, "textDocument");
     prJsonWriterBeginObject(client->writer);
-    writeKeyString(client->writer, "uri", prStringView(&document->uri));
+    writeKeyString(client->writer, "uri", prRawStringView(&document->uri));
     prJsonWriterKey(client->writer, "version");
     prJsonWriterNumber(client->writer, double(document->version));
     prJsonWriterEndObject(client->writer);
@@ -430,17 +430,17 @@ bool isPathByte(char c) {
 bool sameDocument(PrStringView a, PrStringView b) {
     if (a == b)
         return true;
-    PrString first = prLspPathFromUri(a);
-    PrString second = prLspPathFromUri(b);
-    bool same = !prStringIsNull(&first) && prStringView(&first) == prStringView(&second);
-    prStringReset(&first);
-    prStringReset(&second);
+    PrRawString first = prLspPathFromUri(a);
+    PrRawString second = prLspPathFromUri(b);
+    bool same = !prRawStringIsNull(&first) && prRawStringView(&first) == prRawStringView(&second);
+    prRawStringReset(&first);
+    prRawStringReset(&second);
     return same;
 }
 
 LspDocument* PR_NULLABLE documentFromUri(const LspClient* client, PrStringView uri) {
     for (uint32_t i = 0; i < client->documents.count; ++i) {
-        if (sameDocument(prStringView(&client->documents.data[i]->uri), uri))
+        if (sameDocument(prRawStringView(&client->documents.data[i]->uri), uri))
             return client->documents.data[i];
     }
     return nullptr;
@@ -505,7 +505,7 @@ void initialized(LspClient* client, const PrJson* json, PrJsonValueIndex result)
         if (offers(json, capabilities, provider.key))
             client->capabilities |= provider.flag;
     }
-    prStringReplace(&client->serverName, prJsonString(json, member(json, member(json, result, "serverInfo"), "name")));
+    prRawStringReplace(&client->serverName, prJsonString(json, member(json, member(json, result, "serverInfo"), "name")));
 
     client->state = PrLspClientState_Running;
     beginCall(client, "initialized", false);
@@ -587,13 +587,13 @@ void handleServerRequest(LspClient* client, const PrJson* json, PrJsonValueIndex
         prJsonWriterNull(client->writer);
     } else if (method == "workspace/workspaceFolders") {
         beginAnswer(client, json, id);
-        if (prStringIsNull(&client->rootUri)) {
+        if (prRawStringIsNull(&client->rootUri)) {
             prJsonWriterNull(client->writer);
         } else {
             prJsonWriterBeginArray(client->writer);
             prJsonWriterBeginObject(client->writer);
-            writeKeyString(client->writer, "uri", prStringView(&client->rootUri));
-            writeKeyString(client->writer, "name", prStringView(&client->rootName));
+            writeKeyString(client->writer, "uri", prRawStringView(&client->rootUri));
+            writeKeyString(client->writer, "name", prRawStringView(&client->rootName));
             prJsonWriterEndObject(client->writer);
             prJsonWriterEndArray(client->writer);
         }
@@ -752,7 +752,7 @@ PrLspClient* prLspClientCreate(const PrLspClientDesc* desc) {
     client->json = prJsonCreate();
     client->params = prJsonCreate();
     client->writer = prJsonWriterCreate();
-    client->clientName = prStringCopy(desc->clientName.data != nullptr ? desc->clientName : PrStringView("prax"));
+    client->clientName = prRawStringCopy(desc->clientName.data != nullptr ? desc->clientName : PrStringView("prax"));
     if (desc->rootPath.data != nullptr) {
         client->rootUri = prLspUriFromPath(desc->rootPath);
         PrStringView root = desc->rootPath;
@@ -761,7 +761,7 @@ PrLspClient* prLspClientCreate(const PrLspClientDesc* desc) {
         size_t slash = root.size;
         while (slash > 0 && root.data[slash - 1] != '/' && root.data[slash - 1] != '\\')
             --slash;
-        client->rootName = prStringCopy(prStringSlice(root, slash, root.size - slash));
+        client->rootName = prRawStringCopy(prStringSlice(root, slash, root.size - slash));
     }
 
     PrJsonWriter* writer = client->writer;
@@ -771,21 +771,21 @@ PrLspClient* prLspClientCreate(const PrLspClientDesc* desc) {
     prJsonWriterNull(writer);
     prJsonWriterKey(writer, "clientInfo");
     prJsonWriterBeginObject(writer);
-    writeKeyString(writer, "name", prStringView(&client->clientName));
+    writeKeyString(writer, "name", prRawStringView(&client->clientName));
     prJsonWriterEndObject(writer);
     prJsonWriterKey(writer, "rootUri");
-    if (prStringIsNull(&client->rootUri))
+    if (prRawStringIsNull(&client->rootUri))
         prJsonWriterNull(writer);
     else
-        prJsonWriterString(writer, prStringView(&client->rootUri));
+        prJsonWriterString(writer, prRawStringView(&client->rootUri));
     prJsonWriterKey(writer, "workspaceFolders");
-    if (prStringIsNull(&client->rootUri)) {
+    if (prRawStringIsNull(&client->rootUri)) {
         prJsonWriterNull(writer);
     } else {
         prJsonWriterBeginArray(writer);
         prJsonWriterBeginObject(writer);
-        writeKeyString(writer, "uri", prStringView(&client->rootUri));
-        writeKeyString(writer, "name", prStringView(&client->rootName));
+        writeKeyString(writer, "uri", prRawStringView(&client->rootUri));
+        writeKeyString(writer, "name", prRawStringView(&client->rootName));
         prJsonWriterEndObject(writer);
         prJsonWriterEndArray(writer);
     }
@@ -859,10 +859,10 @@ void prLspClientDestroy(PrLspClient* PR_NULLABLE client) {
     prJsonDestroy(client->json);
     prJsonDestroy(client->params);
     prJsonWriterDestroy(client->writer);
-    prStringReset(&client->rootUri);
-    prStringReset(&client->rootName);
-    prStringReset(&client->clientName);
-    prStringReset(&client->serverName);
+    prRawStringReset(&client->rootUri);
+    prRawStringReset(&client->rootName);
+    prRawStringReset(&client->clientName);
+    prRawStringReset(&client->serverName);
     prMemoryFree(client);
 }
 
@@ -901,7 +901,7 @@ PrLspClientState prLspClientState(const PrLspClient* client) {
 }
 
 PrStringView prLspClientServerName(const PrLspClient* client) {
-    PrStringView name = prStringView(&client->serverName);
+    PrStringView name = prRawStringView(&client->serverName);
     return name.data != nullptr ? name : PrStringView("");
 }
 
@@ -965,7 +965,7 @@ PrLspDocument* prLspDocumentCreate(PrLspClient* client, PrTextEditBuffer* buffer
     document->buffer = buffer;
     document->stream = prTextEditStreamCreate(buffer);
     document->uri = prLspUriFromPath(path);
-    document->languageId = prStringCopy(languageId);
+    document->languageId = prRawStringCopy(languageId);
     client->documents.push(document);
     if (client->state == PrLspClientState_Running)
         openDocument(document);
@@ -989,8 +989,8 @@ void prLspDocumentDestroy(PrLspDocument* PR_NULLABLE document) {
     document->strings.reset();
     prTextEditStreamDestroy(document->stream);
     prTextEditBufferDestroy(document->replica);
-    prStringReset(&document->uri);
-    prStringReset(&document->languageId);
+    prRawStringReset(&document->uri);
+    prRawStringReset(&document->languageId);
     prMemoryFree(document);
 }
 
@@ -1014,7 +1014,7 @@ void prLspDocumentSave(PrLspDocument* document) {
 }
 
 PrStringView prLspDocumentUri(const PrLspDocument* document) {
-    return prStringView(&document->uri);
+    return prRawStringView(&document->uri);
 }
 
 PrLspDocument* PR_NULLABLE prLspClientDocumentFromUri(const PrLspClient* client, PrStringView uri) {
@@ -1076,8 +1076,8 @@ PrLspRequest prLspDocumentCompletion(PrLspDocument* document, uint32_t offset, P
     return sendPositionRequest(document, "textDocument/completion", offset, fn, context);
 }
 
-PrString prLspHoverText(const PrJson* json, PrJsonValueIndex result) {
-    PrString text = prStringEmpty();
+PrRawString prLspHoverText(const PrJson* json, PrJsonValueIndex result) {
+    PrRawString text = prRawStringEmpty();
     PrJsonValueIndex contents = member(json, result, "contents");
     // MarkupContent, a MarkedString or an array of MarkedString, each a string or an object with a value.
     PrJsonValueIndex first = contents;
@@ -1091,9 +1091,9 @@ PrString prLspHoverText(const PrJson* json, PrJsonValueIndex result) {
             value = prJsonString(json, member(json, part, "value"));
         if (value.size == 0)
             continue;
-        if (!prStringIsEmpty(&text))
-            prStringAppend(&text, "\n\n");
-        prStringAppend(&text, value);
+        if (!prRawStringIsEmpty(&text))
+            prRawStringAppend(&text, "\n\n");
+        prRawStringAppend(&text, value);
     }
     return text;
 }
@@ -1161,37 +1161,37 @@ uint32_t prLspCompletions(const PrJson* json, PrJsonValueIndex result, PrLspComp
     return count;
 }
 
-PrString prLspUriFromPath(PrStringView path) {
-    PrString uri = prStringCopy("file://");
+PrRawString prLspUriFromPath(PrStringView path) {
+    PrRawString uri = prRawStringCopy("file://");
     // A drive letter's path, as Windows spells one, is a path below the URI's root.
     bool drive = path.size >= 2 && prAsciiIsLetter(path.data[0]) && path.data[1] == ':';
     if (drive)
-        prStringAppend(&uri, "/");
+        prRawStringAppend(&uri, "/");
     const char hex[] = "0123456789ABCDEF";
     for (size_t i = 0; i < path.size; ++i) {
         char c = path.data[i] == '\\' ? '/' : path.data[i];
         if (isPathByte(c)) {
-            prStringAppend(&uri, PrStringView{&c, 1});
+            prRawStringAppend(&uri, PrStringView{&c, 1});
         } else {
             char escaped[3] = {'%', hex[uint8_t(c) >> 4], hex[uint8_t(c) & 15]};
-            prStringAppend(&uri, PrStringView{escaped, 3});
+            prRawStringAppend(&uri, PrStringView{escaped, 3});
         }
     }
     return uri;
 }
 
-PrString prLspPathFromUri(PrStringView uri) {
+PrRawString prLspPathFromUri(PrStringView uri) {
     if (uri.size < 7 || !prAsciiEqualsFold(prStringSlice(uri, 0, 7), "file://"))
-        return prStringNull();
+        return prRawStringNull();
     PrStringView rest = prStringSlice(uri, 7, uri.size - 7);
     size_t slash = prStringFindByte(rest, '/');
     PrStringView authority = prStringSlice(rest, 0, slash);
     PrStringView path = prStringSlice(rest, slash, rest.size - slash);
-    PrString decoded = prStringEmpty();
+    PrRawString decoded = prRawStringEmpty();
     // A host other than the local one names a share, as a UNC path does.
     if (authority.size != 0 && !prAsciiEqualsFold(authority, "localhost")) {
-        prStringAppend(&decoded, "//");
-        prStringAppend(&decoded, authority);
+        prRawStringAppend(&decoded, "//");
+        prRawStringAppend(&decoded, authority);
     }
     for (size_t i = 0; i < path.size; ++i) {
         char c = path.data[i];
@@ -1199,13 +1199,13 @@ PrString prLspPathFromUri(PrStringView uri) {
             c = char(prAsciiHexValue(path.data[i + 1]) << 4 | prAsciiHexValue(path.data[i + 2]));
             i += 2;
         }
-        prStringAppend(&decoded, PrStringView{&c, 1});
+        prRawStringAppend(&decoded, PrStringView{&c, 1});
     }
 #if defined(_WIN32)
-    PrStringView view = prStringView(&decoded);
+    PrStringView view = prRawStringView(&decoded);
     if (view.size >= 3 && view.data[0] == '/' && prAsciiIsLetter(view.data[1]) && view.data[2] == ':') {
-        PrString drive = prStringCopy(prStringSlice(view, 1, view.size - 1));
-        prStringReset(&decoded);
+        PrRawString drive = prRawStringCopy(prStringSlice(view, 1, view.size - 1));
+        prRawStringReset(&decoded);
         decoded = drive;
     }
 #endif

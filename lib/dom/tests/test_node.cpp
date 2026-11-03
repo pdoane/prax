@@ -54,10 +54,10 @@ std::string textOf(PrStringView text) {
     return std::string(text.size != 0 ? text.data : "", text.size);
 }
 
-std::string taken(PrString text) {
-    PrStringView view = prStringView(&text);
+std::string taken(PrRawString text) {
+    PrStringView view = prRawStringView(&text);
     std::string result(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(&text);
+    prRawStringReset(&text);
     return result;
 }
 
@@ -207,11 +207,11 @@ TEST_CASE("an adopted subtree keeps its addresses after its old document is gone
     CHECK(contents->document == inert);
     CHECK(contents->first == text);
     CHECK(text->document == inert);
-    CHECK(prStringView(&text->data) == "a text payload longer than inline string storage");
+    CHECK(prRawStringView(&text->data) == "a text payload longer than inline string storage");
     CHECK(domAttribute(element, PrDomNamespace_None, "name") == attribute);
     CHECK(attribute->document == target);
     CHECK(attribute->parent == element);
-    CHECK(prStringView(&attribute->value) == "a value longer than inline string storage");
+    CHECK(prRawStringView(&attribute->value) == "a value longer than inline string storage");
     CHECK(element->first == comment);
     CHECK(comment->parent == element);
     domNodeRelease(target);
@@ -276,7 +276,7 @@ TEST_CASE("a reference to an attribute keeps its element's tree") {
     CHECK(element->retained == 1);
     domNodeRelease(document);
     CHECK(first->parent == element);
-    CHECK(prStringView(&first->value) == "one");
+    CHECK(prRawStringView(&first->value) == "one");
     domNodeRelease(first);
     CHECK(prMemoryLiveCount() == before);
 }
@@ -655,15 +655,15 @@ TEST_CASE("an HTML element's tag name is uppercase, and a foreign one's is as wr
     PrDomElement* custom = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Unknown, "my-el");
     PrDomElement* path = domElementCreate(document, PrDomNamespace_Svg, PrDomTag_Unknown, "textPath");
 
-    PrString name = domElementTagName(div);
-    CHECK(prStringView(&name) == "DIV");
-    prStringReset(&name);
+    PrRawString name = domElementTagName(div);
+    CHECK(prRawStringView(&name) == "DIV");
+    prRawStringReset(&name);
     name = domElementTagName(custom);
-    CHECK(prStringView(&name) == "MY-EL");
-    prStringReset(&name);
+    CHECK(prRawStringView(&name) == "MY-EL");
+    prRawStringReset(&name);
     name = domElementTagName(path);
-    CHECK(prStringView(&name) == "textPath");
-    prStringReset(&name);
+    CHECK(prRawStringView(&name) == "textPath");
+    prRawStringReset(&name);
     domNodeRelease(document);
 }
 
@@ -755,9 +755,9 @@ TEST_CASE("a fragment inserts its children in order and is left empty") {
     CHECK(parent->first == a);
     CHECK(a->next == b);
     CHECK(b->next == last);
-    PrString text = domChildTextContent(parent);
-    CHECK(prStringView(&text) == "abc");
-    prStringReset(&text);
+    PrRawString text = domChildTextContent(parent);
+    CHECK(prRawStringView(&text) == "abc");
+    prRawStringReset(&text);
     CHECK(ownedCount(document) == 5);
     // Once released, the fragment is freed.
     domNodeRelease(fragment);
@@ -835,9 +835,9 @@ TEST_CASE("nodes and strings are converted into one node and placed around a chi
     CHECK(domBefore(middle, around, 1) == PrStatus_Ok);
     CHECK(domAfter(middle, around + 1, 1) == PrStatus_Ok);
     CHECK(domAppend(parent, around, 2) == PrStatus_Ok);
-    PrString text = domChildTextContent(parent);
-    CHECK(prStringView(&text) == "acac");
-    prStringReset(&text);
+    PrRawString text = domChildTextContent(parent);
+    CHECK(prRawStringView(&text) == "acac");
+    prRawStringReset(&text);
     CHECK(middle->previous != nullptr);
 
     // A node among the arguments is not its own viable sibling.
@@ -862,7 +862,7 @@ TEST_CASE("character data is edited in UTF-16 code units") {
     PrDomText* text = domTextCreate(document, "a\xF0\x9F\x98\x80" "bc");
     PrDomCharacterData* data = text;
     CHECK(prDomCharacterDataLength(data) == 5);
-    PrString part = {};
+    PrRawString part = {};
     CHECK(prDomCharacterDataSubstringData(data, 1, 2, &part) == PrStatus_Ok);
     CHECK(taken(part) == "\xF0\x9F\x98\x80");
     CHECK(prDomCharacterDataSubstringData(data, 2, 1, &part) == PrStatus_Ok);
@@ -884,7 +884,7 @@ TEST_CASE("splitting a text node leaves the rest in a sibling, and wholeText joi
     domAttach(parent, text, nullptr);
     PrDomText* split = nullptr;
     CHECK(prDomTextSplitText(text, 2, &split) == PrStatus_Ok);
-    CHECK(taken(prStringClone(&text->data)) == "he");
+    CHECK(taken(prRawStringClone(&text->data)) == "he");
     REQUIRE(split != nullptr);
     CHECK(text->next == split);
     CHECK(taken(prDomTextWholeText(split)) == "hello");

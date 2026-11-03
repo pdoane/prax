@@ -168,7 +168,7 @@ TEST_CASE("an inline style is the style attribute's declarations, and writes the
     prCssStyleDeclarationSetProperty(handle, &width, "1px", false);
     const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "style");
     REQUIRE(attribute != nullptr);
-    CHECK(prStringView(&attribute->value) == "color: red; width: 1px;");
+    CHECK(prRawStringView(&attribute->value) == "color: red; width: 1px;");
 
     // Setting the attribute sets the declarations.
     domSetAttribute(element, PrDomNamespace_None, "style", "top: 0");
@@ -179,12 +179,12 @@ TEST_CASE("an inline style is the style attribute's declarations, and writes the
     // the attribute as written (cssom-1/#set-a-css-declaration).
     PrCssDeclarationName left = prCssDeclarationNameFromProperty(PrCssProperty_Left);
     prCssStyleDeclarationRemoveProperty(handle, &left, nullptr);
-    CHECK(prStringView(&attribute->value) == "top: 0");
+    CHECK(prRawStringView(&attribute->value) == "top: 0");
     PrCssDeclarationName top = prCssDeclarationNameFromProperty(PrCssProperty_Top);
     prCssStyleDeclarationSetProperty(handle, &top, "nonesuch", false);
     prCssStyleDeclarationSetProperty(handle, &top, "0", false);
     prCssStyleDeclarationSetProperty(handle, &left, "", false);
-    CHECK(prStringView(&attribute->value) == "top: 0");
+    CHECK(prRawStringView(&attribute->value) == "top: 0");
     domNodeRelease(document);
 }
 
@@ -342,7 +342,7 @@ TEST_CASE("an xml-stylesheet instruction in the prolog fetches its CSS sheet, wh
     REQUIRE(prCssStyleSheetListLength(sheets) == 1);
     PrCssStyleSheet* sheet = prCssStyleSheetListStyleSheetAt(sheets, 0);
     CHECK(sheet->ownerNode == document->first);
-    CHECK(prStringView(&sheet->title) == "t");
+    CHECK(prRawStringView(&sheet->title) == "t");
     CHECK(cssMediaListLength(&sheet->media) == 1);
     domRemove(document->first);
     CHECK(prCssStyleSheetListLength(sheets) == 0);

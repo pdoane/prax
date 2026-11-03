@@ -33,7 +33,7 @@ bool meets(const LayoutExclusion& e, PrLayoutUnit y, PrLayoutUnit h) {
 } // namespace
 
 void layoutExclusionsInit(LayoutExclusions& exclusions) {
-    exclusions.floats = Array<LayoutExclusion>{};
+    exclusions.floats = RawArray<LayoutExclusion>{};
     PrLayoutUnit none = kLayoutOffsetNone;
     exclusions.mark = LayoutExclusionMark{0, none, {none, none}, none};
 }
@@ -78,7 +78,7 @@ void layoutReadsMerge(LayoutReads& outer, const LayoutReads& inner) {
 LayoutSpan layoutExclusionsAvailableAmong(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h, uint32_t count) {
     readRange(*cb.reads, y, h);
     LayoutSpan span{cb.lineLeft, cb.lineRight, true};
-    const Array<LayoutExclusion>& floats = cb.exclusions->floats;
+    const RawArray<LayoutExclusion>& floats = cb.exclusions->floats;
     PR_ASSERT(count <= floats.count);
     for (uint32_t i = 0; i < count; ++i) {
         const LayoutExclusion& e = floats.data[i];
@@ -95,7 +95,7 @@ LayoutSpan layoutExclusionsAvailableAmong(const LayoutContainingBlock& cb, PrLay
 
 PrLayoutUnit layoutExclusionsNextEdge(const LayoutContainingBlock& cb, PrLayoutUnit y) {
     PrLayoutUnit next = kLayoutOffsetNone;
-    const Array<LayoutExclusion>& floats = cb.exclusions->floats;
+    const RawArray<LayoutExclusion>& floats = cb.exclusions->floats;
     for (uint32_t i = 0; i < floats.count; ++i) {
         const LayoutExclusion& e = floats.data[i];
         if (excludes(e) && e.bottom.raw > y.raw && (next == kLayoutOffsetNone || e.bottom.raw < next.raw))

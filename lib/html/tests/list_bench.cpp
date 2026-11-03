@@ -225,13 +225,13 @@ int main(int argc, char** argv) {
             c.change(&work);
             frame(&work);
         });
-        PrString report{};
+        PrRawString report{};
         if (verify && !prCssPresentationVerify(work.presentation, &report)) {
-            PrStringView what = prStringView(&report);
+            PrStringView what = prRawStringView(&report);
             fprintf(stderr, "list_bench: %s: presentation verify: %.*s\n", c.name, int(what.size), what.data);
             failed = true;
         }
-        prStringReset(&report);
+        prRawStringReset(&report);
         harnessWriteCase(first, c.name, cost);
         first = false;
     }

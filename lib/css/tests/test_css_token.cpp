@@ -403,10 +403,10 @@ TEST_CASE("two hyphens are a CDC only before a '>'") {
 
 TEST_CASE("a sheet decodes in the charset of its mark, its response, its @charset rule or its document") {
     auto decode = [](PrStringView bytes, PrCharset protocol, PrCharset environment) {
-        PrString out = {};
+        PrRawString out = {};
         PrStringView text = cssDecodeBytes(bytes, protocol, environment, &out);
         std::string result(text.data, text.size);
-        prStringReset(&out);
+        prRawStringReset(&out);
         return result;
     };
     CHECK(decode("a{}", PrCharset_None, PrCharset_None) == "a{}");

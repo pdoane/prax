@@ -106,7 +106,7 @@ void writeToken(PrTextBuffer* out, const HtmlTokenizer* tokenizer) {
     }
 }
 
-void writeErrors(PrTextBuffer* out, const HtmlTokenizer* tokenizer, const Array<HtmlError>& errors) {
+void writeErrors(PrTextBuffer* out, const HtmlTokenizer* tokenizer, const RawArray<HtmlError>& errors) {
     PrStringView input = htmlInputText(tokenizer);
     uint32_t at = 0;
     uint32_t line = 1;
@@ -142,7 +142,7 @@ HtmlState stateFromName(PrStringView name) {
 }
 
 // A case's fields are its state and its last start tag, which is "-" if the case names none.
-void run(PrTextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, Array<HtmlError>* errors) {
+void run(PrTextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, RawArray<HtmlError>* errors) {
     errors->count = 0;
     PrStringView input = prTextBufferView(&test.input);
     htmlTokenizerStart(tokenizer, input, errors);
@@ -176,7 +176,7 @@ int main() {
     HarnessCase test = {};
     PrTextBuffer out = {};
     HtmlTokenizer tokenizer = {};
-    Array<HtmlError> errors;
+    RawArray<HtmlError> errors;
 
     while (harnessReadCase(&test)) {
         if (test.fieldCount != 2) {

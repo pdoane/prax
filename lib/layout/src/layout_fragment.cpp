@@ -3,10 +3,10 @@
 #include "layout/src/layout_fragment.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/layout_tree.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -221,7 +221,7 @@ void layoutFragmentRelease(const LayoutFragment* PR_NULLABLE fragment) {
         return;
     // A stack of fragments to free. The children of each are released as it is freed. The explicit stack lets a deep
     // tree be freed in bounded call-stack space.
-    Array<LayoutFragment*> freeing;
+    RawArray<LayoutFragment*> freeing;
     freeing.push(const_cast<LayoutFragment*>(fragment));
     while (freeing.count != 0) {
         LayoutFragment* f = freeing.last();
@@ -395,7 +395,7 @@ uint32_t layoutGroupEnd(const LayoutFragment* line, uint32_t first, uint32_t* pa
     return end + line->children[end - 1].fragment->part.enclosed;
 }
 
-LayoutFragment* layoutFragmentBuild(Array<LayoutLogicalChild>& children, uint32_t mark, LayoutFragmentKind kind,
+LayoutFragment* layoutFragmentBuild(RawArray<LayoutLogicalChild>& children, uint32_t mark, LayoutFragmentKind kind,
         LayoutNodeIndex node, LayoutMode mode, LayoutLogicalSize size) {
     uint32_t count = children.count - mark;
     const LayoutLogicalChild* from = children.data + mark;
@@ -489,7 +489,7 @@ LayoutFragment* layoutFragmentHold(LayoutFragment* built, const LayoutChild* PR_
     return fragment;
 }
 
-void layoutFragmentDiscard(Array<LayoutLogicalChild>& children, uint32_t mark) {
+void layoutFragmentDiscard(RawArray<LayoutLogicalChild>& children, uint32_t mark) {
     for (uint32_t i = mark; i < children.count; ++i)
         layoutFragmentRelease(children.data[i].fragment);
     children.count = mark;

@@ -4,7 +4,7 @@
 
 #include "font/src/sfnt.h"
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/utf8.h"
 
@@ -71,10 +71,10 @@ SfntTable baseValues(SfntTable scripts, uint16_t record) {
     return offset != 0 ? script.from(offset) : SfntTable{nullptr, 0};
 }
 
-void appendUtf8(PrString* out, uint32_t codePoint) {
+void appendUtf8(PrRawString* out, uint32_t codePoint) {
     char bytes[kPrUtf8MaxBytes];
     uint32_t length = prUtf8Encode(codePoint, bytes);
-    prStringAppend(out, PrStringView{bytes, length});
+    prRawStringAppend(out, PrStringView{bytes, length});
 }
 
 // Reads the size of a PNG from its header. Returns false for bytes that are not a PNG.
@@ -533,7 +533,7 @@ float sfntMetricDelta(const Sfnt& sfnt, uint32_t tag, SfntCoords coords) {
     return 0;
 }
 
-PrString sfntName(const Sfnt& sfnt, uint16_t id) {
+PrRawString sfntName(const Sfnt& sfnt, uint16_t id) {
     SfntTable name = sfntTable(sfnt, kName);
     uint16_t count = name.uint16At(2);
     SfntTable strings = name.from(name.uint16At(4));
@@ -560,11 +560,11 @@ PrString sfntName(const Sfnt& sfnt, uint16_t id) {
         }
     }
     if (best < 0)
-        return prStringNull();
+        return prRawStringNull();
     uint32_t record = uint32_t(best);
     SfntTable text = strings.from(name.uint16At(record + 10));
     uint32_t length = name.uint16At(record + 8);
-    PrString out = prStringEmpty();
+    PrRawString out = prRawStringEmpty();
     if (bestRank == 1) {
         for (uint32_t i = 0; i < length; ++i) {
             uint8_t byte = text.uint8At(i);
@@ -696,9 +696,9 @@ void sfntDescribe(const Sfnt& sfnt, PrFontInfo* out) {
     }
 }
 
-PrString sfntFamily(const Sfnt& sfnt) {
-    PrString name = sfntName(sfnt, 16);
-    if (prStringIsNull(&name))
+PrRawString sfntFamily(const Sfnt& sfnt) {
+    PrRawString name = sfntName(sfnt, 16);
+    if (prRawStringIsNull(&name))
         name = sfntName(sfnt, 1);
     return name;
 }

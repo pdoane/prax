@@ -359,13 +359,13 @@ int main(int argc, char** argv) {
             c.change(&work);
             frame(&work);
         });
-        PrString report{};
+        PrRawString report{};
         if (verify && !prCssPresentationVerify(work.presentation, &report)) {
-            PrStringView what = prStringView(&report);
+            PrStringView what = prRawStringView(&report);
             fprintf(stderr, "frame_bench: %s: presentation verify: %.*s\n", c.name, int(what.size), what.data);
             failed = true;
         }
-        prStringReset(&report);
+        prRawStringReset(&report);
         PrTextBuffer row{};
         harnessAppendFormat(&row, "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"visited\": %u, \"styled\": %u, "
             "\"cached\": %u, \"unchanged\": %u, \"blocks\": %u, \"lines\": %u, \"shaped\": %u, "

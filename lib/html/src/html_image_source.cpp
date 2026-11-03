@@ -36,7 +36,7 @@ bool isNonNegativeInteger(PrStringView text) {
 
 // Appends the candidate of `url` and `descriptors` to `out`, unless the descriptors are in error
 // (html/#parse-a-srcset-attribute, the descriptor parser).
-void addCandidate(PrStringView url, const Array<PrStringView>& descriptors, Array<HtmlImageCandidate>* out) {
+void addCandidate(PrStringView url, const RawArray<PrStringView>& descriptors, RawArray<HtmlImageCandidate>* out) {
     bool error = false;
     uint64_t width = 0;
     double density = -1;
@@ -127,7 +127,7 @@ bool decodes(PrStringView type, const HtmlImageEnvironment& environment) {
 // Selects the candidate of the source set whose density is the lowest at least the pixel ratio, or else the highest. A
 // candidate's density is its density descriptor, its width over the source size, or 1 without either
 // (html/#normalise-the-source-densities).
-HtmlImageSource selectCandidate(const Array<HtmlImageCandidate>& set, double sourceSize, double pixelRatio) {
+HtmlImageSource selectCandidate(const RawArray<HtmlImageCandidate>& set, double sourceSize, double pixelRatio) {
     HtmlImageSource chosen{PrStringView{}, 1};
     bool above = false;
     for (uint32_t i = 0; i < set.count; ++i) {
@@ -150,11 +150,11 @@ HtmlImageSource selectCandidate(const Array<HtmlImageCandidate>& set, double sou
 
 } // namespace
 
-void htmlParseSrcset(PrStringView value, Array<HtmlImageCandidate>* out) {
+void htmlParseSrcset(PrStringView value, RawArray<HtmlImageCandidate>* out) {
     const char* s = value.data;
     size_t size = value.size;
     size_t at = 0;
-    Array<PrStringView> descriptors;
+    RawArray<PrStringView> descriptors;
     for (;;) {
         // The splitting loop: whitespace and commas separate the candidates.
         while (at < size && (isSpace(s[at]) || s[at] == ','))
@@ -267,7 +267,7 @@ double htmlSourceSize(PrStringView value, const HtmlImageEnvironment& environmen
 }
 
 HtmlImageSource htmlSelectImageSource(const PrDomElement* img, const HtmlImageEnvironment& environment) {
-    Array<HtmlImageCandidate> set;
+    RawArray<HtmlImageCandidate> set;
     HtmlImageSource selected{PrStringView{}, 1};
     // A picture's source elements before the img offer their sets first (html/#update-the-source-set).
     const PrDomElement* picture = domElementFromNode(img->parent);

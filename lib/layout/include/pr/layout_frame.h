@@ -16,7 +16,7 @@
 #include "pr/base.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN

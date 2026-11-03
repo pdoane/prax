@@ -3,11 +3,11 @@
 #include "pr/text_shaping.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
 #include "pr/unicode_bidi.h"
 #include "pr/utf8.h"
 
@@ -28,44 +28,44 @@ struct PieceSpan {
 struct TextShaping {
     PrTextDirection direction;
     uint32_t size;                      // the number of bytes of the text
-    Array<PieceSpan> pieces;
-    Array<PrTextShapingSegment> segments;
-    Array<PrTextSpaceFlags> spaces;     // by byte
+    RawArray<PieceSpan> pieces;
+    RawArray<PrTextShapingSegment> segments;
+    RawArray<PrTextSpaceFlags> spaces;     // by byte
     float tabSize;
     float tabMinimum;
-    bool wrapsWords;                    // true if lines find emergency opportunities themselves (findWordBreaks)
-    Array<PrUnicodeLineBreak> breakAt;  // by byte and one past the last
-    Array<PrTextEmergency> emergency;   // by byte and one past the last, or empty
-    Array<float> advance;               // by byte
-    Array<double> reach;                // by byte and one past the last
-    Array<uint32_t> glyphAt;            // by byte and one past the last
-    Array<PrTextShapedRun> runs;
-    Array<PrTextShapedGlyph> glyphs;
-    Array<uint8_t> levels;              // by byte, or empty if every level is even
-    Array<PrTextParagraph> paragraphs;
-    Array<uint8_t> marks;               // by index of a piece, or empty if every level is even
+    bool wrapsWords;                       // true if lines find emergency opportunities themselves (findWordBreaks)
+    RawArray<PrUnicodeLineBreak> breakAt;  // by byte and one past the last
+    RawArray<PrTextEmergency> emergency;   // by byte and one past the last, or empty
+    RawArray<float> advance;               // by byte
+    RawArray<double> reach;                // by byte and one past the last
+    RawArray<uint32_t> glyphAt;            // by byte and one past the last
+    RawArray<PrTextShapedRun> runs;
+    RawArray<PrTextShapedGlyph> glyphs;
+    RawArray<uint8_t> levels;              // by byte, or empty if every level is even
+    RawArray<PrTextParagraph> paragraphs;
+    RawArray<uint8_t> marks;               // by index of a piece, or empty if every level is even
 };
 
 struct TextShapingScratch {
     PrTextItems* PR_NULLABLE items;
     PrTextGlyphBuffer* PR_NULLABLE buffer;
-    Array<uint32_t> codePoints;
-    Array<uint32_t> codeEnds;             // the byte past each code point
-    Array<PrUnicodeLineBreak> breaks;     // by code point
-    Array<PrTextBreakStyle> breakStyles;  // by code point
-    Array<PrTextEmergency> codeEmergency; // by code point
-    Array<bool> unshaped;                 // by byte
-    Array<uint32_t> open;                 // the Open pieces around the piece that wrapBreaks has reached
+    RawArray<uint32_t> codePoints;
+    RawArray<uint32_t> codeEnds;             // the byte past each code point
+    RawArray<PrUnicodeLineBreak> breaks;     // by code point
+    RawArray<PrTextBreakStyle> breakStyles;  // by code point
+    RawArray<PrTextEmergency> codeEmergency; // by code point
+    RawArray<bool> unshaped;                 // by byte
+    RawArray<uint32_t> open;                 // the Open pieces around the piece that wrapBreaks has reached
 };
 
 struct TextWordBreaks {
-    Array<uint32_t> codePoints;
-    Array<uint32_t> ends;               // the byte past each code point, from the first byte of the word
-    Array<PrTextBreakStyle> styles;     // by code point
-    Array<PrUnicodeLineBreak> breaks;   // by code point
-    Array<PrTextEmergency> emergency;   // by code point
-    Array<PrTextEmergency> atByte;      // by byte from the first of the word, and one past its last
-    uint32_t start;                     // the bytes of the word in the text, or none if `end` is 0
+    RawArray<uint32_t> codePoints;
+    RawArray<uint32_t> ends;               // the byte past each code point, from the first byte of the word
+    RawArray<PrTextBreakStyle> styles;     // by code point
+    RawArray<PrUnicodeLineBreak> breaks;   // by code point
+    RawArray<PrTextEmergency> emergency;   // by code point
+    RawArray<PrTextEmergency> atByte;      // by byte from the first of the word, and one past its last
+    uint32_t start;                        // the bytes of the word in the text, or none if `end` is 0
     uint32_t end;
 };
 
@@ -142,7 +142,7 @@ void wrapBreaks(TextShaping& t, PrStringView text, const PrTextShapingDesc& d, T
         any = t.pieces.data[i].noWrap || t.pieces.data[i].breakSpaces;
     if (!any)
         return;
-    Array<uint32_t>& open = s.open;
+    RawArray<uint32_t>& open = s.open;
     open.clear();
     auto noWrapAt = [&](uint32_t depth) { return depth == 0 ? d.noWrap : t.pieces.data[open.data[depth - 1]].noWrap; };
     auto settle = [&](uint32_t b, bool holderNoWrap) {
@@ -580,7 +580,7 @@ PrTextShapingInfo prTextShapingInfo(const PrTextShaping* shaping) {
 }
 
 uint8_t prTextShapingParagraphLevel(const PrTextShaping* shaping, uint32_t byte) {
-    const Array<PrTextParagraph>& paragraphs = shaping->paragraphs;
+    const RawArray<PrTextParagraph>& paragraphs = shaping->paragraphs;
     if (paragraphs.count == 0)
         return shaping->direction == PrTextDirection_Rtl ? 1 : 0;
     uint32_t low = 0;
@@ -721,8 +721,8 @@ uint32_t prTextShapingLineRuns(const PrTextShaping* shaping, uint32_t start, uin
         else
             high = middle;
     }
-    Array<PrTextLineRun> logical;
-    Array<uint8_t> levels;
+    RawArray<PrTextLineRun> logical;
+    RawArray<uint8_t> levels;
     for (uint32_t r = low; r < t.runs.count && t.runs.data[r].item.start < end; ++r) {
         const PrTextItemRun& run = t.runs.data[r].item;
         uint32_t from = run.start > start ? run.start : start;
@@ -739,7 +739,7 @@ uint32_t prTextShapingLineRuns(const PrTextShaping* shaping, uint32_t start, uin
         levels.resize(count);
         for (uint32_t i = 0; i < count; ++i)
             levels.data[i] = logical.data[i].level;
-        Array<uint32_t> order;
+        RawArray<uint32_t> order;
         order.resize(count);
         prUnicodeBidiReorder(levels.data, count, order.data);
         for (uint32_t i = 0; i < count && i < capacity; ++i)

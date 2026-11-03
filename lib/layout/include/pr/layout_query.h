@@ -155,7 +155,7 @@ typedef struct PrLayoutRenderedTextDesc {
 // space is removed at the start and the end of a segment and next to a forced line break, and is kept where a line
 // wraps. The caller releases the string. The first query after a layout indexes every text node, and later queries are
 // linear in the nodes of `root`.
-PrString prLayoutNodeRenderedText(PrLayoutTree* tree, PrLayoutNode root, const PrLayoutRenderedTextDesc* PR_NULLABLE desc);
+PrRawString prLayoutNodeRenderedText(PrLayoutTree* tree, PrLayoutNode root, const PrLayoutRenderedTextDesc* PR_NULLABLE desc);
 
 // Writes the position in the text of `root` or its descendants, in the last layout, nearest `point` in viewport
 // coordinates as painted, to `out` (cssom-view-1/#dom-document-caretpositionfrompoint). The nearest line is the one

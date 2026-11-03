@@ -464,7 +464,7 @@ PR_NOINLINE void inlineSegment(LayoutState& state, Container& c, Flow& flow, Lay
     } else if (flow.edge == Edge_Located) {
         bfc.top = flow.contentTop;
     }
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     uint32_t mark = children.count;
     LayoutInlineResult lines = layoutInlineSegment(state, run, segment, bfc);
     if (lines.stopped) {
@@ -520,7 +520,7 @@ PR_NOINLINE void inlineSegment(LayoutState& state, Container& c, Flow& flow, Lay
 // block would be without that offset. Each row is moved by the relative offset of its inline box, together with the row
 // around it (CSS2/#relative-positioning). Each row reaches as far as what it holds.
 PR_NOINLINE void wrapInRows(LayoutState& state, const Container& c, uint32_t block, const PrLayoutBoxStyle& box) {
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     LayoutLogicalChild placed = children.last();
     children.pop();
     LayoutMode mode = c.content->mode;
@@ -692,7 +692,7 @@ void placeMarker(LayoutState& state, const Container& c, const Flow& flow, const
             moved = c.containing.lineRight - span.right;
         at.inlineOffset += layoutUnitMax(kLayoutUnitZero, moved);
     }
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     children.push(LayoutLogicalChild{});
     for (uint32_t i = children.count - 1; i > mark; --i)
         children.data[i] = children.data[i - 1];
@@ -859,7 +859,7 @@ LayoutFlowOutcome layoutFlowContent(LayoutState& state, const LayoutFlowInput& i
     }
 
     // Lays out the children. If floats wait for their margins, they are laid out again once the margins resolve.
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     uint32_t mark = children.count;
     LayoutExclusionMark exclusionMark = c.containing.exclusions->mark;
     Flow flow{};

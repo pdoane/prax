@@ -51,18 +51,18 @@ TEST_CASE("a standalone SVG document has its style sheets, selectors and inline 
     REQUIRE(prCssStyleSheetListLength(sheets) == 1);
     PrCssRuleList* rules = prCssStyleSheetCssRules(prCssStyleSheetListStyleSheetAt(sheets, 0));
     REQUIRE(prCssRuleListLength(rules) == 1);
-    PrString text = prCssRuleCssText(prCssRuleListRuleAt(rules, 0));
-    CHECK(prStringView(&text) == "rect { fill: green; }");
-    prStringReset(&text);
+    PrRawString text = prCssRuleCssText(prCssRuleListRuleAt(rules, 0));
+    CHECK(prRawStringView(&text) == "rect { fill: green; }");
+    prRawStringReset(&text);
 
     PrDomElement* rect = nullptr;
     REQUIRE(prCssNodeQuerySelector(prDomDocumentAsNode(document), "svg > rect#r", &rect) == PrStatus_Ok);
     REQUIRE(rect != nullptr);
     PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(rect));
     const PrCssDeclarationName strokeName = prCssDeclarationNameFromProperty(PrCssProperty_Stroke);
-    PrString stroke = prCssStyleDeclarationGetPropertyValue(style, &strokeName);
-    CHECK(prStringView(&stroke) == "blue");
-    prStringReset(&stroke);
+    PrRawString stroke = prCssStyleDeclarationGetPropertyValue(style, &strokeName);
+    CHECK(prRawStringView(&stroke) == "blue");
+    prRawStringReset(&stroke);
     prDomDocumentRelease(document);
 }
 

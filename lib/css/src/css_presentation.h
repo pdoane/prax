@@ -10,12 +10,12 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/hash_index.h"
 #include "pr/layout_worker.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/task.h"
 #include "pr/text_buffer.h"
@@ -71,11 +71,11 @@ struct CssPresentationImageSpans {
 
 // An image that a style names by URL (css-images-3/#url-notation), which paints once it has loaded.
 struct CssPresentationImage {
-    PrString url;                               // absolute
+    PrRawString url;                               // absolute
     CssPresentationImageState state;
 
     // The nodes whose records named it while it loaded.
-    Array<const PrDomNode*> waiting;
+    RawArray<const PrDomNode*> waiting;
 
     // The decoded image, arranged as its orientation displays it, and how it was arranged from its stored pixels. The
     // presentation holds a reference.
@@ -108,8 +108,8 @@ struct CssPresentationImageFetch {
 // The texts that counters give the content of a pseudo-element: the text of each counter() and counters() of its
 // content, in order. For a marker whose content is normal, the only text is its marker string.
 struct CssCountingTexts {
-    Array<char> text;
-    Array<uint32_t> ends;           // the end of each text in `text`
+    RawArray<char> text;
+    RawArray<uint32_t> ends;           // the end of each text in `text`
 };
 
 // A pseudo-element whose box the presentation generates (css-pseudo-4/#generated-content), as a node that the
@@ -168,20 +168,20 @@ struct CssCountingBoundary {
 
 // What the counter pass reuses from one run to the next.
 struct CssCountingScratch {
-    Array<CssCountingStep> steps;
-    Array<CssCounting> counters;           // innermost last
-    Array<CssCountingBoundary> boundaries; // innermost last
+    RawArray<CssCountingStep> steps;
+    RawArray<CssCounting> counters;           // innermost last
+    RawArray<CssCountingBoundary> boundaries; // innermost last
     CssCountingTexts texts;
     PrTextBuffer text = {};
-    Array<char> names;              // the names of the counters that a run took from a point (CssCountingPoint)
-    Array<uint32_t> points;         // by CssCountingDepth: the step of each point that a run keeps
+    RawArray<char> names;              // the names of the counters that a run took from a point (CssCountingPoint)
+    RawArray<uint32_t> points;         // by CssCountingDepth: the step of each point that a run keeps
 };
 
 // The counters and containment boundaries in scope at a point of the counter pass, and the quote depth there.
 struct CssCountingPoint {
-    Array<CssCounting> counters;
-    Array<CssCountingBoundary> boundaries;
-    Array<char> names;              // the text that the counters' names view
+    RawArray<CssCounting> counters;
+    RawArray<CssCountingBoundary> boundaries;
+    RawArray<char> names;              // the text that the counters' names view
     uint32_t quoteDepth;
 };
 
@@ -189,8 +189,8 @@ struct CssCountingPoint {
 // and its ancestors, and the state of the pass where each of them closes, after its content that the run walked and
 // before its ::after.
 struct CssCountingResume {
-    Array<const PrDomElement*> chain; // by CssCountingDepth; empty if the next run starts at the root
-    Array<CssCountingPoint> points;   // by CssCountingDepth
+    RawArray<const PrDomElement*> chain; // by CssCountingDepth; empty if the next run starts at the root
+    RawArray<CssCountingPoint> points;   // by CssCountingDepth
 };
 
 // The pseudo-elements whose boxes the presentation generates, by index of CssPresentationEntry::pseudos, which is the
@@ -220,14 +220,14 @@ struct CssPresentationFirsts {
     bool stale;
 
     // The boxes that hold a record for the first formatted line (prLayoutNodeSetFirstLineStyle).
-    Array<PrLayoutNode> lined;
+    RawArray<PrLayoutNode> lined;
 
     // The box of the first letter, an inline box or a float around the first-letter text, or none. It sits before
     // `letterSource`, the text box that the letter was taken from. `letterFull` is the text that box held before the
     // letter was taken, and the box keeps the part of it after `letterEnd`.
     PrLayoutNode letterBox;
     PrLayoutNode letterSource;
-    Array<char> letterFull;
+    RawArray<char> letterFull;
     uint32_t letterEnd;
 };
 
@@ -279,7 +279,7 @@ struct CssPresentationEntry {
     // The entries of the rule set at `matchedGeneration` that an element's style was computed from. A restyle that
     // cannot change what the element matches uses them instead of matching (CssCascadeInput::matched). The generation
     // is 0 if there are none.
-    Array<uint32_t> matched;
+    RawArray<uint32_t> matched;
     uint32_t matchedGeneration;
 
     // With `matched`: the element's pseudo-elements that may generate a box (cssCascadeGenerating), which a restyle
@@ -333,9 +333,9 @@ struct CssPresentationPrefetch {
     // of the parent. It is the style that the cascade gives, not what a running animation presents.
     const CssComputedStyle* PR_NULLABLE parentStyle;
 
-    uint32_t entry;                             // the element's entry, or kHashMissing for an element that is new
-    const Array<uint32_t>* PR_NULLABLE matched; // what the element matched last, if that still holds
-    bool rematch;                               // true if what the descendants match may have changed
+    uint32_t entry;                                // the element's entry, or kHashMissing for an element that is new
+    const RawArray<uint32_t>* PR_NULLABLE matched; // what the element matched last, if that still holds
+    bool rematch;                                  // true if what the descendants match may have changed
 
     // The element's pseudo-elements that may generate a box (cssCascadeGenerating), found with its style.
     uint32_t generating;
@@ -351,12 +351,12 @@ struct CssPresentationTextFont {
 
 // Text fonts, each made once for its families, style and locale, so that equal fonts are one text font.
 struct CssPresentationTextFonts {
-    Array<CssPresentationTextFont> fonts;
-    Array<char> keys;
+    RawArray<CssPresentationTextFont> fonts;
+    RawArray<char> keys;
     HashIndex index;
-    Array<char> key;                // scratch: a key being looked up
+    RawArray<char> key;             // scratch: a key being looked up
     PrTextBuffer families = {};     // scratch: names of a font's families
-    Array<PrFontFamily> familyViews;
+    RawArray<PrFontFamily> familyViews;
 };
 
 // A face of the document's fonts that the presentation's font set holds, with a key that the presentation issues and
@@ -384,7 +384,7 @@ struct CssPresentation {
     PrMutex measuring;
     bool readsMetrics;
 
-    Array<CssPresentationFontFace> fontFaces;
+    RawArray<CssPresentationFontFace> fontFaces;
     KeyIndex fontFaceKeys;          // `fontFaces` by their keys
     KeyIndex fontFaceAddresses;     // `fontFaces` by the addresses of their faces
     uint64_t nextFontFaceKey;       // key for the next face, starting from 1
@@ -399,48 +399,49 @@ struct CssPresentation {
     PrLayoutTree* tree;
     PrLayoutNode root;               // the box of the document's root, which the viewport lays out, or none
     PrTextShaper* shaper;            // what the tree shapes with, which the content of svg elements shapes with too
-    Array<CssParsedUserAgentSheet> userAgent;
+    RawArray<CssParsedUserAgentSheet> userAgent;
     PrCssSheetConditions conditions; // the document's conditions when the rule set was last built
     CssRuleSet userAgentRules;       // the rules of the user agent's sheets that apply, which `rules` builds on
     CssRuleSet rules;
-    CssStyleTable styles;                      // style groups of every thread
-    PrDomAgent* agent;                         // agent whose threads the presentation's work runs on
-    Array<CssPresentationThread> threads;      // one for each of the agent's restyle threads, made by the first restyle
-    Array<CssPresentationPrefetch> prefetched; // in tree order
-    uint32_t prefetchNext;                     // first prefetched element that the walk has not taken
-    Array<uint32_t> tasks;                     // scratch: roots of the subtrees that the pool computes
+    CssStyleTable styles;                         // style groups of every thread
+    PrDomAgent* agent;                            // agent whose threads the presentation's work runs on
+    RawArray<CssPresentationThread> threads;      // one for each of the agent's restyle threads, made by the first
+                                                  // restyle
+    RawArray<CssPresentationPrefetch> prefetched; // in tree order
+    uint32_t prefetchNext;                        // first prefetched element that the walk has not taken
+    RawArray<uint32_t> tasks;                     // scratch: roots of the subtrees that the pool computes
     CssAnimateState animations;
-    Array<CssPresentationEntry> entries;
-    Array<uint32_t> free;           // free entries
-    Array<PrLayoutCalcNode> calc;   // scratch: a length's calculation
+    RawArray<CssPresentationEntry> entries;
+    RawArray<uint32_t> free;           // free entries
+    RawArray<PrLayoutCalcNode> calc;   // scratch: a length's calculation
 
     // Scratch: a track list's tracks, the names of its lines and of the lines of its automatic repetition, and a grid
     // template's areas.
-    Array<PrLayoutGridTrack> gridTracks;
-    Array<PrLayoutGridLineName> gridNames;
-    Array<PrLayoutGridLineName> gridRepeatNames;
-    Array<PrLayoutGridArea> gridAreas;
+    RawArray<PrLayoutGridTrack> gridTracks;
+    RawArray<PrLayoutGridLineName> gridNames;
+    RawArray<PrLayoutGridLineName> gridRepeatNames;
+    RawArray<PrLayoutGridArea> gridAreas;
 
     // The images that styles name by URL, fetched once each and kept for the presentation's life.
-    Array<CssPresentationImage> images;
-    HashIndex imageIndex;                           // `images` by hash of the URL
-    Array<CssPresentationImageFetch*> imageFetches; // fetches in flight, whose presentation its destruction clears
+    RawArray<CssPresentationImage> images;
+    HashIndex imageIndex;                              // `images` by hash of the URL
+    RawArray<CssPresentationImageFetch*> imageFetches; // fetches in flight, whose presentation its destruction clears
 
     // Scratch: an element's background layers, their images' gradient stops and filter items, the sources that the
     // filter items name, which the presentation holds a reference to until the tree holds its own, and where each
     // layer's stops and items start.
-    Array<PrLayoutBackgroundLayer> backgroundLayers;
-    Array<PrLayoutColorStop> backgroundStops;
-    Array<PrLayoutFilter> imageFilters;
-    Array<PrLayoutSource> imageSources;
-    Array<CssPresentationImageSpans> backgroundSpans; // by index of the layer
+    RawArray<PrLayoutBackgroundLayer> backgroundLayers;
+    RawArray<PrLayoutColorStop> backgroundStops;
+    RawArray<PrLayoutFilter> imageFilters;
+    RawArray<PrLayoutSource> imageSources;
+    RawArray<CssPresentationImageSpans> backgroundSpans; // by index of the layer
 
     // Scratch: an element's mask layers, where each layer's stops and filter items start, a basic shape's points, and a
     // filter list.
-    Array<PrLayoutMaskLayer> maskLayers;
-    Array<CssPresentationImageSpans> maskSpans;       // by index of the layer
-    Array<PrLayoutLength> shapePoints;
-    Array<PrLayoutFilter> filters;
+    RawArray<PrLayoutMaskLayer> maskLayers;
+    RawArray<CssPresentationImageSpans> maskSpans;       // by index of the layer
+    RawArray<PrLayoutLength> shapePoints;
+    RawArray<PrLayoutFilter> filters;
 
     PrLayoutVec extent;                   // viewport of the last update
     PrLayoutNode canvasRoot;              // boxes of the root and the body when the canvas was last projected
@@ -477,24 +478,24 @@ struct CssPresentation {
     uint32_t newLeft;                        // new elements that the updates before the next job may still take in
     uint32_t newTaken;                       // new elements taken in since the last job started
     uint32_t jobTaken;                       // new elements that the last started job took in
-    Array<PrLayoutNode> erasing;             // layout nodes whose nodes left the document, which the next update erases
-    Array<PrLayoutNode> unmapping;           // those of `erasing` removed while the agent's worker held the tree
+    RawArray<PrLayoutNode> erasing;          // layout nodes whose nodes left the document, which the next update erases
+    RawArray<PrLayoutNode> unmapping;        // those of `erasing` removed while the agent's worker held the tree
 
     // The nodes whose boxes changed in the restyles since the tree was last brought up to date. The presentation's own
     // thread applies the changes while it holds the tree. A listed node may have left the document since, and the
     // entry's own state says what applying it does.
-    Array<const PrDomNode*> boxQueue;
+    RawArray<const PrDomNode*> boxQueue;
 
     // The queued nodes whose entries were dropped, each with a reference, so that the queue's pointers stay valid until
     // it is applied.
-    Array<const PrDomNode*> boxQueueDropped;
+    RawArray<const PrDomNode*> boxQueueDropped;
 
     // A participant of the counter pass was added, removed or restyled since the last pass, which the next update runs.
     // The elements where the participants changed are listed, each with CssPresentationEntry::counterChanged set,
     // unless a change has no such element, such as a removal, which `countersFromRoot` notes. The next pass then starts
     // at the root.
     bool countersStale;
-    Array<const PrDomNode*> counterChanges;
+    RawArray<const PrDomNode*> counterChanges;
     bool countersFromRoot;
 
     CssCountingScratch counterScratch;
@@ -502,57 +503,57 @@ struct CssPresentation {
 
     // Pseudo-elements whose entries were dropped. Each is freed once no queue or box refers to it: when the tree is
     // next brought up to date.
-    Array<CssPresentationPseudo*> retired;
+    RawArray<CssPresentationPseudo*> retired;
 
     // The records of the outermost svg elements that the presentation has given boxes (css_presentation_svg.h). A
     // record that its element's entry left is retired, and freed with its content once the tree has erased the box
     // whose painter reads it.
-    Array<CssPresentationSvg*> svgs;
-    Array<CssPresentationSvg*> retiredSvgs;
+    RawArray<CssPresentationSvg*> svgs;
+    RawArray<CssPresentationSvg*> retiredSvgs;
 
     // What lib/svg keeps for the presentation, and what the presentation notes for it while it does.
     void* PR_NULLABLE svgState;
-    Array<CssPresentationSvgNote> svgNotes;
+    RawArray<CssPresentationSvgNote> svgNotes;
     bool svgInvalid;
 
     // What resolves the clipPaths, masks and filters that the boxes' effects name by URL, and the nodes whose records
     // name one of them. Those nodes take their sources again when what the sources draw may have changed.
     const CssPresentationReferences* PR_NULLABLE references;
-    Array<const PrDomNode*> referencing;
+    RawArray<const PrDomNode*> referencing;
 
     // What the font properties of each typography group (CssStyleGroup_Typography) other than the initial one ask of
     // shaping, made when a projection first reads the group (cssFontFeatureSet), so that equal groups give one set.
     // Holds a reference to each group and set.
-    Array<CssPresentationFeatures> featureSets;
+    RawArray<CssPresentationFeatures> featureSets;
     HashIndex featureSetIndex;      // `featureSets` by group
 
     // The styles of the ::first-line and ::first-letter of each element that originates either, which few do.
-    Array<CssPresentationFirsts> firsts;
+    RawArray<CssPresentationFirsts> firsts;
     HashIndex firstsIndex;          // `firsts` by element
     uint32_t foreignBoxes;          // the boxes of foreignObject elements, each a root of the layout tree
 
-    Array<CssPresentationInvalidation> invalidations; // invalidations of the elements marked DomStyleFlag_Features
-    HashIndex invalidationIndex;                      // first of each element's `invalidations`
-    Array<uint32_t> features;                         // scratch: features by which an update restyles the descendants
-                                                      // of an element
-    Array<uint32_t> directionQueue;                   // entries whose directionality a change to the text under them
-                                                      // may have changed
+    RawArray<CssPresentationInvalidation> invalidations; // invalidations of the elements marked DomStyleFlag_Features
+    HashIndex invalidationIndex;                         // first of each element's `invalidations`
+    RawArray<uint32_t> features;                         // scratch: features by which an update restyles the
+                                                         // descendants of an element
+    RawArray<uint32_t> directionQueue;                   // entries whose directionality a change to the text under them
+                                                         // may have changed
 
     // The nodes at which scroll and scrollend events are due at the next run of the scroll steps: elements, or the
     // document for the viewport. Each entry holds its node (domNodeHold).
-    Array<PrDomNode*> scrolled;
+    RawArray<PrDomNode*> scrolled;
 
     // What scroll anchoring moved each container by since the last run of the scroll steps, summed over the layouts in
     // between. A container that layouts moved and moved back has not scrolled, and gets no scroll event.
-    Array<PrLayoutScrollAdjustment> anchorMoves;
+    RawArray<PrLayoutScrollAdjustment> anchorMoves;
 
     // The host's scrolls made while the presentation's thread held the tree. They apply in order when the presentation
     // takes the tree back.
-    Array<PrLayoutSceneScroll> pendingScrolls;
+    RawArray<PrLayoutSceneScroll> pendingScrolls;
 
     // The offsets that the document's own scrolls set since the host last took them (prCssPresentationTakeScrolls),
     // listed once for each container.
-    Array<PrLayoutSceneScroll> documentScrolls;
+    RawArray<PrLayoutSceneScroll> documentScrolls;
 };
 
 // Returns the entry of `node`, or kHashMissing if the presentation has none.
@@ -660,7 +661,7 @@ PrDomNode* PR_NULLABLE cssPresentationNodeFromLayout(const PrCssPresentation* pr
 // once. These are the nodes whose boxes are hit (prCssPresentationHitTest), up to `limit` of the topmost boxes. Before
 // an outermost svg element come the elements of its content that are hit there, and the nodes of a foreignObject's
 // content come before the foreignObject. An element of a use element's shadow tree stands for itself.
-void cssPresentationHits(PrCssPresentation* presentation, PrLayoutVec point, uint32_t limit, Array<PrDomNode*>* out);
+void cssPresentationHits(PrCssPresentation* presentation, PrLayoutVec point, uint32_t limit, RawArray<PrDomNode*>* out);
 
 // Returns the element's computed style as of the last update, or null if the presentation did not style it.
 const CssComputedStyle* PR_NULLABLE cssPresentationStyle(const PrCssPresentation* presentation, const PrDomElement* element);

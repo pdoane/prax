@@ -4,8 +4,8 @@
 
 #include "pr/align.h"
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/integer.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -25,8 +25,8 @@ struct CachedFont {
 };
 
 struct FontCache {
-    Array<CachedFace*> faces;
-    Array<CachedFont*> fonts;
+    RawArray<CachedFace*> faces;
+    RawArray<CachedFont*> fonts;
     uint64_t clock;
 };
 

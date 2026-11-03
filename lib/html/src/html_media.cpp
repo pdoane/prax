@@ -29,7 +29,7 @@ struct MediaTask {
     void (*run)(MediaTask* task);
     PrStringView event;                   // an event to fire, or the null view
     PrStringView after;                   // an event to fire after `event`, or the null view
-    Array<PrHtmlPlayPromise> promises;
+    RawArray<PrHtmlPlayPromise> promises;
 
     // The DOMException that the promises are rejected with, or the null view to resolve them.
     PrStringView rejection;
@@ -39,14 +39,14 @@ struct MediaTask {
 };
 
 // Releases the promises without settling them.
-void releasePromises(Array<PrHtmlPlayPromise>* promises) {
+void releasePromises(RawArray<PrHtmlPlayPromise>* promises) {
     for (uint32_t i = 0; i < promises->count; ++i)
         promises->data[i].release(promises->data[i].context);
     promises->reset();
 }
 
-void settle(Array<PrHtmlPlayPromise>* promises, PrStringView rejection) {
-    Array<PrHtmlPlayPromise> taken = *promises;
+void settle(RawArray<PrHtmlPlayPromise>* promises, PrStringView rejection) {
+    RawArray<PrHtmlPlayPromise> taken = *promises;
     *promises = {};
     for (uint32_t i = 0; i < taken.count; ++i) {
         taken.data[i].settle(taken.data[i].context, rejection);
@@ -127,7 +127,7 @@ bool potentiallyPlaying(const HtmlMedia* media) {
 
 // Adds [start, end] to the played ranges (html/#dom-media-played), merging it with each range that it touches.
 void addPlayed(HtmlMedia* media, double start, double end) {
-    Array<double>& ranges = media->played;
+    RawArray<double>& ranges = media->played;
     uint32_t at = 0;
     while (at < ranges.count && ranges.data[at + 1] < start)
         at += 2;
@@ -354,16 +354,16 @@ void updatePoster(HtmlMedia* media) {
         prUrlDestroy(url);
         return;
     }
-    PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     domNodeHold(media->element);
     PosterFetch* fetch = alloc<PosterFetch>();
     *fetch = PosterFetch{media, media->posters};
     DomFetchRequest asked{
-        prStringView(&request), DomFetchDestination_Image, DomCorsSettings_NoCors,
+        prRawStringView(&request), DomFetchDestination_Image, DomCorsSettings_NoCors,
         DomFetchInitiator_Video,
     };
     host->fetch(host->context, &asked, posterFetched, fetch, dropPosterFetch);
-    prStringReset(&request);
+    prRawStringReset(&request);
     prUrlDestroy(url);
 }
 
@@ -483,7 +483,7 @@ void setReadyState(HtmlMedia* media, PrHtmlMediaReadyState state) {
 // html/#dedicated-media-source-failure-steps
 void sourceFailed(HtmlMedia* media, PrStringView message) {
     MediaTask* task = newTask(media);
-    prStringReplace(&media->errorMessage, message);
+    prRawStringReplace(&media->errorMessage, message);
     task->run = [](MediaTask* task) {
         HtmlMedia* failed = task->media;
         failed->error = PrHtmlMediaError_SrcNotSupported;
@@ -598,14 +598,14 @@ void candidateFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
 
 // Starts fetching the candidate at `url`. If `source` is null, the candidate comes from the src attribute.
 void fetchCandidate(HtmlMedia* media, const PrUrl* url, PrDomElement* PR_NULLABLE source) {
-    prStringReset(&media->currentSrc);
+    prRawStringReset(&media->currentSrc);
     media->currentSrc = prUrlSerialize(url, PrUrlSerialization_Whole);
     // A URL of a media source attaches the source (media-source-2/#mediasource-attach).
-    PrString whole = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    PrRawString whole = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     PrHtmlMediaSource* mediaSource = nullptr;
     if (media->window != nullptr)
-        mediaSource = htmlMediaSourceFromUrl(media->window, prStringView(&whole));
-    prStringReset(&whole);
+        mediaSource = htmlMediaSourceFromUrl(media->window, prRawStringView(&whole));
+    prRawStringReset(&whole);
     if (mediaSource != nullptr) {
         if (htmlMediaSourceAttach(mediaSource, media)) {
             media->mediaSource = mediaSource;
@@ -632,14 +632,14 @@ void fetchCandidate(HtmlMedia* media, const PrUrl* url, PrDomElement* PR_NULLABL
         dropTask(fetch);
         return;
     }
-    PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     DomFetchRequest asked{
-        prStringView(&request), DomFetchDestination_Media,
+        prRawStringView(&request), DomFetchDestination_Media,
         domCorsSettings(domAttributeValue(media->element, "crossorigin")),
         DomFetchInitiator(media->element->tag == PrDomTag_Video ? DomFetchInitiator_Video : DomFetchInitiator_Audio),
     };
     host->fetch(host->context, &asked, candidateFetched, fetch, dropTask);
-    prStringReset(&request);
+    prRawStringReset(&request);
 }
 
 // Tries the source children from `from` onward, in order. Fetches the first child whose type the engine may play and
@@ -652,7 +652,7 @@ void trySources(HtmlMedia* media, const PrDomNode* PR_NULLABLE from) {
             continue;
         const PrDomAttr* type = domAttribute(source, PrDomNamespace_None, "type");
         PrUrl* url;
-        if (type != nullptr && htmlCanPlayType(media->window, prStringView(&type->value)) == PrHtmlCanPlay_No)
+        if (type != nullptr && htmlCanPlayType(media->window, prRawStringView(&type->value)) == PrHtmlCanPlay_No)
             url = nullptr;
         else
             url = candidateUrl(media, domAttributeValue(source, "src"));
@@ -692,7 +692,7 @@ void selectResource(MediaTask* task) {
     media->networkState = PrHtmlMediaNetworkState_Loading;
     queueEvent(media, "loadstart");
     if (src != nullptr) {
-        PrUrl* url = candidateUrl(media, prStringView(&src->value));
+        PrUrl* url = candidateUrl(media, prRawStringView(&src->value));
         if (url == nullptr) {
             sourceFailed(media, "The src attribute is not a URL");
             return;
@@ -789,8 +789,8 @@ void internalPause(HtmlMedia* media) {
 
 // Sets the playback state to its initial values, which an element has before any window runs it.
 void initializePlayback(HtmlMedia* media) {
-    media->currentSrc = prStringEmpty();
-    media->errorMessage = prStringEmpty();
+    media->currentSrc = prRawStringEmpty();
+    media->errorMessage = prRawStringEmpty();
     media->position = 0;
     media->since = 0;
     media->duration = kPrF64Nan;
@@ -823,8 +823,8 @@ void resetPlayback(HtmlMedia* media) {
     ++media->posters;
     releasePromises(&media->promises);
     media->played.reset();
-    prStringReset(&media->currentSrc);
-    prStringReset(&media->errorMessage);
+    prRawStringReset(&media->currentSrc);
+    prRawStringReset(&media->errorMessage);
 }
 
 // Takes the state out of the window that runs it, and clears its timer there. Reads nothing of the element.
@@ -1015,7 +1015,7 @@ void htmlMediaLoad(HtmlMedia* media) {
     }
     media->rate = media->defaultRate;
     media->error = PrHtmlMediaError_None;
-    prStringReplace(&media->errorMessage, "");
+    prRawStringReplace(&media->errorMessage, "");
     media->autoplaying = true;
     // A load rejects the play() promises that are still pending (html/#media-element-load-algorithm).
     queueSettle(media, {}, "AbortError");
@@ -1149,7 +1149,7 @@ void htmlMediaSourceChanged(HtmlMedia* media) {
     if (media->decoder != nullptr)
         prMediaDecoderSetSourceEnded(media->decoder, htmlMediaSourceHasEnded(media->mediaSource));
     settlePosition(media);
-    Array<PrMediaTimeRange> ranges{};
+    RawArray<PrMediaTimeRange> ranges{};
     htmlMediaSourceBuffered(media->mediaSource, &ranges);
     bool ended = htmlMediaSourceHasEnded(media->mediaSource);
     double position = media->position;

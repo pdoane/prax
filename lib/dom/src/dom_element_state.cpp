@@ -95,7 +95,7 @@ bool autoRtl(const PrDomElement* element) {
     for (const PrDomNode* node = domNodeNext(element, element); node != nullptr;) {
         if (domIsText(node)) {
             PrUnicodeBidiStrong strong =
-                prUnicodeBidiFirstStrong(prStringView(&static_cast<const PrDomText*>(node)->data));
+                prUnicodeBidiFirstStrong(prRawStringView(&static_cast<const PrDomText*>(node)->data));
             if (strong != PrUnicodeBidiStrong_None)
                 return strong == PrUnicodeBidiStrong_Right;
         }
@@ -244,14 +244,14 @@ PrStringView domElementOwnLanguage(const PrDomElement* element) {
     for (const PrDomAttr* a = element->firstAttribute; a != nullptr; a = static_cast<const PrDomAttr*>(a->next)) {
         if (a->hash != kHash)
             continue;
-        PrStringView name = prStringView(&a->name);
+        PrStringView name = prRawStringView(&a->name);
         if (a->space == PrDomNamespace_Xml && name == "lang")
-            return prStringView(&a->value);
+            return prRawStringView(&a->value);
         if (plain && lang == nullptr && a->space == PrDomNamespace_None &&
                 (lowered ? prAsciiEqualsLowered(name, "lang") : name == "lang"))
             lang = a;
     }
-    return lang != nullptr ? prStringView(&lang->value) : PrStringView{nullptr, 0};
+    return lang != nullptr ? prRawStringView(&lang->value) : PrStringView{nullptr, 0};
 }
 
 PrStringView domElementLanguage(const PrDomElement* element) {
@@ -267,10 +267,10 @@ PrStringView domElementLanguage(const PrDomElement* element) {
 }
 
 PrStringView domDocumentLanguage(const PrDomDocument* document) {
-    if (!prStringIsNull(&document->languagePragma))
-        return prStringView(&document->languagePragma);
-    if (!prStringIsNull(&document->languageHeader))
-        return prStringView(&document->languageHeader);
+    if (!prRawStringIsNull(&document->languagePragma))
+        return prRawStringView(&document->languagePragma);
+    if (!prRawStringIsNull(&document->languageHeader))
+        return prRawStringView(&document->languageHeader);
     return "";
 }
 
@@ -304,9 +304,9 @@ void domMetaConnected(PrDomElement* element) {
         ++end;
     PrStringView candidate{content.data + start, end - start};
     PrDomDocument* document = element->document;
-    if (candidate.size == 0 || prStringView(&document->languagePragma) == candidate)
+    if (candidate.size == 0 || prRawStringView(&document->languagePragma) == candidate)
         return;
-    prStringReplace(&document->languagePragma, candidate);
+    prRawStringReplace(&document->languagePragma, candidate);
     domNotifyLanguageChanged(document);
 }
 
@@ -467,7 +467,7 @@ bool domElementPlaceholderShown(const PrDomElement* element) {
 const PrDomElement* PR_NULLABLE domLabeledControl(const PrDomElement* label) {
     if (const PrDomAttr* named = domAttribute(label, PrDomNamespace_None, "for")) {
         const PrDomElement* control =
-            domElementById(const_cast<PrDomNode*>(domNodeRoot(label)), prStringView(&named->value));
+            domElementById(const_cast<PrDomNode*>(domNodeRoot(label)), prRawStringView(&named->value));
         return control != nullptr && domIsLabelable(control) ? control : nullptr;
     }
     for (const PrDomNode* node = domNodeNext(label, label); node != nullptr; node = domNodeNext(label, node)) {
@@ -544,7 +544,7 @@ PrStringView domElementLinkHref(const PrDomElement* element) {
     if (href.data != nullptr || element->space != PrDomNamespace_Svg)
         return href;
     const PrDomAttr* xlink = domAttribute(element, PrDomNamespace_XLink, "href");
-    return xlink != nullptr ? prStringView(&xlink->value) : PrStringView{};
+    return xlink != nullptr ? prRawStringView(&xlink->value) : PrStringView{};
 }
 
 bool domElementVisited(const PrDomElement* element) {

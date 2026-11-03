@@ -1,6 +1,5 @@
 #include "pr/html_quickjs.h"
 
-#include "pr/array.h"
 #include "pr/css_quickjs.h"
 #include "pr/dom_abort.h"
 #include "pr/dom_quickjs.h"
@@ -10,6 +9,7 @@
 #include "pr/mem.h"
 #include "pr/quickjs_binding.h"
 #include "pr/quickjs_callback.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/thread.h"
@@ -24,18 +24,18 @@ namespace pr_impl {
 // A module of a realm (html/#module-script), by the name that imports resolve to: its URL, or an inline module script's
 // own name. A module that an import names is recorded before it is parsed, and is undefined until then.
 struct JsHtmlModule {
-    PrString name;
-    PrString base;                  // the URL that its imports resolve against, which is its import.meta.url
+    PrRawString name;
+    PrRawString base;               // the URL that its imports resolve against, which is its import.meta.url
     JSValue module;                 // compiled, with its imports unresolved until its graph is linked; or undefined
     JSValue error;                  // html/#concept-script-parse-error, or undefined
-    Array<uint32_t> requests;       // the modules that it imports, by index in the realm's modules
+    RawArray<uint32_t> requests;    // the modules that it imports, by index in the realm's modules
 };
 
 // A classic script that ran in a realm, by its name, which is the URL that it came from (html/#classic-script). Its
 // import() calls resolve against its base URL (html/#concept-script-base-url).
 struct JsHtmlClassicScript {
-    PrString name;
-    PrString base;
+    PrRawString name;
+    PrRawString base;
 };
 
 struct JsHtmlEngine;
@@ -46,9 +46,9 @@ struct JsHtmlRealm;
 struct JsHtmlImport {
     JsHtmlRealm* realm;
     JSValue resolvingFuncs[2];
-    PrString base;                  // the name of the script or module that imports
-    PrString specifier;
-    PrString url;                   // the URL that the specifier resolved to, the name of the graph's root
+    PrRawString base;                  // the name of the script or module that imports
+    PrRawString specifier;
+    PrRawString url;                   // the URL that the specifier resolved to, the name of the graph's root
 };
 
 // A fetch() whose response the browsing context fetches. Its promise is settled once the response arrives, or once its
@@ -69,11 +69,11 @@ struct JsHtmlRealm {
     PrHtmlHost host;                                    // the host that the application gave
     JSContext* PR_NULLABLE ctx;                         // null once the engine is destroyed
     PrHtmlPage* PR_NULLABLE page;                       // null until opened, and once closed
-    Array<JsHtmlModule> modules;
-    Array<JsHtmlClassicScript> classicScripts;          // the latest base of each name that a classic script ran as
-    Array<JsHtmlImport*> imports;                       // the import() calls whose graphs are being fetched
-    Array<JsHtmlFetch*> fetches;                        // the fetch() calls whose responses are being fetched
-    Array<JSValue> evaluations;                         // the promises of module evaluations not yet settled
+    RawArray<JsHtmlModule> modules;
+    RawArray<JsHtmlClassicScript> classicScripts;          // the latest base of each name that a classic script ran as
+    RawArray<JsHtmlImport*> imports;                       // the import() calls whose graphs are being fetched
+    RawArray<JsHtmlFetch*> fetches;                        // the fetch() calls whose responses are being fetched
+    RawArray<JSValue> evaluations;                         // the promises of module evaluations not yet settled
     uint32_t inlineModules;
     bool scripting;                                     // whether the browsing context and its iframes run scripts
     bool opened;
@@ -88,12 +88,12 @@ struct JsHtmlAgent {
 };
 
 struct JsHtmlEngine {
-    Array<JsHtmlAgent> agents;
-    Array<PrJsHtmlBind*> binds;
+    RawArray<JsHtmlAgent> agents;
+    RawArray<PrJsHtmlBind*> binds;
     PrJsHtmlEngineDesc desc;
     JSRuntime* runtime;
     JsHtmlRealm* own;
-    Array<JsHtmlRealm*> realms;   // every realm, the engine's own first
+    RawArray<JsHtmlRealm*> realms;   // every realm, the engine's own first
 };
 
 namespace {
@@ -202,9 +202,9 @@ JSValue fetchMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) 
     }
     if (ok) {
         PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(realm->page));
-        PrString base = prDomNodeBaseUri(prDomDocumentAsNode(document));
-        ok = prJsFetchRequestRead(ctx, argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, prStringView(&base), &request);
-        prStringReset(&base);
+        PrRawString base = prDomNodeBaseUri(prDomDocumentAsNode(document));
+        ok = prJsFetchRequestRead(ctx, argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, prRawStringView(&base), &request);
+        prRawStringReset(&base);
     }
     // A request whose signal is aborted already is not fetched, and rejects with the signal's reason.
     JSValue aborted = ok ? prJsDomAbortSignalReason(ctx, request.signal) : JS_UNDEFINED;
@@ -230,7 +230,7 @@ JSValue fetchMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) 
             .redirect = request.redirect,
             .initiator = PrFetchInitiator_Fetch,
             .referrerPolicy = request.referrerPolicy,
-            .referrer = prStringIsNull(&request.referrer) ? PrStringView{nullptr, 0} : prStringView(&request.referrer),
+            .referrer = prRawStringView(&request.referrer),
         };
         if (prHtmlPageFetch(realm->page, &desc, fetched, fetch) == PrStatus_Ok) {
             realm->fetches.push(fetch);
@@ -292,16 +292,16 @@ JsHtmlRealm* createRealm(JsHtmlEngine* engine) {
 void freeContext(JsHtmlRealm* realm) {
     for (uint32_t i = 0; i < realm->modules.count; ++i) {
         JsHtmlModule& module = realm->modules.data[i];
-        prStringReset(&module.name);
-        prStringReset(&module.base);
+        prRawStringReset(&module.name);
+        prRawStringReset(&module.base);
         JS_FreeValue(realm->ctx, module.module);
         JS_FreeValue(realm->ctx, module.error);
         module.requests.reset();
     }
     realm->modules.reset();
     for (uint32_t i = 0; i < realm->classicScripts.count; ++i) {
-        prStringReset(&realm->classicScripts.data[i].name);
-        prStringReset(&realm->classicScripts.data[i].base);
+        prRawStringReset(&realm->classicScripts.data[i].name);
+        prRawStringReset(&realm->classicScripts.data[i].base);
     }
     realm->classicScripts.reset();
     for (uint32_t i = 0; i < realm->imports.count; ++i) {
@@ -338,7 +338,7 @@ void evalText(PrStringView text, uint32_t column, PrTextBuffer* out) {
 // Returns the index of the module named `name`, or kArrayMissing.
 uint32_t findModule(const JsHtmlRealm* realm, PrStringView name) {
     for (uint32_t i = 0; i < realm->modules.count; ++i) {
-        if (prStringView(&realm->modules.data[i].name) == name)
+        if (prRawStringView(&realm->modules.data[i].name) == name)
             return i;
     }
     return kArrayMissing;
@@ -349,14 +349,14 @@ uint32_t recordModule(JsHtmlRealm* realm, PrStringView name) {
     uint32_t index = findModule(realm, name);
     if (index != kArrayMissing)
         return index;
-    realm->modules.push(JsHtmlModule{prStringCopy(name), prStringCopy(name), JS_UNDEFINED, JS_UNDEFINED, {}});
+    realm->modules.push(JsHtmlModule{prRawStringCopy(name), prRawStringCopy(name), JS_UNDEFINED, JS_UNDEFINED, {}});
     return realm->modules.count - 1;
 }
 
 // Resolves the module specifier `specifier` against `base` (html/#resolve-a-module-specifier), and writes the resolved
 // URL, serialized, to `out`. A specifier that is not a URL resolves against the base if it starts with "/", "./" or
 // "../". Returns false for any other specifier, which an import map would have to name.
-bool resolveSpecifier(PrStringView specifier, PrStringView base, PrString* out) {
+bool resolveSpecifier(PrStringView specifier, PrStringView base, PrRawString* out) {
     PrUrl* parsed = nullptr;
     PrStatus status = PrStatus_InvalidData;
     if (prStringStartsWith(specifier, "/") || prStringStartsWith(specifier, "./") || prStringStartsWith(specifier, "../")) {
@@ -380,11 +380,11 @@ bool resolveSpecifier(PrStringView specifier, PrStringView base, PrString* out) 
 // module has been recorded yet.
 PrStringView baseOf(const JsHtmlRealm* realm, PrStringView name) {
     for (uint32_t i = 0; i < realm->classicScripts.count; ++i) {
-        if (prStringView(&realm->classicScripts.data[i].name) == name)
-            return prStringView(&realm->classicScripts.data[i].base);
+        if (prRawStringView(&realm->classicScripts.data[i].name) == name)
+            return prRawStringView(&realm->classicScripts.data[i].base);
     }
     uint32_t module = findModule(realm, name);
-    return module != kArrayMissing ? prStringView(&realm->modules.data[module].base) : name;
+    return module != kArrayMissing ? prRawStringView(&realm->modules.data[module].base) : name;
 }
 
 // Resolves the specifier `name` that the script or module `baseName` imports to the name of a module, which QuickJS
@@ -395,24 +395,24 @@ char* PR_NULLABLE normalizeModule(JSContext* ctx, const char* baseName, const ch
         JS_ThrowTypeError(ctx, "Module loading requires an HTML document");
         return nullptr;
     }
-    PrString resolved = {};
+    PrRawString resolved = {};
     if (!resolveSpecifier(name, baseOf(realm, baseName), &resolved)) {
         JS_ThrowTypeError(ctx, "Failed to resolve module specifier '%s' from '%s'", name, baseName);
         return nullptr;
     }
-    PrStringView text = prStringView(&resolved);
+    PrStringView text = prRawStringView(&resolved);
     char* result = static_cast<char*>(js_malloc(ctx, text.size + 1));
     if (result != nullptr) {
         prMemCopy(result, text.data, text.size);
         result[text.size] = '\0';
     }
-    prStringReset(&resolved);
+    prRawStringReset(&resolved);
     return result;
 }
 
 // Returns the module's imports resolved against its base URL, or false, with the TypeError thrown, if a specifier does
 // not resolve.
-bool resolveRequests(JsHtmlRealm* realm, JSModuleDef* definition, PrStringView base, Array<PrString>* out) {
+bool resolveRequests(JsHtmlRealm* realm, JSModuleDef* definition, PrStringView base, RawArray<PrRawString>* out) {
     int count = JS_GetModuleRequestCount(definition);
     for (int i = 0; i < count; ++i) {
         JSAtom atom = JS_GetModuleRequest(realm->ctx, definition, i);
@@ -420,7 +420,7 @@ bool resolveRequests(JsHtmlRealm* realm, JSModuleDef* definition, PrStringView b
         JS_FreeAtom(realm->ctx, atom);
         if (specifier == nullptr)
             return false;
-        PrString resolved = {};
+        PrRawString resolved = {};
         bool ok = resolveSpecifier(specifier, base, &resolved);
         if (ok)
             out->push(resolved);
@@ -453,7 +453,7 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
     uint32_t index = recordModule(realm, prTextBufferView(&name));
     JsHtmlModule* module = &realm->modules.data[index];
     if (JS_IsUndefined(module->module) && JS_IsUndefined(module->error)) {
-        prStringReplace(&module->base, script->baseUrl);
+        prRawStringReplace(&module->base, script->baseUrl);
         PrTextBuffer text = {};
         evalText(script->source, script->column, &text);
         prTextBufferAppendChar(&name, '\0');
@@ -465,7 +465,7 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
         PrStringView eval = prTextBufferView(&text);
         JSValue compiled = JS_Eval2(ctx, eval.data, eval.size - 1, &options);
         prTextBufferReset(&text);
-        Array<PrString> requests;
+        RawArray<PrRawString> requests;
         bool parsed = !JS_IsException(compiled);
         if (parsed) {
             JSModuleDef* definition = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(compiled));
@@ -477,11 +477,11 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
         }
         // Recording an import may move the modules.
         for (uint32_t i = 0; parsed && i < requests.count; ++i) {
-            uint32_t imported = recordModule(realm, prStringView(&requests.data[i]));
+            uint32_t imported = recordModule(realm, prRawStringView(&requests.data[i]));
             realm->modules.data[index].requests.push(imported);
         }
         for (uint32_t i = 0; i < requests.count; ++i)
-            prStringReset(&requests.data[i]);
+            prRawStringReset(&requests.data[i]);
         requests.reset();
         module = &realm->modules.data[index];
         module->module = JS_IsException(compiled) ? JS_UNDEFINED : compiled;
@@ -491,7 +491,7 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
     prTextBufferReset(&name);
     for (uint32_t i = 0; i < realm->modules.data[index].requests.count; ++i) {
         uint32_t imported = realm->modules.data[index].requests.data[i];
-        request(requestContext, prStringView(&realm->modules.data[imported].name));
+        request(requestContext, prRawStringView(&realm->modules.data[imported].name));
     }
     return index;
 }
@@ -499,11 +499,11 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
 // Returns the first parse error of the graph of the module at `index`, with a reference, or undefined if it has none
 // (html/#concept-script-parse-error).
 JSValue firstParseError(JsHtmlRealm* realm, uint32_t index) {
-    Array<bool> reached;
+    RawArray<bool> reached;
     reached.resize(realm->modules.count);
     for (uint32_t i = 0; i < reached.count; ++i)
         reached.data[i] = false;
-    Array<uint32_t> pending;
+    RawArray<uint32_t> pending;
     pending.push(index);
     reached.data[index] = true;
     JSValue error = JS_UNDEFINED;
@@ -555,9 +555,9 @@ const char* cStringOf(PrStringView text, PrTextBuffer* out) {
 }
 
 void freeImport(JsHtmlImport* import) {
-    prStringReset(&import->base);
-    prStringReset(&import->specifier);
-    prStringReset(&import->url);
+    prRawStringReset(&import->base);
+    prRawStringReset(&import->specifier);
+    prRawStringReset(&import->url);
     prMemoryFree(import);
 }
 
@@ -580,20 +580,20 @@ void imported(void* PR_NULLABLE context, PrStatus status) {
         return;
     }
     PrTextBuffer url = {};
-    cStringOf(prStringView(&import->url), &url);
+    cStringOf(prRawStringView(&import->url), &url);
     JSValue result = JS_UNDEFINED;
     if (status != PrStatus_Ok) {
         result = JS_ThrowTypeError(ctx, "Failed to fetch module '%s'", prTextBufferView(&url).data);
     } else {
-        JSValue error = firstParseError(realm, findModule(realm, prStringView(&import->url)));
+        JSValue error = firstParseError(realm, findModule(realm, prRawStringView(&import->url)));
         if (!JS_IsUndefined(error)) {
             result = JS_Throw(ctx, error);
         } else {
             PrTextBuffer base = {};
             PrTextBuffer specifier = {};
             jsEnterRealm(ctx);
-            result = JS_LoadModule(ctx, cStringOf(prStringView(&import->base), &base),
-                cStringOf(prStringView(&import->specifier), &specifier));
+            result = JS_LoadModule(ctx, cStringOf(prRawStringView(&import->base), &base),
+                cStringOf(prRawStringView(&import->specifier), &specifier));
             jsLeaveRealm(ctx);
             prTextBufferReset(&base);
             prTextBufferReset(&specifier);
@@ -628,13 +628,13 @@ void importModule(JSContext* ctx, const char* baseName, const char* specifier, J
     *import = JsHtmlImport{
         .realm = realm,
         .resolvingFuncs = {JS_DupValue(ctx, resolvingFuncs[0]), JS_DupValue(ctx, resolvingFuncs[1])},
-        .base = prStringCopy(baseName),
-        .specifier = prStringCopy(specifier),
-        .url = prStringCopy(url),
+        .base = prRawStringCopy(baseName),
+        .specifier = prRawStringCopy(specifier),
+        .url = prRawStringCopy(url),
     };
     js_free(ctx, url);
     realm->imports.push(import);
-    prHtmlPageImportModule(realm->page, prStringView(&import->url), imported, import);
+    prHtmlPageImportModule(realm->page, prRawStringView(&import->url), imported, import);
 }
 
 // The members of the host that prJsHtmlEngineHost returns. Each is called with the realm.
@@ -642,12 +642,12 @@ void importModule(JSContext* ctx, const char* baseName, const char* specifier, J
 // Records the base URL of the classic script named `name`, replacing the base that an earlier script of that name had.
 void recordClassicScript(JsHtmlRealm* realm, PrStringView name, PrStringView base) {
     for (uint32_t i = 0; i < realm->classicScripts.count; ++i) {
-        if (prStringView(&realm->classicScripts.data[i].name) == name) {
-            prStringReplace(&realm->classicScripts.data[i].base, base);
+        if (prRawStringView(&realm->classicScripts.data[i].name) == name) {
+            prRawStringReplace(&realm->classicScripts.data[i].base, base);
             return;
         }
     }
-    realm->classicScripts.push(JsHtmlClassicScript{prStringCopy(name), prStringCopy(base)});
+    realm->classicScripts.push(JsHtmlClassicScript{prRawStringCopy(name), prRawStringCopy(base)});
 }
 
 PrStatus execute(void* context, PrHtmlPage*, const PrHtmlScript* script) {
@@ -721,7 +721,7 @@ bool compile(void* context, PrHtmlPage*, PrDomEventTarget* target, PrDomElement*
     return realm->engine != nullptr && jsHtmlCompileEventHandler(realm->ctx, target, element, handler, body, out);
 }
 
-bool evaluate(void* context, PrHtmlPage*, PrStringView source, PrString* out) {
+bool evaluate(void* context, PrHtmlPage*, PrStringView source, PrRawString* out) {
     JsHtmlRealm* realm = static_cast<JsHtmlRealm*>(context);
     if (realm->engine == nullptr)
         return false;
@@ -739,7 +739,7 @@ bool evaluate(void* context, PrHtmlPage*, PrStringView source, PrString* out) {
     PrStringView value = {};
     bool isString = JS_IsString(result) && jsReadString(ctx, result, &value);
     if (isString)
-        *out = prStringCopy(value);
+        *out = prRawStringCopy(value);
     JS_FreeValue(ctx, result);
     engineCheckpoint(realm->engine);
     return isString;

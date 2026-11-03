@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/unicode_normalization.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -18,7 +18,7 @@ uint32_t unicodeDecomposition(uint32_t codePoint, const uint32_t* PR_NULLABLE* P
 bool unicodeComposition(uint32_t first, uint32_t second, uint32_t* composite);
 
 // Puts the code points in `form`, in place.
-void unicodeNormalize(Array<uint32_t>* codePoints, PrUnicodeNormalForm form);
+void unicodeNormalize(RawArray<uint32_t>* codePoints, PrUnicodeNormalForm form);
 
 // Returns true if the `count` code points at `codePoints` are in `form`.
 bool unicodeIsNormalized(const uint32_t* PR_NULLABLE codePoints, uint32_t count, PrUnicodeNormalForm form);

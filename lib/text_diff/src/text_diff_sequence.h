@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
+#include "pr/raw_array.h"
 #include "pr/text_diff.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -38,12 +38,12 @@ struct TextDiffSequence {
     // The most edits that one comparison of a part of the sequences explores before it reports the part as one change,
     // at least one.
     uint32_t maxCost;
-    Array<TextDiffPart> parts;
+    RawArray<TextDiffPart> parts;
 
     // By index of a diagonal past the most edits of the search: the furthest that the search forward reached on each,
     // and the search back from the ends.
-    Array<int64_t> forward;
-    Array<int64_t> backward;
+    RawArray<int64_t> forward;
+    RawArray<int64_t> backward;
 };
 
 // Frees the memory of comparisons.
@@ -51,7 +51,7 @@ void textDiffSequenceReset(TextDiffSequence* sequence);
 
 // Replaces `changes` with the changes between the sequences of `desc`, in order. The keys are read only during the
 // call.
-void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, Array<PrTextDiffChange>& changes);
+void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, RawArray<PrTextDiffChange>& changes);
 
 } // namespace pr_impl
 

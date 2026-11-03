@@ -72,10 +72,10 @@ void writeNode(std::string* out, PrDomNode* node) {
             out->append(name.data, name.size);
             for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
                     attribute = static_cast<const PrDomAttr*>(attribute->next)) {
-                PrStringView text = prStringView(&attribute->name);
+                PrStringView text = prRawStringView(&attribute->name);
                 *out += '[';
                 out->append(text.data, text.size);
-                text = prStringView(&attribute->value);
+                text = prRawStringView(&attribute->value);
                 *out += '=';
                 out->append(text.data, text.size);
                 *out += ']';
@@ -95,7 +95,7 @@ void writeNode(std::string* out, PrDomNode* node) {
         }
 
         case PrDomNodeType_Text: {
-            PrStringView text = prStringView(&static_cast<const PrDomText*>(node)->data);
+            PrStringView text = prRawStringView(&static_cast<const PrDomText*>(node)->data);
             *out += '"';
             // A control character is written as an escape, so that a failure prints on one line and a carriage return
             // does not move the cursor back over it.
@@ -115,7 +115,7 @@ void writeNode(std::string* out, PrDomNode* node) {
         }
 
         case PrDomNodeType_Comment: {
-            PrStringView text = prStringView(&static_cast<const PrDomComment*>(node)->data);
+            PrStringView text = prRawStringView(&static_cast<const PrDomComment*>(node)->data);
             *out += "<!--";
             out->append(text.data, text.size);
             *out += "-->";
@@ -123,7 +123,7 @@ void writeNode(std::string* out, PrDomNode* node) {
         }
 
         case PrDomNodeType_DocumentType: {
-            PrStringView text = prStringView(&static_cast<const PrDomDocumentType*>(node)->name);
+            PrStringView text = prRawStringView(&static_cast<const PrDomDocumentType*>(node)->name);
             *out += "doctype:";
             out->append(text.data, text.size);
             return;
@@ -131,8 +131,8 @@ void writeNode(std::string* out, PrDomNode* node) {
 
         case PrDomNodeType_ProcessingInstruction: {
             const PrDomProcessingInstruction* instruction = static_cast<const PrDomProcessingInstruction*>(node);
-            PrStringView target = prStringView(&instruction->target);
-            PrStringView data = prStringView(&instruction->data);
+            PrStringView target = prRawStringView(&instruction->target);
+            PrStringView data = prRawStringView(&instruction->data);
             *out += "<?";
             out->append(target.data, target.size);
             *out += ' ';
@@ -329,9 +329,9 @@ TEST_CASE("DOMParser parses an XML type as XML, and shows where it is not well-f
     document = prHtmlDomParserParseFromString(
         "<!DOCTYPE p PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"x\"><p>&nbsp;&hearts;</p>",
         PrHtmlDomParserSupportedType_ApplicationXhtmlXml);
-    PrString text = prDomNodeTextContent(prDomElementAsNode(prDomDocumentElement(document)));
-    CHECK(prStringView(&text) == "\xC2\xA0\xE2\x99\xA5");
-    prStringReset(&text);
+    PrRawString text = prDomNodeTextContent(prDomElementAsNode(prDomDocumentElement(document)));
+    CHECK(prRawStringView(&text) == "\xC2\xA0\xE2\x99\xA5");
+    prRawStringReset(&text);
     prDomDocumentRelease(document);
 
     document = prHtmlDomParserParseFromString("<p>", PrHtmlDomParserSupportedType_TextXml);
@@ -352,9 +352,9 @@ TEST_CASE("a hyperlink's URL parts read and write its href attribute") {
     PrHtmlElement* c = prHtmlAreaElementAsHtmlElement(
         prHtmlAreaElementQuery(prDomElementAsEventTarget(prDomNodeGetElementById(root, "c"))));
     auto component = [](PrHtmlElement* element, PrUrlComponent part) {
-        PrString value = prHtmlHyperlinkComponent(element, part);
-        std::string text(prStringView(&value).data, prStringView(&value).size);
-        prStringReset(&value);
+        PrRawString value = prHtmlHyperlinkComponent(element, part);
+        std::string text(prRawStringView(&value).data, prRawStringView(&value).size);
+        prRawStringReset(&value);
         return text;
     };
     CHECK(component(a, PrUrlComponent_Pathname) == "/one/two");
@@ -456,9 +456,9 @@ TEST_CASE("a Window names the first element whose id is the name, or a form whos
 
     PrDomElement* first = prHtmlWindowNamedItem(window, "a");
     REQUIRE(first != nullptr);
-    PrString name = prDomElementTagName(first);
-    CHECK(prStringView(&name) == "P");
-    prStringReset(&name);
+    PrRawString name = prDomElementTagName(first);
+    CHECK(prRawStringView(&name) == "P");
+    prRawStringReset(&name);
 
     CHECK(prHtmlWindowNamedItem(window, "f") != nullptr);
     CHECK(prHtmlWindowNamedItem(window, "d") == nullptr);   // a div's name attribute does not name it

@@ -2,12 +2,12 @@
 
 #include "pr/fetch_blob_quickjs.h"
 
-#include "pr/array.h"
 #include "pr/charset.h"
 #include "pr/count_of.h"
 #include "pr/dom_quickjs.h"
 #include "pr/float.h"
 #include "pr/quickjs_binding.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/webidl_quickjs.h"
@@ -110,9 +110,9 @@ bool appendPart(JSContext* ctx, JSValueConst part, BlobInit* init, PrTextBuffer*
     if (!jsReadString(ctx, part, &text))
         return false;
     if (init->nativeEndings) {
-        PrString converted = prFetchBlobConvertLineEndings(text);
-        prTextBufferAppend(out, prStringView(&converted));
-        prStringReset(&converted);
+        PrRawString converted = prFetchBlobConvertLineEndings(text);
+        prTextBufferAppend(out, prRawStringView(&converted));
+        prRawStringReset(&converted);
     } else {
         prTextBufferAppend(out, text);
     }
@@ -128,13 +128,13 @@ bool readParts(JSContext* ctx, JSValueConst parts, BlobInit* init, PrTextBuffer*
         JS_ThrowTypeError(ctx, "A blob's parts must be a sequence");
         return false;
     }
-    Array<JSValue> items;
+    RawArray<JSValue> items;
     bool ok = jsSequence(ctx, parts, [&](JSValue item) {
         items.push(item);
         return true;
     });
     // Each string part converts as it is met, so that a part that throws stops the sequence before the bag is read.
-    Array<PrTextBuffer> pieces;
+    RawArray<PrTextBuffer> pieces;
     for (uint32_t i = 0; ok && i < items.count; ++i) {
         pieces.push(PrTextBuffer{});
         ok = appendPart(ctx, items.data[i], init, &pieces.data[i]);
@@ -255,12 +255,12 @@ JSValue blobRead(JSContext* ctx, JSValueConst blobObject, int, JSValueConst*, in
         value = JS_NewUint8ArrayCopy(ctx, bytes.data, bytes.size);
     } else {
         PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
-        PrString decoded = prStringNull();
+        PrRawString decoded = prRawStringNull();
         PrStringView text =
             prCharsetDecodeView(&decoder, PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size},
                 PrCharsetInput_Final, &decoded);
         value = jsNewStringView(ctx, text);
-        prStringReset(&decoded);
+        prRawStringReset(&decoded);
     }
     JSValue promise = jsSettledPromise(ctx, value, false);
     JS_FreeValue(ctx, value);

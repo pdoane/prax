@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_index.h"
 
@@ -38,9 +38,9 @@ struct LayoutLineContent {
     LayoutLineStart from;
     LayoutLineStart next;           // where the line after it starts
     uint32_t end;
-    uint32_t segmentEnd;            // the end of the line's segment, which no grapheme cluster crosses
-    Array<uint32_t> carried;        // Open items of boxes still open from earlier lines, outermost first
-    Array<LayoutLineItem> items;    // in order
+    uint32_t segmentEnd;               // the end of the line's segment, which no grapheme cluster crosses
+    RawArray<uint32_t> carried;        // Open items of boxes still open from earlier lines, outermost first
+    RawArray<LayoutLineItem> items;    // in order
 };
 
 // Frees the memory that the line's content holds.

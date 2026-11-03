@@ -37,8 +37,8 @@ bool prCorePosixFileRemove(PrStringView path);
 bool prCorePosixFileCreateDirectory(PrStringView path);
 
 // Return the directories of the user's caches and data, as prFileCacheDirectory and prFileDataDirectory do.
-PrString prCorePosixFileCacheDirectory(void);
-PrString prCorePosixFileDataDirectory(void);
+PrRawString prCorePosixFileCacheDirectory(void);
+PrRawString prCorePosixFileDataDirectory(void);
 
 #if defined(__cplusplus)
 }

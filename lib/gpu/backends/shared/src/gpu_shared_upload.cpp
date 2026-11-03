@@ -7,7 +7,7 @@
 namespace pr_impl {
 
 void gpuSharedUploadAddCopy(GpuSharedUploadBatch* batch, const GpuSharedUploadCopy& copy) {
-    Array<GpuSharedUploadCopy>& copies = batch->copies;
+    RawArray<GpuSharedUploadCopy>& copies = batch->copies;
     uint64_t lo = copy.target;
     uint64_t hi = copy.target + copy.size;
     // The first copy that sorts at or after (copy.buffer, lo).

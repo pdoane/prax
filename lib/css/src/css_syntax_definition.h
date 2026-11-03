@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 
@@ -36,7 +36,7 @@ struct CssSyntaxComponent {
 // A syntax definition (css-properties-values-api-1/#syntax-definition): the universal one, or a list of components in
 // written order. A value must match one of the components.
 struct CssSyntaxDefinition {
-    Array<CssSyntaxComponent> components;
+    RawArray<CssSyntaxComponent> components;
     PrTextBuffer idents = {};   // the bytes of the components' idents
     bool universal;             // true for `*`, which accepts any value
 };

@@ -1,18 +1,18 @@
-#include "pr/array.h"
+#include "pr/raw_array.h"
 
 #include "doctest/doctest.h"
 
 using namespace pr_impl;
 
 TEST_CASE("an empty array owns nothing") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     CHECK(array.data == nullptr);
     CHECK(array.count == 0);
     CHECK(array.capacity == 0);
 }
 
 TEST_CASE("push keeps every element across growth") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     for (uint32_t i = 0; i < 1000; ++i)
         array.push(i);
 
@@ -24,7 +24,7 @@ TEST_CASE("push keeps every element across growth") {
 }
 
 TEST_CASE("emplace returns the element it adds, in the grown storage") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     array.emplace() = 7;
     CHECK(array.count == 1);
     CHECK(array.data[0] == 7);
@@ -37,7 +37,7 @@ TEST_CASE("emplace returns the element it adds, in the grown storage") {
 }
 
 TEST_CASE("reserve grows without disturbing the elements") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     array.push(1);
     array.push(2);
 
@@ -54,7 +54,7 @@ TEST_CASE("reserve grows without disturbing the elements") {
 }
 
 TEST_CASE("growth at least doubles") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     array.reserve(1);
     CHECK(array.capacity == 16);
     array.reserve(17);
@@ -70,11 +70,11 @@ TEST_CASE("the first allocation is a size, not a count") {
     struct Wide {
         uint8_t bytes[72];
     };
-    Array<Wide> wide;
+    RawArray<Wide> wide;
     wide.reserve(1);
     CHECK(wide.capacity == 4);
 
-    Array<uint8_t> narrow;
+    RawArray<uint8_t> narrow;
     narrow.reserve(1);
     CHECK(narrow.capacity == 64);
 
@@ -83,7 +83,7 @@ TEST_CASE("the first allocation is a size, not a count") {
 }
 
 TEST_CASE("append copies a run") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     uint32_t items[] = {10, 11, 12};
     array.append(items, 3);
     array.append(items, 0);
@@ -95,7 +95,7 @@ TEST_CASE("append copies a run") {
 }
 
 TEST_CASE("erase keeps the order of what remains") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     for (uint32_t i = 0; i < 10; ++i)
         array.push(i);
 
@@ -113,8 +113,8 @@ TEST_CASE("erase keeps the order of what remains") {
 }
 
 TEST_CASE("arrays of different types keep their alignment") {
-    Array<uint8_t> bytes;
-    Array<double> doubles;
+    RawArray<uint8_t> bytes;
+    RawArray<double> doubles;
     for (uint32_t i = 0; i < 100; ++i) {
         bytes.push(uint8_t(i));
         doubles.push(i * 0.5);
@@ -129,7 +129,7 @@ TEST_CASE("arrays of different types keep their alignment") {
 }
 
 TEST_CASE("an array frees what it grew") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     for (uint32_t i = 0; i < 100; ++i)
         array.push(i);
 
@@ -149,7 +149,7 @@ TEST_CASE("an array frees what it grew") {
 }
 
 TEST_CASE("an array inserts and erases in place") {
-    Array<uint32_t> array;
+    RawArray<uint32_t> array;
     array.push(0);
     array.push(2);
     array.insert(1, 1);

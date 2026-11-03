@@ -1,7 +1,7 @@
 #include "html/src/html_focus.h"
 
-#include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/raw_array.h"
 #include "pr/sort.h"
 #include "pr/string_ops.h"
 
@@ -222,7 +222,7 @@ PrDomNode* PR_NULLABLE scopeOwnerOf(PrDomNode* node) {
 
 // Appends `root` if it is an element, and its descendants that are elements, to `out` in tree order, except the
 // descendants of a shadow host or a slot, which own scopes of their own.
-void appendScopeElements(PrDomNode* root, Array<PrDomElement* PR_NONNULL>* out) {
+void appendScopeElements(PrDomNode* root, RawArray<PrDomElement* PR_NONNULL>* out) {
     for (PrDomNode* node = root; node != nullptr;) {
         PrDomElement* element = domElementFromNode(node);
         if (element != nullptr)
@@ -242,8 +242,8 @@ struct ScopeItem {
 // Appends `owner`'s tabindex-ordered focus navigation scope (html/#tabindex-ordered-focus-navigation-scope) to `out`:
 // the owners and the focusable areas of its scope whose tabindex value is not negative. Those with a positive value
 // come first, in ascending order, and the rest follow in tree order. An element without a tabindex value orders as 0.
-void appendOrderedScope(PrDomNode* owner, Array<PrDomElement* PR_NONNULL>* out) {
-    Array<PrDomElement* PR_NONNULL> members;
+void appendOrderedScope(PrDomNode* owner, RawArray<PrDomElement* PR_NONNULL>* out) {
+    RawArray<PrDomElement* PR_NONNULL> members;
     PrDomElement* element = domElementFromNode(owner);
     if (owner->type == PrDomNodeType_Document) {
         for (PrDomNode* child = owner->first; child != nullptr; child = child->next)
@@ -260,7 +260,7 @@ void appendOrderedScope(PrDomNode* owner, Array<PrDomElement* PR_NONNULL>* out) 
         for (PrDomNode* child = count == 0 ? element->first : nullptr; child != nullptr; child = child->next)
             appendScopeElements(child, &members);
     }
-    Array<ScopeItem> items;
+    RawArray<ScopeItem> items;
     for (uint32_t i = 0; i < members.count; ++i) {
         PrDomElement* member = members.data[i];
         int32_t index = 0;
@@ -283,8 +283,8 @@ void appendOrderedScope(PrDomNode* owner, Array<PrDomElement* PR_NONNULL>* out) 
 // Appends `owner`'s flattened tabindex-ordered focus navigation scope
 // (html/#flattened-tabindex-ordered-focus-navigation-scope) to `out`. Each owner in the scope is replaced by its own
 // flattened scope, which follows the owner if the owner focuses itself.
-void appendFlattenedScope(PrDomNode* owner, Array<PrDomElement* PR_NONNULL>* out) {
-    Array<PrDomElement* PR_NONNULL> scope;
+void appendFlattenedScope(PrDomNode* owner, RawArray<PrDomElement* PR_NONNULL>* out) {
+    RawArray<PrDomElement* PR_NONNULL> scope;
     appendOrderedScope(owner, &scope);
     for (uint32_t i = 0; i < scope.count; ++i) {
         PrDomElement* element = scope.data[i];
@@ -322,7 +322,7 @@ PrDomElement* PR_NULLABLE areaOf(PrDomElement* element, bool forward) {
 }
 
 // Returns the first area that sequential navigation focuses among `elements`, or the last going backward.
-PrDomElement* PR_NULLABLE areaAmong(const Array<PrDomElement* PR_NONNULL>& elements, bool forward) {
+PrDomElement* PR_NULLABLE areaAmong(const RawArray<PrDomElement* PR_NONNULL>& elements, bool forward) {
     for (uint32_t i = 0; i < elements.count; ++i) {
         if (PrDomElement* area = areaOf(elements.data[forward ? i : elements.count - 1 - i], forward))
             return area;
@@ -333,7 +333,7 @@ PrDomElement* PR_NULLABLE areaAmong(const Array<PrDomElement* PR_NONNULL>& eleme
 // Returns the first suitable sequentially focusable area of the document, or the last going backward, or null if it has
 // none.
 PrDomElement* PR_NULLABLE firstArea(PrDomDocument* document, bool forward) {
-    Array<PrDomElement* PR_NONNULL> flattened;
+    RawArray<PrDomElement* PR_NONNULL> flattened;
     appendFlattenedScope(document, &flattened);
     PrDomElement* area = areaAmong(flattened, forward);
     flattened.reset();
@@ -345,7 +345,7 @@ PrDomElement* PR_NULLABLE firstArea(PrDomDocument* document, bool forward) {
 PrDomElement* PR_NULLABLE itemArea(PrDomElement* element, bool forward) {
     if (!isScopeOwner(element))
         return areaOf(element, forward);
-    Array<PrDomElement* PR_NONNULL> flattened;
+    RawArray<PrDomElement* PR_NONNULL> flattened;
     if (focusesItself(element))
         flattened.push(element);
     appendFlattenedScope(element, &flattened);
@@ -357,7 +357,7 @@ PrDomElement* PR_NULLABLE itemArea(PrDomElement* element, bool forward) {
 // Returns the index in `scope` of the item nearest `start` in tree order, after it going forward and before it going
 // backward, or -1 if there is none. If `after` is set, the position is just after `start` and its descendants, so that
 // they come before it. The items and `start` are in one tree.
-int64_t nearestItem(const Array<PrDomElement* PR_NONNULL>& scope, const PrDomNode* start, bool forward, bool after) {
+int64_t nearestItem(const RawArray<PrDomElement* PR_NONNULL>& scope, const PrDomNode* start, bool forward, bool after) {
     int64_t nearest = -1;
     for (uint32_t i = 0; i < scope.count; ++i) {
         const PrDomNode* item = scope.data[i];
@@ -401,14 +401,14 @@ PrDomElement* PR_NULLABLE searchFrom(PrDomNode* start, bool forward, bool after)
     }
     PrDomElement* entered = domElementFromNode(start);
     if (forward && !after && entered != nullptr && isScopeOwner(entered) && entered->document->focused == entered) {
-        Array<PrDomElement* PR_NONNULL> flattened;
+        RawArray<PrDomElement* PR_NONNULL> flattened;
         appendFlattenedScope(entered, &flattened);
         PrDomElement* area = areaAmong(flattened, forward);
         flattened.reset();
         if (area != nullptr)
             return area;
     }
-    Array<PrDomElement* PR_NONNULL> scope;
+    RawArray<PrDomElement* PR_NONNULL> scope;
     PrDomElement* found = nullptr;
     while (found == nullptr && owner != nullptr) {
         scope.count = 0;
@@ -449,7 +449,7 @@ const PrHtmlWindow* PR_NULLABLE windowOf(const PrDomDocument* document) {
 }
 
 // Appends `document` and the documents of the frames within it to `out`, each document before its frames' documents.
-void appendDocuments(PrDomDocument* document, Array<PrDomDocument* PR_NONNULL>* out) {
+void appendDocuments(PrDomDocument* document, RawArray<PrDomDocument* PR_NONNULL>* out) {
     out->push(document);
     const PrHtmlWindow* window = windowOf(document);
     for (uint32_t i = 0; window != nullptr && i < window->frames.count; ++i) {
@@ -464,14 +464,14 @@ bool sameOriginAncestors(const PrDomDocument* document) {
     const PrHtmlWindow* window = windowOf(document);
     if (window == nullptr)
         return false;
-    PrString origin = htmlWindowOrigin(window);
+    PrRawString origin = htmlWindowOrigin(window);
     bool same = true;
     for (const PrHtmlWindow* parent = window->parent; same && parent != nullptr; parent = parent->parent) {
-        PrString other = htmlWindowOrigin(parent);
-        same = prStringView(&other) == prStringView(&origin);
-        prStringReset(&other);
+        PrRawString other = htmlWindowOrigin(parent);
+        same = prRawStringView(&other) == prRawStringView(&origin);
+        prRawStringReset(&other);
     }
-    prStringReset(&origin);
+    prRawStringReset(&origin);
     return same;
 }
 
@@ -494,8 +494,8 @@ bool sandboxedAutomatic(const PrDomDocument* document) {
         const PrDomAttr* sandbox = domAttribute(container, PrDomNamespace_None, "sandbox");
         if (sandbox == nullptr)
             continue;
-        Array<PrStringView> tokens;
-        domOrderedSetParse(prStringView(&sandbox->value), &tokens);
+        RawArray<PrStringView> tokens;
+        domOrderedSetParse(prRawStringView(&sandbox->value), &tokens);
         bool scripts = false;
         for (uint32_t i = 0; i < tokens.count && !scripts; ++i)
             scripts = prAsciiEqualsFold(tokens.data[i], "allow-scripts");
@@ -508,7 +508,7 @@ bool sandboxedAutomatic(const PrDomDocument* document) {
 
 // Removes `element` from its document's autofocus candidates.
 void dropCandidate(PrDomElement* element) {
-    Array<PrDomElement* PR_NONNULL>& candidates = element->document->autofocusCandidates;
+    RawArray<PrDomElement* PR_NONNULL>& candidates = element->document->autofocusCandidates;
     for (uint32_t i = 0; i < candidates.count; ++i) {
         if (candidates.data[i] == element) {
             candidates.erase(i, 1);
@@ -643,7 +643,7 @@ void htmlFocusFragment(PrDomElement* target) {
 }
 
 bool htmlFocusHasAutofocus(PrDomDocument* top) {
-    Array<PrDomDocument* PR_NONNULL> documents;
+    RawArray<PrDomDocument* PR_NONNULL> documents;
     appendDocuments(top, &documents);
     bool pending = false;
     for (uint32_t i = 0; i < documents.count && !pending; ++i)
@@ -653,12 +653,12 @@ bool htmlFocusHasAutofocus(PrDomDocument* top) {
 }
 
 void htmlFocusFlushAutofocus(PrDomDocument* top) {
-    Array<PrDomDocument* PR_NONNULL> documents;
+    RawArray<PrDomDocument* PR_NONNULL> documents;
     appendDocuments(top, &documents);
     // The candidates in order: the top-level document's, then those of each frame's document.
-    Array<PrDomElement* PR_NONNULL> candidates;
+    RawArray<PrDomElement* PR_NONNULL> candidates;
     for (uint32_t i = 0; i < documents.count; ++i) {
-        const Array<PrDomElement* PR_NONNULL>& own = documents.data[i]->autofocusCandidates;
+        const RawArray<PrDomElement* PR_NONNULL>& own = documents.data[i]->autofocusCandidates;
         for (uint32_t c = 0; c < own.count; ++c)
             candidates.push(own.data[c]);
     }
@@ -703,7 +703,7 @@ void htmlFocusEndAutofocus(PrDomDocument* document) {
         top = container->document;
     if (top != document && !sameOriginAncestors(document))
         return;
-    Array<PrDomDocument* PR_NONNULL> documents;
+    RawArray<PrDomDocument* PR_NONNULL> documents;
     appendDocuments(top, &documents);
     for (uint32_t i = 0; i < documents.count; ++i)
         documents.data[i]->autofocusCandidates.count = 0;

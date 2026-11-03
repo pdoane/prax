@@ -48,10 +48,10 @@ PrDomHostState linkState(void* context, PrHtmlPage*, const PrDomElement* element
     if ((wanted & PrDomHostState_Visited) == 0 || !hyperlink)
         return 0;
     const Browser& b = *static_cast<Tab*>(context)->browser;
-    PrString url = prHtmlHyperlinkComponent(prHtmlElementQuery(target), PrUrlComponent_Href);
-    PrStringView view = prStringView(&url);
+    PrRawString url = prHtmlHyperlinkComponent(prHtmlElementQuery(target), PrUrlComponent_Href);
+    PrStringView view = prRawStringView(&url);
     bool visited = b.visitedUrls.count(std::string(view.data, view.size)) != 0;
-    prStringReset(&url);
+    prRawStringReset(&url);
     return visited ? PrDomHostState_Visited : PrDomHostState(0);
 }
 
@@ -259,10 +259,10 @@ void post(Browser& b, TabTask* task) {
 }
 
 // Returns a copy of `string`, and releases it.
-std::string taken(PrString string) {
-    PrStringView view = prStringView(&string);
+std::string taken(PrRawString string) {
+    PrStringView view = prRawStringView(&string);
     std::string copy = view.data != nullptr ? std::string(view.data, view.size) : std::string();
-    prStringReset(&string);
+    prRawStringReset(&string);
     return copy;
 }
 

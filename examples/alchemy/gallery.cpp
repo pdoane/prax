@@ -76,7 +76,7 @@ std::string galleryDirectory() {
     const char* named = getenv("ALCHEMY_DIR");
     if (named != nullptr && named[0] != 0)
         return named;
-    PrString data = prFileDataDirectory();
+    PrRawString data = prFileDataDirectory();
     std::string base = takeString(&data);
     return base.empty() ? std::string("Alchemy/images") : joinPath(base, "Alchemy/images");
 }

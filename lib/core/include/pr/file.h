@@ -5,7 +5,7 @@
 
 #include "pr/base.h"
 #include "pr/byte_view.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -84,14 +84,14 @@ bool prFileCreateDirectory(PrStringView path);
 // Returns the directory where the platform keeps the user's caches, which applications share by naming their own
 // directories under it: ~/Library/Caches on Apple's platforms, %LOCALAPPDATA% on Windows, and $XDG_CACHE_HOME or
 // ~/.cache on other Unix-like platforms. Returns the null string if the platform names none. The caller releases the
-// string with prStringReset.
-PrString prFileCacheDirectory(void);
+// string with prRawStringReset.
+PrRawString prFileCacheDirectory(void);
 
 // Returns the directory where the platform keeps the data that applications keep for the user, as the cache directory
 // does: ~/Library/Application Support on Apple's platforms, %APPDATA% on Windows, and $XDG_DATA_HOME or ~/.local/share
 // on other Unix-like platforms. Returns the null string if the platform names none. The caller releases the string with
-// prStringReset.
-PrString prFileDataDirectory(void);
+// prRawStringReset.
+PrRawString prFileDataDirectory(void);
 
 #if defined(__cplusplus)
 }

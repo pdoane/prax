@@ -7,9 +7,9 @@
 #include "draw/backends/triangles/src/draw_triangles_device.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/hash_index.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 #include "draw/backends/triangles/src/kDrawTrianglesShaders.h"
 
@@ -38,8 +38,8 @@ struct TrianglesDevice {
     PrGpuDevice* device;
     PrGpuShaderLibrary* library;
     uint32_t samplers[TrianglesSampler_Count];  // by TrianglesSampler
-    Array<TrianglesPipeline> pipelines;
-    Array<TrianglesOwnTexture> textures;
+    RawArray<TrianglesPipeline> pipelines;
+    RawArray<TrianglesOwnTexture> textures;
     KeyIndex textureIds;            // `textures`, by id
 };
 

@@ -2,7 +2,6 @@
 
 #include "pr/kit_input.h"
 
-#include "pr/array.h"
 #include "pr/float.h"
 #include "pr/float_convert.h"
 #include "pr/integer.h"
@@ -11,6 +10,7 @@
 #include "pr/kit_surface.h"
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
+#include "pr/raw_array.h"
 #include "pr/ui_text_edit.h"
 
 #include "studio/kit/src/kit.h"
@@ -1052,7 +1052,7 @@ void editedText(PrKit& kit, PrLayoutNode control, PrStringView text, PrTextEditB
         PartRecipe{.part = area ? Part_AreaValue : Part_TextValue, .size = style.size, .flags = textFlags});
     // A style is an inline box in its own role and tone. The records come from the styles of this round, as a recipe's
     // do.
-    Array<PrLayoutStyleIndex> records;
+    RawArray<PrLayoutStyleIndex> records;
     if (styleCount == 0)
         records.push(kitStyle(kit, KitFont{.role = PrKitTextRole_Body}, KitToneInk{.tone = PrKitTone_Auto}));
     for (uint32_t i = 0; i < styleCount; ++i) {

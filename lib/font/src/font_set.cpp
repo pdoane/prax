@@ -11,7 +11,6 @@
 #include "pr/font_set.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/atomic.h"
 #include "pr/count_of.h"
@@ -19,6 +18,7 @@
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/string_array.h"
 
 #include "font/src/sfnt.h"
@@ -58,22 +58,22 @@ enum { FaceState_Ready, FaceState_Pending, FaceState_Failed, FaceState_Unread };
 typedef uint8_t FaceState;
 
 struct Face {
-    PrString family;
+    PrRawString family;
     float weightMin, weightMax;
     float widthMin, widthMax;
     PrFontSlope slope;
     float obliqueMin, obliqueMax;
     PrFontInfo info;                            // the info of the face itself, for its axes
-    Array<PrFontCodePointRange> ranges;
-    Array<PrFontVariation> variations;
-    Array<PrFontFeature> features;
+    RawArray<PrFontCodePointRange> ranges;
+    RawArray<PrFontVariation> variations;
+    RawArray<PrFontFeature> features;
     PrFontDerivation derivation;                // the derivation's arrays are those above
     PrFontFaceFlags flags;
 
     // The automatic flags of the descriptor, for the axes that the ranges of the face do not limit.
     PrFontFaceAutoFlags unclamped;
 
-    PrString path;                              // the path of a file face; null for a face added as a font
+    PrRawString path;                              // the path of a file face; null for a face added as a font
     uint32_t index;
     const PrFont* PR_NULLABLE font;             // null until a file face is first opened, or a pending face loads
     bool unreadable;                            // true for a file face that failed to open
@@ -113,14 +113,14 @@ struct SetHinting {
 
 // The stamp of the last change to the faces of a family, by its name, folded as matching folds names.
 struct FamilyStamp {
-    PrString name;
+    PrRawString name;
     uint64_t stamp;
 };
 
 // A name that matches the faces of another family.
 struct Alias {
-    PrString name;
-    PrString family;
+    PrRawString name;
+    PrRawString family;
 };
 
 // A face that a match gives. Its ranges start at `rangeStart` in the ranges of the match.
@@ -131,29 +131,29 @@ struct MatchedFace {
 
 // The faces of matches, each holding a reference to its font, and copies of their ranges.
 struct FontMatch {
-    Array<MatchedFace> faces;
-    Array<PrFontCodePointRange> ranges;
+    RawArray<MatchedFace> faces;
+    RawArray<PrFontCodePointRange> ranges;
 };
 
 struct FontSet {
     FontSet* PR_NULLABLE parent;
-    PrMutex lock;
+    mutable PrMutex lock;           // taken by what reads the set too, so a const set is locked as well
     Atomic<uint64_t> stamp;         // the stamp of the last change of the set
-    Array<Face> faces;
-    Array<PrString> families;
-    Array<Instance> instances;
-    Array<Alias> aliases;
-    PrString generics[PrFontGeneric_Count]; // the family each generic family matches, or null for the parent's
-    PrString defaultName;                   // the default family if it is a name, with defaultSet
-    PrFontGeneric defaultGeneric;           // the default family if it is a generic
+    RawArray<Face> faces;
+    RawArray<PrRawString> families;
+    RawArray<Instance> instances;
+    RawArray<Alias> aliases;
+    PrRawString generics[PrFontGeneric_Count]; // the family each generic family matches, or null for the parent's
+    PrRawString defaultName;                   // the default family if it is a name, with defaultSet
+    PrFontGeneric defaultGeneric;              // the default family if it is a generic
     bool defaultSet;
-    Array<PrString> fallback;              // the families that text falls back to, in order
-    Array<PrLocale> fallbackLocales;       // for each fallback family
-    Array<PrFontGeneric> fallbackGenerics; // for each fallback family
-    Array<uint64_t> requests;              // the pending faces requested since the last take
-    uint64_t nextRank;                     // the rank of the next face added, or the next face ordered
-    uint64_t nextFaceId;                   // the id of the next face added
-    Array<FamilyStamp> familyStamps;
+    RawArray<PrRawString> fallback;           // the families that text falls back to, in order
+    RawArray<PrLocale> fallbackLocales;       // for each fallback family
+    RawArray<PrFontGeneric> fallbackGenerics; // for each fallback family
+    RawArray<uint64_t> requests;              // the pending faces requested since the last take
+    uint64_t nextRank;                        // the rank of the next face added, or the next face ordered
+    uint64_t nextFaceId;                      // the id of the next face added
+    RawArray<FamilyStamp> familyStamps;
     uint64_t bindingStamp;          // the last change to an alias, a generic binding, the default, the fallback or the
                                     // hinting
 
@@ -178,12 +178,12 @@ void familyChanged(FontSet* set, PrStringView family) {
     changed(set);
     uint64_t stamp = set->stamp.load();
     for (uint32_t i = 0; i < set->familyStamps.count; ++i) {
-        if (prAsciiEqualsFold(prStringView(&set->familyStamps.data[i].name), family)) {
+        if (prAsciiEqualsFold(prRawStringView(&set->familyStamps.data[i].name), family)) {
             set->familyStamps.data[i].stamp = stamp;
             return;
         }
     }
-    set->familyStamps.push(FamilyStamp{prStringCopy(family), stamp});
+    set->familyStamps.push(FamilyStamp{prRawStringCopy(family), stamp});
 }
 
 // Records a change of what a family resolves to: an alias, a generic binding, the default or the fallback families.
@@ -198,7 +198,7 @@ uint64_t ownFamilyStamp(const FontSet* set, PrStringView family) {
     uint64_t stamp = set->bindingStamp;
     for (uint32_t i = 0; i < set->familyStamps.count; ++i) {
         const FamilyStamp& at = set->familyStamps.data[i];
-        if (at.stamp > stamp && prAsciiEqualsFold(prStringView(&at.name), family))
+        if (at.stamp > stamp && prAsciiEqualsFold(prRawStringView(&at.name), family))
             stamp = at.stamp;
     }
     return stamp;
@@ -206,22 +206,13 @@ uint64_t ownFamilyStamp(const FontSet* set, PrStringView family) {
 
 // Releases what the face holds, as it leaves the set.
 void faceReset(Face& face) {
-    prStringReset(&face.family);
-    prStringReset(&face.path);
+    prRawStringReset(&face.family);
+    prRawStringReset(&face.path);
     face.ranges.reset();
     face.variations.reset();
     face.features.reset();
     prFontRelease(face.font);
 }
-
-// Holds the lock of a set for a scope.
-struct Locked {
-    FontSet* set;
-    explicit Locked(const FontSet* locked) : set(const_cast<FontSet*>(locked)) { prMutexLock(&set->lock); }
-    ~Locked() { prMutexUnlock(&set->lock); }
-    Locked(const Locked&) = delete;
-    Locked& operator=(const Locked&) = delete;
-};
 
 void setAxis(AxisKey& key, uint32_t axis, float value) {
     key.mask |= 1u << axis;
@@ -259,12 +250,12 @@ bool hasColorGlyphs(const Sfnt& sfnt) {
 
 // Records that the face at `index` was added: its family is one of the set's, and the family changed.
 void faceAdded(FontSet* set, uint32_t index) {
-    PrStringView name = prStringView(&set->faces.data[index].family);
+    PrStringView name = prRawStringView(&set->faces.data[index].family);
     bool known = false;
     for (uint32_t i = 0; i < set->families.count && !known; ++i)
-        known = prAsciiEqualsFold(prStringView(&set->families.data[i]), name);
+        known = prAsciiEqualsFold(prRawStringView(&set->families.data[i]), name);
     if (!known)
-        set->families.push(prStringCopy(name));
+        set->families.push(prRawStringCopy(name));
     familyChanged(set, name);
 }
 
@@ -274,7 +265,7 @@ Face describedFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const P
         bool emoji) {
     Face face{};
     PrFontFaceAutoFlags flags = descriptor->automatic;
-    face.family = prStringCopy((flags & PrFontFaceAutoFlag_Family) != 0 ? family : descriptor->family);
+    face.family = prRawStringCopy((flags & PrFontFaceAutoFlag_Family) != 0 ? family : descriptor->family);
     face.flags = descriptor->flags;
     face.unclamped = descriptor->unclamped;
     if ((flags & PrFontFaceAutoFlag_Emoji) != 0)
@@ -300,7 +291,7 @@ Face describedFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const P
     face.derivation = derivation;
     face.derivation.variations = nullptr;
     face.derivation.features = nullptr;
-    face.path = prStringNull();
+    face.path = prRawStringNull();
     face.rank = set->nextRank++;
     face.id = ++set->nextFaceId;
     return face;
@@ -326,7 +317,7 @@ Face fileFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const Sfnt& 
             prFontCreateFromFile(path, index, nullptr, &font) != PrStatus_Ok)
         font = nullptr;
     Face face = describedFace(set, descriptor, info, family, font != nullptr && drawsEmoji(font));
-    face.path = prStringCopy(path);
+    face.path = prRawStringCopy(path);
     face.index = index;
     face.font = font;
     return face;
@@ -343,12 +334,12 @@ uint32_t addFile(FontSet* set, const PrFontFaceDescriptor* descriptor, PrStringV
         Sfnt sfnt;
         if (!sfntOpen(mapping.data, mapping.size, i, &sfnt))
             continue;
-        PrString family = sfntFamily(sfnt);
-        if (prStringIsNull(&family))
+        PrRawString family = sfntFamily(sfnt);
+        if (prRawStringIsNull(&family))
             continue;
-        set->faces.push(fileFace(set, descriptor, sfnt, path, i, prStringView(&family)));
+        set->faces.push(fileFace(set, descriptor, sfnt, path, i, prRawStringView(&family)));
         faceAdded(set, set->faces.count - 1);
-        prStringReset(&family);
+        prRawStringReset(&family);
         ++added;
     }
     prFileUnmap(&mapping);
@@ -362,8 +353,8 @@ uint32_t addFile(FontSet* set, const PrFontFaceDescriptor* descriptor, PrStringV
 void readFile(FontSet* set, uint32_t at) {
     Face unread = set->faces.data[at];
     set->faces.erase(at);
-    PrStringView family = prStringView(&unread.family);
-    PrStringView path = prStringView(&unread.path);
+    PrStringView family = prRawStringView(&unread.family);
+    PrStringView path = prRawStringView(&unread.path);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     PrFileMapping mapping{};
     if (prFileMap(path, &mapping)) {
@@ -374,9 +365,9 @@ void readFile(FontSet* set, uint32_t at) {
                 Sfnt sfnt;
                 if (!sfntOpen(mapping.data, mapping.size, i, &sfnt))
                     continue;
-                PrString own = sfntFamily(sfnt);
-                bool same = !prStringIsNull(&own) && prAsciiEqualsFold(prStringView(&own), family);
-                prStringReset(&own);
+                PrRawString own = sfntFamily(sfnt);
+                bool same = !prRawStringIsNull(&own) && prAsciiEqualsFold(prRawStringView(&own), family);
+                prRawStringReset(&own);
                 if (pass == 0 && !same)
                     continue;
                 Face face = fileFace(set, &descriptor, sfnt, path, i, family);
@@ -394,7 +385,7 @@ void readFile(FontSet* set, uint32_t at) {
 const PrFont* PR_NULLABLE fontOfFace(Face& face) {
     if (face.font == nullptr && !face.unreadable) {
         const PrFont* font = nullptr;
-        PrStatus status = prFontCreateFromFile(prStringView(&face.path), face.index, nullptr, &font);
+        PrStatus status = prFontCreateFromFile(prRawStringView(&face.path), face.index, nullptr, &font);
         if (status == PrStatus_Ok)
             face.font = font;
         else
@@ -454,7 +445,7 @@ Rank obliqueRank(float value, float asked) {
 }
 
 // Keeps the candidates whose values rank first.
-void keepBest(Array<Candidate>& candidates, float asked, Rank (*rank)(float, float)) {
+void keepBest(RawArray<Candidate>& candidates, float asked, Rank (*rank)(float, float)) {
     if (candidates.count == 0)
         return;
     Rank best = rank(candidates.data[0].value, asked);
@@ -517,7 +508,7 @@ bool givesKind(const Face& face, SlopeKind kind) {
 }
 
 // Narrows the candidates by slope, and returns the kind they provide.
-SlopeKind keepSlope(const FontSet* set, Array<Candidate>& candidates, const PrFontStyle* style) {
+SlopeKind keepSlope(const FontSet* set, RawArray<Candidate>& candidates, const PrFontStyle* style) {
     SlopeKind order[3];
     slopeOrder(style, order);
     for (SlopeKind kind : order) {
@@ -593,7 +584,7 @@ const PrFont* PR_NULLABLE instanceOf(FontSet* set, uint32_t faceIndex, const Axi
     const PrFont* base = fontOfFace(face);
     if (base == nullptr)
         return nullptr;
-    Array<PrFontVariation> variations;
+    RawArray<PrFontVariation> variations;
     for (uint32_t i = 0; i < kAutoAxisCount; ++i) {
         if ((axes.mask & (1u << i)) != 0)
             variations.push(PrFontVariation{kAutoAxes[i], axes.values[i]});
@@ -629,7 +620,7 @@ const PrFont* PR_NULLABLE instanceOf(FontSet* set, uint32_t faceIndex, const Axi
 bool definesFamily(const FontSet* set, PrStringView family) {
     for (uint32_t i = 0; i < set->faces.count; ++i) {
         const Face& face = set->faces.data[i];
-        if (prAsciiEqualsFold(prStringView(&face.family), family))
+        if (prAsciiEqualsFold(prRawStringView(&face.family), family))
             return true;
     }
     return false;
@@ -638,8 +629,10 @@ bool definesFamily(const FontSet* set, PrStringView family) {
 // Returns the set, among `set` and its parents, whose faces are those of `family`, or null if none has any.
 FontSet* PR_NULLABLE definingSet(FontSet* set, PrStringView family) {
     for (FontSet* at = set; at != nullptr; at = at->parent) {
-        Locked locked(at);
-        if (definesFamily(at, family))
+        prMutexLock(&at->lock);
+        bool defines = definesFamily(at, family);
+        prMutexUnlock(&at->lock);
+        if (defines)
             return at;
     }
     return nullptr;
@@ -649,12 +642,16 @@ FontSet* PR_NULLABLE definingSet(FontSet* set, PrStringView family) {
 // view.
 PrStringView aliasOf(const FontSet* set, PrStringView name) {
     for (const FontSet* at = set; at != nullptr; at = at->parent) {
-        Locked locked(at);
-        for (uint32_t a = 0; a < at->aliases.count; ++a) {
+        PrStringView family = {};
+        prMutexLock(&at->lock);
+        for (uint32_t a = 0; a < at->aliases.count && family.data == nullptr; ++a) {
             const Alias& alias = at->aliases.data[a];
-            if (prAsciiEqualsFold(prStringView(&alias.name), name))
-                return prStringView(&alias.family);
+            if (prAsciiEqualsFold(prRawStringView(&alias.name), name))
+                family = prRawStringView(&alias.family);
         }
+        prMutexUnlock(&at->lock);
+        if (family.data != nullptr)
+            return family;
     }
     return PrStringView{};
 }
@@ -663,9 +660,12 @@ PrStringView aliasOf(const FontSet* set, PrStringView name) {
 // empty view.
 PrStringView genericOf(const FontSet* set, PrFontGeneric generic) {
     for (const FontSet* at = set; at != nullptr; at = at->parent) {
-        Locked locked(at);
-        if (!prStringIsNull(&at->generics[generic]))
-            return prStringView(&at->generics[generic]);
+        prMutexLock(&at->lock);
+        bool bound = !prRawStringIsNull(&at->generics[generic]);
+        PrStringView family = prRawStringView(&at->generics[generic]);
+        prMutexUnlock(&at->lock);
+        if (bound)
+            return family;
     }
     return PrStringView{};
 }
@@ -673,9 +673,12 @@ PrStringView genericOf(const FontSet* set, PrFontGeneric generic) {
 // Returns how `set` hints the faces that it matches: its own hinting, or the nearest parent's.
 SetHinting hintingOf(const FontSet* set) {
     for (const FontSet* at = set; at != nullptr; at = at->parent) {
-        Locked locked(at);
-        if (at->hintingSet)
-            return at->hinting;
+        prMutexLock(&at->lock);
+        bool own = at->hintingSet;
+        SetHinting hinting = at->hinting;
+        prMutexUnlock(&at->lock);
+        if (own)
+            return hinting;
     }
     return SetHinting{PrFontHinting_None, nullptr};
 }
@@ -683,20 +686,20 @@ SetHinting hintingOf(const FontSet* set) {
 // Matches the style among the faces of `family` that the set holds, under its lock, hinted as `hinting` says.
 // prFontSetMatch describes the matching.
 void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHinting hinting, FontMatch& out) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     for (uint32_t i = 0; i < set->faces.count;) {
         const Face& face = set->faces.data[i];
-        if (face.state == FaceState_Unread && prAsciiEqualsFold(prStringView(&face.family), family))
+        if (face.state == FaceState_Unread && prAsciiEqualsFold(prRawStringView(&face.family), family))
             readFile(set, i);
         else
             ++i;
     }
     // Every face of the family takes part in narrowing, including a failed one, so that its failure leaves the style
     // that it matched without a face instead of moving the match to another style.
-    Array<Candidate> candidates;
+    RawArray<Candidate> candidates;
     for (uint32_t i = 0; i < set->faces.count; ++i) {
         const Face& face = set->faces.data[i];
-        if (prAsciiEqualsFold(prStringView(&face.family), family))
+        if (prAsciiEqualsFold(prRawStringView(&face.family), family))
             candidates.push(Candidate{i, prF32Clamp(style->width, face.widthMin, face.widthMax)});
     }
     // Sorts the highest rank first, an order that keepBest keeps.
@@ -747,6 +750,7 @@ void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHin
         });
         out.ranges.append(kept.ranges.data, kept.ranges.count);
     }
+    prMutexUnlock(&set->lock);
     candidates.reset();
 }
 
@@ -841,16 +845,16 @@ void prFontSetDestroy(PrFontSet* PR_NULLABLE set) {
         faceReset(set->faces.data[i]);
     stringsReset(&set->families);
     for (uint32_t i = 0; i < set->familyStamps.count; ++i)
-        prStringReset(&set->familyStamps.data[i].name);
+        prRawStringReset(&set->familyStamps.data[i].name);
     set->familyStamps.reset();
     for (uint32_t i = 0; i < set->aliases.count; ++i) {
-        prStringReset(&set->aliases.data[i].name);
-        prStringReset(&set->aliases.data[i].family);
+        prRawStringReset(&set->aliases.data[i].name);
+        prRawStringReset(&set->aliases.data[i].family);
     }
     set->aliases.reset();
-    for (PrString& generic : set->generics)
-        prStringReset(&generic);
-    prStringReset(&set->defaultName);
+    for (PrRawString& generic : set->generics)
+        prRawStringReset(&generic);
+    prRawStringReset(&set->defaultName);
     stringsReset(&set->fallback);
     set->fallbackLocales.reset();
     set->fallbackGenerics.reset();
@@ -879,12 +883,13 @@ uint64_t prFontSetFamilyStamp(const PrFontSet* set, PrFontFamily family) {
     PrStringView aliased = name.size != 0 ? aliasOf(set, name) : PrStringView{};
     uint64_t stamp = 0;
     for (const FontSet* at = set; at != nullptr; at = at->parent) {
-        Locked locked(at);
+        prMutexLock(&at->lock);
         uint64_t own = ownFamilyStamp(at, name);
         if (aliased.size != 0) {
             uint64_t target = ownFamilyStamp(at, aliased);
             own = target > own ? target : own;
         }
+        prMutexUnlock(&at->lock);
         stamp = own > stamp ? own : stamp;
     }
     return stamp;
@@ -895,37 +900,43 @@ uint64_t prFontSetFallbackStamp(const PrFontSet* set) {
 }
 
 void prFontSetAdd(PrFontSet* set, const PrFontFaceDescriptor* descriptor, const PrFont* font) {
-    PrString family = prFontFamilyName(font);
-    Locked locked(set);
-    uint32_t index = addFace(set, descriptor, prFontInfo(font), prStringView(&family), drawsEmoji(font));
-    prStringReset(&family);
+    PrRawString family = prFontFamilyName(font);
+    prMutexLock(&set->lock);
+    uint32_t index = addFace(set, descriptor, prFontInfo(font), prRawStringView(&family), drawsEmoji(font));
+    prRawStringReset(&family);
     Face& face = set->faces.data[index];
     face.index = prFontIndex(font);
     prFontRetain(font);
     face.font = font;
+    prMutexUnlock(&set->lock);
 }
 
 uint32_t prFontSetAddFile(PrFontSet* set, const PrFontFaceDescriptor* descriptor, PrStringView path) {
-    Locked locked(set);
-    return addFile(set, descriptor, path);
+    prMutexLock(&set->lock);
+    uint32_t added = addFile(set, descriptor, path);
+    prMutexUnlock(&set->lock);
+    return added;
 }
 
 void prFontSetAddFileFamily(PrFontSet* set, PrStringView family, PrStringView path) {
-    Locked locked(set);
-    for (uint32_t i = 0; i < set->faces.count; ++i) {
+    prMutexLock(&set->lock);
+    bool known = false;
+    for (uint32_t i = 0; i < set->faces.count && !known; ++i) {
         const Face& face = set->faces.data[i];
-        PrStringView added = prStringView(&face.path);
-        if (face.state == FaceState_Unread && added.size == path.size && prMemEquals(added.data, path.data, path.size) &&
-                prAsciiEqualsFold(prStringView(&face.family), family))
-            return;
+        PrStringView added = prRawStringView(&face.path);
+        known = face.state == FaceState_Unread && added.size == path.size &&
+            prMemEquals(added.data, path.data, path.size) && prAsciiEqualsFold(prRawStringView(&face.family), family);
     }
-    PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
-    descriptor.automatic = 0;
-    descriptor.family = family;
-    uint32_t index = addFace(set, &descriptor, PrFontInfo{}, family, false);
-    Face& face = set->faces.data[index];
-    face.path = prStringCopy(path);
-    face.state = FaceState_Unread;
+    if (!known) {
+        PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
+        descriptor.automatic = 0;
+        descriptor.family = family;
+        uint32_t index = addFace(set, &descriptor, PrFontInfo{}, family, false);
+        Face& face = set->faces.data[index];
+        face.path = prRawStringCopy(path);
+        face.state = FaceState_Unread;
+    }
+    prMutexUnlock(&set->lock);
 }
 
 PrFontSystemBackend prFontSystemBackendFromName(PrStringView name) {
@@ -968,16 +979,17 @@ void prFontSetAddPending(PrFontSet* set, const PrFontFaceDescriptor* descriptor,
     info.weightMin = info.weightMax = given.weightMin;
     info.widthMin = info.widthMax = given.widthMin;
     info.slope = given.slope;
-    Locked locked(set);
+    prMutexLock(&set->lock);
     uint32_t index = addFace(set, &given, info, given.family, false);
     Face& face = set->faces.data[index];
     face.key = key;
     face.state = FaceState_Pending;
     face.autoEmoji = (descriptor->automatic & PrFontFaceAutoFlag_Emoji) != 0;
+    prMutexUnlock(&set->lock);
 }
 
 void prFontSetLoaded(PrFontSet* set, uint64_t key, const PrFont* font) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     for (uint32_t i = 0; i < set->faces.count; ++i) {
         Face& face = set->faces.data[i];
         if (face.state != FaceState_Pending || face.key != key)
@@ -989,30 +1001,32 @@ void prFontSetLoaded(PrFontSet* set, uint64_t key, const PrFont* font) {
         if (face.autoEmoji && drawsEmoji(font))
             face.flags |= PrFontFaceFlag_Emoji;
         face.state = FaceState_Ready;
-        familyChanged(set, prStringView(&face.family));
+        familyChanged(set, prRawStringView(&face.family));
     }
+    prMutexUnlock(&set->lock);
 }
 
 void prFontSetFailed(PrFontSet* set, uint64_t key) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     for (uint32_t i = 0; i < set->faces.count; ++i) {
         Face& face = set->faces.data[i];
         if (face.state == FaceState_Pending && face.key == key) {
             face.state = FaceState_Failed;
-            familyChanged(set, prStringView(&face.family));
+            familyChanged(set, prRawStringView(&face.family));
         }
     }
+    prMutexUnlock(&set->lock);
 }
 
 void prFontSetRemove(PrFontSet* set, uint64_t key) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     for (uint32_t i = 0; i < set->faces.count;) {
         Face& face = set->faces.data[i];
         if (face.key != key) {
             ++i;
             continue;
         }
-        familyChanged(set, prStringView(&face.family));
+        familyChanged(set, prRawStringView(&face.family));
         for (uint32_t k = 0; k < set->instances.count;) {
             if (set->instances.data[k].face == face.id) {
                 prFontRelease(set->instances.data[k].font);
@@ -1027,12 +1041,13 @@ void prFontSetRemove(PrFontSet* set, uint64_t key) {
     }
     set->requests.removeFirst(key);
     set->requestCount.store(set->requests.count);
+    prMutexUnlock(&set->lock);
 }
 
 void prFontSetOrder(PrFontSet* set, const uint64_t* PR_NULLABLE keys, uint32_t count) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     // The faces of each key in turn, as they rank now. The order changes nothing if they already rank in it.
-    Array<uint32_t> ordered;
+    RawArray<uint32_t> ordered;
     bool inOrder = true;
     for (uint32_t k = 0; k < count; ++k) {
         for (uint32_t i = 0; i < set->faces.count; ++i) {
@@ -1048,27 +1063,28 @@ void prFontSetOrder(PrFontSet* set, const uint64_t* PR_NULLABLE keys, uint32_t c
         for (uint32_t i = 0; i < ordered.count; ++i) {
             Face& face = set->faces.data[ordered.data[i]];
             face.rank = set->nextRank++;
-            familyChanged(set, prStringView(&face.family));
+            familyChanged(set, prRawStringView(&face.family));
         }
     }
+    prMutexUnlock(&set->lock);
     ordered.reset();
 }
 
 void prFontSetRequestLoad(PrFontSet* set, uint64_t key) {
     for (FontSet* at = set; at != nullptr; at = at->parent) {
-        Locked locked(at);
-        for (uint32_t i = 0; i < at->faces.count; ++i) {
+        prMutexLock(&at->lock);
+        bool pending = false;
+        for (uint32_t i = 0; i < at->faces.count && !pending; ++i) {
             const Face& face = at->faces.data[i];
-            if (face.state != FaceState_Pending || face.key != key)
-                continue;
-            for (uint32_t r = 0; r < at->requests.count; ++r) {
-                if (at->requests.data[r] == key)
-                    return;
-            }
+            pending = face.state == FaceState_Pending && face.key == key;
+        }
+        if (pending && at->requests.find(key) == kArrayMissing) {
             at->requests.push(key);
             at->requestCount.store(at->requests.count);
-            return;
         }
+        prMutexUnlock(&at->lock);
+        if (pending)
+            return;
     }
 }
 
@@ -1076,7 +1092,7 @@ uint32_t prFontSetTakeLoads(PrFontSet* set, uint64_t* PR_NULLABLE out, uint32_t 
     // A request made while this reads none is taken by the next take, as a request made after it would be.
     if (set->requestCount.load() == 0)
         return 0;
-    Locked locked(set);
+    prMutexLock(&set->lock);
     uint32_t taken = out != nullptr && capacity < set->requests.count ? capacity : set->requests.count;
     if (out == nullptr)
         taken = 0;
@@ -1086,34 +1102,41 @@ uint32_t prFontSetTakeLoads(PrFontSet* set, uint64_t* PR_NULLABLE out, uint32_t 
     prMemMove(set->requests.data, set->requests.data + taken, left * sizeof(uint64_t));
     set->requests.count = left;
     set->requestCount.store(left);
+    prMutexUnlock(&set->lock);
     return taken;
 }
 
 uint32_t prFontSetFaceCount(const PrFontSet* set) {
-    Locked locked(set);
-    return set->faces.count;
+    prMutexLock(&set->lock);
+    uint32_t count = set->faces.count;
+    prMutexUnlock(&set->lock);
+    return count;
 }
 
 void prFontSetAlias(PrFontSet* set, PrStringView name, PrStringView family) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     bindingChanged(set);
-    for (uint32_t i = 0; i < set->aliases.count; ++i) {
+    bool replaced = false;
+    for (uint32_t i = 0; i < set->aliases.count && !replaced; ++i) {
         Alias& alias = set->aliases.data[i];
-        if (prAsciiEqualsFold(prStringView(&alias.name), name)) {
-            prStringReset(&alias.family);
-            alias.family = prStringCopy(family);
-            return;
+        if (prAsciiEqualsFold(prRawStringView(&alias.name), name)) {
+            prRawStringReset(&alias.family);
+            alias.family = prRawStringCopy(family);
+            replaced = true;
         }
     }
-    set->aliases.push(Alias{prStringCopy(name), prStringCopy(family)});
+    if (!replaced)
+        set->aliases.push(Alias{prRawStringCopy(name), prRawStringCopy(family)});
+    prMutexUnlock(&set->lock);
 }
 
 void prFontSetSetGeneric(PrFontSet* set, PrFontGeneric generic, PrStringView family) {
     PR_ASSERT(generic != PrFontGeneric_None && generic < PrFontGeneric_Count);
-    Locked locked(set);
-    prStringReset(&set->generics[generic]);
-    set->generics[generic] = family.size != 0 ? prStringCopy(family) : prStringEmpty();
+    prMutexLock(&set->lock);
+    prRawStringReset(&set->generics[generic]);
+    set->generics[generic] = family.size != 0 ? prRawStringCopy(family) : prRawStringEmpty();
     bindingChanged(set);
+    prMutexUnlock(&set->lock);
 }
 
 PrStringView prFontSetGenericFamily(const PrFontSet* set, PrFontGeneric generic) {
@@ -1122,30 +1145,35 @@ PrStringView prFontSetGenericFamily(const PrFontSet* set, PrFontGeneric generic)
 }
 
 void prFontSetSetDefaultFamily(PrFontSet* set, PrFontFamily family) {
-    Locked locked(set);
-    prStringReset(&set->defaultName);
-    set->defaultName = prStringCopy(family.name);
+    prMutexLock(&set->lock);
+    prRawStringReset(&set->defaultName);
+    set->defaultName = prRawStringCopy(family.name);
     set->defaultGeneric = family.generic;
     set->defaultSet = true;
     bindingChanged(set);
+    prMutexUnlock(&set->lock);
 }
 
 PrFontFamily prFontSetDefaultFamily(const PrFontSet* set) {
     for (const FontSet* at = set; at != nullptr; at = at->parent) {
-        Locked locked(at);
-        if (at->defaultSet)
-            return PrFontFamily{prStringView(&at->defaultName), at->defaultGeneric};
+        prMutexLock(&at->lock);
+        bool own = at->defaultSet;
+        PrFontFamily family = PrFontFamily{prRawStringView(&at->defaultName), at->defaultGeneric};
+        prMutexUnlock(&at->lock);
+        if (own)
+            return family;
     }
     return prFontFamilyGeneric(PrFontGeneric_Serif);
 }
 
 void prFontSetSetHinting(PrFontSet* set, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     set->hinting = SetHinting{hinting, hinter};
     if (hinter == nullptr)
         set->hinting.hinting = PrFontHinting_None;
     set->hintingSet = true;
     bindingChanged(set);
+    prMutexUnlock(&set->lock);
 }
 
 PrFontHinting prFontSetHinting(const PrFontSet* set, PrFontHinter* PR_NULLABLE* PR_NULLABLE hinter) {
@@ -1156,43 +1184,52 @@ PrFontHinting prFontSetHinting(const PrFontSet* set, PrFontHinter* PR_NULLABLE* 
 }
 
 void prFontSetSetFallbackFamilies(PrFontSet* set, const PrFontFallbackFamily* PR_NULLABLE families, uint32_t count) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     stringsClear(&set->fallback);
     set->fallbackLocales.clear();
     set->fallbackGenerics.clear();
     for (uint32_t i = 0; i < count; ++i) {
-        set->fallback.push(prStringCopy(families[i].family));
+        set->fallback.push(prRawStringCopy(families[i].family));
         set->fallbackLocales.push(families[i].locale);
         set->fallbackGenerics.push(families[i].generic);
     }
     bindingChanged(set);
+    prMutexUnlock(&set->lock);
 }
 
 uint32_t prFontSetFallbackCount(const PrFontSet* set) {
     const FontSet* root = fallbackSet(set);
-    Locked locked(root);
-    return root->fallback.count;
+    prMutexLock(&root->lock);
+    uint32_t count = root->fallback.count;
+    prMutexUnlock(&root->lock);
+    return count;
 }
 
 PrFontFallbackFamily prFontSetFallbackFamily(const PrFontSet* set, uint32_t index) {
     const FontSet* root = fallbackSet(set);
-    Locked locked(root);
+    prMutexLock(&root->lock);
     PR_ASSERT(index < root->fallback.count);
-    return PrFontFallbackFamily{
-        prStringView(&root->fallback.data[index]), root->fallbackLocales.data[index],
+    PrFontFallbackFamily family = {
+        prRawStringView(&root->fallback.data[index]), root->fallbackLocales.data[index],
         root->fallbackGenerics.data[index],
     };
+    prMutexUnlock(&root->lock);
+    return family;
 }
 
 uint32_t prFontSetFamilyCount(const PrFontSet* set) {
-    Locked locked(set);
-    return set->families.count;
+    prMutexLock(&set->lock);
+    uint32_t count = set->families.count;
+    prMutexUnlock(&set->lock);
+    return count;
 }
 
 PrStringView prFontSetFamily(const PrFontSet* set, uint32_t index) {
-    Locked locked(set);
+    prMutexLock(&set->lock);
     PR_ASSERT(index < set->families.count);
-    return prStringView(&set->families.data[index]);
+    PrStringView family = prRawStringView(&set->families.data[index]);
+    prMutexUnlock(&set->lock);
+    return family;
 }
 
 PrFontStyle prFontStyleDefault(void) {
@@ -1260,14 +1297,12 @@ void prFontSetMatch(PrFontSet* set, PrFontFamily family, const PrFontStyle* styl
 
 void prFontSetMatchFallback(PrFontSet* set, uint32_t index, const PrFontStyle* style, PrFontMatch* out) {
     FontSet* root = const_cast<FontSet*>(fallbackSet(set));
-    PrString name = prStringNull();
-    {
-        Locked locked(root);
-        PR_ASSERT(index < root->fallback.count);
-        name = prStringClone(&root->fallback.data[index]);
-    }
-    if (definingSet(root, prStringView(&name)) == root)
-        matchIn(root, style, prStringView(&name), hintingOf(set), *out);
-    prStringReset(&name);
+    prMutexLock(&root->lock);
+    PR_ASSERT(index < root->fallback.count);
+    PrRawString name = prRawStringClone(&root->fallback.data[index]);
+    prMutexUnlock(&root->lock);
+    if (definingSet(root, prRawStringView(&name)) == root)
+        matchIn(root, style, prRawStringView(&name), hintingOf(set), *out);
+    prRawStringReset(&name);
 }
 

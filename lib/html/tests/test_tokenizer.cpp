@@ -15,7 +15,7 @@ namespace {
 struct Reader {
     std::string source;
     HtmlTokenizer tokenizer = {};
-    Array<HtmlError> errors;
+    RawArray<HtmlError> errors;
 
     explicit Reader(std::string text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) :
             source(std::move(text)) {

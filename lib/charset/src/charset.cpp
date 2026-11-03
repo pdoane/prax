@@ -1180,11 +1180,11 @@ PrCharset prCharsetFromLabel(PrStringView label) {
 }
 
 PrCharset prCharsetFromMimeType(PrStringView type) {
-    PrString label = prStringNull();
+    PrRawString label = prRawStringNull();
     if (!prMimeTypeParameter(type, "charset", &label))
         return PrCharset_None;
-    PrCharset charset = prCharsetFromLabel(prStringView(&label));
-    prStringReset(&label);
+    PrCharset charset = prCharsetFromLabel(prRawStringView(&label));
+    prRawStringReset(&label);
     return charset;
 }
 
@@ -1257,7 +1257,7 @@ bool prCharsetDecode(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInp
     return ok;
 }
 
-PrStringView prCharsetDecodeView(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInput input, PrString* out) {
+PrStringView prCharsetDecodeView(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInput input, PrRawString* out) {
     PrStringView same;
     if (decodesToItself(decoder, bytes, &same)) {
         if (input == PrCharsetInput_Final)
@@ -1272,15 +1272,15 @@ PrStringView prCharsetDecodeView(PrCharsetDecoder* decoder, PrStringView bytes, 
         return PrStringView{nullptr, 0};
     }
     text.size = uint32_t(size);
-    size_t before = prStringView(out).size;
+    size_t before = prRawStringView(out).size;
     if (before == 0) {
-        prStringReset(out);
+        prRawStringReset(out);
         *out = prTextBufferTake(&text);
     } else {
-        prStringAppend(out, prTextBufferView(&text));
+        prRawStringAppend(out, prTextBufferView(&text));
         prTextBufferReset(&text);
     }
-    PrStringView all = prStringView(out);
+    PrStringView all = prRawStringView(out);
     return prStringSlice(all, before, all.size - before);
 }
 

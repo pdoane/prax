@@ -3,9 +3,9 @@
 #include "dom/src/dom_use.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 
 #include "dom/src/dom_element_state.h"
@@ -22,7 +22,7 @@ struct DomUseRecord {
     uint32_t named;                     // the hash of the ID that the href named when `target` was found
     bool resolve;                       // the element that the href names may have changed
     bool stale;
-    Array<const PrDomElement*> reached;
+    RawArray<const PrDomElement*> reached;
 };
 
 // A referenced element, and the record of a use whose shadow tree instances it. The entries of one element are a list.
@@ -33,8 +33,8 @@ struct DomUseReach {
 };
 
 struct DomUses {
-    Array<DomUseRecord> records;
-    Array<DomUseReach> reaches;
+    RawArray<DomUseRecord> records;
+    RawArray<DomUseReach> reaches;
     HashIndex reachIndex;               // the first entry of each referenced element, by element
 
     bool stale;                        // some record is stale, or needs resolving
@@ -65,7 +65,7 @@ PrStringView hrefOf(const PrDomElement* use) {
     const PrDomAttr* href = domAttribute(use, PrDomNamespace_None, "href");
     if (href == nullptr)
         href = domAttribute(use, PrDomNamespace_XLink, "href");
-    return href != nullptr ? prStringView(&href->value) : PrStringView{};
+    return href != nullptr ? prRawStringView(&href->value) : PrStringView{};
 }
 
 // Returns the element that the use's href or xlink:href names, by ID in the use's document or in another document. In
@@ -78,7 +78,7 @@ const PrDomElement* PR_NULLABLE targetOf(const PrDomElement* use, uint32_t* PR_N
     if (named != nullptr)
         *named = hashOfId(split && reference.fragment.data != nullptr ? reference.fragment : PrStringView{});
     const PrDomElement* target = split ? domReferenceTarget(use->document, reference) : nullptr;
-    prStringReset(&reference.url);
+    prRawStringReset(&reference.url);
     return target;
 }
 
@@ -115,13 +115,14 @@ void syncUse(Sync& s, PrDomElement* use, const PrDomElement* PR_NULLABLE target)
 // Makes `node` take the attributes of `original`, in place.
 void syncAttributes(PrDomElement* node, const PrDomElement* original) {
     for (const PrDomAttr* a = original->firstAttribute; a != nullptr; a = static_cast<const PrDomAttr*>(a->next)) {
-        const PrDomAttr* own = domAttribute(node, a->space, prStringView(&a->name));
-        if (own == nullptr || !(prStringView(&own->value) == prStringView(&a->value)))
-            domSetAttributeNs(node, a->space, domAttributePrefix(a), prStringView(&a->name), prStringView(&a->value));
+        const PrDomAttr* own = domAttribute(node, a->space, prRawStringView(&a->name));
+        PrStringView value = prRawStringView(&a->value);
+        if (own == nullptr || !(prRawStringView(&own->value) == value))
+            domSetAttributeNs(node, a->space, domAttributePrefix(a), prRawStringView(&a->name), value);
     }
     for (PrDomAttr* a = node->firstAttribute; a != nullptr;) {
         PrDomAttr* next = static_cast<PrDomAttr*>(a->next);
-        if (domAttribute(original, a->space, prStringView(&a->name)) == nullptr)
+        if (domAttribute(original, a->space, prRawStringView(&a->name)) == nullptr)
             domRemoveAttributeNode(node, a);
         a = next;
     }
@@ -141,8 +142,8 @@ void syncNode(Sync& s, PrDomNode* node, const PrDomNode* original) {
     }
     const PrDomCharacterData* data = static_cast<const PrDomCharacterData*>(original);
     PrDomCharacterData* own = static_cast<PrDomCharacterData*>(node);
-    if (!(prStringView(&own->data) == prStringView(&data->data)))
-        domSetData(own, prStringView(&data->data));
+    if (!(prRawStringView(&own->data) == prRawStringView(&data->data)))
+        domSetData(own, prRawStringView(&data->data));
 }
 
 // Makes the children of `node` instances of the children of `original`, in order. A child that matches its original
@@ -280,7 +281,7 @@ PrDomNode* PR_NULLABLE domNodeUseOriginal(const PrDomNode* node) {
     // The positions of the node and its ancestors among their siblings, up to the instance root, which is the shadow
     // root's one child. An instance's children correspond to its original's children in order, except the originals
     // that are not instanced.
-    Array<uint32_t> positions;
+    RawArray<uint32_t> positions;
     const PrDomNode* at = node;
     const PrDomNode* parent = at->parent;
     while (parent != nullptr && !domIsUseShadowRoot(parent)) {

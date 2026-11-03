@@ -138,7 +138,7 @@ struct Pair {
 // The (sequence<sequence<USVString>> or record<USVString, USVString> or USVString) init of
 // url/#dom-urlsearchparams-urlsearchparams, fully converted before any of it is used.
 struct InitArgument {
-    Array<Pair> pairs;
+    RawArray<Pair> pairs;
     PrStringView string = {};
 
     void reset() { pairs.reset(); }

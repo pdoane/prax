@@ -39,7 +39,7 @@ constexpr float kBlue = 0.0722f;
 constexpr float kEverywhere = float(1 << 24);
 
 template <typename T>
-void appendKey(Array<uint8_t>& key, const T& value) {
+void appendKey(RawArray<uint8_t>& key, const T& value) {
     key.append(reinterpret_cast<const uint8_t*>(&value), uint32_t(sizeof(T)));
 }
 
@@ -73,7 +73,7 @@ void eachBorderLength(const PrLayoutMaskBorder& border, Each each) {
     }
 }
 
-void shapeKey(Array<uint8_t>& key, const PrLayoutShape& shape) {
+void shapeKey(RawArray<uint8_t>& key, const PrLayoutShape& shape) {
     uint8_t bytes[] = {shape.kind, shape.rule, shape.extentX, shape.extentY};
     appendKey(key, bytes);
     eachShapeLength(shape, [&](PrLayoutLength length) { appendKey(key, length.bits); });
@@ -91,7 +91,7 @@ void shapeKey(Array<uint8_t>& key, const PrLayoutShape& shape) {
     }
 }
 
-void maskKey(Array<uint8_t>& key, const PrLayoutMask& mask) {
+void maskKey(RawArray<uint8_t>& key, const PrLayoutMask& mask) {
     appendKey(key, mask.layerCount);
     for (uint32_t i = 0; i < mask.layerCount; ++i) {
         const PrLayoutMaskLayer& layer = mask.layers[i];
@@ -230,7 +230,7 @@ void freeEntry(LayoutEffectEntry& entry) {
 }
 
 // Interns the value of `kind` whose key is `key`, which the entry takes.
-uint32_t intern(LayoutEffectLists* lists, LayoutCompounds* compounds, LayoutEffectKind kind, Array<uint8_t>& key,
+uint32_t intern(LayoutEffectLists* lists, LayoutCompounds* compounds, LayoutEffectKind kind, RawArray<uint8_t>& key,
         const PrLayoutShape* shape, const PrLayoutMask* mask, const PrLayoutFilter* filters, uint32_t filterCount) {
     LayoutEffectTable& table = lists->tables[kind];
     uint32_t hash = uint32_t(prHashBytes(key.data, key.count, kEffectSeed));
@@ -378,7 +378,7 @@ void polygonPath(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutSha
     uint32_t count = shape.pointCount;
     if (count == 0)
         return;
-    Array<PrVec2> points;
+    RawArray<PrVec2> points;
     for (uint32_t i = 0; i < count; ++i)
         points.push(PrVec2{
             box.left + resolvePx(compounds, shape.points[2 * i], extent.x),
@@ -680,7 +680,7 @@ void drawImageLayer(const LayoutCompounds* compounds, const PrLayoutMaskLayer& l
 // layer's values become alpha by its mode, the layers composite from the bottom up by their operators as an isolated
 // group, and the border then masks the result. Writes the mask's list and area to `out`. Returns false if the mask
 // masks everything away.
-bool combine(Array<DrawnLayer>& layers, const Array<PrDrawComposite>& operators, DrawnLayer* border, DrawnLayer* out) {
+bool combine(RawArray<DrawnLayer>& layers, const RawArray<PrDrawComposite>& operators, DrawnLayer* border, DrawnLayer* out) {
     *out = DrawnLayer{.mode = PrDrawMaskMode_Alpha, .space = PrColorSpace_Srgb};
     if (border == nullptr && layers.count == 1) {
         *out = layers.data[0];
@@ -738,8 +738,8 @@ bool resolveMask(const LayoutTree* tree, PrLayoutMaskIndex index, const LayoutBa
     const LayoutEffectEntry& entry = layoutEffectAt(&styles->effectLists, LayoutEffectKind_Mask, index);
     const PrLayoutMask& mask = entry.mask;
     PrRect border = boxes.boxes[PrLayoutBackgroundBox_BorderBox];
-    Array<DrawnLayer> layers;
-    Array<PrDrawComposite> operators;
+    RawArray<DrawnLayer> layers;
+    RawArray<PrDrawComposite> operators;
     bool draws = true;
     for (uint32_t i = 0; i < mask.layerCount && draws; ++i) {
         const PrLayoutMaskLayer& layer = mask.layers[i];
@@ -917,7 +917,7 @@ PrLayoutShapeIndex layoutEffectListsInternShape(LayoutEffectLists* lists, Layout
         const PrLayoutShape& shape) {
     PrLayoutShape own = shape;
     own.pointCount = shape.pointCount < kPrLayoutShapeMaxPoints ? shape.pointCount : uint32_t(kPrLayoutShapeMaxPoints);
-    Array<uint8_t> key;
+    RawArray<uint8_t> key;
     shapeKey(key, own);
     return intern(lists, compounds, LayoutEffectKind_Shape, key, &own, nullptr, nullptr, 0);
 }
@@ -925,7 +925,7 @@ PrLayoutShapeIndex layoutEffectListsInternShape(LayoutEffectLists* lists, Layout
 PrLayoutMaskIndex layoutEffectListsInternMask(LayoutEffectLists* lists, LayoutCompounds* compounds, const PrLayoutMask& mask) {
     if (mask.layerCount == 0 && mask.border.image.kind == PrLayoutImageKind_None)
         return kPrLayoutMaskNone;
-    Array<uint8_t> key;
+    RawArray<uint8_t> key;
     maskKey(key, mask);
     return intern(lists, compounds, LayoutEffectKind_Mask, key, nullptr, &mask, nullptr, 0);
 }
@@ -934,7 +934,7 @@ PrLayoutFilterIndex layoutEffectListsInternFilter(LayoutEffectLists* lists, Layo
         const PrLayoutFilter* filters, uint32_t count) {
     if (count == 0)
         return kPrLayoutFilterNone;
-    Array<uint8_t> key;
+    RawArray<uint8_t> key;
     layoutFilterKey(key, filters, count);
     return intern(lists, compounds, LayoutEffectKind_Filter, key, nullptr, nullptr, filters, count);
 }

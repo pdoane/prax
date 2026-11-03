@@ -60,10 +60,10 @@ PrLayoutFontStyle mixed(Fixture& f) {
 // Returns the family of a font, such as "Arimo". Two layouts' fonts belong to their own fixtures, so they are compared
 // by family.
 std::string familyOf(const PrFont* font) {
-    PrString family = prFontFamilyName(font);
-    PrStringView view = prStringView(&family);
+    PrRawString family = prFontFamilyName(font);
+    PrStringView view = prRawStringView(&family);
     std::string out(view.data, view.size);
-    prStringReset(&family);
+    prRawStringReset(&family);
     return out;
 }
 

@@ -55,7 +55,7 @@ bool featureSupported(CssValueRun run, uint32_t index) {
 
 // Replaces the results of the condition's <supports-in-parens> with the condition's own result. Those results are the
 // last entries of `results`, starting at the result of the condition's first child.
-void combine(CssValueRun run, uint32_t index, Array<bool>* results) {
+void combine(CssValueRun run, uint32_t index, RawArray<bool>* results) {
     const CssValueNode* values = run.values;
     uint32_t end = index + values[index].next;
     uint32_t operands = 0;
@@ -110,7 +110,7 @@ bool cssFontTechSupported(PrCssKeyword tech) {
 bool cssSupportsEvaluate(CssValueRun condition) {
     // Reading from the end evaluates every <supports-in-parens> before the condition that holds it. Each one leaves its
     // result on the stack.
-    Array<bool> results = {};
+    RawArray<bool> results = {};
     for (uint32_t i = condition.count; i-- > 0;) {
         const CssValueNode* value = &condition.values[i];
         if (value->kind != PrCssValueKind_Production)

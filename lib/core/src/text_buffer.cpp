@@ -3,7 +3,7 @@
 #include "pr/assert.h"
 #include "pr/memory.h"
 
-#include "core/src/string.h"
+#include "core/src/raw_string.h"
 
 namespace pr_impl {
 namespace {
@@ -50,14 +50,14 @@ void prTextBufferReset(PrTextBuffer* buffer) {
     *buffer = PrTextBuffer{};
 }
 
-PrString prTextBufferTake(PrTextBuffer* buffer) {
-    if (buffer->size <= kPrStringInlineCapacity) {
-        PrString string = prStringCopy(prTextBufferView(buffer));
+PrRawString prTextBufferTake(PrTextBuffer* buffer) {
+    if (buffer->size <= kPrRawStringInlineCapacity) {
+        PrRawString string = prRawStringCopy(prTextBufferView(buffer));
         prTextBufferReset(buffer);
         return string;
     }
 
-    PrString string = stringAdopt(buffer->data, buffer->size, buffer->capacity);
+    PrRawString string = rawStringAdopt(buffer->data, buffer->size, buffer->capacity);
     *buffer = PrTextBuffer{};
     return string;
 }

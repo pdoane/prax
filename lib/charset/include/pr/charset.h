@@ -6,7 +6,7 @@
 
 #include "pr/base.h"
 #include "pr/charset_names.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -101,7 +101,7 @@ bool prCharsetDecode(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInp
 // copied. Otherwise the text is appended to `out`, and the result is a view of what was appended. A fatal decoder
 // returns the null view at the first error, and appends nothing. The decoder's state then and after a final part is
 // that of prCharsetDecode.
-PrStringView prCharsetDecodeView(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInput input, PrString* out);
+PrStringView prCharsetDecodeView(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInput input, PrRawString* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Encoding

@@ -16,8 +16,8 @@
 #include "pr/path_tessellator.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/sort.h"
 #include "pr/vec.h"
@@ -66,7 +66,7 @@ struct SweepEdge {
 
 // A polygon that is monotone in the order of the sweep, triangulated as its vertices arrive.
 struct Monotone {
-    Array<uint32_t> stack;      // the vertices not yet triangulated, a reflex chain
+    RawArray<uint32_t> stack;      // the vertices not yet triangulated, a reflex chain
     Side stackSide;
     uint32_t last;              // the vertex added last, on `lastSide`
     Side lastSide;
@@ -89,35 +89,35 @@ struct BoundaryEdge {
 
 struct PathTessellator {
     // The mesh.
-    Array<PrVec2> points;
-    Array<float> coverage;
-    Array<uint32_t> indices;
+    RawArray<PrVec2> points;
+    RawArray<float> coverage;
+    RawArray<uint32_t> indices;
 
     // The rings that a sweep reads: the flattened path, then the loops moved inward.
-    Array<PrVec2> ring;
-    Array<uint32_t> ends;
+    RawArray<PrVec2> ring;
+    RawArray<uint32_t> ends;
 
     // The arrangement.
-    Array<PathGridEdge> gridEdges;
-    Array<PathGridPiece> pieces;
-    Array<PathGridPoint> vertices;      // sorted by pathGridBeforeY
-    Array<SweepEdge> edges;             // sorted by upper vertex; the edges of each vertex start at `starts`
-    Array<uint32_t> starts;             // vertices.count + 1
+    RawArray<PathGridEdge> gridEdges;
+    RawArray<PathGridPiece> pieces;
+    RawArray<PathGridPoint> vertices;      // sorted by pathGridBeforeY
+    RawArray<SweepEdge> edges;             // sorted by upper vertex; the edges of each vertex start at `starts`
+    RawArray<uint32_t> starts;             // vertices.count + 1
 
     // The sweep.
     bool triangulate;
-    uint32_t base;                      // the mesh vertex of the first vertex of the sweep
-    Array<uint32_t> active;             // edges crossing the sweep line, left to right
-    Array<Span> spans;                  // active.count + 1, left to right
-    Array<Monotone> polygons;
-    Array<uint32_t> freePolygons;
-    Array<uint32_t> starting;           // the edges below the current vertex, left to right
-    Array<Span> between;                // the spans that replace those around the current vertex
+    uint32_t base;                         // the mesh vertex of the first vertex of the sweep
+    RawArray<uint32_t> active;             // edges crossing the sweep line, left to right
+    RawArray<Span> spans;                  // active.count + 1, left to right
+    RawArray<Monotone> polygons;
+    RawArray<uint32_t> freePolygons;
+    RawArray<uint32_t> starting;           // the edges below the current vertex, left to right
+    RawArray<Span> between;                // the spans that replace those around the current vertex
 
     // The boundary.
-    Array<BoundaryEdge> boundary;       // sorted by `from`
-    Array<uint32_t> loop;
-    Array<PrVec2> loopPoints;
+    RawArray<BoundaryEdge> boundary;       // sorted by `from`
+    RawArray<uint32_t> loop;
+    RawArray<PrVec2> loopPoints;
 };
 
 bool inside(int32_t winding, Winding rule) {
@@ -246,7 +246,7 @@ uint32_t startPolygon(PathTessellator& t, uint32_t v) {
         index = t.freePolygons.data[--t.freePolygons.count];
     } else {
         index = t.polygons.count;
-        t.polygons.emplace().stack = Array<uint32_t>{};
+        t.polygons.emplace().stack = RawArray<uint32_t>{};
     }
     Monotone& m = t.polygons.data[index];
     m.stack.clear();
@@ -548,7 +548,7 @@ double turnFrom(PathGridPoint r, PathGridPoint d) {
 // Sweeps the arrangement of `ring`, finding its boundary and, if `triangulate`, its triangles and their vertices.
 // Returns the grid it swept on.
 PathGrid sweep(PathTessellator& t, Winding rule, bool triangulate) {
-    const Array<PrVec2>* rings[1] = {&t.ring};
+    const RawArray<PrVec2>* rings[1] = {&t.ring};
     PathGrid grid = pathGridOver(rings, 1);
     t.gridEdges.clear();
     pathGridAddEdges(grid, t.ring, t.ends, 0, t.gridEdges);

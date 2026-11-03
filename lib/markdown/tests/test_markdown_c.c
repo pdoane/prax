@@ -10,10 +10,10 @@ int prTestMarkdownCApi(void) {
     PrMarkdown* document = prMarkdownCreate(&options);
     prMarkdownParse(document, PR_SV("# Hi"));
     int result = prMarkdownBlockCount(document) != 1;
-    PrString html = prStringEmpty();
+    PrRawString html = prRawStringEmpty();
     prMarkdownAppendHtml(document, 0, 1, &html);
-    result |= prStringView(&html).size != 12;
-    prStringReset(&html);
+    result |= prRawStringView(&html).size != 12;
+    prRawStringReset(&html);
     prMarkdownDestroy(document);
     return result;
 }

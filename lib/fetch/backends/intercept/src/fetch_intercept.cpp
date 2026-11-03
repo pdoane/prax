@@ -3,10 +3,10 @@
 #include "pr/fetch_intercept.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/fetch_blob.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/time.h"
 #include "pr/url.h"
 
@@ -18,7 +18,7 @@ struct InterceptFetcher : PrFetchNetwork {
     PrFetchInterceptRequestFn request;
     void* PR_NULLABLE context;
     PrFetchNetwork* PR_NULLABLE next;
-    PrString userAgentStorage;  // what the base's userAgent views
+    PrRawString userAgentStorage;  // what the base's userAgent views
 };
 
 enum {
@@ -32,32 +32,32 @@ typedef uint8_t InterceptState;
 
 // Header names and values, which a fetch owns, and views of them.
 struct InterceptHeaders {
-    Array<PrString> names;
-    Array<PrString> values;
-    Array<PrFetchHeader> views;
+    RawArray<PrRawString> names;
+    RawArray<PrRawString> values;
+    RawArray<PrFetchHeader> views;
 };
 
 void headersCopy(InterceptHeaders* list, const PrFetchHeader* PR_NULLABLE headers, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
-        list->names.push(prStringCopy(headers[i].name));
-        list->values.push(prStringCopy(headers[i].value));
+        list->names.push(prRawStringCopy(headers[i].name));
+        list->values.push(prRawStringCopy(headers[i].value));
     }
     for (uint32_t i = 0; i < count; ++i)
-        list->views.push(PrFetchHeader{prStringView(&list->names.data[i]), prStringView(&list->values.data[i])});
+        list->views.push(PrFetchHeader{prRawStringView(&list->names.data[i]), prRawStringView(&list->values.data[i])});
 }
 
 void headersReset(InterceptHeaders* list) {
     for (uint32_t i = 0; i < list->names.count; ++i) {
-        prStringReset(&list->names.data[i]);
-        prStringReset(&list->values.data[i]);
+        prRawStringReset(&list->names.data[i]);
+        prRawStringReset(&list->values.data[i]);
     }
     list->names.reset();
     list->values.reset();
     list->views.reset();
 }
 
-PrString copyOrNull(PrStringView view) {
-    return view.data != nullptr ? prStringCopy(view) : prStringNull();
+PrRawString copyOrNull(PrStringView view) {
+    return view.data != nullptr ? prRawStringCopy(view) : prRawStringNull();
 }
 
 // A fetch, which is also the request that the host answers. The memory outlives the fetch's destruction while `holds`
@@ -70,19 +70,19 @@ struct InterceptFetch : PrFetch, PrFetchInterceptRequest {
     InterceptState state;
 
     // The copies of the request that the views of its description are of.
-    PrString url;
-    PrString method;
-    PrString origin;
-    PrString referrer;
+    PrRawString url;
+    PrRawString method;
+    PrRawString origin;
+    PrRawString referrer;
     InterceptHeaders requestHeaders;
-    Array<uint8_t> requestBody;
+    RawArray<uint8_t> requestBody;
 
     // The host's response, and its body from `contentStart`, or the next fetcher's fetch that answers instead.
-    PrString responseUrl;       // the null string for the request's URL
+    PrRawString responseUrl;       // the null string for the request's URL
     uint16_t status;
     PrFetchResponseType type;
     InterceptHeaders response;
-    Array<uint8_t> content;
+    RawArray<uint8_t> content;
     uint32_t contentStart;
     PrNetError error;
     PrFetch* PR_NULLABLE passed;
@@ -98,11 +98,11 @@ InterceptFetcher* fetcherOf(InterceptFetch* fetch) {
 
 void freeFetch(InterceptFetch* fetch) {
     prFetchBlobRelease(fetch->blob);
-    prStringReset(&fetch->url);
-    prStringReset(&fetch->responseUrl);
-    prStringReset(&fetch->method);
-    prStringReset(&fetch->origin);
-    prStringReset(&fetch->referrer);
+    prRawStringReset(&fetch->url);
+    prRawStringReset(&fetch->responseUrl);
+    prRawStringReset(&fetch->method);
+    prRawStringReset(&fetch->origin);
+    prRawStringReset(&fetch->referrer);
     headersReset(&fetch->requestHeaders);
     fetch->requestBody.reset();
     headersReset(&fetch->response);
@@ -167,7 +167,7 @@ void passedEvent(void* PR_NULLABLE context, PrFetch*, PrFetchEvent event) {
 
 void destroyFetcher(PrFetchNetwork* base) {
     InterceptFetcher* fetcher = static_cast<InterceptFetcher*>(base);
-    prStringReset(&fetcher->userAgentStorage);
+    prRawStringReset(&fetcher->userAgentStorage);
     if (fetcher->next == nullptr)
         prFetchBlobStoreDestroy(fetcher->blobStore);
     prMemoryFree(fetcher);
@@ -198,10 +198,10 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     if (desc->body.size != 0)
         fetch->requestBody.append(desc->body.data, uint32_t(desc->body.size));
     fetch->desc = *desc;
-    fetch->desc.url = prStringView(&fetch->url);
-    fetch->desc.method = prStringView(&fetch->method);
-    fetch->desc.origin = prStringView(&fetch->origin);
-    fetch->desc.referrer = prStringView(&fetch->referrer);
+    fetch->desc.url = prRawStringView(&fetch->url);
+    fetch->desc.method = prRawStringView(&fetch->method);
+    fetch->desc.origin = prRawStringView(&fetch->origin);
+    fetch->desc.referrer = prRawStringView(&fetch->referrer);
     fetch->desc.headers = fetch->requestHeaders.views.data;
     fetch->desc.body = PrByteView{fetch->requestBody.data, fetch->requestBody.count};
     fetch->timing.startTime = prTimeMonotonicMilliseconds();
@@ -240,7 +240,7 @@ PrStringView fetchUrl(const PrFetchNetwork*, const PrFetch* handle) {
     const InterceptFetch* fetch = static_cast<const InterceptFetch*>(handle);
     if (fetch->passed != nullptr)
         return prFetchUrl(fetch->passed);
-    return prStringView(prStringIsNull(&fetch->responseUrl) ? &fetch->url : &fetch->responseUrl);
+    return prRawStringView(prRawStringIsNull(&fetch->responseUrl) ? &fetch->url : &fetch->responseUrl);
 }
 
 PrFetchResponseType fetchResponseType(const PrFetchNetwork*, const PrFetch* handle) {
@@ -323,8 +323,8 @@ PrFetchNetwork* prFetchInterceptCreate(const PrFetchInterceptDesc* desc) {
         userAgent = prFetchNetworkUserAgent(desc->next);
     else if (userAgent.data == nullptr)
         userAgent = kPrFetchDefaultUserAgent;
-    fetcher->userAgentStorage = prStringCopy(userAgent);
-    fetcher->userAgent = prStringView(&fetcher->userAgentStorage);
+    fetcher->userAgentStorage = prRawStringCopy(userAgent);
+    fetcher->userAgent = prRawStringView(&fetcher->userAgentStorage);
     PR_ASSERT(desc->next == nullptr || desc->next->net == desc->net);
     return fetcher;
 }
@@ -338,7 +338,7 @@ void prFetchInterceptRequestRespond(PrFetchInterceptRequest* request, const PrFe
     fetch->status = response->status;
     fetch->type = response->type;
     if (response->url.data != nullptr)
-        fetch->responseUrl = prStringCopy(response->url);
+        fetch->responseUrl = prRawStringCopy(response->url);
     headersCopy(&fetch->response, response->headers, response->headerCount);
     if (response->body.size != 0)
         fetch->content.append(response->body.data, uint32_t(response->body.size));

@@ -41,7 +41,7 @@ void deliver(void* data) {
             port->queue.count = 0;
             port->queueHead = 0;
         }
-        htmlFireMessage(prHtmlMessagePortAsEventTarget(port), &message, prStringEmpty(), nullptr);
+        htmlFireMessage(prHtmlMessagePortAsEventTarget(port), &message, prRawStringEmpty(), nullptr);
     }
     deliveryEnded(port);
 }
@@ -88,20 +88,20 @@ PrHtmlMessagePort* createPort(PrHtmlWindow* PR_NULLABLE window, PrHtmlMessagePor
 } // namespace
 
 void htmlMessageReset(HtmlMessage* message) {
-    prStringReset(&message->data);
+    prRawStringReset(&message->data);
     for (uint32_t i = 0; i < message->ports.count; ++i)
         domEventTargetRelease(message->ports.data[i]);
     message->ports.reset();
 }
 
-void htmlFireMessage(PrDomEventTarget* target, HtmlMessage* message, PrString origin, PrHtmlWindow* PR_NULLABLE source) {
+void htmlFireMessage(PrDomEventTarget* target, HtmlMessage* message, PrRawString origin, PrHtmlWindow* PR_NULLABLE source) {
     PrHtmlMessageEvent* event =
         domEventCreate<PrHtmlMessageEvent>("message", prDomEventInitDefault(), PrDomEventKind_Message);
     event->trusted = true;
     event->message = allocZeroed<DomMessageEventData>();
     event->message->data = message->data;
     event->message->origin = origin;
-    event->message->lastEventId = prStringEmpty();
+    event->message->lastEventId = prRawStringEmpty();
     event->message->source = source;
     event->message->ports = message->ports;
     *message = HtmlMessage{};
@@ -144,7 +144,7 @@ bool prHtmlMessagePortHasWindow(const PrHtmlMessagePort* port) {
 void prHtmlMessagePortPostMessage(PrHtmlMessagePort* port, PrStringView serialized,
         PrHtmlMessagePort* PR_NONNULL const* PR_NULLABLE ports, uint32_t portCount) {
     PrHtmlMessagePort* peer = port->peer;
-    HtmlMessage message{.data = prStringCopy(serialized)};
+    HtmlMessage message{.data = prRawStringCopy(serialized)};
     for (uint32_t i = 0; i < portCount; ++i)
         message.ports.push(prHtmlMessagePortAsEventTarget(ports[i]));
     if (peer == nullptr) {

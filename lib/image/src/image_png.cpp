@@ -2,10 +2,10 @@
 
 #include "pr/image_png.h"
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/checksum.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
 
@@ -93,7 +93,7 @@ void appendLatin1(PrTextBuffer* out, PrByteView bytes) {
 
 // Decompresses the zlib stream `input` into `out`. Returns false if the stream is corrupt, ends early, or decompresses
 // past kPrImagePngTextMaxBytes.
-bool inflate(PrCompressCodec* codec, PrByteView input, Array<uint8_t>* out) {
+bool inflate(PrCompressCodec* codec, PrByteView input, RawArray<uint8_t>* out) {
     PrCompressDecoder* decoder = nullptr;
     if (prCompressDecoderCreate(codec, PrCompressFormat_Zlib, &decoder) != PrStatus_Ok)
         return false;
@@ -132,7 +132,7 @@ bool readText(const Chunk& chunk, PrCompressCodec* PR_NULLABLE codec, PrImagePng
     PrTextBuffer keywordUtf8{};
     appendLatin1(&keywordUtf8, PrByteView{chunk.data.data, keyword.size});
     PrTextBuffer converted{};
-    Array<uint8_t> inflated{};
+    RawArray<uint8_t> inflated{};
     PrImagePngText text{.keyword = prTextBufferView(&keywordUtf8), .language = "", .translatedKeyword = ""};
     size_t at = keyword.size + 1;
     bool ok = true;

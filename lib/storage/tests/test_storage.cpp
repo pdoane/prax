@@ -35,12 +35,12 @@ std::string directoryOf(const char* name) {
 std::string keysOf(PrStorage* storage) {
     std::string keys;
     for (uint32_t i = 0; i < prStorageCount(storage); ++i) {
-        PrString key = prStorageKey(storage, i);
-        keys += (keys.empty() ? "" : " ") + std::string(prStringView(&key).data, prStringView(&key).size);
-        prStringReset(&key);
+        PrRawString key = prStorageKey(storage, i);
+        keys += (keys.empty() ? "" : " ") + std::string(prRawStringView(&key).data, prRawStringView(&key).size);
+        prRawStringReset(&key);
     }
-    PrString past = prStorageKey(storage, prStorageCount(storage));
-    CHECK(prStringIsNull(&past));
+    PrRawString past = prStorageKey(storage, prStorageCount(storage));
+    CHECK(prRawStringIsNull(&past));
     return keys;
 }
 

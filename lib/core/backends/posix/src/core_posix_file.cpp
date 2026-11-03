@@ -29,20 +29,20 @@ char* PR_NULLABLE terminate(PrStringView path) {
 
 // Returns the directory that the XDG base directory variable `xdg` names, or else `suffix` under the user's home.
 // Apple's platforms name no such variables.
-PrString userDirectory(const char* PR_NULLABLE xdg, const char* suffix) {
+PrRawString userDirectory(const char* PR_NULLABLE xdg, const char* suffix) {
 #if !defined(__APPLE__)
     const char* named = getenv(xdg);
     // The XDG base directory specification ignores a relative path.
     if (named != nullptr && named[0] == '/')
-        return prStringCopy(PrStringView{named, strlen(named)});
+        return prRawStringCopy(PrStringView{named, strlen(named)});
 #else
     (void)xdg;
 #endif
     const char* home = getenv("HOME");
     if (home == nullptr || home[0] != '/')
-        return prStringNull();
-    PrString directory = prStringCopy(PrStringView{home, strlen(home)});
-    prStringAppend(&directory, PrStringView{suffix, strlen(suffix)});
+        return prRawStringNull();
+    PrRawString directory = prRawStringCopy(PrStringView{home, strlen(home)});
+    prRawStringAppend(&directory, PrStringView{suffix, strlen(suffix)});
     return directory;
 }
 
@@ -219,7 +219,7 @@ bool prCorePosixFileCreateDirectory(PrStringView path) {
     return exists;
 }
 
-PrString prCorePosixFileCacheDirectory(void) {
+PrRawString prCorePosixFileCacheDirectory(void) {
 #if defined(__APPLE__)
     return userDirectory(nullptr, "/Library/Caches");
 #else
@@ -227,7 +227,7 @@ PrString prCorePosixFileCacheDirectory(void) {
 #endif
 }
 
-PrString prCorePosixFileDataDirectory(void) {
+PrRawString prCorePosixFileDataDirectory(void) {
 #if defined(__APPLE__)
     return userDirectory(nullptr, "/Library/Application Support");
 #else

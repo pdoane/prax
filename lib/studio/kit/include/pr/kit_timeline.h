@@ -4,7 +4,7 @@
 
 #include "pr/color.h"
 #include "pr/kit.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN

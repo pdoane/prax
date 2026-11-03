@@ -24,7 +24,7 @@ bool same(const TextDiffSequenceDesc& desc, uint32_t a, uint32_t b) {
 }
 
 // Adds a change, joined to the last if they meet.
-void addChange(Array<PrTextDiffChange>& changes, uint32_t oldStart, uint32_t oldCount, uint32_t newStart,
+void addChange(RawArray<PrTextDiffChange>& changes, uint32_t oldStart, uint32_t oldCount, uint32_t newStart,
         uint32_t newCount) {
     if (oldCount == 0 && newCount == 0)
         return;
@@ -107,7 +107,7 @@ void textDiffSequenceReset(TextDiffSequence* sequence) {
     sequence->backward.reset();
 }
 
-void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, Array<PrTextDiffChange>& changes) {
+void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, RawArray<PrTextDiffChange>& changes) {
     PR_ASSERT(desc.oldCount == 0 || desc.oldKeys != nullptr);
     PR_ASSERT(desc.newCount == 0 || desc.newKeys != nullptr);
     PR_ASSERT(sequence->maxCost != 0);
@@ -133,7 +133,7 @@ void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceD
             continue;
         }
         // The part before the snake is compared first, so the stack holds the part after it beneath.
-        Array<TextDiffPart>& parts = sequence->parts;
+        RawArray<TextDiffPart>& parts = sequence->parts;
         parts.push(TextDiffPart{part.oldStart + snake.x1, part.oldEnd, part.newStart + snake.y1, part.newEnd});
         parts.push(TextDiffPart{part.oldStart, part.oldStart + snake.x0, part.newStart, part.newStart + snake.y0});
     }

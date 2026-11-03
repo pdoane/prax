@@ -323,12 +323,12 @@ TEST_CASE("a WOFF2 collection holds each of its fonts") {
         CHECK(prFontCount(prFontData(fonts[index])) == 2);
         CHECK(prFontCodePointGlyph(fonts[index], 'P') != 0);
     }
-    PrString first = prFontFamilyName(fonts[0]);
-    PrString second = prFontFamilyName(fonts[1]);
-    CHECK(std::string(prStringView(&first).data, prStringView(&first).size) == "WOFF Test TTF 0");
-    CHECK(std::string(prStringView(&second).data, prStringView(&second).size) == "WOFF Test TTF 1");
-    prStringReset(&first);
-    prStringReset(&second);
+    PrRawString first = prFontFamilyName(fonts[0]);
+    PrRawString second = prFontFamilyName(fonts[1]);
+    CHECK(std::string(prRawStringView(&first).data, prRawStringView(&first).size) == "WOFF Test TTF 0");
+    CHECK(std::string(prRawStringView(&second).data, prRawStringView(&second).size) == "WOFF Test TTF 1");
+    prRawStringReset(&first);
+    prRawStringReset(&second);
     prFontRelease(fonts[0]);
     prFontRelease(fonts[1]);
     const PrFont* font = nullptr;

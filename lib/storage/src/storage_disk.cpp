@@ -36,7 +36,7 @@ struct DiskJob {
 // were queued, in a drain that the pool runs (drain): one at a time, posted when a job is queued or the index changes
 // while none is posted. `mutex` guards the fields after it.
 struct DiskStorage : PrStorage {
-    PrString directory;
+    PrRawString directory;
     uint64_t limit;
     PrStorageEviction eviction;
     PrTaskPool* pool;
@@ -44,7 +44,7 @@ struct DiskStorage : PrStorage {
     PrCondition drained;        // signaled when a drain ends
     StorageIndex index;
     uint64_t nextFile;
-    Array<DiskJob> jobs;
+    RawArray<DiskJob> jobs;
     bool dirty;                 // true if the index changed since a drain last wrote it
     bool draining;              // true from when a drain is posted until it ends
 };
@@ -56,7 +56,7 @@ struct DiskRecord {
 };
 
 void appendPath(const DiskStorage* storage, uint64_t file, PrTextBuffer* out) {
-    prTextBufferAppend(out, prStringView(&storage->directory));
+    prTextBufferAppend(out, prRawStringView(&storage->directory));
     prTextBufferAppendChar(out, '/');
     if (file == 0)
         prTextBufferAppend(out, "index");
@@ -84,7 +84,7 @@ void writeIndex(DiskStorage* storage) {
     prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(&count), 4});
     for (uint32_t i = 0; i < count; ++i) {
         const StorageEntry& entry = storage->index.entries.data[i];
-        PrStringView key = prStringView(&entry.key);
+        PrStringView key = prRawStringView(&entry.key);
         uint32_t keySize = uint32_t(key.size);
         prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(&keySize), 4});
         prTextBufferAppend(&bytes, key);
@@ -227,7 +227,7 @@ void destroyStorage(PrStorage* base) {
         storageBufferRelease(storage->index.entries.data[i].buffer);
     storageIndexReset(&storage->index);
     storage->jobs.reset();
-    prStringReset(&storage->directory);
+    prRawStringReset(&storage->directory);
     prConditionReset(&storage->drained);
     prMutexReset(&storage->mutex);
     prMemoryFree(storage);
@@ -354,14 +354,14 @@ uint32_t countStorage(const PrStorage* base) {
     return count;
 }
 
-PrString keyStorage(const PrStorage* base, uint32_t position) {
+PrRawString keyStorage(const PrStorage* base, uint32_t position) {
     DiskStorage* storage = const_cast<DiskStorage*>(static_cast<const DiskStorage*>(base));
     prMutexLock(&storage->mutex);
-    PrString key;
+    PrRawString key;
     if (position < storage->index.entries.count)
-        key = prStringCopy(prStringView(&storage->index.entries.data[position].key));
+        key = prRawStringCopy(prRawStringView(&storage->index.entries.data[position].key));
     else
-        key = prStringNull();
+        key = prRawStringNull();
     prMutexUnlock(&storage->mutex);
     return key;
 }
@@ -386,7 +386,7 @@ PrStatus prStorageDiskCreate(const PrStorageDiskDesc* desc, PrStorage* PR_NULLAB
     storage->size = sizeStorage;
     storage->count = countStorage;
     storage->key = keyStorage;
-    storage->directory = prStringCopy(desc->directory);
+    storage->directory = prRawStringCopy(desc->directory);
     storage->limit = desc->limitBytes;
     storage->eviction = desc->eviction;
     storage->pool = desc->pool;

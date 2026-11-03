@@ -26,7 +26,7 @@ namespace {
 struct Parser {
     PrJson* doc;
     LottieAnimation* a;
-    Array<float> scratch;
+    RawArray<float> scratch;
 
     // Differences that older exporters wrote, corrected while reading: fill and stroke colors out of 255 before 4.1.9,
     // and a path's closedness on its item or mask rather than on its shapes before 4.4.18.
@@ -178,7 +178,7 @@ PrVec2 pointOf(const Parser& p, uint32_t array) {
 // Appends a Bézier shape object (`c`, `v`, `i` and `o`) to `out`, with its tangents as points. The shape has `count`
 // vertices if `count` is not kLottieNone, and otherwise as many vertices as the object has. A shape with too few
 // vertices repeats its last vertex.
-void readShape(const Parser& p, uint32_t shape, uint32_t count, Array<float>& out) {
+void readShape(const Parser& p, uint32_t shape, uint32_t count, RawArray<float>& out) {
     uint32_t v = member(p, shape, "v");
     uint32_t in = member(p, shape, "i");
     uint32_t o = member(p, shape, "o");
@@ -226,7 +226,7 @@ typedef uint8_t ValueKind;
 // Reads a keyframe's value into `out`, replacing its contents. The value is a number, an array of numbers, or a bezier
 // shape, bare or in an array of one. `dims` is the number of floats in a value, or kLottieNone for as many as the first
 // value has.
-void readValue(const Parser& p, uint32_t value, ValueKind kind, uint32_t dims, Array<float>& out, float scale = 1) {
+void readValue(const Parser& p, uint32_t value, ValueKind kind, uint32_t dims, RawArray<float>& out, float scale = 1) {
     out.clear();
     if (kind == ValueKind_Shape) {
         uint32_t shape = kindOf(p, value) == PrJsonKind_Array ? elementOf(p, value, 0) : value;
@@ -250,7 +250,7 @@ void readValue(const Parser& p, uint32_t value, ValueKind kind, uint32_t dims, A
         out.data[i] *= scale;
 }
 
-uint32_t pool(Parser& p, const Array<float>& values) {
+uint32_t pool(Parser& p, const RawArray<float>& values) {
     uint32_t offset = uint32_t(p.a->numbers.count);
     if (values.count > 0)
         p.a->numbers.append(values.data, values.count);
@@ -1037,15 +1037,15 @@ struct LayerId {
 
 // Reads a composition's layers. `refs` receives each layer's asset reference, which resolves precomps once every
 // composition is read.
-void readLayers(Parser& p, uint32_t array, LottieComp& comp, Array<uint32_t>& refs) {
+void readLayers(Parser& p, uint32_t array, LottieComp& comp, RawArray<uint32_t>& refs) {
     comp.layers = p.a->layers.count;
     comp.count = sizeOf(p, array);
     for (uint32_t i = 0; i < comp.count; ++i)
         p.a->layers.emplace();
     // Each layer's `ind`, `parent` and `tp`, which are resolved once all layers are read.
-    Array<double> ids;
-    Array<double> parents;
-    Array<double> mattes;
+    RawArray<double> ids;
+    RawArray<double> parents;
+    RawArray<double> mattes;
     uint32_t n = 0;
     for (uint32_t e = firstIn(p, array); e != kPrJsonMissing; e = nextIn(p, array, e), ++n) {
         LottieLayer layer{};
@@ -1125,7 +1125,7 @@ void readLayers(Parser& p, uint32_t array, LottieComp& comp, Array<uint32_t>& re
         p.a->layers.data[comp.layers + n] = layer;
     }
     // The layers sorted by id, with the first layer of each id first. A parent's id finds its layer here.
-    Array<LayerId> byId;
+    RawArray<LayerId> byId;
     byId.reserve(comp.count);
     for (uint32_t j = 0; j < comp.count; ++j)
         byId.push(LayerId{ids.data[j], j});
@@ -1159,8 +1159,8 @@ struct AssetId {
 };
 
 // Returns the ids from `first` on, with their indexes, sorted.
-Array<AssetId> sortedIds(const Array<PrStringView>& ids, uint32_t first) {
-    Array<AssetId> sorted;
+RawArray<AssetId> sortedIds(const RawArray<PrStringView>& ids, uint32_t first) {
+    RawArray<AssetId> sorted;
     for (uint32_t i = first; i < ids.count; ++i)
         sorted.push(AssetId{ids.data[i], i});
     sortItems(sorted.data, sorted.count, [](const AssetId& a, const AssetId& b) {
@@ -1171,7 +1171,7 @@ Array<AssetId> sortedIds(const Array<PrStringView>& ids, uint32_t first) {
 }
 
 // Returns the index of the first asset with the id, or kLottieNone if there is none.
-uint32_t findId(const Array<AssetId>& sorted, PrStringView id) {
+uint32_t findId(const RawArray<AssetId>& sorted, PrStringView id) {
     uint32_t at = lowerBound(sorted.data, sorted.count, id);
     return at < sorted.count && sorted.data[at].id == id ? sorted.data[at].index : kLottieNone;
 }
@@ -1215,7 +1215,7 @@ const PrDrawImage* PR_NULLABLE readImage(const Parser& p, uint32_t asset, const 
     if (options.load == nullptr)
         return nullptr;
     PrStringView directory = text(p, asset, "u");
-    Array<char> joined;
+    RawArray<char> joined;
     if (directory.data != nullptr && !flag(p, asset, "e"))
         joined.append(directory.data, uint32_t(directory.size));
     joined.append(path.data, uint32_t(path.size));
@@ -1256,8 +1256,8 @@ PrStatus lottieParse(PrStringView json, const PrLottieOptions& options, LottieAn
     readCharShapes(p, member(p, root, "chars"));
 
     // The root composition, then each asset that is a composition. Layers refer to these by id.
-    Array<uint32_t> refs;
-    Array<PrStringView> ids;
+    RawArray<uint32_t> refs;
+    RawArray<PrStringView> ids;
     uint32_t rootComp = a.comps.count;
     a.comps.emplace();
     LottieComp comp{};
@@ -1270,7 +1270,7 @@ PrStatus lottieParse(PrStringView json, const PrLottieOptions& options, LottieAn
     a.comps.data[rootComp] = comp;
     ids.push(PrStringView{});
     uint32_t assets = member(p, root, "assets");
-    Array<PrStringView> imageIds;
+    RawArray<PrStringView> imageIds;
     for (uint32_t e = firstIn(p, assets); e != kPrJsonMissing; e = nextIn(p, assets, e)) {
         uint32_t assetLayers = member(p, e, "layers");
         if (kindOf(p, assetLayers) != PrJsonKind_Array) {
@@ -1294,8 +1294,8 @@ PrStatus lottieParse(PrStringView json, const PrLottieOptions& options, LottieAn
         ids.push(text(p, e, "id"));
     }
     // Every layer was read in order, so `refs` is parallel to the layers.
-    Array<AssetId> images = sortedIds(imageIds, 0);
-    Array<AssetId> comps = sortedIds(ids, 1);
+    RawArray<AssetId> images = sortedIds(imageIds, 0);
+    RawArray<AssetId> comps = sortedIds(ids, 1);
     for (uint32_t i = 0; i < a.layers.count; ++i) {
         PrStringView ref = prJsonString(p.doc, refs.data[i]);
         if (refs.data[i] == kPrJsonMissing || ref.data == nullptr)

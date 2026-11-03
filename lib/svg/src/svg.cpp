@@ -163,7 +163,7 @@ void appendRenderedText(const PrDomNode* node, bool inText, PrTextBuffer* out) {
     for (const PrDomNode* child = node->first; child != nullptr; child = child->next) {
         if (domIsText(child)) {
             if (inText)
-                prTextBufferAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
+                prTextBufferAppend(out, prRawStringView(&static_cast<const PrDomCharacterData*>(child)->data));
             continue;
         }
         const PrDomElement* element = domElementFromNode(child);

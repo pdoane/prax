@@ -383,7 +383,7 @@ void foldFunction(CssValuePool* pool, uint32_t at);
 // first.
 void recordGroup(CssMatcher* m, uint32_t index) {
     const CssMatchFrame f = frameAt(m, index);
-    Array<CssMatchEdit>* edits = &m->match->edits;
+    RawArray<CssMatchEdit>* edits = &m->match->edits;
     uint32_t group = edits->count;
     edits->reserve(group + 1 + f.done);
     edits->count = group + 1 + f.done;
@@ -477,7 +477,7 @@ uint32_t canonicalGroup(CssValuePool* pool, CssMatchEdit* group) {
     if (!moved && omitted == 0)
         return group->end - group->start;
 
-    Array<CssValueNode>* values = &pool->values;
+    RawArray<CssValueNode>* values = &pool->values;
     values->reserve(values->count + (group->end - group->start));
     CssValueNode* scratch = values->data + values->count;
     uint32_t written = 0;
@@ -546,7 +546,7 @@ bool isSecondAxis(const CssValueNode* one) {
 // move with the values they refer to. A comma that an empty run leaves first or last among its siblings is also removed
 // (css-values-4/#comb-comma).
 void resizeRun(CssMatcher* m, uint32_t later, uint32_t root, uint32_t start, uint32_t end, uint32_t length) {
-    Array<CssValueNode>* values = &m->pool->values;
+    RawArray<CssValueNode>* values = &m->pool->values;
     int32_t delta = int32_t(length) - int32_t(end - start);
     if (delta < 0) {
         values->erase(start + length, uint32_t(-delta));
@@ -570,7 +570,7 @@ void resizeRun(CssMatcher* m, uint32_t later, uint32_t root, uint32_t start, uin
         ++i;
     }
 
-    Array<CssMatchEdit>* edits = &m->match->edits;
+    RawArray<CssMatchEdit>* edits = &m->match->edits;
     for (uint32_t i = later; i < edits->count; ++i) {
         CssMatchEdit* edit = &edits->data[i];
         edit->start = edit->start >= end ? uint32_t(int32_t(edit->start) + delta) : edit->start;
@@ -624,7 +624,7 @@ void foldProduction(CssMatcher* m, uint32_t later, uint32_t root, const CssMatch
 
 // Applies the edits from `first` on, in the order recorded, to the tree whose first value is `root`, and drops them.
 void applyEdits(CssMatcher* m, uint32_t first, uint32_t root) {
-    Array<CssMatchEdit>* edits = &m->match->edits;
+    RawArray<CssMatchEdit>* edits = &m->match->edits;
     for (uint32_t i = first; i < edits->count; i += edits->data[i].parts + 1) {
         CssMatchEdit edit = edits->data[i];
         uint32_t later = i + edit.parts + 1;
@@ -649,7 +649,7 @@ void applyEdits(CssMatcher* m, uint32_t first, uint32_t root) {
 
 // Returns the first of the edits from `first` on that is inside the function whose value is at `at`.
 uint32_t editsInside(const CssMatcher* m, uint32_t first, uint32_t at) {
-    const Array<CssMatchEdit>* edits = &m->match->edits;
+    const RawArray<CssMatchEdit>* edits = &m->match->edits;
     uint32_t i = first;
     while (i < edits->count && edits->data[i].start < at)
         i += edits->data[i].parts + 1;
@@ -1814,7 +1814,7 @@ void foldRelativeColor(CssValuePool* pool, uint32_t at) {
 // Folds the <color-interpolation-method> whose `in` is at `at` into the form that css-color-5/#serial-color-mix writes:
 // xyz becomes xyz-d65, and a hue interpolation method of shorter is removed. Returns its length in values, and writes
 // the color space that it names to `space`.
-uint32_t foldInterpolationMethod(Array<CssValueNode>* values, uint32_t at, PrCssKeyword* space) {
+uint32_t foldInterpolationMethod(RawArray<CssValueNode>* values, uint32_t at, PrCssKeyword* space) {
     CssValueNode* named = &values->data[at + 1];
     if (cssValueIsKeyword(named, PrCssKeyword_Xyz))
         named->aux = PrCssKeyword_XyzD65;
@@ -1828,7 +1828,7 @@ uint32_t foldInterpolationMethod(Array<CssValueNode>* values, uint32_t at, PrCss
 }
 
 // Returns true if the mix item whose first value is at `index` writes a second value, its percentage.
-bool mixHasSecond(const Array<CssValueNode>* values, uint32_t index) {
+bool mixHasSecond(const RawArray<CssValueNode>* values, uint32_t index) {
     uint32_t second = index + values->data[index].next;
     return second < values->count && !cssValueIsLiteral(&values->data[second], ',');
 }
@@ -1838,7 +1838,7 @@ bool mixHasSecond(const Array<CssValueNode>* values, uint32_t index) {
 // The percentages are all removed if each is an equal share of 100%. Otherwise each omitted percentage becomes the
 // share of 100% that the others leave, unless one is a math function.
 void foldMix(CssValuePool* pool, uint32_t at) {
-    Array<CssValueNode>* values = &pool->values;
+    RawArray<CssValueNode>* values = &pool->values;
     uint32_t first = at + 1;
     if (cssValueIsKeyword(&values->data[first], PrCssKeyword_In)) {
         PrCssKeyword space;
@@ -1894,7 +1894,7 @@ void foldMix(CssValuePool* pool, uint32_t at) {
 // Removes the shape from the radial gradient at `at` if its size implies the shape, along with a comma that would then
 // come first. css-images-3/#valdef-radial-gradient-radial-shape: "If <radial-shape> is omitted, the ending shape
 // defaults to a circle if the <radial-size> is a single <length>, and to an ellipse otherwise."
-void omitImpliedShape(Array<CssValueNode>* values, uint32_t at) {
+void omitImpliedShape(RawArray<CssValueNode>* values, uint32_t at) {
     const CssValueNode* shape = &values->data[at + 1];
     PrCssValueKind size = shape[1].kind;
     bool implied = cssValueIsKeyword(shape, PrCssKeyword_Ellipse) || (cssValueIsKeyword(shape, PrCssKeyword_Circle) &&
@@ -1910,7 +1910,7 @@ void omitImpliedShape(Array<CssValueNode>* values, uint32_t at) {
 // if its size implies it. Its color interpolation method, which is the last item before its stops, is removed if it is
 // the default: srgb for legacy stops and oklab otherwise (css-images-4/#color-interpolation).
 void foldGradient(CssValuePool* pool, uint32_t at) {
-    Array<CssValueNode>* values = &pool->values;
+    RawArray<CssValueNode>* values = &pool->values;
     PrCssKeyword keyword = cssValueKeyword(&values->data[at]);
     if (keyword == PrCssKeyword_RadialGradient || keyword == PrCssKeyword_RepeatingRadialGradient)
         omitImpliedShape(values, at);

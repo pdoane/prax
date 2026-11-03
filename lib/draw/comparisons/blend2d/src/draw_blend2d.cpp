@@ -16,7 +16,6 @@
 #include "pr/draw_blend2d.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_glyph.h"
@@ -27,6 +26,7 @@
 #include "pr/hash_index.h"
 #include "pr/mem.h"
 #include "pr/path_polyline.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "blend2d/blend2d.h"
@@ -49,7 +49,7 @@ struct CachedImage {
 
 struct Blend2dBackend : PrDrawRenderer {
     PrDrawBlend2dOptions options;
-    Array<CachedImage> images;
+    RawArray<CachedImage> images;
     KeyIndex imageIndex;                // `images`, by id
     PrDrawGlyphCache* glyphs;
     uint64_t render;
@@ -93,18 +93,18 @@ struct Push {
 struct Renderer {
     Blend2dBackend* b2;
     const PrPixels* PR_NULLABLE pixels;         // the target's pixels, Bgra8, which WritePixels writes
-    Array<Push> pushes;
+    RawArray<Push> pushes;
     uint32_t collapsed;                     // number of open transform pushes that are collapsed
-    Array<Target*> targets;                 // innermost last
+    RawArray<Target*> targets;              // innermost last
     PrIRect clip;                           // the area that the clips in force let through
     PrPath* shape;
     PrPath* extra;
     PrPathPolyline outline;                     // a border's piece or a decoration
     PrPathPolyline combined;
     BLPathCore path;
-    Array<PrDrawRampPiece> rampPieces;
-    Array<PrColor> ramp;
-    Array<BLGradientStop> stops;
+    RawArray<PrDrawRampPiece> rampPieces;
+    RawArray<PrColor> ramp;
+    RawArray<BLGradientStop> stops;
 };
 
 Target& target(Renderer& r) {
@@ -791,7 +791,7 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
     float width = prRectWidth(area);
     float height = prRectHeight(area);
     uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
-    Array<PrDrawImageRect> pieces;
+    RawArray<PrDrawImageRect> pieces;
     pieces.reserve(count);
     pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, pieces.data, count);
     drawImageRects(r, c, pieces.data, pieces.count);

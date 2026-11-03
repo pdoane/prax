@@ -79,7 +79,7 @@ struct SvgTile {
 // The tiles of the patterns that a drawing paints with, which it holds until it ends. A tile that the same pattern
 // draws again in the same spaces is shared, so that the backend renders it once.
 struct SvgTiles {
-    Array<SvgTile> tiles;
+    RawArray<SvgTile> tiles;
 };
 
 // The state of a drawing: the list, the viewport that percentages are of, and the context element.
@@ -159,7 +159,7 @@ SvgDrawer svgEffectDrawer(const SvgDrawer& d, SvgResourceIndex index, PrDrawList
 
 // Appends the commands of the equivalent path of a rect, a circle, an ellipse or a line node (SVG2/shapes.html), with
 // its lengths resolved in a viewport of `viewport`. A rect or an ellipse that renders nothing has none.
-void svgShapeCommands(const SvgNode& node, PrVec2 viewport, Array<PrPathDataCommand>* out);
+void svgShapeCommands(const SvgNode& node, PrVec2 viewport, RawArray<PrPathDataCommand>* out);
 
 // Returns the length that a percentage along `axis` resolves against in the drawer's viewport.
 float svgPercentBase(const SvgDrawer& d, SvgAxis axis);

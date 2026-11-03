@@ -5,8 +5,8 @@
 #include "pr/color.h"
 #include "pr/css.h"
 #include "pr/dom_abort.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/utf8.h"
 
 PR_STATIC_ASSERT(sizeof(PrCssStyleDeclaration*) == sizeof(void*));
@@ -40,46 +40,46 @@ static PrStringView constructed(PrStringView failed) {
 static PrStringView declarations(PrStringView failed, PrCssStyleDeclaration* style) {
     PrCssDeclarationName color = prCssDeclarationNameFromProperty(PrCssProperty_Color);
     PrCssDeclarationName width = prCssDeclarationNameFromProperty(PrCssProperty_Width);
-    PrString value = prCssStyleDeclarationGetPropertyValue(style, &color);
-    PrString removed = prStringNull();
+    PrRawString value = prCssStyleDeclarationGetPropertyValue(style, &color);
+    PrRawString removed = prRawStringNull();
 
     failed = check(failed, prCssStyleDeclarationLength(style) == 1, "the declarations hold one property");
-    failed = check(failed, prStringView(&value).size == 3, "color is red");
+    failed = check(failed, prRawStringView(&value).size == 3, "color is red");
 
     prCssStyleDeclarationSetProperty(style, &width, PR_SV("1px"), false);
     failed = check(failed, prCssStyleDeclarationLength(style) == 2, "setting width adds a property");
 
     prCssStyleDeclarationRemoveProperty(style, &width, &removed);
-    failed = check(failed, prStringView(&removed).size == 3, "removing width answers 1px");
+    failed = check(failed, prRawStringView(&removed).size == 3, "removing width answers 1px");
 
-    prStringReset(&value);
-    prStringReset(&removed);
+    prRawStringReset(&value);
+    prRawStringReset(&removed);
     return failed;
 }
 
 PrStringView prTestCApi(PrCssStyleDeclaration* style) {
-    PrString text = prStringCopy(PR_SV("color"));
-    PrString copy = prStringClone(&text);
-    PrString none = prStringNull();
+    PrRawString text = prRawStringCopy(PR_SV("color"));
+    PrRawString copy = prRawStringClone(&text);
+    PrRawString none = prRawStringNull();
     PrColor color = prColorFromColor8((PrColor8){0x66, 0x33, 0x99, 0xff});
     PrStringView failed = PR_SV("");
 
     char encoded[kPrUtf8MaxBytes];
     uint32_t size = prUtf8Encode(0x2603, encoded);
 
-    prStringReplace(&copy, PR_SV(""));
+    prRawStringReplace(&copy, PR_SV(""));
 
-    failed = check(failed, prStringView(&text).size == 5, "a copy of \"color\" is 5 bytes");
+    failed = check(failed, prRawStringView(&text).size == 5, "a copy of \"color\" is 5 bytes");
     failed = check(failed, size == 3, "a snowman encodes to 3 bytes");
-    failed = check(failed, prStringIsEmpty(&copy), "a string replaced with the empty one is empty");
-    failed = check(failed, prStringIsNull(&none), "the null string is null");
+    failed = check(failed, prRawStringIsEmpty(&copy), "a string replaced with the empty one is empty");
+    failed = check(failed, prRawStringIsNull(&none), "the null string is null");
     failed = check(failed, prStatusName(PrStatus_OutOfRange).size == 10, "a status is named for itself");
     failed = check(failed, (uint32_t)(color.b * 4.0f) == 2, "an 8-bit channel is a fraction of 255");
     failed = declarations(failed, style);
     failed = constructed(failed);
 
-    prStringReset(&text);
-    prStringReset(&copy);
-    prStringReset(&none);
+    prRawStringReset(&text);
+    prRawStringReset(&copy);
+    prRawStringReset(&none);
     return failed;
 }

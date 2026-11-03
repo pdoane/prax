@@ -5,8 +5,8 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/svg.h"
 
@@ -78,7 +78,7 @@ float prSvgLengthValue(const PrSvgLength* svgLength);
 float prSvgLengthValueInSpecifiedUnits(const PrSvgLength* length);
 
 // Returns the value as a string (SVG2/types.html#__svg__SVGLength__valueAsString). The caller releases it.
-PrString prSvgLengthValueAsString(const PrSvgLength* length);
+PrRawString prSvgLengthValueAsString(const PrSvgLength* length);
 
 // Sets the value in user units as a number, the number before the unit, or the value from a string, and writes a
 // reflected attribute again. Returns ReadOnly for an animated value, and Syntax for a string that is not a length.

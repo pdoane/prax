@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/hash_index.h"
 #include "pr/layout_query.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_fragment.h"
 
@@ -36,17 +36,17 @@ struct LayoutRenderedItem {
 
 // The geometry queries' caches.
 struct LayoutQueries {
-    Array<PrLayoutRect> boxes;      // scratch: a query's boxes
+    RawArray<PrLayoutRect> boxes;      // scratch: a query's boxes
 
     // The hit areas hit tests found. Each is valid while the tree holds its fragment and the effects of the tree's
     // nodes are those it was found for.
     uint32_t hitEffects;            // the tree's effects epoch that they were found for
-    Array<LayoutHitBound> hitBounds;
+    RawArray<LayoutHitBound> hitBounds;
     HashIndex hitIndex;             // by the fragment's pointer
 
     // Where each text node's item is, as of the layout `renderedLayouts` counts (prLayoutNodeRenderedText).
     uint32_t renderedLayouts;
-    Array<LayoutRenderedItem> rendered;     // by LayoutNodeIndex
+    RawArray<LayoutRenderedItem> rendered;     // by LayoutNodeIndex
 };
 
 // Returns true if the node is in the tree's last layout: neither it nor any of its ancestors is absent from it, up to a

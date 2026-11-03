@@ -2,7 +2,6 @@
 
 #include "pr/kit_color.h"
 
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/color_space.h"
@@ -16,6 +15,7 @@
 #include "pr/kit_surface.h"
 #include "pr/kit_text.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 #include "studio/kit/src/kit.h"
 
@@ -534,7 +534,7 @@ struct Sampled {
 // line along the edge of the gamut. If the gamut is wider than sRGB, a dashed line marks where sRGB ends inside it. The
 // image holds half floats, so that colors past sRGB reach a target that shows them.
 void drawSampled(PrKit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrColorSpace gamut) {
-    Array<PrFloat16> pixels;
+    RawArray<PrFloat16> pixels;
     pixels.resize(kSamples * kSamples * 4);
     for (uint32_t y = 0; y < kSamples; ++y) {
         float up = 1 - (float(y) + 0.5f) / kSamples;
@@ -562,7 +562,7 @@ void drawSampled(PrKit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrC
     pixels.reset();
     // An edge is where each column, walked up, first leaves a gamut.
     auto edge = [&](PrColorSpace space, const PrDrawStroke& stroke) {
-        Array<PrVec2> points;
+        RawArray<PrVec2> points;
         for (uint32_t x = 0; x < kSamples; ++x) {
             float across = (float(x) + 0.5f) / kSamples;
             for (uint32_t step = 0; step < kSamples; ++step) {

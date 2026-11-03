@@ -34,7 +34,7 @@ void layoutJustifierReset(LayoutJustifier& justifier) {
 
 PR_NOINLINE void layoutJustifyFind(LayoutState& state, LayoutJustifier& justifier, const LayoutInlineShaping& t,
         const PrLayoutStyleIndex* styles, PrLayoutStyleIndex containerStyle, const LayoutLineContent& line) {
-    Array<LayoutJustifyOpportunity>& opportunities = justifier.opportunities;
+    RawArray<LayoutJustifyOpportunity>& opportunities = justifier.opportunities;
     opportunities.clear();
     uint32_t stop = line.end;
     while (stop > line.from.byte && ((t.spaces.data[stop - 1] & (PrTextSpaceFlag_Collapsible | PrTextSpaceFlag_Hangs)) != 0 ||
@@ -47,7 +47,7 @@ PR_NOINLINE void layoutJustifyFind(LayoutState& state, LayoutJustifier& justifie
             from = b + 1;
     }
     // The boxes open around the text. Depth zero is the root inline box.
-    Array<uint32_t>& open = justifier.open;
+    RawArray<uint32_t>& open = justifier.open;
     open.clear();
     for (uint32_t i = 0; i < line.carried.count; ++i)
         open.push(line.carried.data[i]);

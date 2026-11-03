@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/geom.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -35,21 +35,21 @@ uint32_t pathCubicLineCount(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float to
 
 // Appends to `out` the points of `count` lines at even steps of the parameter of the curve. The points leave out `p0`
 // and end at the curve's end point.
-void pathFlattenQuadLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, uint32_t count, Array<PrVec2>& out);
-void pathFlattenCubicLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, uint32_t count, Array<PrVec2>& out);
+void pathFlattenQuadLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, uint32_t count, RawArray<PrVec2>& out);
+void pathFlattenCubicLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, uint32_t count, RawArray<PrVec2>& out);
 
 // Appends to `out` the points of lines within `tolerance` of the curve. The points leave out `p0` and end at the
 // curve's end point.
-void pathFlattenQuad(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, Array<PrVec2>& out);
-void pathFlattenCubic(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, Array<PrVec2>& out);
+void pathFlattenQuad(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, RawArray<PrVec2>& out);
+void pathFlattenCubic(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, RawArray<PrVec2>& out);
 
 // Appends to `out` the points of lines within `tolerance` of the curve that cover the same area as the curve. The
 // points leave out `p0` and end at the curve's end point.
 //
 // A chord of a curve falls inside it. Each point between the ends therefore moves off the curve, away from its center
 // of curvature. The move balances the area that one chord loses against the area that the next chord gains.
-void pathFlattenQuadArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, Array<PrVec2>& out);
-void pathFlattenCubicArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, Array<PrVec2>& out);
+void pathFlattenQuadArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, RawArray<PrVec2>& out);
+void pathFlattenCubicArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, RawArray<PrVec2>& out);
 
 } // namespace pr_impl
 

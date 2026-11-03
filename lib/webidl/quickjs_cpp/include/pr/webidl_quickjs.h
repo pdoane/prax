@@ -47,7 +47,7 @@ bool jsSequence(JSContext* ctx, JSValueConst input, Visit visit) {
 // A (sequence<unsigned long> or unsigned long) argument (webidl/#js-union). A single value reads as a sequence of one.
 struct Uint32Sequence {
     JSContext* ctx;
-    Array<uint32_t> values = {};    // the call's scope holds the storage once read
+    RawArray<uint32_t> values = {};    // the call's scope holds the storage once read
 
     bool read(JSValueConst input);
 };
@@ -86,7 +86,7 @@ JSValue jsMapForEach(JSContext* ctx, JSValueConst map, JSValue entries, int argc
 // A (DOMString or sequence<unrestricted double>) argument, as the string or the values. An object with @@iterator is
 // the sequence (webidl/#js-union).
 struct JsDoubleSequenceOrString {
-    Array<double> values;
+    RawArray<double> values;
     JsString string;
     bool sequence;
 
@@ -183,7 +183,7 @@ typedef uint8_t JsNamedFlags;
 // The named properties of a class's objects (webidl/#dfn-support-named-properties). A class with a named setter or
 // named deleter has `setItem` or `deleteItem`. Each function returns false, or an exception, if it threw.
 struct JsNamed {
-    bool (*names)(JSContext* ctx, void* handle, Array<JSAtom>* out);   // appends the supported names
+    bool (*names)(JSContext* ctx, void* handle, RawArray<JSAtom>* out);   // appends the supported names
 
     // Returns the value of `name`, or undefined for a name that is not supported.
     JSValue (*item)(JSContext* ctx, JSValueConst object, void* handle, PrStringView name);

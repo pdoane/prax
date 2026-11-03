@@ -1,7 +1,7 @@
 #include "dom/src/dom_xml.h"
 
-#include "pr/array.h"
 #include "pr/charset.h"
+#include "pr/raw_array.h"
 
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_hooks.h"
@@ -157,7 +157,7 @@ bool domXmlCharset(PrStringView bytes, PrCharset transport, bool complete, PrCha
     return true;
 }
 
-PrStringView domXmlDecode(PrStringView bytes, PrCharset transport, PrString* out, PrCharset* outCharset) {
+PrStringView domXmlDecode(PrStringView bytes, PrCharset transport, PrRawString* out, PrCharset* outCharset) {
     domXmlCharset(bytes, transport, true, outCharset);
     PrCharsetDecoder decoder = prCharsetDecoderMake(*outCharset, 0);
     return prCharsetDecodeView(&decoder, bytes, PrCharsetInput_Final, out);
@@ -169,7 +169,7 @@ using namespace pr_impl;
 
 PrDomDocument* prDomParseXml(PrStringView source, PrStringView contentType, PrXmlError* PR_NULLABLE error) {
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Xml);
-    prStringReplace(&document->contentType, contentType);
+    prRawStringReplace(&document->contentType, contentType);
     PrXmlError found = {};
     domXmlParse(document, source, {}, nullptr, &found);
     if (error != nullptr)

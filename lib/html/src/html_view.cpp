@@ -3,7 +3,6 @@
 #include "pr/html_view.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/atomic.h"
 #include "pr/draw_list.h"
@@ -12,6 +11,7 @@
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_worker.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 #include "pr/text_edit.h"
 #include "pr/text_edit_command.h"
@@ -78,12 +78,12 @@ struct HtmlView {
     bool changed;                                // true if the viewport or the presentation changed since the last job
                                                  // started
     uint32_t scrollsTaken;                       // the value that prLayoutCompositorTakeScrolls last returned
-    Array<PrLayoutTrack> tracks;                 // scratch: the presentation's composited animations
-    Array<PrLayoutSceneScroll> scrolls;          // scratch: the offsets that a commit gives
-    Array<ViewFrame> frames;                     // the iframes' browsing contexts, including nested ones, in the order
+    RawArray<PrLayoutTrack> tracks;              // scratch: the presentation's composited animations
+    RawArray<PrLayoutSceneScroll> scrolls;       // scratch: the offsets that a commit gives
+    RawArray<ViewFrame> frames;                  // the iframes' browsing contexts, including nested ones, in the order
                                                  // found
-    Array<PrHtmlPage*> found;                    // scratch: the frames of one browsing context
-    Array<PrLayoutSceneEmbed> embeds;            // scratch: the slots of a scene
+    RawArray<PrHtmlPage*> found;                 // scratch: the frames of one browsing context
+    RawArray<PrLayoutSceneEmbed> embeds;         // scratch: the slots of a scene
 
     // The pointer's state: its position as the document last saw it, the element that it hovers, and the element that
     // the main button was pressed on, each in the innermost document that the pointer is over. The view holds the
@@ -192,7 +192,7 @@ PrCssPresentation* PR_NULLABLE frameRender(HtmlView* v, const ViewFrame& frame) 
 // Finds the iframes' browsing contexts in the window and in their own windows, and keeps the view's state for those
 // that it already knew. Drops what the compositor held for those that are gone.
 void findFrames(HtmlView* v) {
-    Array<ViewFrame> last = v->frames;
+    RawArray<ViewFrame> last = v->frames;
     v->frames = {};
     v->frames.push(ViewFrame{v->page, 0, v->extent, false});
     for (uint32_t at = 0; at < v->frames.count; ++at) {
@@ -235,7 +235,7 @@ void sizeFrames(HtmlView* v, const PrLayoutScene* scene) {
 }
 
 // Sets `out` to the presentation's scroll offsets for the containers of `scene`.
-void sceneScrolls(PrCssPresentation* presentation, const PrLayoutScene* scene, Array<PrLayoutSceneScroll>& out) {
+void sceneScrolls(PrCssPresentation* presentation, const PrLayoutScene* scene, RawArray<PrLayoutSceneScroll>& out) {
     const PrLayoutTree* tree = prCssPresentationTree(presentation);
     out.resize(prLayoutSceneScrolls(tree, scene, nullptr, 0));
     prLayoutSceneScrolls(tree, scene, out.data, out.count);
@@ -292,12 +292,12 @@ void paintEmbedded(void* PR_NULLABLE context, uint64_t embed, PrLayoutVec extent
 // `canvasFilled` is true. Returns the scene's canvas color.
 PrColor16 playTree(HtmlView* v, PrCssPresentation* presentation, PrDrawList* list, bool canvasFilled) {
     const PrLayoutScene* scene = prLayoutTreeScene(prCssPresentationTree(presentation));
-    Array<PrLayoutSceneScroll> scrolls;
+    RawArray<PrLayoutSceneScroll> scrolls;
     sceneScrolls(presentation, scene, scrolls);
-    Array<PrLayoutTrack> tracks;
+    RawArray<PrLayoutTrack> tracks;
     tracks.resize(prCssPresentationTracks(presentation, nullptr, 0));
     prCssPresentationTracks(presentation, tracks.data, tracks.count);
-    Array<PrLayoutSceneEffect> effects;
+    RawArray<PrLayoutSceneEffect> effects;
     double time = presentation->animations.time;
     effects.resize(prLayoutSceneSampleTracks(scene, tracks.data, tracks.count, time, nullptr, 0));
     prLayoutSceneSampleTracks(scene, tracks.data, tracks.count, time, effects.data, effects.count);

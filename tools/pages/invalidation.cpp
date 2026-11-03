@@ -167,14 +167,14 @@ void frame(PrCssPresentation* presentation, bool verify, const char* step, Total
     kind->text.add(laid);
     if (!verify)
         return;
-    PrString report{};
+    PrRawString report{};
     if (!prCssPresentationVerify(presentation, &report)) {
         if (totals->failures++ == 0) {
-            PrStringView what = prStringView(&report);
+            PrStringView what = prRawStringView(&report);
             totals->firstFailure = std::string(step) + ": " + std::string(what.data, what.size);
         }
     }
-    prStringReset(&report);
+    prRawStringReset(&report);
 }
 
 // Returns true if `match` names the element: if its class attribute holds `match`, `match` is the element's name, or
@@ -284,14 +284,14 @@ int main(int argc, char** argv) {
         PrDomElement* element = all[size_t(i) * all.size() / chosen];
         if (marked != nullptr) {
             prDomElementSetAttribute(element, "data-invalidation-target", "");
-            PrString markup = prHtmlOuterHtml(prDomDocumentElement(document));
-            PrStringView text = prStringView(&markup);
+            PrRawString markup = prHtmlOuterHtml(prDomDocumentElement(document));
+            PrStringView text = prRawStringView(&markup);
             FILE* out = fopen(marked, "wb");
             bool written = out != nullptr && fputs("<!DOCTYPE html>\n", out) >= 0 &&
                 fwrite(text.data, 1, text.size, out) == text.size;
             if (out != nullptr)
                 fclose(out);
-            prStringReset(&markup);
+            prRawStringReset(&markup);
             if (!written) {
                 fprintf(stderr, "invalidation: cannot write %s\n", marked);
                 return 1;
@@ -309,13 +309,13 @@ int main(int argc, char** argv) {
         uint32_t count = prDomTokenListLength(classes);
         for (uint32_t c = 0; c < count && c < 4; ++c) {
             // Removing the token rewrites the attribute that the item views.
-            PrString token = prStringCopy(prDomTokenListItem(classes, c));
-            PrStringView name = prStringView(&token);
+            PrRawString token = prRawStringCopy(prDomTokenListItem(classes, c));
+            PrStringView name = prRawStringView(&token);
             prDomTokenListRemove(classes, &name, 1);
             frame(presentation, verify, "class removed", &totals);
             prDomTokenListAdd(classes, &name, 1);
             frame(presentation, verify, "class added", &totals);
-            prStringReset(&token);
+            prRawStringReset(&token);
         }
         prDomTokenListDestroy(classes);
         // Sets an attribute that no selector is likely to read.

@@ -30,7 +30,7 @@ PrCssStyleDeclaration* cssElementInlineStyle(PrDomElement* element) {
     CssInlineStyle* inlineStyle = allocZeroed<CssInlineStyle>();
     const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "style");
     if (attribute != nullptr)
-        cssDeclarationBlockParse(&inlineStyle->block, prStringView(&attribute->value), nullptr);
+        cssDeclarationBlockParse(&inlineStyle->block, prRawStringView(&attribute->value), nullptr);
     inlineStyle->declaration =
         PrCssStyleDeclaration{{nullptr, element, &inlineStyle->block, updateStyleAttribute, nullptr, nullptr, false}};
     style->inlineStyle = inlineStyle;

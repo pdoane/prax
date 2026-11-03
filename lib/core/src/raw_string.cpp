@@ -1,7 +1,7 @@
 // Owned strings and string views.
 
-#include "pr/string.h"
-#include "core/src/string.h"
+#include "pr/raw_string.h"
+#include "core/src/raw_string.h"
 
 #include "pr/assert.h"
 #include "pr/mem.h"
@@ -11,13 +11,13 @@
 namespace pr_impl {
 
 // The tag sits at the same offset in both representations, so the kind can be read before the live one is known.
-static_assert(sizeof(PrString{}.heap) == sizeof(PrString));
-static_assert(offsetof(PrString, heap.tag) == offsetof(PrString, small.tag));
+static_assert(sizeof(PrRawString{}.heap) == sizeof(PrRawString));
+static_assert(offsetof(PrRawString, heap.tag) == offsetof(PrRawString, small.tag));
 
 namespace {
 
-PrStringKind inlineTag(size_t size) {
-    return PrStringKind((size << kPrStringKindBits) | PrStringKind_Inline);
+PrRawStringKind inlineTag(size_t size) {
+    return PrRawStringKind((size << kPrRawStringKindBits) | PrRawStringKind_Inline);
 }
 
 } // namespace
@@ -26,19 +26,19 @@ PrStringKind inlineTag(size_t size) {
 
 using namespace pr_impl;
 
-PrString prStringNull(void) {
-    PrString string = {};
+PrRawString prRawStringNull(void) {
+    PrRawString string = {};
     return string;
 }
 
-PrString prStringCopy(PrStringView text) {
+PrRawString prRawStringCopy(PrStringView text) {
     PR_ASSERT(text.data != nullptr || text.size == 0);
     PR_ASSERT(text.size <= 0xfffffffeu);
     if (text.data == nullptr)
-        return prStringNull();
+        return prRawStringNull();
 
-    PrString string = {};
-    if (text.size <= kPrStringInlineCapacity) {
+    PrRawString string = {};
+    if (text.size <= kPrRawStringInlineCapacity) {
         if (text.size != 0)
             prMemCopy(string.small.text, text.data, text.size);
         string.small.tag = inlineTag(text.size);
@@ -47,55 +47,55 @@ PrString prStringCopy(PrStringView text) {
 
     char* data = static_cast<char*>(prMemoryAlloc(text.size));
     prMemCopy(data, text.data, text.size);
-    return stringAdopt(data, uint32_t(text.size), uint32_t(text.size));
+    return rawStringAdopt(data, uint32_t(text.size), uint32_t(text.size));
 }
 
-PrString prStringExternal(PrStringView text) {
+PrRawString prRawStringExternal(PrStringView text) {
     PR_ASSERT(text.data != nullptr || text.size == 0);
     PR_ASSERT(text.size <= 0xffffffffu);
 
-    PrString string = {};
+    PrRawString string = {};
     string.heap.data = text.data;
     string.heap.size = uint32_t(text.size);
     string.heap.capacity = 0;
-    string.heap.tag = PrStringKind_External;
+    string.heap.tag = PrRawStringKind_External;
     return string;
 }
 
-PrString prStringEmpty(void) {
-    PrString string = {};
+PrRawString prRawStringEmpty(void) {
+    PrRawString string = {};
     string.small.tag = inlineTag(0);
     return string;
 }
 
-PrString prStringClone(const PrString* string) {
-    return prStringCopy(prStringView(string));
+PrRawString prRawStringClone(const PrRawString* string) {
+    return prRawStringCopy(prRawStringView(string));
 }
 
-void prStringReplace(PrString* target, PrStringView text) {
-    PrString value = prStringCopy(text);
-    prStringReset(target);
+void prRawStringReplace(PrRawString* target, PrStringView text) {
+    PrRawString value = prRawStringCopy(text);
+    prRawStringReset(target);
     *target = value;
 }
 
-void prStringAppend(PrString* string, PrStringView text) {
+void prRawStringAppend(PrRawString* string, PrStringView text) {
     PR_ASSERT(string != nullptr && (text.data != nullptr || text.size == 0));
     if (text.size == 0)
         return;
 
     // An external string does not own its bytes, so its bytes are copied before the text is appended. A null string has
     // no bytes and becomes the text.
-    if (prStringKind(string) == PrStringKind_External) {
-        PrStringView external = prStringView(string);
-        *string = external.size != 0 ? prStringCopy(external) : prStringEmpty();
+    if (prRawStringKind(string) == PrRawStringKind_External) {
+        PrStringView external = prRawStringView(string);
+        *string = external.size != 0 ? prRawStringCopy(external) : prRawStringEmpty();
     }
 
-    PrStringView held = prStringView(string);
+    PrStringView held = prRawStringView(string);
     PR_ASSERT(text.size <= 0xfffffffeu - held.size);
     size_t size = held.size + text.size;
 
-    if (prStringKind(string) == PrStringKind_Inline) {
-        if (size <= kPrStringInlineCapacity) {
+    if (prRawStringKind(string) == PrRawStringKind_Inline) {
+        if (size <= kPrRawStringInlineCapacity) {
             prMemCopy(string->small.text + held.size, text.data, text.size);
             string->small.tag = inlineTag(size);
             return;
@@ -106,7 +106,7 @@ void prStringAppend(PrString* string, PrStringView text) {
         char* moved = static_cast<char*>(prMemoryAlloc(capacity));
         prMemCopy(moved, string->small.text, held.size);
         prMemCopy(moved + held.size, text.data, text.size);
-        *string = stringAdopt(moved, uint32_t(size), uint32_t(capacity));
+        *string = rawStringAdopt(moved, uint32_t(size), uint32_t(capacity));
         return;
     }
 
@@ -125,29 +125,29 @@ void prStringAppend(PrString* string, PrStringView text) {
     string->heap.size = uint32_t(size);
 }
 
-void prStringReset(PrString* string) {
+void prRawStringReset(PrRawString* string) {
     PR_ASSERT(string != nullptr);
-    if (prStringKind(string) == PrStringKind_Owned)
+    if (prRawStringKind(string) == PrRawStringKind_Owned)
         prMemoryFree(const_cast<char*>(string->heap.data));
 
-    PrString null = {};
+    PrRawString null = {};
     *string = null;
 }
 
-PrStringKind prStringKind(const PrString* string) {
-    return PrStringKind(string->small.tag & ((1 << kPrStringKindBits) - 1));
+PrRawStringKind prRawStringKind(const PrRawString* string) {
+    return PrRawStringKind(string->small.tag & ((1 << kPrRawStringKindBits) - 1));
 }
 
-bool prStringIsNull(const PrString* string) {
-    return prStringView(string).data == nullptr;
+bool prRawStringIsNull(const PrRawString* string) {
+    return prRawStringView(string).data == nullptr;
 }
 
-bool prStringIsEmpty(const PrString* string) {
-    return prStringView(string).size == 0;
+bool prRawStringIsEmpty(const PrRawString* string) {
+    return prRawStringView(string).size == 0;
 }
 
-PrStringView prStringView(const PrString* string) {
-    if ((string->small.tag & ((1 << kPrStringKindBits) - 1)) == PrStringKind_Inline)
-        return PrStringView{string->small.text, size_t(string->small.tag >> kPrStringKindBits)};
+PrStringView prRawStringView(const PrRawString* string) {
+    if ((string->small.tag & ((1 << kPrRawStringKindBits) - 1)) == PrRawStringKind_Inline)
+        return PrStringView{string->small.text, size_t(string->small.tag >> kPrRawStringKindBits)};
     return PrStringView{string->heap.data, string->heap.size};
 }

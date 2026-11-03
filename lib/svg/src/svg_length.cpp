@@ -99,7 +99,7 @@ constexpr const char* kUnits[] = {"", "", "%", "em", "ex", "px", "cm", "mm", "in
 struct LengthValue {
     PrSvgLengthType type;
     float factor;
-    PrString text;              // Unknown: the value as written
+    PrRawString text;              // Unknown: the value as written
 };
 
 // Parses `text` as a length. Returns false if it is not one.
@@ -123,18 +123,18 @@ bool parse(PrStringView text, LengthValue* out) {
     SvgLengthPercentage other{};
     if (!svgParseLength(text, nullptr, &other))
         return false;
-    *out = LengthValue{.type = PrSvgLengthType_Unknown, .factor = 0, .text = prStringCopy(text)};
+    *out = LengthValue{.type = PrSvgLengthType_Unknown, .factor = 0, .text = prRawStringCopy(text)};
     return true;
 }
 
 // Returns the value as a string (SVG2/types.html#__svg__SVGLength__valueAsString).
-PrString serialize(const LengthValue& value) {
+PrRawString serialize(const LengthValue& value) {
     if (value.type == PrSvgLengthType_Unknown)
-        return prStringClone(&value.text);
+        return prRawStringClone(&value.text);
     PrTextBuffer out{};
     cssSerializeNumber(&out, double(value.factor));
     prTextBufferAppend(&out, kUnits[value.type]);
-    PrString text = prTextBufferCopy(&out);
+    PrRawString text = prTextBufferCopy(&out);
     prTextBufferReset(&out);
     return text;
 }
@@ -180,7 +180,7 @@ struct SvgLength {
 LengthValue valueOf(const SvgLength* length) {
     if (length->element == nullptr) {
         LengthValue value = length->value;
-        value.text = prStringClone(&length->value.text);
+        value.text = prRawStringClone(&length->value.text);
         return value;
     }
     LengthValue value{};
@@ -193,14 +193,14 @@ LengthValue valueOf(const SvgLength* length) {
 // Sets a length's value, and writes a reflected attribute again. The call takes ownership of the value's text.
 void setValue(SvgLength* length, LengthValue value) {
     if (length->element == nullptr) {
-        prStringReset(&length->value.text);
+        prRawStringReset(&length->value.text);
         length->value = value;
         return;
     }
-    PrString text = serialize(value);
-    domSetAttribute(length->element, PrDomNamespace_None, length->attribute->name, prStringView(&text));
-    prStringReset(&text);
-    prStringReset(&value.text);
+    PrRawString text = serialize(value);
+    domSetAttribute(length->element, PrDomNamespace_None, length->attribute->name, prRawStringView(&text));
+    prRawStringReset(&text);
+    prRawStringReset(&value.text);
 }
 
 // Returns what a length resolves against: its element's viewport along the attribute's direction and its font size, or
@@ -241,7 +241,7 @@ void prSvgLengthDestroy(PrSvgLength* PR_NULLABLE length) {
         return;
     if (length->element != nullptr)
         prDomNodeRelease(prSvgElementAsNode(length->element));
-    prStringReset(&length->value.text);
+    prRawStringReset(&length->value.text);
     prMemoryFree(length);
 }
 
@@ -281,7 +281,7 @@ PrSvgLength* prSvgAnimatedLengthAnimVal(const PrSvgAnimatedLength* animated) {
 
 PrSvgLengthType prSvgLengthUnitType(const PrSvgLength* length) {
     LengthValue value = valueOf(length);
-    prStringReset(&value.text);
+    prRawStringReset(&value.text);
     return value.type;
 }
 
@@ -294,25 +294,25 @@ float prSvgLengthValue(const PrSvgLength* svgLength) {
         // Another unit of CSS resolves as SVG resolves the attribute.
         SvgLengthPercentage length{};
         Basis basis = basisOf(svgLength);
-        if (svgParseLength(prStringView(&value.text), nullptr, &length))
+        if (svgParseLength(prRawStringView(&value.text), nullptr, &length))
             result = svgLengthResolve(length, basis.percent);
     } else {
         result = value.factor * unitLength(value.type, basisOf(svgLength));
     }
-    prStringReset(&value.text);
+    prRawStringReset(&value.text);
     return result;
 }
 
 float prSvgLengthValueInSpecifiedUnits(const PrSvgLength* length) {
     LengthValue value = valueOf(length);
-    prStringReset(&value.text);
+    prRawStringReset(&value.text);
     return value.factor;
 }
 
-PrString prSvgLengthValueAsString(const PrSvgLength* length) {
+PrRawString prSvgLengthValueAsString(const PrSvgLength* length) {
     LengthValue value = valueOf(length);
-    PrString text = serialize(value);
-    prStringReset(&value.text);
+    PrRawString text = serialize(value);
+    prRawStringReset(&value.text);
     return text;
 }
 
@@ -327,7 +327,7 @@ PrStatus prSvgLengthSetValueInSpecifiedUnits(PrSvgLength* length, float value) {
     if (length->readOnly)
         return PrStatus_ReadOnly;
     LengthValue current = valueOf(length);
-    prStringReset(&current.text);
+    prRawStringReset(&current.text);
     // A value of another kind becomes a number.
     PrSvgLengthType type = current.type == PrSvgLengthType_Unknown ? PrSvgLengthType_Number : current.type;
     setValue(length, LengthValue{.type = type, .factor = value});

@@ -179,8 +179,8 @@ describes how they should read, and is the guide for prose passes.
   `.gitattributes` keeps the endings LF in every checkout, `.editorconfig` tells editors, and `lint.py` checks each
   (`whitespace`).
 - **Strings.** Inputs are `PrStringView`. A result is a `PrStringView` if its bytes outlive the call, as with a
-  generated table or storage that the object owns until it changes. A result is an owned `PrString`, released with
-  `prStringReset`, if the bytes are copied. Nothing is NUL-terminated. In C++, a NUL-terminated string or a run of
+  generated table or storage that the object owns until it changes. A result is an owned `PrRawString`, released with
+  `prRawStringReset`, if the bytes are copied. Nothing is NUL-terminated. In C++, a NUL-terminated string or a run of
   chars such as `std::string` converts to a view implicitly, and views compare with `==`. A view of a whole literal is
   the literal, at compile time, with no length beside it (`lint.py`, `literal-view`). C spells the view with
   `PR_SV(text)`, which evaluates `text` twice. `{nullptr, 0}` is the null view, which is distinct from the empty view,
@@ -230,7 +230,8 @@ describes how they should read, and is the guide for prose passes.
   (`kPrLayoutNodeNone`, `kLayoutFaceNone`). A lookup that finds nothing returns `k<Subject>Missing` (`kArrayMissing`,
   `kHashMissing`).
 - **Memory.** Use `alloc<T>`, `allocZeroed<T>`, and `prMemoryAlloc`/`prMemoryFree`. No `new`, `delete` or `<new>`, and no
-  constructors or destructors in the implementation. Growable storage is an `Array`. Storage with a known bound may
+  constructors or destructors in the implementation (`lint.py`, `destructor`). Growable storage is a `RawArray`, whose
+  elements are copied as bytes and which its owner resets. Storage with a known bound may
   reserve address space instead (`pr/vmem.h`) if that is worth its overhead. Indices and relative offsets are
   used instead of pointers, which keeps data relocatable and smaller.
 - **Index domains.** An index that is passed between functions has a typedef that names what it counts
@@ -287,7 +288,7 @@ An illustrative module, `lib/sketch` (not in the repo), showing the shape of a p
 #include "pr/color.h"
 #include "pr/geom.h"
 #include "pr/status.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -389,8 +390,8 @@ uint32_t prSketchStrokes(const PrSketch* sketch, PrSketchStroke* PR_NULLABLE out
 // Calls `fn` with each stroke.
 void prSketchEachStroke(const PrSketch* sketch, PrSketchStrokeFn fn, void* PR_NULLABLE context);
 
-// The sketch as SVG path data. The caller releases it with prStringReset.
-PrString prSketchPathData(const PrSketch* sketch);
+// The sketch as SVG path data. The caller releases it with prRawStringReset.
+PrRawString prSketchPathData(const PrSketch* sketch);
 
 #if defined(__cplusplus)
 }
@@ -435,8 +436,8 @@ struct StrokeRecord {
 // The strokes of a sketch, in the order they began.
 struct Sketch {
     PrSketchOptions options;
-    Array<StrokeRecord> strokes;
-    Array<PrVec2> points;
+    RawArray<StrokeRecord> strokes;
+    RawArray<PrVec2> points;
     bool open;                  // true while the last stroke accepts new points
 
     // The bounds of all points, or empty. Adding a point can only grow the bounds, so they are updated as each point is

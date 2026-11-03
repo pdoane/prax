@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/bitset.h"
 #include "pr/font.h"
 #include "pr/hash_index.h"
 #include "pr/layout_value.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -23,10 +23,10 @@ struct LayoutCompound {
 
 // The compound values of a tree's styles. An index names its entry until the entry is freed.
 struct LayoutCompounds {
-    Array<LayoutCompound> entries;
-    Array<uint32_t> free;           // freed indices, which interning reuses
+    RawArray<LayoutCompound> entries;
+    RawArray<uint32_t> free;           // freed indices, which interning reuses
     HashIndex index;
-    Array<uint32_t> candidates;     // same as LayoutTable::candidates
+    RawArray<uint32_t> candidates;     // same as LayoutTable::candidates
 };
 
 // Returns true if a length is auto, none or stretch, or none of the keywords: pixels, a percentage or a compound.
@@ -51,8 +51,8 @@ inline bool layoutLengthIsFixed(PrLayoutLength length) {
 // Returns true if every index below `count` for which `unreferenced` holds is among `candidates`, as
 // LayoutTable::candidates requires of a table's list of the entries that a collect frees.
 template <typename Unreferenced>
-bool layoutCandidatesCover(const Array<uint32_t>& candidates, uint32_t count, Unreferenced unreferenced) {
-    Array<uint64_t> listed{};
+bool layoutCandidatesCover(const RawArray<uint32_t>& candidates, uint32_t count, Unreferenced unreferenced) {
+    RawArray<uint64_t> listed{};
     listed.resize(uint32_t(bitsetWords(count)));
     prMemZero(listed.data, listed.count * sizeof(uint64_t));
     for (uint32_t k = 0; k < candidates.count; ++k)

@@ -35,10 +35,10 @@ void decodeInto(PrCharset charset, PrStringView bytes, char* out) {
 // Decodes `bytes` whole as UTF-8, as an HTML load does: the result is the bytes themselves if they are well-formed.
 void decodeView(PrStringView bytes) {
     PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
-    PrString scratch = {};
+    PrRawString scratch = {};
     PrStringView text = prCharsetDecodeView(&decoder, bytes, PrCharsetInput_Final, &scratch);
     sink = uint8_t(text.size);
-    prStringReset(&scratch);
+    prRawStringReset(&scratch);
 }
 
 void measure(PrStringView name, PrStringView bytes) {

@@ -11,8 +11,8 @@
 #include "pr/css_view.h"
 #include "pr/dom.h"
 #include "pr/fetch_blob.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/url.h"
 
@@ -81,14 +81,14 @@ PrDomDocument* prHtmlDomParserParseFromString(PrStringView source, PrHtmlDomPars
 
 // Returns the HTML serialization of the children of `node`, which is an element or a shadow root
 // (html/#dom-element-innerhtml and html/#dom-shadowroot-innerhtml).
-PrString prHtmlInnerHtml(const PrDomNode* node);
+PrRawString prHtmlInnerHtml(const PrDomNode* node);
 
 // Replaces the children of `node` with `markup` parsed as a fragment. `node` is an element, a shadow root or a
 // template's contents. The context of the parse is the element, or the shadow root's host.
 void prHtmlSetInnerHtml(PrDomNode* node, PrStringView markup);
 
 // Returns the HTML serialization of the element itself (html/#dom-element-outerhtml).
-PrString prHtmlOuterHtml(const PrDomElement* element);
+PrRawString prHtmlOuterHtml(const PrDomElement* element);
 
 // Replaces the element with `markup` parsed as a fragment in the context of its parent. Returns NotAllowed if the
 // parent is a document, and does nothing if the element has no parent.
@@ -147,7 +147,7 @@ PrStringView prHtmlDocumentReferrer(PrDomDocument* document);
 
 // Creates a blob URL of `blob` for the window's origin, which lasts until it is revoked or the window closes
 // (FileAPI/#dfn-createObjectURL).
-PrString prHtmlWindowCreateObjectUrl(PrHtmlWindow* window, const PrFetchBlob* blob);
+PrRawString prHtmlWindowCreateObjectUrl(PrHtmlWindow* window, const PrFetchBlob* blob);
 
 // Revokes `url`, if the window's origin created it (FileAPI/#dfn-revokeObjectURL).
 void prHtmlWindowRevokeObjectUrl(PrHtmlWindow* window, PrStringView url);
@@ -279,7 +279,7 @@ void prHtmlElementSetHidden(PrHtmlElement* element, PrHtmlHidden value);
 
 // Returns the text of the element as it is rendered, or its descendants' text if it is not being rendered
 // (html/#dom-innertext). This brings the layout up to date.
-PrString prHtmlElementInnerText(const PrHtmlElement* element);
+PrRawString prHtmlElementInnerText(const PrHtmlElement* element);
 
 // Replaces the element's children with `value`: a text node for each run of text, and a br element for each line break
 // between them.
@@ -341,7 +341,7 @@ int32_t prHtmlElementOffsetHeight(PrHtmlElement* element);
 // Returns the value of a URL-reflecting attribute (html/#reflecting-content-attributes-in-idl-attributes), which is the
 // content attribute `name` parsed against the document base URL. If the attribute does not parse, returns the
 // attribute's value. If there is no attribute, returns the empty string.
-PrString prHtmlElementReflectedUrl(const PrHtmlElement* element, PrStringView name);
+PrRawString prHtmlElementReflectedUrl(const PrHtmlElement* element, PrStringView name);
 
 // The kinds of integer IDL attribute that reflect a content attribute
 // (html/#reflecting-content-attributes-in-idl-attributes).
@@ -374,7 +374,7 @@ PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* element, PrStringView n
 
 // Writes up to `capacity` names of the element's custom data attributes to `items`, in the order of its attributes
 // (html/#concept-domstringmap-pairs). Returns the total number of names.
-uint32_t prHtmlDatasetNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity);
+uint32_t prHtmlDatasetNames(const PrDomElement* element, PrRawString* PR_NULLABLE items, uint32_t capacity);
 
 // Returns the value of the attribute that `name` refers to, or the null view if the element has no such attribute.
 PrStringView prHtmlDatasetGet(const PrDomElement* element, PrStringView name);
@@ -526,7 +526,7 @@ PrStatus prHtmlCanvasElementGetContext2D(PrHtmlCanvasElement* element, const PrC
 // Writes a data: URL of the bitmap serialized as an image of the MIME type `type`, or as PNG if the window's codec does
 // not encode that type (html/#dom-canvas-todataurl). A bitmap without pixels is "data:,". Returns NotAllowed, and
 // writes the null string, if the bitmap is not origin-clean.
-PrStatus prHtmlCanvasElementToDataUrl(PrHtmlCanvasElement* element, PrStringView type, PrString* out);
+PrStatus prHtmlCanvasElementToDataUrl(PrHtmlCanvasElement* element, PrStringView type, PrRawString* out);
 
 // Writes the bitmap as a source that a context draws (html/#canvasimagesource), with one reference to its image for the
 // caller. A canvas without a context has a transparent bitmap of its size. Returns false, and writes no image, for a
@@ -554,7 +554,7 @@ PrHtmlAreaElement* PR_NULLABLE prHtmlAreaElementQuery(PrDomEventTarget* PR_NULLA
 // The URL is the element's href attribute parsed against the document base URL. If the attribute does not parse,
 // `PrUrlComponent_Href` is the attribute's value, or the empty string if there is no attribute,
 // `PrUrlComponent_Protocol` is ":", and every other component is the empty string.
-PrString prHtmlHyperlinkComponent(const PrHtmlElement* element, PrUrlComponent component);
+PrRawString prHtmlHyperlinkComponent(const PrHtmlElement* element, PrUrlComponent component);
 
 // Sets a component of the URL of a hyperlink. `PrUrlComponent_Href` sets the href attribute. Any other component
 // changes the URL as the URL interface's setter does, and then sets the href attribute to the URL. Does nothing if the
@@ -575,7 +575,7 @@ PrHtmlBaseElement* PR_NULLABLE prHtmlBaseElementQuery(PrDomEventTarget* PR_NULLA
 
 // Returns the href attribute parsed against the document's URL, or the attribute's value if it does not parse
 // (html/#dom-base-href). A missing attribute is the empty string.
-PrString prHtmlBaseElementHref(const PrHtmlBaseElement* element);
+PrRawString prHtmlBaseElementHref(const PrHtmlBaseElement* element);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLLinkElement : HTMLElement (html)
@@ -865,7 +865,7 @@ bool prHtmlScriptElementAsync(const PrHtmlScriptElement* element);
 void prHtmlScriptElementSetAsync(PrHtmlScriptElement* element, bool value);
 
 // html/#dom-script-text: the element's child text content, which setting replaces with one text node.
-PrString prHtmlScriptElementText(const PrHtmlScriptElement* element);
+PrRawString prHtmlScriptElementText(const PrHtmlScriptElement* element);
 void prHtmlScriptElementSetText(PrHtmlScriptElement* element, PrStringView value);
 
 // html/#dom-script-supports: true for the types of script that the engine runs, "classic" and "module".
@@ -1245,7 +1245,7 @@ PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrS
     PrDomEventTarget* PR_NONNULL const* PR_NULLABLE ports, uint32_t portCount, PrStringView targetOrigin);
 
 // Returns a component of the URL of the window's document (html/#the-location-interface).
-PrString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component);
+PrRawString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component);
 
 // How a navigation changes the session history (html/#navigationhistorybehavior).
 enum {
@@ -1266,8 +1266,8 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrHtmlWindow* source, PrU
     PrHtmlHistoryHandling handling);
 
 // The target name of the window's browsing context (html/#nav-target), which hyperlinks name in their target attribute.
-// The name outlives the window's document. The caller releases the returned string with prStringReset.
-PrString prHtmlWindowName(const PrHtmlWindow* window);
+// The name outlives the window's document. The caller releases the returned string with prRawStringReset.
+PrRawString prHtmlWindowName(const PrHtmlWindow* window);
 
 // Sets the target name of the window's browsing context. Does nothing if the window is no longer current in it.
 void prHtmlWindowSetName(PrHtmlWindow* window, PrStringView name);
@@ -1394,8 +1394,8 @@ PrStringView prHtmlNavigatorUserAgent(const PrHtmlWindow* window);
 
 // Returns navigator.appVersion (html/#dom-navigator-appversion): the window's User-Agent after its "Mozilla/" prefix,
 // or the empty string for a User-Agent that does not start with "Mozilla/5.0 (". PrHtmlNavigatorCompatibilityMode_Gecko
-// shortens it to its platform. The caller releases the string with prStringReset.
-PrString prHtmlNavigatorAppVersion(const PrHtmlWindow* window);
+// shortens it to its platform. The caller releases the string with prRawStringReset.
+PrRawString prHtmlNavigatorAppVersion(const PrHtmlWindow* window);
 
 // Returns navigator.platform (html/#dom-navigator-platform), which names the system that the engine runs on. Each
 // system has one string, which pages compare against to tell the systems apart.

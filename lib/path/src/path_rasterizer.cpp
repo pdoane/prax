@@ -6,9 +6,9 @@
 #include "pr/path_rasterizer.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "path/src/cells.h"
@@ -25,9 +25,9 @@ struct Crossing {
 };
 
 struct PathRasterizer {
-    Array<PathCellEdge> edges;
-    Array<float> cells;   // a row of width + 2 per mask row, zeroed between fills
-    Array<Crossing> crossings;
+    RawArray<PathCellEdge> edges;
+    RawArray<float> cells;   // a row of width + 2 per mask row, zeroed between fills
+    RawArray<Crossing> crossings;
 };
 
 void addEdge(PathRasterizer* r, PrVec2 from, PrVec2 to) {

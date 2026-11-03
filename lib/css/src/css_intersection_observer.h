@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css_intersection_observer.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -42,11 +42,11 @@ struct CssIntersectionObserver {
     CssIntersectionOffset rootMargin[4];
     CssIntersectionOffset scrollMargin[4];
 
-    Array<double> thresholds;                   // ascending
+    RawArray<double> thresholds;                   // ascending
     int32_t delay;
     bool trackVisibility;
-    Array<CssIntersectionObservation> observations;
-    Array<PrCssIntersectionObserverEntry> queued;
+    RawArray<CssIntersectionObservation> observations;
+    RawArray<PrCssIntersectionObserverEntry> queued;
 };
 
 } // namespace pr_impl

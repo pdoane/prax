@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/byte_view.h"
 #include "pr/hash_index.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -31,7 +31,7 @@ void storageBufferRelease(StorageBuffer* PR_NULLABLE buffer);
 // One record that a store holds: its key, the size of its bytes, the use that last touched it, and where its bytes are,
 // which is the backend's: a buffer, or the number of a file.
 struct StorageEntry {
-    PrString key;
+    PrRawString key;
     uint64_t size;
     uint64_t used;
     uint64_t file;
@@ -41,7 +41,7 @@ struct StorageEntry {
 // A store's records, found by key. `total` is the sum of their sizes and of their keys' sizes, and `uses` counts the
 // reads and writes, which order the records by their last use.
 struct StorageIndex {
-    Array<StorageEntry> entries;
+    RawArray<StorageEntry> entries;
     HashIndex hashes;
     uint64_t total;
     uint64_t uses;

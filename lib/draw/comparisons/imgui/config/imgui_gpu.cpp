@@ -6,8 +6,8 @@
 #include "draw/comparisons/imgui/config/imgui_gpu.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 #include "draw/comparisons/imgui/config/kImGuiGpuShaders.h"
 
@@ -26,7 +26,7 @@ struct ImGuiGpu {
     PrGpuSampler linear;
     PrGpuSampler nearest;
     uint32_t sampler;               // the sampler of the draws, which the draw data's callbacks choose
-    Array<ImGuiGpuPipeline> pipelines;
+    RawArray<ImGuiGpuPipeline> pipelines;
 };
 
 // The push data of each draw (imgui_gpu.slang).

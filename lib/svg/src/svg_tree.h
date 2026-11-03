@@ -16,13 +16,13 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/draw.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_list.h"
 #include "pr/hash_index.h"
 #include "pr/path.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/svg_render.h"
 #include "pr/text_buffer.h"
@@ -116,7 +116,7 @@ struct SvgMarkers {
 
     // The vertices of a path, a polyline or a polygon, whose positions the build knows. Other shapes' vertices depend
     // on lengths that resolve when the tree is drawn.
-    Array<SvgVertex> vertices;
+    RawArray<SvgVertex> vertices;
 };
 
 // The limits that min-width, max-width, min-height and max-height put on the used width and height of a rect, an image
@@ -255,11 +255,11 @@ struct SvgEffects {
     SvgResourceIndex clipPath;  // Url: the clipPath element
 
     // The mask layers in the order that mask-image lists them, the top layer first, or none if mask-image is none.
-    Array<SvgMaskLayer> layers;
+    RawArray<SvgMaskLayer> layers;
 
     // The items of the filter list, in order. The list is empty if filter is none, or if a URL of it names no filter
     // element, which ignores the whole list (filter-effects-1/#FilterProperty).
-    Array<SvgFilterItem> filters;
+    RawArray<SvgFilterItem> filters;
 
     // How the element's group composites onto what lies beneath: mix-blend-mode as a blend mode, or plus-lighter as an
     // operator (compositing-1/#mix-blend-mode).
@@ -627,9 +627,9 @@ struct SvgResource {
 // too. A reference into another document names an element of a resource document (dom_resource.h), which is built again
 // once that document loads.
 struct SvgReference {
-    PrString id;                            // the null string for the root of another document
-    PrString document;                      // the other document's absolute URL, or the null string for none
-    const PrDomElement* PR_NULLABLE target; // the reference holds a reference to it
+    PrRawString id;                            // the null string for the root of another document
+    PrRawString document;                      // the other document's absolute URL, or the null string for none
+    const PrDomElement* PR_NULLABLE target;    // the reference holds a reference to it
 
     // The root of the tree whose IDs the ID names an element of: the document, or a shadow root
     // (css-shadow-1/#css-tree-scoped-reference). The reference holds a reference to it.
@@ -644,25 +644,25 @@ struct SvgReference {
 // The nodes of an svg element's content and the resources that they draw with. An array whose items keep their indices
 // has a list of the slots that are free, which new items take first.
 struct SvgTree {
-    Array<SvgNode> nodes;               // by SvgNodeIndex; the first is the root
-    Array<SvgNodeIndex> freeNodes;
+    RawArray<SvgNode> nodes;               // by SvgNodeIndex; the first is the root
+    RawArray<SvgNodeIndex> freeNodes;
     HashIndex elements;                 // the nodes that are their elements' own, by element
-    Array<SvgStrokeStyle> strokes;      // owned by the paints of nodes and text (SvgPaints::strokeStyle)
-    Array<uint32_t> freeStrokes;
-    Array<SvgTransformStyle> transforms; // owned by nodes (SvgNode::transformStyle)
-    Array<uint32_t> freeTransforms;
-    Array<SvgMarkers> markers;          // owned by nodes (SvgNode::markers)
-    Array<uint32_t> freeMarkers;
-    Array<SvgEffects> effects;          // owned by nodes (SvgNode::effects)
-    Array<uint32_t> freeEffects;
-    Array<SvgResource> resources;       // by SvgResourceIndex
-    Array<SvgResourceIndex> freeResources;
-    Array<SvgReference> references;
-    Array<uint32_t> freeReferences;
+    RawArray<SvgStrokeStyle> strokes;   // owned by the paints of nodes and text (SvgPaints::strokeStyle)
+    RawArray<uint32_t> freeStrokes;
+    RawArray<SvgTransformStyle> transforms; // owned by nodes (SvgNode::transformStyle)
+    RawArray<uint32_t> freeTransforms;
+    RawArray<SvgMarkers> markers;          // owned by nodes (SvgNode::markers)
+    RawArray<uint32_t> freeMarkers;
+    RawArray<SvgEffects> effects;          // owned by nodes (SvgNode::effects)
+    RawArray<uint32_t> freeEffects;
+    RawArray<SvgResource> resources;       // by SvgResourceIndex
+    RawArray<SvgResourceIndex> freeResources;
+    RawArray<SvgReference> references;
+    RawArray<uint32_t> freeReferences;
 
     // The cascades that style the elements of the other documents that references name, one for each document, which
     // the tree owns. Such a document does not change, so each style is computed once (svg_cascade.h).
-    Array<SvgCascade*> cascades;
+    RawArray<SvgCascade*> cascades;
 
     // A filter of the elements whose subtrees references read: a bit for each such element's hash. A change outside
     // them reaches no dependent.
@@ -673,7 +673,7 @@ struct SvgTree {
     uint32_t sweptResources;
 
     uint32_t update;                    // the number of builds and updates so far
-    Array<uint32_t> fontFamilies;       // the families that the text looked up (svgFontFamilyHash), found or not
+    RawArray<uint32_t> fontFamilies;    // the families that the text looked up (svgFontFamilyHash), found or not
 
     // True if a node blends with what lies beneath it, or a filter reads what lies beneath as its background. Each
     // build and update sets it. The root, an outermost svg element, then draws as an isolated group
@@ -760,7 +760,8 @@ SvgNodeIndex svgTreeNodeFromElement(const SvgTree* tree, const PrDomElement* ele
 // Reads the geometry of a basic shape or a path from its element and computed style: a rect's, a circle's, an ellipse's
 // or a line's into `node`, or the commands of a path, a polyline or a polygon into `commands`, and sets the node's
 // kind. Returns false for any other element, and for a path, a polyline or a polygon with no commands.
-bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, SvgNode* node, Array<PrPathDataCommand>* commands);
+bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, SvgNode* node,
+    RawArray<PrPathDataCommand>* commands);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Updates
@@ -798,7 +799,7 @@ struct SvgDirt {
 struct SvgChanges {
     bool all;                   // the tree is built again
     bool ids;                   // what the document's IDs name may have changed
-    Array<SvgDirt> dirt;
+    RawArray<SvgDirt> dirt;
 };
 
 // Notes a change at `element`: the work on the nodes and resources whose references read it, and on its own node or its
@@ -909,7 +910,7 @@ bool svgPathSame(const PrPath* path, const PrPath* expected);
 // Appends to `out` the vertex of each of `count` commands of path data, with the direction that orient="auto" turns a
 // marker to there (SVG2/painting.html#RenderingMarkers): along the path at the ends of an open subpath, and half way
 // between the directions into and out of the vertex elsewhere.
-void svgMarkerVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, Array<SvgVertex>* out);
+void svgMarkerVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, RawArray<SvgVertex>* out);
 
 // Returns the element that `url` names, or null, and records the reference for what the build is building. A fragment
 // names an element of the tree of `from`, or of its document if the tree is a shadow tree that has no element of that

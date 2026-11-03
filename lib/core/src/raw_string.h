@@ -3,7 +3,7 @@
 #pragma once
 
 #include "pr/assert.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -11,13 +11,13 @@ namespace pr_impl {
 
 // Returns an owned string over `data`, which holds `size` bytes in an allocation of `capacity` from prMemoryAlloc. The
 // string frees the allocation.
-inline PrString stringAdopt(char* data, uint32_t size, uint32_t capacity) {
+inline PrRawString rawStringAdopt(char* data, uint32_t size, uint32_t capacity) {
     PR_ASSERT(capacity >= size);
-    PrString string = {};
+    PrRawString string = {};
     string.heap.data = data;
     string.heap.size = size;
     string.heap.capacity = capacity;
-    string.heap.tag = PrStringKind_Owned;
+    string.heap.tag = PrRawStringKind_Owned;
     return string;
 }
 

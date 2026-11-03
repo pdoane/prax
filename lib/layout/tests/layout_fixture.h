@@ -31,9 +31,9 @@ inline bool verified(PrLayoutTree* tree) {
     PrLayoutTreeDifference difference{};
     bool same = prLayoutTreeVerify(tree, &difference);
     if (!same) {
-        PrStringView what = prStringView(&difference.what);
+        PrStringView what = prRawStringView(&difference.what);
         MESSAGE("node " << uint32_t(difference.node) << ": " << std::string(what.data, what.size));
-        prStringReset(&difference.what);
+        prRawStringReset(&difference.what);
     }
     return same;
 }

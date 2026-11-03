@@ -196,7 +196,7 @@ const PrDomAttr* PR_NULLABLE nextNamed(CssSelectorMatcher* m, const CssSimpleSel
             wanted = cssSelectorNameLowered(m->selectors, simple->name);
         else
             wanted = cssSelectorName(m->selectors, simple->name);
-        if (prStringView(&attribute->name) == wanted)
+        if (prRawStringView(&attribute->name) == wanted)
             return attribute;
     }
     return nullptr;
@@ -234,7 +234,7 @@ bool matchesAttribute(CssSelectorMatcher* m, const CssSimpleSelector* simple, co
     for (; attribute != nullptr;
             attribute = nextNamed(m, simple, element, static_cast<const PrDomAttr*>(attribute->next))) {
         bool plain = domIsHtmlInHtmlDocument(element) && attribute->space == PrDomNamespace_None;
-        if (matchesValue(m, simple, prStringView(&attribute->value), plain))
+        if (matchesValue(m, simple, prRawStringView(&attribute->value), plain))
             return true;
     }
     return false;
@@ -292,7 +292,7 @@ bool isEmpty(const PrDomElement* element) {
             return false;
         if (!domIsText(child))
             continue;
-        PrStringView data = prStringView(&static_cast<const PrDomText*>(child)->data);
+        PrStringView data = prRawStringView(&static_cast<const PrDomText*>(child)->data);
         for (size_t i = 0; i < data.size; ++i) {
             if (!prAsciiIsSpace(data.data[i]))
                 return false;
@@ -1063,7 +1063,8 @@ Match matchReference(CssSelectorMatcher* m, const CssComplexSelector* complex, u
         for (const PrDomAttr* attribute = nextNamed(m, reference, referrer, referrer->firstAttribute);
                 attribute != nullptr; attribute =
                 nextNamed(m, reference, referrer, static_cast<const PrDomAttr*>(attribute->next))) {
-            if (matchesId(m, prStringView(&attribute->value), id) && matchFrom(m, complex, index, referrer, anchor) == Match_Yes)
+            PrStringView value = prRawStringView(&attribute->value);
+            if (matchesId(m, value, id) && matchFrom(m, complex, index, referrer, anchor) == Match_Yes)
                 return Match_Yes;
         }
     }
@@ -1370,7 +1371,7 @@ const PrCssSelectors* PR_NULLABLE cssDomSelectors(const PrDomDocument* document,
         cache = allocZeroed<CssSelectorCache>();
     uint32_t hash = uint32_t(prHashBytes(text.data, text.size, kSeed));
     uint32_t at = cache->index.find(hash, [&](uint32_t i) {
-        return prStringView(&cache->entries.data[i].text) == text;
+        return prRawStringView(&cache->entries.data[i].text) == text;
     });
     if (at != kHashMissing) {
         cache->entries.data[at].used = ++cache->uses;
@@ -1380,7 +1381,7 @@ const PrCssSelectors* PR_NULLABLE cssDomSelectors(const PrDomDocument* document,
     PrCssSelectors* selectors = cssParseDomSelectors(text);
     if (selectors == nullptr)
         return nullptr;
-    CssCachedSelectors entry = {hash, cache->uses + 1, prStringCopy(text), selectors};
+    CssCachedSelectors entry = {hash, cache->uses + 1, prRawStringCopy(text), selectors};
     ++cache->uses;
     if (cache->entries.count < kCssSelectorCacheSize) {
         cache->index.insert(hash, cache->entries.count);
@@ -1395,7 +1396,7 @@ const PrCssSelectors* PR_NULLABLE cssDomSelectors(const PrDomDocument* document,
     }
     CssCachedSelectors* evicted = &cache->entries.data[oldest];
     cache->index.erase(evicted->hash, oldest);
-    prStringReset(&evicted->text);
+    prRawStringReset(&evicted->text);
     cssSelectorsDestroy(evicted->selectors);
     *evicted = entry;
     cache->index.insert(hash, oldest);
@@ -1406,7 +1407,7 @@ void cssSelectorCacheDestroy(CssSelectorCache* PR_NULLABLE cache) {
     if (cache == nullptr)
         return;
     for (uint32_t i = 0; i < cache->entries.count; ++i) {
-        prStringReset(&cache->entries.data[i].text);
+        prRawStringReset(&cache->entries.data[i].text);
         cssSelectorsDestroy(cache->entries.data[i].selectors);
     }
     cache->entries.reset();

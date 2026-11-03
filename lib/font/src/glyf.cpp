@@ -85,7 +85,7 @@ struct Reader {
 };
 
 // Reads packed point numbers. Returns false for "all points", which an empty list stands for.
-bool readPoints(Reader& r, Array<uint16_t>& points) {
+bool readPoints(Reader& r, RawArray<uint16_t>& points) {
     points.clear();
     uint32_t count = r.byte();
     if (count == 0)
@@ -105,7 +105,7 @@ bool readPoints(Reader& r, Array<uint16_t>& points) {
 }
 
 // Reads `count` packed deltas into `out`.
-void readDeltas(Reader& r, uint32_t count, Array<float>& out) {
+void readDeltas(Reader& r, uint32_t count, RawArray<float>& out) {
     out.clear();
     while (out.count < count) {
         uint8_t run = r.byte();
@@ -245,15 +245,15 @@ void addDeltas(const GlyfFace& face, SfntCoords coords, uint32_t glyph, const Pr
     SfntTable data{gvar.data + start, end - start};
     uint16_t tuples = data.uint16At(0);
     Reader serialized{data, data.uint16At(2)};
-    Array<uint16_t> shared;
+    RawArray<uint16_t> shared;
     bool sharedAll = true;
     if ((tuples & TupleFlag_SharedPoints) != 0)
         sharedAll = !readPoints(serialized, shared);
-    Array<uint16_t> own;
-    Array<float> xs;
-    Array<float> ys;
-    Array<PrVec2> tupleDeltas;
-    Array<bool> touched;
+    RawArray<uint16_t> own;
+    RawArray<float> xs;
+    RawArray<float> ys;
+    RawArray<PrVec2> tupleDeltas;
+    RawArray<bool> touched;
     uint32_t header = 4;
     for (uint32_t t = 0; t < (tuples & TupleFlag_CountMask); ++t) {
         uint16_t size = data.uint16At(header);
@@ -280,7 +280,7 @@ void addDeltas(const GlyfFace& face, SfntCoords coords, uint32_t glyph, const Pr
         if (scalar == 0)
             continue;
         bool all = sharedAll;
-        const Array<uint16_t>* points = &shared;
+        const RawArray<uint16_t>* points = &shared;
         if ((index & TupleFlag_PrivatePoints) != 0) {
             all = !readPoints(r, own);
             points = &own;
@@ -379,7 +379,7 @@ bool loadSimple(const GlyfFace& face, SfntCoords coords, uint32_t glyph, SfntTab
     // Every point takes at least one flag byte, so a count past the data is malformed.
     if (at + pointCount > data.size)
         return false;
-    Array<uint8_t> flags;
+    RawArray<uint8_t> flags;
     while (flags.count < pointCount) {
         uint8_t flag = data.uint8At(at++);
         flags.push(flag);
@@ -425,9 +425,9 @@ bool loadSimple(const GlyfFace& face, SfntCoords coords, uint32_t glyph, SfntTab
     if (face.gvar.size == 0 || coords.count == 0)
         return true;
     // The points and the phantom points vary together.
-    Array<PrVec2> original;
-    Array<PrVec2> deltas;
-    Array<uint32_t> ends;
+    RawArray<PrVec2> original;
+    RawArray<PrVec2> deltas;
+    RawArray<uint32_t> ends;
     original.append(out->points.data + base, pointCount);
     original.push(phantom->horizontalOrigin);
     original.push(phantom->horizontalAdvance);
@@ -460,7 +460,7 @@ struct Component {
 // Appends a composite glyph's components.
 bool loadComposite(const GlyfFace& face, SfntCoords coords, uint32_t glyph, SfntTable data, uint32_t depth,
         FontGlyphOutline* out, GlyfPhantom* phantom) {
-    Array<Component> components;
+    RawArray<Component> components;
     uint32_t at = 10;
     ComponentFlags flags = ComponentFlag_MoreComponents;
     while ((flags & ComponentFlag_MoreComponents) != 0 && at + 4 <= data.size) {
@@ -504,8 +504,8 @@ bool loadComposite(const GlyfFace& face, SfntCoords coords, uint32_t glyph, Sfnt
     *phantom = phantomOf(face, coords, glyph, data.int16At(2), data.int16At(8));
     if (face.gvar.size != 0 && coords.count != 0) {
         // The offsets of the components vary as points do, by whole units, and so do the phantom points.
-        Array<PrVec2> original;
-        Array<PrVec2> deltas;
+        RawArray<PrVec2> original;
+        RawArray<PrVec2> deltas;
         for (uint32_t i = 0; i < components.count; ++i)
             original.push(components.data[i].arguments);
         original.push(phantom->horizontalOrigin);

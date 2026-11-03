@@ -4,13 +4,13 @@
 
 #include "pr/align.h"
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/gpu_backend.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 
 #if defined(PR_GPU_HAS_METAL)
 #include "pr/gpu_metal.h"

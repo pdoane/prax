@@ -39,7 +39,7 @@ T* PR_NULLABLE made(T* PR_NULLABLE node) {
 PrDomAttr* PR_NULLABLE attributeNs(const PrDomElement* element, PrStringView namespaceUrl, PrStringView localName) {
     for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
             attribute = static_cast<PrDomAttr*>(attribute->next)) {
-        if (prStringView(&attribute->name) == localName &&
+        if (prRawStringView(&attribute->name) == localName &&
                 domNamespaceUrl(element->document, attribute->space) == namespaceUrl)
             return attribute;
     }
@@ -47,13 +47,13 @@ PrDomAttr* PR_NULLABLE attributeNs(const PrDomElement* element, PrStringView nam
 }
 
 // dom/#concept-attribute-qualified-name
-PrString attributeQualifiedName(const PrDomAttr* attribute) {
+PrRawString attributeQualifiedName(const PrDomAttr* attribute) {
     PrStringView prefix = domAttributePrefix(attribute);
     if (prefix.data == nullptr)
-        return prStringClone(&attribute->name);
-    PrString name = prStringCopy(prefix);
-    prStringAppend(&name, ":");
-    prStringAppend(&name, prStringView(&attribute->name));
+        return prRawStringClone(&attribute->name);
+    PrRawString name = prRawStringCopy(prefix);
+    prRawStringAppend(&name, ":");
+    prRawStringAppend(&name, prRawStringView(&attribute->name));
     return name;
 }
 
@@ -124,7 +124,7 @@ Handle* PR_NULLABLE nodeOfType(PrDomEventTarget* PR_NULLABLE target, PrDomNodeTy
 }
 
 // infra/#strip-and-collapse-ascii-whitespace
-PrString stripAndCollapse(PrStringView text) {
+PrRawString stripAndCollapse(PrStringView text) {
     PrTextBuffer out = {};
     bool space = false;
     for (size_t i = 0; i < text.size; ++i) {
@@ -254,8 +254,8 @@ void setMouseMembers(PrDomEvent* event, const PrDomMouseEventInit& init) {
 DomKeyboardEventData* keyboardOf(PrDomEvent* event) {
     if (event->keyboard == nullptr) {
         event->keyboard = allocZeroed<DomKeyboardEventData>();
-        event->keyboard->key = prStringEmpty();
-        event->keyboard->code = prStringEmpty();
+        event->keyboard->key = prRawStringEmpty();
+        event->keyboard->code = prRawStringEmpty();
     }
     return event->keyboard;
 }
@@ -348,7 +348,7 @@ void prDomEventRelease(PrDomEvent* PR_NULLABLE event) {
 }
 
 PrStringView prDomEventType(const PrDomEvent* event) {
-    return prStringView(&event->type);
+    return prRawStringView(&event->type);
 }
 
 PrDomEventTarget* PR_NULLABLE prDomEventTarget(PrDomEvent* event) {
@@ -620,8 +620,8 @@ PrDomKeyboardEvent* prDomKeyboardEventCreate(PrStringView type, const PrDomKeybo
     PrDomKeyboardEvent* event = domEventCreate<PrDomKeyboardEvent>(type, values.ui.event, PrDomEventKind_Keyboard);
     setUiMembers(event, values.ui);
     DomKeyboardEventData* keyboard = keyboardOf(event);
-    prStringReplace(&keyboard->key, values.key);
-    prStringReplace(&keyboard->code, values.code);
+    prRawStringReplace(&keyboard->key, values.key);
+    prRawStringReplace(&keyboard->code, values.code);
     keyboard->location = values.location;
     keyboard->charCode = values.charCode;
     keyboard->keyCode = values.keyCode;
@@ -641,8 +641,8 @@ PrDomKeyboardEventInit prDomKeyboardEventMembers(PrDomKeyboardEvent* event) {
     members.ui.which = event->which;
     if (const DomKeyboardEventData* keyboard = event->keyboard) {
         members.modifiers = keyboard->modifiers;
-        members.key = prStringView(&keyboard->key);
-        members.code = prStringView(&keyboard->code);
+        members.key = prRawStringView(&keyboard->key);
+        members.code = prRawStringView(&keyboard->code);
         members.location = keyboard->location;
         members.repeat = keyboard->repeat;
         members.isComposing = keyboard->isComposing;
@@ -659,7 +659,7 @@ void prDomKeyboardEventInitKeyboardEvent(PrDomKeyboardEvent* event, PrStringView
     event->view = init->ui.view;
     event->detail = 0;
     DomKeyboardEventData* keyboard = keyboardOf(event);
-    prStringReplace(&keyboard->key, init->key);
+    prRawStringReplace(&keyboard->key, init->key);
     keyboard->location = init->location;
     keyboard->modifiers = init->modifiers;
 }
@@ -669,7 +669,7 @@ void prDomKeyboardEventInitKeyboardEvent(PrDomKeyboardEvent* event, PrStringView
 
 struct PrDomDataTransfer {
     uint32_t references;
-    PrString text;
+    PrRawString text;
     bool hasText;
 };
 
@@ -684,7 +684,7 @@ PrDomClipboardEvent* prDomClipboardEventCreate(PrStringView type, const PrDomEve
     PrDomClipboardEvent* event = domEventCreate<PrDomClipboardEvent>(type, values, PrDomEventKind_Clipboard);
     event->transfer = allocZeroed<PrDomDataTransfer>();
     event->transfer->references = 1;
-    event->transfer->text = prStringCopy(text);
+    event->transfer->text = prRawStringCopy(text);
     event->transfer->hasText = text.size != 0;
     return event;
 }
@@ -700,12 +700,12 @@ void prDomDataTransferRetain(PrDomDataTransfer* transfer) {
 void prDomDataTransferRelease(PrDomDataTransfer* PR_NULLABLE transfer) {
     if (transfer == nullptr || --transfer->references != 0)
         return;
-    prStringReset(&transfer->text);
+    prRawStringReset(&transfer->text);
     prMemoryFree(transfer);
 }
 
 PrStringView prDomDataTransferText(const PrDomDataTransfer* transfer) {
-    return prStringView(&transfer->text);
+    return prRawStringView(&transfer->text);
 }
 
 bool prDomDataTransferHasText(const PrDomDataTransfer* transfer) {
@@ -713,13 +713,13 @@ bool prDomDataTransferHasText(const PrDomDataTransfer* transfer) {
 }
 
 void prDomDataTransferSetText(PrDomDataTransfer* transfer, PrStringView text) {
-    prStringReset(&transfer->text);
-    transfer->text = prStringCopy(text);
+    prRawStringReset(&transfer->text);
+    transfer->text = prRawStringCopy(text);
     transfer->hasText = true;
 }
 
 void prDomDataTransferClear(PrDomDataTransfer* transfer) {
-    prStringReset(&transfer->text);
+    prRawStringReset(&transfer->text);
     transfer->hasText = false;
 }
 
@@ -734,18 +734,18 @@ PrDomInputEvent* prDomInputEventCreate(PrStringView type, const PrDomUiEventInit
     PrDomUiEventInit values = init != nullptr ? *init : prDomUiEventInitDefault();
     PrDomInputEvent* event = domEventCreate<PrDomInputEvent>(type, values.event, PrDomEventKind_Input);
     setUiMembers(event, values);
-    event->composition = prStringCopy(data);
-    event->inputType = prStringCopy(inputType);
+    event->composition = prRawStringCopy(data);
+    event->inputType = prRawStringCopy(inputType);
     event->isComposing = isComposing;
     return event;
 }
 
 PrStringView prDomInputEventData(const PrDomInputEvent* event) {
-    return prStringView(&event->composition);
+    return prRawStringView(&event->composition);
 }
 
 PrStringView prDomInputEventInputType(const PrDomInputEvent* event) {
-    return prStringView(&event->inputType);
+    return prRawStringView(&event->inputType);
 }
 
 bool prDomInputEventIsComposing(const PrDomInputEvent* event) {
@@ -767,12 +767,12 @@ PrDomCompositionEvent* prDomCompositionEventCreate(PrStringView type, const PrDo
     PrDomCompositionEvent* event =
         domEventCreate<PrDomCompositionEvent>(type, values.event, PrDomEventKind_Composition);
     setUiMembers(event, values);
-    event->composition = prStringCopy(data);
+    event->composition = prRawStringCopy(data);
     return event;
 }
 
 PrStringView prDomCompositionEventData(const PrDomCompositionEvent* event) {
-    return prStringView(&event->composition);
+    return prRawStringView(&event->composition);
 }
 
 void prDomCompositionEventInitCompositionEvent(PrDomCompositionEvent* event, PrStringView type,
@@ -782,7 +782,7 @@ void prDomCompositionEventInitCompositionEvent(PrDomCompositionEvent* event, PrS
     domEventInitialize(event, type, init->event.bubbles, init->event.cancelable);
     event->view = init->view;
     event->detail = 0;
-    prStringReplace(&event->composition, data);
+    prRawStringReplace(&event->composition, data);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -874,9 +874,9 @@ PrDomNodeType prDomNodeType(const PrDomNode* node) {
     return node->type;
 }
 
-PrString prDomNodeBaseUri(const PrDomNode* node) {
+PrRawString prDomNodeBaseUri(const PrDomNode* node) {
     PrUrl* base = domDocumentBaseUrl(node->document);
-    PrString result = prUrlSerialize(base, PrUrlSerialization_Whole);
+    PrRawString result = prUrlSerialize(base, PrUrlSerialization_Whole);
     prUrlDestroy(base);
     return result;
 }
@@ -929,7 +929,7 @@ PrDomNode* PR_NULLABLE prDomNodeNextSibling(PrDomNode* node) {
     return domNodeParent(node) != nullptr ? node->next : nullptr;
 }
 
-PrString prDomNodeTextContent(const PrDomNode* node) {
+PrRawString prDomNodeTextContent(const PrDomNode* node) {
     return domNodeTextContent(node);
 }
 
@@ -937,7 +937,7 @@ void prDomNodeSetTextContent(PrDomNode* node, PrStringView value) {
     domSetTextContent(node, value);
 }
 
-PrString prDomNodeChildTextContent(const PrDomNode* node) {
+PrRawString prDomNodeChildTextContent(const PrDomNode* node) {
     return domChildTextContent(node);
 }
 
@@ -957,17 +957,17 @@ PrStatus prDomNodeRemoveChild(PrDomNode* node, PrDomNode* child) {
     return domPreRemove(node, child);
 }
 
-PrString prDomNodeName(const PrDomNode* node) {
+PrRawString prDomNodeName(const PrDomNode* node) {
     switch (node->type) {
         case PrDomNodeType_Element: return domElementTagName(static_cast<const PrDomElement*>(node));
         case PrDomNodeType_Attribute: return attributeQualifiedName(static_cast<const PrDomAttr*>(node));
         case PrDomNodeType_ProcessingInstruction:
-            return prStringClone(&static_cast<const PrDomProcessingInstruction*>(node)->target);
+            return prRawStringClone(&static_cast<const PrDomProcessingInstruction*>(node)->target);
         case PrDomNodeType_DocumentType:
-            return prStringClone(&static_cast<const PrDomDocumentType*>(node)->name);
+            return prRawStringClone(&static_cast<const PrDomDocumentType*>(node)->name);
         default: {
             PrStringView name = prDomNodeTypeName(node->type);
-            return name.data != nullptr ? prStringExternal(name) : prStringEmpty();
+            return name.data != nullptr ? prRawStringExternal(name) : prRawStringEmpty();
         }
     }
 }
@@ -985,12 +985,12 @@ PrStringView prDomNodeTypeName(PrDomNodeType type) {
 
 PrStringView prDomNodeValue(const PrDomNode* node) {
     switch (node->type) {
-        case PrDomNodeType_Attribute: return prStringView(&static_cast<const PrDomAttr*>(node)->value);
+        case PrDomNodeType_Attribute: return prRawStringView(&static_cast<const PrDomAttr*>(node)->value);
         case PrDomNodeType_Text:
         case PrDomNodeType_CdataSection:
         case PrDomNodeType_ProcessingInstruction:
         case PrDomNodeType_Comment:
-            return prStringView(&static_cast<const PrDomCharacterData*>(node)->data);
+            return prRawStringView(&static_cast<const PrDomCharacterData*>(node)->data);
         default: return {};
     }
 }
@@ -1218,7 +1218,7 @@ PrStatus prDomDocumentCreateXml(PrDomImplementation* implementation, PrStringVie
         type = "application/xhtml+xml";
     else if (namespaceUrl == "http://www.w3.org/2000/svg")
         type = "image/svg+xml";
-    document->contentType = prStringExternal(type);
+    document->contentType = prRawStringExternal(type);
     *out = handle;
     return PrStatus_Ok;
 }
@@ -1252,12 +1252,12 @@ void prDomDocumentSetTreeCallback(PrDomDocument* document, const PrDomTreeCallba
     domDocumentSetTreeCallback(document, callback != nullptr ? *callback : PrDomTreeCallback{});
 }
 
-PrString prDomDocumentUrl(const PrDomDocument* document) {
+PrRawString prDomDocumentUrl(const PrDomDocument* document) {
     return prUrlSerialize(document->url, PrUrlSerialization_Whole);
 }
 
 PrStringView prDomDocumentContentType(const PrDomDocument* document) {
-    return prStringView(&document->contentType);
+    return prRawStringView(&document->contentType);
 }
 
 PrStringView prDomDocumentCharacterSet(const PrDomDocument* document) {
@@ -1300,7 +1300,7 @@ PrStatus prDomElementCreate(PrDomDocument* document, PrStringView localName,
     PrTextBuffer buffer = {};
     PrStringView name = lowered(localName, document->kind == DomDocumentKind_Html, &buffer);
     bool html = document->kind == DomDocumentKind_Html ||
-        prStringView(&document->contentType) == "application/xhtml+xml";
+        prRawStringView(&document->contentType) == "application/xhtml+xml";
     PrStringView is = options != nullptr ? options->is : PrStringView{};
     bool held = false;
     PrDomElement* created;
@@ -1336,7 +1336,7 @@ PrStatus prDomElementCreateNs(PrDomDocument* document, PrStringView namespaceUrl
         if (held)
             domNodeUnhold(element);
         if (prefix.data != nullptr)
-            domElementState(element)->prefix = prStringCopy(prefix);
+            domElementState(element)->prefix = prRawStringCopy(prefix);
     } else {
         element = made(domElementCreateNs(document, space, prefix, local));
     }
@@ -1399,7 +1399,7 @@ PrStatus prDomProcessingInstructionCreate(PrDomDocument* document, PrStringView 
 }
 
 // html/#document.title
-PrString prDomDocumentTitle(const PrDomDocument* document) {
+PrRawString prDomDocumentTitle(const PrDomDocument* document) {
     const PrDomElement* root = domDocumentElement(document);
     const PrDomElement* title;
     if (isSvgRoot(root))
@@ -1407,10 +1407,10 @@ PrString prDomDocumentTitle(const PrDomDocument* document) {
     else
         title = firstElement(document, PrDomNamespace_Html, PrDomTag_Title, false);
     if (title == nullptr)
-        return prStringEmpty();
-    PrString text = domChildTextContent(title);
-    PrString result = stripAndCollapse(prStringView(&text));
-    prStringReset(&text);
+        return prRawStringEmpty();
+    PrRawString text = domChildTextContent(title);
+    PrRawString result = stripAndCollapse(prRawStringView(&text));
+    prRawStringReset(&text);
     return result;
 }
 
@@ -1491,18 +1491,18 @@ PrDomDocumentType* PR_NULLABLE prDomDocumentTypeQuery(PrDomEventTarget* PR_NULLA
 }
 
 PrStringView prDomDocumentTypeName(const PrDomDocumentType* doctype) {
-    return prStringView(&doctype->name);
+    return prRawStringView(&doctype->name);
 }
 
 // A doctype that the parser created without an identifier holds the null string, which script sees as the empty string.
 PrStringView prDomDocumentTypePublicId(const PrDomDocumentType* doctype) {
-    const PrString* id = &doctype->publicId;
-    return prStringIsNull(id) ? "" : prStringView(id);
+    const PrRawString* id = &doctype->publicId;
+    return prRawStringIsNull(id) ? "" : prRawStringView(id);
 }
 
 PrStringView prDomDocumentTypeSystemId(const PrDomDocumentType* doctype) {
-    const PrString* id = &doctype->systemId;
-    return prStringIsNull(id) ? "" : prStringView(id);
+    const PrRawString* id = &doctype->systemId;
+    return prRawStringIsNull(id) ? "" : prRawStringView(id);
 }
 
 PrDomDocumentFragment* PR_NULLABLE prDomDocumentFragmentQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -1575,16 +1575,16 @@ PrDomNamespace prDomElementNamespace(const PrDomElement* element) {
 }
 
 PrStringView prDomElementPrefix(const PrDomElement* element) {
-    return element->state != nullptr ? prStringView(&element->state->prefix) : PrStringView{};
+    return element->state != nullptr ? prRawStringView(&element->state->prefix) : PrStringView{};
 }
 
-PrString prDomElementTagName(const PrDomElement* element) {
+PrRawString prDomElementTagName(const PrDomElement* element) {
     return domElementTagName(element);
 }
 
 PrDomTag prDomElementTagNameTag(const PrDomElement* element, bool* uppercase) {
     *uppercase = domIsHtmlInHtmlDocument(element);
-    bool prefixed = element->state != nullptr && !prStringIsNull(&element->state->prefix);
+    bool prefixed = element->state != nullptr && !prRawStringIsNull(&element->state->prefix);
     return prefixed ? PrDomTag_Unknown : domElementTag(element);
 }
 
@@ -1608,7 +1608,7 @@ void prDomElementSetSlot(PrDomElement* element, PrStringView value) {
 
 PrStringView prDomElementGetAttribute(const PrDomElement* element, PrStringView qualifiedName) {
     const PrDomAttr* attribute = domAttributeByName(element, qualifiedName);
-    return attribute != nullptr ? prStringView(&attribute->value) : PrStringView{};
+    return attribute != nullptr ? prRawStringView(&attribute->value) : PrStringView{};
 }
 
 PrStatus prDomElementSetAttribute(PrDomElement* element, PrStringView qualifiedName, PrStringView value) {
@@ -1619,7 +1619,7 @@ PrStatus prDomElementSetAttribute(PrDomElement* element, PrStringView qualifiedN
     // dom/#dom-element-setattribute: sets the attribute with that qualified name, whatever its namespace, or else adds
     // a new attribute in no namespace.
     if (PrDomAttr* attribute = domAttributeByName(element, name))
-        domSetAttribute(element, attribute->space, prStringView(&attribute->name), value);
+        domSetAttribute(element, attribute->space, prRawStringView(&attribute->name), value);
     else
         domSetAttribute(element, PrDomNamespace_None, name, value);
     prTextBufferReset(&buffer);
@@ -1641,7 +1641,7 @@ bool prDomElementHasAttributes(const PrDomElement* element) {
 
 PrStringView prDomElementGetAttributeNs(const PrDomElement* element, PrStringView namespaceUrl, PrStringView localName) {
     const PrDomAttr* attribute = attributeNs(element, namespaceUrl, localName);
-    return attribute != nullptr ? prStringView(&attribute->value) : PrStringView{};
+    return attribute != nullptr ? prRawStringView(&attribute->value) : PrStringView{};
 }
 
 PrStatus prDomElementSetAttributeNs(PrDomElement* element, PrStringView namespaceUrl,
@@ -1664,7 +1664,7 @@ bool prDomElementHasAttributeNs(const PrDomElement* element, PrStringView namesp
     return attributeNs(element, namespaceUrl, localName) != nullptr;
 }
 
-uint32_t prDomElementGetAttributeNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity) {
+uint32_t prDomElementGetAttributeNames(const PrDomElement* element, PrRawString* PR_NULLABLE items, uint32_t capacity) {
     uint32_t count = 0;
     for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
             attribute = static_cast<const PrDomAttr*>(attribute->next), ++count) {
@@ -1706,27 +1706,27 @@ PrDomAttr* PR_NULLABLE prDomElementAttributeAt(PrDomElement* element, uint32_t i
     return attribute;
 }
 
-uint32_t prDomElementNamedAttributeNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity) {
+uint32_t prDomElementNamedAttributeNames(const PrDomElement* element, PrRawString* PR_NULLABLE items, uint32_t capacity) {
     bool html = domIsHtmlInHtmlDocument(element);
     uint32_t count = 0;
     for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
             attribute = static_cast<const PrDomAttr*>(attribute->next)) {
-        PrString name = attributeQualifiedName(attribute);
-        PrStringView view = prStringView(&name);
+        PrRawString name = attributeQualifiedName(attribute);
+        PrStringView view = prRawStringView(&name);
         bool keep = true;
         for (size_t i = 0; html && keep && i < view.size; ++i)
             keep = !prAsciiIsUpper(view.data[i]);
         // If an earlier attribute has the same name, the name belongs to that attribute.
         for (const PrDomAttr* before = element->firstAttribute; keep && before != attribute;
                 before = static_cast<const PrDomAttr*>(before->next)) {
-            PrString earlier = attributeQualifiedName(before);
-            keep = prStringView(&earlier) != view;
-            prStringReset(&earlier);
+            PrRawString earlier = attributeQualifiedName(before);
+            keep = prRawStringView(&earlier) != view;
+            prRawStringReset(&earlier);
         }
         if (keep && count < capacity)
             items[count] = name;
         else
-            prStringReset(&name);
+            prRawStringReset(&name);
         count += keep;
     }
     return count;
@@ -1748,7 +1748,7 @@ PrStatus prDomElementSetAttributeNode(PrDomElement* element, PrDomAttr* attr, Pr
     if (attribute->parent != nullptr && attribute->parent != element)
         return PrStatus_InvalidState;
     PrDomAttr* old = attributeNs(element, domNamespaceUrl(attribute->document, attribute->space),
-        prStringView(&attribute->name));
+        prRawStringView(&attribute->name));
     if (old == attribute) {
         if (out != nullptr) {
             domNodeRetain(attribute);
@@ -1817,7 +1817,7 @@ PrDomShadowRoot* PR_NULLABLE prDomElementShadowRoot(PrDomElement* element) {
 
 PrStringView prDomElementClassName(const PrDomElement* element) {
     const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "class");
-    return attribute != nullptr ? prStringView(&attribute->value) : "";
+    return attribute != nullptr ? prRawStringView(&attribute->value) : "";
 }
 
 void prDomElementSetClassName(PrDomElement* element, PrStringView value) {
@@ -1845,15 +1845,15 @@ PrStringView prDomAttrPrefix(const PrDomAttr* attr) {
 }
 
 PrStringView prDomAttrLocalName(const PrDomAttr* attr) {
-    return prStringView(&attr->name);
+    return prRawStringView(&attr->name);
 }
 
-PrString prDomAttrName(const PrDomAttr* attr) {
+PrRawString prDomAttrName(const PrDomAttr* attr) {
     return attributeQualifiedName(attr);
 }
 
 PrStringView prDomAttrValue(const PrDomAttr* attr) {
-    return prStringView(&attr->value);
+    return prRawStringView(&attr->value);
 }
 
 void prDomAttrSetValue(PrDomAttr* attr, PrStringView value) {
@@ -1889,7 +1889,7 @@ PrDomCharacterData* PR_NULLABLE prDomCharacterDataQuery(PrDomEventTarget* PR_NUL
 }
 
 PrStringView prDomCharacterDataData(const PrDomCharacterData* node) {
-    return prStringView(&node->data);
+    return prRawStringView(&node->data);
 }
 
 void prDomCharacterDataSetData(PrDomCharacterData* node, PrStringView value) {
@@ -1900,7 +1900,7 @@ uint32_t prDomCharacterDataLength(const PrDomCharacterData* node) {
     return domCharacterDataLength(node);
 }
 
-PrStatus prDomCharacterDataSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrString* out) {
+PrStatus prDomCharacterDataSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrRawString* out) {
     return domSubstringData(node, offset, count, out);
 }
 
@@ -1935,13 +1935,13 @@ PrStatus prDomTextSplitText(PrDomText* text, uint32_t offset, PrDomText* PR_NULL
 }
 
 // dom/#dom-text-wholetext: the data of the contiguous Text nodes, in tree order.
-PrString prDomTextWholeText(const PrDomText* text) {
+PrRawString prDomTextWholeText(const PrDomText* text) {
     const PrDomNode* first = text;
     while (first->previous != nullptr && first->parent != nullptr && domIsText(first->previous))
         first = first->previous;
     PrTextBuffer out = {};
     for (const PrDomNode* node = first; node != nullptr && domIsText(node); node = node->parent != nullptr ? node->next : nullptr)
-        prTextBufferAppend(&out, prStringView(&static_cast<const PrDomText*>(node)->data));
+        prTextBufferAppend(&out, prRawStringView(&static_cast<const PrDomText*>(node)->data));
     return prTextBufferTake(&out);
 }
 
@@ -1954,7 +1954,7 @@ PrDomProcessingInstruction* PR_NULLABLE prDomProcessingInstructionQuery(PrDomEve
 }
 
 PrStringView prDomProcessingInstructionTarget(const PrDomProcessingInstruction* instruction) {
-    return prStringView(&instruction->target);
+    return prRawStringView(&instruction->target);
 }
 
 PrDomHtmlCollection* prDomHtmlCollectionCreateChildren(PrDomNode* parent) {
@@ -1987,7 +1987,7 @@ PrDomElement* PR_NULLABLE prDomHtmlCollectionNamedItem(PrDomHtmlCollection* coll
 
 uint32_t prDomHtmlCollectionNames(const PrDomHtmlCollection* collection, PrStringView* PR_NULLABLE items,
         uint32_t capacity) {
-    Array<PrStringView> names;
+    RawArray<PrStringView> names;
     domHtmlCollectionNames(collection, &names);
     for (uint32_t i = 0; i < names.count && i < capacity; ++i)
         items[i] = names.data[i];
@@ -2144,15 +2144,15 @@ PrDomNode* PR_NULLABLE prDomMutationRecordNextSibling(PrDomMutationRecord* recor
 }
 
 PrStringView prDomMutationRecordAttributeName(const PrDomMutationRecord* record) {
-    return prStringView(&record->attributeName);
+    return prRawStringView(&record->attributeName);
 }
 
 PrStringView prDomMutationRecordAttributeNamespace(const PrDomMutationRecord* record) {
-    return prStringView(&record->attributeNamespace);
+    return prRawStringView(&record->attributeNamespace);
 }
 
 PrStringView prDomMutationRecordOldValue(const PrDomMutationRecord* record) {
-    return prStringView(&record->oldValue);
+    return prRawStringView(&record->oldValue);
 }
 
 PrDomRange* prDomRangeCreate(PrDomDocument* document) {
@@ -2314,7 +2314,7 @@ bool prDomRangeIntersectsNode(const PrDomRange* range, PrDomNode* node) {
         domBoundaryCompare(DomBoundary{parent, offset + 1}, range->start) > 0;
 }
 
-PrString prDomRangeToString(const PrDomRange* range) {
+PrRawString prDomRangeToString(const PrDomRange* range) {
     return domRangeString(range);
 }
 
@@ -2485,8 +2485,8 @@ bool prDomSelectionContainsNode(const PrDomSelection* selection, PrDomNode* node
     return domBoundaryCompare(range->start, first) <= 0 && domBoundaryCompare(range->end, last) >= 0;
 }
 
-PrString prDomSelectionToString(const PrDomSelection* selection) {
-    return domSelectionRange(selection) != nullptr ? domRangeString(domSelectionRange(selection)) : prStringEmpty();
+PrRawString prDomSelectionToString(const PrDomSelection* selection) {
+    return domSelectionRange(selection) != nullptr ? domRangeString(domSelectionRange(selection)) : prRawStringEmpty();
 }
 
 uint32_t prDomSelectionComposedRanges(PrDomSelection* selection, PrDomShadowRoot* const PR_NONNULL* PR_NULLABLE roots,
@@ -2548,7 +2548,7 @@ PrDomElement* prDomElementCreateCustom(PrDomDocument* document, PrStringView loc
     element->customState = PrDomCustomElementState_Custom;
     DomElementState* state = domElementState(element);
     state->custom = allocZeroed<DomCustomElement>();
-    state->custom->is = prStringNull();
+    state->custom->is = prRawStringNull();
     state->custom->definition = definition;
     state->custom->registry = document->customElements;
     if (document->customElements != nullptr)
@@ -2571,13 +2571,13 @@ PrDomShadowRoot* PR_NULLABLE prDomElementHostedShadowRoot(PrDomElement* element)
 void prDomElementSetCustomState(PrDomElement* element, PrStringView state, bool present) {
     if (domCustomHasState(element, state) == present)
         return;
-    Array<PrString>& states = domCustomElementFromElement(element)->states;
+    RawArray<PrRawString>& states = domCustomElementFromElement(element)->states;
     if (present) {
-        states.push(prStringCopy(state));
+        states.push(prRawStringCopy(state));
     } else {
         for (uint32_t i = 0; i < states.count; ++i) {
-            if (prStringView(&states.data[i]) == state) {
-                prStringReset(&states.data[i]);
+            if (prRawStringView(&states.data[i]) == state) {
+                prRawStringReset(&states.data[i]);
                 states.erase(i);
                 break;
             }

@@ -97,7 +97,7 @@ bool textEditorDiffModelUpdate(TextEditorDiffModel* model, const PrTextEditBuffe
 }
 
 PrColor16 textEditorDiffLineColor(const TextEditorDiffModel* model, TextEditorDiffSide side, uint32_t line) {
-    const Array<PrTextDiffChange>& changes = model->changes;
+    const RawArray<PrTextDiffChange>& changes = model->changes;
     auto startOf = [&](uint32_t i) {
         return side == TextEditorDiffSide_Old ? changes.data[i].oldStart : changes.data[i].newStart;
     };
@@ -111,7 +111,7 @@ PrColor16 textEditorDiffLineColor(const TextEditorDiffModel* model, TextEditorDi
 
 uint32_t textEditorDiffSpans(const TextEditorDiffModel* model, TextEditorDiffSide side, uint32_t start, uint32_t end,
         PrTextViewSpan* PR_NULLABLE out, uint32_t capacity) {
-    const Array<PrTextViewSpan>& spans = model->sides[side].spans;
+    const RawArray<PrTextViewSpan>& spans = model->sides[side].spans;
     uint32_t first = partitionPoint(0, spans.count, [&](uint32_t i) { return spans.data[i].end <= start; });
     uint32_t count = 0;
     for (uint32_t i = first; i < spans.count && spans.data[i].start < end; ++i) {

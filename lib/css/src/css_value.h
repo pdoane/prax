@@ -10,11 +10,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/color.h"
 #include "pr/css.h"
 #include "pr/css_descriptors.h"
 #include "pr/css_properties.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_syntax.h"
@@ -105,8 +105,8 @@ static_assert(sizeof(CssValueNode) == 16);
 
 // A contiguous preorder tree of values and the text that they reference.
 struct CssValuePool {
-    Array<CssValueNode> values;
-    Array<char> text;           // the text that values reference by `text.start`
+    RawArray<CssValueNode> values;
+    RawArray<char> text;           // the text that values reference by `text.start`
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -406,7 +406,7 @@ struct CssValueOpen {
 // open node has a `next` of one.
 struct CssValue {
     CssValuePool pool;
-    Array<CssValueOpen> open;   // innermost last, so the count is the depth at which a node is added
+    RawArray<CssValueOpen> open;   // innermost last, so the count is the depth at which a node is added
 };
 
 // Returns the value's trees as a run.

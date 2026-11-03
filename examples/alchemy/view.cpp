@@ -917,9 +917,9 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         };
         prKitImage(kit, preview, {.image = image}, fit);
     } else {
-        PrString chord = prCommandChordText(PrCommandChord{.key = 'V', .modifiers = PrAppModifierFlag_Super});
-        std::string hint = "Press " + stringOf(prStringView(&chord)) + " to read the clipboard.";
-        prStringReset(&chord);
+        PrRawString chord = prCommandChordText(PrCommandChord{.key = 'V', .modifiers = PrAppModifierFlag_Super});
+        std::string hint = "Press " + stringOf(prRawStringView(&chord)) + " to read the clipboard.";
+        prRawStringReset(&chord);
         prKitEmptyState(kit, preview, {.icon = PrKitIconKind_Image, .title = "Nothing to import yet", .hint = hint});
     }
     std::string caption = state.import.message;

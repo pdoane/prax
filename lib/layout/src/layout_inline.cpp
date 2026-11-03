@@ -122,16 +122,16 @@ typedef uint32_t LayoutLineBoxDepth;
 
 // The floats of the run being laid out, and those of the line being made.
 struct LayoutInlineFloats {
-    Array<bool> placed;               // by LayoutItemIndex: true if the float is placed
-    Array<uint32_t> child;            // by LayoutItemIndex: the float's index among the children built, or kNoItem
-    Array<LayoutLineAnchor> anchors;  // made on the lines of the segment
+    RawArray<bool> placed;               // by LayoutItemIndex: true if the float is placed
+    RawArray<uint32_t> child;            // by LayoutItemIndex: the float's index among the children built, or kNoItem
+    RawArray<LayoutLineAnchor> anchors;  // made on the lines of the segment
 
     // By LayoutItemIndex and one past the last: the first float at or after the item, or the count.
-    Array<uint32_t> next;
+    RawArray<uint32_t> next;
 
-    Array<uint32_t> forced;           // the floats that the line being made must place after it
-    Array<uint32_t> deferred;         // the floats that the line places after it, in order
-    Array<LayoutInlinePlaced> onLine; // the floats that the line places beside it
+    RawArray<uint32_t> forced;           // the floats that the line being made must place after it
+    RawArray<uint32_t> deferred;         // the floats that the line places after it, in order
+    RawArray<LayoutInlinePlaced> onLine; // the floats that the line places beside it
 };
 
 // The scratch memory of one layout or measurement of a run. A run nested in an atomic inline or a block of another run
@@ -141,20 +141,20 @@ struct LayoutInlineFrame {
     LayoutInlineSegment segment;    // the segment being laid out or measured
 
     // By item: what the layout or measurement resolves for each item.
-    Array<PrLayoutStyleIndex> styles; // the record that styles the item now
-    Array<PrLayoutUnit> advances;     // its inline size on the line beside its text (resolveEdge, resolveItems)
-    Array<PrLayoutUnit> margins;      // Open, Close: the margin part of its advance
+    RawArray<PrLayoutStyleIndex> styles; // the record that styles the item now
+    RawArray<PrLayoutUnit> advances;     // its inline size on the line beside its text (resolveEdge, resolveItems)
+    RawArray<PrLayoutUnit> margins;      // Open, Close: the margin part of its advance
 
     // Open, Close: true if the box has a non-zero inline-axis margin, border or padding at this end, which keeps the
     // line it is on from being a phantom line (css-inline-3/#invisible-line-boxes).
-    Array<bool> edges;
+    RawArray<bool> edges;
 
     // Atomic, Float: its layout. The frame holds the reference to each fragment until a line or a placement takes it.
-    Array<LayoutAtomic> atomics;
+    RawArray<LayoutAtomic> atomics;
 
-    Array<float> position;          // by byte: the width of what precedes it on one unbroken line (measure)
-    Array<float> pieceAdvances;     // by LayoutItemIndex: `advances` in px, as lib/text reads it (measure)
-    Array<uint32_t> open;           // the Open items of the inline boxes open on the line being made, outermost first
+    RawArray<float> position;       // by byte: the width of what precedes it on one unbroken line (measure)
+    RawArray<float> pieceAdvances;  // by LayoutItemIndex: `advances` in px, as lib/text reads it (measure)
+    RawArray<uint32_t> open;        // the Open items of the inline boxes open on the line being made, outermost first
     LayoutLineContent line;         // the content of the line being broken or made
     bool lineCollected;             // true if `line` holds a line of the segment being laid out
     bool lineAligned;               // true if the aligner holds the alignment of `line`, which reaches `lineExtent`
@@ -166,50 +166,50 @@ struct LayoutInlineFrame {
 
     // The line being placed: its leaves and boxes in the order of the text, its levels, the visual order of the leaves,
     // and the parts of the boxes.
-    Array<LayoutLineLeaf> leaves;
-    Array<LayoutLineBox> lineBoxes;
-    Array<LayoutLineBoxIndex> boxStack;    // the boxes open while the items of the line are read
-    Array<LayoutLineBoxIndex> closed;      // the boxes in the order the items of the line end them
-    Array<PrUnicodeBidiClass> lineClasses; // by code point of the line
-    Array<uint8_t> lineCodeLevels;         // by code point of the line
-    Array<uint8_t> lineLevels;             // by byte of the line, from its first
-    Array<uint8_t> leafLevels;
-    Array<LayoutLeafIndex> order;       // by visual position: the leaf there
-    Array<uint32_t> visual;             // by LayoutLeafIndex: its visual position
-    Array<uint32_t> positions;          // scratch: the visual positions of the leaves of a box
-    Array<LayoutLinePart> parts;        // in the order they open
-    Array<uint32_t> closing;            // the parts, in the order they close
+    RawArray<LayoutLineLeaf> leaves;
+    RawArray<LayoutLineBox> lineBoxes;
+    RawArray<LayoutLineBoxIndex> boxStack;    // the boxes open while the items of the line are read
+    RawArray<LayoutLineBoxIndex> closed;      // the boxes in the order the items of the line end them
+    RawArray<PrUnicodeBidiClass> lineClasses; // by code point of the line
+    RawArray<uint8_t> lineCodeLevels;         // by code point of the line
+    RawArray<uint8_t> lineLevels;             // by byte of the line, from its first
+    RawArray<uint8_t> leafLevels;
+    RawArray<LayoutLeafIndex> order;       // by visual position: the leaf there
+    RawArray<uint32_t> visual;             // by LayoutLeafIndex: its visual position
+    RawArray<uint32_t> positions;          // scratch: the visual positions of the leaves of a box
+    RawArray<LayoutLinePart> parts;        // in the order they open
+    RawArray<uint32_t> closing;            // the parts, in the order they close
 
     // The children of a line that bidi reorders, put back in tree order. `leafChild` holds, by leaf, the child it made
     // or kNoItem. `leafStart` holds, by leaf and one past the last, where the content from that leaf on starts in tree
     // order. `groupParts` holds, for each box starting at `groupStart`, its parts in visual order from its start edge,
     // and `contentStart` holds where its content starts in tree order. `logical` holds the indices of the children in
     // tree order.
-    Array<uint32_t> leafChild;
-    Array<uint32_t> leafStart;
-    Array<uint32_t> groupParts;
-    Array<uint32_t> groupStart;         // by LayoutLineBoxIndex and one past the last
-    Array<uint32_t> contentStart;       // by LayoutLineBoxIndex
-    Array<uint32_t> logical;
-    Array<LayoutLogicalChild> reordered;
+    RawArray<uint32_t> leafChild;
+    RawArray<uint32_t> leafStart;
+    RawArray<uint32_t> groupParts;
+    RawArray<uint32_t> groupStart;         // by LayoutLineBoxIndex and one past the last
+    RawArray<uint32_t> contentStart;       // by LayoutLineBoxIndex
+    RawArray<uint32_t> logical;
+    RawArray<LayoutLogicalChild> reordered;
 
     // Relative positioning on the line being placed, in the frame of the line. Holds how far each box moves, together
     // with the boxes around it, and how far each leaf moves, by the innermost box that holds it. Also holds the
     // children being built that are placeholders.
-    Array<LayoutLogicalOffset> boxMoves;    // by LayoutLineBoxIndex
-    Array<LayoutLogicalOffset> depthMoves;  // by LayoutLineBoxDepth: the move of the last box opened at that depth
-    Array<LayoutLogicalOffset> leafMoves;   // by LayoutLeafIndex
-    Array<LayoutLinePlaceholder> placeholders;
+    RawArray<LayoutLogicalOffset> boxMoves;    // by LayoutLineBoxIndex
+    RawArray<LayoutLogicalOffset> depthMoves;  // by LayoutLineBoxDepth: the move of the last box opened at that depth
+    RawArray<LayoutLogicalOffset> leafMoves;   // by LayoutLeafIndex
+    RawArray<LayoutLinePlaceholder> placeholders;
 
     // The text leaf being placed: the faces of its glyphs in the order of the text, its distinct fonts, and its font
     // ranges in the order its glyphs are placed.
-    Array<LayoutLeafFace> leafFaces;
-    Array<const PrFont*> leafFonts;
-    Array<LayoutFragmentFontRange> leafRanges;
+    RawArray<LayoutLeafFace> leafFaces;
+    RawArray<const PrFont*> leafFonts;
+    RawArray<LayoutFragmentFontRange> leafRanges;
 
     // Intrinsic sizing.
-    Array<PrLayoutUnit> maxAdvances;    // by LayoutItemIndex: its advance at max-content
-    Array<bool> clearing;               // by byte: true if a float that clears comes before it
+    RawArray<PrLayoutUnit> maxAdvances;    // by LayoutItemIndex: its advance at max-content
+    RawArray<bool> clearing;               // by byte: true if a float that clears comes before it
 
     PrTextWordBreaks* PR_NULLABLE words; // the opportunities inside a word that fits no line (breakLine)
 };
@@ -217,7 +217,7 @@ struct LayoutInlineFrame {
 // The frames of inline layout, one for each depth of nesting. Each frame is made the first time a layout reaches its
 // depth, and is kept, so that repeated layouts allocate nothing.
 struct LayoutInlineScratch {
-    Array<LayoutInlineFrame*> frames;
+    RawArray<LayoutInlineFrame*> frames;
     uint32_t depth;                 // the number of frames in use
 };
 
@@ -707,7 +707,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
     const LayoutInlineItem& item = t.items.data[leaf.item];
     float size = prLayoutUnitToPx(layoutFontFaces(state.styles, style).size);
     PrLayoutAlignmentBaseline dominant = layoutDominantBaseline(layoutFontStyle(state.styles, style));
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     uint32_t g = leaf.glyphStart;
     uint32_t glyphEnd = leaf.glyphEnd;
     ++state.stats->textLeavesPlaced;
@@ -749,7 +749,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
     if (t.info.glyphs[glyphEnd - 1].run == t.info.glyphs[g].run) {
         single = faceOf(t.runs.data[t.info.glyphs[g].run], glyphEnd);
     } else {
-        Array<LayoutLeafFace>& pieces = f.leafFaces;
+        RawArray<LayoutLeafFace>& pieces = f.leafFaces;
         pieces.clear();
         for (uint32_t i = g; i < glyphEnd;) {
             const LayoutShapingRun& run = t.runs.data[t.info.glyphs[i].run];
@@ -760,8 +760,8 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
         faces = pieces.data;
         faceCount = pieces.count;
         // Its distinct fonts, few, and its font ranges, in the order its glyphs are placed.
-        Array<const PrFont*>& distinct = f.leafFonts;
-        Array<LayoutFragmentFontRange>& placedRanges = f.leafRanges;
+        RawArray<const PrFont*>& distinct = f.leafFonts;
+        RawArray<LayoutFragmentFontRange>& placedRanges = f.leafRanges;
         distinct.clear();
         placedRanges.clear();
         uint32_t placed = 0;
@@ -1075,7 +1075,7 @@ void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const Layout
 // start edge, then its content on the line in the order of the text, with each box inside it treated the same way. Each
 // child keeps its position. Sets the opening and closing parts of each box, and how many children after its last part
 // are its content.
-void treeOrder(const LayoutStyles* styles, LayoutInlineFrame& f, uint32_t mark, Array<LayoutLogicalChild>& children) {
+void treeOrder(const LayoutStyles* styles, LayoutInlineFrame& f, uint32_t mark, RawArray<LayoutLogicalChild>& children) {
     uint32_t boxes = f.lineBoxes.count;
     uint32_t count = f.leaves.count;
     // The parts of each box, in the visual order that f.parts holds them, grouped by box.
@@ -1429,7 +1429,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     LineShares shares{};
     if (align == PrLayoutTextAlign_Justify) {
         layoutJustifyFind(state, f.justifier, t, f.styles.data, aligner.containerStyle, line);
-        const Array<LayoutJustifyOpportunity>& found = f.justifier.opportunities;
+        const RawArray<LayoutJustifyOpportunity>& found = f.justifier.opportunities;
         if (found.count != 0 && free > kLayoutUnitZero) {
             shares = LineShares{
                 found.data, found.count, free.raw / int32_t(found.count),
@@ -1465,7 +1465,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     }
 
     // Places each leaf in visual order from line-left, and each part around its leaves with its edges.
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     uint32_t mark = children.count;
     LayoutMode frame = layoutLineFrame(space.mode);
     LayoutSide lineLeft = layoutLineLeft(space.mode);
@@ -1804,7 +1804,7 @@ void openAcross(const LayoutInlineShaping& t, LayoutInlineFrame& f) {
         return;
     uint32_t block = f.segment.itemStart - 1;
     PR_ASSERT(t.items.data[block].kind == LayoutInlineItemKind_Block);
-    const Array<LayoutInlineAlign>& align = f.aligner.align;
+    const RawArray<LayoutInlineAlign>& align = f.aligner.align;
     for (uint32_t box = align.data[block].parent; box != kLayoutInlineRoot; box = align.data[box].parent)
         f.open.push(box);
     reverseItems(f.open.data, f.open.count);
@@ -2057,7 +2057,7 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
             layoutClearSides(layoutBoxStyle(state.styles, f.styles.data[i]), mode.direction) != 0;
     };
     // By byte of the segment: true if a float that clears comes before the byte.
-    Array<bool>& clearing = f.clearing;
+    RawArray<bool>& clearing = f.clearing;
     clearing.resize(t.text.count + 1);
     for (uint32_t b = segment.byteStart; b <= segment.byteEnd; ++b)
         clearing.data[b] = false;
@@ -2185,7 +2185,7 @@ bool linesKeep(const LayoutState& state, const LayoutInlineFrame& f, const Layou
                 layoutLengthReadsBase(logical.inset[LayoutSide_BlockEnd]))
             return false;
     }
-    const Array<LayoutLogicalChild>& children = state.scratch->children;
+    const RawArray<LayoutLogicalChild>& children = state.scratch->children;
     for (uint32_t i = mark; i < children.count; ++i) {
         if (children.data[i].fragment->kind != LayoutFragmentKind_Line)
             return false;
@@ -2215,7 +2215,7 @@ void startLines(LayoutLineRecord& record, const LayoutInlineFrame& f, const Layo
 // Keeps the lines laid out as `result`, the scratch children from `mark`, in `record`, which startLines started. Sets
 // the collection of the shaping in the record, which makes the record valid.
 void keepLines(LayoutLineRecord& record, const LayoutInlineShaping& t, const LayoutInlineResult& result,
-        const Array<LayoutLogicalChild>& children, uint32_t mark) {
+        const RawArray<LayoutLogicalChild>& children, uint32_t mark) {
     record.collected = t.collected;
     record.hasLines = result.hasLines;
     record.hasBaselines = result.hasBaselines;
@@ -2268,7 +2268,7 @@ LayoutInlineResult layoutInlineSegment(LayoutState& state, LayoutInlineRun& run,
     enterSegment(run, segment);
     const LayoutInlineShaping& t = *run.shaping;
     LayoutInlineFrame& f = *run.frame;
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     // Lines in the records of the first formatted line are laid out every time.
     bool reuses = bfc.reuses && state.reuse && t.collected != 0 && t.firstLine == nullptr;
     PR_ASSERT(!bfc.reuses || (bfc.topFinal && bfc.mayResolve));

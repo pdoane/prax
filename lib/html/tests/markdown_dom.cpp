@@ -31,9 +31,9 @@ void writeTree(PrTextBuffer* out, const PrDomNode* node) {
             for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
                     attribute = static_cast<const PrDomAttr*>(attribute->next)) {
                 prTextBufferAppendChar(out, ' ');
-                prTextBufferAppend(out, prStringView(&attribute->name));
+                prTextBufferAppend(out, prRawStringView(&attribute->name));
                 prTextBufferAppend(out, "=\"");
-                prTextBufferAppend(out, prStringView(&attribute->value));
+                prTextBufferAppend(out, prRawStringView(&attribute->value));
                 prTextBufferAppendChar(out, '"');
             }
             prTextBufferAppendChar(out, '>');
@@ -41,7 +41,7 @@ void writeTree(PrTextBuffer* out, const PrDomNode* node) {
             prTextBufferAppend(out, "</>");
         } else if (child->type == PrDomNodeType_Text || child->type == PrDomNodeType_Comment) {
             prTextBufferAppend(out, child->type == PrDomNodeType_Text ? "[" : "<!--");
-            prTextBufferAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
+            prTextBufferAppend(out, prRawStringView(&static_cast<const PrDomCharacterData*>(child)->data));
             prTextBufferAppend(out, child->type == PrDomNodeType_Text ? "]" : "-->");
         } else {
             prTextBufferAppend(out, "<?>");
@@ -139,10 +139,10 @@ bool buildsElement(const PrMarkdownOptions& options, PrStringView markdown, PrSt
 }
 
 // Returns lib/markdown's HTML of the whole of `markdown`: its blocks, then its footnotes.
-PrString htmlOf(const PrMarkdownOptions& options, PrStringView markdown) {
+PrRawString htmlOf(const PrMarkdownOptions& options, PrStringView markdown) {
     PrMarkdown* document = prMarkdownCreate(&options);
     prMarkdownParse(document, markdown);
-    PrString html = prStringEmpty();
+    PrRawString html = prRawStringEmpty();
     prMarkdownAppendHtml(document, 0, prMarkdownBlockCount(document), &html);
     prMarkdownAppendFootnotesHtml(document, &html);
     prMarkdownDestroy(document);
@@ -159,8 +159,8 @@ int main() {
         if (test.fieldCount != 1 || !readOptions(test.fields[0], &options))
             return 1;
         PrStringView markdown = prTextBufferView(&test.input);
-        PrString written = htmlOf(options, markdown);
-        PrStringView html = prStringView(&written);
+        PrRawString written = htmlOf(options, markdown);
+        PrStringView html = prRawStringView(&written);
         PrTextBuffer out = {};
         prTextBufferAppend(&out, "{\"whole\":");
         prTextBufferAppend(&out, buildsDocument(options, markdown, html, false) ? "true" : "false");
@@ -171,7 +171,7 @@ int main() {
         prTextBufferAppendChar(&out, '}');
         harnessWriteLine(prTextBufferView(&out));
         prTextBufferReset(&out);
-        prStringReset(&written);
+        prRawStringReset(&written);
     }
     harnessCaseReset(&test);
     return 0;

@@ -3,10 +3,10 @@
 #include "draw/comparisons/imgui/src/draw_imgui_gpu.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/draw_image.h"
 #include "pr/mem.h"
 #include "pr/pixels.h"
+#include "pr/raw_array.h"
 
 #include "draw/comparisons/imgui/config/imgui_gpu.h"
 
@@ -26,7 +26,7 @@ struct CachedTexture {
 
 struct ImGuiGpu : ImGuiBackend {
     PrGpuDevice* device;
-    Array<CachedTexture> textures;
+    RawArray<CachedTexture> textures;
 };
 
 PrDrawFrame* createFrame(PrDrawRenderer* renderer) {

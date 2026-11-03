@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/charset.h"
+#include "pr/raw_array.h"
 #include "pr/reserved_array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
@@ -25,7 +25,7 @@ namespace pr_impl {
 // that of the byte order mark, or else `protocol`, the charset of the sheet's Content-Type, or else the one that an
 // @charset rule opening the sheet names, or else `environment`, the charset of the document that loads the sheet, or
 // else UTF-8. The text is a view of `bytes` if they decode to themselves, and is otherwise appended to `out`.
-PrStringView cssDecodeBytes(PrStringView bytes, PrCharset protocol, PrCharset environment, PrString* out);
+PrStringView cssDecodeBytes(PrStringView bytes, PrCharset protocol, PrCharset environment, PrRawString* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Byte classes (css-syntax-3/#tokenizer-definitions)
@@ -135,7 +135,7 @@ typedef uint8_t CssTokenizeFlags;
 
 // The scratch state that tokenizing keeps besides its result, reused from one input to the next.
 struct CssTokenScratch {
-    Array<uint32_t> open;   // the openers waiting for a closer
+    RawArray<uint32_t> open;   // the openers waiting for a closer
 };
 
 // A node of a parsed value (css_value.h).

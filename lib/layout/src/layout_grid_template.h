@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atom_table.h"
 #include "pr/hash_index.h"
 #include "pr/layout_style.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "layout/src/layout_value.h"
@@ -33,7 +33,7 @@ struct LayoutGridTracksEntry {
     uint32_t repeatStart;
     uint32_t repeatCount;
     PrLayoutGridRepeat repeat;
-    Array<uint8_t> key;                         // the bytes that equal lists share
+    RawArray<uint8_t> key;                         // the bytes that equal lists share
     uint32_t hash;
     uint32_t references;                        // number of grid groups that name it
 };
@@ -44,7 +44,7 @@ struct LayoutGridAreasEntry {
     uint32_t areaCount;
     uint32_t rowCount;
     uint32_t columnCount;
-    Array<uint8_t> key;
+    RawArray<uint8_t> key;
     uint32_t hash;
     uint32_t references;
     bool live;                                  // true unless the entry is free
@@ -60,10 +60,10 @@ struct LayoutGridNameForms {
 // entry is freed.
 template <typename Entry>
 struct LayoutGridTable {
-    Array<Entry> entries;
-    Array<uint32_t> free;           // freed indices, which interning reuses
+    RawArray<Entry> entries;
+    RawArray<uint32_t> free;           // freed indices, which interning reuses
     HashIndex index;
-    Array<uint32_t> candidates;     // same as LayoutTable::candidates
+    RawArray<uint32_t> candidates;     // same as LayoutTable::candidates
 };
 
 // The track lists, template areas and names of a tree's styles.
@@ -74,7 +74,7 @@ struct LayoutGridTemplates {
     // A name is its atom plus one, so that zero is no name. The forms of a name that was interned as itself are kept by
     // atom, and a name that is only another name's form has none.
     AtomTable names;
-    Array<LayoutGridNameForms> forms;
+    RawArray<LayoutGridNameForms> forms;
 };
 
 // Prepares the tables with the empty entries at index 0.

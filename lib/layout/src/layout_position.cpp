@@ -537,7 +537,7 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
 }
 
 void layoutViewportHold(LayoutState& state, const LayoutFragment* root, PrLayoutVec at, PrLayoutVec extent,
-        LayoutMode mode, Array<LayoutChild>& out) {
+        LayoutMode mode, RawArray<LayoutChild>& out) {
     LayoutScratch& s = *state.scratch;
     LayoutPendingList list = layoutFragmentPending(root);
     if (list.count == 0)

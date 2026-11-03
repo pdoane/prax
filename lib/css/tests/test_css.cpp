@@ -22,11 +22,11 @@ PrCssRule* ruleAt(const CssTestSheet& sheet, uint32_t index) {
 
 // Returns the strings that a sequence function writes, and releases them.
 template <typename Handle>
-std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrString* PR_NULLABLE, uint32_t), const Handle* handle) {
-    std::vector<PrString> items(function(handle, nullptr, 0));
+std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrRawString* PR_NULLABLE, uint32_t), const Handle* handle) {
+    std::vector<PrRawString> items(function(handle, nullptr, 0));
     function(handle, items.data(), uint32_t(items.size()));
     std::vector<std::string> out;
-    for (PrString& item : items)
+    for (PrRawString& item : items)
         out.push_back(take(item));
     return out;
 }
@@ -137,13 +137,13 @@ TEST_CASE("a declaration block is set and removed through the C API") {
     // A value that the property does not accept, and a name that the block does not accept, leave the block unchanged.
     const PrCssDeclarationName height = prCssDeclarationNameFromProperty(PrCssProperty_Height);
     CHECK(prCssStyleDeclarationSetProperty(style, &height, "red", false) == PrStatus_InvalidData);
-    const PrCssDeclarationName display = {PrCssProperty_Count, PrCssDescriptor_FontFaceFontDisplay, prStringNull()};
+    const PrCssDeclarationName display = {PrCssProperty_Count, PrCssDescriptor_FontFaceFontDisplay, prRawStringNull()};
     CHECK(prCssStyleDeclarationSetProperty(style, &display, "swap", false) == PrStatus_InvalidData);
     CHECK(prCssStyleDeclarationRemoveProperty(style, &display, nullptr) == PrStatus_InvalidData);
     CHECK(prCssStyleDeclarationLength(style) == 2);
 
     const PrCssDeclarationName color = prCssDeclarationNameFromProperty(PrCssProperty_Color);
-    PrString removed = {};
+    PrRawString removed = {};
     CHECK(prCssStyleDeclarationRemoveProperty(style, &color, &removed) == PrStatus_Ok);
     CHECK(take(removed) == "red");
     CHECK(prCssStyleDeclarationRemoveProperty(style, &color, nullptr) == PrStatus_Ok);
@@ -234,8 +234,8 @@ TEST_CASE("a media list is the media queries of a sheet, an @media rule and an @
     PrCssMediaList* media = prCssImportRuleMedia(import);
     CHECK(prCssMediaListLength(media) == 2);
     CHECK(take(prCssMediaListQueryAt(media, 1)) == "print");
-    PrString past = prCssMediaListQueryAt(media, 2);
-    CHECK(prStringIsNull(&past));
+    PrRawString past = prCssMediaListQueryAt(media, 2);
+    CHECK(prRawStringIsNull(&past));
 
     // mediaqueries-5/#error-handling: an entry that is not a media query becomes `not all`.
     PrCssMediaList* rule = prCssMediaRuleMedia(prCssMediaRuleQuery(ruleAt(sheet, 1)));
@@ -333,7 +333,7 @@ TEST_CASE("a descriptor attribute reads and writes its rule's declaration") {
     PrCssFontFaceDescriptors* face = prCssFontFaceRuleStyle(prCssFontFaceRuleQuery(ruleAt(sheet, 2)));
     PrCssStyleDeclaration* descriptors = prCssFontFaceDescriptorsAsCssStyleDeclaration(face);
     CHECK(take(prCssStyleDeclarationGetPropertyValue(descriptors, Named(descriptors, "font-family"))) == "bar");
-    const PrCssDeclarationName display = {PrCssProperty_Count, PrCssDescriptor_FontFaceFontDisplay, prStringNull()};
+    const PrCssDeclarationName display = {PrCssProperty_Count, PrCssDescriptor_FontFaceFontDisplay, prRawStringNull()};
     CHECK(prCssStyleDeclarationSetProperty(descriptors, &display, "swap", false) == PrStatus_Ok);
     CHECK(take(prCssStyleDeclarationCssText(descriptors)) == "font-family: bar; font-display: swap;");
 

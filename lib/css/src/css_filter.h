@@ -9,10 +9,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/draw.h"
 #include "pr/draw_filter.h"
 #include "pr/layout_style.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_style.h"
@@ -32,7 +32,7 @@ struct CssFilterFunction {
 
 // Appends the items of the computed value of `filter`, `run`, to `out`, with the color of drop-shadow() resolved in
 // `colors`. none appends nothing.
-void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, Array<CssFilterFunction>* out);
+void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, RawArray<CssFilterFunction>* out);
 
 // Writes the blend mode that the <blend-mode> keyword `keyword` names to `out` (compositing-1/#ltblendmodegt). Returns
 // false for any other keyword.

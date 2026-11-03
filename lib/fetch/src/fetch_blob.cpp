@@ -47,7 +47,7 @@ PrFetchBlob* newBlob(PrByteView bytes, PrStringView type) {
     if (valid)
         prTextBufferAppend(&lowered, type);
     prTextBufferAsciiLower(&lowered);
-    blob->type = prStringCopy(prTextBufferView(&lowered));
+    blob->type = prRawStringCopy(prTextBufferView(&lowered));
     prTextBufferReset(&lowered);
     return blob;
 }
@@ -59,16 +59,16 @@ int64_t clampPosition(int64_t position, int64_t size) {
 }
 
 void resetEntry(FetchBlobUrl* entry) {
-    prStringReset(&entry->url);
-    prStringReset(&entry->origin);
+    prRawStringReset(&entry->url);
+    prRawStringReset(&entry->origin);
     prFetchBlobRelease(entry->blob);
 }
 
 // A revocation on its way to the network's loop.
 struct BlobRevocation {
     PrFetchBlobStore* store;
-    PrString url;
-    PrString origin;
+    PrRawString url;
+    PrRawString origin;
 };
 
 void revokeOnLoop(void* PR_NULLABLE data) {
@@ -77,16 +77,16 @@ void revokeOnLoop(void* PR_NULLABLE data) {
     prMutexLock(&store->lock);
     for (uint32_t i = 0; i < store->entries.count; ++i) {
         FetchBlobUrl& entry = store->entries.data[i];
-        if (prStringView(&entry.url) == prStringView(&revocation->url) &&
-                prStringView(&entry.origin) == prStringView(&revocation->origin)) {
+        if (prRawStringView(&entry.url) == prRawStringView(&revocation->url) &&
+                prRawStringView(&entry.origin) == prRawStringView(&revocation->origin)) {
             resetEntry(&entry);
             store->entries.erase(i);
             break;
         }
     }
     prMutexUnlock(&store->lock);
-    prStringReset(&revocation->url);
-    prStringReset(&revocation->origin);
+    prRawStringReset(&revocation->url);
+    prRawStringReset(&revocation->origin);
     prMemoryFree(revocation);
 }
 
@@ -103,7 +103,7 @@ const PrFetchBlob* prFetchBlobCreate(PrByteView bytes, PrStringView type) {
 const PrFetchBlob* prFetchBlobCreateFile(PrByteView bytes, PrStringView type, PrStringView name, double lastModified) {
     PrFetchBlob* blob = newBlob(bytes, type);
     blob->isFile = true;
-    blob->name = prStringCopy(name);
+    blob->name = prRawStringCopy(name);
     blob->lastModified = lastModified;
     return blob;
 }
@@ -117,8 +117,8 @@ void prFetchBlobRelease(const PrFetchBlob* PR_NULLABLE blob) {
         return;
     PrFetchBlob* owned = const_cast<PrFetchBlob*>(blob);
     owned->bytes.reset();
-    prStringReset(&owned->type);
-    prStringReset(&owned->name);
+    prRawStringReset(&owned->type);
+    prRawStringReset(&owned->name);
     prMemoryFree(owned);
 }
 
@@ -128,7 +128,7 @@ PrByteView prFetchBlobBytes(const PrFetchBlob* blob) {
 }
 
 PrStringView prFetchBlobType(const PrFetchBlob* blob) {
-    return prStringView(&blob->type);
+    return prRawStringView(&blob->type);
 }
 
 bool prFetchBlobIsFile(const PrFetchBlob* blob) {
@@ -136,7 +136,7 @@ bool prFetchBlobIsFile(const PrFetchBlob* blob) {
 }
 
 PrStringView prFetchBlobFileName(const PrFetchBlob* blob) {
-    return prStringView(&blob->name);
+    return prRawStringView(&blob->name);
 }
 
 double prFetchBlobFileLastModified(const PrFetchBlob* blob) {
@@ -152,7 +152,7 @@ const PrFetchBlob* prFetchBlobSlice(const PrFetchBlob* blob, int64_t start, int6
     return newBlob(PrByteView{bytes.data + from, size_t(span)}, type);
 }
 
-PrString prFetchBlobConvertLineEndings(PrStringView text) {
+PrRawString prFetchBlobConvertLineEndings(PrStringView text) {
     PrTextBuffer out{};
 #if defined(_WIN32)
     constexpr PrStringView kNative = "\r\n";
@@ -170,7 +170,7 @@ PrString prFetchBlobConvertLineEndings(PrStringView text) {
             prTextBufferAppendChar(&out, text.data[i]);
         }
     }
-    PrString result = prStringCopy(prTextBufferView(&out));
+    PrRawString result = prRawStringCopy(prTextBufferView(&out));
     prTextBufferReset(&out);
     return result;
 }
@@ -196,7 +196,7 @@ const PrFetchBlob* PR_NULLABLE prFetchBlobStoreResolve(PrFetchBlobStore* store, 
     const PrFetchBlob* blob = nullptr;
     prMutexLock(&store->lock);
     for (uint32_t i = 0; i < store->entries.count && blob == nullptr; ++i) {
-        if (prStringView(&store->entries.data[i].url) == wanted) {
+        if (prRawStringView(&store->entries.data[i].url) == wanted) {
             blob = store->entries.data[i].blob;
             prFetchBlobRetain(blob);
         }
@@ -209,25 +209,25 @@ bool prFetchBlobIsUrl(PrStringView url) {
     return prAsciiStartsWithFold(url, "blob:");
 }
 
-PrString prFetchBlobUrlGenerate(PrStringView origin) {
+PrRawString prFetchBlobUrlGenerate(PrStringView origin) {
     PrTextBuffer url{};
     prTextBufferAppend(&url, "blob:");
     prTextBufferAppend(&url, origin);
     prTextBufferAppendChar(&url, '/');
     appendUuid(&url);
-    PrString result = prStringCopy(prTextBufferView(&url));
+    PrRawString result = prRawStringCopy(prTextBufferView(&url));
     prTextBufferReset(&url);
     return result;
 }
 
-PrString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, PrStringView origin) {
-    PrString result = prFetchBlobUrlGenerate(origin);
+PrRawString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, PrStringView origin) {
+    PrRawString result = prFetchBlobUrlGenerate(origin);
     PrFetchBlobStore* store = fetcher->blobStore;
     if (store == nullptr)
         return result;
     prFetchBlobRetain(blob);
     prMutexLock(&store->lock);
-    store->entries.push(FetchBlobUrl{prStringClone(&result), prStringCopy(origin), blob});
+    store->entries.push(FetchBlobUrl{prRawStringClone(&result), prRawStringCopy(origin), blob});
     prMutexUnlock(&store->lock);
     return result;
 }
@@ -238,7 +238,7 @@ void prFetchBlobUrlRevoke(PrFetchNetwork* fetcher, PrStringView url, PrStringVie
         return;
     BlobRevocation* revocation = allocZeroed<BlobRevocation>();
     revocation->store = store;
-    revocation->url = prStringCopy(withoutFragment(url));
-    revocation->origin = prStringCopy(origin);
+    revocation->url = prRawStringCopy(withoutFragment(url));
+    revocation->origin = prRawStringCopy(origin);
     prNetPost(fetcher->net, revokeOnLoop, revocation);
 }

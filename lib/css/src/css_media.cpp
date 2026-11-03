@@ -356,7 +356,7 @@ Truth featureComparison(CssValueRun run, uint32_t index, const CssMediaEnvironme
 
 // Replaces the truths of the operands of the <media-condition> at `index`, which are the last entries of `stack`, with
 // the truth of the condition.
-void combine(CssValueRun run, uint32_t index, Array<Truth>* stack) {
+void combine(CssValueRun run, uint32_t index, RawArray<Truth>* stack) {
     const CssValueNode* values = run.values;
     uint32_t end = index + values[index].next;
     uint32_t operands = 0;
@@ -385,7 +385,7 @@ Truth typeMatches(CssValueRun run, uint32_t index, const CssMediaEnvironment* en
 
 // Returns the truth of a <media-query>, whose node is the first node of `query`. The query is read from its end, so
 // every <media-in-parens> is evaluated before the condition that contains it, and leaves its truth on `stack`.
-Truth evaluateQuery(CssValueRun query, const CssMediaEnvironment* environment, Array<Truth>* stack) {
+Truth evaluateQuery(CssValueRun query, const CssMediaEnvironment* environment, RawArray<Truth>* stack) {
     const CssValueNode* values = query.values;
     if (query.count == 1)
         return Truth_False;
@@ -616,7 +616,7 @@ void cssMediaEnvironmentSetType(CssMediaEnvironment* environment, PrCssMediaType
 bool cssMediaListMatches(const CssMediaQueries* list, const CssMediaEnvironment* environment) {
     CssValueRun run = cssValueListRun(&list->queries);
     bool matches = run.count == 0;
-    Array<Truth> stack = {};
+    RawArray<Truth> stack = {};
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         if (cssValueIsProduction(&run.values[i], CssValueDef_MediaQuery))
             matches = matches || evaluateQuery(cssValueSubtree(run, i), environment, &stack) == Truth_True;

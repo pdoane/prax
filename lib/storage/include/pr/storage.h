@@ -9,8 +9,8 @@
 
 #include "pr/base.h"
 #include "pr/byte_view.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -47,7 +47,7 @@ struct PrStorage {
     void (*clear)(PrStorage* storage);
     uint64_t (*size)(const PrStorage* storage);
     uint32_t (*count)(const PrStorage* storage);
-    PrString (*key)(const PrStorage* storage, uint32_t position);
+    PrRawString (*key)(const PrStorage* storage, uint32_t position);
 };
 
 // Finishes the store's work, such as the writes that a disk store has queued, and frees it. Its records must be
@@ -81,7 +81,7 @@ uint32_t prStorageCount(const PrStorage* storage);
 
 // Returns a copy of the key of the record at `position`, below prStorageCount, or the null string past the end. Each
 // record keeps its position until a record is added or removed.
-PrString prStorageKey(const PrStorage* storage, uint32_t position);
+PrRawString prStorageKey(const PrStorage* storage, uint32_t position);
 
 #if defined(__cplusplus)
 }

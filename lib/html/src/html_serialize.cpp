@@ -85,7 +85,7 @@ void appendEscaped(PrTextBuffer* out, PrStringView text, bool attribute) {
 
 // Appends an attribute's serialized name, as html/#html-fragment-serialisation-algorithm writes it.
 void appendAttributeName(PrTextBuffer* out, const PrDomAttr* attribute) {
-    PrStringView name = prStringView(&attribute->name);
+    PrStringView name = prRawStringView(&attribute->name);
     switch (attribute->space) {
         case PrDomNamespace_Xml:
             prTextBufferAppend(out, "xml:");
@@ -117,7 +117,7 @@ void htmlSerializeNode(PrTextBuffer* out, const PrDomNode* node) {
                 prTextBufferAppend(out, " ");
                 appendAttributeName(out, attribute);
                 prTextBufferAppend(out, "=\"");
-                appendEscaped(out, prStringView(&attribute->value), true);
+                appendEscaped(out, prRawStringView(&attribute->value), true);
                 prTextBufferAppend(out, "\"");
             }
             prTextBufferAppend(out, ">");
@@ -131,7 +131,7 @@ void htmlSerializeNode(PrTextBuffer* out, const PrDomNode* node) {
         }
         case PrDomNodeType_Text:
         case PrDomNodeType_CdataSection: {
-            PrStringView data = prStringView(&static_cast<const PrDomCharacterData*>(node)->data);
+            PrStringView data = prRawStringView(&static_cast<const PrDomCharacterData*>(node)->data);
             if (isRawText(node->parent))
                 prTextBufferAppend(out, data);
             else
@@ -140,21 +140,21 @@ void htmlSerializeNode(PrTextBuffer* out, const PrDomNode* node) {
         }
         case PrDomNodeType_Comment:
             prTextBufferAppend(out, "<!--");
-            prTextBufferAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(node)->data));
+            prTextBufferAppend(out, prRawStringView(&static_cast<const PrDomCharacterData*>(node)->data));
             prTextBufferAppend(out, "-->");
             return;
         case PrDomNodeType_ProcessingInstruction: {
             const PrDomProcessingInstruction* instruction = static_cast<const PrDomProcessingInstruction*>(node);
             prTextBufferAppend(out, "<?");
-            prTextBufferAppend(out, prStringView(&instruction->target));
+            prTextBufferAppend(out, prRawStringView(&instruction->target));
             prTextBufferAppend(out, " ");
-            prTextBufferAppend(out, prStringView(&instruction->data));
+            prTextBufferAppend(out, prRawStringView(&instruction->data));
             prTextBufferAppend(out, ">");
             return;
         }
         case PrDomNodeType_DocumentType:
             prTextBufferAppend(out, "<!DOCTYPE ");
-            prTextBufferAppend(out, prStringView(&static_cast<const PrDomDocumentType*>(node)->name));
+            prTextBufferAppend(out, prRawStringView(&static_cast<const PrDomDocumentType*>(node)->name));
             prTextBufferAppend(out, ">");
             return;
         default:

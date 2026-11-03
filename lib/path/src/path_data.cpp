@@ -281,7 +281,7 @@ bool hasLength(const PrPathDataVertex& vertex) {
 }
 
 // Appends `value` to `out` with the fewest significant digits that parse back to it.
-void appendNumber(PrString* out, float value) {
+void appendNumber(PrRawString* out, float value) {
     char text[kPrF64TextMaxBytes];
     size_t length = 0;
     for (uint32_t digits = 6; digits <= 9; ++digits) {
@@ -290,7 +290,7 @@ void appendNumber(PrString* out, float value) {
         if (prF64ParsePrefix(PrStringView{text, length}, &parsed) && float(parsed) == value)
             break;
     }
-    prStringAppend(out, PrStringView{text, length});
+    prRawStringAppend(out, PrStringView{text, length});
 }
 
 } // namespace
@@ -460,19 +460,19 @@ void prPathDataMakeAbsolute(PrPathDataCommand* PR_NULLABLE commands, uint32_t co
     }
 }
 
-void prPathDataWrite(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, PrString* out) {
+void prPathDataWrite(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, PrRawString* out) {
     for (uint32_t i = 0; i < count; ++i) {
         const PrPathDataCommand& command = commands[i];
         if (i != 0)
-            prStringAppend(out, " ");
+            prRawStringAppend(out, " ");
         // A closepath has no coordinates, so z and Z are the same command.
-        prStringAppend(out, upperOf(command.letter) == 'Z' ? PrStringView{"Z"} : PrStringView{&command.letter, 1});
+        prRawStringAppend(out, upperOf(command.letter) == 'Z' ? PrStringView{"Z"} : PrStringView{&command.letter, 1});
         bool arc = upperOf(command.letter) == 'A';
         uint32_t arguments = prPathDataArgumentCount(command.letter);
         for (uint32_t k = 0; k < arguments; ++k) {
-            prStringAppend(out, " ");
+            prRawStringAppend(out, " ");
             if (arc && (k == 3 || k == 4))
-                prStringAppend(out, command.arguments[k] > 0 ? "1" : "0");
+                prRawStringAppend(out, command.arguments[k] > 0 ? "1" : "0");
             else
                 appendNumber(out, command.arguments[k]);
         }

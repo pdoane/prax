@@ -73,10 +73,10 @@ std::string familyMatched(PrFontSet* set, const Asked& r) {
     std::vector<PrFontFace> faces = matchAll(set, r);
     std::string answer;
     if (!faces.empty() && faces[0].font != nullptr) {
-        PrString family = prFontFamilyName(faces[0].font);
-        PrStringView answered = prStringView(&family);
+        PrRawString family = prFontFamilyName(faces[0].font);
+        PrStringView answered = prRawStringView(&family);
         answer.assign(answered.data, answered.size);
-        prStringReset(&family);
+        prRawStringReset(&family);
     }
     for (const PrFontFace& face : faces)
         prFontRelease(face.font);
@@ -628,9 +628,9 @@ TEST_CASE("fallback families are matched among the outermost set's faces, never 
     PrFontStyle style = prFontStyleDefault();
     prFontSetMatchFallback(document, 0, &style, match);
     REQUIRE(prFontMatchFaceCount(match) == 1);
-    PrString family = prFontFamilyName(prFontMatchFace(match, 0).font);
-    CHECK(std::string(prStringView(&family).data, prStringView(&family).size) == "Noto Sans");
-    prStringReset(&family);
+    PrRawString family = prFontFamilyName(prFontMatchFace(match, 0).font);
+    CHECK(std::string(prRawStringView(&family).data, prRawStringView(&family).size) == "Noto Sans");
+    prRawStringReset(&family);
     uint64_t stamp = prFontSetFallbackStamp(document);
     prFontSetRemove(document, 1);
     CHECK(prFontSetFallbackStamp(document) == stamp);

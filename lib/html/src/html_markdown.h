@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/markdown.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 
@@ -52,10 +52,10 @@ struct HtmlMarkdownBuilder {
 
     HtmlParserRest base;            // the state of the parse at a clean point, apart from its frameset-ok flag
 
-    Array<HtmlMarkdownCleanPoint> cleanPoints;   // in the order of their blocks
-    uint32_t built;                              // the number of top-level blocks built
+    RawArray<HtmlMarkdownCleanPoint> cleanPoints; // in the order of their blocks
+    uint32_t built;                               // the number of top-level blocks built
 
-    PrString html;                  // the HTML text of an event that the tokenizer reads
+    PrRawString html;                  // the HTML text of an event that the tokenizer reads
 };
 
 // Starts building into `document`, which must be empty, as an HTML document whose body holds the blocks. The parse runs

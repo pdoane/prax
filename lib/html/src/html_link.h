@@ -6,7 +6,7 @@
 
 #include "pr/dom.h"
 #include "pr/image.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 #include "dom/src/dom_hooks.h"
@@ -27,8 +27,8 @@ void htmlLinkAttributeChanged(PrDomElement* element, PrStringView name);
 // Returns the URL of the icon that the document's links name (html/#rel-icon): that of the last HTML link element in
 // tree order whose rel holds icon and whose href parses. A link whose type is one that `codec` cannot decode names no
 // icon, as the user agent may skip it. A null `codec` skips none. Returns the null string if no link names an icon. The
-// caller releases the string with prStringReset.
-PrString htmlLinkIconUrl(const PrDomDocument* document, PrImageCodec* PR_NULLABLE codec);
+// caller releases the string with prRawStringReset.
+PrRawString htmlLinkIconUrl(const PrDomDocument* document, PrImageCodec* PR_NULLABLE codec);
 
 } // namespace pr_impl
 

@@ -162,7 +162,7 @@ PrRect unionOf(const std::vector<PaintedPath>& paths) {
 using namespace pr_impl;
 
 TEST_CASE("a unicode-range reads ranges, wildcards and a U+ on both ends") {
-    Array<PrFontCodePointRange> ranges;
+    RawArray<PrFontCodePointRange> ranges;
     REQUIRE(svgParseUnicodeRange("U+0-7F, u+4??,U+0064-U+0072", &ranges));
     REQUIRE(ranges.count == 3);
     CHECK(ranges.data[0].first == 0);

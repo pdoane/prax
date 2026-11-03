@@ -35,23 +35,23 @@ wchar_t* PR_NULLABLE widen(PrStringView path) {
 }
 
 // Returns the NUL-terminated `wide` as UTF-8, or the null string if it is empty or is not valid UTF-16.
-PrString narrow(const wchar_t* wide) {
+PrRawString narrow(const wchar_t* wide) {
     int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, nullptr, 0, nullptr, nullptr);
     char* utf8 = size > 1 ? static_cast<char*>(malloc(size_t(size))) : nullptr;
-    PrString text = prStringNull();
+    PrRawString text = prRawStringNull();
     if (utf8 != nullptr && WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, utf8, size, nullptr, nullptr) == size)
-        text = prStringCopy(PrStringView{utf8, size_t(size - 1)});
+        text = prRawStringCopy(PrStringView{utf8, size_t(size - 1)});
     free(utf8);
     return text;
 }
 
 // Returns the directory that the environment variable `name` holds, as UTF-8, or the null string if it holds none.
-PrString directoryOf(const wchar_t* name) {
+PrRawString directoryOf(const wchar_t* name) {
     wchar_t* value = nullptr;
     size_t count = 0;
     if (_wdupenv_s(&value, &count, name) != 0 || value == nullptr)
-        return prStringNull();
-    PrString directory = narrow(value);
+        return prRawStringNull();
+    PrRawString directory = narrow(value);
     free(value);
     return directory;
 }
@@ -174,15 +174,15 @@ bool prCoreWindowsFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NU
         const wchar_t* name = data.cFileName;
         if (name[0] == L'.' && (name[1] == 0 || (name[1] == L'.' && name[2] == 0)))
             continue;
-        PrString utf8 = narrow(name);
-        if (prStringIsNull(&utf8))
+        PrRawString utf8 = narrow(name);
+        if (prRawStringIsNull(&utf8))
             continue;
         PrFileEntry entry{
-            .name = prStringView(&utf8),
+            .name = prRawStringView(&utf8),
             .info = infoOf(data.dwFileAttributes, data.nFileSizeHigh, data.nFileSizeLow, data.ftLastWriteTime),
         };
         fn(context, &entry);
-        prStringReset(&utf8);
+        prRawStringReset(&utf8);
     } while (FindNextFileW(find, &data));
     FindClose(find);
     return true;
@@ -259,10 +259,10 @@ bool prCoreWindowsFileCreateDirectory(PrStringView path) {
     return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
-PrString prCoreWindowsFileCacheDirectory(void) {
+PrRawString prCoreWindowsFileCacheDirectory(void) {
     return directoryOf(L"LOCALAPPDATA");
 }
 
-PrString prCoreWindowsFileDataDirectory(void) {
+PrRawString prCoreWindowsFileDataDirectory(void) {
     return directoryOf(L"APPDATA");
 }

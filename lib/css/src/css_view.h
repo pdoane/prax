@@ -28,7 +28,7 @@ void cssViewScrollViewportBy(PrDomDocument* document, PrLayoutVec delta);
 bool cssViewIsRendered(PrDomElement* element);
 
 // Returns the text of an element that is being rendered (html/#get-the-text-steps).
-PrString cssViewRenderedText(PrDomElement* element);
+PrRawString cssViewRenderedText(PrDomElement* element);
 
 // Returns the element that an HTML element's offsets are measured from (cssom-view-1/#dom-htmlelement-offsetparent), or
 // null.

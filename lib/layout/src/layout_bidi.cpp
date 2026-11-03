@@ -64,8 +64,8 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
     t.splits.clear();
     // `open` holds the Open items of the boxes that are open across paragraphs. `boxes` holds the units of each box in
     // the current paragraph as three values per box: its Open item, its first unit, and the unit after its last.
-    Array<uint32_t>& open = s.bidiOpen;
-    Array<uint32_t>& boxes = s.boxBytes;
+    RawArray<uint32_t>& open = s.bidiOpen;
+    RawArray<uint32_t>& boxes = s.boxBytes;
     open.clear();
     LayoutItemIndex item = 0;
     for (uint32_t k = 0; k < t.info.paragraphCount; ++k) {
@@ -76,7 +76,7 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
         s.unitLevels.clear();
         boxes.clear();
         // Boxes that are open across the start of the paragraph begin at its first unit.
-        Array<uint32_t>& first = s.unitRuns;
+        RawArray<uint32_t>& first = s.unitRuns;
         first.resize(open.count);
         prMemZero(first.data, open.count * sizeof(uint32_t));
         Units units{.s = s, .fresh = true};
@@ -144,7 +144,7 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
                 continue;
             // Finds the runs of consecutive visual positions among the units of the box. The box splits wherever its
             // text passes from one run to another.
-            Array<uint32_t>& runs = s.positions;
+            RawArray<uint32_t>& runs = s.positions;
             runs.clear();
             for (uint32_t u = from; u < to; ++u)
                 runs.push(s.unitVisual.data[u]);

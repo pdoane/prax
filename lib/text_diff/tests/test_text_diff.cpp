@@ -24,7 +24,7 @@ std::vector<PrTextDiffChange> changesOf(const std::string& a, const std::string&
         .newKeys = newKeys.data(),
         .newCount = uint32_t(newKeys.size()),
     };
-    Array<PrTextDiffChange> found;
+    RawArray<PrTextDiffChange> found;
     textDiffSequenceCompare(&sequence, desc, found);
     std::vector<PrTextDiffChange> changes(found.data, found.data + found.count);
     found.reset();
@@ -187,7 +187,7 @@ TEST_CASE("text diff: the equal function confirms keys that collide") {
         },
         .equalContext = &pair,
     };
-    Array<PrTextDiffChange> changes;
+    RawArray<PrTextDiffChange> changes;
     textDiffSequenceCompare(&sequence, desc, changes);
     REQUIRE(changes.count == 1);
     CHECK(changes.data[0].oldStart == 2);

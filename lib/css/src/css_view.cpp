@@ -6,11 +6,11 @@
 #include "pr/css_view.h"
 #include "css/src/css_view.h"
 
-#include "pr/array.h"
 #include "pr/float.h"
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/raw_array.h"
 
 #include "css/src/css_animation.h"
 #include "css/src/css_boxes.h"
@@ -221,7 +221,7 @@ bool cssViewIsRendered(PrDomElement* element) {
         PrLayoutCoordinates_Layout, nullptr, 0) != 0;
 }
 
-PrString cssViewRenderedText(PrDomElement* element) {
+PrRawString cssViewRenderedText(PrDomElement* element) {
     PrCssPresentation* presentation = presentationFor(element);
     PR_ASSERT(presentation != nullptr);
     RenderedRoot root{presentation, domNodeRoot(element)};
@@ -325,7 +325,7 @@ uint32_t prCssElementGetClientRects(PrDomElement* element, PrDomRect* PR_NULLABL
         return 0;
     PrLayoutTree* tree = cssPresentationOwnTree(presentation);
     uint32_t count = prLayoutNodeBoxes(tree, box, PrLayoutCoordinates_Viewport, nullptr, 0);
-    Array<PrLayoutRect> rects;
+    RawArray<PrLayoutRect> rects;
     rects.resize(count);
     prLayoutNodeBoxes(tree, box, PrLayoutCoordinates_Viewport, rects.data, count);
     // The content of a foreignObject is a layout root of its own, whose rectangles are measured from its containing
@@ -365,7 +365,7 @@ PrDomRect prCssElementGetBoundingClientRect(PrDomElement* element) {
     uint32_t count = prCssElementGetClientRects(element, nullptr, 0);
     if (count == 0)
         return PrDomRect{};
-    Array<PrDomRect> rects;
+    RawArray<PrDomRect> rects;
     rects.resize(count);
     prCssElementGetClientRects(element, rects.data, count);
     PrDomRect bounds = rects.data[0];
@@ -586,9 +586,9 @@ uint32_t prCssDocumentElementsFromPoint(PrDomDocument* document, double x, doubl
     PrLayoutVec extent = cssViewViewportExtent(document);
     if (!(x >= 0 && y >= 0 && x <= px(extent.x) && y <= px(extent.y)))
         return 0;
-    Array<PrDomNode*> nodes;
+    RawArray<PrDomNode*> nodes;
     cssPresentationHits(presentation, PrLayoutVec{units(x), units(y)}, UINT32_MAX, &nodes);
-    Array<PrDomElement*> elements;
+    RawArray<PrDomElement*> elements;
     auto add = [&](PrDomElement* element) {
         if (elements.find(element) == kArrayMissing)
             elements.push(element);

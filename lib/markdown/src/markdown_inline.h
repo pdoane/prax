@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/markdown.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "markdown/src/markdown_tree.h"
@@ -49,10 +49,10 @@ typedef uint32_t MarkdownBacktickCount;
 
 // The state of parsing one block's inlines, kept between blocks for its storage.
 struct MarkdownInlineParser {
-    Array<MarkdownDelimiter> delimiters;
-    Array<MarkdownBracket> brackets;
-    Array<char> label;
-    Array<uint32_t> backticks;      // by MarkdownBacktickCount: where the last string of that length starts
+    RawArray<MarkdownDelimiter> delimiters;
+    RawArray<MarkdownBracket> brackets;
+    RawArray<char> label;
+    RawArray<uint32_t> backticks;      // by MarkdownBacktickCount: where the last string of that length starts
 };
 
 // Frees the parser's storage.

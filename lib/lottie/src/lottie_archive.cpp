@@ -5,10 +5,10 @@
 #include "pr/lottie_archive.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/compress_zip.h"
 #include "pr/json.h"
 #include "pr/lottie.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 
 namespace pr_impl {
@@ -24,8 +24,8 @@ struct ArchiveAnimation {
 
 struct LottieArchive {
     PrCompressZip* zip;
-    Array<char> text;
-    Array<ArchiveAnimation> animations;
+    RawArray<char> text;
+    RawArray<ArchiveAnimation> animations;
 };
 
 // Returns the entry that holds the animation `id`. The entry is in animations/, or in a/ from the second version of the
@@ -35,7 +35,7 @@ uint32_t animationEntry(const PrCompressZip* zip, PrStringView id) {
     const char* const folders[] = {"animations/", "a/"};
     for (const char* folder : folders) {
         PrStringView folderView = folder;
-        Array<char> name;
+        RawArray<char> name;
         name.append(folder, uint32_t(folderView.size));
         name.append(id.data, uint32_t(id.size));
         name.append(".json", 5);
@@ -60,7 +60,7 @@ void readAnimations(LottieArchive& a) {
     uint32_t manifest = prCompressZipFind(zip, "manifest.json");
     if (manifest < count) {
         PrCompressZipEntry entry = prCompressZipEntry(zip, manifest);
-        Array<char> bytes;
+        RawArray<char> bytes;
         bytes.reserve(uint32_t(entry.size) + 1);
         PrJson* doc = prJsonCreate();
         if (prCompressZipRead(zip, manifest, reinterpret_cast<uint8_t*>(bytes.data), size_t(entry.size)) ==
@@ -95,7 +95,7 @@ void readAnimations(LottieArchive& a) {
 // read.
 struct ArchiveFiles {
     const PrCompressZip* zip;
-    Array<uint8_t*> read;
+    RawArray<uint8_t*> read;
 };
 
 bool loadEntry(void* PR_NULLABLE context, PrStringView path, PrByteView* out) {

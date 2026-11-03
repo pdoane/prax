@@ -3,7 +3,6 @@
 #include "html/quickjs/src/html_performance_quickjs.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/count_of.h"
 #include "pr/dom_event_handler.h"
 #include "pr/dom_quickjs.h"
@@ -11,6 +10,7 @@
 #include "pr/html_performance.h"
 #include "pr/quickjs_binding.h"
 #include "pr/quickjs_callback.h"
+#include "pr/raw_array.h"
 #include "pr/webidl_quickjs.h"
 
 #include "html/quickjs/src/html_bindings_quickjs.h"
@@ -184,27 +184,27 @@ JSValue entryResourceAttribute(JSContext* ctx, JSValueConst entryObject, int mag
 
 // A metric's object, which holds a copy of the metric, since its entry may go first.
 struct JsServerTiming {
-    PrString name;
-    PrString description;
+    PrRawString name;
+    PrRawString description;
     double duration;
 };
 
 void freeServerTiming(JsServerTiming* PR_NULLABLE metric) {
     if (metric == nullptr)
         return;
-    prStringReset(&metric->name);
-    prStringReset(&metric->description);
+    prRawStringReset(&metric->name);
+    prRawStringReset(&metric->description);
     prMemoryFree(metric);
 }
 
 JSValue serverTimingName(JSContext* ctx, JSValueConst metricObject) {
     JsServerTiming* metric = jsThis<JsServerTiming>(ctx, metricObject, performanceServerTimingClass);
-    return metric != nullptr ? jsNewStringView(ctx, prStringView(&metric->name)) : JS_EXCEPTION;
+    return metric != nullptr ? jsNewStringView(ctx, prRawStringView(&metric->name)) : JS_EXCEPTION;
 }
 
 JSValue serverTimingDescription(JSContext* ctx, JSValueConst metricObject) {
     JsServerTiming* metric = jsThis<JsServerTiming>(ctx, metricObject, performanceServerTimingClass);
-    return metric != nullptr ? jsNewStringView(ctx, prStringView(&metric->description)) : JS_EXCEPTION;
+    return metric != nullptr ? jsNewStringView(ctx, prRawStringView(&metric->description)) : JS_EXCEPTION;
 }
 
 JSValue serverTimingDuration(JSContext* ctx, JSValueConst metricObject) {
@@ -230,8 +230,8 @@ JSValue entryServerTiming(JSContext* ctx, JSValueConst entryObject) {
         for (uint32_t i = 0; i < prHtmlPerformanceEntryServerTimingCount(entry); ++i) {
             PrHtmlServerTiming metric = prHtmlPerformanceEntryServerTiming(entry, i);
             JsServerTiming* copy = allocZeroed<JsServerTiming>();
-            copy->name = prStringCopy(metric.name);
-            copy->description = prStringCopy(metric.description);
+            copy->name = prRawStringCopy(metric.name);
+            copy->description = prRawStringCopy(metric.description);
             copy->duration = metric.duration;
             JS_SetPropertyUint32(ctx, array, i, jsWrap(ctx, performanceServerTimingClass, JS_UNDEFINED, copy, true));
         }
@@ -368,7 +368,7 @@ JSValue timelineEntries(JSContext* ctx, JSValueConst performanceObject, int argc
     if (!readFilter(ctx, argc, argv, magic, &nameArgument, &typeArgument, &type, &name, &result))
         return result;
     uint32_t total = prHtmlPerformanceEntries(performance, type, name, nullptr, 0);
-    Array<PrHtmlPerformanceEntry*> entries;
+    RawArray<PrHtmlPerformanceEntry*> entries;
     entries.resize(total);
     prHtmlPerformanceEntries(performance, type, name, entries.data, total);
     result = entriesToJs(ctx, entries.data, total);
@@ -420,7 +420,7 @@ PrHtmlPerformanceEntry* PR_NULLABLE createMark(JSContext* ctx, PrHtmlPerformance
     }
     PrHtmlPerformanceEntry* mark = nullptr;
     PrHtmlPerformanceError error = prHtmlPerformanceEntryCreateMark(performance, name.value(), hasStart ? &startTime : nullptr,
-        prStringView(&detail.bytes), &mark);
+        prRawStringView(&detail.bytes), &mark);
     jsHtmlSerializedReset(&detail);
     if (error != PrHtmlPerformanceError_None)
         throwError(ctx, error);
@@ -500,7 +500,7 @@ JSValue measure(JSContext* ctx, JSValueConst performanceObject, int argc, JSValu
         }
         desc.hasOptions = hasDetail || desc.hasDuration || desc.start.kind != PrHtmlPerformanceTimestampKind_None ||
             desc.end.kind != PrHtmlPerformanceTimestampKind_None;
-        desc.detail = prStringView(&detail.bytes);
+        desc.detail = prRawStringView(&detail.bytes);
     } else if (!JS_IsUndefined(first)) {
         if (!startText.read(first))
             return JS_EXCEPTION;
@@ -624,7 +624,7 @@ JSValue listEntries(JSContext* ctx, JSValueConst listObject, int argc, JSValueCo
     if (!readFilter(ctx, argc, argv, magic, &nameArgument, &typeArgument, &type, &name, &result))
         return result;
     uint32_t total = prHtmlPerformanceEntryListEntries(list, type, name, nullptr, 0);
-    Array<PrHtmlPerformanceEntry*> entries;
+    RawArray<PrHtmlPerformanceEntry*> entries;
     entries.resize(total);
     prHtmlPerformanceEntryListEntries(list, type, name, entries.data, total);
     result = entriesToJs(ctx, entries.data, total);
@@ -756,7 +756,7 @@ JSValue observerTakeRecords(JSContext* ctx, JSValueConst observerObject, int, JS
     PrHtmlPerformanceEntryList* list = prHtmlPerformanceObserverTakeRecords(observer);
     uint32_t total = prHtmlPerformanceEntryListEntries(list, PrHtmlPerformanceEntryType_Count, PrStringView{nullptr, 0},
         nullptr, 0);
-    Array<PrHtmlPerformanceEntry*> entries;
+    RawArray<PrHtmlPerformanceEntry*> entries;
     entries.resize(total);
     prHtmlPerformanceEntryListEntries(list, PrHtmlPerformanceEntryType_Count, PrStringView{nullptr, 0}, entries.data, total);
     JSValue result = entriesToJs(ctx, entries.data, total);

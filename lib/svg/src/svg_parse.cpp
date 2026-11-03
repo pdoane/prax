@@ -154,7 +154,7 @@ bool svgParseTransform(PrStringView text, PrAffine2* out) {
     return any;
 }
 
-bool svgParseNumbers(PrStringView text, Array<float>* out) {
+bool svgParseNumbers(PrStringView text, RawArray<float>* out) {
     out->clear();
     size_t pos = 0;
     for (;;) {

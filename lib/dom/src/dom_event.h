@@ -5,8 +5,8 @@
 #pragma once
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "dom/src/dom_event_target.h"
@@ -58,8 +58,8 @@ void domEventTargetAssign(PrDomEventTarget* PR_NULLABLE* PR_NONNULL slot, PrDomE
 
 // The data that an ErrorEvent carries beyond an event (html/#runtime-script-errors).
 struct DomErrorEventData {
-    PrString message;
-    PrString filename;
+    PrRawString message;
+    PrRawString filename;
     uint32_t lineno;
     uint32_t colno;
 };
@@ -69,9 +69,9 @@ struct DomErrorEventData {
 // transitioned or the name of the animation, the time in seconds within the active time at which the event occurs, and
 // the pseudo-element that is animated, or empty for the element itself.
 struct DomAnimationEventData {
-    PrString name;
+    PrRawString name;
     double elapsedTime;
-    PrString pseudoElement;
+    PrRawString pseudoElement;
 };
 
 // The data that a MouseEvent carries beyond a UIEvent (pointerevents4/#mouseevent-interface). The related target is
@@ -97,8 +97,8 @@ struct DomWheelEventData {
 // The data that a KeyboardEvent carries beyond a UIEvent (uievents/#interface-keyboardevent), with the legacy codes
 // (uievents/#legacy-interface-KeyboardEvent).
 struct DomKeyboardEventData {
-    PrString key;
-    PrString code;
+    PrRawString key;
+    PrRawString code;
     uint32_t location;
     uint32_t charCode;
     uint32_t keyCode;
@@ -110,19 +110,19 @@ struct DomKeyboardEventData {
 // The data that a MessageEvent carries beyond an event (html/#messageevent). The data is the bytes that a script
 // serialized the message to, or the null string if the binding holds the message itself.
 struct DomMessageEventData {
-    PrString data;
-    PrString origin;
-    PrString lastEventId;
+    PrRawString data;
+    PrRawString origin;
+    PrRawString lastEventId;
     PrDomEventTarget* PR_NULLABLE source;
 
     // The ports that the message transferred, each with a reference.
-    Array<PrDomEventTarget* PR_NONNULL> ports;
+    RawArray<PrDomEventTarget* PR_NONNULL> ports;
 };
 
 // The data of a PopStateEvent or a HashChangeEvent (html/#popstateevent, html/#hashchangeevent).
 struct DomHistoryEventData {
-    PrString oldUrl;
-    PrString newUrl;
+    PrRawString oldUrl;
+    PrRawString newUrl;
     bool historyState;              // a popstate that carries the history state of the window it is fired at
     bool hasUAVisualTransition;
 };
@@ -132,19 +132,19 @@ struct DomHistoryEventData {
 struct DomControlEventData {
     PrDomEventTarget* PR_NULLABLE source;   // a SubmitEvent's submitter, or a ToggleEvent's or CommandEvent's source
     DomEntryList* PR_NULLABLE entries;      // a FormDataEvent's form data
-    PrString oldState;                      // a ToggleEvent's states
-    PrString newState;
-    PrString command;                       // a CommandEvent's command
+    PrRawString oldState;                   // a ToggleEvent's states
+    PrRawString newState;
+    PrRawString command;                       // a CommandEvent's command
 };
 
 // An event (dom/#interface-event). It holds a reference to its target, its related target and the retargeted related
 // target (domEventTargetAssign), which each dispatch sets. Its path holds no references, because the path is the target
 // and the target's ancestors, which the target keeps alive.
 struct DomEvent {
-    PrString type;
+    PrRawString type;
     PrDomEventTarget* PR_NULLABLE target;
     PrDomEventTarget* PR_NULLABLE currentTarget;  // set while a listener is being invoked
-    Array<PrDomEventTarget* PR_NONNULL> path;     // during dispatch, from the target outward (dom/#event-path)
+    RawArray<PrDomEventTarget* PR_NONNULL> path;  // during dispatch, from the target outward (dom/#event-path)
     DomErrorEventData* PR_NULLABLE error;         // data of an ErrorEvent, or null for any other event
     DomMessageEventData* PR_NULLABLE message;     // data of a MessageEvent, or null for any other event
     DomHistoryEventData* PR_NULLABLE history;     // data of a PopStateEvent or HashChangeEvent, or null
@@ -153,8 +153,8 @@ struct DomEvent {
     DomMouseEventData* PR_NULLABLE mouse;         // data of a MouseEvent, or null for one that createEvent made
     DomWheelEventData* PR_NULLABLE wheel;         // data of a WheelEvent, or null for any other event
     DomKeyboardEventData* PR_NULLABLE keyboard;   // data of a KeyboardEvent, or null for one that createEvent made
-    PrString composition;                         // data attribute of a CompositionEvent or an InputEvent
-    PrString inputType;                           // inputType attribute of an InputEvent
+    PrRawString composition;                      // data attribute of a CompositionEvent or an InputEvent
+    PrRawString inputType;                        // inputType attribute of an InputEvent
     PrDomDataTransfer* PR_NULLABLE transfer;      // clipboardData attribute of a ClipboardEvent
     bool isComposing;                             // isComposing attribute of an InputEvent
     PrDomEventTarget* PR_NULLABLE related;        // related target that the event was given
@@ -183,7 +183,7 @@ struct DomEvent {
 
 // One registration in a target's event listener list (dom/#interface-eventtarget).
 struct DomListener {
-    PrString type;
+    PrRawString type;
     PrDomEventListener callback;
     uint64_t id;                     // order in which the listener was added, which dispatch follows
 
@@ -203,7 +203,7 @@ struct DomEventHandlerEntry {
 
     // The text of an internal raw uncompiled handler (html/#internal-raw-uncompiled-handler), or the null string for
     // any other value.
-    PrString raw;
+    PrRawString raw;
 
     PrDomElement* PR_NULLABLE element;   // the element whose content attribute is `raw`
     PrDomEventHandler handler;
@@ -212,8 +212,8 @@ struct DomEventHandlerEntry {
 
 // A target's event listeners, in the order they were added, and its event handlers.
 struct DomListeners {
-    Array<DomListener> entries;
-    Array<DomEventHandlerEntry> handlers;
+    RawArray<DomListener> entries;
+    RawArray<DomEventHandlerEntry> handlers;
     uint64_t nextId;                   // id of the next listener added
 };
 

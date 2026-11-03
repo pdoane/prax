@@ -34,7 +34,7 @@ const HtmlCanvas* PR_NULLABLE htmlCanvasFind(const PrDomElement* element);
 PrCanvas* htmlCanvasCreateContext2D(HtmlCanvas* canvas, const PrCanvasSettings& settings);
 
 // Implement prHtmlCanvasElementToDataUrl and prHtmlCanvasElementImageSource for a canvas element.
-PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString* out);
+PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrRawString* out);
 bool htmlCanvasImageSource(PrDomElement* element, PrCanvasImageSource* out);
 
 // Handles a change to a canvas element: its connection, if `attribute` is the null view, or a change of that attribute.

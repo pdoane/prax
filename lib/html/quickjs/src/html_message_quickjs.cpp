@@ -43,7 +43,7 @@ JSValue portPostMessage(JSContext* ctx, JSValueConst portObject, int argc, JSVal
     PrHtmlMessagePort* port = jsThis<PrHtmlMessagePort>(ctx, portObject, htmlMessagePortClass);
     if (port == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
-    Array<JSValue> transfer;
+    RawArray<JSValue> transfer;
     bool ok = true;
     if (argc > 1 && JS_IsObject(argv[1])) {
         JSValue iterator = jsIteratorMethod(ctx, argv[1]);
@@ -63,8 +63,8 @@ JSValue portPostMessage(JSContext* ctx, JSValueConst portObject, int argc, JSVal
     jsHtmlTransferReset(ctx, &transfer);
     if (!ok)
         return JS_EXCEPTION;
-    prHtmlMessagePortPostMessage(port, prStringView(&message.bytes), message.ports.data, message.ports.count);
-    prStringReset(&message.bytes);
+    prHtmlMessagePortPostMessage(port, prRawStringView(&message.bytes), message.ports.data, message.ports.count);
+    prRawStringReset(&message.bytes);
     message.ports.reset();
     return JS_UNDEFINED;
 }

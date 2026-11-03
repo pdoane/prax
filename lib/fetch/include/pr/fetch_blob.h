@@ -10,7 +10,7 @@
 #include "pr/base.h"
 #include "pr/byte_view.h"
 #include "pr/fetch.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -52,7 +52,7 @@ double prFetchBlobFileLastModified(const PrFetchBlob* blob);
 const PrFetchBlob* prFetchBlobSlice(const PrFetchBlob* blob, int64_t start, int64_t end, PrStringView type);
 
 // Returns `text` with each of its line endings as the platform writes them (FileAPI/#convert-line-endings-to-native).
-PrString prFetchBlobConvertLineEndings(PrStringView text);
+PrRawString prFetchBlobConvertLineEndings(PrStringView text);
 
 // Creates or frees a store of blob URLs (FileAPI/#BlobURLStore). A fetcher's backend holds one. A mutex guards it, so
 // any thread may use it.
@@ -67,11 +67,11 @@ bool prFetchBlobIsUrl(PrStringView url);
 
 // Returns a new blob URL for `origin`, which names nothing until a store's entry gives it an object
 // (FileAPI/#unicodeBlobURL).
-PrString prFetchBlobUrlGenerate(PrStringView origin);
+PrRawString prFetchBlobUrlGenerate(PrStringView origin);
 
 // Creates a blob URL of `blob` for `origin`, which `fetcher` answers until it is revoked (FileAPI/#url). Any thread may
 // call this and prFetchBlobUrlRevoke.
-PrString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, PrStringView origin);
+PrRawString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, PrStringView origin);
 
 // Stops `fetcher` answering `url`, if `origin` created it (FileAPI/#dfn-revokeObjectURL). The revocation is posted to
 // the network's loop, so a fetch of the URL that was posted before it still takes its blob. The fetcher is destroyed by

@@ -56,15 +56,15 @@ struct PostedMessage {
     PrHtmlWindow* target;
     PrHtmlWindow* source;
     HtmlMessage message;
-    PrString sourceOrigin;
-    PrString targetOrigin;
+    PrRawString sourceOrigin;
+    PrRawString targetOrigin;
 };
 
 void dropMessage(void* data) {
     PostedMessage* posted = static_cast<PostedMessage*>(data);
     htmlMessageReset(&posted->message);
-    prStringReset(&posted->sourceOrigin);
-    prStringReset(&posted->targetOrigin);
+    prRawStringReset(&posted->sourceOrigin);
+    prRawStringReset(&posted->targetOrigin);
     prMemoryFree(posted);
 }
 
@@ -72,14 +72,14 @@ void dropMessage(void* data) {
 // target's document has the origin that the message was posted to.
 void deliverMessage(void* data) {
     PostedMessage* posted = static_cast<PostedMessage*>(data);
-    PrString origin = htmlWindowOrigin(posted->target);
-    bool matches = prStringIsNull(&posted->targetOrigin) ||
-        prStringView(&origin) == prStringView(&posted->targetOrigin);
-    prStringReset(&origin);
+    PrRawString origin = htmlWindowOrigin(posted->target);
+    bool matches = prRawStringIsNull(&posted->targetOrigin) ||
+        prRawStringView(&origin) == prRawStringView(&posted->targetOrigin);
+    prRawStringReset(&origin);
     if (matches) {
         htmlFireMessage(prHtmlWindowAsEventTarget(posted->target), &posted->message, posted->sourceOrigin,
             posted->source);
-        posted->sourceOrigin = prStringNull();
+        posted->sourceOrigin = prRawStringNull();
     }
     dropMessage(posted);
 }
@@ -91,7 +91,7 @@ void htmlMergeWithNextText(PrDomNode* node) {
     if (node->type != PrDomNodeType_Text || next == nullptr || next->type != PrDomNodeType_Text)
         return;
     domAppendData(static_cast<PrDomCharacterData*>(node),
-        prStringView(&static_cast<const PrDomCharacterData*>(next)->data));
+        prRawStringView(&static_cast<const PrDomCharacterData*>(next)->data));
     domRemoveFromParent(next);
 }
 
@@ -189,7 +189,7 @@ constexpr PrStringView kDataPrefix = "data-";
 // Writes the name of the element's custom data attribute into `out`, as its dataset exposes it. Returns false if the
 // attribute is not a custom data attribute (html/#concept-domstringmap-pairs).
 bool datasetName(const PrDomAttr* attribute, PrTextBuffer* out) {
-    PrStringView name = prStringView(&attribute->name);
+    PrStringView name = prRawStringView(&attribute->name);
     if (attribute->space != PrDomNamespace_None || !prStringStartsWith(name, kDataPrefix))
         return false;
     for (size_t i = 0; i < name.size; ++i) {
@@ -307,14 +307,14 @@ PrDomDocument* prHtmlDomParserParseFromString(PrStringView source, PrHtmlDomPars
     prCssEnable(document);
     prSvgEnable(document);
     htmlEnable(document);
-    document->contentType = prStringExternal(kXmlTypes[type - PrHtmlDomParserSupportedType_TextXml]);
+    document->contentType = prRawStringExternal(kXmlTypes[type - PrHtmlDomParserSupportedType_TextXml]);
     PrXmlError error = {};
     if (domXmlParse(document, source, {}, htmlXhtmlEntities(), &error) == PrStatus_Syntax)
         htmlShowXmlError(document, error);
     return document;
 }
 
-PrString prHtmlInnerHtml(const PrDomNode* node) {
+PrRawString prHtmlInnerHtml(const PrDomNode* node) {
     PrTextBuffer text = {};
     htmlSerializeChildren(&text, node);
     return prTextBufferTake(&text);
@@ -331,7 +331,7 @@ void prHtmlSetInnerHtml(PrDomNode* node, PrStringView markup) {
     domNodeRelease(fragment);
 }
 
-PrString prHtmlOuterHtml(const PrDomElement* element) {
+PrRawString prHtmlOuterHtml(const PrDomElement* element) {
     PrTextBuffer text = {};
     htmlSerializeNode(&text, element);
     return prTextBufferTake(&text);
@@ -408,17 +408,21 @@ PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document) {
 
 PrStringView prHtmlDocumentReferrer(PrDomDocument* document) {
     PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
-    return window != nullptr && !prStringIsNull(&window->referrer) ? prStringView(&window->referrer) : PrStringView{""};
+    if (window == nullptr || prRawStringIsNull(&window->referrer))
+        return "";
+    return prRawStringView(&window->referrer);
 }
 
-PrString prHtmlWindowCreateObjectUrl(PrHtmlWindow* window, const PrFetchBlob* blob) {
+PrRawString prHtmlWindowCreateObjectUrl(PrHtmlWindow* window, const PrFetchBlob* blob) {
     PrHtmlPage* page = htmlDocumentPage(window->document);
     PrFetchNetwork* fetcher = page != nullptr ? page->host.fetcher : nullptr;
-    PrString origin = htmlWindowOrigin(window);
-    PrString url = fetcher != nullptr ? prFetchBlobUrlCreate(fetcher, blob, prStringView(&origin)) : prStringEmpty();
-    prStringReset(&origin);
+    PrRawString origin = htmlWindowOrigin(window);
+    PrRawString url = prRawStringEmpty();
     if (fetcher != nullptr)
-        window->objectUrls.push(prStringClone(&url));
+        url = prFetchBlobUrlCreate(fetcher, blob, prRawStringView(&origin));
+    prRawStringReset(&origin);
+    if (fetcher != nullptr)
+        window->objectUrls.push(prRawStringClone(&url));
     return url;
 }
 
@@ -427,9 +431,9 @@ void prHtmlWindowRevokeObjectUrl(PrHtmlWindow* window, PrStringView url) {
     PrHtmlPage* page = htmlDocumentPage(window->document);
     if (page == nullptr || page->host.fetcher == nullptr)
         return;
-    PrString origin = htmlWindowOrigin(window);
-    prFetchBlobUrlRevoke(page->host.fetcher, url, prStringView(&origin));
-    prStringReset(&origin);
+    PrRawString origin = htmlWindowOrigin(window);
+    prFetchBlobUrlRevoke(page->host.fetcher, url, prRawStringView(&origin));
+    prRawStringReset(&origin);
 }
 
 PrStatus prHtmlWindowSendBeacon(PrHtmlWindow* window, PrStringView url, PrByteView body, PrStringView contentType, bool* queued) {
@@ -565,7 +569,7 @@ PrHtmlHidden prHtmlElementHidden(const PrHtmlElement* element) {
     const PrDomAttr* hidden = domAttribute(element, PrDomNamespace_None, "hidden");
     if (hidden == nullptr)
         return PrHtmlHidden_NotHidden;
-    if (prAsciiEqualsFold(prStringView(&hidden->value), "until-found"))
+    if (prAsciiEqualsFold(prRawStringView(&hidden->value), "until-found"))
         return PrHtmlHidden_UntilFound;
     return PrHtmlHidden_Hidden;
 }
@@ -577,7 +581,7 @@ void prHtmlElementSetHidden(PrHtmlElement* element, PrHtmlHidden value) {
         domSetAttribute(element, PrDomNamespace_None, "hidden", value == PrHtmlHidden_UntilFound ? "until-found" : "");
 }
 
-PrString prHtmlElementInnerText(const PrHtmlElement* element) {
+PrRawString prHtmlElementInnerText(const PrHtmlElement* element) {
     PrHtmlElement* mutableElement = const_cast<PrHtmlElement*>(element);
     // html/#get-the-text-steps: the descendant text content of an element that is not being rendered.
     return cssViewIsRendered(mutableElement) ? cssViewRenderedText(mutableElement) : domNodeTextContent(element);
@@ -719,16 +723,16 @@ int32_t prHtmlElementOffsetHeight(PrHtmlElement* element) {
     return int32_t(prF64Floor(cssViewOffsetRect(element).height + 0.5));
 }
 
-PrString prHtmlElementReflectedUrl(const PrHtmlElement* element, PrStringView name) {
+PrRawString prHtmlElementReflectedUrl(const PrHtmlElement* element, PrStringView name) {
     const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, name);
     if (attribute == nullptr)
-        return prStringEmpty();
+        return prRawStringEmpty();
     PrUrl* url = nullptr;
-    PrString out;
-    if (domDocumentParseUrl(element->document, prStringView(&attribute->value), &url) == PrStatus_Ok)
+    PrRawString out;
+    if (domDocumentParseUrl(element->document, prRawStringView(&attribute->value), &url) == PrStatus_Ok)
         out = prUrlSerialize(url, PrUrlSerialization_Whole);
     else
-        out = prStringClone(&attribute->value);
+        out = prRawStringClone(&attribute->value);
     prUrlDestroy(url);
     return out;
 }
@@ -758,7 +762,7 @@ PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* element, PrStringView n
     return PrStatus_Ok;
 }
 
-uint32_t prHtmlDatasetNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity) {
+uint32_t prHtmlDatasetNames(const PrDomElement* element, PrRawString* PR_NULLABLE items, uint32_t capacity) {
     uint32_t count = 0;
     PrTextBuffer name = {};
     for (const PrDomAttr* attribute = firstAttribute(element);
@@ -766,7 +770,7 @@ uint32_t prHtmlDatasetNames(const PrDomElement* element, PrString* PR_NULLABLE i
         if (!datasetName(attribute, &name))
             continue;
         if (count < capacity)
-            items[count] = prStringCopy(prTextBufferView(&name));
+            items[count] = prRawStringCopy(prTextBufferView(&name));
         ++count;
     }
     prTextBufferReset(&name);
@@ -779,7 +783,7 @@ PrStringView prHtmlDatasetGet(const PrDomElement* element, PrStringView name) {
     for (const PrDomAttr* attribute = firstAttribute(element);
             attribute != nullptr; attribute = nextAttribute(attribute)) {
         if (datasetName(attribute, &candidate) && prTextBufferView(&candidate) == name) {
-            value = prStringView(&attribute->value);
+            value = prRawStringView(&attribute->value);
             break;
         }
     }
@@ -827,11 +831,11 @@ void prHtmlDialogElementSetOpen(PrHtmlDialogElement* element, bool value) {
 }
 
 PrStringView prHtmlDialogElementReturnValue(const PrHtmlDialogElement* element) {
-    return element->state != nullptr ? prStringView(&element->state->returnValue) : "";
+    return element->state != nullptr ? prRawStringView(&element->state->returnValue) : "";
 }
 
 void prHtmlDialogElementSetReturnValue(PrHtmlDialogElement* element, PrStringView value) {
-    prStringReplace(&domElementState(element)->returnValue, value);
+    prRawStringReplace(&domElementState(element)->returnValue, value);
 }
 
 PrStatus prHtmlDialogElementShow(PrHtmlDialogElement* element) {
@@ -862,7 +866,7 @@ void prHtmlDialogElementClose(PrHtmlDialogElement* element, PrStringView result)
     DomElementState* state = domElementState(element);
     state->modal = false;
     if (result.data != nullptr)
-        prStringReplace(&state->returnValue, result);
+        prRawStringReplace(&state->returnValue, result);
     const DomDocumentHost* host = element->document->host;
     if (host == nullptr)
         return;
@@ -908,7 +912,7 @@ PrDomImageState prHtmlImageElementState(const PrHtmlImageElement* element) {
 
 bool prHtmlImageElementComplete(const PrHtmlImageElement* element) {
     const PrDomAttr* src = domAttribute(element, PrDomNamespace_None, "src");
-    if (src == nullptr || prStringView(&src->value).size == 0)
+    if (src == nullptr || prRawStringView(&src->value).size == 0)
         return true;
     PrDomImageState state = prHtmlImageElementState(element);
     return state == PrDomImageState_CompletelyAvailable || state == PrDomImageState_Broken;
@@ -916,7 +920,7 @@ bool prHtmlImageElementComplete(const PrHtmlImageElement* element) {
 
 PrStringView prHtmlImageElementCurrentSrc(const PrHtmlImageElement* element) {
     const DomElementState* state = element->state;
-    return state != nullptr && !prStringIsNull(&state->imageUrl) ? prStringView(&state->imageUrl) : "";
+    return state != nullptr && !prRawStringIsNull(&state->imageUrl) ? prRawStringView(&state->imageUrl) : "";
 }
 
 uint32_t prHtmlImageElementNaturalWidth(const PrHtmlImageElement* element) {
@@ -1004,7 +1008,7 @@ PrStatus prHtmlCanvasElementGetContext2D(PrHtmlCanvasElement* element, const PrC
     }
 }
 
-PrStatus prHtmlCanvasElementToDataUrl(PrHtmlCanvasElement* element, PrStringView type, PrString* out) {
+PrStatus prHtmlCanvasElementToDataUrl(PrHtmlCanvasElement* element, PrStringView type, PrRawString* out) {
     return htmlCanvasToDataUrl(element, type, out);
 }
 
@@ -1020,16 +1024,16 @@ PrHtmlAreaElement* PR_NULLABLE prHtmlAreaElementQuery(PrDomEventTarget* PR_NULLA
     return htmlElementQuery<PrHtmlAreaElement>(object, PrDomTag_Area);
 }
 
-PrString prHtmlHyperlinkComponent(const PrHtmlElement* element, PrUrlComponent component) {
+PrRawString prHtmlHyperlinkComponent(const PrHtmlElement* element, PrUrlComponent component) {
     PR_ASSERT(domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area));
     PrUrl* url = hyperlinkUrl(element);
     if (url == nullptr) {
         PrStringView href = domAttributeValue(element, "href");
         if (component == PrUrlComponent_Href && href.data != nullptr)
-            return prStringCopy(href);
-        return component == PrUrlComponent_Protocol ? prStringExternal(":") : prStringEmpty();
+            return prRawStringCopy(href);
+        return component == PrUrlComponent_Protocol ? prRawStringExternal(":") : prRawStringEmpty();
     }
-    PrString value = prUrlComponent(url, component);
+    PrRawString value = prUrlComponent(url, component);
     prUrlDestroy(url);
     return value;
 }
@@ -1046,10 +1050,10 @@ PrStatus prHtmlHyperlinkSetComponent(PrHtmlElement* element, PrUrlComponent comp
     // A value that does not parse leaves the URL as it was, and the attribute is set to it all the same
     // (html/#update-href).
     prUrlSetComponent(url, component, value);
-    PrString href = prUrlSerialize(url, PrUrlSerialization_Whole);
+    PrRawString href = prUrlSerialize(url, PrUrlSerialization_Whole);
     prUrlDestroy(url);
-    PrStatus status = prDomElementSetAttribute(element, "href", prStringView(&href));
-    prStringReset(&href);
+    PrStatus status = prDomElementSetAttribute(element, "href", prRawStringView(&href));
+    prRawStringReset(&href);
     return status;
 }
 
@@ -1057,14 +1061,14 @@ PrHtmlBaseElement* PR_NULLABLE prHtmlBaseElementQuery(PrDomEventTarget* PR_NULLA
     return htmlElementQuery<PrHtmlBaseElement>(object, PrDomTag_Base);
 }
 
-PrString prHtmlBaseElementHref(const PrHtmlBaseElement* element) {
+PrRawString prHtmlBaseElementHref(const PrHtmlBaseElement* element) {
     PrStringView href = domAttributeValue(element, "href");
     if (href.data == nullptr)
         href = "";
     PrUrl* url = nullptr;
     if (prUrlCreate(href, element->document->url, element->document->charset, &url) != PrStatus_Ok)
-        return prStringCopy(href);
-    PrString value = prUrlSerialize(url, PrUrlSerialization_Whole);
+        return prRawStringCopy(href);
+    PrRawString value = prUrlSerialize(url, PrUrlSerialization_Whole);
     prUrlDestroy(url);
     return value;
 }
@@ -1113,11 +1117,11 @@ PrHtmlMediaError prHtmlMediaElementError(const PrHtmlMediaElement* element) {
 }
 
 PrStringView prHtmlMediaElementErrorMessage(const PrHtmlMediaElement* element) {
-    return prStringView(&mediaOf(element)->errorMessage);
+    return prRawStringView(&mediaOf(element)->errorMessage);
 }
 
 PrStringView prHtmlMediaElementCurrentSrc(const PrHtmlMediaElement* element) {
-    return prStringView(&mediaOf(element)->currentSrc);
+    return prRawStringView(&mediaOf(element)->currentSrc);
 }
 
 PrHtmlMediaNetworkState prHtmlMediaElementNetworkState(const PrHtmlMediaElement* element) {
@@ -1203,7 +1207,7 @@ uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* element, PrHtmlMediaRanges
     }
     // A media source answers from what it has buffered and what it can seek to.
     if (media->mediaSource != nullptr) {
-        Array<PrMediaTimeRange> ranges{};
+        RawArray<PrMediaTimeRange> ranges{};
         if (which == PrHtmlMediaRanges_Buffered)
             htmlMediaSourceBuffered(media->mediaSource, &ranges);
         else
@@ -1311,7 +1315,7 @@ PrHtmlSlotElement* PR_NULLABLE prHtmlSlotElementQuery(PrDomEventTarget* PR_NULLA
 
 uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* element, bool flatten, PrDomNode* PR_NONNULL* PR_NULLABLE items,
         uint32_t capacity) {
-    Array<PrDomNode* PR_NONNULL> nodes;
+    RawArray<PrDomNode* PR_NONNULL> nodes;
     domSlotAssignedNodes(element, flatten, &nodes);
     for (uint32_t i = 0; items != nullptr && i < nodes.count && i < capacity; ++i)
         items[i] = nodes.data[i];
@@ -1341,7 +1345,7 @@ void prHtmlScriptElementSetAsync(PrHtmlScriptElement* element, bool value) {
         domRemoveAttribute(element, PrDomNamespace_None, "async");
 }
 
-PrString prHtmlScriptElementText(const PrHtmlScriptElement* element) {
+PrRawString prHtmlScriptElementText(const PrHtmlScriptElement* element) {
     return domChildTextContent(element);
 }
 
@@ -1397,11 +1401,11 @@ PrHtmlErrorEvent* prHtmlErrorEventCreate(PrStringView type, const PrHtmlErrorEve
 }
 
 PrStringView prHtmlErrorEventMessage(const PrHtmlErrorEvent* event) {
-    return prStringView(&event->error->message);
+    return prRawStringView(&event->error->message);
 }
 
 PrStringView prHtmlErrorEventFilename(const PrHtmlErrorEvent* event) {
-    return prStringView(&event->error->filename);
+    return prRawStringView(&event->error->filename);
 }
 
 uint32_t prHtmlErrorEventLineno(const PrHtmlErrorEvent* event) {
@@ -1421,9 +1425,9 @@ PrHtmlMessageEvent* prHtmlMessageEventCreate(PrStringView type, const PrHtmlMess
     PrHtmlMessageEvent* event = domEventCreate<PrHtmlMessageEvent>(type, values.event, PrDomEventKind_Message);
     event->message = allocZeroed<DomMessageEventData>();
     *event->message = DomMessageEventData{
-        .data = prStringNull(),
-        .origin = prStringCopy(values.origin),
-        .lastEventId = prStringCopy(values.lastEventId),
+        .data = prRawStringNull(),
+        .origin = prRawStringCopy(values.origin),
+        .lastEventId = prRawStringCopy(values.lastEventId),
         .source = values.source,
         .ports = {},
     };
@@ -1431,16 +1435,16 @@ PrHtmlMessageEvent* prHtmlMessageEventCreate(PrStringView type, const PrHtmlMess
 }
 
 PrStringView prHtmlMessageEventSerializedData(const PrHtmlMessageEvent* event) {
-    const PrString* data = &event->message->data;
-    return prStringIsNull(data) ? PrStringView{} : prStringView(data);
+    const PrRawString* data = &event->message->data;
+    return prRawStringIsNull(data) ? PrStringView{} : prRawStringView(data);
 }
 
 PrStringView prHtmlMessageEventOrigin(const PrHtmlMessageEvent* event) {
-    return prStringView(&event->message->origin);
+    return prRawStringView(&event->message->origin);
 }
 
 PrStringView prHtmlMessageEventLastEventId(const PrHtmlMessageEvent* event) {
-    return prStringView(&event->message->lastEventId);
+    return prRawStringView(&event->message->lastEventId);
 }
 
 PrDomEventTarget* PR_NULLABLE prHtmlMessageEventSource(PrHtmlMessageEvent* event) {
@@ -1626,7 +1630,7 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* window) {
 
 PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrStringView serialized,
         PrDomEventTarget* PR_NONNULL const* PR_NULLABLE ports, uint32_t portCount, PrStringView targetOrigin) {
-    PrString origin = prStringNull();
+    PrRawString origin = prRawStringNull();
     if (targetOrigin == "/") {
         origin = htmlWindowOrigin(source);
     } else if (targetOrigin != "*") {
@@ -1637,14 +1641,14 @@ PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrS
         prUrlDestroy(url);
     }
     PostedMessage* posted = allocZeroed<PostedMessage>();
-    *posted = PostedMessage{window, source, HtmlMessage{.data = prStringCopy(serialized)}, htmlWindowOrigin(source), origin};
+    *posted = PostedMessage{window, source, HtmlMessage{.data = prRawStringCopy(serialized)}, htmlWindowOrigin(source), origin};
     for (uint32_t i = 0; i < portCount; ++i)
         posted->message.ports.push(ports[i]);
     htmlWindowQueueTask(window, deliverMessage, posted, dropMessage);
     return PrStatus_Ok;
 }
 
-PrString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component) {
+PrRawString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component) {
     return prUrlComponent(window->document->url, component);
 }
 
@@ -1671,46 +1675,47 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrHtmlWindow* source, PrU
         prUrlDestroy(copy);
         return PrStatus_Ok;
     }
-    PrString before = prUrlSerialize(document->url, PrUrlSerialization_ExcludeFragment);
-    PrString after = prUrlSerialize(copy, PrUrlSerialization_ExcludeFragment);
-    bool fragment = prStringView(&before) == prStringView(&after) && (component == PrUrlComponent_Hash || now.data != nullptr);
-    prStringReset(&before);
-    prStringReset(&after);
+    PrRawString before = prUrlSerialize(document->url, PrUrlSerialization_ExcludeFragment);
+    PrRawString after = prUrlSerialize(copy, PrUrlSerialization_ExcludeFragment);
+    bool same = prRawStringView(&before) == prRawStringView(&after);
+    bool fragment = same && (component == PrUrlComponent_Hash || now.data != nullptr);
+    prRawStringReset(&before);
+    prRawStringReset(&after);
     if (!fragment) {
-        PrString href = prUrlSerialize(copy, PrUrlSerialization_Whole);
+        PrRawString href = prUrlSerialize(copy, PrUrlSerialization_Whole);
         prUrlDestroy(copy);
         HtmlHistoryCommit commit =
             handling == PrHtmlHistoryHandling_Replace ? HtmlHistoryCommit_Replace : HtmlHistoryCommit_Push;
-        bool navigated = htmlPageNavigate(window, source, prStringView(&href), commit, window->history->index);
-        prStringReset(&href);
+        bool navigated = htmlPageNavigate(window, source, prRawStringView(&href), commit, window->history->index);
+        prRawStringReset(&href);
         return navigated ? PrStatus_Ok : PrStatus_NotSupported;
     }
     // html/#navigate-fragid: the URL that the document has already replaces its entry (html/#navigate), popstate fires,
     // hashchange follows if the fragment changed, and the document scrolls to the fragment.
-    PrString old = prUrlSerialize(document->url, PrUrlSerialization_Whole);
-    PrString next = prUrlSerialize(copy, PrUrlSerialization_Whole);
-    if (prStringView(&old) == prStringView(&next))
+    PrRawString old = prUrlSerialize(document->url, PrUrlSerialization_Whole);
+    PrRawString next = prUrlSerialize(copy, PrUrlSerialization_Whole);
+    if (prRawStringView(&old) == prRawStringView(&next))
         handling = PrHtmlHistoryHandling_Replace;
-    prStringReset(&next);
+    prRawStringReset(&next);
     prUrlDestroy(document->url);
     document->url = copy;
-    htmlHistoryUpdate(window, prStringNull(), handling);
-    htmlHistoryNotify(window, prStringView(&old));
-    prStringReset(&old);
+    htmlHistoryUpdate(window, prRawStringNull(), handling);
+    htmlHistoryNotify(window, prRawStringView(&old));
+    prRawStringReset(&old);
     htmlWindowScrollToFragment(window);
     return PrStatus_Ok;
 }
 
-PrString prHtmlWindowName(const PrHtmlWindow* window) {
+PrRawString prHtmlWindowName(const PrHtmlWindow* window) {
     const PrHtmlPage* page = htmlDocumentPage(window->document);
-    bool named = page != nullptr && page->window == window && prStringView(&page->targetName).data != nullptr;
-    return named ? prStringClone(&page->targetName) : prStringCopy("");
+    bool named = page != nullptr && page->window == window && prRawStringView(&page->targetName).data != nullptr;
+    return named ? prRawStringClone(&page->targetName) : prRawStringCopy("");
 }
 
 void prHtmlWindowSetName(PrHtmlWindow* window, PrStringView name) {
     PrHtmlPage* page = htmlDocumentPage(window->document);
     if (page != nullptr && page->window == window)
-        prStringReplace(&page->targetName, name);
+        prRawStringReplace(&page->targetName, name);
 }
 
 void prHtmlWindowNotifyUserActivation(PrHtmlWindow* window) {
@@ -1745,7 +1750,7 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowFrameFromName(PrHtmlWindow* window, PrStri
     for (uint32_t i = 0; i < window->frames.count; ++i) {
         const HtmlFrame* frame = &window->frames.data[i];
         const PrHtmlPage* page = htmlDocumentPage(frame->window->document);
-        if (page == nullptr || prStringView(&page->targetName) != name)
+        if (page == nullptr || prRawStringView(&page->targetName) != name)
             continue;
         if (first == nullptr) {
             first = frame;
@@ -1885,15 +1890,15 @@ PrStringView prHtmlNavigatorUserAgent(const PrHtmlWindow* window) {
     return window->userAgent.data != nullptr ? window->userAgent : PrStringView{""};
 }
 
-PrString prHtmlNavigatorAppVersion(const PrHtmlWindow* window) {
+PrRawString prHtmlNavigatorAppVersion(const PrHtmlWindow* window) {
     PrStringView userAgent = prHtmlNavigatorUserAgent(window);
     if (!prStringStartsWith(userAgent, "Mozilla/5.0 ("))
-        return prStringCopy("");
+        return prRawStringCopy("");
     PrStringView trail = prStringSlice(userAgent, 8, userAgent.size - 8);
     if (window->navigatorCompatibilityMode != PrHtmlNavigatorCompatibilityMode_Gecko)
-        return prStringCopy(trail);
+        return prRawStringCopy(trail);
     if (prStringStartsWith(trail, "5.0 (Windows"))
-        return prStringCopy("5.0 (Windows)");
+        return prRawStringCopy("5.0 (Windows)");
     // The trail up to its first semicolon, closed with a parenthesis.
     size_t end = 0;
     while (end < trail.size && trail.data[end] != ';')

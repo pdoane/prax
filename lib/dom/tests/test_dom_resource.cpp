@@ -80,7 +80,7 @@ struct HostedDocument {
 };
 
 std::string urlOf(const DomReference& reference) {
-    PrStringView url = prStringView(&reference.url);
+    PrStringView url = prRawStringView(&reference.url);
     return url.data != nullptr ? std::string(url.data, url.size) : std::string();
 }
 
@@ -104,11 +104,11 @@ TEST_CASE("a reference without its surrounding white space names the document it
     CHECK(reference.external);
     CHECK(urlOf(reference) == "https://example.test/dir/defs.svg");
     CHECK(reference.fragment == "c");
-    prStringReset(&reference.url);
+    prRawStringReset(&reference.url);
     REQUIRE(domReferenceSplit(d.document, "../other.svg", &reference));
     CHECK(urlOf(reference) == "https://example.test/other.svg");
     CHECK(reference.fragment.data == nullptr);
-    prStringReset(&reference.url);
+    prRawStringReset(&reference.url);
     CHECK_FALSE(domReferenceSplit(d.document, "", &reference));
 }
 

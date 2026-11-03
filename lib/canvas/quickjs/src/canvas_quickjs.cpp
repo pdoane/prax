@@ -490,7 +490,7 @@ JSValue roundRect(JSContext* ctx, JSValueConst targetObject, int argc, JSValueCo
     if (target == nullptr || !readNumbers(ctx, argc, argv, 0, 4, n))
         return JS_EXCEPTION;
     // The radii are a number, a DOMPointInit, or a sequence of them (webidl/#js-union), and 0 by default.
-    Array<PrDVec2> radii;
+    RawArray<PrDVec2> radii;
     JSValueConst given = argc > 4 ? argv[4] : JS_UNDEFINED;
     bool ok = true;
     JSValue method = JS_IsObject(given) ? jsIteratorMethod(ctx, given) : JS_UNDEFINED;
@@ -1362,7 +1362,7 @@ JSValue setLineDash(JSContext* ctx, JSValueConst canvasContext, int argc, JSValu
     PrCanvas* canvas = contextOf(ctx, canvasContext);
     if (canvas == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
-    Array<double> segments;
+    RawArray<double> segments;
     bool ok = jsSequence(ctx, argv[0], [&](JSValue item) {
         double segment = 0;
         bool read = JS_ToFloat64(ctx, &segment, item) >= 0;

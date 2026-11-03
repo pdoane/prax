@@ -9,12 +9,12 @@
 #include "text/src/text.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/float.h"
 #include "pr/locale_common.h"
+#include "pr/raw_array.h"
 #include "pr/unicode.h"
 #include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
@@ -117,7 +117,7 @@ uint32_t positionFeature(PrTextPosition position) {
 
 // Builds the features that a backend shapes the run with: those of the font, of the kerning policy, of the caps and of
 // the position, unless those are synthesized, and then the run's own features.
-void mergeFeatures(Array<PrTextFeature>& out, const PrTextRun& run, PrTextCaps caps, bool positionFeatures) {
+void mergeFeatures(RawArray<PrTextFeature>& out, const PrTextRun& run, PrTextCaps caps, bool positionFeatures) {
     out.clear();
     for (uint32_t i = 0; i < prFontFeatureCount(run.font); ++i) {
         const PrFontFeature& f = prFontFeatures(run.font)[i];
@@ -209,7 +209,7 @@ CaseForm caseFormOf(PrTextCaps caps, uint32_t codePoint) {
 // Shapes the bytes [start, end) of the text of the run, uppercased if requested, and appends the glyphs to `out` scaled
 // by `scale`, with clusters in terms of the text of the run.
 PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, uint32_t end,
-        bool upper, float scale, PrTextGlyphBuffer& g, Array<PrTextGlyph>& out) {
+        bool upper, float scale, PrTextGlyphBuffer& g, RawArray<PrTextGlyph>& out) {
     g.piece.clear();
     g.origin.clear();
     for (size_t at = start; at < end;) {
@@ -264,8 +264,8 @@ PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, 
 
 // Shapes the run in pieces of characters that draw alike, with small capitals synthesized, in visual order.
 PrStatus shapeSynthesizedCaps(PrTextShaper* shaper, const PrTextRun& run, float scale, PrTextGlyphBuffer& g) {
-    Array<PrTextGlyph> pieces;
-    Array<uint32_t> firsts;                 // the start of the glyphs of each piece in `pieces`
+    RawArray<PrTextGlyph> pieces;
+    RawArray<uint32_t> firsts;                 // the start of the glyphs of each piece in `pieces`
     PrStatus status = PrStatus_Ok;
     size_t at = 0;
     while (at < run.text.size && status == PrStatus_Ok) {
@@ -597,7 +597,7 @@ const PrTextGlyph* PR_NULLABLE prTextGlyphBufferGlyphs(const PrTextGlyphBuffer* 
 }
 
 PrTextGlyph* prTextGlyphBufferAppend(PrTextGlyphBuffer* buffer, uint32_t count) {
-    Array<PrTextGlyph>& array = buffer->glyphs;
+    RawArray<PrTextGlyph>& array = buffer->glyphs;
     uint32_t start = array.count;
     array.reserve(start + count);
     array.count = start + count;
@@ -607,7 +607,7 @@ PrTextGlyph* prTextGlyphBufferAppend(PrTextGlyphBuffer* buffer, uint32_t count) 
 }
 
 PrVec2 prTextGlyphBufferAdvance(const PrTextGlyphBuffer* buffer) {
-    const Array<PrTextGlyph>& array = buffer->glyphs;
+    const RawArray<PrTextGlyph>& array = buffer->glyphs;
     PrVec2 sum{0, 0};
     for (uint32_t i = 0; i < array.count; ++i) {
         sum.x += array.data[i].advance.x;
@@ -618,7 +618,7 @@ PrVec2 prTextGlyphBufferAdvance(const PrTextGlyphBuffer* buffer) {
 
 PrVec2 prTextGlyphBufferPlace(const PrTextGlyphBuffer* buffer, float size, PrVec2 origin, PrFontGlyph* out,
         PrAffine2* PR_NULLABLE transforms) {
-    const Array<PrTextGlyph>& array = buffer->glyphs;
+    const RawArray<PrTextGlyph>& array = buffer->glyphs;
     PrVec2 pen = origin;
     for (uint32_t i = 0; i < array.count; ++i) {
         const PrTextGlyph& g = array.data[i];

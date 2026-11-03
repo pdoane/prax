@@ -4,10 +4,10 @@
 #include "pr/net_sockets.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 
 #include "net/backends/sockets/src/net_sockets_platform.h"
@@ -37,7 +37,7 @@ struct ResolveJob {
     char host[kHostMaxBytes + 1];
     uint16_t port;
     PrNetError error;
-    Array<SocketsAddress> addresses;
+    RawArray<SocketsAddress> addresses;
 };
 
 enum {
@@ -54,13 +54,13 @@ struct Stream : PrNetStream {
     SocketsHandle socket;           // kSocketsHandleNone while none is open
     StreamState state;
     ResolveJob* PR_NULLABLE job;
-    Array<SocketsAddress> addresses;
+    RawArray<SocketsAddress> addresses;
     uint32_t nextAddress;           // the address to try after the one connecting
     PrNetError failure;
     PrNetError lastAttempt;         // why the last address failed
-    Array<uint8_t> received;
+    RawArray<uint8_t> received;
     uint32_t receivedStart;
-    Array<uint8_t> unsent;
+    RawArray<uint8_t> unsent;
     uint32_t unsentStart;
     bool finishing;                 // true once the client finished, until the socket's sending side is shut down
     bool finished;
@@ -79,15 +79,15 @@ struct Network : PrNet {
     PrThread loop;
     PrThread resolver;
     SocketsSystem* system;
-    Array<Stream*> streams;
-    Array<SocketsPollEntry> polls;
-    Array<Stream*> polled;          // the stream of each entry of `polls`
-    Array<Task> running;
+    RawArray<Stream*> streams;
+    RawArray<SocketsPollEntry> polls;
+    RawArray<Stream*> polled;          // the stream of each entry of `polls`
+    RawArray<Task> running;
     bool stopSeen;                  // true once the loop saw `stopping`, after which it no longer waits
     PrMutex mutex;
     PrCondition jobsChanged;
-    Array<Task> tasks;
-    Array<ResolveJob*> jobs;
+    RawArray<Task> tasks;
+    RawArray<ResolveJob*> jobs;
     bool stopping;                  // the loop exits once the tasks posted before run
     bool resolverStopping;
 };
@@ -135,7 +135,7 @@ void resolved(void* PR_NULLABLE context) {
             fail(stream, job->error);
         } else {
             stream->addresses = job->addresses;
-            job->addresses = Array<SocketsAddress>{};
+            job->addresses = RawArray<SocketsAddress>{};
             connectNext(stream);
         }
     }
@@ -280,7 +280,7 @@ void sweep(Network* network) {
 // Runs the tasks posted so far. Returns false once the network stops and every task posted before has run.
 bool runTasks(Network* network) {
     prMutexLock(&network->mutex);
-    Array<Task> swapped = network->tasks;
+    RawArray<Task> swapped = network->tasks;
     network->tasks = network->running;
     network->running = swapped;
     bool stopping = network->stopping;

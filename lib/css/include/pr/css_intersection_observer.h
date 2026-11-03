@@ -15,8 +15,8 @@
 #include "pr/base.h"
 #include "pr/dom.h"
 #include "pr/dom_geometry.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -102,8 +102,8 @@ int32_t prCssIntersectionObserverDelay(const PrCssIntersectionObserver* observer
 bool prCssIntersectionObserverTrackVisibility(const PrCssIntersectionObserver* observer);
 
 // Return the margins, each as its four offsets serialized (intersection-observer/#dom-intersectionobserver-rootmargin).
-PrString prCssIntersectionObserverRootMargin(const PrCssIntersectionObserver* observer);
-PrString prCssIntersectionObserverScrollMargin(const PrCssIntersectionObserver* observer);
+PrRawString prCssIntersectionObserverRootMargin(const PrCssIntersectionObserver* observer);
+PrRawString prCssIntersectionObserverScrollMargin(const PrCssIntersectionObserver* observer);
 
 // Returns the thresholds in ascending order, valid while the observer lives, and writes their number to `count`.
 const double* prCssIntersectionObserverThresholds(const PrCssIntersectionObserver* observer, uint32_t* count);

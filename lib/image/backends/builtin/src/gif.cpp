@@ -1,8 +1,8 @@
 #include "image/backends/builtin/src/gif.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 namespace {
@@ -119,7 +119,7 @@ bool readScreen(const uint8_t* bytes, size_t size, Screen& screen) {
 
 // Collects frames from the block chain until reaching `limit` or the trailer. Returns false for a malformed block,
 // keeping the frames read before it.
-bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limit, Array<Frame>& frames) {
+bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limit, RawArray<Frame>& frames) {
     size_t at = screen.blocks;
     Frame control = {};
     control.delayMs = delayOf(0);
@@ -380,7 +380,7 @@ void clearFrame(const Frame& frame, const Screen& screen, uint8_t* pixels) {
 constexpr uint32_t kNoFrame = 0xFFFFFFFFu;
 
 // Returns the pixel count of the largest frame among those that a compose walks.
-size_t widestFrame(const Array<Frame>& frames) {
+size_t widestFrame(const RawArray<Frame>& frames) {
     size_t widest = 0;
     for (uint32_t i = 0; i < frames.count; ++i) {
         const size_t pixels = size_t(frames.data[i].width) * size_t(frames.data[i].height);
@@ -395,7 +395,7 @@ struct GifAnimation {
     const uint8_t* bytes; // encoded GIF, valid until `gifAnimationClose`
     size_t size;
     Screen screen;
-    Array<Frame> frames;
+    RawArray<Frame> frames;
     LzwTables tables;
     uint8_t* pixels;   // the composed screen, with frame `at` drawn over the ones before it
     uint8_t* previous; // the snapshot that a restore-to-previous disposal restores; null until needed

@@ -3,11 +3,11 @@
 #include "pr/app_win32.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 #include "pr/vec.h"
@@ -67,7 +67,7 @@ struct KeyText {
 // pixels.
 struct HeldEvent {
     PrAppEvent event;
-    Array<char> text;
+    RawArray<char> text;
 };
 
 // What a key that is down reports, so that the window can release it when it loses the keyboard.
@@ -126,7 +126,7 @@ struct Win32App : PrApp {
 
     // The events that arrived during the running callback, in order. A system call that a callback makes may dispatch
     // messages, and the events that they deliver wait here, so that no callback nests in another.
-    Array<HeldEvent> held;
+    RawArray<HeldEvent> held;
 
     // The pointer buttons that are down, by bit of PrAppEvent::button, where the pointer last was, and the keys that
     // are down, by their position. The window releases them when it loses the pointer's capture or the keyboard, which
@@ -136,8 +136,8 @@ struct Win32App : PrApp {
     HeldKey keys[PrAppKeyCode_Count];
 
     // The text of the event being delivered, and scratch storage for conversions.
-    Array<char> utf8;
-    Array<wchar_t> utf16;
+    RawArray<char> utf8;
+    RawArray<wchar_t> utf16;
 };
 
 // The window's style. The title bar's minimize and maximize buttons set a least width that no window message lowers, so
@@ -376,8 +376,8 @@ float sdrWhiteNits(HMONITOR monitor) {
     if (!GetMonitorInfoW(monitor, &info) ||
             GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &pathCount, &modeCount) != ERROR_SUCCESS)
         return kDefaultSdrWhiteNits;
-    Array<DISPLAYCONFIG_PATH_INFO> paths;
-    Array<DISPLAYCONFIG_MODE_INFO> modes;
+    RawArray<DISPLAYCONFIG_PATH_INFO> paths;
+    RawArray<DISPLAYCONFIG_MODE_INFO> modes;
     paths.resize(pathCount);
     modes.resize(modeCount);
     float nits = kDefaultSdrWhiteNits;
@@ -872,7 +872,7 @@ int compositionString(Win32App* app, HIMC context, DWORD index) {
 // The part of the composition that the input method converts, from its clause attributes, or the caret if no clause is
 // a target. The range is in UTF-16 units.
 void compositionSelection(HIMC context, int count, int* start, int* end) {
-    Array<uint8_t> attributes;
+    RawArray<uint8_t> attributes;
     LONG size = ImmGetCompositionStringW(context, GCS_COMPATTR, nullptr, 0);
     *start = -1;
     *end = -1;
@@ -967,7 +967,7 @@ void deliverClipboard(Win32App* app) {
 
 // Reads a device-independent bitmap of `size` bytes as straight-alpha Rgba8 rows into `out`. Returns its extent, or
 // zero for a form that it does not read. It reads 24 bits, and 32 bits with no masks or with the masks of BGRA.
-PrUVec2 dibPixels(const uint8_t* bytes, size_t size, Array<uint8_t>& out) {
+PrUVec2 dibPixels(const uint8_t* bytes, size_t size, RawArray<uint8_t>& out) {
     if (size < sizeof(BITMAPINFOHEADER))
         return PrUVec2{0, 0};
     BITMAPINFOHEADER header;
@@ -1009,7 +1009,7 @@ PrUVec2 dibPixels(const uint8_t* bytes, size_t size, Array<uint8_t>& out) {
 }
 
 void deliverClipboardImage(Win32App* app) {
-    Array<uint8_t> pixels{};
+    RawArray<uint8_t> pixels{};
     PrUVec2 extent{0, 0};
     if (openClipboard(app->window)) {
         // The system makes a CF_DIB of a CF_DIBV5 and the reverse, and either of a CF_BITMAP.
@@ -1466,7 +1466,7 @@ void setCursor(PrApp* base, PrAppCursor cursor) {
 
 void setTitle(PrApp* base, PrStringView title) {
     Win32App* app = static_cast<Win32App*>(base);
-    Array<wchar_t> wide;
+    RawArray<wchar_t> wide;
     win32Widen(title, wide);
     prMemoryFree(app->title);
     app->title = wide.data;
@@ -1649,7 +1649,7 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->browserHide = win32BrowserHide;
     app->browserPrint = win32BrowserPrint;
     app->browserProcesses = win32BrowserProcesses;
-    Array<wchar_t> title;
+    RawArray<wchar_t> title;
     win32Widen(desc->title, title);
     app->title = title.data;
     app->extent = desc->extent;

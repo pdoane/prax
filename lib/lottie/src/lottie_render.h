@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/draw_list.h"
 #include "pr/path.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "lottie/src/lottie_model.h"
@@ -31,8 +31,8 @@ struct LottieContour {
 
 // Contours and the vertices they span. Modifiers rewrite them by appending.
 struct LottieGeometry {
-    Array<LottieVertex> vertices;
-    Array<LottieContour> contours;
+    RawArray<LottieVertex> vertices;
+    RawArray<LottieContour> contours;
 };
 
 // A group of a shape layer's contents, as it is drawn. The group's styles draw under its transform and opacity.
@@ -88,22 +88,22 @@ struct LottieShapeStep {
 struct LottieRender {
     const LottieAnimation* a;
     PrDrawList* list;
-    Array<uint32_t> comps;              // compositions of the precomps being drawn, innermost last
+    RawArray<uint32_t> comps;           // compositions of the precomps being drawn, innermost last
     uint32_t instances;                 // number of layers drawn inside precomps so far
     PrAffine2 toRoot;                   // from the drawing space to the root composition's space
 
     // Scratch for shape contents. Drawing each layer resets it by count.
     LottieGeometry geometry;
-    Array<LottieShapeGroup> groups;
-    Array<LottieShapeEntry> shapes;
-    Array<LottieShapeStyle> styles;
-    Array<LottieShapeModifier> modifiers;
-    Array<LottieShapeStep> steps;
-    Array<uint32_t> refs;
-    Array<PrPath*> paths;               // the styles' paths, kept between layers
-    Array<float> values;                // storage for a property's value
-    Array<PrDrawColorStop> stops;
-    Array<float> dashes;
+    RawArray<LottieShapeGroup> groups;
+    RawArray<LottieShapeEntry> shapes;
+    RawArray<LottieShapeStyle> styles;
+    RawArray<LottieShapeModifier> modifiers;
+    RawArray<LottieShapeStep> steps;
+    RawArray<uint32_t> refs;
+    RawArray<PrPath*> paths;               // the styles' paths, kept between layers
+    RawArray<float> values;                // storage for a property's value
+    RawArray<PrDrawColorStop> stops;
+    RawArray<float> dashes;
     PrPath* path;                       // a working path
 };
 

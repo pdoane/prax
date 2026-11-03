@@ -6,7 +6,7 @@
 #include "pr/unicode_idna.h"
 #include "unicode/src/unicode_idna.h"
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 #include "pr/unicode.h"
 #include "pr/unicode_bidi.h"
@@ -43,8 +43,8 @@ struct IdnaLabel {
 };
 
 // Returns the labels of `domain`, separated by U+002E FULL STOP. A domain always has at least one label.
-Array<IdnaLabel> labelsOf(const Array<uint32_t>& domain) {
-    Array<IdnaLabel> labels{};
+RawArray<IdnaLabel> labelsOf(const RawArray<uint32_t>& domain) {
+    RawArray<IdnaLabel> labels{};
     uint32_t start = 0;
     for (uint32_t i = 0; i <= domain.count; ++i) {
         if (i == domain.count || domain.data[i] == '.') {
@@ -100,7 +100,7 @@ char digitOf(uint32_t value) {
 
 // Decodes the ASCII Punycode at `input` (RFC 3492 section 6.2) and appends the code points to `out`. Returns false if
 // the input is not valid Punycode, or decodes to a value that is not a scalar value.
-bool punycodeDecode(const uint32_t* PR_NULLABLE input, uint32_t count, Array<uint32_t>* out) {
+bool punycodeDecode(const uint32_t* PR_NULLABLE input, uint32_t count, RawArray<uint32_t>* out) {
     uint32_t delimiter = count;
     while (delimiter != 0 && input[delimiter - 1] != '-')
         --delimiter;
@@ -298,9 +298,9 @@ bool meetsBidiRules(const uint32_t* label, uint32_t count) {
 
 // Applies the processing steps of UTS #46 section 4 to `domain`, and writes the result to `*out`. Returns false if
 // processing records an error.
-bool process(PrStringView domain, PrUnicodeIdnaFlags flags, Array<uint32_t>* out) {
+bool process(PrStringView domain, PrUnicodeIdnaFlags flags, RawArray<uint32_t>* out) {
     bool valid = true;
-    Array<uint32_t> mapped{};
+    RawArray<uint32_t> mapped{};
     for (size_t at = 0; at < domain.size;) {
         uint32_t codePoint;
         at += prUtf8Decode(domain, at, &codePoint);
@@ -330,7 +330,7 @@ bool process(PrStringView domain, PrUnicodeIdnaFlags flags, Array<uint32_t>* out
     }
     unicodeNormalize(&mapped, PrUnicodeNormalForm_Nfc);
 
-    Array<IdnaLabel> labels = labelsOf(mapped);
+    RawArray<IdnaLabel> labels = labelsOf(mapped);
     for (uint32_t l = 0; l < labels.count; ++l) {
         const uint32_t* label = mapped.data + labels.data[l].start;
         uint32_t count = labels.data[l].count;
@@ -366,7 +366,7 @@ bool process(PrStringView domain, PrUnicodeIdnaFlags flags, Array<uint32_t>* out
         bidiDomain = (kBidiDomainClasses & bidiBit(prUnicodeBidiClass(out->data[i]))) != 0;
     if (!bidiDomain)
         return valid;
-    Array<IdnaLabel> processed = labelsOf(*out);
+    RawArray<IdnaLabel> processed = labelsOf(*out);
     for (uint32_t l = 0; l < processed.count; ++l) {
         if (processed.data[l].count != 0)
             valid &= meetsBidiRules(out->data + processed.data[l].start, processed.data[l].count);
@@ -380,11 +380,11 @@ bool process(PrStringView domain, PrUnicodeIdnaFlags flags, Array<uint32_t>* out
 
 using namespace pr_impl;
 
-bool prUnicodeIdnaToAscii(PrStringView domain, PrUnicodeIdnaFlags flags, PrString* out) {
-    *out = PrString{};
-    Array<uint32_t> processed{};
+bool prUnicodeIdnaToAscii(PrStringView domain, PrUnicodeIdnaFlags flags, PrRawString* out) {
+    *out = PrRawString{};
+    RawArray<uint32_t> processed{};
     bool valid = process(domain, flags, &processed);
-    Array<IdnaLabel> labels = labelsOf(processed);
+    RawArray<IdnaLabel> labels = labelsOf(processed);
     PrTextBuffer text = {};
     for (uint32_t l = 0; l < labels.count && valid; ++l) {
         const uint32_t* label = processed.data + labels.data[l].start;
@@ -414,8 +414,8 @@ bool prUnicodeIdnaToAscii(PrStringView domain, PrUnicodeIdnaFlags flags, PrStrin
     return valid;
 }
 
-bool prUnicodeIdnaToUnicode(PrStringView domain, PrUnicodeIdnaFlags flags, PrString* out) {
-    Array<uint32_t> processed{};
+bool prUnicodeIdnaToUnicode(PrStringView domain, PrUnicodeIdnaFlags flags, PrRawString* out) {
+    RawArray<uint32_t> processed{};
     bool valid = process(domain, PrUnicodeIdnaFlags(flags & ~PrUnicodeIdnaFlag_VerifyDnsLength), &processed);
     PrTextBuffer text = {};
     for (uint32_t i = 0; i < processed.count; ++i)

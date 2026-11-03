@@ -9,7 +9,6 @@
 #include "pr/font.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
@@ -19,6 +18,7 @@
 #include "pr/font_hinter.h"
 #include "pr/mem.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "font/src/cff.h"
@@ -53,7 +53,7 @@ struct FontData {
     // The fonts open over the data, among which prFontCreateDerived looks for one equal to the font that it would make.
     // Each font removes itself as it is freed. The lock guards the list.
     PrMutex lock;
-    Array<Font*> fonts;
+    RawArray<Font*> fonts;
 };
 
 // A face of the data, at the instance and with the derivation that it was opened with. Fonts are shared between
@@ -88,13 +88,14 @@ struct Font {
     float ascentOverride;
     float descentOverride;
     float lineGapOverride;
-    Array<PrFontFeature> features;
-    Array<float> axisKey;               // for each axis, the value that the derivation asked for; equal fonts share it
+    RawArray<PrFontFeature> features;
+    RawArray<float> axisKey;               // for each axis, the value that the derivation asked for; equal fonts share
+                                           // it
 
     // The instance of the font, and its measurements at that instance.
-    Array<PrFontAxis> axes;
-    Array<float> axisValues;
-    Array<float> normalized;            // the axis values normalized, avar applied; empty at the default instance
+    RawArray<PrFontAxis> axes;
+    RawArray<float> axisValues;
+    RawArray<float> normalized;            // the axis values normalized, avar applied; empty at the default instance
     PrFontMetrics metrics;
     PrFontInfo info;
 
@@ -440,9 +441,9 @@ bool openFont(Font* font, FontData* data, uint32_t index) {
     // user of fonts set it instead, the user would have to do so on each path that a font takes into the engine. A path
     // it missed would draw the page's own copy of Ahem antialiased beside the aliased copy of the host. A derivation
     // can still set it either way (PrFontOverrideFlag_Aliased).
-    PrString family = sfntFamily(font->sfnt);
-    font->aliased = prAsciiEqualsFold(prStringView(&family), "Ahem");
-    prStringReset(&family);
+    PrRawString family = sfntFamily(font->sfnt);
+    font->aliased = prAsciiEqualsFold(prRawStringView(&family), "Ahem");
+    prRawStringReset(&family);
     return true;
 }
 
@@ -527,7 +528,7 @@ bool validDerivation(const PrFontDerivation* PR_NULLABLE d) {
 // What a derivation makes of a font: the values that it sets each axis to, and what it scales, synthesizes and
 // overrides. Two fonts of one face with equal states are equal.
 struct Derived {
-    Array<float> axes;                  // for each axis
+    RawArray<float> axes;                  // for each axis
     float sizeAdjust;
     float embolden;
     float oblique;
@@ -538,7 +539,7 @@ struct Derived {
     float ascentOverride;
     float descentOverride;
     float lineGapOverride;
-    Array<PrFontFeature> features;
+    RawArray<PrFontFeature> features;
 };
 
 // Computes the state of a font opened in the same way as `font`, derived from the base if there is one and then as `d`
@@ -797,7 +798,7 @@ PrStatus prFontCreateWoff(PrByteView bytes, uint32_t index, const PrFontDerivati
         PrCompressCodec* codec, const PrFont* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(validDerivation(derivation));
     *out = nullptr;
-    Array<uint8_t> decoded;
+    RawArray<uint8_t> decoded;
     const PrStatus status = woffDecode(bytes, codec, &decoded);
     if (status != PrStatus_Ok) {
         decoded.reset();
@@ -876,13 +877,13 @@ uint32_t prFontIndex(const PrFont* font) {
     return font->index;
 }
 
-PrString prFontFamilyName(const PrFont* font) {
+PrRawString prFontFamilyName(const PrFont* font) {
     return sfntFamily(font->sfnt);
 }
 
-PrString prFontStyleName(const PrFont* font) {
-    PrString name = sfntName(font->sfnt, 17);
-    if (prStringIsNull(&name))
+PrRawString prFontStyleName(const PrFont* font) {
+    PrRawString name = sfntName(font->sfnt, 17);
+    if (prRawStringIsNull(&name))
         name = sfntName(font->sfnt, 2);
     return name;
 }

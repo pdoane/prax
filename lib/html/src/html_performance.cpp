@@ -43,8 +43,8 @@ constexpr uint64_t kHeaderTransferBytes = 300;
 
 void resetServerTiming(PrHtmlPerformanceEntry* entry) {
     for (uint32_t i = 0; i < entry->serverTiming.count; ++i) {
-        prStringReset(&entry->serverTiming.data[i].name);
-        prStringReset(&entry->serverTiming.data[i].description);
+        prRawStringReset(&entry->serverTiming.data[i].name);
+        prRawStringReset(&entry->serverTiming.data[i].description);
     }
     entry->serverTiming.reset();
 }
@@ -62,7 +62,7 @@ PrHtmlPerformanceEntry* createEntry(PrHtmlPerformance* performance, PrHtmlPerfor
     entry->references = 1;
     entry->sequence = ++ensureTimeline(performance)->sequence;
     entry->type = type;
-    entry->name = prStringCopy(name);
+    entry->name = prRawStringCopy(name);
     return entry;
 }
 
@@ -76,7 +76,7 @@ bool isLegacyMomentName(PrStringView name, PrHtmlPerformanceMoment* out) {
     return false;
 }
 
-void releaseEntries(Array<PrHtmlPerformanceEntry*>* entries) {
+void releaseEntries(RawArray<PrHtmlPerformanceEntry*>* entries) {
     for (uint32_t i = 0; i < entries->count; ++i)
         prHtmlPerformanceEntryRelease(entries->data[i]);
     entries->reset();
@@ -84,11 +84,11 @@ void releaseEntries(Array<PrHtmlPerformanceEntry*>* entries) {
 
 bool entryMatches(const PrHtmlPerformanceEntry* entry, PrHtmlPerformanceEntryType type, PrStringView name) {
     return (type == PrHtmlPerformanceEntryType_Count || entry->type == type) &&
-        (name.data == nullptr || prStringView(&entry->name) == name);
+        (name.data == nullptr || prRawStringView(&entry->name) == name);
 }
 
 // Writes `entries` to `out` in the order of their start times, and frees the array.
-uint32_t writeSorted(Array<PrHtmlPerformanceEntry*>* entries, PrHtmlPerformanceEntry* PR_NONNULL* PR_NULLABLE out,
+uint32_t writeSorted(RawArray<PrHtmlPerformanceEntry*>* entries, PrHtmlPerformanceEntry* PR_NONNULL* PR_NULLABLE out,
         uint32_t capacity) {
     sortItems(entries->data, entries->count, [](const PrHtmlPerformanceEntry* a, const PrHtmlPerformanceEntry* b) {
         return a->startTime != b->startTime ? a->startTime < b->startTime : a->sequence < b->sequence;
@@ -120,7 +120,7 @@ void notifyObservers(void* data) {
     PrHtmlPerformance* performance = static_cast<PrHtmlPerformance*>(data);
     HtmlTimeline* timeline = performance->timeline;
     timeline->observerTaskQueued = false;
-    Array<PrHtmlPerformanceObserver*> list;
+    RawArray<PrHtmlPerformanceObserver*> list;
     for (uint32_t i = 0; i < timeline->observers.count; ++i) {
         prHtmlPerformanceObserverRetain(timeline->observers.data[i]);
         list.push(timeline->observers.data[i]);
@@ -163,7 +163,7 @@ void addToBuffer(HtmlTimeline* timeline, PrHtmlPerformanceEntry* entry) {
 }
 
 void copySecondaryBuffer(HtmlTimeline* timeline) {
-    Array<PrHtmlPerformanceEntry*>& resources = timeline->buffers[PrHtmlPerformanceEntryType_Resource];
+    RawArray<PrHtmlPerformanceEntry*>& resources = timeline->buffers[PrHtmlPerformanceEntryType_Resource];
     uint32_t moved = 0;
     while (moved < timeline->secondaryResources.count && resources.count < timeline->resourceLimit)
         resources.push(timeline->secondaryResources.data[moved++]);
@@ -235,7 +235,7 @@ void appendServerTiming(PrHtmlPerformanceEntry* entry, PrStringView field) {
     PrStringView name = prStringTrim(prStringSlice(field, 0, at));
     if (name.size == 0)
         return;
-    HtmlServerMetric metric{.name = prStringCopy(name), .description = prStringCopy("")};
+    HtmlServerMetric metric{.name = prRawStringCopy(name), .description = prRawStringCopy("")};
     bool hasDuration = false;
     bool hasDescription = false;
     while (at < field.size) {
@@ -279,8 +279,8 @@ void appendServerTiming(PrHtmlPerformanceEntry* entry, PrStringView field) {
             metric.duration = domParseFloat(prTextBufferView(&value), &duration) ? duration : 0;
         } else if (prAsciiEqualsFold(param, "desc") && !hasDescription) {
             hasDescription = true;
-            prStringReset(&metric.description);
-            metric.description = prStringCopy(prTextBufferView(&value));
+            prRawStringReset(&metric.description);
+            metric.description = prRawStringCopy(prTextBufferView(&value));
         }
         prTextBufferReset(&value);
     }
@@ -354,18 +354,18 @@ void fillFromReport(PrHtmlPerformanceEntry* entry, const PrHtmlWindow* window, c
     if (!opaque) {
         entry->encodedBodySize = timing.encodedBodySize;
         entry->decodedBodySize = timing.decodedBodySize;
-        prStringReset(&entry->contentType);
+        prRawStringReset(&entry->contentType);
         if (report->contentType.data != nullptr) {
             PrTextBuffer essence{};
             prTextBufferAppend(&essence, prMimeTypeEssence(report->contentType));
             prTextBufferAsciiLower(&essence);
-            entry->contentType = prStringCopy(prMimeTypeMinimize(prTextBufferView(&essence)));
+            entry->contentType = prRawStringCopy(prMimeTypeMinimize(prTextBufferView(&essence)));
             prTextBufferReset(&essence);
         }
-        prStringReset(&entry->contentEncoding);
+        prRawStringReset(&entry->contentEncoding);
         PrStringView coding = report->contentEncoding;
         if (coding == "gzip" || coding == "x-gzip" || coding == "deflate" || coding == "br" || coding == "zstd")
-            entry->contentEncoding = prStringCopy(coding);
+            entry->contentEncoding = prRawStringCopy(coding);
     }
     // A response that fails the TAO check does not reveal its size on the wire.
     if (entry->cacheState == PrFetchCacheState_Local || !revealTiming)
@@ -411,9 +411,10 @@ PrHtmlPerformanceError timestampOf(const PrHtmlPerformance* performance, const P
         return PrHtmlPerformanceError_None;
     }
     if (performance->timeline != nullptr) {
-        const Array<PrHtmlPerformanceEntry*>& marks = performance->timeline->buffers[PrHtmlPerformanceEntryType_Mark];
+        const HtmlTimeline* timeline = performance->timeline;
+        const RawArray<PrHtmlPerformanceEntry*>& marks = timeline->buffers[PrHtmlPerformanceEntryType_Mark];
         for (uint32_t i = marks.count; i-- != 0;) {
-            if (prStringView(&marks.data[i]->name) == stamp.name) {
+            if (prRawStringView(&marks.data[i]->name) == stamp.name) {
                 *out = marks.data[i]->startTime;
                 return PrHtmlPerformanceError_None;
             }
@@ -512,7 +513,7 @@ void htmlPerformanceReset(PrHtmlPerformance* performance) {
         prHtmlPerformanceObserverRelease(observer);
     }
     timeline->observers.reset();
-    for (Array<PrHtmlPerformanceEntry*>& buffer : timeline->buffers)
+    for (RawArray<PrHtmlPerformanceEntry*>& buffer : timeline->buffers)
         releaseEntries(&buffer);
     releaseEntries(&timeline->secondaryResources);
     prMemoryFree(timeline);
@@ -547,16 +548,16 @@ void prHtmlPerformanceEntryRetain(PrHtmlPerformanceEntry* entry) {
 void prHtmlPerformanceEntryRelease(PrHtmlPerformanceEntry* PR_NULLABLE entry) {
     if (entry == nullptr || --entry->references != 0)
         return;
-    prStringReset(&entry->name);
-    prStringReset(&entry->detail);
-    prStringReset(&entry->contentType);
-    prStringReset(&entry->contentEncoding);
+    prRawStringReset(&entry->name);
+    prRawStringReset(&entry->detail);
+    prRawStringReset(&entry->contentType);
+    prRawStringReset(&entry->contentEncoding);
     resetServerTiming(entry);
     prMemoryFree(entry);
 }
 
 PrStringView prHtmlPerformanceEntryName(const PrHtmlPerformanceEntry* entry) {
-    return prStringView(&entry->name);
+    return prRawStringView(&entry->name);
 }
 
 PrHtmlPerformanceEntryType prHtmlPerformanceEntryType(const PrHtmlPerformanceEntry* entry) {
@@ -572,7 +573,7 @@ double prHtmlPerformanceEntryDuration(const PrHtmlPerformanceEntry* entry) {
 }
 
 PrStringView prHtmlPerformanceEntryDetail(const PrHtmlPerformanceEntry* entry) {
-    return prStringView(&entry->detail);
+    return prRawStringView(&entry->detail);
 }
 
 double prHtmlPerformanceEntryMoment(const PrHtmlPerformanceEntry* entry, PrHtmlPerformanceMoment moment) {
@@ -581,8 +582,8 @@ double prHtmlPerformanceEntryMoment(const PrHtmlPerformanceEntry* entry, PrHtmlP
 }
 
 PrHtmlResourceInfo prHtmlPerformanceEntryResourceInfo(const PrHtmlPerformanceEntry* entry) {
-    PrStringView contentType = prStringView(&entry->contentType);
-    PrStringView contentEncoding = prStringView(&entry->contentEncoding);
+    PrStringView contentType = prRawStringView(&entry->contentType);
+    PrStringView contentEncoding = prRawStringView(&entry->contentEncoding);
     return PrHtmlResourceInfo{
         .initiator = entry->initiator,
         .cacheState = entry->cacheState,
@@ -603,7 +604,7 @@ uint32_t prHtmlPerformanceEntryServerTimingCount(const PrHtmlPerformanceEntry* e
 PrHtmlServerTiming prHtmlPerformanceEntryServerTiming(const PrHtmlPerformanceEntry* entry, uint32_t index) {
     PR_ASSERT(index < entry->serverTiming.count);
     const HtmlServerMetric& metric = entry->serverTiming.data[index];
-    return PrHtmlServerTiming{prStringView(&metric.name), prStringView(&metric.description), metric.duration};
+    return PrHtmlServerTiming{prRawStringView(&metric.name), prRawStringView(&metric.description), metric.duration};
 }
 
 PrHtmlNavigationType prHtmlPerformanceEntryNavigationType(const PrHtmlPerformanceEntry* entry) {
@@ -627,7 +628,7 @@ void prHtmlPerformanceEntryListRelease(PrHtmlPerformanceEntryList* PR_NULLABLE l
 
 uint32_t prHtmlPerformanceEntryListEntries(const PrHtmlPerformanceEntryList* list, PrHtmlPerformanceEntryType type,
         PrStringView name, PrHtmlPerformanceEntry* PR_NONNULL* PR_NULLABLE out, uint32_t capacity) {
-    Array<PrHtmlPerformanceEntry*> matches;
+    RawArray<PrHtmlPerformanceEntry*> matches;
     for (uint32_t i = 0; i < list->entries.count; ++i) {
         if (entryMatches(list->entries.data[i], type, name))
             matches.push(list->entries.data[i]);
@@ -639,11 +640,11 @@ uint32_t prHtmlPerformanceEntries(const PrHtmlPerformance* performance, PrHtmlPe
         PrHtmlPerformanceEntry* PR_NONNULL* PR_NULLABLE out, uint32_t capacity) {
     if (performance->timeline == nullptr)
         return 0;
-    Array<PrHtmlPerformanceEntry*> matches;
+    RawArray<PrHtmlPerformanceEntry*> matches;
     for (uint32_t kind = 0; kind < PrHtmlPerformanceEntryType_Count; ++kind) {
         if (type != PrHtmlPerformanceEntryType_Count && type != kind)
             continue;
-        const Array<PrHtmlPerformanceEntry*>& buffer = performance->timeline->buffers[kind];
+        const RawArray<PrHtmlPerformanceEntry*>& buffer = performance->timeline->buffers[kind];
         for (uint32_t i = 0; i < buffer.count; ++i) {
             if (entryMatches(buffer.data[i], type, name))
                 matches.push(buffer.data[i]);
@@ -663,7 +664,7 @@ PrHtmlPerformanceError prHtmlPerformanceEntryCreateMark(PrHtmlPerformance* perfo
     PrHtmlPerformanceEntry* entry = createEntry(performance, PrHtmlPerformanceEntryType_Mark, name);
     entry->startTime = startTime != nullptr ? *startTime : prHtmlPerformanceNow(performance);
     if (detail.data != nullptr)
-        entry->detail = prStringCopy(detail);
+        entry->detail = prRawStringCopy(detail);
     *out = entry;
     return PrHtmlPerformanceError_None;
 }
@@ -711,7 +712,7 @@ PrHtmlPerformanceError prHtmlPerformanceMeasure(PrHtmlPerformance* performance, 
     entry->startTime = startTime;
     entry->duration = endTime - startTime;
     if (desc->detail.data != nullptr)
-        entry->detail = prStringCopy(desc->detail);
+        entry->detail = prRawStringCopy(desc->detail);
     passToObservers(performance, entry);
     addToBuffer(ensureTimeline(performance), entry);
     *out = entry;
@@ -722,10 +723,10 @@ void prHtmlPerformanceClear(PrHtmlPerformance* performance, PrHtmlPerformanceEnt
     PR_ASSERT(type == PrHtmlPerformanceEntryType_Mark || type == PrHtmlPerformanceEntryType_Measure);
     if (performance->timeline == nullptr)
         return;
-    Array<PrHtmlPerformanceEntry*>& buffer = performance->timeline->buffers[type];
+    RawArray<PrHtmlPerformanceEntry*>& buffer = performance->timeline->buffers[type];
     uint32_t kept = 0;
     for (uint32_t i = 0; i < buffer.count; ++i) {
-        if (name.data == nullptr || prStringView(&buffer.data[i]->name) == name)
+        if (name.data == nullptr || prRawStringView(&buffer.data[i]->name) == name)
             prHtmlPerformanceEntryRelease(buffer.data[i]);
         else
             buffer.data[kept++] = buffer.data[i];
@@ -813,7 +814,7 @@ bool prHtmlPerformanceObserverObserve(PrHtmlPerformanceObserver* observer, const
     for (uint32_t kind = 0; kind < PrHtmlPerformanceEntryType_Count; ++kind) {
         if ((init->types & (1u << kind)) == 0)
             continue;
-        const Array<PrHtmlPerformanceEntry*>& buffer = timeline->buffers[kind];
+        const RawArray<PrHtmlPerformanceEntry*>& buffer = timeline->buffers[kind];
         for (uint32_t i = 0; i < buffer.count; ++i) {
             prHtmlPerformanceEntryRetain(buffer.data[i]);
             observer->records.push(buffer.data[i]);
@@ -828,7 +829,7 @@ void prHtmlPerformanceObserverDisconnect(PrHtmlPerformanceObserver* observer) {
     if (observer->types == 0 || observer->performance == nullptr)
         return;
     observer->types = 0;
-    Array<PrHtmlPerformanceObserver*>& observers = observer->performance->timeline->observers;
+    RawArray<PrHtmlPerformanceObserver*>& observers = observer->performance->timeline->observers;
     for (uint32_t i = 0; i < observers.count; ++i) {
         if (observers.data[i] == observer) {
             observers.erase(i);
@@ -844,6 +845,6 @@ PrHtmlPerformanceEntryList* prHtmlPerformanceObserverTakeRecords(PrHtmlPerforman
     PrHtmlPerformanceEntryList* list = allocZeroed<PrHtmlPerformanceEntryList>();
     list->references = 1;
     list->entries = observer->records;
-    observer->records = Array<PrHtmlPerformanceEntry*>{};
+    observer->records = RawArray<PrHtmlPerformanceEntry*>{};
     return list;
 }

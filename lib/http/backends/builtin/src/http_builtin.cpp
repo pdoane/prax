@@ -3,10 +3,10 @@
 #include "pr/http_builtin.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/string_trim.h"
 #include "pr/text_buffer.h"
@@ -77,26 +77,26 @@ struct Exchange : PrHttpExchange {
     Held held;
     PrHttpExchangeFn PR_NULLABLE event;
     void* PR_NULLABLE context;
-    PrString origin;            // the scheme, host and port, which the exchange shares connections by
-    PrString host;              // the request's host, without an IPv6 address's brackets
+    PrRawString origin;            // the scheme, host and port, which the exchange shares connections by
+    PrRawString host;              // the request's host, without an IPv6 address's brackets
     uint16_t port;
 
     // Where the exchange connects: the request's host and port, or those that a host rule gives.
-    PrString target;
+    PrRawString target;
     uint16_t targetPort;
     bool secure;
     bool head;                  // true for a HEAD request, whose response has no content
     bool retried;               // true once the request was sent again on a new connection
-    PrString request;           // the request's bytes
+    PrRawString request;        // the request's bytes
     ExchangeState state;
     Connection* PR_NULLABLE connection;
     uint16_t status;
-    PrString response;          // the final response's head, which `fields` index
-    Array<FieldSpan> fields;
+    PrRawString response;          // the final response's head, which `fields` index
+    RawArray<FieldSpan> fields;
     Framing framing;
     uint64_t remaining;         // the bytes left in the content, or in the chunk
     ChunkState chunk;
-    Array<uint8_t> content;     // content that arrived, from `contentStart`
+    RawArray<uint8_t> content;     // content that arrived, from `contentStart`
     uint32_t contentStart;
     PrNetError error;
 };
@@ -106,10 +106,10 @@ struct Exchange : PrHttpExchange {
 struct Connection {
     Held held;
     BuiltinHttp* http;
-    PrString origin;
+    PrRawString origin;
     PrNetStream* PR_NULLABLE stream;
     Exchange* PR_NULLABLE exchange;
-    Array<uint8_t> input;
+    RawArray<uint8_t> input;
     uint32_t inputStart;
     uint32_t served;            // the number of responses that the connection completed
     bool reusable;              // true if the current response leaves the connection open
@@ -121,9 +121,9 @@ struct Connection {
 
 // A host rule (PrHttpHostRule), with copies of its names.
 struct HostRule {
-    PrString host;
+    PrRawString host;
     uint16_t port;
-    PrString target;
+    PrRawString target;
     uint16_t targetPort;
 };
 
@@ -131,21 +131,21 @@ struct BuiltinHttp : PrHttp {
     PrTls* PR_NULLABLE tls;
     const PrByteView* PR_NULLABLE anchors;
     uint32_t anchorCount;
-    Array<HostRule> hostRules;
+    RawArray<HostRule> hostRules;
     uint32_t perOrigin;
-    Array<Exchange*> queue;     // exchanges waiting for a connection, in the order they were made
-    Array<Connection*> connections;
+    RawArray<Exchange*> queue;     // exchanges waiting for a connection, in the order they were made
+    RawArray<Connection*> connections;
     bool pumpPosted;
     bool dead;                  // true once destroyed, while a posted pump waits
 };
 
 constexpr PrStringView kProtocols[] = {"http/1.1"};
 
-PrStringView viewOf(const PrString& string) {
-    return prStringView(&string);
+PrStringView viewOf(const PrRawString& string) {
+    return prRawStringView(&string);
 }
 
-PrStringView bytesView(const Array<uint8_t>& bytes, uint32_t start) {
+PrStringView bytesView(const RawArray<uint8_t>& bytes, uint32_t start) {
     return PrStringView{reinterpret_cast<const char*>(bytes.data) + start, bytes.count - start};
 }
 
@@ -199,11 +199,11 @@ void deliver(Exchange* exchange, PrHttpEvent event) {
 }
 
 void freeExchange(Exchange* exchange) {
-    prStringReset(&exchange->origin);
-    prStringReset(&exchange->host);
-    prStringReset(&exchange->target);
-    prStringReset(&exchange->request);
-    prStringReset(&exchange->response);
+    prRawStringReset(&exchange->origin);
+    prRawStringReset(&exchange->host);
+    prRawStringReset(&exchange->target);
+    prRawStringReset(&exchange->request);
+    prRawStringReset(&exchange->response);
     exchange->fields.reset();
     exchange->content.reset();
     prMemoryFree(exchange);
@@ -216,7 +216,7 @@ void releaseExchange(Exchange* exchange) {
 }
 
 void freeConnection(Connection* connection) {
-    prStringReset(&connection->origin);
+    prRawStringReset(&connection->origin);
     connection->input.reset();
     prMemoryFree(connection);
 }
@@ -369,7 +369,7 @@ bool parseHead(Connection* connection, Exchange* exchange) {
             }
             continue;
         }
-        prStringReplace(&exchange->response, head);
+        prRawStringReplace(&exchange->response, head);
         PrStringView stored = viewOf(exchange->response);
         exchange->fields.clear();
         size_t cursor = next;
@@ -657,7 +657,7 @@ void resume(void* PR_NULLABLE context) {
 Connection* openConnection(BuiltinHttp* http, Exchange* exchange) {
     Connection* connection = allocZeroed<Connection>();
     connection->http = http;
-    connection->origin = prStringCopy(viewOf(exchange->origin));
+    connection->origin = prRawStringCopy(viewOf(exchange->origin));
     PrStatus status = PrStatus_Ok;
     if (exchange->secure) {
         PrTlsSessionDesc desc{
@@ -714,8 +714,8 @@ void freeHttp(BuiltinHttp* http) {
     http->queue.reset();
     http->connections.reset();
     for (uint32_t i = 0; i < http->hostRules.count; ++i) {
-        prStringReset(&http->hostRules.data[i].host);
-        prStringReset(&http->hostRules.data[i].target);
+        prRawStringReset(&http->hostRules.data[i].host);
+        prRawStringReset(&http->hostRules.data[i].target);
     }
     http->hostRules.reset();
     prMemoryFree(http);
@@ -850,13 +850,13 @@ PrStatus createExchange(PrHttp* base, const PrHttpRequestDesc* desc, PrHttpExcha
     // An IPv6 address is serialized in brackets, which a connection does not take.
     if (host.size > 2 && host.data[0] == '[')
         host = prStringSlice(host, 1, host.size - 2);
-    exchange->host = prStringCopy(host);
-    exchange->target = prStringCopy(host);
+    exchange->host = prRawStringCopy(host);
+    exchange->target = prRawStringCopy(host);
     exchange->targetPort = exchange->port;
     for (uint32_t i = 0; i < http->hostRules.count; ++i) {
         const HostRule& rule = http->hostRules.data[i];
         if (ruleMatches(rule, host) && (rule.port == 0 || rule.port == exchange->port)) {
-            prStringReplace(&exchange->target, viewOf(rule.target));
+            prRawStringReplace(&exchange->target, viewOf(rule.target));
             exchange->targetPort = rule.targetPort != 0 ? rule.targetPort : exchange->port;
             break;
         }
@@ -967,7 +967,8 @@ PrHttp* prHttpBuiltinCreate(const PrHttpDesc* desc) {
     http->anchorCount = desc->anchorCount;
     for (uint32_t i = 0; i < desc->hostRuleCount; ++i) {
         const PrHttpHostRule& rule = desc->hostRules[i];
-        http->hostRules.push(HostRule{prStringCopy(rule.host), rule.port, prStringCopy(rule.target), rule.targetPort});
+        HostRule copied = {prRawStringCopy(rule.host), rule.port, prRawStringCopy(rule.target), rule.targetPort};
+        http->hostRules.push(copied);
     }
     http->perOrigin = desc->connectionsPerOrigin != 0 ? desc->connectionsPerOrigin : kDefaultConnectionsPerOrigin;
     return http;

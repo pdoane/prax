@@ -72,7 +72,7 @@ void resetTransition(CssRunningTransition& transition) {
 }
 
 void resetAnimation(CssRunningAnimation& animation) {
-    prStringReset(&animation.name);
+    prRawStringReset(&animation.name);
     cssValueListReset(&animation.easing);
     cssValuePoolReset(&animation.values);
     animation.keyframes.reset();
@@ -127,7 +127,7 @@ void queueEvent(CssAnimateState& a, const PrDomNode* target, PrStringView type, 
     const PrDomElement* element = originOf(target);
     domNodeHold(const_cast<PrDomElement*>(element));
     a.events.push(CssAnimateEvent{
-        element, pseudoOf(target), type, prStringCopy(name),
+        element, pseudoOf(target), type, prRawStringCopy(name),
         elapsedMilliseconds / 1000, scheduled, transition,
     });
 }
@@ -149,7 +149,7 @@ void cancelAnimation(CssAnimateState& a, const CssRunningAnimation& animation) {
     const PrLayoutTiming& timing = animation.timing;
     double since = (timing.paused ? timing.hold : a.time - timing.start) - timing.delay;
     double elapsed = prF64Max(0, prF64Min(since, activeDuration(timing)));
-    queueEvent(a, animation.target, "animationcancel", prStringView(&animation.name), elapsed, a.time, false);
+    queueEvent(a, animation.target, "animationcancel", prRawStringView(&animation.name), elapsed, a.time, false);
 }
 
 // Removes a transition, and cancels it if it has not ended.
@@ -562,14 +562,14 @@ void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target
         uint32_t at = a.animations.count;
         for (uint32_t i = 0; i < a.animations.count && at == a.animations.count; ++i) {
             CssRunningAnimation& candidate = a.animations.data[i];
-            if (candidate.target == target && !candidate.matched && prStringView(&candidate.name) == name)
+            if (candidate.target == target && !candidate.matched && prRawStringView(&candidate.name) == name)
                 at = i;
         }
         if (at == a.animations.count) {
             CssRunningAnimation& made = a.animations.emplace();
             made = CssRunningAnimation{};
             made.target = target;
-            made.name = prStringCopy(name);
+            made.name = prRawStringCopy(name);
             made.timing = prLayoutTimingDefault();
             made.timing.start = time;
         }
@@ -752,7 +752,7 @@ bool cssAnimateComposited(const PrCssPresentation* presentation, const PrDomNode
     return false;
 }
 
-const Array<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, AnimationNodeFn layoutNode,
+const RawArray<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, AnimationNodeFn layoutNode,
         AnimationBaseFn baseOf) {
     CssAnimateState& a = presentation->animations;
     a.tracks.clear();
@@ -774,7 +774,7 @@ const Array<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, An
     };
     // Tracks refer to their keyframes by index until every keyframe is made, because the keyframes move while they are
     // added.
-    Array<uint32_t> starts;
+    RawArray<uint32_t> starts;
     auto add = [&](PrLayoutNode node, PrCssProperty property, const PrLayoutTiming& timing, uint32_t start) {
         PrLayoutTrack track{};
         track.node = node;
@@ -899,7 +899,7 @@ void cssAnimateFindEvents(PrCssPresentation* presentation) {
         if (now == was && (now != AnimationPhase_Active || iteration == animation.iteration))
             continue;
         const PrLayoutTiming& timing = animation.timing;
-        PrStringView name = prStringView(&animation.name);
+        PrStringView name = prRawStringView(&animation.name);
         double active = activeDuration(timing);
         double from = intervalStart(timing.delay, active);
         double start = timing.start + timing.delay;
@@ -995,7 +995,7 @@ void cssAnimateReset(CssAnimateState* animations) {
     animations->tracks.reset();
     animations->keyframes.reset();
     for (uint32_t i = 0; i < animations->events.count; ++i) {
-        prStringReset(&animations->events.data[i].name);
+        prRawStringReset(&animations->events.data[i].name);
         domNodeUnhold(const_cast<PrDomElement*>(animations->events.data[i].element));
     }
     animations->events.reset();

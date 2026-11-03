@@ -251,7 +251,7 @@ PR_NOINLINE PrLayoutNode createAway(LayoutTree* tree, LayoutNodeIndex parent, ui
 
 // Writes to `out` the roots that the open frame created, in the order created: the committed roots that it continued,
 // and the roots that it found away from the cursor or made (LayoutFrame::openRoots).
-void gatherRoots(const LayoutTree* tree, Array<LayoutNodeIndex>* out) {
+void gatherRoots(const LayoutTree* tree, RawArray<LayoutNodeIndex>* out) {
     const LayoutFrame& frame = tree->frame;
     out->clear();
     for (uint32_t i = 0; i < frame.roots.count; ++i) {
@@ -494,7 +494,7 @@ uint32_t prLayoutTreeFrameRoots(const PrLayoutTree* tree, PrLayoutNode* PR_NULLA
     const LayoutFrame& frame = tree->frame;
     if (frame.open)
         gatherRoots(tree, &frame.gathered);
-    const Array<LayoutNodeIndex>& roots = frame.open ? frame.gathered : frame.roots;
+    const RawArray<LayoutNodeIndex>& roots = frame.open ? frame.gathered : frame.roots;
     for (uint32_t i = 0; i < roots.count && i < capacity; ++i)
         out[i] = layoutNodeName(tree, roots.data[i]);
     return roots.count;
@@ -559,7 +559,7 @@ uint32_t prLayoutTreeFrameCursor(const PrLayoutTree* tree) {
 }
 
 uint32_t prLayoutTreeDuplicateKeys(const PrLayoutTree* tree, PrLayoutDuplicateKey* out, uint32_t capacity) {
-    const Array<PrLayoutDuplicateKey>& reported = tree->frame.reported;
+    const RawArray<PrLayoutDuplicateKey>& reported = tree->frame.reported;
     for (uint32_t i = 0; i < reported.count && i < capacity; ++i)
         out[i] = reported.data[i];
     return reported.count;

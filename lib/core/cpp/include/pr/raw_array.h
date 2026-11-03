@@ -1,4 +1,5 @@
-// Contiguous growable arrays.
+// Raw arrays: contiguous growable arrays of elements that are copied as bytes, with no constructor or destructor run,
+// which their owner resets.
 
 #pragma once
 
@@ -6,6 +7,7 @@
 #include "pr/base.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/type_traits.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -24,13 +26,14 @@ uint32_t arrayInitialCapacity() {
     return bytes > kArrayInitialCount ? bytes : kArrayInitialCount;
 }
 
-// The index that Array::find returns when no element equals the value.
+// The index that RawArray::find returns when no element equals the value.
 constexpr uint32_t kArrayMissing = 0xffffffffu;
 
-// A growable array that owns its storage. Elements are copied as bytes. Growth invalidates `data` and references into
-// it, so a value that `push`, `insert` or `append` copies must not be stored in the array itself.
+// A growable array that owns its storage. Elements are copied as bytes, so they must be trivially copyable, and none is
+// constructed or destroyed. The owner frees the storage with `reset`. Growth invalidates `data` and references into it,
+// so a value that `push`, `insert` or `append` copies must not be stored in the array itself.
 template <typename T>
-struct Array {
+struct RawArray {
     T* PR_NULLABLE data = nullptr;
     uint32_t count = 0;
     uint32_t capacity = 0;
@@ -91,6 +94,7 @@ struct Array {
     // Gives an array with no storage `newCount` elements of zeroed bytes. A large array that is touched sparsely costs
     // only what it touches.
     void resizeZeroed(uint32_t newCount) {
+        static_assert(isTriviallyCopyable<T>, "a RawArray copies its elements as bytes");
         PR_ASSERT(data == nullptr);
         data = static_cast<T*>(prMemoryAllocZeroed(size_t(newCount) * sizeof(T)));
         count = newCount;
@@ -150,9 +154,12 @@ struct Array {
     }
 };
 
-// The out-of-line definition of Array::reserve.
+// The out-of-line definition of RawArray::reserve.
 template <typename T>
-PR_NOINLINE void Array<T>::reserve(uint32_t minCapacity) {
+PR_NOINLINE void RawArray<T>::reserve(uint32_t minCapacity) {
+    // Checked where storage is first made, by which point `T` is complete, as it need not be where an array is
+    // declared.
+    static_assert(isTriviallyCopyable<T>, "a RawArray copies its elements as bytes");
     if (minCapacity <= capacity)
         return;
     PR_ASSERT(capacity < kArrayMaxGrowth);

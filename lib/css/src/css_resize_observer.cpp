@@ -116,7 +116,7 @@ void removeObservation(PrCssResizeObserver* observer, uint32_t index) {
 
 // Marks the observations whose observed sizes changed as active if they are deeper than `depth`, and notes the others
 // as skipped (resize-observer-1/#gather-active-observations-h). Returns true if any is active.
-bool gather(const Array<PrCssResizeObserver* PR_NONNULL>& observers, PrCssPresentation* PR_NULLABLE presentation,
+bool gather(const RawArray<PrCssResizeObserver* PR_NONNULL>& observers, PrCssPresentation* PR_NULLABLE presentation,
         uint32_t depth, double pixelRatio) {
     bool any = false;
     for (uint32_t i = 0; i < observers.count; ++i) {
@@ -142,10 +142,10 @@ bool gather(const Array<PrCssResizeObserver* PR_NONNULL>& observers, PrCssPresen
 
 // Calls each observer with the entries of its active observations, which then record the sizes delivered
 // (resize-observer-1/#broadcast-active-resize-observations). Returns the depth of the shallowest target delivered.
-uint32_t broadcast(const Array<PrCssResizeObserver* PR_NONNULL>& observers,
+uint32_t broadcast(const RawArray<PrCssResizeObserver* PR_NONNULL>& observers,
         PrCssPresentation* PR_NULLABLE presentation, double pixelRatio) {
     uint32_t shallowest = UINT32_MAX;
-    Array<PrCssResizeObserverEntry> entries;
+    RawArray<PrCssResizeObserverEntry> entries;
     for (uint32_t i = 0; i < observers.count; ++i) {
         PrCssResizeObserver* observer = observers.data[i];
         entries.clear();
@@ -204,7 +204,7 @@ void prCssResizeObserverRetain(PrCssResizeObserver* observer) {
 void prCssResizeObserverRelease(PrCssResizeObserver* PR_NULLABLE observer) {
     if (observer == nullptr || --observer->references != 0)
         return;
-    Array<PrCssResizeObserver* PR_NONNULL>& observers = cssDocumentRoot(observer->document)->resizeObservers;
+    RawArray<PrCssResizeObserver* PR_NONNULL>& observers = cssDocumentRoot(observer->document)->resizeObservers;
     for (uint32_t i = 0; i < observers.count; ++i) {
         if (observers.data[i] == observer) {
             observers.erase(i);
@@ -265,7 +265,7 @@ bool prCssDocumentBroadcastResizeObservations(PrDomDocument* document, double pi
     if (!observing)
         return false;
     // The callbacks may create observers and free them, so each round reads a list of the observers that it holds.
-    Array<PrCssResizeObserver* PR_NONNULL> observers;
+    RawArray<PrCssResizeObserver* PR_NONNULL> observers;
     uint32_t depth = 0;
     bool skipped = false;
     for (;;) {

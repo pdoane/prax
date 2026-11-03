@@ -19,20 +19,20 @@ std::string viewString(PrStringView view) {
 }
 
 std::string blocksHtml(const PrMarkdown* document, uint32_t first, uint32_t count) {
-    PrString out = prStringEmpty();
+    PrRawString out = prRawStringEmpty();
     prMarkdownAppendHtml(document, first, count, &out);
-    std::string html = viewString(prStringView(&out));
-    prStringReset(&out);
+    std::string html = viewString(prRawStringView(&out));
+    prRawStringReset(&out);
     return html;
 }
 
 // Returns the HTML of the whole document: its blocks', then its footnotes'.
 std::string documentHtml(const PrMarkdown* document) {
     std::string html = blocksHtml(document, 0, prMarkdownBlockCount(document));
-    PrString footnotes = prStringEmpty();
+    PrRawString footnotes = prRawStringEmpty();
     prMarkdownAppendFootnotesHtml(document, &footnotes);
-    html += viewString(prStringView(&footnotes));
-    prStringReset(&footnotes);
+    html += viewString(prRawStringView(&footnotes));
+    prRawStringReset(&footnotes);
     return html;
 }
 
@@ -110,10 +110,10 @@ bool streams(PrStringView source, const PrMarkdownOptions& options) {
     }
     prMarkdownEnd(document);
     client.update(document);
-    PrString footnotes = prStringEmpty();
+    PrRawString footnotes = prRawStringEmpty();
     prMarkdownAppendFootnotesHtml(document, &footnotes);
-    std::string streamed = client.joined() + viewString(prStringView(&footnotes));
-    prStringReset(&footnotes);
+    std::string streamed = client.joined() + viewString(prRawStringView(&footnotes));
+    prRawStringReset(&footnotes);
     bool same = streamed == html(source, &options) && documentHtml(document) == streamed;
     prMarkdownDestroy(document);
     return same;

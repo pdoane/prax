@@ -5,10 +5,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/byte_view.h"
 #include "pr/compress.h"
+#include "pr/raw_array.h"
 #include "pr/status.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -20,7 +20,7 @@ namespace pr_impl {
 //
 // Returns InvalidData for bytes that are neither format, or that the rules of the format reject. Returns NotSupported
 // if `codec` does not decode the compression of the file. On failure, `out` holds nothing that is meaningful.
-PrStatus woffDecode(PrByteView bytes, PrCompressCodec* codec, Array<uint8_t>* out);
+PrStatus woffDecode(PrByteView bytes, PrCompressCodec* codec, RawArray<uint8_t>* out);
 
 } // namespace pr_impl
 

@@ -9,10 +9,10 @@ namespace pr_impl {
 
 namespace {
 
-std::string take(PrString value) {
-    PrStringView text = prStringView(&value);
+std::string take(PrRawString value) {
+    PrStringView text = prRawStringView(&value);
     std::string result(text.data != nullptr ? text.data : "", text.size);
-    prStringReset(&value);
+    prRawStringReset(&value);
     return result;
 }
 std::string parse(const char* text, const char* base = nullptr,
@@ -22,7 +22,7 @@ std::string parse(const char* text, const char* base = nullptr,
     PrUrl* result = nullptr;
     PrStatus status = urlParse(text, parent, PrCharset_Utf8, &result);
     urlDestroy(parent);
-    if (status != PrStatus_Ok) return take(prStringCopy(prStatusName(status)));
+    if (status != PrStatus_Ok) return take(prRawStringCopy(prStatusName(status)));
     std::string serialized = take(urlSerialize(result, serialization));
     Url* copy = urlClone(result);
     urlDestroy(result);
@@ -94,15 +94,15 @@ TEST_CASE("opaque URLs and absent components remain distinct") {
     CHECK(parse("custom:/a/..//b") == "custom:/.//b");
     PrUrl* url = nullptr;
     REQUIRE(urlParse("https://example.org/?#", nullptr, PrCharset_Utf8, &url) == PrStatus_Ok);
-    CHECK(!prStringIsNull(&url->query));
-    CHECK(!prStringIsNull(&url->fragment));
-    CHECK(prStringIsEmpty(&url->query));
+    CHECK(!prRawStringIsNull(&url->query));
+    CHECK(!prRawStringIsNull(&url->fragment));
+    CHECK(prRawStringIsEmpty(&url->query));
     CHECK(!url->hasPort);
     urlDestroy(url);
     REQUIRE(urlParse("custom:/a", nullptr, PrCharset_Utf8, &url) == PrStatus_Ok);
-    CHECK(prStringIsNull(&url->host));
-    CHECK(prStringIsNull(&url->query));
-    CHECK(prStringIsNull(&url->fragment));
+    CHECK(prRawStringIsNull(&url->host));
+    CHECK(prRawStringIsNull(&url->query));
+    CHECK(prRawStringIsNull(&url->fragment));
     urlDestroy(url);
     CHECK(urlParse("relative", nullptr, PrCharset_Utf8, &url) == PrStatus_Syntax);
     CHECK(url == nullptr);

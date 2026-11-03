@@ -168,8 +168,8 @@ uint32_t characterAt(const SvgText* text, PrVec2 point) {
 // The state of a hit test.
 struct Hitter {
     SvgDrawer d;
-    PrVec2 point;                      // in the current user space
-    Array<CssPresentationSvgHit> hits; // in painting order
+    PrVec2 point;                         // in the current user space
+    RawArray<CssPresentationSvgHit> hits; // in painting order
 };
 
 void hitNode(Hitter& h, SvgNodeIndex index);
@@ -329,7 +329,7 @@ bool silhouetteHolds(SvgDrawer& d, SvgNodeIndex index, PrVec2 point) {
 }
 
 // Writes the nodes from the root to `index` to `out`, the root first.
-void pathTo(const SvgTree* tree, SvgNodeIndex index, Array<SvgNodeIndex>* out) {
+void pathTo(const SvgTree* tree, SvgNodeIndex index, RawArray<SvgNodeIndex>* out) {
     for (SvgNodeIndex at = index; at != kSvgNodeNone; at = tree->nodes.data[at].parent)
         out->push(at);
     for (uint32_t i = 0; i < out->count / 2; ++i) {
@@ -380,12 +380,12 @@ bool svgClipContains(const SvgTree* tree, SvgResourceIndex index, PrRect box, Pr
 bool svgNodePlace(const SvgTree* tree, PrVec2 viewport, SvgNodeIndex index, SvgPlace* out) {
     SvgTiles tiles{};
     SvgDrawer d = queryDrawer(tree, viewport, nullptr, &tiles);
-    Array<SvgNodeIndex> path;
+    RawArray<SvgNodeIndex> path;
     pathTo(tree, index, &path);
     bool drawn = path.count != 0 && path.data[0] == 0;
     // The transform of each node on the path from its user space to its parent's, and the nearest viewport around the
     // node.
-    Array<PrAffine2> locals;
+    RawArray<PrAffine2> locals;
     uint32_t nearest = 0;
     for (uint32_t i = 0; drawn && i < path.count; ++i) {
         const SvgNode& node = tree->nodes.data[path.data[i]];

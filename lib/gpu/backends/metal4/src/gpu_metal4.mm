@@ -45,8 +45,8 @@ struct Commands : GpuMetalCommands {
 struct Device : GpuMetalDevice {
     id<MTL4Compiler> compiler;              // retained
     dispatch_queue_t feedback;              // the serial queue of the submissions' feedback, retained
-    Array<id> allocators;                   // free id<MTL4CommandAllocator>s, retained
-    Array<id> tables;                       // free id<MTL4ArgumentTable>s, retained
+    RawArray<id> allocators;                // free id<MTL4CommandAllocator>s, retained
+    RawArray<id> tables;                    // free id<MTL4ArgumentTable>s, retained
 
     // The open batch of uploads: its command buffer and encoder.
     id<MTL4CommandBuffer> PR_NULLABLE uploads;               // retained

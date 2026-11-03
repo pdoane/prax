@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/layout_style.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_unit.h"
 
@@ -62,7 +62,7 @@ struct LayoutExclusionMark {
 
 // The floats of one block formatting context, in placement order.
 struct LayoutExclusions {
-    Array<LayoutExclusion> floats;
+    RawArray<LayoutExclusion> floats;
     LayoutExclusionMark mark;
 };
 

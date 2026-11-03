@@ -8,8 +8,8 @@
 #include "lottie/src/lottie_expression.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 
 #include "lottie/src/lottie_eval.h"
@@ -29,16 +29,16 @@ struct LottieExpressions {
 
     // The compiled functions, in compilation order, with undefined for an expression that did not compile. For each
     // property, the index of its function, or kLottieNone if it is not compiled yet.
-    Array<JSValue> functions;
-    Array<uint32_t> functionOf;
+    RawArray<JSValue> functions;
+    RawArray<uint32_t> functionOf;
 
     // A cache of each property's value, because an expression is evaluated once per frame however often it is read. For
     // each property: the frame at which it was last evaluated, the index of its value in `values` or kLottieNone if
     // there is none yet, and whether the expression returned a value.
-    Array<double> frameOf;
-    Array<uint32_t> valueOf;
-    Array<uint8_t> answered;
-    Array<float> values;
+    RawArray<double> frameOf;
+    RawArray<uint32_t> valueOf;
+    RawArray<uint8_t> answered;
+    RawArray<float> values;
 };
 
 namespace {
@@ -154,7 +154,7 @@ JSValue nativeValue(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
     uint32_t dims = lottieDims(a, node->property);
     if (dims == 0 || dims > kExpressionMaxFloats)
         return JS_UNDEFINED;
-    Array<float> values;
+    RawArray<float> values;
     values.reserve(dims);
     double frame = seconds * a.info.frameRate;
     if (expressed)

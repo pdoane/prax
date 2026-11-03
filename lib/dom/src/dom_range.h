@@ -111,7 +111,7 @@ PrStatus domRangeSurround(PrDomRange* range, PrDomNode* parent);
 
 // Returns the text within the range, from the Text nodes that it holds in whole or in part, in tree order
 // (dom/#dom-range-stringifier).
-PrString domRangeString(const PrDomRange* range);
+PrRawString domRangeString(const PrDomRange* range);
 
 // Run the steps that the mutation algorithms run for the live ranges of the node's document. domRangesInserted runs
 // when `node` has been inserted into its parent at its index (dom/#concept-node-insert). domRangesRemoving runs when

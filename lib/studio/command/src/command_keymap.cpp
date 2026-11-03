@@ -3,9 +3,9 @@
 #include "pr/command_keymap.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
@@ -17,17 +17,17 @@ namespace {
 // hold their bytes inline, stay valid as the keymap grows.
 struct Binding {
     PrCommandChord chord;
-    PrString commandId;
-    PrString context;
+    PrRawString commandId;
+    PrRawString context;
     PrCommandBindingKind kind;
 };
 
 struct CommandKeymap {
-    Array<Binding*> bindings;   // in the order that they were made
+    RawArray<Binding*> bindings;   // in the order that they were made
 };
 
-PrStringView viewOf(const PrString& string) {
-    return prStringView(&string);
+PrStringView viewOf(const PrRawString& string) {
+    return prRawStringView(&string);
 }
 
 // A word of a chord's text that names a modifier.
@@ -144,7 +144,7 @@ bool prCommandChordParse(PrStringView text, PrCommandChord* out) {
     return true;
 }
 
-PrString prCommandChordText(PrCommandChord chord) {
+PrRawString prCommandChordText(PrCommandChord chord) {
     PrTextBuffer text{};
 #if defined(__APPLE__)
     // Apple's menus show the modifiers as symbols, in the order Control, Option, Shift, Command.
@@ -169,7 +169,7 @@ PrString prCommandChordText(PrCommandChord chord) {
     }
 #endif
     appendKey(&text, chord.key);
-    PrString string = prTextBufferCopy(&text);
+    PrRawString string = prTextBufferCopy(&text);
     prTextBufferReset(&text);
     return string;
 }
@@ -183,8 +183,8 @@ void prCommandKeymapDestroy(PrCommandKeymap* PR_NULLABLE keymap) {
         return;
     for (uint32_t i = 0; i < keymap->bindings.count; ++i) {
         Binding* binding = keymap->bindings.data[i];
-        prStringReset(&binding->commandId);
-        prStringReset(&binding->context);
+        prRawStringReset(&binding->commandId);
+        prRawStringReset(&binding->context);
         prMemoryFree(binding);
     }
     keymap->bindings.reset();
@@ -198,15 +198,15 @@ void prCommandKeymapBind(PrCommandKeymap* keymap, PrCommandChord chord, PrString
         Binding* binding = keymap->bindings.data[i];
         if (binding->chord.key == chord.key && binding->chord.modifiers == chord.modifiers &&
                 viewOf(binding->context) == context) {
-            prStringReplace(&binding->commandId, commandId);
+            prRawStringReplace(&binding->commandId, commandId);
             binding->kind = kind;
             return;
         }
     }
     Binding* binding = allocZeroed<Binding>();
     binding->chord = chord;
-    binding->commandId = prStringCopy(commandId);
-    binding->context = prStringCopy(context);
+    binding->commandId = prRawStringCopy(commandId);
+    binding->context = prRawStringCopy(context);
     binding->kind = kind;
     keymap->bindings.push(binding);
 }

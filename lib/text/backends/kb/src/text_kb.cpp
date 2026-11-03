@@ -6,8 +6,8 @@
 #include "pr/text_kb.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/raw_array.h"
 #include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
 #include "pr/vec.h"
@@ -44,12 +44,12 @@ struct KbFace {
 
 struct KbFont {
     float unitsPerEm;
-    Array<float> variation;             // the design point, by axis in the order of the font; empty unless variable
+    RawArray<float> variation;             // the design point, by axis in the order of the font; empty unless variable
 
     // The design point, normalized; empty at the default, at which no variation applies.
-    Array<kbts_s16> normalized;
+    RawArray<kbts_s16> normalized;
 
-    Array<KbConfig> configs;
+    RawArray<KbConfig> configs;
 };
 
 bool createFace(PrTextShaper*, const PrFont* font, void* state) {
@@ -103,9 +103,9 @@ struct FeatureSet {
 
 struct KbBackend : PrTextShaper {
     kbts_glyph_storage storage;
-    Array<FeatureSet> sets;             // the feature sets of the run, emptied after the run
-    Array<kbts_feature_override> overrides;
-    Array<PrTextFeature> unitFeatures;  // the features of a vertical run, for each character shaped across
+    RawArray<FeatureSet> sets;             // the feature sets of the run, emptied after the run
+    RawArray<kbts_feature_override> overrides;
+    RawArray<PrTextFeature> unitFeatures;  // the features of a vertical run, for each character shaped across
 };
 
 KbConfig* PR_NULLABLE configFor(KbFace* face, KbFont* font, kbts_script script, kbts_language language) {
@@ -239,7 +239,7 @@ PrStatus shapeAcross(KbBackend* kb, void* faceState, void* fontState, const PrTe
 // glyphs down a line, which a shaping across does not have, so it is left out instead of being half applied.
 PrStatus shapeDown(KbBackend* kb, void* faceState, void* fontState, const PrTextRun* run, PrTextGlyphBuffer* out) {
     constexpr uint32_t kWholeRun = 0xffffffffu;
-    Array<PrTextFeature>& features = kb->unitFeatures;
+    RawArray<PrTextFeature>& features = kb->unitFeatures;
     features.clear();
     for (uint32_t i = 0; i < run->featureCount; ++i) {
         uint32_t tag = run->features[i].tag;

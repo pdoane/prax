@@ -32,7 +32,7 @@ DomSlot* stateOf(PrDomElement* slot) {
     return state->slot;
 }
 
-bool holds(const Array<PrDomNode* PR_NONNULL>& nodes, const PrDomNode* node) {
+bool holds(const RawArray<PrDomNode* PR_NONNULL>& nodes, const PrDomNode* node) {
     for (uint32_t i = 0; i < nodes.count; ++i) {
         if (nodes.data[i] == node)
             return true;
@@ -46,7 +46,7 @@ PrDomShadowRoot* PR_NULLABLE shadowOf(const PrDomNode* node) {
 }
 
 // dom/#find-slotables
-void findSlottables(const PrDomElement* slot, Array<PrDomNode* PR_NONNULL>* out) {
+void findSlottables(const PrDomElement* slot, RawArray<PrDomNode* PR_NONNULL>* out) {
     PrDomShadowRoot* shadow = shadowOf(slot);
     if (shadow == nullptr)
         return;
@@ -68,10 +68,10 @@ void findSlottables(const PrDomElement* slot, Array<PrDomNode* PR_NONNULL>* out)
 
 // dom/#find-flattened-slotables: appends a slot's slottables, or its slottable children if it has none. Each slot among
 // them that is in a shadow tree is replaced by its own flattened slottables.
-void findFlattened(const PrDomElement* slot, Array<PrDomNode* PR_NONNULL>* out) {
+void findFlattened(const PrDomElement* slot, RawArray<PrDomNode* PR_NONNULL>* out) {
     if (shadowOf(slot) == nullptr)
         return;
-    Array<PrDomNode* PR_NONNULL> slottables;
+    RawArray<PrDomNode* PR_NONNULL> slottables;
     findSlottables(slot, &slottables);
     if (slottables.count == 0) {
         for (PrDomNode* child = slot->first; child != nullptr; child = child->next) {
@@ -156,7 +156,7 @@ void unsetSlotted(DomSlots* slots, PrDomNode* node, const PrDomElement* PR_NULLA
 
 // dom/#assign-slotables. The document's render learns of each change to the slot's assigned nodes.
 void assignSlottables(PrDomElement* slot) {
-    Array<PrDomNode* PR_NONNULL> slottables;
+    RawArray<PrDomNode* PR_NONNULL> slottables;
     findSlottables(slot, &slottables);
     DomSlot* state = slotOf(slot);
     bool same = state != nullptr ? slottables.count == state->assigned.count : slottables.count == 0;
@@ -165,7 +165,7 @@ void assignSlottables(PrDomElement* slot) {
     if (!same) {
         signalSlotChange(slot);
         state = stateOf(slot);
-        Array<PrDomNode* PR_NONNULL> before = state->assigned;
+        RawArray<PrDomNode* PR_NONNULL> before = state->assigned;
         state->assigned = slottables;
         slottables = {};
         DomSlots* slots = slot->document->slots;
@@ -205,7 +205,7 @@ bool hasSlot(PrDomNode* root) {
 
 // Removes `node` from the list.
 template <typename Node>
-void forgetIn(Array<Node* PR_NONNULL>* list, const PrDomNode* node) {
+void forgetIn(RawArray<Node* PR_NONNULL>* list, const PrDomNode* node) {
     for (uint32_t i = list->count; i-- > 0;) {
         if (list->data[i] == node)
             list->erase(i);
@@ -299,7 +299,7 @@ PrDomNode* const PR_NONNULL* PR_NULLABLE domSlotAssigned(const PrDomElement* slo
     return state != nullptr ? state->assigned.data : nullptr;
 }
 
-void domSlotAssignedNodes(const PrDomElement* slot, bool flatten, Array<PrDomNode* PR_NONNULL>* out) {
+void domSlotAssignedNodes(const PrDomElement* slot, bool flatten, RawArray<PrDomNode* PR_NONNULL>* out) {
     if (flatten) {
         findFlattened(slot, out);
         return;
@@ -316,7 +316,7 @@ bool domSlotHasSlotted(const PrDomElement* slot) {
         PrDomNode* node = state->assigned.data[i];
         if (!domIsSlot(node) || shadowOf(node) == nullptr)
             return true;
-        Array<PrDomNode* PR_NONNULL> flattened;
+        RawArray<PrDomNode* PR_NONNULL> flattened;
         findFlattened(domElementFromNode(node), &flattened);
         bool any = flattened.count != 0;
         flattened.reset();
@@ -333,7 +333,7 @@ void domSlotAssign(PrDomElement* slot, PrDomNode* const PR_NONNULL* PR_NULLABLE 
     DomSlot* state = stateOf(slot);
     // html/#dom-slot-assign: each node leaves the slot that it was manually assigned to, and the slot's nodes become
     // the given nodes, each listed once.
-    Array<PrDomNode* PR_NONNULL> assigned;
+    RawArray<PrDomNode* PR_NONNULL> assigned;
     for (uint32_t i = 0; i < count; ++i) {
         PrDomNode* node = nodes[i];
         if (holds(assigned, node))
@@ -430,7 +430,7 @@ void domSlotsFire(PrDomDocument* document) {
     DomSlots* slots = document->slots;
     if (slots == nullptr || slots->signals.count == 0)
         return;
-    Array<PrDomElement* PR_NONNULL> signals = slots->signals;
+    RawArray<PrDomElement* PR_NONNULL> signals = slots->signals;
     slots->signals = {};
     PrDomEventInit init = prDomEventInitDefault();
     init.bubbles = true;

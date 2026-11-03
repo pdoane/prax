@@ -14,7 +14,7 @@ namespace pr_impl {
 namespace {
 
 std::string text(const PrDomMatrix& matrix) {
-    PrString out = {};
+    PrRawString out = {};
     REQUIRE(prCssMatrixToString(&matrix, &out) == PrStatus_Ok);
     return take(out);
 }
@@ -80,7 +80,7 @@ TEST_CASE("an inverse keeps a 2D matrix 2D, and a singular matrix becomes NaN") 
     matrix = parsed("scale(0)");
     CHECK_FALSE(prDomMatrixInvert(&matrix));
     CHECK_FALSE(matrix.is2D);
-    PrString out = {};
+    PrRawString out = {};
     CHECK(prCssMatrixToString(&matrix, &out) == PrStatus_InvalidState);
 }
 

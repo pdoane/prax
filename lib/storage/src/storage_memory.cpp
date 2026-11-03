@@ -116,14 +116,14 @@ uint32_t countStorage(const PrStorage* base) {
     return count;
 }
 
-PrString keyStorage(const PrStorage* base, uint32_t position) {
+PrRawString keyStorage(const PrStorage* base, uint32_t position) {
     MemoryStorage* storage = const_cast<MemoryStorage*>(static_cast<const MemoryStorage*>(base));
     prMutexLock(&storage->mutex);
-    PrString key;
+    PrRawString key;
     if (position < storage->index.entries.count)
-        key = prStringCopy(prStringView(&storage->index.entries.data[position].key));
+        key = prRawStringCopy(prRawStringView(&storage->index.entries.data[position].key));
     else
-        key = prStringNull();
+        key = prRawStringNull();
     prMutexUnlock(&storage->mutex);
     return key;
 }

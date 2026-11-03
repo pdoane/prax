@@ -30,7 +30,7 @@ uint32_t cssPathDataStart(CssValueRun run, uint32_t index) {
     return start;
 }
 
-void cssPathCommands(CssValueRun run, uint32_t index, Array<PrPathDataCommand>* out) {
+void cssPathCommands(CssValueRun run, uint32_t index, RawArray<PrPathDataCommand>* out) {
     uint32_t end = index + run.values[index].next;
     uint32_t argument = 0;
     for (uint32_t i = cssPathDataStart(run, index); i < end; ++i) {
@@ -47,7 +47,7 @@ void cssPathCommands(CssValueRun run, uint32_t index, Array<PrPathDataCommand>* 
 }
 
 void cssValuePoolAddAbsolutePath(CssValuePool* pool, CssValueRun run, uint32_t index) {
-    Array<PrPathDataCommand> commands;
+    RawArray<PrPathDataCommand> commands;
     cssPathCommands(run, index, &commands);
     prPathDataMakeAbsolute(commands.data, commands.count);
     uint32_t function = cssValuePoolAdd(pool, run.values[index]);
@@ -64,13 +64,13 @@ void cssSerializePath(PrTextBuffer* out, CssValueRun run, uint32_t index) {
         prTextBufferAppend(out, cssKeywordName(cssValueKeyword(&run.values[index + 1])));
         prTextBufferAppend(out, ", ");
     }
-    Array<PrPathDataCommand> commands;
+    RawArray<PrPathDataCommand> commands;
     cssPathCommands(run, index, &commands);
-    PrString data = prStringNull();
+    PrRawString data = prRawStringNull();
     prPathDataWrite(commands.data, commands.count, &data);
-    cssSerializeString(out, prStringView(&data));
+    cssSerializeString(out, prRawStringView(&data));
     prTextBufferAppendChar(out, ')');
-    prStringReset(&data);
+    prRawStringReset(&data);
     commands.reset();
 }
 

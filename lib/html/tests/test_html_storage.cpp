@@ -14,10 +14,10 @@ namespace pr_impl {
 
 namespace {
 
-std::string textOf(PrString value) {
-    PrStringView view = prStringView(&value);
-    std::string text = prStringIsNull(&value) ? "<null>" : std::string(view.data, view.size);
-    prStringReset(&value);
+std::string textOf(PrRawString value) {
+    PrStringView view = prRawStringView(&value);
+    std::string text = prRawStringIsNull(&value) ? "<null>" : std::string(view.data, view.size);
+    prRawStringReset(&value);
     return text;
 }
 

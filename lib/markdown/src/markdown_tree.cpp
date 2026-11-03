@@ -122,14 +122,14 @@ MarkdownRange markdownTreeCopyText(MarkdownTree* tree, MarkdownRange range) {
     return copy;
 }
 
-void markdownTreeFlatten(const MarkdownTree* tree, Array<MarkdownNode>* out) {
+void markdownTreeFlatten(const MarkdownTree* tree, RawArray<MarkdownNode>* out) {
     // The stored nodes whose subtrees are open, with the tree node that each came from. A paragraph that is left out
     // has no stored node and opens no subtree.
     struct Open {
         MarkdownNodeIndex node;
         uint32_t stored;
     };
-    Array<Open> open;
+    RawArray<Open> open;
     // The position in `out` at which a stored subtree last closed. A Text node before that position is not a sibling of
     // the node that follows it.
     uint32_t closedAt = 0;

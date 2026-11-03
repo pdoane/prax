@@ -13,12 +13,12 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/draw.h"
 #include "pr/draw_filter.h"
 #include "pr/hash_index.h"
 #include "pr/layout_style.h"
 #include "pr/path.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_background.h"
 #include "layout/src/layout_fragment.h"
@@ -54,7 +54,7 @@ struct LayoutEffectEntry {
     PrLayoutFilter* PR_NULLABLE filters;
     uint32_t filterCount;
     PrLayoutColorStop* PR_NULLABLE stops;
-    Array<uint8_t> key;             // the bytes that equal values share
+    RawArray<uint8_t> key;             // the bytes that equal values share
     uint32_t hash;
     uint32_t references;            // number of compositing groups that name it
 };
@@ -62,10 +62,10 @@ struct LayoutEffectEntry {
 // One kind's interned entries. Index 0 is none, which is never freed. An index names its entry until the entry is
 // freed.
 struct LayoutEffectTable {
-    Array<LayoutEffectEntry> entries;
-    Array<uint32_t> free;           // freed indices, which interning reuses
+    RawArray<LayoutEffectEntry> entries;
+    RawArray<uint32_t> free;           // freed indices, which interning reuses
     HashIndex index;
-    Array<uint32_t> candidates;     // indices whose references may have fallen to none (LayoutTable::candidates)
+    RawArray<uint32_t> candidates;     // indices whose references may have fallen to none (LayoutTable::candidates)
 };
 
 // The shapes, masks and filter lists of a tree's styles, by LayoutEffectKind.

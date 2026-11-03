@@ -129,7 +129,7 @@ JSValue dataListOptions(JSContext* ctx, JSValueConst listObject) {
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLOptionElement (html/#htmloptionelement)
 
-using OptionText = PrString (*)(const PrHtmlOptionElement*);
+using OptionText = PrRawString (*)(const PrHtmlOptionElement*);
 
 template <OptionText Read>
 JSValue optionString(JSContext* ctx, JSValueConst optionObject) {
@@ -348,7 +348,7 @@ bool optionsIndexedSet(JSContext* ctx, JSValueConst, void* handle, uint32_t inde
 
 constexpr JsIndexed kOptionsIndexed = {optionsIndexedLength, optionsIndexedItem, optionsIndexedSet};
 
-bool optionsNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
+bool optionsNames(JSContext* ctx, void* handle, RawArray<JSAtom>* out) {
     return jsNameAtoms(ctx, static_cast<const PrDomHtmlCollection*>(handle), prDomHtmlCollectionNames, out);
 }
 

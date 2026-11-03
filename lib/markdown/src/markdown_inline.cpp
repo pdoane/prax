@@ -359,7 +359,7 @@ uint32_t classOf(char character, bool canOpen, uint32_t length) {
 // Resolves the emphasis, the quotes and the other pairs among the delimiters at or after `bottom`
 // (commonmark/#process-emphasis), and removes those delimiters.
 void processEmphasis(Subject& s, uint32_t bottom) {
-    Array<MarkdownDelimiter>& delimiters = s.parser->delimiters;
+    RawArray<MarkdownDelimiter>& delimiters = s.parser->delimiters;
     uint32_t openersBottom[kDelimiterClasses];
     for (uint32_t i = 0; i < kDelimiterClasses; ++i)
         openersBottom[i] = bottom;
@@ -428,7 +428,7 @@ void processEmphasis(Subject& s, uint32_t bottom) {
 
 // Returns the offset after the closing backtick string of `length` that follows `from`, or 0 if there is none.
 size_t closingBackticks(Subject& s, size_t from, uint32_t length) {
-    Array<uint32_t>& backticks = s.parser->backticks;
+    RawArray<uint32_t>& backticks = s.parser->backticks;
     if (!s.clearedBackticks) {
         backticks.resize(kMaxBacktickRun + 1);
         prMemZero(backticks.data, backticks.count * sizeof(uint32_t));
@@ -708,7 +708,7 @@ void handleNewline(Subject& s) {
 // Links and images
 
 void pushBracket(Subject& s, bool image, MarkdownNodeIndex node) {
-    Array<MarkdownBracket>& brackets = s.parser->brackets;
+    RawArray<MarkdownBracket>& brackets = s.parser->brackets;
     if (brackets.count != 0)
         brackets.last().bracketAfter = true;
     MarkdownBracket& bracket = brackets.emplace();
@@ -822,7 +822,7 @@ bool footnoteReference(Subject& s, const MarkdownBracket& opener, size_t initial
 void handleCloseBracket(Subject& s) {
     ++s.pos;
     size_t initial = s.pos;
-    Array<MarkdownBracket>& brackets = s.parser->brackets;
+    RawArray<MarkdownBracket>& brackets = s.parser->brackets;
     if (brackets.count == 0) {
         appendText(s, "]");
         return;
@@ -1198,7 +1198,7 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
 // Joins each run of adjacent plain Text nodes into one, and finds the email autolinks in it, in the inlines under
 // `parent` that are not in a link, code or math.
 void postprocessAutolinks(Subject& s, MarkdownNodeIndex parent) {
-    Array<MarkdownNodeIndex> pending;
+    RawArray<MarkdownNodeIndex> pending;
     pending.push(parent);
     while (pending.count != 0) {
         MarkdownNodeIndex container = pending.last();

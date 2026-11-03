@@ -110,16 +110,16 @@ struct LayoutTableBorder {
 
 // Scratch memory that table layout keeps between layouts: the parts of the tables being laid out, innermost last.
 struct LayoutTableScratch {
-    Array<LayoutTableCell> cells;
-    Array<LayoutTableColumn> columns;
-    Array<LayoutTableRow> rows;
-    Array<LayoutTableGroup> groups;
-    Array<LayoutTableColumnBox> boxes;
-    Array<LayoutTableAside> captions;
-    Array<LayoutTableAside> outOfFlow;
-    Array<uint32_t> order;          // the rows in grid order, then the busy columns while cells are placed
-    Array<LayoutTableBorder> borders;
-    Array<LayoutGridBorder> segments;
+    RawArray<LayoutTableCell> cells;
+    RawArray<LayoutTableColumn> columns;
+    RawArray<LayoutTableRow> rows;
+    RawArray<LayoutTableGroup> groups;
+    RawArray<LayoutTableColumnBox> boxes;
+    RawArray<LayoutTableAside> captions;
+    RawArray<LayoutTableAside> outOfFlow;
+    RawArray<uint32_t> order;          // the rows in grid order, then the busy columns while cells are placed
+    RawArray<LayoutTableBorder> borders;
+    RawArray<LayoutGridBorder> segments;
 };
 
 namespace {
@@ -512,7 +512,7 @@ void orderRows(Table& t) {
         else if (display == PrLayoutDisplay_TableFooterGroup && footer == kNone)
             footer = g;
     }
-    Array<uint32_t>& order = t.scratch().order;
+    RawArray<uint32_t>& order = t.scratch().order;
     auto add = [&](uint32_t g) {
         const LayoutTableGroup& group = t.group(g);
         for (uint32_t r = group.firstRow; r < group.firstRow + group.rowCount; ++r) {
@@ -535,7 +535,7 @@ void orderRows(Table& t) {
 // row. Then adds the columns that the cells reach past the column boxes.
 void placeCells(Table& t) {
     // For each column, the first grid row below the cells placed so far that span it, in the rows' order.
-    Array<uint32_t>& busy = t.scratch().order;
+    RawArray<uint32_t>& busy = t.scratch().order;
     uint32_t busyMark = busy.count;
     for (uint32_t grid = 0; grid < t.rowCount; ++grid) {
         const LayoutTableRow& row = t.gridRow(grid);
@@ -571,7 +571,7 @@ void mergeColumns(Table& t) {
     if (t.fixed || t.columnCount < 2)
         return;
     // starts[c] is set if a cell starts in column c, and ends[c] if a cell ends in it.
-    Array<uint32_t>& flags = t.scratch().order;
+    RawArray<uint32_t>& flags = t.scratch().order;
     uint32_t mark = flags.count;
     for (uint32_t c = 0; c < t.columnCount; ++c)
         flags.push(0);
@@ -691,7 +691,7 @@ struct Resolution {
 };
 
 // Returns the cell that covers the grid slot at `row` and `column`, or kNone. `slots` holds the cells by slot.
-uint32_t slotCell(const Table& t, const Array<uint32_t>& slots, uint32_t mark, uint32_t row, uint32_t column) {
+uint32_t slotCell(const Table& t, const RawArray<uint32_t>& slots, uint32_t mark, uint32_t row, uint32_t column) {
     return slots.data[mark + row * t.columnCount + column];
 }
 
@@ -704,7 +704,7 @@ void resolveBorders(Table& t) {
     const LayoutTree* tree = t.state.tree;
     LayoutTableScratch& s = t.scratch();
     // The cells by slot, in the busy array's place.
-    Array<uint32_t>& slots = s.order;
+    RawArray<uint32_t>& slots = s.order;
     uint32_t mark = slots.count;
     for (uint32_t i = 0; i < t.rowCount * t.columnCount; ++i)
         slots.push(kNone);
@@ -1757,7 +1757,7 @@ void pushCell(Table& t, uint32_t i, LayoutLogicalOffset at, const LayoutSpace& c
 // placed in the fragment around it.
 void pushRows(Table& t, uint32_t g, LayoutLogicalOffset origin, const LayoutSpace& cells, PrLayoutVec fallback) {
     const LayoutTableGroup group = t.group(g);
-    Array<LayoutLogicalChild>& children = t.state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = t.state.scratch->children;
     for (uint32_t r = group.firstRow; r < group.firstRow + group.rowCount; ++r) {
         LayoutTableRow row = t.row(r);
         Area area = areaOf(t, 0, t.columnCount, row.grid, 1);
@@ -1783,7 +1783,7 @@ void pushRows(Table& t, uint32_t g, LayoutLogicalOffset origin, const LayoutSpac
 // A segment across the inline axis also covers the halves of the lines along the block axis that meet it at its ends,
 // so that the corners are drawn.
 uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset grid) {
-    Array<LayoutGridBorder>& segments = t.scratch().segments;
+    RawArray<LayoutGridBorder>& segments = t.scratch().segments;
     uint32_t mark = segments.count;
     auto endHalf = [](PrLayoutUnit width) { return layoutUnit(width.raw / 2); };
     auto startHalf = [&](PrLayoutUnit width) { return width - endHalf(width); };
@@ -1850,7 +1850,7 @@ uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset g
 // corner of the grid in the table's border box: its column groups, columns, row groups, rows and cells in tree order.
 // Each column and column group is as tall as the rows.
 void pushParts(Table& t, LayoutLogicalOffset at, const LayoutSpace& cells, PrLayoutVec fallback) {
-    Array<LayoutLogicalChild>& children = t.state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = t.state.scratch->children;
     for (uint32_t b = 0; b < t.boxCount; ++b) {
         const LayoutTableColumnBox box = t.box(b);
         if (box.group != kNone)
@@ -1987,7 +1987,7 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
 
     // The captions come first, so that the block size that a container gives the table leaves the rest to its grid.
     LayoutSpace captions = captionSpace(t, space, input.inlineSize);
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     PrLayoutUnit gridStart = pushCaptions(t, captions, PrLayoutCaptionSide_Top, kLayoutUnitZero);
     uint32_t bottomMark = children.count;
     PrLayoutUnit bottoms = pushCaptions(t, captions, PrLayoutCaptionSide_Bottom, kLayoutUnitZero);
@@ -2012,7 +2012,7 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
         children.data[i].offset.blockOffset += gridEnd;
     uint32_t bottomCount = children.count - bottomMark;
     LayoutTableScratch& s = t.scratch();
-    Array<LayoutLogicalChild> bottom;
+    RawArray<LayoutLogicalChild> bottom;
     bottom.append(children.data + bottomMark, bottomCount);
     children.count = bottomMark;
     LayoutLogicalOffset gridAt{kLayoutUnitZero, gridStart};
@@ -2047,7 +2047,7 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
 
 LayoutFragment* PR_NULLABLE layoutTableFinish(LayoutState& state, LayoutFragment* PR_NULLABLE built,
         const LayoutTableOutcome& outcome) {
-    Array<LayoutGridBorder>& segments = state.scratch->table->segments;
+    RawArray<LayoutGridBorder>& segments = state.scratch->table->segments;
     LayoutFragment* fragment = built;
     if (built != nullptr)
         fragment = layoutFragmentTable(built, outcome.grid, segments.data + outcome.borderMark, outcome.borderCount);

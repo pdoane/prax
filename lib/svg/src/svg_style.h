@@ -5,13 +5,13 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/color.h"
 #include "pr/geom.h"
 #include "pr/layout_animation.h"
 #include "pr/path.h"
 #include "pr/path_data.h"
 #include "pr/path_stroke.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_style.h"
@@ -130,7 +130,7 @@ PrStringView svgRunUrl(CssValueRun run);
 
 // Appends to `out` the commands of a computed d (SVG2/paths.html#TheDProperty) in absolute coordinates. none appends
 // nothing. A fill rule in path() does not apply, because the fill-rule property decides how a path fills.
-void svgStylePathCommands(const CssComputedStyle* style, Array<PrPathDataCommand>* out);
+void svgStylePathCommands(const CssComputedStyle* style, RawArray<PrPathDataCommand>* out);
 
 // The most dashes that a stroke holds. A longer list strokes without dashes.
 constexpr uint32_t kSvgMaxDashes = 16;

@@ -3,7 +3,6 @@
 #include "pr/text_view.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/hash.h"
@@ -11,6 +10,7 @@
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/text_edit_layout.h"
 #include "pr/text_estimate.h"
@@ -29,15 +29,15 @@ constexpr uint32_t kSpliceLines = 4096;
 
 // The heights of a run of lines, and their sum.
 struct HeightChunk {
-    Array<float> heights;           // of each line in turn, from the chunk's first line
-    Array<uint8_t> exact;           // like `heights`: a row has measured the line since its text or width changed
+    RawArray<float> heights;           // of each line in turn, from the chunk's first line
+    RawArray<uint8_t> exact;           // like `heights`: a row has measured the line since its text or width changed
     double sum;
 };
 
 // A sum tree of two levels over the heights of the lines. Reading nearby lines in turn costs little, because a cursor
 // stays at the last chunk that was read.
 struct HeightIndex {
-    Array<HeightChunk> chunks;
+    RawArray<HeightChunk> chunks;
     double total;
     uint32_t lines;
     uint32_t cursor;                // the chunk last read
@@ -228,32 +228,32 @@ struct TextViewState {
     bool framed;
     bool reveal;
 
-    Array<Row> rows;
-    Array<RowPiece> pieces;
+    RawArray<Row> rows;
+    RawArray<RowPiece> pieces;
     uint32_t lastPiece;             // the piece that the last lookup by node found
     uint64_t rowsVersion;           // the version of the text that `rows` shows
     bool changedView;               // the next frame shows something different
 
     // What the geometry answers with, valid until its next call.
-    Array<char> lineText;
+    RawArray<char> lineText;
     uint32_t lineTextLine;
     bool hasLineText;
-    Array<PrLayoutLineStop> found;
-    Array<PrTextEditLineStop> stops;
+    RawArray<PrLayoutLineStop> found;
+    RawArray<PrTextEditLineStop> stops;
 
-    Array<char> bytes;
-    Array<PrLayoutHighlight> highlights;
-    Array<PrLayoutCaret> carets;
-    Array<PrTextEditSelection> scratch;
-    Array<PrTextEditChange> changes;
+    RawArray<char> bytes;
+    RawArray<PrLayoutHighlight> highlights;
+    RawArray<PrLayoutCaret> carets;
+    RawArray<PrTextEditSelection> scratch;
+    RawArray<PrTextEditChange> changes;
 
     // The spans of the window, in the frame that the view declares, the spans of each layer after those of the layer
     // before it. Each layer's spans end at its entry of `layerEnds`.
-    Array<PrTextViewSpan> spans;
+    RawArray<PrTextViewSpan> spans;
     uint32_t layerEnds[kPrTextViewMaxSpanLayers];
     uint32_t layerCount;
 
-    Array<PrTextViewGap> gaps;
+    RawArray<PrTextViewGap> gaps;
 };
 
 uint32_t lineBytes(const PrTextEditBuffer* buffer, uint32_t line) {
@@ -281,7 +281,7 @@ uint64_t sheetKey(const TextViewState* v) {
 
 // Returns the size of the gap before `line`, or zero.
 float gapBefore(const TextViewState* v, uint32_t line) {
-    const Array<PrTextViewGap>& gaps = v->gaps;
+    const RawArray<PrTextViewGap>& gaps = v->gaps;
     uint32_t at = partitionPoint(0, gaps.count, [&](uint32_t i) { return gaps.data[i].line < line; });
     return at < gaps.count && gaps.data[at].line == line ? gaps.data[at].size : 0;
 }
@@ -718,7 +718,7 @@ PrTextEditGeometry geometryOf(TextViewState* v) {
 }
 
 // Writes the selections in the order of the document to `out`.
-void selectionsInOrder(const TextViewState* v, Array<PrTextEditSelection>& out) {
+void selectionsInOrder(const TextViewState* v, RawArray<PrTextEditSelection>& out) {
     uint32_t count = prTextEditViewSelectionCount(v->edit);
     const PrTextEditSelection* selections = prTextEditViewSelections(v->edit);
     out.clear();
@@ -1355,7 +1355,7 @@ void prTextViewEraseSelection(PrTextView* view) {
     eraseSelections(view, PrTextEditCommand_None);
 }
 
-PrString prTextViewSelectedText(const PrTextView* view) {
+PrRawString prTextViewSelectedText(const PrTextView* view) {
     PrTextView* v = const_cast<PrTextView*>(view);
     selectionsInOrder(v, v->scratch);
     v->bytes.clear();
@@ -1373,7 +1373,7 @@ PrString prTextViewSelectedText(const PrTextView* view) {
         v->bytes.resize(at + (high - low));
         prTextEditBufferCopy(v->buffer, low, high, v->bytes.data + at);
     }
-    return prStringCopy(PrStringView{v->bytes.data, v->bytes.count});
+    return prRawStringCopy(PrStringView{v->bytes.data, v->bytes.count});
 }
 
 void prTextViewAddCaretOnLine(PrTextView* view, PrTextEditLineStep step) {

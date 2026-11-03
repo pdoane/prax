@@ -56,7 +56,7 @@ void forgetResponse(JSContext* ctx, JSValueConst object) {
 // The client of a window's requests: the window's document's base URL, and its browsing context's fetches and the
 // window's timers. Its context is the window.
 
-PrString windowBaseUrl(void* PR_NULLABLE context) {
+PrRawString windowBaseUrl(void* PR_NULLABLE context) {
     PrDomDocument* document = prHtmlWindowDocument(static_cast<PrHtmlWindow*>(context));
     return prDomNodeBaseUri(prDomDocumentAsNode(document));
 }
@@ -227,7 +227,7 @@ JSValue xhrSend(JSContext* ctx, JSValueConst requestObject, int argc, JSValueCon
     PrByteView bytes{nullptr, 0};
     PrStringView contentType{nullptr, 0};
     StringArgument text = {ctx};
-    PrString form = prStringNull();
+    PrRawString form = prRawStringNull();
     const uint8_t* data = nullptr;
     size_t size = 0;
     const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, body);
@@ -240,7 +240,7 @@ JSValue xhrSend(JSContext* ctx, JSValueConst requestObject, int argc, JSValueCon
         bytes = PrByteView{data != nullptr ? data : reinterpret_cast<const uint8_t*>(""), size};
     } else if (PrUrlSearchParams* params = prJsUrlSearchParamsFromValue(ctx, body)) {
         form = prUrlSearchParamsToString(params);
-        PrStringView view = prStringView(&form);
+        PrStringView view = prRawStringView(&form);
         bytes = PrByteView{reinterpret_cast<const uint8_t*>(view.data != nullptr ? view.data : ""), view.size};
         contentType = "application/x-www-form-urlencoded;charset=UTF-8";
     } else {
@@ -253,7 +253,7 @@ JSValue xhrSend(JSContext* ctx, JSValueConst requestObject, int argc, JSValueCon
     forgetResponse(ctx, requestObject);
     prXhrSetActivity(request, activity, JS_GetRuntime(ctx));
     PrStatus status = prXhrSend(request, bytes, contentType);
-    prStringReset(&form);
+    prRawStringReset(&form);
     return result(ctx, status);
 }
 

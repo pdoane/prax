@@ -3,12 +3,12 @@
 #include "pr/audio_mixer.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 
@@ -81,7 +81,7 @@ struct AudioSource {
 struct AudioMixer {
     PrAudioOutput* output;
     PrAudioFormat format;
-    Array<AudioSource*> sources;
+    RawArray<AudioSource*> sources;
     float* block;               // by frame and channel
     double latency;             // the output's latency, read when it starts
 

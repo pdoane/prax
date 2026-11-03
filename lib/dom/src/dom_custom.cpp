@@ -15,15 +15,15 @@ namespace pr_impl {
 namespace {
 
 // Returns a string as a view, or the null view for the null string.
-PrStringView viewOf(const PrString* text) {
-    return prStringIsNull(text) ? PrStringView{} : prStringView(text);
+PrStringView viewOf(const PrRawString* text) {
+    return prRawStringIsNull(text) ? PrStringView{} : prRawStringView(text);
 }
 
 void resetReaction(DomCustomReactionEntry* reaction) {
-    prStringReset(&reaction->name);
-    prStringReset(&reaction->oldValue);
-    prStringReset(&reaction->value);
-    prStringReset(&reaction->space);
+    prRawStringReset(&reaction->name);
+    prRawStringReset(&reaction->oldValue);
+    prRawStringReset(&reaction->value);
+    prRawStringReset(&reaction->space);
     domDocumentRelease(reaction->oldDocument);
     domDocumentRelease(reaction->newDocument);
 }
@@ -68,7 +68,7 @@ void runReactions(PrDomElement* element) {
 
 // html/#invoke-custom-element-reactions: runs each element's reactions in order. The queue may grow while they run.
 // Releases each element once its reactions are done.
-void invokeReactions(Array<PrDomElement* PR_NONNULL>* queue) {
+void invokeReactions(RawArray<PrDomElement* PR_NONNULL>* queue) {
     for (uint32_t i = 0; i < queue->count; ++i) {
         PrDomElement* element = queue->data[i];
         runReactions(element);
@@ -113,9 +113,9 @@ void enqueueCallback(PrDomElement* element, PrDomCustomCallback callback, PrStri
     if (newDocument != nullptr)
         domDocumentRetain(newDocument);
     custom->reactions.push(DomCustomReactionEntry{
-        nullptr, callback, prStringCopy(name),
-        prStringCopy(oldValue), prStringCopy(value),
-        prStringCopy(space), oldDocument, newDocument,
+        nullptr, callback, prRawStringCopy(name),
+        prRawStringCopy(oldValue), prRawStringCopy(value),
+        prRawStringCopy(space), oldDocument, newDocument,
     });
     enqueueElement(element, registry);
 }
@@ -144,7 +144,7 @@ void upgrade(PrDomElement* element, void* definition, const PrDomCustomElementRe
     for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
             attribute = static_cast<PrDomAttr*>(attribute->next)) {
         enqueueCallback(element, PrDomCustomCallback_AttributeChanged,
-            prStringView(&attribute->name), {}, prStringView(&attribute->value),
+            prRawStringView(&attribute->name), {}, prRawStringView(&attribute->value),
             domNamespaceUrl(element->document, attribute->space));
     }
     if (domIsConnected(element))
@@ -227,7 +227,7 @@ PrDomElement* domElementCreateHtml(PrDomDocument* document, PrDomTag tag, PrStri
     }
     PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, tag, name);
     if (is.data != nullptr)
-        domCustomElementFromElement(element)->is = prStringCopy(is);
+        domCustomElementFromElement(element)->is = prRawStringCopy(is);
     // No element that a spec defines has a valid custom element name.
     if (definition != nullptr || is.data != nullptr || (tag == PrDomTag_Unknown && domIsValidCustomElementName(name)))
         element->customState = PrDomCustomElementState_Undefined;
@@ -312,7 +312,7 @@ DomCustomElement* domCustomElementFromElement(PrDomElement* element) {
     DomElementState* state = domElementState(element);
     if (state->custom == nullptr) {
         state->custom = allocZeroed<DomCustomElement>();
-        state->custom->is = prStringNull();
+        state->custom->is = prRawStringNull();
     }
     return state->custom;
 }
@@ -320,7 +320,7 @@ DomCustomElement* domCustomElementFromElement(PrDomElement* element) {
 bool domCustomHasState(const PrDomElement* element, PrStringView state) {
     const DomCustomElement* custom = element->state != nullptr ? element->state->custom : nullptr;
     for (uint32_t i = 0; custom != nullptr && i < custom->states.count; ++i) {
-        if (prStringView(&custom->states.data[i]) == state)
+        if (prRawStringView(&custom->states.data[i]) == state)
             return true;
     }
     return false;
@@ -332,7 +332,7 @@ void domCustomDestroy(DomCustomElement* PR_NULLABLE custom) {
     clearReactions(custom);
     custom->reactions.reset();
     stringsReset(&custom->states);
-    prStringReset(&custom->is);
+    prRawStringReset(&custom->is);
     prMemoryFree(custom);
 }
 
@@ -344,11 +344,11 @@ void domCustomConstructed(PrDomAgent* agent, PrDomElement* element) {
 }
 
 void domCustomReactionsPush(PrDomAgent* agent) {
-    agent->queues.push(Array<PrDomElement* PR_NONNULL>{});
+    agent->queues.push(RawArray<PrDomElement* PR_NONNULL>{});
 }
 
 void domCustomReactionsPop(PrDomAgent* agent) {
-    Array<PrDomElement* PR_NONNULL> queue = agent->queues.data[--agent->queues.count];
+    RawArray<PrDomElement* PR_NONNULL> queue = agent->queues.data[--agent->queues.count];
     if (queue.data == nullptr)
         return;
     invokeReactions(&queue);

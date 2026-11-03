@@ -41,7 +41,7 @@ namespace {
 
 // Returns what `serialize` writes, as a string.
 template <typename Serialize>
-PrString serialized(Serialize serialize) {
+PrRawString serialized(Serialize serialize) {
     PrTextBuffer buffer = {};
     serialize(&buffer);
     return prTextBufferTake(&buffer);
@@ -103,7 +103,7 @@ bool setPrelude(PrCssRule* rule, PrStringView text) {
 
 // Returns the serialization of the prelude of the rule behind a handle.
 template <typename Handle>
-PrString preludeText(const Handle* handle) {
+PrRawString preludeText(const Handle* handle) {
     const CssRuleData* rule = dataOf(handle);
     return serialized([&](PrTextBuffer* out) { cssSerializePrelude(out, rule); });
 }
@@ -121,7 +121,7 @@ Handle* PR_NULLABLE blockOf(PrCssStyleDeclaration* PR_NULLABLE handle, CssAtRule
 }
 
 // Returns the serialization of the values of `run`.
-PrString serializedValues(CssValueRun run) {
+PrRawString serializedValues(CssValueRun run) {
     return serialized([&](PrTextBuffer* out) { cssSerializeValues(out, run); });
 }
 
@@ -165,7 +165,7 @@ uint32_t eachMatching(CssValueRun run, Item* PR_NULLABLE items, uint32_t capacit
 }
 
 // Writes to `items` the serialization of each top-level value of `run` that is a match of `production` (eachMatching).
-uint32_t serializeEach(CssValueRun run, CssValueDef production, PrString* PR_NULLABLE items, uint32_t capacity) {
+uint32_t serializeEach(CssValueRun run, CssValueDef production, PrRawString* PR_NULLABLE items, uint32_t capacity) {
     return eachMatching(run, items, capacity,
         [&](const CssValueNode* value) { return cssValueIsProduction(value, production); },
         [&](uint32_t i) { return serializedValues(cssValueSubtree(run, i)); });
@@ -179,17 +179,17 @@ uint32_t textOfEach(CssValueRun run, PrCssValueKind kind, PrStringView* PR_NULLA
 
 // Returns the <container-name> or the <container-query> of the <container-condition> at `index` of an @container rule's
 // prelude, or the empty string if the condition has none.
-PrString conditionPart(CssValueRun run, uint32_t index, CssValueDef production) {
+PrRawString conditionPart(CssValueRun run, uint32_t index, CssValueDef production) {
     CssValueRun condition = cssValueChildren(run, index);
     uint32_t part = findProduction(condition, production);
-    return part != condition.count ? serializedValues(cssValueSubtree(condition, part)) : prStringEmpty();
+    return part != condition.count ? serializedValues(cssValueSubtree(condition, part)) : prRawStringEmpty();
 }
 
 // Returns the part of an @container rule's condition if it has one condition, or the empty string if it has several
 // (css-conditional-5/#dom-csscontainerrule-containername).
-PrString soleConditionPart(const PrCssContainerRule* rule, CssValueDef production) {
+PrRawString soleConditionPart(const PrCssContainerRule* rule, CssValueDef production) {
     CssValueRun run = preludeOf(rule);
-    return run.values[0].next == run.count ? conditionPart(run, 0, production) : prStringEmpty();
+    return run.values[0].next == run.count ? conditionPart(run, 0, production) : prRawStringEmpty();
 }
 
 // Returns the declaration of `descriptor` in the rule's block, or null if the block declares none.
@@ -201,18 +201,18 @@ const CssDeclaration* PR_NULLABLE declarationOf(const CssRuleData* rule, PrCssDe
 // Returns the serialization of the value of the declaration of `descriptor` in the rule's block, or the empty string if
 // the block declares none.
 template <typename Handle>
-PrString descriptorValue(const Handle* handle, PrCssDescriptor descriptor) {
+PrRawString descriptorValue(const Handle* handle, PrCssDescriptor descriptor) {
     const CssRuleData* rule = dataOf(handle);
     const CssDeclaration* declaration = declarationOf(rule, descriptor);
     if (declaration == nullptr)
-        return prStringEmpty();
+        return prRawStringEmpty();
     return serialized([&](PrTextBuffer* out) { cssSerializeDeclarationValue(out, &rule->style, declaration); });
 }
 
 // Returns the selectors of an @scope rule's scoping root, or of its limit, or the null string if the rule has none. The
 // prelude is a <scope-boundaries>: the root's selectors in parentheses if written, then `to` and the limit's selectors
 // in parentheses if written. The rule's selectors are the root's, then the limit's (cssCompilePreludeSelectors).
-PrString scopeSelectors(const PrCssScopeRule* rule, bool limit) {
+PrRawString scopeSelectors(const PrCssScopeRule* rule, bool limit) {
     const CssRuleData* data = dataOf(rule);
     CssValueRun run = cssValueListRun(&data->prelude);
     uint32_t counts[2] = {0, 0};    // number of selectors of the root and of the limit
@@ -228,7 +228,7 @@ PrString scopeSelectors(const PrCssScopeRule* rule, bool limit) {
         }
     }
     if (!written[limit] || data->selectors == nullptr)
-        return prStringNull();
+        return prRawStringNull();
     return serialized([&](PrTextBuffer* out) {
         cssSerializeSelectorRange(out, data->selectors, limit ? counts[0] : 0, counts[limit]);
     });
@@ -279,22 +279,22 @@ uint32_t functionParameters(CssValueRun run, PrCssFunctionParameter* PR_NULLABLE
         if (type.count != 0 && cssValueIsFunction(&type.values[0], PrCssKeyword_Type))
             type = cssValueChildren(type, 0);
         PrCssFunctionParameter item;
-        item.name = prStringCopy(cssValueText(parameter, parameter.values));
-        item.type = type.count != 0 ? serializedValues(type) : prStringExternal("*");
+        item.name = prRawStringCopy(cssValueText(parameter, parameter.values));
+        item.type = type.count != 0 ? serializedValues(type) : prRawStringExternal("*");
         if (colon < parameter.count)
             item.defaultValue = serializedValues(CssValueRun{
                 parameter.values + colon + 1, parameter.count - colon - 1,
                 parameter.text,
             });
         else
-            item.defaultValue = prStringNull();
+            item.defaultValue = prRawStringNull();
         return item;
     });
 }
 
 // Serializes a mixin or apply name as an identifier, with any necessary escaping.
 template <typename Handle>
-PrString serializedName(const Handle* handle) {
+PrRawString serializedName(const Handle* handle) {
     PrStringView name = preludeName(handle);
     return serialized([&](PrTextBuffer* out) { cssSerializeIdent(out, name); });
 }
@@ -302,7 +302,7 @@ PrString serializedName(const Handle* handle) {
 // Returns the depth of the deepest tree of a run, counting its roots as depth one.
 uint32_t depthOf(CssValueRun run) {
     uint32_t deepest = 0;
-    Array<uint32_t> ends;
+    RawArray<uint32_t> ends;
     for (uint32_t i = 0; i < run.count; ++i) {
         while (ends.count != 0 && ends.last() <= i)
             ends.pop();
@@ -544,7 +544,7 @@ void setCounterStyleDescriptor(PrCssRule* rule, PrCssDescriptor descriptor, PrSt
 // (PrCssFont). The families' names are views of `names`.
 struct CssFont {
     PrTextBuffer names = {};
-    Array<PrFontFamily> families;
+    RawArray<PrFontFamily> families;
     PrFontStyle style;
     bool smallCaps;
     PrTextBuffer serialization = {};
@@ -648,7 +648,7 @@ struct PrCssFont : CssFont {};
 // ---------------------------------------------------------------------------------------------------------------------
 // MediaList
 
-PrString prCssMediaListMediaText(const PrCssMediaList* list) {
+PrRawString prCssMediaListMediaText(const PrCssMediaList* list) {
     const CssMediaQueries* queries = cssMediaListQueries(list);
     return serialized([&](PrTextBuffer* out) { cssSerializeMediaList(out, queries); });
 }
@@ -663,10 +663,10 @@ uint32_t prCssMediaListLength(const PrCssMediaList* list) {
     return cssMediaListLength(cssMediaListQueries(list));
 }
 
-PrString prCssMediaListQueryAt(const PrCssMediaList* list, uint32_t index) {
+PrRawString prCssMediaListQueryAt(const PrCssMediaList* list, uint32_t index) {
     const CssMediaQueries* queries = cssMediaListQueries(list);
     if (index >= cssMediaListLength(queries))
-        return prStringNull();
+        return prRawStringNull();
     return serializedValues(cssMediaQueryAt(queries, index));
 }
 
@@ -692,7 +692,7 @@ PrCssMediaQueryList* PR_NULLABLE prCssMediaQueryListQuery(PrDomEventTarget* PR_N
     return static_cast<PrCssMediaQueryList*>(object);
 }
 
-PrString prCssMediaQueryListMedia(const PrCssMediaQueryList* mediaQueryList) {
+PrRawString prCssMediaQueryListMedia(const PrCssMediaQueryList* mediaQueryList) {
     const CssMediaQueries* list = &mediaQueryList->media;
     return serialized([&](PrTextBuffer* out) { cssSerializeMediaList(out, list); });
 }
@@ -725,7 +725,7 @@ void prCssMediaQueryListRelease(PrCssMediaQueryList* PR_NULLABLE list) {
 // StyleSheet
 
 PrStringView prCssStyleSheetHref(const PrCssStyleSheet* sheet) {
-    return prStringView(&sheet->href);
+    return prRawStringView(&sheet->href);
 }
 
 PrDomNode* PR_NULLABLE prCssStyleSheetOwnerNode(PrCssStyleSheet* sheet) {
@@ -738,7 +738,7 @@ PrCssStyleSheet* PR_NULLABLE prCssStyleSheetParentStyleSheet(PrCssStyleSheet* sh
 }
 
 PrStringView prCssStyleSheetTitle(const PrCssStyleSheet* sheet) {
-    return prStringView(&sheet->title);
+    return prRawStringView(&sheet->title);
 }
 
 PrCssMediaList* prCssStyleSheetMedia(PrCssStyleSheet* sheet) {
@@ -765,7 +765,7 @@ PrCssStyleSheet* prCssStyleSheetCreate(const PrCssStyleSheetInit* PR_NULLABLE in
     PrCssStyleSheetInit defaults = prCssStyleSheetInitDefault();
     if (init == nullptr)
         init = &defaults;
-    sheet->href = prStringCopy(init->baseUrl);
+    sheet->href = prRawStringCopy(init->baseUrl);
     sheet->disabled = init->disabled;
     // cssom-1/#dom-cssstylesheet-cssstylesheet: the media are a MediaList's queries, or the queries that the string
     // holds.
@@ -835,7 +835,7 @@ PrStatus prCssStyleSheetAddRule(PrCssStyleSheet* sheet, PrStringView selector, P
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSRule
 
-PrString prCssRuleCssText(const PrCssRule* rule) {
+PrRawString prCssRuleCssText(const PrCssRule* rule) {
     const CssRuleData* data = dataOf(rule);
     return serialized([&](PrTextBuffer* out) { cssSerializeRule(out, data); });
 }
@@ -924,7 +924,7 @@ PrCssStyleRule* PR_NULLABLE prCssStyleRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssStyleRule>(object, PrCssRuleKind_Style);
 }
 
-PrString prCssStyleRuleSelectorText(const PrCssStyleRule* rule) {
+PrRawString prCssStyleRuleSelectorText(const PrCssStyleRule* rule) {
     const CssRuleData* data = dataOf(rule);
     return serialized([&](PrTextBuffer* out) { cssSerializeSelectorText(out, data); });
 }
@@ -932,7 +932,7 @@ PrString prCssStyleRuleSelectorText(const PrCssStyleRule* rule) {
 void prCssStyleRuleSetSelectorText(PrCssStyleRule* rule, PrStringView value) {
     CssEdit edit;
     cssEditBegin(&edit, cssRuleParser(rule));
-    Array<CssRuleChain> outer;
+    RawArray<CssRuleChain> outer;
     CssEditResult result = cssStyleRulePrepareSelectorText(&edit, cssRuleChain(rule->parent, &outer), sheetDataOf(rule), value);
     outer.reset();
     if (result == CssEditResult_Changed)
@@ -966,28 +966,28 @@ PrCssStyleSheet* PR_NULLABLE prCssImportRuleStyleSheet(PrCssImportRule* rule) {
     return cssImportRuleSheet(rule);
 }
 
-PrString prCssImportRuleLayerName(const PrCssImportRule* rule) {
+PrRawString prCssImportRuleLayerName(const PrCssImportRule* rule) {
     // cssom-1/#dom-cssimportrule-layername: the empty string for `layer`, the layer's name for layer(), and the null
     // string for neither.
     CssValueRun run = preludeOf(rule);
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
         if (cssValueIsKeyword(value, PrCssKeyword_Layer))
-            return prStringEmpty();
+            return prRawStringEmpty();
         if (cssValueIsFunction(value, PrCssKeyword_Layer))
             return serializedValues(cssValueChildren(run, i));
     }
-    return prStringNull();
+    return prRawStringNull();
 }
 
-PrString prCssImportRuleSupportsText(const PrCssImportRule* rule) {
+PrRawString prCssImportRuleSupportsText(const PrCssImportRule* rule) {
     // cssom-1/#dom-cssimportrule-supportstext: the contents of supports(), or the null string if the data has none. All
     // the selectors that the data holds belong to the condition.
     const CssRuleData* data = dataOf(rule);
     CssValueRun run = cssValueListRun(&data->prelude);
     uint32_t condition = findProduction(run, CssValueDef_SupportsImportCondition);
     if (condition == run.count)
-        return prStringNull();
+        return prRawStringNull();
     return serialized([&](PrTextBuffer* out) {
         cssSerializePreludeValues(out, cssValueChildren(run, condition + 1), false, data->selectors, 0);
     });
@@ -1024,7 +1024,7 @@ PrCssConditionRule* PR_NULLABLE prCssConditionRuleQuery(PrCssRule* PR_NULLABLE o
     return conditional ? static_cast<PrCssConditionRule*>(object) : nullptr;
 }
 
-PrString prCssConditionRuleConditionText(const PrCssConditionRule* rule) {
+PrRawString prCssConditionRuleConditionText(const PrCssConditionRule* rule) {
     // css-conditional-3/#the-cssmediarule-interface: a media rule's condition text is its media list's serialization. A
     // supports rule's condition text is the condition as written.
     return preludeText(rule);
@@ -1066,11 +1066,11 @@ PrCssContainerRule* PR_NULLABLE prCssContainerRuleQuery(PrCssRule* PR_NULLABLE o
     return ruleOfKind<PrCssContainerRule>(object, PrCssRuleKind_Container);
 }
 
-PrString prCssContainerRuleContainerName(const PrCssContainerRule* rule) {
+PrRawString prCssContainerRuleContainerName(const PrCssContainerRule* rule) {
     return soleConditionPart(rule, CssValueDef_ContainerName);
 }
 
-PrString prCssContainerRuleContainerQuery(const PrCssContainerRule* rule) {
+PrRawString prCssContainerRuleContainerQuery(const PrCssContainerRule* rule) {
     return soleConditionPart(rule, CssValueDef_ContainerQuery);
 }
 
@@ -1117,7 +1117,7 @@ PrCssPageRule* PR_NULLABLE prCssPageRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssPageRule>(object, PrCssRuleKind_Page);
 }
 
-PrString prCssPageRuleSelectorText(const PrCssPageRule* rule) {
+PrRawString prCssPageRuleSelectorText(const PrCssPageRule* rule) {
     return preludeText(rule);
 }
 
@@ -1215,7 +1215,7 @@ PrCssKeyframeRule* PR_NULLABLE prCssKeyframeRuleQuery(PrCssRule* PR_NULLABLE obj
     return ruleOfKind<PrCssKeyframeRule>(object, PrCssRuleKind_Keyframe);
 }
 
-PrString prCssKeyframeRuleKeyText(const PrCssKeyframeRule* rule) {
+PrRawString prCssKeyframeRuleKeyText(const PrCssKeyframeRule* rule) {
     return preludeText(rule);
 }
 
@@ -1234,7 +1234,7 @@ PrCssLayerBlockRule* PR_NULLABLE prCssLayerBlockRuleQuery(PrCssRule* PR_NULLABLE
     return ruleOfKind<PrCssLayerBlockRule>(object, PrCssRuleKind_LayerBlock);
 }
 
-PrString prCssLayerBlockRuleName(const PrCssLayerBlockRule* rule) {
+PrRawString prCssLayerBlockRuleName(const PrCssLayerBlockRule* rule) {
     // css-cascade-5/#dom-csslayerblockrule-name: the empty string for an anonymous layer.
     return serializedValues(preludeOf(rule));
 }
@@ -1246,7 +1246,7 @@ PrCssLayerStatementRule* PR_NULLABLE prCssLayerStatementRuleQuery(PrCssRule* PR_
     return ruleOfKind<PrCssLayerStatementRule>(object, PrCssRuleKind_LayerStatement);
 }
 
-uint32_t prCssLayerStatementRuleNameList(const PrCssLayerStatementRule* rule, PrString* PR_NULLABLE items,
+uint32_t prCssLayerStatementRuleNameList(const PrCssLayerStatementRule* rule, PrRawString* PR_NULLABLE items,
         uint32_t capacity) {
     return serializeEach(preludeOf(rule), CssValueDef_LayerName, items, capacity);
 }
@@ -1258,11 +1258,11 @@ PrCssScopeRule* PR_NULLABLE prCssScopeRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssScopeRule>(object, PrCssRuleKind_Scope);
 }
 
-PrString prCssScopeRuleStart(const PrCssScopeRule* rule) {
+PrRawString prCssScopeRuleStart(const PrCssScopeRule* rule) {
     return scopeSelectors(rule, false);
 }
 
-PrString prCssScopeRuleEnd(const PrCssScopeRule* rule) {
+PrRawString prCssScopeRuleEnd(const PrCssScopeRule* rule) {
     return scopeSelectors(rule, true);
 }
 
@@ -1297,7 +1297,7 @@ void prCssCounterStyleRuleSetName(PrCssCounterStyleRule* rule, PrStringView valu
     setPrelude(rule, predefined != nullptr ? predefined->name : value);
 }
 
-PrString prCssCounterStyleRuleSystem(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRuleSystem(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStyleSystem);
 }
 
@@ -1305,7 +1305,7 @@ void prCssCounterStyleRuleSetSystem(PrCssCounterStyleRule* rule, PrStringView va
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleSystem, value);
 }
 
-PrString prCssCounterStyleRuleSymbols(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRuleSymbols(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStyleSymbols);
 }
 
@@ -1313,7 +1313,7 @@ void prCssCounterStyleRuleSetSymbols(PrCssCounterStyleRule* rule, PrStringView v
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleSymbols, value);
 }
 
-PrString prCssCounterStyleRuleAdditiveSymbols(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRuleAdditiveSymbols(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStyleAdditiveSymbols);
 }
 
@@ -1321,7 +1321,7 @@ void prCssCounterStyleRuleSetAdditiveSymbols(PrCssCounterStyleRule* rule, PrStri
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleAdditiveSymbols, value);
 }
 
-PrString prCssCounterStyleRuleNegative(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRuleNegative(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStyleNegative);
 }
 
@@ -1329,7 +1329,7 @@ void prCssCounterStyleRuleSetNegative(PrCssCounterStyleRule* rule, PrStringView 
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleNegative, value);
 }
 
-PrString prCssCounterStyleRulePrefix(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRulePrefix(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStylePrefix);
 }
 
@@ -1337,7 +1337,7 @@ void prCssCounterStyleRuleSetPrefix(PrCssCounterStyleRule* rule, PrStringView va
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStylePrefix, value);
 }
 
-PrString prCssCounterStyleRuleSuffix(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRuleSuffix(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStyleSuffix);
 }
 
@@ -1345,7 +1345,7 @@ void prCssCounterStyleRuleSetSuffix(PrCssCounterStyleRule* rule, PrStringView va
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleSuffix, value);
 }
 
-PrString prCssCounterStyleRuleRange(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRuleRange(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStyleRange);
 }
 
@@ -1353,7 +1353,7 @@ void prCssCounterStyleRuleSetRange(PrCssCounterStyleRule* rule, PrStringView val
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleRange, value);
 }
 
-PrString prCssCounterStyleRulePad(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRulePad(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStylePad);
 }
 
@@ -1361,7 +1361,7 @@ void prCssCounterStyleRuleSetPad(PrCssCounterStyleRule* rule, PrStringView value
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStylePad, value);
 }
 
-PrString prCssCounterStyleRuleSpeakAs(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRuleSpeakAs(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStyleSpeakAs);
 }
 
@@ -1369,7 +1369,7 @@ void prCssCounterStyleRuleSetSpeakAs(PrCssCounterStyleRule* rule, PrStringView v
     setCounterStyleDescriptor(rule, PrCssDescriptor_CounterStyleSpeakAs, value);
 }
 
-PrString prCssCounterStyleRuleFallback(const PrCssCounterStyleRule* rule) {
+PrRawString prCssCounterStyleRuleFallback(const PrCssCounterStyleRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_CounterStyleFallback);
 }
 
@@ -1402,10 +1402,10 @@ bool prCssPropertyRuleInherits(const PrCssPropertyRule* rule) {
     return cssValueKeyword(&value.values[0]) == PrCssKeyword_True;
 }
 
-PrString prCssPropertyRuleInitialValue(const PrCssPropertyRule* rule) {
+PrRawString prCssPropertyRuleInitialValue(const PrCssPropertyRule* rule) {
     // The null string if the rule declares none.
     if (declarationOf(dataOf(rule), PrCssDescriptor_PropertyInitialValue) == nullptr)
-        return prStringNull();
+        return prRawStringNull();
     return descriptorValue(rule, PrCssDescriptor_PropertyInitialValue);
 }
 
@@ -1416,7 +1416,7 @@ PrCssFontFeatureValuesRule* PR_NULLABLE prCssFontFeatureValuesRuleQuery(PrCssRul
     return ruleOfKind<PrCssFontFeatureValuesRule>(object, PrCssRuleKind_FontFeatureValues);
 }
 
-PrString prCssFontFeatureValuesRuleFontFamily(const PrCssFontFeatureValuesRule* rule) {
+PrRawString prCssFontFeatureValuesRuleFontFamily(const PrCssFontFeatureValuesRule* rule) {
     return serializedValues(preludeOf(rule));
 }
 
@@ -1531,15 +1531,15 @@ PrStringView prCssFontPaletteValuesRuleName(const PrCssFontPaletteValuesRule* ru
     return preludeName(rule);
 }
 
-PrString prCssFontPaletteValuesRuleFontFamily(const PrCssFontPaletteValuesRule* rule) {
+PrRawString prCssFontPaletteValuesRuleFontFamily(const PrCssFontPaletteValuesRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_FontPaletteValuesFontFamily);
 }
 
-PrString prCssFontPaletteValuesRuleBasePalette(const PrCssFontPaletteValuesRule* rule) {
+PrRawString prCssFontPaletteValuesRuleBasePalette(const PrCssFontPaletteValuesRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_FontPaletteValuesBasePalette);
 }
 
-PrString prCssFontPaletteValuesRuleOverrideColors(const PrCssFontPaletteValuesRule* rule) {
+PrRawString prCssFontPaletteValuesRuleOverrideColors(const PrCssFontPaletteValuesRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_FontPaletteValuesOverrideColors);
 }
 
@@ -1565,7 +1565,7 @@ PrCssViewTransitionRule* PR_NULLABLE prCssViewTransitionRuleQuery(PrCssRule* PR_
     return ruleOfKind<PrCssViewTransitionRule>(object, PrCssRuleKind_ViewTransition);
 }
 
-PrString prCssViewTransitionRuleNavigation(const PrCssViewTransitionRule* rule) {
+PrRawString prCssViewTransitionRuleNavigation(const PrCssViewTransitionRule* rule) {
     return descriptorValue(rule, PrCssDescriptor_ViewTransitionNavigation);
 }
 
@@ -1599,14 +1599,14 @@ uint32_t prCssFunctionRuleGetParameters(const PrCssFunctionRule* rule, PrCssFunc
     return functionParameters(preludeOf(rule), items, capacity);
 }
 
-PrString prCssFunctionRuleReturnType(const PrCssFunctionRule* rule) {
+PrRawString prCssFunctionRuleReturnType(const PrCssFunctionRule* rule) {
     // css-mixins-1/#dom-cssfunctionrule-returntype: `*` if the rule writes none.
     CssValueRun run = preludeOf(rule);
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         if (cssValueIsKeyword(&run.values[i], PrCssKeyword_Returns))
             return serializedValues(CssValueRun{run.values + i + 1, run.count - i - 1, run.text});
     }
-    return prStringExternal("*");
+    return prRawStringExternal("*");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1658,7 +1658,7 @@ PrCssMixinRule* PR_NULLABLE prCssMixinRuleQuery(PrCssRule* PR_NULLABLE object) {
     return ruleOfKind<PrCssMixinRule>(object, PrCssRuleKind_Mixin);
 }
 
-PrString prCssMixinRuleName(const PrCssMixinRule* rule) {
+PrRawString prCssMixinRuleName(const PrCssMixinRule* rule) {
     return serializedName(rule);
 }
 
@@ -1678,7 +1678,7 @@ PrCssApplyBlockRule* PR_NULLABLE prCssApplyBlockRuleQuery(PrCssRule* PR_NULLABLE
     return ruleOfKind<PrCssApplyBlockRule>(object, PrCssRuleKind_ApplyBlock);
 }
 
-PrString prCssApplyBlockRuleName(const PrCssApplyBlockRule* rule) {
+PrRawString prCssApplyBlockRuleName(const PrCssApplyBlockRule* rule) {
     return serializedName(rule);
 }
 
@@ -1694,7 +1694,7 @@ PrCssApplyStatementRule* PR_NULLABLE prCssApplyStatementRuleQuery(PrCssRule* PR_
     return ruleOfKind<PrCssApplyStatementRule>(object, PrCssRuleKind_ApplyStatement);
 }
 
-PrString prCssApplyStatementRuleName(const PrCssApplyStatementRule* rule) {
+PrRawString prCssApplyStatementRuleName(const PrCssApplyStatementRule* rule) {
     return serializedName(rule);
 }
 
@@ -1753,11 +1753,11 @@ PrStringView prCssDescriptorName(PrCssDescriptor descriptor) {
 }
 
 PrCssDeclarationName prCssDeclarationNameCopy(const PrCssDeclarationName* name) {
-    return PrCssDeclarationName{name->property, name->descriptor, prStringClone(&name->author)};
+    return PrCssDeclarationName{name->property, name->descriptor, prRawStringClone(&name->author)};
 }
 
 void prCssDeclarationNameReset(PrCssDeclarationName* name) {
-    prStringReset(&name->author);
+    prRawStringReset(&name->author);
     *name = prCssDeclarationNameFromProperty(PrCssProperty_Count);
 }
 
@@ -1765,14 +1765,14 @@ bool prCssPropertyNameFromText(PrStringView text, PrCssDeclarationName* out) {
     CssDeclaredName declared = {};
     if (!cssNameFromText(CssAtRule_None, text, &declared))
         return false;
-    *out = PrCssDeclarationName{declared.property, declared.descriptor, prStringCopy(declared.text)};
+    *out = PrCssDeclarationName{declared.property, declared.descriptor, prRawStringCopy(declared.text)};
     return true;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSStyleDeclaration
 
-PrString prCssStyleDeclarationCssText(const PrCssStyleDeclaration* declaration) {
+PrRawString prCssStyleDeclarationCssText(const PrCssStyleDeclaration* declaration) {
     const CssDeclarationBlock* block = cssStyleDeclarationBlock(declaration);
     return serialized([&](PrTextBuffer* out) { cssSerializeDeclarationBlock(out, block); });
 }
@@ -1794,7 +1794,7 @@ bool prCssStyleDeclarationNameFromText(const PrCssStyleDeclaration* declaration,
     CssDeclaredName declared = {};
     if (!cssNameFromText(cssStyleDeclarationAtRule(declaration), text, &declared))
         return false;
-    *out = PrCssDeclarationName{declared.property, declared.descriptor, prStringCopy(declared.text)};
+    *out = PrCssDeclarationName{declared.property, declared.descriptor, prRawStringCopy(declared.text)};
     return true;
 }
 
@@ -1805,15 +1805,15 @@ void prCssStyleDeclarationNameAt(const PrCssStyleDeclaration* declaration, uint3
     bool named = item.property != PrCssProperty_Count || item.declaration->descriptor != PrCssDescriptor_None;
     *out = PrCssDeclarationName{
         item.property, item.declaration->descriptor,
-        named ? prStringNull() : prStringCopy(cssDeclarationName(block, item.declaration)),
+        named ? prRawStringNull() : prRawStringCopy(cssDeclarationName(block, item.declaration)),
     };
 }
 
-PrString prCssStyleDeclarationGetPropertyValue(const PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name) {
+PrRawString prCssStyleDeclarationGetPropertyValue(const PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name) {
     // A legacy name alias reads the property that it is an alias of (css-cascade-5/#legacy-name-alias).
     CssDeclaredName declared = {};
     if (!cssDeclaredNameFromName(cssStyleDeclarationAtRule(declaration), name, &declared))
-        return prStringEmpty();
+        return prRawStringEmpty();
     bool single;
     if (declared.property < PrCssProperty_Count)
         single = kCssPropertyLonghands[declared.property].count == 0;
@@ -1850,7 +1850,7 @@ PrStatus prCssStyleDeclarationSetProperty(PrCssStyleDeclaration* declaration,
 }
 
 PrStatus prCssStyleDeclarationRemoveProperty(PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name,
-        PrString* PR_NULLABLE out) {
+        PrRawString* PR_NULLABLE out) {
     if (declaration->readOnly)
         return PrStatus_ReadOnly;
     CssDeclaredName declared = {};
@@ -1944,7 +1944,7 @@ PrCssFunctionDescriptors* PR_NULLABLE prCssFunctionDescriptorsQuery(PrCssStyleDe
 // ---------------------------------------------------------------------------------------------------------------------
 // CSS
 
-PrString prCssEscape(PrStringView ident) {
+PrRawString prCssEscape(PrStringView ident) {
     return serialized([&](PrTextBuffer* out) { cssSerializeIdent(out, ident); });
 }
 
@@ -1981,7 +1981,7 @@ void prCssFontFaceRelease(PrCssFontFace* PR_NULLABLE face) {
     cssFontFaceRelease(face);
 }
 
-PrString prCssFontFaceDescriptor(const PrCssFontFace* face, PrCssFontFaceDescriptor descriptor) {
+PrRawString prCssFontFaceDescriptor(const PrCssFontFace* face, PrCssFontFaceDescriptor descriptor) {
     return cssFontFaceDescriptor(face, descriptor);
 }
 
@@ -2022,7 +2022,7 @@ PrDomEventTarget* prCssFontFaceSetAsEventTarget(PrCssFontFaceSet* set) {
 }
 
 uint32_t prCssFontFaceSetSize(const PrCssFontFaceSet* set) {
-    Array<PrCssFontFace* PR_NONNULL> faces;
+    RawArray<PrCssFontFace* PR_NONNULL> faces;
     cssFontFaceSetFaces(set, &faces);
     uint32_t count = faces.count;
     faces.reset();
@@ -2030,7 +2030,7 @@ uint32_t prCssFontFaceSetSize(const PrCssFontFaceSet* set) {
 }
 
 PrCssFontFace* PR_NULLABLE prCssFontFaceSetAt(PrCssFontFaceSet* set, uint32_t index) {
-    Array<PrCssFontFace* PR_NONNULL> faces;
+    RawArray<PrCssFontFace* PR_NONNULL> faces;
     cssFontFaceSetFaces(set, &faces);
     PrCssFontFace* face = index < faces.count ? faces.data[index] : nullptr;
     faces.reset();
@@ -2058,7 +2058,7 @@ PrCssFontFaceSetLoadStatus prCssFontFaceSetStatus(const PrCssFontFaceSet* set) {
 }
 
 PrStatus prCssFontFaceSetCheck(const PrCssFontFaceSet* set, PrStringView font, bool* out) {
-    Array<PrCssFontFace* PR_NONNULL> matched;
+    RawArray<PrCssFontFace* PR_NONNULL> matched;
     PrStatus status = cssFontFaceSetMatch(set, font, &matched);
     *out = true;
     for (uint32_t i = 0; i < matched.count; ++i) {
@@ -2071,7 +2071,7 @@ PrStatus prCssFontFaceSetCheck(const PrCssFontFaceSet* set, PrStringView font, b
 
 PrStatus prCssFontFaceSetLoad(PrCssFontFaceSet* set, PrDomDocument* document, PrStringView font,
         PrCssFontFace* PR_NONNULL* PR_NULLABLE items, uint32_t capacity, uint32_t* count) {
-    Array<PrCssFontFace* PR_NONNULL> matched;
+    RawArray<PrCssFontFace* PR_NONNULL> matched;
     PrStatus status = cssFontFaceSetMatch(set, font, &matched);
     *count = matched.count;
     for (uint32_t i = 0; i < matched.count; ++i) {
@@ -2151,7 +2151,7 @@ uint32_t prCssHighlightRegistrySize(PrCssHighlightRegistry* registry) {
 
 PrStringView prCssHighlightRegistryNameAt(PrCssHighlightRegistry* registry, uint32_t index) {
     const PrCssHighlightRegistry* live = cssHighlightRegistryLive(registry);
-    return index < live->entries.count ? prStringView(&live->entries.data[index]->name) : PrStringView{};
+    return index < live->entries.count ? prRawStringView(&live->entries.data[index]->name) : PrStringView{};
 }
 
 PrCssHighlight* PR_NULLABLE prCssHighlightRegistryAt(PrCssHighlightRegistry* registry, uint32_t index) {
@@ -2379,7 +2379,7 @@ PrStatus prCssParseColor(PrStringView text, const PrDomElement* PR_NULLABLE elem
     return PrStatus_Ok;
 }
 
-PrString prCssUsedColorSerialize(const PrCssUsedColor* color, PrCssColorSerialization serialization) {
+PrRawString prCssUsedColorSerialize(const PrCssUsedColor* color, PrCssColorSerialization serialization) {
     CssColor value{
         .space = color->space,
         .c = {color->components[0], color->components[1], color->components[2]},
@@ -2404,7 +2404,7 @@ PrString prCssUsedColorSerialize(const PrCssUsedColor* color, PrCssColorSerializ
                 hex[1 + 2 * i] = kHex[bytes[i] >> 4];
                 hex[2 + 2 * i] = kHex[bytes[i] & 15];
             }
-            return prStringCopy(PrStringView{hex, 7});
+            return prRawStringCopy(PrStringView{hex, 7});
         }
     }
     CssValuePool pool{};
@@ -2412,7 +2412,7 @@ PrString prCssUsedColorSerialize(const PrCssUsedColor* color, PrCssColorSerializ
         cssValuePoolAddLegacyColor(&pool, value);
     else
         cssValuePoolAddColorComponents(&pool, value);
-    PrString text = serializedValues(cssValuePoolRun(&pool, CssValueSpan{0, pool.values.count}));
+    PrRawString text = serializedValues(cssValuePoolRun(&pool, CssValueSpan{0, pool.values.count}));
     cssValuePoolReset(&pool);
     return text;
 }
@@ -2523,7 +2523,7 @@ PrStatus prCssParseFilterList(PrStringView text, const PrDomElement* PR_NULLABLE
     CssValuePool computed{};
     cssStyleComputeValue(&computed, PrCssProperty_Filter,
         cssValuePoolRun(&specified, CssValueSpan{0, specified.values.count}), context);
-    Array<CssFilterFunction> items;
+    RawArray<CssFilterFunction> items;
     cssFilterFunctions(cssValuePoolRun(&computed, CssValueSpan{0, computed.values.count}), colors, &items);
     for (uint32_t i = 0; i < items.count && i < capacity; ++i) {
         out[i] = items.data[i].filter;
@@ -2537,7 +2537,7 @@ PrStatus prCssParseFilterList(PrStringView text, const PrDomElement* PR_NULLABLE
     return PrStatus_Ok;
 }
 
-PrString prCssValueSerialize(const PrCssValue* value, uint32_t first, uint32_t end) {
+PrRawString prCssValueSerialize(const PrCssValue* value, uint32_t first, uint32_t end) {
     CssValueRun run = cssValueRun(valueRead(value));
     if (first > end || end > run.count)
         PR_FATAL("a value serialized past its end");
@@ -2686,7 +2686,7 @@ PrDomElement* PR_NULLABLE prCssNodeQuerySelectorCompiled(PrDomNode* node, const 
 void prCssNodeQuerySelectorAllCompiled(PrDomNode* node, const PrCssSelectors* selectors, PrDomNodeList* list) {
     CssSelectorMatcher matcher;
     cssSelectorMatcherInit(&matcher, selectors, domElementFromNode(node), node->document, node);
-    Array<PrDomNode* PR_NONNULL> found;
+    RawArray<PrDomNode* PR_NONNULL> found;
     for (PrDomElement* element = cssSelectorMatcherNext(&matcher, node, node); element != nullptr;
             element = cssSelectorMatcherNext(&matcher, node, element)) {
         found.push(element);
@@ -2797,7 +2797,7 @@ PrStatus prCssMatrixFromString(PrStringView text, PrDomMatrix* out) {
     return PrStatus_Ok;
 }
 
-PrStatus prCssMatrixToString(const PrDomMatrix* matrix, PrString* out) {
+PrStatus prCssMatrixToString(const PrDomMatrix* matrix, PrRawString* out) {
     for (double element : matrix->m) {
         if (!prF64IsFinite(element))
             return PrStatus_InvalidState;
@@ -2835,7 +2835,7 @@ PrCssFontFaceSetLoadEvent* prCssFontFaceSetLoadEventCreate(PrStringView type,
 
 uint32_t prCssFontFaceSetLoadEventFontFaces(PrCssFontFaceSetLoadEvent* event,
         PrCssFontFace* PR_NONNULL* PR_NULLABLE items, uint32_t capacity) {
-    const Array<PrCssFontFace* PR_NONNULL>& faces = static_cast<const CssFontFacesData*>(event->extra)->faces;
+    const RawArray<PrCssFontFace* PR_NONNULL>& faces = static_cast<const CssFontFacesData*>(event->extra)->faces;
     for (uint32_t i = 0; items != nullptr && i < faces.count && i < capacity; ++i)
         items[i] = faces.data[i];
     return faces.count;
@@ -2867,11 +2867,11 @@ PrCssAnimationEvent* prCssAnimationEventCreate(PrStringView type, const PrCssAni
 }
 
 PrStringView prCssTransitionEventPropertyName(const PrCssTransitionEvent* event) {
-    return prStringView(&event->animation->name);
+    return prRawStringView(&event->animation->name);
 }
 
 PrStringView prCssAnimationEventAnimationName(const PrCssAnimationEvent* event) {
-    return prStringView(&event->animation->name);
+    return prRawStringView(&event->animation->name);
 }
 
 double prCssTransitionEventElapsedTime(const PrCssTransitionEvent* event) {
@@ -2883,9 +2883,9 @@ double prCssAnimationEventElapsedTime(const PrCssAnimationEvent* event) {
 }
 
 PrStringView prCssTransitionEventPseudoElement(const PrCssTransitionEvent* event) {
-    return prStringView(&event->animation->pseudoElement);
+    return prRawStringView(&event->animation->pseudoElement);
 }
 
 PrStringView prCssAnimationEventPseudoElement(const PrCssAnimationEvent* event) {
-    return prStringView(&event->animation->pseudoElement);
+    return prRawStringView(&event->animation->pseudoElement);
 }

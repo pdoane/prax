@@ -22,9 +22,9 @@ bool isOffered(const PrCommandRegistry* registry, PrCommandIndex index) {
 }
 
 // Returns the text that a surface shows for the chord of `commandId`, or the null string if nothing binds it.
-PrString shortcutOf(const PrCommandKeymap* keymap, PrStringView commandId) {
+PrRawString shortcutOf(const PrCommandKeymap* keymap, PrStringView commandId) {
     PrCommandChord chord{};
-    return prCommandKeymapChord(keymap, commandId, &chord) ? prCommandChordText(chord) : prStringNull();
+    return prCommandKeymapChord(keymap, commandId, &chord) ? prCommandChordText(chord) : prRawStringNull();
 }
 
 // Returns true if the palette lists the command at `index` for `query`.
@@ -66,15 +66,15 @@ PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandReg
         return kPrLayoutNodeNone;
     PrCommandDesc command = prCommandRegistryCommand(registry, index);
     PrCommandStateFlags state = prCommandRegistryState(registry, index);
-    PrString shortcut = shortcutOf(keymap, commandId);
+    PrRawString shortcut = shortcutOf(keymap, commandId);
     PrKitMenuItem item{
         .text = command.title,
-        .shortcut = prStringView(&shortcut),
+        .shortcut = prRawStringView(&shortcut),
         .checked = (state & PrCommandStateFlag_Checked) != 0,
         .disabled = (state & PrCommandStateFlag_Disabled) != 0 || !isOffered(registry, index),
     };
     PrLayoutNode node = prKitMenuItem(kit, menu, item, style);
-    prStringReset(&shortcut);
+    prRawStringReset(&shortcut);
     if (prKitActivated(kit, node))
         runFromSurface(registry, index);
     return node;
@@ -85,10 +85,13 @@ PrLayoutNode prCommandTooltip(PrKit* kit, PrLayoutNode anchor, const PrCommandRe
     PrCommandIndex index = prCommandRegistryFind(registry, commandId);
     if (index == kPrCommandMissing)
         return kPrLayoutNodeNone;
-    PrString shortcut = shortcutOf(keymap, commandId);
-    PrKitTooltip tooltip{.text = prCommandRegistryCommand(registry, index).title, .shortcut = prStringView(&shortcut)};
+    PrRawString shortcut = shortcutOf(keymap, commandId);
+    PrKitTooltip tooltip{
+        .text = prCommandRegistryCommand(registry, index).title,
+        .shortcut = prRawStringView(&shortcut),
+    };
     PrLayoutNode node = prKitTooltip(kit, anchor, tooltip);
-    prStringReset(&shortcut);
+    prRawStringReset(&shortcut);
     return node;
 }
 
@@ -124,17 +127,17 @@ PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandR
         if (!isListed(registry, i, query))
             continue;
         PrCommandDesc command = prCommandRegistryCommand(registry, i);
-        PrString shortcut = shortcutOf(keymap, command.id);
+        PrRawString shortcut = shortcutOf(keymap, command.id);
         PrKitCommandItem item{
             .key = prUiKey(kit->ui, list, command.id),
             .text = command.title,
             .category = command.category,
-            .shortcut = prStringView(&shortcut),
+            .shortcut = prRawStringView(&shortcut),
             .disabled = (prCommandRegistryState(registry, i) & PrCommandStateFlag_Disabled) != 0,
         };
         if (prKitActivated(kit, prKitCommandItem(kit, list, item)))
             chosen = i;
-        prStringReset(&shortcut);
+        prRawStringReset(&shortcut);
     }
     prKitCommandPaletteFooter(kit, list);
     if (chosen != kPrCommandMissing)

@@ -91,9 +91,9 @@ std::string sheetMedia(PrHtmlPage* page, uint32_t index) {
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssStyleSheet* sheet = prCssStyleSheetListStyleSheetAt(prCssDocumentStyleSheets(document), index);
     REQUIRE(sheet != nullptr);
-    PrString text = prCssMediaListMediaText(prCssStyleSheetMedia(sheet));
-    std::string out(prStringView(&text).data, prStringView(&text).size);
-    prStringReset(&text);
+    PrRawString text = prCssMediaListMediaText(prCssStyleSheetMedia(sheet));
+    std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
+    prRawStringReset(&text);
     return out;
 }
 
@@ -104,11 +104,11 @@ std::string iconUrl(PrImageCodec* PR_NULLABLE images, PrStringView source, PrStr
     host.images = images;
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(page, source, url, nullptr) == PrStatus_Ok);
-    PrString icon = prHtmlPageIconUrl(page);
+    PrRawString icon = prHtmlPageIconUrl(page);
     std::string out = "(none)";
-    if (!prStringIsNull(&icon))
-        out = std::string(prStringView(&icon).data, prStringView(&icon).size);
-    prStringReset(&icon);
+    if (!prRawStringIsNull(&icon))
+        out = std::string(prRawStringView(&icon).data, prRawStringView(&icon).size);
+    prRawStringReset(&icon);
     prHtmlPageDestroy(page);
     return out;
 }
@@ -171,12 +171,12 @@ TEST_CASE("the host loads resolved URLs and executes source with its location") 
     CHECK(state.executed == 2);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     CHECK(prDomNodeGetElementById(prDomDocumentAsNode(document), "written") != nullptr);
-    PrString url = prDomDocumentUrl(document);
-    PrString base = prDomNodeBaseUri(prDomDocumentAsNode(document));
-    CHECK(prStringView(&url) == "https://example.test/tests/page.html");
-    CHECK(prStringView(&base) == "https://example.test/assets/");
-    prStringReset(&url);
-    prStringReset(&base);
+    PrRawString url = prDomDocumentUrl(document);
+    PrRawString base = prDomNodeBaseUri(prDomDocumentAsNode(document));
+    CHECK(prRawStringView(&url) == "https://example.test/tests/page.html");
+    CHECK(prRawStringView(&base) == "https://example.test/assets/");
+    prRawStringReset(&url);
+    prRawStringReset(&base);
     prHtmlPageDestroy(page);
 }
 
@@ -217,15 +217,15 @@ TEST_CASE("base URL uses the first href and rejects data and javascript schemes"
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
     for (PrStringView href :
             {"https://[invalid", "data:text/plain,base", "javascript:base"}) {
-        PrString html = prStringCopy("<base href='");
-        prStringAppend(&html, href);
-        prStringAppend(&html, "'><base href='https://ignored.test/'><script src='unloaded.js'></script>");
-        CHECK(prHtmlPageLoad(page, prStringView(&html), "https://example.test/page", nullptr) == PrStatus_Ok);
-        prStringReset(&html);
+        PrRawString html = prRawStringCopy("<base href='");
+        prRawStringAppend(&html, href);
+        prRawStringAppend(&html, "'><base href='https://ignored.test/'><script src='unloaded.js'></script>");
+        CHECK(prHtmlPageLoad(page, prRawStringView(&html), "https://example.test/page", nullptr) == PrStatus_Ok);
+        prRawStringReset(&html);
         PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-        PrString base = prDomNodeBaseUri(prDomDocumentAsNode(document));
-        CHECK(prStringView(&base) == "https://example.test/page");
-        prStringReset(&base);
+        PrRawString base = prDomNodeBaseUri(prDomDocumentAsNode(document));
+        CHECK(prRawStringView(&base) == "https://example.test/page");
+        prRawStringReset(&base);
     }
     prHtmlPageDestroy(page);
 }
@@ -892,9 +892,9 @@ TEST_CASE("a streamed XML document parses as its pieces arrive, in the charset t
     runTasks(page);
     CHECK(readiness(page) == PrHtmlDocumentReadyState_Complete);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-    PrString text = prDomNodeTextContent(prDomElementAsNode(prDomNodeGetElementById(prDomDocumentAsNode(document), "first")));
-    CHECK(prStringView(&text) == "\xC3\xA9");
-    prStringReset(&text);
+    PrRawString text = prDomNodeTextContent(prDomElementAsNode(prDomNodeGetElementById(prDomDocumentAsNode(document), "first")));
+    CHECK(prRawStringView(&text) == "\xC3\xA9");
+    prRawStringReset(&text);
     prHtmlPageDestroy(page);
 }
 
@@ -1095,9 +1095,9 @@ TEST_CASE("a page's session history keeps each document's entries, and going to 
     prHtmlPageTraverse(page, -1);
     later.settle(page);
     CHECK(prHtmlSessionHistoryIndex(history) == 2);
-    PrString hash = prHtmlWindowLocation(window, PrUrlComponent_Hash);
-    CHECK(prStringView(&hash) == "#x");
-    prStringReset(&hash);
+    PrRawString hash = prHtmlWindowLocation(window, PrUrlComponent_Hash);
+    CHECK(prRawStringView(&hash) == "#x");
+    prRawStringReset(&hash);
     PrStringView state{};
     uint32_t generation = 0;
     REQUIRE(prHtmlHistoryState(window, &state, &generation) == PrStatus_Ok);
@@ -1330,9 +1330,9 @@ TEST_CASE("a navigation fetches its document, keeps the current one until the re
     host.loaded = [](void* data, PrHtmlPage*, PrStatus status) { *static_cast<PrStatus*>(data) = status; };
     PrHtmlPage* page = prHtmlPageCreate(&host);
     auto url = [&] {
-        PrString text = prDomDocumentUrl(prHtmlWindowDocument(prHtmlPageWindow(page)));
-        std::string out(prStringView(&text).data, prStringView(&text).size);
-        prStringReset(&text);
+        PrRawString text = prDomDocumentUrl(prHtmlWindowDocument(prHtmlPageWindow(page)));
+        std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
+        prRawStringReset(&text);
         return out;
     };
 
@@ -1371,9 +1371,9 @@ TEST_CASE("a navigation that fails loads a document that says why, and reports t
     CHECK(loaded == PrStatus_Io);
     CHECK_FALSE(prHtmlPageIsFetching(page));
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-    PrString text = prDomNodeTextContent(prDomElementAsNode(prDomDocumentElement(document)));
-    CHECK(std::string(prStringView(&text).data, prStringView(&text).size).find("gone.html") != std::string::npos);
-    prStringReset(&text);
+    PrRawString text = prDomNodeTextContent(prDomElementAsNode(prDomDocumentElement(document)));
+    CHECK(std::string(prRawStringView(&text).data, prRawStringView(&text).size).find("gone.html") != std::string::npos);
+    prRawStringReset(&text);
     prHtmlPageDestroy(page);
 }
 

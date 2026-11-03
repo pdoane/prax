@@ -3,13 +3,13 @@
 #include "pr/websocket_builtin.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/base64.h"
 #include "pr/checksum.h"
 #include "pr/mem.h"
 #include "pr/random.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/string_trim.h"
 #include "pr/text_buffer.h"
@@ -62,35 +62,35 @@ struct Socket : PrWebSocket {
     PrWebSocketFn PR_NULLABLE event;
     void* PR_NULLABLE context;
     PrWebSocketState state;
-    PrString host;              // the host to connect to, without an IPv6 address's brackets
+    PrRawString host;              // the host to connect to, without an IPv6 address's brackets
     uint16_t port;
     bool secure;
-    PrString request;           // the opening handshake's bytes
-    PrString accept;            // the Sec-WebSocket-Accept value that the server must answer with
-    PrString offered;           // the subprotocols offered, as the Sec-WebSocket-Protocol list sends them
-    PrString protocol;          // the subprotocol that the server chose
+    PrRawString request;           // the opening handshake's bytes
+    PrRawString accept;            // the Sec-WebSocket-Accept value that the server must answer with
+    PrRawString offered;           // the subprotocols offered, as the Sec-WebSocket-Protocol list sends them
+    PrRawString protocol;          // the subprotocol that the server chose
     PrNetStream* PR_NULLABLE stream;
 
     // What arrived and was not parsed, from `inputStart`.
-    Array<uint8_t> input;
+    RawArray<uint8_t> input;
     uint32_t inputStart;
     bool handshaken;
 
     // The data message being assembled from its fragments.
-    Array<uint8_t> message;
+    RawArray<uint8_t> message;
     PrWebSocketMessageKind messageKind;
     bool inMessage;
     PrWebSocketMessage delivered;   // the message during the callback that delivers it
 
     bool closeSent;
     uint16_t closeCode;
-    PrString closeReason;
+    PrRawString closeReason;
     bool wasClean;
     PrNetError error;
 };
 
-PrStringView viewOf(const PrString& string) {
-    return prStringView(&string);
+PrStringView viewOf(const PrRawString& string) {
+    return prRawStringView(&string);
 }
 
 // Returns true if the comma-separated list `value` has `token`, without regard to ASCII case.
@@ -108,12 +108,12 @@ bool listHas(PrStringView value, PrStringView token) {
 }
 
 void freeSocket(Socket* socket) {
-    prStringReset(&socket->host);
-    prStringReset(&socket->request);
-    prStringReset(&socket->accept);
-    prStringReset(&socket->offered);
-    prStringReset(&socket->protocol);
-    prStringReset(&socket->closeReason);
+    prRawStringReset(&socket->host);
+    prRawStringReset(&socket->request);
+    prRawStringReset(&socket->accept);
+    prRawStringReset(&socket->offered);
+    prRawStringReset(&socket->protocol);
+    prRawStringReset(&socket->closeReason);
     socket->input.reset();
     socket->message.reset();
     prMemoryFree(socket);
@@ -140,7 +140,7 @@ void writeFrame(Socket* socket, Opcode opcode, PrByteView first, PrByteView seco
     if (socket->stream == nullptr)
         return;
     uint64_t size = first.size + second.size;
-    Array<uint8_t> frame{};
+    RawArray<uint8_t> frame{};
     frame.reserve(uint32_t(14 + size));
     frame.push(uint8_t(0x80 | opcode));
     if (size < 126) {
@@ -193,7 +193,7 @@ void closeSocket(Socket* socket, bool wasClean, uint16_t code, PrStringView reas
     socket->state = PrWebSocketState_Closed;
     socket->wasClean = wasClean;
     socket->closeCode = code;
-    prStringReplace(&socket->closeReason, reason);
+    prRawStringReplace(&socket->closeReason, reason);
     socket->error = error;
     deliver(socket, PrWebSocketEvent_Close);
 }
@@ -256,7 +256,7 @@ bool acceptHead(Socket* socket, PrStringView head) {
         } else if (prAsciiEqualsFold(name, "sec-websocket-protocol")) {
             if (value.size == 0 || !listHas(viewOf(socket->offered), value) || prStringContains(value, ","))
                 return false;
-            prStringReplace(&socket->protocol, value);
+            prRawStringReplace(&socket->protocol, value);
         }
     }
     return upgrade && connection && accepted;
@@ -529,7 +529,7 @@ void writeRequest(Socket* socket, const PrUrl* url, const PrWebSocketDesc* desc)
     prTextBufferReset(&keyed);
     char accept[28];
     prBase64Encode(PrStringView{reinterpret_cast<const char*>(digest), sizeof(digest)}, accept, sizeof(accept));
-    socket->accept = prStringCopy(PrStringView{accept, sizeof(accept)});
+    socket->accept = prRawStringCopy(PrStringView{accept, sizeof(accept)});
 
     PrTextBuffer offered{};
     for (uint32_t i = 0; i < desc->protocolCount; ++i) {
@@ -600,8 +600,8 @@ PrStatus createSocket(PrWebSocketNetwork* base, const PrWebSocketDesc* desc, PrW
     // An IPv6 address is serialized in brackets, which a connection does not take.
     if (host.size > 2 && host.data[0] == '[')
         host = prStringSlice(host, 1, host.size - 2);
-    socket->host = prStringCopy(host);
-    socket->protocol = prStringEmpty();
+    socket->host = prRawStringCopy(host);
+    socket->protocol = prRawStringEmpty();
     writeRequest(socket, url, desc);
     prUrlDestroy(url);
     hold(socket);
@@ -665,7 +665,7 @@ PrWebSocketCloseInfo socketCloseInfo(const PrWebSocketNetwork*, const PrWebSocke
     return PrWebSocketCloseInfo{
         .wasClean = socket->wasClean,
         .code = socket->closeCode,
-        .reason = prStringIsNull(&socket->closeReason) ? PrStringView{""} : viewOf(socket->closeReason),
+        .reason = prRawStringIsNull(&socket->closeReason) ? PrStringView{""} : viewOf(socket->closeReason),
         .error = socket->error,
     };
 }

@@ -674,11 +674,11 @@ uint32_t readName(HtmlTokenizer* t, HtmlSpan* name, ByteClass stop) {
 // Returns true if the '<' at `offset` starts the end tag of the element whose content the state was entered for
 // (html/#tokenization). Its name consists of ASCII letters, which are all that the end tag name states accept.
 bool isTextEndTag(const HtmlTokenizer* t, uint32_t offset) {
-    if (prStringIsNull(&t->lastStartTag))
+    if (prRawStringIsNull(&t->lastStartTag))
         return false;
 
     PrStringView text = htmlInputText(t);
-    PrStringView tag = prStringView(&t->lastStartTag);
+    PrStringView tag = prRawStringView(&t->lastStartTag);
     uint32_t from = offset + 2;
     if (offset + 1 >= text.size || text.data[offset + 1] != '/' || from + tag.size >= text.size)
         return false;
@@ -1541,7 +1541,7 @@ bool readScript(HtmlTokenizer* t) {
 
 // Inserts well-formed `text` into the input at the read point.
 void insertText(HtmlTokenizer* tokenizer, PrStringView text) {
-    Array<char>& input = tokenizer->input.text;
+    RawArray<char>& input = tokenizer->input.text;
     uint32_t at = tokenizer->input.pos;
 
     // html/#preprocessing-the-input-stream normalizes the stream that the insertion joins, not the inserted text alone.
@@ -1613,7 +1613,7 @@ bool reachedEnd(const HtmlTokenizer* t, HtmlState state, uint32_t start) {
 
 } // namespace
 
-void htmlTokenizerStart(HtmlTokenizer* tokenizer, PrStringView source, Array<HtmlError>* errors) {
+void htmlTokenizerStart(HtmlTokenizer* tokenizer, PrStringView source, RawArray<HtmlError>* errors) {
     PrTextBuffer repaired = {};
     PrStringView text = wellFormed(source, &repaired);
     tokenizer->input.text.count = 0;
@@ -1632,7 +1632,7 @@ void htmlTokenizerStart(HtmlTokenizer* tokenizer, PrStringView source, Array<Htm
     tokenizer->checked = 0;
     tokenizer->state = HtmlState_Data;
     tokenizer->foreign = false;
-    prStringReset(&tokenizer->lastStartTag);
+    prRawStringReset(&tokenizer->lastStartTag);
 }
 
 bool htmlTokenizerNext(HtmlTokenizer* tokenizer) {
@@ -1659,7 +1659,7 @@ bool htmlTokenizerNext(HtmlTokenizer* tokenizer) {
 
 void htmlTokenizerSetState(HtmlTokenizer* tokenizer, HtmlState state, PrStringView tag) {
     tokenizer->state = state;
-    prStringReplace(&tokenizer->lastStartTag, tag);
+    prRawStringReplace(&tokenizer->lastStartTag, tag);
 }
 
 void htmlTokenizerInsert(HtmlTokenizer* tokenizer, PrStringView text) {
@@ -1727,12 +1727,12 @@ void htmlTokenizerReset(HtmlTokenizer* tokenizer) {
     tokenizer->input.text.reset();
     tokenizer->values.reset();
     tokenizer->attributes.reset();
-    prStringReset(&tokenizer->lastStartTag);
+    prRawStringReset(&tokenizer->lastStartTag);
     *tokenizer = HtmlTokenizer{};
 }
 
 PrStringView htmlSpanText(const HtmlTokenizer* tokenizer, HtmlSpan span) {
-    const Array<char>& from = (span.start & kHtmlSpanValues) != 0 ? tokenizer->values : tokenizer->input.text;
+    const RawArray<char>& from = (span.start & kHtmlSpanValues) != 0 ? tokenizer->values : tokenizer->input.text;
     uint32_t start = span.start & ~kHtmlSpanValues;
     return PrStringView{from.data + start, span.end - start};
 }

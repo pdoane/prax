@@ -200,7 +200,7 @@ bool layoutInOwningInline(const LayoutTree* tree, LayoutNodeIndex node) {
     return false;
 }
 
-void layoutContainerChain(const LayoutTree* tree, LayoutNodeIndex container, Array<LayoutNodeIndex>& out) {
+void layoutContainerChain(const LayoutTree* tree, LayoutNodeIndex container, RawArray<LayoutNodeIndex>& out) {
     if (container == kLayoutContainerOutside)
         return;
     if (container == kLayoutContainerViewport) {

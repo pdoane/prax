@@ -100,7 +100,7 @@ struct CssBoxProvider {
 
     // Returns the text of a replaced element, given as its context, which its box does not hold
     // (PrLayoutContent::text). Null for a namespace whose replaced elements have none.
-    PrString (*PR_NULLABLE replacedText)(void* PR_NULLABLE element);
+    PrRawString (*PR_NULLABLE replacedText)(void* PR_NULLABLE element);
 
     // The tags of the elements that two line breaks set apart in their rendered text, whatever their boxes
     // (html/#rendered-text-collection-steps), a set that gen_dom.py builds. Null for a namespace with none.

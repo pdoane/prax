@@ -653,7 +653,7 @@ RowCell addCellText(MarkdownBlockParser* p, PrStringView text) {
 // Splits `text` into the cells of its last row, whose text it adds to the parser's content. Returns false if the text
 // is not rows. Writes to `*outParagraph` the offset in the text of the last row, which is 0 unless rows come before it.
 // The text must not be in the parser's content, which grows.
-bool splitRow(MarkdownBlockParser* p, PrStringView text, Array<RowCell>* cells, size_t* outParagraph) {
+bool splitRow(MarkdownBlockParser* p, PrStringView text, RawArray<RowCell>* cells, size_t* outParagraph) {
     cells->clear();
     *outParagraph = 0;
     size_t offset = cellEnd(text, 0);
@@ -681,13 +681,13 @@ bool splitRow(MarkdownBlockParser* p, PrStringView text, Array<RowCell>* cells, 
 }
 
 // Returns a copy of the line from its first non-whitespace character, which outlives changes to the parser's content.
-void copyRestOfLine(const MarkdownBlockParser* p, Array<char>* out) {
+void copyRestOfLine(const MarkdownBlockParser* p, RawArray<char>* out) {
     out->clear();
     out->append(p->line.data + p->firstNonspace, p->line.count - p->firstNonspace);
 }
 
 // Adds a row of `cells` to `table`, filled with empty cells to the table's columns, or cut to them.
-void addRow(MarkdownBlockParser* p, MarkdownBlockIndex table, const Array<RowCell>& cells, bool header) {
+void addRow(MarkdownBlockParser* p, MarkdownBlockIndex table, const RawArray<RowCell>& cells, bool header) {
     MarkdownBlockIndex row = addChild(p, table, PrMarkdownNodeKind_TableRow);
     blockOf(p, row).open = false;
     blockOf(p, row).header = header;
@@ -717,16 +717,16 @@ void addRow(MarkdownBlockParser* p, MarkdownBlockIndex table, const Array<RowCel
 void tryTableHeader(MarkdownBlockParser* p, MarkdownBlockIndex paragraph) {
     if (blockOf(p, paragraph).tableVisited)
         return;
-    Array<char> line;
+    RawArray<char> line;
     copyRestOfLine(p, &line);
     PrStringView delimiterText{line.data, line.count};
     if (!isDelimiterRow(delimiterText, 0)) {
         line.reset();
         return;
     }
-    Array<RowCell> delimiters;
-    Array<RowCell> headers;
-    Array<char> content;
+    RawArray<RowCell> delimiters;
+    RawArray<RowCell> headers;
+    RawArray<char> content;
     size_t ignored = 0;
     size_t paragraphEnd = 0;
     uint32_t mark = p->content.count;
@@ -795,9 +795,9 @@ void tryTableHeader(MarkdownBlockParser* p, MarkdownBlockIndex paragraph) {
 bool tryTableRow(MarkdownBlockParser* p, MarkdownBlockIndex table) {
     if (p->blank || blockOf(p, table).filledCells > kMaxFilledCells)
         return false;
-    Array<char> line;
+    RawArray<char> line;
     copyRestOfLine(p, &line);
-    Array<RowCell> cells;
+    RawArray<RowCell> cells;
     size_t ignored = 0;
     uint32_t mark = p->content.count;
     bool row = splitRow(p, PrStringView{line.data, line.count}, &cells, &ignored);
@@ -814,9 +814,9 @@ bool tryTableRow(MarkdownBlockParser* p, MarkdownBlockIndex table) {
 
 // Returns true if the line, from its first non-whitespace character, is a row of a table.
 bool continuesTable(MarkdownBlockParser* p) {
-    Array<char> line;
+    RawArray<char> line;
     copyRestOfLine(p, &line);
-    Array<RowCell> cells;
+    RawArray<RowCell> cells;
     size_t ignored = 0;
     uint32_t mark = p->content.count;
     bool row = splitRow(p, PrStringView{line.data, line.count}, &cells, &ignored);
@@ -1210,8 +1210,8 @@ PrMarkdownAlert alertMarker(PrStringView content, size_t* outLength) {
 
 // Appends to `out` the text of the inlines under `node`, as an element's text content: the characters of its text and
 // code, without raw HTML, and without the descriptions of images, which are attributes.
-void appendTextContent(MarkdownTree* tree, MarkdownNodeIndex node, Array<char>* out) {
-    Array<MarkdownNodeIndex> pending;
+void appendTextContent(MarkdownTree* tree, MarkdownNodeIndex node, RawArray<char>* out) {
+    RawArray<MarkdownNodeIndex> pending;
     for (MarkdownNodeIndex child = tree->nodes.data[node].last; child != kMarkdownNodeNone;
             child = tree->nodes.data[child].previous)
         pending.push(child);
@@ -1232,7 +1232,7 @@ void appendTextContent(MarkdownTree* tree, MarkdownNodeIndex node, Array<char>* 
 
 // Appends the slug of `text`, which is a heading's id, to `out`: the text lowercased, with each character that is not a
 // letter, a mark, a number, a connector, a hyphen or a space removed, and each space made a hyphen.
-void appendSlug(PrStringView text, Array<char>* out) {
+void appendSlug(PrStringView text, RawArray<char>* out) {
     size_t index = 0;
     while (index < text.size) {
         uint32_t codePoint = 0;
@@ -1382,8 +1382,8 @@ void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& op
         MarkdownNodeIndex parent;
         uint32_t skip;
     };
-    Array<Pending> pending;
-    Array<char> slug;
+    RawArray<Pending> pending;
+    RawArray<char> slug;
     pending.push(Pending{block, 0, 0});
     while (pending.count != 0) {
         Pending next = pending.last();

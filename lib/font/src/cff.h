@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
+#include "pr/raw_array.h"
 
 #include "font/src/outline.h"
 #include "font/src/sfnt.h"
@@ -34,7 +34,7 @@ struct CffFace {
     bool cff2;
     CffIndex charStrings;
     CffIndex globalSubrs;
-    Array<CffPrivate> privates;     // one for each font dictionary
+    RawArray<CffPrivate> privates;  // one for each font dictionary
     SfntTable fdSelect;             // empty if every glyph takes the first font dictionary
     uint32_t fdSelectCount;         // the glyphs that fdSelect maps
     SfntTable variations;           // the ItemVariationStore of CFF2, or empty

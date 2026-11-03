@@ -75,7 +75,7 @@ bool hasKeyword(CssValueRun run, PrCssKeyword keyword) {
 
 // Appends the node at `index` of a computed calculation tree, and the nodes of its operands, to `out` as layout
 // calculation nodes. Returns false for a node that layout calculations cannot hold.
-bool calcNodes(CssValueRun run, uint32_t index, Array<PrLayoutCalcNode>& out) {
+bool calcNodes(CssValueRun run, uint32_t index, RawArray<PrLayoutCalcNode>& out) {
     const CssValueNode* value = &run.values[index];
     auto leaf = [&](PrLayoutCalcLeaf kind, double number) {
         out.push(prLayoutCalcLeaf(kind, number));
@@ -402,7 +402,7 @@ PrLayoutGridTrack trackOf(PrCssPresentation* r, CssValueRun run, uint32_t index)
 
 // Adds the names of the <line-names> block at `*at` of `run`, which starts with its '[', to `names` at `line`, and
 // moves `*at` past its ']'.
-void lineNamesOf(PrCssPresentation* r, CssValueRun run, uint32_t* at, uint32_t line, Array<PrLayoutGridLineName>& names) {
+void lineNamesOf(PrCssPresentation* r, CssValueRun run, uint32_t* at, uint32_t line, RawArray<PrLayoutGridLineName>& names) {
     uint32_t i = *at + run.values[*at].next;
     for (; i < run.count && !cssValueIsLiteral(&run.values[i], ']'); i += run.values[i].next) {
         if (run.values[i].kind != PrCssValueKind_Ident)
@@ -415,7 +415,7 @@ void lineNamesOf(PrCssPresentation* r, CssValueRun run, uint32_t* at, uint32_t l
 
 // Adds the line names and tracks of the list `run`, the content of a repeat() after its count or of a whole track list,
 // to the presentation's scratch, with each name at the line before the next track, counted from `first`.
-void trackItemsOf(PrCssPresentation* r, CssValueRun run, uint32_t first, Array<PrLayoutGridLineName>& names) {
+void trackItemsOf(PrCssPresentation* r, CssValueRun run, uint32_t first, RawArray<PrLayoutGridLineName>& names) {
     for (uint32_t i = 0; i < run.count;) {
         const CssValueNode* value = &run.values[i];
         if (cssValueIsLiteral(value, '[')) {
@@ -956,7 +956,7 @@ void setSlope(PrFontStyle& style, CssValueRun run) {
 }
 
 // Appends `size` bytes at `bytes` to a text font's key.
-void appendKey(Array<char>& key, const void* bytes, size_t size) {
+void appendKey(RawArray<char>& key, const void* bytes, size_t size) {
     key.append(static_cast<const char*>(bytes), uint32_t(size));
 }
 
@@ -970,7 +970,7 @@ PrTextFont* textFontIn(PrFontSet* set, CssPresentationTextFonts& fonts, const Cs
     setSlope(font, cssComputedValue(style, PrCssProperty_FontStyle));
     // The size is in whole layout units, which is how layout measures every length.
     font.size = prLayoutUnitToPx(prLayoutUnitFromPxDouble(cssStyleFontSize(style)));
-    Array<char>& key = fonts.key;
+    RawArray<char>& key = fonts.key;
     key.clear();
     for (uint32_t i = 0; i < fonts.familyViews.count; ++i) {
         const PrFontFamily& family = fonts.familyViews.data[i];
@@ -1423,7 +1423,7 @@ void imageFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     DomDecodedImage decoded{};
     PrByteView bytes{reinterpret_cast<const uint8_t*>(result->body.data), result->body.size};
     if (result->status == PrStatus_Ok && host != nullptr && host->decodeImage != nullptr &&
-            host->decodeImage(host->context, bytes, domUrlFragment(prStringView(&image.url)), &decoded)) {
+            host->decodeImage(host->context, bytes, domUrlFragment(prRawStringView(&image.url)), &decoded)) {
         image.state = CssPresentationImageState_Loaded;
         image.image = decoded.image;
         image.orientation = decoded.orientation;
@@ -1487,13 +1487,13 @@ CssPresentationImage* PR_NULLABLE imageOf(PrCssPresentation* r, PrStringView ref
         prUrlDestroy(parsed);
         return nullptr;
     }
-    PrString url = prUrlSerialize(parsed, PrUrlSerialization_Whole);
+    PrRawString url = prUrlSerialize(parsed, PrUrlSerialization_Whole);
     prUrlDestroy(parsed);
-    PrStringView view = prStringView(&url);
+    PrStringView view = prRawStringView(&url);
     uint32_t hash = uint32_t(prHashBytes(view.data, view.size, 0x5be0cd19137e2179ull));
-    uint32_t found = r->imageIndex.find(hash, [&](uint32_t at) { return prStringView(&r->images.data[at].url) == view; });
+    uint32_t found = r->imageIndex.find(hash, [&](uint32_t at) { return prRawStringView(&r->images.data[at].url) == view; });
     if (found != kHashMissing) {
-        prStringReset(&url);
+        prRawStringReset(&url);
         return &r->images.data[found];
     }
     uint32_t at = r->images.count;
@@ -1621,14 +1621,14 @@ PrLayoutLength treePosition(void* PR_NULLABLE context, CssValueRun run, uint32_t
 // Writes the gradient of the computed <gradient> at `index` to `out`, with its stops appended to `stops`, for the
 // presentation's layout tree.
 void gradientOf(PrCssPresentation* r, CssValueRun run, uint32_t index, const ColorTarget& target,
-        Array<PrLayoutColorStop>& stops, PrLayoutGradient* out) {
+        RawArray<PrLayoutColorStop>& stops, PrLayoutGradient* out) {
     cssGradientFromValue(run, index, target.context, target.cap, CssLayoutLengths{treeLength, treePosition, r}, stops, out);
 }
 
 bool imageLayerOf(PrCssPresentation* r, CssValueRun image, const ColorTarget& target,
     CssPresentationImageDrawing drawing, PrLayoutBackgroundLayer& layer);
-bool filterItemsOf(PrCssPresentation* r, CssValueRun run, const CssColorContext& colors, Array<PrLayoutFilter>& out,
-    Array<PrLayoutSource>& sources);
+bool filterItemsOf(PrCssPresentation* r, CssValueRun run, const CssColorContext& colors, RawArray<PrLayoutFilter>& out,
+    RawArray<PrLayoutSource>& sources);
 void releaseSource(const PrLayoutSource& source);
 
 // Returns where the gradient stops and filter items of the image that is resolved next start in the presentation's
@@ -1834,7 +1834,7 @@ PrLayoutBackgroundIndex backgroundLayersOf(PrCssPresentation* r, const CssComput
     CssPresentationImageDrawing drawing = imageDrawingOf(r, style);
     r->backgroundLayers.clear();
     clearImages(r);
-    Array<CssPresentationImageSpans>& spans = r->backgroundSpans;
+    RawArray<CssPresentationImageSpans>& spans = r->backgroundSpans;
     spans.clear();
     for (uint32_t i = 0; i < imageItems.count; ++i) {
         PrLayoutBackgroundLayer layer = prLayoutBackgroundLayerDefault();
@@ -1917,9 +1917,9 @@ void releaseSource(const PrLayoutSource& source) {
 // Appends to `out` the items of a computed <filter-value-list>, `run`, with drop-shadow()'s color resolved in `colors`
 // and each URL resolved to the filter element that it names, and appends each source to `sources`. Returns false, and
 // appends nothing, if a URL names no filter element.
-bool filterItemsOf(PrCssPresentation* r, CssValueRun run, const CssColorContext& colors, Array<PrLayoutFilter>& out,
-        Array<PrLayoutSource>& sources) {
-    Array<CssFilterFunction> functions;
+bool filterItemsOf(PrCssPresentation* r, CssValueRun run, const CssColorContext& colors, RawArray<PrLayoutFilter>& out,
+        RawArray<PrLayoutSource>& sources) {
+    RawArray<CssFilterFunction> functions;
     cssFilterFunctions(run, colors, &functions);
     uint32_t mark = out.count;
     uint32_t sourceMark = sources.count;
@@ -1990,7 +1990,7 @@ PrCssKeyword geometryKeywordOf(CssValueRun run) {
 
 // Sets the clip path of `c` from a computed clip-path (css-masking-1/#the-clip-path). A URL that names no clipPath, and
 // a shape that the engine does not draw, clip nothing. Like any value but none, they still make the box a group.
-void clipPathOf(PrCssPresentation* r, CssValueRun clip, PrLayoutCompositingStyle* c, Array<PrLayoutSource>& sources) {
+void clipPathOf(PrCssPresentation* r, CssValueRun clip, PrLayoutCompositingStyle* c, RawArray<PrLayoutSource>& sources) {
     if (clip.count == 0 || cssValueRunFirstKeyword(clip) == PrCssKeyword_None)
         return;
     PrStringView url{};
@@ -2176,7 +2176,7 @@ void maskBorderOf(PrCssPresentation* r, const CssComputedStyle* style, const Col
 // transparent. A layer that references no mask element, or whose image cannot be displayed, is left out, so that it
 // masks nothing.
 PrLayoutMaskIndex maskOf(PrCssPresentation* r, const CssComputedStyle* style, const ColorTarget& target,
-        Array<PrLayoutSource>& sources) {
+        RawArray<PrLayoutSource>& sources) {
     PrLayoutMask mask{.border = prLayoutMaskBorderDefault()};
     CssPresentationImageDrawing drawing = imageDrawingOf(r, style);
     r->maskLayers.clear();
@@ -2260,7 +2260,7 @@ PrLayoutMaskIndex maskOf(PrCssPresentation* r, const CssComputedStyle* style, co
 // (filter-effects-1/#FilterProperty). If a URL names no filter element, the whole list is ignored and filters nothing,
 // though the box keeps its group.
 PrLayoutFilterIndex filterListOf(PrCssPresentation* r, CssValueRun run, const CssColorContext& colors,
-        Array<PrLayoutSource>& sources) {
+        RawArray<PrLayoutSource>& sources) {
     if (run.count == 0 || cssValueRunFirstKeyword(run) == PrCssKeyword_None)
         return kPrLayoutFilterNone;
     r->filters.clear();
@@ -2281,7 +2281,7 @@ PrLayoutGroupIndex compositingOf(PrCssPresentation* r, const CssComputedStyle* s
     bool backdropRoot = will.composites || will.filters || will.groups;
     if (style->groups[CssStyleGroup_Compositing] == r->styles.initial[CssStyleGroup_Compositing] && !backdropRoot)
         return 0;
-    Array<PrLayoutSource> sources;
+    RawArray<PrLayoutSource> sources;
     PrLayoutCompositingStyle c = prLayoutCompositingStyleDefault();
     clipPathOf(r, cssComputedValue(style, PrCssProperty_ClipPath), &c, sources);
     clipRectOf(r, cssComputedValue(style, PrCssProperty_Clip), &c);
@@ -3074,7 +3074,7 @@ bool own(PrCssPresentation* r) {
     r->unmapping.clear();
     if (r->pendingScrolls.count == 0)
         return stale;
-    Array<PrLayoutSceneScroll> pending = r->pendingScrolls;
+    RawArray<PrLayoutSceneScroll> pending = r->pendingScrolls;
     r->pendingScrolls = {};
     for (uint32_t i = 0; i < pending.count; ++i)
         scrollTree(r, pending.data[i].node, pending.data[i].offset, CssPresentationScrollBy_Host);
@@ -3126,7 +3126,7 @@ void clearFirsts(PrCssPresentation* r, CssPresentationFirsts& firsts) {
         PrDomNode* node = presented(r, firsts.letterSource);
         PrStringView text{firsts.letterFull.data, firsts.letterFull.count};
         if (node != nullptr && domIsText(node))
-            text = prStringView(&static_cast<PrDomCharacterData*>(node)->data);
+            text = prRawStringView(&static_cast<PrDomCharacterData*>(node)->data);
         prLayoutNodeSetText(r->tree, firsts.letterSource, text);
     }
     if (firsts.letterBox != kPrLayoutNodeNone && prLayoutNodeIsValid(r->tree, firsts.letterBox)) {
@@ -3265,7 +3265,7 @@ uint32_t firstInvalidation(const PrCssPresentation* r, const PrDomElement* eleme
 }
 
 // Adds `features` to the features by which the descendants of `element` are restyled at the next update.
-void addFeatures(PrCssPresentation* r, PrDomElement* element, const Array<uint32_t>& features) {
+void addFeatures(PrCssPresentation* r, PrDomElement* element, const RawArray<uint32_t>& features) {
     uint32_t hash = prHashPointer(element, 0);
     uint32_t head = firstInvalidation(r, element, hash);
     for (uint32_t f = 0; f < features.count; ++f) {
@@ -3291,7 +3291,7 @@ void addFeatures(PrCssPresentation* r, PrDomElement* element, const Array<uint32
 // Marks the elements that a change to the style of `element` reaches: the element, its siblings, its subtree, or the
 // descendants that carry one of `descendants`.
 void restyleReach(PrCssPresentation* r, PrDomElement* element, bool itself, bool laterSiblings, bool siblings,
-        bool subtree, const Array<uint32_t>& descendants) {
+        bool subtree, const RawArray<uint32_t>& descendants) {
     r->changed = true;
     if (itself)
         mark(element, DomStyleFlag_Self);
@@ -3331,7 +3331,7 @@ bool carries(const PrDomElement* element, const uint32_t* features, uint32_t cou
         }
     }
     for (const PrDomAttr* a = element->firstAttribute; a != nullptr; a = static_cast<const PrDomAttr*>(a->next)) {
-        if (any(cssFeatureHash(CssFeature_Attribute, prStringView(&a->name))))
+        if (any(cssFeatureHash(CssFeature_Attribute, prRawStringView(&a->name))))
             return true;
     }
     return false;
@@ -3339,7 +3339,7 @@ bool carries(const PrDomElement* element, const uint32_t* features, uint32_t cou
 
 // Writes the features that the element carries to `out`, each a cssFeatureHash: its type, its ID, its classes, and its
 // attributes' names.
-void featuresOf(const PrDomElement* element, Array<uint32_t>* out) {
+void featuresOf(const PrDomElement* element, RawArray<uint32_t>* out) {
     out->clear();
     out->push(cssFeatureHash(CssFeature_Type, domElementName(element)));
     PrStringView id = domElementId(element);
@@ -3351,7 +3351,7 @@ void featuresOf(const PrDomElement* element, Array<uint32_t>* out) {
             out->push(cssFeatureHash(CssFeature_Class, domClassesName(element->document, classes.atoms[i])));
     }
     for (const PrDomAttr* a = element->firstAttribute; a != nullptr; a = static_cast<const PrDomAttr*>(a->next))
-        out->push(cssFeatureHash(CssFeature_Attribute, prStringView(&a->name)));
+        out->push(cssFeatureHash(CssFeature_Attribute, prRawStringView(&a->name)));
 }
 
 // Marks the anchors whose :has() arguments a change at `node` can make match or stop matching. These are the ancestors
@@ -3368,8 +3368,8 @@ void invalidateAnchors(PrCssPresentation* r, PrDomNode* node, const CssHasAnchor
     bool everySibling = false;
     for (uint32_t i = 0; i < anchors.previous.count; ++i)
         everySibling = everySibling || anchors.anchors.data[anchors.previous.data[i]].siblings;
-    Array<uint32_t> features;
-    Array<uint32_t> descendants;
+    RawArray<uint32_t> features;
+    RawArray<uint32_t> descendants;
     auto restyle = [&](PrDomElement* candidate, bool sibling) {
         featuresOf(candidate, &features);
         cssHasAnchorsEach(anchors, features.data, features.count, sibling, [&](const CssHasAnchor& a) {
@@ -3631,7 +3631,7 @@ void keepMatches(PrCssPresentation* r, uint32_t at, const CssCascadeScratch& scr
 }
 
 // Returns what the element at `at` matched in the current rule set when its style was last computed, or null.
-const Array<uint32_t>* PR_NULLABLE cachedMatches(const PrCssPresentation* r, uint32_t at) {
+const RawArray<uint32_t>* PR_NULLABLE cachedMatches(const PrCssPresentation* r, uint32_t at) {
     const CssPresentationEntry& entry = r->entries.data[at];
     bool current = entry.matchedGeneration != 0 && entry.matchedGeneration == r->rules.generation;
     return current ? &entry.matched : nullptr;
@@ -3642,7 +3642,7 @@ const Array<uint32_t>* PR_NULLABLE cachedMatches(const PrCssPresentation* r, uin
 // matched properties cache and the element's memo, which verification needs. With the element's entry `at`, the style
 // may come from the entry's memo, which the cascade updates.
 const CssComputedStyle* cascade(PrCssPresentation* r, PrDomElement* element, const CssComputedStyle* PR_NULLABLE parent,
-        CssFontBases rootFont, bool fresh = false, const Array<uint32_t>* PR_NULLABLE matched = nullptr,
+        CssFontBases rootFont, bool fresh = false, const RawArray<uint32_t>* PR_NULLABLE matched = nullptr,
         uint32_t at = kHashMissing) {
     cssStylePrepare(element);
     startThreads(r);
@@ -3856,7 +3856,7 @@ const CssComputedStyle* lineStyleOf(PrCssPresentation* r, PrLayoutNode box, cons
 // That box takes the line's styles the same way, with its own ::first-line nested inside the line's. Appends each box
 // and its style there to `lined`.
 void lineRecords(PrCssPresentation* r, CssPresentationFirsts& firsts, PrLayoutNode box, const CssComputedStyle* style,
-        Array<LinedBox>& lined, bool container) {
+        RawArray<LinedBox>& lined, bool container) {
     bool reads = false;
     prLayoutNodeSetFirstLineStyle(r->tree, box, recordOf(r, presented(r, box), style, false, &reads));
     r->readsOutside = r->readsOutside || reads;
@@ -3941,7 +3941,7 @@ LetterSearch findLetter(const PrCssPresentation* r, PrLayoutNode box, bool conta
             bool data = node != nullptr && domIsText(node);
             PrStringView text;
             if (data)
-                text = prStringView(&static_cast<PrDomCharacterData*>(node)->data);
+                text = prRawStringView(&static_cast<PrDomCharacterData*>(node)->data);
             else
                 text = prLayoutNodeText(r->tree, child);
             for (uint32_t k = 0; k < r->firsts.count && !data; ++k) {
@@ -4024,8 +4024,8 @@ void applyFirsts(PrCssPresentation* r) {
         any = r->firsts.data[i].stale || !letterHolds(r, r->firsts.data[i]);
     if (!any)
         return;
-    Array<uint32_t> order;
-    Array<uint32_t> depths;
+    RawArray<uint32_t> order;
+    RawArray<uint32_t> depths;
     for (uint32_t i = 0; i < r->firsts.count; ++i) {
         CssPresentationFirsts& firsts = r->firsts.data[i];
         firsts.stale = false;
@@ -4034,9 +4034,9 @@ void applyFirsts(PrCssPresentation* r) {
         depths.push(flatDepth(firsts.element));
     }
     sortItems(order.data, order.count, [&](uint32_t a, uint32_t b) { return depths.data[a] < depths.data[b]; });
-    Array<LinedBox> lined;
+    RawArray<LinedBox> lined;
     // The held style of the letter's box for each entry of CssPresentation::firsts, or null.
-    Array<const CssComputedStyle*> letters;
+    RawArray<const CssComputedStyle*> letters;
     for (uint32_t i = 0; i < r->firsts.count; ++i)
         letters.push(nullptr);
     for (uint32_t o = 0; o < order.count; ++o) {
@@ -4202,7 +4202,7 @@ void prefetch(PrCssPresentation* r, PrDomElement* element, const CssComputedStyl
     if (r->prefetchNext != r->prefetched.count || domAgentRestyleWidth(r->agent) == 1)
         return;
     // Lists the descendant elements in tree order, each with its parent's index and the end of its subtree.
-    Array<uint32_t> open;
+    RawArray<uint32_t> open;
     DomFlatWalk walk;
     for (PrDomNode* n = domFlatWalkNext(walk, element, element); n != nullptr; n = domFlatWalkNext(walk, element, n)) {
         PrDomElement* e = domElementFromNode(n);
@@ -4224,7 +4224,7 @@ void prefetch(PrCssPresentation* r, PrDomElement* element, const CssComputedStyl
         bool above = parent != kHashMissing ? r->prefetched.data[parent].rematch : rematch;
         bool own = above || (e->pending & DomStyleFlag_Self) != 0 ||
             (r->features.count != 0 && carries(e, r->features.data, r->features.count));
-        const Array<uint32_t>* matched = !own && entry != kHashMissing ? cachedMatches(r, entry) : nullptr;
+        const RawArray<uint32_t>* matched = !own && entry != kHashMissing ? cachedMatches(r, entry) : nullptr;
         bool below = above || (e->pending & (DomStyleFlag_Subtree | DomStyleFlag_Features)) != 0;
         r->prefetched.push(
             CssPresentationPrefetch{e, parent, 0, nullptr, nullptr, entry, matched, below, kGeneratingUnknown});
@@ -4324,7 +4324,7 @@ bool visitText(Walk& w, PrDomNode* node, bool parentBox) {
     PrCssPresentation* r = w.presentation;
     DomStyleFlags flags = node->pending;
     node->pending = 0;
-    PrStringView data = prStringView(&static_cast<PrDomCharacterData*>(node)->data);
+    PrStringView data = prRawStringView(&static_cast<PrDomCharacterData*>(node)->data);
     bool box = parentBox && data.size != 0;
     uint32_t at = cssPresentationNodeEntry(r, node);
     if (!box) {
@@ -4996,7 +4996,7 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
         if (restyle) {
             base = takePrefetched(r, element, parentStyle, &generating);
             if (base == nullptr) {
-                const Array<uint32_t>* cached = matches ? nullptr : cachedMatches(r, at);
+                const RawArray<uint32_t>* cached = matches ? nullptr : cachedMatches(r, at);
                 base = cascade(r, element, parentStyle, w.rootFont, false, cached, at);
                 if (cached == nullptr)
                     keepMatches(r, at, r->threads.data[0].scratch);
@@ -5222,7 +5222,7 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
 
 // Appends the sheets of the document's trees to `out`: the document's own, then those of each connected shadow root, in
 // shadow-including tree order. A document that has never had a shadow root has no other tree to walk for.
-void treeSheets(PrDomDocument* document, Array<CssTreeSheets>& out) {
+void treeSheets(PrDomDocument* document, RawArray<CssTreeSheets>& out) {
     PrCssStyleSheetList* sheets = cssDocumentStyleSheets(document);
     out.push(CssTreeSheets{document, 0, sheets->sheets.data, sheets->sheets.count});
     if (document->slots == nullptr)
@@ -5330,10 +5330,10 @@ void serializeTrackList(PrTextBuffer* out, const PrCssPresentation* r, PrLayoutN
         prTextBufferAppend(out, "none");
         return;
     }
-    Array<PrLayoutUnit> sizes;
+    RawArray<PrLayoutUnit> sizes;
     sizes.resize(count);
     prLayoutNodeGridTrackSizes(r->tree, node, axis, sizes.data, count);
-    Array<PrLayoutGridLineName> names;
+    RawArray<PrLayoutGridLineName> names;
     names.resize(prLayoutNodeGridLineNames(r->tree, node, axis, nullptr, 0));
     prLayoutNodeGridLineNames(r->tree, node, axis, names.data, names.count);
     uint32_t next = 0;
@@ -6104,7 +6104,7 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
                 return false;
         } else if (!domIsText(child)) {
             continue;
-        } else if (box && prStringView(&static_cast<PrDomCharacterData*>(child)->data).size != 0 &&
+        } else if (box && prRawStringView(&static_cast<PrDomCharacterData*>(child)->data).size != 0 &&
                 layoutNodeOf(r, child) == kPrLayoutNodeNone) {
             return differs(out, child, "the text node should generate a box and has none");
         }
@@ -6168,13 +6168,13 @@ bool verifySvgs(PrCssPresentation* r, Difference* out) {
         uint32_t at = cssPresentationNodeEntry(r, svg->element);
         if (at == kHashMissing || !r->entries.data[at].boxed || svg->functions == nullptr)
             continue;
-        PrString report{};
+        PrRawString report{};
         bool same = svg->functions->verify(svg->content, &report);
         if (!same) {
             differs(out, svg->element, "the content of its SVG tree: ");
-            prTextBufferAppend(&out->what, prStringView(&report));
+            prTextBufferAppend(&out->what, prRawStringView(&report));
         }
-        prStringReset(&report);
+        prRawStringReset(&report);
         if (!same)
             return false;
     }
@@ -6245,7 +6245,7 @@ void syncFonts(PrCssPresentation* r) {
     if (style->fontsVersion == r->fontsVersion && !r->rulesStale && !r->restyleAll)
         return;
     r->fontsVersion = style->fontsVersion;
-    Array<PrCssFontFace* PR_NONNULL> faces;
+    RawArray<PrCssFontFace* PR_NONNULL> faces;
     cssDocumentFontFaces(r->document, &faces);
     // The faces that left the document leave the set. The indexes are rebuilt over the faces that stay.
     KeyIndex current;
@@ -6271,14 +6271,14 @@ void syncFonts(PrCssPresentation* r) {
     r->fontFaceAddresses.rebuild(r->fontFaces.count, addressAt);
     // The set ranks the faces in the order of the font source (css-font-loading-3/#fontfaceset-set-entries), so that a
     // face added for a rule that was put back ranks at the position of its rule.
-    Array<uint64_t> order;
+    RawArray<uint64_t> order;
     bool added = false;
     for (uint32_t i = 0; i < faces.count; ++i) {
         PrCssFontFace* face = faces.data[i];
         uint32_t index = r->fontFaceAddresses.find(uint64_t(uintptr_t(face)), addressAt);
-        PrString family = prStringNull();
+        PrRawString family = prRawStringNull();
         PrFontFaceDescriptor descriptor{};
-        Array<PrFontCodePointRange> ranges;
+        RawArray<PrFontCodePointRange> ranges;
         bool described = false;
         if (index == kHashMissing) {
             cssFontFaceRetain(face);
@@ -6319,7 +6319,7 @@ void syncFonts(PrCssPresentation* r) {
                 changed = true;
             }
         }
-        prStringReset(&family);
+        prRawStringReset(&family);
         ranges.reset();
     }
     if (added)
@@ -6433,7 +6433,7 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
         conditions |= PrCssSheetCondition_Quirks;
     if (r->document->kind == DomDocumentKind_Html)
         conditions |= PrCssSheetCondition_HtmlDocument;
-    if (prStringView(&r->document->contentType) == "text/markdown")
+    if (prRawStringView(&r->document->contentType) == "text/markdown")
         conditions |= PrCssSheetCondition_Markdown;
     if (conditions != r->conditions) {
         r->conditions = conditions;
@@ -6449,13 +6449,13 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
             r->document->media);
     }
     if (r->restyleAll || r->rulesStale) {
-        Array<CssTreeSheets> trees;
+        RawArray<CssTreeSheets> trees;
         treeSheets(r->document, trees);
-        Array<const CssRuleData* PR_NONNULL> counterStyles;
+        RawArray<const CssRuleData* PR_NONNULL> counterStyles;
         counterStyles.append(r->rules.counterStyleRules.data, r->rules.counterStyleRules.count);
         cssRuleSetBuild(&r->rules, &r->userAgentRules, trees.data, trees.count, r->document->media);
         trees.reset();
-        const Array<const CssRuleData* PR_NONNULL>& now = r->rules.counterStyleRules;
+        const RawArray<const CssRuleData* PR_NONNULL>& now = r->rules.counterStyleRules;
         if (now.count != counterStyles.count ||
                 !prMemEquals(now.data, counterStyles.data, now.count * sizeof(const CssRuleData*)))
             counterStylesChanged(r);
@@ -6501,7 +6501,7 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
     r->invalidationIndex.clear();
     r->document->pending = 0;
     for (uint32_t i = 0; i < r->threads.count; ++i) {
-        const Array<CssStructureRead>& structure = r->threads.data[i].scratch.structure;
+        const RawArray<CssStructureRead>& structure = r->threads.data[i].scratch.structure;
         for (uint32_t k = 0; k < structure.count; ++k) {
             uint32_t at = cssPresentationNodeEntry(r, structure.data[k].node);
             if (at != kHashMissing)
@@ -6596,7 +6596,7 @@ void applyBoxes(PrCssPresentation* r) {
                 prLayoutNodeSetRendered(r->tree, box, PrLayoutRenderedFlag_Skipped);
             } else if (domIsText(node)) {
                 box = prLayoutNodeCreateText(r->tree, kPrLayoutNodeNone,
-                    prStringView(&static_cast<PrDomCharacterData*>(node)->data));
+                    prRawStringView(&static_cast<PrDomCharacterData*>(node)->data));
             } else if (isReplaced(static_cast<PrDomElement*>(node))) {
                 box = prLayoutNodeCreateReplaced(r->tree, kPrLayoutNodeNone, projectEntry(r, entry));
                 applyContent(r, static_cast<PrDomElement*>(node), box);
@@ -6623,8 +6623,10 @@ void applyBoxes(PrCssPresentation* r) {
         }
         if ((entry.ops & CssPresentationBoxOp_Style) != 0)
             prLayoutNodeSetStyle(r->tree, entry.layoutNode, projectEntry(r, entry));
-        if ((entry.ops & CssPresentationBoxOp_Text) != 0)
-            prLayoutNodeSetText(r->tree, entry.layoutNode, prStringView(&static_cast<PrDomCharacterData*>(node)->data));
+        if ((entry.ops & CssPresentationBoxOp_Text) != 0) {
+            const PrDomCharacterData* characters = static_cast<PrDomCharacterData*>(node);
+            prLayoutNodeSetText(r->tree, entry.layoutNode, prRawStringView(&characters->data));
+        }
         if ((entry.ops & CssPresentationBoxOp_Content) != 0 && isPseudo(node))
             applyGenerated(r, entry);
         else if ((entry.ops & CssPresentationBoxOp_Content) != 0)
@@ -6672,7 +6674,7 @@ void applyBoxes(PrCssPresentation* r) {
 // Appends to `out` the roots that the presentation lays out: the box of the document's root in the viewport of
 // `extent`, then the content of each foreignObject that the content of an svg element draws, at the size of its
 // positioning rectangle. A foreignObject comes after those around it, whose drawings draw it (prLayoutNodeDraw).
-void layoutRootsOf(const PrCssPresentation* r, PrLayoutVec extent, Array<PrLayoutRoot>* out) {
+void layoutRootsOf(const PrCssPresentation* r, PrLayoutVec extent, RawArray<PrLayoutRoot>* out) {
     out->push(PrLayoutRoot{r->root, extent});
     if (r->foreignBoxes == 0 || r->svgs.count == 0)
         return;
@@ -6680,12 +6682,12 @@ void layoutRootsOf(const PrCssPresentation* r, PrLayoutVec extent, Array<PrLayou
         uint32_t depth;
         PrLayoutRoot root;
     };
-    Array<Ordered> roots;
+    RawArray<Ordered> roots;
     for (uint32_t i = 0; i < r->svgs.count; ++i) {
         uint32_t at = cssPresentationNodeEntry(r, r->svgs.data[i]->element);
         if (at == kHashMissing || !r->entries.data[at].boxed)
             continue;
-        const Array<CssPresentationSvgForeignObject>& found = r->svgs.data[i]->foreignObjects;
+        const RawArray<CssPresentationSvgForeignObject>& found = r->svgs.data[i]->foreignObjects;
         for (uint32_t k = 0; k < found.count; ++k) {
             uint32_t depth = 0;
             for (const PrDomNode* up = found.data[k].element; up != nullptr; up = up->parent)
@@ -6719,7 +6721,7 @@ CssAppearance appearanceOf(PrCssSheetAppearance appearance) {
 void cssPresentationRuleChanged(PrCssPresentation* presentation, const CssRuleData* rule) {
     if (presentation->restyleAll)
         return;
-    Array<uint32_t> features;
+    RawArray<uint32_t> features;
     PrDomElement* root = domDocumentElement(presentation->document);
     if (!cssRuleSubjectFeatures(rule, &features) || presentation->rules.reads.global) {
         features.reset();
@@ -7017,7 +7019,7 @@ bool cssPresentationUpdateLayout(PrCssPresentation* presentation, PrLayoutVec ex
         return false;
     }
     presentation->layoutStale = false;
-    Array<PrLayoutRoot> roots;
+    RawArray<PrLayoutRoot> roots;
     layoutRootsOf(presentation, extent, &roots);
     prLayoutTreeLayout(presentation->tree, roots.data, roots.count);
     roots.reset();
@@ -7044,11 +7046,11 @@ PrDomNode* PR_NULLABLE cssPresentationNodeFromLayout(const PrCssPresentation* pr
     return seen(presented(presentation, node));
 }
 
-void cssPresentationHits(PrCssPresentation* presentation, PrLayoutVec point, uint32_t limit, Array<PrDomNode*>* out) {
+void cssPresentationHits(PrCssPresentation* presentation, PrLayoutVec point, uint32_t limit, RawArray<PrDomNode*>* out) {
     own(presentation);
     PrLayoutTree* tree = presentation->tree;
     // Most points hit few boxes, which one walk finds. A walk that finds more than the first guess walks again.
-    Array<PrLayoutNode> boxes;
+    RawArray<PrLayoutNode> boxes;
     boxes.resize(limit < 16 ? limit : 16);
     uint32_t total = prLayoutTreeHitTest(tree, point, boxes.data, boxes.count);
     if (total > boxes.count && limit > boxes.count) {
@@ -7069,14 +7071,14 @@ void cssPresentationHits(PrCssPresentation* presentation, PrLayoutVec point, uin
             // The content of an outermost svg element is hit in its content box, which is its viewport.
             PrLayoutRect box = prLayoutNodeReplacedContent(tree, boxes.data[i]);
             PrVec2 at = prLayoutVecToPx(PrLayoutVec{local.x - box.left, local.y - box.top});
-            Array<CssPresentationSvgHit> hits;
+            RawArray<CssPresentationSvgHit> hits;
             hits.resize(svg->functions->hitTest(svg->content, at, nullptr, 0));
             svg->functions->hitTest(svg->content, at, hits.data, hits.count);
             for (uint32_t k = 0; k < hits.count; ++k) {
                 const CssPresentationSvgHit& hit = hits.data[k];
                 // A foreignObject's content is a layout root of its own, which is hit before the foreignObject.
                 if (hit.root != kPrLayoutNodeNone) {
-                    Array<PrLayoutNode> inner;
+                    RawArray<PrLayoutNode> inner;
                     PrLayoutVec within = prLayoutVecFromPx(hit.rootPoint);
                     inner.resize(prLayoutNodeHitTest(tree, hit.root, within, nullptr, 0));
                     prLayoutNodeHitTest(tree, hit.root, within, inner.data, inner.count);
@@ -7199,7 +7201,7 @@ void cssPresentationRunScrollSteps(PrCssPresentation* presentation) {
     if (presentation->scrolled.count == 0)
         return;
     // Event listeners can scroll again. Those scrolls wait for the next run.
-    Array<PrDomNode*> targets = presentation->scrolled;
+    RawArray<PrDomNode*> targets = presentation->scrolled;
     presentation->scrolled = {};
     const PrStringView names[] = {"scroll", "scrollend"};
     for (PrStringView name : names) {
@@ -7221,7 +7223,7 @@ void cssPresentationSendAnimationEvents(PrCssPresentation* presentation) {
     if (a.events.count == 0)
         return;
     // Listeners can start and cancel animations. The events of those animations wait for the next update.
-    Array<CssAnimateEvent> events = a.events;
+    RawArray<CssAnimateEvent> events = a.events;
     a.events = {};
     sortItems(events.data, events.count, [](const CssAnimateEvent& x, const CssAnimateEvent& y) {
         return x.scheduled < y.scheduled;
@@ -7235,13 +7237,13 @@ void cssPresentationSendAnimationEvents(PrCssPresentation* presentation) {
             event = domEventCreate<PrCssTransitionEvent>(e.type, init, PrDomEventKind_Transition);
         else
             event = domEventCreate<PrCssAnimationEvent>(e.type, init, PrDomEventKind_Animation);
-        domEventSetAnimation(event, prStringView(&e.name), e.elapsedTime, cssPseudoName(e.pseudo));
+        domEventSetAnimation(event, prRawStringView(&e.name), e.elapsedTime, cssPseudoName(e.pseudo));
         event->trusted = true;
         PrDomElement* target = const_cast<PrDomElement*>(e.element);
         domEventDispatch(target, event);
         domEventRelease(event);
         domNodeUnhold(target);
-        prStringReset(&e.name);
+        prRawStringReset(&e.name);
     }
     events.reset();
 }
@@ -7364,7 +7366,7 @@ void cssPresentationPostJob(PrCssPresentation* presentation, PrLayoutVec extent)
     presentation->jobTaken = presentation->newTaken;
     presentation->newTaken = 0;
     presentation->newLeft = jobShare(presentation);
-    Array<PrLayoutRoot> roots;
+    RawArray<PrLayoutRoot> roots;
     layoutRootsOf(presentation, extent, &roots);
     prLayoutWorkerPost(domAgentLayoutWorker(presentation->agent), presentation->tree, roots.data, roots.count);
     roots.reset();
@@ -7519,7 +7521,7 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
         r->imageFetches.data[i]->presentation = nullptr;
     r->imageFetches.reset();
     for (uint32_t i = 0; i < r->images.count; ++i) {
-        prStringReset(&r->images.data[i].url);
+        prRawStringReset(&r->images.data[i].url);
         r->images.data[i].waiting.reset();
         prDrawImageRelease(r->images.data[i].image);
         prDrawImageRelease(r->images.data[i].stored);
@@ -7617,7 +7619,7 @@ uint32_t prCssPresentationTracks(PrCssPresentation* presentation, PrLayoutTrack*
             return nullptr;
         return d->entries.data[at].base != nullptr ? d->entries.data[at].base : d->entries.data[at].style;
     };
-    const Array<PrLayoutTrack>& tracks = cssAnimateTracks(presentation, layoutNode, baseOf);
+    const RawArray<PrLayoutTrack>& tracks = cssAnimateTracks(presentation, layoutNode, baseOf);
     for (uint32_t i = 0; i < tracks.count && i < capacity; ++i)
         out[i] = tracks.data[i];
     return tracks.count;
@@ -7638,7 +7640,7 @@ PrCssPresentationStats prCssPresentationStats(const PrCssPresentation* presentat
     return presentation->stats;
 }
 
-bool prCssPresentationVerify(PrCssPresentation* presentation, PrString* PR_NULLABLE report) {
+bool prCssPresentationVerify(PrCssPresentation* presentation, PrRawString* PR_NULLABLE report) {
     PrCssPresentation* r = presentation;
     own(r);
     Difference found{nullptr, {}};
@@ -7658,8 +7660,8 @@ bool prCssPresentationVerify(PrCssPresentation* presentation, PrString* PR_NULLA
         same = prLayoutTreeVerify(r->tree, &difference);
         if (!same) {
             found.node = difference.node != kPrLayoutNodeNone ? prCssPresentationNode(r, difference.node) : nullptr;
-            prTextBufferAppend(&found.what, prStringView(&difference.what));
-            prStringReset(&difference.what);
+            prTextBufferAppend(&found.what, prRawStringView(&difference.what));
+            prRawStringReset(&difference.what);
         }
     }
     if (!same && report != nullptr) {
@@ -7669,7 +7671,7 @@ bool prCssPresentationVerify(PrCssPresentation* presentation, PrString* PR_NULLA
             prTextBufferAppend(&text, ": ");
         }
         prTextBufferAppend(&text, prTextBufferView(&found.what));
-        prStringReset(report);
+        prRawStringReset(report);
         *report = prTextBufferTake(&text);
     }
     prTextBufferReset(&found.what);
@@ -7801,7 +7803,7 @@ uint32_t prCssPresentationTakeScrolls(PrCssPresentation* presentation, PrLayoutS
 }
 
 PrDomNode* PR_NULLABLE prCssPresentationHitTest(PrCssPresentation* presentation, PrLayoutVec point) {
-    Array<PrDomNode*> hits;
+    RawArray<PrDomNode*> hits;
     cssPresentationHits(presentation, point, 1, &hits);
     PrDomNode* first = hits.count != 0 ? hits.data[0] : nullptr;
     hits.reset();

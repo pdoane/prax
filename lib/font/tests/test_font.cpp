@@ -57,10 +57,10 @@ const PrFont* hinted(const PrFont* font, PrFontHinting hinting) {
     });
 }
 
-std::string text(PrString string) {
-    PrStringView view = prStringView(&string);
+std::string text(PrRawString string) {
+    PrStringView view = prRawStringView(&string);
     std::string result(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(&string);
+    prRawStringReset(&string);
     return result;
 }
 

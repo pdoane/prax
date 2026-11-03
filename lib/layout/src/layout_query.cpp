@@ -98,12 +98,12 @@ PrLayoutRect placedHitBounds(const LayoutTree* tree, const LayoutFragment* fragm
 // Finds the nodes painted over a point, in painting order.
 struct HitTester : LayoutWalkVisitor {
     const LayoutTree* tree;
-    Array<PrLayoutVec> points;      // the point in each transform's space, the current last
+    RawArray<PrLayoutVec> points;      // the point in each transform's space, the current last
 
     // Whether each clip and transform, with those around it, excludes the point: a clip that does not hold it, or a
     // transform whose inverse does not reach it.
-    Array<bool> outside;
-    Array<uint32_t>* out;
+    RawArray<bool> outside;
+    RawArray<uint32_t>* out;
 
     PrLayoutVec point() const { return points.data[points.count - 1]; }
     bool excluded() const { return outside.count != 0 && outside.data[outside.count - 1]; }
@@ -210,7 +210,7 @@ struct HitTester : LayoutWalkVisitor {
 
 // Writes up to `capacity` of the nodes that a hit test found, in painting order, to `out`, topmost first and each once,
 // and returns their number.
-uint32_t topmostOnce(const LayoutTree* tree, const Array<uint32_t>& hits, PrLayoutNode* PR_NULLABLE out,
+uint32_t topmostOnce(const LayoutTree* tree, const RawArray<uint32_t>& hits, PrLayoutNode* PR_NULLABLE out,
         uint32_t capacity) {
     uint32_t count = 0;
     for (uint32_t i = hits.count; i-- != 0;) {
@@ -270,7 +270,7 @@ struct Mapping {
     // If set, the mapping is kept as stages instead of one composition: each projective transform is a stage of its
     // own, and the affine transforms between them compose into the stages around them. A point that maps back through
     // the stages one at a time is checked against each plane's eye, which one composed matrix cannot do.
-    Array<PrDMatrix3>* PR_NULLABLE stages;
+    RawArray<PrDMatrix3>* PR_NULLABLE stages;
 };
 
 // Appends the composition that `m` holds to its stages, and starts a new one.
@@ -414,7 +414,7 @@ void eachText(LayoutNodeIndex node, const LayoutFragment* container, LayoutPiece
 
 // Appends the line rectangles of the text `node`, in content order and in its block container's content. A break has no
 // extent along its line, and only gives a caret a place.
-void textBoxes(LayoutNodeIndex node, const LayoutFragment* container, LayoutPieceAt at, Array<PrLayoutRect>& out) {
+void textBoxes(LayoutNodeIndex node, const LayoutFragment* container, LayoutPieceAt at, RawArray<PrLayoutRect>& out) {
     eachText(node, container, at, [&](const PlacedText& piece) {
         if ((piece.fragment->flags & LayoutFragmentFlag_Break) == 0)
             out.push(layoutRectAt(piece.offset, piece.fragment->extent));
@@ -423,7 +423,7 @@ void textBoxes(LayoutNodeIndex node, const LayoutFragment* container, LayoutPiec
 
 // Appends the boxes of the inline box `node`, which opens on the line `at` of its block container `container`, in
 // content order and in its container's content: its parts on lines, and its rows around the blocks inside it.
-void inlineBoxes(LayoutNodeIndex node, const LayoutFragment* container, LayoutPieceAt at, Array<PrLayoutRect>& out) {
+void inlineBoxes(LayoutNodeIndex node, const LayoutFragment* container, LayoutPieceAt at, RawArray<PrLayoutRect>& out) {
     LayoutPieces pieces = layoutPiecesFrom(container, kLayoutVecZero, node, at);
     LayoutPiece piece{};
     while (layoutPiecesNext(pieces, &piece)) {
@@ -441,7 +441,7 @@ void inlineBoxes(LayoutNodeIndex node, const LayoutFragment* container, LayoutPi
 // Appends the boxes of `node` in the last layout to `out`, in content order and unmapped, and appends to `m` the
 // mapping from the space they are in to the query's coordinates. A box element's box is its border box at the origin of
 // its own space. The pieces of an inline box or a text are in the content of their block container.
-void boxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, Array<PrLayoutRect>& out) {
+void boxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, RawArray<PrLayoutRect>& out) {
     if (!laidOut(tree, node))
         return;
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
@@ -469,7 +469,7 @@ void boxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, Array<PrL
 
 // Appends the boxes of `node` in the last layout to `out`, in `coordinates` and in content order: where the last layout
 // placed the node, mapped through the boxes that place it.
-void boxesOf(const LayoutTree* tree, PrLayoutCoordinates coordinates, LayoutNodeIndex node, Array<PrLayoutRect>& out) {
+void boxesOf(const LayoutTree* tree, PrLayoutCoordinates coordinates, LayoutNodeIndex node, RawArray<PrLayoutRect>& out) {
     Mapping m{
         .transform = prDAffine2Identity(),
         .painted = coordinates == PrLayoutCoordinates_Viewport,
@@ -712,9 +712,9 @@ void renderedCollect(RenderedWalk& walk, LayoutNodeIndex node) {
             renderedRequireBreaks(walk, breaks);
             const LayoutReplaced& replaced = layoutReplaced(tree, node);
             if (replaced.text != nullptr) {
-                PrString text = replaced.text(replaced.textContext);
-                renderedAppend(walk, prStringView(&text));
-                prStringReset(&text);
+                PrRawString text = replaced.text(replaced.textContext);
+                renderedAppend(walk, prRawStringView(&text));
+                prRawStringReset(&text);
             }
             renderedRequireBreaks(walk, breaks);
             return;
@@ -827,7 +827,7 @@ constexpr float kLineStopSamePlace = 0.05f;
 
 // Appends the stops of the fragment of `piece`, in order of `along`. A stop at a position that the last stop has, at
 // the same place, is one stop, which stands with the text after it.
-void appendLineStops(const PrLayoutTree* tree, const LinePiece& piece, Array<PrLayoutLineStop>& out) {
+void appendLineStops(const PrLayoutTree* tree, const LinePiece& piece, RawArray<PrLayoutLineStop>& out) {
     const LayoutFragment* fragment = piece.fragment;
     PrLayoutNode name = layoutNodeName(tree, piece.node);
     PrStringView all = prLayoutNodeText(tree, name);
@@ -1004,7 +1004,7 @@ using namespace pr_impl;
 
 uint32_t prLayoutNodeBoxes(PrLayoutTree* tree, PrLayoutNode node, PrLayoutCoordinates coordinates,
         PrLayoutRect* PR_NULLABLE out, uint32_t capacity) {
-    Array<PrLayoutRect>& boxes = tree->queries.boxes;
+    RawArray<PrLayoutRect>& boxes = tree->queries.boxes;
     boxes.clear();
     if (prLayoutNodeIsValid(tree, node))
         boxesOf(tree, coordinates, uint32_t(node), boxes);
@@ -1014,7 +1014,7 @@ uint32_t prLayoutNodeBoxes(PrLayoutTree* tree, PrLayoutNode node, PrLayoutCoordi
 }
 
 PrLayoutRect prLayoutNodeBounds(PrLayoutTree* tree, PrLayoutNode node, PrLayoutCoordinates coordinates) {
-    Array<PrLayoutRect>& boxes = tree->queries.boxes;
+    RawArray<PrLayoutRect>& boxes = tree->queries.boxes;
     boxes.clear();
     if (prLayoutNodeIsValid(tree, node))
         boxesOf(tree, coordinates, uint32_t(node), boxes);
@@ -1080,8 +1080,8 @@ PrLayoutRect prLayoutNodeShownBounds(PrLayoutTree* tree, PrLayoutNode node) {
 bool prLayoutNodeLocalPoint(PrLayoutTree* tree, PrLayoutNode node, PrLayoutVec point, PrLayoutVec* out) {
     if (!prLayoutNodeIsValid(tree, node))
         return false;
-    Array<PrLayoutRect>& boxes = tree->queries.boxes;
-    Array<PrDMatrix3> stages;
+    RawArray<PrLayoutRect>& boxes = tree->queries.boxes;
+    RawArray<PrDMatrix3> stages;
     boxes.clear();
     Mapping m{.transform = prDAffine2Identity(), .painted = true, .sticky = true, .stages = &stages};
     boxesIn(tree, uint32_t(node), m, boxes);
@@ -1110,8 +1110,8 @@ bool prLayoutNodeLocalPoint(PrLayoutTree* tree, PrLayoutNode node, PrLayoutVec p
 bool prLayoutNodeMapFromBox(PrLayoutTree* tree, PrLayoutNode node, PrDVec2* PR_NULLABLE points, uint32_t count) {
     if (!prLayoutNodeIsValid(tree, node))
         return false;
-    Array<PrLayoutRect>& boxes = tree->queries.boxes;
-    Array<PrDMatrix3> stages;
+    RawArray<PrLayoutRect>& boxes = tree->queries.boxes;
+    RawArray<PrDMatrix3> stages;
     boxes.clear();
     Mapping m{.transform = prDAffine2Identity(), .painted = true, .sticky = true, .stages = &stages};
     boxesIn(tree, uint32_t(node), m, boxes);
@@ -1250,7 +1250,7 @@ bool prLayoutNodeTextCaret(PrLayoutTree* tree, PrLayoutNode text, uint32_t offse
 
 uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint32_t start, uint32_t end,
         PrLayoutCoordinates coordinates, PrLayoutRect* PR_NULLABLE out, uint32_t capacity) {
-    Array<PrLayoutRect>& boxes = tree->queries.boxes;
+    RawArray<PrLayoutRect>& boxes = tree->queries.boxes;
     boxes.clear();
     if (!prLayoutNodeIsValid(tree, text))
         return 0;
@@ -1277,9 +1277,9 @@ uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint3
     return boxes.count;
 }
 
-PrString prLayoutNodeRenderedText(PrLayoutTree* tree, PrLayoutNode root, const PrLayoutRenderedTextDesc* PR_NULLABLE desc) {
+PrRawString prLayoutNodeRenderedText(PrLayoutTree* tree, PrLayoutNode root, const PrLayoutRenderedTextDesc* PR_NULLABLE desc) {
     if (!prLayoutNodeIsValid(tree, root))
-        return prStringEmpty();
+        return prRawStringEmpty();
     if (tree->queries.renderedLayouts != tree->layouts || tree->queries.rendered.count == 0)
         indexRenderedItems(tree);
     RenderedWalk walk{.tree = tree, .desc = desc != nullptr ? *desc : PrLayoutRenderedTextDesc{}};
@@ -1294,8 +1294,8 @@ bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayo
     double nearestAcross = kPrF64Infinity;
     double nearestAlong = kPrF64Infinity;
     bool found = false;
-    Array<PlacedText> pieces;
-    Array<PrDMatrix3> stages;
+    RawArray<PlacedText> pieces;
+    RawArray<PrDMatrix3> stages;
     LayoutNodeIndex top = uint32_t(root);
     for (LayoutNodeIndex at = top; at != kPrLayoutNodeNone;) {
         pieces.clear();
@@ -1392,9 +1392,9 @@ uint32_t prLayoutLineStops(PrLayoutTree* tree, PrLayoutNode root, PrLayoutTextPo
         return 0;
     if ((layoutTreeNode(tree, uint32_t(position.node)).dirty & LayoutDirtyFlag_Self) != 0)
         return 0;
-    Array<LinePiece> pieces;
-    Array<LineKey> lines;
-    Array<PrLayoutLineStop> stops;
+    RawArray<LinePiece> pieces;
+    RawArray<LineKey> lines;
+    RawArray<PrLayoutLineStop> stops;
     uint32_t held = UINT32_MAX;
     uint32_t nearest = UINT32_MAX;
     LayoutNodeIndex wanted = uint32_t(position.node);
@@ -1437,8 +1437,8 @@ uint32_t prLayoutLineStops(PrLayoutTree* tree, PrLayoutNode root, PrLayoutTextPo
     else if (held != UINT32_MAX && step == PrLayoutLineStep_Previous)
         target = held > 0 ? held - 1 : UINT32_MAX;
     if (target != UINT32_MAX) {
-        Array<LinePiece> onLine;
-        Array<LayoutNodeIndex> order;       // the nodes of the line, in content order
+        RawArray<LinePiece> onLine;
+        RawArray<LayoutNodeIndex> order;       // the nodes of the line, in content order
         for (uint32_t i = 0; i < pieces.count; ++i) {
             if (pieces.data[i].line != target)
                 continue;
@@ -1563,7 +1563,7 @@ bool prLayoutNodeHoldsFixed(const PrLayoutTree* tree, PrLayoutNode node) {
 }
 
 uint32_t prLayoutTreeHitTest(PrLayoutTree* tree, PrLayoutVec point, PrLayoutNode* PR_NULLABLE out, uint32_t capacity) {
-    Array<uint32_t> hits;
+    RawArray<uint32_t> hits;
     HitTester tester{};
     tester.tree = tree;
     tester.points.push(point);
@@ -1586,7 +1586,7 @@ uint32_t prLayoutNodeHitTest(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec 
     }
     if (fragment == nullptr || fragment->childCount == 0)
         return 0;
-    Array<uint32_t> hits;
+    RawArray<uint32_t> hits;
     HitTester tester{};
     tester.tree = tree;
     tester.points.push(point);

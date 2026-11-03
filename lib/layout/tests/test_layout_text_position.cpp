@@ -407,9 +407,9 @@ TEST_CASE("a frame's highlights and caret last until a frame that does not set t
 TEST_CASE("rendered text: white space is processed, and removed only at the edges of a line") {
     auto renderedOf = [](const char* value, PrLayoutWhiteSpaceCollapse collapse, float width = 400) {
         Block b(value, width, collapse);
-        PrString text = prLayoutNodeRenderedText(b.f.tree, b.root, nullptr);
-        std::string copy(prStringView(&text).data, prStringView(&text).size);
-        prStringReset(&text);
+        PrRawString text = prLayoutNodeRenderedText(b.f.tree, b.root, nullptr);
+        std::string copy(prRawStringView(&text).data, prRawStringView(&text).size);
+        prRawStringReset(&text);
         return copy;
     };
     CHECK(renderedOf("  a  \n b  ", PrLayoutWhiteSpaceCollapse_Collapse) == "a b");

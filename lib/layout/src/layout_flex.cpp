@@ -527,7 +527,7 @@ double outerHypothetical(const LayoutFlexItem& it, bool visible) {
 // least one item. A collapsed item counts as visible if `visible` is true, and otherwise as zero size, though it still
 // takes a gap as any item does.
 void collectLines(Flex& f, double main, bool visible) {
-    Array<LayoutFlexLine>& lines = f.state.scratch->flex->lines;
+    RawArray<LayoutFlexLine>& lines = f.state.scratch->flex->lines;
     f.lineMark = lines.count;
     uint32_t first = 0;
     while (first < f.count || f.lineCount == 0) {
@@ -1085,7 +1085,7 @@ LayoutContentOutcome solve(LayoutState& state, LayoutNodeIndex node, const Layou
     LayoutTree* tree = state.tree;
     if (state.scratch->flex == nullptr)
         state.scratch->flex = layoutFlexScratchCreate();
-    Array<LayoutFlexItem>& items = state.scratch->flex->items;
+    RawArray<LayoutFlexItem>& items = state.scratch->flex->items;
     const PrLayoutFlexStyle& flex = layoutFlexStyle(state.styles, layoutTreeNode(tree, node).style);
     PrLayoutFlexDirection direction = flex.direction;
     bool row = isRow(direction);
@@ -1121,7 +1121,7 @@ LayoutContentOutcome solve(LayoutState& state, LayoutNodeIndex node, const Layou
 
     // Collects the items in order-modified document order (css-display-4/#order-modified-document-order), and counts
     // the children that are out of flow. Their static positions are found once the content box is sized.
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     uint32_t outOfFlow = 0;
     auto addItem = [&](LayoutNodeIndex c, const PrLayoutBoxStyle& child, const PrLayoutFlexStyle& childFlex) {
         LayoutFlexItem it{};

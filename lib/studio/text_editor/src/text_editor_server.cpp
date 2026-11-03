@@ -34,7 +34,7 @@ void keepMessage(void* PR_NULLABLE context, const PrLspMessage* message) {
     if (message->method != "window/showMessage")
         return;
     PrJsonValueIndex text = prJsonMember(message->json, message->params, "message");
-    prStringReplace(&server->message, prJsonString(message->json, text));
+    prRawStringReplace(&server->message, prJsonString(message->json, text));
 }
 
 } // namespace
@@ -43,13 +43,13 @@ TextEditorServer* textEditorServerCreate(const TextEditorServerConfig& config, u
         PrProcessLauncher* PR_NULLABLE launcher, PrApp* PR_NULLABLE app) {
     TextEditorServer* server = allocZeroed<TextEditorServer>();
     server->config = index;
-    server->root = prStringCopy(root);
-    server->message = prStringEmpty();
-    Array<PrStringView> arguments;
+    server->root = prRawStringCopy(root);
+    server->message = prRawStringEmpty();
+    RawArray<PrStringView> arguments;
     for (uint32_t i = 0; i < config.arguments.count; ++i)
-        arguments.push(prStringView(&config.arguments.data[i]));
+        arguments.push(prRawStringView(&config.arguments.data[i]));
     PrProcessDesc process{
-        .program = prStringView(&config.program),
+        .program = prRawStringView(&config.program),
         .arguments = arguments.data,
         .argumentCount = arguments.count,
         .directory = root,
@@ -87,8 +87,8 @@ void textEditorServerDestroy(TextEditorServer* server) {
     }
     prLspClientDestroy(server->client);
     prProcessDestroy(server->process);
-    prStringReset(&server->root);
-    prStringReset(&server->message);
+    prRawStringReset(&server->root);
+    prRawStringReset(&server->message);
     server->chunk.reset();
     prMemoryFree(server);
 }

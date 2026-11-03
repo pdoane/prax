@@ -17,7 +17,7 @@ struct Filters : CssTestSource {
     CssValuePool parsed = {};
     CssValuePool computed = {};
     CssMatchState match = {};
-    Array<CssFilterFunction> items = {};
+    RawArray<CssFilterFunction> items = {};
 
     explicit Filters(PrStringView value) : CssTestSource(value) {
         CssValueSpan span{};

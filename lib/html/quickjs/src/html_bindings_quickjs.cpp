@@ -429,7 +429,7 @@ JSValue setTabIndex(JSContext* ctx, JSValueConst elementObject, JSValueConst inp
 // ---------------------------------------------------------------------------------------------------------------------
 // DOMStringMap (html/#domstringmap), whose handle is its element's handle
 
-bool datasetNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
+bool datasetNames(JSContext* ctx, void* handle, RawArray<JSAtom>* out) {
     return jsNameAtoms(ctx, static_cast<const PrDomElement*>(handle), prHtmlDatasetNames, out);
 }
 
@@ -669,7 +669,7 @@ JSValue canvasToDataUrl(JSContext* ctx, JSValueConst canvasObject, int argc, JSV
     StringArgument type = {.ctx = ctx, .fallback = "image/png"};
     if (canvas == nullptr || (jsArgGiven(argc, argv, 0) && !type.read(argv[0])))
         return JS_EXCEPTION;
-    PrString url = prStringNull();
+    PrRawString url = prRawStringNull();
     if (prHtmlCanvasElementToDataUrl(canvas, type.value(), &url) != PrStatus_Ok)
         return jsDomExceptionThrow(ctx, "SecurityError");
     return jsTakeString(ctx, url);
@@ -682,19 +682,19 @@ JSValue canvasToDataUrl(JSContext* ctx, JSValueConst canvasObject, int argc, JSV
 // A MediaError's code and message.
 struct MediaErrorValue {
     uint16_t code;
-    PrString message;
+    PrRawString message;
 };
 
 void mediaErrorDestroy(MediaErrorValue* PR_NULLABLE error) {
     if (error == nullptr)
         return;
-    prStringReset(&error->message);
+    prRawStringReset(&error->message);
     prMemoryFree(error);
 }
 
 // The ranges of a TimeRanges: the start and end of each, in order.
 struct TimeRangesValue {
-    Array<double> bounds;
+    RawArray<double> bounds;
 };
 
 void timeRangesDestroy(TimeRangesValue* PR_NULLABLE ranges) {
@@ -724,7 +724,7 @@ JSValue mediaError(JSContext* ctx, JSValueConst mediaObject) {
         return held;
     JS_FreeValue(ctx, held);
     MediaErrorValue* error = alloc<MediaErrorValue>();
-    *error = MediaErrorValue{code, prStringCopy(prHtmlMediaElementErrorMessage(media))};
+    *error = MediaErrorValue{code, prRawStringCopy(prHtmlMediaElementErrorMessage(media))};
     JSValue object = jsWrap(ctx, htmlMediaErrorClass, JS_NULL, error, true);
     if (JS_IsException(object)) {
         mediaErrorDestroy(error);
@@ -752,8 +752,8 @@ JSValue mediaRanges(JSContext* ctx, JSValueConst mediaObject, int magic) {
         return JS_EXCEPTION;
     uint32_t count = prHtmlMediaElementRanges(media, PrHtmlMediaRanges(magic), nullptr, nullptr, 0);
     TimeRangesValue* ranges = allocZeroed<TimeRangesValue>();
-    Array<double> starts;
-    Array<double> ends;
+    RawArray<double> starts;
+    RawArray<double> ends;
     starts.reserve(count);
     ends.reserve(count);
     prHtmlMediaElementRanges(media, PrHtmlMediaRanges(magic), starts.data, ends.data, count);
@@ -1055,7 +1055,7 @@ JSValue slotAssigned(JSContext* ctx, JSValueConst slotObject, int argc, JSValueC
     if (slot == nullptr || !jsDictionary(ctx, options, &present) ||
             (present && !jsDictBool(ctx, options, "flatten", &flatten)))
         return JS_EXCEPTION;
-    Array<PrDomNode* PR_NONNULL> nodes;
+    RawArray<PrDomNode* PR_NONNULL> nodes;
     nodes.reserve(prHtmlSlotElementAssignedNodes(slot, flatten, nullptr, 0));
     nodes.count = prHtmlSlotElementAssignedNodes(slot, flatten, nodes.data, nodes.capacity);
     JSValue array = JS_NewArray(ctx);
@@ -1074,7 +1074,7 @@ JSValue slotAssign(JSContext* ctx, JSValueConst slotObject, int argc, JSValueCon
     PrHtmlSlotElement* slot = jsThis<PrHtmlSlotElement>(ctx, slotObject, htmlSlotElementClass);
     if (slot == nullptr)
         return JS_EXCEPTION;
-    Array<PrDomNode* PR_NONNULL> nodes;
+    RawArray<PrDomNode* PR_NONNULL> nodes;
     for (int i = 0; i < argc; ++i) {
         PrDomNode* node = jsHandleAs<PrDomNode>(ctx, argv[i], prJsDomNodeClass);
         PrDomNodeType type = node != nullptr ? prDomNodeType(node) : PrDomNodeType_Element;
@@ -1488,7 +1488,7 @@ JSValue messagePortsOf(JSContext* ctx, JSValueConst portsObject, PrHtmlMessageEv
     JSValue ports = jsReference(ctx, portsObject, MessageSlot_Ports);
     if (!JS_IsUndefined(ports))
         return ports;
-    Array<PrHtmlMessagePort*> list;
+    RawArray<PrHtmlMessagePort*> list;
     for (uint32_t i = 0; i < prHtmlMessageEventPortCount(event); ++i)
         list.push(prHtmlMessageEventPort(event, i));
     PrHtmlWindow* window = globalWindow(ctx);
@@ -1550,7 +1550,7 @@ JSValue postMessage(JSContext* ctx, JSValueConst windowObject, int argc, JSValue
     StringArgument targetOrigin = {ctx, "/"};
     if (window == nullptr || source == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
-    Array<JSValue> transfer;
+    RawArray<JSValue> transfer;
     bool ok = true;
     if (argc > 1 && JS_IsObject(argv[1])) {
         ok = jsDictString(ctx, argv[1], "targetOrigin", &targetOrigin) && jsHtmlTransferOption(ctx, argv[1], &transfer);
@@ -1563,10 +1563,10 @@ JSValue postMessage(JSContext* ctx, JSValueConst windowObject, int argc, JSValue
     jsHtmlTransferReset(ctx, &transfer);
     if (!ok)
         return JS_EXCEPTION;
-    Array<PrDomEventTarget*> ports;
+    RawArray<PrDomEventTarget*> ports;
     for (uint32_t i = 0; i < message.ports.count; ++i)
         ports.push(prHtmlMessagePortAsEventTarget(message.ports.data[i]));
-    PrStatus status = prHtmlWindowPostMessage(window, source, prStringView(&message.bytes), ports.data, ports.count,
+    PrStatus status = prHtmlWindowPostMessage(window, source, prRawStringView(&message.bytes), ports.data, ports.count,
         targetOrigin.value());
     if (status != PrStatus_Ok) {
         for (uint32_t i = 0; i < ports.count; ++i)
@@ -1574,7 +1574,7 @@ JSValue postMessage(JSContext* ctx, JSValueConst windowObject, int argc, JSValue
     }
     ports.reset();
     message.ports.reset();
-    prStringReset(&message.bytes);
+    prRawStringReset(&message.bytes);
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "SyntaxError");
 }
 
@@ -1844,7 +1844,7 @@ JSValue callTimerFunction(JSContext* ctx, JSValueConst, int, JSValueConst*, int,
 // timeout. A handler that is not a function is converted to a string, which the global's eval runs as a classic script
 // is run.
 JSValue timerFunction(JSContext* ctx, int argc, JSValueConst* argv) {
-    Array<JSValue> data;
+    RawArray<JSValue> data;
     if (JS_IsFunction(ctx, argv[0])) {
         data.push(JS_DupValue(ctx, argv[0]));
         data.push(JS_NewInt32(ctx, argc > 2 ? argc - 2 : 0));
@@ -1952,7 +1952,7 @@ JSValue structuredClone(JSContext* ctx, JSValueConst windowObject, int argc, JSV
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
-    Array<JSValue> transfer;
+    RawArray<JSValue> transfer;
     bool present = false;
     JSValueConst options = argc > 1 ? argv[1] : JS_UNDEFINED;
     bool ok = jsDictionary(ctx, options, &present) && (!present || jsHtmlTransferOption(ctx, options, &transfer));
@@ -1962,7 +1962,7 @@ JSValue structuredClone(JSContext* ctx, JSValueConst windowObject, int argc, JSV
     if (!ok)
         return JS_EXCEPTION;
     JSValue ports = jsHtmlMessagePortsAdopt(ctx, message.ports.data, message.ports.count, window);
-    JSValue clone = jsHtmlDeserialize(ctx, prStringView(&message.bytes), ports);
+    JSValue clone = jsHtmlDeserialize(ctx, prRawStringView(&message.bytes), ports);
     JS_FreeValue(ctx, ports);
     jsHtmlSerializedReset(&message);
     return clone;
@@ -2504,10 +2504,10 @@ JSValue navigatorSendBeacon(JSContext* ctx, JSValueConst, int argc, JSValueConst
 }
 
 // The API base URL of the realm (html/#api-base-url).
-PrString realmBaseUrl(JSContext* ctx) {
+PrRawString realmBaseUrl(JSContext* ctx) {
     PrHtmlWindow* window = jsHtmlGlobalWindow(ctx);
     if (window == nullptr)
-        return prStringNull();
+        return prRawStringNull();
     return prDomNodeBaseUri(prDomDocumentAsNode(prHtmlWindowDocument(window)));
 }
 
@@ -2520,9 +2520,9 @@ JSValue createObjectUrl(JSContext* ctx, JSValueConst, int argc, JSValueConst* ar
     if (PrHtmlMediaSource* source = jsHtmlMediaSourceOf(ctx, argv[0])) {
         if (window == nullptr)
             return JS_ThrowTypeError(ctx, "createObjectURL needs a window");
-        PrString url = prHtmlMediaSourceUrlCreate(window, source);
-        JSValue result = jsNewStringView(ctx, prStringView(&url));
-        prStringReset(&url);
+        PrRawString url = prHtmlMediaSourceUrlCreate(window, source);
+        JSValue result = jsNewStringView(ctx, prRawStringView(&url));
+        prRawStringReset(&url);
         return result;
     }
     const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, argv[0]);
@@ -2530,9 +2530,9 @@ JSValue createObjectUrl(JSContext* ctx, JSValueConst, int argc, JSValueConst* ar
         return JS_ThrowTypeError(ctx, "The argument is not a Blob or a MediaSource");
     if (window == nullptr)
         return JS_ThrowTypeError(ctx, "createObjectURL needs a window");
-    PrString url = prHtmlWindowCreateObjectUrl(window, blob);
-    JSValue result = jsNewStringView(ctx, prStringView(&url));
-    prStringReset(&url);
+    PrRawString url = prHtmlWindowCreateObjectUrl(window, blob);
+    JSValue result = jsNewStringView(ctx, prRawStringView(&url));
+    prRawStringReset(&url);
     return result;
 }
 
@@ -2722,8 +2722,8 @@ JSValue historyPushState(JSContext* ctx, JSValueConst windowObject, int argc, JS
     JsHtmlSerialized state{};
     if (!JS_IsNull(argv[0]) && !jsHtmlSerialize(ctx, argv[0], nullptr, nullptr, &state))
         return JS_EXCEPTION;
-    PrStatus status = prHtmlHistoryPushState(window, JS_IsNull(argv[0]) ? PrStringView{} : prStringView(&state.bytes),
-        url.value(), PrHtmlHistoryHandling(magic));
+    PrStringView serialized = JS_IsNull(argv[0]) ? PrStringView{} : prRawStringView(&state.bytes);
+    PrStatus status = prHtmlHistoryPushState(window, serialized, url.value(), PrHtmlHistoryHandling(magic));
     jsHtmlSerializedReset(&state);
     return historyStatus(ctx, status);
 }
@@ -3188,8 +3188,8 @@ JSValue storageLength(JSContext* ctx, JSValueConst storageObject) {
 }
 
 // Returns the string, or null for the null string.
-JSValue nullableString(JSContext* ctx, PrString value) {
-    return prStringIsNull(&value) ? JS_NULL : jsTakeString(ctx, value);
+JSValue nullableString(JSContext* ctx, PrRawString value) {
+    return prRawStringIsNull(&value) ? JS_NULL : jsTakeString(ctx, value);
 }
 
 JSValue storageKey(JSContext* ctx, JSValueConst storageObject, int argc, JSValueConst* argv) {
@@ -3243,16 +3243,16 @@ JSValue storageClear(JSContext* ctx, JSValueConst storageObject, int, JSValueCon
 }
 
 // The named properties: the keys, whose values are the items (getItem, setItem and removeItem).
-bool storageNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
+bool storageNames(JSContext* ctx, void* handle, RawArray<JSAtom>* out) {
     const PrHtmlStorage* storage = static_cast<const PrHtmlStorage*>(handle);
     uint32_t length = prHtmlStorageLength(storage);
     for (uint32_t i = 0; i < length; ++i) {
-        PrString key = prHtmlStorageKey(storage, i);
-        if (prStringIsNull(&key))
+        PrRawString key = prHtmlStorageKey(storage, i);
+        if (prRawStringIsNull(&key))
             break;
-        PrStringView view = prStringView(&key);
+        PrStringView view = prRawStringView(&key);
         JSAtom atom = JS_NewAtomLen(ctx, view.data, view.size);
-        prStringReset(&key);
+        prRawStringReset(&key);
         if (atom == JS_ATOM_NULL)
             return false;
         out->push(atom);
@@ -3261,8 +3261,8 @@ bool storageNames(JSContext* ctx, void* handle, Array<JSAtom>* out) {
 }
 
 JSValue storageNamedItem(JSContext* ctx, JSValueConst, void* handle, PrStringView name) {
-    PrString value = prHtmlStorageGetItem(static_cast<const PrHtmlStorage*>(handle), name);
-    return prStringIsNull(&value) ? JS_UNDEFINED : jsTakeString(ctx, value);
+    PrRawString value = prHtmlStorageGetItem(static_cast<const PrHtmlStorage*>(handle), name);
+    return prRawStringIsNull(&value) ? JS_UNDEFINED : jsTakeString(ctx, value);
 }
 
 bool storageNamedSetItem(JSContext* ctx, JSValueConst, void* handle, PrStringView name, JSValueConst input) {

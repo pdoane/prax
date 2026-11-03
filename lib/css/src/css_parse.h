@@ -132,9 +132,9 @@ constexpr CssGrammarIndex kCssMatchCalculate = CssGrammarRoot_None;
 // The state that a match keeps while it runs. It holds nothing between values. A caller keeps one across values, so the
 // arrays grow only once.
 struct CssMatchState {
-    Array<CssMatchFrame> frames;
-    Array<CssMatchChoice> choices;
-    Array<CssMatchEdit> edits;
+    RawArray<CssMatchFrame> frames;
+    RawArray<CssMatchChoice> choices;
+    RawArray<CssMatchEdit> edits;
     CssMathScratch math;        // the calculation trees of a value's math functions
 
     // If set, a given number (cssValueTokens) is wrapped in a calculation if its place does not accept it as is,

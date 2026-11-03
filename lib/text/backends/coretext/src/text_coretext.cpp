@@ -8,7 +8,7 @@
 #include "pr/text_coretext.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/sort.h"
 #include "pr/utf8.h"
 #include "pr/vec.h"
@@ -105,13 +105,13 @@ struct FeaturedFont {
 };
 
 struct CtBackend : PrTextShaper {
-    Array<UniChar> utf16;
-    Array<uint32_t> byteOf;             // for each UTF-16 unit, its byte in the text of the run
-    Array<CGGlyph> glyphs;
-    Array<CGPoint> positions;
-    Array<CFIndex> indices;
-    Array<CFIndex> breaks;              // the offsets at which the set of features over the text changes
-    Array<FeaturedFont> featured;       // the fonts of the run with features, emptied after the run
+    RawArray<UniChar> utf16;
+    RawArray<uint32_t> byteOf;             // for each UTF-16 unit, its byte in the text of the run
+    RawArray<CGGlyph> glyphs;
+    RawArray<CGPoint> positions;
+    RawArray<CFIndex> indices;
+    RawArray<CFIndex> breaks;              // the offsets at which the set of features over the text changes
+    RawArray<FeaturedFont> featured;       // the fonts of the run with features, emptied after the run
 };
 
 // Converts the text of the run to UTF-16, recording the byte offset of each unit.

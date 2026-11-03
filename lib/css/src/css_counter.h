@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css_descriptors.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text.h"
 #include "pr/text_buffer.h"
@@ -26,10 +26,10 @@ struct CssRuleData;
 
 // What one of a document's counter styles holds that its rule does not: its name, and the descriptors' lists.
 struct CssCounterStyleStorage {
-    PrString name;
-    Array<PrStringView> symbols;
-    Array<CssAdditiveTuple> additive;
-    Array<CssCounterRange> ranges;
+    PrRawString name;
+    RawArray<PrStringView> symbols;
+    RawArray<CssAdditiveTuple> additive;
+    RawArray<CssCounterRange> ranges;
 };
 
 // The counter styles that a document's @counter-style rules define (css-counter-styles-3/#the-counter-style-rule). Of
@@ -38,8 +38,8 @@ struct CssCounterStyleStorage {
 // from that style, a document's or a predefined one, and the styles of a cycle of `extends` extend decimal. The symbols
 // view the text of the rules, which outlives the set.
 struct CssCounterStyles {
-    Array<CssCounterStyle> styles;
-    Array<CssCounterStyleStorage> storage;      // by index of `styles`
+    RawArray<CssCounterStyle> styles;
+    RawArray<CssCounterStyleStorage> storage;      // by index of `styles`
 };
 
 // Resolves the counter styles that the `count` @counter-style rules `rules` define, in cascade order, into `out`, in

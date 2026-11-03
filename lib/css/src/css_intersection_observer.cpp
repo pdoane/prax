@@ -123,7 +123,7 @@ bool parseMargin(PrStringView text, CssIntersectionOffset out[4]) {
 }
 
 // Returns the margin's offsets serialized, each a number followed by px or %, separated by spaces.
-PrString serializeMargin(const CssIntersectionOffset margin[4]) {
+PrRawString serializeMargin(const CssIntersectionOffset margin[4]) {
     PrTextBuffer text = {};
     for (uint32_t i = 0; i < 4; ++i) {
         if (i != 0)
@@ -244,7 +244,7 @@ Intersection intersectionOf(const PrCssIntersectionObserver* observer, PrCssPres
 }
 
 // Returns the index of the first threshold above the ratio, or the number of thresholds if none is above it.
-int32_t thresholdIndexOf(const Array<double>& thresholds, double ratio) {
+int32_t thresholdIndexOf(const RawArray<double>& thresholds, double ratio) {
     uint32_t index = 0;
     while (index < thresholds.count && thresholds.data[index] <= ratio)
         ++index;
@@ -358,7 +358,7 @@ void prCssIntersectionObserverRetain(PrCssIntersectionObserver* observer) {
 void prCssIntersectionObserverRelease(PrCssIntersectionObserver* PR_NULLABLE observer) {
     if (observer == nullptr || --observer->references != 0)
         return;
-    Array<PrCssIntersectionObserver* PR_NONNULL>& observers =
+    RawArray<PrCssIntersectionObserver* PR_NONNULL>& observers =
         cssDocumentRoot(observer->document)->intersectionObservers;
     for (uint32_t i = 0; i < observers.count; ++i) {
         if (observers.data[i] == observer) {
@@ -392,11 +392,11 @@ bool prCssIntersectionObserverTrackVisibility(const PrCssIntersectionObserver* o
     return observer->trackVisibility;
 }
 
-PrString prCssIntersectionObserverRootMargin(const PrCssIntersectionObserver* observer) {
+PrRawString prCssIntersectionObserverRootMargin(const PrCssIntersectionObserver* observer) {
     return serializeMargin(observer->rootMargin);
 }
 
-PrString prCssIntersectionObserverScrollMargin(const PrCssIntersectionObserver* observer) {
+PrRawString prCssIntersectionObserverScrollMargin(const PrCssIntersectionObserver* observer) {
     return serializeMargin(observer->scrollMargin);
 }
 
@@ -474,7 +474,7 @@ void prCssDocumentNotifyIntersectionObservers(PrDomDocument* document) {
     CssRoot* root = cssDocumentRoot(document);
     root->intersectionTaskQueued = false;
     // The callbacks may create observers and free them, so the notification holds the observers that it calls.
-    Array<PrCssIntersectionObserver* PR_NONNULL> observers;
+    RawArray<PrCssIntersectionObserver* PR_NONNULL> observers;
     for (uint32_t i = 0; i < root->intersectionObservers.count; ++i) {
         prCssIntersectionObserverRetain(root->intersectionObservers.data[i]);
         observers.push(root->intersectionObservers.data[i]);

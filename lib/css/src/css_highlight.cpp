@@ -14,7 +14,7 @@ namespace pr_impl {
 namespace {
 
 void destroyEntry(CssHighlightEntry* entry) {
-    prStringReset(&entry->name);
+    prRawStringReset(&entry->name);
     weakReset(&entry->highlight);
     prMemoryFree(entry);
 }
@@ -94,7 +94,7 @@ PrCssHighlightRegistry* cssHighlightRegistryLive(PrCssHighlightRegistry* registr
 
 uint32_t cssHighlightRegistryFind(const PrCssHighlightRegistry* registry, PrStringView name) {
     for (uint32_t i = 0; i < registry->entries.count; ++i) {
-        if (prStringView(&registry->entries.data[i]->name) == name)
+        if (prRawStringView(&registry->entries.data[i]->name) == name)
             return i;
     }
     return kArrayMissing;
@@ -107,7 +107,7 @@ void cssHighlightRegistrySet(PrCssHighlightRegistry* registry, PrStringView name
         entry = registry->entries.data[at];
     } else {
         entry = allocZeroed<CssHighlightEntry>();
-        entry->name = prStringCopy(name);
+        entry->name = prRawStringCopy(name);
         registry->entries.push(entry);
     }
     weakSet(&entry->highlight, &highlight->weak, highlight);

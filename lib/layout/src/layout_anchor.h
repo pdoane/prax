@@ -8,10 +8,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/layout_unit.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_index.h"
 
@@ -37,17 +37,17 @@ struct LayoutAnchor {
 
 // The scroll anchoring of a tree.
 struct LayoutAnchoring {
-    Array<LayoutAnchor> anchors;    // of the containers whose offsets are not zero
+    RawArray<LayoutAnchor> anchors;    // of the containers whose offsets are not zero
 
     // The moves that anchoring made since a client last took them, and since the tree's last scene, one per container.
-    Array<PrLayoutScrollAdjustment> untaken;
-    Array<PrLayoutScrollAdjustment> unscened;
+    RawArray<PrLayoutScrollAdjustment> untaken;
+    RawArray<PrLayoutScrollAdjustment> unscened;
 
     // The nodes whose record changed, since the last layout, a value whose change suppresses anchoring along the path
     // from an anchor to its container (LayoutTreeNode::anchorSuppressed), and the nodes that became or stopped being
     // absolutely positioned, which suppress anchoring for every container around them.
-    Array<LayoutNodeIndex> suppressing;
-    Array<LayoutNodeIndex> repositioned;
+    RawArray<LayoutNodeIndex> suppressing;
+    RawArray<LayoutNodeIndex> repositioned;
 };
 
 // Frees the anchoring's storage.

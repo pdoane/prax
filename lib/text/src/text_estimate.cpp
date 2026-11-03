@@ -3,8 +3,8 @@
 #include "pr/text_estimate.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
+#include "pr/raw_array.h"
 #include "pr/unicode.h"
 #include "pr/utf8.h"
 
@@ -38,7 +38,7 @@ struct TextEstimator {
     PrTextAxis axis;
     float size;                     // of the font, in px per em
     uint64_t revision;              // of the font's table of faces, which the advances were read from
-    Array<AdvancePage*> pages;      // by code point, shifted by kPageBits: null for a page that nothing has asked of
+    RawArray<AdvancePage*> pages;   // by code point, shifted by kPageBits: null for a page that nothing has asked of
 };
 
 void clearPages(TextEstimator* e) {

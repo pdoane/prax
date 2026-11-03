@@ -11,11 +11,11 @@
 #include "app/backends/win32/src/win32_browser.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/base64.h"
 #include "pr/count_of.h"
 #include "pr/float_convert.h"
 #include "pr/json.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 
 #include "app/backends/win32/src/win32_text.h"
@@ -71,7 +71,7 @@ typedef uint8_t RequestKind;
 struct Request {
     RequestKind kind;
     PrStatus status;            // the failure that a completion delivers
-    Array<char> text;           // the URL, script or path
+    RawArray<char> text;        // the URL, script or path
     PrRect rect;
     PrUVec2 size;
     PrVec2 paper;
@@ -108,12 +108,12 @@ struct Win32Browser : PrAppBrowser {
     PrAppBrowserDoneFn loaded;
     void* loadedContext;
 
-    Array<Request> waiting;     // the calls made before the engine started
-    Array<Request> failures;    // the completions that the next kMessageFailed delivers
+    RawArray<Request> waiting;     // the calls made before the engine started
+    RawArray<Request> failures;    // the completions that the next kMessageFailed delivers
 
     // Scratch storage for conversions.
-    Array<wchar_t> utf16;
-    Array<char> utf8;
+    RawArray<wchar_t> utf16;
+    RawArray<char> utf8;
 };
 
 template <typename T>
@@ -398,7 +398,7 @@ void evaluate(Win32Browser* b, Request& request) {
 }
 
 // Decodes `png` to premultiplied Bgra8 pixels of `extent` in `out`, scaling it if it has another extent.
-bool decodePng(IWICImagingFactory* imaging, const Array<char>& png, PrUVec2 extent, Array<uint8_t>& out) {
+bool decodePng(IWICImagingFactory* imaging, const RawArray<char>& png, PrUVec2 extent, RawArray<uint8_t>& out) {
     IWICStream* stream = nullptr;
     IWICBitmapDecoder* decoder = nullptr;
     IWICBitmapFrameDecode* frame = nullptr;
@@ -433,8 +433,8 @@ bool decodePng(IWICImagingFactory* imaging, const Array<char>& png, PrUVec2 exte
 // Calls `done` with the pixels of a capture, from the engine's answer to Page.captureScreenshot.
 void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, PrAppBrowserCaptureFn done,
         void* PR_NULLABLE context) {
-    Array<char> png;
-    Array<uint8_t> pixels;
+    RawArray<char> png;
+    RawArray<uint8_t> pixels;
     bool ok = SUCCEEDED(error) && json != nullptr && size.x > 0 && size.y > 0;
     if (ok) {
         PrJson* document = prJsonCreate();
@@ -531,7 +531,7 @@ void print(Win32Browser* b, Request& request) {
     ICoreWebView2_7* view = nullptr;
     ICoreWebView2Environment6* environment = nullptr;
     ICoreWebView2PrintSettings* settings = nullptr;
-    Array<wchar_t> path;
+    RawArray<wchar_t> path;
     bool ok = SUCCEEDED(b->view->QueryInterface(IID_PPV_ARGS(&view))) &&
         SUCCEEDED(b->environment->QueryInterface(IID_PPV_ARGS(&environment))) &&
         SUCCEEDED(environment->CreatePrintSettings(&settings));
@@ -651,8 +651,8 @@ void start(Win32Browser* b, ICoreWebView2Controller* controller) {
     b->started = true;
     layOut(b);
     controller->put_IsVisible(TRUE);
-    Array<Request> waiting = b->waiting;
-    b->waiting = Array<Request>{};
+    RawArray<Request> waiting = b->waiting;
+    b->waiting = RawArray<Request>{};
     for (uint32_t i = 0; i < waiting.count; ++i)
         perform(b, waiting.data[i]);
     waiting.reset();
@@ -854,7 +854,7 @@ PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrows
     }
     layOut(b);
     ShowWindow(b->window, SW_SHOWNOACTIVATE);
-    Array<wchar_t> folder;
+    RawArray<wchar_t> folder;
     folder.resize(GetTempPathW(0, nullptr) + 1);
     DWORD length = GetTempPathW(folder.count, folder.data);
     folder.resize(length < folder.count ? length : 0);

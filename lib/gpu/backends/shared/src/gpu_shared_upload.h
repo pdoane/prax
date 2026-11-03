@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -26,8 +26,8 @@ struct GpuSharedUploadCopy {
 
 // The copies of a batch to buffers, disjoint, and the textures that the batch wrote since its last barrier.
 struct GpuSharedUploadBatch {
-    Array<GpuSharedUploadCopy> copies; // sorted by their buffers, then by their target offsets
-    Array<uint32_t> textures;          // written since the last barrier
+    RawArray<GpuSharedUploadCopy> copies; // sorted by their buffers, then by their target offsets
+    RawArray<uint32_t> textures;          // written since the last barrier
 };
 
 // Adds a copy into a buffer, trimming the copies already in the batch that it overwrites.

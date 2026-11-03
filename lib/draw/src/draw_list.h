@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_list.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -26,16 +26,16 @@ struct DrawHeld {
 
 // Commands and all the data that they point to.
 struct DrawRecording {
-    Array<PrDrawCommand> commands;
-    Array<uint8_t*> blocks;           // side storage, in blocks that never move
-    size_t blockUsed;                 // bytes used of the last block
-    size_t blockSize;                 // the last block's size
-    Array<PrPath*> paths;             // the clones that commands point to
-    Array<const PrDrawImage*> images; // holds one reference to each image
-    Array<const PrFont*> fonts;
-    Array<const PrDrawList*> lists;
-    Array<const PrDrawFilter*> filters;
-    Array<DrawHeld> held;
+    RawArray<PrDrawCommand> commands;
+    RawArray<uint8_t*> blocks;           // side storage, in blocks that never move
+    size_t blockUsed;                    // bytes used of the last block
+    size_t blockSize;                    // the last block's size
+    RawArray<PrPath*> paths;             // the clones that commands point to
+    RawArray<const PrDrawImage*> images; // holds one reference to each image
+    RawArray<const PrFont*> fonts;
+    RawArray<const PrDrawList*> lists;
+    RawArray<const PrDrawFilter*> filters;
+    RawArray<DrawHeld> held;
 };
 
 // A recording of draw commands.
@@ -51,9 +51,9 @@ struct DrawList {
     bool readsBackdrop;             // once frozen: prDrawListReadsBackdrop
     PrRect bounds;                  // once frozen
     DrawRecording recording;
-    Array<PrDrawCommandKind> open;   // innermost last; a clip of any kind is stored as PushClipRect
-    Array<DrawLoweredGroup> lowered; // the open groups that composite in sRGB-linear, innermost last
-    Array<uint32_t> groups;          // the PushGroup commands of the open groups, innermost last
+    RawArray<PrDrawCommandKind> open;   // innermost last; a clip of any kind is stored as PushClipRect
+    RawArray<DrawLoweredGroup> lowered; // the open groups that composite in sRGB-linear, innermost last
+    RawArray<uint32_t> groups;          // the PushGroup commands of the open groups, innermost last
 
     // The brush and stroke copied last, in side storage. A command whose brush or stroke equals one of them shares the
     // copy, so that commands recorded in one paint store it once.
@@ -65,7 +65,7 @@ struct DrawList {
 void drawListFreeze(DrawList* list);
 
 // Returns the commands in recording order. They stay valid until the list changes.
-const Array<PrDrawCommand>& drawListCommands(const DrawList* list);
+const RawArray<PrDrawCommand>& drawListCommands(const DrawList* list);
 
 // Adds or releases a reference to a frozen list that a command, a source or a filter holds.
 void drawListRetain(const DrawList* list);

@@ -29,13 +29,13 @@ constexpr uint64_t kBackgroundSeed = 0x3c6ef372fe94f82bull;
 constexpr uint32_t kMaxRepeatedStops = 4096;
 
 template <typename T>
-void appendKey(Array<uint8_t>& key, const T& value) {
+void appendKey(RawArray<uint8_t>& key, const T& value) {
     key.append(reinterpret_cast<const uint8_t*>(&value), uint32_t(sizeof(T)));
 }
 
 // Appends the bytes that identify `layers`: every field that painting reads, a gradient's stops in place of the pointer
 // to them, an image's or list's address, and a painter's function and context.
-void backgroundKey(Array<uint8_t>& key, const PrLayoutBackgroundLayer* layers, uint32_t count) {
+void backgroundKey(RawArray<uint8_t>& key, const PrLayoutBackgroundLayer* layers, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         const PrLayoutBackgroundLayer& l = layers[i];
         uint8_t bytes[] = {
@@ -231,7 +231,7 @@ float roundCopies(float extent, float size) {
 // A gradient's stops as draw takes them. Until normalize maps them to the range that the brush spans, each offset is
 // the stop's position, as a fraction of the gradient line, ray or turn.
 struct ResolvedStops {
-    Array<PrDrawColorStop> stops;
+    RawArray<PrDrawColorStop> stops;
     float first;                    // the first color stop's position
     float last;                     // the last color stop's position
 };
@@ -243,13 +243,13 @@ void resolveStops(const LayoutCompounds* compounds, const PrLayoutGradient& g, f
         float position;
         bool positioned;
         bool hint;
-        PrDrawColorStop paint;              // the color and hue
-        Array<PrDrawColorStop> followers;   // the colors and hues of the stops at its position that follow it
+        PrDrawColorStop paint;               // the color and hue
+        RawArray<PrDrawColorStop> followers; // the colors and hues of the stops at its position that follow it
     };
     auto paintOf = [](const PrLayoutColorStop& s) {
         return PrDrawColorStop{.color = s.color, .hue = s.hue, .hasHue = s.hasHue};
     };
-    Array<Stop> stops;
+    RawArray<Stop> stops;
     for (uint32_t i = 0; i < g.stopCount; ++i) {
         const PrLayoutColorStop& s = g.stops[i];
         // A color stop at none follows the color stop before it, and the fixup does not see it.
@@ -350,7 +350,7 @@ bool repeatOverTurn(ResolvedStops* resolved) {
     float copies = prF32Ceil(1 / period) + 2;
     if (copies * float(perPeriod) > float(kMaxRepeatedStops))
         return false;
-    Array<PrDrawColorStop> turn;
+    RawArray<PrDrawColorStop> turn;
     // The first copy starts at or before the turn's start, and the last ends at or after its end.
     float shift = -period * prF32Ceil(resolved->first / period) - period;
     for (uint32_t c = 0; float(c) < copies; ++c) {
@@ -367,7 +367,7 @@ bool repeatOverTurn(ResolvedStops* resolved) {
 
 // The average color of a gradient's stops, by the length of each segment, with straight alpha.
 PrColor16 averageColor(const ResolvedStops& resolved) {
-    const Array<PrDrawColorStop>& s = resolved.stops;
+    const RawArray<PrDrawColorStop>& s = resolved.stops;
     float sum[4] = {};
     float total = 0;
     for (uint32_t i = 0; i + 1 < s.count; ++i) {
@@ -700,7 +700,7 @@ PrLayoutBackgroundIndex layoutBackgroundsIntern(LayoutBackgrounds* backgrounds, 
         const PrLayoutBackgroundLayer* layers, uint32_t count) {
     if (count == 0)
         return kPrLayoutBackgroundNone;
-    Array<uint8_t> key;
+    RawArray<uint8_t> key;
     backgroundKey(key, layers, count);
     uint32_t hash = uint32_t(prHashBytes(key.data, key.count, kBackgroundSeed));
     uint32_t found = backgrounds->index.find(hash, [&](uint32_t i) {
@@ -810,7 +810,7 @@ void layoutBackgroundsReset(LayoutBackgrounds* backgrounds) {
     backgrounds->index.reset();
 }
 
-void layoutBackgroundKey(Array<uint8_t>& key, const PrLayoutBackgroundLayer* layers, uint32_t count) {
+void layoutBackgroundKey(RawArray<uint8_t>& key, const PrLayoutBackgroundLayer* layers, uint32_t count) {
     backgroundKey(key, layers, count);
 }
 
@@ -903,7 +903,7 @@ bool layoutBackgroundBlends(const PrLayoutBackgroundLayer* layers, uint32_t coun
     return false;
 }
 
-void layoutSourceKey(Array<uint8_t>& key, const PrLayoutSource& source) {
+void layoutSourceKey(RawArray<uint8_t>& key, const PrLayoutSource& source) {
     appendKey(key, source.functions);
     appendKey(key, source.context);
     appendKey(key, source.version);
@@ -918,7 +918,7 @@ void layoutSourceCount(const PrLayoutSource& source, uint32_t delta) {
         source.functions->release(source.context);
 }
 
-void layoutFilterKey(Array<uint8_t>& key, const PrLayoutFilter* PR_NULLABLE filters, uint32_t count) {
+void layoutFilterKey(RawArray<uint8_t>& key, const PrLayoutFilter* PR_NULLABLE filters, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         const PrLayoutFilter& f = filters[i];
         appendKey(key, f.kind);

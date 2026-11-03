@@ -21,7 +21,7 @@ namespace pr_impl {
 struct CssFontLoad {
     PrCssFontFace* face;
     PrDomDocument* document;
-    Array<PrString> requests;       // URLs of the sources, in order
+    RawArray<PrRawString> requests; // URLs of the sources, in order
     uint32_t next;                  // index of the first source not yet tried
 };
 
@@ -66,7 +66,7 @@ const PrFont* PR_NULLABLE fontOf(PrByteView bytes, PrCompressCodec* PR_NULLABLE 
 
 // Appends the family names in a font-family value, in the order the list is written. Each name is unquoted and has its
 // escapes resolved. A run of identifiers is joined with single spaces.
-void familyNames(PrStringView list, Array<PrString>* out) {
+void familyNames(PrStringView list, RawArray<PrRawString>* out) {
     CssParser parser;
     cssParserInit(&parser);
     cssTokenize(&parser.tokens, &parser.scratch, list);
@@ -77,7 +77,7 @@ void familyNames(PrStringView list, Array<PrString>* out) {
         CssTokenKind kind = i < cssTokenCount(tokens) ? cssTokenKind(tokens, i) : CssTokenKind_Eof;
         if (kind == CssTokenKind_Comma || kind == CssTokenKind_Eof) {
             if (any)
-                out->push(prStringCopy(prTextBufferView(&name)));
+                out->push(prRawStringCopy(prTextBufferView(&name)));
             name.size = 0;
             any = false;
             continue;
@@ -93,7 +93,7 @@ void familyNames(PrStringView list, Array<PrString>* out) {
     cssParserReset(&parser);
 }
 
-void resetNames(Array<PrString>* names) {
+void resetNames(RawArray<PrRawString>* names) {
     stringsReset(names);
 }
 
@@ -108,13 +108,13 @@ CssDeclarationBlock* writableBlockOf(PrCssFontFace* face) {
 }
 
 // Returns the family that the face names, unquoted, or the null string if it names none.
-PrString faceFamily(const PrCssFontFace* face) {
+PrRawString faceFamily(const PrCssFontFace* face) {
     PrTextBuffer text = {};
     cssSerializePropertyValue(&text, blockOf(face), cssDescriptorDeclaredName(PrCssDescriptor_FontFaceFontFamily));
-    Array<PrString> names;
+    RawArray<PrRawString> names;
     familyNames(prTextBufferView(&text), &names);
     prTextBufferReset(&text);
-    PrString family = names.count == 1 ? prStringClone(&names.data[0]) : prStringNull();
+    PrRawString family = names.count == 1 ? prRawStringClone(&names.data[0]) : prRawStringNull();
     resetNames(&names);
     return family;
 }
@@ -124,9 +124,9 @@ PrString faceFamily(const PrCssFontFace* face) {
 // sheet in a style element, and for a face with no rule.
 PrUrl* PR_NULLABLE baseOf(const PrCssFontFace* face, PrDomDocument* document) {
     const PrCssStyleSheet* sheet = face->rule != nullptr ? face->rule->sheet : nullptr;
-    if (sheet != nullptr && !prStringIsNull(&sheet->href)) {
+    if (sheet != nullptr && !prRawStringIsNull(&sheet->href)) {
         PrUrl* url = nullptr;
-        if (prUrlCreate(prStringView(&sheet->href), nullptr, PrCharset_Utf8, &url) == PrStatus_Ok)
+        if (prUrlCreate(prRawStringView(&sheet->href), nullptr, PrCharset_Utf8, &url) == PrStatus_Ok)
             return url;
         prUrlDestroy(url);
     }
@@ -134,7 +134,7 @@ PrUrl* PR_NULLABLE baseOf(const PrCssFontFace* face, PrDomDocument* document) {
 }
 
 // Appends the url()s that the face's src names, in order, each resolved and serialized as a request.
-void sourceRequests(PrCssFontFace* face, PrDomDocument* document, Array<PrString>* out) {
+void sourceRequests(PrCssFontFace* face, PrDomDocument* document, RawArray<PrRawString>* out) {
     PrTextBuffer text = {};
     cssSerializePropertyValue(&text, blockOf(face), cssDescriptorDeclaredName(PrCssDescriptor_FontFaceSrc));
     PrStringView src = prTextBufferView(&text);
@@ -169,15 +169,15 @@ void sourceRequests(PrCssFontFace* face, PrDomDocument* document, Array<PrString
 
 // Appends the CSS-connected faces of the rules of `list`, and of the lists nested in them, in order. A face in a
 // conditional group rule is left out, because the cascade decides whether its condition holds.
-void connectedRules(PrCssRuleList* list, Array<PrCssFontFace* PR_NONNULL>* out);
+void connectedRules(PrCssRuleList* list, RawArray<PrCssFontFace* PR_NONNULL>* out);
 
-void connectedFaces(PrCssStyleSheet* sheet, Array<PrCssFontFace* PR_NONNULL>* out) {
+void connectedFaces(PrCssStyleSheet* sheet, RawArray<PrCssFontFace* PR_NONNULL>* out) {
     if (!sheet->disabled)
         connectedRules(&sheet->cssRules, out);
 }
 
-void connectedRules(PrCssRuleList* list, Array<PrCssFontFace* PR_NONNULL>* out) {
-    const Array<CssRuleData* PR_NONNULL>& rules = cssRuleListData(list);
+void connectedRules(PrCssRuleList* list, RawArray<PrCssFontFace* PR_NONNULL>* out) {
+    const RawArray<CssRuleData* PR_NONNULL>& rules = cssRuleListData(list);
     for (uint32_t i = 0; i < rules.count; ++i) {
         const CssRuleData* data = rules.data[i];
         if (data->kind != CssRuleDataKind_At)
@@ -201,7 +201,7 @@ void tellSetStatus(PrCssFontFaceSet* set) {
 }
 
 // Fires the font load event `type` at the set (css-font-loading-3/#fire-a-font-load-event), naming `faces`.
-void fireLoadEvent(PrCssFontFaceSet* set, PrStringView type, const Array<PrCssFontFace* PR_NONNULL>* PR_NULLABLE faces) {
+void fireLoadEvent(PrCssFontFaceSet* set, PrStringView type, const RawArray<PrCssFontFace* PR_NONNULL>* PR_NULLABLE faces) {
     PrCssFontFaceSetLoadEvent* event =
         domEventCreate<PrCssFontFaceSetLoadEvent>(type, prDomEventInitDefault(), PrDomEventKind_FontFaceSetLoad);
     event->trusted = true;
@@ -254,8 +254,8 @@ void switchToLoaded(PrCssFontFaceSet* set) {
     if (set->status == PrCssFontFaceSetLoadStatus_Loaded || set->loading.count != 0 || pendingOnEnvironment(set))
         return;
     set->status = PrCssFontFaceSetLoadStatus_Loaded;
-    Array<PrCssFontFace* PR_NONNULL> loaded = set->loaded;
-    Array<PrCssFontFace* PR_NONNULL> failed = set->failed;
+    RawArray<PrCssFontFace* PR_NONNULL> loaded = set->loaded;
+    RawArray<PrCssFontFace* PR_NONNULL> failed = set->failed;
     set->loaded = {};
     set->failed = {};
     fireLoadEvent(set, "loadingdone", &loaded);
@@ -293,7 +293,7 @@ void forget(PrCssFontFaceSet* set, PrCssFontFace* face) {
 
 // Appends the sets that hold the face now: the sets it was added to, and its document's set while the face is
 // CSS-connected to a rule of the document's style sheets. A set that the face has left sees nothing of its load.
-void setsOf(PrCssFontFace* face, PrDomDocument* document, Array<PrCssFontFaceSet* PR_NONNULL>* out) {
+void setsOf(PrCssFontFace* face, PrDomDocument* document, RawArray<PrCssFontFaceSet* PR_NONNULL>* out) {
     out->append(face->sets.data, face->sets.count);
     PrCssFontFaceSet* fonts = document->style != nullptr ? document->style->fonts : nullptr;
     if (face->rule != nullptr && fonts != nullptr && fonts->faces.find(face) == kArrayMissing &&
@@ -310,7 +310,7 @@ void setStatus(PrCssFontFace* face, PrDomDocument* document, PrCssFontFaceStatus
     const CssRoot* style = document->style;
     if (style != nullptr && style->fontCallback.faceStatus != nullptr)
         style->fontCallback.faceStatus(style->fontCallback.context, document, face);
-    Array<PrCssFontFaceSet* PR_NONNULL> sets;
+    RawArray<PrCssFontFaceSet* PR_NONNULL> sets;
     setsOf(face, document, &sets);
     for (uint32_t i = 0; i < sets.count; ++i) {
         if (status == PrCssFontFaceStatus_Loading)
@@ -350,7 +350,7 @@ void sourceRelease(CssFontSource* PR_NULLABLE source) {
     if (left != 0)
         return;
     PR_ASSERT(source->waiting.count == 0);
-    prStringReset(&source->url);
+    prRawStringReset(&source->url);
     prFontRelease(source->font);
     source->waiting.reset();
     prMemoryFree(source);
@@ -359,7 +359,7 @@ void sourceRelease(CssFontSource* PR_NULLABLE source) {
 // Returns the document's source for `url`, or null.
 CssFontSource* PR_NULLABLE findSource(const CssRoot* style, PrStringView url) {
     for (uint32_t i = 0; i < style->fontSources.count; ++i) {
-        if (prStringView(&style->fontSources.data[i]->url) == url)
+        if (prRawStringView(&style->fontSources.data[i]->url) == url)
             return style->fontSources.data[i];
     }
     return nullptr;
@@ -420,7 +420,7 @@ void dropFetch(void* PR_NULLABLE data) {
         source->cache = nullptr;
         sourceRelease(source);
     }
-    Array<CssFontLoad*> waiting = source->waiting;
+    RawArray<CssFontLoad*> waiting = source->waiting;
     source->waiting = {};
     for (uint32_t i = 0; i < waiting.count; ++i)
         dropLoad(waiting.data[i]);
@@ -440,7 +440,7 @@ void sourceFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     source->font = result->status == PrStatus_Ok && host != nullptr ? fontOf(bytes, host->compress) : nullptr;
     source->bytes = source->font != nullptr ? prFontData(source->font).size : 0;
     source->settled = true;
-    Array<CssFontLoad*> waiting = source->waiting;
+    RawArray<CssFontLoad*> waiting = source->waiting;
     source->waiting = {};
     for (uint32_t i = 0; i < waiting.count; ++i) {
         if (source->font != nullptr)
@@ -469,12 +469,12 @@ void fetchNext(CssFontLoad* load) {
             dropLoad(load);
             return;
         }
-        PrStringView url = prStringView(&load->requests.data[load->next++]);
+        PrStringView url = prRawStringView(&load->requests.data[load->next++]);
         CssFontSource* source = findSource(style, url);
         if (source == nullptr) {
             source = allocZeroed<CssFontSource>();
             source->references = 2;
-            source->url = prStringCopy(url);
+            source->url = prRawStringCopy(url);
             source->waiting.push(load);
             source->cache = style;
             style->fontSources.push(source);
@@ -483,13 +483,13 @@ void fetchNext(CssFontLoad* load) {
             fetch->source = source;
             fetch->document = document;
             domNodeRetain(document);
-            PrString request = prStringClone(&source->url);
+            PrRawString request = prRawStringClone(&source->url);
             // A font is fetched with CORS (css-fonts-4/#font-fetching-requirements).
             DomFetchRequest asked{
-                prStringView(&request), DomFetchDestination_Font, DomCorsSettings_Anonymous, DomFetchInitiator_Css,
+                prRawStringView(&request), DomFetchDestination_Font, DomCorsSettings_Anonymous, DomFetchInitiator_Css,
             };
             host->fetch(host->context, &asked, sourceFetched, fetch, dropFetch);
-            prStringReset(&request);
+            prRawStringReset(&request);
             return;
         }
         source->used = ++style->fontSourceUses;
@@ -513,10 +513,10 @@ void startLoad(void* data) {
 
 // Removes from the set's loading, loaded and failed faces the faces that are not among `faces`, the document's font
 // faces. Returns true if a loading face was removed.
-bool dropLeft(PrCssFontFaceSet* set, const Array<PrCssFontFace* PR_NONNULL>& faces) {
+bool dropLeft(PrCssFontFaceSet* set, const RawArray<PrCssFontFace* PR_NONNULL>& faces) {
     bool wasLoading = false;
-    Array<PrCssFontFace* PR_NONNULL>* lists[] = {&set->loading, &set->loaded, &set->failed};
-    for (Array<PrCssFontFace* PR_NONNULL>* list : lists) {
+    RawArray<PrCssFontFace* PR_NONNULL>* lists[] = {&set->loading, &set->loaded, &set->failed};
+    for (RawArray<PrCssFontFace* PR_NONNULL>* list : lists) {
         for (uint32_t i = 0; i < list->count;) {
             if (faces.find(list->data[i]) != kArrayMissing) {
                 ++i;
@@ -536,7 +536,7 @@ void reconcile(void* data) {
     CssRoot* style = cssDocumentRoot(document);
     style->fontsReconcileQueued = false;
     if (PrCssFontFaceSet* set = style->fonts) {
-        Array<PrCssFontFace* PR_NONNULL> faces;
+        RawArray<PrCssFontFace* PR_NONNULL> faces;
         cssDocumentFontFaces(document, &faces);
         if (dropLeft(set, faces))
             switchToLoaded(set);
@@ -610,10 +610,10 @@ void cssFontFaceRelease(PrCssFontFace* PR_NULLABLE face) {
     prMemoryFree(face);
 }
 
-PrString cssFontFaceDescriptor(const PrCssFontFace* face, PrCssFontFaceDescriptor descriptor) {
+PrRawString cssFontFaceDescriptor(const PrCssFontFace* face, PrCssFontFaceDescriptor descriptor) {
     PrTextBuffer text = {};
     cssSerializePropertyValue(&text, blockOf(face), reflected(descriptor));
-    PrString out = prStringCopy(prTextBufferView(&text));
+    PrRawString out = prRawStringCopy(prTextBufferView(&text));
     prTextBufferReset(&text);
     return out;
 }
@@ -648,10 +648,10 @@ void cssFontFaceLoad(PrCssFontFace* face, PrDomDocument* document) {
     host->queueTask(host->context, startLoad, load, dropLoad);
 }
 
-bool cssFontFaceDescribe(const PrCssFontFace* face, PrString* family, PrFontFaceDescriptor* out,
-        Array<PrFontCodePointRange>* ranges) {
+bool cssFontFaceDescribe(const PrCssFontFace* face, PrRawString* family, PrFontFaceDescriptor* out,
+        RawArray<PrFontCodePointRange>* ranges) {
     *family = faceFamily(face);
-    if (prStringIsNull(family))
+    if (prRawStringIsNull(family))
         return false;
     const CssDeclarationBlock* block = blockOf(face);
     auto valueOf = [&](PrCssDescriptor descriptor) {
@@ -686,7 +686,7 @@ bool cssFontFaceDescribe(const PrCssFontFace* face, PrString* family, PrFontFace
         return run.count == 0 || (run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword &&
             cssValueKeyword(&run.values[0]) == PrCssKeyword_Auto);
     };
-    d.family = prStringView(family);
+    d.family = prRawStringView(family);
     range(valueOf(PrCssDescriptor_FontFaceFontWeight), kPrFontWeightNormal, [](PrCssKeyword keyword) {
         return double(keyword == PrCssKeyword_Bold ? kPrFontWeightBold : kPrFontWeightNormal);
     }, &d.weightMin, &d.weightMax);
@@ -789,12 +789,12 @@ void cssFontFaceSetDestroy(PrCssFontFaceSet* PR_NULLABLE set) {
     prMemoryFree(set);
 }
 
-void cssFontFaceSetFaces(const PrCssFontFaceSet* set, Array<PrCssFontFace* PR_NONNULL>* out) {
+void cssFontFaceSetFaces(const PrCssFontFaceSet* set, RawArray<PrCssFontFace* PR_NONNULL>* out) {
     cssDocumentFontFaces(set->document, out);
 }
 
 bool cssFontFaceSetHas(const PrCssFontFaceSet* set, const PrCssFontFace* face) {
-    Array<PrCssFontFace* PR_NONNULL> faces;
+    RawArray<PrCssFontFace* PR_NONNULL> faces;
     cssFontFaceSetFaces(set, &faces);
     bool found = faces.find(const_cast<PrCssFontFace*>(face)) != kArrayMissing;
     faces.reset();
@@ -843,7 +843,7 @@ void cssFontFaceSetClear(PrCssFontFaceSet* set) {
         switchToLoaded(set);
 }
 
-PrStatus cssFontFaceSetMatch(const PrCssFontFaceSet* set, PrStringView font, Array<PrCssFontFace* PR_NONNULL>* out) {
+PrStatus cssFontFaceSetMatch(const PrCssFontFaceSet* set, PrStringView font, RawArray<PrCssFontFace* PR_NONNULL>* out) {
     // The value of the font property, which cannot be a CSS-wide keyword here.
     PrStringView trimmed = prStringTrim(font);
     if (cssIsCssWideKeyword(cssKeywordFromText(trimmed)))
@@ -860,28 +860,29 @@ PrStatus cssFontFaceSetMatch(const PrCssFontFaceSet* set, PrStringView font, Arr
         prTextBufferReset(&families);
         return PrStatus_Syntax;
     }
-    Array<PrString> names;
+    RawArray<PrRawString> names;
     familyNames(prTextBufferView(&families), &names);
     prTextBufferReset(&families);
-    Array<PrCssFontFace* PR_NONNULL> faces;
+    RawArray<PrCssFontFace* PR_NONNULL> faces;
     cssFontFaceSetFaces(set, &faces);
     for (uint32_t i = 0; i < faces.count; ++i) {
         PrCssFontFace* face = faces.data[i];
-        PrString family = faceFamily(face);
+        PrRawString family = faceFamily(face);
         for (uint32_t j = 0; j < names.count; ++j) {
-            if (!prStringIsNull(&family) && prAsciiEqualsFold(prStringView(&family), prStringView(&names.data[j]))) {
+            PrStringView name = prRawStringView(&names.data[j]);
+            if (!prRawStringIsNull(&family) && prAsciiEqualsFold(prRawStringView(&family), name)) {
                 out->push(face);
                 break;
             }
         }
-        prStringReset(&family);
+        prRawStringReset(&family);
     }
     faces.reset();
     resetNames(&names);
     return PrStatus_Ok;
 }
 
-void cssDocumentFontFaces(const PrDomDocument* document, Array<PrCssFontFace* PR_NONNULL>* out) {
+void cssDocumentFontFaces(const PrDomDocument* document, RawArray<PrCssFontFace* PR_NONNULL>* out) {
     const CssRoot* style = document->style;
     if (style == nullptr)
         return;
@@ -900,11 +901,11 @@ const PrFont* PR_NULLABLE cssFontFaceCachedFont(const PrCssFontFace* face, PrDom
         decoded = document->style->fontSources.data[i]->font != nullptr;
     if (!decoded)
         return nullptr;
-    Array<PrString> requests;
+    RawArray<PrRawString> requests;
     sourceRequests(const_cast<PrCssFontFace*>(face), document, &requests);
     const PrFont* found = nullptr;
     for (uint32_t i = 0; i < requests.count; ++i) {
-        const CssFontSource* source = findSource(document->style, prStringView(&requests.data[i]));
+        const CssFontSource* source = findSource(document->style, prRawStringView(&requests.data[i]));
         if (source == nullptr || !source->settled)
             break;
         if (source->font != nullptr) {
@@ -916,8 +917,8 @@ const PrFont* PR_NULLABLE cssFontFaceCachedFont(const PrCssFontFace* face, PrDom
     return found;
 }
 
-void cssFontSourcesReset(Array<CssFontSource* PR_NONNULL>* sources) {
-    Array<CssFontSource* PR_NONNULL> held = *sources;
+void cssFontSourcesReset(RawArray<CssFontSource* PR_NONNULL>* sources) {
+    RawArray<CssFontSource* PR_NONNULL> held = *sources;
     *sources = {};
     for (uint32_t i = 0; i < held.count; ++i) {
         held.data[i]->cache = nullptr;
@@ -942,7 +943,7 @@ void cssFontsSourceChanged(PrDomDocument* document) {
     });
 }
 
-void cssFontsSourceSynced(PrDomDocument* document, const Array<PrCssFontFace* PR_NONNULL>& faces) {
+void cssFontsSourceSynced(PrDomDocument* document, const RawArray<PrCssFontFace* PR_NONNULL>& faces) {
     PrCssFontFaceSet* set = document->style != nullptr ? document->style->fonts : nullptr;
     if (set != nullptr)
         dropLeft(set, faces);

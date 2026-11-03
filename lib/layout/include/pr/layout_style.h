@@ -29,7 +29,7 @@
 #include "pr/layout_value.h"
 #include "pr/locale.h"
 #include "pr/path.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text.h"
 #include "pr/text_break.h"

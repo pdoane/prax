@@ -1,9 +1,9 @@
 #include "pr/text_edit_motion.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/float.h"
+#include "pr/raw_array.h"
 #include "pr/unicode_grapheme.h"
 
 namespace pr_impl {
@@ -14,7 +14,7 @@ namespace {
 struct TextLines {
     PrStringView text;
     PrTextDirection direction;
-    Array<PrTextEditLineStop> stops;
+    RawArray<PrTextEditLineStop> stops;
 };
 
 bool textLinesLine(void* PR_NULLABLE context, PrTextEditPosition at, PrTextEditLineStep step, PrTextEditLine* out) {
@@ -104,8 +104,8 @@ struct Paragraph {
         uint32_t size;
     };
 
-    Array<Piece> pieces;
-    Array<char> joined;
+    RawArray<Piece> pieces;
+    RawArray<char> joined;
     PrStringView text;
 
     void gather(const PrTextEditGeometry& g, uint64_t node) {

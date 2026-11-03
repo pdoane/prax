@@ -120,7 +120,7 @@ Cubic segmentOf(const LottieGeometry& g, const LottieContour& c, uint32_t i) {
 
 // Copies the shape's current contours as indices into the geometry, so that they stay valid when the render's refs are
 // appended to.
-void shapeContours(const LottieRender& r, const LottieShapeEntry& e, Array<uint32_t>& out) {
+void shapeContours(const LottieRender& r, const LottieShapeEntry& e, RawArray<uint32_t>& out) {
     out.clear();
     for (uint32_t i = 0; i < e.contourCount; ++i)
         out.push(r.refs.data[e.contours + i]);
@@ -169,12 +169,12 @@ struct Builder {
 // Trim paths
 
 struct Trimmed {
-    Array<float> lengths;           // the cumulative samples of each segment, in order
-    Array<float> segmentLengths;
+    RawArray<float> lengths;           // the cumulative samples of each segment, in order
+    RawArray<float> segmentLengths;
     float total;
 };
 
-void measureShape(const LottieRender& r, const Array<uint32_t>& contours, Trimmed& t) {
+void measureShape(const LottieRender& r, const RawArray<uint32_t>& contours, Trimmed& t) {
     t.lengths.clear();
     t.segmentLengths.clear();
     t.total = 0;
@@ -194,7 +194,7 @@ void measureShape(const LottieRender& r, const Array<uint32_t>& contours, Trimme
 // Appends the part of the shape's contours from `start` to `end`, measured along them in the shape's units. Joins onto
 // the builder's open contour if there is one. A contour taken whole stays closed. `keepOpen` leaves the last contour
 // open so that more can join it.
-void trimShape(LottieRender& r, const Array<uint32_t>& contours, const Trimmed& t, float start, float end,
+void trimShape(LottieRender& r, const RawArray<uint32_t>& contours, const Trimmed& t, float start, float end,
         bool keepOpen, Builder& b) {
     float added = 0;
     uint32_t segment = 0;
@@ -233,7 +233,7 @@ void trimShape(LottieRender& r, const Array<uint32_t>& contours, const Trimmed& 
     }
 }
 
-void trim(LottieRender& r, const LottieItem& item, double frame, Array<uint32_t>& shapes) {
+void trim(LottieRender& r, const LottieItem& item, double frame, RawArray<uint32_t>& shapes) {
     const LottieAnimation& a = *r.a;
     float s = lottieScalar(a, item.props[LottieProp_Start], frame, 0) / 100;
     float e = lottieScalar(a, item.props[LottieProp_End], frame, 100) / 100;
@@ -251,7 +251,7 @@ void trim(LottieRender& r, const LottieItem& item, double frame, Array<uint32_t>
     e = prF32Round(e * 10000) * 0.0001f;
     if ((s == 0 && e == 1) || (s == 1 && e == 0))
         return;
-    Array<uint32_t> contours;
+    RawArray<uint32_t> contours;
     Trimmed t{};
     // With Individually, the shapes form one length in the order they are listed, which is the reverse of the order in
     // which they were found.
@@ -539,7 +539,7 @@ void offsetShape(LottieRender& r, LottieShapeEntry& shape, const LottieItem& ite
 // and combined into the first shape, in the order the shapes are listed. For the merge mode, shapes are appended. For
 // other modes, each shape is combined with the result so far by the mode's operation. The first shape then lies in the
 // merge's group, and the others are left empty.
-void merge(LottieRender& r, const LottieItem& item, uint32_t group, Array<uint32_t>& shapes) {
+void merge(LottieRender& r, const LottieItem& item, uint32_t group, RawArray<uint32_t>& shapes) {
     PrPathPolylineOp op = PrPathPolylineOp_Xor;
     if (item.mode == 2)
         op = PrPathPolylineOp_Union;
@@ -607,7 +607,7 @@ void merge(LottieRender& r, const LottieItem& item, uint32_t group, Array<uint32
 
 void lottieApplyModifiers(LottieRender& r, double frame) {
     const LottieAnimation& a = *r.a;
-    Array<uint32_t> shapes;
+    RawArray<uint32_t> shapes;
     // Modifiers apply nearest first. The modifier found last is the nearest to the shapes it applies to.
     for (uint32_t m = r.modifiers.count; m-- > 0;) {
         const LottieItem& item = a.items.data[r.modifiers.data[m].item];

@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/fetch_blob.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -14,24 +14,24 @@ namespace pr_impl {
 // Immutable bytes, and a file's name and time.
 struct FetchBlob {
     mutable Atomic<uint32_t> references;
-    Array<uint8_t> bytes;
-    PrString type;
-    PrString name;
+    RawArray<uint8_t> bytes;
+    PrRawString type;
+    PrRawString name;
     double lastModified;
     bool isFile;
 };
 
 // An entry of a store.
 struct FetchBlobUrl {
-    PrString url;
-    PrString origin;
+    PrRawString url;
+    PrRawString origin;
     const PrFetchBlob* blob;
 };
 
 // A store of blob URLs. `lock` guards `entries`.
 struct FetchBlobStore {
     PrMutex lock;
-    Array<FetchBlobUrl> entries;
+    RawArray<FetchBlobUrl> entries;
 };
 
 } // namespace pr_impl

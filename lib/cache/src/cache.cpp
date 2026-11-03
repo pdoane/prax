@@ -3,13 +3,13 @@
 #include "pr/cache.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/thread.h"
 
 namespace pr_impl {
@@ -22,7 +22,7 @@ struct Cache;
 // loader writes `value` and sets `finished` under the cache's mutex, as it hands the load to the cache.
 struct CacheLoad {
     Cache* cache;
-    PrString key;
+    PrRawString key;
     const void* PR_NULLABLE value;
     bool cancelled;
     bool finished;
@@ -31,7 +31,7 @@ struct CacheLoad {
 // What the cache holds for a key. `load` is the load that has not finished, and `asked` is the number of the last pump
 // that an ask came before.
 struct CacheEntry {
-    PrString key;
+    PrRawString key;
     PrCacheState state;
     const void* PR_NULLABLE value;
     CacheLoad* PR_NULLABLE load;
@@ -48,14 +48,14 @@ struct CacheTask {
 // the count of loads that have not finished, which `idle` signals the end of.
 struct Cache {
     PrCacheDesc desc;
-    Array<CacheEntry> entries;
+    RawArray<CacheEntry> entries;
     HashIndex hashes;
     uint64_t pumps;
 
     PrMutex mutex;
     PrCondition idle;
-    Array<CacheLoad*> finished;
-    Array<CacheTask> tasks;
+    RawArray<CacheLoad*> finished;
+    RawArray<CacheTask> tasks;
     uint32_t loading;
 };
 
@@ -64,18 +64,18 @@ uint32_t hashOf(PrStringView key) {
 }
 
 uint32_t findEntry(const Cache* cache, PrStringView key) {
-    return cache->hashes.find(hashOf(key), [&](uint32_t at) { return prStringView(&cache->entries.data[at].key) == key; });
+    return cache->hashes.find(hashOf(key), [&](uint32_t at) { return prRawStringView(&cache->entries.data[at].key) == key; });
 }
 
 // Removes the entry at `at`. The last entry takes its position.
 void eraseEntry(Cache* cache, uint32_t at) {
     CacheEntry& entry = cache->entries.data[at];
-    cache->hashes.erase(hashOf(prStringView(&entry.key)), at);
-    prStringReset(&entry.key);
+    cache->hashes.erase(hashOf(prRawStringView(&entry.key)), at);
+    prRawStringReset(&entry.key);
     uint32_t last = cache->entries.count - 1;
     if (at != last) {
         CacheEntry& moved = cache->entries.data[last];
-        cache->hashes.relocate(hashOf(prStringView(&moved.key)), last, at);
+        cache->hashes.relocate(hashOf(prRawStringView(&moved.key)), last, at);
         entry = moved;
     }
     cache->entries.pop();
@@ -100,7 +100,7 @@ void dropEntry(Cache* cache, CacheEntry& entry) {
 }
 
 void freeLoad(CacheLoad* load) {
-    prStringReset(&load->key);
+    prRawStringReset(&load->key);
     prMemoryFree(load);
 }
 
@@ -108,15 +108,15 @@ void freeLoad(CacheLoad* load) {
 // load's value is released. Returns the number of loads adopted or released.
 uint32_t drain(Cache* cache) {
     prMutexLock(&cache->mutex);
-    Array<CacheTask> tasks = cache->tasks;
-    cache->tasks = Array<CacheTask>{};
+    RawArray<CacheTask> tasks = cache->tasks;
+    cache->tasks = RawArray<CacheTask>{};
     prMutexUnlock(&cache->mutex);
     for (uint32_t i = 0; i < tasks.count; ++i)
         tasks.data[i].fn(tasks.data[i].context);
     tasks.reset();
     prMutexLock(&cache->mutex);
-    Array<CacheLoad*> finished = cache->finished;
-    cache->finished = Array<CacheLoad*>{};
+    RawArray<CacheLoad*> finished = cache->finished;
+    cache->finished = RawArray<CacheLoad*>{};
     prMutexUnlock(&cache->mutex);
     for (uint32_t i = 0; i < finished.count; ++i) {
         CacheLoad* load = finished.data[i];
@@ -124,7 +124,7 @@ uint32_t drain(Cache* cache) {
             if (load->value != nullptr)
                 cache->desc.release(cache->desc.context, load->value);
         } else {
-            uint32_t at = findEntry(cache, prStringView(&load->key));
+            uint32_t at = findEntry(cache, prRawStringView(&load->key));
             PR_ASSERT(at != kHashMissing && cache->entries.data[at].load == load);
             CacheEntry& entry = cache->entries.data[at];
             entry.value = load->value;
@@ -190,7 +190,7 @@ void prCacheDestroy(PrCache* PR_NULLABLE cache) {
         drain(cache);
     }
     for (uint32_t i = 0; i < cache->entries.count; ++i)
-        prStringReset(&cache->entries.data[i].key);
+        prRawStringReset(&cache->entries.data[i].key);
     cache->entries.reset();
     cache->hashes.reset();
     cache->finished.reset();
@@ -209,10 +209,10 @@ const void* PR_NULLABLE prCacheValue(PrCache* cache, PrStringView key) {
     }
     PrCacheLoad* load = allocZeroed<PrCacheLoad>();
     load->cache = cache;
-    load->key = prStringCopy(key);
+    load->key = prRawStringCopy(key);
     at = cache->entries.count;
     cache->entries.push(CacheEntry{
-        .key = prStringCopy(key),
+        .key = prRawStringCopy(key),
         .state = PrCacheState_Loading,
         .load = load,
         .asked = cache->pumps,

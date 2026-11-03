@@ -12,12 +12,12 @@ namespace {
 
 // Returns the value of the parameter `name` of `type`, or "<none>" if it has none.
 std::string parameterOf(PrStringView type, PrStringView name) {
-    PrString value = prStringNull();
+    PrRawString value = prRawStringNull();
     if (!prMimeTypeParameter(type, name, &value))
         return "<none>";
-    PrStringView view = prStringView(&value);
+    PrStringView view = prRawStringView(&value);
     std::string result(view.data, view.size);
-    prStringReset(&value);
+    prRawStringReset(&value);
     return result;
 }
 

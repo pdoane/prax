@@ -16,7 +16,7 @@
 #include "pr/kit_choice.h"
 #include "pr/kit_icon.h"
 #include "pr/kit_input.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/vec.h"
 

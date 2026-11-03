@@ -11,10 +11,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/hash_index.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_counter.h"
@@ -81,15 +81,15 @@ struct CssRuleEntry {
 // The entries filed under one feature.
 struct CssRuleBucket {
     uint32_t hash;                  // hash of the feature's kind and its lowercased name
-    Array<uint32_t> entries;
+    RawArray<uint32_t> entries;
 };
 
 // The entries that style one kind of target, filed for matching against an element: the element itself, or one of its
 // pseudo-elements.
 struct CssRuleIndex {
-    Array<CssRuleBucket> buckets;
+    RawArray<CssRuleBucket> buckets;
     HashIndex index;
-    Array<uint32_t> universal;      // the entries filed under no feature
+    RawArray<uint32_t> universal;      // the entries filed under no feature
 };
 
 // The kinds of feature that a selector reads from an element. Entries are filed by these features, and a change to one
@@ -125,11 +125,11 @@ struct CssHasAnchor {
 // anchors that it can be by its own features, so that the cost of finding them grows with the element's features, not
 // with the number of anchors.
 struct CssHasAnchors {
-    Array<CssHasAnchor> anchors;
-    Array<uint32_t> nextOfFeature;  // by index: the next anchor with the same feature, or kHashMissing
-    HashIndex byFeature;            // the first anchor of each feature, by the feature
-    Array<uint32_t> anyElement;     // the anchors without a feature, which any element can be
-    Array<uint32_t> previous;       // the anchors whose arguments reach later siblings (CssHasAnchor::previous)
+    RawArray<CssHasAnchor> anchors;
+    RawArray<uint32_t> nextOfFeature;  // by index: the next anchor with the same feature, or kHashMissing
+    HashIndex byFeature;               // the first anchor of each feature, by the feature
+    RawArray<uint32_t> anyElement;     // the anchors without a feature, which any element can be
+    RawArray<uint32_t> previous;       // the anchors whose arguments reach later siblings (CssHasAnchor::previous)
 };
 
 // Adds `anchor` to the set, unless the set holds it.
@@ -183,7 +183,7 @@ struct CssInvalidation {
     bool laterSiblings;             // the siblings after the element
     bool siblings;                  // every sibling, before and after the element
     bool subtree;                   // every descendant, in place of `descendants`
-    Array<uint32_t> descendants;    // the features of the descendants restyled, each a cssFeatureHash
+    RawArray<uint32_t> descendants; // the features of the descendants restyled, each a cssFeatureHash
     CssHasAnchors anchors;
 };
 
@@ -198,7 +198,7 @@ struct CssRuleReads {
 
 // A @keyframes rule that animations name (css-animations-1/#keyframes).
 struct CssKeyframes {
-    PrString name;
+    PrRawString name;
     const CssRuleData* rule;
 };
 
@@ -211,7 +211,7 @@ struct CssMediaAnswer {
 // The style rules of a document's sheets, filed for matching. A selector of a pseudo-element is filed by the features
 // of its originating element, which matching tests, and its features restyle the originating element.
 struct CssRuleSet {
-    Array<CssRuleEntry> entries;
+    RawArray<CssRuleEntry> entries;
     CssRuleIndex filed[CssPseudo_Count];           // the entries of each target, by the originating element's features
 
     // The entries of ::before and ::after whose declarations set content, also in `filed`. A pseudo-element that
@@ -220,20 +220,21 @@ struct CssRuleSet {
 
     // The entries whose subject ends in ::slotted(), which match an element through the slots it is assigned to, apart
     // from `filed`.
-    Array<uint32_t> slotted;
-    Array<const PrCssSelectors* PR_NONNULL> lists; // the selectors of each style rule, each list with its own matcher
-    const PrDomDocument* PR_NULLABLE document;     // the document whose elements the set matches
-    uint32_t generation;                           // incremented by each build; the matchers of a scratch follow it
-    Array<PrString> layers;                        // the name of each layer, in layer order
-    Array<CssKeyframes> keyframes;                 // the last @keyframes rule of each name
+    RawArray<uint32_t> slotted;
+    RawArray<const PrCssSelectors* PR_NONNULL> lists; // the selectors of each style rule, each list with its own
+                                                      // matcher
+    const PrDomDocument* PR_NULLABLE document;        // the document whose elements the set matches
+    uint32_t generation;                              // incremented by each build; the matchers of a scratch follow it
+    RawArray<PrRawString> layers;                     // the name of each layer, in layer order
+    RawArray<CssKeyframes> keyframes;                 // the last @keyframes rule of each name
 
     // The @counter-style rules, in cascade order, and the counter styles that they define.
-    Array<const CssRuleData* PR_NONNULL> counterStyleRules;
+    RawArray<const CssRuleData* PR_NONNULL> counterStyleRules;
     CssCounterStyles counterStyles;
-    Array<CssInvalidation> invalidations;
+    RawArray<CssInvalidation> invalidations;
     HashIndex invalidationIndex;    // `invalidations` by feature
     CssHasAnchors anchors;          // every :has() anchor, which a child added or removed below it can change
-    Array<CssMediaAnswer> media;    // the media query lists that decided what the build filed
+    RawArray<CssMediaAnswer> media; // the media query lists that decided what the build filed
     CssRuleReads reads;
 
     // True if the document had a shadow tree when the set was built, so that matching tests each entry's scope. A
@@ -254,7 +255,7 @@ const CssInvalidation* PR_NULLABLE cssRuleSetInvalidation(const CssRuleSet* set,
 // Appends to `out` the features of the elements that `rule` can style: the most selective feature of the subject of
 // each complex selector of its style rules, in the rule itself or in the conditional and layer rules that it holds.
 // Returns false if any element can be styled: for a subject with no feature, or a rule that is not of those kinds.
-bool cssRuleSubjectFeatures(const CssRuleData* rule, Array<uint32_t>* out);
+bool cssRuleSubjectFeatures(const CssRuleData* rule, RawArray<uint32_t>* out);
 
 // A user agent's sheet (PrCssUserAgentSheet), parsed: the document's conditions that it applies under, and the used
 // appearance of the elements that it styles, or None for every element. A sheet for one appearance declares neither
@@ -315,7 +316,7 @@ struct CssCascaded {
 // hints, is never cached.
 struct CssMatchedStyle {
     uint32_t hash;                  // hash of `matched`; 0 if the slot is empty
-    Array<uint32_t> matched;        // the entries, in the order they apply
+    RawArray<uint32_t> matched;     // the entries, in the order they apply
     const CssComputedStyle* PR_NULLABLE style;
     const CssStyleValues* PR_NULLABLE parentGroups[CssStyleGroup_Count];   // null for the root
     const CssCustomProperties* PR_NULLABLE parentCustom;
@@ -353,7 +354,7 @@ constexpr uint32_t kCssMatchedWays = 4;
 // several lists that each declare an inherited property share their font group.
 struct CssCachedGroup {
     uint64_t hash;                  // hash of `key`; 0 if the slot is empty
-    Array<uint64_t> key;            // what the group was computed from (cssCascadeStyle)
+    RawArray<uint64_t> key;         // what the group was computed from (cssCascadeStyle)
     const CssStyleValues* PR_NULLABLE values;
 
     // What computing the group read beyond its key, and what it left in the cascade's state, which a hit replays.
@@ -377,18 +378,18 @@ constexpr uint32_t kCssAncestorFilterWords = 64;
 // What the cascade of one element reuses from the previous one, on one thread. Threads that compute styles concurrently
 // each have their own scratch.
 struct CssCascadeScratch {
-    Array<CssSelectorMatcher> matchers; // one for each of the rule set's lists, reused across a restyle's elements
-    Array<uint32_t> epochs;             // for each matcher, the epoch in which it last learned of the tree
-    uint32_t epoch;                     // incremented as the tree changes, past every epoch a matcher learned in
-    const CssRuleSet* PR_NULLABLE set;  // the rule set that the matchers belong to, at `generation`
+    RawArray<CssSelectorMatcher> matchers; // one for each of the rule set's lists, reused across a restyle's elements
+    RawArray<uint32_t> epochs;             // for each matcher, the epoch in which it last learned of the tree
+    uint32_t epoch;                        // incremented as the tree changes, past every epoch a matcher learned in
+    const CssRuleSet* PR_NULLABLE set;     // the rule set that the matchers belong to, at `generation`
     uint32_t generation;
-    Array<uint32_t> candidates;     // the entries that the last element matched, in the order they apply
+    RawArray<uint32_t> candidates;     // the entries that the last element matched, in the order they apply
 
     // What the matches read of nodes' children (CssSelectorMatcher::structure) since the scratch last forgot the tree.
-    Array<CssStructureRead> structure;
+    RawArray<CssStructureRead> structure;
 
-    Array<CssCascaded> winners;     // for each property, the declaration that wins so far
-    Array<PrCssProperty> declared;  // the properties that have a winner
+    RawArray<CssCascaded> winners;     // for each property, the declaration that wins so far
+    RawArray<PrCssProperty> declared;  // the properties that have a winner
 
     // A bit for each style group (1 << CssStyleGroup) that a property of `declared` belongs to. A group whose bit is
     // clear has no winner.
@@ -402,9 +403,9 @@ struct CssCascadeScratch {
     CssAppearance appearance;
     const uint32_t* PR_NULLABLE applying;
     uint32_t applyingCount;
-    Array<uint32_t> filtered;
+    RawArray<uint32_t> filtered;
 
-    Array<CssCascaded> custom;      // the custom properties declared; the last of each name wins
+    RawArray<CssCascaded> custom;   // the custom properties declared; the last of each name wins
     HashIndex customIndex;          // positions in `custom` by cssCustomHash of the name
     CssValuePool substituted;       // values with their substitutions made
     CssValuePool urls;              // a value with its url()s resolved against its sheet's URL
@@ -442,19 +443,19 @@ struct CssCascadeScratch {
     // The bucket hashes of the element matched last, which the matches of its pseudo-elements reuse: its id's, its
     // classes', its type's and its attributes'. They hold for `featuresOf` while the tree is as it was at
     // `featuresEpoch`.
-    Array<uint32_t> featureHashes;
+    RawArray<uint32_t> featureHashes;
     const PrDomElement* PR_NULLABLE featuresOf;
     uint32_t featuresEpoch;
 
     // The cache of computed groups (CssCachedGroup), for the rule set at `generation`, created on first use. It is used
     // while `cacheGroups` is set, which holds while the element's declarations all come from the rule set.
-    Array<CssCachedGroup> cachedGroups;
-    Array<uint64_t> groupKey;       // the key of the group being computed
+    RawArray<CssCachedGroup> cachedGroups;
+    RawArray<uint64_t> groupKey;    // the key of the group being computed
     uint64_t groupSalt;             // the number of the element's shared hints (cssSharedHints), or 0 for none
     bool cacheGroups;
 
     // The matched properties cache, for the rule set at `generation`, created on first use.
-    Array<CssMatchedStyle> matchedStyles;
+    RawArray<CssMatchedStyle> matchedStyles;
     uint32_t matchedLookups;        // number of lookups, which orders the slots of a set by use
     uint32_t matchedHits;           // number of styles taken from the cache; the caller reads and resets it
 };
@@ -467,7 +468,7 @@ struct CssCascadeScratch {
 struct CssCascadeMemo {
     const CssComputedStyle* PR_NULLABLE style;  // null if no style is kept
     const CssComputedStyle* PR_NULLABLE parent;
-    Array<uint32_t> matched;                    // the entries, in the order they apply
+    RawArray<uint32_t> matched;                 // the entries, in the order they apply
     uint32_t generation;                        // the generation of the rule set (CssRuleSet::generation)
     CssFontBases rootFont;
     CssViewport viewport;                       // compared if the style read it
@@ -492,7 +493,7 @@ struct CssCascadeInput {
 
     // The entries that the element matched when its style was last computed, in the order they apply, if nothing that
     // it is matched against has changed since. The cascade uses them in place of matching. Null to match.
-    const Array<uint32_t>* PR_NULLABLE matched;
+    const RawArray<uint32_t>* PR_NULLABLE matched;
 
     // The pseudo-element of `element` to style, or CssPseudo_None for the element. A pseudo-element inherits from what
     // originates it (css-pseudo-4/#treelike), whose style is `parent`: the element's, or for a marker of a ::before or

@@ -18,7 +18,7 @@
 #include "pr/draw.h"
 #include "pr/geom.h"
 #include "pr/layout_style.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/vec.h"
 
@@ -292,7 +292,7 @@ typedef struct PrLayoutContent {
 
     // Returns the text of the element, which has no text in the tree, for the rendered text steps. The caller releases
     // the string. Called with `textContext`, only as the text is read. Null gives no text.
-    PrString (*PR_NULLABLE text)(void* PR_NULLABLE textContext);
+    PrRawString (*PR_NULLABLE text)(void* PR_NULLABLE textContext);
     void* PR_NULLABLE textContext;
 } PrLayoutContent;
 
@@ -429,7 +429,7 @@ PrLayoutTreeStats prLayoutTreeStats(const PrLayoutTree* tree);
 // The first difference prLayoutTreeVerify found.
 typedef struct PrLayoutTreeDifference {
     PrLayoutNode node;              // the node it concerns, or kPrLayoutNodeNone for the tree as a whole
-    PrString what;                  // a description; the caller releases it with prStringReset
+    PrRawString what;               // a description; the caller releases it with prRawStringReset
 } PrLayoutTreeDifference;
 
 // Returns true if the tree's incremental work was correct and bounded. Correct: the cached layout matches a full layout

@@ -2,11 +2,11 @@
 
 #include "pr/image_process.h"
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/float16.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -38,7 +38,7 @@ int32_t edgeIndex(int32_t i, int32_t count, PrImageEdgeMode edge) {
 }
 
 // Blurs `count` values `stride` apart by a Gaussian of `sigma`, reading beyond them according to the edge mode.
-void blurLine(float* values, uint32_t count, size_t stride, float sigma, PrImageEdgeMode edge, Array<float>& scratch) {
+void blurLine(float* values, uint32_t count, size_t stride, float sigma, PrImageEdgeMode edge, RawArray<float>& scratch) {
     if (!(sigma > 0) || count == 0)
         return;
     uint32_t d = uint32_t(prF32Floor(sigma * 3 * prF32Sqrt(2 * kPrF32Pi) / 4 + 0.5f));
@@ -109,7 +109,7 @@ void prImageBlur(PrPixels pixels, PrPixelFormat format, PrVec2 sigma, PrImageEdg
     PR_ASSERT(pixels.stride % sizeof(float) == 0);
     uint32_t channels = format == PrPixelFormat_RgbaF32 ? 4 : 1;
     size_t rowFloats = pixels.stride / sizeof(float);
-    Array<float> scratch;
+    RawArray<float> scratch;
     for (uint32_t c = 0; c < channels; ++c) {
         if (sigma.x > 0) {
             for (uint32_t y = 0; y < pixels.extent.y; ++y)

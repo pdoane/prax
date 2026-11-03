@@ -284,8 +284,8 @@ constexpr Case kCases[] = {
             prCssStyleSheetReplaceSync(w->sheet, unique(w, w->small));
             PrCssRuleList* rules = prCssStyleSheetCssRules(w->sheet);
             for (uint32_t i = 0; i < prCssRuleListLength(rules); ++i) {
-                PrString text = prCssRuleCssText(prCssRuleListRuleAt(rules, i));
-                prStringReset(&text);
+                PrRawString text = prCssRuleCssText(prCssRuleListRuleAt(rules, i));
+                prRawStringReset(&text);
             }
         },
     },
@@ -303,8 +303,8 @@ constexpr Case kCases[] = {
         [](Work* w) {
             prCssStyleSheetInsertRule(w->sheet, ".item > span:hover { color: red; margin: 1px 2px }", 0, nullptr);
             PrCssRule* rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
-            PrString text = prCssStyleRuleSelectorText(prCssStyleRuleQuery(rule));
-            prStringReset(&text);
+            PrRawString text = prCssStyleRuleSelectorText(prCssStyleRuleQuery(rule));
+            prRawStringReset(&text);
             prCssStyleSheetDeleteRule(w->sheet, 0);
         },
     },
@@ -374,9 +374,9 @@ constexpr Case kCases[] = {
             PrCssGroupingRule* group = prCssGroupingRuleQuery(w->rule);
             prCssGroupingRuleInsertRule(group, ".item b { margin: 1px }", 0, nullptr);
             PrCssDeclarationName margin = prCssDeclarationNameFromProperty(PrCssProperty_Margin);
-            PrString value = prCssStyleDeclarationGetPropertyValue(
+            PrRawString value = prCssStyleDeclarationGetPropertyValue(
                 ruleStyle(prCssRuleListRuleAt(prCssGroupingRuleCssRules(group), 0)), &margin);
-            prStringReset(&value);
+            prRawStringReset(&value);
             prCssGroupingRuleDeleteRule(group, 0);
         },
     },

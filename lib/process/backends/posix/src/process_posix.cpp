@@ -332,7 +332,7 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
 #endif
     posix_spawnattr_setflags(&attributes, flags);
 
-    Array<char*> argv;
+    RawArray<char*> argv;
     argv.push(copyString(desc->program));
     for (uint32_t i = 0; i < desc->argumentCount; ++i)
         argv.push(copyString(desc->arguments[i]));

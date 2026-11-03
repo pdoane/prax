@@ -4,7 +4,7 @@
 
 #include "pr/base.h"
 #include "pr/markdown.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -61,20 +61,20 @@ void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn f
 
 // Appends the HTML text of `event` to `out`, with its text and values escaped, as prMarkdownAppendHtml writes each
 // event.
-void prMarkdownHtmlEventAppendText(const PrMarkdownHtmlEvent* event, PrString* out);
+void prMarkdownHtmlEventAppendText(const PrMarkdownHtmlEvent* event, PrRawString* out);
 
 // Appends `url` to `out` percent-encoded. A letter, a digit, a '%' and the punctuation that a URL holds as it is stay
 // as they are, and every other byte is written as %XX. The characters '&' and '\'' are kept, and an HTML writer escapes
 // them.
-void prMarkdownEncodeUrl(PrStringView url, PrString* out);
+void prMarkdownEncodeUrl(PrStringView url, PrRawString* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTML text
 
 // Appends the HTML text of the `count` top-level blocks at `first`, or of the footnotes, to `out`. The text is the
 // events written out, with text and values escaped.
-void prMarkdownAppendHtml(const PrMarkdown* document, uint32_t first, uint32_t count, PrString* out);
-void prMarkdownAppendFootnotesHtml(const PrMarkdown* document, PrString* out);
+void prMarkdownAppendHtml(const PrMarkdown* document, uint32_t first, uint32_t count, PrRawString* out);
+void prMarkdownAppendFootnotesHtml(const PrMarkdown* document, PrRawString* out);
 
 #if defined(__cplusplus)
 }

@@ -70,7 +70,7 @@ void svgCascadeInit(SvgCascade* cascade, PrDomDocument* document, const PrSvgDra
         cascade->userAgent.push(host);
         prTextBufferReset(&rule);
     }
-    Array<CssParsedUserAgentSheet> userAgent;
+    RawArray<CssParsedUserAgentSheet> userAgent;
     for (uint32_t i = 0; i < cascade->userAgent.count; ++i)
         userAgent.push(CssParsedUserAgentSheet{cascade->userAgent.data[i], 0, CssAppearance_None});
     cssRuleSetBuildUserAgent(&cascade->userAgentRules, document, userAgent.data, userAgent.count, 0, document->media);

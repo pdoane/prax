@@ -124,7 +124,7 @@ struct Filing {
     uint32_t anonymous;             // number of anonymous layers named so far
     const CssSheetData* sheet;      // the sheet whose rules are being filed
     PrTextBuffer name = {};
-    Array<uint32_t> types;          // scratch: the types that a subject lists (typeAlternatives)
+    RawArray<uint32_t> types;          // scratch: the types that a subject lists (typeAlternatives)
 
     // The tree whose sheets are being filed, or null for the user agent's sheets, and its depth.
     const PrDomNode* PR_NULLABLE scope;
@@ -136,10 +136,10 @@ struct Filing {
 // Returns the index of the layer that `name` names, and appends the layer in layer order if it is new.
 uint16_t layerIndex(Filing& f, PrStringView name) {
     for (uint32_t i = 0; i < f.set->layers.count; ++i) {
-        if (prStringView(&f.set->layers.data[i]) == name)
+        if (prRawStringView(&f.set->layers.data[i]) == name)
             return uint16_t(i);
     }
-    f.set->layers.push(prStringCopy(name));
+    f.set->layers.push(prRawStringCopy(name));
     return uint16_t(f.set->layers.count - 1);
 }
 
@@ -243,7 +243,7 @@ uint32_t pseudoClassTypes(CssPseudoClass pseudo, const PrStringView* PR_NULLABLE
 // of several types if it has an :is() or :where() whose arguments are all type selectors alone, as `:is(dir, menu, ul)`
 // does. It also requires one of several types if it has a pseudo-class that only those types match, as :heading does.
 // Returns false, with nothing appended, if the compound requires no such types.
-bool typeAlternatives(const PrCssSelectors* selectors, const CssCompoundSelector* compound, Array<uint32_t>& out) {
+bool typeAlternatives(const PrCssSelectors* selectors, const CssCompoundSelector* compound, RawArray<uint32_t>& out) {
     for (uint32_t k = 0; k < compound->simpleCount; ++k) {
         const CssSimpleSelector* simple = &selectors->simple[compound->simple + k];
         const PrStringView* types = nullptr;
@@ -287,7 +287,7 @@ bool typeAlternatives(const PrCssSelectors* selectors, const CssCompoundSelector
 // Also writes to `anyOf` the types of the first of those compounds that requires one of several types
 // (typeAlternatives), if it requires no more of them than kCssAncestorAlternatives. `types` is scratch space.
 void collectAncestors(const PrCssSelectors* selectors, const CssComplexSelector* c, uint32_t* out, uint32_t* anyOf,
-        Array<uint32_t>& types) {
+        RawArray<uint32_t>& types) {
     if ((c->flags & (CssComplexFlag_Relative | CssComplexFlag_Nesting | CssComplexFlag_ImpliedScope)) != 0)
         return;
     const CssCompoundSelector* compounds = selectors->compounds + c->compound;
@@ -858,7 +858,7 @@ uint32_t addMatcher(CssRuleSet* set, const PrCssSelectors* selectors) {
     return set->lists.count - 1;
 }
 
-void fileRules(Filing& f, const Array<CssRuleData* PR_NONNULL>& rules, uint16_t layer, PrStringView prefix);
+void fileRules(Filing& f, const RawArray<CssRuleData* PR_NONNULL>& rules, uint16_t layer, PrStringView prefix);
 
 // Returns the name of the layer that an @layer rule's prelude names at `index` among its comma-separated names, under
 // `prefix`.
@@ -920,7 +920,7 @@ void fileImport(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
         i += value->next - 1;
     }
     uint16_t index = layer;
-    PrString name{};
+    PrRawString name{};
     if (layered) {
         // An import into an anonymous layer is a layer of its own (css-cascade-5/#at-import).
         PrStringView names = prTextBufferView(&named);
@@ -928,17 +928,17 @@ void fileImport(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
             prTextBufferClear(&f.name);
             prTextBufferAppendChar(&f.name, '\x01');
             prTextBufferAppendU64(&f.name, f.anonymous++, 10);
-            name = prStringCopy(prTextBufferView(&f.name));
+            name = prRawStringCopy(prTextBufferView(&f.name));
         } else {
-            name = prStringCopy(layerName(f, names, 0, prefix));
+            name = prRawStringCopy(layerName(f, names, 0, prefix));
         }
-        index = layerIndex(f, prStringView(&name));
+        index = layerIndex(f, prRawStringView(&name));
     }
     const CssSheetData* importing = f.sheet;
     f.sheet = rule->imported;
-    fileRules(f, rule->imported->rules, index, layered ? prStringView(&name) : prefix);
+    fileRules(f, rule->imported->rules, index, layered ? prRawStringView(&name) : prefix);
     f.sheet = importing;
-    prStringReset(&name);
+    prRawStringReset(&name);
     prTextBufferReset(&named);
 }
 
@@ -965,13 +965,13 @@ void fileAtRule(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
                 name = PrStringView{name.data + 1, name.size - 2};
             bool replaced = false;
             for (uint32_t i = 0; i < f.set->keyframes.count && !replaced; ++i) {
-                if (prStringView(&f.set->keyframes.data[i].name) == name) {
+                if (prRawStringView(&f.set->keyframes.data[i].name) == name) {
                     f.set->keyframes.data[i].rule = rule;
                     replaced = true;
                 }
             }
             if (!replaced)
-                f.set->keyframes.push(CssKeyframes{prStringCopy(name), rule});
+                f.set->keyframes.push(CssKeyframes{prRawStringCopy(name), rule});
             prTextBufferReset(&prelude);
             break;
         }
@@ -993,18 +993,18 @@ void fileAtRule(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
                 break;
             }
             // A block with no name is a layer of its own (css-cascade-5/#layer-block).
-            PrString name{};
+            PrRawString name{};
             if (names.size == 0) {
                 prTextBufferClear(&f.name);
                 prTextBufferAppendChar(&f.name, '\x01');
                 prTextBufferAppendU64(&f.name, f.anonymous++, 10);
-                name = prStringCopy(prTextBufferView(&f.name));
+                name = prRawStringCopy(prTextBufferView(&f.name));
             } else {
-                name = prStringCopy(layerName(f, names, 0, prefix));
+                name = prRawStringCopy(layerName(f, names, 0, prefix));
             }
-            uint16_t index = layerIndex(f, prStringView(&name));
-            fileRules(f, rule->children, index, prStringView(&name));
-            prStringReset(&name);
+            uint16_t index = layerIndex(f, prRawStringView(&name));
+            fileRules(f, rule->children, index, prRawStringView(&name));
+            prRawStringReset(&name);
             prTextBufferReset(&prelude);
             break;
         }
@@ -1013,7 +1013,7 @@ void fileAtRule(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
     }
 }
 
-void fileRules(Filing& f, const Array<CssRuleData* PR_NONNULL>& rules, uint16_t layer, PrStringView prefix) {
+void fileRules(Filing& f, const RawArray<CssRuleData* PR_NONNULL>& rules, uint16_t layer, PrStringView prefix) {
     for (uint32_t i = 0; i < rules.count; ++i) {
         const CssRuleData* rule = rules.data[i];
         if (rule->kind == CssRuleDataKind_At) {
@@ -1249,7 +1249,7 @@ void mapFlowRelative(CssCascadeScratch& s, const CssComputedStyle* style, bool* 
 
 // Returns the longhands that important declarations won, or null if none did.
 const CssImportantProperties* PR_NULLABLE importantOf(CssCascadeScratch& s) {
-    Array<PrCssProperty> important;
+    RawArray<PrCssProperty> important;
     for (uint32_t i = 0; i < s.declared.count; ++i) {
         PrCssProperty property = s.declared.data[i];
         const CssDeclaration* d = s.winners.data[property].declaration;
@@ -1591,7 +1591,7 @@ void follow(CssCascadeScratch& s, const CssRuleSet* set) {
 void elementFeatures(CssCascadeScratch& s, const PrDomElement* element) {
     if (s.featuresOf == element && s.featuresEpoch == s.epoch)
         return;
-    Array<uint32_t>& hashes = s.featureHashes;
+    RawArray<uint32_t>& hashes = s.featureHashes;
     hashes.clear();
     PrStringView id = domElementId(element);
     if (id.size != 0)
@@ -2037,7 +2037,7 @@ struct CustomEntry {
 // Resolves references among the element's declared custom properties, each property once. A name that the element does
 // not declare takes the parent's computed value, whose references are already substituted.
 struct CustomLookup {
-    Array<CustomEntry>* entries;
+    RawArray<CustomEntry>* entries;
     const HashIndex* byName;        // positions in `entries` by name hash
     const CssCustomProperties* PR_NULLABLE parent;
     const PrDomElement* PR_NULLABLE element; // whose attributes attr() reads
@@ -2103,7 +2103,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
         return parent;
     }
     // Resolve the declared properties.
-    Array<CustomEntry> entries;
+    RawArray<CustomEntry> entries;
     entries.reserve(s.custom.count);
     for (uint32_t k = 0; k < s.custom.count; ++k) {
         const CssCascaded& c = s.custom.data[k];
@@ -2133,7 +2133,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
         lookup.resolve(i);
 
     // The declared rows, in entry order.
-    Array<CssCustomRow> declared;
+    RawArray<CssCustomRow> declared;
     declared.reserve(entries.count);
     for (uint32_t i = 0; i < entries.count; ++i) {
         const CustomEntry& e = entries.data[i];
@@ -2148,7 +2148,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
     // base is itself the base. Once the entries above the base outgrow it, the new set is flattened and becomes a base
     // itself.
     const CssCustomProperties* base = parent == nullptr ? nullptr : parent->base != nullptr ? parent->base : parent;
-    Array<CssCustomRow> inherited;
+    RawArray<CssCustomRow> inherited;
     if (parent != nullptr && parent->base != nullptr) {
         for (uint32_t i = 0; i < parent->count; ++i) {
             const CssCustomEntry& e = parent->entries[i];
@@ -2169,7 +2169,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
 
     // Merge the inherited and declared rows. A declared row wins over an inherited row of the same name. An invalid row
     // is kept only to hide the base's entry of its name.
-    Array<CssCustomRow> rows;
+    RawArray<CssCustomRow> rows;
     rows.reserve(inherited.count + declared.count);
     auto add = [&](const CssCustomRow& row) {
         PrStringView ignored{};
@@ -2388,7 +2388,7 @@ PrStringView urlText(CssValueRun run, uint32_t index, uint32_t* at) {
 // uses it, and stays as written. Returns `run` itself if the sheet was given as text, which leaves its URLs relative to
 // the document's base URL.
 CssValueRun resolveUrls(CssCascadeScratch& s, CssValueRun run, const CssSheetData* PR_NULLABLE sheet) {
-    if (sheet == nullptr || prStringIsNull(&sheet->href))
+    if (sheet == nullptr || prRawStringIsNull(&sheet->href))
         return run;
     bool any = false;
     for (uint32_t i = 0; i < run.count && !any; ++i) {
@@ -2399,7 +2399,7 @@ CssValueRun resolveUrls(CssCascadeScratch& s, CssValueRun run, const CssSheetDat
     if (!any)
         return run;
     PrUrl* base = nullptr;
-    if (prUrlCreate(prStringView(&sheet->href), nullptr, PrCharset_Utf8, &base) != PrStatus_Ok) {
+    if (prUrlCreate(prRawStringView(&sheet->href), nullptr, PrCharset_Utf8, &base) != PrStatus_Ok) {
         prUrlDestroy(base);
         return run;
     }
@@ -2413,12 +2413,12 @@ CssValueRun resolveUrls(CssCascadeScratch& s, CssValueRun run, const CssSheetDat
             continue;
         PrUrl* url = nullptr;
         if (prUrlCreate(text, base, PrCharset_Utf8, &url) == PrStatus_Ok) {
-            PrString resolved = prUrlSerialize(url, PrUrlSerialization_Whole);
-            PrStringView view = prStringView(&resolved);
+            PrRawString resolved = prUrlSerialize(url, PrUrlSerialization_Whole);
+            PrStringView view = prRawStringView(&resolved);
             CssValueNode& node = s.urls.values.data[span.start + at];
             node.text.start = cssValuePoolAddText(&s.urls, view);
             node.text.length = uint32_t(view.size);
-            prStringReset(&resolved);
+            prRawStringReset(&resolved);
         }
         prUrlDestroy(url);
     }
@@ -2654,7 +2654,7 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
 }
 
 // Appends the bits of each base to `key`.
-void addBases(Array<uint64_t>& key, const CssFontBases& bases) {
+void addBases(RawArray<uint64_t>& key, const CssFontBases& bases) {
     key.push(bitCast<uint64_t>(bases.em));
     key.push(bitCast<uint64_t>(bases.lh));
 }
@@ -2712,7 +2712,7 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
         cssStyleValuesRelease(initial);
     }
     bool root = input.parent == nullptr;
-    Array<uint64_t>& key = s.groupKey;
+    RawArray<uint64_t>& key = s.groupKey;
     key.clear();
     key.push(uint64_t(group) | uint64_t(input.pseudo) << 8 | uint64_t(root) << 16 |
         uint64_t(!root && input.parent->childrenAreItems) << 17 |
@@ -2909,7 +2909,7 @@ bool cssBlockReadsAttributes(const CssDeclarationBlock* block) {
 
 const CssRuleData* PR_NULLABLE cssRuleSetKeyframes(const CssRuleSet* set, PrStringView name) {
     for (uint32_t i = 0; i < set->keyframes.count; ++i) {
-        if (prStringView(&set->keyframes.data[i].name) == name)
+        if (prRawStringView(&set->keyframes.data[i].name) == name)
             return set->keyframes.data[i].rule;
     }
     return nullptr;
@@ -2920,7 +2920,7 @@ const CssInvalidation* PR_NULLABLE cssRuleSetInvalidation(const CssRuleSet* set,
     return at != kHashMissing ? &set->invalidations.data[at] : nullptr;
 }
 
-bool cssRuleSubjectFeatures(const CssRuleData* rule, Array<uint32_t>* out) {
+bool cssRuleSubjectFeatures(const CssRuleData* rule, RawArray<uint32_t>* out) {
     if (rule->kind == CssRuleDataKind_Style) {
         // A nested rule's selectors are relative to its parent's, which the engine does not yet resolve.
         const PrCssSelectors* selectors = rule->selectors;
@@ -3025,10 +3025,10 @@ void cssRuleSetReset(CssRuleSet* set) {
     set->lists.reset();
     set->document = nullptr;
     for (uint32_t i = 0; i < set->layers.count; ++i)
-        prStringReset(&set->layers.data[i]);
+        prRawStringReset(&set->layers.data[i]);
     set->layers.reset();
     for (uint32_t i = 0; i < set->keyframes.count; ++i)
-        prStringReset(&set->keyframes.data[i].name);
+        prRawStringReset(&set->keyframes.data[i].name);
     set->keyframes.reset();
     set->counterStyleRules.reset();
     cssCounterStylesReset(&set->counterStyles);

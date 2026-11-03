@@ -3,10 +3,10 @@
 #include "pr/text_layout.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
 #include "pr/text_shaping.h"
 #include "pr/unicode_grapheme.h"
 
@@ -23,7 +23,7 @@ struct PlacedRun {
 };
 
 struct TextLayout {
-    Array<char> text;
+    RawArray<char> text;
     PrTextFont* PR_NULLABLE font;
     PrTextShaping* PR_NULLABLE shaping;
     PrTextShapingScratch* PR_NULLABLE scratch;
@@ -31,18 +31,18 @@ struct TextLayout {
     float width;                    // the width that the lines take
     float height;
 
-    Array<PrTextLine> lines;
-    Array<PrFontGlyph> glyphs;
-    Array<PrAffine2> transforms;    // by glyph, for runs that are scaled
-    Array<PlacedRun> placed;
+    RawArray<PrTextLine> lines;
+    RawArray<PrFontGlyph> glyphs;
+    RawArray<PrAffine2> transforms;    // by glyph, for runs that are scaled
+    RawArray<PlacedRun> placed;
 
     // By byte: the left and right edges of the placed glyphs whose cluster starts at the byte, or NaN if no cluster
     // starts there, and the bidi level of the part that holds the cluster.
-    Array<float> clusterLeft;
-    Array<float> clusterRight;
-    Array<uint8_t> clusterLevel;
+    RawArray<float> clusterLeft;
+    RawArray<float> clusterRight;
+    RawArray<uint8_t> clusterLevel;
 
-    Array<PrTextLineRun> parts;     // scratch: the parts of one line, in visual order
+    RawArray<PrTextLineRun> parts;     // scratch: the parts of one line, in visual order
 };
 
 bool isLineFeed(const TextLayout& t, uint32_t byte) {

@@ -5,10 +5,10 @@
 // whole and the milliseconds that the parse took, and, unless the case is whole, whether a parse that takes the source
 // a byte at a time gives the same HTML, both at its end and as the blocks that its changes report.
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/markdown.h"
 #include "pr/markdown_html.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 
 #include "tools/harness/harness.h"
@@ -19,28 +19,28 @@ using namespace pr_impl;
 
 namespace {
 
-PrString htmlOf(const PrMarkdown* document, uint32_t first, uint32_t count) {
-    PrString html = prStringEmpty();
+PrRawString htmlOf(const PrMarkdown* document, uint32_t first, uint32_t count) {
+    PrRawString html = prRawStringEmpty();
     prMarkdownAppendHtml(document, first, count, &html);
     return html;
 }
 
 // Returns the HTML of the whole document: its blocks', then its footnotes'.
-PrString documentHtml(const PrMarkdown* document) {
-    PrString html = htmlOf(document, 0, prMarkdownBlockCount(document));
+PrRawString documentHtml(const PrMarkdown* document) {
+    PrRawString html = htmlOf(document, 0, prMarkdownBlockCount(document));
     prMarkdownAppendFootnotesHtml(document, &html);
     return html;
 }
 
 // Applies the document's changes to `blocks`, the HTML of each top-level block as the client last read it.
-void applyChanges(PrMarkdown* document, Array<PrString>* blocks) {
+void applyChanges(PrMarkdown* document, RawArray<PrRawString>* blocks) {
     PrMarkdownChange changes[4];
     uint32_t count = 0;
     while ((count = prMarkdownTakeChanges(document, changes, 4)) != 0) {
         for (uint32_t c = 0; c < count; ++c) {
             const PrMarkdownChange& change = changes[c];
             for (uint32_t i = 0; i < change.removedCount; ++i)
-                prStringReset(&blocks->data[change.first + i]);
+                prRawStringReset(&blocks->data[change.first + i]);
             blocks->erase(change.first, change.removedCount);
             for (uint32_t i = 0; i < change.insertedCount; ++i)
                 blocks->insert(change.first + i, htmlOf(document, change.first + i, 1));
@@ -51,7 +51,7 @@ void applyChanges(PrMarkdown* document, Array<PrString>* blocks) {
 // Returns true if parsing `source` a byte at a time gives `whole`, both at the end and as the client's blocks.
 bool streams(const PrMarkdownOptions& options, PrStringView source, PrStringView whole) {
     PrMarkdown* document = prMarkdownCreate(&options);
-    Array<PrString> blocks;
+    RawArray<PrRawString> blocks;
     bool agrees = true;
     for (size_t i = 0; i < source.size; ++i) {
         prMarkdownAppend(document, prStringSlice(source, i, 1));
@@ -60,20 +60,20 @@ bool streams(const PrMarkdownOptions& options, PrStringView source, PrStringView
     }
     prMarkdownEnd(document);
     applyChanges(document, &blocks);
-    PrString html = documentHtml(document);
-    agrees = agrees && prStringView(&html) == whole;
+    PrRawString html = documentHtml(document);
+    agrees = agrees && prRawStringView(&html) == whole;
     PrTextBuffer joined = {};
     for (uint32_t i = 0; i < blocks.count; ++i) {
-        prTextBufferAppend(&joined, prStringView(&blocks.data[i]));
-        prStringReset(&blocks.data[i]);
+        prTextBufferAppend(&joined, prRawStringView(&blocks.data[i]));
+        prRawStringReset(&blocks.data[i]);
     }
-    PrString footnotes = prStringEmpty();
+    PrRawString footnotes = prRawStringEmpty();
     prMarkdownAppendFootnotesHtml(document, &footnotes);
-    prTextBufferAppend(&joined, prStringView(&footnotes));
-    prStringReset(&footnotes);
+    prTextBufferAppend(&joined, prRawStringView(&footnotes));
+    prRawStringReset(&footnotes);
     agrees = agrees && prTextBufferView(&joined) == whole;
     prTextBufferReset(&joined);
-    prStringReset(&html);
+    prRawStringReset(&html);
     blocks.reset();
     prMarkdownDestroy(document);
     return agrees;
@@ -128,23 +128,23 @@ int main() {
         HarnessCounters before = harnessCounters();
         PrMarkdown* document = prMarkdownCreate(&options);
         prMarkdownParse(document, source);
-        PrString html = documentHtml(document);
+        PrRawString html = documentHtml(document);
         prMarkdownDestroy(document);
         HarnessCounters spent = harnessSpent(before, harnessCounters());
 
         PrTextBuffer out = {};
         prTextBufferAppend(&out, "{\"html\":");
-        harnessWriteString(&out, prStringView(&html));
+        harnessWriteString(&out, prRawStringView(&html));
         prTextBufferAppend(&out, ",\"millis\":");
         harnessWriteNumber(&out, uint64_t(spent.millis));
         if (test.fieldCount == 1) {
             prTextBufferAppend(&out, ",\"streamed\":");
-            prTextBufferAppend(&out, streams(options, source, prStringView(&html)) ? "true" : "false");
+            prTextBufferAppend(&out, streams(options, source, prRawStringView(&html)) ? "true" : "false");
         }
         prTextBufferAppendChar(&out, '}');
         harnessWriteLine(prTextBufferView(&out));
         prTextBufferReset(&out);
-        prStringReset(&html);
+        prRawStringReset(&html);
     }
     harnessCaseReset(&test);
     return 0;

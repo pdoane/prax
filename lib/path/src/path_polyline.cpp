@@ -12,10 +12,10 @@
 
 #include "path/src/path_polyline.h"
 
-#include "pr/array.h"
 #include "pr/bitset.h"
 #include "pr/float.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/sort.h"
 
@@ -35,7 +35,7 @@ bool finite(const PrPathPolyline& polyline) {
 
 // Appends the points of the polyline, and the end of each of its contours, in the form in which the arrangement reads
 // rings.
-void ringsOf(const PrPathPolyline& polyline, Array<PrVec2>& points, Array<uint32_t>& ends) {
+void ringsOf(const PrPathPolyline& polyline, RawArray<PrVec2>& points, RawArray<uint32_t>& ends) {
     if (polyline.pointCount != 0)
         points.append(polyline.points, polyline.pointCount);
     for (uint32_t c = 0; c < polyline.contourCount; ++c)
@@ -54,11 +54,11 @@ struct Bands {
     int64_t origin;
     int64_t size;
     uint32_t count;
-    Array<uint32_t> starts;     // count + 1 offsets into `pieces`
-    Array<uint32_t> pieces;
+    RawArray<uint32_t> starts;     // count + 1 offsets into `pieces`
+    RawArray<uint32_t> pieces;
 };
 
-void buildBands(const Array<PathGridPiece>& pieces, bool vertical, Bands& bands) {
+void buildBands(const RawArray<PathGridPiece>& pieces, bool vertical, Bands& bands) {
     int64_t low = 0;
     int64_t high = 0;
     for (uint32_t i = 0; i < pieces.count; ++i) {
@@ -76,7 +76,7 @@ void buildBands(const Array<PathGridPiece>& pieces, bool vertical, Bands& bands)
     bands.origin = low;
     bands.count = count;
     bands.size = (high - low) / int64_t(count) + 1;
-    Array<uint32_t> sizes;
+    RawArray<uint32_t> sizes;
     for (uint32_t i = 0; i <= count; ++i)
         sizes.push(0);
     auto span = [&](const PathGridPiece& p, uint32_t* first, uint32_t* last) {
@@ -113,7 +113,7 @@ void buildBands(const Array<PathGridPiece>& pieces, bool vertical, Bands& bands)
 
 // Writes how much each region winds on the side of piece `piece` from which a ray from its midpoint exits. The ray runs
 // toward +x, or toward +y for a horizontal piece. Coordinates are doubled, so that the midpoint is on the grid.
-void windingBeside(const Array<PathGridPiece>& pieces, const Bands& bands, uint32_t piece, bool vertical, int32_t* out) {
+void windingBeside(const RawArray<PathGridPiece>& pieces, const Bands& bands, uint32_t piece, bool vertical, int32_t* out) {
     const PathGridPiece& s = pieces.data[piece];
     PathGridPoint m{s.lo.x + s.hi.x, s.lo.y + s.hi.y};
     int64_t along = vertical ? m.x : m.y;
@@ -168,7 +168,7 @@ bool result(PrPathPolylineOp op, bool a, bool b) {
 }
 
 // Chains the boundary into contours, with a point wherever the direction turns.
-void chain(const PathGrid& g, Array<Boundary>& boundary, PrPathPolyline& out) {
+void chain(const PathGrid& g, RawArray<Boundary>& boundary, PrPathPolyline& out) {
     sortItems(boundary.data, boundary.count,
         [](const Boundary& a, const Boundary& b) { return pathGridBeforeX(a.from, b.from); });
     auto next = [&](PathGridPoint from) -> Boundary* {
@@ -179,7 +179,7 @@ void chain(const PathGrid& g, Array<Boundary>& boundary, PrPathPolyline& out) {
         }
         return nullptr;
     };
-    Array<PathGridPoint> contour;
+    RawArray<PathGridPoint> contour;
     for (uint32_t i = 0; i < boundary.count; ++i) {
         if (boundary.data[i].used)
             continue;
@@ -236,7 +236,7 @@ void addPolygon(const PrVec2* points, uint32_t count, PrPathPolyline& out) {
 
 // Adds every point within `distance` of the edges of the rings: a band along each edge, and, at each corner, the area
 // that the join fills on the side that the two bands leave open.
-void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, float distance,
+void boundaryBand(const RawArray<PrVec2>& points, const RawArray<uint32_t>& ends, float distance,
         PrPathJoin join, float miterLimit, float tolerance, PrPathPolyline& out) {
     auto normal = [](PrVec2 a, PrVec2 b) {
         float dx = b.x - a.x;
@@ -343,8 +343,8 @@ PrVec2 homogeneousDivide(HomogeneousPoint h) {
 
 // Appends to `out` the closed contour `polygon` of the plane, projected through `matrix`. The contour is first clipped
 // to the part in which w is at least a small fraction of its largest w. `clipped` is scratch storage.
-void polylineAddProjected(PrPathPolyline& out, const PrMatrix4* matrix, const Array<PrVec2>& polygon,
-        Array<HomogeneousPoint>& clipped) {
+void polylineAddProjected(PrPathPolyline& out, const PrMatrix4* matrix, const RawArray<PrVec2>& polygon,
+        RawArray<HomogeneousPoint>& clipped) {
     clipped.clear();
     float largest = 0;
     for (uint32_t i = 0; i < polygon.count; ++i)
@@ -391,7 +391,7 @@ void prPathPolylineReset(PrPathPolyline* polyline) {
 }
 
 void prPathPolylineMoveTo(PrPathPolyline* polyline, PrVec2 point) {
-    Array<uint32_t> contours;
+    RawArray<uint32_t> contours;
     contours.data = polyline->contours;
     contours.count = polyline->contourCount;
     contours.capacity = polyline->contourCapacity;
@@ -410,7 +410,7 @@ void prPathPolylineMoveTo(PrPathPolyline* polyline, PrVec2 point) {
 }
 
 void prPathPolylineLineTo(PrPathPolyline* polyline, PrVec2 point) {
-    pathPolylineWrite(*polyline, [&](Array<PrVec2>& points) { points.push(point); });
+    pathPolylineWrite(*polyline, [&](RawArray<PrVec2>& points) { points.push(point); });
 }
 
 void prPathPolylineClose(PrPathPolyline* polyline) {
@@ -451,8 +451,8 @@ PrRect prPathPolylineBounds(const PrPathPolyline* polyline) {
 }
 
 void prPathPolylineProject(const PrPathPolyline* polyline, const PrMatrix4* matrix, PrPathPolyline* out) {
-    Array<PrVec2> polygon;
-    Array<HomogeneousPoint> clipped;
+    RawArray<PrVec2> polygon;
+    RawArray<HomogeneousPoint> clipped;
     for (uint32_t c = 0; c < polyline->contourCount; ++c) {
         uint32_t start = polyline->contours[c];
         uint32_t end = prPathPolylineContourEnd(polyline, c);
@@ -470,15 +470,15 @@ void prPathPolylineCombine(const PrPathPolyline* a, PrPathFillRule aRule, const 
         PrPathPolylineOp op, PrPathPolyline* out) {
     if (!finite(*a) || !finite(*b))
         return;
-    Array<PrVec2> points[2];
-    Array<uint32_t> ends[2];
+    RawArray<PrVec2> points[2];
+    RawArray<uint32_t> ends[2];
     ringsOf(*a, points[0], ends[0]);
     ringsOf(*b, points[1], ends[1]);
 
     // The grid spans the extent of both regions.
-    const Array<PrVec2>* both[2] = {&points[0], &points[1]};
+    const RawArray<PrVec2>* both[2] = {&points[0], &points[1]};
     PathGrid g = pathGridOver(both, 2);
-    Array<PathGridEdge> edges;
+    RawArray<PathGridEdge> edges;
     pathGridAddEdges(g, points[0], ends[0], 0, edges);
     pathGridAddEdges(g, points[1], ends[1], 1, edges);
     for (uint32_t i = 0; i < 2; ++i) {
@@ -487,7 +487,7 @@ void prPathPolylineCombine(const PrPathPolyline* a, PrPathFillRule aRule, const 
     }
     pathGridSplitEdges(edges);
 
-    Array<PathGridPiece> pieces;
+    RawArray<PathGridPiece> pieces;
     pathGridMergePieces(edges, pieces);
     edges.reset();
     Bands rows{};
@@ -495,7 +495,7 @@ void prPathPolylineCombine(const PrPathPolyline* a, PrPathFillRule aRule, const 
     buildBands(pieces, false, rows);
     buildBands(pieces, true, columns);
     PrPathFillRule rules[2] = {aRule, bRule};
-    Array<Boundary> boundary;
+    RawArray<Boundary> boundary;
     for (uint32_t i = 0; i < pieces.count; ++i) {
         const PathGridPiece& p = pieces.data[i];
         if (p.winding[0] == 0 && p.winding[1] == 0)
@@ -529,8 +529,8 @@ void prPathPolylineOffset(const PrPathPolyline* polyline, PrPathFillRule rule, f
         float miterLimit, float tolerance, PrPathPolyline* out) {
     PrPathPolyline band{};
     if (distance != 0 && prF32IsFinite(distance) && tolerance > 0 && prF32IsFinite(tolerance)) {
-        Array<PrVec2> points;
-        Array<uint32_t> ends;
+        RawArray<PrVec2> points;
+        RawArray<uint32_t> ends;
         ringsOf(*polyline, points, ends);
         boundaryBand(points, ends, prF32Abs(distance), join, miterLimit, tolerance, band);
         points.reset();

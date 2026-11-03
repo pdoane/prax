@@ -15,7 +15,7 @@
 #include "pr/kit_icon.h"
 #include "pr/kit_image.h"
 #include "pr/kit_text.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN

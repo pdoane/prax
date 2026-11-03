@@ -36,13 +36,13 @@ void storageBufferRelease(StorageBuffer* PR_NULLABLE buffer) {
 
 uint32_t storageIndexFind(const StorageIndex* index, PrStringView key) {
     return index->hashes.find(hashOf(key), [&](uint32_t position) {
-        return prStringView(&index->entries.data[position].key) == key;
+        return prRawStringView(&index->entries.data[position].key) == key;
     });
 }
 
 uint32_t storageIndexInsert(StorageIndex* index, PrStringView key, uint64_t size, uint64_t used) {
     uint32_t position = index->entries.count;
-    index->entries.push(StorageEntry{prStringCopy(key), size, used, 0, nullptr});
+    index->entries.push(StorageEntry{prRawStringCopy(key), size, used, 0, nullptr});
     index->hashes.insert(hashOf(key), position);
     index->total += key.size + size;
     return position;
@@ -56,13 +56,13 @@ void storageIndexResize(StorageIndex* index, uint32_t position, uint64_t size) {
 
 void storageIndexRemove(StorageIndex* index, uint32_t position) {
     StorageEntry& entry = index->entries.data[position];
-    index->total -= prStringView(&entry.key).size + entry.size;
-    index->hashes.erase(hashOf(prStringView(&entry.key)), position);
-    prStringReset(&entry.key);
+    index->total -= prRawStringView(&entry.key).size + entry.size;
+    index->hashes.erase(hashOf(prRawStringView(&entry.key)), position);
+    prRawStringReset(&entry.key);
     uint32_t last = index->entries.count - 1;
     if (position != last) {
         StorageEntry& moved = index->entries.data[last];
-        index->hashes.relocate(hashOf(prStringView(&moved.key)), last, position);
+        index->hashes.relocate(hashOf(prRawStringView(&moved.key)), last, position);
         index->entries.data[position] = moved;
     }
     index->entries.pop();
@@ -79,7 +79,7 @@ uint32_t storageIndexOldest(const StorageIndex* index) {
 
 void storageIndexReset(StorageIndex* index) {
     for (uint32_t i = 0; i < index->entries.count; ++i)
-        prStringReset(&index->entries.data[i].key);
+        prRawStringReset(&index->entries.data[i].key);
     index->entries.reset();
     index->hashes.reset();
     index->total = 0;

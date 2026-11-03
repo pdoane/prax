@@ -196,7 +196,7 @@ struct TypedObject {
     ColorFunction colorFunction;
     bool is2D;
     double number;
-    PrString text;
+    PrRawString text;
     PrCssDeclarationName property;   // property that a style value is a value of
     PrCssValue* PR_NULLABLE value;   // trees of a style value or an image
     uint32_t references;
@@ -216,7 +216,7 @@ TypedObject typedFields(TypedKind kind, PrCssUnit unit = PrCssUnit_Number, doubl
 }
 
 void destroyTyped(TypedObject* object) {
-    prStringReset(&object->text);
+    prRawStringReset(&object->text);
     prCssDeclarationNameReset(&object->property);
     prCssValueDestroy(object->value);
     prMemoryFree(object);
@@ -277,7 +277,7 @@ JSValue newUnit(JSContext* ctx, double number, PrCssUnit unit) {
 // Returns a new keyword value of `text`.
 JSValue newKeyword(JSContext* ctx, PrStringView text) {
     TypedObject fields = typedFields(TypedKind_Keyword);
-    fields.text = prStringCopy(text);
+    fields.text = prRawStringCopy(text);
     return newTyped(ctx, cssKeywordValueClass, fields);
 }
 
@@ -351,7 +351,7 @@ bool eachChild(JSContext* ctx, JSValueConst value, const TypedObject* object, Vi
 // caller creates.
 struct Values {
     JSContext* ctx;
-    Array<JSValue>* values;
+    RawArray<JSValue>* values;
 
     bool read(JSValueConst value, const TypedObject* object) {
         return eachChild(ctx, value, object, [&](JSValueConst child) {
@@ -376,9 +376,9 @@ struct Values {
 };
 
 Values heldValues(JSContext* ctx) {
-    Array<JSValue>* values = allocZeroed<Array<JSValue>>();
+    RawArray<JSValue>* values = allocZeroed<RawArray<JSValue>>();
     auto release = [](JSContext* context, void* held) {
-        Array<JSValue>* values = static_cast<Array<JSValue>*>(held);
+        RawArray<JSValue>* values = static_cast<RawArray<JSValue>*>(held);
         for (uint32_t i = 0; i < values->count; ++i)
             JS_FreeValue(context, values->data[i]);
         values->reset();
@@ -395,7 +395,7 @@ Values heldValues(JSContext* ctx) {
 // runtime's pool and returned to it.
 
 struct TreePool {
-    Array<PrCssValue*> free;
+    RawArray<PrCssValue*> free;
 };
 
 // The number of values that a pool keeps, and the most nodes that a kept value may hold. A pool keeps as many values as
@@ -570,7 +570,7 @@ bool summaryOf(JSContext* ctx, JSValueConst value, Summary* out) {
     out->hasType = object->hasType;
     out->type = object->type;
     if (object->kind == TypedKind_Keyword)
-        out->keyword = prStringView(&object->text);
+        out->keyword = prRawStringView(&object->text);
     return true;
 }
 
@@ -636,10 +636,10 @@ bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* chi
     bool ok = true;
     switch (fields.kind) {
         case TypedKind_Keyword:
-            ok = prStringView(&fields.text).size != 0;
+            ok = prRawStringView(&fields.text).size != 0;
             break;
         case TypedKind_VariableReference:
-            ok = prStringStartsWith(prStringView(&fields.text), "--") &&
+            ok = prStringStartsWith(prRawStringView(&fields.text), "--") &&
                 (count == 0 || (!children[0].string && children[0].kind == TypedKind_Unparsed));
             break;
         case TypedKind_Unparsed:
@@ -722,7 +722,7 @@ bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* chi
 // object's own type for its parent.
 bool valid(JSContext* ctx, JSValueConst value) {
     TypedObject* object = typedOf(value);
-    Array<Summary> children;
+    RawArray<Summary> children;
     bool ok = eachChild(ctx, value, object, [&](JSValueConst child) {
         Summary summary;
         bool read = summaryOf(ctx, child, &summary);
@@ -872,7 +872,7 @@ bool flattenNumeric(JSContext* ctx, JSValueConst value, PrCssValue* out) {
 bool flattenArgument(JSContext* ctx, JSValueConst value, PrCssValue* out) {
     const TypedObject* object = typedOf(value);
     if (object != nullptr && object->kind == TypedKind_Keyword)
-        return addNode(ctx, out, identFields(prStringView(&object->text)));
+        return addNode(ctx, out, identFields(prRawStringView(&object->text)));
     return flattenNumeric(ctx, value, out);
 }
 
@@ -974,7 +974,7 @@ bool flattenColor(JSContext* ctx, JSValueConst value, const TypedObject* object,
         case ColorFunction_Oklch: color.color.space = PrColorSpace_Oklch; break;
         default: {
             const TypedObject* space = typedOf(children.values->data[0]);
-            if (space == nullptr || !colorSpaceOf(prStringView(&space->text), &color.color.space)) {
+            if (space == nullptr || !colorSpaceOf(prRawStringView(&space->text), &color.color.space)) {
                 JS_ThrowTypeError(ctx, "Not a color space");
                 return false;
             }
@@ -1009,7 +1009,7 @@ bool flattenStyle(JSContext* ctx, JSValueConst value, PrCssValue* out) {
             }
             return true;
         case TypedKind_Keyword:
-            return addNode(ctx, out, identFields(prStringView(&object->text)));
+            return addNode(ctx, out, identFields(prRawStringView(&object->text)));
         case TypedKind_Unparsed: {
             PrTextBuffer text = {};
             bool ok = serializeValue(ctx, value, &text);
@@ -1050,9 +1050,9 @@ bool serializeObject(Serializer* s, JSValueConst value, bool nested, bool parenl
 
 // Appends the trees of `value` from `first` up to `end`, in the way that a declaration's value is written.
 void appendValue(PrTextBuffer* out, const PrCssValue* value, uint32_t first, uint32_t end) {
-    PrString text = prCssValueSerialize(value, first, end);
-    prTextBufferAppend(out, prStringView(&text));
-    prStringReset(&text);
+    PrRawString text = prCssValueSerialize(value, first, end);
+    prTextBufferAppend(out, prRawStringView(&text));
+    prRawStringReset(&text);
 }
 
 void serializeNumber(Serializer* s, double number) {
@@ -1168,15 +1168,15 @@ bool serializeComponent(Serializer* s, JSValueConst value, const TypedObject* ob
             return false;
         PrDomMatrix copy = *matrix;
         copy.is2D = flat;
-        PrString text = {};
+        PrRawString text = {};
         // A matrix with an element that is not finite has no serialization
         // (geometry-1/#dommatrixreadonly-stringification-behavior).
         if (prCssMatrixToString(&copy, &text) != PrStatus_Ok) {
             jsDomExceptionThrow(s->ctx, "InvalidStateError");
             return false;
         }
-        prTextBufferAppend(s->out, prStringView(&text));
-        prStringReset(&text);
+        prTextBufferAppend(s->out, prRawStringView(&text));
+        prRawStringReset(&text);
         return true;
     }
     Values children = heldValues(s->ctx);
@@ -1266,7 +1266,7 @@ bool serializeObject(Serializer* s, JSValueConst value, bool nested, bool parenl
             appendValue(s->out, object->value, 0, prCssValueSize(object->value));
             return true;
         case TypedKind_Keyword:
-            prTextBufferAppend(s->out, prStringView(&object->text));
+            prTextBufferAppend(s->out, prRawStringView(&object->text));
             return true;
         case TypedKind_Unparsed:
             return serializeSegments(s, value, object);
@@ -1274,7 +1274,7 @@ bool serializeObject(Serializer* s, JSValueConst value, bool nested, bool parenl
             // Only a comma is written before the fallback. The fallback holds the whitespace after the comma that it
             // was reified from, although css-typed-om-1/#unparsedvalue-serialization writes a comma and a space.
             prTextBufferAppend(s->out, "var(");
-            prTextBufferAppend(s->out, prStringView(&object->text));
+            prTextBufferAppend(s->out, prRawStringView(&object->text));
             JSValue fallback = jsReference(s->ctx, value, 0);
             bool ok = true;
             if (!JS_IsNull(fallback) && !JS_IsUndefined(fallback)) {
@@ -1330,7 +1330,7 @@ JSValue reifyTokens(JSContext* ctx, PrStringView text, uint32_t depth = 0) {
     if (JS_IsException(unparsed))
         return unparsed;
     uint32_t count = depth < kUnparsedDepth ? prCssVariableReferences(text, nullptr, 0) : 0;
-    Array<PrCssVariableReference> references;
+    RawArray<PrCssVariableReference> references;
     references.reserve(count);
     references.count = count;
     prCssVariableReferences(text, references.data, count);
@@ -1343,7 +1343,7 @@ JSValue reifyTokens(JSContext* ctx, PrStringView text, uint32_t depth = 0) {
             ok = hold(ctx, unparsed, jsNewStringView(ctx, segment));
         }
         TypedObject fields = typedFields(TypedKind_VariableReference);
-        fields.text = prStringCopy(reference.name);
+        fields.text = prRawStringCopy(reference.name);
         JSValue variable = newTyped(ctx, cssVariableReferenceValueClass, fields);
         if (ok && !JS_IsException(variable) && reference.hasFallback) {
             PrStringView fallback = {
@@ -1669,9 +1669,9 @@ JSValue reifyItem(JSContext* ctx, const PrCssValue* value, uint32_t first, uint3
                     reified = newKeyword(ctx, prCssKeywordName(fields.keyword));
                 break;
             case PrCssValueKind_Ident: {
-                PrString text = prCssValueSerialize(value, single, end);
-                reified = newKeyword(ctx, prStringView(&text));
-                prStringReset(&text);
+                PrRawString text = prCssValueSerialize(value, single, end);
+                reified = newKeyword(ctx, prRawStringView(&text));
+                prRawStringReset(&text);
                 break;
             }
             case PrCssValueKind_Url:
@@ -1821,13 +1821,13 @@ JSValue textConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
     if (!jsArgCount(ctx, argc, 1) || !text.read(argv[0]))
         return JS_EXCEPTION;
     TypedObject fields = typedFields(Kind);
-    fields.text = prStringCopy(text.value());
+    fields.text = prRawStringCopy(text.value());
     if (Kind == TypedKind_Keyword)
         return construct(ctx, newTarget, cssKeywordValueClass, fields);
     JSValue fallback = jsArgGiven(argc, argv, 1) ? JS_DupValue(ctx, argv[1]) : JS_NULL;
     if (!JS_IsNull(fallback) && jsHandleIn(ctx, fallback, cssUnparsedValueClass) == nullptr) {
         JS_FreeValue(ctx, fallback);
-        prStringReset(&fields.text);
+        prRawStringReset(&fields.text);
         return JS_ThrowTypeError(ctx, "Expected a CSSUnparsedValue");
     }
     return construct(ctx, newTarget, cssVariableReferenceValueClass, fields, &fallback, 1);
@@ -1846,20 +1846,20 @@ JSValue textSet(JSContext* ctx, JSValueConst typedObject, JSValueConst input) {
         return JS_ThrowTypeError(ctx, "Illegal invocation");
     if (!text.read(input))
         return JS_EXCEPTION;
-    PrString previous = object->text;
-    object->text = prStringCopy(text.value());
+    PrRawString previous = object->text;
+    object->text = prRawStringCopy(text.value());
     if (!valid(ctx, typedObject)) {
-        prStringReset(&object->text);
+        prRawStringReset(&object->text);
         object->text = previous;
         return JS_EXCEPTION;
     }
-    prStringReset(&previous);
+    prRawStringReset(&previous);
     return JS_UNDEFINED;
 }
 
 // Reads a sequence argument's items, each converted by `item`. Returns false with the exception pending.
 template <typename Item>
-bool sequence(JSContext* ctx, JSValueConst value, Array<JSValue>* out, Item item) {
+bool sequence(JSContext* ctx, JSValueConst value, RawArray<JSValue>* out, Item item) {
     bool ok = jsSequence(ctx, value, [&](JSValue element) {
         JSValue made = item(element);
         JS_FreeValue(ctx, element);
@@ -1884,7 +1884,7 @@ JSValue segmentOf(JSContext* ctx, JSValueConst value) {
 }
 
 JSValue unparsedConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
-    Array<JSValue> segments;
+    RawArray<JSValue> segments;
     if (!jsArgCount(ctx, argc, 1) || !sequence(ctx, argv[0], &segments, [&](JSValue v) { return segmentOf(ctx, v); }))
         return JS_EXCEPTION;
     JSValue result = construct(ctx, newTarget, cssUnparsedValueClass, typedFields(TypedKind_Unparsed), segments.data,
@@ -2147,7 +2147,7 @@ JSValue to(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
 JSValue toSum(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
     if (typedIn(ctx, object, cssNumericValueClass) == nullptr)
         return JS_EXCEPTION;
-    Array<PrCssUnit> units;
+    RawArray<PrCssUnit> units;
     bool ok = true;
     for (int i = 0; ok && i < argc; ++i) {
         PrCssUnit unit;
@@ -2302,7 +2302,7 @@ JSValue fixedConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValue
 // CSSTransformValue and the components (css-typed-om-1/#transformvalue-objects)
 
 JSValue transformConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
-    Array<JSValue> components;
+    RawArray<JSValue> components;
     auto component = [&](JSValue value) {
         if (jsHandleIn(ctx, value, cssTransformComponentClass) == nullptr)
             return JS_ThrowTypeError(ctx, "Expected a CSSTransformComponent");
@@ -2584,7 +2584,7 @@ JSValue colorFunctionConstruct(JSContext* ctx, JSValueConst newTarget, int argc,
     JSValue children[3] = {rectified(ctx, argv[0], Rectify_Keywordish), JS_UNDEFINED, JS_UNDEFINED};
     if (JS_IsException(children[0]))
         return children[0];
-    Array<JSValue> channels;
+    RawArray<JSValue> channels;
     auto channel = [&](JSValue value) {
         return colorChannel(ctx, value, ChannelType_Percent, ColorIdl_Channel);
     };
@@ -2746,7 +2746,7 @@ bool propertyEquals(const PrCssDeclarationName& a, const PrCssDeclarationName& b
         return false;
     if (a.property != PrCssProperty_Count)
         return true;
-    return prStringView(&a.author) == prStringView(&b.author);
+    return prRawStringView(&a.author) == prRawStringView(&b.author);
 }
 
 // Returns true if a value holds tokens, which append() does not accept (css-typed-om-1/#dom-stylepropertymap-append).

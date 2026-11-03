@@ -310,10 +310,10 @@ void addSvg(PrTextBuffer* out, const PrDomElement* element) {
         const PrDomAttr* attribute = static_cast<const PrDomAttr*>(node);
         if (attribute->space != PrDomNamespace_None)
             continue;
-        PrCssProperty property = svgPresentationOf(element, prStringView(&attribute->name));
+        PrCssProperty property = svgPresentationOf(element, prRawStringView(&attribute->name));
         if (property == PrCssProperty_Count)
             continue;
-        PrStringView value = stringTrimBy(prStringView(&attribute->value), prAsciiIsSpace);
+        PrStringView value = stringTrimBy(prRawStringView(&attribute->value), prAsciiIsSpace);
         if (property == PrCssProperty_D) {
             prTextBufferAppend(out, "d:path(");
             cssSerializeString(out, value);
@@ -349,7 +349,8 @@ void addSvg(PrTextBuffer* out, const PrDomElement* element) {
 // Returns true if an attribute of the element is a presentation attribute.
 bool hasOwn(const PrDomElement* element) {
     for (const PrDomNode* node = element->firstAttribute; node != nullptr; node = node->next) {
-        if (svgPresentationOf(element, prStringView(&static_cast<const PrDomAttr*>(node)->name)) != PrCssProperty_Count)
+        const PrDomAttr* attribute = static_cast<const PrDomAttr*>(node);
+        if (svgPresentationOf(element, prRawStringView(&attribute->name)) != PrCssProperty_Count)
             return true;
     }
     return false;

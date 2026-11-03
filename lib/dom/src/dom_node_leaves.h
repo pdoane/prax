@@ -32,7 +32,7 @@ struct DomComment : PrDomCharacterData {};
 
 // A processing instruction (dom/#interface-processinginstruction).
 struct DomProcessingInstruction : PrDomCharacterData {
-    PrString target;
+    PrRawString target;
 };
 
 } // namespace pr_impl

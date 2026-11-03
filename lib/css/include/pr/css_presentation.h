@@ -19,7 +19,7 @@
 #include "pr/layout_scene.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/vec.h"
 
@@ -168,7 +168,7 @@ PrCssPresentationStats prCssPresentationStats(const PrCssPresentation* presentat
 // the layout and the cached recordings all match a full recomputation. The work is bounded as prLayoutTreeVerify checks
 // it. On failure, writes a description of the first difference to `report` if it is not null, replacing its contents.
 // This is expensive, and is meant for tests and for debugging invalidation.
-bool prCssPresentationVerify(PrCssPresentation* presentation, PrString* PR_NULLABLE report);
+bool prCssPresentationVerify(PrCssPresentation* presentation, PrRawString* PR_NULLABLE report);
 
 // Returns the presentation's layout tree, as of the last update. The presentation owns the tree and its node keys.
 PrLayoutTree* prCssPresentationTree(PrCssPresentation* presentation);

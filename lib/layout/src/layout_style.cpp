@@ -513,7 +513,7 @@ void layoutFontFacesMeasureNew(LayoutStyles* styles, PrLayoutGroupIndex group) {
     measureNewFaces(styles, faces, prLayoutUnitToPx(faces.size));
 }
 
-bool layoutSyncFonts(LayoutStyles* styles, Array<uint64_t>* changed) {
+bool layoutSyncFonts(LayoutStyles* styles, RawArray<uint64_t>* changed) {
     // A text font changes only with its set, and one that joined may be behind its set.
     bool moved = styles->fontJoined;
     for (uint32_t i = 0; i < styles->fontSets.count; ++i) {

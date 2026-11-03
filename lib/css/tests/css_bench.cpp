@@ -59,9 +59,9 @@ uint32_t serializeAll(PrCssRuleList* rules) {
     uint32_t count = prCssRuleListLength(rules);
     for (uint32_t i = 0; i < count; ++i) {
         PrCssRule* rule = prCssRuleListRuleAt(rules, i);
-        PrString text = prCssRuleCssText(rule);
-        size += uint32_t(prStringView(&text).size);
-        prStringReset(&text);
+        PrRawString text = prCssRuleCssText(rule);
+        size += uint32_t(prRawStringView(&text).size);
+        prRawStringReset(&text);
 
         PrCssGroupingRule* group = prCssGroupingRuleQuery(rule);
         if (group != nullptr)

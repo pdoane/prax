@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 
 #include "dom/src/dom_node.h"
 
@@ -102,7 +102,7 @@ PrDomNode* PR_NULLABLE domFlatFollowing(const PrDomNode* node);
 
 // A walk of the descendants of a node in the flat tree, in tree order.
 struct DomFlatWalk {
-    Array<DomFlatChildren> open;    // the children of each node on the path from the root, still to be walked
+    RawArray<DomFlatChildren> open;    // the children of each node on the path from the root, still to be walked
 };
 
 // The walk of a document that has had a shadow root, apart from its light tree.

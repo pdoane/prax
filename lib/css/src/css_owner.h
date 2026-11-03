@@ -7,7 +7,7 @@
 
 #include "pr/charset.h"
 #include "pr/dom.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/url.h"
 
@@ -23,7 +23,7 @@ namespace pr_impl {
 // entry holds a reference to the data.
 struct CssSheetCacheEntry {
     uint64_t hash;
-    PrString text;
+    PrRawString text;
     CssSheetData* data;
 };
 

@@ -12,13 +12,13 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/audio_mixer.h"
 #include "pr/dom.h"
 #include "pr/draw_image.h"
 #include "pr/html.h"
 #include "pr/html_media_source.h"
 #include "pr/media.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "dom/src/dom_event.h"
@@ -42,13 +42,13 @@ struct HtmlMedia {
     HtmlTrackList textTracks;
     HtmlTrackList audioTracks;
     HtmlTrackList videoTracks;
-    PrString currentSrc;                 // html/#dom-media-currentsrc
-    PrString errorMessage;               // html/#dom-mediaerror-message
-    Array<PrHtmlPlayPromise> promises;   // html/#list-of-pending-play-promises
-    Array<double> played;                // html/#dom-media-played: each range's start and end, in order
-    double position;                     // html/#official-playback-position, in seconds, at `since`
-    double since;                        // the value of prTimeMonotonicMilliseconds at which `position` was taken
-    double duration;                     // NaN if it is not known
+    PrRawString currentSrc;               // html/#dom-media-currentsrc
+    PrRawString errorMessage;             // html/#dom-mediaerror-message
+    RawArray<PrHtmlPlayPromise> promises; // html/#list-of-pending-play-promises
+    RawArray<double> played;              // html/#dom-media-played: each range's start and end, in order
+    double position;                      // html/#official-playback-position, in seconds, at `since`
+    double since;                         // the value of prTimeMonotonicMilliseconds at which `position` was taken
+    double duration;                      // NaN if it is not known
     double defaultRate;
     double rate;
     double volume;

@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/hash_index.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_fragment.h"
 
@@ -36,7 +36,7 @@ struct LayoutStackedBox {
 // tree and the styles, which layout does not change.
 struct LayoutStackingList {
     LayoutNodeIndex context;        // kPrLayoutNodeNone if the list is free
-    Array<LayoutStackedBox> boxes;
+    RawArray<LayoutStackedBox> boxes;
     uint32_t zero;                  // the first box at level 0 or above
     uint32_t version;               // raised when it is found or changes, from the tree's LayoutStacking::versions
     bool stale;                     // true if it must be found again before it is read
@@ -45,12 +45,12 @@ struct LayoutStackingList {
 // The stacking contexts' lists. Each is found when a paint or a hit test first needs it, kept current as the tree
 // changes, and found again if stale.
 struct LayoutStacking {
-    Array<LayoutStackingList> lists;
-    Array<uint32_t> freeLists;
-    HashIndex byContext;            // `lists` by the context's node
-    uint32_t versions;              // number of list versions given out since the tree was created
-    uint32_t listsFound;            // number of lists found since the last layout or paint began
-    Array<LayoutStackedBox> moved;  // the boxes a change moves, which each change empties
+    RawArray<LayoutStackingList> lists;
+    RawArray<uint32_t> freeLists;
+    HashIndex byContext;              // `lists` by the context's node
+    uint32_t versions;                // number of list versions given out since the tree was created
+    uint32_t listsFound;              // number of lists found since the last layout or paint began
+    RawArray<LayoutStackedBox> moved; // the boxes a change moves, which each change empties
 };
 
 // Returns true if the box of `node` paints whole in its stacking context. This is the case for an element or a replaced

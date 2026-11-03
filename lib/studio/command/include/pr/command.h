@@ -12,8 +12,8 @@
 
 #include "pr/base.h"
 #include "pr/json.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -123,9 +123,9 @@ bool prCommandRegistryIsDirect(const PrCommandRegistry* registry, PrCommandIndex
 // has the id, InvalidState if the command is disabled, and InvalidData if the arguments are not an object, lack a
 // required parameter, or have a member that is not a parameter or whose value is not of the parameter's kind. On
 // failure, the command does not run, and `error`, if not null, receives a sentence that says why, which the caller
-// releases with prStringReset.
+// releases with prRawStringReset.
 PrStatus prCommandRegistryRun(const PrCommandRegistry* registry, PrStringView id, const PrCommandArgs* PR_NULLABLE args,
-    PrString* PR_NULLABLE error);
+    PrRawString* PR_NULLABLE error);
 
 // Return the argument named `name` of a run, or `fallback` if the run has no such argument. The registry checked each
 // argument's kind before the run. A string is valid while the arguments' document is unchanged.

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/xhr.h"
 
 #include "dom/src/dom_event.h"
@@ -23,8 +23,8 @@ struct XhrProgressData : DomEventExtra {
 
 // A header's name and value, which the request owns.
 struct XhrHeader {
-    PrString name;
-    PrString value;
+    PrRawString name;
+    PrRawString value;
 };
 
 // The upload of a request, which is part of the request.
@@ -38,19 +38,19 @@ struct Xhr : DomCountedTarget {
     XhrUpload upload;
 
     // The request that open() and setRequestHeader() describe.
-    PrString method;                        // normalized, or the null string for GET
-    PrString url;                           // parsed and serialized
-    Array<XhrHeader> requestHeaders;        // in the order set, with the values of a name combined
+    PrRawString method;                     // normalized, or the null string for GET
+    PrRawString url;                        // parsed and serialized
+    RawArray<XhrHeader> requestHeaders;     // in the order set, with the values of a name combined
     uint32_t timeout;                       // in milliseconds, or zero for none
     bool withCredentials;
     PrXhrResponseType responseType;
-    PrString overrideMime;                  // the MIME type that overrideMimeType() set, or the null string
+    PrRawString overrideMime;                  // the MIME type that overrideMimeType() set, or the null string
 
     // The response, which is empty before it arrives and after a network error.
     uint16_t status;
-    PrString responseUrl;
-    Array<XhrHeader> responseHeaders;
-    Array<uint8_t> body;
+    PrRawString responseUrl;
+    RawArray<XhrHeader> responseHeaders;
+    RawArray<uint8_t> body;
 
     PrXhrState state;
     bool sendFlag;                          // xhr/#send-flag

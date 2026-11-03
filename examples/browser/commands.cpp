@@ -420,10 +420,10 @@ std::string commandShortcut(const Browser& b, PrStringView id) {
     PrCommandChord chord{};
     if (!prCommandKeymapChord(b.keymap, id, &chord))
         return std::string();
-    PrString text = prCommandChordText(chord);
-    PrStringView view = prStringView(&text);
+    PrRawString text = prCommandChordText(chord);
+    PrStringView view = prRawStringView(&text);
     std::string copy(view.data, view.size);
-    prStringReset(&text);
+    prRawStringReset(&text);
     return copy;
 }
 

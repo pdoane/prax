@@ -3,10 +3,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/geom.h"
 #include "pr/path.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -24,9 +24,9 @@ typedef uint8_t OutlinePoint;
 
 // The contours of a glyph. Each contour ends at the point before the start of the next.
 struct FontGlyphOutline {
-    Array<PrVec2> points;
-    Array<OutlinePoint> kinds;      // the kind of each point
-    Array<uint32_t> ends;           // for each contour, the index after its last point
+    RawArray<PrVec2> points;
+    RawArray<OutlinePoint> kinds;      // the kind of each point
+    RawArray<uint32_t> ends;           // for each contour, the index after its last point
 };
 
 // Empties the outline, keeping its storage, or frees it.

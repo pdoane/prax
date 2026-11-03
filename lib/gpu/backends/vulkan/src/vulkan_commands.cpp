@@ -416,8 +416,8 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     buffers[bufferCount++].commandBuffer = c->buffer;
 
     c->fence = ++d->issued;
-    Array<VkSemaphoreSubmitInfo> waits;
-    Array<VkSemaphoreSubmitInfo> signals;
+    RawArray<VkSemaphoreSubmitInfo> waits;
+    RawArray<VkSemaphoreSubmitInfo> signals;
     VkSemaphoreSubmitInfo timeline{};
     timeline.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     timeline.semaphore = d->timeline;

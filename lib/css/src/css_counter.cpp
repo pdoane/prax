@@ -2,9 +2,9 @@
 
 #include "css/src/css_counter.h"
 
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/float.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/unicode_grapheme.h"
 
@@ -398,7 +398,7 @@ void appendDecimal(PrTextBuffer* out, int32_t value) {
 // Builds the anonymous counter style that a computed symbols() defines (css-counter-styles-3/#symbols-function), with
 // its symbols in `symbols`. Returns false if the function defines no style that the engine can represent with, such as
 // one of images.
-bool symbolsStyle(CssValueRun run, uint32_t at, Array<PrStringView>* symbols, CssCounterStyle* out) {
+bool symbolsStyle(CssValueRun run, uint32_t at, RawArray<PrStringView>* symbols, CssCounterStyle* out) {
     *out = CssCounterStyle{
         .system = CssCounterSystem_Symbolic,
         .first = 1,
@@ -434,7 +434,7 @@ bool symbolsStyle(CssValueRun run, uint32_t at, Array<PrStringView>* symbols, Cs
 template <typename Fn>
 void withStyle(const CssCounterStyles* PR_NULLABLE styles, CssValueRun counterStyle, Fn fn) {
     if (counterStyle.count != 0 && cssValueIsFunction(counterStyle.values, PrCssKeyword_Symbols)) {
-        Array<PrStringView> symbols;
+        RawArray<PrStringView> symbols;
         CssCounterStyle style{};
         fn(symbolsStyle(counterStyle, 0, &symbols, &style) ? &style : nullptr);
         symbols.reset();
@@ -548,7 +548,7 @@ bool nonOverridable(PrStringView name) {
 }
 
 // Appends the symbols of a symbols descriptor to `out`. Returns false if one is an image.
-bool symbolsOf(CssValueRun run, Array<PrStringView>* out) {
+bool symbolsOf(CssValueRun run, RawArray<PrStringView>* out) {
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         PrStringView symbol{};
         if (!symbolOf(run, &run.values[i], &symbol))
@@ -560,7 +560,7 @@ bool symbolsOf(CssValueRun run, Array<PrStringView>* out) {
 
 // Appends the tuples of an additive-symbols descriptor to `out`. Returns false if one names an image, or if the weights
 // do not strictly decrease, which makes the descriptor invalid (css-counter-styles-3/#counter-style-symbols).
-bool additiveOf(CssValueRun run, double em, Array<CssAdditiveTuple>* out) {
+bool additiveOf(CssValueRun run, double em, RawArray<CssAdditiveTuple>* out) {
     CssAdditiveTuple tuple{.weight = -1};
     bool symbol = false;
     auto close = [&]() {
@@ -643,8 +643,8 @@ bool definesStyle(const Algorithm& a, double em) {
     CssValueRun additive = a.additive;
     if (!systemOf(a.system, em, &style, &extended))
         return !hasSymbols && !hasAdditive;
-    Array<PrStringView> listed;
-    Array<CssAdditiveTuple> tuples;
+    RawArray<PrStringView> listed;
+    RawArray<CssAdditiveTuple> tuples;
     bool valid;
     if (style.system == CssCounterSystem_Additive)
         valid = additiveOf(additive, em, &tuples) && tuples.count != 0;
@@ -725,7 +725,7 @@ void applyDescriptors(const CssRuleData* rule, double em, CssCounterStyle* style
 
 // Returns the index of the style among `defined` that `name` names, or kArrayMissing. A name that matches a predefined
 // style ASCII case-insensitively names it by the predefined style's own name.
-uint32_t definedNamed(const Array<Defined>& defined, PrStringView name) {
+uint32_t definedNamed(const RawArray<Defined>& defined, PrStringView name) {
     for (uint32_t i = 0; i < defined.count; ++i) {
         if (defined.data[i].name == name)
             return i;
@@ -742,7 +742,7 @@ uint32_t definedNamed(const Array<Defined>& defined, PrStringView name) {
 
 // Resolves the style at `at` into `out`, and the styles it extends before it. `stack` holds the styles resolving, of
 // which those from the one that extends a style already resolving form a cycle.
-void resolveDefined(Array<Defined>& defined, uint32_t at, double em, CssCounterStyles* out, Array<uint32_t>& stack) {
+void resolveDefined(RawArray<Defined>& defined, uint32_t at, double em, CssCounterStyles* out, RawArray<uint32_t>& stack) {
     Defined& d = defined.data[at];
     if (d.state == 2)
         return;
@@ -786,8 +786,8 @@ void resolveDefined(Array<Defined>& defined, uint32_t at, double em, CssCounterS
         style = *from;
     }
     applyDescriptors(d.rule, em, &style, &storage);
-    storage.name = prStringCopy(d.name);
-    style.name = prStringView(&storage.name);
+    storage.name = prRawStringCopy(d.name);
+    style.name = prRawStringView(&storage.name);
     stack.pop();
     d.state = 2;
 }
@@ -798,7 +798,7 @@ void cssCounterStylesBuild(CssCounterStyles* out, const CssRuleData* const PR_NO
         uint32_t count, double em) {
     cssCounterStylesReset(out);
     // Of the rules of a name, the last that defines a style wins, in the place of the name's first rule.
-    Array<Defined> defined;
+    RawArray<Defined> defined;
     for (uint32_t i = 0; i < count; ++i) {
         const CssRuleData* rule = rules[i];
         CssValueRun prelude = cssValueListRun(&rule->prelude);
@@ -816,7 +816,7 @@ void cssCounterStylesBuild(CssCounterStyles* out, const CssRuleData* const PR_NO
         out->styles.emplace() = CssCounterStyle{};
         out->storage.emplace() = CssCounterStyleStorage{};
     }
-    Array<uint32_t> stack;
+    RawArray<uint32_t> stack;
     for (uint32_t i = 0; i < defined.count; ++i)
         resolveDefined(defined, i, em, out, stack);
     stack.reset();
@@ -857,7 +857,7 @@ bool cssCounterStyleRuleAccepts(const CssRuleData* rule, PrCssDescriptor descrip
 void cssCounterStylesReset(CssCounterStyles* styles) {
     for (uint32_t i = 0; i < styles->storage.count; ++i) {
         CssCounterStyleStorage& storage = styles->storage.data[i];
-        prStringReset(&storage.name);
+        prRawStringReset(&storage.name);
         storage.symbols.reset();
         storage.additive.reset();
         storage.ranges.reset();

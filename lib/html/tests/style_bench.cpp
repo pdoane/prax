@@ -117,10 +117,10 @@ volatile size_t readSize;
 
 void read(PrDomElement* element, PrCssProperty property) {
     PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
-    PrString value = prCssStyleDeclarationGetPropertyValue(
+    PrRawString value = prCssStyleDeclarationGetPropertyValue(
         prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(element, PrStringView{})), &name);
-    readSize = prStringView(&value).size;
-    prStringReset(&value);
+    readSize = prRawStringView(&value).size;
+    prRawStringReset(&value);
 }
 
 PrDomElement* element(Work* work, PrStringView name) {
@@ -196,7 +196,7 @@ constexpr Case kCases[] = {
         [](Work* w) {
             w->flip = !w->flip;
             PrCssDeclarationName name = prCssDeclarationNameFromProperty(PrCssProperty_Count);
-            name.author = prStringExternal("--text");
+            name.author = prRawStringExternal("--text");
             PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->root));
             prCssStyleDeclarationSetProperty(style, &name, w->flip ? "rgb(200, 0, 0)" : "rgb(51, 51, 51)", false);
             read(w->lastText, PrCssProperty_Color);

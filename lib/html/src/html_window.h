@@ -25,7 +25,7 @@ struct DomAgent;
 
 // An object URL that names a media source, which the entry holds (media-source-2/#mediasource-object-url).
 struct HtmlMediaSourceUrl {
-    PrString url;
+    PrRawString url;
     PrHtmlMediaSource* source;
 };
 
@@ -89,8 +89,8 @@ struct HtmlWindow : DomCountedTarget {
     PrHtmlPreferenceObject preferences[PrHtmlPreference_Count];
     PrHtmlWindow* PR_NULLABLE parent;         // the window whose document holds the iframe of this window
     PrDomElement* PR_NULLABLE currentScript;  // the current script of its document (html/#dom-document-currentscript)
-    Array<HtmlFrame> frames;                  // the iframes of its document, each with its current window
-    Array<HtmlMedia*> mediaElements;          // the media elements of its document, which it runs
+    RawArray<HtmlFrame> frames;               // the iframes of its document, each with its current window
+    RawArray<HtmlMedia*> mediaElements;       // the media elements of its document, which it runs
 
     // The services of the host that its document's canvases use: the device that the document is presented on, which
     // holds their bitmaps, or null for bitmaps in memory, and the codec that encodes them.
@@ -103,9 +103,10 @@ struct HtmlWindow : DomCountedTarget {
     // The default User-Agent value of the host's fetcher (prFetchNetworkUserAgent), or empty without one, and the
     // navigator compatibility mode of the host.
     PrStringView userAgent;
-    PrString referrer;                        // html/#dom-document-referrer, or the null string for none
-    Array<PrString> objectUrls;               // the blob URLs that the window's scripts created and did not revoke
-    Array<HtmlMediaSourceUrl> mediaSources;   // the blob URLs of media sources that the window's scripts created
+    PrRawString referrer;                           // html/#dom-document-referrer, or the null string for none
+    RawArray<PrRawString> objectUrls;               // the blob URLs that the window's scripts created and did not
+                                                    // revoke
+    RawArray<HtmlMediaSourceUrl> mediaSources;      // the blob URLs of media sources that the window's scripts created
     PrHtmlNavigatorCompatibilityMode navigatorCompatibilityMode;
 
     // The clock's time of the last activation notification (html/#last-activation-timestamp). It is positive infinity
@@ -116,16 +117,16 @@ struct HtmlWindow : DomCountedTarget {
 
     // The canvases whose bitmaps changed since they were last shown, which the next rendering update shows. Each holds
     // its element (domNodeHold).
-    Array<PrDomElement*> canvases;
-    Array<HtmlTimer> timers;                  // in the order in which they were set
-    Array<HtmlTask> tasks;                    // in the order in which they were queued
+    RawArray<PrDomElement*> canvases;
+    RawArray<HtmlTimer> timers;               // in the order in which they were set
+    RawArray<HtmlTask> tasks;                 // in the order in which they were queued
     uint32_t taskHead;                        // the first task that has not run
     uint32_t delayingTasks;                   // the number of pending tasks that delay the load event
     uint32_t queuedRun;                       // the queued tasks that have run since anything else did
-    Array<HtmlFrameRequest> frameRequests;    // in the order in which they were requested
+    RawArray<HtmlFrameRequest> frameRequests; // in the order in which they were requested
 
     // The requests that the running frame took over. A canceled request has a null invoke.
-    Array<HtmlFrameRequest> frameRunning;
+    RawArray<HtmlFrameRequest> frameRunning;
 
     double (*PR_NULLABLE clock)(void* PR_NULLABLE context);     // the host's clock, or null for the system's
     double (*PR_NULLABLE wallClock)(void* PR_NULLABLE context); // the host's wall clock (PrHtmlHost::wallNow), or null
@@ -152,8 +153,8 @@ struct HtmlWindow : DomCountedTarget {
     // The idle requests (requestidlecallback/#start-an-idle-period-algorithm). A request waits in `idleRequests` until
     // an idle period starts, which moves it to `idleRunnable`, so that a request made in an idle period waits for the
     // next one.
-    Array<HtmlIdleRequest> idleRequests;
-    Array<HtmlIdleRequest> idleRunnable;
+    RawArray<HtmlIdleRequest> idleRequests;
+    RawArray<HtmlIdleRequest> idleRunnable;
     uint32_t nextIdleHandle;
     double idleDeadline;       // the end of the current idle period, on the clock
     bool runningIdle;          // true during an idle callback
@@ -226,7 +227,7 @@ void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* da
 // Returns the origin of the window's document (html/#concept-origin), serialized
 // (html/#ascii-serialisation-of-an-origin). This is the origin of the document's URL, or the origin of the parent
 // window for a document at about:blank or about:srcdoc.
-PrString htmlWindowOrigin(const PrHtmlWindow* window);
+PrRawString htmlWindowOrigin(const PrHtmlWindow* window);
 
 // Returns true if two windows' documents have the same origin (html/#same-origin).
 bool htmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b);

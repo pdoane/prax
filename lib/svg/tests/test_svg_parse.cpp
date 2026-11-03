@@ -131,7 +131,7 @@ TEST_CASE("a path's d attribute is the path data of the d property, which comput
     Styled doc("<svg xmlns='http://www.w3.org/2000/svg'><path id='p' d='m 5 5 l 10 10 \"10'/>"
         "<path id='q' d='m 5 5 l 10 10' style='d: path(\"M 1 2 h 3 z\")'/></svg>");
     // The data is computed up to its first error, which a quote in the attribute is.
-    Array<PrPathDataCommand> commands;
+    RawArray<PrPathDataCommand> commands;
     svgStylePathCommands(doc.style("p"), &commands);
     REQUIRE(commands.count == 2);
     CHECK(commands.data[1].letter == 'L');

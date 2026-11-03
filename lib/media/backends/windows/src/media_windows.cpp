@@ -3,13 +3,13 @@
 #include "pr/media_windows.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/float.h"
 #include "pr/media_audio.h"
 #include "pr/memory.h"
 #include "pr/mime.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 
 #define NOMINMAX
@@ -72,13 +72,13 @@ struct WindowsDecoder : PrMediaDecoder {
     PrCondition wake;
 
     // Guarded by `mutex`.
-    Array<WindowsFrame> frames; // decoded, in time order, from the last at or before `wanted` on
-    double wanted;              // the time last asked for
-    double seekTo;              // a time to restart decoding at, or NaN
-    double start;               // the time that decoding last started at
-    double through;             // the time of the last frame decoded since then, or -infinity
-    bool dropped;               // frames decoded since `start` were dropped from the front
-    bool ended;                 // every frame since `start` is decoded
+    RawArray<WindowsFrame> frames; // decoded, in time order, from the last at or before `wanted` on
+    double wanted;                 // the time last asked for
+    double seekTo;                 // a time to restart decoding at, or NaN
+    double start;                  // the time that decoding last started at
+    double through;                // the time of the last frame decoded since then, or -infinity
+    bool dropped;                  // frames decoded since `start` were dropped from the front
+    bool ended;                    // every frame since `start` is decoded
     bool stopping;
     uint64_t serials;
 
@@ -268,7 +268,7 @@ bool copySample(IMFSample* sample, const SampleLayout& layout, WindowsFrame* fra
 }
 
 // Releases the frames, and empties the list.
-void releaseFrames(Array<WindowsFrame>* frames) {
+void releaseFrames(RawArray<WindowsFrame>* frames) {
     for (uint32_t i = 0; i < frames->count; ++i)
         frames->data[i].buffer->Release();
     frames->clear();
@@ -429,10 +429,10 @@ PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
         known |= prAsciiEqualsFold(essence, container);
     if (!known)
         return PrMediaSupport_No;
-    PrString parameter{};
+    PrRawString parameter{};
     if (!prMimeTypeParameter(type, "codecs", &parameter))
         return PrMediaSupport_Maybe;
-    PrStringView codecs = prStringView(&parameter);
+    PrStringView codecs = prRawStringView(&parameter);
     // A type that names its codecs, which the system decodes, is probably playable.
     PrMediaSupport support = PrMediaSupport_Probably;
     size_t from = 0;
@@ -447,7 +447,7 @@ PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
             support = PrMediaSupport_No;
         from = end + 1;
     }
-    prStringReset(&parameter);
+    prRawStringReset(&parameter);
     return support;
 }
 

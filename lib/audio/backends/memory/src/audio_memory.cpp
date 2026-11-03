@@ -3,9 +3,9 @@
 #include "pr/audio_memory.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 
@@ -20,7 +20,7 @@ struct MemoryOutput : PrAudioOutput {
     PrThread thread;
     PrAudioRenderFn render;
     void* context;
-    Array<float> samples;       // interleaved
+    RawArray<float> samples;       // interleaved
     Atomic<bool> stopping;
     bool running;
 };

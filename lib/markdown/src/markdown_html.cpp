@@ -756,30 +756,30 @@ void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn f
     writerReset(&section.writer);
 }
 
-void prMarkdownHtmlEventAppendText(const PrMarkdownHtmlEvent* event, PrString* out) {
+void prMarkdownHtmlEventAppendText(const PrMarkdownHtmlEvent* event, PrRawString* out) {
     PrTextBuffer text = {};
     writeText(&text, event);
-    prStringAppend(out, prTextBufferView(&text));
+    prRawStringAppend(out, prTextBufferView(&text));
     prTextBufferReset(&text);
 }
 
-void prMarkdownEncodeUrl(PrStringView url, PrString* out) {
+void prMarkdownEncodeUrl(PrStringView url, PrRawString* out) {
     PrTextBuffer encoded = {};
     encodeUrl(url, &encoded);
-    prStringAppend(out, prTextBufferView(&encoded));
+    prRawStringAppend(out, prTextBufferView(&encoded));
     prTextBufferReset(&encoded);
 }
 
-void prMarkdownAppendHtml(const PrMarkdown* document, uint32_t first, uint32_t count, PrString* out) {
+void prMarkdownAppendHtml(const PrMarkdown* document, uint32_t first, uint32_t count, PrRawString* out) {
     PrTextBuffer text = {};
     prMarkdownWriteHtml(document, first, count, writeText, &text);
-    prStringAppend(out, prTextBufferView(&text));
+    prRawStringAppend(out, prTextBufferView(&text));
     prTextBufferReset(&text);
 }
 
-void prMarkdownAppendFootnotesHtml(const PrMarkdown* document, PrString* out) {
+void prMarkdownAppendFootnotesHtml(const PrMarkdown* document, PrRawString* out) {
     PrTextBuffer text = {};
     prMarkdownWriteFootnotesHtml(document, writeText, &text);
-    prStringAppend(out, prTextBufferView(&text));
+    prRawStringAppend(out, prTextBufferView(&text));
     prTextBufferReset(&text);
 }

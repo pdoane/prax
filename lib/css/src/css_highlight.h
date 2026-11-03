@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/weak.h"
 
@@ -19,7 +19,7 @@ struct DomRange;
 // A Highlight (css-highlight-api-1/#highlight): ranges, in the order they were added. The highlight holds a reference
 // to each range.
 struct CssHighlight {
-    Array<PrDomRange* PR_NONNULL> ranges;
+    RawArray<PrDomRange* PR_NONNULL> ranges;
     uint32_t references;
     uint32_t version;              // counts changes to the ranges
     int32_t priority;
@@ -31,14 +31,14 @@ struct CssHighlight {
 // empty once the highlight is destroyed. Each entry is a separate allocation, because its weak reference is stored at
 // its address.
 struct CssHighlightEntry {
-    PrString name;
+    PrRawString name;
     WeakReference highlight;
 };
 
 // A HighlightRegistry (css-highlight-api-1/#highlight-registry), which a document owns. Its entries are in the order in
 // which their names were first set. An empty entry is removed the next time the registry is read.
 struct CssHighlightRegistry {
-    Array<CssHighlightEntry* PR_NONNULL> entries;
+    RawArray<CssHighlightEntry* PR_NONNULL> entries;
     uint32_t version;              // counts changes to the entries
 };
 

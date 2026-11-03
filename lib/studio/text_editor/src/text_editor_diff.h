@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/color.h"
+#include "pr/raw_array.h"
 #include "pr/text_diff.h"
 #include "pr/text_edit.h"
 #include "pr/text_view.h"
@@ -24,10 +24,10 @@ typedef uint8_t TextEditorDiffSide;
 
 // What one side shows: its gaps, and the spans of the bytes that changed in its changed lines, in order.
 struct TextEditorDiffShown {
-    Array<PrTextViewGap> gaps;
-    Array<PrTextViewSpan> spans;
+    RawArray<PrTextViewGap> gaps;
+    RawArray<PrTextViewSpan> spans;
     const PrTextEditBuffer* PR_NULLABLE buffer; // during a comparison
-    Array<char> line;                           // a line's text, copied for a comparison
+    RawArray<char> line;                        // a line's text, copied for a comparison
 };
 
 // The colors of a comparison: of a changed line on each side, and of the bytes that changed in it.
@@ -39,7 +39,7 @@ struct TextEditorDiffColors {
 // What a comparison of two buffers shows of them, kept until either changes.
 struct TextEditorDiffModel {
     PrTextDiff* diff;
-    Array<PrTextDiffChange> changes;    // of lines
+    RawArray<PrTextDiffChange> changes;    // of lines
     TextEditorDiffShown sides[TextEditorDiffSide_Count];
     uint64_t versions[TextEditorDiffSide_Count];    // of the texts that the changes are of
     bool compared;

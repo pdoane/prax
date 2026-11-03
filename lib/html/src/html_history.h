@@ -5,11 +5,11 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/html.h"
 #include "pr/html_history.h"
 #include "pr/html_page.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -18,8 +18,8 @@ namespace pr_impl {
 
 // A session history entry (html/#session-history-entry).
 struct HtmlHistoryEntry {
-    PrString url;
-    PrString state;             // html/#she-classic-history-api-state, serialized, or null
+    PrRawString url;
+    PrRawString state;          // html/#she-classic-history-api-state, serialized, or null
     uint64_t document;          // the number of the document whose entry it is (HtmlSessionHistory::documents)
     PrHtmlScrollRestoration scrollRestoration;
     bool initial;               // the entry of a browsing context's initial about:blank, which its first load replaces
@@ -36,7 +36,7 @@ typedef uint8_t HtmlHistoryCommit;
 // A traversable's session history (html/#tn-session-history-entries), and its current entry
 // (html/#tn-current-session-history-step).
 struct HtmlSessionHistory {
-    Array<HtmlHistoryEntry> entries;
+    RawArray<HtmlHistoryEntry> entries;
     uint32_t index;
     uint64_t documents;         // the number given to the last document that committed an entry
     HtmlHistoryCommit commit;
@@ -61,7 +61,7 @@ void htmlHistoryNotify(PrHtmlWindow* window, PrStringView oldUrl);
 // Adds an entry for the window's document at its URL, with `state`, which it takes, or replaces the current entry with
 // it, as the URL and history update steps and a fragment navigation do (html/#url-and-history-update-steps,
 // html/#navigate-fragid). The document of an initial about:blank replaces its entry. The history state becomes `state`.
-void htmlHistoryUpdate(PrHtmlWindow* window, PrString state, PrHtmlHistoryHandling handling);
+void htmlHistoryUpdate(PrHtmlWindow* window, PrRawString state, PrHtmlHistoryHandling handling);
 
 // Queues a traversal of the window's session history by `delta` (prHtmlPageTraverse).
 void htmlHistoryTraverse(PrHtmlWindow* window, int32_t delta);

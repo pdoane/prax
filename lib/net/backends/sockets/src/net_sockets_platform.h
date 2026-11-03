@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/net.h"
+#include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -82,7 +82,7 @@ void socketsShutdownSend(SocketsHandle socket);
 
 // Resolves the NUL-terminated `host` with the system's resolver, and appends its addresses for TCP to `out`, in the
 // order that the system prefers. Returns PrNetError_None, or why it resolved to no address.
-PrNetError socketsResolve(const char* host, uint16_t port, Array<SocketsAddress>* out);
+PrNetError socketsResolve(const char* host, uint16_t port, RawArray<SocketsAddress>* out);
 
 } // namespace pr_impl
 

@@ -9,8 +9,8 @@
 #include "pr/base.h"
 #include "pr/font.h"
 #include "pr/locale.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN

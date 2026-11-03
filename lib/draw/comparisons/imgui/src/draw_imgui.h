@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/font.h"
 #include "pr/pixels.h"
+#include "pr/raw_array.h"
 
 #include "imgui.h"
 
@@ -29,7 +29,7 @@ struct ImGuiCachedFont {
 // The state of a renderer that its platform's state begins with.
 struct ImGuiBackend : PrDrawRenderer {
     ImGuiContext* context;
-    Array<ImGuiCachedFont> fonts;
+    RawArray<ImGuiCachedFont> fonts;
     uint64_t render;                    // the prepares so far, which mark what each one used
 };
 

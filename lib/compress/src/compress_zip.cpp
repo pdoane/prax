@@ -3,9 +3,9 @@
 #include "pr/compress_zip.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/checksum.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 
 namespace pr_impl {
@@ -31,7 +31,7 @@ struct ZipRecord {
 struct ZipArchive {
     PrCompressCodec* codec;
     PrByteView bytes;
-    Array<ZipRecord> records;
+    RawArray<ZipRecord> records;
 };
 
 uint16_t read16(const uint8_t* p) {

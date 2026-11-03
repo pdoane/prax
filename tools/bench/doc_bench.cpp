@@ -593,8 +593,8 @@ int main(int argc, char** argv) {
     for (uint32_t i = 0; i < kRestyleSamples; ++i) {
         prDomElementSetAttribute(root, "style", i % 2 == 0 ? "font-size: 17px" : "font-size: 16px");
         restyles.sample([&] {
-            PrString value = prCssStyleDeclarationGetPropertyValue(computed, &color);
-            prStringReset(&value);
+            PrRawString value = prCssStyleDeclarationGetPropertyValue(computed, &color);
+            prRawStringReset(&value);
         });
         // The frame's job lays out the new styles before the next sample.
         frameNow(b, extent);

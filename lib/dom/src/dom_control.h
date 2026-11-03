@@ -13,9 +13,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 #include "pr/text_edit.h"
@@ -40,7 +40,7 @@ struct DomControl {
 
     PrDomSelectionDirection selectionDirection;
     bool selectQueued;                  // a task to fire select is queued (html/#textFieldSelection)
-    PrString defaultOverride;           // html/#concept-output-default-value-override, or the null string for none
+    PrRawString defaultOverride;        // html/#concept-output-default-value-override, or the null string for none
     PrDomElement* PR_NULLABLE form;     // html/#form-owner, which lists the element among its controls
     bool dirtyValue;                    // html/#concept-fe-dirty
     bool checked;                       // html/#concept-fe-checked
@@ -51,7 +51,7 @@ struct DomControl {
 
 // An entry of a form's past names map (html/#past-names-map): a name that the form's named getter found an element by.
 struct DomPastName {
-    PrString name;
+    PrRawString name;
     PrDomElement* element;
 };
 
@@ -59,25 +59,25 @@ struct DomPastName {
 struct DomForm {
     // The form-associated elements whose form owner is the form, in no order. An element of the list is freed only
     // after it leaves the list, and the form clears its elements' owner when it is freed.
-    Array<PrDomElement* PR_NONNULL> controls;
+    RawArray<PrDomElement* PR_NONNULL> controls;
 
     // The past names map, whose elements are form-associated elements that the form owns. An element's entries leave
     // the map when the element leaves the form.
-    Array<DomPastName> pastNames;
+    RawArray<DomPastName> pastNames;
 
     bool constructingEntryList;         // html/#constructing-entry-list
 };
 
 // One entry of an entry list (xhr/#concept-formdata-entry), whose value is a string.
 struct DomEntry {
-    PrString name;
-    PrString value;
+    PrRawString name;
+    PrRawString value;
 };
 
 // An entry list (xhr/#concept-formdata-entry-list), which a FormData and a FormDataEvent share. It counts the
 // references to it.
 struct DomEntryList {
-    Array<DomEntry> entries;
+    RawArray<DomEntry> entries;
     uint32_t references;
 };
 

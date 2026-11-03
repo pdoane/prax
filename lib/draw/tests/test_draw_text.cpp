@@ -32,10 +32,10 @@ const PrFont* load(const char* name) {
 constexpr PrColor kBlack{0, 0, 0, 1};
 
 std::string dump(const PrDrawList* list) {
-    PrString text = prDrawListDump(list);
-    PrStringView view = prStringView(&text);
+    PrRawString text = prDrawListDump(list);
+    PrStringView view = prRawStringView(&text);
     std::string result(view.data != nullptr ? view.data : "", view.size);
-    prStringReset(&text);
+    prRawStringReset(&text);
     return result;
 }
 

@@ -248,7 +248,7 @@ JSValue bufferBuffered(JSContext* ctx, JSValueConst bufferObject) {
     PrStatus status = prHtmlSourceBufferBuffered(buffer, nullptr, 0, &count);
     if (status != PrStatus_Ok)
         return throwStatus(ctx, status);
-    Array<PrMediaTimeRange> ranges;
+    RawArray<PrMediaTimeRange> ranges;
     ranges.resize(count);
     prHtmlSourceBufferBuffered(buffer, ranges.data, count, &count);
     JSValue object = jsHtmlTimeRangesNew(ctx, ranges.data, ranges.count);

@@ -1,9 +1,9 @@
 #include "pr/webidl_observable_array_quickjs.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/count_of.h"
 #include "pr/quickjs_binding.h"
+#include "pr/raw_array.h"
 #include "pr/webidl_quickjs.h"
 
 namespace pr {
@@ -14,7 +14,7 @@ namespace {
 struct Handler {
     const JsObservableArrayHooks* hooks;
     JSValue owner;
-    Array<JSValue> list;   // the backing list
+    RawArray<JSValue> list;   // the backing list
 };
 
 JSClassID handlerClass;
@@ -336,7 +336,7 @@ JSValue jsObservableArrayItem(JSContext* ctx, JSValueConst array, uint32_t index
 }
 
 bool jsObservableArraySet(JSContext* ctx, JSValueConst array, JSValueConst values) {
-    Array<JSValue> items;
+    RawArray<JSValue> items;
     bool ok = jsSequence(ctx, values, [&](JSValue item) {
         items.push(item);
         return true;

@@ -8,10 +8,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_at_rule.h"
@@ -158,10 +158,10 @@ struct CssRuleData {
     // At: the prelude, without its media queries. Keyframe: the keyframe selectors.
     CssValueList prelude;
 
-    CssMediaQueries media;                     // @media and @import: the media queries of the prelude
-    CssDeclarationBlock style;                 // the declarations of the block, if it holds any
-    Array<CssRuleData* PR_NONNULL> children;   // the rules of the block; the rule holds a reference to each
-    CssSheetData* PR_NULLABLE imported;        // @import: the loaded sheet; the rule holds a reference to it
+    CssMediaQueries media;                      // @media and @import: the media queries of the prelude
+    CssDeclarationBlock style;                  // the declarations of the block, if it holds any
+    RawArray<CssRuleData* PR_NONNULL> children; // the rules of the block; the rule holds a reference to each
+    CssSheetData* PR_NULLABLE imported;         // @import: the loaded sheet; the rule holds a reference to it
 };
 
 // A rule and the rules whose blocks hold it, outward to the sheet. What a rule's block accepts depends on this chain. A
@@ -188,9 +188,9 @@ uint32_t cssFeatureBlock(const CssRuleData* rule, CssAtRule type);
 
 // The rules a sheet parses to.
 struct CssSheetData {
-    uint32_t references;                    // one for each sheet and @import rule that holds this data
-    Array<CssRuleData* PR_NONNULL> rules;   // the sheet holds a reference to each rule
-    PrString href;                          // the URL the sheet was fetched from, or the null string for given text
+    uint32_t references;                     // one for each sheet and @import rule that holds this data
+    RawArray<CssRuleData* PR_NONNULL> rules; // the sheet holds a reference to each rule
+    PrRawString href;                        // the URL the sheet was fetched from, or the null string for given text
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -377,7 +377,7 @@ CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclara
 // Prepares removing the declaration of `name`, or of each longhand of a shorthand, and writes its value to `out`
 // (cssom-1/#dom-cssstyledeclaration-removeproperty). Unchanged if the block holds none.
 CssEditResult cssDeclarationBlockPrepareRemove(CssEdit* edit, const CssDeclarationBlock* block,
-    const CssDeclaredName& name, PrString* PR_NULLABLE out);
+    const CssDeclaredName& name, PrRawString* PR_NULLABLE out);
 
 // Commits a prepared change to a block's declarations.
 void cssDeclarationBlockCommit(CssEdit* edit, CssDeclarationBlock* block);
@@ -387,7 +387,8 @@ CssEditResult cssDeclarationBlockSet(CssDeclarationBlock* block, const CssDeclar
     PrStringView value, bool important, CssParserSlot slot);
 CssEditResult cssDeclarationBlockSetValue(CssDeclarationBlock* block, const CssDeclaredName& name,
     CssValueRun run, bool important, bool append, CssParserSlot slot);
-CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDeclaredName& name, PrString* PR_NULLABLE out);
+CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDeclaredName& name,
+    PrRawString* PR_NULLABLE out);
 
 // Adds the value of `name` to `out`. Adds nothing if the block holds no value, or holds a value that is pending on the
 // substitution of its shorthand. A shorthand's value is the serialization of its longhands, matched as a value of the
@@ -428,7 +429,7 @@ void cssRuleListRemove(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE
 
 // Puts `rule` at `index` of a rule list, in place of the rule there. The list takes over the caller's reference to
 // `rule` and releases its reference to the old rule.
-void cssRuleListReplace(Array<CssRuleData* PR_NONNULL>* list, uint32_t index, CssRuleData* rule);
+void cssRuleListReplace(RawArray<CssRuleData* PR_NONNULL>* list, uint32_t index, CssRuleData* rule);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Serialization
@@ -456,7 +457,7 @@ void cssSerializeMediaList(PrTextBuffer* out, const CssMediaQueries* list);
 void cssSerializeRule(PrTextBuffer* out, const CssRuleData* rule);
 
 // Serializes the rules joined with a newline (cssom-1/#serialize-a-css-rule).
-void cssSerializeRuleList(PrTextBuffer* out, const Array<CssRuleData* PR_NONNULL>& rules);
+void cssSerializeRuleList(PrTextBuffer* out, const RawArray<CssRuleData* PR_NONNULL>& rules);
 
 } // namespace pr_impl
 

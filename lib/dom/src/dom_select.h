@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 
 #include "dom/src/dom_node.h"
@@ -53,7 +53,7 @@ void domSelectSetSelectedIndex(PrDomElement* select, int32_t index);
 void domSelectSetValue(PrDomElement* select, PrStringView value);
 
 // Appends the options of the select's list of options (html/#concept-select-option-list) to `out`, in tree order.
-void domSelectOptions(PrDomElement* select, Array<PrDomElement* PR_NONNULL>* out);
+void domSelectOptions(PrDomElement* select, RawArray<PrDomElement* PR_NONNULL>* out);
 
 // Returns true if the select renders as a list box, and false if it renders as a drop-down box
 // (html/#the-select-element-2). A select renders as a list box if it has the multiple attribute or a display size

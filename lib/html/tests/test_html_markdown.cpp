@@ -27,10 +27,10 @@ void writeTree(std::string* out, const PrDomNode* node) {
                 out->append(name.data, name.size);
                 for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
                         attribute = static_cast<const PrDomAttr*>(attribute->next)) {
-                    PrStringView text = prStringView(&attribute->name);
+                    PrStringView text = prRawStringView(&attribute->name);
                     *out += ' ';
                     out->append(text.data, text.size);
-                    text = prStringView(&attribute->value);
+                    text = prRawStringView(&attribute->value);
                     *out += "=\"";
                     out->append(text.data, text.size);
                     *out += '"';
@@ -43,14 +43,14 @@ void writeTree(std::string* out, const PrDomNode* node) {
                 break;
             }
             case PrDomNodeType_Text: {
-                PrStringView text = prStringView(&static_cast<const PrDomText*>(child)->data);
+                PrStringView text = prRawStringView(&static_cast<const PrDomText*>(child)->data);
                 *out += "[";
                 out->append(text.data, text.size);
                 *out += "]";
                 break;
             }
             case PrDomNodeType_Comment: {
-                PrStringView text = prStringView(&static_cast<const PrDomComment*>(child)->data);
+                PrStringView text = prRawStringView(&static_cast<const PrDomComment*>(child)->data);
                 *out += "<!--";
                 out->append(text.data, text.size);
                 *out += "-->";
@@ -76,11 +76,11 @@ std::string treeOf(const PrDomNode* node) {
 std::string htmlOf(PrStringView markdown, const PrMarkdownOptions& options) {
     PrMarkdown* document = prMarkdownCreate(&options);
     prMarkdownParse(document, markdown);
-    PrString html = prStringEmpty();
+    PrRawString html = prRawStringEmpty();
     prMarkdownAppendHtml(document, 0, prMarkdownBlockCount(document), &html);
     prMarkdownAppendFootnotesHtml(document, &html);
-    std::string out(prStringView(&html).data, prStringView(&html).size);
-    prStringReset(&html);
+    std::string out(prRawStringView(&html).data, prRawStringView(&html).size);
+    prRawStringReset(&html);
     prMarkdownDestroy(document);
     return out;
 }
@@ -243,9 +243,9 @@ TEST_CASE("a text/markdown load parses the variant that its content type names")
         headers.contentType = variant.contentType;
         REQUIRE(prHtmlPageLoad(page, "# Hi\n\n~~x~~\n", "https://example.com/a.md", &headers) == PrStatus_Ok);
         PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-        PrString body = prHtmlInnerHtml(prDomElementAsNode(prDomDocumentBody(document)));
-        CHECK(prStringView(&body) == variant.body);
-        prStringReset(&body);
+        PrRawString body = prHtmlInnerHtml(prDomElementAsNode(prDomDocumentBody(document)));
+        CHECK(prRawStringView(&body) == variant.body);
+        prRawStringReset(&body);
         prHtmlPageDestroy(page);
     }
 }
@@ -257,9 +257,9 @@ TEST_CASE("a browsing context loads text/markdown as a document that runs no scr
     REQUIRE(prHtmlPageLoad(page, "# Hi\n\n<script>x()</script>\n", "https://example.com/a.md", &headers) ==
         PrStatus_Ok);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-    PrString body = prHtmlInnerHtml(prDomElementAsNode(prDomDocumentBody(document)));
-    CHECK(prStringView(&body) == "<h1 id=\"hi\">Hi</h1>\n<script>x()</script>\n");
-    prStringReset(&body);
+    PrRawString body = prHtmlInnerHtml(prDomElementAsNode(prDomDocumentBody(document)));
+    CHECK(prRawStringView(&body) == "<h1 id=\"hi\">Hi</h1>\n<script>x()</script>\n");
+    prRawStringReset(&body);
     CHECK(prHtmlDocumentReadyState(document) == PrHtmlDocumentReadyState_Complete);
 
     // A streamed load builds the blocks as they arrive.
@@ -269,15 +269,15 @@ TEST_CASE("a browsing context loads text/markdown as a document that runs no scr
     }
     document = prHtmlWindowDocument(prHtmlPageWindow(page));
     body = prHtmlInnerHtml(prDomElementAsNode(prDomDocumentBody(document)));
-    CHECK(prStringView(&body) == "<p><em>one</em></p>\n<p>tw</p>\n");
-    prStringReset(&body);
+    CHECK(prRawStringView(&body) == "<p><em>one</em></p>\n<p>tw</p>\n");
+    prRawStringReset(&body);
     prHtmlPageAppendLoad(page, "o\n");
     prHtmlPageEndLoad(page);
     while (prDomAgentRunTask(prHtmlPageAgent(page))) {
     }
     body = prHtmlInnerHtml(prDomElementAsNode(prDomDocumentBody(document)));
-    CHECK(prStringView(&body) == "<p><em>one</em></p>\n<p>two</p>\n");
-    prStringReset(&body);
+    CHECK(prRawStringView(&body) == "<p><em>one</em></p>\n<p>two</p>\n");
+    prRawStringReset(&body);
     CHECK(prHtmlDocumentReadyState(document) == PrHtmlDocumentReadyState_Complete);
     prHtmlPageDestroy(page);
 }

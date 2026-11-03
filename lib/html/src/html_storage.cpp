@@ -3,10 +3,10 @@
 #include "html/src/html_storage.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/file.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
 #include "pr/text_buffer.h"
@@ -17,17 +17,17 @@ namespace pr_impl {
 
 // An origin's area, made the first time the origin asked for one.
 struct ProviderArea {
-    PrString origin;
+    PrRawString origin;
     PrStorage* store;
 };
 
 // A provider. `mutex` guards `areas`.
 struct HtmlStorageProvider {
-    PrString directory;     // the null string for areas in memory
+    PrRawString directory;     // the null string for areas in memory
     uint64_t quota;
     PrTaskPool* PR_NULLABLE pool;
     PrMutex mutex;
-    Array<ProviderArea> areas;
+    RawArray<ProviderArea> areas;
 };
 
 namespace {
@@ -52,7 +52,7 @@ void appendDirectoryName(PrStringView origin, PrTextBuffer* out) {
 // Opens the area on disk whose directory in the provider's directory is `name`, or returns null if it cannot be made.
 PrStorage* PR_NULLABLE openDiskArea(const HtmlStorageProvider* provider, PrStringView name) {
     PrTextBuffer path{};
-    prTextBufferAppend(&path, prStringView(&provider->directory));
+    prTextBufferAppend(&path, prRawStringView(&provider->directory));
     prTextBufferAppendChar(&path, '/');
     prTextBufferAppend(&path, name);
     PrStorageDiskDesc desc{
@@ -69,7 +69,7 @@ PrStorage* PR_NULLABLE openDiskArea(const HtmlStorageProvider* provider, PrStrin
 
 // Returns a new area for `origin`, or null if its directory cannot be made.
 PrStorage* PR_NULLABLE createArea(const HtmlStorageProvider* provider, PrStringView origin) {
-    if (prStringIsNull(&provider->directory))
+    if (prRawStringIsNull(&provider->directory))
         return prStorageMemoryCreate(provider->quota, PrStorageEviction_None);
     PrTextBuffer name{};
     appendDirectoryName(origin, &name);
@@ -83,13 +83,13 @@ PrStorage* PR_NULLABLE providerArea(HtmlStorageProvider* provider, PrStringView 
     prMutexLock(&provider->mutex);
     PrStorage* store = nullptr;
     for (uint32_t i = 0; i < provider->areas.count && store == nullptr; ++i) {
-        if (prStringView(&provider->areas.data[i].origin) == origin)
+        if (prRawStringView(&provider->areas.data[i].origin) == origin)
             store = provider->areas.data[i].store;
     }
     if (store == nullptr) {
         store = createArea(provider, origin);
         if (store != nullptr)
-            provider->areas.push(ProviderArea{prStringCopy(origin), store});
+            provider->areas.push(ProviderArea{prRawStringCopy(origin), store});
     }
     prMutexUnlock(&provider->mutex);
     return store;
@@ -98,7 +98,7 @@ PrStorage* PR_NULLABLE providerArea(HtmlStorageProvider* provider, PrStringView 
 } // namespace
 
 void htmlStorageReset(HtmlStorage* storage) {
-    prStringReset(&storage->origin);
+    prRawStringReset(&storage->origin);
     storage->area = nullptr;
 }
 
@@ -110,7 +110,7 @@ struct PrHtmlStorageProvider : HtmlStorageProvider {};
 
 PrHtmlStorageProvider* prHtmlStorageProviderCreate(const PrHtmlStorageProviderDesc* desc) {
     PrHtmlStorageProvider* provider = allocZeroed<PrHtmlStorageProvider>();
-    provider->directory = desc->directory.data != nullptr ? prStringCopy(desc->directory) : prStringNull();
+    provider->directory = desc->directory.data != nullptr ? prRawStringCopy(desc->directory) : prRawStringNull();
     provider->quota = desc->quotaBytes;
     provider->pool = desc->pool;
     PR_ASSERT(desc->directory.data == nullptr || desc->pool != nullptr);
@@ -123,10 +123,10 @@ void prHtmlStorageProviderDestroy(PrHtmlStorageProvider* PR_NULLABLE provider) {
         return;
     for (uint32_t i = 0; i < provider->areas.count; ++i) {
         prStorageDestroy(provider->areas.data[i].store);
-        prStringReset(&provider->areas.data[i].origin);
+        prRawStringReset(&provider->areas.data[i].origin);
     }
     provider->areas.reset();
-    prStringReset(&provider->directory);
+    prRawStringReset(&provider->directory);
     prMutexReset(&provider->mutex);
     prMemoryFree(provider);
 }
@@ -139,32 +139,32 @@ void prHtmlStorageProviderClear(PrHtmlStorageProvider* provider) {
     // directories are gathered first, since the callback must not change the provider's directory.
     struct Gather {
         const HtmlStorageProvider* provider;
-        Array<PrString> closed;
+        RawArray<PrRawString> closed;
     } gather{provider, {}};
-    if (!prStringIsNull(&provider->directory)) {
-        prFileEachEntry(prStringView(&provider->directory), [](void* PR_NULLABLE context, const PrFileEntry* entry) {
+    if (!prRawStringIsNull(&provider->directory)) {
+        prFileEachEntry(prRawStringView(&provider->directory), [](void* PR_NULLABLE context, const PrFileEntry* entry) {
             Gather& g = *static_cast<Gather*>(context);
             if (entry->info.kind != PrFileKind_Directory)
                 return;
             PrTextBuffer name{};
             for (uint32_t i = 0; i < g.provider->areas.count; ++i) {
                 prTextBufferClear(&name);
-                appendDirectoryName(prStringView(&g.provider->areas.data[i].origin), &name);
+                appendDirectoryName(prRawStringView(&g.provider->areas.data[i].origin), &name);
                 if (prTextBufferView(&name) == entry->name) {
                     prTextBufferReset(&name);
                     return;
                 }
             }
             prTextBufferReset(&name);
-            g.closed.push(prStringCopy(entry->name));
+            g.closed.push(prRawStringCopy(entry->name));
         }, &gather);
     }
     for (uint32_t i = 0; i < gather.closed.count; ++i) {
-        if (PrStorage* store = openDiskArea(provider, prStringView(&gather.closed.data[i]))) {
+        if (PrStorage* store = openDiskArea(provider, prRawStringView(&gather.closed.data[i]))) {
             prStorageClear(store);
             prStorageDestroy(store);
         }
-        prStringReset(&gather.closed.data[i]);
+        prRawStringReset(&gather.closed.data[i]);
     }
     gather.closed.reset();
     prMutexUnlock(&provider->mutex);
@@ -174,20 +174,20 @@ PrHtmlStorage* PR_NULLABLE prHtmlWindowStorage(PrHtmlWindow* window, PrHtmlStora
     PrHtmlStorage* storage = &window->storage[kind];
     if (storage->provider == nullptr)
         return nullptr;
-    PrString origin = htmlWindowOrigin(window);
+    PrRawString origin = htmlWindowOrigin(window);
     // A file: URL's origin is the implementation's to define (url/#concept-url-origin). Its document's origin is
     // opaque, and its storage is the one area that every file: document shares, so that a page opened from its files
     // keeps what it stores.
-    if (prStringView(&origin) == "null" && prUrlScheme(window->document->url) == "file")
-        prStringReplace(&origin, "file://");
-    if (storage->area == nullptr || prStringView(&storage->origin) != prStringView(&origin)) {
+    if (prRawStringView(&origin) == "null" && prUrlScheme(window->document->url) == "file")
+        prRawStringReplace(&origin, "file://");
+    if (storage->area == nullptr || prRawStringView(&storage->origin) != prRawStringView(&origin)) {
         htmlStorageReset(storage);
         // html/#dom-localstorage: an opaque origin has no storage.
-        if (prStringView(&origin) != "null")
-            storage->area = providerArea(storage->provider, prStringView(&origin));
+        if (prRawStringView(&origin) != "null")
+            storage->area = providerArea(storage->provider, prRawStringView(&origin));
         storage->origin = origin;
     } else {
-        prStringReset(&origin);
+        prRawStringReset(&origin);
     }
     return storage->area != nullptr ? storage : nullptr;
 }
@@ -196,15 +196,16 @@ uint32_t prHtmlStorageLength(const PrHtmlStorage* storage) {
     return prStorageCount(storage->area);
 }
 
-PrString prHtmlStorageKey(const PrHtmlStorage* storage, uint32_t index) {
+PrRawString prHtmlStorageKey(const PrHtmlStorage* storage, uint32_t index) {
     return prStorageKey(storage->area, index);
 }
 
-PrString prHtmlStorageGetItem(const PrHtmlStorage* storage, PrStringView key) {
+PrRawString prHtmlStorageGetItem(const PrHtmlStorage* storage, PrStringView key) {
     PrStorageRecord record{};
     if (!prStorageRead(storage->area, key, &record))
-        return prStringNull();
-    PrString value = prStringCopy(PrStringView{reinterpret_cast<const char*>(record.bytes.data), record.bytes.size});
+        return prRawStringNull();
+    PrStringView text = {reinterpret_cast<const char*>(record.bytes.data), record.bytes.size};
+    PrRawString value = prRawStringCopy(text);
     prStorageRecordRelease(storage->area, &record);
     return value;
 }

@@ -1,7 +1,7 @@
 #include "dom/src/dom_range.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 
 namespace pr_impl {
@@ -78,8 +78,8 @@ void setBoundary(PrDomRange* range, DomBoundary point, bool start) {
 }
 
 // Returns the substring of a character data node's data, in UTF-16 code units.
-PrString substring(const PrDomNode* node, uint32_t offset, uint32_t count) {
-    PrString out = {};
+PrRawString substring(const PrDomNode* node, uint32_t offset, uint32_t count) {
+    PrRawString out = {};
     domSubstringData(static_cast<const PrDomCharacterData*>(node), offset, count, &out);
     return out;
 }
@@ -115,9 +115,9 @@ DomBoundary collapsedPoint(PrDomRange* range) {
 // contents that this range extracts.
 PrStatus extractPart(PrDomNode* fragment, PrDomNode* node, DomBoundary from, DomBoundary to, bool extract) {
     if (isCharacterData(node)) {
-        PrString data = substring(node, from.offset, to.offset - from.offset);
-        domAttach(fragment, cloneWithData(node, prStringView(&data)), nullptr);
-        prStringReset(&data);
+        PrRawString data = substring(node, from.offset, to.offset - from.offset);
+        domAttach(fragment, cloneWithData(node, prRawStringView(&data)), nullptr);
+        prRawStringReset(&data);
         if (extract)
             domReplaceData(static_cast<PrDomCharacterData*>(node), from.offset, to.offset - from.offset, "");
         return PrStatus_Ok;
@@ -301,7 +301,7 @@ PrStatus domRangeExtract(PrDomRange* range, bool extract, PrDomDocumentFragment*
         common = domNodeParent(common);
     PrDomNode* firstPartial = nullptr;
     PrDomNode* lastPartial = nullptr;
-    Array<PrDomNode*> contained;
+    RawArray<PrDomNode*> contained;
     for (PrDomNode* child = common->first; child != nullptr; child = child->next) {
         if (domRangeContains(range, child)) {
             if (child->type == PrDomNodeType_DocumentType) {
@@ -359,7 +359,7 @@ void domRangeDelete(PrDomRange* range) {
         return;
     }
     // The contained nodes whose parents are not contained, in tree order.
-    Array<PrDomNode*> removed;
+    RawArray<PrDomNode*> removed;
     PrDomNode* root = domRangeRoot(range);
     for (PrDomNode* node = root; node != nullptr;) {
         if (domRangeContains(range, node)) {
@@ -438,12 +438,12 @@ PrStatus domRangeSurround(PrDomRange* range, PrDomNode* parent) {
     return status == PrStatus_Ok ? domRangeSelect(range, parent) : status;
 }
 
-PrString domRangeString(const PrDomRange* range) {
+PrRawString domRangeString(const PrDomRange* range) {
     PrTextBuffer out = {};
     auto append = [&](const PrDomNode* node, uint32_t offset, uint32_t count) {
-        PrString data = substring(node, offset, count);
-        prTextBufferAppend(&out, prStringView(&data));
-        prStringReset(&data);
+        PrRawString data = substring(node, offset, count);
+        prTextBufferAppend(&out, prRawStringView(&data));
+        prRawStringReset(&data);
     };
     const PrDomNode* start = range->start.node;
     const PrDomNode* end = range->end.node;

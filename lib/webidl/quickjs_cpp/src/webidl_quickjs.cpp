@@ -27,10 +27,10 @@ struct Interface {
 // The runtime's interfaces, which it frees with itself.
 constexpr char kInterfacesKey = 0;
 
-Array<Interface*>* interfacesOf(JSRuntime* runtime) {
-    return static_cast<Array<Interface*>*>(jsRuntimeOwned(
-        runtime, &kInterfacesKey, []() -> void* { return allocZeroed<Array<Interface*>>(); }, [](void* list) {
-            Array<Interface*>* interfaces = static_cast<Array<Interface*>*>(list);
+RawArray<Interface*>* interfacesOf(JSRuntime* runtime) {
+    return static_cast<RawArray<Interface*>*>(jsRuntimeOwned(
+        runtime, &kInterfacesKey, []() -> void* { return allocZeroed<RawArray<Interface*>>(); }, [](void* list) {
+            RawArray<Interface*>* interfaces = static_cast<RawArray<Interface*>*>(list);
             for (uint32_t i = 0; i < interfaces->count; ++i)
                 prMemoryFree(interfaces->data[i]);
             interfaces->reset();
@@ -71,7 +71,7 @@ bool platformOf(JSContext* ctx, JSValueConst object, Platform* out) {
     return out->indexed != nullptr || out->named != nullptr;
 }
 
-void freeAtoms(JSContext* ctx, Array<JSAtom>* atoms) {
+void freeAtoms(JSContext* ctx, RawArray<JSAtom>* atoms) {
     for (uint32_t i = 0; i < atoms->count; ++i)
         JS_FreeAtom(ctx, atoms->data[i]);
     atoms->reset();
@@ -177,7 +177,7 @@ int platformOwnPropertyNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NON
     Platform platform = {};
     platformOf(ctx, object, &platform);
     uint32_t length = platform.indexed != nullptr ? platform.indexed->length(platform.handle) : 0;
-    Array<JSAtom> named;
+    RawArray<JSAtom> named;
     if (platform.named != nullptr && !platform.named->names(ctx, platform.handle, &named)) {
         freeAtoms(ctx, &named);
         return -1;
@@ -661,8 +661,8 @@ JSClassID quotaExceededErrorClass;
 // (webidl/#quotaexceedederror) also has a quota and a requested amount, each NaN for null, as for every other
 // exception.
 struct DomException {
-    PrString name;
-    PrString message;
+    PrRawString name;
+    PrRawString message;
     double quota;
     double requested;
 };
@@ -673,11 +673,11 @@ DomException* PR_NULLABLE exceptionOf(JSContext* ctx, JSValueConst object) {
 
 JSValue newException(JSContext* ctx, JSClassID id, PrStringView message, PrStringView name,
         double quota = kPrF64Nan, double requested = kPrF64Nan) {
-    DomException exception = {prStringCopy(name), prStringCopy(message), quota, requested};
+    DomException exception = {prRawStringCopy(name), prRawStringCopy(message), quota, requested};
     JSValue object = jsNewValue(ctx, id, exception);
     if (JS_IsException(object)) {
-        prStringReset(&exception.name);
-        prStringReset(&exception.message);
+        prRawStringReset(&exception.name);
+        prRawStringReset(&exception.message);
     }
     return object;
 }
@@ -685,8 +685,8 @@ JSValue newException(JSContext* ctx, JSClassID id, PrStringView message, PrStrin
 template <const JSClassID* PR_NONNULL Id>
 void finalizer(JSRuntime* runtime, JSValue object) {
     jsFinalize<DomException>(runtime, object, *Id, [](DomException* exception) {
-        prStringReset(&exception->name);
-        prStringReset(&exception->message);
+        prRawStringReset(&exception->name);
+        prRawStringReset(&exception->message);
         prMemoryFree(exception);
     });
 }
@@ -712,7 +712,9 @@ JSValue messageGet(JSContext* ctx, JSValueConst exceptionObject) {
 
 JSValue codeGet(JSContext* ctx, JSValueConst exceptionObject) {
     DomException* exception = exceptionOf(ctx, exceptionObject);
-    return exception != nullptr ? JS_NewUint32(ctx, prWebIdlErrorCode(prStringView(&exception->name))) : JS_EXCEPTION;
+    if (exception == nullptr)
+        return JS_EXCEPTION;
+    return JS_NewUint32(ctx, prWebIdlErrorCode(prRawStringView(&exception->name)));
 }
 
 // Reads a member of QuotaExceededErrorOptions, a double, which is not NaN or an infinity (webidl/#js-double). `*out`

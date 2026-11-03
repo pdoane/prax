@@ -6,12 +6,12 @@
 //
 // `image_bench FILE...` writes one JSON row per file that decodes.
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/compress.h"
 #include "pr/compress_builtin.h"
 #include "pr/image.h"
 #include "pr/image_builtin.h"
+#include "pr/raw_array.h"
 #include "pr/text_buffer.h"
 
 #include "tools/harness/harness.h"
@@ -30,7 +30,7 @@ uint32_t readBe32(const uint8_t* p) {
 
 // Replaces the contents of `out` with a PNG's zlib stream: the data of its IDAT chunks, joined. Leaves `out` empty for
 // any other file.
-void pngStream(PrByteView bytes, Array<uint8_t>& out) {
+void pngStream(PrByteView bytes, RawArray<uint8_t>& out) {
     out.clear();
     static const uint8_t kSignature[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
     if (bytes.size < 8 || memcmp(bytes.data, kSignature, 8) != 0)
@@ -58,9 +58,9 @@ int main(int argc, char** argv) {
     PrImageCodec* imageCodec = prImageBuiltinCreate(compressCodec);
     PrImageDecoder* decoder = prImageDecoderCreate(imageCodec);
     PrTextBuffer file{};
-    Array<uint8_t> pixels;
-    Array<uint8_t> stream;
-    Array<uint8_t> inflated;
+    RawArray<uint8_t> pixels;
+    RawArray<uint8_t> stream;
+    RawArray<uint8_t> inflated;
     int status = 0;
     for (int i = 1; i < argc; ++i) {
         if (!harnessReadFile(&file, argv[i])) {

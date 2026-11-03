@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 #include "pr/xml.h"
@@ -15,14 +15,14 @@ namespace pr_impl {
 
 // A namespace prefix in scope. The empty prefix is the default namespace, and the empty URL means no namespace.
 struct XmlBinding {
-    PrString prefix;
-    PrString url;
+    PrRawString prefix;
+    PrRawString url;
 };
 
 // An element whose end tag has not been read: its qualified name as written in its start tag, the number of bindings
 // that were in scope before it, and where its content starts in the source.
 struct XmlOpen {
-    PrString name;
+    PrRawString name;
     uint32_t bindings;
     size_t contentAt;
 };
@@ -30,8 +30,8 @@ struct XmlOpen {
 // A general entity that the internal subset declares, and its replacement text. The text is null for an external
 // entity, which the parser does not fetch.
 struct XmlEntity {
-    PrString name;
-    PrString value;
+    PrRawString name;
+    PrRawString value;
 };
 
 // A parse: what it reads, where it is, and what it holds while it reads.
@@ -49,12 +49,12 @@ struct XmlParser {
     size_t reference;           // the source offset of the outermost reference being expanded
     uint32_t depth;             // how many entities are expanding
     size_t contentAt;           // where the content of the element being ended starts
-    Array<XmlOpen> open;
-    Array<XmlBinding> bindings;
-    Array<XmlEntity> entities;
+    RawArray<XmlOpen> open;
+    RawArray<XmlBinding> bindings;
+    RawArray<XmlEntity> entities;
     PrTextBuffer text = {};     // the character data not yet reported
     size_t textAt;              // where in the source it starts
-    PrString publicId;          // the doctype's public identifier, which identifies its external subset
+    PrRawString publicId;       // the doctype's public identifier, which identifies its external subset
     bool started;               // true once the byte order mark and the XML declaration are read
     bool doctype;
     bool root;                  // the document element has started

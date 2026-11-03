@@ -13,8 +13,8 @@
 #include "pr/base.h"
 #include "pr/dom.h"
 #include "pr/html.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -57,7 +57,7 @@ PrDomNodeList* PR_NULLABLE prHtmlElementLabels(PrHtmlElement* element);
 
 // Returns the URL that a form or a submit button's attribute `name` names, action or formaction, parsed against the
 // document base URL (html/#dom-fs-action). A missing or empty attribute names the document's URL.
-PrString prHtmlElementFormActionUrl(const PrHtmlElement* element, PrStringView name);
+PrRawString prHtmlElementFormActionUrl(const PrHtmlElement* element, PrStringView name);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLFormElement : HTMLElement (html)
@@ -87,7 +87,7 @@ uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* element, PrStringView nam
 
 // Writes up to `capacity` of the form's supported property names (html/#the-form-element:supported-property-names) to
 // `items`, which the caller releases, and returns the total number of names.
-uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrString* PR_NULLABLE items, uint32_t capacity);
+uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrRawString* PR_NULLABLE items, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLInputElement : HTMLElement (html)
@@ -108,7 +108,7 @@ PrDomInputType prHtmlInputElementType(const PrHtmlInputElement* element);
 
 // Returns the input's value as its mode gives it (html/#dom-input-value), and sets it. Setting returns InvalidState,
 // the setter's "InvalidStateError", for a value other than the empty string in the filename mode.
-PrString prHtmlInputElementValue(const PrHtmlInputElement* element);
+PrRawString prHtmlInputElementValue(const PrHtmlInputElement* element);
 PrStatus prHtmlInputElementSetValue(PrHtmlInputElement* element, PrStringView value);
 
 // Returns the checkedness (html/#dom-input-checked), and sets it with the dirty checkedness flag.
@@ -178,12 +178,12 @@ PR_HANDLE_UPCAST(HtmlTextAreaElement, DomEventTarget, EventTarget)
 PrHtmlTextAreaElement* PR_NULLABLE prHtmlTextAreaElementQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Returns the API value (html/#dom-textarea-value), and sets the raw value with the dirty value flag.
-PrString prHtmlTextAreaElementValue(const PrHtmlTextAreaElement* element);
+PrRawString prHtmlTextAreaElementValue(const PrHtmlTextAreaElement* element);
 void prHtmlTextAreaElementSetValue(PrHtmlTextAreaElement* element, PrStringView value);
 
 // Returns the child text content (html/#dom-textarea-defaultvalue), and replaces the children with a text node of
 // `value`.
-PrString prHtmlTextAreaElementDefaultValue(const PrHtmlTextAreaElement* element);
+PrRawString prHtmlTextAreaElementDefaultValue(const PrHtmlTextAreaElement* element);
 void prHtmlTextAreaElementSetDefaultValue(PrHtmlTextAreaElement* element, PrStringView value);
 
 // Returns the length of the API value in UTF-16 code units (html/#dom-textarea-textlength).
@@ -269,13 +269,13 @@ PrHtmlOutputElement* PR_NULLABLE prHtmlOutputElementQuery(PrDomEventTarget* PR_N
 
 // Returns the output's descendant text content (html/#dom-output-value), and sets it, keeping the default value that
 // the output had as its default value override.
-PrString prHtmlOutputElementValue(const PrHtmlOutputElement* element);
+PrRawString prHtmlOutputElementValue(const PrHtmlOutputElement* element);
 void prHtmlOutputElementSetValue(PrHtmlOutputElement* element, PrStringView value);
 
 // Returns the default value (html/#dom-output-defaultvalue): the default value override, or the descendant text content
 // if there is none. Setting it replaces the descendant text content while there is no override, and replaces the
 // override otherwise.
-PrString prHtmlOutputElementDefaultValue(const PrHtmlOutputElement* element);
+PrRawString prHtmlOutputElementDefaultValue(const PrHtmlOutputElement* element);
 void prHtmlOutputElementSetDefaultValue(PrHtmlOutputElement* element, PrStringView value);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -466,7 +466,7 @@ void prHtmlSelectElementSetSelectedIndex(PrHtmlSelectElement* select, int32_t in
 
 // Returns the value of the first selected option, or the empty string, and makes the first option with `value` the only
 // one selected (html/#dom-select-value).
-PrString prHtmlSelectElementValue(PrHtmlSelectElement* select);
+PrRawString prHtmlSelectElementValue(PrHtmlSelectElement* select);
 void prHtmlSelectElementSetValue(PrHtmlSelectElement* select, PrStringView value);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -496,13 +496,13 @@ PrHtmlOptionElement* prHtmlOptionElementCreate(PrDomDocument* document, const Pr
 PrHtmlFormElement* PR_NULLABLE prHtmlOptionElementForm(PrHtmlOptionElement* option);
 
 // Returns the option's text (html/#dom-option-text), and replaces its children with a text node of `value`.
-PrString prHtmlOptionElementText(const PrHtmlOptionElement* option);
+PrRawString prHtmlOptionElementText(const PrHtmlOptionElement* option);
 void prHtmlOptionElementSetText(PrHtmlOptionElement* option, PrStringView value);
 
 // Return the value attribute or the text, and the label attribute if it is not empty or the text
 // (html/#dom-option-value, html/#dom-option-label).
-PrString prHtmlOptionElementValue(const PrHtmlOptionElement* option);
-PrString prHtmlOptionElementLabel(const PrHtmlOptionElement* option);
+PrRawString prHtmlOptionElementValue(const PrHtmlOptionElement* option);
+PrRawString prHtmlOptionElementLabel(const PrHtmlOptionElement* option);
 
 // Returns the selectedness, and sets it as a script does (html/#dom-option-selected).
 bool prHtmlOptionElementSelected(const PrHtmlOptionElement* option);

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/url.h"
 
@@ -18,13 +18,13 @@ namespace pr_impl {
 // empty one is the empty string. A path that is not opaque has `/` before each segment, so the empty path is the empty
 // string. Views of a component stay valid until the URL changes.
 struct Url {
-    PrString scheme;
-    PrString username;
-    PrString password;
-    PrString host;
-    PrString path;
-    PrString query;
-    PrString fragment;
+    PrRawString scheme;
+    PrRawString username;
+    PrRawString password;
+    PrRawString host;
+    PrRawString path;
+    PrRawString query;
+    PrRawString fragment;
     PrUrlSearchParams* PR_NULLABLE searchParams;    // the query as a list, created on first use
     uint16_t port;
     bool hasPort;
@@ -33,14 +33,14 @@ struct Url {
 
 // A name and value in a query.
 struct UrlPair {
-    PrString name;
-    PrString value;
+    PrRawString name;
+    PrRawString value;
 };
 
 // A list of query pairs (url/#urlsearchparams). `url` is the URL that owns the list and whose query it mirrors, or
 // null.
 struct UrlSearchParams {
-    Array<UrlPair> pairs;
+    RawArray<UrlPair> pairs;
     PrUrl* PR_NULLABLE url;
 };
 
@@ -93,16 +93,16 @@ bool urlIsSpecial(const Url* url);
 bool urlCannotHaveCredentials(const Url* url);
 
 // Returns the URL as text (url/#concept-url-serializer).
-PrString urlSerialize(const Url* url, PrUrlSerialization serialization);
+PrRawString urlSerialize(const Url* url, PrUrlSerialization serialization);
 
 // Returns the URL's origin as text (url/#concept-url-origin, html/#ascii-serialisation-of-an-origin).
-PrString urlOrigin(const Url* url);
+PrRawString urlOrigin(const Url* url);
 
 // Replaces the list with the pairs parsed from `input` (url/#concept-urlencoded-parser). The URL's query is unchanged.
 void urlSearchParamsParse(UrlSearchParams* params, PrStringView input);
 
 // Returns the list as `application/x-www-form-urlencoded` text (url/#concept-urlencoded-serializer).
-PrString urlSearchParamsSerialize(const UrlSearchParams* params);
+PrRawString urlSearchParamsSerialize(const UrlSearchParams* params);
 
 // Writes the list into the query of the URL that owns it, if any (url/#concept-urlsearchparams-update). An empty list
 // makes the query null.

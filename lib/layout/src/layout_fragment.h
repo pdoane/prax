@@ -7,12 +7,12 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/draw.h"
 #include "pr/font.h"
 #include "pr/geom.h"
 #include "pr/layout_query.h"
+#include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/vec.h"
 
@@ -585,7 +585,7 @@ struct LayoutLogicalChild {
 // from `mark` on, each at the physical offset that corresponds to its logical one. Removes them from `children`. The
 // list of boxes out of flow of the fragment gathers the lists of its children, each moved by the offset of the child,
 // and its placeholders, in order.
-LayoutFragment* layoutFragmentBuild(Array<LayoutLogicalChild>& children, uint32_t mark, LayoutFragmentKind kind,
+LayoutFragment* layoutFragmentBuild(RawArray<LayoutLogicalChild>& children, uint32_t mark, LayoutFragmentKind kind,
     LayoutNodeIndex node, LayoutMode mode, LayoutLogicalSize size);
 
 // Returns the fragment of a holder, made from `built`, which this function takes and frees. The new fragment has the
@@ -595,7 +595,7 @@ LayoutFragment* layoutFragmentHold(LayoutFragment* built, const LayoutChild* PR_
     const LayoutPending* PR_NULLABLE pending, uint32_t pendingCount);
 
 // Releases the children of `children` from `mark` on, and removes them.
-void layoutFragmentDiscard(Array<LayoutLogicalChild>& children, uint32_t mark);
+void layoutFragmentDiscard(RawArray<LayoutLogicalChild>& children, uint32_t mark);
 
 } // namespace pr_impl
 

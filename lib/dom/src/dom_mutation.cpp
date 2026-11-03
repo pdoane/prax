@@ -41,7 +41,7 @@ void clear(PrDomMutationObserver* observer) {
     for (uint32_t i = 0; i < observer->records.count; ++i)
         domMutationRecordDestroy(observer->records.data[i]);
     observer->records.clear();
-    Array<PrDomDocument* PR_NONNULL> documents = observer->documents;
+    RawArray<PrDomDocument* PR_NONNULL> documents = observer->documents;
     observer->documents = {};
     for (uint32_t i = 0; i < documents.count; ++i)
         domDocumentRelease(documents.data[i]);
@@ -92,7 +92,7 @@ void queueRecord(PrDomNode* target, PrDomMutationType type, PrStringView name, P
     DomMutationObservers* observers = document->observers;
     if (observers == nullptr || observers->suppressed != 0)
         return;
-    Array<Interested> interested;
+    RawArray<Interested> interested;
     for (PrDomNode* node = target; node != nullptr; node = domNodeParent(node)) {
         for (uint32_t k = 0; k < observers->observers.count; ++k) {
             PrDomMutationObserver* observer = observers->observers.data[k];
@@ -108,7 +108,7 @@ void queueRecord(PrDomNode* target, PrDomMutationType type, PrStringView name, P
                 bool filtered = registration->attributeFilter.count != 0 || options.hasAttributeFilter;
                 bool listed = false;
                 for (uint32_t j = 0; j < registration->attributeFilter.count; ++j)
-                    listed |= prStringView(&registration->attributeFilter.data[j]) == name;
+                    listed |= prRawStringView(&registration->attributeFilter.data[j]) == name;
                 if (filtered && (!listed || space.size != 0))
                     continue;
             }
@@ -137,9 +137,9 @@ void queueRecord(PrDomNode* target, PrDomMutationType type, PrStringView name, P
             record->removed.push(retained(removed[j]));
         record->previous = retained(previous);
         record->next = retained(next);
-        record->attributeName = prStringCopy(name);
-        record->attributeNamespace = space.size != 0 ? prStringCopy(space) : prStringNull();
-        record->oldValue = interested.data[i].oldValue ? prStringCopy(oldValue) : prStringNull();
+        record->attributeName = prRawStringCopy(name);
+        record->attributeNamespace = space.size != 0 ? prRawStringCopy(space) : prRawStringNull();
+        record->oldValue = interested.data[i].oldValue ? prRawStringCopy(oldValue) : prRawStringNull();
         observer->records.push(record);
         // dom/#queue-a-mutation-observer-compound-microtask
         const DomDocumentHost* host = domDocumentMicrotaskHost(document);
@@ -198,14 +198,14 @@ PrStatus domMutationObserverObserve(PrDomMutationObserver* observer, PrDomNode* 
         if (registration->node == target) {
             stringsClear(&registration->attributeFilter);
             for (uint32_t j = 0; j < filterCount; ++j)
-                registration->attributeFilter.push(prStringCopy(filter[j]));
+                registration->attributeFilter.push(prRawStringCopy(filter[j]));
             registration->options = effective;
             return PrStatus_Ok;
         }
     }
     DomObserverRegistration registration = {target, effective, {}};
     for (uint32_t j = 0; j < filterCount; ++j)
-        registration.attributeFilter.push(prStringCopy(filter[j]));
+        registration.attributeFilter.push(prRawStringCopy(filter[j]));
     domNodeRetain(target);
     observer->registrations.push(registration);
     list(observer, target->document);
@@ -243,9 +243,9 @@ void domMutationRecordDestroy(PrDomMutationRecord* PR_NULLABLE record) {
     domNodeRelease(record->next);
     record->added.reset();
     record->removed.reset();
-    prStringReset(&record->attributeName);
-    prStringReset(&record->attributeNamespace);
-    prStringReset(&record->oldValue);
+    prRawStringReset(&record->attributeName);
+    prRawStringReset(&record->attributeNamespace);
+    prRawStringReset(&record->oldValue);
     prMemoryFree(record);
 }
 
@@ -253,7 +253,7 @@ void domMutationObserversDeliver(PrDomDocument* document) {
     DomMutationObservers* observers = document->observers;
     if (observers == nullptr)
         return;
-    Array<PrDomMutationObserver* PR_NONNULL> delivering;
+    RawArray<PrDomMutationObserver* PR_NONNULL> delivering;
     for (uint32_t i = 0; i < observers->observers.count; ++i) {
         PrDomMutationObserver* observer = observers->observers.data[i];
         if (observer->records.count != 0) {

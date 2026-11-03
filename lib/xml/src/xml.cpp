@@ -3,7 +3,7 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_ops.h"
 #include "pr/utf8.h"
 
@@ -24,7 +24,7 @@ using Parser = PrXmlParser;
 // An attribute as its start tag writes it, before namespaces are processed.
 struct Attribute {
     PrStringView name;
-    PrString value;
+    PrRawString value;
 };
 
 bool fail(Parser* p, PrStringView message) {
@@ -116,7 +116,7 @@ bool parseQuoted(Parser* p, PrStringView* out) {
 
 const XmlEntity* PR_NULLABLE findEntity(const Parser* p, PrStringView name) {
     for (uint32_t i = 0; i < p->entities.count; ++i) {
-        if (prStringView(&p->entities.data[i].name) == name)
+        if (prRawStringView(&p->entities.data[i].name) == name)
             return &p->entities.data[i];
     }
     return nullptr;
@@ -164,8 +164,8 @@ bool characterReference(Parser* p, PrTextBuffer* out, bool* handled) {
             return true;
         }
     }
-    if (findEntity(p, name) == nullptr && p->handler->entity != nullptr && !prStringIsEmpty(&p->publicId)) {
-        PrStringView expansion = p->handler->entity(p->handler->context, prStringView(&p->publicId), name);
+    if (findEntity(p, name) == nullptr && p->handler->entity != nullptr && !prRawStringIsEmpty(&p->publicId)) {
+        PrStringView expansion = p->handler->entity(p->handler->context, prRawStringView(&p->publicId), name);
         if (expansion.data != nullptr) {
             prTextBufferAppend(out, expansion);
             return true;
@@ -189,7 +189,7 @@ bool expandEntity(Parser* p, Read read) {
         return fail(p, "an entity is referred to that is not declared");
     }
     // An external entity is not fetched, and expands to nothing.
-    if (prStringIsNull(&entity->value))
+    if (prRawStringIsNull(&entity->value))
         return true;
     if (p->depth == kEntityDepth)
         return fail(p, "an entity refers to itself");
@@ -197,7 +197,7 @@ bool expandEntity(Parser* p, Read read) {
     size_t at = p->at;
     if (p->depth++ == 0)
         p->reference = start - 1;
-    p->input = prStringView(&entity->value);
+    p->input = prRawStringView(&entity->value);
     p->at = 0;
     bool ok = read();
     p->input = input;
@@ -259,8 +259,8 @@ bool resolve(const Parser* p, PrStringView prefix, PrStringView* url) {
         return true;
     }
     for (uint32_t i = p->bindings.count; i-- > 0;) {
-        if (prStringView(&p->bindings.data[i].prefix) == prefix) {
-            *url = prStringView(&p->bindings.data[i].url);
+        if (prRawStringView(&p->bindings.data[i].prefix) == prefix) {
+            *url = prRawStringView(&p->bindings.data[i].url);
             return true;
         }
     }
@@ -324,24 +324,24 @@ bool endElement(Parser* p, PrStringView qualified, size_t contentAt) {
 // Removes the bindings after the first `count` from scope.
 void popBindings(Parser* p, uint32_t count) {
     for (uint32_t i = count; i < p->bindings.count; ++i) {
-        prStringReset(&p->bindings.data[i].prefix);
-        prStringReset(&p->bindings.data[i].url);
+        prRawStringReset(&p->bindings.data[i].prefix);
+        prRawStringReset(&p->bindings.data[i].url);
     }
     p->bindings.count = count;
 }
 
-void resetAttributes(Array<Attribute>* attributes) {
+void resetAttributes(RawArray<Attribute>* attributes) {
     for (uint32_t i = 0; i < attributes->count; ++i)
-        prStringReset(&attributes->data[i].value);
+        prRawStringReset(&attributes->data[i].value);
     attributes->reset();
 }
 
 // Resolves the start tag's attributes into `out`, and checks that no two have one expanded name.
-bool resolveAttributes(Parser* p, const Array<Attribute>& attributes, Array<PrXmlAttribute>* out) {
+bool resolveAttributes(Parser* p, const RawArray<Attribute>& attributes, RawArray<PrXmlAttribute>* out) {
     for (uint32_t i = 0; i < attributes.count; ++i) {
         PrStringView attribute = attributes.data[i].name;
         PrXmlAttribute resolved = {};
-        resolved.value = prStringView(&attributes.data[i].value);
+        resolved.value = prRawStringView(&attributes.data[i].value);
         resolved.name.space = "";
         if (attribute == "xmlns") {
             resolved.name.local = attribute;
@@ -370,7 +370,7 @@ bool startTag(Parser* p) {
     PrStringView name;
     if (!parseName(p, &name) || !flushText(p))
         return false;
-    Array<Attribute> attributes;
+    RawArray<Attribute> attributes;
     bool empty = false;
     for (;;) {
         size_t spaces = skipSpaces(p);
@@ -420,7 +420,7 @@ bool startTag(Parser* p) {
     bool ok = true;
     for (uint32_t i = 0; ok && i < attributes.count; ++i) {
         PrStringView attribute = attributes.data[i].name;
-        PrStringView url = prStringView(&attributes.data[i].value);
+        PrStringView url = prRawStringView(&attributes.data[i].value);
         bool declares = attribute == "xmlns" || prStringStartsWith(attribute, "xmlns:");
         if (!declares)
             continue;
@@ -429,10 +429,10 @@ bool startTag(Parser* p) {
                 (prefix.size != 0 && url.size == 0))
             ok = fail(p, "a namespace declaration binds a reserved prefix or name, or undeclares a prefix");
         else
-            p->bindings.push(XmlBinding{prStringCopy(prefix), prStringCopy(url)});
+            p->bindings.push(XmlBinding{prRawStringCopy(prefix), prRawStringCopy(url)});
     }
     PrXmlName element = {};
-    Array<PrXmlAttribute> resolved;
+    RawArray<PrXmlAttribute> resolved;
     ok = ok && elementName(p, name, &element) && resolveAttributes(p, attributes, &resolved);
     if (ok && p->handler->startElement != nullptr)
         ok = handled(p, p->handler->startElement(p->handler->context, p, &element, resolved.data, resolved.count));
@@ -447,7 +447,7 @@ bool startTag(Parser* p) {
         popBindings(p, bindings);
         return ok;
     }
-    p->open.push(XmlOpen{prStringCopy(name), bindings, p->at});
+    p->open.push(XmlOpen{prRawStringCopy(name), bindings, p->at});
     return true;
 }
 
@@ -458,11 +458,11 @@ bool endTag(Parser* p) {
     skipSpaces(p);
     if (!expect(p, ">", "an end tag is not closed") || !flushText(p))
         return false;
-    if (p->open.count == 0 || prStringView(&p->open.last().name) != name)
+    if (p->open.count == 0 || prRawStringView(&p->open.last().name) != name)
         return fail(p, "an end tag does not match the element it closes");
     XmlOpen closed = p->open.data[--p->open.count];
-    bool done = endElement(p, prStringView(&closed.name), closed.contentAt);
-    prStringReset(&closed.name);
+    bool done = endElement(p, prRawStringView(&closed.name), closed.contentAt);
+    prRawStringReset(&closed.name);
     popBindings(p, closed.bindings);
     return done;
 }
@@ -547,7 +547,7 @@ bool entityDeclaration(Parser* p) {
     PrStringView name;
     if (!parseName(p, &name) || skipSpaces(p) == 0)
         return fail(p, "an entity declaration is not well-formed");
-    PrString value = prStringNull();
+    PrRawString value = prRawStringNull();
     if (startsWith(p, "SYSTEM") || startsWith(p, "PUBLIC")) {
         if (!skipDeclaration(p))
             return false;
@@ -579,15 +579,15 @@ bool entityDeclaration(Parser* p) {
         value = prTextBufferTake(&text);
         skipSpaces(p);
         if (!expect(p, ">", "an entity declaration is not closed")) {
-            prStringReset(&value);
+            prRawStringReset(&value);
             return false;
         }
     }
     // The first declaration of an entity binds it.
     if (findEntity(p, name) == nullptr)
-        p->entities.push(XmlEntity{prStringCopy(name), value});
+        p->entities.push(XmlEntity{prRawStringCopy(name), value});
     else
-        prStringReset(&value);
+        prRawStringReset(&value);
     return true;
 }
 
@@ -657,7 +657,7 @@ bool doctypeDeclaration(Parser* p) {
     }
     if (!expect(p, ">", "a document type declaration is not closed"))
         return false;
-    p->publicId = prStringCopy(publicId);
+    p->publicId = prRawStringCopy(publicId);
     return p->handler->doctype == nullptr ||
         handled(p, p->handler->doctype(p->handler->context, p, name, publicId, systemId));
 }
@@ -1022,16 +1022,16 @@ void prXmlParserDestroy(PrXmlParser* PR_NULLABLE parser) {
     if (parser == nullptr)
         return;
     for (uint32_t i = 0; i < parser->open.count; ++i)
-        prStringReset(&parser->open.data[i].name);
+        prRawStringReset(&parser->open.data[i].name);
     parser->open.reset();
     popBindings(parser, 0);
     parser->bindings.reset();
     for (uint32_t i = 0; i < parser->entities.count; ++i) {
-        prStringReset(&parser->entities.data[i].name);
-        prStringReset(&parser->entities.data[i].value);
+        prRawStringReset(&parser->entities.data[i].name);
+        prRawStringReset(&parser->entities.data[i].value);
     }
     parser->entities.reset();
-    prStringReset(&parser->publicId);
+    prRawStringReset(&parser->publicId);
     prTextBufferReset(&parser->text);
     prTextBufferReset(&parser->source);
     prMemoryFree(parser);

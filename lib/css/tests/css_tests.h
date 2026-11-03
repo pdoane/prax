@@ -25,14 +25,14 @@ namespace pr_impl {
 inline std::string textOf(PrStringView text) {
     return std::string(text.size != 0 ? text.data : "", text.size);
 }
-inline std::string textOf(const PrString& string) {
-    return textOf(prStringView(&string));
+inline std::string textOf(const PrRawString& string) {
+    return textOf(prRawStringView(&string));
 }
 
 // Returns the text of a returned string, which is then released.
-inline std::string take(PrString string) {
+inline std::string take(PrRawString string) {
     std::string text = textOf(string);
-    prStringReset(&string);
+    prRawStringReset(&string);
     return text;
 }
 

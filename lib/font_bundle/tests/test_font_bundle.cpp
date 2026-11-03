@@ -20,10 +20,10 @@ std::string familyOf(PrFontSet* set, const char* name) {
     prFontSetMatch(set, asked, &style, match);
     std::string answer;
     if (prFontMatchFaceCount(match) != 0) {
-        PrString family = prFontFamilyName(prFontMatchFace(match, 0).font);
-        PrStringView answered = prStringView(&family);
+        PrRawString family = prFontFamilyName(prFontMatchFace(match, 0).font);
+        PrStringView answered = prRawStringView(&family);
         answer.assign(answered.data, answered.size);
-        prStringReset(&family);
+        prRawStringReset(&family);
     }
     prFontMatchDestroy(match);
     return answer;

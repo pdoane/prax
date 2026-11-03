@@ -14,7 +14,7 @@ namespace {
 
 // dom/#concept-getelementsbyclassname: returns true if the element has every class of `wanted`. `atoms` holds the atoms
 // of `wanted`. Classes compare ASCII case-insensitively in a quirks mode document.
-bool hasClasses(const PrDomElement* element, const Array<PrStringView>& wanted, const Array<Atom>& atoms, bool quirks) {
+bool hasClasses(const PrDomElement* element, const RawArray<PrStringView>& wanted, const RawArray<Atom>& atoms, bool quirks) {
     if (element->classes == kDomClassesNone)
         return false;
     DomClassList classes = domClassesList(element->document, element->classes);
@@ -35,9 +35,9 @@ bool hasClasses(const PrDomElement* element, const Array<PrStringView>& wanted, 
 // Returns the first element after `after`, among the descendants of the collection's root, that has the collection's
 // classes. Returns null if none does, which is always the case if the collection names no class.
 PrDomElement* PR_NULLABLE nextWithClasses(const PrDomHtmlCollection* collection, PrDomNode* after) {
-    Array<PrStringView> wanted;
-    Array<Atom> atoms;
-    domOrderedSetParse(prStringView(&collection->text), &wanted);
+    RawArray<PrStringView> wanted;
+    RawArray<Atom> atoms;
+    domOrderedSetParse(prRawStringView(&collection->text), &wanted);
     const PrDomDocument* document = collection->root->document;
     bool quirks = document->quirks == DomQuirks_Yes;
     // If no element of the document has a class, no element of the collection has it.
@@ -90,7 +90,7 @@ bool collectionMatches(const PrDomHtmlCollection* collection, const PrDomElement
         default:
             break;
     }
-    PrStringView requested = prStringView(&collection->text);
+    PrStringView requested = prRawStringView(&collection->text);
     if (requested == "*")
         return true;
     PrStringView name = domElementName(element);
@@ -187,11 +187,11 @@ PrDomElement* PR_NULLABLE nextCollectionElement(const PrDomHtmlCollection* colle
 
 // A token set read from the attribute. Its views point into its own copy of the value.
 struct TokenSet {
-    PrString text;
-    Array<PrStringView> tokens;
+    PrRawString text;
+    RawArray<PrStringView> tokens;
 
     void reset() {
-        prStringReset(&text);
+        prRawStringReset(&text);
         tokens.reset();
     }
 
@@ -205,33 +205,33 @@ struct TokenSet {
 };
 
 const PrDomAttr* PR_NULLABLE attributeOf(const PrDomTokenList* list) {
-    return domAttribute(list->element, PrDomNamespace_None, prStringView(&list->name));
+    return domAttribute(list->element, PrDomNamespace_None, prRawStringView(&list->name));
 }
 
 // Returns the attribute's value, or the empty string if the element has no such attribute.
 PrStringView tokensText(const PrDomTokenList* list) {
     const PrDomAttr* attribute = attributeOf(list);
-    return attribute != nullptr ? prStringView(&attribute->value) : "";
+    return attribute != nullptr ? prRawStringView(&attribute->value) : "";
 }
 
-// Fills `set` in place, because its tokens are views of its text, whose bytes may be held inside the PrString.
+// Fills `set` in place, because its tokens are views of its text, whose bytes may be held inside the PrRawString.
 void readTokens(const PrDomTokenList* list, TokenSet* set) {
-    set->text = prStringCopy(tokensText(list));
-    domOrderedSetParse(prStringView(&set->text), &set->tokens);
+    set->text = prRawStringCopy(tokensText(list));
+    domOrderedSetParse(prRawStringView(&set->text), &set->tokens);
 }
 
 // dom/#concept-dtl-update. Leaves an element with no attribute and no tokens unchanged.
 void update(PrDomTokenList* list, const TokenSet& set) {
     if (attributeOf(list) == nullptr && set.tokens.count == 0)
         return;
-    PrString value = prStringEmpty();
+    PrRawString value = prRawStringEmpty();
     for (uint32_t i = 0; i < set.tokens.count; ++i) {
         if (i != 0)
-            prStringAppend(&value, " ");
-        prStringAppend(&value, set.tokens.data[i]);
+            prRawStringAppend(&value, " ");
+        prRawStringAppend(&value, set.tokens.data[i]);
     }
-    domSetAttribute(list->element, PrDomNamespace_None, prStringView(&list->name), prStringView(&value));
-    prStringReset(&value);
+    domSetAttribute(list->element, PrDomNamespace_None, prRawStringView(&list->name), prRawStringView(&value));
+    prRawStringReset(&value);
 }
 
 PrStatus validate(PrStringView token) {
@@ -259,7 +259,7 @@ PrDomNode* PR_NULLABLE nextListNode(const PrDomNodeList* list, PrDomNode* PR_NUL
     if (list->filter == DomNodeListFilter_Children)
         return after == nullptr ? owner->first : after->next;
     PrDomNode* root = domNodeRoot(owner);
-    PrStringView name = prStringView(&list->name);
+    PrStringView name = prRawStringView(&list->name);
     for (PrDomNode* node = domNodeNext(root, after != nullptr ? after : root); node != nullptr; node = domNodeNext(root, node)) {
         PrDomElement* element = domElementFromNode(node);
         if (element == nullptr)
@@ -300,7 +300,7 @@ DomCollectionCache& current(DomCollectionCache& cache, const PrDomNode* root) {
 
 PrDomHtmlCollection* domHtmlCollectionCreate(PrDomNode* root, DomCollectionFilter filter, PrStringView text) {
     PrDomHtmlCollection* collection = alloc<PrDomHtmlCollection>();
-    *collection = PrDomHtmlCollection{{root, prStringCopy(text), filter, {}}};
+    *collection = PrDomHtmlCollection{{root, prRawStringCopy(text), filter, {}}};
     domNodeRetain(root);
     return collection;
 }
@@ -352,7 +352,7 @@ PrDomElement* PR_NULLABLE domHtmlCollectionNamedItem(const PrDomHtmlCollection* 
     return nullptr;
 }
 
-void domHtmlCollectionNames(const PrDomHtmlCollection* collection, Array<PrStringView>* out) {
+void domHtmlCollectionNames(const PrDomHtmlCollection* collection, RawArray<PrStringView>* out) {
     uint32_t start = out->count;
     auto add = [&](PrStringView name) {
         if (name.size == 0)
@@ -375,7 +375,7 @@ void domHtmlCollectionDestroy(PrDomHtmlCollection* PR_NULLABLE collection) {
     if (collection == nullptr)
         return;
     domNodeRelease(collection->root);
-    prStringReset(&collection->text);
+    prRawStringReset(&collection->text);
     prMemoryFree(collection);
 }
 
@@ -390,7 +390,7 @@ PrDomNodeList* domNodeListCreate(PrDomNode* PR_NULLABLE parent) {
 PrDomNodeList* domNodeListCreateFiltered(PrDomNode* node, DomNodeListFilter filter, PrStringView name) {
     PrDomNodeList* list = domNodeListCreate(node);
     list->filter = filter;
-    list->name = prStringCopy(name);
+    list->name = prRawStringCopy(name);
     return list;
 }
 
@@ -442,14 +442,14 @@ void domNodeListDestroy(PrDomNodeList* PR_NULLABLE list) {
     domNodeRelease(list->parent);
     domNodeReleaseEach(list->nodes.data, list->nodes.count);
     list->nodes.reset();
-    prStringReset(&list->name);
+    prRawStringReset(&list->name);
     prMemoryFree(list);
 }
 
 PrDomTokenList* domTokenListCreate(PrDomElement* element, PrStringView name) {
     PrDomTokenList* list = allocZeroed<PrDomTokenList>();
     list->element = element;
-    list->name = prStringCopy(name);
+    list->name = prRawStringCopy(name);
     domNodeRetain(element);
     return list;
 }
@@ -458,12 +458,12 @@ void domTokenListDestroy(PrDomTokenList* PR_NULLABLE list) {
     if (list == nullptr)
         return;
     domNodeRelease(list->element);
-    prStringReset(&list->name);
+    prRawStringReset(&list->name);
     prMemoryFree(list);
 }
 
 uint32_t domTokenListLength(const PrDomTokenList* list) {
-    Array<PrStringView> tokens;
+    RawArray<PrStringView> tokens;
     domOrderedSetParse(tokensText(list), &tokens);
     uint32_t count = tokens.count;
     tokens.reset();
@@ -471,7 +471,7 @@ uint32_t domTokenListLength(const PrDomTokenList* list) {
 }
 
 PrStringView domTokenListItem(const PrDomTokenList* list, uint32_t index) {
-    Array<PrStringView> tokens;
+    RawArray<PrStringView> tokens;
     domOrderedSetParse(tokensText(list), &tokens);
     PrStringView item = index < tokens.count ? tokens.data[index] : PrStringView{};
     tokens.reset();
@@ -479,7 +479,7 @@ PrStringView domTokenListItem(const PrDomTokenList* list, uint32_t index) {
 }
 
 bool domTokenListContains(const PrDomTokenList* list, PrStringView token) {
-    Array<PrStringView> tokens;
+    RawArray<PrStringView> tokens;
     domOrderedSetParse(tokensText(list), &tokens);
     bool found = false;
     for (uint32_t i = 0; !found && i < tokens.count; ++i)
@@ -572,10 +572,10 @@ PrStringView domTokenListValue(const PrDomTokenList* list) {
 }
 
 void domTokenListSetValue(PrDomTokenList* list, PrStringView value) {
-    domSetAttribute(list->element, PrDomNamespace_None, prStringView(&list->name), value);
+    domSetAttribute(list->element, PrDomNamespace_None, prRawStringView(&list->name), value);
 }
 
-void domOrderedSetParse(PrStringView text, Array<PrStringView>* out) {
+void domOrderedSetParse(PrStringView text, RawArray<PrStringView>* out) {
     size_t at = 0;
     while (at < text.size) {
         while (at < text.size && prAsciiIsSpace(text.data[at]))

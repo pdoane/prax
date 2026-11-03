@@ -8,7 +8,7 @@
 
 namespace pr_impl {
 
-void win32Widen(PrStringView text, Array<wchar_t>& out) {
+void win32Widen(PrStringView text, RawArray<wchar_t>& out) {
     int count;
     if (text.size == 0 || text.size > size_t(INT32_MAX))
         count = 0;
@@ -24,7 +24,7 @@ uint32_t win32Utf8Length(const wchar_t* units, int count) {
     return count <= 0 ? 0 : uint32_t(WideCharToMultiByte(CP_UTF8, 0, units, count, nullptr, 0, nullptr, nullptr));
 }
 
-PrStringView win32Narrow(const wchar_t* units, int count, Array<char>& out) {
+PrStringView win32Narrow(const wchar_t* units, int count, RawArray<char>& out) {
     uint32_t size = win32Utf8Length(units, count);
     if (size == 0)
         return "";

@@ -14,12 +14,12 @@
 #include "pr/text_font.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
 #include "pr/locale_common.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/string_array.h"
 #include "pr/unicode.h"
 #include "pr/utf8.h"
@@ -55,20 +55,20 @@ struct FallbackFace {
 
 // The faces that a text font chooses among, as its set matched them.
 struct Order {
-    Array<PrFontFamily> families;       // the list's families, then the set's default family; names are in `names`
-    Array<PrString> names;
+    RawArray<PrFontFamily> families;       // the list's families, then the set's default family; names are in `names`
+    RawArray<PrRawString> names;
     PrFontGeneric generic;              // the first generic family of the families
 
     // The faces matched so far: the faces of each family in turn, then those of the fallback families that clusters
     // needed.
-    Array<OrderFace> faces;
+    RawArray<OrderFace> faces;
 
-    Array<PrFontCodePointRange> ranges; // the ranges of the faces and of the fallback faces
-    uint32_t familiesMatched;           // the number of families whose faces are among `faces`
-    uint32_t requested;                 // the number of faces of those families, which come first
+    RawArray<PrFontCodePointRange> ranges; // the ranges of the faces and of the fallback faces
+    uint32_t familiesMatched;              // the number of families whose faces are among `faces`
+    uint32_t requested;                    // the number of faces of those families, which come first
 
-    Array<FallbackFace> fallback;
-    Array<uint32_t> fallbackScripts;
+    RawArray<FallbackFace> fallback;
+    RawArray<uint32_t> fallbackScripts;
     bool fallbackMatched;
 };
 
@@ -92,22 +92,22 @@ struct TextFont {
     PrFontSet* set;
     PrFontStyle style;
     PrLocale locale;
-    Array<PrFontFamily> listed;         // the families of the description; their names are copies in `listedNames`
-    Array<PrString> listedNames;
+    RawArray<PrFontFamily> listed;         // the families of the description; their names are copies in `listedNames`
+    RawArray<PrRawString> listedNames;
 
     Order order;
     uint64_t version;                   // the version of the set when the text font last checked its order
     uint64_t stamp;                     // the latest change that the order may depend on, as of its match
 
-    Array<const PrFont*> table;         // the fonts answered with, by answer; each holds a reference
+    RawArray<const PrFont*> table;         // the fonts answered with, by answer; each holds a reference
     uint64_t revision;
 
     // The questions answered since the table was last emptied.
     KeyIndex choices;
-    Array<Choice> chosen;
+    RawArray<Choice> chosen;
     HashIndex clusterIndex;
-    Array<ClusterChoice> clusters;
-    Array<char> clusterText;
+    RawArray<ClusterChoice> clusters;
+    RawArray<char> clusterText;
     uint32_t firstAnswer;
     bool firstAsked;
     bool incomplete;                    // true if a question went unrecorded, so a replay cannot vouch for the table
@@ -135,13 +135,13 @@ void orderInit(const TextFont& t, Order& o) {
     o.generic = PrFontGeneric_None;
     for (uint32_t i = 0; i <= t.listed.count; ++i) {
         PrFontFamily family = i < t.listed.count ? t.listed.data[i] : fallback;
-        o.names.push(prStringCopy(family.name));
+        o.names.push(prRawStringCopy(family.name));
         if (o.generic == PrFontGeneric_None)
             o.generic = family.generic;
     }
     for (uint32_t i = 0; i <= t.listed.count; ++i) {
         PrFontGeneric generic = i < t.listed.count ? t.listed.data[i].generic : fallback.generic;
-        o.families.push(PrFontFamily{prStringView(&o.names.data[i]), generic});
+        o.families.push(PrFontFamily{prRawStringView(&o.names.data[i]), generic});
     }
 }
 
@@ -472,9 +472,9 @@ PrTextFont* prTextFontCreate(const PrTextFontDesc* desc) {
     t->revision = 1;
     t->match = prFontMatchCreate();
     for (uint32_t i = 0; i < desc->familyCount; ++i)
-        t->listedNames.push(prStringCopy(desc->families[i].name));
+        t->listedNames.push(prRawStringCopy(desc->families[i].name));
     for (uint32_t i = 0; i < desc->familyCount; ++i)
-        t->listed.push(PrFontFamily{prStringView(&t->listedNames.data[i]), desc->families[i].generic});
+        t->listed.push(PrFontFamily{prRawStringView(&t->listedNames.data[i]), desc->families[i].generic});
     orderInit(*t, t->order);
     t->version = prFontSetVersion(desc->set);
     t->stamp = dependencyStamp(*t);

@@ -3,10 +3,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/byte_view.h"
 #include "pr/file.h"
 #include "pr/net.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/thread.h"
 
@@ -14,7 +14,7 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace harness {
 
-using pr::Array;
+using pr::RawArray;
 
 // The ports of the peer's servers, and the certificate of the CA that issued the certificates of the servers that tests
 // trust.
@@ -82,8 +82,8 @@ struct NetProbe {
     PrCondition changed;
     PrStatus status;            // what the open function returned
     PrStatus finished;          // what prNetStreamFinish returned, if the script finishes
-    Array<PrNetStreamEvent> events;
-    Array<uint8_t> received;
+    RawArray<PrNetStreamEvent> events;
+    RawArray<uint8_t> received;
     PrNetError error;
     bool done;                  // true once the stream ended or failed, or could not be made
     bool destroyed;

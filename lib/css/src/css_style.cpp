@@ -1088,7 +1088,7 @@ bool channelOf(CssValueRun run, uint32_t at, const CssColorChannelSyntax& syntax
     if (node->kind != PrCssValueKind_Math)
         return false;
     // A calculation: its component keywords become their numbers, in a copy of it.
-    Array<CssValueNode> copy;
+    RawArray<CssValueNode> copy;
     copy.append(node, node->next);
     for (uint32_t i = 0; i < copy.count; ++i) {
         CssValueNode& v = copy.data[i];
@@ -1955,12 +1955,12 @@ constexpr VariantFeature kVariantFeatures[] = {
     {PrCssKeyword_HistoricalForms, PR_FONT_TAG('h', 'i', 's', 't'), true},
 };
 
-void pushFeature(Array<PrTextFeature>& features, uint32_t tag, uint32_t value) {
+void pushFeature(RawArray<PrTextFeature>& features, uint32_t tag, uint32_t value) {
     features.push(PrTextFeature{.tag = tag, .value = value, .start = 0, .end = UINT32_MAX});
 }
 
 // Appends the features that the keywords of a computed font-variant longhand turn on or off.
-void variantFeatures(CssValueRun run, Array<PrTextFeature>& features) {
+void variantFeatures(CssValueRun run, RawArray<PrTextFeature>& features) {
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
         if (value->kind != PrCssValueKind_Keyword)
@@ -2546,11 +2546,11 @@ void cssStyleValuesRelease(const CssStyleValues* PR_NULLABLE values) {
         prMemoryFree(group);
 }
 
-void cssFontFamilies(CssValueRun run, PrTextBuffer* names, Array<PrFontFamily>* out) {
+void cssFontFamilies(CssValueRun run, PrTextBuffer* names, RawArray<PrFontFamily>* out) {
     prTextBufferClear(names);
     out->clear();
-    Array<uint32_t> starts;             // start of each named family's name, or UINT32_MAX for a generic
-    Array<PrFontGeneric> generics;
+    RawArray<uint32_t> starts;             // start of each named family's name, or UINT32_MAX for a generic
+    RawArray<PrFontGeneric> generics;
     bool open = false;
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
@@ -2627,7 +2627,7 @@ PrTextFeatureSet* PR_NULLABLE cssFontFeatureSet(const CssComputedStyle* style) {
         desc.synthesis |= PrTextSynthesisFlag_SmallCaps;
     if (keywordOfRun(cssComputedValue(style, PrCssProperty_FontSynthesisPosition)) != PrCssKeyword_None)
         desc.synthesis |= PrTextSynthesisFlag_Position;
-    Array<PrTextFeature> features;
+    RawArray<PrTextFeature> features;
     variantFeatures(cssComputedValue(style, PrCssProperty_FontVariantLigatures), features);
     variantFeatures(cssComputedValue(style, PrCssProperty_FontVariantNumeric), features);
     variantFeatures(cssComputedValue(style, PrCssProperty_FontVariantAlternates), features);

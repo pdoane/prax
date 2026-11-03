@@ -4,9 +4,9 @@
 #include "pr/layout_compositor.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/draw_list.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 
@@ -22,8 +22,8 @@ struct CompositorContent {
     uint64_t embed;                 // zero for the presented scene
     const PrLayoutScene* scene;
     PrAffine2 transform;
-    Array<PrLayoutTrack> tracks;    // each naming a run of `keyframes`
-    Array<PrLayoutKeyframe> keyframes;
+    RawArray<PrLayoutTrack> tracks;    // each naming a run of `keyframes`
+    RawArray<PrLayoutKeyframe> keyframes;
 };
 
 // The offset of a scroll container, which frames show. It is either the client's offset or the compositor's own, set by
@@ -57,14 +57,14 @@ struct LayoutCompositor {
     PrLayoutCompositorDesc desc;
     PrThread thread;
     bool threaded;
-    PrDrawList* list;                   // the list each frame records into, used by one frame at a time
-    Array<FramePart> parts;             // scratch: the parts a frame plays
-    Array<PrLayoutSceneEffect> effects; // scratch: the values the tracks give a frame, by part
-    Array<PrLayoutSceneScroll> offsets; // scratch: the offsets a frame plays, by part
-    uint32_t depth;                     // scratch: how many embedded contents the frame is playing inside
+    PrDrawList* list;                      // the list each frame records into, used by one frame at a time
+    RawArray<FramePart> parts;             // scratch: the parts a frame plays
+    RawArray<PrLayoutSceneEffect> effects; // scratch: the values the tracks give a frame, by part
+    RawArray<PrLayoutSceneScroll> offsets; // scratch: the offsets a frame plays, by part
+    uint32_t depth;                        // scratch: how many embedded contents the frame is playing inside
     mutable PrMutex mutex;
-    Array<CompositorContent> contents;
-    Array<CompositorScroll> scrolls;
+    RawArray<CompositorContent> contents;
+    RawArray<CompositorScroll> scrolls;
     uint32_t sequence;              // incremented by each scroll
     uint32_t taken;                 // the sequence as of the last take
     PrLayoutCompositorStats stats;
@@ -107,7 +107,7 @@ CompositorScroll* PR_NULLABLE scrollOf(LayoutCompositor* c, uint64_t embed, PrLa
 }
 
 // Appends the offsets of `embed` to `out`.
-void addScrolls(const LayoutCompositor* c, uint64_t embed, Array<PrLayoutSceneScroll>& out) {
+void addScrolls(const LayoutCompositor* c, uint64_t embed, RawArray<PrLayoutSceneScroll>& out) {
     for (uint32_t i = 0; i < c->scrolls.count; ++i) {
         if (c->scrolls.data[i].embed == embed)
             out.push(PrLayoutSceneScroll{c->scrolls.data[i].node, c->scrolls.data[i].offset});
@@ -168,9 +168,9 @@ PrLayoutVec scrollBy(LayoutCompositor* c, uint64_t embed, const LayoutScene* sce
 PrLayoutVec scrollAt(LayoutCompositor* c, const CompositorContent& content, PrLayoutVec point, PrLayoutVec delta,
         uint32_t depth) {
     const LayoutScene* scene = content.scene;
-    Array<PrLayoutSceneScroll> scrolls;
+    RawArray<PrLayoutSceneScroll> scrolls;
     addScrolls(c, content.embed, scrolls);
-    Array<PrLayoutVec> offsets;
+    RawArray<PrLayoutVec> offsets;
     layoutSceneScrollOffsets(scene, scrolls.data, scrolls.count, 0, offsets);
     LayoutScrollHit hit = layoutSceneScrollAt(scene, point, nullptr, 0, offsets.data);
     offsets.reset();
@@ -200,9 +200,9 @@ PrLayoutVec scrollAt(LayoutCompositor* c, const CompositorContent& content, PrLa
 // the point. The mutex is held.
 bool regionHolds(LayoutCompositor* c, const CompositorContent& content, PrLayoutVec point, uint32_t depth) {
     const LayoutScene* scene = content.scene;
-    Array<PrLayoutSceneScroll> scrolls;
+    RawArray<PrLayoutSceneScroll> scrolls;
     addScrolls(c, content.embed, scrolls);
-    Array<PrLayoutVec> offsets;
+    RawArray<PrLayoutVec> offsets;
     layoutSceneScrollOffsets(scene, scrolls.data, scrolls.count, 0, offsets);
     LayoutScrollHit hit = layoutSceneScrollAt(scene, point, nullptr, 0, offsets.data);
     offsets.reset();
@@ -455,7 +455,7 @@ void prLayoutCompositorCommit(PrLayoutCompositor* compositor, const PrLayoutComm
     // A new scene's boxes are where scroll anchoring moved them. An offset that the compositor's own scroll set, which
     // the client's offset did not replace, moves with them, so the scene and its offset arrive in the same frame.
     if (commit->scene != last) {
-        const Array<PrLayoutScrollAdjustment>& adjustments = commit->scene->adjustments;
+        const RawArray<PrLayoutScrollAdjustment>& adjustments = commit->scene->adjustments;
         for (uint32_t i = 0; i < adjustments.count; ++i) {
             CompositorScroll* own = scrollOf(c, commit->embed, adjustments.data[i].node);
             if (own != nullptr && own->sequence > commit->scrollsApplied)
@@ -547,7 +547,7 @@ void prLayoutCompositorReleaseWheel(PrLayoutCompositor* compositor) {
 }
 
 uint32_t prLayoutCompositorTakeScrolls(PrLayoutCompositor* compositor, PrLayoutScrollFn fn, void* PR_NULLABLE context) {
-    Array<PrLayoutScroll> taking;
+    RawArray<PrLayoutScroll> taking;
     prMutexLock(&compositor->mutex);
     for (uint32_t i = 0; i < compositor->scrolls.count; ++i) {
         const CompositorScroll& own = compositor->scrolls.data[i];

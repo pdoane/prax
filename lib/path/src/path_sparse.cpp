@@ -9,9 +9,9 @@
 #include "pr/path_sparse.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/float.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 #include "pr/sort.h"
 #include "pr/vec.h"
 
@@ -71,16 +71,16 @@ struct PathSparseRasterizer {
     uint32_t tilesY;
 
     uint32_t stamp;
-    Array<Piece> pieces;
-    Array<Ref> refs;
-    Array<float> leftWinding;   // for each pixel row, the winding of the edges left of the box
-    Array<float> cells;
-    Array<float> carry;         // for each pixel row of the row of tiles, the winding at the current column
-    Array<uint32_t> open;       // for each pixel column, the solid spans ending atop the tiles
-    Array<uint32_t> nextOpen;
-    Array<PrPathSparseSpan> spans;
-    Array<uint8_t> coverage;
-    Array<float> tiles;
+    RawArray<Piece> pieces;
+    RawArray<Ref> refs;
+    RawArray<float> leftWinding;   // for each pixel row, the winding of the edges left of the box
+    RawArray<float> cells;
+    RawArray<float> carry;         // for each pixel row of the row of tiles, the winding at the current column
+    RawArray<uint32_t> open;       // for each pixel column, the solid spans ending atop the tiles
+    RawArray<uint32_t> nextOpen;
+    RawArray<PrPathSparseSpan> spans;
+    RawArray<uint8_t> coverage;
+    RawArray<float> tiles;
 };
 
 uint32_t tileOf(const PathSparseRasterizer* f, float x) {
@@ -397,7 +397,7 @@ void fill(PathSparseRasterizer* f, PrPathFillRule rule) {
             i = j;
         }
         addGap(f, rule, minU32(gapTile * tw, f->width), f->width, y, height, openAt);
-        Array<uint32_t> swap = f->open;
+        RawArray<uint32_t> swap = f->open;
         f->open = f->nextOpen;
         f->nextOpen = swap;
     }

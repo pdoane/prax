@@ -36,24 +36,24 @@ struct CssParser {
     PrTextBuffer givenSource = {};
 
     // The arrays whose runs a CssBlock names.
-    Array<CssItem> items;
-    Array<CssSyntaxDeclaration> declarations;
-    Array<CssSyntaxRule> rules;
+    RawArray<CssItem> items;
+    RawArray<CssSyntaxDeclaration> declarations;
+    RawArray<CssSyntaxRule> rules;
 
     CssValuePool pool;                       // the values that a match produces
     CssMatchState match;                     // the frames and choices that a match runs on
     CssSelectorPool selectors;               // the records that a selector list compiles to
 
     // The declarations being added to a block. Their values and names are in `pool`.
-    Array<CssDeclaration> declared;
+    RawArray<CssDeclaration> declared;
 
     // The declarations that one declaration makes: itself, or the longhands of a shorthand.
-    Array<CssDeclaration> incoming;
+    RawArray<CssDeclaration> incoming;
 
-    Array<CssValueSpan> expanded;            // the values of a shorthand's longhands, in `pool`
-    CssValuePool initials;                   // the initial values of longhands, parsed on first use
-    Array<CssValueSpan> initialOf;           // each property's initial value in `initials`, empty until parsed
-    Array<uint64_t> filter;                  // the names that a block already holds
+    RawArray<CssValueSpan> expanded;            // the values of a shorthand's longhands, in `pool`
+    CssValuePool initials;                      // the initial values of longhands, parsed on first use
+    RawArray<CssValueSpan> initialOf;           // each property's initial value in `initials`, empty until parsed
+    RawArray<uint64_t> filter;                  // the names that a block already holds
 
     // The name of a declaration or an at-rule, with escapes resolved.
     PrTextBuffer names = {};

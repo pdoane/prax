@@ -1193,7 +1193,7 @@ struct SumItem {
     uint32_t count;
 };
 
-typedef Array<SumItem> SumValue;
+typedef RawArray<SumItem> SumValue;
 
 bool unitsEquals(const SumItem& a, const SumItem& b) {
     if (a.count != b.count)
@@ -1621,7 +1621,7 @@ bool cssMathTo(CssValueRun run, uint32_t index, PrCssUnit unit, double* out) {
 
 bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE units, uint32_t count, CssValuePool* out) {
     SumValue sum;
-    Array<SumItem> values;
+    RawArray<SumItem> values;
     bool ok = sumValue(run, index, &sum);
     // Each item as a unit value: its units must be only one unit to the first power, or no unit for a number.
     for (uint32_t i = 0; ok && i < sum.count; ++i) {
@@ -1647,7 +1647,7 @@ bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE 
             type = addTypes(type, unitType(units[u]));
         ok = !type.failure;
         // The total of the items that convert to each unit. Every item must convert to one of the units.
-        Array<SumItem> totals;
+        RawArray<SumItem> totals;
         for (uint32_t u = 0; ok && u < count; ++u) {
             double total = 0;
             for (uint32_t i = 0; i < values.count;) {

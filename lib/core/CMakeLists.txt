@@ -12,7 +12,7 @@ pr_library(core INCLUDE include
     src/pixels.cpp
     src/random.cpp
     src/status.cpp
-    src/string.cpp
+    src/raw_string.cpp
     src/text_buffer.cpp
     src/thread.cpp
     src/time.cpp
@@ -181,7 +181,7 @@ if (PR_DEVELOP)
         tests/test_integer.cpp
         tests/test_pixels.cpp
         tests/test_platform.cpp
-        tests/test_string.cpp
+        tests/test_raw_string.cpp
         tests/test_string_ops.cpp
         tests/test_string_view.cpp
         tests/test_thread.cpp
@@ -192,7 +192,7 @@ if (PR_DEVELOP)
     target_compile_definitions(core_tests PRIVATE PR_CORE_TEST_DIR="${CMAKE_CURRENT_BINARY_DIR}/core_tests_files")
 
     pr_module_tests(core_cpp
-        cpp/tests/test_array.cpp
+        cpp/tests/test_raw_array.cpp
         cpp/tests/test_atom_table.cpp
         cpp/tests/test_bitset.cpp
         cpp/tests/test_hash_index.cpp
@@ -207,7 +207,7 @@ if (PR_DEVELOP)
     add_library(core_configured STATIC
         src/assert.cpp
         src/memory.cpp
-        src/string.cpp
+        src/raw_string.cpp
     )
     target_include_directories(core_configured PUBLIC ${PROJECT_SOURCE_DIR}/lib include)
     target_include_directories(core_configured PRIVATE cpp/include)

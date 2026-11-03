@@ -3,9 +3,9 @@
 #include "pr/task_builtin.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 
 namespace pr_impl {
@@ -37,7 +37,7 @@ struct BuiltinPool : PrTaskPool {
     uint32_t loop;                  // the number of loops started
     uint32_t seats;                 // the number of the pool's threads that the loop still takes
     uint32_t running;               // the number of the pool's threads that took a seat and have not finished the loop
-    Array<Job> jobs;                // the jobs posted and not yet started, oldest first
+    RawArray<Job> jobs;             // the jobs posted and not yet started, oldest first
     bool ending;                    // set once the pool is destroyed, after which its threads end once no job is left
 };
 

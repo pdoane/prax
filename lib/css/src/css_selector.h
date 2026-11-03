@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 
@@ -265,13 +265,13 @@ struct CssComplexSelector {
 
 // The records of a selector list during compilation.
 struct CssSelectorPool {
-    Array<CssComplexSelector> complex;
-    Array<CssCompoundSelector> compounds;
-    Array<CssSimpleSelector> simple;
-    Array<CssSelectorArgument> arguments;
-    Array<CssSelectorNamespace> namespaces;
-    Array<CssSelectorName> names;
-    Array<int32_t> numbers;         // integer arguments, such as the levels of :heading()
+    RawArray<CssComplexSelector> complex;
+    RawArray<CssCompoundSelector> compounds;
+    RawArray<CssSimpleSelector> simple;
+    RawArray<CssSelectorArgument> arguments;
+    RawArray<CssSelectorNamespace> namespaces;
+    RawArray<CssSelectorName> names;
+    RawArray<int32_t> numbers;      // integer arguments, such as the levels of :heading()
     PrTextBuffer text = {};         // the bytes of the names
 };
 

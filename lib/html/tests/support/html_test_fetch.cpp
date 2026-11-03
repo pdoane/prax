@@ -106,9 +106,9 @@ uint32_t TestModules::parse(const PrHtmlScript* script, PrHtmlModuleRequestFn re
             PrUrl* imported = nullptr;
             if (line.starts_with("import ") &&
                     prUrlCreate(line.substr(7), base, PrCharset_Utf8, &imported) == PrStatus_Ok) {
-                PrString url = prUrlSerialize(imported, PrUrlSerialization_Whole);
-                request(requestContext, prStringView(&url));
-                prStringReset(&url);
+                PrRawString url = prUrlSerialize(imported, PrUrlSerialization_Whole);
+                request(requestContext, prRawStringView(&url));
+                prRawStringReset(&url);
             }
             prUrlDestroy(imported);
             start = end + 1;

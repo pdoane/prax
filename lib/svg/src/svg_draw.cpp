@@ -461,7 +461,7 @@ void drawMarker(SvgDrawer& d, SvgResourceIndex index, SvgVertex vertex, float st
 // The vertices that a shape's markers are placed at, and the width of its stroke, which markerUnits="strokeWidth"
 // scales them by.
 struct MarkerVertices {
-    Array<SvgVertex> found;     // the vertices of a shape whose vertices the build did not record
+    RawArray<SvgVertex> found;     // the vertices of a shape whose vertices the build did not record
     const SvgVertex* PR_NULLABLE vertices;
     uint32_t count;
     float strokeWidth;
@@ -474,7 +474,7 @@ void markerVerticesOf(const SvgDrawer& d, const SvgNode& node, MarkerVertices* o
     out->vertices = markers.vertices.data;
     out->count = markers.vertices.count;
     if (node.kind != SvgNodeKind_Path) {
-        Array<PrPathDataCommand> commands;
+        RawArray<PrPathDataCommand> commands;
         svgShapeCommands(node, d.viewport, &commands);
         svgMarkerVertices(commands.data, commands.count, &out->found);
         // A rect's or an ellipse's path ends with a closepath of no length, after the command that returns to the
@@ -774,7 +774,7 @@ PrRect strokeGeometryBounds(const SvgDrawer& d, const SvgNode& node) {
     if (node.kind == SvgNodeKind_Path) {
         prPathAddPath(path, node.path.path, prAffine2Identity());
     } else {
-        Array<PrPathDataCommand> commands;
+        RawArray<PrPathDataCommand> commands;
         svgShapeCommands(node, d.viewport, &commands);
         prPathAppendCommands(path, commands.data, commands.count);
         commands.reset();
@@ -922,7 +922,7 @@ bool clipOutline(SvgDrawer& d, SvgNodeIndex content, PrAffine2 space, PrPath* ou
     if (child.kind == SvgNodeKind_Path) {
         prPathAddPath(out, child.path.path, transform);
     } else {
-        Array<PrPathDataCommand> commands;
+        RawArray<PrPathDataCommand> commands;
         svgShapeCommands(child, d.viewport, &commands);
         PrPath* path = prPathCreate();
         prPathAppendCommands(path, commands.data, commands.count);
@@ -1269,8 +1269,8 @@ bool maskOf(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& masking, Masked*
     CssListItems modeItems = cssListItems(modes);
     CssListItems compositeItems = cssListItems(composites);
     PrRect box = effectBoundsOf(d, index, 0);
-    Array<LayerMask> layers;
-    Array<PrDrawComposite> operators;
+    RawArray<LayerMask> layers;
+    RawArray<PrDrawComposite> operators;
     bool hides = false;
     for (uint32_t i = 0; i < masking.layers.count && !hides; ++i) {
         const SvgMaskLayer& layer = masking.layers.data[i];
@@ -1800,7 +1800,7 @@ SvgDrawer svgEffectDrawer(const SvgDrawer& d, SvgResourceIndex index, PrDrawList
     return effectDrawer(d, index, list);
 }
 
-void svgShapeCommands(const SvgNode& node, PrVec2 viewport, Array<PrPathDataCommand>* out) {
+void svgShapeCommands(const SvgNode& node, PrVec2 viewport, RawArray<PrPathDataCommand>* out) {
     auto add = [&](char letter, float a, float b) {
         out->push(PrPathDataCommand{.letter = letter, .arguments = {a, b}});
     };
@@ -1968,7 +1968,7 @@ void svgShapePath(const SvgDrawer& d, const SvgNode& node, PrPath* out) {
         prPathAddPath(out, node.path.path, prAffine2Identity());
         return;
     }
-    Array<PrPathDataCommand> commands;
+    RawArray<PrPathDataCommand> commands;
     svgShapeCommands(node, d.viewport, &commands);
     prPathAppendCommands(out, commands.data, commands.count);
     commands.reset();

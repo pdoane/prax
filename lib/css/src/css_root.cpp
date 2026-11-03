@@ -49,16 +49,16 @@ void cssRootDestroy(CssRoot* PR_NULLABLE style) {
         cssStyleSheetLeaveOwner(style->instructionSheets.data[i]);
     style->instructionSheets.reset();
     for (uint32_t i = 0; i < style->cache.count; ++i) {
-        prStringReset(&style->cache.data[i].text);
+        prRawStringReset(&style->cache.data[i].text);
         cssSheetDataRelease(style->cache.data[i].data);
     }
     style->cache.reset();
     style->blocking.reset();
     for (uint32_t i = 0; i < style->registered.count; ++i) {
         CssRegisteredProperty* property = &style->registered.data[i];
-        prStringReset(&property->name);
-        prStringReset(&property->syntax);
-        prStringReset(&property->initialValue);
+        prRawStringReset(&property->name);
+        prRawStringReset(&property->syntax);
+        prRawStringReset(&property->initialValue);
         cssSyntaxDefinitionReset(&property->definition);
     }
     style->registered.reset();
@@ -81,7 +81,7 @@ PrStatus cssRegisterProperty(PrDomDocument* document, PrStringView name, PrStrin
         return PrStatus_Syntax;
     CssRoot* style = cssDocumentRoot(document);
     for (uint32_t i = 0; i < style->registered.count; ++i) {
-        if (prStringView(&style->registered.data[i].name) == name)
+        if (prRawStringView(&style->registered.data[i].name) == name)
             return PrStatus_NotAllowed;
     }
     CssParser parser;
@@ -98,9 +98,9 @@ PrStatus cssRegisterProperty(PrDomDocument* document, PrStringView name, PrStrin
         cssSyntaxDefinitionReset(&property.definition);
         return PrStatus_Syntax;
     }
-    property.name = prStringCopy(name);
-    property.syntax = prStringCopy(syntax);
-    property.initialValue = prStringCopy(initialValue);
+    property.name = prRawStringCopy(name);
+    property.syntax = prRawStringCopy(syntax);
+    property.initialValue = prRawStringCopy(initialValue);
     property.inherits = inherits;
     style->registered.push(property);
     return PrStatus_Ok;

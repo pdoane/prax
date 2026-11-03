@@ -6,8 +6,8 @@
 
 #include "pr/base.h"
 #include "pr/charset_names.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -47,10 +47,10 @@ enum {
 typedef uint8_t PrUrlSerialization;
 
 // Returns the URL as text (url/#concept-url-serializer).
-PrString prUrlSerialize(const PrUrl* url, PrUrlSerialization serialization);
+PrRawString prUrlSerialize(const PrUrl* url, PrUrlSerialization serialization);
 
 // Returns the URL's origin as text (url/#concept-url-origin, html/#ascii-serialisation-of-an-origin).
-PrString prUrlOrigin(const PrUrl* url);
+PrRawString prUrlOrigin(const PrUrl* url);
 
 // Returns true if the URLs have the same origin (html/#same-origin). An opaque origin, such as a data: URL's, is the
 // same as no other.
@@ -87,7 +87,7 @@ typedef uint8_t PrUrlComponent;
 
 // Returns the value of the attribute for `component`, as the getter of the URL interface returns it. Returns the empty
 // string, never the null string, if the URL lacks the component.
-PrString prUrlComponent(const PrUrl* url, PrUrlComponent component);
+PrRawString prUrlComponent(const PrUrl* url, PrUrlComponent component);
 
 // Sets the attribute for `component` to `value`, following the setter of the URL interface. Href replaces the whole URL
 // and returns the same statuses as prUrlCreate. On failure, Href leaves the URL unchanged. Any other component leaves
@@ -112,7 +112,7 @@ void prUrlSearchParamsDestroy(PrUrlSearchParams* PR_NULLABLE params);
 void prUrlSearchParamsParse(PrUrlSearchParams* params, PrStringView input);
 
 // Returns the list as `application/x-www-form-urlencoded` text (url/#concept-urlencoded-serializer).
-PrString prUrlSearchParamsToString(const PrUrlSearchParams* params);
+PrRawString prUrlSearchParamsToString(const PrUrlSearchParams* params);
 
 // Return the number of pairs, and the name and value of the pair at `index`. The views stay valid until the list
 // changes.

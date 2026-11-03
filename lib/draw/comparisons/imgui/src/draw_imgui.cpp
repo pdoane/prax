@@ -17,7 +17,6 @@
 #include "draw/comparisons/imgui/src/draw_imgui.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_glyph.h"
 #include "pr/draw_image.h"
@@ -27,6 +26,7 @@
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/path_measure.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "draw/comparisons/imgui/src/draw_imgui_gpu.h"
@@ -51,13 +51,13 @@ constexpr float kTolerance = 0.25f;
 struct Walk {
     ImGuiBackend* imgui;
     ImDrawList* draw;
-    Array<PrDrawTransform> transforms;
-    Array<ImVec4> clips;            // the scissor in force, innermost last
-    Array<bool> projected;          // for each open group, true if it pushed a transform and a scissor
+    RawArray<PrDrawTransform> transforms;
+    RawArray<ImVec4> clips;            // the scissor in force, innermost last
+    RawArray<bool> projected;          // for each open group, true if it pushed a transform and a scissor
     PrPath* shape;
     PrPathPolyline flat;
     PrPathPolyline outline;
-    Array<ImVec2> points;
+    RawArray<ImVec2> points;
 };
 
 ImU32 colorOf(PrColor c) {
@@ -204,8 +204,8 @@ void drawShape(Walk& w, const PrDrawCommand& c) {
             if (c.brush != nullptr && c.brush->kind == PrDrawBrushKind_Linear &&
                     c.brush->space == PrDrawBrushSpace_User) {
                 // The ramp's colors at the corners, at the gradient's parameter for each corner.
-                Array<PrDrawRampPiece> pieces{};
-                Array<PrColor> ramp{};
+                RawArray<PrDrawRampPiece> pieces{};
+                RawArray<PrColor> ramp{};
                 pieces.resize(prDrawGradientRampMaxPieces(c.brush->stopCount));
                 ramp.resize(prDrawGradientRampMaxColors(c.brush->stopCount, 256));
                 pieces.resize(prDrawGradientRamp(c.brush, c.color, PrColorSpace_Srgb, 256, pieces.data, ramp.data));

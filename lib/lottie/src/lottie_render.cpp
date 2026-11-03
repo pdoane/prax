@@ -496,8 +496,8 @@ void lottieDrawComp(LottieRender& r, uint32_t comp, double frame, PrVec2 extent)
     const PrMatrix4* camera = cameraProjection(r, c, frame, extent, &projection) ? &projection : nullptr;
     // The layers to draw, bottom first. Under a camera, each run of consecutive 3D layers is sorted by the depth of
     // each anchor, farthest first, so that nearer planes draw over farther ones. Planes that intersect are not split.
-    Array<uint32_t> order;
-    Array<float> depths;
+    RawArray<uint32_t> order;
+    RawArray<float> depths;
     for (uint32_t i = c.count; i-- > 0;) {
         const LottieLayer& layer = a.layers.data[c.layers + i];
         if (layer.hidden || layer.matteSource || layer.kind == LottieLayerKind_Camera)

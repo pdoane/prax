@@ -16,8 +16,8 @@ namespace pr_impl {
 namespace {
 
 void resetEntry(HtmlHistoryEntry* entry) {
-    prStringReset(&entry->url);
-    prStringReset(&entry->state);
+    prRawStringReset(&entry->url);
+    prRawStringReset(&entry->state);
 }
 
 // Drops the entries after the current one.
@@ -79,20 +79,20 @@ void traverse(void* data) {
     HtmlHistoryEntry& entry = history->entries.data[target];
     // A reload, or an entry of another document, loads its document through the host.
     if (delta == 0 || entry.document != window->historyDocument) {
-        htmlPageNavigate(window, nullptr, prStringView(&entry.url), HtmlHistoryCommit_Traverse, uint32_t(target));
+        htmlPageNavigate(window, nullptr, prRawStringView(&entry.url), HtmlHistoryCommit_Traverse, uint32_t(target));
         return;
     }
     PrUrl* url = nullptr;
-    if (prUrlCreate(prStringView(&entry.url), nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
+    if (prUrlCreate(prRawStringView(&entry.url), nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
         return;
     PrDomDocument* document = window->document;
-    PrString old = prUrlSerialize(document->url, PrUrlSerialization_Whole);
+    PrRawString old = prUrlSerialize(document->url, PrUrlSerialization_Whole);
     prUrlDestroy(document->url);
     document->url = url;
     history->index = uint32_t(target);
     ++window->historyGeneration;
-    htmlHistoryNotify(window, prStringView(&old));
-    prStringReset(&old);
+    htmlHistoryNotify(window, prRawStringView(&old));
+    prRawStringReset(&old);
 }
 
 // Queues a traversal of the window's session history by `delta`.
@@ -123,20 +123,20 @@ uint64_t htmlHistoryCommit(HtmlSessionHistory* history, PrStringView url, bool i
         if (current)
             dropForward(history);
         history->entries.push(HtmlHistoryEntry{
-            prStringCopy(url), prStringNull(), document,
+            prRawStringCopy(url), prRawStringNull(), document,
             PrHtmlScrollRestoration_Auto, initial,
         });
         history->index = history->entries.count - 1;
         return document;
     }
     HtmlHistoryEntry& entry = history->entries.data[target];
-    prStringReset(&entry.url);
-    entry.url = prStringCopy(url);
+    prRawStringReset(&entry.url);
+    entry.url = prRawStringCopy(url);
     entry.document = document;
     entry.initial = false;
     // A replacement starts with no state, and a traversal keeps the entry's.
     if (commit == HtmlHistoryCommit_Replace) {
-        prStringReset(&entry.state);
+        prRawStringReset(&entry.state);
         entry.scrollRestoration = PrHtmlScrollRestoration_Auto;
     }
     history->index = target;
@@ -166,24 +166,24 @@ void htmlHistoryNotify(PrHtmlWindow* window, PrStringView oldUrl) {
     prUrlDestroy(old);
     if (!changed)
         return;
-    PrString newUrl = prUrlSerialize(document->url, PrUrlSerialization_Whole);
+    PrRawString newUrl = prUrlSerialize(document->url, PrUrlSerialization_Whole);
     PrHtmlHashChangeEvent* hashChange =
-        prHtmlHashChangeEventCreate("hashchange", nullptr, oldUrl, prStringView(&newUrl));
-    prStringReset(&newUrl);
+        prHtmlHashChangeEventCreate("hashchange", nullptr, oldUrl, prRawStringView(&newUrl));
+    prRawStringReset(&newUrl);
     hashChange->trusted = true;
     HashChange* change = allocZeroed<HashChange>();
     *change = HashChange{window, hashChange};
     htmlWindowQueueTask(window, fireHashChange, change, dropHashChange);
 }
 
-void htmlHistoryUpdate(PrHtmlWindow* window, PrString state, PrHtmlHistoryHandling handling) {
+void htmlHistoryUpdate(PrHtmlWindow* window, PrRawString state, PrHtmlHistoryHandling handling) {
     HtmlSessionHistory* history = window->history;
-    PrString url = prUrlSerialize(window->document->url, PrUrlSerialization_Whole);
+    PrRawString url = prUrlSerialize(window->document->url, PrUrlSerialization_Whole);
     bool current = history->index < history->entries.count &&
         history->entries.data[history->index].document == window->historyDocument;
     if (!current) {
-        prStringReset(&url);
-        prStringReset(&state);
+        prRawStringReset(&url);
+        prRawStringReset(&state);
         return;
     }
     HtmlHistoryEntry& active = history->entries.data[history->index];
@@ -232,7 +232,7 @@ uint32_t prHtmlSessionHistoryIndex(const PrHtmlSessionHistory* history) {
 PrStringView prHtmlSessionHistoryUrl(const PrHtmlSessionHistory* history, uint32_t index) {
     if (index >= history->entries.count)
         return PrStringView{};
-    return prStringView(&history->entries.data[index].url);
+    return prRawStringView(&history->entries.data[index].url);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -255,8 +255,8 @@ PrStatus prHtmlHistoryState(const PrHtmlWindow* window, PrStringView* out, uint3
     const HtmlSessionHistory* history = window->history;
     if (history->index < history->entries.count) {
         const HtmlHistoryEntry& entry = history->entries.data[history->index];
-        if (entry.document == window->historyDocument && !prStringIsNull(&entry.state))
-            *out = prStringView(&entry.state);
+        if (entry.document == window->historyDocument && !prRawStringIsNull(&entry.state))
+            *out = prRawStringView(&entry.state);
     }
     return PrStatus_Ok;
 }
@@ -280,7 +280,7 @@ PrStatus prHtmlHistoryPushState(PrHtmlWindow* window, PrStringView serialized, P
         prUrlDestroy(document->url);
         document->url = newUrl;
     }
-    htmlHistoryUpdate(window, serialized.data != nullptr ? prStringCopy(serialized) : prStringNull(), handling);
+    htmlHistoryUpdate(window, serialized.data != nullptr ? prRawStringCopy(serialized) : prRawStringNull(), handling);
     return PrStatus_Ok;
 }
 
@@ -322,7 +322,7 @@ PrHtmlPopStateEvent* prHtmlPopStateEventCreate(PrStringView type, const PrDomEve
     PrHtmlPopStateEvent* event = domEventCreate<PrHtmlPopStateEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_PopState);
     event->history = allocZeroed<DomHistoryEventData>();
-    *event->history = DomHistoryEventData{prStringNull(), prStringNull(), false, hasUAVisualTransition};
+    *event->history = DomHistoryEventData{prRawStringNull(), prRawStringNull(), false, hasUAVisualTransition};
     return event;
 }
 
@@ -343,14 +343,14 @@ PrHtmlHashChangeEvent* prHtmlHashChangeEventCreate(PrStringView type, const PrDo
     PrHtmlHashChangeEvent* event = domEventCreate<PrHtmlHashChangeEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_HashChange);
     event->history = allocZeroed<DomHistoryEventData>();
-    *event->history = DomHistoryEventData{prStringCopy(oldUrl), prStringCopy(newUrl), false, false};
+    *event->history = DomHistoryEventData{prRawStringCopy(oldUrl), prRawStringCopy(newUrl), false, false};
     return event;
 }
 
 PrStringView prHtmlHashChangeEventOldUrl(const PrHtmlHashChangeEvent* event) {
-    return prStringView(&event->history->oldUrl);
+    return prRawStringView(&event->history->oldUrl);
 }
 
 PrStringView prHtmlHashChangeEventNewUrl(const PrHtmlHashChangeEvent* event) {
-    return prStringView(&event->history->newUrl);
+    return prRawStringView(&event->history->newUrl);
 }

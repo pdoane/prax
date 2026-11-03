@@ -5,7 +5,6 @@
 #include "pr/canvas.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/color_space.h"
@@ -17,6 +16,7 @@
 #include "pr/layout_style.h"
 #include "pr/mem.h"
 #include "pr/path_stroke.h"
+#include "pr/raw_array.h"
 #include "pr/string_ops.h"
 
 #include "canvas/src/canvas_path.h"
@@ -82,7 +82,7 @@ constexpr float kStretchWidths[] = {50, 62.5f, 75, 87.5f, 100, 112.5f, 125, 150,
 struct CanvasSpacing {
     double value;
     PrCssUnit unit;
-    PrString text;
+    PrRawString text;
 };
 
 // A gradient (html/#canvasgradient). Its kind decides which geometry it uses: the line from `start` to `end`, the
@@ -97,7 +97,7 @@ struct CanvasGradient {
     double angle;
 
     // The stops in the order of their offsets. A stop comes after the stops that were added before it at its offset.
-    Array<PrDrawColorStop> stops;
+    RawArray<PrDrawColorStop> stops;
 };
 
 // A pattern (html/#canvaspattern): an image, repeated as `repetition` says, under its own transform.
@@ -127,7 +127,7 @@ void patternRelease(CanvasPattern* PR_NULLABLE pattern) {
 struct CanvasStyleValue {
     PrCanvasStyleKind kind;
     PrColor color;                              // Color: straight alpha, extended sRGB
-    PrString text;                              // Color: the serialization
+    PrRawString text;                           // Color: the serialization
     CanvasGradient* PR_NULLABLE gradient;       // Gradient: the style holds a reference
     CanvasPattern* PR_NULLABLE pattern;         // Pattern: the style holds a reference
 };
@@ -143,7 +143,7 @@ struct CanvasClip {
 // The drawing state (html/#drawing-state).
 struct CanvasState {
     PrDAffine2 transform;
-    Array<CanvasClip> clips;                    // the clipping region is their intersection
+    RawArray<CanvasClip> clips;                 // the clipping region is their intersection
     CanvasStyleValue styles[2];                 // by PrCanvasStyleRole
     double globalAlpha;
     uint32_t operation;                         // in kOperations
@@ -154,7 +154,7 @@ struct CanvasState {
     double lineWidth;
     double miterLimit;
     double dashOffset;
-    Array<double> dashes;                       // an even count
+    RawArray<double> dashes;                       // an even count
     PrCanvasLineCap lineCap;
     PrCanvasLineJoin lineJoin;
 
@@ -162,15 +162,15 @@ struct CanvasState {
     PrDVec2 shadowOffset;
     double shadowBlur;
     PrColor shadowColor;
-    PrString shadowText;
+    PrRawString shadowText;
 
     // The current filter, as it was set, and its items resolved, which are none for "none".
-    PrString filterText;
-    Array<PrLayoutFilter> filters;
+    PrRawString filterText;
+    RawArray<PrLayoutFilter> filters;
 
     // The text styles. The font holds a reference.
     CanvasFont* font;
-    PrString lang;
+    PrRawString lang;
     CanvasSpacing letterSpacing;
     CanvasSpacing wordSpacing;
     PrCanvasTextAlign textAlign;
@@ -208,7 +208,7 @@ struct CanvasSegment {
 struct CanvasShown {
     Atomic<uint32_t> references;
     CanvasBitmap* bitmap;
-    Array<CanvasSegment> segments;
+    RawArray<CanvasSegment> segments;
     PrDrawSampling sampling;
 };
 
@@ -246,16 +246,16 @@ struct CanvasContext {
     // clipping region, outermost first), the segments that the bitmap may not hold yet, and the last revision given.
     PrDrawList* pending;
     bool recorded;                              // `pending` holds a draw
-    Array<CanvasSegment> segments;
+    RawArray<CanvasSegment> segments;
     uint64_t revision;
-    Array<uint64_t> openClips;
+    RawArray<uint64_t> openClips;
     uint64_t nextClipId;
 
     CanvasState state;
-    Array<CanvasState> saved;                   // the drawing state stack, oldest first
+    RawArray<CanvasState> saved;                // the drawing state stack, oldest first
     CanvasPath path;                            // the current default path, in the bitmap's space
 
-    Array<float> dashes;                        // scratch: the dash list as floats
+    RawArray<float> dashes;                        // scratch: the dash list as floats
 
     // The owner's source of what text is set with, the initial font, which holds a reference, and text set for the last
     // call that drew or measured it.
@@ -293,7 +293,7 @@ PrColor srgbOf(const PrCssUsedColor& color) {
 // Parses `text` as a CSS color (html/#parsed-as-a-css-color-value), and writes it and, if `serialization` is not null,
 // its serialization. Returns false if it does not parse.
 bool parseColor(PrStringView text, const PrDomElement* PR_NULLABLE element, PrColor* color,
-        PrString* PR_NULLABLE serialization) {
+        PrRawString* PR_NULLABLE serialization) {
     PrCssUsedColor parsed{};
     if (prCssParseColor(text, element, &parsed) != PrStatus_Ok)
         return false;
@@ -306,7 +306,7 @@ bool parseColor(PrStringView text, const PrDomElement* PR_NULLABLE element, PrCo
 // --- Styles ---
 
 void styleReset(CanvasStyleValue* style) {
-    prStringReset(&style->text);
+    prRawStringReset(&style->text);
     gradientRelease(style->gradient);
     patternRelease(style->pattern);
     *style = CanvasStyleValue{};
@@ -314,7 +314,7 @@ void styleReset(CanvasStyleValue* style) {
 
 void styleCopy(CanvasStyleValue* out, const CanvasStyleValue& from) {
     *out = from;
-    out->text = prStringClone(&from.text);
+    out->text = prRawStringClone(&from.text);
     if (from.gradient != nullptr)
         ++from.gradient->references;
     if (from.pattern != nullptr)
@@ -330,7 +330,7 @@ void stateInit(CanvasState* state, CanvasFont* font) {
         style = CanvasStyleValue{
             .kind = PrCanvasStyleKind_Color,
             .color = PrColor{0, 0, 0, 1},
-            .text = prStringExternal(kBlack),
+            .text = prRawStringExternal(kBlack),
         };
     state->globalAlpha = 1;
     state->smoothing = true;
@@ -339,13 +339,13 @@ void stateInit(CanvasState* state, CanvasFont* font) {
     state->miterLimit = 10;
     state->lineCap = PrCanvasLineCap_Butt;
     state->lineJoin = PrCanvasLineJoin_Miter;
-    state->shadowText = prStringExternal(kTransparentBlack);
-    state->filterText = prStringExternal(kNone);
+    state->shadowText = prRawStringExternal(kTransparentBlack);
+    state->filterText = prRawStringExternal(kNone);
     canvasFontRetain(font);
     state->font = font;
-    state->lang = prStringExternal(kInherit);
-    state->letterSpacing = CanvasSpacing{.unit = PrCssUnit_Px, .text = prStringExternal(kZeroLength)};
-    state->wordSpacing = CanvasSpacing{.unit = PrCssUnit_Px, .text = prStringExternal(kZeroLength)};
+    state->lang = prRawStringExternal(kInherit);
+    state->letterSpacing = CanvasSpacing{.unit = PrCssUnit_Px, .text = prRawStringExternal(kZeroLength)};
+    state->wordSpacing = CanvasSpacing{.unit = PrCssUnit_Px, .text = prRawStringExternal(kZeroLength)};
     state->textAlign = PrCanvasTextAlign_Start;
     state->textBaseline = PrCanvasTextBaseline_Alphabetic;
     state->direction = PrCanvasDirection_Inherit;
@@ -362,13 +362,13 @@ void stateReset(CanvasState* state) {
     for (CanvasStyleValue& style : state->styles)
         styleReset(&style);
     state->dashes.reset();
-    prStringReset(&state->shadowText);
-    prStringReset(&state->filterText);
+    prRawStringReset(&state->shadowText);
+    prRawStringReset(&state->filterText);
     state->filters.reset();
     canvasFontRelease(state->font);
-    prStringReset(&state->lang);
-    prStringReset(&state->letterSpacing.text);
-    prStringReset(&state->wordSpacing.text);
+    prRawStringReset(&state->lang);
+    prRawStringReset(&state->letterSpacing.text);
+    prRawStringReset(&state->wordSpacing.text);
 }
 
 void stateCopy(CanvasState* out, const CanvasState& from) {
@@ -384,15 +384,15 @@ void stateCopy(CanvasState* out, const CanvasState& from) {
     out->dashes = {};
     if (from.dashes.count != 0)
         out->dashes.append(from.dashes.data, from.dashes.count);
-    out->shadowText = prStringClone(&from.shadowText);
-    out->filterText = prStringClone(&from.filterText);
+    out->shadowText = prRawStringClone(&from.shadowText);
+    out->filterText = prRawStringClone(&from.filterText);
     out->filters = {};
     if (from.filters.count != 0)
         out->filters.append(from.filters.data, from.filters.count);
     canvasFontRetain(from.font);
-    out->lang = prStringClone(&from.lang);
-    out->letterSpacing.text = prStringClone(&from.letterSpacing.text);
-    out->wordSpacing.text = prStringClone(&from.wordSpacing.text);
+    out->lang = prRawStringClone(&from.lang);
+    out->letterSpacing.text = prRawStringClone(&from.letterSpacing.text);
+    out->wordSpacing.text = prRawStringClone(&from.wordSpacing.text);
 }
 
 // --- Text ---
@@ -495,7 +495,7 @@ void bitmapRelease(CanvasBitmap* PR_NULLABLE bitmap) {
     prMemoryFree(bitmap);
 }
 
-void segmentsReset(Array<CanvasSegment>* segments) {
+void segmentsReset(RawArray<CanvasSegment>* segments) {
     for (uint32_t i = 0; i < segments->count; ++i)
         prDrawListRelease(segments->data[i].list);
     segments->reset();
@@ -728,7 +728,7 @@ void discard(CanvasContext* c) {
 // Brings the clips that the pending drawing holds open in line with the clipping region: the areas that both share,
 // outermost first, stay open, and the rest of the region's are pushed.
 void syncClips(CanvasContext* c) {
-    const Array<CanvasClip>& clips = c->state.clips;
+    const RawArray<CanvasClip>& clips = c->state.clips;
     uint32_t shared = 0;
     while (shared < c->openClips.count && shared < clips.count && c->openClips.data[shared] == clips.data[shared].id)
         ++shared;
@@ -1088,7 +1088,7 @@ void addStop(CanvasGradient* g, PrDrawColorStop stop) {
 CanvasTextStyle textStyleOf(const CanvasContext* c, const PrCanvasTextSource& source) {
     const CanvasState& s = c->state;
     double size = double(prCssFontStyle(s.font->css).size);
-    PrStringView lang = prStringView(&s.lang);
+    PrStringView lang = prRawStringView(&s.lang);
     PrLocale locale = lang == kInherit ? source.language : lang.size == 0 ? PrLocale(0) : prLocaleFromTag(lang);
     PrTextDirection direction = source.direction;
     if (s.direction == PrCanvasDirection_Ltr)
@@ -1553,7 +1553,7 @@ PrCanvasStyle prCanvasStyle(const PrCanvas* canvas, PrCanvasStyleRole role) {
     const CanvasStyleValue& style = canvas->state.styles[role];
     PrCanvasStyle out{.kind = style.kind};
     if (style.kind == PrCanvasStyleKind_Color)
-        out.color = prStringView(&style.text);
+        out.color = prRawStringView(&style.text);
     else if (style.kind == PrCanvasStyleKind_Gradient)
         out.gradient = static_cast<PrCanvasGradient*>(style.gradient);
     else
@@ -1563,7 +1563,7 @@ PrCanvasStyle prCanvasStyle(const PrCanvas* canvas, PrCanvasStyleRole role) {
 
 void prCanvasSetStyleColor(PrCanvas* canvas, PrCanvasStyleRole role, PrStringView color) {
     PrColor parsed{};
-    PrString text = prStringNull();
+    PrRawString text = prRawStringNull();
     if (!parseColor(color, canvas->element, &parsed, &text))
         return;
     CanvasStyleValue* style = &canvas->state.styles[role];
@@ -1606,28 +1606,28 @@ void prCanvasSetShadowBlur(PrCanvas* canvas, double value) {
 }
 
 PrStringView prCanvasShadowColor(const PrCanvas* canvas) {
-    return prStringView(&canvas->state.shadowText);
+    return prRawStringView(&canvas->state.shadowText);
 }
 
 void prCanvasSetShadowColor(PrCanvas* canvas, PrStringView value) {
     PrColor parsed{};
-    PrString text = prStringNull();
+    PrRawString text = prRawStringNull();
     if (!parseColor(value, canvas->element, &parsed, &text))
         return;
-    prStringReset(&canvas->state.shadowText);
+    prRawStringReset(&canvas->state.shadowText);
     canvas->state.shadowText = text;
     canvas->state.shadowColor = parsed;
 }
 
 PrStringView prCanvasFilter(const PrCanvas* canvas) {
-    return prStringView(&canvas->state.filterText);
+    return prRawStringView(&canvas->state.filterText);
 }
 
 void prCanvasSetFilter(PrCanvas* canvas, PrStringView value) {
-    Array<PrLayoutFilter>& filters = canvas->state.filters;
+    RawArray<PrLayoutFilter>& filters = canvas->state.filters;
     if (value == kNone) {
         filters.clear();
-        prStringReplace(&canvas->state.filterText, value);
+        prRawStringReplace(&canvas->state.filterText, value);
         return;
     }
     uint32_t count = 0;
@@ -1635,7 +1635,7 @@ void prCanvasSetFilter(PrCanvas* canvas, PrStringView value) {
         return;
     filters.resize(count);
     prCssParseFilterList(value, canvas->element, filters.data, count, &count);
-    prStringReplace(&canvas->state.filterText, value);
+    prRawStringReplace(&canvas->state.filterText, value);
 }
 
 void prCanvasClearRect(PrCanvas* canvas, double x, double y, double w, double h) {
@@ -1956,7 +1956,7 @@ void prCanvasSetLineDash(PrCanvas* canvas, const double* PR_NULLABLE segments, u
         if (!canvasIsFinite(segments[i]) || segments[i] < 0)
             return;
     }
-    Array<double>& dashes = canvas->state.dashes;
+    RawArray<double>& dashes = canvas->state.dashes;
     dashes.clear();
     if (count == 0)
         return;
@@ -1983,11 +1983,11 @@ void prCanvasSetLineDashOffset(PrCanvas* canvas, double value) {
 }
 
 PrStringView prCanvasLang(const PrCanvas* canvas) {
-    return prStringView(&canvas->state.lang);
+    return prRawStringView(&canvas->state.lang);
 }
 
 void prCanvasSetLang(PrCanvas* canvas, PrStringView value) {
-    prStringReplace(&canvas->state.lang, value);
+    prRawStringReplace(&canvas->state.lang, value);
 }
 
 PrStringView prCanvasFont(const PrCanvas* canvas) {
@@ -2027,26 +2027,26 @@ void prCanvasSetDirection(PrCanvas* canvas, PrCanvasDirection value) {
 }
 
 PrStringView prCanvasLetterSpacing(const PrCanvas* canvas) {
-    return prStringView(&canvas->state.letterSpacing.text);
+    return prRawStringView(&canvas->state.letterSpacing.text);
 }
 
 void prCanvasSetLetterSpacing(PrCanvas* canvas, PrStringView value) {
     CanvasSpacing spacing{};
     if (!parseSpacing(value, &spacing))
         return;
-    prStringReset(&canvas->state.letterSpacing.text);
+    prRawStringReset(&canvas->state.letterSpacing.text);
     canvas->state.letterSpacing = spacing;
 }
 
 PrStringView prCanvasWordSpacing(const PrCanvas* canvas) {
-    return prStringView(&canvas->state.wordSpacing.text);
+    return prRawStringView(&canvas->state.wordSpacing.text);
 }
 
 void prCanvasSetWordSpacing(PrCanvas* canvas, PrStringView value) {
     CanvasSpacing spacing{};
     if (!parseSpacing(value, &spacing))
         return;
-    prStringReset(&canvas->state.wordSpacing.text);
+    prRawStringReset(&canvas->state.wordSpacing.text);
     canvas->state.wordSpacing = spacing;
 }
 

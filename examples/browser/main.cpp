@@ -63,11 +63,11 @@ constexpr PrJsHtmlConsolePrinter kConsolePrinter = {printConsole};
 
 // Returns the directory `name` under `root`, a directory that the platform names, which this releases, or the empty
 // string if the platform names none.
-std::string userDirectory(PrString root, const char* name) {
+std::string userDirectory(PrRawString root, const char* name) {
     std::string directory;
-    if (!prStringIsEmpty(&root))
-        directory = std::string(prStringView(&root).data, prStringView(&root).size) + "/Prax/Browser/" + name;
-    prStringReset(&root);
+    if (!prRawStringIsEmpty(&root))
+        directory = std::string(prRawStringView(&root).data, prRawStringView(&root).size) + "/Prax/Browser/" + name;
+    prRawStringReset(&root);
     return directory;
 }
 

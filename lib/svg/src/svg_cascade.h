@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/hash_index.h"
+#include "pr/raw_array.h"
 #include "pr/svg_render.h"
 
 #include "css/src/css_cascade.h"
@@ -30,14 +30,14 @@ struct SvgCascadeEntry {
 // The rules of a document and the styles computed from them.
 struct SvgCascade {
     PrDomDocument* document;
-    Array<CssSheetData*> userAgent;     // SVG's sheet, then the host's rule for the root
+    RawArray<CssSheetData*> userAgent;     // SVG's sheet, then the host's rule for the root
     CssRuleSet userAgentRules;
     CssRuleSet rules;
     CssStyleTable table;
     CssStyleBuilder builder;
     CssCascadeScratch scratch;
     CssViewport viewport;               // what viewport-relative lengths resolve against
-    Array<SvgCascadeEntry> styles;
+    RawArray<SvgCascadeEntry> styles;
     KeyIndex index;                     // `styles` by the address of their elements
     CssFontBases rootFont;              // the root's font bases, known once the root is styled
 };

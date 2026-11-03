@@ -23,12 +23,12 @@ typedef CssCountingBoundary Boundary;
 // The state of one run of the pass, which works in the presentation's scratch arrays (CssCountingScratch).
 struct Pass {
     PrCssPresentation* presentation;
-    Array<Step>& steps;
-    Array<Counter>& counters;
+    RawArray<Step>& steps;
+    RawArray<Counter>& counters;
     CssCountingTexts& texts;
     PrTextBuffer& text;
     const CssStyleValues* initial;  // the initial Generated group, whose counter properties change no counter
-    Array<Boundary>& boundaries;    // innermost last
+    RawArray<Boundary>& boundaries; // innermost last
     uint32_t found;                 // the listed changes (counterChanges) among the elements collected
     uint32_t quoteDepth;            // the quote depth (css-content-3/#quote-depth)
 };
@@ -501,7 +501,7 @@ bool collect(Pass& p, const PrDomElement* element, uint32_t depth, CssCountingWa
 // Returns the depth of the deepest element of the chain that holds `node`, or UINT32_MAX if the chain holds `node`
 // itself or none of its ancestors, so that `node` may come before the chain's points.
 uint32_t chainDepthOf(const CssCountingResume& resume, const PrDomNode* node) {
-    const Array<const PrDomElement*>& chain = resume.chain;
+    const RawArray<const PrDomElement*>& chain = resume.chain;
     for (uint32_t k = 0; k < chain.count; ++k) {
         if (chain.data[k] == node)
             return UINT32_MAX;
@@ -541,7 +541,7 @@ void collectFrom(Pass& p, const CssCountingResume& resume, uint32_t from) {
 // Sets the counters, boundaries and quote depth of the pass to those of `point`, with the counters' names copied into
 // the scratch names, which hold them for the run.
 void restorePoint(Pass& p, const CssCountingPoint& point) {
-    Array<char>& names = p.presentation->counterScratch.names;
+    RawArray<char>& names = p.presentation->counterScratch.names;
     names.clear();
     names.reserve(point.names.count);
     p.counters.clear();
@@ -598,10 +598,10 @@ bool isAfter(const Step& step) {
 // before which the element closes, which is its ::after, or its end. Writes the step of each depth's point to `at` by
 // depth, from the root's, and returns the number of points. Sets `*last` to the element whose point is the deepest, if
 // the steps hold its own step, and to null if they start at that point, so that the chain below it is the last run's.
-uint32_t closingPoints(const Pass& p, Array<uint32_t>& at, const PrDomElement* PR_NULLABLE* last) {
+uint32_t closingPoints(const Pass& p, RawArray<uint32_t>& at, const PrDomElement* PR_NULLABLE* last) {
     at.clear();
     *last = nullptr;
-    const Array<Step>& steps = p.steps;
+    const RawArray<Step>& steps = p.steps;
     if (steps.count == 0 || steps.last().node != nullptr || steps.last().depth != 0)
         return 0;
     uint32_t i = steps.count - 1;
@@ -779,7 +779,7 @@ void cssCountersRun(PrCssPresentation* presentation, CssCountingWalk walk, CssCo
         collect(p, root, 0, walk);
     // The points of the chain that the steps end with, which the run keeps for the next. A run that starts past the
     // root keeps the points below where it starts, and the chain there, unless it walks a new chain's elements.
-    Array<uint32_t>& points = scratch.points;
+    RawArray<uint32_t>& points = scratch.points;
     const PrDomElement* last = nullptr;
     uint32_t pointCount = participants ? closingPoints(p, points, &last) : 0;
     if (participants && last != nullptr)

@@ -2,7 +2,7 @@
 
 #include "css/src/css_grid.h"
 
-#include "pr/array.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 
@@ -21,7 +21,7 @@ struct NamedCells {
 } // namespace
 
 bool cssGridAreasFold(CssValuePool* pool, uint32_t first, uint32_t count) {
-    Array<NamedCells> names;
+    RawArray<NamedCells> names;
     uint32_t rows = 0;
     uint32_t columns = 0;
     bool valid = true;
@@ -60,7 +60,7 @@ bool cssGridAreasFold(CssValuePool* pool, uint32_t first, uint32_t count) {
     if (!valid)
         return false;
     // The canonical text of each string goes onto the end of the pool's text, which its value then names.
-    Array<char> text;
+    RawArray<char> text;
     for (uint32_t i = first; i < first + count; i += pool->values.data[i].next) {
         if (pool->values.data[i].kind != PrCssValueKind_String)
             continue;

@@ -9,12 +9,12 @@
 #include "media/src/media_source_decoder.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/float.h"
 #include "pr/media_audio.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/thread.h"
 
 namespace pr_impl {
@@ -50,7 +50,7 @@ struct SourceDecoder : PrMediaDecoder {
     PrCondition wake;
 
     // Guarded by `mutex`.
-    Array<SourceImage> images;      // in presentation order
+    RawArray<SourceImage> images;   // in presentation order
     double wanted;                  // the time last asked for
     double jumpTo;                  // a time to restart decoding at, or NaN
     double lastDecode;              // the decode timestamp of the last frame decoded, or NaN before the first
@@ -93,7 +93,7 @@ void releaseImages(SourceDecoder* d) {
 
 // Collects the images that a frame decodes to, for the video thread to keep.
 struct ImageSink {
-    Array<SourceImage> images;
+    RawArray<SourceImage> images;
 };
 
 void receiveImage(void* PR_NULLABLE context, void* image, double presentation) {
@@ -180,7 +180,7 @@ void decodeVideo(SourceDecoder* d) {
 
 // Collects the samples that a frame decodes to, for the audio thread to write to its queue.
 struct SampleSink {
-    Array<float> samples;
+    RawArray<float> samples;
     uint32_t channels;
     double time;                    // where the first sample lies, once `timed`
     bool timed;

@@ -1,12 +1,12 @@
 #include "image/backends/builtin/src/png.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/checksum.h"
 #include "pr/compress.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 #include "image/backends/builtin/src/metadata.h"
 
@@ -71,9 +71,9 @@ struct PngFrame {
 struct PngAnimation {
     PrCompressCodec* codec;
     Png png;
-    Array<PngFrame> frames;
-    Array<Chunk> chunks;
-    Array<Chunk> cover;
+    RawArray<PngFrame> frames;
+    RawArray<Chunk> chunks;
+    RawArray<Chunk> cover;
     uint8_t* pixels;
     uint8_t* previous;
     uint8_t* framePixels;
@@ -176,7 +176,7 @@ void readPhys(const Chunk& chunk, ImageMetadata* out) {
 
 // Walks the chunk sequence, collecting the header, the palette, the transparency and every run of pixel data. Returns
 // false for a chunk structure that runs past the bytes or has no header (png 5.3).
-bool readChunks(Png& png, Array<Chunk>& data, const uint8_t* bytes, size_t size) {
+bool readChunks(Png& png, RawArray<Chunk>& data, const uint8_t* bytes, size_t size) {
     size_t at = sizeof(kSignature);
     bool header = false;
     while (at + 8 <= size) {
@@ -942,7 +942,7 @@ bool pngDecode(PrCompressCodec* codec, PrByteView bytes, uint8_t* pixels, size_t
         }
     }
     Png png = {};
-    Array<Chunk> data;
+    RawArray<Chunk> data;
     bool ok = readChunks(png, data, bytes.data, bytes.size);
     ok = ok && uint64_t(png.width) * uint64_t(png.height) * outputChannelsOf(png) * outputSampleBytesOf(png) ==
         uint64_t(pixelsSize);

@@ -231,9 +231,9 @@ void setSanitized(PrDomElement* input, PrStringView text) {
 void sanitize(PrDomElement* input) {
     const DomControl* control = domControl(input);
     if (control != nullptr && control->dirtyValue) {
-        PrString value = prStringCopy(domControlText(control));
-        setSanitized(input, prStringView(&value));
-        prStringReset(&value);
+        PrRawString value = prRawStringCopy(domControlText(control));
+        setSanitized(input, prRawStringView(&value));
+        prRawStringReset(&value);
     } else {
         setSanitized(input, domAttributeValue(input, "value"));
     }
@@ -314,7 +314,7 @@ void removeFromForm(PrDomElement* form, const PrDomElement* element) {
     }
     for (uint32_t i = record->pastNames.count; i-- != 0;) {
         if (record->pastNames.data[i].element == element) {
-            prStringReset(&record->pastNames.data[i].name);
+            prRawStringReset(&record->pastNames.data[i].name);
             record->pastNames.erase(i);
         }
     }
@@ -342,12 +342,12 @@ void setOwner(PrDomElement* element, PrDomElement* PR_NULLABLE form) {
 }
 
 // Returns the document's list of listed elements with a form attribute.
-Array<PrDomElement* PR_NONNULL>& formAttributedOf(PrDomDocument* document) {
+RawArray<PrDomElement* PR_NONNULL>& formAttributedOf(PrDomDocument* document) {
     return document->formAttributed;
 }
 
 void forgetFormAttributed(PrDomElement* element) {
-    Array<PrDomElement* PR_NONNULL>& list = formAttributedOf(element->document);
+    RawArray<PrDomElement* PR_NONNULL>& list = formAttributedOf(element->document);
     for (uint32_t i = 0; i < list.count; ++i) {
         if (list.data[i] == element) {
             list.erase(i);
@@ -359,7 +359,7 @@ void forgetFormAttributed(PrDomElement* element) {
 // Resets the form owners of the connected controls of the document with a form attribute, after an ID of the document
 // changed.
 void resetFormAttributed(PrDomDocument* document) {
-    Array<PrDomElement* PR_NONNULL>& list = formAttributedOf(document);
+    RawArray<PrDomElement* PR_NONNULL>& list = formAttributedOf(document);
     for (uint32_t i = 0; i < list.count; ++i) {
         if (domIsConnected(list.data[i]))
             domFormResetOwner(list.data[i]);
@@ -370,7 +370,7 @@ void resetFormAttributed(PrDomDocument* document) {
 void appendChildText(const PrDomElement* element, PrTextBuffer* out) {
     for (const PrDomNode* child = element->first; child != nullptr; child = child->next) {
         if (child->type == PrDomNodeType_Text || child->type == PrDomNodeType_CdataSection)
-            prTextBufferAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
+            prTextBufferAppend(out, prRawStringView(&static_cast<const PrDomCharacterData*>(child)->data));
     }
 }
 
@@ -407,15 +407,15 @@ void domEntryListRelease(DomEntryList* PR_NULLABLE list) {
     if (list == nullptr || --list->references != 0)
         return;
     for (uint32_t i = 0; i < list->entries.count; ++i) {
-        prStringReset(&list->entries.data[i].name);
-        prStringReset(&list->entries.data[i].value);
+        prRawStringReset(&list->entries.data[i].name);
+        prRawStringReset(&list->entries.data[i].value);
     }
     list->entries.reset();
     prMemoryFree(list);
 }
 
 void domEntryListAppend(DomEntryList* list, PrStringView name, PrStringView value) {
-    list->entries.push(DomEntry{prStringCopy(name), prStringCopy(value)});
+    list->entries.push(DomEntry{prRawStringCopy(name), prRawStringCopy(value)});
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -544,18 +544,18 @@ const DomControl* PR_NULLABLE domControl(const PrDomElement* element) {
 void domFormRememberName(PrDomElement* form, PrStringView name, PrDomElement* element) {
     DomForm* record = domFormFromElement(form);
     for (uint32_t i = 0; i < record->pastNames.count; ++i) {
-        if (prStringView(&record->pastNames.data[i].name) == name) {
+        if (prRawStringView(&record->pastNames.data[i].name) == name) {
             record->pastNames.data[i].element = element;
             return;
         }
     }
-    record->pastNames.push(DomPastName{prStringCopy(name), element});
+    record->pastNames.push(DomPastName{prRawStringCopy(name), element});
 }
 
 PrDomElement* PR_NULLABLE domFormPastName(const PrDomElement* form, PrStringView name) {
     const DomForm* record = form->state != nullptr ? form->state->form : nullptr;
     for (uint32_t i = 0; record != nullptr && i < record->pastNames.count; ++i) {
-        if (prStringView(&record->pastNames.data[i].name) == name)
+        if (prRawStringView(&record->pastNames.data[i].name) == name)
             return record->pastNames.data[i].element;
     }
     return nullptr;
@@ -664,7 +664,7 @@ bool domControlValueEmpty(const PrDomElement* element) {
         if (control != nullptr && control->dirtyValue)
             return domControlText(control).size == 0;
         for (const PrDomNode* child = element->first; child != nullptr; child = child->next) {
-            if (domIsText(child) && !prStringIsEmpty(&static_cast<const PrDomCharacterData*>(child)->data))
+            if (domIsText(child) && !prRawStringIsEmpty(&static_cast<const PrDomCharacterData*>(child)->data))
                 return false;
         }
         return true;
@@ -1097,9 +1097,9 @@ void domControlAttributeChanged(PrDomElement* element, PrStringView name, PrStri
         DomControl* control = domControlFromElement(element);
         if (previous == DomValueMode_Value && (mode == DomValueMode_Default || mode == DomValueMode_DefaultOn)) {
             if (domControlText(control).size != 0) {
-                PrString value = prStringCopy(domControlText(control));
-                domSetAttribute(element, PrDomNamespace_None, "value", prStringView(&value));
-                prStringReset(&value);
+                PrRawString value = prRawStringCopy(domControlText(control));
+                domSetAttribute(element, PrDomNamespace_None, "value", prRawStringView(&value));
+                prRawStringReset(&value);
             }
         } else if (previous != DomValueMode_Value && mode == DomValueMode_Value) {
             domControlSetText(control, "");
@@ -1164,7 +1164,7 @@ void domControlDestroy(PrDomElement* element) {
         prTextEditHistoryDestroy(control->history);
         prTextEditViewDestroy(control->view);
         prTextEditBufferDestroy(control->text);
-        prStringReset(&control->defaultOverride);
+        prRawStringReset(&control->defaultOverride);
         prMemoryFree(control);
         state->control = nullptr;
     }
@@ -1173,7 +1173,7 @@ void domControlDestroy(PrDomElement* element) {
             form->controls.data[i]->state->control->form = nullptr;
         form->controls.reset();
         for (uint32_t i = 0; i < form->pastNames.count; ++i)
-            prStringReset(&form->pastNames.data[i].name);
+            prRawStringReset(&form->pastNames.data[i].name);
         form->pastNames.reset();
         prMemoryFree(form);
         state->form = nullptr;
@@ -1189,7 +1189,7 @@ void domControlAdopted(PrDomElement* element, PrDomDocument* from) {
     if (!domIsFormAssociated(element) && !domIsHtml(element, PrDomTag_Form))
         return;
     element->document->controls = true;
-    Array<PrDomElement* PR_NONNULL>& list = from->formAttributed;
+    RawArray<PrDomElement* PR_NONNULL>& list = from->formAttributed;
     for (uint32_t i = 0; i < list.count; ++i) {
         if (list.data[i] == element) {
             list.erase(i);

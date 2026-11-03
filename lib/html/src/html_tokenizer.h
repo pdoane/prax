@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "pr/array.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 
@@ -26,7 +26,7 @@ namespace pr_impl {
 // A token refers to bytes of the copy by offset. An insertion at the read point moves nothing before that point, so an
 // offset stays valid across an insertion.
 struct HtmlInput {
-    Array<char> text;
+    RawArray<char> text;
     uint32_t pos;            // the next byte to read
 
     // If the last inserted text ended with a carriage return, the position just past the newline that it became. A line
@@ -118,15 +118,15 @@ struct HtmlTokenizer {
     HtmlInput input;
 
     // The text of a token if it is not the input's own bytes. Spans with kHtmlSpanValues set point into it.
-    Array<char> values;
+    RawArray<char> values;
 
-    HtmlToken token;                    // written by htmlTokenizerNext
-    Array<HtmlAttribute> attributes;    // the attributes of the start tag being read, in written order
-    Array<HtmlError>* errors;           // the caller's list of errors, set by htmlTokenizerStart
+    HtmlToken token;                       // written by htmlTokenizerNext
+    RawArray<HtmlAttribute> attributes;    // the attributes of the start tag being read, in written order
+    RawArray<HtmlError>* errors;           // the caller's list of errors, set by htmlTokenizerStart
 
     // The tag that an end tag must match to be appropriate (html/#tokenization). This is the element whose content the
     // state was entered for.
-    PrString lastStartTag;
+    PrRawString lastStartTag;
 
     // The number of input bytes whose code point errors (html/#preprocessing-the-input-stream) have been reported.
     uint32_t checked;
@@ -149,7 +149,7 @@ struct HtmlTokenizer {
 // Tokenizes `source`, replacing the tokenizer's previous input. `source` may be any bytes, and an ill-formed UTF-8
 // sequence in it is read as U+FFFD. Errors are appended to `errors`, which the caller owns and which must outlive the
 // tokenizing.
-void htmlTokenizerStart(HtmlTokenizer* tokenizer, PrStringView source, Array<HtmlError>* errors);
+void htmlTokenizerStart(HtmlTokenizer* tokenizer, PrStringView source, RawArray<HtmlError>* errors);
 
 // Reads the next token. At the end of the input, and at every call after it, the token is HtmlTokenKind_Eof. A
 // character token holds every character that the state read in one run. Returns false, with nothing read, if the input

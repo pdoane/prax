@@ -4,7 +4,7 @@
 #pragma once
 
 #include "pr/base.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 #include <string>
@@ -19,9 +19,9 @@ inline std::string stringOf(PrStringView text) {
 }
 
 // Returns a copy of the string's text, and releases the string.
-inline std::string takeString(PrString* string) {
-    std::string text = stringOf(prStringView(string));
-    prStringReset(string);
+inline std::string takeString(PrRawString* string) {
+    std::string text = stringOf(prRawStringView(string));
+    prRawStringReset(string);
     return text;
 }
 

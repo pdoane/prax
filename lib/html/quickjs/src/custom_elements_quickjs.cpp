@@ -25,10 +25,10 @@ struct Registry;
 // prototype, each lifecycle callback by name, and its construction stack. An entry of the stack for an element that has
 // already been constructed is null.
 struct Definition {
-    PrString name;              // its name, which is its local name, as for an autonomous custom element
-    Array<PrString> observed;   // html/#concept-custom-element-definition-observed-attributes
-    uint32_t index;             // the index of its object among the registry's objects
-    bool callbacks[4];          // true for each lifecycle callback that it has, indexed by PrDomCustomCallback
+    PrRawString name;               // its name, which is its local name, as for an autonomous custom element
+    RawArray<PrRawString> observed; // html/#concept-custom-element-definition-observed-attributes
+    uint32_t index;                 // the index of its object among the registry's objects
+    bool callbacks[4];              // true for each lifecycle callback that it has, indexed by PrDomCustomCallback
     bool disableInternals;
     bool disableShadow;
     bool formAssociated;
@@ -41,7 +41,7 @@ struct Registry {
     JSContext* ctx;
     JSValue object;             // the registry's object, which it does not keep alive
     PrHtmlWindow* window;
-    Array<Definition*> definitions;
+    RawArray<Definition*> definitions;
     bool running;               // html/#element-definition-is-running
 };
 
@@ -62,7 +62,7 @@ constexpr const char* kFormCallbackNames[] = {
 };
 
 void definitionDestroy(Definition* definition) {
-    prStringReset(&definition->name);
+    prRawStringReset(&definition->name);
     stringsReset(&definition->observed);
     prMemoryFree(definition);
 }
@@ -109,7 +109,7 @@ Registry* PR_NULLABLE currentRegistry(JSContext* ctx) {
 
 Definition* PR_NULLABLE definitionNamed(const Registry* registry, PrStringView name) {
     for (uint32_t i = 0; i < registry->definitions.count; ++i) {
-        if (prStringView(&registry->definitions.data[i]->name) == name)
+        if (prRawStringView(&registry->definitions.data[i]->name) == name)
             return registry->definitions.data[i];
     }
     return nullptr;
@@ -141,7 +141,7 @@ bool observes(void* PR_NULLABLE, void* definition, PrDomCustomCallback callback,
     if (callback != PrDomCustomCallback_AttributeChanged)
         return true;
     for (uint32_t i = 0; i < held->observed.count; ++i) {
-        if (prStringView(&held->observed.data[i]) == name)
+        if (prRawStringView(&held->observed.data[i]) == name)
             return true;
     }
     return false;
@@ -257,13 +257,13 @@ void queueMicrotask(void* PR_NULLABLE context, void (*run)(void* data), void* da
 // CustomElementRegistry (html/#customelementregistry)
 
 // Reads the strings of a sequence<DOMString> argument. Returns false, with the exception pending, on failure.
-bool stringSequence(JSContext* ctx, JSValueConst value, Array<PrString>* out) {
+bool stringSequence(JSContext* ctx, JSValueConst value, RawArray<PrRawString>* out) {
     return jsSequence(ctx, value, [&](JSValue item) {
         StringArgument text = {ctx};
         bool read = text.read(item);
         JS_FreeValue(ctx, item);
         if (read)
-            out->push(prStringCopy(text.value()));
+            out->push(prRawStringCopy(text.value()));
         return read;
     });
 }
@@ -331,13 +331,13 @@ JSValue define(JSContext* ctx, JSValueConst registryObject, int argc, JSValueCon
         JS_FreeValue(ctx, observed);
     }
     if (ok) {
-        Array<PrString> disabled;
+        RawArray<PrRawString> disabled;
         JSValue features = JS_GetPropertyStr(ctx, constructor, "disabledFeatures");
         ok = !JS_IsException(features) && (JS_IsUndefined(features) || stringSequence(ctx, features, &disabled));
         JS_FreeValue(ctx, features);
         for (uint32_t i = 0; i < disabled.count; ++i) {
-            definition->disableInternals |= prStringView(&disabled.data[i]) == "internals";
-            definition->disableShadow |= prStringView(&disabled.data[i]) == "shadow";
+            definition->disableInternals |= prRawStringView(&disabled.data[i]) == "internals";
+            definition->disableShadow |= prRawStringView(&disabled.data[i]) == "shadow";
         }
         stringsReset(&disabled);
     }
@@ -362,7 +362,7 @@ JSValue define(JSContext* ctx, JSValueConst registryObject, int argc, JSValueCon
     JS_SetPropertyStr(ctx, holder, "constructor", JS_DupValue(ctx, constructor));
     JS_SetPropertyStr(ctx, holder, "prototype", prototype);
     JS_SetPropertyStr(ctx, holder, "stack", JS_NewArray(ctx));
-    definition->name = prStringCopy(name.value());
+    definition->name = prRawStringCopy(name.value());
     definition->index = registry->definitions.count;
     JSValue definitions = jsReference(ctx, registryObject, kDefinitionsSlot);
     JS_SetPropertyUint32(ctx, definitions, definition->index, holder);
@@ -693,7 +693,7 @@ JSValue jsCustomElementsConstruct(JSContext* ctx, JSValueConst newTarget, int, J
     JSValue element;
     if (depth == 0) {
         PrDomDocument* document = prHtmlWindowDocument(registry->window);
-        PrDomElement* made = prDomElementCreateCustom(document, prStringView(&definition->name), definition);
+        PrDomElement* made = prDomElementCreateCustom(document, prRawStringView(&definition->name), definition);
         element = elementToJs(ctx, made);
         prDomNodeRelease(prDomElementAsNode(made));
     } else {

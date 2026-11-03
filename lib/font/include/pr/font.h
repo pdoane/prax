@@ -11,8 +11,8 @@
 #include "pr/compress.h"
 #include "pr/geom.h"
 #include "pr/path.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/vec.h"
 
@@ -151,8 +151,8 @@ uint32_t prFontIndex(const PrFont* font);
 
 // Returns the family and style names from the name table of the font. The typographic names are preferred if the table
 // has them.
-PrString prFontFamilyName(const PrFont* font);
-PrString prFontStyleName(const PrFont* font);
+PrRawString prFontFamilyName(const PrFont* font);
+PrRawString prFontStyleName(const PrFont* font);
 
 // Returns the factor that scales the outlines and metrics of the font. It is one for a font made from a file.
 float prFontSizeAdjust(const PrFont* font);

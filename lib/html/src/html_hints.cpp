@@ -781,7 +781,7 @@ bool hasOwn(const PrDomElement* element) {
     if (element->tag == PrDomTag_Center)
         return true;
     for (const PrDomNode* node = element->firstAttribute; node != nullptr; node = node->next) {
-        if (mapsOwn(element, prStringView(&static_cast<const PrDomAttr*>(node)->name)))
+        if (mapsOwn(element, prRawStringView(&static_cast<const PrDomAttr*>(node)->name)))
             return true;
     }
     return false;
@@ -838,7 +838,7 @@ bool htmlParseLegacyColor(PrStringView text, PrColor8* out) {
     }
     // Steps 6 to 10: a code point past U+FFFF becomes "00", at most 128 code units are kept, a leading '#' goes, any
     // other character becomes '0', and zeros pad the digits to a multiple of three.
-    Array<char> digits;
+    RawArray<char> digits;
     for (size_t i = 0; i < input.size && digits.count < 128;) {
         uint8_t byte = uint8_t(input.data[i]);
         size_t length = byte < 0x80 ? 1 : byte < 0xe0 ? 2 : byte < 0xf0 ? 3 : 4;

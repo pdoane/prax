@@ -3,11 +3,11 @@
 #include "pr/tls_apple.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/mem.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/thread.h"
 
 #include <Network/Network.h>
@@ -61,10 +61,10 @@ struct AppleSession : PrTlsSession {
     PrNetError error;
     PrTlsFailure failure;
     PrTlsVersion version;
-    PrString protocol;
-    Array<uint8_t> received;        // plaintext that arrived, from `receivedStart`
+    PrRawString protocol;
+    RawArray<uint8_t> received;        // plaintext that arrived, from `receivedStart`
     uint32_t receivedStart;
-    Array<uint8_t> unsent;          // plaintext written before the handshake completed
+    RawArray<uint8_t> unsent;       // plaintext written before the handshake completed
     size_t sending;                 // bytes handed to Network.framework whose send has not completed
     bool receiving;                 // true while a receive has not completed
     bool ended;
@@ -87,8 +87,8 @@ struct Delivery {
     PrNetError error;
     PrTlsFailure failure;
     PrTlsVersion version;
-    PrString protocol;
-    Array<uint8_t> bytes;
+    PrRawString protocol;
+    RawArray<uint8_t> bytes;
     size_t sent;
     bool complete;                  // true if the peer ended
 };
@@ -105,7 +105,7 @@ void release(AppleSession* session) {
     CFRelease(session->serverName);
     if (session->anchors != nullptr)
         CFRelease(session->anchors);
-    prStringReset(&session->protocol);
+    prRawStringReset(&session->protocol);
     session->received.reset();
     session->unsent.reset();
     prMemoryFree(session);
@@ -230,7 +230,7 @@ void run(void* PR_NULLABLE context) {
                 session->state = SessionState_Open;
                 session->version = delivery->version;
                 session->protocol = delivery->protocol;
-                delivery->protocol = prStringNull();
+                delivery->protocol = prRawStringNull();
                 if (session->unsent.count != 0) {
                     send(session, session->unsent.data, session->unsent.count);
                     session->unsent.reset();
@@ -270,7 +270,7 @@ void run(void* PR_NULLABLE context) {
                 break;
         }
     }
-    prStringReset(&delivery->protocol);
+    prRawStringReset(&delivery->protocol);
     delivery->bytes.reset();
     prMemoryFree(delivery);
     release(session);
@@ -324,7 +324,7 @@ void stateChanged(AppleSession* session, nw_connection_state_t state, nw_error_t
                     size_t size = 0;
                     while (protocol[size] != 0)
                         ++size;
-                    delivery->protocol = prStringCopy(PrStringView{protocol, size});
+                    delivery->protocol = prRawStringCopy(PrStringView{protocol, size});
                     free(protocol);
                 }
                 sec_release(secure);
@@ -428,7 +428,7 @@ PrTlsSessionInfo infoSession(const PrTlsSession* base) {
     return PrTlsSessionInfo{
         .version = session->version,
         .failure = session->failure,
-        .protocol = prStringView(&session->protocol),
+        .protocol = prRawStringView(&session->protocol),
     };
 }
 

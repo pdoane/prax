@@ -4,7 +4,7 @@
 #include "core/tests/test_platform_config.h"
 
 #include "pr/memory.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 
 #include "doctest/doctest.h"
 
@@ -80,10 +80,10 @@ TEST_CASE("a configured build allocates through the configured functions") {
 
 TEST_CASE("the C API allocates through the configured functions") {
     size_t before = allocations;
-    PrString string = prStringCopy("a string too long to be stored inline in the string itself");
+    PrRawString string = prRawStringCopy("a string too long to be stored inline in the string itself");
     CHECK(allocations == before + 1);
-    CHECK(prStringView(&string) == "a string too long to be stored inline in the string itself");
-    prStringReset(&string);
+    CHECK(prRawStringView(&string) == "a string too long to be stored inline in the string itself");
+    prRawStringReset(&string);
 }
 
 TEST_CASE("a configured build without zeroed allocation zeroes after allocating") {

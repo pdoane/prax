@@ -311,23 +311,23 @@ void hold(PrDomElement* PR_NULLABLE element) {
         domNodeRetain(element);
 }
 
-void pushHeld(Array<PrDomElement* PR_NULLABLE>* list, PrDomElement* PR_NULLABLE element) {
+void pushHeld(RawArray<PrDomElement* PR_NULLABLE>* list, PrDomElement* PR_NULLABLE element) {
     hold(element);
     list->push(element);
 }
 
-void insertHeld(Array<PrDomElement* PR_NULLABLE>* list, uint32_t index, PrDomElement* element) {
+void insertHeld(RawArray<PrDomElement* PR_NULLABLE>* list, uint32_t index, PrDomElement* element) {
     hold(element);
     list->insert(index, element);
 }
 
-void eraseHeld(Array<PrDomElement* PR_NULLABLE>* list, uint32_t index) {
+void eraseHeld(RawArray<PrDomElement* PR_NULLABLE>* list, uint32_t index) {
     PrDomElement* PR_NULLABLE element = list->data[index];
     list->erase(index);
     domNodeRelease(element);
 }
 
-void replaceHeld(Array<PrDomElement* PR_NULLABLE>* list, uint32_t index, PrDomElement* element) {
+void replaceHeld(RawArray<PrDomElement* PR_NULLABLE>* list, uint32_t index, PrDomElement* element) {
     hold(element);
     domNodeRelease(list->data[index]);
     list->data[index] = element;
@@ -484,8 +484,8 @@ void eraseFormatting(HtmlParser* p, uint32_t index) {
     HtmlFormatting entry = p->formatting.data[index];
     p->formatting.erase(index);
     for (uint32_t i = 0; i < entry.attributeCount; ++i) {
-        prStringReset(&entry.attributes[i].name);
-        prStringReset(&entry.attributes[i].value);
+        prRawStringReset(&entry.attributes[i].name);
+        prRawStringReset(&entry.attributes[i].value);
     }
     prMemoryFree(entry.attributes);
     domNodeRelease(entry.element);
@@ -511,8 +511,8 @@ bool attributesEquals(const HtmlFormatting& a, const HtmlFormatting& b) {
         bool found = false;
         for (uint32_t j = 0; j < b.attributeCount && !found; ++j) {
             const HtmlTokenAttribute& two = b.attributes[j];
-            found = prStringView(&one.name) == prStringView(&two.name) &&
-                prStringView(&one.value) == prStringView(&two.value);
+            found = prRawStringView(&one.name) == prRawStringView(&two.name) &&
+                prRawStringView(&one.value) == prRawStringView(&two.value);
         }
         if (!found)
             return false;
@@ -523,14 +523,14 @@ bool attributesEquals(const HtmlFormatting& a, const HtmlFormatting& b) {
 // html/#push-onto-the-list-of-active-formatting-elements, for the element that the current start tag created, with that
 // tag's attributes. The Noah's Ark clause allows at most three entries with the same name, namespace and attributes.
 void pushFormatting(Tree* t, PrDomElement* element) {
-    const Array<HtmlAttribute>& given = t->p->tokenizer.attributes;
+    const RawArray<HtmlAttribute>& given = t->p->tokenizer.attributes;
     HtmlFormatting entry = {element, nullptr, given.count};
     if (given.count != 0) {
         entry.attributes = static_cast<HtmlTokenAttribute*>(prMemoryAlloc(sizeof(HtmlTokenAttribute) * given.count));
         for (uint32_t i = 0; i < given.count; ++i)
             entry.attributes[i] = HtmlTokenAttribute{
-                prStringCopy(text(t, given.data[i].name)),
-                prStringCopy(text(t, given.data[i].value)),
+                prRawStringCopy(text(t, given.data[i].name)),
+                prRawStringCopy(text(t, given.data[i].value)),
             };
     }
     uint32_t seen = 0;
@@ -742,8 +742,8 @@ PrDomElement* remake(HtmlParser* p, const HtmlFormatting& entry) {
     PrDomDocument* document = creationDocument(p);
     PrDomElement* element = domElementCreate(document, like->space, domElementTag(like), domElementName(like));
     for (uint32_t i = 0; i < entry.attributeCount; ++i)
-        domSetAttribute(element, PrDomNamespace_None, prStringView(&entry.attributes[i].name),
-            prStringView(&entry.attributes[i].value));
+        domSetAttribute(element, PrDomNamespace_None, prRawStringView(&entry.attributes[i].name),
+            prRawStringView(&entry.attributes[i].value));
     return element;
 }
 
@@ -879,7 +879,7 @@ bool attachDeclarativeShadow(Tree* t) {
 }
 
 void reconstructFormatting(Tree* t) {
-    const Array<HtmlFormatting>& list = t->p->formatting;
+    const RawArray<HtmlFormatting>& list = t->p->formatting;
     if (list.count == 0 || list.last().element == nullptr || isOpen(t, list.last().element))
         return;
 
@@ -1064,8 +1064,8 @@ void resetInsertionMode(Tree* t) {
 bool isHtmlIntegrationPoint(const PrDomElement* element) {
     if (element->space == PrDomNamespace_MathMl && element->tag == PrDomTag_AnnotationXml) {
         const PrDomAttr* encoding = domAttribute(element, PrDomNamespace_None, "encoding");
-        return encoding != nullptr && (prAsciiEqualsFold(prStringView(&encoding->value), "text/html") ||
-            prAsciiEqualsFold(prStringView(&encoding->value), "application/xhtml+xml"));
+        return encoding != nullptr && (prAsciiEqualsFold(prRawStringView(&encoding->value), "text/html") ||
+            prAsciiEqualsFold(prRawStringView(&encoding->value), "application/xhtml+xml"));
     }
     return isSvgIntegrationPoint(element);
 }
@@ -1470,7 +1470,7 @@ bool inBodyStart(Tree* t) {
             PrDomElement* input = insertHtmlElement(t);
             pop(t);
             const PrDomAttr* type = domAttribute(input, PrDomNamespace_None, "type");
-            if (type == nullptr || !prAsciiEqualsFold(prStringView(&type->value), "hidden"))
+            if (type == nullptr || !prAsciiEqualsFold(prRawStringView(&type->value), "hidden"))
                 t->p->framesetOk = false;
             return false;
         }

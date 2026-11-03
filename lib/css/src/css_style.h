@@ -16,13 +16,13 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/color.h"
 #include "pr/font_set.h"
 #include "pr/hash_index.h"
 #include "pr/locale.h"
 #include "pr/mutex.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text.h"
 #include "pr/text_break.h"
@@ -351,17 +351,17 @@ constexpr uint32_t kCssStyleTableParts = 1u << kCssStyleTablePartBits;
 // which guards the fields after `mutex`.
 struct CssStyleTablePart {
     PrMutex mutex;
-    Array<CssStyleValues*> groups;
+    RawArray<CssStyleValues*> groups;
     HashIndex index;
-    Array<uint32_t> free;           // indices of `groups` whose group was freed
+    RawArray<uint32_t> free;           // indices of `groups` whose group was freed
 };
 
 // One part of a table's custom property sets. It has the same structure as CssStyleTablePart.
 struct CssCustomTablePart {
     PrMutex mutex;
-    Array<CssCustomProperties*> sets;
+    RawArray<CssCustomProperties*> sets;
     HashIndex index;
-    Array<uint32_t> free;
+    RawArray<uint32_t> free;
 };
 
 // The interned groups and custom property sets, which the builders of several threads share.
@@ -384,7 +384,7 @@ constexpr uint32_t kCssStyleBuilderRecent = 16;
 struct CssStyleBuilder {
     CssStyleTable* PR_NULLABLE table;
     CssValuePool pool;              // the values of the group being built
-    Array<CssValueSpan> spans;      // the runs of those values, by slot
+    RawArray<CssValueSpan> spans;   // the runs of those values, by slot
 
     // Groups that the builder interned recently, by kind, each at the position that its hash names. The builder holds a
     // reference to each. A group that is built again is found here without taking the table's lock. Each kind has slots
@@ -431,7 +431,7 @@ void cssStyleValuesRelease(const CssStyleValues* PR_NULLABLE values);
 // Replaces `out` with the families of a computed font-family (css-fonts-4/#font-family-prop), whose names are views of
 // `names`, which the call also replaces. A keyword, alone or in generic(), is a generic family. A string or a sequence
 // of identifiers names a family, never a generic one.
-void cssFontFamilies(CssValueRun run, PrTextBuffer* names, Array<PrFontFamily>* out);
+void cssFontFamilies(CssValueRun run, PrTextBuffer* names, RawArray<PrFontFamily>* out);
 
 // Returns what the style's font-variant longhands, font-kerning, font-feature-settings and font-synthesis longhands ask
 // of the shaping of its text (css-fonts-4/#feature-variation-precedence), or null if they ask for shaping's defaults.

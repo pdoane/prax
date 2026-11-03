@@ -12,9 +12,9 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/hash_index.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_selector.h"
@@ -32,13 +32,13 @@ PrCssSelectors* PR_NULLABLE cssParseDomSelectors(PrStringView text);
 struct CssCachedSelectors {
     uint32_t hash;
     uint64_t used;              // the cache's use count at the entry's most recent use
-    PrString text;
+    PrRawString text;
     PrCssSelectors* selectors;
 };
 
 // The selector lists that a document keeps for its later queries.
 struct CssSelectorCache {
-    Array<CssCachedSelectors> entries;
+    RawArray<CssCachedSelectors> entries;
     HashIndex index;
     uint64_t uses;
 };
@@ -164,7 +164,7 @@ struct CssSelectorMatcher {
     bool quirks;
 
     // One for each selector of the list that can match an element of the document, in the list's order.
-    Array<CssSubjectFilter> subjects;
+    RawArray<CssSubjectFilter> subjects;
 
     // An ID that a compound left of the subject names, if the list is one selector and only child and descendant
     // combinators join the two compounds. The subject is a descendant of the element with that ID. The null view
@@ -175,19 +175,19 @@ struct CssSelectorMatcher {
 
     // The ancestors beyond kCssShallowWalk that a descendant combinator has passed, in the order that it passed them,
     // and the last walk from each compound that follows a descendant combinator.
-    Array<const PrDomElement* PR_NONNULL> walk;
-    Array<CssAncestorWalk> walks;
+    RawArray<const PrDomElement* PR_NONNULL> walk;
+    RawArray<CssAncestorWalk> walks;
 
-    Array<CssNthRun> runs;                 // the last run of each count, and of each type for a count of a type
-    Array<CssClassAtom> classes;           // the class names the matcher has compared, added on first use
+    RawArray<CssNthRun> runs;                 // the last run of each count, and of each type for a count of a type
+    RawArray<CssClassAtom> classes;           // the class names the matcher has compared, added on first use
 
     // The local names that the matcher has compared against an element with no tag, added on first use.
-    Array<CssLocalName> localNames;
+    RawArray<CssLocalName> localNames;
 
     // The array where a match records what it read of a node's children. A match records reads of the parent of an
     // element that a structural pseudo-class or a sibling combinator tested, and of an element that :empty tested. Null
     // to record nothing.
-    Array<CssStructureRead>* PR_NULLABLE structure;
+    RawArray<CssStructureRead>* PR_NULLABLE structure;
 
     // The element that the running match is for. A read on behalf of another element marks it
     // (DomStructureFlag_Descendants).

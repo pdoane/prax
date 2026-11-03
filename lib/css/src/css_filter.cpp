@@ -29,7 +29,7 @@ float amountAt(CssValueRun run, uint32_t index, float fallback) {
 
 } // namespace
 
-void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, Array<CssFilterFunction>* out) {
+void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, RawArray<CssFilterFunction>* out) {
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
         CssFilterFunction item{.filter = {.amount = 1, .color = prColor16FromColor(colors.current)}};

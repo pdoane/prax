@@ -5,7 +5,7 @@
 #include "app/backends/cocoa/src/cocoa_browser.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
+#include "pr/raw_array.h"
 
 #import <AppKit/AppKit.h>
 #import <QuartzCore/QuartzCore.h>
@@ -283,7 +283,7 @@ void cocoaBrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 siz
         // The image has the screen's pixels, and is drawn at the size asked for, in sRGB.
         uint32_t width = size.x;
         uint32_t height = size.y;
-        Array<uint8_t> bgra;
+        RawArray<uint8_t> bgra;
         bgra.reserve(width * height * 4);
         bgra.count = width * height * 4;
         CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);

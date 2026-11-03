@@ -3,9 +3,9 @@
 #include "pr/path.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/float.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 #include "path/src/flatten.h"
@@ -19,8 +19,8 @@ namespace {
 struct PathStore {
     Atomic<uint32_t> references;
     Atomic<uint64_t> id;            // the id of the contents, assigned when first requested; zero until then
-    Array<PrPathVerb> verbs;
-    Array<PrVec2> points;
+    RawArray<PrPathVerb> verbs;
+    RawArray<PrVec2> points;
 };
 
 struct Path {
@@ -465,8 +465,8 @@ void prPathAddPath(PrPath* path, const PrPath* other, PrAffine2 transform) {
     if (verbCount == 0)
         return;
     // Copy first, since `other` may be `path` or share its store.
-    Array<PrPathVerb> verbs;
-    Array<PrVec2> points;
+    RawArray<PrPathVerb> verbs;
+    RawArray<PrVec2> points;
     verbs.append(source->verbs.data, verbCount);
     points.append(source->points.data, source->points.count);
     uint32_t next = 0;
@@ -642,7 +642,7 @@ void prPathFlatten(const PrPath* path, PrAffine2 transform, float tolerance, PrP
             case PrPathVerb_Quad: {
                 PrVec2 control = map(at);
                 PrVec2 end = map(at + 1);
-                pathPolylineWrite(*out, [&](Array<PrVec2>& points) {
+                pathPolylineWrite(*out, [&](RawArray<PrVec2>& points) {
                     if (flattening == PrPathFlattening_Balanced)
                         pathFlattenQuadArea(last, control, end, tolerance, points);
                     else
@@ -656,7 +656,7 @@ void prPathFlatten(const PrPath* path, PrAffine2 transform, float tolerance, PrP
                 PrVec2 control1 = map(at);
                 PrVec2 control2 = map(at + 1);
                 PrVec2 end = map(at + 2);
-                pathPolylineWrite(*out, [&](Array<PrVec2>& points) {
+                pathPolylineWrite(*out, [&](RawArray<PrVec2>& points) {
                     if (flattening == PrPathFlattening_Balanced)
                         pathFlattenCubicArea(last, control1, control2, end, tolerance, points);
                     else

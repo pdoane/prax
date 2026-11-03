@@ -23,8 +23,8 @@ constexpr uint32_t kDomClassesNone = 0;
 struct DomClasses {
     AtomTable names;
     AtomTable texts;            // list n is text n - 1
-    Array<uint32_t> starts;     // first index in `atoms` of each list, then the end of the last list
-    Array<Atom> atoms;          // the names of every list, list after list
+    RawArray<uint32_t> starts;  // first index in `atoms` of each list, then the end of the last list
+    RawArray<Atom> atoms;       // the names of every list, list after list
     uint32_t last;              // the list last requested, which is most often the next one requested
 };
 

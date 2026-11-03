@@ -17,8 +17,8 @@
 #include "pr/dom_event_handler.h"
 #include "pr/dom_input_type.h"
 #include "pr/dom_tag.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
-#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/task.h"
 
@@ -724,7 +724,7 @@ PrDomNode* PR_NULLABLE prDomNodeTreeParent(PrDomNode* node);
 PrDomNodeType prDomNodeType(const PrDomNode* node);
 
 // Returns the base URL of the node's document, serialized (dom/#dom-node-baseuri).
-PrString prDomNodeBaseUri(const PrDomNode* node);
+PrRawString prDomNodeBaseUri(const PrDomNode* node);
 
 // Returns true if the node's shadow-including root is a document (dom/#connected).
 bool prDomNodeIsConnected(const PrDomNode* node);
@@ -752,14 +752,14 @@ PrDomNode* PR_NULLABLE prDomNodeNextSibling(PrDomNode* node);
 
 // Returns the node's text content (dom/#dom-node-textcontent). This is the text of its descendants for an element or a
 // fragment, the value for an attribute or character data, and the null string for any other node.
-PrString prDomNodeTextContent(const PrDomNode* node);
+PrRawString prDomNodeTextContent(const PrDomNode* node);
 
 // Sets the node's text content. An element or a fragment gets a Text node of `value` as its only child, or no children
 // for the empty string. An attribute or character data gets `value` as its value. Any other node is unchanged.
 void prDomNodeSetTextContent(PrDomNode* node, PrStringView value);
 
 // Returns the concatenation of the data of the node's Text children (dom/#concept-child-text-content).
-PrString prDomNodeChildTextContent(const PrDomNode* node);
+PrRawString prDomNodeChildTextContent(const PrDomNode* node);
 
 // Inserts `node` before `child`, or last for a null `child` (dom/#dom-node-insertbefore).
 PrStatus prDomNodeInsertBefore(PrDomNode* parent, PrDomNode* node, PrDomNode* PR_NULLABLE child);
@@ -774,7 +774,7 @@ PrStatus prDomNodeReplaceChild(PrDomNode* parent, PrDomNode* node, PrDomNode* ch
 PrStatus prDomNodeRemoveChild(PrDomNode* node, PrDomNode* child);
 
 // Returns the node's name (dom/#dom-node-nodename).
-PrString prDomNodeName(const PrDomNode* node);
+PrRawString prDomNodeName(const PrDomNode* node);
 
 // Returns the name shared by every node of `type` (dom/#dom-node-nodename). The text lives as long as the process.
 // Returns the null view for a type whose nodes each have their own name.
@@ -926,7 +926,7 @@ typedef struct PrDomTreeCallback {
 void prDomDocumentSetTreeCallback(PrDomDocument* document, const PrDomTreeCallback* PR_NULLABLE callback);
 
 // Returns the document's URL, serialized (dom/#dom-document-url). It is also dom/#dom-document-documenturi.
-PrString prDomDocumentUrl(const PrDomDocument* document);
+PrRawString prDomDocumentUrl(const PrDomDocument* document);
 
 // Returns the document's content type (dom/#dom-document-contenttype).
 PrStringView prDomDocumentContentType(const PrDomDocument* document);
@@ -985,7 +985,7 @@ PrStatus prDomProcessingInstructionCreate(PrDomDocument* document, PrStringView 
 
 // Returns the text of the document's title element, with ASCII whitespace stripped and collapsed, or the empty string
 // if there is no title element (html/#document.title).
-PrString prDomDocumentTitle(const PrDomDocument* document);
+PrRawString prDomDocumentTitle(const PrDomDocument* document);
 
 // Sets the text of the document's title element. Creates the element if the document element has a place for it, and
 // otherwise does nothing (html/#document.title).
@@ -1172,7 +1172,7 @@ PrStringView prDomElementPrefix(const PrDomElement* element);
 
 // Returns the element's qualified name, in ASCII uppercase for an HTML element in an HTML document
 // (dom/#dom-element-tagname).
-PrString prDomElementTagName(const PrDomElement* element);
+PrRawString prDomElementTagName(const PrDomElement* element);
 
 // Returns the tag that tagName names. Writes true to `uppercase` if tagName is in ASCII uppercase. Returns
 // PrDomTag_Unknown if tagName names no tag, as for an element with a prefix. Only prDomElementTagName returns such a
@@ -1217,7 +1217,7 @@ bool prDomElementHasAttributeNs(const PrDomElement* element, PrStringView namesp
 
 // Writes the qualified names of the element's attributes, in order (dom/#dom-element-getattributenames). Writes up to
 // `capacity` names to `items`, which the caller releases, and returns the total count.
-uint32_t prDomElementGetAttributeNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity);
+uint32_t prDomElementGetAttributeNames(const PrDomElement* element, PrRawString* PR_NULLABLE items, uint32_t capacity);
 
 // Adds the attribute `qualifiedName` if the element lacks it, and removes it otherwise
 // (dom/#dom-element-toggleattribute). A non-null `force` adds the attribute if true and removes it if false. Writes
@@ -1234,7 +1234,7 @@ PrDomAttr* PR_NULLABLE prDomElementAttributeAt(PrDomElement* element, uint32_t i
 // qualified names of the element's attributes, each once. Names with an ASCII uppercase letter are excluded on an HTML
 // element in an HTML document. Writes up to `capacity` names to `items`, which the caller releases, and returns the
 // total count.
-uint32_t prDomElementNamedAttributeNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity);
+uint32_t prDomElementNamedAttributeNames(const PrDomElement* element, PrRawString* PR_NULLABLE items, uint32_t capacity);
 
 // Returns the first attribute whose qualified name is `qualifiedName`, or null
 // (dom/#concept-element-attributes-get-by-name).
@@ -1320,7 +1320,7 @@ PrStringView prDomAttrPrefix(const PrDomAttr* attr);
 PrStringView prDomAttrLocalName(const PrDomAttr* attr);
 
 // Returns the attribute's qualified name (dom/#concept-attribute-qualified-name).
-PrString prDomAttrName(const PrDomAttr* attr);
+PrRawString prDomAttrName(const PrDomAttr* attr);
 
 // Returns the attribute's value.
 PrStringView prDomAttrValue(const PrDomAttr* attr);
@@ -1360,7 +1360,7 @@ uint32_t prDomCharacterDataLength(const PrDomCharacterData* node);
 // the `count` code units at `offset` to `out`, append `data`, insert `data` at `offset`, delete the `count` code units
 // at `offset`, or replace them with `data`. Offsets and counts are in UTF-16 code units. Each returns OutOfRange for an
 // offset past the data.
-PrStatus prDomCharacterDataSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrString* out);
+PrStatus prDomCharacterDataSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrRawString* out);
 void prDomCharacterDataAppendData(PrDomCharacterData* node, PrStringView data);
 PrStatus prDomCharacterDataInsertData(PrDomCharacterData* node, uint32_t offset, PrStringView data);
 PrStatus prDomCharacterDataDeleteData(PrDomCharacterData* node, uint32_t offset, uint32_t count);
@@ -1383,7 +1383,7 @@ PrDomText* PR_NULLABLE prDomTextQuery(PrDomEventTarget* PR_NULLABLE object);
 PrStatus prDomTextSplitText(PrDomText* text, uint32_t offset, PrDomText* PR_NULLABLE* PR_NONNULL out);
 
 // Returns the data of the node and of the contiguous Text siblings around it, in tree order (dom/#dom-text-wholetext).
-PrString prDomTextWholeText(const PrDomText* text);
+PrRawString prDomTextWholeText(const PrDomText* text);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Comment : CharacterData (dom)
@@ -1723,7 +1723,7 @@ bool prDomRangeIntersectsNode(const PrDomRange* range, PrDomNode* node);
 
 // Returns the text within the range, from the Text nodes that it holds in whole or in part, in tree order
 // (dom/#dom-range-stringifier).
-PrString prDomRangeToString(const PrDomRange* range);
+PrRawString prDomRangeToString(const PrDomRange* range);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Selection (selection-api)
@@ -1823,7 +1823,7 @@ void prDomSelectionDeleteFromDocument(PrDomSelection* selection);
 bool prDomSelectionContainsNode(const PrDomSelection* selection, PrDomNode* node, bool allowPartialContainment);
 
 // Returns the text within the selection's range, or the empty string if there is no range.
-PrString prDomSelectionToString(const PrDomSelection* selection);
+PrRawString prDomSelectionToString(const PrDomSelection* selection);
 
 // Writes the range with each boundary point moved out of the shadow trees whose roots are not in `roots`, as a static
 // range that the caller holds (selection-api/#dom-selection-getcomposedranges). Writes none for an empty selection.

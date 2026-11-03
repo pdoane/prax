@@ -45,13 +45,13 @@ PrStringView namespacePrefix(DomNamespaceId space) {
 
 // Writes the attributes, in the order that the corpus prints them, which is sorted by the name that it writes.
 void writeAttributes(PrTextBuffer* out, const PrDomElement* element, uint32_t depth) {
-    Array<const PrDomAttr* PR_NONNULL> order;
+    RawArray<const PrDomAttr* PR_NONNULL> order;
     for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
             attribute = static_cast<const PrDomAttr*>(attribute->next)) {
         uint32_t at = order.count;
         while (at != 0) {
             const PrDomAttr* before = order.data[at - 1];
-            int side = prStringCompare(prStringView(&before->name), prStringView(&attribute->name));
+            int side = prStringCompare(prRawStringView(&before->name), prRawStringView(&attribute->name));
             if (side < 0 || (side == 0 && before->space <= attribute->space))
                 break;
             --at;
@@ -63,9 +63,9 @@ void writeAttributes(PrTextBuffer* out, const PrDomElement* element, uint32_t de
         const PrDomAttr* attribute = order.data[i];
         writeIndent(out, depth);
         prTextBufferAppend(out, namespacePrefix(attribute->space));
-        prTextBufferAppend(out, prStringView(&attribute->name));
+        prTextBufferAppend(out, prRawStringView(&attribute->name));
         prTextBufferAppend(out, "=\"");
-        prTextBufferAppend(out, prStringView(&attribute->value));
+        prTextBufferAppend(out, prRawStringView(&attribute->value));
         prTextBufferAppend(out, "\"\n");
     }
     order.reset();
@@ -102,14 +102,14 @@ void writeNode(PrTextBuffer* out, const PrDomNode* node, uint32_t depth) {
         case PrDomNodeType_Text:
             writeIndent(out, depth);
             prTextBufferAppendChar(out, '"');
-            prTextBufferAppend(out, prStringView(&static_cast<const PrDomText*>(node)->data));
+            prTextBufferAppend(out, prRawStringView(&static_cast<const PrDomText*>(node)->data));
             prTextBufferAppend(out, "\"\n");
             return;
 
         case PrDomNodeType_Comment:
             writeIndent(out, depth);
             prTextBufferAppend(out, "<!-- ");
-            prTextBufferAppend(out, prStringView(&static_cast<const PrDomComment*>(node)->data));
+            prTextBufferAppend(out, prRawStringView(&static_cast<const PrDomComment*>(node)->data));
             prTextBufferAppend(out, " -->\n");
             return;
 
@@ -117,9 +117,9 @@ void writeNode(PrTextBuffer* out, const PrDomNode* node, uint32_t depth) {
             const PrDomProcessingInstruction* instruction = static_cast<const PrDomProcessingInstruction*>(node);
             writeIndent(out, depth);
             prTextBufferAppend(out, "<?");
-            prTextBufferAppend(out, prStringView(&instruction->target));
+            prTextBufferAppend(out, prRawStringView(&instruction->target));
             prTextBufferAppendChar(out, ' ');
-            prTextBufferAppend(out, prStringView(&instruction->data));
+            prTextBufferAppend(out, prRawStringView(&instruction->data));
             prTextBufferAppend(out, "?>\n");
             return;
         }
@@ -128,12 +128,12 @@ void writeNode(PrTextBuffer* out, const PrDomNode* node, uint32_t depth) {
             const PrDomDocumentType* doctype = static_cast<const PrDomDocumentType*>(node);
             writeIndent(out, depth);
             prTextBufferAppend(out, "<!DOCTYPE ");
-            prTextBufferAppend(out, prStringView(&doctype->name));
-            if (prStringView(&doctype->publicId).size != 0 || prStringView(&doctype->systemId).size != 0) {
+            prTextBufferAppend(out, prRawStringView(&doctype->name));
+            if (prRawStringView(&doctype->publicId).size != 0 || prRawStringView(&doctype->systemId).size != 0) {
                 prTextBufferAppend(out, " \"");
-                prTextBufferAppend(out, prStringView(&doctype->publicId));
+                prTextBufferAppend(out, prRawStringView(&doctype->publicId));
                 prTextBufferAppend(out, "\" \"");
-                prTextBufferAppend(out, prStringView(&doctype->systemId));
+                prTextBufferAppend(out, prRawStringView(&doctype->systemId));
                 prTextBufferAppendChar(out, '"');
             }
             prTextBufferAppend(out, ">\n");

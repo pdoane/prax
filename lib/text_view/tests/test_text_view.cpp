@@ -362,9 +362,9 @@ TEST_CASE("a press lands on the line under it, and a selection shows as a highli
     REQUIRE(prTextViewOffsetFromPoint(s.view, PrVec2{1, 45}, &offset, &side));
     CHECK(prTextEditBufferPointFromOffset(s.buffer, offset).line == 2);
     prTextViewRun(s.view, PrTextEditCommand_SelectAll, PrTextEditSelectionMove_Collapse);
-    PrString selected = prTextViewSelectedText(s.view);
-    CHECK(prStringView(&selected).size == prTextEditBufferSize(s.buffer));
-    prStringReset(&selected);
+    PrRawString selected = prTextViewSelectedText(s.view);
+    CHECK(prRawStringView(&selected).size == prTextEditBufferSize(s.buffer));
+    prRawStringReset(&selected);
 }
 
 TEST_CASE("without wrap, a long line is one row, and the caret brings it across") {
@@ -448,9 +448,9 @@ TEST_CASE("every selection moves, types and deletes, and carets that meet join")
 
     prTextViewRun(s.view, PrTextEditCommand_Left, PrTextEditSelectionMove_Extend);
     s.settle();
-    PrString selected = prTextViewSelectedText(s.view);
-    CHECK(std::string(prStringView(&selected).data, prStringView(&selected).size) == "e\no\nr");
-    prStringReset(&selected);
+    PrRawString selected = prTextViewSelectedText(s.view);
+    CHECK(std::string(prRawStringView(&selected).data, prRawStringView(&selected).size) == "e\no\nr");
+    prRawStringReset(&selected);
     prTextViewEraseSelection(s.view);
     s.settle();
     CHECK(s.text() == "on\ntw\nthee\nfour");

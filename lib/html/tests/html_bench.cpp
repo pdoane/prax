@@ -41,7 +41,7 @@ void readOnce(PrStringView text) {
 // The tokenizer on its own, which is the parse without building a tree.
 void tokenizeOnly(PrStringView text) {
     HtmlTokenizer tokenizer = {};
-    Array<HtmlError> errors;
+    RawArray<HtmlError> errors;
 
     htmlTokenizerStart(&tokenizer, text, &errors);
     for (;;) {

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/dom.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "dom/src/dom_agent.h"
@@ -25,10 +25,10 @@ struct DomCustomReactionEntry {
     PrDomCustomCallback callback;
 
     // An attribute's local name, old value, value and namespace. Each is the null string for null.
-    PrString name;
-    PrString oldValue;
-    PrString value;
-    PrString space;
+    PrRawString name;
+    PrRawString oldValue;
+    PrRawString value;
+    PrRawString space;
 
     // The documents between which an adopted element moved. The reaction holds a reference to each.
     PrDomDocument* PR_NULLABLE oldDocument;
@@ -39,9 +39,9 @@ struct DomCustomReactionEntry {
 struct DomCustomElement {
     void* PR_NULLABLE definition;                           // dom/#concept-element-custom-element-definition
     const PrDomCustomElementRegistry* PR_NULLABLE registry; // registry of the definition
-    PrString is;                                            // dom/#concept-element-is-value, or the null string
-    Array<DomCustomReactionEntry> reactions;                // html/#custom-element-reaction-queue
-    Array<PrString> states;                                 // html/#customstateset, in the order added
+    PrRawString is;                                         // dom/#concept-element-is-value, or the null string
+    RawArray<DomCustomReactionEntry> reactions;             // html/#custom-element-reaction-queue
+    RawArray<PrRawString> states;                           // html/#customstateset, in the order added
 };
 
 // Creates an HTML element of `tag` and `name` whose is value is `is` (dom/#concept-create-element). If the document's

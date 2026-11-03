@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/layout_frame.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_index.h"
 
@@ -60,24 +60,24 @@ struct LayoutFrameLinks {
 // a node moved from another parent, marks its parent for the commit to relink. So a frame that declares the committed
 // tree in another order across parents relinks nothing, and a change costs only where it is.
 struct LayoutFrame {
-    uint32_t frame;                     // incremented as each frame begins, starting at 1
-    bool open;                          // true if a frame has begun and has not been committed
-    Array<LayoutNodeIndex> roots;       // the roots of the committed tree, in the order the frame created them
-    Array<LayoutNodeIndex> openRoots;   // the roots that the open frame found away from the cursor or made, in order
+    uint32_t frame;                      // incremented as each frame begins, starting at 1
+    bool open;                           // true if a frame has begun and has not been committed
+    RawArray<LayoutNodeIndex> roots;     // the roots of the committed tree, in the order the frame created them
+    RawArray<LayoutNodeIndex> openRoots; // the roots that the open frame found away from the cursor or made, in order
 
     // Scratch: the roots that the open frame created (gatherRoots).
-    mutable Array<LayoutNodeIndex> gathered;
+    mutable RawArray<LayoutNodeIndex> gathered;
 
     // The committed tree in preorder, and the position of each committed node in it, by LayoutNodeIndex. They are
     // retaken at the next frame once an edit of the tree marks them stale.
-    Array<LayoutPreorderNode> preorder;
-    Array<uint32_t> preorderAt;
+    RawArray<LayoutPreorderNode> preorder;
+    RawArray<uint32_t> preorderAt;
     bool preorderStale;
 
     // The frame's creations in order, and the position of each node's creation, by LayoutNodeIndex. A position names a
     // creation of the open frame only if the creation names the node.
-    Array<LayoutCreation> created;
-    Array<uint32_t> positions;
+    RawArray<LayoutCreation> created;
+    RawArray<uint32_t> positions;
 
     // Where the frame is in the committed preorder: the position the next creation is compared with, the start of the
     // run of positions in order that it ends, the runs before it, and the start of the first earlier run after the
@@ -85,21 +85,21 @@ struct LayoutFrame {
     uint32_t cursor;
     uint32_t runStart;
     uint32_t limit;
-    Array<LayoutPreorderRun> runs;
+    RawArray<LayoutPreorderRun> runs;
 
     // The parents whose children the commit relinks, the nodes the frame made, and the number of creations that found
     // their node away from the cursor.
-    Array<LayoutNodeIndex> relinks;
-    Array<uint32_t> made;           // positions in `created`
+    RawArray<LayoutNodeIndex> relinks;
+    RawArray<uint32_t> made;           // positions in `created`
     uint32_t jumps;
 
     // The keys that the open frame gave twice, and those of the last committed frame, which prLayoutTreeDuplicateKeys
     // reports.
-    Array<PrLayoutDuplicateKey> duplicates;
-    Array<PrLayoutDuplicateKey> reported;
+    RawArray<PrLayoutDuplicateKey> duplicates;
+    RawArray<PrLayoutDuplicateKey> reported;
 
-    Array<LayoutFrameLinks> links;  // by LayoutNodeIndex
-    Array<LayoutNodeIndex> gone;    // scratch: the committed nodes the commit takes out of the tree
+    RawArray<LayoutFrameLinks> links;  // by LayoutNodeIndex
+    RawArray<LayoutNodeIndex> gone;    // scratch: the committed nodes the commit takes out of the tree
 };
 
 // Commits the open frame (pr/layout_frame.h). Sets the values held by its creations on the committed nodes they

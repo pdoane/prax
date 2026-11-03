@@ -137,9 +137,9 @@ TEST_CASE("a directory's entries are its files and directories, without its link
 }
 
 TEST_CASE("the platform names directories for the user's caches and data") {
-    PrString directories[] = {prFileCacheDirectory(), prFileDataDirectory()};
-    for (PrString& directory : directories) {
-        PrStringView view = prStringView(&directory);
+    PrRawString directories[] = {prFileCacheDirectory(), prFileDataDirectory()};
+    for (PrRawString& directory : directories) {
+        PrStringView view = prRawStringView(&directory);
         REQUIRE(view.size != 0);
 #if defined(_WIN32)
         CHECK(view.size > 2);
@@ -148,7 +148,7 @@ TEST_CASE("the platform names directories for the user's caches and data") {
         CHECK(view.data[0] == '/');
 #endif
     }
-    CHECK(prStringView(&directories[0]) != prStringView(&directories[1]));
-    for (PrString& directory : directories)
-        prStringReset(&directory);
+    CHECK(prRawStringView(&directories[0]) != prRawStringView(&directories[1]));
+    for (PrRawString& directory : directories)
+        prRawStringReset(&directory);
 }

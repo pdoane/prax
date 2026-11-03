@@ -27,8 +27,8 @@ constexpr uint32_t domAttributeHash(PrStringView name) {
 
 // An attribute (dom/#interface-attr).
 struct DomAttr : PrDomNode {
-    PrString name;                    // the local name
-    PrString value;
+    PrRawString name;                    // the local name
+    PrRawString value;
     uint32_t hash;                    // domAttributeHash(name), for lookups that fold case and those that do not
     uint8_t prefix;                   // namespace prefix as 1 + its index in DomDocument::prefixes, or 0 for none
 };
@@ -49,7 +49,7 @@ struct DomElement : PrDomNode {
 
 // The base of the nodes that hold data (dom/#interface-characterdata).
 struct DomCharacterData : PrDomNode {
-    PrString data;
+    PrRawString data;
 };
 
 // A document fragment (dom/#documentfragment).
@@ -61,9 +61,9 @@ struct DomDocumentFragment : PrDomNode {
 
 // A doctype (dom/#interface-documenttype).
 struct DomDocumentType : PrDomNode {
-    PrString name;
-    PrString publicId;                // the null string if the doctype has none
-    PrString systemId;                // the null string if the doctype has none
+    PrRawString name;
+    PrRawString publicId;                // the null string if the doctype has none
+    PrRawString systemId;                // the null string if the doctype has none
 };
 
 // A document's mode (dom/#interface-document).
@@ -268,14 +268,14 @@ struct DomDocument : PrDomNode {
 
     // The content type (dom/#concept-document-content-type). It is an external string if the engine names the type, and
     // otherwise a copy of the type that a load or a caller gave.
-    PrString contentType;
+    PrRawString contentType;
 
     // The sources of the default language (html/#pragma-set-default-language): the tag that the last content-language
     // pragma set, and the first tag of the Content-Language header that the document was loaded with. Each is the null
     // string if nothing gave one.
-    PrString languagePragma;
+    PrRawString languagePragma;
 
-    PrString languageHeader;
+    PrRawString languageHeader;
 
     PrDomNode* PR_NULLABLE detached;                            // roots of the document's other trees
 
@@ -303,19 +303,19 @@ struct DomDocument : PrDomNode {
     PrDomEventTarget* PR_NULLABLE global;
 
     const DomDocumentHost* PR_NULLABLE host;
-    AtomTable* PR_NULLABLE namespaces;               // URLs of the namespaces from PrDomNamespace_Other on, if any
-    AtomTable* PR_NULLABLE prefixes;                 // prefixes that the document's attributes have, if any
-    Array<PrDomNode* PR_NONNULL> holds;              // nodes that the engine holds (domNodeHold), each listed once
-    Array<PrDomElement* PR_NONNULL> formAttributed;  // listed elements with a form attribute (dom_control.h)
-    DomMutationObservers* PR_NULLABLE observers;     // created by the first registration
-    DomSlots* PR_NULLABLE slots;                     // created by the first shadow root
-    DomUses* PR_NULLABLE uses;                       // created by the first connected use element (dom_use.h)
-    DomResources* PR_NULLABLE resources;             // created by the first reference to another document
-                                                     // (dom_resource.h)
-    PrDomRange* PR_NULLABLE ranges;                  // live ranges (dom/#concept-live-range), kept current by the
-                                                     // document's mutations
-    struct PrDomNodeIterator* PR_NULLABLE iterators; // the iterators whose root is in the document
-    PrDomSelection* PR_NULLABLE selection;           // created on first access
+    AtomTable* PR_NULLABLE namespaces;                 // URLs of the namespaces from PrDomNamespace_Other on, if any
+    AtomTable* PR_NULLABLE prefixes;                   // prefixes that the document's attributes have, if any
+    RawArray<PrDomNode* PR_NONNULL> holds;             // nodes that the engine holds (domNodeHold), each listed once
+    RawArray<PrDomElement* PR_NONNULL> formAttributed; // listed elements with a form attribute (dom_control.h)
+    DomMutationObservers* PR_NULLABLE observers;       // created by the first registration
+    DomSlots* PR_NULLABLE slots;                       // created by the first shadow root
+    DomUses* PR_NULLABLE uses;                         // created by the first connected use element (dom_use.h)
+    DomResources* PR_NULLABLE resources;               // created by the first reference to another document
+                                                       // (dom_resource.h)
+    PrDomRange* PR_NULLABLE ranges;                    // live ranges (dom/#concept-live-range), kept current by the
+                                                       // document's mutations
+    struct PrDomNodeIterator* PR_NULLABLE iterators;   // the iterators whose root is in the document
+    PrDomSelection* PR_NULLABLE selection;             // created on first access
 
     // The registry of the document's window (dom/#document-custom-element-registry).
     const PrDomCustomElementRegistry* PR_NULLABLE customElements;
@@ -333,7 +333,7 @@ struct DomDocument : PrDomNode {
     // The elements with an autofocus attribute inserted into the document, in order, which its top-level document has
     // yet to flush (html/#autofocus-candidates). An element that leaves the document leaves the list. The top-level
     // document gathers the candidates of its frames' documents with its own.
-    Array<PrDomElement* PR_NONNULL> autofocusCandidates;
+    RawArray<PrDomElement* PR_NONNULL> autofocusCandidates;
 
     PrDomElement* PR_NULLABLE hovered;  // connected element that the user designates (html/#selector-hover)
     PrDomElement* PR_NULLABLE active;   // connected element being activated (html/#selector-active)

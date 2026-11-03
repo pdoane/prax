@@ -7,7 +7,6 @@
 
 #include "pr/draw_lower.h"
 
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/color_space.h"
 #include "pr/draw_commands.h"
@@ -17,6 +16,7 @@
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/path_stroke.h"
+#include "pr/raw_array.h"
 #include "pr/vec.h"
 
 namespace pr_impl {
@@ -98,7 +98,7 @@ void strokeInto(const PrDrawStroke* stroke, const PrPath* geometry, PrAffine2 tr
             transform.a * direction.x + transform.c * direction.y,
             transform.b * direction.x + transform.d * direction.y,
         };
-        Array<float> dashes;
+        RawArray<float> dashes;
         if (!device) {
             float scale = prAffine2MaxScale(transform);
             shape.width *= scale;
@@ -177,7 +177,7 @@ struct Ramp {
     PrColorSpace space;
     uint32_t hue;
     bool straight;              // stops interpolate color and alpha separately
-    Array<SpaceStop> stops;
+    RawArray<SpaceStop> stops;
 };
 
 void prepareStops(Ramp& ramp) {
@@ -283,7 +283,7 @@ bool sameStop(const SpaceStop& a, const SpaceStop& b) {
 // that are apart, and one color after the last, then the last stop's color past 1.
 template <typename F>
 void eachSpan(const Ramp& ramp, PrColorSpace space, F f) {
-    const Array<SpaceStop>& s = ramp.stops;
+    const RawArray<SpaceStop>& s = ramp.stops;
     if (s.count == 0) {
         f(RampSpan{.start = -1, .end = 2, .flat = true});
         return;
@@ -347,9 +347,9 @@ struct Band {
 
 // Points of an outer contour paired with points of an inner one along a side.
 struct Track {
-    Array<PrVec2> outer;
-    Array<PrVec2> inner;
-    Array<float> along;         // the arc length of each outer point from the side's start
+    RawArray<PrVec2> outer;
+    RawArray<PrVec2> inner;
+    RawArray<float> along;         // the arc length of each outer point from the side's start
 };
 
 struct Border {
@@ -581,7 +581,7 @@ const PrDrawBorderSide* PR_NULLABLE uniformSide(const PrDrawBorder* border) {
 
 // Computes the side's region as a convex polygon. The region lies between the lines from its outer corners through its
 // inner corners, and extends far past the border on the outside.
-void wedgePoints(const Border& b, uint32_t side, Array<PrVec2>& out) {
+void wedgePoints(const Border& b, uint32_t side, RawArray<PrVec2>& out) {
     out.clear();
     uint32_t c0 = side;
     uint32_t c1 = (side + 1) % 4;
@@ -604,7 +604,7 @@ void wedgePoints(const Border& b, uint32_t side, Array<PrVec2>& out) {
     }
 }
 
-void addPolygon(PrPathPolyline* polyline, const Array<PrVec2>& points) {
+void addPolygon(PrPathPolyline* polyline, const RawArray<PrVec2>& points) {
     if (points.count < 3)
         return;
     prPathPolylineMoveTo(polyline, points.data[0]);
@@ -614,14 +614,14 @@ void addPolygon(PrPathPolyline* polyline, const Array<PrVec2>& points) {
 }
 
 void addWedge(Border& b, uint32_t side, PrPathPolyline* polyline) {
-    Array<PrVec2> points;
+    RawArray<PrVec2> points;
     wedgePoints(b, side, points);
     addPolygon(polyline, points);
     points.reset();
 }
 
 // Keeps the part of the convex polygon where dot(normal, p - at) >= 0, using `scratch`.
-void clipPolygon(Array<PrVec2>& polygon, PrVec2 at, PrVec2 normal, Array<PrVec2>& scratch) {
+void clipPolygon(RawArray<PrVec2>& polygon, PrVec2 at, PrVec2 normal, RawArray<PrVec2>& scratch) {
     scratch.clear();
     for (uint32_t i = 0; i < polygon.count; ++i) {
         PrVec2 a = polygon.data[i];
@@ -691,9 +691,9 @@ void lowerSide(Border& b, uint32_t side) {
         // whole band.
         uint32_t n = periodsOf(s, total, 4);
         float period = total / float(n);
-        Array<PrVec2> wedge;
-        Array<PrVec2> dash;
-        Array<PrVec2> scratch;
+        RawArray<PrVec2> wedge;
+        RawArray<PrVec2> dash;
+        RawArray<PrVec2> scratch;
         wedgePoints(b, side, wedge);
         for (uint32_t k = 0; k <= n; ++k) {
             float center = float(k) * period;
@@ -768,7 +768,7 @@ void addContour(Border& b, const Contour& c) {
 
 // Tiles one axis of a nine-slice region, appending source and destination intervals in pairs.
 void tileAxis(PrDrawSliceMode mode, float sourceStart, float sourceSize, float start, float size,
-        float tile, Array<float>& out) {
+        float tile, RawArray<float>& out) {
     auto emit = [&](float s0, float s1, float d0, float d1) {
         float values[4] = {s0, s1, d0, d1};
         out.append(values, 4);
@@ -1568,8 +1568,8 @@ uint32_t prDrawNineSliceRects(const PrDrawNineSlice* slices, PrVec2 imageExtent,
     // Tiles each region along an axis, with the tile size scaled by the same factor as the edges across it.
     float topScale = st > 0 ? wt / st : sb > 0 ? wb / sb : 1;
     float leftScale = sl > 0 ? wl / sl : sr > 0 ? wr / sr : 1;
-    Array<float> xs;
-    Array<float> ys;
+    RawArray<float> xs;
+    RawArray<float> ys;
     auto region = [&](uint32_t column, uint32_t row, float tileScaleX, float tileScaleY) {
         xs.clear();
         ys.clear();

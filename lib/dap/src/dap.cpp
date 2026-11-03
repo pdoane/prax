@@ -4,11 +4,11 @@
 #include "pr/dap.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/integer.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_ops.h"
 
 namespace pr_impl {
@@ -42,9 +42,9 @@ struct DapPending {
 
 // The breakpoints of one file: the lines that the host set, and what the adapter reported of them.
 struct DapSource {
-    PrString path;
-    Array<uint32_t> lines;
-    Array<PrDapBreakpoint> breakpoints;
+    PrRawString path;
+    RawArray<uint32_t> lines;
+    RawArray<PrDapBreakpoint> breakpoints;
 };
 
 struct DapClient {
@@ -57,23 +57,23 @@ struct DapClient {
     bool configurationDone;         // the adapter takes the configurationDone request
     bool configured;                // the adapter asked for its configuration, which the client sent
     PrDapRequest nextRequest;
-    Array<DapPending> pending;
-    Array<DapSource> sources;
+    RawArray<DapPending> pending;
+    RawArray<DapSource> sources;
 
     // A launch or attach that the host asked for while the session initialized, as its command and arguments.
-    PrString startCommand;
-    PrString startArguments;
+    PrRawString startCommand;
+    PrRawString startArguments;
 
     int64_t stoppedThread;
-    PrString stopReason;
+    PrRawString stopReason;
     int64_t exitCode;
 
-    Array<uint8_t> received;        // what arrived and was not handled, from `receivedStart`
+    RawArray<uint8_t> received;        // what arrived and was not handled, from `receivedStart`
     uint32_t receivedStart;
     PrJson* json;                   // the message being handled
     PrJson* arguments;              // the arguments that a host gave as text
     PrJsonWriter* writer;
-    Array<uint8_t> frame;
+    RawArray<uint8_t> frame;
 };
 
 // Sends the writer's text as a message, after its header.
@@ -157,7 +157,7 @@ void fail(DapClient* client) {
 
 DapSource* PR_NULLABLE sourceOf(const DapClient* client, PrStringView path) {
     for (uint32_t i = 0; i < client->sources.count; ++i) {
-        if (prStringView(&client->sources.data[i].path) == path)
+        if (prRawStringView(&client->sources.data[i].path) == path)
             return &client->sources.data[i];
     }
     return nullptr;
@@ -170,7 +170,7 @@ void sendBreakpoints(DapClient* client, uint32_t index) {
     prJsonWriterBeginObject(writer);
     prJsonWriterKey(writer, "source");
     prJsonWriterBeginObject(writer);
-    writeKeyString(writer, "path", prStringView(&source.path));
+    writeKeyString(writer, "path", prRawStringView(&source.path));
     prJsonWriterEndObject(writer);
     prJsonWriterKey(writer, "breakpoints");
     prJsonWriterBeginArray(writer);
@@ -199,8 +199,8 @@ bool start(DapClient* client, PrStringView command, PrStringView arguments) {
         if (!prJsonParse(client->arguments, arguments, nullptr) ||
                 prJsonKind(client->arguments, 0) != PrJsonKind_Object)
             return false;
-        prStringReplace(&client->startCommand, command);
-        prStringReplace(&client->startArguments, arguments);
+        prRawStringReplace(&client->startCommand, command);
+        prRawStringReplace(&client->startArguments, arguments);
         return true;
     }
     if (client->state != PrDapClientState_Ready)
@@ -242,10 +242,10 @@ void handleResponse(DapClient* client, const PrJson* json) {
                 client->configurationDone =
                     prJsonKind(json, member(json, body, "supportsConfigurationDoneRequest")) == PrJsonKind_True;
                 client->state = PrDapClientState_Ready;
-                if (!prStringIsNull(&client->startCommand)) {
-                    sendStart(client, prStringView(&client->startCommand), prStringView(&client->startArguments));
-                    prStringReset(&client->startCommand);
-                    prStringReset(&client->startArguments);
+                if (!prRawStringIsNull(&client->startCommand)) {
+                    sendStart(client, prRawStringView(&client->startCommand), prRawStringView(&client->startArguments));
+                    prRawStringReset(&client->startCommand);
+                    prRawStringReset(&client->startArguments);
                 }
                 break;
             case PendingKind_Start:
@@ -295,11 +295,11 @@ void handleEvent(DapClient* client, const PrJson* json) {
     } else if (event == "stopped") {
         client->state = PrDapClientState_Stopped;
         client->stoppedThread = integerMember(json, body, "threadId", 0);
-        prStringReplace(&client->stopReason, stringMember(json, body, "reason"));
+        prRawStringReplace(&client->stopReason, stringMember(json, body, "reason"));
     } else if (event == "continued") {
         client->state = PrDapClientState_Running;
         client->stoppedThread = 0;
-        prStringReplace(&client->stopReason, "");
+        prRawStringReplace(&client->stopReason, "");
     } else if (event == "exited") {
         client->exitCode = integerMember(json, body, "exitCode", -1);
     } else if (event == "terminated") {
@@ -420,9 +420,9 @@ PrDapClient* prDapClientCreate(const PrDapClientDesc* desc) {
     client->json = prJsonCreate();
     client->arguments = prJsonCreate();
     client->writer = prJsonWriterCreate();
-    client->startCommand = prStringNull();
-    client->startArguments = prStringNull();
-    client->stopReason = prStringEmpty();
+    client->startCommand = prRawStringNull();
+    client->startArguments = prRawStringNull();
+    client->stopReason = prRawStringEmpty();
     client->exitCode = -1;
     beginRequest(client, "initialize", PendingKind_Initialize, nullptr, nullptr);
     PrJsonWriter* writer = client->writer;
@@ -444,7 +444,7 @@ void prDapClientDestroy(PrDapClient* PR_NULLABLE client) {
     if (client == nullptr)
         return;
     for (uint32_t i = 0; i < client->sources.count; ++i) {
-        prStringReset(&client->sources.data[i].path);
+        prRawStringReset(&client->sources.data[i].path);
         client->sources.data[i].lines.reset();
         client->sources.data[i].breakpoints.reset();
     }
@@ -455,9 +455,9 @@ void prDapClientDestroy(PrDapClient* PR_NULLABLE client) {
     prJsonDestroy(client->json);
     prJsonDestroy(client->arguments);
     prJsonWriterDestroy(client->writer);
-    prStringReset(&client->startCommand);
-    prStringReset(&client->startArguments);
-    prStringReset(&client->stopReason);
+    prRawStringReset(&client->startCommand);
+    prRawStringReset(&client->startArguments);
+    prRawStringReset(&client->stopReason);
     prMemoryFree(client);
 }
 
@@ -486,7 +486,7 @@ int64_t prDapClientStoppedThread(const PrDapClient* client) {
 }
 
 PrStringView prDapClientStopReason(const PrDapClient* client) {
-    return client->state == PrDapClientState_Stopped ? prStringView(&client->stopReason) : PrStringView("");
+    return client->state == PrDapClientState_Stopped ? prRawStringView(&client->stopReason) : PrStringView("");
 }
 
 int64_t prDapClientExitCode(const PrDapClient* client) {
@@ -514,7 +514,7 @@ void prDapClientDisconnect(PrDapClient* client) {
 void prDapClientSetBreakpoints(PrDapClient* client, PrStringView path, const uint32_t* PR_NULLABLE lines, uint32_t count) {
     DapSource* source = sourceOf(client, path);
     if (source == nullptr) {
-        client->sources.push(DapSource{.path = prStringCopy(path)});
+        client->sources.push(DapSource{.path = prRawStringCopy(path)});
         source = &client->sources.last();
     }
     source->lines.clear();
@@ -561,7 +561,7 @@ PrDapRequest prDapClientStep(PrDapClient* client, int64_t thread, PrDapStep step
     PrDapRequest request = requestOf(client, commands[step], "threadId", thread, nullptr, nullptr);
     client->state = PrDapClientState_Running;
     client->stoppedThread = 0;
-    prStringReplace(&client->stopReason, "");
+    prRawStringReplace(&client->stopReason, "");
     return request;
 }
 

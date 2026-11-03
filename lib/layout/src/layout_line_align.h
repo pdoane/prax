@@ -59,14 +59,14 @@ struct LayoutInlineSubtree {
 
 // The alignment of a run's items and of the most recently aligned line.
 struct LayoutLineAligner {
-    Array<LayoutInlineAlign> align;         // by LayoutItemIndex
-    Array<uint32_t> boxes;                  // scratch: the Open items around the item being aligned
-    Array<LayoutInlineSubtree> subtrees;    // the line's subtrees, in the order the line meets their roots
-    Array<uint32_t> subtreeAt;              // by LayoutItemIndex: the index in `subtrees` of the subtree it roots
-    Array<LayoutLineExtent> onLine;         // by LayoutItemIndex: a line-dependent box's leading box on the line
-    PrLayoutStyleIndex containerStyle;      // the record of the run's container, which styles the root inline box
-    bool lineDependent;                     // true if some Open item is line-dependent
-    bool subtreeRoots;                      // true if some item roots an aligned subtree
+    RawArray<LayoutInlineAlign> align;         // by LayoutItemIndex
+    RawArray<uint32_t> boxes;                  // scratch: the Open items around the item being aligned
+    RawArray<LayoutInlineSubtree> subtrees;    // the line's subtrees, in the order the line meets their roots
+    RawArray<uint32_t> subtreeAt;              // by LayoutItemIndex: the index in `subtrees` of the subtree it roots
+    RawArray<LayoutLineExtent> onLine;         // by LayoutItemIndex: a line-dependent box's leading box on the line
+    PrLayoutStyleIndex containerStyle;         // the record of the run's container, which styles the root inline box
+    bool lineDependent;                        // true if some Open item is line-dependent
+    bool subtreeRoots;                         // true if some item roots an aligned subtree
 };
 
 // Frees the memory that an aligner holds.

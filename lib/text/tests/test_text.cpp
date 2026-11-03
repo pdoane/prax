@@ -248,10 +248,10 @@ std::vector<PrTextItemRun> itemize(PrTextFont* group, const std::string& text, b
 std::vector<std::string> familiesOf(PrTextFont* group, const std::vector<PrTextItemRun>& runs) {
     std::vector<std::string> families;
     for (const PrTextItemRun& run : runs) {
-        PrString family = prFontFamilyName(prTextFontMatchedFont(group, run.face));
-        PrStringView name = prStringView(&family);
+        PrRawString family = prFontFamilyName(prTextFontMatchedFont(group, run.face));
+        PrStringView name = prRawStringView(&family);
         families.emplace_back(name.data, name.size);
-        prStringReset(&family);
+        prRawStringReset(&family);
     }
     return families;
 }
@@ -294,9 +294,9 @@ std::string familyFor(PrTextFont* font, const char* cluster, PrScript script = P
     uint32_t face = prTextFontMatch(font, cluster, script);
     if (face == kPrTextMatchNone)
         return "";
-    PrString family = prFontFamilyName(prTextFontMatchedFont(font, face));
-    std::string name(prStringView(&family).data, prStringView(&family).size);
-    prStringReset(&family);
+    PrRawString family = prFontFamilyName(prTextFontMatchedFont(font, face));
+    std::string name(prRawStringView(&family).data, prRawStringView(&family).size);
+    prRawStringReset(&family);
     return name;
 }
 

@@ -3,9 +3,9 @@
 #include "pr/draw_display.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/color_space.h"
 #include "pr/float16.h"
+#include "pr/raw_array.h"
 
 #include "draw/src/kDrawDisplayShaders.h"
 
@@ -96,7 +96,7 @@ PrGpuTexture createTable(PrGpuDevice* device, PrColorSpace gamut) {
     PrGpuTexture table{};
     if (prGpuTextureCreate(device, &desc, &table) != PrStatus_Ok)
         return PrGpuTexture{};
-    Array<PrFloat16> texels;
+    RawArray<PrFloat16> texels;
     texels.resize(kTableHues * kTableLightnesses * 4);
     for (uint32_t y = 0; y < kTableLightnesses; ++y) {
         float lightness = float(y) / float(kTableLightnesses - 1);

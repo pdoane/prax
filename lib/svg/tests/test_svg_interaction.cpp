@@ -58,9 +58,9 @@ PrDomRect boxOf(PrSvgElement* element, PrSvgBoundingBoxOptions options) {
     return prSvgGraphicsElementGetBBox(element, &options);
 }
 
-std::string stringOf(PrString value) {
-    std::string text(prStringView(&value).data, prStringView(&value).size);
-    prStringReset(&value);
+std::string stringOf(PrRawString value) {
+    std::string text(prRawStringView(&value).data, prRawStringView(&value).size);
+    prRawStringReset(&value);
     return text;
 }
 

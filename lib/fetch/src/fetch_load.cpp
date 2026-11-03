@@ -8,12 +8,12 @@
 #include "pr/fetch_load.h"
 
 #include "pr/alloc.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
-#include "pr/string.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 
 namespace pr_impl {
 
@@ -21,8 +21,8 @@ namespace {
 
 // A header that the load holds a copy of.
 struct LoadHeader {
-    PrString name;
-    PrString value;
+    PrRawString name;
+    PrRawString value;
 };
 
 struct FetchLoad {
@@ -32,13 +32,13 @@ struct FetchLoad {
 
     // The request, whose views are of the copies that follow it.
     PrFetchRequestDesc request;
-    PrString url;
-    PrString method;
-    PrString origin;
-    PrString referrer;
-    Array<LoadHeader> requestHeaders;
-    Array<PrFetchHeader> requestViews;
-    Array<uint8_t> requestBody;
+    PrRawString url;
+    PrRawString method;
+    PrRawString origin;
+    PrRawString referrer;
+    RawArray<LoadHeader> requestHeaders;
+    RawArray<PrFetchHeader> requestViews;
+    RawArray<uint8_t> requestBody;
 
     // The loop's state. `ended` is true once the loop is done with the fetch, which then is null.
     PrFetch* PR_NULLABLE fetch;
@@ -48,9 +48,9 @@ struct FetchLoad {
     PrStatus status;
     PrFetchResponseType type;
     uint16_t responseStatus;
-    PrString responseUrl;
-    Array<LoadHeader> responseHeaders;
-    Array<uint8_t> body;
+    PrRawString responseUrl;
+    RawArray<LoadHeader> responseHeaders;
+    RawArray<uint8_t> body;
 
     // `dropped` is true once the owner destroys the load, under the mutex. `delivered` is the owner's, true once the
     // load has called `done`.
@@ -60,19 +60,19 @@ struct FetchLoad {
 };
 
 // Returns a copy of `text` that keeps the null view distinct from the empty one.
-PrString copyOrNull(PrStringView text) {
-    return text.data != nullptr ? prStringCopy(text) : prStringNull();
+PrRawString copyOrNull(PrStringView text) {
+    return text.data != nullptr ? prRawStringCopy(text) : prRawStringNull();
 }
 
-void copyHeaders(Array<LoadHeader>* out, const PrFetchHeader* PR_NULLABLE headers, uint32_t count) {
+void copyHeaders(RawArray<LoadHeader>* out, const PrFetchHeader* PR_NULLABLE headers, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i)
-        out->push(LoadHeader{prStringCopy(headers[i].name), prStringCopy(headers[i].value)});
+        out->push(LoadHeader{prRawStringCopy(headers[i].name), prRawStringCopy(headers[i].value)});
 }
 
-void resetHeaders(Array<LoadHeader>* headers) {
+void resetHeaders(RawArray<LoadHeader>* headers) {
     for (uint32_t i = 0; i < headers->count; ++i) {
-        prStringReset(&headers->data[i].name);
-        prStringReset(&headers->data[i].value);
+        prRawStringReset(&headers->data[i].name);
+        prRawStringReset(&headers->data[i].value);
     }
     headers->reset();
 }
@@ -81,14 +81,14 @@ void release(FetchLoad* load) {
     if (load->references.fetchSub(1) != 1)
         return;
     PR_ASSERT(load->fetch == nullptr);
-    prStringReset(&load->url);
-    prStringReset(&load->method);
-    prStringReset(&load->origin);
-    prStringReset(&load->referrer);
+    prRawStringReset(&load->url);
+    prRawStringReset(&load->method);
+    prRawStringReset(&load->origin);
+    prRawStringReset(&load->referrer);
     resetHeaders(&load->requestHeaders);
     load->requestViews.reset();
     load->requestBody.reset();
-    prStringReset(&load->responseUrl);
+    prRawStringReset(&load->responseUrl);
     resetHeaders(&load->responseHeaders);
     load->body.reset();
     prMutexReset(&load->mutex);
@@ -104,16 +104,16 @@ void arrive(void* PR_NULLABLE context) {
     prMutexUnlock(&load->mutex);
     if (!dropped) {
         load->delivered = true;
-        Array<PrFetchHeader> headers{};
+        RawArray<PrFetchHeader> headers{};
         for (uint32_t i = 0; i < load->responseHeaders.count; ++i) {
             const LoadHeader& header = load->responseHeaders.data[i];
-            headers.push(PrFetchHeader{prStringView(&header.name), prStringView(&header.value)});
+            headers.push(PrFetchHeader{prRawStringView(&header.name), prRawStringView(&header.value)});
         }
         PrFetchResponse response{
             .status = load->status,
             .type = load->type,
             .responseStatus = load->responseStatus,
-            .url = prStringView(&load->responseUrl),
+            .url = prRawStringView(&load->responseUrl),
             .headers = headers.data,
             .headerCount = headers.count,
             .body = PrByteView{load->body.data, load->body.count},
@@ -159,11 +159,11 @@ void fetchEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent event) {
         case PrFetchEvent_Response: {
             load->type = prFetchResponseType(fetch);
             load->responseStatus = prFetchStatus(fetch);
-            load->responseUrl = prStringCopy(prFetchUrl(fetch));
+            load->responseUrl = prRawStringCopy(prFetchUrl(fetch));
             uint32_t count = prFetchHeaderCount(fetch);
             for (uint32_t i = 0; i < count; ++i) {
                 PrFetchHeader header = prFetchHeader(fetch, i);
-                load->responseHeaders.push(LoadHeader{prStringCopy(header.name), prStringCopy(header.value)});
+                load->responseHeaders.push(LoadHeader{prRawStringCopy(header.name), prRawStringCopy(header.value)});
             }
             break;
         }
@@ -225,22 +225,22 @@ PrFetchLoad* prFetchLoadCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc
     load->references.storeRelaxed(2);
     load->fetcher = fetcher;
     load->desc = *desc;
-    load->url = prStringCopy(request->url);
+    load->url = prRawStringCopy(request->url);
     load->method = copyOrNull(request->method);
     load->origin = copyOrNull(request->origin);
     load->referrer = copyOrNull(request->referrer);
     copyHeaders(&load->requestHeaders, request->headers, request->headerCount);
     for (uint32_t i = 0; i < load->requestHeaders.count; ++i) {
         const LoadHeader& header = load->requestHeaders.data[i];
-        load->requestViews.push(PrFetchHeader{prStringView(&header.name), prStringView(&header.value)});
+        load->requestViews.push(PrFetchHeader{prRawStringView(&header.name), prRawStringView(&header.value)});
     }
     if (request->body.size != 0)
         load->requestBody.append(request->body.data, uint32_t(request->body.size));
     load->request = *request;
-    load->request.url = prStringView(&load->url);
-    load->request.method = prStringView(&load->method);
-    load->request.origin = prStringView(&load->origin);
-    load->request.referrer = prStringView(&load->referrer);
+    load->request.url = prRawStringView(&load->url);
+    load->request.method = prRawStringView(&load->method);
+    load->request.origin = prRawStringView(&load->origin);
+    load->request.referrer = prRawStringView(&load->referrer);
     load->request.headers = load->requestViews.data;
     load->request.body = PrByteView{load->requestBody.data, load->requestBody.count};
     prMutexInit(&load->mutex);

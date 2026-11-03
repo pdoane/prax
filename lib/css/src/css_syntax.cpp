@@ -19,7 +19,7 @@ namespace pr_impl {
 // ---------------------------------------------------------------------------------------------------------------------
 // Decoding (css-syntax-3/#input-byte-stream)
 
-PrStringView cssDecodeBytes(PrStringView bytes, PrCharset protocol, PrCharset environment, PrString* out) {
+PrStringView cssDecodeBytes(PrStringView bytes, PrCharset protocol, PrCharset environment, PrRawString* out) {
     PrCharset charset = prCharsetSniffBom(bytes);
     if (charset == PrCharset_None)
         charset = protocol;
@@ -899,7 +899,7 @@ constexpr uint32_t kBracketKinds = makeBracketKinds();
 
 // Pairs the close token at `index` with the opener that it closes, or marks it unmatched. Records an opener as waiting
 // in `open`, innermost last.
-void pairBracket(CssTokenArray* tokens, Array<uint32_t>* open, uint32_t index, CssTokenKind kind) {
+void pairBracket(CssTokenArray* tokens, RawArray<uint32_t>* open, uint32_t index, CssTokenKind kind) {
     if (opensBlock(kind)) {
         open->push(index);
         return;
@@ -943,7 +943,7 @@ uint32_t commitLanes(CssTokenArray* tokens, uint32_t pos, uint32_t size) {
 
 // Writes every token of the source to `tokens`, committing the lanes one step of the source ahead of the tokens
 // written. `ranges` allows unicode ranges (css-syntax-3/#consume-token). Returns the number of tokens.
-uint32_t tokenizeAll(CssTokenArray* tokens, Array<uint32_t>* open, const Source* s, bool ranges) {
+uint32_t tokenizeAll(CssTokenArray* tokens, RawArray<uint32_t>* open, const Source* s, bool ranges) {
     uint32_t size = s->size;
     uint32_t* starts = tokens->starts.data;
     uint32_t* ends = tokens->ends.data;

@@ -169,14 +169,14 @@ PrFontSet* fallbackSet() {
 
 // Returns the tint of the family of the font `font` among `families`, or the ink color if the family has none.
 PrColor tintOf(const std::vector<Tinted>& families, const PrFont* font) {
-    PrString family = prFontFamilyName(font);
-    PrStringView name = prStringView(&family);
+    PrRawString family = prFontFamilyName(font);
+    PrStringView name = prRawStringView(&family);
     PrColor tint = kInk;
     for (const Tinted& t : families) {
         if (name.size == std::strlen(t.family) && std::memcmp(name.data, t.family, name.size) == 0)
             tint = t.tint;
     }
-    prStringReset(&family);
+    prRawStringReset(&family);
     return tint;
 }
 
@@ -626,10 +626,10 @@ void metricsAndBaselines(PrDrawList* list, float width, float, double) {
             std::snprintf(text, sizeof(text), "%s %.3f%s", line.name, double(value), synthesized ? " (synthesized)" : "");
             label(text, PrVec2{right + 18, labelY + 4}, 10, line.tint);
         }
-        PrString family = prFontFamilyName(font);
-        PrStringView name = prStringView(&family);
+        PrRawString family = prFontFamilyName(font);
+        PrStringView name = prRawStringView(&family);
         label(std::string(name.data != nullptr ? name.data : "", name.size).c_str(), PrVec2{origin.x, 60}, 13, kInk);
-        prStringReset(&family);
+        prRawStringReset(&family);
 
         // Subscript and superscript where the font puts them, and its line's extent.
         TextStyle body = styleOf(font, 40);
@@ -695,10 +695,10 @@ void synthesis(PrDrawList* list, float width, float, double) {
     };
     float y = 90;
     for (const char* file : fonts) {
-        PrString family = prFontFamilyName(fontNamed(file));
-        PrStringView name = prStringView(&family);
+        PrRawString family = prFontFamilyName(fontNamed(file));
+        PrStringView name = prRawStringView(&family);
         label(std::string(name.data != nullptr ? name.data : "", name.size).c_str(), PrVec2{20, y}, 13, kInk);
-        prStringReset(&family);
+        prRawStringReset(&family);
         for (const Row& row : rows) {
             label(row.name, PrVec2{40, y + 24});
             for (uint32_t on = 0; on < 2; ++on) {
@@ -1190,12 +1190,12 @@ void webFonts(PrDrawList* list, float, float, double) {
             label("(./dev.sh fetch fonts)", PrVec2{600, y});
             continue;
         }
-        PrString family = prFontFamilyName(face);
-        PrStringView name = prStringView(&family);
+        PrRawString family = prFontFamilyName(face);
+        PrStringView name = prRawStringView(&family);
         char text[128];
         std::snprintf(text, sizeof(text), "font %u of %u: %.*s, %u glyphs", index, prFontCount(prFontData(face)),
             int(name.size), name.data, prFontGlyphCount(face));
-        prStringReset(&family);
+        prRawStringReset(&family);
         label(text, PrVec2{600, y - 50}, 12, kInk);
         drawText(list, styleOf(face, 72, index == 0 ? kBlue : kTeal), "P", PrVec2{600, y + 30});
     }

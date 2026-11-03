@@ -38,7 +38,7 @@ struct Split {
 };
 
 // Records the points at which the two segments meet, other than at shared ends, as splits of either segment.
-void meet(const Array<PathGridEdge>& edges, uint32_t i, uint32_t j, Array<Split>& splits) {
+void meet(const RawArray<PathGridEdge>& edges, uint32_t i, uint32_t j, RawArray<Split>& splits) {
     const PathGridEdge& p = edges.data[i];
     const PathGridEdge& q = edges.data[j];
     int64_t d1 = pathGridOrient(q.a, q.b, p.a);
@@ -65,9 +65,9 @@ void meet(const Array<PathGridEdge>& edges, uint32_t i, uint32_t j, Array<Split>
 }
 
 // Splits every edge where another meets it. Returns false if no edge was split.
-bool splitOnce(Array<PathGridEdge>& edges) {
+bool splitOnce(RawArray<PathGridEdge>& edges) {
     // The pairs whose x extents overlap, found by a sweep over the edges in order of their left ends.
-    Array<uint32_t> order;
+    RawArray<uint32_t> order;
     for (uint32_t i = 0; i < edges.count; ++i)
         order.push(i);
     auto left = [&](uint32_t i) {
@@ -77,8 +77,8 @@ bool splitOnce(Array<PathGridEdge>& edges) {
         return edges.data[i].a.x > edges.data[i].b.x ? edges.data[i].a.x : edges.data[i].b.x;
     };
     sortItems(order.data, order.count, [&](uint32_t a, uint32_t b) { return left(a) < left(b); });
-    Array<Split> splits;
-    Array<uint32_t> active;
+    RawArray<Split> splits;
+    RawArray<uint32_t> active;
     for (uint32_t k = 0; k < order.count; ++k) {
         uint32_t i = order.data[k];
         int64_t x = left(i);
@@ -116,7 +116,7 @@ bool splitOnce(Array<PathGridEdge>& edges) {
         int64_t tb = (b.at.x - e.a.x) * (e.b.x - e.a.x) + (b.at.y - e.a.y) * (e.b.y - e.a.y);
         return ta < tb;
     });
-    Array<PathGridEdge> pieces;
+    RawArray<PathGridEdge> pieces;
     uint32_t s = 0;
     for (uint32_t i = 0; i < edges.count; ++i) {
         const PathGridEdge e = edges.data[i];
@@ -139,11 +139,11 @@ bool splitOnce(Array<PathGridEdge>& edges) {
 
 } // namespace
 
-PathGrid pathGridOver(const Array<PrVec2>* PR_NONNULL const* PR_NONNULL arrays, uint32_t count) {
+PathGrid pathGridOver(const RawArray<PrVec2>* PR_NONNULL const* PR_NONNULL arrays, uint32_t count) {
     double lowX = 0, lowY = 0, highX = 0, highY = 0;
     bool any = false;
     for (uint32_t a = 0; a < count; ++a) {
-        const Array<PrVec2>& points = *arrays[a];
+        const RawArray<PrVec2>& points = *arrays[a];
         for (uint32_t i = 0; i < points.count; ++i) {
             double x = double(points.data[i].x);
             double y = double(points.data[i].y);
@@ -169,8 +169,8 @@ PrVec2 pathGridUnsnap(const PathGrid& grid, PathGridPoint p) {
     return PrVec2{float(double(p.x) / grid.scale + grid.originX), float(double(p.y) / grid.scale + grid.originY)};
 }
 
-void pathGridAddEdges(const PathGrid& grid, const Array<PrVec2>& points, const Array<uint32_t>& ends,
-        uint8_t owner, Array<PathGridEdge>& edges) {
+void pathGridAddEdges(const PathGrid& grid, const RawArray<PrVec2>& points, const RawArray<uint32_t>& ends,
+        uint8_t owner, RawArray<PathGridEdge>& edges) {
     uint32_t start = 0;
     for (uint32_t r = 0; r < ends.count; ++r) {
         uint32_t end = ends.data[r];
@@ -184,12 +184,12 @@ void pathGridAddEdges(const PathGrid& grid, const Array<PrVec2>& points, const A
     }
 }
 
-void pathGridSplitEdges(Array<PathGridEdge>& edges) {
+void pathGridSplitEdges(RawArray<PathGridEdge>& edges) {
     for (uint32_t round = 0; round < kSplitRounds && splitOnce(edges); ++round) {
     }
 }
 
-void pathGridMergePieces(const Array<PathGridEdge>& edges, Array<PathGridPiece>& out) {
+void pathGridMergePieces(const RawArray<PathGridEdge>& edges, RawArray<PathGridPiece>& out) {
     for (uint32_t i = 0; i < edges.count; ++i) {
         const PathGridEdge& e = edges.data[i];
         bool forward = pathGridBeforeX(e.a, e.b);

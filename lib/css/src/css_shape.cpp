@@ -153,7 +153,7 @@ void ellipseOf(CssValueRun run, uint32_t index, bool circle, const CssShapeLengt
 
 // Converts polygon( <'fill-rule'>? [ round <length> ]? , [ <length-percentage> <length-percentage> ]# )
 // (css-shapes-1/#funcdef-basic-shape-polygon).
-void polygonOf(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, Array<PrLayoutLength>& points,
+void polygonOf(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, RawArray<PrLayoutLength>& points,
         PrLayoutShape* out) {
     uint32_t end = index + run.values[index].next;
     uint32_t i = index + 1;
@@ -186,7 +186,7 @@ void polygonOf(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, 
 void pathOf(CssValueRun run, uint32_t index, PrPath* path, PrLayoutShape* out) {
     if (keywordAt(run, index + 1) == PrCssKeyword_Evenodd)
         out->rule = PrPathFillRule_EvenOdd;
-    Array<PrPathDataCommand> commands;
+    RawArray<PrPathDataCommand> commands;
     cssPathCommands(run, index, &commands);
     prPathAppendCommands(path, commands.data, commands.count);
     commands.reset();
@@ -267,7 +267,7 @@ bool cssIsBasicShape(CssValueRun run, uint32_t index) {
     }
 }
 
-bool cssShapeFromValue(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, Array<PrLayoutLength>& points,
+bool cssShapeFromValue(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, RawArray<PrLayoutLength>& points,
         PrPath* path, PrLayoutShape* out) {
     *out = prLayoutShapeDefault();
     if (!cssIsBasicShape(run, index))
@@ -305,7 +305,7 @@ bool cssShapePath(CssValueRun run, uint32_t index, PrRect box, PrPath* out, PrPa
         scale *= 2;
     PrRect scaled{box.left * scale, box.top * scale, box.right * scale, box.bottom * scale};
     BoxLengths lengths{extent, scale};
-    Array<PrLayoutLength> points;
+    RawArray<PrLayoutLength> points;
     PrPath* path = prPathCreate();
     PrLayoutShape shape{};
     bool drawn = cssShapeFromValue(run, index, CssShapeLengths{boxLength, boxPosition, &lengths}, points, path, &shape);

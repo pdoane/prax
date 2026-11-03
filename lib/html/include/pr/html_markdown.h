@@ -9,7 +9,7 @@
 #include "pr/base.h"
 #include "pr/dom.h"
 #include "pr/markdown.h"
-#include "pr/string.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN

@@ -352,11 +352,11 @@ int main(int argc, char** argv) {
             HarnessCounters cost = harnessMeasure(run);
             PrLayoutTreeDifference difference{};
             if (verify && !prLayoutTreeVerify(w.tree, &difference)) {
-                PrStringView what = prStringView(&difference.what);
+                PrStringView what = prRawStringView(&difference.what);
                 fprintf(stderr, "ui_bench: %s: verify: %.*s\n", name.c_str(), int(what.size), what.data);
                 failed = true;
             }
-            prStringReset(&difference.what);
+            prRawStringReset(&difference.what);
             report(c.name, cost);
         }
         // A cold frame builds a tree from nothing: every node is made, laid out and recorded.

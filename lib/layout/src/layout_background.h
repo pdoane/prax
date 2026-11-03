@@ -5,10 +5,10 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/draw.h"
 #include "pr/hash_index.h"
 #include "pr/layout_style.h"
+#include "pr/raw_array.h"
 
 #include "layout/src/layout_value.h"
 
@@ -23,7 +23,7 @@ struct LayoutBackground {
     uint32_t count;
     PrLayoutColorStop* PR_NULLABLE stops;
     PrLayoutFilter* PR_NULLABLE filters;
-    Array<uint8_t> key;                             // the bytes that equal lists share (backgroundKey)
+    RawArray<uint8_t> key;                             // the bytes that equal lists share (backgroundKey)
     uint32_t hash;
     uint32_t references;                            // number of decoration groups that name it
     bool blends;                                    // a layer blends (layoutBackgroundBlends)
@@ -32,10 +32,10 @@ struct LayoutBackground {
 // The background layers of a tree's styles. Index 0 is the empty list, which is never freed. An index names its entry
 // until the entry is freed.
 struct LayoutBackgrounds {
-    Array<LayoutBackground> entries;
-    Array<uint32_t> free;           // freed indices, which interning reuses
+    RawArray<LayoutBackground> entries;
+    RawArray<uint32_t> free;           // freed indices, which interning reuses
     HashIndex index;
-    Array<uint32_t> candidates;     // same as LayoutTable::candidates
+    RawArray<uint32_t> candidates;     // same as LayoutTable::candidates
 };
 
 // Prepares the table with the empty list at index 0.
@@ -67,7 +67,7 @@ void layoutBackgroundsReset(LayoutBackgrounds* backgrounds);
 // Appends the bytes that identify `count` layers to `key`: every field that painting reads, a gradient's stops and a
 // filter list's items in place of the pointers to them, an image's or list's address, and a painter's function and
 // context. Equal layers append equal bytes.
-void layoutBackgroundKey(Array<uint8_t>& key, const PrLayoutBackgroundLayer* layers, uint32_t count);
+void layoutBackgroundKey(RawArray<uint8_t>& key, const PrLayoutBackgroundLayer* layers, uint32_t count);
 
 // Adds `delta` to the references of what `count` layers name: the compounds of their lengths, their images and lists,
 // the contexts of their painters that share them, and the sources of their filter lists. A list that a layer names is
@@ -116,13 +116,13 @@ PrDrawSource layoutImageSource(const LayoutCompounds* PR_NULLABLE compounds, con
 bool layoutBackgroundBlends(const PrLayoutBackgroundLayer* layers, uint32_t count);
 
 // Appends the bytes that identify a source to `key`: its functions, its context and its version.
-void layoutSourceKey(Array<uint8_t>& key, const PrLayoutSource& source);
+void layoutSourceKey(RawArray<uint8_t>& key, const PrLayoutSource& source);
 
 // Adds `delta` to the references of a source's context, if the source shares it.
 void layoutSourceCount(const PrLayoutSource& source, uint32_t delta);
 
 // Appends the bytes that identify `count` filter items to `key`: every field that drawing reads, and their sources.
-void layoutFilterKey(Array<uint8_t>& key, const PrLayoutFilter* PR_NULLABLE filters, uint32_t count);
+void layoutFilterKey(RawArray<uint8_t>& key, const PrLayoutFilter* PR_NULLABLE filters, uint32_t count);
 
 } // namespace pr_impl
 

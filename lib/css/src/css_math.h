@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "pr/array.h"
 #include "pr/css.h"
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "css/src/css_unit.h"
@@ -55,11 +55,11 @@ constexpr uint32_t kCssMathMaxDepth = 64;
 
 // Scratch memory for building a calculation tree, kept across math functions.
 struct CssMathScratch {
-    Array<CssMathNode> nodes;
+    RawArray<CssMathNode> nodes;
 
     // The values kept as written: functions that are not math functions, and the keywords and commas among the
     // arguments.
-    Array<CssValueNode> leaves;
+    RawArray<CssValueNode> leaves;
 };
 
 // Frees the scratch's memory.

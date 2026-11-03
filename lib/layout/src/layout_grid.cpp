@@ -133,16 +133,16 @@ struct LayoutGridKept {
 // Scratch memory that grid layout keeps between layouts: the items, tracks and names of the containers being laid out,
 // innermost last, the bits of auto-placement, and the lines kept for the boxes out of flow.
 struct LayoutGridScratch {
-    Array<LayoutGridItem> items;
-    Array<GridTrack> tracks;
-    Array<GridLineName> names;
-    Array<uint64_t> occupied;
-    Array<uint32_t> order;
-    Array<double> sizes;
-    Array<LayoutGridKept> kept;
-    Array<PrLayoutUnit> keptPositions;
-    Array<PrLayoutUnit> keptSizes;
-    Array<GridLineName> keptNames;
+    RawArray<LayoutGridItem> items;
+    RawArray<GridTrack> tracks;
+    RawArray<GridLineName> names;
+    RawArray<uint64_t> occupied;
+    RawArray<uint32_t> order;
+    RawArray<double> sizes;
+    RawArray<LayoutGridKept> kept;
+    RawArray<PrLayoutUnit> keptPositions;
+    RawArray<PrLayoutUnit> keptSizes;
+    RawArray<GridLineName> keptNames;
 };
 
 namespace {
@@ -330,7 +330,7 @@ const PrLayoutGridTrack& trackSizes(const GridAxis& axis, int32_t index) {
 // names of its template, with its automatic repetition repeated, and the names that the template's areas give the lines
 // at their edges (css-grid-1/#implicit-named-lines). `rows` says which edges of an area are the axis's.
 void collectNames(Grid& g, GridAxis& axis, const LayoutGridAreasEntry& areas, bool rows) {
-    Array<GridLineName>& names = g.scratch().names;
+    RawArray<GridLineName>& names = g.scratch().names;
     axis.nameMark = names.count;
     const LayoutGridTracksEntry& list = *axis.tracks;
     uint32_t shift = axis.repetitions != 0 ? list.repeatCount * (axis.repetitions - 1) : 0;
@@ -523,7 +523,7 @@ AxisPlacement placementOf(const LayoutGridTemplates* templates, const AxisLines&
 // bits for each track of the axis that the flow advances through, with a bit for each track of the other axis. Rows are
 // added as the flow reaches them.
 struct Occupancy {
-    Array<uint64_t>& bits;
+    RawArray<uint64_t>& bits;
     uint32_t mark;                  // the index of the first row's first word in `bits`
     uint32_t words;                 // the words of a row
     int32_t majorBase;              // the line of the first row
@@ -641,7 +641,7 @@ void placeItems(Grid& g) {
 
     // Each item locked to a track of the flow's axis takes the first position along the other axis, from the start of
     // the explicit grid, where it fits. A sparse flow also starts past the items that this step placed in that track.
-    Array<int32_t> cursors;
+    RawArray<int32_t> cursors;
     for (uint32_t i = 0; i < g.count; ++i) {
         LayoutGridItem& it = g.item(i);
         if (!it.definite[major] || it.definite[minor])
@@ -778,7 +778,7 @@ bool isIntrinsic(LayoutGridSizing sizing) {
 // of an auto-fit repetition (css-grid-1/#auto-repeat). A collapsed track has a fixed size of zero.
 void setUpTracks(Grid& g, PrLayoutGridAxis axis, PrLayoutUnit base) {
     GridAxis& a = g.axes[axis];
-    Array<GridTrack>& tracks = g.scratch().tracks;
+    RawArray<GridTrack>& tracks = g.scratch().tracks;
     a.trackMark = tracks.count;
     tracks.resize(tracks.count + a.trackCount);
     for (uint32_t t = 0; t < a.trackCount; ++t) {
@@ -1290,7 +1290,7 @@ void distribute(Grid& g, PrLayoutGridAxis axis, const uint32_t* items, uint32_t 
         track.planned = 0;
         track.frozen = false;
     }
-    Array<uint32_t>& set = g.scratch().order;
+    RawArray<uint32_t>& set = g.scratch().order;
     for (uint32_t t = 0; t < trackCount; ++t)
         g.track(axis, t).touched = false;
     auto sizeOf = [&](const GridTrack& track) {
@@ -1417,7 +1417,7 @@ void shimBaselines(Grid& g, PrLayoutGridAxis axis) {
     if (axis != PrLayoutGridAxis_Rows)
         return;
     uint32_t trackCount = g.axes[axis].trackCount;
-    Array<double>& above = g.scratch().sizes;
+    RawArray<double>& above = g.scratch().sizes;
     uint32_t mark = above.count;
     above.resize(mark + 2 * trackCount);
     for (uint32_t k = mark; k < above.count; ++k)
@@ -1516,7 +1516,7 @@ void resolveIntrinsicSizes(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space
 
     // The items that span more tracks, none flexible, by increasing span, and then every item that spans a flexible
     // track, whose contributions go only to flexible tracks.
-    Array<uint32_t> group;
+    RawArray<uint32_t> group;
     for (uint32_t span = 2; span <= widest + 1; ++span) {
         bool flexible = span == widest + 1;
         group.clear();
@@ -1684,7 +1684,7 @@ void sizeTracks(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space, double av
     else if (space == LayoutGridSpace_MaxContent)
         free = layoutIsDefinite(g.maxSize[axis]) ? rawOf(g.maxSize[axis]) - totalOf(g, axis) : kPrF64Infinity;
     if (free > 0) {
-        Array<uint32_t>& all = g.scratch().order;
+        RawArray<uint32_t>& all = g.scratch().order;
         uint32_t mark = all.count;
         for (uint32_t t = 0; t < count; ++t)
             all.push(t);
@@ -1937,7 +1937,7 @@ LayoutGridScratch& scratchOf(LayoutState& state) {
 // (css-display-4/#order-modified-document-order), and counts its children out of flow.
 uint32_t collectItems(Grid& g) {
     LayoutTree* tree = g.state.tree;
-    Array<LayoutGridItem>& items = g.scratch().items;
+    RawArray<LayoutGridItem>& items = g.scratch().items;
     g.mark = items.count;
     uint32_t outOfFlow = 0;
     auto add = [&](LayoutNodeIndex c, const PrLayoutBoxStyle& box, const PrLayoutFlexStyle& flex,
@@ -2066,7 +2066,7 @@ PrLayoutUnit sizeRows(Grid& g) {
     if (again) {
         g.size[rows] = size;
         g.axes[rows].gap = layoutGapResolve(g.state.styles, g.flex.rowGap, size);
-        Array<GridTrack>& tracks = g.scratch().tracks;
+        RawArray<GridTrack>& tracks = g.scratch().tracks;
         // The tracks are set up again with their percentages resolved.
         uint32_t columnsEnd = a.trackMark;
         uint32_t saved = tracks.count;
@@ -2322,7 +2322,7 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
     }
 
     // Lays out each item in its area at its final request, or measures it for a solve, and aligns it there.
-    Array<LayoutLogicalChild>& children = state.scratch->children;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
     LayoutContentOutcome outcome{};
     outcome.contentBlock = layoutIsDefinite(input.blockSize) ? input.blockSize : blockSize;
     uint32_t built = 0;
@@ -2373,7 +2373,7 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
     // Aligns the items aligned by their baseline in each row's baseline-sharing groups: those aligned by their first
     // baseline at the row where their span starts, and those aligned by their last baseline at the row where it ends.
     uint32_t rowCount = g.axes[PrLayoutGridAxis_Rows].trackCount;
-    Array<double>& extents = g.scratch().sizes;
+    RawArray<double>& extents = g.scratch().sizes;
     uint32_t extentMark = extents.count;
     extents.resize(extentMark + 2 * rowCount);
     for (uint32_t k = extentMark; k < extents.count; ++k)
