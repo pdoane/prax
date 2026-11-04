@@ -139,12 +139,13 @@ page, such as Prax's, loads at its file: URL. Pages have WPT's Ahem font install
 `tools/lint/test_font_bundle.py` checks that the bundles cover each language's exemplar characters. Ahem, whether
 installed or loaded by `@font-face`, is drawn without antialiasing, as reftests built on it expect (`prFontIsAliased`).
 A page's `@font-face` faces load when its text asks for them in a rendering update, and `document.fonts.ready` waits for
-them, so a page settles with its fonts loaded. A reftest passes if it matches any of its match references and none of
-its mismatch references. A print reftest (web-platform-tests docs, "Print Reftests") and its references are printed
-(`pr_shell --print`). They start from the page box that WPT's protocol gives a document, 5 by 3 inches with half-inch
-margins, which the runner hands the shell (`--page-size`, `--page-margin`). Each page that the test's `reftest-pages`
-metas select is rendered as an image of its own, and compared with the reference's page in the same place. Two
-documents with different numbers of pages differ.
+them, so a page settles with its fonts loaded. The end of a load lays the document out, and the faces that its text asks
+for then delay its load event, so a test that measures at load measures them. A reftest passes if it matches any of its
+match references and none of its mismatch references. A print reftest (web-platform-tests docs, "Print Reftests") and
+its references are printed (`pr_shell --print`). They start from the page box that WPT's protocol gives a document, 5 by
+3 inches with half-inch margins, which the runner hands the shell (`--page-size`, `--page-margin`). Each page that the
+test's `reftest-pages` metas select is rendered as an image of its own, and compared with the reference's page in the
+same place. Two documents with different numbers of pages differ.
 
 `tools/suite/reftest.py` runs the suites whose references are images. resvg's tests are each compared with the PNG
 beside them. Each Lottie corpus is compared with the player that it was written for: lottie-web's tests with

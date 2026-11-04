@@ -25,8 +25,11 @@ namespace pr_impl {
 
 namespace {
 
+// Loads a test font by its file name, or a font of the bundles by its file name after "bundle/".
 const PrFont* load(const char* name) {
     std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+    if (std::strncmp(name, "bundle/", 7) == 0)
+        path = std::string(PR_FONT_BUNDLE_DIR) + "/" + (name + 7);
     std::vector<uint8_t> bytes;
     FILE* file = std::fopen(path.c_str(), "rb");
     REQUIRE(file != nullptr);
@@ -300,6 +303,38 @@ std::string familyFor(PrTextFont* font, const char* cluster, PrScript script = P
     std::string name(prRawStringView(&family).data, prRawStringView(&family).size);
     prRawStringReset(&family);
     return name;
+}
+
+// Checks that `backend` sets each variation sequence that New Computer Modern Math lists in the sequence's glyph: the
+// roundhand script capitals after U+FE01 and a variant empty set after U+FE00. A selector that the font does not list
+// for its base, after an A, is ignored, and so is a second selector.
+void checkVariationSequences(PrTextShaperBackend backend) {
+    const PrFont* font = load("bundle/NewCMMath-Regular.otf");
+    uint16_t script = prFontCodePointGlyph(font, 0x1D49C);
+    uint16_t roundhand = prFontVariationSequenceGlyph(font, 0x1D49C, 0xFE01).glyph;
+    uint16_t emptySet = prFontVariationSequenceGlyph(font, 0x2205, 0xFE00).glyph;
+    REQUIRE(roundhand != 0);
+    REQUIRE(roundhand != script);
+    REQUIRE(emptySet != prFontCodePointGlyph(font, 0x2205));
+    uint16_t a = prFontCodePointGlyph(font, 'A');
+    const char* text = "\xf0\x9d\x92\x9c\xef\xb8\x81\xf0\x9d\x92\x9c\xe2\x88\x85\xef\xb8\x80" "A\xef\xb8\x81\xef\xb8\x81";
+    PrTextShaper* shaper = prTextShaperCreate(backend);
+    CAPTURE(std::string(prTextShaperBackendName(backend).data, prTextShaperBackendName(backend).size));
+    for (PrTextAxis axis : {PrTextAxis_Horizontal, PrTextAxis_Vertical}) {
+        CAPTURE(int(axis));
+        PrTextRun run = runOf(font, text);
+        run.axis = axis;
+        run.script = PrScript_Zmth;
+        std::vector<PrTextGlyph> glyphs = shape(shaper, run);
+        INFO(describe(glyphs));
+        CHECK(idsOf(glyphs) == std::vector<uint32_t>{roundhand, script, emptySet, a});
+        std::vector<uint32_t> clusters;
+        for (const PrTextGlyph& g : glyphs)
+            clusters.push_back(g.cluster);
+        CHECK(clusters == std::vector<uint32_t>{0, 7, 11, 17});
+    }
+    prTextShaperDestroy(shaper);
+    prFontRelease(font);
 }
 
 } // namespace
@@ -936,6 +971,56 @@ TEST_CASE("a cluster of emoji presentation tries the emoji faces first") {
     CHECK(familiesOf(group, itemize(group, "\xf0\x9f\x98\x80\xef\xb8\x8e")) ==
         std::vector<std::string>{"twemoji-glyf_colr_1"});
     prTextFontRelease(group);
+    prFontSetDestroy(set);
+}
+
+TEST_CASE("a variation sequence shapes to the glyph that the font lists for it, with every backend but kb") {
+    uint32_t backends = 0;
+    for (uint32_t b = PrTextShaperBackend_Default + 1; b < PrTextShaperBackend_Count; ++b) {
+        if (!prTextShaperBackendIsBuilt(PrTextShaperBackend(b)) || b == PrTextShaperBackend_Kb)
+            continue;
+        ++backends;
+        checkVariationSequences(PrTextShaperBackend(b));
+    }
+    CHECK(backends != 0);
+}
+
+// kb maps each code point to its glyph on its own, without the font's variation sequences.
+TEST_CASE("kb shapes a variation sequence to the glyph that the font lists for it" * doctest::should_fail()) {
+    REQUIRE(prTextShaperBackendIsBuilt(PrTextShaperBackend_Kb));
+    checkVariationSequences(PrTextShaperBackend_Kb);
+}
+
+// Noto Sans Math lists its chancery script capitals after U+FE00, and New Computer Modern Math its roundhand capitals
+// after U+FE01. Each sequence is set in the face that lists it, wherever that face is in the order, and a sequence that
+// no face lists is set in the first face with its base.
+TEST_CASE("a cluster with a variation sequence prefers the face that lists the sequence") {
+    PrFontSet* set = setOf({{"NotoSansMath.ttf"}, {"bundle/NewCMMath-Regular.otf"}, {"NotoSans.ttf"}});
+    const char* chancery = "\xf0\x9d\x92\x9c\xef\xb8\x80";
+    const char* roundhand = "\xf0\x9d\x92\x9c\xef\xb8\x81";
+    const char* unlisted = "\xf0\x9d\x92\x9c\xef\xb8\x82";
+    PrTextFont* notoFirst = fontOf(set, {"Noto Sans Math", "NewComputerModernMath"});
+    CHECK(familyFor(notoFirst, chancery, PrScript_Zmth) == "Noto Sans Math");
+    CHECK(familyFor(notoFirst, roundhand, PrScript_Zmth) == "NewComputerModernMath");
+    CHECK(familyFor(notoFirst, unlisted, PrScript_Zmth) == "Noto Sans Math");
+    CHECK(familyFor(notoFirst, "\xf0\x9d\x92\x9c", PrScript_Zmth) == "Noto Sans Math");
+    PrTextFont* newCmFirst = fontOf(set, {"NewComputerModernMath", "Noto Sans Math"});
+    CHECK(familyFor(newCmFirst, chancery, PrScript_Zmth) == "Noto Sans Math");
+    CHECK(familyFor(newCmFirst, roundhand, PrScript_Zmth) == "NewComputerModernMath");
+    CHECK(familyFor(newCmFirst, unlisted, PrScript_Zmth) == "NewComputerModernMath");
+    // A fallback family that lists the sequence is preferred to a requested face that has only its base.
+    const PrFontFallbackFamily fallback{.family = "Noto Sans Math"};
+    prFontSetSetFallbackFamilies(set, &fallback, 1);
+    PrTextFont* newCmOnly = fontOf(set, {"NewComputerModernMath"});
+    CHECK(familyFor(newCmOnly, chancery, PrScript_Zmth) == "Noto Sans Math");
+    CHECK(familyFor(newCmOnly, unlisted, PrScript_Zmth) == "NewComputerModernMath");
+    // The emoji presentation selectors choose by presentation, not by the faces that list them.
+    PrTextFont* sans = fontOf(set, {"Noto Sans"});
+    CHECK(familyFor(sans, "A\xef\xb8\x8e") == "Noto Sans");
+    prTextFontRelease(sans);
+    prTextFontRelease(newCmOnly);
+    prTextFontRelease(newCmFirst);
+    prTextFontRelease(notoFirst);
     prFontSetDestroy(set);
 }
 

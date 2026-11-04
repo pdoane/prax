@@ -308,6 +308,27 @@ uint32_t prFontGlyphCount(const PrFont* font);
 // does no shaping.
 uint16_t prFontCodePointGlyph(const PrFont* font, uint32_t codePoint);
 
+// How the character map of a font maps a variation sequence (UTS #37): a base character followed by a variation
+// selector. The font lists the sequences that it supports in its Unicode Variation Sequences (cmap format 14).
+enum {
+    PrFontSequenceMapping_None,         // the font lists no glyph for the sequence
+    PrFontSequenceMapping_Default,      // the sequence takes the glyph of its base character
+    PrFontSequenceMapping_Variant,      // the sequence has a glyph of its own
+};
+typedef uint8_t PrFontSequenceMapping;
+
+// The glyph of a variation sequence, and how the font maps the sequence. The glyph is zero for
+// PrFontSequenceMapping_None.
+typedef struct PrFontSequenceGlyph {
+    uint16_t glyph;
+    PrFontSequenceMapping mapping;
+} PrFontSequenceGlyph;
+
+// Returns the glyph that the character map of the font assigns to the variation sequence of `codePoint` followed by
+// `selector`. A sequence that the font does not list maps to nothing, even if the font has a glyph for `codePoint`: the
+// caller decides whether to ignore the selector. The lookup does no shaping.
+PrFontSequenceGlyph prFontVariationSequenceGlyph(const PrFont* font, uint32_t codePoint, uint32_t selector);
+
 // Returns the advance of the glyph down a vertical line, and the position of its vertical origin relative to its
 // horizontal origin. Both come from the vertical metrics of the font, or are synthesized from its ascent and descent.
 float prFontGlyphVerticalAdvance(const PrFont* font, uint16_t glyph);

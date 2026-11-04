@@ -111,6 +111,10 @@ enum {
 
     LayoutFragmentFlag_Column = 1 << 12,        // Box: a column of a multi-column container, with no node
     LayoutFragmentFlag_Page = 1 << 13,          // Box: a page of a paginated tree, with no node
+
+    // Text: white space that hangs at the end of its line (css-text-3/#hanging). It reaches no scrollable overflow,
+    // because a hanging glyph is not part of the line's content (css-text-3/#white-space-phase-2).
+    LayoutFragmentFlag_Hangs = 1 << 14,
 };
 typedef uint16_t LayoutFragmentFlags;
 
@@ -372,6 +376,12 @@ inline uint32_t layoutFragmentHeldFirst(const LayoutFragment* fragment) {
 // points: they reach nothing and are never hit.
 inline bool layoutFragmentIsPoint(const LayoutFragment* fragment) {
     return fragment->kind == LayoutFragmentKind_Placeholder || fragment->kind == LayoutFragmentKind_FloatAnchor;
+}
+
+// Returns true if the fragment adds to its parent's scrollable overflow: it is neither a point nor white space that
+// hangs.
+inline bool layoutFragmentReachesOverflow(const LayoutFragment* fragment) {
+    return !layoutFragmentIsPoint(fragment) && (fragment->flags & LayoutFragmentFlag_Hangs) == 0;
 }
 
 // Returns the number of bytes that a text fragment of `fontCount` fonts, `rangeCount` font ranges, `glyphCount` glyphs

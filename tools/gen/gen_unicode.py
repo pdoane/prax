@@ -85,7 +85,8 @@ EMOJI_FLAGS = {"Emoji": "PrUnicodeFlag_Emoji", "Emoji_Presentation": "PrUnicodeF
                "Extended_Pictographic": "PrUnicodeFlag_ExtendedPictographic"}
 FLAG_BITS = {"Emoji": 0, "Emoji_Presentation": 1, "Emoji_Modifier": 2, "Emoji_Modifier_Base": 3,
              "Emoji_Component": 4, "Extended_Pictographic": 5, "Lowercase": 6, "Uppercase": 7,
-             "Default_Ignorable_Code_Point": 8, "Mark": 9, "Cased": 10, "Case_Ignorable": 11, "Soft_Dotted": 12}
+             "Default_Ignorable_Code_Point": 8, "Mark": 9, "Cased": 10, "Case_Ignorable": 11, "Soft_Dotted": 12,
+             "Variation_Selector": 13}
 
 MAX_CODE_POINT = 0x10FFFF
 
@@ -629,9 +630,10 @@ def emit_data(path, ucd):
         for first, last, _ in ranges(os.path.join(ucd, "DerivedCoreProperties.txt"), case):
             for code_point in range(first, last + 1):
                 flags[code_point] |= 1 << FLAG_BITS[case]
-    for first, last, _ in ranges(os.path.join(ucd, "PropList.txt"), "Soft_Dotted"):
-        for code_point in range(first, last + 1):
-            flags[code_point] |= 1 << FLAG_BITS["Soft_Dotted"]
+    for prop in ("Soft_Dotted", "Variation_Selector"):
+        for first, last, _ in ranges(os.path.join(ucd, "PropList.txt"), prop):
+            for code_point in range(first, last + 1):
+                flags[code_point] |= 1 << FLAG_BITS[prop]
     for first, last, category in ranges(os.path.join(ucd, "DerivedGeneralCategory.txt")):
         if category in ("Mn", "Mc", "Me"):
             for code_point in range(first, last + 1):

@@ -14,7 +14,7 @@ void addInFlowBounds(const LayoutFragment* fragment, PrLayoutVec at, PrLayoutRec
     for (uint32_t i = 0; i < fragment->childCount; ++i) {
         const LayoutChild& child = fragment->children[i];
         const LayoutFragment* f = child.fragment;
-        if ((f->flags & LayoutFragmentFlag_OutOfFlow) != 0 || layoutFragmentIsPoint(f))
+        if ((f->flags & LayoutFragmentFlag_OutOfFlow) != 0 || !layoutFragmentReachesOverflow(f))
             continue;
         PrLayoutVec offset = at + child.offset;
         bool through = f->kind == LayoutFragmentKind_Line || f->kind == LayoutFragmentKind_Around ||
@@ -73,7 +73,7 @@ PrLayoutRect paddingBox(const LayoutFragment* fragment, const PrLayoutBoxStyle& 
 PrLayoutRect childrenReach(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutRect area) {
     for (uint32_t i = 0; i < fragment->childCount; ++i) {
         const LayoutChild& child = fragment->children[i];
-        if (!layoutFragmentIsPoint(child.fragment))
+        if (layoutFragmentReachesOverflow(child.fragment))
             area = layoutRectUnion(area, layoutRectMoved(layoutPassedOverflow(tree, child.fragment), child.offset));
     }
     return area;
@@ -207,8 +207,8 @@ void layoutFragmentSetOverflow(const LayoutTree* tree, LayoutFragment* fragment)
     for (uint32_t i = 0; i < fragment->childCount; ++i) {
         const LayoutChild& child = fragment->children[i];
         // A placeholder or an anchor reaches nothing. Its box is a child of another fragment, and reaches as far as it
-        // does there.
-        if (layoutFragmentIsPoint(child.fragment))
+        // does there. White space that hangs reaches nothing either.
+        if (!layoutFragmentReachesOverflow(child.fragment))
             continue;
         overflow = layoutRectUnion(overflow, layoutRectMoved(layoutPassedOverflow(tree, child.fragment), child.offset));
     }

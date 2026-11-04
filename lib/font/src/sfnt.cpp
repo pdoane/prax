@@ -306,6 +306,12 @@ int16_t SfntTable::int16At(uint32_t at) const {
     return int16_t(uint16At(at));
 }
 
+uint32_t SfntTable::uint24At(uint32_t at) const {
+    if (data == nullptr || at >= size || size - at < 3)
+        return 0;
+    return uint32_t(data[at]) << 16 | uint32_t(data[at + 1]) << 8 | data[at + 2];
+}
+
 uint32_t SfntTable::uint32At(uint32_t at) const {
     return uint32_t(uint16At(at)) << 16 | uint16At(at + 2);
 }
@@ -786,6 +792,104 @@ uint32_t sfntCmapGlyph(const SfntCmap& cmap, uint32_t codePoint) {
         }
         default: return 0;
     }
+}
+
+bool sfntCmapSequencesOpen(const Sfnt& sfnt, SfntCmapSequences* out) {
+    *out = SfntCmapSequences{};
+    SfntTable cmap = sfntTable(sfnt, kCmap);
+    uint32_t count = entriesIn(cmap, 4, 8, cmap.uint16At(2));
+    SfntTable subtable{};
+    for (uint32_t i = 0; i < count && subtable.data == nullptr; ++i) {
+        uint32_t record = 4 + i * 8;
+        if (cmap.uint16At(record) != 0 || cmap.uint16At(record + 2) != 5)
+            continue;
+        SfntTable candidate = cmap.from(cmap.uint32At(record + 4));
+        if (candidate.uint16At(0) == 14)
+            subtable = candidate;
+    }
+    // The subtable is its length, which must hold its header and its records.
+    uint32_t length = subtable.uint32At(2);
+    if (subtable.data == nullptr || length < 10 || length > subtable.size)
+        return false;
+    subtable.size = length;
+    uint32_t selectors = subtable.uint32At(6);
+    if (selectors > (length - 10) / 11)
+        return false;
+    // Each list that a record names lies within the subtable, and lists code points in ascending order, without
+    // overlap, so that a lookup can search it.
+    auto fits = [&](uint32_t offset, uint32_t entrySize) {
+        if (offset > length || length - offset < 4)
+            return false;
+        return subtable.uint32At(offset) <= (length - offset - 4) / entrySize;
+    };
+    uint32_t previous = 0;
+    for (uint32_t i = 0; i < selectors; ++i) {
+        uint32_t record = 10 + i * 11;
+        uint32_t selector = subtable.uint24At(record);
+        if ((i != 0 && selector <= previous) || selector > 0x10ffff)
+            return false;
+        previous = selector;
+        uint32_t defaults = subtable.uint32At(record + 3);
+        if (defaults != 0) {
+            if (!fits(defaults, 4))
+                return false;
+            uint32_t ranges = subtable.uint32At(defaults);
+            uint32_t next = 0;
+            for (uint32_t k = 0; k < ranges; ++k) {
+                uint32_t at = defaults + 4 + k * 4;
+                uint32_t start = subtable.uint24At(at);
+                uint32_t end = start + subtable.uint8At(at + 3);
+                if (start < next || end > 0x10ffff)
+                    return false;
+                next = end + 1;
+            }
+        }
+        uint32_t variants = subtable.uint32At(record + 7);
+        if (variants != 0) {
+            if (!fits(variants, 5))
+                return false;
+            uint32_t mappings = subtable.uint32At(variants);
+            uint32_t next = 0;
+            for (uint32_t k = 0; k < mappings; ++k) {
+                uint32_t codePoint = subtable.uint24At(variants + 4 + k * 5);
+                if (codePoint < next || codePoint > 0x10ffff)
+                    return false;
+                next = codePoint + 1;
+            }
+        }
+    }
+    out->subtable = subtable;
+    out->selectorCount = selectors;
+    return true;
+}
+
+PrFontSequenceGlyph sfntCmapSequenceGlyph(const SfntCmapSequences& sequences, uint32_t codePoint, uint32_t selector) {
+    const SfntTable& t = sequences.subtable;
+    uint32_t count = sequences.selectorCount;
+    uint32_t i = partitionPoint(0, count, [&](uint32_t k) { return t.uint24At(10 + k * 11) < selector; });
+    if (i == count || t.uint24At(10 + i * 11) != selector)
+        return PrFontSequenceGlyph{};
+    uint32_t record = 10 + i * 11;
+    // A sequence that the default list holds takes the glyph of its base character.
+    uint32_t defaults = t.uint32At(record + 3);
+    if (defaults != 0) {
+        uint32_t ranges = t.uint32At(defaults);
+        uint32_t k = partitionPoint(0, ranges, [&](uint32_t r) {
+            uint32_t at = defaults + 4 + r * 4;
+            return t.uint24At(at) + t.uint8At(at + 3) < codePoint;
+        });
+        if (k < ranges && t.uint24At(defaults + 4 + k * 4) <= codePoint)
+            return PrFontSequenceGlyph{.mapping = PrFontSequenceMapping_Default};
+    }
+    uint32_t variants = t.uint32At(record + 7);
+    if (variants != 0) {
+        uint32_t mappings = t.uint32At(variants);
+        uint32_t k = partitionPoint(0, mappings, [&](uint32_t m) { return t.uint24At(variants + 4 + m * 5) < codePoint; });
+        uint32_t at = variants + 4 + k * 5;
+        if (k < mappings && t.uint24At(at) == codePoint)
+            return PrFontSequenceGlyph{.glyph = t.uint16At(at + 3), .mapping = PrFontSequenceMapping_Variant};
+    }
+    return PrFontSequenceGlyph{};
 }
 
 bool sfntGlyphImage(const Sfnt& sfnt, uint32_t glyph, float pixelsPerEm, SfntImage* out) {

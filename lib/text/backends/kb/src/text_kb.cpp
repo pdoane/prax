@@ -8,6 +8,7 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/raw_array.h"
+#include "pr/unicode.h"
 #include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
 #include "pr/vec.h"
@@ -232,6 +233,14 @@ PrStatus shapeAcross(KbBackend* kb, void* faceState, void* fontState, const PrTe
     return status;
 }
 
+// Returns true if the code point at byte `at` of the text is default ignorable.
+bool ignorableAt(PrStringView text, uint32_t at) {
+    uint32_t codePoint = 0;
+    if (at < text.size)
+        prUtf8Decode(text, at, &codePoint);
+    return (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0;
+}
+
 // Appends the glyphs of a run down, which kb cannot shape. Each grapheme cluster is shaped across on its own, with the
 // vertical forms of the font (vert) and no context, so that nothing joins or ligates across clusters and the marks of a
 // cluster stay with its base. Each cluster is placed by the vertical origin of its base glyph, as a vertical shaping
@@ -271,13 +280,18 @@ PrStatus shapeDown(KbBackend* kb, void* faceState, void* fontState, const PrText
             float advance = prFontGlyphVerticalAdvance(run->font, base) / sizeAdjust;
             PrVec2 origin = prFontGlyphVerticalOrigin(run->font, base);
             PrVec2 pen{-origin.x / sizeAdjust, -origin.y / sizeAdjust};
+            // The glyphs of the cluster share its place on the line, which the cluster leaves after its last glyph that
+            // is drawn. A default ignorable code point that kb sets as nothing, such as a variation selector, has no
+            // advance, and shaping drops its glyph (prTextShaperShape).
+            uint32_t last = count - 1;
+            while (last > 0 && glyphs[last].advance.x == 0 && ignorableAt(across.text, glyphs[last].cluster))
+                --last;
             for (uint32_t i = 0; i < count; ++i) {
                 PrTextGlyph& glyph = glyphs[i];
                 glyph.cluster += uint32_t(at);
                 glyph.offset = pen + glyph.offset;
                 pen.x += glyph.advance.x;
-                // The glyphs of the cluster share its place on the line, which the cluster leaves after its last glyph.
-                glyph.advance = PrVec2{0, i + 1 == count ? advance : 0};
+                glyph.advance = PrVec2{0, i == last ? advance : 0};
             }
         }
         at = next;

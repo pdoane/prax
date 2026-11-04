@@ -265,10 +265,58 @@ bool isIgnorable(uint32_t codePoint) {
     return (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0;
 }
 
-// Returns the first requested face that serves the cluster, or kPrTextMatchNone. Faces that match the presentation of
-// the cluster come first, then the others, each group in the order of the list. A face whose font has not loaded and
-// that the search passes is requested if its ranges hold the first code point of the cluster.
-uint32_t requestedFace(TextFont& t, Order& o, PrStringView cluster, uint32_t first, bool emoji) {
+// What a face must map to serve a cluster.
+enum {
+    Coverage_Characters,                // every code point that is not default ignorable (prTextFaceServesCluster)
+    Coverage_Sequences,                 // those, and every variation sequence that selects a glyph
+};
+typedef uint8_t Coverage;
+
+// Returns true if a variation selector that follows `previous` selects a glyph: a selector that follows a character
+// other than a selector, and that is not an emoji presentation selector. A selector after another is an encoding error
+// and is ignored. A presentation selector chooses between color and text faces (UTS #51) instead.
+bool selectsGlyph(uint32_t previous, uint32_t selector) {
+    bool afterSelector = (prUnicodeFlags(previous) & PrUnicodeFlag_VariationSelector) != 0;
+    return (prUnicodeFlags(selector) & PrUnicodeFlag_VariationSelector) != 0 && !afterSelector && previous != 0 &&
+        selector != 0xfe0e && selector != 0xfe0f;
+}
+
+// Returns true if the cluster holds a variation sequence that selects a glyph.
+bool holdsSequence(PrStringView cluster) {
+    uint32_t previous = 0;
+    for (size_t at = 0; at < cluster.size;) {
+        uint32_t codePoint = 0;
+        at += prUtf8Decode(cluster, at, &codePoint);
+        if (selectsGlyph(previous, codePoint))
+            return true;
+        previous = codePoint;
+    }
+    return false;
+}
+
+// Returns true if the face serves the cluster with the coverage. A face maps a variation sequence if its character map
+// lists the sequence, with a glyph of its own or with its base's glyph.
+bool covers(const PrFontFace& face, PrStringView cluster, Coverage coverage) {
+    if (!prTextFaceServesCluster(&face, cluster))
+        return false;
+    if (coverage == Coverage_Characters)
+        return true;
+    uint32_t previous = 0;
+    for (size_t at = 0; at < cluster.size;) {
+        uint32_t codePoint = 0;
+        at += prUtf8Decode(cluster, at, &codePoint);
+        if (selectsGlyph(previous, codePoint) &&
+                prFontVariationSequenceGlyph(face.font, previous, codePoint).mapping == PrFontSequenceMapping_None)
+            return false;
+        previous = codePoint;
+    }
+    return true;
+}
+
+// Returns the first requested face that serves the cluster with the coverage, or kPrTextMatchNone. Faces that match the
+// presentation of the cluster come first, then the others, each group in the order of the list. A face whose font has
+// not loaded and that the search passes is requested if its ranges hold the first code point of the cluster.
+uint32_t requestedFace(TextFont& t, Order& o, PrStringView cluster, uint32_t first, bool emoji, Coverage coverage) {
     matchFamilies(t, o);
     for (uint32_t pass = 0; pass < 2; ++pass) {
         for (uint32_t i = 0; i < o.requested; ++i) {
@@ -279,15 +327,16 @@ uint32_t requestedFace(TextFont& t, Order& o, PrStringView cluster, uint32_t fir
                 continue;
             }
             bool emojiFace = (face.flags & PrFontFaceFlag_Emoji) != 0;
-            if ((emojiFace == emoji) == (pass == 0) && prTextFaceServesCluster(&face, cluster))
+            if ((emojiFace == emoji) == (pass == 0) && covers(face, cluster, coverage))
                 return i;
         }
     }
     return kPrTextMatchNone;
 }
 
-// Returns the fallback face that serves the cluster, after joining it to the faces of the order, or kPrTextMatchNone.
-uint32_t fallbackFace(TextFont& t, Order& o, PrStringView cluster, PrScript script, bool emoji) {
+// Returns the fallback face that serves the cluster with the coverage, after joining it to the faces of the order, or
+// kPrTextMatchNone.
+uint32_t fallbackFace(TextFont& t, Order& o, PrStringView cluster, PrScript script, bool emoji, Coverage coverage) {
     if (fallsBackToNothing(cluster))
         return kPrTextMatchNone;
     if (!o.fallbackMatched)
@@ -304,7 +353,7 @@ uint32_t fallbackFace(TextFont& t, Order& o, PrStringView cluster, PrScript scri
                     bool color = (face.flags & PrFontFaceFlag_Emoji) != 0;
                     if ((emoji && color != (colors == 0)) || candidate.rank != rank)
                         continue;
-                    if ((pass == 0 && !declares(o, candidate, script)) || !prTextFaceServesCluster(&face, cluster))
+                    if ((pass == 0 && !declares(o, candidate, script)) || !covers(face, cluster, coverage))
                         continue;
                     found = i;
                     break;
@@ -339,14 +388,23 @@ uint32_t firstFace(TextFont& t, Order& o) {
     return kPrTextMatchNone;
 }
 
-// Returns the face of the order that sets the cluster, or kPrTextMatchNone (prTextFontMatch).
+// Returns the face of the order that sets the cluster, or kPrTextMatchNone (prTextFontMatch). A cluster with a
+// variation sequence takes a face that maps the sequence, among the requested faces and then the fallback faces, before
+// a face that maps only its characters.
 uint32_t chooseFace(TextFont& t, Order& o, PrStringView cluster, PrScript script) {
     uint32_t first = 0;
     prUtf8Decode(cluster, 0, &first);
     bool emoji = prTextClusterIsEmoji(cluster);
-    uint32_t face = requestedFace(t, o, cluster, first, emoji);
+    uint32_t face = kPrTextMatchNone;
+    if (holdsSequence(cluster)) {
+        face = requestedFace(t, o, cluster, first, emoji, Coverage_Sequences);
+        if (face == kPrTextMatchNone)
+            face = fallbackFace(t, o, cluster, script, emoji, Coverage_Sequences);
+    }
     if (face == kPrTextMatchNone)
-        face = fallbackFace(t, o, cluster, script, emoji);
+        face = requestedFace(t, o, cluster, first, emoji, Coverage_Characters);
+    if (face == kPrTextMatchNone)
+        face = fallbackFace(t, o, cluster, script, emoji, Coverage_Characters);
     if (face == kPrTextMatchNone) {
         // No face serves the whole cluster: use the face that serves its first code point, or the first available face.
         for (uint32_t i = 0; i < o.requested && face == kPrTextMatchNone; ++i) {

@@ -22,8 +22,7 @@ namespace pr_impl {
 
 namespace {
 
-std::vector<uint8_t> readFile(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+std::vector<uint8_t> readPath(const std::string& path) {
     std::vector<uint8_t> bytes;
     FILE* file = std::fopen(path.c_str(), "rb");
     REQUIRE(file != nullptr);
@@ -33,6 +32,54 @@ std::vector<uint8_t> readFile(const char* name) {
         bytes.insert(bytes.end(), buffer, buffer + read);
     std::fclose(file);
     return bytes;
+}
+
+std::vector<uint8_t> readFile(const char* name) {
+    return readPath(std::string(PR_FONTS_DIR) + "/" + name);
+}
+
+std::vector<uint8_t> newCmMathBytes() {
+    return readPath(std::string(PR_FONT_BUNDLE_DIR) + "/NewCMMath-Regular.otf");
+}
+
+const PrFont* fromBytes(const std::vector<uint8_t>& bytes) {
+    const PrFont* font = nullptr;
+    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    return font;
+}
+
+// Returns the byte offset in the file of the Unicode Variation Sequences subtable (cmap format 14) of its first face.
+uint32_t sequencesOffset(const std::vector<uint8_t>& bytes) {
+    Sfnt sfnt{};
+    REQUIRE(sfntOpen(bytes.data(), bytes.size(), 0, &sfnt));
+    SfntTable cmap = sfntTable(sfnt, PR_FONT_TAG('c', 'm', 'a', 'p'));
+    for (uint32_t i = 0; i < cmap.uint16At(2); ++i) {
+        uint32_t record = 4 + i * 8;
+        SfntTable subtable = cmap.from(cmap.uint32At(record + 4));
+        if (cmap.uint16At(record) == 0 && cmap.uint16At(record + 2) == 5 && subtable.uint16At(0) == 14)
+            return uint32_t(subtable.data - bytes.data());
+    }
+    FAIL("the font has no format 14 subtable");
+    return 0;
+}
+
+void poke24(std::vector<uint8_t>& bytes, uint32_t at, uint32_t value) {
+    bytes[at] = uint8_t(value >> 16);
+    bytes[at + 1] = uint8_t(value >> 8);
+    bytes[at + 2] = uint8_t(value);
+}
+
+void poke32(std::vector<uint8_t>& bytes, uint32_t at, uint32_t value) {
+    bytes[at] = uint8_t(value >> 24);
+    poke24(bytes, at + 1, value & 0xffffff);
+}
+
+uint32_t peek24(const std::vector<uint8_t>& bytes, uint32_t at) {
+    return uint32_t(bytes[at]) << 16 | uint32_t(bytes[at + 1]) << 8 | bytes[at + 2];
+}
+
+uint32_t peek32(const std::vector<uint8_t>& bytes, uint32_t at) {
+    return uint32_t(bytes[at]) << 24 | peek24(bytes, at + 1);
 }
 
 const PrFont* load(const char* name) {
@@ -202,6 +249,222 @@ TEST_CASE("the Unicode cmap subtable is the one FreeType chooses, and maps every
         FT_Done_Face(face);
     }
     FT_Done_FreeType(library);
+}
+
+TEST_CASE("variation sequences map as FreeType maps them") {
+    std::vector<std::string> paths = {std::string(PR_FONT_BUNDLE_DIR) + "/NewCMMath-Regular.otf"};
+    for (const char* name : {"NotoSansJP.ttf", "NotoSansSC.ttf", "NotoSansMongolian.ttf", "NotoColorEmoji.ttf",
+        "NotoSansMath.ttf", "NotoSans.ttf"})
+        paths.push_back(std::string(PR_FONTS_DIR) + "/" + name);
+    FT_Library library = nullptr;
+    REQUIRE(FT_Init_FreeType(&library) == 0);
+    uint32_t listed = 0;
+    for (const std::string& path : paths) {
+        CAPTURE(path);
+        std::vector<uint8_t> bytes = readPath(path);
+        FT_Face face = nullptr;
+        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.size()), 0, &face) == 0);
+        const PrFont* font = fromBytes(bytes);
+        uint32_t differ = 0;
+        uint32_t firstBase = 0;
+        uint32_t firstSelector = 0;
+        auto check = [&](uint32_t base, uint32_t selector) {
+            int isDefault = FT_Face_GetCharVariantIsDefault(face, base, selector);
+            FT_UInt glyph = FT_Face_GetCharVariantIndex(face, base, selector);
+            PrFontSequenceMapping expected = PrFontSequenceMapping_None;
+            if (isDefault == 1 && glyph != 0)
+                expected = PrFontSequenceMapping_Default;
+            else if (isDefault == 0 && glyph != 0)
+                expected = PrFontSequenceMapping_Variant;
+            uint16_t expectedGlyph = expected != PrFontSequenceMapping_None ? uint16_t(glyph) : 0;
+            PrFontSequenceGlyph found = prFontVariationSequenceGlyph(font, base, selector);
+            if ((found.mapping != expected || found.glyph != expectedGlyph) && differ++ == 0) {
+                firstBase = base;
+                firstSelector = selector;
+            }
+        };
+        FT_UInt32* selectors = FT_Face_GetVariantSelectors(face);
+        for (uint32_t s = 0; selectors != nullptr && selectors[s] != 0; ++s) {
+            FT_UInt32* bases = FT_Face_GetCharsOfVariant(face, selectors[s]);
+            for (uint32_t b = 0; bases != nullptr && bases[b] != 0; ++b, ++listed) {
+                // The code points beside a listed one, which the font may not list.
+                check(bases[b], selectors[s]);
+                check(bases[b] + 1, selectors[s]);
+                check(bases[b] - 1, selectors[s]);
+            }
+            check('A', selectors[s]);
+        }
+        check('A', 0xFE00);
+        CAPTURE(firstBase);
+        CAPTURE(firstSelector);
+        CHECK(differ == 0);
+        prFontRelease(font);
+        FT_Done_Face(face);
+    }
+    CHECK(listed > 0);
+    FT_Done_FreeType(library);
+}
+
+// New Computer Modern Math gives the script capitals a roundhand form after U+FE01, and the empty set a variant form
+// after U+FE00.
+TEST_CASE("a variation sequence maps to its own glyph, its base's glyph, or nothing") {
+    const PrFont* font = fromBytes(newCmMathBytes());
+    uint16_t script = prFontCodePointGlyph(font, 0x1D49C);
+    REQUIRE(script != 0);
+    PrFontSequenceGlyph roundhand = prFontVariationSequenceGlyph(font, 0x1D49C, 0xFE01);
+    CHECK(roundhand.mapping == PrFontSequenceMapping_Variant);
+    CHECK(roundhand.glyph != 0);
+    CHECK(roundhand.glyph != script);
+    PrFontSequenceGlyph emptySet = prFontVariationSequenceGlyph(font, 0x2205, 0xFE00);
+    CHECK(emptySet.mapping == PrFontSequenceMapping_Variant);
+    CHECK(emptySet.glyph != 0);
+    CHECK(emptySet.glyph != prFontCodePointGlyph(font, 0x2205));
+    // A selector that the font lists for other characters, and selectors that it lists for none.
+    CHECK(prFontVariationSequenceGlyph(font, 'A', 0xFE01).mapping == PrFontSequenceMapping_None);
+    CHECK(prFontVariationSequenceGlyph(font, 0x1D49C, 0xE01EF).mapping == PrFontSequenceMapping_None);
+    CHECK(prFontVariationSequenceGlyph(font, 0x1D49C, 0x10FFFF).glyph == 0);
+    prFontRelease(font);
+}
+
+// Each malformation leaves the font open, with its character map, and makes the subtable map no sequence.
+TEST_CASE("a malformed variation sequences subtable maps no sequence") {
+    std::vector<uint8_t> original = newCmMathBytes();
+    uint32_t at = sequencesOffset(original);
+    uint32_t length = peek32(original, at + 2);
+    REQUIRE(peek32(original, at + 6) >= 2);
+    // The first variant list of the subtable with more than one variant.
+    uint32_t variants = 0;
+    for (uint32_t i = 0; i < peek32(original, at + 6) && variants == 0; ++i) {
+        uint32_t list = peek32(original, at + 10 + i * 11 + 7);
+        if (list != 0 && peek32(original, at + list) >= 2)
+            variants = list;
+    }
+    REQUIRE(variants != 0);
+    struct Malformation {
+        const char* name;
+        void (*apply)(std::vector<uint8_t>& bytes, uint32_t at, uint32_t length, uint32_t variants);
+    };
+    const Malformation malformations[] = {
+        {
+            "a length past the table",
+            [](std::vector<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
+                poke32(b, at + 2, length + 0x100000);
+            },
+        },
+        {
+            "a length short of the header",
+            [](std::vector<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
+                poke32(b, at + 2, 9);
+            },
+        },
+        {
+            "more records than the length holds",
+            [](std::vector<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
+                poke32(b, at + 6, length / 11);
+            },
+        },
+        {
+            "records out of order",
+            [](std::vector<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
+                poke24(b, at + 10 + 11, peek24(b, at + 10));
+            },
+        },
+        {
+            "a selector past U+10FFFF",
+            [](std::vector<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
+                poke24(b, at + 10, 0x110000);
+            },
+        },
+        {
+            "a list past the length",
+            [](std::vector<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
+                poke32(b, at + 10 + 7, length - 2);
+            },
+        },
+        {
+            "more variants than the length holds",
+            [](std::vector<uint8_t>& b, uint32_t at, uint32_t length, uint32_t variants) {
+                poke32(b, at + variants, length / 5);
+            },
+        },
+        {
+            "variants out of order",
+            [](std::vector<uint8_t>& b, uint32_t at, uint32_t, uint32_t variants) {
+                poke24(b, at + variants + 4 + 5, peek24(b, at + variants + 4));
+            },
+        },
+    };
+    for (const Malformation& m : malformations) {
+        CAPTURE(m.name);
+        std::vector<uint8_t> bytes = original;
+        m.apply(bytes, at, length, variants);
+        const PrFont* font = fromBytes(bytes);
+        CHECK(prFontCodePointGlyph(font, 0x1D49C) != 0);
+        CHECK(prFontVariationSequenceGlyph(font, 0x1D49C, 0xFE01).mapping == PrFontSequenceMapping_None);
+        CHECK(prFontVariationSequenceGlyph(font, 0x2205, 0xFE00).mapping == PrFontSequenceMapping_None);
+        prFontRelease(font);
+    }
+}
+
+// A file of one cmap table, whose one subtable is a format 14 subtable of one record: U+FE00, with a default range that
+// ends at U+10FFFF and one variant.
+TEST_CASE("a variation sequences subtable at the limits of its records maps what it lists") {
+    std::vector<uint8_t> sub;
+    put16(sub, 14);
+    put32(sub, 0);                      // the length, set below
+    put32(sub, 1);
+    sub.push_back(0x00);
+    put16(sub, 0xFE00);
+    put32(sub, 21);
+    put32(sub, 29);
+    put32(sub, 1);                      // the default list: U+10FFF0 to U+10FFFF
+    sub.push_back(0x10);
+    put16(sub, 0xFFF0);
+    sub.push_back(15);
+    put32(sub, 1);                      // the variant list: A as glyph 7
+    sub.push_back(0x00);
+    put16(sub, 'A');
+    put16(sub, 7);
+    poke32(sub, 2, uint32_t(sub.size()));
+    std::vector<uint8_t> file;
+    put32(file, 0x00010000);
+    put16(file, 1);
+    put16(file, 16);
+    put16(file, 0);
+    put16(file, 0);
+    put32(file, PR_FONT_TAG('c', 'm', 'a', 'p'));
+    put32(file, 0);
+    put32(file, 28);
+    put32(file, 12 + uint32_t(sub.size()));
+    put16(file, 0);
+    put16(file, 1);
+    put16(file, 0);
+    put16(file, 5);
+    put32(file, 12);
+    file.insert(file.end(), sub.begin(), sub.end());
+    constexpr uint32_t kSub = 28 + 12;
+    Sfnt sfnt{};
+    REQUIRE(sfntOpen(file.data(), file.size(), 0, &sfnt));
+    SfntCmapSequences sequences{};
+    REQUIRE(sfntCmapSequencesOpen(sfnt, &sequences));
+    CHECK(sfntCmapSequenceGlyph(sequences, 0x10FFFF, 0xFE00).mapping == PrFontSequenceMapping_Default);
+    CHECK(sfntCmapSequenceGlyph(sequences, 0x10FFF0, 0xFE00).mapping == PrFontSequenceMapping_Default);
+    CHECK(sfntCmapSequenceGlyph(sequences, 0x10FFEF, 0xFE00).mapping == PrFontSequenceMapping_None);
+    PrFontSequenceGlyph a = sfntCmapSequenceGlyph(sequences, 'A', 0xFE00);
+    CHECK(a.mapping == PrFontSequenceMapping_Variant);
+    CHECK(a.glyph == 7);
+    CHECK(sfntCmapSequenceGlyph(sequences, 'A', 0xFE01).mapping == PrFontSequenceMapping_None);
+    CHECK(sfntCmapSequenceGlyph(sequences, 'B', 0xFE00).mapping == PrFontSequenceMapping_None);
+    // A default range past U+10FFFF is malformed, and so is a subtable one byte short of its last list.
+    std::vector<uint8_t> past = file;
+    past[kSub + 25 + 3] = 16;
+    REQUIRE(sfntOpen(past.data(), past.size(), 0, &sfnt));
+    CHECK_FALSE(sfntCmapSequencesOpen(sfnt, &sequences));
+    std::vector<uint8_t> shorter = file;
+    poke32(shorter, kSub + 2, uint32_t(sub.size() - 1));
+    REQUIRE(sfntOpen(shorter.data(), shorter.size(), 0, &sfnt));
+    CHECK_FALSE(sfntCmapSequencesOpen(sfnt, &sequences));
+    CHECK(sequences.subtable.data == nullptr);
 }
 
 TEST_CASE("a font's design advances are FreeType's unhinted ones") {

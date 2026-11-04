@@ -426,7 +426,7 @@ TEST_CASE("a document's faces set only its own text") {
     prHtmlPageDestroy(defining);
 }
 
-TEST_CASE("a document's set is loading until its text is laid out and the faces it asks for load") {
+TEST_CASE("a face that the document's text asks for while it loads holds its load event until the face loads") {
     Served served;
     Heard heard;
     PrCssFontCallback callback = {
@@ -441,15 +441,15 @@ TEST_CASE("a document's set is loading until its text is laid out and the faces 
         "<p style='font-family: A'>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
-    // The document has loaded, and the set waits for a layout of its text, which may request the face.
-    CHECK(prCssFontFaceStatus(prCssFontFaceSetAt(fonts, 0)) == PrCssFontFaceStatus_Unloaded);
-    CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loading);
-    prCssDocumentSetFontCallback(document, &callback);
-    prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
+    // The end of the load laid out the text, which asked for the face, and the load event waits for it.
     CHECK(prCssFontFaceStatus(prCssFontFaceSetAt(fonts, 0)) == PrCssFontFaceStatus_Loading);
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loading);
+    CHECK(prHtmlDocumentReadyState(document) != PrHtmlDocumentReadyState_Complete);
+    prCssDocumentSetFontCallback(document, &callback);
     runTasks(page);
     CHECK(prCssFontFaceStatus(prCssFontFaceSetAt(fonts, 0)) == PrCssFontFaceStatus_Loaded);
+    CHECK(prHtmlDocumentReadyState(document) == PrHtmlDocumentReadyState_Complete);
+    prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(heard.said == std::vector<std::string>{"set loaded"});
     prCssDocumentSetFontCallback(document, nullptr);
     prHtmlPageDestroy(page);
@@ -459,7 +459,7 @@ TEST_CASE("a document's set whose text uses none of its faces is loaded once lai
     Served served;
     PrHtmlPage* page = served.load("<style>@font-face { font-family: A; src: url(Arimo.ttf) }</style><p>text");
     PrCssFontFaceSet* fonts = prCssDocumentFonts(prHtmlWindowDocument(prHtmlPageWindow(page)));
-    CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loading);
+    runTasks(page);
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(prCssFontFaceStatus(prCssFontFaceSetAt(fonts, 0)) == PrCssFontFaceStatus_Unloaded);
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
@@ -525,9 +525,12 @@ TEST_CASE("a face whose sheet leaves the document while it loads leaves the set 
     Served served;
     served.hold = true;
     PrHtmlPage* page = served.load("<style id=s>@font-face { font-family: A; src: url(Arimo.ttf) }</style>"
-        "<p style='font-family: A'>text");
+        "<p id=p>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
+    // The text asks for the face once the document has loaded, so that the load does not wait for it.
+    runTasks(page);
+    prDomElementSetAttribute(prDomNodeGetElementById(prDomDocumentAsNode(document), "p"), "style", "font-family: A");
     update(page);
     runTasks(page);
     REQUIRE(served.fetcher.waiting() == 1);

@@ -67,8 +67,9 @@ def sync(source, excludes):
             kept.add(path)
             target = os.path.join(destination, path)
             if not os.path.isfile(target) or not filecmp.cmp(os.path.join(source, path), target, shallow=False):
-                shutil.copyfile(os.path.join(source, path), target)
-                shutil.copymode(os.path.join(source, path), target)
+                # A copy takes the time of the sync, not the source's, which for a commit is its time: a base
+                # older than the last one built would otherwise look older than its objects, which would not build.
+                shutil.copy(os.path.join(source, path), target)
     for directory, names, files in os.walk(destination, topdown=False):
         relative = os.path.relpath(directory, destination)
         relative = "" if relative == "." else relative

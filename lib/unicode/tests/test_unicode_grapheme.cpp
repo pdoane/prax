@@ -119,6 +119,10 @@ TEST_CASE("character properties read from the database") {
     CHECK((prUnicodeFlags(0x200e) & PrUnicodeFlag_DefaultIgnorable) != 0);
     CHECK((prUnicodeFlags(0x00ad) & PrUnicodeFlag_DefaultIgnorable) != 0);
     CHECK((prUnicodeFlags(' ') & PrUnicodeFlag_DefaultIgnorable) == 0);
+    for (uint32_t selector : {0x180Bu, 0x180Fu, 0xFE00u, 0xFE0Fu, 0xE0100u, 0xE01EFu})
+        CHECK((prUnicodeFlags(selector) & PrUnicodeFlag_VariationSelector) != 0);
+    for (uint32_t other : {0x180Eu, 0xFE10u, 0xE00FFu, 0xE01F0u, uint32_t('A')})
+        CHECK((prUnicodeFlags(other) & PrUnicodeFlag_VariationSelector) == 0);
     uint32_t upper[3];
     CHECK(prUnicodeUppercase('q', upper) == 1);
     CHECK(upper[0] == 'Q');

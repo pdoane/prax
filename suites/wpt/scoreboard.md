@@ -116,7 +116,7 @@ of a change to it is what the change did.
 | css/css-writing-modes            |   1234/1234 |     1295/1555 |   83.2% |
 | css/css-zoom                     |         1/1 |           1/1 |  100.0% |
 | css/cssom                        |     282/283 |     3397/4403 |   77.1% |
-| css/cssom-view                   |     229/237 |     1357/2578 |   52.6% |
+| css/cssom-view                   |     229/237 |     1364/2578 |   52.9% |
 | css/fetching                     |         0/1 |           1/1 |  100.0% |
 | css/fill-stroke                  |       11/11 |       283/410 |   69.0% |
 | css/filter-effects               |     387/392 |     2067/3308 |   62.4% |

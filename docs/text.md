@@ -12,6 +12,10 @@ the font, never the shaper.
   CFF2 charstrings (`cff.cpp`), advances (`glyph_metrics.cpp`), color glyphs and palettes (`colr.cpp`), and the other
   tables (`sfnt.cpp`). The readers load what FreeType loads: the tests hold every glyph's points and advance to
   FreeType's at each corner of a variable font's design space.
+- The character map gives a code point's glyph (`prFontCodePointGlyph`) and a variation sequence's
+  (`prFontVariationSequenceGlyph`, cmap format 14). A sequence that the font lists takes its own glyph or its base's,
+  and a sequence that it does not list maps to nothing, so the caller tells a font that supports the sequence from a
+  font that has only its base. A malformed subtable of sequences is checked whole when the font opens, and maps none.
 - Hinting is a backend interface (`pr/font_hinter.h`), and a derivation names the hinter that fits a font's outlines.
   The FreeType backend hints. A font without a hinter draws its design outlines at every size, whatever its hinting.
 - Every length is in ems, with y pointing down from the glyph origin on the baseline.
@@ -114,6 +118,9 @@ counted, so a producer makes it once and names it wherever its text is set. Layo
   first for a cluster with emoji presentation, and last for any other cluster. Then come the fallback families, those
   that declare the cluster's script first, each ranked by how well its locale suits the text's and whether its generic
   matches the style's. A cluster with a private-use code point or a control character does not fall back.
+- A cluster with a variation sequence first looks, through the requested faces and then the fallback families, for a
+  face that lists the sequence, and takes the first face with its base character only if no face lists it
+  (css-fonts-4/#cluster-matching). The emoji presentation selectors choose by presentation instead.
 - An answer is an index into a table of the fonts that the text font has answered with. Runs name fonts by these
   indices. A new answer appends to the table.
 - The first available face is the first requested face whose ranges hold U+0020. Its metrics give the style's strut
@@ -194,6 +201,9 @@ ligatures needs. It places such text as HarfBuzz does.
   layout splits a text's font ranges by scale only then.
 - Fallback happens before shaping, by cluster, in a text font, and a run is in one face. Each run is shaped in its font
   with its surrounding context. A default ignorable code point that a face draws as nothing produces no glyph.
+- A backend sets a variation sequence that the font lists in the sequence's glyph. HarfBuzz and CoreText read the
+  font's sequences themselves, and the simple shaper reads them from `lib/font`. kb maps each code point on its own. A
+  selector that the font does not list for its base is ignored, as any default ignorable code point is.
 
 Tests compare every backend with HarfBuzz. Known differences are separate tests marked to fail.
 

@@ -77,6 +77,7 @@ struct Font {
     uint32_t unitsPerEm;
     uint32_t glyphCount;
     SfntCmap cmap;
+    SfntCmapSequences sequences;
 
     // The derivation that the font was opened with.
     float sizeAdjust;
@@ -174,6 +175,7 @@ bool openReaders(Font* font) {
         return false;
     font->boundsFilled = static_cast<Atomic<uint8_t>*>(prMemoryAllocZeroed(sizeof(Atomic<uint8_t>) * font->glyphCount));
     sfntCmapUnicode(sfnt, &font->cmap);
+    sfntCmapSequencesOpen(sfnt, &font->sequences);
     colrOpen(sfnt, &font->colr);
     return true;
 }
@@ -1001,6 +1003,17 @@ uint16_t prFontCodePointGlyph(const PrFont* font, uint32_t codePoint) {
     const Font* data = font;
     uint32_t glyph = data->cmap.subtable.data != nullptr ? sfntCmapGlyph(data->cmap, codePoint) : 0;
     return glyph < data->glyphCount ? uint16_t(glyph) : 0;
+}
+
+PrFontSequenceGlyph prFontVariationSequenceGlyph(const PrFont* font, uint32_t codePoint, uint32_t selector) {
+    const Font* data = font;
+    PrFontSequenceGlyph found = sfntCmapSequenceGlyph(data->sequences, codePoint, selector);
+    if (found.mapping == PrFontSequenceMapping_Default)
+        found.glyph = prFontCodePointGlyph(font, codePoint);
+    // A sequence whose glyph the font does not have maps nothing.
+    if (found.glyph == 0 || found.glyph >= data->glyphCount)
+        found = PrFontSequenceGlyph{};
+    return found;
 }
 
 float prFontGlyphVerticalAdvance(const PrFont* font, uint16_t glyph) {

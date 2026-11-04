@@ -22,6 +22,7 @@ struct SfntTable {
     uint8_t uint8At(uint32_t at) const;
     uint16_t uint16At(uint32_t at) const;
     int16_t int16At(uint32_t at) const;
+    uint32_t uint24At(uint32_t at) const;
     uint32_t uint32At(uint32_t at) const;
 
     // Returns a Fixed (16.16) or F2DOT14 as a float.
@@ -116,6 +117,23 @@ bool sfntCmapUnicode(const Sfnt& sfnt, SfntCmap* out);
 
 // Returns the glyph that the subtable maps the code point to, or 0 for none.
 uint32_t sfntCmapGlyph(const SfntCmap& cmap, uint32_t codePoint);
+
+// The Unicode Variation Sequences subtable of the cmap table (format 14), which maps a base character and a variation
+// selector to a glyph. The subtable was checked whole when it was opened, so a lookup reads only sorted, bounded
+// records. Reading one changes nothing, so any number of threads may read it at once.
+struct SfntCmapSequences {
+    SfntTable subtable;             // empty for none, which maps no sequence
+    uint32_t selectorCount;
+};
+
+// Opens the subtable of Unicode Variation Sequences, which the Unicode platform lists. Returns false and opens none if
+// the face has no such subtable, or if the subtable is malformed: a length or a count that runs past the table, records
+// out of order or overlapping, or a code point past U+10FFFF.
+bool sfntCmapSequencesOpen(const Sfnt& sfnt, SfntCmapSequences* out);
+
+// Returns how the subtable maps the sequence of `codePoint` and `selector`. For PrFontSequenceMapping_Variant, `glyph`
+// is the glyph of the sequence. For the others, it is 0, and the base character's glyph is the Unicode subtable's.
+PrFontSequenceGlyph sfntCmapSequenceGlyph(const SfntCmapSequences& sequences, uint32_t codePoint, uint32_t selector);
 
 // The encodings that a color bitmap strike holds.
 enum {

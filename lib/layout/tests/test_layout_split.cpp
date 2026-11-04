@@ -717,6 +717,26 @@ TEST_CASE("the lines and floats around a block in an inline box keep their overf
     }
 }
 
+TEST_CASE("preserved white space that hangs at the end of a line adds no scrollable overflow") {
+    // The spaces after "a" run far past the scrollport, at a soft wrap and at the end of the paragraph.
+    for (const char* value : {"a                                        b", "a                                        "}) {
+        CAPTURE(value);
+        Stage s([](PrLayoutFontStyle& f) { f.whiteSpaceCollapse = PrLayoutWhiteSpaceCollapse_Preserve; });
+        PrLayoutNode scroller = s.div(s.stage, scrolling(sized(block(), 100, 100)), value);
+        s.layout();
+        PrLayoutScrollInfo info{};
+        REQUIRE(prLayoutNodeScrollInfo(s.f.tree, scroller, &info));
+        CHECK(prLayoutUnitToPx(info.content.right) == 100.0f);
+    }
+}
+
+TEST_CASE("white space that hangs inside a start-aligned line stays in the fragment of its text") {
+    Stage s([](PrLayoutFontStyle& f) { f.whiteSpaceCollapse = PrLayoutWhiteSpaceCollapse_Preserve; });
+    s.div(s.stage, sized(block(), 100, 100), "a ");
+    s.layout();
+    CHECK(prLayoutTreeStats(s.f.tree).textFragmentsMade == 1);
+}
+
 TEST_CASE("content reached through a row scrolls into view") {
     Stage s;
     PrLayoutNode scroller = s.div(s.stage, scrolling(sized(block(), 100, 100)));

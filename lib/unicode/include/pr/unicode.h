@@ -67,9 +67,9 @@ enum {
 typedef uint8_t PrUnicodeIndicConjunctBreak;
 
 // Binary properties: the emoji properties of UTS #51, Lowercase and Uppercase, Default_Ignorable_Code_Point, the marks,
-// whose General_Category is Mark, and the properties that case mapping's conditions read: Cased, Case_Ignorable and
-// Soft_Dotted. A renderer that does not support a default-ignorable code point shows nothing for it (The Unicode
-// Standard, section 5.21).
+// whose General_Category is Mark, the properties that case mapping's conditions read (Cased, Case_Ignorable and
+// Soft_Dotted), and Variation_Selector. A renderer that does not support a default-ignorable code point shows nothing
+// for it (The Unicode Standard, section 5.21).
 enum {
     PrUnicodeFlag_Emoji = 1u << 0,
     PrUnicodeFlag_EmojiPresentation = 1u << 1,
@@ -84,6 +84,7 @@ enum {
     PrUnicodeFlag_Cased = 1u << 10,
     PrUnicodeFlag_CaseIgnorable = 1u << 11,
     PrUnicodeFlag_SoftDotted = 1u << 12,
+    PrUnicodeFlag_VariationSelector = 1u << 13,
 };
 typedef uint16_t PrUnicodeFlags;
 

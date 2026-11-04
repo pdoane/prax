@@ -846,6 +846,8 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
         text->flags |= LayoutFragmentFlag_FirstLine;
     if (reversed)
         text->flags |= LayoutFragmentFlag_Reversed;
+    if (leaf.hangs)
+        text->flags |= LayoutFragmentFlag_Hangs;
     // The collapsible white space that ends the line, which no leaf holds, ends the bytes of the leaf before it.
     uint32_t to = leaf.to;
     uint32_t lineEnd = f.line.end < item.end ? f.line.end : item.end;
@@ -1114,6 +1116,38 @@ void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const Layout
     }
 }
 
+// Marks the text and tab leaves of the frame from byte `hang` as hanging, and splits the text leaf that holds `hang`
+// there, as textLeaves splits them. The leaves are those of the line from `lineStart`, in the order of the text, and
+// the boxes of the line hold ranges of them.
+void hangLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, uint32_t lineStart, uint32_t hang) {
+    for (uint32_t i = 0; i < f.leaves.count; ++i) {
+        LayoutLineLeaf& leaf = f.leaves.data[i];
+        if (leaf.kind != LayoutLineLeafKind_Text && leaf.kind != LayoutLineLeafKind_Tab)
+            continue;
+        if (leaf.from >= hang) {
+            leaf.hangs = true;
+            continue;
+        }
+        if (leaf.to <= hang)
+            continue;
+        LayoutLineLeaf hanging = leaf;
+        hanging.from = hang;
+        hanging.glyphs = float(t.info.reach[leaf.to] - t.info.reach[hang]);
+        hanging.glyphStart = t.info.glyphAt[hang];
+        hanging.level = t.bidi ? f.lineLevels.data[hang - lineStart] : uint8_t(0);
+        hanging.hangs = true;
+        leaf.to = hang;
+        leaf.glyphs = float(t.info.reach[hang] - t.info.reach[leaf.from]);
+        leaf.glyphEnd = hanging.glyphStart;
+        f.leaves.insert(i + 1, hanging);
+        for (uint32_t b = 0; b < f.lineBoxes.count; ++b) {
+            LayoutLineBox& box = f.lineBoxes.data[b];
+            box.first += box.first > i ? 1 : 0;
+            box.end += box.end > i ? 1 : 0;
+        }
+    }
+}
+
 // Puts the children of the line, from `mark` among `children`, from visual order into tree order (CSS2/#painting-order,
 // css-position-4/#paint-a-box-in-a-line-box). Each box contributes its parts on the line, in visual order from its
 // start edge, then its content on the line in the order of the text, with each box inside it treated the same way. Each
@@ -1224,18 +1258,19 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     }
     PrTextDirection direction = (paragraph & 1) != 0 ? PrTextDirection_Rtl : PrTextDirection_Ltr;
     PrLayoutTextAlign align = place.align;
-    // A line aligned to its start edge does not need to know the room it leaves. Otherwise the preserved white space
-    // that ends the line hangs from `hang`, on the end side of the line (css-text-3/#white-space-phase-2).
-    bool aligns = align != PrLayoutTextAlign_Start || direction == PrTextDirection_Rtl;
-    uint32_t hang = UINT32_MAX;
-    if (aligns) {
-        uint32_t drawn = end;
-        while (drawn > line.from.byte && (t.spaces.data[drawn - 1] & PrTextSpaceFlag_Collapsible) != 0)
-            --drawn;
-        hang = drawn;
-        while (hang > line.from.byte && (t.spaces.data[hang - 1] & PrTextSpaceFlag_Hangs) != 0)
-            --hang;
-    }
+    // The preserved white space that ends the line hangs from `hang`, on the end side of the line
+    // (css-text-3/#white-space-phase-2). It takes no room in the line's alignment and reaches no scrollable overflow.
+    uint32_t drawn = end;
+    while (drawn > line.from.byte && (t.spaces.data[drawn - 1] & PrTextSpaceFlag_Collapsible) != 0)
+        --drawn;
+    uint32_t hang = drawn;
+    while (hang > line.from.byte && (t.spaces.data[hang - 1] & PrTextSpaceFlag_Hangs) != 0)
+        --hang;
+    // A line aligned to its left edge in a left-to-right paragraph is placed the same whatever room it leaves. Its
+    // leaves split at `hang` only if the white space that hangs passes the line's end.
+    bool startAligned = direction == PrTextDirection_Ltr &&
+        (align == PrLayoutTextAlign_Start || align == PrLayoutTextAlign_Left);
+    uint32_t split = startAligned ? UINT32_MAX : hang;
 
     // Builds the leaves and boxes in the order of the text. The boxes still open from the previous line continue on
     // this one.
@@ -1347,7 +1382,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
             }
             case LayoutInlineItemKind_Text:
                 if (on.to > on.from) {
-                    textLeaves(t, f, on, line.from.byte, hang, &logical);
+                    textLeaves(t, f, on, line.from.byte, split, &logical);
                     content = true;
                     take(item, layoutTextOnLine(state, t, it, f.styles.data[item], on.from, on.to,
                         aligner.align.data[item].extent));
@@ -1360,6 +1395,8 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     // The boxes that are still open past the end of the line break here.
     for (uint32_t i = f.boxStack.count; i-- > 0;)
         closeBox(f.boxStack.data[i], kNoItem);
+    if (split != hang && hang < drawn && logical > prLayoutUnitToPx(place.at.inlineOffset + place.size))
+        hangLeaves(t, f, line.from.byte, hang);
 
     // Relative positioning moves the parts of an inline box and everything in them, by its own offset plus the offsets
     // of the boxes around it (CSS2/#relative-positioning). It moves nothing else on the line. Each leaf moves with the

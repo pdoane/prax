@@ -1,4 +1,5 @@
-// The simple shaper: one glyph per character, kerned by GPOS pair adjustments or the kern table.
+// The simple shaper: one glyph per character, kerned by GPOS pair adjustments or the kern table. A variation sequence
+// is one character, whose glyph is the sequence's if the font lists one.
 //
 // A face holds where the font's GPOS, GDEF and kern tables are. Each font keeps its design point, which varies GPOS
 // values through GDEF's variation store, and the kerning lookups of each script and language that it shaped.
@@ -9,6 +10,7 @@
 #include "pr/locale.h"
 #include "pr/raw_array.h"
 #include "pr/search.h"
+#include "pr/unicode.h"
 #include "pr/utf8.h"
 #include "pr/vec.h"
 
@@ -461,19 +463,48 @@ void kern(const SimpleFace& face, SimpleFont& font, const PrTextRun* run, PrText
     }
 }
 
+// A character of a run, and its glyph.
+struct Character {
+    uint16_t glyph;
+    uint32_t length;                    // in bytes, with the variation selector that follows it
+    bool shown;                         // false for a default ignorable code point, which is drawn as nothing
+};
+
+// Returns the character at byte `at` of the run. A variation selector that follows a character joins it, and selects
+// the glyph of the sequence if the font lists one. A selector that follows no character, or another selector, is shown
+// as nothing, as any other default ignorable code point is.
+Character characterAt(const PrTextRun* run, size_t at) {
+    uint32_t codePoint = 0;
+    Character c{};
+    c.length = prUtf8Decode(run->text, at, &codePoint);
+    c.glyph = prFontCodePointGlyph(run->font, codePoint);
+    c.shown = (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) == 0;
+    if (!c.shown || at + c.length >= run->text.size)
+        return c;
+    uint32_t selector = 0;
+    uint32_t length = prUtf8Decode(run->text, at + c.length, &selector);
+    if ((prUnicodeFlags(selector) & PrUnicodeFlag_VariationSelector) == 0)
+        return c;
+    c.length += length;
+    PrFontSequenceGlyph sequence = prFontVariationSequenceGlyph(run->font, codePoint, selector);
+    if (sequence.mapping == PrFontSequenceMapping_Variant)
+        c.glyph = sequence.glyph;
+    return c;
+}
+
 // Appends a run across, in the order of the text, and then reverses a right-to-left run into visual order.
 PrStatus shapeAcross(const SimpleFace& face, SimpleFont& font, const PrTextRun* run, PrTextGlyphBuffer* out) {
     float sizeAdjust = prFontSizeAdjust(run->font);
     uint32_t first = prTextGlyphBufferGlyphCount(out);
     for (size_t at = 0; at < run->text.size;) {
-        uint32_t codePoint = 0;
-        uint32_t length = prUtf8Decode(run->text, at, &codePoint);
+        Character c = characterAt(run, at);
         PrTextGlyph* g = prTextGlyphBufferAppend(out, 1);
-        g->id = prFontCodePointGlyph(run->font, codePoint);
+        g->id = c.glyph;
         g->cluster = uint32_t(at);
         // The font's advances include its size-adjust, which the ems of the design that a backend returns do not.
-        g->advance = PrVec2{prFontGlyphAdvance(run->font, g->id, 0) / sizeAdjust, 0};
-        at += length;
+        if (c.shown)
+            g->advance = PrVec2{prFontGlyphAdvance(run->font, g->id, 0) / sizeAdjust, 0};
+        at += c.length;
     }
     uint32_t count = prTextGlyphBufferGlyphCount(out) - first;
     PrTextGlyph* glyphs = prTextGlyphBufferAppend(out, 0) - count;
@@ -493,15 +524,16 @@ PrStatus shapeAcross(const SimpleFace& face, SimpleFont& font, const PrTextRun* 
 PrStatus shapeDown(const PrTextRun* run, PrTextGlyphBuffer* out) {
     float sizeAdjust = prFontSizeAdjust(run->font);
     for (size_t at = 0; at < run->text.size;) {
-        uint32_t codePoint = 0;
-        uint32_t length = prUtf8Decode(run->text, at, &codePoint);
+        Character c = characterAt(run, at);
         PrTextGlyph* g = prTextGlyphBufferAppend(out, 1);
-        g->id = prFontCodePointGlyph(run->font, codePoint);
+        g->id = c.glyph;
         g->cluster = uint32_t(at);
-        PrVec2 origin = prFontGlyphVerticalOrigin(run->font, g->id);
-        g->offset = PrVec2{-origin.x / sizeAdjust, -origin.y / sizeAdjust};
-        g->advance = PrVec2{0, prFontGlyphVerticalAdvance(run->font, g->id) / sizeAdjust};
-        at += length;
+        if (c.shown) {
+            PrVec2 origin = prFontGlyphVerticalOrigin(run->font, g->id);
+            g->offset = PrVec2{-origin.x / sizeAdjust, -origin.y / sizeAdjust};
+            g->advance = PrVec2{0, prFontGlyphVerticalAdvance(run->font, g->id) / sizeAdjust};
+        }
+        at += c.length;
     }
     return PrStatus_Ok;
 }

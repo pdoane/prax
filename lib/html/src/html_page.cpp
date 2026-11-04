@@ -2170,6 +2170,19 @@ void continueEnd(PrHtmlPage* page) {
     }
     if (page->endStatus == PrStatus_Ok)
         htmlWindowRunLoadDelaying(page->window);
+    // The document's content asks for the downloadable fonts that it uses once it is styled and laid out, and a font
+    // that it asks for while it loads delays its load event, so that a script that runs at load measures the fonts that
+    // the document uses rather than their fallbacks (css-fonts-4/#font-face-loading).
+    if (page->endStatus == PrStatus_Ok && page->presentation != nullptr) {
+        RawArray<PrCssFontFace* PR_NONNULL> faces;
+        cssDocumentFontFaces(document, &faces);
+        bool unloaded = false;
+        for (uint32_t i = 0; i < faces.count && !unloaded; ++i)
+            unloaded = faces.data[i]->status == PrCssFontFaceStatus_Unloaded;
+        faces.reset();
+        if (unloaded)
+            updatePresentationNow(page);
+    }
     // The load event waits for the fetches that delay it, for the scripts that run as soon as possible, and for the
     // loads of its frames' documents.
     bool delayed =

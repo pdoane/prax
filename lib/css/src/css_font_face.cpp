@@ -645,7 +645,12 @@ void cssFontFaceLoad(PrCssFontFace* face, PrDomDocument* document) {
     load->document = document;
     cssFontFaceRetain(face);
     domNodeRetain(document);
-    host->queueTask(host->context, startLoad, load, dropLoad);
+    // A face that the document asks for while it loads holds its load event until the face's fetch starts, and the
+    // fetch holds it until the face loads.
+    if (document->readiness != DomReadiness_Complete)
+        host->queueDelayingTask(host->context, startLoad, load, dropLoad);
+    else
+        host->queueTask(host->context, startLoad, load, dropLoad);
 }
 
 bool cssFontFaceDescribe(const PrCssFontFace* face, PrRawString* family, PrFontFaceDescriptor* out,
