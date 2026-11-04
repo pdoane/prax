@@ -240,17 +240,17 @@ Compressed compressedOf(const std::vector<uint8_t>& file, NSString* kind) {
         for (CMSampleBufferRef sample = [output copyNextSampleBuffer]; sample != nullptr;
                 sample = [output copyNextSampleBuffer]) {
             CMBlockBufferRef block = CMSampleBufferGetDataBuffer(sample);
-            // An audio buffer holds many packets, which its packet descriptions place.
+            // An audio buffer holds many packets, which its packet descriptions place. Their size is in bytes.
             const AudioStreamPacketDescription* packets = nullptr;
-            size_t packetCount = 0;
-            if (block != nullptr && CMSampleBufferGetAudioStreamPacketDescriptionsPtr(sample, &packets, &packetCount) ==
+            size_t packetBytes = 0;
+            if (block != nullptr && CMSampleBufferGetAudioStreamPacketDescriptionsPtr(sample, &packets, &packetBytes) ==
                     noErr && packets != nullptr) {
+                size_t packetCount = packetBytes / sizeof(AudioStreamPacketDescription);
                 double start = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sample));
                 double rate = out.track.sampleRate;
                 for (size_t i = 0; i < packetCount; ++i) {
-                    std::vector<uint8_t> bytes(packets[i].mDataByteSize);
+                    std::vector<uint8_t>& bytes = out.bytes.emplace_back(packets[i].mDataByteSize);
                     CMBlockBufferCopyDataBytes(block, size_t(packets[i].mStartOffset), bytes.size(), bytes.data());
-                    out.bytes.push_back(bytes);
                     double time = start + double(i) * 1024 / rate;
                     out.frames.push_back(PrMediaBufferedFrame{
                         .presentation = time,
@@ -260,9 +260,8 @@ Compressed compressedOf(const std::vector<uint8_t>& file, NSString* kind) {
                     });
                 }
             } else if (block != nullptr && CMSampleBufferGetNumSamples(sample) == 1) {
-                std::vector<uint8_t> bytes(CMBlockBufferGetDataLength(block));
+                std::vector<uint8_t>& bytes = out.bytes.emplace_back(CMBlockBufferGetDataLength(block));
                 CMBlockBufferCopyDataBytes(block, 0, bytes.size(), bytes.data());
-                out.bytes.push_back(bytes);
                 bool key = true;
                 CFArrayRef attachments = CMSampleBufferGetSampleAttachmentsArray(sample, false);
                 if (attachments != nullptr && CFArrayGetCount(attachments) != 0) {
