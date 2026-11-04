@@ -1,6 +1,6 @@
 #include "pr/image_process.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 #include <vector>

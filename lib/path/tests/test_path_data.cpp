@@ -3,7 +3,7 @@
 #include "pr/path.h"
 #include "pr/path_data.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

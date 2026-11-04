@@ -305,7 +305,7 @@ void domSlotAssignedNodes(const PrDomElement* slot, bool flatten, RawArray<PrDom
         return;
     }
     if (const DomSlot* state = slotOf(slot))
-        out->append(state->assigned.data, state->assigned.count);
+        out->append(state->assigned.span());
 }
 
 bool domSlotHasSlotted(const PrDomElement* slot) {

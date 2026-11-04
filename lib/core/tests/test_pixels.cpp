@@ -1,6 +1,6 @@
 #include "pr/pixels.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 TEST_CASE("each pixel format occupies the bytes of its channels") {
     CHECK(prPixelFormatSize(PrPixelFormat_Rgba8) == 4);

@@ -8,7 +8,7 @@
 #include "pr/text_edit_motion.h"
 #include "pr/text_harfbuzz.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

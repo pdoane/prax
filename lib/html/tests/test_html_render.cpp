@@ -19,7 +19,7 @@
 
 #include "css/src/css_presentation.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <atomic>
 #include <cmath>

@@ -3,7 +3,7 @@
 #include "css/tests/css_tests.h"
 #include "dom/src/dom_custom.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 #include <string>

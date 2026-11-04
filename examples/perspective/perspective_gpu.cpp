@@ -3,12 +3,14 @@
 
 #include "examples/perspective/perspective_gpu.h"
 
+#include "pr/array.h"
+#include "pr/print.h"
+
 #include "examples/perspective/kPerspectiveShaders.h"
 
-#include <cstdio>
-#include <vector>
-
 namespace perspective {
+
+using namespace pr;
 
 // A pipeline of one fragment shader for targets of one format.
 struct Pipeline {
@@ -20,7 +22,7 @@ struct Pipeline {
 struct Pipelines {
     PrGpuDevice* device;
     PrGpuShaderLibrary* library;
-    std::vector<Pipeline> made;
+    Array<Pipeline> made;
 };
 
 namespace {
@@ -39,8 +41,8 @@ PrGpuPipeline pipelineFor(Pipelines* p, const char* fragment, PrGpuPass* pass) {
     desc.formats.color[0] = format;
     PrGpuPipeline pipeline{};
     if (prGpuPipelineCreateGraphics(p->device, &desc, &pipeline) != PrStatus_Ok)
-        fprintf(stderr, "perspective: the device makes no pipeline of %s\n", fragment);
-    p->made.push_back(Pipeline{fragment, format, pipeline});
+        printError("perspective: the device makes no pipeline of {}\n", fragment);
+    p->made.push(Pipeline{fragment, format, pipeline});
     return pipeline;
 }
 
@@ -50,7 +52,7 @@ Pipelines* PR_NULLABLE pipelinesCreate(PrGpuDevice* device) {
     Pipelines* p = new Pipelines{};
     p->device = device;
     if (prGpuShaderLibraryCreate(device, kPerspectiveShaders, sizeof(kPerspectiveShaders), &p->library) != PrStatus_Ok) {
-        fprintf(stderr, "perspective: the device takes no shaders of the example's\n");
+        printError("perspective: the device takes no shaders of the example's\n");
         delete p;
         return nullptr;
     }

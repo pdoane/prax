@@ -5,14 +5,16 @@
 
 #include "pr/base.h"
 #include "pr/json.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include <stdint.h>
-#include <string>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
+
+using namespace pr;
 
 // An output of a node: its id and the index of the output, which an input that it links to names.
 struct ComfyRef {
@@ -40,7 +42,7 @@ public:
     void setRef(PrStringView key, ComfyRef ref);
 
     // Returns the graph's JSON text. No node or input may be added after.
-    std::string build();
+    String build();
 
 private:
     PrJsonWriter* writer_ = prJsonWriterCreate();

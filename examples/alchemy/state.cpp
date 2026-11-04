@@ -2,14 +2,13 @@
 
 #include "examples/alchemy/state.h"
 
+#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/file.h"
+#include "pr/float.h"
+#include "pr/string.h"
 
 #include "examples/alchemy/prompt_text.h"
-#include "examples/alchemy/text.h"
-
-#include <algorithm>
-#include <cmath>
 
 namespace alchemy {
 
@@ -23,28 +22,25 @@ constexpr double kHeldEventMaxAge = 5.0;
 // The longest the visit history grows.
 constexpr size_t kHistoryLimit = 100;
 
-std::string readFile(const std::string& path) {
+Array<uint8_t> readFile(PrStringView path) {
     PrFileMapping mapping{};
     if (!prFileMap(path, &mapping))
-        return std::string();
-    std::string bytes(reinterpret_cast<const char*>(mapping.data), mapping.size);
+        return Array<uint8_t>();
+    Array<uint8_t> bytes;
+    bytes.append(mapping.data, uint32_t(mapping.size));
     prFileUnmap(&mapping);
     return bytes;
 }
 
-PrByteView bytesOf(const std::string& bytes) {
-    return PrByteView{reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()};
-}
-
 // Returns the name in `names` that equals `current`, or else the first that contains `preferred`, or else the first.
-std::string chooseName(const std::vector<std::string>& names, const std::string& current, PrStringView preferred) {
-    if (std::find(names.begin(), names.end(), current) != names.end())
+String chooseName(const Array<String>& names, PrStringView current, PrStringView preferred) {
+    if (names.contains(current))
         return current;
-    for (const std::string& name : names) {
+    for (const String& name : names) {
         if (preferred.size != 0 && prAsciiContainsFold(name, preferred))
             return name;
     }
-    return names.empty() ? std::string() : names.front();
+    return names.isEmpty() ? String() : names[0];
 }
 
 // The size of the image that a submission produces, or zero if only the finished image says.
@@ -56,8 +52,8 @@ DimensionSize outputSize(const Submission& s) {
         case OperationMode_Generate: return s.size;
         case OperationMode_Upscale:
             return {
-                uint32_t(std::lround(source.width * s.upscale.factor)),
-                uint32_t(std::lround(source.height * s.upscale.factor)),
+                uint32_t(prF64Round(source.width * s.upscale.factor)),
+                uint32_t(prF64Round(source.height * s.upscale.factor)),
             };
         case OperationMode_Outpaint: {
             bool horizontal =
@@ -74,11 +70,11 @@ DimensionSize outputSize(const Submission& s) {
 // Returns the operation that a submission records: the fields that its mode uses and nothing it leaves at a default.
 ProvenanceOp operationOf(const Submission& s) {
     ProvenanceOp op;
-    op.mode = stringOf(modeName(s.mode));
-    op.source = stringOf(pathFilename(s.sampling.sourcePath));
+    op.mode = modeName(s.mode);
+    op.source = prFilePathName(s.sampling.sourcePath);
     if (modeSamples(s.mode)) {
         for (const LoraEntry& lora : s.sampling.loras)
-            op.loras.push_back({lora.name, lora.weight});
+            op.loras.push({lora.name, lora.weight});
         op.prompt = s.sampling.prompt;
         op.negative = s.sampling.negativePrompt;
         op.checkpoint = s.sampling.checkpoint;
@@ -93,7 +89,7 @@ ProvenanceOp operationOf(const Submission& s) {
             op.width = s.size.width;
             op.height = s.size.height;
             op.batch = s.sampling.batch;
-            if (!s.sampling.sourcePath.empty())
+            if (!s.sampling.sourcePath.isEmpty())
                 op.strength = s.sampling.strength;
             break;
         case OperationMode_Upscale:
@@ -101,7 +97,7 @@ ProvenanceOp operationOf(const Submission& s) {
             op.factor = s.upscale.factor;
             break;
         case OperationMode_Outpaint:
-            op.direction = stringOf(directionName(s.outpaint.direction));
+            op.direction = directionName(s.outpaint.direction);
             op.amount = s.outpaint.amount;
             op.crossfade = s.outpaint.crossfade;
             op.growMask = s.outpaint.growMask;
@@ -124,11 +120,11 @@ SamplingRecipe samplingOf(const GenerateParams& params) {
         .cfg = params.cfg,
     };
     for (const LoraEntry& lora : params.loras)
-        recipe.loras.push_back({lora.name, lora.weight});
+        recipe.loras.push({lora.name, lora.weight});
     return recipe;
 }
 
-std::string graphOf(const Submission& s) {
+String graphOf(const Submission& s) {
     switch (s.mode) {
         case OperationMode_Upscale:
             return upscaleGraph({.model = s.upscale.model, .sourceImage = s.sourceName, .factor = s.upscale.factor});
@@ -163,13 +159,13 @@ std::string graphOf(const Submission& s) {
 void submit(AppState& state, Submission submission) {
     uint64_t tag = state.nextTag++;
     comfySubmit(state.client, tag, graphOf(submission));
-    state.submitting[tag] = std::move(submission);
+    state.submitting[tag] = move(submission);
 }
 
 // Fills what every sampling mode reads, drawing a seed unless it is locked, so that the panel shows the seed that made
 // the image in front of the user.
 bool fillSampling(AppState& state, Submission& s) {
-    if (state.params.checkpoint.empty()) {
+    if (state.params.checkpoint.isEmpty()) {
         setStatus(state, "The server has no checkpoint to sample with.");
         return false;
     }
@@ -180,7 +176,7 @@ bool fillSampling(AppState& state, Submission& s) {
 }
 
 bool fillSource(AppState& state, Submission& s) {
-    if (state.params.sourcePath.empty()) {
+    if (state.params.sourcePath.isEmpty()) {
         setStatus(state, "Choose a source image first: select an image and use it as the source.");
         return false;
     }
@@ -188,7 +184,7 @@ bool fillSource(AppState& state, Submission& s) {
     return true;
 }
 
-Job* findJob(AppState& state, const std::string& promptId) {
+Job* findJob(AppState& state, PrStringView promptId) {
     for (Job& job : state.jobs) {
         if (job.promptId == promptId)
             return &job;
@@ -202,28 +198,31 @@ void dropPreview(AppState& state) {
     state.previewPromptId.clear();
 }
 
-void finishJob(Job& job, AppState& state, JobState outcome, std::string error) {
+void finishJob(Job& job, AppState& state, JobState outcome, PrStringView error) {
     job.state = outcome;
-    job.error = std::move(error);
+    job.error = error;
     if (state.previewPromptId == job.promptId)
         dropPreview(state);
-    setStatus(state, outcome == JobState_Done ? "The run finished." : "The run failed: " + job.error);
+    if (outcome == JobState_Done)
+        setStatus(state, "The run finished.");
+    else
+        setStatus(state, format("The run failed: {}", job.error));
 }
 
 // Writes a finished image into the gallery with the record of the run that made it.
 void saveImage(AppState& state, const ComfyEvent& event, const Job* PR_NULLABLE job) {
-    std::string png(event.bytes.begin(), event.bytes.end());
+    Array<uint8_t> png = event.bytes;
     if (job != nullptr) {
-        std::string recorded = provenanceWrite(bytesOf(png), job->record);
+        Array<uint8_t> recorded = provenanceWrite(png, job->record);
         // An image that cannot carry its record is still worth keeping.
-        if (!recorded.empty())
-            png = std::move(recorded);
+        if (!recorded.isEmpty())
+            png = move(recorded);
     }
-    std::string saved;
+    String saved;
     if (gallerySave(state.gallery, event.filename, png, &saved))
-        setStatus(state, "Saved " + stringOf(pathFilename(saved)) + ".");
+        setStatus(state, format("Saved {}.", prFilePathName(saved)));
     else
-        setStatus(state, "Could not save " + event.filename + " in " + state.gallery.dir + ".");
+        setStatus(state, format("Could not save {} in {}.", event.filename, state.gallery.dir));
 }
 
 // Takes the reply to a catalog request into the state, and starts the survey of its models' files.
@@ -236,20 +235,19 @@ void adoptCatalog(AppState& state, const ComfyCatalog& catalog) {
     state.upscale.model = chooseName(catalog.upscaleModels, state.upscale.model, "x4");
     state.detail.detector = chooseName(catalog.detectors, state.detail.detector, "face");
     // An adapter that the server no longer has is dropped from the chain.
-    std::vector<LoraEntry>& loras = p.loras;
-    loras.erase(std::remove_if(loras.begin(), loras.end(), [&](const LoraEntry& lora) {
-        return std::find(catalog.loras.begin(), catalog.loras.end(), lora.name) == catalog.loras.end();
-    }), loras.end());
+    Array<LoraEntry>& loras = p.loras;
+    loras.removeWhere([&](const LoraEntry& lora) { return !catalog.loras.contains(lora.name); });
     {
-        std::lock_guard<std::mutex> lock(state.survey.mutex);
+        Lock lock(&state.survey.mutex);
         ++state.survey.generation;
     }
-    for (ModelFolder folder : {ModelFolder_Checkpoints, ModelFolder_Loras}) {
+    const ModelFolder folders[] = {ModelFolder_Checkpoints, ModelFolder_Loras};
+    for (ModelFolder folder : folders) {
         uint64_t tag = state.nextTag++;
-        state.folderTags[tag] = folder;
-        comfyFetchFolderPaths(state.client, tag, stringOf(modelFolderName(folder)));
+        state.folderTags.set(tag, folder);
+        comfyFetchFolderPaths(state.client, tag, modelFolderName(folder));
     }
-    setStatus(state, "Connected to " + state.server + ".");
+    setStatus(state, format("Connected to {}.", state.server));
 }
 
 // A survey of one folder's models, which a pool thread reads.
@@ -257,43 +255,42 @@ struct Survey {
     ModelSurvey* survey;
     uint32_t generation;
     ModelFolder folder;
-    std::vector<std::string> roots;
-    std::vector<std::string> names;
+    Array<String> roots;
+    Array<String> names;
 };
 
 void runSurvey(void* PR_NULLABLE context) {
     Survey* job = static_cast<Survey*>(context);
-    for (const std::string& name : job->names) {
+    for (const String& name : job->names) {
         {
-            std::lock_guard<std::mutex> lock(job->survey->mutex);
+            Lock lock(&job->survey->mutex);
             if (job->survey->generation != job->generation)
                 break;
         }
         ModelArchitecture arch = ModelArchitecture_Unknown;
-        for (const std::string& root : job->roots) {
-            arch = readArchitecture(root + "/" + name);
+        for (const String& root : job->roots) {
+            arch = readArchitecture(format("{}/{}", root, name));
             if (arch != ModelArchitecture_Unknown)
                 break;
         }
-        std::lock_guard<std::mutex> lock(job->survey->mutex);
-        job->survey->landed.push_back({{job->folder, name}, arch});
+        Lock lock(&job->survey->mutex);
+        job->survey->landed.push(SurveyedModel{.folder = job->folder, .name = name, .architecture = arch});
     }
     delete job;
 }
 
 // Starts reading the files of a folder's models through the directories that the server searches. A server on another
 // machine names directories that this process cannot open, which leaves its models unknown.
-void startSurvey(AppState& state, ModelFolder folder, std::vector<std::string> roots) {
-    const std::vector<std::string>& names =
-        folder == ModelFolder_Checkpoints ? state.catalog.checkpoints : state.catalog.loras;
-    if (roots.empty() || names.empty())
+void startSurvey(AppState& state, ModelFolder folder, Array<String> roots) {
+    const Array<String>& names = folder == ModelFolder_Checkpoints ? state.catalog.checkpoints : state.catalog.loras;
+    if (roots.isEmpty() || names.isEmpty())
         return;
     uint32_t generation = 0;
     {
-        std::lock_guard<std::mutex> lock(state.survey.mutex);
+        Lock lock(&state.survey.mutex);
         generation = state.survey.generation;
     }
-    prTaskPoolPost(state.pool, runSurvey, new Survey{&state.survey, generation, folder, std::move(roots), names});
+    prTaskPoolPost(state.pool, runSurvey, new Survey{&state.survey, generation, folder, move(roots), names});
 }
 
 // Applies an event to the state. Returns false if it names a prompt that no job has yet, which the caller holds.
@@ -301,7 +298,7 @@ bool applyEvent(AppState& state, const ComfyEvent& event) {
     switch (event.kind) {
         case ComfyEventKind_Connected: {
             state.connection = ConnectionState_Connected;
-            setStatus(state, "Connected to " + state.server + ". Reading its models...");
+            setStatus(state, format("Connected to {}. Reading its models...", state.server));
             state.catalogTag = state.nextTag++;
             comfyFetchCatalog(state.client, state.catalogTag);
             state.managerTag = state.nextTag++;
@@ -335,12 +332,12 @@ bool applyEvent(AppState& state, const ComfyEvent& event) {
         case ComfyEventKind_Preview: return true;
         case ComfyEventKind_ImageReady: {
             Job* job = findJob(state, event.promptId);
-            if (job == nullptr && !event.promptId.empty())
+            if (job == nullptr && !event.promptId.isEmpty())
                 return false;
             saveImage(state, event, job);
             return true;
         }
-        case ComfyEventKind_ImageFailed: setStatus(state, "Could not fetch " + event.filename + "."); return true;
+        case ComfyEventKind_ImageFailed: setStatus(state, format("Could not fetch {}.", event.filename)); return true;
         case ComfyEventKind_Completed:
         case ComfyEventKind_Failed: {
             Job* job = findJob(state, event.promptId);
@@ -356,28 +353,28 @@ bool applyEvent(AppState& state, const ComfyEvent& event) {
     // Replies to the requests that the state made, by their tags.
     bool replied = event.kind == ComfyEventKind_Replied;
     if (event.tag == state.catalogTag) {
-        if (replied && event.catalog != nullptr)
-            adoptCatalog(state, *event.catalog);
+        if (replied)
+            adoptCatalog(state, event.catalog);
         else
             setStatus(state, event.message);
     } else if (event.tag == state.managerTag) {
         state.managerPresent = replied;
-    } else if (state.folderTags.count(event.tag) != 0) {
-        ModelFolder folder = state.folderTags[event.tag];
+    } else if (const ModelFolder* found = state.folderTags.get(event.tag)) {
+        ModelFolder folder = *found;
         state.folderTags.erase(event.tag);
         if (replied)
             startSurvey(state, folder, event.names);
-    } else if (state.uploading.count(event.tag) != 0) {
-        Submission submission = std::move(state.uploading[event.tag]);
+    } else if (Submission* uploading = state.uploading.get(event.tag)) {
+        Submission submission = move(*uploading);
         state.uploading.erase(event.tag);
         if (!replied) {
             setStatus(state, event.message);
             return true;
         }
         submission.sourceName = event.name;
-        submit(state, std::move(submission));
-    } else if (state.submitting.count(event.tag) != 0) {
-        Submission submission = std::move(state.submitting[event.tag]);
+        submit(state, move(submission));
+    } else if (Submission* submitting = state.submitting.get(event.tag)) {
+        Submission submission = move(*submitting);
         state.submitting.erase(event.tag);
         if (!replied) {
             setStatus(state, event.message);
@@ -387,19 +384,19 @@ bool applyEvent(AppState& state, const ComfyEvent& event) {
         job.promptId = event.promptId;
         job.output = outputSize(submission);
         // The run continues the chain that its source carries.
-        if (!submission.sourceBytes.empty())
-            provenanceRead(bytesOf(submission.sourceBytes), state.compress, &job.record);
-        job.record.operations.push_back(operationOf(submission));
-        state.jobs.push_back(std::move(job));
+        if (!submission.sourceBytes.isEmpty())
+            provenanceRead(submission.sourceBytes, state.compress, &job.record);
+        job.record.operations.push(operationOf(submission));
+        state.jobs.push(move(job));
         setStatus(state, "The server queued the run.");
     }
     return true;
 }
 
 void adoptSurveys(AppState& state) {
-    std::lock_guard<std::mutex> lock(state.survey.mutex);
-    for (std::pair<std::pair<ModelFolder, std::string>, ModelArchitecture>& found : state.survey.landed)
-        state.survey.known[found.first] = found.second;
+    Lock lock(&state.survey.mutex);
+    for (const SurveyedModel& found : state.survey.landed)
+        state.survey.known.set(ModelKeyView{found.folder, found.name}, found.architecture);
     state.survey.landed.clear();
 }
 
@@ -413,7 +410,7 @@ const ProvenanceOp* PR_NULLABLE newestWhere(AppState& state, Predicate wanted) {
     const ProvenanceRecord* record = selectedRecord(state);
     if (record == nullptr)
         return nullptr;
-    for (size_t i = record->operations.size(); i > 0; --i) {
+    for (uint32_t i = record->operations.count(); i > 0; --i) {
         if (wanted(record->operations[i - 1]))
             return &record->operations[i - 1];
     }
@@ -424,8 +421,8 @@ void useLoras(AppState& state, const ProvenanceOp& op) {
     GenerateParams& p = state.params;
     p.loras.clear();
     for (const ProvenanceLora& lora : op.loras) {
-        if (std::find(state.catalog.loras.begin(), state.catalog.loras.end(), lora.name) != state.catalog.loras.end())
-            p.loras.push_back({lora.name, lora.weight});
+        if (state.catalog.loras.contains(lora.name))
+            p.loras.push({lora.name, lora.weight});
     }
 }
 
@@ -456,8 +453,8 @@ void useAllOf(AppState& state, const ProvenanceOp& op) {
 
 // Returns the line `index` of `text`, or the empty view.
 PrStringView lineOf(PrStringView text, uint32_t index) {
-    std::vector<PrStringView> lines = promptLines(text);
-    return index < lines.size() ? lines[index] : PrStringView("");
+    Array<PrStringView> lines = promptLines(text);
+    return index < lines.count() ? lines[index] : PrStringView("");
 }
 
 } // namespace
@@ -503,12 +500,12 @@ void stateReset(AppState& state) {
     closeImport(state);
     dropPreview(state);
     // A survey still on the pool stops at its next name.
-    std::lock_guard<std::mutex> lock(state.survey.mutex);
+    Lock lock(&state.survey.mutex);
     ++state.survey.generation;
 }
 
-void setStatus(AppState& state, std::string text) {
-    state.status = std::move(text);
+void setStatus(AppState& state, PrStringView text) {
+    state.status = text;
 }
 
 void connectServer(AppState& state) {
@@ -518,7 +515,7 @@ void connectServer(AppState& state) {
     state.submitting.clear();
     dropPreview(state);
     state.connection = ConnectionState_Connecting;
-    setStatus(state, "Connecting to " + state.server + "...");
+    setStatus(state, format("Connecting to {}...", state.server));
     state.connectedServer = state.server;
     comfyConnect(state.client, state.server);
 }
@@ -541,7 +538,7 @@ bool generate(AppState& state) {
                 return false;
             break;
         case OperationMode_Upscale:
-            if (state.upscale.model.empty()) {
+            if (state.upscale.model.isEmpty()) {
                 setStatus(state, "The server has no upscale model.");
                 return false;
             }
@@ -555,7 +552,7 @@ bool generate(AppState& state) {
             s.outpaint = state.outpaint;
             break;
         case OperationMode_Detail:
-            if (state.detail.detector.empty()) {
+            if (state.detail.detector.isEmpty()) {
                 setStatus(state, "The server does not have the detailer nodes installed.");
                 return false;
             }
@@ -564,24 +561,24 @@ bool generate(AppState& state) {
             s.detail = state.detail;
             break;
     }
-    if (s.sampling.sourcePath.empty()) {
-        submit(state, std::move(s));
+    if (s.sampling.sourcePath.isEmpty()) {
+        submit(state, move(s));
         setStatus(state, "Submitted the run.");
         return true;
     }
     s.sourceBytes = readFile(s.sampling.sourcePath);
-    const PrDrawImage* source = imageDecode(state.codec, s.sourceBytes.data(), s.sourceBytes.size());
+    const PrDrawImage* source = imageDecode(state.codec, s.sourceBytes.data(), s.sourceBytes.count());
     if (source == nullptr) {
-        setStatus(state, "Could not read " + stringOf(pathFilename(s.sampling.sourcePath)) + ".");
+        setStatus(state, format("Could not read {}.", prFilePathName(s.sampling.sourcePath)));
         return false;
     }
     PrUVec2 extent = prDrawImageExtent(source);
     prDrawImageRelease(source);
     s.sourceSize = {extent.x, extent.y};
     uint64_t tag = state.nextTag++;
-    std::vector<uint8_t> bytes(s.sourceBytes.begin(), s.sourceBytes.end());
-    comfyUpload(state.client, tag, stringOf(pathFilename(s.sampling.sourcePath)), std::move(bytes));
-    state.uploading[tag] = std::move(s);
+    Array<uint8_t> bytes = s.sourceBytes;
+    comfyUpload(state.client, tag, prFilePathName(s.sampling.sourcePath), move(bytes));
+    state.uploading.set(tag, move(s));
     setStatus(state, "Uploading the source image...");
     return true;
 }
@@ -594,21 +591,21 @@ void interruptRun(AppState& state) {
 void pumpEvents(AppState& state, double dt) {
     adoptSurveys(state);
     const PrDrawImage* preview = nullptr;
-    std::string previewPrompt;
+    String previewPrompt;
     ComfyEvent event;
     while (comfyPoll(state.client, &event)) {
         // Only the newest frame of a preview is decoded.
         if (event.kind == ComfyEventKind_Preview) {
             prDrawImageRelease(preview);
-            preview = imageDecode(state.codec, event.bytes.data(), event.bytes.size());
+            preview = imageDecode(state.codec, event.bytes.data(), event.bytes.count());
             const Job* job = activeJob(state);
-            previewPrompt = job != nullptr ? job->promptId : std::string();
+            previewPrompt = job != nullptr ? job->promptId : String();
             continue;
         }
         if (!applyEvent(state, event))
-            state.held.push_back({std::move(event), 0});
+            state.held.push({move(event), 0});
     }
-    if (preview != nullptr && !previewPrompt.empty()) {
+    if (preview != nullptr && !previewPrompt.isEmpty()) {
         dropPreview(state);
         state.preview = preview;
         state.previewPromptId = previewPrompt;
@@ -617,23 +614,21 @@ void pumpEvents(AppState& state, double dt) {
     } else {
         prDrawImageRelease(preview);
     }
-    for (size_t i = 0; i < state.held.size();) {
+    for (uint32_t i = 0; i < state.held.count();) {
         if (applyEvent(state, state.held[i].event)) {
-            state.held.erase(state.held.begin() + long(i));
+            state.held.erase(i);
             continue;
         }
         state.held[i].age += dt;
         if (state.held[i].age >= kHeldEventMaxAge) {
-            state.held.erase(state.held.begin() + long(i));
+            state.held.erase(i);
             continue;
         }
         ++i;
     }
     // The status bar shows what is in flight. A finished run left its image in the gallery and its outcome in the
     // status.
-    state.jobs.erase(std::remove_if(state.jobs.begin(), state.jobs.end(), [](const Job& job) {
-        return job.state == JobState_Done || job.state == JobState_Failed;
-    }), state.jobs.end());
+    state.jobs.removeWhere([](const Job& job) { return job.state == JobState_Done || job.state == JobState_Failed; });
 }
 
 const Job* PR_NULLABLE activeJob(const AppState& state) {
@@ -649,13 +644,12 @@ const Job* PR_NULLABLE activeJob(const AppState& state) {
 }
 
 uint32_t runsInFlight(const AppState& state) {
-    return uint32_t(state.jobs.size() + state.uploading.size() + state.submitting.size());
+    return state.jobs.count() + state.uploading.count() + state.submitting.count();
 }
 
 ModelArchitecture modelArchitecture(const AppState& state, ModelFolder folder, PrStringView name) {
-    std::map<std::pair<ModelFolder, std::string>, ModelArchitecture>::const_iterator found =
-        state.survey.known.find({folder, stringOf(name)});
-    return found != state.survey.known.end() ? found->second : ModelArchitecture_Unknown;
+    const ModelArchitecture* found = state.survey.known.get(ModelKeyView{folder, name});
+    return found != nullptr ? *found : ModelArchitecture_Unknown;
 }
 
 bool loraConflicts(const AppState& state, PrStringView name) {
@@ -678,14 +672,15 @@ const ProvenanceRecord* PR_NULLABLE selectedRecord(AppState& state) {
         state.selectedRecordPath = entry->path;
         state.selectedRecordRevision = state.gallery.revision;
         state.selectedRecord = ProvenanceRecord{};
-        std::string bytes = readFile(entry->path);
-        provenanceRead(bytesOf(bytes), state.compress, &state.selectedRecord);
+        Array<uint8_t> bytes = readFile(entry->path);
+        provenanceRead(bytes, state.compress, &state.selectedRecord);
         // The run that produced the image opens first, since it is what the record is asked about.
-        state.recordOpen.assign(state.selectedRecord.operations.size(), false);
-        if (!state.recordOpen.empty())
-            state.recordOpen.back() = true;
+        state.recordOpen.clear();
+        state.recordOpen.resize(state.selectedRecord.operations.count());
+        if (!state.recordOpen.isEmpty())
+            state.recordOpen.last() = true;
     }
-    return state.selectedRecord.operations.empty() ? nullptr : &state.selectedRecord;
+    return state.selectedRecord.operations.isEmpty() ? nullptr : &state.selectedRecord;
 }
 
 void noteVisit(AppState& state) {
@@ -693,22 +688,22 @@ void noteVisit(AppState& state) {
     if (entry == nullptr)
         return;
     VisitHistory& h = state.history;
-    if (h.position < h.visits.size() && h.visits[h.position] == entry->path)
+    if (h.position < h.visits.count() && h.visits[h.position] == entry->path)
         return;
     // A visit made after stepping back discards the walk ahead of it.
-    if (!h.visits.empty())
+    if (!h.visits.isEmpty())
         h.visits.resize(h.position + 1);
-    h.visits.push_back(entry->path);
-    if (h.visits.size() > kHistoryLimit)
-        h.visits.erase(h.visits.begin());
-    h.position = uint32_t(h.visits.size() - 1);
+    h.visits.push(entry->path);
+    if (h.visits.count() > kHistoryLimit)
+        h.visits.erase(0);
+    h.position = h.visits.count() - 1;
 }
 
 bool historyBack(AppState& state) {
     VisitHistory& h = state.history;
     for (uint32_t at = h.position; at > 0; --at) {
         uint32_t index = galleryIndexOf(state.gallery, h.visits[at - 1]);
-        if (index < state.gallery.entries.size()) {
+        if (index < state.gallery.entries.count()) {
             h.position = at - 1;
             gallerySelect(state.gallery, index);
             return true;
@@ -719,9 +714,9 @@ bool historyBack(AppState& state) {
 
 bool historyForward(AppState& state) {
     VisitHistory& h = state.history;
-    for (uint32_t at = h.position + 1; at < h.visits.size(); ++at) {
+    for (uint32_t at = h.position + 1; at < h.visits.count(); ++at) {
         uint32_t index = galleryIndexOf(state.gallery, h.visits[at]);
-        if (index < state.gallery.entries.size()) {
+        if (index < state.gallery.entries.count()) {
             h.position = at;
             gallerySelect(state.gallery, index);
             return true;
@@ -735,11 +730,11 @@ bool canGoBack(const AppState& state) {
 }
 
 bool canGoForward(const AppState& state) {
-    return state.history.position + 1 < state.history.visits.size();
+    return state.history.position + 1 < state.history.visits.count();
 }
 
 bool usePrompt(AppState& state) {
-    const ProvenanceOp* op = newestWhere(state, [](const ProvenanceOp& o) { return !o.prompt.empty(); });
+    const ProvenanceOp* op = newestWhere(state, [](const ProvenanceOp& o) { return !o.prompt.isEmpty(); });
     if (op == nullptr)
         return false;
     state.params.prompt = op->prompt;
@@ -774,18 +769,18 @@ bool useAll(AppState& state) {
 
 bool useRecorded(AppState& state, uint32_t operation, UseWhat what, uint32_t line) {
     const ProvenanceRecord* record = selectedRecord(state);
-    if (record == nullptr || operation >= record->operations.size())
+    if (record == nullptr || operation >= record->operations.count())
         return false;
     const ProvenanceOp& op = record->operations[operation];
     GenerateParams& p = state.params;
     switch (what) {
         case UseWhat_Prompt:
-            if (op.prompt.empty())
+            if (op.prompt.isEmpty())
                 return false;
             p.prompt = op.prompt;
             return true;
         case UseWhat_Negative:
-            if (op.negative.empty())
+            if (op.negative.isEmpty())
                 return false;
             p.negativePrompt = op.negative;
             return true;
@@ -795,17 +790,17 @@ bool useRecorded(AppState& state, uint32_t operation, UseWhat what, uint32_t lin
             PrStringView text = lineOf(positive ? op.prompt : op.negative, line);
             if (text.size == 0)
                 return false;
-            std::string& into = positive ? p.prompt : p.negativePrompt;
+            String& into = positive ? p.prompt : p.negativePrompt;
             into = promptAppendLine(into, text);
             return true;
         }
         case UseWhat_Model:
-            if (op.checkpoint.empty())
+            if (op.checkpoint.isEmpty())
                 return false;
             p.checkpoint = chooseName(state.catalog.checkpoints, op.checkpoint, "");
             return true;
         case UseWhat_Loras:
-            if (op.loras.empty())
+            if (op.loras.isEmpty())
                 return false;
             useLoras(state, op);
             return true;
@@ -831,14 +826,14 @@ bool useRecorded(AppState& state, uint32_t operation, UseWhat what, uint32_t lin
             p.strength = op.strength;
             return true;
         case UseWhat_Upscale:
-            if (op.upscaleModel.empty())
+            if (op.upscaleModel.isEmpty())
                 return false;
             state.upscale.model = chooseName(state.catalog.upscaleModels, op.upscaleModel, "");
             if (op.factor != 0)
                 state.upscale.factor = op.factor;
             return true;
         case UseWhat_Outpaint:
-            if (op.direction.empty())
+            if (op.direction.isEmpty())
                 return false;
             state.outpaint.direction = parseDirection(op.direction, state.outpaint.direction);
             state.outpaint.amount = op.amount;
@@ -847,12 +842,12 @@ bool useRecorded(AppState& state, uint32_t operation, UseWhat what, uint32_t lin
             state.outpaint.context = op.context;
             return true;
         case UseWhat_Detector:
-            if (op.detector.empty())
+            if (op.detector.isEmpty())
                 return false;
             state.detail.detector = op.detector;
             return true;
         case UseWhat_Source:
-            if (op.source.empty())
+            if (op.source.isEmpty())
                 return false;
             p.sourcePath = op.source;
             return true;
@@ -871,7 +866,7 @@ bool useAsSource(AppState& state) {
     if (entry == nullptr)
         return false;
     state.params.sourcePath = entry->path;
-    setStatus(state, "The source image is " + entry->filename + ".");
+    setStatus(state, format("The source image is {}.", entry->filename));
     return true;
 }
 
@@ -881,14 +876,14 @@ void clearSource(AppState& state) {
 
 void requestDelete(AppState& state) {
     state.deletePaths = gallerySelectionPaths(state.gallery);
-    state.deleteOpen = !state.deletePaths.empty();
+    state.deleteOpen = !state.deletePaths.isEmpty();
 }
 
 void confirmDelete(AppState& state) {
-    for (const std::string& path : state.deletePaths)
+    for (const String& path : state.deletePaths)
         imageCacheForget(state.images, path);
     uint32_t removed = galleryDelete(state.gallery, state.deletePaths);
-    setStatus(state, "Deleted " + std::to_string(removed) + (removed == 1 ? " image." : " images."));
+    setStatus(state, format("Deleted {} {}.", removed, removed == 1 ? "image" : "images"));
     state.deleteOpen = false;
     state.deletePaths.clear();
 }
@@ -930,33 +925,32 @@ bool confirmImport(AppState& state) {
     PrPixelView pixels = prDrawImagePixels(state.import.image);
     size_t size = 0;
     prImageCodecEncode(state.codec, "image/png", pixels, nullptr, 0, &size);
-    std::string png(size, '\0');
-    std::string saved;
-    bool encoded = prImageCodecEncode(state.codec, "image/png", pixels, reinterpret_cast<uint8_t*>(png.data()), size,
-        &size) == PrStatus_Ok;
-    if (!encoded || !gallerySave(state.gallery, "Imported.png", png, &saved)) {
+    Array<uint8_t> png(static_cast<uint32_t>(size));
+    String saved;
+    bool encoded = prImageCodecEncode(state.codec, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok;
+    if (!encoded || !gallerySave(state.gallery, "Imported.png", PrByteView{png.data(), size}, &saved)) {
         state.import.message = "The image could not be written to the gallery.";
         return false;
     }
-    setStatus(state, "Imported " + stringOf(pathFilename(saved)) + ".");
+    setStatus(state, format("Imported {}.", prFilePathName(saved)));
     closeImport(state);
     return true;
 }
 
-PrUVec2 selectedPixels(AppState& state, std::vector<uint8_t>* pixels) {
+PrUVec2 selectedPixels(AppState& state, Array<uint8_t>* pixels) {
     const GalleryEntry* entry = gallerySelected(state.gallery);
     if (entry == nullptr)
         return PrUVec2{0, 0};
-    std::string bytes = readFile(entry->path);
+    Array<uint8_t> bytes = readFile(entry->path);
     PrImageSource source{};
-    source.memory = bytesOf(bytes);
+    source.memory = bytes;
     PrImageDecoder* decoder = prImageDecoderCreate(state.codec);
     PrUVec2 extent{0, 0};
     if (prImageDecoderOpen(decoder, source, nullptr) == PrStatus_Ok) {
         const PrImageInfo* info = prImageDecoderInfo(decoder);
         bool swaps = prImageOrientationSwapsAxes(info->orientation);
         PrUVec2 shown = swaps ? PrUVec2{info->extent.y, info->extent.x} : info->extent;
-        pixels->resize(size_t(shown.x) * shown.y * 4);
+        pixels->resize(shown.x * shown.y * 4);
         PrPixels into{pixels->data(), size_t(shown.x) * 4, shown};
         if (prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, info->orientation, into) == PrStatus_Ok)
             extent = shown;
@@ -966,7 +960,7 @@ PrUVec2 selectedPixels(AppState& state, std::vector<uint8_t>* pixels) {
 }
 
 uint64_t drawSeed(AppState& state) {
-    return state.random() & ((uint64_t(1) << 53) - 1);
+    return prRandomU64(&state.random) & ((uint64_t(1) << 53) - 1);
 }
 
 } // namespace alchemy

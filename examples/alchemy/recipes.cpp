@@ -3,12 +3,11 @@
 #include "examples/alchemy/recipes.h"
 
 #include "pr/ascii.h"
+#include "pr/float.h"
+#include "pr/min_max.h"
+#include "pr/string.h"
 
 #include "examples/alchemy/comfy_graph.h"
-#include "examples/alchemy/text.h"
-
-#include <algorithm>
-#include <cmath>
 
 namespace alchemy {
 
@@ -24,14 +23,14 @@ double rescaleBy(double factor, double modelFactor) {
     if (modelFactor <= 0.0)
         return 0.0;
     double scale = factor / modelFactor;
-    return std::fabs(scale - 1.0) < 0.01 ? 0.0 : scale;
+    return prF64Abs(scale - 1.0) < 0.01 ? 0.0 : scale;
 }
 
 // The node whose outputs a sampling recipe works from: the checkpoint's own if it loads no adapter, and the last
 // adapter's otherwise. Both loaders put the model on output 0 and the text encoder on output 1. The VAE is always the
 // checkpoint's, which no adapter changes.
 struct SamplingRefs {
-    std::string node = "checkpoint";
+    String node = "checkpoint";
 
     ComfyRef model() const { return {node, 0}; }
     ComfyRef clip() const { return {node, 1}; }
@@ -44,22 +43,22 @@ SamplingRefs emitModelAndPrompts(ComfyGraph& g, const SamplingRecipe& recipe) {
     g.setText("ckpt_name", recipe.checkpoint);
 
     SamplingRefs refs;
-    for (size_t i = 0; i < recipe.loras.size(); ++i) {
-        std::string id = "lora" + std::to_string(i);
+    for (uint32_t i = 0; i < recipe.loras.count(); ++i) {
+        String id = format("lora{}", i);
         g.node(id, "LoraLoader");
         g.setRef("model", refs.model());
         g.setRef("clip", refs.clip());
         g.setText("lora_name", recipe.loras[i].name);
         g.setNumber("strength_model", recipe.loras[i].weight);
         g.setNumber("strength_clip", recipe.loras[i].weight);
-        refs.node = std::move(id);
+        refs.node = move(id);
     }
 
     g.node("positive", "CLIPTextEncode");
     g.setText("text", recipe.prompt);
     g.setRef("clip", refs.clip());
 
-    if (recipe.negativePrompt.empty()) {
+    if (recipe.negativePrompt.isEmpty()) {
         g.node("negative", "ConditioningZeroOut");
         g.setRef("conditioning", {"positive", 0});
     } else {
@@ -128,14 +127,14 @@ OutpaintCrop outpaintCrop(const OutpaintRecipe& recipe) {
 
     bool horizontal = isHorizontal(recipe.direction);
     uint32_t axis = horizontal ? recipe.sourceWidth : recipe.sourceHeight;
-    uint32_t span = snapToLatentGrid(std::min(recipe.context, axis) + recipe.amount);
+    uint32_t span = snapToLatentGrid(min(recipe.context, axis) + recipe.amount);
     if (horizontal) {
-        crop.width = std::min(span, crop.padWidth);
-        crop.height = std::min(snapToLatentGrid(crop.padHeight), crop.padHeight);
+        crop.width = min(span, crop.padWidth);
+        crop.height = min(snapToLatentGrid(crop.padHeight), crop.padHeight);
         crop.x = recipe.direction == OutpaintDirection_Left ? 0u : crop.padWidth - crop.width;
     } else {
-        crop.height = std::min(span, crop.padHeight);
-        crop.width = std::min(snapToLatentGrid(crop.padWidth), crop.padWidth);
+        crop.height = min(span, crop.padHeight);
+        crop.width = min(snapToLatentGrid(crop.padWidth), crop.padWidth);
         crop.y = recipe.direction == OutpaintDirection_Top ? 0u : crop.padHeight - crop.height;
     }
     return crop;
@@ -143,10 +142,10 @@ OutpaintCrop outpaintCrop(const OutpaintRecipe& recipe) {
 
 } // namespace
 
-std::string txt2ImgGraph(const Txt2ImgRecipe& recipe) {
+String txt2ImgGraph(const Txt2ImgRecipe& recipe) {
     ComfyGraph g;
     SamplingRefs refs = emitModelAndPrompts(g, recipe.sampling);
-    bool fromSource = !recipe.sourceImage.empty();
+    bool fromSource = !recipe.sourceImage.isEmpty();
     if (!fromSource) {
         g.node("latent", "EmptyLatentImage");
         g.setNumber("width", recipe.width);
@@ -176,7 +175,7 @@ std::string txt2ImgGraph(const Txt2ImgRecipe& recipe) {
     return g.build();
 }
 
-std::string upscaleGraph(const UpscaleRecipe& recipe) {
+String upscaleGraph(const UpscaleRecipe& recipe) {
     ComfyGraph g;
     g.node("source", "LoadImage");
     g.setText("image", recipe.sourceImage);
@@ -201,7 +200,7 @@ std::string upscaleGraph(const UpscaleRecipe& recipe) {
     return g.build();
 }
 
-std::string outpaintGraph(const OutpaintRecipe& recipe) {
+String outpaintGraph(const OutpaintRecipe& recipe) {
     OutpaintCrop crop = outpaintCrop(recipe);
     ComfyGraph g;
     SamplingRefs refs = emitModelAndPrompts(g, recipe.sampling);
@@ -264,7 +263,7 @@ std::string outpaintGraph(const OutpaintRecipe& recipe) {
     return g.build();
 }
 
-std::string detailGraph(const DetailRecipe& recipe) {
+String detailGraph(const DetailRecipe& recipe) {
     ComfyGraph g;
     SamplingRefs refs = emitModelAndPrompts(g, recipe.sampling);
     const SamplingRecipe& sampling = recipe.sampling;
@@ -322,8 +321,13 @@ PrStringView directionName(OutpaintDirection direction) {
 }
 
 OutpaintDirection parseDirection(PrStringView name, OutpaintDirection fallback) {
-    for (OutpaintDirection direction : {OutpaintDirection_Left, OutpaintDirection_Top, OutpaintDirection_Right,
-        OutpaintDirection_Bottom}) {
+    const OutpaintDirection directions[] = {
+        OutpaintDirection_Left,
+        OutpaintDirection_Top,
+        OutpaintDirection_Right,
+        OutpaintDirection_Bottom,
+    };
+    for (OutpaintDirection direction : directions) {
         if (prAsciiContainsFold(name, directionName(direction)))
             return direction;
     }

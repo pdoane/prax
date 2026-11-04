@@ -1,6 +1,6 @@
 #include "pr/task.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <vector>
 

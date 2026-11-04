@@ -90,7 +90,7 @@ bool entryMatches(const PrHtmlPerformanceEntry* entry, PrHtmlPerformanceEntryTyp
 // Writes `entries` to `out` in the order of their start times, and frees the array.
 uint32_t writeSorted(RawArray<PrHtmlPerformanceEntry*>* entries, PrHtmlPerformanceEntry* PR_NONNULL* PR_NULLABLE out,
         uint32_t capacity) {
-    sortItems(entries->data, entries->count, [](const PrHtmlPerformanceEntry* a, const PrHtmlPerformanceEntry* b) {
+    sortItems(entries->span(), [](const PrHtmlPerformanceEntry* a, const PrHtmlPerformanceEntry* b) {
         return a->startTime != b->startTime ? a->startTime < b->startTime : a->sequence < b->sequence;
     });
     uint32_t total = entries->count;

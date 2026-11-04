@@ -192,7 +192,9 @@ bool prCorePosixFileRemove(PrStringView path) {
     char* terminated = terminate(path);
     if (terminated == nullptr)
         return false;
-    bool removed = unlink(terminated) == 0;
+    // unlink refuses a directory, with EISDIR on Linux and EPERM on Apple's platforms, which rmdir removes if it is
+    // empty.
+    bool removed = unlink(terminated) == 0 || ((errno == EISDIR || errno == EPERM) && rmdir(terminated) == 0);
     free(terminated);
     return removed;
 }
@@ -233,4 +235,45 @@ PrRawString prCorePosixFileDataDirectory(void) {
 #else
     return userDirectory("XDG_DATA_HOME", "/.local/share");
 #endif
+}
+
+PrRawString prCorePosixFileWorkingDirectory(void) {
+    // getcwd reports ERANGE while the buffer is too small for the directory, so the buffer grows until it fits.
+    for (size_t capacity = 256; capacity <= (size_t(1) << 20); capacity *= 2) {
+        char* buffer = static_cast<char*>(malloc(capacity));
+        if (buffer == nullptr)
+            return prRawStringNull();
+        if (getcwd(buffer, capacity) != nullptr) {
+            PrRawString directory = prRawStringCopy(PrStringView{buffer, strlen(buffer)});
+            free(buffer);
+            return directory;
+        }
+        free(buffer);
+        if (errno != ERANGE)
+            return prRawStringNull();
+    }
+    return prRawStringNull();
+}
+
+bool prCorePosixFileStreamWrite(PrFileStream stream, PrByteView bytes) {
+    int descriptor = stream == PrFileStream_Error ? STDERR_FILENO : STDOUT_FILENO;
+    size_t written = 0;
+    while (written < bytes.size) {
+        ssize_t wrote = write(descriptor, bytes.data + written, bytes.size - written);
+        if (wrote < 0 && errno == EINTR)
+            continue;
+        if (wrote <= 0)
+            return false;
+        written += size_t(wrote);
+    }
+    return true;
+}
+
+size_t prCorePosixFileStreamRead(PrFileStream, void* out, size_t capacity) {
+    for (;;) {
+        ssize_t got = read(STDIN_FILENO, out, capacity);
+        if (got < 0 && errno == EINTR)
+            continue;
+        return got > 0 ? size_t(got) : 0;
+    }
 }

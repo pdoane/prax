@@ -116,7 +116,7 @@ PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandR
     uint32_t count = 0;
     for (PrCommandIndex i = 0; i < prCommandRegistryCount(registry); ++i)
         count += isListed(registry, i, query) ? 1 : 0;
-    PrKitCommandPalette palette{.prompt = "Type a command", .count = count, .query = query};
+    PrKitCommandPalette palette{.prompt = "Type a command", .count = count, .query = query, .searchable = true};
     PrLayoutNode list = prKitCommandPalette(kit, trigger, palette);
     if (list == kPrLayoutNodeNone)
         return list;

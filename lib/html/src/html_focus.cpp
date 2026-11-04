@@ -270,7 +270,7 @@ void appendOrderedScope(PrDomNode* owner, RawArray<PrDomElement* PR_NONNULL>* ou
             items.push(ScopeItem{member, index, i});
     }
     members.reset();
-    sortItems(items.data, items.count, [](const ScopeItem& a, const ScopeItem& b) {
+    sortItems(items.span(), [](const ScopeItem& a, const ScopeItem& b) {
         if ((a.tabIndex == 0) != (b.tabIndex == 0))
             return b.tabIndex == 0;
         return a.tabIndex != b.tabIndex ? a.tabIndex < b.tabIndex : a.position < b.position;

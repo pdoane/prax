@@ -7840,7 +7840,7 @@ PrUnicodeGeneralCategory prUnicodeGeneralCategory(uint32_t codePoint) {
 }
 
 uint32_t prUnicodeUppercase(uint32_t codePoint, uint32_t out[3]) {
-    uint32_t at = lowerBound(kUpperFrom, uint32_t(countOf(kUpperFrom)), codePoint);
+    uint32_t at = lowerBound(Span(kUpperFrom), codePoint);
     if (at == countOf(kUpperFrom) || kUpperFrom[at] != codePoint) {
         out[0] = codePoint;
         return 1;
@@ -7854,7 +7854,7 @@ uint32_t prUnicodeUppercase(uint32_t codePoint, uint32_t out[3]) {
 }
 
 uint32_t prUnicodeLowercase(uint32_t codePoint, uint32_t out[3]) {
-    uint32_t at = lowerBound(kLowerFrom, uint32_t(countOf(kLowerFrom)), codePoint);
+    uint32_t at = lowerBound(Span(kLowerFrom), codePoint);
     if (at == countOf(kLowerFrom) || kLowerFrom[at] != codePoint) {
         out[0] = codePoint;
         return 1;
@@ -7868,7 +7868,7 @@ uint32_t prUnicodeLowercase(uint32_t codePoint, uint32_t out[3]) {
 }
 
 uint32_t prUnicodeTitlecase(uint32_t codePoint, uint32_t out[3]) {
-    uint32_t at = lowerBound(kTitleFrom, uint32_t(countOf(kTitleFrom)), codePoint);
+    uint32_t at = lowerBound(Span(kTitleFrom), codePoint);
     if (at == countOf(kTitleFrom) || kTitleFrom[at] != codePoint) {
         out[0] = codePoint;
         return 1;
@@ -7882,7 +7882,7 @@ uint32_t prUnicodeTitlecase(uint32_t codePoint, uint32_t out[3]) {
 }
 
 uint32_t prUnicodeFold(uint32_t codePoint, uint32_t out[3]) {
-    uint32_t at = lowerBound(kFoldFrom, uint32_t(countOf(kFoldFrom)), codePoint);
+    uint32_t at = lowerBound(Span(kFoldFrom), codePoint);
     if (at == countOf(kFoldFrom) || kFoldFrom[at] != codePoint) {
         out[0] = codePoint;
         return 1;
@@ -7896,17 +7896,17 @@ uint32_t prUnicodeFold(uint32_t codePoint, uint32_t out[3]) {
 }
 
 uint32_t prUnicodeFullWidth(uint32_t codePoint) {
-    uint32_t at = lowerBound(kWideFrom, uint32_t(countOf(kWideFrom)), codePoint);
+    uint32_t at = lowerBound(Span(kWideFrom), codePoint);
     return at != countOf(kWideFrom) && kWideFrom[at] == codePoint ? kWideTo[at] : codePoint;
 }
 
 uint32_t prUnicodeFullSizeKana(uint32_t codePoint) {
-    uint32_t at = lowerBound(kKanaFrom, uint32_t(countOf(kKanaFrom)), codePoint);
+    uint32_t at = lowerBound(Span(kKanaFrom), codePoint);
     return at != countOf(kKanaFrom) && kKanaFrom[at] == codePoint ? kKanaTo[at] : codePoint;
 }
 
 uint32_t prUnicodeMathItalic(uint32_t codePoint) {
-    uint32_t at = lowerBound(kItalicFrom, uint32_t(countOf(kItalicFrom)), codePoint);
+    uint32_t at = lowerBound(Span(kItalicFrom), codePoint);
     return at != countOf(kItalicFrom) && kItalicFrom[at] == codePoint ? kItalicTo[at] : codePoint;
 }
 

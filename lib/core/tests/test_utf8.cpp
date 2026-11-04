@@ -1,7 +1,7 @@
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

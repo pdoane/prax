@@ -1,4 +1,4 @@
-// Random bytes through the platform.
+// Random numbers: unpredictable bytes through the platform, and seeds from them.
 
 #include "pr/random.h"
 
@@ -14,4 +14,10 @@ void prRandomBytes(void* PR_NULLABLE out, size_t size) {
     PR_ASSERT(out != nullptr || size == 0);
     if (size != 0)
         PR_PLATFORM_RANDOM_BYTES(out, size);
+}
+
+uint64_t prRandomSeed(void) {
+    uint64_t seed = 0;
+    prRandomBytes(&seed, sizeof(seed));
+    return seed;
 }

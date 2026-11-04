@@ -1,7 +1,7 @@
 #include "pr/color_space.h"
 #include "pr/image.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <algorithm>
 #include <cmath>

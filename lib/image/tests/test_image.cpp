@@ -1,6 +1,6 @@
 #include "pr/image.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstring>
 #include <initializer_list>

@@ -887,7 +887,7 @@ uint32_t prMarkdownTakeChanges(PrMarkdown* document, PrMarkdownChange* PR_NULLAB
     if (document->queueHead == document->queue.count) {
         document->queue.clear();
         document->queueHead = 0;
-        sortItems(document->resolvedBlocks.data, document->resolvedBlocks.count, [](uint32_t a, uint32_t b) { return a < b; });
+        sortItems(document->resolvedBlocks.span(), [](uint32_t a, uint32_t b) { return a < b; });
         for (uint32_t i = 0; i < document->resolvedBlocks.count; ++i) {
             uint32_t index = document->resolvedBlocks.data[i];
             if (index < document->blockCount)

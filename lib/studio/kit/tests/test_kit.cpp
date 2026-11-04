@@ -8,7 +8,7 @@
 #include "studio/kit/src/kit.h"
 #include "tools/harness/kit_fixture.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

@@ -15,8 +15,6 @@
 #include "examples/studio_gallery/section_feedback.h"
 #include "examples/studio_gallery/section_foundations.h"
 
-#include <stdio.h>
-
 namespace gallery {
 
 namespace {

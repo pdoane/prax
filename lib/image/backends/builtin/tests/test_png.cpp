@@ -4,7 +4,7 @@
 
 #include "image/backends/builtin/tests/image_builtin_test.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <algorithm>
 #include <string>

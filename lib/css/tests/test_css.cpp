@@ -4,7 +4,7 @@
 #include "css/src/css_object.h"
 #include "css/tests/css_tests.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 // lib/css/tests/test_css_c_api.c, compiled as C.
 extern "C" PrStringView prTestCApi(PrCssStyleDeclaration* style);

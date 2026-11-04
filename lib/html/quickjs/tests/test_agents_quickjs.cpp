@@ -13,7 +13,7 @@
 
 #include "html/quickjs/src/html_bindings_quickjs.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <thread>
 #include <vector>

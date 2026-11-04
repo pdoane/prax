@@ -1,7 +1,7 @@
 #include "pr/dom.h"
 #include "pr/thread.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <atomic>
 #include <string>

@@ -1,30 +1,38 @@
 // The state's verbs that work over the gallery's files: the record's groups, and the import.
 
+#include "pr/array.h"
 #include "pr/compress.h"
 #include "pr/file.h"
 #include "pr/image.h"
+#include "pr/random.h"
+#include "pr/string.h"
 
 #include "examples/alchemy/state.h"
 
-#include "doctest/doctest.h"
-
-#include <filesystem>
-#include <random>
-#include <string>
-#include <vector>
+#include "tools/harness/test.h"
 
 using namespace alchemy;
 
 namespace {
 
+// Returns the strings of `items`.
+template <uint32_t N>
+Array<String> strings(const char* const (&items)[N]) {
+    Array<String> out;
+    for (const char* item : items)
+        out.push(item);
+    return out;
+}
+
 // A state over a gallery in a directory of its own, with the codecs that the verbs use.
 struct Fixture {
     AppState state;
-    std::string dir;
+    String dir;
 
     Fixture() {
-        static std::random_device random;
-        dir = (std::filesystem::temp_directory_path() / ("alchemy_state_" + std::to_string(random()))).string();
+        PrRawString cache = prFileCacheDirectory();
+        dir = format("{}/prax-tests/alchemy_state_{}", prRawStringView(&cache), prRandomSeed());
+        prRawStringReset(&cache);
         state.compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
         state.codec = prImageCodecCreate(PrImageCodecBackend_Default, state.compress);
         galleryOpen(state.gallery, dir);
@@ -34,7 +42,8 @@ struct Fixture {
         for (const GalleryEntry& entry : state.gallery.entries)
             prFileRemove(entry.path);
         closeImport(state);
-        std::filesystem::remove_all(dir);
+        // The gallery's directory holds only its images, which are removed above.
+        prFileRemove(dir);
         prImageCodecDestroy(state.codec);
         prCompressCodecDestroy(state.compress);
     }
@@ -48,9 +57,9 @@ struct Fixture {
         REQUIRE(entry != nullptr);
         PrFileMapping mapping{};
         REQUIRE(prFileMap(entry->path, &mapping));
-        std::string png = provenanceWrite(PrByteView{mapping.data, mapping.size}, record);
+        Array<uint8_t> png = provenanceWrite(PrByteView{mapping.data, mapping.size}, record);
         prFileUnmap(&mapping);
-        REQUIRE(prFileWrite(entry->path, PrByteView{reinterpret_cast<const uint8_t*>(png.data()), png.size()}));
+        REQUIRE(prFileWrite(entry->path, png));
         galleryRescan(state.gallery);
     }
 };
@@ -72,7 +81,10 @@ ProvenanceRecord chain() {
     upscale.upscaleModel = "4x";
     upscale.factor = 3.0;
     upscale.source = "older.png";
-    return ProvenanceRecord{{generate, upscale}};
+    ProvenanceRecord record;
+    record.operations.push(generate);
+    record.operations.push(upscale);
+    return record;
 }
 
 } // namespace
@@ -83,18 +95,18 @@ TEST_CASE("a paste stages its image, and only the confirm adds it to the gallery
     openImport(f.state);
     stageImport(f.state, PrPixelView{kPixels, 8, PrUVec2{2, 1}});
     CHECK(f.state.import.image != nullptr);
-    CHECK(f.state.gallery.entries.empty());
+    CHECK(f.state.gallery.entries.isEmpty());
     REQUIRE(confirmImport(f.state));
     CHECK(!f.state.import.open);
     CHECK(f.state.import.image == nullptr);
-    REQUIRE(f.state.gallery.entries.size() == 1);
+    REQUIRE(f.state.gallery.entries.count() == 1);
 
     // The file holds what was staged, which a copy of the selected image reads back.
-    std::vector<uint8_t> pixels;
+    Array<uint8_t> pixels;
     PrUVec2 extent = selectedPixels(f.state, &pixels);
     CHECK(extent.x == 2);
     CHECK(extent.y == 1);
-    CHECK(pixels == std::vector<uint8_t>(kPixels, kPixels + 8));
+    CHECK(pixels == Array<uint8_t>(kPixels));
 }
 
 TEST_CASE("a paste of no image says so and keeps what was staged") {
@@ -104,23 +116,23 @@ TEST_CASE("a paste of no image says so and keeps what was staged") {
     const PrDrawImage* staged = f.state.import.image;
     stageImport(f.state, PrPixelView{nullptr, 0, PrUVec2{0, 0}});
     CHECK(f.state.import.image == staged);
-    CHECK(!f.state.import.message.empty());
+    CHECK(!f.state.import.message.isEmpty());
     closeImport(f.state);
     CHECK(!f.state.import.open);
-    CHECK(f.state.gallery.entries.empty());
+    CHECK(f.state.gallery.entries.isEmpty());
 }
 
 TEST_CASE("a record's verbs carry one group of the operation that they name") {
     Fixture f;
-    f.state.catalog.samplers = {"dpm", "euler"};
-    f.state.catalog.schedulers = {"normal", "karras"};
-    f.state.catalog.upscaleModels = {"2x", "4x"};
+    f.state.catalog.samplers = strings({"dpm", "euler"});
+    f.state.catalog.schedulers = strings({"normal", "karras"});
+    f.state.catalog.upscaleModels = strings({"2x", "4x"});
     f.addImage(chain());
     GenerateParams& p = f.state.params;
 
     SUBCASE("the newest operation opens first") {
         REQUIRE(selectedRecord(f.state) != nullptr);
-        CHECK(f.state.recordOpen == std::vector<bool>{false, true});
+        CHECK(f.state.recordOpen == Array<bool>({false, true}));
     }
     SUBCASE("a group leaves the rest alone") {
         CHECK(useRecorded(f.state, 0, UseWhat_Sampling));
@@ -128,7 +140,7 @@ TEST_CASE("a record's verbs carry one group of the operation that they name") {
         CHECK(p.scheduler == "karras");
         CHECK(p.steps == 31);
         CHECK(p.cfg == 6.5);
-        CHECK(p.prompt.empty());
+        CHECK(p.prompt.isEmpty());
         CHECK(!p.seedLocked);
     }
     SUBCASE("a line joins the prompt being written") {

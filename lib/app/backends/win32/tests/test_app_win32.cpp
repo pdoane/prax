@@ -1,7 +1,7 @@
 #include "pr/app_win32.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <cstring>

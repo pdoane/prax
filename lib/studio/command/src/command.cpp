@@ -59,7 +59,7 @@ bool hasKind(PrJsonKind kind, PrCommandParamKind param) {
 }
 
 // Writes to `error`, if it is not null, the sentence "The command <id> <problem> "<name>"<detail>.", leaving out the
-// name if it is null.
+// name if it is empty.
 void explain(PrRawString* PR_NULLABLE error, PrStringView id, PrStringView problem, PrStringView name = {},
         PrStringView detail = {}) {
     if (error == nullptr)
@@ -69,7 +69,7 @@ void explain(PrRawString* PR_NULLABLE error, PrStringView id, PrStringView probl
     prTextBufferAppend(&text, id);
     prTextBufferAppendChar(&text, ' ');
     prTextBufferAppend(&text, problem);
-    if (name.data != nullptr) {
+    if (!name.isEmpty()) {
         prTextBufferAppend(&text, " \"");
         prTextBufferAppend(&text, name);
         prTextBufferAppendChar(&text, '"');

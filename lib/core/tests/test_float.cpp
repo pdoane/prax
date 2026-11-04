@@ -1,7 +1,7 @@
 #include "pr/float.h"
 #include "pr/string_view.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

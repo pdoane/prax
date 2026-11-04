@@ -1,7 +1,7 @@
 #include "pr/quickjs_binding.h"
 #include "pr/webidl_observable_array_quickjs.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 

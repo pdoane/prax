@@ -2,7 +2,7 @@
 
 #include "text_diff/src/text_diff_sequence.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

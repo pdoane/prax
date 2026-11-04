@@ -5,7 +5,7 @@
 #include "css/src/css_value_def.h"
 #include "css/tests/css_tests.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <ctype.h>
 

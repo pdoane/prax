@@ -6,7 +6,7 @@
 #include "pr/float.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

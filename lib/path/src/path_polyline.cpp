@@ -169,8 +169,7 @@ bool result(PrPathPolylineOp op, bool a, bool b) {
 
 // Chains the boundary into contours, with a point wherever the direction turns.
 void chain(const PathGrid& g, RawArray<Boundary>& boundary, PrPathPolyline& out) {
-    sortItems(boundary.data, boundary.count,
-        [](const Boundary& a, const Boundary& b) { return pathGridBeforeX(a.from, b.from); });
+    sortItems(boundary.span(), [](const Boundary& a, const Boundary& b) { return pathGridBeforeX(a.from, b.from); });
     auto next = [&](PathGridPoint from) -> Boundary* {
         uint32_t lo = partitionPoint(0, boundary.count, [&](uint32_t i) { return pathGridBeforeX(boundary.data[i].from, from); });
         for (uint32_t i = lo; i < boundary.count && boundary.data[i].from == from; ++i) {

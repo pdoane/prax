@@ -3,42 +3,61 @@
 
 #include "examples/browser/favorites.h"
 
+#include "pr/array.h"
 #include "pr/json.h"
+#include "pr/string.h"
 
 #include "examples/browser/address.h"
 #include "examples/browser/profile.h"
 
 namespace browser {
 
-uint32_t favoriteFind(const std::vector<Favorite>& favorites, PrStringView url) {
-    for (size_t i = 0; i < favorites.size(); ++i) {
+namespace {
+
+// A favorite that a new profile starts with.
+struct DefaultFavorite {
+    const char* title;
+    const char* url;
+};
+
+constexpr DefaultFavorite kDefaultFavorites[] = {
+    {"WHATWG HTML", "https://html.spec.whatwg.org/multipage/"},
+    {"Wikipedia", "https://en.wikipedia.org/wiki/Main_Page"},
+    {"Hacker News", "https://news.ycombinator.com/"},
+    {"MDN Web Docs", "https://developer.mozilla.org/en-US/"},
+};
+
+} // namespace
+
+uint32_t favoriteFind(const Array<Favorite>& favorites, PrStringView url) {
+    for (uint32_t i = 0; i < favorites.count(); ++i) {
         if (favorites[i].url == url)
             return uint32_t(i);
     }
     return kFavoriteMissing;
 }
 
-std::string favoriteLabel(const Favorite& favorite) {
-    if (!favorite.title.empty())
+PrStringView favoriteLabel(const Favorite& favorite) {
+    if (!favorite.title.isEmpty())
         return favorite.title;
-    std::string host = addressHost(favorite.url);
-    return host.empty() ? favorite.url : host;
+    PrStringView host = addressHost(favorite.url);
+    if (host.isEmpty())
+        return favorite.url;
+    return host;
 }
 
-std::vector<Favorite> favoritesDefault() {
-    return {
-        {"WHATWG HTML", "https://html.spec.whatwg.org/multipage/"},
-        {"Wikipedia", "https://en.wikipedia.org/wiki/Main_Page"},
-        {"Hacker News", "https://news.ycombinator.com/"},
-        {"MDN Web Docs", "https://developer.mozilla.org/en-US/"},
-    };
+Array<Favorite> favoritesDefault() {
+    Array<Favorite> favorites;
+    for (const DefaultFavorite& seed : kDefaultFavorites)
+        favorites.push(Favorite{.title = seed.title, .url = seed.url});
+    return favorites;
 }
 
-bool favoritesParse(PrStringView text, std::vector<Favorite>* out) {
+bool favoritesParse(PrStringView text, Array<Favorite>* out) {
     PrJson* json = prJsonCreate();
     bool parsed = prJsonParse(json, text, nullptr) && prJsonValueCount(json) != 0 &&
         prJsonKind(json, 0) == PrJsonKind_Array;
-    std::vector<Favorite> favorites;
+    Array<Favorite> favorites;
     for (PrJsonValueIndex item = parsed ? prJsonFirst(json, 0) : kPrJsonMissing; item != kPrJsonMissing;
             item = prJsonAfter(json, 0, item)) {
         if (prJsonKind(json, item) != PrJsonKind_Object)
@@ -48,14 +67,14 @@ bool favoritesParse(PrStringView text, std::vector<Favorite>* out) {
             continue;
         Favorite favorite;
         PrStringView view = prJsonString(json, url);
-        favorite.url.assign(view.data, view.size);
+        favorite.url = view;
         PrJsonValueIndex title = prJsonMember(json, item, "title");
         if (title != kPrJsonMissing && prJsonKind(json, title) == PrJsonKind_String) {
             view = prJsonString(json, title);
-            favorite.title.assign(view.data, view.size);
+            favorite.title = view;
         }
-        if (!favorite.url.empty())
-            favorites.push_back(favorite);
+        if (!favorite.url.isEmpty())
+            favorites.push(favorite);
     }
     prJsonDestroy(json);
     if (parsed)
@@ -63,7 +82,7 @@ bool favoritesParse(PrStringView text, std::vector<Favorite>* out) {
     return parsed;
 }
 
-std::string favoritesText(const std::vector<Favorite>& favorites) {
+String favoritesText(const Array<Favorite>& favorites) {
     PrJsonWriter* writer = prJsonWriterCreate();
     prJsonWriterBeginArray(writer);
     for (const Favorite& favorite : favorites) {
@@ -76,17 +95,17 @@ std::string favoritesText(const std::vector<Favorite>& favorites) {
     }
     prJsonWriterEndArray(writer);
     PrStringView written = prJsonWriterText(writer);
-    std::string text(written.data, written.size);
+    String text(written);
     prJsonWriterDestroy(writer);
     return text;
 }
 
-bool favoritesLoad(PrStringView path, std::vector<Favorite>* out) {
-    std::string text;
+bool favoritesLoad(PrStringView path, Array<Favorite>* out) {
+    String text;
     return profileRead(path, &text) && favoritesParse(text, out);
 }
 
-bool favoritesSave(PrStringView path, const std::vector<Favorite>& favorites) {
+bool favoritesSave(PrStringView path, const Array<Favorite>& favorites) {
     return profileWrite(path, favoritesText(favorites));
 }
 

@@ -2,14 +2,12 @@
 
 #include "examples/alchemy/image_cache.h"
 
+#include "pr/array.h"
 #include "pr/cache.h"
 #include "pr/file.h"
+#include "pr/function.h"
 #include "pr/image_process.h"
-
-#include "examples/alchemy/text.h"
-
-#include <utility>
-#include <vector>
+#include "pr/string.h"
 
 namespace alchemy {
 
@@ -24,7 +22,7 @@ struct ScaleCache {
 struct ImageCache {
     PrTaskPool* pool;
     PrImageCodec* codec;
-    std::function<void()> wake;
+    Function<void()> wake;
     ScaleCache scales[2];               // by ImageScale
 };
 
@@ -38,7 +36,7 @@ constexpr uint32_t kFullIdleFrames = 120;
 // A decode on the pool, which finishes its load.
 struct Decode {
     const ScaleCache* scale;
-    std::string path;
+    String path;
     PrCacheLoad* load;
 };
 
@@ -62,7 +60,7 @@ void runDecode(void* PR_NULLABLE context) {
 
 void* startDecode(void* PR_NULLABLE context, PrStringView path, PrCacheLoad* load) {
     const ScaleCache* scale = static_cast<const ScaleCache*>(context);
-    prTaskPoolPost(scale->images->pool, runDecode, new Decode{scale, std::string(path.data, path.size), load});
+    prTaskPoolPost(scale->images->pool, runDecode, new Decode{scale, path, load});
     return nullptr;
 }
 
@@ -78,12 +76,13 @@ void wakeOwner(void* PR_NULLABLE context) {
 
 } // namespace
 
-ImageCache* imageCacheCreate(PrTaskPool* pool, PrImageCodec* codec, std::function<void()> wake) {
+ImageCache* imageCacheCreate(PrTaskPool* pool, PrImageCodec* codec, Function<void()> wake) {
     ImageCache* images = new ImageCache();
     images->pool = pool;
     images->codec = codec;
-    images->wake = std::move(wake);
-    for (ImageScale scale : {ImageScale_Full, ImageScale_Thumbnail}) {
+    images->wake = move(wake);
+    const ImageScale scales[] = {ImageScale_Full, ImageScale_Thumbnail};
+    for (ImageScale scale : scales) {
         ScaleCache& entry = images->scales[scale];
         entry.images = images;
         entry.scale = scale;
@@ -107,15 +106,15 @@ void imageCacheDestroy(ImageCache* PR_NULLABLE cache) {
     delete cache;
 }
 
-const PrDrawImage* PR_NULLABLE imageCacheGet(ImageCache* cache, const std::string& path, ImageScale scale) {
+const PrDrawImage* PR_NULLABLE imageCacheGet(ImageCache* cache, PrStringView path, ImageScale scale) {
     return static_cast<const PrDrawImage*>(prCacheValue(cache->scales[scale].cache, path));
 }
 
-bool imageCacheFailed(ImageCache* cache, const std::string& path, ImageScale scale) {
+bool imageCacheFailed(ImageCache* cache, PrStringView path, ImageScale scale) {
     return prCacheKeyState(cache->scales[scale].cache, path) == PrCacheState_Failed;
 }
 
-void imageCacheForget(ImageCache* cache, const std::string& path) {
+void imageCacheForget(ImageCache* cache, PrStringView path) {
     for (ScaleCache& scale : cache->scales)
         prCacheRemove(scale.cache, path);
 }
@@ -147,12 +146,12 @@ const PrDrawImage* imageShrink(const PrDrawImage* image, uint32_t maxEdge) {
     }
     uint32_t pixelSize = 4;
     PrPixelView above = prDrawImagePixels(image);
-    std::vector<uint8_t> level;
+    Array<uint8_t> level;
     while (above.extent.x > maxEdge || above.extent.y > maxEdge) {
         PrUVec2 next{above.extent.x > 1 ? above.extent.x / 2 : 1, above.extent.y > 1 ? above.extent.y / 2 : 1};
-        std::vector<uint8_t> below(size_t(next.x) * next.y * pixelSize);
+        Array<uint8_t> below(size_t(next.x) * next.y * pixelSize);
         prImageMipLevel(above, PrPixels{below.data(), next.x * pixelSize, next}, format);
-        level.swap(below);
+        level = move(below);
         above = PrPixelView{level.data(), next.x * pixelSize, next};
     }
     PrDrawImageDesc desc{

@@ -11,7 +11,7 @@
 #include "pr/ui.h"
 #include "pr/ui_text_edit.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

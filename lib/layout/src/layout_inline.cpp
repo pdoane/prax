@@ -1102,7 +1102,7 @@ void treeOrder(const LayoutStyles* styles, LayoutInlineFrame& f, uint32_t mark, 
         const PrLayoutFontStyle& font = layoutFontStyle(styles, f.styles.data[f.lineBoxes.data[b].open]);
         if (layoutUsedMode(font).direction != PrTextDirection_Rtl)
             continue;
-        reverseItems(f.groupParts.data + first, last - first);
+        reverseItems(f.groupParts.span().slice(first, last - first));
     }
     // The leaves in the order of the text, with the group of each box before the first leaf it holds.
     f.logical.clear();
@@ -1369,7 +1369,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
             f.positions.clear();
             for (uint32_t i = box.first; i < box.end; ++i)
                 f.positions.push(f.visual.data[i]);
-            sortItems(f.positions.data, f.positions.count, [](uint32_t x, uint32_t y) { return x < y; });
+            sortItems(f.positions.span(), [](uint32_t x, uint32_t y) { return x < y; });
             // Adjacent leaves stay in one part if an unbroken line would keep them together.
             auto piece = [&](uint32_t p) {
                 return layoutBidiSplitsBefore(t, box.open, f.leaves.data[f.order.data[p]].from);
@@ -1448,20 +1448,20 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     // bidi, each box has one part, which is already in that order, and the boxes close in the order they ended.
     if (t.bidi) {
         auto depth = [&](const LayoutLinePart& part) { return f.lineBoxes.data[part.box].depth; };
-        sortItems(f.parts.data, f.parts.count, [&](const LayoutLinePart& a, const LayoutLinePart& b) {
+        sortItems(f.parts.span(), [&](const LayoutLinePart& a, const LayoutLinePart& b) {
             return a.start != b.start ? a.start < b.start : depth(a) < depth(b);
         });
         f.closing.resize(f.parts.count);
         for (uint32_t i = 0; i < f.parts.count; ++i)
             f.closing.data[i] = i;
-        sortItems(f.closing.data, f.closing.count, [&](uint32_t a, uint32_t b) {
+        sortItems(f.closing.span(), [&](uint32_t a, uint32_t b) {
             const LayoutLinePart& x = f.parts.data[a];
             const LayoutLinePart& y = f.parts.data[b];
             return x.end != y.end ? x.end < y.end : depth(x) > depth(y);
         });
     } else {
         f.closing.clear();
-        f.closing.append(f.closed.data, f.closed.count);
+        f.closing.append(f.closed.span());
     }
 
     // Places each leaf in visual order from line-left, and each part around its leaves with its edges.
@@ -1807,7 +1807,7 @@ void openAcross(const LayoutInlineShaping& t, LayoutInlineFrame& f) {
     const RawArray<LayoutInlineAlign>& align = f.aligner.align;
     for (uint32_t box = align.data[block].parent; box != kLayoutInlineRoot; box = align.data[box].parent)
         f.open.push(box);
-    reverseItems(f.open.data, f.open.count);
+    reverseItems(f.open.span());
 }
 
 // The strut of a line (CSS2/#line-height): the extent of its container's text about the dominant baseline, that extent
@@ -1964,14 +1964,14 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
         lf.lineCollected = false;
         layLine(lf, lt, lineStrut);
         f.open.clear();
-        f.open.append(lf.open.data, lf.open.count);
+        f.open.append(lf.open.span());
         for (uint32_t i = 0; i < lt.items.count; ++i) {
             if (!lf.floats.placed.data[i])
                 continue;
             f.floats.placed.data[i] = true;
             f.floats.child.data[i] = lf.floats.child.data[i];
         }
-        f.floats.anchors.append(lf.floats.anchors.data, lf.floats.anchors.count);
+        f.floats.anchors.append(lf.floats.anchors.span());
         releaseAtomics(lf);
         leaveFrame(state.scratch);
     }

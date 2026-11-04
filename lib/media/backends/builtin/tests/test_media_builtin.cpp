@@ -1,6 +1,6 @@
 #include "pr/media_builtin.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string.h>
 #include <vector>

@@ -1,11 +1,10 @@
+#include "pr/array.h"
 #include "pr/json.h"
+#include "pr/string.h"
 
 #include "examples/alchemy/recipes.h"
-#include "examples/alchemy/text.h"
 
-#include "doctest/doctest.h"
-
-#include <string>
+#include "tools/harness/test.h"
 
 using namespace alchemy;
 
@@ -15,7 +14,7 @@ namespace {
 struct Graph {
     PrJson* d = prJsonCreate();
 
-    explicit Graph(const std::string& text) {
+    explicit Graph(PrStringView text) {
         REQUIRE(prJsonParse(d, text, nullptr));
     }
     ~Graph() {
@@ -50,21 +49,29 @@ struct Graph {
     }
 };
 
-SamplingRecipe sampling(std::vector<LoraRef> loras = {}, std::string negative = "") {
+SamplingRecipe sampling(Array<LoraRef> loras = {}, PrStringView negative = "") {
     return SamplingRecipe{
         .checkpoint = "sdxl.safetensors",
-        .loras = std::move(loras),
+        .loras = move(loras),
         .sampler = "euler",
         .scheduler = "normal",
         .prompt = "a fox",
-        .negativePrompt = std::move(negative),
+        .negativePrompt = negative,
         .seed = 42,
         .cfg = 6.5,
     };
 }
 
-std::vector<LoraRef> chain() {
-    return {{"detail.safetensors", 0.8}, {"film.safetensors", 1.25}};
+// Returns the adapter of `name` at `weight`.
+LoraRef lora(const char* name, double weight) {
+    return LoraRef{.name = name, .weight = weight};
+}
+
+Array<LoraRef> chain() {
+    Array<LoraRef> loras;
+    loras.push(lora("detail.safetensors", 0.8));
+    loras.push(lora("film.safetensors", 1.25));
+    return loras;
 }
 
 } // namespace
@@ -139,7 +146,7 @@ TEST_CASE("an outpaint grows the canvas on one side and samples a crop anchored 
 
 TEST_CASE("a detail pass reads the chain's model and text encoder") {
     Graph g(detailGraph({
-        .sampling = sampling({{"detail.safetensors", 0.8}}),
+        .sampling = sampling(Array<LoraRef>({lora("detail.safetensors", 0.8)})),
         .sourceImage = "fox.png",
         .detector = "bbox/face_yolov8m.pt",
     }));
@@ -164,8 +171,13 @@ TEST_CASE("an upscale rescales by what the model's name states, and runs the mod
 }
 
 TEST_CASE("a direction reads back from its name") {
-    for (OutpaintDirection direction :
-            {OutpaintDirection_Left, OutpaintDirection_Top, OutpaintDirection_Right, OutpaintDirection_Bottom})
+    const OutpaintDirection directions[] = {
+        OutpaintDirection_Left,
+        OutpaintDirection_Top,
+        OutpaintDirection_Right,
+        OutpaintDirection_Bottom,
+    };
+    for (OutpaintDirection direction : directions)
         CHECK(parseDirection(directionName(direction), OutpaintDirection_Right) == direction);
     CHECK(parseDirection("TOP", OutpaintDirection_Right) == OutpaintDirection_Top);
     CHECK(parseDirection("sideways", OutpaintDirection_Bottom) == OutpaintDirection_Bottom);

@@ -1,20 +1,20 @@
 // Scribe's whole interface, driven through events as a window would drive it: its menus, palette, cursors, scrollbar
 // and the view's direction and writing mode.
 
+#include "pr/array.h"
 #include "pr/file.h"
 #include "pr/font_set.h"
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text_font.h"
 #include "pr/ui.h"
 
 #include "examples/scribe/scribe.h"
 #include "tools/harness/kit_fixture.h"
 
-#include "doctest/doctest.h"
-
-#include <string>
-#include <vector>
+#include "tools/harness/test.h"
 
 using namespace harness;
 using namespace scribe;
@@ -26,7 +26,7 @@ struct Editor {
     KitFixture f;
     Scribe s;
 
-    explicit Editor(const std::string& text, const std::string& name = "") {
+    explicit Editor(PrStringView text, PrStringView name = "") {
         PrFontFamily mono{.generic = PrFontGeneric_Monospace};
         PrFontStyle style = prFontStyleDefault();
         style.size = 13;
@@ -35,7 +35,7 @@ struct Editor {
         s.kit = f.kit;
         s.ui = f.ui;
         openEditor(s);
-        if (!text.empty() || !name.empty())
+        if (!text.isEmpty() || !name.isEmpty())
             openText(s, text, name);
         else
             openDocument(s, "");
@@ -71,7 +71,7 @@ struct Editor {
     }
 
     // Runs the command `id`, as the menu bar, the palette and the keys do.
-    void run(const std::string& id) {
+    void run(PrStringView id) {
         REQUIRE(prCommandRegistryRun(s.commands, id, nullptr, nullptr) == PrStatus_Ok);
         settle();
     }
@@ -89,9 +89,8 @@ struct Editor {
     PrTextView* view() { return prTextEditorDocumentView(document()); }
     PrTextEditorOptions options() { return prTextEditorOptions(s.editor); }
 
-    std::string text() {
-        PrStringView all = prTextEditBufferText(prTextEditorDocumentBuffer(document()));
-        return std::string(all.data, all.size);
+    String text() {
+        return prTextEditBufferText(prTextEditorDocumentBuffer(document()));
     }
 
     uint32_t selections() { return prTextEditViewSelectionCount(prTextViewEdit(view())); }
@@ -107,19 +106,19 @@ struct Editor {
         return prLayoutNodeFirstChild(f.tree, block != kPrLayoutNodeNone ? block : row);
     }
 
-    std::vector<PrLayoutHighlight> firstRowMarks() {
+    Array<PrLayoutHighlight> firstRowMarks() {
         PrLayoutNode text = firstRowText();
-        std::vector<PrLayoutHighlight> marks(prLayoutNodeHighlights(f.tree, text, nullptr, 0));
-        prLayoutNodeHighlights(f.tree, text, marks.data(), uint32_t(marks.size()));
+        Array<PrLayoutHighlight> marks(prLayoutNodeHighlights(f.tree, text, nullptr, 0));
+        prLayoutNodeHighlights(f.tree, text, marks.data(), marks.count());
         return marks;
     }
 };
 
 // A document of `count` lines of different text.
-std::string document(uint32_t count) {
-    std::string text;
+String document(uint32_t count) {
+    String text;
     for (uint32_t i = 0; i < count; ++i)
-        text += "line " + std::to_string(i) + (i + 1 < count ? "\n" : "");
+        formatTo(text, "line {}{}", i, i + 1 < count ? "\n" : "");
     return text;
 }
 
@@ -195,7 +194,7 @@ TEST_CASE("a press with Alt adds a cursor where it lands, and a press without it
     CHECK(e.selections() == 2);
     CHECK(e.info().caret.line == 2);
     e.type("x");
-    CHECK(e.text().substr(0, 7) == "xline 0");
+    CHECK(prStringSlice(e.text(), 0, 7) == "xline 0");
     e.click(PrVec2{port.left + 1, port.top + 5});
     CHECK(e.selections() == 1);
     CHECK(e.info().caret.line == 0);
@@ -225,8 +224,9 @@ TEST_CASE("the wheel scrolls the text, and the scrollbar's drag moves it") {
 }
 
 TEST_CASE("the View menu sets vertical lines, whose arrows, wheel and scrollbar turn with them") {
-    for (const char* id : {"view.verticalRl", "view.verticalLr"}) {
-        bool reversed = std::string(id) == "view.verticalRl";
+    PrStringView ids[] = {"view.verticalRl", "view.verticalLr"};
+    for (PrStringView id : ids) {
+        bool reversed = id == "view.verticalRl";
         Editor e(document(5000));
         e.run(id);
         CHECK(e.options().writingMode == (reversed ? PrLayoutWritingMode_VerticalRl : PrLayoutWritingMode_VerticalLr));
@@ -270,8 +270,8 @@ TEST_CASE("the View menu sets vertical lines, whose arrows, wheel and scrollbar 
 }
 
 TEST_CASE("the View menu sets each line's direction, from the choice or from its script") {
-    const std::string hebrew = "\xd7\x90\xd7\x91\xd7\x92";
-    Editor e(hebrew + "\nabc");
+    // Hebrew letters, and a line of Latin ones.
+    Editor e("\xd7\x90\xd7\x91\xd7\x92\nabc");
     // Without the gutter, the port's edges are the lines' edges.
     e.run("view.lineNumbers");
     PrRect caret{};
@@ -308,8 +308,8 @@ TEST_CASE("a file's extension chooses its language, whose captures color the tex
     REQUIRE(language != nullptr);
     CHECK(language->name == "c");
     // The first line's text node colors `int` as a type.
-    std::vector<PrLayoutHighlight> marks = e.firstRowMarks();
-    REQUIRE(!marks.empty());
+    Array<PrLayoutHighlight> marks = e.firstRowMarks();
+    REQUIRE(!marks.isEmpty());
     CHECK(marks[0].start == 0);
     CHECK(marks[0].end == 3);
     CHECK(marks[0].color.a != 0);
@@ -317,7 +317,7 @@ TEST_CASE("a file's extension chooses its language, whose captures color the tex
     e.type("/");
     e.type("/");
     marks = e.firstRowMarks();
-    REQUIRE(marks.size() == 1);
+    REQUIRE(marks.count() == 1);
     CHECK(marks[0].start == 0);
     CHECK(marks[0].end == 18);
 }
@@ -333,17 +333,17 @@ TEST_CASE("a heading of Markdown takes the color of its class, whichever convent
 TEST_CASE("a file of no language the build has shows plain text") {
     Editor e("plain words\n", "notes.txt");
     CHECK(prTextEditorDocumentLanguage(e.document()) == nullptr);
-    CHECK(e.firstRowMarks().empty());
+    CHECK(e.firstRowMarks().isEmpty());
 }
 
 TEST_CASE("a large file streams in over frames, each piece colored as it shows, and an edit meanwhile keeps its undo") {
-    std::string program;
-    while (program.size() < (1u << 20))
-        program += "int value = 1; // a line of the program\n";
+    String program;
+    while (program.count() < (1u << 20))
+        program.append("int value = 1; // a line of the program\n");
     Editor e(program, "big.c");
     // The first frame shows text, already colored, and the rest is still to come.
     CHECK(prTextEditBufferSize(prTextEditorDocumentBuffer(e.document())) != 0);
-    CHECK(!e.firstRowMarks().empty());
+    CHECK(!e.firstRowMarks().isEmpty());
     // Typing goes in while the file loads, and the load keeps its undo.
     e.f.type("x");
     e.f.frame();
@@ -352,7 +352,7 @@ TEST_CASE("a large file streams in over frames, each piece colored as it shows, 
         afterLayout(e.s);
     }
     REQUIRE_FALSE(prTextEditorDocumentInfo(e.document()).loading);
-    CHECK(e.text() == "x" + program);
+    CHECK(e.text() == format("x{}", program));
     e.key('Z', kCommand);
     CHECK(e.text() == program);
 }
@@ -360,15 +360,15 @@ TEST_CASE("a large file streams in over frames, each piece colored as it shows, 
 #endif
 
 TEST_CASE("Save waits for the load to finish") {
-    std::string program;
-    while (program.size() < (1u << 20))
-        program += "int value = 1;\n";
+    String program;
+    while (program.count() < (1u << 20))
+        program.append("int value = 1;\n");
     PrRawString cache = prFileCacheDirectory();
-    std::string folder = std::string(prRawStringView(&cache).data, prRawStringView(&cache).size) + "/prax-tests/scribe";
+    String folder = format("{}/prax-tests/scribe", prRawStringView(&cache));
     prRawStringReset(&cache);
     REQUIRE(prFileCreateDirectory(folder));
-    std::string path = folder + "/big.c";
-    REQUIRE(prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(program.data()), program.size()}));
+    String path = format("{}/big.c", folder);
+    REQUIRE(prFileWrite(path, PrByteView{prStringBytes(program), program.count()}));
     Editor e("");
     REQUIRE(openDocument(e.s, path));
     prTextEditorShow(e.s.editor, prTextEditorDocumentFromPath(e.s.editor, path));

@@ -1,6 +1,6 @@
 #include "pr/url_percent.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

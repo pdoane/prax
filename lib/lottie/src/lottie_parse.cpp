@@ -253,7 +253,7 @@ void readValue(const Parser& p, uint32_t value, ValueKind kind, uint32_t dims, R
 uint32_t pool(Parser& p, const RawArray<float>& values) {
     uint32_t offset = uint32_t(p.a->numbers.count);
     if (values.count > 0)
-        p.a->numbers.append(values.data, values.count);
+        p.a->numbers.append(values.span());
     return offset;
 }
 
@@ -550,7 +550,7 @@ static_assert(sortedTable(kItemNames, [](const ItemName& a, const ItemName& b) {
 
 LottieItemKind itemKindOf(PrStringView ty) {
     uint16_t code = itemCode(ty.data, ty.size);
-    uint32_t at = lowerBound(kItemNames, uint32_t(countOf(kItemNames)), code);
+    uint32_t at = lowerBound(Span(kItemNames), code);
     return at < countOf(kItemNames) && kItemNames[at].code == code ? kItemNames[at].kind : LottieItemKind_Unknown;
 }
 
@@ -776,7 +776,7 @@ void readItem(Parser& p, uint32_t object, uint32_t index) {
         default:
             break;
     }
-    for (uint32_t r = lowerBound(kItemRoles, uint32_t(countOf(kItemRoles)), item.kind);
+    for (uint32_t r = lowerBound(Span(kItemRoles), item.kind);
             r < countOf(kItemRoles) && kItemRoles[r].kind == item.kind; ++r)
         attach(p, item.props[kItemRoles[r].slot], kItemRoles[r].role, member(p, object, kItemRoles[r].key));
     p.parent = outer;
@@ -1129,10 +1129,10 @@ void readLayers(Parser& p, uint32_t array, LottieComp& comp, RawArray<uint32_t>&
     byId.reserve(comp.count);
     for (uint32_t j = 0; j < comp.count; ++j)
         byId.push(LayerId{ids.data[j], j});
-    sortItems(byId.data, byId.count,
+    sortItems(byId.span(),
         [](const LayerId& a, const LayerId& b) { return a.id < b.id || (a.id == b.id && a.layer < b.layer); });
     auto find = [&](double id) {
-        uint32_t at = lowerBound(byId.data, byId.count, id);
+        uint32_t at = lowerBound(byId.span(), id);
         return id != -1e300 && at < byId.count && byId.data[at].id == id ? byId.data[at].layer : kLottieNone;
     };
     for (uint32_t j = 0; j < comp.count; ++j) {
@@ -1163,7 +1163,7 @@ RawArray<AssetId> sortedIds(const RawArray<PrStringView>& ids, uint32_t first) {
     RawArray<AssetId> sorted;
     for (uint32_t i = first; i < ids.count; ++i)
         sorted.push(AssetId{ids.data[i], i});
-    sortItems(sorted.data, sorted.count, [](const AssetId& a, const AssetId& b) {
+    sortItems(sorted.span(), [](const AssetId& a, const AssetId& b) {
         int order = prStringCompare(a.id, b.id);
         return order < 0 || (order == 0 && a.index < b.index);
     });
@@ -1172,7 +1172,7 @@ RawArray<AssetId> sortedIds(const RawArray<PrStringView>& ids, uint32_t first) {
 
 // Returns the index of the first asset with the id, or kLottieNone if there is none.
 uint32_t findId(const RawArray<AssetId>& sorted, PrStringView id) {
-    uint32_t at = lowerBound(sorted.data, sorted.count, id);
+    uint32_t at = lowerBound(sorted.span(), id);
     return at < sorted.count && sorted.data[at].id == id ? sorted.data[at].index : kLottieNone;
 }
 

@@ -119,7 +119,7 @@ struct Layout {
 // the font has none, a shape from any font is used.
 const LottieCharShape* PR_NULLABLE charShapeFor(const Layout& t, PrStringView character, const LottieFont* PR_NULLABLE font) {
     const LottieAnimation& a = *t.a;
-    for (uint32_t at = lowerBound(t.shapes.data, t.shapes.count, character);
+    for (uint32_t at = lowerBound(t.shapes.span(), character);
             at < t.shapes.count && t.shapes.data[at].character == character; ++at) {
         const LottieCharShape& c = a.charShapes.data[t.shapes.data[at].shape];
         if (font == nullptr || (lottieString(a, c.style) == lottieString(a, font->style) &&
@@ -574,7 +574,7 @@ void lottieLayoutText(LottieAnimation& a, const PrLottieOptions& options) {
         t.textFonts.push(textFontOf(a, a.textFonts.data[i], options));
     for (uint32_t i = 0; i < a.charShapes.count; ++i)
         t.shapes.push(CharKey{lottieString(a, a.charShapes.data[i].character), i});
-    sortItems(t.shapes.data, t.shapes.count, [](const CharKey& x, const CharKey& y) {
+    sortItems(t.shapes.span(), [](const CharKey& x, const CharKey& y) {
         int order = prStringCompare(x.character, y.character);
         return order < 0 || (order == 0 && x.shape < y.shape);
     });

@@ -2,8 +2,9 @@
 
 # The main() of every test binary, which installs the crash handler before doctest runs the tests. It takes core's
 # declarations only, so that each binary links the core that it tests.
-add_library(test_main STATIC test_main.cpp)
-target_include_directories(test_main PRIVATE ${PROJECT_SOURCE_DIR}/lib/core/include)
+add_library(test_main STATIC test_main.cpp test.h)
+# Every test includes doctest through test.h, by its path under the root.
+target_include_directories(test_main PUBLIC ${PROJECT_SOURCE_DIR} PRIVATE ${PROJECT_SOURCE_DIR}/lib/core/include)
 target_link_libraries(test_main PUBLIC doctest::doctest PRIVATE pr_warnings)
 
 # Reading files and framed cases, writing JSON, and the CPU's counters.

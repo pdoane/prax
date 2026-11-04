@@ -2,7 +2,7 @@
 #include "pr/path_stroke.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <vector>

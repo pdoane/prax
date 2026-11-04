@@ -382,7 +382,7 @@ void normalizeSelections(RawArray<PrTextEditSelection>& selections) {
     if (selections.count < 2)
         return;
     PrTextEditSelection primary = selections.last();
-    sortItems(selections.data, selections.count, [](const PrTextEditSelection& a, const PrTextEditSelection& b) {
+    sortItems(selections.span(), [](const PrTextEditSelection& a, const PrTextEditSelection& b) {
         return lowOf(a) < lowOf(b);
     });
     uint32_t kept = 0;
@@ -501,10 +501,10 @@ bool mergeStep(HistoryStep& step, const HistoryStep& next, PrTextEditMerge merge
             const StepStyle& style = next.styles.data[i];
             step.styles.push(StepStyle{style.start + step.bytes.count, style.end + step.bytes.count, style.style});
         }
-        step.bytes.append(next.bytes.data, next.bytes.count);
+        step.bytes.append(next.bytes.span());
     } else if (now.start + now.textSize == was.start) {
         // A backward deletion removed what comes before what the step removed.
-        step.styles.append(next.styles.data, next.styles.count);
+        step.styles.append(next.styles.span());
         uint32_t size = step.bytes.count;
         step.bytes.resize(size + next.bytes.count);
         prMemMove(step.bytes.data + next.bytes.count, step.bytes.data, size);
@@ -577,7 +577,7 @@ bool applyTransaction(TextEditBuffer* b, TextEditView* PR_NULLABLE view, const P
     if (recording) {
         captureInverse(b, list, kept, step);
         if (view != nullptr)
-            step.before.append(view->selections.data, view->selections.count);
+            step.before.append(view->selections.span());
         step.merge = merge;
     }
 
@@ -623,12 +623,12 @@ bool applyTransaction(TextEditBuffer* b, TextEditView* PR_NULLABLE view, const P
 
     if (recording) {
         if (view != nullptr)
-            step.after.append(view->selections.data, view->selections.count);
+            step.after.append(view->selections.span());
         clearSteps(history->redo);
         if (history->undo.count != 0 && mergeStep(history->undo.last(), step, merge)) {
             HistoryStep& last = history->undo.last();
             last.after.clear();
-            last.after.append(step.after.data, step.after.count);
+            last.after.append(step.after.span());
             resetStep(step);
         } else {
             history->undo.push(step);
@@ -664,8 +664,8 @@ bool applyStep(TextEditHistory* history, TextEditView* PR_NULLABLE view, RawArra
     findShifts(b, changes.data, changes.count);
     HistoryStep inverse{};
     captureInverse(b, changes.data, changes.count, inverse);
-    inverse.before.append(step.after.data, step.after.count);
-    inverse.after.append(step.before.data, step.before.count);
+    inverse.before.append(step.after.span());
+    inverse.after.append(step.before.span());
     inverse.sealed = true;
     if (step.changes.count == 0) {
         for (uint32_t i = 0; i < step.styles.count; ++i)
@@ -683,7 +683,7 @@ bool applyStep(TextEditHistory* history, TextEditView* PR_NULLABLE view, RawArra
 
     if (view != nullptr && view->buffer == b && step.before.count != 0) {
         view->selections.clear();
-        view->selections.append(step.before.data, step.before.count);
+        view->selections.append(step.before.span());
     }
     to.push(inverse);
     resetStep(step);
@@ -965,7 +965,7 @@ bool prTextEditViewInsert(PrTextEditView* view, PrStringView text, PrTextEditOri
         const PrTextEditSelection& s = view->selections.data[i];
         changes.push(PrTextEditChange{.start = lowOf(s), .end = highOf(s), .text = text});
     }
-    sortItems(changes.data, changes.count, [](const PrTextEditChange& x, const PrTextEditChange& y) {
+    sortItems(changes.span(), [](const PrTextEditChange& x, const PrTextEditChange& y) {
         return x.start < y.start;
     });
     bool applied = applyTransaction(b, view, changes.data, changes.count, origin, merge);
@@ -1018,8 +1018,8 @@ void prTextEditViewSetStyle(PrTextEditView* view, PrTextEditStyle style) {
     }
     if (history == nullptr)
         return;
-    step.before.append(view->selections.data, view->selections.count);
-    step.after.append(view->selections.data, view->selections.count);
+    step.before.append(view->selections.span());
+    step.after.append(view->selections.span());
     step.sealed = true;
     clearSteps(history->redo);
     history->undo.push(step);

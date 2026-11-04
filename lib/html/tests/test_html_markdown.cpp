@@ -8,7 +8,7 @@
 #include "html/src/html_markdown.h"
 #include "html/src/html_parser.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

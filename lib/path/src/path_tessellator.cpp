@@ -74,7 +74,7 @@ struct Monotone {
 
 // The space between two neighboring active edges. If it is inside the region, it holds the polygon above it. After two
 // polygons merge at a vertex, the span holds both until the next vertex in it.
-struct Span {
+struct SweepSpan {
     int32_t winding;
     uint32_t polygon;           // kNone outside the region, or if the sweep does not triangulate
     uint32_t merged;            // the polygon right of the merge, or kNone
@@ -108,11 +108,11 @@ struct PathTessellator {
     bool triangulate;
     uint32_t base;                         // the mesh vertex of the first vertex of the sweep
     RawArray<uint32_t> active;             // edges crossing the sweep line, left to right
-    RawArray<Span> spans;                  // active.count + 1, left to right
+    RawArray<SweepSpan> spans;             // active.count + 1, left to right
     RawArray<Monotone> polygons;
     RawArray<uint32_t> freePolygons;
     RawArray<uint32_t> starting;           // the edges below the current vertex, left to right
-    RawArray<Span> between;                // the spans that replace those around the current vertex
+    RawArray<SweepSpan> between;           // the spans that replace those around the current vertex
 
     // The boundary.
     RawArray<BoundaryEdge> boundary;       // sorted by `from`
@@ -303,7 +303,7 @@ void endPolygon(PathTessellator& t, uint32_t polygon, uint32_t v) {
 
 // Adds the vertex to the side of the span, and returns the polygon that continues below it. In a merged span, a
 // diagonal runs from the merge to this vertex, and ends the polygon on the side that the vertex is on.
-uint32_t continueSpan(PathTessellator& t, const Span& s, uint32_t v, Side side) {
+uint32_t continueSpan(PathTessellator& t, const SweepSpan& s, uint32_t v, Side side) {
     if (s.polygon == kNone)
         return kNone;
     if (s.merged != kNone) {
@@ -320,7 +320,7 @@ uint32_t continueSpan(PathTessellator& t, const Span& s, uint32_t v, Side side) 
     return s.polygon;
 }
 
-void closeSpan(PathTessellator& t, const Span& s, uint32_t v) {
+void closeSpan(PathTessellator& t, const SweepSpan& s, uint32_t v) {
     if (s.polygon != kNone)
         endPolygon(t, s.polygon, v);
     if (s.merged != kNone)
@@ -393,7 +393,7 @@ void visit(PathTessellator& t, uint32_t v, Winding rule) {
         return;
 
     // The edges below, left to right.
-    sortItems(t.starting.data, t.starting.count, [&](uint32_t a, uint32_t b) {
+    sortItems(t.starting.span(), [&](uint32_t a, uint32_t b) {
         return pathGridOrient(p, t.vertices.data[t.edges.data[a].lower], t.vertices.data[t.edges.data[b].lower]) < 0;
     });
 
@@ -401,7 +401,7 @@ void visit(PathTessellator& t, uint32_t v, Winding rule) {
     uint32_t replaced;
     if (first == kNone) {
         // The vertex is inside one span, whose polygon splits.
-        Span s = t.spans.data[position];
+        SweepSpan s = t.spans.data[position];
         replaced = 1;
         uint32_t left = kNone;
         uint32_t right = kNone;
@@ -427,17 +427,17 @@ void visit(PathTessellator& t, uint32_t v, Winding rule) {
                 }
             }
         }
-        t.between.push(Span{s.winding, left, kNone});
+        t.between.push(SweepSpan{s.winding, left, kNone});
         int32_t winding = s.winding;
         for (uint32_t i = 0; i + 1 < t.starting.count; ++i) {
             winding += t.edges.data[t.starting.data[i]].winding;
             uint32_t polygon = inside(winding, rule) ? startPolygon(t, v) : kNone;
-            t.between.push(Span{winding, polygon, kNone});
+            t.between.push(SweepSpan{winding, polygon, kNone});
         }
-        t.between.push(Span{s.winding, right, kNone});
+        t.between.push(SweepSpan{s.winding, right, kNone});
     } else {
-        Span sl = t.spans.data[first];
-        Span sr = t.spans.data[last + 1];
+        SweepSpan sl = t.spans.data[first];
+        SweepSpan sr = t.spans.data[last + 1];
         replaced = last - first + 2;
         for (uint32_t k = first + 1; k <= last; ++k)
             closeSpan(t, t.spans.data[k], v);
@@ -447,23 +447,23 @@ void visit(PathTessellator& t, uint32_t v, Winding rule) {
         uint32_t right = continueSpan(t, sr, v, Side_Left);
         if (t.starting.count == 0) {
             // The spans on either side merge.
-            Span merged{sl.winding, left, right};
+            SweepSpan merged{sl.winding, left, right};
             if (left == kNone || right == kNone)
-                merged = Span{sl.winding, left != kNone ? left : right, kNone};
+                merged = SweepSpan{sl.winding, left != kNone ? left : right, kNone};
             if (merged.polygon != kNone && !inside(sl.winding, rule)) {
                 closeSpan(t, merged, v);
-                merged = Span{sl.winding, kNone, kNone};
+                merged = SweepSpan{sl.winding, kNone, kNone};
             }
             t.between.push(merged);
         } else {
-            t.between.push(Span{sl.winding, left, kNone});
+            t.between.push(SweepSpan{sl.winding, left, kNone});
             int32_t winding = sl.winding;
             for (uint32_t i = 0; i + 1 < t.starting.count; ++i) {
                 winding += t.edges.data[t.starting.data[i]].winding;
                 uint32_t polygon = inside(winding, rule) ? startPolygon(t, v) : kNone;
-                t.between.push(Span{winding, polygon, kNone});
+                t.between.push(SweepSpan{winding, polygon, kNone});
             }
-            t.between.push(Span{sr.winding, right, kNone});
+            t.between.push(SweepSpan{sr.winding, right, kNone});
         }
     }
 
@@ -503,7 +503,7 @@ void buildSweep(PathTessellator& t) {
         t.vertices.push(t.pieces.data[i].lo);
         t.vertices.push(t.pieces.data[i].hi);
     }
-    sortItems(t.vertices.data, t.vertices.count, pathGridBeforeY);
+    sortItems(t.vertices.span(), pathGridBeforeY);
     uint32_t unique = 0;
     for (uint32_t i = 0; i < t.vertices.count; ++i) {
         if (unique == 0 || !(t.vertices.data[unique - 1] == t.vertices.data[i]))
@@ -522,7 +522,7 @@ void buildSweep(PathTessellator& t) {
         else
             t.edges.push(SweepEdge{hi, lo, piece.winding[0], false, false});
     }
-    sortItems(t.edges.data, t.edges.count, [](const SweepEdge& a, const SweepEdge& b) { return a.upper < b.upper; });
+    sortItems(t.edges.span(), [](const SweepEdge& a, const SweepEdge& b) { return a.upper < b.upper; });
     t.starts.clear();
     uint32_t e = 0;
     for (uint32_t v = 0; v <= t.vertices.count; ++v) {
@@ -567,7 +567,7 @@ PathGrid sweep(PathTessellator& t, Winding rule, bool triangulate) {
     t.base = t.points.count;
     t.active.clear();
     t.spans.clear();
-    t.spans.push(Span{0, kNone, kNone});
+    t.spans.push(SweepSpan{0, kNone, kNone});
     t.boundary.clear();
     for (uint32_t v = 0; v < t.vertices.count; ++v)
         visit(t, v, rule);
@@ -582,8 +582,7 @@ PathGrid sweep(PathTessellator& t, Winding rule, bool triangulate) {
 
 // Chains the boundary into loops, places their fringe, and replaces `ring` with the loops moved inward.
 void addBoundaryFringe(PathTessellator& t, const PathGrid& grid, float fringe) {
-    sortItems(t.boundary.data, t.boundary.count,
-        [](const BoundaryEdge& a, const BoundaryEdge& b) { return a.from < b.from; });
+    sortItems(t.boundary.span(), [](const BoundaryEdge& a, const BoundaryEdge& b) { return a.from < b.from; });
     auto firstFrom = [&](uint32_t v) {
         return partitionPoint(0, t.boundary.count, [&](uint32_t i) { return t.boundary.data[i].from < v; });
     };

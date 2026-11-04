@@ -6804,12 +6804,12 @@ bool localeWholeTagReplacement(PrStringView tag, PrStringView* replacement) {
 }
 
 PrLocale languageAlias(PrLanguage language) {
-    uint32_t at = lowerBound(kLanguageAliasKey, uint32_t(countOf(kLanguageAliasKey)), uint32_t(language));
+    uint32_t at = lowerBound(Span(kLanguageAliasKey), uint32_t(language));
     return at < countOf(kLanguageAliasKey) && kLanguageAliasKey[at] == uint32_t(language) ? kLanguageAliasValue[at] : 0u;
 }
 
 PrLocale localeLikelySubtags(PrLocale key) {
-    uint32_t at = lowerBound(kLikelyKey, uint32_t(countOf(kLikelyKey)), key);
+    uint32_t at = lowerBound(Span(kLikelyKey), key);
     return at < countOf(kLikelyKey) && kLikelyKey[at] == key ? kLikelyValue[at] : 0u;
 }
 
@@ -6826,14 +6826,14 @@ PrStringView regionSubtag(PrRegion region) {
 }
 
 void languageSystems(PrLanguage language, uint32_t* first, uint32_t* end) {
-    uint32_t at = lowerBound(kSystemsKey, uint32_t(countOf(kSystemsKey)), uint32_t(language));
+    uint32_t at = lowerBound(Span(kSystemsKey), uint32_t(language));
     bool found = at < countOf(kSystemsKey) && kSystemsKey[at] == language;
     *first = found ? kSystemsAt[at] : 0;
     *end = found ? kSystemsAt[at + 1] : 0;
 }
 
 const PrStringView* PR_NULLABLE localeQuoteMarks(PrLocale key) {
-    uint32_t at = lowerBound(kQuoteKey, uint32_t(countOf(kQuoteKey)), key);
+    uint32_t at = lowerBound(Span(kQuoteKey), key);
     if (at >= countOf(kQuoteKey) || kQuoteKey[at] != key)
         return nullptr;
     return quoteSets() + 4 * kQuoteValue[at];

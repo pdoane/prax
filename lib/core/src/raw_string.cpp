@@ -125,6 +125,22 @@ void prRawStringAppend(PrRawString* string, PrStringView text) {
     string->heap.size = uint32_t(size);
 }
 
+void prRawStringClear(PrRawString* string) {
+    PR_ASSERT(string != nullptr);
+    switch (prRawStringKind(string)) {
+        case PrRawStringKind_Owned:
+            string->heap.size = 0;
+            break;
+        case PrRawStringKind_Inline:
+            string->small.tag = inlineTag(0);
+            break;
+        case PrRawStringKind_External:
+            if (string->heap.data != nullptr)
+                *string = prRawStringEmpty();
+            break;
+    }
+}
+
 void prRawStringReset(PrRawString* string) {
     PR_ASSERT(string != nullptr);
     if (prRawStringKind(string) == PrRawStringKind_Owned)

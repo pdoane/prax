@@ -1,6 +1,6 @@
 #include "pr/checksum.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <string_view>

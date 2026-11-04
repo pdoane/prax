@@ -1,5 +1,6 @@
 #include "pr/hash_index.h"
 
+#include "pr/mem.h"
 #include "pr/memory.h"
 
 namespace pr {
@@ -92,6 +93,22 @@ void HashIndex::reset() {
     slots = nullptr;
     mask = 0;
     count = 0;
+}
+
+void HashIndex::assign(const HashIndex& other) {
+    if (this == &other)
+        return;
+    if (other.slots == nullptr) {
+        clear();
+        return;
+    }
+    if (slots == nullptr || mask != other.mask) {
+        prMemoryFree(slots);
+        slots = static_cast<HashSlot*>(prMemoryAlloc(size_t(other.mask + 1) * sizeof(HashSlot)));
+        mask = other.mask;
+    }
+    prMemCopy(slots, other.slots, size_t(mask + 1) * sizeof(HashSlot));
+    count = other.count;
 }
 
 } // namespace pr

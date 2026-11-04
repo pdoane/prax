@@ -3,8 +3,7 @@
 #include "examples/alchemy/comfy_graph.h"
 
 #include "pr/assert.h"
-
-#include "examples/alchemy/text.h"
+#include "pr/string.h"
 
 namespace alchemy {
 
@@ -53,7 +52,7 @@ void ComfyGraph::setRef(PrStringView key, ComfyRef ref) {
     prJsonWriterEndArray(writer_);
 }
 
-std::string ComfyGraph::build() {
+String ComfyGraph::build() {
     if (!started_) {
         prJsonWriterBeginObject(writer_);
         started_ = true;
@@ -64,7 +63,7 @@ std::string ComfyGraph::build() {
         nodeOpen_ = false;
     }
     prJsonWriterEndObject(writer_);
-    return stringOf(prJsonWriterText(writer_));
+    return prJsonWriterText(writer_);
 }
 
 } // namespace alchemy

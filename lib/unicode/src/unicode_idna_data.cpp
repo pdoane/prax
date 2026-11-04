@@ -2773,7 +2773,7 @@ constexpr uint32_t kIdnaMappings[] = {
 } // namespace
 
 UnicodeIdnaMapping unicodeIdnaMapping(uint32_t codePoint) {
-    uint32_t at = upperBound(kIdnaFirsts, uint32_t(countOf(kIdnaFirsts)), codePoint) - 1;
+    uint32_t at = upperBound(Span(kIdnaFirsts), codePoint) - 1;
     uint32_t entry = kIdnaEntries[at];
     UnicodeIdnaMapping mapping{};
     mapping.status = IdnaStatus(entry & 7);

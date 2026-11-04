@@ -2258,7 +2258,7 @@ bool cssStyleIsImportant(const CssComputedStyle* style, PrCssProperty property) 
     const CssImportantProperties* important = style->important;
     if (important == nullptr)
         return false;
-    uint32_t low = lowerBound(important->properties, important->count, property);
+    uint32_t low = lowerBound(Span(important->properties, important->count), property);
     return low < important->count && important->properties[low] == property;
 }
 

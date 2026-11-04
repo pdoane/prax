@@ -1,7 +1,7 @@
 #include "pr/html.h"
 #include "pr/html_page.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 

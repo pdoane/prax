@@ -1,6 +1,6 @@
 #include "pr/base64.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

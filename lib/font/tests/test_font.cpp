@@ -3,10 +3,10 @@
 
 #include "font/src/sfnt.h"
 
-#include "doctest/doctest.h"
 #include "freetype/freetype.h"
 #include "freetype/ftadvanc.h"
 #include "freetype/tttables.h"
+#include "tools/harness/test.h"
 
 #include <algorithm>
 #include <cmath>

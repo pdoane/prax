@@ -2,7 +2,7 @@
 
 #include "pr/canvas.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 

@@ -2,7 +2,7 @@
 #include "pr/audio_memory.h"
 #include "pr/thread.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 extern "C" int prTestAudioCApi(void);
 

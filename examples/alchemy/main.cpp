@@ -7,11 +7,17 @@
 // context's rounds, and renders the tree's scene into the window's swap chain.
 
 #include "pr/app.h"
+#include "pr/array.h"
 #include "pr/assert.h"
+#include "pr/atomic.h"
+#include "pr/callback.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
+#include "pr/environment.h"
 #include "pr/file.h"
+#include "pr/float.h"
+#include "pr/float_convert.h"
 #include "pr/font_bundle.h"
 #include "pr/font_set.h"
 #include "pr/gpu.h"
@@ -22,22 +28,18 @@
 #include "pr/layout_frame.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
+#include "pr/min_max.h"
 #include "pr/net.h"
+#include "pr/print.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text.h"
 #include "pr/tls.h"
 #include "pr/ui.h"
 #include "pr/websocket.h"
 
 #include "examples/alchemy/commands.h"
-#include "examples/alchemy/text.h"
 #include "examples/alchemy/view.h"
-
-#include <algorithm>
-#include <atomic>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <vector>
 
 namespace {
 
@@ -63,10 +65,10 @@ struct Window {
     PrAppColorScheme scheme = PrAppColorScheme_Dark;
     const PrLayoutScene* scene = nullptr;
     PrDrawList* list = nullptr;
-    std::vector<PrLayoutSceneScroll> scrolls;
+    Array<PrLayoutSceneScroll> scrolls;
 
     // The application, which the network's loop and the task pool wake when they deliver results.
-    std::atomic<PrApp*> app{nullptr};
+    Atomic<PrApp*> app;     // starts null, as the window is static
     PrGpuDevice* device = nullptr;
     PrGpuSwapChain* swapChain = nullptr;
     PrDrawRenderer* renderer = nullptr;
@@ -77,18 +79,18 @@ struct Window {
     // as a PNG, rendered on the CPU, before the application quits. It lets a script see the interface without a screen.
     // $ALCHEMY_CAPTURE_COMMANDS names commands, separated by commas, that run halfway to the frame, to bring up what
     // the capture should show.
-    const char* PR_NULLABLE capturePath = nullptr;
-    const char* PR_NULLABLE captureCommands = nullptr;
+    String capturePath;         // the file to capture the window into, or empty for none
+    String captureCommands;     // the commands to run before the capture, or empty for none
     double captureSeconds = 5;
     double startTime = -1;
 };
 
 // Renders the list on the CPU into a PNG file at `path`, at `extent` target pixels on the `canvas` color.
-bool capture(Window& w, const char* path, PrUVec2 extent, PrColor canvas) {
+bool capture(Window& w, PrStringView path, PrUVec2 extent, PrColor canvas) {
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrDrawFrame* cpuFrame = prDrawFrameCreate(cpu);
-    std::vector<uint8_t> pixels(size_t(extent.x) * extent.y * 4);
-    for (size_t i = 0; i < pixels.size(); i += 4) {
+    Array<uint8_t> pixels(size_t(extent.x) * extent.y * 4);
+    for (uint32_t i = 0; i < pixels.count(); i += 4) {
         pixels[i] = uint8_t(canvas.r * 255.0f + 0.5f);
         pixels[i + 1] = uint8_t(canvas.g * 255.0f + 0.5f);
         pixels[i + 2] = uint8_t(canvas.b * 255.0f + 0.5f);
@@ -101,8 +103,8 @@ bool capture(Window& w, const char* path, PrUVec2 extent, PrColor canvas) {
         PrPixelView view{pixels.data(), extent.x * 4, extent};
         size_t size = 0;
         prImageCodecEncode(w.state.codec, "image/png", view, nullptr, 0, &size);
-        std::vector<uint8_t> png(size);
-        if (prImageCodecEncode(w.state.codec, "image/png", view, png.data(), png.size(), &size) == PrStatus_Ok)
+        Array<uint8_t> png(size);
+        if (prImageCodecEncode(w.state.codec, "image/png", view, png.data(), png.count(), &size) == PrStatus_Ok)
             written = prFileWrite(path, PrByteView{png.data(), size});
     }
     prDrawFrameDestroy(cpuFrame);
@@ -181,7 +183,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     w.shell.app = app;
     prUiSetApp(w.ui, app);
     if (!openDevice(w)) {
-        fprintf(stderr, "alchemy: no GPU device to render with\n");
+        printError("alchemy: no GPU device to render with\n");
         prAppStop(app);
         return;
     }
@@ -226,10 +228,10 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* f) {
     prLayoutSceneRelease(w.scene);
     w.scene = scene;
     w.scrolls.resize(prLayoutSceneScrolls(w.tree, scene, nullptr, 0));
-    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), uint32_t(w.scrolls.size()));
+    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), w.scrolls.count());
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
     options.scrolls = w.scrolls.data();
-    options.scrollCount = uint32_t(w.scrolls.size());
+    options.scrollCount = w.scrolls.count();
     options.canvasFilled = true;
     float ratio = f->display.pixelRatio;
     prDrawListClear(w.list);
@@ -243,24 +245,26 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* f) {
         render(w, extent, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a});
     if (w.startTime < 0)
         w.startTime = f->time;
-    if (w.captureCommands != nullptr && f->time - w.startTime >= w.captureSeconds / 2) {
-        std::string commands = w.captureCommands;
-        w.captureCommands = nullptr;
-        for (size_t at = 0; at <= commands.size();) {
-            size_t end = std::min(commands.find(',', at), commands.size());
-            runCommand(*w.commands, commands.substr(at, end - at));
-            at = end + 1;
+    if (!w.captureCommands.isEmpty() && f->time - w.startTime >= w.captureSeconds / 2) {
+        String commands = move(w.captureCommands);
+        PrStringView rest = commands;
+        for (;;) {
+            size_t end = prStringFindByte(rest, ',');
+            runCommand(*w.commands, prStringSlice(rest, 0, end));
+            if (end == rest.size)
+                break;
+            rest = prStringSlice(rest, end + 1, rest.size - end - 1);
         }
     }
-    if (w.capturePath != nullptr && f->time - w.startTime >= w.captureSeconds && extent.x != 0) {
+    if (!w.capturePath.isEmpty() && f->time - w.startTime >= w.captureSeconds && extent.x != 0) {
         if (!capture(w, w.capturePath, extent, canvas))
-            fprintf(stderr, "alchemy: could not write %s\n", w.capturePath);
+            printError("alchemy: could not write {}\n", w.capturePath);
         prAppStop(app);
         return {};
     }
     PrAppOutput output = prUiOutput(w.ui);
     // A capture waits for its moment, which no input announces.
-    if (w.capturePath != nullptr)
+    if (!w.capturePath.isEmpty())
         output.wantsFrame = true;
     // A run in flight moves its progress and its preview, which the server's events deliver with a wake.
     return output;
@@ -286,7 +290,7 @@ int main() {
     static Window w;
     w.fonts = prFontSetCreate(nullptr);
     if (prFontBundleInstall(w.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR) == 0) {
-        fprintf(stderr, "alchemy: the fonts under %s could not be installed\n", PR_FONT_BUNDLE_DIR);
+        printError("alchemy: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
         return 1;
     }
     w.shaper = prTextShaperCreate(PrTextShaperBackend_Default);
@@ -314,12 +318,13 @@ int main() {
         .websockets = w.websockets,
         .wake = [] { wake(w); },
     });
-    if (const char* server = getenv("ALCHEMY_SERVER"))
-        w.state.server = server;
-    w.capturePath = getenv("ALCHEMY_CAPTURE");
-    w.captureCommands = getenv("ALCHEMY_CAPTURE_COMMANDS");
-    if (const char* seconds = getenv("ALCHEMY_CAPTURE_SECONDS"))
-        w.captureSeconds = atof(seconds);
+    String server = String::adopt(prEnvironmentVariable("ALCHEMY_SERVER"));
+    if (!server.isEmpty())
+        w.state.server = move(server);
+    w.capturePath = String::adopt(prEnvironmentVariable("ALCHEMY_CAPTURE"));
+    w.captureCommands = String::adopt(prEnvironmentVariable("ALCHEMY_CAPTURE_COMMANDS"));
+    String seconds = String::adopt(prEnvironmentVariable("ALCHEMY_CAPTURE_SECONDS"));
+    prF64ParsePrefix(seconds, &w.captureSeconds);
     galleryOpen(w.state.gallery, galleryDirectory());
 
     w.shell.ui = w.ui;
@@ -336,11 +341,11 @@ int main() {
     // The services go in the reverse of their making: the client lets go of the loop, the sources on the loop go on it,
     // and the pool finishes its decodes and surveys before the state that they write to.
     comfyClientDestroy(w.state.client);
-    prNetPostBlocking(w.net, [](void* PR_NULLABLE context) {
-        Window& window = *static_cast<Window*>(context);
-        prWebSocketNetworkDestroy(window.websockets);
-        prHttpDestroy(window.http);
-    }, &w);
+    auto destroyOnLoop = [&] {
+        prWebSocketNetworkDestroy(w.websockets);
+        prHttpDestroy(w.http);
+    };
+    prNetPostBlocking(w.net, PR_SCOPED_CALLBACK(destroyOnLoop));
     prTlsDestroy(w.tls);
     prNetDestroy(w.net);
     imageCacheDestroy(w.state.images);

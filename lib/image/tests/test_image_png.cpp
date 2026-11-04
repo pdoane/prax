@@ -2,7 +2,7 @@
 #include "pr/compress.h"
 #include "pr/image_png.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

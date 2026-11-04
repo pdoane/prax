@@ -4,7 +4,7 @@
 #include "pr/text_harfbuzz.h"
 #include "pr/text_shaping.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 #include <string>

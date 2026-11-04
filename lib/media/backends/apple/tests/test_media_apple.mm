@@ -1,7 +1,7 @@
 #include "pr/media_apple.h"
 #include "pr/thread.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <algorithm>
 #include <string>

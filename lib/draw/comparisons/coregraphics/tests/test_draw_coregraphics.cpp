@@ -2,7 +2,7 @@
 #include "pr/draw_cpu.h"
 #include "pr/text_coretext.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <string>

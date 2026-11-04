@@ -184,17 +184,49 @@ def check_namespace(report, path, text, implements_public, name):
                    "the C++ API is in pr and its implementation in pr_impl; this file's namespace is %s" % name)
 
 
-QUALIFIED = re.compile(r"(?<![\w:])(?:::)?pr_impl::")
+QUALIFIED = re.compile(r"(?<![\w:])(?:::)?pr(?:_impl)?::")
 
 # Matches a C opaque type: the public handle, at global scope, derived from the internal type that it names.
 OPAQUE_TYPE = re.compile(r"^struct Pr\w+ : (?:pr_impl::)?\w+ \{\};$")
 
 
+# The head of an explicit specialization.
+EXPLICIT_SPECIALIZATION = re.compile(r"\btemplate\s*<\s*>")
+
+
+def specialization_lines(code):
+    """Returns the numbers of the lines of masked `code` that are within an explicit specialization: from its
+    `template <>` to the brace that closes its body, or to the semicolon that ends a specialization with none."""
+    lines = set()
+    for match in EXPLICIT_SPECIALIZATION.finditer(code):
+        depth = 0
+        end = len(code)
+        for at in range(match.end(), len(code)):
+            character = code[at]
+            if character == "{":
+                depth += 1
+            elif character == "}":
+                depth -= 1
+                if depth == 0:
+                    end = at
+                    break
+            elif character == ";" and depth == 0:
+                end = at
+                break
+        lines.update(range(line_of(code, match.start()), line_of(code, end) + 1))
+    return lines
+
+
 def check_qualified(report, path, text):
-    """Only a macro spells out `pr_impl::`, because it expands in its caller's scope. Code imports the namespace with
-    `using namespace pr_impl;`. A header names the base of each C opaque type that it declares."""
-    code = mask_non_code(text).split("\n")
+    """Only a macro spells out `pr::` or `pr_impl::`, because it expands in its caller's scope. Code imports the
+    namespace with a using-directive: `using namespace pr;` in an application, and `using namespace pr_impl;` in the
+    library. A header names the base of each C opaque type that it declares. An explicit specialization of another
+    library's template names the pr types that it is for with `pr::`, since it is written in that library's
+    namespace."""
+    masked = mask_non_code(text)
+    code = masked.split("\n")
     raw = text.split("\n")
+    specializing = specialization_lines(masked)
     in_macro = False
     for index, line in enumerate(code):
         macro = in_macro or line.lstrip().startswith("#")
@@ -203,8 +235,11 @@ def check_qualified(report, path, text):
             continue
         if path.endswith(".h") and OPAQUE_TYPE.match(line):
             continue
+        if index + 1 in specializing and all(m.group(0).lstrip(":") == "pr::" for m in QUALIFIED.finditer(line)):
+            continue
         report.add(path, index + 1, "qualified",
-                   "pr_impl:: outside a macro; take the namespace with a using-directive")
+                   "%s outside a macro; take the namespace with a using-directive"
+                   % QUALIFIED.search(line).group(0).lstrip(":"))
 
 
 def check_application_namespace(report, path, text):
@@ -213,6 +248,23 @@ def check_application_namespace(report, path, text):
     for match in re.finditer(r"\bpr_impl\b", mask_non_code(text)):
         report.add(path, line_of(text, match.start()), "application-namespace",
                    "an application uses namespace pr, not the implementation's pr_impl")
+
+
+# The harness's sources that include doctest itself: the header that every test includes in its place, and the source
+# that defines doctest's implementation.
+DOCTEST_OWNERS = ("tools/harness/test.h", "tools/harness/test_main.cpp")
+
+DOCTEST_INCLUDE = re.compile(r'^[ \t]*#[ \t]*include[ \t]*"doctest/doctest\.h"', re.M)
+
+
+def check_test_include(report, path, text):
+    """A test includes doctest through tools/harness/test.h, which teaches doctest to print core's text and bytes, so
+    that a failed check shows the values it compared."""
+    if os.path.relpath(path, ROOT).replace(os.sep, "/") in DOCTEST_OWNERS:
+        return
+    for match in DOCTEST_INCLUDE.finditer(text):
+        report.add(path, line_of(text, match.start()), "test-include",
+                   'include "tools/harness/test.h", which prints core\'s types in failed checks, not doctest itself')
 
 
 def check_test_cases(report, path, text):
@@ -332,7 +384,7 @@ def check_internal_names(report, path, text, names):
     reported = set()
     for match in PUBLIC_NAME.finditer(code):
         name = match.group(1)
-        if name in names or name in classes or name in reported or name.endswith("_"):
+        if name in names or name in classes or name in reported or name in CPP_GLOBAL_NAMES or name.endswith("_"):
             continue
         reported.add(name)
         report.add(path, line_of(text, match.start()), "internal-name",
@@ -577,7 +629,9 @@ WRAPPERS = {
     "lib/tls/backends/schannel/src/tls_schannel.cpp": {"schannel.h", "security.h", "subauth.h", "wincrypt.h",
                                                        "windows.h"},
     "lib/core/backends/posix/src/core_posix_vmem.cpp": {"sys/mman.h"},
+    "lib/core/backends/posix/src/core_posix_environment.cpp": {"stdlib.h", "string.h"},
     "lib/core/backends/posix/src/core_posix_random.cpp": {"sys/random.h", "unistd.h"},
+    "lib/core/backends/windows/src/core_windows_environment.cpp": {"windows.h", "stdlib.h"},
     "lib/core/backends/windows/src/core_windows_random.cpp": {"windows.h", "bcrypt.h"},
     "tools/harness/cpu_counters.cpp": {"libproc.h", "mach/mach_time.h", "unistd.h", "windows.h"},
     "lib/core/quickjs_cpp/src/quickjs_callback.cpp": {"stdio.h"},
@@ -868,14 +922,15 @@ CODE_HEAD = re.compile(r"(?:template\s*<.*>\s*)?(?:(?:typedef|static|constexpr|c
 # The first line of an enumeration, whose items are each a line of their own.
 ENUM_HEAD = re.compile(r"(?:typedef\s+)?enum\b")
 
-# What comes before a brace that opens code: a parameter list, a capture list, a label, an Objective-C block's caret, a
-# lambda's or a function's specifier or attribute macro, a lambda's trailing return type, or a keyword that a block
-# follows. A brace after anything else opens data, an initializer list.
-CODE_BRACE = re.compile(r"(?:[)\]^:]|\b(?:mutable|noexcept|const|override|final|else|do|try|[A-Z][A-Z0-9]*_[A-Z0-9_]+)"
+# What comes before a brace that opens code: a parameter list, a capture list, a member initialized by a list, a label,
+# an Objective-C block's caret, a lambda's or a function's specifier or attribute macro, a lambda's trailing return
+# type, or a keyword that a block follows. A brace after anything else opens data, an initializer list.
+CODE_BRACE = re.compile(r"(?:[)\]}^:]|\b(?:mutable|noexcept|const|override|final|else|do|try|[A-Z][A-Z0-9]*_[A-Z0-9_]+)"
                         r"|->\s*[\w:<>,*& ]+)\s*$")
 
-# A line that ends a statement without a semicolon: a macro that expands to declarations, or a template's header.
-UNTERMINATED_STATEMENT = re.compile(r"[A-Z][A-Z0-9_]*(?:\(.*\))?|template\s*<.*>")
+# A line that ends a statement without a semicolon: a macro that expands to declarations, or a template's header, which
+# may end with its requires-clause.
+UNTERMINATED_STATEMENT = re.compile(r"[A-Z][A-Z0-9_]*(?:\(.*\))?|template\s*<.*>(?:\s+requires\b.*)?")
 
 # The first line of a statement whose body may follow it without braces.
 CONTROL_HEAD = re.compile(r"(?:\}\s*)?(?:if|for|while|else|do|switch)\b")
@@ -1604,7 +1659,10 @@ def match_marker(line):
 
 
 def check_allocation(report, path, text):
-    """Reports ordinary new and delete, which need no include, so the header allowlist cannot catch them."""
+    """Reports ordinary new and delete, which need no include, so the header allowlist cannot catch them. The managed
+    layer constructs and destroys in place, through pr/construct.h's placement form, and is exempt."""
+    if is_managed_header(path):
+        return
     code = mask_non_code(text)
     for match in re.finditer(r"^[ \t]*#[ \t]*include[^\n]*", code, re.M):
         directive = text[match.start():match.end()]
@@ -1625,7 +1683,8 @@ def check_allocation(report, path, text):
 
 # The headers of core's managed layer, as they are included: types that construct, copy and destroy their contents,
 # which applications and tests use. An implementation in lib/ manages memory explicitly, so it includes none of them.
-MANAGED = set()
+MANAGED = {"pr/array.h", "pr/construct.h", "pr/defer.h", "pr/function.h", "pr/lock.h", "pr/map.h", "pr/print.h",
+           "pr/set.h", "pr/string.h"}
 
 
 def is_implementation(path):
@@ -2052,12 +2111,14 @@ def check_include_paths(report, path, text):
 
 
 # The headers of the dependencies that the build fetches, and the sources that may include each, as fnmatch patterns in
-# which * crosses directories: the allocator's wrapper, the bindings and the code that drives them, and the tests.
+# which * crosses directories: the allocator's wrapper, the bindings and the code that drives them, and the tests. The
+# harness's doctest header stands in for doctest's own, so it sorts and is allowed as doctest is (check_test_include).
 THIRD_PARTY = {
+    "tools/harness/test.h": ("lib/*/tests/*", "examples/*/tests/*", "tools/harness/kit_fixture.h"),
     "mimalloc.h": ("lib/core/backends/mimalloc/src/core_mimalloc.cpp",),
     "quickjs.h": ("lib/*/quickjs/*", "lib/*/quickjs_cpp/*", "lib/lottie/src/lottie_expression.cpp", "tools/shell/page_host.cpp",
                   "examples/browser/main.cpp"),
-    "doctest/doctest.h": ("lib/*/tests/*", "examples/*/tests/*", "tools/harness/test_main.cpp", "tools/harness/kit_fixture.h"),
+    "doctest/doctest.h": DOCTEST_OWNERS,
     "blend2d/blend2d.h": ("lib/draw/comparisons/blend2d/src/draw_blend2d.cpp",),
     "rlottie.h": ("tools/viewer/source_rlottie.cpp", "tools/suite/lottie/rlottie_reference.cpp"),
     "imgui.h": ("lib/draw/comparisons/imgui/src/draw_imgui*", "lib/draw/comparisons/imgui/config/*"),
@@ -2355,7 +2416,7 @@ def check_binding_includes(report, path, text):
     for match in re.finditer(r'^#include "([^"]+)"', text, re.M):
         header = match.group(1)
         if not (header.startswith("pr/") or header.startswith(layer) or header == "quickjs.h"
-                or header.startswith("doctest/")):
+                or header == "tools/harness/test.h"):
             report.add(path, line_of(text, match.start()), "binding-include",
                        "a binding includes %s, which is not public API" % header)
 
@@ -2534,10 +2595,10 @@ def check_homes(report, headers, sources, texts):
 # types appear in other modules' signatures more than in their own, own a tag for each vocabulary. A numeric variant,
 # as PrIRect is of PrRect, is a tag of its own.
 TAGS = {
-    "lib/core": ("Adler32", "Ascii", "Base64", "ByteView", "Condition", "Core", "Crash", "Crc32", "DVec2", "F32",
-                 "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory", "Mutex", "Pixel", "Pixels",
-                 "Random", "RawString", "Sha1", "Status", "String", "TextBuffer", "Thread", "Time", "U64", "UVec2",
-                 "Utf8", "Vec2", "Vec3", "Vmem"),
+    "lib/core": ("Adler32", "Ascii", "Base64", "ByteView", "Condition", "Core", "Crash", "Crc32", "DVec2",
+                 "Environment", "F32", "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory", "Mutex",
+                 "Pixel", "Pixels", "Random", "RawString", "Sha1", "Status", "String", "TextBuffer", "Thread", "Time",
+                 "U64", "UVec2", "Utf8", "Vec2", "Vec3", "Vmem"),
     "lib/geom": ("Affine2", "Affine4", "Corner", "DAffine2", "DMatrix3", "DMatrix4", "IRect", "Matrix3", "Matrix4",
                  "Rect"),
     "lib/locale": ("Language", "Locale", "Region", "Script"),
@@ -2628,6 +2689,10 @@ WEB_IDL = ("lib/canvas", "lib/css", "lib/dom", "lib/html", "lib/mathml", "lib/sv
 
 # The functions named for a name of another API: the Vulkan entry point that prGpuVulkanGetInstanceProcAddr returns.
 FOREIGN_NAMES = ("prGpuVulkanGetInstanceProcAddr",)
+
+# The public names that a header of a C++ layer declares outside its namespace, because C++ requires them there: the tag
+# of core's placement form of new (pr/construct.h), which a global operator new takes.
+CPP_GLOBAL_NAMES = ("PrPlacementTag",)
 
 
 def check_function_names(report, paths, texts):
@@ -2928,9 +2993,19 @@ def check_spec_free(report, path, text, ids):
 # Applications
 
 def is_application(path):
-    """Returns true for a file of an application, under examples or tools, which keeps its own namespace and uses the
-    standard library as it likes. The rules of structure and naming apply there as anywhere."""
+    """Returns true for a file of an application, under examples or tools, which keeps its own namespace. The rules of
+    structure and naming apply there as anywhere."""
     return os.path.relpath(path, ROOT).replace(os.sep, "/").startswith(("examples/", "tools/"))
+
+
+# The applications that are written on core, which are the examples: they reach the standard library through it, as
+# the library does, and lint checks their includes as it checks the library's.
+ON_CORE = ("examples/",)
+
+
+def is_on_core(path):
+    """Returns true for a file of an application that is written on core (ON_CORE)."""
+    return os.path.relpath(path, ROOT).replace(os.sep, "/").startswith(ON_CORE)
 
 
 # The C++ layers of a library, lib/<module>/<layer>, whose public headers are C++: core's toolkit, and the toolkits that
@@ -3058,10 +3133,13 @@ def check_code_file(path):
         check_nullability_region(report, path, text)
     else:
         check_global_definitions(report, path, text)
+    check_test_include(report, path, text)
     if is_test(path):
         check_test_cases(report, path, text)
     if binding_layer(path) is not None:
         check_binding_includes(report, path, text)
+    if is_application(path) and is_on_core(path):
+        check_stdlib(report, path, text)
     if not is_application(path):
         check_allocation(report, path, text)
         check_destructors(report, path, text)

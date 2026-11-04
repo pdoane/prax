@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "pr/callback.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_list.h"
 #include "pr/font_bundle.h"
@@ -17,7 +18,7 @@
 #include "pr/text_harfbuzz.h"
 #include "pr/ui.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <functional>
 #include <string>
@@ -87,21 +88,21 @@ struct KitFixture {
             .display = display,
             .preferences = preferences,
         };
-        uint32_t ran = prUiFrame(ui, &desc, [](void* context, PrUi*, const PrUiRound*) {
-            KitFixture* f = static_cast<KitFixture*>(context);
+        auto round = [this](PrUi*, const PrUiRound*) {
             PrKitSurfaceStyle style{
                 .box = {
                     .overflow = PrKitOverflow_Clip,
                     .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
                 },
-                .ground = f->ground,
+                .ground = ground,
             };
-            f->root = prKitSurface(f->kit, kPrLayoutNodeNone, {}, style);
-            if (f->edit != nullptr)
-                prUiSetEditSink(f->ui, f->root, f->edit, f->editContext);
-            if (f->build)
-                f->build(f->root);
-        }, this);
+            root = prKitSurface(kit, kPrLayoutNodeNone, {}, style);
+            if (edit != nullptr)
+                prUiSetEditSink(ui, root, edit, editContext);
+            if (build)
+                build(root);
+        };
+        uint32_t ran = prUiFrame(ui, &desc, PR_SCOPED_CALLBACK(round));
         PrLayoutDuplicateKey duplicates[4] = {};
         uint32_t count = prLayoutTreeDuplicateKeys(tree, duplicates, 4);
         for (uint32_t i = 0; i < count && i < 4; ++i) {

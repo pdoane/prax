@@ -3,7 +3,7 @@
 
 #include "dom/src/dom_node.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

@@ -3,7 +3,7 @@
 #include "lottie/src/lottie_eval.h"
 #include "lottie/src/lottie_model.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

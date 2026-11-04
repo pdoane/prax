@@ -3,7 +3,7 @@
 #include "pr/layout_tree.h"
 #include "pr/text_harfbuzz.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 

@@ -8,8 +8,6 @@
 #include "pr/json.h"
 #include "pr/string_ops.h"
 
-#include "examples/alchemy/text.h"
-
 namespace alchemy {
 
 using namespace pr;

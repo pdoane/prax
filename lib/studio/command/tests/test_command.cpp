@@ -2,7 +2,7 @@
 #include "pr/command_keymap.h"
 #include "pr/json.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

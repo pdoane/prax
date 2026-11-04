@@ -231,9 +231,11 @@ describes how they should read, and is the guide for prose passes.
   `kHashMissing`).
 - **Memory.** Use `alloc<T>`, `allocZeroed<T>`, and `prMemoryAlloc`/`prMemoryFree`. No `new`, `delete` or `<new>`, and no
   constructors or destructors in the implementation (`lint.py`, `destructor`). Growable storage is a `RawArray`, whose
-  elements are copied as bytes and which its owner resets. Storage with a known bound may
-  reserve address space instead (`pr/vmem.h`) if that is worth its overhead. Indices and relative offsets are
-  used instead of pointers, which keeps data relocatable and smaller.
+  elements are copied as bytes and which its owner resets, and text is a `PrRawString`. Storage with a known bound may
+  reserve address space instead (`pr/vmem.h`) if that is worth its overhead. Indices and relative offsets are used
+  instead of pointers, which keeps data relocatable and smaller. Examples, tools and tests may use core's managed layer
+  instead (`Array`, `String`, `Map`, `Set`, `Function`, `Lock`, `Defer`), whose values construct, copy and destroy
+  what they hold; an implementation includes none of its headers (`managed-include`).
 - **Index domains.** An index that is passed between functions has a typedef that names what it counts
   (`LayoutNodeIndex`, `PrLayoutStyleIndex`), used in signatures and fields. An array whose index is not simply a
   position says what indexes it: a ` // by <domain>` comment, a type that names the index, or a word every reader knows

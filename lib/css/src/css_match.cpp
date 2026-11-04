@@ -402,7 +402,7 @@ void recordGroup(CssMatcher* m, uint32_t index) {
 
 // Returns the entry in kCssGrammarOmissions for `node`, or null.
 const CssGrammarOmission* PR_NULLABLE omissionOf(CssGrammarIndex node) {
-    uint32_t at = lowerBound(kCssGrammarOmissions, kCssGrammarOmissionCount, node);
+    uint32_t at = lowerBound(Span(kCssGrammarOmissions, kCssGrammarOmissionCount), node);
     return at < kCssGrammarOmissionCount && kCssGrammarOmissions[at].node == node ? &kCssGrammarOmissions[at] : nullptr;
 }
 

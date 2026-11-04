@@ -1,7 +1,7 @@
 #include "pr/path_measure.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <initializer_list>

@@ -9,13 +9,16 @@
 #include "pr/kit_input.h"
 #include "pr/kit_surface.h"
 #include "pr/kit_text.h"
+#include "pr/print.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
-
-#include <string>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace gallery {
+
+using namespace pr;
 
 // The styles that the gallery's sections share.
 constexpr PrKitTextStyle kBodySecondary = {.tone = PrKitTone_Secondary};
@@ -36,9 +39,6 @@ constexpr PrKitTextStyle kMonoStrong = {.role = PrKitTextRole_MonoStrong};
 constexpr PrKitButtonStyle kPrimary = {.variant = PrKitButtonVariant_Primary};
 constexpr PrKitButtonStyle kGhost = {.variant = PrKitButtonVariant_Ghost};
 constexpr PrKitButtonStyle kDanger = {.variant = PrKitButtonVariant_Danger};
-
-// Returns a view of the formatted text in `buffer`, which holds `size` bytes.
-PrStringView format(char* buffer, size_t size, const char* text, ...) PR_PRINTF_FORMAT(3, 4);
 
 // Creates a card: a box on the panel ground with a rule on every side, laid out as `box` says.
 PrLayoutNode card(PrKit* kit, PrLayoutNode parent, const PrKitBoxStyle& box);

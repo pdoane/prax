@@ -1,6 +1,6 @@
 #include "pr/html_page.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 TEST_CASE("a style element's sheet is in the document's list before the next script runs") {
     struct State {

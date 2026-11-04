@@ -4,7 +4,7 @@
 #include "pr/random.h"
 #include "pr/time.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 

@@ -1,7 +1,7 @@
 #include "pr/ascii.h"
 #include "pr/name_table.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 

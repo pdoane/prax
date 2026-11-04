@@ -1145,7 +1145,7 @@ constexpr uint32_t kComposites[] = {
 } // namespace
 
 uint32_t unicodeDecomposition(uint32_t codePoint, const uint32_t* PR_NULLABLE* PR_NONNULL out) {
-    uint32_t at = lowerBound(kDecomposed, uint32_t(countOf(kDecomposed)), codePoint);
+    uint32_t at = lowerBound(Span(kDecomposed), codePoint);
     if (at == countOf(kDecomposed) || kDecomposed[at] != codePoint)
         return 0;
     *out = kDecompositions + kDecompositionStarts[at];
@@ -1154,7 +1154,7 @@ uint32_t unicodeDecomposition(uint32_t codePoint, const uint32_t* PR_NULLABLE* P
 
 bool unicodeComposition(uint32_t first, uint32_t second, uint32_t* composite) {
     uint64_t key = uint64_t(first) << 21 | second;
-    uint32_t at = lowerBound(kCompositionPairs, uint32_t(countOf(kCompositionPairs)), key);
+    uint32_t at = lowerBound(Span(kCompositionPairs), key);
     if (at == countOf(kCompositionPairs) || kCompositionPairs[at] != key)
         return false;
     *composite = kComposites[at];

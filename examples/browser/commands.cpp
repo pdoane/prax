@@ -7,11 +7,12 @@
 #include "pr/command.h"
 #include "pr/command_keymap.h"
 #include "pr/count_of.h"
+#include "pr/print.h"
+#include "pr/string.h"
 
 #include "examples/browser/address.h"
 #include "examples/browser/tab.h"
 
-#include <cstdio>
 #include <stdint.h>
 
 namespace browser {
@@ -65,11 +66,11 @@ void toggleFavorite(Browser& b) {
     Tab* tab = browserActiveTab(b);
     uint32_t found = favoriteFind(b.favorites, tab->info.url);
     if (found != kFavoriteMissing)
-        b.favorites.erase(b.favorites.begin() + found);
+        b.favorites.erase(found);
     else
-        b.favorites.push_back(Favorite{tab->info.title, tab->info.url});
-    if (!b.favoritesPath.empty() && !favoritesSave(b.favoritesPath, b.favorites))
-        fprintf(stderr, "browser: cannot save the favorites to %s\n", b.favoritesPath.c_str());
+        b.favorites.push(Favorite{tab->info.title, tab->info.url});
+    if (!b.favoritesPath.isEmpty() && !favoritesSave(b.favoritesPath, b.favorites))
+        printError("browser: cannot save the favorites to {}\n", b.favoritesPath);
 }
 
 // The index that selectTab takes for the last tab.
@@ -77,14 +78,14 @@ constexpr uint32_t kLastTab = UINT32_MAX;
 
 // Makes the tab at `index` active, or the last tab for kLastTab, if there is such a tab.
 void selectTab(Browser& b, uint32_t index) {
-    uint32_t count = uint32_t(b.tabs.size());
+    uint32_t count = b.tabs.count();
     uint32_t chosen = index == kLastTab ? count - 1 : index;
     if (chosen < count)
         tabActivate(b, chosen);
 }
 
 PrCommandStateFlags whenOtherTabs(const Browser& b) {
-    return disabledUnless(b.tabs.size() > 1);
+    return disabledUnless(b.tabs.count() > 1);
 }
 
 PrCommandStateFlags whenZoomsIn(const Browser& b) {
@@ -122,11 +123,11 @@ constexpr CommandSpec kSpecs[] = {
         .title = "Reopen Closed Tab",
         .category = "Tabs",
         .run = [](Browser& b) {
-            std::string url = b.closed.back();
-            b.closed.pop_back();
+            String url = move(b.closed.last());
+            b.closed.pop();
             tabOpenNext(b, url);
         },
-        .state = [](const Browser& b) { return disabledUnless(!b.closed.empty()); },
+        .state = [](const Browser& b) { return disabledUnless(!b.closed.isEmpty()); },
         .chords = {"Cmd Shift T"},
     },
     {
@@ -140,7 +141,7 @@ constexpr CommandSpec kSpecs[] = {
         .id = "tab.next",
         .title = "Next Tab",
         .category = "Tabs",
-        .run = [](Browser& b) { tabActivate(b, (b.active + 1) % uint32_t(b.tabs.size())); },
+        .run = [](Browser& b) { tabActivate(b, (b.active + 1) % b.tabs.count()); },
         .state = whenOtherTabs,
         .chords = {"Ctrl Tab"},
     },
@@ -149,7 +150,7 @@ constexpr CommandSpec kSpecs[] = {
         .title = "Previous Tab",
         .category = "Tabs",
         .run = [](Browser& b) {
-            uint32_t count = uint32_t(b.tabs.size());
+            uint32_t count = b.tabs.count();
             tabActivate(b, (b.active + count - 1) % count);
         },
         .state = whenOtherTabs,
@@ -359,7 +360,7 @@ void commandsCreate(Browser& b) {
     b.commands = prCommandRegistryCreate();
     b.keymap = prCommandKeymapCreate();
     b.commandContexts.resize(countOf(kSpecs));
-    for (size_t i = 0; i < countOf(kSpecs); ++i) {
+    for (uint32_t i = 0; i < countOf(kSpecs); ++i) {
         const CommandSpec& spec = kSpecs[i];
         b.commandContexts[i] = CommandContext{&b, &spec};
         PrCommandDesc desc{
@@ -416,15 +417,11 @@ PrStringView commandTitle(const Browser& b, PrStringView id) {
     return prCommandRegistryCommand(b.commands, indexOf(b, id)).title;
 }
 
-std::string commandShortcut(const Browser& b, PrStringView id) {
+String commandShortcut(const Browser& b, PrStringView id) {
     PrCommandChord chord{};
     if (!prCommandKeymapChord(b.keymap, id, &chord))
-        return std::string();
-    PrRawString text = prCommandChordText(chord);
-    PrStringView view = prRawStringView(&text);
-    std::string copy(view.data, view.size);
-    prRawStringReset(&text);
-    return copy;
+        return String();
+    return String::adopt(prCommandChordText(chord));
 }
 
 bool commandsRunChord(Browser& b, const PrAppEvent& event) {

@@ -1,6 +1,6 @@
 #include "pr/bitset.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 using namespace pr_impl;
 

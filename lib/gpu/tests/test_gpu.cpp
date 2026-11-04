@@ -4,7 +4,7 @@
 
 #include "gpu/tests/kTestGpuShaders.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstring>
 #include <string>

@@ -13,12 +13,14 @@
 // frame laid out. The pane is a replaced element whose painter embeds that list.
 
 #include "pr/app.h"
+#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #include "pr/css_view.h"
 #include "pr/dom.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
+#include "pr/float.h"
 #include "pr/font_bundle.h"
 #include "pr/gpu.h"
 #include "pr/html.h"
@@ -36,15 +38,12 @@
 #include "pr/layout_scene.h"
 #include "pr/layout_unit.h"
 #include "pr/markdown.h"
+#include "pr/min_max.h"
+#include "pr/print.h"
+#include "pr/string.h"
 #include "pr/text.h"
 #include "pr/text_font.h"
-
-#include <chrono>
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <string>
+#include "pr/time.h"
 
 namespace {
 
@@ -405,7 +404,7 @@ struct Stream {
 
     // The text that streams, and how much of it has been delivered. In the chat, the text is the messages in order, and
     // `messageEnds` is where each one ends.
-    std::string text;
+    String text;
     size_t delivered = 0;
     double budget = 0;              // bytes that the rate has allowed and that are not yet delivered
     uint32_t pieces = 0;
@@ -431,7 +430,7 @@ struct Stream {
 
 // The page's clock: a monotonic clock in milliseconds.
 double now(void* PR_NULLABLE) {
-    return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    return prTimeMonotonicMilliseconds();
 }
 
 PrDomDocument* documentOf(const Stream& s) {
@@ -515,7 +514,7 @@ void restart(Stream& s) {
         case Sample_Chat: {
             prHtmlPageLoad(s.page, kChatPage, "about:chat", nullptr);
             for (const Message& message : kChat)
-                s.text += message.markdown;
+                s.text.append(message.markdown);
             startMessage(s);
             break;
         }
@@ -532,7 +531,7 @@ void restart(Stream& s) {
 size_t messageEnd(uint32_t index) {
     size_t end = 0;
     for (uint32_t i = 0; i <= index && i < countOf(kChat); ++i)
-        end += std::strlen(kChat[i].markdown);
+        end += PrStringView(kChat[i].markdown).size;
     return end;
 }
 
@@ -550,8 +549,8 @@ void noteChanges(Stream& s) {
 
 // Delivers one piece of at most `size` bytes.
 void deliverPiece(Stream& s, size_t size) {
-    size_t end = s.sample == Sample_Chat ? messageEnd(s.message) : s.text.size();
-    size = std::min(size, end - s.delivered);
+    size_t end = s.sample == Sample_Chat ? messageEnd(s.message) : s.text.count();
+    size = min(size, end - s.delivered);
     PrStringView piece{s.text.data() + s.delivered, size};
     switch (s.sample) {
         case Sample_Markdown:
@@ -585,8 +584,8 @@ void deliverPiece(Stream& s, size_t size) {
     } else if (s.element != nullptr) {
         PrMarkdownOptions options = chatOptions();
         prHtmlSetMarkdown(s.element, PrStringView{
-            s.text.data() + end - std::strlen(kChat[s.message].markdown),
-            std::strlen(kChat[s.message].markdown),
+            s.text.data() + end - PrStringView(kChat[s.message].markdown).size,
+            PrStringView(kChat[s.message].markdown).size,
         }, &options);
     }
     prHtmlMarkdownStreamDestroy(s.markdownStream);
@@ -598,7 +597,7 @@ void deliverPiece(Stream& s, size_t size) {
 }
 
 bool finished(const Stream& s) {
-    return s.delivered >= s.text.size();
+    return s.delivered >= s.text.count();
 }
 
 // Advances the stream by `delta` seconds: delivers the pieces that its rate allows, runs the page's due tasks, scrolls
@@ -606,7 +605,7 @@ bool finished(const Stream& s) {
 void advance(Stream& s, double delta) {
     if (!s.paused && !finished(s)) {
         s.budget += double(s.rate) * delta;
-        size_t chunk = size_t(std::max(1.0f, std::round(s.chunk)));
+        size_t chunk = size_t(max(1.0f, prF32Round(s.chunk)));
         while (!finished(s) && s.budget >= double(chunk)) {
             // A question in the chat shows whole.
             bool question = s.sample == Sample_Chat && kChat[s.message].fromUser;
@@ -659,17 +658,17 @@ void releasePage(void* PR_NULLABLE context) {
 }
 
 // Returns the status line: what has been delivered, and what the last piece changed.
-std::string statusOf(const Stream& s) {
-    char line[256];
-    int written = std::snprintf(line, sizeof line, "%zu of %zu bytes in %u pieces%s", s.delivered, s.text.size(),
-        s.pieces, s.paused ? ", paused" : finished(s) ? ", done" : "");
-    std::string status(line, size_t(std::max(written, 0)));
+String statusOf(const Stream& s) {
+    PrStringView state = "";
+    if (s.paused)
+        state = ", paused";
+    else if (finished(s))
+        state = ", done";
+    String status = format("{} of {} bytes in {} pieces{}", s.delivered, s.text.count(), s.pieces, state);
     if (s.mirror != nullptr) {
-        written = std::snprintf(line, sizeof line,
-            ".  Markdown: %u blocks, %u final; the last change replaced %u blocks at %u with %u; "
-                "%u blocks built in all", prMarkdownBlockCount(s.mirror), prMarkdownFinalCount(s.mirror),
-            s.lastChange.removedCount, s.lastChange.first, s.lastChange.insertedCount, s.rebuilt);
-        status.append(line, size_t(std::max(written, 0)));
+        formatTo(status, ".  Markdown: {} blocks, {} final; the last change replaced {} blocks at {} with {}; {} blocks "
+            "built in all", prMarkdownBlockCount(s.mirror), prMarkdownFinalCount(s.mirror), s.lastChange.removedCount,
+            s.lastChange.first, s.lastChange.insertedCount, s.rebuilt);
     }
     return status;
 }
@@ -710,8 +709,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     PrKitTextStyle meta{.role = PrKitTextRole_Meta, .tone = PrKitTone_Secondary};
     PrKitPlace slider{.width = prKitPx(160), .flex = PrKitFlex_Fixed};
     char label[64];
-    int written = std::snprintf(label, sizeof label, "%.0f bytes/s", double(s.rate));
-    prKitLabel(kit, bar, {.text = PrStringView{label, size_t(std::max(written, 0))}}, meta);
+    prKitLabel(kit, bar, {.text = formatToBuffer(Span(label), "{:.0f} bytes/s", s.rate)}, meta);
     PrLayoutNode rate = prKitSlider(kit, bar, {
         .value = prKitScalarF32(&s.rate),
         .min = kMinRate,
@@ -719,8 +717,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
         .scale = PrKitSliderScale_Ratio,
     }, {});
     prKitPlace(kit, rate, &slider);
-    written = std::snprintf(label, sizeof label, "%.0f bytes a piece", double(std::round(s.chunk)));
-    prKitLabel(kit, bar, {.text = PrStringView{label, size_t(std::max(written, 0))}}, meta);
+    prKitLabel(kit, bar, {.text = formatToBuffer(Span(label), "{:.0f} bytes a piece", prF32Round(s.chunk))}, meta);
     PrLayoutNode chunk = prKitSlider(kit, bar, {
         .value = prKitScalarF32(&s.chunk),
         .min = kMinChunk,
@@ -729,7 +726,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     }, {});
     prKitPlace(kit, chunk, &slider);
     PrLayoutNode progress = prKitProgress(
-        kit, bar, {.value = s.text.empty() ? 0.0f : float(s.delivered) / float(s.text.size())});
+        kit, bar, {.value = s.text.isEmpty() ? 0.0f : float(s.delivered) / float(s.text.count())});
     PrKitPlace grow{.flex = PrKitFlex_Grow};
     prKitPlace(kit, progress, &grow);
 
@@ -752,7 +749,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
         .rules = PrKitRuleFlag_Top,
     };
     PrLayoutNode status = prKitSurface(kit, ground, {}, footer);
-    std::string line = statusOf(s);
+    String line = statusOf(s);
     prKitLabel(kit, status, {.text = line}, meta);
 }
 
@@ -771,7 +768,7 @@ struct Window {
     PrKit* kit = nullptr;
     const PrLayoutScene* scene = nullptr;   // the scene of the last frame, which its list plays
     PrDrawList* list = nullptr;
-    std::vector<PrLayoutSceneScroll> scrolls;
+    Array<PrLayoutSceneScroll> scrolls;
 
     PrApp* app = nullptr;
     PrGpuDevice* device = nullptr;
@@ -844,7 +841,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     Window& w = *static_cast<Window*>(context);
     w.app = app;
     if (!openDevice(w)) {
-        std::fprintf(stderr, "incremental: no GPU device to render with\n");
+        printError("incremental: no GPU device to render with\n");
         prAppStop(app);
         return;
     }
@@ -879,10 +876,10 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     prLayoutSceneRelease(w.scene);
     w.scene = scene;
     w.scrolls.resize(prLayoutSceneScrolls(w.tree, scene, nullptr, 0));
-    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), uint32_t(w.scrolls.size()));
+    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), w.scrolls.count());
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
     options.scrolls = w.scrolls.data();
-    options.scrollCount = uint32_t(w.scrolls.size());
+    options.scrollCount = w.scrolls.count();
     options.canvasFilled = true;
     float ratio = f->display.pixelRatio;
     prDrawListClear(w.list);
@@ -937,7 +934,7 @@ int main() {
     static Window w;
     w.fonts = prFontSetCreate(nullptr);
     if (prFontBundleInstall(w.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR) == 0) {
-        std::fprintf(stderr, "incremental: the fonts under %s could not be installed\n", PR_FONT_BUNDLE_DIR);
+        printError("incremental: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
         return 1;
     }
     w.shaper = prTextShaperCreate(PrTextShaperBackend_Default);

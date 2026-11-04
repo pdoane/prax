@@ -1,9 +1,9 @@
+#include "pr/string.h"
+#include "pr/string_ops.h"
+
 #include "examples/browser/address.h"
 
-#include "doctest/doctest.h"
-
-#include <string>
-#include <vector>
+#include "tools/harness/test.h"
 
 using namespace browser;
 
@@ -15,53 +15,56 @@ struct ResolveCase {
     const char* url;
 };
 
-std::string resolved(const char* typed) {
+String resolved(const char* typed) {
     return addressResolve(typed);
 }
 
 } // namespace
 
 TEST_CASE("text with a scheme resolves to itself") {
-    for (const ResolveCase& c : std::vector<ResolveCase>{
-            {"https://example.com/a?b#c", "https://example.com/a?b#c"},
-            {"  http://example.com  ", "http://example.com"},
-            {"HTTPS://Example.com", "HTTPS://Example.com"},
-            {"about:blank", "about:blank"},
-            {"data:text/html,<p>hi", "data:text/html,<p>hi"},
-            {"ftp://example.com/file", "ftp://example.com/file"},
-            {"prax:history", "prax:history"},
-    }) {
+    const ResolveCase cases[] = {
+        {"https://example.com/a?b#c", "https://example.com/a?b#c"},
+        {"  http://example.com  ", "http://example.com"},
+        {"HTTPS://Example.com", "HTTPS://Example.com"},
+        {"about:blank", "about:blank"},
+        {"data:text/html,<p>hi", "data:text/html,<p>hi"},
+        {"ftp://example.com/file", "ftp://example.com/file"},
+        {"prax:history", "prax:history"},
+    };
+    for (const ResolveCase& c : cases) {
         CAPTURE(c.typed);
         CHECK(resolved(c.typed) == c.url);
     }
 }
 
 TEST_CASE("text that names a host resolves to the host's https URL, and the local host to http") {
-    for (const ResolveCase& c : std::vector<ResolveCase>{
-            {"example.com", "https://example.com"},
-            {"en.wikipedia.org/wiki/HTML", "https://en.wikipedia.org/wiki/HTML"},
-            {"example.com:8443/path", "https://example.com:8443/path"},
-            {"intranet:8080", "https://intranet:8080"},
-            {"localhost", "http://localhost"},
-            {"localhost:8000/index.html", "http://localhost:8000/index.html"},
-            {"127.0.0.1:3000", "http://127.0.0.1:3000"},
-            {"[::1]:8080/", "http://[::1]:8080/"},
-    }) {
+    const ResolveCase cases[] = {
+        {"example.com", "https://example.com"},
+        {"en.wikipedia.org/wiki/HTML", "https://en.wikipedia.org/wiki/HTML"},
+        {"example.com:8443/path", "https://example.com:8443/path"},
+        {"intranet:8080", "https://intranet:8080"},
+        {"localhost", "http://localhost"},
+        {"localhost:8000/index.html", "http://localhost:8000/index.html"},
+        {"127.0.0.1:3000", "http://127.0.0.1:3000"},
+        {"[::1]:8080/", "http://[::1]:8080/"},
+    };
+    for (const ResolveCase& c : cases) {
         CAPTURE(c.typed);
         CHECK(resolved(c.typed) == c.url);
     }
 }
 
 TEST_CASE("text that names no URL is a search for the text") {
-    for (const ResolveCase& c : std::vector<ResolveCase>{
-            {"html parser", "https://html.duckduckgo.com/html/?q=html+parser"},
-            {"prax", "https://html.duckduckgo.com/html/?q=prax"},
-            {"what is a.b", "https://html.duckduckgo.com/html/?q=what+is+a.b"},
-            {"c++ & rust?", "https://html.duckduckgo.com/html/?q=c%2B%2B+%26+rust%3F"},
-            {"example.", "https://html.duckduckgo.com/html/?q=example."},
-            {".hidden", "https://html.duckduckgo.com/html/?q=.hidden"},
-            {"caf\xc3\xa9", "https://html.duckduckgo.com/html/?q=caf%C3%A9"},
-    }) {
+    const ResolveCase cases[] = {
+        {"html parser", "https://html.duckduckgo.com/html/?q=html+parser"},
+        {"prax", "https://html.duckduckgo.com/html/?q=prax"},
+        {"what is a.b", "https://html.duckduckgo.com/html/?q=what+is+a.b"},
+        {"c++ & rust?", "https://html.duckduckgo.com/html/?q=c%2B%2B+%26+rust%3F"},
+        {"example.", "https://html.duckduckgo.com/html/?q=example."},
+        {".hidden", "https://html.duckduckgo.com/html/?q=.hidden"},
+        {"caf\xc3\xa9", "https://html.duckduckgo.com/html/?q=caf%C3%A9"},
+    };
+    for (const ResolveCase& c : cases) {
         CAPTURE(c.typed);
         CHECK(resolved(c.typed) == c.url);
     }
@@ -73,9 +76,9 @@ TEST_CASE("whitespace resolves to nothing") {
 }
 
 TEST_CASE("a path to a file that exists resolves to its file URL") {
-    std::string url = resolved(__FILE__);
-    CHECK(url.rfind("file://", 0) == 0);
-    CHECK(url.find("examples/browser/tests/test_address.cpp") != std::string::npos);
+    String url = resolved(__FILE__);
+    CHECK(prStringStartsWith(url, "file://"));
+    CHECK(prStringContains(url, "examples/browser/tests/test_address.cpp"));
     CHECK(resolved("/no/such/file.html") == "https://html.duckduckgo.com/html/?q=%2Fno%2Fsuch%2Ffile.html");
 }
 

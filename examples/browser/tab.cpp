@@ -6,15 +6,16 @@
 
 #include "examples/browser/tab.h"
 
+#include "pr/array.h"
 #include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/html.h"
+#include "pr/min_max.h"
+#include "pr/print.h"
+#include "pr/string.h"
 #include "pr/time.h"
 
 #include "examples/browser/address.h"
-
-#include <algorithm>
-#include <cstdio>
 
 namespace browser {
 
@@ -50,7 +51,7 @@ PrDomHostState linkState(void* context, PrHtmlPage*, const PrDomElement* element
     const Browser& b = *static_cast<Tab*>(context)->browser;
     PrRawString url = prHtmlHyperlinkComponent(prHtmlElementQuery(target), PrUrlComponent_Href);
     PrStringView view = prRawStringView(&url);
-    bool visited = b.visitedUrls.count(std::string(view.data, view.size)) != 0;
+    bool visited = b.visitedUrls.contains(view);
     prRawStringReset(&url);
     return visited ? PrDomHostState_Visited : PrDomHostState(0);
 }
@@ -59,7 +60,7 @@ PrDomHostState linkState(void* context, PrHtmlPage*, const PrDomElement* element
 void openWindow(void* context, PrHtmlPage*, PrStringView url) {
     Tab& tab = *static_cast<Tab*>(context);
     prMutexLock(&tab.mutex);
-    tab.opened.emplace_back(url.data, url.size);
+    tab.opened.emplace(url);
     prMutexUnlock(&tab.mutex);
     browserWantFrame(*tab.browser);
 }
@@ -91,11 +92,11 @@ PrHtmlVisibility visibilityOf(bool shown) {
     return shown ? PrHtmlVisibility_Visible : PrHtmlVisibility_Hidden;
 }
 
-void navigate(Tab& tab, const std::string& url) {
+void navigate(Tab& tab, const String& url) {
     tab.pending = url;
     tab.loadStarted = prTimeMonotonicMilliseconds();
     if (prHtmlPageNavigate(tab.page, url) != PrStatus_Ok)
-        fprintf(stderr, "browser: cannot navigate to %s\n", url.c_str());
+        printError("browser: cannot navigate to {}\n", url);
 }
 
 // Prints, under --trace, what a tab's view did with its jobs, and how long a viewport's changes took to settle.
@@ -103,34 +104,33 @@ void traceUpdate(void* PR_NULLABLE context, const PrHtmlViewUpdate* update) {
     Tab& tab = *static_cast<Tab*>(context);
     double now = prTimeMonotonicMilliseconds();
     if (update->extent.x != tab.traceExtent.x || update->extent.y != tab.traceExtent.y) {
-        fprintf(stderr, "[%.3f] page sees viewport %.0fx%.0f\n", now / 1000, double(update->extent.x),
-            double(update->extent.y));
+        printError("[{:.3f}] page sees viewport {:.0f}x{:.0f}\n", now / 1000, update->extent.x, update->extent.y);
         tab.traceExtent = update->extent;
         if (tab.traceResized == 0)
             tab.traceResized = now;
     }
     if (update->committed) {
         bool stale = update->committedExtent.x != update->extent.x || update->committedExtent.y != update->extent.y;
-        fprintf(stderr, "[%.3f] job done at %.0fx%.0f%s in %.1f ms: %u blocks laid out, %u reused, %u lines broken; frames %u blocks\n",
-            now / 1000, double(update->committedExtent.x), double(update->committedExtent.y), stale ? " (stale)" : "",
-            update->committedMillis, update->layout.blocksLaidOut, update->layout.blocksReused,
+        printError("[{:.3f}] job done at {:.0f}x{:.0f}{} in {:.1f} ms: {} blocks laid out, {} reused, {} lines broken; "
+            "frames {} blocks\n", now / 1000, update->committedExtent.x, update->committedExtent.y,
+            stale ? " (stale)" : "", update->committedMillis, update->layout.blocksLaidOut, update->layout.blocksReused,
             update->layout.linesBroken, update->framesBlocks);
         if (tab.traceResized != 0 && stale)
             ++tab.traceStale;
     }
     if (update->started) {
-        fprintf(stderr,
-            "[%.3f] job start at %.0fx%.0f for%s%s%s (%u), prepared in %.1f ms: %u elements styled, %u animated; "
-                "frames %u styled, %u animated\n",
-            now / 1000, double(update->extent.x), double(update->extent.y), update->startedForView ? " view" : "",
-            update->startedForPage ? " page" : "", update->startedForFrames != 0 ? " frames" : "",
-            update->startedForFrames, update->startMillis, update->style.elementsStyled, update->style.elementsAnimated,
-            update->framesStyled, update->framesAnimated);
+        PrStringView view = update->startedForView ? " view" : "";
+        PrStringView page = update->startedForPage ? " page" : "";
+        PrStringView frames = update->startedForFrames != 0 ? " frames" : "";
+        printError("[{:.3f}] job start at {:.0f}x{:.0f} for{}{}{} ({}), prepared in {:.1f} ms: {} elements styled, {} "
+            "animated; frames {} styled, {} animated\n", now / 1000, update->extent.x, update->extent.y, view, page,
+            frames, update->startedForFrames, update->startMillis, update->style.elementsStyled,
+            update->style.elementsAnimated, update->framesStyled, update->framesAnimated);
         if (tab.traceResized != 0)
             ++tab.traceJobs;
     }
     if (update->current && tab.traceResized != 0) {
-        fprintf(stderr, "[%.3f] viewport settled %.1f ms after it changed: %u jobs, %u stale\n", now / 1000,
+        printError("[{:.3f}] viewport settled {:.1f} ms after it changed: {} jobs, {} stale\n", now / 1000,
             now - tab.traceResized, tab.traceJobs, tab.traceStale);
         tab.traceResized = 0;
         tab.traceJobs = 0;
@@ -139,7 +139,7 @@ void traceUpdate(void* PR_NULLABLE context, const PrHtmlViewUpdate* update) {
 }
 
 // Opens a tab's page at the extent of `window`, with its view, and navigates it to `url` unless it is empty.
-void openPage(Browser& b, Tab& tab, const PrAppFrame& window, bool shown, const std::string& url) {
+void openPage(Browser& b, Tab& tab, const PrAppFrame& window, bool shown, const String& url) {
     tab.history = prHtmlSessionHistoryCreate();
     PrHtmlHost host = pageHost(tab);
     PrHtmlHost scripted = prJsHtmlEngineHost(b.engine, &host, PrJsHtmlScripting_Enabled);
@@ -158,8 +158,8 @@ void openPage(Browser& b, Tab& tab, const PrAppFrame& window, bool shown, const 
     PrHtmlView* made = prHtmlViewCreate(&view);
     prHtmlViewSetApp(made, b.app);
     tab.view.store(made);
-    b.open.push_back(&tab);
-    if (!url.empty())
+    b.open.push(&tab);
+    if (!url.isEmpty())
         navigate(tab, url);
 }
 
@@ -202,7 +202,7 @@ struct TabTask {
     Browser* browser;
     Tab* PR_NULLABLE tab;
     TaskKind kind;
-    std::string url;                // Open, Navigate: the URL to load, or empty for none. Visit: the URL that the
+    String url;                     // Open, Navigate: the URL to load, or empty for none. Visit: the URL that the
                                     // history recorded. Forget: the URL that it removed, or empty if it removed all
     PrAppFrame window{};            // Open: the window as the page first sees it
     bool shown = false;             // Open, Show: true if the tab is the active one
@@ -222,16 +222,16 @@ void runTask(void* PR_NULLABLE context) {
             prHtmlPageSetVisibility(task->tab->page, visibilityOf(task->shown));
             break;
         case TaskKind_Close:
-            b.open.erase(std::find(b.open.begin(), b.open.end(), task->tab));
+            b.open.removeFirst(task->tab);
             closePage(*task->tab);
             freeTab(task->tab);
             break;
         case TaskKind_Visit:
-            if (b.visitedUrls.insert(task->url).second)
+            if (b.visitedUrls.add(task->url))
                 linksChanged(b);
             break;
         case TaskKind_Forget:
-            if (task->url.empty())
+            if (task->url.isEmpty())
                 b.visitedUrls.clear();
             else
                 b.visitedUrls.erase(task->url);
@@ -259,9 +259,8 @@ void post(Browser& b, TabTask* task) {
 }
 
 // Returns a copy of `string`, and releases it.
-std::string taken(PrRawString string) {
-    PrStringView view = prRawStringView(&string);
-    std::string copy = view.data != nullptr ? std::string(view.data, view.size) : std::string();
+String taken(PrRawString string) {
+    String copy = prRawStringView(&string);
     prRawStringReset(&string);
     return copy;
 }
@@ -276,7 +275,7 @@ TabInfo infoOf(Tab& tab) {
     bool navigating = prHtmlPageIsNavigating(tab.page);
     if (!navigating)
         tab.pending.clear();
-    if (!tab.pending.empty())
+    if (!tab.pending.isEmpty())
         info.url = tab.pending;
     info.loading = navigating || prHtmlPageIsFetching(tab.page);
     uint32_t length = prHtmlSessionHistoryLength(tab.history);
@@ -304,8 +303,7 @@ void reportLoad(Tab& tab, const TabInfo& info) {
     if (prHtmlDocumentReadyState(document) != PrHtmlDocumentReadyState_Complete || presentation == nullptr ||
             prCssPresentationIsBusy(presentation) || !prCssPresentationIsCurrent(presentation))
         return;
-    fprintf(stderr, "browser: %s settled in %.2f s\n", info.url.c_str(),
-        (prTimeMonotonicMilliseconds() - tab.loadStarted) / 1000);
+    printError("browser: {} settled in {:.2f} s\n", info.url, (prTimeMonotonicMilliseconds() - tab.loadStarted) / 1000);
     tab.loadStarted = 0;
 }
 
@@ -360,8 +358,8 @@ void wantFrame(void* PR_NULLABLE context) {
 
 // Writes the history to its file, if the platform names a data directory to keep it in.
 void saveHistory(const Browser& b) {
-    if (!b.historyPath.empty() && !historySave(b.historyPath, b.history))
-        fprintf(stderr, "browser: cannot save the history to %s\n", b.historyPath.c_str());
+    if (!b.historyPath.isEmpty() && !historySave(b.historyPath, b.history))
+        printError("browser: cannot save the history to {}\n", b.historyPath);
 }
 
 // Records the tab's document in the history once it has loaded. A URL that the tab did not show last is a visit, which
@@ -387,6 +385,8 @@ Tab* tabOpen(Browser& b, PrStringView url, uint32_t index) {
     Tab* tab = new Tab;
     tab->browser = &b;
     tab->key = b.nextKey++;
+    tab->view.store(nullptr);
+    tab->shown.store(false);
     prMutexInit(&tab->mutex);
     // The compositor has no thread of its own: the window's frames make its frames while the tab is active.
     PrLayoutCompositorDesc compositor{
@@ -397,16 +397,16 @@ Tab* tabOpen(Browser& b, PrStringView url, uint32_t index) {
         .canvasFilled = true,
     };
     tab->compositor = prLayoutCompositorCreate(&compositor);
-    tab->info.url.assign(url.data, url.size);
-    tab->info.loading = url.size != 0;
-    b.tabs.insert(b.tabs.begin() + std::ptrdiff_t(std::min<size_t>(index, b.tabs.size())), tab);
+    tab->info.url = url;
+    tab->info.loading = !url.isEmpty();
+    b.tabs.insert(min(index, b.tabs.count()), tab);
     post(b,
         new TabTask{.browser = &b, .tab = tab, .kind = TaskKind_Open, .url = tab->info.url, .window = b.pageWindow});
     return tab;
 }
 
 void tabOpenNext(Browser& b, PrStringView url) {
-    uint32_t at = b.tabs.empty() ? 0 : b.active + 1;
+    uint32_t at = b.tabs.isEmpty() ? 0 : b.active + 1;
     tabOpen(b, url, at);
     tabActivate(b, at);
 }
@@ -420,7 +420,7 @@ void tabsLoad(Browser& b, PrStringView url, TabTarget target) {
 }
 
 void tabsShowHistory(Browser& b) {
-    for (uint32_t i = 0; i < b.tabs.size(); ++i) {
+    for (uint32_t i = 0; i < b.tabs.count(); ++i) {
         if (b.tabs[i]->info.url == kAddressHistory) {
             tabActivate(b, i);
             return;
@@ -434,24 +434,24 @@ void tabsShowHistory(Browser& b) {
 void tabClose(Browser& b, uint32_t index) {
     Tab* tab = b.tabs[index];
     if (!addressIsBlank(tab->info.url)) {
-        b.closed.push_back(tab->info.url);
-        if (b.closed.size() > kMaxClosed)
-            b.closed.erase(b.closed.begin());
+        b.closed.push(tab->info.url);
+        if (b.closed.count() > kMaxClosed)
+            b.closed.erase(0);
     }
-    b.tabs.erase(b.tabs.begin() + index);
+    b.tabs.erase(index);
     post(b, new TabTask{.browser = &b, .tab = tab, .kind = TaskKind_Close});
     // The window keeps a tab: closing the last one opens the start page.
-    if (b.tabs.empty())
+    if (b.tabs.isEmpty())
         tabOpen(b, PrStringView{}, 0);
     uint32_t active = b.active;
-    if (index < active || active >= b.tabs.size())
+    if (index < active || active >= b.tabs.count())
         active = active > 0 ? active - 1 : 0;
     tabActivate(b, active);
 }
 
 void tabActivate(Browser& b, uint32_t index) {
     b.active = index;
-    for (uint32_t i = 0; i < b.tabs.size(); ++i) {
+    for (uint32_t i = 0; i < b.tabs.count(); ++i) {
         Tab* tab = b.tabs[i];
         bool shown = i == index;
         if (tab->shown.exchange(shown) != shown) {
@@ -463,7 +463,7 @@ void tabActivate(Browser& b, uint32_t index) {
 }
 
 void tabNavigate(Browser& b, Tab& tab, PrStringView url) {
-    tab.info.url.assign(url.data, url.size);
+    tab.info.url = url;
     tab.info.loading = true;
     post(b, new TabTask{.browser = &b, .tab = &tab, .kind = TaskKind_Navigate, .url = tab.info.url});
 }
@@ -475,33 +475,32 @@ void tabTraverse(Tab& tab, int32_t delta) {
 
 bool tabsRefresh(Browser& b) {
     bool changed = false;
-    std::vector<std::string> opened;
+    Array<String> opened;
     for (Tab* tab : b.tabs) {
         prMutexLock(&tab->mutex);
         bool taken = tab->changed;
         if (taken)
             tab->info = tab->published;
         tab->changed = false;
-        opened.insert(opened.end(), tab->opened.begin(), tab->opened.end());
+        opened.append(tab->opened.span());
         tab->opened.clear();
         prMutexUnlock(&tab->mutex);
         if (taken)
             record(b, *tab);
         changed = changed || taken;
     }
-    for (const std::string& url : opened)
+    for (const String& url : opened)
         tabOpenNext(b, url);
-    return changed || !opened.empty();
+    return changed || !opened.isEmpty();
 }
 
 void tabsForget(Browser& b, PrStringView url) {
-    if (url.size == 0)
+    if (url.isEmpty())
         b.history.clear();
     else if (!historyRemove(&b.history, url))
         return;
     saveHistory(b);
-    post(b,
-        new TabTask{.browser = &b, .tab = nullptr, .kind = TaskKind_Forget, .url = std::string(url.data, url.size)});
+    post(b, new TabTask{.browser = &b, .tab = nullptr, .kind = TaskKind_Forget, .url = url});
 }
 
 void tabsRun(Browser& b) {

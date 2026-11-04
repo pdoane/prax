@@ -8,7 +8,7 @@
 #include "dom/src/dom_node.h"
 #include "dom/src/dom_xml.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

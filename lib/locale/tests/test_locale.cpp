@@ -2,7 +2,7 @@
 #include "pr/locale_common.h"
 #include "pr/locale_full.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

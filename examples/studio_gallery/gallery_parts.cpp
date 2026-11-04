@@ -4,9 +4,6 @@
 
 #include "pr/kit_button.h"
 
-#include <stdarg.h>
-#include <stdio.h>
-
 namespace gallery {
 
 namespace {
@@ -17,15 +14,6 @@ constexpr PrKitTextStyle kMonoStrongFaint = {.role = PrKitTextRole_MonoStrong, .
 constexpr float kMeasure = 600;
 
 } // namespace
-
-PrStringView format(char* buffer, size_t size, const char* text, ...) {
-    va_list args;
-    va_start(args, text);
-    int written = vsnprintf(buffer, size, text, args);
-    va_end(args);
-    size_t length = written < 0 ? 0 : size_t(written) < size ? size_t(written) : size - 1;
-    return PrStringView{buffer, length};
-}
 
 PrLayoutNode card(PrKit* kit, PrLayoutNode parent, const PrKitBoxStyle& box) {
     PrKitSurfaceStyle surface{.box = box, .ground = PrKitGround_Panel, .rules = PrKitRuleFlag_All};

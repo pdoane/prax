@@ -1,7 +1,7 @@
 #include "pr/app.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

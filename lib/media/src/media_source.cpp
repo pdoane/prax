@@ -342,7 +342,7 @@ void codedFramesReceived(void* context, const PrMediaCodedFrame* frames, uint32_
     b->order.resize(count);
     for (uint32_t i = 0; i < count; ++i)
         b->order.data[i] = i;
-    sortItems(b->order.data, count, [frames](uint32_t x, uint32_t y) {
+    sortItems(Span(b->order.data, count), [frames](uint32_t x, uint32_t y) {
         return frames[x].decode < frames[y].decode || (frames[x].decode == frames[y].decode && x < y);
     });
     prMutexLock(&b->lock);
@@ -358,7 +358,7 @@ void trackRanges(const TrackBuffer* track, RawArray<PrMediaTimeRange>* out) {
         const BufferFrame& frame = track->frames.data[i];
         out->push(PrMediaTimeRange{frame.presentation, frame.presentation + frame.duration});
     }
-    sortItems(out->data, out->count, [](const PrMediaTimeRange& a, const PrMediaTimeRange& b) {
+    sortItems(out->span(), [](const PrMediaTimeRange& a, const PrMediaTimeRange& b) {
         return a.start < b.start;
     });
     uint32_t merged = 0;

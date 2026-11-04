@@ -2,12 +2,11 @@
 
 #include "examples/alchemy/provenance.h"
 
+#include "pr/array.h"
 #include "pr/image_png.h"
+#include "pr/integer.h"
 #include "pr/json.h"
-
-#include "examples/alchemy/text.h"
-
-#include <stdlib.h>
+#include "pr/string.h"
 
 namespace alchemy {
 
@@ -15,8 +14,8 @@ namespace {
 
 constexpr double kVersion = 1;
 
-void writeText(PrJsonWriter* w, const char* key, const std::string& value) {
-    if (value.empty())
+void writeText(PrJsonWriter* w, const char* key, PrStringView value) {
+    if (value.isEmpty())
         return;
     prJsonWriterKey(w, key);
     prJsonWriterString(w, value);
@@ -36,7 +35,7 @@ void writeOp(PrJsonWriter* w, const ProvenanceOp& op) {
     writeText(w, "prompt", op.prompt);
     writeText(w, "negative", op.negative);
     writeText(w, "checkpoint", op.checkpoint);
-    if (!op.loras.empty()) {
+    if (!op.loras.isEmpty()) {
         prJsonWriterKey(w, "loras");
         prJsonWriterBeginArray(w);
         for (const ProvenanceLora& lora : op.loras) {
@@ -66,13 +65,13 @@ void writeOp(PrJsonWriter* w, const ProvenanceOp& op) {
     writeNumber(w, "context", op.context);
     writeText(w, "detector", op.detector);
     if (provenanceSamples(op))
-        writeText(w, "seed", std::to_string(op.seed));
+        writeText(w, "seed", format("{}", op.seed));
     writeText(w, "source", op.source);
     prJsonWriterEndObject(w);
 }
 
-std::string memberString(const PrJson* d, PrJsonValueIndex object, const char* key) {
-    return stringOf(prJsonString(d, prJsonMember(d, object, key)));
+String memberString(const PrJson* d, PrJsonValueIndex object, const char* key) {
+    return prJsonString(d, prJsonMember(d, object, key));
 }
 
 double memberNumber(const PrJson* d, PrJsonValueIndex object, const char* key, double fallback) {
@@ -94,7 +93,7 @@ ProvenanceOp readOp(const PrJson* d, PrJsonValueIndex object) {
     PrJsonValueIndex loras = prJsonMember(d, object, "loras");
     for (PrJsonValueIndex i = prJsonFirst(d, loras); i != kPrJsonMissing; i = prJsonAfter(d, loras, i)) {
         if (prJsonKind(d, i) == PrJsonKind_Object)
-            op.loras.push_back({memberString(d, i, "name"), memberNumber(d, i, "weight", 1.0)});
+            op.loras.push({memberString(d, i, "name"), memberNumber(d, i, "weight", 1.0)});
     }
     op.sampler = memberString(d, object, "sampler");
     op.scheduler = memberString(d, object, "scheduler");
@@ -113,20 +112,21 @@ ProvenanceOp readOp(const PrJson* d, PrJsonValueIndex object) {
     op.cfg = memberNumber(d, object, "cfg", 0);
     op.strength = memberNumber(d, object, "strength", 0);
     op.factor = memberNumber(d, object, "upscaleFactor", 0);
-    std::string seed = memberString(d, object, "seed");
-    op.seed = seed.empty() ? 0 : strtoull(seed.c_str(), nullptr, 10);
+    String seed = memberString(d, object, "seed");
+    op.seed = 0;
+    prU64ParsePrefix(seed.data(), seed.count(), &op.seed, 10);
     return op;
 }
 
 // Keeps the text of a PNG file's chunk under the provenance keyword.
 void collect(void* PR_NULLABLE context, const PrImagePngText* text) {
     if (text->keyword == kProvenanceKeyword)
-        *static_cast<std::string*>(context) = stringOf(text->text);
+        *static_cast<String*>(context) = text->text;
 }
 
 } // namespace
 
-std::string provenanceSerialize(const ProvenanceRecord& record) {
+String provenanceSerialize(const ProvenanceRecord& record) {
     PrJsonWriter* w = prJsonWriterCreate();
     prJsonWriterBeginObject(w);
     prJsonWriterKey(w, "version");
@@ -137,7 +137,7 @@ std::string provenanceSerialize(const ProvenanceRecord& record) {
         writeOp(w, op);
     prJsonWriterEndArray(w);
     prJsonWriterEndObject(w);
-    std::string text = stringOf(prJsonWriterText(w));
+    String text = prJsonWriterText(w);
     prJsonWriterDestroy(w);
     return text;
 }
@@ -151,7 +151,7 @@ bool provenanceParse(PrStringView text, ProvenanceRecord* out) {
         out->operations.clear();
         for (PrJsonValueIndex i = prJsonFirst(d, operations); i != kPrJsonMissing; i = prJsonAfter(d, operations, i)) {
             if (prJsonKind(d, i) == PrJsonKind_Object)
-                out->operations.push_back(readOp(d, i));
+                out->operations.push(readOp(d, i));
         }
     }
     prJsonDestroy(d);
@@ -159,37 +159,38 @@ bool provenanceParse(PrStringView text, ProvenanceRecord* out) {
 }
 
 bool provenanceRead(PrByteView png, PrCompressCodec* PR_NULLABLE compress, ProvenanceRecord* out) {
-    std::string text;
+    String text;
     PrStatus status = prImagePngEachText(png, compress, collect, &text);
     if (status != PrStatus_Ok && status != PrStatus_Truncated)
         return false;
-    return !text.empty() && provenanceParse(text, out);
+    return !text.isEmpty() && provenanceParse(text, out);
 }
 
-std::string provenanceWrite(PrByteView png, const ProvenanceRecord& record) {
-    std::string text = provenanceSerialize(record);
+Array<uint8_t> provenanceWrite(PrByteView png, const ProvenanceRecord& record) {
+    String text = provenanceSerialize(record);
     size_t size = 0;
     if (prImagePngSetText(png, kProvenanceKeyword, text, nullptr, 0, &size) != PrStatus_Ok)
-        return std::string();
-    std::string out(size, '\0');
-    prImagePngSetText(png, kProvenanceKeyword, text, reinterpret_cast<uint8_t*>(out.data()), size, &size);
+        return Array<uint8_t>();
+    Array<uint8_t> out(static_cast<uint32_t>(size));
+    prImagePngSetText(png, kProvenanceKeyword, text, out.data(), size, &size);
+    out.resize(uint32_t(size));
     return out;
 }
 
 const ProvenanceOp* PR_NULLABLE provenanceNewest(const ProvenanceRecord& record) {
-    return record.operations.empty() ? nullptr : &record.operations.back();
+    return record.operations.isEmpty() ? nullptr : &record.operations.last();
 }
 
 bool provenanceSamples(const ProvenanceOp& op) {
-    return !op.checkpoint.empty() || !op.sampler.empty();
+    return !op.checkpoint.isEmpty() || !op.sampler.isEmpty();
 }
 
-std::string provenanceChain(const ProvenanceRecord& record) {
-    std::string out;
+String provenanceChain(const ProvenanceRecord& record) {
+    String out;
     for (const ProvenanceOp& op : record.operations) {
-        if (!out.empty())
-            out += " \xE2\x86\x92 ";
-        out += op.mode.empty() ? std::string("?") : op.mode;
+        if (!out.isEmpty())
+            out.append(" \xE2\x86\x92 ");
+        out.append(op.mode.isEmpty() ? PrStringView("?") : op.mode.view());
     }
     return out;
 }

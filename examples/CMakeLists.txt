@@ -68,7 +68,7 @@ pr_example(perspective perspective/perspective.cpp perspective/perspective_gpu.c
 pr_slang(perspective perspective/perspective_gpu.slang VARIABLE kPerspectiveShaders)
 target_link_libraries(perspective PRIVATE prax::app prax::studio_kit prax::draw
                                           prax::gpu prax::layout prax::text prax::font_bundle
-                                          prax::image prax::compress)
+                                          prax::image prax::compress prax::core_cpp)
 target_compile_definitions(perspective PRIVATE
     PR_PERSPECTIVE_PICTURE="${CMAKE_CURRENT_SOURCE_DIR}/perspective/picture.png")
 

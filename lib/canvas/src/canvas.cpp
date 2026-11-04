@@ -383,12 +383,12 @@ void stateCopy(CanvasState* out, const CanvasState& from) {
         styleCopy(&out->styles[i], from.styles[i]);
     out->dashes = {};
     if (from.dashes.count != 0)
-        out->dashes.append(from.dashes.data, from.dashes.count);
+        out->dashes.append(from.dashes.span());
     out->shadowText = prRawStringClone(&from.shadowText);
     out->filterText = prRawStringClone(&from.filterText);
     out->filters = {};
     if (from.filters.count != 0)
-        out->filters.append(from.filters.data, from.filters.count);
+        out->filters.append(from.filters.span());
     canvasFontRetain(from.font);
     out->lang = prRawStringClone(&from.lang);
     out->letterSpacing.text = prRawStringClone(&from.letterSpacing.text);

@@ -2,7 +2,7 @@
 #include "pr/task_builtin.h"
 #include "pr/thread.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 

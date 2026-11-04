@@ -1,7 +1,7 @@
 #include "pr/charset.h"
 #include "pr/utf8.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

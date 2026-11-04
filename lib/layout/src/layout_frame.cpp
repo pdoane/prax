@@ -267,7 +267,7 @@ void gatherRoots(const LayoutTree* tree, RawArray<LayoutNodeIndex>* out) {
         if (!listed)
             out->push(root);
     }
-    sortItems(out->data, out->count, [&](LayoutNodeIndex a, LayoutNodeIndex b) {
+    sortItems(out->span(), [&](LayoutNodeIndex a, LayoutNodeIndex b) {
         return frame.positions.data[a] < frame.positions.data[b];
     });
 }
@@ -326,7 +326,7 @@ void layoutFrameCommit(LayoutTree* tree) {
     PR_ASSERT(frame.open);
     frame.open = false;
     frame.reported.clear();
-    frame.reported.append(frame.duplicates.data, frame.duplicates.count);
+    frame.reported.append(frame.duplicates.span());
     layoutTreeExpireFrameMarks(tree, frame.frame);
     PrLayoutTreeStats& stats = tree->stats;
     uint32_t kept = frame.created.count - frame.made.count;
@@ -392,7 +392,7 @@ void layoutFrameCommit(LayoutTree* tree) {
     gatherRoots(tree, &frame.gathered);
     frame.roots.clear();
     if (frame.gathered.count != 0)
-        frame.roots.append(frame.gathered.data, frame.gathered.count);
+        frame.roots.append(frame.gathered.span());
     // None of the gone nodes holds a node that the frame created, because each such node was moved out first.
     for (uint32_t i = 0; i < frame.gone.count; ++i) {
         LayoutNodeIndex node = frame.gone.data[i];

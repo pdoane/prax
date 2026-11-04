@@ -914,17 +914,17 @@ PrLayoutNode prKitCommandPalette(PrKit* kit, PrLayoutNode trigger, PrKitCommandP
     if (content == kPrLayoutNodeNone)
         return kPrLayoutNodeNone;
     PrUi* ui = kit->ui;
-    // The search field, or the frame if the palette has no query, takes focus as the modal's first focusable node. The
-    // frame claims the keys that move and activate the selection, which reach it from the field inside it.
-    bool queried = palette.query.data != nullptr;
+    // The search field, or the frame if the palette is not searchable, takes focus as the modal's first focusable node.
+    // The frame claims the keys that move and activate the selection, which reach it from the field inside it.
+    bool searchable = palette.searchable;
     PrLayoutNode frame =
-        prUiElement(ui, content, 0, cardStyle(*kit, kPaletteWidth), queried ? PrUiFlags(0) : PrUiFlag_Focusable);
+        prUiElement(ui, content, 0, cardStyle(*kit, kPaletteWidth), searchable ? PrUiFlags(0) : PrUiFlag_Focusable);
     RowBox searchBox{.height = kPrKitHeightXl, .padding = prKitEdgesXY(0, kPrKitSpace5), .rules = PrKitRuleFlag_Bottom};
     PrLayoutNode search =
         prLayoutTreeFrameElement(kit->tree, frame, 0, ruledRow(*kit, searchBox, kPrKitSpace4, PrColor{0, 0, 0, 0}));
     prKitIcon(kit, search, {.icon = PrKitIconKind_Search}, {.size = 14, .tone = PrKitTone_Muted});
     PrLayoutNode queryField = kPrLayoutNodeNone;
-    if (queried) {
+    if (searchable) {
         PrKitTextField field{.text = palette.query, .placeholder = palette.prompt};
         PrKitFieldStyle bare{.bare = true};
         queryField = prKitTextField(kit, search, field, bare);

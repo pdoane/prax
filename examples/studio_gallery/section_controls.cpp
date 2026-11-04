@@ -223,8 +223,11 @@ void buildContextMenu(PrKit* kit, PrLayoutNode section, MenuState& state) {
     if (prKitActivated(kit, prKitButton(kit, readout, {.text = "Not A Menu Item"}, {})))
         ++state.outsideClicks;
     char clicks[32];
-    prKitLabel(kit, readout, {.text = format(clicks, sizeof clicks, "clicks: %u", state.outsideClicks)}, kMonoMuted);
-    prKitLabel(kit, readout, {.text = state.verb.empty() ? "no verb chosen yet" : state.verb}, kMonoSecondary);
+    prKitLabel(kit, readout, {.text = formatToBuffer(Span(clicks), "clicks: {}", state.outsideClicks)}, kMonoMuted);
+    PrStringView verb = state.verb;
+    if (state.verb.isEmpty())
+        verb = "no verb chosen yet";
+    prKitLabel(kit, readout, {.text = verb}, kMonoSecondary);
     PrLayoutNode tag = prKitBox(kit, readout, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace2});
     prKitSwatch(kit, tag, {.color = state.tag}, {.size = kPrKitSpace5});
     prKitLabel(kit, tag, {.text = state.wrap ? "wrap: on" : "wrap: off"}, kMonoMuted);
@@ -245,13 +248,18 @@ void buildPalette(PrKit* kit, PrLayoutNode section, PaletteState& palette) {
         if (commandMatches(commands[i], palette.query))
             shown[matches++] = i;
     }
-    PrKitCommandPalette content{.prompt = "Type a command", .count = matches, .query = palette.query};
+    PrKitCommandPalette content{
+        .prompt = "Type a command",
+        .count = matches,
+        .query = palette.query,
+        .searchable = true,
+    };
     PrLayoutNode list = prKitCommandPalette(kit, trigger, content);
     if (list == kPrLayoutNodeNone)
         return;
     PrStringView text{};
     if (prKitTextChanged(kit, list, &text))
-        palette.query.assign(text.data, text.size);
+        palette.query = text;
     for (uint32_t i = 0; i < matches; ++i) {
         const CommandItem& command = commands[shown[i]];
         PrKitCommandItem item{
@@ -346,7 +354,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitTextField nameField{.text = inputs.name, .placeholder = "Unnamed entity"};
         PrStringView text{};
         if (prKitTextChanged(kit, prKitTextField(kit, name, nameField, {}), &text))
-            inputs.name.assign(text.data, text.size);
+            inputs.name = text;
         PrLayoutNode search = prKitBox(kit, row, {}, cell);
         caption(kit, search, "SELECT ON FOCUS");
         PrKitTextField searchField{
@@ -357,19 +365,19 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             .selectOnFocus = true,
         };
         if (prKitTextChanged(kit, prKitTextField(kit, search, searchField, {}), &text))
-            inputs.search.assign(text.data, text.size);
+            inputs.search = text;
         PrLayoutNode locked = prKitBox(kit, row, {.disabled = true}, cell);
         caption(kit, locked, "DISABLED");
         PrKitTextField lockedField{.text = inputs.locked};
         if (prKitTextChanged(kit, prKitTextField(kit, locked, lockedField, {}), &text))
-            inputs.locked.assign(text.data, text.size);
+            inputs.locked = text;
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "HISTORY", "ENTER SUBMITS . UP AND DOWN RECALL", false);
         PrLayoutNode row = captionRow(kit, panel, "COMMAND", kCaptionWidth);
         PrStringView lines[16];
         uint32_t count = 0;
-        for (const std::string& command : inputs.commands) {
+        for (const String& command : inputs.commands) {
             if (count < 16)
                 lines[count++] = command;
         }
@@ -383,7 +391,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrLayoutNode field = prKitTextField(kit, row, command, mono);
         PrStringView text{};
         if (prKitTextChanged(kit, field, &text))
-            inputs.command.assign(text.data, text.size);
+            inputs.command = text;
         // The field leaves Enter to its caller, which submits the line.
         PrUiEvents events = prUiEvents(kit->ui, field);
         for (uint32_t i = 0; i < events.count; ++i) {
@@ -391,7 +399,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
                 submitCommand(inputs);
         }
         char submitted[32];
-        prKitLabel(kit, row, {.text = format(submitted, sizeof submitted, "%zu submitted", inputs.commands.size())}, kCaption);
+        prKitLabel(kit, row, {.text = formatToBuffer(Span(submitted), "{} submitted", inputs.commands.count())}, kCaption);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "SUGGEST", "FREE TEXT . KNOWN VALUES", false);
@@ -410,7 +418,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         };
         PrStringView text{};
         if (prKitTextChanged(kit, prKitSuggestField(kit, captionRow(kit, panel, "AREA", kCaptionWidth), area, mono), &text))
-            inputs.area.assign(text.data, text.size);
+            inputs.area = text;
         uint32_t revisionCount = 0;
         const PrStringView* revisions = galleryRevisions(&revisionCount);
         PrKitSuggestField revision{
@@ -425,7 +433,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         };
         PrLayoutNode revisionRow = captionRow(kit, panel, "REVISION", kCaptionWidth);
         if (prKitTextChanged(kit, prKitSuggestField(kit, revisionRow, revision, mono), &text))
-            inputs.revision.assign(text.data, text.size);
+            inputs.revision = text;
         prKitLabel(kit, panel, {.text = "the caller filters the items, so the list shows what it hands over"},
             kBodySecondary);
     }
@@ -466,13 +474,13 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         caption(kit, notes, "NOTES");
         PrKitTextArea prose{.text = inputs.prose, .placeholder = "Notes", .rows = 5};
         if (prKitTextChanged(kit, prKitTextArea(kit, notes, prose, {}), &text))
-            inputs.prose.assign(text.data, text.size);
+            inputs.prose = text;
         PrLayoutNode code = prKitBox(kit, row, {}, cell);
         caption(kit, code, "SHADER SNIPPET");
         PrKitTextArea snippet{.text = inputs.snippet, .rows = 5};
         PrKitFieldStyle mono{.mono = true};
         if (prKitTextChanged(kit, prKitTextArea(kit, code, snippet, mono), &text))
-            inputs.snippet.assign(text.data, text.size);
+            inputs.snippet = text;
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "STYLED TEXT", "STYLE RUNS IN ONE BUFFER", false);
@@ -623,12 +631,12 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 
         PrLayoutNode readout = specimenRow(kit, panel, kPrKitSpace8, false);
         const char* const labels[] = {"BEGIN", "CHANGE", "COMMIT", "STATES", "AT"};
-        const uint32_t counts[] = {undo.begins, undo.changes, undo.commits, uint32_t(undo.history.size()), undo.cursor};
+        const uint32_t counts[] = {undo.begins, undo.changes, undo.commits, undo.history.count(), undo.cursor};
         for (uint32_t i = 0; i < 5; ++i) {
             PrKitBoxStyle column{.gap = kPrKitSpace1};
             PrLayoutNode box = prKitBox(kit, readout, {}, column);
             char value[16];
-            prKitLabel(kit, box, {.text = format(value, sizeof value, "%u", counts[i])}, kMonoStrong);
+            prKitLabel(kit, box, {.text = formatToBuffer(Span(value), "{}", counts[i])}, kMonoStrong);
             caption(kit, box, labels[i]);
         }
         PrKitButton undoButton{.text = "Undo", .icon = PrKitIconKind_Undo, .disabled = !undoAvailable(undo)};

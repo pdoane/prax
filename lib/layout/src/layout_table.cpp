@@ -2017,7 +2017,7 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
     children.count = bottomMark;
     LayoutLogicalOffset gridAt{kLayoutUnitZero, gridStart};
     pushParts(t, gridAt, definite, space.fallback);
-    children.append(bottom.data, bottom.count);
+    children.append(bottom.span());
     bottom.reset();
 
     LayoutTableOutcome outcome{};

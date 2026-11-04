@@ -211,7 +211,7 @@ struct TimelineState {
 };
 
 // The geometry of the view in one round: the seconds that it spans, and the width of the lanes at the last layout.
-struct Span {
+struct TimelineSpan {
     float start;
     float seconds;
     float width;
@@ -236,7 +236,7 @@ struct Snapped {
 
 // Returns `time` snapped to the timeline's snap sources, other than the blocks that `moving` names, or to the playhead
 // if `scrub` is true.
-Snapped snapTime(const PrKitTimeline& t, const Span& span, float time, bool scrub, bool moving) {
+Snapped snapTime(const PrKitTimeline& t, const TimelineSpan& span, float time, bool scrub, bool moving) {
     const PrKitTimelineSnap& snap = t.snap;
     float nearest = kSnapReach * span.secondsPerPx();
     float best = time;
@@ -290,7 +290,7 @@ void mark(PrKit& kit, PrLayoutNode parent, float percent, float top, float size,
 }
 
 // Creates the ruler's ticks and their labels, at the finest step that leaves room between them.
-void ticks(PrKit& kit, PrLayoutNode ruler, const Span& span) {
+void ticks(PrKit& kit, PrLayoutNode ruler, const TimelineSpan& span) {
     const PrKitPalette& p = kit.theme.palette;
     float step = kTickSteps[countOf(kTickSteps) - 1];
     for (float s : kTickSteps) {
@@ -356,7 +356,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
     PrLayoutNode ruler = prLayoutTreeFrameElement(k.tree, header, 0, kitStyle(k, LaneBox{}, KitGrow{}));
     if (editable && t.playhead != nullptr)
         prUiSetFlags(ui, ruler, PrUiFlag_Pressable);
-    Span span{.start = t.view->start, .seconds = t.view->end - t.view->start, .width = kitExtent(k, ruler).x};
+    TimelineSpan span{.start = t.view->start, .seconds = t.view->end - t.view->start, .width = kitExtent(k, ruler).x};
 
     // The wheel pans the view, and with Command or Control zooms it about the pointer.
     PrVec2 wheel{};

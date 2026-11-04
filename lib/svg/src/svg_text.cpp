@@ -186,7 +186,7 @@ struct TextStyle {
 
 // An element whose characters share a style, or a part of them that a pseudo-element styles: the part on the first line
 // of the text, under ::first-line, or the first letter, under ::first-letter (css-pseudo-4/#first-line-inheritance).
-struct Span {
+struct TextSpan {
     TextStyle style;
     const PrDomElement* element;
     const CssComputedStyle* computed;   // the element's style, or the part's
@@ -304,7 +304,7 @@ struct Layout {
     bool instance;                      // the text is in a use element's shadow tree
     RawArray<char> text;
     RawArray<TextPath> paths;
-    RawArray<Span> spans;
+    RawArray<TextSpan> spans;
     RawArray<Family> families;
     PrTextBuffer familyNames = {};
     RawArray<Char> chars;
@@ -630,7 +630,7 @@ void collect(Layout& t, const PrDomElement* element, uint32_t span) {
                 cssComputedStyleRelease(style);
             continue;
         }
-        Span inner{};
+        TextSpan inner{};
         TextStyle parentStyle = t.spans.data[span].style;
         inner.style = textStyleOf(t, e, style, &parentStyle);
         inner.element = e;
@@ -794,7 +794,7 @@ const SvgFont* PR_NULLABLE fontOfFace(Layout& t, SvgDocumentFonts* documentFonts
 }
 
 // Returns the host's text font for the span's style. Each text font is created once per build.
-PrTextFont* PR_NULLABLE hostFonts(Layout& t, const Span& span) {
+PrTextFont* PR_NULLABLE hostFonts(Layout& t, const TextSpan& span) {
     const PrSvgDrawOptions& options = *buildOf(t).options;
     if (options.fonts == nullptr || options.shaper == nullptr)
         return nullptr;
@@ -860,7 +860,7 @@ bool rangesCover(const PrFontCodePointRange* PR_NULLABLE ranges, uint32_t count,
 // fonts come before the host's, so the result is the first SVG font named by the span's families that has a glyph for
 // the character. Otherwise it is the host's face for the cluster (prTextFontMatch), which decides what sets a cluster
 // that no font serves. If the host has no face, the result is the first SVG font named, or none.
-Font fontFor(Layout& t, const Char& c, const Span& span, PrStringView cluster) {
+Font fontFor(Layout& t, const Char& c, const TextSpan& span, PrStringView cluster) {
     PrStringView text{t.text.data, t.text.count};
     uint32_t codePoint = 0;
     prUtf8Decode(text, c.offset, &codePoint);
@@ -924,7 +924,7 @@ float spacingAfter(const Layout& t, const Char& c, const TextStyle& style) {
 // the glyph placed before it.
 void setSvgRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
     const SvgFont& font = *run.font.svg;
-    const Span& span = t.spans.data[t.chars.data[run.firstChar].span];
+    const TextSpan& span = t.spans.data[t.chars.data[run.firstChar].span];
     float scale = span.style.fontSize / font.unitsPerEm;
     const Char& last = t.chars.data[run.endChar - 1];
     PrStringView text{t.text.data, last.offset + last.length};
@@ -979,7 +979,7 @@ void setSvgRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
 
 // Sets a run in a host font as the shaper shapes it, with the surrounding text as context.
 void setHostRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
-    const Span& span = t.spans.data[t.chars.data[run.firstChar].span];
+    const TextSpan& span = t.spans.data[t.chars.data[run.firstChar].span];
     float size = span.style.fontSize;
     uint32_t start = t.chars.data[run.firstChar].offset;
     const Char& last = t.chars.data[run.endChar - 1];
@@ -1653,7 +1653,7 @@ void addOutline(Layout& t, const Glyph& glyph, const PrPath* outline, PrAffine2 
 // Records the run's glyphs: a host font's glyphs, or an SVG font's outlines and the content of its glyph elements,
 // which inherits from the run's element. A glyph that a text path bends is recorded as its outline.
 void recordRun(Layout& t, const Run& run) {
-    const Span& span = t.spans.data[t.chars.data[run.firstChar].span];
+    const TextSpan& span = t.spans.data[t.chars.data[run.firstChar].span];
     const TextStyle& style = span.style;
     if (run.firstGlyph == run.endGlyph || !style.visible)
         return;
@@ -1783,7 +1783,7 @@ void dropRemoved(Layout& t) {
     kept.push(count);
     t.chars.count = count;
     t.text.clear();
-    t.text.append(text.data, text.count);
+    t.text.append(text.span());
     text.reset();
     for (uint32_t i = 0; i < t.spans.count; ++i) {
         t.spans.data[i].start = kept.data[t.spans.data[i].start];
@@ -1830,7 +1830,7 @@ void beginLayout(Layout& t, const PrDomElement* text, const CssComputedStyle* st
     textStyle.lineIncrement = lineIncrementOf(text, textStyle.lineIncrement);
     addDecoration(textStyle, svgStyleLines(style), textStyle.paints);
     PrStringView language = domElementLanguage(text);
-    t.spans.push(Span{
+    t.spans.push(TextSpan{
         .style = textStyle,
         .element = text,
         .computed = style,
@@ -2051,7 +2051,7 @@ void recordCharacters(Layout& t) {
     }
     placed.reset();
     for (uint32_t i = 0; i < t.spans.count; ++i) {
-        const Span& span = t.spans.data[i];
+        const TextSpan& span = t.spans.data[i];
         if (span.of != kArrayMissing)
             continue;
         const SvgPaints& paints = span.style.paints;
@@ -2310,7 +2310,7 @@ void addLineParts(Layout& t, const CssComputedStyle* line) {
     uint32_t count = t.spans.count;
     RawArray<uint32_t> parts;
     for (uint32_t i = 0; i < count; ++i) {
-        Span part = t.spans.data[i];
+        TextSpan part = t.spans.data[i];
         // The line's own part sits between the text and its content.
         uint32_t parent = i == 0 ? 0 : parts.data[part.parent];
         part.computed = i == 0 ? line : svgBuildStyleUnder(*t.b, part.element, t.spans.data[parent].computed);
@@ -2358,7 +2358,7 @@ void addLetterPart(Layout& t, const PrDomElement* text) {
         svgBuildPseudoStyleUnder(*t.b, text, CssPseudo_FirstLetter, t.spans.data[span].computed);
     if (letter == nullptr)
         return;
-    Span part = t.spans.data[span];
+    TextSpan part = t.spans.data[span];
     TextStyle parentStyle = part.style;
     part.style = textStyleOf(t, part.element, letter, &parentStyle);
     part.style.orientation = parentStyle.orientation;
@@ -2619,7 +2619,7 @@ void layoutTextArea(Layout& t, const PrDomElement* area, const CssComputedStyle*
     float start = width < 0 || align == Anchor_Start ? x : align == Anchor_Middle ? x + width / 2 : x + width;
     Anchor textAlign = own.textAlign;
     for (uint32_t i = 0; i < t.spans.count; ++i) {
-        Span& span = t.spans.data[i];
+        TextSpan& span = t.spans.data[i];
         span.style.textAnchor = textAlign;
     }
     for (uint32_t l = 0; l < lines; ++l) {

@@ -3,7 +3,7 @@
 #include "pr/thread.h"
 #include "pr/time.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

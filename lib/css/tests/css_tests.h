@@ -12,7 +12,7 @@
 #include "css/src/css_object.h"
 #include "css/src/css_syntax.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

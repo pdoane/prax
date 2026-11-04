@@ -3,7 +3,7 @@
 #include "compress/backends/builtin/src/brotli.h"
 #include "compress/backends/builtin/src/brotli_tables.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <algorithm>
 #include <string>

@@ -6,6 +6,7 @@
 #include "examples/browser/icons.h"
 
 #include "pr/fetch_load.h"
+#include "pr/string.h"
 
 namespace browser {
 
@@ -83,8 +84,8 @@ PrCache* iconsCreate(Browser& b) {
     return prCacheCreate(&desc);
 }
 
-const PrDrawImage* PR_NULLABLE iconsGet(Browser& b, const std::string& url) {
-    if (url.empty())
+const PrDrawImage* PR_NULLABLE iconsGet(Browser& b, const String& url) {
+    if (url.isEmpty())
         return nullptr;
     return static_cast<const PrDrawImage*>(prCacheValue(b.icons, url));
 }

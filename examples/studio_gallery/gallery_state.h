@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/color.h"
 #include "pr/draw_image.h"
 #include "pr/kit_collection.h"
@@ -11,16 +12,17 @@
 #include "pr/kit_text.h"
 #include "pr/kit_timeline.h"
 #include "pr/layout_tree.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_edit.h"
 
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace gallery {
+
+using namespace pr;
 
 // The sections of the gallery, in page order. The sidebar lists them, and the content records the node of each.
 enum {
@@ -82,9 +84,9 @@ struct CommandItem {
 
 // A node of the scene tree, flattened in preorder with its depth.
 struct TreeNode {
-    std::string name;
-    std::string meta;
-    std::string badge;              // a status shown in place of the icon, or empty
+    String name;
+    String meta;
+    String badge;              // a status shown in place of the icon, or empty
     uint32_t depth = 0;
     uint32_t key = 0;               // the node's identity, which a move keeps
     PrKitIconKind icon = PrKitIconKind_None;
@@ -126,8 +128,8 @@ struct UndoSnapshot {
 struct UndoState {
     UndoSnapshot values;
     UndoSnapshot opened;
-    std::vector<UndoSnapshot> history;  // oldest first
-    uint32_t cursor = 0;                // the state that `values` is
+    Array<UndoSnapshot> history;  // oldest first
+    uint32_t cursor = 0;          // the state that `values` is
     uint32_t begins = 0;
     uint32_t changes = 0;
     uint32_t commits = 0;
@@ -136,17 +138,17 @@ struct UndoState {
 
 // The text, numeric, vector and color values of the inputs section.
 struct InputsState {
-    std::string name = "MainCamera";
-    std::string search = "level_01";
-    std::string locked = "Locked";
-    std::string command;
-    std::string area = "lib/gpu";
-    std::string revision = "main";
-    std::string prose;
-    std::string snippet;
+    String name = "MainCamera";
+    String search = "level_01";
+    String locked = "Locked";
+    String command;
+    String area = "lib/gpu";
+    String revision = "main";
+    String prose;
+    String snippet;
     PrTextEditBuffer* styled = nullptr;     // the text of the styled area, whose styles index kStyledLooks
     PrTextEditHistory* styledHistory = nullptr;
-    std::vector<std::string> commands;      // submitted lines, oldest first
+    Array<String> commands;      // submitted lines, oldest first
     float uv[2] = {0.5f, 0.5f};
     float position[3] = {1.234f, 0.0f, -4.5f};
     float rotation[3] = {0.0f, 90.0f, 0.0f};
@@ -171,8 +173,8 @@ struct InputsState {
 
 // The property panel that the inspector section edits.
 struct InspectorState {
-    std::string name = "Player";
-    std::string meshRef = "player_base.mesh";
+    String name = "Player";
+    String meshRef = "player_base.mesh";
     float position[3] = {1.234f, 0.0f, -4.5f};
     float rotation[3] = {0.0f, 90.0f, 0.0f};
     float scale[3] = {1.0f, 1.0f, 1.0f};
@@ -194,18 +196,18 @@ struct InspectorState {
 struct TableState {
     PrKitTableSort sort{.column = AssetSort_Name};
     PrKitSelection cursor{.anchor = 1, .lead = 1};
-    std::vector<uint32_t> selection = {1};      // assets, sorted
+    Array<uint32_t> selection = Array<uint32_t>({1u}); // assets, sorted
 };
 
 // The command palette's query and selected command.
 struct PaletteState {
-    std::string query;
+    String query;
     uint32_t active = 0;
 };
 
 // What the menu specimens chose.
 struct MenuState {
-    std::string verb;
+    String verb;
     uint32_t component = 0;
     uint32_t clip = 34;
     uint32_t outsideClicks = 0;
@@ -233,9 +235,9 @@ struct ToolbarState {
 
 // The scene tree, its visible rows in display order, and its selection.
 struct TreeState {
-    std::vector<TreeNode> nodes;
-    std::vector<PrKitTreeItem> rows;    // the visible rows
-    std::vector<uint32_t> keys;         // the node of each visible row
+    Array<TreeNode> nodes;
+    Array<PrKitTreeItem> rows;    // the visible rows
+    Array<uint32_t> keys;         // the node of each visible row
     PrKitSelection cursor = {};
     uint32_t selected = 6;
 };
@@ -264,8 +266,8 @@ constexpr uint32_t kCollectionGroupSize = 100;
 
 // A generated asset of the collection.
 struct CollectionAsset {
-    std::string name;
-    std::string sizeText;
+    String name;
+    String sizeText;
     const char* type = "";
     uint64_t sizeBytes = 0;
     PrColor tint = {};
@@ -274,13 +276,13 @@ struct CollectionAsset {
 
 // The collection's assets, each view's selection and cursor, and what its context menu did.
 struct CollectionsState {
-    std::vector<CollectionAsset> assets;
-    std::vector<uint32_t> selection;        // assets, sorted
-    std::vector<uint32_t> treeSelection;    // tree keys (collectionTreeKey)
-    std::vector<PrKitTreeItem> treeRows;
-    std::vector<uint32_t> treeKeys;
-    std::vector<uint8_t> groupOpen;
-    std::string verb;
+    Array<CollectionAsset> assets;
+    Array<uint32_t> selection;        // assets, sorted
+    Array<uint32_t> treeSelection;    // tree keys (collectionTreeKey)
+    Array<PrKitTreeItem> treeRows;
+    Array<uint32_t> treeKeys;
+    Array<uint8_t> groupOpen;
+    String verb;
     PrKitSelection cursor = {};
     PrKitSelection treeCursor = {};
     uint32_t contextIndex = 0;
@@ -291,11 +293,11 @@ struct CollectionsState {
 // the toolbar turns on, and the undo state that the edit sink records. A gesture copies the blocks that it opens on,
 // and one that changed them becomes the state that Undo restores.
 struct TimelineState {
-    std::vector<PrKitTimelineTrack> tracks;
-    std::vector<PrKitTimelineBlock> blocks;
-    std::vector<PrKitTimelineMarker> markers;
-    std::vector<PrKitTimelineBlock> opened;
-    std::vector<PrKitTimelineBlock> undo;
+    Array<PrKitTimelineTrack> tracks;
+    Array<PrKitTimelineBlock> blocks;
+    Array<PrKitTimelineMarker> markers;
+    Array<PrKitTimelineBlock> opened;
+    Array<PrKitTimelineBlock> undo;
     PrKitTimeSpan view = {0, 8};
     PrKitTimeSpan inspectorView = {0, 8};   // the read-only timeline's own view
     PrKitTimeSpan loop = {2, 6};
@@ -324,8 +326,8 @@ typedef uint32_t PortType;
 
 // The graph section's material: its nodes and wires, and the view.
 struct GraphState {
-    std::vector<PrKitGraphNode> nodes;
-    std::vector<PrKitGraphWire> wires;
+    Array<PrKitGraphNode> nodes;
+    Array<PrKitGraphWire> wires;
     PrKitGraphView view = {{16, 8}, 1};
     uint64_t nextWireId = 1;
 };
@@ -353,8 +355,8 @@ struct GalleryState {
     KeysState keys;
     ProgressState progress;
     CollectionsState collections;
-    std::vector<std::string> chips;
-    std::string filter;
+    Array<String> chips;
+    String filter;
     PrColor color = {.42f, .55f, .78f, 1.0f};
 
     // The colors of the pickers in sRGB, Display P3 and Rec. 2020, each starting at P3's green primary in extended
@@ -411,7 +413,7 @@ const PrStringView* galleryRevisions(uint32_t* count);
 void submitCommand(InputsState& inputs);
 
 // Returns true if the command's label or category holds `query`, ignoring case. An empty query matches every command.
-bool commandMatches(const CommandItem& item, const std::string& query);
+bool commandMatches(const CommandItem& item, PrStringView query);
 
 // Begins an edit gesture, copying the values it opens on.
 void undoBegin(UndoState& undo);
@@ -441,11 +443,11 @@ void moveTreeNode(TreeState& tree, uint32_t key, uint32_t targetKey, TreePlaceme
 void treeOrder(TreeState& tree);
 
 // Returns true if `selection` holds `value`.
-bool selectionHolds(const std::vector<uint32_t>& selection, uint32_t value);
+bool selectionHolds(const Array<uint32_t>& selection, uint32_t value);
 
 // Applies a view's edit to a selection of values. `keys` gives the value of each row, or is null if a row's index is
 // its value.
-void selectionApply(std::vector<uint32_t>& selection, const PrKitSelectionEdit& edit, const uint32_t* PR_NULLABLE keys);
+void selectionApply(Array<uint32_t>& selection, const PrKitSelectionEdit& edit, const uint32_t* PR_NULLABLE keys);
 
 // Finds the collection tree's visible rows: each group, and the assets of each open group.
 void collectionsTreeOrder(CollectionsState& collections);

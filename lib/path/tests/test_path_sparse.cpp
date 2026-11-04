@@ -1,8 +1,9 @@
 #include "pr/path_rasterizer.h"
 #include "pr/path_sparse.h"
+#include "pr/random.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <cstdint>
@@ -12,26 +13,17 @@ namespace pr_impl {
 
 namespace {
 
-struct Random {
-    uint64_t state;
-
-    float next() {
-        state = state * 6364136223846793005ull + 1442695040888963407ull;
-        return float((state >> 40) & 0xffffff) / float(0x1000000);
-    }
-};
-
 // Returns a path of closed contours through random points within `size`, some of them curves.
-PrPath* randomPath(Random& random, float size) {
+PrPath* randomPath(PrRandom& random, float size) {
     PrPath* path = prPathCreate();
-    int contours = 1 + int(random.next() * 3);
+    int contours = 1 + int(prRandomF32(&random) * 3);
     for (int c = 0; c < contours; ++c) {
-        prPathMoveTo(path, PrVec2{random.next() * size, random.next() * size});
-        int n = 2 + int(random.next() * 8);
+        prPathMoveTo(path, PrVec2{prRandomF32(&random) * size, prRandomF32(&random) * size});
+        int n = 2 + int(prRandomF32(&random) * 8);
         for (int i = 0; i < n; ++i) {
-            PrVec2 p{random.next() * size, random.next() * size};
-            if (random.next() < 0.3f)
-                prPathQuadTo(path, PrVec2{random.next() * size, random.next() * size}, p);
+            PrVec2 p{prRandomF32(&random) * size, prRandomF32(&random) * size};
+            if (prRandomF32(&random) < 0.3f)
+                prPathQuadTo(path, PrVec2{prRandomF32(&random) * size, prRandomF32(&random) * size}, p);
             else
                 prPathLineTo(path, p);
         }
@@ -157,19 +149,19 @@ TEST_CASE("sparse spans cover each pixel as the rasterizer does") {
         {PrPathSparseKind_Segments, {8, 4}},
         {PrPathSparseKind_Coverage, {16, 2}},
     };
-    Random random{2024};
+    PrRandom random = {.state = 2024};
     for (const PrPathSparseRasterizerOptions& options : kinds) {
         PrPathSparseRasterizer* rasterizer = prPathSparseRasterizerCreate(&options);
         PrPathPolyline polyline{};
         for (int trial = 0; trial < 60; ++trial) {
             PrPath* path = randomPath(random, 120);
             PrPathFillRule rule = trial % 2 == 0 ? PrPathFillRule_NonZero : PrPathFillRule_EvenOdd;
-            PrAffine2 transform = prAffine2Translate(PrVec2{random.next() * 3 - 1.5f, random.next() * 3 - 1.5f});
+            PrAffine2 transform = prAffine2Translate(PrVec2{prRandomF32(&random) * 3 - 1.5f, prRandomF32(&random) * 3 - 1.5f});
             // A box that cuts the path on some sides.
-            int32_t left = int32_t(random.next() * 30) - 10;
-            int32_t top = int32_t(random.next() * 30) - 10;
-            uint32_t width = 60 + uint32_t(random.next() * 80);
-            uint32_t height = 60 + uint32_t(random.next() * 80);
+            int32_t left = int32_t(prRandomF32(&random) * 30) - 10;
+            int32_t top = int32_t(prRandomF32(&random) * 30) - 10;
+            uint32_t width = 60 + uint32_t(prRandomF32(&random) * 80);
+            uint32_t height = 60 + uint32_t(prRandomF32(&random) * 80);
             PrIRect box{left, top, left + int32_t(width), top + int32_t(height)};
             PrPathSparse sparse{};
             fillPath(rasterizer, polyline, path, transform, rule, box, &sparse);

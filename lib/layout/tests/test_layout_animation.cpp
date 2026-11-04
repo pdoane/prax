@@ -1,6 +1,6 @@
 #include "pr/layout_animation.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 

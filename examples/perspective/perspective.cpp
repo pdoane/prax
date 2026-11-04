@@ -13,11 +13,14 @@
 // renderer owns (PrDrawBeneath).
 
 #include "pr/app.h"
+#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/compress.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_image.h"
 #include "pr/draw_renderer.h"
+#include "pr/file.h"
+#include "pr/float.h"
 #include "pr/font_bundle.h"
 #include "pr/gpu.h"
 #include "pr/image.h"
@@ -31,19 +34,15 @@
 #include "pr/layout_frame.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_unit.h"
+#include "pr/print.h"
 #include "pr/text.h"
 
 #include "examples/perspective/perspective_gpu.h"
 
-#include <cmath>
-#include <cstdio>
-#include <fstream>
-#include <iterator>
-#include <vector>
-
 namespace {
 
 using namespace perspective;
+using namespace pr;
 
 constexpr uint32_t kPanels = 4;
 
@@ -158,7 +157,7 @@ void paintPicture(void* context, PrVec2 size, PrDrawList* list) {
     if (p.picture == nullptr)
         return;
     PrUVec2 natural = prDrawImageExtent(p.picture);
-    float fit = std::fmax(size.x / float(natural.x), size.y / float(natural.y));
+    float fit = prF32Max(size.x / float(natural.x), size.y / float(natural.y));
     PrVec2 drawn{float(natural.x) * fit, float(natural.y) * fit};
     PrRect at{(size.x - drawn.x) / 2, (size.y - drawn.y) / 2, (size.x + drawn.x) / 2, (size.y + drawn.y) / 2};
     PrDrawSource source = prDrawSourceImage(p.picture, PrRect{0, 0, float(natural.x), float(natural.y)});
@@ -228,10 +227,10 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
         ++p.presses[index];
     prKitSlider(kit, line, {.value = prKitScalarF32(&p.sliders[index]), .min = 0, .max = 1}, {});
     char counted[64];
-    int written = snprintf(counted, sizeof counted, "%s x%u, slider %.2f", text.action, p.presses[index],
-        double(p.sliders[index]));
+    PrStringView written = formatToBuffer(Span(counted), "{} x{}, slider {:.2f}", text.action, p.presses[index],
+        p.sliders[index]);
     PrKitTextStyle meta{.role = PrKitTextRole_Meta, .tone = PrKitTone_Muted};
-    prKitLabel(kit, content, {.text = PrStringView{counted, size_t(written > 0 ? written : 0)}}, meta);
+    prKitLabel(kit, content, {.text = written}, meta);
 }
 
 // Declares the round: a header with the backdrop's toggle, and the row of panels in perspective.
@@ -317,13 +316,16 @@ bool openPanels(Panels& p) {
     p.frosted = prDrawFilterCreate(builder);
     prDrawFilterBuilderDestroy(builder);
 
-    std::ifstream file(PR_PERSPECTIVE_PICTURE, std::ios::binary);
-    std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    PrFileMapping file = {};
+    if (!prFileMap(PR_PERSPECTIVE_PICTURE, &file))
+        return false;
     PrCompressCodec* compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
     PrImageCodec* images = prImageCodecCreate(PrImageCodecBackend_Default, compress);
+    PrByteView bytes{file.data, file.size};
     bool read = prDrawImageCreateFromBytes(images, bytes, &p.picture, nullptr) == PrStatus_Ok;
     prImageCodecDestroy(images);
     prCompressCodecDestroy(compress);
+    prFileUnmap(&file);
     return read;
 }
 
@@ -348,7 +350,7 @@ struct Window {
     PrKit* kit = nullptr;
     const PrLayoutScene* scene = nullptr;   // the scene of the last frame, which its list plays
     PrDrawList* list = nullptr;
-    std::vector<PrLayoutSceneScroll> scrolls;
+    Array<PrLayoutSceneScroll> scrolls;
 
     PrApp* app = nullptr;
     PrGpuDevice* device = nullptr;
@@ -502,7 +504,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     Window& w = *static_cast<Window*>(context);
     w.app = app;
     if (!openDevice(w)) {
-        fprintf(stderr, "perspective: no GPU device to render with\n");
+        printError("perspective: no GPU device to render with\n");
         prAppStop(app);
         return;
     }
@@ -539,19 +541,16 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     prLayoutSceneRelease(w.scene);
     w.scene = scene;
     w.scrolls.resize(prLayoutSceneScrolls(w.tree, scene, nullptr, 0));
-    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), uint32_t(w.scrolls.size()));
+    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), w.scrolls.count());
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
     options.scrolls = w.scrolls.data();
-    options.scrollCount = uint32_t(w.scrolls.size());
+    options.scrollCount = w.scrolls.count();
     prDrawListClear(w.list);
     prDrawListPushTransformAffine2(w.list, prAffine2Scale(PrVec2{w.pixelRatio, w.pixelRatio}));
     prLayoutScenePlay(scene, w.list, &options);
     prDrawListPopTransform(w.list);
 
-    PrUVec2 extent{
-        uint32_t(std::lround(f->extent.x * w.pixelRatio)),
-        uint32_t(std::lround(f->extent.y * w.pixelRatio)),
-    };
+    PrUVec2 extent{uint32_t(prF32Round(f->extent.x * w.pixelRatio)), uint32_t(prF32Round(f->extent.y * w.pixelRatio))};
     if (extent.x != 0 && extent.y != 0)
         render(w, extent);
     // The background moves in every frame.
@@ -580,10 +579,10 @@ int main() {
     prCrashHandler();
     static Window w;
     if (!openPanels(w.panels))
-        fprintf(stderr, "perspective: the picture at %s could not be read\n", PR_PERSPECTIVE_PICTURE);
+        printError("perspective: the picture at {} could not be read\n", PR_PERSPECTIVE_PICTURE);
     w.fonts = prFontSetCreate(nullptr);
     if (prFontBundleInstall(w.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR) == 0) {
-        fprintf(stderr, "perspective: the fonts under %s could not be installed\n", PR_FONT_BUNDLE_DIR);
+        printError("perspective: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
         return 1;
     }
     w.shaper = prTextShaperCreate(PrTextShaperBackend_Default);

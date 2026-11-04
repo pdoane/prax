@@ -1,7 +1,7 @@
 #include "pr/html_entity.h"
 #include "pr/string_ops.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 extern "C" int prTestEntityCApi(void);
 

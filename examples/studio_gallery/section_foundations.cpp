@@ -383,7 +383,7 @@ void sectionIcons(PrKit* kit, PrLayoutNode parent) {
         PrLayoutNode cell = prKitBox(kit, row, {}, column);
         prKitIcon(kit, cell, {.icon = PrKitIconKind_Atlas}, {.size = size, .tone = PrKitTone_Accent});
         char label[8];
-        prKitLabel(kit, cell, {.text = format(label, sizeof label, "%dpx", int(size))}, kMeta);
+        prKitLabel(kit, cell, {.text = formatToBuffer(Span(label), "{}px", int(size))}, kMeta);
     }
     PrLayoutNode legend = prKitBox(kit, sizes, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
     prKitLabel(kit, legend, {.text = "prKitIconName"}, kMonoStrong);

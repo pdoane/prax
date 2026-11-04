@@ -2,7 +2,7 @@
 #include "pr/audio_apple.h"
 #include "pr/thread.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 using namespace pr_impl;
 

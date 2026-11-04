@@ -11,7 +11,7 @@
 #include "pr/text_coretext.h"
 #endif
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <cstdio>

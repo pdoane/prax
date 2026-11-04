@@ -4,7 +4,7 @@
 #include "pr/gpu.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdint>
 #include <string>

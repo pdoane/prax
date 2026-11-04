@@ -1,6 +1,6 @@
 #include "pr/font_set.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <string>

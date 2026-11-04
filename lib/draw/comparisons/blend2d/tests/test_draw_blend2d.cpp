@@ -2,7 +2,7 @@
 #include "pr/draw_cpu.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdlib>
 #include <vector>

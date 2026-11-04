@@ -2,15 +2,13 @@
 
 #include "examples/alchemy/prompt_text.h"
 
+#include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/float.h"
+#include "pr/float_convert.h"
+#include "pr/min_max.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
-
-#include "examples/alchemy/text.h"
-
-#include <algorithm>
-#include <cmath>
-#include <stdio.h>
-#include <stdlib.h>
 
 namespace alchemy {
 
@@ -42,27 +40,26 @@ bool isDelimiter(PrStringView text, uint32_t pos) {
 }
 
 // Appends `weight` with two decimals and without trailing zeros: 1.15, 1.1, 1.
-void appendWeight(std::string& out, double weight) {
+void appendWeight(String& out, double weight) {
     char buffer[32];
-    snprintf(buffer, sizeof(buffer), "%.2f", weight);
-    std::string text = buffer;
-    while (!text.empty() && text.back() == '0')
-        text.pop_back();
-    if (!text.empty() && text.back() == '.')
-        text.pop_back();
-    out += text;
+    PrStringView text = formatToBuffer(Span(buffer), "{:.2f}", weight);
+    while (prStringEndsWith(text, "0"))
+        text = prStringSlice(text, 0, text.size - 1);
+    if (prStringEndsWith(text, "."))
+        text = prStringSlice(text, 0, text.size - 1);
+    out.append(text);
 }
 
 double roundWeight(double weight) {
-    return std::round(weight * 100.0) / 100.0;
+    return prF64Round(weight * 100.0) / 100.0;
 }
 
-void appendGroup(std::string& out, PrStringView inner, double weight) {
-    out += '(';
-    out.append(inner.begin(), inner.end());
-    out += ':';
+void appendGroup(String& out, PrStringView inner, double weight) {
+    out.append('(');
+    out.append(inner);
+    out.append(':');
     appendWeight(out, weight);
-    out += ')';
+    out.append(')');
 }
 
 // Splits a group's content into its text and its weight. Only the last colon can name the weight, and content whose
@@ -71,12 +68,11 @@ bool splitWeight(PrStringView content, PrStringView* inner, double* weight) {
     size_t colon = prStringFindLastByte(content, ':');
     if (colon == content.size || colon == 0)
         return false;
-    std::string tail = stringOf(prStringTrim(prStringSlice(content, colon + 1, content.size - colon - 1)));
-    if (tail.empty())
+    PrStringView tail = prStringTrim(prStringSlice(content, colon + 1, content.size - colon - 1));
+    if (tail.isEmpty())
         return false;
-    char* end = nullptr;
-    double parsed = strtod(tail.c_str(), &end);
-    if (end != tail.c_str() + tail.size() || !std::isfinite(parsed))
+    double parsed = 0;
+    if (prF64ParsePrefix(tail, &parsed) != tail.size || !prF64IsFinite(parsed))
         return false;
     *inner = prStringSlice(content, 0, colon);
     *weight = parsed;
@@ -168,8 +164,8 @@ void expandToWord(PrStringView text, uint32_t* start, uint32_t* end) {
 } // namespace
 
 bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, double delta, WeightEdit* out) {
-    uint32_t start = std::min(selectionStart, uint32_t(text.size));
-    uint32_t end = std::min(selectionEnd, uint32_t(text.size));
+    uint32_t start = min(selectionStart, uint32_t(text.size));
+    uint32_t end = min(selectionEnd, uint32_t(text.size));
     if (start == end) {
         Group enclosing;
         if (findEnclosingGroup(text, start, &enclosing)) {
@@ -202,7 +198,7 @@ bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t sel
         if (group.weight > 0.0 && adjusted < 0.0)
             adjusted = 0.0;
         if (adjusted == 1.0)
-            out->text = stringOf(groupInner(text, group));
+            out->text = groupInner(text, group);
         else
             appendGroup(out->text, groupInner(text, group), adjusted);
         return true;
@@ -217,12 +213,12 @@ bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t sel
     return true;
 }
 
-std::vector<PrStringView> promptLines(PrStringView prompt) {
-    std::vector<PrStringView> lines;
+Array<PrStringView> promptLines(PrStringView prompt) {
+    Array<PrStringView> lines;
     PrStringView text = prStringTrim(prompt);
     while (text.size != 0) {
         size_t newline = prStringFindByte(text, '\n');
-        lines.push_back(prStringSlice(text, 0, newline));
+        lines.push(prStringSlice(text, 0, newline));
         if (newline == text.size)
             break;
         text = prStringSlice(text, newline + 1, text.size - newline - 1);
@@ -230,34 +226,34 @@ std::vector<PrStringView> promptLines(PrStringView prompt) {
     return lines;
 }
 
-std::string promptAppendLine(PrStringView prompt, PrStringView line) {
-    std::string out = stringOf(prompt);
-    if (!out.empty())
-        out += '\n';
-    out.append(line.begin(), line.end());
+String promptAppendLine(PrStringView prompt, PrStringView line) {
+    String out = prompt;
+    if (!out.isEmpty())
+        out.append('\n');
+    out.append(line);
     return out;
 }
 
 PrStringView embeddingName(PrStringView filename) {
-    for (PrStringView extension : {".safetensors", ".ckpt", ".pt", ".pth", ".bin"}) {
+    const PrStringView extensions[] = {".safetensors", ".ckpt", ".pt", ".pth", ".bin"};
+    for (PrStringView extension : extensions) {
         if (prAsciiEndsWithFold(filename, extension))
             return prStringSlice(filename, 0, filename.size - extension.size);
     }
     return filename;
 }
 
-std::string embeddingInsertText(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd,
-        PrStringView filename) {
-    uint32_t begin = std::min(selectionStart, uint32_t(text.size));
-    uint32_t end = std::min(selectionEnd, uint32_t(text.size));
-    std::string out;
+String embeddingInsertText(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, PrStringView filename) {
+    uint32_t begin = min(selectionStart, uint32_t(text.size));
+    uint32_t end = min(selectionEnd, uint32_t(text.size));
+    String out;
     if (begin > 0 && !prAsciiIsSpace(text.data[begin - 1]))
-        out += ' ';
-    out += "embedding:";
+        out.append(' ');
+    out.append("embedding:");
     PrStringView name = embeddingName(filename);
-    out.append(name.begin(), name.end());
+    out.append(name);
     if (end < text.size && !prAsciiIsSpace(text.data[end]))
-        out += ' ';
+        out.append(' ');
     return out;
 }
 

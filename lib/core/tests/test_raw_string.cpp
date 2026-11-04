@@ -1,6 +1,6 @@
 #include "pr/raw_string.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 #include <string.h>
@@ -280,4 +280,31 @@ TEST_CASE("string replacement can copy a view of its current storage") {
         CHECK(prRawStringView(&string) == PrStringView{text + 1, strlen(text) - 1});
         prRawStringReset(&string);
     }
+}
+
+TEST_CASE("clear empties a string and keeps the storage that it owns") {
+    PrRawString owned = prRawStringCopy(pattern(100));
+    const char* storage = owned.heap.data;
+    prRawStringClear(&owned);
+    CHECK(prRawStringKind(&owned) == PrRawStringKind_Owned);
+    CHECK(prRawStringIsEmpty(&owned));
+    CHECK(!prRawStringIsNull(&owned));
+    prRawStringAppend(&owned, "again");
+    CHECK(owned.heap.data == storage);
+    CHECK(prRawStringView(&owned) == "again");
+    prRawStringReset(&owned);
+
+    PrRawString small = prRawStringCopy("short");
+    prRawStringClear(&small);
+    CHECK(prRawStringKind(&small) == PrRawStringKind_Inline);
+    CHECK(prRawStringIsEmpty(&small));
+
+    PrRawString external = prRawStringExternal("text");
+    prRawStringClear(&external);
+    CHECK(prRawStringIsEmpty(&external));
+    CHECK(!prRawStringIsNull(&external));
+
+    PrRawString null = prRawStringNull();
+    prRawStringClear(&null);
+    CHECK(prRawStringIsNull(&null));
 }

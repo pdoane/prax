@@ -2,14 +2,15 @@
 
 #include "examples/alchemy/commands.h"
 
+#include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/count_of.h"
+#include "pr/lock.h"
+#include "pr/min_max.h"
+#include "pr/string.h"
 #include "pr/ui_text_edit.h"
 
 #include "examples/alchemy/prompt_text.h"
-#include "examples/alchemy/text.h"
-
-#include <cmath>
 
 namespace alchemy {
 
@@ -72,7 +73,7 @@ int focusedPrompt(const Shell& s) {
     return -1;
 }
 
-std::string& promptText(Shell& s, int field) {
+String& promptText(Shell& s, int field) {
     return field == 0 ? s.state->params.prompt : s.state->params.negativePrompt;
 }
 
@@ -82,15 +83,15 @@ void adjustWeight(Shell& s, int steps) {
     if (field < 0)
         return;
     PrUi* ui = s.ui;
-    std::string& text = promptText(s, field);
+    String& text = promptText(s, field);
     PrUiTextSelection selection = prUiTextEditSelection(ui, s.promptFields[field]);
-    uint32_t start = std::min(selection.anchor, selection.caret);
-    uint32_t end = std::max(selection.anchor, selection.caret);
+    uint32_t start = min(selection.anchor, selection.caret);
+    uint32_t end = max(selection.anchor, selection.caret);
     WeightEdit edit;
     if (!promptWeightAdjust(text, start, end, steps * kPromptWeightStep, &edit))
         return;
     text.replace(edit.begin, edit.end - edit.begin, edit.text);
-    uint32_t written = edit.begin + uint32_t(edit.text.size());
+    uint32_t written = edit.begin + edit.text.count();
     prUiTextEditSetSelection(ui, s.promptFields[field], PrUiTextSelection{.anchor = edit.begin, .caret = written});
 }
 
@@ -118,7 +119,7 @@ constexpr PrCommandParam kUse[] = {
 
 void runInsertEmbedding(Shell& s, const PrCommandArgs* args) {
     PrStringView part = prCommandArgsString(args, "name", "");
-    for (const std::string& name : s.state->catalog.embeddings) {
+    for (const String& name : s.state->catalog.embeddings) {
         if (prAsciiContainsFold(name, part)) {
             insertEmbedding(s, prCommandArgsBool(args, "negative", false) ? 1 : 0, name);
             return;
@@ -137,7 +138,7 @@ void runUse(Shell& s, const PrCommandArgs* args) {
 }
 
 void copyImage(Shell& s) {
-    std::vector<uint8_t> pixels;
+    Array<uint8_t> pixels;
     PrUVec2 extent = selectedPixels(*s.state, &pixels);
     bool copied = extent.x != 0 && s.app != nullptr &&
         prAppSetClipboardImage(s.app, PrPixelView{pixels.data(), size_t(extent.x) * 4, extent}) == PrStatus_Ok;
@@ -175,8 +176,8 @@ constexpr PrCommandParam kParameters[] = {
 };
 
 // Returns the first of `names` that contains `part`, or `current` if none does.
-std::string matchName(const std::vector<std::string>& names, PrStringView part, const std::string& current) {
-    for (const std::string& name : names) {
+String matchName(const Array<String>& names, PrStringView part, PrStringView current) {
+    for (const String& name : names) {
         if (prAsciiContainsFold(name, part))
             return name;
     }
@@ -189,9 +190,9 @@ void setParameters(Shell& s, const PrCommandArgs* args) {
     if (prCommandArgsHas(args, "mode"))
         st.mode = parseMode(prCommandArgsString(args, "mode", ""), st.mode);
     if (prCommandArgsHas(args, "prompt"))
-        p.prompt = stringOf(prCommandArgsString(args, "prompt", ""));
+        p.prompt = prCommandArgsString(args, "prompt", "");
     if (prCommandArgsHas(args, "negative"))
-        p.negativePrompt = stringOf(prCommandArgsString(args, "negative", ""));
+        p.negativePrompt = prCommandArgsString(args, "negative", "");
     if (prCommandArgsHas(args, "checkpoint"))
         p.checkpoint = matchName(st.catalog.checkpoints, prCommandArgsString(args, "checkpoint", ""), p.checkpoint);
     if (prCommandArgsHas(args, "sampler"))
@@ -199,20 +200,20 @@ void setParameters(Shell& s, const PrCommandArgs* args) {
     if (prCommandArgsHas(args, "scheduler"))
         p.scheduler = matchName(st.catalog.schedulers, prCommandArgsString(args, "scheduler", ""), p.scheduler);
     if (prCommandArgsHas(args, "steps"))
-        p.steps = uint32_t(std::clamp(prCommandArgsNumber(args, "steps", p.steps), 1.0, 150.0));
+        p.steps = uint32_t(clamp(prCommandArgsNumber(args, "steps", p.steps), 1.0, 150.0));
     if (prCommandArgsHas(args, "cfg"))
-        p.cfg = std::clamp(prCommandArgsNumber(args, "cfg", p.cfg), 1.0, 30.0);
+        p.cfg = clamp(prCommandArgsNumber(args, "cfg", p.cfg), 1.0, 30.0);
     if (prCommandArgsHas(args, "seed")) {
         double seed = prCommandArgsNumber(args, "seed", 0);
         p.seed = seed > 0 && seed < 9007199254740992.0 ? uint64_t(seed) : 0;
         p.seedLocked = true;
     }
     if (prCommandArgsHas(args, "batch"))
-        p.batch = uint32_t(std::clamp(prCommandArgsNumber(args, "batch", p.batch), 1.0, 8.0));
+        p.batch = uint32_t(clamp(prCommandArgsNumber(args, "batch", p.batch), 1.0, 8.0));
     if (prCommandArgsHas(args, "width") || prCommandArgsHas(args, "height")) {
         setCustomSize(st.dims, true);
-        st.dims.size.width = uint32_t(std::clamp(prCommandArgsNumber(args, "width", st.dims.size.width), 64.0, 4096.0));
-        st.dims.size.height = uint32_t(std::clamp(prCommandArgsNumber(args, "height", st.dims.size.height), 64.0, 4096.0));
+        st.dims.size.width = uint32_t(clamp(prCommandArgsNumber(args, "width", st.dims.size.width), 64.0, 4096.0));
+        st.dims.size.height = uint32_t(clamp(prCommandArgsNumber(args, "height", st.dims.size.height), 64.0, 4096.0));
     }
 }
 
@@ -229,10 +230,10 @@ void reportStatus(Shell& s, const PrCommandArgs* args) {
     prJsonWriterKey(w, "runs");
     prJsonWriterNumber(w, runsInFlight(st));
     prJsonWriterKey(w, "images");
-    prJsonWriterNumber(w, double(st.gallery.entries.size()));
+    prJsonWriterNumber(w, double(st.gallery.entries.count()));
     const GalleryEntry* selected = gallerySelected(st.gallery);
     prJsonWriterKey(w, "selected");
-    prJsonWriterString(w, selected != nullptr ? selected->path : std::string());
+    prJsonWriterString(w, selected != nullptr ? selected->path : String());
     prJsonWriterEndObject(w);
 }
 
@@ -329,7 +330,7 @@ constexpr CommandSpec kSpecs[] = {
         .title = "Clear the Source Image",
         .category = "Parameters",
         .run = [](Shell& s, const PrCommandArgs*) { clearSource(*s.state); },
-        .state = [](Shell& s) { return disabledUnless(!s.state->params.sourcePath.empty()); },
+        .state = [](Shell& s) { return disabledUnless(!s.state->params.sourcePath.isEmpty()); },
     },
     {
         .id = "alchemy.increaseWeight",
@@ -494,7 +495,7 @@ constexpr CommandSpec kSpecs[] = {
         },
         .state = [](Shell& s) {
             const Gallery& gallery = s.state->gallery;
-            return disabledUnless(galleryIndexOf(gallery, s.state->params.sourcePath) < gallery.entries.size());
+            return disabledUnless(galleryIndexOf(gallery, s.state->params.sourcePath) < gallery.entries.count());
         },
     },
     {
@@ -518,7 +519,7 @@ constexpr CommandSpec kSpecs[] = {
         .category = "Image",
         .run = [](Shell& s, const PrCommandArgs*) {
             if (s.app != nullptr)
-                prAppOpenUrl(s.app, "file://" + s.state->gallery.dir);
+                prAppOpenUrl(s.app, format("file://{}", s.state->gallery.dir));
         },
     },
 
@@ -615,20 +616,20 @@ void commandsDestroy(Commands* PR_NULLABLE commands) {
 }
 
 void insertEmbedding(Shell& shell, int field, PrStringView filename) {
-    std::string& text = promptText(shell, field);
-    uint32_t start = uint32_t(text.size());
+    String& text = promptText(shell, field);
+    uint32_t start = text.count();
     uint32_t end = start;
     PrLayoutNode node = shell.promptFields[field];
     bool placed = shell.ui != nullptr && node != kPrLayoutNodeNone && shell.promptTouched[field];
     if (placed) {
         PrUiTextSelection selection = prUiTextEditSelection(shell.ui, node);
-        start = std::min(std::min(selection.anchor, selection.caret), start);
-        end = std::min(std::max(selection.anchor, selection.caret), end);
+        start = min(min(selection.anchor, selection.caret), start);
+        end = min(max(selection.anchor, selection.caret), end);
     }
-    std::string token = embeddingInsertText(text, start, end, filename);
+    String token = embeddingInsertText(text, start, end, filename);
     text.replace(start, end - start, token);
     if (shell.ui != nullptr && node != kPrLayoutNodeNone) {
-        uint32_t caret = start + uint32_t(token.size());
+        uint32_t caret = start + token.count();
         prUiTextEditSetSelection(shell.ui, node, PrUiTextSelection{.anchor = caret, .caret = caret});
         prUiSetFocus(shell.ui, node);
     }

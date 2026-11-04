@@ -2,17 +2,17 @@
 
 #include "examples/alchemy/comfy_client.h"
 
+#include "pr/array.h"
+#include "pr/ascii.h"
+#include "pr/function.h"
 #include "pr/json.h"
+#include "pr/lock.h"
+#include "pr/map.h"
 #include "pr/random.h"
+#include "pr/set.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
-
-#include "examples/alchemy/text.h"
-
-#include <condition_variable>
-#include <deque>
-#include <mutex>
-#include <unordered_map>
-#include <unordered_set>
+#include "pr/thread.h"
 
 namespace alchemy {
 
@@ -23,49 +23,56 @@ using namespace pr;
 struct ComfyRequest {
     ComfyClient* client;
     PrHttpExchange* PR_NULLABLE exchange;
-    std::string method;
-    std::string url;
-    std::string contentType;
-    std::string body;
-    std::string response;
-    std::function<void(uint16_t status, const std::string& body)> done;
+    String method;
+    String url;
+    String contentType;
+    String body;
+    String response;
+    Function<void(uint16_t status, PrStringView body)> done;
+};
+
+// A request made while the socket connects: the tag that its reply carries, and what starts it once the socket opens.
+struct WaitingRequest {
+    uint64_t tag;
+    Function<void()> start;
 };
 
 struct ComfyClient {
     PrNet* net;
     PrHttp* http;
     PrWebSocketNetwork* websockets;
-    std::function<void()> wake;
+    Function<void()> wake;
 
-    // The events for the application, which any thread may take.
-    std::mutex mutex;
-    std::deque<ComfyEvent> events;
+    // The events for the application, which any thread may take. The events before `taken` have been taken.
+    PrMutex mutex;
+    Array<ComfyEvent> events;
+    uint32_t taken = 0;
 
     // The state of the connection, which only the loop reads and writes.
-    std::string origin;         // the server's HTTP origin, such as "http://127.0.0.1:8188"
-    std::string clientId;       // the id that the server sends this client's runs' events under
-    PrWebSocket* PR_NULLABLE socket;
-    bool open;
+    String origin;              // the server's HTTP origin, such as "http://127.0.0.1:8188"
+    String clientId;            // the id that the server sends this client's runs' events under
+    PrWebSocket* PR_NULLABLE socket = nullptr;
+    bool open = false;
 
-    // The requests made while the socket connects, by the tags that their replies carry.
-    std::vector<std::pair<uint64_t, std::function<void()>>> waiting;
+    // The requests made while the socket connects.
+    Array<WaitingRequest> waiting;
 
     // The REST exchanges in flight.
-    std::unordered_set<ComfyRequest*> requests;
+    Set<ComfyRequest*> requests;
 
     // The image fetches in flight by prompt, and the prompts whose end waits for them, so that a prompt's images are
     // delivered before its end.
-    std::unordered_map<std::string, uint32_t> fetching;
-    std::unordered_set<std::string> ending;
+    Map<String, uint32_t> fetching;
+    Set<String> ending;
 };
 
 namespace {
 
 // Runs `fn` on the client's loop, after the tasks posted before it.
-void post(ComfyClient* client, std::function<void()> fn) {
-    std::function<void()>* task = new std::function<void()>(std::move(fn));
+void post(ComfyClient* client, Function<void()> fn) {
+    Function<void()>* task = new Function<void()>(move(fn));
     prNetPost(client->net, [](void* PR_NULLABLE context) {
-        std::function<void()>* run = static_cast<std::function<void()>*>(context);
+        Function<void()>* run = static_cast<Function<void()>*>(context);
         (*run)();
         delete run;
     }, task);
@@ -73,46 +80,45 @@ void post(ComfyClient* client, std::function<void()> fn) {
 
 void deliver(ComfyClient* client, ComfyEvent event) {
     {
-        std::lock_guard<std::mutex> lock(client->mutex);
-        client->events.push_back(std::move(event));
+        Lock lock(&client->mutex);
+        client->events.push(move(event));
     }
     if (client->wake)
         client->wake();
 }
 
-void refuse(ComfyClient* client, uint64_t tag, std::string message) {
+void refuse(ComfyClient* client, uint64_t tag, PrStringView message) {
     ComfyEvent event;
     event.kind = ComfyEventKind_Refused;
     event.tag = tag;
-    event.message = std::move(message);
-    deliver(client, std::move(event));
+    event.message = message;
+    deliver(client, move(event));
 }
 
-std::string randomHex(size_t bytes) {
-    std::vector<uint8_t> random(bytes);
-    prRandomBytes(random.data(), random.size());
+String randomHex(uint32_t bytes) {
+    Array<uint8_t> random(bytes);
+    prRandomBytes(random.data(), random.count());
     static const char kHex[] = "0123456789abcdef";
-    std::string out;
+    String out;
     for (uint8_t byte : random) {
-        out += kHex[byte >> 4];
-        out += kHex[byte & 15];
+        out.append(kHex[byte >> 4]);
+        out.append(kHex[byte & 15]);
     }
     return out;
 }
 
 // Returns `text` percent-encoded for a URL's query, with every byte but the unreserved characters encoded.
-std::string percentEncode(PrStringView text) {
+String percentEncode(PrStringView text) {
     static const char kHex[] = "0123456789ABCDEF";
-    std::string out;
+    String out;
     for (char c : text) {
-        bool unreserved = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' ||
-            c == '.' || c == '_' || c == '~';
+        bool unreserved = prAsciiIsLetter(c) || prAsciiIsDigit(c) || c == '-' || c == '.' || c == '_' || c == '~';
         if (unreserved) {
-            out += c;
+            out.append(c);
         } else {
-            out += '%';
-            out += kHex[uint8_t(c) >> 4];
-            out += kHex[uint8_t(c) & 15];
+            out.append('%');
+            out.append(kHex[uint8_t(c) >> 4]);
+            out.append(kHex[uint8_t(c) & 15]);
         }
     }
     return out;
@@ -129,8 +135,8 @@ struct Document {
     PrJson* d = prJsonCreate();
     ~Document() { prJsonDestroy(d); }
     bool parse(PrStringView text) { return prJsonParse(d, text, nullptr); }
-    std::string string(PrJsonValueIndex object, const char* key) const {
-        return stringOf(prJsonString(d, prJsonMember(d, object, key)));
+    String string(PrJsonValueIndex object, const char* key) const {
+        return prJsonString(d, prJsonMember(d, object, key));
     }
     double number(PrJsonValueIndex object, const char* key, double fallback) const {
         PrJsonValueIndex value = prJsonMember(d, object, key);
@@ -141,16 +147,16 @@ struct Document {
     }
 };
 
-void appendStrings(const Document& doc, PrJsonValueIndex array, std::vector<std::string>* out) {
+void appendStrings(const Document& doc, PrJsonValueIndex array, Array<String>* out) {
     for (PrJsonValueIndex i = prJsonFirst(doc.d, array); i != kPrJsonMissing; i = prJsonAfter(doc.d, array, i)) {
         if (prJsonKind(doc.d, i) == PrJsonKind_String)
-            out->push_back(stringOf(prJsonString(doc.d, i)));
+            out->push(prJsonString(doc.d, i));
     }
 }
 
 // Appends the options of a node's combo input, which the server reports as `[[options...], {...}]` or as `["COMBO",
 // {"options": [...]}]`. A node or an input that the server does not report appends nothing.
-void collectCombo(const Document& doc, const char* nodeClass, const char* input, std::vector<std::string>* out) {
+void collectCombo(const Document& doc, const char* nodeClass, const char* input, Array<String>* out) {
     PrJsonValueIndex required = doc.member(doc.member(doc.member(0, nodeClass), "input"), "required");
     PrJsonValueIndex entry = doc.member(required, input);
     PrJsonValueIndex options = prJsonElement(doc.d, entry, 0);
@@ -164,7 +170,7 @@ void requestEvent(void* PR_NULLABLE context, PrHttpExchange* exchange, PrHttpEve
     char chunk[16 * 1024];
     for (size_t got = prHttpExchangeRead(exchange, reinterpret_cast<uint8_t*>(chunk), sizeof(chunk)); got != 0;
             got = prHttpExchangeRead(exchange, reinterpret_cast<uint8_t*>(chunk), sizeof(chunk)))
-        request->response.append(chunk, got);
+        request->response.append(PrStringView{chunk, got});
     if (event != PrHttpEvent_End && event != PrHttpEvent_Fail)
         return;
     uint16_t status = event == PrHttpEvent_End ? prHttpExchangeStatus(exchange) : 0;
@@ -175,42 +181,43 @@ void requestEvent(void* PR_NULLABLE context, PrHttpExchange* exchange, PrHttpEve
 }
 
 // Starts a REST exchange on the loop. `done` runs on the loop with the response.
-void exchange(ComfyClient* client, std::string method, std::string path, std::string contentType, std::string body,
-        std::function<void(uint16_t, const std::string&)> done) {
+void exchange(ComfyClient* client, PrStringView method, PrStringView path, PrStringView contentType, String body,
+        Function<void(uint16_t, PrStringView)> done) {
     ComfyRequest* request = new ComfyRequest{
         .client = client,
         .exchange = nullptr,
-        .method = std::move(method),
-        .url = client->origin + path,
-        .contentType = std::move(contentType),
-        .body = std::move(body),
-        .done = std::move(done),
+        .method = method,
+        .url = format("{}{}", client->origin, path),
+        .contentType = contentType,
+        .body = move(body),
+        .done = move(done),
     };
     PrHttpHeader header{"Content-Type", request->contentType};
+    bool typed = !request->contentType.isEmpty();
     PrHttpRequestDesc desc{
         .method = request->method,
         .url = request->url,
-        .headers = request->contentType.empty() ? nullptr : &header,
-        .headerCount = request->contentType.empty() ? 0u : 1u,
-        .body = PrByteView{reinterpret_cast<const uint8_t*>(request->body.data()), request->body.size()},
+        .headers = typed ? &header : nullptr,
+        .headerCount = typed ? 1u : 0u,
+        .body = PrByteView{prStringBytes(request->body), request->body.count()},
         .event = requestEvent,
         .context = request,
     };
     if (prHttpExchangeCreate(client->http, &desc, &request->exchange) != PrStatus_Ok) {
-        request->done(0, std::string());
+        request->done(0, "");
         delete request;
         return;
     }
-    client->requests.insert(request);
+    client->requests.add(request);
 }
 
 // Runs `start` on the loop once the connection is open, or refuses the request `tag` if there is no connection.
-void whenOpen(ComfyClient* client, uint64_t tag, std::function<void()> start) {
-    post(client, [client, tag, start = std::move(start)]() mutable {
+void whenOpen(ComfyClient* client, uint64_t tag, Function<void()> start) {
+    post(client, [client, tag, start = move(start)]() mutable {
         if (client->open)
             start();
         else if (client->socket != nullptr)
-            client->waiting.push_back({tag, std::move(start)});
+            client->waiting.push(WaitingRequest{.tag = tag, .start = move(start)});
         else
             refuse(client, tag, "Not connected to a server.");
     });
@@ -218,51 +225,55 @@ void whenOpen(ComfyClient* client, uint64_t tag, std::function<void()> start) {
 
 // Returns the function that delivers the reply to the request `tag`: Replied with what `fill` reads from a 200
 // response, or Refused with `failure`.
-std::function<void(uint16_t, const std::string&)> replyTo(ComfyClient* client, uint64_t tag, std::string failure,
-        std::function<bool(const std::string&, ComfyEvent*)> fill) {
-    return [client, tag, failure = std::move(failure), fill = std::move(fill)](uint16_t status, const std::string& body) {
+Function<void(uint16_t, PrStringView)> replyTo(ComfyClient* client, uint64_t tag, PrStringView failure,
+        Function<bool(PrStringView, ComfyEvent*)> fill) {
+    return [client, tag, failure = String(failure), fill = move(fill)](uint16_t status, PrStringView body) {
         ComfyEvent event;
         event.kind = ComfyEventKind_Replied;
         event.tag = tag;
         if (status == 200 && fill(body, &event))
-            deliver(client, std::move(event));
+            deliver(client, move(event));
+        else if (status != 0)
+            refuse(client, tag, format("{} (HTTP {})", failure, status));
         else
-            refuse(client, tag, failure + (status != 0 ? " (HTTP " + std::to_string(status) + ")" : ""));
+            refuse(client, tag, failure);
     };
 }
 
 // Delivers the end of `promptId`, or holds it until the prompt's image fetches finish.
-void endPrompt(ComfyClient* client, const std::string& promptId) {
-    if (client->fetching.count(promptId) != 0) {
-        client->ending.insert(promptId);
+void endPrompt(ComfyClient* client, PrStringView promptId) {
+    if (client->fetching.contains(promptId)) {
+        client->ending.add(promptId);
         return;
     }
     ComfyEvent event;
     event.kind = ComfyEventKind_Completed;
     event.promptId = promptId;
-    deliver(client, std::move(event));
+    deliver(client, move(event));
 }
 
-void fetchImage(ComfyClient* client, std::string promptId, std::string filename, std::string subfolder, std::string type) {
+void fetchImage(ComfyClient* client, PrStringView promptId, PrStringView filename, PrStringView subfolder, PrStringView type) {
     ++client->fetching[promptId];
-    std::string path = "/view?filename=" + percentEncode(filename);
-    if (!subfolder.empty())
-        path += "&subfolder=" + percentEncode(subfolder);
-    path += "&type=" + percentEncode(type);
-    exchange(client, "GET", path, "", "", [client, promptId, filename](uint16_t status, const std::string& body) {
-        ComfyEvent event;
-        event.kind = status == 200 ? ComfyEventKind_ImageReady : ComfyEventKind_ImageFailed;
-        event.promptId = promptId;
-        event.filename = filename;
-        if (status == 200)
-            event.bytes.assign(body.begin(), body.end());
-        deliver(client, std::move(event));
-        if (--client->fetching[promptId] != 0)
-            return;
-        client->fetching.erase(promptId);
-        if (client->ending.erase(promptId) != 0)
-            endPrompt(client, promptId);
-    });
+    String path = format("/view?filename={}", percentEncode(filename));
+    if (!subfolder.isEmpty())
+        formatTo(path, "&subfolder={}", percentEncode(subfolder));
+    formatTo(path, "&type={}", percentEncode(type));
+    exchange(client, "GET", path, "", String(),
+        [client, promptId = String(promptId), filename = String(filename)](uint16_t status, PrStringView body) {
+            ComfyEvent event;
+            event.kind = status == 200 ? ComfyEventKind_ImageReady : ComfyEventKind_ImageFailed;
+            event.promptId = promptId;
+            event.filename = filename;
+            if (status == 200)
+                event.bytes.append(prStringBytes(body), uint32_t(body.size));
+            deliver(client, move(event));
+            uint32_t* fetching = client->fetching.get(promptId);
+            if (fetching == nullptr || --*fetching != 0)
+                return;
+            client->fetching.erase(promptId);
+            if (client->ending.erase(promptId))
+                endPrompt(client, promptId);
+        });
 }
 
 // Reads a message of the server's event stream (the "type" and "data" of a run's progress) into events.
@@ -270,7 +281,7 @@ void handleMessage(ComfyClient* client, PrStringView text) {
     Document doc;
     if (!doc.parse(text))
         return;
-    std::string type = doc.string(0, "type");
+    String type = doc.string(0, "type");
     PrJsonValueIndex data = doc.member(0, "data");
     ComfyEvent event;
     event.promptId = doc.string(data, "prompt_id");
@@ -290,46 +301,47 @@ void handleMessage(ComfyClient* client, PrStringView text) {
         // the client leaves aside so that a prompt ends once.
         PrJsonValueIndex node = doc.member(data, "node");
         if (prJsonKind(doc.d, node) == PrJsonKind_Null) {
-            if (!event.promptId.empty())
+            if (!event.promptId.isEmpty())
                 endPrompt(client, event.promptId);
             return;
         }
         event.kind = ComfyEventKind_Executing;
-        event.node = stringOf(prJsonString(doc.d, node));
+        event.node = prJsonString(doc.d, node);
     } else if (type == "executed") {
         PrJsonValueIndex images = doc.member(doc.member(data, "output"), "images");
         for (PrJsonValueIndex i = prJsonFirst(doc.d, images); i != kPrJsonMissing; i = prJsonAfter(doc.d, images, i)) {
-            std::string filename = doc.string(i, "filename");
-            std::string kind = doc.string(i, "type");
-            if (!filename.empty())
-                fetchImage(client, event.promptId, filename, doc.string(i, "subfolder"), kind.empty() ? "output" : kind);
+            String filename = doc.string(i, "filename");
+            String kind = doc.string(i, "type");
+            if (kind.isEmpty())
+                kind = "output";
+            if (!filename.isEmpty())
+                fetchImage(client, event.promptId, filename, doc.string(i, "subfolder"), kind);
         }
         return;
     } else if (type == "execution_error") {
         event.kind = ComfyEventKind_Failed;
         event.message = doc.string(data, "exception_message");
-        if (event.message.empty())
+        if (event.message.isEmpty())
             event.message = "The server could not run the prompt.";
     } else {
         return;
     }
-    deliver(client, std::move(event));
+    deliver(client, move(event));
 }
 
-void closeSocket(ComfyClient* client, std::string reason) {
+void closeSocket(ComfyClient* client, PrStringView reason) {
     if (client->socket == nullptr)
         return;
     prWebSocketDestroy(client->socket);
     client->socket = nullptr;
     client->open = false;
-    std::vector<std::pair<uint64_t, std::function<void()>>> waiting = std::move(client->waiting);
-    client->waiting.clear();
+    Array<WaitingRequest> waiting = move(client->waiting);
     ComfyEvent event;
     event.kind = ComfyEventKind_Disconnected;
-    event.message = std::move(reason);
-    deliver(client, std::move(event));
-    for (const std::pair<uint64_t, std::function<void()>>& request : waiting)
-        refuse(client, request.first, "The connection to the server closed before the request was sent.");
+    event.message = reason;
+    deliver(client, move(event));
+    for (const WaitingRequest& request : waiting)
+        refuse(client, request.tag, "The connection to the server closed before the request was sent.");
 }
 
 void socketEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEvent event) {
@@ -339,11 +351,10 @@ void socketEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEven
             client->open = true;
             ComfyEvent connected;
             connected.kind = ComfyEventKind_Connected;
-            deliver(client, std::move(connected));
-            std::vector<std::pair<uint64_t, std::function<void()>>> waiting = std::move(client->waiting);
-            client->waiting.clear();
-            for (std::pair<uint64_t, std::function<void()>>& request : waiting)
-                request.second();
+            deliver(client, move(connected));
+            Array<WaitingRequest> waiting = move(client->waiting);
+            for (WaitingRequest& request : waiting)
+                request.start();
             break;
         }
         case PrWebSocketEvent_Message: {
@@ -355,8 +366,8 @@ void socketEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEven
                 // A preview frame: a 4-byte event type and a 4-byte image format, then the image.
                 ComfyEvent preview;
                 preview.kind = ComfyEventKind_Preview;
-                preview.bytes.assign(message.data.data + 8, message.data.data + message.data.size);
-                deliver(client, std::move(preview));
+                preview.bytes.append(message.data.data + 8, uint32_t(message.data.size - 8));
+                deliver(client, move(preview));
             }
             break;
         }
@@ -368,26 +379,45 @@ void socketEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEven
     }
 }
 
+// Returns `text` without the spaces, line breaks and quotes at either end.
+PrStringView unquoted(PrStringView text) {
+    auto trimmed = [](char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '"'; };
+    size_t start = 0;
+    size_t end = text.size;
+    while (start < end && trimmed(text.data[start]))
+        ++start;
+    while (end > start && trimmed(text.data[end - 1]))
+        --end;
+    return prStringSlice(text, start, end - start);
+}
+
+// A member of a request's JSON body: its key and its value.
+struct BodyMember {
+    const char* key;
+    String value;
+};
+
 } // namespace
 
 ComfyClient* comfyClientCreate(const ComfyClientDesc& desc) {
-    return new ComfyClient{
-        .net = desc.net,
-        .http = desc.http,
-        .websockets = desc.websockets,
-        .wake = desc.wake,
-        .clientId = randomHex(16),
-        .socket = nullptr,
-        .open = false,
-    };
+    ComfyClient* client = new ComfyClient;
+    client->net = desc.net;
+    client->http = desc.http;
+    client->websockets = desc.websockets;
+    client->wake = desc.wake;
+    client->clientId = randomHex(16);
+    prMutexInit(&client->mutex);
+    return client;
 }
 
 void comfyClientDestroy(ComfyClient* PR_NULLABLE client) {
     if (client == nullptr)
         return;
     // The loop lets go of the client's exchanges and socket, which its callbacks name, before the client is freed.
-    std::mutex mutex;
-    std::condition_variable released;
+    PrMutex mutex;
+    PrCondition released;
+    prMutexInit(&mutex);
+    prConditionInit(&released);
     bool done = false;
     post(client, [&] {
         for (ComfyRequest* request : client->requests) {
@@ -397,31 +427,41 @@ void comfyClientDestroy(ComfyClient* PR_NULLABLE client) {
         client->requests.clear();
         prWebSocketDestroy(client->socket);
         client->socket = nullptr;
-        std::lock_guard<std::mutex> lock(mutex);
+        Lock lock(&mutex);
         done = true;
-        released.notify_one();
+        prConditionSignal(&released);
     });
-    std::unique_lock<std::mutex> lock(mutex);
-    released.wait(lock, [&] { return done; });
+    {
+        Lock lock(&mutex);
+        while (!done)
+            prConditionWait(&released, &mutex);
+    }
+    prConditionReset(&released);
+    prMutexReset(&mutex);
+    prMutexReset(&client->mutex);
     delete client;
 }
 
-void comfyConnect(ComfyClient* client, const std::string& origin) {
-    post(client, [client, origin] {
+void comfyConnect(ComfyClient* client, PrStringView origin) {
+    post(client, [client, origin = String(origin)] {
         closeSocket(client, "Connecting to another server.");
-        client->origin = origin;
-        while (!client->origin.empty() && client->origin.back() == '/')
-            client->origin.pop_back();
-        std::string url = client->origin;
-        if (url.rfind("http", 0) == 0)
-            url.replace(0, 4, "ws");
-        url += "/ws?clientId=" + client->clientId;
+        PrStringView trimmed = origin;
+        while (prStringEndsWith(trimmed, "/"))
+            trimmed = prStringSlice(trimmed, 0, trimmed.size - 1);
+        client->origin = trimmed;
+        PrStringView rest = client->origin;
+        PrStringView scheme = "";
+        if (prStringStartsWith(rest, "http")) {
+            scheme = "ws";
+            rest = prStringSlice(rest, 4, rest.size - 4);
+        }
+        String url = format("{}{}/ws?clientId={}", scheme, rest, client->clientId);
         PrWebSocketDesc desc{.url = url, .event = socketEvent, .context = client};
         if (prWebSocketCreate(client->websockets, &desc, &client->socket) != PrStatus_Ok) {
             ComfyEvent event;
             event.kind = ComfyEventKind_Disconnected;
             event.message = "The server's address is not one that alchemy can connect to.";
-            deliver(client, std::move(event));
+            deliver(client, move(event));
         }
     });
 }
@@ -430,16 +470,17 @@ void comfyDisconnect(ComfyClient* client) {
     post(client, [client] { closeSocket(client, "Disconnected."); });
 }
 
-void comfySubmit(ComfyClient* client, uint64_t tag, std::string graph) {
-    whenOpen(client, tag, [client, tag, graph = std::move(graph)] {
+void comfySubmit(ComfyClient* client, uint64_t tag, String graph) {
+    whenOpen(client, tag, [client, tag, graph = move(graph)] {
         // A server streams previews only for a prompt that asks for them, whatever its own default.
-        std::string body = "{\"prompt\":" + graph + ",\"client_id\":\"" + client->clientId +
-            "\",\"extra_data\":{\"preview_method\":\"auto\"}}";
-        exchange(client, "POST", "/prompt", "application/json", std::move(body),
-            replyTo(client, tag, "The server did not accept the prompt.", [](const std::string& response, ComfyEvent* event) {
+        String body = format("{{\"prompt\":{},\"client_id\":\"{}\",\"extra_data\":{{\"preview_method\":\"auto\"}}}}",
+            graph, client->clientId);
+        exchange(client, "POST", "/prompt", "application/json", move(body),
+            replyTo(client, tag, "The server did not accept the prompt.", [](PrStringView response, ComfyEvent* event) {
                 Document doc;
-                event->promptId = doc.parse(response) ? doc.string(0, "prompt_id") : std::string();
-                return !event->promptId.empty();
+                if (doc.parse(response))
+                    event->promptId = doc.string(0, "prompt_id");
+                return !event->promptId.isEmpty();
             }));
     });
 }
@@ -447,118 +488,126 @@ void comfySubmit(ComfyClient* client, uint64_t tag, std::string graph) {
 void comfyInterrupt(ComfyClient* client) {
     post(client, [client] {
         if (client->open)
-            exchange(client, "POST", "/interrupt", "application/json", "{}", [](uint16_t, const std::string&) {});
+            exchange(client, "POST", "/interrupt", "application/json", "{}", [](uint16_t, PrStringView) {});
     });
 }
 
-void comfyUpload(ComfyClient* client, uint64_t tag, std::string filename, std::vector<uint8_t> bytes) {
-    whenOpen(client, tag, [client, tag, filename = std::move(filename), bytes = std::move(bytes)] {
-        PrStringView payload(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+void comfyUpload(ComfyClient* client, uint64_t tag, PrStringView filename, Array<uint8_t> bytes) {
+    whenOpen(client, tag, [client, tag, filename = String(filename), bytes = move(bytes)] {
+        PrStringView payload(reinterpret_cast<const char*>(bytes.data()), bytes.count());
         // The boundary must not occur in the payload, or a part would end early.
-        std::string boundary;
+        String boundary;
         do {
-            boundary = "----AlchemyComfyUi" + randomHex(8);
+            boundary = format("----AlchemyComfyUi{}", randomHex(8));
         } while (prStringContains(payload, boundary));
-        std::string safeName;
+        String safeName;
         for (char c : filename)
-            safeName += c == '"' || c == '\\' || uint8_t(c) < 0x20 || c == 0x7f ? '_' : c;
-        std::string body = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"image\"; filename=\"" +
-            safeName + "\"\r\nContent-Type: application/octet-stream\r\n\r\n";
-        body.append(payload.begin(), payload.end());
-        body += "\r\n--" + boundary + "\r\nContent-Disposition: form-data; name=\"overwrite\"\r\n\r\ntrue\r\n--" +
-            boundary + "--\r\n";
-        exchange(client, "POST", "/upload/image", "multipart/form-data; boundary=" + boundary, std::move(body),
-            replyTo(client, tag, "The server did not accept the image.", [](const std::string& response, ComfyEvent* event) {
+            safeName.append(c == '"' || c == '\\' || uint8_t(c) < 0x20 || c == 0x7f ? '_' : c);
+        String body = format("--{}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"{}\"\r\n"
+            "Content-Type: application/octet-stream\r\n\r\n", boundary, safeName);
+        body.append(payload);
+        formatTo(body, "\r\n--{}\r\nContent-Disposition: form-data; name=\"overwrite\"\r\n\r\ntrue\r\n--{}--\r\n", boundary,
+            boundary);
+        String contentType = format("multipart/form-data; boundary={}", boundary);
+        exchange(client, "POST", "/upload/image", contentType, move(body),
+            replyTo(client, tag, "The server did not accept the image.", [](PrStringView response, ComfyEvent* event) {
                 Document doc;
-                event->name = doc.parse(response) ? doc.string(0, "name") : std::string();
-                return !event->name.empty();
+                if (doc.parse(response))
+                    event->name = doc.string(0, "name");
+                return !event->name.isEmpty();
             }));
     });
 }
 
 void comfyFetchCatalog(ComfyClient* client, uint64_t tag) {
     whenOpen(client, tag, [client, tag] {
-        exchange(client, "GET", "/object_info", "", "", [client, tag](uint16_t status, const std::string& body) {
+        exchange(client, "GET", "/object_info", "", String(), [client, tag](uint16_t status, PrStringView body) {
             Document doc;
             if (status != 200 || !doc.parse(body)) {
                 refuse(client, tag, "The server did not report its models.");
                 return;
             }
-            std::shared_ptr<ComfyCatalog> catalog = std::make_shared<ComfyCatalog>();
-            collectCombo(doc, "CheckpointLoaderSimple", "ckpt_name", &catalog->checkpoints);
-            collectCombo(doc, "LoraLoader", "lora_name", &catalog->loras);
-            collectCombo(doc, "KSampler", "sampler_name", &catalog->samplers);
-            collectCombo(doc, "KSampler", "scheduler", &catalog->schedulers);
-            collectCombo(doc, "UpscaleModelLoader", "model_name", &catalog->upscaleModels);
-            collectCombo(doc, "UltralyticsDetectorProvider", "model_name", &catalog->detectors);
+            ComfyCatalog catalog;
+            collectCombo(doc, "CheckpointLoaderSimple", "ckpt_name", &catalog.checkpoints);
+            collectCombo(doc, "LoraLoader", "lora_name", &catalog.loras);
+            collectCombo(doc, "KSampler", "sampler_name", &catalog.samplers);
+            collectCombo(doc, "KSampler", "scheduler", &catalog.schedulers);
+            collectCombo(doc, "UpscaleModelLoader", "model_name", &catalog.upscaleModels);
+            collectCombo(doc, "UltralyticsDetectorProvider", "model_name", &catalog.detectors);
             // The embeddings are a separate request, and a server that answers none still has a catalog.
-            exchange(client, "GET", "/embeddings", "", "",
-                [client, tag, catalog](uint16_t embeddingStatus, const std::string& embeddings) {
+            exchange(client, "GET", "/embeddings", "", String(),
+                [client, tag, catalog = move(catalog)](uint16_t embeddingStatus, PrStringView embeddings) mutable {
                     Document list;
                     if (embeddingStatus == 200 && list.parse(embeddings))
-                        appendStrings(list, 0, &catalog->embeddings);
+                        appendStrings(list, 0, &catalog.embeddings);
                     ComfyEvent event;
                     event.kind = ComfyEventKind_Replied;
                     event.tag = tag;
-                    event.catalog = catalog;
-                    deliver(client, std::move(event));
+                    event.catalog = move(catalog);
+                    deliver(client, move(event));
                 });
         });
     });
 }
 
-void comfyFetchFolderPaths(ComfyClient* client, uint64_t tag, std::string folder) {
-    whenOpen(client, tag, [client, tag, folder = std::move(folder)] {
-        exchange(client, "GET", "/internal/folder_paths", "", "", replyTo(client, tag, "The server did not report its folders.",
-            [folder](const std::string& response, ComfyEvent* event) {
-                Document doc;
-                if (!doc.parse(response) || prJsonKind(doc.d, 0) != PrJsonKind_Object)
-                    return false;
-                appendStrings(doc, doc.member(0, folder.c_str()), &event->names);
-                return true;
-            }));
+void comfyFetchFolderPaths(ComfyClient* client, uint64_t tag, PrStringView folder) {
+    whenOpen(client, tag, [client, tag, folder = String(folder)] {
+        Function<bool(PrStringView, ComfyEvent*)> fill = [folder](PrStringView response, ComfyEvent* event) {
+            Document doc;
+            if (!doc.parse(response) || prJsonKind(doc.d, 0) != PrJsonKind_Object)
+                return false;
+            PrJsonValueIndex paths = prJsonMember(doc.d, 0, folder);
+            appendStrings(doc, paths, &event->names);
+            return true;
+        };
+        exchange(client, "GET", "/internal/folder_paths", "", String(),
+            replyTo(client, tag, "The server did not report its folders.", move(fill)));
     });
 }
 
 void comfyFetchManagerVersion(ComfyClient* client, uint64_t tag) {
     whenOpen(client, tag, [client, tag] {
-        exchange(client, "GET", "/v2/manager/version", "", "",
-            replyTo(client, tag, "The server has no ComfyUI-Manager.", [](const std::string& response, ComfyEvent* event) {
-                size_t start = response.find_first_not_of(" \t\r\n\"");
-                size_t end = response.find_last_not_of(" \t\r\n\"");
-                if (start == std::string::npos)
+        exchange(client, "GET", "/v2/manager/version", "", String(),
+            replyTo(client, tag, "The server has no ComfyUI-Manager.", [](PrStringView response, ComfyEvent* event) {
+                PrStringView version = unquoted(response);
+                if (version.isEmpty())
                     return false;
-                event->name = response.substr(start, end - start + 1);
+                event->name = version;
                 return true;
             }));
     });
 }
 
 void comfyInstallModel(ComfyClient* client, uint64_t tag, ComfyModelInstall install) {
-    whenOpen(client, tag, [client, tag, install = std::move(install)] {
+    whenOpen(client, tag, [client, tag, install = move(install)] {
         PrJsonWriter* w = prJsonWriterCreate();
         prJsonWriterBeginObject(w);
-        const std::pair<const char*, std::string> members[] = {
-            {"name", install.name},         {"type", install.type},           {"base", install.base},
-            {"save_path", "default"},       {"url", install.url},             {"filename", install.filename},
-            {"ui_id", randomHex(16)},       {"client_id", client->clientId},
+        const BodyMember members[] = {
+            {"name", install.name},
+            {"type", install.type},
+            {"base", install.base},
+            {"save_path", "default"},
+            {"url", install.url},
+            {"filename", install.filename},
+            {"ui_id", randomHex(16)},
+            {"client_id", client->clientId},
         };
-        for (const std::pair<const char*, std::string>& member : members) {
-            prJsonWriterKey(w, member.first);
-            prJsonWriterString(w, member.second);
+        for (const BodyMember& member : members) {
+            prJsonWriterKey(w, member.key);
+            prJsonWriterString(w, member.value);
         }
         prJsonWriterEndObject(w);
-        std::string body = stringOf(prJsonWriterText(w));
+        String body(prJsonWriterText(w));
         prJsonWriterDestroy(w);
-        exchange(client, "POST", "/v2/manager/queue/install_model", "application/json", std::move(body),
-            [client, tag](uint16_t status, const std::string&) {
+        exchange(client, "POST", "/v2/manager/queue/install_model", "application/json", move(body),
+            [client, tag](uint16_t status, PrStringView) {
                 if (status != 200) {
                     refuse(client, tag, "ComfyUI-Manager did not queue the download.");
                     return;
                 }
-                     // A worker that is already running answers 201, which leaves the task queued as a start would.
+                // A worker that is already running answers 201, which leaves the task queued as a start would.
                 exchange(client, "POST", "/v2/manager/queue/start", "application/json", "{}",
-                    [client, tag](uint16_t started, const std::string&) {
+                    [client, tag](uint16_t started, PrStringView) {
                         if (started != 200 && started != 201) {
                             refuse(client, tag, "ComfyUI-Manager did not start its queue.");
                             return;
@@ -566,7 +615,7 @@ void comfyInstallModel(ComfyClient* client, uint64_t tag, ComfyModelInstall inst
                         ComfyEvent event;
                         event.kind = ComfyEventKind_Replied;
                         event.tag = tag;
-                        deliver(client, std::move(event));
+                        deliver(client, move(event));
                     });
             });
     });
@@ -574,27 +623,30 @@ void comfyInstallModel(ComfyClient* client, uint64_t tag, ComfyModelInstall inst
 
 void comfyFetchManagerStatus(ComfyClient* client, uint64_t tag) {
     whenOpen(client, tag, [client, tag] {
-        exchange(client, "GET", "/v2/manager/queue/status", "", "", replyTo(client, tag, "ComfyUI-Manager did not report its queue.",
-            [](const std::string& response, ComfyEvent* event) {
-                Document doc;
-                if (!doc.parse(response))
-                    return false;
-                event->manager.total = clampCount(doc.number(0, "total_count", 0));
-                event->manager.done = clampCount(doc.number(0, "done_count", 0));
-                event->manager.inProgress = clampCount(doc.number(0, "in_progress_count", 0));
-                event->manager.pending = clampCount(doc.number(0, "pending_count", 0));
-                event->manager.processing = prJsonKind(doc.d, doc.member(0, "is_processing")) == PrJsonKind_True;
-                return true;
-            }));
+        Function<bool(PrStringView, ComfyEvent*)> fill = [](PrStringView response, ComfyEvent* event) {
+            Document doc;
+            if (!doc.parse(response))
+                return false;
+            event->manager.total = clampCount(doc.number(0, "total_count", 0));
+            event->manager.done = clampCount(doc.number(0, "done_count", 0));
+            event->manager.inProgress = clampCount(doc.number(0, "in_progress_count", 0));
+            event->manager.pending = clampCount(doc.number(0, "pending_count", 0));
+            event->manager.processing = prJsonKind(doc.d, doc.member(0, "is_processing")) == PrJsonKind_True;
+            return true;
+        };
+        exchange(client, "GET", "/v2/manager/queue/status", "", String(),
+            replyTo(client, tag, "ComfyUI-Manager did not report its queue.", move(fill)));
     });
 }
 
 bool comfyPoll(ComfyClient* client, ComfyEvent* out) {
-    std::lock_guard<std::mutex> lock(client->mutex);
-    if (client->events.empty())
+    Lock lock(&client->mutex);
+    if (client->taken == client->events.count()) {
+        client->events.clear();
+        client->taken = 0;
         return false;
-    *out = std::move(client->events.front());
-    client->events.pop_front();
+    }
+    *out = move(client->events[client->taken++]);
     return true;
 }
 

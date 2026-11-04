@@ -9,7 +9,7 @@
 #include "pr/text_harfbuzz.h"
 #include "pr/text_view.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <utility>

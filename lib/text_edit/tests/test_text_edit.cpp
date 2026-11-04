@@ -1,7 +1,7 @@
 #include "pr/text_edit.h"
 #include "pr/text_edit_command.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

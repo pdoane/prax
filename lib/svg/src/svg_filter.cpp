@@ -327,7 +327,7 @@ void readTransfer(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
                 numbersOf(f, "tableValues", &parts.scratch)) {
             t.first = parts.numbers.count;
             t.count = parts.scratch.count;
-            parts.numbers.append(parts.scratch.data, parts.scratch.count);
+            parts.numbers.append(parts.scratch.span());
         }
         p->transfer[channel] = t;
     }
@@ -375,7 +375,7 @@ void readConvolve(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
     if (!numbersOf(e, "kernelMatrix", &parts.scratch) || parts.scratch.count != extent.x * extent.y)
         return;
     uint32_t first = parts.numbers.count;
-    parts.numbers.append(parts.scratch.data, parts.scratch.count);
+    parts.numbers.append(parts.scratch.span());
     float targetX = numberOf(parts, e, "targetX", float(extent.x / 2));
     float targetY = numberOf(parts, e, "targetY", float(extent.y / 2));
     if (!(targetX >= 0) || !(targetY >= 0) || targetX >= order.x || targetY >= order.y) {

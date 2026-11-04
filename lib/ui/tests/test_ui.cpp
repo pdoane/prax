@@ -4,7 +4,7 @@
 
 #include "ui/tests/ui_fixture.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

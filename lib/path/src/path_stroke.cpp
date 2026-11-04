@@ -487,7 +487,7 @@ float measure(Stroker& s, bool closed) {
             }
         }
         v.clear();
-        v.append(split.data, split.count);
+        v.append(split.span());
         split.reset();
     }
     for (uint32_t i = 0; i < v.count; ++i)
@@ -501,7 +501,7 @@ void finishPiece(Stroker& s, PrVec2 direction, bool atStart, bool atEnd, bool cl
     const PrPathStroke* style = s.style;
     if (closed && atStart) {
         s.first.clear();
-        s.first.append(s.piece.data, s.piece.count);
+        s.first.append(s.piece.span());
     } else {
         strokeOpen(s, s.piece.data, s.piece.count, direction, atStart && !closed ? style->startCap : style->dashCap,
             atEnd && !closed ? style->endCap : style->dashCap);

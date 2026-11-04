@@ -567,7 +567,7 @@ void derivedOf(const Font* font, const Font* PR_NULLABLE base, const PrFontDeriv
     out->ascentOverride = from->ascentOverride;
     out->descentOverride = from->descentOverride;
     out->lineGapOverride = from->lineGapOverride;
-    out->features.append(from->features.data, from->features.count);
+    out->features.append(from->features.span());
     if (d == nullptr)
         return;
     out->sizeAdjust *= d->sizeAdjust;
@@ -624,9 +624,9 @@ void derive(Font* font, const Font* PR_NULLABLE base, const PrFontDerivation* PR
     font->descentOverride = derived.descentOverride;
     font->lineGapOverride = derived.lineGapOverride;
     font->features.clear();
-    font->features.append(derived.features.data, derived.features.count);
+    font->features.append(derived.features.span());
     font->axisKey.clear();
-    font->axisKey.append(derived.axes.data, derived.axes.count);
+    font->axisKey.append(derived.axes.span());
     derivedReset(&derived);
     readMetrics(font);
 }

@@ -11,7 +11,7 @@
 #include "svg/src/svg_parse.h"
 #include "svg/src/svg_style.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

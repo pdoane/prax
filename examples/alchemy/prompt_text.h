@@ -3,16 +3,18 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/base.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
+
+using namespace pr;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Attention weights
@@ -33,7 +35,7 @@ constexpr double kPromptWeightStep = 0.05;
 
 // An adjustment of a weight: `text` replaces the bytes from `begin` to `end`, and what it writes stays selected.
 struct WeightEdit {
-    std::string text;
+    String text;
     uint32_t begin = 0;
     uint32_t end = 0;
 };
@@ -50,10 +52,10 @@ bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t sel
 
 // Returns the lines of `prompt`, which view its bytes, without the whitespace around the whole. A blank prompt has no
 // lines.
-std::vector<PrStringView> promptLines(PrStringView prompt);
+Array<PrStringView> promptLines(PrStringView prompt);
 
 // Returns `prompt` with `line` appended as a line of its own, or `line` alone if the prompt is empty.
-std::string promptAppendLine(PrStringView prompt, PrStringView line);
+String promptAppendLine(PrStringView prompt, PrStringView line);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Embeddings
@@ -66,7 +68,7 @@ PrStringView embeddingName(PrStringView filename);
 
 // Returns the text that inserting the embedding over the selection writes: its token, with a space on each side that
 // meets text rather than whitespace or an end of the prompt.
-std::string embeddingInsertText(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, PrStringView filename);
+String embeddingInsertText(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, PrStringView filename);
 
 } // namespace alchemy
 

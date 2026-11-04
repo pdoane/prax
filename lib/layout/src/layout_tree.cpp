@@ -89,7 +89,7 @@ void indexHighlights(LayoutHighlights& h) {
     for (uint32_t i = 0; i < h.ranges.count; ++i)
         h.byStart.data[i] = i;
     const PrLayoutHighlight* ranges = h.ranges.data;
-    sortItems(h.byStart.data, h.byStart.count, [&](uint32_t a, uint32_t b) {
+    sortItems(h.byStart.span(), [&](uint32_t a, uint32_t b) {
         return ranges[a].start < ranges[b].start || (ranges[a].start == ranges[b].start && a < b);
     });
     h.reach.resize(h.ranges.count);
@@ -1107,7 +1107,7 @@ void layoutHighlightsReaching(const LayoutHighlights* highlights, uint32_t start
         if (ranges[order.data[i]].end > start)
             out.push(order.data[i]);
     }
-    sortItems(out.data, out.count, [](uint32_t a, uint32_t b) { return a < b; });
+    sortItems(out.span(), [](uint32_t a, uint32_t b) { return a < b; });
 }
 
 void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLayoutHighlight* PR_NULLABLE highlights,

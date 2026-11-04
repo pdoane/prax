@@ -5,7 +5,7 @@
 
 #include "gpu/tests/kTestGpuHostShaders.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdint>
 #include <cstring>

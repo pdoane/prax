@@ -5,7 +5,7 @@
 #include "pr/memory.h"
 #include "pr/syntax.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

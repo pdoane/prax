@@ -2,7 +2,7 @@
 #include "pr/font.h"
 #include "pr/path.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <string>

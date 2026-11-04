@@ -11,7 +11,7 @@
 #include "layout/src/layout_fragment.h"
 #include "layout/tests/layout_fixture.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <algorithm>
 #include <string>

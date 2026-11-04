@@ -1,7 +1,9 @@
 #include "pr/file.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/time.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <algorithm>
 #include <string>
@@ -22,6 +24,11 @@ std::string contentsOf(const PrFileMapping& mapping) {
 
 PrByteView bytesOf(const char* text) {
     return PrByteView{reinterpret_cast<const uint8_t*>(text), std::char_traits<char>::length(text)};
+}
+
+// Returns the absolute form of `path`, which prFilePathAbsolute makes.
+String absolute(PrStringView path) {
+    return String::adopt(prFilePathAbsolute(path));
 }
 
 } // namespace
@@ -133,7 +140,13 @@ TEST_CASE("a directory's entries are its files and directories, without its link
     CHECK(!prFileEachEntry(pathOf("listed/a.txt"), collect, &entries));
     CHECK(!prFileEachEntry(pathOf("listed/missing"), collect, &entries));
     CHECK(prFileRemove(pathOf("listed/a.txt")));
+    // A directory that holds files stays, and an empty one is removed.
+    CHECK(!prFileRemove(pathOf("listed")));
     CHECK(prFileRemove(pathOf("listed/b.txt")));
+    CHECK(prFileRemove(pathOf("listed/inner")));
+    CHECK(prFileRemove(pathOf("listed")));
+    PrFileInfo removed{};
+    CHECK(!prFileInfo(pathOf("listed"), &removed));
 }
 
 TEST_CASE("the platform names directories for the user's caches and data") {
@@ -151,4 +164,65 @@ TEST_CASE("the platform names directories for the user's caches and data") {
     CHECK(prRawStringView(&directories[0]) != prRawStringView(&directories[1]));
     for (PrRawString& directory : directories)
         prRawStringReset(&directory);
+}
+
+TEST_CASE("a path's parts are read from its text") {
+    CHECK(prFilePathName("dir/sub/notes.txt") == "notes.txt");
+    CHECK(prFilePathName("notes.txt") == "notes.txt");
+    CHECK(prFilePathName("dir/") == "");
+    CHECK(prFilePathParent("dir/sub/notes.txt") == "dir/sub");
+    CHECK(prFilePathParent("dir//notes.txt") == "dir");
+    CHECK(prFilePathParent("/notes.txt") == "/");
+    CHECK(prFilePathParent("notes.txt") == "");
+    CHECK(prFilePathExtension("dir.d/notes.txt") == ".txt");
+    CHECK(prFilePathExtension("archive.tar.gz") == ".gz");
+    CHECK(prFilePathExtension("dir.d/README") == "");
+    CHECK(prFilePathExtension(".profile") == "");
+#if defined(_WIN32)
+    CHECK(prFilePathName("C:\\dir\\notes.txt") == "notes.txt");
+    CHECK(prFilePathParent("C:\\dir\\notes.txt") == "C:\\dir");
+#endif
+}
+
+TEST_CASE("a part appends to a path after one separator") {
+    PrTextBuffer path = {};
+    prFilePathAppend(&path, "dir");
+    prFilePathAppend(&path, "sub");
+    CHECK(prTextBufferView(&path) == "dir/sub");
+    prTextBufferAppend(&path, "/");
+    prFilePathAppend(&path, "notes.txt");
+    CHECK(prTextBufferView(&path) == "dir/sub/notes.txt");
+    prTextBufferReset(&path);
+}
+
+TEST_CASE("an absolute path is normalized from its text, and a relative one is under the working directory") {
+    // The root is "/", or on Windows the root of the working directory's drive.
+    String root = absolute("/");
+    CHECK(prStringEndsWith(root, "/"));
+    CHECK(absolute("/a/b/../c/./d//e") == format("{}a/c/d/e", root));
+    CHECK(absolute("/a/b/..") == format("{}a", root));
+    CHECK(absolute("/../x") == format("{}x", root));
+    PrRawString empty = prFilePathAbsolute("");
+    CHECK(prRawStringIsNull(&empty));
+
+    PrRawString working = prFileWorkingDirectory();
+    REQUIRE(!prRawStringIsEmpty(&working));
+    String base = absolute(prRawStringView(&working));
+    prRawStringReset(&working);
+    String expected = base;
+    if (prStringEndsWith(expected, "/"))
+        expected.append("notes.txt");
+    else
+        expected.append("/notes.txt");
+    CHECK(absolute("dir/../notes.txt") == expected);
+    CHECK(absolute("./notes.txt") == expected);
+
+#if defined(_WIN32)
+    CHECK(absolute("C:\\a\\..\\b") == "C:/b");
+    CHECK(absolute("C:") == "C:/");
+    CHECK(absolute("\\\\server\\share\\x") == "//server/share/x");
+    // A lone separator is the root of the working directory's drive.
+    String drive = absolute("\\x");
+    CHECK(prStringSlice(drive, 1, drive.count() - 1) == ":/x");
+#endif
 }

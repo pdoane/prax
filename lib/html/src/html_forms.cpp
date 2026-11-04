@@ -526,7 +526,7 @@ uint32_t prHtmlFormElementNames(PrHtmlFormElement* formElement, PrRawString* PR_
                 sources.count,
             });
     }
-    sortItems(sources.data, sources.count, [](const Source& a, const Source& b) {
+    sortItems(sources.span(), [](const Source& a, const Source& b) {
         if (a.element != b.element)
             return domNodePrecedes(a.element, b.element);
         return a.rank != b.rank ? a.rank < b.rank : a.order < b.order;

@@ -12,16 +12,16 @@
 #include "pr/draw_display.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
+#include "pr/float.h"
 #include "pr/gpu.h"
+#include "pr/print.h"
 #include "pr/text.h"
 
 #include "examples/draw/scenes.h"
 
-#include <cmath>
-#include <stdio.h>
-
 namespace {
 
+using namespace pr;
 using namespace scenes;
 
 // The scenes in a window, and the device that they render on.
@@ -50,8 +50,7 @@ struct Window {
 };
 
 void announce(const Window& w) {
-    printf("%s: %s\n", w.scenes[w.scene].name, w.scenes[w.scene].description);
-    fflush(stdout);
+    print("{}: {}\n", w.scenes[w.scene].name, w.scenes[w.scene].description);
 }
 
 // Frees what the window made on its device, and the device.
@@ -145,7 +144,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     Window& w = *static_cast<Window*>(context);
     w.app = app;
     if (!openDevice(w)) {
-        fprintf(stderr, "draw: no GPU device to render with\n");
+        printError("draw: no GPU device to render with\n");
         prAppStop(app);
         return;
     }
@@ -164,7 +163,7 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     if (!w.paused)
         w.clock += f->delta;
     // The hold eases in a tenth of a second or so.
-    float ease = 1 - std::exp(-float(f->delta) * 18);
+    float ease = 1 - prF32Exp(-float(f->delta) * 18);
     w.hold += ((w.held ? 1.0f : 0.0f) - w.hold) * ease;
 
     // The scene draws in logical pixels, and the list's transform takes them to the display's target pixels.

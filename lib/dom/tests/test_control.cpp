@@ -4,7 +4,7 @@
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_microsyntax.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 

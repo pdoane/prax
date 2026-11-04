@@ -20,13 +20,11 @@
 #include "pr/layout_frame.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
+#include "pr/print.h"
 #include "pr/text.h"
 #include "pr/ui.h"
 
 #include "examples/studio_gallery/gallery_view.h"
-
-#include <stdio.h>
-#include <vector>
 
 namespace {
 
@@ -44,7 +42,7 @@ struct Window {
     PrAppColorScheme scheme = PrAppColorScheme_Dark; // the scheme of the kit's theme
     const PrLayoutScene* scene = nullptr;            // the scene of the last frame, which its list plays
     PrDrawList* list = nullptr;
-    std::vector<PrLayoutSceneScroll> scrolls;
+    Array<PrLayoutSceneScroll> scrolls;
 
     PrApp* app = nullptr;
     PrGpuDevice* device = nullptr;
@@ -176,7 +174,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     w.app = app;
     prUiSetApp(w.ui, app);
     if (!openDevice(w)) {
-        fprintf(stderr, "studio_gallery: no GPU device to render with\n");
+        printError("studio_gallery: no GPU device to render with\n");
         prAppStop(app);
         return;
     }
@@ -215,10 +213,10 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     prLayoutSceneRelease(w.scene);
     w.scene = scene;
     w.scrolls.resize(prLayoutSceneScrolls(w.tree, scene, nullptr, 0));
-    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), uint32_t(w.scrolls.size()));
+    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), w.scrolls.count());
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
     options.scrolls = w.scrolls.data();
-    options.scrollCount = uint32_t(w.scrolls.size());
+    options.scrollCount = w.scrolls.count();
     options.canvasFilled = true;
     float ratio = f->display.pixelRatio;
     prDrawListClear(w.list);
@@ -250,7 +248,7 @@ int main() {
     static Window w;
     w.fonts = prFontSetCreate(nullptr);
     if (prFontBundleInstall(w.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR) == 0) {
-        fprintf(stderr, "studio_gallery: the fonts under %s could not be installed\n", PR_FONT_BUNDLE_DIR);
+        printError("studio_gallery: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
         return 1;
     }
     w.shaper = prTextShaperCreate(PrTextShaperBackend_Default);

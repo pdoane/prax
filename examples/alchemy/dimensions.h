@@ -9,16 +9,18 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include "examples/alchemy/models.h"
 
 #include <stdint.h>
-#include <string>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
+
+using namespace pr;
 
 // The ladder that a run's size comes from.
 enum {
@@ -50,7 +52,7 @@ struct Dimensions {
 
     // The checkpoint that the family was last chosen for, and whether its file's header chose it rather than its name.
     // A family that a caller chose stands while the checkpoint stays selected.
-    std::string checkpointSeed;
+    String checkpointSeed;
     bool detected = false;
 
     Dimensions();
@@ -103,9 +105,9 @@ DimensionFamily parseFamily(PrStringView name, DimensionFamily fallback);
 PrStringView familyLabel(DimensionFamily family);
 
 // Return the size as a report names it, such as "1024 x 1024 (1:1)", and its two halves as the panel shows them.
-std::string dimensionLabel(DimensionSize size);
-std::string dimensionSizeLabel(DimensionSize size);
-std::string dimensionRatioLabel(DimensionSize size);
+String dimensionLabel(DimensionSize size);
+String dimensionSizeLabel(DimensionSize size);
+String dimensionRatioLabel(DimensionSize size);
 
 // Return the aspect and the megapixels that a size states.
 double sizeAspect(DimensionSize size);

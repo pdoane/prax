@@ -4,7 +4,7 @@
 
 #include "tools/harness/compare.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 using namespace harness;
 

@@ -4,7 +4,7 @@
 #include "pr/text_harfbuzz.h"
 #include "pr/text_simple.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <cstdio>

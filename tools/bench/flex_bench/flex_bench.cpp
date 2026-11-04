@@ -26,6 +26,7 @@
 // the engines differ.
 
 #include "pr/assert.h"
+#include "pr/random.h"
 
 #include "tools/bench/flex_bench/flex_engine.h"
 #include "tools/bench/flex_bench/prax_engine.h"
@@ -50,51 +51,33 @@ constexpr float kViewportWidth = 1024;
 constexpr float kViewportHeight = 768;
 constexpr float kNarrowWidth = 900;
 
-// A deterministic stream of numbers (splitmix64), so that every run builds the same trees.
-struct Random {
-    uint64_t state;
-
-    uint64_t next() {
-        uint64_t z = (state += 0x9e3779b97f4a7c15ull);
-        z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull;
-        z = (z ^ (z >> 27)) * 0x94d049bb133111ebull;
-        return z ^ (z >> 31);
-    }
-
-    // Returns a number in [0, 1).
-    float unit() { return float(next() >> 40) / float(1ull << 24); }
-
-    // Returns a whole number in [low, high].
-    uint32_t between(uint32_t low, uint32_t high) { return low + uint32_t(next() % (high - low + 1)); }
-};
-
 FlexLength px(float value) {
     return FlexLength{.kind = FlexLengthKind_Px, .value = value};
 }
 
 // Taffy's random_dimension: auto a fifth of the time, a length under 500 px three fifths of the time, and otherwise a
 // percentage.
-FlexLength randomLength(Random& random) {
-    float choice = random.unit();
+FlexLength randomLength(PrRandom& random) {
+    float choice = prRandomF32(&random);
     if (choice < 0.2f)
         return FlexLength{};
     if (choice < 0.8f)
-        return px(random.unit() * 500);
-    return FlexLength{.kind = FlexLengthKind_Percent, .value = random.unit() * 100};
+        return px(prRandomF32(&random) * 500);
+    return FlexLength{.kind = FlexLengthKind_Percent, .value = prRandomF32(&random) * 100};
 }
 
 // How a generator styles the leaves and the containers that it makes.
 struct Styler {
-    std::function<FlexStyle(Random&)> leaf;
-    std::function<FlexStyle(Random&)> container;
+    std::function<FlexStyle(PrRandom&)> leaf;
+    std::function<FlexStyle(PrRandom&)> container;
 };
 
 Styler fixed(const FlexStyle& style) {
-    return Styler{[style](Random&) { return style; }, [style](Random&) { return style; }};
+    return Styler{[style](PrRandom&) { return style; }, [style](PrRandom&) { return style; }};
 }
 
 Styler randomSizes() {
-    auto make = [](Random& random) {
+    auto make = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
         style.width = randomLength(random);
         style.height = randomLength(random);
@@ -114,7 +97,7 @@ Tree rooted() {
 
 // Taffy's build_deep_tree: `branching` containers, each holding an equal share of the remaining nodes, recursively down
 // to leaves.
-std::vector<uint32_t> deepTree(Tree& tree, Random& random, const Styler& styler, uint32_t nodes, uint32_t branching) {
+std::vector<uint32_t> deepTree(Tree& tree, PrRandom& random, const Styler& styler, uint32_t nodes, uint32_t branching) {
     std::vector<uint32_t> made;
     if (nodes <= branching) {
         for (uint32_t i = 0; i < nodes; ++i)
@@ -131,7 +114,7 @@ std::vector<uint32_t> deepTree(Tree& tree, Random& random, const Styler& styler,
 }
 
 Tree deepHierarchy(const Styler& styler, uint32_t nodes, uint32_t branching) {
-    Random random{12345};
+    PrRandom random = {.state = 12345};
     Tree tree = rooted();
     tree.children[tree.root] = deepTree(tree, random, styler, nodes, branching);
     return tree;
@@ -139,11 +122,11 @@ Tree deepHierarchy(const Styler& styler, uint32_t nodes, uint32_t branching) {
 
 // Taffy's build_flat_hierarchy: containers of one to four leaves under the root, until the tree holds `nodes`.
 Tree flatHierarchy(const Styler& styler, uint32_t nodes) {
-    Random random{12345};
+    PrRandom random = {.state = 12345};
     Tree tree = rooted();
     std::vector<uint32_t> containers;
     while (tree.styles.size() < nodes) {
-        uint32_t count = random.between(1, 4);
+        uint32_t count = prRandomU32Between(&random, 1, 4);
         std::vector<uint32_t> leaves;
         for (uint32_t i = 0; i < count; ++i)
             leaves.push_back(tree.add(styler.leaf(random)));
@@ -157,7 +140,7 @@ Tree flatHierarchy(const Styler& styler, uint32_t nodes) {
 
 // Taffy's build_super_deep_hierarchy: `depth` levels, each holding a container and `perLevel` - 1 leaves beside it.
 Tree superDeepHierarchy(const Styler& styler, uint32_t depth, uint32_t perLevel) {
-    Random random{12345};
+    PrRandom random = {.state = 12345};
     Tree tree = rooted();
     std::vector<uint32_t> children;
     for (uint32_t level = 0; level < depth; ++level) {
@@ -176,7 +159,7 @@ Tree superDeepHierarchy(const Styler& styler, uint32_t depth, uint32_t perLevel)
 // each leaf may or may not grow, set its own alignment, or have an auto margin. Measures the alignment and gaps that
 // place a line's items.
 Styler aligned() {
-    auto container = [](Random& random) {
+    auto container = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
         const FlexDirection directions[] = {
             FlexDirection_Row, FlexDirection_Column, FlexDirection_RowReverse,
@@ -191,27 +174,27 @@ Styler aligned() {
             FlexAlign_Baseline,
         };
         const float gaps[] = {0, 0, 4, 10};
-        style.direction = directions[random.between(0, 3)];
-        style.justifyContent = justifies[random.between(0, 5)];
-        style.alignItems = aligns[random.between(0, 4)];
-        style.gap = gaps[random.between(0, 3)];
-        style.grow = float(random.between(0, 1));
+        style.direction = directions[prRandomU32Between(&random, 0, 3)];
+        style.justifyContent = justifies[prRandomU32Between(&random, 0, 5)];
+        style.alignItems = aligns[prRandomU32Between(&random, 0, 4)];
+        style.gap = gaps[prRandomU32Between(&random, 0, 3)];
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
-    auto leaf = [](Random& random) {
+    auto leaf = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.width = px(float(random.between(10, 60)));
-        style.height = px(float(random.between(10, 60)));
-        style.grow = float(random.between(0, 2));
-        if (random.unit() < 0.25f) {
+        style.width = px(float(prRandomU32Between(&random, 10, 60)));
+        style.height = px(float(prRandomU32Between(&random, 10, 60)));
+        style.grow = float(prRandomU32Between(&random, 0, 2));
+        if (prRandomF32(&random) < 0.25f) {
             const FlexAlign selves[] = {
                 FlexAlign_FlexStart, FlexAlign_FlexEnd, FlexAlign_Center, FlexAlign_Stretch,
                 FlexAlign_Baseline,
             };
-            style.alignSelf = selves[random.between(0, 4)];
+            style.alignSelf = selves[prRandomU32Between(&random, 0, 4)];
         }
-        if (random.unit() < 0.15f)
-            style.marginAuto = uint8_t(1u << random.between(0, 3));
+        if (prRandomF32(&random) < 0.15f)
+            style.marginAuto = uint8_t(1u << prRandomU32Between(&random, 0, 3));
         return style;
     };
     return Styler{leaf, container};
@@ -219,16 +202,16 @@ Styler aligned() {
 
 // Leaves of fixed sizes from 10 to 60 px with grow factors of up to two, under containers with a grow factor of 0 or 1.
 Styler sizedLeaves() {
-    auto leaf = [](Random& random) {
+    auto leaf = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.width = px(float(random.between(10, 60)));
-        style.height = px(float(random.between(10, 60)));
-        style.grow = float(random.between(0, 2));
+        style.width = px(float(prRandomU32Between(&random, 10, 60)));
+        style.height = px(float(prRandomU32Between(&random, 10, 60)));
+        style.grow = float(prRandomU32Between(&random, 0, 2));
         return style;
     };
-    auto container = [](Random& random) {
+    auto container = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.grow = float(random.between(0, 1));
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
     return Styler{leaf, container};
@@ -247,7 +230,7 @@ void alternate(Tree& tree, uint32_t node, uint32_t depth) {
 // viewport that wrap or wrap in reverse, and a quarter are wrapping columns 300 px tall. Each has a random
 // align-content and gap. The leaves are 20 to 120 px wide and 10 to 60 px tall, and may or may not grow.
 Tree wrappingHierarchy(uint32_t nodes) {
-    Random random{12345};
+    PrRandom random = {.state = 12345};
     Tree tree = rooted();
     tree.styles[tree.root].direction = FlexDirection_Column;
     tree.styles[tree.root].alignItems = FlexAlign_FlexStart;
@@ -258,26 +241,26 @@ Tree wrappingHierarchy(uint32_t nodes) {
     };
     const float gaps[] = {0, 0, 4, 10};
     while (tree.styles.size() < nodes) {
-        uint32_t count = random.between(8, 30);
+        uint32_t count = prRandomU32Between(&random, 8, 30);
         std::vector<uint32_t> leaves;
         for (uint32_t i = 0; i < count; ++i) {
             FlexStyle leaf = flexStyleDefault();
-            leaf.width = px(float(random.between(20, 120)));
-            leaf.height = px(float(random.between(10, 60)));
-            leaf.grow = float(random.between(0, 1));
+            leaf.width = px(float(prRandomU32Between(&random, 20, 120)));
+            leaf.height = px(float(prRandomU32Between(&random, 10, 60)));
+            leaf.grow = float(prRandomU32Between(&random, 0, 1));
             leaves.push_back(tree.add(leaf));
         }
         FlexStyle style = flexStyleDefault();
-        style.wrap = random.unit() < 0.25f ? FlexWrap_WrapReverse : FlexWrap_Wrap;
-        style.alignContent = contents[random.between(0, 6)];
-        style.gap = gaps[random.between(0, 3)];
+        style.wrap = prRandomF32(&random) < 0.25f ? FlexWrap_WrapReverse : FlexWrap_Wrap;
+        style.alignContent = contents[prRandomU32Between(&random, 0, 6)];
+        style.gap = gaps[prRandomU32Between(&random, 0, 3)];
         style.shrink = 0;
-        if (random.unit() < 0.25f) {
+        if (prRandomF32(&random) < 0.25f) {
             style.direction = FlexDirection_Column;
             style.height = px(300);
         } else {
             style.width = px(kViewportWidth);
-            style.height = px(float(random.between(100, 300)));
+            style.height = px(float(prRandomU32Between(&random, 100, 300)));
         }
         uint32_t container = tree.add(style);
         tree.children[container] = std::move(leaves);
@@ -292,23 +275,23 @@ Tree wrappingHierarchy(uint32_t nodes) {
 // the container's alignment gives.
 Styler positioned() {
     Styler base = aligned();
-    auto container = [base](Random& random) {
+    auto container = [base](PrRandom& random) {
         FlexStyle style = base.container(random);
         style.position = FlexPosition_Relative;
         return style;
     };
-    auto leaf = [base](Random& random) {
+    auto leaf = [base](PrRandom& random) {
         FlexStyle style = base.leaf(random);
-        if (random.unit() < 0.2f) {
+        if (prRandomF32(&random) < 0.2f) {
             style.position = FlexPosition_Absolute;
             style.marginAuto = 0;
-            uint32_t placed = random.between(0, 2);
+            uint32_t placed = prRandomU32Between(&random, 0, 2);
             if (placed == 0) {
-                style.inset[0] = px(float(random.between(0, 40)));
-                style.inset[3] = px(float(random.between(0, 40)));
+                style.inset[0] = px(float(prRandomU32Between(&random, 0, 40)));
+                style.inset[3] = px(float(prRandomU32Between(&random, 0, 40)));
             } else if (placed == 1) {
-                style.inset[1] = px(float(random.between(0, 40)));
-                style.inset[2] = px(float(random.between(0, 40)));
+                style.inset[1] = px(float(prRandomU32Between(&random, 0, 40)));
+                style.inset[2] = px(float(prRandomU32Between(&random, 0, 40)));
             }
         }
         return style;
@@ -321,23 +304,23 @@ Styler positioned() {
 // changed the given size. Containers do not stretch, because stretching an item whose cross size determines its main
 // size compounds through the levels, which no real page does.
 Styler ratios() {
-    auto container = [](Random& random) {
+    auto container = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.direction = random.unit() < 0.5f ? FlexDirection_Row : FlexDirection_Column;
+        style.direction = prRandomF32(&random) < 0.5f ? FlexDirection_Row : FlexDirection_Column;
         const FlexAlign aligns[] = {FlexAlign_FlexStart, FlexAlign_Center, FlexAlign_FlexEnd};
-        style.alignItems = aligns[random.between(0, 2)];
-        style.grow = float(random.between(0, 1));
+        style.alignItems = aligns[prRandomU32Between(&random, 0, 2)];
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
-    auto leaf = [](Random& random) {
+    auto leaf = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
         const float ratios[] = {0.5f, 1, 4.0f / 3, 2};
-        style.aspectRatio = ratios[random.between(0, 3)];
-        if (random.unit() < 0.5f)
-            style.width = px(float(random.between(10, 60)));
+        style.aspectRatio = ratios[prRandomU32Between(&random, 0, 3)];
+        if (prRandomF32(&random) < 0.5f)
+            style.width = px(float(prRandomU32Between(&random, 10, 60)));
         else
-            style.height = px(float(random.between(10, 60)));
-        style.grow = float(random.between(0, 1));
+            style.height = px(float(prRandomU32Between(&random, 10, 60)));
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
     return Styler{leaf, container};
@@ -346,24 +329,24 @@ Styler ratios() {
 // Mostly columns that stretch their items. Every box's height is auto or a percentage of its container's height,
 // including containers. Percentages resolve at every level against a size that stretching or flexing made definite.
 Styler percentages() {
-    auto percent = [](Random& random) {
+    auto percent = [](PrRandom& random) {
         const float percents[] = {0, 50, 100};
-        float value = percents[random.between(0, 2)];
+        float value = percents[prRandomU32Between(&random, 0, 2)];
         return value == 0 ? FlexLength{} : FlexLength{.kind = FlexLengthKind_Percent, .value = value};
     };
-    auto container = [percent](Random& random) {
+    auto container = [percent](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.direction = random.unit() < 0.75f ? FlexDirection_Column : FlexDirection_Row;
+        style.direction = prRandomF32(&random) < 0.75f ? FlexDirection_Column : FlexDirection_Row;
         style.height = percent(random);
-        style.grow = float(random.between(0, 1));
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
-    auto leaf = [percent](Random& random) {
+    auto leaf = [percent](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.width = px(float(random.between(10, 60)));
+        style.width = px(float(prRandomU32Between(&random, 10, 60)));
         style.height = percent(random);
-        style.minHeight = px(float(random.between(0, 20)));
-        style.grow = float(random.between(0, 1));
+        style.minHeight = px(float(prRandomU32Between(&random, 0, 20)));
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
     return Styler{leaf, container};
@@ -373,19 +356,19 @@ Styler percentages() {
 // containers, whose automatic minimum is zero. Measures the content-based minimum, read through every level and cut off
 // at a scroll container.
 Styler scrollingColumns() {
-    auto container = [](Random& random) {
+    auto container = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
         style.direction = FlexDirection_Column;
         style.grow = 1;
         style.basis = px(0);
-        if (random.unit() < 0.33f)
+        if (prRandomF32(&random) < 0.33f)
             style.overflow = FlexOverflow_Scroll;
         return style;
     };
-    auto leaf = [](Random& random) {
+    auto leaf = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.height = px(float(random.between(10, 60)));
-        style.grow = float(random.between(0, 1));
+        style.height = px(float(prRandomU32Between(&random, 10, 60)));
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
     return Styler{leaf, container};
@@ -440,10 +423,10 @@ Tree staircaseHierarchy(uint32_t nodes, uint32_t perLine) {
 // container sorts its items. Only lib/layout runs this tree, because neither Yoga nor Taffy supports order.
 Tree orderedHierarchy(uint32_t nodes) {
     Tree tree = flatHierarchy(randomSizes(), nodes);
-    Random random{54321};
+    PrRandom random = {.state = 54321};
     for (uint32_t i = 0; i < tree.styles.size(); ++i)
         if (i != tree.root)
-            tree.styles[i].order = int32_t(random.between(1, 3));
+            tree.styles[i].order = int32_t(prRandomU32Between(&random, 1, 3));
     return tree;
 }
 
@@ -452,18 +435,18 @@ Tree orderedHierarchy(uint32_t nodes) {
 // reused, unless a word reads that height, in which case they are laid out again. Only lib/layout runs this tree,
 // because neither Yoga nor Taffy lays out inline content.
 Styler wordLeaves() {
-    auto container = [](Random& random) {
+    auto container = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.direction = random.unit() < 0.5f ? FlexDirection_Row : FlexDirection_Column;
-        style.grow = float(random.between(0, 1));
+        style.direction = prRandomF32(&random) < 0.5f ? FlexDirection_Row : FlexDirection_Column;
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
-    auto leaf = [](Random& random) {
+    auto leaf = [](PrRandom& random) {
         FlexStyle style = flexStyleDefault();
-        style.width = px(float(random.between(40, 160)));
-        style.words = uint16_t(random.between(3, 16));
-        style.percentWord = random.unit() < 0.25f;
-        style.grow = float(random.between(0, 1));
+        style.width = px(float(prRandomU32Between(&random, 40, 160)));
+        style.words = uint16_t(prRandomU32Between(&random, 3, 16));
+        style.percentWord = prRandomF32(&random) < 0.25f;
+        style.grow = float(prRandomU32Between(&random, 0, 1));
         return style;
     };
     return Styler{leaf, container};
@@ -499,8 +482,8 @@ std::vector<Case> cases() {
     out.push_back({"aligned", deepHierarchy(aligned(), 4000, 5)});
     // Every container is a column, so every item is sized in its block axis.
     Styler columnar = sizedLeaves();
-    std::function<FlexStyle(Random&)> rows = columnar.container;
-    columnar.container = [rows](Random& random) {
+    std::function<FlexStyle(PrRandom&)> rows = columnar.container;
+    columnar.container = [rows](PrRandom& random) {
         FlexStyle style = rows(random);
         style.direction = FlexDirection_Column;
         return style;

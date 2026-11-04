@@ -7,20 +7,21 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/base.h"
+#include "pr/function.h"
 #include "pr/http.h"
 #include "pr/net.h"
+#include "pr/string.h"
 #include "pr/websocket.h"
 
-#include <functional>
-#include <memory>
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
+
+using namespace pr;
 
 // The kinds of a client's events.
 enum {
@@ -42,13 +43,13 @@ typedef uint8_t ComfyEventKind;
 // The vocabularies that a server reports in /object_info and /embeddings. A vocabulary that the server does not report
 // is empty.
 struct ComfyCatalog {
-    std::vector<std::string> checkpoints;
-    std::vector<std::string> loras;
-    std::vector<std::string> samplers;
-    std::vector<std::string> schedulers;
-    std::vector<std::string> upscaleModels;
-    std::vector<std::string> detectors;
-    std::vector<std::string> embeddings;
+    Array<String> checkpoints;
+    Array<String> loras;
+    Array<String> samplers;
+    Array<String> schedulers;
+    Array<String> upscaleModels;
+    Array<String> detectors;
+    Array<String> embeddings;
 };
 
 // The depth of ComfyUI-Manager's queue of tasks, across every client.
@@ -66,28 +67,28 @@ struct ComfyManagerStatus {
 struct ComfyEvent {
     ComfyEventKind kind = ComfyEventKind_Connected;
     uint64_t tag = 0;
-    std::string promptId;
-    std::string node;
-    std::string filename;
-    std::string message;
-    std::string name;
+    String promptId;
+    String node;
+    String filename;
+    String message;
+    String name;
     uint32_t value = 0;
     uint32_t max = 0;
     uint32_t count = 0;
-    std::vector<uint8_t> bytes;
-    std::vector<std::string> names;
-    std::shared_ptr<ComfyCatalog> catalog;
+    Array<uint8_t> bytes;
+    Array<String> names;
+    ComfyCatalog catalog;
     ComfyManagerStatus manager;
 };
 
 // A model download that ComfyUI-Manager queues: the file at `url`, stored as `filename` in the folder that `type`
 // selects. `name` and `base` describe it in the manager's reports.
 struct ComfyModelInstall {
-    std::string name;
-    std::string type;
-    std::string base;
-    std::string url;
-    std::string filename;
+    String name;
+    String type;
+    String base;
+    String url;
+    String filename;
 };
 
 // What a client connects with: the network whose loop runs it, and the sources of HTTP exchanges and WebSockets on that
@@ -96,7 +97,7 @@ struct ComfyClientDesc {
     PrNet* net;
     PrHttp* http;
     PrWebSocketNetwork* websockets;
-    std::function<void()> wake;
+    Function<void()> wake;
 };
 
 // A client of one server at a time.
@@ -109,28 +110,28 @@ void comfyClientDestroy(ComfyClient* PR_NULLABLE client);
 
 // Connects to the server at `origin`, such as "http://127.0.0.1:8188", replacing any connection. Delivers Connected or
 // Disconnected. A request made before Connected waits for it.
-void comfyConnect(ComfyClient* client, const std::string& origin);
+void comfyConnect(ComfyClient* client, PrStringView origin);
 
 // Closes the connection. Delivers Disconnected.
 void comfyDisconnect(ComfyClient* client);
 
 // Queues the API-format prompt `graph`, asking for latent previews. The reply's `promptId` names the prompt, which the
 // run's events carry.
-void comfySubmit(ComfyClient* client, uint64_t tag, std::string graph);
+void comfySubmit(ComfyClient* client, uint64_t tag, String graph);
 
 // Stops the prompt that the server is running.
 void comfyInterrupt(ComfyClient* client);
 
 // Uploads `bytes` as an input image named `filename`, replacing any of that name. The reply's `name` is what a
 // LoadImage node's image input takes.
-void comfyUpload(ComfyClient* client, uint64_t tag, std::string filename, std::vector<uint8_t> bytes);
+void comfyUpload(ComfyClient* client, uint64_t tag, PrStringView filename, Array<uint8_t> bytes);
 
 // Reads the server's vocabularies into the reply's `catalog`.
 void comfyFetchCatalog(ComfyClient* client, uint64_t tag);
 
 // Reads the directories that the server searches for the model folder `folder` into the reply's `names`. They are the
 // server's own paths, which a client on another machine cannot open.
-void comfyFetchFolderPaths(ComfyClient* client, uint64_t tag, std::string folder);
+void comfyFetchFolderPaths(ComfyClient* client, uint64_t tag, PrStringView folder);
 
 // Asks for ComfyUI-Manager's version, into the reply's `name`. A refusal means that the server has no manager.
 void comfyFetchManagerVersion(ComfyClient* client, uint64_t tag);

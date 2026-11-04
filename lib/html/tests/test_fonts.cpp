@@ -15,7 +15,7 @@
 #include "css/src/css_root.h"
 #include "html/tests/support/html_test_fetch.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <string>

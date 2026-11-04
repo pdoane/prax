@@ -9,9 +9,9 @@
 #include "font/src/outline.h"
 #include "font/src/sfnt.h"
 
-#include "doctest/doctest.h"
 #include "freetype/freetype.h"
 #include "freetype/ftmm.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <cstdio>

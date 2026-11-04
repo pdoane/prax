@@ -2,7 +2,7 @@
 #include "pr/float.h"
 #include "pr/float16.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 

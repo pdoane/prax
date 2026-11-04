@@ -475,7 +475,7 @@ void htmlMediaSourceBuffered(const PrHtmlMediaSource* source, RawArray<PrMediaTi
         }
         out->clear();
         if (next.count != 0)
-            out->append(next.data, next.count);
+            out->append(next.span());
     }
     ranges.reset();
     next.reset();

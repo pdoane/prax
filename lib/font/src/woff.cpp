@@ -602,7 +602,7 @@ bool rebuildSimpleGlyph(GlyfStreams& s, uint32_t glyph, int16_t contours, GlyphP
     glyf.append(length, 2);
     if (instructionLength != 0)
         glyf.append(instructions, instructionLength);
-    glyf.append(points.flags.data, points.flags.count);
+    glyf.append(points.flags.span());
     appendCoordinates(glyf, points.dx.data, pointCount);
     appendCoordinates(glyf, points.dy.data, pointCount);
     return true;
@@ -770,7 +770,7 @@ void keepRebuilt(Woff2File& file, Woff2Table& table, const RawArray<uint8_t>& by
     table.start = file.rebuilt.count;
     table.size = bytes.count;
     if (bytes.count != 0)
-        file.rebuilt.append(bytes.data, bytes.count);
+        file.rebuilt.append(bytes.span());
     while (file.rebuilt.count % 4 != 0)
         file.rebuilt.push(0);
 }

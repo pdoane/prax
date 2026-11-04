@@ -82,7 +82,7 @@ void sectionProgress(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrLayoutNode bake = captionRow(kit, panel, "BAKE", 92);
         fill(kit, prKitProgress(kit, bake, {.value = progress.bake}));
         char percent[16];
-        prKitLabel(kit, bake, {.text = format(percent, sizeof percent, "%.0f%%", double(progress.bake * 100))},
+        prKitLabel(kit, bake, {.text = formatToBuffer(Span(percent), "{:.0f}%", double(progress.bake * 100))},
             kMonoMuted);
         PrLayoutNode scan = captionRow(kit, panel, "SCANNING", 92);
         fill(kit, prKitProgress(kit, scan, {.indeterminate = true}));

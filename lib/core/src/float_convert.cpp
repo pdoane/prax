@@ -635,6 +635,7 @@ struct DecimalScan {
     int32_t exponent10 = 0;
     bool negative = false;
     bool truncated = false;    // a nonzero digit was dropped beyond what a uint64_t holds
+    size_t length = 0;         // the bytes of the number, its sign and exponent included
 };
 
 // The number of digits that a uint64_t holds without overflowing.
@@ -729,9 +730,11 @@ bool scanDecimal(PrStringView input, DecimalScan* out) {
                 ++q;
             }
             exponent10 += expNegative ? -exponent : exponent;
+            p = q;
         }
     }
 
+    out->length = size_t(p - begin);
     out->mantissa = mantissa;
     out->exponent10 = exponent10;
     return true;
@@ -776,6 +779,147 @@ PR_NOINLINE AdjustedMantissa decimalToBinary(const BinaryFormat* format, const D
     return adjusted;
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Binary to decimal, rounded to a place
+//
+// Steele and White's digit generation. The value is held as an exact ratio num/den, and digits are produced one at a
+// time, so the rounding reads the true remainder and needs no error analysis. The operands stay within one limb for
+// ordinary magnitudes, and grow only toward the ends of the exponent range.
+
+constexpr size_t kDigitLimbs = 24;
+using DigitUint = BigUint<kDigitLimbs>;
+
+// Writes the m and e for which |value| = m * 2^e exactly. `value` must be finite and not zero.
+void decompose(double value, uint64_t* m, int32_t* e) {
+    uint64_t bits = bitCast<uint64_t>(value) & ~(1ull << 63);
+    uint64_t mantissa = bits & 0xfffffffffffffull;
+    uint32_t exponent = uint32_t(bits >> 52);
+    PR_ASSERT(bits != 0 && exponent != 0x7ff);
+    if (exponent == 0) {
+        *m = mantissa;
+        *e = -1074;
+    } else {
+        *m = mantissa | 1ull << 52;
+        *e = int32_t(exponent) - 1075;
+    }
+}
+
+// Sets num/den into [1, 10), and returns the exponent E for which |value| = 0.d1d2... * 10^E.
+int32_t scaleToLeadingDigit(DigitUint* num, DigitUint* den, uint64_t m, int32_t e) {
+    // The target is m * 2^e * 10^k with k = 1 - E. The ten is split into its two factors, which keeps the pair in
+    // lowest terms: num = m * 5^k * 2^(e + k) and den = 5^-k * 2^-(e + k), each power taken where its exponent is
+    // positive. Routing the power of two through 10^k would leave a common factor of two and double the operands'
+    // width. E is estimated from log10(2) in fixed point, which lands within one, and corrected below.
+    int32_t magnitude = int32_t(log2Floor(m)) + e;
+    int32_t exponent = (magnitude * 78913 >> 18) + 1;
+    int32_t k = 1 - exponent;
+
+    setU64(num, m);
+    setU64(den, 1);
+    if (k >= 0)
+        mulPow5(num, uint32_t(k));
+    else
+        mulPow5(den, uint32_t(-k));
+    int32_t shift = e + k;
+    if (shift >= 0)
+        shiftLeft(num, uint32_t(shift));
+    else
+        shiftLeft(den, uint32_t(-shift));
+
+    for (;;) {
+        if (compare(num, den) < 0) {
+            mulAdd(num, 10, 0);
+            --exponent;
+            continue;
+        }
+        DigitUint tenDen = *den;
+        mulAdd(&tenDen, 10, 0);
+        if (compare(num, &tenDen) >= 0) {
+            *den = tenDen;
+            ++exponent;
+            continue;
+        }
+        return exponent;
+    }
+}
+
+// Writes `wanted` digits, then rounds the remainder half to even and carries. A carry out of the leading digit raises
+// the exponent.
+PrF64Digits generateDigits(DigitUint* num, DigitUint* den, int32_t exponent, uint32_t wanted, char* out) {
+    // Operands that fit in one limb give their digits by 64-bit division. The headroom keeps num * 10 from overflowing.
+    constexpr uint64_t kSingleLimbMax = 1ull << 60;
+    if (wanted != 0 && den->count == 1 && den->limbs[0] < kSingleLimbMax && num->count <= 1) {
+        uint64_t divisor = den->limbs[0];
+        uint64_t value = num->count == 1 ? num->limbs[0] : 0;
+        for (uint32_t i = 0; i < wanted; ++i) {
+            uint64_t digit = value / divisor;
+            PR_ASSERT(digit < 10);
+            out[i] = char('0' + digit);
+            value -= digit * divisor;
+            if (i + 1 < wanted)
+                value *= 10;
+        }
+        setU64(num, value);
+    } else if (wanted != 0) {
+        // The divisor is fixed across the run, so its multiples by 2, 4 and 8 are built once, and each digit takes four
+        // comparisons instead of nine subtractions.
+        DigitUint multiples[3];
+        for (uint32_t k = 0; k < 3; ++k) {
+            multiples[k] = *den;
+            shiftLeft(&multiples[k], k + 1);
+        }
+        for (uint32_t i = 0; i < wanted; ++i) {
+            uint32_t digit = 0;
+            for (uint32_t k = 3; k-- > 0;) {
+                if (compare(num, &multiples[k]) >= 0) {
+                    subtract(num, &multiples[k]);
+                    digit += 1u << (k + 1);
+                }
+            }
+            if (compare(num, den) >= 0) {
+                subtract(num, den);
+                digit += 1;
+            }
+            PR_ASSERT(digit < 10);
+            out[i] = char('0' + digit);
+            if (i + 1 < wanted)
+                mulAdd(num, 10, 0);
+        }
+    }
+
+    bool roundUp = false;
+    if (wanted == 0) {
+        // No digit was written, so the value rounds up if it passes half of the first place that would have been.
+        mulAdd(num, 2, 0);
+        DigitUint tenDen = *den;
+        mulAdd(&tenDen, 10, 0);
+        roundUp = compare(num, &tenDen) > 0;
+    } else {
+        shiftLeft(num, 1);
+        int32_t order = compare(num, den);
+        roundUp = order > 0 || (order == 0 && ((out[wanted - 1] - '0') & 1) != 0);
+    }
+
+    uint32_t count = wanted;
+    if (roundUp) {
+        uint32_t i = wanted;
+        while (i > 0 && out[i - 1] == '9') {
+            out[i - 1] = '0';
+            --i;
+        }
+        if (i > 0) {
+            ++out[i - 1];
+        } else {
+            // Every digit carried, so the result is a one in the next place up.
+            out[0] = '1';
+            if (count == 0)
+                count = 1;
+            ++exponent;
+        }
+    }
+    return PrF64Digits{count, exponent};
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -789,14 +933,51 @@ PrF64Decimal prF64ShortestDecimal(double value) {
     return shortestDecimal(52, 1023, mantissa, exponent);
 }
 
-bool prF64ParsePrefix(PrStringView text, double* out) {
+PrF64Decimal prF32ShortestDecimal(float value) {
+    uint32_t bits = bitCast<uint32_t>(value);
+    uint32_t mantissa = bits & 0x7fffffu;
+    uint32_t exponent = (bits >> 23) & 0xffu;
+    return shortestDecimal(23, 127, mantissa, exponent);
+}
+
+PrF64Digits prF64FixedDigits(double value, uint32_t decimals, char* out, size_t capacity) {
+    uint64_t m = 0;
+    int32_t e = 0;
+    decompose(value, &m, &e);
+    DigitUint num;
+    DigitUint den;
+    int32_t exponent = scaleToLeadingDigit(&num, &den, m, e);
+    // The digits run from the leading one down to the 10^-decimals place. Fewer than none means that the value lies
+    // below half of that place, and rounds away.
+    int64_t span = int64_t(exponent) + decimals;
+    if (span < 0)
+        return PrF64Digits{0, exponent};
+    // Past the exact expansion every digit is a zero, which the caller writes.
+    uint32_t wanted = span < kPrF64MaxExactDigits ? uint32_t(span) : uint32_t(kPrF64MaxExactDigits);
+    PR_ASSERT(wanted < capacity);
+    return generateDigits(&num, &den, exponent, wanted, out);
+}
+
+PrF64Digits prF64SignificantDigits(double value, uint32_t significant, char* out, size_t capacity) {
+    uint64_t m = 0;
+    int32_t e = 0;
+    decompose(value, &m, &e);
+    uint32_t wanted = significant < kPrF64MaxExactDigits ? significant : uint32_t(kPrF64MaxExactDigits);
+    PR_ASSERT(wanted < capacity);
+    DigitUint num;
+    DigitUint den;
+    int32_t exponent = scaleToLeadingDigit(&num, &den, m, e);
+    return generateDigits(&num, &den, exponent, wanted, out);
+}
+
+size_t prF64ParsePrefix(PrStringView text, double* out) {
     DecimalScan scan;
     if (!scanDecimal(text, &scan))
-        return false;
+        return 0;
     if (!exactF64(&scan, out)) {
         AdjustedMantissa adjusted = decimalToBinary(&kF64Format, &scan, text);
         uint64_t sign = scan.negative ? 0x8000000000000000ull : 0;
         *out = bitCast<double>(sign | (uint64_t(adjusted.power2) << 52) | adjusted.mantissa);
     }
-    return true;
+    return scan.length;
 }

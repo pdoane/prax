@@ -14,7 +14,7 @@
 #include "pr/syntax_treesitter_python.h"
 #include "pr/syntax_treesitter_xml.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

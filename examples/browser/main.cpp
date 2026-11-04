@@ -21,6 +21,7 @@
 
 #include "pr/app.h"
 #include "pr/assert.h"
+#include "pr/callback.h"
 #include "pr/charset_quickjs.h"
 #include "pr/count_of.h"
 #include "pr/draw_list.h"
@@ -30,8 +31,11 @@
 #include "pr/kit_theme.h"
 #include "pr/layout_tree.h"
 #include "pr/mathml_quickjs.h"
+#include "pr/print.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/svg_quickjs.h"
 #include "pr/url_quickjs.h"
 #include "pr/xhr_quickjs.h"
@@ -40,9 +44,6 @@
 #include "examples/browser/browser.h"
 #include "examples/browser/commands.h"
 #include "examples/browser/icons.h"
-
-#include <cstdio>
-#include <string>
 
 using namespace browser;
 using namespace pr;
@@ -63,10 +64,10 @@ constexpr PrJsHtmlConsolePrinter kConsolePrinter = {printConsole};
 
 // Returns the directory `name` under `root`, a directory that the platform names, which this releases, or the empty
 // string if the platform names none.
-std::string userDirectory(PrRawString root, const char* name) {
-    std::string directory;
+String userDirectory(PrRawString root, const char* name) {
+    String directory;
     if (!prRawStringIsEmpty(&root))
-        directory = std::string(prRawStringView(&root).data, prRawStringView(&root).size) + "/Prax/Browser/" + name;
+        directory = format("{}/Prax/Browser/{}", prRawStringView(&root), name);
     prRawStringReset(&root);
     return directory;
 }
@@ -119,31 +120,30 @@ void openShared(Browser& b) {
 
     // The cache, local storage, the favorites and the history are on disk where the platform keeps a user's, so that
     // they outlive the run.
-    std::string directory = b.cacheDirectory;
-    if (directory.empty())
+    String directory = b.cacheDirectory;
+    if (directory.isEmpty())
         directory = userDirectory(prFileCacheDirectory(), "Cache");
-    if (!directory.empty()) {
+    if (!directory.isEmpty()) {
         PrStorageDiskDesc disk{.directory = directory, .limitBytes = kCacheBytes, .pool = b.io};
         if (prStorageDiskCreate(&disk, &b.cache) != PrStatus_Ok)
-            fprintf(stderr, "browser: cannot open the cache in %s\n", directory.c_str());
+            printError("browser: cannot open the cache in {}\n", directory);
     }
     if (b.cache == nullptr)
         b.cache = prStorageMemoryCreate(kCacheBytes, PrStorageEviction_LeastRecentlyUsed);
-    PrHtmlStorageProviderDesc local{.quotaBytes = kPrHtmlStorageQuotaBytes, .pool = b.io};
-    std::string localDirectory = userDirectory(prFileDataDirectory(), "Local Storage");
-    if (!localDirectory.empty())
-        local.directory = localDirectory;
+    // A platform that names no data directory keeps local storage in memory.
+    String localDirectory = userDirectory(prFileDataDirectory(), "Local Storage");
+    PrHtmlStorageProviderDesc local{.directory = localDirectory, .quotaBytes = kPrHtmlStorageQuotaBytes, .pool = b.io};
     b.localStorage = prHtmlStorageProviderCreate(&local);
     PrHtmlStorageProviderDesc session{.quotaBytes = kPrHtmlStorageQuotaBytes};
     b.sessionStorage = prHtmlStorageProviderCreate(&session);
     b.favoritesPath = userDirectory(prFileDataDirectory(), "Favorites.json");
-    if (b.favoritesPath.empty() || !favoritesLoad(b.favoritesPath, &b.favorites))
+    if (b.favoritesPath.isEmpty() || !favoritesLoad(b.favoritesPath, &b.favorites))
         b.favorites = favoritesDefault();
     b.historyPath = userDirectory(prFileDataDirectory(), "History.json");
-    if (!b.historyPath.empty())
+    if (!b.historyPath.isEmpty())
         historyLoad(b.historyPath, &b.history);
     for (const Visit& visit : b.history)
-        b.visitedUrls.insert(visit.url);
+        b.visitedUrls.add(visit.url);
 
     b.net = prNetCreate(PrNetBackend_Default);
     b.tls = prTlsCreate(PrTlsBackend_Default, b.net);
@@ -169,12 +169,12 @@ void openShared(Browser& b) {
 // the fetcher that it passes requests to.
 void closeShared(Browser& b) {
     prDomAgentDestroy(b.agent);
-    prNetPostBlocking(b.net, [](void* PR_NULLABLE context) {
-        Browser& browser = *static_cast<Browser*>(context);
-        prFetchNetworkDestroy(browser.fetcher);
-        prFetchNetworkDestroy(browser.network);
-        prHttpDestroy(browser.http);
-    }, &b);
+    auto destroyOnLoop = [&] {
+        prFetchNetworkDestroy(b.fetcher);
+        prFetchNetworkDestroy(b.network);
+        prHttpDestroy(b.http);
+    };
+    prNetPostBlocking(b.net, PR_SCOPED_CALLBACK(destroyOnLoop));
     prTlsDestroy(b.tls);
     prNetDestroy(b.net);
     prStorageDestroy(b.cache);
@@ -224,20 +224,20 @@ int main(int argc, char** argv) {
     prCrashHandler();
     static Browser b;
     for (int at = 1; at < argc; ++at) {
-        std::string argument = argv[at];
+        PrStringView argument = argv[at];
         if (argument == "--cache" && at + 1 < argc) {
             b.cacheDirectory = argv[++at];
         } else if (argument == "--stats") {
             b.stats = true;
         } else if (argument == "--trace") {
             b.trace = true;
-        } else if (argument.rfind("--", 0) == 0) {
-            fprintf(stderr, "usage: browser [--cache <directory>] [--stats] [--trace] [<url | path | search>...]\n");
+        } else if (prStringStartsWith(argument, "--")) {
+            printError("usage: browser [--cache <directory>] [--stats] [--trace] [<url | path | search>...]\n");
             return 2;
         } else {
-            std::string url = addressResolve(argument);
-            if (!url.empty())
-                b.addresses.push_back(url);
+            String url = addressResolve(argument);
+            if (!url.isEmpty())
+                b.addresses.push(url);
         }
     }
     openShared(b);

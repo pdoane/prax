@@ -4,7 +4,7 @@
 #include "pr/font.h"
 #include "pr/font_coretext.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <vector>
 

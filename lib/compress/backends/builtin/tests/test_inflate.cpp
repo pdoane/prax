@@ -2,7 +2,7 @@
 
 #include "compress/backends/builtin/src/inflate.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <algorithm>
 #include <string>

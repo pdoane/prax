@@ -2,7 +2,7 @@
 
 #include "media/tests/media_test_stream.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

@@ -37,9 +37,15 @@ bool prCoreWindowsFileWrite(PrStringView path, PrByteView bytes);
 bool prCoreWindowsFileRemove(PrStringView path);
 bool prCoreWindowsFileCreateDirectory(PrStringView path);
 
-// Return the directories of the user's caches and data, as prFileCacheDirectory and prFileDataDirectory do.
+// Return the directories of the user's caches and data, and the working directory, as prFileCacheDirectory,
+// prFileDataDirectory and prFileWorkingDirectory do.
 PrRawString prCoreWindowsFileCacheDirectory(void);
 PrRawString prCoreWindowsFileDataDirectory(void);
+PrRawString prCoreWindowsFileWorkingDirectory(void);
+
+// Write and read the process's standard streams as prFileStreamWrite and prFileStreamRead do.
+bool prCoreWindowsFileStreamWrite(PrFileStream stream, PrByteView bytes);
+size_t prCoreWindowsFileStreamRead(PrFileStream stream, void* out, size_t capacity);
 
 #if defined(__cplusplus)
 }

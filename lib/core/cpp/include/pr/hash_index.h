@@ -58,6 +58,10 @@ struct HashIndex {
 
     // Frees the slots and leaves the index empty.
     void reset();
+
+    // Makes the index a copy of `other`, for a client whose storage was copied with its positions. The slots are copied
+    // as they are, with nothing rehashed, and the index's own slots are reused if they are the same size.
+    void assign(const HashIndex& other);
 };
 
 // A hash index over the entries of a client by a 64-bit key, such as the id of a resource. Removing an entry moves the

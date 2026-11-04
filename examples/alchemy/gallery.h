@@ -6,31 +6,33 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/kit_collection.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
 
+using namespace pr;
+
 // An image of the gallery.
 struct GalleryEntry {
-    std::string path;
-    std::string filename;
+    String path;
+    String filename;
     double modified = 0;        // milliseconds since the Unix epoch
 };
 
 // The images of a directory, newest first, and the browser's selection of them. `selected` holds a flag for each entry,
 // and `lead` is the entry that the viewport shows.
 struct Gallery {
-    std::string dir;
-    std::vector<GalleryEntry> entries;
-    std::vector<bool> selected;
+    String dir;
+    Array<GalleryEntry> entries;
+    Array<bool> selected;
     PrKitSelection selection{};
     uint32_t lead = 0;
 
@@ -40,7 +42,7 @@ struct Gallery {
 
 // Returns the directory of the gallery: $ALCHEMY_DIR if it is set, and otherwise Alchemy/images under the platform's
 // directory for application data.
-std::string galleryDirectory();
+String galleryDirectory();
 
 // Points the gallery at `dir`, creating it if it is missing, and lists its images.
 void galleryOpen(Gallery& gallery, PrStringView dir);
@@ -51,7 +53,7 @@ void galleryRescan(Gallery& gallery);
 // Writes `png` into the gallery's directory under a name made from `filename`, and selects it at the head of the list.
 // Only the basename of `filename` is used, it ends in .png, and a number is added to it if a file has the name already.
 // Writes the path to `savedPath`. Returns false if the file could not be written.
-bool gallerySave(Gallery& gallery, PrStringView filename, const std::string& png, std::string* savedPath);
+bool gallerySave(Gallery& gallery, PrStringView filename, PrByteView png, String* savedPath);
 
 // Returns the entry that the viewport shows, or null if the gallery is empty.
 const GalleryEntry* PR_NULLABLE gallerySelected(const Gallery& gallery);
@@ -64,14 +66,11 @@ void galleryStep(Gallery& gallery, int32_t delta);
 uint32_t galleryIndexOf(const Gallery& gallery, PrStringView path);
 
 // Returns the paths of the selected entries, in the list's order, or of the lead alone if none is selected.
-std::vector<std::string> gallerySelectionPaths(const Gallery& gallery);
+Array<String> gallerySelectionPaths(const Gallery& gallery);
 
 // Removes the files of `paths` and their entries, and leaves the selection on the neighbor of the last that was
 // removed. Returns the number of files removed.
-uint32_t galleryDelete(Gallery& gallery, const std::vector<std::string>& paths);
-
-// Returns the basename of `path`.
-PrStringView pathFilename(PrStringView path);
+uint32_t galleryDelete(Gallery& gallery, const Array<String>& paths);
 
 } // namespace alchemy
 

@@ -148,9 +148,9 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
             runs.clear();
             for (uint32_t u = from; u < to; ++u)
                 runs.push(s.unitVisual.data[u]);
-            sortItems(runs.data, runs.count, [](uint32_t a, uint32_t b) { return a < b; });
+            sortItems(runs.span(), [](uint32_t a, uint32_t b) { return a < b; });
             auto runOf = [&](uint32_t u) {
-                uint32_t at = upperBound(runs.data, runs.count, s.unitVisual.data[u]) - 1;
+                uint32_t at = upperBound(runs.span(), s.unitVisual.data[u]) - 1;
                 uint32_t run = 0;
                 for (uint32_t j = 1; j <= at; ++j)
                     run += runs.data[j] != runs.data[j - 1] + 1 ? 1 : 0;
@@ -162,7 +162,7 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
             }
         }
     }
-    sortItems(t.splits.data, t.splits.count, [](const LayoutBidiSplit& a, const LayoutBidiSplit& b) {
+    sortItems(t.splits.span(), [](const LayoutBidiSplit& a, const LayoutBidiSplit& b) {
         return a.open != b.open ? a.open < b.open : a.byte < b.byte;
     });
 }

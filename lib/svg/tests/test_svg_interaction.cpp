@@ -7,7 +7,7 @@
 #include "pr/svg.h"
 #include "pr/svg_length.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

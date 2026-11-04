@@ -4,7 +4,7 @@
 
 #include "draw/src/draw_glyph.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <string>

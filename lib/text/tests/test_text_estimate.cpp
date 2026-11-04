@@ -3,7 +3,7 @@
 #include "pr/font_set.h"
 #include "pr/text_estimate.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

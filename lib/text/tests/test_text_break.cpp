@@ -3,7 +3,7 @@
 #include "pr/text_break.h"
 #include "pr/utf8.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstring>
 #include <string>

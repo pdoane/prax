@@ -76,7 +76,7 @@ bool splitOnce(RawArray<PathGridEdge>& edges) {
     auto right = [&](uint32_t i) {
         return edges.data[i].a.x > edges.data[i].b.x ? edges.data[i].a.x : edges.data[i].b.x;
     };
-    sortItems(order.data, order.count, [&](uint32_t a, uint32_t b) { return left(a) < left(b); });
+    sortItems(order.span(), [&](uint32_t a, uint32_t b) { return left(a) < left(b); });
     RawArray<Split> splits;
     RawArray<uint32_t> active;
     for (uint32_t k = 0; k < order.count; ++k) {
@@ -108,7 +108,7 @@ bool splitOnce(RawArray<PathGridEdge>& edges) {
     }
 
     // Sorts the splits of each edge along the edge, and emits the pieces between them.
-    sortItems(splits.data, splits.count, [&](const Split& a, const Split& b) {
+    sortItems(splits.span(), [&](const Split& a, const Split& b) {
         if (a.edge != b.edge)
             return a.edge < b.edge;
         const PathGridEdge& e = edges.data[a.edge];
@@ -197,7 +197,7 @@ void pathGridMergePieces(const RawArray<PathGridEdge>& edges, RawArray<PathGridP
         piece.winding[e.owner] = forward ? 1 : -1;
         out.push(piece);
     }
-    sortItems(out.data, out.count, [](const PathGridPiece& a, const PathGridPiece& b) {
+    sortItems(out.span(), [](const PathGridPiece& a, const PathGridPiece& b) {
         if (!(a.lo == b.lo))
             return pathGridBeforeX(a.lo, b.lo);
         return pathGridBeforeX(a.hi, b.hi);

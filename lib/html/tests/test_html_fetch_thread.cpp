@@ -4,7 +4,7 @@
 #include "pr/html_page.h"
 #include "pr/net_sockets.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <chrono>
 #include <condition_variable>

@@ -1,6 +1,6 @@
 #include "pr/time_date.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 

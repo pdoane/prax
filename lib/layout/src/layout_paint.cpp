@@ -618,7 +618,7 @@ struct Painter : LayoutWalkVisitor {
                 follow();
                 embedMoved(part.segments.data[0].list, part.segments.data[0].offset + moved);
             }
-            into().lists.append(part.lists.data, part.lists.count);
+            into().lists.append(part.lists.span());
             return;
         }
         LayoutPaintRecording& to = into();
@@ -707,7 +707,7 @@ struct Painter : LayoutWalkVisitor {
                 layoutRectMoved(part.regions.data[i].rect, moved),
                 map(part.regions.data[i].scroll),
             });
-        to.lists.append(part.lists.data, part.lists.count);
+        to.lists.append(part.lists.span());
         // A part ends where the walk is, which may be a different container from its last segment's. For example, a run
         // of a list ends in the container of its last box.
         follow();
@@ -1889,7 +1889,7 @@ struct Painter : LayoutWalkVisitor {
             }
         }
         cuts.push(kPrF32Infinity);
-        sortItems(cuts.data, cuts.count, [](float a, float b) { return a < b; });
+        sortItems(cuts.span(), [](float a, float b) { return a < b; });
         for (uint32_t c = 0; text.glyphCount != 0 && c + 1 < cuts.count; ++c) {
             float lo = cuts.data[c];
             float hi = cuts.data[c + 1];

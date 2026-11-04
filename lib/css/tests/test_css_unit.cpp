@@ -3,7 +3,7 @@
 #include "css/src/css_style.h"
 #include "css/src/css_unit.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 

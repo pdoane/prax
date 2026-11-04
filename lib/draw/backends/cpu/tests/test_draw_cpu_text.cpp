@@ -3,7 +3,7 @@
 #include "pr/draw_glyph.h"
 #include "pr/image_builtin.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <string>

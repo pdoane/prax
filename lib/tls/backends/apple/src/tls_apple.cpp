@@ -249,7 +249,7 @@ void run(void* PR_NULLABLE context) {
                         session->received.clear();
                         session->receivedStart = 0;
                     }
-                    session->received.append(delivery->bytes.data, delivery->bytes.count);
+                    session->received.append(delivery->bytes.span());
                 }
                 if (delivery->complete)
                     session->ended = true;

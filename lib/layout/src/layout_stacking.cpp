@@ -46,7 +46,7 @@ void findList(const LayoutTree* tree, LayoutNodeIndex context, bool fresh, RawAr
     RawArray<FoundBox> found;
     for (uint32_t i = 0; i < out.count; ++i)
         found.push(FoundBox{out.data[i], i});
-    sortItems(found.data, found.count, [](const FoundBox& a, const FoundBox& b) {
+    sortItems(found.span(), [](const FoundBox& a, const FoundBox& b) {
         return a.box.level < b.box.level || (a.box.level == b.box.level && a.order < b.order);
     });
     for (uint32_t i = 0; i < found.count; ++i)

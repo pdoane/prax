@@ -553,7 +553,7 @@ void restorePoint(Pass& p, const CssCountingPoint& point) {
         p.counters.push(counter);
     }
     p.boundaries.clear();
-    p.boundaries.append(point.boundaries.data, point.boundaries.count);
+    p.boundaries.append(point.boundaries.span());
     p.quoteDepth = point.quoteDepth;
 }
 
@@ -573,7 +573,7 @@ void savePoint(const Pass& p, CssCountingPoint& point) {
         point.counters.push(counter);
     }
     point.boundaries.clear();
-    point.boundaries.append(p.boundaries.data, p.boundaries.count);
+    point.boundaries.append(p.boundaries.span());
     point.quoteDepth = p.quoteDepth;
 }
 

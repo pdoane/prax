@@ -4,7 +4,7 @@
 
 #include "layout/tests/layout_fixture.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

@@ -16,6 +16,8 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
 
+using namespace pr;
+
 // The contexts of the key bindings, which the view puts on its panels: the application's own, which applies everywhere,
 // the parameters panel, the panels that show the gallery, and the dialog of an import.
 constexpr PrStringView kContextParameters = "parameters";

@@ -71,9 +71,9 @@ PathStore* own(Path* path) {
     }
     PathStore* copy = createStore();
     if (store->verbs.count != 0)
-        copy->verbs.append(store->verbs.data, store->verbs.count);
+        copy->verbs.append(store->verbs.span());
     if (store->points.count != 0)
-        copy->points.append(store->points.data, store->points.count);
+        copy->points.append(store->points.span());
     releaseStore(store);
     path->store = copy;
     return copy;
@@ -468,7 +468,7 @@ void prPathAddPath(PrPath* path, const PrPath* other, PrAffine2 transform) {
     RawArray<PrPathVerb> verbs;
     RawArray<PrVec2> points;
     verbs.append(source->verbs.data, verbCount);
-    points.append(source->points.data, source->points.count);
+    points.append(source->points.span());
     uint32_t next = 0;
     path->open = false;
     for (uint32_t i = 0; i < verbCount; ++i) {

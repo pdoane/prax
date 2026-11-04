@@ -33,6 +33,12 @@ typedef struct PrByteView {
     constexpr const uint8_t* PR_NULLABLE begin() const { return data; }
     constexpr const uint8_t* PR_NULLABLE end() const { return data + size; }
 
+    // Returns true if the view holds no bytes. The null view holds none.
+    constexpr bool isEmpty() const { return size == 0; }
+
+    // Returns true if the view is the null view.
+    constexpr bool isNull() const { return data == nullptr; }
+
     // The null view equals the empty view.
     friend constexpr bool operator==(PrByteView a, PrByteView b) {
         return a.size == b.size && (a.size == 0 || __builtin_memcmp(a.data, b.data, a.size) == 0);

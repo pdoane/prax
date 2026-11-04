@@ -1,7 +1,7 @@
 #include "url/src/url_record.h"
 #include "url/src/url_scheme.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

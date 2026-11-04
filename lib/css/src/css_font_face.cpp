@@ -294,7 +294,7 @@ void forget(PrCssFontFaceSet* set, PrCssFontFace* face) {
 // Appends the sets that hold the face now: the sets it was added to, and its document's set while the face is
 // CSS-connected to a rule of the document's style sheets. A set that the face has left sees nothing of its load.
 void setsOf(PrCssFontFace* face, PrDomDocument* document, RawArray<PrCssFontFaceSet* PR_NONNULL>* out) {
-    out->append(face->sets.data, face->sets.count);
+    out->append(face->sets.span());
     PrCssFontFaceSet* fonts = document->style != nullptr ? document->style->fonts : nullptr;
     if (face->rule != nullptr && fonts != nullptr && fonts->faces.find(face) == kArrayMissing &&
             cssFontFaceSetHas(fonts, face))
@@ -889,7 +889,7 @@ void cssDocumentFontFaces(const PrDomDocument* document, RawArray<PrCssFontFace*
     for (uint32_t i = 0; i < style->sheets.sheets.count; ++i)
         connectedFaces(style->sheets.sheets.data[i], out);
     if (style->fonts != nullptr)
-        out->append(style->fonts->faces.data, style->fonts->faces.count);
+        out->append(style->fonts->faces.span());
 }
 
 const PrFont* PR_NULLABLE cssFontFaceCachedFont(const PrCssFontFace* face, PrDomDocument* document) {

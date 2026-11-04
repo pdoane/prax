@@ -3,7 +3,7 @@
 #include "pr/color_space.h"
 #include "pr/float.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <initializer_list>

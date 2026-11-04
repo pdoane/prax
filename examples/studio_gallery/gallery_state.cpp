@@ -2,11 +2,10 @@
 
 #include "examples/studio_gallery/gallery_state.h"
 
+#include "pr/ascii.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
-
-#include <ctype.h>
-#include <stdio.h>
+#include "pr/random.h"
 
 namespace gallery {
 
@@ -49,25 +48,25 @@ constexpr TreeSeed kTreeSeeds[] = {
 };
 
 // Returns one past the last node of the subtree at `start`.
-size_t subtreeEnd(const std::vector<TreeNode>& nodes, size_t start) {
-    size_t end = start + 1;
-    while (end < nodes.size() && nodes[end].depth > nodes[start].depth)
+uint32_t subtreeEnd(const Array<TreeNode>& nodes, uint32_t start) {
+    uint32_t end = start + 1;
+    while (end < nodes.count() && nodes[end].depth > nodes[start].depth)
         ++end;
     return end;
 }
 
-size_t indexOfKey(const std::vector<TreeNode>& nodes, uint32_t key) {
-    for (size_t i = 0; i < nodes.size(); ++i) {
+uint32_t indexOfKey(const Array<TreeNode>& nodes, uint32_t key) {
+    for (uint32_t i = 0; i < nodes.count(); ++i) {
         if (nodes[i].key == key)
             return i;
     }
-    return nodes.size();
+    return nodes.count();
 }
 
 // Finds which nodes have children, and closes the nodes that have none.
-void markChildren(std::vector<TreeNode>& nodes) {
-    for (size_t i = 0; i < nodes.size(); ++i) {
-        nodes[i].hasChildren = i + 1 < nodes.size() && nodes[i + 1].depth > nodes[i].depth;
+void markChildren(Array<TreeNode>& nodes) {
+    for (uint32_t i = 0; i < nodes.count(); ++i) {
+        nodes[i].hasChildren = i + 1 < nodes.count() && nodes[i + 1].depth > nodes[i].depth;
         if (!nodes[i].hasChildren)
             nodes[i].open = false;
     }
@@ -133,74 +132,42 @@ constexpr const char* kAssetNouns[] = {
     "canopy", "beacon",   "bridge", "workbench",
 };
 
-// A generator whose sequence is the same on every run, so that the collection is too.
-struct AssetRandom {
-    uint64_t state;
-
-    uint64_t next() {
-        state += 0x9e3779b97f4a7c15ull;
-        uint64_t value = state;
-        value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ull;
-        value = (value ^ (value >> 27)) * 0x94d049bb133111ebull;
-        return value ^ (value >> 31);
-    }
-
-    uint32_t below(uint32_t bound) {
-        return uint32_t(next() % bound);
-    }
-};
-
 // Returns a byte count in the largest unit that keeps a whole part.
-std::string sizeLabel(uint64_t bytes) {
-    char text[16];
+String sizeLabel(uint64_t bytes) {
     if (bytes >= 1024 * 1024)
-        snprintf(text, sizeof text, "%.1f MB", double(bytes) / (1024.0 * 1024.0));
-    else if (bytes >= 1024)
-        snprintf(text, sizeof text, "%.0f KB", double(bytes) / 1024.0);
-    else
-        snprintf(text, sizeof text, "%llu B", static_cast<unsigned long long>(bytes));
-    return text;
+        return format("{:.1f} MB", double(bytes) / (1024.0 * 1024.0));
+    if (bytes >= 1024)
+        return format("{:.0f} KB", double(bytes) / 1024.0);
+    return format("{} B", bytes);
 }
 
 void seedCollections(CollectionsState& collections) {
-    AssetRandom random{0x5eed1e55c0ffee11ull};
+    PrRandom random = {.state = 0x5eed1e55c0ffee11ull};
     collections.assets.clear();
     collections.assets.reserve(kCollectionGroups * kCollectionGroupSize);
     for (uint32_t i = 0; i < kCollectionGroups * kCollectionGroupSize; ++i) {
-        const AssetKind& kind = kAssetKinds[random.below(countOf(kAssetKinds))];
-        const char* qualifier = kAssetQualifiers[random.below(countOf(kAssetQualifiers))];
-        const char* noun = kAssetNouns[random.below(countOf(kAssetNouns))];
-        char name[64];
-        snprintf(name, sizeof name, "%s_%s_%02u.%s", qualifier, noun, random.below(100), kind.extension);
+        const AssetKind& kind = kAssetKinds[prRandomU32Below(&random, countOf(kAssetKinds))];
+        const char* qualifier = kAssetQualifiers[prRandomU32Below(&random, countOf(kAssetQualifiers))];
+        const char* noun = kAssetNouns[prRandomU32Below(&random, countOf(kAssetNouns))];
         CollectionAsset asset;
-        asset.name = name;
+        asset.name = format("{}_{}_{:02}.{}", qualifier, noun, prRandomU32Below(&random, 100), kind.extension);
         asset.type = kind.type;
         asset.icon = kind.icon;
         // The magnitude is chosen first, so that the sizes spread across their units.
-        uint32_t magnitude = 9 + random.below(16);
-        asset.sizeBytes = 64ull + random.next() % (1ull << magnitude);
+        uint32_t magnitude = 9 + prRandomU32Below(&random, 16);
+        asset.sizeBytes = 64ull + prRandomU64Below(&random, 1ull << magnitude);
         asset.sizeText = sizeLabel(asset.sizeBytes);
-        uint64_t tint = random.next();
+        uint64_t tint = prRandomU64(&random);
         asset.tint = PrColor{
             0.27f + float(tint & 0x6f) / 512.0f, 0.27f + float((tint >> 8) & 0x6f) / 512.0f,
             0.27f + float((tint >> 16) & 0x6f) / 512.0f, 1.0f,
         };
-        collections.assets.push_back(asset);
+        collections.assets.push(asset);
     }
 }
 
-bool containsIgnoreCase(const char* text, const std::string& needle) {
-    if (needle.empty())
-        return true;
-    std::string owned(text);
-    for (size_t i = 0; i + needle.size() <= owned.size(); ++i) {
-        size_t j = 0;
-        while (j < needle.size() && tolower(owned[i + j]) == tolower(needle[j]))
-            ++j;
-        if (j == needle.size())
-            return true;
-    }
-    return false;
+bool containsIgnoreCase(const char* text, PrStringView needle) {
+    return needle.isEmpty() || prAsciiContainsFold(text, needle);
 }
 
 // A block of the timeline's clip.
@@ -226,9 +193,9 @@ constexpr float kMarkerSeeds[] = {1.5f, 4.0f, 5.5f};
 
 void seedTimeline(TimelineState& timeline) {
     for (const char* name : kTrackSeeds)
-        timeline.tracks.push_back(PrKitTimelineTrack{.name = name});
+        timeline.tracks.push(PrKitTimelineTrack{.name = name});
     for (const BlockSeed& seed : kBlockSeeds) {
-        timeline.blocks.push_back(PrKitTimelineBlock{
+        timeline.blocks.push(PrKitTimelineBlock{
             .id = timeline.nextId++,
             .track = seed.track,
             .start = seed.start,
@@ -238,7 +205,7 @@ void seedTimeline(TimelineState& timeline) {
         });
     }
     for (float time : kMarkerSeeds)
-        timeline.markers.push_back(PrKitTimelineMarker{.track = 3, .time = time, .color = {.86f, .38f, .38f, 1}});
+        timeline.markers.push(PrKitTimelineMarker{.track = 3, .time = time, .color = {.86f, .38f, .38f, 1}});
 }
 
 // The ports of the graph's nodes.
@@ -260,7 +227,7 @@ constexpr PrKitGraphPort kSurfaceIn[] = {
 };
 
 void seedGraph(GraphState& graph) {
-    graph.nodes = {
+    graph.nodes = Array<PrKitGraphNode>({
         {
             .id = 1,
             .position = {24, 36},
@@ -282,12 +249,12 @@ void seedGraph(GraphState& graph) {
             .bodyHeight = 28,
         },
         {.id = 4, .position = {510, 130}, .title = "Surface", .meta = "output", .inputs = kSurfaceIn, .inputCount = 3},
-    };
-    graph.wires = {
+    });
+    graph.wires = Array<PrKitGraphWire>({
         {.id = graph.nextWireId++, .link = {.fromNode = 1, .fromPort = 1, .toNode = 3, .toPort = 1}},
         {.id = graph.nextWireId++, .link = {.fromNode = 2, .fromPort = 1, .toNode = 3, .toPort = 3}},
         {.id = graph.nextWireId++, .link = {.fromNode = 3, .fromPort = 1, .toNode = 4, .toPort = 1}},
-    };
+    });
 }
 
 } // namespace
@@ -302,7 +269,9 @@ GalleryState::GalleryState() {
     inputs.styled = prTextEditBufferCreate("Select some text and give it a style. Each style is a run of its own, and the "
         "caret, the selection and undo count through them all.");
     inputs.styledHistory = prTextEditHistoryCreate(inputs.styled);
-    inputs.commands = {"build --release", "suite render css/flex-basis", "bench vg"};
+    const char* commands[] = {"build --release", "suite render css/flex-basis", "bench vg"};
+    for (const char* command : commands)
+        inputs.commands.push(command);
     uint32_t key = 0;
     for (const TreeSeed& seed : kTreeSeeds) {
         TreeNode node;
@@ -314,12 +283,14 @@ GalleryState::GalleryState() {
         node.icon = seed.icon;
         node.badgeTone = seed.badgeTone;
         node.hidden = seed.hidden;
-        tree.nodes.push_back(node);
+        tree.nodes.push(node);
     }
     markChildren(tree.nodes);
-    for (size_t i = 0; i < tree.nodes.size(); ++i)
+    for (uint32_t i = 0; i < tree.nodes.count(); ++i)
         tree.nodes[i].open = tree.nodes[i].hasChildren && kTreeSeeds[i].open;
-    chips = {"player", "physics", "no-lod", "shader:pbr"};
+    const char* seededChips[] = {"player", "physics", "no-lod", "shader:pbr"};
+    for (const char* chip : seededChips)
+        chips.push(chip);
     seedCollections(collections);
     seedTimeline(timeline);
     seedGraph(graph);
@@ -336,7 +307,7 @@ const PrDrawImage* galleryPicture(GalleryState& state) {
         return state.picture;
     constexpr uint32_t kWidth = 512;
     constexpr uint32_t kHeight = 256;
-    std::vector<uint8_t> pixels(kWidth * kHeight * 4);
+    Array<uint8_t> pixels(kWidth * kHeight * 4);
     auto mix = [](float a, float b, float t) { return a + (b - a) * t; };
     for (uint32_t y = 0; y < kHeight; ++y) {
         for (uint32_t x = 0; x < kWidth; ++x) {
@@ -364,7 +335,7 @@ const PrDrawImage* galleryPicture(GalleryState& state) {
                 color[1] = 0.16f;
                 color[2] = 0.14f;
             }
-            uint8_t* texel = &pixels[(size_t(y) * kWidth + x) * 4];
+            uint8_t* texel = &pixels[(y * kWidth + x) * 4];
             for (uint32_t c = 0; c < 3; ++c)
                 texel[c] = uint8_t(color[c] * 255 + 0.5f);
             texel[3] = 255;
@@ -483,21 +454,21 @@ const PrStringView* galleryRevisions(uint32_t* count) {
 }
 
 void submitCommand(InputsState& inputs) {
-    if (inputs.command.empty())
+    if (inputs.command.isEmpty())
         return;
-    inputs.commands.push_back(inputs.command);
+    inputs.commands.push(inputs.command);
     inputs.command.clear();
 }
 
-bool commandMatches(const CommandItem& item, const std::string& query) {
+bool commandMatches(const CommandItem& item, PrStringView query) {
     return containsIgnoreCase(item.label, query) || containsIgnoreCase(item.category, query);
 }
 
 void undoBegin(UndoState& undo) {
     undo.opened = undo.values;
     undo.wrote = false;
-    if (undo.history.empty()) {
-        undo.history.push_back(undo.opened);
+    if (undo.history.isEmpty()) {
+        undo.history.push(undo.opened);
         undo.cursor = 0;
         return;
     }
@@ -508,8 +479,8 @@ void undoCommit(UndoState& undo) {
     if (!undo.wrote)
         return;
     undo.history.resize(undo.cursor + 1);
-    undo.history.push_back(undo.values);
-    undo.cursor = uint32_t(undo.history.size()) - 1;
+    undo.history.push(undo.values);
+    undo.cursor = undo.history.count() - 1;
 }
 
 bool undoAvailable(const UndoState& undo) {
@@ -517,7 +488,7 @@ bool undoAvailable(const UndoState& undo) {
 }
 
 bool redoAvailable(const UndoState& undo) {
-    return size_t(undo.cursor) + 1 < undo.history.size();
+    return size_t(undo.cursor) + 1 < undo.history.count();
 }
 
 bool undoStep(UndoState& undo, bool forward) {
@@ -550,29 +521,34 @@ void moveTab(TabsState& tabs, uint32_t from, uint32_t to) {
 }
 
 TreeNode* findTreeNode(TreeState& tree, uint32_t key) {
-    size_t index = indexOfKey(tree.nodes, key);
-    return index < tree.nodes.size() ? &tree.nodes[index] : nullptr;
+    uint32_t index = indexOfKey(tree.nodes, key);
+    return index < tree.nodes.count() ? &tree.nodes[index] : nullptr;
 }
 
 void moveTreeNode(TreeState& tree, uint32_t key, uint32_t targetKey, TreePlacement placement) {
-    std::vector<TreeNode>& nodes = tree.nodes;
-    size_t start = indexOfKey(nodes, key);
-    if (start >= nodes.size() || key == targetKey)
+    Array<TreeNode>& nodes = tree.nodes;
+    uint32_t start = indexOfKey(nodes, key);
+    if (start >= nodes.count() || key == targetKey)
         return;
-    size_t end = subtreeEnd(nodes, start);
-    for (size_t i = start; i < end; ++i) {
+    uint32_t end = subtreeEnd(nodes, start);
+    for (uint32_t i = start; i < end; ++i) {
         if (nodes[i].key == targetKey)
             return;
     }
-    std::vector<TreeNode> moved(nodes.begin() + long(start), nodes.begin() + long(end));
-    nodes.erase(nodes.begin() + long(start), nodes.begin() + long(end));
-    size_t at = indexOfKey(nodes, targetKey);
+    Array<TreeNode> moved;
+    moved.append(nodes.span().slice(start, end - start));
+    nodes.erase(start, end - start);
+    uint32_t at = indexOfKey(nodes, targetKey);
     uint32_t depth = placement == TreePlacement_Into ? nodes[at].depth + 1 : nodes[at].depth;
     int32_t shift = int32_t(depth) - int32_t(moved[0].depth);
     for (TreeNode& node : moved)
         node.depth = uint32_t(int32_t(node.depth) + shift);
-    size_t insertAt = placement == TreePlacement_Into  ? at + 1 : placement == TreePlacement_After ? subtreeEnd(nodes, at) : at;
-    nodes.insert(nodes.begin() + long(insertAt), moved.begin(), moved.end());
+    uint32_t insertAt = at;
+    if (placement == TreePlacement_Into)
+        insertAt = at + 1;
+    else if (placement == TreePlacement_After)
+        insertAt = subtreeEnd(nodes, at);
+    nodes.insert(insertAt, moved.span());
     markChildren(nodes);
     if (placement == TreePlacement_Into)
         nodes[at].open = true;
@@ -588,12 +564,12 @@ void treeOrder(TreeState& tree) {
             continue;
         skipping = node.hasChildren && !node.open;
         skipDepth = node.depth;
-        tree.rows.push_back(PrKitTreeItem{.depth = node.depth, .hasChildren = node.hasChildren, .open = node.open});
-        tree.keys.push_back(node.key);
+        tree.rows.push(PrKitTreeItem{.depth = node.depth, .hasChildren = node.hasChildren, .open = node.open});
+        tree.keys.push(node.key);
     }
 }
 
-bool selectionHolds(const std::vector<uint32_t>& selection, uint32_t value) {
+bool selectionHolds(const Array<uint32_t>& selection, uint32_t value) {
     for (uint32_t held : selection) {
         if (held == value)
             return true;
@@ -601,7 +577,7 @@ bool selectionHolds(const std::vector<uint32_t>& selection, uint32_t value) {
     return false;
 }
 
-void selectionApply(std::vector<uint32_t>& selection, const PrKitSelectionEdit& edit, const uint32_t* keys) {
+void selectionApply(Array<uint32_t>& selection, const PrKitSelectionEdit& edit, const uint32_t* keys) {
     if (edit.op == PrKitSelectionOp_None)
         return;
     if (edit.op == PrKitSelectionOp_Replace)
@@ -610,32 +586,32 @@ void selectionApply(std::vector<uint32_t>& selection, const PrKitSelectionEdit& 
         uint32_t index = edit.first + i;
         uint32_t value = keys != nullptr ? keys[index] : index;
         bool held = false;
-        for (size_t j = 0; j < selection.size(); ++j) {
+        for (uint32_t j = 0; j < selection.count(); ++j) {
             if (selection[j] != value)
                 continue;
             held = true;
             if (edit.op == PrKitSelectionOp_Toggle)
-                selection.erase(selection.begin() + long(j));
+                selection.erase(j);
             break;
         }
         if (!held)
-            selection.push_back(value);
+            selection.push(value);
     }
 }
 
 void collectionsTreeOrder(CollectionsState& collections) {
-    collections.groupOpen.resize(kCollectionGroups, 0);
+    collections.groupOpen.resize(kCollectionGroups);
     collections.treeRows.clear();
     collections.treeKeys.clear();
     for (uint32_t group = 0; group < kCollectionGroups; ++group) {
         bool open = collections.groupOpen[group] != 0;
-        collections.treeRows.push_back(PrKitTreeItem{.depth = 0, .hasChildren = true, .open = open});
-        collections.treeKeys.push_back(group << 16);
+        collections.treeRows.push(PrKitTreeItem{.depth = 0, .hasChildren = true, .open = open});
+        collections.treeKeys.push(group << 16);
         if (!open)
             continue;
         for (uint32_t child = 0; child < kCollectionGroupSize; ++child) {
-            collections.treeRows.push_back(PrKitTreeItem{.depth = 1});
-            collections.treeKeys.push_back((group << 16) | (child + 1));
+            collections.treeRows.push(PrKitTreeItem{.depth = 1});
+            collections.treeKeys.push((group << 16) | (child + 1));
         }
     }
 }

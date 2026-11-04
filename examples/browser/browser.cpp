@@ -7,19 +7,19 @@
 #include "examples/browser/browser.h"
 
 #include "pr/draw_list.h"
+#include "pr/float.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
 #include "pr/layout_unit.h"
+#include "pr/min_max.h"
+#include "pr/print.h"
+#include "pr/string.h"
 #include "pr/time.h"
 
 #include "examples/browser/chrome.h"
 #include "examples/browser/commands.h"
 #include "examples/browser/tab.h"
-
-#include <algorithm>
-#include <cmath>
-#include <cstdio>
 
 namespace browser {
 
@@ -41,10 +41,10 @@ void playChrome(Browser& b, float ratio) {
     prLayoutSceneRelease(b.scene);
     b.scene = scene;
     b.scrolls.resize(prLayoutSceneScrolls(b.tree, scene, nullptr, 0));
-    prLayoutSceneScrolls(b.tree, scene, b.scrolls.data(), uint32_t(b.scrolls.size()));
+    prLayoutSceneScrolls(b.tree, scene, b.scrolls.data(), b.scrolls.count());
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
     options.scrolls = b.scrolls.data();
-    options.scrollCount = uint32_t(b.scrolls.size());
+    options.scrollCount = b.scrolls.count();
     options.canvasFilled = true;
     prDrawListClear(b.chromeList);
     prDrawListPushTransformAffine2(b.chromeList, prAffine2Scale(PrVec2{ratio, ratio}));
@@ -65,11 +65,10 @@ void printStats(Browser& b, double now) {
     uint32_t frames = b.statsFrames;
     double gpu = double(b.statsGpu.exchange(0)) / 1000;
     const PrDrawStats& last = b.statsLast;
-    fprintf(stderr,
-        "browser: %.1f fps, per frame %.2f ms on the window's thread (%.2f ms waiting for a drawable), %.2f ms on the "
-            "GPU; last frame %u passes, %u layers, %u draws, %u primitives, %u path fills, %llu KB uploaded\n",
-        frames * 1000 / elapsed, b.statsCpu / frames, b.statsWait / frames, gpu / frames, last.passes, last.layers,
-        last.draws, last.primitives, last.pathFills, (unsigned long long)(last.uploadBytes >> 10));
+    printError("browser: {:.1f} fps, per frame {:.2f} ms on the window's thread ({:.2f} ms waiting for a drawable), "
+        "{:.2f} ms on the GPU; last frame {} passes, {} layers, {} draws, {} primitives, {} path fills, {} KB "
+        "uploaded\n", frames * 1000 / elapsed, b.statsCpu / frames, b.statsWait / frames, gpu / frames, last.passes,
+        last.layers, last.draws, last.primitives, last.pathFills, last.uploadBytes >> 10);
     b.statsSince = now;
     b.statsFrames = 0;
     b.statsCpu = 0;
@@ -131,7 +130,7 @@ void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
     prGpuSwapChainPresent(b.swapChain, commands);
     if (b.stats) {
         prGpuCommandsOnDone(commands, [](void* PR_NULLABLE context, double seconds) {
-            static_cast<Browser*>(context)->statsGpu.fetch_add(uint64_t(seconds * 1e6));
+            static_cast<Browser*>(context)->statsGpu.fetchAdd(uint64_t(seconds * 1e6));
         }, &b);
     }
     prGpuCommandsSubmit(commands);
@@ -188,16 +187,16 @@ void start(void* context, PrApp* app, const PrAppFrame* window) {
             prGpuSwapChainCreate(b.device, &surface, &swapChain, &b.swapChain) != PrStatus_Ok ||
             prDrawRendererCreate(PrDrawRendererBackend_Default, b.device, nullptr, &b.renderer) != PrStatus_Ok ||
             prDrawDisplayCreate(b.device, &b.display) != PrStatus_Ok) {
-        fprintf(stderr, "browser: no GPU device to render with\n");
+        printError("browser: no GPU device to render with\n");
         prAppStop(app);
         return;
     }
     b.pageFrame = prDrawFrameCreate(b.renderer);
     b.chromeFrame = prDrawFrameCreate(b.renderer);
     b.pageWindow = *window;
-    for (const std::string& address : b.addresses)
-        tabOpen(b, address, uint32_t(b.tabs.size()));
-    if (b.tabs.empty()) {
+    for (const String& address : b.addresses)
+        tabOpen(b, address, b.tabs.count());
+    if (b.tabs.isEmpty()) {
         tabOpen(b, PrStringView{}, 0);
         b.chrome.focusAddress = true;
     }
@@ -233,7 +232,7 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     prUiFrame(b.ui, &desc, build, &b);
     float ratio = f->display.pixelRatio;
     playChrome(b, ratio);
-    b.extent = PrUVec2{uint32_t(std::lround(f->extent.x * ratio)), uint32_t(std::lround(f->extent.y * ratio))};
+    b.extent = PrUVec2{uint32_t(prF32Round(f->extent.x * ratio)), uint32_t(prF32Round(f->extent.y * ratio))};
     b.shownOn = f->display;
 
     // The page's box, as this frame's layout placed it, in px and in target pixels within the window.
@@ -241,12 +240,12 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     if (b.chrome.slot != kPrLayoutNodeNone)
         page = prLayoutRectToPx(prLayoutNodeBounds(b.tree, b.chrome.slot, PrLayoutCoordinates_Viewport));
     b.chrome.page = page;
-    int32_t left = int32_t(std::lround(page.left * ratio));
-    int32_t top = int32_t(std::lround(page.top * ratio));
-    int32_t right = std::min(int32_t(std::lround(page.right * ratio)), int32_t(b.extent.x));
-    int32_t bottom = std::min(int32_t(std::lround(page.bottom * ratio)), int32_t(b.extent.y));
+    int32_t left = int32_t(prF32Round(page.left * ratio));
+    int32_t top = int32_t(prF32Round(page.top * ratio));
+    int32_t right = min(int32_t(prF32Round(page.right * ratio)), int32_t(b.extent.x));
+    int32_t bottom = min(int32_t(prF32Round(page.bottom * ratio)), int32_t(b.extent.y));
     b.pageOrigin = PrIVec2{left, top};
-    b.pageExtent = PrUVec2{uint32_t(std::max(right - left, 0)), uint32_t(std::max(bottom - top, 0))};
+    b.pageExtent = PrUVec2{uint32_t(max(right - left, 0)), uint32_t(max(bottom - top, 0))};
 
     Tab* tab = browserActiveTab(b);
     PrHtmlView* view = tab != nullptr ? tab->view.load() : nullptr;
@@ -257,8 +256,8 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
         shown.extent = PrVec2{(page.right - page.left) / tab->zoom, (page.bottom - page.top) / tab->zoom};
         shown.display.pixelRatio = ratio * tab->zoom;
         if (b.trace && (shown.extent.x != b.pageWindow.extent.x || shown.extent.y != b.pageWindow.extent.y))
-            fprintf(stderr, "[%.3f] window asks for viewport %.0fx%.0f\n", prTimeMonotonicMilliseconds() / 1000,
-                double(shown.extent.x), double(shown.extent.y));
+            printError("[{:.3f}] window asks for viewport {:.0f}x{:.0f}\n", prTimeMonotonicMilliseconds() / 1000,
+                shown.extent.x, shown.extent.y);
         b.pageWindow = shown;
         prHtmlViewPostFrame(view, &shown);
         prLayoutCompositorFrame(tab->compositor);
@@ -374,7 +373,7 @@ void browserWantFrame(Browser& b) {
 }
 
 Tab* PR_NULLABLE browserActiveTab(const Browser& b) {
-    return b.active < b.tabs.size() ? b.tabs[b.active] : nullptr;
+    return b.active < b.tabs.count() ? b.tabs[b.active] : nullptr;
 }
 
 void browserPresent(Browser& b, PrDrawList* list, PrColor16 canvas) {

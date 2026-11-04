@@ -3,26 +3,25 @@
 #include "examples/browser/profile.h"
 
 #include "pr/file.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 namespace browser {
 
-bool profileRead(PrStringView path, std::string* out) {
+bool profileRead(PrStringView path, String* out) {
     PrFileMapping mapping{};
     if (!prFileMap(path, &mapping))
         return false;
-    out->clear();
-    if (mapping.size != 0)
-        out->assign(reinterpret_cast<const char*>(mapping.data), mapping.size);
+    *out = PrStringView{reinterpret_cast<const char*>(mapping.data), mapping.size};
     prFileUnmap(&mapping);
     return true;
 }
 
 bool profileWrite(PrStringView path, PrStringView text) {
-    std::string file(path.data, path.size);
-    size_t slash = file.find_last_of('/');
-    if (slash != std::string::npos)
-        prFileCreateDirectory(PrStringView{file.data(), slash});
-    return prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size});
+    PrStringView parent = prFilePathParent(path);
+    if (!parent.isEmpty())
+        prFileCreateDirectory(parent);
+    return prFileWrite(path, PrByteView{prStringBytes(text), text.size});
 }
 
 } // namespace browser

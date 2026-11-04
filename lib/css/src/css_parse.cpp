@@ -224,7 +224,7 @@ void holdKeywordForms(PrCssProperty property, CssValuePool* pool, uint32_t first
             for (uint32_t i = keywords; i < 3; ++i)
                 written = written << 16 | PrCssKeyword_Unknown;
             const CssKeywordForm* forms = kCssKeywordForms + run.start;
-            uint32_t at = lowerBound(forms, run.count, written);
+            uint32_t at = lowerBound(Span(forms, run.count), written);
             if (at < run.count && forms[at].written == written) {
                 uint32_t held = 0;
                 for (; held < 3 && forms[at].held[held] != PrCssKeyword_Unknown; ++held)

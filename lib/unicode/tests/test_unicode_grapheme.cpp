@@ -3,7 +3,7 @@
 #include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <sstream>

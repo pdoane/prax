@@ -1,6 +1,6 @@
 #include "examples/alchemy/dimensions.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 using namespace alchemy;
 

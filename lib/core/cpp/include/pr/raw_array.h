@@ -7,6 +7,7 @@
 #include "pr/base.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/span.h"
 #include "pr/type_traits.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -69,8 +70,9 @@ struct RawArray {
         count -= removedCount;
     }
 
-    // Appends copies of the `itemsCount` elements at `items`, growing once for all of them.
-    void append(const T* PR_NONNULL items, uint32_t itemsCount) {
+    // Append copies of the `itemsCount` elements at `items`, or of the elements of `items`, growing once for all of
+    // them. The elements must not be in the array.
+    void append(const T* PR_NULLABLE items, uint32_t itemsCount) {
         if (itemsCount == 0)
             return;
         PR_ASSERT(itemsCount <= 0xffffffffu - count && !holds(items));
@@ -78,6 +80,10 @@ struct RawArray {
             reserve(count + itemsCount);
         prMemCopy(data + count, items, size_t(itemsCount) * sizeof(T));
         count += itemsCount;
+    }
+    template <typename Item>
+    void append(Span<Item> items) requires(isSame<RemoveConst<Item>, T>) {
+        append(items.data(), items.count());
     }
 
     // Grows the capacity to at least `minCapacity`, and keeps the elements. Growth at least doubles the capacity.
@@ -152,6 +158,10 @@ struct RawArray {
         uintptr_t at = uintptr_t(pointer);
         return at >= uintptr_t(data) && at < uintptr_t(data + capacity);
     }
+
+    // The elements, valid until the array changes.
+    Span<T> span() { return Span(data, count); }
+    Span<const T> span() const { return Span<const T>(data, count); }
 };
 
 // The out-of-line definition of RawArray::reserve.

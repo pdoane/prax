@@ -1,7 +1,7 @@
 #include "pr/string_ops.h"
 #include "pr/string_trim.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 using namespace pr_impl;
 

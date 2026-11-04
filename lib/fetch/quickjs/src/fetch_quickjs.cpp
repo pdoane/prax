@@ -834,7 +834,7 @@ JSValue cloneMethod(JSContext* ctx, JSValueConst responseObject, int, JSValueCon
     };
     clone->body.present = response->body.present;
     if (response->body.bytes.count != 0)
-        clone->body.bytes.append(response->body.bytes.data, response->body.bytes.count);
+        clone->body.bytes.append(response->body.bytes.span());
     // The clone's body is a branch of the same stream (fetch/#concept-body-clone), which the same abort errors.
     JSValue object = newResponse(ctx, clone, headers);
     JSValue signal = jsSameObject(ctx, responseObject, "signal");
@@ -1109,7 +1109,7 @@ JSValue requestClone(JSContext* ctx, JSValueConst requestObject, int, JSValueCon
     clone->keepalive = request->keepalive;
     clone->body.present = request->body.present;
     if (request->body.bytes.count != 0)
-        clone->body.bytes.append(request->body.bytes.data, request->body.bytes.count);
+        clone->body.bytes.append(request->body.bytes.span());
     JsHeaders* original = headersOfResponse(ctx, requestObject);
     JsHeaders* headers = headersCreate(original->guard);
     for (uint32_t i = 0; i < original->names.count; ++i)

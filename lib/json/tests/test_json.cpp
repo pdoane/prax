@@ -2,7 +2,7 @@
 #include "pr/json.h"
 #include "pr/string_ops.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <initializer_list>
 

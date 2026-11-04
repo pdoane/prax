@@ -9,7 +9,7 @@
 #include "lottie/src/lottie_model.h"
 #include "lottie/src/lottie_parse.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <utility>

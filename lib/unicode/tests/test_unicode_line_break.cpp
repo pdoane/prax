@@ -1,6 +1,6 @@
 #include "pr/unicode_line_break.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <fstream>
 #include <sstream>

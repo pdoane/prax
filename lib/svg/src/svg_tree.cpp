@@ -2348,7 +2348,7 @@ SvgUpdate svgTreeUpdate(SvgTree* tree, const PrDomElement* element, SvgChanges* 
             dirt.work == SvgWork_Remove   ? 0 : dirt.work == SvgWork_Resource ? 1 : 2 + depthOf(tree, dirt.index);
         order.push(Ordered{rank, dirt});
     }
-    sortItems(order.data, order.count, [](const Ordered& a, const Ordered& b) { return a.rank < b.rank; });
+    sortItems(order.span(), [](const Ordered& a, const Ordered& b) { return a.rank < b.rank; });
     ++tree->update;
     SvgBuilder b{
         .tree = tree,

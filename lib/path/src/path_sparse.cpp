@@ -361,7 +361,7 @@ void addSegmentSpan(PathSparseRasterizer* f, uint32_t firstTile, uint32_t x1, ui
 void fill(PathSparseRasterizer* f, PrPathFillRule rule) {
     uint32_t tw = f->options.tileExtent.x;
     uint32_t th = f->options.tileExtent.y;
-    sortItems(f->refs.data, f->refs.count, [](const Ref& a, const Ref& b) {
+    sortItems(f->refs.span(), [](const Ref& a, const Ref& b) {
         if (a.row != b.row)
             return a.row < b.row;
         if (a.tile != b.tile)

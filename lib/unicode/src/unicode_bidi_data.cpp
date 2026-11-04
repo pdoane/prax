@@ -552,7 +552,7 @@ PrUnicodeBidiClass prUnicodeBidiClass(uint32_t codePoint) {
 }
 
 PrUnicodeBidiBracket prUnicodeBidiBracket(uint32_t codePoint, uint32_t* key) {
-    uint32_t at = lowerBound(kBidiBrackets, uint32_t(countOf(kBidiBrackets)), codePoint);
+    uint32_t at = lowerBound(Span(kBidiBrackets), codePoint);
     if (at == countOf(kBidiBrackets) || kBidiBrackets[at] != codePoint)
         return PrUnicodeBidiBracket_None;
     *key = kBidiBracketKeys[at] >> 1;

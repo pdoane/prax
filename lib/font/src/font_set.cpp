@@ -590,7 +590,7 @@ const PrFont* PR_NULLABLE instanceOf(FontSet* set, uint32_t faceIndex, const Axi
             variations.push(PrFontVariation{kAutoAxes[i], axes.values[i]});
     }
     if (face.variations.count != 0)
-        variations.append(face.variations.data, face.variations.count);
+        variations.append(face.variations.span());
     PrFontDerivation derivation = face.derivation;
     derivation.variations = variations.data;
     derivation.variationCount = variations.count;
@@ -748,7 +748,7 @@ void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHin
             PrFontFace{font, nullptr, kept.ranges.count, kept.flags, kept.state == FaceState_Pending ? kept.key : 0},
             out.ranges.count,
         });
-        out.ranges.append(kept.ranges.data, kept.ranges.count);
+        out.ranges.append(kept.ranges.span());
     }
     prMutexUnlock(&set->lock);
     candidates.reset();

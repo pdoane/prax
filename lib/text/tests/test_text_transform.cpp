@@ -4,7 +4,7 @@
 #include "pr/text_transform.h"
 #include "pr/utf8.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

@@ -2,16 +2,18 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/base.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
+
+using namespace pr;
 
 // The prefix of the files that a run's SaveImage node writes on the server.
 constexpr PrStringView kSavePrefix = "Alchemy";
@@ -20,19 +22,20 @@ constexpr PrStringView kSavePrefix = "Alchemy";
 // diffusion model and the text encoder alike. The chain applies in order: each adapter takes the model and the text
 // encoder that the one before it produced, under the node ids "lora0", "lora1" and so on.
 struct LoraRef {
-    std::string name;
+    PrStringView name;
     double weight = 1.0;
 };
 
 // What every sampling recipe reads: the model, its adapters, the prompts and the sampler's settings. The model, sampler
-// and scheduler are names from the server's vocabulary.
+// and scheduler are names from the server's vocabulary. A recipe is the argument of one graph's build: its text views
+// the caller's strings, which must stay alive until the build returns.
 struct SamplingRecipe {
-    std::string checkpoint;
-    std::vector<LoraRef> loras;
-    std::string sampler;
-    std::string scheduler;
-    std::string prompt;
-    std::string negativePrompt;
+    PrStringView checkpoint;
+    Array<LoraRef> loras;
+    PrStringView sampler;
+    PrStringView scheduler;
+    PrStringView prompt;
+    PrStringView negativePrompt;
     uint64_t seed = 0;
     uint32_t steps = 20;
     double cfg = 7.0;
@@ -43,7 +46,7 @@ struct SamplingRecipe {
 // is how much of it the sampler may discard. A batch applies only to the empty latent.
 struct Txt2ImgRecipe {
     SamplingRecipe sampling;
-    std::string sourceImage;
+    PrStringView sourceImage;
     double denoise = 1.0;
     uint32_t width = 1024;
     uint32_t height = 1024;
@@ -54,8 +57,8 @@ struct Txt2ImgRecipe {
 // graph rescales what the model made to `factor` if the name states the model's factor, and runs the model alone if it
 // does not, since a rescale by a guessed ratio would misreport what the model did.
 struct UpscaleRecipe {
-    std::string model;
-    std::string sourceImage;
+    PrStringView model;
+    PrStringView sourceImage;
     double factor = 2.0;
 };
 
@@ -74,7 +77,7 @@ typedef uint8_t OutpaintDirection;
 // sampled region reaches past the feathered seam.
 struct OutpaintRecipe {
     SamplingRecipe sampling;
-    std::string sourceImage;
+    PrStringView sourceImage;
     OutpaintDirection direction = OutpaintDirection_Right;
     uint32_t sourceWidth = 0;
     uint32_t sourceHeight = 0;
@@ -88,17 +91,17 @@ struct OutpaintRecipe {
 // its own resolution. `detector` is a name from the vocabulary that only a server with the detailer nodes reports.
 struct DetailRecipe {
     SamplingRecipe sampling;
-    std::string sourceImage;
-    std::string detector;
+    PrStringView sourceImage;
+    PrStringView detector;
 };
 
 // Return the graph of a recipe. Node ids name the stages ("checkpoint", "sampler", "decode"), so that a progress event
 // names the stage that it reached. An empty negative prompt zeroes the positive conditioning rather than encoding empty
 // text.
-std::string txt2ImgGraph(const Txt2ImgRecipe& recipe);
-std::string upscaleGraph(const UpscaleRecipe& recipe);
-std::string outpaintGraph(const OutpaintRecipe& recipe);
-std::string detailGraph(const DetailRecipe& recipe);
+String txt2ImgGraph(const Txt2ImgRecipe& recipe);
+String upscaleGraph(const UpscaleRecipe& recipe);
+String outpaintGraph(const OutpaintRecipe& recipe);
+String detailGraph(const DetailRecipe& recipe);
 
 // Returns the direction's name as commands and records spell it.
 PrStringView directionName(OutpaintDirection direction);

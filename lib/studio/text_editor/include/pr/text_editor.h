@@ -127,7 +127,7 @@ typedef struct PrTextEditorDocument PrTextEditorDocument;
 // What a document holds. A document of a file streams in over the frames that follow, and its language is its file's. A
 // document of `text` streams in as a file does, and `name`, a file name, chooses its language, or empty for none.
 typedef struct PrTextEditorDocumentDesc {
-    PrStringView path;                          // the file, or the null view for a text of no file
+    PrStringView path;                          // the file, or empty for a text of no file
     PrStringView text;
     PrStringView name;
     bool readOnly;                              // the document refuses its user's edits
@@ -156,7 +156,7 @@ PrTextEditBuffer* prTextEditorDocumentBuffer(const PrTextEditorDocument* documen
 PrTextView* prTextEditorDocumentView(const PrTextEditorDocument* document);
 PrTextEditHistory* prTextEditorDocumentHistory(const PrTextEditorDocument* document);
 
-// The document's file, or the null view for a text of no file.
+// The document's file, or empty for a text of no file.
 PrStringView prTextEditorDocumentPath(const PrTextEditorDocument* document);
 
 // The document's language, or null.

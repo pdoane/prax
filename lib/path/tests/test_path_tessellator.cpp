@@ -1,7 +1,8 @@
 #include "pr/path_tessellator.h"
+#include "pr/random.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <cstdint>
@@ -93,16 +94,6 @@ int winding(const std::vector<std::vector<PrVec2>>& rings, PrVec2 p) {
     }
     return w;
 }
-
-// A small deterministic generator.
-struct Random {
-    uint64_t state;
-
-    float next() {
-        state = state * 6364136223846793005ull + 1442695040888963407ull;
-        return float((state >> 40) & 0xffffff) / float(0x1000000);
-    }
-};
 
 } // namespace
 
@@ -236,18 +227,18 @@ TEST_CASE("inputs that are not finite, and paths with no area, tessellate nothin
 
 TEST_CASE("random polygons' triangles cover each point as the fill rule does") {
     PrPathTessellator* t = prPathTessellatorCreate();
-    Random random{12345};
+    PrRandom random = {.state = 12345};
     for (int round = 0; round < 60; ++round) {
         std::vector<std::vector<PrVec2>> rings;
         PrPath* path = prPathCreate();
         int ringCount = 1 + round % 3;
         for (int r = 0; r < ringCount; ++r) {
             std::vector<PrVec2> ring;
-            int n = 3 + int(random.next() * 12);
+            int n = 3 + int(prRandomF32(&random) * 12);
             for (int i = 0; i < n; ++i) {
                 // Some rounds snap to a coarse grid, for shared vertices and collinear edges.
-                float x = random.next() * 100;
-                float y = random.next() * 100;
+                float x = prRandomF32(&random) * 100;
+                float y = prRandomF32(&random) * 100;
                 if (round % 4 == 0) {
                     x = std::floor(x / 20) * 20;
                     y = std::floor(y / 20) * 20;
@@ -286,7 +277,7 @@ TEST_CASE("random polygons' triangles cover each point as the fill rule does") {
 
 TEST_CASE("with a fringe, points away from the boundary are still covered once or not at all") {
     PrPathTessellator* t = prPathTessellatorCreate();
-    Random random{777};
+    PrRandom random = {.state = 777};
     auto distance = [](PrVec2 a, PrVec2 b, PrVec2 p) {
         double dx = double(b.x) - double(a.x);
         double dy = double(b.y) - double(a.y);
@@ -303,9 +294,9 @@ TEST_CASE("with a fringe, points away from the boundary are still covered once o
         int ringCount = 1 + round % 3;
         for (int r = 0; r < ringCount; ++r) {
             std::vector<PrVec2> ring;
-            int n = 3 + int(random.next() * 10);
+            int n = 3 + int(prRandomF32(&random) * 10);
             for (int i = 0; i < n; ++i)
-                ring.push_back(PrVec2{random.next() * 100, random.next() * 100});
+                ring.push_back(PrVec2{prRandomF32(&random) * 100, prRandomF32(&random) * 100});
             rings.push_back(ring);
             for (size_t i = 0; i < ring.size(); ++i) {
                 if (i == 0)

@@ -2,7 +2,7 @@
 
 #include "layout/src/layout_logical.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 

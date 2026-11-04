@@ -634,7 +634,7 @@ void clipPolygon(RawArray<PrVec2>& polygon, PrVec2 at, PrVec2 normal, RawArray<P
             scratch.push(prVec2Lerp(a, c, da / (da - dc)));
     }
     polygon.clear();
-    polygon.append(scratch.data, scratch.count);
+    polygon.append(scratch.span());
 }
 
 // Returns the direction of the track's outer edge at arc length `s`.
@@ -700,7 +700,7 @@ void lowerSide(Border& b, uint32_t side) {
             float from = center - period * 3 / 8;
             float to = center + period * 3 / 8;
             dash.clear();
-            dash.append(wedge.data, wedge.count);
+            dash.append(wedge.span());
             if (from > 0)
                 clipPolygon(dash, outerAt(b.track, from), outerDirection(b.track, from), scratch);
             if (to < total)

@@ -999,7 +999,7 @@ PrTextFont* textFontIn(PrFontSet* set, CssPresentationTextFonts& fonts, const Cs
         .locale = style->locale,
     };
     CssPresentationTextFont entry{fonts.keys.count, key.count, prTextFontCreate(&desc)};
-    fonts.keys.append(key.data, key.count);
+    fonts.keys.append(key.span());
     fonts.index.insert(hash, fonts.fonts.count);
     fonts.fonts.push(entry);
     return entry.font;
@@ -3625,7 +3625,7 @@ constexpr uint32_t kGeneratingUnknown = UINT32_MAX;
 void keepMatches(PrCssPresentation* r, uint32_t at, const CssCascadeScratch& scratch) {
     CssPresentationEntry& entry = r->entries.data[at];
     entry.matched.clear();
-    entry.matched.append(scratch.candidates.data, scratch.candidates.count);
+    entry.matched.append(scratch.candidates.span());
     entry.matchedGeneration = r->rules.generation;
     entry.generating = kGeneratingUnknown;
 }
@@ -4033,7 +4033,7 @@ void applyFirsts(PrCssPresentation* r) {
         order.push(i);
         depths.push(flatDepth(firsts.element));
     }
-    sortItems(order.data, order.count, [&](uint32_t a, uint32_t b) { return depths.data[a] < depths.data[b]; });
+    sortItems(order.span(), [&](uint32_t a, uint32_t b) { return depths.data[a] < depths.data[b]; });
     RawArray<LinedBox> lined;
     // The held style of the letter's box for each entry of CssPresentation::firsts, or null.
     RawArray<const CssComputedStyle*> letters;
@@ -5782,7 +5782,7 @@ ComputedOrder buildComputedOrder() {
         for (uint32_t i = 0; i < group.count && order.count < countOf(order.properties); ++i)
             order.properties[order.count++] = group.properties[i];
     }
-    sortItems(order.properties, order.count, [](PrCssProperty a, PrCssProperty b) {
+    sortItems(Span(order.properties, order.count), [](PrCssProperty a, PrCssProperty b) {
         return prStringCompare(cssPropertyName(a), cssPropertyName(b)) < 0;
     });
     return order;
@@ -6355,9 +6355,9 @@ void setCounterTexts(void* PR_NULLABLE context, CssPresentationPseudo* pseudo, c
     if (sameCounterTexts(kept, *texts))
         return;
     kept.text.clear();
-    kept.text.append(texts->text.data, texts->text.count);
+    kept.text.append(texts->text.span());
     kept.ends.clear();
-    kept.ends.append(texts->ends.data, texts->ends.count);
+    kept.ends.append(texts->ends.span());
     uint32_t at = cssPresentationNodeEntry(r, pseudo);
     if (r->entries.data[at].boxed)
         queueBox(r, at, CssPresentationBoxOp_Content);
@@ -6452,7 +6452,7 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
         RawArray<CssTreeSheets> trees;
         treeSheets(r->document, trees);
         RawArray<const CssRuleData* PR_NONNULL> counterStyles;
-        counterStyles.append(r->rules.counterStyleRules.data, r->rules.counterStyleRules.count);
+        counterStyles.append(r->rules.counterStyleRules.span());
         cssRuleSetBuild(&r->rules, &r->userAgentRules, trees.data, trees.count, r->document->media);
         trees.reset();
         const RawArray<const CssRuleData* PR_NONNULL>& now = r->rules.counterStyleRules;
@@ -6695,7 +6695,7 @@ void layoutRootsOf(const PrCssPresentation* r, PrLayoutVec extent, RawArray<PrLa
             roots.push(Ordered{depth, PrLayoutRoot{found.data[k].root, prLayoutVecFromPx(found.data[k].extent)}});
         }
     }
-    sortItems(roots.data, roots.count, [](const Ordered& a, const Ordered& b) { return a.depth < b.depth; });
+    sortItems(roots.span(), [](const Ordered& a, const Ordered& b) { return a.depth < b.depth; });
     for (uint32_t i = 0; i < roots.count; ++i)
         out->push(roots.data[i].root);
     roots.reset();
@@ -7225,7 +7225,7 @@ void cssPresentationSendAnimationEvents(PrCssPresentation* presentation) {
     // Listeners can start and cancel animations. The events of those animations wait for the next update.
     RawArray<CssAnimateEvent> events = a.events;
     a.events = {};
-    sortItems(events.data, events.count, [](const CssAnimateEvent& x, const CssAnimateEvent& y) {
+    sortItems(events.span(), [](const CssAnimateEvent& x, const CssAnimateEvent& y) {
         return x.scheduled < y.scheduled;
     });
     PrDomEventInit init = prDomEventInitDefault();

@@ -8,7 +8,7 @@
 #include "html/src/html_charset.h"
 #include "html/tests/support/html_test_fetch.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstring>
 #include <fstream>

@@ -1,7 +1,7 @@
 #include "pr/unicode_normalization.h"
 #include "pr/utf8.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <fstream>
 #include <set>

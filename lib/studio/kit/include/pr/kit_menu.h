@@ -279,9 +279,11 @@ typedef struct PrKitCommandPalette {
     PrStringView prompt;            // faint text in the search row while the query is empty
     uint32_t count;                 // number of items that the caller creates in the palette's list
 
-    // The query that the search row edits, by which the caller filters the items it creates. The caller takes a new
-    // query from prKitTextChanged on the palette's list. A null view makes a palette that only shows its prompt.
+    // The query that the search row edits while the palette is searchable, by which the caller filters the items it
+    // creates. The caller takes a new query from prKitTextChanged on the palette's list. A palette that is not
+    // searchable shows only its prompt in the search row.
     PrStringView query;
+    bool searchable;
 } PrKitCommandPalette;
 
 // Creates the command palette that `trigger` opens: a modal at the top of the viewport, over a card of a search row and

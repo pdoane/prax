@@ -22,9 +22,7 @@
 #include "pr/kit_theme.h"
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
-
-#include <stdio.h>
-#include <string>
+#include "pr/string.h"
 
 namespace scribe {
 
@@ -104,35 +102,36 @@ bool buildMenus(Scribe& s, PrLayoutNode root) {
 }
 
 // The status line: the document's file and state, the caret, and what the editor last had to say.
-std::string statusLine(Scribe& s) {
+String statusLine(Scribe& s) {
     PrTextEditorDocument* document = prTextEditorShown(s.editor);
     if (document == nullptr)
         return "no document";
     PrTextEditorDocumentInfo info = prTextEditorDocumentInfo(document);
     PrTextViewInfo view = prTextViewInfo(prTextEditorDocumentView(document));
     PrTextEditorOptions options = prTextEditorOptions(s.editor);
-    std::string state = info.edited ? "edited" : "saved";
+    String state(info.edited ? "edited" : "saved");
     if (info.loading)
-        state = "loading " + std::to_string(int(info.loaded * 100)) + "%";
-    std::string language = "plain text";
+        state = format("loading {}%", int(info.loaded * 100));
+    String language("plain text");
     if (const PrSyntaxLanguage* named = prTextEditorDocumentLanguage(document)) {
-        language.assign(named->name.data, named->name.size);
+        language = named->name;
         if (info.parsing)
-            language += ", parsing";
+            language.append(", parsing");
     }
     const char* servers[] = {"", ", starting server", "", ", server failed"};
-    language += servers[info.server];
+    language.append(servers[info.server]);
     if (info.errors != 0 || info.warnings != 0)
-        language += "  " + std::to_string(info.errors) + " errors, " + std::to_string(info.warnings) + " warnings";
-    char where[160];
-    snprintf(where, sizeof(where), "%s  Ln %u, Col %u  %u lines  %s%s  %s", state.c_str(), view.caret.line + 1,
-        view.caret.column + 1, view.lineCount, options.wrap ? "wrap" : "no wrap", info.crlf ? "  CRLF" : "  LF",
-        language.c_str());
+        formatTo(language, "  {} errors, {} warnings", info.errors, info.warnings);
     PrStringView path = prTextEditorDocumentPath(document);
-    std::string line = (path.data == nullptr ? std::string("untitled") : std::string(path.data, path.size)) + "   " + where;
+    if (path.isEmpty())
+        path = "untitled";
+    PrStringView wrap = options.wrap ? "wrap" : "no wrap";
+    PrStringView endings = info.crlf ? "  CRLF" : "  LF";
+    String line = format("{}   {}  Ln {}, Col {}  {} lines  {}{}  {}", path, state, view.caret.line + 1,
+        view.caret.column + 1, view.lineCount, wrap, endings, language);
     PrStringView said = prTextEditorStatus(s.editor);
-    if (said.size != 0)
-        line += "   " + std::string(said.data, said.size);
+    if (!said.isEmpty())
+        formatTo(line, "   {}", said);
     return line;
 }
 
@@ -143,11 +142,12 @@ void openEditor(Scribe& s) {
     s.keymap = prCommandKeymapCreate();
     s.languages = prSyntaxRegistryCreate();
 #if defined(SCRIBE_HAS_TREESITTER)
-    for (const PrSyntaxLanguage* language : {
+    const PrSyntaxLanguage* languages[] = {
         prSyntaxTreeSitterC(), prSyntaxTreeSitterCpp(), prSyntaxTreeSitterCss(), prSyntaxTreeSitterHtml(),
-            prSyntaxTreeSitterJavaScript(), prSyntaxTreeSitterJson(), prSyntaxTreeSitterMarkdown(),
-            prSyntaxTreeSitterMarkdownInline(), prSyntaxTreeSitterPython(), prSyntaxTreeSitterXml(),
-    })
+        prSyntaxTreeSitterJavaScript(), prSyntaxTreeSitterJson(), prSyntaxTreeSitterMarkdown(),
+        prSyntaxTreeSitterMarkdownInline(), prSyntaxTreeSitterPython(), prSyntaxTreeSitterXml(),
+    };
+    for (const PrSyntaxLanguage* language : languages)
         prSyntaxRegistryAdd(s.languages, language);
 #endif
     s.launcher = prProcessLauncherCreate(PrProcessBackend_Default);
@@ -174,15 +174,15 @@ void openEditor(Scribe& s) {
     });
 }
 
-bool openDocument(Scribe& s, const std::string& path) {
+bool openDocument(Scribe& s, PrStringView path) {
     PrTextEditorDocumentDesc desc{};
-    if (!path.empty())
+    if (!path.isEmpty())
         desc.path = path;
     PrTextEditorDocument* document = nullptr;
     return prTextEditorDocumentCreate(s.editor, &desc, &document) == PrStatus_Ok;
 }
 
-void setDebuggee(Scribe& s, const std::string& program) {
+void setDebuggee(Scribe& s, PrStringView program) {
     // lldb-dap is part of the toolchain, which xcrun finds on Apple's platforms, and is on the PATH elsewhere.
 #if defined(__APPLE__)
     PrStringView adapter = "xcrun";
@@ -193,13 +193,14 @@ void setDebuggee(Scribe& s, const std::string& program) {
     const PrStringView* arguments = nullptr;
     uint32_t argumentCount = 0;
 #endif
-    std::string escaped;
-    for (char c : program) {
+    String launch("{\"program\":\"");
+    for (size_t i = 0; i < program.size; ++i) {
+        char c = program.data[i];
         if (c == '"' || c == '\\')
-            escaped += '\\';
-        escaped += c;
+            launch.append('\\');
+        launch.append(c);
     }
-    std::string launch = "{\"program\":\"" + escaped + "\"}";
+    launch.append("\"}");
     PrTextEditorDebuggerDesc desc{
         .program = adapter,
         .arguments = arguments,
@@ -210,7 +211,7 @@ void setDebuggee(Scribe& s, const std::string& program) {
     prTextEditorSetDebugger(s.editor, &desc);
 }
 
-bool openDiff(Scribe& s, const std::string& oldPath, const std::string& newPath) {
+bool openDiff(Scribe& s, PrStringView oldPath, PrStringView newPath) {
     PrTextEditorDocumentDesc oldDesc{.path = oldPath, .readOnly = true};
     PrTextEditorDocumentDesc newDesc{.path = newPath};
     PrTextEditorDocument* old = nullptr;
@@ -222,7 +223,7 @@ bool openDiff(Scribe& s, const std::string& oldPath, const std::string& newPath)
     return true;
 }
 
-void openText(Scribe& s, PrStringView text, const std::string& name) {
+void openText(Scribe& s, PrStringView text, PrStringView name) {
     PrTextEditorDocumentDesc desc{.text = text, .name = name};
     PrTextEditorDocument* document = nullptr;
     prTextEditorDocumentCreate(s.editor, &desc, &document);
@@ -252,7 +253,7 @@ void buildScribe(Scribe& s, PrLayoutNode root, PrVec2 extent) {
     if (list == kPrLayoutNodeNone) {
         s.paletteQuery.clear();
     } else if (prKitTextChanged(s.kit, list, &query)) {
-        s.paletteQuery.assign(query.data, query.size);
+        s.paletteQuery = query;
     }
     // A command runs on the text, so typing goes on there once what floats over it closes.
     PrLayoutNode text = prTextEditorTextNode(s.editor);

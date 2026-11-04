@@ -223,7 +223,7 @@ CFAttributedStringRef createText(CtBackend* c, const PrTextRun* run, CTFontRef f
         c->breaks.push(range.location);
         c->breaks.push(range.location + range.length);
     }
-    sortItems(c->breaks.data, c->breaks.count, [](CFIndex a, CFIndex b) { return a < b; });
+    sortItems(c->breaks.span(), [](CFIndex a, CFIndex b) { return a < b; });
     for (uint32_t b = 0; b + 1 < c->breaks.count; ++b) {
         CFIndex from = c->breaks.data[b];
         CFIndex to = c->breaks.data[b + 1];

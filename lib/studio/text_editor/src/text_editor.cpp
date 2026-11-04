@@ -400,7 +400,7 @@ int32_t configOf(const TextEditor* editor, PrStringView language) {
 
 // Tells the document's language server of it, starting the server for its workspace if none runs.
 void attachServer(TextEditor* editor, TextEditorDocument* document) {
-    if (document->lsp != nullptr || document->language == nullptr || prRawStringIsNull(&document->path))
+    if (document->lsp != nullptr || document->language == nullptr || prRawStringIsEmpty(&document->path))
         return;
     int32_t config = configOf(editor, document->language->name);
     if (config < 0)
@@ -550,7 +550,7 @@ TextEditorDocument* PR_NULLABLE documentFromPath(const TextEditor* editor, PrStr
     // A path from elsewhere, as a language server's URI gives one, may spell a document's file another way.
     for (uint32_t i = 0; i < editor->documents.count; ++i) {
         const PrRawString& own = editor->documents.data[i]->path;
-        if (!prRawStringIsNull(&own) && prFileSame(prRawStringView(&own), path))
+        if (!prRawStringIsEmpty(&own) && prFileSame(prRawStringView(&own), path))
             return editor->documents.data[i];
     }
     return nullptr;
@@ -558,7 +558,7 @@ TextEditorDocument* PR_NULLABLE documentFromPath(const TextEditor* editor, PrStr
 
 // Writes the document to its file, with the line endings that the file had.
 PrStatus saveDocument(TextEditorDocument* document) {
-    if (prRawStringIsNull(&document->path) || document->loading)
+    if (prRawStringIsEmpty(&document->path) || document->loading)
         return PrStatus_InvalidState;
     PrStringView text = prTextEditBufferText(document->buffer);
     bool ok = false;
@@ -643,7 +643,7 @@ void syncBreakpoints(TextEditor* editor) {
     RawArray<uint32_t> lines;
     for (uint32_t i = 0; i < editor->documents.count; ++i) {
         TextEditorDocument* document = editor->documents.data[i];
-        if (prRawStringIsNull(&document->path))
+        if (prRawStringIsEmpty(&document->path))
             continue;
         breakpointLinesOf(document, lines);
         bool same = document->sent && lines.count == document->sentLines.count &&
@@ -653,7 +653,7 @@ void syncBreakpoints(TextEditor* editor) {
         prDapClientSetBreakpoints(editor->debug->client, prRawStringView(&document->path), lines.data, lines.count);
         document->sentLines.clear();
         if (lines.count != 0)
-            document->sentLines.append(lines.data, lines.count);
+            document->sentLines.append(lines.span());
         document->sent = true;
     }
     lines.reset();
@@ -856,7 +856,7 @@ void definitionAnswered(void* PR_NULLABLE context, const PrLspResponse* response
         return;
     }
     PrRawString path = prLspPathFromUri(location.uri);
-    if (prRawStringIsNull(&path)) {
+    if (prRawStringIsEmpty(&path)) {
         setStatus(editor, "the definition is not in a file");
         return;
     }
@@ -1022,7 +1022,7 @@ void registerCommands(TextEditor* e) {
     }, e, [](void* c) -> PrCommandStateFlags {
         const TextEditorDocument* document = editorOf(c).shown;
         // A file that is still loading would be saved cut short.
-        bool savable = document != nullptr && !prRawStringIsNull(&document->path) && !document->loading;
+        bool savable = document != nullptr && !prRawStringIsEmpty(&document->path) && !document->loading;
         return savable ? 0 : PrCommandStateFlag_Disabled;
     });
     addCommand(e, "view.toggleWrap", "Word Wrap", "Alt Z", [](void* c, const PrCommandArgs*) {
@@ -1134,7 +1134,7 @@ void registerCommands(TextEditor* e) {
     addCommand(e, "diff.compareSaved", "Compare with Saved", nullptr, [](void* c, const PrCommandArgs*) {
         TextEditor& editor = editorOf(c);
         TextEditorDocument* young = editor.shown;
-        if (young == nullptr || prRawStringIsNull(&young->path) || young->loading)
+        if (young == nullptr || prRawStringIsEmpty(&young->path) || young->loading)
             return;
         // The saved text is a document of no file of its own, which the file's name gives the same language.
         PrFileMapping mapping{};
@@ -1161,7 +1161,7 @@ void registerCommands(TextEditor* e) {
         editor.diff->ownsOld = true;
     }, e, [](void* c) -> PrCommandStateFlags {
         const TextEditorDocument* document = editorOf(c).shown;
-        bool comparable = document != nullptr && !prRawStringIsNull(&document->path) && !document->loading;
+        bool comparable = document != nullptr && !prRawStringIsEmpty(&document->path) && !document->loading;
         return comparable ? 0 : PrCommandStateFlag_Disabled;
     });
     addCommand(e, "diff.close", "Close Comparison", nullptr, [](void* c, const PrCommandArgs*) {
@@ -1906,7 +1906,7 @@ PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocu
     *out = nullptr;
     PrFileMapping mapping{};
     bool crlf = false;
-    if (desc->path.data != nullptr) {
+    if (!desc->path.isEmpty()) {
         if (!prFileMap(desc->path, &mapping))
             return PrStatus_NotFound;
         if (mapping.size > size_t(kPrTextEditBufferMaxBytes)) {
@@ -1930,7 +1930,7 @@ PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocu
     document->handle = document;
     document->editor = editor;
     document->listed = true;
-    document->path = desc->path.data != nullptr ? prRawStringCopy(desc->path) : prRawStringNull();
+    document->path = desc->path.isEmpty() ? prRawStringNull() : prRawStringCopy(desc->path);
     document->crlf = crlf;
     document->buffer = prTextEditBufferCreate("");
     document->readOnly = desc->readOnly;
@@ -1940,13 +1940,13 @@ PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocu
     document->view = prTextViewCreate(document->buffer);
     document->savedVersion = prTextEditBufferVersion(document->buffer);
     document->spansVersion = UINT64_MAX;
-    PrStringView name = desc->path.data != nullptr ? desc->path : desc->name;
+    PrStringView name = desc->path.isEmpty() ? desc->name : desc->path;
     if (editor->languages != nullptr && name.size != 0)
         document->language = prSyntaxRegistryFromPath(editor->languages, name);
     if (document->language != nullptr)
         document->syntax = prSyntaxTreeCreate(document->language, editor->languages, document->buffer);
     document->mapping = mapping;
-    if (desc->path.data == nullptr && desc->text.size != 0)
+    if (desc->path.isEmpty() && desc->text.size != 0)
         document->source.append(desc->text.data, uint32_t(desc->text.size));
     document->loading = sourceOf(document).size != 0;
     editor->documents.push(document);

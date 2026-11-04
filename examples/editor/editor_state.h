@@ -3,19 +3,21 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/color.h"
 #include "pr/kit_collection.h"
 #include "pr/kit_data.h"
 #include "pr/kit_dock.h"
 #include "pr/kit_icon.h"
+#include "pr/string.h"
 
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace editor {
+
+using namespace pr;
 
 struct Hud;
 
@@ -52,9 +54,9 @@ struct Vector3 {
 struct Entity {
     EntityId id = 0;
     uint32_t depth = 0;
-    std::string name;
-    std::string type;
-    std::string mesh;
+    String name;
+    String type;
+    String mesh;
     PrKitIconKind icon = PrKitIconKind_Cube;
     Vector3 position;
     Vector3 rotation;
@@ -71,9 +73,9 @@ struct Entity {
 
 // A line of the console.
 struct LogEntry {
-    std::string time;
-    std::string message;
-    std::string source;
+    String time;
+    String message;
+    String source;
     PrKitLogLevel level = PrKitLogLevel_Info;
 };
 
@@ -93,21 +95,21 @@ struct EditorState {
     EditorState& operator=(const EditorState&) = delete;
 
     // The level, its selection, and the inspector's lock on one entity.
-    std::string levelName;
-    std::vector<Entity> entities;
+    String levelName;
+    Array<Entity> entities;
     EntityId selected = 0;
     EntityId nextId = 1;
     bool inspectorLocked = false;
     EntityId lockedEntity = 0;
 
     // The scene tree: its filter, the rows that it shows, and its cursor.
-    std::string sceneFilter;
-    std::vector<EntityId> sceneRows;
-    std::vector<PrKitTreeItem> sceneItems;
+    String sceneFilter;
+    Array<EntityId> sceneRows;
+    Array<PrKitTreeItem> sceneItems;
     PrKitSelection sceneCursor = {kPrKitRowNone, kPrKitRowNone};
 
     // The console's log, and the levels that it shows.
-    std::vector<LogEntry> logs;
+    Array<LogEntry> logs;
     bool showInfo = true;
     bool showWarnings = true;
     bool showErrors = true;
@@ -145,7 +147,7 @@ struct EditorState {
     void addEntity();
     void removeEntity(EntityId id);
     void moveEntity(EntityId id, EntityId target, TreePlacement placement);
-    void addLog(PrKitLogLevel level, const std::string& message, const std::string& source);
+    void addLog(PrKitLogLevel level, PrStringView message, PrStringView source);
     void clearLogs();
 
     // Returns true if the console shows lines of `level`.

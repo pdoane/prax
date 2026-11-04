@@ -2,7 +2,7 @@
 
 #include "html/src/html_tokenizer.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

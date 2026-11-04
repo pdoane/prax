@@ -3,7 +3,7 @@
 
 #include "html/src/html_parser.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

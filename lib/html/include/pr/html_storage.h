@@ -40,7 +40,7 @@ typedef struct PrHtmlStorageProvider PrHtmlStorageProvider;
 // Where a provider keeps its areas, and how much each may hold.
 typedef struct PrHtmlStorageProviderDesc {
     // The UTF-8 path of the directory in which the provider keeps each origin's area across the runs of the program, in
-    // a directory of its own. The null view keeps the areas in memory, for as long as the provider lives.
+    // a directory of its own. An empty view keeps the areas in memory, for as long as the provider lives.
     PrStringView directory;
     uint64_t quotaBytes;    // the bytes that each origin's area may hold, its keys included
 

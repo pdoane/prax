@@ -2,7 +2,10 @@
 
 #include "examples/alchemy/view.h"
 
+#include "pr/array.h"
 #include "pr/command_kit.h"
+#include "pr/file.h"
+#include "pr/float.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
@@ -12,17 +15,11 @@
 #include "pr/kit_menu.h"
 #include "pr/kit_surface.h"
 #include "pr/kit_text.h"
+#include "pr/min_max.h"
+#include "pr/string.h"
 #include "pr/ui_text_edit.h"
 
 #include "examples/alchemy/prompt_text.h"
-#include "examples/alchemy/text.h"
-
-#include <algorithm>
-#include <cmath>
-#include <memory>
-#include <stdio.h>
-#include <string>
-#include <vector>
 
 namespace alchemy {
 
@@ -92,22 +89,22 @@ PrLayoutNode iconButton(PrKit* kit, PrLayoutNode parent, PrKitIconKind icon, PrS
 }
 
 // A select of `names` that writes the chosen name to `current`. An empty list shows `missing`.
-void selectName(PrKit* kit, PrLayoutNode parent, const std::vector<std::string>& names, std::string& current,
+void selectName(PrKit* kit, PrLayoutNode parent, const Array<String>& names, String& current,
         PrStringView missing, PrKitFlex flex = PrKitFlex_Fill) {
-    PrStringView label = names.empty() ? missing : current.empty() ? PrStringView("Choose...") : current;
-    PrLayoutNode select = prKitSelect(kit, parent, {.label = label, .disabled = names.empty()}, {});
+    PrStringView label = names.isEmpty() ? missing : current.isEmpty() ? PrStringView("Choose...") : current.view();
+    PrLayoutNode select = prKitSelect(kit, parent, {.label = label, .disabled = names.isEmpty()}, {});
     PrKitPlace place{.flex = flex};
     prKitPlace(kit, select, &place);
     int32_t step = 0;
-    if (prKitStepped(kit, select, &step) && !names.empty()) {
-        std::vector<std::string>::const_iterator at = std::find(names.begin(), names.end(), current);
-        int64_t index = at == names.end() ? 0 : int64_t(at - names.begin()) + step;
-        current = names[size_t(std::clamp<int64_t>(index, 0, int64_t(names.size()) - 1))];
+    if (prKitStepped(kit, select, &step) && !names.isEmpty()) {
+        uint32_t at = names.find(current);
+        int64_t index = at == kArrayMissing ? 0 : int64_t(at) + step;
+        current = names[uint32_t(clamp<int64_t>(index, 0, int64_t(names.count()) - 1))];
     }
     PrLayoutNode menu = prKitSelectMenu(kit, select);
     if (menu == kPrLayoutNodeNone)
         return;
-    for (size_t i = 0; i < names.size(); ++i) {
+    for (uint32_t i = 0; i < names.count(); ++i) {
         PrKitMenuItem item{.text = names[i], .checked = names[i] == current};
         if (prKitActivated(kit, prKitMenuItem(kit, menu, item, {})))
             current = names[i];
@@ -136,8 +133,7 @@ PrLayoutNode captioned(PrKit* kit, PrLayoutNode parent, const char* label, PrKit
     return column;
 }
 
-void captionedSelect(PrKit* kit, PrLayoutNode parent, const char* label, const std::vector<std::string>& names,
-        std::string& current) {
+void captionedSelect(PrKit* kit, PrLayoutNode parent, const char* label, const Array<String>& names, String& current) {
     selectName(kit, captioned(kit, parent, label, PrKitFlex_Fill), names, current, "None", PrKitFlex_Auto);
 }
 
@@ -160,7 +156,7 @@ void buildMode(PrKit* kit, PrLayoutNode parent, AppState& state) {
 // how to choose it.
 void buildSource(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& commands) {
     GenerateParams& p = state.params;
-    if (p.sourcePath.empty()) {
+    if (p.sourcePath.isEmpty()) {
         if (modeNeedsSource(state.mode)) {
             prKitLabel(kit, parent, {.text = "Right-click an image and choose Use as Source."},
                 PrKitTextStyle{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Faint, .wrap = PrKitWrap_Wrap});
@@ -186,7 +182,7 @@ void buildSource(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& com
     }
     PrKitBoxStyle details{.gap = kPrKitSpace2, .place = {.flex = PrKitFlex_Fill}};
     PrLayoutNode column = prKitBox(kit, line, {}, details);
-    prKitLabel(kit, column, {.text = pathFilename(p.sourcePath)},
+    prKitLabel(kit, column, {.text = prFilePathName(p.sourcePath)},
         textStyle(PrKitTextRole_BodySmall, PrKitTone_Secondary));
     PrLayoutNode actions = row(kit, column);
     commandButton(kit, actions, commands, "alchemy.clearSource", "Clear", PrKitIconKind_None,
@@ -210,9 +206,9 @@ void buildPromptHeader(PrKit* kit, PrLayoutNode parent, AppState& state, Shell& 
     if (popover == kPrLayoutNodeNone)
         return;
     PrLayoutNode menu = prKitMenu(kit, popover, {}, {.minWidth = kMenuWidth});
-    if (state.catalog.embeddings.empty())
+    if (state.catalog.embeddings.isEmpty())
         prKitMenuItem(kit, menu, {.text = "No embeddings on the server", .disabled = true}, {});
-    for (const std::string& embedding : state.catalog.embeddings) {
+    for (const String& embedding : state.catalog.embeddings) {
         PrKitMenuItem item{.key = prUiKey(kit->ui, menu, embedding), .text = embeddingName(embedding)};
         if (prKitActivated(kit, prKitMenuItem(kit, menu, item, {}))) {
             insertEmbedding(shell, target, embedding);
@@ -230,9 +226,9 @@ void buildPrompts(PrKit* kit, PrLayoutNode parent, AppState& state, Shell& shell
         kit, parent, {.text = state.params.negativePrompt, .placeholder = "What to avoid", .rows = 2}, {});
     PrStringView text{};
     if (prKitTextChanged(kit, shell.promptFields[0], &text))
-        state.params.prompt.assign(text.data, text.size);
+        state.params.prompt = text;
     if (prKitTextChanged(kit, shell.promptFields[1], &text))
-        state.params.negativePrompt.assign(text.data, text.size);
+        state.params.negativePrompt = text;
     for (int i = 0; i < 2; ++i) {
         if (prUiIsFocusWithin(shell.ui, shell.promptFields[i]))
             shell.promptTouched[i] = true;
@@ -240,8 +236,8 @@ void buildPrompts(PrKit* kit, PrLayoutNode parent, AppState& state, Shell& shell
 }
 
 void buildLoras(PrKit* kit, PrLayoutNode parent, AppState& state) {
-    std::vector<LoraEntry>& loras = state.params.loras;
-    for (size_t i = 0; i < loras.size();) {
+    Array<LoraEntry>& loras = state.params.loras;
+    for (uint32_t i = 0; i < loras.count();) {
         // An adapter's row is keyed by its name, so that its controls keep their state as the rows around it change.
         PrKitBoxStyle style{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = kPrKitSpace3};
         PrLayoutNode line = prKitBox(kit, parent, {.key = prUiKey(kit->ui, parent, loras[i].name)}, style);
@@ -260,32 +256,33 @@ void buildLoras(PrKit* kit, PrLayoutNode parent, AppState& state) {
         PrLayoutNode remove = prKitButton(kit, line, {.icon = PrKitIconKind_Close},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm});
         if (prKitActivated(kit, remove)) {
-            loras.erase(loras.begin() + long(i));
+            loras.erase(i);
             continue;
         }
         ++i;
     }
     // The adapters that the add menu offers: those that the checkpoint can load and the chain does not hold.
-    std::vector<std::string> candidates;
-    for (const std::string& name : state.catalog.loras) {
-        bool listed = std::find_if(loras.begin(), loras.end(), [&](const LoraEntry& lora) { return lora.name == name; }) !=
-            loras.end();
+    Array<String> candidates;
+    for (const String& name : state.catalog.loras) {
+        bool listed = false;
+        for (const LoraEntry& lora : loras)
+            listed = listed || lora.name == name;
         if (!listed && !loraConflicts(state, name))
-            candidates.push_back(name);
+            candidates.push(name);
     }
-    std::string added;
+    String added;
     selectName(kit, row(kit, parent), candidates, added, "No adapters on the server");
-    if (!added.empty())
-        loras.push_back({added, 1.0});
+    if (!added.isEmpty())
+        loras.push({added, 1.0});
 }
 
 void buildDimensions(PrKit* kit, PrLayoutNode parent, AppState& state) {
     Dimensions& dims = state.dims;
     PrLayoutNode header = row(kit, parent);
-    std::string family = stringOf(familyLabel(dims.family));
+    String family = familyLabel(dims.family);
     if (!dims.detected && !dims.customSize)
-        family += " (by name)";
-    prKitLabel(kit, header, {.text = dims.customSize ? std::string("CUSTOM") : family},
+        family.append(" (by name)");
+    prKitLabel(kit, header, {.text = dims.customSize ? PrStringView("CUSTOM") : family.view()},
         textStyle(PrKitTextRole_Caption, PrKitTone_Muted));
     prKitSpacer(kit, header, {});
     prKitLabel(kit, header, {.text = dimensionLabel(dims.size)}, textStyle(PrKitTextRole_Mono));
@@ -312,7 +309,7 @@ void buildDimensions(PrKit* kit, PrLayoutNode parent, AppState& state) {
         uint32_t megapixel = dims.megapixel;
         for (uint32_t i = 0; i < count; ++i) {
             char label[16];
-            snprintf(label, sizeof(label), "%g MP", ladder[i]);
+            formatToBuffer(Span(label), "{:g} MP", ladder[i]);
             PrKitChoice choice{.label = label, .selected = i == megapixel};
             if (prKitActivated(kit, prKitSegment(kit, budgets, choice)))
                 megapixel = i;
@@ -333,7 +330,7 @@ void buildDimensions(PrKit* kit, PrLayoutNode parent, AppState& state) {
             .max = double(count - 1),
             .step = 1.0f / float(count - 1),
         }, {});
-        uint32_t chosen = uint32_t(std::lround(position));
+        uint32_t chosen = uint32_t(prF64Round(position));
         if (chosen != preset)
             selectPreset(dims, chosen);
     }
@@ -403,7 +400,7 @@ void buildParameters(PrKit* kit, PrLayoutNode content, AppState& state, Commands
         case OperationMode_Generate:
             buildDimensions(kit, panel, state);
             numberField(kit, field(kit, panel, "Batch"), prKitScalarU32(&state.params.batch), 1, 8);
-            if (!state.params.sourcePath.empty()) {
+            if (!state.params.sourcePath.isEmpty()) {
                 PrLayoutNode strength = field(kit, panel, "Strength");
                 prKitSlider(kit, strength, {.value = prKitScalarF64(&state.params.strength), .min = 0.05, .max = 1}, {});
             }
@@ -442,8 +439,8 @@ struct RecordBlock {
     uint32_t operation;
 
     // A caption over a value, with the verb that puts the value's group back into the parameters.
-    void value(const char* label, const std::string& text, UseWhat what, const char* verb = "Use") {
-        if (text.empty())
+    void value(const char* label, PrStringView text, UseWhat what, const char* verb = "Use") {
+        if (text.isEmpty())
             return;
         header(label, what, verb);
         prKitLabel(kit, parent, {.text = text}, wrapped());
@@ -451,16 +448,16 @@ struct RecordBlock {
 
     // A prompt as the lines that it was written over: the group's verb replaces the prompt being written, and each
     // line's verb appends that line to it, which is how a prompt is composed out of several images' pieces.
-    void prompt(const char* label, const std::string& text, UseWhat what, UseWhat lineWhat) {
-        if (text.empty())
+    void prompt(const char* label, PrStringView text, UseWhat what, UseWhat lineWhat) {
+        if (text.isEmpty())
             return;
         header(label, what, "Use");
-        std::vector<PrStringView> lines = promptLines(text);
-        if (lines.size() < 2) {
+        Array<PrStringView> lines = promptLines(text);
+        if (lines.count() < 2) {
             prKitLabel(kit, parent, {.text = text}, wrapped());
             return;
         }
-        for (uint32_t i = 0; i < lines.size(); ++i) {
+        for (uint32_t i = 0; i < lines.count(); ++i) {
             PrLayoutNode line = row(kit, parent, kPrKitSpace2);
             PrKitBoxStyle fill{.place = {.flex = PrKitFlex_Fill}};
             prKitLabel(kit, prKitBox(kit, line, {}, fill), {.text = lines[i]}, wrapped());
@@ -483,40 +480,48 @@ struct RecordBlock {
     }
 };
 
-std::string fixed(double value, int decimals) {
-    char text[32];
-    snprintf(text, sizeof(text), "%.*f", decimals, value);
-    return text;
+String fixed(double value, int decimals) {
+    return format("{:.{}f}", value, decimals);
+}
+
+// The separator between the parts of a line.
+constexpr PrStringView kDot = " \xC2\xB7 ";
+
+// Appends `part` to `line`, after `separator` unless the line is empty.
+void appendPart(String& line, PrStringView separator, PrStringView part) {
+    if (!line.isEmpty())
+        line.append(separator);
+    line.append(part);
 }
 
 // The sampling vocabulary as one line, which is how a run is recognized at a glance.
-std::string samplingLine(const ProvenanceOp& op) {
-    std::string line = op.sampler;
-    if (!op.scheduler.empty())
-        line += (line.empty() ? "" : " / ") + op.scheduler;
+String samplingLine(const ProvenanceOp& op) {
+    String line = op.sampler;
+    if (!op.scheduler.isEmpty())
+        appendPart(line, " / ", op.scheduler);
     if (op.steps != 0)
-        line += (line.empty() ? "" : " \xC2\xB7 ") + std::to_string(op.steps) + " steps";
+        appendPart(line, kDot, format("{} steps", op.steps));
     if (op.cfg != 0)
-        line += (line.empty() ? "" : " \xC2\xB7 ") + ("cfg " + fixed(op.cfg, 1));
+        appendPart(line, kDot, format("cfg {:.1f}", op.cfg));
     return line;
 }
 
 // The adapters that a run loaded, as one line.
-std::string loraLine(const ProvenanceOp& op) {
-    std::string line;
+String loraLine(const ProvenanceOp& op) {
+    String line;
     for (const ProvenanceLora& lora : op.loras)
-        line += (line.empty() ? "" : " \xC2\xB7 ") + lora.name + " " + fixed(lora.weight, 2);
+        appendPart(line, kDot, format("{} {:.2f}", lora.name, lora.weight));
     return line;
 }
 
 // What an operation's row states beside its name: the one thing that tells two runs of the same mode apart.
-std::string operationMeta(const ProvenanceOp& op) {
-    if (!op.upscaleModel.empty())
-        return fixed(op.factor, 1) + "x";
-    if (!op.direction.empty())
-        return op.direction + " " + std::to_string(op.amount) + "px";
+String operationMeta(const ProvenanceOp& op) {
+    if (!op.upscaleModel.isEmpty())
+        return format("{:.1f}x", op.factor);
+    if (!op.direction.isEmpty())
+        return format("{} {}px", op.direction, op.amount);
     if (op.width != 0 && op.height != 0)
-        return std::to_string(op.width) + " x " + std::to_string(op.height);
+        return format("{} x {}", op.width, op.height);
     return op.detector;
 }
 
@@ -529,7 +534,8 @@ void buildOperation(PrKit* kit, PrLayoutNode card, AppState& state, const Proven
     PrKitIconKind fold = open ? PrKitIconKind_ChevronDown : PrKitIconKind_ChevronRight;
     if (prKitActivated(kit, iconButton(kit, line, fold, open ? "Hide this run" : "Show this run")))
         state.recordOpen[operation] = !open;
-    prKitLabel(kit, line, {.text = op.mode.empty() ? std::string("?") : op.mode}, textStyle(PrKitTextRole_Body));
+    PrStringView mode = op.mode.isEmpty() ? PrStringView("?") : op.mode.view();
+    prKitLabel(kit, line, {.text = mode}, textStyle(PrKitTextRole_Body));
     prKitSpacer(kit, line, {});
     prKitLabel(kit, line, {.text = operationMeta(op)}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
     if (!open)
@@ -544,17 +550,18 @@ void buildOperation(PrKit* kit, PrLayoutNode card, AppState& state, const Proven
     block.value("Adapters", loraLine(op), UseWhat_Loras);
     block.value("Sampler", samplingLine(op), UseWhat_Sampling);
     if (op.width != 0 && op.height != 0) {
-        block.value("Size", std::to_string(op.width) + " x " + std::to_string(op.height), UseWhat_Aspect, "Use Aspect Ratio");
+        block.value("Size", format("{} x {}", op.width, op.height), UseWhat_Aspect, "Use Aspect Ratio");
     }
     if (provenanceSamples(op))
-        block.value("Seed", std::to_string(op.seed), UseWhat_Seed);
+        block.value("Seed", format("{}", op.seed), UseWhat_Seed);
     if (op.strength != 0)
         block.value("Strength", fixed(op.strength, 2), UseWhat_Strength);
-    if (!op.upscaleModel.empty())
-        block.value("Upscale", op.upscaleModel + " at " + fixed(op.factor, 1) + "x", UseWhat_Upscale);
-    if (!op.direction.empty()) {
-        block.value("Outpaint", op.direction + " by " + std::to_string(op.amount) + "px, context " +
-            std::to_string(op.context) + ", crossfade " + std::to_string(op.crossfade), UseWhat_Outpaint);
+    if (!op.upscaleModel.isEmpty())
+        block.value("Upscale", format("{} at {:.1f}x", op.upscaleModel, op.factor), UseWhat_Upscale);
+    if (!op.direction.isEmpty()) {
+        String outpaint = format("{} by {}px, context {}, crossfade {}", op.direction, op.amount, op.context,
+            op.crossfade);
+        block.value("Outpaint", outpaint, UseWhat_Outpaint);
     }
     block.value("Detector", op.detector, UseWhat_Detector);
     block.value("Source", op.source, UseWhat_Source);
@@ -584,7 +591,7 @@ void buildRecord(PrKit* kit, PrLayoutNode stack, AppState& state, Commands& comm
     PrLayoutNode header = row(kit, card, kPrKitSpace2);
     prKitLabel(kit, header, {.text = "Image Info"}, textStyle(PrKitTextRole_Caption, PrKitTone_Muted));
     if (record != nullptr)
-        prKitBadge(kit, header, {.text = std::to_string(record->operations.size())}, {});
+        prKitBadge(kit, header, {.text = format("{}", record->operations.count())}, {});
     prKitSpacer(kit, header, {});
     if (prKitActivated(kit, iconButton(kit, header, PrKitIconKind_Close, "Close")))
         runCommand(commands, "alchemy.toggleInfo");
@@ -593,9 +600,9 @@ void buildRecord(PrKit* kit, PrLayoutNode stack, AppState& state, Commands& comm
             textStyle(PrKitTextRole_BodySmall, PrKitTone_Faint));
         return;
     }
-    if (record->operations.size() > 1)
+    if (record->operations.count() > 1)
         prKitLabel(kit, card, {.text = provenanceChain(*record)}, RecordBlock::wrapped());
-    for (uint32_t i = uint32_t(record->operations.size()); i > 0; --i)
+    for (uint32_t i = record->operations.count(); i > 0; --i)
         buildOperation(kit, card, state, record->operations[i - 1], i - 1);
 }
 
@@ -653,10 +660,10 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
     bool previewing = state.showPreview && state.preview != nullptr && job != nullptr &&
         job->promptId == state.previewPromptId;
     if (entry != nullptr) {
-        std::string label = entry->filename;
+        String label = entry->filename;
         if (image != nullptr) {
             PrUVec2 extent = prDrawImageExtent(image);
-            label += "  " + std::to_string(extent.x) + " x " + std::to_string(extent.y);
+            formatTo(label, "  {} x {}", extent.x, extent.y);
         }
         prKitLabel(kit, toolbar, {.text = label}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
     }
@@ -707,7 +714,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
 void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& commands) {
     prCommandScope(kit->ui, content, commands.registry, commands.keymap, kContextGallery);
     Gallery& gallery = state.gallery;
-    if (gallery.entries.empty()) {
+    if (gallery.entries.isEmpty()) {
         prKitEmptyState(kit, content, {
             .icon = PrKitIconKind_Folder,
             .title = "The gallery is empty",
@@ -717,17 +724,13 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
     }
     PrUi* ui = kit->ui;
     PrKitListViewStyle style{.rowHeight = kTileHeight, .tileWidth = kTileWidth, .place = {.flex = PrKitFlex_Fill}};
-    PrLayoutNode view = prKitListView(
-        kit, content, {.count = uint32_t(gallery.entries.size()), .selection = &gallery.selection}, style);
+    PrKitListView list{.count = gallery.entries.count(), .selection = &gallery.selection};
+    PrLayoutNode view = prKitListView(kit, content, list, style);
     PrKitWindow window = prKitListWindow(kit, view);
     uint32_t pendingSelect = kPrKitRowNone;
-    for (uint32_t i = window.first; i < window.first + window.count && i < gallery.entries.size(); ++i) {
+    for (uint32_t i = window.first; i < window.first + window.count && i < gallery.entries.count(); ++i) {
         const GalleryEntry& entry = gallery.entries[i];
-        PrKitTile item{
-            .index = i,
-            .item = std::hash<std::string>{}(entry.filename),
-            .selected = gallery.selected[i] != 0,
-        };
+        PrKitTile item{.index = i, .item = hashKey(entry.filename), .selected = gallery.selected[i] != 0};
         PrLayoutNode tile = prKitListTile(kit, view, item);
         // The thumbnail is an icon until the cache has decoded the image.
         const PrDrawImage* image = imageCacheGet(state.images, entry.path, ImageScale_Thumbnail);
@@ -747,12 +750,7 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
     }
     PrKitSelectionEdit edit{};
     if (prKitSelectionEdited(kit, view, &edit)) {
-        std::unique_ptr<bool[]> flags(new bool[gallery.entries.size()]);
-        for (size_t i = 0; i < gallery.entries.size(); ++i)
-            flags[i] = gallery.selected[i] != 0;
-        prKitSelectionApply(&edit, flags.get(), uint32_t(gallery.entries.size()));
-        for (size_t i = 0; i < gallery.entries.size(); ++i)
-            gallery.selected[i] = flags[i];
+        prKitSelectionApply(&edit, gallery.selected.data(), gallery.entries.count());
         gallery.lead = gallery.selection.lead;
     }
     if (pendingSelect != kPrKitRowNone)
@@ -761,33 +759,31 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
 }
 
 void buildMenus(PrKit* kit, PrLayoutNode bar, Commands& commands) {
+    // Each menu's command ids, with null for a separator.
+    static const char* const kAlchemyItems[] = {
+        "alchemy.configureServer", "alchemy.connect", "alchemy.disconnect", nullptr, "view.palette", nullptr, "app.quit",
+    };
+    static const char* const kRunItems[] = {
+        "alchemy.generate", "alchemy.interrupt", nullptr, "alchemy.mode.generate", "alchemy.mode.upscale",
+        "alchemy.mode.outpaint", "alchemy.mode.detail", nullptr, "alchemy.newSeed", "alchemy.lockSeed",
+        "alchemy.swapDimensions", "alchemy.clearSource",
+    };
+    static const char* const kImageItems[] = {
+        "alchemy.back", "alchemy.forward", "alchemy.previousImage", "alchemy.nextImage", nullptr, "alchemy.useAsSource",
+        "alchemy.usePrompt", "alchemy.useSeed", "alchemy.useAspect", "alchemy.useAll", nullptr, "alchemy.copyImage",
+        "alchemy.pasteImage", "alchemy.importImage", nullptr, "alchemy.deleteImage", "alchemy.rescan",
+        "alchemy.openGallery",
+    };
+    static const char* const kViewItems[] = {"alchemy.toggleInfo", "alchemy.togglePreview"};
     struct Menu {
         const char* title;
-        std::vector<const char*> items;   // command ids, with null for a separator
+        Span<const char* const> items;
     };
-    static const Menu kMenus[] = {
-        {
-            "Alchemy",
-            {"alchemy.configureServer", "alchemy.connect", "alchemy.disconnect", nullptr, "view.palette", nullptr, "app.quit"},
-        },
-        {
-            "Run",
-            {
-                "alchemy.generate", "alchemy.interrupt", nullptr, "alchemy.mode.generate", "alchemy.mode.upscale",
-                "alchemy.mode.outpaint", "alchemy.mode.detail", nullptr, "alchemy.newSeed", "alchemy.lockSeed",
-                "alchemy.swapDimensions", "alchemy.clearSource",
-            },
-        },
-        {
-            "Image",
-            {
-                "alchemy.back", "alchemy.forward", "alchemy.previousImage", "alchemy.nextImage", nullptr,
-                "alchemy.useAsSource", "alchemy.usePrompt", "alchemy.useSeed", "alchemy.useAspect", "alchemy.useAll",
-                nullptr, "alchemy.copyImage", "alchemy.pasteImage", "alchemy.importImage", nullptr,
-                "alchemy.deleteImage", "alchemy.rescan", "alchemy.openGallery",
-            },
-        },
-        {"View", {"alchemy.toggleInfo", "alchemy.togglePreview"}},
+    const Menu kMenus[] = {
+        {"Alchemy", Span(kAlchemyItems)},
+        {"Run", Span(kRunItems)},
+        {"Image", Span(kImageItems)},
+        {"View", Span(kViewItems)},
     };
     for (const Menu& menu : kMenus) {
         PrLayoutNode item = prKitMenuBarItem(kit, bar, {.text = menu.title});
@@ -829,17 +825,17 @@ PrLayoutNode buildStatus(PrKit* kit, PrLayoutNode parent, AppState& state) {
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, message, &fill);
     if (const Job* job = activeJob(state)) {
-        std::string stage = job->node.empty() ? std::string("queued") : job->node;
+        String stage = job->node.isEmpty() ? String("queued") : job->node;
         if (job->progressMax != 0)
-            stage += " " + std::to_string(job->progressValue) + "/" + std::to_string(job->progressMax);
+            formatTo(stage, " {}/{}", job->progressValue, job->progressMax);
         prKitLabel(kit, status, {.text = stage}, textStyle(PrKitTextRole_Mono, PrKitTone_Accent));
     }
     uint32_t inFlight = runsInFlight(state);
     if (inFlight > 1 || state.queueRemaining > 1) {
-        std::string queued = std::to_string(std::max(inFlight, state.queueRemaining)) + " queued";
+        String queued = format("{} queued", max(inFlight, state.queueRemaining));
         prKitLabel(kit, status, {.text = queued}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
     }
-    std::string count = std::to_string(state.gallery.entries.size()) + " images";
+    String count = format("{} images", state.gallery.entries.count());
     prKitLabel(kit, status, {.text = count}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
     return server;
 }
@@ -867,8 +863,8 @@ void buildServerDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
     PrStringView text{};
     PrKitTextField server{.text = state.server, .placeholder = "http://127.0.0.1:8188"};
     if (prKitTextChanged(kit, prKitTextField(kit, address, server, {}), &text))
-        state.server.assign(text.data, text.size);
-    if (!state.status.empty()) {
+        state.server = text;
+    if (!state.status.isEmpty()) {
         prKitLabel(kit, body, {.text = state.status},
             PrKitTextStyle{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Muted, .wrap = PrKitWrap_Wrap});
     }
@@ -918,17 +914,17 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         prKitImage(kit, preview, {.image = image}, fit);
     } else {
         PrRawString chord = prCommandChordText(PrCommandChord{.key = 'V', .modifiers = PrAppModifierFlag_Super});
-        std::string hint = "Press " + stringOf(prRawStringView(&chord)) + " to read the clipboard.";
+        String hint = format("Press {} to read the clipboard.", prRawStringView(&chord));
         prRawStringReset(&chord);
         prKitEmptyState(kit, preview, {.icon = PrKitIconKind_Image, .title = "Nothing to import yet", .hint = hint});
     }
-    std::string caption = state.import.message;
-    if (caption.empty() && image != nullptr) {
+    String caption = state.import.message;
+    if (caption.isEmpty() && image != nullptr) {
         PrUVec2 extent = prDrawImageExtent(image);
-        caption = std::to_string(extent.x) + " x " + std::to_string(extent.y);
+        caption = format("{} x {}", extent.x, extent.y);
     }
-    if (!caption.empty()) {
-        PrKitTone tone = state.import.message.empty() ? PrKitTone_Muted : PrKitTone_Warning;
+    if (!caption.isEmpty()) {
+        PrKitTone tone = state.import.message.isEmpty() ? PrKitTone_Muted : PrKitTone_Warning;
         prKitLabel(kit, body, {.text = caption}, textStyle(PrKitTextRole_BodySmall, tone));
     }
     PrLayoutNode footer = prKitDialogFooter(kit, body);
@@ -955,11 +951,11 @@ void buildDeleteDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
     PrLayoutNode body = requestedDialog(kit, trigger, state.deleteOpen, view.deleteShown, {.title = "Delete images"});
     if (body == kPrLayoutNodeNone)
         return;
-    std::string question;
-    if (state.deletePaths.size() == 1)
-        question = "Delete " + stringOf(pathFilename(state.deletePaths[0])) + "?";
+    String question;
+    if (state.deletePaths.count() == 1)
+        question = format("Delete {}?", prFilePathName(state.deletePaths[0]));
     else
-        question = "Delete " + std::to_string(state.deletePaths.size()) + " images?";
+        question = format("Delete {} images?", state.deletePaths.count());
     prKitLabel(kit, body, {.text = question}, textStyle(PrKitTextRole_Body));
     prKitLabel(kit, body, {.text = "The files are removed from the gallery's folder, which cannot be undone."},
         PrKitTextStyle{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Muted, .wrap = PrKitWrap_Wrap});
@@ -1000,7 +996,7 @@ void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
     if (list == kPrLayoutNodeNone)
         view.paletteQuery.clear();
     else if (prKitTextChanged(kit, list, &query))
-        view.paletteQuery.assign(query.data, query.size);
+        view.paletteQuery = query;
 
     PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = view.dock, .describe = describePanel});
     PrKitPlace fill{.flex = PrKitFlex_Fill};

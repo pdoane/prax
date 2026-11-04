@@ -6,6 +6,7 @@
 
 #include "pr/ascii.h"
 #include "pr/base64.h"
+#include "pr/callback.h"
 #include "pr/charset_quickjs.h"
 #include "pr/compress_builtin.h"
 #include "pr/count_of.h"
@@ -550,12 +551,12 @@ void openNetwork(HostState& s) {
 void closeNetwork(HostState& s) {
     if (s.net == nullptr)
         return;
-    prNetPostBlocking(s.net, [](void* PR_NULLABLE context) {
-        HostState& state = *static_cast<HostState*>(context);
-        prFetchNetworkDestroy(state.fetcher);
-        prFetchNetworkDestroy(state.builtin);
-        prHttpDestroy(state.http);
-    }, &s);
+    auto destroyOnLoop = [&] {
+        prFetchNetworkDestroy(s.fetcher);
+        prFetchNetworkDestroy(s.builtin);
+        prHttpDestroy(s.http);
+    };
+    prNetPostBlocking(s.net, PR_SCOPED_CALLBACK(destroyOnLoop));
     prTlsDestroy(s.tls);
     prNetDestroy(s.net);
     prStorageDestroy(s.cache);

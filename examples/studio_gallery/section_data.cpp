@@ -41,7 +41,7 @@ PrLayoutNode buildList(PrKit* kit, PrLayoutNode parent, CollectionsState& collec
         .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed},
     };
     PrLayoutNode view = prKitListView(
-        kit, parent, {.count = uint32_t(collections.assets.size()), .selection = &collections.cursor}, style);
+        kit, parent, {.count = collections.assets.count(), .selection = &collections.cursor}, style);
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         const CollectionAsset& asset = collections.assets[i];
@@ -69,7 +69,7 @@ PrLayoutNode buildGrid(PrKit* kit, PrLayoutNode parent, CollectionsState& collec
         .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed},
     };
     PrLayoutNode view = prKitListView(
-        kit, parent, {.count = uint32_t(collections.assets.size()), .selection = &collections.cursor}, style);
+        kit, parent, {.count = collections.assets.count(), .selection = &collections.cursor}, style);
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         const CollectionAsset& asset = collections.assets[i];
@@ -88,7 +88,7 @@ PrLayoutNode buildGrid(PrKit* kit, PrLayoutNode parent, CollectionsState& collec
 PrLayoutNode buildTree(PrKit* kit, PrLayoutNode parent, CollectionsState& collections) {
     collectionsTreeOrder(collections);
     PrKitTreeView tree{
-        .count = uint32_t(collections.treeRows.size()),
+        .count = collections.treeRows.count(),
         .selection = &collections.treeCursor,
         .items = collections.treeRows.data(),
     };
@@ -110,9 +110,9 @@ PrLayoutNode buildTree(PrKit* kit, PrLayoutNode parent, CollectionsState& collec
         } else {
             PrKitIconKind folder = collections.treeRows[i].open ? PrKitIconKind_FolderOpen : PrKitIconKind_Folder;
             prKitRowIcon(kit, row, {.icon = folder});
-            prKitRowLabel(kit, row, {.text = format(label, sizeof label, "Group %u", collectionGroupOf(key))},
+            prKitRowLabel(kit, row, {.text = formatToBuffer(Span(label), "Group {}", collectionGroupOf(key))},
                 PrKitTone_Primary);
-            prKitRowMeta(kit, row, {.text = format(meta, sizeof meta, "%u", kCollectionGroupSize)});
+            prKitRowMeta(kit, row, {.text = formatToBuffer(Span(meta), "{}", kCollectionGroupSize)});
         }
     }
     PrKitTreeFold fold{};
@@ -172,10 +172,10 @@ void sectionCollections(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     prKitSpacer(kit, bar, {});
     bool tree = collections.viewMode == CollectionView_Tree;
     char summary[64];
-    size_t held = tree ? collections.treeSelection.size() : collections.selection.size();
+    size_t held = tree ? collections.treeSelection.count() : collections.selection.count();
     prKitLabel(kit, bar,
-        {.text = format(summary, sizeof summary, "%zu of %zu selected", held, collections.assets.size())}, kMonoMuted);
-    if (!collections.verb.empty())
+        {.text = formatToBuffer(Span(summary), "{} of {} selected", held, collections.assets.count())}, kMonoMuted);
+    if (!collections.verb.isEmpty())
         prKitLabel(kit, bar, {.text = collections.verb}, kBodySecondaryLine);
 
     PrLayoutNode view;
@@ -267,16 +267,16 @@ void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     for (const PrKitTimelineBlock& block : timeline.blocks)
         selected += block.selected ? 1 : 0;
     char count[32];
-    prKitLabel(kit, bar, {.text = format(count, sizeof count, "%u selected", selected)}, kMonoMuted);
+    prKitLabel(kit, bar, {.text = formatToBuffer(Span(count), "{} selected", selected)}, kMonoMuted);
 
     PrLayoutNode panel = demoPanel(kit, section, "ANIMATION CLIP", "EDITABLE . UNDO SINK", true);
     PrKitTimeline view{
         .tracks = timeline.tracks.data(),
-        .trackCount = uint32_t(timeline.tracks.size()),
+        .trackCount = timeline.tracks.count(),
         .blocks = timeline.blocks.data(),
-        .blockCount = uint32_t(timeline.blocks.size()),
+        .blockCount = timeline.blocks.count(),
         .markers = timeline.markers.data(),
-        .markerCount = uint32_t(timeline.markers.size()),
+        .markerCount = timeline.markers.count(),
         .view = &timeline.view,
         .playhead = &timeline.playhead,
         .loop = &timeline.loop,
@@ -290,17 +290,17 @@ void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     prUiSetEditSink(kit->ui, panel, timelineEdit, &timeline);
     PrLayoutNode clip = prKitTimeline(kit, panel, view, {.trackHeight = 30});
     if (prKitRemoved(kit, clip)) {
-        std::vector<PrKitTimelineBlock> kept;
+        Array<PrKitTimelineBlock> kept;
         for (const PrKitTimelineBlock& block : timeline.blocks) {
             if (!block.selected)
-                kept.push_back(block);
+                kept.push(block);
         }
         timeline.blocks = kept;
     }
     uint32_t addTrack = 0;
     float addTime = 0;
     if (prKitAdded(kit, clip, &addTrack, &addTime)) {
-        timeline.blocks.push_back(PrKitTimelineBlock{
+        timeline.blocks.push(PrKitTimelineBlock{
             .id = timeline.nextId++,
             .track = addTrack,
             .start = addTime,
@@ -318,7 +318,7 @@ void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     const uint32_t values[] = {timeline.begins, timeline.changes, timeline.commits};
     for (uint32_t i = 0; i < 3; ++i) {
         char value[16];
-        PrKitStatTile tile{.label = labels[i], .value = format(value, sizeof value, "%u", values[i])};
+        PrKitStatTile tile{.label = labels[i], .value = formatToBuffer(Span(value), "{}", values[i])};
         prKitStatTile(kit, counts, tile);
     }
 
@@ -351,8 +351,7 @@ void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrKitButtonStyle small{.size = PrKitControlSize_Sm};
     PrKitButton arrange{.text = "Arrange"};
     if (prUiActivated(ui, prKitButton(kit, bar, arrange, small)))
-        prKitGraphArrange(graph.nodes.data(), uint32_t(graph.nodes.size()), graph.wires.data(),
-            uint32_t(graph.wires.size()));
+        prKitGraphArrange(graph.nodes.data(), graph.nodes.count(), graph.wires.data(), graph.wires.count());
     uint32_t selected = 0;
     for (const PrKitGraphNode& node : graph.nodes)
         selected += node.selected ? 1 : 0;
@@ -364,8 +363,8 @@ void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     prKitSpacer(kit, bar, {});
     char readout[64];
     prKitLabel(kit, bar, {
-        .text = format(readout, sizeof readout, "%zu nodes . %zu wires . %u selected", graph.nodes.size(),
-            graph.wires.size(), selected + picked),
+        .text = formatToBuffer(Span(readout), "{} nodes . {} wires . {} selected", graph.nodes.count(),
+            graph.wires.count(), selected + picked),
     }, kMonoMuted);
 
     PrLayoutNode panel = demoPanel(kit, section, "MATERIAL GRAPH", "EDITABLE", true);
@@ -376,9 +375,9 @@ void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     };
     PrKitGraph view{
         .nodes = graph.nodes.data(),
-        .nodeCount = uint32_t(graph.nodes.size()),
+        .nodeCount = graph.nodes.count(),
         .wires = graph.wires.data(),
-        .wireCount = uint32_t(graph.wires.size()),
+        .wireCount = graph.wires.count(),
         .typeColors = kTypeColors,
         .typeCount = PortType_Count,
         .view = &graph.view,
@@ -386,7 +385,7 @@ void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrLayoutNode canvas = prKitGraph(kit, panel, view, {.place = {.height = prKitPx(340), .flex = PrKitFlex_Fixed}});
 
     // The blend node's body shows its mix from its first input's color to its second's.
-    for (uint32_t i = 0; i < uint32_t(graph.nodes.size()); ++i) {
+    for (uint32_t i = 0; i < graph.nodes.count(); ++i) {
         PrLayoutNode body = prKitGraphBody(kit, canvas, i);
         if (body == kPrLayoutNodeNone)
             continue;
@@ -404,19 +403,19 @@ void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrKitGraphLink link{};
     if (prKitConnected(kit, canvas, &link)) {
         // A wire into an input replaces the wire that fed it.
-        std::vector<PrKitGraphWire> kept;
+        Array<PrKitGraphWire> kept;
         for (const PrKitGraphWire& wire : graph.wires) {
             if (wire.link.toNode != link.toNode || wire.link.toPort != link.toPort)
-                kept.push_back(wire);
+                kept.push(wire);
         }
-        kept.push_back(PrKitGraphWire{.id = graph.nextWireId++, .link = link});
+        kept.push(PrKitGraphWire{.id = graph.nextWireId++, .link = link});
         graph.wires = kept;
     }
     if (prKitRemoved(kit, canvas) || removing) {
-        std::vector<PrKitGraphNode> nodes;
+        Array<PrKitGraphNode> nodes;
         for (const PrKitGraphNode& node : graph.nodes) {
             if (!node.selected)
-                nodes.push_back(node);
+                nodes.push(node);
         }
         auto held = [&](uint64_t id) {
             for (const PrKitGraphNode& node : nodes) {
@@ -425,10 +424,10 @@ void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             }
             return false;
         };
-        std::vector<PrKitGraphWire> wires;
+        Array<PrKitGraphWire> wires;
         for (const PrKitGraphWire& wire : graph.wires) {
             if (!wire.selected && held(wire.link.fromNode) && held(wire.link.toNode))
-                wires.push_back(wire);
+                wires.push(wire);
         }
         graph.nodes = nodes;
         graph.wires = wires;

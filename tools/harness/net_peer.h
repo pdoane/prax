@@ -14,7 +14,7 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace harness {
 
-using pr::RawArray;
+using namespace pr;
 
 // The ports of the peer's servers, and the certificate of the CA that issued the certificates of the servers that tests
 // trust.

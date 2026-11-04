@@ -1,6 +1,6 @@
 #include "pr/xhr.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

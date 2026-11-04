@@ -1,6 +1,6 @@
 #include "pr/media.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 extern "C" int prTestMediaCApi(void);
 

@@ -4,11 +4,9 @@
 
 #include "pr/ascii.h"
 #include "pr/count_of.h"
-
-#include "examples/alchemy/text.h"
-
-#include <algorithm>
-#include <cmath>
+#include "pr/float.h"
+#include "pr/min_max.h"
+#include "pr/string.h"
 
 namespace alchemy {
 
@@ -53,8 +51,8 @@ constexpr double kMinAspectExponent = -2.0;
 constexpr double kMaxAspectExponent = 2.0;
 
 uint32_t snapEdge(double value) {
-    double steps = std::max(std::round(value / kSizeStep), 1.0);
-    return std::clamp(uint32_t(steps) * kSizeStep, kMinEdge, kMaxEdge);
+    double steps = max(prF64Round(value / kSizeStep), 1.0);
+    return clamp(uint32_t(steps) * kSizeStep, kMinEdge, kMaxEdge);
 }
 
 double areaOf(DimensionSize size) {
@@ -65,11 +63,11 @@ double areaOf(DimensionSize size) {
 uint32_t nearestAspect(const DimensionSize* sizes, uint32_t count, double aspect, DimensionSize tieBreak) {
     double area = areaOf(tieBreak);
     uint32_t nearest = 0;
-    double bestAspect = HUGE_VAL;
-    double bestArea = HUGE_VAL;
+    double bestAspect = kPrF64Infinity;
+    double bestArea = kPrF64Infinity;
     for (uint32_t i = 0; i < count; ++i) {
-        double aspectDelta = std::fabs(sizeAspect(sizes[i]) - aspect);
-        double areaDelta = std::fabs(areaOf(sizes[i]) - area);
+        double aspectDelta = prF64Abs(sizeAspect(sizes[i]) - aspect);
+        double areaDelta = prF64Abs(areaOf(sizes[i]) - area);
         if (aspectDelta > bestAspect || (aspectDelta == bestAspect && areaDelta >= bestArea))
             continue;
         nearest = i;
@@ -94,14 +92,14 @@ uint32_t exactSize(const DimensionSize* sizes, uint32_t count, DimensionSize siz
 uint32_t nearestMegapixel(double megapixels) {
     uint32_t nearest = 0;
     for (uint32_t i = 1; i < kMegapixelCount; ++i) {
-        if (std::fabs(kMegapixels[i] - megapixels) < std::fabs(kMegapixels[nearest] - megapixels))
+        if (prF64Abs(kMegapixels[i] - megapixels) < prF64Abs(kMegapixels[nearest] - megapixels))
             nearest = i;
     }
     return nearest;
 }
 
 double flexibleAspectExponent(double aspect) {
-    return std::clamp(std::log2(aspect), kMinAspectExponent, kMaxAspectExponent);
+    return clamp(prF64Log2(aspect), kMinAspectExponent, kMaxAspectExponent);
 }
 
 // Moves the current family's selection to the entry nearest the current size, so that the picture keeps its shape when
@@ -139,7 +137,7 @@ bool ladderStatesSize(DimensionFamily family, DimensionSize size, LadderPick* pi
         case DimensionFamily_Flexible: {
             pick->megapixel = nearestMegapixel(sizeMegapixels(size));
             pick->aspectExponent = flexibleAspectExponent(sizeAspect(size));
-            DimensionSize fitted = flexibleSize(kMegapixels[pick->megapixel], std::exp2(pick->aspectExponent));
+            DimensionSize fitted = flexibleSize(kMegapixels[pick->megapixel], prF64Exp2(pick->aspectExponent));
             return fitted.width == size.width && fitted.height == size.height;
         }
     }
@@ -156,7 +154,7 @@ uint32_t greatestCommonDivisor(uint32_t a, uint32_t b) {
 }
 
 DimensionSize ratioOf(DimensionSize size) {
-    uint32_t divisor = std::max(greatestCommonDivisor(size.width, size.height), 1u);
+    uint32_t divisor = max(greatestCommonDivisor(size.width, size.height), 1u);
     return {size.width / divisor, size.height / divisor};
 }
 
@@ -183,11 +181,11 @@ DimensionSize resolvedSize(const Dimensions& dims) {
     if (dims.customSize)
         return dims.size;
     switch (dims.family) {
-        case DimensionFamily_Sdxl: return kSdxlBuckets[std::min(dims.sdxlPreset, kSdxlCount - 1)];
-        case DimensionFamily_Sd15: return kSd15Sizes[std::min(dims.sd15Preset, kSd15Count - 1)];
+        case DimensionFamily_Sdxl: return kSdxlBuckets[min(dims.sdxlPreset, kSdxlCount - 1)];
+        case DimensionFamily_Sd15: return kSd15Sizes[min(dims.sd15Preset, kSd15Count - 1)];
         case DimensionFamily_Flexible:
-            return flexibleSize(kMegapixels[std::min(dims.megapixel, kMegapixelCount - 1)],
-                std::exp2(std::clamp(dims.aspectExponent, kMinAspectExponent, kMaxAspectExponent)));
+            return flexibleSize(kMegapixels[min(dims.megapixel, kMegapixelCount - 1)],
+                prF64Exp2(clamp(dims.aspectExponent, kMinAspectExponent, kMaxAspectExponent)));
     }
     return dims.size;
 }
@@ -199,7 +197,7 @@ void seedDimensions(Dimensions& dims, PrStringView checkpoint, ModelArchitecture
     // The family is chosen again once the checkpoint's own file answers for what its name had been read as.
     if (checkpoint == dims.checkpointSeed && (dims.detected || !detected))
         return;
-    dims.checkpointSeed = stringOf(checkpoint);
+    dims.checkpointSeed = checkpoint;
     setDimensionFamily(dims, detected ? familyForArchitecture(arch) : familyForCheckpoint(checkpoint, dims.family));
     dims.detected = detected;
 }
@@ -225,15 +223,15 @@ void setCustomSize(Dimensions& dims, bool custom) {
 
 void selectPreset(Dimensions& dims, uint32_t preset) {
     if (dims.family == DimensionFamily_Sdxl)
-        dims.sdxlPreset = std::min(preset, kSdxlCount - 1);
+        dims.sdxlPreset = min(preset, kSdxlCount - 1);
     else if (dims.family == DimensionFamily_Sd15)
-        dims.sd15Preset = std::min(preset, kSd15Count - 1);
+        dims.sd15Preset = min(preset, kSd15Count - 1);
     resolve(dims);
 }
 
 void selectFlexible(Dimensions& dims, uint32_t megapixel, double aspectExponent) {
-    dims.megapixel = std::min(megapixel, kMegapixelCount - 1);
-    dims.aspectExponent = std::clamp(aspectExponent, kMinAspectExponent, kMaxAspectExponent);
+    dims.megapixel = min(megapixel, kMegapixelCount - 1);
+    dims.aspectExponent = clamp(aspectExponent, kMinAspectExponent, kMaxAspectExponent);
     resolve(dims);
 }
 
@@ -247,7 +245,7 @@ void swapDimensions(Dimensions& dims) {
         case DimensionFamily_Sdxl: dims.sdxlPreset = nearestSize(kSdxlBuckets, kSdxlCount, flipped); break;
         case DimensionFamily_Sd15: dims.sd15Preset = nearestSize(kSd15Sizes, kSd15Count, flipped); break;
         case DimensionFamily_Flexible:
-            dims.aspectExponent = std::clamp(-dims.aspectExponent, kMinAspectExponent, kMaxAspectExponent);
+            dims.aspectExponent = clamp(-dims.aspectExponent, kMinAspectExponent, kMaxAspectExponent);
             break;
     }
     resolve(dims);
@@ -306,11 +304,13 @@ DimensionFamily familyForArchitecture(ModelArchitecture arch) {
 DimensionFamily familyForCheckpoint(PrStringView filename, DimensionFamily fallback) {
     if (prAsciiContainsFold(filename, "xl"))
         return DimensionFamily_Sdxl;
-    for (PrStringView marker : {"sd15", "sd-1-5", "sd_1_5", "v1-5", "1.5"}) {
+    const char* sd15Markers[] = {"sd15", "sd-1-5", "sd_1_5", "v1-5", "1.5"};
+    for (const char* marker : sd15Markers) {
         if (prAsciiContainsFold(filename, marker))
             return DimensionFamily_Sd15;
     }
-    for (PrStringView marker : {"flux", "sd3", "cascade"}) {
+    const char* flexibleMarkers[] = {"flux", "sd3", "cascade"};
+    for (const char* marker : flexibleMarkers) {
         if (prAsciiContainsFold(filename, marker))
             return DimensionFamily_Flexible;
     }
@@ -327,7 +327,8 @@ PrStringView familyName(DimensionFamily family) {
 }
 
 DimensionFamily parseFamily(PrStringView name, DimensionFamily fallback) {
-    for (DimensionFamily family : {DimensionFamily_Sdxl, DimensionFamily_Sd15, DimensionFamily_Flexible}) {
+    const DimensionFamily families[] = {DimensionFamily_Sdxl, DimensionFamily_Sd15, DimensionFamily_Flexible};
+    for (DimensionFamily family : families) {
         if (prAsciiContainsFold(name, familyName(family)))
             return family;
     }
@@ -343,17 +344,17 @@ PrStringView familyLabel(DimensionFamily family) {
     return "SDXL";
 }
 
-std::string dimensionLabel(DimensionSize size) {
-    return dimensionSizeLabel(size) + " (" + dimensionRatioLabel(size) + ")";
+String dimensionLabel(DimensionSize size) {
+    return format("{} ({})", dimensionSizeLabel(size), dimensionRatioLabel(size));
 }
 
-std::string dimensionSizeLabel(DimensionSize size) {
-    return std::to_string(size.width) + " x " + std::to_string(size.height);
+String dimensionSizeLabel(DimensionSize size) {
+    return format("{} x {}", size.width, size.height);
 }
 
-std::string dimensionRatioLabel(DimensionSize size) {
+String dimensionRatioLabel(DimensionSize size) {
     DimensionSize ratio = ratioOf(size);
-    return std::to_string(ratio.width) + ":" + std::to_string(ratio.height);
+    return format("{}:{}", ratio.width, ratio.height);
 }
 
 double sizeAspect(DimensionSize size) {
@@ -365,9 +366,9 @@ double sizeMegapixels(DimensionSize size) {
 }
 
 DimensionSize flexibleSize(double megapixels, double aspect) {
-    double pixels = std::max(megapixels, 0.1) * 1.0e6;
-    double ratio = std::clamp(aspect, std::exp2(kMinAspectExponent), std::exp2(kMaxAspectExponent));
-    return {snapEdge(std::sqrt(pixels * ratio)), snapEdge(std::sqrt(pixels / ratio))};
+    double pixels = max(megapixels, 0.1) * 1.0e6;
+    double ratio = clamp(aspect, prF64Exp2(kMinAspectExponent), prF64Exp2(kMaxAspectExponent));
+    return {snapEdge(prF64Sqrt(pixels * ratio)), snapEdge(prF64Sqrt(pixels / ratio))};
 }
 
 double flexibleAspectMin() {

@@ -4,7 +4,7 @@
 #include "html/src/html_forms.h"
 #include "html/src/html_hints.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

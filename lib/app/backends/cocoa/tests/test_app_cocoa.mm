@@ -1,7 +1,7 @@
 #include "pr/app_cocoa.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstring>
 #include <string>

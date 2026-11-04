@@ -6,7 +6,7 @@
 #include "pr/html_storage.h"
 #include "pr/task_builtin.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

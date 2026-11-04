@@ -83,7 +83,7 @@ void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrLayoutNode panel = demoPanel(kit, section, "SCENE HIERARCHY", "LIVE . DRAG TO REPARENT", true);
     treeOrder(tree);
     PrKitTreeView content{
-        .count = uint32_t(tree.rows.size()),
+        .count = tree.rows.count(),
         .selection = &tree.cursor,
         .items = tree.rows.data(),
         .dragKind = kDragTreeRow,
@@ -97,13 +97,13 @@ void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         TreeNode* node = findTreeNode(tree, key);
         PrLayoutNode rowNode = prKitTreeRow(kit, view, {.index = i, .item = key, .selected = tree.selected == key});
         // A node with a status shows it in place of its icon.
-        if (!node->badge.empty())
+        if (!node->badge.isEmpty())
             prKitStatus(kit, rowNode, {.text = node->badge}, {.tone = node->badgeTone});
         else
             prKitRowIcon(kit, rowNode, {.icon = node->icon});
         prKitRowLabel(kit, rowNode, {.text = node->name},
             PrKitTone(node->hidden ? PrKitTone_Faint : PrKitTone_Primary));
-        if (!node->meta.empty())
+        if (!node->meta.isEmpty())
             prKitRowMeta(kit, rowNode, {.text = node->meta});
         PrKitVisibilityToggle toggle{.hidden = node->hidden, .revealed = prUiIsHovered(ui, rowNode)};
         if (prKitActivated(kit, prKitVisibilityToggle(kit, rowNode, toggle)))
@@ -115,10 +115,10 @@ void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             node->open = fold.open;
     }
     PrKitSelectionEdit edit{};
-    if (prKitSelectionEdited(kit, view, &edit) && tree.cursor.lead < tree.keys.size())
+    if (prKitSelectionEdited(kit, view, &edit) && tree.cursor.lead < tree.keys.count())
         tree.selected = tree.keys[tree.cursor.lead];
     PrKitTreeDrop drop{};
-    if (prKitRowDropped(kit, view, &drop) && drop.row < tree.keys.size()) {
+    if (prKitRowDropped(kit, view, &drop) && drop.row < tree.keys.count()) {
         TreePlacement placement = TreePlacement_Into;
         if (drop.zone == PrKitDropZone_Before)
             placement = TreePlacement_Before;
@@ -154,7 +154,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitFieldStyle small{.size = PrKitControlSize_Sm};
         PrStringView text{};
         if (prKitTextChanged(kit, prKitTextField(kit, identity, name, small), &text))
-            inspector.name.assign(text.data, text.size);
+            inspector.name = text;
         prKitBadge(kit, identity, {.text = "ENTITY"}, {.variant = PrKitBadgeVariant_Accent});
         prKitBadge(kit, identity, {.text = "0x7FF8_A2B0"}, {.variant = PrKitBadgeVariant_Neutral});
     }
@@ -350,7 +350,7 @@ void sectionTables(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     };
     {
         char tags[16];
-        PrLayoutNode panel = demoPanel(kit, section, "ASSET BROWSER", format(tags, sizeof tags, "%u ROWS", count), true);
+        PrLayoutNode panel = demoPanel(kit, section, "ASSET BROWSER", formatToBuffer(Span(tags), "{} ROWS", count), true);
         PrKitTable content{
             .count = count,
             .selection = &table.cursor,
@@ -422,17 +422,17 @@ void sectionTags(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     }
     PrLayoutNode panel = demoPanel(kit, section, "CHIPS", "REMOVABLE . READ-ONLY", false);
     PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, true);
-    size_t removeAt = state.chips.size();
-    for (size_t i = 0; i < state.chips.size(); ++i) {
+    uint32_t removeAt = state.chips.count();
+    for (uint32_t i = 0; i < state.chips.count(); ++i) {
         if (prKitRemoved(kit, prKitChip(kit, row, {.label = state.chips[i], .removable = true})))
             removeAt = i;
     }
     PrKitButton add{.text = "Tag", .icon = PrKitIconKind_Plus};
     PrKitButtonStyle ghost{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Xs};
     if (prKitActivated(kit, prKitButton(kit, row, add, ghost)))
-        state.chips.push_back(kChipPool[state.chips.size() % countOf(kChipPool)]);
-    if (removeAt < state.chips.size())
-        state.chips.erase(state.chips.begin() + long(removeAt));
+        state.chips.push(kChipPool[state.chips.count() % countOf(kChipPool)]);
+    if (removeAt < state.chips.count())
+        state.chips.erase(removeAt);
     PrLayoutNode readOnly = specimenRow(kit, panel, kPrKitSpace3, true);
     for (const char* label : kChipPool) {
         prKitChip(kit, readOnly, {.label = label});

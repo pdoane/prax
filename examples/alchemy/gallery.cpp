@@ -2,14 +2,14 @@
 
 #include "examples/alchemy/gallery.h"
 
+#include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/environment.h"
 #include "pr/file.h"
+#include "pr/min_max.h"
+#include "pr/sort.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
-
-#include "examples/alchemy/text.h"
-
-#include <algorithm>
-#include <stdlib.h>
 
 namespace alchemy {
 
@@ -21,41 +21,41 @@ bool endsWithPng(PrStringView name) {
     return name.size > 4 && prAsciiEndsWithFold(name, ".png");
 }
 
-std::string joinPath(PrStringView dir, PrStringView name) {
-    std::string path = stringOf(dir);
-    if (!path.empty() && path.back() != '/')
-        path += '/';
-    path.append(name.begin(), name.end());
+String joinPath(PrStringView dir, PrStringView name) {
+    String path(dir);
+    if (!path.isEmpty() && !prStringEndsWith(path, "/"))
+        path.append('/');
+    path.append(name);
     return path;
 }
 
-bool exists(const std::string& path) {
+bool exists(PrStringView path) {
     PrFileInfo info{};
     return prFileInfo(path, &info);
 }
 
 // Returns a name that cannot leave the gallery's directory and that a listing finds: the basename without leading dots,
 // ending in .png.
-std::string galleryFilename(PrStringView filename) {
-    PrStringView base = pathFilename(filename);
-    while (base.size != 0 && base.data[0] == '.')
+String galleryFilename(PrStringView filename) {
+    PrStringView base = prFilePathName(filename);
+    while (!base.isEmpty() && base.data[0] == '.')
         base = prStringSlice(base, 1, base.size - 1);
-    if (base.size == 0)
+    if (base.isEmpty())
         return "image.png";
-    std::string out = stringOf(base);
+    String out(base);
     if (!endsWithPng(out))
-        out += ".png";
+        out.append(".png");
     return out;
 }
 
 // Returns a path in `dir` that no file has: `filename`, or else its stem with a number.
-std::string uniquePath(PrStringView dir, const std::string& filename) {
-    std::string path = joinPath(dir, filename);
+String uniquePath(PrStringView dir, PrStringView filename) {
+    String path = joinPath(dir, filename);
     if (!exists(path))
         return path;
-    std::string stem = filename.substr(0, filename.size() - 4);
+    PrStringView stem = prStringSlice(filename, 0, filename.size - 4);
     for (uint32_t i = 1; i < 10000; ++i) {
-        path = joinPath(dir, stem + "-" + std::to_string(i) + ".png");
+        path = joinPath(dir, format("{}-{}.png", stem, i));
         if (!exists(path))
             return path;
     }
@@ -67,42 +67,46 @@ void collect(void* PR_NULLABLE context, const PrFileEntry* entry) {
     PrStringView name = entry->name;
     if (entry->info.kind != PrFileKind_Regular || !endsWithPng(name) || name.data[0] == '.')
         return;
-    gallery->entries.push_back({joinPath(gallery->dir, name), stringOf(name), entry->info.modified});
+    gallery->entries.push(GalleryEntry{
+        .path = joinPath(gallery->dir, name),
+        .filename = name,
+        .modified = entry->info.modified,
+    });
 }
 
 } // namespace
 
-std::string galleryDirectory() {
-    const char* named = getenv("ALCHEMY_DIR");
-    if (named != nullptr && named[0] != 0)
+String galleryDirectory() {
+    String named = String::adopt(prEnvironmentVariable("ALCHEMY_DIR"));
+    if (!named.isEmpty())
         return named;
-    PrRawString data = prFileDataDirectory();
-    std::string base = takeString(&data);
-    return base.empty() ? std::string("Alchemy/images") : joinPath(base, "Alchemy/images");
+    String base = String::adopt(prFileDataDirectory());
+    return base.isEmpty() ? String("Alchemy/images") : joinPath(base, "Alchemy/images");
 }
 
 void galleryOpen(Gallery& gallery, PrStringView dir) {
-    gallery.dir = stringOf(dir);
+    gallery.dir = dir;
     prFileCreateDirectory(gallery.dir);
     galleryRescan(gallery);
 }
 
 void galleryRescan(Gallery& gallery) {
-    std::vector<std::string> kept = gallerySelectionPaths(gallery);
-    std::string lead = gallerySelected(gallery) != nullptr ? gallerySelected(gallery)->filename : std::string();
+    Array<String> kept = gallerySelectionPaths(gallery);
+    String lead = gallerySelected(gallery) != nullptr ? gallerySelected(gallery)->filename : String();
     gallery.entries.clear();
     prFileEachEntry(gallery.dir, collect, &gallery);
-    std::sort(gallery.entries.begin(), gallery.entries.end(), [](const GalleryEntry& a, const GalleryEntry& b) {
-        return a.modified != b.modified ? a.modified > b.modified : a.filename > b.filename;
+    sortItems(gallery.entries.span(), [](const GalleryEntry& a, const GalleryEntry& b) {
+        return a.modified != b.modified ? a.modified > b.modified : prStringCompare(a.filename, b.filename) > 0;
     });
     ++gallery.revision;
     // The selection carries over by name. If none of it remains, the newest image is selected.
-    gallery.selected.assign(gallery.entries.size(), false);
+    gallery.selected.clear();
+    gallery.selected.resize(gallery.entries.count());
     uint32_t newLead = 0;
     bool any = false;
-    for (uint32_t i = 0; i < gallery.entries.size(); ++i) {
+    for (uint32_t i = 0; i < gallery.entries.count(); ++i) {
         const GalleryEntry& entry = gallery.entries[i];
-        if (std::find(kept.begin(), kept.end(), entry.path) != kept.end()) {
+        if (kept.contains(entry.path)) {
             gallery.selected[i] = true;
             if (!any)
                 newLead = i;
@@ -117,27 +121,27 @@ void galleryRescan(Gallery& gallery) {
         gallery.lead = gallery.selection.lead = gallery.selection.anchor = newLead;
 }
 
-bool gallerySave(Gallery& gallery, PrStringView filename, const std::string& png, std::string* savedPath) {
-    std::string path = uniquePath(gallery.dir, galleryFilename(filename));
-    if (!prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(png.data()), png.size()}))
+bool gallerySave(Gallery& gallery, PrStringView filename, PrByteView png, String* savedPath) {
+    String path = uniquePath(gallery.dir, galleryFilename(filename));
+    if (!prFileWrite(path, png))
         return false;
     PrFileInfo info{};
     prFileInfo(path, &info);
-    GalleryEntry entry{path, stringOf(pathFilename(path)), info.modified};
-    gallery.entries.insert(gallery.entries.begin(), entry);
-    gallery.selected.insert(gallery.selected.begin(), false);
+    gallery.entries.insert(0, GalleryEntry{.path = path, .filename = prFilePathName(path), .modified = info.modified});
+    gallery.selected.insert(0, false);
     gallerySelect(gallery, 0);
     *savedPath = path;
     return true;
 }
 
 const GalleryEntry* PR_NULLABLE gallerySelected(const Gallery& gallery) {
-    return gallery.lead < gallery.entries.size() ? &gallery.entries[gallery.lead] : nullptr;
+    return gallery.lead < gallery.entries.count() ? &gallery.entries[gallery.lead] : nullptr;
 }
 
 void gallerySelect(Gallery& gallery, uint32_t index) {
-    gallery.selected.assign(gallery.entries.size(), false);
-    if (index >= gallery.entries.size()) {
+    gallery.selected.clear();
+    gallery.selected.resize(gallery.entries.count());
+    if (index >= gallery.entries.count()) {
         gallery.lead = 0;
         gallery.selection = PrKitSelection{};
         return;
@@ -149,56 +153,49 @@ void gallerySelect(Gallery& gallery, uint32_t index) {
 }
 
 void galleryStep(Gallery& gallery, int32_t delta) {
-    if (gallery.entries.empty())
+    if (gallery.entries.isEmpty())
         return;
     int64_t index = int64_t(gallery.lead) + delta;
-    index = std::clamp<int64_t>(index, 0, int64_t(gallery.entries.size()) - 1);
+    index = clamp<int64_t>(index, 0, int64_t(gallery.entries.count()) - 1);
     gallerySelect(gallery, uint32_t(index));
 }
 
 uint32_t galleryIndexOf(const Gallery& gallery, PrStringView path) {
-    for (uint32_t i = 0; i < gallery.entries.size(); ++i) {
+    for (uint32_t i = 0; i < gallery.entries.count(); ++i) {
         if (gallery.entries[i].path == path)
             return i;
     }
-    return uint32_t(gallery.entries.size());
+    return gallery.entries.count();
 }
 
-std::vector<std::string> gallerySelectionPaths(const Gallery& gallery) {
-    std::vector<std::string> paths;
-    for (uint32_t i = 0; i < gallery.entries.size() && i < gallery.selected.size(); ++i) {
+Array<String> gallerySelectionPaths(const Gallery& gallery) {
+    Array<String> paths;
+    for (uint32_t i = 0; i < gallery.entries.count() && i < gallery.selected.count(); ++i) {
         if (gallery.selected[i])
-            paths.push_back(gallery.entries[i].path);
+            paths.push(gallery.entries[i].path);
     }
-    if (paths.empty() && gallerySelected(gallery) != nullptr)
-        paths.push_back(gallerySelected(gallery)->path);
+    if (paths.isEmpty() && gallerySelected(gallery) != nullptr)
+        paths.push(gallerySelected(gallery)->path);
     return paths;
 }
 
-uint32_t galleryDelete(Gallery& gallery, const std::vector<std::string>& paths) {
+uint32_t galleryDelete(Gallery& gallery, const Array<String>& paths) {
     uint32_t removed = 0;
     uint32_t last = gallery.lead;
-    for (const std::string& path : paths) {
+    for (const String& path : paths) {
         uint32_t index = galleryIndexOf(gallery, path);
-        if (index == gallery.entries.size() || !prFileRemove(path))
+        if (index == gallery.entries.count() || !prFileRemove(path))
             continue;
-        gallery.entries.erase(gallery.entries.begin() + index);
-        gallery.selected.erase(gallery.selected.begin() + index);
+        gallery.entries.erase(index);
+        gallery.selected.erase(index);
         last = index;
         ++removed;
     }
     // The neighbor that took the last removed entry's place, or the entry before it at the end of the list.
-    uint32_t count = uint32_t(gallery.entries.size());
+    uint32_t count = gallery.entries.count();
     if (removed != 0)
-        gallerySelect(gallery, count == 0 ? 0 : std::min(last, count - 1));
+        gallerySelect(gallery, count == 0 ? 0 : min(last, count - 1));
     return removed;
-}
-
-PrStringView pathFilename(PrStringView path) {
-    size_t start = path.size;
-    while (start > 0 && path.data[start - 1] != '/' && path.data[start - 1] != '\\')
-        --start;
-    return prStringSlice(path, start, path.size - start);
 }
 
 } // namespace alchemy

@@ -1,7 +1,7 @@
 #include "pr/fetch_intercept.h"
 #include "pr/net_null.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

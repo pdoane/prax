@@ -2,7 +2,7 @@
 #include "pr/path_rasterizer.h"
 #include "pr/vec.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cmath>
 #include <string>

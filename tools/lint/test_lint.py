@@ -141,6 +141,22 @@ class ManagedLayer(unittest.TestCase):
             self.assertEqual(self.rules("lib/core/cpp/include/pr/array.h", "    ~Array() { reset(); }\n"), [])
 
 
+class TestIncludes(unittest.TestCase):
+    def rules(self, path, source):
+        report = lint.Report()
+        lint.check_test_include(report, os.path.join(lint.ROOT, path), source)
+        return [rule for _, _, rule, _ in report.problems]
+
+    def test_a_test_includes_doctest_through_the_harness(self):
+        self.assertEqual(self.rules("lib/font/tests/test_a.cpp", '#include "doctest/doctest.h"\n'), ["test-include"])
+        self.assertEqual(self.rules("tools/harness/kit_fixture.h", '#include "doctest/doctest.h"\n'), ["test-include"])
+        self.assertEqual(self.rules("lib/font/tests/test_a.cpp", '#include "tools/harness/test.h"\n'), [])
+
+    def test_the_harness_includes_doctest_itself(self):
+        self.assertEqual(self.rules("tools/harness/test.h", '#include "doctest/doctest.h"\n'), [])
+        self.assertEqual(self.rules("tools/harness/test_main.cpp", '#include "doctest/doctest.h"\n'), [])
+
+
 class Builtins(unittest.TestCase):
     def rules(self, source, path="lib/core/src/a.cpp"):
         report = lint.Report()
@@ -260,6 +276,22 @@ class Namespaces(unittest.TestCase):
                   'pr_impl::Value value;\n')
         self.assertEqual(self.rules(lint.check_qualified, 'examples/viewer/a.cpp', source),
                          [(5, 'qualified')])
+
+    def test_pr_is_spelled_out_only_in_an_explicit_specialization(self):
+        source = ('namespace doctest {\n'
+                  'template <>\n'
+                  'struct StringMaker<pr::String> {\n'
+                  '    static String convert(const pr::String& text);\n'
+                  '};\n'
+                  'template <> struct Hash<pr::Span<int>>;\n'
+                  'template <>\n'
+                  'struct StringMaker<pr_impl::Value> {};\n'
+                  '} // namespace doctest\n'
+                  'pr::String text;\n'
+                  'template <typename T>\n'
+                  'struct Holder { pr::Array<T> items; };\n')
+        self.assertEqual(self.rules(lint.check_qualified, 'tools/harness/a.h', source),
+                         [(8, 'qualified'), (10, 'qualified'), (12, 'qualified')])
 
     def test_an_application_uses_pr_and_not_pr_impl(self):
         source = ('// pr_impl in a comment\nusing namespace pr;\nusing namespace pr_impl;\n'
@@ -1024,16 +1056,18 @@ class IncludeOrder(unittest.TestCase):
 
     def test_third_party_headers_are_quoted_and_confined(self):
         self.assertEqual(len(self.problems('lib/core/tests/test_x.cpp',
-                                           '#include <doctest/doctest.h>\n')), 1)
+                                           '#include <tools/harness/test.h>\n')), 1)
         self.assertEqual(len(self.problems('lib/dom/quickjs/src/x.cpp',
                                            '#include "quickjs.h"\n')), 0)
         self.assertEqual(len(self.problems('lib/dom/src/x.cpp', '#include "quickjs.h"\n')), 1)
         self.assertEqual(len(self.problems('lib/core/src/x.cpp', '#include "quickjs.h"\n')), 1)
 
-    def test_doctest_is_confined_to_tests(self):
+    def test_doctest_is_confined_to_tests_through_the_harness(self):
         self.assertEqual(len(self.problems('lib/draw/backends/cpu/tests/test_x.cpp',
-                                           '#include "doctest/doctest.h"\n')), 0)
-        self.assertEqual(len(self.problems('lib/draw/src/x.cpp', '#include "doctest/doctest.h"\n')), 1)
+                                           '#include "tools/harness/test.h"\n')), 0)
+        self.assertEqual(len(self.problems('lib/draw/src/x.cpp', '#include "tools/harness/test.h"\n')), 1)
+        self.assertEqual(len(self.problems('lib/draw/backends/cpu/tests/test_x.cpp',
+                                           '#include "doctest/doctest.h"\n')), 1)
 
     def test_a_directive_separates_includes(self):
         self.assertEqual(self.problems('lib/core/src/x.cpp',
@@ -1424,6 +1458,13 @@ class Indentation(unittest.TestCase):
 
     def test_tabs_are_not_indentation(self):
         self.assertEqual(self.problems('void f() {\n\tg();\n}\n'), [2, 2])
+
+    def test_a_template_header_with_a_requires_clause_begins_its_declaration(self):
+        self.assertEqual(self.problems('template <typename T> requires requires { typename T::U; }\nstruct S<T> {\n'
+                                       '    int x;\n};\n'), [])
+
+    def test_a_body_after_a_member_initialized_by_a_list_ends_the_statement(self):
+        self.assertEqual(self.problems('struct S : B {\n    S(int* p) :\n            B{.p = p} {}\n    ~S() {}\n};\n'), [])
 
     def test_a_continued_item_is_one_level_past_the_item(self):
         self.assertEqual(self.problems('X x{\n    .a = "b"\n        "c",\n    .d = 1,\n};\n'), [])

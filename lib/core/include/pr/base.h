@@ -36,6 +36,19 @@
 #define PR_COLD __attribute__((cold))
 #endif
 
+// Marks a C++ member function's result as referring into its object, written after its qualifiers, so that the compiler
+// warns where the result outlives a temporary object, as a view of a temporary string does.
+#if defined(__cplusplus) && defined(__has_cpp_attribute)
+#if __has_cpp_attribute(clang::lifetimebound)
+#define PR_LIFETIMEBOUND [[clang::lifetimebound]]
+#elif __has_cpp_attribute(msvc::lifetimebound)
+#define PR_LIFETIMEBOUND [[msvc::lifetimebound]]
+#endif
+#endif
+#if !defined(PR_LIFETIMEBOUND)
+#define PR_LIFETIMEBOUND
+#endif
+
 // Checks the arguments of a function that formats as printf does, written after its declaration: `string` is the
 // position of its format string and `first` of the first argument that the string formats, counting from 1.
 #if defined(_MSC_VER)

@@ -164,7 +164,7 @@ void buildLengths(const uint32_t* frequencies, uint32_t count, uint32_t limit, u
         lengths[symbols[0]] = 1;
         return;
     }
-    sortItems(symbols, used, [&](uint16_t a, uint16_t b) {
+    sortItems(Span(symbols, used), [&](uint16_t a, uint16_t b) {
         return frequencies[a] != frequencies[b] ? frequencies[a] < frequencies[b] : a < b;
     });
 

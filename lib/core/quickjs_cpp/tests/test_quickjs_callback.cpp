@@ -1,7 +1,7 @@
 #include "pr/quickjs_binding.h"
 #include "pr/quickjs_callback.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 using namespace pr_impl;
 

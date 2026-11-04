@@ -405,7 +405,7 @@ void unsafeHeaderNames(const HeaderList* headers, RawArray<PrRawString>* out) {
         }
     }
     if (safelistedBytes > kSafelistMaxBytes)
-        unsafe.append(safelisted.data, safelisted.count);
+        unsafe.append(safelisted.span());
     for (uint32_t k = 0; k < unsafe.count; ++k) {
         PrRawString name = prRawStringCopy(prRawStringView(&headers->names.data[unsafe.data[k]]));
         prAsciiLowerText(const_cast<char*>(prRawStringView(&name).data), prRawStringView(&name).size);

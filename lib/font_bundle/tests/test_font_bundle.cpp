@@ -2,7 +2,7 @@
 
 #include "pr/font_bundle.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 

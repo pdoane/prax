@@ -1,6 +1,6 @@
 #include "pr/draw_shared_atlas.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <string>

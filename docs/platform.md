@@ -2,9 +2,9 @@
 
 The platform is what the library does to the host on its own initiative: allocating memory, reporting a failure it
 cannot continue past, starting threads and locking between them, reading clocks, reading and writing files by path,
-reserving address space, and reading random bytes. What an embedder hands the library already, such as a window's
-surface or a font's bytes, does not go through it. Atomics are instructions, not a facility, and stay in the toolkit
-(`pr/atomic.h`). The CPU counters that the benchmarks read are tooling, not part of the platform.
+reserving address space, reading the environment, and reading random bytes. What an embedder hands the library already,
+such as a window's surface or a font's bytes, does not go through it. Atomics are instructions, not a facility, and stay
+in the toolkit (`pr/atomic.h`). The CPU counters that the benchmarks read are tooling, not part of the platform.
 
 Core's C API is the platform's interface (`pr/memory.h`, `pr/assert.h`, `pr/thread.h`, `pr/mutex.h`, `pr/time.h`,
 `pr/file.h`, `pr/vmem.h`, `pr/random.h`), and every library reaches the host through it. Each facility is bound at
@@ -20,9 +20,10 @@ implementation does not wait with a mutex from another, and one allocator does n
 | memory | `PR_PLATFORM_ALLOC_BYTES`, `REALLOC_BYTES` and `FREE_BYTES`, with `ALLOC_ZEROED_BYTES` and `USABLE_BYTES` if the embedder has them | the C library, or mimalloc with `PR_PLATFORM_MIMALLOC` |
 | failure | `PR_PLATFORM_FAIL`, and `PR_ASSERT`, which replaces the library's assertions | POSIX, or the Windows family on Windows |
 | threads | `PR_PLATFORM_THREAD_START`, `_JOIN`, `_HARDWARE_COUNT` and `_SLEEP`, `PR_PLATFORM_MUTEX_INIT`, `_RESET`, `_LOCK` and `_UNLOCK`, and `PR_PLATFORM_CONDITION_INIT`, `_RESET`, `_WAIT`, `_WAIT_FOR`, `_SIGNAL` and `_BROADCAST` | POSIX, or the Windows family on Windows |
-| files | `PR_PLATFORM_FILE_MAP`, `_UNMAP`, `_INFO`, `_SAME`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_CACHE_DIRECTORY` and `_DATA_DIRECTORY` | POSIX, or the Windows family on Windows |
+| files | `PR_PLATFORM_FILE_MAP`, `_UNMAP`, `_INFO`, `_SAME`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_CACHE_DIRECTORY`, `_DATA_DIRECTORY`, `_WORKING_DIRECTORY`, `_STREAM_WRITE` and `_STREAM_READ` | POSIX, or the Windows family on Windows |
 | address space | `PR_PLATFORM_VMEM_RESERVE`, `_COMMIT` and `_FREE` | POSIX, or the Windows family on Windows |
 | clocks | `PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS`, `_WALL_MILLISECONDS` and `_LOCAL_OFFSET_MILLISECONDS` | POSIX, or the Windows family on Windows |
+| environment | `PR_PLATFORM_ENVIRONMENT_VARIABLE` | POSIX, or the Windows family on Windows |
 | random bytes | `PR_PLATFORM_RANDOM_BYTES` | POSIX, or the Windows family on Windows |
 
 Each macro behaves as the backend function of the same name. For example, `PR_PLATFORM_MUTEX_LOCK(mutex)` behaves as

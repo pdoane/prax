@@ -19,12 +19,12 @@
 #include "pr/string_view.h"
 
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
+
+using namespace pr;
 
 // The diffusion model that a file holds. A refiner is reported apart from the base that it pairs with, since its
 // cross-attention context differs.

@@ -1,7 +1,7 @@
 #include "pr/count_of.h"
 #include "pr/unicode_bidi.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstdio>
 #include <sstream>

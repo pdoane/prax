@@ -12,7 +12,7 @@
 #include "svg/src/svg_document.h"
 #include "svg/src/svg_font.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

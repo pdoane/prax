@@ -1,7 +1,7 @@
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_select.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 

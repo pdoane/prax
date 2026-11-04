@@ -12,6 +12,7 @@
 // gap between frames, and how long input waited for the frame that took it, all in milliseconds.
 
 #include "pr/app.h"
+#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/draw_display.h"
 #include "pr/draw_list.h"
@@ -25,16 +26,13 @@
 #include "pr/layout_frame.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
+#include "pr/print.h"
 #include "pr/text.h"
 #include "pr/text_font.h"
 #include "pr/time.h"
 #include "pr/ui.h"
 
 #include "examples/scribe/scribe.h"
-
-#include <stdio.h>
-#include <string>
-#include <vector>
 
 namespace {
 
@@ -57,7 +55,7 @@ struct Window {
     PrAppColorScheme scheme = PrAppColorScheme_Dark; // the scheme of the kit's theme
     const PrLayoutScene* scene = nullptr;            // the scene of the last frame, which its list plays
     PrDrawList* list = nullptr;
-    std::vector<PrLayoutSceneScroll> scrolls;
+    Array<PrLayoutSceneScroll> scrolls;
 
     PrApp* app = nullptr;
     PrGpuDevice* device = nullptr;
@@ -184,7 +182,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     w.app = app;
     prUiSetApp(w.ui, app);
     if (!openDevice(w)) {
-        fprintf(stderr, "scribe: no GPU device to render with\n");
+        printError("scribe: no GPU device to render with\n");
         prAppStop(app);
         return;
     }
@@ -229,10 +227,10 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     prLayoutSceneRelease(w.scene);
     w.scene = scene;
     w.scrolls.resize(prLayoutSceneScrolls(w.tree, scene, nullptr, 0));
-    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), uint32_t(w.scrolls.size()));
+    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), w.scrolls.count());
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
     options.scrolls = w.scrolls.data();
-    options.scrollCount = uint32_t(w.scrolls.size());
+    options.scrollCount = w.scrolls.count();
     options.canvasFilled = true;
     double traceScene = w.trace ? prTimeMonotonicMilliseconds() : 0;
     float ratio = f->display.pixelRatio;
@@ -251,11 +249,10 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
         double gap = traceStart - w.traceLastFrame;
         double waited = w.traceEvent != 0 ? traceStart - w.traceEvent : 0;
         if (end - traceStart > kTraceSlowFrame || gap > kTraceLongGap || waited > kTraceLongGap) {
-            fprintf(stderr, "frame %.0fx%.0f: total %.1f (wait %.1f, rounds %u %.1f, scene %.1f, play %.1f, render %.1f), "
-                "gap %.1f, input waited %.1f\n", double(f->extent.x), double(f->extent.y), end - traceStart,
-                traceWaited - traceStart,
-                rounds, traceBuilt - traceWaited, traceScene - traceBuilt, tracePlayed - traceScene, end - tracePlayed, gap,
-                waited);
+            printError("frame {:.0f}x{:.0f}: total {:.1f} (wait {:.1f}, rounds {} {:.1f}, scene {:.1f}, play {:.1f}, "
+                "render {:.1f}), gap {:.1f}, input waited {:.1f}\n", f->extent.x, f->extent.y, end - traceStart,
+                traceWaited - traceStart, rounds, traceBuilt - traceWaited, traceScene - traceBuilt,
+                tracePlayed - traceScene, end - tracePlayed, gap, waited);
         }
         w.traceLastFrame = end;
         w.traceEvent = 0;
@@ -280,12 +277,12 @@ void shutdown(void* context, PrApp*) {
 int main(int argc, char** argv) {
     prCrashHandler();
     static Window w;
-    std::string path;
-    std::string compared;           // the old file of --diff
-    std::string debuggee;           // the program of --debug
+    PrStringView path = {};
+    PrStringView compared = {};     // the old file of --diff
+    PrStringView debuggee = {};     // the program of --debug
     bool diff = false;
     for (int i = 1; i < argc; ++i) {
-        std::string argument = argv[i];
+        PrStringView argument = argv[i];
         if (argument == "--trace") {
             w.trace = true;
         } else if (argument == "--debug" && i + 1 < argc) {
@@ -294,16 +291,16 @@ int main(int argc, char** argv) {
             diff = true;
             compared = argv[++i];
             path = argv[++i];
-        } else if (path.empty()) {
+        } else if (path.isEmpty()) {
             path = argument;
         } else {
-            fprintf(stderr, "usage: scribe [--trace] [--debug program] [file | --diff old new]\n");
+            printError("usage: scribe [--trace] [--debug program] [file | --diff old new]\n");
             return 2;
         }
     }
     w.fonts = prFontSetCreate(nullptr);
     if (prFontBundleInstall(w.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR) == 0) {
-        fprintf(stderr, "scribe: the fonts under %s could not be installed\n", PR_FONT_BUNDLE_DIR);
+        printError("scribe: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
         return 1;
     }
     w.shaper = prTextShaperCreate(PrTextShaperBackend_Default);
@@ -326,11 +323,14 @@ int main(int argc, char** argv) {
     // The editor's language servers wake the application, so the application comes first.
     w.scribe.app = app;
     openEditor(w.scribe);
-    if (!debuggee.empty())
+    if (!debuggee.isEmpty())
         setDebuggee(w.scribe, debuggee);
     bool opened = diff ? openDiff(w.scribe, compared, path) : openDocument(w.scribe, path);
     if (!opened) {
-        fprintf(stderr, "scribe: cannot read %s\n", diff ? (compared + " or " + path).c_str() : path.c_str());
+        if (diff)
+            printError("scribe: cannot read {} or {}\n", compared, path);
+        else
+            printError("scribe: cannot read {}\n", path);
         closeEditor(w.scribe);
         prAppDestroy(app);
         return 1;

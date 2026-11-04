@@ -1,7 +1,7 @@
 #include "pr/string_ops.h"
 #include "pr/xml.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

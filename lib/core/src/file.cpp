@@ -2,6 +2,9 @@
 
 #include "pr/file.h"
 
+#include "pr/ascii.h"
+#include "pr/assert.h"
+#include "pr/string_ops.h"
 #include "pr/utf8.h"
 
 #include "core/src/config.h"
@@ -24,6 +27,72 @@ void filterEntry(void* PR_NULLABLE context, const PrFileEntry* entry) {
     const EntryFilter* filter = static_cast<const EntryFilter*>(context);
     if (prUtf8Validate(entry->name) == entry->name.size)
         filter->fn(filter->context, entry);
+}
+
+// Returns true if `c` separates the parts of a path.
+bool isSeparator(char c) {
+#if defined(_WIN32)
+    return c == '/' || c == '\\';
+#else
+    return c == '/';
+#endif
+}
+
+// Returns the offset of the last separator of `path`, or its size if it has none.
+size_t lastSeparator(PrStringView path) {
+    for (size_t at = path.size; at-- > 0;) {
+        if (isSeparator(path.data[at]))
+            return at;
+    }
+    return path.size;
+}
+
+// Returns the length of the root that begins `path`, or zero if it is relative. A root is a separator, and on Windows
+// also two separators, which begin a UNC path, or a drive letter and a colon with or without a separator after them.
+size_t rootLength(PrStringView path) {
+#if defined(_WIN32)
+    if (path.size >= 2 && prAsciiIsLetter(path.data[0]) && path.data[1] == ':')
+        return path.size >= 3 && isSeparator(path.data[2]) ? 3 : 2;
+    if (path.size >= 2 && isSeparator(path.data[0]) && isSeparator(path.data[1]))
+        return 2;
+#endif
+    if (path.size >= 1 && isSeparator(path.data[0]))
+        return 1;
+    return 0;
+}
+
+// Appends the root of `path`, whose length is `root`, with its separators written as slashes. A drive's root ends in a
+// slash whether or not `path` has one there.
+void appendRoot(PrTextBuffer* out, PrStringView path, size_t root) {
+    for (size_t i = 0; i < root; ++i)
+        prTextBufferAppendChar(out, isSeparator(path.data[i]) ? '/' : path.data[i]);
+    if (root == 2 && path.data[1] == ':')
+        prTextBufferAppendChar(out, '/');
+}
+
+// Appends the parts of `path` from `start` to `out`, normalized, after the root that `out` holds up to `rootEnd`.
+void appendParts(PrTextBuffer* out, uint32_t rootEnd, PrStringView path, size_t start) {
+    size_t at = start;
+    while (at < path.size) {
+        size_t end = at;
+        while (end < path.size && !isSeparator(path.data[end]))
+            ++end;
+        PrStringView part = prStringSlice(path, at, end - at);
+        at = end + 1;
+        if (part.isEmpty() || part == ".")
+            continue;
+        if (part == "..") {
+            // The last part goes, with the separator before it. At the root, there is none to remove.
+            uint32_t cut = out->size;
+            while (cut > rootEnd && out->data[cut - 1] != '/')
+                --cut;
+            out->size = cut > rootEnd ? cut - 1 : rootEnd;
+            continue;
+        }
+        if (out->size > rootEnd)
+            prTextBufferAppendChar(out, '/');
+        prTextBufferAppend(out, part);
+    }
 }
 
 } // namespace
@@ -79,4 +148,82 @@ PrRawString prFileCacheDirectory(void) {
 
 PrRawString prFileDataDirectory(void) {
     return PR_PLATFORM_FILE_DATA_DIRECTORY();
+}
+
+PrRawString prFileWorkingDirectory(void) {
+    return PR_PLATFORM_FILE_WORKING_DIRECTORY();
+}
+
+bool prFileStreamWrite(PrFileStream stream, PrByteView bytes) {
+    PR_ASSERT(stream == PrFileStream_Output || stream == PrFileStream_Error);
+    return PR_PLATFORM_FILE_STREAM_WRITE(stream, bytes);
+}
+
+size_t prFileStreamRead(PrFileStream stream, void* out, size_t capacity) {
+    PR_ASSERT(stream == PrFileStream_Input);
+    return PR_PLATFORM_FILE_STREAM_READ(stream, out, capacity);
+}
+
+PrStringView prFilePathName(PrStringView path) {
+    size_t separator = lastSeparator(path);
+    if (separator == path.size)
+        return path;
+    return prStringSlice(path, separator + 1, path.size - separator - 1);
+}
+
+PrStringView prFilePathParent(PrStringView path) {
+    size_t separator = lastSeparator(path);
+    if (separator == path.size)
+        return prStringSlice(path, 0, 0);
+    size_t end = separator;
+    while (end > 0 && isSeparator(path.data[end - 1]))
+        --end;
+    // A part directly under the root keeps the root's separator.
+    return prStringSlice(path, 0, end == 0 ? 1 : end);
+}
+
+PrStringView prFilePathExtension(PrStringView path) {
+    PrStringView name = prFilePathName(path);
+    size_t dot = prStringFindLastByte(name, '.');
+    if (dot == name.size || dot == 0)
+        return prStringSlice(name, name.size, 0);
+    return prStringSlice(name, dot, name.size - dot);
+}
+
+void prFilePathAppend(PrTextBuffer* path, PrStringView part) {
+    if (path->size != 0 && !isSeparator(path->data[path->size - 1]))
+        prTextBufferAppendChar(path, '/');
+    prTextBufferAppend(path, part);
+}
+
+PrRawString prFilePathAbsolute(PrStringView path) {
+    if (path.isEmpty())
+        return prRawStringNull();
+    size_t root = rootLength(path);
+    PrTextBuffer out = {};
+    // A path with a root of its own is absolute, but on Windows a lone separator is the root of the working directory's
+    // drive.
+    bool underWorking = root == 0;
+#if defined(_WIN32)
+    underWorking = underWorking || root == 1;
+#endif
+    if (!underWorking) {
+        appendRoot(&out, path, root);
+        appendParts(&out, out.size, path, root);
+        return prTextBufferTake(&out);
+    }
+    PrRawString working = PR_PLATFORM_FILE_WORKING_DIRECTORY();
+    PrStringView base = prRawStringView(&working);
+    size_t baseRoot = rootLength(base);
+    if (baseRoot == 0) {
+        prRawStringReset(&working);
+        return prRawStringNull();
+    }
+    appendRoot(&out, base, baseRoot);
+    uint32_t rootEnd = out.size;
+    if (root == 0)
+        appendParts(&out, rootEnd, base, baseRoot);
+    appendParts(&out, rootEnd, path, root);
+    prRawStringReset(&working);
+    return prTextBufferTake(&out);
 }

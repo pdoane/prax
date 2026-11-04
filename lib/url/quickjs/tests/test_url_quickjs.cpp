@@ -1,7 +1,7 @@
 #include "pr/quickjs_binding.h"
 #include "pr/url_quickjs.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <cstring>
 

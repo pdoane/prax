@@ -5,7 +5,7 @@
 
 #include "tools/harness/kit_fixture.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <vector>
 

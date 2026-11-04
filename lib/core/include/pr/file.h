@@ -1,5 +1,6 @@
 // Files by path, through the platform: files read into memory and written whole, what the file system records about
-// them, the entries of directories, and the directories that the platform names for the user's caches and data.
+// them, the entries of directories, and the directories that the platform names for the user's caches and data. And the
+// parts of paths, which are read from their text alone.
 
 #pragma once
 
@@ -7,6 +8,7 @@
 #include "pr/byte_view.h"
 #include "pr/raw_string.h"
 #include "pr/string_view.h"
+#include "pr/text_buffer.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -73,8 +75,8 @@ bool prFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE cont
 // mapping of the file that was there stays valid. Returns false if the file cannot be written.
 bool prFileWrite(PrStringView path, PrByteView bytes);
 
-// Removes the file at the UTF-8 `path`. A mapping of it stays valid. Returns false if there is no such file, or it
-// cannot be removed.
+// Removes the file or the empty directory at the UTF-8 `path`. A mapping of the file stays valid. Returns false if
+// there is no such file, or it cannot be removed, as a directory that holds files cannot.
 bool prFileRemove(PrStringView path);
 
 // Creates the directory at the UTF-8 `path`, and each directory above it that is missing. Returns true if the directory
@@ -92,6 +94,51 @@ PrRawString prFileCacheDirectory(void);
 // on other Unix-like platforms. Returns the null string if the platform names none. The caller releases the string with
 // prRawStringReset.
 PrRawString prFileDataDirectory(void);
+
+// Returns the process's working directory, against which a relative path is read, or the null string if it cannot be
+// read. The caller releases the string with prRawStringReset.
+PrRawString prFileWorkingDirectory(void);
+
+// The process's standard streams.
+enum {
+    PrFileStream_Input,
+    PrFileStream_Output,
+    PrFileStream_Error,
+};
+typedef uint8_t PrFileStream;
+
+// Writes all of `bytes` to the output or error stream, as they are, with no translation of line endings and no
+// buffering. Returns false if the stream cannot be written, as when it is closed.
+bool prFileStreamWrite(PrFileStream stream, PrByteView bytes);
+
+// Reads up to `capacity` bytes of the input stream into `out`, waiting until some are available, and returns how many
+// it read. Returns zero at the end of the stream, and if it cannot be read.
+size_t prFileStreamRead(PrFileStream stream, void* out, size_t capacity);
+
+// The parts of a UTF-8 path, read from its text alone: the file system is not asked, and a part that names a link is
+// not followed. A slash separates the parts, and so does a backslash on Windows.
+
+// Returns the last part of `path`: what follows its last separator, or all of it if it has none.
+PrStringView prFilePathName(PrStringView path);
+
+// Returns `path` without its last part and the separators before it: the directory that holds what the path names.
+// Returns the empty view for a path of one part, and the root, such as "/", for a part directly under the root.
+PrStringView prFilePathParent(PrStringView path);
+
+// Returns the extension of the last part of `path`, from its last dot: ".txt" for "notes.txt". Returns the empty view
+// if the part has no dot, or its only dot begins it, as in ".profile".
+PrStringView prFilePathExtension(PrStringView path);
+
+// Appends `part` to the path in `path`, after a separator unless the path is empty or already ends in one.
+void prFilePathAppend(PrTextBuffer* path, PrStringView part);
+
+// Returns `path` as an absolute path: under the working directory if it is relative, and normalized from its text.
+// Normalizing removes each empty part and each "." part, removes each ".." part with the part before it, and writes
+// each separator as a slash. A ".." at the root stays at the root. A link is not followed, so the path names the file
+// that `path` does only if no ".." part follows a link. On Windows, a path that begins with one separator is under the
+// working directory's drive. Returns the null string if `path` is empty, or is relative and the working directory
+// cannot be read. The caller releases the string with prRawStringReset.
+PrRawString prFilePathAbsolute(PrStringView path);
 
 #if defined(__cplusplus)
 }

@@ -12,7 +12,7 @@
 
 #include "tools/harness/net_peer.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

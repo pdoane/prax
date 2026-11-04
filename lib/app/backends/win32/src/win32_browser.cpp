@@ -858,7 +858,7 @@ PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrows
     folder.resize(GetTempPathW(0, nullptr) + 1);
     DWORD length = GetTempPathW(folder.count, folder.data);
     folder.resize(length < folder.count ? length : 0);
-    folder.append(kDataFolder, uint32_t(countOf(kDataFolder)));
+    folder.append(Span(kDataFolder));
     // The engine may complete the creation within the call, and the completion ends the creation.
     b->creating = true;
     ComPtr<CoreWebView2EnvironmentOptions> options = Make<CoreWebView2EnvironmentOptions>();

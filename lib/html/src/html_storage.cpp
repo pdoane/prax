@@ -69,7 +69,7 @@ PrStorage* PR_NULLABLE openDiskArea(const HtmlStorageProvider* provider, PrStrin
 
 // Returns a new area for `origin`, or null if its directory cannot be made.
 PrStorage* PR_NULLABLE createArea(const HtmlStorageProvider* provider, PrStringView origin) {
-    if (prRawStringIsNull(&provider->directory))
+    if (prRawStringIsEmpty(&provider->directory))
         return prStorageMemoryCreate(provider->quota, PrStorageEviction_None);
     PrTextBuffer name{};
     appendDirectoryName(origin, &name);
@@ -110,10 +110,10 @@ struct PrHtmlStorageProvider : HtmlStorageProvider {};
 
 PrHtmlStorageProvider* prHtmlStorageProviderCreate(const PrHtmlStorageProviderDesc* desc) {
     PrHtmlStorageProvider* provider = allocZeroed<PrHtmlStorageProvider>();
-    provider->directory = desc->directory.data != nullptr ? prRawStringCopy(desc->directory) : prRawStringNull();
+    provider->directory = desc->directory.isEmpty() ? prRawStringNull() : prRawStringCopy(desc->directory);
     provider->quota = desc->quotaBytes;
     provider->pool = desc->pool;
-    PR_ASSERT(desc->directory.data == nullptr || desc->pool != nullptr);
+    PR_ASSERT(desc->directory.isEmpty() || desc->pool != nullptr);
     prMutexInit(&provider->mutex);
     return provider;
 }
@@ -141,7 +141,7 @@ void prHtmlStorageProviderClear(PrHtmlStorageProvider* provider) {
         const HtmlStorageProvider* provider;
         RawArray<PrRawString> closed;
     } gather{provider, {}};
-    if (!prRawStringIsNull(&provider->directory)) {
+    if (!prRawStringIsEmpty(&provider->directory)) {
         prFileEachEntry(prRawStringView(&provider->directory), [](void* PR_NULLABLE context, const PrFileEntry* entry) {
             Gather& g = *static_cast<Gather*>(context);
             if (entry->info.kind != PrFileKind_Directory)

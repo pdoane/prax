@@ -5,7 +5,7 @@
 
 #include "gpu/tests/kTestGpuHostShaders.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #define VK_NO_PROTOTYPES
 #include <cstdint>

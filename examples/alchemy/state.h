@@ -4,10 +4,18 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/compress.h"
 #include "pr/draw_image.h"
+#include "pr/hash.h"
+#include "pr/hash_key.h"
 #include "pr/image.h"
+#include "pr/lock.h"
+#include "pr/map.h"
+#include "pr/mutex.h"
+#include "pr/random.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/task.h"
 
@@ -19,16 +27,13 @@
 #include "examples/alchemy/provenance.h"
 #include "examples/alchemy/recipes.h"
 
-#include <map>
-#include <mutex>
-#include <random>
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
+
+using namespace pr;
 
 // What a run does. Generate runs text-to-image, or image-to-image if a source image is held. The other modes run over
 // the source image.
@@ -60,20 +65,20 @@ typedef uint8_t ConnectionState;
 
 // An adapter that a run chains onto its checkpoint, by its file's name on the server.
 struct LoraEntry {
-    std::string name;
+    String name;
     double weight = 1.0;
 };
 
 // The inputs that the sampling modes share, and those of Generate. Models are held by the names that the server knows.
 // The source image stays held until a command replaces or clears it.
 struct GenerateParams {
-    std::string prompt;
-    std::string negativePrompt;
-    std::string sourcePath;
-    std::vector<LoraEntry> loras;
-    std::string checkpoint;
-    std::string sampler;
-    std::string scheduler;
+    String prompt;
+    String negativePrompt;
+    String sourcePath;
+    Array<LoraEntry> loras;
+    String checkpoint;
+    String sampler;
+    String scheduler;
     double strength = 0.75;     // how far an image-to-image run may move from its source
     double cfg = 7.0;
     uint64_t seed = 0;
@@ -84,7 +89,7 @@ struct GenerateParams {
 
 // The inputs of the other modes.
 struct UpscaleParams {
-    std::string model;
+    String model;
     double factor = 2.0;
 };
 struct OutpaintParams {
@@ -95,7 +100,7 @@ struct OutpaintParams {
     uint32_t context = 512;
 };
 struct DetailParams {
-    std::string detector;
+    String detector;
 };
 
 // Where a run stands on the server.
@@ -109,12 +114,12 @@ typedef uint8_t JobState;
 
 // A prompt that the server queued, and the record that its images are saved with.
 struct Job {
-    std::string promptId;
+    String promptId;
     JobState state = JobState_Pending;
     uint32_t progressValue = 0;
     uint32_t progressMax = 0;
-    std::string node;           // the stage that the run reached, by its node's id
-    std::string error;
+    String node;           // the stage that the run reached, by its node's id
+    String error;
     ProvenanceRecord record;
 
     // The size of the image that the run produces, or zero if only the finished image says. A latent preview is shown
@@ -131,8 +136,8 @@ struct Submission {
     DetailParams detail;
     DimensionSize size;
     DimensionSize sourceSize;
-    std::string sourceBytes;
-    std::string sourceName;     // the name that the server stored the source under
+    Array<uint8_t> sourceBytes;
+    String sourceName;     // the name that the server stored the source under
 };
 
 // An event that names a prompt whose submission has not been answered yet, which the server's stream can deliver before
@@ -145,15 +150,58 @@ struct HeldEvent {
 // The images that the session visited, in order, which Back and Forward walk without recording the walk. A visit is a
 // path, since a rescan reorders the entries.
 struct VisitHistory {
-    std::vector<std::string> visits;
+    Array<String> visits;
     uint32_t position = 0;
+};
+
+// A model file as a lookup names it: its folder and its name, which the lookup does not copy.
+struct ModelKeyView {
+    ModelFolder folder;
+    PrStringView name;
+};
+
+// A model file by its folder and its name, which the survey files its architecture under.
+struct ModelKey {
+    // A table keyed by model files looks them up by their views (pr/hash_key.h).
+    using Lookup = ModelKeyView;
+
+    ModelFolder folder = 0;
+    String name;
+
+    ModelKey() = default;
+    explicit ModelKey(const ModelKeyView& key) : folder(key.folder), name(key.name) {}
+    operator ModelKeyView() const { return ModelKeyView{folder, name}; }
+
+    friend bool operator==(const ModelKey& a, const ModelKeyView& b) { return a.folder == b.folder && a.name == b.name; }
+};
+
+// Return the hash of a model file's key, which is the same for a key and its view: its name's bytes, seeded by its
+// folder.
+inline uint32_t hashKey(const ModelKeyView& key) {
+    uint64_t hash = prHashBytes(key.name.data, key.name.size, key.folder);
+    return uint32_t(hash ^ (hash >> 32));
+}
+inline uint32_t hashKey(const ModelKey& key) {
+    return hashKey(ModelKeyView{key.folder, key.name});
+}
+
+// The architecture that a model file states, as a survey task reads it.
+struct SurveyedModel {
+    ModelFolder folder;
+    String name;
+    ModelArchitecture architecture;
 };
 
 // The architectures that model files state, by folder and name, read on the task pool.
 struct ModelSurvey {
-    std::map<std::pair<ModelFolder, std::string>, ModelArchitecture> known;
-    std::mutex mutex;
-    std::vector<std::pair<std::pair<ModelFolder, std::string>, ModelArchitecture>> landed;
+    ModelSurvey() { prMutexInit(&mutex); }
+    ~ModelSurvey() { prMutexReset(&mutex); }
+    ModelSurvey(const ModelSurvey&) = delete;
+    ModelSurvey& operator=(const ModelSurvey&) = delete;
+
+    Map<ModelKey, ModelArchitecture> known;
+    PrMutex mutex;
+    Array<SurveyedModel> landed;
     uint32_t generation = 0;    // the count of catalogs, so that a survey of an older one stops
 };
 
@@ -162,7 +210,7 @@ struct ModelSurvey {
 struct ImportPrompt {
     bool open = false;
     const PrDrawImage* PR_NULLABLE image = nullptr;
-    std::string message;
+    String message;
 };
 
 // The groups of an operation's inputs that the record's verbs carry into the parameters.
@@ -199,11 +247,11 @@ struct AppState {
     PrTaskPool* pool = nullptr;
 
     // The server.
-    std::string server = "http://127.0.0.1:8188";
-    std::string connectedServer;    // the address that the last connection went to
+    String server = "http://127.0.0.1:8188";
+    String connectedServer;    // the address that the last connection went to
     ConnectionState connection = ConnectionState_Disconnected;
     uint32_t queueRemaining = 0;
-    std::string status;
+    String status;
     ComfyCatalog catalog;
     bool managerPresent = false;
     ModelSurvey survey;
@@ -219,17 +267,17 @@ struct AppState {
     // The runs on their way and in flight, and the events that wait for them. Requests to the server carry tags, by
     // which their replies find the submission or the request that asked.
     uint64_t nextTag = 1;
-    std::map<uint64_t, Submission> uploading;
-    std::map<uint64_t, Submission> submitting;
-    std::vector<Job> jobs;
-    std::vector<HeldEvent> held;
+    Map<uint64_t, Submission> uploading;
+    Map<uint64_t, Submission> submitting;
+    Array<Job> jobs;
+    Array<HeldEvent> held;
     uint64_t catalogTag = 0;
     uint64_t managerTag = 0;
-    std::map<uint64_t, ModelFolder> folderTags;
+    Map<uint64_t, ModelFolder> folderTags;
 
     // The latest latent preview, the prompt that it belongs to, and the size of the image that it stands for.
     const PrDrawImage* PR_NULLABLE preview = nullptr;
-    std::string previewPromptId;
+    String previewPromptId;
     DimensionSize previewSize;
 
     // The gallery, what the viewport shows of it, and the record of its selected image, read from the file once.
@@ -238,10 +286,10 @@ struct AppState {
     bool showInfo = false;
     bool showPreview = true;
     ProvenanceRecord selectedRecord;
-    std::string selectedRecordPath;
+    String selectedRecordPath;
     uint32_t selectedRecordRevision = 0;
     bool selectedRecordRead = false;
-    std::vector<bool> recordOpen;   // by operation of the selected record: its row shows what it states
+    Array<bool> recordOpen;   // by index of the selected record's operations: true while its row shows what it states
 
     // The dialog of the server's address, and the dialog of an import.
     bool serverOpen = false;
@@ -249,16 +297,16 @@ struct AppState {
 
     // The confirmation that a delete asks for, and the images that it names.
     bool deleteOpen = false;
-    std::vector<std::string> deletePaths;
+    Array<String> deletePaths;
 
-    std::mt19937_64 random{std::random_device{}()};
+    PrRandom random = {.state = prRandomSeed()};
 };
 
 // Frees what the state holds of the library's objects.
 void stateReset(AppState& state);
 
 // Sets the status line, which the status bar shows.
-void setStatus(AppState& state, std::string text);
+void setStatus(AppState& state, PrStringView text);
 
 // Connects to the state's server, or disconnects from it.
 void connectServer(AppState& state);
@@ -334,7 +382,7 @@ bool confirmImport(AppState& state);
 
 // Writes the selected image's pixels, as displayed, to `pixels` as straight-alpha sRGB Rgba8 rows, and returns their
 // extent, or zero if no image is selected or its file cannot be read.
-PrUVec2 selectedPixels(AppState& state, std::vector<uint8_t>* pixels);
+PrUVec2 selectedPixels(AppState& state, Array<uint8_t>* pixels);
 
 // Draws a seed below 2^53, so that the seed field shows it exactly.
 uint64_t drawSeed(AppState& state);

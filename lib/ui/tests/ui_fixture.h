@@ -8,7 +8,7 @@
 #include "pr/layout_tree.h"
 #include "pr/ui.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <functional>
 

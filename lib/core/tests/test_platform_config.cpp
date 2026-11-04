@@ -6,7 +6,7 @@
 #include "pr/memory.h"
 #include "pr/raw_string.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <stdlib.h>
 #include <string.h>

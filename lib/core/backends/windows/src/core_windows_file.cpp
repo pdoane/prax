@@ -230,7 +230,9 @@ bool prCoreWindowsFileRemove(PrStringView path) {
     wchar_t* wide = widen(path);
     if (wide == nullptr)
         return false;
-    bool removed = DeleteFileW(wide) != 0;
+    DWORD attributes = GetFileAttributesW(wide);
+    bool directory = attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    bool removed = (directory ? RemoveDirectoryW(wide) : DeleteFileW(wide)) != 0;
     free(wide);
     return removed;
 }
@@ -265,4 +267,44 @@ PrRawString prCoreWindowsFileCacheDirectory(void) {
 
 PrRawString prCoreWindowsFileDataDirectory(void) {
     return directoryOf(L"APPDATA");
+}
+
+PrRawString prCoreWindowsFileWorkingDirectory(void) {
+    DWORD count = GetCurrentDirectoryW(0, nullptr);
+    if (count == 0)
+        return prRawStringNull();
+    wchar_t* wide = static_cast<wchar_t*>(malloc(size_t(count) * sizeof(wchar_t)));
+    if (wide == nullptr)
+        return prRawStringNull();
+    // The directory can change between the two calls, and a longer one is not written.
+    DWORD written = GetCurrentDirectoryW(count, wide);
+    PrRawString directory = written != 0 && written < count ? narrow(wide) : prRawStringNull();
+    free(wide);
+    return directory;
+}
+
+bool prCoreWindowsFileStreamWrite(PrFileStream stream, PrByteView bytes) {
+    HANDLE handle = GetStdHandle(stream == PrFileStream_Error ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+    if (handle == nullptr || handle == INVALID_HANDLE_VALUE)
+        return false;
+    size_t written = 0;
+    while (written < bytes.size) {
+        DWORD chunk = bytes.size - written > 0x40000000 ? 0x40000000 : DWORD(bytes.size - written);
+        DWORD wrote = 0;
+        if (!WriteFile(handle, bytes.data + written, chunk, &wrote, nullptr) || wrote == 0)
+            return false;
+        written += wrote;
+    }
+    return true;
+}
+
+size_t prCoreWindowsFileStreamRead(PrFileStream, void* out, size_t capacity) {
+    HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
+    if (handle == nullptr || handle == INVALID_HANDLE_VALUE)
+        return 0;
+    DWORD chunk = capacity > 0x40000000 ? 0x40000000 : DWORD(capacity);
+    DWORD got = 0;
+    if (!ReadFile(handle, out, chunk, &got, nullptr))
+        return 0;
+    return got;
 }

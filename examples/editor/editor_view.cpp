@@ -5,6 +5,7 @@
 #include "pr/ascii.h"
 #include "pr/count_of.h"
 #include "pr/draw_list.h"
+#include "pr/float.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
@@ -20,13 +21,10 @@
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
 #include "pr/layout_unit.h"
+#include "pr/print.h"
 #include "pr/ui.h"
 
 #include "examples/editor/hud.h"
-
-#include <cmath>
-#include <stdio.h>
-#include <string>
 
 namespace editor {
 
@@ -269,10 +267,12 @@ void buildStatusBar(PrKit* kit, PrLayoutNode parent, const EditorState& editor) 
     PrLayoutNode status = bar(kit, parent, PrKitGround_Header, PrKitRuleFlag_Top, kPrKitHeightSm, kPrKitSpace3);
     prKitLabel(kit, status, {.text = editor.levelName}, kCaption);
     char entities[32];
-    snprintf(entities, sizeof entities, "%zu entities", editor.entities.size());
     char edits[32];
-    snprintf(edits, sizeof edits, "%u edits", editor.edits);
-    for (const char* item : {entities, edits}) {
+    PrStringView items[] = {
+        formatToBuffer(Span(entities), "{} entities", editor.entities.count()),
+        formatToBuffer(Span(edits), "{} edits", editor.edits),
+    };
+    for (PrStringView item : items) {
         prKitDivider(kit, status, {});
         prKitLabel(kit, status, {.text = item}, kCaption);
     }
@@ -292,21 +292,21 @@ void buildStatusBar(PrKit* kit, PrLayoutNode parent, const EditorState& editor) 
 void sceneRows(EditorState& editor) {
     editor.sceneRows.clear();
     editor.sceneItems.clear();
-    bool filtered = !editor.sceneFilter.empty();
+    bool filtered = !editor.sceneFilter.isEmpty();
     uint32_t closedDepth = UINT32_MAX;
     for (const Entity& entity : editor.entities) {
         if (filtered) {
             if (prAsciiContainsFold(entity.name, editor.sceneFilter)) {
-                editor.sceneRows.push_back(entity.id);
-                editor.sceneItems.push_back(PrKitTreeItem{});
+                editor.sceneRows.push(entity.id);
+                editor.sceneItems.push(PrKitTreeItem{});
             }
             continue;
         }
         if (entity.depth > closedDepth)
             continue;
         closedDepth = entity.hasChildren && !entity.open ? entity.depth : UINT32_MAX;
-        editor.sceneRows.push_back(entity.id);
-        editor.sceneItems.push_back(PrKitTreeItem{
+        editor.sceneRows.push(entity.id);
+        editor.sceneItems.push(PrKitTreeItem{
             .depth = entity.depth,
             .hasChildren = entity.hasChildren,
             .open = entity.open,
@@ -325,7 +325,7 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrLayoutNode field = prKitTextField(kit, actions, filter, {.size = PrKitControlSize_Sm});
     PrStringView changed{};
     if (prKitTextChanged(kit, field, &changed))
-        editor.sceneFilter.assign(changed.data, changed.size);
+        editor.sceneFilter = changed;
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, field, &fill);
     PrLayoutNode add = prKitButton(kit, actions, {.icon = PrKitIconKind_Plus}, kGhostXs);
@@ -335,7 +335,7 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
 
     sceneRows(editor);
     PrKitTreeView content{
-        .count = uint32_t(editor.sceneRows.size()),
+        .count = editor.sceneRows.count(),
         .selection = &editor.sceneCursor,
         .items = editor.sceneItems.data(),
         .dragKind = kDragEntity,
@@ -349,7 +349,7 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
             prKitTreeRow(kit, view, {.index = i, .item = entity.id, .selected = editor.selected == entity.id});
         prKitRowIcon(kit, node, {.icon = entity.icon});
         prKitRowLabel(kit, node, {.text = entity.name}, PrKitTone(entity.hidden ? PrKitTone_Faint : PrKitTone_Primary));
-        if (!entity.type.empty())
+        if (!entity.type.isEmpty())
             prKitRowMeta(kit, node, {.text = entity.type});
         PrKitVisibilityToggle toggle{.hidden = entity.hidden, .revealed = prUiIsHovered(ui, node)};
         if (prKitActivated(kit, prKitVisibilityToggle(kit, node, toggle)))
@@ -361,10 +361,10 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         entity.open = !entity.open;
     }
     PrKitSelectionEdit edit{};
-    if (prKitSelectionEdited(kit, view, &edit) && editor.sceneCursor.lead < editor.sceneRows.size())
+    if (prKitSelectionEdited(kit, view, &edit) && editor.sceneCursor.lead < editor.sceneRows.count())
         editor.selected = editor.sceneRows[editor.sceneCursor.lead];
     PrKitTreeDrop drop{};
-    if (prKitRowDropped(kit, view, &drop) && drop.row < editor.sceneRows.size()) {
+    if (prKitRowDropped(kit, view, &drop) && drop.row < editor.sceneRows.count()) {
         TreePlacement placement = TreePlacement_Into;
         if (drop.zone == PrKitDropZone_Before)
             placement = TreePlacement_Before;
@@ -437,7 +437,7 @@ constexpr float kMetersAcross = 30;
 
 // Returns how many px a meter of ground takes in a viewport of `size`.
 float pixelsPerMeter(PrVec2 size) {
-    return std::fmin(size.x, size.y) / kMetersAcross;
+    return prF32Min(size.x, size.y) / kMetersAcross;
 }
 
 // Returns where an entity stands in a viewport of `size`, in px.
@@ -485,9 +485,9 @@ void paintViewport(void* context, PrVec2 size, PrDrawList* list) {
     solid(editor.renderMode, kGround,
         [&](PrDrawPaint paint) { prDrawListCornerRect(list, prCornerRectRound(ground, scale), paint); });
     if (editor.grid) {
-        for (float x = std::fmod(center.x, scale); x < size.x; x += scale)
+        for (float x = prF32Fmod(center.x, scale); x < size.x; x += scale)
             prDrawListRect(list, PrRect{x, 0, x + 1, size.y}, {.color = kGridLine});
-        for (float y = std::fmod(center.y, scale); y < size.y; y += scale)
+        for (float y = prF32Fmod(center.y, scale); y < size.y; y += scale)
             prDrawListRect(list, PrRect{0, y, size.x, y + 1}, {.color = kGridLine});
     }
     for (const Entity& entity : editor.entities) {
@@ -534,7 +534,7 @@ void pickEntity(PrKit* kit, PrLayoutNode viewport, EditorState& editor) {
         if (!drawn(entity))
             continue;
         PrVec2 at = placeOf(entity, size);
-        float distance = std::hypot(at.x - local.x, at.y - local.y);
+        float distance = prF32Hypot(at.x - local.x, at.y - local.y);
         if (distance < reach) {
             reach = distance;
             nearest = entity.id;
@@ -590,10 +590,11 @@ void buildViewport(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrLayoutNode status = hudPanel(hud, layer, {.corner = HudCorner_BottomLeft, .row = true});
     const Entity* selected = editor.find(editor.selected);
     hudReadout(hud, status, {.label = "SEL", .value = selected != nullptr ? PrStringView(selected->name) : "none"});
-    char at[48] = "";
+    char at[48];
+    PrStringView position = "-";
     if (selected != nullptr)
-        snprintf(at, sizeof at, "%.1f, %.1f", double(selected->position.x), double(selected->position.z));
-    hudReadout(hud, status, {.label = "AT", .value = selected != nullptr ? PrStringView(at) : "-"});
+        position = formatToBuffer(Span(at), "{:.1f}, {:.1f}", selected->position.x, selected->position.z);
+    hudReadout(hud, status, {.label = "AT", .value = position});
     // The switches bind what the toolbar's buttons bind, and their gestures reach the editor's edit sink.
     prKitTooltip(kit, hudSwitch(hud, status, {.label = "GRID", .value = &editor.grid}),
         {.text = "Show the grid", .shortcut = "Cmd '"});
@@ -618,8 +619,8 @@ void buildConsole(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     };
     for (uint32_t i = 0; i < 3; ++i) {
         char label[32];
-        snprintf(label, sizeof label, "%s %u", levels[i].name, counts[i]);
-        if (prKitActivated(kit, prKitButton(kit, actions, {.text = label, .selected = *levels[i].shown}, kGhostXs)))
+        PrStringView text = formatToBuffer(Span(label), "{} {}", levels[i].name, counts[i]);
+        if (prKitActivated(kit, prKitButton(kit, actions, {.text = text, .selected = *levels[i].shown}, kGhostXs)))
             *levels[i].shown = !*levels[i].shown;
     }
     prKitSpacer(kit, actions, {});
@@ -673,7 +674,7 @@ void buildInspector(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         PrLayoutNode asset = prKitAssetField(kit, prKitInspectorRow(kit, mesh, {.label = "Mesh"}, {}), field);
         uint64_t dropped = 0;
         if (prKitDropped(kit, asset, &dropped) && dropped < countOf(kAssets))
-            entity->mesh = std::string(kAssets[dropped].name) + ".mesh";
+            entity->mesh = format("{}.mesh", kAssets[dropped].name);
         prKitColorField(kit, prKitInspectorRow(kit, mesh, {.label = "Tint"}, {}), {.color = &editor.tint}, {});
         const char* lighting[] = {"realtime", "mixed", "baked"};
         segmented(kit, prKitInspectorRow(kit, mesh, {.label = "Lighting"}, {}), lighting, 3, &editor.lighting);

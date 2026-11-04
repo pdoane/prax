@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/span.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -25,18 +26,18 @@ uint32_t partitionPoint(uint32_t first, uint32_t end, Before before) {
     return first;
 }
 
-// Returns the index of the first of the `count` items that is not less than `key`, or `count` if every item is less.
-// The items must be in ascending order under `<`.
+// Returns the index of the first item that is not less than `key`, or the count if every item is less. The items must
+// be in ascending order under `<`.
 template <typename T, typename Key>
-uint32_t lowerBound(const T* PR_NONNULL items, uint32_t count, const Key& key) {
-    return partitionPoint(0, count, [&](uint32_t i) { return items[i] < key; });
+uint32_t lowerBound(Span<T> items, const Key& key) {
+    return partitionPoint(0, items.count(), [&](uint32_t i) { return items[i] < key; });
 }
 
-// Returns the index of the first of the `count` items that is greater than `key`, or `count` if no item is. The items
-// must be in ascending order under `<`.
+// Returns the index of the first item that is greater than `key`, or the count if no item is. The items must be in
+// ascending order under `<`.
 template <typename T, typename Key>
-uint32_t upperBound(const T* PR_NONNULL items, uint32_t count, const Key& key) {
-    return partitionPoint(0, count, [&](uint32_t i) { return !(key < items[i]); });
+uint32_t upperBound(Span<T> items, const Key& key) {
+    return partitionPoint(0, items.count(), [&](uint32_t i) { return !(key < items[i]); });
 }
 
 } // namespace pr

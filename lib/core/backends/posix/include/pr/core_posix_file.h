@@ -36,9 +36,15 @@ bool prCorePosixFileWrite(PrStringView path, PrByteView bytes);
 bool prCorePosixFileRemove(PrStringView path);
 bool prCorePosixFileCreateDirectory(PrStringView path);
 
-// Return the directories of the user's caches and data, as prFileCacheDirectory and prFileDataDirectory do.
+// Return the directories of the user's caches and data, and the working directory, as prFileCacheDirectory,
+// prFileDataDirectory and prFileWorkingDirectory do.
 PrRawString prCorePosixFileCacheDirectory(void);
 PrRawString prCorePosixFileDataDirectory(void);
+PrRawString prCorePosixFileWorkingDirectory(void);
+
+// Write and read the process's standard streams as prFileStreamWrite and prFileStreamRead do.
+bool prCorePosixFileStreamWrite(PrFileStream stream, PrByteView bytes);
+size_t prCorePosixFileStreamRead(PrFileStream stream, void* out, size_t capacity);
 
 #if defined(__cplusplus)
 }

@@ -448,7 +448,7 @@ TSTree* PR_NULLABLE layerTree(TreeSitterTree* h, const TreeSitterLanguage* langu
     layer->edited = false;
     layer->used = true;
     layer->ranges.clear();
-    layer->ranges.append(ranges.data, ranges.count);
+    layer->ranges.append(ranges.span());
     return tree;
 }
 
@@ -578,8 +578,7 @@ void inject(TreeSitterTree* h, const TreeSitterLanguage* host, TSNode root, uint
         TreeSitterInjection& injection = found.data[i];
         // A parse takes its ranges in order, without overlap.
         RawArray<TSRange>& ranges = injection.ranges;
-        sortItems(ranges.data, ranges.count,
-            [](const TSRange& a, const TSRange& b) { return a.start_byte < b.start_byte; });
+        sortItems(ranges.span(), [](const TSRange& a, const TSRange& b) { return a.start_byte < b.start_byte; });
         uint32_t kept = 0;
         for (uint32_t r = 0; r < ranges.count; ++r) {
             if (kept == 0 || ranges.data[r].start_byte >= ranges.data[kept - 1].end_byte)
@@ -615,13 +614,13 @@ bool outranks(const TreeSitterItem& a, const TreeSitterItem& b) {
 uint32_t flatten(TreeSitterTree* h, PrSyntaxSpan* PR_NULLABLE out, uint32_t capacity) {
     RawArray<TreeSitterItem>& items = h->items;
     // By start, so that a sweep adds each item where it begins.
-    sortItems(items.data, items.count, [](const TreeSitterItem& a, const TreeSitterItem& b) { return a.start < b.start; });
+    sortItems(items.span(), [](const TreeSitterItem& a, const TreeSitterItem& b) { return a.start < b.start; });
     h->bounds.clear();
     for (uint32_t i = 0; i < items.count; ++i) {
         h->bounds.push(items.data[i].start);
         h->bounds.push(items.data[i].end);
     }
-    sortItems(h->bounds.data, h->bounds.count, [](uint32_t a, uint32_t b) { return a < b; });
+    sortItems(h->bounds.span(), [](uint32_t a, uint32_t b) { return a < b; });
     // The last span is written once the next cannot extend it, so that every capacity gives the same count.
     uint32_t count = 0;
     PrSyntaxSpan last{};

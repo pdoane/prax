@@ -29,6 +29,9 @@ double __cdecl fmod(double x, double y);
 double __cdecl pow(double x, double y);
 PR_CRT_IMPORT double __cdecl cbrt(double x);
 PR_CRT_IMPORT double __cdecl ceil(double x);
+PR_CRT_IMPORT double __cdecl exp2(double x);
+PR_CRT_IMPORT double __cdecl log2(double x);
+PR_CRT_IMPORT float __cdecl exp2f(float x);
 PR_CRT_IMPORT double __cdecl floor(double x);
 PR_CRT_IMPORT double __cdecl round(double x);
 PR_CRT_IMPORT double __cdecl hypot(double x, double y);
@@ -161,6 +164,12 @@ static inline double prF64Log(double value) {
 }
 static inline double prF64Exp(double value) {
     return PR_MATH_BUILTIN(exp)(value);
+}
+static inline double prF64Exp2(double value) {
+    return PR_MATH_BUILTIN(exp2)(value);
+}
+static inline double prF64Log2(double value) {
+    return PR_MATH_BUILTIN(log2)(value);
 }
 static inline double prF64Floor(double value) {
     return PR_MATH_BUILTIN(floor)(value);
@@ -342,6 +351,15 @@ static inline float prF32Log(float value) {
 }
 static inline float prF32Log2(float value) {
     return PR_MATH_BUILTIN(log2f)(value);
+}
+static inline float prF32Exp2(float value) {
+    return PR_MATH_BUILTIN(exp2f)(value);
+}
+
+// Returns the length of the vector (`x`, `y`), without overflow or underflow in the squares. It is computed in double,
+// because MSVC's C library defines hypotf only inline in its header.
+static inline float prF32Hypot(float x, float y) {
+    return PR_VALUE_CAST(float, prF64Hypot(PR_VALUE_CAST(double, x), PR_VALUE_CAST(double, y)));
 }
 static inline float prF32Floor(float value) {
     return PR_MATH_BUILTIN(floorf)(value);

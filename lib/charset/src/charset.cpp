@@ -941,7 +941,7 @@ constexpr uint32_t kNoPointer = 0xffff;
 // Returns true if an encoder's table holds `codePoint`, and writes the pointer beside it.
 template <typename CodePoint, size_t N>
 bool findPointer(const CodePoint (&codePoints)[N], const uint16_t (&pointers)[N], uint32_t codePoint, uint32_t* pointer) {
-    uint32_t low = lowerBound(codePoints, uint32_t(N), codePoint);
+    uint32_t low = lowerBound(Span(codePoints, uint32_t(N)), codePoint);
     if (low == N || codePoints[low] != codePoint)
         return false;
     *pointer = pointers[low];

@@ -13,6 +13,8 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace browser {
 
+using namespace pr;
+
 // Opens a tab at `index` in the tab strip, which loads `url`, or shows the start page if `url` is empty. The page opens
 // on the page's thread. Returns the tab.
 Tab* tabOpen(Browser& b, PrStringView url, uint32_t index);

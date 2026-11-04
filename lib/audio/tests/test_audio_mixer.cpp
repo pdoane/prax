@@ -2,7 +2,7 @@
 #include "pr/audio_mixer.h"
 #include "pr/float.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <vector>
 

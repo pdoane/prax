@@ -3403,9 +3403,9 @@ void copyPrepared(Walk& w, const PreparedList& p, PrVec2 offset = PrVec2{0, 0}) 
     uint32_t values = b.values.count;
     uint32_t paints = b.paints.count;
     uint32_t clips = b.clips.count;
-    b.values.append(p.values.data, p.values.count);
-    b.paints.append(p.paints.data, p.paints.count);
-    b.clips.append(p.clips.data, p.clips.count);
+    b.values.append(p.values.span());
+    b.paints.append(p.paints.span());
+    b.clips.append(p.clips.span());
     bool moved = offset.x != 0 || offset.y != 0;
     if (moved) {
         for (uint32_t i = clips; i < b.clips.count; ++i) {

@@ -11,6 +11,8 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace browser {
 
+using namespace pr;
+
 // Declares a round of the chrome: the tab strip, the toolbar with the address bar, the favorites bar, and the active
 // tab's page or its start page.
 void chromeBuild(Browser& b);

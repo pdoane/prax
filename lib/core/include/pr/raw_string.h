@@ -73,6 +73,10 @@ void prRawStringReplace(PrRawString* target, PrStringView text);
 // string one append at a time copies each byte once, amortized.
 void prRawStringAppend(PrRawString* string, PrStringView text);
 
+// Empties `string` and keeps the storage that it owns, so that text appended next reuses it. A null string stays null,
+// and an external string becomes the empty string.
+void prRawStringClear(PrRawString* string);
+
 // Frees the heap memory of `string`, if any, and leaves the null string behind. Safe to call twice.
 void prRawStringReset(PrRawString* string);
 

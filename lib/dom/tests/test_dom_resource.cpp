@@ -10,7 +10,7 @@
 #include "dom/src/dom_resource.h"
 #include "dom/src/dom_use.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <string>
 #include <vector>

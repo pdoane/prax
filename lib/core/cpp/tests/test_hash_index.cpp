@@ -1,6 +1,6 @@
 #include "pr/hash_index.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 using namespace pr_impl;
 

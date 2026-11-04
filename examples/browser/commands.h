@@ -6,15 +6,16 @@
 #include "pr/app.h"
 #include "pr/base.h"
 #include "pr/raw_string.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include "examples/browser/browser.h"
 
-#include <string>
-
 PR_ASSUME_NONNULL_BEGIN
 
 namespace browser {
+
+using namespace pr;
 
 // The ids of the commands that the chrome's own controls run.
 constexpr const char* kCommandNewTab = "tab.new";
@@ -42,7 +43,7 @@ bool commandIsChecked(const Browser& b, PrStringView id);
 PrStringView commandTitle(const Browser& b, PrStringView id);
 
 // Returns the chord that runs the command `id`, as the platform shows a shortcut, or empty if no chord is bound to it.
-std::string commandShortcut(const Browser& b, PrStringView id);
+String commandShortcut(const Browser& b, PrStringView id);
 
 // Runs the command that the chord of `event`, a KeyDown, is bound to, for keys that go to the page rather than through
 // the chrome's scope (prCommandScope). Returns true if the chord is bound, whether or not its command was enabled.

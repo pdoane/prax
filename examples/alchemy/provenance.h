@@ -9,42 +9,44 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/base.h"
 #include "pr/byte_view.h"
 #include "pr/compress.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include <stdint.h>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace alchemy {
+
+using namespace pr;
 
 // The keyword of the text chunk that holds the record.
 constexpr PrStringView kProvenanceKeyword = "alchemy";
 
 // An adapter of the chain that a run loaded, by the name that the server knew it under.
 struct ProvenanceLora {
-    std::string name;
+    String name;
     double weight = 1.0;
 };
 
 // One run's inputs. A record holds only the fields that its mode uses, so a field left at its default is one that the
 // mode says nothing about. `source` is the file that the run worked from.
 struct ProvenanceOp {
-    std::string mode;
-    std::string prompt;
-    std::string negative;
-    std::string checkpoint;
-    std::vector<ProvenanceLora> loras;
-    std::string sampler;
-    std::string scheduler;
-    std::string upscaleModel;
-    std::string detector;
-    std::string direction;
-    std::string source;
+    String mode;
+    String prompt;
+    String negative;
+    String checkpoint;
+    Array<ProvenanceLora> loras;
+    String sampler;
+    String scheduler;
+    String upscaleModel;
+    String detector;
+    String direction;
+    String source;
     uint64_t seed = 0;
     uint32_t steps = 0;
     uint32_t width = 0;
@@ -61,11 +63,11 @@ struct ProvenanceOp {
 
 // The runs that made an image, oldest first.
 struct ProvenanceRecord {
-    std::vector<ProvenanceOp> operations;
+    Array<ProvenanceOp> operations;
 };
 
 // Returns the record as JSON. A seed is written as decimal text, since a JSON number cannot hold every 64-bit value.
-std::string provenanceSerialize(const ProvenanceRecord& record);
+String provenanceSerialize(const ProvenanceRecord& record);
 
 // Reads the record that the JSON `text` holds into `out`. Returns false if the text is not a record.
 bool provenanceParse(PrStringView text, ProvenanceRecord* out);
@@ -76,7 +78,7 @@ bool provenanceRead(PrByteView png, PrCompressCodec* PR_NULLABLE compress, Prove
 
 // Returns the PNG file `png` with `record` in place of any record that it carried, or the empty string if `png` is not
 // a PNG file.
-std::string provenanceWrite(PrByteView png, const ProvenanceRecord& record);
+Array<uint8_t> provenanceWrite(PrByteView png, const ProvenanceRecord& record);
 
 // Returns the run that produced the image, or null if the record holds none.
 const ProvenanceOp* PR_NULLABLE provenanceNewest(const ProvenanceRecord& record);
@@ -85,7 +87,7 @@ const ProvenanceOp* PR_NULLABLE provenanceNewest(const ProvenanceRecord& record)
 bool provenanceSamples(const ProvenanceOp& op);
 
 // Returns the chain as one line, such as "generate → outpaint → upscale".
-std::string provenanceChain(const ProvenanceRecord& record);
+String provenanceChain(const ProvenanceRecord& record);
 
 } // namespace alchemy
 

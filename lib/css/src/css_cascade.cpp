@@ -1456,7 +1456,7 @@ void store(CssMatchedStyle& slot, uint32_t hash, uint64_t sharedHints, DomWidget
         const CssComputedStyle* style, bool readsViewport, bool readsFont) {
     forgetMatched(slot);
     slot.hash = hash;
-    slot.matched.append(s.candidates.data, s.candidates.count);
+    slot.matched.append(s.candidates.span());
     cssComputedStyleRetain(style);
     slot.style = style;
     slot.root = input.parent == nullptr;
@@ -1508,7 +1508,7 @@ void remember(CssCascadeMemo* memo, const CssRuleSet* set, const CssCascadeScrat
     cssCascadeMemoClear(memo);
     memo->style = style;
     memo->parent = input.parent;
-    memo->matched.append(s.candidates.data, s.candidates.count);
+    memo->matched.append(s.candidates.span());
     memo->generation = set->generation;
     memo->rootFont = input.rootFont;
     memo->viewport = input.viewport;
@@ -1735,7 +1735,7 @@ void match(const CssRuleSet* set, CssCascadeScratch& s, const PrDomElement* elem
                 s.candidates.push(set->slotted.data[i]);
         }
     }
-    sortItems(s.candidates.data, s.candidates.count, [&](uint32_t a, uint32_t b) {
+    sortItems(s.candidates.span(), [&](uint32_t a, uint32_t b) {
         return appliesBefore(set->entries.data[a], set->entries.data[b]);
     });
 }
@@ -2140,7 +2140,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
         bool invalid = e.resolution != Resolution_Resolved;
         declared.push(CssCustomRow{e.hash, e.name, invalid ? PrStringView{} : prTextBufferView(&e.resolved), invalid});
     }
-    sortItems(declared.data, declared.count, [](const CssCustomRow& a, const CssCustomRow& b) {
+    sortItems(declared.span(), [](const CssCustomRow& a, const CssCustomRow& b) {
         return cssCustomBefore(a.hash, a.name, b.hash, b.name);
     });
 
@@ -2764,7 +2764,7 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
     cssStyleValuesRelease(cached.parentValues);
     cached.hash = hash;
     cached.key.clear();
-    cached.key.append(key.data, key.count);
+    cached.key.append(key.span());
     cssStyleValuesRetain(values);
     cached.values = values;
     cached.inheritsReset = s.inheritsReset;
@@ -2811,10 +2811,10 @@ void copyIndex(CssRuleIndex& to, const CssRuleIndex& from) {
         CssRuleBucket& made = to.buckets.emplace();
         made = CssRuleBucket{};
         made.hash = bucket.hash;
-        made.entries.append(bucket.entries.data, bucket.entries.count);
+        made.entries.append(bucket.entries.span());
         to.index.insert(bucket.hash, i);
     }
-    to.universal.append(from.universal.data, from.universal.count);
+    to.universal.append(from.universal.span());
 }
 
 // Copies the rule set `from` into the empty `to`, which then holds the same entries for the same document. The user
@@ -2823,11 +2823,11 @@ void copyRuleSet(CssRuleSet* to, const CssRuleSet* from) {
     PR_ASSERT(from->layers.count == 0 && from->keyframes.count == 0 && from->anchors.anchors.count == 0 &&
         from->counterStyleRules.count == 0);
     to->document = from->document;
-    to->entries.append(from->entries.data, from->entries.count);
+    to->entries.append(from->entries.span());
     for (uint32_t p = 0; p < CssPseudo_Count; ++p)
         copyIndex(to->filed[p], from->filed[p]);
     copyIndex(to->generating, from->generating);
-    to->lists.append(from->lists.data, from->lists.count);
+    to->lists.append(from->lists.span());
     to->invalidations.reserve(from->invalidations.count);
     for (uint32_t i = 0; i < from->invalidations.count; ++i) {
         const CssInvalidation& invalidation = from->invalidations.data[i];
@@ -2840,14 +2840,14 @@ void copyRuleSet(CssRuleSet* to, const CssRuleSet* from) {
         made.laterSiblings = invalidation.laterSiblings;
         made.siblings = invalidation.siblings;
         made.subtree = invalidation.subtree;
-        made.descendants.append(invalidation.descendants.data, invalidation.descendants.count);
+        made.descendants.append(invalidation.descendants.span());
         for (uint32_t k = 0; k < invalidation.anchors.anchors.count; ++k)
             cssHasAnchorsAdd(&made.anchors, invalidation.anchors.anchors.data[k]);
         // The head of each chain comes before the rest of the chain, and the index holds the heads.
         if (invalidationAt(to, made.hash) == kHashMissing)
             to->invalidationIndex.insert(made.hash, i);
     }
-    to->media.append(from->media.data, from->media.count);
+    to->media.append(from->media.span());
     to->reads = from->reads;
 }
 
@@ -3072,7 +3072,7 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
 
     if (input.matched != nullptr) {
         s.candidates.clear();
-        s.candidates.append(input.matched->data, input.matched->count);
+        s.candidates.append(input.matched->span());
     } else {
         match(set, s, input.element, set->filed[input.pseudo]);
     }

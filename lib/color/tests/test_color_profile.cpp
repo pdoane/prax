@@ -2,7 +2,7 @@
 #include "pr/color_profile.h"
 #include "pr/integer.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <vector>
 

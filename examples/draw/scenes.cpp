@@ -3,20 +3,18 @@
 
 #include "examples/draw/scenes.h"
 
+#include "pr/array.h"
 #include "pr/count_of.h"
+#include "pr/file.h"
+#include "pr/float.h"
 #include "pr/font.h"
 #include "pr/locale.h"
+#include "pr/min_max.h"
+#include "pr/print.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text.h"
 #include "pr/utf8.h"
-
-#include <algorithm>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <cstring>
-#include <string>
-#include <string_view>
-#include <vector>
 
 namespace scenes {
 
@@ -31,26 +29,26 @@ constexpr PrColor kWhite{1, 1, 1, 1};
 // Text
 
 PrTextShaper* textShaper = nullptr;
-std::string fontDirectory;
+String fontDirectory;
 PrTextGlyphBuffer* glyphBuffer = nullptr;
 
 // A font of the bundle at a design point, loaded once for each.
 struct LoadedFont {
-    std::string key;
+    String key;
     const PrFont* font;
 };
 
-std::vector<LoadedFont>& loadedFonts() {
-    static std::vector<LoadedFont> fonts;
+Array<LoadedFont>& loadedFonts() {
+    static Array<LoadedFont> fonts;
     return fonts;
 }
 
 // Returns the font of the bundle's file `file` at the design point that `values` give, loaded once for each. Returns
 // null if the file does not load.
 const PrFont* PR_NULLABLE fontVaried(const char* file, const PrFontVariation* PR_NULLABLE values, uint32_t count) {
-    std::string key = file;
+    String key(file);
     for (uint32_t i = 0; i < count; ++i)
-        key += " " + std::to_string(values[i].tag) + "=" + std::to_string(values[i].value);
+        formatTo(key, " {}={}", values[i].tag, values[i].value);
     for (const LoadedFont& loaded : loadedFonts()) {
         if (loaded.key == key)
             return loaded.font;
@@ -63,18 +61,15 @@ const PrFont* PR_NULLABLE fontVaried(const char* file, const PrFontVariation* PR
         derivation.variationCount = count;
         font = base != nullptr ? prFontCreateDerived(base, &derivation) : nullptr;
     } else {
-        std::vector<uint8_t> bytes;
-        if (FILE* f = std::fopen((fontDirectory + "/" + file).c_str(), "rb")) {
-            uint8_t buffer[65536];
-            for (size_t read = std::fread(buffer, 1, sizeof(buffer), f); read != 0;
-                    read = std::fread(buffer, 1, sizeof(buffer), f))
-                bytes.insert(bytes.end(), buffer, buffer + read);
-            std::fclose(f);
-        }
-        if (prFontCreate(bytes, 0, nullptr, &font) != PrStatus_Ok)
+        // The font copies the file's bytes, so the mapping goes as soon as the font is made.
+        PrFileMapping mapping = {};
+        String path = format("{}/{}", fontDirectory, file);
+        bool mapped = prFileMap(path, &mapping);
+        if (!mapped || prFontCreate(PrByteView{mapping.data, mapping.size}, 0, nullptr, &font) != PrStatus_Ok)
             font = nullptr;
+        prFileUnmap(&mapping);
     }
-    loadedFonts().push_back(LoadedFont{key, font});
+    loadedFonts().push(LoadedFont{key, font});
     return font;
 }
 
@@ -96,12 +91,12 @@ struct TextStyle {
 // Glyphs placed for one run in a style's font, and a transform for each that the shaper synthesized at another size, or
 // none if every glyph is drawn at the style's size.
 struct ShapedText {
-    std::vector<PrFontGlyph> glyphs;
-    std::vector<PrAffine2> transforms;
+    Array<PrFontGlyph> glyphs;
+    Array<PrAffine2> transforms;
 };
 
 // Places the text's glyphs on the baseline from `origin`, left to right or top to bottom. Returns the advance.
-float shapeText(const TextStyle& style, const char* text, PrVec2 origin, ShapedText& out) {
+float shapeText(const TextStyle& style, PrStringView text, PrVec2 origin, ShapedText& out) {
     out.glyphs.clear();
     out.transforms.clear();
     if (style.font == nullptr)
@@ -129,26 +124,26 @@ float shapeText(const TextStyle& style, const char* text, PrVec2 origin, ShapedT
     return style.axis == PrTextAxis_Vertical ? pen.y - origin.y : pen.x - origin.x;
 }
 
-float textAdvance(const TextStyle& style, const char* text) {
+float textAdvance(const TextStyle& style, PrStringView text) {
     ShapedText shaped;
     return shapeText(style, text, PrVec2{0, 0}, shaped);
 }
 
 // Records the glyphs as one run in the style's font.
 void drawGlyphs(PrDrawList* list, const TextStyle& style, const ShapedText& shaped) {
-    if (shaped.glyphs.empty())
+    if (shaped.glyphs.isEmpty())
         return;
     PrFontGlyphRun run{};
     run.font = style.font;
     run.size = style.size;
     run.glyphs = shaped.glyphs.data();
-    run.glyphCount = uint32_t(shaped.glyphs.size());
-    run.transforms = shaped.transforms.empty() ? nullptr : shaped.transforms.data();
+    run.glyphCount = shaped.glyphs.count();
+    run.transforms = shaped.transforms.isEmpty() ? nullptr : shaped.transforms.data();
     prDrawListGlyphs(list, &run, PrVec2{}, style.paint);
 }
 
 // Records the text as one glyph run from `origin`. Returns its advance.
-float drawText(PrDrawList* list, const TextStyle& style, const char* text, PrVec2 origin) {
+float drawText(PrDrawList* list, const TextStyle& style, PrStringView text, PrVec2 origin) {
     ShapedText shaped;
     float advance = shapeText(style, text, origin, shaped);
     drawGlyphs(list, style, shaped);
@@ -214,16 +209,16 @@ PrColor fade(PrColor color, float alpha) {
 }
 
 PrVec2 orbit(PrVec2 center, float radius, float angle) {
-    return PrVec2{center.x + radius * std::cos(angle), center.y + radius * std::sin(angle)};
+    return PrVec2{center.x + radius * prF32Cos(angle), center.y + radius * prF32Sin(angle)};
 }
 
 PrAffine2 turn(float angle, PrVec2 at, float sx = 1, float sy = 1) {
-    float c = std::cos(angle);
-    float s = std::sin(angle);
+    float c = prF32Cos(angle);
+    float s = prF32Sin(angle);
     return PrAffine2{c * sx, s * sx, -s * sy, c * sy, at.x, at.y};
 }
 
-const PrDrawImage* imageOf(const std::vector<uint8_t>& premultiplied, uint32_t width, uint32_t height) {
+const PrDrawImage* imageOf(const Array<uint8_t>& premultiplied, uint32_t width, uint32_t height) {
     PrDrawImageDesc desc{
         PrPixelView{premultiplied.data(), size_t(width) * 4, {width, height}}, PrPixelFormat_Rgba8,
         PrDrawAlpha_Premultiplied, PrColorSpace_Srgb,
@@ -233,7 +228,7 @@ const PrDrawImage* imageOf(const std::vector<uint8_t>& premultiplied, uint32_t w
     return image;
 }
 
-void put(std::vector<uint8_t>& pixels, uint32_t width, uint32_t x, uint32_t y, PrColor c) {
+void put(Array<uint8_t>& pixels, uint32_t width, uint32_t x, uint32_t y, PrColor c) {
     uint8_t* p = pixels.data() + (size_t(y) * width + x) * 4;
     p[0] = uint8_t(c.r * c.a * 255);
     p[1] = uint8_t(c.g * c.a * 255);
@@ -246,15 +241,15 @@ const PrDrawImage* fish(FishColoring coloring = FishColoring_Plain) {
     if (cachedFish[coloring] != nullptr)
         return cachedFish[coloring];
     PrColor by = kFishColorings[coloring];
-    std::vector<uint8_t> pixels(64 * 64 * 4);
+    Array<uint8_t> pixels(64 * 64 * 4);
     for (int y = 0; y < 64; ++y) {
         for (int x = 0; x < 64; ++x) {
             float dx = float(x) - 31.5f;
             float dy = float(y) - 26;
             bool body = dx * dx / 81 + dy * dy / 400 < 1;
             bool tail =
-                y >= 43 && y <= 59 && std::fabs(dx) < float(y - 40) * .63f && (y < 53 || std::fabs(dx) > float(y - 53) * .8f);
-            bool fins = y >= 25 && y <= 36 && std::fabs(dx) < float(17 - std::abs(y - 29) * 2);
+                y >= 43 && y <= 59 && prF32Abs(dx) < float(y - 40) * .63f && (y < 53 || prF32Abs(dx) > float(y - 53) * .8f);
+            bool fins = y >= 25 && y <= 36 && prF32Abs(dx) < float(17 - (y > 29 ? y - 29 : 29 - y) * 2);
             PrColor color{0, 0, 0, 0};
             if (tail || fins)
                 color = PrColor{.81f, .84f, .69f, .8f};
@@ -280,10 +275,10 @@ const PrDrawImage* fish(FishColoring coloring = FishColoring_Plain) {
 const PrDrawImage* water() {
     if (cachedWater != nullptr)
         return cachedWater;
-    std::vector<uint8_t> pixels(32 * 32 * 4);
+    Array<uint8_t> pixels(32 * 32 * 4);
     for (int y = 0; y < 32; ++y) {
         for (int x = 0; x < 32; ++x) {
-            float wave = std::sin(float(x) * kPi / 16) * 2;
+            float wave = prF32Sin(float(x) * kPi / 16) * 2;
             bool line = (y + int(wave + 3)) % 16 == 0;
             uint8_t* p = pixels.data() + size_t(y * 32 + x) * 4;
             p[0] = line ? 25 : 0;
@@ -300,10 +295,10 @@ const PrDrawImage* water() {
 const PrDrawImage* skin() {
     if (cachedSkin != nullptr)
         return cachedSkin;
-    std::vector<uint8_t> pixels(32 * 32 * 4);
+    Array<uint8_t> pixels(32 * 32 * 4);
     for (int y = 0; y < 32; ++y) {
         for (int x = 0; x < 32; ++x) {
-            int edge = std::min({x, y, 31 - x, 31 - y});
+            int edge = min(min(x, y), min(31 - x, 31 - y));
             PrColor color{.30f, .14f, .07f, 1};
             if (edge == 1 || edge == 5)
                 color = PrColor{.98f, .81f, .48f, 1};
@@ -339,24 +334,24 @@ struct Stage {
     // the view shows.
     template <typename Draw>
     void across(float width, Draw draw) const {
-        for (float x = std::floor(view.left / width) * width; x < view.right; x += width)
+        for (float x = prF32Floor(view.left / width) * width; x < view.right; x += width)
             draw(x);
     }
 
     // Calls `draw` with the corner of each copy of a tile of `size`, laid from the scene's origin, that the view shows.
     template <typename Draw>
     void tiles(PrVec2 size, Draw draw) const {
-        for (float y = std::floor(view.top / size.y) * size.y; y < view.bottom; y += size.y)
+        for (float y = prF32Floor(view.top / size.y) * size.y; y < view.bottom; y += size.y)
             across(size.x, [&](float x) { draw(PrVec2{x, y}); });
     }
 
     // Returns the x at which something that wraps around the view is drawn: `travel` along a loop through the view and
     // `margin` past each of its sides.
     float wrap(float travel, float margin) const {
-        return view.left - margin + std::fmod(travel, view.right - view.left + 2 * margin);
+        return view.left - margin + prF32Fmod(travel, view.right - view.left + 2 * margin);
     }
 
-    void label(const char* text, float x, float y, float size, PrColor tint = kGalleryInk) const {
+    void label(PrStringView text, float x, float y, float size, PrColor tint = kGalleryInk) const {
         TextStyle style;
         style.font = fontNamed("NotoSans[wdth,wght].ttf");
         style.size = size;
@@ -380,12 +375,18 @@ struct Stage {
 
     // Draws a band of the ring between `radius - width` and `radius`, from `start` through `span` radians.
     void ring(PrVec2 center, float radius, float width, float start, float span, PrColor color) const {
-        prDrawListSector(list, center, std::max(0.0f, radius - width), radius, start, span, {.color = color});
+        prDrawListSector(list, center, max(0.0f, radius - width), radius, start, span, {.color = color});
     }
 
-    void polygon(const std::vector<PrVec2>& points, PrColor color) const {
-        prDrawListPolylineContour(list, points.data(), uint32_t(points.size()), PrDrawContour_Closed,
-            PrPathFillRule_NonZero, {.color = color});
+    // Fills the polygon of the `count` points at `points`, or of an array of points, or of a list of them, as in
+    // `s.polygon({{0, 0}, {10, 0}, {5, 8}}, color)`.
+    void polygon(const PrVec2* points, uint32_t count, PrColor color) const {
+        prDrawListPolylineContour(list, points, count, PrDrawContour_Closed, PrPathFillRule_NonZero, {.color = color});
+    }
+    void polygon(const Array<PrVec2>& points, PrColor color) const { polygon(points.data(), points.count(), color); }
+    template <uint32_t N>
+    void polygon(const PrVec2 (&points)[N], PrColor color) const {
+        polygon(points, N, color);
     }
 
     void beam(PrVec2 a, PrVec2 b, float radius, PrColor color) const {
@@ -399,7 +400,7 @@ struct Stage {
         PrDrawColorStop stops[6];
         for (uint32_t i = 0; i < 6; ++i) {
             float r = float(i) / 5;
-            float alpha = (std::exp(-5 * r * r) - std::exp(-5.0f)) / (1 - std::exp(-5.0f));
+            float alpha = (prF32Exp(-5 * r * r) - prF32Exp(-5.0f)) / (1 - prF32Exp(-5.0f));
             stops[i] = PrDrawColorStop{.offset = r, .color = fade(color, .6f * alpha)};
         }
         PrDrawBrush brush = prDrawBrushRadial(center, 0, center, radius, stops, 6);
@@ -423,8 +424,8 @@ struct Placement {
 
 // Places the scene's space to fit the drawing above the caption's band, centered there.
 Placement fit(float width, float height) {
-    float above = std::max(height - kCaptionBand, 1.0f);
-    float scale = std::min(width / kSceneWidth, above / kSceneHeight);
+    float above = max(height - kCaptionBand, 1.0f);
+    float scale = min(width / kSceneWidth, above / kSceneHeight);
     return Placement{scale, PrVec2{(width - kSceneWidth * scale) / 2, (above - kSceneHeight * scale) / 2}};
 }
 
@@ -444,9 +445,9 @@ void gauges(const Stage& s) {
     }
     const PrColor colors[] = {kCoral, kGalleryInk, kMint};
     const float amounts[] = {
-        .78f + .08f * std::sin(s.t),
-        .64f + .1f * std::sin(s.t * .7f),
-        .89f + .04f * std::cos(s.t),
+        .78f + .08f * prF32Sin(s.t),
+        .64f + .1f * prF32Sin(s.t * .7f),
+        .89f + .04f * prF32Cos(s.t),
     };
     for (int i = 0; i < 3; ++i) {
         float outer = 184.0f - float(i) * 30;
@@ -459,9 +460,7 @@ void gauges(const Stage& s) {
         s.capsule(top, top, 10, colors[i]);
         s.capsule(tip, tip, 10, colors[i]);
     }
-    char momentum[12];
-    std::snprintf(momentum, sizeof(momentum), "%02d", int(amounts[0] * 100));
-    s.label(momentum, 242, 415, 74);
+    s.label(format("{:02}", int(amounts[0] * 100)), 242, 415, 74);
     s.label("DAILY MOMENTUM", 240, 447, 11, kMuted);
     s.rect(586, 200, 326, 424, kGalleryInk, 28);
     s.label("THIS WEEK", 616, 244, 12, kMint);
@@ -470,7 +469,7 @@ void gauges(const Stage& s) {
     const char* days[] = {"M", "T", "W", "T", "F", "S", "S"};
     for (int i = 0; i < 7; ++i) {
         float x = 630 + float(i) * 39;
-        s.capsule(PrVec2{x, 534}, PrVec2{x, 534 - bars[i] - 12 * std::sin(s.t * 1.3f + float(i))}, 10, i == 5 ? kCoral : kMint);
+        s.capsule(PrVec2{x, 534}, PrVec2{x, 534 - bars[i] - 12 * prF32Sin(s.t * 1.3f + float(i))}, 10, i == 5 ? kCoral : kMint);
         s.label(days[i], x - 5, 569, 12, kWhite);
     }
     s.label("04 : 32", 616, 604, 16, kMint);
@@ -498,22 +497,22 @@ void theatre(const Stage& s) {
     s.label("THE ORPHEUM / EST. 1926", 48, 41, 11, gold);
     s.label("PAPER THEATRE", 44, 104, 55, cream);
     s.label("A SMALL STAGE. AN IMPOSSIBLE NIGHT.", 48, 135, 11, gold);
-    float w = 720 + 24 * std::sin(t * .43f);
-    float h = 385 + 12 * std::cos(t * .57f);
+    float w = 720 + 24 * prF32Sin(t * .43f);
+    float h = 385 + 12 * prF32Cos(t * .57f);
     PrRect stage{480 - w / 2, 172, 480 + w / 2, 172 + h};
     s.rect(stage.left + 8, stage.top + 12, w, h, PrColor{.12f, .025f, .055f, 1});
     s.rect(stage.left, stage.top, w, h, night);
     prDrawListPushClipRect(s.list, stage, PrDrawEdges_Antialiased);
     for (int i = 0; i < 53; ++i) {
         PrVec2 point{170 + float((i * 113) % 640), 197 + float((i * 67) % 266)};
-        s.capsule(point, point, .6f + .5f * (1 + std::sin(t + float(i))), fade(cream, .45f));
+        s.capsule(point, point, .6f + .5f * (1 + prF32Sin(t + float(i))), fade(cream, .45f));
     }
     for (int i = 0; i < 3; ++i) {
-        float x = 288 + float(i) * 192 + 18 * std::sin(t * .5f + float(i));
+        float x = 288 + float(i) * 192 + 18 * prF32Sin(t * .5f + float(i));
         s.polygon({{x, 178}, {x - 125, 540}, {x + 155, 540}}, fade(i == 1 ? cream : gold, .035f));
     }
-    float swing = .13f * std::sin(t * .7f);
-    PrVec2 moon{468 + 43 * std::sin(swing), 322 + 5 * std::cos(t * .7f)};
+    float swing = .13f * prF32Sin(t * .7f);
+    PrVec2 moon{468 + 43 * prF32Sin(swing), 322 + 5 * prF32Cos(t * .7f)};
     s.capsule(PrVec2{480, 182}, moon, .65f, fade(gold, .6f));
     s.push(turn(swing, moon));
     PrPath* crescent = prPathCreate();
@@ -527,29 +526,29 @@ void theatre(const Stage& s) {
     s.capsule(PrVec2{-52, 26}, PrVec2{-45, 27}, 3.5f, PrColor{.88f, .47f, .37f, 1});
     s.pop();
     for (int i = 0; i < 5; ++i) {
-        float x = 228 + float(i) * 123 + 13 * std::sin(t * .8f + float(i));
-        float y = 247 + float((i * 43) % 130) + 10 * std::sin(t + float(i));
-        s.capsule(PrVec2{x - 9 * std::sin(t * .8f), 177}, PrVec2{x, y}, .55f, fade(gold, .5f));
-        std::vector<PrVec2> points;
+        float x = 228 + float(i) * 123 + 13 * prF32Sin(t * .8f + float(i));
+        float y = 247 + float((i * 43) % 130) + 10 * prF32Sin(t + float(i));
+        s.capsule(PrVec2{x - 9 * prF32Sin(t * .8f), 177}, PrVec2{x, y}, .55f, fade(gold, .5f));
+        Array<PrVec2> points;
         for (int tip = 0; tip < 10; ++tip)
-            points.push_back(orbit(PrVec2{x, y}, tip % 2 ? 8.0f : 20.0f,
-                float(tip) * kPi / 5 - kPi / 2 + .12f * std::sin(t + float(i))));
+            points.push(orbit(PrVec2{x, y}, tip % 2 ? 8.0f : 20.0f,
+                float(tip) * kPi / 5 - kPi / 2 + .12f * prF32Sin(t + float(i))));
         s.polygon(points, i % 2 ? cream : gold);
     }
     const PrColor hills[] = {{.28f, .24f, .34f, 1}, {.44f, .36f, .44f, 1}, {.64f, .51f, .53f, 1}};
     for (int layer = 0; layer < 3; ++layer) {
         float y = 468 + float(layer) * 29;
         for (int cloud = 0; cloud < 6; ++cloud) {
-            float x = 100 + float(cloud) * 150 + 14 * std::sin(t * .5f + float(layer));
+            float x = 100 + float(cloud) * 150 + 14 * prF32Sin(t * .5f + float(layer));
             prDrawListEllipse(s.list, PrVec2{x, y}, PrVec2{110, 32 + float(cloud % 3) * 9}, 0, {.color = hills[layer]});
         }
         s.rect(120, y, 740, 100, hills[layer]);
     }
     for (int bird = 0; bird < 3; ++bird) {
         float phase = t * .45f + float(bird) * 1.9f;
-        float x = 488 + 169 * std::sin(phase);
-        float y = 429 + 19 * std::cos(phase * 1.3f);
-        float flap = 24 + 18 * std::sin(t * 2.6f + float(bird));
+        float x = 488 + 169 * prF32Sin(phase);
+        float y = 429 + 19 * prF32Cos(phase * 1.3f);
+        float flap = 24 + 18 * prF32Sin(t * 2.6f + float(bird));
         s.polygon({
             {x - 4, y + 4},
             {x - 42, y - flap},
@@ -561,19 +560,19 @@ void theatre(const Stage& s) {
         }, cream);
         s.polygon({{x + 6, y}, {x + 21, y - 7}, {x + 15, y + 2}}, gold);
     }
-    float opening = 17 + 17 * std::sin(t * .3f);
+    float opening = 17 + 17 * prF32Sin(t * .3f);
     for (int side = 0; side < 2; ++side) {
         float direction = side == 0 ? 1.0f : -1.0f;
         float edge = side == 0 ? stage.left : stage.right;
         for (int fold = 6; fold >= 0; --fold) {
             float width = 22 + float(fold) * 15 - opening * float(fold) / 6;
-            std::vector<PrVec2> curtain{{edge, 174}, {edge + direction * width * 1.55f, 174}};
+            Array<PrVec2> curtain({{edge, 174}, {edge + direction * width * 1.55f, 174}});
             for (int row = 0; row <= 24; ++row) {
                 float y = 180 + float(row) * 17;
-                float bulge = 1.1f - .48f * std::sin(float(row) / 24 * kPi);
-                curtain.push_back({edge + direction * (width * bulge + 4 * std::sin(t * .8f + float(row) * .1f)), y});
+                float bulge = 1.1f - .48f * prF32Sin(float(row) / 24 * kPi);
+                curtain.push({edge + direction * (width * bulge + 4 * prF32Sin(t * .8f + float(row) * .1f)), y});
             }
-            curtain.push_back({edge, 590});
+            curtain.push({edge, 590});
             s.polygon(curtain, fold % 2 ? PrColor{.48f, .055f, .13f, 1} : PrColor{.65f, .105f, .18f, 1});
         }
         float tieX = edge + direction * 49;
@@ -590,12 +589,12 @@ void theatre(const Stage& s) {
     theatreFrame(s, stage);
     for (int i = 0; i < 23; ++i) {
         PrVec2 bulb{stage.left + 25 + float(i) * (w - 50) / 22, stage.bottom + 17};
-        float pulse = std::sin(t * 1.2f + float(i) * .3f);
+        float pulse = prF32Sin(t * 1.2f + float(i) * .3f);
         s.capsule(bulb, bulb, 2.8f, fade(cream, .55f + .45f * pulse * pulse));
     }
     s.label("ACT II", 48, 622, 13, gold);
     s.label("THE MOON KEEPS ITS OWN TIME", 48, 645, 10, cream);
-    float ticketWidth = 264 + 12 * std::sin(t * .7f);
+    float ticketWidth = 264 + 12 * prF32Sin(t * .7f);
     s.rect(634, 601, ticketWidth, 49, velvet);
     theatreFrame(s, PrRect{634, 601, 634 + ticketWidth, 650});
     s.label("TONIGHT AT EIGHT", 659, 631, 11, cream);
@@ -642,29 +641,29 @@ void koi(const Stage& s) {
     PrVec2 focus{};
     for (int i = 0; i < 4; ++i) {
         const Route& route = routes[i];
-        float phase = route.phase + route.speed * (t + .7f * std::sin(t * .27f + route.phase));
+        float phase = route.phase + route.speed * (t + .7f * prF32Sin(t * .27f + route.phase));
         PrVec2 p{
-            route.center.x + route.reach.x * (std::sin(phase) + .13f * std::sin(2 * phase)),
-            route.center.y + route.reach.y * std::sin(2 * phase + .4f),
+            route.center.x + route.reach.x * (prF32Sin(phase) + .13f * prF32Sin(2 * phase)),
+            route.center.y + route.reach.y * prF32Sin(2 * phase + .4f),
         };
         if (i == 0)
             focus = p;
-        float dx = route.speed * route.reach.x * (std::cos(phase) + .26f * std::cos(2 * phase));
-        float dy = route.speed * route.reach.y * 2 * std::cos(2 * phase + .4f);
-        float angle = std::atan2(dy, dx) + kPi / 2;
+        float dx = route.speed * route.reach.x * (prF32Cos(phase) + .26f * prF32Cos(2 * phase));
+        float dy = route.speed * route.reach.y * 2 * prF32Cos(2 * phase + .4f);
+        float angle = prF32Atan2(dy, dx) + kPi / 2;
         s.push(turn(angle, p, route.scale, route.scale));
         drawImage(s.list, fish(FishColoring_Shadow), PrRect{0, 0, 64, 64}, PrRect{-65, -57, 75, 83},
             PrDrawSampling_Nearest, 1);
         drawImage(s.list, fish(i % 3 == 1 ? FishColoring_Gold : FishColoring_Plain), PrRect{0, 0, 64, 64},
             PrRect{-70, -70, 70, 70}, PrDrawSampling_Nearest, 1);
         s.pop();
-        float wake = std::fmod(t * .24f + float(i) * .13f, 1.0f);
+        float wake = prF32Fmod(t * .24f + float(i) * .13f, 1.0f);
         PrDrawStroke stroke = strokeOf(1);
         prDrawListEllipse(s.list, PrVec2{p.x - 10, p.y + 12}, PrVec2{17 + wake * 28, 8 + wake * 15}, angle,
             {.color = fade(linen, (1 - wake) * .12f), .stroke = &stroke});
     }
     for (int i = 0; i < 6; ++i) {
-        PrVec2 p{128 + float((i * 71) % 156), 332 + float((i * 47) % 204) + 3 * std::sin(t * .6f + float(i))};
+        PrVec2 p{128 + float((i * 71) % 156), 332 + float((i * 47) % 204) + 3 * prF32Sin(t * .6f + float(i))};
         float radius = 25 + float(i % 3) * 8;
         s.capsule(PrVec2{p.x + 4, p.y + 5}, PrVec2{p.x + 4, p.y + 5}, radius, fade(kGalleryInk, .13f));
         prDrawListSector(s.list, p, 0, radius, -.55f, 2 * kPi - .25f,
@@ -697,7 +696,7 @@ void koi(const Stage& s) {
     s.capsule(lens, lens, 114, PrColor{.71f, .65f, .42f, 1});
     s.capsule(lens, lens, 108, pondColor);
     // The lens magnifies part of a fish, spread over its bounds.
-    PrDrawSource detail = prDrawSourceImage(fish(), PrRect{17 + 2 * std::sin(t * .4f), 7 + 2 * std::cos(t * .5f), 0, 0});
+    PrDrawSource detail = prDrawSourceImage(fish(), PrRect{17 + 2 * prF32Sin(t * .4f), 7 + 2 * prF32Cos(t * .5f), 0, 0});
     detail.rect.right = detail.rect.left + 28;
     detail.rect.bottom = detail.rect.top + 28;
     PrDrawBrush magnified = prDrawBrushImage(detail, PrRect{0, 0, 1, 1}, PrDrawSampling_Nearest);
@@ -721,7 +720,7 @@ void stars(const Stage& s) {
     s.tiles(PrVec2{960, 640}, [&](PrVec2 corner) {
         for (uint32_t i = 0; i < 110; ++i) {
             PrVec2 p = corner + PrVec2{float((i * 313 + 47) % 960), float((i * 157 + 23) % 640)};
-            float alpha = .12f + .2f * (1 + std::sin(s.t * .6f + float(i)));
+            float alpha = .12f + .2f * (1 + prF32Sin(s.t * .6f + float(i)));
             s.capsule(p, p, i % 9 == 0 ? 1.2f : .55f, fade(kCyan, alpha));
         }
     });
@@ -759,11 +758,11 @@ void reactor(const Stage& s) {
         }, fade(i % 2 ? kCyan : kViolet, .18f));
         s.beam(orbit(center, 50, a), tip, .85f, fade(kCyan, .8f));
     }
-    s.glow(center, 68 + 5 * std::sin(t * 3), kCyan);
+    s.glow(center, 68 + 5 * prF32Sin(t * 3), kCyan);
     s.capsule(center, center, 23, kCyan);
     s.capsule(center, center, 12, kWhite);
     for (int i = 0; i < 54; ++i) {
-        float phase = std::fmod(float(i) * .618034f + t * .15f, 1.0f);
+        float phase = prF32Fmod(float(i) * .618034f + t * .15f, 1.0f);
         float a = float(i) * 2.399963f + t * .12f;
         float r = 58 + phase * 196;
         s.beam(orbit(center, r - 5 - phase * 9, a), orbit(center, r, a), .65f,
@@ -772,12 +771,10 @@ void reactor(const Stage& s) {
     cutPanel(s, PrRect{632, 171, 918, 595}, PrColor{.035f, .045f, .095f, .94f});
     s.beam(PrVec2{633, 193}, PrVec2{633, 303}, 1, kViolet);
     s.label("CORE OUTPUT", 658, 211, 12, fade(kCyan, .65f));
-    char value[32];
-    std::snprintf(value, sizeof(value), "%05.1f", 84.0 + std::sin(double(t) * 1.4) * 1.7);
-    s.label(value, 653, 281, 57, kWhite);
+    s.label(format("{:05.1f}", 84.0 + prF64Sin(double(t) * 1.4) * 1.7), 653, 281, 57, kWhite);
     s.label("TERAWATTS", 658, 309, 11, kCyan);
     for (int i = 0; i < 34; ++i) {
-        float h = 14 + 22 * (1 + std::sin(float(i) * .6f - t * 2)) + 8 * std::cos(float(i) * 1.3f + t);
+        float h = 14 + 22 * (1 + prF32Sin(float(i) * .6f - t * 2)) + 8 * prF32Cos(float(i) * 1.3f + t);
         s.rect(658 + float(i) * 6.5f, 411 - h, 3.5f, h, fade(i > 27 ? kHot : kCyan, .75f), 1);
     }
     s.label("CONTAINMENT", 658, 452, 11, fade(kCyan, .65f));
@@ -798,8 +795,8 @@ void combat(const Stage& s) {
     s.across(960, [&](float left) {
         for (uint32_t i = 0; i < 72; ++i) {
             float x = left + float((i * 313 + 47) % 960);
-            float y = s.view.top + std::fmod(float(i * 157) + t * 6, 410 - s.view.top);
-            s.capsule(PrVec2{x, y}, PrVec2{x - 2, y + 4}, .55f, fade(amber, .14f + .1f * std::sin(t + float(i))));
+            float y = s.view.top + prF32Fmod(float(i * 157) + t * 6, 410 - s.view.top);
+            s.capsule(PrVec2{x, y}, PrVec2{x - 2, y + 4}, .55f, fade(amber, .14f + .1f * prF32Sin(t + float(i))));
         }
     });
     s.glow(PrVec2{490, 340}, 330, fade(amber, .7f));
@@ -817,18 +814,18 @@ void combat(const Stage& s) {
         s.capsule(PrVec2{480 + float(i) * 26, 412}, PrVec2{480 + float(i) * (26 + 154 * reach), s.view.bottom}, .55f,
             fade(amber, .22f));
     for (int i = 0; i < 12; ++i) {
-        float phase = std::fmod(float(i) / 12 + t * .055f, 1.0f);
+        float phase = prF32Fmod(float(i) / 12 + t * .055f, 1.0f);
         float y = 414 + phase * phase * 300 * reach;
         s.capsule(PrVec2{s.view.left, y}, PrVec2{s.view.right, y}, .6f, fade(amber, .12f + phase * .24f));
     }
     s.label("GHOST RUNNER", 40, 64, 31, kWhite);
     s.label("SECTOR 09  /  INTERCEPT", 42, 93, 11, acid);
     s.label("LIVE FEED", 624, 50, 11, ember);
-    s.capsule(PrVec2{607, 46}, PrVec2{607, 46}, 3 + std::sin(t * 3), ember);
-    PrVec2 ship{478 + 26 * std::sin(t * .9f), 306 + 16 * std::cos(t * 1.2f)};
+    s.capsule(PrVec2{607, 46}, PrVec2{607, 46}, 3 + prF32Sin(t * 3), ember);
+    PrVec2 ship{478 + 26 * prF32Sin(t * .9f), 306 + 16 * prF32Cos(t * 1.2f)};
     s.glow(PrVec2{ship.x, ship.y + 47}, 80, fade(ember, .8f));
-    s.beam(PrVec2{ship.x - 24, ship.y + 38}, PrVec2{ship.x - 29, ship.y + 88 + 10 * std::sin(t * 12)}, 3, ember);
-    s.beam(PrVec2{ship.x + 24, ship.y + 38}, PrVec2{ship.x + 29, ship.y + 88 + 10 * std::cos(t * 12)}, 3, ember);
+    s.beam(PrVec2{ship.x - 24, ship.y + 38}, PrVec2{ship.x - 29, ship.y + 88 + 10 * prF32Sin(t * 12)}, 3, ember);
+    s.beam(PrVec2{ship.x + 24, ship.y + 38}, PrVec2{ship.x + 29, ship.y + 88 + 10 * prF32Cos(t * 12)}, 3, ember);
     s.polygon({
         {ship.x, ship.y - 85},
         {ship.x + 91, ship.y + 49},
@@ -874,7 +871,7 @@ void combat(const Stage& s) {
     const char* names[] = {"DASH", "PULSE", "CLOAK"};
     for (int i = 0; i < 3; ++i) {
         PrVec2 c{365 + float(i) * 116, 592};
-        float progress = std::fmod(t * .08f + float(i) * .27f, 1.0f);
+        float progress = prF32Fmod(t * .08f + float(i) * .27f, 1.0f);
         s.capsule(c, c, 32, PrColor{.11f, .13f, .065f, .9f});
         s.ring(c, 35, 3, -kPi / 2, 2 * kPi * progress, i == 1 ? ember : acid);
         s.label(keys[i], c.x - 8, c.y + 8, 22, kWhite);
@@ -897,13 +894,13 @@ void jelly(const Stage& s) {
     s.label("JAM!", 39, 148, 78, plum);
     s.label("A LITTLE SHAPE-SHIFTING MISCHIEF", 46, 179, 11, fade(plum, .7f));
     for (int layer = 0; layer < 2; ++layer) {
-        std::vector<PrVec2> hill{{s.view.left, s.view.bottom}};
+        Array<PrVec2> hill({{s.view.left, s.view.bottom}});
         float x = s.view.left;
         for (; x < s.view.right + 24; x += 24)
-            hill.push_back({
-                x, layer == 0 ? 460 + 25 * std::sin(x * .009f + t * .2f) : 556 + 20 * std::sin(x * .012f - t * .12f),
+            hill.push({
+                x, layer == 0 ? 460 + 25 * prF32Sin(x * .009f + t * .2f) : 556 + 20 * prF32Sin(x * .012f - t * .12f),
             });
-        hill.push_back({x - 24, s.view.bottom});
+        hill.push({x - 24, s.view.bottom});
         s.polygon(hill, layer == 0 ? PrColor{.73f, .82f, .58f, 1} : PrColor{.50f, .69f, .49f, 1});
     }
     const PrVec2 positions[] = {{387, 332}, {684, 328}, {190, 449}, {463, 468}, {761, 454}};
@@ -920,25 +917,26 @@ void jelly(const Stage& s) {
     for (int i = 0; i < 5; ++i) {
         float phase = t * 2 + float(i) * 1.7f;
         float size = i < 2 ? 92.0f : 143.0f;
-        float bounce = std::max(0.f, std::sin(phase)) * 19 * (1 - held);
-        float squash = 1 + .08f * std::cos(phase * 2) * (1 - held) + .45f * held;
+        float bounce = max(0.f, prF32Sin(phase)) * 19 * (1 - held);
+        float squash = 1 + .08f * prF32Cos(phase * 2) * (1 - held) + .45f * held;
         float sink = size * .5f * (1 - 1 / squash);
         PrVec2 p = positions[i];
         prDrawListEllipse(s.list, PrVec2{p.x, p.y + size * .48f}, PrVec2{size * .43f * (1 + .3f * held), 8}, 0,
             {.color = fade(plum, .10f)});
-        s.push(turn(.09f * std::sin(phase) * (1 - held), PrVec2{p.x, p.y - bounce + sink}, squash, 1 / squash));
+        s.push(turn(.09f * prF32Sin(phase) * (1 - held), PrVec2{p.x, p.y - bounce + sink}, squash, 1 / squash));
         PrCornerRect blob{PrRect{-size * .5f, -size * .5f, size * .5f, size * .5f}, {}};
         for (uint32_t corner = 0; corner < 4; ++corner)
             blob.corners[corner] = PrCorner{
                 PrVec2{size * .42f, size * .42f},
-                .6f + 1.6f * std::sin(t * .6f + float(i) * 1.9f + float(corner) * .5f),
+                .6f + 1.6f * prF32Sin(t * .6f + float(i) * 1.9f + float(corner) * .5f),
             };
         prDrawListCornerRect(s.list, blob, {.color = colors[i]});
         float eye = size * .1f;
         float separation = size * .17f;
-        float gaze = std::clamp((pointer.x - p.x) * .012f, -3.0f, 3.0f);
-        bool blink = std::sin(t * .8f + float(i) * .9f) > .993f;
-        for (float x : {-separation, separation}) {
+        float gaze = clamp((pointer.x - p.x) * .012f, -3.0f, 3.0f);
+        bool blink = prF32Sin(t * .8f + float(i) * .9f) > .993f;
+        const float eyes[] = {-separation, separation};
+        for (float x : eyes) {
             if (blink) {
                 s.capsule(PrVec2{x - eye * .6f, -5}, PrVec2{x + eye * .6f, -5}, 2, plum);
             } else {
@@ -953,8 +951,8 @@ void jelly(const Stage& s) {
     }
     for (int i = 0; i < 14; ++i) {
         float x = 22 + float(i) * 70;
-        float y = 570 + 13 * std::sin(float(i) * 1.8f);
-        float sway = 3 * std::sin(t + float(i));
+        float y = 570 + 13 * prF32Sin(float(i) * 1.8f);
+        float sway = 3 * prF32Sin(t + float(i));
         s.capsule(PrVec2{x, y + 17}, PrVec2{x + sway, y}, 1.5f, fade(plum, .35f));
         for (int petal = 0; petal < 5; ++petal) {
             PrVec2 point = orbit(PrVec2{x + sway, y}, 5, float(petal) * 2 * kPi / 5);
@@ -1003,10 +1001,10 @@ void chroma(const Stage& s) {
     float phase = .22f * s.t;
     auto curve = [&](float u, float strand) {
         float fold = u * 2.1f * kPi + phase;
-        float spread = 36 + 80 * (.5f + .5f * std::sin(u * 2 * kPi - phase));
+        float spread = 36 + 80 * (.5f + .5f * prF32Sin(u * 2 * kPi - phase));
         return PrVec2{
-            s.view.left - 60 + (s.view.right - s.view.left + 120) * u + strand * 25 * std::cos(fold),
-            360 + 108 * std::sin(fold) + strand * spread * std::cos(fold * .65f + phase),
+            s.view.left - 60 + (s.view.right - s.view.left + 120) * u + strand * 25 * prF32Cos(fold),
+            360 + 108 * prF32Sin(fold) + strand * spread * prF32Cos(fold * .65f + phase),
         };
     };
     prDrawListPushClipRect(s.list, PrRect{s.view.left, 168, s.view.right, 537}, PrDrawEdges_Antialiased);
@@ -1017,7 +1015,7 @@ void chroma(const Stage& s) {
         for (int i = 0; i < 129; ++i)
             points[i] = curve(float(i) / 128, across);
         // Each strand's palette, darkened by the light that falls on it.
-        float lighting = .62f + .38f * std::pow(.5f + .5f * std::sin(across * 3.2f + phase), 2.f);
+        float lighting = .62f + .38f * prF32Pow(.5f + .5f * prF32Sin(across * 3.2f + phase), 2.f);
         PrDrawColorStop lit[2];
         for (uint32_t k = 0; k < 2; ++k) {
             PrColor c = palette[k].color;
@@ -1080,7 +1078,7 @@ void airmail(const Stage& s) {
     s.fill(PrColor{.89f, .87f, .79f, 1});
     // The ruled lines: slanting down from under the heading, and across, falling slightly to the left.
     float lean = 110.0f / 550 * (s.view.bottom - 170);
-    for (float x = -100 - 47 * std::ceil((lean - s.view.left - 100) / 47); x < s.view.right; x += 47)
+    for (float x = -100 - 47 * prF32Ceil((lean - s.view.left - 100) / 47); x < s.view.right; x += 47)
         s.capsule(PrVec2{x, 170}, PrVec2{x + lean, s.view.bottom}, .6f, fade(blue, .04f));
     for (float y = 175; y < s.view.bottom + 30; y += 27)
         s.capsule(PrVec2{s.view.left, y - 30 * s.view.left / 960}, PrVec2{s.view.right, y - 30 * s.view.right / 960},
@@ -1089,7 +1087,7 @@ void airmail(const Stage& s) {
     s.label("AIRMAIL", 42, 115, 76, blue);
     s.label("Small worlds. Long journeys.", 48, 147, 15, red);
 
-    s.push(turn(-.19f + .014f * std::sin(t * .3f), PrVec2{202, 364 + 5 * std::sin(t * .45f)}));
+    s.push(turn(-.19f + .014f * prF32Sin(t * .3f), PrVec2{202, 364 + 5 * prF32Sin(t * .45f)}));
     const PrCornerRect cut{PrRect{-116, -143, 116, 143}, {{{15, 15}, 0}, {{15, 15}, 0}, {{15, 15}, 0}, {{15, 15}, 0}}};
     prDrawListCornerRect(s.list, cut, {.color = cream});
     postcardFrame(s, PrRect{-116, -143, 116, 143}, PrDrawBorderStyle_Double, green, 12, 0, 15);
@@ -1099,12 +1097,12 @@ void airmail(const Stage& s) {
     s.polygon({{-26, 59}, {44, -21}, {93, 42}, {93, 96}, {-26, 96}}, PrColor{.12f, .33f, .29f, 1});
     for (int i = 0; i < 5; ++i) {
         float y = 47 + float(i) * 10;
-        s.capsule(PrVec2{-84 + 7 * std::sin(t + float(i)), y}, PrVec2{81, y - 3}, .7f, fade(cream, .4f));
+        s.capsule(PrVec2{-84 + 7 * prF32Sin(t + float(i)), y}, PrVec2{81, y - 3}, .7f, fade(cream, .4f));
     }
     s.label("NORTH COAST", -88, 120, 16, green);
     s.pop();
 
-    s.push(turn(.17f + .016f * std::sin(t * .35f), PrVec2{755, 354 + 6 * std::sin(t * .5f + 2)}));
+    s.push(turn(.17f + .016f * prF32Sin(t * .35f), PrVec2{755, 354 + 6 * prF32Sin(t * .5f + 2)}));
     const PrCornerRect smooth{
         PrRect{-113, -132, 113, 132},
         {{{22, 22}, 2}, {{22, 22}, 2}, {{22, 22}, 2}, {{22, 22}, 2}},
@@ -1115,15 +1113,15 @@ void airmail(const Stage& s) {
     postcardFrame(s, PrRect{-88, -106, 88, 75}, PrDrawBorderStyle_Inset, PrColor{.83f, .63f, .43f, 1}, 4, 0, 0);
     s.capsule(PrVec2{0, 62}, PrVec2{0, -4}, 3, green);
     for (int petal = 0; petal < 8; ++petal) {
-        float angle = float(petal) * kPi / 4 + .1f * std::sin(t * .7f);
+        float angle = float(petal) * kPi / 4 + .1f * prF32Sin(t * .7f);
         s.capsule(orbit(PrVec2{0, -30}, 12, angle), orbit(PrVec2{0, -30}, 38, angle), 12, red);
     }
     s.capsule(PrVec2{0, -30}, PrVec2{0, -30}, 15, PrColor{.96f, .70f, .27f, 1});
     s.label("SUN ROOM", -78, 108, 19, cream);
     s.pop();
 
-    float cardWidth = 432 + 64 * std::sin(t * .65f);
-    float cardHeight = 286 + 38 * std::sin(t * .8f + 1);
+    float cardWidth = 432 + 64 * prF32Sin(t * .65f);
+    float cardHeight = 286 + 38 * prF32Sin(t * .8f + 1);
     s.push(turn(-.035f, PrVec2{477, 398}));
     PrDrawBorder border{};
     border.shape.rect = PrRect{-cardWidth / 2, -cardHeight / 2, cardWidth / 2, cardHeight / 2};
@@ -1137,7 +1135,7 @@ void airmail(const Stage& s) {
             periods[i] * (postal[style] == PrDrawBorderStyle_Dotted ? 2u : 1u),
         };
     prDrawListBorder(s.list, &border, {});
-    float artwork = std::min(cardWidth / 432, cardHeight / 286);
+    float artwork = min(cardWidth / 432, cardHeight / 286);
     s.push(PrAffine2{artwork, 0, 0, artwork, 0, 0});
     s.rect(-192, -116, 228, 230, sky);
     postcardFrame(s, PrRect{-192, -116, 36, 114}, PrDrawBorderStyle_Solid, blue, 2, 0, 0);
@@ -1146,11 +1144,11 @@ void airmail(const Stage& s) {
     s.polygon({{-146, 13}, {-69, -34}, {34, 10}, {34, 114}, {-146, 114}}, PrColor{.20f, .39f, .45f, 1});
     s.rect(-190, 18, 224, 95, PrColor{.18f, .48f, .60f, 1});
     for (int i = 0; i < 8; ++i) {
-        float x = -180 + float((i * 53) % 153) + 8 * std::sin(t * .8f + float(i));
+        float x = -180 + float((i * 53) % 153) + 8 * prF32Sin(t * .8f + float(i));
         float y = 30 + float(i) * 10;
         s.capsule(PrVec2{x, y}, PrVec2{x + 32, y}, .8f, fade(cream, .55f));
     }
-    float bird = 9 * std::sin(t);
+    float bird = 9 * prF32Sin(t);
     s.capsule(PrVec2{-161, -83}, PrVec2{-152, -78 + bird * .2f}, 1.3f, blue);
     s.capsule(PrVec2{-152, -78 + bird * .2f}, PrVec2{-143, -83}, 1.3f, blue);
     s.label("WISH YOU", 57, -69, 16, blue);
@@ -1175,9 +1173,7 @@ void airmail(const Stage& s) {
     s.label("A NEW EDGE EVERY FEW SECONDS", 630, 591, 10, blue);
     s.rect(630, 603, 281, 48, cream, 8);
     postcardFrame(s, PrRect{630, 603, 911, 651}, PrDrawBorderStyle_Ridge, blue, 3, 1, 8);
-    char caption[48];
-    std::snprintf(caption, sizeof(caption), "EDGE / %s", postalName[style]);
-    s.label(caption, 650, 633, 15, blue);
+    s.label(format("EDGE / {}", postalName[style]), 650, 633, 15, blue);
 }
 
 // Draws a shadow of the rounded box, dropped or inner.
@@ -1204,16 +1200,16 @@ void sunroom(const Stage& s) {
     const PrColor olive{.28f, .34f, .20f, 1};
     s.fill(PrColor{.91f, .70f, .53f, 1});
     // Broad shafts of afternoon light drift across the tabletop.
-    s.push(PrAffine2{1, 0, -.48f, 1, 100 + 14 * std::sin(t * .2f), 0});
+    s.push(PrAffine2{1, 0, -.48f, 1, 100 + 14 * prF32Sin(t * .2f), 0});
     float from = s.view.left + .48f * s.view.top - 300;
-    for (float x = -240 + 245 * std::floor((from + 240) / 245); x < s.view.right + .48f * s.view.bottom; x += 245)
+    for (float x = -240 + 245 * prF32Floor((from + 240) / 245); x < s.view.right + .48f * s.view.bottom; x += 245)
         s.rect(x, s.view.top, 160, s.view.bottom - s.view.top, PrColor{1, .94f, .72f, .22f});
     s.pop();
     s.label("SLOW DAYS / GOOD FREQUENCIES", 48, 53, 12, clay);
     s.label("Sunday stereo.", 45, 120, 54, plum);
     s.label("Leave a little room for doing nothing.", 48, 154, 14, plum);
-    s.push(turn(-.035f + .012f * std::sin(t * .4f), PrVec2{477, 389 + 4 * std::sin(t * .7f)}));
-    radioShadow(s, PrRect{-332, -163, 332, 173}, 44, PrVec2{16 + 6 * std::sin(t * .35f), 26}, 34, -3, fade(plum, .33f));
+    s.push(turn(-.035f + .012f * prF32Sin(t * .4f), PrVec2{477, 389 + 4 * prF32Sin(t * .7f)}));
+    radioShadow(s, PrRect{-332, -163, 332, 173}, 44, PrVec2{16 + 6 * prF32Sin(t * .35f), 26}, 34, -3, fade(plum, .33f));
     radioShadow(s, PrRect{-332, -163, 332, 173}, 44, PrVec2{3, 7}, 8, 1, fade(plum, .22f));
     s.rect(-332, -163, 664, 336, clay, 44);
     s.rect(-326, -161, 652, 321, cream, 41);
@@ -1229,7 +1225,7 @@ void sunroom(const Stage& s) {
     for (int row = 0; row < 18; ++row) {
         for (int column = 0; column < 22; ++column) {
             PrVec2 p{-274 + float(column) * 12 + (row % 2 ? 6.f : 0.f), -104 + float(row) * 12};
-            float pulse = .82f + .18f * std::sin(t * 3 - float(row) * .18f - float(column) * .12f);
+            float pulse = .82f + .18f * prF32Sin(t * 3 - float(row) * .18f - float(column) * .12f);
             s.capsule(p, p, 2.3f, fade(cream, pulse * .6f));
         }
     }
@@ -1237,7 +1233,7 @@ void sunroom(const Stage& s) {
     s.label("SUNROOM", -249, 144, 13, clay);
     s.rect(30, -123, 258, 90, olive, 15);
     radioShadow(s, PrRect{30, -123, 288, -33}, 15, PrVec2{4, 7}, 12, 1, fade(plum, .85f), true);
-    float tune = 90 + 150 * (.5f + .5f * std::sin(t * .27f));
+    float tune = 90 + 150 * (.5f + .5f * prF32Sin(t * .27f));
     for (int i = 0; i < 25; ++i) {
         float x = 47 + float(i) * 9;
         s.capsule(PrVec2{x, -61}, PrVec2{x, i % 5 == 0 ? -78.f : -71.f}, .7f, fade(cream, .65f));
@@ -1248,7 +1244,7 @@ void sunroom(const Stage& s) {
     const char* keys[] = {"PLAY", "AM", "FM"};
     for (int i = 0; i < 3; ++i) {
         float x = 34 + float(i) * 87;
-        float depression = 2 + 2 * std::sin(t * 1.8f - float(i) * 2);
+        float depression = 2 + 2 * prF32Sin(t * 1.8f - float(i) * 2);
         PrRect key{x, 12 + depression, x + 73, 50 + depression};
         radioShadow(s, key, 10, PrVec2{0, 6 - depression}, 7, 0, fade(plum, .30f));
         s.rect(key.left, key.top, 73, 38, i == 0 ? clay : PrColor{.92f, .76f, .51f, 1}, 10);
@@ -1260,14 +1256,14 @@ void sunroom(const Stage& s) {
         radioShadow(s, PrRect{x - 28, 74, x + 28, 130}, 28, PrVec2{3, 5}, 8, 0, fade(plum, .35f));
         s.rect(x - 28, 74, 56, 56, clay, 28);
         s.rect(x - 25, 75, 50, 50, PrColor{.97f, .80f, .56f, 1}, 25);
-        float a = -.8f + .6f * std::sin(t * .27f + float(i));
-        s.capsule(PrVec2{x + std::sin(a) * 13, 100 - std::cos(a) * 13},
-            PrVec2{x + std::sin(a) * 22, 100 - std::cos(a) * 22}, 2, clay);
+        float a = -.8f + .6f * prF32Sin(t * .27f + float(i));
+        s.capsule(PrVec2{x + prF32Sin(a) * 13, 100 - prF32Cos(a) * 13},
+            PrVec2{x + prF32Sin(a) * 22, 100 - prF32Cos(a) * 22}, 2, clay);
         s.label(i == 0 ? "VOLUME" : "TUNING", x - 22, 148, 10, clay);
     }
     s.pop();
     s.label("ON AIR", 49, 626, 11, clay);
-    s.capsule(PrVec2{119, 622}, PrVec2{119, 622}, 3, fade(clay, .55f + .45f * std::sin(t * 2)));
+    s.capsule(PrVec2{119, 622}, PrVec2{119, 622}, 3, fade(clay, .55f + .45f * prF32Sin(t * 2)));
     s.label("Sunroom sessions", 49, 654, 22, plum);
     s.label("AN AFTERNOON ON REPEAT", 648, 650, 12, plum);
 }
@@ -1299,7 +1295,7 @@ TextStyle rubyStyle(const TextStyle& base) {
 
 // Moves each glyph `tracking` further along the run's axis than the one before it.
 void track(ShapedText& shaped, float tracking, PrTextAxis axis) {
-    for (size_t i = 0; i < shaped.glyphs.size(); ++i) {
+    for (uint32_t i = 0; i < shaped.glyphs.count(); ++i) {
         float by = float(i) * tracking;
         if (axis == PrTextAxis_Vertical)
             shaped.glyphs[i].position.y += by;
@@ -1310,12 +1306,12 @@ void track(ShapedText& shaped, float tracking, PrTextAxis axis) {
 
 // Draws the text down the column whose center line passes through `top`, from `top`, with `tracking` between its
 // characters. Returns the advance down.
-float upright(const Stage& s, const TextStyle& style, const char* text, PrVec2 top, float tracking = 0) {
+float upright(const Stage& s, const TextStyle& style, PrStringView text, PrVec2 top, float tracking = 0) {
     ShapedText shaped;
     float down = shapeText(style, text, top, shaped);
     track(shaped, tracking, PrTextAxis_Vertical);
     drawGlyphs(s.list, style, shaped);
-    return down + float(std::max<size_t>(shaped.glyphs.size(), 1) - 1) * tracking;
+    return down + float(max<uint32_t>(shaped.glyphs.count(), 1) - 1) * tracking;
 }
 
 // Sets two digits across in the em of a vertical column that starts at `top` (縦中横), in the font's half-width forms,
@@ -1327,7 +1323,7 @@ void combined(const Stage& s, const TextStyle& column, const char* digits, PrVec
     across.features = &halfWidth;
     across.featureCount = 1;
     float width = textAdvance(across, digits);
-    float squeeze = std::min(1.0f, column.size / width);
+    float squeeze = min(1.0f, column.size / width);
     float baseline = top.y + column.size / 2 + prFontMetrics(column.font).capHeight * column.size / 2;
     s.push(PrAffine2{squeeze, 0, 0, 1, top.x - width * squeeze / 2, baseline});
     drawText(s.list, across, digits, PrVec2{0, 0});
@@ -1336,7 +1332,7 @@ void combined(const Stage& s, const TextStyle& column, const char* digits, PrVec
 
 // Sets Latin text sideways down the column whose center line passes through `top`, turned a quarter clockwise as a
 // vertical line turns it, with its capitals centered on the line. Returns the advance down.
-float sideways(const Stage& s, const TextStyle& style, const char* text, PrVec2 top, float tracking = 0) {
+float sideways(const Stage& s, const TextStyle& style, PrStringView text, PrVec2 top, float tracking = 0) {
     ShapedText shaped;
     float capHeight = prFontMetrics(style.font).capHeight * style.size;
     float down = shapeText(style, text, PrVec2{0, capHeight / 2}, shaped);
@@ -1344,20 +1340,20 @@ float sideways(const Stage& s, const TextStyle& style, const char* text, PrVec2 
     s.push(turn(kPi / 2, top));
     drawGlyphs(s.list, style, shaped);
     s.pop();
-    return down + float(std::max<size_t>(shaped.glyphs.size(), 1) - 1) * tracking;
+    return down + float(max<uint32_t>(shaped.glyphs.count(), 1) - 1) * tracking;
 }
 
 // Sets a reading beside its base, which runs `length` down from `top`, on the center line through `top`. A reading
 // shorter than its base spreads with half as much space at its ends as between its characters, and a longer one
 // overhangs both ends equally.
-void ruby(const Stage& s, const TextStyle& style, const char* reading, PrVec2 top, float length) {
+void ruby(const Stage& s, const TextStyle& style, PrStringView reading, PrVec2 top, float length) {
     ShapedText shaped;
     float down = shapeText(style, reading, top, shaped);
-    if (shaped.glyphs.empty())
+    if (shaped.glyphs.isEmpty())
         return;
-    float count = float(shaped.glyphs.size());
+    float count = float(shaped.glyphs.count());
     float space = (length - down) / count;
-    for (size_t i = 0; i < shaped.glyphs.size(); ++i)
+    for (uint32_t i = 0; i < shaped.glyphs.count(); ++i)
         shaped.glyphs[i].position.y += space > 0 ? space * (float(i) + .5f) : space * count / 2;
     drawGlyphs(s.list, style, shaped);
 }
@@ -1365,15 +1361,24 @@ void ruby(const Stage& s, const TextStyle& style, const char* reading, PrVec2 to
 // A character of a paragraph: its code point, and its bytes.
 struct Character {
     uint32_t codePoint;
-    std::string text;
+    String text;
 };
 
 // A reading over `count` characters from `first`.
 struct Reading {
-    size_t first;
-    size_t count;
-    std::string text;
+    uint32_t first;
+    uint32_t count;
+    String text;
 };
+
+// Returns true if the code points of `set`, which a zero ends, hold `c`.
+bool inSet(const char32_t* set, uint32_t c) {
+    for (; *set != 0; ++set) {
+        if (uint32_t(*set) == c)
+            return true;
+    }
+    return false;
+}
 
 bool isKanji(uint32_t c) {
     return (c >= 0x4e00 && c <= 0x9fff) || c == U'々';
@@ -1382,44 +1387,41 @@ bool isKanji(uint32_t c) {
 // Characters that do not begin a column (行頭禁則): closing brackets, punctuation, small kana, the long vowel mark and the
 // iteration marks.
 bool beginsNoColumn(uint32_t c) {
-    return std::u32string_view(U"、。，．・：；？！ー…‥」』）〕】〉》ゝゞ々ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ").find(c) != std::u32string_view::npos;
+    return inSet(U"、。，．・：；？！ー…‥」』）〕】〉》ゝゞ々ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ", c);
 }
 
 // Characters that do not end a column (行末禁則): opening brackets.
 bool endsNoColumn(uint32_t c) {
-    return std::u32string_view(U"「『（〔【〈《").find(c) != std::u32string_view::npos;
+    return inSet(U"「『（〔【〈《", c);
 }
 
 // Punctuation that may hang below the end of a full column (ぶら下げ).
 bool hangs(uint32_t c) {
-    return std::u32string_view(U"、。，．").find(c) != std::u32string_view::npos;
+    return inSet(U"、。，．", c);
 }
 
 // Reads text that marks its readings as Aozora Bunko does: a reading in 《》 follows the run of kanji that it reads, or
 // the characters after a ｜.
-void readRuby(const char* text, std::vector<Character>& characters, std::vector<Reading>& readings) {
-    PrStringView view(text);
-    size_t marked = SIZE_MAX;
-    for (size_t at = 0; at < view.size;) {
+void readRuby(PrStringView text, Array<Character>& characters, Array<Reading>& readings) {
+    const PrStringView closing = "》";
+    uint32_t marked = UINT32_MAX;
+    for (size_t at = 0; at < text.size;) {
         uint32_t c = 0;
-        uint32_t length = prUtf8Decode(view, at, &c);
+        uint32_t length = prUtf8Decode(text, at, &c);
         if (c == U'｜') {
-            marked = characters.size();
+            marked = characters.count();
         } else if (c == U'《') {
-            size_t close = std::string_view(text + at, view.size - at).find("》");
-            size_t first = characters.size();
-            while (marked == SIZE_MAX && first > 0 && isKanji(characters[first - 1].codePoint))
+            size_t close = prStringFind(prStringSlice(text, at, text.size - at), closing);
+            uint32_t first = characters.count();
+            while (marked == UINT32_MAX && first > 0 && isKanji(characters[first - 1].codePoint))
                 --first;
-            if (marked != SIZE_MAX)
+            if (marked != UINT32_MAX)
                 first = marked;
-            readings.push_back(Reading{
-                first, characters.size() - first,
-                std::string(text + at + length, close - length),
-            });
-            marked = SIZE_MAX;
-            length = uint32_t(close + std::strlen("》"));
+            readings.push(Reading{first, characters.count() - first, prStringSlice(text, at + length, close - length)});
+            marked = UINT32_MAX;
+            length = uint32_t(close + closing.size);
         } else {
-            characters.push_back(Character{c, std::string(text + at, length)});
+            characters.push(Character{c, prStringSlice(text, at, length)});
         }
         at += length;
     }
@@ -1429,41 +1431,41 @@ void readRuby(const char* text, std::vector<Character>& characters, std::vector<
 // `pitch` apart, with its readings beside their bases. The paragraph begins one em down (字下げ). A column breaks where
 // neither its end nor the next column's start breaks a rule: punctuation that would begin the next column hangs below
 // this one, and otherwise characters move to the next column, and the column spreads to its full length.
-void paragraph(const Stage& s, const TextStyle& style, const char* text, PrVec2 top, uint32_t length, float pitch) {
-    std::vector<Character> characters;
-    std::vector<Reading> readings;
+void paragraph(const Stage& s, const TextStyle& style, PrStringView text, PrVec2 top, uint32_t length, float pitch) {
+    Array<Character> characters;
+    Array<Reading> readings;
     readRuby(text, characters, readings);
     const TextStyle readingStyle = rubyStyle(style);
     const float em = style.size;
-    auto splitsReading = [&](size_t at) {
+    auto splitsReading = [&](uint32_t at) {
         for (const Reading& r : readings)
             if (r.first < at && at < r.first + r.count)
                 return true;
         return false;
     };
     PrVec2 at = top;
-    for (size_t start = 0; start < characters.size(); at.x -= pitch) {
-        size_t room = start == 0 ? length - 1 : length;
+    for (uint32_t start = 0; start < characters.count(); at.x -= pitch) {
+        uint32_t room = start == 0 ? length - 1 : length;
         float y = start == 0 ? at.y + em : at.y;
-        size_t end = std::min(start + room, characters.size());
-        size_t hanging = 0;
-        if (end < characters.size() && hangs(characters[end].codePoint)) {
+        uint32_t end = min(start + room, characters.count());
+        uint32_t hanging = 0;
+        if (end < characters.count() && hangs(characters[end].codePoint)) {
             hanging = 1;
         } else {
-            while (end < characters.size() && end > start + 1 &&
+            while (end < characters.count() && end > start + 1 &&
                     (beginsNoColumn(characters[end].codePoint) || endsNoColumn(characters[end - 1].codePoint) ||
                         splitsReading(end)))
                 --end;
         }
-        size_t set = end - start;
+        uint32_t set = end - start;
         end += hanging;
-        std::string column;
-        for (size_t i = start; i < end; ++i)
-            column += characters[i].text;
+        String column;
+        for (uint32_t i = start; i < end; ++i)
+            column.append(characters[i].text);
         ShapedText shaped;
-        shapeText(style, column.c_str(), PrVec2{at.x, y}, shaped);
+        shapeText(style, column, PrVec2{at.x, y}, shaped);
         float spread = 0;
-        if (end < characters.size() && set < room && set > 1 && shaped.glyphs.size() == end - start)
+        if (end < characters.count() && set < room && set > 1 && shaped.glyphs.count() == end - start)
             spread = float(room - set) * em / float(set - 1);
         track(shaped, spread, PrTextAxis_Vertical);
         drawGlyphs(s.list, style, shaped);
@@ -1471,7 +1473,7 @@ void paragraph(const Stage& s, const TextStyle& style, const char* text, PrVec2 
             if (r.first < start || r.first + r.count > end)
                 continue;
             float from = y + float(r.first - start) * (em + spread);
-            ruby(s, readingStyle, r.text.c_str(), PrVec2{at.x + em / 2 + readingStyle.size / 2 + .5f, from},
+            ruby(s, readingStyle, r.text, PrVec2{at.x + em / 2 + readingStyle.size / 2 + .5f, from},
                 float(r.count) * em + float(r.count - 1) * spread);
         }
         start = end;
@@ -1480,14 +1482,14 @@ void paragraph(const Stage& s, const TextStyle& style, const char* text, PrVec2 
 
 // Draws a seal (落款) pressed in `ink`, its characters cut out of the ink in `ground`, with the worn edge of a stone
 // seal.
-void seal(const Stage& s, PrVec2 center, float size, const char* text, PrColor ink, PrColor ground) {
+void seal(const Stage& s, PrVec2 center, float size, PrStringView text, PrColor ink, PrColor ground) {
     s.push(turn(-.04f, center));
-    std::vector<PrVec2> edge;
+    Array<PrVec2> edge;
     float h = size / 2;
     for (int side = 0; side < 4; ++side) {
         for (int k = 0; k < 9; ++k) {
             float along = -h + size * float(k) / 9;
-            float wear = .7f * std::sin(float(side * 9 + k) * 12.9898f) * std::sin(float(k) * 4.1f + 1);
+            float wear = .7f * prF32Sin(float(side * 9 + k) * 12.9898f) * prF32Sin(float(k) * 4.1f + 1);
             PrVec2 p;
             if (side == 0)
                 p = PrVec2{along, -h + wear};
@@ -1497,7 +1499,7 @@ void seal(const Stage& s, PrVec2 center, float size, const char* text, PrColor i
                 p = PrVec2{-along, h - wear};
             else
                 p = PrVec2{-h + wear, -along};
-            edge.push_back(p);
+            edge.push(p);
         }
     }
     s.polygon(edge, ink);
@@ -1511,16 +1513,16 @@ void seal(const Stage& s, PrVec2 center, float size, const char* text, PrColor i
 
 // Draws a maple leaf of `radius` at the origin, its seven lobes narrow and deep, and its stem down.
 void mapleLeaf(const Stage& s, float radius, PrColor color) {
-    std::vector<PrVec2> points{{0, radius * .2f}};
+    Array<PrVec2> points({{0, radius * .2f}});
     const float lobes[] = {.45f, .78f, .94f, 1, .94f, .78f, .45f};
     for (int j = 0; j < 7; ++j) {
         float angle = -kPi / 2 + float(j - 3) * .7f;
         float reach = radius * lobes[j];
-        points.push_back(orbit(PrVec2{0, 0}, reach * .62f, angle - .26f));
-        points.push_back(orbit(PrVec2{0, 0}, reach, angle));
-        points.push_back(orbit(PrVec2{0, 0}, reach * .62f, angle + .26f));
+        points.push(orbit(PrVec2{0, 0}, reach * .62f, angle - .26f));
+        points.push(orbit(PrVec2{0, 0}, reach, angle));
+        points.push(orbit(PrVec2{0, 0}, reach * .62f, angle + .26f));
         if (j < 6)
-            points.push_back(orbit(PrVec2{0, 0}, radius * .4f, angle + .35f));
+            points.push(orbit(PrVec2{0, 0}, radius * .4f, angle + .35f));
     }
     s.polygon(points, color);
     s.capsule(PrVec2{0, 0}, PrVec2{0, radius * .9f}, radius * .06f, color);
@@ -1529,13 +1531,13 @@ void mapleLeaf(const Stage& s, float radius, PrColor color) {
 // The height of each range of hills above the horizon at `x`: the far peak, the middle hills and the near trees.
 float hills(int range, float x) {
     if (range == 0) {
-        float peak = 205 * std::exp(-std::fabs(x - 520) / 118);
-        return std::min(peak, 190.0f) + 18 + 6 * std::sin(x * .02f);
+        float peak = 205 * prF32Exp(-prF32Abs(x - 520) / 118);
+        return min(peak, 190.0f) + 18 + 6 * prF32Sin(x * .02f);
     }
     if (range == 1)
-        return 34 + 22 * std::sin(x * .011f + 1) + 12 * std::sin(x * .027f + .4f) +
-            70 * std::exp(-(x - 170) * (x - 170) / 9000) + 44 * std::exp(-(x - 790) * (x - 790) / 16000);
-    return 12 + 6 * std::sin(x * .05f) + 4 * std::sin(x * .13f + 2) + 3 * std::fabs(std::sin(x * .31f));
+        return 34 + 22 * prF32Sin(x * .011f + 1) + 12 * prF32Sin(x * .027f + .4f) +
+            70 * prF32Exp(-(x - 170) * (x - 170) / 9000) + 44 * prF32Exp(-(x - 790) * (x - 790) / 16000);
+    return 12 + 6 * prF32Sin(x * .05f) + 4 * prF32Sin(x * .13f + 2) + 3 * prF32Abs(prF32Sin(x * .31f));
 }
 
 // Draws a five-storied pagoda's silhouette, standing at `base`.
@@ -1603,7 +1605,7 @@ void tsukimi(const Stage& s) {
     s.across(960, [&](float left) {
         for (int i = 0; i < 46; ++i) {
             PrVec2 p{left + float((i * 211 + 31) % 960), s.view.top + float((i * 97 + 13) % 230)};
-            float alpha = (.18f + .14f * std::sin(t * .5f + float(i) * 2.3f)) * (1 - std::max(p.y, 0.0f) / 260);
+            float alpha = (.18f + .14f * prF32Sin(t * .5f + float(i) * 2.3f)) * (1 - max(p.y, 0.0f) / 260);
             s.capsule(p, p, i % 7 == 0 ? .9f : .5f, fade(moonWhite, alpha));
         }
     });
@@ -1631,22 +1633,22 @@ void tsukimi(const Stage& s) {
     PrDrawBrush waterBrush = prDrawBrushLinear(PrVec2{0, horizon}, PrVec2{0, kSceneHeight}, water, 3);
     prDrawListRect(s.list, PrRect{s.view.left, horizon, s.view.right, s.view.bottom}, {.brush = &waterBrush});
     for (int range = 0; range < 3; ++range) {
-        std::vector<PrVec2> above{{s.view.right + 10, horizon}, {s.view.left - 10, horizon}};
-        std::vector<PrVec2> below{{s.view.right + 10, horizon}, {s.view.left - 10, horizon}};
+        Array<PrVec2> above({{s.view.right + 10, horizon}, {s.view.left - 10, horizon}});
+        Array<PrVec2> below({{s.view.right + 10, horizon}, {s.view.left - 10, horizon}});
         for (float x = s.view.left - 10; x <= s.view.right + 10; x += 6) {
-            above.push_back(PrVec2{x, horizon - hills(range, x)});
-            below.push_back(PrVec2{x, horizon + hills(range, x) * .55f});
+            above.push(PrVec2{x, horizon - hills(range, x)});
+            below.push(PrVec2{x, horizon + hills(range, x) * .55f});
         }
         s.polygon(below, fade(ranges[range], .26f));
         s.polygon(above, ranges[range]);
         if (range == 0) {
             // Snow on the far peak, catching the last light.
-            std::vector<PrVec2> snow;
+            Array<PrVec2> snow;
             for (float x = 440; x <= 600; x += 3)
-                snow.push_back(PrVec2{x, horizon - hills(0, x)});
+                snow.push(PrVec2{x, horizon - hills(0, x)});
             for (float x = 600; x >= 440; x -= 3) {
-                float line = 152 + 9 * std::sin(x * .19f) + 4 * std::sin(x * .47f + 1);
-                snow.push_back(PrVec2{x, horizon - std::min(hills(0, x), line)});
+                float line = 152 + 9 * prF32Sin(x * .19f) + 4 * prF32Sin(x * .47f + 1);
+                snow.push(PrVec2{x, horizon - min(hills(0, x), line)});
             }
             s.polygon(snow, fade(PrColor{.85f, .74f, .80f, 1}, .35f));
         }
@@ -1666,9 +1668,9 @@ void tsukimi(const Stage& s) {
     s.pop();
     for (int k = 0; k < 26; ++k) {
         float y = horizon + 8 + float(k) * 8 + float(k * k) * .12f;
-        float swell = std::sin(t * .9f + float(k) * 1.7f);
+        float swell = prF32Sin(t * .9f + float(k) * 1.7f);
         float reach = (10 + 18 * swell * swell) * (1 - float(k) / 34);
-        float x = moon.x + 4 * std::sin(t * .6f + float(k) * .9f);
+        float x = moon.x + 4 * prF32Sin(t * .6f + float(k) * .9f);
         s.capsule(PrVec2{x - reach, y}, PrVec2{x + reach, y}, .6f + .25f * float(k % 3),
             fade(moonWhite, .55f * (1 - float(k) / 28)));
     }
@@ -1676,40 +1678,40 @@ void tsukimi(const Stage& s) {
         s.across(960, [&](float left) {
             for (int i = 0; i < 30; ++i) {
                 float y = down + 14 + float((i * 53) % 270);
-                float x = left + float((i * 137) % 960) + 10 * std::sin(t * .3f + float(i));
+                float x = left + float((i * 137) % 960) + 10 * prF32Sin(t * .3f + float(i));
                 float reach = 14 + float((i * 29) % 40);
                 s.capsule(PrVec2{x - reach, y}, PrVec2{x + reach, y}, .5f,
-                    fade(kinari, .05f + .04f * std::sin(t * .8f + float(i))));
+                    fade(kinari, .05f + .04f * prF32Sin(t * .8f + float(i))));
             }
         });
     }
 
     // The near shore, and a stone lantern on it. It falls away to the right until it passes under the view.
-    std::vector<PrVec2> shore{{std::min(s.view.left, 0.0f), s.view.bottom}};
-    for (float x = std::min(s.view.left, 0.0f);; x += 10) {
-        float fall = std::max(x, 0.0f);
-        shore.push_back(PrVec2{x, 586 + fall * fall / 1300 + 5 * std::sin(x * .05f)});
-        if (shore.back().y > s.view.bottom + 6) {
-            shore.push_back(PrVec2{x, s.view.bottom + 6});
+    Array<PrVec2> shore({{min(s.view.left, 0.0f), s.view.bottom}});
+    for (float x = min(s.view.left, 0.0f);; x += 10) {
+        float fall = max(x, 0.0f);
+        shore.push(PrVec2{x, 586 + fall * fall / 1300 + 5 * prF32Sin(x * .05f)});
+        if (shore.last().y > s.view.bottom + 6) {
+            shore.push(PrVec2{x, s.view.bottom + 6});
             break;
         }
     }
     s.polygon(shore, PrColor{.025f, .025f, .05f, 1});
-    lantern(s, PrVec2{136, 600}, PrColor{.035f, .035f, .065f, 1}, .82f + .1f * std::sin(t * 7.3f) + .08f * std::sin(t * 13.1f));
+    lantern(s, PrVec2{136, 600}, PrColor{.035f, .035f, .065f, 1}, .82f + .1f * prF32Sin(t * 7.3f) + .08f * prF32Sin(t * 13.1f));
 
     // Maple leaves falling slowly, turning as they fall.
     s.across(1000, [&](float left) {
         for (int i = 0; i < 11; ++i) {
             float period = 15 + float(i % 4) * 4;
-            float phase = std::fmod(t / period + float(i) * .137f, 1.0f);
+            float phase = prF32Fmod(t / period + float(i) * .137f, 1.0f);
             float top = s.view.top - 20;
             float land = 470 + float((i * 67) % 200);
             PrVec2 p{
-                left + float((i * 173 + 120) % 1000) - phase * 150 + 26 * std::sin(phase * 7 + float(i)),
+                left + float((i * 173 + 120) % 1000) - phase * 150 + 26 * prF32Sin(phase * 7 + float(i)),
                 top + phase * (land - top),
             };
-            float alpha = std::min({1.0f, phase * 8, (1 - phase) * 6});
-            float tumble = .35f + .65f * std::fabs(std::sin(t * .9f + float(i)));
+            float alpha = min(1.0f, min(phase * 8, (1 - phase) * 6));
+            float tumble = .35f + .65f * prF32Abs(prF32Sin(t * .9f + float(i)));
             float angle = t * (i % 2 ? .7f : -.6f) + float(i);
             s.push(turn(angle, p, 1, tumble));
             mapleLeaf(s, 8 + float(i % 3) * 1.5f, fade(i % 3 == 0 ? shu : momiji, .9f * alpha));
@@ -1780,7 +1782,7 @@ void drawScene(PrDrawList* list, float width, float height, double time, const S
             (input.pointer.y - placed.offset.y) / placed.scale,
         };
     else
-        at = PrVec2{480 + 230 * std::sin(t * .41f), 330 + 110 * std::sin(t * .67f + 1)};
+        at = PrVec2{480 + 230 * prF32Sin(t * .41f), 330 + 110 * prF32Sin(t * .67f + 1)};
     scene(Stage{list, t, view, at, input.hold});
     prDrawListPopTransform(list);
     prDrawListPopClip(list);
@@ -1851,8 +1853,7 @@ void drawCaption(PrDrawList* list, float width, float height, uint32_t scene, bo
     hint.size = 12;
     hint.paint.color = fade(kWhite, .7f);
 
-    char number[32];
-    snprintf(number, sizeof(number), "   %u / %u", scene + 1, count);
+    String number = format("   {} / {}", scene + 1, count);
     const char* keys = paused ? "Left and Right arrows: scenes  ·  Space: resume  ·  Esc: quit" :
         "Left and Right arrows: scenes  ·  Space: pause  ·  Esc: quit";
     float nameWidth = textAdvance(title, current.name);
@@ -1862,12 +1863,13 @@ void drawCaption(PrDrawList* list, float width, float height, uint32_t scene, bo
     // A rounded bar in the band, with a chevron at each end for the arrow keys.
     constexpr float kChevronSpace = 40;
     constexpr float kMargin = 8;
-    float barWidth = std::min(std::max(lineWidth, hintWidth) + 2 * kChevronSpace, width - 2 * kMargin);
+    float barWidth = min(max(lineWidth, hintWidth) + 2 * kChevronSpace, width - 2 * kMargin);
     PrRect bar{(width - barWidth) / 2, height - kCaptionBand + kMargin, (width + barWidth) / 2, height - kMargin};
     prDrawListCornerRect(list, prCornerRectRound(bar, 12), {.color = PrColor{0, 0, 0, .62f}});
     PrDrawStroke stroke = strokeOf(2, PrPathJoin_Round, PrPathCap_Round);
     float middle = (bar.top + bar.bottom) / 2;
-    for (float side : {-1.0f, 1.0f}) {
+    const float sides[] = {-1.0f, 1.0f};
+    for (float side : sides) {
         float x = side < 0 ? bar.left + kChevronSpace / 2 + 3 : bar.right - kChevronSpace / 2 - 3;
         PrVec2 points[] = {{x - 3 * side, middle - 7}, {x + 3 * side, middle}, {x - 3 * side, middle + 7}};
         prDrawListPolylineContour(list, points, countOf(points), PrDrawContour_Open, PrPathFillRule_NonZero,

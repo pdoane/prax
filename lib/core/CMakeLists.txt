@@ -3,6 +3,7 @@ pr_library(core INCLUDE include
     src/assert.cpp
     src/base64.cpp
     src/checksum.cpp
+    src/environment.cpp
     src/file.cpp
     src/float.cpp
     src/float_convert.cpp
@@ -81,6 +82,7 @@ endif()
 # serves them on Windows. A target builds the family that it has.
 if (WIN32)
     pr_library(core_windows INCLUDE backends/windows/include
+        backends/windows/src/core_windows_environment.cpp
         backends/windows/src/core_windows_fail.cpp
         backends/windows/src/core_windows_file.cpp
         backends/windows/src/core_windows_random.cpp
@@ -93,6 +95,7 @@ if (WIN32)
     target_link_libraries(pr_core_windows PRIVATE bcrypt)
 else()
     pr_library(core_posix INCLUDE backends/posix/include
+        backends/posix/src/core_posix_environment.cpp
         backends/posix/src/core_posix_fail.cpp
         backends/posix/src/core_posix_file.cpp
         backends/posix/src/core_posix_random.cpp
@@ -119,8 +122,10 @@ endif()
 # Core's C++ layer: the toolkit that every library's implementation is written with, and the C++ side of the platform.
 pr_library(core_cpp INCLUDE cpp/include
     cpp/src/atom_table.cpp
+    cpp/src/format.cpp
     cpp/src/hash_index.cpp
     cpp/src/number_list.cpp
+    cpp/src/writer.cpp
 )
 target_link_libraries(pr_core_cpp PUBLIC prax::core)
 
@@ -181,6 +186,8 @@ if (PR_DEVELOP)
         tests/test_integer.cpp
         tests/test_pixels.cpp
         tests/test_platform.cpp
+        tests/test_environment.cpp
+        tests/test_random.cpp
         tests/test_raw_string.cpp
         tests/test_string_ops.cpp
         tests/test_string_view.cpp
@@ -193,14 +200,23 @@ if (PR_DEVELOP)
 
     pr_module_tests(core_cpp
         cpp/tests/test_raw_array.cpp
+        cpp/tests/test_array.cpp
         cpp/tests/test_atom_table.cpp
         cpp/tests/test_bitset.cpp
+        cpp/tests/test_format.cpp
+        cpp/tests/test_function.cpp
         cpp/tests/test_hash_index.cpp
+        cpp/tests/test_map.cpp
+        cpp/tests/test_min_max.cpp
         cpp/tests/test_name_table.cpp
         cpp/tests/test_number_list.cpp
+        cpp/tests/test_print.cpp
         cpp/tests/test_search.cpp
         cpp/tests/test_sort.cpp
+        cpp/tests/test_span.cpp
+        cpp/tests/test_string.cpp
         cpp/tests/test_vmem.cpp
+        cpp/tests/test_writer.cpp
     )
 
     # A build of core's memory, failure and strings configured by a header, with the builtin platform left out.
@@ -223,6 +239,9 @@ if (PR_DEVELOP)
     endif()
     add_executable(core_config_tests tests/test_platform_config.cpp)
     target_link_libraries(core_config_tests PRIVATE core_configured test_main pr_warnings)
+    # The tests' doctest header (tools/harness/test.h) prints the C++ layer's strings, which are header-only over the
+    # configured core, so the layer's headers are all that this binary needs of it.
+    target_include_directories(core_config_tests PRIVATE cpp/include)
     doctest_discover_tests(core_config_tests)
 
     if (PR_JS)

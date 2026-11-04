@@ -1,7 +1,7 @@
 #include "pr/cache.h"
 #include "pr/task.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 #include <atomic>
 #include <string>

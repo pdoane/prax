@@ -5,7 +5,7 @@
 #include "pr/lottie_archive.h"
 #include "pr/string_ops.h"
 
-#include "doctest/doctest.h"
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 

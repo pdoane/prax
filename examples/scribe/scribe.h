@@ -7,15 +7,16 @@
 #include "pr/command_keymap.h"
 #include "pr/kit.h"
 #include "pr/process.h"
+#include "pr/string.h"
 #include "pr/syntax.h"
 #include "pr/text_editor.h"
 #include "pr/ui.h"
 
-#include <string>
-
 PR_ASSUME_NONNULL_BEGIN
 
 namespace scribe {
+
+using namespace pr;
 
 // The editor and what Scribe puts around it.
 struct Scribe {
@@ -32,10 +33,10 @@ struct Scribe {
 
     float menuHeight = 0;           // of the menu bar, at the last layout
     PrLayoutNode menuBar = kPrLayoutNodeNone;
-    bool paletteRequested = false;  // a command asked to open the palette in the next round
-    bool paletteOpen = false;       // the palette was open in the last round, and has focus
-    bool menuOpen = false;          // a menu was open in the last round
-    std::string paletteQuery;
+    bool paletteRequested = false;    // a command asked to open the palette in the next round
+    bool paletteOpen = false;         // the palette was open in the last round, and has focus
+    bool menuOpen = false;            // a menu was open in the last round
+    String paletteQuery;
 };
 
 // Makes the editor with Scribe's languages, its language servers and its commands, over the kit, the ui and the font,
@@ -44,18 +45,18 @@ void openEditor(Scribe& s);
 
 // Opens the file at `path` as a document, which streams in over the frames that follow, or an empty document of no file
 // if `path` is empty. Returns false if the file cannot be read, or is past what a buffer holds.
-bool openDocument(Scribe& s, const std::string& path);
+bool openDocument(Scribe& s, PrStringView path);
 
 // Makes lldb-dap the editor's debugger, launching the program at `program`.
-void setDebuggee(Scribe& s, const std::string& program);
+void setDebuggee(Scribe& s, PrStringView program);
 
 // Opens the files at `oldPath` and `newPath`, the old read-only, and shows their comparison. Returns false if either
 // cannot be read.
-bool openDiff(Scribe& s, const std::string& oldPath, const std::string& newPath);
+bool openDiff(Scribe& s, PrStringView oldPath, PrStringView newPath);
 
 // Opens a document of `text` that belongs to no file and streams in as a file does. `name` is a file name that chooses
 // its language, or empty for none.
-void openText(Scribe& s, PrStringView text, const std::string& name);
+void openText(Scribe& s, PrStringView text, PrStringView name);
 
 // Frees the editor, its documents and the commands.
 void closeEditor(Scribe& s);
