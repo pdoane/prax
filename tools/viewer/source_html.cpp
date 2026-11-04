@@ -57,22 +57,34 @@ bool start(HtmlSource& html) {
     return true;
 }
 
-// The ports of WPT's server, or zero without one.
+// The ports of WPT's server and of the third-party server, or zero without one.
 uint16_t wptHttp = 0;
 uint16_t wptHttps = 0;
+uint16_t thirdPartyHttp = 0;
 
 fs::path wptCheckout() {
     return fs::path(kThirdParty) / "wpt";
 }
 
+// Returns the path of `path` relative to `directory`, or empty if it is outside the directory.
+fs::path relativeTo(const fs::path& path, const fs::path& directory) {
+    fs::path relative = fs::absolute(path).lexically_normal().lexically_relative(
+        fs::absolute(directory).lexically_normal());
+    if (relative.empty() || *relative.begin() == "..")
+        return {};
+    return relative;
+}
+
+// Returns `query` as the query of a URL: empty, or with its `?`.
+std::string querySuffix(const std::string& query) {
+    return query.empty() ? std::string() : "?" + query;
+}
+
 // Returns the URL that WPT's server serves the page at `path` at, over HTTPS if its name has `.https.`, or empty if the
 // page is outside the checkout or no server serves it.
-std::string wptUrlOf(const fs::path& path) {
-    if (!wptServed())
-        return {};
-    fs::path relative = fs::absolute(path).lexically_normal().lexically_relative(
-        fs::absolute(wptCheckout()).lexically_normal());
-    if (relative.empty() || *relative.begin() == "..")
+std::string wptUrlOf(const fs::path& path, const std::string& query) {
+    fs::path relative = relativeTo(path, wptCheckout());
+    if (!wptServed() || relative.empty())
         return {};
     bool secure = path.filename().string().find(".https.") != std::string::npos;
     std::string origin;
@@ -80,7 +92,17 @@ std::string wptUrlOf(const fs::path& path) {
         origin = "https://web-platform.test:" + std::to_string(wptHttps);
     else
         origin = "http://web-platform.test:" + std::to_string(wptHttp);
-    return origin + "/" + relative.generic_string();
+    return origin + "/" + relative.generic_string() + querySuffix(query);
+}
+
+// Returns the URL that the third-party server serves the page at `path` at, or empty if the page is outside
+// third_party, is WPT's, or no server serves it.
+std::string thirdPartyUrlOf(const fs::path& path, const std::string& query) {
+    fs::path relative = relativeTo(path, kThirdParty);
+    if (!thirdPartyServed() || relative.empty() || !relativeTo(path, wptCheckout()).empty())
+        return {};
+    return "http://127.0.0.1:" + std::to_string(thirdPartyHttp) + "/" + queryEscaped(relative.generic_string()) +
+        querySuffix(query);
 }
 
 // Reaches WPT's server as tools/suite/wpt/wpt.py has pr_shell reach it: WPT's hosts resolve to the loopback, its CA is
@@ -105,18 +127,41 @@ bool wptServed() {
     return wptHttp != 0;
 }
 
-std::shared_ptr<HtmlSource> loadHtml(const fs::path& path, const fs::path& settings, const fs::path& capture, bool scripts,
-        page_host::Media media, PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter,
-        PrGpuDevice* PR_NULLABLE device) {
-    std::string url = wptUrlOf(path);
-    std::shared_ptr<HtmlSource> html = std::make_shared<HtmlSource>(path, url.empty() ? path.string() : url, media, shaper);
+void serveThirdPartyFrom(uint16_t http) {
+    thirdPartyHttp = http;
+}
+
+bool thirdPartyServed() {
+    return thirdPartyHttp != 0;
+}
+
+std::string htmlBrowserUrl(const fs::path& path, const std::string& query) {
+    std::string url = thirdPartyUrlOf(path, query);
+    return url.empty() ? fileUrl(path) + querySuffix(query) : url;
+}
+
+std::shared_ptr<HtmlSource> loadHtml(const fs::path& path, const std::string& query, const fs::path& settings,
+        const fs::path& capture, bool scripts, page_host::Media media, PrTextShaper* shaper, PrFontHinting hinting,
+        PrFontHinter* PR_NULLABLE hinter, PrGpuDevice* PR_NULLABLE device) {
+    std::string wpt = wptUrlOf(path, query);
+    std::string thirdParty = thirdPartyUrlOf(path, query);
+    std::string location = path.string();
+    if (!wpt.empty())
+        location = wpt;
+    else if (!thirdParty.empty())
+        location = thirdParty;
+    else if (!query.empty())
+        location = fileUrl(path) + querySuffix(query);
+    std::shared_ptr<HtmlSource> html = std::make_shared<HtmlSource>(path, location, media, shaper);
     if (!settings.empty())
         suite::suiteRenderReadFonts(html->host.fonts(), settings.string(),
             fs::path(kThirdParty).parent_path().string());
     html->host.setHinting(hinting, hinter);
     html->host.setPageGap(kPageGap);
     html->host.setDevice(device);
-    if (!url.empty() && !reachWpt(html->host))
+    if (!wpt.empty() && !reachWpt(html->host))
+        return nullptr;
+    if (!thirdParty.empty() && !html->host.useNetwork())
         return nullptr;
     std::string captured;
     if (!capture.empty() && !html->host.addCapture(capture, &captured))

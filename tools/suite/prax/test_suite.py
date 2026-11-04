@@ -30,6 +30,8 @@ class Headings(unittest.TestCase):
         self.assertEqual(suite.spec_name("css-fonts-4"), "CSS Fonts 4")
         self.assertEqual(suite.spec_name("css-ui-3"), "CSS Basic User Interface 3")
         self.assertEqual(suite.spec_name("SVG2"), "SVG 2")
+        self.assertEqual(suite.spec_name("mathml-core"), "MathML Core")
+        self.assertEqual(suite.spec_name("mathml4"), "MathML 4")
 
 
 class Directories(unittest.TestCase):

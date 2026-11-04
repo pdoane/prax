@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mlongdiv: long division</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.6.2 Long Division &lt;mlongdiv&gt;</div>
+  <h1>mlongdiv: long division</h1>
+  <p class=pr-lede><q>The first two children of mlongdiv are the divisor and the result of the division, in that order. The
+  remaining children are treated as if they were children of mstack.</q> longdivstyle <q>Controls the style of the
+  long division layout.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#long-division-mlongdiv">MathML 4 §3.6.2</a></span></p>
+</header>
+
+<section>
+  <h2>Styles</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mlongdiv><mn>3</mn><mn>41</mn><mn>123</mn><mn>12</mn><msline length=2 /><mn>3</mn><mn>3</mn><msline length=1 /><mn>0</mn></mlongdiv></math></div>
+    <figcaption>123 divided by 3, lefttop: 3 at the left of a bracket over 123, 41 over the bracket, the steps under it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Every number in a row.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mlongdiv longdivstyle="stackedrightright"><mn>3</mn><mn>41</mn><mn>123</mn></mlongdiv></math></div>
+    <figcaption><code>stackedrightright</code>: 123, then at its right 3 over a line over 41. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> In a row.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mlongdiv longdivstyle=":right=right"><mn>3</mn><mn>41</mn><mn>123</mn></mlongdiv></math></div>
+    <figcaption><code>:right=right</code>: 123 : 3 = 41 on one line. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> "341123".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

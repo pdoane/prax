@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>math-style: normal and compact</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 4.3 The math-style property</div>
+  <h1>math-style: normal and compact</h1>
+  <p class=pr-lede><q>When math-style is compact, the math layout on descendants tries to minimize the logical height</q>: <q>The
+  font-size is scaled down when its specified value is math and the computed value of math-depth is auto-add</q>,
+  <q>Operators with the largeop property do not follow rules […] to make them bigger.</q>, <q>Under-/overscripts
+  attached to an operator with the movablelimits property are actually drawn as sub-/superscripts</q>, <q>Smaller
+  vertical gaps and shifts from the OpenType MATH table are used for fractions and radicals</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#the-math-style-property">MathML Core §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p>The same formula with its math root compact, then normal.</p>
+  <figure>
+    <div class="pr-stage"><math style="math-style: compact"><munderover><mo>∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo>+</mo><mn>∞</mn></mrow></munderover><mfrac><mn>1</mn><msup><mi>n</mi><mn>2</mn></msup></mfrac></math></div>
+    <figcaption>Compact: a small ∑ with its limits beside it, a small fraction with tight gaps.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math style="math-style: normal"><munderover><mo>∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo>+</mo><mn>∞</mn></mrow></munderover><mfrac><mn>1</mn><msup><mi>n</mi><mn>2</mn></msup></mfrac></math></div>
+    <figcaption>Normal: a large ∑ with limits under and over, a fraction at the text's size with wider gaps.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Radicals</h2>
+  <figure>
+    <div class="pr-stage"><math><msqrt style="math-style: compact"><mfrac><mn>1</mn><mn>2</mn></mfrac></msqrt><msqrt style="math-style: normal"><mfrac><mn>1</mn><mn>2</mn></mfrac></msqrt></math></div>
+    <figcaption>A root of ½ compact, then normal: the second's rule further above its content.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -980,7 +980,8 @@ bool matchLeaf(CssMatcher* m, CssGrammarIndex index, uint32_t outer) {
     switch (cssGrammarType(node)) {
         case CssGrammarType_Keyword: {
             skipSpace(m, outer);
-            if (cssPeek(m->ts) != CssTokenKind_Ident || cssTokenKeyword(m->ts->tokens, m->ts->pos) != value)
+            if (cssPeek(m->ts) != CssTokenKind_Ident || cssTokenKeyword(m->ts->tokens, m->ts->pos) != value ||
+                    (value >= kCssKeywordFirstPrivate && !m->match->engine))
                 return false;
             ++m->ts->pos;
             cssValuePoolAdd(m->pool, cssKeywordValue(PrCssKeyword(value)));
@@ -995,6 +996,8 @@ bool matchLeaf(CssMatcher* m, CssGrammarIndex index, uint32_t outer) {
                 return false;
 
             PrCssKeyword keyword = cssTokenKeyword(m->ts->tokens, m->ts->pos);
+            if (keyword >= kCssKeywordFirstPrivate && keyword != PrCssKeyword_Unknown && !m->match->engine)
+                return false;
             CssGrammarIndex end = cssGrammarAfter(index);
             CssGrammarIndex child = CssGrammarIndex(index + 1);
             while (child < end && cssGrammarValue(kCssGrammarNodes[child]) != keyword)
@@ -1663,7 +1666,7 @@ bool checkPseudo(CssMatcher* m, uint32_t index) {
         pseudo = found;
     } else {
         CssPseudoClass found = cssPseudoClass(name, function);
-        if (found >= CssPseudoClass_FirstPrivate && !m->match->userAgent)
+        if (found >= CssPseudoClass_FirstPrivate && !m->match->engine)
             found = CssPseudoClass_None;
         if (isProduction(outer, CssValueDef_PseudoCompoundSelector))
             after = cssMatchedPseudoElement(m->pool, outer.anchor + 1);

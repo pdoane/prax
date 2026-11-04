@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>movablelimits, and the wrong number of children</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.2.1 Children of &lt;munder&gt;, &lt;mover&gt;, &lt;munderover&gt;</div>
+  <h1>movablelimits, and the wrong number of children</h1>
+  <p class=pr-lede><q>If the &lt;munder&gt;, &lt;mover&gt; or &lt;munderover&gt; elements have a computed math-style property
+  equal to compact and their base is an embellished operator with the movablelimits property, then their layout
+  algorithms are respectively the same as the ones described for &lt;msub&gt;, &lt;msup&gt; and
+  &lt;msubsup&gt;</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#children-of-munder-mover-munderover">MathML Core §3.4.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Limits that move</h2>
+  <figure>
+    <div class="pr-stage"><math><munderover><mo>∑</mo><mi>i</mi><mi>n</mi></munderover><munderover><mo>∫</mo><mn>0</mn><mn>1</mn></munderover><munderover><mi>X</mi><mi>i</mi><mi>n</mi></munderover></math></div>
+    <figcaption>Inline: ∑'s limits move beside it, as scripts; ∫ and X have no movablelimits, so theirs stay under and over.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><munderover><mo movablelimits=false>∑</mo><mi>i</mi><mi>n</mi></munderover><munderover><mrow><mo>∑</mo></mrow><mi>i</mi><mi>n</mi></munderover><munderover style="math-style: normal"><mo>∑</mo><mi>i</mi><mi>n</mi></munderover></math></div>
+    <figcaption><code>movablelimits="false"</code>: under and over; ∑ in an <code>mrow</code>, still embellished: beside; <code>math-style: normal</code>: a large ∑, under and over.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Children</h2>
+  <figure>
+    <div class="pr-stage"><math><munder><mi>x</mi></munder><mover><mi>x</mi><mi>y</mi><mi>z</mi></mover></math></div>
+    <figcaption>An <code>munder</code> of one child and an <code>mover</code> of three: "x" and "xyz" in a row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

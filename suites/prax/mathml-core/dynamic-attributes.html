@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Attributes changed by script</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.2.3 DOM and JavaScript</div>
+  <h1>Attributes changed by script</h1>
+  <p class=pr-lede><q>User agents supporting Web application APIs must ensure that they keep the visual rendering of MathML
+  synchronized with the DOM tree, in particular perform necessary updates when MathML attributes are modified
+  dynamically.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#dom-and-javascript">MathML Core §2.2.3</a></span> Each formula is parsed one way, and the page's
+  script changes it when it loads; each caption describes the formula after the change.</p>
+</header>
+
+<section>
+  <h2>Attributes set, changed and removed</h2>
+  <figure>
+    <div class="pr-stage"><math><mfrac id=d1><mn>1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption><code>linethickness="0"</code> set: 1 over 2 with no bar.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><munder id=d2><mo>∑</mo><mi>k</mi></munder></math></div>
+    <figcaption><code>displaystyle="true"</code> set: a large ∑, k under it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mfrac><mn>1</mn><mn>2</mn></mfrac><mo id=d3 lspace=40px>+</mo><mn>3</mn></math></div>
+    <figcaption><code>lspace</code> removed: the usual space before +.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mi id=d4 mathvariant=normal>x</mi><mi>y</mi></math></div>
+    <figcaption><code>mathvariant</code> removed: x italic, as y is.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Children and text changed</h2>
+  <figure>
+    <div class="pr-stage"><math><msqrt id=d5><mi>x</mi></msqrt></math></div>
+    <figcaption>A fraction added under the root: the surd grown to cover x over 2.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mi id=d6>sin</mi></math></div>
+    <figcaption>Text changed from "sin" to "y": y italic, as a one-letter identifier is.</figcaption>
+  </figure>
+</section>
+
+<script>
+document.getElementById("d1").setAttribute("linethickness", "0");
+document.getElementById("d2").setAttribute("displaystyle", "true");
+document.getElementById("d3").removeAttribute("lspace");
+document.getElementById("d4").removeAttribute("mathvariant");
+const frac = document.createElementNS("http://www.w3.org/1998/Math/MathML", "mfrac");
+frac.innerHTML = "<mi>x</mi><mn>2</mn>";
+const root = document.getElementById("d5");
+root.replaceChild(frac, root.firstChild);
+document.getElementById("d6").textContent = "y";
+</script>
+
+</body>
+</html>

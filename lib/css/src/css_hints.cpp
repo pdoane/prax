@@ -51,7 +51,7 @@ void setBlock(CssDeclarationBlock* PR_NULLABLE* PR_NONNULL block, const PrTextBu
     }
     if (*block == nullptr)
         *block = allocZeroed<CssDeclarationBlock>();
-    cssDeclarationBlockParse(*block, prTextBufferView(&text), nullptr);
+    cssDeclarationBlockParse(*block, prTextBufferView(&text), nullptr, CssOrigin_Hint);
 }
 
 // Builds the hints that an element gives other elements.
@@ -148,6 +148,29 @@ void cssHintsChanged(PrDomElement* element) {
     element->style->hintsBuilt = false;
     if (element->style->given != nullptr)
         element->style->given->built = false;
+}
+
+bool cssHintsHasReaders(const PrDomElement* element) {
+    const CssHintProvider* provider = providerOf(element);
+    return provider != nullptr && provider->readers != nullptr;
+}
+
+void cssHintsEachReader(PrDomElement* element, void (*fn)(void* PR_NULLABLE context, PrDomElement* reader),
+        void* PR_NULLABLE context) {
+    const CssHintProvider* provider = providerOf(element);
+    if (provider != nullptr && provider->readers != nullptr)
+        provider->readers(element, fn, context);
+}
+
+void cssHintsEachStructureReader(PrDomNode* node, void (*fn)(void* PR_NULLABLE context, PrDomElement* reader),
+        void* PR_NULLABLE context) {
+    const CssRoot* style = node->document->style;
+    if (style == nullptr)
+        return;
+    for (const CssHintProvider* provider : style->hintProviders) {
+        if (provider != nullptr && provider->structureReaders != nullptr)
+            provider->structureReaders(node, fn, context);
+    }
 }
 
 void cssHintsDestroy(CssElementStyle* style) {

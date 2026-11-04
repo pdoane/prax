@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/float.h"
+#include "pr/name_table.h"
 #include "pr/number_list.h"
 #include "pr/path_data.h"
 #include "pr/string_ops.h"
@@ -484,12 +485,7 @@ const SvgFont* svgDocumentFontsLoad(SvgDocumentFonts* fonts, const PrDomElement*
 }
 
 uint32_t svgFontFamilyHash(PrStringView family) {
-    uint32_t hash = 2166136261u;
-    for (size_t i = 0; i < family.size; ++i) {
-        char c = family.data[i];
-        hash = (hash ^ uint8_t(c >= 'A' && c <= 'Z' ? c + 32 : c)) * 16777619u;
-    }
-    return hash;
+    return uint32_t(nameHashLower(family.data, family.size, kNameSeed));
 }
 
 bool svgParseUnicodeRange(PrStringView text, RawArray<PrFontCodePointRange>* out) {

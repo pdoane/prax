@@ -139,6 +139,7 @@ struct LayoutStyles {
     LayoutTable<PrLayoutTableStyle> table;
     LayoutTable<PrLayoutCompositingStyle> compositing;
     LayoutTable<PrLayoutGridStyle> grid;
+    LayoutTable<PrLayoutMathStyle> math;
     LayoutTable<PrLayoutStyle> style;
 
     // By PrLayoutStyleIndex, set as each record is interned.
@@ -166,7 +167,16 @@ struct LayoutStyles {
     // change between siblings forces one. If there are none, layoutHasForcedBreakInside returns false at once.
     uint32_t forcedBreakGroups;
 
+    // The number of live records of a math box or of a box that lays out its children by math layout. While there are
+    // none, block layout runs a copy without math layout's checks.
+    uint32_t mathRecords;
+
     RawArray<LayoutFontFaces> faces; // by PrLayoutGroupIndex, made on first use
+
+    // By PrLayoutGroupIndex, the feature set that the text of a font group with math state is shaped with
+    // (layoutShapingFeatures), or null. Each set is made on first use, and the styles hold a reference to it until its
+    // group is freed.
+    RawArray<const PrTextFeatureSet*> mathFeatures;
     float targetPixelRatio;          // target pixels per px, which font metrics and leading snap to
     int32_t targetPixelUnits;        // the units in a target pixel if whole, and 0 otherwise
 
@@ -281,6 +291,9 @@ inline const PrLayoutCompositingStyle& layoutCompositingStyle(const LayoutStyles
 inline const PrLayoutGridStyle& layoutGridStyle(const LayoutStyles* styles, PrLayoutStyleIndex style) {
     return layoutTableAt(styles->grid, layoutStyle(styles, style).groups[PrLayoutGroup_Grid]);
 }
+inline const PrLayoutMathStyle& layoutMathStyle(const LayoutStyles* styles, PrLayoutStyleIndex style) {
+    return layoutTableAt(styles->math, layoutStyle(styles, style).groups[PrLayoutGroup_Math]);
+}
 inline const PrLayoutFragmentationStyle& layoutFragmentationStyle(const LayoutStyles* styles, PrLayoutStyleIndex style) {
     return layoutTableStyle(styles, style).fragmentation;
 }
@@ -335,6 +348,11 @@ inline const LayoutFontFaces& layoutFontFacesOfGroup(LayoutStyles* styles, PrLay
 inline const LayoutFontFaces& layoutFontFaces(LayoutStyles* styles, PrLayoutStyleIndex style) {
     return layoutFontFacesOfGroup(styles, layoutStyle(styles, style).groups[PrLayoutGroup_Font]);
 }
+
+// Returns the feature set that the text of the font group `group` is shaped with. It holds the script forms of the
+// group's math depth (ssty) and the dotless forms (dtls) if the group asks for them (pr/font_math.h), followed by the
+// group's own features, which win.
+const PrTextFeatureSet* PR_NULLABLE layoutShapingFeatures(LayoutStyles* styles, PrLayoutGroupIndex group);
 
 // Retains or releases a node's reference to the record `style`.
 void layoutStyleRetain(LayoutStyles* styles, PrLayoutStyleIndex style);

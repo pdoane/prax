@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align on munder and mover</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.4.4 Underscript &lt;munder&gt;</div>
+  <h1>align on munder and mover</h1>
+  <p class=pr-lede>align: <q>Specifies whether the script is aligned left, center, or right under/over the base.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#underscript-munder">MathML 4 §3.4.4</a></span></p>
+</header>
+
+<section>
+  <h2>Left, center and right</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><munder align=left><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mo>+</mo><mi>c</mi></mrow><mtext>sum</mtext></munder></math></div>
+    <figcaption><code>align="left"</code>: "sum" under the start of <i>a</i> + <i>b</i> + <i>c</i>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Centered.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><munder><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mo>+</mo><mi>c</mi></mrow><mtext>sum</mtext></munder></math></div>
+    <figcaption>No attribute: centered.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mover align=right><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mo>+</mo><mi>c</mi></mrow><mtext>sum</mtext></mover></math></div>
+    <figcaption><code>mover align="right"</code>: "sum" over its end. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Centered.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

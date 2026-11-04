@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mfenced: fences and separators</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.3.8 Expression Inside Pair of Fences &lt;mfenced&gt;</div>
+  <h1>mfenced: fences and separators</h1>
+  <p class=pr-lede><q>any mfenced element is completely equivalent to an expanded form described below. A renderer that supports
+  this recommendation is required to render either of these forms in exactly the same way.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#expression-inside-pair-of-fences-mfenced">MathML 4 §3.3.8</a></span> Each <code>mfenced</code> is followed by its
+  expanded form, which should look the same.</p>
+</header>
+
+<section>
+  <h2>Defaults and attributes</h2>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math><mfenced><mi>x</mi><mi>y</mi></mfenced><mspace width=20px /><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></math></div>
+    <figcaption>(x, y) twice. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The first as "xy".</figcaption>
+  </figure>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math><mfenced open="[" close="}" separators=";|"><mi>a</mi><mi>b</mi><mi>c</mi><mi>d</mi></mfenced></math></div>
+    <figcaption><code>open="["</code>, <code>close="}"</code>, <code>separators=";|"</code>: [a; b | c | d}, the last separator repeated. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> "abcd".</figcaption>
+  </figure>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math><mfenced><mfrac><mn>1</mn><mn>2</mn></mfrac></mfenced><mfenced open="|" close="|" separators=""><mi>x</mi></mfenced></math></div>
+    <figcaption>Parentheses stretched around ½; |x| with no separators. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No fences.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

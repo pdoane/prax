@@ -77,6 +77,23 @@ PARSER_ONLY = {
     "mglyph": ("mathml", "mathml3, named by html/#parsing-main-inforeign"),
 }
 
+# The MathML elements that the engine renders and webref does not list, because webref extracts MathML Core alone. They
+# are the presentation elements of MathML 4 that MathML Core leaves out (mathml4/#presm), mlabeledtr from the legacy
+# schema of MathML 4 (mathml4/#presm_mtr), and MathML 3's maligngroup. gen_dom.py fails if webref lists one of them.
+MATHML_FULL = {
+    "maligngroup": "MathML 3's alignment group, which MathML 4 removed and malignmark's parsing keeps",
+    "menclose": "mathml4/#presm_menclose",
+    "mfenced": "mathml4/#presm_mfenced",
+    "mlabeledtr": "mathml4/#presm_mtr",
+    "mlongdiv": "mathml4/#presm_mlongdiv",
+    "mscarries": "mathml4/#presm_mscarries",
+    "mscarry": "mathml4/#presm_mscarry",
+    "msgroup": "mathml4/#presm_msgroup",
+    "msline": "mathml4/#presm_msline",
+    "msrow": "mathml4/#presm_msrow",
+    "mstack": "mathml4/#presm_mstack",
+}
+
 # SVG Tiny 1.2 elements that the engine renders, which SVG 2 dropped and webref does not extract. gen_dom.py fails if
 # one of them appears in webref.
 SVG_TINY = {
@@ -143,6 +160,9 @@ TAG_SETS = [
     ("kDomTagsSvgBoxes", "The SVG elements whose markup decides more of their boxes than their style does, which "
      "SVG's provider answers for (css_boxes.h).",
      ["svg"]),
+    ("kDomTagsMathMlBoxes", "The MathML elements whose markup gives their boxes more than their style does, which "
+     "MathML's box provider answers for (css_boxes.h).",
+     ["mglyph", "mi", "mn", "mo", "ms", "mtd", "mtext"]),
 ]
 
 
@@ -171,6 +191,11 @@ def read(webref):
             sys.exit("webref defines the %s element %s now; drop it from PARSER_ONLY (%s)"
                      % (space, name, why))
         spaces[name].add(space)
+    for name, where in MATHML_FULL.items():
+        if "mathml" in spaces[name]:
+            sys.exit("webref defines the mathml element %s now; drop it from MATHML_FULL (%s)"
+                     % (name, where))
+        spaces[name].add("mathml")
     for name, where in SVG_TINY.items():
         if "svg" in spaces[name]:
             sys.exit("webref defines the svg element %s now; drop it from SVG_TINY (%s)"

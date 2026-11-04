@@ -131,6 +131,12 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
     uint32_t at = layoutPaintChunk(tree, node, fragment, opening, root);
     // Chunks are looked up again by index, because adding the layers that a chunk names can add chunks.
     const LayoutPaintChunk* chunk = &tree->paint.chunks.data[at];
+    // The scene's runs grow once for each chunk. A chunk can hold tens of thousands of segments, and a run that doubled
+    // as they were pushed would copy them at each step and touch new pages that the scene does not keep.
+    scene->scrolls.reserve(scene->scrolls.count + chunk->scrolls.count);
+    scene->segments.reserve(scene->segments.count + chunk->segments.count);
+    scene->slots.reserve(scene->slots.count + chunk->slots.count);
+    scene->regions.reserve(scene->regions.count + chunk->regions.count);
     uint32_t base = scene->scrolls.count;
     for (uint32_t i = 0; i < chunk->scrolls.count; ++i) {
         const LayoutPaintScroll& s = chunk->scrolls.data[i];

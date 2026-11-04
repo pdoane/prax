@@ -11,6 +11,7 @@ reads one directory of each. A checkout fetches only what it lacks, and a file w
 commit names it, is fetched again.
 """
 
+import hashlib
 import os
 import shutil
 import tempfile
@@ -57,12 +58,14 @@ class Git:
 
 class Files:
     """Files fetched into `directory`, by name and URL. With a `stamp`, the files are what that version or commit
-    names, and are fetched again when it changes."""
+    names, and are fetched again when it changes. With `digests`, by name, a file is pinned to the SHA-256 that names
+    it, which pins a source that has no versions. A fetch that brings anything else fails."""
 
-    def __init__(self, directory, files, stamp=None):
+    def __init__(self, directory, files, stamp=None, digests=None):
         self.directory = directory
         self.files = files
         self.stamp = stamp
+        self.digests = digests or {}
 
     def fetch(self):
         directory = os.path.join(THIRD_PARTY, self.directory)
@@ -83,7 +86,7 @@ class Files:
             path = os.path.join(directory, name)
             if not os.path.exists(path):
                 print("fetching %s/%s" % (self.directory, name), flush=True)
-                download(url, path)
+                download(url, path, self.digests.get(name))
         if stamp_file:
             with open(stamp_file, "w") as f:
                 f.write(self.stamp[1] + "\n")
@@ -134,14 +137,20 @@ class Pages:
 USER_AGENT = "Mozilla/5.0 (compatible; Prax)"
 
 
-def download(url, path):
-    """Writes what `url` holds to `path`, through a temporary file, so that a failed download leaves nothing."""
+def download(url, path, digest=None):
+    """Writes what `url` holds to `path`, through a temporary file, so that a failed download leaves nothing. With a
+    `digest`, what it holds must have that SHA-256."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     handle, temporary = tempfile.mkstemp(dir=os.path.dirname(path))
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with os.fdopen(handle, "wb") as out, urllib.request.urlopen(request) as response:
             shutil.copyfileobj(response, out)
+        if digest is not None:
+            with open(temporary, "rb") as f:
+                got = hashlib.sha256(f.read()).hexdigest()
+            if got != digest:
+                raise ValueError("its SHA-256 is %s, not the pinned %s" % (got, digest))
         os.replace(temporary, path)
     except Exception as error:
         os.remove(temporary)
@@ -177,6 +186,8 @@ LOTTIE_SPEC_COMMIT = "4b55957472f8718e34e9c1298f0e8f021b6c597f"
 # The Encoding Standard's repository, whose encodings and indexes the charset generator reads.
 ENCODING_COMMIT = "be17ac5c49881336538acfc7b40dba3c8009144b"
 # release-48
+# MathML Core's repository, whose tables the MathML generator reads.
+MATHML_CORE_COMMIT = "66256baa0e7125171ff16b3831acfba3c43179c7"
 CLDR_COMMIT = "acd6d88ae493633240e19a87a721076a8a75c310"
 # CommonMark 0.31.2, and cmark-gfm 0.29.0.gfm.13: the corpora of the Markdown suites, and the implementation that
 # lib/markdown is compared with.
@@ -201,6 +212,9 @@ PRINCE_SAMPLES = {
     "webarch": ("webarch.html",),
     "winelist": ("winelist.html",),
 }
+# Fred Wang's MathFonts, which holds math fonts as web fonts and Mozilla's MathML torture test, whose formulas stand
+# beside images of TeX's setting of them. The commit is of the site's branch (gh-pages), which holds the built fonts.
+MATHFONTS_COMMIT = "9182b146cb64ac1a5e9cb92a09cd79612ca95d1c"
 
 UCD = "https://www.unicode.org/Public/17.0.0/ucd/"
 OFL = "https://raw.githubusercontent.com/google/fonts/%s/ofl/" % GOOGLE_FONTS_COMMIT
@@ -216,6 +230,65 @@ def web_features_version():
             if line.startswith("# web-features "):
                 return line[len("# web-features "):].strip()
     dev.fail("tools/suite/wpt/web_features.txt states no web-features version")
+
+
+MATH_TEST_FONTS = (
+    "axisheight5000-verticalarrow14000",
+    "fraction-axisheight7000-rulethickness1000",
+    "fraction-denominatordisplaystylegapmin5000-rulethickness1000",
+    "fraction-denominatordisplaystyleshiftdown6000-axisheight1000-rulethickness1000",
+    "fraction-denominatorgapmin4000-rulethickness1000",
+    "fraction-denominatorshiftdown3000-axisheight1000-rulethickness1000",
+    "fraction-numeratordisplaystylegapmin8000-rulethickness1000",
+    "fraction-numeratordisplaystyleshiftup2000-axisheight1000-rulethickness1000",
+    "fraction-numeratorgapmin9000-rulethickness1000",
+    "fraction-numeratorshiftup11000-axisheight1000-rulethickness1000",
+    "fraction-rulethickness10000",
+    "largeop-displayoperatorminheight2000-2AFF-italiccorrection3000",
+    "largeop-displayoperatorminheight5000",
+    "limits-lowerlimitbaselinedropmin3000",
+    "limits-lowerlimitgapmin11000",
+    "limits-upperlimitbaselinerisemin5000",
+    "limits-upperlimitgapmin7000",
+    "operators",
+    "radical-degreebottomraisepercent25-rulethickness1000",
+    "radical-displaystyleverticalgap7000-rulethickness1000",
+    "radical-extraascender3000-rulethickness1000",
+    "radical-kernafterdegreeminus5000-rulethickness1000",
+    "radical-kernbeforedegree4000-rulethickness1000",
+    "radical-rtlm",
+    "radical-rulethickness8000",
+    "radical-verticalgap6000-rulethickness1000",
+    "scriptpercentscaledown0-scriptscriptpercentscaledown40",
+    "scriptpercentscaledown80-scriptscriptpercentscaledown0",
+    "scriptpercentscaledown80-scriptscriptpercentscaledown40",
+    "scripts-spaceafterscript3000",
+    "scripts-subscriptbaselinedropmin9000",
+    "scripts-subscriptshiftdown6000",
+    "scripts-subscripttopmax4000",
+    "scripts-subsuperscriptgapmin11000",
+    "scripts-subsuperscriptgapmin11000-superscriptbottommaxwithsubscript3000",
+    "scripts-superscriptbaselinedropmax10000",
+    "scripts-superscriptbottommin8000",
+    "scripts-superscriptshiftup7000",
+    "scripts-superscriptshiftupcramped5000",
+    "stack-bottomdisplaystyleshiftdown5000-axisheight1000",
+    "stack-bottomshiftdown6000-axisheight1000",
+    "stack-displaystylegapmin4000",
+    "stack-gapmin8000",
+    "stack-topdisplaystyleshiftup3000-axisheight1000",
+    "stack-topshiftup9000-axisheight1000",
+    "stretchstack-bottomshiftdown3000",
+    "stretchstack-gapabovemin7000",
+    "stretchstack-gapbelowmin11000",
+    "stretchstack-topshiftup5000",
+    "stretchy",
+    "stretchy-text-direction-asymetrical",
+    "underover-accentbaseheight4000-overbarextraascender3000",
+    "underover-accentbaseheight4000-overbarverticalgap11000",
+    "underover-accentbaseheight4000-underbarextradescender5000",
+    "underover-accentbaseheight4000-underbarverticalgap7000",
+)
 
 
 def fonts():
@@ -313,6 +386,11 @@ def fonts():
                            "tabledata-transform-hmtx-001.woff2", "available-002.woff2",
                            "tabledata-glyf-bbox-002.woff2", "tabledata-brotli-001.woff2", "header-length-001.woff2",
                            "directory-mismatched-tables-001.woff2")]
+    # WPT's math fonts, for the tests of lib/font's MATH reader and of math layout. Each sets one or a few OpenType MATH
+    # parameters or glyph constructions to whole numbers of ems and the rest to zero, so that a test gives the exact
+    # position that the parameter decides. Their names and WPT's mathml/tools, which generated them, give their
+    # parameters.
+    files += [("math/%s.woff" % name, WPT_RAW + "fonts/math/%s.woff" % name) for name in MATH_TEST_FONTS]
     return [
         # The CMYK profile css-color's calibrated CMYK and device-cmyk() examples are computed with, for suites/prax.
         Files("icc", [("Coated_Fogra39L_VIGC_300.icc",
@@ -326,6 +404,51 @@ def rlottie():
     """rlottie, Samsung's Lottie player: the corpus of the rlottie suite is its examples. The build compiles the player,
     the suite's reference (rlottie_reference), at the same commit (cmake/dependencies.cmake)."""
     return [Git("lottie/rlottie", "https://github.com/Samsung/rlottie.git", RLOTTIE_COMMIT, "example")]
+
+
+# eyeasme.com's MathML browser test: formulas in MathML, each beside images of TeX's setting of it and Firefox's. The
+# site has no versions, so each file is pinned by its SHA-256.
+EYEASME = "http://eyeasme.com/Joe/MathML/"
+EYEASME_FILES = {
+    "MathML_browser_test.html": "3df1e25152f45429e639fb115ecbb7cbc21ecc868d3018204acee07cbb7f85bf",
+    "Images/MathML/axiom_of_power_set.png": "b97a5946114f8ed2480377092fc0efe43daa4558d162cf125a6412a2682b9821",
+    "Images/MathML/binomial_coefficient.png": "d2173ed18995ed5370f8a2168ed2eea1e873c897abc23174bfa8cce9b63cf207",
+    "Images/MathML/cichons_diagram.png": "5e07d54922cf425a2a7ff78245d0eb8b43f1aec5f718d6a70d39491d3bac0a1a",
+    "Images/MathML/complex_number.png": "c7de52e2df790159248f9bbb11fd08f49aa3132615707bb9d5fd3a61e20d0aaf",
+    "Images/MathML/deMorgans_law.png": "2254ac6e11c5493ed65d514d29bd5898c45dee142fc5a4b913a2d56c6b0998be",
+    "Images/MathML/differentiable_manifold.png": "e078ea8fae656830ce39bd85b7d2ff8424b4b99adce6b2ceebe006612f84ca1b",
+    "Images/MathML/divergence.png": "b3221ff0a180e87545cfc9bfac97ee19f6562274f043e3002c3f7a48717848a0",
+    "Images/MathML/font_sizes.png": "dc19e45dbd8a74b9785d7fc7a281bba4c6aaf42efd41327dd413e560a499d07d",
+    "Images/MathML/moore_determinant.png": "b2eeb45280a3c7b4c1287ac640d15f6aaaffa22ad0dddc075542530040c776d8",
+    "Images/MathML/multiscripts_and_greek_alphabet.png": "93e90b907a92d03b44f8e7ae660085cf133c5a125b2ea4bd19f1095dc9ae786c",
+    "Images/MathML/nested_matrices.png": "f29adb006714431fa5e15de9d96f65a734990a60d70cac02c4ba94d2044b48b0",
+    "Images/MathML/nested_roots.png": "edaa3fbca8253c6886b741d9968b9e89acbe628d86daa89b50ce2e55e3d563b5",
+    "Images/MathML/quadratic_formula.png": "2bd43dc661c6c3c10119c9c499b84f65b8e1d9a7c82c67d3966cf527c20bac58",
+    "Images/MathML/schwinger_dyson.png": "46307d4c86dc70f5095d708ffc59346c05063af74c39e15a447b0b50c674d03e",
+    "Images/MathML/sophomores_dream.png": "610566553215305d542968283ac01be70c36526e572091ff1f9f6bc24b0c306b",
+    "Images/MathML/sphere_volume.png": "f31d5e7d9f1196468836ad08e5453ba7675817607d05635a6162427b46c110c5",
+    "Images/TeX/axiom_of_power_set.png": "e22b8cc5190c2d1a3c6fdf6347304326fa7a490100a9bdeb376e01ad10f069da",
+    "Images/TeX/binomial_coefficient.png": "05b31e48c49bf7d39de0db2725e4f5c3942ef22114e6e4ed3e01ef605a447374",
+    "Images/TeX/cichons_diagram.png": "3c394fef78d35482ae5085c3467b8d03db6aa39874500fd23131508dab8cbbf7",
+    "Images/TeX/complex_number.png": "107f4b9ceb39303d7352e6b3a0affe71b40f46f7205a1be02cb18bb864fe002a",
+    "Images/TeX/deMorgans_law.png": "48815c963617130fb196b023610a293036a8a38733b836de1976e1b3e5690dae",
+    "Images/TeX/differentiable_manifold.png": "72831fbd1e1f2f81301f1b640235fcd42ec96d90f21e74f1d5e09813862b0941",
+    "Images/TeX/divergence.png": "f21582291790febb6e5ba459b11f7ce7569155fb869fe30d012fbbd47b14d995",
+    "Images/TeX/font_sizes.png": "cdae710772d2ed9976b1c57a73718b27f8e15a7fb36b51c9cb30c37fcbafe8e6",
+    "Images/TeX/moore_determinant.png": "86ca2ca15a5e68432a1f267cdb3880df92d83151ea4eab37eb8229aa19b548de",
+    "Images/TeX/multiscripts_and_greek_alphabet.png": "afe149330fbf96c9c98ec11ac605e9fe855fb8cd225a14c5e52dcadd32f2b26d",
+    "Images/TeX/nested_matrices.png": "1fa2a092aa732a0433b7b2115a733812d44c83878fb6d529bb010802f62bafef",
+    "Images/TeX/nested_roots.png": "f3dcaa8d6803f81fc625e13d69b245e0c012b2dde2e1c3cf0251ef507477ba98",
+    "Images/TeX/quadratic_formula.png": "dd7cf9e46df2fa5903495ca4afeb98dfaf4224e1b4e7581793f69dbb404f1f7b",
+    "Images/TeX/schwinger_dyson.png": "6b002233682c66655b4b38ba2b03e76b9f036d47822c77761ac178c5732aff0f",
+    "Images/TeX/sophomores_dream.png": "1b20721b33517b101f96f3c16ebf71bc7deeaf8637868446efec9ba4135cd525",
+    "Images/TeX/sphere_volume.png": "032dc88627f74d1907fcf584f0844cfde33fad03d8f43a3d7804001050082f2d",
+}
+
+
+def eyeasme():
+    """The MathML browser test's page and its images, as the site lays them out."""
+    return [Files("eyeasme", [(name, EYEASME + name) for name in EYEASME_FILES], digests=EYEASME_FILES)]
 
 
 # The checkouts, by name, each as what it fetches.
@@ -374,6 +497,11 @@ CHECKOUTS = {
         Git("lottie/lottie-spec", "https://github.com/lottie/lottie-spec.git", LOTTIE_SPEC_COMMIT, "tests"),
     ],
     "fonts": fonts,
+    # Visual suites of MathML for a person to compare with TeX and the browsers (./dev.sh probe, with --root
+    # third_party for MathFonts' pages, which name their scripts and fonts from the root).
+    "mathfonts": lambda: [Git("MathFonts", "https://github.com/fred-wang/MathFonts.git", MATHFONTS_COMMIT,
+                              "mozilla_mathml_test", "NewComputerModern", "LatinModern", "STIX")],
+    "eyeasme": eyeasme,
     # The stylesheets the benchmark parses, pinned so that each number is comparable with the last. Three are in the
     # form a stylesheet is written in, and six are in the form one is shipped in: minified, tree-shaken and without
     # comments.
@@ -416,7 +544,8 @@ CHECKOUTS = {
     # modern use.
     "unicode": lambda: [Files("unicode", [
         (path.split("/")[-1], UCD + path) for path in (
-            "extracted/DerivedBidiClass.txt", "extracted/DerivedJoiningType.txt", "BidiBrackets.txt", "BidiTest.txt",
+            "extracted/DerivedBidiClass.txt", "extracted/DerivedJoiningType.txt", "BidiBrackets.txt", "BidiMirroring.txt",
+            "BidiTest.txt",
             "BidiCharacterTest.txt", "LineBreak.txt", "auxiliary/LineBreakTest.txt", "EastAsianWidth.txt",
             "extracted/DerivedGeneralCategory.txt", "auxiliary/GraphemeBreakProperty.txt",
             "auxiliary/GraphemeBreakTest.txt",
@@ -438,6 +567,15 @@ CHECKOUTS = {
         (web_features_version() + ".json", NPM + "web-features@%s/data.json" % web_features_version())])],
     # The RFCs that generators read. A published RFC never changes, so its number pins it.
     "rfcs": lambda: [Files("rfc", [("rfc7932.txt", "https://www.rfc-editor.org/rfc/rfc7932.txt")])],
+    # MathML Core's operator dictionary, the operators that stretch along the inline axis, the combining characters
+    # that stand for spacing accents, and the glyph assemblies built from Unicode characters, for the MathML generator,
+    # with MathML 3's dictionary, the last that lists the accent property, at its dated Recommendation.
+    "mathml": lambda: [Files("mathml", [
+        (name, "https://raw.githubusercontent.com/w3c/mathml-core/%s/tables/%s" % (MATHML_CORE_COMMIT, name))
+        for name in ("operator-dictionary-compact.html", "inline-axis-operators.txt", "combining-operators.html",
+                     "unicode-assembly.html")] + [
+        ("mathml3-operator-dictionary.html", "https://www.w3.org/TR/2014/REC-MathML3-20140410/appendixc.html")],
+        ("commit", MATHML_CORE_COMMIT))],
     # The sources of the CSS Working Group's drafts that generators read: css-counter-styles-3's predefined counter
     # styles, for the CSS generator.
     "drafts": lambda: [Files("drafts", [

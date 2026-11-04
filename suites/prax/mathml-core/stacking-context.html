@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stacking contexts and the order of painting</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .z { position: relative; z-index: -1; }
+  .s { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.1.4 Stacking contexts</div>
+  <h1>Stacking contexts and the order of painting</h1>
+  <p class=pr-lede><q>A MathML element with computed style display: block math or display: inline math generates a new stacking
+  context.</q> <q>The extra graphical items are painted after text and background</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#stacking-contexts">MathML Core §3.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>A child behind its formula</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math class=s><mi>a</mi><mi class=z mathbackground=#4f81bd style="top: 6px; left: 4px">b</mi></math></div>
+    <figcaption>b with <code>z-index: -1</code> and a blue background, moved down 6px: it stays in the formula's stacking context, so its blue is painted over the formula's orange. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> b hidden behind the stage: the formula forms no stacking context.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Bars painted after backgrounds</h2>
+  <figure>
+    <div class="pr-stage"><math><mfrac><mn mathbackground=#4f81bd style="margin-bottom: -12px">1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption>A numerator with a blue background pulled down 12px over the fraction bar: the bar is painted over the blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><msqrt><mi mathbackground=#4f81bd style="margin-top: -14px; padding-top: 14px">x</mi></msqrt></math></div>
+    <figcaption>A radicand whose blue background reaches up over the rule: the rule painted over the blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

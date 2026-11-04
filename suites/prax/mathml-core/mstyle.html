@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mstyle</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.4 Style Change &lt;mstyle&gt;</div>
+  <h1>mstyle</h1>
+  <p class=pr-lede><q>Historically, the mstyle element was introduced to make style changes that affect the rendering of its
+  contents. […] Its layout algorithm is the same as the mrow element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#style-change-mstyle">MathML Core §3.3.4</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <figure>
+    <div class="pr-stage"><math><mstyle scriptlevel=1><mo>*</mo><msub><mi>A</mi><mi>B</mi></msub></mstyle><mo>*</mo><mstyle displaystyle=true><munder><mo>∑</mo><mi>C</mi></munder><mo>*</mo><munder><mi>D</mi><mi>E</mi></munder></mstyle></math></div>
+    <figcaption>"*A_B" a level smaller; then * at the text size; then a large ∑ with C under it, * and D with E under it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mstyle mathcolor=#c0392b mathbackground=#f6d7b4><mi>x</mi><mo>+</mo><mi>y</mi></mstyle></math></div>
+    <figcaption>An <code>mstyle</code> with colors: "x + y" red on orange, laid out as a row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

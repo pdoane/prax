@@ -1,10 +1,10 @@
 # Our pages
 
-`suites/prax` walks CSS, SVG and input for a person to read and act on: CSS 2 chapter by chapter, every CSS
-module section by section, SVG 2 chapter by chapter, HTML's chapter on its elements, and the specifications of input
-and focus (UI Events, Pointer Events, and HTML's chapter on user interaction). A page shows what the specification has
-a reader see, and where Chrome, Safari and Firefox draw something else. The workloads, real pages that pull those
-features together, sit beside them.
+`suites/prax` walks CSS, SVG, MathML and input for a person to read and act on: CSS 2 chapter by chapter, every CSS
+module section by section, SVG 2 chapter by chapter, MathML Core, HTML's chapter on its elements, and the
+specifications of input and focus (UI Events, Pointer Events, and HTML's chapter on user interaction). A page shows
+what the specification has a reader see, and where Chrome, Safari and Firefox draw something else. The workloads, real
+pages that pull those features together, sit beside them.
 
 This file holds the suite's rules and the decisions made along the way, with their reasons. `docs/testing.md` says how
 the suite sits among the others.
@@ -38,13 +38,14 @@ Appendix E), and **every CSS module, each walked whole**: every section with som
 features no browser ships and features the engine does not implement yet. Pages come before the implementation. Within
 each module, what is drawn is in and parsing and serialization are out, so a module that is only syntax or object model
 has no directory. SVG 2 is walked the same way, a directory for each chapter that draws something
-(`svg2-10-basic-shapes`), named by its number and title as CSS 2's chapters are. Input is walked as the parts of
-its specifications that a user's input reaches: `uievents`, `pointerevents`, and HTML's chapter on user interaction,
-named by its number and title (`html-06-user-interaction`). A supports page of these lists the interfaces and members
-that the pages use (`.pr-api`) beside any declarations, and a directory whose pages match pseudo-classes or
-pseudo-elements lists those selectors (`.pr-selector`). `index.txt` lists the directories
-walked so far, in the order of their names, each with the specifications it walks and a note where a module's content
-moved or a later level is not walked yet; the rest are to be walked as well.
+(`svg2-10-basic-shapes`), named by its number and title as CSS 2's chapters are. Input is walked as the parts of its
+specifications that a user's input reaches: `uievents`, `pointerevents`, and HTML's chapter on user interaction, named
+by its number and title (`html-06-user-interaction`). MathML Core is walked as a module is (`mathml-core`), and MathML
+4's presentation markup as a chapter of CSS 2 is (`mathml4-03-presentation-markup`). A supports page of these lists the
+interfaces and members that the pages use (`.pr-api`) beside any declarations, and a directory whose pages match
+pseudo-classes or pseudo-elements lists those selectors (`.pr-selector`). `index.txt` lists the directories walked so
+far, in the order of their names, each with the specifications it walks and a note where a module's content moved or a
+later level is not walked yet; the rest are to be walked as well.
 
 ## Pages that walk no specification
 
@@ -198,6 +199,9 @@ gathers controls, as `examples/studio_gallery` gathers Studio Kit's.
 - **Text is for reading.** No Ahem or other test fonts that draw boxes. Where a size comes from text, `.pr-measure`
   sets real words in Noto Sans Mono at `calc(50px / 3)`, so every character is 10px wide and "auto" is 40px against
   the guides.
+- **Math layout is measured against the font's own MATH table.** A guide marks the position that a constant of the
+  formula's real math font gives, such as a superscript's baseline at SuperscriptShiftUp, and the caption names the
+  constant and its value, which `shared/fonts.css` lists for each math font, so the reader can check it.
 - **A font's own value and the fallback, both.** Where the specification takes a value from the font and falls back
   without it (baselines, metrics, features), one figure uses a font that has it, so the reader sees the font's value
   used, and another one that lacks it, so they see the fallback; synthesis is the engine's to do, and the page tests

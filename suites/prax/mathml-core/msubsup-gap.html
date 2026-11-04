@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>msubsup: the gap between the scripts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.1.4 Base with subscript and superscript</div>
+  <h1>msubsup: the gap between the scripts</h1>
+  <p class=pr-lede><q>If SubSuperGap is not at least SubSuperscriptGapMin then […] Let Δ be SuperscriptBottomMaxWithSubscript −
+  (SuperShift − the ink line-descent of the msubsup superscript's margin box). If Δ &gt; 0 then set Δ to the minimum
+  between Δ set SubSuperscriptGapMin − SubSuperGap and increase SuperShift […] by Δ.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#base-with-subscript-and-superscript">MathML Core §3.4.1.4</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>The superscript moves up to open the gap</h2>
+  <p>At 60px, SubSuperscriptGapMin, 160, is 9.6px.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 23.5px"></span><span class=pr-level style="vertical-align: 33px"></span><math style="font-size: 60px"><msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>T</mi><mi>k</mi><mi>j</mi></msubsup></math></div>
+    <figcaption><i>x<sub>i</sub></i>²: the scripts are already far enough apart, and the 2 sits at 23.5px. <i>T<sub>k</sub><sup>j</sup></i>: the tall <i>k</i> and the descending <i>j</i> would come within 5.04px, so the <i>j</i> rises 4.56px, to 33px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

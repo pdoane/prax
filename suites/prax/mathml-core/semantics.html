@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>semantics and annotations</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+  .alt semantics > :first-child { display: none; }
+  .alt semantics > annotation { display: inline; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.8 Semantics and Presentation</div>
+  <h1>semantics and annotations</h1>
+  <p class=pr-lede><q>The user agent stylesheet must contain the following rule in order to only render the annotated MathML
+  expression:</q> <code>semantics &gt; :not(:first-child) { display: none; }</code> <q>The layout algorithm of the
+  &lt;annotation-xml&gt; and &lt;annotation&gt; element is the same as the mtext element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#semantics-and-presentation">MathML Core §3.8</a></span></p>
+</header>
+
+<section>
+  <h2>The annotated expression only</h2>
+  <figure>
+    <div class="pr-stage"><math><semantics><mfrac><mn>1</mn><mn>2</mn></mfrac><annotation encoding="application/x-tex">\frac{1}{2}</annotation><annotation-xml encoding="MathML-Content"><apply><divide/><cn>1</cn><cn>2</cn></apply></annotation-xml></semantics></math></div>
+    <figcaption>The specification's example: ½, and neither the TeX nor the content markup.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math class=alt><semantics><mfrac><mn>1</mn><mn>2</mn></mfrac><annotation encoding="application/x-tex">\frac{1}{2}</annotation></semantics></math></div>
+    <figcaption>The page hides the first child and shows the annotation, as the specification suggests: "\frac{1}{2}" as text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

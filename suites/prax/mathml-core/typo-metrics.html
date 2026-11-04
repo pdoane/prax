@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line spacing from the typographic metrics</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .n { font: 20px/normal 'PR Noto Sans Math'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.2.4 Text layout</div>
+  <h1>Line spacing from the typographic metrics</h1>
+  <p class=pr-lede><q>Because math fonts generally contain very tall glyphs such as big integrals, using typographic metrics is
+  important to avoid excessive line spacing of text. As a consequence, user agents must take into account the
+  USE_TYPO_METRICS flag from the OS/2 table when performing text layout.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#text-layout">MathML Core §2.2.4</a></span>
+  PR Noto Sans Math sets the flag; its typographic ascent and descent are 1069 and 423 units, a line of 1.492em, and
+  its Windows ones 3105 and 2550, 5.655em.</p>
+</header>
+
+<section>
+  <h2>Lines of math text</h2>
+  <figure>
+    <div class="pr-stage n"><math class=n display=block><mtext>first<br>second</mtext></math></div>
+    <figcaption>An <code>mtext</code> of two lines at 20px, <code>line-height: normal</code>: lines 29.8px apart, the stage about 80px tall, not 230px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage n"><div class=n>first<br>second</div></div>
+    <figcaption>The same in HTML text: the same spacing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

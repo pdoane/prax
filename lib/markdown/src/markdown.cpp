@@ -704,6 +704,9 @@ void fillStep(const Markdown* document, const MarkdownTopBlock& block, const Mar
         case PrMarkdownNodeKind_Math:
             step->display = values.display;
             break;
+        case PrMarkdownNodeKind_MathBlock:
+            step->display = true;
+            break;
         case PrMarkdownNodeKind_List:
             step->list = values.list;
             step->tight = values.tight;

@@ -28,7 +28,8 @@ enum {
 
     PrMarkdownExtensionFlag_Alerts = 1u << 6,           // GitHub's alerts: a block quote whose first line is [!NOTE]
     PrMarkdownExtensionFlag_HeadingIds = 1u << 7,       // an id for each heading, as GitHub makes it from the text
-    PrMarkdownExtensionFlag_Math = 1u << 8,             // GitHub's math: TeX between $, between $$, or in $`…`$
+    PrMarkdownExtensionFlag_Math = 1u << 8,             // GitHub's math: TeX in $, $$, $`…`$ or a ```math block
+
     PrMarkdownExtensionFlag_Highlight = 1u << 9,        // text between two equals signs on each side
 
     // pandoc's subscripts between tildes and superscripts between carets. With them, one tilde is a subscript and two
@@ -157,6 +158,7 @@ enum {
     PrMarkdownNodeKind_FootnoteDefinition,
     PrMarkdownNodeKind_Alert,
     PrMarkdownNodeKind_FrontMatter,
+    PrMarkdownNodeKind_MathBlock,       // a ```math block, whose child is its TeX
 
     // Inlines
     PrMarkdownNodeKind_Text,
@@ -242,7 +244,10 @@ typedef struct PrMarkdownStep {
 
     PrMarkdownTask task;            // Item
     PrMarkdownAlert alert;          // Alert
-    bool display;                   // Math: true for display math, between $$, and false for inline math
+
+    // Math: true for display math between $$, and false for inline math. MathBlock: always true.
+    bool display;
+
     PrMarkdownAlignment alignment;  // TableCell
     bool header;                    // TableCell: true if the cell is in the table's head
     uint32_t start;                 // List: the number of an ordered list's first item

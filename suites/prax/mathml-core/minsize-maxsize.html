@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stretchy operators: minsize and maxsize</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.4.3 Layout of operators</div>
+  <h1>Stretchy operators: minsize and maxsize</h1>
+  <p class=pr-lede><q>Let minsize and maxsize be the minsize and maxsize properties on the operator. Percentage values are
+  interpreted relative to the height of g.</q> <q>This step ensures that the condition minsize ≤ T ≤ maxsize
+  holds.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-of-operators">MathML Core §3.2.4.3</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>Bounds on the target</h2>
+  <p>At 40px, where 1em is 40px.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 34.68px"></span><span class=pr-level style="vertical-align: -12.44px"></span><math style="font-size: 40px; math-style: normal"><mrow><mo maxsize=1em>(</mo><mfrac><msup><mi>π</mi><mn>2</mn></msup><mn>6</mn></mfrac><mo maxsize=1em>)</mo></mrow></math></div>
+    <figcaption><code>maxsize="1em"</code>: the parentheses stop at 40px, kept about the axis: the variant <code>parenleft.s01</code>, from −12.44px to 34.68px, shorter than the fraction.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 72.36px"></span><span class=pr-level style="vertical-align: -50.12px"></span><math style="font-size: 40px; math-style: normal"><mrow><mo minsize=3em>(</mo><mn>1</mn><mo minsize=3em>)</mo></mrow></math></div>
+    <figcaption><code>minsize="3em"</code> around a lone 1: 120px, about the axis, from −50.12px to 72.36px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Symmetric or not</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 26px; math-style: normal"><mrow><mo symmetric=false>(</mo><mfrac><mn>1</mn><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></mfrac><mo symmetric=false>)</mo></mrow><mrow><mo>(</mo><mfrac><mn>1</mn><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></mfrac><mo>)</mo></mrow></math></div>
+    <figcaption>At 26px, <code>symmetric="false"</code> parentheses span just the fraction; the symmetric ones, centered on the bar, reach as far above it as the taller denominator reaches below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -60,6 +60,7 @@ enum {
     PrLayoutGroup_Table,            // not inherited, read by layout: tables, and fragmentation
     PrLayoutGroup_Compositing,      // not inherited, read by compositing
     PrLayoutGroup_Grid,             // not inherited, read by layout
+    PrLayoutGroup_Math,             // not inherited, read by layout
     PrLayoutGroup_Count,
 };
 typedef uint8_t PrLayoutGroup;
@@ -212,10 +213,18 @@ enum {
 };
 typedef uint8_t PrLayoutTextIndentFlags;
 
+// The math layout state that a box inherits.
+enum {
+    PrLayoutMathFlag_CompactStyle = 1u << 0,    // math-style is compact (mathml-core/#the-math-style-property)
+    PrLayoutMathFlag_CompactShift = 1u << 1,    // math-shift is compact (mathml-core/#the-math-shift)
+    PrLayoutMathFlag_Dotless = 1u << 2,         // text takes a MATH font's dotless forms (dtls), as under an accent
+};
+typedef uint8_t PrLayoutMathFlags;
+
 PR_NO_PADDING_BEGIN
 // How text is set: its font, what it asks of shaping, the height of its lines, how its white space collapses and its
 // lines wrap, how it is transformed, how a line's content sits in its line box, the writing mode and direction of the
-// content a box holds, and the language of its text. Inherited, and read by layout.
+// content a box holds, the language of its text, and the state of math layout. Inherited, and read by layout.
 typedef struct PrLayoutFontStyle {
     // What its text is set in, at its size and for its language (pr/text_font.h), or the tree's default font if null. A
     // group holds a reference to the font while the tree holds the group.
@@ -254,7 +263,13 @@ typedef struct PrLayoutFontStyle {
     // it (css-break-4/#widows-orphans), at least 1. A larger count than 255 is 255.
     uint8_t orphans;
     uint8_t widows;
-    uint8_t _pad;
+
+    // The computed math-depth (mathml-core/#the-math-script-level-property), clamped to 0 through 255. Text at depth 1
+    // is shaped with the font's first level of script forms (ssty), and text at a greater depth with the second.
+    uint8_t mathDepth;
+
+    PrLayoutMathFlags mathFlags;
+    uint8_t _pad[7];
 } PrLayoutFontStyle;
 PR_NO_PADDING_END
 
@@ -367,6 +382,9 @@ enum {
     // formatting context and a stacking context. It takes no part in its parent's layout, and generates no box anywhere
     // else.
     PrLayoutDisplay_PageMargin,
+
+    PrLayoutDisplay_BlockMath,      // a block-level math box (mathml-core/#new-display-math-value), content centered
+    PrLayoutDisplay_InlineMath,     // an atomic inline-level math box, aligned by its alphabetic baseline
 };
 typedef uint8_t PrLayoutDisplay;
 
@@ -1723,6 +1741,336 @@ PrLayoutGridStyle prLayoutGridStyleDefault(void);
 PrLayoutGroupIndex prLayoutGridStyleIntern(PrLayoutTree* tree, const PrLayoutGridStyle* grid);
 PrLayoutGroupIndex prLayoutGridStyleCreate(PrLayoutTree* tree, const PrLayoutGridStyle* grid);
 PrLayoutGridStyle prLayoutGridStyleRecord(const PrLayoutTree* tree, PrLayoutGroupIndex index);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Math group
+
+// The layout algorithm of a math box (mathml-core/#layout-algorithms, mathml4/#presm). A box whose in-flow children do
+// not fit its algorithm, such as an msub without exactly two, is laid out as a row, as MathML Core specifies for
+// invalid markup. A box whose display is not a math display has no math layout of its own, and its math parent measures
+// it by its box. A table cell of any kind but None, such as an mtd, lays out its content as a row.
+enum {
+    PrLayoutMathKind_None,              // not a MathML element, laid out as a row by a math display
+    PrLayoutMathKind_Row,               // mrow and the elements laid out as one, such as math and mstyle
+    PrLayoutMathKind_Token,             // mi, mn, mtext and ms, laid out in flow and measured by their ink
+    PrLayoutMathKind_Operator,          // mo, a token that may stretch or be drawn large
+    PrLayoutMathKind_Space,             // mspace
+    PrLayoutMathKind_Fraction,          // mfrac
+    PrLayoutMathKind_SquareRoot,        // msqrt
+    PrLayoutMathKind_Root,              // mroot
+    PrLayoutMathKind_Padded,            // mpadded
+    PrLayoutMathKind_Subscript,         // msub
+    PrLayoutMathKind_Superscript,       // msup
+    PrLayoutMathKind_SubSuperscript,    // msubsup
+    PrLayoutMathKind_Under,             // munder
+    PrLayoutMathKind_Over,              // mover
+    PrLayoutMathKind_UnderOver,         // munderover
+    PrLayoutMathKind_Multiscripts,      // mmultiscripts
+    PrLayoutMathKind_Prescripts,        // mprescripts, a row that separates the prescripts of an mmultiscripts
+    PrLayoutMathKind_Table,             // mtable, a table box aligned by PrLayoutMathStyle::tableAlign
+    PrLayoutMathKind_Enclose,           // menclose (mathml4/#presm_menclose)
+    PrLayoutMathKind_Fenced,            // mfenced (mathml4/#presm_mfenced), a row between the fences and separators of
+                                        // PrLayoutMathStyle::fences
+    PrLayoutMathKind_Stack,             // mstack (mathml4/#presm_elementary), rows of digits aligned in columns
+    PrLayoutMathKind_LongDivision,      // mlongdiv, a stack with a divisor and a result
+};
+typedef uint8_t PrLayoutMathKind;
+
+// The properties that an embellished operator (mathml-core/#embellished-operators) takes from its core operator. The
+// producer resolves them from the core operator's attributes and the operator dictionary
+// (mathml-core/#dictionary-based-attributes). A row sizes a fence as TeX sizes a delimiter, to at least 90.1% of what
+// it encloses and at most half an em short of it (TeXbook Appendix G, rule 19, \delimiterfactor and
+// \delimitershortfall). A prefix fence and the postfix fence that matches it enclose a group that no line break splits.
+enum {
+    PrLayoutMathOperatorFlag_Stretchy = 1u << 0,
+    PrLayoutMathOperatorFlag_Symmetric = 1u << 1,
+    PrLayoutMathOperatorFlag_LargeOp = 1u << 2,
+    PrLayoutMathOperatorFlag_MovableLimits = 1u << 3,
+    PrLayoutMathOperatorFlag_Fence = 1u << 4,
+    PrLayoutMathOperatorFlag_InlineAxis = 1u << 5,      // stretches inline (mathml-core/#stretchy-operator-axis)
+    PrLayoutMathOperatorFlag_Prefix = 1u << 6,          // the form is prefix (mathml-core/#dfn-form)
+    PrLayoutMathOperatorFlag_Postfix = 1u << 7,         // the form is postfix
+};
+typedef uint8_t PrLayoutMathOperatorFlags;
+
+// Flags of an munder, mover or munderover (mathml-core/#underscripts-and-overscripts-munder-mover-munderover) and of an
+// mfrac (mathml4/#presm_mfrac).
+enum {
+    PrLayoutMathScriptFlag_Accent = 1u << 0,            // the overscript is an accent
+    PrLayoutMathScriptFlag_AccentUnder = 1u << 1,       // the underscript is an accent
+    PrLayoutMathScriptFlag_Bevelled = 1u << 2,          // the fraction is bevelled
+};
+typedef uint8_t PrLayoutMathScriptFlags;
+
+// The inline-axis alignment, as MathML 4 defines it, of the numerator and the denominator of a fraction (numalign,
+// denomalign), of the scripts of an munder, mover or munderover (align), and of the rows of a stack (stackalign).
+enum {
+    PrLayoutMathAlign_Center,
+    PrLayoutMathAlign_Left,
+    PrLayoutMathAlign_Right,
+    PrLayoutMathAlign_DecimalPoint,     // the rows of a stack on their decimal points (mathml4/#presm_mstack)
+};
+typedef uint8_t PrLayoutMathAlign;
+
+// The role of an item of an mstack or an mlongdiv (mathml4/#presm_elementary). The rows, groups and carries of a stack
+// pass their children through to it as items, as display: contents does. The producer marks each item with its part,
+// whether it starts a row, and the position of its row.
+enum {
+    PrLayoutMathStackPart_None,         // not an item of a stack
+    PrLayoutMathStackPart_Number,       // an mn, with a column for each character
+    PrLayoutMathStackPart_Digit,        // any other element of a row, which takes one column
+    PrLayoutMathStackPart_Carry,        // a carry, borrow or crossout of a column of the next row
+    PrLayoutMathStackPart_Line,         // an msline
+    PrLayoutMathStackPart_Divisor,      // the divisor of an mlongdiv
+    PrLayoutMathStackPart_Result,       // the result of an mlongdiv
+};
+typedef uint8_t PrLayoutMathStackPart;
+
+// Where a carry sits beside the character of its column, as a compass direction (mathml4/#presm_mscarries).
+enum {
+    PrLayoutMathCarryLocation_N,
+    PrLayoutMathCarryLocation_Ne,
+    PrLayoutMathCarryLocation_E,
+    PrLayoutMathCarryLocation_Se,
+    PrLayoutMathCarryLocation_S,
+    PrLayoutMathCarryLocation_Sw,
+    PrLayoutMathCarryLocation_W,
+    PrLayoutMathCarryLocation_Nw,
+};
+typedef uint8_t PrLayoutMathCarryLocation;
+
+// Whether an item starts a row of its stack, and how a carry crosses out the character of its column.
+enum {
+    PrLayoutMathStackFlag_RowStart = 1u << 0,
+    PrLayoutMathStackFlag_UpDiagonalStrike = 1u << 1,
+    PrLayoutMathStackFlag_DownDiagonalStrike = 1u << 2,
+    PrLayoutMathStackFlag_VerticalStrike = 1u << 3,
+    PrLayoutMathStackFlag_HorizontalStrike = 1u << 4,
+};
+typedef uint8_t PrLayoutMathStackFlags;
+
+// Where an operator goes when a line breaks at it (mathml4/#presm_linebreaking). Auto is After in inline math because
+// TeX breaks a formula in a paragraph after its relations and binary operators.
+enum {
+    PrLayoutMathBreakStyle_Auto,        // Before in display math, and After in inline math
+    PrLayoutMathBreakStyle_Before,      // at the start of the next line
+    PrLayoutMathBreakStyle_After,       // at the end of the line that the break ends
+    PrLayoutMathBreakStyle_Duplicate,   // at both
+};
+typedef uint8_t PrLayoutMathBreakStyle;
+
+// The alignment of the line after a break within the formula's width (mathml4/#presm_linebreaking, indentalign).
+enum {
+    PrLayoutMathIndent_Auto,            // as the formula decides
+    PrLayoutMathIndent_Left,
+    PrLayoutMathIndent_Center,
+    PrLayoutMathIndent_Right,
+};
+typedef uint8_t PrLayoutMathIndent;
+
+// The limits of PrLayoutMathStyle::breakPenalty. A penalty between them is the cost, as in TeX, that a break at the box
+// adds to a breaking of the formula.
+enum {
+    kPrLayoutMathForcedBreak = -10000,  // forces a break
+    kPrLayoutMathNoBreak = 10000,       // forbids a break
+};
+
+// The styles of long division (mathml4/#presm_mlongdiv), named for where the divisor and the result go beside the
+// dividend.
+enum {
+    PrLayoutMathLongDivision_LeftTop,
+    PrLayoutMathLongDivision_StackedRightRight,
+    PrLayoutMathLongDivision_MediumStackedRightRight,
+    PrLayoutMathLongDivision_ShortStackedRightRight,
+    PrLayoutMathLongDivision_RightTop,
+    PrLayoutMathLongDivision_LeftSlashRight,
+    PrLayoutMathLongDivision_LeftParenRight,
+    PrLayoutMathLongDivision_ColonRightEqualRight,
+    PrLayoutMathLongDivision_StackedLeftLeft,
+    PrLayoutMathLongDivision_StackedLeftLineTop,
+};
+typedef uint8_t PrLayoutMathLongDivision;
+
+// The pseudo-unit of the inner box that a dimension of an mpadded is a multiple of (mathml4/#presm_mpadded).
+enum {
+    PrLayoutMathPseudo_None,
+    PrLayoutMathPseudo_Width,
+    PrLayoutMathPseudo_Height,
+    PrLayoutMathPseudo_Depth,
+};
+typedef uint8_t PrLayoutMathPseudo;
+
+// How a dimension of an mpadded relates to the inner box's value. MathML Core treats a percentage as absent
+// (mathml-core/#inner-box-and-requested-parameters).
+enum {
+    PrLayoutMathPaddingMode_Absent,     // the inner box's value, or zero for lspace and voffset
+    PrLayoutMathPaddingMode_Set,        // the given value
+    PrLayoutMathPaddingMode_Increase,   // the inner box's value plus the given value
+    PrLayoutMathPaddingMode_Decrease,   // the inner box's value minus the given value
+};
+typedef uint8_t PrLayoutMathPaddingMode;
+
+PR_NO_PADDING_BEGIN
+// A dimension of an mpadded: `factor` times the inner box's pseudo-unit, plus `length`.
+typedef struct PrLayoutMathPadding {
+    float factor;
+    PrLayoutUnit length;
+    PrLayoutMathPseudo pseudo;
+    PrLayoutMathPaddingMode mode;
+    uint8_t _pad[2];
+} PrLayoutMathPadding;
+PR_NO_PADDING_END
+
+// The dimensions of an mpadded, which index PrLayoutMathStyle::padding.
+enum {
+    PrLayoutMathPadded_Width,
+    PrLayoutMathPadded_Height,
+    PrLayoutMathPadded_Depth,
+    PrLayoutMathPadded_LeftSpace,
+    PrLayoutMathPadded_VerticalOffset,
+    PrLayoutMathPadded_Count,
+};
+typedef uint8_t PrLayoutMathPadded;
+
+// The part of an mtable that sits on the baseline of its parent (mathml4/#presm_mtable).
+enum {
+    PrLayoutMathTableAlign_Axis,        // the center, on the math axis rather than the baseline, as in MathML Core
+    PrLayoutMathTableAlign_Center,
+    PrLayoutMathTableAlign_Top,
+    PrLayoutMathTableAlign_Bottom,
+    PrLayoutMathTableAlign_Baseline,    // the baseline of the row that PrLayoutMathStyle::tableRow names
+};
+typedef uint8_t PrLayoutMathTableAlign;
+
+// The notations of an menclose (mathml4/#presm_menclose), drawn around or over its content.
+enum {
+    PrLayoutMathNotationFlag_LongDivision = 1u << 0,
+    PrLayoutMathNotationFlag_Actuarial = 1u << 1,
+    PrLayoutMathNotationFlag_PhasorAngle = 1u << 2,
+    PrLayoutMathNotationFlag_Radical = 1u << 3,
+    PrLayoutMathNotationFlag_Box = 1u << 4,
+    PrLayoutMathNotationFlag_RoundedBox = 1u << 5,
+    PrLayoutMathNotationFlag_Circle = 1u << 6,
+    PrLayoutMathNotationFlag_Left = 1u << 7,
+    PrLayoutMathNotationFlag_Right = 1u << 8,
+    PrLayoutMathNotationFlag_Top = 1u << 9,
+    PrLayoutMathNotationFlag_Bottom = 1u << 10,
+    PrLayoutMathNotationFlag_UpDiagonalStrike = 1u << 11,
+    PrLayoutMathNotationFlag_DownDiagonalStrike = 1u << 12,
+    PrLayoutMathNotationFlag_VerticalStrike = 1u << 13,
+    PrLayoutMathNotationFlag_HorizontalStrike = 1u << 14,
+    PrLayoutMathNotationFlag_Madruwb = 1u << 15,
+    PrLayoutMathNotationFlag_UpDiagonalArrow = 1u << 16,
+};
+typedef uint32_t PrLayoutMathNotationFlags;
+
+PR_NO_PADDING_BEGIN
+// A fence or a separator of an mfenced, which the box draws without an element of its own. The producer resolves its
+// properties as for the mo of the expanded form (mathml4/#presm_mfenced). Its spaces are in px.
+typedef struct PrLayoutMathFence {
+    uint32_t codePoint;                 // 0 for none
+    PrLayoutUnit leftSpace;
+    PrLayoutUnit rightSpace;
+    PrLayoutMathOperatorFlags flags;
+    uint8_t _pad[3];
+} PrLayoutMathFence;
+PR_NO_PADDING_END
+
+// The indices of PrLayoutMathStyle::fences.
+enum {
+    PrLayoutMathFenceSlot_Open,
+    PrLayoutMathFenceSlot_Close,
+    PrLayoutMathFenceSlot_Separators,   // the first separator, followed by the rest
+};
+typedef uint8_t PrLayoutMathFenceSlot;
+
+// The maximum number of fences and separators that an mfenced keeps, two fences and six separators. The last separator
+// repeats after them, as the last character of the separators attribute does.
+enum { kPrLayoutMathMaxFences = 8 };
+
+PR_NO_PADDING_BEGIN
+// How a math box lays out its children (mathml-core/#layout-algorithms). The producer resolves the values from the
+// element's attributes and the operator dictionary. Not inherited, and read by layout. A box's math parent also reads
+// its kind and its embellishment.
+//
+// An embellished operator has the properties of its core operator, which its math parent reads to space and stretch it.
+// The producer resolves its spaces to px with the core operator's font. A size limit is in px or a percentage of the
+// unstretched glyph's size, and a maximum of none means no maximum.
+typedef struct PrLayoutMathStyle {
+    PrLayoutMathKind kind;
+    bool embellished;
+    PrLayoutMathOperatorFlags operatorFlags;
+    PrLayoutMathScriptFlags scriptFlags;
+    PrLayoutUnit leftSpace;
+    PrLayoutUnit rightSpace;
+    PrLayoutLength minSize;
+    PrLayoutLength maxSize;
+
+    // Fraction: the thickness of the bar, in px, as a percentage of the font's FractionRuleThickness, or auto for that
+    // thickness (mathml-core/#fractions-mfrac), and the alignment of the numerator and the denominator.
+    PrLayoutLength lineThickness;
+    PrLayoutMathAlign numeratorAlign;
+    PrLayoutMathAlign denominatorAlign;
+
+    PrLayoutMathAlign scriptAlign;                         // Under, Over and UnderOver
+    PrLayoutMathTableAlign tableAlign;                     // Table
+    int32_t tableRow;                                      // Table: the row that Baseline aligns, counted from 1 at the
+                                                           // top or from -1 at the bottom, or 0 for none
+    PrLayoutUnit spaceAscent;                              // Space: the requested line-ascent
+                                                           // (mathml-core/#space-mspace)
+    PrLayoutMathPadding padding[PrLayoutMathPadded_Count]; // Padded
+    PrLayoutMathNotationFlags notations;                   // Enclose
+
+    // Fenced: the fences, then `separatorCount` separators.
+    PrLayoutMathFence fences[kPrLayoutMathMaxFences];
+    uint8_t separatorCount;
+
+    // Stack and LongDivision: the column that the rows align on, the side of its column that a narrower character goes
+    // to, the style of a long division, the space between columns in px, and the character that DecimalPoint aligns on.
+    PrLayoutMathAlign stackAlign;
+    PrLayoutMathAlign charAlign;
+    PrLayoutMathLongDivision longDivision;
+    PrLayoutUnit charSpacing;
+    uint32_t decimalPoint;
+
+    // An item of a stack: its part, its flags, where it sits if it is a carry, and the shift of its row in columns
+    // toward the left (mathml4/#presm_msgroup). A Line spans `lineColumns` columns, or every column if 0. It extends
+    // `overhangs` px past them on the left and the right, and is `lineThickness` thick.
+    PrLayoutMathStackPart stackPart;
+    PrLayoutMathStackFlags stackFlags;
+    PrLayoutMathCarryLocation carryLocation;
+    uint8_t _pad2;
+    int32_t stackPosition;
+    uint32_t lineColumns;
+    PrLayoutUnit overhangs[2];
+
+    // An embellished operator or an mspace: the penalty of a line break at it, where the operator goes at such a break,
+    // and the alignment of the next line, shifted by `indentShift` px (mathml4/#presm_linebreaking). The first line of
+    // a broken formula is aligned by the indentalignfirst and indentshiftfirst of the operator that ends it, and the
+    // last line by the indentalignlast and indentshiftlast of the operator that starts it. Lines are `lineLeading` px
+    // apart, or as the formula decides if it is negative. An invisible times at a break is drawn as `breakChar` unless
+    // it is 0.
+    int32_t breakPenalty;
+    PrLayoutMathBreakStyle breakStyle;
+    PrLayoutMathIndent indent;
+    PrLayoutMathIndent indentFirst;
+    PrLayoutMathIndent indentLast;
+    PrLayoutUnit indentShift;
+    PrLayoutUnit indentShiftFirst;
+    PrLayoutUnit indentShiftLast;
+    PrLayoutUnit lineLeading;
+    uint32_t breakChar;
+} PrLayoutMathStyle;
+PR_NO_PADDING_END
+
+// Returns no kind, no embellished operator, with no spaces, no minimum, no maximum, the font's line thickness, centered
+// parts, absent padding, a table on the axis, no notations and no line break.
+PrLayoutMathStyle prLayoutMathStyleDefault(void);
+
+// Interns or creates a math group and returns its index, or returns the math group at `index`.
+PrLayoutGroupIndex prLayoutMathStyleIntern(PrLayoutTree* tree, const PrLayoutMathStyle* math);
+PrLayoutGroupIndex prLayoutMathStyleCreate(PrLayoutTree* tree, const PrLayoutMathStyle* math);
+PrLayoutMathStyle prLayoutMathStyleRecord(const PrLayoutTree* tree, PrLayoutGroupIndex index);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Lengths

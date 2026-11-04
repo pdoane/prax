@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mathcolor, mathbackground and mathsize</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.1.5 Legacy MathML Style Attributes</div>
+  <h1>mathcolor, mathbackground and mathsize</h1>
+  <p class=pr-lede><q>The mathcolor and mathbackground attributes, if present, must have a value that is a &lt;color&gt;. In that case,
+  the user agent is expected to treat these attributes as a presentational hint setting the element's color and
+  background-color properties</q> <q>The mathsize attribute […] as a presentational hint setting the element's
+  font-size property to the corresponding value.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#legacy-mathml-style-attributes">MathML Core §2.1.5</a></span></p>
+</header>
+
+<section>
+  <h2>mathcolor and mathbackground</h2>
+  <figure>
+    <div class="pr-stage"><math><mfrac mathcolor=#c0392b><mn>1</mn><mn>2</mn></mfrac><msqrt mathcolor=#2c5a8f><mi>x</mi></msqrt></math></div>
+    <figcaption><code>mathcolor</code> red on a fraction, blue on a root: the digits and the bar red, the x, surd and rule blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mrow mathbackground=#f9cc9d><mi>a</mi><mo>+</mo><mi>b</mi></mrow><mo>=</mo><mi mathbackground=yellow>c</mi></math></div>
+    <figcaption><code>mathbackground</code>: "a + b" on orange, c on yellow, "=" on nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mi mathcolor=red style="color: green">x</mi><mi style="color: green" mathcolor=red>y</mi></math></div>
+    <figcaption>A presentational hint loses to the author's <code>style</code>: x and y green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>mathsize</h2>
+  <figure>
+    <div class="pr-stage"><math><mi>x</mi><mi mathsize=48px>x</mi><mi mathsize=50%>x</mi><mrow mathsize=2em><mi>x</mi></mrow></math></div>
+    <figcaption>At 24px: x, then 48px, then 50%, 12px, then 2em, 48px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mfrac mathsize=200%><mn>1</mn><mn>2</mn></mfrac><mfrac><mn>1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption><code>mathsize="200%"</code> on a fraction: the digits, the bar's thickness and its gaps all twice those of the next fraction.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -45,6 +45,8 @@ void layoutScratchDestroy(LayoutScratch* PR_NULLABLE scratch) {
     layoutFlexScratchDestroy(scratch->flex);
     layoutTableScratchDestroy(scratch->table);
     layoutGridScratchDestroy(scratch->grid);
+    scratch->mathPaints.reset();
+    scratch->mathGlyphs.reset();
     prMemoryFree(scratch);
 }
 

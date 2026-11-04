@@ -78,7 +78,7 @@ float resolved(const Tree& c, PrLayoutLength length, float base) {
 // The groups' sizes, which determine the cost of hashing and comparing a style. The font's holds a pointer, and this is
 // its size where a pointer is 64 bits.
 #if UINTPTR_MAX == UINT64_MAX
-static_assert(sizeof(PrLayoutFontStyle) == 48);
+static_assert(sizeof(PrLayoutFontStyle) == 56);
 #endif
 static_assert(sizeof(PrLayoutBoxStyle) == 112);
 static_assert(sizeof(PrLayoutEffectStyle) == 132);

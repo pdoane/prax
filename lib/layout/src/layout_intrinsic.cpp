@@ -9,6 +9,7 @@
 #include "layout/src/layout_flex.h"
 #include "layout/src/layout_grid.h"
 #include "layout/src/layout_inline.h"
+#include "layout/src/layout_math.h"
 #include "layout/src/layout_replaced.h"
 #include "layout/src/layout_sizing.h"
 #include "layout/src/layout_table.h"
@@ -163,6 +164,9 @@ LayoutIntrinsicSizes containerIntrinsic(LayoutState& state, LayoutNodeIndex node
     // container's own input only if that size or limit reads the container's base.
     bool givesInput = base.readsPercentBlock || layoutLengthReadsBase(own.minBlockSize) ||
         layoutLengthReadsBase(own.maxBlockSize);
+    // The sizes of a math box are its math content's, as its math layout finds them.
+    if (layoutTreeNode(state.tree, node).children == LayoutChildren_Math)
+        return transferred(layoutMathIntrinsic(state, node, input));
     // The sizes of a flex or grid container come from the contributions of its items, as its layout finds them.
     if (layoutIsFlexContainer(box) || layoutIsGridContainer(box)) {
         sizes =

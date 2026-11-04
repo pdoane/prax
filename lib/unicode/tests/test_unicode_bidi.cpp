@@ -91,6 +91,20 @@ TEST_CASE("the strong type of a code point is left, right or none") {
     CHECK(prUnicodeBidiStrong(0x10FFFF) == PrUnicodeBidiStrong_None);
 }
 
+TEST_CASE("a mirrored character's glyph is its pair's, and others mirror to themselves") {
+    CHECK(prUnicodeBidiMirror('(') == ')');
+    CHECK(prUnicodeBidiMirror(')') == '(');
+    CHECK(prUnicodeBidiMirror(0x2208) == 0x220B);
+    CHECK(prUnicodeBidiMirror(0x27E8) == 0x27E9);
+    CHECK(prUnicodeBidiMirror(0x221A) == 0x221A);
+    CHECK(prUnicodeBidiMirror('x') == 'x');
+    CHECK(prUnicodeBidiIsMirrored('('));
+    CHECK(prUnicodeBidiIsMirrored(0x2211));
+    CHECK(prUnicodeBidiIsMirrored(0x221A));
+    CHECK_FALSE(prUnicodeBidiIsMirrored(0x2192));
+    CHECK_FALSE(prUnicodeBidiIsMirrored('x'));
+}
+
 TEST_CASE("the first strong code point of a text decides its direction") {
     CHECK(prUnicodeBidiFirstStrong("") == PrUnicodeBidiStrong_None);
     CHECK(prUnicodeBidiFirstStrong("12 -") == PrUnicodeBidiStrong_None);

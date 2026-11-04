@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mmultiscripts: where each script goes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.3.1 Base with prescripts and postscripts</div>
+  <h1>mmultiscripts: where each script goes</h1>
+  <p class=pr-lede><q>Place the subscript at inline-start position inline-offset + pair-inline-size − the inline size of the
+  subscript's margin box.</q> <q>Place the subscript at inline-start position inline-offset −
+  LargeOpItalicCorrection.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#base-with-prescripts-and-postscripts">MathML Core §3.4.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Prescripts end at the base; postscripts start there</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 40px; math-style: normal"><mmultiscripts><mi>U</mi><mprescripts /><mn>92</mn><mn>238</mn></mmultiscripts><mo>→</mo><mmultiscripts><mi>Th</mi><mprescripts /><mn>90</mn><mn>234</mn></mmultiscripts><mo>+</mo><mmultiscripts><mi>α</mi><mprescripts /><mn>2</mn><mn>4</mn></mmultiscripts></math></div>
+    <figcaption>Alpha decay of uranium 238: each pair of prescripts right-aligned against its symbol, so 92 ends under the end of 238.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 40px; math-style: normal"><mmultiscripts><mi>R</mi><mi>i</mi><none /><none /><mi>j</mi><mi>k</mi><none /><none /><mi>l</mi></mmultiscripts></math></div>
+    <figcaption>A tensor <i>R</i> with indices <i>i</i> down, <i>j</i> up, <i>k</i> down and <i>l</i> up, each pair in a column of its own, left-aligned.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -119,7 +119,9 @@ BENCHES = [
     Bench("layout", "generated documents laid out from scratch, at another width, and after small changes",
           ["pr_shell"], fetch=["fonts"], script="layout.js", kind=layout_kind,
           fonts=[("Arimo", "normal", os.path.join(FONTS, "Arimo.ttf")),
-                 ("Arimo", "italic", os.path.join(FONTS, "Arimo-Italic.ttf"))]),
+                 ("Arimo", "italic", os.path.join(FONTS, "Arimo-Italic.ttf")),
+                 ("NewComputerModernMath", "normal",
+                  os.path.join(common.RELEASE, "font_bundle", "NewCMMath-Regular.otf"))]),
 
     # Engine benchmarks: they measure what only the engine exposes.
     Bench("frame", "whole frames after each kind of change to a page of cards, at 100 and 2000 cards, and its load",

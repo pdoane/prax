@@ -90,4 +90,7 @@ TEST_CASE("math-auto sets a lone character in its italic form and leaves longer 
     CHECK(transformed("sin", PrTextTransform_MathAuto) == "sin");
     CHECK(transformed("2", PrTextTransform_MathAuto) == "2");
     CHECK(transformed("sin x", PrTextTransform_MathAuto, 0, 4, 5) == "𝑥");
+    CHECK(transformed("sin", PrTextTransform_MathBold) == "𝐬𝐢𝐧");
+    CHECK(transformed("Rx", prTextTransformFromMathVariant(PrUnicodeMathVariant_DoubleStruck)) == "ℝ𝕩");
+    CHECK(transformed("h2", PrTextTransform_MathItalic) == "ℎ2");
 }

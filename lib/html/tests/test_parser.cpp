@@ -342,16 +342,17 @@ TEST_CASE("DOMParser parses an XML type as XML, and shows where it is not well-f
 
 TEST_CASE("a hyperlink's URL parts read and write its href attribute") {
     PrDomDocument* document = prHtmlDomParserParseFromString(
-        "<a id=a href='https://example.com:8080/one/two?q=1#top'>x</a><a id=b href='http://[bad'>y</a><area id=c>",
+        "<a id=a href='https://example.com:8080/one/two?q=1#top'>x</a><a id=b href='http://[bad'>y</a><area id=c>"
+            "<math><a id=m href='https://example.com/math'>z</a></math>",
         PrHtmlDomParserSupportedType_TextHtml);
     PrDomNode* root = prDomDocumentAsNode(document);
-    PrHtmlElement* a = prHtmlAnchorElementAsHtmlElement(
-        prHtmlAnchorElementQuery(prDomElementAsEventTarget(prDomNodeGetElementById(root, "a"))));
-    PrHtmlElement* b = prHtmlAnchorElementAsHtmlElement(
-        prHtmlAnchorElementQuery(prDomElementAsEventTarget(prDomNodeGetElementById(root, "b"))));
-    PrHtmlElement* c = prHtmlAreaElementAsHtmlElement(
-        prHtmlAreaElementQuery(prDomElementAsEventTarget(prDomNodeGetElementById(root, "c"))));
-    auto component = [](PrHtmlElement* element, PrUrlComponent part) {
+    PrDomElement* a = prDomNodeGetElementById(root, "a");
+    PrDomElement* b = prDomNodeGetElementById(root, "b");
+    PrDomElement* c = prDomNodeGetElementById(root, "c");
+    PrDomElement* m = prDomNodeGetElementById(root, "m");
+    REQUIRE(prHtmlAnchorElementQuery(prDomElementAsEventTarget(a)) != nullptr);
+    REQUIRE(prHtmlAreaElementQuery(prDomElementAsEventTarget(c)) != nullptr);
+    auto component = [](PrDomElement* element, PrUrlComponent part) {
         PrRawString value = prHtmlHyperlinkComponent(element, part);
         std::string text(prRawStringView(&value).data, prRawStringView(&value).size);
         prRawStringReset(&value);
@@ -362,7 +363,7 @@ TEST_CASE("a hyperlink's URL parts read and write its href attribute") {
     CHECK(component(a, PrUrlComponent_Search) == "?q=1");
     CHECK(component(a, PrUrlComponent_Hash) == "#top");
     CHECK(prHtmlHyperlinkSetComponent(a, PrUrlComponent_Pathname, "/three") == PrStatus_Ok);
-    PrStringView href = prDomElementGetAttribute(prHtmlElementAsElement(a), "href");
+    PrStringView href = prDomElementGetAttribute(a, "href");
     CHECK(href == "https://example.com:8080/three?q=1#top");
     // An href that does not parse reads as written, with a protocol of ":".
     CHECK(component(b, PrUrlComponent_Href) == "http://[bad");
@@ -370,6 +371,8 @@ TEST_CASE("a hyperlink's URL parts read and write its href attribute") {
     CHECK(component(b, PrUrlComponent_Pathname).empty());
     CHECK(component(c, PrUrlComponent_Href).empty());
     CHECK(prHtmlHyperlinkSetComponent(c, PrUrlComponent_Origin, "x") == PrStatus_ReadOnly);
+    // MathML's a element is a hyperlink with the same members (mathml-core/#the-a-element).
+    CHECK(component(m, PrUrlComponent_Pathname) == "/math");
     prDomDocumentRelease(document);
 }
 

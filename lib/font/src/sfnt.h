@@ -7,6 +7,7 @@
 
 #include "pr/base.h"
 #include "pr/font.h"
+#include "pr/raw_array.h"
 #include "pr/raw_string.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -18,7 +19,7 @@ struct SfntTable {
     const uint8_t* PR_NULLABLE data;
     uint32_t size;
 
-    // Returns the big-endian value at byte `at`, or zero past the end.
+    // Returns the big-endian value at byte `at`, or zero if any of its bytes is past the end.
     uint8_t uint8At(uint32_t at) const;
     uint16_t uint16At(uint32_t at) const;
     int16_t int16At(uint32_t at) const;
@@ -126,13 +127,14 @@ struct SfntCmapSequences {
     uint32_t selectorCount;
 };
 
-// Opens the subtable of Unicode Variation Sequences, which the Unicode platform lists. Returns false and opens none if
-// the face has no such subtable, or if the subtable is malformed: a length or a count that runs past the table, records
-// out of order or overlapping, or a code point past U+10FFFF.
+// Opens the Unicode Variation Sequences subtable that the Unicode platform lists. Returns false and opens none if the
+// face has no such subtable, or if the subtable is malformed, such as by a length or a count that runs past the table,
+// records that are out of order or overlap, or a code point past U+10FFFF.
 bool sfntCmapSequencesOpen(const Sfnt& sfnt, SfntCmapSequences* out);
 
 // Returns how the subtable maps the sequence of `codePoint` and `selector`. For PrFontSequenceMapping_Variant, `glyph`
-// is the glyph of the sequence. For the others, it is 0, and the base character's glyph is the Unicode subtable's.
+// is the glyph of the sequence. For the others, `glyph` is 0, and the Unicode subtable gives the base character's
+// glyph.
 PrFontSequenceGlyph sfntCmapSequenceGlyph(const SfntCmapSequences& sequences, uint32_t codePoint, uint32_t selector);
 
 // The encodings that a color bitmap strike holds.
@@ -166,6 +168,40 @@ bool sfntGlyphImage(const Sfnt& sfnt, uint32_t glyph, float pixelsPerEm, SfntIma
 // Gets the SVG document that holds the glyph (OpenType SVG), and its index among the documents of the font. Returns
 // false if no document holds it.
 bool sfntGlyphSvg(const Sfnt& sfnt, uint32_t glyph, SfntTable* document, uint32_t* index);
+
+// The result of sfntCoverageIndex for a glyph that the coverage does not list.
+constexpr uint32_t kSfntCoverageMissing = 0xFFFFFFFFu;
+
+// Returns the index of the glyph in an OpenType Coverage table, which indexes the records of the table that refers to
+// it, or kSfntCoverageMissing. The caller checks the index against the number of records.
+uint32_t sfntCoverageIndex(SfntTable coverage, uint32_t glyph);
+
+// A subtable of a GSUB lookup that substitutes one glyph for one glyph: a single substitution (LookupType 1) or an
+// alternate substitution (LookupType 3), reached through an extension lookup's subtable if it is one.
+struct SfntSubstitution {
+    SfntTable subtable;
+    uint16_t type;
+};
+
+// The subtables that substitute one glyph for one glyph in the lookups of each GSUB feature, under every script and
+// language system, in the order of the feature records and of their lookups. A face builds them once, so that finding a
+// feature's glyph does not walk the feature list.
+struct SfntFeatureSubstitutions {
+    RawArray<uint32_t> tags;                // the features' tags, in increasing order
+    RawArray<uint32_t> starts;              // by feature, its first subtable, and the number of subtables at the end
+    RawArray<SfntSubstitution> subtables;
+};
+
+// Builds the substitutions of the face's GSUB features into `out`, which is empty.
+void sfntFeatureSubstitutionsBuild(const Sfnt& sfnt, SfntFeatureSubstitutions* out);
+
+// Frees the substitutions.
+void sfntFeatureSubstitutionsReset(SfntFeatureSubstitutions* substitutions);
+
+// Returns the glyph that the GSUB feature `feature` substitutes for the glyph by a single substitution, or the first
+// alternate of an alternate substitution, in the first of its subtables that substitutes it, or the glyph itself if
+// none does.
+uint32_t sfntFeatureGlyph(const SfntFeatureSubstitutions& substitutions, uint32_t feature, uint32_t glyph);
 
 } // namespace pr_impl
 

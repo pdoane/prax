@@ -6,6 +6,7 @@ if ((APPLE OR WIN32) AND PR_JS)
         source_lottie.cpp
         suite_lottie.cpp
         suite_markdown.cpp
+        suite_mathml.cpp
         suite_prax.cpp
         suite_prince.cpp
         suite_svg.cpp
@@ -18,6 +19,7 @@ if ((APPLE OR WIN32) AND PR_JS)
     target_include_directories(viewer_documents PUBLIC ${PROJECT_SOURCE_DIR})
     target_compile_definitions(viewer_documents PRIVATE
         PR_SUITES_DIR="${PROJECT_SOURCE_DIR}/suites"
+        PR_TEX_TESTS_DIR="${PROJECT_SOURCE_DIR}/lib/tex/tests"
         PR_THIRD_PARTY_DIR="${PROJECT_SOURCE_DIR}/third_party"
         PR_VIEWER_CACHE_DIR="${PROJECT_BINARY_DIR}/viewer-cache")
     target_link_libraries(viewer_documents PUBLIC prax::draw draw_compare draw_renderers suite_render prax::text

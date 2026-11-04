@@ -42,6 +42,7 @@ constexpr NamedFont kStandard14[] = {
     {"Cousine-BoldItalic.ttf", "Cousine"},
     {"LeviSymbol-Regular.ttf", "LeviSymbol", PrFontGeneric_None, "Symbol"},
     {"Levibats-Regular.ttf", "Levibats-Regular", PrFontGeneric_None, "ZapfDingbats"},
+    {"NewCMMath-Regular.otf", "NewComputerModernMath", PrFontGeneric_Math},
 };
 
 // The generic families that fallback families stand for in every bundle.

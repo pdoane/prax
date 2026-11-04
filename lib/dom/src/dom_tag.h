@@ -38,6 +38,10 @@ extern const uint64_t kDomTagsHtmlParagraphs[kDomTagWords];
 // (css_boxes.h).
 extern const uint64_t kDomTagsSvgBoxes[kDomTagWords];
 
+// The MathML elements whose markup gives their boxes more than their style does, which MathML's box provider answers
+// for (css_boxes.h).
+extern const uint64_t kDomTagsMathMlBoxes[kDomTagWords];
+
 } // namespace pr_impl
 
 PR_ASSUME_NONNULL_END

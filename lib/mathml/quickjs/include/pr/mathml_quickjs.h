@@ -15,8 +15,9 @@ extern "C" {
 // Binds the classes of MathML elements. The DOM's binding must be bound first.
 void prJsMathMlBind(JSContext* ctx);
 
-// The class of MathMLElement. Other modules add members to it.
+// The classes of MathMLElement and MathMLAnchorElement. Other modules add members to them.
 extern JSClassID prJsMathMlElementClass;
+extern JSClassID prJsMathMlAnchorElementClass;
 
 #if defined(__cplusplus)
 }

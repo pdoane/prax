@@ -16,15 +16,24 @@ namespace {
 
 JSClassID classifyElement(void* handle) {
     PrDomEventTarget* target = prDomElementAsEventTarget(static_cast<PrDomElement*>(handle));
+    if (prMathMlAnchorElementQuery(target) != nullptr)
+        return prJsMathMlAnchorElementClass;
     return prMathMlElementQuery(target) != nullptr ? prJsMathMlElementClass : prJsDomElementClass;
 }
 
 constexpr JSCFunctionListEntry kElementProto[] = {PR_JS_TAG("MathMLElement"), PR_JS_CSS_INLINE_STYLE};
 
+constexpr JSCFunctionListEntry kAnchorElementProto[] = {PR_JS_TAG("MathMLAnchorElement")};
+
 constexpr JsClassDefinition kClasses[] = {
     {
         PR_JS_CLASS("MathMLElement", prJsMathMlElementClass, jsViewFinalizer<&prJsMathMlElementClass>, kElementProto),
         .base = &prJsDomElementClass,
+    },
+    {
+        PR_JS_CLASS("MathMLAnchorElement", prJsMathMlAnchorElementClass,
+            jsViewFinalizer<&prJsMathMlAnchorElementClass>, kAnchorElementProto),
+        .base = &prJsMathMlElementClass,
     },
 };
 
@@ -36,6 +45,7 @@ using namespace pr_impl;
 
 // The classes that other modules' bindings refer to.
 JSClassID prJsMathMlElementClass;
+JSClassID prJsMathMlAnchorElementClass;
 
 void prJsMathMlBind(JSContext* ctx) {
     for (const JsClassDefinition& definition : kClasses)

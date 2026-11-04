@@ -87,8 +87,35 @@ TEST_CASE("full-width, full-size kana and mathematical italic forms") {
     CHECK(prUnicodeFullSizeKana(0x31F0) == 0x30AF);    // small katakana ku
     CHECK(prUnicodeFullSizeKana(0xFF67) == 0xFF71);    // small half-width katakana a stays half-width
     CHECK(prUnicodeFullSizeKana(0x3042) == 0x3042);
-    CHECK(prUnicodeMathItalic('x') == 0x1D465);
-    CHECK(prUnicodeMathItalic('h') == 0x210E);
-    CHECK(prUnicodeMathItalic(0x03B1) == 0x1D6FC);     // alpha
-    CHECK(prUnicodeMathItalic('2') == '2');
+    CHECK(prUnicodeMathVariant('x', PrUnicodeMathVariant_Italic) == 0x1D465);
+    CHECK(prUnicodeMathVariant('h', PrUnicodeMathVariant_Italic) == 0x210E);
+    CHECK(prUnicodeMathVariant(0x03B1, PrUnicodeMathVariant_Italic) == 0x1D6FC);     // alpha
+    CHECK(prUnicodeMathVariant('2', PrUnicodeMathVariant_Italic) == '2');
+}
+
+TEST_CASE("mathematical alphanumeric forms of every variant") {
+    // The number of characters that each variant maps, as MathML Core's tables give them
+    // (mathml-core/#new-text-transform-mappings).
+    constexpr uint32_t kCounts[PrUnicodeMathVariant_Count] = {
+        122, 112, 110, 52, 52, 52, 87, 52, 62, 120, 52, 110, 62, 20, 15, 27, 23,
+    };
+    for (uint32_t variant = 0; variant < PrUnicodeMathVariant_Count; ++variant) {
+        uint32_t count = 0;
+        for (uint32_t c = 0; c < 0x1F000; ++c)
+            count += prUnicodeMathVariant(c, PrUnicodeMathVariant(variant)) != c ? 1 : 0;
+        CAPTURE(variant);
+        CHECK(count == kCounts[variant]);
+    }
+    // The holes of the alphabets are letterlike symbols.
+    CHECK(prUnicodeMathVariant('B', PrUnicodeMathVariant_Script) == 0x212C);
+    CHECK(prUnicodeMathVariant('C', PrUnicodeMathVariant_Fraktur) == 0x212D);
+    CHECK(prUnicodeMathVariant('R', PrUnicodeMathVariant_DoubleStruck) == 0x211D);
+    CHECK(prUnicodeMathVariant('l', PrUnicodeMathVariant_Script) == 0x1D4C1);
+    CHECK(prUnicodeMathVariant('A', PrUnicodeMathVariant_BoldFraktur) == 0x1D56C);
+    CHECK(prUnicodeMathVariant('0', PrUnicodeMathVariant_Monospace) == 0x1D7F6);
+    CHECK(prUnicodeMathVariant(0x0628, PrUnicodeMathVariant_Initial) == 0x1EE21);     // beh
+    CHECK(prUnicodeMathVariant(0x0131, PrUnicodeMathVariant_Italic) == 0x1D6A4);      // dotless i
+
+    // No variant maps Greek capital pi.
+    CHECK(prUnicodeMathVariant(0x03A0, PrUnicodeMathVariant_DoubleStruck) == 0x03A0);
 }

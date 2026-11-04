@@ -13,6 +13,7 @@
 #include "pr/ascii.h"
 #include "pr/bit_cast.h"
 #include "pr/count_of.h"
+#include "pr/float.h"
 #include "pr/hash.h"
 #include "pr/mem.h"
 #include "pr/name_table.h"
@@ -23,6 +24,7 @@
 #include "css/src/css_at_rule.h"
 #include "css/src/css_hints.h"
 #include "css/src/css_inline_style.h"
+#include "css/src/css_math.h"
 #include "css/src/css_object.h"
 #include "css/src/css_parse.h"
 #include "css/src/css_parser.h"
@@ -368,11 +370,37 @@ bool decidesAppearance(const CssDeclarationBlock* block) {
     return false;
 }
 
+// Returns the namespace that a universal or type selector of the compound requires of its element, if it is one that a
+// rule index files apart (kCssRuleNamespaces), or else kCssRuleNamespaces. A compound of the :host kind may match a
+// featureless host, whatever its namespace (css-shadow-1/#host-element-in-tree), so it requires none.
+uint32_t subjectNamespace(const PrCssSelectors* selectors, const CssCompoundSelector* compound) {
+    for (uint32_t k = 0; k < compound->simpleCount; ++k) {
+        const CssSimpleSelector* simple = &selectors->simple[compound->simple + k];
+        if (simple->kind == CssSimpleKind_PseudoClass && (simple->pseudoClass == CssPseudoClass_Host ||
+                simple->pseudoClass == CssPseudoClass_HostFn || simple->pseudoClass == CssPseudoClass_HostContextFn))
+            return kCssRuleNamespaces;
+    }
+    for (uint32_t k = 0; k < compound->simpleCount; ++k) {
+        const CssSimpleSelector* simple = &selectors->simple[compound->simple + k];
+        if (simple->kind != CssSimpleKind_Universal && simple->kind != CssSimpleKind_Type)
+            continue;
+        if (simple->prefix == CssNamespacePrefix_Empty)
+            return PrDomNamespace_None;
+        if (simple->prefix == CssNamespacePrefix_Any || simple->space == kCssSelectorNone)
+            continue;
+        PrDomNamespace named = selectors->namespaces[simple->space].named;
+        if (named < kCssRuleNamespaces)
+            return named;
+    }
+    return kCssRuleNamespaces;
+}
+
 // Files each complex selector of `selectors` with the declarations of `block`, among the entries of what it styles. A
 // selector is filed under the first of these that its subject has: its id, a class, an attribute that it names, or its
 // type. An attribute comes before the type because fewer elements carry it. A subject with none of them may require one
 // of several types (typeAlternatives). It is then filed under each type. An element has one type, so it finds the entry
-// once. A selector with none of these is filed as universal.
+// once. A selector with none of these is filed under the namespace that its subject requires (CssRuleIndex::spaces), or
+// as universal if it requires none of those.
 void fileSelectors(Filing& f, const PrCssSelectors* selectors, uint32_t matcher, const CssDeclarationBlock* block,
         uint16_t layer) {
     CssRuleSet* set = f.set;
@@ -440,6 +468,7 @@ void fileSelectors(Filing& f, const PrCssSelectors* selectors, uint32_t matcher,
             if (simple->kind == CssSimpleKind_Type && simple->name != kCssSelectorAll)
                 hash = cssFeatureHash(CssFeature_Type, cssSelectorNameLowered(selectors, simple->name));
         }
+        uint32_t space = hash == 0 ? subjectNamespace(selectors, subject) : kCssRuleNamespaces;
         f.types.clear();
         bool ends = pseudo == CssPseudo_Before || pseudo == CssPseudo_After;
         if (ends && generates < 0)
@@ -453,6 +482,8 @@ void fileSelectors(Filing& f, const PrCssSelectors* selectors, uint32_t matcher,
             } else if (typeAlternatives(selectors, subject, f.types)) {
                 for (uint32_t t = 0; t < f.types.count; ++t)
                     file(*filed, f.types.data[t], at);
+            } else if (space < kCssRuleNamespaces) {
+                filed->spaces[space].push(at);
             } else {
                 filed->universal.push(at);
             }
@@ -1710,8 +1741,8 @@ bool matchesEntry(const CssRuleSet* set, CssCascadeScratch& s, const PrDomElemen
     return matches;
 }
 
-// Calls `visit` with each entry of `filed` that `element` may match: those filed under its features, and the universal
-// entries. Stops once `visit` returns false.
+// Calls `visit` with each entry of `filed` that `element` may match: those filed under its features, the universal
+// entries, and those filed under its namespace. Stops once `visit` returns false.
 template <typename Visit>
 void matchEach(const CssRuleSet*, CssCascadeScratch& s, const PrDomElement* element, const CssRuleIndex& filed, Visit visit) {
     elementFeatures(s, element);
@@ -1728,6 +1759,13 @@ void matchEach(const CssRuleSet*, CssCascadeScratch& s, const PrDomElement* elem
     }
     for (uint32_t i = 0; i < filed.universal.count; ++i) {
         if (!visit(filed.universal.data[i]))
+            return;
+    }
+    if (element->space >= kCssRuleNamespaces)
+        return;
+    const RawArray<uint32_t>& space = filed.spaces[element->space];
+    for (uint32_t i = 0; i < space.count; ++i) {
+        if (!visit(space.data[i]))
             return;
     }
 }
@@ -1771,24 +1809,61 @@ void match(const CssRuleSet* set, CssCascadeScratch& s, const PrDomElement* elem
     });
 }
 
+// A block-level display, as the keywords of its computed value.
+struct BlockDisplay {
+    CssValueNode values[2];
+    uint32_t count;
+
+    CssValueRun run() const { return CssValueRun{values, count, nullptr}; }
+};
+
+// Returns the display of `keyword` alone.
+BlockDisplay blockDisplay(PrCssKeyword keyword) {
+    return BlockDisplay{.values = {cssKeywordValue(keyword)}, .count = 1};
+}
+
+// Returns true if the display `run` is a math display: math, inline math or block math.
+bool isMathDisplay(CssValueRun run) {
+    for (uint32_t k = 0; k < run.count; ++k) {
+        if (cssValueIsKeyword(run.values + k, PrCssKeyword_Math))
+            return true;
+    }
+    return false;
+}
+
 // Sets `out` to the block-level display that blockifying the computed display `run` gives (css-display-4/#blockify).
 // The parser holds the two-keyword forms of a display as their legacy keywords. Each inline-level display becomes its
-// block-level equivalent, and inline-block becomes block. A table-internal display becomes block, with flow as its
-// inner display (css-display-4/#transformations). Returns false if `run` is neither inline-level nor table-internal.
-bool blockified(CssValueRun run, PrCssKeyword* out) {
+// block-level equivalent, and inline-block becomes block. Inline math becomes block math, which keeps its inner display
+// as blockification does every other, but only on an element that keeps a math display, which `math` says: on any
+// other, a math display is a flow display (mathml-core/#new-display-math-value), which blockifies to block. A
+// table-internal display becomes block, with flow as its inner display (css-display-4/#transformations). Returns false
+// if `run` is neither inline-level nor table-internal.
+bool blockified(CssValueRun run, bool math, BlockDisplay* out) {
     if (run.count == 2 && cssValueIsKeyword(run.values, PrCssKeyword_Inline) &&
             cssValueIsKeyword(run.values + 1, PrCssKeyword_ListItem)) {
-        *out = PrCssKeyword_ListItem;
+        *out = blockDisplay(PrCssKeyword_ListItem);
+        return true;
+    }
+    if (isMathDisplay(run)) {
+        for (uint32_t k = 0; k < run.count; ++k) {
+            if (cssValueIsKeyword(run.values + k, PrCssKeyword_Block))
+                return false;
+        }
+        *out = blockDisplay(PrCssKeyword_Block);
+        if (math) {
+            out->values[1] = cssKeywordValue(PrCssKeyword_Math);
+            out->count = 2;
+        }
         return true;
     }
     if (run.count != 1 || run.values[0].kind != PrCssValueKind_Keyword)
         return false;
     switch (cssValueKeyword(run.values)) {
         case PrCssKeyword_Inline:
-        case PrCssKeyword_InlineBlock: *out = PrCssKeyword_Block; return true;
-        case PrCssKeyword_InlineTable: *out = PrCssKeyword_Table; return true;
-        case PrCssKeyword_InlineFlex: *out = PrCssKeyword_Flex; return true;
-        case PrCssKeyword_InlineGrid: *out = PrCssKeyword_Grid; return true;
+        case PrCssKeyword_InlineBlock: *out = blockDisplay(PrCssKeyword_Block); return true;
+        case PrCssKeyword_InlineTable: *out = blockDisplay(PrCssKeyword_Table); return true;
+        case PrCssKeyword_InlineFlex: *out = blockDisplay(PrCssKeyword_Flex); return true;
+        case PrCssKeyword_InlineGrid: *out = blockDisplay(PrCssKeyword_Grid); return true;
         case PrCssKeyword_TableRowGroup:
         case PrCssKeyword_TableHeaderGroup:
         case PrCssKeyword_TableFooterGroup:
@@ -1796,7 +1871,7 @@ bool blockified(CssValueRun run, PrCssKeyword* out) {
         case PrCssKeyword_TableColumnGroup:
         case PrCssKeyword_TableColumn:
         case PrCssKeyword_TableCell:
-        case PrCssKeyword_TableCaption: *out = PrCssKeyword_Block; return true;
+        case PrCssKeyword_TableCaption: *out = blockDisplay(PrCssKeyword_Block); return true;
         default: return false;
     }
 }
@@ -2027,7 +2102,7 @@ CssValueRun declaredValue(CssCascadeScratch& s, const CssCascaded& cascaded, con
             prTextBufferAppend(&declaration, cssPropertyName(declared));
             prTextBufferAppendChar(&declaration, ':');
             prTextBufferAppend(&declaration, text);
-            cssDeclarationBlockParse(block, prTextBufferView(&declaration), nullptr);
+            cssDeclarationBlockParse(block, prTextBufferView(&declaration), nullptr, CssOrigin_Author);
             prTextBufferReset(&declaration);
             s.parsedShorthand = declared;
             prTextBufferClear(&s.parsedText);
@@ -2509,6 +2584,52 @@ bool appliesToFirst(CssPseudo pseudo, PrCssProperty property) {
     }
 }
 
+// Returns the integer of a computed math-depth, or 0 for a parent that has none.
+int32_t mathDepthOf(const CssComputedStyle* PR_NULLABLE style) {
+    if (style == nullptr)
+        return 0;
+    CssValueRun run = cssComputedValue(style, PrCssProperty_MathDepth);
+    return run.count == 1 && cssValueIsNumeric(run.values[0].kind) ? int32_t(run.values[0].number) : 0;
+}
+
+// The most that a math-depth is either way, which keeps an integer, and a sum of two, within an int32_t.
+constexpr double kMathDepthLimit = 1e9;
+
+// Returns the integer of a specified <integer>, which may be a calculation, within the range of a math-depth, or
+// `otherwise` if it does not resolve.
+int32_t integerOf(CssValueRun run, uint32_t index, int32_t otherwise) {
+    double number = 0;
+    if (run.values[index].kind == PrCssValueKind_Integer)
+        number = run.values[index].number;
+    else if (!cssMathTo(run, index, PrCssUnit_Number, &number))
+        return otherwise;
+    return int32_t(prF64Round(prF64Min(prF64Max(number, -kMathDepthLimit), kMathDepthLimit)));
+}
+
+// Returns `depth` within the range of a computed math-depth.
+int32_t clampedMathDepth(int64_t depth) {
+    constexpr int64_t kLimit = int64_t(kMathDepthLimit);
+    return int32_t(depth < -kLimit ? -kLimit : depth > kLimit ? kLimit : depth);
+}
+
+// Returns the computed math-depth that the specified `run` gives an element whose parent is `parent`
+// (mathml-core/#the-math-script-level-property). auto-add adds one to the inherited value if the inherited math-style
+// is compact. add() adds its integer to the inherited value, and an integer replaces it. The sums stay within the range
+// of a math-depth.
+int32_t computedMathDepth(CssValueRun run, const CssComputedStyle* PR_NULLABLE parent) {
+    int32_t inherited = mathDepthOf(parent);
+    if (run.count == 0)
+        return inherited;
+    if (cssValueIsKeyword(run.values, PrCssKeyword_AutoAdd)) {
+        bool compact = parent != nullptr &&
+            cssComputedFirstKeyword(parent, PrCssProperty_MathStyle) == PrCssKeyword_Compact;
+        return compact ? clampedMathDepth(int64_t(inherited) + 1) : inherited;
+    }
+    if (cssValueIsFunction(run.values, PrCssKeyword_Add) && run.count > 1)
+        return clampedMathDepth(int64_t(inherited) + integerOf(run, 1, 0));
+    return integerOf(run, 0, inherited);
+}
+
 // Computes one group of the element's style.
 const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s, CssStyleGroup group,
         const CssCascadeInput& input, CssStyleContext& context, const CssCustomProperties* PR_NULLABLE custom) {
@@ -2540,6 +2661,8 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
     // its static position.
     bool positioned = !root && group == CssStyleGroup_Box && outOfFlow(s, input, custom);
     bool blockify = root || positioned || (group == CssStyleGroup_Box && (item || floats(s, input, custom)));
+    // Only a MathML element keeps a math display (mathml-core/#new-display-math-value).
+    bool keepsMath = input.pseudo == CssPseudo_None && input.element->space == PrDomNamespace_MathMl;
     // The overflow pair is computed together, because each axis's value depends on the other's.
     PrCssKeyword overflowX = PrCssKeyword_Visible;
     PrCssKeyword overflowY = PrCssKeyword_Visible;
@@ -2552,6 +2675,8 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
         if (inherits)
             s.inheritsReset = true;
     }
+    // The element's computed math-depth, once the font group has computed it.
+    int32_t mathDepth = 0;
     // Computes the property of slot `i` into the builder.
     auto add = [&](uint32_t i, PrCssProperty property) {
         const CssCascaded& cascaded = s.winners.data[property];
@@ -2581,19 +2706,18 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
         if (keyword != PrCssKeyword_Count && blockify && property == PrCssProperty_Display) {
             // The root has no parent to inherit from, so every CSS-wide keyword gives the initial inline, blockified. A
             // float takes its parent's display, blockified, if it inherits, and otherwise the initial inline.
-            PrCssKeyword blockLevel = PrCssKeyword_Block;
+            BlockDisplay block = blockDisplay(PrCssKeyword_Block);
             s.staticInline = positioned;
             if (!root && keyword == PrCssKeyword_Inherit) {
                 s.inheritsReset = true;
                 CssValueRun parent = cssComputedValue(input.parent, PrCssProperty_Display);
-                if (!blockified(parent, &blockLevel)) {
+                if (!blockified(parent, keepsMath, &block)) {
                     s.staticInline = false;
                     cssStyleAddValue(builder, parent);
                     return;
                 }
             }
-            CssValueNode block = cssKeywordValue(blockLevel);
-            cssStyleAddValue(builder, CssValueRun{&block, 1, nullptr});
+            cssStyleAddValue(builder, block.run());
             return;
         }
         // `color: currentcolor` is `color: inherit` (css-color-4/#resolving-color-values), so the element takes its
@@ -2608,7 +2732,6 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
             addDefault(builder, group, i, inherit, input.parent, initial);
             return;
         }
-        PrCssKeyword blockLevel = PrCssKeyword_Unknown;
         // Contents computes to block on the root, because it would give the root no box (css-display-4/#root).
         if (root && property == PrCssProperty_Display && run.count == 1 &&
                 cssValueIsKeyword(run.values, PrCssKeyword_Contents)) {
@@ -2616,30 +2739,35 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
             cssStyleAddValue(builder, CssValueRun{&block, 1, nullptr});
             return;
         }
-        if (blockify && property == PrCssProperty_Display && blockified(run, &blockLevel)) {
+        BlockDisplay block{};
+        if (blockify && property == PrCssProperty_Display && blockified(run, keepsMath, &block)) {
             s.staticInline = positioned;
-            CssValueNode block = cssKeywordValue(blockLevel);
-            cssStyleAddValue(builder, CssValueRun{&block, 1, nullptr});
+            cssStyleAddValue(builder, block.run());
             return;
         }
         // On anything that is not a MathML element, math and inline math compute to inline, and block math to block
         // (mathml-core/#new-display-math-value).
-        if (property == PrCssProperty_Display && (input.pseudo != CssPseudo_None ||
-                input.element->space != PrDomNamespace_MathMl)) {
-            bool math = false;
-            bool block = false;
-            for (uint32_t k = 0; k < run.count; ++k) {
-                math = math || cssValueIsKeyword(run.values + k, PrCssKeyword_Math);
-                block = block || cssValueIsKeyword(run.values + k, PrCssKeyword_Block);
-            }
-            if (math) {
-                CssValueNode flow = cssKeywordValue(block ? PrCssKeyword_Block : PrCssKeyword_Inline);
-                CssValueRun flowRun{&flow, 1, nullptr};
-                if (blockify && blockified(flowRun, &blockLevel))
-                    flow = cssKeywordValue(blockLevel);
-                cssStyleAddValue(builder, CssValueRun{&flow, 1, nullptr});
-                return;
-            }
+        if (property == PrCssProperty_Display && !keepsMath && isMathDisplay(run)) {
+            bool blockMath = false;
+            for (uint32_t k = 0; k < run.count; ++k)
+                blockMath = blockMath || cssValueIsKeyword(run.values + k, PrCssKeyword_Block);
+            CssValueNode flow = cssKeywordValue(blockMath ? PrCssKeyword_Block : PrCssKeyword_Inline);
+            cssStyleAddValue(builder, CssValueRun{&flow, 1, nullptr});
+            return;
+        }
+        if (property == PrCssProperty_MathDepth) {
+            CssValueNode depth = cssNumberValue(PrCssValueKind_Integer, PrCssUnit_Number,
+                double(computedMathDepth(run, input.parent)));
+            cssStyleAddValue(builder, CssValueRun{&depth, 1, nullptr});
+            return;
+        }
+        // font-size: math scales the inherited size by the change of math-depth
+        // (mathml-core/#the-math-script-level-property).
+        if (property == PrCssProperty_FontSize && run.count == 1 && cssValueIsKeyword(run.values, PrCssKeyword_Math)) {
+            double scale = cssMathDepthScale(context, mathDepthOf(input.parent), mathDepth);
+            CssValueNode size = cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Px, context.font.em * scale);
+            cssStyleAddValue(builder, CssValueRun{&size, 1, nullptr});
+            return;
         }
         if ((property == PrCssProperty_TextAlignAll || property == PrCssProperty_TextAlignLast) &&
                 run.count == 1 && cssValueIsKeyword(run.values, PrCssKeyword_MatchParent)) {
@@ -2653,6 +2781,11 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
     for (uint32_t i = 0; i < properties.count; ++i) {
         PrCssProperty property = properties.properties[i];
         add(i, property);
+        // font-size: math reads the element's own math-depth, which the font group computes before font-size.
+        if (property == PrCssProperty_MathDepth) {
+            CssValueRun depth = cssStyleLastValue(builder);
+            mathDepth = depth.count == 1 ? int32_t(depth.values[0].number) : 0;
+        }
         if (generates && property == PrCssProperty_Content) {
             CssValueRun content = cssStyleLastValue(builder);
             if (content.count == 1 && cssValueIsKeyword(content.values, PrCssKeyword_Normal)) {
@@ -2853,9 +2986,12 @@ void copyIndex(CssRuleIndex& to, const CssRuleIndex& from) {
         made = CssRuleBucket{};
         made.hash = bucket.hash;
         made.entries.append(bucket.entries.span());
-        to.index.insert(bucket.hash, i);
     }
+    // The buckets keep their positions, so the index is copied without hashing them again.
+    to.index.assign(from.index);
     to.universal.append(from.universal.span());
+    for (uint32_t i = 0; i < kCssRuleNamespaces; ++i)
+        to.spaces[i].append(from.spaces[i].span());
 }
 
 // Copies the rule set `from` into the empty `to`, which then holds the same entries for the same document. The user
@@ -2884,10 +3020,9 @@ void copyRuleSet(CssRuleSet* to, const CssRuleSet* from) {
         made.descendants.append(invalidation.descendants.span());
         for (uint32_t k = 0; k < invalidation.anchors.anchors.count; ++k)
             cssHasAnchorsAdd(&made.anchors, invalidation.anchors.anchors.data[k]);
-        // The head of each chain comes before the rest of the chain, and the index holds the heads.
-        if (invalidationAt(to, made.hash) == kHashMissing)
-            to->invalidationIndex.insert(made.hash, i);
     }
+    // The invalidations keep their positions, so the index of the heads of their chains is copied as it is.
+    to->invalidationIndex.assign(from->invalidationIndex);
     to->media.append(from->media.span());
     to->reads = from->reads;
 }
@@ -3134,6 +3269,8 @@ void cssRuleSetReset(CssRuleSet* set) {
         filed.buckets.reset();
         filed.index.reset();
         filed.universal.reset();
+        for (RawArray<uint32_t>& space : filed.spaces)
+            space.reset();
     };
     for (CssRuleIndex& filed : set->filed)
         resetIndex(filed);
@@ -3395,7 +3532,7 @@ uint32_t cssCascadeOriginating(const CssRuleSet* set, CssCascadeScratch* scratch
     bool followed = false;
     bool filtered = false;
     for (const CssRuleIndex* filed : indexes) {
-        if (filed->universal.count == 0 && filed->buckets.count == 0)
+        if (cssRuleIndexIsEmpty(*filed))
             continue;
         if (!followed) {
             follow(s, set);
@@ -3419,7 +3556,7 @@ uint32_t cssCascadeOriginating(const CssRuleSet* set, CssCascadeScratch* scratch
 uint32_t cssCascadeGenerating(const CssRuleSet* set, CssCascadeScratch* scratch, const PrDomElement* element) {
     CssCascadeScratch& s = *scratch;
     const CssRuleIndex& filed = set->generating;
-    if (filed.universal.count == 0 && filed.buckets.count == 0)
+    if (cssRuleIndexIsEmpty(filed))
         return 0;
     follow(s, set);
     constexpr uint32_t kBoth = (1u << CssPseudo_Before) | (1u << CssPseudo_After);

@@ -160,3 +160,31 @@ html/syntax/parsing/html5lib_write_single.html?file=template:43-45
     expects the frameset to replace the body; template:46 and template:47 expect the flag to have
     been cleared, so the corpus disagrees with itself here (tools/suite/html_tree.py records the same).
 
+
+mathml/presentation-markup/mrow/legacy-mfenced-element-001.html
+mathml/presentation-markup/mrow/mrow-preferred-width.html:1-2
+mathml/presentation-markup/operators/embellished-operator-001.html:32-35
+    mathml4/#presm_mfenced: an mfenced "is completely equivalent to an expanded form", an mrow of an opening
+    fence, its arguments with separators between them, and a closing fence, which "a renderer that supports
+    this recommendation is required to render ... in exactly the same way". The engine renders MathML 4, so
+    its mfenced draws its fences and separators, and is not an embellished operator, where these cases take
+    MathML Core's reading of it as an unknown element, an mrow of its children alone.
+
+mathml/presentation-markup/operators/mo-lspace-rspace-with-positive-scriptlevel.html:0
+    TeXbook Chapter 18, the table of spacing between atoms: the medium and thick spaces around binary operations and
+    relations are omitted in script and scriptscript styles, and the thin spaces stay. The engine sets math as TeX
+    does, so an operator at a math depth past zero drops the dictionary's spaces past a thin space. MathML Core scales
+    the spaces with the font and drops none, as this case expects, and as Chrome and Firefox draw the limits of a sum
+    (Mozilla's MathML torture test, case 12, "i = 1" spaced against TeX's "i=1").
+
+mathml/presentation-markup/scripts/underover-parameters-3.html:2-5,7
+mathml/presentation-markup/scripts/underover-parameters-4.tentative.html:2-5
+    TeXbook Appendix G, rule 12, and OpenType MATH's AccentBaseHeight ("maximum (ink) height of accent base that does
+    not require raising the accents"): an accent sits on its base's baseline, raised only by as much as the base rises
+    past AccentBaseHeight, since an accent glyph is drawn above the x-height. The engine keeps that, and keeps an
+    overscript that is no accent glyph, such as these cases' mspace, from overlapping the base. MathML Core instead
+    raises every accent overscript to AccentBaseHeight above the baseline, as these cases expect, and as Chrome and
+    WebKit measure (40px against the engine's 30px for a 30px base and a 40px AccentBaseHeight). Core's own note says
+    that TeX's rule is to align the baselines and that its rule is a simplification for arbitrary overscripts.
+    In underover-parameters-4, the accents are breves, which MathML 4 makes accents by the dictionary where the
+    attribute is absent; every other expectation of those cases holds.

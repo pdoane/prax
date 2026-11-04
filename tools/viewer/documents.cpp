@@ -11,6 +11,7 @@
 #include "tools/viewer/source_rlottie.h"
 #include "tools/viewer/suite_lottie.h"
 #include "tools/viewer/suite_markdown.h"
+#include "tools/viewer/suite_mathml.h"
 #include "tools/viewer/suite_prax.h"
 #include "tools/viewer/suite_prince.h"
 #include "tools/viewer/suite_svg.h"
@@ -173,7 +174,7 @@ Reference browserReference(const Source& source) {
             if (source.path.extension() == ".md" || source.path.extension() == ".markdown" ||
                     source.path.parent_path() == viewerCache() / "pages")
                 break;
-            return Reference{"Browser", {}, fileUrl(source.path), {}, source.path.extension() != ".svg"};
+            return Reference{"Browser", {}, htmlBrowserUrl(source.path, source.query), {}, source.path.extension() != ".svg"};
         case SourceType_Lottie:
             return Reference{"lottie-web", {}, lottiePlayerUrl("player.html", source.path)};
         case SourceType_Rlottie:
@@ -243,8 +244,8 @@ std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host:
     PrTextShaper* textShaper = loaded->shaper.get();
     switch (source.type) {
         case SourceType_Page:
-            loaded->html = loadHtml(source.path, source.settings, source.capture, source.scripts, media, textShaper,
-                text.hinting, hinterOf(text.hinting), device);
+            loaded->html = loadHtml(source.path, source.query, source.settings, source.capture, source.scripts, media,
+                textShaper, text.hinting, hinterOf(text.hinting), device);
             break;
         case SourceType_Lottie:
             loaded->lottie = loadLottie(source.path, source.settings, textShaper, text.hinting, hinterOf(text.hinting));
@@ -349,7 +350,8 @@ const std::vector<Collection>& allCollections() {
     static const std::vector<Collection> collections = [] {
         std::vector<Collection> all;
         std::vector<Collection> (*const suites[])() = {
-            praxCollections, wptCollections, svgCollections, lottieCollections, markdownCollections, princeCollections,
+            praxCollections, wptCollections, mathmlCollections, svgCollections, lottieCollections, markdownCollections,
+            princeCollections,
         };
         for (std::vector<Collection> (*suite)() : suites) {
             for (Collection& c : suite())

@@ -412,7 +412,7 @@ uint64_t firstTextKey(const StructurePass& pass, PrDomNode* node) {
 void describe(StructurePass& pass, const PrDomElement* element, PrDrawStructureNodeDesc& desc, RawArray<char>& name,
         RawArray<char>& title, PrRawString& uri) {
     if (desc.type == PrDrawStructureType_Link && isHtml(element)) {
-        uri = prHtmlHyperlinkComponent(reinterpret_cast<const PrHtmlElement*>(element), PrUrlComponent_Href);
+        uri = prHtmlHyperlinkComponent(element, PrUrlComponent_Href);
         PrStringView href = prRawStringView(&uri);
         // A link to a fragment of the document leads to the first text of the element that the fragment indicates.
         size_t hash = 0;

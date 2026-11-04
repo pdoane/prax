@@ -60,8 +60,9 @@ bool isDetailsSummary(const PrDomElement* element) {
 
 // Returns true if the element is focusable by its kind (html/#focusable-area), regardless of its tabindex.
 bool focusableKind(const PrDomElement* element) {
-    // An SVG a element that is a hyperlink (SVG2/interact.html#Focus).
-    if (element->space == PrDomNamespace_Svg)
+    // An SVG a element that is a hyperlink (SVG2/interact.html#Focus). A MathML a element with an href, as an HTML a
+    // element (mathml-core/#the-a-element).
+    if (element->space == PrDomNamespace_Svg || element->space == PrDomNamespace_MathMl)
         return element->tag == PrDomTag_A && domElementLink(element);
     if (element->space != PrDomNamespace_Html)
         return false;
@@ -541,6 +542,8 @@ int32_t htmlTabIndex(const PrDomElement* element) {
         return index;
     if (element->space == PrDomNamespace_Svg)
         return element->tag == PrDomTag_A ? 0 : -1;
+    if (element->space == PrDomNamespace_MathMl)
+        return element->tag == PrDomTag_A && domElementLink(element) ? 0 : -1;
     if (element->space != PrDomNamespace_Html)
         return -1;
     switch (element->tag) {

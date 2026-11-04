@@ -157,6 +157,15 @@ in the viewer (`tools/viewer`), which shows the engine beside each suite's refer
 `./dev.sh probe <page> --screenshot <directory>` captures a page in the browsers and in the engine, side by side.
 `--viewport 600x800` lays out a page of `suites/prax` as the suite is meant to be read.
 
+Math has two visual suites, which set formulas beside images of TeX's setting of them, and `./dev.sh fetch mathfonts
+eyeasme` checks out both. Mozilla's MathML torture test in MathFonts names its scripts and fonts from the root, so it
+is probed with a root (`./dev.sh probe third_party/MathFonts/mozilla_mathml_test/index.html --root third_party --query
+fontFamily=NewComputerModern`). The other is eyeasme.com's MathML browser test
+(`third_party/eyeasme/MathML_browser_test.html`). `lib/tex/tests/mathematics.md` is a sample of real mathematics in
+TeX, which pr_shell renders through lib/markdown. The viewer's MathML collection holds all three. It lists the torture
+test once for each of MathFonts' math fonts, loaded from a server of `third_party` that `./dev.sh viewer` runs beside
+it, and each of eyeasme's formulas beside its image of TeX's setting.
+
 ## Our pages (`suites/prax`)
 
 The pages walk through all of CSS, CSS 2 and every module, and SVG 2 chapter by chapter, one page per section, for a

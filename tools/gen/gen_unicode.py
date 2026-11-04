@@ -4,8 +4,8 @@
 Reads the Unicode Character Database and emits:
 
     unicode_bidi_data.cpp
-                        the properties that unicode_bidi.h declares: the bidirectional class of every code point and the
-                        paired brackets
+                        the properties that unicode_bidi.h declares: the bidirectional class of every code point, the
+                        paired brackets, the mirrored glyphs and the mirrored characters
     unicode_line_break_data.cpp
                         the properties that unicode_line_break.h declares: the line breaking class of every code point
                         and the other properties that the rules read
@@ -31,7 +31,7 @@ from tools.gen.gen_common import namespaced, table, write
 
 UCD_URL = "https://www.unicode.org/Public/17.0.0/ucd/"
 BANNER = gen_common.banner(__file__, UCD_URL + "extracted/DerivedBidiClass.txt",
-                           UCD_URL + "BidiBrackets.txt", UCD_URL + "UnicodeData.txt")
+                           UCD_URL + "BidiBrackets.txt", UCD_URL + "BidiMirroring.txt", UCD_URL + "UnicodeData.txt")
 
 LINE_BREAK_BANNER = gen_common.banner(__file__, UCD_URL + "LineBreak.txt",
                                       UCD_URL + "EastAsianWidth.txt",
@@ -183,7 +183,31 @@ def brackets(path, canonical):
     return out
 
 
-def emit_source(path, classes, bracket_list):
+def mirrors(path):
+    """Returns (code point, Bidi_Mirroring_Glyph) for each code point that BidiMirroring.txt pairs, in order."""
+    out = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            data = line.split("#", 1)[0].strip()
+            if not data:
+                continue
+            point, mirror = (part.strip() for part in data.split(";"))
+            out.append((int(point, 16), int(mirror, 16)))
+    return sorted(out)
+
+
+def mirrored(path):
+    """Returns each code point whose Bidi_Mirrored property is Yes in UnicodeData.txt, in order."""
+    out = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            fields = line.split(";")
+            if len(fields) > 9 and fields[9] == "Y":
+                out.append(int(fields[0], 16))
+    return sorted(out)
+
+
+def emit_source(path, classes, bracket_list, mirror_list, mirrored_list):
     index = {name: i for i, name in enumerate(BIDI_CLASSES)}
     head = [BANNER, '\n#include "pr/unicode_bidi.h"\n\n#include "pr/count_of.h"\n'
             '#include "pr/search.h"\n\n#include "unicode/src/unicode_staged.h"\n']
@@ -198,16 +222,28 @@ def emit_source(path, classes, bracket_list):
             table("constexpr uint32_t kBidiBracketKeys[]",
                   ["0x%06x << 1 | %d" % (key, 1 if opens else 0)
                    for _, opens, key in bracket_list], 5),
+            "\n// The code points that have a Bidi_Mirroring_Glyph, in order, and the Bidi_Mirroring_Glyph of each.\n",
+            table("constexpr uint32_t kBidiMirrored[]", ["0x%06x" % cp for cp, _ in mirror_list], 8),
+            table("constexpr uint32_t kBidiMirrors[]", ["0x%06x" % mirror for _, mirror in mirror_list], 8),
+            "\n// The code points whose Bidi_Mirrored property is Yes, in order.\n",
+            table("constexpr uint32_t kBidiMirroredProperty[]", ["0x%06x" % cp for cp in mirrored_list], 8),
             "\n} // namespace\n",
             "\nPrUnicodeBidiClass prUnicodeBidiClass(uint32_t codePoint) {\n"
             "    return PrUnicodeBidiClass(unicodeStagedValue(kBidiClassTop, kBidiClassMiddle, kBidiClassLeaves, codePoint));\n}\n",
             "\nPrUnicodeBidiBracket prUnicodeBidiBracket(uint32_t codePoint, uint32_t* key) {\n"
-            "    uint32_t at = lowerBound(kBidiBrackets, uint32_t(countOf(kBidiBrackets)), "
-            "codePoint);\n"
+            "    uint32_t at = lowerBound(Span(kBidiBrackets), codePoint);\n"
             "    if (at == countOf(kBidiBrackets) || kBidiBrackets[at] != codePoint)\n"
             "        return PrUnicodeBidiBracket_None;\n"
             "    *key = kBidiBracketKeys[at] >> 1;\n"
             "    return (kBidiBracketKeys[at] & 1) != 0 ? PrUnicodeBidiBracket_Open : PrUnicodeBidiBracket_Close;\n"
+            "}\n",
+            "\nuint32_t prUnicodeBidiMirror(uint32_t codePoint) {\n"
+            "    uint32_t at = lowerBound(Span(kBidiMirrored), codePoint);\n"
+            "    return at != countOf(kBidiMirrored) && kBidiMirrored[at] == codePoint ? kBidiMirrors[at] : codePoint;\n"
+            "}\n",
+            "\nbool prUnicodeBidiIsMirrored(uint32_t codePoint) {\n"
+            "    uint32_t at = lowerBound(Span(kBidiMirroredProperty), codePoint);\n"
+            "    return at != countOf(kBidiMirroredProperty) && kBidiMirroredProperty[at] == codePoint;\n"
             "}\n"]
     write(path, namespaced(head, body, public=True))
 
@@ -384,19 +420,57 @@ def small_kana(unicode_data):
     return sorted(forms.items())
 
 
-def math_italics(unicode_data):
-    """Returns the Mathematical Italic form of every code point that has one: the code point whose <font>
-    decomposition it is, among those named MATHEMATICAL ITALIC, and U+210E PLANCK CONSTANT, which stands in the hole
-    for italic h. These are MathML Core's italic mappings (mathml-core/#italic-mappings)."""
+# The styles of the Mathematical Alphanumeric Symbols, in the order of PrUnicodeMathVariant, each with the prefixes of
+# the names of its characters. The names of the letterlike symbols that fill the holes of the SMP's alphabets begin
+# with the style alone, such as SCRIPT, BLACK-LETTER (fraktur) and DOUBLE-STRUCK CAPITAL. PLANCK CONSTANT is italic h.
+# These are MathML's mathvariant mappings (mathml-core/#new-text-transform-mappings).
+MATH_VARIANTS = [
+    ("Bold", ["MATHEMATICAL BOLD "]),
+    ("Italic", ["MATHEMATICAL ITALIC "]),
+    ("BoldItalic", ["MATHEMATICAL BOLD ITALIC "]),
+    ("Script", ["MATHEMATICAL SCRIPT ", "SCRIPT "]),
+    ("BoldScript", ["MATHEMATICAL BOLD SCRIPT "]),
+    ("Fraktur", ["MATHEMATICAL FRAKTUR ", "BLACK-LETTER "]),
+    ("DoubleStruck", ["MATHEMATICAL DOUBLE-STRUCK ", "DOUBLE-STRUCK CAPITAL ", "ARABIC MATHEMATICAL DOUBLE-STRUCK "]),
+    ("BoldFraktur", ["MATHEMATICAL BOLD FRAKTUR "]),
+    ("SansSerif", ["MATHEMATICAL SANS-SERIF "]),
+    ("BoldSansSerif", ["MATHEMATICAL SANS-SERIF BOLD "]),
+    ("SansSerifItalic", ["MATHEMATICAL SANS-SERIF ITALIC "]),
+    ("SansSerifBoldItalic", ["MATHEMATICAL SANS-SERIF BOLD ITALIC "]),
+    ("Monospace", ["MATHEMATICAL MONOSPACE "]),
+    ("Initial", ["ARABIC MATHEMATICAL INITIAL "]),
+    ("Tailed", ["ARABIC MATHEMATICAL TAILED "]),
+    ("Looped", ["ARABIC MATHEMATICAL LOOPED "]),
+    ("Stretched", ["ARABIC MATHEMATICAL STRETCHED "]),
+]
+
+
+def math_variants(unicode_data):
+    """Returns the mathematical alphanumeric form of every code point that has one, as (variant << 21 | code point,
+    form) pairs in order, where variant indexes MATH_VARIANTS. A form is the code point whose <font> decomposition is
+    the code point, in the style whose name prefix is the longest that the form's name begins with. A letterlike symbol
+    that fills a hole maps only an ASCII letter, because DOUBLE-STRUCK CAPITAL GAMMA and PI are not forms of any
+    mathvariant."""
+    prefixes = sorted(((prefix, index) for index, (_, names) in enumerate(MATH_VARIANTS) for prefix in names),
+                      key=lambda pair: -len(pair[0]))
     forms = {}
     with open(unicode_data, encoding="utf-8") as f:
         for line in f:
             fields = line.split(";")
             parts = fields[5].split()
+            if len(parts) != 2 or parts[0] != "<font>":
+                continue
+            name = fields[1]
             code_point = int(fields[0], 16)
-            if len(parts) == 2 and parts[0] == "<font>" and (fields[1].startswith("MATHEMATICAL ITALIC ")
-                                                              or code_point == 0x210E):
-                forms[int(parts[1], 16)] = code_point
+            source = int(parts[1], 16)
+            if name == "PLANCK CONSTANT":
+                forms[1 << 21 | source] = code_point
+                continue
+            for prefix, index in prefixes:
+                if name.startswith(prefix):
+                    if prefix.startswith("MATHEMATICAL ") or prefix.startswith("ARABIC ") or source < 0x80:
+                        forms[index << 21 | source] = code_point
+                    break
     return sorted(forms.items())
 
 
@@ -419,7 +493,7 @@ def mapping_lookup(function, prefix):
     """Returns the definition of `function`, which writes the mapping of a code point from the tables <prefix>From and
     <prefix>To, or the code point itself if they do not hold it."""
     return ("\nuint32_t %s(uint32_t codePoint, uint32_t out[3]) {\n" % function
-            + "    uint32_t at = lowerBound(%sFrom, uint32_t(countOf(%sFrom)), codePoint);\n" % (prefix, prefix)
+            + "    uint32_t at = lowerBound(Span(%sFrom), codePoint);\n" % prefix
             + "    if (at == countOf(%sFrom) || %sFrom[at] != codePoint) {\n" % (prefix, prefix)
             + "        out[0] = codePoint;\n        return 1;\n    }\n    uint32_t count = 0;\n"
             + "    while (count < 3 && %sTo[at][count] != 0) {\n" % prefix
@@ -433,7 +507,7 @@ def single_lookup(function, prefix):
     """Returns the definition of `function`, which returns the mapping of a code point from the tables <prefix>From
     and <prefix>To, or the code point itself if they do not hold it."""
     return ("\nuint32_t %s(uint32_t codePoint) {\n" % function
-            + "    uint32_t at = lowerBound(%sFrom, uint32_t(countOf(%sFrom)), codePoint);\n" % (prefix, prefix)
+            + "    uint32_t at = lowerBound(Span(%sFrom), codePoint);\n" % prefix
             + "    return at != countOf(%sFrom) && %sFrom[at] == codePoint ? %sTo[at] : codePoint;\n}\n"
             % (prefix, prefix, prefix))
 
@@ -495,14 +569,14 @@ def emit_normalization(path, ucd):
             table("constexpr uint32_t kComposites[]", ["0x%05x" % cp for _, cp in composites], 8),
             "\n} // namespace\n",
             "\nuint32_t unicodeDecomposition(uint32_t codePoint, const uint32_t* PR_NULLABLE* PR_NONNULL out) {\n"
-            "    uint32_t at = lowerBound(kDecomposed, uint32_t(countOf(kDecomposed)), codePoint);\n"
+            "    uint32_t at = lowerBound(Span(kDecomposed), codePoint);\n"
             "    if (at == countOf(kDecomposed) || kDecomposed[at] != codePoint)\n"
             "        return 0;\n"
             "    *out = kDecompositions + kDecompositionStarts[at];\n"
             "    return uint32_t(kDecompositionStarts[at + 1] - kDecompositionStarts[at]);\n}\n",
             "\nbool unicodeComposition(uint32_t first, uint32_t second, uint32_t* composite) {\n"
             "    uint64_t key = uint64_t(first) << 21 | second;\n"
-            "    uint32_t at = lowerBound(kCompositionPairs, uint32_t(countOf(kCompositionPairs)), key);\n"
+            "    uint32_t at = lowerBound(Span(kCompositionPairs), key);\n"
             "    if (at == countOf(kCompositionPairs) || kCompositionPairs[at] != key)\n"
             "        return false;\n"
             "    *composite = kComposites[at];\n"
@@ -556,7 +630,7 @@ def emit_idna(path, ucd):
             table("constexpr uint32_t kIdnaMappings[]", ["0x%05x" % cp for cp in pool], 8),
             "\n} // namespace\n",
             "\nUnicodeIdnaMapping unicodeIdnaMapping(uint32_t codePoint) {\n"
-            "    uint32_t at = upperBound(kIdnaFirsts, uint32_t(countOf(kIdnaFirsts)), codePoint) - 1;\n"
+            "    uint32_t at = upperBound(Span(kIdnaFirsts), codePoint) - 1;\n"
             "    uint32_t entry = kIdnaEntries[at];\n"
             "    UnicodeIdnaMapping mapping{};\n"
             "    mapping.status = IdnaStatus(entry & 7);\n"
@@ -652,7 +726,7 @@ def emit_data(path, ucd):
     title = case_mapping(os.path.join(ucd, "UnicodeData.txt"), os.path.join(ucd, "SpecialCasing.txt"), TITLECASE)
     wide = compatibility_forms(os.path.join(ucd, "UnicodeData.txt"))
     kana = small_kana(os.path.join(ucd, "UnicodeData.txt"))
-    italic = math_italics(os.path.join(ucd, "UnicodeData.txt"))
+    variants = math_variants(os.path.join(ucd, "UnicodeData.txt"))
     folded = case_folding(os.path.join(ucd, "CaseFolding.txt"))
     category_index = {short: i for i, (short, _) in enumerate(GENERAL_CATEGORIES)}
     categories = fill("Cn", ranges(os.path.join(ucd, "DerivedGeneralCategory.txt")))
@@ -710,9 +784,10 @@ def emit_data(path, ucd):
             "\n// Small kana, in order, and their full-size forms.\n",
             table("constexpr uint32_t kKanaFrom[]", ["0x%06x" % cp for cp, _ in kana], 8),
             table("constexpr uint32_t kKanaTo[]", ["0x%06x" % m for _, m in kana], 8),
-            "\n// Code points that have a Mathematical Italic form, in order, and that form.\n",
-            table("constexpr uint32_t kItalicFrom[]", ["0x%06x" % cp for cp, _ in italic], 8),
-            table("constexpr uint32_t kItalicTo[]", ["0x%06x" % m for _, m in italic], 8),
+            "\n// The code points that have a mathematical alphanumeric form, each keyed by its PrUnicodeMathVariant in "
+            "the bits\n// above its 21, in order, and that form.\n",
+            table("constexpr uint32_t kMathFrom[]", ["0x%07x" % cp for cp, _ in variants], 8),
+            table("constexpr uint32_t kMathTo[]", ["0x%06x" % m for _, m in variants], 8),
             "\n// Code points that do not fold to themselves, in order, and their full case foldings: up to three code "
             "points,\n// padded with zeros.\n",
             table("constexpr uint32_t kFoldFrom[]", ["0x%06x" % cp for cp, _ in folded], 8),
@@ -746,7 +821,10 @@ def emit_data(path, ucd):
             mapping_lookup("prUnicodeFold", "kFold"),
             single_lookup("prUnicodeFullWidth", "kWide"),
             single_lookup("prUnicodeFullSizeKana", "kKana"),
-            single_lookup("prUnicodeMathItalic", "kItalic")]
+            "\nuint32_t prUnicodeMathVariant(uint32_t codePoint, PrUnicodeMathVariant variant) {\n"
+            "    uint32_t key = uint32_t(variant) << 21 | codePoint;\n"
+            "    uint32_t at = lowerBound(Span(kMathFrom), key);\n"
+            "    return at != countOf(kMathFrom) && kMathFrom[at] == key ? kMathTo[at] : codePoint;\n}\n"]
     write(path, namespaced(head, body, public=True))
 
 
@@ -764,7 +842,9 @@ def main():
     canonical = singletons(os.path.join(args.ucd, "UnicodeData.txt"))
     gen_common.write(os.path.join(args.out, "unicode_staged.h"), [gen_common.banner(__file__), STAGED_HEADER])
     emit_source(os.path.join(args.out, "unicode_bidi_data.cpp"), classes,
-                brackets(os.path.join(args.ucd, "BidiBrackets.txt"), canonical))
+                brackets(os.path.join(args.ucd, "BidiBrackets.txt"), canonical),
+                mirrors(os.path.join(args.ucd, "BidiMirroring.txt")),
+                mirrored(os.path.join(args.ucd, "UnicodeData.txt")))
     emit_line_break(os.path.join(args.out, "unicode_line_break_data.cpp"), args.ucd)
     emit_data(os.path.join(args.out, "unicode_data.cpp"), args.ucd)
     emit_normalization(os.path.join(args.out, "unicode_normalization_data.cpp"), args.ucd)

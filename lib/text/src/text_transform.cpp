@@ -105,9 +105,13 @@ uint32_t prTextTransformAt(const PrTextTransformRun* run, size_t at, uint32_t ou
             break;
         case PrTextTransform_MathAuto:
             if (isSingle(run, at))
-                out[0] = prUnicodeMathItalic(codePoint);
+                out[0] = prUnicodeMathVariant(codePoint, PrUnicodeMathVariant_Italic);
             break;
-        default: break;
+        case PrTextTransform_None: break;
+        default:
+            out[0] = prUnicodeMathVariant(codePoint,
+                PrUnicodeMathVariant((run->transform & kPrTextTransformValueMask) - PrTextTransform_MathBold));
+            break;
     }
     for (uint32_t i = 0; i < count; ++i) {
         if ((run->transform & PrTextTransformFlag_FullWidth) != 0)

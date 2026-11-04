@@ -67,6 +67,8 @@ struct Source {
     std::filesystem::path capture{};
 
     bool scripts = true;                        // Page: false loads the page without running its scripts
+
+    std::string query{};                        // Page: the query of its URL, without its `?`, or empty for none
 };
 
 // The space between the pages of a printed document wherever the viewer shows them, in CSS pixels: a printed page's

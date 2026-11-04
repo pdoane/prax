@@ -1305,6 +1305,17 @@ bool waitsForLineEnd(PrStringView line) {
     return true;
 }
 
+// Returns true if the block is a fenced code block of display math, whose info string's first word is "math".
+bool isMathFence(const MarkdownBlockParser* parser, const MarkdownParseBlock& block, const PrMarkdownOptions& options) {
+    if ((options.extensions & PrMarkdownExtensionFlag_Math) == 0 || !block.fenced)
+        return false;
+    PrStringView info{parser->text.data + block.info.start, block.info.size};
+    size_t word = 0;
+    while (word < info.size && !prAsciiIsSpace(info.data[word]))
+        ++word;
+    return prStringSlice(info, 0, word) == "math";
+}
+
 } // namespace
 
 void markdownBlockParserReset(MarkdownBlockParser* parser) {
@@ -1396,6 +1407,8 @@ void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& op
         PrMarkdownNodeKind kind = from.kind;
         if (kind == PrMarkdownNodeKind_HtmlBlock && options.rawHtml == PrMarkdownRawHtml_Escape)
             kind = PrMarkdownNodeKind_Paragraph;
+        if (kind == PrMarkdownNodeKind_CodeBlock && isMathFence(parser, from, options))
+            kind = PrMarkdownNodeKind_MathBlock;
         MarkdownNodeIndex node = markdownTreeAppend(tree, next.parent, kind);
         MarkdownValues& values = tree->nodes.data[node].values;
         switch (from.kind) {
@@ -1422,6 +1435,9 @@ void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& op
             case PrMarkdownNodeKind_CodeBlock: {
                 PrStringView info{parser->text.data + from.info.start, from.info.size};
                 values.info = markdownTreeAddText(tree, info);
+                // A math block's TeX is its lines, without the line ending that closes the last.
+                if (kind == PrMarkdownNodeKind_MathBlock && content.size != 0 && content.data[content.size - 1] == '\n')
+                    --content.size;
                 if (content.size != 0) {
                     MarkdownRange range = markdownTreeAddText(tree, content);
                     MarkdownNodeIndex text = markdownTreeAppend(tree, node, PrMarkdownNodeKind_Text);

@@ -9,7 +9,8 @@
 // element that gives such hints builds one block for every kind of element that takes them, which keeps the shared
 // hints cheap to match and lets those elements share computed styles.
 //
-// Each block is built on first use, on the element's agent thread, and kept until an attribute that it reads changes.
+// Each block is built on first use, on the element's agent thread, and kept until an attribute or a part of the tree
+// that it reads changes.
 
 #pragma once
 
@@ -31,6 +32,7 @@ enum {
     CssHintReach_None,              // the attribute maps to no hint
     CssHintReach_Self,              // the element alone
     CssHintReach_Subtree,           // the element and its descendants, as for a table's border
+    CssHintReach_Readers,           // the element and those whose own hints read it (CssHintProvider::readers)
     CssHintReach_Document,          // every element of the document, as for a body's link colors
 };
 typedef uint8_t CssHintReach;
@@ -49,6 +51,19 @@ struct CssHintProvider {
 
     // Returns the elements that a change to the attribute `name` of the element restyles through hints.
     CssHintReach (*mapped)(const PrDomElement* element, PrStringView name);
+
+    // Calls `fn` with each element whose own hints read the attributes of `element` for which `mapped` returns
+    // CssHintReach_Readers, as a MathML table's attributes give its cells theirs. Null for a namespace whose hints read
+    // only their own element's attributes.
+    void (*PR_NULLABLE readers)(PrDomElement* element, void (*fn)(void* PR_NULLABLE context, PrDomElement* reader),
+        void* PR_NULLABLE context);
+
+    // Calls `fn` with each element of the namespace whose own hints read the place of `node` in its tree, as `node` is
+    // inserted, is about to be removed, or changes its data: the elements that read their ancestors, and those that
+    // read the children of an ancestor of `node`, as a MathML cell's hints read its column. Null for a namespace whose
+    // hints read no structure.
+    void (*PR_NULLABLE structureReaders)(PrDomNode* node, void (*fn)(void* PR_NULLABLE context, PrDomElement* reader),
+        void* PR_NULLABLE context);
 
     // Returns the element that gives `element` hints, or null if none does, and writes the kind of element that it is,
     // below kCssHintTakers, to `taker`. Null for a namespace whose elements give none.
@@ -84,6 +99,19 @@ const CssDeclarationBlock* PR_NULLABLE cssSharedHints(const PrDomElement* elemen
 
 // Discards the element's hints, and those that it gives other elements, after an attribute that they read has changed.
 void cssHintsChanged(PrDomElement* element);
+
+// Returns true if the hints of other elements may read the attributes of `element` (CssHintProvider::readers).
+bool cssHintsHasReaders(const PrDomElement* element);
+
+// Calls `fn` with each element whose own hints read the attributes of `element`, as its provider says
+// (CssHintProvider::readers).
+void cssHintsEachReader(PrDomElement* element, void (*fn)(void* PR_NULLABLE context, PrDomElement* reader),
+    void* PR_NULLABLE context);
+
+// Calls `fn` with each element whose own hints read the place of `node` in its tree, as every provider of the document
+// says (CssHintProvider::structureReaders).
+void cssHintsEachStructureReader(PrDomNode* node, void (*fn)(void* PR_NULLABLE context, PrDomElement* reader),
+    void* PR_NULLABLE context);
 
 // Frees the hints that an element's style state holds.
 void cssHintsDestroy(CssElementStyle* style);

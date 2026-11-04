@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Padding, margin and a given size in a row</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.1.2 Layout Algorithms</div>
+  <h1>Padding, margin and a given size in a row</h1>
+  <p class=pr-lede><q>The box metrics and offsets of the padding box are obtained from the content box by taking into account the
+  corresponding padding properties as described in CSS.</q> <q>if a different size is specified for the content box
+  (via width, height or related properties), that size is used instead and the inline-start and block-start edges of
+  the math content box are aligned with the ones of the content box</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-algorithms">MathML Core §3.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>Space in a row, and a size given</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px"><mi>a</mi><mo>+</mo><mi style="padding: 0 20px; background: #b9cde6">b</mi><mo>+</mo><mi style="margin: 0 20px">c</mi></math></div>
+    <figcaption><code>padding: 0 20px</code> on <i>b</i>: 20px of tint each side of it; <code>margin: 0 20px</code> on <i>c</i>: 20px of space before it.</figcaption>
+  </figure>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math style="font-size: 30px"><mrow style="width: 160px; height: 60px; background: #b9cde6"><mi>x</mi><mo>+</mo><mi>y</mi></mrow></math></div>
+    <figcaption>An <code>mrow</code> 160px by 60px: the tint that size, and "x + y" at its top left. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "x + y" above the tint, which hangs below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

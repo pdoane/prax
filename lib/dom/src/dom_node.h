@@ -33,7 +33,7 @@ static_assert(sizeof(DomText) == 128);
 static_assert(sizeof(DomComment) == 128);
 static_assert(sizeof(DomProcessingInstruction) == 160);
 static_assert(sizeof(DomDocumentType) == 192);
-static_assert(sizeof(DomDocument) == 616);
+static_assert(sizeof(DomDocument) == 632);
 #endif
 
 // Returns the fragment that a template element holds (html/#the-template-element), or null for any other element.
@@ -169,7 +169,8 @@ PrDomShadowRoot* domAttachUseShadow(PrDomElement* use);
 
 // Returns true if the element's browsing context loads content for it. Such an element is an HTML element of embedded
 // content (html/#embedded-content-category), an input, which can be an image button, or an SVG image or feImage
-// element, whose href can name an image (SVG2/embedded.html#ImageElement, filter-effects-1/#feImageElement).
+// element, whose href can name an image (SVG2/embedded.html#ImageElement, filter-effects-1/#feImageElement), or a
+// MathML mglyph, whose src names the image that stands for a character (mathml4/#presm_mglyph).
 bool domEmbeds(const PrDomElement* element);
 
 // Notifies the document's host of a change to an element for which domEmbeds is true. A null `attribute` means a

@@ -51,7 +51,7 @@ void setStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyleIndex style)
     bool box = layoutKindIsBox(n.kind);
     n.vertical = traits.vertical;
     n.positioned = box && traits.positioned;
-    n.children = layoutKindIsElement(n.kind) ? traits.children & 0x3u : LayoutChildren_Flow;
+    n.children = layoutKindIsElement(n.kind) ? traits.children & 0x7u : LayoutChildren_Flow;
     n.justifies = layoutKindIsElement(n.kind) && traits.justifies;
     n.justifiesItems = layoutKindIsElement(n.kind) && traits.justifiesItems;
     bool fixedBackground = box && traits.fixedBackground;
@@ -808,6 +808,39 @@ bool sameText(const LayoutFragment* x, const LayoutFragment* y, LayoutNodeIndex 
     return true;
 }
 
+// Returns true if two box fragments are both math boxes with the same metrics that draw the same, or neither is a math
+// box.
+bool sameMath(const LayoutFragment* x, const LayoutFragment* y) {
+    bool math = (x->flags & LayoutFragmentFlag_Math) != 0;
+    if (math != ((y->flags & LayoutFragmentFlag_Math) != 0))
+        return false;
+    if (!math)
+        return true;
+    LayoutMathData a = layoutFragmentMathData(x);
+    LayoutMathData b = layoutFragmentMathData(y);
+    const LayoutMathMetrics& m = a.metrics;
+    const LayoutMathMetrics& n = b.metrics;
+    if (m.inkAscent != n.inkAscent || m.inkDescent != n.inkDescent || m.italic != n.italic ||
+            m.attachment != n.attachment || m.glyphFont != n.glyphFont || m.glyphSize != n.glyphSize ||
+            m.glyph != n.glyph || m.extended != n.extended || a.paintCount != b.paintCount ||
+            a.glyphCount != b.glyphCount)
+        return false;
+    for (uint32_t i = 0; i < a.paintCount; ++i) {
+        const LayoutMathPaint& p = a.paints[i];
+        const LayoutMathPaint& q = b.paints[i];
+        if (p.kind != q.kind || !prMemEquals(&p.rect, &q.rect, sizeof p.rect) || p.thickness != q.thickness ||
+                p.font != q.font || p.size != q.size || p.glyphStart != q.glyphStart || p.glyphCount != q.glyphCount ||
+                p.mirrored != q.mirrored)
+            return false;
+    }
+    for (uint32_t i = 0; i < a.glyphCount; ++i) {
+        if (a.glyphs[i].id != b.glyphs[i].id || a.glyphs[i].position.x != b.glyphs[i].position.x ||
+                a.glyphs[i].position.y != b.glyphs[i].position.y)
+            return false;
+    }
+    return true;
+}
+
 // Returns true if two fragment trees are the same layout. `a` is the cached result and `b` the fresh one. On the first
 // difference, writes it to `out`, naming the nearest node at or above it, which is `node` for an anonymous fragment.
 bool sameFragments(const LayoutFragment* a, const LayoutFragment* b, LayoutNodeIndex node, Mismatch* out) {
@@ -833,6 +866,10 @@ bool sameFragments(const LayoutFragment* a, const LayoutFragment* b, LayoutNodeI
         case LayoutFragmentKind_Box:
             if (!sameBaselines(a->box.baselines, b->box.baselines)) {
                 mismatch(out, node, "the box's baselines or their sets");
+                return false;
+            }
+            if (!sameMath(a, b)) {
+                mismatch(out, node, "the math box's metrics or what it draws");
                 return false;
             }
             break;
@@ -964,12 +1001,13 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
     constexpr uint32_t kEffect = (1u << PrLayoutGroup_Effect) | (1u << PrLayoutGroup_Compositing);
     constexpr uint32_t kTable = 1u << PrLayoutGroup_Table;
     constexpr uint32_t kGrid = 1u << PrLayoutGroup_Grid;
+    constexpr uint32_t kMath = 1u << PrLayoutGroup_Math;
     constexpr uint32_t kDecoration = 1u << PrLayoutGroup_Decoration;
     const PrLayoutBoxStyle& boxBefore = layoutBoxStyle(tree->styles, was);
     const PrLayoutBoxStyle& boxAfter = layoutBoxStyle(tree->styles, style);
 
-    // Layout reads the font, box, flex, grid and table groups, and the border styles and colors of a table and its
-    // parts.
+    // Layout reads the font, box, flex, grid, table and math groups, and the border styles and colors of a table and
+    // its parts. A math box's parent reads its math group, and lays out again as the box does.
     if ((changed & kBox) != 0) {
         // A box's container reads whether its ancestors clip and whether the box that the viewport holds is fixed.
         LayoutClips clipsBefore = layoutClips(boxBefore);
@@ -995,7 +1033,7 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
         } else {
             markDirty(tree, index);
         }
-    } else if ((changed & (kFont | kTable)) != 0 || ((changed & kFlex) != 0 && !onlyItemFlex(tree->styles, was,
+    } else if ((changed & (kFont | kTable | kMath)) != 0 || ((changed & kFlex) != 0 && !onlyItemFlex(tree->styles, was,
             style)) || ((changed & kGrid) != 0 && !onlyItemGrid(tree->styles, was, style)) ||
             ((changed & kDecoration) != 0 && collapsingBorders(tree->styles, boxAfter, was, style))) {
         markDirty(tree, index);
@@ -1016,7 +1054,7 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
     // collapsed item, takes the box's subtree out of every list.
     bool modes = (changed & kFont) != 0 &&
         layoutFontStyle(tree->styles, was).writingMode != layoutFontStyle(tree->styles, style).writingMode;
-    bool items = layoutChildrenFromBox(boxBefore) != layoutChildrenFromBox(boxAfter);
+    bool items = layoutStyleTraits(tree->styles, was).children != layoutStyleTraits(tree->styles, style).children;
     const LayoutStyleTraits& traitsBefore = layoutStyleTraits(tree->styles, was);
     const LayoutStyleTraits& traitsAfter = layoutStyleTraits(tree->styles, style);
     bool layerChanged = false;

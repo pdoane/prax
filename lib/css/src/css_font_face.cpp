@@ -764,7 +764,7 @@ void cssFontFaceDisconnect(PrCssFontFace* face) {
     PrTextBuffer text = {};
     cssSerializeDeclarationBlock(&text, &face->rule->data->style);
     face->descriptors.rule = CssAtRule_FontFace;
-    cssDeclarationBlockParse(&face->descriptors, prTextBufferView(&text), nullptr);
+    cssDeclarationBlockParse(&face->descriptors, prTextBufferView(&text), nullptr, CssOrigin_Author);
     prTextBufferReset(&text);
     face->rule = nullptr;
 }

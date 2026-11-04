@@ -139,22 +139,24 @@ BROWSERS = {
 # Serving
 
 
-def url_of(path):
-    relative = os.path.relpath(path, tools.ROOT)
+def url_of(path, root=None):
+    root = root or tools.ROOT
+    relative = os.path.relpath(path, root)
     if relative.startswith(".."):
-        sys.exit("%s is not under %s, which is what a browser is served" % (path, tools.ROOT))
+        sys.exit("%s is not under %s, which is what a browser is served" % (path, root))
     # A URL's path separates its segments with '/', as Windows' paths do not.
     return "/" + relative.replace(os.sep, "/")
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
-    """Serves the checkout and /config with cross-origin isolation, and receives the results that the page posts to
+    """Serves the server's root and /config with cross-origin isolation, and receives the results that the page posts to
     /results."""
 
     server_version = "bench"
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=tools.ROOT, **kwargs)
+        # The server is the third argument, which the base class keeps only once it handles the request.
+        super().__init__(*args, directory=args[2].root, **kwargs)
 
     def end_headers(self):
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
@@ -193,7 +195,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 class Server(http.server.ThreadingHTTPServer):
-    def __init__(self):
+    def __init__(self, root=None):
+        self.root = root or tools.ROOT    # the directory served at /, the checkout by default
         super().__init__(("127.0.0.1", 0), Handler)
         self.config = None
         self.report = None

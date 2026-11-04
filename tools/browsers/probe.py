@@ -177,9 +177,10 @@ addEventListener("load", async () => {
 """
 
 
-def run_engine(page, directory, viewport, pixel_ratio=None, keys=False):
-    """Returns what pr_shell logged when it ran the page at `viewport`, or None. The console prints on stderr. With
-    `keys`, the shell presses the keys that the page asks for."""
+def run_engine(page, directory, viewport, pixel_ratio=None, keys=False, extra=()):
+    """Returns what pr_shell logged when it ran the page, a path or a URL, at `viewport`, or None. The console prints
+    on stderr. With `keys`, the shell presses the keys that the page asks for. `extra` are more of the shell's
+    arguments."""
     shell = common.binary(directory, "pr_shell")
     prelude = []
     script = None
@@ -189,7 +190,7 @@ def run_engine(page, directory, viewport, pixel_ratio=None, keys=False):
         script.close()
         prelude = ["--prelude", script.name]
     try:
-        done = subprocess.run([shell, "--viewport", viewport] + shell_pixel_ratio(pixel_ratio) + prelude
+        done = subprocess.run([shell, "--viewport", viewport] + shell_pixel_ratio(pixel_ratio) + prelude + list(extra)
                               + ["--html", page], capture_output=True, text=True)
     finally:
         if script is not None:
@@ -753,6 +754,11 @@ def main():
     parser.add_argument("--no-key-commands", action="store_true", help="with --keys, send Chrome no macOS commands")
     parser.add_argument("--pixel-ratio", type=float, metavar="PIXELS",
                         help="pixels per CSS pixel in every column, in place of the display's")
+    parser.add_argument("--root", metavar="DIRECTORY",
+                        help="the directory served at /, for a page that names its resources from the root; the "
+                             "engine then loads the page from the server too, as it does with --query")
+    parser.add_argument("--query", default="", metavar="QUERY",
+                        help="the query of the page's URL, as fontFamily=NewComputerModern")
     options = parser.parse_args()
     page = os.path.abspath(options.page)
     if not os.path.exists(page):
@@ -764,29 +770,43 @@ def main():
     columns = [c for c in every if not options.browser or c[0] in options.browser]
     if options.safari:
         columns = [("S", "safari", []) if c[0] == "S" else c for c in columns]
-    server = browsers.Server()
+    root = os.path.abspath(options.root) if options.root else common.ROOT
+    server = browsers.Server(root)
+    # A page under the root is served, so that its resources load as they do for every column, and one outside it is
+    # opened as a file. The engine loads the page from the server, over sockets, if the root or the query is the
+    # caller's, and otherwise opens its file, as the shell takes no query on a path.
+    inside = not os.path.relpath(page, root).startswith("..")
+    served = inside and bool(options.root or options.query)
+
+    def page_url(*parameters):
+        """Returns the page's URL, with the caller's query and `parameters`."""
+        joined = "&".join(p for p in (options.query,) + parameters if p)
+        query = "?" + joined if joined else ""
+        if inside:
+            return "http://127.0.0.1:%d%s%s" % (server.server_address[1], browsers.url_of(page, root), query)
+        return "file://" + page + query
+
+    engine_page = page_url() if served else page
+    engine_network = ["--network"] if served else []
     if options.scan and options.pixel_ratio is None:
         sys.exit("--scan needs --pixel-ratio, so that every column has the same pixels per CSS px")
     if options.scan and not options.screenshot:
         options.screenshot = tempfile.mkdtemp(prefix="probe-scan-")
     if options.screenshot:
         os.makedirs(options.screenshot, exist_ok=True)
-        # If the page is in the checkout, it is served the same way as for the measures, so that its resources load the
-        # same way.
-        inside = not os.path.relpath(page, common.ROOT).startswith("..")
-        page_url = ("http://127.0.0.1:%d%s" % (server.server_address[1], browsers.url_of(page)) if inside
-                    else "file://" + page)
+        url = page_url()
         for column, name, extra in columns:
             if not installed(name, options.build):
                 continue
             path = os.path.join(os.path.abspath(options.screenshot), column + ".png")
-            if screenshot(column, name, extra, page_url, path, options.timeout, options.build, options.viewport,
+            if screenshot(column, name, extra, url, path, options.timeout, options.build, options.viewport,
                           options.pixel_ratio, options.scheme) and not options.scan:
                 print(path)
         path = os.path.join(os.path.abspath(options.screenshot), "P.png")
         shell = common.binary(options.build, "pr_shell")
         subprocess.run([shell, "--viewport", options.viewport] + shell_pixel_ratio(options.pixel_ratio)
-                       + (["--dark"] if options.scheme == "dark" else []) + ["--screenshot", path, "--html", page],
+                       + (["--dark"] if options.scheme == "dark" else []) + engine_network
+                       + ["--screenshot", path, "--html", engine_page],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if options.scan:
             print_scans(page, options.screenshot, [c[0] for c in columns] + ["P"], options.pixel_ratio)
@@ -796,12 +816,11 @@ def main():
     if options.keys:
         # One Chrome column is enough for input, and the build's WebKit host takes none.
         columns = [c for c in columns if c[0] != "C1" and c[1] != "webkit"]
-    # A page that asks for keys reports through its driver, so it needs no server, and may stand outside the checkout.
-    if options.keys and os.path.relpath(page, common.ROOT).startswith(".."):
-        url = "file://" + page
-    else:
-        query = "" if options.keys else "?post=/report"
-        url = "http://127.0.0.1:%d%s%s" % (server.server_address[1], browsers.url_of(page), query)
+    # A page that asks for keys reports through its driver, so it needs no server, and may stand outside the root. Any
+    # other posts its report to the server.
+    if not options.keys and not inside:
+        sys.exit("a page that reports its measures must be under the root that is served, %s" % root)
+    url = page_url() if options.keys else page_url("post=/report")
     reports = {}
     versions = []
     for column, name, extra in columns:
@@ -817,7 +836,8 @@ def main():
             reports[column] = report
             versions.append("%s %s at %s" % (name, version(name), report.get("dpr")))
     print("  P", file=sys.stderr, flush=True)
-    engine = run_engine(page, options.build, options.viewport, options.pixel_ratio, options.keys)
+    engine = run_engine(engine_page, options.build, options.viewport, options.pixel_ratio, options.keys,
+                        engine_network)
     if engine is not None:
         reports["P"] = engine
 

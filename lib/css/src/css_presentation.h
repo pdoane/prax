@@ -494,6 +494,10 @@ struct CssPresentation {
     bool readsViewport;                      // a computed style resolved a length relative to the viewport's extent
     bool readsOutside;                       // an entry's readsOutside is set
     const PrDomNode* PR_NULLABLE projecting; // the node whose record is being projected, which an image waits on
+
+    // True once a provider has refined the record of an element (CssBoxProvider::record). Until then, no change to the
+    // document reaches a record beyond those that it restyles, so no provider is asked what a change reaches.
+    bool refined;
     float headroom;                          // the display's headroom in stops that styles were last projected for
 
     // The user's preferred scheme and the page's supported schemes that styles were last projected for.
@@ -601,6 +605,13 @@ inline uint32_t cssPresentationNodeEntry(const CssPresentation* presentation, co
     uint32_t at = node->presentationEntry - 1;
     bool own = node->presentationEntry != 0 && at < presentation->entries.count && presentation->entries.data[at].node == node;
     return own ? at : kHashMissing;
+}
+
+// Returns the computed style of `node`, or null if the presentation has not styled it.
+inline const CssComputedStyle* PR_NULLABLE cssPresentationNodeStyle(const CssPresentation* presentation,
+        const PrDomNode* node) {
+    uint32_t at = cssPresentationNodeEntry(presentation, node);
+    return at != kHashMissing ? presentation->entries.data[at].style : nullptr;
 }
 
 // Records that the document changed in a way that can change any element's style, such as its sheets or its media

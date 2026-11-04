@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>msqrt: the gap, the rule and the surd</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.3.2 Square root</div>
+  <h1>msqrt: the gap, the rule and the surd</h1>
+  <p class=pr-lede><q>The line-ascent of the math content is the maximum between: The line-ascent of the msqrt base's margin box.
+  The sum of the ink line-ascent of the msqrt base, the radical gap, the RadicalRuleThickness and
+  RadicalExtraAscender.</q> The radical gap is <q>RadicalVerticalGap if the math-style is compact and
+  RadicalDisplayStyleVerticalGap if the math-style is normal</q>. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#square-root">MathML Core §3.3.3.2</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>The gap over the base</h2>
+  <p>√2 at 60px; the guide marks the rule's underside.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 48.78px"></span><math style="font-size: 60px"><msqrt><mn>2</mn></msqrt><mo>≈</mo><mn>1.41421</mn></math></div>
+    <figcaption>Inline: the 2's ink top, 724, plus RadicalVerticalGap, 89: the rule from 48.78px, 4.26px thick (RadicalRuleThickness 71).</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 54.84px"></span><math style="font-size: 60px; math-style: normal"><msqrt><mn>2</mn></msqrt><mo>≈</mo><mn>1.41421</mn></math></div>
+    <figcaption>Display: RadicalDisplayStyleVerticalGap, 190: the rule from 54.84px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Nested</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 26px; math-style: normal"><mn>3</mn><mo>=</mo><msqrt><mn>1</mn><mo>+</mo><mn>2</mn><msqrt><mn>1</mn><mo>+</mo><mn>3</mn><msqrt><mn>1</mn><mo>+</mo><mn>4</mn><msqrt><mn>1</mn><mo>+</mo><mo>⋯</mo></msqrt></msqrt></msqrt></msqrt></math></div>
+    <figcaption>Ramanujan's nested radical at 26px: each surd as tall as what it covers, the outer ones larger variants.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

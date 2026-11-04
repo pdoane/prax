@@ -1,5 +1,5 @@
 // The simple shaper: one glyph per character, kerned by GPOS pair adjustments or the kern table. A variation sequence
-// is one character, whose glyph is the sequence's if the font lists one.
+// is one character, set in the glyph of the sequence if the font lists one.
 //
 // A face holds where the font's GPOS, GDEF and kern tables are. Each font keeps its design point, which varies GPOS
 // values through GDEF's variation store, and the kerning lookups of each script and language that it shaped.
@@ -471,8 +471,8 @@ struct Character {
 };
 
 // Returns the character at byte `at` of the run. A variation selector that follows a character joins it, and selects
-// the glyph of the sequence if the font lists one. A selector that follows no character, or another selector, is shown
-// as nothing, as any other default ignorable code point is.
+// the glyph of the sequence if the font lists one. A selector that follows no character, or follows another selector,
+// is drawn as nothing, as any other default ignorable code point is.
 Character characterAt(const PrTextRun* run, size_t at) {
     uint32_t codePoint = 0;
     Character c{};

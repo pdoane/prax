@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>displaystyle and scriptlevel</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.1.6 The displaystyle and scriptlevel attributes</div>
+  <h1>displaystyle and scriptlevel</h1>
+  <p class=pr-lede><q>an ASCII case-insensitive match to true is mapped to normal while an ASCII case-insensitive match to false is
+  mapped to compact.</q> <q>+&lt;U&gt;, -&lt;U&gt; and &lt;U&gt; are respectively mapped to add(&lt;U&gt;)
+  add(&lt;-U&gt;) and &lt;U&gt;.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#the-displaystyle-and-scriptlevel-attributes">MathML Core §2.1.6</a></span></p>
+</header>
+
+<section>
+  <h2>displaystyle</h2>
+  <figure>
+    <div class="pr-stage"><math><munder><mo>∑</mo><mi>A</mi></munder></math></div>
+    <figcaption>Inline: a text-size ∑, A small at its lower right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><munder displaystyle=TRUE><mo>∑</mo><mi>A</mi></munder></math></div>
+    <figcaption><code>displaystyle="TRUE"</code>: a larger ∑, A under it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><munder displaystyle=true><mo>∑</mo><mi scriptlevel=0>A</mi></munder></math></div>
+    <figcaption>And <code>scriptlevel="0"</code> on A: A as large as the formula's text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math display=block><munder displaystyle=false><mo>∑</mo><mi>A</mi></munder></math></div>
+    <figcaption>Block math with <code>displaystyle="false"</code>: as inline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>scriptlevel</h2>
+  <figure>
+    <div class="pr-stage"><math><mi>x</mi><mi scriptlevel=1>x</mi><mi scriptlevel=2>x</mi><mrow scriptlevel=2><mi scriptlevel=-1>x</mi></mrow></math></div>
+    <figcaption><code>1</code>, <code>2</code>, then <code>-1</code> inside 2: each smaller, the last as large as the second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mrow scriptlevel=+1><mi>x</mi><mrow scriptlevel=+1><mi>x</mi></mrow></mrow></math></div>
+    <figcaption><code>+1</code> twice: two steps down, as the second and third above.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><msup><mi>x</mi><mi scriptlevel=-1>x</mi></msup></math></div>
+    <figcaption>A superscript with <code>-1</code>: the hint replaces the style sheet's <code>add(1)</code>, so the superscript is a level above the formula, larger than its x.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

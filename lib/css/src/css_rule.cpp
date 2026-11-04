@@ -1884,10 +1884,10 @@ void cssSheetDataParse(CssSheetData* sheet, PrStringView text, CssParserSlot slo
     CssTokenStream ts = cssParserTokenize(parser, text);
 
     CssBlock parsed = {};
-    parser->match.userAgent = origin != CssOrigin_Author;
+    parser->match.engine = origin != CssOrigin_Author;
     cssParseStylesheetContents(&ts, parser, &parsed);
     addSheetRules(sheet, parser, &ts, parsed);
-    parser->match.userAgent = false;
+    parser->match.engine = false;
     cssParserDrop(parser, parsed);
     cssParserEnd(&scope);
 }
@@ -2072,10 +2072,12 @@ void cssMediaListCommit(CssEdit* edit, CssMediaQueries* list) {
     list->queries = cssValueListCopy(cssValuePoolRun(&edit->scope.parser->pool, edit->staged));
 }
 
-void cssDeclarationBlockParse(CssDeclarationBlock* block, PrStringView text, CssParserSlot slot) {
+void cssDeclarationBlockParse(CssDeclarationBlock* block, PrStringView text, CssParserSlot slot, CssOrigin origin) {
     CssParserScope scope;
     cssParserBegin(&scope, slot);
+    scope.parser->match.engine = origin != CssOrigin_Author;
     parseDeclarations(scope.parser, block, text);
+    scope.parser->match.engine = false;
     cssParserEnd(&scope);
 }
 

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mmultiscripts: prescripts and tensor indices</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.3 Prescripts and Tensor Indices &lt;mmultiscripts&gt;</div>
+  <h1>mmultiscripts: prescripts and tensor indices</h1>
+  <p class=pr-lede><q>Followed by an even number of in-flow children called mmultiscripts postscripts […] Optionally followed by an
+  mprescripts element and an even number of in-flow children called mmultiscripts prescripts</q> <q>If an
+  &lt;mmultiscripts&gt; element is not valid then it is laid out the same as the mrow element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#prescripts-and-tensor-indices-mmultiscripts">MathML Core §3.4.3</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><mmultiscripts><mn>1</mn><mn>2</mn><mn>3</mn><none /><mn>5</mn><mprescripts /><mn>6</mn><none /><mn>8</mn><mn>9</mn></mmultiscripts></math></div>
+    <figcaption>1 with 2 and 3 after it, sub and super, then 5 as a second subscript; before it 6 below, and 8 below and 9 above. <code>none</code>, unknown to Core, is an empty row.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Valid and not</h2>
+  <figure>
+    <div class="pr-stage"><math><mmultiscripts><mi>C</mi><mprescripts /><mn>6</mn><mn>14</mn></mmultiscripts><mo>,</mo><mmultiscripts><mi>R</mi><mi>i</mi><mi>j</mi><mi>k</mi><mi>l</mi></mmultiscripts></math></div>
+    <figcaption>A carbon isotope, ¹⁴₆C; a tensor R with i and j, then k and l, each pair stacked.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mmultiscripts><mi>x</mi><mn>1</mn></mmultiscripts><mo>,</mo><mmultiscripts><mi>y</mi><mprescripts /><mn>1</mn></mmultiscripts></math></div>
+    <figcaption>An odd number of postscripts, then of prescripts: neither valid, so rows: "x1" and "y1".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

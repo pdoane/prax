@@ -84,13 +84,30 @@ struct CssRuleBucket {
     RawArray<uint32_t> entries;
 };
 
+// The namespaces whose elements a rule index files entries for apart from the universal entries: no namespace, HTML,
+// MathML and SVG.
+constexpr uint32_t kCssRuleNamespaces = PrDomNamespace_Svg + 1;
+
 // The entries that style one kind of target, filed for matching against an element: the element itself, or one of its
 // pseudo-elements.
 struct CssRuleIndex {
     RawArray<CssRuleBucket> buckets;
     HashIndex index;
     RawArray<uint32_t> universal;      // the entries filed under no feature
+
+    // By DomNamespaceId: the entries whose subject requires no feature but its namespace, as the selectors of a sheet
+    // with a default namespace do. Only the elements of that namespace test them.
+    RawArray<uint32_t> spaces[kCssRuleNamespaces];
 };
+
+// Returns true if the index files no entry.
+inline bool cssRuleIndexIsEmpty(const CssRuleIndex& filed) {
+    for (const RawArray<uint32_t>& space : filed.spaces) {
+        if (space.count != 0)
+            return false;
+    }
+    return filed.universal.count == 0 && filed.buckets.count == 0;
+}
 
 // The kinds of feature that a selector reads from an element. Entries are filed by these features, and a change to one
 // of them invalidates styles.

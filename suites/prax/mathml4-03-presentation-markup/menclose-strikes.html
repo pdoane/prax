@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>menclose: strikes and combined notations</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 22px; padding: 10px 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.3.9 Enclose Expression Inside Notation &lt;menclose&gt;</div>
+  <h1>menclose: strikes and combined notations</h1>
+  <p class=pr-lede><q>The values northeastarrow, updiagonalstrike, downdiagonalstrike, verticalstrike and horizontalstrike should
+  result in the indicated strikeout lines being superimposed over the content of the menclose</q> <q>Each should be
+  rendered as if the others were not present; they should not nest one inside of the other.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#enclose-expression-inside-notation-menclose">MathML 4 §3.3.9</a></span></p>
+</header>
+
+<section>
+  <h2>Strikes</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="updiagonalstrike"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>updiagonalstrike</code>: a line from lower left to upper right over it. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="downdiagonalstrike"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>downdiagonalstrike</code>: a line from upper left to lower right. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="verticalstrike"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>verticalstrike</code>: a vertical line through it. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="horizontalstrike"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>horizontalstrike</code>: a horizontal line through it. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="northeastarrow"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>northeastarrow</code>: an arrow from lower left to upper right. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No notation.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Several at once</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="updiagonalstrike downdiagonalstrike"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>updiagonalstrike downdiagonalstrike</code>: both diagonals, a cross. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="circle box"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>circle box</code>: a circle and a box, each drawn as if alone, overlapping. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="box" mathcolor=#c0392b><mi mathcolor=#1f2430>x</mi></menclose><menclose><mi>y</mi></menclose></math></div>
+    <figcaption>A red box, drawn in <code>mathcolor</code>, around a black x; no <code>notation</code>: nothing around y. <span class=pr-flag>Chrome</span> No box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

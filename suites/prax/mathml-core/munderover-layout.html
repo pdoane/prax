@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>munderover: limits</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.2.5 Base with underscript and overscript</div>
+  <h1>munderover: limits</h1>
+  <p class=pr-lede>For a base with the largeop property, UnderShift is the maximum of <q>LowerLimitBaselineDropMin</q> and
+  <q>LowerLimitGapMin + the ascent of the munder underscript</q>, and OverShift the maximum of
+  <q>UpperLimitBaselineRiseMin</q> and <q>UpperLimitGapMin + the descent of the mover overscript</q>. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#base-with-underscript-and-overscript">MathML Core §3.4.2.5</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>Gauss's sum</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 47.6px"></span><span class=pr-level style="vertical-align: -40.8px"></span><math style="font-size: 40px; math-style: normal"><munderover><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mi>k</mi><mo>=</mo><mfrac><mrow><mi>n</mi><mo>(</mo><mi>n</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow><mn>2</mn></mfrac></math></div>
+    <figcaption>At 40px. The display ∑ reaches 37.84px up and 15.6px down; <i>n</i>'s baseline is UpperLimitBaselineRiseMin, 244, above it, at 47.6px, and <i>k</i> = 1's is LowerLimitBaselineDropMin, 630, below it, at −40.8px: each is more than the gap that its constant asks for.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

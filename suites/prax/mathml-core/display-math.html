@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display: block math and inline math</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 24px; }
+  .pr-stage span { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 4.1 The display: block math and display: inline math value</div>
+  <h1>display: block math and inline math</h1>
+  <p class=pr-lede><q>For elements that are not MathML elements, if the specified value of display is block math or inline math
+  then the computed value is block flow and inline flow respectively. For the mtable element the computed value is
+  block table and inline table respectively.</q> <q>Unknown MathML elements behave the same as the mrow element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#new-display-math-value">MathML Core §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>On other elements, and on tables</h2>
+  <figure>
+    <div class="pr-stage">a <span style="display: block math">b</span> c</div>
+    <figcaption>An HTML <code>span</code> with <code>display: block math</code>: a block, "b" on a line of its own, tinted across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage">a <span style="display: inline math">b</span> c</div>
+    <figcaption>With <code>inline math</code>: inline, "a b c" on one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage">x <math><mtable style="display: block math"><mtr><mtd><mn>1</mn></mtd></mtr></mtable></math> y</div>
+    <figcaption>An <code>mtable</code> with <code>display: block math</code>: a block table, on a line of its own.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Unknown elements</h2>
+  <figure>
+    <div class="pr-stage"><math><mfoo><mi>a</mi><mo>+</mo><mi>b</mi></mfoo><none /><mi>c</mi></math></div>
+    <figcaption>An unknown <code>mfoo</code>: a row, "a + b" spaced; an empty <code>none</code>: nothing; then c.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

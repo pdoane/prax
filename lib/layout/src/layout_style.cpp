@@ -40,17 +40,15 @@ uint32_t tableHash(const T& value) {
     return uint32_t(prHashBytes(&value, sizeof(T), kLayoutSeed));
 }
 
-// A record is four 8-byte words of group indices and one more index, which products mix, where the bytes' general hash
-// would loop.
-static_assert(sizeof(PrLayoutStyle) == 36);
+// A record is five 8-byte words of group indices. The hash mixes the words with products, which is faster than the
+// general hash, whose loop runs over the bytes.
+static_assert(sizeof(PrLayoutStyle) == 40);
 template <>
 uint32_t tableHash(const PrLayoutStyle& value) {
     constexpr uint64_t kMix = 0x9e3779b97f4a7c15ull;
-    uint64_t words[4];
-    uint32_t last = 0;
+    uint64_t words[5];
     prMemCopy(words, &value, sizeof words);
-    prMemCopy(&last, value.groups + 8, sizeof last);
-    return uint32_t(prHashFold((words[0] * kMix) ^ words[1], (words[2] ^ kMix) + (words[3] + uint64_t(last) * kMix) * kMix));
+    return uint32_t(prHashFold((words[0] * kMix) ^ words[1], (words[2] ^ kMix) + (words[3] + words[4] * kMix) * kMix));
 }
 
 // Adds an entry of `value` with no references, which the next collect frees unless something names it. An interned
@@ -191,6 +189,9 @@ void countGroup(LayoutStyles* c, PrLayoutGroup kind, PrLayoutGroupIndex index, u
         case PrLayoutGroup_Grid:
             tableCount(c->grid, index, delta);
             break;
+        case PrLayoutGroup_Math:
+            tableCount(c->math, index, delta);
+            break;
         default:
             PR_ASSERT(false);
     }
@@ -198,7 +199,7 @@ void countGroup(LayoutStyles* c, PrLayoutGroup kind, PrLayoutGroupIndex index, u
 
 // Adds `delta` to the references of the groups that a record names.
 void countGroups(LayoutStyles* c, const PrLayoutStyle& style, uint32_t delta) {
-    static_assert(PrLayoutGroup_Count == 9, "count every group of a record");
+    static_assert(PrLayoutGroup_Count == 10, "count every group of a record");
     tableCount(c->font, style.groups[PrLayoutGroup_Font], delta);
     tableCount(c->color, style.groups[PrLayoutGroup_Color], delta);
     tableCount(c->box, style.groups[PrLayoutGroup_Box], delta);
@@ -208,6 +209,7 @@ void countGroups(LayoutStyles* c, const PrLayoutStyle& style, uint32_t delta) {
     tableCount(c->table, style.groups[PrLayoutGroup_Table], delta);
     tableCount(c->compositing, style.groups[PrLayoutGroup_Compositing], delta);
     tableCount(c->grid, style.groups[PrLayoutGroup_Grid], delta);
+    tableCount(c->math, style.groups[PrLayoutGroup_Math], delta);
 }
 
 // Adds `delta` to the references of the compounds that a group's words name, and checks in debug builds that each word
@@ -310,6 +312,11 @@ void countCompounds(LayoutStyles* c, const PrLayoutFragmentationStyle& fragmenta
 void countCompounds(LayoutStyles* c, const PrLayoutTableStyle& table, uint32_t delta) {
     countCompounds(c, table.fragmentation, delta);
 }
+void countCompounds(LayoutStyles* c, const PrLayoutMathStyle& math, uint32_t delta) {
+    countCompounds(c, math.minSize, delta);
+    countCompounds(c, math.maxSize, delta);
+    countCompounds(c, math.lineThickness, delta);
+}
 
 // Returns true if a table group's values are in their ranges.
 bool isValid(const PrLayoutTableStyle& table) {
@@ -343,6 +350,9 @@ uint32_t createNaming(LayoutStyles* c, LayoutTable<T>& table, const T& value) {
 // entry. A candidate listed again is already freed by then, and one that gained references since is kept.
 template <typename T, typename Freeing>
 void collect(LayoutTable<T>& table, Freeing freeing) {
+    // Most layouts release nothing of most tables, which then cost one test each.
+    if (table.candidates.count == 0)
+        return;
     for (uint32_t k = 0; k < table.candidates.count; ++k) {
         uint32_t i = table.candidates.data[k];
         if (table.references.data[i] == 0) {
@@ -451,6 +461,13 @@ void measureFaces(LayoutStyles* styles, LayoutFontFaces& faces) {
     faces.revision = prTextFontRevision(faces.font);
 }
 
+// Returns true if the record `style` at `index` is that of a math box or of a box that lays out its children by math
+// layout (LayoutStyles::mathRecords).
+bool isMathRecord(const LayoutStyles* c, const PrLayoutStyle& style, PrLayoutStyleIndex index) {
+    return layoutIsMathBox(layoutTableAt(c->box, style.groups[PrLayoutGroup_Box])) ||
+        c->traits.data[index].children == LayoutChildren_Math;
+}
+
 // Interns a record that the table may not hold. A record new to the table names its groups, and its traits are found.
 // Counts a record that the table added into the groups it names, and finds its traits.
 void addedRecord(LayoutStyles* c, const PrLayoutStyle& style, PrLayoutStyleIndex index) {
@@ -460,6 +477,8 @@ void addedRecord(LayoutStyles* c, const PrLayoutStyle& style, PrLayoutStyleIndex
     c->traits.data[index] = layoutStyleTraitsFromIndex(c, index);
     if (c->traits.data[index].wholeTablePart)
         ++c->wholeTableParts;
+    if (isMathRecord(c, style, index))
+        ++c->mathRecords;
 }
 
 PR_NOINLINE PrLayoutStyleIndex internRecord(LayoutStyles* c, const PrLayoutStyle& style) {
@@ -567,6 +586,40 @@ bool layoutSyncFonts(LayoutStyles* styles, RawArray<uint64_t>* changed) {
     return any;
 }
 
+const PrTextFeatureSet* PR_NULLABLE layoutShapingFeatures(LayoutStyles* styles, PrLayoutGroupIndex group) {
+    const PrLayoutFontStyle& font = layoutTableAt(styles->font, group);
+    uint32_t level = font.mathDepth < 2 ? font.mathDepth : 2;
+    bool dotless = (font.mathFlags & PrLayoutMathFlag_Dotless) != 0;
+    if (level == 0 && !dotless)
+        return font.features;
+    while (styles->mathFeatures.count <= group)
+        styles->mathFeatures.push(nullptr);
+    if (styles->mathFeatures.data[group] != nullptr)
+        return styles->mathFeatures.data[group];
+    // The math forms apply first, and the group's own features after them, so that font-feature-settings can turn them
+    // off.
+    PrTextRun own{};
+    prTextFeatureSetApply(font.features, &own);
+    RawArray<PrTextFeature> features;
+    if (level != 0)
+        features.push(PrTextFeature{PR_FONT_TAG('s', 's', 't', 'y'), level, 0, UINT32_MAX});
+    if (dotless)
+        features.push(PrTextFeature{PR_FONT_TAG('d', 't', 'l', 's'), 1, 0, UINT32_MAX});
+    for (uint32_t i = 0; i < own.featureCount; ++i)
+        features.push(own.features[i]);
+    PrTextFeatureSetDesc desc{
+        .caps = own.caps,
+        .position = own.position,
+        .kerning = own.kerning,
+        .synthesis = own.synthesis,
+        .features = features.data,
+        .featureCount = features.count,
+    };
+    styles->mathFeatures.data[group] = prTextFeatureSetCreate(&desc);
+    features.reset();
+    return styles->mathFeatures.data[group];
+}
+
 void layoutStyleRetain(LayoutStyles* styles, PrLayoutStyleIndex style) {
     tableCount(styles->style, style, 1);
 }
@@ -604,6 +657,7 @@ LayoutStyles* layoutStylesCreate(PrTextFont* PR_NULLABLE font, PrTextShaper* PR_
     PrLayoutTableStyle table = prLayoutTableStyleDefault();
     PrLayoutCompositingStyle compositing = prLayoutCompositingStyleDefault();
     PrLayoutGridStyle grid = prLayoutGridStyleDefault();
+    PrLayoutMathStyle math = prLayoutMathStyleDefault();
     PrLayoutStyle style = prLayoutStyleDefault();
     tableInit(c->font, fontGroup);
     tableInit(c->color, color);
@@ -615,6 +669,7 @@ LayoutStyles* layoutStylesCreate(PrTextFont* PR_NULLABLE font, PrTextShaper* PR_
     tableInit(c->table, table);
     tableInit(c->compositing, compositing);
     tableInit(c->grid, grid);
+    tableInit(c->math, math);
     tableInit(c->style, style);
     layoutBackgroundsInit(&c->backgrounds);
     layoutEffectListsInit(&c->effectLists);
@@ -632,6 +687,9 @@ void layoutStylesDestroy(LayoutStyles* PR_NULLABLE styles) {
         c->faces.data[i].metrics.reset();
     }
     c->faces.reset();
+    for (uint32_t i = 0; i < c->mathFeatures.count; ++i)
+        prTextFeatureSetRelease(c->mathFeatures.data[i]);
+    c->mathFeatures.reset();
     for (uint32_t i = 1; i < c->font.references.count; ++i) {
         if (c->font.references.data[i] == kLayoutFreed)
             continue;
@@ -657,6 +715,7 @@ void layoutStylesDestroy(LayoutStyles* PR_NULLABLE styles) {
     }
     tableReset(c->compositing);
     tableReset(c->grid);
+    tableReset(c->math);
     tableReset(c->style);
     c->traits.reset();
     layoutBackgroundsReset(&c->backgrounds);
@@ -685,11 +744,17 @@ void layoutStylesCollect(LayoutStyles* styles) {
         countGroups(c, layoutTableAt(c->style, i), 0xffffffffu);
         if (c->traits.data[i].wholeTablePart)
             --c->wholeTableParts;
+        if (isMathRecord(c, layoutTableAt(c->style, i), i))
+            --c->mathRecords;
     });
     collect(c->font, [&](uint32_t i) {
         countCompounds(c, layoutTableAt(c->font, i), 0xffffffffu);
         if (i < c->faces.count)
             releaseFaces(c->faces.data[i]);
+        if (i < c->mathFeatures.count) {
+            prTextFeatureSetRelease(c->mathFeatures.data[i]);
+            c->mathFeatures.data[i] = nullptr;
+        }
     });
     collect(c->color, [](uint32_t) {});
     collect(c->box, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->box, i), 0xffffffffu); });
@@ -699,6 +764,7 @@ void layoutStylesCollect(LayoutStyles* styles) {
     collect(c->table, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->table, i), 0xffffffffu); });
     collect(c->compositing, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->compositing, i), 0xffffffffu); });
     collect(c->grid, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->grid, i), 0xffffffffu); });
+    collect(c->math, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->math, i), 0xffffffffu); });
     if (c->backgrounds.candidates.count != 0)
         layoutBackgroundsCollect(&c->backgrounds, &c->compounds);
     layoutEffectListsCollect(&c->effectLists, &c->compounds);
@@ -711,7 +777,8 @@ bool layoutStylesVerify(const LayoutStyles* styles) {
     const LayoutStyles* c = styles;
     return covered(c->style) && covered(c->font) && covered(c->color) && covered(c->box) && covered(c->decoration) &&
         covered(c->effects) && covered(c->flex) && covered(c->table) && covered(c->compositing) &&
-        covered(c->grid) && layoutBackgroundsVerify(&c->backgrounds) && layoutEffectListsVerify(&c->effectLists) &&
+        covered(c->grid) && covered(c->math) && layoutBackgroundsVerify(&c->backgrounds) &&
+        layoutEffectListsVerify(&c->effectLists) &&
         layoutGridTemplatesVerify(&c->grids) && layoutCompoundsVerify(&c->compounds);
 }
 
@@ -781,6 +848,8 @@ uint32_t prLayoutGroupReferences(const PrLayoutTree* tree, PrLayoutGroup kind, P
             return c->compositing.references.data[index];
         case PrLayoutGroup_Grid:
             return c->grid.references.data[index];
+        case PrLayoutGroup_Math:
+            return c->math.references.data[index];
         default:
             PR_ASSERT(false);
             return 0;
@@ -833,9 +902,10 @@ PrLayoutColorStyle prLayoutColorStyleRecord(const PrLayoutTree* tree, uint32_t i
 }
 
 bool prLayoutDisplayIsInlineLevel(PrLayoutDisplay display) {
-    return display == PrLayoutDisplay_Inline || display == PrLayoutDisplay_InlineBlock ||
-        display == PrLayoutDisplay_InlineFlex || display == PrLayoutDisplay_InlineGrid ||
-        display == PrLayoutDisplay_InlineTable;
+    constexpr uint32_t kInlineLevel = 1u << PrLayoutDisplay_Inline | 1u << PrLayoutDisplay_InlineBlock |
+        1u << PrLayoutDisplay_InlineFlex | 1u << PrLayoutDisplay_InlineGrid | 1u << PrLayoutDisplay_InlineTable |
+        1u << PrLayoutDisplay_InlineMath;
+    return display < 32 && (kInlineLevel >> display & 1u) != 0;
 }
 
 bool prLayoutDisplayIsInlineBox(PrLayoutDisplay display) {
@@ -1183,6 +1253,28 @@ uint32_t prLayoutGridStyleCreate(PrLayoutTree* tree, const PrLayoutGridStyle* gr
 
 PrLayoutGridStyle prLayoutGridStyleRecord(const PrLayoutTree* tree, uint32_t index) {
     return layoutTableAt(tree->styles->grid, index);
+}
+
+PrLayoutMathStyle prLayoutMathStyleDefault(void) {
+    PrLayoutMathStyle math{};
+    math.minSize = prLayoutLengthPx(0);
+    math.maxSize = prLayoutLengthNone();
+    math.lineThickness = prLayoutLengthAuto();
+    math.breakPenalty = kPrLayoutMathNoBreak;
+    math.lineLeading = PrLayoutUnit{-1};
+    return math;
+}
+
+uint32_t prLayoutMathStyleIntern(PrLayoutTree* tree, const PrLayoutMathStyle* math) {
+    return internNaming(tree->styles, tree->styles->math, *math);
+}
+
+uint32_t prLayoutMathStyleCreate(PrLayoutTree* tree, const PrLayoutMathStyle* math) {
+    return createNaming(tree->styles, tree->styles->math, *math);
+}
+
+PrLayoutMathStyle prLayoutMathStyleRecord(const PrLayoutTree* tree, uint32_t index) {
+    return layoutTableAt(tree->styles->math, index);
 }
 
 PrLayoutLength prLayoutLengthIntern(PrLayoutTree* tree, const PrLayoutCalcNode* nodes, uint32_t count) {

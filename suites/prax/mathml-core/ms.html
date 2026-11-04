@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ms: string literals</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.6 String Literal &lt;ms&gt;</div>
+  <h1>ms: string literals</h1>
+  <p class=pr-lede><q>Its layout algorithm is the same as the mtext element.</q> <q>In MathML3, it was possible to use the lquote
+  and rquote attributes to respectively specify the strings to use as opening and closing quotes. These are no longer
+  supported and the quotes must instead be specified as part of the text of the &lt;ms&gt; element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#string-literal-ms">MathML Core §3.2.6</a></span></p>
+</header>
+
+<section>
+  <h2>Text as it is</h2>
+  <figure>
+    <div class="pr-stage"><math><mi>s</mi><mo>=</mo><ms>"hello world"</ms></math></div>
+    <figcaption>The specification's example: s = "hello world", the quotes the text's own, upright.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><ms>abc</ms><ms lquote="«" rquote="»">def</ms></math></div>
+    <figcaption>abc and def, with no quotes added, <code>lquote</code> and <code>rquote</code> ignored.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

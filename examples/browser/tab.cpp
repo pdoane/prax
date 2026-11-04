@@ -49,7 +49,7 @@ PrDomHostState linkState(void* context, PrHtmlPage*, const PrDomElement* element
     if ((wanted & PrDomHostState_Visited) == 0 || !hyperlink)
         return 0;
     const Browser& b = *static_cast<Tab*>(context)->browser;
-    PrRawString url = prHtmlHyperlinkComponent(prHtmlElementQuery(target), PrUrlComponent_Href);
+    PrRawString url = prHtmlHyperlinkComponent(element, PrUrlComponent_Href);
     PrStringView view = prRawStringView(&url);
     bool visited = b.visitedUrls.contains(view);
     prRawStringReset(&url);

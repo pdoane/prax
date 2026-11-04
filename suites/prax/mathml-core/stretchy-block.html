@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stretching along the block axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.1.1 Algorithm for stretching operators along the block axis</div>
+  <h1>Stretching along the block axis</h1>
+  <p class=pr-lede><q>Calculate the unconstrained target sizes Uascent and Udescent as respectively the maximum ink ascent and
+  maximum ink descent of the margin boxes of in-flow children that have been laid out in the previous step.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#algorithm-for-stretching-operators-along-the-block-axis">MathML Core §3.3.1.1</a></span> A symmetric operator covers as much above the axis as below; its glyph is the first variant that covers
+  that. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-of-operators">MathML Core §3.2.4.3</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>Fences fitted to their contents</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 62.94px"></span><span class=pr-level style="vertical-align: -40.7px"></span><math style="font-size: 40px; math-style: normal"><mrow><mo>(</mo><mfrac><msup><mi>π</mi><mn>2</mn></msup><mn>6</mn></mfrac><mo>)</mo></mrow></math></div>
+    <figcaption>At 40px, π²/6 reaches 61.14px up and 27.32px down; symmetric about the axis, the first variant that covers it, <code>parenleft.s07</code>, from −40.7px to 62.94px.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 26px; math-style: normal"><mrow><mi>R</mi><mo>(</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mi>cos</mi><mi>θ</mi></mtd><mtd><mo>−</mo><mi>sin</mi><mi>θ</mi></mtd></mtr><mtr><mtd><mi>sin</mi><mi>θ</mi></mtd><mtd><mi>cos</mi><mi>θ</mi></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+    <figcaption>A rotation matrix at 26px: the brackets as tall as the table; the parentheses of R(θ), in a row of their own, at text size.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What does not stretch</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 26px; math-style: normal"><mrow><mo stretchy=false>(</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo stretchy=false>)</mo></mrow><mrow><mo>|</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>|</mo></mrow><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></math></div>
+    <figcaption><code>stretchy="false"</code>: text-size parentheses around ½; bars that do stretch; and around a lone 1, nothing to stretch to: parentheses at text size.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

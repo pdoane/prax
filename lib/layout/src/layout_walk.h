@@ -190,6 +190,10 @@ struct LayoutWalkVisitor {
     void gridBackgrounds(const LayoutFragment*, PrLayoutVec) {}
     void gridBorders(const LayoutFragment*, PrLayoutVec) {}
 
+    // Called for a math box at `at` in the inlines phase, after its children (LayoutFragmentFlag_Math), for what it
+    // draws beside them (mathml-core/#stacking-contexts).
+    void math(const LayoutFragment*, PrLayoutVec) {}
+
     // Called before the decoration of a table's row group, row or cell at `at` that paints whole, for the backgrounds
     // of the tracks and track groups behind its cells, which its table's gridBackgrounds leaves to it.
     void trackBackgrounds(const LayoutFragment*, PrLayoutVec) {}
@@ -754,6 +758,9 @@ struct LayoutWalk {
             start = end;
         }
         place = saved;
+        if (phase == LayoutPhase_Inlines && (fragment->flags & LayoutFragmentFlag_Math) != 0 &&
+                isVisible(fragment->node))
+            visitor.math(fragment, base);
         leaveContent(entered);
     }
 

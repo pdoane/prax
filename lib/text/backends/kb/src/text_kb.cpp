@@ -280,8 +280,8 @@ PrStatus shapeDown(KbBackend* kb, void* faceState, void* fontState, const PrText
             float advance = prFontGlyphVerticalAdvance(run->font, base) / sizeAdjust;
             PrVec2 origin = prFontGlyphVerticalOrigin(run->font, base);
             PrVec2 pen{-origin.x / sizeAdjust, -origin.y / sizeAdjust};
-            // The glyphs of the cluster share its place on the line, which the cluster leaves after its last glyph that
-            // is drawn. A default ignorable code point that kb sets as nothing, such as a variation selector, has no
+            // The glyphs of the cluster share its place on the line, and the cluster's advance follows its last drawn
+            // glyph. A default ignorable code point that kb sets as nothing, such as a variation selector, has no
             // advance, and shaping drops its glyph (prTextShaperShape).
             uint32_t last = count - 1;
             while (last > 0 && glyphs[last].advance.x == 0 && ignorableAt(across.text, glyphs[last].cluster))

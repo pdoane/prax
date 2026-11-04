@@ -179,7 +179,8 @@ int32_t prSvgTextContentElementGetCharNumAtPosition(PrSvgElement* element, PrDom
 
 // Gives the document SVG: its elements' presentation attributes style them (SVG2/styling.html#PresentationAttributes).
 // A document that the DOM creates from it, such as by DOMImplementation, has SVG too. Gives the document CSS first
-// (prCssEnable). Does nothing for a document that has SVG.
+// (prCssEnable), and MathML, which SVG content holds through foreignObject (prMathMlEnable). Does nothing for a
+// document that has SVG.
 void prSvgEnable(PrDomDocument* document);
 
 #if defined(__cplusplus)

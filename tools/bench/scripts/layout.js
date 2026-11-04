@@ -5,8 +5,9 @@
 // pr_shell and in a browser.
 //
 // The documents are fair to compare. Each uses only features that the engine lays out (blocks, inline boxes,
-// inline-blocks, floats, margins, relative and absolute positioning, flex containers and aspect-ratio) in Arimo, a font
-// that both engines have. They are generated from a fixed seed, so every engine and every run lays out the same text.
+// inline-blocks, floats, margins, relative and absolute positioning, flex containers, aspect-ratio and MathML) in Arimo
+// and New Computer Modern Math, fonts that both engines have. They are generated from a fixed seed, so every engine and
+// every run lays out the same text.
 // A case is a change followed by a geometry read, which brings style and layout up to date. Painting is not measured,
 // because a browser does not expose it.
 
@@ -284,6 +285,30 @@ const kDocuments = [
          return html;
      }},
 
+    // A formula of one long table, a row of a sum, a fraction and a power each. Measures the cost of a change in one
+    // cell, which must not grow with the table's rows, and of a change to an attribute of the table that its cells
+    // read.
+    {name: "math-table", target: "mn",
+     style: "math { font-family: NewComputerModernMath }",
+     markup(next) {
+         let html = '<math display="block"><mtable>';
+         for (let i = 0; i < 1000; ++i)
+             html += "<mtr><mtd><mi>" + words(next, 1, false) + "</mi><mo>+</mo><mn>" + i + "</mn></mtd><mtd><mfrac>" +
+                     "<mn>1</mn><mi>x</mi></mfrac></mtd><mtd><msup><mi>y</mi><mn>2</mn></msup></mtd></mtr>";
+         return html + "</mtable></math>";
+     },
+     cases(stage, read) {
+         const table = stage.querySelector("mtable");
+         let flip = false;
+         return [
+             {name: "columnalign", run() {
+                 flip = !flip;
+                 table.setAttribute("columnalign", flip ? "left" : "center");
+                 read();
+             }},
+         ];
+     }},
+
     {name: "wide", target: "div",
      style: "div { margin: 0 }",
      markup(next) {
@@ -305,9 +330,9 @@ const kDocuments = [
 const kWidth = "800px";
 const kNarrowWidth = "640px";
 
-// Returns the cases for a document. `stage` holds the document, and a geometry read of `marker` brings layout up to
-// date.
-function cases(stage, marker, target) {
+// Returns the cases for a document: the changes that every document takes, and those of its own. `stage` holds the
+// document, and a geometry read of `marker` brings layout up to date.
+function cases(doc, stage, marker, target) {
     const read = () => marker.getBoundingClientRect().top;
     const changed = target.firstChild && target.firstChild.nodeType === 3 ? target.firstChild : null;
     const original = changed ? changed.data : "";
@@ -354,7 +379,7 @@ function cases(stage, marker, target) {
                 target.insertBefore(floated, target.firstChild);
             read();
         }},
-    ];
+    ].concat(doc.cases ? doc.cases(stage, read) : []);
 }
 
 function benchmark(only) {
@@ -373,7 +398,7 @@ function benchmark(only) {
         const nodes = stage.getElementsByTagName("*").length;
         // The height of the laid-out document, which shows that two engines laid out the same lines.
         const height = Math.round(stage.getBoundingClientRect().height);
-        for (const c of cases(stage, marker, target)) {
+        for (const c of cases(doc, stage, marker, target)) {
             const name = doc.name + " " + c.name;
             if (only !== undefined && only.name !== name)
                 continue;

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mpadded</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+  .pr-stage mpadded { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.6 Adjust Space Around Content &lt;mpadded&gt;</div>
+  <h1>mpadded</h1>
+  <p class=pr-lede><q>The mpadded element renders the same as its in-flow child content, but with the size and relative
+  positioning point of its content modified according to &lt;mpadded&gt;’s attributes.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#adjust-space-around-content-mpadded">MathML Core §3.3.6</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><mpadded><mfrac><mn>1</mn><mn>23456</mn></mfrac></mpadded><mo>+</mo><mpadded width=50px height=40px depth=30px lspace=10px voffset=5px><mfrac><mn>1</mn><mn>23456</mn></mfrac></mpadded></math></div>
+    <figcaption>A fraction in a tinted <code>mpadded</code> with no attributes, as an <code>mrow</code>; then in one 50px wide, 40px up and 30px down, the fraction 10px in and raised 5px, overflowing the tint.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

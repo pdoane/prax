@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Underscripts and overscripts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.2 Underscripts and Overscripts &lt;munder&gt;, &lt;mover&gt;, &lt;munderover&gt;</div>
+  <h1>Underscripts and overscripts</h1>
+  <p class=pr-lede><q>The font-size is automatically scaled down within the scripts, unless they are meant to be accents.</q>
+  <q>accent, accentunder attributes, if present, must have values that are booleans. If these attributes are absent
+  or invalid, they are treated as equal to false.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#underscripts-and-overscripts-munder-mover-munderover">MathML Core §3.4.2</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><munder><mn>1</mn><mn>2</mn></munder><mo>+</mo><mover><mn>3</mn><mn>4</mn></mover><mo>+</mo><munderover><mn>5</mn><mn>6</mn><mn>7</mn></munderover><mo>+</mo><mover accent=true><mn>8</mn><mn>9</mn></mover><mo>+</mo><munder accentunder=true><mn>10</mn><mn>11</mn></munder></math></div>
+    <figcaption>2 under 1, 4 over 3, 6 under and 7 over 5, smaller; 9 over 8 and 11 under 10, accents, at full size.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Accents in the math font</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><mover accent=true><mi>x</mi><mo>^</mo></mover><mo>,</mo><mover><mi>x</mi><mo>^</mo></mover><mo>,</mo><mover accent=yes><mi>x</mi><mo>^</mo></mover><mo>,</mo><mover accent=true><mi>X</mi><mo>~</mo></mover></math></div>
+    <figcaption>x with ^ as an accent, close and full size; as a script, smaller and higher; with <code>accent="yes"</code>, invalid, a script; X with ~ as an accent, just over its top. Each ^ and ~ is stretchy along the inline axis, so it takes the first size that covers its base.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

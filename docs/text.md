@@ -15,7 +15,8 @@ the font, never the shaper.
 - The character map gives a code point's glyph (`prFontCodePointGlyph`) and a variation sequence's
   (`prFontVariationSequenceGlyph`, cmap format 14). A sequence that the font lists takes its own glyph or its base's,
   and a sequence that it does not list maps to nothing, so the caller tells a font that supports the sequence from a
-  font that has only its base. A malformed subtable of sequences is checked whole when the font opens, and maps none.
+  font that has only its base. The subtable of sequences is checked whole when the font opens, and a malformed one maps
+  no sequence.
 - Hinting is a backend interface (`pr/font_hinter.h`), and a derivation names the hinter that fits a font's outlines.
   The FreeType backend hints. A font without a hinter draws its design outlines at every size, whatever its hinting.
 - Every length is in ems, with y pointing down from the glyph origin on the baseline.
@@ -39,6 +40,25 @@ the font, never the shaper.
   that its text is still text. Only a font of bitmap strikes has no subset.
 - A font is immutable and thread-safe. The readers only read the font's bytes, so they take no lock. A mutex guards the
   cache of outlines, and painters are called without it held.
+
+## Math fonts (`pr/font_math.h`)
+
+- The OpenType MATH table is read in place (`font_math.cpp`), like the other tables. A font keeps the offsets of its
+  subtables and its constants, and every other query reads the bytes with bounds checks. A malformed table degrades to
+  what it still holds. Nothing in it can fault a read or make a stretch return more than a bounded number of glyphs.
+- Every font answers, with or without MATH. A constant that the font lacks takes MathML Core's fallback, derived from
+  the font's own metrics at its instance. A glyph that the font does not stretch along an axis reports
+  `PrFontMathStretchKind_None`, and layout falls back to the shaped text.
+- Values keep MATH's signs. Shifts, gaps and heights are distances in the direction that their names say, with the
+  size-adjust applied. Only placed glyphs (the output of `prFontMathGlyphStretch`) use the y-down positions of a glyph
+  run, so layout copies them into a `PrFontGlyphRun` scaled by the font size.
+- `prFontMathGlyphStretch` is MathML Core's algorithm to shape a stretchy glyph, with the assembly laid out to the
+  target exactly where the connectors allow. A connector joins only a neighbor, so the outer ends of the first and
+  last non-extenders bound neither the overlap nor the assembly's validity. The parts of a vertical assembly are
+  stacked by the bottom of their ink (`prFontGlyphInkBounds`), which may lie off the glyph's origin.
+- Script glyphs (`ssty`), dotless forms (`dtls`) and flattened accents (`flac`) are GSUB features. A text run requests
+  them through its features (`PrTextRun`), as it does any feature, and every shaper that applies GSUB passes them to
+  the font.
 
 ## Font sets (`pr/font_set.h`)
 

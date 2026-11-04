@@ -243,6 +243,7 @@ constexpr char kHtmlStyleHtmlDocument[] = "@namespace \"http://www.w3.org/1999/x
 // The rules that apply in a document built from Markdown (pr/html_markdown.h): a column of text that is comfortable to
 // read, in either color scheme. Colors are mixed from the scheme's system colors, so that they follow it.
 constexpr char kHtmlStyleMarkdown[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
+    "@namespace m \"http://www.w3.org/1998/Math/MathML\";\n"
     "html { color-scheme: light dark; }\n"
     "body { max-width: 48em; margin: 0 auto; padding: 1em 2em; font-family: sans-serif; line-height: 1.5; }\n"
     "h1, h2 { padding-block-end: 0.3em; border-block-end: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); }\n"
@@ -258,7 +259,8 @@ constexpr char kHtmlStyleMarkdown[] = "@namespace \"http://www.w3.org/1999/xhtml
     "th, td { padding: 0.3em 0.8em; border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); }\n"
     "hr { border: none; border-block-start: 2px solid color-mix(in srgb, CanvasText 20%, Canvas); }\n"
     "img { max-width: 100%; }\n"
-    // Alerts, in the colors that GitHub gives each kind, and math, whose TeX is text until it typesets.
+    // Alerts, in the colors that GitHub gives each kind, and display math, which is set off from its text as TeX sets
+    // it with \abovedisplayskip and \belowdisplayskip, and scrolls if it is wider than the column.
     ".markdown-alert { margin-block: 1em; padding: 0.5em 1em; border-inline-start: 0.25em solid var(--alert); }\n"
     ".markdown-alert > :last-child { margin-block-end: 0; }\n"
     ".markdown-alert-title { margin-block-start: 0; font-weight: 600; color: var(--alert); }\n"
@@ -267,8 +269,7 @@ constexpr char kHtmlStyleMarkdown[] = "@namespace \"http://www.w3.org/1999/xhtml
     ".markdown-alert-important { --alert: #ab7df8; }\n"
     ".markdown-alert-warning { --alert: #d29922; }\n"
     ".markdown-alert-caution { --alert: #f85149; }\n"
-    ".math { font-family: math, serif; }\n"
-    ".math-display { display: block; margin-block: 1em; text-align: center; overflow-x: auto; }\n"
+    "m|math[display=block i] { margin-block: 1em; overflow-x: auto; }\n"
     ".footnotes { margin-block-start: 2em; padding-block-start: 1em; font-size: 0.875em;"
     " border-block-start: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); }\n"
     "li > input[type=checkbox]:first-child { margin-inline: 0 0.4em; }\n";

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>maction</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.7 Enlivening Expressions</div>
+  <h1>maction</h1>
+  <p class=pr-lede><q>The layout algorithm of the &lt;maction&gt; element is the same as the &lt;mrow&gt; element. The user agent
+  stylesheet must contain the following rules in order to hide all but its first child element</q>
+  <code>maction &gt; :not(:first-child) { display: none; }</code> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#enlivening-expressions">MathML Core §3.7</a></span></p>
+</header>
+
+<section>
+  <h2>The first child only</h2>
+  <figure>
+    <div class="pr-stage"><math><maction actiontype=toggle selection=2><mfrac><mn>1</mn><mn>3</mn></mfrac><mfrac><mn>1</mn><mn>4</mn></mfrac><mfrac><mn>1</mn><mn>2</mn></mfrac></maction></math></div>
+    <figcaption>The specification's example: ⅓ only, though <code>selection="2"</code>; clicking it changes nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><maction><mi>a</mi><mi style="display: inline">b</mi></maction></math></div>
+    <figcaption>The second child given <code>display: inline</code> by the author: a then b.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

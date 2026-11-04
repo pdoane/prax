@@ -1,4 +1,5 @@
 #include "pr/font.h"
+#include "pr/font_math.h"
 
 int prTestFontCApi(void);
 

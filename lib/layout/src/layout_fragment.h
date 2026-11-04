@@ -112,9 +112,13 @@ enum {
     LayoutFragmentFlag_Column = 1 << 12,        // Box: a column of a multi-column container, with no node
     LayoutFragmentFlag_Page = 1 << 13,          // Box: a page of a paginated tree, with no node
 
+    // Box: a math box. After its children and its list, its allocation holds its math metrics and what it draws beside
+    // its children (layoutFragmentMathData).
+    LayoutFragmentFlag_Math = 1 << 14,
+
     // Text: white space that hangs at the end of its line (css-text-3/#hanging). It reaches no scrollable overflow,
     // because a hanging glyph is not part of the line's content (css-text-3/#white-space-phase-2).
-    LayoutFragmentFlag_Hangs = 1 << 14,
+    LayoutFragmentFlag_Hangs = 1 << 15,
 };
 typedef uint16_t LayoutFragmentFlags;
 
@@ -166,18 +170,21 @@ struct LayoutChild {
     PrLayoutVec offset;
 };
 
-// What a static position aligns of a box out of flow in each physical axis (css-position-3/#resolving-inset-auto):
-// either an edge of its margin box or its center is placed at the position. A block or inline formatting context gives
-// the inline-start and block-start edges of its own writing mode, whatever the writing mode of the containing block. A
-// flex container aligns the box as its sole item.
+// What a static position aligns of a box out of flow in each physical axis (css-position-3/#resolving-inset-auto): an
+// edge of its margin box, its center or its first baseline is placed at the position. A box without a baseline in that
+// axis aligns its start edge. A block or inline formatting context gives the inline-start and block-start edges of its
+// own writing mode, whatever the writing mode of the containing block. A flex container aligns the box as its sole
+// item.
 enum {
-    LayoutStaticEdge_Right = 1 << 0,    // the right edge, else the left
-    LayoutStaticEdge_Bottom = 1 << 1,   // the bottom edge, else the top
-    LayoutStaticEdge_CenterX = 1 << 2,  // the center in the horizontal axis, in place of an edge
-    LayoutStaticEdge_CenterY = 1 << 3,  // the center in the vertical axis, in place of an edge
-    LayoutStaticEdge_SafeX = 1 << 4,    // a box that overflows its inset-modified containing block in the horizontal
-                                        // axis is aligned at its start edge instead (css-align-3/#overflow-values)
-    LayoutStaticEdge_SafeY = 1 << 5,    // the same in the vertical axis
+    LayoutStaticEdge_Right = 1 << 0,     // the right edge, else the left
+    LayoutStaticEdge_Bottom = 1 << 1,    // the bottom edge, else the top
+    LayoutStaticEdge_CenterX = 1 << 2,   // the center in the horizontal axis, in place of an edge
+    LayoutStaticEdge_CenterY = 1 << 3,   // the center in the vertical axis, in place of an edge
+    LayoutStaticEdge_SafeX = 1 << 4,     // a box that overflows its inset-modified containing block in the horizontal
+                                         // axis is aligned at its start edge instead (css-align-3/#overflow-values)
+    LayoutStaticEdge_SafeY = 1 << 5,     // the same in the vertical axis
+    LayoutStaticEdge_BaselineX = 1 << 6, // the first baseline of the box in the horizontal axis, in place of an edge
+    LayoutStaticEdge_BaselineY = 1 << 7, // the same in the vertical axis
 };
 typedef uint8_t LayoutStaticEdges;
 
@@ -531,6 +538,74 @@ LayoutFragment* layoutFragmentGrid(LayoutFragment* built, const LayoutGridAxisTr
 
 // Returns the tracks along `axis` that a grid container's fragment holds.
 LayoutGridAxisTracks layoutFragmentGridTracks(const LayoutFragment* grid, PrLayoutGridAxis axis);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Math boxes
+
+// What a math box draws beside its children, after their text (mathml-core/#stacking-contexts), in its color.
+enum {
+    LayoutMathPaintKind_Rule,       // a filled rectangle, such as a fraction's bar
+    LayoutMathPaintKind_Line,       // a stroked segment from (left, top) to (right, bottom), in any order
+    LayoutMathPaintKind_Arrow,      // a Line with a head at (right, bottom)
+    LayoutMathPaintKind_Ellipse,    // a stroked ellipse inscribed in the rectangle
+    LayoutMathPaintKind_RoundBox,   // a stroked rectangle with rounded corners
+    LayoutMathPaintKind_Glyphs,     // glyphs of one font, such as a stretched operator or a radical sign
+};
+typedef uint8_t LayoutMathPaintKind;
+
+// An item that a math box draws. Positions are in px from the top left of the box's border box. The glyphs of a Glyphs
+// item are a range of the box's glyphs, placed by their origins. The item holds a reference to its font.
+struct LayoutMathPaint {
+    PrRect rect;
+    float thickness;                // the width of a stroke
+    const PrFont* PR_NULLABLE font; // Glyphs
+    float size;                     // Glyphs: the em size in px
+    uint32_t glyphStart;
+    uint32_t glyphCount;
+    LayoutMathPaintKind kind;
+
+    // Glyphs: true if drawn mirrored along the inline axis about the center of the rectangle, as a right-to-left
+    // formula draws a mirrored character for which the font has no mirrored form.
+    bool mirrored;
+};
+
+// The top accent attachment of a math box that has none.
+constexpr PrLayoutUnit kLayoutMathNoAttachment = PrLayoutUnit{INT32_MIN};
+
+// The math metrics of a math box beyond its box (mathml-core/#box-model), measured on its border box. They are the ink
+// above and below its alphabetic baseline, its italic correction, and its top accent attachment from its inline-start
+// edge, or kLayoutMathNoAttachment.
+//
+// A box that is one glyph, as most tokens are, also names the glyph, its font and its em size in px, so that scripts
+// can be kerned into its corners (OpenType MATH, MathKernInfo). A fragment in the box's subtree holds the font. Its
+// italic correction and attachment are the glyph's. An extended shape is measured by its ink as a box is.
+struct LayoutMathMetrics {
+    PrLayoutUnit inkAscent;
+    PrLayoutUnit inkDescent;
+    PrLayoutUnit italic;
+    PrLayoutUnit attachment;
+    const PrFont* PR_NULLABLE glyphFont;
+    float glyphSize;
+    uint16_t glyph;
+    bool extended;
+};
+
+// What a math box's fragment holds beyond a box's, its metrics and what it draws. The data is valid while the fragment
+// lives.
+struct LayoutMathData {
+    LayoutMathMetrics metrics;
+    const LayoutMathPaint* PR_NULLABLE paints;
+    uint32_t paintCount;
+    const PrFontGlyph* PR_NULLABLE glyphs;
+    uint32_t glyphCount;
+};
+
+// Returns a math box's fragment (LayoutFragmentFlag_Math) made from `built`, which it takes and frees, holding a copy
+// of `data`. The fragment retains the font of each Glyphs item.
+LayoutFragment* layoutFragmentMath(LayoutFragment* built, const LayoutMathData& data);
+
+// Returns what a math box's fragment holds.
+LayoutMathData layoutFragmentMathData(const LayoutFragment* fragment);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Pieces of inline boxes

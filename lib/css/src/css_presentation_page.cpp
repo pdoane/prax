@@ -196,7 +196,7 @@ void noteReads(Pass& p, const CssComputedStyle* style) {
 const CssDeclarationBlock* defaultsOf(CssPageMargins& margins, PrLayoutMarginBox which) {
     if (margins.defaults[which] == nullptr) {
         CssDeclarationBlock* block = allocZeroed<CssDeclarationBlock>();
-        cssDeclarationBlockParse(block, kMarginDefaults[which], nullptr);
+        cssDeclarationBlockParse(block, kMarginDefaults[which], nullptr, CssOrigin_UserAgent);
         margins.defaults[which] = block;
     }
     return margins.defaults[which];

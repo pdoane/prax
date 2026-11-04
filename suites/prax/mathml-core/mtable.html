@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mtable: a table centered on the axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.5.1 Table or Matrix &lt;mtable&gt;</div>
+  <h1>mtable: a table centered on the axis</h1>
+  <p class=pr-lede><q>The mtable is laid out as an inline-table and sets displaystyle to false.</q> <q>The center of the table is
+  aligned with the math axis.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#table-or-matrix-mtable">MathML Core §3.5.1</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>Centered on the axis</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 11.12px"></span><math style="font-size: 40px"><mi>det</mi><mrow><mo>[</mo><mtable><mtr><mtd><mi>a</mi></mtd><mtd><mi>b</mi></mtd></mtr><mtr><mtd><mi>c</mi></mtd><mtd><mi>d</mi></mtd></mtr></mtable><mo>]</mo></mrow><mo>=</mo><mi>a</mi><mi>d</mi><mo>−</mo><mi>b</mi><mi>c</mi></math></div>
+    <figcaption>A determinant at 40px: the matrix's middle on the math axis, AxisHeight 278, 11.12px up, the line that halves the = and the −.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not in display style</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 26px; math-style: normal"><mrow><mi>f</mi><mo>(</mo><mi>x</mi><mo>)</mo></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnalign=left><mtr><mtd><mfrac><mn>1</mn><mi>x</mi></mfrac></mtd><mtd><mtext>if&nbsp;</mtext><mi>x</mi><mo>≠</mo><mn>0</mn></mtd></mtr><mtr><mtd><munder><mo>∑</mo><mi>n</mi></munder><msub><mi>a</mi><mi>n</mi></msub></mtd><mtd><mtext>otherwise</mtext></mtd></mtr></mtable></mrow></math></div>
+    <figcaption>A piecewise function in display math: its cells are compact, the fraction at script size and the ∑ small with <i>n</i> beside it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

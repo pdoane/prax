@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mglyph: images as symbols</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.2.1.1 Using images to represent symbols &lt;mglyph/&gt;</div>
+  <h1>mglyph: images as symbols</h1>
+  <p class=pr-lede><q>The mglyph element provides a mechanism for displaying images to represent non-standard symbols.</q> <q>If only
+  one of width and height is given, the image should be scaled to preserve the aspect ratio; if neither are given,
+  the image should be displayed at its natural size.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#using-images-to-represent-symbols-mglyph">MathML 4 §3.2.1.1</a></span> The image is the suite's flag, 40 by 20.</p>
+</header>
+
+<section>
+  <h2>Size and alignment</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mi><mglyph src="../shared/resources/flag-40x20.png" alt="flag" /></mi><mo>+</mo><mi>x</mi></math></div>
+    <figcaption>A flag 40px by 20px, its bottom on the baseline, then + x. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No image.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mi><mglyph src="../shared/resources/flag-40x20.png" alt="flag" height=10px /></mi><mi><mglyph src="../shared/resources/flag-40x20.png" alt="flag" width=80px height=20px /></mi></math></div>
+    <figcaption><code>height="10px"</code>: 20px by 10px; then 80px by 20px, stretched. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No image.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mi>x</mi><mi><mglyph src="../shared/resources/flag-40x20.png" alt="flag" valign=-10px /></mi></math></div>
+    <figcaption><code>valign="-10px"</code>: the flag 10px below the baseline. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No image.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

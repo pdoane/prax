@@ -139,7 +139,14 @@ struct LayoutSpace {
     // space. A cached result is never laid out with it: one that a fragmentainer does not break is the result of an
     // unfragmented layout.
     const LayoutFragmentation* PR_NULLABLE fragmentation;
+
+    // The stretch size constraint that a math parent lays out an embellished operator with, or null for none. It stays
+    // valid during the call that receives the space. A cached result is keyed on it.
+    const LayoutMathStretch* PR_NULLABLE stretch;
 };
+
+// A box's space is copied for each child, so its fields are ordered to leave no padding.
+static_assert(sizeof(LayoutSpace) == 80);
 
 // Returns the fragmentainer that a box laid out in `space` is laid out in, or null outside a fragmentation context.
 inline const LayoutFragmentainer* PR_NULLABLE layoutSpaceFragmentainer(const LayoutSpace& space) {
@@ -155,6 +162,18 @@ inline const LayoutBreakToken* PR_NULLABLE layoutSpaceResume(const LayoutSpace& 
 // Returns the cell inputs of `space`, which are empty for a box that is not a table cell.
 inline LayoutCellSpace layoutCellSpaceFromSpace(const LayoutSpace& space) {
     return space.cell != nullptr ? *space.cell : LayoutCellSpace{};
+}
+
+// Returns the stretch size constraint of `space`, which has no axis for a box that is not asked to stretch.
+inline LayoutMathStretch layoutMathStretchFromSpace(const LayoutSpace& space) {
+    return space.stretch != nullptr ? *space.stretch : LayoutMathStretch{};
+}
+
+// Returns true if two spaces hold equal stretch size constraints, or neither holds one.
+inline bool layoutSpaceStretchesEqual(const LayoutSpace& a, const LayoutSpace& b) {
+    if (a.stretch == b.stretch)
+        return true;
+    return a.stretch != nullptr && b.stretch != nullptr && layoutMathStretchesEqual(*a.stretch, *b.stretch);
 }
 
 // Returns true if a box laid out in `space` is out of flow, so that its containing block sizes the space.
@@ -351,6 +370,10 @@ struct LayoutScratch {
     // The boxes that the running layout laid out with break tokens, whose results no cache entry keeps, and whose marks
     // its end clears (layoutEndLayout), since it laid them out from their current inputs.
     RawArray<LayoutNodeIndex> broken;
+
+    // What the math boxes being made draw beside their children, innermost last (layoutMathFinish).
+    RawArray<LayoutMathPaint> mathPaints;
+    RawArray<PrFontGlyph> mathGlyphs;
 };
 
 // Creates empty scratch memory, and frees it.

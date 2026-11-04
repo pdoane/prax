@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>msqrt and mroot</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.3 Radicals &lt;msqrt&gt;, &lt;mroot&gt;</div>
+  <h1>msqrt and mroot</h1>
+  <p class=pr-lede><q>The msqrt element is used for square roots, while the mroot element is used to draw radicals with indices,
+  e.g. a cube root.</q> <q>The &lt;mroot&gt; element increments scriptlevel by 2, and sets displaystyle to "false" in
+  all but its first child.</q> <q>If the &lt;mroot&gt; has less or more than two in-flow children, its layout
+  algorithm is the same as the mrow element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#radicals-msqrt-mroot">MathML Core §3.3.3</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <figure>
+    <div class="pr-stage"><math><mroot><msqrt><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>+</mo><mn>4</mn></msqrt><mn>3</mn></mroot><mo>+</mo><mn>0</mn></math></div>
+    <figcaption>A cube root of the square root of "½ + 4", then + 0: the 3 smaller than the ½'s digits, two levels down; the inner surd covering the fraction; the outer covering the inner.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Children</h2>
+  <figure>
+    <div class="pr-stage"><math><msqrt><mi>a</mi><mi>b</mi><mi>c</mi></msqrt><msqrt></msqrt></math></div>
+    <figcaption><code>msqrt</code> of three children: one surd over abc; of none: a surd over nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mroot><mi>x</mi></mroot><mroot><mi>x</mi><mn>3</mn><mn>4</mn></mroot></math></div>
+    <figcaption><code>mroot</code> of one child, then three: no surd, "x" and "x34".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

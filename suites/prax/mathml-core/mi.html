@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mi: identifiers, italic when alone</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.2 Identifier &lt;mi&gt;</div>
+  <h1>mi: identifiers, italic when alone</h1>
+  <p class=pr-lede><q>The user agent stylesheet must contain the following property in order to implement automatic italic via the
+  text-transform value</q> <code>mi { text-transform: math-auto; }</code>. <q>The mathvariant attribute, if present,
+  must be an ASCII case-insensitive match of normal. In that case, the user agent is expected to treat the attribute
+  as a presentational hint setting the element's text-transform property to none.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#the-mi-element">MathML Core §3.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <figure>
+    <div class="pr-stage"><math><mi>cos</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi mathvariant=normal>c</mi><mo>,</mo><mi>∞</mi></math></div>
+    <figcaption>"cos" upright (three characters), c italic (𝑐, U+1D450), c upright (<code>mathvariant="normal"</code>), ∞ as it is (no italic form).</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mi>h</mi><mi>α</mi><mi>A</mi><mi>ı</mi><mi mathvariant=NORMAL>α</mi><mi mathvariant=bold>x</mi></math></div>
+    <figcaption>h, α, A and ı italic, h as ℎ U+210E; α upright with <code>"NORMAL"</code>; x italic with <code>mathvariant="bold"</code>, which Core ignores. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> x bold and upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

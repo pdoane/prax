@@ -2044,15 +2044,25 @@ Area areaOf(const Table& t, uint32_t first, uint32_t count, uint32_t row, uint32
 }
 
 // Appends a placeholder for each child out of flow whose place `container` holds, at `at` in the logical space of the
-// fragment being made.
-void placeOutOfFlow(Table& t, LayoutNodeIndex container, LayoutLogicalOffset at) {
+// fragment being made. In a row of math whose baseline is `rowBaseline` below its block-start edge, a math element out
+// of flow, as an mlabeledtr's label is, sits on the row's baseline (mathml4/#presm_mtr), as an equation's tag does.
+void placeOutOfFlow(Table& t, LayoutNodeIndex container, LayoutLogicalOffset at,
+        PrLayoutUnit rowBaseline = layoutUnit(-1)) {
     for (uint32_t i = 0; i < t.outOfFlowCount; ++i) {
         const LayoutTableAside& aside = t.outOfFlow(i);
         if (aside.container != container)
             continue;
-        LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(aside.node, layoutStaticEdges(t.mode),
+        LayoutStaticEdges edges = layoutStaticEdges(t.mode);
+        LayoutLogicalOffset place = at;
+        const LayoutTreeNode& table = layoutTreeNode(t.state.tree, t.node);
+        if (rowBaseline >= kLayoutUnitZero &&
+                layoutMathStyle(t.state.styles, table.style).kind == PrLayoutMathKind_Table) {
+            edges = layoutStaticEdgesAligned(t.mode, LayoutStaticAlign_Start, LayoutStaticAlign_Baseline, false, false);
+            place.blockOffset += rowBaseline;
+        }
+        LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(aside.node, edges,
             layoutNodePositionScheme(t.state.tree, aside.node));
-        t.state.scratch->children.push(LayoutLogicalChild{placeholder, at});
+        t.state.scratch->children.push(LayoutLogicalChild{placeholder, place});
     }
 }
 
@@ -2128,7 +2138,7 @@ void pushRows(Table& t, uint32_t g, LayoutLogicalOffset origin, const LayoutSpac
         }
         if (row.node == kPrLayoutNodeNone)
             continue;
-        placeOutOfFlow(t, row.node, kLayoutLogicalOffsetZero);
+        placeOutOfFlow(t, row.node, kLayoutLogicalOffsetZero, rowBaseline(t, row.grid));
         bool repeated = row.grid < t.headerEnd || row.grid >= t.footerStart || row.grid == t.resumedRow;
         const LayoutFragment* fragment = buildPart(t, row.node, mark, area.size, fallback, repeated);
         LayoutLogicalOffset relative = layoutRelativeOffset(t.state.styles, boxOf(t.state.tree, row.node), cells);

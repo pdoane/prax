@@ -20,6 +20,7 @@
 #include "layout/src/layout_fragmentation.h"
 #include "layout/src/layout_grid.h"
 #include "layout/src/layout_intrinsic.h"
+#include "layout/src/layout_math.h"
 #include "layout/src/layout_multicol.h"
 #include "layout/src/layout_page.h"
 #include "layout/src/layout_position.h"
@@ -128,19 +129,21 @@ PR_NOINLINE bool fitsByJustifying(const LayoutState& state, LayoutNodeIndex node
 // measured in. If auto margins share the room that a given size leaves, also sets the inline-start margin in `e`.
 //
 // An auto size fills what the margins leave of the available space, as stretch does. A box that shrinks to fit, which
-// is an inline-level box, a float, an outside marker or an orthogonal flow root, takes fit-content for an auto size and
-// zero for auto margins (CSS2/#inlineblock-width, CSS2/#float-width, css-writing-modes-4/#orthogonal-auto). An in-flow
-// block-level box whose justify-self is not normal or stretch takes fit-content for an auto size. Its auto margins
-// share the room it leaves, and its justify-self places it in whatever room remains after that, leaving the
-// over-constrained margin as it is (css-align-3/#justify-block). A semi-replaced element also takes fit-content for an
-// auto size at normal, and is placed as a block of that size (html/#button-layout). A box out of flow takes the size
-// its space gives, and its placement shares its auto margins (css-position-3/#abspos-auto-size).
+// is an inline-level box, a float, an outside marker, an orthogonal flow root or a box in a math parent, takes
+// fit-content for an auto size and zero for auto margins (CSS2/#inlineblock-width, CSS2/#float-width,
+// css-writing-modes-4/#orthogonal-auto). An in-flow block-level box whose justify-self is not normal or stretch takes
+// fit-content for an auto size. Its auto margins share the room it leaves, and its justify-self places it in whatever
+// room remains after that, leaving the over-constrained margin as it is (css-align-3/#justify-block). A semi-replaced
+// element also takes fit-content for an auto size at normal, and is placed as a block of that size
+// (html/#button-layout). A box out of flow takes the size its space gives, and its placement shares its auto margins
+// (css-position-3/#abspos-auto-size).
 //
 // The auto inline size of a table is fit-content, and the table's auto margins share the space that it leaves. A table
 // is never narrower than its min-content size, which its columns and captions need (css-tables-3/#layout-principles).
 //
 // Sets `*fills` if the size is what the available space leaves, so that a different available size changes it
-// (LayoutResultFlag_FillsAvailable).
+// (LayoutResultFlag_FillsAvailable). `kMath` is false if the tree holds no math box (LayoutStyles::mathRecords).
+template <bool kMath>
 PrLayoutUnit inlineSizeOf(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
         const PrLayoutBoxStyle& box, const LayoutLogicalBox& logical, LayoutEdges& e,
         LayoutMode measure, bool* readsPercentBlock, bool* fills, LayoutNodeIndex runLast = kPrLayoutNodeNone) {
@@ -153,7 +156,8 @@ PrLayoutUnit inlineSizeOf(LayoutState& state, LayoutNodeIndex node, const Layout
         shrinks = space.autoInline == LayoutAutoSize_FitContent;
     else
         shrinks = (!root && prLayoutDisplayIsInlineLevel(box.display)) || box.floating != PrLayoutFloat_None ||
-            box.display == PrLayoutDisplay_Marker || layoutIsOrthogonal(measure, space.mode);
+            box.display == PrLayoutDisplay_Marker || layoutIsOrthogonal(measure, space.mode) ||
+            (kMath && !root && layoutInMath(state.tree, node));
     // Only an in-flow block-level box is justified, and only if an alignment is set or the box is semi-replaced.
     PrLayoutAlignment justify = PrLayoutAlignment_Normal;
     bool fits = false;
@@ -355,6 +359,11 @@ struct Shell {
     bool scrolls;
     bool intrinsicReads;            // true if its inline size read the block-axis percentage base
     bool fills;                     // true if its inline size follows the available space (FillsAvailable)
+
+    bool mathSized;                 // true for a math box whose math content decides its auto inline size, which is an
+                                    // inline-level math box or one in a math parent
+    bool mathToken;                 // true for a math token, whose flow content its math layout then measures
+
     PrLayoutUnit inlineSize;        // of its border box
     LayoutBlockAxis axis;
     LayoutSpace contentSpace;       // its content box, the containing block of its children
@@ -365,7 +374,8 @@ struct Shell {
 };
 
 // Finds the shell `s` of the box that layoutContainer lays out: its inline size, the block size that its style or its
-// container decides, and its content box.
+// container decides, and its content box. `kMath` is false if the tree holds no math box.
+template <bool kMath>
 PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node, const LayoutSpace& space,
         const LayoutRequests* PR_NULLABLE requests, LayoutNodeIndex runLast,
         const PrLayoutBoxStyle* PR_NULLABLE anonymous) {
@@ -383,7 +393,10 @@ PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node,
     s.anonymous = anonymous;
     s.box = anonymous != nullptr ? anonymous : &layoutBoxStyle(state.styles, n.style);
     s.space = &space;
-    s.children = anonymous != nullptr ? layoutChildrenFromBox(*anonymous) : LayoutChildren(n.children);
+    if (anonymous != nullptr)
+        s.children = layoutChildrenFromBox(*anonymous, PrLayoutMathKind_None);
+    else
+        s.children = LayoutChildren(n.children);
     const PrLayoutBoxStyle& box = *s.box;
     PR_ASSERT(anonymous == nullptr || layoutIsTable(box) ||
         (requests != nullptr && requests->inlineAxis.kind == LayoutRequestKind_Fixed));
@@ -425,10 +438,17 @@ PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node,
     s.intrinsicReads = false;
     s.fills = false;
     LayoutRequest inlineRequest = layoutInlineRequest(requests);
+    bool math = kMath && anonymous == nullptr && layoutIsMathBox(box);
+    s.mathToken = math && s.children == LayoutChildren_Flow;
+    s.mathSized = math && (box.display == PrLayoutDisplay_InlineMath || layoutInMath(state.tree, node)) &&
+        !layoutLengthIsFixed(sizing.inlineSize) && !layoutLengthIsContentBased(sizing.inlineSize) &&
+        !layoutLengthIsStretch(sizing.inlineSize) && !(s.requested && inlineRequest.kind == LayoutRequestKind_Fixed);
     if (s.requested && inlineRequest.kind == LayoutRequestKind_Fixed)
         s.inlineSize = layoutUnitMax(inlineRequest.size, layoutEdgesInline(es));
+    else if (s.mathSized && s.children == LayoutChildren_Math)
+        s.inlineSize = layoutEdgesInline(es);
     else
-        s.inlineSize = inlineSizeOf(state, node, space, box, sizing, es, sizingMode, &s.intrinsicReads, &s.fills, runLast);
+        s.inlineSize = inlineSizeOf<kMath>(state, node, space, box, sizing, es, sizingMode, &s.intrinsicReads, &s.fills, runLast);
     PrLayoutUnit contentInline = layoutUnitMax(kLayoutUnitZero, s.inlineSize - layoutEdgesInline(es));
     // A box out of flow stretches into its inset-modified containing block rather than its containing block.
     PrLayoutUnit stretchBase = layoutSpaceIsOutOfFlow(space) ? space.stretchBlock : space.percentBlock;
@@ -597,7 +617,7 @@ bool sameSpace(const LayoutSpace& a, const LayoutSpace& b) {
         a.containing.blockSize == b.containing.blockSize && a.blockLimit == b.blockLimit &&
         a.fallback == b.fallback && a.autoInline == b.autoInline && a.autoBlock == b.autoBlock &&
         a.stretchBlock == b.stretchBlock && layoutCellSpacesEqual(layoutCellSpaceFromSpace(a),
-            layoutCellSpaceFromSpace(b));
+            layoutCellSpaceFromSpace(b)) && layoutSpaceStretchesEqual(a, b);
 }
 
 // Returns true if the band memo `m` holds the content of the box `s` for `input`.
@@ -981,6 +1001,123 @@ PR_NOINLINE LayoutTableOutcome tableContent(LayoutState& state, const Shell& s, 
     return outcome;
 }
 
+// Returns the input of the math layout of the box `s`, whose lines, if it is a token, start at `mark` among the scratch
+// children.
+LayoutMathInput mathInputOf(const Shell& s, uint32_t mark, const LayoutShellContent& content) {
+    const LayoutBaseline& first = content.edges[LayoutBaselineEdge_First];
+    return LayoutMathInput{
+        .node = s.node,
+        .content = &s.contentSpace,
+        .origin = s.origin,
+        .contentInline = s.mathSized ? layoutUnit(-1) : s.contentSpace.containing.inlineSize,
+        .contentBlock = s.contentSpace.containing.blockSize,
+        .percentInline = s.mathSized ? s.space->percentInline : s.contentSpace.containing.inlineSize,
+        .stretch = s.space->stretch,
+        .mark = mark,
+        .baseline = first.present ? first.offset : kLayoutBaselineNone,
+    };
+}
+
+// Moves the math content of the table cell `s`, whose children start at `mark` among the scratch children, along the
+// block axis by its vertical-align, as a cell's flow content moves (css-tables-3/#row-layout). Its baseline moves to
+// the baseline that its row gives it, or its middle or bottom moves in the room that its block size leaves.
+void mathCellShift(LayoutState& state, const Shell& s, uint32_t mark, LayoutMathOutcome& outcome) {
+    PrLayoutUnit shift = kLayoutUnitZero;
+    // The table asks the cell for the height of its rows, which is the cell's size even where it is not definite for
+    // the cell's content.
+    PrLayoutUnit free = kLayoutUnitZero;
+    if (layoutIsDefinite(s.axis.size))
+        free = s.axis.size - s.axis.edges - outcome.blockSize;
+    switch (layoutCellAlignFromBox(*s.box)) {
+        case LayoutCellAlign_Middle: shift = layoutUnitMax(kLayoutUnitZero, free / 2); break;
+        case LayoutCellAlign_Bottom: shift = layoutUnitMax(kLayoutUnitZero, free); break;
+        case LayoutCellAlign_Baseline:
+            if (s.space->cell != nullptr && s.space->cell->aligned)
+                shift = layoutUnitMax(kLayoutUnitZero,
+                    s.space->cell->baseline - (s.origin.blockOffset + outcome.baseline));
+            break;
+        default: break;
+    }
+    if (shift == kLayoutUnitZero)
+        return;
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
+    for (uint32_t i = mark; i < children.count; ++i)
+        children.data[i].offset.blockOffset += shift;
+    float dy = prLayoutUnitToPx(shift);
+    for (uint32_t i = outcome.paints; i < state.scratch->mathPaints.count; ++i) {
+        state.scratch->mathPaints.data[i].rect.top += dy;
+        state.scratch->mathPaints.data[i].rect.bottom += dy;
+    }
+    for (uint32_t i = outcome.glyphs; i < state.scratch->mathGlyphs.count; ++i)
+        state.scratch->mathGlyphs.data[i].position.y += dy;
+    outcome.baseline += shift;
+    outcome.blockSize += shift;
+}
+
+// Finishes the sizes of the math box `s` from what its math layout gave. These are an inline size that its math content
+// decides, a block size that its content decides, and its baselines, which are the alphabetic baseline of its math
+// content box.
+void mathFinish(LayoutState& state, Shell& s, const LayoutMathOutcome& outcome, LayoutShellContent& content) {
+    const PrLayoutBoxStyle& box = *s.box;
+    const LayoutLogicalBox& sizing = s.sizing();
+    LayoutEdges& es = s.edges();
+    if (s.mathSized && outcome.inlineSized) {
+        PrLayoutUnit edges = layoutEdgesInline(es);
+        s.inlineSize = layoutClampSize(state.styles, box, outcome.inlineSize + edges, sizing.minInlineSize,
+            sizing.maxInlineSize, s.space->percentInline, edges, layoutUnit(-1), layoutNoKeyword);
+    }
+    if (!outcome.sized)
+        return;
+    const LayoutBlockAxis& axis = s.axis;
+    PrLayoutUnit size = outcome.blockSize + axis.edges;
+    content.blockSize = layoutContentBlockSize(state.styles, box, sizing, axis, s.space->percentBlock, s.clamps, size, size);
+    content.contentBlock = outcome.blockSize;
+    uint32_t source = layoutStyle(state.styles, layoutTreeNode(state.tree, s.node).style).groups[PrLayoutGroup_Font];
+    LayoutBaseline baseline = layoutBaselineAt(s.origin.blockOffset + outcome.baseline, source);
+    content.edges[LayoutBaselineEdge_First] = baseline;
+    content.edges[LayoutBaselineEdge_Last] = baseline;
+}
+
+// Returns the fragment of the box `s`, whose children start at `mark` among the scratch children, at the block size
+// that its content gives, or null if `measuring`. `lines` are the lines of a grid container, or null.
+LayoutFragment* PR_NULLABLE buildFragment(LayoutState& state, const Shell& s, uint32_t mark,
+        const LayoutShellContent& content, bool measuring, const LayoutGridLines* PR_NULLABLE lines) {
+    if (measuring)
+        return nullptr;
+    LayoutLogicalSize size{s.inlineSize, content.blockSize};
+    LayoutMode mode = s.content.mode;
+    if (s.anonymous != nullptr)
+        return layoutFragmentBuild(state.scratch->children, mark, LayoutFragmentKind_Box, kPrLayoutNodeNone, mode, size);
+    return layoutHolderBuild(state, s.node, mark, mode, size, s.contentSpace.fallback, lines);
+}
+
+// Lays out the math content of the math box `s`, whose children start at `mark` among the scratch children, and
+// finishes its sizes. Returns its fragment, or null if `measuring`. A token's content is already laid out in flow, and
+// its math layout measures it. Kept out of line from layoutContainer, which most boxes reach without math.
+PR_NOINLINE LayoutFragment* PR_NULLABLE mathContent(LayoutState& state, Shell& s, uint32_t mark,
+        LayoutShellContent& content, bool measuring) {
+    LayoutMode mode = s.content.mode;
+    if (s.mathToken) {
+        LayoutMathOutcome math = layoutMathToken(state, mathInputOf(s, mark, content));
+        mathFinish(state, s, math, content);
+        LayoutFragment* fragment = buildFragment(state, s, mark, content, measuring, nullptr);
+        if (fragment != nullptr)
+            return layoutMathFinish(state, fragment, math, s.origin, s.inlineSize, mode);
+        layoutMathDiscard(state, math);
+        return nullptr;
+    }
+    LayoutMathOutcome math = layoutMathContent(state, mathInputOf(s, mark, content));
+    if (s.box->display == PrLayoutDisplay_TableCell)
+        mathCellShift(state, s, mark, math);
+    mathFinish(state, s, math, content);
+    if (measuring) {
+        layoutFragmentDiscard(state.scratch->children, mark);
+        layoutMathDiscard(state, math);
+        return nullptr;
+    }
+    return layoutMathFinish(state, buildFragment(state, s, mark, content, false, nullptr), math, s.origin, s.inlineSize, mode);
+}
+
 // Lays out the block-level box `node` in `space`: a block container, a flex or grid container, or a table. If
 // `anonymous` is given, it lays out instead the anonymous box of that style that wraps the siblings from `node` through
 // `runLast`. If `node` is text or a line break, the box is the anonymous block of a flex item that wraps the run of
@@ -995,14 +1132,16 @@ PR_NOINLINE LayoutTableOutcome tableContent(LayoutState& state, const Shell& s, 
 // If `measure` is given, a flex or grid container is solved alone and `measure` is set to its answer to a measurement
 // of `kind`. The result then has no fragment, and the items are measured but not laid out. Kept out of line from
 // layoutBlock: most work in most layouts is reuse of a cached result, and this keeps that path cheap.
-PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
+//
+// `kMath` is false if the tree holds no math box. That copy has none of math layout's checks.
+template <bool kMath>
+PR_NOINLINE LayoutResult layoutContainerOf(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
         const LayoutRequests* PR_NULLABLE requests, LayoutReads* PR_NULLABLE reads, LayoutMeasurement* PR_NULLABLE measure,
-        LayoutMeasureKind kind = LayoutMeasureKind_Baselines, LayoutNodeIndex runLast = kPrLayoutNodeNone,
-        const PrLayoutBoxStyle* PR_NULLABLE anonymous = nullptr) {
+        LayoutMeasureKind kind, LayoutNodeIndex runLast, const PrLayoutBoxStyle* PR_NULLABLE anonymous) {
     bool readsBefore = state.readsFallback;
     state.readsFallback = false;
     Shell s;
-    shellOf(state, s, node, space, requests, runLast, anonymous);
+    shellOf<kMath>(state, s, node, space, requests, runLast, anonymous);
     const PrLayoutBoxStyle& box = *s.box;
     LayoutMode mode = s.content.mode;
     PR_ASSERT(space.bfc == nullptr ||
@@ -1017,13 +1156,8 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
     uint32_t mark = children.count;
     LayoutShellContent content{};
     LayoutFragment* fragment = nullptr;
-    auto build = [&](const LayoutGridLines* PR_NULLABLE lines) -> LayoutFragment* {
-        if (measure != nullptr)
-            return nullptr;
-        LayoutLogicalSize size{s.inlineSize, content.blockSize};
-        if (s.anonymous != nullptr)
-            return layoutFragmentBuild(children, mark, LayoutFragmentKind_Box, kPrLayoutNodeNone, mode, size);
-        return layoutHolderBuild(state, node, mark, mode, size, s.contentSpace.fallback, lines);
+    auto build = [&](const LayoutGridLines* PR_NULLABLE lines) {
+        return buildFragment(state, s, mark, content, measure != nullptr, lines);
     };
     LayoutResult result{};
     result.start = layoutStrut(s.e.margin[LayoutSide_BlockStart]);
@@ -1047,9 +1181,15 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
             PR_ASSERT(space.fragmentation != nullptr || flow.token == nullptr);
             if (space.fragmentation != nullptr)
                 result.token = fragmentedEnd(s, flow, content);
-            fragment = build(nullptr);
+            if (kMath && s.mathToken)
+                fragment = mathContent(state, s, mark, content, measure != nullptr);
+            else
+                fragment = build(nullptr);
             break;
         }
+        case LayoutChildren_Math:
+            fragment = mathContent(state, s, mark, content, measure != nullptr);
+            break;
         case LayoutChildren_Flex:
         case LayoutChildren_Grid: {
             LayoutContentGoal goal = LayoutContentGoal_Size;
@@ -1138,7 +1278,9 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
             padding[layoutPhysicalSide(mode, side)] = s.inner.padding[side];
         layoutScrollerSetOverflow(state.tree, fragment, box, padding, mode, flowRect);
     } else {
-        layoutFragmentSetOverflow(state.tree, fragment);
+        // A math box has set its overflow, which leaves out the lines of a token (layoutMathFinish).
+        if (!kMath || (fragment->flags & LayoutFragmentFlag_Math) == 0)
+            layoutFragmentSetOverflow(state.tree, fragment);
         fragment->overflow = layoutRectUnion(fragment->overflow, flowRect);
     }
     fragment->box.containingInline = space.containing.inlineSize;
@@ -1149,6 +1291,17 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
     layoutFragmentSetBaselines(fragment, content.edges[LayoutBaselineEdge_First],
         content.edges[LayoutBaselineEdge_Last]);
     return result;
+}
+
+// Lays out the box as layoutContainerOf does, in the copy that has math layout's checks only if the tree holds a math
+// box.
+PR_FORCE_INLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
+        const LayoutRequests* PR_NULLABLE requests, LayoutReads* PR_NULLABLE reads, LayoutMeasurement* PR_NULLABLE measure,
+        LayoutMeasureKind kind = LayoutMeasureKind_Baselines, LayoutNodeIndex runLast = kPrLayoutNodeNone,
+        const PrLayoutBoxStyle* PR_NULLABLE anonymous = nullptr) {
+    if (state.styles->mathRecords != 0)
+        return layoutContainerOf<true>(state, node, space, requests, reads, measure, kind, runLast, anonymous);
+    return layoutContainerOf<false>(state, node, space, requests, reads, measure, kind, runLast, anonymous);
 }
 
 // Takes the result that the cache holds for the box `node` from a layout when a different size was available, if the
@@ -1162,7 +1315,11 @@ bool findResized(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& sp
     LayoutEdges e = layoutEdgesFromBox(state.styles, logical, space.containing.inlineSize);
     bool readsPercentBlock = false;
     bool fills = false;
-    PrLayoutUnit size = inlineSizeOf(state, node, space, box, logical, e, space.mode, &readsPercentBlock, &fills);
+    PrLayoutUnit size;
+    if (state.styles->mathRecords != 0)
+        size = inlineSizeOf<true>(state, node, space, box, logical, e, space.mode, &readsPercentBlock, &fills);
+    else
+        size = inlineSizeOf<false>(state, node, space, box, logical, e, space.mode, &readsPercentBlock, &fills);
     LayoutResolvedInline resolved{size, e.margin[LayoutSide_InlineStart]};
     return layoutCacheFindResized(state, node, space, requests, resolved, out);
 }

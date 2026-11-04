@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>merror</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.5 Error Message &lt;merror&gt;</div>
+  <h1>merror</h1>
+  <p class=pr-lede><q>The user agent stylesheet must contain the following rule in order to visually highlight the error
+  message:</q> <code>merror { border: 1px solid red; background-color: lightYellow; }</code> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#error-message-merror">MathML Core §3.3.5</a></span></p>
+</header>
+
+<section>
+  <h2>Highlighted</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><mfrac><merror><mtext>Syntax error: \frac{1}</mtext></merror><mn>3</mn></mfrac></math></div>
+    <figcaption>The specification's example: a numerator in a 1px red border on light yellow, over 3.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><merror><mi>x</mi><mo>+</mo><mi>y</mi></merror></math></div>
+    <figcaption>Several children laid out as a row, spaced, in the red border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

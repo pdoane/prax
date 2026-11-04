@@ -195,19 +195,37 @@ inline bool layoutIsGridContainer(const PrLayoutBoxStyle& box) {
     return box.display == PrLayoutDisplay_Grid || box.display == PrLayoutDisplay_InlineGrid;
 }
 
+// Returns true if a box styled by `box` is a math box (mathml-core/#new-display-math-value).
+inline bool layoutIsMathBox(const PrLayoutBoxStyle& box) {
+    return box.display == PrLayoutDisplay_BlockMath || box.display == PrLayoutDisplay_InlineMath;
+}
+
+// Returns true if a math box of `kind` is a token, whose content is laid out in flow and which its math layout then
+// measures by its ink (layout_math.h).
+inline bool layoutMathKindIsToken(PrLayoutMathKind kind) {
+    return kind == PrLayoutMathKind_Token || kind == PrLayoutMathKind_Operator;
+}
+
 // How a box lays out its children, which names the algorithm that lays out its content (layout_content.h): in flow, as
-// the items of a flex or grid container, or as the parts of a table. A table's row groups, rows, column groups and
-// columns also hold table parts.
+// the items of a flex or grid container, as the parts of a table, or by math layout. A table's row groups, rows, column
+// groups and columns also hold table parts. A math box's children are its items, as a flex container's are. The kinds
+// that make items of the children follow the others (layoutChildrenAreItems).
 enum {
     LayoutChildren_Flow,
-    LayoutChildren_Flex,
     LayoutChildren_Table,
+    LayoutChildren_Flex,
     LayoutChildren_Grid,
+    LayoutChildren_Math,
 };
 typedef uint8_t LayoutChildren;
 
-// Returns how an element styled by `box` lays out its children.
-inline LayoutChildren layoutChildrenFromBox(const PrLayoutBoxStyle& box) {
+// Returns how an element styled by `box`, of the math kind `kind`, lays out its children. A token's content is in flow.
+// A table cell of a math kind, as an mtd is, lays out its content as a math row (mathml-core/#table-or-matrix-mtable).
+inline LayoutChildren layoutChildrenFromBox(const PrLayoutBoxStyle& box, PrLayoutMathKind kind) {
+    if (layoutIsMathBox(box))
+        return layoutMathKindIsToken(kind) ? LayoutChildren_Flow : LayoutChildren_Math;
+    if (box.display == PrLayoutDisplay_TableCell && kind != PrLayoutMathKind_None)
+        return LayoutChildren_Math;
     if (layoutIsFlexContainer(box))
         return LayoutChildren_Flex;
     if (layoutIsGridContainer(box))
@@ -223,7 +241,7 @@ inline LayoutChildren layoutChildrenFromBox(const PrLayoutBoxStyle& box) {
 // its parent, and each run of text is an anonymous item (css-flexbox-2/#flex-items, css-grid-1/#grid-items). Items
 // paint in order-modified document order, and z-index applies to them whatever their position.
 inline bool layoutChildrenAreItems(LayoutChildren children) {
-    return children == LayoutChildren_Flex || children == LayoutChildren_Grid;
+    return children >= LayoutChildren_Flex;
 }
 
 // Returns true if the parent of the node is a flex container.
@@ -237,6 +255,13 @@ inline bool layoutInFlexContainer(const LayoutTree* tree, LayoutNodeIndex node) 
 inline bool layoutInItemContainer(const LayoutTree* tree, LayoutNodeIndex node) {
     LayoutNodeIndex parent = layoutTreeNode(tree, node).parent;
     return parent != kPrLayoutNodeNone && layoutChildrenAreItems(layoutTreeNode(tree, parent).children);
+}
+
+// Returns true if the parent of the node lays out its children by math layout, so that the node is a child of a math
+// box whose content does not wrap.
+inline bool layoutInMath(const LayoutTree* tree, LayoutNodeIndex node) {
+    LayoutNodeIndex parent = layoutTreeNode(tree, node).parent;
+    return parent != kPrLayoutNodeNone && layoutTreeNode(tree, parent).children == LayoutChildren_Math;
 }
 
 // Returns true if the parent of the node holds the parts of a table: a table, a row group, a row or a column group.
@@ -378,13 +403,15 @@ constexpr uint32_t kLayoutFontGroupNone = 0xffffffffu;
 // css-tables-3/#fixup-algorithm).
 inline bool layoutEstablishesContext(const LayoutTree* tree, LayoutNodeIndex node, const PrLayoutBoxStyle& box,
         LayoutOuterMode outer) {
-    if (node == tree->root || box.floating != PrLayoutFloat_None || layoutPositionIsOutOfFlow(box.position) ||
-            layoutIsScrollContainer(box) ||
-            box.display == PrLayoutDisplay_FlowRoot || box.display == PrLayoutDisplay_InlineBlock ||
-            box.display == PrLayoutDisplay_Marker || box.display == PrLayoutDisplay_PageMargin ||
-            layoutIsFlexContainer(box) || layoutIsGridContainer(box) ||
-            layoutIsTable(box) || box.display == PrLayoutDisplay_TableCell ||
-            box.display == PrLayoutDisplay_TableCaption)
+    // The displays whose boxes establish a context, by PrLayoutDisplay.
+    constexpr uint32_t kDisplays = 1u << PrLayoutDisplay_FlowRoot | 1u << PrLayoutDisplay_InlineBlock |
+        1u << PrLayoutDisplay_Marker | 1u << PrLayoutDisplay_Flex | 1u << PrLayoutDisplay_InlineFlex |
+        1u << PrLayoutDisplay_Grid | 1u << PrLayoutDisplay_InlineGrid | 1u << PrLayoutDisplay_Table |
+        1u << PrLayoutDisplay_InlineTable | 1u << PrLayoutDisplay_TableCell | 1u << PrLayoutDisplay_TableCaption |
+        1u << PrLayoutDisplay_PageMargin | 1u << PrLayoutDisplay_BlockMath | 1u << PrLayoutDisplay_InlineMath;
+    static_assert(PrLayoutDisplay_InlineMath < 32, "every display has a bit");
+    if ((kDisplays >> box.display & 1u) != 0 || node == tree->root || box.floating != PrLayoutFloat_None ||
+            layoutPositionIsOutOfFlow(box.position) || layoutIsScrollContainer(box))
         return true;
     PrLayoutStyleIndex style = layoutTreeNode(tree, node).style;
     if (layoutHasColumns(tree->styles, style))

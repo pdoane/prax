@@ -30,7 +30,7 @@ PrCssStyleDeclaration* cssElementInlineStyle(PrDomElement* element) {
     CssInlineStyle* inlineStyle = allocZeroed<CssInlineStyle>();
     const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "style");
     if (attribute != nullptr)
-        cssDeclarationBlockParse(&inlineStyle->block, prRawStringView(&attribute->value), nullptr);
+        cssDeclarationBlockParse(&inlineStyle->block, prRawStringView(&attribute->value), nullptr, CssOrigin_Author);
     inlineStyle->declaration =
         PrCssStyleDeclaration{{nullptr, element, &inlineStyle->block, updateStyleAttribute, nullptr, nullptr, false}};
     style->inlineStyle = inlineStyle;
@@ -41,7 +41,7 @@ void cssElementStyleAttributeChanged(PrDomElement* element, PrStringView value) 
     CssElementStyle* style = element->style;
     if (style == nullptr || style->inlineStyle == nullptr || style->updatingAttribute)
         return;
-    cssDeclarationBlockParse(&style->inlineStyle->block, value, nullptr);
+    cssDeclarationBlockParse(&style->inlineStyle->block, value, nullptr, CssOrigin_Author);
 }
 
 } // namespace pr_impl

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Padding, border and margin on a numerator</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .pr-stage { width: 110px; }
+  figure { display: inline-block; width: 150px; }
+  figure figcaption { max-width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.1.2 Layout Algorithms</div>
+  <h1>Padding, border and margin on a numerator</h1>
+  <p class=pr-lede><q>The baselines of the padding box are the same as the one of the content box.</q> <q>if the line-over border is
+  positive then the ink-over baseline is set to the line-over edge of the border box and if the line-under border is
+  positive then the ink-under baseline is set to the line-under edge of the border box.</q> <q>The baselines of the
+  margin box are the same as the one of the border box.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-algorithms">MathML Core §3.1.2</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them. Each
+  fraction is ½ in display style at 50px; the numerator 1 is tinted. FractionNumeratorDisplayStyleShiftUp, 704, puts
+  its baseline at 35.2px, the line; the gap rule, FractionNumDisplayStyleGapMin, 150, 7.5px over the bar, decides only if
+  the numerator's ink reaches lower.</p>
+</header>
+
+<section>
+  <h2>Only a border counts as ink</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><span class=pr-level style="vertical-align: 35.2px"></span><math style="font-size: 50px; math-style: normal"><mfrac><mn style="background: #b9cde6; padding-bottom: 20px">1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption><code>padding-bottom: 20px</code>: the 1 stays on the line, its tint reaching down past the bar. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> The 1 raised by the padding.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><span class=pr-level style="vertical-align: 43.17px"></span><math style="font-size: 50px; math-style: normal"><mfrac><mn style="background: #b9cde6; border-bottom: 20px solid #4f81bd">1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption>A 20px border under it is ink: the border's bottom 7.5px over the bar, so the 1 rises to 43.17px. <span class=pr-flag>Firefox</span> The 1 not raised, the border over the bar.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><span class=pr-level style="vertical-align: 35.2px"></span><math style="font-size: 50px; math-style: normal"><mfrac><mn style="background: #b9cde6; margin-bottom: 20px">1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption><code>margin-bottom: 20px</code>: the 1 on the line, as with no margin. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The 1 raised by the margin.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

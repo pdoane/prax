@@ -7,9 +7,10 @@ Working Group draft (css-break-4, css2, cssom-view-1), whose source is the Overv
 w3c/csswg-drafts; of an FXTF draft (css-masking-1, filter-effects-1, compositing-2), whose source is the same in
 w3c/fxtf-drafts; of a WHATWG standard (html, dom), whose source is in its own repository; or svg2-<chapter> for a
 chapter of SVG 2 (svg2-styling, svg2-painting), whose source is that chapter's file in w3c/svgwg; or of a W3C
-specification in a repository of its own (uievents, uievents-key, pointerevents), whose source is its Bikeshed file, or
-the published HTML where the repository keeps no Bikeshed source. The source is text as its editors write it, so a
-match is shown with its section's heading and its markup.
+specification in a repository of its own (uievents, uievents-key, pointerevents, mathml-core, mathml4), whose source
+is its Bikeshed file, or the HTML that ReSpec publishes from, with its includes inlined, where the repository keeps no
+Bikeshed source. The source is text as its editors write it, so a match is shown with its section's heading and its
+markup.
 
 Usage: python3 -m tools.spec.spec <name> [pattern] [--context N] [--refresh]
   With a pattern, a case-insensitive regular expression, prints each match with N lines around it, by line number in
@@ -38,11 +39,12 @@ W3C = {"uievents": "main/index.bs", "uievents-key": "gh-pages/index.html", "uiev
        "intersection-observer": "main/index.bs", "hr-time": "main/index.bs", "performance-timeline": "main/index.bs",
        "user-timing": "main/index.bs", "navigation-timing": "main/index.bs", "resource-timing": "main/index.bs",
        "server-timing": "main/index.bs", "file-api": "main/index.bs", "media-source-2": "main/media-source-respec.html",
-       "mse-byte-stream-format-isobmff": "gh-pages/index.html"}
+       "mse-byte-stream-format-isobmff": "gh-pages/index.html", "mathml-core": "main/spec.html",
+       "mathml4": "main/spec.html"}
 
 # The repositories of the W3C specifications whose repository is not named for the specification.
 W3C_REPOSITORIES = {"intersection-observer": "IntersectionObserver", "file-api": "FileAPI",
-                    "media-source-2": "media-source"}
+                    "media-source-2": "media-source", "mathml4": "mathml"}
 
 # The drafts of the FXTF, which w3c/fxtf-drafts holds rather than w3c/csswg-drafts.
 FXTF = {"compositing-1", "compositing-2", "css-masking-1", "css-masking-2", "filter-effects-1", "filter-effects-2",
@@ -88,7 +90,7 @@ def fetch(name, refresh):
         if body is None:
             sys.exit("no source for %s at %s" % (name, "; ".join(errors)))
         with open(path, "wb") as f:
-            f.write(inline_includes(body, url))
+            f.write(inline_respec_includes(body, url) if html else inline_includes(body, url))
     return path
 
 
@@ -117,6 +119,30 @@ def inline_includes(body, url, root=None):
         return match.group(0)
 
     return INCLUDE.sub(included, body)
+
+
+# A ReSpec include: an element whose content is the file at its path, relative to the source.
+RESPEC_INCLUDE = re.compile(rb'(<(\w+)\b[^>]*\bdata-include="([^"]+)"[^>]*>)')
+
+
+def inline_respec_includes(body, url):
+    """Returns the published HTML `body`, fetched from `url`, with the file that each ReSpec include names placed inside
+    the element that names it, so that tables and style sheets kept in files of their own are searched with the rest.
+    An include that is not found stays empty."""
+    base = url.rsplit("/", 1)[0] + "/"
+    cache = {}
+
+    def included(match):
+        path = match.group(3).decode()
+        if path not in cache:
+            try:
+                with urllib.request.urlopen(base + path, timeout=60) as response:
+                    cache[path] = response.read()
+            except OSError:
+                cache[path] = b""
+        return match.group(1) + cache[path]
+
+    return RESPEC_INCLUDE.sub(included, body)
 
 
 def main():

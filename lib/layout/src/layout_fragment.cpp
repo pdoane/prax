@@ -237,9 +237,14 @@ void layoutFragmentRelease(const LayoutFragment* PR_NULLABLE fragment) {
             const PrFont* const* fonts = layoutFragmentTextFonts(f);
             for (uint32_t i = 0; i < f->text.fontCount; ++i)
                 prFontRelease(fonts[i]);
-        }
-        else if (f->kind == LayoutFragmentKind_Box)
+        } else if (f->kind == LayoutFragmentKind_Box) {
             layoutBaselinesReset(f->box.baselines);
+            if ((f->flags & LayoutFragmentFlag_Math) != 0) {
+                LayoutMathData math = layoutFragmentMathData(f);
+                for (uint32_t i = 0; i < math.paintCount; ++i)
+                    prFontRelease(math.paints[i].font);
+            }
+        }
         prMemoryFree(f);
     }
     freeing.reset();
@@ -316,6 +321,50 @@ LayoutGridAxisTracks layoutFragmentGridTracks(const LayoutFragment* grid, PrLayo
             };
         bytes += sizeof(PrLayoutUnit) * header.count;
     }
+}
+
+LayoutFragment* layoutFragmentMath(LayoutFragment* built, const LayoutMathData& data) {
+    size_t base = boxBytes(built);
+    size_t header = alignedFor<LayoutMathData>(base);
+    size_t paints = alignedFor<LayoutMathPaint>(header + sizeof(LayoutMathData));
+    size_t glyphs = alignedFor<PrFontGlyph>(paints + sizeof(LayoutMathPaint) * data.paintCount);
+    size_t bytesNeeded = glyphs + sizeof(PrFontGlyph) * data.glyphCount;
+    uint8_t* bytes = static_cast<uint8_t*>(prMemoryAlloc(bytesNeeded));
+    prMemCopy(bytes, built, base);
+    LayoutFragment* fragment = reinterpret_cast<LayoutFragment*>(bytes);
+    if (fragment->childCount != 0)
+        fragment->children = reinterpret_cast<LayoutChild*>(bytes + alignedFor<LayoutChild>(sizeof(LayoutFragment)));
+    fragment->flags |= LayoutFragmentFlag_Math;
+    LayoutMathData kept = data;
+    kept.paints = nullptr;
+    kept.glyphs = nullptr;
+    prMemCopy(bytes + header, &kept, sizeof kept);
+    if (data.paintCount != 0)
+        prMemCopy(bytes + paints, data.paints, sizeof(LayoutMathPaint) * data.paintCount);
+    if (data.glyphCount != 0)
+        prMemCopy(bytes + glyphs, data.glyphs, sizeof(PrFontGlyph) * data.glyphCount);
+    for (uint32_t i = 0; i < data.paintCount; ++i) {
+        if (data.paints[i].font != nullptr)
+            prFontRetain(data.paints[i].font);
+    }
+    // The children of the built fragment now belong to the new one, and it holds nothing else.
+    prMemoryFree(built);
+    return fragment;
+}
+
+LayoutMathData layoutFragmentMathData(const LayoutFragment* fragment) {
+    PR_ASSERT((fragment->flags & LayoutFragmentFlag_Math) != 0);
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(fragment);
+    size_t header = alignedFor<LayoutMathData>(boxBytes(fragment));
+    LayoutMathData data{};
+    prMemCopy(&data, bytes + header, sizeof data);
+    size_t paints = alignedFor<LayoutMathPaint>(header + sizeof(LayoutMathData));
+    size_t glyphs = alignedFor<PrFontGlyph>(paints + sizeof(LayoutMathPaint) * data.paintCount);
+    if (data.paintCount != 0)
+        data.paints = reinterpret_cast<const LayoutMathPaint*>(bytes + paints);
+    if (data.glyphCount != 0)
+        data.glyphs = reinterpret_cast<const PrFontGlyph*>(bytes + glyphs);
+    return data;
 }
 
 bool layoutPiecesNext(LayoutPieces& pieces, LayoutPiece* out) {

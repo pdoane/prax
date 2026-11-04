@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>msub: the subscript's shift</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.1.2 Base with subscript</div>
+  <h1>msub: the subscript's shift</h1>
+  <p class=pr-lede><q>SubShift is the maximum between: SubscriptShiftDown; the ink line-ascent of the subscript's margin box −
+  SubscriptTopMax; SubscriptBaselineDropMin + the ink line-descent of the msub base's margin box</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#base-with-subscript">MathML Core §3.4.1.2</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>The shift down, and the base's descender</h2>
+  <p>Each formula is at 60px.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: -12.6px"></span><math style="font-size: 60px"><msub><mi>a</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi>a</mi><mi>n</mi></msub><mo>+</mo><msub><mi>a</mi><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msub></math></div>
+    <figcaption>Fibonacci's recurrence: every subscript on the line 12.6px down, SubscriptShiftDown, 210.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: -12.6px"></span><span class=pr-level style="vertical-align: -22.8px"></span><math style="font-size: 60px"><msub><mi>x</mi><mi>k</mi></msub><mo>,</mo><msub><mi>y</mi><mi>k</mi></msub></math></div>
+    <figcaption><i>x<sub>k</sub></i> at 12.6px down; <i>y<sub>k</sub></i> lower, at 22.8px: SubscriptBaselineDropMin 140 below the <i>y</i>'s descender, 240.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

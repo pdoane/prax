@@ -140,9 +140,10 @@ bool domElementMediaFlag(const PrDomElement* element, DomMediaFlags flag);
 // Returns the level of an h1 to h6 element, or zero for any other element (html/#heading-level).
 uint32_t domElementHeadingLevel(const PrDomElement* element);
 
-// Returns true if the element is the source of a hyperlink (html/#selector-link): an HTML a or area element with an
-// href attribute, or an SVG a element with an href or an XLink href that is not inside another hyperlink. SVG makes an
-// a element inside another hyperlink an inactive placeholder (SVG2/linking.html#AElement).
+// Returns true if the element is the source of a hyperlink (html/#selector-link). Such an element is an HTML or MathML
+// a element or an HTML area element with an href attribute, or an SVG a element with an href or an XLink href that is
+// not inside another hyperlink. SVG makes an a element inside another hyperlink an inactive placeholder
+// (SVG2/linking.html#AElement).
 bool domElementLink(const PrDomElement* element);
 
 // Returns the URL of a hyperlink (domElementLink) as written: its href, or for an SVG a element without one, its XLink

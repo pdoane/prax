@@ -60,11 +60,14 @@ bool layoutIsUpright(const PrLayoutFontStyle& container, const PrLayoutFontStyle
 bool layoutSameShapingStyle(const LayoutStyles* styles, uint32_t a, uint32_t b) {
     if (a == b)
         return true;
-    const PrLayoutFontStyle& first = layoutTableAt(styles->font, a);
-    const PrLayoutFontStyle& second = layoutTableAt(styles->font, b);
-    return layoutTextFont(styles, first) == layoutTextFont(styles, second) &&
-        prTextFeatureSetEquals(first.features, second.features) && first.letterSpacing == second.letterSpacing &&
-        first.wordSpacing == second.wordSpacing;
+    const PrLayoutFontStyle& x = layoutTableAt(styles->font, a);
+    const PrLayoutFontStyle& y = layoutTableAt(styles->font, b);
+    uint32_t levelX = x.mathDepth < 2 ? x.mathDepth : 2;
+    uint32_t levelY = y.mathDepth < 2 ? y.mathDepth : 2;
+    return layoutTextFont(styles, x) == layoutTextFont(styles, y) && levelX == levelY &&
+        (x.mathFlags & PrLayoutMathFlag_Dotless) == (y.mathFlags & PrLayoutMathFlag_Dotless) &&
+        prTextFeatureSetEquals(x.features, y.features) && x.letterSpacing == y.letterSpacing &&
+        x.wordSpacing == y.wordSpacing;
 }
 
 bool layoutItemize(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, LayoutInlineShaping& t, LayoutShapingScratch& s) {
@@ -89,9 +92,11 @@ bool layoutItemize(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, Layou
                 piece.style = style;
                 piece.font = layoutFontFacesOfGroup(styles, style).font;
                 piece.size = prLayoutUnitToPx(layoutFontFacesOfGroup(styles, style).size);
-                piece.features = layoutTableAt(styles->font, style).features;
+                piece.features = layoutShapingFeatures(styles, style);
                 piece.letterSpacing = layoutTableAt(styles->font, style).letterSpacing;
                 piece.wordSpacing = layoutTableAt(styles->font, style).wordSpacing;
+                piece.math = layoutTableAt(styles->font, style).mathDepth != 0 ||
+                    (layoutTableAt(styles->font, style).mathFlags & PrLayoutMathFlag_Dotless) != 0;
                 piece.breakStyle = breakStyleOf(styles, item);
                 piece.noWrap = layoutTableAt(styles->font, item.font).textWrapMode == PrLayoutTextWrapMode_Nowrap;
                 piece.breakSpaces = layoutTableAt(styles->font, item.font).whiteSpaceCollapse ==

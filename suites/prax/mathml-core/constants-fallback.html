@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Without a MATH table</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .a math { font-family: 'PR Noto Sans Math'; }
+  .b math { font-family: 'PR Noto Sans'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 5.1 Layout constants (MathConstants)</div>
+  <h1>Without a MATH table</h1>
+  <p class=pr-lede><q>scriptPercentScaleDown: MATH.MathConstants.scriptPercentScaleDown / 100 or 0.71 if
+  MATH.MathConstants.scriptPercentScaleDown is null or not available.</q> <q>axisHeight: MATH.MathConstants.axisHeight
+  or half OS/2.sxHeight</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-constants-mathconstants">MathML Core §5.1</a></span> Each formula is at 48px, first in
+  PR Noto Sans Math, whose ScriptPercentScaleDown is 60, then in PR Noto Sans, which has no MATH table.</p>
+</header>
+
+<section>
+  <h2>The font's constants, then the fallbacks</h2>
+  <figure>
+    <div class="pr-stage pr-wide a"><math style="font-size: 48px"><msup><mi>e</mi><mrow><mo>−</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></msup><mo>−</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption>With MATH: the exponent at 60%, 28.8px, its own exponent at ScriptScriptPercentScaleDown 50%, 24px; the bar on the font's axis.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide b"><math style="font-size: 48px"><msup><mi>e</mi><mrow><mo>−</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></msup><mo>−</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption>Without: 71% a level, 34.1px, then 0.5041, 24.2px; the bar at half the x-height and as thick as the font's underline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

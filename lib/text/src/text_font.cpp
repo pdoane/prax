@@ -268,13 +268,13 @@ bool isIgnorable(uint32_t codePoint) {
 // What a face must map to serve a cluster.
 enum {
     Coverage_Characters,                // every code point that is not default ignorable (prTextFaceServesCluster)
-    Coverage_Sequences,                 // those, and every variation sequence that selects a glyph
+    Coverage_Sequences,                 // every such code point, and every variation sequence that selects a glyph
 };
 typedef uint8_t Coverage;
 
-// Returns true if a variation selector that follows `previous` selects a glyph: a selector that follows a character
-// other than a selector, and that is not an emoji presentation selector. A selector after another is an encoding error
-// and is ignored. A presentation selector chooses between color and text faces (UTS #51) instead.
+// Returns true if `selector` is a variation selector that selects a glyph for `previous`. It does unless `previous` is
+// absent or is a selector itself, or `selector` is an emoji presentation selector. A selector after another is an
+// encoding error and is ignored. An emoji presentation selector chooses between color and text faces instead (UTS #51).
 bool selectsGlyph(uint32_t previous, uint32_t selector) {
     bool afterSelector = (prUnicodeFlags(previous) & PrUnicodeFlag_VariationSelector) != 0;
     return (prUnicodeFlags(selector) & PrUnicodeFlag_VariationSelector) != 0 && !afterSelector && previous != 0 &&
@@ -313,9 +313,9 @@ bool covers(const PrFontFace& face, PrStringView cluster, Coverage coverage) {
     return true;
 }
 
-// Returns the first requested face that serves the cluster with the coverage, or kPrTextMatchNone. Faces that match the
-// presentation of the cluster come first, then the others, each group in the order of the list. A face whose font has
-// not loaded and that the search passes is requested if its ranges hold the first code point of the cluster.
+// Returns the first requested face that serves the cluster with the coverage, or kPrTextMatchNone. The faces that match
+// the presentation of the cluster come first, then the others, each group in the order of the list. The search requests
+// the load of each unloaded face that it passes if the ranges of the face hold the first code point of the cluster.
 uint32_t requestedFace(TextFont& t, Order& o, PrStringView cluster, uint32_t first, bool emoji, Coverage coverage) {
     matchFamilies(t, o);
     for (uint32_t pass = 0; pass < 2; ++pass) {
@@ -334,8 +334,8 @@ uint32_t requestedFace(TextFont& t, Order& o, PrStringView cluster, uint32_t fir
     return kPrTextMatchNone;
 }
 
-// Returns the fallback face that serves the cluster with the coverage, after joining it to the faces of the order, or
-// kPrTextMatchNone.
+// Returns the fallback face that serves the cluster with the coverage, or kPrTextMatchNone. The face found joins the
+// faces of the order.
 uint32_t fallbackFace(TextFont& t, Order& o, PrStringView cluster, PrScript script, bool emoji, Coverage coverage) {
     if (fallsBackToNothing(cluster))
         return kPrTextMatchNone;
@@ -389,8 +389,8 @@ uint32_t firstFace(TextFont& t, Order& o) {
 }
 
 // Returns the face of the order that sets the cluster, or kPrTextMatchNone (prTextFontMatch). A cluster with a
-// variation sequence takes a face that maps the sequence, among the requested faces and then the fallback faces, before
-// a face that maps only its characters.
+// variation sequence prefers a face that maps the sequence, among the requested faces and then the fallback faces, to a
+// face that maps only its characters.
 uint32_t chooseFace(TextFont& t, Order& o, PrStringView cluster, PrScript script) {
     uint32_t first = 0;
     prUtf8Decode(cluster, 0, &first);

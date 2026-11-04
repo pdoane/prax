@@ -305,9 +305,11 @@ bool layoutIsAtomicInline(const LayoutTree* tree, LayoutNodeIndex node) {
     // The check for a flex or grid container parent comes last, and runs only for the few boxes that would otherwise be
     // atomic.
     PrLayoutDisplay display = layoutBoxStyle(tree->styles, n.style).display;
-    bool atomic = n.kind == PrLayoutNodeKind_Replaced || display == PrLayoutDisplay_InlineBlock ||
-        display == PrLayoutDisplay_InlineFlex || display == PrLayoutDisplay_InlineGrid ||
-        display == PrLayoutDisplay_InlineTable || (display == PrLayoutDisplay_Inline && n.parent != kPrLayoutNodeNone &&
+    // The displays of atomic inline-level boxes, by PrLayoutDisplay.
+    constexpr uint32_t kAtomic = 1u << PrLayoutDisplay_InlineBlock | 1u << PrLayoutDisplay_InlineFlex |
+        1u << PrLayoutDisplay_InlineGrid | 1u << PrLayoutDisplay_InlineTable | 1u << PrLayoutDisplay_InlineMath;
+    bool atomic = n.kind == PrLayoutNodeKind_Replaced || (kAtomic >> display & 1u) != 0 ||
+        (display == PrLayoutDisplay_Inline && n.parent != kPrLayoutNodeNone &&
             layoutFontStyle(tree->styles, n.style).writingMode !=
             layoutFontStyle(tree->styles, layoutTreeNode(tree, n.parent).style).writingMode);
     return atomic && !layoutInItemContainer(tree, node);
@@ -522,6 +524,8 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
         for (uint32_t i = 0; i < layers.count && !fixedBackground; ++i)
             fixedBackground = layers.layers[i].attachment == PrLayoutBackgroundAttachment_Fixed;
     }
+    LayoutChildren children =
+        layoutChildrenFromBox(box, layoutTableAt(styles->math, record.groups[PrLayoutGroup_Math]).kind);
     // Only a block container has columns (css-multicol-1/#the-multi-column-model). The default table group, which most
     // records name, has none.
     bool multiColumn = false;
@@ -529,7 +533,7 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
         const PrLayoutFragmentationStyle& fragmentation =
             layoutTableAt(styles->table, record.groups[PrLayoutGroup_Table]).fragmentation;
         bool columns = fragmentation.columnCount != 0 || !layoutLengthIsAuto(fragmentation.columnWidth);
-        bool blockContainer = layoutChildrenFromBox(box) == LayoutChildren_Flow &&
+        bool blockContainer = children == LayoutChildren_Flow &&
             box.display != PrLayoutDisplay_Inline && box.display != PrLayoutDisplay_None &&
             box.display != PrLayoutDisplay_Marker && !prLayoutDisplayIsLayoutInternal(box.display);
         multiColumn = columns && (blockContainer || box.display == PrLayoutDisplay_TableCell ||
@@ -543,7 +547,7 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
         .mayPaintWhole = moved || layered || box.zIndexed,
         .mayStack = box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky || box.zIndexed ||
             layered || box.display == PrLayoutDisplay_PageMargin,
-        .children = layoutChildrenFromBox(box),
+        .children = children,
         .justifies = justifySelf != PrLayoutAlignment_Auto && justifySelf != PrLayoutAlignment_Normal,
         .justifiesItems = (flex.justifyItems & kPrLayoutAlignmentValueMask) != PrLayoutAlignment_Normal,
         .composites = effects.opacity < 1 || effects.layer || grouped,

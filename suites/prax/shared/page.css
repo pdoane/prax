@@ -445,6 +445,38 @@ svg .pr-baseline {
     stroke-dasharray: 3px 2px;
 }
 
+/* A baseline across a narrow stage, which stops at its edge. */
+.pr-stage.pr-narrow .pr-baseline {
+    width: 100px;
+    margin-right: -100px;
+}
+
+/* A height that a caption gives from a line's baseline, such as a formula's math axis or where a script's baseline
+   must be: dashed in blue across the line, a zero-height inline-block that takes no room on the line, raised (or, with
+   a negative value, lowered) by its own `vertical-align: <length>`. Put it first on the line whose baseline it is
+   measured from. */
+.pr-level {
+    display: inline-block;
+    width: 100%;
+    height: 0;
+    margin-right: -100%;
+    border-bottom: 1px dashed #2c5a8f;
+}
+
+/* An inline position that a caption gives, such as where a script must start: dashed in blue down the stage, at its
+   own `left` from the stage's padding edge. The stage is its containing block (`.pr-marked`). */
+.pr-stage.pr-marked {
+    position: relative;
+}
+
+.pr-mark {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px dashed #2c5a8f;
+}
+
 /* A vertical line's baseline, dashed down the stage: the vertical counterpart of `.pr-baseline`. Put it first on the
    line whose baseline it marks. */
 .pr-vbaseline {

@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/css.h"
 #include "pr/float.h"
+#include "pr/mathml.h"
 
 #include "css/src/css_boxes.h"
 #include "dom/src/dom_flat.h"
@@ -493,4 +494,6 @@ void prSvgEnable(PrDomDocument* document) {
         return;
     cssHintsProvide(document, PrDomNamespace_Svg, svgHints());
     cssBoxesProvide(document, PrDomNamespace_Svg, &kBoxes);
+    // MathML reaches SVG content through foreignObject.
+    prMathMlEnable(document);
 }

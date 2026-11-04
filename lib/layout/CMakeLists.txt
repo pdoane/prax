@@ -25,6 +25,7 @@ pr_library(layout INCLUDE include
     src/layout_justify.cpp
     src/layout_line_align.cpp
     src/layout_logical.cpp
+    src/layout_math.cpp
     src/layout_multicol.cpp
     src/layout_page.cpp
     src/layout_paint.cpp
@@ -71,6 +72,7 @@ if (PR_DEVELOP)
         tests/test_layout_logical.cpp
         tests/test_layout_marker.cpp
         tests/test_layout_marking.cpp
+        tests/test_layout_math.cpp
         tests/test_layout_page.cpp
         tests/test_layout_position.cpp
         tests/test_layout_stacking.cpp
@@ -84,5 +86,11 @@ if (PR_DEVELOP)
     )
     target_compile_definitions(layout_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts"
                                                     PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
-    target_link_libraries(layout_tests PRIVATE prax::text prax::draw prax::font prax::locale)
+    # STIX Two Math, which HarfBuzz's tests carry, has the flattened accents (flac) that the bundled math fonts lack.
+    FetchContent_GetProperties(harfbuzz)
+    set(_pr_stix "${harfbuzz_SOURCE_DIR}/test/subset/data/fonts/STIXTwoMath-Regular.ttf")
+    if (harfbuzz_SOURCE_DIR AND EXISTS ${_pr_stix})
+        target_compile_definitions(layout_tests PRIVATE PR_STIX_MATH_FONT="${_pr_stix}")
+    endif()
+    target_link_libraries(layout_tests PRIVATE prax::text prax::draw prax::font prax::locale prax::compress)
 endif()

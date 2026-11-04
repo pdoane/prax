@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>displaystyle, scriptlevel and math-shift in scripts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.4 Displaystyle, scriptlevel and math-shift in scripts</div>
+  <h1>displaystyle, scriptlevel and math-shift in scripts</h1>
+  <p class=pr-lede><q>For all scripted elements, the rule of thumb is to set displaystyle to false and to increment scriptlevel in
+  all child elements but the first one.</q> <q>The &lt;msub&gt; and &lt;msubsup&gt; elements set math-shift to compact
+  on their second child.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#displaystyle-and-scriptlevel-in-scripts">MathML Core §3.4.4</a></span></p>
+</header>
+
+<section>
+  <h2>Levels and accents</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 40px"><msup><mi>e</mi><msup><mi>x</mi><mn>2</mn></msup></msup><mo>,</mo><mover accent=true><mi>v</mi><mo>→</mo></mover><mo>,</mo><munder accentunder=true><mi>x</mi><mo>_</mo></munder></math></div>
+    <figcaption>In <i>e</i> to the <i>x</i>², each level smaller; an accent arrow over <i>v</i> and a line under <i>x</i> at full size.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 40px"><msub><mi>a</mi><msup><mi>n</mi><mn>2</mn></msup></msub><mo>,</mo><msup><mi>n</mi><mn>2</mn></msup></math></div>
+    <figcaption><i>n</i>² as a subscript is cramped: its 2 sits lower against the <i>n</i> than in <i>n</i>² alone, at the same proportion of a smaller size.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 40px"><munderover displaystyle=true><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>m</mi></munderover></munderover></math></div>
+    <figcaption>A ∑ in a ∑'s upper limit is not in display style: small, its limits beside it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

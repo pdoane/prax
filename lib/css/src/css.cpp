@@ -1780,7 +1780,8 @@ PrRawString prCssStyleDeclarationCssText(const PrCssStyleDeclaration* declaratio
 PrStatus prCssStyleDeclarationSetCssText(PrCssStyleDeclaration* declaration, PrStringView value) {
     if (declaration->readOnly)
         return PrStatus_ReadOnly;
-    cssDeclarationBlockParse(cssStyleDeclarationWritable(declaration), value, cssStyleDeclarationParser(declaration));
+    cssDeclarationBlockParse(cssStyleDeclarationWritable(declaration), value, cssStyleDeclarationParser(declaration),
+        CssOrigin_Author);
     cssStyleDeclarationUpdateOwner(declaration);
     return PrStatus_Ok;
 }

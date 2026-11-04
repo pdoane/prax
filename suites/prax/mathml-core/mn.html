@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mn: numbers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.3 Number &lt;mn&gt;</div>
+  <h1>mn: numbers</h1>
+  <p class=pr-lede><q>The mn element represents a "numeric literal" or other data that should be rendered as a numeric literal.</q>
+  <q>Its layout algorithm is the same as the mtext element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#number-mn">MathML Core §3.2.3</a></span></p>
+</header>
+
+<section>
+  <h2>Upright digits</h2>
+  <figure>
+    <div class="pr-stage"><math><mn>3.141592</mn></math></div>
+    <figcaption>The specification's example: 3.141592, upright, no space inside.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mn>2</mn><mi>x</mi><mn>x</mn></math></div>
+    <figcaption>2, then x as <code>mi</code>, italic, and as <code>mn</code>, upright: <code>mn</code> takes no automatic italic.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

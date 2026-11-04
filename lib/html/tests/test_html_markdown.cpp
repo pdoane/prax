@@ -170,6 +170,21 @@ void checkBuilds(PrStringView markdown, const PrMarkdownOptions& options = every
     CHECK(builtElement(markdown, options, true) == element);
 }
 
+// Counts the elements in the MathML namespace below `node`, and the elements in another namespace below a <math>.
+void countMathMl(const PrDomNode* node, bool inMath, uint32_t* mathml, uint32_t* other) {
+    for (const PrDomNode* child = node->first; child != nullptr; child = child->next) {
+        if (child->type != PrDomNodeType_Element)
+            continue;
+        const PrDomElement* element = domElementFromNode(child);
+        bool isMathMl = element->space == PrDomNamespace_MathMl;
+        if (isMathMl)
+            ++*mathml;
+        else if (inMath)
+            ++*other;
+        countMathMl(child, inMath || isMathMl, mathml, other);
+    }
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -188,6 +203,25 @@ TEST_CASE("Markdown builds the DOM that parsing its HTML gives") {
     checkBuilds("| a | b |\n|:--|--:|\n| 1 | 2 |\n\n- [ ] task\n- [x] done\n");
     checkBuilds("Footnote[^1] and again[^1].\n\n[^1]: The note.\n\n    More of it.\n");
     checkBuilds("~~struck~~ www.example.com\n");
+}
+
+TEST_CASE("math builds MathML elements, as parsing its HTML does") {
+    const char* markdown = "Inline $x^2 < \\frac{a}{b}$ and display $$\\begin{cases} 1 & x \\\\ 0 \\end{cases}$$ math\n";
+    checkBuilds(markdown);
+    checkBuilds("```math\n\\sqrt{x}\n```\n");
+    PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
+    PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "div");
+    domNodeRetain(element);
+    PrMarkdownOptions options = everything();
+    prHtmlSetMarkdown(element, markdown, &options);
+    uint32_t mathml = 0;
+    uint32_t other = 0;
+    countMathMl(element, false, &mathml, &other);
+    CHECK(mathml > 20);
+    CHECK(other == 0);
+    CHECK(treeOf(element).find("<math display=\"block\"><semantics><mrow><mo>[{]</mo><mtable ") != std::string::npos);
+    domNodeRelease(element);
+    domNodeRelease(document);
 }
 
 TEST_CASE("raw HTML nests with Markdown as the HTML that holds both does") {

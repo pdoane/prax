@@ -1,8 +1,9 @@
 # Markdown
 
 `lib/markdown` parses Markdown into a document that a client walks. It depends on `lib/core`, `lib/unicode` (case
-folding, case mapping and general categories) and `lib/html_entity` (named character references), and on nothing that
-lays out or renders. `lib/html` builds a DOM from a document ([html.md](html.md#markdown)).
+folding, case mapping and general categories), `lib/html_entity` (named character references) and `lib/tex` (math as
+MathML, [tex.md](tex.md)), and on nothing that lays out or renders. `lib/html` builds a DOM from a document
+([html.md](html.md#markdown)).
 
 ## Which behavior
 
@@ -62,6 +63,11 @@ the reference implementations' algorithms, because content relies on their resul
 - HTML is a sequence of events: start tags with their attributes, end tags, text and raw HTML. HTML text is one client
   of them, and the DOM builder is another, so the two give the same tree. The text is what the specifications'
   examples give.
+- Math is MathML. `lib/tex` writes a `<math>` from the TeX, annotated with its source, and its elements are events
+  like any others, so the DOM builder makes them MathML elements. Each formula is set alone, so a block's HTML depends
+  only on the block. A macro that one formula defines does not reach the next, and each formula's equations are
+  numbered from 1. A client that typesets TeX itself walks the document, whose Math nodes hold the TeX. A fenced code
+  block whose info string is `math` is display math, as GitHub renders it, and is a MathBlock node.
 
 ## Cost
 

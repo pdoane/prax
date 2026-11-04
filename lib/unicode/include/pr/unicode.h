@@ -66,10 +66,9 @@ enum {
 };
 typedef uint8_t PrUnicodeIndicConjunctBreak;
 
-// Binary properties: the emoji properties of UTS #51, Lowercase and Uppercase, Default_Ignorable_Code_Point, the marks,
-// whose General_Category is Mark, the properties that case mapping's conditions read (Cased, Case_Ignorable and
-// Soft_Dotted), and Variation_Selector. A renderer that does not support a default-ignorable code point shows nothing
-// for it (The Unicode Standard, section 5.21).
+// Binary properties of a code point, from the Unicode Character Database and UTS #51. Mark is a General_Category of
+// Mark. Cased, Case_Ignorable and Soft_Dotted are the properties that the conditions of case mapping read. A renderer
+// that does not support a default-ignorable code point shows nothing for it (The Unicode Standard, section 5.21).
 enum {
     PrUnicodeFlag_Emoji = 1u << 0,
     PrUnicodeFlag_EmojiPresentation = 1u << 1,
@@ -208,9 +207,35 @@ uint32_t prUnicodeFullWidth(uint32_t codePoint);
 // Returns the full-size form of a small kana, as named without SMALL. Any other code point maps to itself.
 uint32_t prUnicodeFullSizeKana(uint32_t codePoint);
 
-// Returns the Mathematical Italic form of `codePoint`, whose <font> decomposition is `codePoint`, or itself if it has
-// none. Italic h is U+210E PLANCK CONSTANT.
-uint32_t prUnicodeMathItalic(uint32_t codePoint);
+// The styles of the Mathematical Alphanumeric Symbols and the Arabic Mathematical Alphabetic Symbols, which MathML's
+// mathvariant values name (mathml4/#presm_commatt).
+enum {
+    PrUnicodeMathVariant_Bold,
+    PrUnicodeMathVariant_Italic,
+    PrUnicodeMathVariant_BoldItalic,
+    PrUnicodeMathVariant_Script,
+    PrUnicodeMathVariant_BoldScript,
+    PrUnicodeMathVariant_Fraktur,
+    PrUnicodeMathVariant_DoubleStruck,
+    PrUnicodeMathVariant_BoldFraktur,
+    PrUnicodeMathVariant_SansSerif,
+    PrUnicodeMathVariant_BoldSansSerif,
+    PrUnicodeMathVariant_SansSerifItalic,
+    PrUnicodeMathVariant_SansSerifBoldItalic,
+    PrUnicodeMathVariant_Monospace,
+    PrUnicodeMathVariant_Initial,
+    PrUnicodeMathVariant_Tailed,
+    PrUnicodeMathVariant_Looped,
+    PrUnicodeMathVariant_Stretched,
+    PrUnicodeMathVariant_Count,
+};
+typedef uint8_t PrUnicodeMathVariant;
+
+// Returns the form of `codePoint` in the style `variant`, or `codePoint` itself if it has none. The form is the
+// character whose <font> decomposition is `codePoint` and whose name gives that style. Letterlike symbols fill the
+// holes of the alphabets, so italic h is U+210E PLANCK CONSTANT and script B is U+212C SCRIPT CAPITAL B
+// (mathml-core/#new-text-transform-mappings).
+uint32_t prUnicodeMathVariant(uint32_t codePoint, PrUnicodeMathVariant variant);
 
 #if defined(__cplusplus)
 }

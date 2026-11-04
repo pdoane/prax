@@ -52,6 +52,10 @@ template <>
 struct UiGroupValue<PrLayoutGroup_Grid> {
     using Type = PrLayoutGridStyle;
 };
+template <>
+struct UiGroupValue<PrLayoutGroup_Math> {
+    using Type = PrLayoutMathStyle;
+};
 
 // Returns one address for each type, whichever file names it: the identity of a recipe, and of a part.
 template <typename T>

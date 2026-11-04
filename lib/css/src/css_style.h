@@ -198,6 +198,12 @@ enum {
     CssFontMetric_Cap,              // the cap height of the first available font
     CssFontMetric_Ch,               // the advance measure of "0" in the font that sets it
     CssFontMetric_Ic,               // the advance measure of U+6C34, the CJK water ideograph, in the font that sets it
+
+    // The scale factors of a script and of a script of a script, as fractions, from the OpenType MATH table of the
+    // first available font. A font without a MATH table cannot measure them.
+    CssFontMetric_ScriptPercentScaleDown,
+    CssFontMetric_ScriptScriptPercentScaleDown,
+
     CssFontMetric_Count,
 };
 typedef uint8_t CssFontMetric;
@@ -218,6 +224,7 @@ struct CssFontMetrics {
     const CssComputedStyle* PR_NULLABLE sources[2]; // the styles whose fonts are measured
     double ems[2][CssFontMetric_Count];
     uint8_t measured[2];            // by CssFontMetric, the metrics in `ems`
+    uint8_t found[2];               // by CssFontMetric, the metrics in `ems` that the font gave, not a fallback
     bool readsFont;                 // a value read a metric of the element's font, or of its parent's
     bool readsRoot;                 // a value read a metric of the root's font
     bool readsGroup;                // a value of the group being computed read either
@@ -519,6 +526,12 @@ CssFontBases cssStyleFontBases(const CssComputedStyle* style);
 // takes its fallback (css-values-4/#font-relative-lengths): 0.5em for ex, 0.7em for cap without a font, 0.5em for ch,
 // or 1em for ch set upright, and 1em for ic.
 double cssFontMetricPx(const CssStyleContext& context, bool root, CssFontMetric metric);
+
+// Returns the factor by which `font-size: math` scales the inherited font size, from the inherited math-depth
+// `inherited` to the computed `computed` (mathml-core/#the-math-script-level-property). The factor reads
+// scriptPercentScaleDown and scriptScriptPercentScaleDown from the MATH table of the inherited first available font,
+// which `context.font` measures, and takes 0.71 per level for a font without one.
+double cssMathDepthScale(const CssStyleContext& context, int32_t inherited, int32_t computed);
 
 // Writes the color of the value at `index` of `run` in `context`, in its own space with its missing components, as
 // cssResolveColor resolves it before converting it. Returns false for a value that is not a <color>.

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Other display values on MathML elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 24px; }
+  .grid { display: inline-grid; grid-template-columns: auto auto auto; gap: 0 8px; }
+  .grid > * { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 4.1 The display: block math and display: inline math value</div>
+  <h1>Other display values on MathML elements</h1>
+  <p class=pr-lede><q>The display: block math and display: inline math values provide a default layout for MathML elements while
+  at the same time allowing to override it with either native display values or custom values.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#new-display-math-value">MathML Core §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Grid and block</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><mrow><mo>[</mo><mrow class=grid><mn>12</mn><mn>34</mn><mn>56</mn><mn>7</mn><mn>8</mn><mn>9</mn></mrow><mo>]</mo></mrow></math></div>
+    <figcaption>The specification's example: an <code>mrow</code> with <code>display: inline-grid</code>, three tinted columns of two rows, 12 34 56 over 7 8 9, between brackets.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mfrac style="display: block"><mn>1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption>An <code>mfrac</code> with <code>display: block</code>: no bar, 1 above 2 as blocks of CSS flow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

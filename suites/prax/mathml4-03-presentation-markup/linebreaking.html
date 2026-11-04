@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Forced line breaks at operators</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.1.7.1 Control of Linebreaks</div>
+  <h1>Forced line breaks at operators</h1>
+  <p class=pr-lede><q>All such linebreaks take place within mrow (including inferred mrow; see ) or mfenced. The breaks typically
+  take place at mo elements</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#control-of-linebreaks">MathML 4 §3.1.7.1</a></span> <q>newline is used to force a
+  linebreak</q>; linebreakstyle <q>before causes the operator to appear at the beginning of the new line</q>. <span class=pr-cite><a href="https://w3c.github.io/mathml/#linebreaking-attributes">MathML 4 §3.2.6.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>linebreak and linebreakstyle</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math display=block><mi>a</mi><mo>=</mo><mi>b</mi><mo linebreak=newline>+</mo><mi>c</mi></math></div>
+    <figcaption><code>linebreak="newline"</code> on +: "a = b" on one line, "+ c" on the next, the + starting it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> One line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math display=block><mi>a</mi><mo>=</mo><mi>b</mi><mo linebreak=newline linebreakstyle=after>+</mo><mi>c</mi></math></div>
+    <figcaption><code>linebreakstyle="after"</code>: "a = b +" then "c". <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> One line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math display=block><mi>a</mi><mo>=</mo><mi>b</mi><mo linebreak=newline linebreakstyle=duplicate>+</mo><mi>c</mi></math></div>
+    <figcaption><code>linebreakstyle="duplicate"</code>: "a = b +" then "+ c". <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> One line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Automatic breaks</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><div style="width: 120px"><math display=block overflow=linebreak><mi>a</mi><mo>+</mo><mi>b</mi><mo>+</mo><mi>c</mi><mo>+</mo><mi>d</mi><mo>+</mo><mi>e</mi><mo>+</mo><mi>f</mi></math></div></div>
+    <figcaption><code>overflow="linebreak"</code> in 120px: the sum broken at a + so that each line fits. <span class=pr-flag>Chrome</span> One line, past the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

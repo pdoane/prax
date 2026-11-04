@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mfrac: the bar on the math axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.2.1 Fraction with nonzero line thickness</div>
+  <h1>mfrac: the bar on the math axis</h1>
+  <p class=pr-lede><q>The center of the fraction bar is shifted away from the alphabetic baseline of the math content box by a
+  distance of AxisHeight towards the line-over. Its block size is the fraction line thickness.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#fraction-with-nonzero-line-thickness">MathML Core §3.3.2.1</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>Level with the operators</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 13.9px"></span><math style="font-size: 50px; math-style: normal"><mi>x</mi><mo>=</mo><mfrac><mrow><mo>−</mo><mi>b</mi><mo>±</mo><msqrt><msup><mi>b</mi><mn>2</mn></msup><mo>−</mo><mn>4</mn><mi>a</mi><mi>c</mi></msqrt></mrow><mrow><mn>2</mn><mi>a</mi></mrow></mfrac></math></div>
+    <figcaption>The quadratic formula at 50px: the bar, FractionRuleThickness 71, 3.55px thick, centered on the math axis, AxisHeight 278, 13.9px up, the line that also halves the = and the minus signs.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Color and visibility</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage"><math style="font-size: 50px"><mfrac style="color: #c0392b"><mn style="color: #1f2430">1</mn><mn style="color: #1f2430">2</mn></mfrac><mfrac style="visibility: hidden"><mn style="visibility: visible">1</mn><mn style="visibility: visible">2</mn></mfrac></math></div>
+    <figcaption>A fraction with <code>color: #c0392b</code>: a red bar between black digits; then one with <code>visibility: hidden</code> and visible digits: no bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

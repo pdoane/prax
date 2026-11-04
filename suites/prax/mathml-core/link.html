@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>a: links in formulas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+  math :any-link { color: #2c5a8f; text-decoration: underline; }
+  math a:focus-visible { outline: 3px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.6 Linking &lt;a&gt;</div>
+  <h1>a: links in formulas</h1>
+  <p class=pr-lede><q>The a element is used to group together any number of sub-expressions equivalently to mrow. It's main purpose
+  is to enable the specification of hyperlinks via the use of the href attribute.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#the-a-element">MathML Core §3.6</a></span> The page styles <code>:any-link</code> in a formula blue and underlined.</p>
+</header>
+
+<section>
+  <h2>A row that is a link</h2>
+  <figure>
+    <div class="pr-stage"><math><mi>x</mi><mo>=</mo><a href="#"><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>+</mo><mi>y</mi></a></math></div>
+    <figcaption>x = ½ + y, where "½ + y" is a link: blue, laid out as a row with the + spaced. Tab to it: an outline around it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><a><mi>a</mi><mo>+</mo><mi>b</mi></a></math></div>
+    <figcaption>An <code>a</code> with no <code>href</code>: an <code>mrow</code>, not a link, "a + b" in black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

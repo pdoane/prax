@@ -50,14 +50,16 @@
 // `--shaper <name>`, or with the default shaper, and hint fonts as `--hinting <name>` says, or not at all. They render
 // pages for `--media screen` or `--media print`, or for the collection's media. With `--reference <name>`, which names
 // a renderer or one of the document's own references for the second pane, by its name or its file name (`prax-svg` for
-// "Prax SVG"), the window opens in comparison, shown as `--look side`, `flip` or `difference`. `--snapshot <path>`
-// writes the window's first frame whose figures are settled as a PNG, including the controls, and quits. `--tour
-// <passes>` turns through every document that many times, one per frame, and quits. `--rendering back-to-back` opens
-// rendering back to back, as B does, and `--rendering paced` paced by the display. `--present hdr` opens presenting in
-// half floats, as H does, and `--present sdr` in 8 bits. `--wpt-server <http port> <https port>` serves WPT's reftests
-// from WPT's server (tools/suite/wpt/wpt_serve.py), which `./dev.sh viewer` starts, and the WPT collection is listed
-// only with it. With PR_VIEWER_PROFILE set, which prints each frame's phases, the tour measures what moving between
-// documents costs.
+// "Prax SVG"), the window opens in comparison, at `--zoom <percent>` of the natural size rather than fitted, shown as
+// `--look side`, `flip` or `difference`. `--snapshot <path>` writes the window's first frame whose figures are settled
+// as a PNG, including the controls, and quits. `--tour <passes>` turns through every document that many times, one per
+// frame, and quits. `--rendering back-to-back` opens rendering back to back, as B does, and `--rendering paced` paced
+// by the display. `--present hdr` opens presenting in half floats, as H does, and `--present sdr` in 8 bits.
+// `--wpt-server <http port> <https port>` serves WPT's reftests from WPT's server (tools/suite/wpt/wpt_serve.py), which
+// `./dev.sh viewer` starts, and the WPT collection is listed only with it. `--third-party-server <http port>` loads the
+// other pages of third_party from an HTTP server that serves the directory at its root, which `./dev.sh viewer` starts
+// too. With PR_VIEWER_PROFILE set, which prints each frame's phases, the tour measures what moving between documents
+// costs.
 
 #include "pr/app.h"
 #include "pr/assert.h"
@@ -1648,7 +1650,8 @@ int main(int argc, char** argv) {
         std::fprintf(to, "usage: viewer [--document <which>] [--render <directory>] [--pixel-ratio <pixels>]"
             " [--renderer <name>] [--shaper <name>] [--hinting <name>] [--media screen|print] [--reference <name>]"
             " [--look side|flip|difference] [--snapshot <path>] [--tour <passes>] [--collection <word>] [--zoom <percent>]"
-            " [--time <seconds>] [--rendering paced|back-to-back] [--present sdr|hdr] [--wpt-server <http port> <https port>]\n");
+            " [--time <seconds>] [--rendering paced|back-to-back] [--present sdr|hdr] [--wpt-server <http port> <https port>]"
+            " [--third-party-server <http port>]\n");
     };
     for (int i = 1; i < argc; i += 2) {
         if (std::strcmp(argv[i], "--help") == 0 || std::strcmp(argv[i], "-h") == 0) {
@@ -1658,6 +1661,10 @@ int main(int argc, char** argv) {
         if (std::strcmp(argv[i], "--wpt-server") == 0 && i + 2 < argc) {
             serveWptFrom(uint16_t(std::atoi(argv[i + 1])), uint16_t(std::atoi(argv[i + 2])));
             ++i;
+            continue;
+        }
+        if (std::strcmp(argv[i], "--third-party-server") == 0 && i + 1 < argc) {
+            serveThirdPartyFrom(uint16_t(std::atoi(argv[i + 1])));
             continue;
         }
         if (i + 1 == argc) {

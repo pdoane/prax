@@ -7,7 +7,7 @@ pr_library(markdown INCLUDE include
     src/markdown_scan.cpp
     src/markdown_tree.cpp
 )
-target_link_libraries(pr_markdown PUBLIC prax::core PRIVATE prax::core_cpp prax::unicode prax::html_entity)
+target_link_libraries(pr_markdown PUBLIC prax::core PRIVATE prax::core_cpp prax::unicode prax::html_entity prax::tex)
 
 if (PR_DEVELOP)
     pr_module_tests(markdown

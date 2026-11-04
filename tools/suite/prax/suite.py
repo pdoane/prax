@@ -121,10 +121,12 @@ def reference_of(spec, anchor):
 
 def spec_name(short):
     """Returns the name that a page uses for the specification: its title without "Module", "Level" or "Standard", as
-    in "CSS Fonts 4" and "HTML"."""
+    in "CSS Fonts 4" and "HTML", or its abbreviation and version, as in "MathML 4"."""
     if short in ("CSS2", "SVG2"):
         return short[:-1] + " 2"
     title = specs()[short]["title"]
+    # "Mathematical Markup Language (MathML) Version 4.0" is MathML 4.
+    title = re.sub(r"^.* \((\w+)\) Version (\d+)(?:\.0)?$", r"\1 \2", title)
     title = re.sub(r" \(.*\)$", "", title)
     return re.sub(r" Module| Level| Standard$", "", title)
 

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>dir: right-to-left formulas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 0 6px; box-sizing: border-box; font-size: 24px; line-height: 60px; }
+  .pr-stage mn { background: #b9cde6; }
+  .ar { font-family: math, "PR Noto Sans Arabic"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.1.4 Attributes common to HTML and MathML elements</div>
+  <h1>dir: right-to-left formulas</h1>
+  <p class=pr-lede><q>The dir attribute, if present, must be an ASCII case-insensitive match to ltr or rtl. In that
+  case, the user agent is expected to treat the attribute as a presentational hint setting the element's direction
+  property to the corresponding value.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#attributes-common-to-html-and-mathml-elements">MathML Core §2.1.4</a></span>
+  Each number is tinted blue.</p>
+</header>
+
+<section>
+  <h2>A row, a fraction and scripts</h2>
+  <figure>
+    <div class=pr-stage><math><mn>1</mn><mo>+</mo><msup><mn>2</mn><mn>3</mn></msup></math></div>
+    <figcaption>No <code>dir</code>: 1 + 2, with 3 raised at the right of 2.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><math dir=rtl><mn>1</mn><mo>+</mo><msup><mn>2</mn><mn>3</mn></msup></math></div>
+    <figcaption><code>dir="rtl"</code>: 1 at the right, then +, then 2 with 3 raised at its left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><math dir=RTL><mn>1</mn><mo>+</mo><mrow dir=ltr><mn>2</mn><mo>−</mo><mn>3</mn></mrow></math></div>
+    <figcaption><code>dir="RTL"</code> on the formula and <code>ltr</code> on its last row: 1 + at the right, and
+    "2 − 3" left to right at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Mirrored operators</h2>
+  <figure>
+    <div class="pr-stage ar"><math dir=rtl><mo>(</mo><mn>١</mn><mo>&lt;</mo><mn>٢</mn><mo>]</mo></math></div>
+    <figcaption>"(", one, "&lt;", two and "]", laid out from the right, each operator mirrored: the "(" at the
+    right drawn as ")", the "&lt;" as "&gt;", the "]" at the left as "[".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

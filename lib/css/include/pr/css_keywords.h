@@ -1244,6 +1244,23 @@ enum {
     PrCssKeyword_ZeroIfScroll,                 // zero-if-scroll
     PrCssKeyword_ZoomIn,                       // zoom-in
     PrCssKeyword_ZoomOut,                      // zoom-out
+    PrCssKeyword_PrMathBold,                   // -pr-math-bold
+    PrCssKeyword_PrMathBoldFraktur,            // -pr-math-bold-fraktur
+    PrCssKeyword_PrMathBoldItalic,             // -pr-math-bold-italic
+    PrCssKeyword_PrMathBoldSansSerif,          // -pr-math-bold-sans-serif
+    PrCssKeyword_PrMathBoldScript,             // -pr-math-bold-script
+    PrCssKeyword_PrMathDoubleStruck,           // -pr-math-double-struck
+    PrCssKeyword_PrMathFraktur,                // -pr-math-fraktur
+    PrCssKeyword_PrMathInitial,                // -pr-math-initial
+    PrCssKeyword_PrMathItalic,                 // -pr-math-italic
+    PrCssKeyword_PrMathLooped,                 // -pr-math-looped
+    PrCssKeyword_PrMathMonospace,              // -pr-math-monospace
+    PrCssKeyword_PrMathSansSerif,              // -pr-math-sans-serif
+    PrCssKeyword_PrMathSansSerifBoldItalic,    // -pr-math-sans-serif-bold-italic
+    PrCssKeyword_PrMathSansSerifItalic,        // -pr-math-sans-serif-italic
+    PrCssKeyword_PrMathScript,                 // -pr-math-script
+    PrCssKeyword_PrMathStretched,              // -pr-math-stretched
+    PrCssKeyword_PrMathTailed,                 // -pr-math-tailed
 
     PrCssKeyword_Count,
     PrCssKeyword_Unknown = PrCssKeyword_Count,   // text that no keyword matches

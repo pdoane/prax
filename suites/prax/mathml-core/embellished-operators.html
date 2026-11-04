@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Embellished operators</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.4.1 Embellished operators</div>
+  <h1>Embellished operators</h1>
+  <p class=pr-lede>A MathML Core element is an embellished operator if it is <q>An mo element; a scripted element or an mfrac, whose
+  first in-flow child exists and is an embellished operator; a grouping element or mpadded, whose in-flow children
+  consist (in any order) of one embellished operator and zero or more space-like elements.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#embellished-operators">MathML Core §3.2.4.1</a></span> An embellished operator stretches and is spaced as its core
+  operator is.</p>
+</header>
+
+<section>
+  <h2>Stretched in its wrapper</h2>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math style="font-size: 30px; math-style: normal"><mrow><mo>(</mo><mfrac><mrow><mi>a</mi><mo>+</mo><mi>b</mi></mrow><mrow><mi>c</mi><mo>+</mo><mi>d</mi></mrow></mfrac><msup><mo>)</mo><mn>2</mn></msup></mrow></math></div>
+    <figcaption>A closing parenthesis with an exponent, an <code>msup</code> on ): it stretches to the fraction as the opening one does, and the 2 rides its top. <span class=pr-flag>Chrome</span> The closing parenthesis at text size.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px; math-style: normal"><mi>A</mi><munder><mo>→</mo><mtext>f</mtext></munder><mi>B</mi><munder><mo>⟶</mo><mrow><mi>g</mi><mo>∘</mo><mi>f</mi></mrow></munder><mi>C</mi></math></div>
+    <figcaption>Arrows with labels under them, <code>munder</code> on →: each arrow as wide as its label, and spaced as a relation.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

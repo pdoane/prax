@@ -1,5 +1,5 @@
 // Fonts: the faces of font files, read by the readers of font/src: sfnt.h for their tables, glyf.h and cff.h for their
-// outlines, glyph_metrics.h for their advances and colr.h for their color glyphs.
+// outlines, glyph_metrics.h for their advances, colr.h for their color glyphs and font_math.h for their MATH tables.
 //
 // The readers only read the font's bytes, so any number of threads load from a font at once. The mutex of the font
 // guards the caches of outlines that it fills behind const. Outlines are cached in the ems of the design. Every value
@@ -7,6 +7,7 @@
 // leave alone.
 
 #include "pr/font.h"
+#include "font/src/font.h"
 
 #include "pr/alloc.h"
 #include "pr/ascii.h"
@@ -23,6 +24,7 @@
 
 #include "font/src/cff.h"
 #include "font/src/colr.h"
+#include "font/src/font_math.h"
 #include "font/src/glyf.h"
 #include "font/src/glyph_metrics.h"
 #include "font/src/outline.h"
@@ -38,82 +40,6 @@ constexpr PrStringView kHintingNames[PrFontHinting_Count] = {"none", "light", "f
 constexpr uint32_t tagOf(char a, char b, char c, char d) {
     return uint32_t(uint8_t(a)) << 24 | uint32_t(uint8_t(b)) << 16 | uint32_t(uint8_t(c)) << 8 | uint32_t(uint8_t(d));
 }
-
-// The bytes of a font file, shared by the fonts derived from it: either a copy that follows this structure in the same
-// allocation, or a mapped file.
-struct Font;
-
-struct FontData {
-    Atomic<uint32_t> references;
-    const uint8_t* bytes;
-    size_t size;
-    PrByteView mapping;
-    uint8_t* PR_NULLABLE owned;     // bytes allocated apart from the data, which the data frees
-
-    // The fonts open over the data, among which prFontCreateDerived looks for one equal to the font that it would make.
-    // Each font removes itself as it is freed. The lock guards the list.
-    PrMutex lock;
-    RawArray<Font*> fonts;
-};
-
-// A face of the data, at the instance and with the derivation that it was opened with. Fonts are shared between
-// threads.
-struct Font {
-    mutable Atomic<uint32_t> references;
-    uint64_t id;
-    FontData* data;
-    uint32_t index;
-    Sfnt sfnt;
-
-    // The readers of the face.
-    FontGlyphMetricTables metricTables;
-    GlyfFace glyf;
-    CffFace cff;
-    ColrFace colr;
-    bool truetype;                      // true if glyf holds the outlines, and false for CFF or none
-    bool outlined;                      // false for a face of bitmap strikes only
-    bool strikes;                       // true if the font has color bitmap strikes
-    bool svg;                           // true if the font has SVG documents of glyphs
-    uint32_t unitsPerEm;
-    uint32_t glyphCount;
-    SfntCmap cmap;
-    SfntCmapSequences sequences;
-
-    // The derivation that the font was opened with.
-    float sizeAdjust;
-    PrFontHinting hinting;
-    PrFontHinter* PR_NULLABLE hinter;
-    bool aliased;
-    float embolden;
-    float oblique;
-    PrFontOverrideFlags overrides;
-    float ascentOverride;
-    float descentOverride;
-    float lineGapOverride;
-    RawArray<PrFontFeature> features;
-    RawArray<float> axisKey;               // for each axis, the value that the derivation asked for; equal fonts share
-                                           // it
-
-    // The instance of the font, and its measurements at that instance.
-    RawArray<PrFontAxis> axes;
-    RawArray<float> axisValues;
-    RawArray<float> normalized;            // the axis values normalized, avar applied; empty at the default instance
-    PrFontMetrics metrics;
-    PrFontInfo info;
-
-    // The outlines, by glyph, each created on first use with its bounds. The mutex guards them.
-    mutable PrMutex mutex;
-    mutable PrPath* PR_NULLABLE* PR_NULLABLE outlines;
-    mutable PrRect* PR_NULLABLE outlineBounds;
-
-    // By glyph, whether the bounds of its outline are filled in. A reader reads the bounds without the mutex once the
-    // flag is set. The bounds are set before the flag.
-    Atomic<uint8_t>* boundsFilled;
-
-    // By glyph, the bits of its advance in font units, or kAdvanceUnknown until it is found. A font at an instance
-    // other than its default finds each advance once. Null at the default instance, at which hmtx answers.
-    Atomic<uint32_t>* PR_NULLABLE advances;
-};
 
 // The bits of a NaN, which no advance can have.
 constexpr uint32_t kAdvanceUnknown = 0xFFFFFFFFu;
@@ -177,6 +103,7 @@ bool openReaders(Font* font) {
     sfntCmapUnicode(sfnt, &font->cmap);
     sfntCmapSequencesOpen(sfnt, &font->sequences);
     colrOpen(sfnt, &font->colr);
+    fontMathOpen(sfnt, &font->math);
     return true;
 }
 
@@ -418,6 +345,7 @@ void readMetrics(Font* font) {
     m.averageAdvance = averageAdvance * k;
     m.maxAdvance = maxAdvance * k;
     font->metrics = m;
+    fontMathMeasure(&font->math, sfnt, k, m);
 }
 
 // Opens the zeroed `font` over the face at `index` of the data. Returns false if the face does not parse. An open font
@@ -475,15 +403,45 @@ const PrPath* cachedOutline(const Font* font, uint32_t glyph) {
     if (font->outlines == nullptr) {
         font->outlines = static_cast<PrPath**>(prMemoryAllocZeroed(sizeof(PrPath*) * font->glyphCount));
         font->outlineBounds = static_cast<PrRect*>(prMemoryAllocZeroed(sizeof(PrRect) * font->glyphCount));
+        font->inkBounds = static_cast<PrRect*>(prMemoryAllocZeroed(sizeof(PrRect) * font->glyphCount));
     }
     PrPath*& outline = font->outlines[glyph];
     if (outline == nullptr) {
         outline = prPathCreate();
         appendDesign(font, glyph, 0, outline);
         font->outlineBounds[glyph] = prPathBounds(outline);
-        font->boundsFilled[glyph].store(1);
+        font->boundsFilled[glyph].store(uint8_t(font->boundsFilled[glyph].load() | FontBounds_Outline));
     }
     return outline;
+}
+
+// Returns the bounds of the glyph's outline in the design's ems, its control points' or with `ink` its tight bounds,
+// each found once.
+PrRect cachedBounds(const Font* font, uint32_t glyph, bool ink) {
+    FontBounds flag = ink ? FontBounds_Ink : FontBounds_Outline;
+    if ((font->boundsFilled[glyph].load() & flag) == 0) {
+        prMutexLock(&font->mutex);
+        const PrPath* outline = cachedOutline(font, glyph);
+        if (ink && (font->boundsFilled[glyph].load() & FontBounds_Ink) == 0) {
+            font->inkBounds[glyph] = prPathTightBounds(outline);
+            font->boundsFilled[glyph].store(uint8_t(font->boundsFilled[glyph].load() | FontBounds_Ink));
+        }
+        prMutexUnlock(&font->mutex);
+    }
+    return ink ? font->inkBounds[glyph] : font->outlineBounds[glyph];
+}
+
+// Returns the bounds of the glyph at the font's size-adjust and emboldened, or an empty rectangle for a glyph with no
+// outline.
+PrRect glyphBounds(const Font* font, uint16_t glyph, bool ink) {
+    if (glyph >= font->glyphCount)
+        return PrRect{0, 0, 0, 0};
+    PrRect bounds = cachedBounds(font, glyph, ink);
+    if (prRectIsEmpty(bounds))
+        return PrRect{0, 0, 0, 0};
+    float k = font->sizeAdjust;
+    float e = font->embolden;
+    return PrRect{bounds.left * k - e, bounds.top * k - e, bounds.right * k + e, bounds.bottom * k + e};
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -685,9 +643,11 @@ void releaseFont(const Font* PR_NULLABLE font) {
             prPathDestroy(data->outlines[i]);
         prMemoryFree(data->outlines);
         prMemoryFree(data->outlineBounds);
+        prMemoryFree(data->inkBounds);
     }
     prMemoryFree(data->boundsFilled);
     prMemoryFree(data->advances);
+    sfntFeatureSubstitutionsReset(&data->substitutions);
     data->axes.reset();
     data->axisValues.reset();
     data->normalized.reset();
@@ -775,9 +735,6 @@ PrFontHinting prFontHintingFromName(PrStringView name) {
 PrStringView prFontHintingName(PrFontHinting hinting) {
     return hinting < PrFontHinting_Count ? kHintingNames[hinting] : PrStringView{};
 }
-
-// C opaque types
-struct PrFont : Font {};
 
 PrFontDerivation prFontDerivationDefault(void) {
     PrFontDerivation d{};
@@ -1005,6 +962,20 @@ uint16_t prFontCodePointGlyph(const PrFont* font, uint32_t codePoint) {
     return glyph < data->glyphCount ? uint16_t(glyph) : 0;
 }
 
+uint16_t prFontFeatureGlyph(const PrFont* font, uint32_t feature, uint16_t glyph) {
+    const Font* data = font;
+    if (data->substitutionsBuilt.load() == 0) {
+        prMutexLock(&data->mutex);
+        if (data->substitutionsBuilt.loadRelaxed() == 0) {
+            sfntFeatureSubstitutionsBuild(data->sfnt, &data->substitutions);
+            data->substitutionsBuilt.store(1);
+        }
+        prMutexUnlock(&data->mutex);
+    }
+    uint32_t found = sfntFeatureGlyph(data->substitutions, feature, glyph);
+    return found < font->glyphCount ? uint16_t(found) : glyph;
+}
+
 PrFontSequenceGlyph prFontVariationSequenceGlyph(const PrFont* font, uint32_t codePoint, uint32_t selector) {
     const Font* data = font;
     PrFontSequenceGlyph found = sfntCmapSequenceGlyph(data->sequences, codePoint, selector);
@@ -1072,23 +1043,11 @@ PrVec2 prFontGlyphVerticalOrigin(const PrFont* font, uint16_t glyph) {
 }
 
 PrRect prFontGlyphBounds(const PrFont* font, uint16_t glyph) {
-    const Font* data = font;
-    if (glyph >= data->glyphCount)
-        return PrRect{0, 0, 0, 0};
-    PrRect bounds{};
-    if (data->boundsFilled[glyph].load() != 0) {
-        bounds = data->outlineBounds[glyph];
-    } else {
-        prMutexLock(&data->mutex);
-        cachedOutline(data, glyph);
-        bounds = data->outlineBounds[glyph];
-        prMutexUnlock(&data->mutex);
-    }
-    if (prRectIsEmpty(bounds))
-        return PrRect{0, 0, 0, 0};
-    float k = data->sizeAdjust;
-    float e = data->embolden;
-    return PrRect{bounds.left * k - e, bounds.top * k - e, bounds.right * k + e, bounds.bottom * k + e};
+    return glyphBounds(font, glyph, false);
+}
+
+PrRect prFontGlyphInkBounds(const PrFont* font, uint16_t glyph) {
+    return glyphBounds(font, glyph, true);
 }
 
 bool prFontGlyphOutline(const PrFont* font, uint16_t glyph, float pixelsPerEm, PrAffine2 transform, PrPath* out) {

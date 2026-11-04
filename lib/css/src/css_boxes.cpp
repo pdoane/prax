@@ -8,7 +8,12 @@ namespace pr_impl {
 
 void cssBoxesProvide(PrDomDocument* document, DomNamespaceId space, const CssBoxProvider* provider) {
     PR_ASSERT(space < kCssProviderNamespaces);
-    cssDocumentRoot(document)->boxProviders[space] = provider;
+    CssRoot* root = cssDocumentRoot(document);
+    root->boxProviders[space] = provider;
+    if (provider != nullptr && provider->record != nullptr)
+        root->refiningSpaces |= 1u << space;
+    else
+        root->refiningSpaces &= ~(1u << space);
 }
 
 CssColorSchemeFlags cssPageSchemes(PrDomDocument* document) {

@@ -5,6 +5,8 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
+#include "pr/raw_array.h"
+#include "pr/tex.h"
 #include "pr/text_buffer.h"
 
 namespace pr_impl {
@@ -100,6 +102,10 @@ struct Writer {
     bool paragraphWaits;
 
     bool inFrontMatter;             // true while the steps of front matter, which has no HTML, are walked
+
+    bool inMath;                                      // true while the steps of math are walked
+    PrTextBuffer tex;                                 // the TeX of the math being walked
+    RawArray<PrMarkdownHtmlAttribute> mathAttributes; // the attributes of the MathML start tag being written
 };
 
 void emit(Writer* w, const PrMarkdownHtmlEvent& event) {
@@ -270,6 +276,38 @@ void endWaitingParagraph(Writer* w) {
     text(w, "\n");
 }
 
+// Writes the MathML of the TeX `tex` as events. Each formula is typeset alone, so a definition in one does not reach
+// the next, and a block's HTML depends only on the block.
+void writeMath(Writer* w, PrStringView tex, bool display) {
+    PrTexOptions options = prTexOptionsDefault();
+    options.display = display ? PrTexDisplay_Block : PrTexDisplay_Inline;
+    prTexWriteMathMl(tex, &options, [](void* PR_NULLABLE context, const PrTexEvent* event) {
+        Writer* writer = static_cast<Writer*>(context);
+        PrMarkdownHtmlEvent out{};
+        switch (event->kind) {
+            case PrTexEventKind_StartTag:
+                out.kind = PrMarkdownHtmlEventKind_StartTag;
+                out.name = event->name;
+                writer->mathAttributes.clear();
+                for (uint32_t i = 0; i < event->attributeCount; ++i)
+                    writer->mathAttributes.push({event->attributes[i].name, event->attributes[i].value});
+                out.attributes = event->attributeCount != 0 ? writer->mathAttributes.data : nullptr;
+                out.attributeCount = event->attributeCount;
+                break;
+            case PrTexEventKind_EndTag:
+                out.kind = PrMarkdownHtmlEventKind_EndTag;
+                out.name = event->name;
+                break;
+            case PrTexEventKind_Text:
+                out.kind = PrMarkdownHtmlEventKind_Text;
+                out.text = event->text;
+                break;
+        }
+        emit(writer, out);
+    }, w);
+    w->atLineStart = false;
+}
+
 void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
     Writer* w = static_cast<Writer*>(context);
     bool enter = step->kind == PrMarkdownStepKind_Enter;
@@ -312,6 +350,20 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
             }
         } else if (enter && (step->node == PrMarkdownNodeKind_SoftBreak || step->node == PrMarkdownNodeKind_HardBreak)) {
             prTextBufferAppendChar(&w->description, ' ');
+        }
+        return;
+    }
+    // Math's TeX is the text of its children, which becomes MathML when the math ends.
+    if (w->inMath) {
+        if (step->kind == PrMarkdownStepKind_Text) {
+            prTextBufferAppend(&w->tex, step->text);
+            return;
+        }
+        if ((step->node == PrMarkdownNodeKind_Math || step->node == PrMarkdownNodeKind_MathBlock) && !enter) {
+            w->inMath = false;
+            writeMath(w, prTextBufferView(&w->tex), step->display);
+            if (step->node == PrMarkdownNodeKind_MathBlock)
+                text(w, "\n");
         }
         return;
     }
@@ -495,17 +547,15 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
             text(w, "\n");
             break;
         }
-        case PrMarkdownNodeKind_Math: {
-            // TeX is text in a span, which a client typesets.
-            if (!enter) {
-                end(w, "span");
-                break;
+        case PrMarkdownNodeKind_Math:
+        case PrMarkdownNodeKind_MathBlock:
+            if (enter) {
+                if (step->node == PrMarkdownNodeKind_MathBlock)
+                    cr(w);
+                prTextBufferClear(&w->tex);
+                w->inMath = true;
             }
-            Tag tag = startTag(w, "span");
-            attribute(w, &tag, "class", step->display ? "math math-display" : "math math-inline");
-            writeTag(w, tag);
             break;
-        }
         case PrMarkdownNodeKind_Highlight:
             if (enter)
                 start(w, "mark");
@@ -634,6 +684,8 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
 void writerReset(Writer* w) {
     prTextBufferReset(&w->values);
     prTextBufferReset(&w->description);
+    prTextBufferReset(&w->tex);
+    w->mathAttributes.reset();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

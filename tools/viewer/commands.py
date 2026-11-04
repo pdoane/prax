@@ -3,6 +3,7 @@
 import os
 
 from tools import dev
+from tools.browsers import browsers
 from tools.build import build as builds
 from tools.fetch import checkouts
 
@@ -20,8 +21,19 @@ def viewer(argv):
     checkouts.fetch("fonts")
     mode = argv.pop(0) if argv[:1] in (["debug"], ["release"]) else None
     program = dev.executable(builds.build(mode).directory, "viewer")
-    # WPT's reftests are served from WPT's own server, which runs as long as the viewer does.
-    if os.path.isdir(os.path.join(dev.ROOT, "third_party", "wpt", ".git")):
-        dev.python("tools.suite.wpt.wpt_serve", "--around", "third_party/wpt", program, *argv)
-    else:
-        dev.run([program, *argv])
+    # The other pages of third_party, such as MathFonts' tests, which name their resources from the root, are served
+    # from a server of the directory that runs as long as the viewer does.
+    third_party = os.path.join(dev.ROOT, "third_party")
+    server = browsers.Server(third_party) if os.path.isdir(third_party) else None
+    command = [program, *argv]
+    if server is not None:
+        command += ["--third-party-server", str(server.server_address[1])]
+    try:
+        # WPT's reftests are served from WPT's own server, which runs as long as the viewer does.
+        if os.path.isdir(os.path.join(third_party, "wpt", ".git")):
+            dev.python("tools.suite.wpt.wpt_serve", "--around", "third_party/wpt", *command)
+        else:
+            dev.run(command)
+    finally:
+        if server is not None:
+            server.shutdown()

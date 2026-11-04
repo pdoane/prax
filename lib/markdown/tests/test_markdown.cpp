@@ -355,12 +355,56 @@ TEST_CASE("highlights, subscripts and superscripts pair runs of their characters
     CHECK(html("==mark== ~one~ x^2^\n", &plain) == "<p>==mark== <del>one</del> x^2^</p>\n");
 }
 
-TEST_CASE("math is TeX between dollar signs") {
+TEST_CASE("math is TeX between dollar signs, written as MathML") {
     PrMarkdownOptions options = everything();
-    CHECK(html("$x^2$ and $$\\sum_i i$$ and $`a$b`$\n\nbut $5 and $6.\n\n$ x $, \\$y\\$\n", &options) ==
-        "<p><span class=\"math math-inline\">x^2</span> and <span class=\"math math-display\">\\sum_i i</span> "
-        "and <span class=\"math math-inline\">a$b</span></p>\n<p>but $5 and $6.</p>\n<p>$ x $, $y$</p>\n");
+    CHECK(html("$x^2$ and $$\\sum_i i$$ and $`a<b`$\n\nbut $5 and $6.\n\n$ x $, \\$y\\$\n", &options) ==
+        "<p><math display=\"inline\"><semantics><msup><mi>x</mi><mn>2</mn></msup>"
+        "<annotation encoding=\"application/x-tex\">x^2</annotation></semantics></math> and "
+        "<math display=\"block\"><semantics><mrow><munder><mo lspace=\"0em\">∑</mo><mi>i</mi></munder><mi>i</mi></mrow>"
+        "<annotation encoding=\"application/x-tex\">\\sum_i i</annotation></semantics></math> and "
+        "<math display=\"inline\"><semantics><mrow><mi>a</mi><mo>&lt;</mo><mi>b</mi></mrow>"
+        "<annotation encoding=\"application/x-tex\">a&lt;b</annotation></semantics></math></p>\n"
+        "<p>but $5 and $6.</p>\n<p>$ x $, $y$</p>\n");
+    // Math in an image's description is its TeX.
+    CHECK(html("![area $\\pi r^2$](c.png)\n", &options) == "<p><img src=\"c.png\" alt=\"area \\pi r^2\" /></p>\n");
+    // A formula's definitions end with it.
+    CHECK(html("$\\def\\a{1}\\a$ $\\a$\n", &options) == "<p><math display=\"inline\"><semantics><mn>1</mn>"
+        "<annotation encoding=\"application/x-tex\">\\def\\a{1}\\a</annotation></semantics></math> "
+        "<math display=\"inline\"><semantics><merror><mtext>\\a</mtext></merror>"
+        "<annotation encoding=\"application/x-tex\">\\a</annotation></semantics></math></p>\n");
     CHECK(streams("Inline $a*b*c$ *emphasis*\n\n$$\nx\n$$\n", options));
+}
+
+TEST_CASE("a fenced code block of math is display math") {
+    PrMarkdownOptions options = everything();
+    CHECK(html("```math\nx^2\n\\\\ y\n```\n", &options) ==
+        "<math display=\"block\"><semantics><mtable displaystyle=\"true\" rowspacing=\"0.3em\"><mtr><mtd><mspace heig"
+        "ht=\"0.84em\" depth=\"0.36em\"></mspace><msup><mi>x</mi><mn>2</mn></msup></mtd></mtr><mtr><mtd><mspace heigh"
+        "t=\"0.84em\" depth=\"0.36em\"></mspace><mi>y</mi></mtd></mtr></mtable><annotation encoding=\"application/x-t"
+        "ex\">x^2\n\\\\ y</annotation></semantics></math>\n");
+    CHECK(html("> ~~~ math extra\n> a<b\n> ~~~\n\ntext\n", &options) ==
+        "<blockquote>\n<math display=\"block\"><semantics><mrow><mi>a</mi><mo>&lt;</mo><mi>b</mi></mrow><annotation"
+        " encoding=\"application/x-tex\">a&lt;b</annotation></semantics></math>\n</blockquote>\n<p>text</p>\n");
+    // Another language, and math without the extension, are code.
+    CHECK(html("```mathematica\nx\n```\n", &options) == "<pre><code class=\"language-mathematica\">x\n</code></pre>\n");
+    CHECK(html("```math\nx\n```\n", gfm()) == "<pre><code class=\"language-math\">x\n</code></pre>\n");
+    // The walk gives the block's TeX as its child.
+    PrMarkdown* document = prMarkdownCreate(&options);
+    prMarkdownAppend(document, "```math\n\\alpha\n```\n");
+    prMarkdownEnd(document);
+    std::string walked;
+    prMarkdownWalk(document, 0, 1, [](void* context, const PrMarkdownStep* step) {
+        std::string* out = static_cast<std::string*>(context);
+        if (step->kind == PrMarkdownStepKind_Enter && step->node == PrMarkdownNodeKind_MathBlock)
+            *out += step->display ? "[display " : "[";
+        if (step->kind == PrMarkdownStepKind_Text)
+            *out += viewString(step->text);
+        if (step->kind == PrMarkdownStepKind_Leave)
+            *out += "]";
+    }, &walked);
+    CHECK(walked == "[display \\alpha]");
+    prMarkdownDestroy(document);
+    CHECK(streams("```math\na\n\nb\n```\n", options));
 }
 
 TEST_CASE("front matter is held as it is written, and keeps the blocks after its opening fence tentative") {

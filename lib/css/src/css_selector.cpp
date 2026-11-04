@@ -833,7 +833,7 @@ struct Direct {
     uint32_t pos;
     uint32_t end;
     CssSelectorPool* pool;
-    bool userAgent;                 // true if the selectors may name the engine's private pseudo-classes
+    bool engine;                    // true if the selectors may name the engine's private pseudo-classes
 };
 
 CssTokenKind directKind(const Direct* d) {
@@ -935,7 +935,7 @@ bool directPseudo(Direct* d, CssSimpleSelector* out) {
     if (!directPlain(d, CssTokenKind_Ident, &name))
         return false;
     CssPseudoClass pseudoClass = element ? CssPseudoClass_None : cssPseudoClass(name, false);
-    if (pseudoClass >= CssPseudoClass_FirstPrivate && !d->userAgent)
+    if (pseudoClass >= CssPseudoClass_FirstPrivate && !d->engine)
         pseudoClass = CssPseudoClass_None;
     if (pseudoClass != CssPseudoClass_None) {
         *out = directSimple(CssSimpleKind_PseudoClass);
@@ -1062,8 +1062,8 @@ bool directComplex(Direct* d, CssComplexSelector* out, bool* more) {
 }
 
 // Reads the selector list in `span` directly into the cleared pool, if it can be read directly.
-bool directList(CssSelectorPool* pool, const CssTokenArray* tokens, CssTokenSpan span, bool userAgent, CssSelectorList* out) {
-    Direct d = {tokens, span.start, span.start + span.count, pool, userAgent};
+bool directList(CssSelectorPool* pool, const CssTokenArray* tokens, CssTokenSpan span, bool engine, CssSelectorList* out) {
+    Direct d = {tokens, span.start, span.start + span.count, pool, engine};
     *out = CssSelectorList{0, 0};
     for (bool more = true; more;) {
         directSkipWhitespace(&d);
@@ -1591,7 +1591,7 @@ PrCssSelectors* PR_NULLABLE cssParseSelectors(CssParser* parser, const CssTokenS
     CssSelectorList list = {};
     if (context->nesting == CssSelectorNesting_None && (context->sheet == nullptr ||
             !cssSheetNamespace(context->sheet, PrStringView{}, &fallback)) &&
-            directList(pool, ts->tokens, span, parser->match.userAgent, &list)) {
+            directList(pool, ts->tokens, span, parser->match.engine, &list)) {
         PrCssSelectors* read = hold(pool, list);
         cssSelectorsSpecify(read, context->parent);
 #ifndef NDEBUG

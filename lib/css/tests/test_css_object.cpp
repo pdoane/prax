@@ -643,7 +643,7 @@ TEST_CASE("a declaration block reparses from text") {
     CssTestSheet sheet("a { color: red }");
     CssDeclarationBlock* style = &sheet.rule(0)->style;
 
-    cssDeclarationBlockParse(style, "width: 2px; height: 3px; & b { }", nullptr);
+    cssDeclarationBlockParse(style, "width: 2px; height: 3px; & b { }", nullptr, CssOrigin_Author);
     CHECK(declarations(style) == "width: 2px; height: 3px;");
 }
 
@@ -678,7 +678,7 @@ TEST_CASE("a changed block keeps its declarations' order and values, and a parse
     CHECK(declarations(copied) == "--long: [a b c d e]; background-image: url(\"x.png\"); width: 19px; --new: q; margin: 1px 2px;");
     cssRuleDataRelease(copy);
 
-    cssDeclarationBlockParse(style, "--k: 1; top: 0", nullptr);
+    cssDeclarationBlockParse(style, "--k: 1; top: 0", nullptr, CssOrigin_Author);
     CHECK(style->stored == nullptr);
     CHECK(declarations(style) == "--k: 1; top: 0px;");
 }

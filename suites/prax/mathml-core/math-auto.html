@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-transform: math-auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font: 28px/48px 'PR Noto Sans Math'; }
+  .pr-stage math { font-family: 'PR Noto Sans Math'; }
+  .ma { text-transform: math-auto; }
+  .ma span { margin-right: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 4.2 The math-auto transform</div>
+  <h1>text-transform: math-auto</h1>
+  <p class=pr-lede><q>On text nodes containing a single character, if the computed value is math-auto and the character is present
+  in the "Original" column of Italic mappings then it is converted to the corresponding character from the "italic"
+  column.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#math-auto-transform">MathML Core §4.2</a></span> The font is PR Noto Sans Math, which has the italic
+  forms.</p>
+</header>
+
+<section>
+  <h2>On any element</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><div class=ma><span>x</span><span>B</span><span>θ</span><span>sin</span><span>5</span><span>∂</span></div></div>
+    <figcaption>HTML spans: x, B, θ and ∂ italic, 𝑥 𝐵 𝜃 𝜕; "sin" and 5 upright.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mi>x</mi><mtext style="text-transform: math-auto">x</mtext><mi style="text-transform: none">x</mi></math></div>
+    <figcaption>An <code>mi</code> x italic; an <code>mtext</code> with <code>math-auto</code> italic too; an <code>mi</code> with <code>none</code> upright.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A text node, not an element</h2>
+  <figure>
+    <div class="pr-stage"><div class=ma><span>a<b>b</b></span></div></div>
+    <figcaption>A span of "a" and a <code>b</code> of "b": each text node one character, so both italic, the second bold.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

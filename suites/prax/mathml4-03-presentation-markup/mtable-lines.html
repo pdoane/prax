@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mtable: lines and frames</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.5.1 Table or Matrix &lt;mtable&gt;</div>
+  <h1>mtable: lines and frames</h1>
+  <p class=pr-lede>rowlines and columnlines: <q>specifies whether and what kind of lines should be added between each row</q>
+  (column). frame: <q>specifies whether and what kind of lines should be drawn around the table.</q> framespacing:
+  <q>specifies the additional spacing added between the table and frame, if frame is not none.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#table-or-matrix-mtable">MathML 4 §3.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Rules</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable rowlines=solid><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>rowlines="solid"</code>: a line between the rows. <span class=pr-flag>Chrome</span> No line.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable columnlines=dashed><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>columnlines="dashed"</code>: a dashed line between the columns. <span class=pr-flag>Chrome</span> No line.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable rowlines="solid none" columnlines="none"><mtr><mtd><mn>1</mn></mtd></mtr><mtr><mtd><mn>2</mn></mtd></mtr><mtr><mtd><mn>3</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>rowlines="solid none"</code>: a line under the first row only. <span class=pr-flag>Chrome</span> No line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Frames</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable frame=solid><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>frame="solid"</code>: a box around the table, 0.4em and 0.5ex from it. <span class=pr-flag>Chrome</span> No frame.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable frame=dashed framespacing="20px 0px"><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>frame="dashed" framespacing="20px 0px"</code>: a dashed box 20px from each side, touching top and bottom. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Firefox frames it with its default spacing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>menclose: enclosures</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 22px; padding: 10px 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.3.9 Enclose Expression Inside Notation &lt;menclose&gt;</div>
+  <h1>menclose: enclosures</h1>
+  <p class=pr-lede><q>The menclose element renders its content inside the enclosing notation specified by its notation
+  attribute.</q> <q>The values left, right, top and bottom should result in lines drawn on those sides of the
+  contents.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#enclose-expression-inside-notation-menclose">MathML 4 §3.3.9</a></span> Each encloses "x + y".</p>
+</header>
+
+<section>
+  <h2>Enclosures</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="box"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>box</code>: a box around "x + y". <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="roundedbox"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>roundedbox</code>: a box with round corners. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="circle"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>circle</code>: an ellipse around it. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="left"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>left</code>: a line at its left. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="right"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>right</code>: a line at its right. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="top"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>top</code>: a line over it. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="bottom"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>bottom</code>: a line under it. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="actuarial"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>actuarial</code>: a line over it and down its right. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="madruwb"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>madruwb</code>: the Arabic factorial: a line under it and up its right, with a hook. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><menclose notation="phasorangle"><mi>x</mi><mo>+</mo><mi>y</mi></menclose></math></div>
+    <figcaption><code>phasorangle</code>: an angle: a line under it rising to its left. <span class=pr-flag>Chrome</span> No notation.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

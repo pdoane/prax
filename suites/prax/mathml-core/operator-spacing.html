@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Operator spacing from the dictionary</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .tint :is(mi, mn, mtext) { background: #dde7f3; }
+  .tint mo { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · B.1 Operator Dictionary</div>
+  <h1>Operator spacing from the dictionary</h1>
+  <p class=pr-lede><q>Find the row corresponding to the specified category on Operators values for each category. Set lspace and
+  rspace to the value specified in the corresponding column.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#operator-dictionary">MathML Core §B.1</a></span> Each
+  token is tinted, operators orange and the rest blue, so the untinted gap beside an operator is its lspace or rspace.
+  At 36px, 1/18em is 2px.</p>
+</header>
+
+<section>
+  <h2>Relations, binary operators and punctuation</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>y</mi><mo>=</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>×</mo><mi>c</mi><mo>,</mo><mi>d</mi></math></div>
+    <figcaption>= gets 5/18em, 10px, each side; +, category B, 4/18em, 8px; ×, category C, 3/18em, 6px; the comma, category M, nothing before and 6px after.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>f</mi><mo>:</mo><mi>A</mi><mo>→</mo><mi>B</mi><mo>,</mo><mi>sin</mi><mo>⁡</mo><mi>x</mi></math></div>
+    <figcaption>The colon, M: 6px after only; →, A: 10px each side; U+2061 FUNCTION APPLICATION, K: no space, "sin" and <i>x</i> touching.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Prefix operators</h2>
+  <p>First in a row of more than one child, an operator is prefix.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mrow><mo>∂</mo><mi>f</mi></mrow><mo>=</mo><mrow><mo>−</mo><mi>g</mi></mrow><mo>+</mo><mrow><mo>∑</mo><msub><mi>a</mi><mi>i</mi></msub></mrow></math></div>
+    <figcaption>∂, L: 6px before, none after; − as a prefix, D: no space; ∑, J: 6px each side.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>a</mi><mo>|</mo><mi>b</mi><mo>,</mo><mrow><mo>|</mo><mi>x</mi><mo>|</mo></mrow></math></div>
+    <figcaption>| between two letters is infix, ForceDefault, 10px each side; around <i>x</i>, prefix and postfix fences, F and G, with no space.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

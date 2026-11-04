@@ -16,6 +16,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <string>
 
 struct PrGpuDevice;
 
@@ -30,22 +31,35 @@ void serveWptFrom(uint16_t http, uint16_t https);
 // Returns true if WPT's server serves the WPT checkout's pages (serveWptFrom).
 bool wptServed();
 
-// A page, loaded in its own page host and run until it settles, with its text shaped by `shaper`, which outlives it, in
-// the host's fonts and those of the suite's render settings `settings` if it names a file, hinted as `hinting` says. A
-// `capture` that is not empty answers what the page loads from other origins (PageHost::addCapture), and without
-// `scripts`, the page loads without running its scripts. A page of the WPT checkout loads from WPT's server where one
-// serves it (serveWptFrom), and any other page loads at its file: URL. The page runs on a virtual clock whose time zero
-// is the settled page, so that its frame at a time is the same on every run. Bringing it to a time runs its event loop
-// and animations to that time, and an earlier time runs the page again from its start. The page is presented by a
-// renderer on `device`, or by a renderer in memory if `device` is null.
+// Loads the pages of the third_party directory outside WPT's checkout afterward from an HTTP server on the loopback at
+// the port `http`, which serves the directory at its root. A page that names its resources from the root, as MathFonts'
+// tests do, needs the server.
+void serveThirdPartyFrom(uint16_t http);
+
+// Returns true if the third-party server serves the pages of third_party outside WPT's checkout (serveThirdPartyFrom).
+bool thirdPartyServed();
+
+// Returns the URL that the system's browser loads the page at `path` from, with `query`: the third-party server's URL
+// where one serves the page, and otherwise its file: URL.
+std::string htmlBrowserUrl(const std::filesystem::path& path, const std::string& query);
+
+// A page, loaded with `query` in its own page host and run until it settles, with its text shaped by `shaper`, which
+// outlives it, in the host's fonts and those of the suite's render settings `settings` if it names a file, hinted as
+// `hinting` says. A `capture` that is not empty answers what the page loads from other origins (PageHost::addCapture),
+// and without `scripts`, the page loads without running its scripts. A page of the WPT checkout loads from WPT's server
+// where one serves it (serveWptFrom), another page of third_party from the third-party server where one serves it
+// (serveThirdPartyFrom), and any other page at its file: URL. The page runs on a virtual clock whose time zero is the
+// settled page, so that its frame at a time is the same on every run. Bringing it to a time runs its event loop and
+// animations to that time, and an earlier time runs the page again from its start. The page is presented by a renderer
+// on `device`, or by a renderer in memory if `device` is null.
 //
 // The page renders for `media` in a `width` by `height` viewport, painted for the display and the user's preferences,
 // at the display's pixel ratio: on the screen, or printed in the pages that printHtml prints, stacked down the viewport
 // (PageHost::paint). Either scrolls through its viewport's overflow.
 struct HtmlSource;
-std::shared_ptr<HtmlSource> loadHtml(const std::filesystem::path& path, const std::filesystem::path& settings,
-    const std::filesystem::path& capture, bool scripts, page_host::Media media, PrTextShaper* shaper, PrFontHinting hinting,
-    PrFontHinter* PR_NULLABLE hinter, PrGpuDevice* PR_NULLABLE device);
+std::shared_ptr<HtmlSource> loadHtml(const std::filesystem::path& path, const std::string& query,
+    const std::filesystem::path& settings, const std::filesystem::path& capture, bool scripts, page_host::Media media,
+    PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter, PrGpuDevice* PR_NULLABLE device);
 void htmlAt(HtmlSource& html, double time);
 void drawHtml(HtmlSource& html, PrDrawList* list, float width, float height, const PrAppDisplay& display,
     const PrAppUserPreferences& preferences);

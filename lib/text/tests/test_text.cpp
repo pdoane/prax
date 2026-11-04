@@ -881,6 +881,34 @@ TEST_CASE("an upright run that a backend sets a unit at a time joins nothing acr
     prFontRelease(font);
 }
 
+TEST_CASE("an upright cluster with a variation selector advances once in kb, as in HarfBuzz") {
+    // 葛 with an ideographic variation selector, then 日, in a font that lists the sequence, in fonts without the
+    // ideographs, whose clusters are .notdef, and in a font whose .notdef has no vertical metrics. kb sets each cluster
+    // across on its own, and must leave the selector drawing nothing and the cluster one advance down the line.
+    for (const char* name : {"NotoSansJP.ttf", "NotoSans.ttf", "Ahem.ttf", "NotoSansArabic.ttf"}) {
+        CAPTURE(name);
+        const PrFont* font = load(name);
+        PrTextRun run = runOf(font, "\xe8\x91\x9b\xf3\xa0\x84\x80\xe6\x97\xa5");
+        run.axis = PrTextAxis_Vertical;
+        PrTextShaper* hb = prTextHarfBuzzCreate();
+        PrTextShaper* kb = prTextKbCreate();
+        std::vector<PrTextGlyph> expected = shape(hb, run);
+        std::vector<PrTextGlyph> units = shape(kb, run);
+        CAPTURE(describe(expected));
+        CAPTURE(describe(units));
+        CHECK(expected.size() == 2);
+        CHECK(units.size() == 2);
+        bool same = units.size() == expected.size();
+        for (size_t i = 0; same && i < units.size(); ++i)
+            same =
+                units[i].cluster == expected[i].cluster && units[i].advance.y == doctest::Approx(expected[i].advance.y);
+        CHECK(same);
+        prTextShaperDestroy(kb);
+        prTextShaperDestroy(hb);
+        prFontRelease(font);
+    }
+}
+
 TEST_CASE("a font's size-adjust scales what it shapes") {
     const PrFont* font = load("NotoSans.ttf");
     PrFontDerivation d = prFontDerivationDefault();

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mfrac: numerator and denominator shifts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.2.1 Fraction with nonzero line thickness</div>
+  <h1>mfrac: numerator and denominator shifts</h1>
+  <p class=pr-lede><q>NumeratorShift is the maximum between: FractionNumeratorShiftUp (respectively
+  FractionNumeratorDisplayStyleShiftUp) if the math-style is compact (respectively normal). The AxisHeight + half the
+  fraction line thickness + FractionNumeratorGapMin […] + the ink line-descent of the numerator's margin box.</q>
+  DenominatorShift is the same, downward. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#fraction-with-nonzero-line-thickness">MathML Core §3.3.2.1</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>Display and inline</h2>
+  <p>The Basel problem at 50px; the guides mark the baselines of π² and 6.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 35.2px"></span><span class=pr-level style="vertical-align: -33.65px"></span><math style="font-size: 50px; math-style: normal"><munderover><mo>∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mi>∞</mi></munderover><mfrac><mn>1</mn><msup><mi>n</mi><mn>2</mn></msup></mfrac><mo>=</mo><mfrac><msup><mi>π</mi><mn>2</mn></msup><mn>6</mn></mfrac></math></div>
+    <figcaption>Display: FractionNumeratorDisplayStyleShiftUp, 704, puts π² at 35.2px; FractionDenominatorDisplayStyleShiftDown, 673, puts 6 at −33.65px. The gaps, 150 from the bar, ask for less.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 26.45px"></span><span class=pr-level style="vertical-align: -16px"></span><math style="font-size: 50px"><munderover><mo>∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mi>∞</mi></munderover><mfrac><mn>1</mn><msup><mi>n</mi><mn>2</mn></msup></mfrac><mo>=</mo><mfrac><msup><mi>π</mi><mn>2</mn></msup><mn>6</mn></mfrac></math></div>
+    <figcaption>Inline: the parts at script size, closer, π² at 26.45px (FractionNumeratorShiftUp, 529) and 6 at −16px (FractionDenominatorShiftDown, 320).</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

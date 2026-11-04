@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/float.h"
+#include "pr/locale_common.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/raw_array.h"
@@ -301,7 +302,7 @@ void shapeRun(TextShaping& t, const PrTextShapingDesc& d, PrTextShapedRun& run, 
     bool rightToLeft = (item.level & 1) != 0;
     shaped.direction = rightToLeft ? PrTextDirection_Rtl : PrTextDirection_Ltr;
     shaped.axis = item.upright ? PrTextAxis_Vertical : PrTextAxis_Horizontal;
-    shaped.script = item.script;
+    shaped.script = piece.math ? PrScript_Zmth : item.script;
     shaped.locale = prTextFontLocale(piece.font);
     shaped.pixelsPerEm = size * (d.pixelRatio > 0 ? d.pixelRatio : 1);
     prTextFeatureSetApply(piece.features, &shaped);

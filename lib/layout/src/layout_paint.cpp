@@ -1690,6 +1690,73 @@ struct Painter : LayoutWalkVisitor {
             closeBlending(wasHeld);
     }
 
+    // Records what the math box `fragment` at `at` draws beside its children, in its color: its rules, strokes and
+    // glyphs (layoutFragmentMathData). It is out of line, because most walks reach no math box.
+    PR_NOINLINE void math(const LayoutFragment* fragment, PrLayoutVec at) {
+        LayoutMathData data = layoutFragmentMathData(fragment);
+        if (data.paintCount == 0)
+            return;
+        PrColor16 color = layoutColorStyle(styles, layoutTreeNode(tree, fragment->node).style).color;
+        PrVec2 offset = prLayoutVecToPx(at - origin);
+        for (uint32_t i = 0; i < data.paintCount; ++i) {
+            const LayoutMathPaint& p = data.paints[i];
+            PrRect r{p.rect.left + offset.x, p.rect.top + offset.y, p.rect.right + offset.x, p.rect.bottom + offset.y};
+            PrDrawStroke stroke = prDrawStrokeDefault();
+            stroke.shape.width = p.thickness;
+            switch (p.kind) {
+                case LayoutMathPaintKind_Rule:
+                    prDrawListRect(out(), r, {.color = color});
+                    break;
+                case LayoutMathPaintKind_Line:
+                case LayoutMathPaintKind_Arrow: {
+                    PrVec2 start{r.left, r.top};
+                    PrVec2 end{r.right, r.bottom};
+                    prDrawListLine(out(), start, end, {.color = color, .stroke = &stroke});
+                    if (p.kind != LayoutMathPaintKind_Arrow)
+                        break;
+                    // A head of five strokes' length, back from the end along the line.
+                    PrVec2 d{end.x - start.x, end.y - start.y};
+                    float length = prF32Sqrt(d.x * d.x + d.y * d.y);
+                    if (length <= 0)
+                        break;
+                    PrVec2 u{d.x / length, d.y / length};
+                    float back = p.thickness * 5;
+                    float side = p.thickness * 2.5f;
+                    PrVec2 head[3] = {
+                        end,
+                        PrVec2{end.x - u.x * back - u.y * side, end.y - u.y * back + u.x * side},
+                        PrVec2{end.x - u.x * back + u.y * side, end.y - u.y * back - u.x * side},
+                    };
+                    prDrawListPolylineContour(out(), head, 3, PrDrawContour_Closed, PrPathFillRule_NonZero, {.color = color});
+                    break;
+                }
+                case LayoutMathPaintKind_Ellipse:
+                    prDrawListEllipse(out(), PrVec2{(r.left + r.right) / 2, (r.top + r.bottom) / 2},
+                        PrVec2{(r.right - r.left) / 2, (r.bottom - r.top) / 2}, 0, {.color = color, .stroke = &stroke});
+                    break;
+                case LayoutMathPaintKind_RoundBox:
+                    prDrawListCornerRect(out(), prCornerRectRound(r, p.thickness * 4), {.color = color, .stroke = &stroke});
+                    break;
+                case LayoutMathPaintKind_Glyphs: {
+                    PrFontGlyphRun run{};
+                    run.font = p.font;
+                    run.size = p.size;
+                    run.glyphs = data.glyphs + p.glyphStart;
+                    run.glyphCount = p.glyphCount;
+                    if (p.mirrored)
+                        prDrawListPushTransformAffine2(out(), PrAffine2{-1, 0, 0, 1, r.left + r.right, 0});
+                    prDrawListGlyphs(out(), &run, offset, {.color = color});
+                    if (p.mirrored)
+                        prDrawListPopTransform(out());
+                    break;
+                }
+                default:
+                    break;
+            }
+            recorded();
+        }
+    }
+
     // Records the collapsed borders of the grid of a table, whose fragment is `table` at `at`, after its cells'
     // backgrounds (css-tables-3/#drawing-collapsed-borders-2). A solid segment is a rectangle, and any other style is
     // drawn as one side of its rectangle.

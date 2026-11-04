@@ -10,11 +10,11 @@ USAGE = {
 }
 
 GENERATORS = ("gen_brotli", "gen_charset", "gen_css", "gen_dom", "gen_html", "gen_url", "gen_webidl", "gen_unicode",
-              "gen_locale")
+              "gen_locale", "gen_mathml")
 
 
 def gen(argv):
     dev.usage(argv, USAGE["gen"])
-    checkouts.fetch("webref", "entities", "encodings", "unicode", "cldr", "rfcs", "drafts")
+    checkouts.fetch("webref", "entities", "encodings", "unicode", "cldr", "rfcs", "drafts", "mathml")
     for generator in GENERATORS:
         dev.python("tools.gen." + generator)

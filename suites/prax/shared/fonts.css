@@ -143,7 +143,21 @@
     src: url(../../../third_party/fonts/NotoSansPhoenician.ttf) format("truetype");
 }
 
-/* Mathematical alphanumerics (U+1D400 to U+1D7FF), operators and arrows. */
+/* Mathematical alphanumerics (U+1D400 to U+1D7FF), operators and arrows, and an OpenType MATH table, so that a figure
+   about math layout can draw guides from known constants. In a 1000-unit em: AxisHeight 278, AccentBaseHeight 556;
+   ScriptPercentScaleDown 60 and ScriptScriptPercentScaleDown 50; FractionRuleThickness 71, FractionNumeratorShiftUp
+   529 and DisplayStyleShiftUp 704, FractionDenominatorShiftDown 320 and DisplayStyleShiftDown 673,
+   FractionNumeratorGapMin and FractionDenominatorGapMin 71, their DisplayStyle 150; StackTopShiftUp 529 and
+   DisplayStyle 704, StackBottomShiftDown 320 and DisplayStyle 673, StackGapMin 178 and DisplayStyle 336;
+   SubscriptShiftDown 210, SubscriptTopMax 430, SubscriptBaselineDropMin 140; SuperscriptShiftUp 390 and Cramped 280,
+   SuperscriptBottomMin 134, SuperscriptBaselineDropMax 240, SuperscriptBottomMaxWithSubscript 430,
+   SubSuperscriptGapMin 160, SpaceAfterScript 40; UpperLimitGapMin 100, UpperLimitBaselineRiseMin 244, LowerLimitGapMin
+   100, LowerLimitBaselineDropMin 630; StretchStackTopShiftUp 244, StretchStackBottomShiftDown 559,
+   StretchStackGapAboveMin and GapBelowMin 100; OverbarVerticalGap and UnderbarVerticalGap 150, OverbarExtraAscender
+   and UnderbarExtraDescender 71; RadicalVerticalGap 89, RadicalDisplayStyleVerticalGap 190, RadicalRuleThickness 71,
+   RadicalExtraAscender 71, RadicalKernBeforeDegree 51, RadicalKernAfterDegree -450, RadicalDegreeBottomRaisePercent
+   56; DisplayOperatorMinHeight 2300. Its OS/2 table sets USE_TYPO_METRICS, with typographic ascent 1069 and descent
+   423, and Windows ascent 3105 and descent 2550. */
 @font-face {
     font-family: "PR Noto Sans Math";
     src: url(../../../third_party/fonts/NotoSansMath.ttf) format("truetype");

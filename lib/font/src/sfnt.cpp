@@ -6,6 +6,7 @@
 
 #include "pr/raw_array.h"
 #include "pr/search.h"
+#include "pr/sort.h"
 #include "pr/utf8.h"
 
 namespace pr_impl {
@@ -299,7 +300,9 @@ uint8_t SfntTable::uint8At(uint32_t at) const {
 }
 
 uint16_t SfntTable::uint16At(uint32_t at) const {
-    return uint16_t(uint8At(at) << 8 | uint8At(at + 1));
+    if (data == nullptr || at >= size || size - at < 2)
+        return 0;
+    return uint16_t(data[at] << 8 | data[at + 1]);
 }
 
 int16_t SfntTable::int16At(uint32_t at) const {
@@ -313,7 +316,9 @@ uint32_t SfntTable::uint24At(uint32_t at) const {
 }
 
 uint32_t SfntTable::uint32At(uint32_t at) const {
-    return uint32_t(uint16At(at)) << 16 | uint16At(at + 2);
+    if (data == nullptr || at >= size || size - at < 4)
+        return 0;
+    return uint32_t(data[at]) << 24 | uint32_t(data[at + 1]) << 16 | uint32_t(data[at + 2]) << 8 | data[at + 3];
 }
 
 float SfntTable::fixed(uint32_t at) const {
@@ -807,7 +812,7 @@ bool sfntCmapSequencesOpen(const Sfnt& sfnt, SfntCmapSequences* out) {
         if (candidate.uint16At(0) == 14)
             subtable = candidate;
     }
-    // The subtable is its length, which must hold its header and its records.
+    // The subtable ends where its length field says, and the length must hold the header.
     uint32_t length = subtable.uint32At(2);
     if (subtable.data == nullptr || length < 10 || length > subtable.size)
         return false;
@@ -945,6 +950,123 @@ bool sfntGlyphSvg(const Sfnt& sfnt, uint32_t glyph, SfntTable* document, uint32_
         return true;
     }
     return false;
+}
+
+uint32_t sfntCoverageIndex(SfntTable coverage, uint32_t glyph) {
+    // Both formats list their entries in increasing glyph order. A table out of order finds wrong entries, never
+    // entries past its end.
+    uint16_t format = coverage.uint16At(0);
+    if (format == 1) {
+        uint32_t low = 0;
+        uint32_t high = entriesIn(coverage, 4, 2, coverage.uint16At(2));
+        while (low < high) {
+            uint32_t middle = low + (high - low) / 2;
+            uint32_t at = coverage.uint16At(4 + middle * 2);
+            if (at == glyph)
+                return middle;
+            if (at < glyph)
+                low = middle + 1;
+            else
+                high = middle;
+        }
+    } else if (format == 2) {
+        uint32_t low = 0;
+        uint32_t high = entriesIn(coverage, 4, 6, coverage.uint16At(2));
+        while (low < high) {
+            uint32_t middle = low + (high - low) / 2;
+            uint32_t record = 4 + middle * 6;
+            uint32_t start = coverage.uint16At(record);
+            uint32_t end = coverage.uint16At(record + 2);
+            if (glyph < start)
+                high = middle;
+            else if (glyph > end)
+                low = middle + 1;
+            else
+                return coverage.uint16At(record + 4) + (glyph - start);
+        }
+    }
+    return kSfntCoverageMissing;
+}
+
+void sfntFeatureSubstitutionsBuild(const Sfnt& sfnt, SfntFeatureSubstitutions* out) {
+    SfntTable gsub = sfntTable(sfnt, kGsub);
+    if (gsub.size < 10)
+        return;
+    SfntTable features = gsub.from(gsub.uint16At(6));
+    SfntTable lookups = gsub.from(gsub.uint16At(8));
+    uint32_t lookupCount = entriesIn(lookups, 2, 2, lookups.uint16At(0));
+    uint32_t featureCount = entriesIn(features, 2, 6, features.uint16At(0));
+    // The feature records by tag, and in their order among the records of a tag.
+    struct Record {
+        uint32_t tag;
+        uint32_t index;
+    };
+    RawArray<Record> records;
+    for (uint32_t f = 0; f < featureCount; ++f)
+        records.push(Record{features.uint32At(2 + f * 6), f});
+    sortItems(Span<Record>(records.data, records.count), [](const Record& a, const Record& b) {
+        return a.tag != b.tag ? a.tag < b.tag : a.index < b.index;
+    });
+    for (uint32_t n = 0; n < records.count; ++n) {
+        const Record& r = records.data[n];
+        if (out->tags.count == 0 || out->tags.data[out->tags.count - 1] != r.tag) {
+            out->tags.push(r.tag);
+            out->starts.push(out->subtables.count);
+        }
+        SfntTable table = features.from(features.uint16At(2 + r.index * 6 + 4));
+        uint32_t indices = entriesIn(table, 4, 2, table.uint16At(2));
+        for (uint32_t i = 0; i < indices; ++i) {
+            uint32_t index = table.uint16At(4 + i * 2);
+            if (index >= lookupCount)
+                continue;
+            SfntTable lookup = lookups.from(lookups.uint16At(2 + index * 2));
+            uint16_t type = lookup.uint16At(0);
+            uint32_t subtables = entriesIn(lookup, 6, 2, lookup.uint16At(4));
+            for (uint32_t k = 0; k < subtables; ++k) {
+                SfntTable sub = lookup.from(lookup.uint16At(6 + k * 2));
+                uint16_t subType = type;
+                // An extension lookup holds its subtables at 32-bit offsets (OpenType GSUB, LookupType 7).
+                if (type == 7) {
+                    subType = sub.uint16At(2);
+                    sub = sub.from(sub.uint32At(4));
+                }
+                if (subType == 1 || subType == 3)
+                    out->subtables.push(SfntSubstitution{sub, subType});
+            }
+        }
+    }
+    out->starts.push(out->subtables.count);
+    records.reset();
+}
+
+void sfntFeatureSubstitutionsReset(SfntFeatureSubstitutions* substitutions) {
+    substitutions->tags.reset();
+    substitutions->starts.reset();
+    substitutions->subtables.reset();
+}
+
+uint32_t sfntFeatureGlyph(const SfntFeatureSubstitutions& substitutions, uint32_t feature, uint32_t glyph) {
+    uint32_t at = lowerBound(Span<const uint32_t>(substitutions.tags.data, substitutions.tags.count), feature);
+    if (at == substitutions.tags.count || substitutions.tags.data[at] != feature)
+        return glyph;
+    for (uint32_t i = substitutions.starts.data[at]; i < substitutions.starts.data[at + 1]; ++i) {
+        SfntTable sub = substitutions.subtables.data[i].subtable;
+        uint16_t type = substitutions.subtables.data[i].type;
+        uint16_t format = sub.uint16At(0);
+        uint32_t covered = sfntCoverageIndex(sub.from(sub.uint16At(2)), glyph);
+        if (covered == kSfntCoverageMissing)
+            continue;
+        if (type == 1 && format == 1)
+            return (glyph + uint32_t(sub.int16At(4))) & 0xFFFFu;
+        if (type == 1 && format == 2 && covered < entriesIn(sub, 6, 2, sub.uint16At(4)))
+            return sub.uint16At(6 + covered * 2);
+        if (type == 3 && format == 1 && covered < entriesIn(sub, 6, 2, sub.uint16At(4))) {
+            SfntTable set = sub.from(sub.uint16At(6 + covered * 2));
+            if (entriesIn(set, 2, 2, set.uint16At(0)) != 0)
+                return set.uint16At(2);
+        }
+    }
+    return glyph;
 }
 
 } // namespace pr_impl

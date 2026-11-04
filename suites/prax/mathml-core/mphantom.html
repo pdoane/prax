@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mphantom</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.7 Making Sub-Expressions Invisible &lt;mphantom&gt;</div>
+  <h1>mphantom</h1>
+  <p class=pr-lede><q>The user agent stylesheet must contain the following rule in order to hide the content:</q> <code>mphantom {
+  visibility: hidden; }</code> <q>Its layout algorithm is the same as the mrow element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#making-sub-expressions-invisible-mphantom">MathML Core §3.3.7</a></span></p>
+</header>
+
+<section>
+  <h2>Invisible, taking room</h2>
+  <figure>
+    <div class="pr-stage"><math><mfrac><mrow><mi>x</mi><mo>+</mo><mi>y</mi><mo>+</mo><mi>z</mi></mrow><mrow><mi>x</mi><mphantom><mo form=infix>+</mo><mi>y</mi></mphantom><mo>+</mo><mi>z</mi></mrow></mfrac></math></div>
+    <figcaption>The specification's example: x + y + z over x + z, the denominator's x and z under the numerator's, a gap where "+ y" is hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mphantom mathbackground=#f6d7b4><mi>x</mi></mphantom><mi>y</mi><mphantom><mi style="visibility: visible">z</mi></mphantom></math></div>
+    <figcaption>An <code>mphantom</code> with a background: hidden too, an empty space, then y; then z, made visible again inside one.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,5 +1,7 @@
 #include "html/src/html_document.h"
 
+#include "pr/mathml.h"
+
 #include "dom/src/dom_hooks.h"
 #include "dom/src/dom_node.h"
 #include "html/src/html_boxes.h"
@@ -26,6 +28,8 @@ void htmlEnable(PrDomDocument* document) {
         return;
     cssHintsProvide(document, PrDomNamespace_Html, htmlHints());
     cssBoxesProvide(document, PrDomNamespace_Html, htmlBoxes());
+    // HTML holds MathML content (html/#mathml).
+    prMathMlEnable(document);
     // The links that the document already holds take their sheets, as if the parser had just inserted them.
     for (PrDomNode* node = document->first; node != nullptr; node = domNodeNext(document, node)) {
         if (PrDomElement* element = domElementFromNode(node))

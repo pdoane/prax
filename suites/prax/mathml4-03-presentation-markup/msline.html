@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>msline: lines in a stack</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.6.7 Horizontal Line &lt;msline/&gt;</div>
+  <h1>msline: lines in a stack</h1>
+  <p class=pr-lede><q>msline draws a horizontal line inside of an mstack element. The position, length, and thickness of the line
+  are specified as attributes. If the length is specified, the line is positioned and drawn as if it were a number
+  with the given number of digits.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#horizontal-line-msline">MathML 4 §3.6.7</a></span></p>
+</header>
+
+<section>
+  <h2>Length, position and thickness</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mstack><mn>12345</mn><msline /><mn>678</mn></mstack></math></div>
+    <figcaption>No attributes: a line under the whole stack. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No line.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mstack><mn>12345</mn><msline length=2 /><mn>678</mn></mstack></math></div>
+    <figcaption><code>length="2"</code>: a line under the 4 and 5 only. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No line.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mstack><mn>12345</mn><msline length=2 position=2 mslinethickness=thick mathcolor=#c0392b /><mn>678</mn></mstack></math></div>
+    <figcaption><code>position="2"</code>, thick and red: under the 2 and 3. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

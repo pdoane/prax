@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Operator form and spacing attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .tint :is(mi, mn, mtext) { background: #dde7f3; }
+  .tint mo { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.4.2 Dictionary-based attributes</div>
+  <h1>Operator form and spacing attributes</h1>
+  <p class=pr-lede><q>If the embellished operator is the first in-flow child of a grouping element, mpadded or msqrt with more than
+  one in-flow child (ignoring all space-like children) then it has form prefix. Or, if the embellished operator is the
+  last in-flow child […] then it has form postfix.</q> <q>Percentage values for lspace, rspace are interpreted
+  relative to the value read from the dictionary</q>. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#dictionary-based-attributes">MathML Core §3.2.4.2</a></span> Tokens
+  are tinted, operators orange; at 36px, 1/18em is 2px.</p>
+</header>
+
+<section>
+  <h2>The form from the position</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>x</mi><mo>=</mo><mrow><mo>−</mo><mi>b</mi></mrow><mo>−</mo><mi>c</mi></math></div>
+    <figcaption>The first − begins its row: prefix, no space; the second is between <i>b</i> and <i>c</i>: infix, 8px each side.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>n</mi><mo>!</mo><mo>=</mo><mi>n</mi><mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo><mo>!</mo></math></div>
+    <figcaption>Each ! is last in its row or follows a fence, and the postfix entry gives it no space.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Attributes</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>a</mi><mo form=prefix>−</mo><mi>b</mi><mo lspace=20px rspace=0px>+</mo><mi>c</mi><mo lspace=50% rspace=150%>+</mo><mi>d</mi></math></div>
+    <figcaption><code>form="prefix"</code>: − with no space; <code>lspace="20px" rspace="0px"</code>: 20px before + and none after; <code>50%</code> and <code>150%</code> of 8px: 4px and 12px.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>a</mi><msup><mo>+</mo><mo>′</mo></msup><mi>b</mi></math></div>
+    <figcaption>+′, an <code>msup</code> on +, is an embellished operator: the 8px are around the whole <code>msup</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mtd: cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+  .pr-stage mtd { border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.5.3 Entry in Table or Matrix &lt;mtd&gt;</div>
+  <h1>mtd: cells</h1>
+  <p class=pr-lede><q>The mtd is laid out as a table-cell with content centered in the cell and a default padding.</q>
+  <code>mtd { text-align: center; padding: 0.5ex 0.4em; }</code> <q>The columnspan (respectively rowspan) attribute has
+  the same syntax and semantics as the colspan (respectively rowspan) attribute on the &lt;td&gt; element</q> <q>The
+  &lt;mtd&gt; element generates an anonymous &lt;mrow&gt; box.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#entry-in-table-or-matrix-mtd">MathML Core §3.5.3</a></span></p>
+</header>
+
+<section>
+  <h2>Centered, padded, spanning</h2>
+  <figure>
+    <div class="pr-stage"><math><mtable><mtr><mtd><mn>1</mn></mtd><mtd><mn>2</mn></mtd><mtd><mn>3</mn></mtd></mtr><mtr><mtd columnspan=2><mn>4</mn></mtd><mtd rowspan=2><mn>5</mn></mtd></mtr><mtr><mtd><mn>6</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption>1 2 3 across; 4 spans the first two columns, centered; 5 spans two rows, centered between them; 6 and 7 below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mtable><mtr><mtd><mn>1</mn></mtd><mtd style="padding: 0"><mn>1</mn></mtd></mtr></mtable></math></div>
+    <figcaption>The default padding, half an x-height above and below, 0.4em each side; then a cell with none.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mtable><mtr><mtd><mo>[</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>]</mo></mtd><mtd><mi>x</mi><mo>+</mo><mi>y</mi></mtd></mtr></mtable></math></div>
+    <figcaption>A cell's children form a row: the brackets stretch to the fraction, and + is spaced.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

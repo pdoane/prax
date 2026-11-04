@@ -153,6 +153,10 @@ struct CssRoot {
     const CssHintProvider* PR_NULLABLE hintProviders[kCssProviderNamespaces];
     const CssBoxProvider* PR_NULLABLE boxProviders[kCssProviderNamespaces];
 
+    // For a document, a bit for each namespace by DomNamespaceId whose box provider refines its elements' records
+    // (CssBoxProvider::record), so that projecting an element of any other namespace asks no provider.
+    uint32_t refiningSpaces;
+
     // For a document, its presentation and the hooks that the presentation gives it, or null if it has none.
     const CssPresentationHooks* PR_NULLABLE presentationHooks;
     void* PR_NULLABLE presentation;

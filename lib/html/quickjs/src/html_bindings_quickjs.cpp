@@ -1125,14 +1125,14 @@ JSValue setAttributeString(JSContext* ctx, JSValueConst elementObject, JSValueCo
 // HTMLHyperlinkElementUtils (html/#api-for-a-and-area-elements), each attribute named by its PrUrlComponent
 
 JSValue hyperlinkComponent(JSContext* ctx, JSValueConst elementObject, int magic) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     return jsTakeString(ctx, prHtmlHyperlinkComponent(element, PrUrlComponent(magic)));
 }
 
 JSValue setHyperlinkComponent(JSContext* ctx, JSValueConst elementObject, JSValueConst input, int magic) {
-    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
     StringArgument value = {ctx};
     if (element == nullptr || !value.read(input))
         return JS_EXCEPTION;
@@ -3443,6 +3443,13 @@ constexpr JSCFunctionListEntry kCanvasElementProto[] = {
         PR_HYPERLINK("pathname", PrUrlComponent_Pathname), PR_HYPERLINK("search", PrUrlComponent_Search),           \
         PR_HYPERLINK("hash", PrUrlComponent_Hash), PR_JS_METHOD("toString", 0, hyperlinkToString)
 
+// The members that HTML adds to MathML's a element, which are its target and HyperlinkElementUtils
+// (mathml-core/#the-a-element).
+constexpr JSCFunctionListEntry kMathMlAnchorElementProto[] = {
+    PR_REFLECT_STRING("target", "target"),
+    PR_HYPERLINK_UTILS,
+};
+
 constexpr JSCFunctionListEntry kAnchorElementProto[] = {
     PR_JS_TAG("HTMLAnchorElement"),
     PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
@@ -4163,6 +4170,14 @@ void jsHtmlBind(JSContext* ctx) {
     // The interface object of Document also goes by the name that browsers give HTML documents.
     JS_DefinePropertyValueStr(ctx, global, "HTMLDocument", JS_GetPropertyStr(ctx, global, "Document"),
         JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
+    // The members of MathML's a element that HTML's hyperlinks share, if the realm binds MathML.
+    JSValue mathMlAnchor = JS_GetPropertyStr(ctx, global, "MathMLAnchorElement");
+    if (JS_IsObject(mathMlAnchor)) {
+        JSValue proto = JS_GetPropertyStr(ctx, mathMlAnchor, "prototype");
+        JS_SetPropertyFunctionList(ctx, proto, kMathMlAnchorElementProto, int(countOf(kMathMlAnchorElementProto)));
+        JS_FreeValue(ctx, proto);
+    }
+    JS_FreeValue(ctx, mathMlAnchor);
     // HTMLOrSVGElement's members, on the elements of the foreign modules that the realm binds.
     constexpr const char* kForeign[] = {"SVGElement", "MathMLElement"};
     for (const char* foreign : kForeign) {

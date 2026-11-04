@@ -19,7 +19,7 @@ pr_library(svg INCLUDE include
 )
 target_link_libraries(pr_svg PUBLIC prax::dom prax::css  prax::draw prax::text prax::font prax::layout
                                     prax::color prax::compress prax::image
-                             PRIVATE prax::core_cpp prax::path prax::url prax::geom prax::unicode prax::locale)
+                             PRIVATE prax::core_cpp prax::mathml prax::path prax::url prax::geom prax::unicode prax::locale)
 
 if (PR_JS)
     pr_library(svg_quickjs INCLUDE quickjs/include

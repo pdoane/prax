@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mtable: columnalign and rowalign</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 18px; }
+  .pr-stage mtd { outline: 1px solid #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.5.1 Table or Matrix &lt;mtable&gt;</div>
+  <h1>mtable: columnalign and rowalign</h1>
+  <p class=pr-lede>rowalign: <q>top aligns the tops of each entry across the row; bottom aligns the bottoms of the cells, center
+  centers the cells; baseline aligns the baselines of the cells; axis aligns the axis of each cells.</q> columnalign:
+  <q>left aligns the left side of the cells; center centers each cells; right aligns the right side of the cells.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/mathml/#table-or-matrix-mtable">MathML 4 §3.5.1</a></span> Each table has a row of 1 and ⅔ and a row of 456 and 7, its
+  cells outlined.</p>
+</header>
+
+<section>
+  <h2>Columns</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable columnalign=left><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>columnalign="left"</code>: 1 and 7 at the left of their columns. <span class=pr-flag>Chrome</span> Centered.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable columnalign="right left"><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>"right left"</code>: the first column right, the second left. <span class=pr-flag>Chrome</span> Centered.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable><mtr columnalign=right><mtd><mn>1</mn></mtd><mtd><mn>2</mn></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>789</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>columnalign</code> on the first <code>mtr</code>: its cells right. <span class=pr-flag>Chrome</span> Centered.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable rowalign=top><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>rowalign="top"</code>: 1 at the top of its row. <span class=pr-flag>Chrome</span> On the baseline.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable rowalign=bottom><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>bottom</code>: 1 at the bottom. <span class=pr-flag>Chrome</span> On the baseline.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable rowalign=axis><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>axis</code>: 1's middle level with the bar. <span class=pr-flag>Chrome</span> On the baseline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

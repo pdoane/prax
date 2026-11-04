@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Assemblies from Unicode pieces</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+  .pr-stage math { font-family: 'PR Noto Sans', 'PR Noto Sans Math'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · B.4 Unicode-based Glyph Assemblies</div>
+  <h1>Assemblies from Unicode pieces</h1>
+  <p class=pr-lede><q>The following table provides fallback that user agents may use for stretching a given base character when
+  the font does not provide a MATH.MathVariants table.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#unicode-based-glyph-assemblies">MathML Core §B.4</a></span> A fallback the user agent may use: no browser is flagged.</p>
+</header>
+
+<section>
+  <h2>Fences in a font with no MATH table</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><mo>(</mo><mtable><mtr><mtd><mn>1</mn></mtd></mtr><mtr><mtd><mn>2</mn></mtd></mtr><mtr><mtd><mn>3</mn></mtd></mtr></mtable><mo>)</mo><mo>{</mo><mtable><mtr><mtd><mn>1</mn></mtd></mtr><mtr><mtd><mn>2</mn></mtd></mtr><mtr><mtd><mn>3</mn></mtd></mtr></mtable><mo>}</mo></math></div>
+    <figcaption>Parentheses and braces around three rows, in PR Noto Sans: either built from the pieces ⎛ ⎜ ⎝ and ⎧ ⎨ ⎩ ⎪ of a font that has them, PR Noto Sans Math here, or left at text size.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

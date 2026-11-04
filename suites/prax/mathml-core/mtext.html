@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mtext: text as itself</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.1 Text &lt;mtext&gt;</div>
+  <h1>mtext: text as itself</h1>
+  <p class=pr-lede><q>The mtext element is used to represent arbitrary text that should be rendered as itself. In general, the
+  &lt;mtext&gt; element is intended to denote commentary text.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#text-mtext">MathML Core §3.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Words in a formula</h2>
+  <figure>
+    <div class="pr-stage"><math><mi>y</mi><mo>=</mo><msup><mi>x</mi><mn>2</mn></msup><mtext>&nbsp;if&nbsp;</mtext><mi>x</mi><mo>≥</mo><mn>1</mn></math></div>
+    <figcaption>The specification's example: "y = x² if x ≥ 1", the "if" upright, in the formula's font, with the spaces the text holds.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mtext>x</mtext><mi>x</mi></math></div>
+    <figcaption>x as <code>mtext</code>, then as <code>mi</code>: the first upright, the second italic.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

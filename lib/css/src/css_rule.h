@@ -306,8 +306,9 @@ CssEditResult cssMediaListPrepareDelete(CssEdit* edit, const CssMediaQueries* li
 // Commits a prepared change to a media list.
 void cssMediaListCommit(CssEdit* edit, CssMediaQueries* list);
 
-// Replaces the block's declarations with the ones in `text` (cssom-1/#parse-a-css-declaration-block).
-void cssDeclarationBlockParse(CssDeclarationBlock* block, PrStringView text, CssParserSlot slot);
+// Replaces the block's declarations with the ones in `text` (cssom-1/#parse-a-css-declaration-block). Text of an origin
+// other than the author's is the engine's own, which may name its private keywords (CssMatchState::engine).
+void cssDeclarationBlockParse(CssDeclarationBlock* block, PrStringView text, CssParserSlot slot, CssOrigin origin);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Declarations

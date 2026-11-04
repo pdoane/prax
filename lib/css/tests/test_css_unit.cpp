@@ -5,6 +5,7 @@
 
 #include "tools/harness/test.h"
 
+#include <cmath>
 #include <initializer_list>
 
 namespace pr_impl {
@@ -56,6 +57,21 @@ TEST_CASE("text no unit matches is unknown") {
     }
     CHECK(cssUnitCategory(PrCssUnit_Number) == CssUnitCategory_Number);
     CHECK(cssUnitCategory(PrCssUnit_Unknown) == CssUnitCategory_Unknown);
+}
+
+TEST_CASE("a change of math-depth past a double's range scales by a finite factor") {
+    CssStyleContext context{};
+    context.font = cssFontBases(16, 20);
+    CHECK(cssMathDepthScale(context, 0, 2) == doctest::Approx(0.5041));
+    CHECK(cssMathDepthScale(context, 2, 0) == doctest::Approx(1 / 0.5041));
+    double up = cssMathDepthScale(context, 5000, 0);
+    CHECK(std::isfinite(up));
+    CHECK(up > 1);
+    double down = cssMathDepthScale(context, 0, 5000);
+    CHECK(std::isfinite(down));
+    CHECK(down >= 0);
+    CHECK(std::isfinite(cssMathDepthScale(context, -1000000000, 1000000000)));
+    CHECK(std::isfinite(cssMathDepthScale(context, 1000000000, -1000000000)));
 }
 
 TEST_CASE("a font metric is measured once in the bases' font, and takes its fallback where it cannot be") {

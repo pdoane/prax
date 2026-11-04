@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mtr: rows</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+  .pr-stage mtd { border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.5.2 Row in Table or Matrix &lt;mtr&gt;</div>
+  <h1>mtr: rows</h1>
+  <p class=pr-lede><q>The mtr is laid out as table-row.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#row-in-table-or-matrix-mtr">MathML Core §3.5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Rows of cells</h2>
+  <figure>
+    <div class="pr-stage"><math><mtable><mtr><mtd><mi>a</mi></mtd><mtd><mfrac><mn>1</mn><mn>2</mn></mfrac></mtd></mtr><mtr><mtd><mi>bb</mi></mtd><mtd><mi>c</mi></mtd></mtr></mtable></math></div>
+    <figcaption>Two rows: the first as tall as its fraction, the second as tall as its text; each column as wide as its widest cell.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mtable><mtr style="background: #f6d7b4"><mtd><mi>a</mi></mtd><mtd><mi>b</mi></mtd></mtr><mtr style="display: none"><mtd><mi>c</mi></mtd></mtr><mtr><mtd><mi>d</mi></mtd></mtr></mtable></math></div>
+    <figcaption>A row with a background, tinted across both cells; a row with <code>display: none</code>, gone; a third row of one cell.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

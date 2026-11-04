@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mrow: a row on one baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.1 Group Sub-Expressions &lt;mrow&gt;</div>
+  <h1>mrow: a row on one baseline</h1>
+  <p class=pr-lede><q>The child boxes are put in a row one after the other with all their alphabetic baselines aligned.</q>
+  <q>Because the box model ensures alignment of alphabetic baselines, fraction bars or symmetric stretchy operators
+  will also be aligned along the math axis in the typical case when AxisHeight is the same for all in-flow
+  children.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#horizontally-group-sub-expressions-mrow">MathML Core §3.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Baselines, and the axis</h2>
+  <figure>
+    <div class="pr-stage"><math><msup><mrow><mo>(</mo><mn>1</mn><mo>+</mo><mfrac><mn>2</mn><mn>3</mn></mfrac><mo>)</mo></mrow><mn>5</mn></msup></math></div>
+    <figcaption>The specification's example: (1 + 2/3)⁵, the parentheses stretched to the fraction, the bar level with the + bar, and the 5 raised from the whole group.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mi>a</mi><mrow><mi>b</mi><mi>c</mi></mrow><mrow></mrow><mi>d</mi></math></div>
+    <figcaption>abcd: a row in a row adds nothing, and an empty one is nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

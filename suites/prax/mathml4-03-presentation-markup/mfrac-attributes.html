@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mfrac: bevelled, numalign, denomalign</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.3.2 Fractions &lt;mfrac&gt;</div>
+  <h1>mfrac: bevelled, numalign, denomalign</h1>
+  <p class=pr-lede><q>numalign: Specifies the alignment of the numerator over the fraction.</q> <q>bevelled: Specifies whether the
+  fraction should be displayed in a bevelled style (the numerator slightly raised, the denominator slightly lowered
+  and both separated by a slash), rather than "build up" vertically.</q> <q>The default value is medium; thin is
+  thinner, but visible; thick is thicker.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#fractions-mfrac">MathML 4 §3.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Alignment of the numerator and denominator</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mfrac numalign=left><mn>1</mn><mn>12345</mn></mfrac><mfrac denomalign=right><mn>12345</mn><mn>2</mn></mfrac></math></div>
+    <figcaption><code>numalign="left"</code>: 1 at the left over 12345; <code>denomalign="right"</code>: 2 at the right under 12345. <span class=pr-flag>Chrome</span> Both centered.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Bevelled and named thicknesses</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mfrac bevelled=true><mn>1</mn><mrow><msup><mi>x</mi><mn>3</mn></msup><mo>+</mo><mn>1</mn></mrow></mfrac></math></div>
+    <figcaption><code>bevelled="true"</code>: 1, raised, then a slash, then x³ + 1, lowered, on one line. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> A stacked fraction.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mfrac linethickness=thin><mn>1</mn><mn>2</mn></mfrac><mfrac linethickness=medium><mn>1</mn><mn>2</mn></mfrac><mfrac linethickness=thick><mn>1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption><code>thin</code>, <code>medium</code>, <code>thick</code>: three bars, each thicker. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The same bar three times.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

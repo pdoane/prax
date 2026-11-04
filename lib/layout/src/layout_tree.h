@@ -83,7 +83,8 @@ struct LayoutTreeNode {
     uint32_t paintSubtree;
 
     uint32_t generation;            // raised when the node is freed, so that its old names name nothing (PrLayoutNode)
-    PrLayoutNodeKind kind;
+    PrLayoutNodeKind kind : 4;
+    PrLayoutRenderedFlags rendered : 4;
     LayoutDirtyFlags dirty : 5;
     bool live : 1;                 // true if the index names a node rather than a freed slot
     bool readsViewport : 1;        // its layout or intrinsic sizes read the viewport's extent, and it is listed
@@ -100,9 +101,13 @@ struct LayoutTreeNode {
     // It is kept when its record is set, because every walk over a container's children reads it.
     uint8_t childKind : 3;
 
+    // True if the table of its kind lists it. That table holds the elements that have a record for the first formatted
+    // line (LayoutTree::firstLines), or the text that has highlights (LayoutTree::highlights).
+    bool listed : 1;
+
     // Element: how its record lays out its children, as a LayoutChildren. layoutInItemContainer and layoutInTable read
     // it from a child's parent.
-    uint8_t children : 2;
+    uint8_t children : 3;
 
     // Element: `justifies` is set if its record sets a justify-self other than auto or normal, and `justifiesItems` if
     // it sets a justify-items other than normal, so that block layout reads neither if neither is set
@@ -121,12 +126,6 @@ struct LayoutTreeNode {
     // Element, Replaced: true if its record changed, since the last layout, a value whose change suppresses scroll
     // anchoring for an anchor in its subtree (LayoutAnchoring::suppressing).
     bool anchorSuppressed : 1;
-
-    // True if the table of its kind lists it: an element that has a record for the first formatted line
-    // (LayoutTree::firstLines), or text that has highlights (LayoutTree::highlights).
-    bool listed : 1;
-
-    PrLayoutRenderedFlags rendered : 4;
 };
 
 // Every node pays for each byte of the struct, so data that only one kind holds shares a union, or lives in a table of

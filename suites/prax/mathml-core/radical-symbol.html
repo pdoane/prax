@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The radical symbol</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.3.1 Radical symbol</div>
+  <h1>The radical symbol</h1>
+  <p class=pr-lede><q>The radical symbol must only be painted if the visibility of the &lt;msqrt&gt; or &lt;mroot&gt; element is
+  visible. In that case, the radical symbol must be painted with the color of that element.</q> <q>The radical
+  glyph is the glyph obtained as a result of running get a glyph corresponding to the U+221A SQUARE ROOT character
+  given dir.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#radical-symbol">MathML Core §3.3.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Color, visibility and direction</h2>
+  <figure>
+    <div class="pr-stage"><math><msqrt style="color: #c0392b"><mi style="color: #1f2430">x</mi></msqrt><msqrt style="visibility: hidden"><mi style="visibility: visible">y</mi></msqrt></math></div>
+    <figcaption>A red surd and rule over a black x; then y alone, its surd and rule hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math dir=rtl style="font-family: 'PR Noto Sans Math', 'PR Noto Sans Arabic'"><msqrt><mn>٢</mn></msqrt></math></div>
+    <figcaption><code>dir="rtl"</code>, in PR Noto Sans Math, which has an <code>rtlm</code> form of √: the digit two with the surd on its right, opening leftward.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mfrac: fractions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.2 Fractions &lt;mfrac&gt;</div>
+  <h1>mfrac: fractions</h1>
+  <p class=pr-lede><q>If the attribute is absent or has an invalid value, FractionRuleThickness is used as the default value. A
+  percentage is interpreted relative to that default value. A negative value is interpreted as 0.</q> <q>The
+  &lt;mfrac&gt; element sets displaystyle to false, or if it was already false increments scriptlevel by 1, within its
+  children.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#fractions-mfrac">MathML Core §3.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Nested fractions</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px; math-style: normal"><mi>φ</mi><mo>=</mo><mn>1</mn><mo>+</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><mo>⋱</mo></mrow></mfrac></mrow></mfrac></mrow></mfrac></math></div>
+    <figcaption>The golden ratio's continued fraction in display style: the outer fraction's parts compact, so each deeper fraction a level smaller, down to the smallest size.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px; math-style: normal"><mi>φ</mi><mo>=</mo><mn>1</mn><mo>+</mo><mfrac><mn>1</mn><mrow displaystyle=true><mn>1</mn><mo>+</mo><mfrac><mn>1</mn><mrow displaystyle=true><mn>1</mn><mo>+</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><mo>⋱</mo></mrow></mfrac></mrow></mfrac></mrow></mfrac></math></div>
+    <figcaption>The same with <code>displaystyle="true"</code> on each denominator's row: every level at full size, as continued fractions are usually set.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>linethickness</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 40px"><mfrac><mi>a</mi><mi>b</mi></mfrac><mfrac linethickness=200%><mi>a</mi><mi>b</mi></mfrac><mfrac linethickness=4px><mi>a</mi><mi>b</mi></mfrac><mfrac linethickness=-1px><mi>a</mi><mi>b</mi></mfrac></math></div>
+    <figcaption>The default, then <code>200%</code> of it, then <code>4px</code>, then <code>-1px</code>, taken as 0: no bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

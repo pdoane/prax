@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The math element resets what it inherits</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 0 6px; box-sizing: border-box; font-size: 20px; line-height: 40px; }
+  .loud { font-family: "PR Noto Sans Mono"; font-style: italic; font-weight: bold; letter-spacing: 6px;
+          word-spacing: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.1.1 The Top-Level &lt;math&gt; Element</div>
+  <h1>The math element resets what it inherits</h1>
+  <p class=pr-lede><q>the user agent stylesheet should set the font-family to the math value on the &lt;math&gt;
+  element instead of inheriting it.</q> <q>several CSS properties that can be set on a parent container such as
+  font-style, font-weight, direction or text-indent etc are not expected to apply to the math formula and so the user
+  agent stylesheet has rules to reset them by default.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#the-top-level-math-element">MathML Core §2.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Font and spacing</h2>
+  <p>Each block is italic, bold and monospace, with 6px letter spacing and 20px word spacing.</p>
+  <figure>
+    <div class="pr-stage loud">a b <math><mtext>a b</mtext><mo>+</mo><mi>sin</mi></math></div>
+    <figcaption>The block's "a b" spread, bold italic monospace; the formula's "a b", +, "sin" upright, regular, in
+    the <code>math</code> family, a serif math font, with no extra spacing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage loud" style="text-indent: 30px"><math display=block><mtable><mtr><mtd><mtext>x<br>y</mtext></mtd></mtr></mtable></math></div>
+    <figcaption><code>text-indent: 30px</code> on the block: the block math's lines, x over y in a cell, not
+    indented, centered.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Direction and line height</h2>
+  <figure>
+    <div class=pr-stage style="direction: rtl"><math><mn>1</mn><mo>−</mo><mn>2</mn></math></div>
+    <figcaption>The block is <code>rtl</code>; the formula is <code>ltr</code>: "1 − 2" reading left to right,
+    at the block's start, its right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="line-height: 80px"><math><mtable><mtr><mtd><mtext>a</mtext></mtd></mtr><mtr><mtd><mtext>b</mtext></mtd></mtr></mtable></math></div>
+    <figcaption>The block's <code>line-height</code> is 80px; the formula's is <code>normal</code>, so the table's
+    two rows sit close, as the font's own line spacing puts them, not 80px apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

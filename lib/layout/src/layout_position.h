@@ -21,11 +21,12 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr_impl {
 
 // The part of a box that a static position aligns in one logical axis of its static context: its start edge, its end
-// edge, or its center.
+// edge, its center, or its first baseline.
 enum {
     LayoutStaticAlign_Start,
     LayoutStaticAlign_End,
     LayoutStaticAlign_Center,
+    LayoutStaticAlign_Baseline,
 };
 typedef uint8_t LayoutStaticAlign;
 

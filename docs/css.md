@@ -81,14 +81,16 @@ tree's context.
 ## The cascade (`css_cascade.h`)
 
 A rule set files each complex selector of a document's style rules under the most selective feature of its subject
-compound (an ID, a class, an attribute or a type), or with the universal entries. An element matches the entries filed
-under its own features and the universal entries. An entry also keeps up to four features that the subject's ancestors
-must carry: IDs, classes and attribute names first, then types. They come from the compounds that the selector reaches
-through descendant and child combinators. A Bloom filter of the features of an element's ancestors rejects, without
-walking the ancestors, the entries whose ancestor requirements cannot match. The cascade sorts the matches by origin,
-importance, layer, specificity and order, and the last declaration of each longhand wins. A `revert` rolls a longhand
-back to the declarations of the origin before its own. A `revert-layer` rolls it back to the declarations of the layer
-before its own.
+compound: an ID, a class, an attribute or a type. A subject with none of these features may still require a namespace,
+as the selectors of a sheet with a default namespace do. If that namespace is the null namespace, HTML, MathML or SVG,
+the selector is filed under it. Every other selector is filed with the universal entries. An element matches the entries
+filed under its own features, those filed under its namespace, and the universal entries. An entry also keeps up to four
+features that the subject's ancestors must carry: IDs, classes and attribute names first, then types. They come from the
+compounds that the selector reaches through descendant and child combinators. A Bloom filter of the features of an
+element's ancestors rejects, without walking the ancestors, the entries whose ancestor requirements cannot match. The
+cascade sorts the matches by origin, importance, layer, specificity and order, and the last declaration of each longhand
+wins. A `revert` rolls a longhand back to the declarations of the origin before its own. A `revert-layer` rolls it back
+to the declarations of the layer before its own.
 
 An `@import` files the imported sheet's rules in the layer that its `layer` or `layer()` names
 (css-cascade-5/#at-import). An import whose `supports()` condition fails applies nothing, though its sheet is still
@@ -255,12 +257,16 @@ on the caller's thread. `prCssPresentationVerify` checks an update against one f
 `prCssPresentationStats` counts what the update did. A browsing context renders its document if its host gives a default
 text font and a shaper, and `getComputedStyle` reads the presentation.
 
-Some of what a box is comes from the element's markup, not its style: whether it is replaced, a line break, a button
-or a text field, the columns that a table cell spans, whether `display: contents` generates nothing, and the page's
-supported color schemes. Each markup language gives the document's CSS a provider for its namespace (`css_boxes.h`),
-as it gives one for its hints, and the presentation asks it as it projects an element. A provider names the tags that
-it answers for, so the elements of every other tag cost a projection no call. The content of outermost svg elements is
-lib/svg's, which fills the presentation's records of them (`css_presentation_svg.h`, [svg.md](svg.md)).
+Some of what a box is comes from the element's markup, not its style: whether it is replaced, a line break, a button or
+a text field, the columns that a table cell spans, whether `display: contents` generates nothing, and the page's
+supported color schemes. Each markup language gives the document's CSS a provider for its namespace (`css_boxes.h`), as
+it gives one for its hints, and the presentation asks it as it projects an element. A provider names the tags that it
+answers for, so the elements of every other tag cost a projection no call. A provider may also refine the layout record
+that an element's style projects to, with what the element's markup and surroundings give layout. It then names the
+elements whose records a change reaches, whether the change is to an element's children or attributes or to a child's
+style, and the presentation projects those elements again. lib/css knows no language's elements, and HTML, SVG and
+MathML each give their own providers. The content of outermost svg elements is lib/svg's, which fills the presentation's
+records of them (`css_presentation_svg.h`, [svg.md](svg.md)).
 
 The presentation renders the flat tree (css-shadow-1/#flattening, `dom_flat.h`): a shadow host's children are its shadow
 root's, a slot's are its assigned nodes or else its own children, and a light child that no slot takes is not
@@ -434,5 +440,43 @@ A pseudo-element that the presentation generates animates as an element does, wi
 its own. Its base style decides whether it exists, so an animation that takes its box away keeps it and its animations,
 and a base style that generates nothing cancels them. Its events go to the originating element, and name the
 pseudo-element.
+
+## MathML
+
+`lib/mathml` holds MathML's element model. It decides which elements are which, their in-flow children, the layout
+that their children make them take, and which are embellished operators, with their properties from the operator
+dictionary. It parses their attributes by MathML Core's grammars and MathML 4's (`mathml_element.h`,
+`mathml_operator.h`, `mathml_attribute.h`).
+`tools/gen/gen_mathml.py` generates the dictionary from MathML Core's tables, with the accent property from MathML 3's
+(`mathml_dictionary.h`). `prMathMlEnable` gives a document's CSS MathML's providers of hints (`mathml_hints.h`) and of
+boxes (`mathml_boxes.h`). HTML and SVG documents enable MathML as they enable their own namespaces, because both hold
+MathML content.
+
+MathML's box provider projects each MathML element's box onto layout's math group (`PrLayoutMathStyle`). The group
+holds the algorithm of its math box, its attributes resolved against its computed style, and an embellished operator's
+properties resolved against its core operator's style. The computed styles of the children in the presentation decide
+which of them are in flow (mathml-core/#layout-algorithms). A change to an element's children, or to a child's style
+that takes the child in or out of flow, projects again the element, its MathML ancestors and their children, since it
+can change their embellishment and their operators' forms. A change to a token's text or to an element's attributes
+changes its content alone, and projects again the element, its MathML ancestors, and the children of an munder, mover
+or munderover among them, whose base reads its accent. Neither reaches past a table cell, nor across the rows and cells
+of a table, which read neither one another nor what is in them. A change to the attributes of a math element, an mstyle
+or elementary math also projects again the MathML elements below it.
+
+- MathML Core's attributes that are presentational hints map to `direction`, `color`, `background-color`, `font-size`,
+  `math-style`, `math-depth`, `text-transform`, and the sizes of mspace and mpadded. MathML 4's table attributes give the
+  cells of an mtable their alignment, padding and lines, and the table its frame, so that CSS's table layout lays out the
+  table. A table's or a row's attribute reaches the hints of its cells, and an accent attribute those of its parts
+  (`CssHintReach_Readers`, `CssHintProvider::readers`), which are built again and restyle those elements alone.
+- An absent accent or accentunder of an munder, mover or munderover is the accent of the script's core operator, as
+  MathML 4 defaults it, which is the mo's attribute or the dictionary's property (`mathMlUnderOverAccents`). The script
+  and the base then take as hints the rules that the user agent's sheet gives them when the attribute is present.
+- An attribute that MathML 4 lets an enclosing mstyle default, such as an mfrac's linethickness or an mo's stretchy, is
+  read through the mstyle (`mathMlInheritedValue`).
+- A token's mathvariant other than normal is a trait that its markup gives its box (`CssBoxTraits::textTransform`). It
+  sets the token's text in a style of the Mathematical Alphanumeric Symbols, which no CSS value expresses.
+- `math-style`, `math-depth` and `math-shift` are in the font group, before `font-size`, which `font-size: math` scales
+  by the change of math-depth from the parent's. The scale reads the MATH table of the parent's first available font
+  through the producer of styles (`CssFontMetric_ScriptPercentScaleDown`), so a style that scales reads font metrics.
 
 Suites: `css-parsing` (the tokenizer and consume algorithms, tested directly) and `css-wpt`.

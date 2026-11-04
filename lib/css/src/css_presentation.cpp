@@ -15,6 +15,7 @@
 #include "pr/count_of.h"
 #include "pr/draw_list.h"
 #include "pr/float.h"
+#include "pr/font_math.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
 #include "pr/layout_query.h"
@@ -23,11 +24,13 @@
 #include "pr/mem.h"
 #include "pr/sort.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 #include "pr/text_break.h"
 #include "pr/text_buffer.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 #include "pr/url.h"
+#include "pr/utf8.h"
 
 #include "css/src/css_animation.h"
 #include "css/src/css_boxes.h"
@@ -263,6 +266,9 @@ PrLayoutDisplay displayOf(CssValueRun run) {
         case PrCssKeyword_TableCaption: return PrLayoutDisplay_TableCaption;
         default: break;
     }
+    // Only a MathML element keeps a math display, which gives a math box (mathml-core/#new-display-math-value).
+    if (hasKeyword(run, PrCssKeyword_Math))
+        return hasKeyword(run, PrCssKeyword_Block) ? PrLayoutDisplay_BlockMath : PrLayoutDisplay_InlineMath;
     if (hasKeyword(run, PrCssKeyword_Inline) || hasKeyword(run, PrCssKeyword_Contents) || rubyDisplay(run))
         return PrLayoutDisplay_Inline;
     if (hasKeyword(run, PrCssKeyword_FlowRoot))
@@ -1100,7 +1106,8 @@ PrTextFont* textFontOf(PrCssPresentation* r, const CssComputedStyle* style) {
 // Measures a metric of the font that `style` sets, for the cascade (CssFontMeasure), in the presentation's measuring
 // text fonts, brought up to date with the document's fonts. The x-height and cap height are those of the first
 // available face, and a face with no cap height measures its ascent (css-values-4/#cap). An advance is that of the
-// glyph in the face that sets the character.
+// glyph in the face that sets the character. The scale factors of scripts are those of the first available face's MATH
+// table.
 bool measureFont(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontMetric metric, bool upright, double* ems) {
     PrCssPresentation* r = static_cast<PrCssPresentation*>(data);
     prMutexLock(&r->measuring);
@@ -1108,7 +1115,19 @@ bool measureFont(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontM
     PrTextFont* font = textFontIn(r->fonts, r->measured, style);
     prTextFontUpdate(font);
     bool found = false;
-    if (metric == CssFontMetric_Ex || metric == CssFontMetric_Cap) {
+    if (metric == CssFontMetric_ScriptPercentScaleDown || metric == CssFontMetric_ScriptScriptPercentScaleDown) {
+        // The scale factors of font-size: math are the MATH table's, which a font without one does not give
+        // (mathml-core/#the-math-script-level-property).
+        uint32_t first = prTextFontFirst(font);
+        const PrFont* face = first != kPrTextMatchNone ? prTextFontMatchedFont(font, first) : nullptr;
+        if (face != nullptr && prFontHasMath(face)) {
+            const PrFontMathConstants* constants = prFontMathConstants(face);
+            *ems = double(constants->scriptScriptPercentScaleDown);
+            if (metric == CssFontMetric_ScriptPercentScaleDown)
+                *ems = double(constants->scriptPercentScaleDown);
+            found = true;
+        }
+    } else if (metric == CssFontMetric_Ex || metric == CssFontMetric_Cap) {
         uint32_t first = prTextFontFirst(font);
         if (first != kPrTextMatchNone) {
             PrFontMetrics metrics = prFontMetrics(prTextFontMatchedFont(font, first));
@@ -1353,8 +1372,9 @@ void setTextIndent(PrCssPresentation* r, PrLayoutFontStyle& font, CssValueRun ru
     }
 }
 
-// Returns the transform that a computed text-transform names (css-text-4/#text-transform-property): none, math-auto, or
-// a case transform with full-width and full-size-kana, in any order.
+// Returns the transform that a computed text-transform names (css-text-4/#text-transform-property): none, math-auto, a
+// case transform with full-width and full-size-kana, in any order, or one of the math variants that only the engine's
+// hints name (the -pr-math- keywords).
 PrTextTransform textTransformOf(CssValueRun run) {
     uint32_t transform = PrTextTransform_None;
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
@@ -1363,6 +1383,23 @@ PrTextTransform textTransformOf(CssValueRun run) {
             case PrCssKeyword_Uppercase: transform |= PrTextTransform_Uppercase; break;
             case PrCssKeyword_Lowercase: transform |= PrTextTransform_Lowercase; break;
             case PrCssKeyword_MathAuto: transform |= PrTextTransform_MathAuto; break;
+            case PrCssKeyword_PrMathBold: transform |= PrTextTransform_MathBold; break;
+            case PrCssKeyword_PrMathItalic: transform |= PrTextTransform_MathItalic; break;
+            case PrCssKeyword_PrMathBoldItalic: transform |= PrTextTransform_MathBoldItalic; break;
+            case PrCssKeyword_PrMathScript: transform |= PrTextTransform_MathScript; break;
+            case PrCssKeyword_PrMathBoldScript: transform |= PrTextTransform_MathBoldScript; break;
+            case PrCssKeyword_PrMathFraktur: transform |= PrTextTransform_MathFraktur; break;
+            case PrCssKeyword_PrMathDoubleStruck: transform |= PrTextTransform_MathDoubleStruck; break;
+            case PrCssKeyword_PrMathBoldFraktur: transform |= PrTextTransform_MathBoldFraktur; break;
+            case PrCssKeyword_PrMathSansSerif: transform |= PrTextTransform_MathSansSerif; break;
+            case PrCssKeyword_PrMathBoldSansSerif: transform |= PrTextTransform_MathBoldSansSerif; break;
+            case PrCssKeyword_PrMathSansSerifItalic: transform |= PrTextTransform_MathSansSerifItalic; break;
+            case PrCssKeyword_PrMathSansSerifBoldItalic: transform |= PrTextTransform_MathSansSerifBoldItalic; break;
+            case PrCssKeyword_PrMathMonospace: transform |= PrTextTransform_MathMonospace; break;
+            case PrCssKeyword_PrMathInitial: transform |= PrTextTransform_MathInitial; break;
+            case PrCssKeyword_PrMathTailed: transform |= PrTextTransform_MathTailed; break;
+            case PrCssKeyword_PrMathLooped: transform |= PrTextTransform_MathLooped; break;
+            case PrCssKeyword_PrMathStretched: transform |= PrTextTransform_MathStretched; break;
             case PrCssKeyword_FullWidth: transform |= PrTextTransformFlag_FullWidth; break;
             case PrCssKeyword_FullSizeKana: transform |= PrTextTransformFlag_FullSizeKana; break;
             default: break;
@@ -2445,8 +2482,19 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     font.wordSpacing = spacingOf(style, PrCssProperty_WordSpacing);
     // Text that declares no typography properties, as most text does, has no font features and no tailoring of line
     // breaks.
-    if (style->groups[CssStyleGroup_Typography] != r->styles.initial[CssStyleGroup_Typography]) {
+    bool typography = style->groups[CssStyleGroup_Typography] != r->styles.initial[CssStyleGroup_Typography];
+    if (typography)
         font.features = featureSetOf(r, style);
+    // The math state that math layout reads. Its math-depth also selects the script forms of the font for text
+    // (mathml-core/#the-math-script-level-property).
+    CssValueRun depth = cssComputedValue(style, PrCssProperty_MathDepth);
+    if (depth.count == 1 && cssValueIsNumeric(depth.values[0].kind) && depth.values[0].number > 0)
+        font.mathDepth = depth.values[0].number < 255 ? uint8_t(depth.values[0].number) : uint8_t(255);
+    if (cssComputedFirstKeyword(style, PrCssProperty_MathStyle) == PrCssKeyword_Compact)
+        font.mathFlags |= PrLayoutMathFlag_CompactStyle;
+    if (cssComputedFirstKeyword(style, PrCssProperty_MathShift) == PrCssKeyword_Compact)
+        font.mathFlags |= PrLayoutMathFlag_CompactShift;
+    if (typography) {
         PrTextBreakStyle breaks = cssTextBreakStyle(style);
         font.wordBreak = breaks.wordBreak;
         font.overflowWrap = breaks.overflowWrap;
@@ -2794,12 +2842,76 @@ PrLayoutStyleIndex recordOf(PrCssPresentation* r, const PrDomNode* node, const C
         layer, readsOutside);
 }
 
+// Projects the box of `node` again at the next update, if it has one, though its style may not change.
+void reprojectNode(PrCssPresentation* r, PrDomNode* node) {
+    uint32_t at = cssPresentationNodeEntry(r, node);
+    if (at == kHashMissing || r->entries.data[at].node == nullptr)
+        return;
+    r->entries.data[at].reprojectPending = true;
+    r->changed = true;
+    mark(node, DomStyleFlag_Self);
+}
+
+// Calls `fn` with each element whose layout record a change of kind `change` at `node` reaches, as the provider of the
+// node's namespace says (CssBoxProvider::reach). A presentation that has refined no record has none that a change
+// reaches.
+template <typename Fn>
+void eachReach(const PrCssPresentation* r, PrDomNode* PR_NULLABLE node, CssBoxChange change, Fn fn) {
+    if (!r->refined)
+        return;
+    PrDomElement* element = domElementFromNode(node);
+    const CssBoxProvider* provider = element != nullptr ? cssBoxProviderOfNamespace(element) : nullptr;
+    if (provider == nullptr || provider->reach == nullptr)
+        return;
+    provider->reach(element, change, [](void* context, PrDomElement* at) { (*static_cast<Fn*>(context))(at); }, &fn);
+}
+
+// Projects again, at the next update, the records that a change of kind `change` at `node` reaches.
+void reprojectReach(PrCssPresentation* r, PrDomNode* PR_NULLABLE node, CssBoxChange change) {
+    eachReach(r, node, change, [&](PrDomElement* at) { reprojectNode(r, at); });
+}
+
+// Returns true if the change of the style of `element` from `old` to `style` changes records that a change to its
+// parent's children reaches, as the provider of the parent's namespace says (CssBoxProvider::childStyleReaches).
+bool childStyleReaches(const PrDomElement* element, const CssComputedStyle* old, const CssComputedStyle* style) {
+    const PrDomElement* parent = domNodeParentElement(element);
+    const CssBoxProvider* provider = parent != nullptr ? cssBoxProviderOfNamespace(parent) : nullptr;
+    return provider != nullptr && provider->childStyleReaches != nullptr && provider->childStyleReaches(old, style);
+}
+
+// Returns true if the change of the style of `element` from `old` to `style` changes the records of other elements, as
+// the provider of its namespace says (CssBoxProvider::styleReaches).
+bool styleReaches(const PrDomElement* element, const CssComputedStyle* old, const CssComputedStyle* style) {
+    const CssBoxProvider* provider = cssBoxProviderOfNamespace(element);
+    return provider != nullptr && provider->styleReaches != nullptr && provider->styleReaches(element, old, style);
+}
+
+// Returns `record`, the record that the style `style` of `element` projects to, as the provider of the element's
+// namespace refines it (CssBoxProvider::record).
+PrLayoutStyleIndex refineRecord(PrCssPresentation* r, const PrDomElement* element, const CssComputedStyle* style,
+        PrLayoutStyleIndex record) {
+    const CssRoot* root = element->document->style;
+    if (root == nullptr || element->space >= kCssProviderNamespaces || (root->refiningSpaces & (1u << element->space)) == 0)
+        return record;
+    const CssBoxProvider* provider = root->boxProviders[element->space];
+    r->refined = true;
+    CssBoxRecordContext context{
+        .presentation = r,
+        .tree = r->tree,
+        .measure = &r->fontMeasure,
+        .viewport = CssViewport{prLayoutUnitToPx(r->extent.x), prLayoutUnitToPx(r->extent.y)},
+    };
+    return provider->record(context, element, style, record);
+}
+
 // Returns the record of an entry's box, for a node that is neither the root nor the body. projectCanvas sets the
 // records of the root and the body.
 PrLayoutStyleIndex projectEntry(PrCssPresentation* r, CssPresentationEntry& entry) {
     entry.readsOutside = false;
     r->projecting = entry.node;
     PrLayoutStyleIndex record = recordOf(r, entry.node, entry.style, entry.composited, &entry.readsOutside);
+    if (const PrDomElement* element = domElementFromNode(entry.node))
+        record = refineRecord(r, element, entry.style, record);
     r->readsOutside = r->readsOutside || entry.readsOutside;
     return record;
 }
@@ -3672,6 +3784,17 @@ void markChildren(PrCssPresentation* r, PrDomNode* child) {
         restyle(child->previous, false, (read & DomStructureFlag_Backward) != 0);
 }
 
+// Marks the elements whose hints read the place of `node` in its tree, as `node` is inserted, is about to be removed or
+// changes its data. CSS hears the change first, and has dropped those hints (css_hints.h).
+void markStructureReaders(PrCssPresentation* r, PrDomNode* node) {
+    if (!invalidates(r))
+        return;
+    cssHintsEachStructureReader(node, [](void* PR_NULLABLE context, PrDomElement* reader) {
+        static_cast<PrCssPresentation*>(context)->changed = true;
+        mark(reader, DomStyleFlag_Self);
+    }, r);
+}
+
 // Adds the features by which the descendants of `element` are restyled to the update's features.
 void pushFeatures(PrCssPresentation* r, const PrDomElement* element) {
     uint32_t hash = prHashPointer(element, 0);
@@ -3803,7 +3926,7 @@ const CssComputedStyle* cascadeFirst(PrCssPresentation* r, const PrDomElement* e
 bool stylesFirsts(const PrCssPresentation* r) {
     const CssRuleIndex& line = r->rules.filed[CssPseudo_FirstLine];
     const CssRuleIndex& letter = r->rules.filed[CssPseudo_FirstLetter];
-    return line.universal.count != 0 || line.buckets.count != 0 || letter.universal.count != 0 || letter.buckets.count != 0;
+    return !cssRuleIndexIsEmpty(line) || !cssRuleIndexIsEmpty(letter);
 }
 
 // Brings the ::first-line and ::first-letter styles of the element at `at` up to date under `style`, its style as
@@ -4423,6 +4546,16 @@ void queueBox(PrCssPresentation* r, uint32_t at, CssPresentationBoxOps ops) {
     if ((entry.ops & CssPresentationBoxOp_Queued) == 0)
         r->boxQueue.push(entry.node);
     entry.ops |= ops | CssPresentationBoxOp_Queued;
+}
+
+// Queues the boxes whose records a change of kind `change` at `node` reaches to be projected again when this update
+// applies its boxes, for a change that the update's own walk makes after it has passed some of them.
+void requeueReach(PrCssPresentation* r, PrDomNode* PR_NULLABLE node, CssBoxChange change) {
+    eachReach(r, node, change, [&](PrDomElement* at) {
+        uint32_t entry = cssPresentationNodeEntry(r, at);
+        if (entry != kHashMissing && r->entries.data[entry].node != nullptr && r->entries.data[entry].boxed)
+            queueBox(r, entry, CssPresentationBoxOp_Style);
+    });
 }
 
 // The number of new elements that a restyle takes in between readings of the clock.
@@ -5190,6 +5323,12 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
         }
         if (old != nullptr && style->groups[CssStyleGroup_Generated] != old->groups[CssStyleGroup_Generated])
             countersChanged = true;
+        // A change to the style of a child, such as one that takes it out of its parent's flow, can change records that
+        // this walk has passed.
+        if (old != nullptr && r->refined && childStyleReaches(element, old, style))
+            requeueReach(r, element->parent, CssBoxChange_Children);
+        if (old != nullptr && r->refined && styleReaches(element, old, style))
+            requeueReach(r, element, CssBoxChange_Style);
         cssComputedStyleRelease(entry.base);
         cssComputedStyleRelease(old);
         entry.style = style;
@@ -6184,6 +6323,7 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
     if (box && !canvas) {
         bool reads = false;
         PrLayoutStyleIndex record = project(r, cached, presentationOf(element), r->entries.data[at].composited, &reads);
+        record = refineRecord(r, element, cached, record);
         if (record != prLayoutNodeStyle(r->tree, node))
             return differs(out, domNode, "the box's layout record");
     }
@@ -6893,6 +7033,8 @@ void cssPresentationResourceLoaded(PrCssPresentation* presentation) {
 void cssPresentationInserted(PrCssPresentation* presentation, PrDomNode* node) {
     mark(node, DomStyleFlag_Self | DomStyleFlag_Subtree);
     markChildren(presentation, node);
+    markStructureReaders(presentation, node);
+    reprojectReach(presentation, node->parent, CssBoxChange_Children);
     if (presentation->rules.reads.direction && invalidates(presentation))
         invalidateDirection(presentation, node);
     // The contents of the new subtree can make the :has() of an ancestor or an earlier sibling match.
@@ -6901,6 +7043,7 @@ void cssPresentationInserted(PrCssPresentation* presentation, PrDomNode* node) {
 }
 
 void cssPresentationRemoving(PrCssPresentation* presentation, PrDomNode* node) {
+    reprojectReach(presentation, node->parent, CssBoxChange_Children);
     // The ancestors of a focused, hovered or active element lose :focus-within, :hover or :active when it is removed.
     const PrDomDocument* document = node->document;
     const PrDomElement* pointed[] = {document->focused, document->hovered, document->active};
@@ -6922,6 +7065,7 @@ void cssPresentationRemoving(PrCssPresentation* presentation, PrDomNode* node) {
         invalidateAnchors(presentation, node, presentation->rules.anchors);
     if (presentation->rules.reads.direction && invalidates(presentation))
         invalidateDirection(presentation, node);
+    markStructureReaders(presentation, node);
     forget(presentation, node);
     markChildren(presentation, node);
 }
@@ -6933,6 +7077,9 @@ void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomEleme
     bool html = space == PrDomNamespace_None;
     // CSS hears the change first, and has dropped the hints that the attribute builds (css_hints.h).
     CssHintReach hinted = html ? cssHintsMapped(element, name) : CssHintReach_None;
+    // An element's attributes can give its layout record, and the records of other elements, beyond their styles.
+    if (html && presentation->refined)
+        reprojectReach(presentation, element, CssBoxChange_Attributes);
     if (!invalidates(presentation))
         return;
     switch (hinted) {
@@ -6944,6 +7091,11 @@ void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomEleme
         case CssHintReach_Subtree:
             presentation->changed = true;
             mark(element, DomStyleFlag_Self | DomStyleFlag_Subtree);
+            break;
+        case CssHintReach_Readers:
+            presentation->changed = true;
+            mark(element, DomStyleFlag_Self);
+            cssHintsEachReader(element, [](void*, PrDomElement* reader) { mark(reader, DomStyleFlag_Self); }, nullptr);
             break;
         case CssHintReach_Document:
             presentation->changed = true;
@@ -7008,6 +7160,9 @@ void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomEleme
 void cssPresentationDataChanged(PrCssPresentation* presentation, PrDomNode* node) {
     presentation->changed = true;
     mark(node, DomStyleFlag_Self);
+    markStructureReaders(presentation, node);
+    // A text's content can give the layout records of its parent and of other elements beyond their styles.
+    reprojectReach(presentation, node->parent, CssBoxChange_Children);
     if (presentation->rules.reads.direction && invalidates(presentation))
         invalidateDirection(presentation, node);
     // :empty in a :has() argument reads whether an element has text.
@@ -7518,7 +7673,8 @@ void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomEl
         });
         cssComputedStyleRelease(style);
     }
-    cssDeclarationBlockParse(out, prTextBufferView(&text), nullptr);
+    // The text is the engine's own serialization of the values, which may name its private keywords.
+    cssDeclarationBlockParse(out, prTextBufferView(&text), nullptr, CssOrigin_UserAgent);
     prTextBufferReset(&text);
 }
 

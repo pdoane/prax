@@ -12,7 +12,7 @@ namespace {
 struct Block {
     CssDeclarationBlock style = {};
 
-    explicit Block(PrStringView text) { cssDeclarationBlockParse(&style, text, nullptr); }
+    explicit Block(PrStringView text) { cssDeclarationBlockParse(&style, text, nullptr, CssOrigin_Author); }
     ~Block() { cssDeclarationBlockReset(&style); }
 
     Block(const Block&) = delete;

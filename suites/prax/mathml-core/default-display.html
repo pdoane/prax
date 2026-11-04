@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The display of MathML elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.1.1 Box Model</div>
+  <h1>The display of MathML elements</h1>
+  <p class=pr-lede><q>For Tabular MathML elements mtable, mtr, mtd it is respectively equal to inline-table, table-row and
+  table-cell. For all but the first children of the maction and semantics elements, it is equal to none. For all the
+  other MathML elements it is equal to block math.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#box-model">MathML Core §3.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Tables, and hidden children</h2>
+  <figure>
+    <div class="pr-stage"><math><mtable><mtr><mtd><mn>1</mn></mtd><mtd><mn>22</mn></mtd></mtr><mtr><mtd><mn>333</mn></mtd><mtd><mn>4</mn></mtd></mtr></mtable></math></div>
+    <figcaption>A table of two rows and two columns, each column as wide as its widest cell, the cells centered.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><semantics><mi>x</mi><mi>y</mi><annotation>z</annotation></semantics><maction><mi>a</mi><mi>b</mi></maction></math></div>
+    <figcaption><code>semantics</code> and <code>maction</code>: only their first children, x and a.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Every other element is block math</h2>
+  <figure>
+    <div class="pr-stage"><math><mfrac><mn>1</mn><mn>2</mn></mfrac><mfrac style="display: block math"><mn>1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption>A fraction, and one with <code>display: block math</code> set: the same.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mfrac style="display: inline"><mn>1</mn><mn>2</mn></mfrac></math></div>
+    <figcaption><code>display: inline</code> on an <code>mfrac</code>: no longer a fraction but an inline box, whose children are blocks of <code>block math</code>: 1 above 2, and no bar. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A fraction with its bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

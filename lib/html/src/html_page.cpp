@@ -1880,9 +1880,10 @@ void objectChanged(PrHtmlPage* page, PrDomElement* element) {
 }
 
 // Returns true if the element has activation behavior that follows its hyperlink: an a or area element
-// (html/#the-a-element, html/#the-area-element), or an SVG a element that is a hyperlink (SVG2/linking.html#AElement).
+// (html/#the-a-element, html/#the-area-element), or an SVG or MathML a element that is a hyperlink
+// (SVG2/linking.html#AElement, mathml-core/#the-a-element).
 bool activates(void* PR_NULLABLE, const PrDomElement* element) {
-    if (element->space == PrDomNamespace_Svg)
+    if (element->space == PrDomNamespace_Svg || element->space == PrDomNamespace_MathMl)
         return element->tag == PrDomTag_A && domElementLink(element);
     // A click in an editing host places the caret, so a link there does not navigate.
     if (!domIsHtml(element, PrDomTag_A) && !domIsHtml(element, PrDomTag_Area))
@@ -1915,6 +1916,12 @@ void embedChanged(void* PR_NULLABLE context, PrDomElement* element, PrStringView
         return;
     }
     bool fresh = element->state == nullptr || element->state->generation == 0;
+    // An mglyph shows the image that its src names (mathml4/#presm_mglyph).
+    if (element->space == PrDomNamespace_MathMl) {
+        if (connection ? fresh : attribute == "src")
+            updateImage(page, element, domAttributeValue(element, "src"));
+        return;
+    }
     switch (element->tag) {
         case PrDomTag_Iframe:
             if (connection || attribute == "src" || attribute == "srcdoc")

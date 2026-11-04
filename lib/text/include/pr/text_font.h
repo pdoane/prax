@@ -67,10 +67,10 @@ PrLocale prTextFontLocale(const PrTextFont* font);
 //   control character uses no fallback family.
 // - Otherwise, the face that serves its first code point, or the first available face (prTextFontFirst).
 //
-// A cluster that holds a variation sequence first goes through the first two steps with faces whose character maps list
-// the sequence (prFontVariationSequenceGlyph), and goes through them again with every face if none does, so a face that
-// lists the sequence is preferred to a face that has only its base character. The emoji presentation selectors are not
-// such sequences: they choose between color and text faces.
+// A cluster that holds a variation sequence first goes through the first two steps with only the faces whose character
+// maps list the sequence (prFontVariationSequenceGlyph). If none does, it goes through them again with every face. So a
+// face that lists the sequence is preferred to a face that has only its base character. The emoji presentation
+// selectors do not form such sequences, because they choose between color and text faces.
 //
 // The choice is a function of the cluster, the script and the text font, and the text font remembers it. A font that
 // has not matched before is appended to the matched fonts (prTextFontMatchedFont). Returns kPrTextMatchNone if the text
@@ -108,8 +108,8 @@ bool prTextFontUpdate(PrTextFont* font);
 uint64_t prTextFontRevision(const PrTextFont* font);
 
 // Returns true if the face serves every code point of the grapheme cluster `cluster` other than the default ignorable
-// ones, which shaping either consumes or shows nothing of. A variation selector is default ignorable, so a face with
-// the base character of a variation sequence serves the sequence.
+// ones, which shaping consumes or draws as nothing. A variation selector is default ignorable, so a face with the base
+// character of a variation sequence serves the sequence.
 bool prTextFaceServesCluster(const PrFontFace* face, PrStringView cluster);
 
 // Returns true if the grapheme cluster `cluster` has emoji presentation. It does if its first code point has emoji

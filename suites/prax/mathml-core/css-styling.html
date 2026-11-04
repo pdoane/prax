@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS on MathML: what applies and what does not</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .v { writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.2.2 CSS styling</div>
+  <h1>CSS on MathML: what applies and what does not</h1>
+  <p class=pr-lede><q>this adds !important rules to force writing mode to horizontal-lr on all MathML elements.</q> <q>The float
+  property does not create floating of elements whose parent's computed display value is block math or inline math</q>
+  <q>Line breaking inside math formulas: white-space is treated as nowrap on all MathML elements.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#css-styling">MathML Core §2.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Writing mode and floats</h2>
+  <figure>
+    <div class="pr-stage"><math class=v><mi>a</mi><mo>+</mo><mi>b</mi></math></div>
+    <figcaption><code>writing-mode: vertical-rl</code> on the formula: still "a + b" across.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mi>a</mi><mo>+</mo><mi style="float: right">b</mi><mo>=</mo><mi>c</mi></math></div>
+    <figcaption><code>float: right</code> on b: b stays in the row, "a + b = c". <span class=pr-flag>Safari</span> Takes b out of the row: "a + = c".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No line breaks, no alignment</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><div style="width: 80px"><math><mtext>a long note in a token</mtext><mo>+</mo><mi>x</mi></math></div></div>
+    <figcaption>In a box 80px wide, a formula with a long <code>mtext</code>: on one line, past the stage's edge. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Chrome breaks the line inside the <code>mtext</code>, Firefox after it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mrow style="display: flex; justify-content: flex-end; width: 120px; background: #f9cc9d"><mi>x</mi></mrow></math></div>
+    <figcaption>An <code>mrow</code> with <code>display: flex</code> and <code>justify-content: flex-end</code>, which must be ignored: x at the left of the orange 120px. <span class=pr-flag>Chrome</span> x at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

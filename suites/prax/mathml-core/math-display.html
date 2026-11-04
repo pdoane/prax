@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The math element: inline and block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { font-size: 16px; line-height: 24px; }
+  .pr-stage p { margin: 0; }
+  math { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.1.1 The Top-Level &lt;math&gt; Element</div>
+  <h1>The math element: inline and block</h1>
+  <p class=pr-lede><q>If the display attribute is absent or has an invalid value, the User Agent stylesheet treats it
+  the same as inline.</q> <q>if the computed display property is equal to block math then that math content box is
+  rendered horizontally centered within the content box.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#the-top-level-math-element">MathML Core §2.1.1</a></span>
+  Each <code>math</code> element is tinted blue, and holds x over 2.</p>
+</header>
+
+<section>
+  <h2>Inline, in the line of text</h2>
+  <figure>
+    <div class=pr-stage><p>so <math><mfrac><mi>x</mi><mn>2</mn></mfrac></math> is half</p></div>
+    <figcaption>No attribute: the fraction between "so" and "is", on one line, the tint as wide as the
+    fraction.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p>so <math display=nonsense><mfrac><mi>x</mi><mn>2</mn></mfrac></math> is half</p></div>
+    <figcaption><code>display="nonsense"</code>: invalid, so inline, the same as the first.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Block, on a line of its own and centered</h2>
+  <figure>
+    <div class=pr-stage><p>so <math display=block><mfrac><mi>x</mi><mn>2</mn></mfrac></math> is half</p></div>
+    <figcaption>"so" on the first line, then the tint across the stage's 200px with the fraction centered in it, then
+    "is half" on the next line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p>so <math display=BLOCK style="width: 100px"><mfrac><mi>x</mi><mn>2</mn></mfrac></math> is half</p></div>
+    <figcaption><code>display="BLOCK"</code> and <code>width: 100px</code>: a block 100px wide at the left, the
+    fraction centered in it, at 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The math style that each gives</h2>
+  <p>Inline math is <code>math-style: compact</code> and block math <code>normal</code>.</p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><p><math><munderover><mo>∑</mo><mi>k</mi><mi>n</mi></munderover></math></p></div>
+    <figcaption>Inline: a text-size ∑, k at its lower right and n at its upper right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><math display=block><munderover><mo>∑</mo><mi>k</mi><mi>n</mi></munderover></math></div>
+    <figcaption>Block: a larger ∑, centered, with k under it and n over it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

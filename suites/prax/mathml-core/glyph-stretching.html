@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stretching a glyph, and mirroring it</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .pr-stage math { font-family: 'PR Noto Sans Math', 'PR Noto Sans Arabic'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 5.3.2 Algorithms for glyph stretching</div>
+  <h1>Stretching a glyph, and mirroring it</h1>
+  <p class=pr-lede><q>If dir is rtl: If there exists an OpenType rtlm variant of g in the first available font, then return it and
+  exit with success.</q> <q>Otherwise, if c has the Bidi_Mirrored property: If c has a corresponding mirrored
+  codepoint, c', then return the glyph corresponding to c'</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#algorithms-for-glyph-stretching">MathML Core §5.3.2</a></span> The formulas are in PR Noto Sans Math, whose √ and ∑ have <code>rtlm</code> forms, with PR Noto Sans Arabic
+  for the letters.</p>
+</header>
+
+<section>
+  <h2>rtlm forms and mirrored characters</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 36px" dir=rtl><msqrt><mn>٢</mn></msqrt><mo>+</mo><munderover><mo>∑</mo><mrow><mi>س</mi><mo>=</mo><mn>١</mn></mrow><mi>ن</mi></munderover><mi>س</mi></math></div>
+    <figcaption><code>dir="rtl"</code>: the surd at the right of ٢, opening left, the font's rtlm √; the ∑ facing left, its rtlm form.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 36px" dir=rtl><mo>(</mo><mfrac><mn>١</mn><mn>٢</mn></mfrac><mo>]</mo><mo>≤</mo><mn>٣</mn></math></div>
+    <figcaption>( drawn as ), stretched, ] as [, and ≤ as ≥, each the mirrored character.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

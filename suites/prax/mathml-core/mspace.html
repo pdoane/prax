@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mspace: a space of a given size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .pr-stage :is(mspace, mpadded) { outline: 1px solid #4f81bd; background: rgba(79, 129, 189, 0.15); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.5 Space &lt;mspace&gt;</div>
+  <h1>mspace: a space of a given size</h1>
+  <p class=pr-lede><q>The min-content inline size, max-content inline size and inline size of the math content are equal to the
+  resolved value of the width property. The block size of the math content is equal to the resolved value of the
+  height property. The line-ascent of the math content is equal to the requested line-ascent</q>, the height
+  attribute's value. <q>If both the height and depth attributes are present, valid and not a percentage then they are
+  used as a presentational hint setting the element's height property to […] calc(height + depth)</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#space-mspace">MathML Core §3.2.5</a></span> Each <code>mspace</code> is outlined in blue, as the specification's example
+  draws it; dashed lines mark the heights its attributes give.</p>
+</header>
+
+<section>
+  <h2>Space in a formula</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 32px"><mi>f</mi><mo>(</mo><mi>x</mi><mo>)</mo><mspace width=1em /><mi>d</mi><mi>x</mi></math></div>
+    <figcaption><i>f</i>(<i>x</i>), an em of space, <i>dx</i>: the space is 32px wide and has no height.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 20px"></span><span class=pr-level style="vertical-align: 30px"></span><span class=pr-level style="vertical-align: -10px"></span><span class=pr-level style="vertical-align: -20px"></span><math style="font-size: 32px"><mn>1</mn><mspace width=30px height=20px depth=10px /><mn>2</mn><mspace width=30px depth=20px /><mn>3</mn><mspace width=30px height=30px /><mn>4</mn></math></div>
+    <figcaption>Between the digits: 20px up and 10px down; only <code>depth="20px"</code>, all below the baseline; only <code>height="30px"</code>, all above.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages, and CSS</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 32px"><mn>1</mn><mspace width=50% height=20px /><mn>2</mn><mspace width=40px height=20px style="width: 10px" /><mn>3</mn></math></div>
+    <figcaption><code>width="50%"</code> is no hint: no width between 1 and 2, an outline 0 wide; <code>width: 10px</code> in a style attribute beats <code>width="40px"</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

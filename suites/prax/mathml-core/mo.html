@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mo: operators, fences, separators and accents</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.4 Operator, Fence, Separator or Accent &lt;mo&gt;</div>
+  <h1>mo: operators, fences, separators and accents</h1>
+  <p class=pr-lede><q>The mo element represents an operator or anything that should be rendered as an operator.</q> <q>Note that
+  the default properties of operators are dictionary-based</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#operator-fence-separator-or-accent-mo">MathML Core §3.2.4</a></span> The specification's examples.</p>
+</header>
+
+<section>
+  <h2>Spacing, large operators and limits</h2>
+  <figure>
+    <div class="pr-stage"><math><mn>1</mn><mo>+</mo><mn>2</mn><mo form=prefix>+</mo><mn>3</mn><mo lspace=0px>+</mo><mn>4</mn><mo rspace=0px>+</mo><mn>5</mn></math></div>
+    <figcaption>Spaced + between 1 and 2; none around the prefix one; none before the third, none after the fourth.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><munder><mo>∑</mo><mn>5</mn></munder><munder><mo movablelimits=false>∑</mo><mn>6</mn></munder><mstyle displaystyle=true><munder><mo>∑</mo><mn>5</mn></munder><munder><mo largeop=false>∑</mo><mn>7</mn></munder></mstyle></math></div>
+    <figcaption>Inline ∑ with 5 at its lower right; with <code>movablelimits="false"</code>, 6 under it; in display, a large ∑ with 5 under it; with <code>largeop="false"</code>, a small one with 7 under it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Stretching</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mo>↑</mo><mfrac><mi>a</mi><mfrac><mi>b</mi><mfrac><mi>c</mi><mi>d</mi></mfrac></mfrac></mfrac><mo stretchy=false>↑</mo><mo symmetric=true>↑</mo><mo maxsize=30px>↑</mo><mo minsize=60px>↑</mo></math></div>
+    <figcaption>Beside a tall nested fraction: an arrow as tall; an unstretched one; a symmetric one, about the axis; one at most 30px; one at least 60px. <span class=pr-flag>Firefox</span> Only the last stretched.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

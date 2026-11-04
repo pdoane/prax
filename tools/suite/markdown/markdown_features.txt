@@ -14,7 +14,7 @@ tag-filter              build   # GFM, as a policy for raw HTML rather than an e
 footnotes               build   # GitHub, as cmark-gfm parses and numbers them
 alerts                  build   # GitHub; another renderer shows an alert as a plain block quote
 heading-ids             build   # GitHub's slugs, so that a #fragment reaches its heading
-math                    build   # GitHub's $, $$ and $`; the TeX is text until it typesets as MathML
+math                    build   # GitHub's $, $$, $` and ```math, written as MathML by lib/tex
 smart-punctuation       build   # cmark's, as an option
 front-matter            build   # docs sites lead with it; its YAML is a client's to read
 highlight               build   # ==text==: Obsidian, markdown-it and pandoc agree on the syntax

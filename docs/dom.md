@@ -5,7 +5,9 @@
 - `lib/dom`: the node tree, attributes, collections and events.
 - `lib/css`: style sheets, their values and the cascade, and the presentation of a document: its styles projected
   onto a layout tree, and CSSOM View, which reads it (see [css.md](css.md)).
-- `lib/xml`, `lib/svg` and `lib/mathml` depend only on `dom` and `css`, so their documents work without HTML.
+- `lib/xml` and `lib/svg` depend only on `dom` and `css`, so their documents work without HTML. `lib/mathml` is MathML's
+  element model. It gives `css` the presentational hints of MathML's attributes and a box provider for its elements
+  (see [css.md](css.md#mathml)). It depends on `dom`, `css` and `layout`, and HTML and SVG documents enable it.
 - `lib/html`: parsing, element behavior and browsing contexts. It depends on the others and integrates them through
   hooks, and nothing depends on `html`.
 - Resource loading and script evaluation belong to the host.

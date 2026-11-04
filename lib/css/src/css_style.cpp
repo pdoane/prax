@@ -1995,6 +1995,41 @@ PrCssKeyword keywordOfRun(CssValueRun run) {
     return PrCssKeyword_Count;
 }
 
+// Returns the ems of `metric` in the bases of `context`, measured in the bases' font if the context measures fonts, or
+// else `fallback`. Writes whether the font gave the metric to `found`.
+double metricEms(const CssStyleContext& context, bool root, CssFontMetric metric, bool upright, double fallback, bool* found) {
+    const CssFontBases& bases = root ? context.root : context.font;
+    const CssComputedStyle* style = bases.style;
+    double ems = fallback;
+    *found = false;
+    CssFontMetrics* metrics = context.metrics;
+    if (metrics == nullptr)
+        return ems;
+    (root ? metrics->readsRoot : metrics->readsFont) = true;
+    metrics->readsGroup = true;
+    uint32_t side = root ? 1 : 0;
+    if (style == nullptr || metrics->measure == nullptr)
+        return ems;
+    if (metrics->sources[side] != style) {
+        metrics->sources[side] = style;
+        metrics->measured[side] = 0;
+        metrics->found[side] = 0;
+    }
+    uint8_t bit = uint8_t(1u << metric);
+    if ((metrics->measured[side] & bit) == 0) {
+        double measured = 0;
+        if (metrics->measure->measure(metrics->measure->data, style, metric, upright, &measured)) {
+            metrics->ems[side][metric] = measured;
+            metrics->found[side] |= bit;
+        } else {
+            metrics->ems[side][metric] = ems;
+        }
+        metrics->measured[side] |= bit;
+    }
+    *found = (metrics->found[side] & bit) != 0;
+    return metrics->ems[side][metric];
+}
+
 } // namespace
 
 CssStyleSlot cssStyleSlot(PrCssProperty property) {
@@ -2797,31 +2832,50 @@ double cssFontMetricPx(const CssStyleContext& context, bool root, CssFontMetric 
         upright = vertical && (orientation == PrCssKeyword_Upright ||
             (metric == CssFontMetric_Ic && orientation == PrCssKeyword_Mixed));
     }
-    constexpr double kFallbacks[CssFontMetric_Count] = {0.5, 0.7, 0.5, 1};
-    double ems = metric == CssFontMetric_Ch && upright ? 1 : kFallbacks[metric];
-    CssFontMetrics* metrics = context.metrics;
-    if (metrics != nullptr) {
-        (root ? metrics->readsRoot : metrics->readsFont) = true;
-        metrics->readsGroup = true;
-        uint32_t side = root ? 1 : 0;
-        if (style != nullptr && metrics->measure != nullptr) {
-            if (metrics->sources[side] != style) {
-                metrics->sources[side] = style;
-                metrics->measured[side] = 0;
-            }
-            uint8_t bit = uint8_t(1u << metric);
-            if ((metrics->measured[side] & bit) == 0) {
-                double measured = 0;
-                if (metrics->measure->measure(metrics->measure->data, style, metric, upright, &measured))
-                    metrics->ems[side][metric] = measured;
-                else
-                    metrics->ems[side][metric] = ems;
-                metrics->measured[side] |= bit;
-            }
-            ems = metrics->ems[side][metric];
+    constexpr double kFallbacks[CssFontMetric_Count] = {0.5, 0.7, 0.5, 1, 0.71, 0.5041};
+    bool found = false;
+    double ems = metricEms(context, root, metric, upright,
+        metric == CssFontMetric_Ch && upright ? 1 : kFallbacks[metric], &found);
+    return ems * bases.em;
+}
+
+double cssMathDepthScale(const CssStyleContext& context, int32_t inherited, int32_t computed) {
+    // A is the inherited depth and B the computed one, swapped with the scale inverted if B is less than A
+    // (mathml-core/#the-math-script-level-property). E is the number of levels left after the MATH table's factors
+    // apply, and each of them scales by 0.71.
+    int64_t a = inherited;
+    int64_t b = computed;
+    if (a == b)
+        return 1;
+    bool invert = b < a;
+    if (invert) {
+        int64_t swap = a;
+        a = b;
+        b = swap;
+    }
+    int64_t e = b - a;
+    double scale = 1;
+    bool script = false;
+    bool scriptScript = false;
+    double scriptDown = metricEms(context, false, CssFontMetric_ScriptPercentScaleDown, false, 0.71, &script);
+    double scriptScriptDown =
+        metricEms(context, false, CssFontMetric_ScriptScriptPercentScaleDown, false, 0.5041, &scriptScript);
+    if (script && scriptScript) {
+        if (a <= 0 && b >= 2) {
+            scale *= scriptScriptDown;
+            e -= 2;
+        } else if (a == 1) {
+            scale *= scriptScriptDown / scriptDown;
+            e -= 1;
+        } else if (b == 1) {
+            scale *= scriptDown;
+            e -= 1;
         }
     }
-    return ems * bases.em;
+    // A change of depth past a double's range scales to zero, or inverted, to the largest finite factor, as a calc()
+    // that overflows clamps (css-values-4/#calc-ieee).
+    scale *= prF64Pow(0.71, double(e));
+    return invert ? prF64Min(1 / scale, kPrF64Max) : scale;
 }
 
 bool cssResolveColorComponents(CssValueRun run, uint32_t index, const CssColorContext& context, CssColor* out) {

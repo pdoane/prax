@@ -13,6 +13,9 @@ namespace pr_impl {
 // The length of the longest keyword.
 constexpr uint32_t kCssKeywordMaxLength = 31;
 
+// The first of the engine's private keywords, which only text that the engine writes may name.
+constexpr PrCssKeyword kCssKeywordFirstPrivate = PrCssKeyword_PrMathBold;
+
 // The keyword's name in lowercase.
 PrStringView cssKeywordName(PrCssKeyword keyword);
 

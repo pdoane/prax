@@ -7,14 +7,22 @@
 // the document's CSS a provider for its namespace (cssBoxesProvide), which answers from the element alone. The
 // presentation asks it as it projects each element, so the provider reads only the element, its attributes and its
 // state, and is cheap.
+//
+// A language may also give layout what an element's markup and surroundings decide beyond its style, such as the layout
+// algorithm of its box and the values of its attributes. The provider then refines the layout record that the element's
+// style projects to. It also names the elements whose records a change to the document reaches, so that the
+// presentation projects them again.
 
 #pragma once
 
 #include "pr/bitset.h"
+#include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/dom_tag.h"
 #include "pr/layout_style.h"
+#include "pr/layout_tree.h"
 #include "pr/string_view.h"
+#include "pr/text_transform.h"
 
 #include "css/src/css_root.h"
 #include "css/src/css_style.h"
@@ -85,6 +93,28 @@ struct CssBoxTraits {
     PrLayoutNaturalSize natural;
 };
 
+// The context in which a provider refines the layout record of an element's box. The record may read the styles of
+// other elements from `presentation` (cssPresentationNodeStyle), is interned in `tree`, and resolves lengths against
+// `measure` and `viewport`.
+struct CssBoxRecordContext {
+    const PrCssPresentation* presentation;
+    PrLayoutTree* tree;
+    const CssFontMeasure* PR_NULLABLE measure;
+    CssViewport viewport;
+};
+
+// What changed at an element that may change the layout records of elements beyond those that the change restyles.
+enum {
+    CssBoxChange_Children,      // a child was inserted or removed, its text changed, or its style changed in a way that
+                                // CssBoxProvider::childStyleReaches reports
+    CssBoxChange_Attributes,    // an attribute in no namespace changed
+    CssBoxChange_Style,         // its style changed in a way that CssBoxProvider::styleReaches reports
+};
+typedef uint8_t CssBoxChange;
+
+// Called with each element whose layout record a change reaches.
+typedef void (*CssBoxReachFn)(void* PR_NULLABLE context, PrDomElement* element);
+
 // What a namespace's elements give their boxes.
 struct CssBoxProvider {
     // The tags of the elements that may give their boxes anything, a set that gen_dom.py builds (dom_tag.h). The
@@ -109,6 +139,25 @@ struct CssBoxProvider {
     // Returns the color schemes that the document's page supports, as the namespace's elements give them, such as
     // HTML's meta elements (css-color-adjust-1/#color-scheme-page). Null for a namespace whose elements give none.
     CssColorSchemeFlags (*PR_NULLABLE pageSchemes)(PrDomDocument* document);
+
+    // Returns `record`, the layout record that the element's computed `style` projects to, refined with what the
+    // element's markup and surroundings give layout beyond its style. The presentation calls it for every element of
+    // the namespace that has a box, whatever its tag. Null for a namespace whose records come from their styles alone.
+    PrLayoutStyleIndex (*PR_NULLABLE record)(const CssBoxRecordContext& context, const PrDomElement* element,
+        const CssComputedStyle* style, PrLayoutStyleIndex record);
+
+    // Calls `fn` with each element whose record a change of kind `change` at `element` may change, among the elements
+    // whose records `record` refines. Null if `record` is.
+    void (*PR_NULLABLE reach)(PrDomElement* element, CssBoxChange change, CssBoxReachFn fn, void* PR_NULLABLE context);
+
+    // Returns true if a child's change of computed style from `old` to `style` can change the records that
+    // CssBoxChange_Children reaches. Null if `record` is.
+    bool (*PR_NULLABLE childStyleReaches)(const CssComputedStyle* old, const CssComputedStyle* style);
+
+    // Returns true if the element's change of computed style from `old` to `style` can change the records of other
+    // elements, which CssBoxChange_Style reaches, as an operator's font gives the spaces of the operators around it.
+    // Null if `record` is.
+    bool (*PR_NULLABLE styleReaches)(const PrDomElement* element, const CssComputedStyle* old, const CssComputedStyle* style);
 };
 
 // Gives the document's CSS the provider of the elements of the namespace `space`.

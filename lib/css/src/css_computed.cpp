@@ -23,7 +23,7 @@ void refreshComputed(const PrCssStyleDeclaration* declaration) {
     PrCssPresentation* presentation = domIsConnected(element) ? cssPresentationOf(element->document) : nullptr;
     CssComputedDeclarations* computed = computedOf(declaration);
     if (presentation == nullptr || computed->pseudo == CssPseudo_Count) {
-        cssDeclarationBlockParse(declaration->block, "", nullptr);
+        cssDeclarationBlockParse(declaration->block, "", nullptr, CssOrigin_Author);
         computed->filler = nullptr;
         return;
     }

@@ -93,6 +93,11 @@ typedef struct PrTextPiece {
 
     bool noWrap;                        // Text, Open: true if lines do not wrap inside it
     bool breakSpaces;                   // Text: true if a line may break after any space or tab
+
+    // Text: true if it is set as mathematical notation. Such text is shaped in the math script (ISO 15924 Zmth,
+    // OpenType 'math') whatever the scripts of its characters, because a math font holds its script and dotless forms
+    // there.
+    bool math;
 } PrTextPiece;
 
 // The input of an itemization: the text, its pieces, and the direction and unicode-bidi of its container, which set the

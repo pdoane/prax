@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous mrow boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.1.3 Anonymous &lt;mrow&gt; boxes</div>
+  <h1>Anonymous mrow boxes</h1>
+  <p class=pr-lede><q>If a MathML element generates an anonymous &lt;mrow&gt; box then it wraps its children in an anonymous
+  &lt;mrow&gt; box.</q> <q>the &lt;msqrt&gt; element adds proper spacing around its &lt;mo&gt;+&lt;/mo&gt; child while
+  the &lt;mtd&gt; element stretches its &lt;mo&gt; children vertically.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#anonymous-mrow-boxes">MathML Core §3.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>Children laid out as a row</h2>
+  <figure>
+    <div class="pr-stage"><math><msqrt><mn>7</mn><mo>+</mo><mn>2</mn></msqrt><msqrt><mrow><mn>7</mn><mo>+</mo><mn>2</mn></mrow></msqrt></math></div>
+    <figcaption><code>msqrt</code> of 7, +, 2, then of an <code>mrow</code> of them: the same, a space each side of +.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mtable><mtr><mtd><mo>(</mo><mfrac><mfrac><mn>1</mn><mn>2</mn></mfrac><mn>3</mn></mfrac><mo>)</mo></mtd></mtr></mtable></math></div>
+    <figcaption>Parentheses in an <code>mtd</code> around a tall fraction: stretched to it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Text-size parentheses.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mpadded><mo>[</mo><mfrac><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><mn>2</mn></mfrac><mo>]</mo></mpadded></math></div>
+    <figcaption>Brackets in an <code>mpadded</code> around (n + 1)/2: stretched to it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

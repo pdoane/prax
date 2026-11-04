@@ -220,7 +220,7 @@ of a change to it is what the change did.
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
 | html/browsers                                       |   565/770 |      607/2345 |   25.8% |
 | html/canvas                                         | 2652/2876 |     1739/5247 |   33.1% |
-| html/dom                                            |   346/353 |   61178/66758 |   91.6% |
+| html/dom                                            |   346/353 |   61188/66758 |   91.6% |
 | html/editing                                        |   124/254 |       525/846 |   62.0% |
 | html/embedded-content                               |       1/1 |           0/2 |    0.0% |
 | html/infrastructure                                 |   123/148 |      808/1135 |   71.1% |
@@ -288,7 +288,7 @@ of a change to it is what the change did.
 
 | Module                     |   Files |     Tests | Passing |
 |----------------------------|--------:|----------:|--------:|
-| mathml                     |     1/1 |     77/89 |   86.5% |
+| mathml                     |     1/1 |     88/89 |   98.8% |
 | mathml/crashtests          | 114/114 |   114/114 |  100.0% |
 | mathml/presentation-markup | 305/305 |  230/1047 |   21.9% |
 | mathml/relations           | 174/176 |  832/2456 |   33.8% |

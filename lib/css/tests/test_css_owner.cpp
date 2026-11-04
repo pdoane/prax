@@ -76,7 +76,8 @@ TEST_CASE("an element's style data is made on first use and holds its inline sty
     CHECK(element->style == nullptr);
     CHECK(cssElementSheet(element) == nullptr);
     CssElementStyle* style = cssElementStyle(element);
-    cssDeclarationBlockParse(cssStyleDeclarationWritable(cssElementInlineStyle(element)), "color: red", nullptr);
+    cssDeclarationBlockParse(cssStyleDeclarationWritable(cssElementInlineStyle(element)), "color: red", nullptr,
+        CssOrigin_Author);
     domInsert(document, element, nullptr);
     PrCssStyleSheet* sheet = cssElementSheet(element);
     REQUIRE(sheet != nullptr);

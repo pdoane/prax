@@ -128,22 +128,34 @@ namespace {
 
 // The style attribute is the inline style's declarations. An element's hints are kept while it is out of the document
 // too, and must not outlive the attribute that they were built from. An element without style data has neither to bring
-// up to date.
+// up to date, though the hints of others may read its attributes.
 void attributeChanged(void* PR_NULLABLE, PrDomElement* element, DomNamespaceId space, PrStringView name, PrStringView,
         PrStringView value) {
-    if (space != PrDomNamespace_None || element->style == nullptr)
+    if (space != PrDomNamespace_None || (element->style == nullptr && !cssHintsHasReaders(element)))
         return;
-    if (name == "style")
+    if (name == "style" && element->style != nullptr)
         cssElementStyleAttributeChanged(element, value);
-    if (cssHintsMapped(element, name) != CssHintReach_None)
+    CssHintReach reach = cssHintsMapped(element, name);
+    if (reach != CssHintReach_None)
         cssHintsChanged(element);
+    // The hints of the elements that read the attribute, as a MathML table's attributes give its cells theirs.
+    if (reach == CssHintReach_Readers)
+        cssHintsEachReader(element, [](void*, PrDomElement* reader) { cssHintsChanged(reader); }, nullptr);
+}
+
+// The hints that read the place of a node in its tree, as a MathML cell's hints read its column, must not outlive it.
+void structureChanged(void* PR_NULLABLE, PrDomNode* node) {
+    cssHintsEachStructureReader(node, [](void*, PrDomElement* reader) { cssHintsChanged(reader); }, nullptr);
 }
 
 } // namespace
 
 const DomDocumentHooks* cssDocumentHooks() {
     static constexpr DomDocumentHooks kHooks = {
+        .inserted = structureChanged,
+        .removing = structureChanged,
         .attributeChanged = attributeChanged,
+        .dataChanged = structureChanged,
         .languageChanged = [](void*, PrDomDocument* document) { cssDocumentStyleChanged(document); },
         .styleBlockUpdate = [](void*, PrDomElement* element, DomInsertedBy by) { cssStyleBlockUpdate(element, by); },
         .instructionInserted = [](void*, PrDomNode* node) { cssXmlStylesheetInserted(node); },

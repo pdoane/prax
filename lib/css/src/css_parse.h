@@ -141,9 +141,10 @@ struct CssMatchState {
     // because it is out of range or not an integer. A written number is never wrapped.
     bool calculate;
 
-    // True while the parser reads a user agent sheet. The selectors of such a sheet may name the engine's private
-    // pseudo-classes.
-    bool userAgent;
+    // True while the parser reads text that the engine writes: a user agent sheet, presentational hints, or serialized
+    // computed values. Such text may name the engine's private pseudo-classes (CssPseudoClass_FirstPrivate) and
+    // keywords (kCssKeywordFirstPrivate).
+    bool engine;
 };
 
 // Frees the state's memory.

@@ -2031,75 +2031,75 @@ extern const CssGrammarIndex kCssPropertyGrammarRoot[] = {
     2266,  // text-spacing-trim
     2269,  // text-transform
     426,   // text-underline-offset
-    2279,  // text-underline-position
-    2288,  // text-wrap
-    2293,  // text-wrap-mode
-    2296,  // text-wrap-style
-    2302,  // timeline-scope
-    2306,  // timeline-trigger
-    2315,  // timeline-trigger-activation-range
+    2296,  // text-underline-position
+    2305,  // text-wrap
+    2310,  // text-wrap-mode
+    2313,  // text-wrap-style
+    2319,  // timeline-scope
+    2323,  // timeline-trigger
+    2332,  // timeline-trigger-activation-range
     105,   // timeline-trigger-activation-range-end
     111,   // timeline-trigger-activation-range-start
-    2318,  // timeline-trigger-active-range
-    2321,  // timeline-trigger-active-range-end
-    2328,  // timeline-trigger-active-range-start
+    2335,  // timeline-trigger-active-range
+    2338,  // timeline-trigger-active-range-end
+    2345,  // timeline-trigger-active-range-start
     840,   // timeline-trigger-name
-    2335,  // timeline-trigger-source
+    2352,  // timeline-trigger-source
     426,   // top
-    2342,  // touch-action
-    2356,  // transform
-    2359,  // transform-box
-    2365,  // transform-origin
-    2396,  // transform-style
-    2399,  // transition
-    2412,  // transition-behavior
-    2413,  // transition-delay
-    2414,  // transition-duration
-    2415,  // transition-property
+    2359,  // touch-action
+    2373,  // transform
+    2376,  // transform-box
+    2382,  // transform-origin
+    2413,  // transform-style
+    2416,  // transition
+    2429,  // transition-behavior
+    2430,  // transition-delay
+    2431,  // transition-duration
+    2432,  // transition-property
     118,   // transition-timing-function
-    2418,  // translate
-    2302,  // trigger-scope
-    2425,  // unicode-bidi
-    2432,  // user-select
-    2438,  // vector-effect
-    2445,  // vertical-align
-    2454,  // view-timeline
+    2435,  // translate
+    2319,  // trigger-scope
+    2442,  // unicode-bidi
+    2449,  // user-select
+    2455,  // vector-effect
+    2462,  // vertical-align
+    2471,  // view-timeline
     1678,  // view-timeline-axis
-    2462,  // view-timeline-inset
+    2479,  // view-timeline-inset
     1683,  // view-timeline-name
     708,   // view-transition-class
-    2466,  // view-transition-group
-    2471,  // view-transition-name
+    2483,  // view-transition-group
+    2488,  // view-transition-name
     2147,  // view-transition-scope
-    2474,  // visibility
-    2479,  // voice-balance
-    2486,  // voice-duration
-    2489,  // voice-family
-    2494,  // voice-pitch
-    2494,  // voice-range
-    2509,  // voice-rate
-    2518,  // voice-stress
-    2524,  // voice-volume
-    2534,  // white-space
-    2546,  // white-space-collapse
-    2553,  // white-space-trim
+    2491,  // visibility
+    2496,  // voice-balance
+    2503,  // voice-duration
+    2506,  // voice-family
+    2511,  // voice-pitch
+    2511,  // voice-range
+    2526,  // voice-rate
+    2535,  // voice-stress
+    2541,  // voice-volume
+    2551,  // white-space
+    2563,  // white-space-collapse
+    2570,  // white-space-trim
     892,   // widows
     229,   // width
-    2559,  // will-change
-    2562,  // window-drag
-    2565,  // word-break
-    2572,  // word-space-transform
+    2576,  // will-change
+    2579,  // window-drag
+    2582,  // word-break
+    2589,  // word-space-transform
     1363,  // word-spacing
-    2579,  // wrap-after
-    2579,  // wrap-before
-    2586,  // wrap-flow
-    2594,  // wrap-inside
-    2597,  // wrap-through
-    2600,  // writing-mode
+    2596,  // wrap-after
+    2596,  // wrap-before
+    2603,  // wrap-flow
+    2611,  // wrap-inside
+    2614,  // wrap-through
+    2617,  // writing-mode
     802,   // x
     802,   // y
-    2612,  // z-index
-    2616,  // zoom
+    2629,  // z-index
+    2633,  // zoom
     0,     // -webkit-align-content
     0,     // -webkit-align-items
     0,     // -webkit-align-self
@@ -5025,91 +5025,91 @@ extern const uint8_t kCssPropertyExcludedIdents[PrCssProperty_Count] = {
 };
 
 extern const CssKeywordForm kCssKeywordForms[] = {
-    { 0x02b4035404ceull, { PrCssKeyword_RepeatY, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // no-repeat repeat: repeat-y
-    { 0x035402b404ceull, { PrCssKeyword_RepeatX, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // repeat no-repeat: repeat-x
-    { 0x0065016704ceull, { PrCssKeyword_Flex, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flex: flex
+    { 0x02b4035404dfull, { PrCssKeyword_RepeatY, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // no-repeat repeat: repeat-y
+    { 0x035402b404dfull, { PrCssKeyword_RepeatX, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // repeat no-repeat: repeat-x
+    { 0x0065016704dfull, { PrCssKeyword_Flex, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flex: flex
     { 0x006501730244ull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow list-item: list-item
-    { 0x0065017304ceull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow: block
+    { 0x0065017304dfull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow: block
     { 0x006501740244ull, { PrCssKeyword_FlowRoot, PrCssKeyword_ListItem, PrCssKeyword_Unknown } },  // block flow-root list-item: flow-root list-item
-    { 0x0065017404ceull, { PrCssKeyword_FlowRoot, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow-root: flow-root
-    { 0x0065019804ceull, { PrCssKeyword_Grid, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block grid: grid
-    { 0x0065024404ceull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block list-item: list-item
-    { 0x0065043804ceull, { PrCssKeyword_Table, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block table: table
-    { 0x0173024404ceull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // flow list-item: list-item
-    { 0x017304ce04ceull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // flow: block
-    { 0x01db016704ceull, { PrCssKeyword_InlineFlex, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flex: inline-flex
+    { 0x0065017404dfull, { PrCssKeyword_FlowRoot, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow-root: flow-root
+    { 0x0065019804dfull, { PrCssKeyword_Grid, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block grid: grid
+    { 0x0065024404dfull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block list-item: list-item
+    { 0x0065043804dfull, { PrCssKeyword_Table, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block table: table
+    { 0x0173024404dfull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // flow list-item: list-item
+    { 0x017304df04dfull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // flow: block
+    { 0x01db016704dfull, { PrCssKeyword_InlineFlex, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flex: inline-flex
     { 0x01db01730244ull, { PrCssKeyword_Inline, PrCssKeyword_ListItem, PrCssKeyword_Unknown } },  // inline flow list-item: inline list-item
-    { 0x01db017304ceull, { PrCssKeyword_Inline, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flow: inline
-    { 0x01db017404ceull, { PrCssKeyword_InlineBlock, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flow-root: inline-block
-    { 0x01db019804ceull, { PrCssKeyword_InlineGrid, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline grid: inline-grid
-    { 0x01db037e04ceull, { PrCssKeyword_Ruby, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline ruby: ruby
-    { 0x01db043804ceull, { PrCssKeyword_InlineTable, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline table: inline-table
+    { 0x01db017304dfull, { PrCssKeyword_Inline, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flow: inline
+    { 0x01db017404dfull, { PrCssKeyword_InlineBlock, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flow-root: inline-block
+    { 0x01db019804dfull, { PrCssKeyword_InlineGrid, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline grid: inline-grid
+    { 0x01db037e04dfull, { PrCssKeyword_Ruby, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline ruby: ruby
+    { 0x01db043804dfull, { PrCssKeyword_InlineTable, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline table: inline-table
     { 0x038301730244ull, { PrCssKeyword_RunIn, PrCssKeyword_ListItem, PrCssKeyword_Unknown } },  // run-in flow list-item: run-in list-item
-    { 0x0383017304ceull, { PrCssKeyword_RunIn, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // run-in flow: run-in
-    { 0x0067006604ceull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-start block-end: block
-    { 0x02b4035404ceull, { PrCssKeyword_RepeatY, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // no-repeat repeat: repeat-y
-    { 0x035402b404ceull, { PrCssKeyword_RepeatX, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // repeat no-repeat: repeat-x
-    { 0x006603ed04ceull, { PrCssKeyword_BlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-end span-all: block-end
-    { 0x006703ed04ceull, { PrCssKeyword_BlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-start span-all: block-start
-    { 0x0095009504ceull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0095009504ceull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0095009504ceull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0095009504ceull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0095009504ceull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0137013704ceull, { PrCssKeyword_End, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // end end: end
-    { 0x021b03ed04ceull, { PrCssKeyword_Left, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // left span-all: left
-    { 0x036903ed04ceull, { PrCssKeyword_Right, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // right span-all: right
-    { 0x03a603ed04ceull, { PrCssKeyword_SelfBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-block-end span-all: self-block-end
-    { 0x03a703ed04ceull, { PrCssKeyword_SelfBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-block-start span-all: self-block-start
-    { 0x03a803a804ceull, { PrCssKeyword_SelfEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-end self-end: self-end
-    { 0x03ac03ac04ceull, { PrCssKeyword_SelfStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-start self-start: self-start
-    { 0x03ad03ed04ceull, { PrCssKeyword_SelfXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-x-end span-all: self-x-end
-    { 0x03ae03ed04ceull, { PrCssKeyword_SelfXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-x-start span-all: self-x-start
-    { 0x03ed007304ceull, { PrCssKeyword_Bottom, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all bottom: bottom
-    { 0x03ed01dd04ceull, { PrCssKeyword_InlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all inline-end: inline-end
-    { 0x03ed01e204ceull, { PrCssKeyword_InlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all inline-start: inline-start
-    { 0x03ed03aa04ceull, { PrCssKeyword_SelfInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-inline-end: self-inline-end
-    { 0x03ed03ab04ceull, { PrCssKeyword_SelfInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-inline-start: self-inline-start
-    { 0x03ed03af04ceull, { PrCssKeyword_SelfYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-y-end: self-y-end
-    { 0x03ed03b004ceull, { PrCssKeyword_SelfYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-y-start: self-y-start
-    { 0x03ed03ed04ceull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03ed04ceull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03ed04ceull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03ed04ceull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03ed04ceull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03f004ceull, { PrCssKeyword_SpanBottom, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-bottom: span-bottom
-    { 0x03ed03f204ceull, { PrCssKeyword_SpanInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-inline-end: span-inline-end
-    { 0x03ed03f304ceull, { PrCssKeyword_SpanInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-inline-start: span-inline-start
-    { 0x03ed03f904ceull, { PrCssKeyword_SpanSelfInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-inline-end: span-self-inline-end
-    { 0x03ed03fa04ceull, { PrCssKeyword_SpanSelfInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-inline-start: span-self-inline-start
-    { 0x03ed03fe04ceull, { PrCssKeyword_SpanSelfYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-y-end: span-self-y-end
-    { 0x03ed03ff04ceull, { PrCssKeyword_SpanSelfYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-y-start: span-self-y-start
-    { 0x03ed040104ceull, { PrCssKeyword_SpanTop, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-top: span-top
-    { 0x03ed040404ceull, { PrCssKeyword_SpanYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-y-end: span-y-end
-    { 0x03ed040504ceull, { PrCssKeyword_SpanYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-y-start: span-y-start
-    { 0x03ed046004ceull, { PrCssKeyword_Top, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all top: top
-    { 0x03ed04c404ceull, { PrCssKeyword_YEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all y-end: y-end
-    { 0x03ed04c504ceull, { PrCssKeyword_YStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all y-start: y-start
-    { 0x03ee03ed04ceull, { PrCssKeyword_SpanBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-block-end span-all: span-block-end
-    { 0x03ef03ed04ceull, { PrCssKeyword_SpanBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-block-start span-all: span-block-start
-    { 0x03f103f104ceull, { PrCssKeyword_SpanEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-end span-end: span-end
-    { 0x03f403ed04ceull, { PrCssKeyword_SpanLeft, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-left span-all: span-left
-    { 0x03f503ed04ceull, { PrCssKeyword_SpanRight, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-right span-all: span-right
-    { 0x03f603ed04ceull, { PrCssKeyword_SpanSelfBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-block-end span-all: span-self-block-end
-    { 0x03f703ed04ceull, { PrCssKeyword_SpanSelfBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-block-start span-all: span-self-block-start
-    { 0x03f803f804ceull, { PrCssKeyword_SpanSelfEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-end span-self-end: span-self-end
-    { 0x03fb03fb04ceull, { PrCssKeyword_SpanSelfStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-start span-self-start: span-self-start
-    { 0x03fc03ed04ceull, { PrCssKeyword_SpanSelfXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-x-end span-all: span-self-x-end
-    { 0x03fd03ed04ceull, { PrCssKeyword_SpanSelfXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-x-start span-all: span-self-x-start
-    { 0x0400040004ceull, { PrCssKeyword_SpanStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-start span-start: span-start
-    { 0x040203ed04ceull, { PrCssKeyword_SpanXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-x-end span-all: span-x-end
-    { 0x040303ed04ceull, { PrCssKeyword_SpanXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-x-start span-all: span-x-start
-    { 0x0415041504ceull, { PrCssKeyword_Start, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // start start: start
-    { 0x04b003ed04ceull, { PrCssKeyword_XEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // x-end span-all: x-end
-    { 0x04b903ed04ceull, { PrCssKeyword_XStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // x-start span-all: x-start
-    { 0x01c401c404ceull, { PrCssKeyword_Ideographic, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // ideographic ideographic: ideographic
-    { 0x01c501c504ceull, { PrCssKeyword_IdeographicInk, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // ideographic-ink ideographic-ink: ideographic-ink
-    { 0x044c044c04ceull, { PrCssKeyword_Text, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // text text: text
+    { 0x0383017304dfull, { PrCssKeyword_RunIn, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // run-in flow: run-in
+    { 0x0067006604dfull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-start block-end: block
+    { 0x02b4035404dfull, { PrCssKeyword_RepeatY, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // no-repeat repeat: repeat-y
+    { 0x035402b404dfull, { PrCssKeyword_RepeatX, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // repeat no-repeat: repeat-x
+    { 0x006603ed04dfull, { PrCssKeyword_BlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-end span-all: block-end
+    { 0x006703ed04dfull, { PrCssKeyword_BlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-start span-all: block-start
+    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0137013704dfull, { PrCssKeyword_End, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // end end: end
+    { 0x021b03ed04dfull, { PrCssKeyword_Left, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // left span-all: left
+    { 0x036903ed04dfull, { PrCssKeyword_Right, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // right span-all: right
+    { 0x03a603ed04dfull, { PrCssKeyword_SelfBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-block-end span-all: self-block-end
+    { 0x03a703ed04dfull, { PrCssKeyword_SelfBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-block-start span-all: self-block-start
+    { 0x03a803a804dfull, { PrCssKeyword_SelfEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-end self-end: self-end
+    { 0x03ac03ac04dfull, { PrCssKeyword_SelfStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-start self-start: self-start
+    { 0x03ad03ed04dfull, { PrCssKeyword_SelfXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-x-end span-all: self-x-end
+    { 0x03ae03ed04dfull, { PrCssKeyword_SelfXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-x-start span-all: self-x-start
+    { 0x03ed007304dfull, { PrCssKeyword_Bottom, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all bottom: bottom
+    { 0x03ed01dd04dfull, { PrCssKeyword_InlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all inline-end: inline-end
+    { 0x03ed01e204dfull, { PrCssKeyword_InlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all inline-start: inline-start
+    { 0x03ed03aa04dfull, { PrCssKeyword_SelfInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-inline-end: self-inline-end
+    { 0x03ed03ab04dfull, { PrCssKeyword_SelfInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-inline-start: self-inline-start
+    { 0x03ed03af04dfull, { PrCssKeyword_SelfYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-y-end: self-y-end
+    { 0x03ed03b004dfull, { PrCssKeyword_SelfYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-y-start: self-y-start
+    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ed03f004dfull, { PrCssKeyword_SpanBottom, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-bottom: span-bottom
+    { 0x03ed03f204dfull, { PrCssKeyword_SpanInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-inline-end: span-inline-end
+    { 0x03ed03f304dfull, { PrCssKeyword_SpanInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-inline-start: span-inline-start
+    { 0x03ed03f904dfull, { PrCssKeyword_SpanSelfInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-inline-end: span-self-inline-end
+    { 0x03ed03fa04dfull, { PrCssKeyword_SpanSelfInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-inline-start: span-self-inline-start
+    { 0x03ed03fe04dfull, { PrCssKeyword_SpanSelfYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-y-end: span-self-y-end
+    { 0x03ed03ff04dfull, { PrCssKeyword_SpanSelfYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-y-start: span-self-y-start
+    { 0x03ed040104dfull, { PrCssKeyword_SpanTop, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-top: span-top
+    { 0x03ed040404dfull, { PrCssKeyword_SpanYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-y-end: span-y-end
+    { 0x03ed040504dfull, { PrCssKeyword_SpanYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-y-start: span-y-start
+    { 0x03ed046004dfull, { PrCssKeyword_Top, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all top: top
+    { 0x03ed04c404dfull, { PrCssKeyword_YEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all y-end: y-end
+    { 0x03ed04c504dfull, { PrCssKeyword_YStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all y-start: y-start
+    { 0x03ee03ed04dfull, { PrCssKeyword_SpanBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-block-end span-all: span-block-end
+    { 0x03ef03ed04dfull, { PrCssKeyword_SpanBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-block-start span-all: span-block-start
+    { 0x03f103f104dfull, { PrCssKeyword_SpanEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-end span-end: span-end
+    { 0x03f403ed04dfull, { PrCssKeyword_SpanLeft, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-left span-all: span-left
+    { 0x03f503ed04dfull, { PrCssKeyword_SpanRight, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-right span-all: span-right
+    { 0x03f603ed04dfull, { PrCssKeyword_SpanSelfBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-block-end span-all: span-self-block-end
+    { 0x03f703ed04dfull, { PrCssKeyword_SpanSelfBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-block-start span-all: span-self-block-start
+    { 0x03f803f804dfull, { PrCssKeyword_SpanSelfEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-end span-self-end: span-self-end
+    { 0x03fb03fb04dfull, { PrCssKeyword_SpanSelfStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-start span-self-start: span-self-start
+    { 0x03fc03ed04dfull, { PrCssKeyword_SpanSelfXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-x-end span-all: span-self-x-end
+    { 0x03fd03ed04dfull, { PrCssKeyword_SpanSelfXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-x-start span-all: span-self-x-start
+    { 0x0400040004dfull, { PrCssKeyword_SpanStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-start span-start: span-start
+    { 0x040203ed04dfull, { PrCssKeyword_SpanXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-x-end span-all: span-x-end
+    { 0x040303ed04dfull, { PrCssKeyword_SpanXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-x-start span-all: span-x-start
+    { 0x0415041504dfull, { PrCssKeyword_Start, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // start start: start
+    { 0x04b003ed04dfull, { PrCssKeyword_XEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // x-end span-all: x-end
+    { 0x04b903ed04dfull, { PrCssKeyword_XStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // x-start span-all: x-start
+    { 0x01c401c404dfull, { PrCssKeyword_Ideographic, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // ideographic ideographic: ideographic
+    { 0x01c501c504dfull, { PrCssKeyword_IdeographicInk, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // ideographic-ink ideographic-ink: ideographic-ink
+    { 0x044c044c04dfull, { PrCssKeyword_Text, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // text text: text
 };
 
 extern const CssKeywordFormRun kCssPropertyKeywordForms[PrCssProperty_Count] = {

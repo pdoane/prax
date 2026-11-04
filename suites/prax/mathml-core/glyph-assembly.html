@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Size variants, then an assembly</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 5.3.1 The GlyphAssembly table</div>
+  <h1>Size variants, then an assembly</h1>
+  <p class=pr-lede><q>rmin is the minimal number of repetitions needed to obtain an assembly of size at least T</q> <q>The glyph
+  assembly stretch size for a target size T is AssembySize(omax, rmin).</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#the-glyphassembly-table">MathML Core §5.3.1</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em: its ( has 12 size variants, the tallest
+  3768 units, and an assembly of ⎛, ⎜ repeated and ⎝.</p>
+</header>
+
+<section>
+  <h2>Parentheses around taller and taller matrices</h2>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math style="font-size: 28px; math-style: normal"><mrow><mo>(</mo><mtable><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>)</mo></mrow><mrow><mo>(</mo><mtable><mtr><mtd><mn>1</mn></mtd></mtr><mtr><mtd><mn>2</mn></mtd></mtr></mtable><mo>)</mo></mrow><mrow><mo>(</mo><mtable><mtr><mtd><mn>1</mn></mtd></mtr><mtr><mtd><mn>2</mn></mtd></mtr><mtr><mtd><mn>3</mn></mtd></mtr></mtable><mo>)</mo></mrow><mrow><mo>(</mo><mtable><mtr><mtd><mn>1</mn></mtd></mtr><mtr><mtd><mn>2</mn></mtd></mtr><mtr><mtd><mn>3</mn></mtd></mtr><mtr><mtd><mn>4</mn></mtd></mtr><mtr><mtd><mn>5</mn></mtd></mtr></mtable><mo>)</mo></mrow></math></div>
+    <figcaption>Around one, two and three rows, size variants, each a little larger and heavier; around five, taller than the last variant at 28px, 105px, the assembly: a top, a bottom and a straight extender between them. <span class=pr-flag>Firefox</span> The rows far apart, the matrices past the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Braces and integrals</h2>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math style="font-size: 28px; math-style: normal"><mrow><mo>{</mo><mtable columnalign=left><mtr><mtd><mi>x</mi><mo>+</mo><mi>y</mi><mo>=</mo><mn>1</mn></mtd></mtr><mtr><mtd><mi>x</mi><mo>−</mo><mi>y</mi><mo>=</mo><mn>3</mn></mtd></mtr><mtr><mtd><mn>2</mn><mi>x</mi><mo>=</mo><mn>4</mn></mtd></mtr><mtr><mtd><mi>y</mi><mo>=</mo><mo>−</mo><mn>1</mn></mtd></mtr></mtable></mrow></math></div>
+    <figcaption>A system of four equations: its brace assembled from a top, a middle, a bottom and extenders. <span class=pr-flag>Firefox</span> The rows far apart, past the stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

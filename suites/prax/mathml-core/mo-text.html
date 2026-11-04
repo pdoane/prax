@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Operators drawn as text</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.4.3 Layout of operators</div>
+  <h1>Operators drawn as text</h1>
+  <p class=pr-lede><q>If the content of the &lt;mo&gt; element is not made of a single character c then fall back to the layout
+  algorithm of […] mtext.</q> <q>The text of the operator must only be painted if the visibility of the &lt;mo&gt;
+  element is visible. In that case, it must be painted with the color of the &lt;mo&gt; element.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-of-operators">MathML Core §3.2.4.3</a></span></p>
+</header>
+
+<section>
+  <h2>Several characters, color and visibility</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mo>(</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>)</mo><mo>((</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>))</mo></math></div>
+    <figcaption>One parenthesis each side stretches around the fraction; "((" and "))", two characters, stay text-size. <span class=pr-flag>Firefox</span> The single parentheses at text size too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mi>a</mi><mo style="color: #c0392b">+</mo><mi>b</mi><mo style="visibility: hidden">+</mo><mi>c</mi></math></div>
+    <figcaption>a, a red +, b, then a hidden + still taking its place and its spacing, then c.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

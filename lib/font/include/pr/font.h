@@ -308,8 +308,15 @@ uint32_t prFontGlyphCount(const PrFont* font);
 // does no shaping.
 uint16_t prFontCodePointGlyph(const PrFont* font, uint32_t codePoint);
 
-// How the character map of a font maps a variation sequence (UTS #37): a base character followed by a variation
-// selector. The font lists the sequences that it supports in its Unicode Variation Sequences (cmap format 14).
+// Returns the glyph that the OpenType feature `feature` (PR_FONT_TAG) substitutes for `glyph` by a single substitution,
+// or by the first alternate of an alternate substitution, or `glyph` itself if the feature substitutes nothing for it.
+// The feature is read under every script and language system of the font's GSUB table, and the lookup does no other
+// shaping. Math layout uses it for the forms that it chooses by size or direction, such as flac and rtlm.
+uint16_t prFontFeatureGlyph(const PrFont* font, uint32_t feature, uint16_t glyph);
+
+// How the character map of a font maps a variation sequence (UTS #37), which is a base character followed by a
+// variation selector. The font lists the sequences that it supports in its Unicode Variation Sequences subtable (cmap
+// format 14).
 enum {
     PrFontSequenceMapping_None,         // the font lists no glyph for the sequence
     PrFontSequenceMapping_Default,      // the sequence takes the glyph of its base character
@@ -325,7 +332,7 @@ typedef struct PrFontSequenceGlyph {
 } PrFontSequenceGlyph;
 
 // Returns the glyph that the character map of the font assigns to the variation sequence of `codePoint` followed by
-// `selector`. A sequence that the font does not list maps to nothing, even if the font has a glyph for `codePoint`: the
+// `selector`. A sequence that the font does not list maps to nothing, even if the font has a glyph for `codePoint`. The
 // caller decides whether to ignore the selector. The lookup does no shaping.
 PrFontSequenceGlyph prFontVariationSequenceGlyph(const PrFont* font, uint32_t codePoint, uint32_t selector);
 
@@ -337,6 +344,11 @@ PrVec2 prFontGlyphVerticalOrigin(const PrFont* font, uint16_t glyph);
 // Returns the bounds of the unhinted, emboldened outline of the glyph, including control points. Returns an empty
 // rectangle for a glyph with no outline.
 PrRect prFontGlyphBounds(const PrFont* font, uint16_t glyph);
+
+// Returns the ink bounds of the unhinted, emboldened outline of the glyph, which are the extremes of its curves rather
+// than of their control points. Returns an empty rectangle for a glyph with no outline. It costs more than
+// prFontGlyphBounds, whose bounds include the control points.
+PrRect prFontGlyphInkBounds(const PrFont* font, uint16_t glyph);
 
 // Appends the emboldened outline of the glyph in ems to `out`, mapped through `transform`. The outline fills with the
 // nonzero rule. Returns false for a glyph with no outline, such as a space. A hinted font fits the outline to

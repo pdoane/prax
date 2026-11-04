@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mstack: stacked digits</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 28px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.6.1 Stacks of Characters &lt;mstack&gt;</div>
+  <h1>mstack: stacked digits</h1>
+  <p class=pr-lede><q>mstack is used to lay out rows of numbers that are aligned on each digit.</q> <q>For decimalpoint, the column
+  used is the left-most column in each row that contains the decimalpoint character</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#stacks-of-characters-mstack">MathML 4 §3.6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Addition</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mstack><mn>424</mn><msrow><mo>+</mo><mn>33</mn></msrow><msline /></mstack></math></div>
+    <figcaption>The specification's example: 424 over + 33, the 3s under the 2 and the 4 to the right, the + in the hundreds column, then a line under them. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> "424+33" in a row.</figcaption>
+  </figure>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math><mstack stackalign=left><mn>424</mn><mn>33</mn></mstack><mspace width=20px /><mstack><mn>4.24</mn><mn>33.1</mn></mstack></math></div>
+    <figcaption><code>stackalign="left"</code>: 424 over 33 flush left; then the default, on the decimal points: 4.24 over 33.1, the points in one column. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> In rows.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows shifted</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mstack><mn>123</mn><msrow position=1><mn>45</mn></msrow><msline /><mn>6</mn></mstack></math></div>
+    <figcaption><code>position="1"</code> on 45: one column left of where it would be, its 5 under the 2. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> In a row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

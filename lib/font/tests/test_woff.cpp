@@ -1,5 +1,6 @@
 #include "pr/compress_builtin.h"
 #include "pr/font.h"
+#include "pr/font_math.h"
 #include "pr/path.h"
 
 #include "tools/harness/test.h"
@@ -397,4 +398,31 @@ TEST_CASE("a WOFF2 file whose compressed data runs past its end is not a font, w
     CHECK(prFontCreateWoff(bytes, 0, nullptr, codec, &font) == PrStatus_InvalidData);
     CHECK(font == nullptr);
     prCompressCodecDestroy(codec);
+}
+
+TEST_CASE("a WOFF2 file of a math font reads its MATH table as the font file does") {
+    const PrFont* reference = loadFont("NotoSansMath.ttf");
+    const std::vector<uint8_t> ttf = readFile("NotoSansMath.ttf");
+    const std::vector<uint8_t> woff2 = woff2Of(ttf);
+    PrCompressCodec* codec = prCompressBuiltinCreate();
+    const PrFont* font = nullptr;
+    REQUIRE(prFontCreateWoff(woff2, 0, nullptr, codec, &font) == PrStatus_Ok);
+    prCompressCodecDestroy(codec);
+    CHECK(prFontHasMath(font));
+    CHECK(prFontMathConstants(font)->axisHeight == prFontMathConstants(reference)->axisHeight);
+    uint16_t paren = prFontCodePointGlyph(font, '(');
+    PrFontMathStretchInfo expected{};
+    PrFontMathStretchInfo info{};
+    PrFontGlyph a[16];
+    PrFontGlyph b[16];
+    uint32_t count = prFontMathGlyphStretch(reference, paren, PrFontMathAxis_Vertical, 6, &expected, a, 16);
+    CHECK(count == 7);
+    CHECK(prFontMathGlyphStretch(font, paren, PrFontMathAxis_Vertical, 6, &info, b, 16) == count);
+    CHECK(info.ascent == expected.ascent);
+    for (uint32_t i = 0; i < count && i < 16; ++i) {
+        CHECK(b[i].id == a[i].id);
+        CHECK(b[i].position.y == a[i].position.y);
+    }
+    prFontRelease(font);
+    prFontRelease(reference);
 }

@@ -60,6 +60,14 @@ typedef uint8_t PrUnicodeBidiBracket;
 // closing bracket pair when their keys are equal.
 PrUnicodeBidiBracket prUnicodeBidiBracket(uint32_t codePoint, uint32_t* key);
 
+// Returns the Bidi_Mirroring_Glyph of `codePoint`, the character whose glyph is the mirror image of its glyph, or
+// `codePoint` itself if it has none. A right-to-left run shows the mirrored character.
+uint32_t prUnicodeBidiMirror(uint32_t codePoint);
+
+// Returns true if the Bidi_Mirrored property of `codePoint` is Yes. A right-to-left run shows such a character
+// mirrored, with the glyph of its Bidi_Mirroring_Glyph if it has one.
+bool prUnicodeBidiIsMirrored(uint32_t codePoint);
+
 // The strong bidirectional types.
 enum {
     PrUnicodeBidiStrong_None,    // a weak or neutral type

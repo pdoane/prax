@@ -12,6 +12,7 @@
 #pragma once
 
 #include "pr/layout_tree.h"
+#include "pr/mem.h"
 #include "pr/raw_array.h"
 
 #include "layout/src/layout_exclusion.h"
@@ -58,6 +59,58 @@ inline bool layoutCellSpacesEqual(const LayoutCellSpace& a, const LayoutCellSpac
     return true;
 }
 
+// The axis along which a math parent asks an embellished operator to stretch (mathml-core/#box-model).
+enum {
+    LayoutMathStretchAxis_None,
+    LayoutMathStretchAxis_Inline,       // to cover an inline size
+    LayoutMathStretchAxis_Block,        // to cover an ink line-ascent and line-descent
+};
+typedef uint8_t LayoutMathStretchAxis;
+
+// The stretch size constraint that a math parent lays out an embellished operator with (LayoutSpace::stretch). Along
+// the inline axis, `size` is the inline size to cover. Along the block axis, `size` and `depth` are the ink line-ascent
+// and line-descent to cover.
+//
+// An accent over a base taller than the font's FlattenedAccentBaseHeight is laid out `flattened`, and takes its glyph's
+// flattened form (OpenType MATH, flac), along any axis or none.
+//
+// A number in an mstack is laid out with the inline offset of the origin of each of its glyphs from its inline-start
+// edge, which puts each of its characters in its column (mathml4/#presm_mstack). The offsets are valid only during the
+// layout that they are given to, and a cached result is keyed on their count and their hash.
+//
+// The fields before `columns` are the constraint's key, which is compared as bytes (layoutMathStretchesEqual). A field
+// that the constraint does not use is zero, as `depth` is along the inline axis and both sizes are with no axis.
+PR_NO_PADDING_BEGIN
+struct LayoutMathStretch {
+    PrLayoutUnit size;
+    PrLayoutUnit depth;
+
+    // The inline size that a row breaks its lines to fit (mathml4/#presm_linebreaking), or 0 for none. It is the width
+    // of a formula's container, which a row that is a formula's only child takes from the formula.
+    PrLayoutUnit lineWidth;
+
+    uint32_t columnCount;
+    uint64_t columnsHash;
+    LayoutMathStretchAxis axis;
+    bool flattened;
+    uint8_t _pad[6];
+
+    const PrLayoutUnit* PR_NULLABLE columns;
+};
+PR_NO_PADDING_END
+
+// Returns true if the constraint asks the box that it lays out to stretch, to take another form, to set its characters
+// in columns, or to break its lines.
+inline bool layoutMathStretchIsActive(const LayoutMathStretch& stretch) {
+    return stretch.axis != LayoutMathStretchAxis_None || stretch.flattened || stretch.columnCount != 0 ||
+        stretch.lineWidth != PrLayoutUnit{0};
+}
+
+// Returns true if two stretch size constraints have equal keys.
+inline bool layoutMathStretchesEqual(const LayoutMathStretch& a, const LayoutMathStretch& b) {
+    return prMemEquals(&a, &b, offsetof(LayoutMathStretch, columns));
+}
+
 // What a cached result read beyond what its entry holds. If the result is not plain (LayoutCacheFlag_Plain), this is
 // what it read of its block formatting context beyond its range, and the floats it placed there. If it read the
 // fallback of its space (LayoutResultFlag_ReadsFallback), this holds that fallback. Offsets are from the block-start
@@ -72,6 +125,7 @@ struct LayoutCacheContext {
     LayoutLineExtent marker;          // the outside markers of its space (LayoutSpace::marker)
 
     LayoutCellSpace cell;           // the inputs from the cell's table (LayoutSpace::cell)
+    LayoutMathStretch stretch;      // the stretch size constraint of an embellished operator (LayoutSpace::stretch)
 };
 
 // Marks no context record (LayoutCacheEntry::context). The first record of the cache is never used.
@@ -125,8 +179,8 @@ enum {
     LayoutCacheFlag_Measured = 1 << 13,     // a measurement record holds an answer (LayoutMeasureRecord)
     LayoutCacheFlag_SizeOnly = 1 << 14,     // a measurement record's answer has no baselines (LayoutMeasureKind_Size)
 
-    // The space held outside markers, or a table cell's baseline or borders. The context record holds them
-    // (LayoutCacheContext::marker, LayoutCacheContext::cell).
+    // The space held outside markers, a table cell's baseline or borders, or a stretch size constraint. The context
+    // record holds them (LayoutCacheContext::marker, LayoutCacheContext::cell, LayoutCacheContext::stretch).
     LayoutCacheFlag_SpaceExtras = 1 << 15,
     LayoutCacheFlag_Requests = LayoutCacheFlag_InlineFixed | LayoutCacheFlag_BlockFixed | LayoutCacheFlag_BlockContent |
         LayoutCacheFlag_BlockDefinite,

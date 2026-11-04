@@ -25,14 +25,15 @@ constexpr char kDomTagBlob[] =
     "font-face-src" "font-face-uri" "footer" "foreignObject" "form" "frame" "frameset" "g"
     "glyph" "glyphRef" "h1" "h2" "h3" "h4" "h5" "h6" "head" "header" "hgroup" "hkern" "hr"
     "html" "i" "iframe" "image" "img" "input" "ins" "kbd" "keygen" "label" "legend" "li" "line"
-    "linearGradient" "link" "listing" "maction" "main" "malignmark" "map" "mark" "marker"
-    "marquee" "mask" "math" "menu" "merror" "meta" "metadata" "meter" "mfrac" "mglyph" "mi"
-    "missing-glyph" "mmultiscripts" "mn" "mo" "mover" "mpadded" "mpath" "mphantom"
-    "mprescripts" "mroot" "mrow" "ms" "mspace" "msqrt" "mstyle" "msub" "msubsup" "msup"
-    "mtable" "mtd" "mtext" "mtr" "munder" "munderover" "nav" "nobr" "noembed" "noframes"
-    "noscript" "object" "ol" "optgroup" "option" "output" "p" "param" "path" "pattern"
-    "picture" "plaintext" "polygon" "polyline" "pre" "progress" "q" "radialGradient" "rb"
-    "rect" "rp" "rt" "rtc" "ruby" "s" "samp" "script" "search" "section" "select"
+    "linearGradient" "link" "listing" "maction" "main" "maligngroup" "malignmark" "map" "mark"
+    "marker" "marquee" "mask" "math" "menclose" "menu" "merror" "meta" "metadata" "meter"
+    "mfenced" "mfrac" "mglyph" "mi" "missing-glyph" "mlabeledtr" "mlongdiv" "mmultiscripts"
+    "mn" "mo" "mover" "mpadded" "mpath" "mphantom" "mprescripts" "mroot" "mrow" "ms"
+    "mscarries" "mscarry" "msgroup" "msline" "mspace" "msqrt" "msrow" "mstack" "mstyle" "msub"
+    "msubsup" "msup" "mtable" "mtd" "mtext" "mtr" "munder" "munderover" "nav" "nobr" "noembed"
+    "noframes" "noscript" "object" "ol" "optgroup" "option" "output" "p" "param" "path"
+    "pattern" "picture" "plaintext" "polygon" "polyline" "pre" "progress" "q" "radialGradient"
+    "rb" "rect" "rp" "rt" "rtc" "ruby" "s" "samp" "script" "search" "section" "select"
     "selectedcontent" "semantics" "set" "slot" "small" "source" "span" "stop" "strike" "strong"
     "style" "sub" "summary" "sup" "svg" "switch" "symbol" "table" "tbody" "tbreak" "td"
     "template" "text" "textArea" "textarea" "textPath" "tfoot" "th" "thead" "time" "title" "tr"
@@ -50,56 +51,78 @@ constexpr uint16_t kDomTagAt[] = {
     632, 638, 642, 651, 667, 681, 694, 707, 713, 726, 730, 735,
     743, 744, 749, 757, 759, 761, 763, 765, 767, 769, 773, 779,
     785, 790, 792, 796, 797, 803, 808, 811, 816, 819, 822, 828,
-    833, 839, 841, 845, 859, 863, 870, 877, 881, 891, 894, 898,
-    904, 911, 915, 919, 923, 929, 933, 941, 946, 951, 957, 959,
-    972, 985, 987, 989, 994, 1001, 1006, 1014, 1025, 1030, 1034, 1036,
-    1042, 1047, 1053, 1057, 1064, 1068, 1074, 1077, 1082, 1085, 1091, 1101,
-    1104, 1108, 1115, 1123, 1131, 1137, 1139, 1147, 1153, 1159, 1160, 1165,
-    1169, 1176, 1183, 1192, 1199, 1207, 1210, 1218, 1219, 1233, 1235, 1239,
-    1241, 1243, 1246, 1250, 1251, 1255, 1261, 1267, 1274, 1280, 1295, 1304,
-    1307, 1311, 1316, 1322, 1326, 1330, 1336, 1342, 1347, 1350, 1357, 1360,
-    1363, 1369, 1375, 1380, 1385, 1391, 1393, 1401, 1405, 1413, 1421, 1429,
-    1434, 1436, 1441, 1445, 1450, 1452, 1457, 1461, 1466, 1468, 1469, 1471,
-    1474, 1477, 1482, 1486, 1491, 1494, 1497,
+    833, 839, 841, 845, 859, 863, 870, 877, 881, 892, 902, 905,
+    909, 915, 922, 926, 930, 938, 942, 948, 952, 960, 965, 972,
+    977, 983, 985, 998, 1008, 1016, 1029, 1031, 1033, 1038, 1045, 1050,
+    1058, 1069, 1074, 1078, 1080, 1089, 1096, 1103, 1109, 1115, 1120, 1125,
+    1131, 1137, 1141, 1148, 1152, 1158, 1161, 1166, 1169, 1175, 1185, 1188,
+    1192, 1199, 1207, 1215, 1221, 1223, 1231, 1237, 1243, 1244, 1249, 1253,
+    1260, 1267, 1276, 1283, 1291, 1294, 1302, 1303, 1317, 1319, 1323, 1325,
+    1327, 1330, 1334, 1335, 1339, 1345, 1351, 1358, 1364, 1379, 1388, 1391,
+    1395, 1400, 1406, 1410, 1414, 1420, 1426, 1431, 1434, 1441, 1444, 1447,
+    1453, 1459, 1464, 1469, 1475, 1477, 1485, 1489, 1497, 1505, 1513, 1518,
+    1520, 1525, 1529, 1534, 1536, 1541, 1545, 1550, 1552, 1553, 1555, 1558,
+    1561, 1566, 1570, 1575, 1578, 1581,
 };
 
 constexpr uint8_t kDomTagDisplace[] = {
-    4, 8, 37, 3, 15, 0, 17, 0, 5, 41, 12, 2,
-    1, 5, 15, 5, 11, 4, 0, 3, 6, 0, 9, 7,
-    0, 5, 1, 0, 6, 25, 6, 12, 0, 0, 3, 0,
-    0, 16, 8, 0, 1, 4, 3, 0, 0, 0, 3, 31,
-    1, 11, 0, 6, 0, 0, 0, 0, 0, 7, 4, 16,
-    28, 2, 0, 10, 4, 0, 0, 3, 7, 3, 0, 3,
-    0, 3, 0, 5, 1, 4, 4, 0, 0, 4, 1, 11,
-    0, 5, 0, 8, 3, 7, 0, 0, 0, 1, 5, 1,
-    2, 0, 31, 0, 10, 6, 5, 0, 15, 3, 0, 0,
-    3, 10, 7, 0, 9, 5, 11, 1, 1, 0, 3, 0,
-    11, 21, 2, 12, 0, 0, 4, 4,
+    4, 2, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0,
+    3, 0, 0, 0, 1, 0, 0, 0, 2, 1, 3, 3,
+    0, 2, 0, 0, 0, 0, 0, 2, 3, 8, 0, 0,
+    8, 0, 2, 0, 0, 1, 0, 0, 0, 3, 5, 1,
+    1, 4, 1, 4, 2, 1, 0, 4, 0, 0, 1, 0,
+    1, 2, 5, 0, 0, 4, 0, 0, 3, 0, 0, 3,
+    1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1,
+    0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0,
+    0, 0, 3, 0, 0, 0, 1, 3, 0, 2, 1, 6,
+    4, 0, 0, 0, 0, 0, 3, 1, 0, 0, 3, 2,
+    0, 0, 1, 0, 1, 3, 0, 1,
 };
 
-constexpr uint8_t kDomTagSlot[] = {
-    114, 90, 18, 148, 135, 31, 146, 194, 104, 239, 87, 0,
-    142, 10, 205, 94, 86, 78, 15, 0, 7, 235, 130, 242,
-    204, 158, 21, 159, 129, 236, 46, 115, 124, 131, 139, 47,
-    209, 213, 88, 193, 144, 14, 83, 0, 188, 95, 136, 165,
-    137, 26, 134, 0, 107, 143, 229, 186, 59, 140, 206, 226,
-    201, 80, 79, 225, 160, 155, 125, 30, 210, 61, 57, 5,
-    177, 197, 223, 63, 11, 60, 25, 82, 84, 112, 1, 162,
-    212, 182, 179, 138, 0, 141, 102, 153, 98, 168, 12, 74,
-    154, 180, 222, 216, 66, 211, 120, 116, 19, 170, 0, 13,
-    228, 97, 122, 110, 171, 34, 133, 173, 132, 163, 38, 184,
-    92, 73, 101, 29, 27, 150, 50, 28, 2, 174, 230, 0,
-    100, 196, 113, 207, 166, 3, 198, 96, 185, 65, 40, 192,
-    68, 0, 181, 199, 36, 183, 0, 52, 72, 81, 37, 22,
-    231, 241, 232, 103, 244, 221, 69, 43, 149, 55, 6, 39,
-    23, 121, 20, 64, 44, 89, 67, 105, 4, 234, 54, 172,
-    53, 157, 77, 33, 117, 106, 167, 119, 126, 169, 215, 75,
-    156, 24, 240, 70, 200, 62, 161, 32, 202, 233, 218, 93,
-    238, 51, 178, 127, 0, 0, 99, 190, 237, 176, 187, 48,
-    56, 191, 9, 214, 219, 220, 91, 41, 108, 175, 243, 58,
-    208, 245, 224, 76, 189, 85, 111, 42, 227, 164, 71, 217,
-    195, 109, 203, 49, 16, 123, 17, 147, 145, 151, 118, 35,
-    128, 152, 45, 8,
+constexpr uint16_t kDomTagSlot[] = {
+    0, 80, 0, 0, 0, 0, 3, 0, 183, 0, 101, 0,
+    153, 180, 0, 228, 0, 233, 0, 145, 0, 0, 0, 0,
+    149, 0, 242, 0, 0, 0, 0, 141, 0, 0, 10, 191,
+    236, 0, 66, 114, 65, 0, 0, 200, 224, 0, 0, 0,
+    0, 125, 34, 0, 0, 222, 123, 27, 0, 102, 0, 95,
+    255, 0, 0, 112, 0, 11, 0, 0, 79, 49, 195, 0,
+    0, 185, 0, 0, 0, 90, 6, 190, 0, 135, 209, 75,
+    0, 0, 0, 0, 0, 0, 8, 127, 0, 157, 208, 19,
+    0, 0, 181, 162, 0, 0, 0, 0, 0, 50, 0, 206,
+    193, 0, 0, 252, 215, 0, 0, 0, 0, 0, 0, 54,
+    88, 0, 64, 221, 0, 166, 4, 0, 81, 168, 0, 0,
+    5, 0, 69, 116, 0, 0, 0, 0, 29, 0, 62, 0,
+    0, 0, 248, 0, 0, 0, 245, 120, 21, 113, 188, 0,
+    170, 0, 177, 0, 0, 247, 0, 7, 0, 85, 0, 30,
+    227, 0, 0, 232, 22, 122, 0, 0, 0, 109, 0, 0,
+    0, 182, 0, 0, 0, 0, 179, 0, 56, 0, 198, 0,
+    0, 121, 16, 0, 0, 234, 0, 0, 73, 0, 251, 118,
+    0, 238, 199, 0, 241, 0, 207, 91, 140, 76, 0, 0,
+    0, 0, 20, 0, 0, 0, 44, 174, 214, 161, 0, 0,
+    13, 213, 235, 51, 152, 0, 46, 0, 243, 0, 0, 189,
+    89, 138, 0, 133, 24, 0, 212, 92, 229, 74, 0, 0,
+    0, 0, 42, 0, 0, 25, 0, 100, 0, 0, 0, 131,
+    0, 0, 0, 0, 0, 0, 0, 86, 0, 0, 194, 210,
+    0, 196, 0, 240, 0, 0, 0, 0, 0, 192, 0, 216,
+    0, 0, 84, 52, 0, 119, 58, 0, 230, 0, 0, 0,
+    0, 0, 246, 0, 256, 0, 0, 0, 225, 158, 203, 0,
+    0, 0, 187, 156, 0, 43, 0, 150, 0, 219, 253, 0,
+    0, 143, 0, 0, 40, 59, 1, 0, 0, 175, 231, 0,
+    36, 39, 184, 134, 137, 45, 104, 15, 0, 237, 0, 0,
+    202, 0, 197, 93, 160, 0, 167, 126, 0, 0, 35, 0,
+    0, 148, 205, 0, 0, 239, 173, 48, 0, 33, 0, 0,
+    0, 0, 0, 0, 67, 0, 55, 147, 31, 226, 171, 211,
+    254, 77, 155, 0, 117, 163, 0, 0, 106, 0, 0, 0,
+    23, 0, 0, 28, 47, 0, 0, 164, 63, 0, 0, 124,
+    0, 0, 0, 78, 0, 144, 97, 12, 142, 220, 0, 0,
+    18, 60, 249, 103, 0, 0, 0, 0, 132, 0, 0, 107,
+    178, 0, 0, 0, 32, 83, 169, 217, 0, 115, 130, 0,
+    0, 111, 68, 201, 186, 0, 0, 2, 128, 165, 0, 0,
+    0, 108, 110, 0, 223, 159, 0, 129, 9, 146, 38, 87,
+    154, 0, 105, 244, 136, 139, 57, 71, 0, 70, 0, 37,
+    99, 0, 96, 0, 53, 0, 151, 98, 0, 82, 0, 72,
+    17, 0, 0, 0, 204, 0, 0, 0, 94, 0, 41, 176,
+    172, 26, 14, 0, 61, 218, 250, 0,
 };
 
 constexpr char kDomTagUpperBlob[] =
@@ -117,14 +140,15 @@ constexpr char kDomTagUpperBlob[] =
     "FONT-FACE-SRC" "FONT-FACE-URI" "FOOTER" "FOREIGNOBJECT" "FORM" "FRAME" "FRAMESET" "G"
     "GLYPH" "GLYPHREF" "H1" "H2" "H3" "H4" "H5" "H6" "HEAD" "HEADER" "HGROUP" "HKERN" "HR"
     "HTML" "I" "IFRAME" "IMAGE" "IMG" "INPUT" "INS" "KBD" "KEYGEN" "LABEL" "LEGEND" "LI" "LINE"
-    "LINEARGRADIENT" "LINK" "LISTING" "MACTION" "MAIN" "MALIGNMARK" "MAP" "MARK" "MARKER"
-    "MARQUEE" "MASK" "MATH" "MENU" "MERROR" "META" "METADATA" "METER" "MFRAC" "MGLYPH" "MI"
-    "MISSING-GLYPH" "MMULTISCRIPTS" "MN" "MO" "MOVER" "MPADDED" "MPATH" "MPHANTOM"
-    "MPRESCRIPTS" "MROOT" "MROW" "MS" "MSPACE" "MSQRT" "MSTYLE" "MSUB" "MSUBSUP" "MSUP"
-    "MTABLE" "MTD" "MTEXT" "MTR" "MUNDER" "MUNDEROVER" "NAV" "NOBR" "NOEMBED" "NOFRAMES"
-    "NOSCRIPT" "OBJECT" "OL" "OPTGROUP" "OPTION" "OUTPUT" "P" "PARAM" "PATH" "PATTERN"
-    "PICTURE" "PLAINTEXT" "POLYGON" "POLYLINE" "PRE" "PROGRESS" "Q" "RADIALGRADIENT" "RB"
-    "RECT" "RP" "RT" "RTC" "RUBY" "S" "SAMP" "SCRIPT" "SEARCH" "SECTION" "SELECT"
+    "LINEARGRADIENT" "LINK" "LISTING" "MACTION" "MAIN" "MALIGNGROUP" "MALIGNMARK" "MAP" "MARK"
+    "MARKER" "MARQUEE" "MASK" "MATH" "MENCLOSE" "MENU" "MERROR" "META" "METADATA" "METER"
+    "MFENCED" "MFRAC" "MGLYPH" "MI" "MISSING-GLYPH" "MLABELEDTR" "MLONGDIV" "MMULTISCRIPTS"
+    "MN" "MO" "MOVER" "MPADDED" "MPATH" "MPHANTOM" "MPRESCRIPTS" "MROOT" "MROW" "MS"
+    "MSCARRIES" "MSCARRY" "MSGROUP" "MSLINE" "MSPACE" "MSQRT" "MSROW" "MSTACK" "MSTYLE" "MSUB"
+    "MSUBSUP" "MSUP" "MTABLE" "MTD" "MTEXT" "MTR" "MUNDER" "MUNDEROVER" "NAV" "NOBR" "NOEMBED"
+    "NOFRAMES" "NOSCRIPT" "OBJECT" "OL" "OPTGROUP" "OPTION" "OUTPUT" "P" "PARAM" "PATH"
+    "PATTERN" "PICTURE" "PLAINTEXT" "POLYGON" "POLYLINE" "PRE" "PROGRESS" "Q" "RADIALGRADIENT"
+    "RB" "RECT" "RP" "RT" "RTC" "RUBY" "S" "SAMP" "SCRIPT" "SEARCH" "SECTION" "SELECT"
     "SELECTEDCONTENT" "SEMANTICS" "SET" "SLOT" "SMALL" "SOURCE" "SPAN" "STOP" "STRIKE" "STRONG"
     "STYLE" "SUB" "SUMMARY" "SUP" "SVG" "SWITCH" "SYMBOL" "TABLE" "TBODY" "TBREAK" "TD"
     "TEMPLATE" "TEXT" "TEXTAREA" "TEXTAREA" "TEXTPATH" "TFOOT" "TH" "THEAD" "TIME" "TITLE" "TR"
@@ -142,17 +166,18 @@ constexpr uint16_t kDomTagUpperAt[] = {
     632, 638, 642, 651, 667, 681, 694, 707, 713, 726, 730, 735,
     743, 744, 749, 757, 759, 761, 763, 765, 767, 769, 773, 779,
     785, 790, 792, 796, 797, 803, 808, 811, 816, 819, 822, 828,
-    833, 839, 841, 845, 859, 863, 870, 877, 881, 891, 894, 898,
-    904, 911, 915, 919, 923, 929, 933, 941, 946, 951, 957, 959,
-    972, 985, 987, 989, 994, 1001, 1006, 1014, 1025, 1030, 1034, 1036,
-    1042, 1047, 1053, 1057, 1064, 1068, 1074, 1077, 1082, 1085, 1091, 1101,
-    1104, 1108, 1115, 1123, 1131, 1137, 1139, 1147, 1153, 1159, 1160, 1165,
-    1169, 1176, 1183, 1192, 1199, 1207, 1210, 1218, 1219, 1233, 1235, 1239,
-    1241, 1243, 1246, 1250, 1251, 1255, 1261, 1267, 1274, 1280, 1295, 1304,
-    1307, 1311, 1316, 1322, 1326, 1330, 1336, 1342, 1347, 1350, 1357, 1360,
-    1363, 1369, 1375, 1380, 1385, 1391, 1393, 1401, 1405, 1413, 1421, 1429,
-    1434, 1436, 1441, 1445, 1450, 1452, 1457, 1461, 1466, 1468, 1469, 1471,
-    1474, 1477, 1482, 1486, 1491, 1494, 1497,
+    833, 839, 841, 845, 859, 863, 870, 877, 881, 892, 902, 905,
+    909, 915, 922, 926, 930, 938, 942, 948, 952, 960, 965, 972,
+    977, 983, 985, 998, 1008, 1016, 1029, 1031, 1033, 1038, 1045, 1050,
+    1058, 1069, 1074, 1078, 1080, 1089, 1096, 1103, 1109, 1115, 1120, 1125,
+    1131, 1137, 1141, 1148, 1152, 1158, 1161, 1166, 1169, 1175, 1185, 1188,
+    1192, 1199, 1207, 1215, 1221, 1223, 1231, 1237, 1243, 1244, 1249, 1253,
+    1260, 1267, 1276, 1283, 1291, 1294, 1302, 1303, 1317, 1319, 1323, 1325,
+    1327, 1330, 1334, 1335, 1339, 1345, 1351, 1358, 1364, 1379, 1388, 1391,
+    1395, 1400, 1406, 1410, 1414, 1420, 1426, 1431, 1434, 1441, 1444, 1447,
+    1453, 1459, 1464, 1469, 1475, 1477, 1485, 1489, 1497, 1505, 1513, 1518,
+    1520, 1525, 1529, 1534, 1536, 1541, 1545, 1550, 1552, 1553, 1555, 1558,
+    1561, 1566, 1570, 1575, 1578, 1581,
 };
 
 } // namespace
@@ -167,10 +192,10 @@ PrStringView domTagUpperName(PrDomTag tag) {
 
 PrDomTag domTagFromText(PrStringView text) {
     uint64_t word;
-    uint64_t hash = nameHash(text.data, text.size, 0x326b6ac778cbb843ull, &word);
+    uint64_t hash = nameHash(text.data, text.size, 0xc5a49d04a6bab236ull, &word);
     uint32_t tag = kDomTagSlot[(uint32_t(hash)
         + kDomTagDisplace[(hash >> 32) & 127u] * (uint32_t(hash >> 32) | 1))
-        & 255u];
+        & 511u];
     return nameEquals(domTagName(PrDomTag(tag)), text, word) ? PrDomTag(tag) : PrDomTag_Unknown;
 }
 
@@ -180,17 +205,19 @@ const uint64_t kDomTagsHtmlBoxes[kDomTagWords] = {
     UINT64_C(0x0080403038220000),
     // PrDomTag_Frame, PrDomTag_Frameset, PrDomTag_Iframe, PrDomTag_Img, PrDomTag_Input
     UINT64_C(0x000d0000c0000000),
-    // PrDomTag_Meter, PrDomTag_Object, PrDomTag_Progress
-    UINT64_C(0x0400100000000800),
-    // PrDomTag_Select, PrDomTag_Td, PrDomTag_Textarea, PrDomTag_Th, PrDomTag_Video, PrDomTag_Wbr
-    UINT64_C(0x0012001220000100),
+    // PrDomTag_Meter, PrDomTag_Object
+    UINT64_C(0x0080000000002000),
+    // PrDomTag_Progress, PrDomTag_Select, PrDomTag_Td, PrDomTag_Textarea, PrDomTag_Th, PrDomTag_Video, PrDomTag_Wbr
+    UINT64_C(0x9000910000080020),
+    UINT64_C(0x0000000000000000),
 };
 
 const uint64_t kDomTagsHtmlParagraphs[kDomTagWords] = {
     UINT64_C(0x0000000000000000),
     UINT64_C(0x0000000000000000),
     // PrDomTag_P
-    UINT64_C(0x0002000000000000),
+    UINT64_C(0x1000000000000000),
+    UINT64_C(0x0000000000000000),
     UINT64_C(0x0000000000000000),
 };
 
@@ -199,7 +226,17 @@ const uint64_t kDomTagsSvgBoxes[kDomTagWords] = {
     UINT64_C(0x0000000000000000),
     UINT64_C(0x0000000000000000),
     // PrDomTag_Svg
-    UINT64_C(0x0000000000800000),
+    UINT64_C(0x0000000400000000),
+    UINT64_C(0x0000000000000000),
+};
+
+const uint64_t kDomTagsMathMlBoxes[kDomTagWords] = {
+    UINT64_C(0x0000000000000000),
+    UINT64_C(0x0000000000000000),
+    // PrDomTag_Mglyph, PrDomTag_Mi, PrDomTag_Mn, PrDomTag_Mo, PrDomTag_Ms, PrDomTag_Mtd, PrDomTag_Mtext
+    UINT64_C(0x0000600080c30000),
+    UINT64_C(0x0000000000000000),
+    UINT64_C(0x0000000000000000),
 };
 
 } // namespace pr_impl

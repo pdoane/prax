@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Named spaces</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 36px; }
+  .pr-stage :is(mpadded, mspace) { outline: 1px solid #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.3.6 Adjust Space Around Content &lt;mpadded&gt;</div>
+  <h1>Named spaces</h1>
+  <p class=pr-lede><q>While MathML-Core supports the above attributes, it only allows the value to be a valid
+  &lt;length-percentage&gt;. As described in length MathML 4 extends this syntax to allow namedspace.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#adjust-space-around-content-mpadded">MathML 4 §3.3.6</a></span> <code>thickmathspace</code> is 5/18em, at 36px
+  10px. Each <code>mpadded</code> and <code>mspace</code> is outlined.</p>
+</header>
+
+<section>
+  <h2>Lengths in named spaces</h2>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math><mi>f</mi><mo>(</mo><mi>x</mi><mo>)</mo><mspace width=veryverythickmathspace /><mi>d</mi><mi>x</mi></math></div>
+    <figcaption><code>width="veryverythickmathspace"</code>, 7/18em: 14px between <i>f</i>(<i>x</i>) and <i>dx</i>. <span class=pr-flag>Chrome</span> No space.</figcaption>
+  </figure>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math><mi>a</mi><mpadded lspace=thickmathspace><mi>b</mi></mpadded><mi>c</mi></math></div>
+    <figcaption><code>lspace="thickmathspace"</code>: <i>b</i> moved 10px right within its outline. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> <i>b</i> unmoved.</figcaption>
+  </figure>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math><mi>a</mi><mo lspace=verythickmathspace rspace=negativethinmathspace>=</mo><mi>b</mi></math></div>
+    <figcaption><code>lspace="verythickmathspace"</code> on =: 12px before it; <code>rspace="negativethinmathspace"</code>: −6px after it, <i>b</i> pulled into it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The dictionary's 10px each side.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

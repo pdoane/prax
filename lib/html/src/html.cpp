@@ -228,9 +228,16 @@ const PrDomAttr* PR_NULLABLE nextAttribute(const PrDomAttr* attribute) {
     return static_cast<const PrDomAttr*>(attribute->next);
 }
 
+// Returns true if the element has the members of HTMLHyperlinkElementUtils, as an HTML a or area element and a MathML a
+// element do (mathml-core/#the-a-element).
+bool isHyperlinkElement(const PrDomElement* element) {
+    return domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area) ||
+        (element->space == PrDomNamespace_MathMl && element->tag == PrDomTag_A);
+}
+
 // Returns the URL of a hyperlink, its href attribute parsed against the document base URL, or null if the element has
 // no href attribute or it does not parse (html/#reinitialise-url). The caller destroys the URL.
-PrUrl* PR_NULLABLE hyperlinkUrl(const PrHtmlElement* element) {
+PrUrl* PR_NULLABLE hyperlinkUrl(const PrDomElement* element) {
     PrStringView href = domAttributeValue(element, "href");
     if (href.data == nullptr)
         return nullptr;
@@ -1024,8 +1031,8 @@ PrHtmlAreaElement* PR_NULLABLE prHtmlAreaElementQuery(PrDomEventTarget* PR_NULLA
     return htmlElementQuery<PrHtmlAreaElement>(object, PrDomTag_Area);
 }
 
-PrRawString prHtmlHyperlinkComponent(const PrHtmlElement* element, PrUrlComponent component) {
-    PR_ASSERT(domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area));
+PrRawString prHtmlHyperlinkComponent(const PrDomElement* element, PrUrlComponent component) {
+    PR_ASSERT(isHyperlinkElement(element));
     PrUrl* url = hyperlinkUrl(element);
     if (url == nullptr) {
         PrStringView href = domAttributeValue(element, "href");
@@ -1038,8 +1045,8 @@ PrRawString prHtmlHyperlinkComponent(const PrHtmlElement* element, PrUrlComponen
     return value;
 }
 
-PrStatus prHtmlHyperlinkSetComponent(PrHtmlElement* element, PrUrlComponent component, PrStringView value) {
-    PR_ASSERT(domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area));
+PrStatus prHtmlHyperlinkSetComponent(PrDomElement* element, PrUrlComponent component, PrStringView value) {
+    PR_ASSERT(isHyperlinkElement(element));
     if (component == PrUrlComponent_Origin)
         return PrStatus_ReadOnly;
     if (component == PrUrlComponent_Href)

@@ -5,13 +5,13 @@ This document describes `lib/svg`. The module styles nothing itself: SVG content
 
 ## Styling
 
-- **Presentation attributes** are hints at the hint origin (css-cascade-5/#preshint), built in `css_hints.cpp` with
-  HTML's. Each property that SVG 2 makes a presentation attribute is one, and so is a geometry property (cx, r, x,
-  width and the rest) on the elements that it sizes. x and y are hints on every svg and symbol element, and an inner
-  svg or an instanced symbol takes them from its style. An inner svg element's width and height are not hints, nor
-  are a symbol's or a use element's, which are attributes alone (w3c/svgwg#1057). A `transform` takes SVG's syntax
-  alone (css-transforms-1/#svg-syntax) and becomes the transform property. An attribute that holds more than one
-  value declares nothing.
+- **Presentation attributes** are hints at the hint origin (css-cascade-5/#preshint), which lib/svg gives the document's
+  CSS (`svg_hints.cpp`). Each property that SVG 2 makes a presentation attribute is one, and so is a geometry property
+  (cx, r, x, width and the rest) on the elements that it sizes. x and y are hints on every svg and symbol element, and
+  an inner svg or an instanced symbol takes them from its style. An inner svg element's width and height are not hints,
+  nor are a symbol's or a use element's, which are attributes alone (w3c/svgwg#1057). A `transform` takes SVG's syntax
+  alone (css-transforms-1/#svg-syntax) and becomes the transform property. An attribute that holds more than one value
+  declares nothing.
 - **Lengths in an attribute** take every CSS unit (w3c/svgwg#1216). A number alone inside the functions of the filter
   attribute, such as `drop-shadow(4 5 6)`, is a length in px or an angle in degrees
   (SVG2/types.html#presentation-attribute-css-value). A negative length is replaced by the initial value in an

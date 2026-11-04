@@ -685,6 +685,83 @@ where scroll offsets apply, and a scroll still records and lays out nothing.
   posted to it, in turn. A job holds its tree and the tree's context until the worker is waited for, so a client
   changes trees between jobs, and one worker serves every tree that its client's thread presents.
 
+### Math layout
+
+- A math box (`PrLayoutDisplay_BlockMath`, `PrLayoutDisplay_InlineMath`, mathml-core/#new-display-math-value) is laid
+  out by its shell as any block-level box is, and establishes a formatting context. Its math group
+  (`PrLayoutMathStyle`) names the algorithm that lays out its content (`layout_math.h`). The group also holds the values
+  that the producer resolves from the element's attributes and the operator dictionary, such as an embellished
+  operator's spacing, stretchiness and limits, a fraction's bar, an mpadded's dimensions and an menclose's notations.
+  The inherited state that math layout reads (math-style, math-shift, math-depth) is in the font group, because it
+  applies to the text that it styles. Layout knows nothing of MathML elements.
+- A math box's children are its items, as a flex container's are. Each child box and each run of text is laid out
+  through its own cache, in a space whose inline size is unbounded, because math content does not wrap. A stretchy
+  operator is laid out in a space with a stretch size constraint (`LayoutSpace::stretch`), which keys its cached
+  result. An inline-level math box, and a math box in a math parent, take the inline size that their math content
+  gives. A block-level math box in flow fills its line and centers its content. A math box's intrinsic sizes are the
+  inline size that its math layout gives, laid out once without constraint.
+- A token's content is laid out in flow, so its text has carets, highlights and hit testing as any text does. Its math
+  layout then sizes its box to the ink of its glyphs, and an operator that stretches or is drawn large replaces its line
+  with the glyphs of its variant or assembly. Text at a math depth above zero is shaped with the font's script forms
+  (ssty), and a dotless base with its dotless forms (dtls). Both are shaped in the math script, where math fonts hold
+  those lookups.
+- The fragment of a math box holds its math metrics (ink, italic correction, top accent attachment, and the glyph it is
+  if it is one), which its math parent reads, and the rules, strokes and glyphs it draws beside its children, after
+  their text (`LayoutFragmentFlag_Math`).
+- The algorithms are MathML Core's, brought up to TeXbook Appendix G and the intended use of the OpenType MATH table
+  where Core is looser. Scripts on a character base take no baseline drop and are kerned into its corners
+  (MathKernInfo). An accent sits on its base's baseline, raised by as much as the base's height exceeds
+  AccentBaseHeight, and is aligned by the top accent attachments. A fence is sized as TeX sizes a delimiter. A radical
+  keeps Core's placement rather than TeX's, its rule the gap above its base and a taller sign hanging below, so that the
+  rules of nested radicals are evenly spaced. A brace or arrow stretched over or under its base clears it by the stretch
+  stack's gap, and a bar by the overbar's or underbar's. The producer drops the dictionary's medium and thick spaces
+  around an operator at a math depth above zero, as TeX's script styles do.
+- A box draws some operators without an element of their own. These are an mfenced's fences and separators, which the
+  producer resolves from the dictionary as the mo elements of its expanded form (`PrLayoutMathFence`), and the signs
+  and rules of a long division. In a font without a MathVariants table, a stretched operator is built from the Unicode
+  characters for the parts of stretched operators (`prFontMathCodePointStretch`). If its own font lacks the parts, they
+  come from the first face of its font group that the parts are set in and that has them all.
+- A right-to-left formula mirrors its logical layout. Each glyph that math layout draws is the one that MathML Core
+  gets for its character, which is its rtlm form or the glyph of its Bidi_Mirroring_Glyph. A character that a right-to-left
+  run mirrors but that has neither, such as the radical sign or the summation sign, is drawn mirrored
+  (`LayoutMathPaint::mirrored`).
+- Elementary math (mstack, mlongdiv) is a box whose items are the children of its rows. The producer passes its rows,
+  groups and carries through to it as display: contents does, and marks each item with its part, whether it starts a
+  row, and its row's position (`PrLayoutMathStyle::stackPart`). The stack splits a number into a column for
+  each character, and lays the number out again with the inline offset of each glyph (`LayoutMathStretch::columns`),
+  which the token draws in place of its line.
+
+#### Line breaking
+
+A formula breaks into lines as MathML 4 describes (mathml4/#presm_linebreaking), with TeX's choices where MathML 4
+leaves them to the renderer.
+
+- **Where.** A line breaks at an embellished operator or an mspace of a row, outside every pair of fences. The producer
+  gives each one a penalty (`PrLayoutMathStyle::breakPenalty`). The penalty is TeX's \relpenalty (500) at a relation
+  and its \binoppenalty (700) at a binary operator, which the dictionary's thick and medium spaces identify, and no
+  break elsewhere. linebreak="newline" forces a break, nobreak forbids one, and goodbreak and badbreak lower or raise
+  its cost.
+- **Which.** A row breaks only at forced breaks unless it has a width to fit (`LayoutMathStretch::lineWidth`). A
+  display formula's row takes its container's width, and a row that is a formula's only child takes the width from its
+  parent, so that `<math><mrow>…</mrow></math>` breaks inside the mrow. The chosen breaking is the one whose demerits
+  sum least, as TeX breaks a paragraph. A line's demerits grow with the cube of the room that it leaves and with the
+  square of its penalty.
+- **The operator.** linebreakstyle puts the operator at the start of the next line (before), at the end of the line
+  (after), or at both (duplicate), where the line it ends draws a copy of its glyphs. Its default is before in display
+  style, as MathML 4's dictionary has it, and after in compact style, as TeX breaks a formula in a paragraph. The
+  operator's spaces at a line's edge are dropped.
+- **Indentation.** The first line starts at the row's start. A line after a break starts where its operator's
+  indentalign puts it, past its indentshift. By default it starts where the right side of the first line's first
+  relation starts, so that the continuation lines' operators stand under its right side, or 2em in if that is past half the
+  width. The first line goes where its break's indentalignfirst puts it, the row's start by default, and the last
+  where its break's indentalignlast does. Lines stand a baselineskip of 1.2em apart, or a quarter em apart where their
+  boxes are taller, or lineleading apart if the breaks give it.
+- **Invisible times.** A break at an invisible times shows the linebreakmultchar at the end of the line it ends, as
+  TeX's \* shows a ×.
+- **Inline formulas.** A formula in a paragraph breaks across the paragraph's lines, as TeX breaks it. The inline
+  formatting context takes the top-level row's break points as break opportunities of the math box, and weighs their
+  penalties against the text's. A math box broken across lines is laid out as one row segment on each line.
+
 ## Replaced elements
 
 - A replaced element is a node with no children, whose content the client gives as data: its natural dimensions,

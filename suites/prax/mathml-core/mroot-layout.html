@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mroot: placing the index</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.3.3 Root with index</div>
+  <h1>mroot: placing the index</h1>
+  <p class=pr-lede><q>The inline offset of the index is AdjustedRadicalKernBeforeDegree.</q> AdjustedRadicalKernAfterDegree is
+  <q>max(−inline size of the index's margin box, RadicalKernAfterDegree)</q>. <q>The alphabetic baseline of the index
+  is shifted away from the line-under edge by a distance of RadicalDegreeBottomRaisePercent × the block size of B +
+  the line-descent of the index's margin box.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#root-with-index">MathML Core §3.3.3.3</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>The cube root of x</h2>
+  <p>At 60px; the 3 is at script-script size, 30px.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide pr-marked"><span class=pr-mark style="left: 17.06px"></span><span class=pr-level style="vertical-align: 16.24px"></span><math style="font-size: 60px"><mroot><mi>x</mi><mn>3</mn></mroot></math></div>
+    <figcaption>The 3 starts RadicalKernBeforeDegree, 51, 3.06px, in, at the line; RadicalKernAfterDegree, −450, is -27px, but the 3 is only 17.16px wide, so the surd starts back at the same line. The 3's baseline is 56% of the root's height up from its bottom: 16.24px above the baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A wider index</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide pr-marked"><span class=pr-mark style="left: 24.38px"></span><math style="font-size: 60px"><mroot><mi>x</mi><mn>12</mn></mroot></math></div>
+    <figcaption>12, 34.32px wide: the full kern, −27px, so the surd starts 24.38px from the left, under the 2.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mfrac without a bar: a stack</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.2.2 Fraction with zero line thickness</div>
+  <h1>mfrac without a bar: a stack</h1>
+  <p class=pr-lede><q>If the math-style is compact then TopShift and BottomShift are respectively set to StackTopShiftUp and
+  StackBottomShiftDown. Otherwise math-style is normal and they are respectively set to StackTopDisplayStyleShiftUp
+  and StackBottomDisplayStyleShiftDown.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#fraction-with-zero-line-thickness">MathML Core §3.3.2.2</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>Binomial coefficients</h2>
+  <p>At 50px; the guides mark the baselines of n and k in the binomial.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 35.2px"></span><span class=pr-level style="vertical-align: -33.65px"></span><math style="font-size: 50px; math-style: normal"><mrow><mo>(</mo><mfrac linethickness=0><mi>n</mi><mi>k</mi></mfrac><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mi>n</mi><mo>!</mo></mrow><mrow><mi>k</mi><mo>!</mo><mo>(</mo><mi>n</mi><mo>−</mo><mi>k</mi><mo>)</mo><mo>!</mo></mrow></mfrac></math></div>
+    <figcaption>Display: <i>n</i> at 35.2px, StackTopDisplayStyleShiftUp 704, and <i>k</i> at −33.65px, StackBottomDisplayStyleShiftDown 673; the gap, 30.85px, is past StackDisplayStyleGapMin.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 26.45px"></span><span class=pr-level style="vertical-align: -16px"></span><math style="font-size: 50px"><mrow><mo>(</mo><mfrac linethickness=0><mi>n</mi><mi>k</mi></mfrac><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mi>n</mi><mo>!</mo></mrow><mrow><mi>k</mi><mo>!</mo><mo>(</mo><mi>n</mi><mo>−</mo><mi>k</mi><mo>)</mo><mo>!</mo></mrow></mfrac></math></div>
+    <figcaption>Inline: <i>n</i> at 26.45px, StackTopShiftUp 529, and <i>k</i> at −16px, StackBottomShiftDown 320.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

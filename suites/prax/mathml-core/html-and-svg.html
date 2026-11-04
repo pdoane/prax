@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>MathML in HTML and SVG</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.2.1 HTML and SVG</div>
+  <h1>MathML in HTML and SVG</h1>
+  <p class=pr-lede><q>When evaluating the SVG requiredExtensions attribute, user agents must claim support for the language extension
+  identified by the MathML namespace.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#html-and-svg">MathML Core §2.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>A switch in SVG</h2>
+  <figure>
+    <div class="pr-stage"><svg width=188 height=60><switch><foreignObject width=188 height=60 requiredExtensions="http://www.w3.org/1998/Math/MathML"><math><msqrt><mn>2</mn><mi>r</mi><mo>−</mo><mn>1</mn></msqrt></math></foreignObject><text x=0 y=30>fallback</text></switch></svg></div>
+    <figcaption>A <code>switch</code> of a <code>foreignObject</code> that requires MathML and a text "fallback": √(2r − 1), and no "fallback".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>HTML inside a token</h2>
+  <figure>
+    <div class="pr-stage"><math><mn>2</mn><mo>−</mo><mtext><input size=2 value=1></mtext><mo>=</mo><mn>3</mn></math></div>
+    <figcaption>An HTML <code>input</code> in an <code>mtext</code>: 2 − a text field holding 1 = 3, the field in the row.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mfrac><mtext><b>bold</b></mtext><mtext><i>italic</i> <span style="color: #c0392b">red</span></mtext></mfrac></math></div>
+    <figcaption>Phrasing content in tokens: "bold" over "italic red", on one line, styled as HTML styles it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Chrome breaks "italic red" onto two lines; Firefox drops the space.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

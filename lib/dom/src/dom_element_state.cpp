@@ -221,10 +221,12 @@ bool hostState(const PrDomElement* element, PrDomHostState state) {
         (host->elementState(host->context, element, state) & state) != 0;
 }
 
-// Returns true if the element is an a or area element, of HTML or of SVG, that names a URL, whether or not it is a
-// hyperlink.
+// Returns true if the element is an a or area element, of HTML, of SVG or of MathML (mathml-core/#the-a-element), that
+// names a URL, whether or not it is a hyperlink.
 bool namesLink(const PrDomElement* element) {
     if (domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area))
+        return domHasAttribute(element, "href");
+    if (element->space == PrDomNamespace_MathMl && element->tag == PrDomTag_A)
         return domHasAttribute(element, "href");
     return element->space == PrDomNamespace_Svg && element->tag == PrDomTag_A &&
         (domHasAttribute(element, "href") || domAttribute(element, PrDomNamespace_XLink, "href") != nullptr);

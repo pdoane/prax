@@ -342,6 +342,16 @@ PROPERTY_GRAMMARS = {
     "stop-opacity": "<'opacity'>",
 }
 
+# The engine's private keywords, which parse only in text that the engine writes: user agent sheets, presentational
+# hints and the serialized computed values that it reads back. Each one is a value that a markup language's attribute
+# gives a property and that no standard value expresses, so that a hint declares it and the cascade decides it. MathML's
+# mathvariant names a style of the Mathematical Alphanumeric Symbols (mathml4/#presm_commatt), of which text-transform
+# has math-auto alone (css-text-4/#valdef-text-transform-math-auto). The enum lists them after the other keywords.
+MATH_VARIANTS = ["bold", "italic", "bold-italic", "script", "bold-script", "fraktur", "double-struck", "bold-fraktur",
+                 "sans-serif", "bold-sans-serif", "sans-serif-italic", "sans-serif-bold-italic", "monospace",
+                 "initial", "tailed", "looped", "stretched"]
+PRIVATE_KEYWORDS = ["-pr-math-" + variant for variant in MATH_VARIANTS]
+
 # The grammars of properties that their spec amends in prose, by property: the grammar that webref reads, and the
 # grammar with the amendment. Where a grammar takes a <number> beside a length, the <number> comes first, since a 0
 # that could be either parses as a <number> (css-values-4/#lengths).
@@ -393,6 +403,10 @@ PROPERTY_AMENDMENTS = {
     # css-gcpm-3/#setting-named-strings-the-string-set-pro: a named string's value is a content list, which content(),
     # counters and attr() make from the element. css-content-3's grammar, which webref reads, takes strings alone.
     "string-set": ("none | [ <custom-ident> <string>+ ]#", "none | [ <custom-ident> <content-list> ]#"),
+    # The math variants that MathML's mathvariant gives a token (PRIVATE_KEYWORDS).
+    "text-transform": ("none | [capitalize | uppercase | lowercase ] || full-width || full-size-kana | math-auto",
+                       "none | [capitalize | uppercase | lowercase ] || full-width || full-size-kana | math-auto | "
+                       + " | ".join(PRIVATE_KEYWORDS)),
     "writing-mode": ("horizontal-tb | vertical-rl | vertical-lr | sideways-rl | sideways-lr",
                      "horizontal-tb | vertical-rl | vertical-lr | sideways-rl | sideways-lr | lr | lr-tb | rl "
                      "| rl-tb | tb | tb-rl"),
@@ -829,8 +843,9 @@ STYLE_GROUPS = [
         "Font", True, "read by layout",
         "",
         [
-            "font-family", "font-size", "font-style", "font-weight", "font-width", "line-height", "dominant-baseline",
-            "writing-mode", "direction", "text-orientation", "white-space-collapse", "text-wrap-mode",
+            "font-family", "math-style", "math-depth", "math-shift", "font-size", "font-style", "font-weight",
+            "font-width", "line-height", "dominant-baseline", "writing-mode", "direction", "text-orientation",
+            "white-space-collapse", "text-wrap-mode",
             "text-align-all", "text-align-last", "text-justify", "text-indent", "letter-spacing", "word-spacing",
             "text-transform",
         ]),
@@ -1013,14 +1028,14 @@ NOT_COMPUTED = {
     "hyphenate-limit-zone", "hyphens", "image-animation", "image-resolution", "initial-letter", "initial-letter-align",
     "initial-letter-wrap", "inline-sizing", "interest-delay-end", "interest-delay-start", "interpolate-size",
     "line-break", "line-clamp", "line-fit-edge", "line-grid", "line-height-step", "line-padding", "line-snap",
-    "link-parameters", "margin-break", "margin-trim", "marker-side", "math-depth", "math-shift", "math-style",
-    "max-lines", "min-intrinsic-sizing", "nav-down", "nav-left", "nav-right", "nav-up", "object-view-box",
-    "offset-anchor", "offset-distance", "offset-path", "offset-position", "offset-rotate", "overflow-clip-margin",
-    "overflow-clip-margin-block", "overflow-clip-margin-bottom", "overflow-clip-margin-inline",
-    "overflow-clip-margin-left", "overflow-clip-margin-right", "overflow-clip-margin-top", "overlay", "pause-after",
-    "pause-before", "pointer-timeline-axis", "pointer-timeline-name", "position-anchor", "position-area",
-    "position-try-fallbacks", "position-try-order", "position-visibility", "print-color-adjust", "reading-flow",
-    "reading-order", "region-fragment", "resize", "rest-after", "rest-before", "row-rule-break", "row-rule-color",
+    "link-parameters", "margin-break", "margin-trim", "marker-side", "max-lines", "min-intrinsic-sizing", "nav-down",
+    "nav-left", "nav-right", "nav-up", "object-view-box", "offset-anchor", "offset-distance", "offset-path",
+    "offset-position", "offset-rotate", "overflow-clip-margin", "overflow-clip-margin-block",
+    "overflow-clip-margin-bottom", "overflow-clip-margin-inline", "overflow-clip-margin-left",
+    "overflow-clip-margin-right", "overflow-clip-margin-top", "overlay", "pause-after", "pause-before",
+    "pointer-timeline-axis", "pointer-timeline-name", "position-anchor", "position-area", "position-try-fallbacks",
+    "position-try-order", "position-visibility", "print-color-adjust", "reading-flow", "reading-order",
+    "region-fragment", "resize", "rest-after", "rest-before", "row-rule-break", "row-rule-color",
     "row-rule-inset-cap-end", "row-rule-inset-cap-start", "row-rule-inset-junction-end",
     "row-rule-inset-junction-start", "row-rule-style", "row-rule-visibility-items", "row-rule-width", "ruby-align",
     "ruby-merge", "ruby-overhang", "ruby-position", "rule-overlap", "scroll-axis-lock", "scroll-behavior",
@@ -3691,7 +3706,7 @@ def emit_value_def_source(path, values, g):
 
 # A leading dash is part of the keyword (-infinity is not infinity, -n is not n) except on a
 # vendor prefix, where it is noise.
-VENDOR_PREFIXES = ("-webkit-", "-moz-", "-ms-", "-o-", "-apple-", "-khtml-", "-epub-")
+VENDOR_PREFIXES = ("-webkit-", "-moz-", "-ms-", "-o-", "-apple-", "-khtml-", "-epub-", "-pr-")
 
 
 def keyword_ident(name):
@@ -4626,12 +4641,13 @@ def compile_grammars(props, values, descs, pseudos, at_rules, shorthands, extra_
     trees = prune_unreachable(instantiate_generics(trees, values), values)
     trees = mark_shorthands(trees, shorthands)
 
-    # Keyword ids are assigned in sorted order so the enum reads alphabetically.
-    names = sorted({n.value for _, _, _, t in trees for n in walk(t)
-                    if n.type in ("keyword", "atkeyword", "function")}
-                   | {name[:-2] for name in TREE_COUNTING_FUNCTIONS}
-                   | set(EXTRA_KEYWORDS) | set(extra_keywords) | at_rules.keywords)
-    g.keywords = {name: i for i, name in enumerate(names)}
+    # Keyword ids are assigned in sorted order so the enum reads alphabetically, and the private keywords follow the
+    # others, so that one comparison tells them apart.
+    names = sorted(({n.value for _, _, _, t in trees for n in walk(t)
+                     if n.type in ("keyword", "atkeyword", "function")}
+                    | {name[:-2] for name in TREE_COUNTING_FUNCTIONS}
+                    | set(EXTRA_KEYWORDS) | set(extra_keywords) | at_rules.keywords) - set(PRIVATE_KEYWORDS))
+    g.keywords = {name: i for i, name in enumerate(names + sorted(PRIVATE_KEYWORDS))}
 
     g.value_terminals = reachable_terminals(values, trees)
     for kind, name, e, tree in trees:
@@ -4884,6 +4900,8 @@ def emit_keyword_header(path, g):
     body = ["\n// The length of the longest keyword.\n"
             "constexpr uint32_t kCssKeywordMaxLength = %d;\n"
             % max(len(name) for name in g.keywords)]
+    body.append("\n// The first of the engine's private keywords, which only text that the engine writes may name.\n"
+                "constexpr PrCssKeyword kCssKeywordFirstPrivate = %s;\n" % keyword_ident(sorted(PRIVATE_KEYWORDS)[0]))
     body.append("\n// The keyword's name in lowercase.\n"
                 "PrStringView cssKeywordName(PrCssKeyword keyword);\n")
     body.append("\n// The keyword that `text` names, or PrCssKeyword_Unknown. Keywords are ASCII\n"

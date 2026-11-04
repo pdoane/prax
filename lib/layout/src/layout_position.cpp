@@ -53,6 +53,7 @@ struct InsetAxis {
     AxisEdge start;                 // the containing block's start edge in the axis
     bool inlineAxis;                // the axis is the containing block's inline axis
     bool safe;                      // the static position's alignment is start where the box overflows
+    bool baseline;                  // true if the box's first baseline goes at the static position, not its low edge
 };
 
 // Resolves the insets of `box` in `axis` of `containing`, using the static position of `pending` if both are auto
@@ -82,6 +83,7 @@ InsetAxis insetAxis(const LayoutStyles* styles, const PrLayoutBoxStyle& box, con
         bool staticCenter = (pending.edges & (axis == 0 ? LayoutStaticEdge_CenterX : LayoutStaticEdge_CenterY)) != 0;
         a.anchor = staticCenter ? AxisEdge_Center : staticHigh ? AxisEdge_High : AxisEdge_Low;
         a.safe = (pending.edges & (axis == 0 ? LayoutStaticEdge_SafeX : LayoutStaticEdge_SafeY)) != 0;
+        a.baseline = (pending.edges & (axis == 0 ? LayoutStaticEdge_BaselineX : LayoutStaticEdge_BaselineY)) != 0;
         PrLayoutUnit position = along(pending.at, axis);
         if (staticCenter) {
             PrLayoutUnit half = layoutUnitMax(kLayoutUnitZero, layoutUnitMin(position - lo, hi - position));
@@ -331,6 +333,21 @@ void holdPending(LayoutState& state, LayoutNodeIndex holder, uint32_t pendingMar
     s.pending.count = kept;
 }
 
+// Returns how far the first baseline of `fragment`, the box `node` laid out out of flow, lies from its low edge in
+// `axis`, if `a` places that baseline at the static position. Returns zero otherwise, or if the box has no baseline in
+// that axis, which is the case unless `axis` is the box's block axis.
+PrLayoutUnit baselineFromLow(const LayoutTree* tree, LayoutNodeIndex node, const LayoutFragment* fragment,
+        const InsetAxis& a, uint32_t axis) {
+    if (!a.baseline)
+        return kLayoutUnitZero;
+    LayoutBaseline first = layoutFragmentBaseline(fragment, LayoutBaselineEdge_First);
+    PrRectSide start = layoutPhysicalSide(layoutOwnMode(tree, node), LayoutSide_BlockStart);
+    bool horizontal = start == PrRectSide_Left || start == PrRectSide_Right;
+    if (!first.present || horizontal != (axis == 0))
+        return kLayoutUnitZero;
+    return layoutRunsBackward(start) ? along(fragment->extent, axis) - first.offset : first.offset;
+}
+
 // Lays out the box out of flow that `pending` names against `containing`, and caches its position.
 PR_NOINLINE LayoutChild layOutAbsolute(LayoutState& state, const LayoutPending& pending,
         const LayoutAbsoluteBlock& containing) {
@@ -400,7 +417,7 @@ PR_NOINLINE LayoutChild layOutAbsolute(LayoutState& state, const LayoutPending& 
         PrLayoutUnit placed = place(axes[axis], along(result.fragment->extent, axis),
             autoLow ? kLayoutUnitZero : layoutResolve(state.styles, low, base),
             autoHigh ? kLayoutUnitZero : layoutResolve(state.styles, high, base), autoLow, autoHigh);
-        (axis == 0 ? at.x : at.y) = placed;
+        (axis == 0 ? at.x : at.y) = placed - baselineFromLow(state.tree, node, result.fragment, axes[axis], axis);
     }
     layoutCacheStoreAbsolute(state, node, containing, pending.at, pending.edges, at);
     return LayoutChild{result.fragment, at};
@@ -434,6 +451,10 @@ LayoutStaticEdges layoutStaticEdgesAligned(LayoutMode mode, LayoutStaticAlign in
             edges |= horizontal ? LayoutStaticEdge_SafeX : LayoutStaticEdge_SafeY;
         if (aligns[i] == LayoutStaticAlign_Center) {
             edges |= horizontal ? LayoutStaticEdge_CenterX : LayoutStaticEdge_CenterY;
+            continue;
+        }
+        if (aligns[i] == LayoutStaticAlign_Baseline) {
+            edges |= horizontal ? LayoutStaticEdge_BaselineX : LayoutStaticEdge_BaselineY;
             continue;
         }
         // The aligned edge: the start side, or the side opposite it.

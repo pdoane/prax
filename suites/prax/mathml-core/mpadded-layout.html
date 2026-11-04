@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mpadded: lspace and voffset</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .pr-stage :is(mspace, mpadded) { outline: 1px solid #4f81bd; background: rgba(79, 129, 189, 0.15); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.6.2 Layout of &lt;mpadded&gt;</div>
+  <h1>mpadded: lspace and voffset</h1>
+  <p class=pr-lede><q>The line-ascent of the math content is the requested height. The line-descent of the math content is the
+  requested depth. The mpadded inner box is placed so that its alphabetic baseline is shifted away from the alphabetic
+  baseline by the requested voffset towards the line-over.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-of-mpadded">MathML Core §3.3.6.2</a></span> The
+  box model figure places the inner box the requested lspace from the start. Each <code>mpadded</code> is 120px wide,
+  45px up and 35px down, around 1/(1 + x²) at 30px.</p>
+</header>
+
+<section>
+  <h2>Moving the content</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px"><mi>y</mi><mo>=</mo><mpadded width=120px height=45px depth=35px><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></mfrac></mpadded><mo>+</mo><mi>c</mi></math></div>
+    <figcaption>No offset: the fraction at the start.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px"><mi>y</mi><mo>=</mo><mpadded width=120px height=45px depth=35px lspace=30px voffset=10px><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></mfrac></mpadded><mo>+</mo><mi>c</mi></math></div>
+    <figcaption><code>lspace="30px" voffset="10px"</code>: 30px in and raised 10px, the outline unchanged.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px"><mi>y</mi><mo>=</mo><mpadded width=120px height=45px depth=35px voffset=-15px><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></mfrac></mpadded><mo>+</mo><mi>c</mi></math></div>
+    <figcaption><code>voffset="-15px"</code>: lowered 15px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

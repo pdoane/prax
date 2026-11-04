@@ -312,13 +312,14 @@ PR_NOINLINE const LayoutCacheEntry* PR_NULLABLE resizedEntry(const LayoutState& 
 // Returns true if the space holds inputs beyond its sizes that the context record of an entry keeps: outside markers,
 // or the inputs that a table gives a cell.
 bool hasExtras(const LayoutSpace& space) {
-    return !layoutLineExtentIsEmpty(space.marker) || space.cell != nullptr;
+    return !layoutLineExtentIsEmpty(space.marker) || space.cell != nullptr || space.stretch != nullptr;
 }
 
-// Returns true if the context record of an entry holds the same outside markers as `space`, and the same inputs from a
-// table to a cell.
+// Returns true if the context record of an entry holds the same outside markers as `space`, the same inputs from a
+// table to a cell, and the same stretch size constraint.
 bool sameExtras(const LayoutCacheContext& context, const LayoutSpace& space) {
-    return context.marker == space.marker && layoutCellSpacesEqual(context.cell, layoutCellSpaceFromSpace(space));
+    return context.marker == space.marker && layoutCellSpacesEqual(context.cell, layoutCellSpaceFromSpace(space)) &&
+        layoutMathStretchesEqual(context.stretch, layoutMathStretchFromSpace(space));
 }
 
 // Returns the entry of `node` if it was laid out in `space` at `requests` and nothing in its subtree has changed since,
@@ -791,6 +792,7 @@ void layoutCacheStore(LayoutState& state, LayoutNodeIndex node, const LayoutSpac
         LayoutCacheContext& extras = contextOf(tree->cache, entry);
         extras.marker = space.marker;
         extras.cell = layoutCellSpaceFromSpace(space);
+        extras.stretch = layoutMathStretchFromSpace(space);
         entry.flags |= LayoutCacheFlag_SpaceExtras;
     }
     if (reads == nullptr)

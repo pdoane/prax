@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mtable: spacing and equal sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 18px; }
+  .pr-stage mtd { outline: 1px solid #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.5.1 Table or Matrix &lt;mtable&gt;</div>
+  <h1>mtable: spacing and equal sizes</h1>
+  <p class=pr-lede>rowspacing: <q>specifies how much space to add between rows.</q> (default 1.0ex) columnspacing: <q>specifies how
+  much space to add between columns.</q> (default 0.8em) equalrows: <q>specifies whether to force all rows to have
+  the same total height.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#table-or-matrix-mtable">MathML 4 §3.5.1</a></span> Each cell is outlined.</p>
+</header>
+
+<section>
+  <h2>Spacing</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable columnspacing=40px><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>columnspacing="40px"</code>: the columns 40px apart. <span class=pr-flag>Chrome</span> The default spacing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable rowspacing=30px><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>rowspacing="30px"</code>: the rows 30px apart. <span class=pr-flag>Chrome</span> The default spacing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable rowspacing="0px" columnspacing="0px"><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption>Both 0: the cells touching. <span class=pr-flag>Chrome</span> The default spacing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Equal rows and columns</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable equalrows=true><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>equalrows="true"</code>: the second row as tall as the first, with its fraction. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Rows of their own heights.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><math><mtable equalcolumns=true><mtr><mtd><mn>1</mn></mtd><mtd><mfrac><mn>2</mn><mn>3</mn></mfrac></mtd></mtr><mtr><mtd><mn>456</mn></mtd><mtd><mn>7</mn></mtd></mtr></mtable></math></div>
+    <figcaption><code>equalcolumns="true"</code>: the second column as wide as the first, with 456. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Columns of their own widths.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

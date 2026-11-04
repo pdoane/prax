@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus in MathML</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  :focus-visible { outline: 3px solid #2c5a8f; }
+  .pr-stage mrow:focus { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 2.2.5 Focus</div>
+  <h1>Focus in MathML</h1>
+  <p class=pr-lede><q>The contents of embedded math elements (including HTML elements inside token elements) contribute to the
+  sequential focus order of the containing owner HTML document</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#focus">MathML Core §2.2.5</a></span> Click the field
+  before the first stage, then press Tab to move through the stages.</p>
+</header>
+
+<section>
+  <h2>Focusable MathML and HTML in tokens</h2>
+  <figure>
+    <div class="pr-stage"><input size=6 value=start> <math><mrow tabindex=0><mi>a</mi><mo>+</mo><mi>b</mi></mrow><mo>=</mo><mtext><button>c</button></mtext></math></div>
+    <figcaption>Tab once: "a + b" takes the focus, tinted blue and outlined; Tab again: the button c; then the link below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><mrow tabindex=-1><mi>x</mi></mrow><mtext><a href="#">link</a></mtext></math></div>
+    <figcaption>An <code>mrow</code> with <code>tabindex="-1"</code> is skipped by Tab; the HTML link in the <code>mtext</code> takes it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

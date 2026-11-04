@@ -904,6 +904,11 @@ PrLayoutGroupIndex makeGroup(Ui* ui, const PrUiGroupRecipe& recipe) {
             recipe.make(recipe.owner, recipe.bytes, &value);
             return prLayoutGridStyleCreate(tree, &value);
         }
+        case PrLayoutGroup_Math: {
+            PrLayoutMathStyle value = prLayoutMathStyleDefault();
+            recipe.make(recipe.owner, recipe.bytes, &value);
+            return prLayoutMathStyleCreate(tree, &value);
+        }
         default:
             PR_FATAL("a group recipe of no kind");
     }

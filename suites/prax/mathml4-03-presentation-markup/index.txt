@@ -1,0 +1,211 @@
+00-supports-1.html
+# mathml4/#presentation-markup 3 Presentation Markup: no page; its sections show it
+# mathml4/#introduction-0 3.1 Introduction: no page; its sections define terms
+# mathml4/#presentation-mathml-structure 3.1.1 Presentation MathML Structure: no page; it describes the markup's structure
+# mathml4/#terminology-used-in-this-chapter 3.1.2 Terminology Used In This Chapter: no page; it defines terms
+# mathml4/#required-arguments 3.1.3 Required Arguments: no page; the elements' pages show their arguments
+# mathml4/#inferred-mrow-s 3.1.3.1 Inferred <mrow>s: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#table-of-argument-requirements 3.1.3.2 Table of argument requirements: no page; it is a table of the elements' arguments
+# mathml4/#elements-with-special-behaviors 3.1.4 Elements with Special Behaviors: no page; it lists elements that later sections show
+# mathml4/#directionality 3.1.5 Directionality: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#overall-directionality-of-mathematics-formulas 3.1.5.1 Overall Directionality of Mathematics Formulas: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#bidirectional-layout-in-token-elements 3.1.5.2 Bidirectional Layout in Token Elements: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#displaystyle-and-scriptlevel 3.1.6 Displaystyle and Scriptlevel: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#linebreaking-of-expressions 3.1.7 Linebreaking of Expressions: no page; 3.1.7.1 shows it
+mathml4/#control-of-linebreaks 3.1.7.1 Control of Linebreaks
+    linebreaking.html
+# mathml4/#examples-of-linebreaking 3.1.7.2 Examples of Linebreaking: no page; examples of 3.1.7.1, which its page shows
+# mathml4/#summary-of-presentation-elements 3.1.8 Summary of Presentation Elements: no page; it lists the elements
+# mathml4/#token-elements 3.1.8.1 Token Elements: no page; it lists elements
+# mathml4/#general-layout-schemata 3.1.8.2 General Layout Schemata: no page; it lists elements
+# mathml4/#script-and-limit-schemata 3.1.8.3 Script and Limit Schemata: no page; it lists elements
+# mathml4/#tables-and-matrices 3.1.8.4 Tables and Matrices: no page; it lists elements
+# mathml4/#elementary-math-layout 3.1.8.5 Elementary Math Layout: no page; it lists elements
+# mathml4/#enlivening-expressions 3.1.8.6 Enlivening Expressions: no page; it lists elements
+# mathml4/#attributes-common-to-presentation-elements 3.1.9 Attributes common to presentation elements: no page; its attributes are MathML Core's
+# mathml4/#mathml-core-attributes 3.1.9.1 MathML Core Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#mathml-full-only-attributes 3.1.9.2 MathML Full-only Attributes: no page; it lists attributes that the elements' pages show
+# mathml4/#attributes-0 3.1.9.2.1 Attributes: no page; it lists attributes that the elements' pages show
+# mathml4/#token-elements-0 3.2 Token Elements: no page; its sections show each token
+# mathml4/#token-element-content-characters-mglyph 3.2.1 Token Element Content Characters, <mglyph/>: no page; 3.2.1.1 shows mglyph
+mathml4/#using-images-to-represent-symbols-mglyph 3.2.1.1 Using images to represent symbols <mglyph/>
+    mglyph.html
+# mathml4/#description 3.2.1.1.1 Description: no page; the pages of 3.2.1.1 show it
+# mathml4/#attributes-1 3.2.1.1.2 Attributes: no page; the pages of 3.2.1.1 show it
+# mathml4/#example 3.2.1.1.3 Example: no page; the pages of 3.2.1.1 show it
+mathml4/#mathematics-style-attributes-common-to-token-elements 3.2.2 Mathematics style attributes common to token elements
+    mathvariant.html
+# mathml4/#embedding-html-in-mathml 3.2.3 Embedding HTML in MathML: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#identifier-mi 3.2.4 Identifier <mi>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-0 3.2.4.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-2 3.2.4.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples 3.2.4.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#number-mn 3.2.5 Number <mn>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-1 3.2.5.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-3 3.2.5.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-0 3.2.5.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#numbers-that-should-not-be-written-using-mn-alone 3.2.5.4 Numbers that should not be written using <mn> alone: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-of-complex-representations-of-numbers 3.2.5.4.1 Examples of complex representations of numbers: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#operator-fence-separator-or-accent-mo 3.2.6 Operator, Fence, Separator or Accent <mo>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-2 3.2.6.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-4 3.2.6.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#dictionary-based-attributes 3.2.6.2.1 Dictionary-based attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#linebreaking-attributes 3.2.6.2.2 Linebreaking attributes: no page; 3.1.7.1's page shows them
+# mathml4/#indentation-attributes 3.2.6.2.3 Indentation attributes: no page yet: indentation after a line break is not walked yet
+# mathml4/#examples-with-ordinary-operators 3.2.6.3 Examples with ordinary operators: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-with-fences-and-separators 3.2.6.4 Examples with fences and separators: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#invisible-operators 3.2.6.5 Invisible operators: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-1 3.2.6.5.1 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#detailed-rendering-rules-for-mo-elements 3.2.6.6 Detailed rendering rules for <mo> elements: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#the-operator-dictionary 3.2.6.6.1 The operator dictionary: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#default-value-of-the-form-attribute 3.2.6.6.2 Default value of the form attribute: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#exception-for-embellished-operators 3.2.6.6.3 Exception for embellished operators: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#spacing-around-an-operator 3.2.6.6.4 Spacing around an operator: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#stretching-of-operators-fences-and-accents 3.2.6.7 Stretching of operators, fences and accents: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#example-of-stretchy-attributes 3.2.6.7.1 Example of stretchy attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#vertical-stretching-rules 3.2.6.7.2 Vertical Stretching Rules: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#horizontal-stretching-rules 3.2.6.7.3 Horizontal Stretching Rules: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#rules-common-to-both-vertical-and-horizontal-stretching 3.2.6.7.4 Rules Common to both Vertical and Horizontal Stretching: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#text-mtext 3.2.7 Text <mtext>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-3 3.2.7.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-5 3.2.7.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-2 3.2.7.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#space-mspace 3.2.8 Space <mspace/>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-4 3.2.8.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-6 3.2.8.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-3 3.2.8.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#definition-of-space-like-elements 3.2.8.4 Definition of space-like elements: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#legal-grouping-of-space-like-elements 3.2.8.5 Legal grouping of space-like elements: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#string-literal-ms 3.2.9 String Literal <ms>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-5 3.2.9.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-7 3.2.9.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#general-layout-schemata-0 3.3 General Layout Schemata: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#horizontally-group-sub-expressions-mrow-a 3.3.1 Horizontally Group Sub-Expressions <mrow>, <a>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-6 3.3.1.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-8 3.3.1.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#proper-grouping-of-sub-expressions-using-mrow 3.3.1.3 Proper grouping of sub-expressions using <mrow>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#mrow-of-one-argument 3.3.1.3.1 <mrow> of one argument: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#precise-rule-for-proper-grouping 3.3.1.3.2 Precise rule for proper grouping: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-4 3.3.1.4 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+mathml4/#fractions-mfrac 3.3.2 Fractions <mfrac>
+    mfrac-attributes.html
+# mathml4/#description-7 3.3.2.1 Description: no page; the pages of 3.3.2 show it
+# mathml4/#attributes-9 3.3.2.2 Attributes: no page; the pages of 3.3.2 show it
+# mathml4/#examples-5 3.3.2.3 Examples: no page; the pages of 3.3.2 show it
+# mathml4/#radicals-msqrt-mroot 3.3.3 Radicals <msqrt>, <mroot>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-8 3.3.3.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-10 3.3.3.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-6 3.3.3.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#style-change-mstyle 3.3.4 Style Change <mstyle>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-9 3.3.4.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-7 3.3.4.2 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#error-message-merror 3.3.5 Error Message <merror>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-10 3.3.5.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-11 3.3.5.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#example-0 3.3.5.3 Example: no page; MathML Core's directory, mathml-core, walks what it draws
+mathml4/#adjust-space-around-content-mpadded 3.3.6 Adjust Space Around Content <mpadded>
+    mpadded-namedspace.html
+# mathml4/#description-11 3.3.6.1 Description: no page; the pages of 3.3.6 show it
+# mathml4/#attributes-12 3.3.6.2 Attributes: no page; the pages of 3.3.6 show it
+# mathml4/#meanings-of-size-and-position-attributes 3.3.6.3 Meanings of size and position attributes: no page; the pages of 3.3.6 show it
+# mathml4/#examples-8 3.3.6.4 Examples: no page; the pages of 3.3.6 show it
+# mathml4/#making-sub-expressions-invisible-mphantom 3.3.7 Making Sub-Expressions Invisible <mphantom>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-12 3.3.7.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-13 3.3.7.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-9 3.3.7.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+mathml4/#expression-inside-pair-of-fences-mfenced 3.3.8 Expression Inside Pair of Fences <mfenced>
+    mfenced.html
+# mathml4/#description-13 3.3.8.1 Description: no page; the pages of 3.3.8 show it
+# mathml4/#attributes-14 3.3.8.2 Attributes: no page; the pages of 3.3.8 show it
+# mathml4/#examples-10 3.3.8.3 Examples: no page; the pages of 3.3.8 show it
+mathml4/#enclose-expression-inside-notation-menclose 3.3.9 Enclose Expression Inside Notation <menclose>
+    menclose.html
+    menclose-strikes.html
+# mathml4/#description-14 3.3.9.1 Description: no page; the pages of 3.3.9 show it
+# mathml4/#attributes-15 3.3.9.2 Attributes: no page; the pages of 3.3.9 show it
+# mathml4/#examples-11 3.3.9.3 Examples: no page; the pages of 3.3.9 show it
+# mathml4/#script-and-limit-schemata-0 3.4 Script and Limit Schemata: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#subscript-msub 3.4.1 Subscript <msub>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-15 3.4.1.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-16 3.4.1.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#superscript-msup 3.4.2 Superscript <msup>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-16 3.4.2.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-17 3.4.2.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#subscript-superscript-pair-msubsup 3.4.3 Subscript-superscript Pair <msubsup>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-17 3.4.3.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-18 3.4.3.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-12 3.4.3.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+mathml4/#underscript-munder 3.4.4 Underscript <munder>
+    underover-align.html
+# mathml4/#description-18 3.4.4.1 Description: no page; the pages of 3.4.4 show it
+# mathml4/#attributes-19 3.4.4.2 Attributes: no page; the pages of 3.4.4 show it
+# mathml4/#examples-13 3.4.4.3 Examples: no page; the pages of 3.4.4 show it
+# mathml4/#overscript-mover 3.4.5 Overscript <mover>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-19 3.4.5.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-20 3.4.5.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-14 3.4.5.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#underscript-overscript-pair-munderover 3.4.6 Underscript-overscript Pair <munderover>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-20 3.4.6.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-21 3.4.6.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-15 3.4.6.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#prescripts-and-tensor-indices-mmultiscripts-mprescripts 3.4.7 Prescripts and Tensor Indices <mmultiscripts>, <mprescripts/>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-21 3.4.7.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-22 3.4.7.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#examples-16 3.4.7.3 Examples: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#tabular-math 3.5 Tabular Math: no page; MathML Core's directory, mathml-core, walks what it draws
+mathml4/#table-or-matrix-mtable 3.5.1 Table or Matrix <mtable>
+    mtable-align.html
+    mtable-lines.html
+    mtable-spacing.html
+# mathml4/#description-22 3.5.1.1 Description: no page; the pages of 3.5.1 show it
+# mathml4/#attributes-23 3.5.1.2 Attributes: no page; the pages of 3.5.1 show it
+# mathml4/#examples-17 3.5.1.3 Examples: no page; the pages of 3.5.1 show it
+# mathml4/#row-in-table-or-matrix-mtr 3.5.2 Row in Table or Matrix <mtr>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-23 3.5.2.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-24 3.5.2.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#equation-numbering 3.5.2.3 Equation Numbering: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#entry-in-table-or-matrix-mtd 3.5.3 Entry in Table or Matrix <mtd>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#description-24 3.5.3.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-25 3.5.3.2 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#alignment-markers-maligngroup-malignmark 3.5.4 Alignment Markers <maligngroup/>, <malignmark/>: no page yet: alignment markers are not walked yet
+# mathml4/#description-25 3.5.4.1 Description: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#specifying-alignment-groups 3.5.4.2 Specifying alignment groups: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#table-cells-that-are-not-divided-into-alignment-groups 3.5.4.3 Table cells that are not divided into alignment groups: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#specifying-alignment-points-using-malignmark 3.5.4.4 Specifying alignment points using <malignmark/>: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#alignment-algorithm 3.5.4.5 Alignment algorithm: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#mathml-representation-of-an-alignment-example 3.5.4.6 MathML representation of an alignment example: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#elementary-math 3.6 Elementary Math: no page; its sections show each element
+mathml4/#stacks-of-characters-mstack 3.6.1 Stacks of Characters <mstack>
+    mstack.html
+# mathml4/#description-26 3.6.1.1 Description: no page; the pages of 3.6.1 show it
+# mathml4/#attributes-26 3.6.1.2 Attributes: no page; the pages of 3.6.1 show it
+mathml4/#long-division-mlongdiv 3.6.2 Long Division <mlongdiv>
+    mlongdiv.html
+# mathml4/#description-27 3.6.2.1 Description: no page; the pages of 3.6.2 show it
+# mathml4/#attributes-27 3.6.2.2 Attributes: no page; the pages of 3.6.2 show it
+# mathml4/#group-rows-with-similar-positions-msgroup 3.6.3 Group Rows with Similar Positions <msgroup>: no page yet: msgroup is not walked yet
+# mathml4/#description-28 3.6.3.1 Description: no page; it describes the element above it, whose page or note covers it
+# mathml4/#attributes-28 3.6.3.2 Attributes: no page; it describes the element above it, whose page or note covers it
+# mathml4/#rows-in-elementary-math-msrow 3.6.4 Rows in Elementary Math <msrow>: no page; mstack's page shows msrow
+# mathml4/#description-29 3.6.4.1 Description: no page; it describes the element above it, whose page or note covers it
+# mathml4/#attributes-29 3.6.4.2 Attributes: no page; it describes the element above it, whose page or note covers it
+mathml4/#carries-borrows-and-crossouts-mscarries 3.6.5 Carries, Borrows, and Crossouts <mscarries>
+    mscarries.html
+# mathml4/#description-30 3.6.5.1 Description: no page; the pages of 3.6.5 show it
+# mathml4/#attributes-30 3.6.5.2 Attributes: no page; the pages of 3.6.5 show it
+# mathml4/#a-single-carry-mscarry 3.6.6 A Single Carry <mscarry>: no page; mscarries's page shows mscarry
+# mathml4/#description-31 3.6.6.1 Description: no page; it describes the element above it, whose page or note covers it
+# mathml4/#attributes-31 3.6.6.2 Attributes: no page; it describes the element above it, whose page or note covers it
+mathml4/#horizontal-line-msline 3.6.7 Horizontal Line <msline/>
+    msline.html
+# mathml4/#description-32 3.6.7.1 Description: no page; the pages of 3.6.7 show it
+# mathml4/#attributes-32 3.6.7.2 Attributes: no page; the pages of 3.6.7 show it
+# mathml4/#elementary-math-examples 3.6.8 Elementary Math Examples: no page; examples of the elements whose pages show them
+# mathml4/#addition-and-subtraction 3.6.8.1 Addition and Subtraction: no page; it describes the element above it, whose page or note covers it
+# mathml4/#multiplication 3.6.8.2 Multiplication: no page; it describes the element above it, whose page or note covers it
+# mathml4/#long-division 3.6.8.3 Long Division: no page; it describes the element above it, whose page or note covers it
+# mathml4/#repeating-decimal 3.6.8.4 Repeating decimal: no page; it describes the element above it, whose page or note covers it
+# mathml4/#enlivening-expressions-0 3.7 Enlivening Expressions: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#bind-action-to-sub-expression 3.7.1 Bind Action to Sub-Expression: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#attributes-33 3.7.1.1 Attributes: no page; MathML Core's directory, mathml-core, walks what it draws
+# mathml4/#semantics-and-presentation 3.8 Semantics and Presentation: no page; MathML Core's directory, mathml-core, walks what it draws

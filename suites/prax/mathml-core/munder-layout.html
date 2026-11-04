@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>munder: limits and accents under</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.2.3 Base with underscript</div>
+  <h1>munder: limits and accents under</h1>
+  <p class=pr-lede><q>UnderShift is equal to UnderbarVerticalGap if the accentunder attribute is not an ASCII case-insensitive
+  match to true and to zero otherwise.</q> For a large operator, UnderShift is the maximum of
+  <q>LowerLimitBaselineDropMin</q> and <q>LowerLimitGapMin + the ascent of the munder underscript</q>. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#base-with-underscript">MathML Core §3.4.2.3</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>A lower limit</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: -40.8px"></span><math style="font-size: 40px; math-style: normal"><munder><mo>∏</mo><mrow><mi>p</mi><mtext>&nbsp;prime</mtext></mrow></munder><mfrac><mn>1</mn><mrow><mn>1</mn><mo>−</mo><msup><mi>p</mi><mrow><mo>−</mo><mi>s</mi></mrow></msup></mrow></mfrac><mo>=</mo><mi>ζ</mi><mo>(</mo><mi>s</mi><mo>)</mo></math></div>
+    <figcaption>Euler's product at 40px: the display ∏ reaches 15.6px down, and "p prime" sits LowerLimitBaselineDropMin, 630, 25.2px, below that, at −40.8px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An underbrace</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 32px"><munder><munder accentunder=true><mrow><mi>a</mi><mo>+</mo><mo>⋯</mo><mo>+</mo><mi>a</mi></mrow><mo>⏟</mo></munder><mrow><mi>n</mi><mtext>&nbsp;times</mtext></mrow></munder></math></div>
+    <figcaption><i>a</i> + ⋯ + <i>a</i> over a brace, as an accent, stretched to its width, and "n times" under it, small.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

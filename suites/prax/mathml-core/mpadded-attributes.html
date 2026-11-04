@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mpadded: the requested size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .pr-stage :is(mspace, mpadded) { outline: 1px solid #4f81bd; background: rgba(79, 129, 189, 0.15); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.6.1 Inner box and requested parameters</div>
+  <h1>mpadded: the requested size</h1>
+  <p class=pr-lede><q>If the height attribute is absent, invalid or a percentage then the requested height is the inner
+  line-ascent. Otherwise the requested height is the resolved value of the height attribute, clamping negative values
+  to 0.</q> The depth is the same, and <q>the requested width is the resolved value of the width property</q>. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#inner-box-and-requested-parameters">MathML Core §3.3.6.1</a></span> Each <code>mpadded</code> holds 1/(1 + x²) at 30px
+  and is outlined; dashed lines mark the heights its attributes give.</p>
+</header>
+
+<section>
+  <h2>Width, height and depth</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px"><mi>y</mi><mo>=</mo><mpadded ><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></mfrac></mpadded><mo>+</mo><mi>c</mi></math></div>
+    <figcaption>No attributes: the outline hugs the fraction.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 40px"></span><span class=pr-level style="vertical-align: -30px"></span><math style="font-size: 30px"><mi>y</mi><mo>=</mo><mpadded width=120px height=40px depth=30px><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></mfrac></mpadded><mo>+</mo><mi>c</mi></math></div>
+    <figcaption>120px wide, 40px up and 30px down: room around the fraction, and + pushed right.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 0px"></span><math style="font-size: 30px"><mi>y</mi><mo>=</mo><mpadded width=10px height=0px depth=0px><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></mfrac></mpadded><mo>+</mo><mi>c</mi></math></div>
+    <figcaption>10px wide with no height or depth: the fraction overflows a flat outline, and + overlaps it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages and negative values</h2>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math style="font-size: 30px"><mi>y</mi><mo>=</mo><mpadded height=200% depth=-10px width=50%><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></mfrac></mpadded><mo>+</mo><mi>c</mi></math></div>
+    <figcaption><code>height="200%"</code> and <code>width="50%"</code> are ignored, the fraction's own; <code>depth="-10px"</code> clamps to 0, the outline ending at the baseline. <span class=pr-flag>Firefox</span> The width half the fraction's.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

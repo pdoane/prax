@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mathvariant on tokens</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 15px; }
+  .pr-stage math { font-family: 'PR Noto Sans Math'; }
+  .pr-stage mtd { padding: 0 6px; text-align: left; }
+  .pr-stage mtext { font: 11px sans-serif; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML 4 · 3.2.2 Mathematics style attributes common to token elements</div>
+  <h1>mathvariant on tokens</h1>
+  <p class=pr-lede><q>The mathvariant attribute defines logical classes of token elements. Each class provides a collection of
+  typographically-related symbolic tokens.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml/#mathematics-style-attributes-common-to-token-elements">MathML 4 §3.2.2</a></span> Each row sets "Ab" in an
+  <code>mi</code> with a variant, in PR Noto Sans Math, which has the Mathematical Alphanumeric Symbols.</p>
+</header>
+
+<section>
+  <h2>Each variant</h2>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide"><math><mtable><mtr><mtd><mtext>bold</mtext></mtd><mtd><mi mathvariant=bold>A</mi><mi mathvariant=bold>b</mi></mtd></mtr><mtr><mtd><mtext>italic</mtext></mtd><mtd><mi mathvariant=italic>A</mi><mi mathvariant=italic>b</mi></mtd></mtr><mtr><mtd><mtext>bold-italic</mtext></mtd><mtd><mi mathvariant=bold-italic>A</mi><mi mathvariant=bold-italic>b</mi></mtd></mtr><mtr><mtd><mtext>double-struck</mtext></mtd><mtd><mi mathvariant=double-struck>A</mi><mi mathvariant=double-struck>b</mi></mtd></mtr><mtr><mtd><mtext>bold-fraktur</mtext></mtd><mtd><mi mathvariant=bold-fraktur>A</mi><mi mathvariant=bold-fraktur>b</mi></mtd></mtr><mtr><mtd><mtext>script</mtext></mtd><mtd><mi mathvariant=script>A</mi><mi mathvariant=script>b</mi></mtd></mtr><mtr><mtd><mtext>bold-script</mtext></mtd><mtd><mi mathvariant=bold-script>A</mi><mi mathvariant=bold-script>b</mi></mtd></mtr><mtr><mtd><mtext>fraktur</mtext></mtd><mtd><mi mathvariant=fraktur>A</mi><mi mathvariant=fraktur>b</mi></mtd></mtr><mtr><mtd><mtext>sans-serif</mtext></mtd><mtd><mi mathvariant=sans-serif>A</mi><mi mathvariant=sans-serif>b</mi></mtd></mtr><mtr><mtd><mtext>bold-sans-serif</mtext></mtd><mtd><mi mathvariant=bold-sans-serif>A</mi><mi mathvariant=bold-sans-serif>b</mi></mtd></mtr><mtr><mtd><mtext>sans-serif-italic</mtext></mtd><mtd><mi mathvariant=sans-serif-italic>A</mi><mi mathvariant=sans-serif-italic>b</mi></mtd></mtr><mtr><mtd><mtext>sans-serif-bold-italic</mtext></mtd><mtd><mi mathvariant=sans-serif-bold-italic>A</mi><mi mathvariant=sans-serif-bold-italic>b</mi></mtd></mtr><mtr><mtd><mtext>monospace</mtext></mtd><mtd><mi mathvariant=monospace>A</mi><mi mathvariant=monospace>b</mi></mtd></mtr></mtable></math></div>
+    <figcaption>Each "Ab" in its variant: bold 𝐀𝐛, italic 𝐴𝑏, bold italic, double-struck 𝔸𝕓, bold fraktur, script 𝒜𝒷, bold script, fraktur 𝔄𝔟, the sans-serifs, monospace 𝙰𝚋. <span class=pr-flag>Chrome</span> Chrome draws no variant.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Several characters, and mn</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><math><mi mathvariant=bold>sin</mi><mn mathvariant=double-struck>12</mn><mo mathvariant=fraktur>+</mo></math></div>
+    <figcaption>Bold "sin", double-struck 𝟙𝟚; a fraktur +, which has no such form, as it is. <span class=pr-flag>Chrome</span> Plain "sin" and 12.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Italic correction on scripts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .pr-stage.pr-marked math { padding: 0; }
+  .pr-stage.pr-marked { padding-left: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 5.2 Glyph information (MathGlyphInfo)</div>
+  <h1>Italic correction on scripts</h1>
+  <p class=pr-lede><q>MathItalicsCorrectionInfo: […] Use the corresponding value in
+  MATH.MathGlyphInfo.MathItalicsCorrectionInfo.italicsCorrection if there is one for the requested glyph or 0
+  otherwise.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#glyph-information-mathglyphinfo">MathML Core §5.2</a></span> A superscript starts <q>the inline size of
+  the msup base's margin box + ItalicCorrection</q> along; a large operator's subscript <q>the inline size of the
+  msub base's margin box − LargeOpItalicCorrection</q>. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#base-with-superscript">MathML Core §3.4.1.3</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them. Blue lines mark where a script's box starts.</p>
+</header>
+
+<section>
+  <h2>A slanted letter</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide pr-marked"><span class=pr-mark style="left: 59px"></span><span class=pr-mark style="left: 73.5px"></span><math style="font-size: 100px"><msubsup><mi>f</mi><mn>1</mn><mn>2</mn></msubsup></math></div>
+    <figcaption><i>f</i> at 100px is 45px wide, and its italic correction is 145, 14.5px: the subscript 1 starts at its advance, the left line; the superscript 2 that much further, clear of the overhang.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A large operator</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide pr-marked"><span class=pr-mark style="left: 36.08px"></span><span class=pr-mark style="left: 56.08px"></span><math style="font-size: 40px"><msubsup displaystyle=true><mo lspace=0px rspace=0px>∫</mo><mn>0</mn><mn>1</mn></msubsup><mi>f</mi><mo>(</mo><mi>x</mi><mo>)</mo><mi>d</mi><mi>x</mi></math></div>
+    <figcaption>The display ∫ at 40px is 42.08px wide with a correction of 500, 20px: the 1 starts at its end, the right line, and the 0 that much before it, tucked under the slant.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

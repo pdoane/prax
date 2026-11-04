@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stretching along the inline axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.2.2 Algorithm for stretching operators along the inline axis</div>
+  <h1>Stretching along the inline axis</h1>
+  <p class=pr-lede><q>Calculate the target size T to the maximum inline size of the margin boxes of child boxes that have been
+  laid out in the previous step. Lay out or relayout all the elements of LToStretch with inline stretch size
+  constraint T.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#algorithm-for-stretching-operators-along-the-inline-axis">MathML Core §3.4.2.2</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>Braces and arrows as wide as their base</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 40px; math-style: normal"><mover><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mo>+</mo><mi>c</mi></mrow><mo>⏞</mo></mover></math></div>
+    <figcaption>At 40px, <i>a</i> + <i>b</i> + <i>c</i> is 127.54px wide; the brace takes its first variant at least that wide, <code>uni23DE.s04</code>, 133.28px, centered over it.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math style="font-size: 30px; math-style: normal"><mover><mi>x</mi><mo>→</mo></mover><mo>,</mo><mover><mrow><mi>A</mi><mi>B</mi></mrow><mo>→</mo></mover><mo>,</mo><munder><mrow><mi>x</mi><mo>+</mo><mi>y</mi></mrow><mo>_</mo></munder></math></div>
+    <figcaption>Arrows over <i>x</i> and over <i>AB</i>, each as wide as what it covers, built from pieces; a line under <i>x</i> + <i>y</i>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

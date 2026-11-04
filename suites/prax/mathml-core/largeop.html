@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Large operators in display style</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.4.3 Layout of operators</div>
+  <h1>Large operators in display style</h1>
+  <p class=pr-lede><q>If the operator has the largeop property and if math-style on the &lt;mo&gt; element is normal […] The
+  inline size, ink line-ascent, ink line-descent, line-ascent and line-descent of the math content are obtained by the
+  algorithm to shape a stretchy glyph g to block dimension DisplayOperatorMinHeight.</q> <q>If the operator has the
+  symmetric property, then Δ = [(ascent of stretchy glyph − descent of stretchy glyph) − 2 * AxisHeight] / 2.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-of-operators">MathML Core §3.2.4.3</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them.</p>
+</header>
+
+<section>
+  <h2>The Gaussian integral</h2>
+  <p>At 50px. DisplayOperatorMinHeight is 2300.</p>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 71.83px"></span><span class=pr-level style="vertical-align: -44.02px"></span><math style="font-size: 50px; math-style: normal"><msubsup><mo>∫</mo><mrow><mo>−</mo><mi>∞</mi></mrow><mi>∞</mi></msubsup><msup><mi>e</mi><mrow><mo>−</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></msup><mi>d</mi><mi>x</mi><mo>=</mo><msqrt><mi>π</mi></msqrt></math></div>
+    <figcaption>The ∫'s first variant at least 2300 tall is its display form, 2317: centered on the axis, from −44.02px to 71.83px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>When no variant is tall enough</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><span class=pr-level style="vertical-align: 47.3px"></span><span class=pr-level style="vertical-align: -19.5px"></span><math style="font-size: 50px; math-style: normal"><munderover><mo>∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mi>∞</mi></munderover><mfrac><mn>1</mn><msup><mi>n</mi><mn>2</mn></msup></mfrac></math></div>
+    <figcaption>∑'s variants stop at 1336 and it has no assembly, so the last, centered on the axis: from −19.5px to 47.3px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

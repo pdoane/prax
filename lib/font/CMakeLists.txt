@@ -5,6 +5,8 @@ pr_library(font INCLUDE include
     src/colr.cpp
     src/font.cpp
     src/font_hinter.cpp
+    src/font_math.cpp
+    src/font_math_unicode.cpp
     src/font_set.cpp
     src/font_subset.cpp
     src/glyf.cpp
@@ -51,6 +53,7 @@ if (PR_DEVELOP)
     pr_module_tests(font
         tests/test_font.cpp
         tests/test_font_c.c
+        tests/test_font_math.cpp
         tests/test_font_set.cpp
         tests/test_font_subset.cpp
         tests/test_font_subset_c.c

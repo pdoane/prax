@@ -890,7 +890,7 @@ def sorted_table(name, pairs, value_type, comment):
 def search(name, key, absent):
     """Returns the lines of a binary search of a sorted table's keys for `key`. The lines return the key's value, or
     `absent` if the key is not found."""
-    return ("    uint32_t at = lowerBound(%(n)sKey, uint32_t(countOf(%(n)sKey)), %(k)s);\n"
+    return ("    uint32_t at = lowerBound(Span(%(n)sKey), %(k)s);\n"
             "    return at < countOf(%(n)sKey) && %(n)sKey[at] == %(k)s ? %(n)sValue[at] : %(a)s;\n"
             % {"n": name, "k": key, "a": absent})
 
@@ -995,14 +995,14 @@ def data_source(m):
                "    return nameAt(kRegionCodeBlob, kRegionCodeAt, region);\n}\n")
     out.append("""
 void languageSystems(PrLanguage language, uint32_t* first, uint32_t* end) {
-    uint32_t at = lowerBound(kSystemsKey, uint32_t(countOf(kSystemsKey)), uint32_t(language));
+    uint32_t at = lowerBound(Span(kSystemsKey), uint32_t(language));
     bool found = at < countOf(kSystemsKey) && kSystemsKey[at] == language;
     *first = found ? kSystemsAt[at] : 0;
     *end = found ? kSystemsAt[at + 1] : 0;
 }
 
 const PrStringView* PR_NULLABLE localeQuoteMarks(PrLocale key) {
-    uint32_t at = lowerBound(kQuoteKey, uint32_t(countOf(kQuoteKey)), key);
+    uint32_t at = lowerBound(Span(kQuoteKey), key);
     if (at >= countOf(kQuoteKey) || kQuoteKey[at] != key)
         return nullptr;
     return quoteSets() + 4 * kQuoteValue[at];

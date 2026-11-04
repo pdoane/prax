@@ -14,8 +14,8 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// How text is transformed. A value names the case transform, or math-auto, and the flags add the width and size
-// transforms, which apply after the case transform, the width before the size.
+// How text is transformed. A value names a case transform, math-auto or a mathematical variant. The flags add the width
+// and size transforms, which apply after the value's transform, width before size.
 enum {
     PrTextTransform_None,
 
@@ -29,15 +29,40 @@ enum {
     // Text of a single character, besides white space, in its Mathematical Italic form if it has one.
     PrTextTransform_MathAuto,
 
-    // Every character in its full-width form if it has one. A space becomes U+3000 IDEOGRAPHIC SPACE.
-    PrTextTransformFlag_FullWidth = 1u << 3,
+    // Every character in its form in one style of the Mathematical Alphanumeric Symbols, if it has one
+    // (prUnicodeMathVariant), for MathML's mathvariant. The members follow the order of PrUnicodeMathVariant.
+    PrTextTransform_MathBold,
+    PrTextTransform_MathItalic,
+    PrTextTransform_MathBoldItalic,
+    PrTextTransform_MathScript,
+    PrTextTransform_MathBoldScript,
+    PrTextTransform_MathFraktur,
+    PrTextTransform_MathDoubleStruck,
+    PrTextTransform_MathBoldFraktur,
+    PrTextTransform_MathSansSerif,
+    PrTextTransform_MathBoldSansSerif,
+    PrTextTransform_MathSansSerifItalic,
+    PrTextTransform_MathSansSerifBoldItalic,
+    PrTextTransform_MathMonospace,
+    PrTextTransform_MathInitial,
+    PrTextTransform_MathTailed,
+    PrTextTransform_MathLooped,
+    PrTextTransform_MathStretched,
 
-    PrTextTransformFlag_FullSizeKana = 1u << 4,     // every small kana in its full-size form
+    // Every character in its full-width form if it has one. A space becomes U+3000 IDEOGRAPHIC SPACE.
+    PrTextTransformFlag_FullWidth = 1u << 5,
+
+    PrTextTransformFlag_FullSizeKana = 1u << 6,     // every small kana in its full-size form
 };
 typedef uint8_t PrTextTransform;
 
 // The bits of a PrTextTransform that hold its value rather than its flags.
-enum { kPrTextTransformValueMask = (1u << 3) - 1 };
+enum { kPrTextTransformValueMask = (1u << 5) - 1 };
+
+// Returns the transform that sets text in the mathematical alphanumeric style `variant`.
+PR_CONSTEXPR PrTextTransform prTextTransformFromMathVariant(PrUnicodeMathVariant variant) {
+    return PR_VALUE_CAST(PrTextTransform, PrTextTransform_MathBold + variant);
+}
 
 // The most code points that transforming one code point gives.
 enum { kPrTextTransformMaxCodePoints = kPrUnicodeCaseMaxCodePoints };

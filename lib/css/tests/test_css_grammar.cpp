@@ -1,6 +1,7 @@
 #include "css/src/css_grammar.h"
 #include "css/src/css_keyword.h"
 #include "css/src/css_property.h"
+#include "css/src/css_rule.h"
 #include "css/src/css_terminal.h"
 #include "css/src/css_value_def.h"
 #include "css/tests/css_tests.h"
@@ -234,14 +235,24 @@ TEST_CASE("range 0 is unbounded") {
         (CssGrammarRangeFlag_MinUnbounded | CssGrammarRangeFlag_MaxUnbounded));
 }
 
-TEST_CASE("keyword names are unique and sorted") {
+TEST_CASE("keyword names are unique and sorted, the private keywords after the others") {
     for (PrCssKeyword i = 0; i < PrCssKeyword_Count; ++i) {
         CAPTURE(i);
         REQUIRE(cssKeywordName(i).data != nullptr);
         CHECK(cssKeywordName(i).size != 0);
-        if (i)
+        CHECK(prStringStartsWith(cssKeywordName(i), "-pr-") == (i >= kCssKeywordFirstPrivate));
+        if (i != 0 && i != kCssKeywordFirstPrivate)
             CHECK(prStringCompare(cssKeywordName(i - 1), cssKeywordName(i)) < 0);
     }
+}
+
+TEST_CASE("only the engine's own text names its private keywords") {
+    CssDeclarationBlock block{};
+    cssDeclarationBlockParse(&block, "text-transform: -pr-math-bold", nullptr, CssOrigin_Author);
+    CHECK(block.count == 0);
+    cssDeclarationBlockParse(&block, "text-transform: -pr-math-bold", nullptr, CssOrigin_Hint);
+    CHECK(block.count == 1);
+    cssDeclarationBlockReset(&block);
 }
 
 TEST_CASE("keywords are lowercase, since idents are case-insensitive") {

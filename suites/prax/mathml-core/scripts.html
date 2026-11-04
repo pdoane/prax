@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subscripts and superscripts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.1 Subscripts and Superscripts &lt;msub&gt;, &lt;msup&gt;, &lt;msubsup&gt;</div>
+  <h1>Subscripts and superscripts</h1>
+  <p class=pr-lede><q>The msub, msup and msubsup elements are used to attach subscript and superscript to a MathML expression.</q>
+  <q>The font-size is automatically scaled down within the scripts.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#subscripts-and-superscripts-msub-msup-msubsup">MathML Core §3.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><msub><mn>1</mn><mn>2</mn></msub><mo>+</mo><msup><mn>3</mn><mn>4</mn></msup><mo>+</mo><msubsup><mn>5</mn><mn>6</mn><mn>7</mn></msubsup></math></div>
+    <figcaption>1 with 2 below right, 3 with 4 above right, 5 with 6 below and 7 above, the scripts smaller.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the math font</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide"><math><msup><mi>e</mi><mrow><mi>i</mi><mi>π</mi></mrow></msup><mo>,</mo><msub><mi>a</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msubsup><mi>x</mi><mi>j</mi><mn>2</mn></msubsup></math></div>
+    <figcaption>e to the iπ, a sub n + 1, x with j and 2: the superscripts up off the base, the subscripts down under the baseline, the j's descender clear of the 2.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

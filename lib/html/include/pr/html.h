@@ -547,16 +547,17 @@ PR_HANDLE_UPCAST(HtmlAreaElement, DomEventTarget, EventTarget)
 PrHtmlAnchorElement* PR_NULLABLE prHtmlAnchorElementQuery(PrDomEventTarget* PR_NULLABLE object);
 PrHtmlAreaElement* PR_NULLABLE prHtmlAreaElementQuery(PrDomEventTarget* PR_NULLABLE object);
 
-// Returns a component of the URL of a hyperlink, which is an a or an area element (html/#api-for-a-and-area-elements).
+// Returns a component of the URL of a hyperlink, which is an HTML a or area element
+// (html/#api-for-a-and-area-elements), or a MathML a element, which has the same members (mathml-core/#the-a-element).
 // The URL is the element's href attribute parsed against the document base URL. If the attribute does not parse,
 // `PrUrlComponent_Href` is the attribute's value, or the empty string if there is no attribute,
 // `PrUrlComponent_Protocol` is ":", and every other component is the empty string.
-PrRawString prHtmlHyperlinkComponent(const PrHtmlElement* element, PrUrlComponent component);
+PrRawString prHtmlHyperlinkComponent(const PrDomElement* element, PrUrlComponent component);
 
 // Sets a component of the URL of a hyperlink. `PrUrlComponent_Href` sets the href attribute. Any other component
 // changes the URL as the URL interface's setter does, and then sets the href attribute to the URL. Does nothing if the
 // href attribute does not parse. Returns ReadOnly for `PrUrlComponent_Origin`.
-PrStatus prHtmlHyperlinkSetComponent(PrHtmlElement* element, PrUrlComponent component, PrStringView value);
+PrStatus prHtmlHyperlinkSetComponent(PrDomElement* element, PrUrlComponent component, PrStringView value);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLBaseElement : HTMLElement (html)

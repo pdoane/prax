@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Scripts with the wrong number of children</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.4.1.1 Children of &lt;msub&gt;, &lt;msup&gt;, &lt;msubsup&gt;</div>
+  <h1>Scripts with the wrong number of children</h1>
+  <p class=pr-lede><q>If the &lt;msub&gt; element has less or more than two in-flow children, its layout algorithm is the same as
+  the mrow element.</q> The same holds of <code>msup</code>, and of <code>msubsup</code> with other than three. <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#children-of-msub-msup-msubsup">MathML Core §3.4.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Laid out as a row</h2>
+  <figure>
+    <div class="pr-stage"><math><msub><mi>x</mi></msub><mo>,</mo><msup><mi>x</mi><mn>2</mn><mn>3</mn></msup><mo>,</mo><msubsup><mi>x</mi><mn>2</mn></msubsup></math></div>
+    <figcaption><code>msub</code> of one child, <code>msup</code> of three, <code>msubsup</code> of two: "x", "x23" and "x2", on the baseline, the digits a script level smaller.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><math><msup><mi>x</mi><mn style="display: none">9</mn><mn>2</mn></msup></math></div>
+    <figcaption>An <code>msup</code> whose second child is <code>display: none</code>: two in-flow children, x².</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

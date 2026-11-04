@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mrow: italic correction between children</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .pr-stage.pr-marked math { padding: 0; }
+  .pr-stage.pr-marked { padding-left: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.3.1.2 Layout of &lt;mrow&gt;</div>
+  <h1>mrow: italic correction between children</h1>
+  <p class=pr-lede><q>A child box is slanted if it is not an embellished operator and has nonzero italic correction.</q> <q>If the
+  child is not slanted, then increment inline-offset by previous-italic-correction.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#layout-of-mrow">MathML Core §3.3.1.2</a></span>  The formulas are set in PR Noto Sans Math, whose MATH constants <code>shared/fonts.css</code> lists in units of a
+  1000-unit em; a dashed blue line marks the height that the caption computes from them. Blue lines mark where a child starts.</p>
+</header>
+
+<section>
+  <h2>Before an upright child, not a slanted one</h2>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide pr-marked"><span class=pr-mark style="left: 73.5px"></span><math style="font-size: 100px"><mi>f</mi><mo>(</mo><mi>x</mi><mo>)</mo></math></div>
+    <figcaption><i>f</i>(<i>x</i>) at 100px: the parenthesis, an operator, is not slanted, so it starts after <i>f</i>'s 45px and its correction, 14.5px.</figcaption>
+  </figure>
+  <figure class=pr-wide>
+    <div class="pr-stage pr-wide pr-marked"><span class=pr-mark style="left: 59px"></span><math style="font-size: 100px"><mi>f</mi><mi>f</mi></math></div>
+    <figcaption><i>ff</i>: the second <i>f</i> is slanted too, so no correction; it starts at 59px, leaning on the first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Space-like elements and operator forms</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; font-size: 24px; line-height: normal; }
+  .pr-stage { padding: 6px 14px; box-sizing: border-box; line-height: normal; white-space: nowrap; }
+  .pr-stage math { font-family: "PR Noto Sans Math"; }
+  .pr-stage .pr-level { border-bottom-color: rgba(44, 90, 143, 0.75); }
+  figure { display: block; }
+  .pr-stage.pr-wide { width: auto; }
+  .pr-wide + figcaption { max-width: none; }
+  .tint :is(mi, mn, mtext) { background: #dde7f3; }
+  .tint mo { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>MathML Core · 3.2.5.1 Definition of space-like elements</div>
+  <h1>Space-like elements and operator forms</h1>
+  <p class=pr-lede>A MathML Core element is a space-like element if it is <q>an mtext or mspace; or a grouping element or mpadded
+  all of whose in-flow children are space-like.</q> <q>Note that an mphantom is not automatically defined to be
+  space-like, unless its content is space-like.</q> <span class=pr-cite><a href="https://w3c.github.io/mathml-core/#definition-of-space-like-elements">MathML Core §3.2.5.1</a></span>
+  An operator's form counts a row's children without its space-like ones. Tokens are tinted, operators orange.</p>
+</header>
+
+<section>
+  <h2>What counts</h2>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>a</mi><mo>=</mo><mrow><mspace width=10px /><mo>−</mo><mi>b</mi></mrow></math></div>
+    <figcaption>In a row of an <code>mspace</code>, − and <i>b</i>, − is still first: prefix, no space after. <span class=pr-flag>Chrome</span> A space after −.</figcaption>
+  </figure>
+  <figure class="pr-wide pr-erratum">
+    <div class="pr-stage pr-wide tint"><math style="font-size: 36px"><mi>a</mi><mo>=</mo><mrow><mphantom><mi>x</mi></mphantom><mo>−</mo><mi>b</mi></mrow></math></div>
+    <figcaption>After an <code>mphantom</code> of <i>x</i>, which is not space-like, − is infix: 8px each side of it, a gap where the phantom is. <span class=pr-flag>Firefox</span> No space after −.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

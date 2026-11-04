@@ -1702,10 +1702,7 @@ PrDomShadowRoot* domAttachUseShadow(PrDomElement* use) {
 }
 
 bool domEmbeds(const PrDomElement* element) {
-    if (element->space == PrDomNamespace_Svg)
-        return element->tag == PrDomTag_Image || element->tag == PrDomTag_FeImage;
-    if (element->space != PrDomNamespace_Html)
-        return false;
+    // Most elements have none of these tags, which one test of the tag tells.
     switch (element->tag) {
         case PrDomTag_Audio:
         case PrDomTag_Canvas:
@@ -1717,7 +1714,12 @@ bool domEmbeds(const PrDomElement* element) {
         case PrDomTag_Picture:
         case PrDomTag_Source:
         case PrDomTag_Video:
-            return true;
+            return element->space == PrDomNamespace_Html;
+        case PrDomTag_Image:
+        case PrDomTag_FeImage:
+            return element->space == PrDomNamespace_Svg;
+        case PrDomTag_Mglyph:
+            return element->space == PrDomNamespace_MathMl;
         default:
             return false;
     }
