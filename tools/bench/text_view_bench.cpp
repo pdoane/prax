@@ -22,16 +22,7 @@
 #include "pr/layout_tree.h"
 #include "pr/string_view.h"
 #include "pr/syntax.h"
-#include "pr/syntax_treesitter_c.h"
-#include "pr/syntax_treesitter_cpp.h"
-#include "pr/syntax_treesitter_css.h"
-#include "pr/syntax_treesitter_html.h"
-#include "pr/syntax_treesitter_javascript.h"
-#include "pr/syntax_treesitter_json.h"
-#include "pr/syntax_treesitter_markdown.h"
-#include "pr/syntax_treesitter_markdown_inline.h"
-#include "pr/syntax_treesitter_python.h"
-#include "pr/syntax_treesitter_xml.h"
+#include "pr/syntax_treesitter_languages.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/text_view.h"
 #include "pr/time.h"
@@ -329,12 +320,7 @@ int measureFile(const char* path) {
         b.view = prTextViewCreate(b.buffer);
     });
     b.registry = prSyntaxRegistryCreate();
-    for (const PrSyntaxLanguage* language : {
-        prSyntaxTreeSitterC(), prSyntaxTreeSitterCpp(), prSyntaxTreeSitterCss(), prSyntaxTreeSitterHtml(),
-            prSyntaxTreeSitterJavaScript(), prSyntaxTreeSitterJson(), prSyntaxTreeSitterMarkdown(),
-            prSyntaxTreeSitterMarkdownInline(), prSyntaxTreeSitterPython(), prSyntaxTreeSitterXml(),
-    })
-        prSyntaxRegistryAdd(b.registry, language);
+    prSyntaxTreeSitterAddLanguages(b.registry);
     const PrSyntaxLanguage* language = prSyntaxRegistryFromPath(b.registry, path);
     if (language != nullptr) {
         b.syntax = prSyntaxTreeCreate(language, b.registry, b.buffer);

@@ -1,0 +1,26 @@
+diff --git a/src/ring.c b/src/ring.c
+index 3f2a1c4..8b9d0e7 100644
+--- a/src/ring.c
++++ b/src/ring.c
+@@ -12,9 +12,11 @@ typedef struct Ring {
+     size_t count;
+ } Ring;
+
+-static size_t ringWrite(Ring* ring, const uint8_t* bytes, size_t size) {
++static size_t ringWrite(Ring* ring, const void* bytes, size_t size) {
++    const uint8_t* in = (const uint8_t*)bytes;
+     size_t written = MIN(size, RING_CAPACITY - ring->count);
+     for (size_t i = 0; i < written; ++i)
+-        ring->data[(ring->head + ring->count + i) % RING_CAPACITY] = bytes[i];
++        ring->data[(ring->head + ring->count + i) % RING_CAPACITY] = in[i];
+     ring->count += written;
+     return written;
+ }
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..e69de29
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,2 @@
++# Ring
++A ring buffer of bytes.

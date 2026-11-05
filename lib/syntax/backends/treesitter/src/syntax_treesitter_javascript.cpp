@@ -2,11 +2,10 @@
 
 #include "pr/syntax_treesitter_javascript.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_javascript.h"
-
-#include "tree_sitter/tree-sitter-javascript.h"
 
 using namespace pr_impl;
 
@@ -18,7 +17,7 @@ const PrSyntaxLanguage* prSyntaxTreeSitterJavaScript(void) {
             .name = "javascript",
             .namePattern = "^(js|javascript)$",
             .extensions = kExtensions,
-            .extensionCount = 4,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_javascript(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

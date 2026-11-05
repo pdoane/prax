@@ -1,0 +1,46 @@
+# A CI workflow that builds and tests on three platforms.
+name: build
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  BUILD_TYPE: Release
+  CACHE_VERSION: 3
+
+defaults: &defaults
+  timeout-minutes: 30
+  continue-on-error: false
+
+jobs:
+  test:
+    <<: *defaults
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            sanitize: true
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      - name: Build and test
+        run: |
+          cmake --build build --parallel
+          ctest --test-dir build --output-on-failure
+      - name: Sanitize
+        if: matrix.sanitize == true
+        run: >
+          cmake -B asan -DSANITIZE=address
+          && cmake --build asan
+        env:
+          ASAN_OPTIONS: "detect_leaks=1:abort_on_error=1"
+      - name: Report
+        if: ${{ failure() }}
+        run: echo 'build failed on ${{ matrix.os }}'
+retries: ~
+ratio: 0.75

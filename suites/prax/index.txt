@@ -88,6 +88,10 @@ svg2-14-paint-servers SVG2/pservers.html
 svg2-15-scripting-and-interactivity SVG2/interact.html
 svg2-16-linking SVG2/linking.html
 
+# A source in each language that the editor highlights, to open in Scribe (README.md, "Pages that walk no
+# specification").
+syntax
+
 uievents uievents uievents-key uievents-code
 
 # Real pages that pull features together (README.md, "Pages that walk no specification").

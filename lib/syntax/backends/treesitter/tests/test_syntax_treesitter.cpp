@@ -3,12 +3,14 @@
 
 #include "pr/count_of.h"
 #include "pr/float.h"
+#include "pr/syntax_treesitter.h"
 #include "pr/syntax_treesitter_c.h"
 #include "pr/syntax_treesitter_cpp.h"
 #include "pr/syntax_treesitter_css.h"
 #include "pr/syntax_treesitter_html.h"
 #include "pr/syntax_treesitter_javascript.h"
 #include "pr/syntax_treesitter_json.h"
+#include "pr/syntax_treesitter_languages.h"
 #include "pr/syntax_treesitter_markdown.h"
 #include "pr/syntax_treesitter_markdown_inline.h"
 #include "pr/syntax_treesitter_python.h"
@@ -20,6 +22,10 @@
 #include <vector>
 
 extern "C" int prTestSyntaxTreeSitterCApi(void);
+
+// The grammar of C, whose language a test makes again with queries of its own.
+struct TSLanguage;
+extern "C" const TSLanguage* tree_sitter_c(void);
 
 namespace pr_impl {
 
@@ -33,12 +39,7 @@ struct Parsed {
     PrSyntaxTree* tree = nullptr;
 
     Parsed(const PrSyntaxLanguage* language, const std::string& text) {
-        for (const PrSyntaxLanguage* added : {
-            prSyntaxTreeSitterC(), prSyntaxTreeSitterCpp(), prSyntaxTreeSitterCss(), prSyntaxTreeSitterHtml(),
-                prSyntaxTreeSitterJavaScript(), prSyntaxTreeSitterJson(), prSyntaxTreeSitterMarkdown(),
-                prSyntaxTreeSitterMarkdownInline(), prSyntaxTreeSitterPython(), prSyntaxTreeSitterXml(),
-        })
-            prSyntaxRegistryAdd(registry, added);
+        prSyntaxTreeSitterAddLanguages(registry);
         buffer = prTextEditBufferCreate(text);
         view = prTextEditViewCreate(buffer);
         tree = prSyntaxTreeCreate(language, registry, buffer);
@@ -342,4 +343,78 @@ TEST_CASE("Python and XML name their parts") {
     CHECK(xml.at("root kind") == "tag");
     CHECK(xml.at("kind=") == "property");
     CHECK(xml.at("<!-- note") == "comment");
+}
+
+TEST_CASE("each built-in language is found by its file, and its queries name a part of a line") {
+    struct Case {
+        const char* path;
+        const char* text;
+        const char* needle;
+        const char* category;
+    };
+    const Case cases[] = {
+        {"run.sh", "if [ -n \"$1\" ]; then echo hi; fi\n", "if", "keyword"},
+        {"main.c", "int main(void) { return 0; }\n", "return", "keyword"},
+        {"Program.cs", "class Point { int x; }\n", "class", "keyword"},
+        {"CMakeLists.txt", "add_library(core STATIC a.c)\n", "add_library", "function.builtin"},
+        {"point.h", "namespace a { class Point {}; }\n", "namespace", "keyword"},
+        {"page.css", "a { color: red; }\n", "color", "property"},
+        {"main.dart", "class Point { final int x = 0; }\n", "class", "keyword"},
+        {"fix.diff", "--- a/x\n+++ b/x\n@@ -1 +1 @@\n-old\n+new\n", "new", "diff.plus"},
+        {"Dockerfile", "FROM alpine:3\nRUN echo hi\n", "FROM", "keyword"},
+        {"blur.frag", "uniform vec4 color;\nvoid main() {}\n", "uniform", "type.qualifier"},
+        {"main.go", "package main\nfunc main() {}\n", "func", "keyword"},
+        {"site.hcl", "block \"a\" { count = 1 }\n", "1", "number"},
+        {"blur.hlsl", "cbuffer Frame : register(b0) { float4 color; };\n", "cbuffer", "type"},
+        {"page.html", "<p class=\"a\">text</p>\n", "p class", "tag"},
+        {"Point.java", "public class Point { int x; }\n", "public", "keyword"},
+        {"app.js", "const answer = 42;\n", "const", "keyword"},
+        {"data.json", "{\"key\": true}\n", "true", "constant.builtin"},
+        {"Main.kt", "fun main() { val x = 1 }\n", "fun", "keyword.function"},
+        {"init.lua", "local x = 1\n", "local", "keyword"},
+        {"Makefile", "# build\nall: main.o\n", "# build", "comment"},
+        {"README.md", "# Title\n", "Title", "text.title"},
+        {"view.m", "@interface View : NSObject\n@end\n", "@interface", "keyword"},
+        {"index.php", "<?php echo $name; ?>\n", "name;", "variable"},
+        {"build.ps1", "function Get-Thing { param($Name) }\n", "function", "keyword"},
+        {"area.py", "def area(radius):\n    return radius\n", "def", "keyword"},
+        {"point.rb", "class Point\nend\n", "class", "keyword"},
+        {"main.rs", "fn main() { let x = 1; }\n", "fn", "keyword"},
+        {"blur.slang", "struct Frame { float4 color; };\n", "struct", "keyword.type"},
+        {"query.sql", "SELECT id FROM users;\n", "SELECT", "keyword"},
+        {"main.swift", "func area() -> Int { return 1 }\n", "func", "keyword.function"},
+        {"main.tf", "resource \"aws_s3_bucket\" \"b\" { count = 1 }\n", "1", "number"},
+        {"Cargo.toml", "[package]\nname = \"a\"\n", "name", "type"},
+        {"view.tsx", "const v = <div>{x}</div>;\n", "div", "tag"},
+        {"main.ts", "let x: number = 1;\n", "number", "type.builtin"},
+        {"blur.wgsl", "fn main() -> f32 { return 1.0; }\n", "fn", "keyword.function"},
+        {"feed.xml", "<root kind=\"x\"/>\n", "root", "tag"},
+        {"config.yaml", "name: a\n", "name", "property"},
+    };
+    PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
+    prSyntaxTreeSitterAddLanguages(registry);
+    for (const Case& c : cases) {
+        std::string path = c.path;
+        CAPTURE(path);
+        const PrSyntaxLanguage* language = prSyntaxRegistryFromPath(registry, c.path);
+        REQUIRE(language != nullptr);
+        Parsed h(language, c.text);
+        CHECK(h.at(c.needle) == std::string(c.category));
+    }
+    prSyntaxRegistryDestroy(registry);
+}
+
+TEST_CASE("Neovim's predicates test a capture's text with Lua's patterns, and its node's parent and ancestors") {
+    const char kHighlights[] = "(identifier) @variable\n"
+        "((identifier) @constant (#lua-match? @constant \"^[A-Z][A-Z_%d]*$\"))\n"
+        "((identifier) @parameter (#has-parent? @parameter parameter_declaration))\n"
+        "((identifier) @returned (#has-ancestor? @returned return_statement) (#not-lua-match? @returned \"^%u\"))\n";
+    PrSyntaxTreeSitterDesc desc{.name = "c", .grammar = tree_sitter_c(), .highlights = kHighlights};
+    const PrSyntaxLanguage* language = prSyntaxTreeSitterLanguageCreate(&desc);
+    Parsed h(language, "int f(int count) { return LIMIT_2 + count; }\n");
+    CHECK(h.at("f(") == "variable");
+    CHECK(h.at("count)") == "parameter");
+    CHECK(h.at("LIMIT_2") == "constant");
+    CHECK(h.at("count;") == "returned");
+    prSyntaxTreeSitterLanguageDestroy(language);
 }

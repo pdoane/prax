@@ -12,7 +12,9 @@ the chapter's page:
     svg2-10-basic-shapes SVG2/shapes.html
 
 A directory that walks no specification, such as `workloads`, is listed by its name alone. Its index lists its pages
-and no sections, and its pages have no eyebrow, since they are real pages and not the specifications' figures.
+and no sections, and its pages have no eyebrow, since they are real pages and not the specifications' figures. Its
+pages may be files of any kind, such as `syntax`'s sources, which an editor opens; the tools that open pages in a
+browser open only those that are HTML.
 
 A directory's `index.txt` lists its sections in the specification's order, each by its anchor with the number and the
 title that the specification gives it, and under each, indented, the pages that walk through it. Pages before the
@@ -271,7 +273,7 @@ def read_suite(problems):
                 if match:
                     d.commented.add(match.group(1))
         for n, text, indented in content_lines(d.index()):
-            if text.endswith(".html"):
+            if text.endswith(".html") or not d.specs:
                 if not d.specs and (indented or d.sections):
                     problems.append((d.index(), n, "%s: a directory that walks no specification has no sections"
                                      % text))
@@ -292,14 +294,14 @@ def read_suite(problems):
 
 
 def pages_of(names):
-    """Returns the pages of the named directories, as (directory, page), in the index's order. The pages of a directory
-    that the top-level index does not list yet, such as one being written, come in its own index's order, or else in
-    the order of its files."""
+    """Returns the HTML pages of the named directories, as (directory, page), in the index's order. The pages of a
+    directory that the top-level index does not list yet, such as one being written, come in its own index's order, or
+    else in the order of its files."""
     listed = {d.name: d for d in read_suite([])}
     pages = []
     for name in names:
         if name in listed:
-            pages += [(name, p) for _, p in listed[name].all_pages()]
+            pages += [(name, p) for _, p in listed[name].all_pages() if p.endswith(".html")]
             continue
         d = Directory(name, [], None, 0)
         if os.path.exists(d.index()):
@@ -414,12 +416,21 @@ def check_levels(d, problems):
                              % (d.name, spec)))
 
 
+def is_page(d, name):
+    """Returns true if the file `name` of a directory is one of its pages: an HTML file, or in a directory that walks no
+    specification, any file but its index."""
+    if name.endswith(".html"):
+        return True
+    return (not d.specs and name != "index.txt" and not name.startswith(".")
+            and os.path.isfile(os.path.join(d.path(), name)))
+
+
 def check_pages(d, problems, fix):
     listed = [p for _, p in d.all_pages()]
     for p in sorted(set(listed)):
         if listed.count(p) > 1:
             problems.append((d.index(), 1, "%s is listed %d times" % (p, listed.count(p))))
-    on_disk = sorted(f for f in os.listdir(d.path()) if f.endswith(".html")) if os.path.isdir(d.path()) else []
+    on_disk = sorted(f for f in os.listdir(d.path()) if is_page(d, f)) if os.path.isdir(d.path()) else []
     for p in on_disk:
         if p not in listed:
             problems.append((os.path.join(d.path(), p), 1, "not in %s/index.txt" % d.name))

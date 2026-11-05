@@ -347,16 +347,20 @@ and until it finishes, the spans are those of the last parse that finished, move
 streams into its buffer in pieces, as the HTML and Markdown loads do (`PrTextEditOrigin_Load`), and each piece parses
 before the next arrives, so the text and its syntax show together, and the cost of a piece follows the piece.
 
-The tree-sitter backend (`PR_SYNTAX_TREESITTER`, off by default) evaluates the queries' text predicates itself, with
-`lib/regex`. An injection hands ranges to another language of the registry: the language that its query names, or that
-the text of a capture names, such as the info string of a Markdown fence, which a language's name pattern matches. Its
-content leaves out the ranges of the content node's named children, as a block quote's markers, unless the query
-includes them, and the matches of a combined injection are one document. An injected language injects in turn, four
-deep at most, as a script in an HTML block in Markdown's inline text. Each injection in the range asked for is parsed
-when spans of it are asked for, and its tree is kept: the edits move it, a query of the same ranges reuses it, and one
-of ranges that an edit touched parses it again incrementally. A tree that a query does not reach is dropped. Each
-built-in grammar has a header and a function of its own (`pr/syntax_treesitter_<language>.h`), so a program links only
-the grammars that it names, and a host can add a grammar of its own (`prSyntaxTreeSitterLanguageCreate`).
+The tree-sitter backend (`PR_SYNTAX_TREESITTER`, off by default) evaluates the queries' predicates itself, with
+`lib/regex`: tree-sitter's tests of a capture's text, and Neovim's Lua patterns and tests of a node's parent and
+ancestors, so a grammar that ships no queries of its own takes nvim-treesitter's. An injection hands ranges to another
+language of the registry: the language that its query names, or that the text of a capture names, such as the info
+string of a Markdown fence, which a language's name pattern matches. Its content leaves out the ranges of the content
+node's named children, as a block quote's markers, unless the query includes them, and the matches of a combined
+injection are one document. An injected language injects in turn, four deep at most, as a script in an HTML block in
+Markdown's inline text. Each injection in the range asked for is parsed when spans of it are asked for, and its tree is
+kept: the edits move it, a query of the same ranges reuses it, and one of ranges that an edit touched parses it again
+incrementally. A tree that a query does not reach is dropped. Each built-in grammar has a header and a function of its
+own (`pr/syntax_treesitter_<language>.h`), so a program links only the grammars that it names, a host that offers them
+all adds them at once (`pr/syntax_treesitter_languages.h`), and a host can add a grammar of its own
+(`prSyntaxTreeSitterLanguageCreate`). `suites/prax/syntax` holds a source in each built-in language, to look at in
+Scribe.
 
 ## Languages and scripts (`pr/locale.h`)
 

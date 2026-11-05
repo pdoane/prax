@@ -2,11 +2,10 @@
 
 #include "pr/syntax_treesitter_python.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_python.h"
-
-#include "tree_sitter/tree-sitter-python.h"
 
 using namespace pr_impl;
 
@@ -18,7 +17,7 @@ const PrSyntaxLanguage* prSyntaxTreeSitterPython(void) {
             .name = "python",
             .namePattern = "^(py|python)$",
             .extensions = kExtensions,
-            .extensionCount = 2,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_python(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

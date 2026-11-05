@@ -2,11 +2,10 @@
 
 #include "pr/syntax_treesitter_json.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_json.h"
-
-#include "tree-sitter-json.h"
 
 using namespace pr_impl;
 
@@ -18,7 +17,7 @@ const PrSyntaxLanguage* prSyntaxTreeSitterJson(void) {
             .name = "json",
             .namePattern = "^json$",
             .extensions = kExtensions,
-            .extensionCount = 1,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_json(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

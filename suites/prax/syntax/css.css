@@ -1,0 +1,41 @@
+/* A card component with a dark scheme and a container query. */
+@import url("tokens.css") layer(tokens);
+
+:root {
+    --radius: 12px;
+    --accent: oklch(0.65 0.18 250);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.2), 0 4px 12px rgb(0 0 0 / 0.1);
+}
+
+.card {
+    container-type: inline-size;
+    display: grid;
+    grid-template-columns: [media] 120px [body] 1fr;
+    gap: calc(var(--radius) / 2);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    transition: transform 150ms ease-out;
+}
+
+.card:hover,
+.card:focus-within {
+    transform: translateY(-2px);
+}
+
+.card > .title::after {
+    content: "\2192";
+    color: var(--accent);
+}
+
+@container (width < 400px) {
+    .card {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --shadow: none;
+    }
+    .card { background: #1e1e1e !important; }
+}

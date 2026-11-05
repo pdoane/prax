@@ -7,8 +7,6 @@
 
 #include "syntax/backends/treesitter/src/syntax_queries_markdown_inline.h"
 
-#include "tree-sitter/tree-sitter-markdown-inline.h"
-
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterMarkdownInline(void) {

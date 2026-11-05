@@ -2,23 +2,22 @@
 
 #include "pr/syntax_treesitter_c.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_c.h"
 
-#include "tree_sitter/tree-sitter-c.h"
-
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterC(void) {
-    static const PrStringView kExtensions[] = {"c", "h"};
+    static const PrStringView kExtensions[] = {"c"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "c",
-            .namePattern = "^(c|h)$",
+            .namePattern = "^c$",
             .extensions = kExtensions,
-            .extensionCount = 2,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_c(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

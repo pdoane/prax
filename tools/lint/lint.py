@@ -509,14 +509,15 @@ def check_linkage(report, path, text):
     """Only the public headers give C linkage. A definition takes it from the declaration that it implements, so
     internal code opens no extern "C" block and defines nothing with it. Internal code declares with C linkage only
     what C defines: a compiler intrinsic, whose name starts with an underscore, a function of the C library that
-    C_LIBRARY names, or a test's C translation unit, whose functions take the library's prefix because they reach the
-    linker by their names alone. Such a declaration is at global scope, where the name it declares lives."""
+    C_LIBRARY names, a tree-sitter grammar's function (tree_sitter_<grammar>), which its generated parser defines, or a
+    test's C translation unit, whose functions take the library's prefix because they reach the linker by their names
+    alone. Such a declaration is at global scope, where the name it declares lives."""
     code = mask_non_code(text)
     for match in re.finditer(r'^([ \t]*)extern "C" [^;{(]*?\b(\w+)\s*\(', text, re.M):
         if code[match.start(2)] == " ":
             continue
         name = match.group(2)
-        if not name.startswith(("pr", "_")) and name not in C_LIBRARY:
+        if not name.startswith(("pr", "_", "tree_sitter_")) and name not in C_LIBRARY:
             report.add(path, line_of(text, match.start()), "linkage",
                        'extern "C" %s has no prefix; a name with C linkage takes pr' % name)
         spans = namespace_spans(code, r"\w+") + namespace_spans(code.replace("namespace {", "namespace _ {"), "_")
@@ -2136,17 +2137,6 @@ THIRD_PARTY = {
     "cmark-gfm-core-extensions.h": ("tools/suite/markdown/cmark_gfm_reference.cpp",),
     "hb.h": ("lib/text/backends/harfbuzz/src/text_harfbuzz.cpp",),
     "tree_sitter/api.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter.cpp",),
-    "tree_sitter/tree-sitter-c.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_c.cpp",),
-    "tree-sitter-cpp.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_cpp.cpp",),
-    "tree_sitter/tree-sitter-css.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_css.cpp",),
-    "tree-sitter-html.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_html.cpp",),
-    "tree_sitter/tree-sitter-javascript.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_javascript.cpp",),
-    "tree-sitter-json.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_json.cpp",),
-    "tree-sitter/tree-sitter-markdown.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_markdown.cpp",),
-    "tree-sitter/tree-sitter-markdown-inline.h": (
-        "lib/syntax/backends/treesitter/src/syntax_treesitter_markdown_inline.cpp",),
-    "tree_sitter/tree-sitter-python.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_python.cpp",),
-    "tree-sitter-xml.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter_xml.cpp",),
     "freetype/freetype.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "lib/font/tests/test_font.cpp",
                             "lib/font/tests/test_outline.cpp", "lib/draw/comparisons/imgui/src/draw_imgui.cpp"),
     "freetype/ftadvanc.h": ("lib/font/tests/test_font.cpp",),

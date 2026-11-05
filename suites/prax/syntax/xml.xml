@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A feed of a blog's newest posts, in Atom. -->
+<!DOCTYPE feed>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title type="text">Ring &amp; Friends</title>
+    <id>urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6</id>
+    <updated>2026-11-05T09:30:00Z</updated>
+    <link rel="self" href="https://example.com/feed.xml"/>
+    <author>
+        <name>Ada</name>
+        <email>ada@example.com</email>
+    </author>
+    <entry>
+        <title>Version 1.2</title>
+        <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+        <updated>2026-11-04T18:00:00Z</updated>
+        <summary type="html"><![CDATA[Writes now take <code>const void*</code>.]]></summary>
+        <category term="release"/>
+    </entry>
+    <?xml-stylesheet type="text/xsl" href="feed.xsl"?>
+</feed>

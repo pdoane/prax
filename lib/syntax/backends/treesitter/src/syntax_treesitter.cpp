@@ -19,22 +19,26 @@ namespace pr_impl {
 
 namespace {
 
-// A text predicate of a pattern, which tree-sitter leaves to its host.
+// A predicate of a pattern, which tree-sitter leaves to its host: of a capture's text, as tree-sitter's own tools read
+// them, or of where its node is, as Neovim's queries add.
 enum {
     TreeSitterTestKind_Eq,
     TreeSitterTestKind_Match,
     TreeSitterTestKind_AnyOf,
+    TreeSitterTestKind_Parent,
+    TreeSitterTestKind_Ancestor,
 };
 typedef uint8_t TreeSitterTestKind;
 
 // One predicate: whether the text of a capture equals a string, equals another capture's text, matches an expression,
-// or is one of several strings, or the negation of one of these.
+// or is one of several strings; whether its node's parent, or any of its ancestors, is of one of several types; or the
+// negation of one of these.
 struct TreeSitterTest {
     TreeSitterTestKind kind;
     bool negated;
     uint32_t capture;               // by the query's capture index
     uint32_t otherCapture;          // for Eq of two captures, or UINT32_MAX
-    RawArray<PrRawString> strings;  // the string of Eq, or the strings of AnyOf
+    RawArray<PrRawString> strings;  // the string of Eq, the strings of AnyOf, or the node types of Parent and Ancestor
     PrRegex* PR_NULLABLE regex;     // of Match, or null for a pattern that does not compile, which matches nothing
 };
 
@@ -145,6 +149,138 @@ void useAllocator() {
     }
 }
 
+// Appends to `out` the class of a Lua pattern's `%` class letter, such as `a-zA-Z` for `a`, and returns false for a
+// letter that names none that a regex's class can hold.
+bool appendLuaClass(RawArray<char>& out, char letter) {
+    const char* members = nullptr;
+    switch (letter | 0x20) {
+        case 'a': members = "a-zA-Z"; break;
+        case 'd': members = "0-9"; break;
+        case 'g': members = "!-~"; break;
+        case 'l': members = "a-z"; break;
+        case 'p': members = "!-/:-@\\[-`{-~"; break;
+        case 's': members = " \\t\\n\\v\\f\\r"; break;
+        case 'u': members = "A-Z"; break;
+        case 'w': members = "a-zA-Z0-9"; break;
+        case 'x': members = "0-9a-fA-F"; break;
+        default: return false;
+    }
+    for (const char* c = members; *c != 0; ++c)
+        out.push(*c);
+    return true;
+}
+
+bool isLetter(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+// Appends a character that a regex reads as itself.
+void appendLiteral(RawArray<char>& out, char c) {
+    for (const char* special = "\\.^$|?*+()[]{}-/"; *special != 0; ++special) {
+        if (c == *special) {
+            out.push('\\');
+            break;
+        }
+    }
+    out.push(c);
+}
+
+// Translates a Lua pattern, as Neovim's #lua-match? reads it, to a regular expression of pr/regex.h. Returns false for
+// a pattern that has what a regex cannot say, such as a balanced match (`%b`), a frontier (`%f`) or a back reference.
+bool regexOfLuaPattern(PrStringView pattern, RawArray<char>& out) {
+    size_t i = 0;
+    size_t n = pattern.size;
+    const char* p = pattern.data;
+    if (n > 0 && p[0] == '^') {
+        out.push('^');
+        i = 1;
+    }
+    bool atom = false;  // the last item is one that a quantifier applies to
+    while (i < n) {
+        char c = p[i];
+        if (c == '%') {
+            if (i + 1 >= n)
+                return false;
+            char e = p[i + 1];
+            i += 2;
+            if (isLetter(e)) {
+                out.push('[');
+                if (e >= 'A' && e <= 'Z')
+                    out.push('^');
+                if (!appendLuaClass(out, e))
+                    return false;
+                out.push(']');
+            } else if (e >= '0' && e <= '9') {
+                return false;
+            } else {
+                appendLiteral(out, e);
+            }
+            atom = true;
+        } else if (c == '[') {
+            out.push('[');
+            ++i;
+            if (i < n && p[i] == '^') {
+                out.push('^');
+                ++i;
+            }
+            // A `]` first in the set is one of its members, and a `-` first or last is itself, as Lua reads them.
+            size_t first = i;
+            while (i < n && (p[i] != ']' || i == first)) {
+                if (p[i] == '%') {
+                    if (i + 1 >= n)
+                        return false;
+                    char e = p[i + 1];
+                    // A complemented class, such as %S, has no form inside a regex's class.
+                    if (isLetter(e) && (e < 'a' || !appendLuaClass(out, e)))
+                        return false;
+                    if (!isLetter(e))
+                        appendLiteral(out, e);
+                    i += 2;
+                } else if (p[i] == '-' && i != first && i + 1 < n && p[i + 1] != ']') {
+                    out.push('-');
+                    ++i;
+                } else {
+                    appendLiteral(out, p[i]);
+                    ++i;
+                }
+            }
+            if (i >= n)
+                return false;
+            out.push(']');
+            ++i;
+            atom = true;
+        } else if ((c == '*' || c == '+' || c == '?' || c == '-') && atom) {
+            if (c == '-') {
+                out.push('*');
+                out.push('?');
+            } else {
+                out.push(c);
+            }
+            ++i;
+            atom = false;
+        } else if (c == '$' && i + 1 == n) {
+            out.push('$');
+            ++i;
+        } else if (c == '.') {
+            // Lua's `.` matches a line feed too.
+            const char any[] = "(?:.|\\n)";
+            for (const char* a = any; *a != 0; ++a)
+                out.push(*a);
+            ++i;
+            atom = true;
+        } else if (c == '(' || c == ')') {
+            out.push(c);
+            ++i;
+            atom = c == ')';
+        } else {
+            appendLiteral(out, c);
+            ++i;
+            atom = true;
+        }
+    }
+    return true;
+}
+
 // Reads the predicates of each pattern of a compiled query.
 void readPredicates(TreeSitterQuery& q) {
     uint32_t patternCount = ts_query_pattern_count(q.query);
@@ -188,9 +324,28 @@ void readPredicates(TreeSitterQuery& q) {
                     test.capture = steps[i + 1].value_id;
                     prRegexCreate(stringAt(i + 2), &test.regex);
                     kept = true;
+                } else if ((name == "lua-match?" || name == "not-lua-match?") && hasCapture && end == i + 3 &&
+                        steps[i + 2].type == TSQueryPredicateStepTypeString) {
+                    test.kind = TreeSitterTestKind_Match;
+                    test.negated = name == "not-lua-match?";
+                    test.capture = steps[i + 1].value_id;
+                    RawArray<char> regex;
+                    if (regexOfLuaPattern(stringAt(i + 2), regex))
+                        prRegexCreate(PrStringView{regex.data, regex.count}, &test.regex);
+                    regex.reset();
+                    kept = true;
                 } else if ((name == "any-of?" || name == "not-any-of?") && hasCapture) {
                     test.kind = TreeSitterTestKind_AnyOf;
                     test.negated = name == "not-any-of?";
+                    test.capture = steps[i + 1].value_id;
+                    for (uint32_t k = i + 2; k < end; ++k)
+                        test.strings.push(prRawStringCopy(stringAt(k)));
+                    kept = true;
+                } else if ((name == "has-parent?" || name == "not-has-parent?" || name == "has-ancestor?" ||
+                        name == "not-has-ancestor?") && hasCapture) {
+                    bool parent = name == "has-parent?" || name == "not-has-parent?";
+                    test.kind = parent ? TreeSitterTestKind_Parent : TreeSitterTestKind_Ancestor;
+                    test.negated = name.size > 0 && name.data[0] == 'n';
                     test.capture = steps[i + 1].value_id;
                     for (uint32_t k = i + 2; k < end; ++k)
                         test.strings.push(prRawStringCopy(stringAt(k)));
@@ -306,7 +461,15 @@ bool passes(TreeSitterTree* h, const TreeSitterQuery& q, const TSQueryMatch& mat
         if (ts_node_is_null(node))
             continue;
         bool holds = false;
-        if (test.kind == TreeSitterTestKind_Eq && test.otherCapture != UINT32_MAX) {
+        if (test.kind == TreeSitterTestKind_Parent || test.kind == TreeSitterTestKind_Ancestor) {
+            for (TSNode up = ts_node_parent(node); !ts_node_is_null(up) && !holds; up = ts_node_parent(up)) {
+                PrStringView type = ts_node_type(up);
+                for (uint32_t s = 0; s < test.strings.count && !holds; ++s)
+                    holds = prRawStringView(&test.strings.data[s]) == type;
+                if (test.kind == TreeSitterTestKind_Parent)
+                    break;
+            }
+        } else if (test.kind == TreeSitterTestKind_Eq && test.otherCapture != UINT32_MAX) {
             TSNode other = captured(match, test.otherCapture);
             PrRawString first = prRawStringCopy(textOf(h, node));
             holds = !ts_node_is_null(other) && prRawStringView(&first) == textOf(h, other);

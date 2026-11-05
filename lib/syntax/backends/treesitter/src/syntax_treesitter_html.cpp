@@ -2,11 +2,10 @@
 
 #include "pr/syntax_treesitter_html.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_html.h"
-
-#include "tree-sitter-html.h"
 
 using namespace pr_impl;
 
@@ -18,7 +17,7 @@ const PrSyntaxLanguage* prSyntaxTreeSitterHtml(void) {
             .name = "html",
             .namePattern = "^html$",
             .extensions = kExtensions,
-            .extensionCount = 3,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_html(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

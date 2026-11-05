@@ -15,6 +15,15 @@ struct ClassWord {
     TextEditorStyleClass style;
 };
 
+// The classes of names whose leading words give a class that their first word does not, matched before the first word:
+// a name that is one of these or continues one with a dot, as `diff.plus.gutter`.
+constexpr ClassWord kClassOfLeadingWords[] = {
+    {"diff.delta", TextEditorStyleClass_Changed},
+    {"diff.minus", TextEditorStyleClass_Deleted},
+    {"diff.plus", TextEditorStyleClass_Inserted},
+    {"variable.member", TextEditorStyleClass_Member},
+};
+
 // The classes by the first word of a category's name. The name of a markup element, such as a tag, reads as its
 // structure, as a keyword does.
 constexpr ClassWord kClassOfFirstWord[] = {
@@ -22,13 +31,16 @@ constexpr ClassWord kClassOfFirstWord[] = {
     {"boolean", TextEditorStyleClass_Constant},
     {"character", TextEditorStyleClass_Constant},
     {"comment", TextEditorStyleClass_Comment},
+    {"conditional", TextEditorStyleClass_Keyword},
     {"constant", TextEditorStyleClass_Constant},
     {"constructor", TextEditorStyleClass_Type},
     {"delimiter", TextEditorStyleClass_Punctuation},
     {"escape", TextEditorStyleClass_Escape},
+    {"exception", TextEditorStyleClass_Keyword},
     {"field", TextEditorStyleClass_Member},
     {"float", TextEditorStyleClass_Number},
     {"function", TextEditorStyleClass_Function},
+    {"include", TextEditorStyleClass_Keyword},
     {"keyword", TextEditorStyleClass_Keyword},
     {"label", TextEditorStyleClass_Variable},
     {"member", TextEditorStyleClass_Member},
@@ -41,7 +53,10 @@ constexpr ClassWord kClassOfFirstWord[] = {
     {"preproc", TextEditorStyleClass_Keyword},
     {"property", TextEditorStyleClass_Member},
     {"punctuation", TextEditorStyleClass_Punctuation},
+    {"repeat", TextEditorStyleClass_Keyword},
+    {"storageclass", TextEditorStyleClass_Keyword},
     {"string", TextEditorStyleClass_String},
+    {"structure", TextEditorStyleClass_Type},
     {"tag", TextEditorStyleClass_Keyword},
     {"type", TextEditorStyleClass_Type},
     {"variable", TextEditorStyleClass_Variable},
@@ -88,6 +103,9 @@ constexpr ClassColor kClassColors[TextEditorStyleClass_Count] = {
     {{206, 145, 120, 255}, {163, 21, 21, 255}},         // Emphasis
     {{86, 156, 214, 255}, {0, 0, 255, 255}},            // Link
     {{156, 220, 254, 255}, {0, 16, 128, 255}},          // LinkTarget
+    {{129, 184, 139, 255}, {0, 128, 0, 255}},           // Inserted
+    {{244, 135, 113, 255}, {200, 0, 0, 255}},           // Deleted
+    {{86, 156, 214, 255}, {0, 92, 197, 255}},           // Changed
 };
 
 // Returns the word of `name` that starts at `from`, up to the next dot.
@@ -109,6 +127,12 @@ TextEditorStyleClass classOfWord(const ClassWord* words, size_t count, PrStringV
 } // namespace
 
 TextEditorStyleClass textEditorStyleClassFromCategory(PrStringView name) {
+    for (const ClassWord& leading : kClassOfLeadingWords) {
+        PrStringView words = leading.word;
+        if (name.size >= words.size && PrStringView{name.data, words.size} == words &&
+                (name.size == words.size || name.data[words.size] == '.'))
+            return leading.style;
+    }
     PrStringView first = wordAt(name, 0);
     if (first == "text" || first == "markup") {
         if (first.size >= name.size)

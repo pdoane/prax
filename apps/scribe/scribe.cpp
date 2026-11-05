@@ -6,16 +6,7 @@
 #include "pr/command_kit.h"
 #include "pr/count_of.h"
 #if defined(SCRIBE_HAS_TREESITTER)
-#include "pr/syntax_treesitter_c.h"
-#include "pr/syntax_treesitter_cpp.h"
-#include "pr/syntax_treesitter_css.h"
-#include "pr/syntax_treesitter_html.h"
-#include "pr/syntax_treesitter_javascript.h"
-#include "pr/syntax_treesitter_json.h"
-#include "pr/syntax_treesitter_markdown.h"
-#include "pr/syntax_treesitter_markdown_inline.h"
-#include "pr/syntax_treesitter_python.h"
-#include "pr/syntax_treesitter_xml.h"
+#include "pr/syntax_treesitter_languages.h"
 #endif
 #include "pr/kit_menu.h"
 #include "pr/kit_text.h"
@@ -142,13 +133,7 @@ void openEditor(Scribe& s) {
     s.keymap = prCommandKeymapCreate();
     s.languages = prSyntaxRegistryCreate();
 #if defined(SCRIBE_HAS_TREESITTER)
-    const PrSyntaxLanguage* languages[] = {
-        prSyntaxTreeSitterC(), prSyntaxTreeSitterCpp(), prSyntaxTreeSitterCss(), prSyntaxTreeSitterHtml(),
-        prSyntaxTreeSitterJavaScript(), prSyntaxTreeSitterJson(), prSyntaxTreeSitterMarkdown(),
-        prSyntaxTreeSitterMarkdownInline(), prSyntaxTreeSitterPython(), prSyntaxTreeSitterXml(),
-    };
-    for (const PrSyntaxLanguage* language : languages)
-        prSyntaxRegistryAdd(s.languages, language);
+    prSyntaxTreeSitterAddLanguages(s.languages);
 #endif
     s.launcher = prProcessLauncherCreate(PrProcessBackend_Default);
     PrTextEditorDesc desc{

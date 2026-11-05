@@ -55,7 +55,7 @@ by its name alone, and its own index lists its pages and no sections (`tools/sui
 an eyebrow, citations or guides. What the rest of this file says of a page's markup and of the browsers still holds:
 each page fits 600 by 800, uses its features directly, and cites no test suite. A page is right if it looks as its
 author meant it to in every browser, and a difference between the browsers and the engine is found by looking at them
-side by side.
+side by side. A third, `syntax`, holds sources for an editor rather than pages for a browser (below).
 
 ### Workloads
 
@@ -81,6 +81,21 @@ gathers controls, as `examples/studio_gallery` gathers Studio Kit's.
   page that runs a form shows what its events and entry lists held.
 - **The markup is static**, so that a page shows every state before any control works. Script only sets what markup
   cannot, such as `indeterminate`, and reports what the controls did.
+
+### The syntax samples
+
+`syntax` holds a source in each language that `lib/syntax` highlights, to open in Scribe (`./dev.sh app scribe
+<file>`) and look at as a reader would. The unit tests check what the languages name; these show how it reads.
+
+- **A file is named for its language**, with the extension or the whole file name that selects it (`rust.rs`,
+  `Dockerfile`), so that the editor picks its language as it would any other file's. HTML's is `html.htm`, so that
+  the tools that open the suite's pages in a browser leave it out.
+- **Its content is plausible**: a small program, configuration or document of the kind the language is written for,
+  that uses what the language's highlighting tells apart (comments, strings and their escapes, numbers, keywords,
+  types, functions, constants, and the language's own constructs, such as Rust's lifetimes or a shell's expansions).
+- **It is valid**, so that what looks wrong is the highlighting, not a parse that the source made fail. Where a
+  language holds another, as Markdown's fences, PHP's pages or a shell's heredocs do, the sample includes it, to show
+  the injection.
 
 ## How it is organized
 

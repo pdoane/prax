@@ -2,8 +2,10 @@
 // incrementally from the edit stream.
 //
 // A language reads a grammar's highlights query, whose names are the categories of its spans, and its injections query,
-// whose matches hand ranges to other languages of the registry. An injected range is parsed afresh when spans of it are
-// asked for, so its cost follows what is shown. Each grammar that the backend builds in has a header of its own
+// whose matches hand ranges to other languages of the registry. A query is in the form that tree-sitter's own tools
+// read or in Neovim's, whose predicates add Lua's patterns (#lua-match?) and tests of a node's parent and ancestors
+// (#has-parent?, #has-ancestor?). An injected range is parsed afresh when spans of it are asked for, so its cost
+// follows what is shown. Each grammar that the backend builds in has a header of its own
 // (pr/syntax_treesitter_<language>.h), so a program links only the grammars that it names.
 
 #pragma once

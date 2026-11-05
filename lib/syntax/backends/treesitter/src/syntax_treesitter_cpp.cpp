@@ -2,23 +2,23 @@
 
 #include "pr/syntax_treesitter_cpp.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_cpp.h"
 
-#include "tree-sitter-cpp.h"
-
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterCpp(void) {
-    static const PrStringView kExtensions[] = {"cpp", "cc", "cxx", "hpp", "hh", "hxx", "inl", "mm"};
+    static const PrStringView kExtensions[] =
+        {"cpp", "cc", "cxx", "c++", "h", "hpp", "hh", "hxx", "h++", "inl", "ipp", "tpp", "cppm", "ixx"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "cpp",
-            .namePattern = "^(cc|cpp|c\\+\\+)$",
+            .namePattern = "^(cc|cpp|cxx|c\\+\\+|h|hpp)$",
             .extensions = kExtensions,
-            .extensionCount = 8,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_cpp(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

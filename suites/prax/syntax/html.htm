@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!-- A sign-in form, with its style and its script in the page. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in &mdash; Example</title>
+<style>
+    form { display: grid; gap: 8px; max-width: 320px; }
+    .error:empty { display: none; }
+</style>
+</head>
+<body>
+<main>
+    <h1>Sign in</h1>
+    <form id="sign-in" action="/session" method="post" novalidate>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required autocomplete="username">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" minlength="8" required>
+        <p class="error" role="alert"></p>
+        <button type="submit" disabled>Continue</button>
+    </form>
+</main>
+<script type="module">
+    const form = document.getElementById("sign-in");
+    form.addEventListener("input", () => {
+        form.querySelector("button").disabled = !form.checkValidity();
+    });
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const response = await fetch(form.action, { method: "POST", body: new FormData(form) });
+        form.querySelector(".error").textContent = response.ok ? "" : `Failed: ${response.status}`;
+    });
+</script>
+</body>
+</html>

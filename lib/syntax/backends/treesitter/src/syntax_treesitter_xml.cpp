@@ -2,11 +2,10 @@
 
 #include "pr/syntax_treesitter_xml.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_xml.h"
-
-#include "tree-sitter-xml.h"
 
 using namespace pr_impl;
 
@@ -18,7 +17,7 @@ const PrSyntaxLanguage* prSyntaxTreeSitterXml(void) {
             .name = "xml",
             .namePattern = "^(xml|svg|xsd|xslt|xsl|rng)$",
             .extensions = kExtensions,
-            .extensionCount = 6,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_xml(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

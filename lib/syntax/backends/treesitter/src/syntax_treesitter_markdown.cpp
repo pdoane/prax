@@ -2,11 +2,10 @@
 
 #include "pr/syntax_treesitter_markdown.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_markdown.h"
-
-#include "tree-sitter/tree-sitter-markdown.h"
 
 using namespace pr_impl;
 
@@ -18,7 +17,7 @@ const PrSyntaxLanguage* prSyntaxTreeSitterMarkdown(void) {
             .name = "markdown",
             .namePattern = "^(markdown|md)$",
             .extensions = kExtensions,
-            .extensionCount = 2,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_markdown(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

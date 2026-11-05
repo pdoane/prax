@@ -2,11 +2,10 @@
 
 #include "pr/syntax_treesitter_css.h"
 
+#include "pr/count_of.h"
 #include "pr/syntax_treesitter.h"
 
 #include "syntax/backends/treesitter/src/syntax_queries_css.h"
-
-#include "tree_sitter/tree-sitter-css.h"
 
 using namespace pr_impl;
 
@@ -18,7 +17,7 @@ const PrSyntaxLanguage* prSyntaxTreeSitterCss(void) {
             .name = "css",
             .namePattern = "^css$",
             .extensions = kExtensions,
-            .extensionCount = 1,
+            .extensionCount = countOf(kExtensions),
             .grammar = tree_sitter_css(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,
