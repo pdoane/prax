@@ -591,7 +591,13 @@ void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* da
         window->tasks.erase(0, window->taskHead);
         window->taskHead = 0;
     }
-    window->tasks.push(HtmlTask{run, data, drop, delaysLoad});
+    window->tasks.push(HtmlTask{
+        .run = run,
+        .data = data,
+        .drop = drop,
+        .order = window->agent->queuedTasks++,
+        .delaysLoad = delaysLoad,
+    });
     window->delayingTasks += delaysLoad ? 1 : 0;
 }
 
@@ -752,6 +758,10 @@ double htmlWindowNextTaskDelay(const PrHtmlWindow* window) {
         due = frameAt;
     double delay = due - htmlWindowClock(window);
     return delay > 0 ? delay : 0;
+}
+
+uint64_t htmlWindowFirstTaskOrder(const PrHtmlWindow* window) {
+    return window->taskHead != window->tasks.count ? window->tasks.data[window->taskHead].order : kDomTaskOrderNone;
 }
 
 bool htmlWindowRunTask(PrHtmlWindow* window) {

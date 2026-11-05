@@ -38,30 +38,50 @@ bool runPosted(PrDomAgent* agent) {
     return true;
 }
 
-// Runs at most one task: a posted task, or else a task of the global whose turn it is. A task that spins the event loop
-// runs one during its own, and is still running afterward.
+// Runs a task of the global at `index`, and returns true if one ran.
+bool runGlobal(PrDomAgent* agent, uint32_t index) {
+    DomAgentGlobal g = agent->globals.data[index];
+    bool outer = agent->runningTask;
+    agent->runningTask = true;
+    bool ran = g.tasks->run(g.global);
+    agent->runningTask = outer;
+    if (!ran)
+        return false;
+    // The task may have added or removed globals. Next time, the global after this one in the list goes first.
+    uint32_t at = 0;
+    while (at < agent->globals.count && agent->globals.data[at].global != g.global)
+        ++at;
+    agent->nextGlobal = at < agent->globals.count ? at + 1 : 0;
+    return true;
+}
+
+// Runs at most one task: a posted task, or else a task of a global. A task that spins the event loop runs one during
+// its own, and is still running afterward.
 bool runNextTask(PrDomAgent* agent) {
     if (runPosted(agent))
         return true;
-    // Each global whose task can run takes its turn, from the one after the global that ran last.
+    // Queued tasks run in the order they were queued, across the globals, as one task source's tasks do
+    // (html/#event-loop-processing-model).
     uint32_t count = agent->globals.count;
+    uint32_t oldest = count;
+    uint64_t oldestOrder = kDomTaskOrderNone;
+    for (uint32_t i = 0; i < count; ++i) {
+        DomAgentGlobal g = agent->globals.data[i];
+        uint64_t order = g.tasks->delay(g.global) == 0 ? g.tasks->firstQueued(g.global) : kDomTaskOrderNone;
+        if (order < oldestOrder) {
+            oldest = i;
+            oldestOrder = order;
+        }
+    }
+    if (oldest != count && runGlobal(agent, oldest))
+        return true;
+    // Otherwise each global with a timer, a rendering update or an idle callback due takes its turn, from the one after
+    // the global that ran last.
     for (uint32_t k = 0; k < count; ++k) {
         uint32_t i = (agent->nextGlobal + k) % count;
         DomAgentGlobal g = agent->globals.data[i];
-        if (g.tasks->delay(g.global) != 0)
-            continue;
-        bool outer = agent->runningTask;
-        agent->runningTask = true;
-        bool ran = g.tasks->run(g.global);
-        agent->runningTask = outer;
-        if (!ran)
-            continue;
-        // The task may have added or removed globals. Next time, the global after this one in the list goes first.
-        uint32_t at = 0;
-        while (at < agent->globals.count && agent->globals.data[at].global != g.global)
-            ++at;
-        agent->nextGlobal = at < agent->globals.count ? at + 1 : 0;
-        return true;
+        if (g.tasks->delay(g.global) == 0 && runGlobal(agent, i))
+            return true;
     }
     return false;
 }

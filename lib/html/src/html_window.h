@@ -12,6 +12,7 @@
 #include "pr/string_view.h"
 
 #include "css/src/css_media.h"
+#include "dom/src/dom_agent.h"
 #include "dom/src/dom_node.h"
 #include "html/src/html_history.h"
 #include "html/src/html_storage.h"
@@ -44,6 +45,7 @@ struct HtmlTask {
     void (*run)(void* data);
     void* data;
     void (*PR_NULLABLE drop)(void* data);    // frees the data of a task that is cleared before it runs
+    uint64_t order;                          // where the task stands among those that the agent's globals queued
     bool delaysLoad;                         // true if the load event waits for the task (html/#delay-the-load-event)
 };
 
@@ -267,6 +269,9 @@ bool htmlWindowIsFullyActive(const PrHtmlWindow* window);
 // A queued task can run immediately, and a timer once it is due. A rendering update can run at the next rendering
 // opportunity if there are frame requests or the document is to be revealed.
 double htmlWindowNextTaskDelay(const PrHtmlWindow* window);
+
+// The order of the window's oldest queued task among the tasks of its agent, or kDomTaskOrderNone if none is queued.
+uint64_t htmlWindowFirstTaskOrder(const PrHtmlWindow* window);
 
 // Runs the first queued task. If no task is queued, runs whichever of the timers and the rendering opportunity is due
 // first. The rendering opportunity reveals the document (html/#reveal) and runs the animation frame callbacks

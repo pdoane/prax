@@ -19,12 +19,16 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+// The order that a global with no queued task reports.
+constexpr uint64_t kDomTaskOrderNone = ~uint64_t(0);
+
 // The callbacks through which an agent's event loop runs the tasks of one of its global objects. A global object, such
 // as an HTML Window, keeps its own task queues and timers. Each callback is called with the global.
 struct DomGlobalTasks {
-    double (*delay)(void* global);      // returns milliseconds until a task can run: 0 if one can run now, -1 if none
-    bool (*run)(void* global);          // runs at most one task, and returns true if one ran
-    bool (*idle)(void* global);         // returns true if nothing is pending except animation frames
+    double (*delay)(void* global);         // returns milliseconds until a task can run: 0 if now, -1 if none
+    uint64_t (*firstQueued)(void* global); // returns the order of the oldest queued task, or kDomTaskOrderNone
+    bool (*run)(void* global);             // runs at most one task, and returns true if one ran
+    bool (*idle)(void* global);            // returns true if nothing is pending except animation frames
 };
 
 // A global object on an agent's event loop.
@@ -55,6 +59,7 @@ struct DomAgent {
 
     RawArray<DomAgentGlobal> globals;       // globals on the event loop, in the order they were added
     uint32_t nextGlobal;                    // global to look for a task in first next time, so that each takes its turn
+    uint64_t queuedTasks;                   // tasks that the globals have queued, which gives each its order
     bool runningTask;
 
     PrDomAgentOptions options;

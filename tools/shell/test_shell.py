@@ -381,6 +381,35 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, "arrived\n")
 
+    def test_an_inserted_iframe_fires_load_at_once_for_about_blank_and_after_its_javascript_url(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><body><script>\n"
+                                   "const blank = document.createElement('iframe');\n"
+                                   "blank.onload = () => print('blank load');\n"
+                                   "document.body.append(blank);\n"
+                                   "print('blank inserted');\n"
+                                   "const script = document.createElement('iframe');\n"
+                                   "script.src = \"javascript:parent.print('script ran')\";\n"
+                                   "script.onload = () => print('script load');\n"
+                                   "document.body.append(script);\n"
+                                   "print('script inserted');</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(),
+                             ["blank load", "blank inserted", "script inserted", "script ran", "script load"])
+
+    def test_messages_to_frames_are_handled_in_the_order_they_were_posted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            echo = "<script>onmessage = e => parent.postMessage(e.data, '*');</script>"
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><iframe srcdoc=\"%s\"></iframe><iframe srcdoc=\"%s\"></iframe>"
+                                   "<script>\n"
+                                   "onmessage = e => print(e.data);\n"
+                                   "onload = () => { window[1].postMessage('second', '*');"
+                                   " window[0].postMessage('first', '*'); };</script>" % (echo, echo))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["second", "first"])
+
     def test_a_javascript_url_decodes_invalid_utf8_as_replacement_characters(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

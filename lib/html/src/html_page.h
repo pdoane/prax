@@ -232,16 +232,17 @@ struct HtmlPage {
     bool contentLoaded;         // true once the end has fired DOMContentLoaded
     bool loadEnded;             // true once the end of its document's load has run, whether or not it fired load
 
-    // True for a frame's initial about:blank, which an iframe shows while the document that its src names is fetched
-    // (html/#is-initial-about:blank). Its load fires no event at the iframe.
+    // True for a frame's initial about:blank (html/#is-initial-about:blank). Its load fires no event at the iframe,
+    // which fires load when the iframe is inserted, or when the document that replaces it loads.
     bool initialBlank;
 
     // The context's ongoing navigation (html/#ongoing-navigation): the source of its iframe, which its container's
     // document fetches while this initial about:blank stands, or a navigation that a task waits to run. The task runs
     // only while its id is still the pending one, so a later navigation or a stop cancels it.
     bool awaitingSource;
-    uint32_t pendingNavigation; // the id of the navigation that waits for its task, or zero
-    uint32_t navigations;       // the ids that navigations have taken
+    uint32_t pendingNavigation;   // the id of the navigation that waits for its task, or zero
+    uint32_t insertionNavigation; // the javascript: navigation that the iframe's insertion began, or zero
+    uint32_t navigations;         // the ids that navigations have taken
 
     // The target name (html/#nav-target). An iframe's page takes it from the iframe's name attribute.
     PrRawString targetName;

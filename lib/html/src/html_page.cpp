@@ -1507,8 +1507,10 @@ bool isBlank(const PrUrl* url) {
 // Handles a change to an iframe's frame (html/#the-iframe-element). An iframe connected in the window's document
 // contains a browsing context, navigated to what its attributes name. This is its srcdoc, or the resource that its src
 // names, fetched through its document's browsing context, or else about:blank. Any other iframe contains no browsing
-// context. Its load event follows html/#iframe-load-event-steps.
+// context. Its load event follows html/#iframe-load-event-steps. An iframe that has no browsing context yet is being
+// inserted (html/#process-the-iframe-attributes, initialInsertion), and fires load at once if it shows about:blank.
 void frameChanged(PrHtmlPage* page, PrDomElement* element) {
+    bool initialInsertion = htmlFrameWindow(element) == nullptr;
     PrStringView srcdoc = domAttributeValue(element, "srcdoc");
     PrStringView src = domAttributeValue(element, "src");
     PrUrl* resolved = nullptr;
@@ -1519,12 +1521,15 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
     if (parsed && prUrlScheme(resolved) == "javascript" && inWindow(page, element)) {
         PrHtmlWindow* child = htmlFrameWindow(element);
         if (child == nullptr) {
-            attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{});
+            attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{}, FrameDocument_InitialBlank);
             child = htmlFrameWindow(element);
         }
         PrRawString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
         htmlPageNavigate(child, page->window, prRawStringView(&href), HtmlHistoryCommit_Replace, child->history->index);
         prRawStringReset(&href);
+        PrHtmlPage* childPage = htmlDocumentPage(child->document);
+        if (initialInsertion && childPage != nullptr)
+            childPage->insertionNavigation = childPage->pendingNavigation;
         prUrlDestroy(resolved);
         return;
     }
@@ -1536,6 +1541,11 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
     }
     if (srcdoc.data != nullptr) {
         attachFrame(page, element, srcdoc, "about:srcdoc", PrHtmlResponseHeaders{});
+    } else if (initialInsertion && (!parsed || isBlank(resolved))) {
+        PrRawString href = parsed ? prUrlSerialize(resolved, PrUrlSerialization_Whole) : prRawStringCopy("about:blank");
+        attachFrame(page, element, "", prRawStringView(&href), PrHtmlResponseHeaders{}, FrameDocument_InitialBlank);
+        prRawStringReset(&href);
+        domEventFire(element, "load");
     } else if (parsed && isBlank(resolved)) {
         PrRawString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
         attachFrame(page, element, "", prRawStringView(&href), PrHtmlResponseHeaders{});
@@ -2107,9 +2117,9 @@ void frameLoadEnded(PrHtmlPage* page) {
             page->endStatus != PrStatus_Ok ? page->endStatus : page->navigationFailure);
     PrHtmlWindow* parent = page->window->parent;
     PrHtmlPage* holder = parent != nullptr ? htmlDocumentPage(parent->document) : nullptr;
-    if (holder == nullptr || page->initialBlank)
+    if (holder == nullptr)
         return;
-    for (uint32_t i = 0; i < parent->frames.count; ++i) {
+    for (uint32_t i = 0; i < parent->frames.count && !page->initialBlank; ++i) {
         if (parent->frames.data[i].window == page->window)
             queueElementEvent(holder, parent->frames.data[i].container, false);
     }
@@ -2280,6 +2290,7 @@ void replaceWindow(PrHtmlPage* page) {
     PrHtmlWindow* closed = page->window;
     PrHtmlWindow* window = htmlWindowCreate();
     shareWithWindow(page, window);
+    page->initialBlank = false;
     window->agent = closed->agent;
     window->history = closed->history;
     window->parent = closed->parent;
@@ -2801,6 +2812,11 @@ double windowTaskDelay(void* global) {
     return runsTasks(page) ? htmlWindowNextTaskDelay(page->window) : -1;
 }
 
+uint64_t windowFirstQueued(void* global) {
+    PrHtmlPage* page = static_cast<PrHtmlPage*>(global);
+    return runsTasks(page) ? htmlWindowFirstTaskOrder(page->window) : kDomTaskOrderNone;
+}
+
 // The settle hook spins the event loop, from the task that ends a streamed load too.
 bool windowRunTask(void* global) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(global);
@@ -2815,7 +2831,12 @@ bool windowIsIdle(void* global) {
     return page->fetches == nullptr && htmlWindowIsIdle(page->window);
 }
 
-constexpr DomGlobalTasks kWindowTasks = {windowTaskDelay, windowRunTask, windowIsIdle};
+constexpr DomGlobalTasks kWindowTasks = {
+    .delay = windowTaskDelay,
+    .firstQueued = windowFirstQueued,
+    .run = windowRunTask,
+    .idle = windowIsIdle,
+};
 
 // Tells the host that a rendering update of the browsing context's window finished (PrHtmlHost::rendered).
 void rendered(void* context) {
@@ -2894,6 +2915,8 @@ void dropDocumentLoad(PrHtmlPage* page);
 // completion leaves the document in place. A navigation that the script starts takes precedence over the string.
 void runJavascriptUrl(PrHtmlPage* page, const Navigation* navigation) {
     dropDocumentLoad(page);
+    bool insertion = navigation->id == page->insertionNavigation;
+    page->insertionNavigation = 0;
     if (!navigation->sameOrigin || page->host.evaluate == nullptr)
         return;
     PrStringView url = prRawStringView(&navigation->url);
@@ -2913,8 +2936,14 @@ void runJavascriptUrl(PrHtmlPage* page, const Navigation* navigation) {
         PrHtmlResponseHeaders headers{.contentType = "text/html;charset=utf-8"};
         abortDocument(page);
         htmlHistoryExpect(page->window->history, HtmlHistoryCommit_Replace, page->window->history->index);
+        page->initialBlank = false;
         prHtmlPageLoad(page, prRawStringView(&result), prRawStringView(&documentUrl), &headers);
         prRawStringReset(&documentUrl);
+    } else if (insertion && page->initialBlank) {
+        // A script that leaves the initial about:blank of an inserted iframe in place ends with the iframe's load event
+        // (html/#navigate-to-a-javascript:-url).
+        if (PrDomElement* container = htmlFrameContainer(page->window->document))
+            domEventFire(container, "load");
     }
     prRawStringReset(&result);
 }
@@ -3386,6 +3415,7 @@ PrStatus htmlDocumentOpen(PrDomDocument* document) {
     if (page->awaitingSource || page->pendingNavigation != 0)
         stopLoading(page);
     abortDocument(page);
+    page->initialBlank = false;
     // The listeners of the document and the window are erased, and the document's children are removed. A
     // script-created parser takes over the document, with its insertion point at the end of an empty input.
     eraseListeners(document);
