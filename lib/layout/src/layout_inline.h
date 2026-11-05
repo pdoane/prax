@@ -43,6 +43,17 @@ struct LayoutInlineBfc {
     // layout of a flex item after its measurement, may then take the lines that its last layout made
     // (LayoutLineRecord). So may a layout at another available size that leaves the same inline size.
     bool reuses;
+
+    // In a fragmentation context: where the fragmentainer ends in the context's coordinates, or kLayoutOffsetNone
+    // outside one, whether nothing comes before the lines in it, the fewest lines that a break may leave before it in
+    // the fragmentainer and after it in the next (css-break-4/#widows-orphans), and the start of the line to resume
+    // from, or null to start at the segment's start.
+    PrLayoutUnit limit = kLayoutOffsetNone;
+    const LayoutFragmentainer* PR_NULLABLE fragmentainer = nullptr; // the fragmentainer, in the context's coordinates
+    bool atTop;
+    uint32_t orphans;
+    uint32_t widows;
+    const LayoutLineStart* PR_NULLABLE resume;
 };
 
 // What laying out an inline formatting context gives its block container.
@@ -55,6 +66,11 @@ struct LayoutInlineResult {
     bool stopped;                   // true if it has a line and stopped before laying it out
     LayoutLineSides placed;         // the sides of the floats it placed, if it has no line
     LayoutLineSides unplaced;       // the sides of the floats waiting for the margins before it, if `top` may move
+
+    // True if the fragmentainer ends before the segment does, and the start of the line that the next fragmentainer
+    // resumes from.
+    bool broken;
+    LayoutLineStart breakAt;
 };
 
 struct LayoutInlineFrame;

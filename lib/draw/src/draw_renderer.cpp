@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/draw_commands.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/vec.h"
@@ -24,6 +25,15 @@
 namespace pr_impl {
 
 namespace {
+
+// Returns the part that is the whole list, played from its root.
+PrDrawPart wholeOf(const PrDrawList* list) {
+    return PrDrawPart{
+        .first = 0,
+        .count = prDrawListCommandCount(list),
+        .transform = prDrawTransformFromAffine2(prAffine2Identity()),
+    };
+}
 
 constexpr PrStringView kBackendNames[PrDrawRendererBackend_Count] = {"default", "cpu", "canvas", "triangles", "fragment"};
 
@@ -161,7 +171,13 @@ void prDrawFrameDestroy(PrDrawFrame* PR_NULLABLE frame) {
 }
 
 PrStatus prDrawFramePrepare(PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget* target) {
+    PrDrawPart whole = wholeOf(list);
+    return prDrawFramePreparePart(frame, list, &whole, target);
+}
+
+PrStatus prDrawFramePreparePart(PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part, const PrDrawTarget* target) {
     PrDrawRenderer* renderer = frame->renderer;
+    PR_ASSERT(part->first <= prDrawListCommandCount(list) && part->count <= prDrawListCommandCount(list) - part->first);
     PR_ASSERT(prDrawListDepth(list) == 0);
     PR_ASSERT(target->commands != nullptr);
     PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Texture ||
@@ -173,7 +189,7 @@ PrStatus prDrawFramePrepare(PrDrawFrame* frame, const PrDrawList* list, const Pr
     if (target->format != PrPixelFormat_Rgba8 && target->format != PrPixelFormat_Bgra8 &&
             target->format != PrPixelFormat_RgbaF16)
         return PrStatus_NotSupported;
-    PrStatus status = renderer->framePrepare(renderer, frame, list, target);
+    PrStatus status = renderer->framePrepare(renderer, frame, list, part, target);
     if (status != PrStatus_Ok)
         return status;
     frame->extent.x = target->extent.x;
@@ -195,6 +211,12 @@ void prDrawFrameRender(PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
 }
 
 PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels, PrPixelFormat format) {
+    PrDrawPart whole = wholeOf(list);
+    return prDrawRendererRenderPartPixels(renderer, list, &whole, pixels, format);
+}
+
+PrStatus prDrawRendererRenderPartPixels(PrDrawRenderer* renderer, const PrDrawList* list, const PrDrawPart* part,
+        PrPixels pixels, PrPixelFormat format) {
     PR_ASSERT(format == PrPixelFormat_Rgba8 || format == PrPixelFormat_Bgra8 || format == PrPixelFormat_RgbaF16);
     PR_ASSERT(size_t(pixels.extent.x) * prPixelFormatSize(format) <= pixels.stride);
     PrGpuDevice* device = renderer->device;
@@ -221,7 +243,7 @@ PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* 
     }
     PrDrawTarget target{.extent = pixels.extent, .format = format, .commands = commands};
     PrDrawFrame* frame = prDrawFrameCreate(renderer);
-    status = prDrawFramePrepare(frame, list, &target);
+    status = prDrawFramePreparePart(frame, list, part, &target);
     if (status == PrStatus_Ok) {
         PrGpuSubresources all{};
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ShaderRead,

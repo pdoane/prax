@@ -304,3 +304,28 @@ TEST_CASE("a line's runs are in visual order, with the white space that ends it 
     CHECK(two[0].level == 1);
     CHECK(two[1].start == 0);
 }
+
+TEST_CASE("a piece's letter and word spacing widen its advances by their px, and Arabic takes no letter spacing") {
+    Shaped s;
+    // An e with a combining acute is one typographic character unit.
+    std::string text = "ab e\xcc\x81";
+    uint32_t size = uint32_t(text.size());
+    s.set(text);
+    float plain = s.width(0, size);
+    PrTextPiece spaced = s.piece(0, size);
+    spaced.letterSpacing = 2;
+    spaced.wordSpacing = 5;
+    s.set(text, std::vector<PrTextPiece>{spaced});
+    CHECK(s.width(0, size) == doctest::Approx(plain + 4 * 2 + 5));
+    // The space after a character is part of its advance.
+    CHECK(s.width(0, 1) == doctest::Approx(prTextShapingInfo(s.shaping).advances[0]));
+
+    // Arabic letters, which join, take no letter spacing.
+    std::string arabic = "\xd8\xb3\xd9\x84";
+    s.set(arabic, std::vector<PrTextPiece>{s.piece(0, 4)}, PrTextDirection_Rtl);
+    float joined = s.width(0, 4);
+    PrTextPiece rtl = s.piece(0, 4);
+    rtl.letterSpacing = 3;
+    s.set(arabic, std::vector<PrTextPiece>{rtl}, PrTextDirection_Rtl);
+    CHECK(s.width(0, 4) == doctest::Approx(joined));
+}

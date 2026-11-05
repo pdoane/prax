@@ -3913,8 +3913,58 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     clock.now = 60;
     runDue(page);
     CHECK(calls.size() == 2);
+
+    // A target observed once the page is idle keeps it from idling until its first update is delivered.
+    REQUIRE(prDomAgentIsIdle(prHtmlPageAgent(page)));
+    PrCssIntersectionObserver* later = nullptr;
+    REQUIRE(prCssIntersectionObserverCreate(document, &init, &callback, &later) == PrStatus_Ok);
+    prCssIntersectionObserverObserve(later, target);
+    CHECK_FALSE(prDomAgentIsIdle(prHtmlPageAgent(page)));
+    clock.now = 80;
+    runDue(page);
+    REQUIRE(calls.size() == 3);
+    REQUIRE(calls[2].size() == 1);
+    CHECK(calls[2][0].isIntersecting);
+    CHECK(prDomAgentIsIdle(prHtmlPageAgent(page)));
+    prCssIntersectionObserverDisconnect(later);
+    prCssIntersectionObserverRelease(later);
     prCssIntersectionObserverDisconnect(observer);
     prCssIntersectionObserverRelease(observer);
+    prHtmlPageDestroy(page);
+}
+
+TEST_CASE("an idle period before a requested frame leaves no more than a frame interval") {
+    Page fonts("");
+    SteppedClock clock;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.context = &clock;
+    host.now = steppedNow;
+    host.font = fonts.defaultFont;
+    host.shaper = fonts.shaper;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(page, "<!doctype html>", "about:blank", nullptr) == PrStatus_Ok);
+    PrHtmlWindow* window = prHtmlPageWindow(page);
+    PrHtmlFrameRequestCallback frame{};
+    frame.invoke = [](void* PR_NULLABLE, double) {};
+    prHtmlWindowRequestAnimationFrame(window, &frame);
+    // A frame at 50 ms is one whose time plus the frame interval rounds up, past the interval from it.
+    clock.now = 50;
+    runDue(page);
+    prHtmlWindowRequestAnimationFrame(window, &frame);
+    struct Idle {
+        PrHtmlWindow* window;
+        double remaining = -1;
+    } idle{window};
+    PrHtmlIdleRequestCallback callback{};
+    callback.context = &idle;
+    callback.invoke = [](void* PR_NULLABLE context, double deadline, bool) {
+        Idle* idle = static_cast<Idle*>(context);
+        idle->remaining = prHtmlWindowIdleTimeRemaining(idle->window, deadline);
+    };
+    prHtmlWindowRequestIdleCallback(window, &callback, 0);
+    runDue(page);
+    CHECK(idle.remaining > 0);
+    CHECK(idle.remaining <= 1000.0 / 60);
     prHtmlPageDestroy(page);
 }
 
@@ -4825,4 +4875,33 @@ TEST_CASE("ex, cap, ch and ic measure the element's font, and their root forms t
     CHECK(size("e").x > 15);
     CHECK(size("e").x < 25);
     CHECK(size("e").x != 20);
+}
+
+TEST_CASE("a positioned inline box in a multi-column container, holding boxes out of flow, paints") {
+    Page page(R"(<style>
+        section { width: 300px; height: 100px; border: blue 1px solid }
+        .columns { column-width: 100px; column-fill: auto; height: 100px }
+        inline-block { display: inline-block }
+        .cb { position: relative }
+        abs { position: absolute; background: purple; width: 100px; height: 50px }
+        abs.p0 { top: 0; left: 0; background: blue }
+    </style><section>123 <span class="cb">456<br><inline-block>7 <abs></abs><abs class="p0"></abs></inline-block>
+    </span></section><section class="columns">123 <span class="cb">456<br><inline-block>7 <abs></abs>
+    <abs class="p0"></abs></inline-block></span></section>)");
+    frame(page, 0);
+}
+
+TEST_CASE("letter-spacing and word-spacing add their lengths after each character and each space") {
+    // Every Ahem glyph is an em square.
+    Page page("<div style='font: 10px Ahem'><span id=a style='letter-spacing: 2px'>abc</span><br>"
+        "<span id=b style='word-spacing: 50%'>a b</span><br><span id=c style='letter-spacing: 0.5em'>ab</span><br>"
+        "<span id=d style='letter-spacing: normal; word-spacing: normal'>a b</span></div>");
+    auto width = [&](const char* id) {
+        PrRect r = page.bounds(id);
+        return r.right - r.left;
+    };
+    CHECK(width("a") == 36);
+    CHECK(width("b") == 35);
+    CHECK(width("c") == 30);
+    CHECK(width("d") == 30);
 }

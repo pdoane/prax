@@ -121,10 +121,12 @@ LayoutPending* layoutFragmentPendingStorage(LayoutFragment* fragment) {
     return reinterpret_cast<LayoutPending*>(bytes + sizeof(uint32_t));
 }
 
-LayoutFragment* layoutFragmentCreatePlaceholder(LayoutNodeIndex node, LayoutStaticEdges edges, bool fixed) {
+LayoutFragment* layoutFragmentCreatePlaceholder(LayoutNodeIndex node, LayoutStaticEdges edges,
+        PrLayoutPosition position) {
     LayoutFragment* fragment = layoutFragmentCreate(LayoutFragmentKind_Placeholder, node, 0);
     fragment->edges = edges;
-    fragment->placeholder.fixed = fixed;
+    fragment->placeholder.fixed = position == PrLayoutPosition_Fixed;
+    fragment->placeholder.running = position == PrLayoutPosition_Running;
     fragment->flags = LayoutFragmentFlag_Placeholders;
     return fragment;
 }
@@ -170,7 +172,7 @@ LayoutFragment* layoutFragmentCreateText(LayoutNodeIndex node, float size, const
     LayoutFragmentFontRange* ownRanges = const_cast<LayoutFragmentFontRange*>(layoutFragmentTextRanges(fragment));
     for (uint32_t i = 0; i < rangeCount; ++i) {
         PR_ASSERT(ranges[i].font < fontCount && ranges[i].glyphEnd > (i != 0 ? ranges[i - 1].glyphEnd : 0));
-        PR_ASSERT(i == 0 || ranges[i].font != ranges[i - 1].font);
+        PR_ASSERT(i == 0 || ranges[i].font != ranges[i - 1].font || ranges[i].scale != ranges[i - 1].scale);
         ownRanges[i] = ranges[i];
     }
     fragment->text.glyphs = glyphCount != 0 ? reinterpret_cast<PrFontGlyph*>(ownRanges + rangeCount) : nullptr;
@@ -395,12 +397,39 @@ uint32_t layoutGroupEnd(const LayoutFragment* line, uint32_t first, uint32_t* pa
     return end + line->children[end - 1].fragment->part.enclosed;
 }
 
+void layoutFragmentSummarize(LayoutFragment* fragment) {
+    uint32_t floatsFirst = 0;
+    uint32_t floatsEnd = 0;
+    LayoutFragmentFlags flags = 0;
+    for (uint32_t i = 0; i < fragment->childCount; ++i) {
+        const LayoutFragment* child = fragment->children[i].fragment;
+        if ((child->flags & LayoutFragmentFlag_OutOfFlow) != 0) {
+            flags |= LayoutFragmentFlag_Holds;
+            continue;
+        }
+        if (child->kind == LayoutFragmentKind_Line)
+            flags |= LayoutFragmentFlag_Lines;
+        if (addsPlaceholders(child))
+            flags |= LayoutFragmentFlag_Placeholders;
+        if ((child->flags & LayoutFragmentFlag_Float) != 0 || layoutFragmentHoldsFloats(child)) {
+            floatsFirst = floatsFirst == floatsEnd ? i : floatsFirst;
+            floatsEnd = i + 1;
+        }
+    }
+    fragment->floatsFirst = floatsFirst;
+    fragment->floatsEnd = floatsEnd;
+    fragment->flags = LayoutFragmentFlags(fragment->flags &
+        ~(LayoutFragmentFlag_Holds | LayoutFragmentFlag_Lines | LayoutFragmentFlag_Placeholders));
+    fragment->flags |= flags;
+}
+
 LayoutFragment* layoutFragmentBuild(RawArray<LayoutLogicalChild>& children, uint32_t mark, LayoutFragmentKind kind,
         LayoutNodeIndex node, LayoutMode mode, LayoutLogicalSize size) {
     uint32_t count = children.count - mark;
     const LayoutLogicalChild* from = children.data + mark;
     LayoutFragment* fragment = layoutFragmentCreate(kind, node, count);
     LayoutChild* to = fragment->children;
+    // The children are summarized as they are copied, as layoutFragmentSummarize would, which saves a second pass.
     uint32_t floatsFirst = 0;
     uint32_t floatsEnd = 0;
     bool placeholders = false;
@@ -411,6 +440,7 @@ LayoutFragment* layoutFragmentBuild(RawArray<LayoutLogicalChild>& children, uint
         LayoutLogicalSize childSize = layoutLogicalSize(mode, child->extent);
         to[i] = LayoutChild{child, layoutPhysicalOffset(mode, from[i].offset, childSize, size)};
         LayoutFragmentFlags flags = child->flags;
+        PR_ASSERT((flags & LayoutFragmentFlag_OutOfFlow) == 0);
         lines = lines || child->kind == LayoutFragmentKind_Line;
         if ((flags & LayoutFragmentFlag_Float) != 0 || layoutFragmentHoldsFloats(child)) {
             floatsFirst = floatsFirst == floatsEnd ? i : floatsFirst;
@@ -442,6 +472,7 @@ LayoutFragment* layoutFragmentBuild(RawArray<LayoutLogicalChild>& children, uint
                     .at = child.offset,
                     .edges = f->edges,
                     .fixed = f->placeholder.fixed,
+                    .running = f->placeholder.running,
                 };
                 continue;
             }
@@ -478,6 +509,7 @@ LayoutFragment* layoutFragmentHold(LayoutFragment* built, const LayoutChild* PR_
     }
     if (pendingCount != 0)
         prMemCopy(layoutFragmentPendingStorage(fragment), pending, sizeof(LayoutPending) * pendingCount);
+    // The held boxes are out of flow, so the built fragment's summary stands, and they add only that it holds them.
     fragment->floatsFirst = built->floatsFirst;
     fragment->floatsEnd = built->floatsEnd;
     fragment->flags |= LayoutFragmentFlags(built->flags & (LayoutFragmentFlag_Placeholders | LayoutFragmentFlag_Lines));

@@ -21,6 +21,12 @@ namespace pr_impl {
 // reads of the context of `space`.
 LayoutResult layoutBlock(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space);
 
+// Lays out the block-level box `node` in the fragmentainer of `space`, from the token that `space` resumes from, if
+// any, and keeps nothing in its cache (layout_fragmentation.h). A box that may not break is laid out as layoutBlock
+// lays it out.
+LayoutResult layoutBlockFragmented(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
+    const LayoutRequests* PR_NULLABLE requests = nullptr);
+
 // Measures what `kind` asks for of the flex item `node` in `space`, at the `requests` of its container. The inline
 // request must be Fixed. Returns the answer from the item's measurement records if one is valid. Otherwise lays the
 // item out and keeps the answer from that layout in its records.
@@ -46,8 +52,9 @@ LayoutResult layoutAnonymousBlock(LayoutState& state, LayoutNodeIndex first, Lay
 LayoutResult layoutAnonymousTable(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last, const LayoutSpace& space);
 
 // Releases the layouts made by measurements that no final layout took, and the measurements remembered by a layout that
-// keeps no records. Called when a layout ends.
-void layoutEndLayout(LayoutScratch& scratch);
+// keeps no records, and clears the marks of the boxes that the layout laid out across fragmentainers. Called when a
+// layout ends.
+void layoutEndLayout(LayoutState& state);
 
 // Lays out the root in a viewport of `extent`, and returns a fragment of the initial containing block that holds it.
 const LayoutFragment* layoutViewport(LayoutState& state, uint32_t root, PrLayoutVec extent);

@@ -23,6 +23,11 @@ std::string significant(double value, uint32_t digits) {
     return std::string(text, prF64FormatSignificant(value, digits, text));
 }
 
+std::string fixed(double value, uint32_t decimals) {
+    char text[kPrF64FixedMaxBytes];
+    return std::string(text, prF64FormatFixed(value, decimals, text));
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -101,4 +106,22 @@ TEST_CASE("a value to a number of significant digits rounds half away from zero"
     CHECK(significant(0.5, 6) == "0.5");
     CHECK(significant(-0.0, 6) == "0");
     CHECK(significant(1e-7 / 3.0, 6) == "3.33333e-8");
+}
+
+TEST_CASE("a value to a number of places is positional, rounds half away from zero and drops trailing zeros") {
+    CHECK(fixed(0.12345, 4) == "0.1235");
+    CHECK(fixed(-0.12345, 4) == "-0.1235");
+    CHECK(fixed(2.5, 0) == "3");
+    CHECK(fixed(1.5, 2) == "1.5");
+    CHECK(fixed(0.00001, 4) == "0");
+    CHECK(fixed(-0.00004, 4) == "0");
+    CHECK(fixed(0.00005, 4) == "0.0001");
+    CHECK(fixed(0.0105, 2) == "0.01");
+    CHECK(fixed(9.99996, 4) == "10");
+    CHECK(fixed(1e20, 4) == "100000000000000000000");
+    CHECK(fixed(123456.789, 1) == "123456.8");
+    CHECK(fixed(1e-30, 17) == "0");
+    CHECK(fixed(0.0, 3) == "0");
+    CHECK(fixed(-0.0, 3) == "0");
+    CHECK(fixed(-999999999999999999999.0 / 10, 0) == "-100000000000000000000");
 }

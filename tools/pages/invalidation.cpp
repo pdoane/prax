@@ -245,7 +245,7 @@ int main(int argc, char** argv) {
     if (!host.addCapture(argv[at], &url, argv[at + 1]))
         return 1;
     Page* page = host.load(url);
-    if (page == nullptr || host.settle() == PageHost::Settled::Failed)
+    if (page == nullptr || host.settle() == page_host::Settled_Failed)
         return 1;
     PrHtmlPage* htmlPage = PageHost::htmlPage(page);
     PrCssPresentation* presentation = htmlPage != nullptr ? prHtmlPagePresentation(htmlPage) : nullptr;

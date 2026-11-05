@@ -21,7 +21,9 @@
 #include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
 
+#include "css/src/css_page.h"
 #include "css/src/css_presentation.h"
+#include "css/src/css_presentation_page.h"
 #include "css/src/css_serialize.h"
 #include "dom/src/dom_agent.h"
 #include "dom/src/dom_control.h"
@@ -66,10 +68,19 @@ struct ViewInbox {
 
 struct HtmlView {
     PrHtmlPage* page;
+
+    // A paged view's box of a page before its @page rules apply, the space between its pages, and the page boxes that
+    // the rules give its document, which the tree's layout reads (prHtmlViewSetPaged).
+    bool paged;
+    PrLayoutPageBox initial;
+    PrLayoutUnit pageGap;
+    CssPageBoxes pageBoxes;
+
     ViewInbox* inbox;
     PrLayoutCompositor* PR_NULLABLE compositor;
     double jobBudget;
     bool canvasFilled;                           // as the description gives it
+    PrLayoutMarking marking;                     // what the trees of its documents mark
     PrCssPresentation* PR_NULLABLE presentation; // the browsing context's presentation, as the view last saw it
     PrVec2 extent;                               // in CSS pixels
     bool posted;                                 // true if the presentation has a job whose scene the view has not
@@ -163,6 +174,12 @@ PrCssPresentation* PR_NULLABLE presentationOf(HtmlView* v) {
             prCssPresentationSetJobBudget(presentation, v->jobBudget);
     }
     return presentation;
+}
+
+// Writes the box that a paged view's document gives the page `page` (PrLayoutPageBoxFn).
+void pageBoxOf(void* PR_NULLABLE context, const PrLayoutPageContext* page, PrLayoutPageBox* box) {
+    const HtmlView* v = static_cast<const HtmlView*>(context);
+    *box = cssPageBoxesFind(v->pageBoxes, *page, v->initial);
 }
 
 // Sets the viewport of the view and of its page.
@@ -287,10 +304,45 @@ void forwardScrolls(HtmlView* v, PrCssPresentation* presentation, uint64_t embed
 
 void paintEmbedded(void* PR_NULLABLE context, uint64_t embed, PrLayoutVec extent, PrDrawList* list);
 
+PrColor16 playTree(HtmlView* v, PrCssPresentation* presentation, PrDrawList* list, bool canvasFilled);
+
+// Plays a paged view's pages as its viewport shows them (prHtmlViewSetPaged): each page that the viewport shows on the
+// paper of its sheet, with what it shows of its box (prLayoutPageBoxPaint) and its content clipped to its bleed area,
+// as prLayoutTreePaintPage records it. Returns the canvas's color.
+PrColor16 playPages(HtmlView* v, PrCssPresentation* presentation, PrDrawList* list) {
+    PrLayoutTree* tree = prCssPresentationTree(presentation);
+    PrLayoutScrollInfo info{};
+    prLayoutNodeScrollInfo(tree, kPrLayoutNodeNone, &info);
+    PrVec2 port = prLayoutVecToPx(info.portExtent);
+    // The scene scrolls the viewport by whole target pixels, and the pages move with it.
+    float ratio = v->page->display.pixelRatio > 0 ? v->page->display.pixelRatio : 1;
+    PrVec2 scroll = prLayoutVecToPx(info.offset);
+    scroll = PrVec2{prF32Round(scroll.x * ratio) / ratio, prF32Round(scroll.y * ratio) / ratio};
+    const PrLayoutScene* scene = prLayoutTreeScene(tree);
+    PrColor16 canvas = prLayoutSceneCanvasColor(scene);
+    prLayoutSceneRelease(scene);
+    for (uint32_t i = 0; i < prLayoutTreePageCount(tree); ++i) {
+        PrLayoutPage page = prLayoutTreePage(tree, i);
+        PrLayoutPageSheet sheet = prLayoutPageBoxSheet(&page.box);
+        PrVec2 at = prLayoutVecToPx(page.offset - PrLayoutVec{sheet.trim.left, sheet.trim.top});
+        at = PrVec2{at.x - scroll.x, at.y - scroll.y};
+        PrRect paper = prRectAt(at, prLayoutVecToPx(sheet.extent));
+        if (paper.right <= 0 || paper.bottom <= 0 || paper.left >= port.x || paper.top >= port.y)
+            continue;
+        prDrawListRect(list, paper, {.color = PrColor{1, 1, 1, 1}, .edges = PrDrawEdges_Snapped});
+        prLayoutPageBoxPaint(&page.box, canvas, at, list);
+        prDrawListPushClipRect(list, prRectOffset(prLayoutRectToPx(sheet.bleed), at), PrDrawEdges_Snapped);
+        playTree(v, presentation, list, true);
+        prDrawListPopClip(list);
+    }
+    return canvas;
+}
+
 // Plays the scene of the presentation's tree into `list` at the tree's scroll offsets, with its composited animations
 // sampled at the presentation's time and each frame's document in its slot, and without a fill for its canvas if
 // `canvasFilled` is true. Returns the scene's canvas color.
 PrColor16 playTree(HtmlView* v, PrCssPresentation* presentation, PrDrawList* list, bool canvasFilled) {
+    prLayoutTreeSetMarking(prCssPresentationTree(presentation), v->marking);
     const PrLayoutScene* scene = prLayoutTreeScene(prCssPresentationTree(presentation));
     RawArray<PrLayoutSceneScroll> scrolls;
     sceneScrolls(presentation, scene, scrolls);
@@ -1588,6 +1640,7 @@ void prHtmlViewDestroy(PrHtmlView* PR_NULLABLE view) {
     view->frames.reset();
     view->found.reset();
     view->embeds.reset();
+    cssPageBoxesReset(view->pageBoxes);
     prMemoryFree(view);
 }
 
@@ -1688,7 +1741,7 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
         return update;
     }
     // Every document's changes go into the tree before any job is posted, so that the jobs run back to back.
-    htmlPresentationPrepareJob(presentation, prLayoutVecFromPx(view->extent));
+    htmlPresentationPrepareJob(presentation, prLayoutVecFromPx(htmlPageContainingExtent(view->page)));
     for (uint32_t i = 0; i < view->frames.count; ++i) {
         ViewFrame& frame = view->frames.data[i];
         PrCssPresentation* inner = frameRender(view, frame);
@@ -1697,13 +1750,14 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
             htmlPresentationPrepareJob(inner, prLayoutVecFromPx(frame.extent));
     }
     showTextControl(view);
-    cssPresentationPostJob(presentation, prLayoutVecFromPx(view->extent));
+    cssPresentationPostJob(presentation, prLayoutVecFromPx(htmlPageContainingExtent(view->page)),
+        prLayoutVecFromPx(htmlPageViewport(view->page)));
     update.style = prCssPresentationStats(presentation);
     for (uint32_t i = 0; i < view->frames.count; ++i) {
         const ViewFrame& frame = view->frames.data[i];
         if (frame.posted) {
             PrCssPresentation* inner = prHtmlPagePresentation(frame.page);
-            cssPresentationPostJob(inner, prLayoutVecFromPx(frame.extent));
+            cssPresentationPostJob(inner, prLayoutVecFromPx(frame.extent), prLayoutVecFromPx(frame.extent));
             PrCssPresentationStats stats = prCssPresentationStats(inner);
             update.framesStyled += stats.elementsStyled;
             update.framesAnimated += stats.elementsAnimated;
@@ -1727,6 +1781,11 @@ void prHtmlViewSetCaretHidden(PrHtmlView* view, bool hidden) {
     view->caretHidden = hidden;
 }
 
+void prHtmlViewSetMarking(PrHtmlView* view, PrLayoutMarking marking) {
+    view->changed = view->changed || view->marking != marking;
+    view->marking = marking;
+}
+
 void prHtmlViewSetTime(PrHtmlView* view, double time) {
     view->time = time;
 }
@@ -1741,6 +1800,8 @@ PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list) {
     if (presentation == nullptr || prHtmlPageIsRenderBlocked(view->page))
         return PrColor16{};
     prHtmlViewPrepare(view);
+    if (view->paged)
+        return playPages(view, presentation, list);
     return playTree(view, presentation, list, view->canvasFilled);
 }
 
@@ -1751,13 +1812,87 @@ void prHtmlViewPrepare(PrHtmlView* view) {
     findFrames(view);
     // A host that paints the document itself takes what updates give a compositor here: the layout, and then the
     // control's caret and selection and the scroll that reveals the caret, which the layout must hold.
-    PrLayoutVec extent = prLayoutVecFromPx(view->extent);
-    prHtmlPresentationUpdate(presentation, extent);
+    PrLayoutVec extent = prLayoutVecFromPx(htmlPageContainingExtent(view->page));
+    PrLayoutVec viewport = prLayoutVecFromPx(htmlPageViewport(view->page));
+    htmlPresentationUpdate(presentation, extent, viewport);
     showTextControl(view);
     revealCaret(view);
-    prHtmlPresentationUpdate(presentation, extent);
+    htmlPresentationUpdate(presentation, extent, viewport);
     view->changed = false;
     view->posted = false;
+}
+
+void prHtmlViewSetPaged(PrHtmlView* view, const PrLayoutPageBox* PR_NULLABLE initial, float gap) {
+    view->paged = initial != nullptr;
+    view->pageGap = prLayoutUnitFromPx(gap);
+    if (initial != nullptr)
+        view->initial = *initial;
+    // The first page's area is the paper's until the document's @page rules are resolved (prHtmlViewPageCount).
+    PrHtmlPrintDesc print{};
+    if (initial != nullptr) {
+        print.paper = prLayoutVecToPx(initial->extent);
+        print.firstArea = prLayoutVecToPx(prLayoutPageBoxArea(initial));
+    }
+    prHtmlPageSetPrint(view->page, initial != nullptr ? &print : nullptr);
+    PrCssPresentation* presentation = presentationOf(view);
+    if (presentation == nullptr)
+        return;
+    prHtmlViewWait(view);
+    // A view that shows the screen has no page-margin boxes.
+    if (!view->paged)
+        cssPresentationClearPageMargins(presentation);
+    PrLayoutPagination pagination{.box = pageBoxOf, .context = view, .gap = view->pageGap};
+    prLayoutTreeSetPagination(prCssPresentationTree(presentation), view->paged ? &pagination : nullptr);
+    view->changed = true;
+}
+
+uint32_t prHtmlViewPageCount(PrHtmlView* view) {
+    PrCssPresentation* presentation = presentationOf(view);
+    if (!view->paged || presentation == nullptr || prHtmlPageIsRenderBlocked(view->page))
+        return 0;
+    prHtmlViewWait(view);
+    PrLayoutTree* tree = prCssPresentationTree(presentation);
+    // The page boxes are resolved on this thread, which layout then reads on any thread. New boxes lay the document out
+    // again.
+    CssPageBoxes boxes{};
+    cssPageBoxesResolve(documentOf(view), &view->page->window->media, tree, view->initial, boxes);
+    bool same = cssPageBoxesEqual(boxes, view->pageBoxes);
+    cssPageBoxesReset(view->pageBoxes);
+    view->pageBoxes = boxes;
+    // The first page's area is the initial containing block, which styles read before the layout that asks for the
+    // page's box. Its name comes from the computed `page` values, which no length relative to the area changes, so the
+    // area found from the styles as they are holds once they are restyled for it.
+    cssPresentationUpdateBoxes(presentation, prLayoutVecFromPx(htmlPageContainingExtent(view->page)));
+    PrLayoutPageBox first = cssPageBoxesFind(view->pageBoxes, prLayoutNodeStartPage(tree, presentation->root),
+        view->initial);
+    PrHtmlPrintDesc print{
+        .paper = prLayoutVecToPx(view->initial.extent),
+        .firstArea = prLayoutVecToPx(prLayoutPageBoxArea(&first)),
+    };
+    prHtmlPageSetPrint(view->page, &print);
+    PrLayoutPagination pagination{.box = pageBoxOf, .context = view, .gap = view->pageGap};
+    if (!same)
+        prLayoutTreeSetPagination(tree, &pagination);
+    prHtmlViewPrepare(view);
+    // The margin boxes show what the layout gave each page, such as the page count, and are laid out after the content,
+    // which they leave as it is.
+    cssPresentationSetPageMargins(presentation, view->pageBoxes, !same);
+    prHtmlViewPrepare(view);
+    return prLayoutTreePageCount(tree);
+}
+
+PrLayoutPage prHtmlViewPage(PrHtmlView* view, uint32_t index) {
+    PrCssPresentation* presentation = presentationOf(view);
+    PR_ASSERT(presentation != nullptr);
+    return prLayoutTreePage(prCssPresentationTree(presentation), index);
+}
+
+void prHtmlViewPaintPage(PrHtmlView* view, uint32_t index, PrDrawList* list) {
+    PrCssPresentation* presentation = presentationOf(view);
+    PR_ASSERT(presentation != nullptr);
+    PrLayoutTree* tree = prCssPresentationTree(presentation);
+    prLayoutTreeSetMarking(tree, view->marking);
+    prLayoutTreePaintPage(tree, index, list);
 }
 
 PrAppOutput prHtmlViewOutput(const PrHtmlView* view) {

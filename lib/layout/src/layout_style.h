@@ -119,6 +119,8 @@ struct LayoutStyleTraits {
     // A table's row group, row or cell styled by it may paint whole, and then paints the track backgrounds behind its
     // cells itself.
     bool wholeTablePart;
+
+    bool multiColumn;               // true if a box of the record is a multi-column container (css-multicol-1)
 };
 
 // The interned style records and groups of a tree, and the faces and metrics that layout caches for their fonts.
@@ -155,6 +157,14 @@ struct LayoutStyles {
     // tree with none of either pays nothing to look for sticky boxes or for the table parts that paint their tracks.
     uint32_t stickyGroups;
     uint32_t wholeTableParts;
+
+    // The number of live box groups whose display is a page-margin box. A tree with none pays nothing to tell a change
+    // in a margin box from a change in its parent's content.
+    uint32_t pageMarginGroups;
+
+    // The number of live table groups whose break-before or break-after forces a break, or that name a page, whose
+    // change between siblings forces one. If there are none, layoutHasForcedBreakInside returns false at once.
+    uint32_t forcedBreakGroups;
 
     RawArray<LayoutFontFaces> faces; // by PrLayoutGroupIndex, made on first use
     float targetPixelRatio;          // target pixels per px, which font metrics and leading snap to
@@ -270,6 +280,15 @@ inline const PrLayoutCompositingStyle& layoutCompositingStyle(const LayoutStyles
 }
 inline const PrLayoutGridStyle& layoutGridStyle(const LayoutStyles* styles, PrLayoutStyleIndex style) {
     return layoutTableAt(styles->grid, layoutStyle(styles, style).groups[PrLayoutGroup_Grid]);
+}
+inline const PrLayoutFragmentationStyle& layoutFragmentationStyle(const LayoutStyles* styles, PrLayoutStyleIndex style) {
+    return layoutTableStyle(styles, style).fragmentation;
+}
+
+// Returns true if a box of the record `style` is a multi-column container (LayoutStyleTraits::multiColumn). A record of
+// the default table group, as most are, has no columns, so the check reads its traits only for the others.
+inline bool layoutHasColumns(const LayoutStyles* styles, PrLayoutStyleIndex style) {
+    return layoutStyle(styles, style).groups[PrLayoutGroup_Table] != 0 && layoutStyleTraits(styles, style).multiColumn;
 }
 
 // The identity box transform.

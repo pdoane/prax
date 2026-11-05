@@ -32,9 +32,12 @@ void layoutScratchDestroy(LayoutScratch* PR_NULLABLE scratch) {
     scratch->handoffs.reset();
     scratch->handoffIndex.reset();
     scratch->memos.reset();
+    scratch->broken.reset();
     scratch->memoIndex.reset();
     scratch->intrinsicMemos.reset();
     scratch->intrinsicMemoIndex.reset();
+    scratch->bands.reset();
+    scratch->bandIndex.reset();
     prTextGlyphBufferDestroy(scratch->glyphs);
     layoutShapingScratchReset(*scratch->shaping);
     prMemoryFree(scratch->shaping);

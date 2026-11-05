@@ -110,7 +110,7 @@ struct GridTrack {
 
 // A name of a line of an axis of a grid: the line, counted from 0 at the start of the explicit grid, and its name.
 struct GridLineName {
-    PrLayoutGridName name;
+    PrLayoutName name;
     int32_t line;
 };
 
@@ -349,7 +349,7 @@ void collectNames(Grid& g, GridAxis& axis, const LayoutGridAreasEntry& areas, bo
     for (uint32_t i = 0; i < areas.areaCount; ++i) {
         const PrLayoutGridArea& a = areas.areas[i];
         LayoutGridNameForms forms = layoutGridNameForms(templates, a.name);
-        if (forms.start == kPrLayoutGridNameNone)
+        if (forms.start == kPrLayoutNameNone)
             continue;
         names.push(GridLineName{forms.start, int32_t(rows ? a.rowStart : a.columnStart)});
         names.push(GridLineName{forms.end, int32_t(rows ? a.rowEnd : a.columnEnd)});
@@ -377,7 +377,7 @@ struct NamedLines {
 };
 
 // Returns the lines of `names`, `count` of them sorted by name, that have `name`.
-NamedLines namedLines(const GridLineName* PR_NULLABLE names, uint32_t count, PrLayoutGridName name) {
+NamedLines namedLines(const GridLineName* PR_NULLABLE names, uint32_t count, PrLayoutName name) {
     uint32_t lo = partitionPoint(0, count, [&](uint32_t i) { return names[i].name < name; });
     uint32_t end = lo;
     while (end < count && names[end].name == name)
@@ -399,7 +399,7 @@ struct AxisLines {
 // Returns the `n`th line named `name`, counting from the start of the explicit grid if `n` is positive and from its end
 // if negative (css-grid-1/#grid-placement-int). If the explicit grid has too few such lines, every implicit line counts
 // as one, past the explicit grid's end or before its start.
-int32_t nthNamed(const AxisLines& lines, PrLayoutGridName name, int32_t n) {
+int32_t nthNamed(const AxisLines& lines, PrLayoutName name, int32_t n) {
     NamedLines named = namedLines(lines.names, lines.nameCount, name);
     int32_t k = int32_t(named.count);
     if (n > 0)
@@ -411,8 +411,8 @@ int32_t nthNamed(const AxisLines& lines, PrLayoutGridName name, int32_t n) {
 // Returns the line `n` lines named `name` from `from`, forward if `forward` is true and backward otherwise, or `n`
 // lines from it if `name` is none (css-grid-1/#grid-placement-span-int). If the explicit grid has too few such lines
 // past `from`, every implicit line on the side of the explicit grid that the search goes toward counts as one.
-int32_t spanFrom(const AxisLines& lines, int32_t from, bool forward, PrLayoutGridName name, int32_t n) {
-    if (name == kPrLayoutGridNameNone)
+int32_t spanFrom(const AxisLines& lines, int32_t from, bool forward, PrLayoutName name, int32_t n) {
+    if (name == kPrLayoutNameNone)
         return forward ? from + n : from - n;
     NamedLines named = namedLines(lines.names, lines.nameCount, name);
     int32_t found = 0;
@@ -436,13 +436,13 @@ int32_t spanFrom(const AxisLines& lines, int32_t from, bool forward, PrLayoutGri
 // edge otherwise (css-grid-1/#line-placement). A name alone names first the edge of an area of that name, through the
 // lines named with its `-start` or `-end` form, and otherwise the first line of that name.
 int32_t lineOf(const LayoutGridTemplates* templates, const AxisLines& lines, const PrLayoutGridLine& line, bool start) {
-    if (line.name == kPrLayoutGridNameNone)
+    if (line.name == kPrLayoutNameNone)
         return line.integer > 0 ? line.integer - 1 : lines.explicitCount + 1 + line.integer;
     if (line.integer != 0)
         return nthNamed(lines, line.name, line.integer);
     LayoutGridNameForms forms = layoutGridNameForms(templates, line.name);
-    PrLayoutGridName edge = start ? forms.start : forms.end;
-    if (edge != kPrLayoutGridNameNone) {
+    PrLayoutName edge = start ? forms.start : forms.end;
+    if (edge != kPrLayoutNameNone) {
         NamedLines named = namedLines(lines.names, lines.nameCount, edge);
         if (named.count != 0)
             return named.first[0].line;
@@ -498,7 +498,7 @@ AxisPlacement placementOf(const LayoutGridTemplates* templates, const AxisLines&
         p.definite = true;
     } else {
         const PrLayoutGridLine& span = startLine.kind == PrLayoutGridLineKind_Span ? startLine : endLine;
-        p.end = span.kind == PrLayoutGridLineKind_Span && span.name == kPrLayoutGridNameNone ? span.integer : 1;
+        p.end = span.kind == PrLayoutGridLineKind_Span && span.name == kPrLayoutNameNone ? span.integer : 1;
         p.end = p.end < 2 * kPrLayoutGridMaxLine ? p.end : 2 * kPrLayoutGridMaxLine;
         return p;
     }
@@ -2236,7 +2236,7 @@ void placeOutOfFlow(Grid& g, LayoutLogicalOffset origin, PrLayoutUnit inlineSize
         LayoutStaticEdges edges =
             layoutStaticEdgesAligned(g.mode(), aligns[PrLayoutGridAxis_Columns], aligns[PrLayoutGridAxis_Rows],
                 safe[PrLayoutGridAxis_Columns], safe[PrLayoutGridAxis_Rows]);
-        LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(c, edges, layoutIsFixed(tree, c));
+        LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(c, edges, layoutNodePositionScheme(tree, c));
         g.state.scratch->children.push(LayoutLogicalChild{placeholder, origin + offset});
     }, [](uint32_t, uint32_t) {});
 }
@@ -2291,6 +2291,61 @@ void layoutGridScratchDestroy(LayoutGridScratch* PR_NULLABLE scratch) {
     scratch->keptSizes.reset();
     scratch->keptNames.reset();
     prMemoryFree(scratch);
+}
+
+// The lines that a grid container's layout kept, with the positions, sizes and names that they hold from mark zero.
+struct LayoutGridLinesCopy {
+    LayoutNodeIndex node;
+    LayoutGridKept kept;
+    RawArray<PrLayoutUnit> positions;
+    RawArray<PrLayoutUnit> sizes;
+    RawArray<GridLineName> names;
+};
+
+LayoutGridLinesCopy* layoutGridLinesCopyCreate(LayoutState& state, const LayoutGridLines& lines) {
+    const LayoutGridScratch& s = *state.scratch->grid;
+    const LayoutGridKept& kept = s.kept.data[lines.mark];
+    LayoutGridLinesCopy* copy = allocZeroed<LayoutGridLinesCopy>();
+    copy->node = lines.node;
+    copy->kept = kept;
+    copy->kept.positions = 0;
+    copy->kept.sizes = 0;
+    copy->kept.names = 0;
+    uint32_t positions = 0;
+    uint32_t sizes = 0;
+    uint32_t names = 0;
+    for (PrLayoutGridAxis axis = 0; axis < PrLayoutGridAxis_Count; ++axis) {
+        positions += kept.trackCount[axis] + 1;
+        sizes += kept.trackCount[axis];
+        names += kept.nameCount[axis];
+    }
+    copy->positions.append(s.keptPositions.data + kept.positions, positions);
+    copy->sizes.append(s.keptSizes.data + kept.sizes, sizes);
+    copy->names.append(s.keptNames.data + kept.names, names);
+    return copy;
+}
+
+void layoutGridLinesCopyDestroy(LayoutGridLinesCopy* PR_NULLABLE copy) {
+    if (copy == nullptr)
+        return;
+    copy->positions.reset();
+    copy->sizes.reset();
+    copy->names.reset();
+    prMemoryFree(copy);
+}
+
+LayoutGridLines layoutGridLinesRestore(LayoutState& state, const LayoutGridLinesCopy& copy) {
+    LayoutGridScratch& s = *state.scratch->grid;
+    LayoutGridKept kept = copy.kept;
+    kept.positions = s.keptPositions.count;
+    kept.sizes = s.keptSizes.count;
+    kept.names = s.keptNames.count;
+    s.keptPositions.append(copy.positions.span());
+    s.keptSizes.append(copy.sizes.span());
+    s.keptNames.append(copy.names.span());
+    LayoutGridLines lines{copy.node, s.kept.count};
+    s.kept.push(kept);
+    return lines;
 }
 
 LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node, const LayoutContentInput& input,

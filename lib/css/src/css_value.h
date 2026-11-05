@@ -257,6 +257,25 @@ inline CssValueRun cssValueSubtree(CssValueRun run, uint32_t index) {
     return CssValueRun{run.values + index, run.values[index].next, run.text};
 }
 
+// Writes the index of the first value of each argument of the function at `at` of the run, which commas separate, to
+// `starts`, up to `capacity` of them. Returns the number of arguments.
+inline uint32_t cssValueArguments(CssValueRun run, uint32_t at, uint32_t* starts, uint32_t capacity) {
+    uint32_t count = 0;
+    uint32_t end = at + run.values[at].next;
+    bool fresh = true;
+    for (uint32_t i = at + 1; i < end; i += run.values[i].next) {
+        if (cssValueIsLiteral(&run.values[i], ',')) {
+            fresh = true;
+        } else if (fresh) {
+            if (count < capacity)
+                starts[count] = i;
+            ++count;
+            fresh = false;
+        }
+    }
+    return count;
+}
+
 // Returns the children of the value at `index` of the run.
 inline CssValueRun cssValueChildren(CssValueRun run, uint32_t index) {
     return CssValueRun{run.values + index + 1, run.values[index].next - 1, run.text};

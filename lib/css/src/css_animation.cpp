@@ -951,6 +951,63 @@ bool addTransformsBetween(CssValuePool* PR_NULLABLE out, CssValueRun from, CssVa
 // The most items that the lists of a repeatable list repeat to before they combine.
 constexpr uint32_t kMaxRepeatedItems = 256;
 
+// Returns true if `property` is a list of gap decorations, which may hold repeat()s (css-gaps-1/#gap-decorations).
+bool isGapRuleList(PrCssProperty property) {
+    switch (property) {
+        case PrCssProperty_ColumnRuleColor:
+        case PrCssProperty_ColumnRuleStyle:
+        case PrCssProperty_ColumnRuleWidth:
+        case PrCssProperty_RowRuleColor:
+        case PrCssProperty_RowRuleStyle:
+        case PrCssProperty_RowRuleWidth: return true;
+        default: return false;
+    }
+}
+
+// Returns true if the list `run` holds a repeat().
+bool holdsRepeat(CssValueRun run) {
+    for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
+        if (cssValueIsFunction(&run.values[i], PrCssKeyword_Repeat))
+            return true;
+    }
+    return false;
+}
+
+// Writes the items of the list of gap decorations `run` to `out`, each repeat() of an integer as the items that it
+// repeats (css-gaps-1/#typedef-repeat-line-width), and returns their number. Returns zero for a list that holds a
+// repeat() of auto, or that expands past kMaxRepeatedItems.
+uint32_t expandRepeaters(CssValueRun run, CssValuePool* out) {
+    uint32_t count = 0;
+    auto add = [&](CssValueRun item) {
+        if (count != 0)
+            cssValuePoolAdd(out, cssLiteralValue(','));
+        cssValuePoolAddRun(out, item);
+        ++count;
+    };
+    for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
+        const CssValueNode& value = run.values[i];
+        if (value.kind == PrCssValueKind_Literal)
+            continue;
+        if (!cssValueIsFunction(&value, PrCssKeyword_Repeat)) {
+            add(cssValueSubtree(run, i));
+            continue;
+        }
+        const CssValueNode& times = run.values[i + 1];
+        if (times.kind != PrCssValueKind_Integer || times.number < 1)
+            return 0;
+        uint32_t end = i + value.next;
+        for (uint32_t n = 0; n < uint32_t(times.number); ++n) {
+            for (uint32_t k = i + 1 + times.next; k < end; k += run.values[k].next) {
+                if (run.values[k].kind != PrCssValueKind_Literal)
+                    add(cssValueSubtree(run, k));
+            }
+            if (count > kMaxRepeatedItems)
+                return 0;
+        }
+    }
+    return count;
+}
+
 // Writes `a` and `b` to `aOut` and `bOut`, each repeated to the least common multiple of their numbers of items, and
 // returns true, if `property` animates as a repeatable list and the numbers differ (web-animations-1/#repeatable-list).
 // Returns false, and writes nothing, otherwise.
@@ -1726,9 +1783,68 @@ void addTrackItems(CssValuePool* out, const TrackOp& op, const TrackItems& a, co
     cssValuePoolAddRun(out, named.names[a.count]);
 }
 
+bool interpolable(PrCssProperty property, CssValueRun from, CssValueRun to, const CssColorContext& colors);
+void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
+    const CssColorContext& colors);
+
+// Interpolates the lists of gap decorations `from` and `to` of `property` item by item, into `out` unless it is null,
+// and returns true, if either holds more than one item or a repeat(): each repeat() of an integer is written out as the
+// items that it repeats, and the lists repeat to the least common multiple of their numbers of items
+// (css-gaps-1/#typedef-repeat-line-width). Sets `*between` to whether every pair of items is equal or interpolates, and
+// some pair differs. Returns false, and writes nothing, for another property, for two single items, and for a list that
+// holds a repeat() of auto.
+bool gapListsBetween(CssValuePool* PR_NULLABLE out, PrCssProperty property, CssValueRun from, CssValueRun to,
+        double progress, const CssColorContext& colors, bool* between) {
+    if (!isGapRuleList(property))
+        return false;
+    CssValuePool x{};
+    CssValuePool y{};
+    uint32_t xCount = expandRepeaters(from, &x);
+    uint32_t yCount = expandRepeaters(to, &y);
+    bool lists = xCount != 0 && yCount != 0 && (xCount > 1 || yCount > 1 || holdsRepeat(from) || holdsRepeat(to));
+    uint32_t common = xCount;
+    while (lists && common % yCount != 0 && common <= kMaxRepeatedItems)
+        common += xCount;
+    CssValueRun xs = cssValuePoolRun(&x, CssValueSpan{0, x.values.count});
+    CssValueRun ys = cssValuePoolRun(&y, CssValueSpan{0, y.values.count});
+    CssListItems xItems = cssListItems(xs);
+    CssListItems yItems = cssListItems(ys);
+    lists = lists && common <= kMaxRepeatedItems && xItems.count == xCount && yItems.count == yCount;
+    if (lists) {
+        bool differs = false;
+        bool all = true;
+        for (uint32_t i = 0; i < common && all; ++i) {
+            CssValueRun a = cssListItem(xs, xItems, i % xCount);
+            CssValueRun b = cssListItem(ys, yItems, i % yCount);
+            bool same = cssValueRunEquals(a, b);
+            differs = differs || !same;
+            all = same || interpolable(property, a, b, colors);
+        }
+        *between = all && differs;
+        for (uint32_t i = 0; out != nullptr && *between && i < common; ++i) {
+            if (i != 0)
+                cssValuePoolAdd(out, cssLiteralValue(','));
+            CssValueRun a = cssListItem(xs, xItems, i % xCount);
+            CssValueRun b = cssListItem(ys, yItems, i % yCount);
+            if (cssValueRunEquals(a, b))
+                cssValuePoolAddRun(out, a);
+            else
+                interpolate(out, property, a, b, progress, colors);
+        }
+        if (out != nullptr && !*between)
+            cssValuePoolAddRun(out, progress < 0.5 ? from : to);
+    }
+    cssValuePoolReset(&x);
+    cssValuePoolReset(&y);
+    return lists;
+}
+
 bool interpolable(PrCssProperty property, CssValueRun from, CssValueRun to, const CssColorContext& colors) {
     if (cssValueRunEquals(from, to))
         return false;
+    bool between = false;
+    if (gapListsBetween(nullptr, property, from, to, 0, colors, &between))
+        return between;
     if (property == PrCssProperty_Visibility)
         return (from.count == 1 && cssValueIsKeyword(from.values, PrCssKeyword_Visible)) ||
             (to.count == 1 && cssValueIsKeyword(to.values, PrCssKeyword_Visible));
@@ -1767,6 +1883,9 @@ bool interpolable(PrCssProperty property, CssValueRun from, CssValueRun to, cons
 
 void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
         const CssColorContext& colors) {
+    bool between = false;
+    if (gapListsBetween(out, property, from, to, progress, colors, &between))
+        return;
     // Visibility is visible between two values if either of them is visible (web-animations-1/#animating-visibility).
     if (property == PrCssProperty_Visibility) {
         bool fromVisible = from.count == 1 && cssValueIsKeyword(from.values, PrCssKeyword_Visible);

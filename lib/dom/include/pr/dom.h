@@ -1938,8 +1938,9 @@ double prDomAgentNextTaskDelay(PrDomAgent* agent);
 // that animations want, the time updates of media that plays in a loop, and intervals, which run until a script clears
 // them (html/#dom-setinterval). No task is posted (prDomAgentPost), and in any window, there is no task, other timer or
 // animation frame request, no fetch that has not been answered, no scroll or animation event, no transition, no CSS
-// animation that runs to an end, and no document to reveal. A host that runs pages until they settle stops at idle,
-// because that work can run forever.
+// animation that runs to an end, no document to reveal, and no autofocus candidate, resize observation or intersection
+// observation that awaits a rendering update. A host that runs pages until they settle stops at idle, because that work
+// can run forever.
 bool prDomAgentIsIdle(PrDomAgent* agent);
 
 // Runs at most one task of the agent's event loop: a posted task, or else a task of a window whose task can run now.

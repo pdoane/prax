@@ -306,6 +306,19 @@ TEST_CASE("a group without bounds takes the bounds of its contents, unless it ma
     prDrawListPopGroup(list);
     CHECK(prDrawListCommands(list)[0].group->bounds.right == 0);
     prDrawListRelease(list);
+
+    // A group with a layer covers its bounds even with no contents.
+    list = prDrawListCreate();
+    uint64_t drawn = 0;
+    PrDrawGroupLayer layer = {.extent = {4, 4}, .drawn = &drawn};
+    group = prDrawGroupDefault();
+    group.bounds = PrRect{0, 0, 4, 4};
+    group.layer = &layer;
+    prDrawListPushGroup(list, &group);
+    prDrawListPopGroup(list);
+    CHECK(prDrawListCommandCount(list) == 2);
+    CHECK_FALSE(prDrawListMisses(list, prAffine2Identity(), PrRect{0, 0, 10, 10}));
+    prDrawListRelease(list);
 }
 
 TEST_CASE("a group that draws nothing is removed with its contents") {

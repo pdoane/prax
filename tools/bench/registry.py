@@ -128,6 +128,9 @@ BENCHES = [
     Bench("lists", "a list of 10,000 items: loaded in pieces, an item inserted at the start or appended, and a restyle",
           ["list_bench"], fetch=["fonts"], run=engine.lists,
           sources=[os.path.join(TESTS, "html", "tests", "list_bench.cpp")]),
+    Bench("print", "a long generated document printed: paginated, its pages painted, and written as PDF and SVG",
+          ["print_bench"], fetch=["fonts"], run=engine.print_document,
+          sources=[os.path.join(TESTS, "html", "tests", "print_bench.cpp")]),
     Bench("ui", "immediate-mode frames: trees declared whole every frame, unchanged, changed, scrolled and cold",
           ["ui_bench", "editor_bench"], fetch=["fonts"], run=engine.ui),
     Bench("text-edit", "editing a text of 100, 10,000 and 1,000,000 lines: at the caret, far away, and with undo; and moving a "
@@ -148,7 +151,7 @@ BENCHES = [
     Bench("long-doc", "a long specification in the browser example: load, scroll, hover, navigate, restyle, resize",
           ["doc_bench"], fetch=["docs", "fonts"], run=engine.long_doc, options=engine.long_doc_options,
           sources=[os.path.join(common.ROOT, "tools", "bench", "doc_bench.cpp")]),
-    Bench("draw", "recording and rendering the viewer's feature drawings on a renderer of lib/draw",
+    Bench("draw", "recording and rendering draw_features' drawings on a renderer of lib/draw",
           ["draw_bench"], fetch=["fonts"], run=engine.draw, options=engine.draw_options),
     Bench("image-decode", "decoding the PNG and JPEG images of WPT's images directory",
           ["image_bench"], fetch=["wpt"], run=engine.image_decode, options=engine.image_decode_options,

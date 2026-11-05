@@ -136,6 +136,66 @@ void listChanged(LayoutStacking& s, LayoutStackingList& list) {
     list.version = ++s.versions;
 }
 
+// Appends to `out` the pieces of boxes that paint whole in `fragment`, which is at `at` in the viewport's content,
+// other than the ones that their placements give.
+void collectPieces(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutVec at, RawArray<LayoutWholePiece>& out) {
+    for (uint32_t i = 0; i < fragment->childCount; ++i) {
+        const LayoutChild& child = fragment->children[i];
+        const LayoutFragment* c = child.fragment;
+        PrLayoutVec position = at + child.offset;
+        bool box = c->kind == LayoutFragmentKind_Box || c->kind == LayoutFragmentKind_Replaced;
+        if (box && c->node != kPrLayoutNodeNone && layoutNodePaintsWhole(tree, c->node)) {
+            bool placed = layoutCachePlaced(tree->cache, c->node) == c && layoutBoxPositioned(tree, c->node).position == position;
+            if (!placed)
+                out.push(LayoutWholePiece{c->node, position, c});
+        }
+        if (c->childCount != 0)
+            collectPieces(tree, c, position, out);
+    }
+}
+
+// Finds the pieces of the tree's boxes that paint whole, other than the ones that their placements give, from the
+// fragments of the roots of fragmentation contexts that are placed. A root inside another is found twice, and its
+// pieces once.
+void findPieces(const LayoutTree* tree) {
+    LayoutStacking& stacking = tree->stacking;
+    stacking.pieces.clear();
+    RawArray<LayoutNodeIndex>& roots = stacking.fragmentationRoots;
+    uint32_t kept = 0;
+    for (uint32_t i = 0; i < roots.count; ++i) {
+        LayoutNodeIndex root = roots.data[i];
+        const LayoutFragment* fragment = root < tree->cache.placements.count ? layoutCachePlaced(tree->cache, root) : nullptr;
+        if (fragment == nullptr)
+            continue;
+        roots.data[kept++] = root;
+        collectPieces(tree, fragment, layoutBoxPositioned(tree, root).position, stacking.pieces);
+    }
+    roots.count = kept;
+    RawArray<LayoutWholePiece>& pieces = stacking.pieces;
+    sortItems(pieces.span(), [](const LayoutWholePiece& a, const LayoutWholePiece& b) {
+        if (a.node != b.node)
+            return a.node < b.node;
+        if (a.position.y != b.position.y)
+            return a.position.y < b.position.y;
+        if (a.position.x != b.position.x)
+            return a.position.x < b.position.x;
+        return a.fragment < b.fragment;
+    });
+    uint32_t unique = 0;
+    for (uint32_t i = 0; i < pieces.count; ++i) {
+        const LayoutWholePiece& p = pieces.data[i];
+        if (unique != 0) {
+            const LayoutWholePiece& q = pieces.data[unique - 1];
+            if (q.node == p.node && q.position == p.position && q.fragment == p.fragment)
+                continue;
+        }
+        pieces.data[unique++] = p;
+    }
+    pieces.count = unique;
+    stacking.piecesLayout = tree->layouts;
+    stacking.piecesFound = true;
+}
+
 } // namespace
 
 bool layoutNodePaintsWholeAs(const LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex style) {
@@ -276,6 +336,51 @@ void layoutStackingReset(LayoutStacking& stacking) {
     stacking.freeLists.reset();
     stacking.byContext.reset();
     stacking.moved.reset();
+    stacking.fragmentationRoots.reset();
+    stacking.pieces.reset();
+    stacking.piecesFound = false;
+}
+
+void layoutStackingAddFragmentationRoot(LayoutTree* tree, LayoutNodeIndex node) {
+    RawArray<LayoutNodeIndex>& roots = tree->stacking.fragmentationRoots;
+    uint32_t at = 0;
+    uint32_t end = roots.count;
+    while (at < end) {
+        uint32_t mid = at + (end - at) / 2;
+        if (roots.data[mid] < node)
+            at = mid + 1;
+        else
+            end = mid;
+    }
+    if (at < roots.count && roots.data[at] == node)
+        return;
+    roots.push(node);
+    for (uint32_t i = roots.count - 1; i > at; --i)
+        roots.data[i] = roots.data[i - 1];
+    roots.data[at] = node;
+    tree->stacking.piecesFound = false;
+}
+
+LayoutWholePieces layoutWholePiecesOf(const LayoutTree* tree, LayoutNodeIndex node) {
+    LayoutStacking& stacking = tree->stacking;
+    if (stacking.fragmentationRoots.count == 0)
+        return LayoutWholePieces{};
+    if (!stacking.piecesFound || stacking.piecesLayout != tree->layouts)
+        findPieces(tree);
+    const RawArray<LayoutWholePiece>& pieces = stacking.pieces;
+    uint32_t at = 0;
+    uint32_t end = pieces.count;
+    while (at < end) {
+        uint32_t mid = at + (end - at) / 2;
+        if (pieces.data[mid].node < node)
+            at = mid + 1;
+        else
+            end = mid;
+    }
+    uint32_t stop = at;
+    while (stop < pieces.count && pieces.data[stop].node == node)
+        ++stop;
+    return LayoutWholePieces{pieces.data + at, stop - at};
 }
 
 uint32_t layoutStackingVerify(const LayoutTree* tree) {

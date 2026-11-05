@@ -246,6 +246,24 @@ TEST_CASE("a single font has one face, and bytes that are not a font none") {
     CHECK(prFontCount(PrByteView{bytes.data(), 3}) == 0);
 }
 
+TEST_CASE("a font's PostScript name is its name table's, or names the axes of an instance away from its default") {
+    const PrFont* font = load("NotoSans.ttf");
+    CHECK(text(prFontPostScriptName(font)) == "NotoSans-Regular");
+    prFontRelease(font);
+    const PrFont* flex = load("RobotoFlex.ttf");
+    PrFontVariation bold[2] = {{PR_FONT_TAG('w', 'g', 'h', 't'), 700}, {PR_FONT_TAG('w', 'd', 't', 'h'), 87.5f}};
+    PrFontDerivation derivation = prFontDerivationDefault();
+    derivation.variations = bold;
+    derivation.variationCount = 2;
+    const PrFont* instance = prFontCreateDerived(flex, &derivation);
+    std::string name = text(prFontPostScriptName(instance));
+    CHECK(name.rfind("RobotoFlex", 0) == 0);
+    CHECK(name.find("_700wght") != std::string::npos);
+    CHECK(name.find("_87.5wdth") != std::string::npos);
+    prFontRelease(instance);
+    prFontRelease(flex);
+}
+
 TEST_CASE("a font reads its names, metrics and glyphs") {
     const PrFont* font = load("NotoSans.ttf");
     CHECK(text(prFontFamilyName(font)) == "Noto Sans");

@@ -7,6 +7,7 @@
 #include "pr/color.h"
 #include "pr/draw_glyph.h"
 #include "pr/draw_list.h"
+#include "pr/draw_transform.h"
 #include "pr/geom.h"
 #include "pr/gpu.h"
 #include "pr/pixels.h"
@@ -80,7 +81,7 @@ typedef struct PrDrawBeneath {
 // A render blends encoded extended sRGB, and its target holds encoded extended sRGB. An 8-bit target clamps colors to
 // [0, 1], and an RgbaF16 target keeps colors outside that range. The renderer maps no colors for a display. A caller
 // that shows the render on a display tone maps it, maps it into the display's gamut, and converts it to the display's
-// encoding, if those differ from the render's. encoding where those differ from the render's.
+// encoding, if those differ from the render's.
 typedef struct PrDrawTarget {
     PrUVec2 extent;                             // the render's extent in pixels
     PrPixelFormat format;                       // the format of the texture that the render's pass draws into
@@ -90,6 +91,18 @@ typedef struct PrDrawTarget {
 
     const PrDrawBeneath* PR_NULLABLE beneath;   // null for transparent
 } PrDrawTarget;
+
+// A part of a list that a render plays: `count` of the list's commands from `first`, which close every scope that they
+// open. `transform` maps the commands' space to the render's pixels. It is the transform that a walk of the list holds
+// where the commands lie, placed in the render, so that the commands snap as they do in place. No clip or group around
+// the commands plays, and commands in target pixels are in the render's pixels. A part lets a consumer of a list render
+// a group or a command of it into pixels of its own, as a writer rasterizes what its format cannot draw, without
+// copying the commands into another list.
+typedef struct PrDrawPart {
+    uint32_t first;
+    uint32_t count;
+    PrDrawTransform transform;
+} PrDrawPart;
 
 // The fields at the start of every frame's state.
 struct PrDrawFrame {
@@ -117,7 +130,8 @@ struct PrDrawRenderer {
     void (*PR_NULLABLE destroy)(PrDrawRenderer* renderer);
     PrDrawFrame* PR_NONNULL (*PR_NONNULL frameCreate)(PrDrawRenderer* renderer);
     void (*frameDestroy)(PrDrawRenderer* renderer, PrDrawFrame* frame);
-    PrStatus (*framePrepare)(PrDrawRenderer* renderer, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget* target);
+    PrStatus (*framePrepare)(PrDrawRenderer* renderer, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
+        const PrDrawTarget* target);
     void (*frameRender)(PrDrawRenderer* renderer, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin);
     void (*PR_NULLABLE frameStats)(PrDrawRenderer* renderer, const PrDrawFrame* frame, PrDrawStats* out);
     void (*PR_NULLABLE dropResources)(PrDrawRenderer* renderer);
@@ -189,6 +203,10 @@ void prDrawFrameDestroy(PrDrawFrame* PR_NULLABLE frame);
 // failure, the frame has nothing prepared.
 PrStatus prDrawFramePrepare(PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget* target);
 
+// Prepares a part of the list as prDrawFramePrepare prepares a whole list, and returns what it returns. The part lies
+// within the list's commands.
+PrStatus prDrawFramePreparePart(PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part, const PrDrawTarget* target);
+
 // Returns the counts of the work that preparing the frame produced. All counts are zero for a renderer that counts
 // nothing.
 PrDrawStats prDrawFrameStats(const PrDrawFrame* frame);
@@ -203,6 +221,11 @@ void prDrawFrameRender(PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin);
 // Any other device draws over a copy of them in a texture, which is read back, and the list's backdrops read nothing.
 // Returns what preparing returns.
 PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels, PrPixelFormat format);
+
+// Renders a part of the list over `pixels` as prDrawRendererRenderPixels renders a whole list, and returns what it
+// returns.
+PrStatus prDrawRendererRenderPartPixels(PrDrawRenderer* renderer, const PrDrawList* list, const PrDrawPart* part,
+    PrPixels pixels, PrPixelFormat format);
 
 #if defined(__cplusplus)
 }

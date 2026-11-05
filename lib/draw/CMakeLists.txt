@@ -1,5 +1,5 @@
-# Drawing: draw lists, and the backends that the build turns on, which render them. A backend is built on the public
-# API of draw and path.
+# Drawing: draw lists, and the backends that the build turns on, which render them or write them as documents. A backend
+# is built on the public API of draw and path.
 pr_library(draw INCLUDE include
     src/draw.cpp
     src/draw_commands.cpp
@@ -12,9 +12,11 @@ pr_library(draw INCLUDE include
     src/draw_lower.cpp
     src/draw_projection.cpp
     src/draw_renderer.cpp
+    src/draw_structure.cpp
     src/draw_transform.cpp
+    src/draw_writer.cpp
 )
-target_link_libraries(pr_draw PUBLIC prax::path prax::font prax::image prax::geom prax::gpu prax::color
+target_link_libraries(pr_draw PUBLIC prax::path prax::font prax::image prax::geom prax::gpu prax::color prax::compress prax::task
                               PRIVATE prax::core_cpp)
 # The display shader, which maps a frame of lib/draw's colors to a display (pr/draw_display.h).
 pr_slang(pr_draw src/draw_display.slang VARIABLE kDrawDisplayShaders)
@@ -43,6 +45,26 @@ target_sources(pr_draw PRIVATE backends/shared/src/draw_shared_memory.cpp)
 if (PR_DRAW_TRIANGLES OR PR_DRAW_FRAGMENT)
     target_sources(pr_draw PRIVATE backends/shared/src/draw_shared_atlas.cpp)
     pr_headers(pr_draw PUBLIC backends/shared/include)
+endif()
+
+# What the writers share: the walk that draws natively, lowers, and rasterizes the rest with the CPU renderer.
+if (PR_DRAW_SVG OR PR_DRAW_PDF)
+    if (NOT PR_DRAW_CPU)
+        message(FATAL_ERROR "lib/draw's writers rasterize with its CPU renderer: PR_DRAW_SVG and PR_DRAW_PDF need PR_DRAW_CPU")
+    endif()
+    target_sources(pr_draw PRIVATE backends/shared/src/draw_shared_writer.cpp)
+endif()
+
+if (PR_DRAW_PDF)
+    target_sources(pr_draw PRIVATE backends/pdf/src/draw_pdf.cpp)
+    pr_headers(pr_draw PUBLIC backends/pdf/include)
+    target_compile_definitions(pr_draw PRIVATE PR_DRAW_HAS_PDF)
+endif()
+
+if (PR_DRAW_SVG)
+    target_sources(pr_draw PRIVATE backends/svg/src/draw_svg.cpp)
+    pr_headers(pr_draw PUBLIC backends/svg/include)
+    target_compile_definitions(pr_draw PRIVATE PR_DRAW_HAS_SVG)
 endif()
 
 if (PR_DRAW_FRAGMENT)
@@ -81,10 +103,11 @@ if (PR_DEVELOP)
         tests/test_draw_lower.cpp
         tests/test_draw_projection.cpp
         tests/test_draw_text.cpp
+        tests/test_draw_writer.cpp
     )
     target_compile_definitions(draw_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
     target_link_libraries(draw_tests PRIVATE draw_compare prax::path prax::color prax::image prax::compress
-                                             prax::font prax::gpu)
+                                             prax::font prax::gpu prax::task)
     if (PR_DRAW_CPU)
         target_sources(draw_tests PRIVATE
             backends/cpu/tests/test_draw_cpu.cpp
@@ -98,6 +121,18 @@ if (PR_DEVELOP)
         pr_page_tests(draw backends/canvas/tests/test_draw_canvas_page.cpp
             PRELOAD "${PROJECT_SOURCE_DIR}/third_party/fonts/NotoSans.ttf@/fonts/NotoSans.ttf")
         target_link_libraries(draw_page_tests PRIVATE prax::font prax::path prax::gpu)
+    endif()
+    if (PR_DRAW_PDF)
+        target_sources(draw_tests PRIVATE
+            backends/pdf/tests/test_draw_pdf.cpp
+            backends/pdf/tests/test_draw_pdf_c.c
+        )
+    endif()
+    if (PR_DRAW_SVG)
+        target_sources(draw_tests PRIVATE
+            backends/svg/tests/test_draw_svg.cpp
+            backends/svg/tests/test_draw_svg_c.c
+        )
     endif()
     if (PR_DRAW_TRIANGLES OR PR_DRAW_FRAGMENT)
         target_sources(draw_tests PRIVATE

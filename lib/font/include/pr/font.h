@@ -154,6 +154,12 @@ uint32_t prFontIndex(const PrFont* font);
 PrRawString prFontFamilyName(const PrFont* font);
 PrRawString prFontStyleName(const PrFont* font);
 
+// Returns the PostScript name of the font: the name table's (name ID 6), or for an instance of a variable font away
+// from its default, the name that Adobe Technical Note #5902 generates from the family's prefix and the values of the
+// axes that differ from their defaults, such as Gelasio_700wght. Returns the null string if the font has no such name.
+// Synthesis does not change the name.
+PrRawString prFontPostScriptName(const PrFont* font);
+
 // Returns the factor that scales the outlines and metrics of the font. It is one for a font made from a file.
 float prFontSizeAdjust(const PrFont* font);
 
@@ -532,6 +538,16 @@ typedef struct PrFontGlyphRun {
     uint32_t glyphCount;
     const PrAffine2* PR_NULLABLE transforms;    // one per glyph about its origin, or null
     PrFontPalette palette;                      // the palette and color overrides of a color font
+
+    // The text that the glyphs were shaped from, in UTF-8, or the null view if the producer does not know it. A writer
+    // of documents maps the glyphs back to it, so that a reader can select and search the text.
+    PrStringView text;
+
+    // For each glyph, the offset in `text` of the first byte of the characters that the glyph was shaped from, as a
+    // shaper reports its clusters, or null. The characters of a glyph run from its offset up to the next greater offset
+    // among the run's glyphs, or to the end of `text`. Glyphs of one cluster share its offset, and a cluster whose
+    // characters make no glyph of their own, as in a ligature, belongs to the glyph before it in the text.
+    const uint32_t* PR_NULLABLE clusters;
 } PrFontGlyphRun;
 
 #if defined(__cplusplus)

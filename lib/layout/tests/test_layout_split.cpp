@@ -690,19 +690,20 @@ TEST_CASE("an inline box's row holds what its block reaches, for the scroll cont
 
 TEST_CASE("the lines and floats around a block in an inline box keep their overflow, for the scroll container") {
     // Where the oversized content is: before the block, after it, or a float in a segment with no text.
-    enum Where { Before, After, Float };
-    for (Where where : {Before, After, Float}) {
+    enum { Where_Before, Where_After, Where_Float };
+    typedef uint8_t Where;
+    for (Where where : {Where_Before, Where_After, Where_Float}) {
         CAPTURE(int(where));
         Stage s;
         PrLayoutNode scroller = s.div(s.stage, scrolling(sized(block(), 100, 100)));
         PrLayoutNode span = s.span(scroller);
         PrLayoutNode wide = kPrLayoutNodeNone;
-        if (where == Before)
+        if (where == Where_Before)
             wide = s.add(span, inlineBlock(300, 10));
         s.div(span, sized(block(), -1, 10));
-        if (where == After)
+        if (where == Where_After)
             wide = s.add(span, inlineBlock(300, 10));
-        if (where == Float)
+        if (where == Where_Float)
             wide = s.add(span, floatLeft(300, 10));
         s.layout();
         PrLayoutScrollInfo info{};

@@ -206,6 +206,13 @@ inline PrLayoutBoxStyle inlineBox() {
     return prLayoutBoxStyleDefault();
 }
 
+// Interns the table group of `fragmentation` and the initial table values, which holds a box's fragmentation values.
+inline PrLayoutGroupIndex fragmentationGroup(PrLayoutTree* tree, const PrLayoutFragmentationStyle& fragmentation) {
+    PrLayoutTableStyle table = prLayoutTableStyleDefault();
+    table.fragmentation = fragmentation;
+    return prLayoutTableStyleIntern(tree, &table);
+}
+
 // Sets the box's block-start and block-end margins.
 inline void setMargins(PrLayoutBoxStyle& box, float top, float bottom) {
     box.margin[PrRectSide_Top] = prLayoutLengthPx(top);
@@ -261,11 +268,12 @@ inline void checkRect(PrRect actual, double left, double top, double right, doub
     CHECK(double(actual.bottom) == doctest::Approx(bottom));
 }
 
-// A glyph that a list draws: its id, and its origin in the list's space.
+// A glyph that a list draws: its id, its origin in the list's space, and the em size of its run.
 struct DrawnGlyph {
     uint16_t id;
     double x;
     double y;
+    float size;
 };
 
 // Appends the glyphs that `list` draws under `transform`, in the order it draws them, including through the lists it
@@ -291,7 +299,7 @@ inline void appendGlyphs(const PrDrawList* list, PrDrawTransform transform, std:
                     double y = double(p.y);
                     out.push_back(DrawnGlyph{
                         command.glyphs->glyphs[g].id, t.a * x + t.c * y + t.e,
-                        t.b * x + t.d * y + t.f,
+                        t.b * x + t.d * y + t.f, command.glyphs->size,
                     });
                 }
                 break;

@@ -558,6 +558,9 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_PopGroup:
                 popGroup(w);
                 break;
+            case PrDrawCommandKind_PushMark:
+            case PrDrawCommandKind_PopMark:
+                break;
             default:
                 drawShape(w, c);
                 break;
@@ -607,7 +610,8 @@ void imguiFrameClear(ImGuiFrame* frame) {
     frame->data.CmdLists.clear();
 }
 
-void imguiRecord(ImGuiBackend* imgui, ImGuiFrame* frame, const PrDrawList* list, const PrDrawTarget* target) {
+void imguiRecord(ImGuiBackend* imgui, ImGuiFrame* frame, const PrDrawList* list, const PrDrawPart& part,
+        const PrDrawTarget* target) {
     float width = float(target->extent.x);
     float height = float(target->extent.y);
     ImGuiIO& io = ImGui::GetIO();
@@ -618,10 +622,10 @@ void imguiRecord(ImGuiBackend* imgui, ImGuiFrame* frame, const PrDrawList* list,
     Walk w{};
     w.imgui = imgui;
     w.draw = ImGui::GetBackgroundDrawList();
-    w.transforms.push(prDrawTransformFromAffine2(prAffine2Identity()));
+    w.transforms.push(part.transform);
     w.clips.push(ImVec4(0, 0, width, height));
     w.shape = prPathCreate();
-    runCommands(w, prDrawListCommands(list), prDrawListCommandCount(list));
+    runCommands(w, prDrawListCommands(list) + part.first, part.count);
     prPathDestroy(w.shape);
     prPathPolylineReset(&w.flat);
     prPathPolylineReset(&w.outline);

@@ -21,6 +21,7 @@ pr_library(html INCLUDE include
     src/html_parser.cpp
     src/html_serialize.cpp
     src/html_storage.cpp
+    src/html_structure.cpp
     src/html_table.cpp
     src/html_tokenizer.cpp
     src/html_media.cpp
@@ -69,6 +70,7 @@ if (PR_DEVELOP)
         tests/test_parser.cpp
         tests/test_html_render.cpp
         tests/test_html_storage.cpp
+        tests/test_html_structure.cpp
         tests/test_html_style.cpp
         tests/test_html_view.cpp
         tests/test_timer.cpp
@@ -118,6 +120,11 @@ if (PR_DEVELOP)
     pr_harness(list_bench prax::html tests/list_bench.cpp)
     target_link_libraries(list_bench PRIVATE prax::text prax::css prax::layout)
     target_compile_definitions(list_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+
+    # Printing a long generated document and writing it as PDF and SVG, which ./dev.sh bench print runs.
+    pr_harness(print_bench prax::html tests/print_bench.cpp)
+    target_link_libraries(print_bench PRIVATE prax::text prax::draw prax::compress prax::layout)
+    target_compile_definitions(print_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
 
     # The selector benchmark's cases through the C API, which ./dev.sh bench selectors runs beside the shell's.
     pr_harness(selector_bench prax::html tests/selector_bench.cpp)

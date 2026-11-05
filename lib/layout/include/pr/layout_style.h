@@ -57,7 +57,7 @@ enum {
     PrLayoutGroup_Decoration,       // not inherited, read by painting
     PrLayoutGroup_Effect,           // not inherited, read by compositing
     PrLayoutGroup_Flex,             // not inherited, read by layout
-    PrLayoutGroup_Table,            // not inherited, read by layout
+    PrLayoutGroup_Table,            // not inherited, read by layout: tables, and fragmentation
     PrLayoutGroup_Compositing,      // not inherited, read by compositing
     PrLayoutGroup_Grid,             // not inherited, read by layout
     PrLayoutGroup_Count,
@@ -105,6 +105,19 @@ void prLayoutGroupRelease(PrLayoutTree* tree, PrLayoutGroup kind, PrLayoutGroupI
 // Returns the references to the group of `kind` at `index`: those of the records that name it and of callers. A caller
 // that holds the only reference knows that no record names the group.
 uint32_t prLayoutGroupReferences(const PrLayoutTree* tree, PrLayoutGroup kind, PrLayoutGroupIndex index);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Names
+
+// A <custom-ident> that a group names, as its tree interns it: grid lines or a grid area (css-grid-1/#named-lines), or
+// a page (css-page-3/#using-named-pages). Equal names are equal numbers. A name is valid for the tree's life.
+typedef uint32_t PrLayoutName;
+
+// No name.
+enum { kPrLayoutNameNone = 0 };
+
+// Interns `name`, a <custom-ident>, and returns its number.
+PrLayoutName prLayoutNameIntern(PrLayoutTree* tree, PrStringView name);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Font group
@@ -213,6 +226,11 @@ typedef struct PrLayoutFontStyle {
     // distinct groups.
     const PrTextFeatureSet* PR_NULLABLE features;
 
+    // The space added after each typographic character unit of its text, and after each word separator, in px
+    // (css-text-4/#letter-spacing-property, css-text-4/#word-spacing-property).
+    float letterSpacing;
+    float wordSpacing;
+
     PrLayoutLineHeight lineHeight;
     PrLayoutLength textIndent;          // a percentage of the block container's content inline size
     PrLayoutWritingMode writingMode;
@@ -231,13 +249,18 @@ typedef struct PrLayoutFontStyle {
     // How its text is transformed after its white space collapses (css-text-4/#text-transform-property). The transform
     // of a text's own record applies, also on the first formatted line, whose records give it no other.
     PrTextTransform textTransform;
-    uint8_t _pad[3];
+
+    // The fewest lines of a block container that a fragmentation break may leave in a fragmentainer before it and after
+    // it (css-break-4/#widows-orphans), at least 1. A larger count than 255 is 255.
+    uint8_t orphans;
+    uint8_t widows;
+    uint8_t _pad;
 } PrLayoutFontStyle;
 PR_NO_PADDING_END
 
 // Returns the default font group: the tree's default font, a normal line height, collapsing white space and wrapping
-// lines, lines aligned to their start edge, the last line aligned like the others, no indent, and horizontal-tb and ltr
-// with mixed orientation and the auto dominant baseline.
+// lines, lines aligned to their start edge, the last line aligned like the others, no indent, horizontal-tb and ltr
+// with mixed orientation and the auto dominant baseline, and two lines kept on each side of a break.
 PrLayoutFontStyle prLayoutFontStyleDefault(void);
 
 // Interns or creates a font group and returns its index, or returns the font group at `index`.
@@ -338,6 +361,12 @@ enum {
     PrLayoutDisplay_TableColumn,
     PrLayoutDisplay_TableCell,
     PrLayoutDisplay_TableCaption,
+
+    // A page-margin box (css-page-3/#margin-boxes): a child of a paginated tree's viewport root, which a page that
+    // names it lays out in its margin (prLayoutTreeSetPageMargins), as a block container that establishes a block
+    // formatting context and a stacking context. It takes no part in its parent's layout, and generates no box anywhere
+    // else.
+    PrLayoutDisplay_PageMargin,
 };
 typedef uint8_t PrLayoutDisplay;
 
@@ -443,12 +472,15 @@ typedef uint8_t PrLayoutBaselineSource;
 // How a box is positioned (css-position-3/#position-property). Absolute and Fixed take the box out of flow and place it
 // in its containing block. Sticky is laid out as Relative with no offset, and is then moved by its insets from the
 // scrollport of its nearest scroll container as that container scrolls (css-position-3/#stickypos-insets). Its insets'
-// percentages are of the scrollport's size. An inline box does not stick.
+// percentages are of the scrollport's size. An inline box does not stick. Running takes a running element out of flow
+// (css-gcpm-3/#running-elements): it leaves a placeholder at its static position, which places it on a page
+// (prLayoutNodePage), and no box of its own. Its producer lays copies of it out in page-margin boxes.
 enum {
     PrLayoutPosition_Static,
     PrLayoutPosition_Relative,
     PrLayoutPosition_Absolute,
     PrLayoutPosition_Fixed,
+    PrLayoutPosition_Running,       // after Fixed, so that the positions out of flow are one range
     PrLayoutPosition_Sticky,
 };
 typedef uint8_t PrLayoutPosition;
@@ -529,7 +561,11 @@ typedef struct PrLayoutBoxStyle {
     // viewport.
     PrLayoutOverscroll overscrollX : 2;
     PrLayoutOverscroll overscrollY : 2;
-    uint8_t _pad2 : 4;
+
+    // It has size containment in its block axis, so that its content does not size it there and it does not break in a
+    // fragmentation context (css-contain-2/#containment-size, css-break-4/#monolithic).
+    uint8_t containBlock : 1;
+    uint8_t _pad2 : 3;
 
     uint16_t intrinsicCharacters;
 } PrLayoutBoxStyle;
@@ -594,10 +630,14 @@ PR_NO_PADDING_BEGIN
 // replaced box's content, where the box is hit, and a clip path or backdrop filter of the border box's edges. The other
 // boxes' corners follow from them (css-backgrounds-3/#corner-shaping). Corners that overlap are reduced
 // (css-backgrounds-3/#corner-overlap).
+//
+// A multi-column container paints its column rule in the middle of each gap between two of its columns that hold
+// content, and the rule takes no room (css-multicol-1/#column-gaps-and-rules). Its width is zero if its style is none.
 typedef struct PrLayoutDecorationStyle {
     PrColor16 background;
     PrColor16 borderColor[PrRectSide_Count];
     PrColor16 outlineColor;
+    PrColor16 columnRuleColor;
     PrLayoutLength objectPositionX;     // where fitted content sits (css-images-3/#the-object-position)
     PrLayoutLength objectPositionY;
 
@@ -611,12 +651,15 @@ typedef struct PrLayoutDecorationStyle {
 
     PrLayoutUnit outlineWidth;
     PrLayoutUnit outlineOffset;
+    PrLayoutUnit columnRuleWidth;
     PrLayoutBackgroundIndex backgroundLayers;
     PrDrawBorderStyle borderStyle[PrRectSide_Count];
     PrDrawBorderStyle outlineStyle;
     PrLayoutObjectFit objectFit;
     PrLayoutBackgroundBox backgroundClip;
     PrLayoutBackgroundAttachment backgroundAttachment;
+    PrDrawBorderStyle columnRuleStyle;
+    uint8_t _pad[3];
 } PrLayoutDecorationStyle;
 PR_NO_PADDING_END
 
@@ -1382,6 +1425,88 @@ PrLayoutGroupIndex prLayoutFlexStyleCreate(PrLayoutTree* tree, const PrLayoutFle
 PrLayoutFlexStyle prLayoutFlexStyleRecord(const PrLayoutTree* tree, PrLayoutGroupIndex index);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Fragmentation
+
+// What a box asks of the break opportunity before it or after it (css-break-4/#break-between). Auto asks nothing. The
+// avoid values ask that no break of their kind fall there, and Avoid asks it of every kind. The other values force a
+// break: a page break, a page break that puts the next page on a given side, a column break, a break of the innermost
+// fragmentation context for Always, and of every context for All.
+enum {
+    PrLayoutBreak_Auto,
+    PrLayoutBreak_Avoid,
+    PrLayoutBreak_AvoidPage,
+    PrLayoutBreak_AvoidColumn,
+    PrLayoutBreak_Always,
+    PrLayoutBreak_All,
+    PrLayoutBreak_Page,
+    PrLayoutBreak_Left,
+    PrLayoutBreak_Right,
+    PrLayoutBreak_Recto,
+    PrLayoutBreak_Verso,
+    PrLayoutBreak_Column,
+};
+typedef uint8_t PrLayoutBreak;
+
+// What a box asks of the break opportunities inside it (css-break-4/#break-within).
+enum {
+    PrLayoutBreakInside_Auto,           // nothing
+    PrLayoutBreakInside_Avoid,          // that no break of any kind fall there
+    PrLayoutBreakInside_AvoidPage,      // that no page break fall there
+    PrLayoutBreakInside_AvoidColumn,    // that no column break fall there
+};
+typedef uint8_t PrLayoutBreakInside;
+
+// How a box's edges paint where it breaks (css-break-4/#break-decoration): as one box sliced at the break, or with its
+// border, padding and backgrounds on each piece.
+enum {
+    PrLayoutBoxDecorationBreak_Slice,
+    PrLayoutBoxDecorationBreak_Clone,
+};
+typedef uint8_t PrLayoutBoxDecorationBreak;
+
+// How a multi-column container fills its columns (css-multicol-1/#cf).
+enum {
+    PrLayoutColumnFill_Balance,     // balanced in each column set, except a last set in a definite height
+    PrLayoutColumnFill_Auto,        // filled in turn
+    PrLayoutColumnFill_BalanceAll,  // balanced in every set
+};
+typedef uint8_t PrLayoutColumnFill;
+
+// Whether a box in a multi-column container spans all of its columns (css-multicol-1/#column-span).
+enum {
+    PrLayoutColumnSpan_None,
+    PrLayoutColumnSpan_All,
+};
+typedef uint8_t PrLayoutColumnSpan;
+
+// The most columns that a multi-column container lays out in one column set. A larger count is this many.
+enum { kPrLayoutMaxColumns = 1000 };
+
+PR_NO_PADDING_BEGIN
+// Where a box breaks across fragmentainers (css-break-4), what a multi-column container's columns are (css-multicol-1),
+// and which page a box goes on (css-page-3/#using-named-pages). Not inherited, and read by layout. The table group
+// holds it (PrLayoutTableStyle::fragmentation).
+//
+// A block container is a multi-column container if its column count or its column width is not auto
+// (css-multicol-1/#the-multi-column-model). The flex group's column gap is its gap between columns, and normal is 1em
+// there (css-multicol-1/#column-gap). Its rule is the decoration group's.
+typedef struct PrLayoutFragmentationStyle {
+    PrLayoutLength columnWidth;     // auto or a length
+    PrLayoutName page;              // kPrLayoutNameNone for auto
+    uint16_t columnCount;           // 0 for auto
+    PrLayoutBreak breakBefore;
+    PrLayoutBreak breakAfter;
+    PrLayoutBreakInside breakInside;
+    PrLayoutBoxDecorationBreak boxDecorationBreak;
+    PrLayoutColumnFill columnFill;
+    PrLayoutColumnSpan columnSpan;
+} PrLayoutFragmentationStyle;
+PR_NO_PADDING_END
+
+// Returns each property's initial value: no break asked for, slices at breaks, and no columns.
+PrLayoutFragmentationStyle prLayoutFragmentationStyleDefault(void);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Table group
 
 // Whether a table's cells have borders of their own, separated by the table's border spacing, or share borders that the
@@ -1413,7 +1538,11 @@ enum { kPrLayoutTableMaxColumnSpan = 1000 };
 enum { kPrLayoutTableMaxRowSpan = 65534 };
 
 PR_NO_PADDING_BEGIN
-// How a table lays out its parts, and how many tracks a cell or a column spans. Not inherited, and read by layout.
+// How a table lays out its parts, how many tracks a cell or a column spans, and where a box breaks across
+// fragmentainers. Not inherited, and read by layout.
+//
+// The group holds both because few boxes have either: most boxes are not table parts, and most declare no break, column
+// or page. Most records then name the default group, and a record holds one group index for both.
 //
 // CSS inherits border-collapse, border-spacing and caption-side. Layout reads each of them only on the box that it
 // applies to: border-spacing and border-collapse on the table, and caption-side on the caption. A producer gives each
@@ -1428,10 +1557,11 @@ typedef struct PrLayoutTableStyle {
     PrLayoutCaptionSide captionSide;
     PrLayoutTableLayout tableLayout;
     uint8_t _pad;
+    PrLayoutFragmentationStyle fragmentation;
 } PrLayoutTableStyle;
 PR_NO_PADDING_END
 
-// Returns each property's initial value, and spans of one.
+// Returns each property's initial value, spans of one, and the initial fragmentation values.
 PrLayoutTableStyle prLayoutTableStyleDefault(void);
 
 // Interns or creates a table group and returns its index, or returns the table group at `index`.
@@ -1441,16 +1571,6 @@ PrLayoutTableStyle prLayoutTableStyleRecord(const PrLayoutTree* tree, PrLayoutGr
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Grid group
-
-// A name of grid lines or of a grid area (css-grid-1/#named-lines), as its tree interns it. Equal names are equal
-// numbers. A name is valid for the tree's life.
-typedef uint32_t PrLayoutGridName;
-
-// No name.
-enum { kPrLayoutGridNameNone = 0 };
-
-// Interns `name`, a <custom-ident>, and returns its number.
-PrLayoutGridName prLayoutGridNameIntern(PrLayoutTree* tree, PrStringView name);
 
 // The furthest line from the explicit grid that a placement names, in either direction (css-grid-1/#overlarge-grids).
 // The implicit grid holds the lines from -kPrLayoutGridMaxLine through kPrLayoutGridMaxLine, and a placement past them
@@ -1469,7 +1589,7 @@ typedef struct PrLayoutGridTrack {
 // A name of the line at `line` of a track list, which counts the lines from 0 before the first track.
 typedef struct PrLayoutGridLineName {
     uint32_t line;
-    PrLayoutGridName name;
+    PrLayoutName name;
 } PrLayoutGridLineName;
 
 // How a track list's automatic repetition repeats its tracks (css-grid-1/#auto-repeat): not at all, as many times as
@@ -1513,7 +1633,7 @@ PrLayoutGridTracksIndex prLayoutGridTracksIntern(PrLayoutTree* tree, const PrLay
 // A named grid area (css-grid-1/#grid-template-areas-property): its name, and the lines that bound it, counted from 0
 // at the start of the explicit grid.
 typedef struct PrLayoutGridArea {
-    PrLayoutGridName name;
+    PrLayoutName name;
     uint16_t rowStart;
     uint16_t rowEnd;
     uint16_t columnStart;
@@ -1554,7 +1674,7 @@ PR_NO_PADDING_BEGIN
 // is a <custom-ident> alone, which names an area's edge before it names a line. A span is `integer` lines, of those
 // named `name` if it has a name. An integer is clamped to kPrLayoutGridMaxLine.
 typedef struct PrLayoutGridLine {
-    PrLayoutGridName name;
+    PrLayoutName name;
     int16_t integer;
     PrLayoutGridLineKind kind;
     uint8_t _pad;

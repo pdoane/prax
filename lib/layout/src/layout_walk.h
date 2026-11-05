@@ -579,14 +579,23 @@ struct LayoutWalk {
     void paintEntry(LayoutNodeIndex node, const RawArray<LayoutWalkContainer>& base, PrLayoutVec origin,
             PrLayoutVec reference) {
         bool inlineBox = layoutIsInlineBox(tree, node);
+        // An inline box that starts in a piece of its container after the first, as a fragmentation break makes, has no
+        // placement to paint it from.
+        LayoutPlacement placement{};
+        if (inlineBox) {
+            placement = layoutCachePlacement(tree->cache, node);
+            if (placement.parent == kPrLayoutNodeNone)
+                return;
+        }
         LayoutPositioned positioned = inlineBox ? layoutNodePositioned(tree, node) : layoutBoxPositioned(tree, node);
         chain.clear();
         layoutContainerChain(tree, positioned.container, chain);
         PrLayoutVec moved = enterChain(chain, base, origin, reference);
         PrLayoutVec at = origin + moved + positioned.position - reference;
         if (inlineBox) {
-            LayoutPlacement placement = layoutCachePlacement(tree->cache, node);
             const LayoutFragment* container = layoutCachePlaced(tree->cache, placement.parent);
+            if (container == nullptr)
+                return;
             visitor.placed(node, container, at);
             inlineWhole(node, LayoutWalkPlace{container, at, placement.at});
             return;
@@ -599,6 +608,21 @@ struct LayoutWalk {
         bool holdsList = layoutNodeLeadsWhole(tree, node) && layoutIsStackingContext(tree, node);
         if (holdsList || visitor.enters(fragment, at))
             paintWhole(fragment, at);
+        // Only a tree with roots of fragmentation contexts has other pieces.
+        if (tree->stacking.fragmentationRoots.count != 0)
+            paintPieces(node, at - positioned.position, holdsList);
+    }
+
+    // Paints the pieces of the box `node` that paints whole other than its first, after it and in the same containers.
+    // `shift` moves a position in the viewport's content into the coordinates of the containers.
+    PR_NOINLINE void paintPieces(LayoutNodeIndex node, PrLayoutVec shift, bool holdsList) {
+        LayoutWholePieces pieces = layoutWholePiecesOf(tree, node);
+        for (uint32_t i = 0; i < pieces.count; ++i) {
+            const LayoutWholePiece& piece = pieces.pieces[i];
+            PrLayoutVec pieceAt = shift + piece.position;
+            if (holdsList || visitor.enters(piece.fragment, pieceAt))
+                paintWhole(piece.fragment, pieceAt);
+        }
     }
 
     // --- Inline boxes that paint whole ---

@@ -16,6 +16,7 @@
 
 #include "layout/src/layout_block.h"
 #include "layout/src/layout_box.h"
+#include "layout/src/layout_fragmentation.h"
 #include "layout/src/layout_intrinsic.h"
 #include "layout/src/layout_shaping.h"
 
@@ -228,8 +229,24 @@ enum {
 };
 typedef uint8_t Reach;
 
-// Records that the inputs of the node's layout changed, and that its ancestors' subtrees did, as far as `reach` says.
-void markDirty(LayoutTree* tree, LayoutNodeIndex node, Reach reach = Reach_Holders) {
+// Returns true if `node` is a page-margin box (PrLayoutDisplay_PageMargin), which takes no part in its parent's layout.
+bool isMarginBox(const LayoutTree* tree, LayoutNodeIndex node) {
+    const LayoutTreeNode& n = layoutTreeNode(tree, node);
+    return layoutKindIsElement(n.kind) && layoutBoxStyle(tree->styles, n.style).display == PrLayoutDisplay_PageMargin;
+}
+
+// Records that a page-margin box among the children of `parent` changed, came or went.
+void markMargins(LayoutTree* tree, LayoutNodeIndex parent) {
+    tree->pendingLayout |= LayoutInputFlag_Layout;
+    nodeAt(tree, parent).dirty |= LayoutDirtyFlag_Margins;
+}
+
+// Records that the inputs of the node's layout changed, and that its ancestors' subtrees did, as far as `reach` says. A
+// change in a page-margin box reaches its parent only as a change of its margins. Margin boxes are children of the
+// root, so the walk reads a child's style only when it reaches the root, and only if `kMargins` says that the tree has
+// a margin box.
+template <bool kMargins>
+void markDirtyIn(LayoutTree* tree, LayoutNodeIndex node, Reach reach) {
     tree->pendingLayout |= LayoutInputFlag_Layout;
     LayoutTreeNode& n = nodeAt(tree, node);
     n.dirty |= LayoutDirtyFlag_Self;
@@ -246,7 +263,11 @@ void markDirty(LayoutTree* tree, LayoutNodeIndex node, Reach reach = Reach_Holde
     if (reach == Reach_Ancestors) {
         // An ancestor whose ancestors all hold a change ends the walk.
         n.dirty |= LayoutDirtyFlag_Ancestors;
-        for (uint32_t at = n.parent; at != kPrLayoutNodeNone; at = nodeAt(tree, at).parent) {
+        for (uint32_t child = node, at = n.parent; at != kPrLayoutNodeNone; child = at, at = nodeAt(tree, at).parent) {
+            if (kMargins && at == tree->root && isMarginBox(tree, child)) {
+                markMargins(tree, at);
+                break;
+            }
             LayoutTreeNode& ancestor = nodeAt(tree, at);
             if ((ancestor.dirty & LayoutDirtyFlag_Ancestors) != 0)
                 break;
@@ -261,7 +282,11 @@ void markDirty(LayoutTree* tree, LayoutNodeIndex node, Reach reach = Reach_Holde
     // that the inline box is the containing block of.
     LayoutNodeIndex box = layoutIsOutOfFlow(tree, node) ? node : kPrLayoutNodeNone;
     bool inlineHolder = false;
-    for (uint32_t at = n.parent; at != kPrLayoutNodeNone; at = nodeAt(tree, at).parent) {
+    for (uint32_t child = node, at = n.parent; at != kPrLayoutNodeNone; child = at, at = nodeAt(tree, at).parent) {
+        if (kMargins && at == tree->root && isMarginBox(tree, child)) {
+            markMargins(tree, at);
+            break;
+        }
         LayoutTreeNode& ancestor = nodeAt(tree, at);
         if (box != kPrLayoutNodeNone) {
             bool holds;
@@ -290,6 +315,15 @@ void markDirty(LayoutTree* tree, LayoutNodeIndex node, Reach reach = Reach_Holde
         if (layoutIsOutOfFlow(tree, at))
             box = at;
     }
+}
+
+// Records that the inputs of the node's layout changed, as markDirtyIn does. A tree without page-margin boxes walks
+// without looking for them.
+void markDirty(LayoutTree* tree, LayoutNodeIndex node, Reach reach = Reach_Holders) {
+    if (tree->styles->pageMarginGroups != 0)
+        markDirtyIn<true>(tree, node, reach);
+    else
+        markDirtyIn<false>(tree, node, reach);
 }
 
 // Returns true if two records differ in their flex groups only in what a flex or grid container reads of its item: its
@@ -338,6 +372,14 @@ void markRunsAround(LayoutTree* tree, LayoutNodeIndex parent, LayoutNodeIndex pr
     }
 }
 
+// Records that the children of `parent` changed by the coming or going of `child`.
+void markChildren(LayoutTree* tree, LayoutNodeIndex parent, LayoutNodeIndex child) {
+    if (tree->styles->pageMarginGroups != 0 && parent == tree->root && isMarginBox(tree, child))
+        markMargins(tree, parent);
+    else
+        markDirty(tree, parent, Reach_Ancestors);
+}
+
 // Marks the child `node` of a flex or grid container if it is content, and the content around it, in the same way as
 // markRunsAround.
 void markRunNeighbours(LayoutTree* tree, LayoutNodeIndex node) {
@@ -357,7 +399,7 @@ void appendNew(LayoutTree* tree, LayoutNodeIndex parent, LayoutNodeIndex node) {
         return;
     LayoutTreeNode& p = nodeAt(tree, parent);
     PR_ASSERT(layoutKindIsElement(p.kind));
-    markDirty(tree, parent, Reach_Ancestors);
+    markChildren(tree, parent, node);
     LayoutTreeNode& n = nodeAt(tree, node);
     n.parent = parent;
     n.previous = p.last;
@@ -629,6 +671,78 @@ void mismatch(Mismatch* out, LayoutNodeIndex node, const char* what) {
     prTextBufferAppend(&out->what, what);
 }
 
+// The page area of one page that brokenLine checks lines against: its block range in the page's coordinates, along the
+// physical axis of the root's block flow.
+struct PageArea {
+    PrLayoutUnit start;
+    PrLayoutUnit end;
+    bool horizontal;                // true if the root's writing mode is horizontal, with a vertical block axis
+    LayoutMode mode;                // the writing mode of the root, which monolithic boxes are found by
+};
+
+// Returns the box whose line in the subtree of `fragment`, at `offset` in its page, crosses an edge of `area`, or none.
+// A line that is taller than the page area may cross its end. `box` is the nearest box around `fragment`. Lines inside
+// a monolithic box and boxes out of flow are not checked, since no break falls inside them.
+LayoutNodeIndex brokenLine(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutVec offset,
+        const PageArea& area, LayoutNodeIndex box) {
+    for (uint32_t i = 0; i < fragment->childCount; ++i) {
+        const LayoutChild& child = fragment->children[i];
+        const LayoutFragment* c = child.fragment;
+        PrLayoutVec at = offset + child.offset;
+        if (c->kind == LayoutFragmentKind_Line) {
+            PrLayoutUnit start = area.horizontal ? at.y : at.x;
+            PrLayoutUnit size = area.horizontal ? c->extent.y : c->extent.x;
+            PrLayoutUnit end = start + size;
+            bool crosses = (start < area.start && end > area.start) || (start < area.end && end > area.end);
+            if (crosses && size <= area.end - area.start)
+                return box;
+            continue;
+        }
+        if ((c->kind != LayoutFragmentKind_Box && c->kind != LayoutFragmentKind_Around) ||
+                (c->flags & LayoutFragmentFlag_OutOfFlow) != 0)
+            continue;
+        LayoutNodeIndex inner = box;
+        if (c->kind == LayoutFragmentKind_Box && c->node != kPrLayoutNodeNone) {
+            // A margin box lies outside the page area, and is not fragmented.
+            if (layoutIsMonolithic(tree, c->node, area.mode) || isMarginBox(tree, c->node))
+                continue;
+            inner = c->node;
+        }
+        LayoutNodeIndex found = brokenLine(tree, c, at, area, inner);
+        if (found != kPrLayoutNodeNone)
+            return found;
+    }
+    return kPrLayoutNodeNone;
+}
+
+// Returns true if no line of the tree's pages crosses an edge of its page area (css-break-4/#possible-breaks: a break
+// between lines never falls inside one). Otherwise records the box that holds the first such line.
+bool pagesVerify(const LayoutTree* tree, Mismatch* found) {
+    if (tree->pages.count == 0 || tree->fragment == nullptr || tree->fragment->childCount == 0)
+        return true;
+    const LayoutFragment* stack = tree->fragment->children[0].fragment;
+    PR_ASSERT(stack->childCount == tree->pages.count);
+    LayoutMode mode = layoutOwnMode(tree, tree->root);
+    bool horizontal = layoutIsHorizontal(mode);
+    for (uint32_t i = 0; i < stack->childCount; ++i) {
+        const PrLayoutPageBox& box = tree->pages.data[i].box;
+        PrLayoutUnit extent = horizontal ? box.extent.y : box.extent.x;
+        PageArea area{
+            .start = horizontal ? box.margin[PrRectSide_Top] : box.margin[PrRectSide_Left],
+            .end = extent - (horizontal ? box.margin[PrRectSide_Bottom] : box.margin[PrRectSide_Right]),
+            .horizontal = horizontal,
+            .mode = mode,
+        };
+        LayoutNodeIndex node = brokenLine(tree, stack->children[i].fragment, kLayoutVecZero, area, tree->root);
+        if (node != kPrLayoutNodeNone) {
+            mismatch(found, node, "a line crosses an edge of the page area of page ");
+            prTextBufferAppendU64(&found->what, i + 1, 10);
+            return false;
+        }
+    }
+    return true;
+}
+
 // Returns true if two kept baseline sets are the same, with the same clamps.
 bool sameBaselines(const LayoutBaselines& a, const LayoutBaselines& b) {
     for (uint32_t edge = 0; edge < LayoutBaselineEdge_Count; ++edge) {
@@ -666,8 +780,8 @@ bool sameText(const LayoutFragment* x, const LayoutFragment* y, LayoutNodeIndex 
     const LayoutFragmentFontRange* ra = layoutFragmentTextRanges(x);
     const LayoutFragmentFontRange* rb = layoutFragmentTextRanges(y);
     for (uint32_t i = 0; i < a.rangeCount; ++i) {
-        if (ra[i].font != rb[i].font || ra[i].glyphEnd != rb[i].glyphEnd) {
-            mismatch(out, node, "a font range's font or glyphs");
+        if (ra[i].font != rb[i].font || ra[i].glyphEnd != rb[i].glyphEnd || ra[i].scale != rb[i].scale) {
+            mismatch(out, node, "a font range's font, glyphs or scale");
             return false;
         }
     }
@@ -996,7 +1110,7 @@ void layoutTreeInsert(LayoutTree* tree, LayoutNodeIndex parentIndex, LayoutNodeI
     PR_ASSERT(layoutKindIsElement(p.kind) && n.parent == kPrLayoutNodeNone && tree->root != index &&
         !layoutTreeIsLaidOutRoot(tree, index));
     PR_ASSERT(beforeIndex == kPrLayoutNodeNone || nodeAt(tree, beforeIndex).parent == parentIndex);
-    markDirty(tree, parentIndex, Reach_Ancestors);
+    markChildren(tree, parentIndex, index);
     n.parent = parentIndex;
     n.next = beforeIndex;
     if (beforeIndex == kPrLayoutNodeNone) {
@@ -1026,7 +1140,7 @@ void layoutTreeRemove(LayoutTree* tree, LayoutNodeIndex index) {
     LayoutNodeIndex previous = n.previous;
     LayoutNodeIndex next = n.next;
     if (parent != kPrLayoutNodeNone)
-        markDirty(tree, parent, Reach_Ancestors);
+        markChildren(tree, parent, index);
     // Content removed from a flex or grid container keeps nothing of its run's anonymous item.
     if (parent != kPrLayoutNodeNone && layoutChildrenAreItems(nodeAt(tree, parent).children) && layoutIsRunContent(n))
         layoutCacheInvalidate(tree->cache, index);
@@ -1084,6 +1198,22 @@ void layoutTreeReadViewport(LayoutTree* tree, LayoutNodeIndex node) {
         return;
     n.readsViewport = true;
     tree->viewportReaders.push(node);
+}
+
+void layoutTreeForgetLayout(LayoutTree* tree) {
+    tree->pendingLayout |= LayoutInputFlag_Layout;
+    layoutTreeForgetPages(tree);
+    for (uint32_t i = 0; i < tree->nodes.count; ++i) {
+        if (tree->nodes.data[i].live)
+            layoutCacheForget(tree->cache, i);
+    }
+    if (tree->root != kPrLayoutNodeNone)
+        markDirty(tree, tree->root);
+}
+
+void layoutTreeForgetPages(LayoutTree* tree) {
+    layoutFragmentRelease(tree->pageStack);
+    tree->pageStack = nullptr;
 }
 
 const LayoutHighlights* PR_NULLABLE layoutTextHighlights(const LayoutTree* tree, LayoutNodeIndex node) {
@@ -1241,6 +1371,10 @@ void prLayoutTreeDestroy(PrLayoutTree* PR_NULLABLE tree) {
         prDrawListRelease(t->roots.data[i].drawing);
     }
     t->roots.reset();
+    t->pages.reset();
+    layoutTreeForgetPages(t);
+    t->pageMargins.reset();
+    t->runningPages.reset();
     t->rootReaders.reset();
     layoutAnchoringReset(t->anchoring);
     layoutCacheReset(t->cache);
@@ -1276,6 +1410,21 @@ void prLayoutTreeSetCanvasColor(PrLayoutTree* tree, PrColor16 color) {
 
 PrColor16 prLayoutTreeCanvasColor(const PrLayoutTree* tree) {
     return tree->canvasColor;
+}
+
+void prLayoutTreeSetMarking(PrLayoutTree* tree, PrLayoutMarking marking) {
+    if (marking == tree->marking)
+        return;
+    tree->marking = marking;
+    // Every recording marks or not as the tree did when it was made, so none is current.
+    uint32_t paints = tree->paint.paints;
+    layoutPaintCacheReset(tree->paint);
+    tree->paint.paints = paints;
+    tree->pendingPaint |= LayoutInputFlag_Paint;
+}
+
+PrLayoutMarking prLayoutTreeMarking(const PrLayoutTree* tree) {
+    return tree->marking;
 }
 
 void prLayoutTreeSetViewportWheelEvents(PrLayoutTree* tree, PrLayoutWheelEvents events) {
@@ -1318,6 +1467,40 @@ PrLayoutNode prLayoutNodeCreateLineBreak(PrLayoutTree* tree, PrLayoutNode parent
     return createStyled(tree, parent, style, PrLayoutNodeKind_LineBreak);
 }
 
+PrLayoutNode prLayoutTreeCopy(PrLayoutTree* tree, PrLayoutNode node, PrLayoutNode parent) {
+    LayoutTree* t = tree;
+    PR_ASSERT(!t->frame.open);
+    PrLayoutNode copy = kPrLayoutNodeNone;
+    const LayoutTreeNode& n = nodeAt(t, layoutNodeIndex(t, node));
+    switch (n.kind) {
+        case PrLayoutNodeKind_Text: {
+            copy = prLayoutNodeCreateText(tree, parent, prLayoutNodeText(tree, node));
+            PrLayoutStyleIndex style = prLayoutNodeStyle(tree, node);
+            if (style != kPrLayoutStyleNone)
+                prLayoutNodeSetStyle(tree, copy, style);
+            break;
+        }
+        case PrLayoutNodeKind_Replaced: {
+            copy = createStyled(tree, parent, n.style, n.kind);
+            prLayoutNodeSetNaturalSize(tree, copy, prLayoutNodeNaturalSize(tree, node));
+            PrLayoutContent content = prLayoutNodeContent(tree, node);
+            prLayoutNodeSetContent(tree, copy, &content);
+            break;
+        }
+        default: copy = createStyled(tree, parent, n.style, n.kind); break;
+    }
+    LayoutNodeIndex index = layoutNodeIndex(t, node);
+    nodeAt(t, layoutNodeIndex(t, copy)).rendered = nodeAt(t, index).rendered;
+    if (layoutKindIsElement(nodeAt(t, index).kind)) {
+        PrLayoutStyleIndex firstLine = layoutFirstLineStyle(t, index);
+        if (firstLine != kPrLayoutStyleNone)
+            prLayoutNodeSetFirstLineStyle(tree, copy, firstLine);
+    }
+    for (LayoutNodeIndex child = nodeAt(t, index).first; child != kPrLayoutNodeNone; child = nodeAt(t, child).next)
+        prLayoutTreeCopy(tree, layoutNodeName(t, child), copy);
+    return copy;
+}
+
 void prLayoutTreeErase(PrLayoutTree* tree, PrLayoutNode node) {
     PR_ASSERT(!tree->frame.open);
     LayoutTree* t = tree;
@@ -1327,7 +1510,7 @@ void prLayoutTreeErase(PrLayoutTree* tree, PrLayoutNode node) {
     LayoutNodeIndex previous = n.previous;
     LayoutNodeIndex next = n.next;
     if (parent != kPrLayoutNodeNone)
-        markDirty(t, parent, Reach_Ancestors);
+        markChildren(t, parent, index);
     layoutStackingRemoving(t, index);
     unlink(t, index);
     markRunsAround(t, parent, previous, next);
@@ -1335,10 +1518,7 @@ void prLayoutTreeErase(PrLayoutTree* tree, PrLayoutNode node) {
 }
 
 bool prLayoutNodeIsValid(const PrLayoutTree* tree, PrLayoutNode node) {
-    const LayoutTree* t = tree;
-    LayoutNodeIndex index = LayoutNodeIndex(node);
-    return index != kPrLayoutNodeNone && index < t->nodes.count && t->nodes.data[index].live &&
-        t->nodes.data[index].generation == uint32_t(node >> 32);
+    return layoutNodeIsValid(tree, node);
 }
 
 PrLayoutNodeKind prLayoutNodeKind(const PrLayoutTree* tree, PrLayoutNode node) {
@@ -1644,6 +1824,7 @@ void prLayoutTreeLayout(PrLayoutTree* tree, const PrLayoutRoot* roots, uint32_t 
     if (metricsChanged) {
         t->metricsGeneration = t->styles->metricsGeneration;
         forgetHintedShapings(t);
+        layoutTreeForgetPages(t);
         t->pendingLayout |= LayoutInputFlag_Layout;
         for (uint32_t i = 0; i < t->nodes.count; ++i) {
             if (t->nodes.data[i].live)
@@ -1691,7 +1872,7 @@ void prLayoutTreeLayout(PrLayoutTree* tree, const PrLayoutRoot* roots, uint32_t 
         layoutFragmentRelease(root.fragment);
         root.fragment = laid;
     }
-    layoutEndLayout(*state.scratch);
+    layoutEndLayout(state);
     // The final tree is published once it is whole.
     t->cache.published = 0;
     layoutCachePlace(t->cache, kPrLayoutNodeNone, fragment);
@@ -1740,11 +1921,17 @@ bool prLayoutTreeVerify(PrLayoutTree* tree, PrLayoutTreeDifference* PR_NULLABLE 
     uint32_t listsFound = t->stacking.listsFound;
     Mismatch found{kPrLayoutNodeNone, {}};
     const PrLayoutTreeStats& done = t->stats;
-    bool same = true;
+    bool same = pagesVerify(t, &found);
     // Each stage did no work unless an input it reads changed.
-    if ((t->laidOutFor & LayoutInputFlag_Layout) == 0 &&
+    if (same && (t->laidOutFor & LayoutInputFlag_Layout) == 0 &&
             (done.blocksLaidOut != 0 || done.linesLaidOut != 0 || done.inlinesShaped != 0 || done.intrinsicsComputed != 0)) {
-        mismatch(&found, kPrLayoutNodeNone, "the last layout did work, but no input that layout reads had changed");
+        mismatch(&found, kPrLayoutNodeNone, "the last layout did work, but no input that layout reads had changed:");
+        const uint32_t counts[] = {done.blocksLaidOut, done.linesLaidOut, done.inlinesShaped, done.intrinsicsComputed};
+        const char* names[] = {" blocks ", ", lines ", ", shapings ", ", intrinsic sizes "};
+        for (uint32_t i = 0; i < 4; ++i) {
+            prTextBufferAppend(&found.what, names[i]);
+            prTextBufferAppendU64(&found.what, counts[i], 10);
+        }
         same = false;
     }
     if (same && (t->paintedFor & (LayoutInputFlag_Layout | LayoutInputFlag_Paint)) == 0 &&
@@ -1778,7 +1965,7 @@ bool prLayoutTreeVerify(PrLayoutTree* tree, PrLayoutTreeDifference* PR_NULLABLE 
                 same = false;
             }
         }
-        layoutEndLayout(*state.scratch);
+        layoutEndLayout(state);
         if (same) {
             LayoutNodeIndex node = layoutPositionsVerify(t);
             if (node != kPrLayoutNodeNone) {

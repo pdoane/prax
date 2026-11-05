@@ -18,6 +18,7 @@
 #include "layout/src/layout_cache.h"
 #include "layout/src/layout_exclusion.h"
 #include "layout/src/layout_fragment.h"
+#include "layout/src/layout_fragmentation.h"
 #include "layout/src/layout_logical.h"
 #include "layout/src/layout_margin.h"
 #include "layout/src/layout_style.h"
@@ -31,6 +32,7 @@ struct LayoutFlexScratch;
 struct LayoutGridScratch;
 struct LayoutInlineScratch;
 struct LayoutTableScratch;
+struct LayoutBandsMemo;
 struct LayoutInlineShaping;
 struct LayoutShapingScratch;
 
@@ -94,6 +96,10 @@ inline LayoutRequest layoutBlockRequest(const LayoutRequests* PR_NULLABLE reques
 struct LayoutSpace {
     LayoutMode mode;         // the containing block's mode, which the margins, insets and placement are in
 
+    // What an auto size is in each of the box's axes.
+    LayoutAutoSize autoInline;
+    LayoutAutoSize autoBlock;
+
     // What an auto inline size fills, along with auto inline margins if the box is in its containing block's flow: the
     // containing block's content inline size, or the space beside the floats in which a box that avoids them is placed.
     PrLayoutUnit available;
@@ -115,22 +121,36 @@ struct LayoutSpace {
     // size (css-writing-modes-4/#orthogonal-auto). A result reports reading it (LayoutResult::readsFallback).
     PrLayoutVec fallback;
 
+    // For a box out of flow, the margin box block size that a stretch-fit block size fills, which is the size of its
+    // inset-modified containing block and is never indefinite.
+    PrLayoutUnit stretchBlock;
+
     const LayoutBfc* PR_NULLABLE bfc;   // set if it is in flow in a context it does not establish
 
     // The outside markers that the box's first line holds (PrLayoutDisplay_Marker): the extent of their margin boxes
     // about the alphabetic baseline, or empty for none.
     LayoutLineExtent marker;
 
-    // What an auto size is in each of the box's axes. For a box out of flow, also the margin box block size that a
-    // stretch-fit block size fills, which is the size of its inset-modified containing block and is never indefinite.
-    LayoutAutoSize autoInline;
-    LayoutAutoSize autoBlock;
-    PrLayoutUnit stretchBlock;
-
     // What a table gives a table cell beyond its size requests, or null for any other box. The inputs stay valid during
     // the call that receives the space. A cached result is keyed on them.
     const LayoutCellSpace* PR_NULLABLE cell;
+
+    // What a fragmentation context gives the box, or null outside one. It stays valid during the call that receives the
+    // space. A cached result is never laid out with it: one that a fragmentainer does not break is the result of an
+    // unfragmented layout.
+    const LayoutFragmentation* PR_NULLABLE fragmentation;
 };
+
+// Returns the fragmentainer that a box laid out in `space` is laid out in, or null outside a fragmentation context.
+inline const LayoutFragmentainer* PR_NULLABLE layoutSpaceFragmentainer(const LayoutSpace& space) {
+    return space.fragmentation != nullptr ? space.fragmentation->fragmentainer : nullptr;
+}
+
+// Returns the token that a box laid out in `space` resumes from, or null for its first fragment or outside a
+// fragmentation context.
+inline const LayoutBreakToken* PR_NULLABLE layoutSpaceResume(const LayoutSpace& space) {
+    return space.fragmentation != nullptr ? space.fragmentation->resume : nullptr;
+}
 
 // Returns the cell inputs of `space`, which are empty for a box that is not a table cell.
 inline LayoutCellSpace layoutCellSpaceFromSpace(const LayoutSpace& space) {
@@ -161,26 +181,30 @@ struct LayoutResult {
 
     PrLayoutUnit marginInlineStart; // where its border box starts within its containing block's content box
 
-    LayoutResultFlags flags;
-
     // In a context that it does not establish: its border box's block-start edge, if its layout found it, or
-    // kLayoutOffsetNone; and whether clearance put it there.
+    // kLayoutOffsetNone. `cleared` says whether clearance put it there.
     PrLayoutUnit top = kLayoutOffsetNone;
-    bool cleared;
 
     // Where the margins before it resolve, if it stopped there with floats waiting for them, or kLayoutOffsetNone. The
     // box that holds the floats lays out again with the margins resolved.
     PrLayoutUnit resolution = kLayoutOffsetNone;
-
-    // The unplaced floats that it holds while collapsing through. Its parent lays it out again once it knows where to
-    // place them.
-    LayoutLineSides unplaced;
 
     // What it read of its context, which its parent records when it places it: a block range from its border box's
     // block-start edge, empty if readLo >= readHi. A cached result that reads nothing at its position gives the range
     // it read when it was laid out, because only placing it says where that is.
     PrLayoutUnit readLo;
     PrLayoutUnit readHi;
+
+    LayoutResultFlags flags;
+    bool cleared;
+
+    // The unplaced floats that it holds while collapsing through. Its parent lays it out again once it knows where to
+    // place them.
+    LayoutLineSides unplaced;
+
+    // Where the box resumes in the next fragmentainer, a reference that the caller takes, or null if it finished in the
+    // fragmentainer of its space (layout_fragmentation.h).
+    const LayoutBreakToken* PR_NULLABLE token;
 };
 
 // Returns true if a layout stopped where the margins before the box resolve, and created no fragment.
@@ -317,9 +341,16 @@ struct LayoutScratch {
     HashIndex memoIndex;                          // the memos by KeyIndex::hashOf their node
     RawArray<LayoutIntrinsicMemo> intrinsicMemos; // the running layout's intrinsic memos, which its end empties
     HashIndex intrinsicMemoIndex;                 // the intrinsic memos by KeyIndex::hashOf their node
+    RawArray<LayoutBandsMemo*> bands;             // the running layout's flex and grid content in fragmentation
+                                                  // contexts, which its end frees (layoutEndLayout)
+    HashIndex bandIndex;                          // the band memos by KeyIndex::hashOf their node
     LayoutFlexScratch* PR_NULLABLE flex;          // made the first time a layout reaches a flex container
     LayoutTableScratch* PR_NULLABLE table;        // created the first time that a layout reaches a table
     LayoutGridScratch* PR_NULLABLE grid;          // made the first time a layout reaches a grid container
+
+    // The boxes that the running layout laid out with break tokens, whose results no cache entry keeps, and whose marks
+    // its end clears (layoutEndLayout), since it laid them out from their current inputs.
+    RawArray<LayoutNodeIndex> broken;
 };
 
 // Creates empty scratch memory, and frees it.
@@ -333,6 +364,10 @@ struct LayoutState {
     LayoutScratch* scratch;
     PrLayoutTreeStats* stats;
     PrLayoutVec viewport;           // the extent of the layout, the initial containing block's
+
+    // The least that a fragmentainer would have to grow by for the content that a break pushed past its end to fit, the
+    // least over the breaks since a balancing column set last reset it, or INT32_MAX if none pushed anything.
+    PrLayoutUnit fragmentShortage = PrLayoutUnit{INT32_MAX};
 
     // Whether anything laid out or measured since the innermost box that clears this flag read the fallback of the
     // space or input it was given (LayoutSpace::fallback). A box clears the flag before its content, and sets it again

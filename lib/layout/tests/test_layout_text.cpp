@@ -440,6 +440,56 @@ TEST_CASE("text is shaped with its font group's feature set") {
     CHECK(verified(f.tree));
 }
 
+TEST_CASE("text beside a box of other font features is shaped with its own features") {
+    Fixture f;
+    PrLayoutFontStyle normal = textFont(PrLayoutWhiteSpaceCollapse_Collapse);
+    PrTextFeatureSetDesc desc{
+        .caps = PrTextCaps_AllSmall,
+        .kerning = PrTextKerning_Auto,
+        .synthesis = PrTextSynthesisFlag_SmallCaps,
+    };
+    PrTextFeatureSet* caps = prTextFeatureSetCreate(&desc);
+    PrLayoutFontStyle capped = normal;
+    capped.features = caps;
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block(), nullptr, nullptr, &normal);
+    PrLayoutNode first = f.element(root, inlineBox(), nullptr, nullptr, &capped);
+    f.text(first, "the");
+    PrLayoutNode rest = f.element(root, inlineBox(), nullptr, nullptr, &normal);
+    f.text(rest, "following");
+    prTextFeatureSetRelease(caps);
+    f.layout(px(400, 600));
+    CHECK(f.bounds(rest).right - f.bounds(rest).left == doctest::Approx(widthOf("following")));
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("synthesized small capitals paint at the em that shaping scaled them to") {
+    Fixture f;
+    PrTextFeatureSetDesc desc{
+        .caps = PrTextCaps_Small,
+        .kerning = PrTextKerning_Auto,
+        .synthesis = PrTextSynthesisFlag_SmallCaps,
+    };
+    PrTextFeatureSet* caps = prTextFeatureSetCreate(&desc);
+    PrLayoutFontStyle capped = textFont(PrLayoutWhiteSpaceCollapse_Collapse);
+    capped.features = caps;
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block(), nullptr, nullptr, &capped);
+    f.text(root, "Tht");
+    prTextFeatureSetRelease(caps);
+    f.layout(px(400, 600));
+    CHECK(verified(f.tree));
+    PrDrawList* list = prDrawListCreate();
+    prLayoutTreePaint(f.tree, list);
+    std::vector<DrawnGlyph> drawn;
+    appendGlyphs(list, prDrawTransformFromDAffine2(PrDAffine2{1, 0, 0, 1, 0, 0}), drawn);
+    prDrawListRelease(list);
+    // The capital keeps the em of the text, and the lowercase letters are capitals at a smaller em.
+    REQUIRE(drawn.size() == 3);
+    CHECK(drawn[0].size == 16.0f);
+    CHECK(drawn[1].size < 16.0f);
+    CHECK(drawn[2].size == drawn[1].size);
+    CHECK(drawn[2].id == drawn[0].id);
+}
+
 TEST_CASE("text is transformed after its white space collapses and before it is shaped") {
     auto transformedWidth = [](const char* text, PrTextTransform transform) {
         Fixture f;

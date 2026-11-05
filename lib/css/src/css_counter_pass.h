@@ -19,6 +19,31 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+// Returns true if a computed counter-reset, counter-increment or counter-set changes a counter.
+inline bool cssChangesCounters(CssValueRun run) {
+    return run.count != 0 && !cssValueIsKeyword(run.values, PrCssKeyword_None);
+}
+
+// Calls `fn` with each item of a computed counter-reset, counter-increment or counter-set: the counter's name, whether
+// reversed() names it, and its integer if it has one.
+template <typename Fn>
+void cssEachCounterItem(CssValueRun run, Fn fn) {
+    if (!cssChangesCounters(run))
+        return;
+    for (uint32_t i = 0; i < run.count;) {
+        const CssValueNode* item = &run.values[i];
+        bool reversed = item->kind == PrCssValueKind_Function;
+        PrStringView name = cssValueText(run, reversed ? item + 1 : item);
+        i += item->next;
+        bool given = i < run.count && run.values[i].kind == PrCssValueKind_Integer;
+        double number = given ? run.values[i].number : 0;
+        if (given)
+            ++i;
+        int32_t value = number < INT32_MIN ? INT32_MIN : number > INT32_MAX ? INT32_MAX : int32_t(number);
+        fn(name, reversed, given, value);
+    }
+}
+
 // Returns true if the computed display of `style` makes a list item (css-display-3/#list-items).
 bool cssIsListItem(const CssComputedStyle* style);
 

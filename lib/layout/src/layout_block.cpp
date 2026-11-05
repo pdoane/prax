@@ -10,18 +10,62 @@
 
 #include "layout/src/layout_block.h"
 
+#include "pr/alloc.h"
+#include "pr/sort.h"
+
 #include "layout/src/layout_box.h"
 #include "layout/src/layout_cache.h"
 #include "layout/src/layout_flex.h"
 #include "layout/src/layout_flow.h"
+#include "layout/src/layout_fragmentation.h"
 #include "layout/src/layout_grid.h"
 #include "layout/src/layout_intrinsic.h"
+#include "layout/src/layout_multicol.h"
+#include "layout/src/layout_page.h"
 #include "layout/src/layout_position.h"
 #include "layout/src/layout_replaced.h"
 #include "layout/src/layout_sizing.h"
 #include "layout/src/layout_table.h"
 
 namespace pr_impl {
+
+// What a box's content gave its shell, which the shell finishes the box from.
+struct LayoutShellContent {
+    PrLayoutUnit blockSize;                         // of the border box
+    PrLayoutUnit contentBlock;                      // the end of the in-flow content in the content box, before
+                                                    // alignment moved it
+    PrLayoutUnit shift;                             // how far alignment moved the content along the block axis
+    LayoutBaseline edges[LayoutBaselineEdge_Count]; // by LayoutBaselineEdge: the box's baselines, measured from the
+                                                    // block-start edge of its border box
+
+    // The bounds of the margin boxes of the items that a scroll container holds (LayoutContentOutcome).
+    LayoutLogicalOffset itemsStart;
+    LayoutLogicalOffset itemsEnd;
+};
+
+// The content of a flex or grid container that the running layout laid out in a fragmentation context, which its later
+// fragmentainers take instead of laying the container's items out again. Its key is the container's content space and
+// what its shell gives its content. Nothing changes during a layout, so the memo holds until the layout's end frees it.
+// The children are references that the memo holds, in the order that the content left them.
+struct LayoutBandsMemo {
+    LayoutNodeIndex node;
+    LayoutNodeIndex parent;
+    LayoutSpace space;
+    LayoutContentInput input;
+    PrLayoutUnit axisSize;
+    PrLayoutUnit axisEdges;
+    PrLayoutUnit percentBlock;
+    bool clamps;
+
+    LayoutShellContent content;
+    LayoutGridLinesCopy* PR_NULLABLE lines;
+    RawArray<LayoutLogicalChild> children;
+    RawArray<uint32_t> band;            // by child: its band, in block order
+    RawArray<uint32_t> bandFirst;       // by band: its first member, and the end of the members after the last band
+    RawArray<uint32_t> members;         // the children of each band in turn
+    RawArray<PrLayoutUnit> starts;      // by band: its block-start offset
+    RawArray<PrLayoutUnit> ends;        // by band: its block-end offset
+};
 
 namespace {
 
@@ -320,20 +364,6 @@ struct Shell {
     LayoutEdges& edges() { return orthogonal ? inner : e; }
 };
 
-// What a box's content gave its shell, which the shell finishes the box from.
-struct Content {
-    PrLayoutUnit blockSize;         // of the border box
-    PrLayoutUnit contentBlock;      // the end of the in-flow content in the content box, before alignment moved it
-    PrLayoutUnit shift;             // how far alignment moved the content along the block axis
-
-    // The box's baselines, indexed by LayoutBaselineEdge and measured from the block-start edge of its border box.
-    LayoutBaseline edges[LayoutBaselineEdge_Count];
-
-    // The bounds of the margin boxes of the items that a scroll container holds (LayoutContentOutcome).
-    LayoutLogicalOffset itemsStart;
-    LayoutLogicalOffset itemsEnd;
-};
-
 // Finds the shell `s` of the box that layoutContainer lays out: its inline size, the block size that its style or its
 // container decides, and its content box.
 PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node, const LayoutSpace& space,
@@ -371,6 +401,20 @@ PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node,
     // has the borders that the table resolves.
     if (box.display == PrLayoutDisplay_TableCell)
         layoutCellEdges(s.e, s.inner, space, mode);
+    // A box that resumes in a fragmentainer has no block-start margin there, and no block-start border or padding
+    // unless it clones its edges (css-break-4/#break-decoration).
+    if (layoutSpaceResume(space) != nullptr) {
+        bool clones = s.anonymous == nullptr &&
+            layoutFragmentationStyle(state.styles, n.style).boxDecorationBreak == PrLayoutBoxDecorationBreak_Clone;
+        LayoutEdges* both[] = {&s.e, &s.inner};
+        for (LayoutEdges* edges : both) {
+            edges->margin[LayoutSide_BlockStart] = kLayoutUnitZero;
+            if (!clones) {
+                edges->border[LayoutSide_BlockStart] = kLayoutUnitZero;
+                edges->padding[LayoutSide_BlockStart] = kLayoutUnitZero;
+            }
+        }
+    }
     const LayoutLogicalBox& sizing = s.sizing();
     LayoutEdges& es = s.edges();
 
@@ -447,7 +491,8 @@ PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node,
 // Lays out the content of the block container `s` in flow (layoutFlowContent), which may stop where the margins before
 // it resolve. In flow in a context, the box records its reads of the context in `reads`. Sets `content` to what the
 // shell finishes the box from.
-PR_FORCE_INLINE LayoutFlowOutcome flowContent(LayoutState& state, Shell& s, LayoutReads* PR_NULLABLE reads, Content& content) {
+PR_FORCE_INLINE LayoutFlowOutcome flowContent(LayoutState& state, Shell& s, LayoutReads* PR_NULLABLE reads,
+        LayoutShellContent& content) {
     // Content in a block size that its style or its container fixes is aligned in it.
     bool fixedBlock;
     if (s.requested)
@@ -473,7 +518,9 @@ PR_FORCE_INLINE LayoutFlowOutcome flowContent(LayoutState& state, Shell& s, Layo
         .marked = s.anonymous == nullptr,
         .reads = reads,
     };
-    LayoutFlowOutcome flow = layoutFlowContent(state, input);
+    // A multi-column container lays its content out as column sets and spanners (css-multicol-1).
+    bool columns = s.anonymous == nullptr && layoutHasColumns(state.styles, layoutTreeNode(state.tree, s.node).style);
+    LayoutFlowOutcome flow = columns ? layoutMulticolContent(state, input) : layoutFlowContent(state, input);
     content.blockSize = flow.blockSize;
     content.contentBlock = flow.contentBlock;
     content.shift = flow.shift;
@@ -482,13 +529,384 @@ PR_FORCE_INLINE LayoutFlowOutcome flowContent(LayoutState& state, Shell& s, Layo
     return flow;
 }
 
+// Returns where the box `s` resumes in the next fragmentainer, a reference that the caller takes, or null if the box
+// ends in the fragmentainer of its space. The box's space has a fragmentainer, and its content in flow gave `flow` and
+// `content`. A box whose content breaks fills the fragmentainer to its end. So does a box that reaches past the end
+// with a block size that its content does not decide, such as a fixed block size or a minimum that its content does not
+// reach, and the rest of that box goes to the next fragmentainer. Sets the block size in `content` to what the box's
+// fragment takes.
+PR_NOINLINE LayoutBreakToken* PR_NULLABLE fragmentedEnd(const Shell& s, LayoutFlowOutcome& flow, LayoutShellContent& content) {
+    const LayoutSpace& space = *s.space;
+    PR_ASSERT(space.fragmentation != nullptr);
+    const LayoutFragmentainer& fragmentainer = *space.fragmentation->fragmentainer;
+    const LayoutBreakToken* PR_NULLABLE resume = space.fragmentation->resume;
+    // The fragmentainer's end from the block-start edge of the border box.
+    PrLayoutUnit end = fragmentainer.end;
+    if (space.bfc != nullptr)
+        end = flow.top != kLayoutOffsetNone ? end - flow.top : layoutUnit(INT32_MAX);
+    PrLayoutUnit consumed = resume != nullptr ? resume->consumed : kLayoutUnitZero;
+    LayoutBreakToken* token = flow.token;
+    bool fixed = layoutIsDefinite(s.axis.size);
+    // The size that the content reaches here, through the box's block-end edges.
+    PrLayoutUnit reached =
+        s.origin.blockOffset + content.contentBlock + layoutEdgesContent(s.inner, LayoutSide_BlockEnd);
+    if (fixed) {
+        content.blockSize = layoutUnitMax(kLayoutUnitZero, s.axis.size - consumed);
+    } else if (consumed > kLayoutUnitZero) {
+        // A minimum that the content does not reach applies to the box's fragments together, so a box that resumes
+        // keeps what its earlier fragments left of it (css-break-4/#varying-size-boxes).
+        content.blockSize = layoutUnitMax(reached, content.blockSize - consumed);
+    }
+    // A box whose size its content does not reach continues past the end of the fragmentainer, and so does a box whose
+    // content ends in it but whose block-end edges do not: the break goes after its content
+    // (css-break-4/#possible-breaks, class C).
+    bool beyond = fixed || content.blockSize > reached || s.origin.blockOffset + content.contentBlock <= end;
+    if (token == nullptr && beyond && content.blockSize > end && end > kLayoutUnitZero)
+        token = layoutBreakTokenCreate(s.parent, kLayoutUnitZero, kPrLayoutNodeNone, nullptr);
+    if (token == nullptr)
+        return nullptr;
+    content.blockSize = layoutUnitMax(kLayoutUnitZero, end);
+    token->consumed = consumed + content.blockSize;
+    return token;
+}
+
+// Marks the fragment of the box `s` in a fragmentation context: a fragment after the first is a continuation, and a box
+// that slices its edges breaks at the sides where its fragment starts after a break or ends before one.
+void markBroken(const LayoutState& state, const Shell& s, LayoutFragment* fragment, bool breaks) {
+    const LayoutBreakToken* PR_NULLABLE resume = layoutSpaceResume(*s.space);
+    LayoutMode mode = s.content.mode;
+    bool clones = layoutFragmentationStyle(state.styles, layoutTreeNode(state.tree, s.node).style).boxDecorationBreak ==
+        PrLayoutBoxDecorationBreak_Clone;
+    if (resume != nullptr)
+        fragment->flags |= LayoutFragmentFlag_Continuation;
+    if (clones || fragment->kind != LayoutFragmentKind_Box)
+        return;
+    LayoutSideFlags broken = 0;
+    if (resume != nullptr)
+        broken |= LayoutSideFlags(1u << layoutPhysicalSide(mode, LayoutSide_BlockStart));
+    if (breaks)
+        broken |= LayoutSideFlags(1u << layoutPhysicalSide(mode, LayoutSide_BlockEnd));
+    fragment->broken = broken;
+}
+
+// Returns true if two spaces of a flex item or a table cell are the same. Neither is in flow in a context.
+bool sameSpace(const LayoutSpace& a, const LayoutSpace& b) {
+    PR_ASSERT(a.bfc == nullptr && b.bfc == nullptr);
+    return a.mode == b.mode && a.available == b.available && a.percentInline == b.percentInline &&
+        a.percentBlock == b.percentBlock && a.containing.inlineSize == b.containing.inlineSize &&
+        a.containing.blockSize == b.containing.blockSize && a.blockLimit == b.blockLimit &&
+        a.fallback == b.fallback && a.autoInline == b.autoInline && a.autoBlock == b.autoBlock &&
+        a.stretchBlock == b.stretchBlock && layoutCellSpacesEqual(layoutCellSpaceFromSpace(a),
+            layoutCellSpaceFromSpace(b));
+}
+
+// Returns true if the band memo `m` holds the content of the box `s` for `input`.
+bool sameBandsKey(const LayoutBandsMemo& m, const Shell& s, const LayoutContentInput& input) {
+    if (m.node != s.node || m.parent != s.parent || !sameSpace(m.space, s.contentSpace) ||
+            m.input.origin.inlineOffset != input.origin.inlineOffset ||
+            m.input.origin.blockOffset != input.origin.blockOffset || m.input.blockSize != input.blockSize ||
+            m.input.minBlock != input.minBlock || m.input.maxBlock != input.maxBlock ||
+            m.input.scrolls != input.scrolls || m.axisSize != s.axis.size || m.axisEdges != s.axis.edges ||
+            m.percentBlock != s.space->percentBlock || m.clamps != s.clamps)
+        return false;
+    for (LayoutSide side = 0; side < LayoutSide_Count; ++side) {
+        if (m.input.padding[side] != input.padding[side])
+            return false;
+    }
+    return true;
+}
+
+// Finds the bands of the children that the content of the box `s` left in the scratch children from `mark`, and moves
+// the children into a new memo of that content, which the running layout keeps. The items whose block ranges overlap
+// form a band, such as a flex line or a grid row.
+LayoutBandsMemo* keepBands(LayoutState& state, const Shell& s, const LayoutContentInput& input, uint32_t mark,
+        const LayoutShellContent& content, const LayoutGridLines& lines) {
+    LayoutScratch& scratch = *state.scratch;
+    RawArray<LayoutLogicalChild>& children = scratch.children;
+    LayoutMode mode = s.content.mode;
+    LayoutBandsMemo* m = allocZeroed<LayoutBandsMemo>();
+    m->node = s.node;
+    m->parent = s.parent;
+    m->space = s.contentSpace;
+    m->input = input;
+    m->input.content = nullptr;
+    m->axisSize = s.axis.size;
+    m->axisEdges = s.axis.edges;
+    m->percentBlock = s.space->percentBlock;
+    m->clamps = s.clamps;
+    m->content = content;
+    if (lines.node != kPrLayoutNodeNone)
+        m->lines = layoutGridLinesCopyCreate(state, lines);
+    uint32_t count = children.count - mark;
+    m->children.append(children.data + mark, count);
+    children.count = mark;
+    // The children in block order.
+    RawArray<uint32_t> order;
+    for (uint32_t i = 0; i < count; ++i) {
+        uint32_t at = order.count;
+        order.push(i);
+        while (at > 0 && m->children.data[order.data[at - 1]].offset.blockOffset >
+                m->children.data[i].offset.blockOffset) {
+            order.data[at] = order.data[at - 1];
+            order.data[--at] = i;
+        }
+    }
+    m->band.resize(count);
+    for (uint32_t k = 0; k < order.count; ++k) {
+        const LayoutLogicalChild& child = m->children.data[order.data[k]];
+        PrLayoutUnit top = child.offset.blockOffset;
+        PrLayoutUnit bottom = top + layoutLogicalSize(mode, child.fragment->extent).blockSize;
+        if (m->ends.count != 0 && top < m->ends.last()) {
+            m->ends.last() = layoutUnitMax(m->ends.last(), bottom);
+        } else {
+            m->starts.push(top);
+            m->ends.push(bottom);
+        }
+        m->band.data[order.data[k]] = m->starts.count - 1;
+    }
+    order.reset();
+    // The members of each band, in the children's order.
+    uint32_t bands = m->starts.count;
+    m->bandFirst.resize(bands + 1);
+    for (uint32_t b = 0; b <= bands; ++b)
+        m->bandFirst.data[b] = 0;
+    for (uint32_t i = 0; i < count; ++i)
+        m->bandFirst.data[m->band.data[i] + 1] += 1;
+    for (uint32_t b = 0; b < bands; ++b)
+        m->bandFirst.data[b + 1] += m->bandFirst.data[b];
+    m->members.resize(count);
+    RawArray<uint32_t> fill;
+    fill.append(m->bandFirst.data, bands);
+    for (uint32_t i = 0; i < count; ++i)
+        m->members.data[fill.data[m->band.data[i]]++] = i;
+    fill.reset();
+    scratch.bandIndex.insert(KeyIndex::hashOf(s.node), scratch.bands.count);
+    scratch.bands.push(m);
+    return m;
+}
+
+// Frees the band memo `m` and the references that it holds.
+void destroyBands(LayoutBandsMemo* m) {
+    for (uint32_t i = 0; i < m->children.count; ++i)
+        layoutFragmentRelease(m->children.data[i].fragment);
+    m->children.reset();
+    m->band.reset();
+    m->bandFirst.reset();
+    m->members.reset();
+    m->starts.reset();
+    m->ends.reset();
+    layoutGridLinesCopyDestroy(m->lines);
+    prMemoryFree(m);
+}
+
+// Appends to the scratch children the items of the flex or grid container `s` that go in the fragmentainer of its
+// space, from the content that `m` holds. Returns where the container resumes in the next fragmentainer, a reference or
+// null. The container breaks between its bands. The fragmentainer holds the bands from the one that the container
+// resumes at that end in it, and at least one band. In a fragmentainer after the first, the bands move up to the start
+// of the content box. Sets the block size in `content` to the fragment's. The work is in the bands that the
+// fragmentainer holds, so a container across many fragmentainers lays out in each only its own items.
+PR_NOINLINE LayoutBreakToken* PR_NULLABLE breakBetweenBands(LayoutState& state, const Shell& s, LayoutShellContent& content,
+        const LayoutBandsMemo& m) {
+    const LayoutSpace& space = *s.space;
+    LayoutMode mode = s.content.mode;
+    uint32_t bands = m.starts.count;
+    const LayoutFragmentainer& fragmentainer = *space.fragmentation->fragmentainer;
+    const LayoutBreakToken* PR_NULLABLE resume = space.fragmentation->resume;
+    uint32_t first = resume != nullptr ? resume->segment : 0;
+    PrLayoutUnit shift = kLayoutUnitZero;
+    if (first != 0 && first < bands)
+        shift = m.starts.data[first] - s.origin.blockOffset;
+    PrLayoutUnit end = fragmentainer.end;
+    // The items of the bands that break inside, laid out again, in place of their fragments in the memo, even if they
+    // end in the fragmentainer. An item that ended in an earlier fragmentainer has a null fragment.
+    RawArray<LayoutLogicalChild> pieces;
+    RawArray<uint32_t> pieceOf;         // by piece: its child
+    RawArray<uint32_t> pieced;          // the bands laid out again
+
+    // Breaks inside the band `b`, whose items are laid out again as fragmentainers that end where this one does, each
+    // from its token in `resumed` if the band resumes. Returns the tokens of the items, chained by their siblings, or
+    // null if they all end here, and sets `*height` to the band's block size from its top. Returns false if an item is
+    // not a box, which the band does not break in, or if the band starts here and no item placed any of its content.
+    auto breakInside = [&](uint32_t b, const LayoutBreakToken* PR_NULLABLE resumed, LayoutBreakToken** chain,
+            PrLayoutUnit* height) {
+        for (uint32_t k = m.bandFirst.data[b]; k < m.bandFirst.data[b + 1]; ++k) {
+            const LayoutFragment* f = m.children.data[m.members.data[k]].fragment;
+            if (f->kind != LayoutFragmentKind_Box || f->node == kPrLayoutNodeNone)
+                return false;
+        }
+        PrLayoutUnit top = m.starts.data[b] - shift;
+        bool breaks = false;
+        bool placed = false;
+        uint32_t pieceMark = pieces.count;
+        *height = kLayoutUnitZero;
+        *chain = nullptr;
+        for (uint32_t k = m.bandFirst.data[b]; k < m.bandFirst.data[b + 1]; ++k) {
+            uint32_t i = m.members.data[k];
+            const LayoutLogicalChild& child = m.children.data[i];
+            LayoutNodeIndex node = child.fragment->node;
+            const LayoutBreakToken* from = nullptr;
+            for (const LayoutBreakToken* t = resumed; t != nullptr && from == nullptr; t = t->sibling) {
+                if (t->node == node)
+                    from = t;
+            }
+            if (resumed != nullptr && (from == nullptr || from->segment == UINT32_MAX)) {
+                // The item ended before: it keeps an ended token for the fragmentainers after this one.
+                pieces.push(LayoutLogicalChild{nullptr, child.offset});
+                pieceOf.push(i);
+                LayoutBreakToken* ended = layoutBreakTokenCreate(node, kLayoutUnitZero, kPrLayoutNodeNone, nullptr);
+                ended->segment = UINT32_MAX;
+                ended->sibling = *chain;
+                *chain = ended;
+                continue;
+            }
+            PrLayoutUnit at = resumed != nullptr ? top : child.offset.blockOffset - shift;
+            LayoutFragmentainer itemFragmentainer = layoutFragmentainerMoved(fragmentainer, at,
+                fragmentainer.atTop && b == first);
+            LayoutSpace itemSpace = s.contentSpace;
+            LayoutFragmentation itemFragmentation{&itemFragmentainer, from};
+            itemSpace.fragmentation = &itemFragmentation;
+            LayoutRequests requests{
+                .inlineAxis = LayoutRequest{
+                    .size = layoutLogicalSize(mode, child.fragment->extent).inlineSize,
+                    .kind = LayoutRequestKind_Fixed,
+                    .definite = true,
+                },
+                .blockAxis = LayoutRequest{.kind = LayoutRequestKind_Content},
+            };
+            LayoutResult result = layoutBlockFragmented(state, node, itemSpace, &requests);
+            LayoutLogicalOffset offset = child.offset;
+            offset.blockOffset = at + shift;
+            pieces.push(LayoutLogicalChild{result.fragment, offset});
+            pieceOf.push(i);
+            *height = layoutUnitMax(*height, at - top + layoutLogicalSize(mode, result.fragment->extent).blockSize);
+            LayoutBreakToken* token = const_cast<LayoutBreakToken*>(result.token);
+            placed = placed || token == nullptr || !token->atStart;
+            if (token == nullptr) {
+                token = layoutBreakTokenCreate(node, kLayoutUnitZero, kPrLayoutNodeNone, nullptr);
+                token->segment = UINT32_MAX;
+            } else {
+                breaks = true;
+            }
+            token->sibling = *chain;
+            *chain = token;
+        }
+        if (!breaks || (resumed == nullptr && !placed)) {
+            layoutBreakTokenRelease(*chain);
+            *chain = nullptr;
+        }
+        if (resumed == nullptr && !placed) {
+            for (uint32_t p = pieceMark; p < pieces.count; ++p)
+                layoutFragmentRelease(pieces.data[p].fragment);
+            pieces.count = pieceMark;
+            pieceOf.count = pieceMark;
+            return false;
+        }
+        pieced.push(b);
+        return true;
+    };
+    // A band that resumes inside lays its items out from their tokens, and the bands after it follow its new height.
+    LayoutBreakToken* items = nullptr;
+    uint32_t split = UINT32_MAX;
+    PrLayoutUnit after = shift;     // the shift of the bands after the first
+    PrLayoutUnit firstEnd = first < bands ? m.ends.data[first] : kLayoutUnitZero;
+    if (resume != nullptr && resume->childToken != nullptr && first < bands) {
+        PrLayoutUnit height = kLayoutUnitZero;
+        if (breakInside(first, resume->childToken, &items, &height)) {
+            split = first;
+            after = shift + (firstEnd - m.starts.data[first]) - height;
+            firstEnd = m.starts.data[first] + height;
+        }
+    }
+    auto endOf = [&](uint32_t b) { return b == first ? firstEnd : m.ends.data[b]; };
+    uint32_t next = items != nullptr ? first + 1 : first;
+    while (next < bands && items == nullptr) {
+        PrLayoutUnit bandShift = next == first ? shift : after;
+        bool fits = endOf(next) - bandShift <= end;
+        if (!fits && split != next) {
+            // A band that does not fit breaks inside if it is the first here and nothing comes before the container in
+            // the fragmentainer, or if no fragmentainer could hold it. Otherwise it goes to the next fragmentainer, and
+            // so does the container if the band is its first.
+            bool top = fragmentainer.atTop || resume != nullptr;
+            bool alone = (next == first && top) ||
+                endOf(next) - m.starts.data[next] > fragmentainer.blockSize - s.origin.blockOffset;
+            PrLayoutUnit height = kLayoutUnitZero;
+            if (alone && breakInside(next, nullptr, &items, &height) && items != nullptr) {
+                split = next;
+                ++next;
+                break;
+            }
+        }
+        if (!fits && next != first)
+            break;
+        ++next;
+    }
+    // The items of the bands from the first to the next, in the children's order, which is the order that they paint
+    // in. The items of the other bands go to other fragmentainers.
+    RawArray<uint32_t> kept;
+    for (uint32_t b = first; b < next && b < bands; ++b) {
+        for (uint32_t k = m.bandFirst.data[b]; k < m.bandFirst.data[b + 1]; ++k) {
+            uint32_t i = m.members.data[k];
+            uint32_t at = kept.count;
+            kept.push(i);
+            for (; at > 0 && kept.data[at - 1] > i; --at)
+                kept.data[at] = kept.data[at - 1];
+            kept.data[at] = i;
+        }
+    }
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
+    for (uint32_t k = 0; k < kept.count; ++k) {
+        uint32_t i = kept.data[k];
+        uint32_t b = m.band.data[i];
+        LayoutLogicalChild child = m.children.data[i];
+        if (pieced.find(b) != kArrayMissing) {
+            uint32_t p = pieceOf.find(i);
+            if (p != kArrayMissing) {
+                child = pieces.data[p];
+                pieces.data[p].fragment = nullptr;
+            } else {
+                layoutFragmentRetain(child.fragment);
+            }
+        } else {
+            layoutFragmentRetain(child.fragment);
+        }
+        if (child.fragment == nullptr)
+            continue;
+        child.offset.blockOffset -= b == first ? shift : after;
+        children.push(child);
+    }
+    for (uint32_t p = 0; p < pieces.count; ++p)
+        layoutFragmentRelease(pieces.data[p].fragment);
+    pieces.reset();
+    pieceOf.reset();
+    pieced.reset();
+    kept.reset();
+    LayoutBreakToken* token = nullptr;
+    if (items != nullptr) {
+        token = layoutBreakTokenCreate(s.parent, kLayoutUnitZero, kPrLayoutNodeNone, items);
+        token->segment = split;
+        content.blockSize = layoutUnitMax(kLayoutUnitZero, end);
+    } else if (next < bands) {
+        state.fragmentShortage = layoutUnitMin(state.fragmentShortage, endOf(next) - after - end);
+        token = layoutBreakTokenCreate(s.parent, kLayoutUnitZero, kPrLayoutNodeNone, nullptr);
+        token->segment = next;
+        content.blockSize = layoutUnitMax(kLayoutUnitZero, end);
+    } else {
+        content.blockSize = layoutUnitMax(kLayoutUnitZero, content.blockSize - after);
+    }
+    return token;
+}
+
 // Lays out or solves the content of the box `s`, which establishes an independent formatting context: a flex or grid
 // container's items, for `goal`. Sets `content` to what the shell finishes the box from, and `lines` to the lines of a
 // grid container that builds. The block size of the content box is the box's if its style or its container decides it,
 // and otherwise its content decides it within the box's limits. A size that its container decides or asks of its
 // content has no limits.
-PR_NOINLINE void independentContent(LayoutState& state, Shell& s, LayoutContentGoal goal, Content& content,
-        LayoutGridLines* lines) {
+//
+// If `bands` is not null, the content is built in a fragmentation context, and its children go to a memo of the running
+// layout instead of the scratch children (keepBands). The memo is set to `*bands`. A later layout of the same content,
+// as in the next fragmentainer, takes the memo, and lays out nothing.
+PR_NOINLINE void independentContent(LayoutState& state, Shell& s, LayoutContentGoal goal, LayoutShellContent& content,
+        LayoutGridLines* lines, const LayoutBandsMemo** PR_NULLABLE bands = nullptr) {
     const PrLayoutBoxStyle& box = *s.box;
     const LayoutLogicalBox& sizing = s.sizing();
     const LayoutBlockAxis& axis = s.axis;
@@ -516,6 +934,20 @@ PR_NOINLINE void independentContent(LayoutState& state, Shell& s, LayoutContentG
         input.minBlock = layoutUnitMax(input.minBlock, input.blockSize);
         input.blockSize = layoutUnit(-1);
     }
+    LayoutScratch& scratch = *state.scratch;
+    if (bands != nullptr) {
+        uint32_t at = scratch.bandIndex.find(KeyIndex::hashOf(s.node),
+            [&](uint32_t i) { return sameBandsKey(*scratch.bands.data[i], s, input); });
+        if (at != kHashMissing) {
+            const LayoutBandsMemo& m = *scratch.bands.data[at];
+            content = m.content;
+            if (m.lines != nullptr)
+                *lines = layoutGridLinesRestore(state, *m.lines);
+            *bands = &m;
+            return;
+        }
+    }
+    uint32_t mark = scratch.children.count;
     LayoutContentOutcome outcome;
     if (s.children == LayoutChildren_Flex)
         outcome = layoutFlexContent(state, s.parent, input);
@@ -528,12 +960,14 @@ PR_NOINLINE void independentContent(LayoutState& state, Shell& s, LayoutContentG
     content.edges[LayoutBaselineEdge_Last] = layoutBaselineMoved(outcome.last, s.origin.blockOffset);
     content.itemsStart = outcome.itemsStart;
     content.itemsEnd = outcome.itemsEnd;
+    if (bands != nullptr)
+        *bands = keepBands(state, s, input, mark, content, *lines);
 }
 
 // Lays out the parts of the table `s` as its content (layoutTableContent). Sets `content` to what the shell finishes
 // the box from. The table's captions and grid are placed relative to its border box, not inside its edges, and its
 // border box holds them. Returns what layoutTableFinish needs to make the table's fragment.
-PR_NOINLINE LayoutTableOutcome tableContent(LayoutState& state, const Shell& s, Content& content) {
+PR_NOINLINE LayoutTableOutcome tableContent(LayoutState& state, const Shell& s, LayoutShellContent& content) {
     LayoutTableInput input{
         .space = s.space,
         .inlineSize = s.inlineSize,
@@ -581,7 +1015,7 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
     // flow, because a box out of flow ends a run.
     RawArray<LayoutLogicalChild>& children = state.scratch->children;
     uint32_t mark = children.count;
-    Content content{};
+    LayoutShellContent content{};
     LayoutFragment* fragment = nullptr;
     auto build = [&](const LayoutGridLines* PR_NULLABLE lines) -> LayoutFragment* {
         if (measure != nullptr)
@@ -610,6 +1044,9 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
             result.top = flow.top;
             result.cleared = flow.cleared;
             result.unplaced = flow.unplaced;
+            PR_ASSERT(space.fragmentation != nullptr || flow.token == nullptr);
+            if (space.fragmentation != nullptr)
+                result.token = fragmentedEnd(s, flow, content);
             fragment = build(nullptr);
             break;
         }
@@ -621,7 +1058,13 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
             else if (kind == LayoutMeasureKind_Baselines)
                 goal = LayoutContentGoal_Baselines;
             LayoutGridLines lines{kPrLayoutNodeNone, 0};
-            independentContent(state, s, goal, content, &lines);
+            if (measure == nullptr && space.fragmentation != nullptr) {
+                const LayoutBandsMemo* bands = nullptr;
+                independentContent(state, s, goal, content, &lines, &bands);
+                result.token = breakBetweenBands(state, s, content, *bands);
+            } else {
+                independentContent(state, s, goal, content, &lines);
+            }
             if (lines.node == kPrLayoutNodeNone) {
                 fragment = build(nullptr);
                 break;
@@ -631,6 +1074,9 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
         }
         default: {
             LayoutTableOutcome table = tableContent(state, s, content);
+            result.token = table.token;
+            if (table.token != nullptr && space.fragmentation != nullptr)
+                content.blockSize = layoutUnitMax(content.blockSize, layoutSpaceFragmentainer(space)->end);
             fragment = layoutTableFinish(state, build(nullptr), table);
             break;
         }
@@ -696,22 +1142,13 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
         fragment->overflow = layoutRectUnion(fragment->overflow, flowRect);
     }
     fragment->box.containingInline = space.containing.inlineSize;
+    if (space.fragmentation != nullptr && s.anonymous == nullptr && measure == nullptr)
+        markBroken(state, s, fragment, result.token != nullptr);
     result.fragment = fragment;
     exportBaselines(state, space, box, mode, content.blockSize, content.edges, result);
     layoutFragmentSetBaselines(fragment, content.edges[LayoutBaselineEdge_First],
         content.edges[LayoutBaselineEdge_Last]);
     return result;
-}
-
-// Returns true if two spaces of a flex item or a table cell are the same. Neither is in flow in a context.
-bool sameSpace(const LayoutSpace& a, const LayoutSpace& b) {
-    PR_ASSERT(a.bfc == nullptr && b.bfc == nullptr);
-    return a.mode == b.mode && a.available == b.available && a.percentInline == b.percentInline &&
-        a.percentBlock == b.percentBlock && a.containing.inlineSize == b.containing.inlineSize &&
-        a.containing.blockSize == b.containing.blockSize && a.blockLimit == b.blockLimit &&
-        a.fallback == b.fallback && a.autoInline == b.autoInline && a.autoBlock == b.autoBlock &&
-        a.stretchBlock == b.stretchBlock && layoutCellSpacesEqual(layoutCellSpaceFromSpace(a),
-            layoutCellSpaceFromSpace(b));
 }
 
 // Takes the result that the cache holds for the box `node` from a layout when a different size was available, if the
@@ -874,6 +1311,430 @@ LayoutMeasurement measure(LayoutState& state, LayoutNodeIndex node, const Layout
     return out;
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// The initial containing block and pages
+
+// Lays out the root in a viewport of `extent`, and returns a fragment of the initial containing block that holds it.
+LayoutFragment* viewportOf(LayoutState& state, uint32_t root, PrLayoutVec extent) {
+    if (root == kPrLayoutNodeNone) {
+        LayoutFragment* viewport = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, 0);
+        viewport->extent = extent;
+        viewport->overflow = layoutRectAt(kLayoutVecZero, extent);
+        return viewport;
+    }
+    // The root is a block box whatever its display (css-display-4/#root). It is laid out in the initial containing
+    // block, whose writing mode is the root's (css-writing-modes-4/#principal-flow).
+    LayoutMode mode = layoutOwnMode(state.tree, root);
+    LayoutLogicalSize initial = layoutLogicalSize(mode, extent);
+    LayoutSpace space{
+        .mode = mode,
+        .available = initial.inlineSize,
+        .percentInline = initial.inlineSize,
+        .percentBlock = initial.blockSize,
+        .containing = initial,
+        .blockLimit = layoutUnit(-1),
+        .fallback = extent,
+    };
+    LayoutResult result = layoutBlock(state, root, space);
+    const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, root).style);
+    LayoutLogicalSize size = layoutLogicalSize(mode, result.fragment->extent);
+    LayoutLogicalOffset offset{result.marginInlineStart, layoutStrutSize(result.start)};
+    // A root that floats shrinks to fit, and goes to its own side of the initial containing block
+    // (CSS2/#float-position).
+    if (box.floating != PrLayoutFloat_None && box.display != PrLayoutDisplay_None) {
+        PrLayoutFloat floating = box.floating;
+        bool ltr = mode.direction == PrTextDirection_Ltr;
+        bool end = floating == PrLayoutFloat_InlineEnd || (floating == PrLayoutFloat_Right && ltr) ||
+            (floating == PrLayoutFloat_Left && !ltr);
+        if (end) {
+            LayoutEdges e = layoutEdgesFromBox(state.styles, layoutLogicalBox(box, mode), initial.inlineSize);
+            offset.inlineOffset = initial.inlineSize - size.inlineSize - e.margin[LayoutSide_InlineEnd];
+        }
+    }
+    PrLayoutVec at = layoutPhysicalOffset(mode, offset + layoutRelativeOffset(state.styles, box, space), size, initial);
+    // Holds the boxes out of flow that no box in the root holds, after the root: absolutely positioned boxes in the
+    // initial containing block, and fixed boxes in the viewport (css-position-3/#def-cb).
+    RawArray<LayoutChild> held;
+    layoutViewportHold(state, result.fragment, at, extent, mode, held);
+    LayoutFragment* viewport = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, 1 + held.count);
+    viewport->extent = extent;
+    viewport->overflow = layoutRectAt(kLayoutVecZero, extent);
+    viewport->children[0] = LayoutChild{result.fragment, at};
+    for (uint32_t i = 0; i < held.count; ++i)
+        viewport->children[1 + i] = held.data[i];
+    layoutFragmentSummarize(viewport);
+    // The viewport scrolls through the margin box of the root and what the root reaches without clipping. Scrolling
+    // starts from the corner of the initial containing block that is the origin of the principal writing mode.
+    LayoutLogicalSize margins{
+        offset.inlineOffset + size.inlineSize,
+        layoutStrutSize(result.start) + size.blockSize + layoutStrutSize(result.end),
+    };
+    PrLayoutRect reach = layoutRectAt(layoutPhysicalOffset(mode, kLayoutLogicalOffsetZero, margins, initial),
+        layoutPhysicalSize(mode, margins));
+    reach = layoutRectUnion(reach, layoutRectMoved(result.fragment->overflow, at));
+    // The parts of a fixed box that lie outside the viewport cannot be scrolled to.
+    for (uint32_t i = 0; i < held.count; ++i) {
+        const LayoutFragment* f = held.data[i].fragment;
+        if (!layoutIsFixed(state.tree, f->node))
+            reach = layoutRectUnion(reach, layoutRectMoved(layoutPassedOverflow(state.tree, f), held.data[i].offset));
+    }
+    held.reset();
+    PrLayoutRect scrollable = layoutRectUnion(viewport->overflow, reach);
+    const PrRectSide origin[] = {
+        layoutPhysicalSide(mode, LayoutSide_BlockStart),
+        layoutPhysicalSide(mode, LayoutSide_InlineStart),
+    };
+    for (PrRectSide side : origin) {
+        switch (side) {
+            case PrRectSide_Left: scrollable.left = kLayoutUnitZero; break;
+            case PrRectSide_Top: scrollable.top = kLayoutUnitZero; break;
+            case PrRectSide_Right: scrollable.right = extent.x; break;
+            default: scrollable.bottom = extent.y; break;
+        }
+    }
+    viewport->overflow = scrollable;
+    return viewport;
+}
+
+// Returns the box of the page that `context` describes, from the tree's pagination, with margins that leave a page area
+// of at least zero.
+PrLayoutPageBox pageBoxOf(const LayoutState& state, const PrLayoutPageContext& context) {
+    PrLayoutPageBox box = prLayoutPageBoxDefault();
+    const PrLayoutPagination& pagination = state.tree->pagination;
+    pagination.box(pagination.context, &context, &box);
+    return layoutPageBoxFit(box);
+}
+
+// Returns the side of the page after one on `side`.
+PrLayoutPageSide nextSide(PrLayoutPageSide side) {
+    if (side == PrLayoutPageSide_Left)
+        return PrLayoutPageSide_Right;
+    return PrLayoutPageSide_Left;
+}
+
+// Returns true if a page on `side` is on the side that a forced break asks for (css-break-4/#page-break-values). The
+// recto page is the right page of a left-to-right root.
+bool sideFits(LayoutBreakSide wanted, PrLayoutPageSide side, PrTextDirection direction) {
+    PrLayoutPageSide recto = PrLayoutPageSide_Left;
+    if (direction == PrTextDirection_Ltr)
+        recto = PrLayoutPageSide_Right;
+    switch (wanted) {
+        case LayoutBreakSide_Left: return side == PrLayoutPageSide_Left;
+        case LayoutBreakSide_Right: return side == PrLayoutPageSide_Right;
+        case LayoutBreakSide_Recto: return side == recto;
+        case LayoutBreakSide_Verso: return side != recto;
+        default: return true;
+    }
+}
+
+// Returns a blank page fragment of `box`.
+LayoutFragment* blankPageOf(const LayoutState& state, const PrLayoutPageBox& box) {
+    LayoutFragment* page = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, 0);
+    page->extent = box.extent;
+    page->flags |= LayoutFragmentFlag_Page;
+    layoutFragmentSetOverflow(state.tree, page);
+    return page;
+}
+
+// Returns the node of the first content of `fragment` in its children's order: a text, a replaced box, or a box with a
+// size and no content inside it. Placeholders and boxes with no size hold no content. Returns kPrLayoutNodeNone if it
+// holds none.
+LayoutNodeIndex firstContentOf(const LayoutFragment* fragment) {
+    for (uint32_t i = 0; i < fragment->childCount; ++i) {
+        const LayoutFragment* child = fragment->children[i].fragment;
+        switch (child->kind) {
+            case LayoutFragmentKind_Text:
+            case LayoutFragmentKind_Replaced: return child->node;
+            case LayoutFragmentKind_Box:
+            case LayoutFragmentKind_Line:
+            case LayoutFragmentKind_Around: {
+                LayoutNodeIndex found = firstContentOf(child);
+                if (found != kPrLayoutNodeNone)
+                    return found;
+                if (child->kind == LayoutFragmentKind_Box && child->node != kPrLayoutNodeNone && child->childCount == 0 &&
+                        child->extent.x > kLayoutUnitZero && child->extent.y > kLayoutUnitZero)
+                    return child->node;
+                break;
+            }
+            default: break;
+        }
+    }
+    return kPrLayoutNodeNone;
+}
+
+// Lays the content of the root out as pages (pr/layout_page.h): one page at a time, each in its own page area, from the
+// token of the page before. Appends each page's fragment to `pages`, at its offset down the stack of pages, with its
+// sheet the pagination's gap below the sheet before. The fragment holds the page's part of the root's content, the
+// boxes out of flow that the page holds, and the fixed boxes that repeat on it. Appends what each page is to `records`,
+// and each running box whose placeholder a page holds, with the page, to `running`.
+void paginate(LayoutState& state, uint32_t root, RawArray<LayoutChild>& pages, RawArray<PrLayoutPage>& records,
+        RawArray<LayoutRunningPage>& running) {
+    LayoutTree* tree = state.tree;
+    LayoutMode mode = layoutOwnMode(tree, root);
+    PrLayoutPageContext context = layoutStartPageContext(tree, root);
+    PrLayoutPageBox box = pageBoxOf(state, context);
+    RawArray<LayoutChild> held;
+    RawArray<LayoutChild> fixed;        // the fixed boxes of the pages so far, each holding a reference
+    RawArray<uint32_t> fixedFrom;       // by fixed box: the index among `pages` of the page that holds it first
+    RawArray<LayoutNodeIndex> placed;   // scratch: the running boxes whose placeholders a page holds
+    PrLayoutUnit y = kLayoutUnitZero;   // the top of the next page's sheet
+    auto add = [&](LayoutFragment* page, const PrLayoutPageContext& at, const PrLayoutPageBox& pageBox) {
+        PrLayoutPageSheet sheet = prLayoutPageBoxSheet(&pageBox);
+        PrLayoutVec offset{sheet.trim.left, y + sheet.trim.top};
+        PrLayoutPage record{
+            .context = at,
+            .box = pageBox,
+            .offset = offset,
+            .first = layoutNodeName(tree, firstContentOf(page)),
+        };
+        pages.push(LayoutChild{page, offset});
+        records.push(record);
+        y += sheet.extent.y + tree->pagination.gap;
+    };
+    const PrLayoutBoxStyle& rootBox = layoutBoxStyle(state.styles, layoutTreeNode(tree, root).style);
+    const LayoutBreakToken* resume = nullptr;
+    constexpr uint32_t kMaxPages = 100000;
+    for (uint32_t index = 0; index < kMaxPages; ++index) {
+        PrLayoutVec area = prLayoutPageBoxArea(&box);
+        LayoutLogicalSize initial = layoutLogicalSize(mode, area);
+        LayoutEdges e = layoutEdgesFromBox(state.styles, layoutLogicalBox(rootBox, mode), initial.inlineSize);
+        PrLayoutUnit marginStart = resume != nullptr ? kLayoutUnitZero : e.margin[LayoutSide_BlockStart];
+        LayoutFragmentainer page{
+            .blockSize = initial.blockSize,
+            .end = layoutUnitMax(initial.blockSize - marginStart, layoutUnitPx(1)),
+            .kind = LayoutFragmentainerKind_Page,
+            .atTop = true,
+        };
+        LayoutFragmentation fragmentation{&page, resume};
+        LayoutSpace space{
+            .mode = mode,
+            .available = initial.inlineSize,
+            .percentInline = initial.inlineSize,
+            .percentBlock = initial.blockSize,
+            .containing = initial,
+            .blockLimit = layoutUnit(-1),
+            .fallback = area,
+            .fragmentation = &fragmentation,
+        };
+        LayoutResult result = layoutBlockFragmented(state, root, space);
+        LayoutLogicalSize size = layoutLogicalSize(mode, result.fragment->extent);
+        LayoutLogicalOffset offset{result.marginInlineStart, marginStart};
+        PrLayoutVec at = layoutPhysicalOffset(mode, offset, size, initial);
+        // The page holds the boxes out of flow whose placeholders are on it, and the fixed boxes of the pages before,
+        // which repeat on every page after the one that they are found on (CSS2/#fixed-positioning).
+        placed.clear();
+        layoutViewportHold(state, result.fragment, at, area, mode, held, &placed);
+        for (uint32_t i = 0; i < placed.count; ++i)
+            running.push(LayoutRunningPage{placed.data[i], pages.count});
+        uint32_t found = held.count;
+        for (uint32_t i = 0; i < fixed.count; ++i) {
+            layoutFragmentRetain(fixed.data[i].fragment);
+            held.push(fixed.data[i]);
+        }
+        for (uint32_t i = 0; i < found; ++i) {
+            if (layoutIsFixed(tree, held.data[i].fragment->node)) {
+                layoutFragmentRetain(held.data[i].fragment);
+                fixed.push(held.data[i]);
+                fixedFrom.push(pages.count);
+            }
+        }
+        // The page holds the content of the root's fragment, in its page area.
+        const LayoutFragment* piece = result.fragment;
+        PrLayoutVec margin{box.margin[PrRectSide_Left], box.margin[PrRectSide_Top]};
+        uint32_t heldCount = held.count;
+        LayoutFragment* fragment = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone,
+            piece->childCount + heldCount);
+        fragment->extent = box.extent;
+        fragment->flags |= LayoutFragmentFlag_Page;
+        for (uint32_t i = 0; i < piece->childCount; ++i) {
+            layoutFragmentRetain(piece->children[i].fragment);
+            fragment->children[i] = LayoutChild{piece->children[i].fragment, margin + at + piece->children[i].offset};
+        }
+        for (uint32_t i = 0; i < heldCount; ++i)
+            fragment->children[piece->childCount + i] =
+                LayoutChild{held.data[i].fragment, margin + held.data[i].offset};
+        layoutFragmentSummarize(fragment);
+        held.clear();
+        layoutFragmentSetOverflow(tree, fragment);
+        layoutFragmentRelease(piece);
+        add(fragment, context, box);
+        layoutBreakTokenRelease(resume);
+        resume = result.token;
+        if (resume == nullptr)
+            break;
+        PrLayoutName name = resume->hasPage ? resume->page : context.name;
+        PrLayoutPageContext next{.index = context.index + 1, .name = name, .side = nextSide(context.side)};
+        if (!sideFits(resume->side, next.side, mode.direction)) {
+            // A break to a side of the spread that the next page is not on inserts a blank page.
+            PrLayoutPageContext blank = next;
+            blank.blank = true;
+            PrLayoutPageBox blankBox = pageBoxOf(state, blank);
+            add(blankPageOf(state, blankBox), blank, blankBox);
+            next.index += 1;
+            next.side = nextSide(next.side);
+        }
+        context = next;
+        box = pageBoxOf(state, context);
+    }
+    layoutBreakTokenRelease(resume);
+    held.reset();
+    placed.reset();
+    // A fixed box repeats on the pages before the one that holds it too (css-position-3/#fixed-pos).
+    for (uint32_t p = 0; p < pages.count; ++p) {
+        uint32_t extra = 0;
+        for (uint32_t i = 0; i < fixed.count; ++i)
+            extra += fixedFrom.data[i] > p ? 1 : 0;
+        if (extra == 0)
+            continue;
+        const LayoutFragment* old = pages.data[p].fragment;
+        LayoutFragment* page = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, old->childCount + extra);
+        page->extent = old->extent;
+        page->flags = old->flags;
+        for (uint32_t i = 0; i < old->childCount; ++i) {
+            layoutFragmentRetain(old->children[i].fragment);
+            page->children[i] = old->children[i];
+        }
+        PrLayoutVec margin{records.data[p].box.margin[PrRectSide_Left], records.data[p].box.margin[PrRectSide_Top]};
+        uint32_t at = old->childCount;
+        for (uint32_t i = 0; i < fixed.count; ++i) {
+            if (fixedFrom.data[i] <= p)
+                continue;
+            layoutFragmentRetain(fixed.data[i].fragment);
+            page->children[at++] = LayoutChild{fixed.data[i].fragment, margin + fixed.data[i].offset};
+        }
+        layoutFragmentSummarize(page);
+        layoutFragmentSetOverflow(tree, page);
+        layoutFragmentRelease(old);
+        pages.data[p].fragment = page;
+    }
+    fixedFrom.reset();
+    for (uint32_t i = 0; i < fixed.count; ++i)
+        layoutFragmentRelease(fixed.data[i].fragment);
+    fixed.reset();
+    sortItems(running.span(), [](const LayoutRunningPage& a, const LayoutRunningPage& b) { return a.node < b.node; });
+}
+
+// Returns an anonymous fragment of the extent of the page box `box` that holds the fragments of the margin boxes
+// `boxes`, by PrLayoutMarginBox, laid out in its margins, or null if the page generates no margin box. A margin box is
+// a child of the root whose display is PrLayoutDisplay_PageMargin, and any other node generates none.
+const LayoutFragment* PR_NULLABLE marginsOf(LayoutState& state, uint32_t root, const PrLayoutPageBox& box,
+        const LayoutNodeIndex* boxes) {
+    LayoutTree* tree = state.tree;
+    LayoutNodeIndex generated[PrLayoutMarginBox_Count]{};
+    bool any = false;
+    for (uint32_t i = 0; i < PrLayoutMarginBox_Count; ++i) {
+        LayoutNodeIndex node = boxes[i];
+        if (node == kPrLayoutNodeNone)
+            continue;
+        const LayoutTreeNode& n = layoutTreeNode(tree, node);
+        if (n.parent != root || !layoutKindIsElement(n.kind) ||
+                layoutBoxStyle(state.styles, n.style).display != PrLayoutDisplay_PageMargin)
+            continue;
+        generated[i] = node;
+        any = true;
+    }
+    if (!any)
+        return nullptr;
+    RawArray<LayoutChild> margins;
+    layoutPageMargins(state, box, generated, margins);
+    LayoutFragment* page = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, margins.count);
+    page->extent = box.extent;
+    for (uint32_t i = 0; i < margins.count; ++i)
+        page->children[i] = margins.data[i];
+    margins.reset();
+    layoutFragmentSummarize(page);
+    layoutFragmentSetOverflow(tree, page);
+    return page;
+}
+
+// Lays out the root as pages (pr/layout_page.h), and returns a fragment of a viewport of `extent` that holds them. The
+// fragment's first child is the root's own box, which holds the pages' content. The pages' sheets are stacked down that
+// box in order, each centered across the widest sheet, so that the root stays one box, whose layer paints every page.
+// The box is centered across the viewport if it is narrower. The children after it hold the margin boxes of each page
+// that has any, at the page's offset. The viewport scrolls through the root's box. A layout that keeps its results
+// records the pages in the tree, with the root's box. A later layout in which nothing but margin boxes changed takes
+// the root's box from there, and lays out only the margins. Neither that layout nor the placements that it publishes
+// reach the content, whatever the viewport's extent.
+const LayoutFragment* pagesOf(LayoutState& state, uint32_t root, PrLayoutVec extent) {
+    LayoutTree* tree = state.tree;
+    layoutStackingAddFragmentationRoot(tree, root);
+    RawArray<PrLayoutPage> records;
+    const LayoutFragment* stack = nullptr;
+    bool kept = state.reuse && tree->pageStack != nullptr &&
+        (layoutTreeNode(tree, root).dirty & ~LayoutDirtyFlag_Margins) == 0;
+    if (kept) {
+        stack = tree->pageStack;
+        layoutFragmentRetain(stack);
+        records.append(tree->pages.data, tree->pages.count);
+    } else {
+        RawArray<LayoutChild> pages;
+        RawArray<LayoutRunningPage> running;
+        paginate(state, root, pages, records, running);
+        PrLayoutUnit width = kLayoutUnitZero;
+        PrLayoutUnit height = kLayoutUnitZero;
+        for (uint32_t i = 0; i < records.count; ++i) {
+            PrLayoutPageSheet sheet = prLayoutPageBoxSheet(&records.data[i].box);
+            width = layoutUnitMax(width, sheet.extent.x);
+            height = records.data[i].offset.y - sheet.trim.top + sheet.extent.y;
+        }
+        for (uint32_t i = 0; i < pages.count; ++i) {
+            PrLayoutPageSheet sheet = prLayoutPageBoxSheet(&records.data[i].box);
+            pages.data[i].offset.x = (width - sheet.extent.x) / 2 + sheet.trim.left;
+        }
+        LayoutMode mode = layoutOwnMode(tree, root);
+        LayoutFragment* made = layoutFragmentCreate(LayoutFragmentKind_Box, root, pages.count);
+        for (uint32_t i = 0; i < pages.count; ++i)
+            made->children[i] = pages.data[i];
+        layoutFragmentSummarize(made);
+        made->extent = PrLayoutVec{width, height};
+        made->box.containingInline = layoutLogicalSize(mode, made->extent).inlineSize;
+        layoutFragmentSetOverflow(tree, made);
+        pages.reset();
+        stack = made;
+        if (state.reuse) {
+            layoutTreeForgetPages(tree);
+            layoutFragmentRetain(stack);
+            tree->pageStack = stack;
+            tree->runningPages.reset();
+            tree->runningPages = running;
+        } else {
+            running.reset();
+        }
+    }
+    // A page's offset in the viewport's content is its offset in the stack, moved by the stack's offset across the
+    // viewport, which the viewport's extent decides.
+    PrLayoutVec at{layoutUnitMax(kLayoutUnitZero, (extent.x - stack->extent.x) / 2), kLayoutUnitZero};
+    for (uint32_t i = 0; i < records.count; ++i)
+        records.data[i].offset = stack->children[i].offset + at;
+    RawArray<LayoutChild> margined;
+    uint32_t setFor = tree->pageMargins.count / PrLayoutMarginBox_Count;
+    for (uint32_t p = 0; p < records.count && p < setFor; ++p) {
+        LayoutNodeIndex boxes[PrLayoutMarginBox_Count];
+        for (uint32_t i = 0; i < PrLayoutMarginBox_Count; ++i) {
+            PrLayoutNode node = tree->pageMargins.data[p * PrLayoutMarginBox_Count + i];
+            boxes[i] = layoutNodeIsValid(tree, node) ? layoutNodeIndex(tree, node) : kPrLayoutNodeNone;
+        }
+        if (const LayoutFragment* margins = marginsOf(state, root, records.data[p].box, boxes))
+            margined.push(LayoutChild{margins, records.data[p].offset});
+    }
+    LayoutFragment* viewport = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, 1 + margined.count);
+    viewport->children[0] = LayoutChild{stack, at};
+    for (uint32_t i = 0; i < margined.count; ++i)
+        viewport->children[1 + i] = margined.data[i];
+    margined.reset();
+    layoutFragmentSummarize(viewport);
+    viewport->extent = extent;
+    viewport->overflow = layoutRectUnion(layoutRectAt(kLayoutVecZero, extent), layoutRectAt(at, stack->extent));
+    if (state.reuse) {
+        tree->pages.reset();
+        tree->pages = records;
+        tree->nodes.data[root].dirty &= LayoutDirtyFlags(~LayoutDirtyFlag_Margins);
+    } else {
+        records.reset();
+    }
+    return viewport;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -881,6 +1742,30 @@ LayoutMeasurement measure(LayoutState& state, LayoutNodeIndex node, const Layout
 
 LayoutResult layoutBlock(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space) {
     return resultOf(state, node, space, nullptr);
+}
+
+LayoutResult layoutBlockFragmented(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
+        const LayoutRequests* PR_NULLABLE requests) {
+    PR_ASSERT(space.fragmentation != nullptr);
+    if (layoutIsMonolithic(state.tree, node, space.mode)) {
+        LayoutSpace whole = space;
+        whole.fragmentation = nullptr;
+        return requests != nullptr ? layoutFinal(state, node, whole, *requests) : layoutBlock(state, node, whole);
+    }
+    ++state.stats->blocksLaidOut;
+    // A box laid out across fragmentainers keeps no result, so its marks would outlast the layout that took its changes
+    // in. Its cache entry is from before those changes, if it has any.
+    if (state.reuse && layoutTreeNode(state.tree, node).dirty != 0) {
+        layoutCacheForget(state.tree->cache, node);
+        state.scratch->broken.push(node);
+    }
+    if (space.bfc == nullptr)
+        return layoutContainer(state, node, space, requests, nullptr, nullptr);
+    LayoutReads reads = layoutReadsBegin(*space.bfc->containing.exclusions);
+    LayoutResult result = layoutContainer(state, node, space, requests, &reads, nullptr);
+    if (!layoutResultStopped(result))
+        layoutReadsMerge(*space.bfc->containing.reads, reads);
+    return result;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -940,7 +1825,11 @@ LayoutResult layoutAnonymousTable(LayoutState& state, LayoutNodeIndex first, Lay
         &layoutAnonymousTableStyle());
 }
 
-void layoutEndLayout(LayoutScratch& scratch) {
+void layoutEndLayout(LayoutState& state) {
+    LayoutScratch& scratch = *state.scratch;
+    for (uint32_t i = 0; i < scratch.broken.count; ++i)
+        state.tree->nodes.data[scratch.broken.data[i]].dirty = 0;
+    scratch.broken.clear();
     for (uint32_t i = 0; i < scratch.handoffs.count; ++i)
         layoutFragmentRelease(scratch.handoffs.data[i].result.fragment);
     scratch.handoffs.clear();
@@ -949,92 +1838,24 @@ void layoutEndLayout(LayoutScratch& scratch) {
     scratch.memoIndex.clear();
     scratch.intrinsicMemos.clear();
     scratch.intrinsicMemoIndex.clear();
+    for (uint32_t i = 0; i < scratch.bands.count; ++i)
+        destroyBands(scratch.bands.data[i]);
+    scratch.bands.clear();
+    scratch.bandIndex.clear();
+    layoutTableEndLayout(scratch.table);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The initial containing block
 
 const LayoutFragment* layoutViewport(LayoutState& state, uint32_t root, PrLayoutVec extent) {
-    if (root == kPrLayoutNodeNone) {
-        LayoutFragment* viewport = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, 0);
-        viewport->extent = extent;
-        viewport->overflow = layoutRectAt(kLayoutVecZero, extent);
-        return viewport;
+    LayoutTree* tree = state.tree;
+    if (root == kPrLayoutNodeNone || root != tree->root || tree->pagination.box == nullptr) {
+        if (root == tree->root && state.reuse)
+            tree->pages.clear();
+        return viewportOf(state, root, extent);
     }
-    // The root is a block box whatever its display (css-display-4/#root). It is laid out in the initial containing
-    // block, whose writing mode is the root's (css-writing-modes-4/#principal-flow).
-    LayoutMode mode = layoutOwnMode(state.tree, root);
-    LayoutLogicalSize initial = layoutLogicalSize(mode, extent);
-    LayoutSpace space{
-        .mode = mode,
-        .available = initial.inlineSize,
-        .percentInline = initial.inlineSize,
-        .percentBlock = initial.blockSize,
-        .containing = initial,
-        .blockLimit = layoutUnit(-1),
-        .fallback = extent,
-    };
-    LayoutResult result = layoutBlock(state, root, space);
-    const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, root).style);
-    LayoutLogicalSize size = layoutLogicalSize(mode, result.fragment->extent);
-    LayoutLogicalOffset offset{result.marginInlineStart, layoutStrutSize(result.start)};
-    // A root that floats shrinks to fit, and goes to its own side of the initial containing block
-    // (CSS2/#float-position).
-    if (box.floating != PrLayoutFloat_None && box.display != PrLayoutDisplay_None) {
-        PrLayoutFloat floating = box.floating;
-        bool ltr = mode.direction == PrTextDirection_Ltr;
-        bool end = floating == PrLayoutFloat_InlineEnd || (floating == PrLayoutFloat_Right && ltr) ||
-            (floating == PrLayoutFloat_Left && !ltr);
-        if (end) {
-            LayoutEdges e = layoutEdgesFromBox(state.styles, layoutLogicalBox(box, mode), initial.inlineSize);
-            offset.inlineOffset = initial.inlineSize - size.inlineSize - e.margin[LayoutSide_InlineEnd];
-        }
-    }
-    PrLayoutVec at = layoutPhysicalOffset(mode, offset + layoutRelativeOffset(state.styles, box, space), size, initial);
-    // Holds the boxes out of flow that no box in the root holds, after the root: absolutely positioned boxes in the
-    // initial containing block, and fixed boxes in the viewport (css-position-3/#def-cb).
-    RawArray<LayoutChild> held;
-    layoutViewportHold(state, result.fragment, at, extent, mode, held);
-    LayoutFragment* viewport = layoutFragmentCreate(LayoutFragmentKind_Box, kPrLayoutNodeNone, 1 + held.count);
-    viewport->extent = extent;
-    viewport->overflow = layoutRectAt(kLayoutVecZero, extent);
-    viewport->children[0] = LayoutChild{result.fragment, at};
-    if (held.count != 0)
-        viewport->flags |= LayoutFragmentFlag_Holds;
-    viewport->flags |= LayoutFragmentFlags(result.fragment->flags & LayoutFragmentFlag_Placeholders);
-    for (uint32_t i = 0; i < held.count; ++i)
-        viewport->children[1 + i] = held.data[i];
-    // The viewport scrolls through the margin box of the root and what the root reaches without clipping. Scrolling
-    // starts from the corner of the initial containing block that is the origin of the principal writing mode.
-    LayoutLogicalSize margins{
-        offset.inlineOffset + size.inlineSize,
-        layoutStrutSize(result.start) + size.blockSize + layoutStrutSize(result.end),
-    };
-    PrLayoutRect reach = layoutRectAt(layoutPhysicalOffset(mode, kLayoutLogicalOffsetZero, margins, initial),
-        layoutPhysicalSize(mode, margins));
-    reach = layoutRectUnion(reach, layoutRectMoved(result.fragment->overflow, at));
-    // The parts of a fixed box that lie outside the viewport cannot be scrolled to.
-    for (uint32_t i = 0; i < held.count; ++i) {
-        const LayoutFragment* f = held.data[i].fragment;
-        if (!layoutIsFixed(state.tree, f->node))
-            reach = layoutRectUnion(reach, layoutRectMoved(layoutPassedOverflow(state.tree, f), held.data[i].offset));
-    }
-    held.reset();
-    PrLayoutRect scrollable = layoutRectUnion(viewport->overflow, reach);
-    const PrRectSide origin[] = {
-        layoutPhysicalSide(mode, LayoutSide_BlockStart),
-        layoutPhysicalSide(mode, LayoutSide_InlineStart),
-    };
-    for (PrRectSide side : origin) {
-        switch (side) {
-            case PrRectSide_Left: scrollable.left = kLayoutUnitZero; break;
-            case PrRectSide_Top: scrollable.top = kLayoutUnitZero; break;
-            case PrRectSide_Right: scrollable.right = extent.x; break;
-            default: scrollable.bottom = extent.y; break;
-        }
-    }
-    viewport->overflow = scrollable;
-    return viewport;
+    return pagesOf(state, root, extent);
 }
 
 } // namespace pr_impl

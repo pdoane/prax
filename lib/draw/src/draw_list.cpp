@@ -461,7 +461,9 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
                 if (!prRectIsEmpty(g->bounds))
                     groupClip = prRectIntersect(clip, mapBounds(t, g->bounds));
                 clips.push(groupClip);
-                if (g->filter != nullptr || g->backdrop != nullptr || prDrawCompositeIsUnbounded(g->composite))
+                // These effects can cover the group's whole bounds, whatever its contents.
+                if (g->filter != nullptr || g->backdrop != nullptr || g->layer != nullptr ||
+                        prDrawCompositeIsUnbounded(g->composite))
                     bounds = prRectUnion(bounds, groupClip);
                 painting = false;
                 break;
@@ -469,6 +471,10 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_PopClip:
             case PrDrawCommandKind_PopGroup:
                 clips.pop();
+                painting = false;
+                break;
+            case PrDrawCommandKind_PushMark:
+            case PrDrawCommandKind_PopMark:
                 painting = false;
                 break;
             default: {
@@ -963,6 +969,17 @@ void prDrawListGlyphs(PrDrawList* list, const PrFontGlyphRun* run, PrVec2 origin
             copy->palette.colors = sideCopy(r, run->palette.colors, run->palette.colorCount);
         else
             copy->palette.colorCount = 0;
+        if (run->text.data != nullptr && run->text.size != 0 && run->text.size < UINT32_MAX) {
+            copy->text.data = sideCopy(r, run->text.data, uint32_t(run->text.size));
+        } else {
+            copy->text = PrStringView{};
+            copy->clusters = nullptr;
+        }
+        if (copy->clusters != nullptr) {
+            for (uint32_t i = 0; i < run->glyphCount; ++i)
+                PR_ASSERT(run->clusters[i] < run->text.size);
+            copy->clusters = sideCopy(r, run->clusters, run->glyphCount);
+        }
         holdFont(r, copy->font);
         c->glyphs = copy;
         if (prFontIsAliased(copy->font))
@@ -1046,12 +1063,42 @@ void prDrawListPopGroup(PrDrawList* list) {
         popGroup(list);
 }
 
+void prDrawListPushMark(PrDrawList* list, uint64_t key) {
+    PR_ASSERT(key != 0);
+    push(list, PrDrawCommandKind_PushMark, PrDrawCommandKind_PushMark, PrDrawEdges_Antialiased)->key = key;
+}
+
+void prDrawListPopMark(PrDrawList* list) {
+    pop(list, PrDrawCommandKind_PushMark, PrDrawCommandKind_PopMark);
+}
+
 uint32_t prDrawListDepth(const PrDrawList* list) {
     return list->open.count;
 }
 
 PrRect prDrawListBounds(const PrDrawList* list) {
     return list->frozen ? list->bounds : recordingBounds(list->recording);
+}
+
+bool prDrawListMisses(const PrDrawList* list, PrAffine2 transform, PrRect clip) {
+    if (prDrawListWritesPixels(list))
+        return false;
+    PrRect bounds = prDrawListBounds(list);
+    if (prRectIsEmpty(bounds) || prRectIsEmpty(clip))
+        return true;
+    if (unbounded(bounds) || !prF32IsFinite(bounds.left) || !prF32IsFinite(bounds.top) ||
+            !prF32IsFinite(bounds.right) || !prF32IsFinite(bounds.bottom))
+        return false;
+    PrRect mapped = prAffine2MapRect(transform, bounds);
+    if (!prF32IsFinite(mapped.left) || !prF32IsFinite(mapped.top) || !prF32IsFinite(mapped.right) ||
+            !prF32IsFinite(mapped.bottom))
+        return false;
+    return mapped.right <= clip.left || mapped.left >= clip.right || mapped.bottom <= clip.top ||
+        mapped.top >= clip.bottom;
+}
+
+PrRect prDrawCommandsBounds(const PrDrawCommand* PR_NULLABLE commands, uint32_t count) {
+    return count != 0 ? commandsBounds(commands, count) : PrRect{0, 0, 0, 0};
 }
 
 bool prDrawListReadsBackdrop(const PrDrawList* list) {

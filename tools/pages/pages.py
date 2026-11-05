@@ -18,13 +18,19 @@ large to keep, or that cannot be fetched, is recorded as omitted, with the reaso
 
 The page's own markup is saved as <page>.html, and the resources under <page>.files/, each named for its type.
 <page>.json records the document's URL, which is where the page's redirects ended, and its Content-Type, and for each
-resource its URL, its file and its Content-Type. `pr_shell --html <page.json>`, the browser example and the invalidation
-harness serve each resource from its file with its type. The browser side of the benchmarks reads the manifest beside
+resource its URL, its file and its Content-Type, and for each URL left out the reason. `pr_shell --html <page.json>`
+and the invalidation harness serve each resource from its file with its type, and fail each URL left out, so that a
+captured page never reaches the network. The browser side of the benchmarks reads the manifest beside
 the pages, pages.json, because a page fetched over HTTP cannot list a directory.
 
 Every page captured is also written to third_party/pages-corpus under the same name, so a page captured again replaces
 its older copy there. That corpus only grows, and is a larger set of pages for a scan that can afford one. It is not a
 history, and nothing measured against it is reproducible.
+
+`local` captures pages that are files, such as a checkout's documents, with what they load from other origins. Chrome
+records only what it fetches over HTTP, so the files are served on the loopback while their pages are captured. Each
+capture records its page at its file: URL and keeps only the resources of other origins, because the page's own files
+load from where they are, as they do in a browser that opens the file.
 
 Usage:
     python3 -m tools.pages.pages roll [--if-empty]       take the day's pages, or with --if-empty only if there are none
@@ -34,15 +40,20 @@ Usage:
     python3 -m tools.pages.pages check [word...]         the URLs that each capture's markup and sheets name and that it
     lacks
     python3 -m tools.pages.pages take <url>...           capture each page at its URL into third_party/pages-corpus
+    python3 -m tools.pages.pages local <root> <out> <page>...
+                                             capture each page, a path under root, into out at the same path
 """
 
 import argparse
 import base64
 import concurrent.futures
+import functools
 import hashlib
 import html.parser
+import http.server
 import json
 import os
+import pathlib
 import queue
 import re
 import shutil
@@ -100,7 +111,8 @@ REGIONAL = 6
 CANDIDATES = 40
 REGIONAL_CANDIDATES = 3000
 
-# The bounds on a page's document, in bytes.
+# The bounds on a page's document, in bytes. A rolled page smaller than the least is too small to measure, and no
+# capture keeps a document larger than the most.
 MIN_BYTES = 20 * 1024
 MAX_BYTES = 8 * 1024 * 1024
 
@@ -664,7 +676,7 @@ def capture(url, fetch=None, recorder=record):
         return "status %d" % status
     if not is_html(kind) and kind:
         return kind
-    if not MIN_BYTES <= len(body) <= MAX_BYTES:
+    if len(body) > MAX_BYTES:
         return "%d bytes" % len(body)
     resources = {u: (data, kind, u) for u, (data, kind) in recording.responses.items()}
     # The URLs that were redirected serve what they were redirected to.
@@ -788,15 +800,68 @@ def take(name, url, directories):
     """Captures the page at `url` and writes it as `name` to each of `directories`. Returns false, saying why, if it
     cannot be captured."""
     page = capture(url)
+    if not isinstance(page, str) and len(page.body) < MIN_BYTES:
+        page = "%d bytes" % len(page.body)
     if isinstance(page, str):
         print("  skipped %s: %s" % (url, page[:70]), flush=True)
         return False
     save(directories, name, page)
+    report(name, page)
+    return True
+
+
+def report(name, page):
+    """Prints what the capture of the page `name` holds."""
     size = sum(len(data) for data, _, _ in {id(r[0]): r for r in page.resources.values()}.values())
     print("  took %s (%d KB, %d resources, %d MB%s)" % (
         name, len(page.body) >> 10, len(page.resources), size >> 20,
         ", %d omitted" % len(page.omitted) if page.omitted else ""), flush=True)
-    return True
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Pages that are files
+
+
+class Files(http.server.SimpleHTTPRequestHandler):
+    """Serves a directory's files, without a line on stderr for each request."""
+
+    def log_message(self, format, *args):
+        pass
+
+
+def localized(page, served, location):
+    """Returns the capture `page`, of a page served under the URL `served`, as the page loads at the file: URL
+    `location`: with only the resources and the omissions of other origins, since its own files load from where they
+    are."""
+    return Capture(location, page.body, page.kind,
+                   {url: r for url, r in page.resources.items() if not url.startswith(served)},
+                   {url: r for url, r in page.omitted.items() if not url.startswith(served)})
+
+
+def take_local(root, out, paths):
+    """Captures each page of `paths`, each a path under `root`, as it loads at its file: URL, and writes it to `out` at
+    the same path, with its markup as .html whatever the page's extension. Returns false if any page cannot be
+    captured."""
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Files, directory=root))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    served = "http://127.0.0.1:%d/" % server.server_address[1]
+    taken = True
+    try:
+        for path in paths:
+            page = capture(served + urllib.parse.quote(path))
+            if isinstance(page, str):
+                print("  skipped %s: %s" % (path, page[:70]), flush=True)
+                taken = False
+                continue
+            location = pathlib.Path(os.path.realpath(os.path.join(root, path))).as_uri()
+            stem = os.path.splitext(path)[0]
+            name = os.path.basename(stem) + ".html"
+            page = localized(page, served, location)
+            save((os.path.join(out, os.path.dirname(stem)),), name, page)
+            report(path, page)
+    finally:
+        server.shutdown()
+    return taken
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -938,7 +1003,7 @@ def refresh(words, jobs):
 
 def take_urls(urls):
     """Captures each page at its URL into the corpus, named for its host and path, and prints the path of each page's
-    record, which `pr_shell --html` and the browser example open. The rolled pages are left alone, because their
+    record, which `pr_shell --html` opens. The rolled pages are left alone, because their
     sources decide what a benchmark reads. Returns false if any page cannot be captured."""
     taken = True
     for url in urls:
@@ -1004,6 +1069,10 @@ def main():
     checked.add_argument("words", nargs="*")
     taken = commands.add_parser("take", help="capture the pages at the URLs given into the corpus")
     taken.add_argument("urls", nargs="+")
+    local = commands.add_parser("local", help="capture pages that are files, at their file: URLs")
+    local.add_argument("root")
+    local.add_argument("out")
+    local.add_argument("paths", nargs="+")
     args = ap.parse_args()
 
     if args.command == "check":
@@ -1013,6 +1082,8 @@ def main():
         return roll(args.if_empty)
     if args.command == "take":
         return 0 if take_urls(args.urls) else 1
+    if args.command == "local":
+        return 0 if take_local(args.root, args.out, args.paths) else 1
     return refresh(args.words, args.jobs)
 
 

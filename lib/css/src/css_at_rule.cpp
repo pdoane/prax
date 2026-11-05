@@ -243,50 +243,50 @@ extern const CssGrammarIndex kCssAtRuleBlockPrelude[CssAtRule_Count] = {
     0,     // CssAtRule_None
     76,    // CssAtRule_WebkitKeyframes
     0,     // CssAtRule_Annotation
-    6116,  // CssAtRule_Apply
+    6124,  // CssAtRule_Apply
     0,     // CssAtRule_BottomCenter
     0,     // CssAtRule_BottomLeft
     0,     // CssAtRule_BottomLeftCorner
     0,     // CssAtRule_BottomRight
     0,     // CssAtRule_BottomRightCorner
     0,     // CssAtRule_CharacterVariant
-    6119,  // CssAtRule_ColorProfile
-    6122,  // CssAtRule_Container
+    6127,  // CssAtRule_ColorProfile
+    6130,  // CssAtRule_Container
     0,     // CssAtRule_Contents
-    5918,  // CssAtRule_CounterStyle
+    5926,  // CssAtRule_CounterStyle
     0,     // CssAtRule_CustomMedia
     0,     // CssAtRule_CustomSelector
-    6132,  // CssAtRule_Else
+    6140,  // CssAtRule_Else
     0,     // CssAtRule_FontFace
-    6000,  // CssAtRule_FontFeatureValues
-    2627,  // CssAtRule_FontPaletteValues
-    6133,  // CssAtRule_Function
+    6008,  // CssAtRule_FontFeatureValues
+    2635,  // CssAtRule_FontPaletteValues
+    6141,  // CssAtRule_Function
     0,     // CssAtRule_HistoricalForms
     0,     // CssAtRule_Import
     76,    // CssAtRule_Keyframes
-    6157,  // CssAtRule_Layer
+    6165,  // CssAtRule_Layer
     0,     // CssAtRule_LeftBottom
     0,     // CssAtRule_LeftMiddle
     0,     // CssAtRule_LeftTop
-    2627,  // CssAtRule_Location
-    3806,  // CssAtRule_Media
-    6159,  // CssAtRule_Mixin
+    2635,  // CssAtRule_Location
+    3814,  // CssAtRule_Media
+    6167,  // CssAtRule_Mixin
     0,     // CssAtRule_Namespace
-    4001,  // CssAtRule_Navigation
+    4009,  // CssAtRule_Navigation
     0,     // CssAtRule_Ornaments
-    6170,  // CssAtRule_Page
-    2627,  // CssAtRule_PositionTry
+    6178,  // CssAtRule_Page
+    2635,  // CssAtRule_PositionTry
     0,     // CssAtRule_Private
-    6171,  // CssAtRule_Property
+    6179,  // CssAtRule_Property
     0,     // CssAtRule_RightBottom
     0,     // CssAtRule_RightMiddle
     0,     // CssAtRule_RightTop
-    6172,  // CssAtRule_Scope
+    6180,  // CssAtRule_Scope
     0,     // CssAtRule_StartingStyle
     0,     // CssAtRule_Styleset
     0,     // CssAtRule_Stylistic
-    4877,  // CssAtRule_Supports
-    2627,  // CssAtRule_SupportsCondition
+    4885,  // CssAtRule_Supports
+    2635,  // CssAtRule_SupportsCondition
     0,     // CssAtRule_Swash
     0,     // CssAtRule_TopCenter
     0,     // CssAtRule_TopLeft
@@ -294,14 +294,14 @@ extern const CssGrammarIndex kCssAtRuleBlockPrelude[CssAtRule_Count] = {
     0,     // CssAtRule_TopRight
     0,     // CssAtRule_TopRightCorner
     0,     // CssAtRule_ViewTransition
-    6173,  // CssAtRule_When
+    6181,  // CssAtRule_When
 };
 
 extern const CssGrammarIndex kCssAtRuleStatementPrelude[CssAtRule_Count] = {
     0,     // CssAtRule_None
     0,     // CssAtRule_WebkitKeyframes
     0,     // CssAtRule_Annotation
-    6116,  // CssAtRule_Apply
+    6124,  // CssAtRule_Apply
     0,     // CssAtRule_BottomCenter
     0,     // CssAtRule_BottomLeft
     0,     // CssAtRule_BottomLeftCorner
@@ -312,24 +312,24 @@ extern const CssGrammarIndex kCssAtRuleStatementPrelude[CssAtRule_Count] = {
     0,     // CssAtRule_Container
     0,     // CssAtRule_Contents
     0,     // CssAtRule_CounterStyle
-    6123,  // CssAtRule_CustomMedia
-    6129,  // CssAtRule_CustomSelector
+    6131,  // CssAtRule_CustomMedia
+    6137,  // CssAtRule_CustomSelector
     0,     // CssAtRule_Else
     0,     // CssAtRule_FontFace
     0,     // CssAtRule_FontFeatureValues
     0,     // CssAtRule_FontPaletteValues
     0,     // CssAtRule_Function
     0,     // CssAtRule_HistoricalForms
-    6140,  // CssAtRule_Import
+    6148,  // CssAtRule_Import
     0,     // CssAtRule_Keyframes
-    6158,  // CssAtRule_Layer
+    6166,  // CssAtRule_Layer
     0,     // CssAtRule_LeftBottom
     0,     // CssAtRule_LeftMiddle
     0,     // CssAtRule_LeftTop
     0,     // CssAtRule_Location
     0,     // CssAtRule_Media
     0,     // CssAtRule_Mixin
-    6165,  // CssAtRule_Namespace
+    6173,  // CssAtRule_Namespace
     0,     // CssAtRule_Navigation
     0,     // CssAtRule_Ornaments
     0,     // CssAtRule_Page
@@ -357,7 +357,7 @@ extern const CssGrammarIndex kCssAtRuleStatementPrelude[CssAtRule_Count] = {
 
 extern const CssGrammarIndex kCssAtRuleQualifiedPrelude[CssAtRule_Count] = {
     0,     // CssAtRule_None
-    6177,  // CssAtRule_WebkitKeyframes
+    6185,  // CssAtRule_WebkitKeyframes
     0,     // CssAtRule_Annotation
     0,     // CssAtRule_Apply
     0,     // CssAtRule_BottomCenter
@@ -379,7 +379,7 @@ extern const CssGrammarIndex kCssAtRuleQualifiedPrelude[CssAtRule_Count] = {
     0,     // CssAtRule_Function
     0,     // CssAtRule_HistoricalForms
     0,     // CssAtRule_Import
-    6177,  // CssAtRule_Keyframes
+    6185,  // CssAtRule_Keyframes
     0,     // CssAtRule_Layer
     0,     // CssAtRule_LeftBottom
     0,     // CssAtRule_LeftMiddle
@@ -532,14 +532,14 @@ extern const CssPropertiesIn kCssAtRuleProperties[CssAtRule_Count] = {
 extern const CssGrammarIndex kCssAtRuleNamedValue[CssAtRule_Count] = {
     0,     // CssAtRule_None
     0,     // CssAtRule_WebkitKeyframes
-    6174,  // CssAtRule_Annotation
+    6182,  // CssAtRule_Annotation
     0,     // CssAtRule_Apply
     0,     // CssAtRule_BottomCenter
     0,     // CssAtRule_BottomLeft
     0,     // CssAtRule_BottomLeftCorner
     0,     // CssAtRule_BottomRight
     0,     // CssAtRule_BottomRightCorner
-    6175,  // CssAtRule_CharacterVariant
+    6183,  // CssAtRule_CharacterVariant
     0,     // CssAtRule_ColorProfile
     0,     // CssAtRule_Container
     0,     // CssAtRule_Contents
@@ -551,7 +551,7 @@ extern const CssGrammarIndex kCssAtRuleNamedValue[CssAtRule_Count] = {
     0,     // CssAtRule_FontFeatureValues
     0,     // CssAtRule_FontPaletteValues
     0,     // CssAtRule_Function
-    6176,  // CssAtRule_HistoricalForms
+    6184,  // CssAtRule_HistoricalForms
     0,     // CssAtRule_Import
     0,     // CssAtRule_Keyframes
     0,     // CssAtRule_Layer
@@ -563,7 +563,7 @@ extern const CssGrammarIndex kCssAtRuleNamedValue[CssAtRule_Count] = {
     0,     // CssAtRule_Mixin
     0,     // CssAtRule_Namespace
     0,     // CssAtRule_Navigation
-    6174,  // CssAtRule_Ornaments
+    6182,  // CssAtRule_Ornaments
     0,     // CssAtRule_Page
     0,     // CssAtRule_PositionTry
     0,     // CssAtRule_Private
@@ -573,11 +573,11 @@ extern const CssGrammarIndex kCssAtRuleNamedValue[CssAtRule_Count] = {
     0,     // CssAtRule_RightTop
     0,     // CssAtRule_Scope
     0,     // CssAtRule_StartingStyle
-    6176,  // CssAtRule_Styleset
-    6174,  // CssAtRule_Stylistic
+    6184,  // CssAtRule_Styleset
+    6182,  // CssAtRule_Stylistic
     0,     // CssAtRule_Supports
     0,     // CssAtRule_SupportsCondition
-    6174,  // CssAtRule_Swash
+    6182,  // CssAtRule_Swash
     0,     // CssAtRule_TopCenter
     0,     // CssAtRule_TopLeft
     0,     // CssAtRule_TopLeftCorner
@@ -942,109 +942,109 @@ extern const PrCssDescriptor kCssDescriptorAlias[PrCssDescriptor_Count] = {
 
 // Grammar roots, CssGrammarRoot_None where there is no grammar.
 extern const CssGrammarIndex kCssDescriptorGrammarRoot[] = {
-    5868,  // @color-profile components
-    5869,  // @color-profile rendering-intent
-    786,   // @color-profile src
+    5876,  // @color-profile components
+    5877,  // @color-profile rendering-intent
+    794,   // @color-profile src
     133,   // @container aspect-ratio
-    1382,  // @container block-size
-    5874,  // @container fallback
-    1382,  // @container height
-    1382,  // @container inline-size
-    5881,  // @container orientation
-    5884,  // @container scrollable
-    5884,  // @container scrolled
-    5898,  // @container snapped
-    5905,  // @container stuck
-    1382,  // @container width
-    5915,  // @counter-style additive-symbols
-    5918,  // @counter-style fallback
-    5919,  // @counter-style negative
-    5922,  // @counter-style pad
-    5917,  // @counter-style prefix
-    5925,  // @counter-style range
-    5931,  // @counter-style speak-as
-    5917,  // @counter-style suffix
-    5938,  // @counter-style symbols
-    5939,  // @counter-style system
-    5951,  // @font-face ascent-override
-    5951,  // @font-face descent-override
-    5954,  // @font-face font-display
-    5960,  // @font-face font-family
-    953,   // @font-face font-feature-settings
-    960,   // @font-face font-language-override
-    1237,  // @font-face font-named-instance
-    5961,  // @font-face font-size
+    1390,  // @container block-size
+    5882,  // @container fallback
+    1390,  // @container height
+    1390,  // @container inline-size
+    5889,  // @container orientation
+    5892,  // @container scrollable
+    5892,  // @container scrolled
+    5906,  // @container snapped
+    5913,  // @container stuck
+    1390,  // @container width
+    5923,  // @counter-style additive-symbols
+    5926,  // @counter-style fallback
+    5927,  // @counter-style negative
+    5930,  // @counter-style pad
+    5925,  // @counter-style prefix
+    5933,  // @counter-style range
+    5939,  // @counter-style speak-as
+    5925,  // @counter-style suffix
+    5946,  // @counter-style symbols
+    5947,  // @counter-style system
+    5959,  // @font-face ascent-override
+    5959,  // @font-face descent-override
+    5962,  // @font-face font-display
+    5968,  // @font-face font-family
+    961,   // @font-face font-feature-settings
+    968,   // @font-face font-language-override
+    1245,  // @font-face font-named-instance
+    5969,  // @font-face font-size
     0,     // @font-face font-stretch
-    5964,  // @font-face font-style
-    5974,  // @font-face font-variation-settings
-    5979,  // @font-face font-weight
-    5982,  // @font-face font-width
-    5951,  // @font-face line-gap-override
-    5985,  // @font-face size-adjust
-    5986,  // @font-face src
-    5987,  // @font-face subscript-position-override
-    5991,  // @font-face subscript-size-override
-    5987,  // @font-face superscript-position-override
-    5991,  // @font-face superscript-size-override
-    5995,  // @font-face unicode-range
-    5954,  // @font-feature-values font-display
-    5996,  // @font-palette-values base-palette
-    6000,  // @font-palette-values font-family
-    6001,  // @font-palette-values override-colors
-    6004,  // @function result
-    2051,  // @media -webkit-device-pixel-ratio
-    6005,  // @media -webkit-transform-3d
-    6006,  // @media any-hover
-    6009,  // @media any-pointer
+    5972,  // @font-face font-style
+    5982,  // @font-face font-variation-settings
+    5987,  // @font-face font-weight
+    5990,  // @font-face font-width
+    5959,  // @font-face line-gap-override
+    5993,  // @font-face size-adjust
+    5994,  // @font-face src
+    5995,  // @font-face subscript-position-override
+    5999,  // @font-face subscript-size-override
+    5995,  // @font-face superscript-position-override
+    5999,  // @font-face superscript-size-override
+    6003,  // @font-face unicode-range
+    5962,  // @font-feature-values font-display
+    6004,  // @font-palette-values base-palette
+    6008,  // @font-palette-values font-family
+    6009,  // @font-palette-values override-colors
+    6012,  // @function result
+    2059,  // @media -webkit-device-pixel-ratio
+    6013,  // @media -webkit-transform-3d
+    6014,  // @media any-hover
+    6017,  // @media any-pointer
     133,   // @media aspect-ratio
-    1559,  // @media color
-    6013,  // @media color-gamut
-    1559,  // @media color-index
+    1567,  // @media color
+    6021,  // @media color-gamut
+    1567,  // @media color-index
     133,   // @media device-aspect-ratio
-    1382,  // @media device-height
-    1382,  // @media device-width
-    6017,  // @media display-mode
-    6023,  // @media display-state
-    6028,  // @media dynamic-range
-    6031,  // @media environment-blending
-    6035,  // @media forced-colors
-    6005,  // @media grid
-    1382,  // @media height
-    1559,  // @media horizontal-viewport-segments
-    6006,  // @media hover
-    6038,  // @media inverted-colors
-    1559,  // @media monochrome
-    6041,  // @media nav-controls
-    5881,  // @media orientation
-    6044,  // @media overflow-block
-    6048,  // @media overflow-inline
-    6009,  // @media pointer
-    6051,  // @media prefers-color-scheme
-    6054,  // @media prefers-contrast
-    6059,  // @media prefers-reduced-data
-    6059,  // @media prefers-reduced-motion
-    6059,  // @media prefers-reduced-transparency
-    6062,  // @media resizable
-    6065,  // @media resolution
-    6068,  // @media scan
-    6071,  // @media scripting
-    6075,  // @media shape
-    6051,  // @media ua-color-scheme
-    6078,  // @media update
-    1559,  // @media vertical-viewport-segments
-    6013,  // @media video-color-gamut
-    6028,  // @media video-dynamic-range
-    1382,  // @media width
-    6082,  // @page bleed
-    6085,  // @page marks
-    6090,  // @page page-margin-safety
-    6094,  // @page page-orientation
-    6098,  // @page size
-    6062,  // @property inherits
-    6004,  // @property initial-value
-    4931,  // @property syntax
-    963,   // @view-transition navigation
-    6106,  // @view-transition types
+    1390,  // @media device-height
+    1390,  // @media device-width
+    6025,  // @media display-mode
+    6031,  // @media display-state
+    6036,  // @media dynamic-range
+    6039,  // @media environment-blending
+    6043,  // @media forced-colors
+    6013,  // @media grid
+    1390,  // @media height
+    1567,  // @media horizontal-viewport-segments
+    6014,  // @media hover
+    6046,  // @media inverted-colors
+    1567,  // @media monochrome
+    6049,  // @media nav-controls
+    5889,  // @media orientation
+    6052,  // @media overflow-block
+    6056,  // @media overflow-inline
+    6017,  // @media pointer
+    6059,  // @media prefers-color-scheme
+    6062,  // @media prefers-contrast
+    6067,  // @media prefers-reduced-data
+    6067,  // @media prefers-reduced-motion
+    6067,  // @media prefers-reduced-transparency
+    6070,  // @media resizable
+    6073,  // @media resolution
+    6076,  // @media scan
+    6079,  // @media scripting
+    6083,  // @media shape
+    6059,  // @media ua-color-scheme
+    6086,  // @media update
+    1567,  // @media vertical-viewport-segments
+    6021,  // @media video-color-gamut
+    6036,  // @media video-dynamic-range
+    1390,  // @media width
+    6090,  // @page bleed
+    6093,  // @page marks
+    6098,  // @page page-margin-safety
+    6102,  // @page page-orientation
+    6106,  // @page size
+    6070,  // @property inherits
+    6012,  // @property initial-value
+    4939,  // @property syntax
+    971,   // @view-transition navigation
+    6114,  // @view-transition types
 };
 
 extern const uint64_t kCssDescriptorUnicodeRanges[bitsetWords(PrCssDescriptor_Count)] = {

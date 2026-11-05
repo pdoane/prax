@@ -439,6 +439,7 @@ bool prDrawAtlasGlyph(PrDrawAtlas* atlas, const PrFontGlyphRun* run, uint32_t in
         single.glyphs = &alone;
         single.glyphCount = 1;
         single.transforms = run->transforms != nullptr ? &run->transforms[index] : nullptr;
+        single.clusters = run->clusters != nullptr ? &run->clusters[index] : nullptr;
         PrAffine2 place = transform;
         place.e = float(key.phaseX) / kPhases;
         place.f = float(key.phaseY) / kPhases;

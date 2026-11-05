@@ -43,6 +43,13 @@ def lists(args):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# print
+
+def print_document(args):
+    return {"prax": common.run_json([common.binary(args.bin, "print_bench")], "print_bench")}, []
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 # ui
 
 def ui(args):
@@ -218,8 +225,8 @@ def draw(args):
     if args.pixel_ratio is not None:
         command += ["--pixel-ratio", str(args.pixel_ratio)]
     rows = common.run_json(command + args.drawings, "draw_bench")
-    viewer = os.path.join(common.ROOT, "tools", "viewer")
-    return {"prax": rows}, sorted(glob.glob(os.path.join(viewer, "*.cpp")) + glob.glob(os.path.join(viewer, "*.h")))
+    drawings = os.path.join(common.ROOT, "examples", "draw_features")
+    return {"prax": rows}, sorted(glob.glob(os.path.join(drawings, "*.cpp")) + glob.glob(os.path.join(drawings, "*.h")))
 
 
 # ----------------------------------------------------------------------------------------------------------------------

@@ -2499,6 +2499,10 @@ void cssStyleComputeInitial(CssValuePool* pool, PrCssProperty property, const Cs
     cssValuePoolReset(&parsed);
 }
 
+bool cssStyleLengthPx(double number, PrCssUnit unit, const CssStyleContext& context, double* out) {
+    return absoluteLength(number, unit, context, out);
+}
+
 void cssStyleAddValue(CssStyleBuilder* builder, CssValueRun computed) {
     uint32_t start = builder->pool.values.count;
     cssValuePoolAddRun(&builder->pool, computed);

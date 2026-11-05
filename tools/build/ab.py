@@ -49,7 +49,8 @@ def excluded(relative, excludes):
 def sync(source, excludes):
     """Brings the sources of the base to the files of `source`, a directory, apart from the `excludes` and the linked
     third_party. Only the files whose contents differ are written, so a build of them sees only them change, and the
-    files that `source` no longer has are removed."""
+    files that `source` no longer has are removed. A written file takes the time it is written, not its source's: a
+    commit's archive dates its files by the commit, which can be older than the objects of a later base's build."""
     destination = os.path.join(build.AB, "src")
     os.makedirs(destination, exist_ok=True)
     kept = set()
@@ -66,7 +67,8 @@ def sync(source, excludes):
             kept.add(path)
             target = os.path.join(destination, path)
             if not os.path.isfile(target) or not filecmp.cmp(os.path.join(source, path), target, shallow=False):
-                shutil.copy2(os.path.join(source, path), target)
+                shutil.copyfile(os.path.join(source, path), target)
+                shutil.copymode(os.path.join(source, path), target)
     for directory, names, files in os.walk(destination, topdown=False):
         relative = os.path.relpath(directory, destination)
         relative = "" if relative == "." else relative

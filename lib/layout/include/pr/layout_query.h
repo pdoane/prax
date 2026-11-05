@@ -42,11 +42,12 @@ typedef uint8_t PrLayoutCoordinates;
 // Returns the border boxes of an element's boxes, or the line rectangles of a text node, from the last layout, in
 // `coordinates`, in content order (cssom-view-1/#dom-element-getclientrects). An inline box's boxes are its parts on
 // lines and its rows around the block-level boxes inside it, each row across its container's content box and as tall as
-// the block's border box. A box under a rotation or skew yields its bounding rectangle, rounded outward to layout
-// units. A box under a projection yields the bounding rectangle of the part of it that is drawn: the part nearer the
-// eye than drawing's cut (kPrPathPolylineNearPlane) is cut away, and a box wholly behind the eye yields an empty
-// rectangle at the origin. An element that generates no box, or an erased node, has none. Writes up to `capacity`
-// rectangles to `out` and returns the total count.
+// the block's border box. A box that a fragmentation break crosses has a box for each of its fragments, in the
+// fragmentainers in order (css-break-4/#fragmentation-model). A box under a rotation or skew yields its bounding
+// rectangle, rounded outward to layout units. A box under a projection yields the bounding rectangle of the part of it
+// that is drawn: the part nearer the eye than drawing's cut (kPrPathPolylineNearPlane) is cut away, and a box wholly
+// behind the eye yields an empty rectangle at the origin. An element that generates no box, or an erased node, has
+// none. Writes up to `capacity` rectangles to `out` and returns the total count.
 uint32_t prLayoutNodeBoxes(PrLayoutTree* tree, PrLayoutNode node, PrLayoutCoordinates coordinates,
     PrLayoutRect* PR_NULLABLE out, uint32_t capacity);
 
@@ -111,8 +112,8 @@ uint32_t prLayoutNodeGridTrackSizes(const PrLayoutTree* tree, PrLayoutNode node,
 uint32_t prLayoutNodeGridLineNames(const PrLayoutTree* tree, PrLayoutNode node, PrLayoutGridAxis axis,
     PrLayoutGridLineName* PR_NULLABLE out, uint32_t capacity);
 
-// Returns the text that the tree interned for `name` (prLayoutGridNameIntern), valid for the tree's life.
-PrStringView prLayoutGridNameText(const PrLayoutTree* tree, PrLayoutGridName name);
+// Returns the text that the tree interned for `name` (prLayoutNameIntern), valid for the tree's life.
+PrStringView prLayoutNameText(const PrLayoutTree* tree, PrLayoutName name);
 
 // Returns the used width of the border at `side` of a box styled as `node` is: its style's width snapped as a line
 // width at the tree's target pixel ratio (css-values-4/#snap-as-a-line-width). Returns zero for text or an erased node.

@@ -34,7 +34,7 @@
     return URL.createObjectURL(new Blob([data], { type: type }));
   }
 
-  var player = '../../third_party/dotlottie-web/';
+  var player = '../../../third_party/dotlottie-web/';
   var ready = Promise.all([
     read(player + 'index.js', 'text'),
     read(player + 'dotlottie-player.wasm', 'arraybuffer'),

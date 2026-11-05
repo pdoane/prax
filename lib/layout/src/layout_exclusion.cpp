@@ -5,6 +5,8 @@
 
 #include "layout/src/layout_exclusion.h"
 
+#include "layout/src/layout_fragmentation.h"
+
 namespace pr_impl {
 
 namespace {
@@ -34,11 +36,15 @@ bool meets(const LayoutExclusion& e, PrLayoutUnit y, PrLayoutUnit h) {
 
 void layoutExclusionsInit(LayoutExclusions& exclusions) {
     exclusions.floats = RawArray<LayoutExclusion>{};
+    exclusions.broken = RawArray<LayoutBrokenFloat>{};
     PrLayoutUnit none = kLayoutOffsetNone;
     exclusions.mark = LayoutExclusionMark{0, none, {none, none}, none};
 }
 
 void layoutExclusionsReset(LayoutExclusions& exclusions) {
+    for (uint32_t i = 0; i < exclusions.broken.count; ++i)
+        layoutBreakTokenRelease(exclusions.broken.data[i].token);
+    exclusions.broken.reset();
     exclusions.floats.reset();
     layoutExclusionsInit(exclusions);
 }
@@ -57,6 +63,10 @@ void layoutExclusionsCut(LayoutExclusions& exclusions, const LayoutExclusionMark
     PR_ASSERT(mark.count <= exclusions.floats.count);
     exclusions.floats.count = mark.count;
     exclusions.mark = mark;
+    while (exclusions.broken.count != 0 && exclusions.broken.last().exclusion >= mark.count) {
+        layoutBreakTokenRelease(exclusions.broken.last().token);
+        exclusions.broken.pop();
+    }
 }
 
 LayoutReads layoutReadsBegin(const LayoutExclusions& exclusions) {

@@ -104,6 +104,13 @@ enum {
 
     LayoutFragmentFlag_Reversed = 1 << 9,       // Text: at an odd bidi level, so the order of its text runs leftward
     LayoutFragmentFlag_Break = 1 << 10,         // Text: the forced break that ends its line, with no glyphs
+
+    // Box, Around: a piece of a box that a fragmentation break crossed, after its first piece (layout_fragmentation.h).
+    // Placements pass through it as through an anonymous box, so that a box's placement is its first piece.
+    LayoutFragmentFlag_Continuation = 1 << 11,
+
+    LayoutFragmentFlag_Column = 1 << 12,        // Box: a column of a multi-column container, with no node
+    LayoutFragmentFlag_Page = 1 << 13,          // Box: a page of a paginated tree, with no node
 };
 typedef uint16_t LayoutFragmentFlags;
 
@@ -179,6 +186,7 @@ struct LayoutPending {
     LayoutStaticEdges edges;
     bool inLines;                   // true if it came to the list through a line, a row or an anonymous block box
     bool fixed;                     // true if its position is fixed (LayoutFragmentPlaceholder::fixed)
+    bool running;                   // true if it is a running box (LayoutFragmentPlaceholder::running)
 };
 
 // The first and last baselines of a box, indexed by LayoutBaselineEdge and measured from the block-start edge of its
@@ -210,11 +218,13 @@ struct LayoutFragmentBox {
     PrLayoutUnit containingInline;
 };
 
-// A range of the glyphs of a text fragment in one font: the index of the font among the fragment's fonts, and the index
-// of the glyph after the last glyph in the range.
+// A range of the glyphs of a text fragment in one font at one em: the index of the font among the fragment's fonts, the
+// index of the glyph after the last glyph in the range, and the em of its glyphs relative to the fragment's size, which
+// is one unless shaping synthesized the glyphs smaller, as small capitals or a subscript (PrTextGlyph::scale).
 struct LayoutFragmentFontRange {
     uint32_t font;
     uint32_t glyphEnd;
+    float scale;
 };
 
 // A place where a caret can stand in a text fragment: the start of a cluster, as an offset in its node's text, and the
@@ -229,10 +239,10 @@ struct LayoutCaretStop {
 // on a vertical line are placed down the line.
 //
 // The fonts of the fragment are distinct, and it holds a reference to each (layoutFragmentTextFonts). The glyphs are
-// divided into ranges of one font each (layoutFragmentTextRanges). Each range holds at least one glyph, the ranges
-// cover the glyphs once and in order, and adjacent ranges have different fonts. The fonts are stored right after the
-// fragment, followed by the ranges, then the glyphs, then the caret stops (layoutFragmentTextStops). A break fragment
-// has no fonts, ranges or glyphs.
+// divided into ranges of one font and one scale each (layoutFragmentTextRanges). Each range holds at least one glyph,
+// the ranges cover the glyphs once and in order, and adjacent ranges differ in font or scale. The fonts are stored
+// right after the fragment, followed by the ranges, then the glyphs, then the caret stops (layoutFragmentTextStops). A
+// break fragment has no fonts, ranges or glyphs.
 //
 // The caret stops are in the order the glyphs are placed, one at the start of each cluster, so their offsets fall in
 // the order of the text, or against it in a reversed fragment. The fragment holds the bytes of its node's text from its
@@ -274,6 +284,7 @@ struct LayoutFragmentAnchor {
 // boxes that may hold it (LayoutPending).
 struct LayoutFragmentPlaceholder {
     bool fixed;
+    bool running;                   // true if its box is running, which no box holds (PrLayoutPosition_Running)
 };
 
 // Marks an anchor that has no float fragment among the siblings of its line (LayoutFragmentAnchor).
@@ -285,7 +296,8 @@ struct LayoutFragment {
     mutable Atomic<uint32_t> references;
     LayoutFragmentKind kind;
     union {
-        LayoutSideFlags broken;     // Inline: the sides at which the box breaks across lines, which have no border
+        LayoutSideFlags broken;     // Inline, Box: the sides at which the box breaks across lines or fragmentainers,
+                                    // which have no border
         LayoutStaticEdges edges;    // Placeholder: the edges its static position gives the box
         LayoutTextTurn turn;        // Text: how its glyphs are turned
     };
@@ -338,9 +350,9 @@ LayoutFragment* layoutFragmentCreate(LayoutFragmentKind kind, LayoutNodeIndex no
 // Returns the list of a fragment that was made with room for one, for its maker to fill in.
 LayoutPending* layoutFragmentPendingStorage(LayoutFragment* fragment);
 
-// Creates a placeholder with one reference for the box out of flow `node`, whose static position gives `edges`. `fixed`
-// says whether the position of the box is fixed.
-LayoutFragment* layoutFragmentCreatePlaceholder(LayoutNodeIndex node, LayoutStaticEdges edges, bool fixed);
+// Creates a placeholder with one reference for the box out of flow `node`, whose static position gives `edges` and
+// whose position is `position`.
+LayoutFragment* layoutFragmentCreatePlaceholder(LayoutNodeIndex node, LayoutStaticEdges edges, PrLayoutPosition position);
 
 // Creates an anchor with one reference for the float `node`. The anchor carries the placeholder flag of `flags`, which
 // are the flags of the float's fragment. Its maker sets where the float's fragment is.
@@ -582,6 +594,12 @@ struct LayoutLogicalChild {
     const LayoutFragment* fragment;
     LayoutLogicalOffset offset;
 };
+
+// Derives the fields of `fragment` that summarize its children: the range of the children that are floats or hold
+// floats, and the flags that say that a child is a line, that the children hold a placeholder, and that the fragment
+// holds boxes out of flow, which are its last children. Every fragment with children is summarized once its children
+// are set, whether a builder or a caller sets them.
+void layoutFragmentSummarize(LayoutFragment* fragment);
 
 // Creates a fragment of `kind` and `size` in `mode`, with one reference. Its children are the entries of `children`
 // from `mark` on, each at the physical offset that corresponds to its logical one. Removes them from `children`. The

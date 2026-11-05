@@ -239,6 +239,15 @@ TEST_CASE("append copies an external string before adding to it") {
     prRawStringReset(&string);
 }
 
+TEST_CASE("an integer appends as its digits in the radix") {
+    PrRawString string = prRawStringCopy("id ");
+    prRawStringAppendU64(&string, 1234, 10);
+    prRawStringAppend(&string, " ");
+    prRawStringAppendU64(&string, 255, 16);
+    CHECK(prRawStringView(&string) == "id 1234 ff");
+    prRawStringReset(&string);
+}
+
 TEST_CASE("append makes a null string the text") {
     PrRawString string = prRawStringNull();
     prRawStringAppend(&string, "ab");

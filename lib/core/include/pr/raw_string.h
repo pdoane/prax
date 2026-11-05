@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/integer.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -72,6 +73,13 @@ void prRawStringReplace(PrRawString* target, PrStringView text);
 // becomes `text`. `text` must not point into `string`. When the capacity grows, it at least doubles, so building a
 // string one append at a time copies each byte once, amortized.
 void prRawStringAppend(PrRawString* string, PrStringView text);
+
+// Appends the digits of `value` in `radix`, written by prU64Format, to `string` by prRawStringAppend.
+static inline void prRawStringAppendU64(PrRawString* string, uint64_t value, uint32_t radix) {
+    char digits[kPrU64TextMaxBytes];
+    size_t size = prU64Format(value, digits, radix);
+    prRawStringAppend(string, PR_LITERAL(PrStringView){digits, size});
+}
 
 // Empties `string` and keeps the storage that it owns, so that text appended next reuses it. A null string stays null,
 // and an external string becomes the empty string.

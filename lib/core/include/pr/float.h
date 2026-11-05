@@ -384,6 +384,10 @@ enum {
     kPrF64PositionalMinExponent = -6,   // the range of exponents that prF64Format writes in positional notation
     kPrF64PositionalMaxExponent = 21,
     kPrF64MaxDigits = 17,               // the number of significant digits that tells every double apart
+
+    // The most bytes that prF64FormatFixed writes: a sign, the digits below 10^kPrF64PositionalMaxExponent, a point and
+    // kPrF64MaxDigits places.
+    kPrF64FixedMaxBytes = 1 + kPrF64PositionalMaxExponent + 1 + kPrF64MaxDigits,
 };
 
 // Parses the decimal number in the `size` bytes at `data`, correctly rounded with ties to even. The syntax is an
@@ -400,6 +404,14 @@ size_t prF64Format(double value, char* out);
 // Writes to `out` the shortest decimal of `value` rounded to `digits` significant digits, half away from zero, in the
 // notation of prF64Format. 73.33859777674978 to six digits is "73.3386". `digits` must be 1 through kPrF64MaxDigits.
 size_t prF64FormatSignificant(double value, uint32_t digits, char* out);
+
+// Writes to `out` the shortest decimal of `value` rounded to `decimals` places, half away from zero, in positional
+// notation with no exponent and no trailing zeros, and returns its length: 0.12345 to four places is "0.1235", and 2.5
+// to none is "3". A value that rounds to zero writes as "0". Formats such as PDF, which read no exponent and bound the
+// precision of a real, write their numbers this way. `value` must be finite, and its magnitude below
+// 10^kPrF64PositionalMaxExponent. `decimals` must be at most kPrF64MaxDigits. `out` must hold at least
+// kPrF64FixedMaxBytes bytes. The output is not terminated.
+size_t prF64FormatFixed(double value, uint32_t decimals, char* out);
 
 #if defined(__cplusplus)
 }

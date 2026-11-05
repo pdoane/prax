@@ -455,7 +455,7 @@ void placeLine(LayoutCache& cache, LayoutNodeIndex parent, const LayoutFragment*
                 break;
             case LayoutFragmentKind_Box:
             case LayoutFragmentKind_Replaced:
-                if (c->node != kPrLayoutNodeNone)
+                if (c->node != kPrLayoutNodeNone && (c->flags & LayoutFragmentFlag_Continuation) == 0)
                     placeBox(cache, c->node, parent, c, offset + child.offset);
                 else
                     placeWithin(cache, parent, c, offset + child.offset, at.child, true);
@@ -479,8 +479,9 @@ void placeWithin(LayoutCache& cache, LayoutNodeIndex parent, const LayoutFragmen
         if (c->kind == LayoutFragmentKind_Line)
             placeLine(cache, parent, c, at, LayoutPieceAt{child, i}, nested);
         else if (c->kind == LayoutFragmentKind_Around)
-            placeWithin(cache, parent, c, at, child, nested);
-        else if (c->kind == LayoutFragmentKind_Box && c->node == kPrLayoutNodeNone)
+            placeWithin(cache, parent, c, at, child, nested || (c->flags & LayoutFragmentFlag_Continuation) != 0);
+        else if (c->kind == LayoutFragmentKind_Box &&
+                (c->node == kPrLayoutNodeNone || (c->flags & LayoutFragmentFlag_Continuation) != 0))
             placeWithin(cache, parent, c, at, child, true);
         else if ((c->kind == LayoutFragmentKind_Box || c->kind == LayoutFragmentKind_Replaced) &&
                 c->node != kPrLayoutNodeNone)
@@ -721,13 +722,21 @@ void layoutCachePlace(LayoutCache& cache, LayoutNodeIndex node, const LayoutFrag
     for (uint32_t i = fragment->childCount; i-- > 0;) {
         const LayoutChild& child = fragment->children[i];
         const LayoutFragment* c = child.fragment;
-        if (c->kind == LayoutFragmentKind_Line)
-            placeLine(cache, node, c, child.offset, LayoutPieceAt{i, kLayoutPieceNone});
-        else if (c->kind == LayoutFragmentKind_Around ||
-                (c->kind == LayoutFragmentKind_Box && c->node == kPrLayoutNodeNone))
-            placeWithin(cache, node, c, child.offset, i);
-        else if (c->kind == LayoutFragmentKind_Box || c->kind == LayoutFragmentKind_Replaced)
-            placeBox(cache, c->node, node, c, child.offset);
+        bool continues = (c->flags & LayoutFragmentFlag_Continuation) != 0;
+        switch (c->kind) {
+            case LayoutFragmentKind_Line:
+                placeLine(cache, node, c, child.offset, LayoutPieceAt{i, kLayoutPieceNone});
+                break;
+            case LayoutFragmentKind_Around: placeWithin(cache, node, c, child.offset, i, continues); break;
+            case LayoutFragmentKind_Box:
+                if (c->node != kPrLayoutNodeNone && !continues)
+                    placeBox(cache, c->node, node, c, child.offset);
+                else
+                    placeWithin(cache, node, c, child.offset, i, continues);
+                break;
+            case LayoutFragmentKind_Replaced: placeBox(cache, c->node, node, c, child.offset); break;
+            default: break;
+        }
     }
 }
 

@@ -38,6 +38,19 @@ endif()
 target_include_directories(draw_compare PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(draw_compare PUBLIC prax::core PRIVATE prax::core_cpp pr_warnings)
 
+# The renderers of lib/draw and its comparisons, in the configurations that the viewer and draw_bench render with. The
+# web's build has no comparisons, and neither of those tools.
+if (NOT EMSCRIPTEN)
+    add_library(draw_renderers STATIC draw_renderers.cpp)
+    target_include_directories(draw_renderers PUBLIC ${PROJECT_SOURCE_DIR})
+    target_link_libraries(draw_renderers PUBLIC prax::draw prax::gpu
+                                         PRIVATE draw_blend2d draw_imgui prax::compress prax::image prax::svg
+                                                 prax::core_cpp pr_warnings)
+    if (APPLE)
+        target_link_libraries(draw_renderers PRIVATE draw_coregraphics)
+    endif()
+endif()
+
 # The fixture of the tests of Studio Kit and of the libraries over it (kit_fixture.h): a kit that sets text in the Noto
 # fonts that the build fetched, and the frames that drive it.
 add_library(kit_fixture INTERFACE kit_fixture.h)

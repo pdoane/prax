@@ -62,6 +62,20 @@ float prLayoutTreeTargetPixelRatio(const PrLayoutTree* tree);
 void prLayoutTreeSetCanvasColor(PrLayoutTree* tree, PrColor16 color);
 PrColor16 prLayoutTreeCanvasColor(const PrLayoutTree* tree);
 
+// What a paint labels with marks (prDrawListPushMark), whose keys are the nodes' keys (prLayoutNodeSetKey).
+enum {
+    PrLayoutMarking_None,
+    PrLayoutMarking_Content,    // each text fragment's glyphs and each replaced box's content, by its node's key
+};
+typedef uint8_t PrLayoutMarking;
+
+// Sets or returns what the tree's paints mark, which is nothing until it is set. A tree marks its content for a writer
+// of documents, which joins the marks to a structure of the nodes' keys (pr/draw_structure.h). A node without a key
+// paints unmarked. A paint that marks also gives each glyph run its text. Setting a new value records every box again
+// at the next paint.
+void prLayoutTreeSetMarking(PrLayoutTree* tree, PrLayoutMarking marking);
+PrLayoutMarking prLayoutTreeMarking(const PrLayoutTree* tree);
+
 // Sets or returns whether a user's wheel anywhere over the viewport waits for the tree's document, which may cancel it,
 // as a wheel over a box of PrLayoutWheelEvents_Blocking does. It is passive until it is set. A scene holds the value.
 void prLayoutTreeSetViewportWheelEvents(PrLayoutTree* tree, PrLayoutWheelEvents events);
@@ -113,6 +127,11 @@ PrLayoutNode prLayoutNodeCreateSemiReplaced(PrLayoutTree* tree, PrLayoutNode par
 // and forces a line break in its inline formatting context, whatever its white space. Only its `clear` and its display
 // are read from its record. Its line is set in its parent's font, like the text around it.
 PrLayoutNode prLayoutNodeCreateLineBreak(PrLayoutTree* tree, PrLayoutNode parent, PrLayoutStyleIndex style);
+
+// Creates a copy of the subtree of `node` as the last child of element `parent`, and returns the copy of `node`. Each
+// node of the copy has its original's kind, record, record for the first formatted line, text, natural dimensions,
+// content and rendered flags, and no key. The cost is the size of the subtree.
+PrLayoutNode prLayoutTreeCopy(PrLayoutTree* tree, PrLayoutNode node, PrLayoutNode parent);
 
 // Removes the node from its parent and destroys it and its descendants.
 void prLayoutTreeErase(PrLayoutTree* tree, PrLayoutNode node);
@@ -384,6 +403,8 @@ typedef struct PrLayoutTreeStats {
     uint32_t flexLaidOut;           // flex containers laid out
     uint32_t flexItemsFlexed;       // items visited by the rounds of resolving flexible lengths, one per item a round
     uint32_t tablesLaidOut;         // tables whose grids were laid out, not counting their cells' layouts
+    uint32_t tableRowsSized;        // rows sized from their cells, one for each row of each table sized
+    uint32_t tableRowsPlaced;       // rows placed in a fragment of their table, one for each fragment that holds a row
     uint32_t gridsSolved;           // grid containers solved for a measurement, without their items' final layouts
     uint32_t gridsLaidOut;          // grid containers laid out
     uint32_t boxFragmentsMade;      // fragments made of block containers, flex containers, anonymous and replaced boxes
@@ -432,11 +453,11 @@ typedef struct PrLayoutTreeDifference {
     PrRawString what;               // a description; the caller releases it with prRawStringReset
 } PrLayoutTreeDifference;
 
-// Returns true if the tree's incremental work was correct and bounded. Correct: the cached layout matches a full layout
-// with no reuse, each cached recording matches a fresh recording, and geometry queries match placing every box.
-// Bounded: the last layout did no work unless an input that layout reads had changed, and the last paint recorded
-// nothing unless an input that recordings read had changed. On failure, writes the first difference to `out` if it is
-// not null. Expensive; for tests and for debugging invalidation.
+// Returns true if the tree's incremental work was correct and bounded, and its pages break no line. Correct: the cached
+// layout matches a full layout with no reuse, each cached recording matches a fresh recording, and geometry queries
+// match placing every box. Bounded: the last layout did no work unless an input that layout reads had changed, and the
+// last paint recorded nothing unless an input that recordings read had changed. On failure, writes the first difference
+// to `out` if it is not null. Expensive; for tests and for debugging invalidation.
 bool prLayoutTreeVerify(PrLayoutTree* tree, PrLayoutTreeDifference* PR_NULLABLE out);
 
 #if defined(__cplusplus)

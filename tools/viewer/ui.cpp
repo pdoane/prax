@@ -23,6 +23,7 @@
 #include "pr/ui.h"
 
 #include "tools/viewer/document_tree.h"
+#include "tools/viewer/zoom.h"
 
 #include <algorithm>
 #include <cmath>
@@ -33,6 +34,8 @@
 #include <vector>
 
 namespace viewer {
+
+using namespace harness;
 
 // The width of the panel of controls, in logical pixels.
 constexpr float kPanel = 300;
@@ -95,6 +98,7 @@ struct Round {
     Choices* choices;
     float height;
     bool pageKeys;
+    bool prints;                // the shown document is one that the engine prints (prints)
 };
 
 // Returns the row of the tree's node, or the first row if it is not listed.
@@ -240,8 +244,23 @@ void documentTree(const Round& r, PrLayoutNode parent, const Collection& collect
         label(kit, parent, format("%zu documents", collection.documents().size()), PrKitTone_Faint);
 }
 
+// Creates a segment of a segmented control, and returns true if it is activated.
+bool segment(PrKit* kit, PrLayoutNode control, PrStringView name, bool selected) {
+    return prKitActivated(kit, prKitSegment(kit, control, {.label = name, .selected = selected}));
+}
+
+// Creates the control of the media that a pane renders a page for.
+void mediaControl(const Round& r, PrLayoutNode parent, PaneChoice& pane) {
+    PrKit* kit = r.ui->kit;
+    PrLayoutNode media = prKitSegmented(kit, row(kit, parent, "Media"), {}, {.size = PrKitControlSize_Sm});
+    if (segment(kit, media, "Screen", pane.media == page_host::Media_Screen))
+        pane.media = page_host::Media_Screen;
+    if (segment(kit, media, "Print", pane.media == page_host::Media_Print))
+        pane.media = page_host::Media_Print;
+}
+
 // Creates the controls of Prax's renderers in a pane: the family of renderers, its variants if it has several, the
-// shaper and the hinting.
+// shaper, the hinting, and the media of a document that the engine prints.
 void praxControls(const Round& r, PrLayoutNode parent, PaneChoice& pane) {
     PrKit* kit = r.ui->kit;
     const std::vector<RendererConfig>& configs = *r.configs;
@@ -265,6 +284,8 @@ void praxControls(const Round& r, PrLayoutNode parent, PaneChoice& pane) {
         PrFontHinting_Count, pane.text.hinting,
         [](uint32_t h) { return std::string(prFontHintingName(PrFontHinting(h)).data); },
         [&](uint32_t h) { pane.text.hinting = PrFontHinting(h); });
+    if (r.prints)
+        mediaControl(r, parent, pane);
 }
 
 // Creates the controls of a pane: what renders it, Prax or one of the document's references, and Prax's renderers.
@@ -283,6 +304,8 @@ void paneControls(const Round& r, PrLayoutNode parent, PrStringView name, PaneCh
         });
     if (pane.renderer == Renderer_Prax || pane.reference >= references.size())
         praxControls(r, box, pane);
+    else if (r.prints && references[pane.reference].browsed)
+        mediaControl(r, box, pane);
 }
 
 // Creates the figures of a render.
@@ -313,11 +336,6 @@ void renderedText(PrKit* kit, PrLayoutNode parent, const std::string& name, cons
         label(kit, parent, format("at frame %.3f", r.frame), PrKitTone_Muted);
 }
 
-// Creates a segment of a segmented control, and returns true if it is activated.
-bool segment(PrKit* kit, PrLayoutNode control, PrStringView name, bool selected) {
-    return prKitActivated(kit, prKitSegment(kit, control, {.label = name, .selected = selected}));
-}
-
 // Creates the panel's view controls: one render or two, how two compare, the zoom, and the clock.
 void viewControls(const Round& r, PrLayoutNode parent) {
     PrKit* kit = r.ui->kit;
@@ -340,20 +358,17 @@ void viewControls(const Round& r, PrLayoutNode parent) {
         if (c.look == Look_Flip)
             prKitCheckbox(kit, parent, {.value = &c.showingSecond, .label = "Showing the second"}, small);
     }
-    // Both views zoom and pan.
+    // The zoom commands, as the keys give them.
     PrLayoutNode zoom = buttonRow(kit, parent);
-    label(kit, zoom, format("Zoom %.0f%%%s", double(r.figures->zoom) * 100, c.fit ? ", fitted" : ""));
-    if (button(kit, zoom, "Fit")) {
-        c.fit = true;
-        c.panX = 0;
-        c.panY = 0;
-    }
-    if (button(kit, zoom, "1:1")) {
-        c.fit = false;
+    if (button(kit, zoom, "-"))
+        c.zoom = zoomOut(c.zoom);
+    label(kit, zoom, format("%.0f%%", double(c.zoom) * 100));
+    if (button(kit, zoom, "+"))
+        c.zoom = zoomIn(c.zoom);
+    if (button(kit, zoom, "Actual size"))
         c.zoom = 1;
-        c.panX = 0;
-        c.panY = 0;
-    }
+    if (button(kit, zoom, "Fit width"))
+        c.fitWidth = true;
     prKitCheckbox(kit, parent, {.value = &c.backToBack, .label = "Render back to back"}, small);
     // The clock pauses and steps. Rendering continues either way.
     PrLayoutNode clock = buttonRow(kit, parent);
@@ -382,9 +397,11 @@ void figureControls(const Round& r, PrLayoutNode parent) {
     const Rendered& first = figures.panes[0];
     if (!first.captured)
         label(kit, parent, format("%u commands, %ux%u", first.commands, first.width, first.height));
-    renderedText(kit, parent, paneName(c.panes[0], *r.configs, *r.references), first);
+    const Source& source = allCollections()[c.collection].documents()[c.document].source;
+    renderedText(kit, parent, paneName(c.panes[0], *r.configs, *r.references, paneMedia(c.panes[0], source)), first);
     if (c.view == View_Compare) {
-        renderedText(kit, parent, paneName(c.panes[1], *r.configs, *r.references), figures.panes[1]);
+        renderedText(kit, parent, paneName(c.panes[1], *r.configs, *r.references, paneMedia(c.panes[1], source)),
+            figures.panes[1]);
         if (figures.playing) {
             label(kit, parent, "comparing needs the clock paused: space", PrKitTone_Warning);
         } else if (figures.comparing) {
@@ -396,8 +413,8 @@ void figureControls(const Round& r, PrLayoutNode parent) {
         }
     }
     prKitDivider(kit, parent, {});
-    for (const char* line : {"arrows  tree     [ ]  document", "1-9  renderer    V  variant     T  shaper",
-        "C  compare     F  flip     D  difference     X  swap", "scroll  zoom     drag  pan     =  1:1     0  fit",
+    for (const char* line : {"arrows  tree     [ ]  document", "1-9  renderer    V  variant     T  shaper     P  print",
+        "C  compare     F  flip     D  difference     X  swap", "Cmd + -  zoom     Cmd 0  actual size",
                 "space  play     , .  frame     Home  start", "Q  quit"})
         label(kit, parent, line, PrKitTone_Faint);
     label(kit, parent, format("B  back to back     H  HDR%s", c.hdr ? " (on)" : ""), PrKitTone_Faint);
@@ -429,6 +446,9 @@ void build(void* context, PrUi*, const PrUiRound*) {
         [&](uint32_t c) { return collections[c].name; }, [&](uint32_t c) {
             choices.collection = c;
             choices.document = 0;
+            // The engine renders the collection's pages for its media until a pane chooses another.
+            for (PaneChoice& pane : choices.panes)
+                pane.media = collections[c].media;
             // A document is first compared with its first reference, which its suite compares Prax with.
             choices.panes[1].renderer = Renderer_Reference;
             choices.panes[1].reference = 0;
@@ -472,11 +492,19 @@ void chooseFamily(PaneChoice& pane, const std::vector<RendererConfig>& configs, 
 }
 
 std::string paneName(const PaneChoice& pane, const std::vector<RendererConfig>& configs,
-        const std::vector<Reference>& references) {
-    if (pane.renderer == Renderer_Reference && pane.reference < references.size())
-        return references[pane.reference].name;
-    return std::string("Prax, ") + configs[pane.config].name + ", " +
-        prTextShaperBackendName(pane.text.shaper).data + ", " + prFontHintingName(pane.text.hinting).data;
+        const std::vector<Reference>& references, page_host::Media media) {
+    bool print = media == page_host::Media_Print;
+    if (pane.renderer == Renderer_Reference && pane.reference < references.size()) {
+        const Reference& reference = references[pane.reference];
+        return reference.browsed && print ? reference.name + " (print)" : reference.name;
+    }
+    std::string prax = print ? "Prax (print), " : "Prax, ";
+    return prax + configs[pane.config].name + ", " + prTextShaperBackendName(pane.text.shaper).data + ", " +
+        prFontHintingName(pane.text.hinting).data;
+}
+
+page_host::Media paneMedia(const PaneChoice& pane, const Source& source) {
+    return prints(source) ? pane.media : page_host::Media_Screen;
 }
 
 Ui* uiCreate(PrGpuDevice* device, PrApp* app) {
@@ -571,7 +599,8 @@ PrRect uiLayout(Ui* ui, const PrAppFrame* frame, bool pageKeys, const std::vecto
         PrKitTheme theme = prKitThemeStudio(variant, ui->fonts);
         prKitSetTheme(ui->kit, &theme);
     }
-    Round round{ui, &configs, &references, &figures, &choices, frame->extent.y, pageKeys};
+    const Source& source = allCollections()[choices.collection].documents()[choices.document].source;
+    Round round{ui, &configs, &references, &figures, &choices, frame->extent.y, pageKeys, prints(source)};
     PrUiFrameDesc desc{
         .time = frame->time,
         .delta = frame->delta,

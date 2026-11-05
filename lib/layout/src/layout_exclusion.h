@@ -60,10 +60,20 @@ struct LayoutExclusionMark {
     PrLayoutUnit lowestAll;
 };
 
-// The floats of one block formatting context, in placement order.
+struct LayoutBreakToken;
+
+// A float that breaks in a fragmentainer, which the root of its context resumes at the top of the next one: the
+// exclusion that it placed, by index, and its token, a reference that the context holds (css-break-4/#parallel-flows).
+struct LayoutBrokenFloat {
+    uint32_t exclusion;
+    const LayoutBreakToken* token;
+};
+
+// The floats of one block formatting context, in placement order, and those of them that break.
 struct LayoutExclusions {
     RawArray<LayoutExclusion> floats;
     LayoutExclusionMark mark;
+    RawArray<LayoutBrokenFloat> broken;
 };
 
 // Initializes exclusions to empty, and frees them, leaving them empty.

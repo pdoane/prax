@@ -13,25 +13,26 @@ namespace pr_impl {
 
 // The kinds of group, which partition the properties that the engine computes (STYLE_GROUPS in gen_css.py).
 enum {
-    CssStyleGroup_Font,         // inherited, read by layout
-    CssStyleGroup_Color,        // inherited, read by painting, and by hit testing
-    CssStyleGroup_Box,          // not inherited, read by layout
-    CssStyleGroup_Flex,         // not inherited, read by layout: flex layout and box alignment
-    CssStyleGroup_Decoration,   // not inherited, read by painting
-    CssStyleGroup_Background,   // not inherited, read by painting: the background's color and layers, and corners
-    CssStyleGroup_Effect,       // not inherited, read by compositing: opacity, transforms and stacking
-    CssStyleGroup_Compositing,  // not inherited, read by compositing: clip paths, masks, filters and blending
-    CssStyleGroup_Animation,    // not inherited, which the presentation runs
+    CssStyleGroup_Font,           // inherited, read by layout
+    CssStyleGroup_Color,          // inherited, read by painting, and by hit testing
+    CssStyleGroup_Box,            // not inherited, read by layout
+    CssStyleGroup_Flex,           // not inherited, read by layout: flex layout and box alignment
+    CssStyleGroup_Decoration,     // not inherited, read by painting
+    CssStyleGroup_Background,     // not inherited, read by painting: the background's color and layers, and corners
+    CssStyleGroup_Effect,         // not inherited, read by compositing: opacity, transforms and stacking
+    CssStyleGroup_Compositing,    // not inherited, read by compositing: clip paths, masks, filters and blending
+    CssStyleGroup_Animation,      // not inherited, which the presentation runs
 
     // not inherited, read by the presentation: generated content, counters, appearance, selection
     CssStyleGroup_Generated,
 
-    CssStyleGroup_List,         // inherited, read by the presentation: list markers and quotes
-    CssStyleGroup_Svg,          // inherited, read by SVG: fills, strokes, markers and how shapes render
-    CssStyleGroup_SvgGeometry,  // not inherited, read by SVG: geometry, and the properties of resource elements
-    CssStyleGroup_Table,        // inherited, read by layout: how a table's borders and captions are laid out
-    CssStyleGroup_Typography,   // inherited, read by text: font features, and where words may break
-    CssStyleGroup_Grid,         // not inherited, read by layout: a container's templates and an item's placement
+    CssStyleGroup_List,           // inherited, read by the presentation: list markers and quotes
+    CssStyleGroup_Svg,            // inherited, read by SVG: fills, strokes, markers and how shapes render
+    CssStyleGroup_SvgGeometry,    // not inherited, read by SVG: geometry, and the properties of resource elements
+    CssStyleGroup_Table,          // inherited, read by layout: how a table's borders and captions are laid out
+    CssStyleGroup_Typography,     // inherited, read by text and breaks: font features, word breaks, orphans and widows
+    CssStyleGroup_Grid,           // not inherited, read by layout: a container's templates and an item's placement
+    CssStyleGroup_Fragmentation,  // not inherited, read by layout: breaks, columns and pages
     CssStyleGroup_Count,
 };
 typedef uint8_t CssStyleGroup;

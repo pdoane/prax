@@ -141,6 +141,10 @@ computes as its physical counterpart, or is on the list of the longhands that th
 yet (`NOT_COMPUTED`), whose declarations a style drops. The generator fails on a longhand that is none of these, and on
 a group that holds a property whose inheritance is not the group's.
 
+Viewport-percentage lengths are relative to the extent that the presentation is updated in, the initial containing
+block (css-values-4/#viewport-relative-lengths): the viewport on the screen, and the first page's area in print
+(layout.md, Paged media).
+
 Font-relative lengths are relative to the element's font, and their root forms to the root's font
 (css-values-4/#font-relative-lengths). In the font group, they are relative to the parent's font. em and lh read the
 computed font size and line height. ex and cap read the x-height and cap height of the first available face. ch and ic
@@ -370,6 +374,28 @@ change to the participants. If every noted element follows one of those points, 
 point and walks only what follows it, so a parser that appends content in jobs pays for what each job appends. A
 removal, a change before the points, or a reversed counter in scope at the point, whose initial value counts what
 follows, starts the pass at the root.
+
+Page-margin boxes (`css_presentation_page.h`) are boxes of the presentation's tree, children of the root's box, which
+layout places in the margins of each page (layout.md, Paged media). The view resolves the @page rules that apply to
+each kind of page. The presentation cascades their declarations into styles that no element's rules give
+(`cssCascadeBlocks`). The page context's style inherits from the root's. Each margin box's style inherits from the
+page context's, and takes its margin rules' declarations after the user agent's text-align and vertical-align
+(css-page-3/#margin-text-alignment). A margin box whose content computes to none generates no box.
+
+Once the content is laid out into pages, the presentation makes each page's margin boxes from what their content gives
+on that page:
+
+- strings and images;
+- the page and pages counters, and the counters of the page context;
+- the document's counters as they are at the start of the page (css-page-3/#page-based-counters);
+- named strings (`string-set`, css-gcpm-3/#named-strings);
+- copies of running elements (css-gcpm-3/#running-elements).
+
+The last three take one walk of the document in tree order, and only if a margin box reads them. A named string's or a
+running element's assignments are placed on the page of the element's box. An element with `position: running()` has
+no box, only a placeholder (`PrLayoutPosition_Running`), which places it on a page. A copy is a copy of the running
+element's boxes (`prLayoutTreeCopy`), so it inherits as the element does where it is. A page's margin box whose record
+and content are the same as before is kept, so a second pass over unchanged pages changes nothing.
 
 Counter styles (`css_counter.h`) turn a counter's value into text. The predefined styles that css-counter-styles-3
 writes as rules are generated from its source into a table (`css_counter_style.h`), with the complex styles' characters

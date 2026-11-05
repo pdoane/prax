@@ -42,8 +42,27 @@ struct LayoutStackingList {
     bool stale;                     // true if it must be found again before it is read
 };
 
+// A piece of a box that paints whole, other than the one that its placement gives (LayoutPlacement): a piece after a
+// fragmentation break, or a fixed box that repeats on each page. Its position is in the viewport's content.
+struct LayoutWholePiece {
+    LayoutNodeIndex node;
+    PrLayoutVec position;
+    const LayoutFragment* fragment; // in the viewport's fragment, which holds it
+};
+
+// The other pieces of a box that paints whole, valid until the next layout or paint.
+struct LayoutWholePieces {
+    const LayoutWholePiece* PR_NULLABLE pieces;
+    uint32_t count;
+};
+
 // The stacking contexts' lists. Each is found when a paint or a hit test first needs it, kept current as the tree
 // changes, and found again if stale.
+//
+// A box that paints whole paints in its list each of its pieces. Its placement gives the first, and the others are in
+// the fragments of the roots of fragmentation contexts that layout registers: a paginated root and multi-column
+// containers. They are found from those fragments once per layout that changes the fragments, when a walk first needs
+// them, at a cost proportional to the fragments that the roots hold.
 struct LayoutStacking {
     RawArray<LayoutStackingList> lists;
     RawArray<uint32_t> freeLists;
@@ -51,6 +70,11 @@ struct LayoutStacking {
     uint32_t versions;                // number of list versions given out since the tree was created
     uint32_t listsFound;              // number of lists found since the last layout or paint began
     RawArray<LayoutStackedBox> moved; // the boxes a change moves, which each change empties
+
+    RawArray<LayoutNodeIndex> fragmentationRoots; // sorted, and may hold a node that is no longer a root
+    RawArray<LayoutWholePiece> pieces;            // sorted by node
+    uint32_t piecesLayout;                        // the LayoutTree::layouts that `pieces` were found at
+    bool piecesFound;
 };
 
 // Returns true if the box of `node` paints whole in its stacking context. This is the case for an element or a replaced
@@ -106,6 +130,13 @@ void layoutStackingForget(LayoutTree* tree, LayoutNodeIndex node);
 
 // Frees the lists.
 void layoutStackingReset(LayoutStacking& stacking);
+
+// Records that `node` is the root of a fragmentation context, whose fragment may hold pieces of boxes that paint whole
+// other than the ones that their placements give.
+void layoutStackingAddFragmentationRoot(LayoutTree* tree, LayoutNodeIndex node);
+
+// Returns the pieces of the box `node`, which paints whole, other than the one that its placement gives.
+LayoutWholePieces layoutWholePiecesOf(const LayoutTree* tree, LayoutNodeIndex node);
 
 // Checks each list that is not stale against finding it again from the box tree. Returns the context of the first list
 // that differs, or kPrLayoutNodeNone.

@@ -41,6 +41,7 @@ struct TextShaping {
     RawArray<uint32_t> glyphAt;            // by byte and one past the last
     RawArray<PrTextShapedRun> runs;
     RawArray<PrTextShapedGlyph> glyphs;
+    bool scaled;                           // true if a glyph's scale is not one
     RawArray<uint8_t> levels;              // by byte, or empty if every level is even
     RawArray<PrTextParagraph> paragraphs;
     RawArray<uint8_t> marks;               // by index of a piece, or empty if every level is even
@@ -304,6 +305,8 @@ void shapeRun(TextShaping& t, const PrTextShapingDesc& d, PrTextShapedRun& run, 
     shaped.locale = prTextFontLocale(piece.font);
     shaped.pixelsPerEm = size * (d.pixelRatio > 0 ? d.pixelRatio : 1);
     prTextFeatureSetApply(piece.features, &shaped);
+    shaped.letterSpacing = size > 0 ? piece.letterSpacing / size : 0;
+    shaped.wordSpacing = size > 0 ? piece.wordSpacing / size : 0;
     if (prTextShaperShape(d.shaper, &shaped, s.buffer) != PrStatus_Ok)
         return;
     const PrTextGlyph* glyphs = prTextGlyphBufferGlyphs(s.buffer);
@@ -325,6 +328,7 @@ void shapeRun(TextShaping& t, const PrTextShapingDesc& d, PrTextShapedRun& run, 
             .id = glyph.id,
             .scale = glyph.scale,
         });
+        t.scaled = t.scaled || glyph.scale != 1;
         t.advance.data[cluster] += advance;
     }
     run.glyphEnd = t.glyphs.count;
@@ -531,6 +535,7 @@ void prTextShapingSet(PrTextShaping* shaping, const PrTextShapingDesc* desc, PrT
     if (size != 0)
         prMemZero(t.advance.data, size * sizeof(float));
     t.glyphs.clear();
+    t.scaled = false;
     t.runs.clear();
     const PrTextItemRun* runs = prTextItemsRuns(s.items);
     for (uint32_t r = 0; r < prTextItemsRunCount(s.items); ++r) {
@@ -565,6 +570,7 @@ PrTextShapingInfo prTextShapingInfo(const PrTextShaping* shaping) {
         .runCount = shaping->runs.count,
         .glyphs = shaping->glyphs.data,
         .glyphCount = shaping->glyphs.count,
+        .scaled = shaping->scaled,
         .segments = shaping->segments.data,
         .segmentCount = shaping->segments.count,
         .paragraphs = shaping->paragraphs.data,

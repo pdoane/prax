@@ -16,7 +16,6 @@ namespace {
 namespace fs = std::filesystem;
 
 constexpr const char* kThirdParty = PR_THIRD_PARTY_DIR;
-constexpr const char* kCache = PR_VIEWER_CACHE_DIR;
 
 // The line that opens an example, after which its extensions are named, and the line that closes it.
 const std::string kFence(32, '`');
@@ -111,7 +110,7 @@ void writeIfChanged(const fs::path& path, const std::string& text) {
 // HTML page of its expected HTML.
 std::vector<Document> examples(const char* suite, const std::vector<fs::path>& files) {
     std::vector<Document> documents;
-    fs::path cache = fs::path(kCache) / "markdown" / suite;
+    fs::path cache = viewerCache() / "markdown" / suite;
     for (const fs::path& file : files) {
         std::string stem = file.stem().string();
         for (const Example& example : examplesOf(file)) {
@@ -135,7 +134,7 @@ std::vector<Document> examples(const char* suite, const std::vector<fs::path>& f
             Document d{stem + ":" + std::to_string(example.number), description, fileSource(markdown)};
             Reference expected{"expected", fileSource(html)};
             d.references.push_back(std::move(expected));
-            d.references.push_back(Reference{"browser", {}, fileUrl(html)});
+            d.references.push_back(Reference{"Browser", {}, fileUrl(html), {}, true});
             d.folders = {stem, example.section};
             documents.push_back(std::move(d));
         }
@@ -154,7 +153,6 @@ std::vector<Collection> markdownCollections() {
             "CommonMark",
             800,
             600,
-            0,
             [commonmark] {
                 return examples("commonmark", {commonmark});
             },
@@ -166,7 +164,6 @@ std::vector<Collection> markdownCollections() {
             "GFM",
             800,
             600,
-            0,
             [gfm] {
                 return examples("gfm", {gfm / "spec.txt", gfm / "extensions.txt", gfm / "regression.txt"});
             },

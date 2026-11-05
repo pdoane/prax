@@ -1,9 +1,9 @@
 // Draw lists: recorded commands that a backend renders.
 //
 // A command that cannot paint is not recorded, such as a fill of a shape with no area or a command whose color has no
-// alpha. A command's coordinates are in the transform space in effect when it is recorded. Transforms, clips and groups
-// are pushed and popped in one nesting order. Each pop closes the most recent open push, which must be of the same
-// kind.
+// alpha. A command's coordinates are in the transform space in effect when it is recorded. Transforms, clips, groups
+// and marks are pushed and popped in one nesting order. Each pop closes the most recent open push, which must be of the
+// same kind.
 //
 // A list copies the data that a call passes into storage that it owns, which stays valid until the list changes. It
 // records a path as a clone, and holds a reference to each image, font, list and filter that it names. A list that
@@ -124,6 +124,12 @@ void prDrawListPopClip(PrDrawList* list);
 void prDrawListPushGroup(PrDrawList* list, const PrDrawGroup* group);
 void prDrawListPopGroup(PrDrawList* list);
 
+// Pushes a mark, which labels the commands until its pop with the producer's `key`, such as the node of a document that
+// the commands present, or pops it. A mark changes nothing that a list draws. It carries the meaning of the content to
+// a writer, which joins its marks to a structure (pr/draw_structure.h). A key may label many marks, and is not zero.
+void prDrawListPushMark(PrDrawList* list, uint64_t key);
+void prDrawListPopMark(PrDrawList* list);
+
 // Returns the number of open pushes. A list renders only if there are none.
 uint32_t prDrawListDepth(const PrDrawList* list);
 
@@ -133,6 +139,15 @@ uint32_t prDrawListDepth(const PrDrawList* list);
 // clip. Written pixels (prDrawListWritePixels) cover their position in the target's space, unless they are inside a
 // projected group. A list that plays a list that writes pixels is unbounded.
 PrRect prDrawListBounds(const PrDrawList* list);
+
+// Returns true if nothing that the list draws, played under `transform`, reaches `clip`, a rectangle in target pixels.
+// A list that writes pixels reaches every clip. A consumer of a list skips an embedded list that misses the clip in
+// effect. The list caches its bounds when it is frozen, so what lies outside the clip costs only this test.
+bool prDrawListMisses(const PrDrawList* list, PrAffine2 transform, PrRect clip);
+
+// Returns the area that `count` commands may cover, in their own space, as prDrawListBounds measures a list of them.
+// The commands may belong to any list, and close every scope that they open.
+PrRect prDrawCommandsBounds(const PrDrawCommand* PR_NULLABLE commands, uint32_t count);
 
 // Returns true if a group in the list, or in a list that it plays, reads what lies beneath it. Such a group has a
 // backdrop, or a filter that reads the backdrop. A projected group is not a backdrop root, so a group inside it counts.

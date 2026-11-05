@@ -15,6 +15,7 @@
 #include "pr/float.h"
 #include "pr/locale_common.h"
 #include "pr/raw_array.h"
+#include "pr/sort.h"
 #include "pr/unicode.h"
 #include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
@@ -134,8 +135,76 @@ void mergeFeatures(RawArray<PrTextFeature>& out, const PrTextRun& run, PrTextCap
         out.push(PrTextFeature{tags[i], 1, 0, kWholeRun});
     if (positionFeatures && positionFeature(run.position) != 0)
         out.push(PrTextFeature{positionFeature(run.position), 1, 0, kWholeRun});
+    // Spaced letters take no optional ligatures, which would join them.
+    if (run.letterSpacing != 0) {
+        static const uint32_t kOptional[] = {
+            tagOf('l', 'i', 'g', 'a'), tagOf('c', 'l', 'i', 'g'), tagOf('d', 'l', 'i', 'g'), tagOf('h', 'l', 'i', 'g'),
+        };
+        for (uint32_t tag : kOptional)
+            out.push(PrTextFeature{tag, 0, 0, kWholeRun});
+    }
     if (run.featureCount != 0)
         out.append(run.features, run.featureCount);
+}
+
+// Writes to `out`, for each of the `count` glyphs that a backend shaped from `text` in visual order, the spacing after
+// it. The text divides into segments at each grapheme cluster boundary at which a cluster of glyphs starts, so that a
+// mark that a backend gives a cluster of its own stays with its base, and a cluster that joins several grapheme
+// clusters, as a ligature or an Indic conjunct does, is not split. Each segment takes the run's letter spacing, unless
+// it starts with a letter that joins its neighbors, as in a cursive script, or with a default ignorable code point, and
+// the word spacing for each word separator that starts one of its grapheme clusters. The spacing goes on the segment's
+// last glyph in the order of the text.
+void spacingOf(const PrTextRun& run, PrStringView text, const PrTextGlyph* glyphs, uint32_t count,
+        RawArray<uint64_t>& order, float* out) {
+    for (uint32_t i = 0; i < count; ++i)
+        out[i] = 0;
+    if (run.letterSpacing == 0 && run.wordSpacing == 0)
+        return;
+    // The glyphs by cluster, and by visual order within a cluster.
+    order.resize(count);
+    for (uint32_t i = 0; i < count; ++i)
+        order.data[i] = uint64_t(glyphs[i].cluster) << 32 | i;
+    sortItems(order.span(), [](uint64_t a, uint64_t b) { return a < b; });
+    auto clusterAt = [&](uint32_t k) { return uint32_t(order.data[k] >> 32); };
+    bool rightToLeft = run.direction == PrTextDirection_Rtl;
+    uint32_t at = 0;
+    uint32_t last = UINT32_MAX;
+    size_t start = 0;
+    float words = 0;
+    for (size_t grapheme = 0; grapheme < text.size;) {
+        uint32_t codePoint = 0;
+        prUtf8Decode(text, grapheme, &codePoint);
+        if (prTextIsWordSeparator(codePoint))
+            words += run.wordSpacing;
+        size_t end = prUnicodeGraphemeNext(text, grapheme);
+        while (at < count && clusterAt(at) < end) {
+            uint32_t past = at + 1;
+            while (past < count && clusterAt(past) == clusterAt(at))
+                ++past;
+            // The last glyph of a cluster in the order of the text is its last placed, or its first right to left. A
+            // default ignorable code point that draws nothing has its glyph removed, so it takes no spacing.
+            uint32_t glyph = uint32_t(order.data[rightToLeft ? at : past - 1]);
+            uint32_t drawn = 0;
+            prUtf8Decode(text, clusterAt(at), &drawn);
+            bool removed = (prUnicodeFlags(drawn) & PrUnicodeFlag_DefaultIgnorable) != 0 &&
+                glyphs[glyph].advance.x == 0 && glyphs[glyph].advance.y == 0;
+            if (!removed)
+                last = glyph;
+            at = past;
+        }
+        grapheme = end;
+        if (end < text.size && (at == count || clusterAt(at) != end))
+            continue;
+        if (last != UINT32_MAX) {
+            prUtf8Decode(text, start, &codePoint);
+            PrUnicodeJoiningType joining = prUnicodeJoiningType(codePoint);
+            bool joins = joining != PrUnicodeJoiningType_NonJoining && joining != PrUnicodeJoiningType_Transparent;
+            bool ignorable = (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0;
+            out[last] += words + (joins || ignorable ? 0 : run.letterSpacing);
+        }
+        start = end;
+        words = 0;
+    }
 }
 
 // Shapes the run as given, into `out`.
@@ -207,9 +276,9 @@ CaseForm caseFormOf(PrTextCaps caps, uint32_t codePoint) {
 }
 
 // Shapes the bytes [start, end) of the text of the run, uppercased if requested, and appends the glyphs to `out` scaled
-// by `scale`, with clusters in terms of the text of the run.
+// by `scale`, with clusters in terms of the text of the run, and the spacing after each glyph to `spacing`.
 PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, uint32_t end,
-        bool upper, float scale, PrTextGlyphBuffer& g, RawArray<PrTextGlyph>& out) {
+        bool upper, float scale, PrTextGlyphBuffer& g, RawArray<PrTextGlyph>& out, RawArray<float>& spacing) {
     g.piece.clear();
     g.origin.clear();
     for (size_t at = start; at < end;) {
@@ -251,6 +320,10 @@ PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, 
     PrStatus status = shapeWith(shaper, piece, s);
     if (status != PrStatus_Ok)
         return status;
+    // The spacing follows the characters as shaped, so a character that maps to several capitals is spaced as several.
+    uint32_t first = spacing.count;
+    spacing.resize(first + s.glyphs.count);
+    spacingOf(piece, piece.text, s.glyphs.data, s.glyphs.count, s.order, spacing.data + first);
     for (uint32_t i = 0; i < s.glyphs.count; ++i) {
         PrTextGlyph glyph = s.glyphs.data[i];
         glyph.cluster = glyph.cluster < g.origin.count ? g.origin.data[glyph.cluster] : start;
@@ -265,6 +338,7 @@ PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, 
 // Shapes the run in pieces of characters that draw alike, with small capitals synthesized, in visual order.
 PrStatus shapeSynthesizedCaps(PrTextShaper* shaper, const PrTextRun& run, float scale, PrTextGlyphBuffer& g) {
     RawArray<PrTextGlyph> pieces;
+    RawArray<float> spacing;                   // the spacing after each glyph of `pieces`
     RawArray<uint32_t> firsts;                 // the start of the glyphs of each piece in `pieces`
     PrStatus status = PrStatus_Ok;
     size_t at = 0;
@@ -282,11 +356,12 @@ PrStatus shapeSynthesizedCaps(PrTextShaper* shaper, const PrTextRun& run, float 
             end += length;
         }
         firsts.push(pieces.count);
-        status = shapePiece(shaper, run, uint32_t(at), uint32_t(end), form.upper, form.scaled ? scale : 1, g, pieces);
+        status = shapePiece(shaper, run, uint32_t(at), uint32_t(end), form.upper, form.scaled ? scale : 1, g, pieces, spacing);
         at = end;
     }
     firsts.push(pieces.count);
     g.glyphs.clear();
+    g.spacing.clear();
     if (status == PrStatus_Ok) {
         // Each piece is in visual order, and the pieces of a right-to-left run go right to left.
         bool reversed = run.direction == PrTextDirection_Rtl;
@@ -294,9 +369,11 @@ PrStatus shapeSynthesizedCaps(PrTextShaper* shaper, const PrTextRun& run, float 
         for (uint32_t k = 0; k < count; ++k) {
             uint32_t p = reversed ? count - 1 - k : k;
             g.glyphs.append(pieces.data + firsts.data[p], firsts.data[p + 1] - firsts.data[p]);
+            g.spacing.append(spacing.data + firsts.data[p], firsts.data[p + 1] - firsts.data[p]);
         }
     }
     pieces.reset();
+    spacing.reset();
     firsts.reset();
     return status;
 }
@@ -364,6 +441,8 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
         synthesizePosition = !fontGives(shaper, plain, positionFeature(run->position), true, g);
     }
 
+    // Most text is not spaced, and skips the spacing's work: a run shaped whole has no spacing to apply.
+    bool spaced = run->letterSpacing != 0 || run->wordSpacing != 0;
     PrTextRun shaped = *run;
     mergeFeatures(g.features, *run, synthesizeCaps ? PrTextCaps_Normal : caps, !synthesizePosition);
     shaped.features = g.features.data;
@@ -377,6 +456,10 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
         status = shapeSynthesizedCaps(shaper, shaped, prF32Clamp(scale, 0.6f, 0.9f), g);
     } else {
         status = shapeWith(shaper, shaped, g);
+        if (status == PrStatus_Ok && spaced) {
+            g.spacing.resize(g.glyphs.count);
+            spacingOf(shaped, shaped.text, g.glyphs.data, g.glyphs.count, scratchOf(g).order, g.spacing.data);
+        }
     }
     if (status != PrStatus_Ok) {
         g.glyphs.clear();
@@ -426,10 +509,26 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
             prUtf8Decode(run->text, glyph.cluster, &codePoint);
         bool ignorable = (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0 && glyph.advance.x == 0 &&
             glyph.advance.y == 0;
-        if (!ignorable)
+        if (!ignorable) {
+            if (spaced)
+                g.spacing.data[kept] = g.spacing.data[i];
             g.glyphs.data[kept++] = glyph;
+        }
     }
     g.glyphs.count = kept;
+    // The spacing after a glyph widens its advance. Right to left, the space is on the glyph's left, so the glyph moves
+    // right by it.
+    for (uint32_t i = 0; spaced && i < kept; ++i) {
+        PrTextGlyph& glyph = g.glyphs.data[i];
+        float spacing = g.spacing.data[i];
+        if (vertical) {
+            glyph.advance.y += spacing;
+        } else {
+            glyph.advance.x += spacing;
+            if (run->direction == PrTextDirection_Rtl)
+                glyph.offset.x += spacing;
+        }
+    }
     bool rightToLeft = run->direction == PrTextDirection_Rtl;
     mergeClusters(g.glyphs.data, g.glyphs.count, rightToLeft);
     markGraphemes(g, run->text, rightToLeft);
@@ -459,6 +558,11 @@ struct PrTextFeatureSet {
     mutable Atomic<uint32_t> references;
     PrTextFeatureSetDesc desc;      // its features follow it in the allocation
 };
+
+bool prTextIsWordSeparator(uint32_t codePoint) {
+    return codePoint == 0x20 || codePoint == 0xA0 || codePoint == 0x1361 || codePoint == 0x10100 ||
+        codePoint == 0x10101 || codePoint == 0x1039F || codePoint == 0x1091F;
+}
 
 PrTextFeatureSet* prTextFeatureSetCreate(const PrTextFeatureSetDesc* desc) {
     size_t size = sizeof(PrTextFeatureSet) + sizeof(PrTextFeature) * desc->featureCount;
@@ -581,6 +685,8 @@ void prTextGlyphBufferDestroy(PrTextGlyphBuffer* PR_NULLABLE buffer) {
     buffer->origin.reset();
     buffer->probe.reset();
     buffer->boundaries.reset();
+    buffer->spacing.reset();
+    buffer->order.reset();
     prMemoryFree(buffer);
 }
 

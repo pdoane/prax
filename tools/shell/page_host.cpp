@@ -14,11 +14,13 @@
 #include "pr/css_presentation.h"
 #include "pr/fetch.h"
 #include "pr/fetch_intercept.h"
+#include "pr/file.h"
 #include "pr/font_bundle.h"
 #include "pr/font_set.h"
 #include "pr/html_page.h"
 #include "pr/html_quickjs.h"
 #include "pr/html_storage.h"
+#include "pr/html_structure.h"
 #include "pr/html_view.h"
 #include "pr/http.h"
 #include "pr/image_builtin.h"
@@ -26,6 +28,7 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/mathml_quickjs.h"
+#include "pr/mem.h"
 #include "pr/net.h"
 #include "pr/net_null.h"
 #include "pr/quickjs_binding.h"
@@ -62,7 +65,8 @@ using namespace harness;
 
 namespace page_host {
 
-// A resource of a captured page (addCapture): its file, and the Content-Type that it was served with, if known.
+// A resource of a captured page (addCapture): its file, or empty if the capture omitted it, and the Content-Type that
+// it was served with, if known.
 struct CapturedResource {
     std::filesystem::path file;
     std::string type;
@@ -83,6 +87,8 @@ struct HostState {
 
     // The device that presents the pages, or null if they are presented in memory.
     PrGpuDevice* PR_NULLABLE device = nullptr;
+
+    float pageGap = 0;          // the space between the pages of a paint for print media, in CSS pixels
 
     // The pages' local storage and session storage, in memory, which a run's pages share as the pages of one tab do.
     // Each run starts with both empty, so that what a page stores does not depend on the pages that ran before it.
@@ -181,13 +187,19 @@ struct Page {
     bool finished = false;      // the page said it is done (stopRun), and nothing that it waits for matters
     bool requested = false;     // loaded by PageHost::load, rather than an iframe's
     bool verifyFailed = false;  // the page's presentation failed a check (PageHost::verifyRendering)
-    PageHost::Capture capture = PageHost::Capture::None;
+    Capture capture = Capture_None;
 
     // The view that presents the page, made when it is first painted or sent input, and the input that the page sent
     // and the host has yet to dispatch.
     PrHtmlView* PR_NULLABLE view = nullptr;
     std::vector<PendingInput> input = {};
     PrVec2 viewport = {800, 600};   // the view's viewport, the host's until a paint gives another
+
+    // True while a print or a paint for print media has left the view laid out in pages over `pageBox`, `pageGap`
+    // apart.
+    bool paged = false;
+    PrLayoutPageBox pageBox{};
+    float pageGap = 0;
 };
 
 namespace {
@@ -319,8 +331,9 @@ const char* contentTypeOf(const std::filesystem::path& file) {
 }
 
 // Answers a request of the host's fetcher, on the loop: a captured resource from its file, with the type that it was
-// served with, and any other request by passing it to the built-in fetcher. A captured file that does not load is a
-// network error.
+// served with, and any other request by passing it to the built-in fetcher. A captured response is basic, with no CORS
+// check, as the built-in fetcher answers a file: URL, whatever the request's mode. A resource that the capture omitted,
+// or whose file does not load, is a network error.
 void answerResource(void* PR_NULLABLE context, PrFetchInterceptRequest* request) {
     HostState& s = *static_cast<HostState*>(context);
     CapturedResource resource;
@@ -335,7 +348,7 @@ void answerResource(void* PR_NULLABLE context, PrFetchInterceptRequest* request)
         resource = captured->second;
     }
     PrTextBuffer text = {};
-    if (!harnessReadFile(&text, resource.file.string().c_str())) {
+    if (resource.file.empty() || !harnessReadFile(&text, resource.file.string().c_str())) {
         prTextBufferReset(&text);
         prFetchInterceptRequestFail(request, PrNetError_Refused);
         return;
@@ -493,7 +506,7 @@ void loadedHtml(void* context, PrHtmlPage* htmlPage, PrStatus status) {
     // A captured page runs the capture's wait once it has loaded, which stops the run (stopRun()) once the page is
     // ready.
     const std::string& wait = run->host->captureWait;
-    if (run->capture == PageHost::Capture::Wait && !wait.empty() && run->ok && run->ctx != nullptr) {
+    if (run->capture == Capture_Wait && !wait.empty() && run->ok && run->ctx != nullptr) {
         std::string waiter = "(function () {\n" + wait + "\n}).call(window, location.href, stopRun);";
         run->ok = prJsHtmlEngineRun(run->ctx, waiter, "capture-wait", 1, 1) && run->ok;
     }
@@ -510,6 +523,18 @@ void verifyRender(Page* run, PrCssPresentation* presentation) {
         fprintf(stderr, "%s: presentation verify: %.*s\n", run->name.c_str(), int(what.size), what.data);
     }
     prRawStringReset(&report);
+}
+
+// Checks the layout of the page's printed pages (prLayoutTreeVerify), which is up to date, apart from the checks of its
+// presentation that its rendering updates make. Writes the first failure to stderr.
+void verifyPrint(Page* run, PrCssPresentation* presentation) {
+    PrLayoutTreeDifference difference{};
+    if (!prLayoutTreeVerify(prCssPresentationTree(presentation), &difference)) {
+        run->verifyFailed = true;
+        PrStringView what = prRawStringView(&difference.what);
+        fprintf(stderr, "%s: print verify: %.*s\n", run->name.c_str(), int(what.size), what.data);
+    }
+    prRawStringReset(&difference.what);
 }
 
 void renderedHtml(void* context, PrHtmlPage* htmlPage) {
@@ -893,7 +918,8 @@ bool dispatchInput(HostState& s) {
     return any;
 }
 
-// Serves `file` with `type`, which may be empty, for the URL `location`. Does nothing if `location` is not a URL.
+// Serves `file` with `type`, which may be empty, for the URL `location`, or a network error if `file` is empty. Does
+// nothing if `location` is not a URL.
 void addCaptured(HostState& s, PrStringView location, const std::filesystem::path& file, PrStringView type) {
     PrUrl* url = nullptr;
     if (location.data == nullptr || prUrlCreate(location, nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
@@ -945,6 +971,14 @@ bool readPemCertificate(const std::filesystem::path& path, std::string* out) {
         return false;
     out->resize(size);
     return true;
+}
+
+// Returns the file of page `number`, from 1, of a document written to `path` as a file for each page
+// (PageHost::documentFiles).
+std::filesystem::path pageFile(const std::filesystem::path& path, uint32_t number) {
+    std::filesystem::path file = path;
+    file.replace_filename(path.stem().string() + "-" + std::to_string(number) + path.extension().string());
+    return file;
 }
 
 } // namespace
@@ -1006,6 +1040,14 @@ bool PageHost::addCapture(const std::filesystem::path& capture, std::string* pag
             addCaptured(*state_, prJsonString(json, prJsonMember(json, entry, "url")),
                 capture.parent_path() / std::string(file.data, file.size), prJsonString(json, prJsonMember(json, entry, "type")));
     }
+    // What the capture omitted fails, rather than reaching the network.
+    uint32_t omitted = prJsonMember(json, 0, "omitted");
+    for (uint32_t i = 0;; ++i) {
+        uint32_t entry = prJsonElement(json, omitted, i);
+        if (entry == kPrJsonMissing)
+            break;
+        addCaptured(*state_, prJsonString(json, prJsonMember(json, entry, "url")), {}, PrStringView{nullptr, 0});
+    }
     prTextBufferReset(&text);
     prJsonDestroy(json);
     return true;
@@ -1028,12 +1070,20 @@ bool PageHost::addFont(const std::filesystem::path& file) {
     return true;
 }
 
+PrFontSet* PageHost::fonts() {
+    return state_->fonts;
+}
+
 void PageHost::setHinting(PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter) {
     prFontSetSetHinting(state_->fonts, hinting, hinter);
 }
 
 void PageHost::setDevice(PrGpuDevice* PR_NULLABLE device) {
     state_->device = device;
+}
+
+void PageHost::setPageGap(float gap) {
+    state_->pageGap = gap;
 }
 
 void PageHost::useVirtualTime() {
@@ -1198,7 +1248,7 @@ uint32_t PageHost::verify(PrVec2 viewport) {
             if (PrCssPresentation* presentation = prHtmlPagePresentation(page->htmlPage)) {
                 // Painting brings the presentation up to date, as a frame does.
                 PrDrawList* list = prDrawListCreate();
-                paint(page.get(), viewport, prAppDisplayDefault(), state_->preferences, list);
+                paint(page.get(), Media_Screen, viewport, prAppDisplayDefault(), state_->preferences, list);
                 prDrawListRelease(list);
                 verifyRender(page.get(), presentation);
             }
@@ -1220,14 +1270,14 @@ PrHtmlPage* PR_NULLABLE PageHost::htmlPage(const Page* page) {
     return page->htmlPage;
 }
 
-PageHost::Settled PageHost::settle(double timeout) {
+Settled PageHost::settle(double timeout) {
     HostState& s = *state_;
     double deadline = timeout >= 0 ? prTimeMonotonicMilliseconds() + timeout : -1;
     for (;;) {
         if (deadline >= 0 && prTimeMonotonicMilliseconds() >= deadline)
-            return Settled::TimedOut;
+            return Settled_TimedOut;
         if (!prJsHtmlEngineCheckpoint(s.engine))
-            return Settled::Failed;
+            return Settled_Failed;
         runNetwork(s);
         // A run stops once each page that it loaded is done, whatever an iframe or a page's own work waits for.
         bool requested = false;
@@ -1254,7 +1304,7 @@ PageHost::Settled PageHost::settle(double timeout) {
         if (done || prDomAgentIsIdle(s.agent) || delay < 0) {
             bool started = false;
             if (!renderFetches(s, &started))
-                return Settled::Idle;
+                return Settled_Idle;
             s.awaitingRender = started;
             continue;
         }
@@ -1267,7 +1317,7 @@ PageHost::Settled PageHost::settle(double timeout) {
                 continue;
             }
             if (!waitMilliseconds(s, delay))
-                return Settled::Failed;
+                return Settled_Failed;
         }
         prDomAgentRun(s.agent, 0);
     }
@@ -1313,7 +1363,7 @@ bool PageHost::signalRendered(PrVec2 viewport) {
         if (finished(page.get()))
             continue;
         PrDrawList* list = prDrawListCreate();
-        paint(page.get(), viewport, prAppDisplayDefault(), state_->preferences, list);
+        paint(page.get(), Media_Screen, viewport, prAppDisplayDefault(), state_->preferences, list);
         prDrawListRelease(list);
         PrDomElement* root = prDomDocumentElement(prHtmlWindowDocument(prHtmlPageWindow(page->htmlPage)));
         PrDomEventInit init = prDomEventInitDefault();
@@ -1326,23 +1376,179 @@ bool PageHost::signalRendered(PrVec2 viewport) {
     return fired;
 }
 
-bool PageHost::paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, const PrAppUserPreferences& preferences,
-        PrDrawList* list) {
+bool PageHost::paint(Page* page, Media media, PrVec2 viewport, const PrAppDisplay& display,
+        const PrAppUserPreferences& preferences, PrDrawList* list, PrDrawStructure* PR_NULLABLE structure) {
     if (page->htmlPage == nullptr || prHtmlPagePresentation(page->htmlPage) == nullptr)
         return false;
     PrHtmlView* view = viewOf(page);
+    // Paginating again lays the whole document out again, so a view that stays paged in the same box is left as it is.
+    bool paged = media == Media_Print;
+    PrLayoutPageBox paper = prLayoutPageBoxDefault();
+    float gap = state_->pageGap;
+    if (paged != page->paged ||
+            (paged && (!prMemEquals(&page->pageBox, &paper, sizeof(PrLayoutPageBox)) || page->pageGap != gap))) {
+        prHtmlViewSetPaged(view, paged ? &paper : nullptr, gap);
+        page->paged = paged;
+        page->pageBox = paper;
+        page->pageGap = gap;
+    }
     page->viewport = viewport;
     prHtmlViewSetViewport(view, viewport);
     prHtmlViewSetDisplay(view, &display);
     prHtmlViewSetUserPreferences(view, &preferences);
-    prHtmlViewPrepare(view);
-    // A paint that computes a style for the first time starts the fetches of the images that the style names. The
-    // responses are used in tasks, which run before the page is painted again with them. A page whose styles were
-    // computed before its load ended had its load wait for them instead.
+    if (paged)
+        prepareWithFetches(view, [](PrHtmlView* printed) { prHtmlViewPageCount(printed); });
+    else
+        prepareWithFetches(view, prHtmlViewPrepare);
+    // The list is the caller's, with what the caller has recorded in it, so the document is recorded in it once.
+    prHtmlViewSetMarking(view, structure != nullptr ? PrLayoutMarking_Content : PrLayoutMarking_None);
+    prHtmlViewPaint(view, list);
+    prHtmlViewSetMarking(view, PrLayoutMarking_None);
+    if (state_->verify && paged)
+        verifyPrint(page, prHtmlPagePresentation(page->htmlPage));
+    else if (state_->verify)
+        verifyRender(page, prHtmlPagePresentation(page->htmlPage));
+    if (structure != nullptr)
+        prHtmlStructureAppend(page->htmlPage, structure);
+    return true;
+}
+
+bool PageHost::print(Page* page, const PrLayoutPageBox& initial, const PrAppDisplay& display,
+        const PrAppUserPreferences& preferences, std::vector<PrintedPage>& pages,
+        PrDrawStructure* PR_NULLABLE structure, PrintTimings* PR_NULLABLE timings) {
+    if (page->htmlPage == nullptr || prHtmlPagePresentation(page->htmlPage) == nullptr)
+        return false;
+    double started = prTimeMonotonicMilliseconds();
+    PrHtmlView* view = viewOf(page);
+    prHtmlViewSetDisplay(view, &display);
+    prHtmlViewSetUserPreferences(view, &preferences);
+    // Paginating again lays the whole document out again, so a view that stays paged in the same box is left as it is.
+    if (!page->paged || !prMemEquals(&page->pageBox, &initial, sizeof(PrLayoutPageBox)))
+        prHtmlViewSetPaged(view, &initial, page->pageGap);
+    page->paged = true;
+    page->pageBox = initial;
+    prepareWithFetches(view, [](PrHtmlView* paged) { prHtmlViewPageCount(paged); });
+    uint32_t count = prHtmlViewPageCount(view);
+    double paginated = prTimeMonotonicMilliseconds();
+    prHtmlViewSetMarking(view, structure != nullptr ? PrLayoutMarking_Content : PrLayoutMarking_None);
+    for (uint32_t i = 0; i < count; ++i) {
+        PrDrawList* list = prDrawListCreate();
+        prHtmlViewPaintPage(view, i, list);
+        PrLayoutPage printed = prHtmlViewPage(view, i);
+        PrLayoutPageSheet sheet = prLayoutPageBoxSheet(&printed.box);
+        pages.push_back(PrintedPage{
+            .list = list,
+            .extent = prLayoutVecToPx(sheet.extent),
+            .bleed = prLayoutRectToPx(sheet.bleed),
+            .trim = prLayoutRectToPx(sheet.trim),
+        });
+    }
+    double painted = prTimeMonotonicMilliseconds();
+    prHtmlViewSetMarking(view, PrLayoutMarking_None);
+    if (state_->verify)
+        verifyPrint(page, prHtmlPagePresentation(page->htmlPage));
+    if (structure != nullptr)
+        prHtmlStructureAppend(page->htmlPage, structure);
+    if (timings != nullptr) {
+        *timings = PrintTimings{
+            .paginate = paginated - started,
+            .paint = painted - paginated,
+            .structure = prTimeMonotonicMilliseconds() - painted,
+        };
+    }
+    return true;
+}
+
+bool PageHost::writeDocument(Page* page, Media media, const PrLayoutPageBox& pageBox, PrVec2 viewport,
+        PrDrawWriterBackend backend, const std::filesystem::path& path, DocumentTimings* PR_NULLABLE timings) {
+    std::vector<PrintedPage> pages;
+    PrintTimings phases{};
+    double started = prTimeMonotonicMilliseconds();
+    PrDrawStructure* structure = prDrawStructureCreate(nullptr);
+    // The paint marks the content, which gives its text runs their text, and a format that tags its content joins the
+    // marks to the structure.
+    bool ok = false;
+    if (media == Media_Print) {
+        ok = print(page, pageBox, prAppDisplayDefault(), userPreferences(), pages, structure, &phases);
+    } else {
+        PrDrawList* list = prDrawListCreate();
+        pages.push_back(PrintedPage{.list = list, .extent = viewport});
+        ok = paint(page, Media_Screen, viewport, prAppDisplayDefault(), userPreferences(), list, structure);
+    }
+    if (!ok)
+        fprintf(stderr, "%s: no rendering to write\n", pageName(page).c_str());
+    PrDrawWriterOptions options = prDrawWriterOptionsDefault();
+    options.compress = state_->compress;
+    options.images = state_->images;
+    options.tasks = state_->workers;
+    PrDrawWriter* writer = nullptr;
+    ok = ok && prDrawWriterCreate(backend, &options, &writer) == PrStatus_Ok;
+    if (ok) {
+        std::vector<std::string> outputs;
+        std::string title = pageTitle(page);
+        PrDrawDocumentDesc desc{
+            .write = [](void* PR_NULLABLE context, uint32_t output, PrByteView data) {
+                std::vector<std::string>& written = *static_cast<std::vector<std::string>*>(context);
+                if (output >= written.size())
+                    written.resize(output + 1);
+                written[output].append(reinterpret_cast<const char*>(data.data), data.size);
+            },
+            .context = &outputs,
+            .structure = structure,
+            .title = title,
+            .language = prDrawStructureNodeDesc(structure, kPrDrawStructureRoot).language,
+        };
+        std::vector<PrDrawPage> written;
+        for (const PrintedPage& printed : pages)
+            written.push_back(PrDrawPage{
+                .list = printed.list,
+                .extent = printed.extent,
+                .bleed = printed.bleed,
+                .trim = printed.trim,
+            });
+        double writing = prTimeMonotonicMilliseconds();
+        prDrawWriterWrite(writer, &desc, written.data(), uint32_t(written.size()));
+        double filing = prTimeMonotonicMilliseconds();
+        // The files of an earlier write go first, so that what remains is this write's.
+        std::error_code error;
+        for (const std::filesystem::path& file : documentFiles(path))
+            std::filesystem::remove(file, error);
+        size_t bytes = 0;
+        for (size_t i = 0; i < outputs.size() && ok; ++i) {
+            std::filesystem::path file = outputs.size() > 1 ? pageFile(path, uint32_t(i + 1)) : path;
+            const std::string& output = outputs[i];
+            ok = prFileWrite(file.string(), PrByteView{reinterpret_cast<const uint8_t*>(output.data()), output.size()});
+            bytes += output.size();
+        }
+        if (timings != nullptr) {
+            *timings = DocumentTimings{
+                .pages = uint32_t(pages.size()),
+                .bytes = bytes,
+                .print = phases,
+                .other = writing - started - phases.paginate - phases.paint - phases.structure,
+                .write = filing - writing,
+                .file = prTimeMonotonicMilliseconds() - filing,
+            };
+        }
+        if (!ok)
+            fprintf(stderr, "%s: cannot write %s\n", pageName(page).c_str(), path.string().c_str());
+    }
+    prDrawWriterDestroy(writer);
+    prDrawStructureDestroy(structure);
+    for (const PrintedPage& printed : pages)
+        prDrawListRelease(printed.list);
+    return ok;
+}
+
+void PageHost::prepareWithFetches(PrHtmlView* view, void (*prepare)(PrHtmlView* view)) {
+    prepare(view);
+    // Preparing a document that computes a style for the first time starts the fetches of the images that the style
+    // names. The responses are used in tasks, which run before the document is prepared again with them. A page whose
+    // styles were computed before its load ended had its load wait for them instead.
     HostState& s = *state_;
     double deadline = prTimeMonotonicMilliseconds() + (s.timedOut ? 0 : kPaintNetworkWait);
     for (uint32_t pass = 0; pass < kMaxPaintPasses; ++pass) {
-        // Every response that the server is to send arrives before the page is painted again.
+        // Every response that the server is to send arrives before the document is prepared again.
         bool ran = false;
         for (;;) {
             runNetwork(s);
@@ -1353,11 +1559,36 @@ bool PageHost::paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, c
         }
         if (!ran)
             break;
-        prHtmlViewPrepare(view);
+        prepare(view);
     }
-    // The list is the caller's, with what the caller has recorded in it, so the document is recorded in it once.
-    prHtmlViewPaint(view, list);
-    return true;
+}
+
+std::vector<std::filesystem::path> PageHost::documentFiles(const std::filesystem::path& path) {
+    std::error_code error;
+    if (std::filesystem::exists(path, error))
+        return {path};
+    std::vector<std::filesystem::path> files;
+    for (uint32_t number = 1;; ++number) {
+        std::filesystem::path file = pageFile(path, number);
+        if (!std::filesystem::exists(file, error))
+            break;
+        files.push_back(file);
+    }
+    return files;
+}
+
+PrTaskPool* PR_NULLABLE PageHost::workers() const {
+    return state_->workers;
+}
+
+std::string PageHost::pageTitle(Page* page) {
+    if (page->htmlPage == nullptr)
+        return {};
+    PrRawString title = prDomDocumentTitle(prHtmlWindowDocument(prHtmlPageWindow(page->htmlPage)));
+    PrStringView view = prRawStringView(&title);
+    std::string result(view.data != nullptr ? view.data : "", view.size);
+    prRawStringReset(&title);
+    return result;
 }
 
 } // namespace page_host

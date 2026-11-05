@@ -188,6 +188,26 @@ generator takes them from WHATWG's `entities.json`.
   document with a fragment scrolls to the element that the fragment indicates, and that element becomes the document's
   target element (`:target`).
 
+## Printing
+
+- A view prints by laying its document out as pages (`prHtmlViewSetPaged`, [layout.md](layout.md#paged-media-prlayout_pageh)).
+  A paged view's window matches the print media type. The host gives the box that a page has before the document's
+  rules apply, as its paper and margins give it, and the document's `@page` rules give each page's size, margins and
+  background over it (css-page-3/#page-properties), by the page's name, side, and whether it is the first or a blank
+  page.
+- Layout asks for a page's box on whichever thread lays the tree out, and the rules are the document's, which only the
+  document's thread reads. So the view resolves the boxes ahead, for every kind of page that the rules' selectors tell
+  apart, each time the host asks for the page count, and layout reads only those boxes.
+- Each page's margin boxes come from its @page rules' margin rules (css-page-3/#margin-boxes), which the
+  presentation makes into boxes of the tree once the content is laid out into pages (css.md, Page-margin boxes). So
+  counting pages lays the content out, makes the margin boxes from what each page holds, and lays out again, which
+  lays out only the margin boxes that changed.
+- Each page is painted into a list of its own (`prHtmlViewPaintPage`): its background, the document's content on the
+  page, with the canvas's color in its page area, and its margin boxes, all through the tree's scene.
+- A paged view shows its pages down its viewport as a print preview does, each sheet on white paper, the gap apart that
+  its host gives (`prHtmlViewSetPaged`). It records the sheets alone, and what lies around and between them is the
+  host's to draw.
+
 ## Replaced elements
 
 An `iframe` is a replaced element whose content is embedded. Its slot shows the document of its browsing context. That
@@ -255,3 +275,36 @@ The view runs the user's motions and edits (`pr/text_edit_command.h`), and repor
 (`prHtmlViewOutput`). `::selection` colors the selection. Cut, copy and paste fire their events, whose listeners can take
 them over through `clipboardData`. The clipboard belongs to the application that the host gives the view
 (`prHtmlViewSetApp`), and a paste's text comes back as a Clipboard event that the host passes on.
+
+## Structure
+
+A document's structure (`pr/html_structure.h`) is a pass over the DOM, apart from painting, that builds the structure
+tree of [draw.md](draw.md#the-structure-tree). A writer, or a platform's accessibility tree, joins the structure to the
+marks that layout painted. A view records marks when its host asks (`prHtmlViewSetMarking`). The pass reads the DOM,
+and reads style and layout only to learn what is hidden.
+
+- **Roles.** Each element's role is its `role` attribute's first token that names a WAI-ARIA role, or else its implicit
+  role, as HTML-AAM's element role mappings give it. The role decides the node's structure type: headings by their level
+  (`aria-level`, or the element's rank), paragraphs, lists and their items, tables, rows, header and data cells, figures
+  and images, links, block quotes, code. An element whose role is generic, none or presentation adds no node, and its
+  children join its parent's. So does a role that has no structure type of its own.
+- **Content.** A text node is a key child of the node of its nearest element that adds one. An image, and any element
+  whose role is img, is a figure whose alternate text is its accessible name (accname-1.2/#computation-steps), and its
+  own key is its child, since layout marks a replaced element by its element. Its descendants add nothing.
+- **Paragraphs.** Text and inline content directly in a node that holds blocks, such as a section or a division, is
+  gathered into a paragraph, which ends at the next block. A list item's content is its body (`LBody`), beside its
+  marker, and a description list's terms are labels (`Lbl`).
+- **Reading order** is the DOM's, with the elements that `aria-owns` names moved to the end of their owner, each once.
+- **Hidden content** is left out: an element whose box is not rendered (`display: none`, or no box at all), or that is
+  `aria-hidden` or `hidden`. Its marks, if it painted any, then belong to no node, and the writer writes them as
+  artifacts. Text that `visibility` hides paints no marks, so the references to it resolve to nothing.
+- **Generated content** of `::before`, `::after` and `::marker` is not in the DOM. Its text lies in anonymous boxes,
+  which have no key, so layout paints it unmarked and a writer writes it as an artifact.
+- **Page-margin boxes** are a pagination artifact (PDF/UA), and their boxes have no key, except the content of a link
+  inside a copy of a running element (css-gcpm-3/#running-elements). Each such copied box has a key of its own, which
+  the presentation lists with its link, and the structure makes a link of each copy, after the document's content, so
+  that the link stays a link on every page. The running element itself, which no box shows where it is, is left out.
+- **Names and text.** A link's URI is its `href`, resolved against the document's base URL. A link to a fragment of the
+  document goes to the first key of the element that the fragment indicates, in tree order. A heading's title is its
+  text content, which the outline shows. An `abbr`'s `title` is its expansion. An element's `lang` is its node's
+  language when it differs from its parent's, and the document's language is the root's.

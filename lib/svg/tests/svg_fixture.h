@@ -130,6 +130,8 @@ struct Drawing {
                 case PrDrawCommandKind_PushClipCornerRect:
                 case PrDrawCommandKind_PushClipPath: ++clips; continue;
                 case PrDrawCommandKind_PopClip: --clips; continue;
+                case PrDrawCommandKind_PushMark:
+                case PrDrawCommandKind_PopMark: continue;
                 default: break;
             }
             Drawn d{};

@@ -86,6 +86,11 @@ typedef struct PrTextPiece {
     // Text: the size that the text is set at, in px, or zero for the size of its text font.
     float size;
 
+    // Text: the space that shaping adds after each grapheme cluster, and after each word separator
+    // (prTextIsWordSeparator), in px. A shaping reads these.
+    float letterSpacing;
+    float wordSpacing;
+
     bool noWrap;                        // Text, Open: true if lines do not wrap inside it
     bool breakSpaces;                   // Text: true if a line may break after any space or tab
 } PrTextPiece;

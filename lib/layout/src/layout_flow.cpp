@@ -16,6 +16,32 @@ namespace {
 // ---------------------------------------------------------------------------------------------------------------------
 // Containers
 
+// The state of the breaks of a container's content in a fragmentation context. A container outside one has none, so
+// that laying out its content costs nothing of fragmentation.
+struct FlowBreaks {
+    LayoutFragmentainer fragmentainer;                // in the coordinates that the children are placed in
+    const LayoutBreakToken* PR_NULLABLE resume;       // the token that the content resumes from
+    bool resumed;                                     // true once the content has reached `resume`
+    const LayoutBreakToken* PR_NULLABLE childResume;  // the token of the child that resumes now
+    const LayoutBreakToken* PR_NULLABLE lineResume;   // the token whose line the run of inline content resumes at
+    bool truncates;                                   // true if the margin before the resuming child is truncated
+    LayoutBreakToken* PR_NULLABLE tokenOut;           // the token that ends the content in this fragmentainer
+    LayoutNodeIndex lastBlock;                        // the last block-level child placed in the fragmentainer, or none
+                                                      // if the last sibling placed is an anonymous block box
+    bool afterAnonymous;                              // true if the last sibling placed is an anonymous block box
+    bool placedAny;                                   // true if anything was placed in the fragmentainer
+    PrLayoutName page;                                // the used page value
+
+    // The unforced breaks that break-before and break-after avoid (css-break-4/#break-between): the last block-level
+    // child placed in the fragmentainer that a break may go before, the child that the layout breaks before once it
+    // rewinds there, and whether it is to rewind or has rewound. A container rewinds once, and keeps the break that it
+    // then finds.
+    LayoutNodeIndex lastAllowed;
+    LayoutNodeIndex stopBefore;
+    bool rewinds;
+    bool rewound;
+};
+
 // A block container whose children are being laid out, and its position in its block formatting context.
 struct Container {
     LayoutNodeIndex node;             // the box, or the parent of the content of an anonymous box
@@ -50,6 +76,8 @@ struct Container {
     // size were auto. The size of its content, which is its automatic minimum, then ends before the pending margins.
     bool endCollapses;
     bool contentEndCollapses;
+
+    FlowBreaks* PR_NULLABLE frag;   // the state of the content's breaks in a fragmentation context, or null outside one
 };
 
 // The state of the block-start edge of a container as its children are laid out.
@@ -102,6 +130,11 @@ struct Flow {
 // Returns true if the container's block-start margin collapses with what follows.
 bool collapsing(const Flow& flow) {
     return flow.edge == Edge_Open || flow.edge == Edge_Located;
+}
+
+// Returns true if a break ended the content of the container in this fragmentainer.
+bool ended(const Container& c) {
+    return c.frag != nullptr && c.frag->tokenOut != nullptr;
 }
 
 // Returns where the pending margins, together with `more`, end. While the margins of the container collapse with them,
@@ -282,7 +315,7 @@ PR_FORCE_INLINE bool placeBlock(LayoutState& state, Container& c, Flow& flow, co
 
 // Returns the position in the context of a block-level child in flow. It comes after the pending margins, which
 // collapse with the margins of the container while those still collapse, and below the floats on `clears`.
-LayoutBfc& childContext(Container& c, const Flow& flow, LayoutLineSides clears) {
+PR_FORCE_INLINE LayoutBfc& childContext(Container& c, const Flow& flow, LayoutLineSides clears) {
     LayoutMarginChain& chain = c.child.chain;
     if (collapsing(flow)) {
         chain = c.chain;
@@ -297,9 +330,103 @@ LayoutBfc& childContext(Container& c, const Flow& flow, LayoutLineSides clears) 
     return c.child;
 }
 
+void breakAt(LayoutState& state, Container& c, LayoutNodeIndex child, const LayoutBreakToken* PR_NULLABLE childToken,
+    bool forced, LayoutBreakSide side);
+
+// Returns the space that a float among the children of `c` is laid out in.
+LayoutSpace floatSpace(const Container& c) {
+    LayoutSpace space = *c.content;
+    space.available = space.percentInline;
+    space.bfc = nullptr;
+    return space;
+}
+
+// Breaks inside the float `child`, laid out as `f` and placed at `*placed` from `top`, if it may break and starts
+// before the end of the fragmentainer (css-break-4/#possible-breaks). Lays the float out again in the fragmentainer,
+// places it again from `top` as the exclusions stood at `mark`, and records its token in the context, whose root
+// resumes it (layoutFlowContent). Returns false if the float does not break, and leaves `f` and `*placed` as they were.
+bool breakFloat(LayoutState& state, Container& c, uint32_t child, const PrLayoutBoxStyle& box, LayoutAtomic& f,
+        PrLayoutUnit top, const LayoutExclusionMark& mark, LayoutExclusion* placed) {
+    LayoutMode mode = c.content->mode;
+    bool atTop = c.frag->fragmentainer.atTop && !c.frag->placedAny;
+    PrLayoutUnit borderTop = placed->top + f.margin[LayoutSide_BlockStart];
+    if (borderTop >= c.frag->fragmentainer.end || layoutIsMonolithic(state.tree, child, mode) ||
+            (!atTop && layoutAvoidsBreakInside(state.tree, child, c.frag->fragmentainer.kind)))
+        return false;
+    LayoutFragmentainer fragmentainer = layoutFragmentainerMoved(c.frag->fragmentainer, borderTop, atTop && borderTop == top);
+    LayoutSpace space = floatSpace(c);
+    LayoutFragmentation fragmentation{&fragmentainer, nullptr};
+    space.fragmentation = &fragmentation;
+    LayoutResult result = layoutBlockFragmented(state, child, space);
+    if (result.token == nullptr) {
+        layoutFragmentRelease(result.fragment);
+        return false;
+    }
+    layoutFragmentRelease(f.fragment);
+    f.fragment = result.fragment;
+    f.margin[LayoutSide_BlockEnd] = kLayoutUnitZero;
+    LayoutExclusions& exclusions = *c.containing.exclusions;
+    layoutExclusionsCut(exclusions, mark);
+    *placed = layoutFloatPlace(box, f, c.containing, mode, top);
+    LayoutBreakToken* token = const_cast<LayoutBreakToken*>(result.token);
+    token->floatLeft = placed->left;
+    exclusions.broken.push(LayoutBrokenFloat{exclusions.floats.count - 1, token});
+    return true;
+}
+
+// Lays out again, at the top of the content of the root `c` of a block formatting context, the floats that broke in the
+// fragmentainer before, each from its token in `floats`, at the line-left offset that it had there. A float that breaks
+// again is recorded in the context as breakFloat records it.
+void resumeFloats(LayoutState& state, Container& c, const Flow& flow, const LayoutBreakToken* floats) {
+    LayoutMode mode = c.content->mode;
+    LayoutExclusions& exclusions = *c.containing.exclusions;
+    for (const LayoutBreakToken* k = floats; k != nullptr; k = k->sibling) {
+        LayoutNodeIndex node = k->node;
+        const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, node).style);
+        LayoutSpace space = floatSpace(c);
+        LayoutFragmentation fragmentation{&c.frag->fragmentainer, k->pushed ? nullptr : k};
+        space.fragmentation = &fragmentation;
+        LayoutResult result = layoutBlockFragmented(state, node, space);
+        LayoutAtomic f{};
+        f.fragment = result.fragment;
+        f.relative = layoutRelativeOffset(state.styles, box, *c.content);
+        LayoutEdges e = layoutEdgesFromBox(state.styles, layoutLogicalBox(box, mode), c.content->percentInline);
+        for (LayoutSide side = 0; side < LayoutSide_Count; ++side)
+            f.margin[side] = e.margin[side];
+        // The margin before a break is truncated, and so is the margin after one.
+        f.margin[LayoutSide_BlockStart] = kLayoutUnitZero;
+        if (result.token != nullptr)
+            f.margin[LayoutSide_BlockEnd] = kLayoutUnitZero;
+        // A float that broke keeps its place across the line. One pushed whole is placed again, below the floats that
+        // it clears.
+        LayoutExclusion placed{};
+        if (k->pushed) {
+            placed = layoutFloatPlace(box, f, c.containing, mode, flow.contentTop);
+        } else {
+            LayoutLogicalSize size = layoutAtomicMarginBox(f, mode);
+            placed = LayoutExclusion{
+                .left = k->floatLeft,
+                .right = k->floatLeft + size.inlineSize,
+                .top = flow.contentTop,
+                .bottom = flow.contentTop + size.blockSize,
+                .side = layoutFloatSide(box, mode.direction),
+            };
+            layoutExclusionsAdd(exclusions, placed);
+        }
+        LayoutLogicalOffset at = layoutFloatOffset(f, placed, c.containing, mode, flow.contentTop);
+        state.scratch->children.push(LayoutLogicalChild{f.fragment, c.origin + at});
+        if (result.token != nullptr) {
+            LayoutBreakToken* token = const_cast<LayoutBreakToken*>(result.token);
+            token->floatLeft = k->floatLeft;
+            exclusions.broken.push(LayoutBrokenFloat{exclusions.floats.count - 1, token});
+        }
+        c.frag->placedAny = true;
+    }
+}
+
 // Lays out a float among the block-level children. The float is placed at the point where layout reaches it or, if the
 // margins of the container have not resolved, waits for them (CSS2/#float-position).
-PR_NOINLINE void floatChild(LayoutState& state, const Container& c, Flow& flow, uint32_t child, const PrLayoutBoxStyle& box) {
+PR_NOINLINE void floatChild(LayoutState& state, Container& c, Flow& flow, uint32_t child, const PrLayoutBoxStyle& box) {
     LayoutMode mode = c.content->mode;
     LayoutAtomic f = layoutFloat(state, child, *c.content);
     LayoutLineSides side = layoutFloatSide(box, mode.direction);
@@ -310,11 +437,45 @@ PR_NOINLINE void floatChild(LayoutState& state, const Container& c, Flow& flow, 
         return;
     }
     PrLayoutUnit top = flow.edge == Edge_Located ? flow.contentTop : nextEdge(c, flow);
+    LayoutExclusionMark exclusionMark = c.containing.exclusions->mark;
     LayoutExclusion placed = layoutFloatPlace(box, f, c.containing, mode, top);
+    // In a fragmentation context a float that reaches past the fragmentainer breaks inside if it may, and the root of
+    // its context resumes it at the top of the next fragmentainer. Otherwise it goes to the next one, unless nothing
+    // comes before it in this one, and the content beside it moves with it.
+    if (c.frag != nullptr && placed.bottom > c.frag->fragmentainer.end &&
+            breakFloat(state, c, child, box, f, top, exclusionMark, &placed)) {
+        LayoutLogicalOffset at = layoutFloatOffset(f, placed, c.containing, mode, flow.contentTop);
+        state.scratch->children.push(LayoutLogicalChild{f.fragment, c.origin + at});
+        if (collapsing(flow))
+            flow.adjoining = LayoutLineSides(flow.adjoining | side);
+        c.frag->placedAny = true;
+        return;
+    }
+    // A float that starts past the end goes to the next fragmentainer whole, as breakFloat records it, and the content
+    // after it stays in this one.
+    if (c.frag != nullptr && placed.top >= c.frag->fragmentainer.end &&
+            !(c.frag->fragmentainer.atTop && !c.frag->placedAny && placed.top == top)) {
+        layoutFragmentRelease(f.fragment);
+        LayoutBreakToken* token = layoutBreakTokenCreate(child, kLayoutUnitZero, kPrLayoutNodeNone, nullptr);
+        token->pushed = true;
+        LayoutExclusions& exclusions = *c.containing.exclusions;
+        exclusions.broken.push(LayoutBrokenFloat{exclusions.floats.count - 1, token});
+        return;
+    }
+    if (c.frag != nullptr && placed.bottom > c.frag->fragmentainer.end &&
+            !(c.frag->fragmentainer.atTop && !c.frag->placedAny)) {
+        state.fragmentShortage = layoutUnitMin(state.fragmentShortage, placed.bottom - c.frag->fragmentainer.end);
+        layoutExclusionsCut(*c.containing.exclusions, exclusionMark);
+        layoutFragmentRelease(f.fragment);
+        breakAt(state, c, child, nullptr, false, LayoutBreakSide_Any);
+        return;
+    }
     LayoutLogicalOffset at = layoutFloatOffset(f, placed, c.containing, mode, flow.contentTop);
     state.scratch->children.push(LayoutLogicalChild{f.fragment, c.origin + at});
     if (collapsing(flow))
         flow.adjoining = LayoutLineSides(flow.adjoining | side);
+    if (c.frag != nullptr)
+        c.frag->placedAny = true;
 }
 
 // Places the placeholder of the box out of flow `child` among the block-level children, where a block-level box with no
@@ -323,13 +484,165 @@ PR_NOINLINE void floatChild(LayoutState& state, const Container& c, Flow& flow, 
 // no room.
 PR_NOINLINE void outOfFlowChild(LayoutState& state, const Container& c, const Flow& flow, uint32_t child) {
     PrLayoutUnit offset = collapsing(flow) ? kLayoutUnitZero : flow.cursor + layoutStrutSize(flow.pending);
-    LayoutFragment* placeholder =
-        layoutFragmentCreatePlaceholder(child, layoutStaticEdges(c.content->mode), layoutIsFixed(state.tree, child));
+    LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(child, layoutStaticEdges(c.content->mode),
+        layoutNodePositionScheme(state.tree, child));
     state.scratch->children.push(LayoutLogicalChild{placeholder, c.origin + LayoutLogicalOffset{kLayoutUnitZero, offset}});
 }
 
+// Returns the block-end edge of the content placed so far, in the coordinates of the container's children, or
+// kLayoutOffsetNone while the container's position is not known.
+PrLayoutUnit placedEnd(const Flow& flow) {
+    if (flow.edge == Edge_Open)
+        return kLayoutOffsetNone;
+    return flow.contentTop + flow.cursor;
+}
+
+// Ends the content of the container in this fragmentainer before `child`, or inside it if `childToken` is given, which
+// the token takes. A child that starts a run of inline content starts an anonymous block box, whose used page value is
+// the container's.
+void breakAt(LayoutState& state, Container& c, LayoutNodeIndex child, const LayoutBreakToken* PR_NULLABLE childToken,
+        bool forced, LayoutBreakSide side) {
+    LayoutBreakToken* token = layoutBreakTokenCreate(c.node, kLayoutUnitZero, child, childToken);
+    if (childToken == nullptr) {
+        token->forced = forced;
+        token->side = side;
+        bool block = layoutChildKindIsBlock(layoutChildKind(state.tree, child));
+        token->hasPage = true;
+        token->page = block ? layoutStartPage(state.tree, child, c.frag->page) : c.frag->page;
+    }
+    c.frag->tokenOut = token;
+}
+
+// Records that the block-level child `child`, whose fragment is `fragment`, is placed in the fragmentainer, and whether
+// a break may go before it: one that its break values and those of the child before it do not avoid, after content in
+// the fragmentainer. A child with no block size and no floats is not content of the fragmentainer, so a break after it
+// alone is a break before the container, and an outside marker stays with the first line after it.
+void placedBlock(const LayoutState& state, Container& c, LayoutNodeIndex child, const LayoutFragment* fragment) {
+    bool allowed = c.frag->placedAny || !c.frag->fragmentainer.atTop;
+    LayoutBreakSide side = LayoutBreakSide_Any;
+    if (allowed && (c.frag->lastBlock != kPrLayoutNodeNone || c.frag->afterAnonymous))
+        allowed = layoutBreakBetween(state.tree, c.frag->lastBlock, child, c.frag->fragmentainer.kind, c.frag->page, &side) !=
+            LayoutBreakAsk_Avoid;
+    if (allowed)
+        c.frag->lastAllowed = child;
+    c.frag->placedAny =
+        c.frag->placedAny || layoutLogicalSize(c.content->mode, fragment->extent).blockSize > kLayoutUnitZero ||
+        layoutFragmentHoldsFloats(fragment);
+    c.frag->lastBlock = child;
+    c.frag->afterAnonymous = false;
+}
+
+// Ends the content of the container in this fragmentainer before `child`, which does not fit, with an unforced break.
+// If the break values avoid that break, and an earlier break that they do not avoid is possible in the fragmentainer,
+// the container rewinds to it (css-break-4/#unforced-breaks, rule 1).
+void pushBefore(LayoutState& state, Container& c, LayoutNodeIndex child) {
+    breakAt(state, c, child, nullptr, false, LayoutBreakSide_Any);
+    if (c.frag->rewound || c.frag->lastAllowed == kPrLayoutNodeNone ||
+            (c.frag->lastBlock == kPrLayoutNodeNone && !c.frag->afterAnonymous))
+        return;
+    LayoutBreakSide side = LayoutBreakSide_Any;
+    if (layoutBreakBetween(state.tree, c.frag->lastBlock, child, c.frag->fragmentainer.kind, c.frag->page, &side) !=
+            LayoutBreakAsk_Avoid)
+        return;
+    c.frag->stopBefore = c.frag->lastAllowed;
+    c.frag->rewinds = true;
+}
+
+// Lays out a block-level child in flow in a fragmentation context, as flowChild does outside one. A child that resumes
+// is laid out from its token. Any other child is taken unfragmented, from its cache, if it ends in the fragmentainer.
+// Otherwise a child that may break is laid out again in the fragmentainer, and a child that may not is pushed to the
+// next one, unless nothing comes before it in this one. Returns false if the layout of the container stops, which
+// includes a break.
+PR_NOINLINE bool fragmentedChild(LayoutState& state, Container& c, Flow& flow, uint32_t child, const PrLayoutBoxStyle& box) {
+    LayoutLineSides clears = layoutClearSides(box, c.content->mode.direction);
+    bool clearsAdjoining = collapsing(flow) && (clears & (c.chain.adjoining | flow.adjoining)) != 0;
+    if (clearsAdjoining && !close(c, flow, nextEdge(c, flow)))
+        return false;
+    LayoutBfc& bfc = childContext(c, flow, clears);
+    bfc.chain.clearsAdjoining = bfc.chain.clearsAdjoining || clearsAdjoining;
+    c.inFlow.marker = markerFor(c, flow);
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
+    uint32_t mark = children.count;
+    LayoutExclusionMark exclusionMark = c.containing.exclusions->mark;
+    Flow saved = flow;
+    bool atTop = c.frag->fragmentainer.atTop && !c.frag->placedAny;
+    LayoutFragmentainer childFrag = c.frag->fragmentainer;
+    childFrag.atTop = atTop;
+    LayoutFragmentainerKind kind = c.frag->fragmentainer.kind;
+    bool breakable = !layoutIsMonolithic(state.tree, child, c.content->mode) &&
+        (atTop || !layoutAvoidsBreakInside(state.tree, child, kind));
+    LayoutSpace fragmented = c.inFlow;
+    LayoutFragmentation fragmentation{&childFrag, c.frag->childResume};
+    fragmented.fragmentation = &fragmentation;
+    LayoutResult result{};
+    bool laidFragmented = c.frag->childResume != nullptr || (breakable && layoutHasForcedBreakInside(state.tree, child, kind));
+    for (uint32_t attempt = 0;; ++attempt) {
+        result = laidFragmented ? layoutBlockFragmented(state, child, fragmented) : layoutBlock(state, child, c.inFlow);
+        if (layoutResultStopped(result)) {
+            stop(c, flow, result.resolution);
+            return false;
+        }
+        if (result.unplaced != 0) {
+            if (!collapsing(flow)) {
+                // It collapsed through while holding floats, which go at the position of its border box.
+                bfc.chain.resolved = layoutMarginChainEnd(bfc.chain, result.start);
+                layoutFragmentRelease(result.fragment);
+                layoutBreakTokenRelease(result.token);
+                result = laidFragmented ? layoutBlockFragmented(state, child, fragmented) : layoutBlock(state, child, c.inFlow);
+            } else {
+                flow.unplaced = LayoutLineSides(flow.unplaced | result.unplaced);
+                flow.adjoining = LayoutLineSides(flow.adjoining | result.unplaced);
+            }
+        }
+        if (c.frag->truncates) {
+            // An unforced break truncates the margins after it (css-break-4/#break-margins).
+            result.start = LayoutStrut{};
+        }
+        if (!placeBlock(state, c, flow, result, layoutRelativeOffset(state.styles, box, *c.content))) {
+            layoutFragmentRelease(result.fragment);
+            layoutBreakTokenRelease(result.token);
+            return false;
+        }
+        PrLayoutUnit end = placedEnd(flow);
+        if (result.token != nullptr && result.token->atStart && !atTop) {
+            // The child placed none of its content here, so it goes to the next fragmentainer whole.
+            layoutBreakTokenRelease(result.token);
+            layoutFragmentDiscard(children, mark);
+            layoutExclusionsCut(*c.containing.exclusions, exclusionMark);
+            flow = saved;
+            pushBefore(state, c, child);
+            return false;
+        }
+        if (result.token != nullptr) {
+            // The child placed some of its content before its break.
+            c.frag->placedAny = true;
+            breakAt(state, c, child, result.token, false, LayoutBreakSide_Any);
+            return false;
+        }
+        if (end == kLayoutOffsetNone || end <= c.frag->fragmentainer.end || (atTop && (!breakable || laidFragmented)))
+            break;
+        // The child crosses the fragmentainer's end. It is laid out again in the fragmentainer if it may break, and
+        // otherwise goes to the next fragmentainer.
+        state.fragmentShortage = layoutUnitMin(state.fragmentShortage, end - c.frag->fragmentainer.end);
+        layoutFragmentDiscard(children, mark);
+        layoutExclusionsCut(*c.containing.exclusions, exclusionMark);
+        flow = saved;
+        if (!breakable || laidFragmented || attempt != 0) {
+            pushBefore(state, c, child);
+            return false;
+        }
+        laidFragmented = true;
+    }
+    placedBlock(state, c, child, result.fragment);
+    return true;
+}
+
 // Lays out a block-level child in flow that does not avoid floats. Returns false if the layout of the container stops.
+// `kFragmented` is true in a fragmentation context, whose children fragmentedChild lays out.
+template <bool kFragmented>
 PR_FORCE_INLINE bool flowChild(LayoutState& state, Container& c, Flow& flow, uint32_t child, const PrLayoutBoxStyle& box) {
+    if constexpr (kFragmented)
+        return fragmentedChild(state, c, flow, child, box);
     LayoutLineSides clears = layoutClearSides(box, c.content->mode.direction);
     // A child that clears floats adjoining its position has clearance. The margins before it resolve without its own
     // margin, and the floats are placed there.
@@ -372,7 +685,9 @@ PR_NOINLINE bool avoiderChild(LayoutState& state, Container& c, Flow& flow, uint
         const PrLayoutBoxStyle& box, LayoutNodeIndex runLast = kPrLayoutNodeNone) {
     LayoutMode mode = c.content->mode;
     LayoutEdges e = layoutEdgesFromBox(state.styles, layoutLogicalBox(box, mode), c.content->containing.inlineSize);
-    LayoutStrut marginStart = layoutStrut(e.margin[LayoutSide_BlockStart]);
+    // An unforced break truncates the margins after it (css-break-4/#break-margins).
+    LayoutStrut marginStart =
+        c.frag != nullptr && c.frag->truncates ? LayoutStrut{} : layoutStrut(e.margin[LayoutSide_BlockStart]);
     LayoutLineSides adjoining = LayoutLineSides(c.chain.adjoining | flow.adjoining);
     LayoutLineSides clears = layoutClearSides(box, mode.direction);
     // Where the margins before the child end without its own margin, and with it.
@@ -430,6 +745,47 @@ PR_NOINLINE bool avoiderChild(LayoutState& state, Container& c, Flow& flow, uint
     PR_ASSERT(flow.edge == Edge_Closed);
     const LayoutResult& result = placed.result;
     LayoutLogicalSize size = layoutLogicalSize(mode, result.fragment->extent);
+    LayoutResult broken{};
+    bool overflows = c.frag != nullptr && placed.top + size.blockSize > c.frag->fragmentainer.end;
+    bool atTop = c.frag != nullptr && c.frag->fragmentainer.atTop && !c.frag->placedAny;
+    bool breakable = c.frag != nullptr && runLast == kPrLayoutNodeNone && !layoutIsMonolithic(state.tree, child, mode) &&
+        (atTop || !layoutAvoidsBreakInside(state.tree, child, c.frag->fragmentainer.kind));
+    if (c.frag != nullptr && (overflows || c.frag->childResume != nullptr) && breakable) {
+        // A box that establishes a formatting context of its own and that does not fit breaks inside, laid out again in
+        // the fragmentainer: a block container in its flow, a table between its rows (layout_table.h), a flex or grid
+        // container between its lines or rows, and a multi-column container between its rows of columns.
+        LayoutFragmentainer childFrag = layoutFragmentainerMoved(c.frag->fragmentainer, placed.top, atTop);
+        LayoutSpace fragmented = *content;
+        LayoutFragmentation fragmentation{&childFrag, c.frag->childResume};
+        fragmented.fragmentation = &fragmentation;
+        broken = runLast == kPrLayoutNodeNone ? layoutBlockFragmented(state, child, fragmented) : LayoutResult{};
+        if (broken.fragment != nullptr) {
+            layoutFragmentRelease(placed.result.fragment);
+            placed.result = broken;
+            size = layoutLogicalSize(mode, broken.fragment->extent);
+        }
+    }
+    if (c.frag != nullptr && placed.result.token != nullptr && placed.result.token->atStart && !atTop) {
+        // The child placed none of its content here, so it goes to the next fragmentainer whole.
+        layoutFragmentRelease(placed.result.fragment);
+        layoutBreakTokenRelease(placed.result.token);
+        pushBefore(state, c, child);
+        return false;
+    }
+    if (c.frag != nullptr && placed.result.token != nullptr) {
+        c.frag->placedAny = true;
+    } else if (c.frag != nullptr) {
+        // A box that avoids floats is monolithic in a fragmentation context, and goes to the next fragmentainer if it
+        // does not fit, unless nothing comes before it in this one.
+        if (placed.top + size.blockSize > c.frag->fragmentainer.end && !atTop) {
+            state.fragmentShortage =
+                layoutUnitMin(state.fragmentShortage, placed.top + size.blockSize - c.frag->fragmentainer.end);
+            layoutFragmentRelease(result.fragment);
+            pushBefore(state, c, child);
+            return false;
+        }
+        placedBlock(state, c, child, result.fragment);
+    }
     PrLayoutUnit offset = placed.top - flow.contentTop;
     LayoutLogicalOffset at{
         layoutInlineStartFromLeft(c.containing, mode.direction, placed.left, size.inlineSize), offset,
@@ -439,14 +795,24 @@ PR_NOINLINE bool avoiderChild(LayoutState& state, Container& c, Flow& flow, uint
     flow.content = true;
     flow.sealed = false;
     pushChild(state, c, flow, result, at, layoutRelativeOffset(state.styles, box, *c.content));
+    if (result.token != nullptr) {
+        breakAt(state, c, child, result.token, false, LayoutBreakSide_Any);
+        return false;
+    }
     return true;
 }
 
 // Lays out segment `segment` of `run` as an inline formatting context. It is either alone, as the content of the
 // container, or in an anonymous block box among block-level children (css-display-4/#anonymous).
 PR_NOINLINE void inlineSegment(LayoutState& state, Container& c, Flow& flow, LayoutInlineRun& run, uint32_t segment,
-        bool alone, bool firstFormatted) {
+        bool alone, bool firstFormatted, LayoutNodeIndex first) {
     PrLayoutUnit end = nextEdge(c, flow);
+    const LayoutLineStart* resume = nullptr;
+    if (c.frag != nullptr && c.frag->lineResume != nullptr && c.frag->lineResume->segment == segment) {
+        resume = &c.frag->lineResume->line;
+        firstFormatted = false;
+        c.frag->lineResume = nullptr;
+    }
     LayoutInlineBfc bfc{
         .containing = c.containing,
         .top = end,
@@ -455,7 +821,16 @@ PR_NOINLINE void inlineSegment(LayoutState& state, Container& c, Flow& flow, Lay
         .firstFormatted = firstFormatted,
         .marker = markerFor(c, flow),
         .reuses = alone && !c.inContext,
+        .resume = resume,
     };
+    if (c.frag != nullptr) {
+        bfc.limit = c.frag->fragmentainer.end;
+        bfc.fragmentainer = &c.frag->fragmentainer;
+        bfc.atTop = c.frag->fragmentainer.atTop && !c.frag->placedAny;
+        const PrLayoutFontStyle& font = layoutFontStyle(state.styles, layoutTreeNode(state.tree, c.node).style);
+        bfc.orphans = font.orphans;
+        bfc.widows = font.widows;
+    }
     if (flow.edge == Edge_Open) {
         // Its first line would resolve the margins of the container, either there or at the floor it clears.
         bfc.top = layoutMarginChainResolve(c.chain, end, false).top;
@@ -467,6 +842,16 @@ PR_NOINLINE void inlineSegment(LayoutState& state, Container& c, Flow& flow, Lay
     RawArray<LayoutLogicalChild>& children = state.scratch->children;
     uint32_t mark = children.count;
     LayoutInlineResult lines = layoutInlineSegment(state, run, segment, bfc);
+    if (c.frag != nullptr && lines.broken) {
+        // The lines of the segment continue in the next fragmentainer, from the line that did not fit.
+        breakAt(state, c, first, nullptr, false, LayoutBreakSide_Any);
+        c.frag->tokenOut->inLine = true;
+        c.frag->tokenOut->line = lines.breakAt;
+        c.frag->tokenOut->segment = segment;
+        c.frag->tokenOut->page = c.frag->page;
+    }
+    if (c.frag != nullptr && lines.hasLines)
+        c.frag->placedAny = true;
     if (lines.stopped) {
         bool located = locate(c, flow, end);
         PR_ASSERT(!located);
@@ -549,9 +934,10 @@ PR_NOINLINE void wrapInRows(LayoutState& state, const Container& c, uint32_t blo
 PR_NOINLINE void inlineChildren(LayoutState& state, Container& c, Flow& flow, uint32_t first, uint32_t last, bool alone) {
     LayoutInlineRun run = layoutInlineBegin(state, c.node, first, last, *c.content);
     uint32_t segments = layoutInlineSegmentCount(run);
-    for (uint32_t k = 0; k < segments && flow.edge != Edge_Stopped; ++k) {
-        inlineSegment(state, c, flow, run, k, alone && segments == 1, k == 0 && !flow.blocks);
-        if (k + 1 == segments || flow.edge == Edge_Stopped)
+    uint32_t from = c.frag != nullptr && c.frag->lineResume != nullptr ? c.frag->lineResume->segment : 0;
+    for (uint32_t k = from; k < segments && flow.edge != Edge_Stopped && !ended(c); ++k) {
+        inlineSegment(state, c, flow, run, k, alone && segments == 1, k == 0 && !flow.blocks, first);
+        if (k + 1 == segments || flow.edge == Edge_Stopped || ended(c))
             continue;
         uint32_t block = layoutInlineBlockAfter(run, k);
         const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, block).style);
@@ -559,18 +945,89 @@ PR_NOINLINE void inlineChildren(LayoutState& state, Container& c, Flow& flow, ui
         bool placed;
         if (layoutAvoidsFloats(state.tree, block, box, c.children))
             placed = avoiderChild(state, c, flow, block, box);
+        else if (c.frag != nullptr)
+            placed = fragmentedChild(state, c, flow, block, box);
         else
-            placed = flowChild(state, c, flow, block, box);
+            placed = flowChild<false>(state, c, flow, block, box);
         if (placed)
             wrapInRows(state, c, block, box);
     }
     layoutInlineEnd(state, run);
 }
 
+// In a fragmentation context, returns true if the content reaches `child` in this fragmentainer: the children before
+// the one that the content resumes from are in earlier fragmentainers, and none follows the break that ends the content
+// in this one. Sets what the child resumes from.
+bool reachesChild(Container& c, const Flow& flow, uint32_t child) {
+    if (c.frag->tokenOut != nullptr || flow.edge == Edge_Stopped)
+        return false;
+    c.frag->childResume = nullptr;
+    c.frag->truncates = false;
+    if (!c.frag->resumed) {
+        if (child != c.frag->resume->child)
+            return false;
+        c.frag->resumed = true;
+        c.frag->childResume = c.frag->resume->childToken;
+        c.frag->truncates = c.frag->childResume == nullptr && !c.frag->resume->forced;
+        if (c.frag->resume->inLine)
+            c.frag->lineResume = c.frag->resume;
+    }
+    return true;
+}
+
+// In a fragmentation context, ends the content in this fragmentainer before `child` and returns true if the break
+// values force a break between it and the sibling before it.
+bool forcedBefore(LayoutState& state, Container& c, uint32_t child) {
+    if ((c.frag->lastBlock == kPrLayoutNodeNone && !c.frag->afterAnonymous) ||
+            (!c.frag->placedAny && c.frag->fragmentainer.atTop))
+        return false;
+    LayoutBreakSide side = LayoutBreakSide_Any;
+    LayoutNodeIndex box = layoutChildKindIsBlock(layoutChildKind(state.tree, child)) ? child : kPrLayoutNodeNone;
+    if (layoutBreakBetween(state.tree, c.frag->lastBlock, box, c.frag->fragmentainer.kind, c.frag->page, &side) !=
+            LayoutBreakAsk_Force)
+        return false;
+    breakAt(state, c, child, nullptr, true, side);
+    return true;
+}
+
+// In a fragmentation context, ends the content in this fragmentainer before `child` and returns true if the container
+// rewinds to the break before it.
+bool stopsBefore(LayoutState& state, Container& c, uint32_t child) {
+    if (child != c.frag->stopBefore)
+        return false;
+    breakAt(state, c, child, nullptr, false, LayoutBreakSide_Any);
+    return true;
+}
+
+// In a fragmentation context, returns true if the block-level child `child`, styled by `box`, is laid out in this
+// fragmentainer, and otherwise ends the content before it if a break goes there.
+PR_NOINLINE bool fragmentedBlockStarts(LayoutState& state, Container& c, const Flow& flow, uint32_t child,
+        const PrLayoutBoxStyle& box) {
+    if (!reachesChild(c, flow, child) || stopsBefore(state, c, child))
+        return false;
+    bool inFlowBlock = !layoutPositionIsOutOfFlow(box.position) && box.floating == PrLayoutFloat_None;
+    return !inFlowBlock || !forcedBefore(state, c, child);
+}
+
+// In a fragmentation context, returns true if the run of inline content from `first` to `last` is laid out in this
+// fragmentainer, and otherwise ends the content before it if a break goes there. Sets `*anonymous` if the run is an
+// anonymous block box among block-level siblings, which a break may fall before or after.
+PR_NOINLINE bool fragmentedInlinesStart(LayoutState& state, Container& c, const Flow& flow, uint32_t first,
+        uint32_t last, bool alone, bool* anonymous) {
+    if (!reachesChild(c, flow, first))
+        return false;
+    *anonymous = !alone && layoutRunGeneratesBox(state.tree, c.node, first, last);
+    return !(*anonymous && c.frag->lastBlock != kPrLayoutNodeNone && c.frag->lineResume == nullptr &&
+        forcedBefore(state, c, first));
+}
+
 // Lays out the children of the container and appends their fragments to the scratch children, until all are laid out or
-// the layout stops.
-void layoutChildren(LayoutState& state, Container& c, Flow& flow) {
+// the layout stops. `kFragmented` is true in a fragmentation context, and the loop outside one does no work of it.
+template <bool kFragmented>
+void layoutChildrenIn(LayoutState& state, Container& c, Flow& flow) {
     auto blocks = [&](uint32_t child, const PrLayoutBoxStyle& box) {
+        if (kFragmented && !fragmentedBlockStarts(state, c, flow, child, box))
+            return;
         if (layoutPositionIsOutOfFlow(box.position)) {
             if (flow.edge != Edge_Stopped)
                 outOfFlowChild(state, c, flow, child);
@@ -585,14 +1042,25 @@ void layoutChildren(LayoutState& state, Container& c, Flow& flow) {
         else if (layoutAvoidsFloats(state.tree, child, box, c.children))
             avoiderChild(state, c, flow, child, box);
         else
-            flowChild(state, c, flow, child, box);
+            flowChild<kFragmented>(state, c, flow, child, box);
     };
+    // A run of inline content among block-level boxes is an anonymous block box, which is a sibling between which and
+    // its neighbors breaks fall, unless its white space collapses away.
     auto inlines = [&](uint32_t first, uint32_t last, bool alone) {
+        bool anonymous = false;
+        if (kFragmented && !fragmentedInlinesStart(state, c, flow, first, last, alone, &anonymous))
+            return;
         if (flow.edge != Edge_Stopped)
             inlineChildren(state, c, flow, first, last, alone);
+        if (anonymous) {
+            c.frag->lastBlock = kPrLayoutNodeNone;
+            c.frag->afterAnonymous = true;
+        }
     };
     // An anonymous table is a block-level box that avoids floats.
     auto tables = [&](uint32_t first, uint32_t last) {
+        if (kFragmented && (!reachesChild(c, flow, first) || stopsBefore(state, c, first)))
+            return;
         flow.blocks = true;
         if (flow.edge != Edge_Stopped)
             avoiderChild(state, c, flow, first, layoutAnonymousTableStyle(), last);
@@ -601,6 +1069,14 @@ void layoutChildren(LayoutState& state, Container& c, Flow& flow) {
         layoutEachChildIn(state.tree, c.runFirst, c.runLast, blocks, inlines, tables);
     else
         layoutEachChild(state.tree, c.node, blocks, inlines, tables);
+}
+
+// Lays out the children of the container, as layoutChildrenIn does in its context.
+void layoutChildren(LayoutState& state, Container& c, Flow& flow) {
+    if (c.frag != nullptr)
+        layoutChildrenIn<true>(state, c, flow);
+    else
+        layoutChildrenIn<false>(state, c, flow);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -760,17 +1236,18 @@ LayoutBaseline setOf(const FlowBaseline& flow, LayoutBaselineEdge edge) {
 // Returns how far the content of the block container of `c` moves along its block axis. The content box is `free`
 // larger than the content, whose block-end edge is at `contentEnd` from the block-start edge of the border box.
 //
-// A table cell moves its content by its vertical-align (css-tables-3/#row-layout). Bottom moves the content down by all
-// of the free space, and middle by half of it. Baseline moves the content so that the cell's first baseline, `first`,
-// lies on the baseline that the cell's row gives it. A cell that has no first baseline aligns the block-end edge of its
-// content instead. An empty cell is not moved, because its table gives it no row baseline (layoutTableContent).
+// A table cell moves its content by its vertical-align (css-tables-3/#row-layout), and so does a page-margin box, which
+// has no row baseline (css-page-3/#page-properties). Bottom moves the content down by all of the free space, and middle
+// by half of it. Baseline moves the content so that the cell's first baseline, `first`, lies on the baseline that the
+// cell's row gives it. A cell that has no first baseline aligns the block-end edge of its content instead. An empty
+// cell is not moved, because its table gives it no row baseline (layoutTableContent).
 //
 // Any other block container moves its content by its align-content (css-align-3/#align-block), but only if it
 // establishes its own formatting context. A distributed alignment falls back to its single-subject alignment, and a
 // baseline alignment falls back to start. Content that does not fit is not moved.
 PR_NOINLINE PrLayoutUnit contentShift(const LayoutState& state, const Container& c, const LayoutSpace& space,
         const PrLayoutBoxStyle& box, PrLayoutUnit free, const LayoutBaseline& first, PrLayoutUnit contentEnd) {
-    if (box.display == PrLayoutDisplay_TableCell) {
+    if (box.display == PrLayoutDisplay_TableCell || box.display == PrLayoutDisplay_PageMargin) {
         switch (layoutCellAlignFromBox(box)) {
             case LayoutCellAlign_Middle: return layoutUnitMax(kLayoutUnitZero, free / 2);
             case LayoutCellAlign_Bottom: return layoutUnitMax(kLayoutUnitZero, free);
@@ -798,6 +1275,51 @@ PR_NOINLINE PrLayoutUnit contentShift(const LayoutState& state, const Container&
         case PrLayoutAlignment_FlexEnd: return free;
         default: return kLayoutUnitZero;
     }
+}
+
+// Sets up the container `c`, whose content `input` lays out, in the fragmentation context of its space, with `breaks`
+// for the state of its breaks. The children of a box in its parent's context are placed in the context's coordinates,
+// and those of any other box from its content box. A box that resumes has no block-start edge in this fragmentainer,
+// and its margins collapse with nothing before it.
+PR_NOINLINE void beginFragmented(const LayoutState& state, Container& c, FlowBreaks& breaks, const LayoutFlowInput& input,
+        const LayoutEdges& inner) {
+    const LayoutFragmentation& fragmentation = *input.space->fragmentation;
+    const LayoutFragmentainer& outer = *fragmentation.fragmentainer;
+    breaks = FlowBreaks{
+        .fragmentainer = c.inContext ? outer : layoutFragmentainerMoved(outer, c.origin.blockOffset, outer.atTop),
+        .resume = fragmentation.resume,
+        .resumed = fragmentation.resume == nullptr,
+        .lastBlock = kPrLayoutNodeNone,
+        .page = layoutUsedPage(state.tree, c.node),
+        .lastAllowed = kPrLayoutNodeNone,
+        .stopBefore = kPrLayoutNodeNone,
+    };
+    // A box that clones its edges at a break keeps room for its block-end border and padding in each fragmentainer
+    // (css-break-4/#break-decoration).
+    if (input.runFirst == kPrLayoutNodeNone &&
+            layoutFragmentationStyle(state.styles, layoutTreeNode(state.tree, c.node).style).boxDecorationBreak ==
+            PrLayoutBoxDecorationBreak_Clone)
+        breaks.fragmentainer.end -= layoutEdgesContent(inner, LayoutSide_BlockEnd);
+    c.frag = &breaks;
+    if (fragmentation.resume != nullptr)
+        c.startCollapses = false;
+}
+
+// Readies the container `c` in a fragmentation context to lay its children out again, from where its content resumes,
+// for an attempt that `rewinding` says rewinds to an earlier break.
+PR_NOINLINE void restartFragmented(Container& c, bool rewinding) {
+    if (rewinding) {
+        c.frag->rewinds = false;
+        c.frag->rewound = true;
+    }
+    c.frag->lastAllowed = kPrLayoutNodeNone;
+    layoutBreakTokenRelease(c.frag->tokenOut);
+    c.frag->tokenOut = nullptr;
+    c.frag->resumed = c.frag->resume == nullptr;
+    c.frag->lineResume = nullptr;
+    c.frag->placedAny = false;
+    c.frag->lastBlock = kPrLayoutNodeNone;
+    c.frag->afterAnonymous = false;
 }
 
 } // namespace
@@ -845,12 +1367,17 @@ LayoutFlowOutcome layoutFlowContent(LayoutState& state, const LayoutFlowInput& i
     c.child.containing = c.containing;
     c.inFlow = *c.content;
     c.inFlow.bfc = &c.child;
+    c.inFlow.fragmentation = nullptr;
+
+    FlowBreaks breaks;
+    if (space.fragmentation != nullptr)
+        beginFragmented(state, c, breaks, input, inner);
 
     // A list item lays out its outside marker apart from its flow, and gives the marker to the first line of its flow,
     // along with the markers of its space.
     c.marker = space.marker;
     Marker marker{};
-    if (input.marked) {
+    if (input.marked && layoutSpaceResume(space) == nullptr) {
         LayoutNodeIndex markerNode = layoutNodeMarker(state.tree, input.node);
         if (markerNode != kPrLayoutNodeNone) {
             marker = layOutMarker(state, c, markerNode);
@@ -866,26 +1393,49 @@ LayoutFlowOutcome layoutFlowContent(LayoutState& state, const LayoutFlowInput& i
     Ending ending{};
     for (uint32_t attempt = 0;; ++attempt) {
         flow = startFlow(c);
+        if (flow.edge != Edge_Stopped && !c.inContext && c.frag != nullptr && c.frag->resume != nullptr &&
+                c.frag->resume->floats != nullptr)
+            resumeFloats(state, c, flow, c.frag->resume->floats);
         if (flow.edge != Edge_Stopped)
             layoutChildren(state, c, flow);
         if (flow.edge != Edge_Stopped && marker.fragment != nullptr && !flow.first.present && !flow.blocks)
             markerLine(state, c, flow);
         if (flow.edge != Edge_Stopped)
             ending = endFlow(state, input, c, flow);
-        if (flow.edge != Edge_Stopped || !flow.restart)
+        bool rewinding = c.frag != nullptr && c.frag->rewinds && flow.edge != Edge_Stopped;
+        if (!rewinding && (flow.edge != Edge_Stopped || !flow.restart))
             break;
         layoutFragmentDiscard(children, mark);
         layoutExclusionsCut(*c.containing.exclusions, exclusionMark);
         *c.containing.reads = layoutReadsBegin(*c.containing.exclusions);
-        c.chain.resolved = flow.stopAt;
+        if (!rewinding)
+            c.chain.resolved = flow.stopAt;
+        if (c.frag != nullptr)
+            restartFragmented(c, rewinding);
         ++state.stats->blocksRestarted;
         PR_ASSERT(attempt < 8);
+    }
+    // The root of a context resumes the floats that break in this fragmentainer, after its own content if that ends
+    // here (css-break-4/#parallel-flows).
+    if (flow.edge != Edge_Stopped && !c.inContext && c.frag != nullptr && exclusions.broken.count != 0) {
+        const LayoutBreakToken* floats = nullptr;
+        for (uint32_t i = exclusions.broken.count; i-- > 0;) {
+            LayoutBreakToken* token = const_cast<LayoutBreakToken*>(exclusions.broken.data[i].token);
+            token->sibling = floats;
+            floats = token;
+        }
+        exclusions.broken.count = 0;
+        if (c.frag->tokenOut == nullptr)
+            c.frag->tokenOut = layoutBreakTokenCreate(c.node, kLayoutUnitZero, kPrLayoutNodeNone, nullptr);
+        c.frag->tokenOut->floats = floats;
     }
     layoutExclusionsReset(exclusions);
     LayoutFlowOutcome outcome{};
     outcome.top = kLayoutOffsetNone;
     outcome.stopAt = kLayoutOffsetNone;
     if (flow.edge == Edge_Stopped) {
+        if (c.frag != nullptr)
+            layoutBreakTokenRelease(c.frag->tokenOut);
         layoutFragmentRelease(marker.fragment);
         layoutFragmentDiscard(children, mark);
         layoutExclusionsCut(*c.containing.exclusions, exclusionMark);
@@ -924,6 +1474,11 @@ LayoutFlowOutcome layoutFlowContent(LayoutState& state, const LayoutFlowInput& i
     }
     if (ending.collapsedThrough && flow.edge == Edge_Open)
         outcome.unplaced = flow.unplaced;
+    if (c.frag != nullptr) {
+        if (c.frag->tokenOut != nullptr && c.frag->resume == nullptr && !c.frag->placedAny)
+            c.frag->tokenOut->atStart = true;
+        outcome.token = c.frag->tokenOut;
+    }
     return outcome;
 }
 

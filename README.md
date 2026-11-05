@@ -68,7 +68,7 @@ against its hash (`cmake/dependencies.cmake`). To use your own copy of a depende
 - A module defines an interface, and its library contains every backend of that interface that the build enables (the
   `PR_<MODULE>_<BACKEND>` options below). A program chooses among them at run time, or disables them and provides its
   own implementation.
-- The applications in `examples/` are built this way; `examples/draw` is the smallest.
+- The applications in `examples/` are built this way; `examples/draw_gallery` is the smallest.
 
 Add the source tree to a project with FetchContent:
 
@@ -157,6 +157,8 @@ platform supports.
 | draw renderer | `PR_DRAW_CANVAS` | the browser's Canvas 2D | the web | on |
 | draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform but the web | on |
 | draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform but the web | on |
+| draw writer | `PR_DRAW_SVG` | SVG documents, which need `PR_DRAW_CPU` | every platform | on |
+| draw writer | `PR_DRAW_PDF` | tagged PDF documents, which need `PR_DRAW_CPU` | every platform | on |
 
 `prax::font_bundle` maps the generic font families and font fallback to font files that the application provides.
 `pr_font_bundle_fetch(<directory> Noto)` downloads a bundle's files into a directory at configure time. It is available

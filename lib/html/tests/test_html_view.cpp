@@ -5,12 +5,15 @@
 #include "pr/draw_cpu.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
+#include "pr/draw_structure.h"
 #include "pr/html.h"
 #include "pr/html_forms.h"
 #include "pr/html_page.h"
+#include "pr/html_structure.h"
 #include "pr/html_view.h"
 #include "pr/image_builtin.h"
 #include "pr/layout_compositor.h"
+#include "pr/layout_page.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/text_harfbuzz.h"
@@ -86,7 +89,8 @@ std::vector<uint8_t> withOrientation(const std::vector<uint8_t>& png, uint8_t or
     return out;
 }
 
-// A page in a browsing context, presented by a view to a compositor without a thread of its own, over Tinos. The
+// A page in a browsing context, presented by a view to a compositor without a thread of its own, over Tinos. The page's
+// clock moves only when runNextTask steps it, so that no rendering update comes due while a test sets the page up.
 struct Viewed {
     PrFontSet* fonts = prFontSetCreate(nullptr);
     PrTextShaper* shaper = prTextHarfBuzzCreate();
@@ -94,6 +98,7 @@ struct Viewed {
     PrHtmlPage* page = nullptr;
     PrLayoutCompositor* compositor = nullptr;
     PrHtmlView* view = nullptr;
+    double now = 0;                 // the page's clock, in milliseconds
     uint32_t presented = 0;
     uint32_t wanted = 0;            // the times the compositor came to want a frame
     std::vector<uint8_t> pixels;    // the last frame presented, 40 by 40
@@ -122,6 +127,7 @@ struct Viewed {
         defaultFont = prTextFontCreate(&defaultFontDesc);
         PrHtmlHost host = prHtmlHostDefault();
         host.context = this;
+        host.now = [](void* context) { return static_cast<Viewed*>(context)->now; };
         host.elementState =
                 [](void* context, PrHtmlPage*, const PrDomElement* element, PrDomHostState wanted) -> PrDomHostState {
             bool visited = element == static_cast<Viewed*>(context)->visited;
@@ -164,6 +170,17 @@ struct Viewed {
     }
 
     PrDomDocument* document() { return prHtmlWindowDocument(prHtmlPageWindow(page)); }
+
+    // Steps the page's clock to the next task of its event loop, and runs the task. Returns false if there is none.
+    bool runNextTask() {
+        PrDomAgent* agent = prHtmlPageAgent(page);
+        double delay = prDomAgentNextTaskDelay(agent);
+        if (delay < 0)
+            return false;
+        now += delay;
+        prDomAgentRunTask(agent);
+        return true;
+    }
 
     // Paints the view into 40 by 40 pixels.
     std::vector<uint8_t> paint() {
@@ -439,6 +456,46 @@ struct EditedArea {
         prHtmlTextControlSetSelectionRange(area, end, end, PrDomSelectionDirection_None);
     }
 };
+
+// Appends the text of the subtree of `node` in `tree` to `out`.
+void appendText(PrLayoutTree* tree, PrLayoutNode node, std::string& out) {
+    if (prLayoutNodeKind(tree, node) == PrLayoutNodeKind_Text) {
+        PrStringView text = prLayoutNodeText(tree, node);
+        out.append(text.data, text.size);
+        return;
+    }
+    for (PrLayoutNode child = prLayoutNodeFirstChild(tree, node); child != kPrLayoutNodeNone;
+            child = prLayoutNodeNextSibling(tree, child))
+        appendText(tree, child, out);
+}
+
+// Returns the text of each margin box of the page at `index` of a paged view, by PrLayoutMarginBox, and "-" for a box
+// that the page does not generate.
+std::vector<std::string> marginTexts(Viewed& v, uint32_t index) {
+    PrLayoutTree* tree = prCssPresentationTree(prHtmlPagePresentation(v.page));
+    PrLayoutNode boxes[PrLayoutMarginBox_Count];
+    prLayoutTreePageMargins(tree, index, boxes);
+    std::vector<std::string> texts;
+    for (PrLayoutNode box : boxes) {
+        std::string text = box != kPrLayoutNodeNone ? "" : "-";
+        if (box != kPrLayoutNodeNone)
+            appendText(tree, box, text);
+        texts.push_back(text);
+    }
+    return texts;
+}
+
+// Returns the text of the margin box `which` of the page at `index`.
+std::string marginText(Viewed& v, uint32_t index, PrLayoutMarginBox which) {
+    return marginTexts(v, index)[which];
+}
+
+// Lays `v` out as pages over a US letter page, and returns the number of pages.
+uint32_t paged(Viewed& v) {
+    PrLayoutPageBox initial = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &initial, 0);
+    return prHtmlViewPageCount(v.view);
+}
 
 } // namespace
 
@@ -1183,10 +1240,9 @@ TEST_CASE("a press focuses the nearest focusable ancestor, or the viewport, and 
 TEST_CASE("the first autofocus candidate that is focusable takes the focus at the next rendering update, and shows it") {
     Viewed page("<input id=hidden autofocus hidden><input id=first autofocus><input id=second autofocus>");
     PrDomNode* document = prDomDocumentAsNode(page.document());
-    PrDomAgent* agent = prHtmlPageAgent(page.page);
     // The rendering update runs at the next rendering opportunity, on the agent's clock.
-    while (prHtmlActiveElement(document) == prDomDocumentBody(page.document()) && prDomAgentNextTaskDelay(agent) >= 0)
-        prDomAgentRunTask(agent);
+    while (prHtmlActiveElement(document) == prDomDocumentBody(page.document()) && page.runNextTask()) {
+    }
     CHECK(prHtmlActiveElement(document) == page.byId("first"));
     CHECK(page.matches("first", ":focus-visible"));
 }
@@ -1195,9 +1251,8 @@ TEST_CASE("an autofocus candidate that becomes focusable before the rendering up
     Viewed page("<textarea id=t autofocus disabled></textarea><select id=s autofocus></select>");
     prDomElementRemoveAttribute(page.byId("t"), "disabled");
     PrDomNode* document = prDomDocumentAsNode(page.document());
-    PrDomAgent* agent = prHtmlPageAgent(page.page);
-    while (prHtmlActiveElement(document) == prDomDocumentBody(page.document()) && prDomAgentNextTaskDelay(agent) >= 0)
-        prDomAgentRunTask(agent);
+    while (prHtmlActiveElement(document) == prDomDocumentBody(page.document()) && page.runNextTask()) {
+    }
     CHECK(prHtmlActiveElement(document) == page.byId("t"));
 }
 
@@ -2884,4 +2939,456 @@ TEST_CASE("an svg element that takes no pointer lets it through, and its content
     CHECK(hitAt(page, 10, 20) == "under");
     CHECK(hitAt(page, 30, 20) == "taker");
     CHECK(hitAt(page, 5, 55) != "img");
+}
+
+TEST_CASE("a paged view lays its document out in the page boxes that its @page rules give, and paints each page") {
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 20px }
+        @page :first { margin-top: 50px }
+        @page wide { size: 400px 300px }
+        html, body { margin: 0 }
+        div { height: 100px; background: red }
+        .after { break-before: page }
+        .wide { page: wide }
+    </style><div></div><div></div><div></div><div class=after></div><div class=wide></div>)");
+    PrLayoutPageBox initial = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &initial, 0);
+    // The first page's area is 230px tall and holds two blocks and the start of the third, the second's holds the rest
+    // of the third, a forced break puts the fourth on the third page, and a block of another page name goes on a page
+    // of that name.
+    REQUIRE(prHtmlViewPageCount(v.view) == 4);
+    PrLayoutPage first = prHtmlViewPage(v.view, 0);
+    CHECK(prLayoutUnitToPx(first.box.extent.x) == 200);
+    CHECK(prLayoutUnitToPx(first.box.margin[PrRectSide_Top]) == 50);
+    CHECK(prLayoutUnitToPx(prHtmlViewPage(v.view, 1).box.margin[PrRectSide_Top]) == 20);
+    PrLayoutPage wide = prHtmlViewPage(v.view, 3);
+    CHECK(prLayoutUnitToPx(wide.box.extent.x) == 400);
+    PrDrawList* list = prDrawListCreate();
+    prHtmlViewPaintPage(v.view, 0, list);
+    std::vector<uint8_t> drawn(size_t(200) * 300 * 4, 0);
+    PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+    PrPixels into{drawn.data(), 200 * 4, {200, 300}};
+    prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
+    prDrawRendererDestroy(cpu);
+    prDrawListRelease(list);
+    // The blocks are red, and nothing fills the margins. The third block's fixed height breaks at the end of the first
+    // page's area.
+    auto rgba = [&](uint32_t x, uint32_t y) {
+        const uint8_t* p = &drawn[(size_t(y) * 200 + x) * 4];
+        return uint32_t(p[0]) << 24 | uint32_t(p[1]) << 16 | uint32_t(p[2]) << 8 | p[3];
+    };
+    CHECK(rgba(100, 60) == 0xff0000ffu);
+    CHECK(rgba(100, 240) == 0xff0000ffu);
+    CHECK(rgba(100, 260) == 0xff0000ffu);
+    CHECK(rgba(100, 290) == 0u);
+    CHECK(rgba(10, 60) == 0u);
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+    CHECK(prHtmlViewPageCount(v.view) == 0);
+}
+
+TEST_CASE("a paged view centers its pages across a viewport whose extent changes") {
+    // The pages' boxes are the same in any viewport, so a new extent changes no style or box. Only the pages' places
+    // change.
+    Viewed v(R"(<style>@page { size: 200px 300px; margin: 0 }</style><p>text)");
+    PrLayoutPageBox initial = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &initial, 0);
+    prHtmlViewSetViewport(v.view, PrVec2{800, 600});
+    REQUIRE(prHtmlViewPageCount(v.view) == 1);
+    CHECK(prLayoutUnitToPx(prHtmlViewPage(v.view, 0).offset.x) == 300);
+    prHtmlViewSetViewport(v.view, PrVec2{400, 600});
+    REQUIRE(prHtmlViewPageCount(v.view) == 1);
+    CHECK(prLayoutUnitToPx(prHtmlViewPage(v.view, 0).offset.x) == 100);
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("@page's marks and bleed give a page's box its marks and its bleed, which is 6pt for crop marks by default") {
+    struct Expected {
+        const char* rule;
+        PrLayoutPageMarkFlags marks;
+        float bleed;                // px
+    };
+    const Expected cases[] = {
+        {"", PrLayoutPageMarkFlag_None, 0},
+        {"marks: crop", PrLayoutPageMarkFlag_Crop, 8},
+        {"marks: cross", PrLayoutPageMarkFlag_Cross, 0},
+        {"marks: cross crop", PrLayoutPageMarkFlag_All, 8},
+        {"marks: none; bleed: 3pt", PrLayoutPageMarkFlag_None, 4},
+        {"marks: crop; bleed: -6px", PrLayoutPageMarkFlag_Crop, -6},
+        {"marks: crop; bleed: auto", PrLayoutPageMarkFlag_Crop, 8},
+    };
+    for (const Expected& expected : cases) {
+        CAPTURE(expected.rule);
+        std::string html = std::string("<style>@page { size: 100px 60px; ") + expected.rule + " }</style>x";
+        Viewed v(html.c_str());
+        PrLayoutPageBox initial = prLayoutPageBoxDefault();
+        prHtmlViewSetPaged(v.view, &initial, 0);
+        REQUIRE(prHtmlViewPageCount(v.view) == 1);
+        PrLayoutPageBox box = prHtmlViewPage(v.view, 0).box;
+        CHECK(box.marks == expected.marks);
+        CHECK(prLayoutUnitToPx(box.bleed) == expected.bleed);
+    }
+}
+
+TEST_CASE("a paged view prints and previews each page on its sheet, with its marks and its content in the bleed area") {
+    Viewed v(R"(<style>
+        @page { size: 100px 60px; margin: 10px; bleed: 4px; marks: crop; background: blue }
+        html, body { margin: 0 }
+        div { margin-left: -20px; width: 30px; height: 20px; background: red }
+    </style><div></div>)");
+    PrLayoutPageBox initial = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &initial, 0);
+    REQUIRE(prHtmlViewPageCount(v.view) == 1);
+    // A crop mark starts 8 px from the page box, outside the 4 px bleed, runs 32 px, and the sheet ends 8 px past it.
+    PrLayoutPageBox box = prHtmlViewPage(v.view, 0).box;
+    PrLayoutPageSheet sheet = prLayoutPageBoxSheet(&box);
+    REQUIRE(prLayoutVecToPx(sheet.extent) == PrVec2{196, 156});
+    CHECK(prLayoutRectToPx(sheet.trim).left == 48);
+    CHECK(prLayoutRectToPx(sheet.bleed).left == 44);
+    // Returns the RGBA pixels of `list` drawn into `width` by `height` px.
+    auto render = [](PrDrawList* list, uint32_t width, uint32_t height) {
+        std::vector<uint8_t> drawn(size_t(width) * height * 4, 0);
+        PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+        PrPixels into{drawn.data(), size_t(width) * 4, {width, height}};
+        prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
+        prDrawRendererDestroy(cpu);
+        prDrawListRelease(list);
+        return drawn;
+    };
+    // Returns the color of the pixel at `x`, `y` as 0xRRGGBBAA.
+    auto rgba = [](const std::vector<uint8_t>& drawn, uint32_t width, uint32_t x, uint32_t y) {
+        const uint8_t* p = &drawn[(size_t(y) * width + x) * 4];
+        return uint32_t(p[0]) << 24 | uint32_t(p[1]) << 16 | uint32_t(p[2]) << 8 | p[3];
+    };
+    PrDrawList* list = prDrawListCreate();
+    prHtmlViewPaintPage(v.view, 0, list);
+    std::vector<uint8_t> printed = render(list, 196, 156);
+    // The block overflows the page box into the bleed area and is clipped at its edge, and the page's background fills
+    // the rest of the bleed area. A crop mark extends the page box's left edge above it.
+    CHECK(rgba(printed, 196, 46, 65) == 0xff0000ffu);
+    CHECK(rgba(printed, 196, 40, 65) == 0u);
+    CHECK(rgba(printed, 196, 46, 90) == 0x0000ffffu);
+    CHECK((rgba(printed, 196, 47, 20) | rgba(printed, 196, 48, 20)) != 0u);
+    CHECK(rgba(printed, 196, 48, 42) == 0u);
+    // The preview shows the same sheet on white paper, with the page box at the page's offset, over the backdrop.
+    list = prDrawListCreate();
+    prHtmlViewPaint(v.view, list);
+    std::vector<uint8_t> shown = render(list, 800, 600);
+    PrVec2 offset = prLayoutVecToPx(prHtmlViewPage(v.view, 0).offset);
+    uint32_t x = uint32_t(offset.x) - 48;
+    uint32_t y = uint32_t(offset.y) - 48;
+    REQUIRE(x + 200 <= 800);
+    REQUIRE(y + 156 <= 600);
+    CHECK(rgba(shown, 800, x + 46, y + 65) == 0xff0000ffu);
+    CHECK(rgba(shown, 800, x + 40, y + 65) == 0xffffffffu);
+    CHECK(rgba(shown, 800, x + 46, y + 90) == 0x0000ffffu);
+    CHECK((rgba(shown, 800, x + 47, y + 20) & rgba(shown, 800, x + 48, y + 20)) != 0xffffffffu);
+    CHECK(rgba(shown, 800, x + 196 + 2, y + 20) != 0xffffffffu);
+}
+
+TEST_CASE("a paged view's viewport units are of the first page's area, and its media queries see the paper") {
+    // The first page's area is 280 by 180 px once the @page rules apply. The paper is portrait, so #b matches the query
+    // in print, and the screen's 800 by 600 viewport is landscape.
+    Viewed v(R"(<style>
+        @page { size: 300px 200px; margin: 20px 30px }
+        @page :first { margin: 10px }
+        html, body { margin: 0 }
+        #a { width: 50vw; height: 50vh }
+        #b { height: 10px }
+        @media (orientation: portrait) { #b { width: 10px } }
+    </style><div id=a></div><div id=b></div>)");
+    auto extent = [&](const char* id) {
+        PrDomRect rect = prCssElementGetBoundingClientRect(v.byId(id));
+        return std::to_string(int(rect.width)) + "x" + std::to_string(int(rect.height));
+    };
+    CHECK(extent("a") == "400x300");
+    CHECK(extent("b") == "800x10");
+    PrLayoutPageBox paper = prLayoutPageBoxDefault();
+    paper.extent = PrLayoutVec{prLayoutUnitFromPx(200), prLayoutUnitFromPx(400)};
+    prHtmlViewSetPaged(v.view, &paper, 0);
+    REQUIRE(prHtmlViewPageCount(v.view) == 1);
+    CHECK(extent("a") == "140x90");
+    CHECK(extent("b") == "10x10");
+    // The screen's viewport applies again once the view shows the screen.
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+    CHECK(extent("a") == "400x300");
+    CHECK(extent("b") == "800x10");
+}
+
+TEST_CASE("a paged view's first page takes the name of the root's start page value, which sizes viewport units") {
+    Viewed v(R"(<style>
+        @page { size: 300px 200px; margin: 0 }
+        @page wide { size: 600px 200px }
+        html, body { margin: 0 }
+        #a { width: 10vw; height: 10px; page: wide }
+    </style><div id=a></div>)");
+    PrLayoutPageBox paper = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &paper, 0);
+    REQUIRE(prHtmlViewPageCount(v.view) == 1);
+    CHECK(prLayoutUnitToPx(prHtmlViewPage(v.view, 0).box.extent.x) == 600);
+    CHECK(prCssElementGetBoundingClientRect(v.byId("a")).width == 60.0);
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("a paged view starts a page wherever the used page value changes between siblings") {
+    // The body forces no break by its break values. The page value of the first block differs from the body's, and the
+    // text after the second block is an anonymous block box of the body's page value, so each starts a page. The white
+    // space between the blocks generates no box.
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 20px }
+        @page b { size: 400px 300px }
+        html, body { margin: 0 }
+    </style>
+    <div style="page: b">a</div>
+    <div><div style="page: b">b</div></div>
+    text)");
+    PrLayoutPageBox initial = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &initial, 0);
+    REQUIRE(prHtmlViewPageCount(v.view) == 2);
+    CHECK(prLayoutUnitToPx(prHtmlViewPage(v.view, 0).box.extent.x) == 400);
+    CHECK(prLayoutUnitToPx(prHtmlViewPage(v.view, 1).box.extent.x) == 200);
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("a paged view starts a titled sidebar's long list on the page where the sidebar starts") {
+    // The markup of an Asciidoctor sidebar, whose title avoids a break after it. The page areas are 300 px tall: 150 px
+    // of filler, the sidebar's 2 px border and 20 px title, and 30 items of 20 px fill two pages and a little of a
+    // third.
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 0 }
+        html, body { margin: 0 }
+        .filler { height: 150px }
+        .sidebarblock { border: 1px solid }
+        .title { height: 20px; break-after: avoid }
+        ul, p { margin: 0 }
+        p { height: 20px }
+    </style><div class=filler></div><div class=sidebarblock><div class=content><div class=title></div>
+        <div class=ulist><ul>)"
+        "<li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p>"
+        "<li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p>"
+        "<li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p><li><p></p>"
+        "</ul></div></div></div>");
+    PrLayoutPageBox initial = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &initial, 0);
+    CHECK(prHtmlViewPageCount(v.view) == 3);
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("a paged view keeps a heading on the page of the content after it") {
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 0 }
+        html, body { margin: 0 }
+        div { height: 220px }
+        h2 { height: 40px; margin: 0; background: red }
+        p { height: 100px; margin: 0; overflow: auto }
+    </style><div></div><h2></h2><p></p>)");
+    PrLayoutPageBox initial = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &initial, 0);
+    REQUIRE(prHtmlViewPageCount(v.view) == 2);
+    auto red = [&](uint32_t page, uint32_t y) {
+        PrDrawList* list = prDrawListCreate();
+        prHtmlViewPaintPage(v.view, page, list);
+        std::vector<uint8_t> drawn(size_t(200) * 300 * 4, 0);
+        PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+        PrPixels into{drawn.data(), 200 * 4, {200, 300}};
+        prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
+        prDrawRendererDestroy(cpu);
+        prDrawListRelease(list);
+        const uint8_t* p = &drawn[(size_t(y) * 200 + 100) * 4];
+        return p[0] == 255 && p[1] == 0 && p[2] == 0;
+    };
+    // The heading would fit at the end of the first page, but the user agent's break-after: avoid-page moves it to the
+    // second, with the paragraph after it, which does not fit on the first and, as a scroll container, cannot break.
+    CHECK(!red(0, 240));
+    CHECK(red(1, 20));
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("a paged view draws the content of its pages' margin boxes, with the page and pages counters") {
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 40px 20px;
+            @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 12px; color: blue }
+            @top-right { content: counter(pages); color: blue } }
+        @page :first { @top-right { content: none } }
+        html, body { margin: 0 }
+        div { height: 200px }
+    </style><div></div><div></div><div></div>)");
+    PrLayoutPageBox initial = prLayoutPageBoxDefault();
+    prHtmlViewSetPaged(v.view, &initial, 0);
+    REQUIRE(prHtmlViewPageCount(v.view) == 3);
+    // Paints the page at `index`, and returns the number of its blue pixels in the rows from `top` to `bottom`, and the
+    // columns that they span.
+    auto blueIn = [&](uint32_t index, uint32_t top, uint32_t bottom, uint32_t* left, uint32_t* right) {
+        PrDrawList* list = prDrawListCreate();
+        prHtmlViewPaintPage(v.view, index, list);
+        std::vector<uint8_t> drawn(size_t(200) * 300 * 4, 0);
+        PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+        PrPixels into{drawn.data(), 200 * 4, {200, 300}};
+        prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
+        prDrawRendererDestroy(cpu);
+        prDrawListRelease(list);
+        uint32_t count = 0;
+        *left = 200;
+        *right = 0;
+        for (uint32_t y = top; y < bottom; ++y) {
+            for (uint32_t x = 0; x < 200; ++x) {
+                const uint8_t* p = &drawn[(size_t(y) * 200 + x) * 4];
+                if (p[3] != 0 && p[2] > p[0]) {
+                    ++count;
+                    *left = x < *left ? x : *left;
+                    *right = x + 1 > *right ? x + 1 : *right;
+                }
+            }
+        }
+        return count;
+    };
+    uint32_t left = 0;
+    uint32_t right = 0;
+    // The first page's top right margin box has no content, and later pages' show the number of pages at the right of
+    // the page area.
+    CHECK(blueIn(0, 0, 40, &left, &right) == 0);
+    CHECK(blueIn(1, 0, 40, &left, &right) > 0);
+    CHECK(left > 150);
+    CHECK(right <= 180);
+    // The bottom margin holds the text, centered in the page area.
+    CHECK(blueIn(1, 260, 300, &left, &right) > 0);
+    CHECK(left > 20);
+    CHECK(right < 180);
+    CHECK(left + right > 180);
+    CHECK(left + right < 220);
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("a page's margin boxes show their strings and counters, and a box with no content is not generated") {
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 40px 20px;
+            @top-left { content: "Doc" }
+            @top-right { content: counter(page, upper-roman) "/" counter(pages) }
+            @bottom-center { content: normal }
+            @left-middle { content: "" } }
+        @page :left { counter-increment: page 2 }
+        html, body { margin: 0 }
+        div { height: 200px }
+    </style><div></div><div></div><div></div>)");
+    REQUIRE(paged(v) == 3);
+    // A right page counts by one, and a left page by two, as its page context says.
+    CHECK(marginText(v, 0, PrLayoutMarginBox_TopRight) == "I/3");
+    CHECK(marginText(v, 1, PrLayoutMarginBox_TopRight) == "III/3");
+    CHECK(marginText(v, 2, PrLayoutMarginBox_TopRight) == "IV/3");
+    CHECK(marginText(v, 2, PrLayoutMarginBox_TopLeft) == "Doc");
+    // Content normal computes to none, and generates no box. An empty string generates an empty box.
+    CHECK(marginText(v, 0, PrLayoutMarginBox_BottomCenter) == "-");
+    CHECK(marginText(v, 0, PrLayoutMarginBox_LeftMiddle).empty());
+    CHECK(marginText(v, 0, PrLayoutMarginBox_TopCenter) == "-");
+    // Printing again keeps the boxes that are unchanged.
+    PrLayoutTree* tree = prCssPresentationTree(prHtmlPagePresentation(v.page));
+    PrLayoutNode before[PrLayoutMarginBox_Count];
+    prLayoutTreePageMargins(tree, 1, before);
+    REQUIRE(prHtmlViewPageCount(v.view) == 3);
+    PrLayoutNode after[PrLayoutMarginBox_Count];
+    prLayoutTreePageMargins(tree, 1, after);
+    CHECK(before[PrLayoutMarginBox_TopRight] == after[PrLayoutMarginBox_TopRight]);
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+    CHECK(prHtmlViewPageCount(v.view) == 0);
+}
+
+TEST_CASE("a margin box shows the document's counters as they are at the start of its page") {
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 40px 20px; @top-center { content: "Section " counter(section) } }
+        html, body { margin: 0 }
+        h2 { counter-increment: section; height: 100px; margin: 0 }
+        body { counter-reset: section 10 }
+    </style><h2>A</h2><h2>B</h2><h2>C</h2><h2>D</h2><h2>E</h2>)");
+    // Each page area holds two headings. The counter at the start of a page is the value before its first heading.
+    REQUIRE(paged(v) == 3);
+    CHECK(marginText(v, 0, PrLayoutMarginBox_TopCenter) == "Section 10");
+    CHECK(marginText(v, 1, PrLayoutMarginBox_TopCenter) == "Section 12");
+    CHECK(marginText(v, 2, PrLayoutMarginBox_TopCenter) == "Section 14");
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("named strings take the assignment that first, start, last and first-except name on each page") {
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 40px 20px;
+            @top-left { content: string(title) }
+            @top-center { content: string(title, start) }
+            @top-right { content: string(title, last) }
+            @bottom-left { content: string(title, first-except) } }
+        html, body { margin: 0 }
+        h1 { string-set: title content(); height: 50px; margin: 0; font-size: 10px }
+        p { height: 100px; margin: 0 }
+        .first { break-before: page }
+    </style><h1>One</h1><h1>Two</h1><p class=first></p><h1 class=first>Three</h1>)");
+    // Page one sets One and Two, page two sets none, and page three starts with Three.
+    REQUIRE(paged(v) == 3);
+    std::vector<std::string> one = marginTexts(v, 0);
+    CHECK(one[PrLayoutMarginBox_TopLeft] == "One");
+    CHECK(one[PrLayoutMarginBox_TopCenter] == "One");
+    CHECK(one[PrLayoutMarginBox_TopRight] == "Two");
+    CHECK(one[PrLayoutMarginBox_BottomLeft].empty());
+    std::vector<std::string> two = marginTexts(v, 1);
+    CHECK(two[PrLayoutMarginBox_TopLeft] == "Two");
+    CHECK(two[PrLayoutMarginBox_TopCenter] == "Two");
+    CHECK(two[PrLayoutMarginBox_TopRight] == "Two");
+    CHECK(two[PrLayoutMarginBox_BottomLeft] == "Two");
+    std::vector<std::string> three = marginTexts(v, 2);
+    CHECK(three[PrLayoutMarginBox_TopCenter] == "Three");
+    CHECK(three[PrLayoutMarginBox_BottomLeft].empty());
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("a running element leaves the flow, and a copy of it shows in the margin boxes of its pages") {
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 40px 20px; @top-center { content: element(header) } }
+        html, body { margin: 0 }
+        .header { position: running(header); font-size: 10px }
+        .page { height: 100px; break-before: page }
+    </style><div class=header>First <a href="https://example.com/">link</a></div><div class=page id=a>A</div>
+        <div class=page>B</div><div class=page><div class=header>Second</div>C</div>)");
+    REQUIRE(paged(v) == 3);
+    CHECK(marginText(v, 0, PrLayoutMarginBox_TopCenter) == "First link");
+    CHECK(marginText(v, 1, PrLayoutMarginBox_TopCenter) == "First link");
+    CHECK(marginText(v, 2, PrLayoutMarginBox_TopCenter) == "Second");
+    // The running element takes no room in the flow.
+    CHECK(prCssElementGetBoundingClientRect(v.byId("a")).y == 40.0);
+    // The structure makes a link of each copy of the link, and leaves the rest of the margin boxes as artifacts.
+    PrDrawStructure* structure = prDrawStructureCreate(nullptr);
+    prHtmlStructureAppend(v.page, structure);
+    PrRawString dump = prDrawStructureDump(structure);
+    std::string text(prRawStringView(&dump).data, prRawStringView(&dump).size);
+    size_t links = 0;
+    for (size_t at = text.find("Link"); at != std::string::npos; at = text.find("Link", at + 1))
+        ++links;
+    CHECK(links == 2);
+    CHECK(text.find("First") == std::string::npos);
+    prRawStringReset(&dump);
+    prDrawStructureDestroy(structure);
+    prHtmlViewSetPaged(v.view, nullptr, 0);
+}
+
+TEST_CASE("a margin box shows an image that its content names, once the image loads") {
+    Viewed v(R"(<style>
+        @page { size: 200px 300px; margin: 40px 20px;
+            @top-left { content: "A" url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'/>") } }
+        html, body { margin: 0 }
+    </style><div>A</div>)");
+    REQUIRE(paged(v) == 1);
+    PrLayoutTree* tree = prCssPresentationTree(prHtmlPagePresentation(v.page));
+    auto replacedIn = [&]() {
+        PrLayoutNode boxes[PrLayoutMarginBox_Count];
+        prLayoutTreePageMargins(tree, 0, boxes);
+        REQUIRE(boxes[PrLayoutMarginBox_TopLeft] != kPrLayoutNodeNone);
+        uint32_t count = 0;
+        for (PrLayoutNode child = prLayoutNodeFirstChild(tree, boxes[PrLayoutMarginBox_TopLeft]);
+                child != kPrLayoutNodeNone; child = prLayoutNodeNextSibling(tree, child))
+            count += prLayoutNodeKind(tree, child) == PrLayoutNodeKind_Replaced ? 1 : 0;
+        return count;
+    };
+    // The image's fetch is answered in a task, and the next pass shows the image after the text.
+    for (uint32_t i = 0; i < 4 && replacedIn() == 0; ++i) {
+        v.settle();
+        REQUIRE(prHtmlViewPageCount(v.view) == 1);
+    }
+    CHECK(replacedIn() == 1);
+    CHECK(marginText(v, 0, PrLayoutMarginBox_TopLeft) == "A");
+    prHtmlViewSetPaged(v.view, nullptr, 0);
 }

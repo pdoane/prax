@@ -1,44 +1,63 @@
 // A viewer for what the engine draws: collections of documents, each shown in one pane or compared across two. A pane
-// shows Prax, the engine, in a configuration of its renderers: a renderer, a text shaper and a font hinting. Or it
-// shows one of the document's references, by the document's type: the system's browser, another player such as
-// lottie-web, Skottie or rlottie, or an image such as a suite's reference. The panes are alike, so two of Prax's
-// configurations, or two players, compare as Prax and a reference do. A document's first reference is the one that its
-// suite compares the engine with, which the second pane opens on.
+// shows Prax, the engine, in a configuration of its renderers: a renderer, a text shaper and a font hinting. Prax
+// renders a page for a media: on the screen, or printed, as the pages that a printed document holds. Each collection
+// chooses the media that its pages open in. Otherwise a pane shows one of the document's references, by the document's
+// type: the system's browser, another player such as lottie-web, Skottie or rlottie, an image such as a suite's
+// reference, or a printed document. A printed document is a PDF that another engine printed, a PDF or SVG that Prax
+// prints of the page when the document opens, or a PDF that the browser prints of the page for print media. The
+// platform rasterizes a PDF where it can, and the system's browser shows it elsewhere. The engine shows an SVG as the
+// document of a page (documents.h). The panes are alike, so two of Prax's configurations, or two players, compare as
+// Prax and a reference do. A document's first reference is the one that its suite compares the engine with, which the
+// second pane opens on.
+//
+// Each collection declares the viewport that its documents are written for, and each pane lays its document out in that
+// viewport, in either view. A viewport smaller than its pane is centered in it, the pane shows as much of a larger one
+// as fits, and the document scrolls through its own overflow in both axes. A document that has an extent of its own and
+// no viewport, an image or a Lottie animation, is fitted to the viewport and centered. A printed page or a PDF shows
+// its pages as the engine's paged view does: down the viewport with a gap between them, centered across it. The zoom is
+// page zoom: the viewport is drawn at the zoom, and its target pixels per CSS pixel are the display's times the zoom.
+// It starts at 100%, or at `--zoom <percent>`, and changes only by the zoom commands, and Fit width zooms the first
+// pane's document so that what its viewport scrolls through is as wide as the pane. A document opens at its top left,
+// and a change of media opens it there again. In comparison, the pane that was last scrolled leads, and the other
+// pane's document, or the browser's by scrollTo, scrolls to the same offset.
 //
 // The controls beside the documents choose the collection, the document, each pane and the view. Keys: the arrows move
 // through the tree of documents, opening and closing its directories. [ and ] turn the document. 1 through 9 choose a
 // renderer's family for the first pane, returning to the configuration that it last showed. V turns through the
-// family's configurations. T turns through the shapers, which reloads the document. X swaps the panes. C switches
-// between the single view and the comparison view. S, F and D show a comparison side by side, flipping between the two
-// panes, or as their difference. = shows the renders at their natural size, and 0 fits them to their panes. Every
+// family's configurations. T turns through the shapers, which reloads the document. P switches the first pane's page
+// between the screen and print, which reloads it too. X swaps the panes. C switches between the single view and the
+// comparison view. S, F and D show a comparison side by side, flipping between the two panes, or as their difference.
+// Command = and Command - zoom in and out through the standard steps, and Command 0 shows the actual size. Every
 // document renders again at each of the display's refreshes, so that its figures are steady. B renders back to back
 // instead, as fast as the device allows, to measure; the figures say which. H presents in half floats, so that colors
 // past SDR white and past sRGB's gamut show on a display that can show them; the panes then render in half floats, tone
-// mapped to the display's headroom. Space plays and pauses the document's clock. Q or Escape quits. In comparison,
-// scrolling zooms and dragging pans both renders together, and the renders open at their natural size. Prax's render of
-// a page takes input as the browser's live page does: the pointer and the wheel over it go to the page, and after a
-// click on it, so do keys other than Command chords, until a click elsewhere. Scrolling and dragging elsewhere zoom and
-// pan.
+// mapped to the display's headroom. Space plays and pauses the document's clock. Q or Escape quits. The pointer and the
+// wheel over a document go to the document, and after a click on a page, so do keys other than Command chords, until a
+// click elsewhere. A wheel that a page cannot take at its scroll limit stays with the page.
 //
 // `viewer --render <directory>` opens no window. It renders every document of the collection with every renderer and
-// writes each render as a PNG named for the document and the renderer, creating the directory if needed. The collection
-// is the features unless `--collection` names another. `--reference <renderer>` also compares every other renderer's
-// render with that renderer's render, as the SVG corpora are compared, and writes the difference beside it. `--document
-// <which>` narrows either mode to the documents that it names, by number or by a word of the name, and the window opens
-// at the first of them. `--pixel-ratio <pixels>` renders at that many target pixels per unit of the document.
+// writes each render, in a viewport of the collection's size, as a PNG named for the document, its media if it is a
+// page, and the renderer, as in 5-flyer-print-cpu.png, creating the directory if needed, and prints each of a
+// document's printed references in its format, named for the document and the reference, as in 1-campaign-prax-pdf.pdf.
+// The collection is the first unless `--collection` names another. `--reference <renderer>` also compares every other
+// renderer's render with that renderer's render, as the SVG corpora are compared, and writes the difference beside it.
+// `--document <which>` narrows either mode to the documents that it names, by number or by a word of the name, and the
+// window opens at the first of them. `--pixel-ratio <pixels>` renders at that many target pixels per unit of the
+// document.
 //
 // The window opens on `--collection <word>`, the collection whose name contains the word, with the first pane on
 // `--renderer <name>`, or on fragment in its default configuration. The first pane, and the renders, shape text with
-// `--shaper <name>`, or with the default shaper, and hint fonts as `--hinting <name>` says, or not at all. With
-// `--reference <name>`, which names a renderer or one of the document's own references for the second pane, the window
-// opens in comparison, at `--zoom <percent>` of the natural size rather than fitted, shown as `--look side`, `flip` or
-// `difference`. `--snapshot <path>` writes the window's first frame whose figures are settled as a PNG, including the
-// controls, and quits. `--tour <passes>` turns through every document that many times, one per frame, and quits.
-// `--rendering back-to-back` opens rendering back to back, as B does, and `--rendering paced` paced by the display.
-// `--present hdr` opens presenting in half floats, as H does, and `--present sdr` in 8 bits. `--wpt-server <http port>
-// <https port>` serves WPT's reftests from WPT's server (tools/suite/wpt/wpt_serve.py), which `./dev.sh viewer` starts,
-// and the WPT collection is listed only with it. With PR_VIEWER_PROFILE set, which prints each frame's phases, the tour
-// measures what moving between documents costs.
+// `--shaper <name>`, or with the default shaper, and hint fonts as `--hinting <name>` says, or not at all. They render
+// pages for `--media screen` or `--media print`, or for the collection's media. With `--reference <name>`, which names
+// a renderer or one of the document's own references for the second pane, by its name or its file name (`prax-svg` for
+// "Prax SVG"), the window opens in comparison, shown as `--look side`, `flip` or `difference`. `--snapshot <path>`
+// writes the window's first frame whose figures are settled as a PNG, including the controls, and quits. `--tour
+// <passes>` turns through every document that many times, one per frame, and quits. `--rendering back-to-back` opens
+// rendering back to back, as B does, and `--rendering paced` paced by the display. `--present hdr` opens presenting in
+// half floats, as H does, and `--present sdr` in 8 bits. `--wpt-server <http port> <https port>` serves WPT's reftests
+// from WPT's server (tools/suite/wpt/wpt_serve.py), which `./dev.sh viewer` starts, and the WPT collection is listed
+// only with it. With PR_VIEWER_PROFILE set, which prints each frame's phases, the tour measures what moving between
+// documents costs.
 
 #include "pr/app.h"
 #include "pr/assert.h"
@@ -51,13 +70,12 @@
 #include "pr/vec.h"
 
 #include "tools/harness/compare.h"
+#include "tools/harness/draw_renderers.h"
 #include "tools/viewer/documents.h"
-#include "tools/viewer/drawing.h"
-#include "tools/viewer/features.h"
 #include "tools/viewer/panes.h"
-#include "tools/viewer/renderers.h"
 #include "tools/viewer/source_html.h"
 #include "tools/viewer/ui.h"
+#include "tools/viewer/zoom.h"
 
 #include <atomic>
 #include <chrono>
@@ -82,10 +100,12 @@ namespace {
 // The gap between the comparison's panes, in logical pixels.
 constexpr float kGap = 8;
 
-// The window's initial size: the controls, and a feature drawing at the size it lays out for.
+// The window's initial size, in logical pixels.
 constexpr float kWindowWidth = 1400;
 constexpr float kWindowHeight = 800;
 
+// What the window shows where nothing else is: around the controls and the panes, and in each pane wherever its
+// document draws nothing, as between a printed document's pages.
 constexpr PrColor kBackdrop{0.12f, 0.12f, 0.13f, 1};
 
 // Returns the swap chain that the viewer presents with, for SDR or for HDR.
@@ -157,10 +177,6 @@ bool writePng(const std::string& path, const std::vector<uint8_t>& pixels, uint3
     return writeRgbaPng(path, rgba, width, height);
 }
 
-void releaseResources() {
-    releaseDrawings();
-}
-
 int indexOf(const std::vector<RendererConfig>& configs, const char* name) {
     for (uint32_t b = 0; b < uint32_t(configs.size()); ++b)
         if (std::strcmp(configs[b].name, name) == 0)
@@ -169,7 +185,7 @@ int indexOf(const std::vector<RendererConfig>& configs, const char* name) {
 }
 
 int renderAll(const char* directory, const Collection& documents, const char* which, const char* referenceName,
-        TextBackends text, double time, float pixelRatio) {
+        TextBackends text, page_host::Media media, double time, float pixelRatio) {
     std::error_code error;
     std::filesystem::create_directories(directory, error);
     if (error) {
@@ -189,8 +205,6 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
         prGpuDeviceDestroy(device);
         return 2;
     }
-    uint32_t width = uint32_t(std::lround(documents.width * pixelRatio));
-    uint32_t height = uint32_t(std::lround(documents.height * pixelRatio));
     Slot slot;
     Slot referenceSlot;
     PrDrawList* list = prDrawListCreate();
@@ -199,19 +213,27 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
         if (!documentNamed(documents, d, which))
             continue;
         const Document& document = documents.documents()[d];
+        // A document renders in a viewport of the collection's size.
+        PrVec2 size{documents.width, documents.height};
+        uint32_t width = uint32_t(std::lround(size.x * pixelRatio));
+        uint32_t height = uint32_t(std::lround(size.y * pixelRatio));
         // Each renderer configuration renders a load of its own, presented where its renderer renders.
         auto recordFor = [&](uint32_t config) {
             PrGpuDevice* presenter = prDrawRendererDevice(configs[config].renderer);
-            std::shared_ptr<Loaded> loaded = load(document.source, text, presenter);
-            record(list, *loaded, documents.width, documents.height, pixelRatio, time);
+            std::shared_ptr<Loaded> loaded = load(document.source, text, media, presenter);
+            record(list, *loaded, size.x, size.y, pixelRatio, time);
             return loaded;
         };
         std::string stem = std::string(directory) + "/" + std::to_string(d + 1) + "-" + fileNameOf(document.name) + "-";
+        // The renders of a document that the engine prints say which media they are for.
+        std::string renders = stem;
+        if (prints(document.source))
+            renders += media == page_host::Media_Print ? "print-" : "screen-";
         std::vector<uint8_t> expected;
         if (reference >= 0) {
             std::shared_ptr<Loaded> loaded = recordFor(uint32_t(reference));
             if (sizeSlot(device, referenceSlot, width, height) == PrStatus_Ok &&
-                    renderSlotWaiting(device, referenceSlot, configs, uint32_t(reference), list, background(*loaded))
+                    renderSlotWaiting(device, referenceSlot, configs, uint32_t(reference), list, kBackdrop)
                     .status == PrStatus_Ok) {
                 expected = readSlot(referenceSlot);
                 straightenBgra(expected.data(), width, height, size_t(width) * 4);
@@ -222,24 +244,36 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
             Rendered r{};
             r.status = sizeSlot(device, slot, width, height);
             if (r.status == PrStatus_Ok)
-                r = renderSlotWaiting(device, slot, configs, b, list, background(*loaded));
+                r = renderSlotWaiting(device, slot, configs, b, list, kBackdrop);
             std::vector<uint8_t> pixels;
             if (r.status == PrStatus_Ok)
                 pixels = readSlot(slot);
-            std::string path = stem + configs[b].name + ".png";
+            std::string path = renders + configs[b].name + ".png";
             bool ok = r.status == PrStatus_Ok && writePng(path, pixels, width, height);
             std::printf("%s %s: %u commands, %.2f ms", ok ? "wrote" : "FAILED", path.c_str(), r.commands, r.ms);
-            if (ok && !expected.empty() && int(b) != reference) {
+            if (ok && !expected.empty() && expected.size() == pixels.size() && int(b) != reference) {
                 std::vector<uint8_t> diff(pixels.size());
                 straightenBgra(pixels.data(), width, height, size_t(width) * 4);
                 ImageDifference c = compareImages(expected.data(), pixels.data(), width, height,
                     size_t(width) * 4, ImageComparison{}, diff.data());
-                std::string diffPath = stem + configs[b].name + "-diff-" + referenceName + ".png";
+                std::string diffPath = renders + configs[b].name + "-diff-" + referenceName + ".png";
                 ok = writeRgbaPng(diffPath, diff, width, height);
                 std::printf(", against %s changed %.3f%% (content %.3f%%), mean error %.3f",
                     referenceName, c.changedRatio * 100, c.contentChangedRatio * 100, c.mae);
             }
             std::printf("\n");
+            failures += ok ? 0 : 1;
+        }
+        // Each printed reference is printed beside the renders, named for the document and the reference, with its
+        // format's extension.
+        for (const Reference& listed : document.references) {
+            if (listed.printed.path.empty())
+                continue;
+            Reference printed = listed;
+            PrStringView extension = prDrawWriterBackendName(listed.printed.format);
+            printed.printed.path = stem + fileNameOf(listed.name) + "." + std::string(extension.data, extension.size);
+            bool ok = print(printed);
+            std::printf("%s %s\n", ok ? "wrote" : "FAILED", printed.printed.path.string().c_str());
             failures += ok ? 0 : 1;
         }
     }
@@ -248,7 +282,6 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
     releaseSlot(referenceSlot);
     destroyConfigs(configs);
     prGpuDeviceDestroy(device);
-    releaseResources();
     return failures == 0 ? 0 : 1;
 }
 
@@ -383,19 +416,112 @@ private:
     std::thread thread_;
 };
 
-// A pane's own load of a document, and the text renderers and the renderer configuration that it was loaded for.
+// How far a print of a printed reference has come.
+enum {
+    PrintState_Pending,
+    PrintState_Printed,
+    PrintState_Failed,
+};
+typedef uint8_t PrintState;
+
+// A print of a printed reference, which the printer runs. Its state is written on the printer's thread.
+struct PrintJob {
+    Reference reference;
+    std::atomic<PrintState> state{PrintState_Pending};
+};
+
+// Prints the printed references on its own thread, in the order that they were asked for, so that no frame waits for a
+// print. A job that no one holds any more is skipped. Each print that ends wakes the app.
+class Printer {
+public:
+    explicit Printer(PrApp* app) : app_(app), thread_([this] { run(); }) {}
+
+    // Waits for the print that is running.
+    ~Printer() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            stopping_ = true;
+        }
+        wake_.notify_one();
+        thread_.join();
+    }
+
+    // Returns a job that prints the reference, queued after the jobs asked for before it.
+    std::shared_ptr<PrintJob> ask(const Reference& reference) {
+        std::shared_ptr<PrintJob> job = std::make_shared<PrintJob>();
+        job->reference = reference;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            queue_.push_back(job);
+        }
+        wake_.notify_one();
+        return job;
+    }
+
+private:
+    void run() {
+        for (;;) {
+            std::shared_ptr<PrintJob> job;
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                wake_.wait(lock, [this] { return !queue_.empty() || stopping_; });
+                if (stopping_)
+                    return;
+                job = queue_.front().lock();
+                queue_.erase(queue_.begin());
+            }
+            if (job == nullptr)
+                continue;
+            job->state = print(job->reference) ? PrintState_Printed : PrintState_Failed;
+            prAppWake(app_);
+        }
+    }
+
+    PrApp* app_;
+    std::mutex mutex_;
+    std::condition_variable wake_;
+    std::vector<std::weak_ptr<PrintJob>> queue_;
+    bool stopping_ = false;
+    std::thread thread_;
+};
+
+// A pane's own load of a document, and the text renderers, the renderer configuration and the media that it was loaded
+// for.
 struct PaneLoad {
     TextBackends text;
     uint32_t config = 0;
+    page_host::Media media = page_host::Media_Screen;
     std::shared_ptr<Loaded> loaded;
+};
+
+// The system's browser printing the document's page to a PDF, for the browser's reference in print media. The browser
+// loads the page, waits for its fonts, and prints on the paper that the engine's prints start from
+// (prLayoutPageBoxDefault). Its callbacks run on the application's thread, so no frame waits for the print. The print
+// ends with its browser, which calls nothing more once destroyed.
+struct BrowserPrint {
+    PrAppBrowser* PR_NULLABLE browser = nullptr;
+    std::filesystem::path path;                     // where the PDF is written
+    PrintState state = PrintState_Pending;
+    std::shared_ptr<Loaded> loaded;                 // the PDF as a source, once printed, if the platform draws PDFs
+
+    BrowserPrint() = default;
+    BrowserPrint(const BrowserPrint&) = delete;
+    BrowserPrint& operator=(const BrowserPrint&) = delete;
+    ~BrowserPrint() { prAppBrowserDestroy(browser); }
 };
 
 // A document, loaded with the references that the engine draws, and loaded again by each pane, so that each pane's view
 // is independent of the other's.
 struct Opened {
     std::vector<Reference> references;              // the document's references (referencesOf)
-    std::vector<std::shared_ptr<Loaded>> loaded;    // each reference's source, or null for a browser's page
-    PaneLoad panes[2];                              // by pane
+
+    // Each reference's source, or null for a browser's page. A printed PDF's source is loaded once it is printed, if
+    // the platform draws PDFs.
+    std::vector<std::shared_ptr<Loaded>> loaded;
+
+    std::vector<std::shared_ptr<PrintJob>> prints;  // each printed reference's print, or null for another reference
+    std::shared_ptr<BrowserPrint> browserPrint;     // the browser's print of the page, once a pane asks for it
+    PaneLoad panes[2];                              // by pane: the pane's own load
 };
 
 // The system's browser of a pane that shows a page, created when the pane first shows one. It is shown live over the
@@ -411,6 +537,8 @@ struct PaneBrowser {
     double time = -1;                   // the time that it stands at, negative for none
     std::chrono::steady_clock::time_point asked;
     Rendered figures;
+
+    PrVec2 scrolled{-1, -1};            // the scroll offset that it was last told, negative for none
 
     // Incremented on each load. A reply tagged with an older value is dropped. The next load is sent without waiting
     // for replies from earlier pages.
@@ -451,10 +579,11 @@ struct Viewer {
     PrApp* PR_NULLABLE app = nullptr;
     std::unique_ptr<Comparer> comparer;
     Comparer::Result result;
+    std::unique_ptr<Printer> printer;
     Choices choices;
     Figures figures;
     PrRect content{};           // where documents go, in logical pixels
-    bool dragging = false;
+    float zoomed = 1;           // the zoom that the panes last showed, which a change of zoom scrolls from
 
     // The engine's render of a page takes input as the browser's live page does: a press on it gives it the keyboard,
     // and a press elsewhere takes the keyboard back. A press that started on it keeps the pointer until its release.
@@ -471,6 +600,10 @@ struct Viewer {
     const char* referenceName = nullptr;
     const char* snapshot = nullptr;
     const char* collectionName = nullptr;
+
+    // The pane whose document the wheel or a zoom last scrolled, and when, which the other pane follows.
+    uint32_t scrolledPane = 0;
+    std::chrono::steady_clock::time_point scrolledAt;
 
     // The document shown, loaded from the collection's listing, with its references and the collection and document it
     // was loaded for. Another document replaces it.
@@ -511,55 +644,11 @@ bool paneShown(const Viewer& v, uint32_t index) {
     return false;
 }
 
-// Returns where the view shows the pane: its rectangle side by side, and otherwise the whole content area.
-PrRect paneShownRect(const Viewer& v, uint32_t index) {
-    return v.choices.view == View_Compare && v.choices.look == Look_SideBySide ? paneRect(v, index) : v.content;
-}
-
-// Returns the comparison's zoom: logical pixels per unit of the document, so that 1 shows the document at its natural
-// size regardless of the display's pixel ratio or the density that it was rendered at. If the view is fitted, the zoom
-// is the one that fits the pane's render in the rectangle. Otherwise, it is the chosen zoom.
-float viewZoom(const Viewer& v, const Slot& slot, PrRect rect) {
-    if (!v.choices.fit || slot.texture.id == 0)
-        return v.choices.zoom;
-    float w = prRectWidth(rect);
-    float h = prRectHeight(rect);
-    PrUVec2 extent = prGpuTextureExtent(slot.device, slot.texture);
-    return std::fmin(w * slot.pixelRatio / float(extent.x), h * slot.pixelRatio / float(extent.y));
-}
-
-// Returns where the view places a document of `width` by `height` units at `zoom` in the rectangle: centered and
-// panned.
-PrRect placed(const Viewer& v, PrRect rect, float width, float height, float zoom) {
-    float w = width * zoom;
-    float h = height * zoom;
-    float cx = (rect.left + rect.right) / 2 + v.choices.panX;
-    float cy = (rect.top + rect.bottom) / 2 + v.choices.panY;
-    return PrRect{cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2};
-}
-
-// Returns the view's zoom for a document of `size` units in the rectangle: the zoom that fits it if the view is fitted,
-// and the chosen zoom otherwise.
-float zoomFor(const Viewer& v, PrRect rect, PrVec2 size) {
-    if (!v.choices.fit || size.x <= 0 || size.y <= 0)
-        return v.choices.zoom;
-    return std::fmin(prRectWidth(rect) / size.x, prRectHeight(rect) / size.y);
-}
-
-// Draws the texture in the rectangle. A render of the view's region goes where it was rendered for, one texel per
-// target pixel. A whole document is placed the way the view places it: centered, zoomed and panned, and sampled by
-// nearest texel if one texel covers a target pixel or more.
-void showTexture(const Viewer& v, const Slot& slot, PrGpuTexture texture, PrRect rect, float pixelRatio) {
-    if (texture.id == 0)
-        return;
-    if (slot.viewed) {
+// Draws the texture where the slot's render goes, clipped to the rectangle. The texture's texels are the window's
+// target pixels.
+void showTexture(const Viewer& v, const Slot& slot, PrGpuTexture texture, PrRect rect) {
+    if (texture.id != 0)
         uiImage(v.ui, texture, rect, slot.at, true);
-        return;
-    }
-    float zoom = viewZoom(v, slot, rect);
-    PrUVec2 extent = prGpuTextureExtent(v.device, texture);
-    PrRect at = placed(v, rect, float(extent.x) / slot.pixelRatio, float(extent.y) / slot.pixelRatio, zoom);
-    uiImage(v.ui, texture, rect, at, zoom * pixelRatio / slot.pixelRatio >= 1);
 }
 
 // Returns true if the pane shows Prax, either by its choice or because the document has no such reference.
@@ -572,11 +661,11 @@ std::string paneStem(const Viewer& v, const PaneChoice& pane, const Opened& docu
     char stem[320];
     const PaneOutput& output = source.output;
     bool prax = showsPrax(pane, document);
-    std::snprintf(stem, sizeof(stem), "%u %u %s %u %u %u %ux%u %d %gx%g %g %g,%g %u %g %u %u", v.choices.collection,
-        v.choices.document, prax ? "prax" : "reference", prax ? pane.config : pane.reference,
-        uint32_t(pane.text.shaper), uint32_t(pane.text.hinting), source.width, source.height,
-        int(v.choices.view == View_Single), double(source.docWidth), double(source.docHeight),
-        double(source.pixelRatio), double(source.origin.x), double(source.origin.y),
+    std::snprintf(stem, sizeof(stem), "%u %u %s %u %u %u %u %ux%u %gx%g %g %g %g %u %g %u %u",
+        v.choices.collection, v.choices.document, prax ? "prax" : "reference", prax ? pane.config : pane.reference,
+        uint32_t(pane.text.shaper), uint32_t(pane.text.hinting), uint32_t(pane.media), source.width, source.height,
+        double(source.docWidth), double(source.docHeight), double(source.pixelRatio), double(source.scroll.x),
+        double(source.scroll.y),
         uint32_t(output.format), double(output.display.headroom), uint32_t(output.display.gamut),
         uint32_t(output.preferences.colorScheme));
     return stem;
@@ -623,6 +712,7 @@ void browserLoaded(void* context, PrStatus status) {
     b->loaded = status == PrStatus_Ok;
     if (!b->loaded)
         b->url.clear();
+    b->scrolled = PrVec2{-1, -1};
     b->playing = false;
     b->time = -1;
 }
@@ -684,8 +774,6 @@ void browserCaptured(void* context, PrStatus status, PrPixelView pixels) {
         r.ms = millisSince(c->begin);
         slot.rendered = r;
         slot.shown = shown;
-        slot.pixelRatio = c->source.pixelRatio;
-        slot.viewed = c->source.viewed;
         slot.at = c->source.at;
         pane.publish(index, c->version);
     }
@@ -709,7 +797,8 @@ void browserStood(void* context, PrStatus status, PrStringView json) {
         return;
     }
     const PaneSource& source = c->source;
-    PrRect region = source.viewed ? source.region : PrRect{0, 0, source.docWidth, source.docHeight};
+    // The capture holds the part of the viewport that the pane's texture holds.
+    PrRect region{0, 0, float(source.width) / source.pixelRatio, float(source.height) / source.pixelRatio};
     prAppBrowserCapture(c->v->browsers[c->index].browser, region, PrUVec2{source.width, source.height}, browserCaptured, c);
 }
 
@@ -739,7 +828,15 @@ void browserNext(Viewer& v, uint32_t index, bool running) {
     prAppBrowserResize(b.browser, PrUVec2{viewport(source.docWidth), viewport(source.docHeight)});
     if (!b.loaded)
         return;
-    char script[640];
+    char script[2048];
+    if (b.scrolled.x != source.scroll.x || b.scrolled.y != source.scroll.y) {
+        b.scrolled = source.scroll;
+        std::snprintf(script, sizeof(script), "window.scrollTo(%g, %g)", double(source.scroll.x),
+            double(source.scroll.y));
+        b.busy = true;
+        prAppBrowserEvaluate(b.browser, script, browserPlays, new BrowserCommand{&v, index, b.generation});
+        return;
+    }
     if (running) {
         if (!b.playing || b.playedFrom != v.clockSets) {
             b.playing = true;
@@ -789,11 +886,14 @@ void browserShow(Viewer& v, uint32_t index) {
         prAppBrowserHide(b.browser);
         return;
     }
-    PrRect rect = paneShownRect(v, index);
     float zoom = v.choices.zoom;
-    if (v.choices.fit && source.docWidth > 0 && source.docHeight > 0)
-        zoom = std::fmin(prRectWidth(rect) / source.docWidth, prRectHeight(rect) / source.docHeight);
-    prAppBrowserShow(b.browser, rect, placed(v, rect, source.docWidth, source.docHeight, zoom));
+    PrRect viewport{
+        source.at.left,
+        source.at.top,
+        source.at.left + source.docWidth * zoom,
+        source.at.top + source.docHeight * zoom,
+    };
+    prAppBrowserShow(b.browser, source.at, viewport);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -809,11 +909,22 @@ Opened& shownDocument(Viewer& v) {
         const Document& listed = allCollections()[v.openCollection].documents()[v.openDocument];
         v.open = std::make_shared<Opened>();
         v.open->references = referencesOf(listed);
-        for (const Reference& reference : v.open->references)
-            v.open->loaded.push_back(reference.url.empty() ? load(reference.source, TextBackends{}, nullptr) : nullptr);
+        v.choices.scroll = PrVec2{0, 0};
+        // Each opening prints the printed references again, if their pages have changed or this process has not printed
+        // them, so that the PDF shows the engine and the page as they are.
+        for (const Reference& reference : v.open->references) {
+            bool printed = !reference.printed.path.empty();
+            bool drawn = reference.url.empty() && !printed;
+            std::shared_ptr<Loaded> loaded;
+            if (drawn)
+                loaded = load(reference.source, TextBackends{}, page_host::Media_Screen, nullptr);
+            v.open->loaded.push_back(std::move(loaded));
+            v.open->prints.push_back(printed ? v.printer->ask(reference) : nullptr);
+        }
         // Finds a reference named on the command line that belongs to the document rather than to a renderer.
         for (uint32_t r = 0; v.referenceName != nullptr && r < v.open->references.size(); ++r) {
-            if (v.open->references[r].name == v.referenceName) {
+            const std::string& name = v.open->references[r].name;
+            if (name == v.referenceName || fileNameOf(name) == fileNameOf(v.referenceName)) {
                 v.choices.panes[1].renderer = Renderer_Reference;
                 v.choices.panes[1].reference = r;
                 v.choices.view = View_Compare;
@@ -823,121 +934,151 @@ Opened& shownDocument(Viewer& v) {
     return *v.open;
 }
 
-// Returns the document as pane `index` loaded it. Loads it again if the pane's text renderers or renderer configuration
-// changed since its last load. The load is presented on the viewer's device if the configuration's renderer renders
-// there, and in memory otherwise.
+// Returns the document as pane `index` loaded it. Loads it again if the pane's text renderers, renderer configuration
+// or media changed since its last load. The load is presented on the device that the configuration's renderer renders
+// on.
 std::shared_ptr<Loaded> paneDocument(Viewer& v, Opened& document, uint32_t index) {
     const PaneChoice& choice = v.choices.panes[index];
     PaneLoad& pane = document.panes[index];
-    if (pane.loaded == nullptr || pane.text != choice.text || pane.config != choice.config) {
-        const Document& listed = allCollections()[v.openCollection].documents()[v.openDocument];
+    const Document& listed = allCollections()[v.openCollection].documents()[v.openDocument];
+    page_host::Media media = paneMedia(choice, listed.source);
+    if (pane.loaded == nullptr || pane.text != choice.text || pane.config != choice.config || pane.media != media) {
         PrGpuDevice* device = prDrawRendererDevice(v.configs[choice.config].renderer);
-        pane = PaneLoad{choice.text, choice.config, load(listed.source, choice.text, device)};
+        pane = PaneLoad{choice.text, choice.config, media, load(listed.source, choice.text, media, device)};
+        // A load opens at the top of the document, and the other pane follows it there.
+        v.choices.scroll = PrVec2{0, 0};
     }
     return pane.loaded;
 }
 
-// Returns the pixel ratio that a comparison measures at, if it has one: the ratio of a pane that shows a raster. For a
-// reference that is an image, the ratio is the image's own pixels per unit: the collection's pixel ratio, or else the
-// image's pixels over the document's size. For a player of the document's own pixels, the ratio is the display's pixel
-// ratio. Returns zero if every pane draws from vectors.
-float rasterPixelRatio(const Viewer& v, const Collection& collection, const Opened& document, PrVec2 size,
-        float pixelRatio) {
-    for (const PaneChoice& pane : v.choices.panes) {
-        if (showsPrax(pane, document))
-            continue;
-        const Reference& reference = document.references[pane.reference];
-        const std::shared_ptr<Loaded>& loaded = document.loaded[pane.reference];
-        if (reference.source.type == SourceType_Image || reference.source.type == SourceType_Snapshots) {
-            if (collection.pixelRatio > 0)
-                return collection.pixelRatio;
-            PrVec2 pixels = loaded != nullptr ? naturalSize(*loaded) : PrVec2{0, 0};
-            return pixels.x > 0 ? pixels.x / size.x : 1;
-        }
-        if (loaded != nullptr && pixelsOnly(*loaded))
-            return pixelRatio;
+// Returns true if the pane shows the browser's reference printed: its choice is the browser showing the document's
+// page, in print media.
+bool printsBrowser(const Viewer& v, const Opened& document, const PaneChoice& choice) {
+    const Document& listed = allCollections()[v.openCollection].documents()[v.openDocument];
+    return !showsPrax(choice, document) && document.references[choice.reference].browsed &&
+        paneMedia(choice, listed.source) == page_host::Media_Print;
+}
+
+void browserPrintDone(void* context, PrStatus status) {
+    BrowserPrint* print = static_cast<BrowserPrint*>(context);
+    print->state = status == PrStatus_Ok ? PrintState_Printed : PrintState_Failed;
+    if (status != PrStatus_Ok)
+        std::fprintf(stderr, "viewer: the browser did not print %s\n", print->path.string().c_str());
+}
+
+void browserPrintReady(void* context, PrStatus, PrStringView) {
+    BrowserPrint* print = static_cast<BrowserPrint*>(context);
+    PrLayoutVec paper = prLayoutPageBoxDefault().extent;
+    if (prAppBrowserPrint(print->browser, print->path.string(), prLayoutVecToPx(paper), browserPrintDone, print) !=
+            PrStatus_Ok)
+        print->state = PrintState_Failed;
+}
+
+void browserPrintLoaded(void* context, PrStatus status) {
+    BrowserPrint* print = static_cast<BrowserPrint*>(context);
+    if (status != PrStatus_Ok) {
+        print->state = PrintState_Failed;
+        return;
     }
-    return 0;
+    prAppBrowserEvaluate(print->browser, "document.fonts.ready.then(() => 0)", browserPrintReady, print);
 }
 
-// Sets the source to render the view's region of a document of its size in the pane's rectangle `rect`, at the view's
-// zoom, on a display of `pixelRatio` target pixels per logical pixel. The region is the part that the pane shows, in
-// whole target pixels, so that the texture is never larger than the pane.
-void viewRegion(const Viewer& v, PaneSource& source, PrRect rect, float pixelRatio) {
-    PrVec2 size{source.docWidth, source.docHeight};
-    float zoom = zoomFor(v, rect, size);
-    PrRect at = placed(v, rect, size.x, size.y, zoom);
-    float ratio = zoom * pixelRatio;
-    // The pane and the document in target pixels, and the whole pixels of the pane that the document covers.
-    float left = std::fmax(std::floor(rect.left * pixelRatio), std::floor(at.left * pixelRatio));
-    float top = std::fmax(std::floor(rect.top * pixelRatio), std::floor(at.top * pixelRatio));
-    float right = std::fmin(std::ceil(rect.right * pixelRatio), std::ceil(at.right * pixelRatio));
-    float bottom = std::fmin(std::ceil(rect.bottom * pixelRatio), std::ceil(at.bottom * pixelRatio));
-    source.viewed = true;
-    source.pixelRatio = ratio;
-    source.width = right > left ? uint32_t(right - left) : 0;
-    source.height = bottom > top ? uint32_t(bottom - top) : 0;
-    source.origin = PrVec2{at.left * pixelRatio - left, at.top * pixelRatio - top};
-    source.at = PrRect{left / pixelRatio, top / pixelRatio, right / pixelRatio, bottom / pixelRatio};
-    source.region = PrRect{
-        (left - at.left * pixelRatio) / ratio, (top - at.top * pixelRatio) / ratio,
-        (right - at.left * pixelRatio) / ratio, (bottom - at.top * pixelRatio) / ratio,
-    };
+// Starts the browser's print of the document's page at `url`, unless it has started, and returns it.
+BrowserPrint& browserPrint(Viewer& v, Opened& document, const std::string& url) {
+    if (document.browserPrint == nullptr) {
+        document.browserPrint = std::make_shared<BrowserPrint>();
+        BrowserPrint& print = *document.browserPrint;
+        const Document& listed = allCollections()[v.openCollection].documents()[v.openDocument];
+        print.path = viewerCache() / "browser" / (fileNameOf(listed.name) + ".pdf");
+        std::error_code error;
+        std::filesystem::create_directories(print.path.parent_path(), error);
+        PrLayoutVec paper = prLayoutPageBoxDefault().extent;
+        PrVec2 px = prLayoutVecToPx(paper);
+        PrAppBrowserDesc desc{.viewport = PrUVec2{uint32_t(std::lround(px.x)), uint32_t(std::lround(px.y))}};
+        if (prAppBrowserCreate(v.app, &desc, &print.browser) != PrStatus_Ok) {
+            print.state = PrintState_Failed;
+        } else {
+            prAppBrowserLoad(print.browser, url, browserPrintLoaded, &print);
+        }
+    }
+    BrowserPrint& print = *document.browserPrint;
+    if (print.state == PrintState_Printed && print.loaded == nullptr && pdfDrawn())
+        print.loaded = loadPrinted(print.path, PrDrawWriterBackend_Pdf);
+    return print;
 }
 
-// Gives pane `index` what its choice says that it shows: the document rendered by Prax, or one of its references. In
-// the single view, the document lays out for the pane. In comparison, it lays out at its natural size. Each pane
-// renders the view's region at the view's zoom (viewRegion), except in a comparison with a raster, which renders the
-// whole document at the raster's pixels per unit. In comparison, the pane's renders go to the comparer while the clock
-// stands.
+// Returns the source that the engine draws for the reference that the pane chooses, or null if a browser shows it or
+// nothing shows yet. A printed PDF is drawn once its print ends, if the platform draws PDFs, and so is the browser's
+// print of the page in print media.
+std::shared_ptr<Loaded> shownReference(Viewer& v, Opened& document, const PaneChoice& choice) {
+    if (printsBrowser(v, document, choice))
+        return browserPrint(v, document, document.references[choice.reference].url).loaded;
+    const Reference& reference = document.references[choice.reference];
+    std::shared_ptr<Loaded>& loaded = document.loaded[choice.reference];
+    const std::shared_ptr<PrintJob>& job = document.prints[choice.reference];
+    bool pdf = reference.printed.format == PrDrawWriterBackend_Pdf;
+    if (loaded == nullptr && job != nullptr && job->state == PrintState_Printed && (!pdf || pdfDrawn()))
+        loaded = loadPrinted(reference.printed.path, reference.printed.format);
+    return loaded;
+}
+
+// Returns the URL that the system's browser shows for the reference that the pane chooses, or empty while it has none:
+// a printed document shows nothing until its print ends.
+std::string referenceUrl(Viewer& v, Opened& document, const PaneChoice& choice) {
+    const Reference& reference = document.references[choice.reference];
+    if (printsBrowser(v, document, choice)) {
+        const BrowserPrint& print = browserPrint(v, document, reference.url);
+        return print.state == PrintState_Printed ? fileUrl(print.path) : std::string();
+    }
+    const std::shared_ptr<PrintJob>& job = document.prints[choice.reference];
+    if (job == nullptr)
+        return reference.url;
+    return job->state == PrintState_Printed ? fileUrl(reference.printed.path) : std::string();
+}
+
+// Gives pane `index` what its choice says that it shows: the document rendered by Prax, or one of its references, at
+// the view's zoom, in target pixels of a display of `pixelRatio`, laid out in the viewport that its collection
+// declares. The viewport is centered in the pane, and the pane shows as much of it as fits. In comparison, the pane's
+// renders go to the comparer while the clock stands.
 void showPane(Viewer& v, uint32_t index, float pixelRatio) {
-    const Collection& collection = allCollections()[v.choices.collection];
-    const Document& listed = collection.documents()[v.choices.document];
     Opened& document = shownDocument(v);
     const PaneChoice& choice = v.choices.panes[index];
     bool prax = showsPrax(choice, document);
-    // A reference's pane reads the document's size and background from the first pane's load.
     std::shared_ptr<Loaded> engine = paneDocument(v, document, prax ? index : 0);
-    bool single = v.choices.view == View_Single;
-    PrRect r = paneRect(v, index);
+    std::shared_ptr<Loaded> shown = prax ? engine : shownReference(v, document, choice);
+    float zoom = v.choices.zoom;
+    PrRect rect = paneRect(v, index);
+    const Collection& collection = allCollections()[v.choices.collection];
+    PrVec2 visible{
+        std::min(collection.width, prRectWidth(rect) / zoom),
+        std::min(collection.height, prRectHeight(rect) / zoom),
+    };
     PaneSource source;
-    source.docWidth = prRectWidth(r);
-    source.docHeight = prRectHeight(r);
-    float raster = 0;
-    if (!single) {
-        // The listing's size, or else the source's own, or else the collection's.
-        PrVec2 natural = naturalSize(*engine);
-        float width = listed.width > 0 ? listed.width : natural.x;
-        float height = listed.height > 0 ? listed.height : natural.y;
-        source.docWidth = width > 0 ? width : collection.width;
-        source.docHeight = height > 0 ? height : collection.height;
-        raster = rasterPixelRatio(v, collection, document, PrVec2{source.docWidth, source.docHeight}, pixelRatio);
-    }
-    if (raster > 0) {
-        source.pixelRatio = raster;
-        source.width = uint32_t(std::lround(source.docWidth * raster));
-        source.height = uint32_t(std::lround(source.docHeight * raster));
-    } else {
-        viewRegion(v, source, r, pixelRatio);
-    }
+    // A viewport smaller than the pane is centered in it. A larger one fills the pane and scrolls.
+    float left = rect.left + (prRectWidth(rect) - visible.x * zoom) / 2;
+    float top = rect.top + (prRectHeight(rect) - visible.y * zoom) / 2;
+    source.at = PrRect{left, top, left + visible.x * zoom, top + visible.y * zoom};
+    source.docWidth = collection.width;
+    source.docHeight = collection.height;
+    source.pixelRatio = zoom * pixelRatio;
+    source.width = uint32_t(std::lround(visible.x * source.pixelRatio));
+    source.height = uint32_t(std::lround(visible.y * source.pixelRatio));
     if (source.width == 0 || source.height == 0) {
         v.panes[index]->show(PaneSource{});
         return;
     }
     PrPixelFormat format = v.choices.hdr ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8;
     source.output = PaneOutput{format, v.display, v.preferences};
-    source.stem = paneStem(v, choice, document, source);
-    source.background = background(*engine);
+    source.background = kBackdrop;
     source.backToBack = v.choices.backToBack;
     // A reference that the engine draws draws with the cpu renderer, which is the first.
     source.config = prax ? choice.config : 0;
-    if (prax) {
-        source.loaded = engine;
-    } else {
-        source.loaded = document.loaded[choice.reference];
-        source.url = document.references[choice.reference].url;
-    }
-    if (!single && !v.clock.running()) {
+    source.loaded = shown;
+    if (shown == nullptr)
+        source.url = referenceUrl(v, document, choice);
+    source.scroll = v.choices.scroll;
+    source.stem = paneStem(v, choice, document, source);
+    if (v.choices.view == View_Compare && !v.clock.running()) {
         Comparer* comparer = v.comparer.get();
         source.compare = [comparer, index](const std::string& shown, PrPixelView texels) {
             comparer->deliver(index, shown, texels);
@@ -987,12 +1128,14 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
         pane.config = defaultConfig(v.configs);
     }
     v.comparer = std::make_unique<Comparer>(app);
+    v.printer = std::make_unique<Printer>(app);
     if (v.configName != nullptr && indexOf(v.configs, v.configName) >= 0)
         v.choices.panes[0].config = uint32_t(indexOf(v.configs, v.configName));
     // The second pane shows the document's first reference, unless the command line names a renderer for it. It sets
-    // its text as the first does.
+    // its text and its media as the first does.
     v.choices.panes[1].renderer = Renderer_Reference;
     v.choices.panes[1].text = v.choices.panes[0].text;
+    v.choices.panes[1].media = v.choices.panes[0].media;
     if (v.referenceName != nullptr && indexOf(v.configs, v.referenceName) >= 0) {
         v.choices.panes[1].renderer = Renderer_Prax;
         v.choices.panes[1].config = uint32_t(indexOf(v.configs, v.referenceName));
@@ -1023,22 +1166,68 @@ bool inside(PrRect r, float x, float y) {
     return x >= r.left && x < r.right && y >= r.top && y < r.bottom;
 }
 
+// Scrolls the other pane's document to the offset of the document that was last scrolled, so that the panes show the
+// same part of the document. A browser's document follows by its source (browserNext). A page reports its scroll once
+// its rendering update takes the scroll, so the panes follow for a while after the last scroll.
+void followScroll(Viewer& v) {
+    if (millisSince(v.scrolledAt) > 2000)
+        return;
+    const PaneSource& leader = v.panes[v.scrolledPane]->source();
+    if (leader.loaded == nullptr)
+        return;
+    PrVec2 offset = scroll(*leader.loaded);
+    if (offset.x == v.choices.scroll.x && offset.y == v.choices.scroll.y)
+        return;
+    v.choices.scroll = offset;
+    const PaneSource& other = v.panes[1 - v.scrolledPane]->source();
+    if (other.loaded != nullptr) {
+        scrollTo(*other.loaded, offset);
+        v.panes[1 - v.scrolledPane]->touch();
+    }
+}
+
+// Applies a change of the zoom since the panes last showed it. Fitting the width zooms the first pane's document so
+// that what its viewport scrolls through is as wide as the pane. Each pane's document then scrolls to keep the point at
+// the pane's center fixed.
+void applyZoom(Viewer& v) {
+    const PaneSource& first = v.panes[0]->source();
+    if (v.choices.fitWidth && first.loaded != nullptr) {
+        float width = contentWidth(*first.loaded);
+        if (width > 0)
+            v.choices.zoom = prRectWidth(paneRect(v, 0)) / width;
+    }
+    v.choices.fitWidth = false;
+    if (v.choices.zoom == v.zoomed)
+        return;
+    PrRect shown = paneRect(v, 0);
+    PrVec2 offset{
+        anchoredScroll(v.choices.scroll.x, prRectWidth(shown), v.zoomed, v.choices.zoom),
+        anchoredScroll(v.choices.scroll.y, prRectHeight(shown), v.zoomed, v.choices.zoom),
+    };
+    v.zoomed = v.choices.zoom;
+    v.choices.scroll = offset;
+    for (std::unique_ptr<Pane>& pane : v.panes) {
+        if (pane->source().loaded != nullptr) {
+            scrollTo(*pane->source().loaded, offset);
+            pane->touch();
+        }
+    }
+}
+
 // Returns the panel's output with that of the page that holds the keyboard, where its pane shows it.
 PrAppOutput pageOutput(Viewer& v, const PrAppOutput& panel, double time) {
     uint32_t index = v.pagePane;
     if (!v.pageKeys)
         return panel;
     const PaneSource& source = v.panes[index]->source();
-    if (source.loaded == nullptr || !takesInput(*source.loaded) || !paneShown(v, index))
+    if (source.loaded == nullptr || !paneShown(v, index))
         return panel;
-    PrRect rect = paneShownRect(v, index);
-    float zoom = zoomFor(v, rect, PrVec2{source.docWidth, source.docHeight});
-    PrRect at = placed(v, rect, source.docWidth, source.docHeight, zoom);
-    PrAppOutput page = prAppOutputPlaced(output(*source.loaded, v.app, time), PrVec2{at.left, at.top}, zoom);
+    PrAppOutput page = prAppOutputPlaced(output(*source.loaded, v.app, time), PrVec2{source.at.left, source.at.top},
+        v.choices.zoom);
     // A caret that blinks changes the page's render.
     if (page.wantsFrame || page.frameTime != 0)
         v.panes[index]->touch();
-    return prAppOutputMerge(panel, page, inside(rect, v.pointerX, v.pointerY));
+    return prAppOutputMerge(panel, page, inside(source.at, v.pointerX, v.pointerY));
 }
 
 PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
@@ -1079,6 +1268,24 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     if (sizeTexture(v.device, v.frame, width, height, format) != PrStatus_Ok)
         return {};
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    // The frame shows the panes' latest renders, which are taken before the controls are laid out, so that the figures
+    // that the controls show are those of the renders shown. Panes that the running clock drives each show their own
+    // time, so they are not compared.
+    ++v.frames;
+    const Slot* slots[2] = {&v.panes[0]->take(v.frames, format), &v.panes[1]->take(v.frames, format)};
+    bool compared = v.choices.view == View_Compare;
+    bool played = v.clock.running();
+    v.figures.playing = compared && played;
+    if (compared && !played) {
+        updateDifference(v, slots[0]->shown, slots[1]->shown);
+    } else {
+        v.figures.compared = false;
+        v.figures.comparing = false;
+    }
+    for (uint32_t i = 0; i < 2; ++i) {
+        bool browsed = (i == 0 || compared) && !v.panes[i]->source().url.empty();
+        v.figures.panes[i] = browsed && played ? v.browsers[i].figures : slots[i]->rendered;
+    }
     v.content = uiLayout(v.ui, frame, v.pageKeys, v.configs, shownDocument(v).references, v.figures, v.choices);
     double layoutMs = millisSince(begin);
 
@@ -1103,6 +1310,8 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     // live over the pane where the view shows it.
     bool compare = v.choices.view == View_Compare;
     uint32_t paneCount = compare ? 2 : 1;
+    followScroll(v);
+    applyZoom(v);
     for (uint32_t i = 0; i < paneCount; ++i)
         showPane(v, i, pixelRatio);
     if (!compare)
@@ -1120,24 +1329,15 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
         }
         if (live[i])
             browserNext(v, i, running);
+        // A browser that shows no page forgets the last, so that a page shown again loads again, as a printed PDF must
+        // once it is printed again.
+        if (!live[i])
+            v.browsers[i].url.clear();
         browserShow(v, i);
         // Under the page, its capture while the clock stands. The capture shows the page as it stands, and is what a
         // snapshot of the frame shows. Nothing is under the page while it plays.
         liveShown[i] = live[i] && running && paneShown(v, i);
     }
-
-    ++v.frames;
-    const Slot* slots[2] = {&v.panes[0]->take(v.frames, format), &v.panes[1]->take(v.frames, format)};
-    // Panes that the running clock drives each show their own time, so they are not compared.
-    v.figures.playing = compare && running;
-    if (compare && !running) {
-        updateDifference(v, slots[0]->shown, slots[1]->shown);
-    } else {
-        v.figures.compared = false;
-        v.figures.comparing = false;
-    }
-    for (uint32_t i = 0; i < 2; ++i)
-        v.figures.panes[i] = live[i] && running ? v.browsers[i].figures : slots[i]->rendered;
 
     PrGpuCommands* commands = nullptr;
     if (!prGpuCommandsBegin(v.device, nullptr, &commands)) {
@@ -1148,18 +1348,12 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     }
     if (compare && v.choices.look == Look_Difference) {
         if (v.figures.compared)
-            showTexture(v, *slots[0], v.difference, v.content, pixelRatio);
+            showTexture(v, *slots[0], v.difference, v.content);
     } else {
         for (uint32_t i = 0; i < paneCount; ++i)
             if (paneShown(v, i) && !liveShown[i])
-                showTexture(v, *slots[i], slots[i]->texture, paneShownRect(v, i), pixelRatio);
+                showTexture(v, *slots[i], slots[i]->texture, paneRect(v, i));
     }
-    const Slot& first = *slots[0];
-    if (first.viewed || first.texture.id == 0)
-        v.figures.zoom =
-            zoomFor(v, paneRect(v, 0), PrVec2{v.panes[0]->source().docWidth, v.panes[0]->source().docHeight});
-    else
-        v.figures.zoom = viewZoom(v, first, paneRect(v, 0));
     // One pass clears the frame to the backdrop, then draws the panes' renders and the controls.
     uiPrepare(v.ui, commands, PrUVec2{width, height}, format);
     PrGpuSubresources all{};
@@ -1203,8 +1397,17 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
         }
         prGpuSwapChainPresent(v.swapChain, commands);
     }
-    bool settled = !running && v.panes[0]->settled() && (!compare || v.panes[1]->settled()) && !v.browsers[0].busy &&
-        !v.browsers[1].busy;
+    // A pane that waits for its reference's print shows nothing yet, which is not its settled render.
+    bool printing = false;
+    for (uint32_t i = 0; i < paneCount; ++i) {
+        const PaneChoice& choice = v.choices.panes[i];
+        if (showsPrax(choice, *v.open))
+            continue;
+        const std::shared_ptr<PrintJob>& job = v.open->prints[choice.reference];
+        printing = printing || (job != nullptr && job->state == PrintState_Pending);
+    }
+    bool settled = !running && !printing && v.panes[0]->settled() && (!compare || v.panes[1]->settled()) &&
+        !v.browsers[0].busy && !v.browsers[1].busy;
     if (settled && !v.figures.comparing && v.snapshot != nullptr) {
         prGpuCommandsSubmitAndWait(commands);
         std::vector<uint8_t> pixels(size_t(width) * height * prPixelFormatSize(format));
@@ -1245,26 +1448,20 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     return pageOutput(v, panel, frame->time);
 }
 
-// Zooms both renders by `factor` about the point, which stays fixed in its pane.
-void zoomAbout(Viewer& v, float factor, float x, float y) {
-    PrRect pane = inside(paneRect(v, 1), x, y) ? paneRect(v, 1) : paneRect(v, 0);
-    float cx = x - (pane.left + pane.right) / 2;
-    float cy = y - (pane.top + pane.bottom) / 2;
-    if (v.choices.fit) {
-        v.choices.fit = false;
-        v.choices.zoom = v.figures.zoom;
-    }
-    float zoom = std::fmin(std::fmax(v.choices.zoom * factor, 0.05f), 64.0f);
-    float ratio = zoom / v.choices.zoom;
-    v.choices.panX = cx - (cx - v.choices.panX) * ratio;
-    v.choices.panY = cy - (cy - v.choices.panY) * ratio;
-    v.choices.zoom = zoom;
-}
-
-void keyDown(Viewer& v, PrApp* app, PrAppKey key) {
+void keyDown(Viewer& v, PrApp* app, PrAppKey key, PrAppModifierFlags modifiers) {
     Choices& c = v.choices;
     PaneChoice& first = c.panes[0];
     uint32_t count = uint32_t(allCollections()[c.collection].documents().size());
+    // Command =, Command + and Command - zoom in and out, and Command 0 shows the actual size.
+    if ((modifiers & PrAppModifierFlag_Super) != 0) {
+        if (key == '=' || key == '+')
+            c.zoom = zoomIn(c.zoom);
+        else if (key == '-')
+            c.zoom = zoomOut(c.zoom);
+        else if (key == '0')
+            c.zoom = 1;
+        return;
+    }
     if (key == 'Q' || key == PrAppKey_Escape) {
         prAppStop(app);
     } else if (key == ']') {
@@ -1284,6 +1481,9 @@ void keyDown(Viewer& v, PrApp* app, PrAppKey key) {
         do
             first.text.shaper = PrTextShaperBackend((first.text.shaper + 1) % PrTextShaperBackend_Count);
         while (!prTextShaperBackendIsBuilt(first.text.shaper));
+    } else if (key == 'P') {
+        first.renderer = Renderer_Prax;
+        first.media = first.media == page_host::Media_Print ? page_host::Media_Screen : page_host::Media_Print;
     } else if (key == 'X') {
         std::swap(c.panes[0], c.panes[1]);
     } else if (key == 'C') {
@@ -1311,11 +1511,6 @@ void keyDown(Viewer& v, PrApp* app, PrAppKey key) {
     } else if (key == PrAppKey_Home) {
         c.playing = false;
         c.time = 0;
-    } else if (key == '0' || key == '=') {
-        c.fit = key == '0';
-        c.zoom = 1;
-        c.panX = 0;
-        c.panY = 0;
     }
 }
 
@@ -1324,15 +1519,11 @@ void keyDown(Viewer& v, PrApp* app, PrAppKey key) {
 // the document, unless the page holds the pointer.
 Loaded* PR_NULLABLE pageAt(Viewer& v, uint32_t index, PrVec2 window, PrVec2* out) {
     const PaneSource& source = v.panes[index]->source();
-    if (source.loaded == nullptr || !takesInput(*source.loaded) || source.docWidth <= 0 || source.docHeight <= 0 ||
-            !paneShown(v, index))
+    if (source.loaded == nullptr || source.docWidth <= 0 || source.docHeight <= 0 || !paneShown(v, index))
         return nullptr;
-    PrRect rect = paneShownRect(v, index);
-    float zoom = zoomFor(v, rect, PrVec2{source.docWidth, source.docHeight});
-    PrRect at = placed(v, rect, source.docWidth, source.docHeight, zoom);
-    *out = PrVec2{(window.x - at.left) / zoom, (window.y - at.top) / zoom};
-    bool onPage = inside(rect, window.x, window.y) && out->x >= 0 && out->y >= 0 && out->x < source.docWidth &&
-        out->y < source.docHeight;
+    float zoom = v.choices.zoom;
+    *out = PrVec2{(window.x - source.at.left) / zoom, (window.y - source.at.top) / zoom};
+    bool onPage = inside(source.at, window.x, window.y);
     return onPage || (v.pagePressed && v.pagePane == index) ? source.loaded.get() : nullptr;
 }
 
@@ -1364,6 +1555,10 @@ bool toPage(Viewer& v, const PrAppEvent& event) {
                 v.pagePressed = false;
             input(*page, local);
             v.panes[index]->touch();
+            if (event.kind == PrAppEventKind_Scroll) {
+                v.scrolledPane = index;
+                v.scrolledAt = std::chrono::steady_clock::now();
+            }
             return true;
         }
         case PrAppEventKind_KeyDown:
@@ -1373,11 +1568,13 @@ bool toPage(Viewer& v, const PrAppEvent& event) {
         case PrAppEventKind_CompositionUpdate:
         case PrAppEventKind_CompositionEnd: {
             const PaneSource& source = v.panes[v.pagePane]->source();
-            if (!v.pageKeys || (event.modifiers & PrAppModifierFlag_Super) != 0 || source.loaded == nullptr ||
-                    !takesInput(*source.loaded))
+            if (!v.pageKeys || (event.modifiers & PrAppModifierFlag_Super) != 0 || source.loaded == nullptr)
                 return false;
             input(*source.loaded, event);
             v.panes[v.pagePane]->touch();
+            // A key may scroll the page, which the other pane follows.
+            v.scrolledPane = v.pagePane;
+            v.scrolledAt = std::chrono::steady_clock::now();
             return true;
         }
         default:
@@ -1400,42 +1597,15 @@ void event(void* context, PrApp* app, const PrAppEvent* event) {
     bool taken = uiEvent(v.ui, *event);
     if (taken && event->kind == PrAppEventKind_PointerDown)
         v.pageKeys = false;
-    if (!taken && event->kind == PrAppEventKind_PointerMove) {
+    if (event->kind == PrAppEventKind_PointerDown || event->kind == PrAppEventKind_PointerMove) {
         v.pointerX = event->position.x;
         v.pointerY = event->position.y;
     }
-    if (!taken && !key && !v.dragging && toPage(v, *event))
+    // The pointer and the wheel over a document go to the document.
+    if (!taken && !key && toPage(v, *event))
         return;
-    switch (event->kind) {
-        case PrAppEventKind_KeyDown:
-            if (!taken)
-                keyDown(v, app, event->key);
-            break;
-        case PrAppEventKind_PointerDown:
-            v.dragging = !taken && event->button == 0 && inside(v.content, event->position.x, event->position.y);
-            v.pointerX = event->position.x;
-            v.pointerY = event->position.y;
-            break;
-        case PrAppEventKind_PointerUp:
-            v.dragging = false;
-            break;
-        case PrAppEventKind_PointerMove:
-            if (v.dragging) {
-                v.choices.panX += event->position.x - v.pointerX;
-                v.choices.panY += event->position.y - v.pointerY;
-            }
-            v.pointerX = event->position.x;
-            v.pointerY = event->position.y;
-            break;
-        case PrAppEventKind_Scroll:
-            if (!taken && inside(v.content, v.pointerX, v.pointerY)) {
-                PrVec2 pixels = prAppEventScrollPixels(event, kPrAppScrollLineHeight);
-                zoomAbout(v, std::exp(-pixels.y * 0.01f), v.pointerX, v.pointerY);
-            }
-            break;
-        default:
-            break;
-    }
+    if (event->kind == PrAppEventKind_KeyDown && !taken)
+        keyDown(v, app, event->key, event->modifiers);
 }
 
 void shutdown(void* context, PrApp*) {
@@ -1453,6 +1623,7 @@ void shutdown(void* context, PrApp*) {
         b.browser = nullptr;
     }
     v.comparer.reset();
+    v.printer.reset();
     prDrawDisplayDestroy(v.displayShader);
     prGpuTextureDestroy(v.device, v.difference);
     prGpuTextureDestroy(v.device, v.frame);
@@ -1462,7 +1633,6 @@ void shutdown(void* context, PrApp*) {
     destroyConfigs(v.configs);
     prGpuSwapChainDestroy(v.swapChain);
     prGpuDeviceDestroy(v.device);
-    releaseResources();
 }
 
 } // namespace
@@ -1472,10 +1642,11 @@ int main(int argc, char** argv) {
     const char* directory = nullptr;
     const char* which = nullptr;
     float pixelRatio = 1;
+    bool mediaChosen = false;
     Viewer viewer;
     auto usage = [](FILE* to) {
         std::fprintf(to, "usage: viewer [--document <which>] [--render <directory>] [--pixel-ratio <pixels>]"
-            " [--renderer <name>] [--shaper <name>] [--hinting <name>] [--reference <name>]"
+            " [--renderer <name>] [--shaper <name>] [--hinting <name>] [--media screen|print] [--reference <name>]"
             " [--look side|flip|difference] [--snapshot <path>] [--tour <passes>] [--collection <word>] [--zoom <percent>]"
             " [--time <seconds>] [--rendering paced|back-to-back] [--present sdr|hdr] [--wpt-server <http port> <https port>]\n");
     };
@@ -1508,6 +1679,12 @@ int main(int argc, char** argv) {
             viewer.choices.panes[0].text.shaper = prTextShaperBackendFromName(value);
         } else if (std::strcmp(argv[i], "--hinting") == 0 && prFontHintingFromName(value) != PrFontHinting_Count) {
             viewer.choices.panes[0].text.hinting = prFontHintingFromName(value);
+        } else if (std::strcmp(argv[i], "--media") == 0 && std::strcmp(value, "screen") == 0) {
+            viewer.choices.panes[0].media = page_host::Media_Screen;
+            mediaChosen = true;
+        } else if (std::strcmp(argv[i], "--media") == 0 && std::strcmp(value, "print") == 0) {
+            viewer.choices.panes[0].media = page_host::Media_Print;
+            mediaChosen = true;
         } else if (std::strcmp(argv[i], "--reference") == 0) {
             viewer.referenceName = value;
         } else if (std::strcmp(argv[i], "--look") == 0 && std::strcmp(value, "side") == 0) {
@@ -1519,9 +1696,9 @@ int main(int argc, char** argv) {
         } else if (std::strcmp(argv[i], "--snapshot") == 0) {
             viewer.snapshot = value;
             viewer.choices.playing = false;
-        } else if (std::strcmp(argv[i], "--zoom") == 0) {
-            viewer.choices.fit = false;
+        } else if (std::strcmp(argv[i], "--zoom") == 0 && std::strtof(value, nullptr) > 0) {
             viewer.choices.zoom = std::strtof(value, nullptr) / 100;
+            viewer.zoomed = viewer.choices.zoom;
         } else if (std::strcmp(argv[i], "--collection") == 0) {
             viewer.collectionName = value;
         } else if (std::strcmp(argv[i], "--time") == 0) {
@@ -1549,9 +1726,13 @@ int main(int argc, char** argv) {
             break;
         }
     }
+    // The engine renders the collection's pages for its media, unless the command line chooses another.
+    if (!mediaChosen)
+        viewer.choices.panes[0].media = collections[viewer.choices.collection].media;
     if (directory != nullptr)
         return renderAll(directory, collections[viewer.choices.collection], which, viewer.referenceName,
-            viewer.choices.panes[0].text, viewer.choices.time, pixelRatio > 0 ? pixelRatio : 1);
+            viewer.choices.panes[0].text, viewer.choices.panes[0].media, viewer.choices.time,
+            pixelRatio > 0 ? pixelRatio : 1);
     // The list opens scrolled to the chosen document.
     viewer.choices.documentChanged = true;
     const Collection& opened = collections[viewer.choices.collection];

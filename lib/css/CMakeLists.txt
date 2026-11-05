@@ -27,12 +27,14 @@ pr_library(css INCLUDE include
     src/css_media.cpp
     src/css_object.cpp
     src/css_owner.cpp
+    src/css_page.cpp
     src/css_parse.cpp
     src/css_parse_terminal.cpp
     src/css_parser.cpp
     src/css_path.cpp
     src/css_presentation.cpp
     src/css_presentation_hooks.cpp
+    src/css_presentation_page.cpp
     src/css_presentation_svg.cpp
     src/css_property.cpp
     src/css_pseudo.cpp

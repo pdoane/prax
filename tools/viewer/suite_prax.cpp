@@ -124,7 +124,7 @@ std::vector<Collection> praxCollections() {
     std::error_code error;
     if (!fs::is_directory(root(), error))
         return {};
-    return {Collection{"Prax", 600, 800, 0, pages}};
+    return {Collection{"Prax", 600, 800, pages}};
 }
 
 } // namespace viewer

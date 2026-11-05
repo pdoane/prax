@@ -311,8 +311,12 @@ struct HtmlPage {
     PrHtmlVisibility visibility;    // whether the page is shown to the user (html/#system-visibility-state)
 
     // The viewport in CSS pixels (prHtmlPageSetViewport), which the window's media features describe and its document
-    // is laid out in. A frame's is its iframe's content box once the parent lays the iframe out.
+    // is laid out in on the screen. A frame's is its iframe's content box once the parent lays the iframe out.
     PrVec2 viewport;
+
+    // What the document is printed on while `printed` is set (prHtmlPageSetPrint).
+    bool printed;
+    PrHtmlPrintDesc print;
 
     RawArray<HtmlElementEvent> elementEvents;     // events for its document's embedded content, in the order queued
     RawArray<HtmlAvailableImage> availableImages; // the images of its document that an img shows at once
@@ -334,6 +338,14 @@ void htmlPageFrames(PrHtmlPage* page, RawArray<PrHtmlPage*>* out);
 
 // Returns the browsing context whose current document is `document`, or null for any other document.
 PrHtmlPage* PR_NULLABLE htmlDocumentPage(const PrDomDocument* document);
+
+// Returns the extent in CSS pixels of the initial containing block of the context's document, which viewport-percentage
+// lengths are relative to: the viewport on the screen, and the first page's area in print (prHtmlPageSetPrint).
+PrVec2 htmlPageContainingExtent(const PrHtmlPage* page);
+
+// Returns the extent in CSS pixels of the context's viewport, which its document's layout is laid out in. Printed, the
+// layout stacks the pages down the viewport, which scrolls through them (pr/layout_page.h).
+PrVec2 htmlPageViewport(const PrHtmlPage* page);
 
 // Returns the id by which the context's scenes fill its iframe's slot in the scenes of the enclosing context
 // (PrLayoutContentKind_Embed). The id is never zero.
@@ -363,6 +375,10 @@ void htmlPageFollowFrameScheme(PrHtmlPage* parent, PrHtmlPage* page);
 // cssPresentationPrepareJob does, and then what the browsing context draws in the boxes. cssPresentationPostJob is the
 // second half.
 void htmlPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec extent);
+
+// Brings a presentation up to date, as prHtmlPresentationUpdate does, with its styles in a viewport of `extent` and its
+// layout in a viewport of `viewport`, which differ for a printed document (htmlPageContainingExtent).
+bool htmlPresentationUpdate(PrCssPresentation* presentation, PrLayoutVec extent, PrLayoutVec viewport);
 
 // Starts a load whose input arrives in pieces, as prHtmlPageBeginLoad does, without dropping the page's document load
 // (prHtmlPageNavigate), which calls it as its response arrives.

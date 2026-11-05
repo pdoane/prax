@@ -3,6 +3,7 @@
 #include "layout/src/layout_justify.h"
 
 #include "pr/search.h"
+#include "pr/text_shaping.h"
 #include "pr/unicode.h"
 #include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
@@ -10,13 +11,6 @@
 namespace pr_impl {
 
 namespace {
-
-// Returns true if `codePoint` is a word separator (css-text-3/#word-separator), which inter-word justification
-// stretches.
-bool isWordSeparator(uint32_t codePoint) {
-    return codePoint == 0x20 || codePoint == 0xA0 || codePoint == 0x1361 || codePoint == 0x10100 ||
-        codePoint == 0x10101 || codePoint == 0x1039F || codePoint == 0x1091F;
-}
 
 // Returns true if `codePoint` is a letter of a cursive script that joins or is joined by its neighbors. Justification
 // opens no gap between two such letters (css-text-3/#justify-cursive).
@@ -106,7 +100,7 @@ PR_NOINLINE void layoutJustifyFind(LayoutState& state, LayoutJustifier& justifie
                 if (unsplit && !cursive && fontAt(shallowest).textJustify == PrLayoutTextJustify_InterCharacter)
                     add(b, true);
             }
-            if (words && next > from && isWordSeparator(codePoint))
+            if (words && next > from && prTextIsWordSeparator(codePoint))
                 add(next, false);
             previous = true;
             previousCode = codePoint;

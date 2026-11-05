@@ -2,6 +2,8 @@
 #include "pr/draw_list.h"
 #include "pr/draw_projection.h"
 #include "pr/draw_renderer.h"
+#include "pr/draw_structure.h"
+#include "pr/draw_writer.h"
 
 int prTestDrawCApi(void);
 

@@ -35,6 +35,11 @@ struct LayoutTableScratch;
 LayoutTableScratch* layoutTableScratchCreate(void);
 void layoutTableScratchDestroy(LayoutTableScratch* PR_NULLABLE scratch);
 
+// Frees the tables that the running layout sized for its fragmentation contexts. A table across many fragmentainers is
+// sized once, by its first, and the others take its rows from the memo, so they lay out only the rows that each holds.
+// Nothing changes during a layout, so the memo holds for the whole layout, and its end frees it.
+void layoutTableEndLayout(LayoutTableScratch* PR_NULLABLE scratch);
+
 // The inputs to the layout of a table's parts. `space` is the space that the table is laid out in. `inlineSize` is the
 // inline size of the table's border box, which its captions also take.
 //
@@ -59,6 +64,10 @@ struct LayoutTableOutcome {
     PrLayoutRect grid;
     uint32_t borderMark;
     uint32_t borderCount;
+
+    // In a fragmentation context, where the table resumes in the next fragmentainer, a reference that the caller takes,
+    // or null if its rows end in this one.
+    const LayoutBreakToken* PR_NULLABLE token;
 };
 
 // Lays out the parts of the table `node` in its own writing mode. Appends its captions and the parts of its grid to the
@@ -87,7 +96,7 @@ LayoutIntrinsicSizes layoutTableIntrinsic(LayoutState& state, LayoutNodeIndex no
 bool layoutTableCellIsEmpty(const LayoutFragment* fragment);
 
 // Returns true if the table cell `node` is in a table that collapses its borders. The table's grid then draws the
-// cell's borders. The function finds the table through the cell's placements. A cell in an anonymous table reads the
+// cell's borders. The function finds the table through the cell's ancestors. A cell in an anonymous table reads the
 // border model from its own style instead.
 bool layoutTableCellCollapses(const LayoutTree* tree, LayoutNodeIndex node);
 

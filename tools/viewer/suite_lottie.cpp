@@ -102,14 +102,14 @@ std::vector<Reference> lottieIosReferences(const fs::path& path, const fs::path&
         std::map<std::string, std::vector<Snapshot>>::const_iterator found = snapshots.find(name);
         if (found == snapshots.end() || !(timing.rate > 0))
             continue;
-        Source source{SourceType_Snapshots};
-        source.length = timing.length / timing.rate;
+        double length = timing.length / timing.rate;
+        std::vector<std::pair<double, fs::path>> shots;
         for (const Snapshot& snapshot : found->second) {
             double frame = snapshot.frame ? snapshot.at - timing.inPoint : snapshot.at / 100.0 * timing.length;
-            source.snapshots.emplace_back(std::min(frame / timing.rate, source.length), snapshot.path);
+            shots.emplace_back(std::min(frame / timing.rate, length), snapshot.path);
         }
-        std::sort(source.snapshots.begin(), source.snapshots.end());
-        references.push_back(Reference{title, source});
+        std::sort(shots.begin(), shots.end());
+        references.push_back(Reference{title, Source{.path = snapshotPage(shots, length)}});
     }
     return references;
 }
@@ -131,7 +131,7 @@ std::vector<Reference> referencesOf(Player player, const fs::path& path, const f
                 return {Reference{"dotLottie", {}, lottiePlayerUrl("dotlottie.html", path)}};
             break;
         case Player_Rlottie:
-            return {Reference{"rlottie", Source{SourceType_Rlottie, path}}};
+            return {Reference{"rlottie", Source{.type = SourceType_Rlottie, .path = path}}};
         case Player_LottieIos:
             return lottieIosReferences(path, root);
     }
@@ -156,7 +156,6 @@ Collection collectionOf(const Corpus& c) {
         c.name,
         512,
         512,
-        0,
         [c] {
             std::vector<fs::path> files;
             std::error_code error;

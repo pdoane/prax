@@ -30,6 +30,10 @@ struct SuiteRender {
 //   background white            a Lottie animation drawn over white, as a player page shows it
 bool suiteRenderRead(SuiteRender* out, PrStringView path, PrStringView root);
 
+// Reads the font settings of the file at `path` into `fonts`, as suiteRenderRead does, and ignores the others. Returns
+// false as suiteRenderRead does.
+bool suiteRenderReadFonts(PrFontSet* fonts, PrStringView path, PrStringView root);
+
 // Frees the font set, and zeroes the settings.
 void suiteRenderReset(SuiteRender* render);
 

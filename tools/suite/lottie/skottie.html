@@ -18,7 +18,7 @@
   html, body { margin: 0; background: #fff; overflow: hidden; }
   #player { width: 100vw; height: 100vh; display: block; }
 </style>
-<script src="../../third_party/canvaskit/canvaskit.js"></script>
+<script src="../../../third_party/canvaskit/canvaskit.js"></script>
 </head>
 <body>
 <canvas id="player"></canvas>
@@ -37,10 +37,10 @@
   var src = new URL(new URLSearchParams(location.search).get('src'), location.href);
   // The font files that the suite's settings list, each relative to the repository's root.
   function fonts() {
-    return read('../../suites/skottie/render.txt', 'text').then(function (settings) {
+    return read('../../../suites/skottie/render.txt', 'text').then(function (settings) {
       return settings.split('\n').map(function (line) {
         var words = line.split('#')[0].trim().split(/\s+/);
-        return words[0] === 'font' ? '../../' + words.slice(1).join(' ') : null;
+        return words[0] === 'font' ? '../../../' + words.slice(1).join(' ') : null;
       }).filter(Boolean);
     });
   }
@@ -78,7 +78,7 @@
   // drawing reaches the screen later.
   var settling = 2;
   var ready = Promise.all([
-    read('../../third_party/canvaskit/canvaskit.wasm', 'arraybuffer'),
+    read('../../../third_party/canvaskit/canvaskit.wasm', 'arraybuffer'),
     read(src.href, 'text'),
     fonts(),
   ]).then(function (loaded) {

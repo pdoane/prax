@@ -268,6 +268,11 @@ struct LayoutPaintCache {
     HashIndex subIndex;             // `subs` by fragment
     RawArray<LayoutPaintRun> runs;
     HashIndex runIndex;             // `runs` by node, phase and index
+
+    // Emptied recordings that keep their storage: of parts that were not cached, and of cached parts recorded again or
+    // dropped. A part being recorded takes its storage from them, so that recording the same parts again allocates
+    // nothing.
+    RawArray<LayoutPaintRecording> spare;
     uint32_t paints;                // number of paints made, including the one in progress
 };
 

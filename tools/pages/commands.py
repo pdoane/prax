@@ -19,7 +19,7 @@ USAGE = {
     the URLs that each capture's markup and sheets name and that it lacks
 ./dev.sh pages take <url>...
     capture each page at its URL into third_party/pages-corpus, as roll captures, and print the path of its record,
-    which pr_shell --html and the browser example open
+    which pr_shell --html opens
 ./dev.sh pages invalidation [debug|asan] [args...]
     changes to elements of each page of third_party/pages, each checked against a full recomputation, and what the
     changes cost (tools/pages/invalidation.py), from that build's harness""",

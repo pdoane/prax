@@ -29,9 +29,29 @@
 // loaded, which calls stopRun() once the page is ready (PageHost::setCaptureWait), as WPT's test-wait.js waits for a
 // reftest's screenshot.
 //
+// --print, before the next page, renders the page and its references printed, as WPT's print reftests capture them
+// (web-platform-tests docs, "Print Reftests"): each page of the printed document is rendered as its own image, of its
+// page box's extent. A screenshot then writes the first page at its path and each later page n with `-page<n>` before
+// the extension, and --write names the renders of a later page the same way, as in `<stem>-page2-ref.png`. --pages
+// <ranges>, before the next page or reference, keeps only the pages of that document that the ranges name, numbered
+// from 1, in the form of WPT's reftest-pages meta, as in `-2,4,6-`. The comparison of a printed page with a reference
+// is a line `REFTEST <json>` that gives both documents' numbers of pages ("pageCounts"), whether the reference draws
+// anything on any page ("blank"), and, if the numbers match, the figures of each pair of pages in order ("pages"). Two
+// pages of different extents are compared over the extent that they share, from their top left.
+//
+// --pdf and --svg write the next page as a document of PDF or SVG (pr/draw_writer.h) once every page has settled: the
+// page printed for print media, as the pages of the page boxes that its @page rules give. --snapshot, before the next
+// page, writes it instead as it renders in the viewport, as one page of the viewport's size. A PDF is tagged with the
+// document's structure (pr/html_structure.h), and its streams are compressed. An SVG of several pages is a file for
+// each page (PageHost::documentFiles).
+//
+// --page-size WxH and --page-margin <px> set the page box that a printed document starts from before its @page rules
+// apply, as a printer's paper and margins give it, in CSS pixels: a US letter page with no margins
+// (prLayoutPageBoxDefault) unless they are given.
+//
 // --html also opens a page that tools/pages/pages.py captured, by its JSON file. The page is the HTML file beside the
 // JSON, and loads at the URL that it was captured from. The resources that the capture saved are answered from their
-// files.
+// files, and those that it left out fail.
 //
 // --no-scripts loads the pages that follow without running their own scripts. --dark loads them for a user who prefers
 // a dark color scheme.
@@ -55,20 +75,31 @@
 //
 // --serve serves runs read from stdin in one process, which saves a process start for each run (serve).
 //
+// --timings reports on stderr how long each phase of a run took: loading the pages until they settle, and, for each
+// document written, its pagination, the paint of its pages, its structure, the writer, and the file's write.
+//
 // --verify checks each page's presentation against a full recomputation (prCssPresentationVerify) after every rendering
-// update and once the pages settle, and writes each page's first failure to stderr as "<page>: render verify: ...". A
-// failure does not change the exit status, so a runner reads the pages' own results as it would without --verify.
+// update and once the pages settle, and writes each page's first failure to stderr as "<page>: presentation verify:
+// ...". It checks the layout of each printed document's pages (prLayoutTreeVerify), which includes that no line crosses
+// a page's edge, and writes a failure as "<page>: print verify: ...". A failure does not change the exit status, so a
+// runner reads the pages' own results as it would without --verify.
 
 #include "pr/assert.h"
 #include "pr/audio_memory.h"
 #include "pr/audio_mixer.h"
+#include "pr/compress.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_renderer.h"
+#include "pr/draw_structure.h"
+#include "pr/draw_writer.h"
 #include "pr/file.h"
 #include "pr/float.h"
 #include "pr/font_hinter.h"
+#include "pr/image.h"
+#include "pr/layout_page.h"
 #include "pr/media.h"
 #include "pr/text.h"
+#include "pr/time.h"
 
 #include "tools/harness/compare.h"
 #include "tools/harness/harness.h"
@@ -77,6 +108,7 @@
 #include "tools/shell/device_render.h"
 #include "tools/shell/page_host.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <memory>
 #include <stdio.h>
@@ -88,6 +120,7 @@
 using namespace pr;
 using namespace harness;
 using namespace shell;
+using page_host::Media;
 using page_host::Page;
 using page_host::PageHost;
 
@@ -128,37 +161,138 @@ struct Render {
     std::vector<uint8_t> rgba;
 };
 
+// Renders `list`, in target pixels, into `out`, which covers `extent` CSS pixels at `pixelRatio`, rounded up. Returns
+// false, saying why on stderr with the page's name `file`, if the renderer cannot render.
+bool renderList(const PrDrawList* list, PrVec2 extent, float pixelRatio, PrDrawRendererBackend backend,
+        Renderers& renderers, const char* file, Render* out) {
+    out->width = uint32_t(prF64Ceil(double(extent.x) * double(pixelRatio)));
+    out->height = uint32_t(prF64Ceil(double(extent.y) * double(pixelRatio)));
+    out->rgba.assign(size_t(out->width) * out->height * 4, 0);
+    PrPixels into{out->rgba.data(), size_t(out->width) * 4, {out->width, out->height}};
+    if (backend != PrDrawRendererBackend_Cpu) {
+        bool ok = renderOnDevice(renderers, backend, list, into.extent, out->rgba.data());
+        if (!ok)
+            fprintf(stderr, "%s: the %s renderer could not render\n", file, prDrawRendererBackendName(backend).data);
+        return ok;
+    }
+    return prDrawRendererRenderPixels(renderers.cpu, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok;
+}
+
+// Returns true if the page has finished, as a capture requires. Says on stderr if it has not.
+bool captureReady(Page* page) {
+    if (PageHost::finished(page))
+        return true;
+    fprintf(stderr, "%s: reftest-wait was not removed\n", PageHost::pageName(page).c_str());
+    return false;
+}
+
 // Renders the page in its current state, over its canvas, as WPT's reftests capture it. Returns false, saying why on
 // stderr, if the page has not finished or has no rendering.
 bool renderPage(PageHost& host, Page* page, PrVec2 viewport, float pixelRatio, PrDrawRendererBackend backend,
         Renderers& renderers, Render* out) {
-    const std::string pathText = PageHost::pageName(page);
-    const char* file = pathText.c_str();
-    if (!PageHost::finished(page)) {
-        fprintf(stderr, "%s: reftest-wait was not removed\n", file);
+    if (!captureReady(page))
         return false;
-    }
+    const std::string name = PageHost::pageName(page);
     PrDrawList* list = prDrawListCreate();
     // The page paints in CSS pixels, which the transform maps to target pixels.
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{pixelRatio, pixelRatio}));
     PrAppDisplay display = prAppDisplayDefault();
     display.pixelRatio = pixelRatio;
-    bool ok = host.paint(page, viewport, display, host.userPreferences(), list);
+    bool ok = host.paint(page, page_host::Media_Screen, viewport, display, host.userPreferences(), list);
     prDrawListPopTransform(list);
     if (!ok)
-        fprintf(stderr, "%s: no rendering to capture\n", file);
-    out->width = uint32_t(prF64Ceil(double(viewport.x) * double(pixelRatio)));
-    out->height = uint32_t(prF64Ceil(double(viewport.y) * double(pixelRatio)));
-    out->rgba.assign(size_t(out->width) * out->height * 4, 0);
-    PrPixels into{out->rgba.data(), size_t(out->width) * 4, {out->width, out->height}};
-    if (ok && backend != PrDrawRendererBackend_Cpu) {
-        ok = renderOnDevice(renderers, backend, list, into.extent, out->rgba.data());
-        if (!ok)
-            fprintf(stderr, "%s: the %s renderer could not render\n", file, prDrawRendererBackendName(backend).data);
-    } else {
-        ok = ok && prDrawRendererRenderPixels(renderers.cpu, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok;
-    }
+        fprintf(stderr, "%s: no rendering to capture\n", name.c_str());
+    ok = ok && renderList(list, viewport, pixelRatio, backend, renderers, name.c_str(), out);
     prDrawListRelease(list);
+    return ok;
+}
+
+// A range of the pages of a printed document, numbered from 1, both ends included. An end of 0 is open: the range
+// starts at the first page or runs to the last.
+struct PageRange {
+    uint32_t first;
+    uint32_t last;
+};
+
+// Parses `text` as the content of WPT's reftest-pages meta: ranges separated by commas, each a page or two pages,
+// either of which may be absent, around a hyphen. Returns false, saying why on stderr, if it does not parse.
+bool parsePageRanges(const std::string& text, std::vector<PageRange>* out) {
+    // Reads a page's number at `at`, or 0 for none, and moves past it and the spaces around it.
+    auto number = [&text](size_t& at, uint32_t* page) {
+        while (at < text.size() && text[at] == ' ')
+            ++at;
+        uint64_t value = 0;
+        size_t start = at;
+        while (at < text.size() && text[at] >= '0' && text[at] <= '9' && value <= UINT32_MAX)
+            value = value * 10 + uint64_t(text[at++] - '0');
+        while (at < text.size() && text[at] == ' ')
+            ++at;
+        *page = uint32_t(value);
+        return at == start || (value != 0 && value <= UINT32_MAX);
+    };
+    size_t at = 0;
+    for (;;) {
+        PageRange range{};
+        bool ok = number(at, &range.first);
+        if (ok && at < text.size() && text[at] == '-') {
+            ++at;
+            ok = number(at, &range.last);
+        } else {
+            ok = ok && range.first != 0;
+            range.last = range.first;
+        }
+        if (!ok || (at < text.size() && text[at] != ',')) {
+            fprintf(stderr, "--pages takes page ranges, as -2,4,6-: %s\n", text.c_str());
+            return false;
+        }
+        out->push_back(range);
+        if (at == text.size())
+            return true;
+        ++at;
+    }
+}
+
+// Returns true if the page numbered `number` of `count` is in one of `ranges`, or if there are no ranges.
+bool pageSelected(const std::vector<PageRange>& ranges, uint32_t number, uint32_t count) {
+    if (ranges.empty())
+        return true;
+    for (const PageRange& range : ranges) {
+        uint32_t first = range.first != 0 ? range.first : 1;
+        uint32_t last = range.last != 0 ? range.last : count;
+        if (first <= number && number <= last)
+            return true;
+    }
+    return false;
+}
+
+// Prints the page in its current state from the page box `initial`, and renders each of its pages that `ranges` select,
+// as WPT's print reftests capture them, appending one render for each. Returns false, saying why on stderr, if the page
+// has not finished or has no rendering.
+bool renderPrinted(PageHost& host, Page* page, const PrLayoutPageBox& initial, const std::vector<PageRange>& ranges,
+        float pixelRatio, PrDrawRendererBackend backend, Renderers& renderers, std::vector<Render>* out) {
+    if (!captureReady(page))
+        return false;
+    const std::string name = PageHost::pageName(page);
+    std::vector<PageHost::PrintedPage> pages;
+    // The pages lay out for the pixel ratio that they render at, as a screenshot does.
+    PrAppDisplay display = prAppDisplayDefault();
+    display.pixelRatio = pixelRatio;
+    bool ok = host.print(page, initial, display, host.userPreferences(), pages);
+    if (!ok)
+        fprintf(stderr, "%s: no rendering to capture\n", name.c_str());
+    for (size_t i = 0; ok && i < pages.size(); ++i) {
+        if (!pageSelected(ranges, uint32_t(i + 1), uint32_t(pages.size())))
+            continue;
+        PrDrawList* list = prDrawListCreate();
+        prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{pixelRatio, pixelRatio}));
+        prDrawListEmbed(list, pages[i].list, PrDVec2{0, 0});
+        prDrawListPopTransform(list);
+        out->emplace_back();
+        ok = renderList(list, pages[i].extent, pixelRatio, backend, renderers, name.c_str(), &out->back());
+        prDrawListRelease(list);
+    }
+    for (const PageHost::PrintedPage& printed : pages)
+        prDrawListRelease(printed.list);
     return ok;
 }
 
@@ -174,20 +308,128 @@ bool writePng(const Render& render, Page* page, const std::string& path) {
 }
 
 // What is asked of a page loaded with --html once the pages settle: a screenshot, the references that it is compared
-// with, and the stem of the renders to write (--write).
+// with, the stem of the renders to write (--write), and the documents to write.
 struct Request {
     Page* page;
     std::string screenshot;         // empty for none
     std::vector<Page*> references;
     std::string write;              // empty for none
+    std::string pdf;                // empty for none
+    std::string svg;                // empty for none
+    Media media;
+    bool timings;                   // true if the run reports how long each phase of the document's writing took
+
+    // Whether the page and its references are rendered printed (--print), and the pages of each that are rendered then,
+    // or no ranges for all of them.
+    bool print;
+    std::vector<PageRange> pages;
+    std::vector<std::vector<PageRange>> referencePages;     // by reference
 };
 
-// Renders the request's page and writes its screenshot, and compares it with each of its references. Returns false,
-// saying why on stderr, if a page cannot be rendered or the screenshot written.
-bool answer(PageHost& host, const Request& request, PrVec2 viewport, float pixelRatio, PrDrawRendererBackend backend,
-        Renderers& renderers) {
+// Writes the page as a document in `media` by the writer `backend`, to `path` (PageHost::writeDocument). A printed
+// document starts from the page box `pageBox`. Reports how long each phase took if asked. Returns false, saying why on
+// stderr, if it cannot.
+bool writeDocument(PageHost& host, Page* page, PrVec2 viewport, const PrLayoutPageBox& pageBox, Media media,
+        PrDrawWriterBackend backend, const std::string& path, bool timings) {
+    PageHost::DocumentTimings phases{};
+    if (!host.writeDocument(page, media, pageBox, viewport, backend, path, &phases))
+        return false;
+    if (timings) {
+        fprintf(stderr, "%s: %u pages, %zu bytes. paginate %.0f ms, paint %.0f ms, structure %.0f ms, other %.0f ms, "
+            "write %.0f ms, file %.0f ms\n", prDrawWriterBackendName(backend).data, phases.pages, phases.bytes,
+            phases.print.paginate, phases.print.paint, phases.print.structure, phases.other, phases.write, phases.file);
+    }
+    return true;
+}
+
+// Returns the path of the render of the page numbered `number` of a printed document, from 1: `<stem><suffix>` for the
+// first page, and `<stem>-page<number><suffix>` for a later one.
+std::string pageFile(const std::string& stem, size_t number, const std::string& suffix) {
+    return number == 1 ? stem + suffix : stem + "-page" + std::to_string(number) + suffix;
+}
+
+// Returns the part of `render` from its top left that is `width` by `height` pixels, which must lie inside it.
+Render cropped(const Render& render, uint32_t width, uint32_t height) {
+    PR_ASSERT(width <= render.width && height <= render.height);
+    Render out{width, height, std::vector<uint8_t>(size_t(width) * height * 4)};
+    for (uint32_t y = 0; y < height; ++y) {
+        const uint8_t* row = render.rgba.data() + size_t(y) * render.width * 4;
+        std::copy(row, row + size_t(width) * 4, out.rgba.data() + size_t(y) * width * 4);
+    }
+    return out;
+}
+
+// Renders the request's page printed, writes its screenshot, and compares each of its pages with the pages of each
+// reference in order. Returns false, saying why on stderr, if a page cannot be rendered or a file written.
+bool answerPrinted(PageHost& host, const Request& request, const PrLayoutPageBox& pageBox, float pixelRatio,
+        PrDrawRendererBackend backend, Renderers& renderers) {
+    std::vector<Render> rendered;
+    if (!renderPrinted(host, request.page, pageBox, request.pages, pixelRatio, backend, renderers, &rendered))
+        return false;
+    std::string screenshot = request.screenshot;
+    if (std::filesystem::path(screenshot).extension() == ".png")
+        screenshot.resize(screenshot.size() - 4);
+    for (size_t i = 0; i < rendered.size(); ++i) {
+        if (!request.screenshot.empty() && !writePng(rendered[i], request.page, pageFile(screenshot, i + 1, ".png")))
+            return false;
+        if (!request.write.empty() && !writePng(rendered[i], request.page, pageFile(request.write, i + 1, ".png")))
+            return false;
+    }
+    for (size_t r = 0; r < request.references.size(); ++r) {
+        Page* reference = request.references[r];
+        std::vector<Render> expected;
+        if (!renderPrinted(host, reference, pageBox, request.referencePages[r], pixelRatio, backend, renderers,
+                &expected))
+            return false;
+        std::string number = r == 0 ? "" : std::to_string(r + 1);
+        bool blank = true;
+        std::string figures;
+        for (size_t i = 0; i < expected.size(); ++i) {
+            const Render& want = expected[i];
+            blank = blank && !imageDrawsAnything(want.rgba.data(), want.width, want.height, size_t(want.width) * 4);
+            if (!request.write.empty() && !writePng(want, reference, pageFile(request.write, i + 1, "-ref" + number + ".png")))
+                return false;
+            if (expected.size() != rendered.size())
+                continue;
+            // wptrunner measures two images of different extents over the extent that they share.
+            uint32_t width = rendered[i].width < want.width ? rendered[i].width : want.width;
+            uint32_t height = rendered[i].height < want.height ? rendered[i].height : want.height;
+            Render got = cropped(rendered[i], width, height);
+            Render wanted = cropped(want, width, height);
+            size_t stride = size_t(width) * 4;
+            if (!request.write.empty()) {
+                Render diff{width, height, std::vector<uint8_t>(got.rgba.size())};
+                compareImages(wanted.rgba.data(), got.rgba.data(), width, height, stride, ImageComparison{},
+                    diff.rgba.data());
+                if (!writePng(diff, request.page, pageFile(request.write, i + 1, "-diff" + number + ".png")))
+                    return false;
+            }
+            PixelDifference d = countDifferences(wanted.rgba.data(), got.rgba.data(), width, height, stride);
+            figures += (i == 0 ? "" : ",") + std::string("{\"maxDifference\":") + std::to_string(d.maxDifference) +
+                ",\"differingPixels\":" + std::to_string(d.differingPixels) + "}";
+        }
+        printf("REFTEST {\"pageCounts\":[%zu,%zu],\"blank\":%s,\"pages\":[%s]}\n", rendered.size(), expected.size(),
+            blank ? "true" : "false", figures.c_str());
+    }
+    return true;
+}
+
+// Writes the request's documents, renders its page and writes its screenshot, and compares it with each of its
+// references. Returns false, saying why on stderr, if a page cannot be rendered or a file written.
+bool answer(PageHost& host, const Request& request, PrVec2 viewport, const PrLayoutPageBox& pageBox, float pixelRatio,
+        PrDrawRendererBackend backend, Renderers& renderers) {
+    if (!request.pdf.empty() &&
+            !writeDocument(host, request.page, viewport, pageBox, request.media, PrDrawWriterBackend_Pdf, request.pdf,
+                request.timings))
+        return false;
+    if (!request.svg.empty() &&
+            !writeDocument(host, request.page, viewport, pageBox, request.media, PrDrawWriterBackend_Svg, request.svg,
+                request.timings))
+        return false;
     if (request.screenshot.empty() && request.references.empty() && request.write.empty())
         return true;
+    if (request.print)
+        return answerPrinted(host, request, pageBox, pixelRatio, backend, renderers);
     Render render;
     if (!renderPage(host, request.page, viewport, pixelRatio, backend, renderers, &render))
         return false;
@@ -230,9 +472,22 @@ struct Run {
     float pixelRatio = 1;                                       // target pixels per CSS pixel of screenshots and
                                                                 // comparisons
     PrDrawRendererBackend renderer = PrDrawRendererBackend_Cpu; // what renders screenshots and comparisons
+    PrLayoutPageBox pageBox = prLayoutPageBoxDefault();         // what a printed document starts from
     std::string screenshot;
     std::vector<std::string> references;
     std::string write;
+    std::string pdf;
+    std::string svg;
+    Media media = page_host::Media_Print;
+    bool print = false;             // true if the next page is rendered printed (--print)
+
+    // The pages that --pages selects of the next document named, and of each reference named since the last page, or no
+    // ranges for all of them.
+    std::vector<PageRange> pages;
+    std::vector<std::vector<PageRange>> referencePages;     // by reference
+
+    bool timings = false;           // true if the run reports how long each phase took (--timings)
+    double started = 0;             // when the run began, in milliseconds of the monotonic clock
     std::vector<Request> requests;
 };
 
@@ -288,7 +543,8 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
             option == "--viewport" || option == "--pixel-ratio" || option == "--renderer" ||
             option == "--timeout" || option == "--restyle-threads" || option == "--shaper" || option == "--media" ||
             option == "--audio" || option == "--audio-write" || option == "--hinting" || option == "--ca" ||
-            option == "--capture-wait" || option == "--cache";
+            option == "--capture-wait" || option == "--cache" || option == "--pdf" || option == "--svg" ||
+            option == "--pages" || option == "--page-size" || option == "--page-margin";
         if ((takesOne && i + 1 >= args.size()) || (takesTwo && i + 2 >= args.size())) {
             fprintf(stderr, "%s needs %s\n", option.c_str(), takesTwo ? "two arguments" : "an argument");
             run.ok = false;
@@ -309,6 +565,12 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
             run.verify = true;
         } else if (option == "--serve") {
             run.serve = true;
+        } else if (option == "--snapshot") {
+            run.media = page_host::Media_Screen;
+        } else if (option == "--timings") {
+            run.timings = true;
+        } else if (option == "--print") {
+            run.print = true;
         } else if (!takesOne) {
             run.ok = host.runFile(option.c_str());
         } else {
@@ -328,8 +590,32 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 run.screenshot = value;
             } else if (option == "--write") {
                 run.write = value;
+            } else if (option == "--pdf") {
+                run.pdf = value;
+            } else if (option == "--svg") {
+                run.svg = value;
             } else if (option == "--reference") {
                 run.references.push_back(value);
+                run.referencePages.push_back(std::move(run.pages));
+                run.pages.clear();
+            } else if (option == "--pages") {
+                run.pages.clear();
+                run.ok = parsePageRanges(value, &run.pages);
+            } else if (option == "--page-size") {
+                float width = 0;
+                float height = 0;
+                run.ok = sscanf(value.c_str(), "%fx%f", &width, &height) == 2 && width > 0 && height > 0;
+                if (!run.ok)
+                    fprintf(stderr, "--page-size takes WxH in CSS pixels, as 480x288\n");
+                run.pageBox.extent = PrLayoutVec{prLayoutUnitFromPx(width), prLayoutUnitFromPx(height)};
+            } else if (option == "--page-margin") {
+                char* end = nullptr;
+                float margin = strtof(value.c_str(), &end);
+                run.ok = end != value.c_str() && *end == '\0' && margin >= 0;
+                if (!run.ok)
+                    fprintf(stderr, "--page-margin takes CSS pixels, as 48\n");
+                for (PrLayoutUnit& side : run.pageBox.margin)
+                    side = prLayoutUnitFromPx(margin);
             } else if (option == "--shaper" || option == "--hinting" || option == "--media" || option == "--audio" ||
                     option == "--audio-write") {
                 // main reads these options, before the host is created.
@@ -372,13 +658,25 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 if (std::filesystem::path(page).extension() == ".json")
                     run.ok = host.addCapture(value, &page);
                 // A page that is captured, or compared with references, waits until it is ready, as a reftest does.
-                PageHost::Capture capture = PageHost::Capture::None;
-                if (!run.screenshot.empty() || !run.references.empty() || !run.write.empty())
-                    capture = PageHost::Capture::Wait;
-                Request request{run.ok ? host.load(page, capture) : nullptr, run.screenshot, {}, run.write};
+                page_host::Capture capture = page_host::Capture_None;
+                if (!run.screenshot.empty() || !run.references.empty() || !run.write.empty() || !run.pdf.empty() ||
+                        !run.svg.empty() || run.print)
+                    capture = page_host::Capture_Wait;
+                Request request{
+                    .page = run.ok ? host.load(page, capture) : nullptr,
+                    .screenshot = run.screenshot,
+                    .write = run.write,
+                    .pdf = run.pdf,
+                    .svg = run.svg,
+                    .media = run.media,
+                    .timings = run.timings,
+                    .print = run.print,
+                    .pages = run.pages,
+                    .referencePages = run.referencePages,
+                };
                 run.ok = request.page != nullptr && PageHost::pageOk(request.page);
                 for (size_t r = 0; run.ok && r < run.references.size(); ++r) {
-                    Page* reference = host.load(run.references[r], PageHost::Capture::Wait);
+                    Page* reference = host.load(run.references[r], page_host::Capture_Wait);
                     run.ok = reference != nullptr && PageHost::pageOk(reference);
                     request.references.push_back(reference);
                 }
@@ -387,6 +685,12 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 run.screenshot.clear();
                 run.references.clear();
                 run.write.clear();
+                run.pdf.clear();
+                run.svg.clear();
+                run.media = page_host::Media_Print;
+                run.print = false;
+                run.pages.clear();
+                run.referencePages.clear();
             }
         }
     }
@@ -399,19 +703,21 @@ constexpr int kTimedOut = 124;
 // page fails or cannot be answered, or kTimedOut.
 int finish(PageHost& host, Run& run, Renderers& renderers) {
     if (run.ok) {
-        PageHost::Settled settled = host.settle(run.timeout);
+        page_host::Settled settled = host.settle(run.timeout);
         // A page that still waits once it has rendered hears so, and settles again.
-        if (settled == PageHost::Settled::Idle && host.signalRendered(run.viewport))
+        if (settled == page_host::Settled_Idle && host.signalRendered(run.viewport))
             settled = host.settle(run.timeout);
-        if (settled == PageHost::Settled::TimedOut) {
+        if (settled == page_host::Settled_TimedOut) {
             fprintf(stderr, "the pages did not settle in %g ms\n", run.timeout);
             // What the pages reached is still answered, because a page that never settles has no other record of it.
             host.stopWaiting();
             for (const Request& request : run.requests)
-                answer(host, request, run.viewport, run.pixelRatio, run.renderer, renderers);
+                answer(host, request, run.viewport, run.pageBox, run.pixelRatio, run.renderer, renderers);
             return kTimedOut;
         }
-        run.ok = settled == PageHost::Settled::Idle;
+        run.ok = settled == page_host::Settled_Idle;
+        if (run.timings)
+            fprintf(stderr, "load: %.0f ms\n", prTimeMonotonicMilliseconds() - run.started);
         // A page's load fails once its failure arrives.
         for (const Request& request : run.requests) {
             run.ok = run.ok && PageHost::pageOk(request.page);
@@ -423,7 +729,7 @@ int finish(PageHost& host, Run& run, Renderers& renderers) {
         host.verify(run.viewport);
     for (const Request& request : run.requests) {
         if (run.ok)
-            run.ok = answer(host, request, run.viewport, run.pixelRatio, run.renderer, renderers);
+            run.ok = answer(host, request, run.viewport, run.pageBox, run.pixelRatio, run.renderer, renderers);
     }
     return run.ok ? 0 : 1;
 }
@@ -442,6 +748,7 @@ int serve(PageHost& host, const Run& settings, Renderers& renderers) {
         Run run;
         run.verify = settings.verify;
         run.viewport = settings.viewport;
+        run.pageBox = settings.pageBox;
         run.pixelRatio = settings.pixelRatio;
         run.renderer = settings.renderer;
         run.timeout = settings.timeout;
@@ -477,9 +784,10 @@ int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "usage: pr_shell [--network] [--resolve <host> <address>]... [--ca <pem>]... [--cache <directory>] "
             "[--prelude <script>] [--font <file>] [--capture-wait <script>] [--virtual-time] [--verify] [--no-scripts] [--dark] "
-            "[--viewport WxH] [--pixel-ratio <target pixels per px>] [--renderer <name>] "
-            "[--timeout <ms>] [--restyle-threads <n>] [--shaper <name>] [--hinting none|light|full] [--media <name>] [--serve] "
-            "<script | [--screenshot <png>] [--reference <page>]... [--write <stem>] "
+            "[--viewport WxH] [--pixel-ratio <target pixels per px>] [--renderer <name>] [--page-size WxH] "
+            "[--page-margin <px>] [--timeout <ms>] [--restyle-threads <n>] [--shaper <name>] [--hinting none|light|full] "
+            "[--media <name>] [--serve] [--timings] <script | [--print] [--screenshot <png>] [[--pages <ranges>] "
+            "--reference <page>]... [--write <stem>] [--pdf <pdf>] [--svg <svg>] [--pages <ranges>] "
             "--html <url | page.html | capture.json>>...\n");
         return 2;
     }
@@ -544,6 +852,7 @@ int main(int argc, char** argv) {
     // The hinter lives as long as the process, because the fonts that name it are kept.
     host.setHinting(hinting, hinting != PrFontHinting_None ? prFontHinterCreate(PrFontHinterBackend_Default) : nullptr);
     Run run;
+    run.started = prTimeMonotonicMilliseconds();
     parse(host, args, run);
     Renderers renderers;
     // Glyphs are drawn at the phases that the fragment backend's atlas holds them at, so that runs that a page splits

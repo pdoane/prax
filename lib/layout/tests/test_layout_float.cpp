@@ -747,7 +747,8 @@ TEST_CASE("clearance level with a float's bottom is clearance, and one unit past
 }
 
 TEST_CASE("intrinsic sizes sum floats beside one another, which clearance and blocks in flow end") {
-    enum Kind { Left, Right, LeftClear, Block, Avoider, ClearBlock, Word };
+    enum { Kind_Left, Kind_Right, Kind_LeftClear, Kind_Block, Kind_Avoider, Kind_ClearBlock, Kind_Word };
+    typedef uint8_t Kind;
     struct Item {
         Kind kind;
         float width;
@@ -759,15 +760,15 @@ TEST_CASE("intrinsic sizes sum floats beside one another, which clearance and bl
         double width;
     };
     const Case cases[] = {
-        {"two left floats", false, {{Left, 50}, {Left, 70}}, 120},
-        {"a left float, and one that clears it", false, {{Left, 50}, {LeftClear, 70}}, 70},
-        {"a float, then a block", false, {{Left, 50}, {Block, 100}}, 100},
-        {"a float, then a box that avoids floats", false, {{Left, 50}, {Avoider, 100}}, 150},
-        {"a word, then a float", false, {{Word, 100}, {Left, 50}}, 150},
-        {"min-content of two floats", true, {{Left, 50}, {Left, 70}}, 70},
-        {"a left and a right float", false, {{Left, 50}, {Right, 70}}, 120},
-        {"a float, a block that clears, a float", false, {{Left, 50}, {ClearBlock, 100}, {Left, 70}}, 100},
-        {"a float, a block, a float", false, {{Left, 50}, {Block, 100}, {Left, 70}}, 100},
+        {"two left floats", false, {{Kind_Left, 50}, {Kind_Left, 70}}, 120},
+        {"a left float, and one that clears it", false, {{Kind_Left, 50}, {Kind_LeftClear, 70}}, 70},
+        {"a float, then a block", false, {{Kind_Left, 50}, {Kind_Block, 100}}, 100},
+        {"a float, then a box that avoids floats", false, {{Kind_Left, 50}, {Kind_Avoider, 100}}, 150},
+        {"a word, then a float", false, {{Kind_Word, 100}, {Kind_Left, 50}}, 150},
+        {"min-content of two floats", true, {{Kind_Left, 50}, {Kind_Left, 70}}, 70},
+        {"a left and a right float", false, {{Kind_Left, 50}, {Kind_Right, 70}}, 120},
+        {"a float, a block that clears, a float", false, {{Kind_Left, 50}, {Kind_ClearBlock, 100}, {Kind_Left, 70}}, 100},
+        {"a float, a block, a float", false, {{Kind_Left, 50}, {Kind_Block, 100}, {Kind_Left, 70}}, 100},
     };
     for (const Case& c : cases) {
         CAPTURE(c.name);
@@ -777,13 +778,13 @@ TEST_CASE("intrinsic sizes sum floats beside one another, which clearance and bl
         PrLayoutNode box = s.add(s.stage, measured);
         for (const Item& item : c.items) {
             switch (item.kind) {
-                case Left: s.add(box, left(item.width, 10)); break;
-                case Right: s.add(box, right(item.width, 10)); break;
-                case LeftClear: s.add(box, cleared(left(item.width, 10), PrLayoutClear_Left)); break;
-                case Block: s.word(s.add(box, block()), item.width); break;
-                case Avoider: s.add(box, hidden(sized(block(), item.width, 10))); break;
-                case ClearBlock: s.add(box, cleared(sized(block(), item.width, 10), PrLayoutClear_Left)); break;
-                case Word: s.word(box, item.width); break;
+                case Kind_Left: s.add(box, left(item.width, 10)); break;
+                case Kind_Right: s.add(box, right(item.width, 10)); break;
+                case Kind_LeftClear: s.add(box, cleared(left(item.width, 10), PrLayoutClear_Left)); break;
+                case Kind_Block: s.word(s.add(box, block()), item.width); break;
+                case Kind_Avoider: s.add(box, hidden(sized(block(), item.width, 10))); break;
+                case Kind_ClearBlock: s.add(box, cleared(sized(block(), item.width, 10), PrLayoutClear_Left)); break;
+                case Kind_Word: s.word(box, item.width); break;
             }
         }
         s.layout();

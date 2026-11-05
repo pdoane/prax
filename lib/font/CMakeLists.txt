@@ -6,6 +6,7 @@ pr_library(font INCLUDE include
     src/font.cpp
     src/font_hinter.cpp
     src/font_set.cpp
+    src/font_subset.cpp
     src/glyf.cpp
     src/glyph_metrics.cpp
     src/outline.cpp
@@ -51,6 +52,8 @@ if (PR_DEVELOP)
         tests/test_font.cpp
         tests/test_font_c.c
         tests/test_font_set.cpp
+        tests/test_font_subset.cpp
+        tests/test_font_subset_c.c
         tests/test_outline.cpp
         tests/test_woff.cpp
     )

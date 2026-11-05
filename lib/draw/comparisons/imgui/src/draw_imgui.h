@@ -45,10 +45,11 @@ void imguiImagePixels(const PrDrawImage* image, PrPixels pixels);
 // Deletes the draw lists that the frame holds. The backend's context is current.
 void imguiFrameClear(ImGuiFrame* frame);
 
-// Runs a Dear ImGui frame over the target's extent that records the list into the context's background draw list, and
-// copies the frame's draw data into `frame`, whose draw lists are clear. Then drops the fonts that the frame did not
-// use. The backend's context is current, and `render` already counts this prepare.
-void imguiRecord(ImGuiBackend* imgui, ImGuiFrame* frame, const PrDrawList* list, const PrDrawTarget* target);
+// Runs a Dear ImGui frame over the target's extent that records the part of the list into the context's background draw
+// list, and copies the frame's draw data into `frame`, whose draw lists are clear. Then drops the fonts that the frame
+// did not use. The backend's context is current, and `render` already counts this prepare.
+void imguiRecord(ImGuiBackend* imgui, ImGuiFrame* frame, const PrDrawList* list, const PrDrawPart& part,
+    const PrDrawTarget* target);
 
 // Destroys the backend's context, then releases its fonts, whose bytes the atlas read until then. The platform's
 // renderer has shut down.

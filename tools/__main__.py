@@ -30,6 +30,7 @@ COMMANDS = {
     "layout": "tools.lint.commands",
     "prose": "tools.lint.commands",
     "viewer": "tools.viewer.commands",
+    "document": "tools.shell.commands",
     "example": "tools.build.commands",
     "fetch": "tools.fetch.commands",
     "clean": "tools.build.commands",

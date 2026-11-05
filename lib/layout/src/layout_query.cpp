@@ -440,10 +440,9 @@ void inlineBoxes(LayoutNodeIndex node, const LayoutFragment* container, LayoutPi
 
 // Appends the boxes of `node` in the last layout to `out`, in content order and unmapped, and appends to `m` the
 // mapping from the space they are in to the query's coordinates. A box element's box is its border box at the origin of
-// its own space. The pieces of an inline box or a text are in the content of their block container.
-void boxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, RawArray<PrLayoutRect>& out) {
-    if (!laidOut(tree, node))
-        return;
+// its own space. The pieces of an inline box or a text are in the content of their block container. The node must be in
+// the last layout (laidOut).
+void laidOutBoxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, RawArray<PrLayoutRect>& out) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     if (n.kind == PrLayoutNodeKind_LineBreak)
         return;
@@ -467,16 +466,73 @@ void boxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, RawArray<
         inlineBoxes(node, container, placement.at, out);
 }
 
+// Appends the boxes of `node`, as laidOutBoxesIn does, if the node is in the last layout.
+void boxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, RawArray<PrLayoutRect>& out) {
+    if (laidOut(tree, node))
+        laidOutBoxesIn(tree, node, m, out);
+}
+
+// Appends the border box of each fragment of `fragment`'s subtree that belongs to `node`, in content order and offset
+// by `offset`. The search descends through the anonymous boxes, such as columns, and through the fragments of the boxes
+// in `through`, which hold the fragments of the node.
+void piecesIn(const LayoutFragment* fragment, PrLayoutVec offset, LayoutNodeIndex node,
+        const RawArray<LayoutNodeIndex>& through, RawArray<PrLayoutRect>& out) {
+    for (uint32_t i = 0; i < fragment->childCount; ++i) {
+        const LayoutChild& child = fragment->children[i];
+        const LayoutFragment* piece = child.fragment;
+        if (piece->kind != LayoutFragmentKind_Box && piece->kind != LayoutFragmentKind_Around)
+            continue;
+        if (piece->node == node) {
+            out.push(layoutRectAt(offset + child.offset, piece->extent));
+            continue;
+        }
+        bool holds = piece->node == kPrLayoutNodeNone;
+        for (uint32_t k = 0; k < through.count && !holds; ++k)
+            holds = piece->node == through.data[k];
+        if (holds)
+            piecesIn(piece, offset + child.offset, node, through, out);
+    }
+}
+
+// Appends the border boxes of the fragments of the box `node`, which a fragmentation break crossed, to `out`, in
+// content order and in the content of the nearest box around it whose fragment no break crosses. Appends to `m` the
+// mapping from that content to the query's coordinates. Every fragment of the node is in that box's fragment, because
+// the boxes between them are broken too, and their fragments hold the node's. Returns false, and appends nothing, if no
+// box around the node holds its fragments, as the pages of a paginated root do.
+bool piecesOf(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, RawArray<PrLayoutRect>& out) {
+    RawArray<LayoutNodeIndex> through;
+    LayoutNodeIndex holder = layoutCachePlacement(tree->cache, node).parent;
+    const LayoutFragment* fragment = holder != kPrLayoutNodeNone ? layoutCachePlaced(tree->cache, holder) : nullptr;
+    while (fragment != nullptr && fragment->kind == LayoutFragmentKind_Box && fragment->broken != 0) {
+        through.push(holder);
+        holder = layoutCachePlacement(tree->cache, holder).parent;
+        fragment = holder != kPrLayoutNodeNone ? layoutCachePlaced(tree->cache, holder) : nullptr;
+    }
+    if (fragment != nullptr) {
+        piecesIn(fragment, kLayoutVecZero, node, through, out);
+        fromContent(tree, holder, m);
+    }
+    through.reset();
+    return fragment != nullptr;
+}
+
 // Appends the boxes of `node` in the last layout to `out`, in `coordinates` and in content order: where the last layout
-// placed the node, mapped through the boxes that place it.
+// placed the node, mapped through the boxes that place it. A box that a fragmentation break crossed has a box for each
+// of its fragments.
 void boxesOf(const LayoutTree* tree, PrLayoutCoordinates coordinates, LayoutNodeIndex node, RawArray<PrLayoutRect>& out) {
     Mapping m{
         .transform = prDAffine2Identity(),
         .painted = coordinates == PrLayoutCoordinates_Viewport,
         .sticky = coordinates != PrLayoutCoordinates_Layout,
     };
+    if (!laidOut(tree, node))
+        return;
     uint32_t first = out.count;
-    boxesIn(tree, node, m, out);
+    const LayoutFragment* fragment = layoutCachePlaced(tree->cache, node);
+    bool broken = fragment != nullptr && fragment->kind == LayoutFragmentKind_Box && fragment->broken != 0 &&
+        !layoutIsInlineBox(tree, node);
+    if (!broken || !piecesOf(tree, node, m, out))
+        laidOutBoxesIn(tree, node, m, out);
     for (uint32_t i = first; i < out.count; ++i)
         out.data[i] = mapped(m, out.data[i]);
 }
@@ -1184,7 +1240,7 @@ uint32_t prLayoutNodeGridLineNames(const PrLayoutTree* tree, PrLayoutNode node, 
     // repetition, which give an inner line the names that end one repetition before those that start the next, and
     // those at the repetition's end and after it.
     uint32_t count = 0;
-    auto add = [&](uint32_t line, PrLayoutGridName name) {
+    auto add = [&](uint32_t line, PrLayoutName name) {
         if (count < capacity)
             out[count] = PrLayoutGridLineName{uint32_t(int32_t(line) + tracks.explicitStart), name};
         ++count;
@@ -1206,9 +1262,9 @@ uint32_t prLayoutNodeGridLineNames(const PrLayoutTree* tree, PrLayoutNode node, 
     return count;
 }
 
-PrStringView prLayoutGridNameText(const PrLayoutTree* tree, PrLayoutGridName name) {
+PrStringView prLayoutNameText(const PrLayoutTree* tree, PrLayoutName name) {
     const LayoutTree* t = tree;
-    if (name == kPrLayoutGridNameNone || name > t->styles->grids.names.atoms.count)
+    if (name == kPrLayoutNameNone || name > t->styles->grids.names.atoms.count)
         return PrStringView{};
     return atomTableText(&t->styles->grids.names, name - 1);
 }

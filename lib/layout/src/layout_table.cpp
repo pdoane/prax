@@ -76,6 +76,7 @@ struct LayoutTableRow {
     PrLayoutUnit descent;
     bool baselines;                 // true if a cell in it is aligned by its baseline
     bool collapsed;                 // true if the visibility of its row or row group is collapse
+    bool monolithic;                // true if a cell that spans it is anonymous or orthogonal, or spans more rows
     PrLayoutUnit offset;            // the offset of its block-start edge in the grid's border box
 };
 
@@ -108,8 +109,8 @@ struct LayoutTableBorder {
     PrColor16 color;
 };
 
-// Scratch memory that table layout keeps between layouts: the parts of the tables being laid out, innermost last.
-struct LayoutTableScratch {
+// The parts of tables being laid out, each table's from its marks.
+struct LayoutTableParts {
     RawArray<LayoutTableCell> cells;
     RawArray<LayoutTableColumn> columns;
     RawArray<LayoutTableRow> rows;
@@ -117,9 +118,39 @@ struct LayoutTableScratch {
     RawArray<LayoutTableColumnBox> boxes;
     RawArray<LayoutTableAside> captions;
     RawArray<LayoutTableAside> outOfFlow;
+    RawArray<uint32_t> emptyGroups;    // the row groups with no rows
     RawArray<uint32_t> order;          // the rows in grid order, then the busy columns while cells are placed
     RawArray<LayoutTableBorder> borders;
+};
+
+// A table that a fragmented layout sized during the running layout, which its later fragmentainers take instead of
+// sizing it again (layoutTableContent). Its key is what sizing reads beyond the tree, which does not change during a
+// layout. Its parts start at mark zero of its own storage, so the layout of its cells, which may lay out other tables,
+// does not move them. The cells' fragments are references that the memo holds.
+struct LayoutTableMemo {
+    LayoutNodeIndex node;
+    LayoutNodeIndex runLast;
+    PrLayoutUnit inlineSize;
+    PrLayoutUnit containingInline;
+    PrLayoutUnit percentBlock;
+    PrLayoutVec fallback;
+    PrLayoutUnit blockSize;         // the block size that the container decides, or zero
+    LayoutRequestKind blockKind;
+    bool first;                     // true if the table starts in the fragmentainer, which then holds its top captions
+
+    LayoutTableParts parts;
+    uint32_t cellCount, columnCount, rowCount, groupCount, boxCount, captionCount, outOfFlowCount, emptyGroupCount;
+    LayoutEdges edges;
+    PrLayoutUnit removed;           // the block size that collapsed rows took from the grid (collapseRows)
+};
+
+// Scratch memory that table layout keeps between layouts: the parts of the tables being laid out, innermost last, the
+// collapsed borders of the fragments being made, and the running layout's sized tables, which its end frees.
+struct LayoutTableScratch {
+    LayoutTableParts parts;
     RawArray<LayoutGridBorder> segments;
+    RawArray<LayoutTableMemo*> memos;
+    HashIndex memoIndex;            // the memos by KeyIndex::hashOf their node
 };
 
 namespace {
@@ -157,6 +188,34 @@ struct Table {
     bool fixed;                     // true if it is laid out in fixed mode (css-tables-3/#table-layout-property)
     PrLayoutUnit inlineSpacing;     // the border spacing between columns, zero if its borders collapse
     PrLayoutUnit blockSpacing;      // the border spacing between rows, zero if its borders collapse
+
+    // In a fragmentation context: whether the table resumes from an earlier fragmentainer, and the grid rows of its
+    // header before `headerEnd` and of its footer from `footerStart`, which every fragmentainer repeats.
+    bool continues;
+    uint32_t headerEnd;
+    uint32_t footerStart;
+
+    // The grid rows of the body in the fragmentainer being laid out, from `bodyStart` to before `bodyEnd`. Outside a
+    // fragmentation context, every row is in the body, and the header and footer are empty. Each pass after the
+    // fragmentainer's rows are chosen visits only the header, the body and the footer (eachRowHere), so a table across
+    // many fragmentainers lays out in each only the rows that it holds.
+    uint32_t bodyStart;
+    uint32_t bodyEnd;
+
+    // In a fragmentation context, the body rows that break inside. `resumedRow` resumes inside from the fragmentainer
+    // before, and `splitRow` breaks inside in this one. Either is kNone if there is no such row, and both may be the
+    // same row. `cellTokens` holds where the cells of `splitRow` resume in the next fragmentainer, chained by their
+    // siblings.
+    uint32_t resumedRow;
+    uint32_t splitRow;
+    LayoutBreakToken* PR_NULLABLE cellTokens;
+
+    // The rows laid out in pieces in this fragmentainer (breakInsideRow), at most the resumed row and the split row,
+    // and their block sizes as the table sized them, which the rows take again once the fragmentainer is laid out.
+    uint32_t pieceRows[2];
+    PrLayoutUnit pieceSized[2];
+    uint32_t pieceCount;
+
     LayoutEdges edges;              // its grid's padding and borders, collapsed if its borders collapse
     LayoutIntrinsicInput cellInput; // what its cells are measured in
 
@@ -167,10 +226,14 @@ struct Table {
     uint32_t boxMark, boxCount;
     uint32_t captionMark, captionCount;
     uint32_t outOfFlowMark, outOfFlowCount;
+    uint32_t emptyGroupMark, emptyGroupCount;
     uint32_t orderMark;
     uint32_t borderMark;
 
-    LayoutTableScratch& scratch() const { return *state.scratch->table; }
+    LayoutTableParts* storage;      // the scratch parts, or a memo's
+    LayoutTableMemo* PR_NULLABLE memo;
+
+    LayoutTableParts& scratch() const { return *storage; }
     LayoutTableCell& cell(uint32_t i) const { return scratch().cells.data[cellMark + i]; }
     LayoutTableColumn& column(uint32_t i) const { return scratch().columns.data[columnMark + i]; }
     LayoutTableRow& row(uint32_t i) const { return scratch().rows.data[rowMark + i]; }
@@ -178,6 +241,7 @@ struct Table {
     LayoutTableColumnBox& box(uint32_t i) const { return scratch().boxes.data[boxMark + i]; }
     LayoutTableAside& caption(uint32_t i) const { return scratch().captions.data[captionMark + i]; }
     LayoutTableAside& outOfFlow(uint32_t i) const { return scratch().outOfFlow.data[outOfFlowMark + i]; }
+    uint32_t emptyGroup(uint32_t i) const { return scratch().emptyGroups.data[emptyGroupMark + i]; }
 
     // The row at `grid` in the grid.
     LayoutTableRow& gridRow(uint32_t grid) const { return row(scratch().order.data[orderMark + grid]); }
@@ -193,14 +257,14 @@ struct Table {
     }
 };
 
-// Starts the layout of the table `node` at the end of the scratch memory, in the table's own mode. If `runLast` is not
-// kPrLayoutNodeNone, the table is the anonymous table that wraps the run of siblings from `node` through `runLast`. An
-// anonymous table has the initial style, except for the border spacing and the border model, which it inherits from its
-// parent (css-tables-3/#fixup-boxes).
-Table beginTable(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast) {
+// Starts the layout of the table `node` at the end of the scratch memory, or in the storage of `memo` if it is not
+// null, in the table's own mode. If `runLast` is not kPrLayoutNodeNone, the table is the anonymous table that wraps the
+// run of siblings from `node` through `runLast`. An anonymous table has the initial style, except for the border
+// spacing and the border model, which it inherits from its parent (css-tables-3/#fixup-boxes).
+Table beginTable(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast, LayoutTableMemo* PR_NULLABLE memo = nullptr) {
     if (state.scratch->table == nullptr)
         state.scratch->table = layoutTableScratchCreate();
-    LayoutTableScratch& s = *state.scratch->table;
+    LayoutTableParts& s = memo != nullptr ? memo->parts : state.scratch->table->parts;
     const LayoutTreeNode& n = layoutTreeNode(state.tree, node);
     bool anonymous = runLast != kPrLayoutNodeNone;
     LayoutNodeIndex parent = anonymous ? n.parent : node;
@@ -224,6 +288,17 @@ Table beginTable(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLa
         .fixed = false,
         .inlineSpacing = kLayoutUnitZero,
         .blockSpacing = kLayoutUnitZero,
+        .continues = false,
+        .headerEnd = 0,
+        .footerStart = 0,
+        .bodyStart = 0,
+        .bodyEnd = 0,
+        .resumedRow = kNone,
+        .splitRow = kNone,
+        .cellTokens = nullptr,
+        .pieceRows = {},
+        .pieceSized = {},
+        .pieceCount = 0,
         .edges = {},
         .cellInput = {},
         .cellMark = s.cells.count,
@@ -240,8 +315,12 @@ Table beginTable(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLa
         .captionCount = 0,
         .outOfFlowMark = s.outOfFlow.count,
         .outOfFlowCount = 0,
+        .emptyGroupMark = s.emptyGroups.count,
+        .emptyGroupCount = 0,
         .orderMark = s.order.count,
         .borderMark = s.borders.count,
+        .storage = &s,
+        .memo = memo,
     };
     t.collapsed = t.style.borderCollapse == PrLayoutBorderCollapse_Collapse;
     // Border spacing is physical: its first length is horizontal (css-tables-3/#border-spacing-property).
@@ -257,9 +336,11 @@ Table beginTable(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLa
     return t;
 }
 
-// Releases the fragments that the cells hold, and frees the table's scratch memory.
+// Releases the fragments that the cells hold, and frees the table's scratch memory. A memo keeps both.
 void endTable(Table& t) {
-    LayoutTableScratch& s = t.scratch();
+    if (t.memo != nullptr)
+        return;
+    LayoutTableParts& s = t.scratch();
     for (uint32_t i = 0; i < t.cellCount; ++i)
         layoutFragmentRelease(t.cell(i).fragment);
     s.cells.count = t.cellMark;
@@ -269,6 +350,7 @@ void endTable(Table& t) {
     s.boxes.count = t.boxMark;
     s.captions.count = t.captionMark;
     s.outOfFlow.count = t.outOfFlowMark;
+    s.emptyGroups.count = t.emptyGroupMark;
     s.order.count = t.orderMark;
     s.borders.count = t.borderMark;
 }
@@ -296,6 +378,26 @@ uint32_t visibleRows(const Table& t, uint32_t first, uint32_t count) {
     return visible;
 }
 
+// Calls `fn` with each grid row in the fragmentainer being laid out, in grid order: the header's, the body's and the
+// footer's.
+template <typename Fn>
+void eachRowHere(const Table& t, Fn fn) {
+    for (uint32_t grid = 0; grid < t.headerEnd; ++grid)
+        fn(grid);
+    for (uint32_t grid = t.bodyStart; grid < t.bodyEnd; ++grid)
+        fn(grid);
+    for (uint32_t grid = t.footerStart; grid < t.rowCount; ++grid)
+        fn(grid);
+}
+
+// Returns the number of the rows that the cell spans that are in the fragmentainer being laid out, from its first row,
+// which is in it. Only a body cell can span rows that are elsewhere, since a cell's rows are in its row group.
+uint32_t spanHere(const Table& t, const LayoutTableCell& cell) {
+    if (cell.gridRow >= t.bodyStart && cell.gridRow < t.bodyEnd && cell.gridRow + cell.rowSpan > t.bodyEnd)
+        return t.bodyEnd - cell.gridRow;
+    return cell.rowSpan;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // The grid
 
@@ -316,7 +418,7 @@ struct Collector {
     }
 
     void openGroup(LayoutNodeIndex node, PrLayoutDisplay display) {
-        LayoutTableScratch& s = t.scratch();
+        LayoutTableParts& s = t.scratch();
         group = t.groupCount++;
         s.groups.push(LayoutTableGroup{.node = node, .display = display, .firstRow = t.rowCount, .rowCount = 0});
         implicitGroup = node == kPrLayoutNodeNone;
@@ -330,7 +432,7 @@ struct Collector {
     void openRow(LayoutNodeIndex node) {
         if (group == kNone)
             openGroup(kPrLayoutNodeNone, PrLayoutDisplay_TableRowGroup);
-        LayoutTableScratch& s = t.scratch();
+        LayoutTableParts& s = t.scratch();
         row = t.rowCount++;
         s.rows.push(LayoutTableRow{
             .node = node,
@@ -345,7 +447,7 @@ struct Collector {
     void addCell(LayoutNodeIndex node, LayoutNodeIndex runLast) {
         if (row == kNone)
             openRow(kPrLayoutNodeNone);
-        LayoutTableScratch& s = t.scratch();
+        LayoutTableParts& s = t.scratch();
         LayoutTableCell cell{};
         cell.node = node;
         cell.runLast = runLast;
@@ -426,6 +528,10 @@ struct Collector {
                     row = kNone;
                     openGroup(c, layoutBoxStyle(tree->styles, layoutTreeNode(tree, c).style).display);
                     children(c, t.group(group).display);
+                    if (t.group(group).rowCount == 0) {
+                        t.scratch().emptyGroups.push(group);
+                        ++t.emptyGroupCount;
+                    }
                     group = kNone;
                     row = kNone;
                     break;
@@ -456,7 +562,7 @@ struct Collector {
     // children generate no boxes (css-tables-3/#fixup-algorithm).
     void columnGroup(LayoutNodeIndex node) {
         clearMarks(node);
-        LayoutTableScratch& s = t.scratch();
+        LayoutTableParts& s = t.scratch();
         uint32_t box = t.boxCount++;
         uint32_t first = t.columnCount;
         s.boxes.push(LayoutTableColumnBox{.node = node, .group = kNone, .firstColumn = first});
@@ -479,7 +585,7 @@ struct Collector {
     // Adds the columns of the column box `node`, in the column group box `group` if it is not kNone.
     void column(LayoutNodeIndex node, uint32_t groupBox) {
         clearMarks(node);
-        LayoutTableScratch& s = t.scratch();
+        LayoutTableParts& s = t.scratch();
         uint32_t span = layoutTableStyle(tree->styles, layoutTreeNode(tree, node).style).columnSpan;
         s.boxes.push(LayoutTableColumnBox{
             .node = node,
@@ -702,7 +808,7 @@ uint32_t slotCell(const Table& t, const RawArray<uint32_t>& slots, uint32_t mark
 // segment of its outermost line on that side, and its padding is ignored (css-tables-3/#collapsed-style-overrides).
 void resolveBorders(Table& t) {
     const LayoutTree* tree = t.state.tree;
-    LayoutTableScratch& s = t.scratch();
+    LayoutTableParts& s = t.scratch();
     // The cells by slot, in the busy array's place.
     RawArray<uint32_t>& slots = s.order;
     uint32_t mark = slots.count;
@@ -1039,7 +1145,7 @@ void measureColumns(Table& t) {
     }
     // Cells that span more columns, by increasing span. Each span's contributions are found from the columns as the
     // spans before it left them, and then applied.
-    LayoutTableScratch& s = t.scratch();
+    LayoutTableParts& s = t.scratch();
     for (uint32_t span = 2; span <= maxSpan; ++span) {
         // The copy is made in the same storage as the columns, which growth moves, so the storage grows before any
         // column is read.
@@ -1464,6 +1570,7 @@ PrLayoutUnit spannedBlock(const Table& t, uint32_t first, uint32_t count) {
 // their baselines. Cells that span more rows then grow them, by increasing span, in proportion to the rows' sizes or
 // else equally. The rows are sized as if none were collapsed (collapseRows).
 void sizeRows(Table& t) {
+    t.state.stats->tableRowsSized += t.rowCount;
     // The block size of the rows from `first`, `count` of them, and of the spacing between them, with every row
     // visible.
     auto spanned = [&](uint32_t first, uint32_t count) {
@@ -1480,6 +1587,7 @@ void sizeRows(Table& t) {
         row.ascent = kLayoutUnitZero;
         row.descent = kLayoutUnitZero;
         row.baselines = false;
+        row.monolithic = false;
     }
     uint32_t maxSpan = 1;
     for (uint32_t i = 0; i < t.cellCount; ++i) {
@@ -1487,6 +1595,10 @@ void sizeRows(Table& t) {
         PrLayoutUnit size = layoutUnitMax(cell.measured, cell.styledBlock);
         LayoutTableRow& row = t.gridRow(cell.gridRow);
         maxSpan = cell.rowSpan > maxSpan ? cell.rowSpan : maxSpan;
+        if (cell.rowSpan != 1 || cell.runLast != kPrLayoutNodeNone || cell.orthogonal) {
+            for (uint32_t r = cell.gridRow; r < cell.gridRow + cell.rowSpan; ++r)
+                t.gridRow(r).monolithic = true;
+        }
         if (cell.align == LayoutCellAlign_Baseline) {
             row.baselines = true;
             row.ascent = layoutUnitMax(row.ascent, cell.baseline);
@@ -1612,15 +1724,220 @@ PrLayoutUnit collapseRows(Table& t) {
     return removed;
 }
 
-// Places the rows of the table in its grid, and returns the block size of the grid's border box.
+// The segment of a cell's token in a row that breaks inside, for a cell whose content ended in an earlier
+// fragmentainer.
+constexpr uint32_t kCellEnded = 0xffffffffu;
+
+// Breaks inside the body row `grid` of the fragmentainer of `space`, at its top if `atTop`, if it resumes inside or
+// does not fit in `left`, the block size that the fragmentainer leaves it (css-tables-3/#fragmentation, css-break-4).
+// Its cells are laid out in `cells` as fragmentainers of that size, each from its token, and the row takes the room
+// left, or its tallest cell's content if every cell ends. A cell that ended before is an empty piece. Sets the row's
+// block size, its cells' fragments and the table's pieces, `resumedRow`, `splitRow` and `cellTokens`. A row with a cell
+// that spans more rows, or an anonymous or orthogonal cell, does not break inside, and neither does a row whose cells
+// are monolithic.
+void breakInsideRow(Table& t, const LayoutSpace& space, const LayoutSpace& cells, uint32_t grid, PrLayoutUnit left, bool atTop) {
+    const LayoutBreakToken* resume = layoutSpaceResume(space);
+    const LayoutBreakToken* resumed = nullptr;
+    if (resume != nullptr && resume->segment == grid)
+        resumed = resume->childToken;
+    if ((resumed == nullptr && t.gridRow(grid).blockSize <= left) || left <= kLayoutUnitZero)
+        return;
+    if (t.gridRow(grid).monolithic)
+        return;
+    const LayoutTableRow row = t.gridRow(grid);
+    LayoutFragmentainer fragmentainer{
+        .blockSize = left,
+        .end = left,
+        .kind = layoutSpaceFragmentainer(space)->kind,
+        .atTop = atTop,
+    };
+    struct Piece {
+        uint32_t cell;
+        LayoutFragment* PR_NULLABLE fragment;
+        const LayoutBreakToken* PR_NULLABLE token;
+    };
+    RawArray<Piece> pieces;
+    bool breaks = false;
+    bool placed = false;            // true if a cell placed some of its content
+    PrLayoutUnit tallest = kLayoutUnitZero;
+    for (uint32_t i = row.firstCell; i < row.firstCell + row.cellCount; ++i) {
+        const LayoutTableCell& cell = t.cell(i);
+        const LayoutBreakToken* from = nullptr;
+        for (const LayoutBreakToken* k = resumed; k != nullptr && from == nullptr; k = k->sibling) {
+            if (k->node == cell.node)
+                from = k;
+        }
+        if (from != nullptr && from->segment == kCellEnded) {
+            pieces.push(Piece{i, nullptr, nullptr});
+            continue;
+        }
+        LayoutCellSpace inputs = cellInputs(t, cell);
+        LayoutSpace s = cells;
+        s.cell = inputs.collapsed ? &inputs : nullptr;
+        LayoutFragmentation fragmentation{&fragmentainer, from};
+        s.fragmentation = &fragmentation;
+        LayoutRequests requests = contentRequests(cell.inlineSize);
+        LayoutResult result = layoutBlockFragmented(t.state, cell.node, s, &requests);
+        breaks = breaks || result.token != nullptr;
+        placed = placed || result.token == nullptr || !result.token->atStart;
+        tallest = layoutUnitMax(tallest, layoutLogicalSize(t.mode, result.fragment->extent).blockSize);
+        pieces.push(Piece{i, const_cast<LayoutFragment*>(result.fragment), result.token});
+    }
+    if (resumed == nullptr && (!breaks || !placed)) {
+        // Nothing in the row breaks, or no cell placed any of its content here, so the row is laid out whole and
+        // overflows the fragmentainer or goes to the next one.
+        for (uint32_t k = 0; k < pieces.count; ++k) {
+            layoutFragmentRelease(pieces.data[k].fragment);
+            layoutBreakTokenRelease(pieces.data[k].token);
+        }
+        pieces.reset();
+        return;
+    }
+    PrLayoutUnit size = breaks ? left : tallest;
+    LayoutBreakToken* chain = nullptr;
+    for (uint32_t k = pieces.count; k-- > 0;) {
+        Piece& piece = pieces.data[k];
+        const LayoutTableCell& cell = t.cell(piece.cell);
+        LayoutFragment* fragment = piece.fragment;
+        if (fragment == nullptr || fragment->references.loadRelaxed() == 1) {
+            // A cell's piece fills its row. An ended cell is an empty piece, which continues the cell.
+            if (fragment == nullptr) {
+                fragment = layoutFragmentCreate(LayoutFragmentKind_Box, cell.node, 0);
+                fragment->flags |= LayoutFragmentFlag_Continuation;
+            }
+            fragment->extent = layoutPhysicalSize(t.mode, LayoutLogicalSize{cell.inlineSize, size});
+            layoutFragmentSetOverflow(t.state.tree, fragment);
+        }
+        layoutFragmentRelease(t.cell(piece.cell).fragment);
+        t.cell(piece.cell).fragment = fragment;
+        if (!breaks)
+            continue;
+        LayoutBreakToken* token = nullptr;
+        if (piece.token != nullptr) {
+            token = const_cast<LayoutBreakToken*>(piece.token);
+        } else {
+            token = layoutBreakTokenCreate(cell.node, kLayoutUnitZero, kPrLayoutNodeNone, nullptr);
+            token->segment = kCellEnded;
+        }
+        token->sibling = chain;
+        chain = token;
+    }
+    pieces.reset();
+    // Laying the cells out may have grown the table's scratch, so the row is found again.
+    PR_ASSERT(t.pieceCount < 2);
+    t.pieceRows[t.pieceCount] = grid;
+    t.pieceSized[t.pieceCount] = t.gridRow(grid).blockSize;
+    ++t.pieceCount;
+    t.gridRow(grid).blockSize = size;
+    if (resumed != nullptr)
+        t.resumedRow = grid;
+    if (breaks) {
+        t.splitRow = grid;
+        t.cellTokens = chain;
+    }
+}
+
+// Returns true if the grid row `grid` is laid out in pieces in the fragmentainer.
+bool isPieces(const Table& t, uint32_t grid) {
+    for (uint32_t i = 0; i < t.pieceCount; ++i) {
+        if (t.pieceRows[i] == grid)
+            return true;
+    }
+    return false;
+}
+
+// Chooses the rows of the table that go in the fragmentainer of `space` (css-break-4, css-tables-3/#fragmentation). The
+// rows of a header group and of a footer group repeat in every fragmentainer. Between them go the body rows that fit,
+// from the one that the table resumes at. `room` is the block size that the fragmentainer leaves the grid's rows, and
+// `fresh` is the block size that a fragmentainer would leave them if the table started at its top. A row that does not
+// fit goes to the next fragmentainer, unless it would be the first body row there, and so do the rows before it that a
+// cell spans together with it. A row breaks inside if nothing comes before it in the fragmentainer, or if it would not
+// fit in one of its own, so that a row that fits in the next fragmentainer is not split. Sets the body rows of the
+// fragmentainer. Returns the grid index of the first body row of the next fragmentainer, or kNone if the rows end in
+// this one.
+uint32_t fragmentRows(Table& t, const LayoutSpace& space, const LayoutSpace& cells, PrLayoutUnit room, PrLayoutUnit fresh) {
+    // A header group is the table's first group and a footer group its last (css-tables-3/#table-header-group).
+    uint32_t headerEnd = 0;
+    uint32_t footerStart = t.rowCount;
+    if (t.groupCount != 0 && t.group(0).display == PrLayoutDisplay_TableHeaderGroup && t.group(0).rowCount != 0)
+        headerEnd = t.row(t.group(0).firstRow + t.group(0).rowCount - 1).grid + 1;
+    uint32_t lastGroup = t.groupCount - 1;
+    if (t.groupCount > 1 && t.group(lastGroup).display == PrLayoutDisplay_TableFooterGroup &&
+            t.group(lastGroup).rowCount != 0)
+        footerStart = t.row(t.group(lastGroup).firstRow).grid;
+    if (footerStart < headerEnd)
+        footerStart = headerEnd;
+    t.headerEnd = headerEnd;
+    t.footerStart = footerStart;
+    const LayoutBreakToken* resume = layoutSpaceResume(space);
+    t.continues = resume != nullptr;
+    uint32_t from = headerEnd;
+    if (resume != nullptr && resume->segment > headerEnd && resume->segment < footerStart)
+        from = resume->segment;
+    PrLayoutUnit used = kLayoutUnitZero;
+    t.bodyStart = from;
+    t.bodyEnd = from;
+    eachRowHere(t, [&](uint32_t grid) { used = used + t.gridRow(grid).blockSize + t.blockSpacing; });
+    t.resumedRow = kNone;
+    t.splitRow = kNone;
+    t.cellTokens = nullptr;
+    t.pieceCount = 0;
+    // The first body row breaks inside if it resumes inside, if the table starts at the top of the fragmentainer, or if
+    // it would not fit in a fragmentainer of its own. A later row breaks inside only in the last case.
+    PrLayoutUnit repeated = used;
+    bool atTop = layoutSpaceFragmentainer(space)->atTop;
+    if (from < footerStart && (resume != nullptr || atTop || t.gridRow(from).blockSize + t.blockSpacing > fresh - repeated))
+        breakInsideRow(t, space, cells, from, room - used - t.blockSpacing, atTop);
+    uint32_t next = kNone;
+    // A first body row that neither fits nor breaks inside goes to the next fragmentainer with the table, unless
+    // nothing comes before the table here.
+    if (from < footerStart && resume == nullptr && !atTop && t.splitRow != from &&
+            used + t.gridRow(from).blockSize + t.blockSpacing > room)
+        next = from;
+    for (uint32_t grid = from; grid < footerStart && next == kNone; ++grid) {
+        PrLayoutUnit size = t.gridRow(grid).blockSize + t.blockSpacing;
+        if (grid > from && t.cellTokens == nullptr && used + size > room && size > fresh - repeated)
+            breakInsideRow(t, space, cells, grid, room - used - t.blockSpacing, false);
+        if (grid > from && t.splitRow != grid && (used + size > room || t.cellTokens != nullptr))
+            next = grid;
+        else
+            used = used + t.gridRow(grid).blockSize + t.blockSpacing;
+    }
+    // A cell that spans rows keeps them together: the break goes before the first row of a cell that spans it, unless
+    // that row is the first in the fragmentainer (css-tables-3/#fragmentation).
+    for (bool moved = next != kNone; moved;) {
+        moved = false;
+        for (uint32_t grid = from + 1; grid < next && !moved; ++grid) {
+            const LayoutTableRow& row = t.gridRow(grid);
+            for (uint32_t i = row.firstCell; i < row.firstCell + row.cellCount && !moved; ++i) {
+                const LayoutTableCell& cell = t.cell(i);
+                if (cell.gridRow + cell.rowSpan > next) {
+                    next = cell.gridRow;
+                    moved = true;
+                }
+            }
+        }
+    }
+    t.bodyEnd = next != kNone ? next : footerStart;
+    // A row that breaks inside resumes in the next fragmentainer.
+    if (t.cellTokens != nullptr)
+        next = t.splitRow;
+    return next;
+}
+
+// Places the rows of the table that are in the fragmentainer being laid out in its grid, and returns the block size of
+// the grid's border box.
 PrLayoutUnit placeRows(Table& t) {
     PrLayoutUnit at = layoutEdgesContent(t.edges, LayoutSide_BlockStart);
-    for (uint32_t grid = 0; grid < t.rowCount; ++grid) {
+    bool visible = false;
+    eachRowHere(t, [&](uint32_t grid) {
         LayoutTableRow& row = t.gridRow(grid);
         row.offset = row.collapsed ? at : at + t.blockSpacing;
         at = row.offset + row.blockSize;
-    }
-    if (visibleRows(t, 0, t.rowCount) != 0)
+        visible = visible || !row.collapsed;
+        ++t.state.stats->tableRowsPlaced;
+    });
+    if (visible)
         at = at + t.blockSpacing;
     return at + layoutEdgesContent(t.edges, LayoutSide_BlockEnd);
 }
@@ -1633,11 +1950,9 @@ PrLayoutUnit rowBaseline(const Table& t, uint32_t grid) {
         return row.ascent;
     PrLayoutUnit lowest = kLayoutUnitZero;
     bool any = false;
-    for (uint32_t i = 0; i < t.cellCount; ++i) {
+    for (uint32_t i = row.firstCell; i < row.firstCell + row.cellCount; ++i) {
         const LayoutTableCell& cell = t.cell(i);
-        if (cell.gridRow != grid)
-            continue;
-        PrLayoutUnit end = spannedBlock(t, grid, cell.rowSpan) - cell.blockEdgeEnd;
+        PrLayoutUnit end = spannedBlock(t, grid, spanHere(t, cell)) - cell.blockEdgeEnd;
         lowest = any ? layoutUnitMax(lowest, end) : end;
         any = true;
     }
@@ -1647,45 +1962,55 @@ PrLayoutUnit rowBaseline(const Table& t, uint32_t grid) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Cells
 
-// Lays out each cell at its final size: the width of its columns and the height of its rows. A cell that is as tall as
-// its content, and that its alignment does not move, asks again for its content's size and takes the layout it was
-// measured with. A cell's content is definite in its block axis if the cell's block size is a length, or if the table's
-// block size is a length or a percentage of a definite size (css-tables-3/#table-cell-content-relayout). An orthogonal
-// cell is laid out with both of its sizes fixed, in its own axes.
-void layOutCells(Table& t, const LayoutSpace& cells, bool definiteTable) {
-    for (uint32_t i = 0; i < t.cellCount; ++i) {
-        LayoutTableCell cell = t.cell(i);
-        PrLayoutUnit blockSize = spannedBlock(t, cell.gridRow, cell.rowSpan);
-        bool definite = definiteTable;
-        if (!definite && cell.runLast == kPrLayoutNodeNone) {
-            PrLayoutLength height = layoutLogicalBox(boxOf(t.state.tree, cell.node), t.mode).blockSize;
-            definite = layoutLengthIsFixed(height) && !layoutLengthReadsBase(height);
-        }
-        LayoutCellSpace inputs = cellInputs(t, cell);
-        LayoutSpace space = cells;
-        PrLayoutUnit rowAscent = t.gridRow(cell.gridRow).ascent;
-        bool shifts = cell.align == LayoutCellAlign_Baseline && cell.baseline != rowAscent;
-        LayoutRequests requests = contentRequests(cell.inlineSize);
-        if (cell.orthogonal) {
-            requests = orthogonalRequests(cell.inlineSize);
-            requests.inlineAxis = LayoutRequest{.size = blockSize, .kind = LayoutRequestKind_Fixed, .definite = true};
-        } else if (definite || blockSize != cell.measured || shifts) {
-            requests.blockAxis = LayoutRequest{.size = blockSize, .kind = LayoutRequestKind_Fixed, .definite = definite};
-            inputs.aligned = cell.align == LayoutCellAlign_Baseline;
-            inputs.baseline = inputs.aligned ? rowAscent : kLayoutUnitZero;
-        } else if (cell.runLast != kPrLayoutNodeNone) {
-            // The anonymous cell keeps the layout that it was measured with.
-            continue;
-        }
-        space.cell = inputs.collapsed || inputs.aligned ? &inputs : nullptr;
-        LayoutResult result;
-        if (cell.runLast != kPrLayoutNodeNone)
-            result = layoutAnonymousBlock(t.state, cell.node, cell.runLast, space, requests);
-        else
-            result = layoutFinal(t.state, cell.node, space, requests);
-        layoutFragmentRelease(t.cell(i).fragment);
-        t.cell(i).fragment = result.fragment;
+// Lays out cell `i` at its final size: the width of its columns and the height of its rows in the fragmentainer. A cell
+// that is as tall as its content, and that its alignment does not move, asks again for its content's size and takes the
+// layout it was measured with. A cell's content is definite in its block axis if the cell's block size is a length, or
+// if the table's block size is a length or a percentage of a definite size (css-tables-3/#table-cell-content-relayout).
+// An orthogonal cell is laid out with both of its sizes fixed, in its own axes.
+void layOutCell(Table& t, uint32_t i, const LayoutSpace& cells, bool definiteTable) {
+    LayoutTableCell cell = t.cell(i);
+    PrLayoutUnit blockSize = spannedBlock(t, cell.gridRow, spanHere(t, cell));
+    bool definite = definiteTable;
+    if (!definite && cell.runLast == kPrLayoutNodeNone) {
+        PrLayoutLength height = layoutLogicalBox(boxOf(t.state.tree, cell.node), t.mode).blockSize;
+        definite = layoutLengthIsFixed(height) && !layoutLengthReadsBase(height);
     }
+    LayoutCellSpace inputs = cellInputs(t, cell);
+    LayoutSpace space = cells;
+    PrLayoutUnit rowAscent = t.gridRow(cell.gridRow).ascent;
+    bool shifts = cell.align == LayoutCellAlign_Baseline && cell.baseline != rowAscent;
+    LayoutRequests requests = contentRequests(cell.inlineSize);
+    if (cell.orthogonal) {
+        requests = orthogonalRequests(cell.inlineSize);
+        requests.inlineAxis = LayoutRequest{.size = blockSize, .kind = LayoutRequestKind_Fixed, .definite = true};
+    } else if (definite || blockSize != cell.measured || shifts) {
+        requests.blockAxis = LayoutRequest{.size = blockSize, .kind = LayoutRequestKind_Fixed, .definite = definite};
+        inputs.aligned = cell.align == LayoutCellAlign_Baseline;
+        inputs.baseline = inputs.aligned ? rowAscent : kLayoutUnitZero;
+    } else if (cell.runLast != kPrLayoutNodeNone) {
+        // The anonymous cell keeps the layout that it was measured with.
+        return;
+    }
+    space.cell = inputs.collapsed || inputs.aligned ? &inputs : nullptr;
+    LayoutResult result;
+    if (cell.runLast != kPrLayoutNodeNone)
+        result = layoutAnonymousBlock(t.state, cell.node, cell.runLast, space, requests);
+    else
+        result = layoutFinal(t.state, cell.node, space, requests);
+    layoutFragmentRelease(t.cell(i).fragment);
+    t.cell(i).fragment = result.fragment;
+}
+
+// Lays out the cells that start in the rows of the fragmentainer being laid out. The cells of a row that breaks inside
+// are laid out with it (breakInsideRow).
+void layOutCells(Table& t, const LayoutSpace& cells, bool definiteTable) {
+    eachRowHere(t, [&](uint32_t grid) {
+        if (isPieces(t, grid))
+            return;
+        const LayoutTableRow row = t.gridRow(grid);
+        for (uint32_t i = row.firstCell; i < row.firstCell + row.cellCount; ++i)
+            layOutCell(t, i, cells, definiteTable);
+    });
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1726,18 +2051,21 @@ void placeOutOfFlow(Table& t, LayoutNodeIndex container, LayoutLogicalOffset at)
         if (aside.container != container)
             continue;
         LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(aside.node, layoutStaticEdges(t.mode),
-            layoutIsFixed(t.state.tree, aside.node));
+            layoutNodePositionScheme(t.state.tree, aside.node));
         t.state.scratch->children.push(LayoutLogicalChild{placeholder, at});
     }
 }
 
 // Returns the fragment of the table part `node`, of `size`, made from the scratch children from `mark`. The part holds
-// the boxes out of flow that it is the containing block of, laid out in `fallback`.
+// the boxes out of flow that it is the containing block of, laid out in `fallback`. A part that an earlier
+// fragmentainer also holds, `repeated`, is a continuation there, so that its placement is its first fragment.
 const LayoutFragment* buildPart(Table& t, LayoutNodeIndex node, uint32_t mark, LayoutLogicalSize size,
-        PrLayoutVec fallback) {
+        PrLayoutVec fallback, bool repeated = true) {
     ++t.state.stats->boxFragmentsMade;
     LayoutFragment* fragment = layoutHolderBuild(t.state, node, mark, t.mode, size, fallback);
     layoutFragmentSetOverflow(t.state.tree, fragment);
+    if (t.continues && repeated)
+        fragment->flags |= LayoutFragmentFlag_Continuation;
     return fragment;
 }
 
@@ -1752,26 +2080,57 @@ void pushCell(Table& t, uint32_t i, LayoutLogicalOffset at, const LayoutSpace& c
     t.state.scratch->children.push(LayoutLogicalChild{cell.fragment, at + relative});
 }
 
-// Appends the fragments of the rows of the group `g`, each holding its cells, at their offsets from `origin`, the start
-// corner of the fragment being made in the grid's border box. A row with no box has no fragment, and its cells are
-// placed in the fragment around it.
+// The grid rows of a range of rows that are in the fragmentainer being laid out, from `first` through `last`.
+struct RowsHere {
+    uint32_t first;
+    uint32_t last;
+    bool any;
+};
+
+// Returns the grid rows from `first`, `count` of them, that are in the fragmentainer being laid out. The rows of a row
+// group that are in it are contiguous, since a group is in the header, the footer or the body.
+RowsHere rowsHere(const Table& t, uint32_t first, uint32_t count) {
+    RowsHere here{};
+    auto take = [&](uint32_t start, uint32_t end) {
+        uint32_t low = start > first ? start : first;
+        uint32_t high = end < first + count ? end : first + count;
+        if (low >= high)
+            return;
+        if (!here.any)
+            here.first = low;
+        here.last = high - 1;
+        here.any = true;
+    };
+    take(0, t.headerEnd);
+    take(t.bodyStart, t.bodyEnd);
+    take(t.footerStart, t.rowCount);
+    return here;
+}
+
+// Appends the fragments of the rows of the group `g` that are in the fragmentainer, each holding its cells, at their
+// offsets from `origin`, the start corner of the fragment being made in the grid's border box. A row with no box has no
+// fragment, and its cells are placed in the fragment around it.
 void pushRows(Table& t, uint32_t g, LayoutLogicalOffset origin, const LayoutSpace& cells, PrLayoutVec fallback) {
     const LayoutTableGroup group = t.group(g);
     RawArray<LayoutLogicalChild>& children = t.state.scratch->children;
-    for (uint32_t r = group.firstRow; r < group.firstRow + group.rowCount; ++r) {
-        LayoutTableRow row = t.row(r);
+    if (group.rowCount == 0)
+        return;
+    RowsHere here = rowsHere(t, t.row(group.firstRow).grid, group.rowCount);
+    for (uint32_t grid = here.first; here.any && grid <= here.last; ++grid) {
+        LayoutTableRow row = t.gridRow(grid);
         Area area = areaOf(t, 0, t.columnCount, row.grid, 1);
         LayoutLogicalOffset base = row.node != kPrLayoutNodeNone ? area.offset : origin;
         uint32_t mark = children.count;
         for (uint32_t i = row.firstCell; i < row.firstCell + row.cellCount; ++i) {
             const LayoutTableCell& cell = t.cell(i);
-            Area at = areaOf(t, cell.column, cell.columnSpan, cell.gridRow, cell.rowSpan);
+            Area at = areaOf(t, cell.column, cell.columnSpan, cell.gridRow, spanHere(t, cell));
             pushCell(t, i, at.offset - base, cells);
         }
         if (row.node == kPrLayoutNodeNone)
             continue;
         placeOutOfFlow(t, row.node, kLayoutLogicalOffsetZero);
-        const LayoutFragment* fragment = buildPart(t, row.node, mark, area.size, fallback);
+        bool repeated = row.grid < t.headerEnd || row.grid >= t.footerStart || row.grid == t.resumedRow;
+        const LayoutFragment* fragment = buildPart(t, row.node, mark, area.size, fallback, repeated);
         LayoutLogicalOffset relative = layoutRelativeOffset(t.state.styles, boxOf(t.state.tree, row.node), cells);
         children.push(LayoutLogicalChild{fragment, area.offset - origin + relative});
     }
@@ -1783,7 +2142,7 @@ void pushRows(Table& t, uint32_t g, LayoutLogicalOffset origin, const LayoutSpac
 // A segment across the inline axis also covers the halves of the lines along the block axis that meet it at its ends,
 // so that the corners are drawn.
 uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset grid) {
-    RawArray<LayoutGridBorder>& segments = t.scratch().segments;
+    RawArray<LayoutGridBorder>& segments = t.state.scratch->table->segments;
     uint32_t mark = segments.count;
     auto endHalf = [](PrLayoutUnit width) { return layoutUnit(width.raw / 2); };
     auto startHalf = [&](PrLayoutUnit width) { return width - endHalf(width); };
@@ -1800,13 +2159,7 @@ uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset g
             .side = side,
         });
     };
-    // The block offset of each line across the inline axis, and the inline offset of each line along the block axis.
-    auto acrossAt = [&](uint32_t line) {
-        if (line < t.rowCount)
-            return t.gridRow(line).offset;
-        const LayoutTableRow& last = t.gridRow(t.rowCount - 1);
-        return last.offset + last.blockSize;
-    };
+    // The inline offset of each line along the block axis.
     auto alongAt = [&](uint32_t line) {
         if (line < t.columnCount)
             return t.column(line).offset;
@@ -1824,17 +2177,24 @@ uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset g
     };
     if (t.rowCount == 0 || t.columnCount == 0)
         return 0;
+    // In a fragmentation context, the segments are those of the rows in the fragmentainer. The lines between the rows
+    // that are elsewhere coincide, so each such run of lines draws once: as the line before the next row in the
+    // fragmentainer, or after its last row if none follows, which is the border at the break
+    // (css-tables-3/#fragmentation).
+    RowsHere here = rowsHere(t, 0, t.rowCount);
+    if (!here.any)
+        return 0;
     for (uint32_t line = 0; line <= t.columnCount; ++line) {
         PrLayoutUnit x = alongAt(line);
-        for (uint32_t row = 0; row < t.rowCount; ++row) {
+        eachRowHere(t, [&](uint32_t row) {
             const LayoutTableBorder& border = t.alongBorder(line, row);
             const LayoutTableRow& r = t.gridRow(row);
             push(border, LayoutLogicalOffset{x - startHalf(border.width), r.offset},
                 LayoutLogicalSize{border.width, r.blockSize}, along);
-        }
+        });
     }
-    for (uint32_t line = 0; line <= t.rowCount; ++line) {
-        PrLayoutUnit y = acrossAt(line);
+    // The line across the inline axis at `line`, at the block offset `y`.
+    auto pushAcross = [&](uint32_t line, PrLayoutUnit y) {
         for (uint32_t c = 0; c < t.columnCount; ++c) {
             const LayoutTableBorder& border = t.acrossBorder(line, c);
             PrLayoutUnit start = alongAt(c) - startHalf(alongWidth(c, line));
@@ -1842,38 +2202,66 @@ uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset g
             push(border, LayoutLogicalOffset{start, y - startHalf(border.width)},
                 LayoutLogicalSize{end - start, border.width}, across);
         }
-    }
+    };
+    eachRowHere(t, [&](uint32_t row) { pushAcross(row, t.gridRow(row).offset); });
+    const LayoutTableRow& last = t.gridRow(here.last);
+    pushAcross(here.last + 1, last.offset + last.blockSize);
     return segments.count - mark;
 }
 
 // Appends the fragments of the parts of the table's grid to the scratch children, at their offsets from `at`, the start
 // corner of the grid in the table's border box: its column groups, columns, row groups, rows and cells in tree order.
-// Each column and column group is as tall as the rows.
+// Each column and column group is as tall as the rows in the fragmentainer. A row group whose rows are all in other
+// fragmentainers has no fragment in this one, and a row group with no rows has one in each.
 void pushParts(Table& t, LayoutLogicalOffset at, const LayoutSpace& cells, PrLayoutVec fallback) {
     RawArray<LayoutLogicalChild>& children = t.state.scratch->children;
+    RowsHere rows = rowsHere(t, 0, t.rowCount);
+    uint32_t firstRow = rows.any ? rows.first : 0;
+    uint32_t rowSpan = rows.any ? rows.last - rows.first + 1 : 0;
     for (uint32_t b = 0; b < t.boxCount; ++b) {
         const LayoutTableColumnBox box = t.box(b);
         if (box.group != kNone)
             continue;
-        Area area = areaOf(t, box.firstColumn, box.columnCount, 0, t.rowCount);
+        Area area = areaOf(t, box.firstColumn, box.columnCount, firstRow, rowSpan);
         uint32_t boxMark = children.count;
         for (uint32_t k = b + 1; k < t.boxCount && t.box(k).group == b; ++k) {
             const LayoutTableColumnBox column = t.box(k);
-            Area columnArea = areaOf(t, column.firstColumn, column.columnCount, 0, t.rowCount);
+            Area columnArea = areaOf(t, column.firstColumn, column.columnCount, firstRow, rowSpan);
             const LayoutFragment* fragment = buildPart(t, column.node, children.count, columnArea.size, fallback);
             children.push(LayoutLogicalChild{fragment, columnArea.offset - area.offset});
         }
         const LayoutFragment* fragment = buildPart(t, box.node, boxMark, area.size, fallback);
         children.push(LayoutLogicalChild{fragment, at + area.offset});
     }
-    for (uint32_t g = 0; g < t.groupCount; ++g) {
+    // The groups to visit, in tree order: those of the rows in the fragmentainer, and those with no rows. The rows of a
+    // group are contiguous in the grid, and the groups are in tree order there but for the header and the footer.
+    RawArray<uint32_t> visits;
+    eachRowHere(t, [&](uint32_t grid) {
+        uint32_t g = t.gridRow(grid).group;
+        if (visits.count == 0 || visits.last() != g)
+            visits.push(g);
+    });
+    for (uint32_t i = 0; i < t.emptyGroupCount; ++i)
+        visits.push(t.emptyGroup(i));
+    for (uint32_t i = 1; i < visits.count; ++i) {
+        uint32_t g = visits.data[i];
+        uint32_t k = i;
+        for (; k > 0 && visits.data[k - 1] > g; --k)
+            visits.data[k] = visits.data[k - 1];
+        visits.data[k] = g;
+    }
+    for (uint32_t v = 0; v < visits.count; ++v) {
+        uint32_t g = visits.data[v];
         const LayoutTableGroup group = t.group(g);
         if (group.node == kPrLayoutNodeNone) {
             pushRows(t, g, kLayoutLogicalOffsetZero - at, cells, fallback);
             continue;
         }
-        uint32_t first = group.rowCount != 0 ? t.row(group.firstRow).grid : 0;
-        Area area = areaOf(t, 0, t.columnCount, first, group.rowCount);
+        Area area = areaOf(t, 0, t.columnCount, 0, 0);
+        if (group.rowCount != 0) {
+            RowsHere here = rowsHere(t, t.row(group.firstRow).grid, group.rowCount);
+            area = areaOf(t, 0, t.columnCount, here.first, here.last - here.first + 1);
+        }
         uint32_t groupMark = children.count;
         pushRows(t, g, area.offset, cells, fallback);
         placeOutOfFlow(t, group.node, kLayoutLogicalOffsetZero);
@@ -1881,6 +2269,7 @@ void pushParts(Table& t, LayoutLogicalOffset at, const LayoutSpace& cells, PrLay
         LayoutLogicalOffset relative = layoutRelativeOffset(t.state.styles, boxOf(t.state.tree, group.node), cells);
         children.push(LayoutLogicalChild{fragment, at + area.offset + relative});
     }
+    visits.reset();
     placeOutOfFlow(t, t.node, at + LayoutLogicalOffset{
         layoutEdgesContent(t.edges, LayoutSide_InlineStart),
         layoutEdgesContent(t.edges, LayoutSide_BlockStart),
@@ -1923,6 +2312,83 @@ PrLayoutUnit pushCaptions(Table& t, const LayoutSpace& captions, PrLayoutCaption
     return at + layoutStrutSize(pending);
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Sized tables
+
+// Frees the storage of `parts`.
+void resetParts(LayoutTableParts& parts) {
+    parts.cells.reset();
+    parts.columns.reset();
+    parts.rows.reset();
+    parts.groups.reset();
+    parts.boxes.reset();
+    parts.captions.reset();
+    parts.outOfFlow.reset();
+    parts.emptyGroups.reset();
+    parts.order.reset();
+    parts.borders.reset();
+}
+
+// Returns true if two memos have the same key.
+bool sameKey(const LayoutTableMemo& a, const LayoutTableMemo& b) {
+    return a.node == b.node && a.runLast == b.runLast && a.inlineSize == b.inlineSize &&
+        a.containingInline == b.containingInline && a.percentBlock == b.percentBlock &&
+        a.fallback.x == b.fallback.x && a.fallback.y == b.fallback.y && a.blockSize == b.blockSize &&
+        a.blockKind == b.blockKind && a.first == b.first;
+}
+
+// Returns the running layout's memo of the table with the key of `key`, or null.
+LayoutTableMemo* PR_NULLABLE findMemo(LayoutTableScratch& s, const LayoutTableMemo& key) {
+    uint32_t at = s.memoIndex.find(KeyIndex::hashOf(key.node), [&](uint32_t i) { return sameKey(*s.memos.data[i], key); });
+    return at != kHashMissing ? s.memos.data[at] : nullptr;
+}
+
+// Adds an empty memo with the key of `key`, which the table's sizing fills (keepTable).
+LayoutTableMemo* addMemo(LayoutTableScratch& s, const LayoutTableMemo& key) {
+    LayoutTableMemo* memo = allocZeroed<LayoutTableMemo>();
+    *memo = key;
+    s.memoIndex.insert(KeyIndex::hashOf(key.node), s.memos.count);
+    s.memos.push(memo);
+    return memo;
+}
+
+// Records in `memo` what the sizing of the table found beyond its parts, which are in the memo's storage.
+void keepTable(const Table& t, LayoutTableMemo& memo, PrLayoutUnit removed) {
+    memo.cellCount = t.cellCount;
+    memo.columnCount = t.columnCount;
+    memo.rowCount = t.rowCount;
+    memo.groupCount = t.groupCount;
+    memo.boxCount = t.boxCount;
+    memo.captionCount = t.captionCount;
+    memo.outOfFlowCount = t.outOfFlowCount;
+    memo.emptyGroupCount = t.emptyGroupCount;
+    memo.edges = t.edges;
+    memo.removed = removed;
+}
+
+// Restores the sized table from `memo`, in place of building and sizing it. The memo's parts start at mark zero.
+void restoreTable(Table& t, const LayoutTableMemo& memo) {
+    t.cellMark = 0;
+    t.columnMark = 0;
+    t.rowMark = 0;
+    t.groupMark = 0;
+    t.boxMark = 0;
+    t.captionMark = 0;
+    t.outOfFlowMark = 0;
+    t.emptyGroupMark = 0;
+    t.orderMark = 0;
+    t.borderMark = 0;
+    t.cellCount = memo.cellCount;
+    t.columnCount = memo.columnCount;
+    t.rowCount = memo.rowCount;
+    t.groupCount = memo.groupCount;
+    t.boxCount = memo.boxCount;
+    t.captionCount = memo.captionCount;
+    t.outOfFlowCount = memo.outOfFlowCount;
+    t.emptyGroupCount = memo.emptyGroupCount;
+    t.edges = memo.edges;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1935,26 +2401,65 @@ LayoutTableScratch* layoutTableScratchCreate(void) {
 void layoutTableScratchDestroy(LayoutTableScratch* PR_NULLABLE scratch) {
     if (scratch == nullptr)
         return;
-    scratch->cells.reset();
-    scratch->columns.reset();
-    scratch->rows.reset();
-    scratch->groups.reset();
-    scratch->boxes.reset();
-    scratch->captions.reset();
-    scratch->outOfFlow.reset();
-    scratch->order.reset();
-    scratch->borders.reset();
+    layoutTableEndLayout(scratch);
+    resetParts(scratch->parts);
     scratch->segments.reset();
+    scratch->memos.reset();
+    scratch->memoIndex.reset();
     prMemoryFree(scratch);
+}
+
+void layoutTableEndLayout(LayoutTableScratch* PR_NULLABLE scratch) {
+    if (scratch == nullptr)
+        return;
+    for (uint32_t m = 0; m < scratch->memos.count; ++m) {
+        LayoutTableMemo* memo = scratch->memos.data[m];
+        for (uint32_t i = 0; i < memo->cellCount; ++i)
+            layoutFragmentRelease(memo->parts.cells.data[i].fragment);
+        resetParts(memo->parts);
+        prMemoryFree(memo);
+    }
+    scratch->memos.clear();
+    scratch->memoIndex.clear();
 }
 
 LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast,
         const LayoutTableInput& input) {
     const LayoutSpace& space = *input.space;
-    Table t = beginTable(state, node, runLast);
     ++state.stats->tablesLaidOut;
-    buildGrid(t);
-    findEdges(t, space.containing.inlineSize);
+    // In a fragmentation context, the table is sized once for all of its fragmentainers.
+    LayoutTableMemo* memo = nullptr;
+    bool sized = false;
+    if (space.fragmentation != nullptr) {
+        if (state.scratch->table == nullptr)
+            state.scratch->table = layoutTableScratchCreate();
+        LayoutTableMemo key{
+            .node = node,
+            .runLast = runLast,
+            .inlineSize = input.inlineSize,
+            .containingInline = space.containing.inlineSize,
+            .percentBlock = space.percentBlock,
+            .fallback = space.fallback,
+            .blockSize = input.blockKind == LayoutRequestKind_Fixed ? input.blockSize : kLayoutUnitZero,
+            .blockKind = input.blockKind,
+            .first = input.blockKind == LayoutRequestKind_Fixed && layoutSpaceResume(space) == nullptr,
+        };
+        memo = findMemo(*state.scratch->table, key);
+        sized = memo != nullptr;
+        if (memo == nullptr)
+            memo = addMemo(*state.scratch->table, key);
+    }
+    Table t = beginTable(state, node, runLast, memo);
+    if (sized) {
+        restoreTable(t, *memo);
+    } else {
+        buildGrid(t);
+        findEdges(t, space.containing.inlineSize);
+    }
+    t.headerEnd = 0;
+    t.footerStart = t.rowCount;
+    t.bodyStart = 0;
+    t.bodyEnd = t.rowCount;
     const PrLayoutBoxStyle& box = *t.boxStyle;
     LayoutLogicalBox logical = layoutLogicalBox(box, t.mode);
     PrLayoutUnit edgesBlock = layoutEdgesBlock(t.edges);
@@ -1978,17 +2483,21 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
 
     PrLayoutUnit contentInline = layoutUnitMax(kLayoutUnitZero, input.inlineSize - layoutEdgesInline(t.edges));
     t.cellInput = LayoutIntrinsicInput{t.mode, layoutUnit(-1), layoutUnit(-1), space.fallback};
-    measureCells(t);
-    measureColumns(t);
-    placeColumns(t, input.inlineSize);
     LayoutSpace cells = cellSpace(t, space, contentInline, layoutUnit(-1));
-    measureRows(t, cells);
-    sizeRows(t);
+    if (!sized) {
+        measureCells(t);
+        measureColumns(t);
+        placeColumns(t, input.inlineSize);
+        measureRows(t, cells);
+        sizeRows(t);
+    }
 
     // The captions come first, so that the block size that a container gives the table leaves the rest to its grid.
     LayoutSpace captions = captionSpace(t, space, input.inlineSize);
     RawArray<LayoutLogicalChild>& children = state.scratch->children;
-    PrLayoutUnit gridStart = pushCaptions(t, captions, PrLayoutCaptionSide_Top, kLayoutUnitZero);
+    PrLayoutUnit gridStart = kLayoutUnitZero;
+    if (layoutSpaceResume(space) == nullptr)
+        gridStart = pushCaptions(t, captions, PrLayoutCaptionSide_Top, kLayoutUnitZero);
     uint32_t bottomMark = children.count;
     PrLayoutUnit bottoms = pushCaptions(t, captions, PrLayoutCaptionSide_Bottom, kLayoutUnitZero);
     // A block size that the container decides replaces the one that the table's style gives, because the container has
@@ -1998,9 +2507,28 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
         styled = input.blockSize - gridStart - bottoms;
     else if (input.blockKind == LayoutRequestKind_Content)
         styled = kLayoutUnitZero;
-    distributeHeight(t, layoutUnitMax(kLayoutUnitZero, styled - edgesBlock));
-    PrLayoutUnit removed = collapseRows(t);
-    PrLayoutUnit gridBlock = layoutUnitMax(placeRows(t), styled - removed);
+    PrLayoutUnit removed = kLayoutUnitZero;
+    if (sized) {
+        removed = memo->removed;
+    } else {
+        distributeHeight(t, layoutUnitMax(kLayoutUnitZero, styled - edgesBlock));
+        removed = collapseRows(t);
+        if (memo != nullptr)
+            keepTable(t, *memo, removed);
+    }
+    // In a fragmentation context, the grid holds the rows that fit in the fragmentainer, between the rows of its header
+    // and footer, which repeat. The top captions go in the first fragmentainer, and the bottom ones in the last. The
+    // rows of a table that breaks fill the block size that its style gives, so each of its fragments is as tall as its
+    // rows there.
+    uint32_t nextRow = kNone;
+    if (space.fragmentation != nullptr) {
+        PrLayoutUnit room = layoutSpaceFragmentainer(space)->end - gridStart - edgesBlock - t.blockSpacing;
+        PrLayoutUnit fresh = layoutSpaceFragmentainer(space)->blockSize - edgesBlock - t.blockSpacing;
+        nextRow = fragmentRows(t, space, cells, room, fresh);
+    }
+    PrLayoutUnit gridBlock = placeRows(t);
+    if (!t.continues && nextRow == kNone)
+        gridBlock = layoutUnitMax(gridBlock, styled - removed);
     PrLayoutUnit gridContent = gridBlock - edgesBlock;
     LayoutSpace definite = cellSpace(t, space, contentInline, definiteCells ? gridContent : layoutUnit(-1));
     layOutCells(t, definite, definiteCells);
@@ -2011,36 +2539,58 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
     for (uint32_t i = bottomMark; i < children.count; ++i)
         children.data[i].offset.blockOffset += gridEnd;
     uint32_t bottomCount = children.count - bottomMark;
-    LayoutTableScratch& s = t.scratch();
     RawArray<LayoutLogicalChild> bottom;
     bottom.append(children.data + bottomMark, bottomCount);
     children.count = bottomMark;
+    if (nextRow != kNone) {
+        // The bottom captions wait for the last fragmentainer.
+        for (uint32_t i = 0; i < bottom.count; ++i)
+            layoutFragmentRelease(bottom.data[i].fragment);
+        bottom.count = 0;
+        bottoms = kLayoutUnitZero;
+    }
     LayoutLogicalOffset gridAt{kLayoutUnitZero, gridStart};
     pushParts(t, gridAt, definite, space.fallback);
     children.append(bottom.span());
     bottom.reset();
 
     LayoutTableOutcome outcome{};
+    if (nextRow != kNone) {
+        // A table that holds no body row here, or a piece of one, places none of its content
+        // (LayoutBreakToken::atStart).
+        bool placesNone = layoutSpaceResume(space) == nullptr && nextRow == t.bodyStart && t.cellTokens == nullptr;
+        LayoutBreakToken* token = layoutBreakTokenCreate(node, kLayoutUnitZero, kPrLayoutNodeNone, t.cellTokens);
+        t.cellTokens = nullptr;
+        token->segment = nextRow;
+        token->atStart = placesNone;
+        outcome.token = token;
+    }
     outcome.blockSize = gridEnd + bottoms;
     LayoutLogicalSize size{input.inlineSize, outcome.blockSize};
     LayoutLogicalSize gridSize{input.inlineSize, gridBlock};
     outcome.grid =
         layoutRectAt(layoutPhysicalOffset(t.mode, gridAt, gridSize, size), layoutPhysicalSize(t.mode, gridSize));
-    outcome.borderMark = s.segments.count;
+    outcome.borderMark = state.scratch->table->segments.count;
     outcome.borderCount = t.collapsed ? collectSegments(t, size, gridAt) : 0;
-    // The table's baselines are those of its first and last rows that cells start in (css-tables-3/#row-layout).
-    uint32_t firstRow = 0;
-    while (firstRow < t.rowCount && t.gridRow(firstRow).cellCount == 0)
-        ++firstRow;
-    uint32_t lastRow = t.rowCount;
-    while (lastRow > firstRow && t.gridRow(lastRow - 1).cellCount == 0)
-        --lastRow;
-    if (firstRow < t.rowCount) {
+    // The table's baselines are those of its first and last rows in the fragmentainer that cells start in
+    // (css-tables-3/#row-layout).
+    uint32_t firstRow = kNone;
+    uint32_t lastRow = kNone;
+    eachRowHere(t, [&](uint32_t grid) {
+        if (t.gridRow(grid).cellCount == 0)
+            return;
+        firstRow = firstRow == kNone ? grid : firstRow;
+        lastRow = grid;
+    });
+    if (firstRow != kNone) {
         PrLayoutUnit first = gridStart + t.gridRow(firstRow).offset + rowBaseline(t, firstRow);
-        PrLayoutUnit last = gridStart + t.gridRow(lastRow - 1).offset + rowBaseline(t, lastRow - 1);
+        PrLayoutUnit last = gridStart + t.gridRow(lastRow).offset + rowBaseline(t, lastRow);
         outcome.first = layoutBaselineAt(first, kLayoutBaselineSynthesized);
         outcome.last = layoutBaselineAt(last, kLayoutBaselineSynthesized);
     }
+    // The rows laid out in pieces are as tall as the table sized them for the next fragmentainer.
+    for (uint32_t i = t.pieceCount; i-- > 0;)
+        t.gridRow(t.pieceRows[i]).blockSize = t.pieceSized[i];
     endTable(t);
     return outcome;
 }
@@ -2095,8 +2645,8 @@ bool layoutTableCellIsEmpty(const LayoutFragment* fragment) {
 }
 
 bool layoutTableCellCollapses(const LayoutTree* tree, LayoutNodeIndex node) {
-    for (LayoutNodeIndex at = layoutCachePlacement(tree->cache, node).parent; at != kPrLayoutNodeNone;
-            at = layoutCachePlacement(tree->cache, at).parent) {
+    for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != kPrLayoutNodeNone;
+            at = layoutTreeNode(tree, at).parent) {
         PrLayoutStyleIndex style = layoutTreeNode(tree, at).style;
         PrLayoutDisplay display = layoutBoxStyle(tree->styles, style).display;
         if (display == PrLayoutDisplay_Table || display == PrLayoutDisplay_InlineTable)

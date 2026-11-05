@@ -27,16 +27,16 @@ function(pr_example_fonts name)
     endforeach()
 endfunction()
 
-# The web's build has only the draw and video examples. They run in a browser, so they read files packaged into their
+# The web's build has only the draw gallery and video examples. They run in a browser, so they read files packaged into their
 # pages, not the host's files as the tests under Node.js do.
 if (EMSCRIPTEN)
     get_directory_property(PR_EXAMPLE_LINK_OPTIONS LINK_OPTIONS)
     list(REMOVE_ITEM PR_EXAMPLE_LINK_OPTIONS -sNODERAWFS=1)
     set_directory_properties(PROPERTIES LINK_OPTIONS "${PR_EXAMPLE_LINK_OPTIONS}")
-    pr_example(draw draw/main.cpp draw/scenes.cpp)
-    target_link_libraries(draw PRIVATE prax::app prax::draw prax::gpu
-                                       prax::font prax::locale prax::text prax::core_cpp)
-    pr_example_fonts(draw "NotoSans[wdth,wght].ttf" "NotoSerif[wdth,wght].ttf" "NotoSansJP-VF.otf")
+    pr_example(draw_gallery draw_gallery/main.cpp draw_gallery/scenes.cpp)
+    target_link_libraries(draw_gallery PRIVATE prax::app prax::draw prax::gpu
+                                               prax::font prax::locale prax::text prax::core_cpp)
+    pr_example_fonts(draw_gallery "NotoSans[wdth,wght].ttf" "NotoSerif[wdth,wght].ttf" "NotoSansJP-VF.otf")
     pr_example(video video/main.cpp)
     target_link_libraries(video PRIVATE prax::app prax::draw prax::gpu prax::media prax::core_cpp)
     target_compile_definitions(video PRIVATE PR_VIDEO_FILE="/videos/cat.mp4")
@@ -65,9 +65,9 @@ if (PR_DEVELOP)
     target_link_libraries(scribe_editor_tests PRIVATE kit_fixture prax::font prax::layout prax::text prax::ui)
 endif()
 
-# The draw example: animated scenes drawn with lib/draw alone, rendered on the GPU and mapped to the display.
-pr_example(draw draw/main.cpp draw/scenes.cpp)
-target_link_libraries(draw PRIVATE prax::app prax::draw prax::gpu
+# The draw gallery: animated scenes drawn with lib/draw alone, rendered on the GPU and mapped to the display.
+pr_example(draw_gallery draw_gallery/main.cpp draw_gallery/scenes.cpp)
+target_link_libraries(draw_gallery PRIVATE prax::app prax::draw prax::gpu
                                    prax::font prax::locale prax::text prax::core_cpp)
 
 # The video example: a video that lib/media decodes and lib/draw draws. The device imports each frame without a copy
@@ -75,6 +75,31 @@ target_link_libraries(draw PRIVATE prax::app prax::draw prax::gpu
 pr_example(video video/main.cpp)
 target_link_libraries(video PRIVATE prax::app prax::draw prax::gpu prax::media prax::core_cpp)
 target_compile_definitions(video PRIVATE PR_VIDEO_FILE="${PROJECT_SOURCE_DIR}/third_party/videos/cat.mp4")
+# The feature drawings: a captioned drawing of each feature of lib/draw's list, and dense workloads that measure its
+# renderers. They are a library of their own, which the application and draw_bench link. Their fonts are the files of
+# third_party/fonts.
+add_library(draw_features_drawings STATIC
+    draw_features/drawing.cpp
+    draw_features/features.cpp
+    draw_features/features_boxes.cpp
+    draw_features/features_compose.cpp
+    draw_features/features_filters.cpp
+    draw_features/features_fonts.cpp
+    draw_features/features_paint.cpp
+    draw_features/features_shapes.cpp
+    draw_features/features_text.cpp
+    draw_features/workloads.cpp
+)
+target_include_directories(draw_features_drawings PUBLIC ${PROJECT_SOURCE_DIR})
+target_compile_definitions(draw_features_drawings PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+target_link_libraries(draw_features_drawings PUBLIC prax::app prax::draw prax::font prax::text prax::core_cpp
+                                             PRIVATE prax::color prax::compress prax::image prax::path prax::svg
+                                                     pr_warnings)
+
+# The feature drawings in a window, rendered on the GPU and mapped to the display.
+pr_example(draw_features draw_features/main.cpp)
+target_link_libraries(draw_features PRIVATE draw_features_drawings prax::app prax::draw prax::gpu prax::text
+                                            prax::core_cpp)
 
 # The editor example: Studio Kit's widgets and a HUD library of its own over an editor's model, composed in one tree.
 pr_example(editor

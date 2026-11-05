@@ -1070,7 +1070,7 @@ void placeOutOfFlow(Flex& f, LayoutLogicalOffset origin, double main, PrLayoutUn
         bool mainSafe = (f.flex.justifyContent & PrLayoutAlignmentFlag_Safe) != 0;
         LayoutStaticEdges edges = layoutStaticEdgesAligned(f.content.mode, inlineAlign, blockAlign,
             f.row ? mainSafe : safe, f.row ? safe : mainSafe);
-        LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(c, edges, layoutIsFixed(tree, c));
+        LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(c, edges, layoutNodePositionScheme(tree, c));
         f.state.scratch->children.push(LayoutLogicalChild{placeholder, origin + offset});
     }, [](uint32_t, uint32_t) {});
 }

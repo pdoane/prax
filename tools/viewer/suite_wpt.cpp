@@ -255,7 +255,7 @@ std::vector<Document> wpt() {
             refs[0].match ? "WPT reftest, against its reference" : "WPT reftest, against the reference it must differ from",
             fileSource(test),
         };
-        d.references.push_back(Reference{"corpus", fileSource(refs[0].path)});
+        d.references.push_back(Reference{"Corpus", fileSource(refs[0].path)});
         documents.push_back(std::move(d));
     }
     return documents;
@@ -266,7 +266,7 @@ std::vector<Document> wpt() {
 std::vector<Collection> wptCollections() {
     std::vector<Collection> collections;
     if (fs::exists(checkout()) && wptServed())
-        collections.push_back(Collection{"WPT", 800, 600, 0, wpt});
+        collections.push_back(Collection{"WPT", 800, 600, wpt});
     return collections;
 }
 

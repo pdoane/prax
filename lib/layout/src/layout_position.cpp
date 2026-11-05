@@ -377,14 +377,14 @@ PR_NOINLINE LayoutChild layOutAbsolute(LayoutState& state, const LayoutPending& 
     };
     LayoutSpace space{
         .mode = containing.mode,
+        .autoInline = autoSizeIn(inlineAxis),
+        .autoBlock = autoSizeIn(blockAxis),
         .available = axes[inlineAxis].high - axes[inlineAxis].low,
         .percentInline = along(extent, inlineAxis),
         .percentBlock = along(extent, blockAxis),
         .containing = layoutLogicalSize(containing.mode, extent),
         .blockLimit = layoutUnit(-1),
         .fallback = containing.fallback,
-        .autoInline = autoSizeIn(inlineAxis),
-        .autoBlock = autoSizeIn(blockAxis),
         .stretchBlock = axes[blockAxis].high - axes[blockAxis].low,
     };
     LayoutResult result = layoutBlock(state, node, space);
@@ -465,9 +465,10 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
     bool holdsFixed = layoutHoldsFixed(state.tree, node);
     LayoutPendingList list = layoutFragmentPending(built);
     bool any = false;
+    // No box holds a running box, whose list passes up to the viewport.
     for (uint32_t i = 0; i < list.count && !any; ++i) {
         const LayoutPending& entry = list.entries[i];
-        any = (entry.fixed ? holdsFixed : holdsAbsolute) || entry.inLines;
+        any = ((entry.fixed ? holdsFixed : holdsAbsolute) || entry.inLines) && !entry.running;
     }
     if (!any)
         return built;
@@ -508,6 +509,8 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
     // A positioned inline box in its lines is nearer than the container itself, and the container holds what no inline
     // box holds.
     holdPending(state, node, pendingMark, [&](const LayoutPending& entry, LayoutAbsoluteBlock& containing) {
+        if (entry.running)
+            return false;
         if (entry.inLines) {
             LayoutNodeIndex inlineBox = inlineHolderOf(state.tree, entry.node, node);
             if (inlineBox != kPrLayoutNodeNone) {
@@ -537,7 +540,7 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
 }
 
 void layoutViewportHold(LayoutState& state, const LayoutFragment* root, PrLayoutVec at, PrLayoutVec extent,
-        LayoutMode mode, RawArray<LayoutChild>& out) {
+        LayoutMode mode, RawArray<LayoutChild>& out, RawArray<LayoutNodeIndex>* PR_NULLABLE running) {
     LayoutScratch& s = *state.scratch;
     LayoutPendingList list = layoutFragmentPending(root);
     if (list.count == 0)
@@ -546,9 +549,16 @@ void layoutViewportHold(LayoutState& state, const LayoutFragment* root, PrLayout
     uint32_t heldMark = s.held.count;
     for (uint32_t i = 0; i < list.count; ++i) {
         LayoutPending entry = list.entries[i];
+        if (entry.running) {
+            if (running != nullptr)
+                running->push(entry.node);
+            continue;
+        }
         entry.at = entry.at + at;
         s.pending.push(entry);
     }
+    if (s.pending.count == pendingMark)
+        return;
     // The initial containing block, and for fixed boxes the unscrolled viewport: one rectangle at the origin.
     LayoutAbsoluteBlock initial{layoutRectAt(kLayoutVecZero, extent), mode, extent};
     holdPending(state, kPrLayoutNodeNone, pendingMark, [&](const LayoutPending&, LayoutAbsoluteBlock& containing) {

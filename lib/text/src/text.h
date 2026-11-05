@@ -12,12 +12,14 @@ namespace pr_impl {
 // A glyph buffer. It holds the scratch memory that shaping reuses.
 struct TextGlyphBuffer {
     RawArray<PrTextGlyph> glyphs;
+    RawArray<float> spacing;                   // by glyph: the letter and word spacing after it, in ems of the run
     RawArray<PrTextFeature> features;          // the merged features of a shaping
     RawArray<PrTextFeature> pieceFeatures;     // the features of a piece, moved into its text
     RawArray<char> piece;                      // the text of a piece
     RawArray<uint32_t> origin;                 // for each byte of the text of the piece, its byte in the run
     RawArray<uint32_t> probe;                  // glyph ids that a probe compares
     RawArray<uint32_t> boundaries;             // the offsets at which grapheme clusters start
+    RawArray<uint64_t> order;                  // the glyphs by cluster, which spacing finds the clusters' ends by
     PrTextGlyphBuffer* PR_NULLABLE scratch;    // the buffer that pieces and probes shape into
 };
 

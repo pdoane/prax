@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/base.h"
+#include "pr/float.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/raw_string.h"
@@ -78,6 +79,13 @@ static inline void prTextBufferAppendCodePoint(PrTextBuffer* buffer, uint32_t co
 static inline void prTextBufferAppendU64(PrTextBuffer* buffer, uint64_t value, uint32_t radix) {
     char digits[kPrU64TextMaxBytes];
     size_t size = prU64Format(value, digits, radix);
+    prTextBufferAppend(buffer, PR_LITERAL(PrStringView){digits, size});
+}
+
+// Appends `value` rounded to `decimals` places, written by prF64FormatFixed.
+static inline void prTextBufferAppendF64Fixed(PrTextBuffer* buffer, double value, uint32_t decimals) {
+    char digits[kPrF64FixedMaxBytes];
+    size_t size = prF64FormatFixed(value, decimals, digits);
     prTextBufferAppend(buffer, PR_LITERAL(PrStringView){digits, size});
 }
 

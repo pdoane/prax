@@ -80,9 +80,11 @@ PrLayoutRect childrenReach(const LayoutTree* tree, const LayoutFragment* fragmen
 }
 
 // Returns the container of a node that the viewport holds: outside the content of the viewport for a fixed box, and
-// otherwise that content.
+// otherwise that content. A paginated tree's fixed box is fixed to its page (pr/layout_page.h), which the viewport
+// scrolls with its content.
 LayoutNodeIndex topContainer(const LayoutTree* tree, LayoutNodeIndex node) {
-    if (layoutTreeNode(tree, node).parent != kPrLayoutNodeNone && layoutIsFixed(tree, node))
+    bool paged = tree->pagination.box != nullptr;
+    if (layoutTreeNode(tree, node).parent != kPrLayoutNodeNone && layoutIsFixed(tree, node) && !paged)
         return kLayoutContainerOutside;
     return kLayoutContainerViewport;
 }
@@ -459,7 +461,7 @@ bool layoutIsStackingContextAs(const LayoutTree* tree, LayoutNodeIndex node, PrL
         return false;
     const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, style);
     if (box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky ||
-            (box.zIndexed && layoutZIndexApplies(tree, node, box)))
+            box.display == PrLayoutDisplay_PageMargin || (box.zIndexed && layoutZIndexApplies(tree, node, box)))
         return true;
     const LayoutStyleTraits& traits = layoutStyleTraits(tree->styles, style);
     if (traits.composites)
@@ -470,7 +472,7 @@ bool layoutIsStackingContextAs(const LayoutTree* tree, LayoutNodeIndex node, PrL
 bool layoutPaintsWholeAs(const LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex style) {
     const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, style);
     return box.position != PrLayoutPosition_Static || box.transformed || layoutOwnsLayer(tree->styles, style) ||
-        (box.zIndexed && layoutInItemContainer(tree, node));
+        box.display == PrLayoutDisplay_PageMargin || (box.zIndexed && layoutInItemContainer(tree, node));
 }
 
 bool layoutInlinePaintsWhole(const LayoutStyles* styles, PrLayoutStyleIndex style) {
@@ -499,8 +501,7 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
     const PrLayoutStyle& record = layoutStyle(styles, style);
     const PrLayoutBoxStyle& box = layoutTableAt(styles->box, record.groups[PrLayoutGroup_Box]);
     const PrLayoutEffectStyle& effects = layoutTableAt(styles->effects, record.groups[PrLayoutGroup_Effect]);
-    bool positioned = (box.position == PrLayoutPosition_Absolute || box.position == PrLayoutPosition_Fixed) &&
-        box.display != PrLayoutDisplay_None;
+    bool positioned = layoutPositionIsOutOfFlow(box.position) && box.display != PrLayoutDisplay_None;
     // The properties that give the box a stacking context or a layer of its own, whatever its position. This is the
     // union of what layoutPaintsWholeAs and layoutInlinePaintsWhole read besides position. A z-index may apply to a
     // static box, such as a flex item. A record that names the default effects group, at index 0, has no transform.
@@ -509,7 +510,8 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
     bool grouped = record.groups[PrLayoutGroup_Compositing] != 0 && layoutCompositingGroups(
         layoutTableAt(styles->compositing, record.groups[PrLayoutGroup_Compositing]));
     bool layered = effects.opacity < 1 || effects.layer || grouped || box.transformed || transforms;
-    bool moved = box.position != PrLayoutPosition_Static;
+    // A page-margin box makes a stacking context whatever its position (css-page-3/#painting).
+    bool moved = box.position != PrLayoutPosition_Static || box.display == PrLayoutDisplay_PageMargin;
     const PrLayoutFlexStyle& flex = layoutTableAt(styles->flex, record.groups[PrLayoutGroup_Flex]);
     uint32_t justifySelf = flex.justifySelf & kPrLayoutAlignmentValueMask;
     PrLayoutBackgroundIndex backgrounds =
@@ -520,13 +522,27 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
         for (uint32_t i = 0; i < layers.count && !fixedBackground; ++i)
             fixedBackground = layers.layers[i].attachment == PrLayoutBackgroundAttachment_Fixed;
     }
+    // Only a block container has columns (css-multicol-1/#the-multi-column-model). The default table group, which most
+    // records name, has none.
+    bool multiColumn = false;
+    if (record.groups[PrLayoutGroup_Table] != 0) {
+        const PrLayoutFragmentationStyle& fragmentation =
+            layoutTableAt(styles->table, record.groups[PrLayoutGroup_Table]).fragmentation;
+        bool columns = fragmentation.columnCount != 0 || !layoutLengthIsAuto(fragmentation.columnWidth);
+        bool blockContainer = layoutChildrenFromBox(box) == LayoutChildren_Flow &&
+            box.display != PrLayoutDisplay_Inline && box.display != PrLayoutDisplay_None &&
+            box.display != PrLayoutDisplay_Marker && !prLayoutDisplayIsLayoutInternal(box.display);
+        multiColumn = columns && (blockContainer || box.display == PrLayoutDisplay_TableCell ||
+            box.display == PrLayoutDisplay_TableCaption);
+    }
     return LayoutStyleTraits{
         .childKind = layoutChildKindFromStyle(PrLayoutNodeKind_Element, &box, positioned),
         .vertical = layoutTableAt(styles->font, record.groups[PrLayoutGroup_Font]).writingMode !=
             PrLayoutWritingMode_HorizontalTb,
         .positioned = positioned,
         .mayPaintWhole = moved || layered || box.zIndexed,
-        .mayStack = box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky || box.zIndexed || layered,
+        .mayStack = box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky || box.zIndexed ||
+            layered || box.display == PrLayoutDisplay_PageMargin,
         .children = layoutChildrenFromBox(box),
         .justifies = justifySelf != PrLayoutAlignment_Auto && justifySelf != PrLayoutAlignment_Normal,
         .justifiesItems = (flex.justifyItems & kPrLayoutAlignmentValueMask) != PrLayoutAlignment_Normal,
@@ -535,6 +551,7 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
         .fixedBackground = fixedBackground,
         .wholeTablePart = (moved || layered || box.zIndexed) && (layoutDisplayIsRowGroup(box.display) ||
             box.display == PrLayoutDisplay_TableRow || box.display == PrLayoutDisplay_TableCell),
+        .multiColumn = multiColumn,
     };
 }
 

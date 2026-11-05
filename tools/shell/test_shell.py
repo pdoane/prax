@@ -4,6 +4,7 @@
 import math
 import os
 from pathlib import Path
+import re
 import socket
 import struct
 import subprocess
@@ -79,6 +80,15 @@ def png(width, height):
     header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows)) +
         chunk(b"IEND", b""))
+
+
+def pdf_text(written):
+    """Returns the bytes of a PDF with the objects that its object streams hold, decompressed, after them, so that a
+    test finds an object's entries wherever the writer put it."""
+    out = [written]
+    for m in re.finditer(rb"<< /Type /ObjStm [^\n]*?/Length (\d+) /Filter /FlateDecode >>\nstream\n", written):
+        out.append(zlib.decompress(written[m.end():m.end() + int(m.group(1))]))
+    return b"\n".join(out)
 
 
 def url(path):
@@ -281,6 +291,52 @@ class HtmlHostTests(unittest.TestCase):
                                        "--network", "--timeout", "200", "--screenshot", str(screenshot))
             self.assertEqual(result.returncode, 124, result.stderr)
             self.assertTrue(screenshot.exists())
+
+    def test_a_snapshot_is_written_as_a_tagged_pdf_and_as_svg(self):
+        with tempfile.TemporaryDirectory() as directory:
+            pdf = Path(directory) / "page.pdf"
+            svg = Path(directory) / "page.svg"
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><html lang=en><title>T</title><h1>Heading</h1>"
+                                   "<p>Some <a href='https://example.com/'>linked</a> text</p>",
+                                   "--viewport", "400x300", "--snapshot", "--pdf", str(pdf), "--svg", str(svg))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            written = pdf_text(pdf.read_bytes())
+            self.assertTrue(written.startswith(b"%PDF-2.0\n"))
+            self.assertTrue(pdf.read_bytes().endswith(b"%%EOF\n"))
+            self.assertIn(b"/MediaBox [0 0 300 225]", written)
+            self.assertIn(b"/StructTreeRoot", written)
+            self.assertIn(b"/S /H1", written)
+            self.assertIn(b"/URI (https://example.com/)", written)
+            self.assertIn(b"/Lang (en)", written)
+            drawing = svg.read_text()
+            self.assertIn('width="400" height="300"', drawing)
+            self.assertIn("<title>T</title>", drawing)
+            self.assertIn('aria-label="Heading"', drawing)
+
+    def test_a_printed_page_is_written_as_the_pages_of_its_page_boxes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            pdf = Path(directory) / "page.pdf"
+            svg = Path(directory) / "page.svg"
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><html lang=en><style>@page { size: 400px 300px; margin: 20px }"
+                                   "</style><h1>First</h1><p style='break-after: page'>One</p><h1>Second</h1>"
+                                   "<p>Two</p>",
+                                   "--pdf", str(pdf), "--svg", str(svg))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            written = pdf_text(pdf.read_bytes())
+            self.assertEqual(len(re.findall(rb"/Type /Page\b(?!s)", written)), 2)
+            self.assertEqual(written.count(b"/MediaBox [0 0 300 225]"), 2)
+            self.assertEqual(written.count(b"/S /H1"), 2)
+            # SVG has no pages, so each page is an SVG document of its own, numbered from 1.
+            self.assertFalse(svg.exists())
+            first = (Path(directory) / "page-1.svg").read_text()
+            second = (Path(directory) / "page-2.svg").read_text()
+            self.assertFalse((Path(directory) / "page-3.svg").exists())
+            self.assertIn('width="400" height="300"', first)
+            self.assertIn('aria-label="First"', first)
+            self.assertIn('width="400" height="300"', second)
+            self.assertIn('aria-label="Second"', second)
 
     def test_inner_text_reads_the_rendered_text_of_an_element_that_is_rendered(self):
         with tempfile.TemporaryDirectory() as directory:

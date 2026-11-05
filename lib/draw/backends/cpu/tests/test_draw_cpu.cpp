@@ -206,6 +206,27 @@ TEST_CASE("transforms nest, the inner one applied first") {
     prDrawListRelease(list);
 }
 
+TEST_CASE("a part of a list renders as its commands do in place") {
+    PrDrawList* list = prDrawListCreate();
+    prDrawListPushTransformAffine2(list, prAffine2Translate(PrVec2{4, 0}));
+    prDrawListRect(list, PrRect{-4, 0, -3, 1}, {.color = kBlack});
+    PrDrawGroup group = prDrawGroupDefault();
+    group.opacity = 0.5f;
+    prDrawListPushGroup(list, &group);
+    prDrawListRect(list, PrRect{0, 0, 2, 1}, {.color = kBlack});
+    prDrawListPopGroup(list);
+    prDrawListPopTransform(list);
+    const PrDrawCommand* commands = prDrawListCommands(list);
+    PrDrawTransform root = prDrawTransformFromAffine2(prAffine2Identity());
+    PrDrawPart part{.first = 2, .count = 3, .transform = prDrawTransformPush(&root, &commands[0])};
+    Target t = target(8, 1);
+    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    CHECK(prDrawRendererRenderPartPixels(renderer, list, &part, t.pixels, t.format) == PrStatus_Ok);
+    prDrawRendererDestroy(renderer);
+    CHECK(alphaRow(t, 0) == "0 0 0 0 128 128 0 0");
+    prDrawListRelease(list);
+}
+
 TEST_CASE("paths, rounded rectangles and ellipses fill, clipped to the target") {
     Target t = target(8, 8, PrPixelFormat_Bgra8);
     PrDrawList* list = prDrawListCreate();

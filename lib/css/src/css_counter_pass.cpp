@@ -33,31 +33,6 @@ struct Pass {
     uint32_t quoteDepth;            // the quote depth (css-content-3/#quote-depth)
 };
 
-// Returns true if a computed counter-reset, counter-increment or counter-set changes a counter.
-bool changesCounters(CssValueRun run) {
-    return run.count != 0 && !cssValueIsKeyword(run.values, PrCssKeyword_None);
-}
-
-// Calls `fn` with each item of a computed counter-reset, counter-increment or counter-set: the counter's name, whether
-// reversed() names it, and its integer if it has one.
-template <typename Fn>
-void eachCounterItem(CssValueRun run, Fn fn) {
-    if (!changesCounters(run))
-        return;
-    for (uint32_t i = 0; i < run.count;) {
-        const CssValueNode* item = &run.values[i];
-        bool reversed = item->kind == PrCssValueKind_Function;
-        PrStringView name = cssValueText(run, reversed ? item + 1 : item);
-        i += item->next;
-        bool given = i < run.count && run.values[i].kind == PrCssValueKind_Integer;
-        double number = given ? run.values[i].number : 0;
-        if (given)
-            ++i;
-        int32_t value = number < INT32_MIN ? INT32_MIN : number > INT32_MAX ? INT32_MAX : int32_t(number);
-        fn(name, reversed, given, value);
-    }
-}
-
 // Returns the sum of `a` and `b`, clamped to the range of a counter's value.
 int32_t addClamped(int32_t a, int64_t b) {
     int64_t sum = int64_t(a) + b;
@@ -79,7 +54,7 @@ bool incrementsListItem(const Step& step) {
         return false;
     const CssComputedStyle* style = step.style;
     bool named = false;
-    eachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
+    cssEachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
         [&](PrStringView name, bool, bool, int32_t) { named = named || name == "list-item"; });
     return !named;
 }
@@ -132,7 +107,7 @@ int32_t reversedStart(const Pass& p, uint32_t at, PrStringView name) {
             continue;
         const CssComputedStyle* style = step.style;
         bool resets = false;
-        eachCounterItem(cssComputedValue(style, PrCssProperty_CounterReset),
+        cssEachCounterItem(cssComputedValue(style, PrCssProperty_CounterReset),
             [&](PrStringView item, bool, bool, int32_t) { resets = resets || item == name; });
         if (resets && i != at) {
             if (step.depth == depth)
@@ -141,7 +116,7 @@ int32_t reversedStart(const Pass& p, uint32_t at, PrStringView name) {
             continue;
         }
         int64_t increment = 0;
-        eachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
+        cssEachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
             [&](PrStringView item, bool, bool given, int32_t value) {
                 if (item == name)
                     increment += given ? value : 1;
@@ -155,7 +130,7 @@ int32_t reversedStart(const Pass& p, uint32_t at, PrStringView name) {
             contained = step.depth;
         bool sets = false;
         int32_t set = 0;
-        eachCounterItem(cssComputedValue(style, PrCssProperty_CounterSet), [&](PrStringView item, bool, bool, int32_t value) {
+        cssEachCounterItem(cssComputedValue(style, PrCssProperty_CounterSet), [&](PrStringView item, bool, bool, int32_t value) {
             if (item == name) {
                 sets = true;
                 set = value;
@@ -219,17 +194,17 @@ void applyCounters(Pass& p, uint32_t at) {
     CssValueRun reset = cssComputedValue(style, PrCssProperty_CounterReset);
     // Of several items that name the same counter, only the last instantiates it.
     uint32_t index = 0;
-    eachCounterItem(reset, [&](PrStringView name, bool reversed, bool given, int32_t value) {
+    cssEachCounterItem(reset, [&](PrStringView name, bool reversed, bool given, int32_t value) {
         uint32_t later = 0;
         bool last = true;
-        eachCounterItem(reset, [&](PrStringView other, bool, bool, int32_t) {
+        cssEachCounterItem(reset, [&](PrStringView other, bool, bool, int32_t) {
             last = last && (later++ <= index || other != name);
         });
         ++index;
         if (last)
             instantiate(p, at, name, reversed, given, value, narrowScope(name));
     });
-    eachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
+    cssEachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
         [&](PrStringView name, bool, bool given, int32_t value) {
             uint32_t counter = changedCounter(p, at, name);
             p.counters.data[counter].value = increment(p.counters.data[counter].value, given ? value : 1);
@@ -239,29 +214,10 @@ void applyCounters(Pass& p, uint32_t at) {
         int32_t by = p.counters.data[counter].reversed ? -1 : 1;
         p.counters.data[counter].value = increment(p.counters.data[counter].value, by);
     }
-    eachCounterItem(cssComputedValue(style, PrCssProperty_CounterSet), [&](PrStringView name, bool, bool, int32_t value) {
+    cssEachCounterItem(cssComputedValue(style, PrCssProperty_CounterSet), [&](PrStringView name, bool, bool, int32_t value) {
         uint32_t counter = changedCounter(p, at, name);
         p.counters.data[counter].value = value;
     });
-}
-
-// Writes the index of the first value of each argument of the function at `at`, which commas separate, to `starts`, up
-// to `capacity` of them. Returns the number of arguments.
-uint32_t argumentsOf(CssValueRun run, uint32_t at, uint32_t* starts, uint32_t capacity) {
-    uint32_t count = 0;
-    uint32_t end = at + run.values[at].next;
-    bool fresh = true;
-    for (uint32_t i = at + 1; i < end; i += run.values[i].next) {
-        if (cssValueIsLiteral(&run.values[i], ',')) {
-            fresh = true;
-        } else if (fresh) {
-            if (count < capacity)
-                starts[count] = i;
-            ++count;
-            fresh = false;
-        }
-    }
-    return count;
 }
 
 // Returns the counter style that argument `at` of a counter() or counters() names, or an empty run, which is decimal,
@@ -412,7 +368,7 @@ void readCounters(Pass& p, uint32_t at, bool marker) {
         if (!one && !cssValueIsFunction(item, PrCssKeyword_Counters))
             continue;
         uint32_t starts[3];
-        uint32_t count = argumentsOf(content, i, starts, 3);
+        uint32_t count = cssValueArguments(content, i, starts, 3);
         PrStringView name = cssValueText(content, &content.values[starts[0]]);
         if (one) {
             uint32_t counter = counterFor(p, at, name);
@@ -680,9 +636,9 @@ bool cssCountsElement(const PrCssPresentation* presentation, const CssComputedSt
     // A style whose Generated group is the initial one changes no counter.
     if (listItem || style->groups[CssStyleGroup_Generated] == presentation->styles.initial[CssStyleGroup_Generated])
         return listItem;
-    return changesCounters(cssComputedValue(style, PrCssProperty_CounterReset)) ||
-        changesCounters(cssComputedValue(style, PrCssProperty_CounterIncrement)) ||
-        changesCounters(cssComputedValue(style, PrCssProperty_CounterSet));
+    return cssChangesCounters(cssComputedValue(style, PrCssProperty_CounterReset)) ||
+        cssChangesCounters(cssComputedValue(style, PrCssProperty_CounterIncrement)) ||
+        cssChangesCounters(cssComputedValue(style, PrCssProperty_CounterSet));
 }
 
 bool cssCountsPseudo(const PrCssPresentation* presentation, const CssComputedStyle* style, CssPseudo pseudo) {
@@ -690,9 +646,9 @@ bool cssCountsPseudo(const PrCssPresentation* presentation, const CssComputedSty
         return true;
     if (style->groups[CssStyleGroup_Generated] == presentation->styles.initial[CssStyleGroup_Generated])
         return false;
-    return readsCounters(style) || changesCounters(cssComputedValue(style, PrCssProperty_CounterReset)) ||
-        changesCounters(cssComputedValue(style, PrCssProperty_CounterIncrement)) ||
-        changesCounters(cssComputedValue(style, PrCssProperty_CounterSet));
+    return readsCounters(style) || cssChangesCounters(cssComputedValue(style, PrCssProperty_CounterReset)) ||
+        cssChangesCounters(cssComputedValue(style, PrCssProperty_CounterIncrement)) ||
+        cssChangesCounters(cssComputedValue(style, PrCssProperty_CounterSet));
 }
 
 bool cssReadsQuotes(const CssComputedStyle* style) {

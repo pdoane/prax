@@ -128,7 +128,7 @@ bool isLine(const PrLayoutGridLine& line) {
         case PrLayoutGridLineKind_Auto: return true;
         case PrLayoutGridLineKind_Line:
             return line.integer >= -kPrLayoutGridMaxLine && line.integer <= kPrLayoutGridMaxLine &&
-                (line.integer != 0 || line.name != kPrLayoutGridNameNone);
+                (line.integer != 0 || line.name != kPrLayoutNameNone);
         case PrLayoutGridLineKind_Span: return line.integer >= 1 && line.integer <= kPrLayoutGridMaxLine;
         default: return false;
     }
@@ -195,11 +195,11 @@ PrLayoutGridAreasIndex layoutGridTemplatesInternAreas(LayoutGridTemplates* templ
     });
 }
 
-PrLayoutGridName layoutGridTemplatesInternName(LayoutGridTemplates* templates, PrStringView name) {
+PrLayoutName layoutGridTemplatesInternName(LayoutGridTemplates* templates, PrStringView name) {
     Atom atom = atomTableAdd(&templates->names, name);
     while (templates->forms.count <= atom)
         templates->forms.push(LayoutGridNameForms{});
-    if (templates->forms.data[atom].start == kPrLayoutGridNameNone) {
+    if (templates->forms.data[atom].start == kPrLayoutNameNone) {
         // The forms are interned as names of their own, but are given no forms of their own unless they are interned as
         // themselves.
         RawArray<char> text;

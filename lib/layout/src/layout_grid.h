@@ -34,6 +34,19 @@ struct LayoutGridLines {
     uint32_t mark;                  // the index of its lines in the grid scratch memory
 };
 
+// A copy of a grid container's lines that outlives the grid scratch memory, so that a later layout of the container
+// with the same content, such as in another fragmentainer, keeps the same lines without laying the grid out again.
+struct LayoutGridLinesCopy;
+
+// Copies the lines that `lines` names, which stay in the scratch memory. The caller frees the copy with
+// layoutGridLinesCopyDestroy.
+LayoutGridLinesCopy* layoutGridLinesCopyCreate(LayoutState& state, const LayoutGridLines& lines);
+void layoutGridLinesCopyDestroy(LayoutGridLinesCopy* PR_NULLABLE copy);
+
+// Keeps the lines of `copy` in the grid scratch memory again, as the layout that copied them kept them, and returns
+// where they are, until layoutGridFinish.
+LayoutGridLines layoutGridLinesRestore(LayoutState& state, const LayoutGridLinesCopy& copy);
+
 // Solves the grid container `node` over its items in `input`, for the input's goal. If the goal is to build, also lays
 // each item out at its final request in its grid area, and appends its fragment to the scratch children at its logical
 // offset in the border box, in order-modified document order, which is the order the items paint in. A child that is

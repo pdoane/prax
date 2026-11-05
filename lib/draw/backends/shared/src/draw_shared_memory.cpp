@@ -29,7 +29,8 @@ void renderNarrowed(DrawMemoryFrame* frame, PrPixels pixels) {
             }
         }
     }
-    frame->render(frame->renderer, PrPixels{narrow, stride, pixels.extent}, PrPixelFormat_Rgba8, frame->list);
+    frame->render(frame->renderer, PrPixels{narrow, stride, pixels.extent}, PrPixelFormat_Rgba8, frame->list,
+        frame->part);
     for (uint32_t y = 0; y < pixels.extent.y; ++y) {
         for (uint32_t x = 0; x < pixels.extent.x; ++x) {
             PrFloat16 wide[4];
@@ -57,7 +58,7 @@ void drawFrame(void* PR_NULLABLE context, const void* native) {
     if (format == PrPixelFormat_RgbaF16 && !frame->halfFloat)
         renderNarrowed(frame, at);
     else
-        frame->render(frame->renderer, at, format, frame->list);
+        frame->render(frame->renderer, at, format, frame->list, frame->part);
 }
 
 } // namespace
@@ -85,8 +86,9 @@ void drawMemoryFrameDestroy(DrawMemoryFrame* frame) {
     prMemoryFree(frame);
 }
 
-void drawMemoryFramePrepare(DrawMemoryFrame* frame, const PrDrawList* list) {
+void drawMemoryFramePrepare(DrawMemoryFrame* frame, const PrDrawList* list, const PrDrawPart& part) {
     frame->list = list;
+    frame->part = part;
     frame->origins.clear();
     frame->drawn = 0;
 }

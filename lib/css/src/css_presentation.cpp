@@ -46,6 +46,7 @@
 #include "css/src/css_media.h"
 #include "css/src/css_object.h"
 #include "css/src/css_presentation_hooks.h"
+#include "css/src/css_presentation_page.h"
 #include "css/src/css_root.h"
 #include "css/src/css_serialize.h"
 #include "css/src/css_shape.h"
@@ -407,7 +408,7 @@ void lineNamesOf(PrCssPresentation* r, CssValueRun run, uint32_t* at, uint32_t l
     for (; i < run.count && !cssValueIsLiteral(&run.values[i], ']'); i += run.values[i].next) {
         if (run.values[i].kind != PrCssValueKind_Ident)
             continue;
-        PrLayoutGridName name = prLayoutGridNameIntern(r->tree, cssValueText(run, &run.values[i]));
+        PrLayoutName name = prLayoutNameIntern(r->tree, cssValueText(run, &run.values[i]));
         names.push(PrLayoutGridLineName{line, name});
     }
     *at = i < run.count ? i + run.values[i].next : i;
@@ -501,7 +502,7 @@ PrLayoutGridAreasIndex areasOf(PrCssPresentation* r, CssValueRun run) {
         uint32_t column = 0;
         cssGridAreaCells(cssValueText(run, &run.values[i]), [&](PrStringView text) {
             if (text.size != 0 && column < kPrLayoutGridMaxLine) {
-                PrLayoutGridName name = prLayoutGridNameIntern(r->tree, text);
+                PrLayoutName name = prLayoutNameIntern(r->tree, text);
                 uint32_t at = 0;
                 while (at < r->gridAreas.count && r->gridAreas.data[at].name != name)
                     ++at;
@@ -541,13 +542,13 @@ PrLayoutGridLine gridLineOf(PrCssPresentation* r, CssValueRun run) {
         else if (value.kind == PrCssValueKind_Integer)
             integer = value.number;
         else if (value.kind == PrCssValueKind_Ident)
-            line.name = prLayoutGridNameIntern(r->tree, cssValueText(run, &value));
+            line.name = prLayoutNameIntern(r->tree, cssValueText(run, &value));
     }
     double most = double(kPrLayoutGridMaxLine);
     if (spans) {
         line.kind = PrLayoutGridLineKind_Span;
         line.integer = int16_t(integer >= 1 ? (integer < most ? integer : most) : 1);
-    } else if (integer != 0 || line.name != kPrLayoutGridNameNone) {
+    } else if (integer != 0 || line.name != kPrLayoutNameNone) {
         line.kind = PrLayoutGridLineKind_Line;
         line.integer = int16_t(integer < -most ? -most : integer > most ? most : integer);
     }
@@ -615,6 +616,76 @@ PrLayoutFlexStyle flexOf(PrCssPresentation* r, const CssComputedStyle* style) {
     return flex;
 }
 
+// Returns the number of lines that orphans or widows keeps (css-break-4/#widows-orphans), from 1 to 255.
+uint8_t linesOf(CssValueRun run) {
+    if (run.count != 1 || run.values[0].kind != PrCssValueKind_Integer)
+        return 2;
+    return uint8_t(prF64Min(prF64Max(run.values[0].number, 1), 255));
+}
+
+// Returns the break that a break-before or break-after value asks for (css-break-4/#break-between). A legacy
+// page-break-before or page-break-after value, `legacy`, applies if the value is auto: `always` is a page break, and
+// the other values are their own (css-break-4/#page-break-properties).
+PrLayoutBreak breakOf(CssValueRun run, CssValueRun legacy) {
+    PrCssKeyword keyword = cssValueRunFirstKeyword(run);
+    if (keyword == PrCssKeyword_Auto || run.count == 0) {
+        keyword = cssValueRunFirstKeyword(legacy);
+        if (keyword == PrCssKeyword_Always)
+            keyword = PrCssKeyword_Page;
+    }
+    switch (keyword) {
+        case PrCssKeyword_Avoid: return PrLayoutBreak_Avoid;
+        case PrCssKeyword_AvoidPage: return PrLayoutBreak_AvoidPage;
+        case PrCssKeyword_AvoidColumn: return PrLayoutBreak_AvoidColumn;
+        case PrCssKeyword_Always: return PrLayoutBreak_Always;
+        case PrCssKeyword_All: return PrLayoutBreak_All;
+        case PrCssKeyword_Page: return PrLayoutBreak_Page;
+        case PrCssKeyword_Left: return PrLayoutBreak_Left;
+        case PrCssKeyword_Right: return PrLayoutBreak_Right;
+        case PrCssKeyword_Recto: return PrLayoutBreak_Recto;
+        case PrCssKeyword_Verso: return PrLayoutBreak_Verso;
+        case PrCssKeyword_Column: return PrLayoutBreak_Column;
+        default: return PrLayoutBreak_Auto;
+    }
+}
+
+// Returns the fragmentation values of `style`: its breaks, its columns and its page.
+PrLayoutFragmentationStyle fragmentationOf(PrCssPresentation* r, const CssComputedStyle* style) {
+    PrLayoutFragmentationStyle fragmentation = prLayoutFragmentationStyleDefault();
+    fragmentation.breakBefore = breakOf(cssComputedValue(style, PrCssProperty_BreakBefore),
+        cssComputedValue(style, PrCssProperty_PageBreakBefore));
+    fragmentation.breakAfter = breakOf(cssComputedValue(style, PrCssProperty_BreakAfter),
+        cssComputedValue(style, PrCssProperty_PageBreakAfter));
+    PrCssKeyword inside = cssComputedFirstKeyword(style, PrCssProperty_BreakInside);
+    if (inside == PrCssKeyword_Auto)
+        inside = cssComputedFirstKeyword(style, PrCssProperty_PageBreakInside);
+    switch (inside) {
+        case PrCssKeyword_Avoid: fragmentation.breakInside = PrLayoutBreakInside_Avoid; break;
+        case PrCssKeyword_AvoidPage: fragmentation.breakInside = PrLayoutBreakInside_AvoidPage; break;
+        case PrCssKeyword_AvoidColumn: fragmentation.breakInside = PrLayoutBreakInside_AvoidColumn; break;
+        default: break;
+    }
+    bool clone = cssComputedFirstKeyword(style, PrCssProperty_BoxDecorationBreak) == PrCssKeyword_Clone;
+    fragmentation.boxDecorationBreak = clone ? PrLayoutBoxDecorationBreak_Clone : PrLayoutBoxDecorationBreak_Slice;
+    CssValueRun count = cssComputedValue(style, PrCssProperty_ColumnCount);
+    if (count.count == 1 && count.values[0].kind == PrCssValueKind_Integer)
+        fragmentation.columnCount = uint16_t(prF64Min(prF64Max(count.values[0].number, 1), kPrLayoutMaxColumns));
+    CssValueRun width = cssComputedValue(style, PrCssProperty_ColumnWidth);
+    if (width.count != 0 && cssValueRunFirstKeyword(width) != PrCssKeyword_Auto)
+        fragmentation.columnWidth = lengthOf(r, width);
+    switch (cssComputedFirstKeyword(style, PrCssProperty_ColumnFill)) {
+        case PrCssKeyword_Auto: fragmentation.columnFill = PrLayoutColumnFill_Auto; break;
+        case PrCssKeyword_BalanceAll: fragmentation.columnFill = PrLayoutColumnFill_BalanceAll; break;
+        default: break;
+    }
+    if (cssComputedFirstKeyword(style, PrCssProperty_ColumnSpan) == PrCssKeyword_All)
+        fragmentation.columnSpan = PrLayoutColumnSpan_All;
+    CssValueRun page = cssComputedValue(style, PrCssProperty_Page);
+    if (page.count == 1 && page.values[0].kind != PrCssValueKind_Keyword)
+        fragmentation.page = prLayoutNameIntern(r->tree, cssValueText(page, &page.values[0]));
+    return fragmentation;
+}
+
 PrLayoutOverflow overflowOf(CssValueRun run) {
     switch (cssValueRunFirstKeyword(run)) {
         case PrCssKeyword_Hidden:
@@ -643,6 +714,9 @@ PrLayoutOverscroll overscrollOf(CssValueRun run) {
 }
 
 PrLayoutPosition positionOf(CssValueRun run) {
+    // running() takes the element out of flow, to be copied into page-margin boxes (css-gcpm-3/#running-elements).
+    if (run.count != 0 && cssValueIsFunction(run.values, PrCssKeyword_Running))
+        return PrLayoutPosition_Running;
     switch (cssValueRunFirstKeyword(run)) {
         case PrCssKeyword_Relative: return PrLayoutPosition_Relative;
         case PrCssKeyword_Absolute: return PrLayoutPosition_Absolute;
@@ -1139,6 +1213,16 @@ bool isLineBreak(const PrDomNode* node) {
 // Returns true if `node` is a pseudo-element that the presentation generates.
 bool isPseudo(const PrDomNode* node) {
     return node->type == DomTargetType_PseudoElement;
+}
+
+// Returns true if a computed contain applies size containment in both axes (css-contain-2/#contain-property).
+bool containsSize(CssValueRun run) {
+    for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
+        if (cssValueIsKeyword(&run.values[i], PrCssKeyword_Size) ||
+                cssValueIsKeyword(&run.values[i], PrCssKeyword_Strict))
+            return true;
+    }
+    return false;
 }
 
 // Returns true if a computed contain or container-type applies inline-size containment
@@ -2301,6 +2385,13 @@ PrLayoutGroupIndex compositingOf(PrCssPresentation* r, const CssComputedStyle* s
     return index;
 }
 
+// Returns the px that letter-spacing or word-spacing computes to in `style`: a length, or a percentage of the font size
+// (css-text-4/#letter-spacing-property, css-text-4/#word-spacing-property).
+float spacingOf(const CssComputedStyle* style, PrCssProperty property) {
+    double px = 0;
+    return cssResolveLength(cssComputedValue(style, property), 0, cssStyleFontSize(style), &px) ? float(px) : 0;
+}
+
 // Returns what the font properties of `style`, whose typography group is not the initial one, ask of shaping, as that
 // group gives it (CssPresentation::featureSets), or null for the shaper's defaults. The presentation holds the
 // reference.
@@ -2350,6 +2441,8 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     }
     font.textJustify = textJustifyOf(cssComputedValue(style, PrCssProperty_TextJustify));
     font.textTransform = textTransformOf(cssComputedValue(style, PrCssProperty_TextTransform));
+    font.letterSpacing = spacingOf(style, PrCssProperty_LetterSpacing);
+    font.wordSpacing = spacingOf(style, PrCssProperty_WordSpacing);
     // Text that declares no typography properties, as most text does, has no font features and no tailoring of line
     // breaks.
     if (style->groups[CssStyleGroup_Typography] != r->styles.initial[CssStyleGroup_Typography]) {
@@ -2357,6 +2450,8 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         PrTextBreakStyle breaks = cssTextBreakStyle(style);
         font.wordBreak = breaks.wordBreak;
         font.overflowWrap = breaks.overflowWrap;
+        font.orphans = linesOf(cssComputedValue(style, PrCssProperty_Orphans));
+        font.widows = linesOf(cssComputedValue(style, PrCssProperty_Widows));
     }
     record.groups[PrLayoutGroup_Font] = prLayoutFontStyleIntern(r->tree, &font);
 
@@ -2474,6 +2569,9 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     box.containInline = containsInline(cssComputedValue(style, PrCssProperty_Contain)) ||
         containsInline(cssComputedValue(style, PrCssProperty_ContainerType)) ||
         cssComputedFirstKeyword(style, PrCssProperty_ContentVisibility) == PrCssKeyword_Hidden;
+    box.containBlock = containsSize(cssComputedValue(style, PrCssProperty_Contain)) ||
+        containsSize(cssComputedValue(style, PrCssProperty_ContainerType)) ||
+        cssComputedFirstKeyword(style, PrCssProperty_ContentVisibility) == PrCssKeyword_Hidden;
     box.containIntrinsicWidth = containIntrinsicOf(r, cssComputedValue(style, PrCssProperty_ContainIntrinsicWidth));
     box.containIntrinsicHeight = containIntrinsicOf(r, cssComputedValue(style, PrCssProperty_ContainIntrinsicHeight));
     // A text field of fixed field sizing sizes its inline axis in characters, and not by the text it shows
@@ -2505,8 +2603,10 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     // Size containment has no effect on an internal table box or on an inline box that is not atomic
     // (css-contain-2/#containment-size).
     bool inlineBox = box.display == PrLayoutDisplay_Inline && !presentation.replaced;
-    if (prLayoutDisplayIsLayoutInternal(box.display) || inlineBox)
+    if (prLayoutDisplayIsLayoutInternal(box.display) || inlineBox) {
         box.containInline = 0;
+        box.containBlock = 0;
+    }
     record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(r->tree, &box);
     // For most elements, the flex group is the default, which is the record's own.
     PrLayoutFlexStyle flex = flexOf(r, style);
@@ -2522,12 +2622,16 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
             record.groups[PrLayoutGroup_Grid] = prLayoutGridStyleIntern(r->tree, &grid);
     }
     // For most elements, the table group is the default too. The spacing, border model and caption side in it are
-    // inherited, and have their initial values outside a table. Only a table reads table-layout.
+    // inherited, and have their initial values outside a table. Only a table reads table-layout. Most elements declare
+    // no break, column or page either.
     bool tableLike = box.display == PrLayoutDisplay_Table || box.display == PrLayoutDisplay_InlineTable;
     bool given = style->groups[CssStyleGroup_Table] != r->styles.initial[CssStyleGroup_Table];
-    if (presentation.spans || tableLike || given) {
+    bool fragments = style->groups[CssStyleGroup_Fragmentation] != r->styles.initial[CssStyleGroup_Fragmentation];
+    if (presentation.spans || tableLike || given || fragments) {
         PrLayoutTableStyle table = tableOf(style, presentation.spans ? presentation.columnSpan : 1,
             presentation.spans ? presentation.rowSpan : 1);
+        if (fragments)
+            table.fragmentation = fragmentationOf(r, style);
         PrLayoutTableStyle initialTable = prLayoutTableStyleDefault();
         if (!prMemEquals(&table, &initialTable, sizeof(PrLayoutTableStyle)))
             record.groups[PrLayoutGroup_Table] = prLayoutTableStyleIntern(r->tree, &table);
@@ -2580,6 +2684,19 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         decoration.outlineColor = prColor16FromColor(capped(outline));
         decoration.outlineWidth = prLayoutUnitFromPxDouble(pxOf(cssComputedValue(style, PrCssProperty_OutlineWidth)));
         decoration.outlineOffset = prLayoutUnitFromPxDouble(pxOf(cssComputedValue(style, PrCssProperty_OutlineOffset)));
+    }
+    // A column rule of style none has no width (css-multicol-1/#crw).
+    if (style->groups[CssStyleGroup_Fragmentation] != r->styles.initial[CssStyleGroup_Fragmentation]) {
+        decoration.columnRuleStyle = borderStyleOf(cssComputedValue(style, PrCssProperty_ColumnRuleStyle));
+        if (prDrawBorderStylePaints(decoration.columnRuleStyle)) {
+            PrColor rule = currentColor;
+            cssResolveColor(cssComputedValue(style, PrCssProperty_ColumnRuleColor), 0, colors, &rule);
+            decoration.columnRuleColor = prColor16FromColor(capped(rule));
+            decoration.columnRuleWidth =
+                prLayoutUnitFromPxDouble(pxOf(cssComputedValue(style, PrCssProperty_ColumnRuleWidth)));
+        } else {
+            decoration.columnRuleStyle = PrDrawBorderStyle_None;
+        }
     }
     record.groups[PrLayoutGroup_Decoration] = prLayoutDecorationStyleIntern(r->tree, &decoration);
 
@@ -2877,11 +2994,16 @@ void present(PrCssPresentation* r, PrLayoutNode layoutNode, PrDomNode* PR_NULLAB
     prLayoutNodeSetKey(r->tree, layoutNode, uint64_t(uintptr_t(node)));
 }
 
-// Returns the node of the document that a layout node presents, or null. The presentation must own the tree.
+// Returns the node of the document that a layout node presents, or null. The presentation must own the tree. A key
+// whose lowest bit is set names a box that the presentation copied, such as a link's content in a copy of a running
+// element (CssPageMarginLink), and presents no node: no node's address has that bit.
 PrDomNode* PR_NULLABLE presented(const PrCssPresentation* r, PrLayoutNode layoutNode) {
     if (!prLayoutNodeIsValid(r->tree, layoutNode))
         return nullptr;
-    return reinterpret_cast<PrDomNode*>(uintptr_t(prLayoutNodeKey(r->tree, layoutNode)));
+    uint64_t key = prLayoutNodeKey(r->tree, layoutNode);
+    if ((key & 1) != 0)
+        return nullptr;
+    return reinterpret_cast<PrDomNode*>(uintptr_t(key));
 }
 
 // Returns the node of the document that the nearest of a layout node and its ancestors presents, or null. The boxes of
@@ -4381,8 +4503,9 @@ void placePseudo(PrCssPresentation* r, const PrDomElement* element, uint32_t whi
 
 // Puts the boxes of the element's children under `box`, from `next` on, in their order, between the boxes of its
 // ::before and its ::after (css-pseudo-4/#generated-content). The box of its ::marker comes first, ahead of ::before
-// (css-lists-3/#marker-pseudo). A text control's ::field-content follows ::before. A child of display contents is
-// replaced by the boxes of its own children, and its text is set in its record.
+// (css-lists-3/#marker-pseudo). The root's page-margin boxes follow its ::after. A text control's ::field-content
+// follows ::before. A child of display contents is replaced by the boxes of its own children, and its text is set in
+// its record.
 void placeChildren(PrCssPresentation* r, const PrDomElement* element, PrLayoutNode box, PrLayoutNode& next) {
     PrLayoutStyleIndex textStyle = kPrLayoutStyleNone;
     bool styled = false;
@@ -4407,6 +4530,15 @@ void placeChildren(PrCssPresentation* r, const PrDomElement* element, PrLayoutNo
         placeBox(r, box, node, next);
     });
     placePseudo(r, element, kAfterPseudo, box, next);
+    // A paged presentation's page-margin boxes are the last children of the root's box. One erased with an earlier
+    // root's box is gone.
+    if (box == r->root) {
+        for (uint32_t i = 0; i < r->pageMargins.nodes.count; ++i) {
+            PrLayoutNode margin = r->pageMargins.nodes.data[i];
+            if (prLayoutNodeIsValid(r->tree, margin))
+                placeBox(r, box, margin, next);
+        }
+    }
 }
 
 // Puts the boxes of the element's children under its box, in their order, and removes the boxes that belong to no
@@ -5341,7 +5473,7 @@ void serializeTrackList(PrTextBuffer* out, const PrCssPresentation* r, PrLayoutN
         bool opened = false;
         for (; next < names.count && names.data[next].line == line; ++next) {
             prTextBufferAppend(out, opened ? " " : line != 0 ? " [" : "[");
-            prTextBufferAppend(out, prLayoutGridNameText(r->tree, names.data[next].name));
+            prTextBufferAppend(out, prLayoutNameText(r->tree, names.data[next].name));
             opened = true;
         }
         if (opened)
@@ -5440,6 +5572,20 @@ void serializeResolved(PrTextBuffer* out, PrCssPresentation* r, const CssCompute
             float ratio = cssMediaEnvironmentPixelRatio(r->document->media);
             cssSerializeNumber(out, snapBorderWidth(length.values[0].number, ratio));
             prTextBufferAppend(out, "px");
+            return;
+        }
+        // A column rule's width may be a list of widths (css-gaps-1/#column-row-rule-width), each of which snaps.
+        if (length.count > 1) {
+            float ratio = cssMediaEnvironmentPixelRatio(r->document->media);
+            CssValuePool pool{};
+            cssValuePoolAddRun(&pool, length);
+            for (uint32_t i = 0; i < pool.values.count; ++i) {
+                CssValueNode& value = pool.values.data[i];
+                if (value.kind == PrCssValueKind_Dimension && value.unit == PrCssUnit_Px)
+                    value.number = snapBorderWidth(value.number, ratio);
+            }
+            cssSerializeValues(out, CssValueRun{pool.values.data, pool.values.count, length.text});
+            cssValuePoolReset(&pool);
             return;
         }
     }
@@ -5853,7 +5999,7 @@ bool differs(Difference* out, const PrDomNode* node, const char* what) {
 constexpr const char* kGroupNames[] = {
     "font",      "color",     "box",  "flex", "decoration",   "background",
     "effect",    "compositing", "animation", "generated", "list", "svg",
-    "svg geometry", "table", "typography", "grid",
+    "svg geometry", "table", "typography", "grid", "fragmentation",
 };
 static_assert(countOf(kGroupNames) == CssStyleGroup_Count);
 
@@ -7013,12 +7159,15 @@ void cssPresentationUpdateBoxes(PrCssPresentation* presentation, PrLayoutVec ext
 
 bool cssPresentationUpdateLayout(PrCssPresentation* presentation, PrLayoutVec extent) {
     closeUpdate(presentation);
-    if (!presentation->layoutStale) {
+    // A viewport that lays out pages lays them out in their page boxes, so its extent changes no style or box. It still
+    // places the pages across the viewport.
+    if (!presentation->layoutStale && extent == presentation->laidOutIn) {
         // A face that left with its sheet may have been the last face that the set waited for.
         cssFontsReadinessChanged(presentation->document);
         return false;
     }
     presentation->layoutStale = false;
+    presentation->laidOutIn = extent;
     RawArray<PrLayoutRoot> roots;
     layoutRootsOf(presentation, extent, &roots);
     prLayoutTreeLayout(presentation->tree, roots.data, roots.count);
@@ -7144,6 +7293,73 @@ const CssComputedStyle* PR_NULLABLE cssPresentationPseudoStyleUnder(PrCssPresent
     if ((originating & (1u << pseudo)) == 0)
         return nullptr;
     return cascadeFirst(presentation, element, pseudo, parent);
+}
+
+const CssComputedStyle* cssPresentationStyleOfBlocks(PrCssPresentation* presentation,
+        const CssComputedStyle* PR_NULLABLE parent, CssPseudo pseudo,
+        const CssDeclarationBlock* PR_NONNULL const* PR_NONNULL blocks, uint32_t count) {
+    startThreads(presentation);
+    PrDomElement* root = prDomDocumentElement(presentation->document);
+    PR_ASSERT(root != nullptr);
+    CssCascadeInput input{
+        .element = root,
+        .parent = parent,
+        .rootFont = presentation->rootFont,
+        .viewport = viewportOf(presentation),
+        .pseudo = pseudo,
+    };
+    CssPresentationThread& thread = presentation->threads.data[0];
+    return cssCascadeBlocks(&presentation->rules, &thread.builder, &thread.scratch, input, blocks, count);
+}
+
+PrLayoutStyleIndex cssPresentationRecord(PrCssPresentation* presentation, const CssComputedStyle* style) {
+    bool reads = false;
+    return project(presentation, style, Presentation{}, false, &reads);
+}
+
+PrLayoutStyleIndex cssPresentationAnonymousRecord(PrCssPresentation* presentation, const CssComputedStyle* parent) {
+    bool reads = false;
+    return anonymousRecord(presentation, parent, CssValueRun{}, &reads);
+}
+
+bool cssPresentationImageReady(PrCssPresentation* presentation, CssValueRun value) {
+    PrStringView reference{};
+    if (!urlOf(value, &reference))
+        return false;
+    CssPresentationImage* loaded = imageOf(presentation, reference);
+    return loaded != nullptr && loaded->state == CssPresentationImageState_Loaded;
+}
+
+bool cssPresentationCreateImage(PrCssPresentation* presentation, PrLayoutNode box, const CssComputedStyle* style,
+        CssValueRun value) {
+    PrCssPresentation* r = presentation;
+    PrStringView reference{};
+    if (!urlOf(value, &reference))
+        return false;
+    CssPresentationImage* loaded = imageOf(r, reference);
+    if (loaded == nullptr || loaded->state != CssPresentationImageState_Loaded)
+        return false;
+    PrLayoutNode image = prLayoutNodeCreateReplaced(r->tree, box, cssPresentationAnonymousRecord(r, style));
+    CssPresentationImageDrawing drawing = imageDrawingOf(r, style);
+    prLayoutNodeSetNaturalSize(r->tree, image, orientedSize(loaded->natural, loaded->orientation, drawing.oriented));
+    PrLayoutContent content{};
+    if (loaded->image != nullptr) {
+        content.kind = PrLayoutContentKind_Image;
+        content.image = orientedImage(loaded->image, loaded->orientation, drawing.oriented, &loaded->stored);
+        content.limit = drawing.limit;
+        content.rendering = drawing.rendering;
+    } else {
+        content.kind = PrLayoutContentKind_Painter;
+        content.painter = loaded->vector;
+    }
+    prLayoutNodeSetContent(r->tree, image, &content);
+    return true;
+}
+
+void cssPresentationReconcileRoot(PrCssPresentation* presentation) {
+    PrDomElement* root = prDomDocumentElement(presentation->document);
+    if (root != nullptr && presentation->root != kPrLayoutNodeNone)
+        reconcile(presentation, root, presentation->root);
 }
 
 void cssPresentationReprojectReferencing(PrCssPresentation* presentation) {
@@ -7359,15 +7575,16 @@ void cssPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec exte
     applyBoxes(presentation);
 }
 
-void cssPresentationPostJob(PrCssPresentation* presentation, PrLayoutVec extent) {
+void cssPresentationPostJob(PrCssPresentation* presentation, PrLayoutVec extent, PrLayoutVec viewport) {
     closeUpdate(presentation);
     presentation->layoutStale = false;
     presentation->sceneStale = false;
     presentation->jobTaken = presentation->newTaken;
     presentation->newTaken = 0;
     presentation->newLeft = jobShare(presentation);
+    presentation->laidOutIn = viewport;
     RawArray<PrLayoutRoot> roots;
-    layoutRootsOf(presentation, extent, &roots);
+    layoutRootsOf(presentation, viewport, &roots);
     prLayoutWorkerPost(domAgentLayoutWorker(presentation->agent), presentation->tree, roots.data, roots.count);
     roots.reset();
     // The next job's styles are computed while this one lays out, and wait for it to take their boxes.
@@ -7424,6 +7641,7 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
     own(r);
     releaseDroppedQueue(r);
     r->boxQueueDropped.reset();
+    cssPageMarginsReset(r->pageMargins);
     if (r->agent->worker != nullptr)
         prLayoutWorkerForget(r->agent->worker, r->tree);
     r->erasing.reset();
@@ -7545,7 +7763,7 @@ bool prCssPresentationUpdate(PrCssPresentation* presentation, PrLayoutVec extent
 
 void prCssPresentationStart(PrCssPresentation* presentation, PrLayoutVec extent) {
     cssPresentationPrepareJob(presentation, extent);
-    cssPresentationPostJob(presentation, extent);
+    cssPresentationPostJob(presentation, extent, extent);
 }
 
 void prCssPresentationSetJobBudget(PrCssPresentation* presentation, double milliseconds) {

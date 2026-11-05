@@ -198,6 +198,8 @@ pr_backend_option(PR_DRAW_CPU "lib/draw's CPU renderer" ON ON)
 pr_backend_option(PR_DRAW_CANVAS "lib/draw's Canvas 2D renderer" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
 pr_backend_option(PR_DRAW_TRIANGLES "lib/draw's triangles renderer" "${PR_SYSTEM}" "${PR_SYSTEM}")
 pr_backend_option(PR_DRAW_FRAGMENT "lib/draw's fragment renderer" "${PR_SYSTEM}" "${PR_SYSTEM}")
+pr_backend_option(PR_DRAW_SVG "lib/draw's SVG writer" ON ON)
+pr_backend_option(PR_DRAW_PDF "lib/draw's PDF writer" ON ON)
 include(lib/font_bundle/font_bundle.cmake)
 
 # The compiler of the shaders, and the shader libraries that it compiles for each backend.

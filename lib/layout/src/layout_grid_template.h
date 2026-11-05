@@ -52,8 +52,8 @@ struct LayoutGridAreasEntry {
 
 // The names that a name gives the lines at the edges of the area that it names (css-grid-1/#implicit-named-lines).
 struct LayoutGridNameForms {
-    PrLayoutGridName start;         // the name with `-start` after it
-    PrLayoutGridName end;           // the name with `-end` after it
+    PrLayoutName start;         // the name with `-start` after it
+    PrLayoutName end;           // the name with `-end` after it
 };
 
 // A table of interned entries. Index 0 is the empty entry, which is never freed. An index names its entry until the
@@ -88,8 +88,8 @@ PrLayoutGridTracksIndex layoutGridTemplatesInternTracks(LayoutGridTemplates* tem
 // Interns a template's areas as prLayoutGridAreasIntern defines.
 PrLayoutGridAreasIndex layoutGridTemplatesInternAreas(LayoutGridTemplates* templates, const PrLayoutGridAreas& areas);
 
-// Interns a name as prLayoutGridNameIntern defines, together with its forms.
-PrLayoutGridName layoutGridTemplatesInternName(LayoutGridTemplates* templates, PrStringView name);
+// Interns a name as prLayoutNameIntern defines, together with its forms.
+PrLayoutName layoutGridTemplatesInternName(LayoutGridTemplates* templates, PrStringView name);
 
 // Returns the track list at `index`.
 inline const LayoutGridTracksEntry& layoutGridTracksAt(const LayoutGridTemplates* templates, PrLayoutGridTracksIndex index) {
@@ -104,8 +104,8 @@ inline const LayoutGridAreasEntry& layoutGridAreasAt(const LayoutGridTemplates* 
 }
 
 // Returns the forms of `name`, which are none if `name` is none or was only interned as another name's form.
-inline LayoutGridNameForms layoutGridNameForms(const LayoutGridTemplates* templates, PrLayoutGridName name) {
-    if (name == kPrLayoutGridNameNone || name > templates->forms.count)
+inline LayoutGridNameForms layoutGridNameForms(const LayoutGridTemplates* templates, PrLayoutName name) {
+    if (name == kPrLayoutNameNone || name > templates->forms.count)
         return LayoutGridNameForms{};
     return templates->forms.data[name - 1];
 }

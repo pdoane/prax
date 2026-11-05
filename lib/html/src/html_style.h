@@ -101,6 +101,9 @@ constexpr char kHtmlStyle[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
     // html/#sections-and-headings, with each heading's type for :heading
     "article, aside, h1, h2, h3, h4, h5, h6, hgroup, nav, section { display: block; }\n"
     "h1, h2, h3, h4, h5, h6 { font-weight: bold; }\n"
+    // A heading stays with the content after it on a page. html/#rendering gives no break rules. CSS2's sample style
+    // sheet for print gives `page-break-after: avoid` (CSS2/sample.html), which avoids page breaks only.
+    "h1, h2, h3, h4, h5, h6 { break-after: avoid-page; }\n"
     "h1 { margin-block: 0.67em; font-size: 2em; }\n"
     "h2 { margin-block: 0.83em; font-size: 1.5em; }\n"
     "h3 { margin-block: 1em; font-size: 1.17em; }\n"

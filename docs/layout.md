@@ -574,7 +574,8 @@ where scroll offsets apply, and a scroll still records and lays out nothing.
   groups, columns, row groups and rows, each placed in its own box and clipped to the border boxes of the cells that
   start in it (css-tables-3/#drawing-cell-backgrounds); after its cells' backgrounds, its collapsed borders. A cell of
   `empty-cells: hide` with no content paints nothing in the separated model. A column is never hit.
-- `prLayoutTreeStats` counts the tables laid out; their cells' measurements count with flex items'.
+- `prLayoutTreeStats` counts the tables laid out, the rows sized and the rows placed in fragments; their cells'
+  measurements count with flex items'.
 
 ### Grid layout
 
@@ -678,7 +679,8 @@ where scroll offsets apply, and a scroll still records and lays out nothing.
   (`prLayoutNodeBorderWidth`) reads back the width that layout used. A new ratio makes the tree forget its layout before
   it next lays out. The tree keeps its shapings, which hold no vertical metric.
 - `prLayoutTreeStats` counts what a layout did, and `prLayoutTreeVerify` checks a layout's result against a layout
-  from scratch. Tests assert both: what a change costs, and that what was cached is right.
+  from scratch, and that no line of a page crosses an edge of its page area outside a monolithic box, unless the line
+  is taller than the page area. Tests assert both: what a change costs, and that what was cached is right.
 - A worker (`pr/layout_worker.h`) is the layout stage of a pipeline: one thread that lays out and records the trees
   posted to it, in turn. A job holds its tree and the tree's context until the worker is waited for, so a client
   changes trees between jobs, and one worker serves every tree that its client's thread presents.
@@ -787,8 +789,9 @@ breaks, across lines or at a bidi split, so painting reads no writing mode.
   direction, on the line that holds its start, and its end edge goes on its end-most part on the line that holds its
   end.
 
-- A font group carries what its text asks of shaping (`PrTextFeatureSet`, `pr/text.h`), which each run is shaped with,
-  and of breaking (`PrTextWordBreak`, `PrTextOverflowWrap`, `pr/text_break.h`). Breaks are UAX #14's opportunities,
+- A font group carries what its text asks of shaping (`PrTextFeatureSet`, `pr/text.h`) and its letter and word
+  spacing, which each run is shaped with, and of breaking (`PrTextWordBreak`, `PrTextOverflowWrap`,
+  `pr/text_break.h`). Breaks are UAX #14's opportunities,
   tailored by lib/text (`prTextBreaksTailor`) only if some text in the context asks for it. word-break's break-all
   and keep-all change the opportunities themselves. overflow-wrap, and word-break's break-word, add emergency
   opportunities between grapheme clusters (`PrTextShapingInfo::emergency`). A line takes the last emergency
@@ -877,6 +880,220 @@ breaks, across lines or at a bidi split, so painting reads no writing mode.
   block-level box is. Collecting a context does not descend into one or clear its marks, and a change to or inside one
   that keeps its kind leaves the context's text current: the box is laid out again, together with its line or its
   segments.
+
+## Fragmentation (`layout_fragmentation.h`)
+
+Fragmentation lays a flow out across fragmentainers: the columns of a multi-column container (css-multicol-1) and the
+pages of paged media (css-page-3), by the rules of css-break-4. It is an input of layout, not a pass after it.
+
+- **The space holds the fragmentainer.** A box laid out in a fragmentation context is given a fragmentainer in its space
+  (`LayoutSpace::fragmentation`): the kind of context, the fragmentainer's block size, where it ends in the block
+  coordinates that the box is placed in, and whether anything comes before the box in it. A box in flow in a block
+  formatting context measures its position in the context's coordinates, so the boxes of one context share one
+  fragmentainer. A box that establishes a context, and the content of a box that is not in one, are given the
+  fragmentainer moved into their own coordinates. Each fragmentainer is laid out at its own inline size, so pages of
+  different sizes, and columns, lay their content out again in the room that each gives, and a percentage of the
+  fragmentainer's block size resolves against it.
+- **Results carry break tokens.** A box that does not finish in its fragmentainer gives back a break token
+  (`LayoutBreakToken`) with its fragment. The token holds the block size that the box's fragments have taken, and where
+  its content resumes: the child to lay out next with that child's own token, or the place in an inline formatting
+  context where the next line starts. The next fragmentainer lays the box out again from its token, in its own space. A
+  token is immutable and reference counted. It names nodes and text offsets, never fragments, so the content after a
+  break is laid out again. Floats and clearance are placed again in the new fragmentainer, and the lines beside a float
+  that a break pushed move with it.
+- **The cache.** A result that a fragmentainer does not break is the result of an unfragmented layout, and is kept and
+  keyed as any result is. It is reused in a fragmentainer if it ends there, where it lands, and has no forced break
+  inside, so a box that fits costs a lookup and a comparison. A box whose result would cross the fragmentainer's end is
+  laid out again with the fragmentainer, and a result with a break token is not kept: its fragmentation inputs, the
+  fragmentainer and the token it resumes from, are new with each fragmentainer. Such a box drops its cache entry if it
+  had changed, and the layout's end clears its marks, so a layout after no change finds the tree clean. Laying out a
+  document is then linear in its content: each fragmentainer lays out again only the boxes that its breaks cross, and
+  takes every box inside it from the cache, or lays it out once.
+- **Outside a fragmentation context** fragmentation costs a check. A block container lays its children out through a
+  loop compiled without fragmentation's work, chosen once per container by whether its space has a fragmentainer, and
+  the work of a box that breaks is in functions of its own, off the paths that lay out and place boxes that do not.
+  A space carries fragmentation's inputs behind one pointer (`LayoutSpace::fragmentation`), and a container keeps the
+  state of its breaks apart, filled only in a fragmentation context, so neither grows what every box's layout copies
+  and zeroes. A box's fragmentation values are in its table group (`PrLayoutTableStyle::fragmentation`), which few
+  boxes name, so a record holds no group of its own for them. Records of the default table group have no columns, and
+  their traits do not read the group. Painting looks for the other pieces of a box only in a tree that registered a
+  fragmentation root.
+- **Break opportunities** (css-break-4/#possible-breaks). Between siblings in block flow (class A), between line boxes
+  (class B), and the box's end (class C). A flex or grid container breaks between its bands, the items whose block
+  ranges overlap, such as a flex line or a grid row. The container's content is laid out once in a fragmentation
+  context, and a memo keeps its items and bands for the rest of the running layout, keyed by its content space and what
+  its shell gives its content, so each fragmentainer places only the bands that it holds. A band that does not fit
+  breaks inside if it is the first in its fragmentainer and nothing comes before the container there, or if no
+  fragmentainer could hold it. Otherwise it goes to the next fragmentainer, and the container with it if it is the first
+  band. A band breaks inside thus: its items are laid out again as fragmentainers that end where the container's does,
+  and resume from their tokens in the next, where the band starts at the top of the content box. Lines are monolithic,
+  and so are replaced boxes, scroll containers and boxes of another block flow, which are pushed whole or overflow an
+  empty fragmentainer.
+- **Floats in parallel flow** (css-break-4/#parallel-flows). A float that a fragmentainer's end crosses breaks inside if
+  it may, and one that starts past the end goes to the next fragmentainer whole, while the content after it stays. The
+  float's token goes to its block formatting context (`LayoutExclusions::broken`), and the root of the context carries
+  it in its own token, which it makes if its content ends in the fragmentainer. The root resumes each such float at the
+  top of its content in the next fragmentainer, before its content in flow: a float that broke at the line-left offset
+  that it had, and a float pushed whole where it is placed again, below the floats that it clears.
+- **Widows and orphans.** A break between lines leaves at least `orphans` lines before it, or moves the whole run of
+  lines to the next fragmentainer, and at least `widows` after it, by breaking earlier when that still leaves the
+  orphans; the lines past the break are laid out as far as the widows need, to count them.
+- **Forced breaks.** A break-before or break-after value that names the context's kind, or `always`, forces a break
+  between siblings, and propagates from a first or last child to its parent's edge (css-break-4/#break-propagation).
+  Nothing propagates out of monolithic content, whose breaks are ignored, and a column-reverse flex container takes the
+  values of its last item at its block-start edge. A forced break with nothing before it in its fragmentainer makes no
+  empty fragmentainer. A break to a side of the spread adds a blank page if the next page is of the other side.
+- **Named pages** (css-page-3/#using-named-pages). In paged media a page break is forced between siblings in block flow
+  if the end page value of the first differs from the start page value of the second. A box's start and end page
+  values are those of its first and last children in a block container, at any depth, or its used page value, which is
+  its own `page` or else its nearest ancestor's that is not auto. A run of inline content among block-level siblings is
+  an anonymous block box with its container's used value, and white space that collapses away generates no box. A
+  break between siblings names the page after it with the start page value of the box after it. A break inside a box
+  keeps the page's name.
+- **Unforced breaks** go at the last opportunity that fits. A box that would place none of its content before its break
+  goes to the next fragmentainer whole, unless nothing comes before it in this one: a break between its block-start edge
+  and its first content is a break before the box (`LayoutBreakToken::atStart`). So a box's edges, or an outside marker
+  without its first line, never end a fragmentainer alone. A block child with no block size and no floats is not
+  content of the fragmentainer, so a break after it alone is a break before its container, and an outside marker stays
+  with the first line after it. A box whose content ends in the fragmentainer but whose block-end padding, border or
+  margin does not breaks after its content (class C), and its block-end edges continue in the next fragmentainer, as do
+  the edges of a box whose size its content does not reach. A break between siblings that their break-before and
+  break-after values avoid moves back to the last earlier break between siblings of the same container that they do not
+  avoid: the container lays its children out again once, and breaks there. If there is none, the break stays. A box
+  whose `break-inside` avoids breaks of the context's kind is laid out as monolithic unless nothing comes before it in
+  its fragmentainer. A block container breaks between its lines no sooner than `orphans` lines into a fragmentainer,
+  unless nothing came before the paragraph there.
+- **Tables** break between their rows (css-tables-3/#fragmentation). A table that its fragmentainer's end crosses is
+  laid out again in the fragmentainer at its own width, with the rows of its header group and footer group in every
+  fragmentainer, and the body rows from the one it resumes at that fit between them. A row that does not fit goes to the
+  next fragmentainer, unless it would be the first body row there, and so do the rows before it that a cell spans with
+  it. A row breaks inside if it would not fit in a fragmentainer of its own, or if it is the first body row and nothing
+  comes before the table in the fragmentainer, so a row that fits in the next fragmentainer is never split. A first body
+  row that neither fits nor breaks inside takes the table to the next fragmentainer, with its header, unless nothing
+  comes before the table. It breaks inside thus: its cells are laid out as fragmentainers of the room left, and resume
+  from their tokens in the next, where a cell that ended is an empty piece. The top captions go in the first
+  fragmentainer, and the bottom captions in the last. The parts that a later fragmentainer repeats are continuations
+  there. A fragment draws the collapsed borders of its own rows, and one border at each break, where the lines of the
+  rows elsewhere coincide.
+- **A table across N fragmentainers is linear in its rows.** It sizes each row a bounded number of times, and lays out
+  in each fragmentainer only its header, its footer and the rows on it. The first fragmentainer sizes the table, and a
+  memo keeps the sized table for the rest of the running layout, keyed by the inputs that sizing reads beyond the tree:
+  the table's inline size, its containing block's, its percentage base and fallback, and a block size that its container
+  decides (`layoutTableEndLayout`). Nothing changes during a layout, so the memo cannot go stale, and the layout's end
+  frees it. Each later fragmentainer chooses, places and lays out its own rows from the memo. A row that breaks inside
+  is laid out again in each fragmentainer that it reaches, and takes its sized block size again afterward.
+- **Margins at a break** (css-break-4/#break-margins). The content after a break starts at the block-start edge of the
+  fragmentainer: the margins that adjoin an unforced break are truncated, and a forced break keeps the margin after it.
+- **Sizes across fragments.** A fixed block size, and a min-height that the content does not reach, apply to a box's
+  fragments together: each fragment takes what the fragments before it left (css-break-4/#varying-size-boxes).
+- **Pieces of a box.** Each fragmentainer that a box reaches holds a fragment of it with the sides at which it breaks
+  (`LayoutFragment::broken`). A fragment before the last fills its fragmentainer to the end. Under
+  `box-decoration-break: slice`, a broken side has no border or padding. Under `clone`, each fragment has them, and they
+  take room in each fragmentainer. A fragment after the first is a continuation (`LayoutFragmentFlag_Continuation`).
+  Placements pass through a continuation as through an anonymous box, so a box's placement is its first fragment.
+
+### Multi-column layout
+
+- A block container with a `column-count` or a `column-width` other than auto is a multi-column container
+  (css-multicol-1/#the-multi-column-model). It establishes a block formatting context. Its content is laid out as
+  column sets and spanners, at the used column width (css-multicol-1/#pseudo-algorithm). Each column is a
+  fragmentainer: the set's content is laid out one column after another, each resuming from the token of the column
+  before.
+- **Column sets.** A set of `column-fill: auto` in a definite height fills each column in turn. A set that balances
+  starts at the height that shares its content's unfragmented height among its columns, and grows by what the content
+  left over needs, a bounded number of times, so balancing costs a few layouts of the set, each of which takes the boxes
+  inside its columns from the cache. Columns past the count overflow in the inline direction
+  (css-multicol-1/#pagination-and-overflow-outside-multicol).
+- **Spanners.** A child of the container in flow with `column-span: all` is laid out across the container's content box
+  between the column sets before and after it (css-multicol-1/#column-span).
+- **Nested fragmentation.** A container in an outer fragmentation context, such as a page, is a fragmentainer's worth
+  of rows of columns at a time (css-multicol-1/#cf). A set's columns are at most the room left in the outer
+  fragmentainer. A set whose content does not fit in its columns fills that room, and the container breaks after it,
+  with a token that holds the run's first child and the token of the column that follows. Only the set that ends the
+  content balances, so a container across many pages costs its content once, plus the balancing of its last row. A
+  spanner is monolithic there. A column counts as the top of its fragmentainer only if nothing comes before the
+  container in the outer fragmentainer, so content after other content does not overflow a column: it goes to the next
+  column, and past the last to the next outer fragmentainer. A container that places none of its content in the outer
+  fragmentainer goes to the next one whole.
+- **Fragments.** The container's fragment holds each column as an anonymous box (`LayoutFragmentFlag_Column`) of the
+  column width and the set's height, which holds that column's content, and each spanner.
+- **Rules.** `column-rule` paints in the middle of each gap between two columns of a set that both hold content, the
+  height of the set, above the container's background and below its content (css-multicol-1/#column-gaps-and-rules).
+
+### Paged media (`pr/layout_page.h`)
+
+- A paginated tree lays its root out one page at a time. Each page's box decides the page area that the root is laid
+  out in, as the initial containing block, so pages of different sizes lay their content out at their own sizes. The
+  root resumes on each page from the token of the page before. The root's box holds one anonymous box for each page
+  (`LayoutFragmentFlag_Page`), stacked down the viewport, so geometry and hit testing read one tree.
+- **The viewport of pages.** The sheets of the pages go down the viewport the pagination's gap apart, each centered
+  across the widest sheet, and the stack is centered across the viewport if it is narrower. The viewport keeps the
+  extent that the tree is laid out in. It scrolls through the stack in both axes, as it scrolls a document on the
+  screen, so a producer shows its pages through the same scroll offset and input (`prHtmlViewSetPaged`). The scrollport
+  clips no page. Whatever shows a page clips it to the page's bleed area. A fixed box is fixed to its page, and scrolls
+  with it.
+- **Page boxes.** The producer resolves `@page` rules, which layout knows nothing of. Layout asks it for each page's
+  box, its extent, margins, background, bleed and marks, given the page's index, its side, whether it is the first or a
+  blank page, and its name: the used `page` value of the first box on it (css-page-3/#using-named-pages). The first page
+  is a right page in a left-to-right root, and a left page otherwise.
+- **Sheets, bleed and marks.** A page is printed on a sheet that holds its page box, its bleed area and its marks
+  (css-page-3/#marks, #bleed), whose geometry layout owns (`prLayoutPageBoxSheet`), since the stack of pages, the page's
+  paint and every producer's preview read the same sheet. The producer gives the used bleed, resolving the descriptor's
+  auto from the marks, and layout gives each side of the page box the same room on the sheet: the bleed area, and
+  outside it a band for the marks if there are any. The page's background paints over the bleed area, its content is
+  clipped to the bleed area, and its marks are drawn outside it, all by layout (`prLayoutPageBoxPaint`), so a page's
+  list is the whole sheet and a print preview draws what the document holds. A page with no bleed and no marks is its
+  own sheet. A writer is given the sheet's extent, and the bleed area and the page box as the page's bleed and trim
+  boxes (draw.md, Documents).
+- **The initial containing block** is the page area of the first page (css-page-3/#page-model), and viewport-percentage
+  lengths are relative to it (css-values-4/#viewport-relative-lengths). Its size depends on the @page rules, which
+  depend on media queries and on the first page's name, which depends on the computed `page` values. The chain is cut
+  in two places, so that it has no cycle. Media queries see the paper, the page box before any @page rule applies, as
+  css-page-3/#page-size-prop requires, and so do the viewport-percentage lengths of the @page rules themselves. No
+  length changes a `page` value, so the first page's name is read from the styles as they are, before they resolve any
+  length against the area. A producer therefore resolves its page boxes on the document's thread, brings the styles
+  up to date, asks layout for the first page (`prLayoutNodeStartPage`), and takes that page's area
+  (`prLayoutPageBoxArea`) as the extent that the styles and the layout's root are computed in, in place of the
+  viewport. Only the styles that read the viewport are computed again for the new extent, once, and the layout that
+  follows lays the pages out. HTML's view does this as it counts the pages (`prHtmlViewPageCount`), and its page holds
+  the paper and the area (`prHtmlPageSetPrint`), so that a script's query lays the document out in the same extent.
+  Showing the screen again restores the viewport and the screen's media, which restyles the same elements back.
+- **Boxes out of flow** whose containing block is the initial one are held by the page that their placeholders are on.
+  A fixed box is fixed to the page area, and repeats on every page (CSS2/#fixed-positioning), the pages before the one
+  that holds it included. Its placement is its first page's.
+- **Pieces that paint whole.** A box that paints whole paints each of its pieces from its stacking context's list: the
+  first from its placement, and the others, such as its pieces in later fragmentainers and a fixed box's repeats, from
+  the fragments of the fragmentation roots that layout registers (`layoutWholePiecesOf`).
+- **Margin boxes** are boxes of the tree (css-page-3/#margin-boxes): children of the paginated root whose display is
+  `PrLayoutDisplay_PageMargin`, which take no part in the root's layout. The producer gives each page its margin boxes
+  by node (`prLayoutTreeSetPageMargins`), as it gives any content, once the content is laid out into pages, since what
+  they show, such as the page count, a running header or a counter's value at the start of the page, depends on the
+  whole layout. A page sizes and places its margin boxes by css-page-3/#margin-dimension (`layout_page.h`): a corner box
+  fills its corner, and the three boxes of a side share the side between the corners by their content's min-content
+  and max-content sizes, with the middle box centered. Each is then laid out at its size, through its cache, as a block
+  container that establishes a block formatting context, whose vertical-align places its content as a table cell's
+  does (css-page-3/#page-properties).
+- **Two passes.** A change in a margin box marks the root as holding a change of its margins only
+  (`LayoutDirtyFlag_Margins`), so the next layout takes the root's box of pages from the last one
+  (`LayoutTree::pageStack`) and lays out only the margin boxes. The margin boxes of a page are in an anonymous box of
+  the viewport's fragment at the page's offset, after the root's box, so the root's box stays the same fragment, and
+  publishing the placements of the new fragments does not reach the content: a placement of a box broken across pages
+  is published from its fragments in order, and only a new root's box publishes them again. The producer's second pass
+  therefore costs no layout of the content, and each page's margin boxes cost what they hold.
+- **Painting margin boxes.** A margin box makes a stacking context, whose z-index applies, and paints whole from the
+  root's list after the content of its level, since it follows the content in tree order (css-page-3/#painting). It
+  paints through the page's scene like any box, culled to its page.
+- **What a page holds.** A page records the node of its first content in the flow (`PrLayoutPage::first`), and a node's
+  page is the page of its first box (`prLayoutNodePage`), which a producer reads for the values that a page's margin
+  boxes show, such as named strings (css-gcpm-3/#setting-named-strings-the-string-set-pro). A running box
+  (`PrLayoutPosition_Running`, css-gcpm-3/#running-elements) is out of flow, and its placeholder places it on a page,
+  but no box holds it: its producer lays copies of it out in margin boxes.
+- **Painting a page** plays the tree's scene clipped to the page's bleed area and moved to the page box's place on its
+  sheet. The page's list embeds the scene's recordings whole, without copying them. A recording is a list of embedded
+  batches and cached parts, each with bounds that its list caches when it is frozen, and every consumer of a list skips
+  an embedded list that misses the clip in effect (`prDrawListMisses`). So a page's list holds only what lies on that
+  page as consumers see it, the writers never walk another page's content, and printing a document costs what its pages
+  hold, plus a test of each embedded list that a page passes over.
 
 ## Painting (`pr/layout_scene.h`)
 
@@ -995,6 +1212,11 @@ where it lands, and moving it records nothing, while every edge rounds from its 
   transform, so content under an animated transform moves as one, without rounding again as the transform changes.
 - **Scroll offsets** are rounded to whole target pixels where a scene plays them, so that a scroll moves what it shows
   by whole pixels. The offsets that the tree and queries hold are exact.
+
+A tree that marks its content (`prLayoutTreeSetMarking`) labels the glyphs of each text fragment and the content of
+each replaced box with a mark of its node's key, and gives each glyph run its text: the bytes of the node's text that
+its glyphs were shaped from, with the cluster of each glyph found from the fragment's caret stops. Decoration is left
+unmarked. Marking is a property of the tree's recordings, so changing it records every box again.
 
 Recordings are cached at three granularities, each keyed so that a change records again only what it reaches.
 

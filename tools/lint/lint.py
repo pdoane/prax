@@ -644,6 +644,7 @@ WRAPPERS = {
                                                          "mmreg.h", "objbase.h"},
     "lib/media/backends/windows/src/media_windows.cpp": {"windows.h", "mfapi.h", "mferror.h", "mfidl.h", "mfreadwrite.h",
                                                          "objbase.h", "shlwapi.h"},
+    "tools/viewer/source_pdf.cpp": {"CoreGraphics/CoreGraphics.h"},
     "lib/draw/comparisons/coregraphics/src/draw_coregraphics.cpp": {"CoreGraphics/CoreGraphics.h",
                                                                  "CoreText/CoreText.h"},
     "tools/harness/harness.cpp": {"arm_neon.h", "stdarg.h", "stdio.h", "stdlib.h"},
@@ -1748,7 +1749,8 @@ def check_enums(report, path, text, typedefs=None):
     # Another language's source in a string literal, such as a shader's, follows that language's rules.
     # An empty scoped enum of a fixed type is no set of values but an integer type of its own, which no other integer
     # converts to.
-    for match in re.finditer(r"^enum\s+(?:class\s+)?\w+(?:\s*:\s*\w+)?\s*\{(\};)?", mask_non_code(text), re.M):
+    # A named enumeration inside a class or a function breaks the rule as one at namespace scope does.
+    for match in re.finditer(r"^[ \t]*enum\s+(?:class\s+)?\w+(?:\s*:\s*\w+)?\s*\{(\};)?", mask_non_code(text), re.M):
         if match.group(1) and "class" in match.group(0):
             continue
         report.add(path, line_of(text, match.start()), "enum-form",
@@ -2005,7 +2007,7 @@ IMPLEMENTATIONS = re.compile(r"\b(?:(?:as|like) (?:the |all three |other |major 
 
 # The backends that are the library's own implementations rather than wrappers of another. Their comments cite
 # specifications, as the rest of the library's do. Comparisons wrap other implementations, so none is listed.
-OWN_BACKENDS = ("builtin", "cpu", "fragment", "triangles")
+OWN_BACKENDS = ("builtin", "cpu", "fragment", "pdf", "svg", "triangles")
 
 
 def check_implementation_names(report, path, text):
@@ -2116,7 +2118,7 @@ def check_include_paths(report, path, text):
 # which * crosses directories: the allocator's wrapper, the bindings and the code that drives them, and the tests. The
 # harness's doctest header stands in for doctest's own, so it sorts and is allowed as doctest is (check_test_include).
 THIRD_PARTY = {
-    "tools/harness/test.h": ("lib/*/tests/*", "examples/*/tests/*", "tools/harness/kit_fixture.h"),
+    "tools/harness/test.h": ("lib/*/tests/*", "examples/*/tests/*", "tools/*/tests/*", "tools/harness/kit_fixture.h"),
     "mimalloc.h": ("lib/core/backends/mimalloc/src/core_mimalloc.cpp",),
     "quickjs.h": ("lib/*/quickjs/*", "lib/*/quickjs_cpp/*", "lib/lottie/src/lottie_expression.cpp", "tools/shell/page_host.cpp",
                   "examples/browser/main.cpp"),

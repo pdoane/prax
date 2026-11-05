@@ -4,6 +4,7 @@
 #include "layout/src/layout_scene.h"
 
 #include "pr/alloc.h"
+#include "pr/draw_commands.h"
 #include "pr/draw_list.h"
 
 #include "layout/src/layout_walk.h"
@@ -886,11 +887,16 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
         if (overflow.overflowY == PrLayoutOverflow_Visible)
             overflow.overflowY = PrLayoutOverflow_Scroll;
         PrLayoutRect range = layoutScrollRange(viewport->extent, viewport->overflow);
+        // The viewport of a paginated tree clips no page to its scrollport: what shows a page clips it to the page's
+        // bleed area, as prLayoutTreePaintPage does, at any scroll offset.
+        PrLayoutRect clip = layoutRectAt(kLayoutVecZero, viewport->extent);
+        if (tree->pagination.box != nullptr)
+            clip = viewport->overflow;
         scene->scrolls.push(LayoutSceneContainer{
             .node = kPrLayoutNodeNone,
             .parent = kPaintScrollNone,
             .layer = kPaintScrollNone,
-            .clip = layoutRectAt(kLayoutVecZero, viewport->extent),
+            .clip = clip,
             .range = range,
             .portExtent = viewport->extent,
             .content = viewport->overflow,

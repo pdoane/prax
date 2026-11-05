@@ -44,6 +44,8 @@ enum {
     PrDrawCommandKind_PopClip,
     PrDrawCommandKind_PushGroup,
     PrDrawCommandKind_PopGroup,
+    PrDrawCommandKind_PushMark,
+    PrDrawCommandKind_PopMark,
     PrDrawCommandKind_Count,
 };
 typedef uint8_t PrDrawCommandKind;
@@ -53,7 +55,7 @@ typedef uint8_t PrDrawCommandKind;
 // a brush is white at the brush's opacity, so a backend reads the opacity there. The source of a nine-slice takes the
 // place of its brush. A command with a `stroke` field fills if the stroke is null, and strokes otherwise. The data that
 // a command points to stays valid until the list changes.
-typedef struct PrDrawCommand {
+struct PrDrawCommand {
     PrDrawCommandKind kind;
     PrDrawComposite composite;                  // painting commands
     PrDrawBlendMode blendMode;                  // painting commands
@@ -113,8 +115,9 @@ typedef struct PrDrawCommand {
             PrVec2 snapExtent;                  // the rectangle that a PrDrawSnapFlag_Rect push snaps, from the origin
         };                                      // PushTransformAffine2
         const PrDrawGroup* group;               // PushGroup
+        uint64_t key;                           // PushMark: the producer's key, never zero
     };
-} PrDrawCommand;
+};
 
 // Returns the commands in recording order. They stay valid until the list changes.
 uint32_t prDrawListCommandCount(const PrDrawList* list);

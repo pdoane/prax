@@ -56,6 +56,10 @@ neighbors are covered from three sides, each cheap enough to run on every change
 - `frame` and `long-doc`: one large page of cards and one long specification, each measured through whole frames:
   changes that reach one box, and resizes, which reach every box that depends on the width.
 
+Printing is covered by `print`: a long generated document, paginated, painted with its content marked, and written by
+lib/draw's writers. The PDF is written with its codec and without, so the difference between the two rows is the
+cost of its compression.
+
 A benchmark whose run grows past a few seconds stops being run on every change. Add cases that each reach a different
 path, instead of more of the same, and keep a slow benchmark's case count small if its pages are slow.
 

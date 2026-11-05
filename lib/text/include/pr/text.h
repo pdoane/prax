@@ -110,10 +110,21 @@ typedef struct PrTextRun {
     PrTextPosition position;
     PrTextSynthesisFlags synthesis;
 
+    // The space added after each grapheme cluster of the text as it is shaped, after the case mapping that synthesized
+    // capitals apply, and after each word separator (prTextIsWordSeparator), in ems of the run. The space is part of
+    // the advance of the cluster's last glyph in the order of the text, and is not scaled by synthesis or size-adjust.
+    // Spaced letters take no optional ligatures, unless the run's features ask for them.
+    float letterSpacing;
+    float wordSpacing;
+
     // The pixels per em at which the run is drawn. A horizontal run of a hinted font uses its advances at this size
     // (prFontGlyphAdvance). Zero gives the design advances.
     float pixelsPerEm;
 } PrTextRun;
+
+// Returns true if `codePoint` separates words: the space, the no-break space, or the word separator of the Ethiopic,
+// Aegean, Ugaritic or Phoenician script. Word spacing follows it, and justification between words stretches it.
+bool prTextIsWordSeparator(uint32_t codePoint);
 
 // What a style asks of the shaping of its text: its capital and position forms, its kerning, the forms that may be
 // synthesized, and font features. The features apply in order, after the font's own. A feature set is immutable and

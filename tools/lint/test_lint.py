@@ -992,6 +992,11 @@ class Enums(unittest.TestCase):
                 lint.check_enums(report, 'enum.h', declaration + '\n    Value_A,\n};\n')
                 self.assertIn('enum-form', [rule for _, _, rule, _ in report.problems])
 
+    def test_named_enums_in_a_class_are_rejected(self):
+        report = lint.Report()
+        lint.check_enums(report, 'enum.h', 'class Host {\n    enum class Value {\n        A,\n    };\n};\n')
+        self.assertIn('enum-form', [rule for _, _, rule, _ in report.problems])
+
     def test_fixed_width_enum_is_accepted(self):
         report = lint.Report()
         lint.check_enums(report, 'enum.h',

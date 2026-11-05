@@ -7,6 +7,7 @@
 #pragma once
 
 #include "pr/hash_index.h"
+#include "pr/layout_page.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
 #include "pr/raw_array.h"
@@ -45,8 +46,19 @@ enum {
     // Every ancestor of the node is marked as holding a change (LayoutDirtyFlag_Descendant), whatever boxes out of flow
     // lie between.
     LayoutDirtyFlag_Ancestors = 1 << 3,
+
+    // A page-margin box among the node's children, or in one's subtree, changed, came or went
+    // (PrLayoutDisplay_PageMargin). The node's own layout does not read its margin boxes, so its pages keep their
+    // content and lay out their margins again.
+    LayoutDirtyFlag_Margins = 1 << 4,
 };
 typedef uint8_t LayoutDirtyFlags;
+
+// A running box whose placeholder a page holds, and the index of that page.
+struct LayoutRunningPage {
+    LayoutNodeIndex node;
+    uint32_t page;
+};
 
 // What the tree holds for a node, by its index. Links are node indices, or kPrLayoutNodeNone if there is none.
 struct LayoutTreeNode {
@@ -72,8 +84,7 @@ struct LayoutTreeNode {
 
     uint32_t generation;            // raised when the node is freed, so that its old names name nothing (PrLayoutNode)
     PrLayoutNodeKind kind;
-    LayoutDirtyFlags dirty : 4;
-    PrLayoutRenderedFlags rendered : 4;
+    LayoutDirtyFlags dirty : 5;
     bool live : 1;                 // true if the index names a node rather than a freed slot
     bool readsViewport : 1;        // its layout or intrinsic sizes read the viewport's extent, and it is listed
 
@@ -114,6 +125,8 @@ struct LayoutTreeNode {
     // True if the table of its kind lists it: an element that has a record for the first formatted line
     // (LayoutTree::firstLines), or text that has highlights (LayoutTree::highlights).
     bool listed : 1;
+
+    PrLayoutRenderedFlags rendered : 4;
 };
 
 // Every node pays for each byte of the struct, so data that only one kind holds shares a union, or lives in a table of
@@ -253,6 +266,24 @@ struct LayoutTree {
     const LayoutFragment* PR_NULLABLE fragment; // the viewport's fragment from the last layout, held by the tree
     PrLayoutVec viewport;                       // the extent the last layout was given
     RawArray<LayoutLaidRoot> roots;             // the last layout's other roots, in the order it was given them
+
+    // How the viewport's root is paginated, with no box function for continuous media, and the last layout's pages.
+    PrLayoutPagination pagination;
+    RawArray<PrLayoutPage> pages;
+
+    // The margin boxes of the pages, PrLayoutMarginBox_Count nodes for each page from the first, kPrLayoutNodeNone for
+    // a box that a page does not generate (prLayoutTreeSetPageMargins). They are names, which name nothing once their
+    // nodes are erased.
+    RawArray<PrLayoutNode> pageMargins;
+
+    // The root's box from the last layout that kept its results, which holds the pages' content. The tree holds a
+    // reference. A layout that follows changes to margin boxes alone takes it in place of laying the content out again.
+    const LayoutFragment* PR_NULLABLE pageStack;
+
+    // The running boxes (PrLayoutPosition_Running) whose placeholders the last layout's pages hold, sorted by node,
+    // with the index of the page that holds each.
+    RawArray<LayoutRunningPage> runningPages;
+
     uint32_t layouts;                           // raised by each layout that changes the fragments
     LayoutCache cache;
 
@@ -275,6 +306,7 @@ struct LayoutTree {
     // --- Painting and queries ---
 
     LayoutPaintCache paint;
+    PrLayoutMarking marking;         // what the tree's recordings mark (prLayoutTreeSetMarking)
     mutable LayoutStacking stacking; // filled by the walks of painting and queries
     mutable LayoutQueries queries;   // filled by queries, which do not change the tree
     PrLayoutTreeStats stats;         // of the last layout and the last paint
@@ -323,6 +355,14 @@ void layoutTreeEraseDetached(LayoutTree* tree, LayoutNodeIndex node);
 // again (LayoutTree::viewportReaders).
 void layoutTreeReadViewport(LayoutTree* tree, LayoutNodeIndex node);
 
+// Forgets every box's cached layout, so that the next layout lays out every box again, as an input that every box reads
+// has changed.
+void layoutTreeForgetLayout(LayoutTree* tree);
+
+// Forgets the pages' content that the last layout kept (LayoutTree::pageStack), so that the next layout lays the
+// content out into pages again.
+void layoutTreeForgetPages(LayoutTree* tree);
+
 // Returns what the tree holds for a live node.
 inline const LayoutTreeNode& layoutTreeNode(const LayoutTree* tree, LayoutNodeIndex node) {
     PR_ASSERT(node != kPrLayoutNodeNone && node < tree->nodes.count && tree->nodes.data[node].live);
@@ -334,6 +374,13 @@ inline LayoutNodeIndex layoutNodeRoot(const LayoutTree* tree, LayoutNodeIndex no
     while (tree->nodes.data[node].parent != kPrLayoutNodeNone)
         node = tree->nodes.data[node].parent;
     return node;
+}
+
+// Returns true if `node` names a node of the tree that has not been erased (prLayoutNodeIsValid).
+inline bool layoutNodeIsValid(const LayoutTree* tree, PrLayoutNode node) {
+    LayoutNodeIndex index = LayoutNodeIndex(node);
+    return index != kPrLayoutNodeNone && index < tree->nodes.count && tree->nodes.data[index].live &&
+        tree->nodes.data[index].generation == uint32_t(node >> 32);
 }
 
 // Returns the index of the node that `node` names, or kPrLayoutNodeNone for none. The node is live.

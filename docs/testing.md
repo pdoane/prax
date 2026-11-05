@@ -99,6 +99,18 @@ restyled to the same style, and boxes painted again although nothing that they p
 fails. The counts show where invalidation is coarse on real pages and real CSS, and the `page-changes` benchmark
 (docs/performance.md) records them.
 
+A capture is the local copy of what its page loads, so a host answers each captured resource as it answers a local
+one (`PageHost::addCapture`): as from the request's own origin, with no CORS check, whatever the request's mode. A URL
+that the capture left out, as one that its server refused, fails as a network error, so a captured page never reaches
+the network. `tools/pages/pages.py local` captures pages that are files, such as the Prince samples
+(`./dev.sh fetch prince_samples`): each loads at its file: URL, and its capture holds only what other origins serve.
+
+The Prince samples are only those that we are licensed to use. yeslogic/prince-samples provides a sample without
+license information for evaluating Prince alone, so the fetch takes only the directories whose README licenses both
+the HTML and Prince's PDF of it (`tools/fetch/checkouts.py`). The captured fonts, style sheets and images belong to
+their owners under their own terms. They are a local copy for testing, fetched into third_party, never committed and
+never redistributed.
+
 A failure is a defect wherever it lies, and is cut down to a test before it is fixed:
 
 - `invalidation --element N <capture> <page>` makes only the changes of the Nth chosen element, and prints which
@@ -128,7 +140,11 @@ page, such as Prax's, loads at its file: URL. Pages have WPT's Ahem font install
 installed or loaded by `@font-face`, is drawn without antialiasing, as reftests built on it expect (`prFontIsAliased`).
 A page's `@font-face` faces load when its text asks for them in a rendering update, and `document.fonts.ready` waits for
 them, so a page settles with its fonts loaded. A reftest passes if it matches any of its match references and none of
-its mismatch references.
+its mismatch references. A print reftest (web-platform-tests docs, "Print Reftests") and its references are printed
+(`pr_shell --print`). They start from the page box that WPT's protocol gives a document, 5 by 3 inches with half-inch
+margins, which the runner hands the shell (`--page-size`, `--page-margin`). Each page that the test's `reftest-pages`
+metas select is rendered as an image of its own, and compared with the reference's page in the same place. Two
+documents with different numbers of pages differ.
 
 `tools/suite/reftest.py` runs the suites whose references are images. resvg's tests are each compared with the PNG
 beside them. Each Lottie corpus is compared with the player that it was written for: lottie-web's tests with
@@ -161,13 +177,15 @@ The examples under `examples/` are applications over the public headers, each a 
 them, then builds `tools/package`, a program over their public headers, against the installed package and against the
 source tree as FetchContent adds it, and runs each.
 
-- `draw` draws animated scenes with `lib/draw` alone, and shows a frame of HDR through the display shader
+- `draw_gallery` draws animated scenes with `lib/draw` alone, and shows a frame of HDR through the display shader
   (`pr/draw_display.h`).
+- `draw_features` shows a captioned drawing of each feature of `lib/draw`'s list, and the workloads that `./dev.sh
+  bench draw` measures, from a library of drawings that the benchmark links.
 - `studio_gallery` shows every widget of Studio Kit, live.
 - `editor` is a level editor of Studio Kit's widgets and a HUD library of its own, composed in one tree.
 - `perspective` stands Kit panels in 3D over a background that it draws with its own pipeline, as a 3D engine would.
 - `incremental` renders Markdown and HTML as they arrive in pieces.
 - `browser` shows a web page in a window, and navigates from it, as a browser's threads do.
 
-The tools that measure and compare the engine are under `tools/`: the viewer (`./dev.sh viewer`, [draw.md](draw.md)),
-and the benchmarks that `./dev.sh bench` runs.
+The tools that measure and compare the engine are under `tools/`: the viewer (`./dev.sh viewer`, whose header
+comment in tools/viewer/viewer.cpp describes it), and the benchmarks that `./dev.sh bench` runs.

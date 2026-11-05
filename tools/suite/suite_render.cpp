@@ -39,7 +39,8 @@ bool split(PrStringView text, char separator, PrStringView* first, PrStringView*
     return false;
 }
 
-bool readLine(SuiteRender* out, PrStringView line, PrStringView root) {
+// Reads a line of settings into `fonts` and `background`.
+bool readLine(PrFontSet* fonts, PrColor* background, PrStringView line, PrStringView root) {
     for (size_t i = 0; i < line.size; ++i)
         if (line.data[i] == '#')
             line.size = i;
@@ -47,7 +48,7 @@ bool readLine(SuiteRender* out, PrStringView line, PrStringView root) {
     if (line.size == 0)
         return true;
     if (line == "system") {
-        prFontSystemInstall(PrFontSystemBackend_Default, out->fonts);
+        prFontSystemInstall(PrFontSystemBackend_Default, fonts);
         return true;
     }
     PrStringView setting;
@@ -65,7 +66,7 @@ bool readLine(SuiteRender* out, PrStringView line, PrStringView root) {
         prTextBufferReset(&file);
         if (status != PrStatus_Ok)
             return false;
-        prFontSetAdd(out->fonts, &descriptor, font);
+        prFontSetAdd(fonts, &descriptor, font);
         prFontRelease(font);
         return true;
     }
@@ -76,31 +77,28 @@ bool readLine(SuiteRender* out, PrStringView line, PrStringView root) {
             return false;
         PrFontGeneric generic = prFontGenericFromName(name);
         if (generic != PrFontGeneric_None)
-            prFontSetSetGeneric(out->fonts, generic, family);
+            prFontSetSetGeneric(fonts, generic, family);
         else
-            prFontSetAlias(out->fonts, name, family);
+            prFontSetAlias(fonts, name, family);
         return true;
     }
     if (setting == "default") {
         PrFontGeneric generic = prFontGenericFromName(value);
         if (generic != PrFontGeneric_None)
-            prFontSetSetDefaultFamily(out->fonts, prFontFamilyGeneric(generic));
+            prFontSetSetDefaultFamily(fonts, prFontFamilyGeneric(generic));
         else
-            prFontSetSetDefaultFamily(out->fonts, prFontFamilyFromName(value));
+            prFontSetSetDefaultFamily(fonts, prFontFamilyFromName(value));
         return true;
     }
     if (setting == "background" && value == "white") {
-        out->background = PrColor{1, 1, 1, 1};
+        *background = PrColor{1, 1, 1, 1};
         return true;
     }
     return false;
 }
 
-} // namespace
-
-bool suiteRenderRead(SuiteRender* out, PrStringView path, PrStringView root) {
-    suiteRenderReset(out);
-    out->fonts = prFontSetCreate(nullptr);
+// Reads the settings file at `path` into `fonts` and `background`.
+bool readFile(PrFontSet* fonts, PrColor* background, PrStringView path, PrStringView root) {
     PrByteView mapping{};
     if (!prFileMap(path, &mapping))
         return false;
@@ -110,11 +108,24 @@ bool suiteRenderRead(SuiteRender* out, PrStringView path, PrStringView root) {
     for (size_t i = 0; i <= mapping.size; ++i) {
         if (i < mapping.size && data[i] != '\n')
             continue;
-        ok = readLine(out, PrStringView{data + start, i - start}, root) && ok;
+        ok = readLine(fonts, background, PrStringView{data + start, i - start}, root) && ok;
         start = i + 1;
     }
     prFileUnmap(&mapping);
     return ok;
+}
+
+} // namespace
+
+bool suiteRenderRead(SuiteRender* out, PrStringView path, PrStringView root) {
+    suiteRenderReset(out);
+    out->fonts = prFontSetCreate(nullptr);
+    return readFile(out->fonts, &out->background, path, root);
+}
+
+bool suiteRenderReadFonts(PrFontSet* fonts, PrStringView path, PrStringView root) {
+    PrColor background{};
+    return readFile(fonts, &background, path, root);
 }
 
 void suiteRenderReset(SuiteRender* render) {

@@ -3263,18 +3263,8 @@ void drawCommand(Walk& w, const PrDrawCommand& c) {
 
 // Returns true if nothing that an embedded list draws reaches the current clip, so that playing it changes nothing.
 bool missesClip(const Walk& w, const PrDrawList* embedded) {
-    if (prDrawListWritesPixels(embedded))
-        return false;
-    PrRect bounds = prDrawListBounds(embedded);
-    if (prRectIsEmpty(bounds))
-        return true;
-    if (!prF32IsFinite(bounds.left) || !prF32IsFinite(bounds.top) || !prF32IsFinite(bounds.right) ||
-            !prF32IsFinite(bounds.bottom))
-        return false;
     const PrDrawTransform& x = w.transforms.last();
-    if (x.degenerate)
-        return false;
-    return prIRectIsEmpty(mappedBox(prMatrix3FromAffine2(x.affine), prIRectRoundOut(bounds), clipOf(w).box));
+    return !x.degenerate && prDrawListMisses(embedded, x.affine, prRectFromIRect(clipOf(w).box));
 }
 
 // The counts of the frame's arrays, to tell which ones an embedded list's records added to.
@@ -3661,6 +3651,9 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_PopGroup:
                 popGroup(w);
                 break;
+            case PrDrawCommandKind_PushMark:
+            case PrDrawCommandKind_PopMark:
+                break;
             default:
                 drawPainting(w, c);
                 break;
@@ -3858,12 +3851,13 @@ void storageDestroy(FrameStorage* b) {
     prMemoryFree(b);
 }
 
-// Builds the frame that draws the list over the target into the storage, and describes it in `out`. A backdrop reads
-// what lies beneath the target in the form that the target's `beneath` gives: a color that the frame draws itself, the
-// host's texture in the frame's beneath layer, or the host's drawing at the start of the passes marked for it. Without
-// it, what lies beneath is transparent. The frame stays valid until the storage's next build. The requests' texels stay
-// valid until the next build with any storage.
-void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawTarget& target, FrameStorage* b, FragmentFrame* out) {
+// Builds the frame that draws the part of the list over the target into the storage, and describes it in `out`. A
+// backdrop reads what lies beneath the target in the form that the target's `beneath` gives: a color that the frame
+// draws itself, the host's texture in the frame's beneath layer, or the host's drawing at the start of the passes
+// marked for it. Without it, what lies beneath is transparent. The frame stays valid until the storage's next build.
+// The requests' texels stay valid until the next build with any storage.
+void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawPart& part, const PrDrawTarget& target,
+        FrameStorage* b, FragmentFrame* out) {
     uint32_t width = target.extent.x;
     uint32_t height = target.extent.y;
     b->instances.clear();
@@ -3912,7 +3906,7 @@ void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawTarget& targ
     w.b = b;
     w.target = PrIRect{0, 0, int32_t(width), int32_t(height)};
     w.extended = target.format == PrPixelFormat_RgbaF16;
-    w.transforms.push(prDrawTransformFromAffine2(prAffine2Identity()));
+    w.transforms.push(part.transform);
     w.clips.push(clipOfBox(w, w.target));
     w.opacities.push(1);
     w.layers.push(0);
@@ -3926,8 +3920,8 @@ void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawTarget& targ
     // A group that reads what lies beneath it reads what the list drew before it, over what the host provides. The
     // target cannot be read while preparing, so a list with such a group draws into a layer of its own, which then
     // draws over the target.
-    const PrDrawCommand* commands = prDrawListCommands(list);
-    uint32_t count = prDrawListCommandCount(list);
+    const PrDrawCommand* commands = prDrawListCommands(list) + part.first;
+    uint32_t count = part.count;
     bool root = width != 0 && height != 0 && prDrawListReadsBackdrop(list);
     uint32_t rootTexture = root ? enterLayer(w, w.target, false) : 0;
     w.root = root ? w.layers.last() : 0;
@@ -3987,10 +3981,11 @@ void destroyFrame(PrDrawRenderer* renderer, PrDrawFrame* handle) {
     prMemoryFree(frame);
 }
 
-PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawTarget* target) {
+PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* part,
+        const PrDrawTarget* target) {
     FragmentRenderer* r = static_cast<FragmentRenderer*>(renderer);
     FragmentDrawFrame* frame = static_cast<FragmentDrawFrame*>(handle);
-    fragmentBuild(r->fragment, list, *target, frame->storage, &frame->built);
+    fragmentBuild(r->fragment, list, *part, *target, frame->storage, &frame->built);
     fragmentDevicePrepare(r->state, &frame->built, target->commands, target->format, target->beneath);
     return PrStatus_Ok;
 }

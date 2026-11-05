@@ -631,6 +631,97 @@ TEST_CASE("small capitals come from the font, or are synthesized from its capita
     prTextShaperDestroy(hb);
 }
 
+TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spacing each word separator") {
+    PrTextShaper* hb = prTextHarfBuzzCreate();
+    const PrFont* flex = load("RobotoFlex.ttf");
+    // An e with a combining acute is one grapheme cluster, which takes the spacing once.
+    PrTextRun run = runOf(flex, "a e\xcc\x81");
+    std::vector<PrTextGlyph> plain = shape(hb, run);
+    run.letterSpacing = 0.25f;
+    run.wordSpacing = 0.5f;
+    std::vector<PrTextGlyph> spaced = shape(hb, run);
+    REQUIRE(spaced.size() == plain.size());
+    float before = 0;
+    float after = 0;
+    for (uint32_t i = 0; i < plain.size(); ++i) {
+        before += plain[i].advance.x;
+        after += spaced[i].advance.x;
+    }
+    CHECK(after == doctest::Approx(before + 3 * 0.25f + 0.5f));
+    CHECK(spaced[0].advance.x == doctest::Approx(plain[0].advance.x + 0.25f));
+
+    // A zero width non-joiner extends the grapheme cluster before it, whose spacing stays with its letter when the
+    // non-joiner's glyph is removed.
+    run = runOf(flex, "a\xe2\x80\x8c" "b");
+    run.letterSpacing = 0;
+    run.wordSpacing = 0;
+    plain = shape(hb, run);
+    run.letterSpacing = 0.25f;
+    spaced = shape(hb, run);
+    REQUIRE(spaced.size() == plain.size());
+    before = 0;
+    after = 0;
+    for (uint32_t i = 0; i < plain.size(); ++i) {
+        before += plain[i].advance.x;
+        after += spaced[i].advance.x;
+    }
+    CHECK(after == doctest::Approx(before + 2 * 0.25f));
+
+    // Synthesized small capitals space the capitals that a sharp s maps to apart.
+    run = runOf(flex, "\xc3\x9f");
+    run.caps = PrTextCaps_Small;
+    run.synthesis = PrTextSynthesisFlag_SmallCaps;
+    plain = shape(hb, run);
+    run.letterSpacing = 0.25f;
+    spaced = shape(hb, run);
+    REQUIRE(spaced.size() == 2);
+    CHECK(spaced[0].advance.x == doctest::Approx(plain[0].advance.x + 0.25f));
+    CHECK(spaced[1].advance.x == doctest::Approx(plain[1].advance.x + 0.25f));
+
+    // Right to left, the space after a character is on its left, so its glyph moves right by it.
+    const PrFont* hebrew = load("NotoSansHebrew.ttf");
+    run = runOf(hebrew, "\xd7\xa9\xd7\x9c");
+    run.direction = PrTextDirection_Rtl;
+    plain = shape(hb, run);
+    run.letterSpacing = 0.25f;
+    spaced = shape(hb, run);
+    REQUIRE(spaced.size() == plain.size());
+    for (uint32_t i = 0; i < plain.size(); ++i) {
+        CHECK(spaced[i].advance.x == doctest::Approx(plain[i].advance.x + 0.25f));
+        CHECK(spaced[i].offset.x == doctest::Approx(plain[i].offset.x + 0.25f));
+    }
+    prFontRelease(hebrew);
+
+    // Letters that join their neighbors, as Arabic's do, take no letter spacing.
+    const PrFont* arabic = load("NotoSansArabic.ttf");
+    run = runOf(arabic, "\xd8\xb3\xd9\x84");
+    run.direction = PrTextDirection_Rtl;
+    plain = shape(hb, run);
+    run.letterSpacing = 0.25f;
+    spaced = shape(hb, run);
+    REQUIRE(spaced.size() == plain.size());
+    for (uint32_t i = 0; i < plain.size(); ++i)
+        CHECK(spaced[i].advance.x == doctest::Approx(plain[i].advance.x));
+    prFontRelease(arabic);
+    prFontRelease(flex);
+    prTextShaperDestroy(hb);
+}
+
+TEST_CASE("spaced letters take no optional ligatures, unless the run asks for them") {
+    PrTextShaper* hb = prTextHarfBuzzCreate();
+    const PrFont* noto = load("NotoSans.ttf");
+    PrTextRun run = runOf(noto, "ffi");
+    CHECK(shape(hb, run).size() < 3);
+    run.letterSpacing = 0.1f;
+    CHECK(shape(hb, run).size() == 3);
+    PrTextFeature liga{PR_FONT_TAG('l', 'i', 'g', 'a'), 1, 0, 3};
+    run.features = &liga;
+    run.featureCount = 1;
+    CHECK(shape(hb, run).size() < 3);
+    prFontRelease(noto);
+    prTextShaperDestroy(hb);
+}
+
 TEST_CASE("a superscript the font lacks is scaled and raised as its metrics say") {
     const PrFont* flex = load("RobotoFlex.ttf");
     PrTextShaper* hb = prTextHarfBuzzCreate();

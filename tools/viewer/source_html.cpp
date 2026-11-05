@@ -1,12 +1,23 @@
-// HTML and XHTML pages as sources (source_html.h).
+// Pages as sources (source_html.h).
 
 #include "tools/viewer/source_html.h"
 
-#include "tools/shell/page_host.h"
+#include "pr/css_presentation.h"
+#include "pr/css_view.h"
+#include "pr/html.h"
+#include "pr/html_page.h"
+#include "pr/layout_query.h"
 
+#include "tools/shell/page_host.h"
+#include "tools/suite/suite_render.h"
+#include "tools/viewer/documents.h"
+
+#include <cmath>
 #include <cstdio>
+#include <mutex>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace viewer {
 
@@ -15,11 +26,12 @@ namespace fs = std::filesystem;
 // A page in its own host, on a virtual clock that the viewer's clock drives. `origin` is the clock's time once the page
 // settled, in milliseconds, which is time zero of the viewer's clock.
 struct HtmlSource {
-    HtmlSource(fs::path path, std::string location, PrTextShaper* shaper) :
-            path(std::move(path)), location(std::move(location)), host(shaper, nullptr, nullptr) {}
+    HtmlSource(fs::path path, std::string location, page_host::Media media, PrTextShaper* shaper) :
+            path(std::move(path)), location(std::move(location)), media(media), host(shaper, nullptr, nullptr) {}
 
     fs::path path;
     std::string location;       // the URL or path that the page loads from
+    page_host::Media media;
     page_host::PageHost host;
     page_host::Page* PR_NULLABLE page = nullptr;
     double origin = 0;
@@ -93,14 +105,24 @@ bool wptServed() {
     return wptHttp != 0;
 }
 
-std::shared_ptr<HtmlSource> loadHtml(const fs::path& path, PrTextShaper* shaper, PrFontHinting hinting,
-        PrFontHinter* PR_NULLABLE hinter, PrGpuDevice* PR_NULLABLE device) {
+std::shared_ptr<HtmlSource> loadHtml(const fs::path& path, const fs::path& settings, const fs::path& capture, bool scripts,
+        page_host::Media media, PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter,
+        PrGpuDevice* PR_NULLABLE device) {
     std::string url = wptUrlOf(path);
-    std::shared_ptr<HtmlSource> html = std::make_shared<HtmlSource>(path, url.empty() ? path.string() : url, shaper);
+    std::shared_ptr<HtmlSource> html = std::make_shared<HtmlSource>(path, url.empty() ? path.string() : url, media, shaper);
+    if (!settings.empty())
+        suite::suiteRenderReadFonts(html->host.fonts(), settings.string(),
+            fs::path(kThirdParty).parent_path().string());
     html->host.setHinting(hinting, hinter);
+    html->host.setPageGap(kPageGap);
     html->host.setDevice(device);
     if (!url.empty() && !reachWpt(html->host))
         return nullptr;
+    std::string captured;
+    if (!capture.empty() && !html->host.addCapture(capture, &captured))
+        return nullptr;
+    if (!scripts)
+        html->host.disableScripts();
     html->host.useVirtualTime();
     html->host.runAllAnimationFrames();
     if (!start(*html))
@@ -123,7 +145,7 @@ void htmlAt(HtmlSource& html, double time) {
 void drawHtml(HtmlSource& html, PrDrawList* list, float width, float height, const PrAppDisplay& display,
         const PrAppUserPreferences& preferences) {
     if (html.page != nullptr)
-        html.host.paint(html.page, PrVec2{width, height}, display, preferences, list);
+        html.host.paint(html.page, html.media, PrVec2{width, height}, display, preferences, list);
 }
 
 void htmlInput(HtmlSource& html, const PrAppEvent& event) {
@@ -135,9 +157,58 @@ PrAppOutput htmlOutput(HtmlSource& html, double time) {
     return html.page != nullptr ? html.host.output(html.page, time) : PrAppOutput{};
 }
 
+PrVec2 htmlScroll(HtmlSource& html) {
+    PrHtmlPage* page = html.page != nullptr ? page_host::PageHost::htmlPage(html.page) : nullptr;
+    if (page == nullptr)
+        return PrVec2{0, 0};
+    PrHtmlWindow* window = prHtmlPageWindow(page);
+    return PrVec2{float(prHtmlWindowScrollX(window)), float(prHtmlWindowScrollY(window))};
+}
+
+void htmlScrollTo(HtmlSource& html, PrVec2 offset) {
+    PrHtmlPage* page = html.page != nullptr ? page_host::PageHost::htmlPage(html.page) : nullptr;
+    if (page == nullptr)
+        return;
+    PrCssScrollToOptions options{.hasLeft = true, .hasTop = true, .left = double(offset.x), .top = double(offset.y)};
+    prHtmlWindowScroll(prHtmlPageWindow(page), &options);
+}
+
+float htmlContentWidth(HtmlSource& html) {
+    PrHtmlPage* page = html.page != nullptr ? page_host::PageHost::htmlPage(html.page) : nullptr;
+    PrCssPresentation* presentation = page != nullptr ? prHtmlPagePresentation(page) : nullptr;
+    PrLayoutScrollInfo info{};
+    if (presentation == nullptr || !prLayoutNodeScrollInfo(prCssPresentationTree(presentation), kPrLayoutNodeNone, &info))
+        return 0;
+    return prLayoutUnitToPx(info.content.right - info.content.left);
+}
+
 void htmlSetApp(HtmlSource& html, PrApp* app) {
     if (html.page != nullptr)
         html.host.setInteractive(html.page, app);
+}
+
+bool printHtml(const fs::path& path, const fs::path& capture, bool scripts, const fs::path& out, PrDrawWriterBackend format) {
+    std::unique_ptr<PrTextShaper, decltype(&prTextShaperDestroy)> shaper(
+        prTextShaperCreate(PrTextShaperBackend_Default), prTextShaperDestroy);
+    page_host::PageHost host(shaper.get(), nullptr, nullptr);
+    std::string captured;
+    if (!capture.empty() && !host.addCapture(capture, &captured))
+        return false;
+    if (!scripts)
+        host.disableScripts();
+    page_host::Page* page = host.load(path.string());
+    if (page == nullptr)
+        return false;
+    if (host.settle(kSettleTimeout) == page_host::Settled_TimedOut) {
+        std::fprintf(stderr, "%s: did not settle in %g ms\n", path.string().c_str(), kSettleTimeout);
+        host.stopWaiting();
+    }
+    if (!page_host::PageHost::pageOk(page))
+        std::fprintf(stderr, "%s: printed after an error in its load or its scripts\n", path.string().c_str());
+    std::error_code error;
+    fs::create_directories(out.parent_path(), error);
+    // A print lays out for its page boxes, so it takes no viewport.
+    return host.writeDocument(page, page_host::Media_Print, prLayoutPageBoxDefault(), PrVec2{0, 0}, format, out);
 }
 
 } // namespace viewer

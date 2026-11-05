@@ -13,9 +13,11 @@
 #include "pr/css_presentation.h"
 #include "pr/dom.h"
 #include "pr/hash_index.h"
+#include "pr/layout_page.h"
 #include "pr/layout_worker.h"
 #include "pr/mutex.h"
 #include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/task.h"
 #include "pr/text_buffer.h"
@@ -322,6 +324,40 @@ struct CssPresentationThread {
     CssCascadeScratch scratch;
 };
 
+// A page-margin box that the presentation gave a page (css-page-3/#margin-boxes): its box, its record, and what its
+// content was made from. A later pass that would make the same content keeps the box.
+struct CssPageMarginSlot {
+    PrLayoutNode node;              // kPrLayoutNodeNone if the page generates no such box
+    PrLayoutStyleIndex record;
+    PrRawString made;
+};
+
+// A box of a link's content in a copy of a running element (css-gcpm-3/#running-elements): the link, the copy, and the
+// key that the presentation gave the copied box, whose marks the document's structure makes a link of.
+struct CssPageMarginLink {
+    const PrDomElement* link;
+    uint32_t copy;
+    uint64_t key;
+};
+
+// The page-margin boxes that a paged presentation gives the pages of its tree's last layout.
+struct CssPageMargins {
+    RawArray<CssPageMarginSlot> slots;      // PrLayoutMarginBox_Count for each page, from the first
+    RawArray<PrLayoutNode> nodes;           // the boxes of `slots` in order, the last children of the root's box
+    RawArray<CssPageMarginLink> links;      // in the order of the copies
+    uint32_t copies;                        // the number of copies of running elements made, which numbers them
+    uint64_t keys;                          // the number of keys given to copied boxes
+
+    // The user agent's declarations of each margin box, by PrLayoutMarginBox, parsed on first use.
+    CssDeclarationBlock* PR_NULLABLE defaults[PrLayoutMarginBox_Count];
+
+    // What the last pass was made for: the presentation's version (CssPresentation::version) and the number of pages,
+    // if `made` is set. A pass for the same, with the same page boxes, would make the same boxes, and is skipped.
+    uint64_t version;
+    uint32_t pages;
+    bool made;
+};
+
 // An element of a subtree whose styles a restyle computes ahead, on several threads, before it walks the subtree.
 struct CssPresentationPrefetch {
     PrDomElement* element;
@@ -453,6 +489,7 @@ struct CssPresentation {
     bool rulesStale;                         // the rule set is out of date, except for the rules a change restyles by
                                              // feature
     bool layoutStale;                        // an update changed styles or boxes that no layout has laid out since
+    PrLayoutVec laidOutIn;                   // the viewport that the last layout laid the tree out in
     bool sceneStale;                         // a layout on the caller's thread changed what the last scene shows
     bool readsViewport;                      // a computed style resolved a length relative to the viewport's extent
     bool readsOutside;                       // an entry's readsOutside is set
@@ -554,6 +591,9 @@ struct CssPresentation {
     // The offsets that the document's own scrolls set since the host last took them (prCssPresentationTakeScrolls),
     // listed once for each container.
     RawArray<PrLayoutSceneScroll> documentScrolls;
+
+    // The boxes in the margins of a paged presentation's pages (css_presentation_page.h).
+    CssPageMargins pageMargins;
 };
 
 // Returns the entry of `node`, or kHashMissing if the presentation has none.
@@ -635,7 +675,8 @@ void cssPresentationFlush(PrCssPresentation* presentation);
 
 // The two steps of prCssPresentationUpdate, between which the browsing context brings up to date what it draws in the
 // boxes, such as the content of svg elements (css_presentation_svg.h). The first brings the styles and the boxes up to
-// date. The second lays the boxes out if anything changed, and returns true if it did.
+// date. The second lays the boxes out if anything changed or the viewport's extent is not the one that they were last
+// laid out in, and returns true if it did.
 void cssPresentationUpdateBoxes(PrCssPresentation* presentation, PrLayoutVec extent);
 bool cssPresentationUpdateLayout(PrCssPresentation* presentation, PrLayoutVec extent);
 
@@ -685,6 +726,34 @@ const CssComputedStyle* cssPresentationStyleUnder(PrCssPresentation* presentatio
 // no rule styles it. The caller owns a reference to the style. Called on the presentation's thread, outside a restyle.
 const CssComputedStyle* PR_NULLABLE cssPresentationPseudoStyleUnder(PrCssPresentation* presentation,
     const PrDomElement* element, CssPseudo pseudo, const CssComputedStyle* PR_NULLABLE parent);
+
+// Returns the style that the declaration blocks `blocks` give a box that no element generates, in the order of the
+// cascade, inheriting from `parent`: a page context's or a page-margin box's (cssCascadeBlocks). The box computes its
+// content as `pseudo` does. The caller holds one reference. Called on the presentation's thread, outside a restyle.
+const CssComputedStyle* cssPresentationStyleOfBlocks(PrCssPresentation* presentation,
+    const CssComputedStyle* PR_NULLABLE parent, CssPseudo pseudo,
+    const CssDeclarationBlock* PR_NONNULL const* PR_NONNULL blocks, uint32_t count);
+
+// Returns the layout record that the computed style `style` projects onto, as an element's does.
+PrLayoutStyleIndex cssPresentationRecord(PrCssPresentation* presentation, const CssComputedStyle* style);
+
+// Returns the record of an anonymous box in a box styled by `parent`, which inherits what inherits from it and takes
+// the initial values of the rest, as the boxes of generated content do.
+PrLayoutStyleIndex cssPresentationAnonymousRecord(PrCssPresentation* presentation, const CssComputedStyle* parent);
+
+// Returns true if the image that the url `value` names has loaded. Starts fetching the image if no style has named it
+// before.
+bool cssPresentationImageReady(PrCssPresentation* presentation, CssValueRun value);
+
+// Creates a replaced box as the last child of `box` that shows the image that the url `value` names, in a box styled by
+// `style`, and returns true. Starts fetching the image if no style has named it before. Returns false, and creates
+// nothing, while the image loads, and if it failed to.
+bool cssPresentationCreateImage(PrCssPresentation* presentation, PrLayoutNode box, const CssComputedStyle* style,
+    CssValueRun value);
+
+// Puts the children of the root's box in order, the page-margin boxes last (CssPageMargins::nodes), and removes the
+// children that belong to nothing.
+void cssPresentationReconcileRoot(PrCssPresentation* presentation);
 
 // Projects again, at the next update, the boxes that name a source of the references (CssPresentationReferences),
 // because what a source draws may have changed.
@@ -771,9 +840,11 @@ bool cssPresentationComputedCustomValue(PrCssPresentation* presentation, const P
 // The two halves of prCssPresentationStart. The first brings the styles and the tree up to date and waits for the
 // agent's layout thread. The second posts the job, and then restyles the next job's content ahead. A host that presents
 // several documents can then take in the changes of each document before it posts any job, so that the jobs run back to
-// back, and brings up to date what it draws in the boxes in between.
+// back, and brings up to date what it draws in the boxes in between. The styles' viewport is `extent`, and `viewport`
+// is the extent of the viewport that the layout's root is laid out in, which is the same but for a paginated tree's
+// (pr/layout_page.h).
 void cssPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec extent);
-void cssPresentationPostJob(PrCssPresentation* presentation, PrLayoutVec extent);
+void cssPresentationPostJob(PrCssPresentation* presentation, PrLayoutVec extent, PrLayoutVec viewport);
 
 // Returns true if the element's used color scheme is dark (css-color-adjust-1/#color-scheme-prop), as of the
 // presentation's last update. An element that the presentation has not styled uses the page's scheme.

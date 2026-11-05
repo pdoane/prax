@@ -18,18 +18,24 @@
 #include "pr/app_user_preferences.h"
 #include "pr/audio_mixer.h"
 #include "pr/draw_list.h"
+#include "pr/draw_structure.h"
+#include "pr/draw_writer.h"
 #include "pr/font.h"
+#include "pr/layout_page.h"
 #include "pr/media.h"
+#include "pr/task.h"
 #include "pr/vec.h"
 
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <vector>
 
 struct JSContext;
 
 struct PrGpuDevice;
 struct PrHtmlPage;
+struct PrHtmlView;
 struct PrTextShaper;
 
 PR_ASSUME_NONNULL_BEGIN
@@ -41,6 +47,29 @@ struct Page;
 
 // The state of a host: its script runtime, event loop, network, fonts and pages.
 struct HostState;
+
+// Whether a page is loaded to be captured, as a reftest or its reference.
+enum {
+    Capture_None,
+    Capture_Wait,       // the page runs the capture's wait (setCaptureWait), which stops the run (stopRun())
+};
+typedef uint8_t Capture;
+
+// How a host's settle ended.
+enum {
+    Settled_Idle,       // nothing was left to run, only a page's animations wanted frames, or every page that load
+                        // loaded stopped the run
+    Settled_TimedOut,   // the timeout passed first
+    Settled_Failed,     // a job failed outside any page
+};
+typedef uint8_t Settled;
+
+// The media type that a page renders for (mediaqueries-4/#media-types).
+enum {
+    Media_Screen,   // as it renders in the viewport (PageHost::paint)
+    Media_Print,    // printed, in the pages of its page boxes (PageHost::print)
+};
+typedef uint8_t Media;
 
 // A host of pages, as this header describes.
 class PageHost {
@@ -59,11 +88,15 @@ public:
     void reset();
 
     // Serves the resources that a captured page loads, as tools/pages/pages.py saves them. `capture` is a JSON file
-    // that holds the page's URL ("url") and the Content-Type it was served with ("type"), and each resource that was
-    // captured ("resources": an array of {"url", "file", "type"}, each file relative to the JSON's directory). A
-    // request for a captured URL is answered from its file with its type, whatever its host, and the page loads at its
-    // URL with its type. The page's URL is answered from `page`, or from the HTML file beside the JSON if `page` is
-    // empty. Writes the page's URL to `pageUrl`. Returns false, saying why on stderr, if the file cannot be read.
+    // that holds the page's URL ("url") and the Content-Type it was served with ("type"), each resource that was
+    // captured ("resources": an array of {"url", "file", "type"}, each file relative to the JSON's directory), and each
+    // that was left out ("omitted": an array of {"url", "reason"}). A request for a captured URL is answered from its
+    // file with its type, whatever its host, and the page loads at its URL with its type. A request for an omitted URL
+    // is a network error, so that a capture never reaches the network. A captured response is the local copy of what
+    // the page loads, so it is answered as a local one is: as from the request's own origin
+    // (PrFetchResponseType_Basic), with no CORS check. The page's URL is answered from `page`, or from the HTML file
+    // beside the JSON if `page` is empty. Writes the page's URL to `pageUrl`. Returns false, saying why on stderr, if
+    // the file cannot be read.
     bool addCapture(const std::filesystem::path& capture, std::string* pageUrl, const std::filesystem::path& page = {});
 
     // Runs `script` in each window that the pages loaded afterward open, before its document's own scripts.
@@ -73,6 +106,9 @@ public:
     // load.
     bool addFont(const std::filesystem::path& file);
 
+    // Returns the host's font set, which the pages set their text in, to add faces and families to. The host owns it.
+    PrFontSet* fonts();
+
     // Hints the fonts of the pages loaded afterward, the host's and their own, by `hinter` in the mode `hinting`, or
     // draws them as designed with a null hinter, as the host does until this is called (prFontSetSetHinting). The
     // hinter must outlive the host.
@@ -81,6 +117,10 @@ public:
     // Presents the pages loaded afterward with a renderer on `device`, or with a renderer in memory if `device` is
     // null, as the host does until this is called (PrHtmlHost::device). The device must outlive the pages.
     void setDevice(PrGpuDevice* PR_NULLABLE device);
+
+    // Sets the gap between printed pages, in CSS pixels, as a paint for print media stacks them down the viewport
+    // (prHtmlViewSetPaged). The gap is zero until this is called.
+    void setPageGap(float gap);
 
     // Loads the pages afterward without running their scripts, as a browser with scripting disabled does. Scripts that
     // the host runs (runFile) still run.
@@ -126,8 +166,9 @@ public:
     void advance(double until);
 
     // Checks each page's presentation after every rendering update, and once more when verify() is called, against a
-    // full recomputation (prCssPresentationVerify). Writes each page's first failure to stderr as "<page>: render
-    // verify: <what differs>". The pages loaded afterward are checked.
+    // full recomputation (prCssPresentationVerify). Writes each page's first failure to stderr as "<page>: presentation
+    // verify: <what differs>". Checks the layout of each print's pages too (prLayoutTreeVerify), and writes its failure
+    // as "<page>: print verify: <what differs>". The pages loaded afterward are checked.
     void verifyRendering();
 
     // Brings each page's presentation up to date in a viewport of `viewport` CSS pixels and checks it, as
@@ -151,10 +192,9 @@ public:
     // Returns false, saying why on stderr, if the file holds no certificate.
     bool addTrustAnchor(const std::filesystem::path& pem);
 
-    // Runs the script file `script` in each page loaded with Capture::Wait once it has loaded, as the body of a
-    // function called on the window with the page's URL and the function that stops the run (stopRun()). The script
-    // stops the run once the page is ready to be captured. Returns false, saying why on stderr, if the file cannot be
-    // read.
+    // Runs the script file `script` in each page loaded with Capture_Wait once it has loaded, as the body of a function
+    // called on the window with the page's URL and the function that stops the run (stopRun()). The script stops the
+    // run once the page is ready to be captured. Returns false, saying why on stderr, if the file cannot be read.
     bool setCaptureWait(const std::filesystem::path& script);
 
     // Returns the context that runs scripts outside any page, with the shell's functions: print(), readFile(path),
@@ -166,16 +206,10 @@ public:
     // the file cannot be read or the script throws.
     bool runFile(const char* path);
 
-    // Whether a page is loaded to be captured, as a reftest or its reference.
-    enum class Capture {
-        None,
-        Wait,           // the page runs the capture's wait (setCaptureWait), which stops the run (stopRun())
-    };
-
     // Starts loading the page at `location`, an absolute URL or a path, which loads at its file: URL. The page loads as
     // the host runs its tasks (settle). Returns null, saying why on stderr, if a path names no file. A page that fails
     // to load is returned, and pageOk reports the failure once it arrives.
-    Page* PR_NULLABLE load(const std::string& location, Capture capture = Capture::None);
+    Page* PR_NULLABLE load(const std::string& location, Capture capture = Capture_None);
 
     // Returns true if the page has loaded and run without an error so far.
     static bool pageOk(const Page* page);
@@ -186,14 +220,6 @@ public:
 
     // Returns the browsing context that the page runs in, or null once it is destroyed.
     static PrHtmlPage* PR_NULLABLE htmlPage(const Page* page);
-
-    // How settle ended.
-    enum class Settled {
-        Idle,           // nothing was left to run, only a page's animations wanted frames, or every page that load
-                        // loaded stopped the run
-        TimedOut,       // the timeout passed first
-        Failed,         // a job failed outside any page
-    };
 
     // Runs the pages' due jobs, tasks and timers until none is left, only a page's animations want frames, or every
     // page that load loaded has stopped the run (stopRun()). With a `timeout` of zero or more, it stops once that many
@@ -222,14 +248,86 @@ public:
     // that it can go on to its final state. Returns true if it fired at any page. The pages then need to settle again.
     bool signalRendered(PrVec2 viewport);
 
-    // Paints the page into `list`, in CSS pixels, as it renders in a viewport of `viewport` CSS pixels on `display` for
-    // a user with `preferences`, over the canvas's color. The caller renders the list at the display's pixel ratio. A
-    // paint that starts fetches, as the first style that names an image does, waits for them and paints again. Returns
-    // false if the page has no rendering.
-    bool paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, const PrAppUserPreferences& preferences,
-        PrDrawList* list);
+    // Paints the page into `list`, in CSS pixels, as a viewport of `viewport` CSS pixels shows it in `media`, on
+    // `display` for a user with `preferences`. Returns false if the page has no rendering.
+    //
+    // On the screen, the page paints over its canvas's color. In print, its pages are on US letter paper with no
+    // margins until the document's @page rules change it. They stack down the viewport as a paged view shows them
+    // (prHtmlViewSetPaged), the page gap apart (setPageGap), each on white paper, with nothing painted between them.
+    //
+    // Either media scrolls by the window's scroll offset and the user's input. The caller renders the list at the
+    // display's pixel ratio. A paint that starts fetches, as the first style that names an image does, waits for them
+    // and paints again. With a `structure`, the paint marks the page's content and appends the document's structure to
+    // `structure`, for a writer of documents to join (pr/html_structure.h).
+    bool paint(Page* page, Media media, PrVec2 viewport, const PrAppDisplay& display,
+        const PrAppUserPreferences& preferences, PrDrawList* list, PrDrawStructure* PR_NULLABLE structure = nullptr);
+
+    // A page of a printed document: its paint, and its sheet as a writer takes it (PrDrawPage), in CSS pixels from the
+    // sheet's top left. The caller releases the list.
+    struct PrintedPage {
+        PrDrawList* list;
+        PrVec2 extent;
+        PrRect bleed;
+        PrRect trim;
+    };
+
+    // How long each phase of a print took, in milliseconds.
+    struct PrintTimings {
+        double paginate;    // style and layout into pages, with the fetches that they start
+        double paint;       // the paint of every page
+        double structure;   // the document's structure
+    };
+
+    // Prints the page's document for print media (css-page-3) on `display` for a user with `preferences`, and appends
+    // its pages to `pages`. A page's box is `initial`, as a printer's paper and margins give it, until the document's
+    // @page rules change it. The caller renders the pages at the display's pixel ratio. A print waits for the fetches
+    // that it starts, as a paint does. Returns false if the page has no rendering. With a `structure`, the pages mark
+    // their content and the document's structure is appended to `structure`, as for a paint. The view stays paged
+    // afterwards, so that the next print in the same page box lays out only what changed, until a paint for the screen.
+    // With `timings`, the print reports how long each of its phases took.
+    bool print(Page* page, const PrLayoutPageBox& initial, const PrAppDisplay& display,
+        const PrAppUserPreferences& preferences, std::vector<PrintedPage>& pages,
+        PrDrawStructure* PR_NULLABLE structure = nullptr, PrintTimings* PR_NULLABLE timings = nullptr);
+
+    // What writing a document made, and how long each phase took, in milliseconds.
+    struct DocumentTimings {
+        uint32_t pages;
+        size_t bytes;
+        PrintTimings print;     // zero for the screen
+        double other;           // the rest of the paint and the structure, with the writer's setup
+        double write;           // the writer
+        double file;            // the file's write
+    };
+
+    // Writes the page as a document of the writer `backend` (pr/draw_writer.h) to `path`, in `media`. A printed page's
+    // box is `pageBox`, as a printer's paper and margins give it, until the document's @page rules change it. The
+    // screen is laid out in a viewport of `viewport` CSS pixels. Either renders on the default display for the host's
+    // user preferences. The document is tagged with the document's structure (pr/html_structure.h) if its format tags
+    // content, its streams are compressed, and the writer shares the host's workers. A format without pages writes a
+    // file for each page, named as documentFiles names them, and removes the files of an earlier write that this one
+    // does not replace. Returns false, saying why on stderr, if the page has no rendering or a file cannot be written.
+    // With `timings`, the call reports what it made and how long each phase took.
+    bool writeDocument(Page* page, Media media, const PrLayoutPageBox& pageBox, PrVec2 viewport,
+        PrDrawWriterBackend backend, const std::filesystem::path& path, DocumentTimings* PR_NULLABLE timings = nullptr);
+
+    // Returns the files of the document written to `path` (writeDocument), in order: `path` itself for a document of
+    // one file, as a format with pages writes, and otherwise one file for each page, named for `path` with the page's
+    // number from 1 before the extension, as page-1.svg and page-2.svg are for page.svg. Returns none if neither
+    // exists.
+    static std::vector<std::filesystem::path> documentFiles(const std::filesystem::path& path);
+
+    // The threads that share the work of the host's pages with the thread that runs them, or null for none. Work that
+    // the host runs between the pages' tasks, such as writing a document, may share them too.
+    PrTaskPool* PR_NULLABLE workers() const;
+
+    // Returns the title of the page's document, or empty.
+    static std::string pageTitle(Page* page);
 
 private:
+    // Brings the view's document up to date with `prepare`, and again after the tasks that the fetches it started
+    // deliver, until a pass runs none.
+    void prepareWithFetches(PrHtmlView* view, void (*prepare)(PrHtmlView* view));
+
     std::unique_ptr<HostState> state_;
 };
 

@@ -31,7 +31,7 @@ constexpr CssStyleGroup kAnimatedGroups[] = {
     CssStyleGroup_Font, CssStyleGroup_Color, CssStyleGroup_Box, CssStyleGroup_Flex, CssStyleGroup_Decoration,
     CssStyleGroup_Background, CssStyleGroup_Effect, CssStyleGroup_Compositing, CssStyleGroup_Generated,
     CssStyleGroup_List, CssStyleGroup_Svg, CssStyleGroup_SvgGeometry, CssStyleGroup_Table, CssStyleGroup_Typography,
-    CssStyleGroup_Grid,
+    CssStyleGroup_Grid, CssStyleGroup_Fragmentation,
 };
 
 CssValueRun animationValue(const CssComputedStyle* style, PrCssProperty property) {

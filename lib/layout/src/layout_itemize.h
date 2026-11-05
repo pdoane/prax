@@ -22,7 +22,8 @@ namespace pr_impl {
 bool layoutIsUpright(const PrLayoutFontStyle& container, const PrLayoutFontStyle& font, uint32_t codePoint, PrScript script);
 
 // Returns true if text styled by the font groups `a` and `b` shapes identically, which is the case if the groups have
-// the same faces, size and language. Other properties of the groups, such as color, do not affect glyphs.
+// the same faces, size, language, font features, such as small capitals, and spacing. Other properties of the groups,
+// such as color, do not affect glyphs.
 bool layoutSameShapingStyle(const LayoutStyles* styles, uint32_t a, uint32_t b);
 
 // Divides the text of `t` into shaping runs (LayoutShapingRun) and replaces `t.runs` with them. Each run records its

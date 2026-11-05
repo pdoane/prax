@@ -54,13 +54,14 @@ void dropUnusedTextures(ImGuiGpu* g) {
     g->textures.count = kept;
 }
 
-PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawTarget* target) {
+PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* part,
+        const PrDrawTarget* target) {
     ImGuiGpu* g = static_cast<ImGuiGpu*>(renderer);
     ImGui::SetCurrentContext(g->context);
     ImGuiFrame* frame = static_cast<ImGuiFrame*>(handle);
     imguiFrameClear(frame);
     ++g->render;
-    imguiRecord(g, frame, list, target);
+    imguiRecord(g, frame, list, *part, target);
     dropUnusedTextures(g);
     return PrStatus_Ok;
 }

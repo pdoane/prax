@@ -12,14 +12,19 @@ A reftest is one case. It is rendered if the test and each of its references can
 HTML or XHTML page loads in the shell, and a static SVG document is rendered by the reftest harness
 (tools/suite/reftest.cpp). If every page of a reftest is HTML or XHTML, one run of the shell renders the test and its
 references once they settle, and compares them (--reference). Otherwise the shell captures each page as a PNG
-(--screenshot), and the reftest harness compares them. A page for print is not rendered. A reftest is judged as
-wptrunner judges it: it passes if it renders the same as one of its `match` references, within the ranges that a fuzzy
-meta gives, and that reference and the test then differ from the `mismatch` references along wptrunner's chain of them
-(reftest_outcome). Renders are compared as wptrunner compares them, where a pixel differs only if the luma of its
-channels' differences is nonzero. suites/wpt/fuzzy.txt overrides a test's fuzzy ranges, as a browser's metadata does,
-each with its reason. --write keeps each reftest's render, its reference and their difference, as tools/suite/reftest.py
-does. A match in which the engine draws nothing for both the test and its reference does not pass, because two renders
-of nothing agree without testing anything. It counts as a file that completed and a test that failed, so that what the
+(--screenshot), and the reftest harness compares them. A print reftest, which WPT's manifest finds by its name
+(is_print), is rendered if each of its documents is HTML or XHTML. The shell prints the test and its references, from
+the page box of WPT's print reftests, and renders each page that the test's reftest-pages metas select as an image of
+its own (pr_shell --print). Two documents then render the same if they have as many pages and each page renders the
+same as the page in the same place, each within the fuzzy ranges (web-platform-tests docs, "Print Reftests"). A
+reftest is judged as wptrunner judges it: it passes if it renders the same as one of its `match` references, within
+the ranges that a fuzzy meta gives, and that reference and the test then differ from the `mismatch` references along
+wptrunner's chain of them (reftest_outcome). Renders are compared as wptrunner compares them, where a pixel differs
+only if the luma of its channels' differences is nonzero. suites/wpt/fuzzy.txt overrides a test's fuzzy ranges, as a
+browser's metadata does, each with its reason. --write keeps each reftest's render, its reference and their
+difference, as tools/suite/reftest.py does, and those of a print reftest's later page with `-page<n>` after the stem.
+A match in which the engine draws nothing for both the test and its reference does not pass, because two renders of
+nothing agree without testing anything. It counts as a file that completed and a test that failed, so that what the
 engine draws does not change what is counted. A reftest that is not rendered is listed and not counted. Results are one
 row per module: a directory's first two levels, with CSS2 split by its subdirectories.
 
@@ -566,9 +571,10 @@ RENDERED = (".svg",)
 CAPTURED = (".html", ".htm", ".xht", ".xhtml")
 REFTEST_SIZE = "800x600"
 
-# Matches the mark of a reftest of paged media whose root has the class reftest-print, one of the ways that WPT names a
-# print reftest, which the shell does not capture.
-PRINT = re.compile(r"\breftest-print\b")
+# The page box that WPT prints a print reftest's documents on before their @page rules apply, in CSS pixels at 96 per
+# inch: 5 by 3 inches, with margins of half an inch (web-platform-tests docs, "Print Reftests").
+PRINT_PAGE_SIZE = "480x288"
+PRINT_PAGE_MARGIN = "48"
 
 REFTEST_LINK = re.compile(r"<(?:\w+:)?link\b[^>]*>", re.I | re.S)
 LINK_ATTRIBUTE = re.compile(r"""\b(rel|href)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))""", re.I)
@@ -645,13 +651,29 @@ def css_flags(text):
     return flags
 
 
+def type_flag(path):
+    """Returns the type that the name of the file at `path` gives it, the word after its last hyphen and before any
+    dot, or None, as WPT's manifest reads it (tools/manifest/sourcefile.py)."""
+    stem = os.path.splitext(os.path.basename(path))[0]
+    return stem.rsplit("-", 1)[1].split(".")[0] if "-" in stem else None
+
+
+def is_print(path):
+    """Returns true if the page at `path` is a print reftest's by its name, as WPT's manifest finds them
+    (name_is_print_reftest): its type is print, or a directory of its path in the checkout is named print."""
+    directory = os.path.dirname(os.path.relpath(path, WPT))
+    return type_flag(path) == "print" or "print" in directory.split(os.sep)
+
+
 def is_manual(path):
     """Returns true if the test at `path` is one that a person runs, which wptrunner leaves out, as WPT's manifest finds
-    them: a name whose type is manual or visual, or a CSS test whose flags call for a person."""
-    stem = os.path.splitext(os.path.basename(path))[0]
-    if "-" in stem and stem.rsplit("-", 1)[1].split(".")[0] in ("manual", "visual"):
+    them: a name whose type is manual or visual, or a CSS test whose flags call for a person. A print reftest is never
+    one by its flags, since the manifest finds it first."""
+    if type_flag(path) in ("manual", "visual"):
         return True
-    return not path.endswith(SCRIPTS) and bool(css_flags(page_text(path)) & CSS_MANUAL_FLAGS)
+    if path.endswith(SCRIPTS) or (is_print(path) and references(path)):
+        return False
+    return bool(css_flags(page_text(path)) & CSS_MANUAL_FLAGS)
 
 
 def kind_of(path, relative):
@@ -738,23 +760,42 @@ def within(allowed, difference, pixels):
             or (low <= difference <= high and fewest <= pixels <= most))
 
 
-def drawable(path):
+def drawable(path, printed=False):
     """Returns true if a reftest's document can be rendered: a page that the shell captures, or a static document that
-    the reftest harness renders."""
+    the reftest harness renders. A document of a print reftest is `printed`, which only the shell does."""
     if path.endswith(CAPTURED):
-        # A print reftest is named with -print, is in a directory named print, as WPT's manifest finds them
-        # (tools/manifest/sourcefile.py, name_is_print_reftest), or marks its root with reftest-print.
-        return (not os.path.splitext(path)[0].endswith("-print")
-                and "print" not in os.path.dirname(path).split(os.sep)
-                and not PRINT.search(page_text(path)))
-    return path.endswith(RENDERED) and not reftest.DYNAMIC.search(page_text(path))
+        return True
+    return not printed and path.endswith(RENDERED) and not reftest.DYNAMIC.search(page_text(path))
 
 
 def renderable(path):
     """Returns true if the test and each of its references can be rendered."""
     refs = references(path)
-    return (bool(refs) and drawable(path)
-            and all(os.path.exists(r) and drawable(r) for _, r in refs))
+    printed = is_print(path)
+    return (bool(refs) and drawable(path, printed)
+            and all(os.path.exists(r) and drawable(r, printed) for _, r in refs))
+
+
+def page_ranges(path):
+    """Returns the pages of each document that the print reftest at `path` compares, by the document's path, as the
+    test's reftest-pages metas give them, in the form that pr_shell --pages takes. A meta keyed by a reference's URL,
+    relative to the test, selects that reference's pages, and an unkeyed one selects the test's own. A document that
+    no meta names compares every page. WPT's manifest reads only the test's metas, so a reference's own do not apply.
+    The shell rejects ranges that do not parse, which fails the test, as the manifest rejects them."""
+    ranges = {}
+    for tag in META_TAG.findall(page_text(path)):
+        attributes = {m.group(1).lower(): m.group(2) or m.group(3) or m.group(4) or ""
+                      for m in META_ATTRIBUTE.finditer(tag)}
+        if attributes.get("name", "").lower() != "reftest-pages":
+            continue
+        parts = attributes.get("content", "").rsplit(":", 1)
+        document = path
+        if len(parts) == 2:
+            href = parts[0].strip().split("?")[0].split("#")[0]
+            base = WPT if href.startswith("/") else os.path.dirname(path)
+            document = os.path.normpath(os.path.join(base, href.lstrip("/")))
+        ranges[document] = "".join(parts[-1].split())
+    return ranges
 
 
 def capture(shell, path, png):
@@ -786,25 +827,35 @@ def comparisons(path):
 
 
 def compare_reftest(shell, path):
-    """Returns the answer for each of the reftest's comparisons, in the form that the reftest harness gives. If every
-    document is a page that the shell captures, one run of the shell renders and compares them. Otherwise the shell
-    captures each page as a PNG, and the reftest harness renders each static document and compares them."""
+    """Returns the answer for each of the reftest's comparisons, in the form that the reftest harness gives, or for a
+    print reftest in the form that pr_shell --print gives. If every document is a page that the shell captures, one run
+    of the shell renders and compares them, as it always does for a print reftest. Otherwise the shell captures each
+    page as a PNG, and the reftest harness renders each static document and compares them."""
     pairs = comparisons(path)
+    if is_print(path):
+        return compare_pages(shell, pairs, page_ranges(path))
     if all(d.endswith(CAPTURED) for pair in pairs for d in pair) and SHELLS.serves(shell):
         return compare_pages(shell, pairs)
     return compare_documents(shell, pairs)
 
 
-def compare_pages(shell, pairs):
-    """Returns compare_reftest's answers for the comparisons `pairs`, each of two pages."""
+def compare_pages(shell, pairs, printed=None):
+    """Returns compare_reftest's answers for the comparisons `pairs`, each of two pages. If `printed` is given, the
+    pages are printed, and it holds the page ranges of the documents that it names (page_ranges)."""
     args = []
+    if printed is not None:
+        args += ["--page-size", PRINT_PAGE_SIZE, "--page-margin", PRINT_PAGE_MARGIN]
+
+    def pages(document):
+        return ["--pages", printed[document]] if printed and document in printed else []
+
     for left in dict.fromkeys(left for left, _ in pairs):
-        args += [arg for l, right in pairs if l == left for arg in ("--reference", url_of(right))]
+        args += [arg for l, right in pairs if l == left for arg in pages(right) + ["--reference", url_of(right)]]
         if WRITE:
             stem = reftest.write_stem(WRITE, os.path.relpath(left, WPT))
             os.makedirs(os.path.dirname(stem), exist_ok=True)
             args += ["--write", stem]
-        args += ["--html", url_of(left)]
+        args += (["--print"] if printed is not None else []) + pages(left) + ["--html", url_of(left)]
     try:
         process = SHELLS.run(shell, args, TIMEOUT)
     except subprocess.TimeoutExpired:
@@ -845,32 +896,43 @@ def compare_documents(shell, pairs):
         return [slot if slot is not None else next(given) for slot in slots]
 
 
+def same(allowed, answer):
+    """Returns true if a comparison's answer says that its two documents render the same within the fuzzy ranges
+    `allowed`. A printed document renders the same as another if they have as many pages and each page is within the
+    ranges of the page in the same place (wptrunner's check_pass)."""
+    if "pageCounts" not in answer:
+        return within(allowed, answer["maxDifference"], answer["differingPixels"])
+    count, other = answer["pageCounts"]
+    return count == other and all(within(allowed, page["maxDifference"], page["differingPixels"])
+                                  for page in answer["pages"])
+
+
 def reftest_outcome(path, answers):
     """Returns whether the reftest passes, fails, or matches only by drawing nothing, from the harness's answer for
     each of its comparisons, as wptrunner walks them. The test passes if it matches one of its match references, within
     its fuzzy ranges, and that reference then differs from the first mismatch reference, which differs from the test,
     as each later mismatch reference does. Of these, only a comparison of the test with its own reference uses the
     test's fuzzy ranges. With no match reference, the test must differ from every mismatch reference."""
-    if any(a["status"] != "" or "maxDifference" not in a for a in answers):
+    if any(a["status"] != "" or not ("maxDifference" in a or "pageCounts" in a) for a in answers):
         return "fail"
     refs = references(path)
     own = answers[:len(refs)]
     chained = iter(answers[len(refs):])
 
     def differs(answer):
-        return not within(((0, 0), (0, 0)), answer["maxDifference"], answer["differingPixels"])
+        return not same(((0, 0), (0, 0)), answer)
 
     mismatches = [(ref, a) for (rel, ref), a in zip(refs, own) if rel == "mismatch"]
     later = all(differs(a) for _, a in mismatches[1:])
     matches = [(ref, a) for (rel, ref), a in zip(refs, own) if rel == "match"]
     if not matches:
         first, answer = mismatches[0]
-        apart = not within(fuzzy(path, first), answer["maxDifference"], answer["differingPixels"])
+        apart = not same(fuzzy(path, first), answer)
         return "pass" if apart and later else "fail"
     passing = []
     for ref, answer in matches:
         tail = not mismatches or (differs(next(chained)) and differs(mismatches[0][1]) and later)
-        if within(fuzzy(path, ref), answer["maxDifference"], answer["differingPixels"]) and tail:
+        if same(fuzzy(path, ref), answer) and tail:
             passing.append(answer)
     if not passing:
         return "fail"

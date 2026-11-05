@@ -99,9 +99,10 @@ if (PR_JS)
     target_compile_definitions(doc_bench PRIVATE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
 endif()
 
-if ((APPLE OR WIN32) AND PR_JS)
-    # What each drawing costs to record and render with each backend. ./dev.sh bench draw runs it.
+# What each drawing of draw_features costs to record and render with each backend, which needs the examples' drawings.
+# ./dev.sh bench draw runs it.
+if ((APPLE OR WIN32) AND PR_EXAMPLES)
     add_executable(draw_bench draw_bench.cpp)
-    target_link_libraries(draw_bench PRIVATE viewer_documents harness prax::compress prax::draw prax::gpu
-                                             prax::image pr_warnings)
+    target_link_libraries(draw_bench PRIVATE draw_features_drawings draw_renderers harness prax::app prax::compress
+                                             prax::draw prax::gpu prax::image pr_warnings)
 endif()

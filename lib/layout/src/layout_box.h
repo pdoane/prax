@@ -165,14 +165,16 @@ PrLayoutScrollFlags layoutChainAxes(const PrLayoutBoxStyle& box);
 // ---------------------------------------------------------------------------------------------------------------------
 // Taking part in a parent's layout
 
-// Returns true if a box of `position` is absolutely positioned, which takes it out of flow
-// (css-position-3/#position-property).
+// Returns true if a box of `position` is absolutely positioned or running, which takes it out of flow
+// (css-position-3/#position-property, css-gcpm-3/#running-elements).
 inline bool layoutPositionIsOutOfFlow(PrLayoutPosition position) {
-    return position == PrLayoutPosition_Absolute || position == PrLayoutPosition_Fixed;
+    return position == PrLayoutPosition_Absolute || position == PrLayoutPosition_Fixed ||
+        position == PrLayoutPosition_Running;
 }
 
 // Returns true if the box of the node is out of flow (css-position-3/#abspos-layout). This is an element whose position
-// is absolute or fixed, other than the root, which is laid out as static whatever its position (CSS2/#dis-pos-flo).
+// is absolute, fixed or running, other than the root, which is laid out as static whatever its position
+// (CSS2/#dis-pos-flo).
 inline bool layoutIsOutOfFlow(const LayoutTree* tree, LayoutNodeIndex node) {
     return layoutTreeNode(tree, node).positioned && node != tree->root;
 }
@@ -255,8 +257,9 @@ inline bool layoutIsCollapsedItem(const LayoutTree* tree, LayoutNodeIndex node, 
 bool layoutIsInColumn(const LayoutTree* tree, LayoutNodeIndex node);
 
 // Returns true if the node has no box in the final tree, in which case its subtree has none either. An element has no
-// box if its display is none or it is a collapsed flex item. A text node or a line break has a box whenever its parent
-// has one. A child of a table column has no box, and neither has a child of a column group that is not a column.
+// box if its display is none, it is running, or it is a collapsed flex item. A text node or a line break has a box
+// whenever its parent has one. A child of a table column has no box, and neither has a child of a column group that is
+// not a column.
 inline bool layoutIsAbsent(const LayoutTree* tree, LayoutNodeIndex node) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     if (n.parent != kPrLayoutNodeNone && layoutTreeNode(tree, n.parent).children == LayoutChildren_Table &&
@@ -265,7 +268,10 @@ inline bool layoutIsAbsent(const LayoutTree* tree, LayoutNodeIndex node) {
     if (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak)
         return false;
     const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, n.style);
-    return box.display == PrLayoutDisplay_None || layoutIsCollapsedItem(tree, node, box);
+    // A running box is out of flow, which the node's bit says without its record.
+    return box.display == PrLayoutDisplay_None ||
+        (n.positioned && box.position == PrLayoutPosition_Running && node != tree->root) ||
+        layoutIsCollapsedItem(tree, node, box);
 }
 
 // The preferred aspect ratio of a box in a writing mode (css-sizing-4/#aspect-ratio).
@@ -366,19 +372,23 @@ constexpr uint32_t kLayoutFontGroupNone = 0xffffffffu;
 // Returns true if the box of `node`, styled by `box`, establishes a block formatting context for its content
 // (CSS2/#block-formatting, css-writing-modes-4/#block-flow, css-position-3/#position-property). These boxes are the
 // root, a float, a box out of flow, a scroll container, flow-root, inline-block, an outside marker, a flex or grid
-// container, a table, a table cell, a caption, and a box whose writing mode differs from that of its containing block,
-// `outer`. The content of a flex or grid container or a table is independent of its context
-// (css-flexbox-2/#flex-containers, css-grid-1/#grid-containers, css-tables-3/#fixup-algorithm).
+// container, a table, a table cell, a caption, a multi-column container (css-multicol-1/#the-multi-column-model), and a
+// box whose writing mode differs from that of its containing block, `outer`. The content of a flex or grid container or
+// a table is independent of its context (css-flexbox-2/#flex-containers, css-grid-1/#grid-containers,
+// css-tables-3/#fixup-algorithm).
 inline bool layoutEstablishesContext(const LayoutTree* tree, LayoutNodeIndex node, const PrLayoutBoxStyle& box,
         LayoutOuterMode outer) {
     if (node == tree->root || box.floating != PrLayoutFloat_None || layoutPositionIsOutOfFlow(box.position) ||
             layoutIsScrollContainer(box) ||
             box.display == PrLayoutDisplay_FlowRoot || box.display == PrLayoutDisplay_InlineBlock ||
-            box.display == PrLayoutDisplay_Marker || layoutIsFlexContainer(box) || layoutIsGridContainer(box) ||
+            box.display == PrLayoutDisplay_Marker || box.display == PrLayoutDisplay_PageMargin ||
+            layoutIsFlexContainer(box) || layoutIsGridContainer(box) ||
             layoutIsTable(box) || box.display == PrLayoutDisplay_TableCell ||
             box.display == PrLayoutDisplay_TableCaption)
         return true;
     PrLayoutStyleIndex style = layoutTreeNode(tree, node).style;
+    if (layoutHasColumns(tree->styles, style))
+        return true;
     if (layoutStyle(tree->styles, style).groups[PrLayoutGroup_Font] == outer.font)
         return false;
     return layoutFontStyle(tree->styles, style).writingMode != outer.mode.writingMode;
@@ -410,7 +420,7 @@ inline LayoutLineSides layoutFloatSide(const PrLayoutBoxStyle& box, PrTextDirect
 }
 
 // Returns the sides of the floats that a box styled by `box` clears in a containing block of `direction`, or zero.
-inline LayoutLineSides layoutClearSides(const PrLayoutBoxStyle& box, PrTextDirection direction) {
+PR_FORCE_INLINE LayoutLineSides layoutClearSides(const PrLayoutBoxStyle& box, PrTextDirection direction) {
     PrLayoutClear clear = box.clear;
     if (clear == PrLayoutClear_None)
         return 0;
@@ -447,7 +457,8 @@ inline LayoutChildKind layoutChildKindFromStyle(PrLayoutNodeKind kind, const PrL
         bool positioned) {
     if (kind == PrLayoutNodeKind_Text)
         return LayoutChildKind_Inline;
-    if (box->display == PrLayoutDisplay_None || box->display == PrLayoutDisplay_Marker)
+    if (box->display == PrLayoutDisplay_None || box->display == PrLayoutDisplay_Marker ||
+            box->display == PrLayoutDisplay_PageMargin)
         return LayoutChildKind_None;
     if (kind == PrLayoutNodeKind_LineBreak)
         return LayoutChildKind_Inline;
@@ -654,10 +665,12 @@ void layoutEachChild(const LayoutTree* tree, LayoutNodeIndex node, Block block, 
 // Painting
 
 // Returns true if z-index applies to the box of `node`, styled by `box` (css-position-3/#stacking). It applies if the
-// box is positioned, or is a flex or grid item, whose z-index applies whatever its position (css-flexbox-2/#painting,
-// css-grid-1/#z-order). It never applies to the root, which is laid out as static whatever its position.
-inline bool layoutZIndexApplies(const LayoutTree* tree, LayoutNodeIndex node, const PrLayoutBoxStyle& box) {
-    return (box.position != PrLayoutPosition_Static || layoutInItemContainer(tree, node)) && node != tree->root;
+// box is positioned, or is a flex or grid item or a page-margin box, whose z-index applies whatever its position
+// (css-flexbox-2/#painting, css-grid-1/#z-order, css-page-3/#painting). It never applies to the root, which is laid out
+// as static whatever its position.
+PR_FORCE_INLINE bool layoutZIndexApplies(const LayoutTree* tree, LayoutNodeIndex node, const PrLayoutBoxStyle& box) {
+    return (box.position != PrLayoutPosition_Static || box.display == PrLayoutDisplay_PageMargin ||
+        layoutInItemContainer(tree, node)) && node != tree->root;
 }
 
 // Returns the stack level of the box of `node` in its stacking context (CSS2/#stack-level): its z-index if z-index
@@ -671,9 +684,9 @@ inline int32_t layoutStackLevel(const LayoutTree* tree, LayoutNodeIndex node) {
 
 // Returns true if the box of `node` makes a stacking context, which contains the stack levels of its descendants
 // (CSS2/#stacking-context). These boxes are the root, a positioned box whose z-index is not auto, a fixed or sticky
-// box, a box with opacity below 1 (css-color-4/#transparency), a box with a transform if transforms apply to it
-// (css-transforms-1/#transform-rendering), and a box that a compositor animates, because an animated property has the
-// effect of will-change (web-animations-1/#side-effects-section).
+// box, a page-margin box, a box with opacity below 1 (css-color-4/#transparency), a box with a transform if transforms
+// apply to it (css-transforms-1/#transform-rendering), and a box that a compositor animates, because an animated
+// property has the effect of will-change (web-animations-1/#side-effects-section).
 bool layoutIsStackingContextAs(const LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex style);
 inline bool layoutIsStackingContext(const LayoutTree* tree, LayoutNodeIndex node) {
     return layoutIsStackingContextAs(tree, node, layoutTreeNode(tree, node).style);
@@ -682,7 +695,8 @@ inline bool layoutIsStackingContext(const LayoutTree* tree, LayoutNodeIndex node
 // Returns true if the box of `node`, which has a fragment of its own and is styled by `style`, is painted whole in the
 // last phase of its stacking context. This is the case if it is positioned or makes a stacking context. A transform
 // other than none makes one whatever its matrix (css-transforms-1/#transform-rendering, css-color-4/#transparency), and
-// so does a flex or grid item whose z-index is not auto (css-flexbox-2/#painting, css-grid-1/#z-order).
+// so does a flex or grid item whose z-index is not auto (css-flexbox-2/#painting, css-grid-1/#z-order), and a
+// page-margin box (css-page-3/#painting).
 //
 // Painting late is separate from containing the stack levels of the descendants of the box, which only a stacking
 // context does. A positioned box at z-index auto paints as a stacking container
@@ -743,8 +757,10 @@ inline bool layoutHoldsFixed(const LayoutTree* tree, LayoutNodeIndex node) {
 }
 
 // Returns true if `holder` is the containing block of a box out of flow in it, whose position is `position`: fixed, or
-// absolute otherwise.
+// absolute otherwise. No box holds a running box.
 inline bool layoutHoldsPosition(const LayoutTree* tree, LayoutNodeIndex holder, PrLayoutPosition position) {
+    if (position == PrLayoutPosition_Running)
+        return false;
     return position == PrLayoutPosition_Fixed ? layoutHoldsFixed(tree, holder) : layoutHoldsAbsolute(tree, holder);
 }
 

@@ -16,6 +16,7 @@ pr_library(layout INCLUDE include
     src/layout_float.cpp
     src/layout_flow.cpp
     src/layout_fragment.cpp
+    src/layout_fragmentation.cpp
     src/layout_grid.cpp
     src/layout_grid_template.cpp
     src/layout_inline.cpp
@@ -24,6 +25,8 @@ pr_library(layout INCLUDE include
     src/layout_justify.cpp
     src/layout_line_align.cpp
     src/layout_logical.cpp
+    src/layout_multicol.cpp
+    src/layout_page.cpp
     src/layout_paint.cpp
     src/layout_position.cpp
     src/layout_query.cpp
@@ -57,6 +60,7 @@ if (PR_DEVELOP)
         tests/test_layout_faces.cpp
         tests/test_layout_fallback.cpp
         tests/test_layout_flex.cpp
+        tests/test_layout_fragmentation.cpp
         tests/test_layout_frame.cpp
         tests/test_layout_grid.cpp
         tests/test_layout_float.cpp
@@ -66,6 +70,8 @@ if (PR_DEVELOP)
         tests/test_layout_line.cpp
         tests/test_layout_logical.cpp
         tests/test_layout_marker.cpp
+        tests/test_layout_marking.cpp
+        tests/test_layout_page.cpp
         tests/test_layout_position.cpp
         tests/test_layout_stacking.cpp
         tests/test_layout_sticky.cpp

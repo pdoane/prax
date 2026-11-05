@@ -120,6 +120,9 @@ typedef struct PrDMatrix4 {
 // Returns the rectangle of `extent` with its top left at `origin`.
 PrRect prRectAt(PrVec2 origin, PrVec2 extent);
 
+// Returns `rect` moved by `offset`.
+PrRect prRectOffset(PrRect rect, PrVec2 offset);
+
 // Returns true if `rect` has no area.
 bool prRectIsEmpty(PrRect rect);
 

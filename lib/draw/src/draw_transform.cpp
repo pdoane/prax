@@ -254,6 +254,8 @@ bool prDrawCommandSkipsCollapsed(const PrDrawCommand* command) {
         case PrDrawCommandKind_PopTransform:
         case PrDrawCommandKind_PopClip:
         case PrDrawCommandKind_PopGroup:
+        case PrDrawCommandKind_PushMark:
+        case PrDrawCommandKind_PopMark:
             return false;
         default:
             return true;

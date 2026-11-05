@@ -1976,6 +1976,19 @@ void embedAdopted(void* PR_NULLABLE context, PrDomElement* element) {
         updateImageSource(static_cast<PrHtmlPage*>(context), element);
 }
 
+// Sets the width and height media features to `extent` (mediaqueries-5/#width, mediaqueries-5/#height).
+void setExtentFeatures(PrHtmlPage* page, PrVec2 extent) {
+    const PrCssDescriptor features[] = {PrCssDescriptor_MediaWidth, PrCssDescriptor_MediaHeight};
+    const float sizes[] = {extent.x, extent.y};
+    for (uint32_t i = 0; i < 2; ++i) {
+        PrTextBuffer length = {};
+        cssSerializeNumber(&length, double(sizes[i]));
+        prTextBufferAppend(&length, "px");
+        cssMediaEnvironmentSet(&page->window->media, features[i], prTextBufferView(&length));
+        prTextBufferReset(&length);
+    }
+}
+
 // Brings a frame's viewport up to date as its iframe's content box, after the parent's layout. A frame whose iframe has
 // no box keeps its last viewport.
 void updateFrameViewport(PrHtmlPage* page) {
@@ -2004,7 +2017,7 @@ void updateFrameViewport(PrHtmlPage* page) {
 bool viewportNow(void* PR_NULLABLE context, PrVec2* out) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(context);
     updateFrameViewport(page);
-    *out = page->viewport;
+    *out = htmlPageContainingExtent(page);
     return true;
 }
 
@@ -2016,12 +2029,13 @@ void updatePresentationNow(void* PR_NULLABLE context) {
     PrCssPresentation* presentation = page->presentation;
     if (presentation == nullptr)
         return;
-    PrVec2 viewport{};
-    viewportNow(page, &viewport);
-    PrLayoutVec extent = prLayoutVecFromPx(viewport);
-    prHtmlPresentationUpdate(presentation, extent);
+    PrVec2 containing{};
+    viewportNow(page, &containing);
+    PrLayoutVec extent = prLayoutVecFromPx(containing);
+    PrLayoutVec viewport = prLayoutVecFromPx(htmlPageViewport(page));
+    htmlPresentationUpdate(presentation, extent, viewport);
     if (cssPresentationSvgsResized(presentation))
-        prHtmlPresentationUpdate(presentation, extent);
+        htmlPresentationUpdate(presentation, extent, viewport);
 }
 
 // Erases the listeners and event handlers of `root` and its shadow-including descendants.
@@ -3482,6 +3496,14 @@ PrHtmlPage* PR_NULLABLE htmlDocumentPage(const PrDomDocument* document) {
     return page->window->document == document ? page : nullptr;
 }
 
+PrVec2 htmlPageContainingExtent(const PrHtmlPage* page) {
+    return page->printed ? page->print.firstArea : page->viewport;
+}
+
+PrVec2 htmlPageViewport(const PrHtmlPage* page) {
+    return page->viewport;
+}
+
 uint64_t htmlPageEmbed(const PrHtmlPage* page) {
     return uint64_t(uintptr_t(page));
 }
@@ -3569,6 +3591,16 @@ void htmlPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec ext
         cssPresentationPrepareJob(presentation, extent);
         svgPresentationUpdate(presentation);
     }
+}
+
+bool htmlPresentationUpdate(PrCssPresentation* presentation, PrLayoutVec extent, PrLayoutVec viewport) {
+    cssPresentationUpdateBoxes(presentation, extent);
+    // The boxes that name a reference whose source changed take it again before the layout.
+    if (!cssPresentationSvgIdle(presentation) && svgPresentationUpdate(presentation)) {
+        cssPresentationUpdateBoxes(presentation, extent);
+        svgPresentationUpdate(presentation);
+    }
+    return cssPresentationUpdateLayout(presentation, viewport);
 }
 
 PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* page, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers) {
@@ -3921,9 +3953,19 @@ bool prHtmlPageSetMediaFeature(PrHtmlPage* page, PrCssDescriptor feature, PrStri
     return cssMediaEnvironmentSet(&page->window->media, feature, value);
 }
 
-void prHtmlPageSetMediaType(PrHtmlPage* page, PrCssMediaType type) {
+void prHtmlPageSetPrint(PrHtmlPage* page, const PrHtmlPrintDesc* PR_NULLABLE print) {
+    bool printed = print != nullptr;
+    // The first page's area reaches styles through the extent that the presentation is next updated in
+    // (htmlPageContainingExtent), which restyles the elements that read it. Only the medium changes media queries.
+    bool medium = printed != page->printed ||
+        (printed && (print->paper.x != page->print.paper.x || print->paper.y != page->print.paper.y));
+    page->printed = printed;
+    page->print = printed ? *print : PrHtmlPrintDesc{};
+    if (!medium)
+        return;
+    cssMediaEnvironmentSetType(&page->window->media, printed ? PrCssMediaType_Print : PrCssMediaType_Screen);
+    setExtentFeatures(page, printed ? print->paper : page->viewport);
     cssPresentationDocumentMediaChanged(page->window->document);
-    cssMediaEnvironmentSetType(&page->window->media, type);
 }
 
 void prHtmlPageSetDefaultCharset(PrHtmlPage* page, PrCharset charset) {
@@ -3935,15 +3977,10 @@ void prHtmlPageSetViewport(PrHtmlPage* page, PrVec2 extent) {
     if (page->viewport.x == extent.x && page->viewport.y == extent.y)
         return;
     page->viewport = extent;
-    const PrCssDescriptor features[] = {PrCssDescriptor_MediaWidth, PrCssDescriptor_MediaHeight};
-    const float sizes[] = {extent.x, extent.y};
-    for (uint32_t i = 0; i < 2; ++i) {
-        PrTextBuffer length = {};
-        cssSerializeNumber(&length, double(sizes[i]));
-        prTextBufferAppend(&length, "px");
-        cssMediaEnvironmentSet(&page->window->media, features[i], prTextBufferView(&length));
-        prTextBufferReset(&length);
-    }
+    // Media queries see the paper while the document is printed.
+    if (page->printed)
+        return;
+    setExtentFeatures(page, extent);
     cssPresentationDocumentMediaChanged(page->window->document);
 }
 
@@ -3989,18 +4026,12 @@ PrCssPresentation* PR_NULLABLE prHtmlPagePresentation(PrHtmlPage* page) {
 }
 
 bool prHtmlPresentationUpdate(PrCssPresentation* presentation, PrLayoutVec extent) {
-    cssPresentationUpdateBoxes(presentation, extent);
-    // The boxes that name a reference whose source changed take it again before the layout.
-    if (!cssPresentationSvgIdle(presentation) && svgPresentationUpdate(presentation)) {
-        cssPresentationUpdateBoxes(presentation, extent);
-        svgPresentationUpdate(presentation);
-    }
-    return cssPresentationUpdateLayout(presentation, extent);
+    return htmlPresentationUpdate(presentation, extent, extent);
 }
 
 void prHtmlPresentationStart(PrCssPresentation* presentation, PrLayoutVec extent) {
     htmlPresentationPrepareJob(presentation, extent);
-    cssPresentationPostJob(presentation, extent);
+    cssPresentationPostJob(presentation, extent, extent);
 }
 
 double prHtmlPageTimeOrigin(PrHtmlPage* page) {

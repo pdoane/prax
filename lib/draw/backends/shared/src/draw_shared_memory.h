@@ -11,14 +11,17 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
-// Renders `list` over `pixels` in `format`. The pixels have the render's extent.
-using DrawMemoryRenderFn = void (*)(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list);
+// Renders the part of `list` over `pixels` in `format`. The pixels have the render's extent.
+using DrawMemoryRenderFn = void (*)(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list,
+    const PrDrawPart& part);
 
-// A frame of a renderer that draws on the CPU: its list, how it renders, and the origin of each render since the frame
-// was prepared. The native draws read the origins in the order that they run. A renderer that draws only 8 bits renders
-// an RgbaF16 target by clamping its colors to Rgba8, drawing over them, and widening the result back.
+// A frame of a renderer that draws on the CPU: the part of its list, how it renders, and the origin of each render
+// since the frame was prepared. The native draws read the origins in the order that they run. A renderer that draws
+// only 8 bits renders an RgbaF16 target by clamping its colors to Rgba8, drawing over them, and widening the result
+// back.
 struct DrawMemoryFrame : PrDrawFrame {
     const PrDrawList* PR_NULLABLE list;
+    PrDrawPart part;
     DrawMemoryRenderFn render;
     bool halfFloat;                 // the renderer draws RgbaF16 itself
     RawArray<PrIVec2> origins;
@@ -35,8 +38,8 @@ PrGpuDevice* PR_NULLABLE drawMemoryDevice(PrGpuDevice* PR_NULLABLE device, bool*
 DrawMemoryFrame* drawMemoryFrameCreate(PrDrawRenderer* renderer, DrawMemoryRenderFn render, bool halfFloat);
 void drawMemoryFrameDestroy(DrawMemoryFrame* frame);
 
-// Keeps the list, which renders when the frame's passes run.
-void drawMemoryFramePrepare(DrawMemoryFrame* frame, const PrDrawList* list);
+// Keeps the part of the list, which renders when the frame's passes run.
+void drawMemoryFramePrepare(DrawMemoryFrame* frame, const PrDrawList* list, const PrDrawPart& part);
 
 // Records a render of the frame into the pass at `origin`. The render runs while the pass's work runs.
 void drawMemoryFrameRender(DrawMemoryFrame* frame, PrGpuPass* pass, PrIVec2 origin);

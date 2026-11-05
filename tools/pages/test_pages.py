@@ -98,10 +98,6 @@ def recorder(url):
 
 class CaptureTests(unittest.TestCase):
     def setUp(self):
-        # The fixture is smaller than a page worth measuring.
-        minimum = pages.MIN_BYTES
-        pages.MIN_BYTES = 0
-        self.addCleanup(setattr, pages, "MIN_BYTES", minimum)
         self.web = Web(WEB)
         self.page = pages.capture(PAGE_URL, self.web, recorder)
         self.by_url = {url: data for url, (data, _, _) in self.page.resources.items()}
@@ -161,6 +157,16 @@ class CaptureTests(unittest.TestCase):
                              os.stat(os.path.join(second, r["file"])).st_ino)
         self.assertEqual(os.stat(os.path.join(first, "news-site.html")).st_ino,
                          os.stat(os.path.join(second, "news-site.html")).st_ino)
+
+    def test_a_page_that_is_a_file_keeps_only_what_other_origins_serve(self):
+        served = pages.Capture(PAGE_URL, PAGE, "text/html", {
+            "https://site.test/docs/app.js": (b"run()", "text/javascript", "https://site.test/docs/app.js"),
+            "https://fonts.test/face.woff2": (b"face", "font/woff2", "https://fonts.test/face.woff2"),
+        }, {"https://site.test/docs/missing.png": "not found", "https://fonts.test/refused.ttf": "HTTP Error 403"})
+        page = pages.localized(served, "https://site.test/", "file:///checkout/docs/index.html")
+        self.assertEqual(page.url, "file:///checkout/docs/index.html")
+        self.assertEqual(sorted(page.resources), ["https://fonts.test/face.woff2"])
+        self.assertEqual(sorted(page.omitted), ["https://fonts.test/refused.ttf"])
 
     def test_a_page_that_is_not_html_or_failed_is_not_captured(self):
         def failed(url):

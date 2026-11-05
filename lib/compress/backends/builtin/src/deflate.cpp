@@ -6,6 +6,7 @@
 #include "pr/assert.h"
 #include "pr/checksum.h"
 #include "pr/count_of.h"
+#include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/sort.h"
 
@@ -95,17 +96,20 @@ inline uint32_t distanceSymbol(uint32_t distance) {
 }
 
 // How long each level searches for matches. `chain` is the number of earlier positions it tries, and `nice` is the
-// match length at which it stops. If `lazy` is set, it defers a match to look for a longer one at the next position.
+// match length at which it stops. Once it holds a match of `good` bytes, it tries a quarter as many positions. It
+// defers a match shorter than `lazy` bytes to look for a longer one at the next position, and defers none if `lazy` is
+// zero.
 struct Effort {
     uint32_t chain;
     uint32_t nice;
-    bool lazy;
+    uint32_t good;
+    uint32_t lazy;
 };
 
 constexpr Effort kEfforts[] = {
-    {8, 32, false},     // PrCompressLevel_Fast
-    {64, 128, true},    // PrCompressLevel_Default
-    {1024, 258, true},  // PrCompressLevel_Small
+    {8, 32, 4, 0},          // PrCompressLevel_Fast
+    {128, 128, 8, 16},      // PrCompressLevel_Default
+    {1024, 258, 32, 258},   // PrCompressLevel_Small
 };
 
 // A literal, or a match of `length` bytes at `distance`. A literal's distance is zero and its length is the byte.
@@ -294,6 +298,20 @@ inline void insert(Encoder& e, size_t position) {
     e.heads[hash] = int32_t(position);
 }
 
+// Returns the number of bytes, up to `limit`, that `there` and `here` have in common at their start.
+inline uint32_t commonLength(const uint8_t* there, const uint8_t* here, uint32_t limit) {
+    uint32_t length = 0;
+    while (length + 8 <= limit) {
+        const uint64_t differ = prMemReadLeU64(there + length) ^ prMemReadLeU64(here + length);
+        if (differ != 0)
+            return length + prU64LowestBit(differ) / 8;
+        length += 8;
+    }
+    while (length < limit && there[length] == here[length])
+        ++length;
+    return length;
+}
+
 // Returns the length of the longest match at `position` that is longer than `shorter`, and sets `distance` to its
 // distance. Returns zero if no earlier position gives such a match.
 uint32_t findMatch(const Encoder& e, size_t position, uint32_t shorter, uint32_t* distance) {
@@ -307,15 +325,14 @@ uint32_t findMatch(const Encoder& e, size_t position, uint32_t shorter, uint32_t
         return 0;
     uint32_t found = 0;
     int32_t candidate = e.heads[hashAt(here)];
-    for (uint32_t tries = e.effort.chain; tries != 0 && candidate >= 0; --tries) {
+    uint32_t tries = best >= e.effort.good ? e.effort.chain / 4 : e.effort.chain;
+    for (; tries != 0 && candidate >= 0; --tries) {
         const size_t back = position - size_t(candidate);
         if (back == 0 || back > kWindowSize)
             break;
         const uint8_t* there = e.input.data + candidate;
         if (there[best] == here[best] && there[0] == here[0]) {
-            uint32_t length = 0;
-            while (length < limit && there[length] == here[length])
-                ++length;
+            const uint32_t length = commonLength(there, here, limit);
             if (length > best) {
                 best = length;
                 found = length;
@@ -540,7 +557,7 @@ void encodeData(Encoder& e) {
             ++position;
             continue;
         }
-        while (e.effort.lazy && length < e.effort.nice && position + 1 < size) {
+        while (length < e.effort.lazy && position + 1 < size) {
             uint32_t laterDistance = 0;
             const uint32_t later = findMatch(e, position + 1, length, &laterDistance);
             if (later == 0)

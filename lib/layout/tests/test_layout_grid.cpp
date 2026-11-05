@@ -46,10 +46,10 @@ PrLayoutGridTrack fitContent(float px) {
 }
 
 // A grid-placement value: a line, a span, or auto.
-PrLayoutGridLine line(int16_t integer, PrLayoutGridName name = kPrLayoutGridNameNone) {
+PrLayoutGridLine line(int16_t integer, PrLayoutName name = kPrLayoutNameNone) {
     return PrLayoutGridLine{name, integer, PrLayoutGridLineKind_Line, 0};
 }
-PrLayoutGridLine span(int16_t integer, PrLayoutGridName name = kPrLayoutGridNameNone) {
+PrLayoutGridLine span(int16_t integer, PrLayoutName name = kPrLayoutNameNone) {
     return PrLayoutGridLine{name, integer, PrLayoutGridLineKind_Span, 0};
 }
 
@@ -110,7 +110,7 @@ struct Stage {
         return prLayoutGridTracksIntern(f.tree, &desc);
     }
 
-    PrLayoutGridName name(const char* text) { return prLayoutGridNameIntern(f.tree, text); }
+    PrLayoutName name(const char* text) { return prLayoutNameIntern(f.tree, text); }
 
     // Creates a grid container under `parent`, `width` wide if given.
     PrLayoutNode grid(PrLayoutNode parent, const PrLayoutGridStyle& grid, float width = -1,
@@ -328,10 +328,10 @@ TEST_CASE("conflicting placements swap, collapse to one track, or drop the end's
 
 TEST_CASE("named lines and areas place items, and a name alone finds an area's edges") {
     Stage s;
-    PrLayoutGridName header = s.name("header");
-    PrLayoutGridName main = s.name("main");
-    PrLayoutGridName side = s.name("side");
-    PrLayoutGridName content = s.name("content");
+    PrLayoutName header = s.name("header");
+    PrLayoutName main = s.name("main");
+    PrLayoutName side = s.name("side");
+    PrLayoutName content = s.name("content");
     std::vector<PrLayoutGridArea> areas = {{header, 0, 1, 0, 2}, {side, 1, 2, 0, 1}, {main, 1, 2, 1, 2}};
     PrLayoutGridAreas template_{.rowCount = 2, .columnCount = 2, .areas = areas.data(), .areaCount = 3};
     PrLayoutGridStyle style = prLayoutGridStyleDefault();

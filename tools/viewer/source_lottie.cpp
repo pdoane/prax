@@ -105,13 +105,14 @@ double lottieFrameAt(const LottieSource& lottie, double time) {
     return prLottieAnimationFrameAt(lottie.animation, time);
 }
 
-void drawLottie(LottieSource& lottie, PrDrawList* list, float width, float height, double frame) {
-    PrLottieInfo info = prLottieAnimationInfo(lottie.animation);
-    if (!(info.extent.x > 0) || !(info.extent.y > 0))
-        return;
-    float scale = std::fmin(width / info.extent.x, height / info.extent.y);
-    PrAffine2 fit{scale, 0, 0, scale, (width - info.extent.x * scale) / 2, (height - info.extent.y * scale) / 2};
-    prDrawListPushTransformAffine2(list, fit);
+void drawLottie(LottieSource& lottie, PrDrawList* list, PrVec2 viewport, double frame) {
+    prDrawListRect(list, PrRect{0, 0, viewport.x, viewport.y}, {.color = PrColor{1, 1, 1, 1}});
+    PrVec2 extent = lottieSize(lottie);
+    PrRect fitted = fittedIn(extent, viewport);
+    float scale = extent.x > 0 ? prRectWidth(fitted) / extent.x : 1;
+    PrAffine2 placed = prAffine2Concat(prAffine2Scale(PrVec2{scale, scale}),
+        prAffine2Translate(PrVec2{fitted.left, fitted.top}));
+    prDrawListPushTransformAffine2(list, placed);
     prLottieAnimationDraw(lottie.animation, frame, list);
     prDrawListPopTransform(list);
 }

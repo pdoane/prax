@@ -1273,6 +1273,9 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_PopGroup:
                 pop(r);
                 break;
+            case PrDrawCommandKind_PushMark:
+            case PrDrawCommandKind_PopMark:
+                break;
             default:
                 drawShape(r, c);
                 break;
@@ -1331,7 +1334,8 @@ void endRender(CgBackend* cg) {
     cg->sized.clear();
 }
 
-void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list) {
+void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list,
+        const PrDrawPart& part) {
     CgBackend* cg = static_cast<CgBackend*>(renderer);
     CGContextRef context = contextOver(cg, pixels, format);
     if (context == nullptr)
@@ -1340,7 +1344,12 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
     prDrawGlyphCacheBegin(cg->glyphs);
     Renderer r{};
     initRenderer(r, cg, context, &pixels, format);
-    runCommands(r, prDrawListCommands(list), prDrawListCommandCount(list));
+    // The part's transform is the first push of Quartz's stack, which nothing pops.
+    if (part.transform.degenerate)
+        ++r.collapsed;
+    else
+        CGContextConcatCTM(context, affineOf(part.transform.daffine));
+    runCommands(r, prDrawListCommands(list) + part.first, part.count);
     finishRenderer(r);
     CGContextFlush(context);
     CGContextRelease(context);
@@ -1351,9 +1360,10 @@ PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
     return drawMemoryFrameCreate(renderer, renderPixels, false);
 }
 
-// Keeps the list, which renders when the frame's pass runs.
-PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget*) {
-    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list);
+// Keeps the part of the list, which renders when the frame's pass runs.
+PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
+        const PrDrawTarget*) {
+    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list, *part);
     return PrStatus_Ok;
 }
 

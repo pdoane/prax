@@ -1967,11 +1967,15 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_Glyphs:
                 drawGlyphs(w, c);
                 break;
-            case PrDrawCommandKind_Embed:
-                w.transforms.push(prDrawTransformMoved(&w.transforms.last(), c.embed.offset));
+            case PrDrawCommandKind_Embed: {
+                PrDrawTransform moved = prDrawTransformMoved(&w.transforms.last(), c.embed.offset);
+                if (prDrawListMisses(c.embed.list, moved.affine, prRectFromIRect(w.clips.last().box)))
+                    break;
+                w.transforms.push(moved);
                 runCommands(w, prDrawListCommands(c.embed.list), prDrawListCommandCount(c.embed.list));
                 w.transforms.pop();
                 break;
+            }
             case PrDrawCommandKind_PushTransformAffine2: {
                 PrDrawTransform next = prDrawTransformPush(&w.transforms.last(), &c);
                 w.transforms.push(next);
@@ -1994,6 +1998,9 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
                 break;
             case PrDrawCommandKind_PopGroup:
                 w.opacities.pop();
+                break;
+            case PrDrawCommandKind_PushMark:
+            case PrDrawCommandKind_PopMark:
                 break;
             default:
                 drawShape(w, c);
@@ -2143,11 +2150,11 @@ void storageDestroy(FrameStorage* b) {
     prMemoryFree(b);
 }
 
-// Builds the frame that draws the list over a target `width` by `height` pixels into the storage, and describes it in
-// `out`. The frame stays valid until the storage's next build. The requests' texels stay valid until the next build
-// with any storage.
-void trianglesBuild(Triangles* t, const PrDrawList* list, uint32_t width, uint32_t height, FrameStorage* b,
-        TrianglesFrame* out) {
+// Builds the frame that draws the part of the list over a target `width` by `height` pixels into the storage, and
+// describes it in `out`. The frame stays valid until the storage's next build. The requests' texels stay valid until
+// the next build with any storage.
+void trianglesBuild(Triangles* t, const PrDrawList* list, const PrDrawPart& part, uint32_t width, uint32_t height,
+        FrameStorage* b, TrianglesFrame* out) {
     b->vertices.clear();
     b->indices.clear();
     b->draws.clear();
@@ -2164,10 +2171,10 @@ void trianglesBuild(Triangles* t, const PrDrawList* list, uint32_t width, uint32
     w.t = t;
     w.b = b;
     w.target = PrIRect{0, 0, int32_t(width), int32_t(height)};
-    w.transforms.push(prDrawTransformFromAffine2(prAffine2Identity()));
+    w.transforms.push(part.transform);
     w.clips.push(Clip{w.target, 0});
     w.opacities.push(1);
-    runCommands(w, prDrawListCommands(list), prDrawListCommandCount(list));
+    runCommands(w, prDrawListCommands(list) + part.first, part.count);
     finishRequests(w);
     prDrawGlyphCacheEnd(t->lists);
     w.transforms.reset();
@@ -2209,10 +2216,11 @@ void destroyFrame(PrDrawRenderer*, PrDrawFrame* handle) {
     prMemoryFree(frame);
 }
 
-PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawTarget* target) {
+PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* part,
+        const PrDrawTarget* target) {
     TrianglesRenderer* r = static_cast<TrianglesRenderer*>(renderer);
     TrianglesDrawFrame* frame = static_cast<TrianglesDrawFrame*>(handle);
-    trianglesBuild(r->triangles, list, target->extent.x, target->extent.y, frame->storage, &frame->built);
+    trianglesBuild(r->triangles, list, *part, target->extent.x, target->extent.y, frame->storage, &frame->built);
     trianglesDevicePrepare(r->state, &frame->built, target->commands);
     return PrStatus_Ok;
 }

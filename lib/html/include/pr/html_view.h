@@ -22,6 +22,7 @@
 #include "pr/draw.h"
 #include "pr/html_page.h"
 #include "pr/layout_compositor.h"
+#include "pr/layout_page.h"
 #include "pr/layout_tree.h"
 #include "pr/vec.h"
 
@@ -112,6 +113,11 @@ void prHtmlViewSetApp(PrHtmlView* view, PrApp* PR_NULLABLE app);
 // test runner does, since a screenshot of a blinking caret says nothing about the page.
 void prHtmlViewSetCaretHidden(PrHtmlView* view, bool hidden);
 
+// Sets what the view's recordings mark in the trees of its documents (prLayoutTreeSetMarking), which is nothing by
+// default. A host that writes the document for a reader marks its content, and joins the marks to the document's
+// structure (pr/html_structure.h).
+void prHtmlViewSetMarking(PrHtmlView* view, PrLayoutMarking marking);
+
 // Sets the time that a text control's caret blinks by, in seconds of the clock that events carry. A posted frame sets
 // it (prHtmlViewPostFrame). A caret that no time reaches is steady.
 void prHtmlViewSetTime(PrHtmlView* view, double time);
@@ -119,11 +125,12 @@ void prHtmlViewSetTime(PrHtmlView* view, double time);
 // Waits for the agent's layout thread to finish its jobs.
 void prHtmlViewWait(PrHtmlView* view);
 
-// Records the document into `list` in CSS pixels, as the view's next frame would show it. The call brings the
-// document's styles and layout up to date on the caller's thread, waits for the agent's layout thread, and plays the
-// resulting scene with its composited animations sampled at the document's current time (prLayoutSceneSampleTracks), as
-// a compositor's frame at that time shows them. The layout snaps to the view's pixel ratio, and the caller renders the
-// list at that pixel ratio. Records nothing while the document is render-blocked.
+// Records the document into `list` in CSS pixels, as the view's next frame would show it, and a paged view's pages as
+// prHtmlViewSetPaged says. The call brings the document's styles and layout up to date on the caller's thread, waits
+// for the agent's layout thread, and plays the resulting scene with its composited animations sampled at the document's
+// current time (prLayoutSceneSampleTracks), as a compositor's frame at that time shows them. The layout snaps to the
+// view's pixel ratio, and the caller renders the list at that pixel ratio. Records nothing while the document is
+// render-blocked.
 //
 // Returns the color of the document's canvas (prLayoutSceneCanvasColor), which the list fills unless the host does
 // (PrHtmlViewDesc::canvasFilled), or transparent while the document is render-blocked.
@@ -133,6 +140,29 @@ PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list);
 // caret and selection. Computing a style starts the fetches that it names. A host runs what those fetches deliver, and
 // repeats this until they deliver nothing, so that it records the document once.
 void prHtmlViewPrepare(PrHtmlView* view);
+
+// Sets whether the view lays its document out as pages for print (css-page-3), or continuously if `initial` is null. A
+// paged view's document is laid out in the page boxes that its @page rules give, over `initial`, a page's box before
+// any rule applies, as a printer's paper and margins give it. Its page is printed on that paper (prHtmlPageSetPrint),
+// whose first page's area is the initial containing block.
+//
+// A paged view shows its pages as a print preview does: their sheets down its viewport, `gap` px apart and centered
+// across it (pr/layout_page.h), each on white paper with its marks. Nothing is recorded between or around the sheets,
+// where the host's own background shows. The viewport scrolls through the pages as it scrolls a document on the screen,
+// by the same input and the window's scroll offset.
+void prHtmlViewSetPaged(PrHtmlView* view, const PrLayoutPageBox* PR_NULLABLE initial, float gap);
+
+// Brings a paged view's document up to date for printing, as prHtmlViewPrepare does, after resolving its page boxes
+// from its @page rules and the area of its first page, and returns its number of pages. Returns zero for a view that is
+// not paged.
+uint32_t prHtmlViewPageCount(PrHtmlView* view);
+
+// Returns the page at `index` of a paged view's last layout, which must be below the page count.
+PrLayoutPage prHtmlViewPage(PrHtmlView* view, uint32_t index);
+
+// Records the page at `index` of a paged view's last layout into `list`, in CSS pixels from the top left of its sheet
+// (prLayoutTreePaintPage). The index must be below the page count.
+void prHtmlViewPaintPage(PrHtmlView* view, uint32_t index, PrDrawList* list);
 
 // Returns what the view reports to the window, in viewport px, which a host places (prAppOutputPlaced). The cursor is
 // what the document under the pointer shows there (css-ui-4/#cursor). The view finds it again at each hover, and after

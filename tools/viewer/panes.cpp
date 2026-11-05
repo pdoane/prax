@@ -13,6 +13,8 @@
 
 namespace viewer {
 
+using namespace harness;
+
 double millisSince(std::chrono::steady_clock::time_point begin) {
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count();
 }
@@ -400,8 +402,10 @@ void Pane::render(const PaneSource& source, double time, Slot& slot) {
     PrDrawList* list = nullptr;
     const PaneOutput& output = source.output;
     const uint32_t bytes = prPixelFormatSize(output.format);
-    // A view's region draws through a list. A whole document may come as its source's own pixels, which are BGRA.
-    bool inMemory = source.loaded != nullptr && !source.viewed && pixels(*source.loaded, source.width, source.height, bgra);
+    // A document may come as its source's own pixels, which are BGRA, if it has pixels of the texture's size.
+    PrVec2 viewport{source.docWidth, source.docHeight};
+    bool inMemory = source.loaded != nullptr &&
+        pixels(*source.loaded, viewport, source.width, source.height, source.pixelRatio, bgra);
     if (inMemory && output.format == PrPixelFormat_RgbaF16) {
         std::vector<uint8_t> wide(size_t(source.width) * source.height * 8);
         for (size_t i = 0; i < size_t(source.width) * source.height; ++i) {
@@ -417,8 +421,7 @@ void Pane::render(const PaneSource& source, double time, Slot& slot) {
     if (!inMemory && source.loaded != nullptr) {
         std::chrono::steady_clock::time_point recording = std::chrono::steady_clock::now();
         list = prDrawListCreate();
-        prDrawListPushTransformAffine2(
-            list, PrAffine2{source.pixelRatio, 0, 0, source.pixelRatio, source.origin.x, source.origin.y});
+        prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{source.pixelRatio, source.pixelRatio}));
         // The page renders at the pane's own pixel ratio.
         PrAppDisplay display = output.display;
         display.pixelRatio = source.pixelRatio;
@@ -477,8 +480,6 @@ void Pane::render(const PaneSource& source, double time, Slot& slot) {
     r.fps = fps_.done();
     slot.rendered = r;
     slot.shown = shown;
-    slot.pixelRatio = source.pixelRatio;
-    slot.viewed = source.viewed;
     slot.at = source.at;
 }
 

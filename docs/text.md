@@ -28,6 +28,11 @@ the font, never the shaper.
   not draw's, because `lib/draw` depends on `lib/font`, so `lib/font` names nothing of `lib/draw`. Bitmap glyphs
   are drawn by `lib/draw` through `lib/image`, and SVG glyphs by `lib/svg`, each a glyph decoder. `lib/font` decodes
   no pictures.
+- A document embeds a subset of a font's file (`pr/font_subset.h`): TrueType outlines as an sfnt, or CFF as a bare
+  table, each with the glyph ids of the font kept, so that the ids that a glyph run names select the same glyphs in the
+  subset. A font whose file does not hold the outlines that it draws, as an instance of a variable font away from its
+  default, a font with synthetic bold or a CFF2 font, is subset as CFF charstrings of the outlines that it draws, so
+  that its text is still text. Only a font of bitmap strikes has no subset.
 - A font is immutable and thread-safe. The readers only read the font's bytes, so they take no lock. A mutex guards the
   cache of outlines, and painters are called without it held.
 
@@ -141,6 +146,7 @@ shaping alone.
 - The host measures and breaks one line at a time (`prTextShapingLineWidth`, `prTextShapingBreakLine`), so each line
   can have its own width. It reads the text's intrinsic widths from `prTextShapingIntrinsic`.
 - A shaping holds what it derives from the text, not the text. The host passes the text to each call that reads it.
+- A piece's letter and word spacing are its runs' (`PrTextRun::letterSpacing`), so lines break and measure with them.
 - What differs between hosts is an option, not a hook. A piece says whether lines wrap in it and whether they may break
   after any space, each byte of white space says what a line's end does to it, and the host chooses where lines may
   break beside objects and gives the tab stops. Layout's inline formatting is a host, and it describes its items this way.
@@ -181,6 +187,11 @@ ligatures needs. It places such text as HarfBuzz does.
 - `prTextShaperShape` enforces what callers rely on for every backend: monotonic clusters, caret stops, and the
   lowering of kerning, caps, and subscripts and superscripts to features. If any character lacks the feature,
   synthesis applies to the whole run.
+- A run's letter spacing follows each grapheme cluster of the text as shaped, so a character that synthesized capitals
+  map to several is spaced as several, and its word spacing follows each word separator. The spacing is part of the
+  advances, and spaced letters take no optional ligatures. A run with neither spacing, as most are, does none of this
+  work. A shaping notes whether shaping synthesized any glyph at another scale (`PrTextShapingInfo::scaled`), so that
+  layout splits a text's font ranges by scale only then.
 - Fallback happens before shaping, by cluster, in a text font, and a run is in one face. Each run is shaped in its font
   with its surrounding context. A default ignorable code point that a face draws as nothing produces no glyph.
 

@@ -136,6 +136,7 @@ typedef struct PrTextShapingInfo {
     uint32_t runCount;
     const PrTextShapedGlyph* PR_NULLABLE glyphs;
     uint32_t glyphCount;
+    bool scaled;                                            // true if a glyph's scale is not one
     const PrTextShapingSegment* segments;                   // at least one
     uint32_t segmentCount;
     const PrTextParagraph* PR_NULLABLE paragraphs;          // the bidi paragraphs, or none if `levels` is null

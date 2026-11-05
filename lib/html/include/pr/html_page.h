@@ -349,8 +349,20 @@ bool prHtmlPageIsRenderBlocked(PrHtmlPage* page);
 // environment unchanged, if the feature does not accept `value`.
 bool prHtmlPageSetMediaFeature(PrHtmlPage* page, PrCssDescriptor feature, PrStringView value);
 
-// Sets the media type of that environment (mediaqueries-5/#media-types).
-void prHtmlPageSetMediaType(PrHtmlPage* page, PrCssMediaType type);
+// What a printed document is presented on: the extent of the paper's page box before any @page rule applies, and the
+// extent of the first page's area once the document's @page rules apply, both in CSS pixels.
+typedef struct PrHtmlPrintDesc {
+    PrVec2 paper;
+    PrVec2 firstArea;
+} PrHtmlPrintDesc;
+
+// Presents the document printed as `print` describes, or on the screen in its viewport if `print` is null. In print,
+// media queries see the print type (mediaqueries-5/#media-types), and their width and height are the paper's, which
+// @page rules do not change (css-page-3/#page-size-prop). The first page's area is the initial containing block
+// (css-page-3/#page-model), so viewport-percentage lengths are relative to it
+// (css-values-4/#viewport-relative-lengths), and so is the layout that a script's query brings up to date. The viewport
+// keeps its extent, and no resize event fires. A change of either restyles only the elements whose styles read it.
+void prHtmlPageSetPrint(PrHtmlPage* page, const PrHtmlPrintDesc* PR_NULLABLE print);
 
 // Sets the charset of an HTML document whose bytes, response and parent document give it none
 // (html/#encoding-sniffing-algorithm). It is windows-1252 until a host sets it, and the page's frames take it. The spec

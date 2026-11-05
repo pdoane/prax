@@ -1302,6 +1302,19 @@ void forgetMatched(CssMatchedStyle& cached) {
     cached.matched.clear();
 }
 
+// Empties a slot of the cache of computed groups, and releases what it holds.
+void forgetGroup(CssCachedGroup& cached) {
+    cssStyleValuesRelease(cached.values);
+    cssStyleValuesRelease(cached.parentValues);
+    cssStyleValuesRelease(cached.parentGroup);
+    cssCustomPropertiesRelease(cached.custom);
+    cached.values = nullptr;
+    cached.parentValues = nullptr;
+    cached.parentGroup = nullptr;
+    cached.custom = nullptr;
+    cached.hash = 0;
+}
+
 void forgetMatchedStyles(CssCascadeScratch& s) {
     for (uint32_t i = 0; i < s.matchedStyles.count; ++i) {
         if (s.matchedStyles.data[i].hash != 0)
@@ -1309,13 +1322,8 @@ void forgetMatchedStyles(CssCascadeScratch& s) {
     }
     for (uint32_t i = 0; i < s.cachedGroups.count; ++i) {
         CssCachedGroup& cached = s.cachedGroups.data[i];
-        if (cached.hash == 0)
-            continue;
-        cssStyleValuesRelease(cached.values);
-        cssStyleValuesRelease(cached.parentValues);
-        cached.values = nullptr;
-        cached.parentValues = nullptr;
-        cached.hash = 0;
+        if (cached.hash != 0)
+            forgetGroup(cached);
     }
 }
 
@@ -1323,7 +1331,30 @@ void forgetMatchedStyles(CssCascadeScratch& s) {
 CssMatchedStyle* matchedSet(CssCascadeScratch& s, uint32_t hash) {
     if (s.matchedStyles.count == 0)
         s.matchedStyles.resizeZeroed(kCssMatchedStyles);
-    return s.matchedStyles.data + hash % (kCssMatchedStyles / kCssMatchedWays) * kCssMatchedWays;
+    // The lowest bit of a hash is set, so the set comes from the bits above it.
+    return s.matchedStyles.data + (hash >> 1) % (kCssMatchedStyles / kCssMatchedWays) * kCssMatchedWays;
+}
+
+// Returns the set of kCssCachedGroupWays slots for a group whose key hashes to `hash`.
+CssCachedGroup* groupSet(CssCascadeScratch& s, uint64_t hash) {
+    if (s.cachedGroups.count == 0)
+        s.cachedGroups.resizeZeroed(kCssCachedGroups);
+    // The lowest bit of a hash is set, so the set comes from the bits above it.
+    return s.cachedGroups.data + (hash >> 1) % (kCssCachedGroups / kCssCachedGroupWays) * kCssCachedGroupWays;
+}
+
+// Returns the slot of `set` in which a group for `hash` is stored: a slot that holds a group for the same key, an empty
+// slot, or the least recently used slot.
+CssCachedGroup& groupVictim(CssCachedGroup* set, uint64_t hash) {
+    CssCachedGroup* victim = &set[0];
+    for (uint32_t way = 0; way < kCssCachedGroupWays; ++way) {
+        CssCachedGroup& slot = set[way];
+        if (slot.hash == hash || slot.hash == 0)
+            return slot;
+        if (slot.used < victim->used)
+            victim = &slot;
+    }
+    return *victim;
 }
 
 // Returns the slot of `set` in which a style for `hash` is stored: a slot that holds a style for the same entries, an
@@ -2727,16 +2758,19 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
         key.push(uint64_t(uintptr_t(winner.declaration)) ^ uint64_t(winner.longhand) << 48);
     }
     uint64_t hash = prHashBytes(key.data, sizeof(uint64_t) * key.count, kMatchedSeed) | 1;
-    if (s.cachedGroups.count == 0)
-        s.cachedGroups.resizeZeroed(kCssCachedGroups);
-    CssCachedGroup& cached = s.cachedGroups.data[hash % kCssCachedGroups];
+    CssCachedGroup* set = groupSet(s, hash);
+    ++s.groupLookups;
     const CssStyleValues* parentValues = root ? nullptr : input.parent->groups[group];
-    bool hit = cached.hash == hash && cached.key.count == key.count &&
-        prMemEquals(cached.key.data, key.data, sizeof(uint64_t) * key.count) &&
-        (!cached.inheritsReset || cached.parentValues == parentValues) && (!cached.readsViewport ||
-            (cached.viewport.width == input.viewport.width && cached.viewport.height == input.viewport.height)) &&
-        !cached.readsMetrics;
-    if (hit) {
+    for (uint32_t way = 0; way < kCssCachedGroupWays; ++way) {
+        CssCachedGroup& cached = set[way];
+        bool hit = cached.hash == hash && cached.key.count == key.count &&
+            prMemEquals(cached.key.data, key.data, sizeof(uint64_t) * key.count) &&
+            (!cached.inheritsReset || cached.parentValues == parentValues) && (!cached.readsViewport ||
+                (cached.viewport.width == input.viewport.width && cached.viewport.height == input.viewport.height)) &&
+            !cached.readsMetrics;
+        if (!hit)
+            continue;
+        cached.used = s.groupLookups;
         s.inheritsReset = s.inheritsReset || cached.inheritsReset;
         if (group == CssStyleGroup_Box)
             s.staticInline = cached.staticInline;
@@ -2749,6 +2783,8 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
         cssStyleValuesRetain(cached.values);
         return cached.values;
     }
+    CssCachedGroup& cached = groupVictim(set, hash);
+    cached.used = s.groupLookups;
     // Computes the group with the cascade's flags cleared, to learn what this group sets.
     bool inheritsReset = s.inheritsReset;
     bool readsViewport = *context.readsViewport;
@@ -2760,13 +2796,18 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
     if (context.metrics != nullptr)
         context.metrics->readsGroup = false;
     const CssStyleValues* values = buildGroup(builder, s, group, input, context, custom);
-    cssStyleValuesRelease(cached.values);
-    cssStyleValuesRelease(cached.parentValues);
+    forgetGroup(cached);
     cached.hash = hash;
     cached.key.clear();
     cached.key.append(key.span());
     cssStyleValuesRetain(values);
     cached.values = values;
+    cached.parentGroup = inherited && !root ? input.parent->groups[group] : nullptr;
+    if (cached.parentGroup != nullptr)
+        cssStyleValuesRetain(cached.parentGroup);
+    cached.custom = custom;
+    if (custom != nullptr)
+        cssCustomPropertiesRetain(custom);
     cached.inheritsReset = s.inheritsReset;
     cached.parentValues = s.inheritsReset ? parentValues : nullptr;
     if (cached.parentValues != nullptr)
@@ -2849,6 +2890,82 @@ void copyRuleSet(CssRuleSet* to, const CssRuleSet* from) {
     }
     to->media.append(from->media.span());
     to->reads = from->reads;
+}
+
+// Computes every group of `style` from the winners of the scratch's cascade, with the input's surroundings, and sets
+// what the style read: `*readsFont` if a value was relative to its font or mapped a flow-relative property, and
+// `*readsViewport` if a value was relative to the viewport.
+void computeGroups(CssStyleBuilder* builder, CssCascadeScratch& s, const CssCascadeInput& input, CssComputedStyle* style,
+        bool* readsFont, bool* readsViewport) {
+    // Until the font group is computed, the font that its values measure is the parent's. The root's own values measure
+    // no font until then, as the initial font has no style.
+    CssFontMetrics metrics{};
+    metrics.measure = builder->measure;
+    CssStyleContext context{};
+    context.metrics = &metrics;
+    context.font = input.parent != nullptr ? cssStyleFontBases(input.parent) : kCssInitialFontBases;
+    // Root-relative lengths in the root's own font size and line height are relative to the initial font.
+    context.root = input.parent != nullptr ? input.rootFont : kCssInitialFontBases;
+    context.parentWeight = input.parent != nullptr ? cssStyleFontWeight(input.parent) : 400;
+    if (input.parent != nullptr)
+        context.parentColor = cssStyleColor(input.parent, kCssDefaultColorEnvironment);
+    else
+        context.parentColor = PrColor{0, 0, 0, 1};
+    context.viewport = input.viewport;
+    // Tracks whether this style reads the viewport. The scratch also records this for every style since it last forgot
+    // the tree.
+    bool readBefore = s.readsViewport;
+    s.readsViewport = false;
+    context.readsViewport = &s.readsViewport;
+    // The font group comes first, because the lengths of the other groups are relative to its size and line height, and
+    // so are the root's own root-relative lengths after them.
+    style->groups[CssStyleGroup_Font] = computeGroup(builder, s, CssStyleGroup_Font, input, context, style->custom);
+    context.font.style = style;
+    if (input.parent == nullptr)
+        context.root.style = style;
+    // The typography group follows the font group, whose longhands the font shorthand declares with it, so that a
+    // shorthand that substitutes a variable is parsed once for both.
+    style->groups[CssStyleGroup_Typography] =
+        computeGroup(builder, s, CssStyleGroup_Typography, input, context, style->custom);
+    mapFlowRelative(s, style, readsFont);
+    style->important = importantOf(s);
+    context.readsFont = readsFont;
+    style->groups[CssStyleGroup_Color] = computeGroup(builder, s, CssStyleGroup_Color, input, context, style->custom);
+    style->groups[CssStyleGroup_Decoration] =
+        computeGroup(builder, s, CssStyleGroup_Decoration, input, context, style->custom);
+    style->groups[CssStyleGroup_Background] =
+        computeGroup(builder, s, CssStyleGroup_Background, input, context, style->custom);
+    style->groups[CssStyleGroup_Effect] = computeGroup(builder, s, CssStyleGroup_Effect, input, context, style->custom);
+    style->groups[CssStyleGroup_Compositing] =
+        computeGroup(builder, s, CssStyleGroup_Compositing, input, context, style->custom);
+    style->groups[CssStyleGroup_Animation] =
+        computeGroup(builder, s, CssStyleGroup_Animation, input, context, style->custom);
+    style->groups[CssStyleGroup_Box] = computeGroup(builder, s, CssStyleGroup_Box, input, context, style->custom);
+    style->groups[CssStyleGroup_Flex] = computeGroup(builder, s, CssStyleGroup_Flex, input, context, style->custom);
+    style->groups[CssStyleGroup_Generated] =
+        computeGroup(builder, s, CssStyleGroup_Generated, input, context, style->custom);
+    style->groups[CssStyleGroup_List] = computeGroup(builder, s, CssStyleGroup_List, input, context, style->custom);
+    style->groups[CssStyleGroup_Svg] = computeGroup(builder, s, CssStyleGroup_Svg, input, context, style->custom);
+    style->groups[CssStyleGroup_SvgGeometry] =
+        computeGroup(builder, s, CssStyleGroup_SvgGeometry, input, context, style->custom);
+    style->groups[CssStyleGroup_Table] = computeGroup(builder, s, CssStyleGroup_Table, input, context, style->custom);
+    style->groups[CssStyleGroup_Grid] = computeGroup(builder, s, CssStyleGroup_Grid, input, context, style->custom);
+    style->groups[CssStyleGroup_Fragmentation] =
+        computeGroup(builder, s, CssStyleGroup_Fragmentation, input, context, style->custom);
+    static_assert(CssStyleGroup_Count == 17, "compute every group of a style");
+    style->inheritsReset = s.inheritsReset;
+    style->staticInline = s.staticInline;
+    CssValueRun display = cssComputedValue(style, PrCssProperty_Display);
+    bool single = display.count == 1 && display.values[0].kind == PrCssValueKind_Keyword;
+    PrCssKeyword keyword = single ? cssValueKeyword(display.values) : PrCssKeyword_Count;
+    style->childrenAreItems = keyword == PrCssKeyword_Flex || keyword == PrCssKeyword_InlineFlex ||
+        keyword == PrCssKeyword_Grid || keyword == PrCssKeyword_InlineGrid ||
+        (keyword == PrCssKeyword_Contents && input.parent != nullptr && input.parent->childrenAreItems);
+    style->font = cssFontBases(context.font.em, context.font.lh);
+    style->readsFontMetrics = metrics.readsFont;
+    style->readsRootMetrics = metrics.readsRoot;
+    *readsViewport = s.readsViewport;
+    s.readsViewport = readBefore || s.readsViewport;
 }
 
 } // namespace
@@ -3218,83 +3335,55 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
         }
     }
 
-    // Until the font group is computed, the font that its values measure is the parent's. The root's own values measure
-    // no font until then, as the initial font has no style.
     style->locale = locale;
-    CssFontMetrics metrics{};
-    metrics.measure = builder->measure;
-    CssStyleContext context{};
-    context.metrics = &metrics;
-    context.font = input.parent != nullptr ? cssStyleFontBases(input.parent) : kCssInitialFontBases;
-    // Root-relative lengths in the root's own font size and line height are relative to the initial font.
-    context.root = input.parent != nullptr ? input.rootFont : kCssInitialFontBases;
-    context.parentWeight = input.parent != nullptr ? cssStyleFontWeight(input.parent) : 400;
-    if (input.parent != nullptr)
-        context.parentColor = cssStyleColor(input.parent, kCssDefaultColorEnvironment);
-    else
-        context.parentColor = PrColor{0, 0, 0, 1};
-    context.viewport = input.viewport;
-    // Tracks whether this style reads the viewport. The scratch also records this for every style since it last forgot
-    // the tree.
-    bool readBefore = s.readsViewport;
-    s.readsViewport = false;
-    context.readsViewport = &s.readsViewport;
-    // The font group comes first, because the lengths of the other groups are relative to its size and line height, and
-    // so are the root's own root-relative lengths after them.
-    style->groups[CssStyleGroup_Font] = computeGroup(builder, s, CssStyleGroup_Font, input, context, style->custom);
-    context.font.style = style;
-    if (input.parent == nullptr)
-        context.root.style = style;
-    // The typography group follows the font group, whose longhands the font shorthand declares with it, so that a
-    // shorthand that substitutes a variable is parsed once for both.
-    style->groups[CssStyleGroup_Typography] =
-        computeGroup(builder, s, CssStyleGroup_Typography, input, context, style->custom);
     bool readsFont = false;
-    mapFlowRelative(s, style, &readsFont);
-    style->important = importantOf(s);
-    context.readsFont = &readsFont;
-    style->groups[CssStyleGroup_Color] = computeGroup(builder, s, CssStyleGroup_Color, input, context, style->custom);
-    style->groups[CssStyleGroup_Decoration] =
-        computeGroup(builder, s, CssStyleGroup_Decoration, input, context, style->custom);
-    style->groups[CssStyleGroup_Background] =
-        computeGroup(builder, s, CssStyleGroup_Background, input, context, style->custom);
-    style->groups[CssStyleGroup_Effect] = computeGroup(builder, s, CssStyleGroup_Effect, input, context, style->custom);
-    style->groups[CssStyleGroup_Compositing] =
-        computeGroup(builder, s, CssStyleGroup_Compositing, input, context, style->custom);
-    style->groups[CssStyleGroup_Animation] =
-        computeGroup(builder, s, CssStyleGroup_Animation, input, context, style->custom);
-    style->groups[CssStyleGroup_Box] = computeGroup(builder, s, CssStyleGroup_Box, input, context, style->custom);
-    style->groups[CssStyleGroup_Flex] = computeGroup(builder, s, CssStyleGroup_Flex, input, context, style->custom);
-    style->groups[CssStyleGroup_Generated] =
-        computeGroup(builder, s, CssStyleGroup_Generated, input, context, style->custom);
-    style->groups[CssStyleGroup_List] = computeGroup(builder, s, CssStyleGroup_List, input, context, style->custom);
-    style->groups[CssStyleGroup_Svg] = computeGroup(builder, s, CssStyleGroup_Svg, input, context, style->custom);
-    style->groups[CssStyleGroup_SvgGeometry] =
-        computeGroup(builder, s, CssStyleGroup_SvgGeometry, input, context, style->custom);
-    style->groups[CssStyleGroup_Table] = computeGroup(builder, s, CssStyleGroup_Table, input, context, style->custom);
-    style->groups[CssStyleGroup_Grid] = computeGroup(builder, s, CssStyleGroup_Grid, input, context, style->custom);
-    style->inheritsReset = s.inheritsReset;
-    style->staticInline = s.staticInline;
-    CssValueRun display = cssComputedValue(style, PrCssProperty_Display);
-    bool single = display.count == 1 && display.values[0].kind == PrCssValueKind_Keyword;
-    PrCssKeyword keyword = single ? cssValueKeyword(display.values) : PrCssKeyword_Count;
-    style->childrenAreItems = keyword == PrCssKeyword_Flex || keyword == PrCssKeyword_InlineFlex ||
-        keyword == PrCssKeyword_Grid || keyword == PrCssKeyword_InlineGrid ||
-        (keyword == PrCssKeyword_Contents && input.parent != nullptr && input.parent->childrenAreItems);
-    style->font = cssFontBases(context.font.em, context.font.lh);
-    style->readsFontMetrics = metrics.readsFont;
-    style->readsRootMetrics = metrics.readsRoot;
-    bool readsViewport = s.readsViewport;
-    s.readsViewport = readBefore || readsViewport;
+    bool readsViewport = false;
+    computeGroups(builder, s, input, style, &readsFont, &readsViewport);
     // A style that measured a font depends on what the fonts held when it was computed, so no other element takes it,
     // and the element computes it again.
-    bool measured = metrics.readsFont || metrics.readsRoot;
+    bool measured = style->readsFontMetrics || style->readsRootMetrics;
     if (slot != nullptr && !measured)
         store(*slot, hash, sharedId, widget, parentAppearance, s, input, style, readsViewport, readsFont);
     if (memo != nullptr && !measured)
         remember(memo, set, s, input, style, sharedId, widget, readsViewport);
     else if (memo != nullptr)
         cssCascadeMemoClear(memo);
+    return style;
+}
+
+const CssComputedStyle* cssCascadeBlocks(const CssRuleSet* set, CssStyleBuilder* builder, CssCascadeScratch* scratch,
+        const CssCascadeInput& input, const CssDeclarationBlock* PR_NONNULL const* PR_NONNULL blocks, uint32_t count) {
+    CssCascadeScratch& s = *scratch;
+    follow(s, set);
+    if (s.winners.count == 0) {
+        s.winners.reserve(PrCssProperty_Count);
+        s.winners.count = PrCssProperty_Count;
+        prMemZero(s.winners.data, sizeof(CssCascaded) * PrCssProperty_Count);
+    }
+    s.element = input.element;
+    s.inheritsReset = false;
+    s.passThrough = 0;
+    s.staticInline = false;
+    s.cacheGroups = false;
+    s.groupSalt = 0;
+    forgetWinners(s);
+    // No rule's declarations come before the blocks', so a revert rolls back to the defaults.
+    s.applying = nullptr;
+    s.applyingCount = 0;
+    s.appearance = CssAppearance_None;
+    CssPlace place{set, CssHintBlocks{}, CssOrigin_Author, 0, nullptr};
+    for (uint32_t i = 0; i < count; ++i)
+        apply(s, blocks[i], false, place);
+    for (uint32_t i = 0; i < count; ++i)
+        apply(s, blocks[i], true, place);
+    CssComputedStyle* style = allocZeroed<CssComputedStyle>();
+    style->references.storeRelaxed(1);
+    style->custom = customProperties(s, builder->table, input.parent != nullptr ? input.parent->custom : nullptr);
+    style->appearance = input.parent != nullptr ? input.parent->appearance : CssAppearance_None;
+    style->locale = input.parent != nullptr ? input.parent->locale : PrLocale(0);
+    bool readsFont = false;
+    bool readsViewport = false;
+    computeGroups(builder, s, input, style, &readsFont, &readsViewport);
     return style;
 }
 

@@ -173,8 +173,6 @@ struct CpuBackend : PrDrawRenderer {
     RawArray<Renderer*> renderers;         // for each depth of nesting
 };
 
-// A frame: the list that it renders once there are pixels.
-
 // Flattens the path into `out` in target pixels under the transform, and returns `out`.
 const PrPathPolyline& land(const PrDrawTransform& x, const PrPath* path, PrPathPolyline& out) {
     prPathPolylineClear(&out);
@@ -1612,6 +1610,7 @@ void drawGlyphs(Renderer& r, const PrDrawCommand& c) {
             single.glyphs = &alone;
             single.glyphCount = 1;
             single.transforms = run->transforms != nullptr ? &run->transforms[i] : nullptr;
+            single.clusters = run->clusters != nullptr ? &run->clusters[i] : nullptr;
             PrAffine2 place = x.affine;
             place.e = drawn.x;
             place.f = drawn.y;
@@ -1667,11 +1666,17 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_Glyphs:
                 drawGlyphs(r, c);
                 break;
-            case PrDrawCommandKind_Embed:
-                r.transforms.push(prDrawTransformMoved(&r.transforms.last(), c.embed.offset));
+            case PrDrawCommandKind_Embed: {
+                PrDrawTransform moved = prDrawTransformMoved(&r.transforms.last(), c.embed.offset);
+                const Clip& clip = currentClip(r);
+                if (prDrawListMisses(c.embed.list, moved.affine,
+                        prRectIntersect(clip.rect, prRectFromIRect(clip.coverage.box))))
+                    break;
+                r.transforms.push(moved);
                 runCommands(r, prDrawListCommands(c.embed.list), prDrawListCommandCount(c.embed.list));
                 r.transforms.pop();
                 break;
+            }
             case PrDrawCommandKind_PushTransformAffine2: {
                 PrDrawTransform next = prDrawTransformPush(&r.transforms.last(), &c);
                 r.transforms.push(next);
@@ -1702,6 +1707,9 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_PopGroup:
                 popGroup(r);
                 break;
+            case PrDrawCommandKind_PushMark:
+            case PrDrawCommandKind_PopMark:
+                break;
             default:
                 drawShape(r, c);
                 break;
@@ -1728,8 +1736,9 @@ void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
     drawMemoryFrameDestroy(static_cast<DrawMemoryFrame*>(frame));
 }
 
-// Renders the list into the pixels. A backdrop reads what the pixels held as well as what the list drew.
-void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list) {
+// Renders the part of the list into the pixels. A backdrop reads what the pixels held as well as what the list drew.
+void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list,
+        const PrDrawPart& part) {
     CpuBackend* cpu = static_cast<CpuBackend*>(renderer);
     PrIRect whole{0, 0, int32_t(pixels.extent.x), int32_t(pixels.extent.y)};
     CpuTarget target{pixels.data, pixels.stride, whole, format, false, whole};
@@ -1738,7 +1747,8 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
     for (uint32_t i = 0; i < cpu->renderers.count; ++i)
         cpu->renderers.data[i]->used = false;
     Renderer& r = beginRender(cpu, 0, target);
-    runCommands(r, prDrawListCommands(list), prDrawListCommandCount(list));
+    r.transforms.data[0] = part.transform;
+    runCommands(r, prDrawListCommands(list) + part.first, part.count);
     endRender(r);
     // Only renderers for the depths that nesting reached are kept, deepest last.
     while (!cpu->renderers.last()->used)
@@ -1751,9 +1761,10 @@ PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
     return drawMemoryFrameCreate(renderer, renderPixels, true);
 }
 
-// Keeps the list, which renders when the frame's pass runs.
-PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget*) {
-    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list);
+// Keeps the part of the list, which renders when the frame's pass runs.
+PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
+        const PrDrawTarget*) {
+    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list, *part);
     return PrStatus_Ok;
 }
 

@@ -80,6 +80,7 @@ class RunnerTests(unittest.TestCase):
                 "plain.html": '<meta name="flags" content="ahem"><link rel="match" href="r.html">',
                 "click-manual.html": "<script src=/resources/testharness.js></script>",
                 "look-visual.html": '<link rel="match" href="r.html">',
+                "pages-print.html": '<meta name="flags" content="paged"><link rel="match" href="r.html">',
             }
             manual = {}
             for name, text in pages.items():
@@ -87,8 +88,10 @@ class RunnerTests(unittest.TestCase):
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(text)
                 manual[name] = wpt.is_manual(path)
+            # WPT's manifest finds a print reftest before it reads a test's flags.
             self.assertEqual(manual, {"animated.html": True, "paged.html": True, "plain.html": False,
-                                      "click-manual.html": True, "look-visual.html": True})
+                                      "click-manual.html": True, "look-visual.html": True,
+                                      "pages-print.html": False})
 
     def test_subtest_exception_keeps_other_results(self):
         result = self.run_page('''
@@ -440,6 +443,47 @@ class ReftestTests(unittest.TestCase):
         self.assertTrue(wpt.within(((0, 4), (10, 20)), 0, 3))
         self.assertFalse(wpt.within(((1, 4), (10, 20)), 2, 3))
         self.assertFalse(wpt.within(((0, 0), (0, 0)), 1, 1))
+
+    # Two pages of print, each a square, the first green, that a forced break separates.
+    PAGES = '<div style="break-after: page">' + SQUARE % "green" + '</div>' + SQUARE
+
+    def test_a_print_reftest_compares_its_pages_in_order_and_fails_on_another_count(self):
+        output = self.run_reftests({
+            "ref.html": self.PAGES % "green",
+            "same-print.html": '<link rel="match" href="ref.html">' + self.PAGES % "green",
+            "fewer-print.html": '<link rel="match" href="ref.html">' + self.SQUARE % "green",
+            "second-print.html": '<link rel="match" href="ref.html">' + self.PAGES % "red",
+            "unlike-print.html": '<link rel="mismatch" href="ref.html">' + self.SQUARE % "green",
+        }, ["same-print.html", "fewer-print.html", "second-print.html", "unlike-print.html"])
+        self.assertRegex(output, r"css-a/fewer-print.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a/second-print.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a\s+4/4\s+2/4")
+
+    def test_a_print_reftest_compares_the_pages_that_its_reftest_pages_metas_select(self):
+        # The body has no margin, which would start the first page lower than the second.
+        flush = '<style>body { margin: 0 }</style>'
+        output = self.run_reftests({
+            "ref.html": flush + self.SQUARE % "red",
+            "pages.html": flush + self.PAGES % "red",
+            "own-print.html": '<meta name="reftest-pages" content="2-"><link rel="match" href="ref.html">'
+                              + flush + self.PAGES % "red",
+            "keyed-print.html": '<meta name="reftest-pages" content="pages.html:2">'
+                                '<link rel="match" href="pages.html">' + flush + self.SQUARE % "red",
+            "all-print.html": '<link rel="match" href="ref.html">' + flush + self.PAGES % "red",
+        }, ["own-print.html", "keyed-print.html", "all-print.html"])
+        self.assertRegex(output, r"css-a/all-print.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a\s+3/3\s+2/3")
+
+    def test_a_print_reftest_is_printed_on_the_page_box_of_wpts_protocol(self):
+        # The page is 5 by 3 inches, with margins of half an inch, so its page area is 384 by 192 px, 48 px in from the
+        # page's edges.
+        output = self.run_reftests({
+            "ref.html": '<style>@page { margin: 0 } body { margin: 0 }</style>'
+                        '<div style="margin: 48px; width: 384px; height: 192px; background: green"></div>',
+            "area-print.html": '<link rel="match" href="ref.html"><style>body { margin: 0 }</style>'
+                               '<div style="height: 192px; background: green"></div>',
+        }, ["area-print.html"])
+        self.assertRegex(output, r"css-a\s+1/1\s+1/1")
 
     def test_a_page_that_never_finishes_fails(self):
         output = self.run_reftests({

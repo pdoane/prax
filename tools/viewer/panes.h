@@ -9,8 +9,8 @@
 #include "pr/draw_renderer.h"
 #include "pr/gpu.h"
 
+#include "tools/harness/draw_renderers.h"
 #include "tools/viewer/documents.h"
-#include "tools/viewer/renderers.h"
 #include "tools/viewer/ui.h"
 
 #include <atomic>
@@ -39,9 +39,7 @@ struct Slot {
     PrDrawList* PR_NULLABLE prepared = nullptr;     // the list that `drawn` prepared, unchanged while the frame lives
     std::string shown;                              // what the texture holds; empty for nothing
     Rendered rendered;
-    float pixelRatio = 1;                           // the texture's target pixels per unit of the document
-    bool viewed = false;                            // true if the render is of the view's region, shown at `at`
-    PrRect at{};                                    // viewed: where the texture goes, in the window's logical pixels
+    PrRect at{};                                    // where the texture goes, in the window's logical pixels
     uint64_t frame = 0;                             // the last of the viewer's frames that draws the slot
 };
 
@@ -73,7 +71,7 @@ struct PaneOutput {
 // device prepares the list, then encodes it into a pass that clears the slot's texture to the background. A renderer in
 // memory renders into pixels filled with the background, which are then written to the texture. The result's `ms` is
 // how long preparation or rendering took.
-Rendered renderSlot(Slot& slot, const std::vector<RendererConfig>& configs, uint32_t config, const PrDrawList* list,
+Rendered renderSlot(Slot& slot, const std::vector<harness::RendererConfig>& configs, uint32_t config, const PrDrawList* list,
     PrColor background, PrGpuCommands* commands, PaneOutput output);
 
 // The time that documents draw at. Every pane reads the clock when it starts a render, and the panes of one document
@@ -111,18 +109,16 @@ struct PaneSource {
     std::string url;                    // the page that the browser renders
     uint32_t config = 0;
     bool backToBack = false;            // true to render again as soon as a render ends, rather than once it is taken
-    float docWidth = 0;                 // the size that the document lays out for
-    float docHeight = 0;
-    float pixelRatio = 1;               // the texture's target pixels per unit of the document
 
-    // If set, the render is of the view's region: the part of the document that the pane shows, in a texture no larger
-    // than the pane. The texture's pixels hold the document's origin at `origin`, and the texture goes to `at` in the
-    // window's logical pixels. `region` is that part in the document's units. Otherwise, the render is of the whole
-    // document, which the view places and zooms as it shows it.
-    bool viewed = false;
-    PrVec2 origin{0, 0};
+    // The extent of the viewport that the document is laid out in, in CSS pixels. The part of the viewport from its top
+    // left that the texture's size holds renders into the texture, at `pixelRatio` target pixels per CSS pixel, and the
+    // texture goes to `at`, in the window's logical pixels.
+    float docWidth = 0;
+    float docHeight = 0;
+    float pixelRatio = 1;
     PrRect at{};
-    PrRect region{};
+
+    PrVec2 scroll{0, 0};                // the scroll offset that the system's browser scrolls its document to
 
     uint32_t width = 0;                 // the texture's size
     uint32_t height = 0;
@@ -137,7 +133,7 @@ struct PaneSource {
 struct PaneContext {
     PrApp* app;
     PrGpuDevice* device;
-    const std::vector<RendererConfig>* configs;
+    const std::vector<harness::RendererConfig>* configs;
     std::vector<std::unique_ptr<std::mutex>>* configLocks; // one per renderer, held while the renderer is used
     SharedClock* clock;
 

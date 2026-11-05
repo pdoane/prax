@@ -736,13 +736,14 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
             .across = 0,
         };
     };
-    // A leaf of one run, which is the common case, has one face, one font and one font range, and needs no scratch.
+    // A leaf of one run at one scale, which is the common case, has one face, one font and one font range, and needs no
+    // scratch.
     LayoutLeafFace single;
     LayoutLeafFace* faces = &single;
     uint32_t faceCount = 1;
     const PrFont* const* fonts = &single.font;
     uint32_t fontCount = 1;
-    LayoutFragmentFontRange singleRange{0, glyphEnd - g};
+    LayoutFragmentFontRange singleRange{0, glyphEnd - g, t.info.glyphs[g].scale};
     const LayoutFragmentFontRange* ranges = &singleRange;
     uint32_t rangeCount = 1;
     bool reversed = (leaf.level & 1) != 0;
@@ -759,7 +760,14 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
         }
         faces = pieces.data;
         faceCount = pieces.count;
-        // Its distinct fonts, few, and its font ranges, in the order its glyphs are placed.
+    }
+    // Only a shaping that synthesized glyphs at another scale divides its ranges by scale.
+    bool scaled = false;
+    for (uint32_t i = g; t.info.scaled && i < glyphEnd && !scaled; ++i)
+        scaled = t.info.glyphs[i].scale != singleRange.scale;
+    if (faceCount != 1 && !scaled) {
+        // Its distinct fonts, few, and its font ranges, one for each run of faces of one font, in the order its glyphs
+        // are placed.
         RawArray<const PrFont*>& distinct = f.leafFonts;
         RawArray<LayoutFragmentFontRange>& placedRanges = f.leafRanges;
         distinct.clear();
@@ -777,7 +785,43 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
             if (placedRanges.count != 0 && placedRanges.last().font == font)
                 placedRanges.last().glyphEnd = placed;
             else
-                placedRanges.push(LayoutFragmentFontRange{font, placed});
+                placedRanges.push(LayoutFragmentFontRange{font, placed, singleRange.scale});
+        }
+        fonts = distinct.data;
+        fontCount = distinct.count;
+        ranges = placedRanges.data;
+        rangeCount = placedRanges.count;
+    } else if (scaled) {
+        // Its distinct fonts and its font ranges, one for each run of glyphs of one font and one scale.
+        RawArray<const PrFont*>& distinct = f.leafFonts;
+        RawArray<LayoutFragmentFontRange>& placedRanges = f.leafRanges;
+        distinct.clear();
+        placedRanges.clear();
+        uint32_t j = reversed ? faceCount - 1 : 0;
+        uint32_t font = 0;
+        for (uint32_t k = 0; k < glyphEnd - g; ++k) {
+            uint32_t i = reversed ? glyphEnd - 1 - k : g + k;
+            bool entered = k == 0;
+            while (!reversed && i >= faces[j].glyphEnd) {
+                ++j;
+                entered = true;
+            }
+            while (reversed && j != 0 && i < faces[j - 1].glyphEnd) {
+                --j;
+                entered = true;
+            }
+            if (entered) {
+                font = 0;
+                while (font < distinct.count && distinct.data[font] != faces[j].font)
+                    ++font;
+                if (font == distinct.count)
+                    distinct.push(faces[j].font);
+            }
+            float scale = t.info.glyphs[i].scale;
+            if (placedRanges.count != 0 && placedRanges.last().font == font && placedRanges.last().scale == scale)
+                placedRanges.last().glyphEnd = k + 1;
+            else
+                placedRanges.push(LayoutFragmentFontRange{font, k + 1, scale});
         }
         fonts = distinct.data;
         fontCount = distinct.count;
@@ -1524,8 +1568,8 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
                 LayoutNodeIndex node = t.items.data[leaf.item].node;
                 LayoutLogicalOffset move = moves ? f.leafMoves.data[f.order.data[p]] : kLayoutLogicalOffsetZero;
                 f.placeholders.push(LayoutLinePlaceholder{children.count, move, leaf.contentBefore});
-                LayoutFragment* placeholder =
-                    layoutFragmentCreatePlaceholder(node, layoutStaticEdges(space.mode), layoutIsFixed(state.tree, node));
+                LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(node, layoutStaticEdges(space.mode),
+                    layoutNodePositionScheme(state.tree, node));
                 children.push(LayoutLogicalChild{placeholder, LayoutLogicalOffset{x, kLayoutUnitZero}});
                 placed = children.count;
                 break;
@@ -1636,15 +1680,72 @@ LayoutExclusion placeFloat(const LayoutState& state, const LayoutInlineFrame& f,
     return layoutFloatPlace(box, f.atomics.data[item], bfc.containing, space.mode, top);
 }
 
+// Returns the index of the exclusion `placed` among the floats of the context of `bfc`.
+uint32_t exclusionIndex(const LayoutInlineBfc& bfc, const LayoutExclusion& placed) {
+    const LayoutExclusions& exclusions = *bfc.containing.exclusions;
+    uint32_t index = exclusions.floats.count;
+    while (index > 0 && !(exclusions.floats.data[index - 1] == placed))
+        --index;
+    PR_ASSERT(index > 0);
+    return index - 1;
+}
+
+// Breaks inside the float `atomic`, placed at `placed`, if it reaches past the end of the fragmentainer of `bfc`, may
+// break, and starts before that end (css-break-4/#possible-breaks). Lays the float out again in the fragmentainer in
+// `space`, and records its token in the context, whose root resumes it (layoutFlowContent). The float's exclusion keeps
+// its block-end edge, since nothing past the fragmentainer's end is laid out in this fragmentainer. A float that starts
+// past the end goes to the next fragmentainer whole. Returns true for such a float, whose fragment the caller drops.
+bool breakFloat(LayoutState& state, LayoutAtomic& atomic, const LayoutExclusion& placed, const LayoutSpace& space,
+        const LayoutInlineBfc& bfc) {
+    const LayoutFragmentainer* fragmentainer = bfc.fragmentainer;
+    if (fragmentainer == nullptr || placed.bottom <= fragmentainer->end)
+        return false;
+    LayoutExclusions& exclusions = *bfc.containing.exclusions;
+    LayoutNodeIndex node = atomic.fragment->node;
+    PrLayoutUnit borderTop = placed.top + atomic.margin[LayoutSide_BlockStart];
+    if (placed.top >= fragmentainer->end && !(bfc.atTop && placed.top == bfc.top)) {
+        LayoutBreakToken* token = layoutBreakTokenCreate(node, kLayoutUnitZero, kPrLayoutNodeNone, nullptr);
+        token->pushed = true;
+        exclusions.broken.push(LayoutBrokenFloat{exclusionIndex(bfc, placed), token});
+        return true;
+    }
+    if (borderTop >= fragmentainer->end || layoutIsMonolithic(state.tree, node, space.mode) ||
+            (!bfc.atTop && layoutAvoidsBreakInside(state.tree, node, fragmentainer->kind)))
+        return false;
+    LayoutFragmentainer moved = layoutFragmentainerMoved(*fragmentainer, borderTop, false);
+    LayoutSpace floatSpace = space;
+    floatSpace.available = space.percentInline;
+    floatSpace.bfc = nullptr;
+    LayoutFragmentation fragmentation{&moved, nullptr};
+    floatSpace.fragmentation = &fragmentation;
+    LayoutResult result = layoutBlockFragmented(state, node, floatSpace);
+    if (result.token == nullptr) {
+        layoutFragmentRelease(result.fragment);
+        return false;
+    }
+    layoutFragmentRelease(atomic.fragment);
+    atomic.fragment = result.fragment;
+    atomic.margin[LayoutSide_BlockEnd] = kLayoutUnitZero;
+    LayoutBreakToken* token = const_cast<LayoutBreakToken*>(result.token);
+    token->floatLeft = placed.left;
+    exclusions.broken.push(LayoutBrokenFloat{exclusionIndex(bfc, placed), token});
+    return false;
+}
+
 // Appends the fragment of the float of `item`, placed at `placed`, at its position from the corner of the context.
 void pushFloat(LayoutState& state, LayoutInlineFrame& f, LayoutItemIndex item, const LayoutExclusion& placed,
         const LayoutSpace& space, const LayoutInlineBfc& bfc) {
     LayoutAtomic& atomic = f.atomics.data[item];
+    f.floats.placed.data[item] = true;
+    if (breakFloat(state, atomic, placed, space, bfc)) {
+        layoutFragmentRelease(atomic.fragment);
+        atomic.fragment = nullptr;
+        return;
+    }
     LayoutLogicalOffset at = layoutFloatOffset(atomic, placed, bfc.containing, space.mode, bfc.top);
     f.floats.child.data[item] = state.scratch->children.count;
     state.scratch->children.push(LayoutLogicalChild{atomic.fragment, at});
     atomic.fragment = nullptr;
-    f.floats.placed.data[item] = true;
 }
 
 // Returns the offset of the start of a line in `span` from the starting content edge of the block, in px. Tab stops are
@@ -1893,6 +1994,17 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
     uint32_t lines = 0;
     bool afterForced = false;
     openAcross(t, f);
+    if (bfc.resume != nullptr) {
+        // The lines resume inside the boxes that are open around the item they start at.
+        at = *bfc.resume;
+        f.open.clear();
+        if (at.item < segment.itemEnd) {
+            const RawArray<LayoutInlineAlign>& align = f.aligner.align;
+            for (uint32_t box = align.data[at.item].parent; box != kLayoutInlineRoot; box = align.data[box].parent)
+                f.open.push(box);
+            reverseItems(f.open.span());
+        }
+    }
     f.lineCollected = false;
     if (f.words != nullptr)
         prTextWordBreaksClear(f.words);
@@ -1945,7 +2057,7 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
     // (prLayoutNodeSetFirstLineStyle), from the context's shaping in them, with a frame of its own. Its fonts may break
     // it elsewhere than the container's own records would. The lines after it continue from where it ends, with the
     // boxes it leaves open and the floats it placed.
-    if (bfc.firstFormatted && t.firstLine != nullptr && segment.itemStart == 0) {
+    if (bfc.firstFormatted && t.firstLine != nullptr && segment.itemStart == 0 && bfc.resume == nullptr) {
         const LayoutInlineShaping& lt = *t.firstLine;
         PrLayoutStyleIndex lineStyle = layoutNodeLineStyle(state.tree, container);
         LayoutInlineFrame& lf = enterFrame(state.scratch);
@@ -1976,9 +2088,68 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
         leaveFrame(state.scratch);
     }
     // Lines continue while items remain. The items after a forced break at the end of the text go on a line of their
-    // own.
-    while (lines == 0 || at.byte < segment.byteEnd || at.item < segment.itemEnd)
-        layLine(f, t, strut);
+    // own. In a fragmentation context, a line that ends past the fragmentainer goes to the next one, unless nothing
+    // comes before it there. A break leaves at least `orphans` lines before it, and at least `widows` after it if that
+    // leaves the orphans: the lines after the one that ends past the fragmentainer are laid out, as far as the widows
+    // need, to count them.
+    if (bfc.limit == kLayoutOffsetNone) {
+        while (lines == 0 || at.byte < segment.byteEnd || at.item < segment.itemEnd)
+            layLine(f, t, strut);
+    } else {
+        RawArray<LayoutLogicalChild>& placedLines = state.scratch->children;
+        uint32_t firstMark = placedLines.count;
+        struct LineState {
+            uint32_t mark;
+            uint32_t anchors;
+            LayoutLineStart before;
+            PrLayoutUnit y;
+            LayoutInlineResult kept;
+        };
+        RawArray<LineState> history;
+        uint32_t here = 0;
+        while (lines == 0 || at.byte < segment.byteEnd || at.item < segment.itemEnd) {
+            LineState line{placedLines.count, f.floats.anchors.count, at, y, result};
+            history.push(line);
+            layLine(f, t, strut);
+            if (y <= bfc.limit || (here == 0 && bfc.atTop)) {
+                ++here;
+                continue;
+            }
+            state.fragmentShortage = layoutUnitMin(state.fragmentShortage, y - bfc.limit);
+            uint32_t breakAt = here;
+            uint32_t after = 1;
+            while (after < bfc.widows && (at.byte < segment.byteEnd || at.item < segment.itemEnd)) {
+                layLine(f, t, strut);
+                ++after;
+            }
+            if (after < bfc.widows) {
+                uint32_t earlier = here > bfc.widows - after ? here - (bfc.widows - after) : 0;
+                if (earlier >= bfc.orphans && earlier > 0)
+                    breakAt = earlier;
+            }
+            if (here < bfc.orphans && bfc.resume == nullptr && !bfc.atTop) {
+                line = LineState{
+                    firstMark, 0, LayoutLineStart{segment.byteStart, segment.itemStart, 0}, bfc.top,
+                    LayoutInlineResult{},
+                };
+            } else if (here < bfc.orphans && !bfc.atTop) {
+                // A paragraph that resumes below other content, as in a column of a nested multi-column container that
+                // is not at the top of its outer fragmentainer, moves its lines on too.
+                line = history.data[0];
+            } else {
+                line = history.data[breakAt];
+            }
+            layoutFragmentDiscard(placedLines, line.mark);
+            f.floats.anchors.count = line.anchors;
+            at = line.before;
+            y = line.y;
+            result = line.kept;
+            result.broken = true;
+            result.breakAt = at;
+            break;
+        }
+        history.reset();
+    }
     state.stats->linesLaidOut += lines;
     // Floats placed beside lines that are all phantom adjoin the margins around them, because nothing on the lines
     // resolved those margins.
@@ -2270,7 +2441,8 @@ LayoutInlineResult layoutInlineSegment(LayoutState& state, LayoutInlineRun& run,
     LayoutInlineFrame& f = *run.frame;
     RawArray<LayoutLogicalChild>& children = state.scratch->children;
     // Lines in the records of the first formatted line are laid out every time.
-    bool reuses = bfc.reuses && state.reuse && t.collected != 0 && t.firstLine == nullptr;
+    bool reuses = bfc.reuses && state.reuse && t.collected != 0 && t.firstLine == nullptr &&
+        bfc.limit == kLayoutOffsetNone && bfc.resume == nullptr;
     PR_ASSERT(!bfc.reuses || (bfc.topFinal && bfc.mayResolve));
     LayoutNodeIndex first = t.nodes.data[0];
     if (const LayoutLineRecord* kept = reuses ? layoutCacheFindLines(state.tree->cache, first) : nullptr;

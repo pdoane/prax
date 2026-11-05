@@ -141,3 +141,64 @@ size_t prF64FormatSignificant(double value, uint32_t digits, char* out) {
     PR_ASSERT(length <= kPrF64TextMaxBytes);
     return length;
 }
+
+size_t prF64FormatFixed(double value, uint32_t decimals, char* out) {
+    PR_ASSERT(prF64IsFinite(value) && prF64Abs(value) < 1e21 && decimals <= kPrF64MaxDigits);
+    if (value == 0) {
+        out[0] = '0';
+        return 1;
+    }
+    // The shortest decimal, digits * 10^exponent, rounded at the 10^-decimals place.
+    PrF64Decimal decimal = prF64ShortestDecimal(value);
+    int32_t place = -int32_t(decimals);
+    if (decimal.exponent < place) {
+        uint32_t dropped = uint32_t(place - decimal.exponent);
+        // The digits are below 10^kPrF64MaxDigits, so past that many places they round to zero.
+        if (dropped > kPrF64MaxDigits) {
+            decimal.digits = 0;
+        } else {
+            uint64_t scale = 1;
+            for (uint32_t i = 0; i < dropped; ++i)
+                scale *= 10;
+            uint64_t rest = decimal.digits % scale;
+            decimal.digits = decimal.digits / scale + (rest * 2 >= scale ? 1 : 0);
+        }
+        decimal.exponent = place;
+        while (decimal.digits != 0 && decimal.digits % 10 == 0) {
+            decimal.digits /= 10;
+            ++decimal.exponent;
+        }
+    }
+    if (decimal.digits == 0) {
+        out[0] = '0';
+        return 1;
+    }
+    size_t length = 0;
+    if (value < 0)
+        out[length++] = '-';
+    char digits[kPrU64TextMaxBytes];
+    int32_t count = int32_t(prU64Format(decimal.digits, digits, 10));
+    if (decimal.exponent >= 0) {
+        prMemCopy(out + length, digits, size_t(count));
+        length += size_t(count);
+        for (int32_t i = 0; i < decimal.exponent; ++i)
+            out[length++] = '0';
+        return length;
+    }
+    // The digits before the point, then the zeros and digits after it.
+    int32_t point = count + decimal.exponent;
+    if (point > 0) {
+        prMemCopy(out + length, digits, size_t(point));
+        length += size_t(point);
+    } else {
+        out[length++] = '0';
+    }
+    out[length++] = '.';
+    for (int32_t i = point; i < 0; ++i)
+        out[length++] = '0';
+    int32_t from = point > 0 ? point : 0;
+    prMemCopy(out + length, digits + from, size_t(count - from));
+    length += size_t(count - from);
+    PR_ASSERT(length <= kPrF64FixedMaxBytes);
+    return length;
+}

@@ -89,6 +89,38 @@ class Files:
                 f.write(self.stamp[1] + "\n")
 
 
+class Captures:
+    """The pages of a checkout, each a path under `checkout`, captured into `directory` by tools/pages/pages.py with
+    what they load from other origins, so that they load the same on every run and without the network. A capture is
+    made once, and again only when the `stamp` changes, since what a server answers can change while the pin does
+    not."""
+
+    def __init__(self, directory, checkout, pages, stamp):
+        self.directory = directory
+        self.checkout = checkout
+        self.pages = pages
+        self.stamp = stamp
+
+    def fetch(self):
+        directory = os.path.join(THIRD_PARTY, self.directory)
+        stamp_file = os.path.join(directory, self.stamp[0])
+        try:
+            with open(stamp_file) as f:
+                current = f.read().strip()
+        except FileNotFoundError:
+            current = None
+        if current != self.stamp[1]:
+            shutil.rmtree(directory, ignore_errors=True)
+            os.makedirs(directory)
+            with open(stamp_file, "w") as f:
+                f.write(self.stamp[1] + "\n")
+        missing = [page for page in self.pages
+                   if not os.path.exists(os.path.join(directory, os.path.splitext(page)[0] + ".json"))]
+        if missing:
+            print("capturing %d pages of %s" % (len(missing), self.checkout), flush=True)
+            dev.python("tools.pages.pages", "local", os.path.join(THIRD_PARTY, self.checkout), directory, *missing)
+
+
 class Pages:
     """The real pages that the benchmarks read, captured by tools/pages/pages.py."""
 
@@ -150,6 +182,25 @@ CLDR_COMMIT = "acd6d88ae493633240e19a87a721076a8a75c310"
 # lib/markdown is compared with.
 COMMONMARK_SPEC_COMMIT = "9103e341a973013013bb1a80e13567007c5cef6f"
 CMARK_GFM_COMMIT = "587a12bb54d95ac37241377e6ddc93ea0e45439b"
+PRINCE_SAMPLES_COMMIT = "ebf33b86eaacff2df6acd2e3babcba11dd875b82"
+# The licensed directories of prince-samples, each with the documents of it that Prince prints and the viewer lists.
+PRINCE_SAMPLES = {
+    "campaign": ("letter.html",),
+    "catalogue": ("PrinceCatalogue.html", "Cover.html"),
+    "digte": ("digte.html",),
+    "flyer": ("flyer.html",),
+    "invoice-colorful": ("invoicesample.html",),
+    "invoice-plain": ("index.html",),
+    "letter": ("letter.html",),
+    "magic6": ("magic.xhtml",),
+    "magic8": ("index.html",),
+    "malthus": ("essay.html",),
+    "textbook": ("somatosensory.html",),
+    "twist": ("oliver-twist.html",),
+    "usenix": ("example.html",),
+    "webarch": ("webarch.html",),
+    "winelist": ("winelist.html",),
+}
 
 UCD = "https://www.unicode.org/Public/17.0.0/ucd/"
 OFL = "https://raw.githubusercontent.com/google/fonts/%s/ofl/" % GOOGLE_FONTS_COMMIT
@@ -398,6 +449,22 @@ CHECKOUTS = {
     # github/cmark-gfm: GFM's specification and its tests of the extensions. The build compiles cmark-gfm itself at
     # the same commit (cmake/dependencies.cmake).
     "cmark_gfm": lambda: [Git("cmark-gfm", "https://github.com/github/cmark-gfm.git", CMARK_GFM_COMMIT, "test")],
+    # yeslogic/prince-samples: documents written for print, each with the PDF that Prince made of it, which the viewer
+    # shows beside the engine's own PDF (tools/viewer/suite_prince.cpp). The repository provides a file without license
+    # information only for evaluating Prince, so only the directories whose README licenses both the HTML and its PDF
+    # are fetched: under CC BY 4.0, CC BY-SA 4.0 (textbook), or the Project Gutenberg License (malthus, twist). Each
+    # README, which carries its sample's attribution, is fetched with its directory, and so is the root README. Most
+    # documents load fonts, sheets and images from the web, so each is captured with what it loads from other origins
+    # (third_party/prince-samples-capture), and the viewer and `./dev.sh document` print it the same on every run. What
+    # a capture holds belongs to its owners under their own terms: it is a local copy for testing, never committed and
+    # never redistributed.
+    "prince_samples": lambda: [
+        Git("prince-samples", "https://github.com/yeslogic/prince-samples.git", PRINCE_SAMPLES_COMMIT,
+            *PRINCE_SAMPLES),
+        Captures("prince-samples-capture", "prince-samples",
+                 [directory + "/" + page for directory, pages in PRINCE_SAMPLES.items() for page in pages],
+                 ("commit", PRINCE_SAMPLES_COMMIT)),
+    ],
 }
 
 

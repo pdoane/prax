@@ -542,7 +542,8 @@ TEST_CASE("a relatively positioned inline-block moves alone, and nothing of its 
 }
 
 TEST_CASE("an inline-block's descendants that paint late paint above its following siblings") {
-    enum Late { Late_None, Late_Relative, Late_Layer, Late_Opacity };
+    enum { Late_None, Late_Relative, Late_Layer, Late_Opacity };
+    typedef uint8_t Late;
     for (Late late : {Late_None, Late_Relative, Late_Layer, Late_Opacity}) {
         CAPTURE(int(late));
         Fixture f;

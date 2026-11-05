@@ -137,6 +137,10 @@ PrRect prRectAt(PrVec2 origin, PrVec2 extent) {
     return PrRect{origin.x, origin.y, origin.x + extent.x, origin.y + extent.y};
 }
 
+PrRect prRectOffset(PrRect rect, PrVec2 offset) {
+    return PrRect{rect.left + offset.x, rect.top + offset.y, rect.right + offset.x, rect.bottom + offset.y};
+}
+
 bool prRectIsEmpty(PrRect rect) {
     return !(rect.right > rect.left && rect.bottom > rect.top);
 }

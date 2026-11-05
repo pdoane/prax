@@ -357,6 +357,12 @@ struct CssCachedGroup {
     RawArray<uint64_t> key;         // what the group was computed from (cssCascadeStyle)
     const CssStyleValues* PR_NULLABLE values;
 
+    // What the key names by address, which the slot holds a reference to, so that no other values take the address
+    // while the key names it: the parent's group if the group inherits, and the element's custom properties. The custom
+    // properties also stay interned, so an element whose custom properties change back finds the group again.
+    const CssStyleValues* PR_NULLABLE parentGroup;
+    const CssCustomProperties* PR_NULLABLE custom;
+
     // What computing the group read beyond its key, and what it left in the cascade's state, which a hit replays.
     const CssStyleValues* PR_NULLABLE parentValues; // the parent's group of the same kind, read if `inheritsReset`
     CssViewport viewport;                           // the viewport, whose extent is compared if `readsViewport`
@@ -367,10 +373,14 @@ struct CssCachedGroup {
     bool readsViewport;                             // a value resolved a length relative to the viewport's extent
     bool readsFont;                                 // a value resolved a length relative to the element's font
     bool readsMetrics;                              // a value read a font's metrics, so the group is not reused
+    uint32_t used;                                  // CssCascadeScratch::groupLookups when last stored or taken
 };
 
-// The number of slots in the cache of computed groups. A group evicts the group whose key hashes to the same slot.
+// The number of slots in the cache of computed groups, and the number that one hash may use: a set of
+// kCssCachedGroupWays slots. A new group evicts the least recently used slot of its set, so keys that the addresses in
+// them happen to put in one set each keep a group.
 constexpr uint32_t kCssCachedGroups = 4096;
+constexpr uint32_t kCssCachedGroupWays = 4;
 
 // The size of the Bloom filter of the features of an element's ancestors, in 64-bit words.
 constexpr uint32_t kCssAncestorFilterWords = 64;
@@ -452,6 +462,7 @@ struct CssCascadeScratch {
     RawArray<CssCachedGroup> cachedGroups;
     RawArray<uint64_t> groupKey;    // the key of the group being computed
     uint64_t groupSalt;             // the number of the element's shared hints (cssSharedHints), or 0 for none
+    uint32_t groupLookups;          // number of lookups, which orders the slots of a set by use
     bool cacheGroups;
 
     // The matched properties cache, for the rule set at `generation`, created on first use.
@@ -515,6 +526,14 @@ struct CssCascadeInput {
 // and the rule set do not change.
 const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* builder, CssCascadeScratch* scratch,
     const CssCascadeInput& input);
+
+// Returns the style that the declaration blocks `blocks` give, in the order of the cascade, with one reference that the
+// caller holds. The style is one that no element's rules give, such as a page context's or a page-margin box's
+// (css-page-3/#cascading-and-page-context). The blocks' normal declarations apply in order, then their important ones.
+// The style inherits from the input's parent, and attr() reads the input's element. A pseudo of ::before computes
+// content as a ::before does, with normal computing to none. No rule's declarations apply, and nothing is cached.
+const CssComputedStyle* cssCascadeBlocks(const CssRuleSet* set, CssStyleBuilder* builder, CssCascadeScratch* scratch,
+    const CssCascadeInput& input, const CssDeclarationBlock* PR_NONNULL const* PR_NONNULL blocks, uint32_t count);
 
 // Returns the pseudo-elements among ::first-line and ::first-letter that `element` originates, as bits by CssPseudo. An
 // element originates one if an entry of `set` for that pseudo-element matches it. If `set` has no such entries, returns

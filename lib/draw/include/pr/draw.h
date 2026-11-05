@@ -22,6 +22,9 @@ extern "C" {
 // A list of draw commands, recorded once and rendered by any renderer (draw_list.h).
 typedef struct PrDrawList PrDrawList;
 
+// A command of a list, as a backend reads it (draw_commands.h).
+typedef struct PrDrawCommand PrDrawCommand;
+
 // Pixels that commands draw from (draw_image.h).
 typedef struct PrDrawImage PrDrawImage;
 

@@ -1,7 +1,7 @@
 // draw_bench: measures what recording and rendering each drawing costs, by renderer.
 //
 // ./dev.sh bench draw runs this and records its rows. A row is a drawing of a collection on one renderer, rendered at
-// its collection's size times the pixel ratio, onto pixels in memory or, for a renderer that renders on a device, onto
+// the collections' size times the pixel ratio, onto pixels in memory or, for a renderer that renders on a device, onto
 // a texture of that size. A row reports what rendering cost the CPU, and for a device, the time that the device spent
 // executing it. A render on a device waits for the device before the next render, so that what the engine does is the
 // same from run to run. A frame prepared while the device works on another frame can find the resources it reuses busy,
@@ -10,10 +10,11 @@
 // benchmarks measure theirs, after a render that warms the caches that a steady frame finds warm (fonts, glyph lists,
 // textures).
 //
-// `draw_bench [--renderer NAME]... [--collection WORD]... [--pixel-ratio <pixels>] [--shaper NAME] [DOCUMENT]...`
-// measures the named renderers, the collections whose names contain the words, and the documents named by number or by
-// a word of the name, shaping text with the named shaper. By default it measures every feature drawing on the viewer's
-// default renderer at a pixel ratio of 2, shaping with HarfBuzz. The collections are those drawn in code.
+// `draw_bench [--renderer NAME]... [--collection WORD]... [--pixel-ratio <pixels>] [--shaper NAME] [DRAWING]...`
+// measures the named renderers, the collections whose names contain the words, and the drawings named by number or by a
+// word of the name, shaping text with the named shaper. By default it measures every feature drawing on the viewer's
+// default renderer at a pixel ratio of 2, shaping with HarfBuzz. The collections are draw_features' drawings: its
+// features and its workloads (examples/draw_features).
 //
 // A renderer on a device renders each drawing twice, each in a row of its own: to 8 bits, and to half floats (`kHdr`),
 // whose rows end in "hdr". A renderer in memory renders to 8 bits.
@@ -21,6 +22,7 @@
 // `--images DIR` also writes what each row rendered into DIR, as a PNG named for the row. A half-float render is
 // clamped to 8 bits.
 
+#include "pr/app_display.h"
 #include "pr/assert.h"
 #include "pr/compress_builtin.h"
 #include "pr/draw_commands.h"
@@ -29,14 +31,13 @@
 #include "pr/image_builtin.h"
 #include "pr/vec.h"
 
+#include "examples/draw_features/drawing.h"
+#include "examples/draw_features/features.h"
+#include "examples/draw_features/workloads.h"
+#include "tools/harness/draw_renderers.h"
 #include "tools/harness/harness.h"
-#include "tools/viewer/documents.h"
-#include "tools/viewer/drawing.h"
-#include "tools/viewer/features.h"
-#include "tools/viewer/panes.h"
-#include "tools/viewer/renderers.h"
-#include "tools/viewer/suites.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -47,9 +48,38 @@
 
 using namespace pr;
 using namespace harness;
-using namespace viewer;
+using namespace drawings;
 
 namespace {
+
+// A collection of drawings, each drawn at the collections' size.
+struct Collection {
+    const char* name;
+    const Array<Drawing>& (*drawings)();
+};
+
+constexpr Collection kCollections[] = {{"Features", allFeatures}, {"Workloads", workloadDrawings}};
+constexpr float kWidth = 1100;
+constexpr float kHeight = 800;
+
+// Returns the name as a file name: lowercase letters and digits, with dashes between words.
+std::string fileNameOf(const std::string& name) {
+    std::string out = name;
+    for (char& c : out)
+        c = c >= 'A' && c <= 'Z'   ? char(c - 'A' + 'a') : c >= 'a' && c <= 'z' ? c : c >= '0' && c <= '9' ? c : '-';
+    return out;
+}
+
+// Returns `count` premultiplied BGRA pixels of the color.
+std::vector<uint8_t> pixelsOf(PrColor color, size_t count) {
+    float a = std::clamp(color.a, 0.0f, 1.0f);
+    auto byte = [](float v) { return uint8_t(std::lround(std::clamp(v, 0.0f, 1.0f) * 255)); };
+    uint8_t pixel[4] = {byte(color.b * a), byte(color.g * a), byte(color.r * a), byte(a)};
+    std::vector<uint8_t> pixels(count * 4);
+    for (size_t i = 0; i < count; ++i)
+        std::memcpy(pixels.data() + i * 4, pixel, 4);
+    return pixels;
+}
 
 // What a render on a device draws into: the texture's format, named by a suffix of the row.
 struct BenchOutput {
@@ -98,22 +128,30 @@ bool matches(const std::vector<const char*>& words, const std::string& name) {
     return false;
 }
 
-bool named(const Collection& collection, uint32_t index, const std::vector<const char*>& which) {
+// Returns true if `which` names the drawing at `index`, by its number from one or by part of its name, as fileNameOf
+// gives them, or if `which` is empty.
+bool named(const Drawing& drawing, uint32_t index, const std::vector<const char*>& which) {
     if (which.empty())
         return true;
-    for (const char* w : which)
-        if (documentNamed(collection, index, w))
+    for (const char* w : which) {
+        char* end = nullptr;
+        long number = std::strtol(w, &end, 10);
+        bool numbered = end != w && *end == 0;
+        if (numbered && number == long(index) + 1)
             return true;
+        if (!numbered && fileNameOf(drawing.name).find(fileNameOf(w)) != std::string::npos)
+            return true;
+    }
     return false;
 }
 
-void record(PrDrawList* list, Loaded& loaded, const Collection& collection, float pixelRatio) {
+// Records the drawing into the list at the collections' size, at time zero, with its text shaped by `shaper`.
+void record(PrDrawList* list, const Drawing& drawing, PrTextShaper* shaper, float pixelRatio) {
     prDrawListClear(list);
     prDrawListPushTransformAffine2(list, PrAffine2{pixelRatio, 0, 0, pixelRatio, 0, 0});
-    update(loaded, 0);
     PrAppDisplay display = prAppDisplayDefault();
     display.pixelRatio = pixelRatio;
-    draw(loaded, list, collection.width, collection.height, display, PrAppUserPreferences{});
+    drawDrawing(drawing, list, shaper, nullptr, display, kWidth, kHeight, 0);
     prDrawListPopTransform(list);
 }
 
@@ -236,7 +274,7 @@ int main(int argc, char** argv) {
     std::vector<const char*> drawings;
     float pixelRatio = 2;
     const char* images = nullptr;
-    TextBackends text;
+    PrTextShaperBackend shaper = PrTextShaperBackend_Default;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--renderer") == 0 && i + 1 < argc)
             configNames.push_back(argv[++i]);
@@ -248,7 +286,7 @@ int main(int argc, char** argv) {
             pixelRatio = std::strtof(argv[++i], nullptr);
         else if (std::strcmp(argv[i], "--shaper") == 0 && i + 1 < argc &&
                 prTextShaperBackendIsBuilt(prTextShaperBackendFromName(argv[i + 1])))
-            text.shaper = prTextShaperBackendFromName(argv[++i]);
+            shaper = prTextShaperBackendFromName(argv[++i]);
         else
             drawings.push_back(argv[i]);
     }
@@ -263,11 +301,11 @@ int main(int argc, char** argv) {
     PrImageCodec* imageCodec = compressCodec != nullptr ? prImageBuiltinCreate(compressCodec) : nullptr;
     PrDrawList* list = prDrawListCreate();
     int status = 0;
-    for (const Collection& collection : drawingCollections()) {
+    for (const Collection& collection : kCollections) {
         if (!matches(collectionNames, collection.name))
             continue;
-        uint32_t width = uint32_t(collection.width * pixelRatio);
-        uint32_t height = uint32_t(collection.height * pixelRatio);
+        uint32_t width = uint32_t(kWidth * pixelRatio);
+        uint32_t height = uint32_t(kHeight * pixelRatio);
         BenchTarget targets[] = {{{}, width, height, device, {}, kSdr}, {{}, width, height, device, {}, kHdr}};
         for (BenchTarget& target : targets) {
             PrGpuTextureDesc textureDesc = prGpuTextureDesc2d(
@@ -276,18 +314,21 @@ int main(int argc, char** argv) {
             if (device != nullptr)
                 prGpuTextureCreate(device, &textureDesc, &target.texture);
         }
-        for (uint32_t d = 0; d < uint32_t(collection.documents().size()); ++d) {
-            if (!named(collection, d, drawings))
+        for (uint32_t d = 0; d < collection.drawings().count(); ++d) {
+            const Drawing& drawing = collection.drawings()[d];
+            if (!named(drawing, d, drawings))
                 continue;
             std::string name = fileNameOf(collection.name) + " " + (d < 9 ? "0" : "") + std::to_string(d + 1) + " " +
-                fileNameOf(collection.documents()[d].name);
-            std::shared_ptr<Loaded> document = load(collection.documents()[d].source, text, nullptr);
-            PrColor clear = background(*document);
+                fileNameOf(drawing.name);
+            // Each drawing sets its text with a shaper of its own.
+            std::unique_ptr<PrTextShaper, decltype(&prTextShaperDestroy)> textShaper(prTextShaperCreate(shaper),
+                prTextShaperDestroy);
+            PrColor clear = kPaper;
             std::vector<uint8_t> backgroundPixels = pixelsOf(clear, size_t(width) * height);
             Times recordTimes{};
             HarnessCounters recorded = measure([&] {
                 double started = nowMillis();
-                record(list, *document, collection, pixelRatio);
+                record(list, drawing, textShaper.get(), pixelRatio);
                 return Times{nowMillis() - started, 0};
             }, &recordTimes);
             bool first = true;

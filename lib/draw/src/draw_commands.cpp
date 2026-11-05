@@ -382,6 +382,14 @@ void dumpCommand(PrRawString* out, const PrDrawCommand& command) {
         case PrDrawCommandKind_PopGroup:
             appendText(out, "pop-group");
             break;
+        case PrDrawCommandKind_PushMark:
+            appendText(out, "push-mark");
+            appendText(out, " ");
+            prRawStringAppendU64(out, command.key, 10);
+            break;
+        case PrDrawCommandKind_PopMark:
+            appendText(out, "pop-mark");
+            break;
         default:
             break;
     }

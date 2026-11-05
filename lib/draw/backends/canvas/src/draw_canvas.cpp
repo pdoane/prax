@@ -1248,15 +1248,16 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
 // ---------------------------------------------------------------------------------------------------------------------
 // The renderer
 
-// A frame: its list, and the origin of each render since it was prepared. The frame's plays read the origins in the
-// order that they run.
+// A frame: the part of its list, and the origin of each render since it was prepared. The frame's plays read the
+// origins in the order that they run.
 struct CanvasFrame : PrDrawFrame {
     const PrDrawList* PR_NULLABLE list;
+    PrDrawPart part;
     RawArray<PrIVec2> origins;
     uint32_t played;
 };
 
-// Walks the frame's list into the canvas, within the render's rectangle.
+// Walks the part of the frame's list into the canvas, within the render's rectangle.
 void play(void* PR_NULLABLE context, const void* native) {
     CanvasFrame* frame = static_cast<CanvasFrame*>(context);
     PrGpuCanvas canvas = *static_cast<const PrGpuCanvas*>(native);
@@ -1269,14 +1270,14 @@ void play(void* PR_NULLABLE context, const void* native) {
     RawArray<DrawnList> drawn{};
     Walk w{.backend = backend, .drawn = &drawn};
     forgetState(w);
-    w.transforms.push(prDrawTransformFromAffine2(prAffine2Identity()));
+    w.transforms.push(frame->part.transform);
     PrIRect whole{0, 0, int32_t(frame->extent.x), int32_t(frame->extent.y)};
     w.clips.push(whole);
     prDrawCanvasSave();
     prDrawCanvasRect(0, 0, float(whole.right), float(whole.bottom));
     sendTransform(prAffine2Identity());
     prDrawCanvasClip(0);
-    runCommands(w, prDrawListCommands(frame->list), prDrawListCommandCount(frame->list));
+    runCommands(w, prDrawListCommands(frame->list) + frame->part.first, frame->part.count);
     // A list's pushes and pops balance, so the walk ends with the render's own clip in place.
     prDrawCanvasRestore();
     prDrawCanvasEnd();
@@ -1318,10 +1319,12 @@ void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
     prMemoryFree(f);
 }
 
-// Keeps the list, which the frame's pass walks when it runs.
-PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget*) {
+// Keeps the part of the list, which the frame's pass walks when it runs.
+PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
+        const PrDrawTarget*) {
     CanvasFrame* f = static_cast<CanvasFrame*>(frame);
     f->list = list;
+    f->part = *part;
     f->origins.clear();
     f->played = 0;
     return PrStatus_Ok;

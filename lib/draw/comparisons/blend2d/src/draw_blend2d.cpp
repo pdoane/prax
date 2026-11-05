@@ -58,8 +58,6 @@ struct Blend2dBackend : PrDrawRenderer {
     uint64_t render;
 };
 
-// A frame: the list that it renders, once there are pixels.
-
 // An image that a render draws into, with its origin at (box.left, box.top) in target pixels. It is the target's image,
 // or an offscreen for a clip, a group or an operator.
 struct Target {
@@ -1243,6 +1241,9 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_PopGroup:
                 pop(r);
                 break;
+            case PrDrawCommandKind_PushMark:
+            case PrDrawCommandKind_PopMark:
+                break;
             default:
                 drawShape(r, c);
                 break;
@@ -1295,7 +1296,8 @@ void swapRedBlue(PrPixels pixels) {
     }
 }
 
-void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list) {
+void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list,
+        const PrDrawPart& part) {
     Blend2dBackend* b2 = static_cast<Blend2dBackend*>(renderer);
     // Blend2D draws premultiplied BGRA, so RGBA pixels are swapped for the render and swapped back afterward.
     bool swapped = format == PrPixelFormat_Rgba8;
@@ -1311,7 +1313,14 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
     beginTarget(root, b2->options.threads);
     Renderer r{};
     initRenderer(r, b2, root, &pixels);
-    runCommands(r, prDrawListCommands(list), prDrawListCommandCount(list));
+    // The part's transform is the first transform of Blend2D's user space, which nothing pops.
+    if (part.transform.degenerate) {
+        ++r.collapsed;
+    } else {
+        BLMatrix2D m = matrixOf(part.transform.daffine);
+        bl_context_apply_transform_op(context(r), BL_TRANSFORM_OP_TRANSFORM, &m);
+    }
+    runCommands(r, prDrawListCommands(list) + part.first, part.count);
     finishRenderer(r);
     endTarget(root);
     destroyTarget(root);
@@ -1324,9 +1333,10 @@ PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
     return drawMemoryFrameCreate(renderer, renderPixels, false);
 }
 
-// Keeps the list, which renders when the frame's pass runs.
-PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget*) {
-    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list);
+// Keeps the part of the list, which renders when the frame's pass runs.
+PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
+        const PrDrawTarget*) {
+    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list, *part);
     return PrStatus_Ok;
 }
 

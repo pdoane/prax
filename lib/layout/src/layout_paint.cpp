@@ -75,6 +75,25 @@ void resetRecording(LayoutPaintRecording& recording) {
     recording.fixed.reset();
 }
 
+// The most emptied recordings that the cache keeps for parts to take their storage from (LayoutPaintCache::spare).
+constexpr uint32_t kPaintSpareRecordings = 64;
+
+// Empties a recording that the cache no longer holds, and keeps its storage for a part to take, unless the cache keeps
+// enough already.
+void spareRecording(LayoutPaintCache& cache, LayoutPaintRecording& recording) {
+    clearRecording(recording);
+    bool stored = recording.segments.capacity != 0 || recording.scrolls.capacity != 0 ||
+        recording.layers.capacity != 0 || recording.slots.capacity != 0 || recording.regions.capacity != 0 ||
+        recording.lists.capacity != 0 || recording.fixed.capacity != 0;
+    if (!stored)
+        return;
+    if (cache.spare.count < kPaintSpareRecordings)
+        cache.spare.push(recording);
+    else
+        resetRecording(recording);
+    recording = LayoutPaintRecording{};
+}
+
 // Releases the fragments of the boxes that a recording placed from outside it, and frees the list.
 void releaseOuter(RawArray<LayoutPaintPlaced>& outer) {
     for (uint32_t i = 0; i < outer.count; ++i)
@@ -82,9 +101,9 @@ void releaseOuter(RawArray<LayoutPaintPlaced>& outer) {
     outer.reset();
 }
 
-// Frees what a run holds.
-void runRelease(LayoutPaintRun& run) {
-    resetRecording(run.recording);
+// Frees what a run holds, and spares its recording's storage.
+void runRelease(LayoutPaintCache& cache, LayoutPaintRun& run) {
+    spareRecording(cache, run.recording);
     for (uint32_t i = 0; i < run.children.count; ++i)
         layoutFragmentRelease(run.children.data[i].fragment);
     run.children.reset();
@@ -94,7 +113,7 @@ void runRelease(LayoutPaintRun& run) {
 // Drops the run at `at`.
 void runDrop(LayoutPaintCache& cache, uint32_t at) {
     LayoutPaintRun& run = cache.runs.data[at];
-    runRelease(run);
+    runRelease(cache, run);
     cache.runIndex.erase(runHash(run.node, run.phase, run.index), at);
     uint32_t last = cache.runs.count - 1;
     if (at != last) {
@@ -105,9 +124,9 @@ void runDrop(LayoutPaintCache& cache, uint32_t at) {
     cache.runs.pop();
 }
 
-// Frees what a subtree's recording holds.
-void subRelease(LayoutPaintSub& sub) {
-    resetRecording(sub.recording);
+// Frees what a subtree's recording holds, and spares its storage.
+void subRelease(LayoutPaintCache& cache, LayoutPaintSub& sub) {
+    spareRecording(cache, sub.recording);
     layoutFragmentRelease(sub.fragment);
 }
 
@@ -115,7 +134,7 @@ void subRelease(LayoutPaintSub& sub) {
 void subStore(LayoutPaintCache& cache, LayoutPaintSub& sub) {
     uint32_t at = subFind(cache, sub.fragment, LayoutPhase(sub.phase));
     if (at != kHashMissing) {
-        subRelease(cache.subs.data[at]);
+        subRelease(cache, cache.subs.data[at]);
         cache.subs.data[at] = sub;
         return;
     }
@@ -130,7 +149,7 @@ void subDrop(LayoutPaintCache& cache, const LayoutFragment* fragment) {
         uint32_t at = cache.subIndex.find(hash, [&](uint32_t i) { return cache.subs.data[i].fragment == fragment; });
         if (at == kHashMissing)
             return;
-        subRelease(cache.subs.data[at]);
+        subRelease(cache, cache.subs.data[at]);
         cache.subIndex.erase(hash, at);
         uint32_t last = cache.subs.count - 1;
         if (at != last) {
@@ -431,9 +450,6 @@ struct Painter : LayoutWalkVisitor {
     // The containers of a part being appended, as named by the recording it is appended to.
     RawArray<LayoutPaintContainerRef> mapped;
 
-    // Emptied recordings of parts that were not cached. A part being recorded takes its storage from them.
-    RawArray<LayoutPaintRecording> spare;
-
     // Scratch: the stretch along a text fragment's line that each of its highlights covers, in px, empty if it covers
     // none of it, and the cuts where a stretch starts or ends.
     struct HighlightStretch {
@@ -444,6 +460,14 @@ struct Painter : LayoutWalkVisitor {
     RawArray<HighlightStretch> highlightStretches;
     RawArray<uint32_t> highlightsReaching;
     RawArray<float> highlightCuts;
+
+    // The text of the glyph runs of the fragment being recorded, for a paint that marks content: by glyph, the bytes of
+    // the node's text that each glyph was shaped from, and the text and clusters of one run.
+    RawArray<uint32_t> glyphStarts;
+    RawArray<uint32_t> glyphEnds;
+    RawArray<uint32_t> runClusters;
+    RawArray<char> runText;
+    RawArray<uint32_t> stopBytes;   // the bytes of the fragment's caret stops, in the text's order
 
     // By caret of the tree: the fragment that holds the caret, once `caretsSearched` is true.
     RawArray<const LayoutFragment*> caretFragments;
@@ -722,9 +746,9 @@ struct Painter : LayoutWalkVisitor {
         part.outerOrigin = origin;
         part.commands = commands;
         part.visits = visits;
-        if (spare.count != 0) {
-            part.recording = spare.last();
-            spare.pop();
+        if (cache->spare.count != 0) {
+            part.recording = cache->spare.last();
+            cache->spare.pop();
         }
         subtrees.push(part);
         list = nullptr;
@@ -785,8 +809,7 @@ struct Painter : LayoutWalkVisitor {
         bool worth = !s.placesOutside && (s.run != 0 || !isEmpty(s.recording) || visits - s.visits >= kPaintSubVisits);
         PR_ASSERT(s.run == 0 || layoutPhaseIsList(s.phase) || s.recording.lists.count == 0);
         if (subs != RecordSubs_Cached || !worth) {
-            clearRecording(s.recording);
-            spare.push(s.recording);
+            spareRecording(*cache, s.recording);
             return;
         }
         if (layoutPhaseIsList(s.phase)) {
@@ -902,7 +925,7 @@ struct Painter : LayoutWalkVisitor {
             cache->runIndex.insert(runHash(key, phase, index), at);
         }
         LayoutPaintRun& run = cache->runs.data[at];
-        runRelease(run);
+        runRelease(*cache, run);
         run.node = key;
         run.phase = phase;
         run.index = index;
@@ -1313,6 +1336,58 @@ struct Painter : LayoutWalkVisitor {
             ++stats->boxesRepaintedUnchanged;
     }
 
+    // Records the column rules of the multi-column container `fragment`, whose border box is `rect`: one in the middle
+    // of each gap between two adjacent columns of a column set that both hold content, as tall as the set
+    // (css-multicol-1/#column-gaps-and-rules). The rule's width is snapped as a border's.
+    void columnRules(const LayoutFragment* fragment, PrRect rect, const PrLayoutDecorationStyle& decoration) {
+        float width = prLayoutUnitToPx(layoutBorderWidth(styles, decoration.columnRuleWidth));
+        const LayoutFragment* last = nullptr;
+        PrRect before{};
+        bool any = false;
+        for (uint32_t i = 0; i < fragment->childCount; ++i) {
+            const LayoutChild& child = fragment->children[i];
+            if ((child.fragment->flags & LayoutFragmentFlag_Column) == 0) {
+                last = nullptr;
+                continue;
+            }
+            PrRect column = prLayoutRectToPx(layoutRectAt(child.offset, child.fragment->extent));
+            column = PrRect{
+                column.left + rect.left, column.top + rect.top, column.right + rect.left,
+                column.bottom + rect.top,
+            };
+            bool holds = child.fragment->childCount != 0;
+            bool sameSet = last != nullptr && (column.top == before.top || column.left == before.left);
+            if (holds && sameSet) {
+                // Columns side by side in x have a vertical rule between them, and columns stacked in y, as a vertical
+                // writing mode stacks them, a horizontal one.
+                PrDrawBorder rule{};
+                PrRect line;
+                PrRectSide side;
+                if (column.top == before.top && column.left != before.left) {
+                    float middle = (prF32Min(column.right, before.right) + prF32Max(column.left, before.left)) / 2;
+                    line = PrRect{middle - width / 2, column.top, middle + width / 2, column.bottom};
+                    side = PrRectSide_Left;
+                } else {
+                    float middle = (prF32Min(column.bottom, before.bottom) + prF32Max(column.top, before.top)) / 2;
+                    line = PrRect{column.left, middle - width / 2, column.right, middle + width / 2};
+                    side = PrRectSide_Top;
+                }
+                rule.shape = prCornerRectRound(line, 0);
+                rule.sides[side] = PrDrawBorderSide{
+                    .width = width,
+                    .style = decoration.columnRuleStyle,
+                    .color = decoration.columnRuleColor,
+                };
+                prDrawListBorder(out(), &rule, {.edges = PrDrawEdges_Snapped});
+                any = true;
+            }
+            last = holds ? child.fragment : nullptr;
+            before = column;
+        }
+        if (any)
+            recorded();
+    }
+
     // Records a box's background, unless the canvas took the background, and then its border and its outline. The
     // background is its color, within the box that its background-clip names, and its layers over it. A side at which
     // an inline box breaks across lines has no border (css-break-4/#break-decoration), and each of an inline box's
@@ -1395,6 +1470,9 @@ struct Painter : LayoutWalkVisitor {
             prDrawListBorder(out(), &border, {.edges = PrDrawEdges_Snapped});
             recorded();
         }
+        if (prDrawBorderStylePaints(decoration.columnRuleStyle) && decoration.columnRuleWidth > kLayoutUnitZero &&
+                prFloat16ToFloat(decoration.columnRuleColor.a) > 0)
+            columnRules(fragment, rect, decoration);
         PrLayoutUnit outlineWidth = layoutBorderWidth(styles, decoration.outlineWidth);
         if (decoration.outlineStyle != PrDrawBorderStyle_None && outlineWidth > kLayoutUnitZero &&
                 prFloat16ToFloat(decoration.outlineColor.a) > 0) {
@@ -1719,6 +1797,9 @@ struct Painter : LayoutWalkVisitor {
             n.natural.height.raw >= 0 ? n.natural.height : layoutRectHeight(box),
         };
         PrDrawList* into = out();
+        uint64_t key = markKey(fragment->node);
+        if (key != 0)
+            prDrawListPushMark(into, key);
         // The content is clipped to the curves of the content box's corners (css-backgrounds-3/#corner-clipping).
         const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(styles, style);
         if (layoutHasCorners(decoration)) {
@@ -1761,7 +1842,81 @@ struct Painter : LayoutWalkVisitor {
             prDrawListRelease(content);
         }
         prDrawListPopClip(into);
+        if (key != 0)
+            prDrawListPopMark(into);
         recorded();
+    }
+
+    // Returns the key that marks the content of `node`: its key if the tree marks content, and zero otherwise.
+    uint64_t markKey(LayoutNodeIndex node) const {
+        return tree->marking == PrLayoutMarking_Content ? layoutTreeNode(tree, node).key : 0;
+    }
+
+    // Finds the bytes of the node's text that each glyph of the text fragment was shaped from. A glyph that starts a
+    // cluster lies where the cluster's caret stop does along the line, and the glyphs after it up to the next stop
+    // belong to the same cluster. A cluster runs to the next cluster in the order of the text.
+    void glyphText(const LayoutFragment* fragment) {
+        const LayoutFragmentText& text = fragment->text;
+        const LayoutCaretStop* stops = layoutFragmentTextStops(fragment);
+        bool vertical = layoutStyleTraits(styles, layoutFragmentStyle(tree, fragment)).vertical;
+        bool upright = vertical && fragment->turn == LayoutTextTurn_None;
+        glyphStarts.resize(text.glyphCount);
+        glyphEnds.resize(text.glyphCount);
+        uint32_t stop = 0;
+        for (uint32_t i = 0; i < text.glyphCount; ++i) {
+            float along = upright ? text.glyphs[i].position.y : text.glyphs[i].position.x;
+            while (stop + 1 < text.stopCount && stops[stop + 1].along <= along + 1e-3f)
+                ++stop;
+            glyphStarts.data[i] = stops[stop].byte;
+        }
+        // A glyph's characters end at the first stop in the text's order after their start, or at the end of the text.
+        stopBytes.clear();
+        for (uint32_t k = 0; k < text.stopCount; ++k)
+            stopBytes.push(stops[k].byte);
+        sortItems(stopBytes.span(), [](uint32_t a, uint32_t b) { return a < b; });
+        for (uint32_t i = 0; i < text.glyphCount; ++i) {
+            uint32_t lo = 0;
+            uint32_t hi = stopBytes.count;
+            while (lo < hi) {
+                uint32_t mid = (lo + hi) / 2;
+                if (stopBytes.data[mid] <= glyphStarts.data[i])
+                    lo = mid + 1;
+                else
+                    hi = mid;
+            }
+            glyphEnds.data[i] = lo < stopBytes.count && stopBytes.data[lo] < text.end ? stopBytes.data[lo] : text.end;
+        }
+    }
+
+    // Gives `run`, the glyphs from `first` of the fragment, its text and clusters, from the bytes that glyphText found.
+    // White space that breaks lines reads as a space. White space at the end of the run that no glyph draws, as a space
+    // that hangs or is removed at the end of a line, is left out, so that each glyph's characters are the ones that it
+    // draws.
+    void runTextOf(const LayoutFragment* fragment, uint32_t first, PrFontGlyphRun* run) {
+        uint32_t begin = UINT32_MAX;
+        uint32_t end = 0;
+        uint32_t last = 0;
+        for (uint32_t i = first; i < first + run->glyphCount; ++i) {
+            begin = glyphStarts.data[i] < begin ? glyphStarts.data[i] : begin;
+            end = glyphEnds.data[i] > end ? glyphEnds.data[i] : end;
+            last = glyphStarts.data[i] > last ? glyphStarts.data[i] : last;
+        }
+        PrStringView source = layoutNodeText(tree, fragment->node);
+        if (begin >= end || end > source.size)
+            return;
+        auto white = [](char c) { return c == ' ' || c == '\n' || c == '\r' || c == '\t'; };
+        while (end > last + 1 && white(source.data[end - 1]))
+            --end;
+        runText.clear();
+        for (uint32_t b = begin; b < end; ++b) {
+            char c = source.data[b];
+            runText.push(c == '\n' || c == '\r' || c == '\t' ? ' ' : c);
+        }
+        runClusters.resize(run->glyphCount);
+        for (uint32_t i = 0; i < run->glyphCount; ++i)
+            runClusters.data[i] = glyphStarts.data[first + i] - begin;
+        run->text = PrStringView{runText.data, runText.count};
+        run->clusters = runClusters.data;
     }
 
     // Records a text fragment's glyphs, one command for each of its font ranges. A fragment normally stays whole in its
@@ -1808,6 +1963,9 @@ struct Painter : LayoutWalkVisitor {
         }
         const PrFont* const* fonts = layoutFragmentTextFonts(fragment);
         const LayoutFragmentFontRange* ranges = layoutFragmentTextRanges(fragment);
+        uint64_t key = markKey(fragment->node);
+        if (key != 0)
+            glyphText(fragment);
         PrDrawList* into = nullptr;     // the batch being recorded into, with the frame pushed
         uint32_t own = 0;               // the commands of the fragment in that batch
         uint32_t start = 0;
@@ -1816,12 +1974,16 @@ struct Painter : LayoutWalkVisitor {
                 into = out();
                 own = 0;
                 prDrawListPushTransformSnapped(into, prDAffine2FromAffine2(placed), blockAxis);
+                if (key != 0)
+                    prDrawListPushMark(into, key);
             }
             PrFontGlyphRun run{};
             run.font = fonts[ranges[i].font];
-            run.size = text.size;
+            run.size = text.size * ranges[i].scale;
             run.glyphs = text.glyphs + start;
             run.glyphCount = ranges[i].glyphEnd - start;
+            if (key != 0)
+                runTextOf(fragment, start, &run);
             prDrawListGlyphs(into, &run, pen, {.color = color});
             start = ranges[i].glyphEnd;
             ++commands;
@@ -1829,13 +1991,18 @@ struct Painter : LayoutWalkVisitor {
             ++batched;
             ++own;
             if (batched >= kPaintBatch && (i + 1 == text.rangeCount || own >= kPaintBatch)) {
+                if (key != 0)
+                    prDrawListPopMark(into);
                 prDrawListPopTransform(into);
                 flush();
                 into = nullptr;
             }
         }
-        if (into != nullptr)
+        if (into != nullptr) {
+            if (key != 0)
+                prDrawListPopMark(into);
             prDrawListPopTransform(into);
+        }
         ++stats->textFragmentsRecorded;
         stats->glyphCommandsRecorded += text.rangeCount;
         caretSlots(fragment, at);
@@ -1984,16 +2151,25 @@ struct Painter : LayoutWalkVisitor {
         prDrawListPushTransformSnapped(into, prDAffine2FromAffine2(placed), blockAxis);
         const PrFont* const* fonts = layoutFragmentTextFonts(fragment);
         const LayoutFragmentFontRange* ranges = layoutFragmentTextRanges(fragment);
+        uint64_t key = markKey(fragment->node);
+        if (key != 0) {
+            glyphText(fragment);
+            prDrawListPushMark(into, key);
+        }
         uint32_t start = 0;
         for (uint32_t i = 0; i < text.rangeCount; ++i) {
             PrFontGlyphRun run{};
             run.font = fonts[ranges[i].font];
-            run.size = text.size;
+            run.size = text.size * ranges[i].scale;
             run.glyphs = text.glyphs + start;
             run.glyphCount = ranges[i].glyphEnd - start;
+            if (key != 0)
+                runTextOf(fragment, start, &run);
             prDrawListGlyphs(into, &run, pen, {.color = color});
             start = ranges[i].glyphEnd;
         }
+        if (key != 0)
+            prDrawListPopMark(into);
         prDrawListPopTransform(into);
         commands += text.rangeCount + 2;
         stats->commandsRecorded += text.rangeCount + 2;
@@ -2116,13 +2292,15 @@ void record(LayoutTree* tree, LayoutPaintChunk& chunk, const LayoutFragment* fra
     painter.openedIndex.reset();
     painter.columns.reset();
     painter.mapped.reset();
-    for (uint32_t i = 0; i < painter.spare.count; ++i)
-        resetRecording(painter.spare.data[i]);
-    painter.spare.reset();
     painter.highlightStretches.reset();
     painter.highlightsReaching.reset();
     painter.caretFragments.reset();
     painter.highlightCuts.reset();
+    painter.glyphStarts.reset();
+    painter.glyphEnds.reset();
+    painter.runClusters.reset();
+    painter.runText.reset();
+    painter.stopBytes.reset();
     // Scenes embed the recording on whatever thread plays them.
     for (uint32_t i = 0; i < chunk.segments.count; ++i)
         prDrawListFreeze(chunk.segments.data[i].list);
@@ -2192,13 +2370,16 @@ void layoutPaintCacheReset(LayoutPaintCache& cache) {
     cache.chunks.reset();
     cache.byNode.reset();
     for (uint32_t i = 0; i < cache.subs.count; ++i)
-        subRelease(cache.subs.data[i]);
+        subRelease(cache, cache.subs.data[i]);
     cache.subs.reset();
     cache.subIndex.reset();
     for (uint32_t i = 0; i < cache.runs.count; ++i)
-        runRelease(cache.runs.data[i]);
+        runRelease(cache, cache.runs.data[i]);
     cache.runs.reset();
     cache.runIndex.reset();
+    for (uint32_t i = 0; i < cache.spare.count; ++i)
+        resetRecording(cache.spare.data[i]);
+    cache.spare.reset();
 }
 
 LayoutBackgroundBoxes layoutBackgroundBoxes(const LayoutStyles* styles, const LayoutFragment* fragment,

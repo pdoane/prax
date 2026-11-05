@@ -415,6 +415,10 @@ void cssStyleComputeValue(CssValuePool* pool, PrCssProperty property, CssValueRu
 // family is the user agent's (css-fonts-4/#font-family-prop).
 void cssStyleComputeInitial(CssValuePool* pool, PrCssProperty property, const CssStyleContext& context);
 
+// Returns the px of `number` in the length unit `unit`, relative to `context` (css-values-4/#lengths), or false if
+// `context` does not resolve the unit.
+bool cssStyleLengthPx(double number, PrCssUnit unit, const CssStyleContext& context, double* out);
+
 // Adds a value that is already computed, such as a parent's inherited value.
 void cssStyleAddValue(CssStyleBuilder* builder, CssValueRun computed);
 

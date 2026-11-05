@@ -81,6 +81,10 @@ struct LayoutFlowOutcome {
     // Its first and last baselines, measured from the block-start edge of its border box.
     LayoutBaseline first;
     LayoutBaseline last;
+
+    // In a fragmentation context, where its content resumes in the next fragmentainer, a reference that the shell
+    // takes, or null if its content ends in this one.
+    LayoutBreakToken* PR_NULLABLE token;
 };
 
 // Lays out the content of the block container that `input` describes, and appends the fragments of its children to the

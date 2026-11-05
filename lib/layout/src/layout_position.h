@@ -52,9 +52,10 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
 
 // Lays out the boxes out of flow listed by the root's fragment `root`, which is at `at` in the viewport. Each is laid
 // out against the initial containing block or the viewport, which has size `extent` at the origin in the root's writing
-// mode `mode`. Appends their fragments to `out`.
+// mode `mode`. Appends their fragments to `out`. A running box is laid out nowhere, and is appended to `running` if it
+// is not null.
 void layoutViewportHold(LayoutState& state, const LayoutFragment* root, PrLayoutVec at, PrLayoutVec extent,
-    LayoutMode mode, RawArray<LayoutChild>& out);
+    LayoutMode mode, RawArray<LayoutChild>& out, RawArray<LayoutNodeIndex>* PR_NULLABLE running = nullptr);
 
 } // namespace pr_impl
 

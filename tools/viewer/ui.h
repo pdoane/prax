@@ -9,8 +9,8 @@
 #include "pr/status.h"
 
 #include "tools/harness/compare.h"
+#include "tools/harness/draw_renderers.h"
 #include "tools/viewer/documents.h"
-#include "tools/viewer/renderers.h"
 
 #include <string>
 #include <vector>
@@ -42,10 +42,11 @@ typedef uint8_t Renderer;
 struct PaneChoice {
     Renderer renderer = Renderer_Prax;
 
-    // Prax: the renderer that renders the document, and the text renderers that it loads with, so that a pane loads its
-    // own copy of the document.
+    // Prax: the renderer that renders the document, and the text renderers and the media that it loads with, so that a
+    // pane loads its own copy of the document. The media applies to a document that the engine prints (prints).
     uint32_t config = 0;
     TextBackends text{};
+    page_host::Media media = page_host::Media_Screen;
 
     // Reference: one of the document's references (referencesOf). The first is the reference that its suite compares
     // the engine with. A pane whose document has no such reference shows Prax.
@@ -68,10 +69,12 @@ struct Choices {
     View view = View_Single;
     Look look = Look_SideBySide;
     bool showingSecond = false;     // Flip: true if the second pane shows
-    bool fit = false;               // Compare: true to fit the renders to their panes, false to show them at `zoom`
-    float zoom = 1;                 // logical pixels per unit of the document; 1 is its natural size
-    float panX = 0;                 // the renders' offset from their panes' centers, in logical pixels
-    float panY = 0;
+
+    // The page zoom: logical pixels per CSS pixel, which the zoom commands alone change. 1 is the actual size.
+    float zoom = 1;
+    bool fitWidth = false;          // true once asked to zoom the first pane's document to the pane's width
+
+    PrVec2 scroll{0, 0};            // how far the panes' documents are scrolled, in CSS pixels
     bool documentChanged = false;   // true if a key moved to another document, so that the list scrolls to it
     double time = 0;                // seconds on the clock that the document draws at
     bool playing = true;            // true if the document's clock runs
@@ -121,7 +124,6 @@ struct Rendered {
 // The figures that the controls show: each pane's and, in comparison, how the panes differ.
 struct Figures {
     Rendered panes[2];
-    float zoom = 1;             // the comparison's zoom as shown, fitted or not
     bool compared = false;      // true if the difference is of the renders shown
     bool comparing = false;     // true while a difference of the shown renders is being computed
     bool playing = false;       // true if the clock runs, so that the renders are not compared
@@ -133,11 +135,17 @@ struct Ui;
 
 // Shows the family's renderer in the pane, in the configuration that the pane last showed, and remembers the current
 // family's configuration.
-void chooseFamily(PaneChoice& pane, const std::vector<RendererConfig>& configs, uint32_t family);
+void chooseFamily(PaneChoice& pane, const std::vector<harness::RendererConfig>& configs, uint32_t family);
 
-// Returns the pane's name: Prax's configuration, or the reference's name. `references` are the shown document's.
-std::string paneName(const PaneChoice& pane, const std::vector<RendererConfig>& configs,
-    const std::vector<Reference>& references);
+// Returns the pane's name: Prax's configuration, or the reference's name. `references` are the shown document's. The
+// name of Prax, or of the browser showing the document's page, says "(print)" if `media` is print, the media that the
+// pane renders the document for (paneMedia).
+std::string paneName(const PaneChoice& pane, const std::vector<harness::RendererConfig>& configs,
+    const std::vector<Reference>& references, page_host::Media media);
+
+// Returns the media that the pane renders the document of `source` for: its choice for a source that the engine prints,
+// and the screen for any other.
+page_host::Media paneMedia(const PaneChoice& pane, const Source& source);
 
 // Creates controls drawn on the device, a device of prGpuDeviceCreate, which renders them into the frame over the
 // documents.
@@ -155,7 +163,7 @@ bool uiEvent(Ui* ui, const PrAppEvent& event);
 // Lays out the controls for the frame, and applies what they changed to `choices`. `pageKeys` is true while a page
 // holds the keyboard, so that the controls give up focus. `references` are the shown document's own references. Returns
 // the rectangle left for documents, in logical pixels.
-PrRect uiLayout(Ui* ui, const PrAppFrame* frame, bool pageKeys, const std::vector<RendererConfig>& configs,
+PrRect uiLayout(Ui* ui, const PrAppFrame* frame, bool pageKeys, const std::vector<harness::RendererConfig>& configs,
     const std::vector<Reference>& references, const Figures& figures, Choices& choices);
 
 // The cursor that the controls show at the pointer.

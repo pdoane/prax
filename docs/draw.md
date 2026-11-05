@@ -8,9 +8,9 @@ backends must agree on.
 ## Libraries
 
 `lib/geom` (points, rects, transforms, shaped corners) → `lib/path` (paths and renderer algorithms, each in its own
-public `pr/path_*` header) → `lib/draw` (the list, resources, lowering utilities, backend interface) →
-`lib/draw/backends/*`, with the comparison backends in `lib/draw/comparisons/*`. `lib/font` and `lib/text` sit beside
-these libraries ([text.md](text.md)).
+public `pr/path_*` header) → `lib/draw` (the list, resources, lowering utilities, the renderer and writer interfaces,
+the structure tree) → `lib/draw/backends/*`, with the comparison backends in `lib/draw/comparisons/*`. `lib/font` and
+`lib/text` sit beside these libraries ([text.md](text.md)).
 
 The device backends are written once, against `lib/gpu` ([gpu.md](gpu.md)), which runs them on Metal, Direct3D 12 and
 Vulkan.
@@ -33,13 +33,15 @@ with no private fast path. A `const` list may be rendered by several backends at
   and have a process-unique id that backends key caches on. A list's id changes when the list changes. A path's id
   names its contents: the clone that a list records shares the id, so lists recorded every frame from the producer's
   paths hit the same cache entries.
-- **Transforms, clips and groups push and pop in one nesting order**, like platform state stacks.
+- **Transforms, clips, groups and marks push and pop in one nesting order**, like platform state stacks.
 - **Target space is pixels.** The producer puts its unit ratio in the root transform, so the stack gives the target
   scale everywhere (glyph rasterization, caching, mip selection).
 - **What cannot paint is not recorded.**
 - **Transform collapse** is detected during the walk by `prDrawTransformPush`, for every backend.
-- **Embedding** plays another list as if it were recorded in place (SVG `<use>`, symbols, precomps, cached subtrees). A
-  referenced list is frozen. Freezing is a state of the list, not a separate type: a list is recorded and then frozen
+- **Embedding** plays another list as if it were recorded in place (SVG `<use>`, symbols, precomps, cached subtrees). An
+  embedded list that misses the clip in effect draws nothing, and a consumer skips it without walking it
+  (`prDrawListMisses`), so a list that embeds more than it shows, such as a page of a printed document, costs what it
+  shows. A referenced list is frozen. Freezing is a state of the list, not a separate type: a list is recorded and then frozen
   in place, and a change after freezing is a contract violation that asserts. A backend may cache a frozen list as a
   texture keyed on its id and the target scale if the list reads no backdrop and draws only source-over and normal
   outside isolated groups.
@@ -339,6 +341,124 @@ Each is rasterized once, with the coverage that the uncached fill would have. An
   in agreement.
 - What a render draws belongs to the host.
 
+## Documents
+
+A list says what a page looks like. A document format also says what the page means, and wants text as text. Writers
+(`pr/draw_writer.h`) turn lists into documents, one list for each page, and three pieces keep the list itself free of
+any one format: marks in the list, a structure tree beside it, and the writer that joins the two.
+
+### Writers
+
+A writer is an interface of its own, beside the renderer. A renderer fills pixels; a writer emits the bytes of a
+document, which the host receives through a function as they are written. A document is a sequence of pages, each a list
+on a sheet of an extent in px, written between `prDrawWriterBegin` and `prDrawWriterEnd`. Pages may arrive one at a time,
+as a paginator makes them. Writer backends follow the rules of every backend: they read the list through the public API,
+switch on each command's kind, and keep their complexity in the libraries.
+
+| backend | output | text |
+| --- | --- | --- |
+| `svg` | SVG 2, a document of its own for each page, since SVG has no pages | glyph outlines, shared between uses on the page |
+| `pdf` | PDF 2.0 (ISO 32000-2), tagged when a structure is given | embedded subsets of the fonts, with ToUnicode maps |
+
+- **Sheets and boxes.** A page is a sheet (`PrDrawPage`): its list is drawn on the sheet's extent, and it gives the
+  boxes that print production reads, the bleed box that its content is clipped to and the trim box of the finished page,
+  as css-page-3's bleed area and page box. The producer decides the sheet, and the writer records what its format can. A
+  PDF page's MediaBox is the sheet, with a BleedBox and a TrimBox where each differs from it (ISO 32000-2, 14.11.2). An
+  SVG page is the sheet, since SVG has no such boxes. A page whose sheet is its page box writes neither box.
+- **Units.** A page's extent is in px. A PDF page is in points, 72 to the inch, and CSS defines 96 px to the inch
+  (css-values-4/#absolute-lengths), so the page's transform scales by 3/4 and flips y. An SVG page keeps px.
+- **Text is a font.** A PDF glyph run shows the subset of its font's glyphs by glyph id, so the glyphs are the font's
+  own, which a reader can select and search. An SVG document draws the outlines of its glyphs (`prFontGlyphOutline`),
+  each defined once and placed by `use`, because SVG has no way to show a glyph by its id: a `text` element shapes its
+  characters again, and the shaping of another reader can differ. A run's text, when the run carries it, labels its
+  group (`aria-label`), so the document still reads.
+- **Text is compact.** A PDF shows the glyphs of a line as one `TJ` array at the run's size, whose numbers move the
+  text position only where layout placed a glyph away from where the font's width leaves it. A gap that most glyphs of
+  the line share, as letter spacing leaves, is the character spacing (`Tc`), which a reader that extracts text counts
+  as part of each glyph. Runs that follow one another share a text object and move between lines by `Td`. The writer
+  leaves out an operator that would select the color, alphas or font that the graphics state already holds.
+- **Fonts are subset where they are written.** `lib/font` writes a subset of a font's file (`prFontSubset`): TrueType
+  outlines in an sfnt, or CFF charstrings in a bare CFF table, in both cases with the glyph ids of the font kept, so
+  that a run's ids name the same glyphs in the subset. A font whose outlines its file does not hold, as a variable
+  font's instance away from its default, a font with synthetic bold, or a CFF2 font, is subset as CFF charstrings of
+  the outlines that it draws. A font with no subset, of bitmap strikes only, draws its glyphs as filled outlines,
+  marked with the run's text as their replacement text. Synthetic oblique is the text matrix's shear, and size-adjust
+  scales the text's size.
+- **Text maps back to characters.** A run that carries its text (`PrFontGlyphRun::text`) and the cluster of each glyph
+  maps each glyph to the characters of its cluster in the font's ToUnicode map. Where a glyph's characters differ
+  between its uses, or where a cluster's characters do not divide among its glyphs, as with a ligature or a reordered
+  cluster, the run's text is its replacement text (ISO 32000-2, 14.9.4) instead. A run without its text maps each glyph
+  through the font's character map, inverted.
+- **Streams are compressed** with the writer's codec (`lib/compress`), and images are written as their pixels, with a
+  soft mask for alpha, compressed the same way. A writer without a codec writes them as they are. With a codec, a
+  PDF's objects that are not streams, such as its structure elements and annotations, are compressed in object
+  streams, which a cross-reference stream finds (ISO 32000-2, 7.5.7 and 7.5.8). A writer given a task pool
+  (`PrDrawWriterOptions::tasks`) compresses several streams at once on its threads, and writes them in order.
+- **A PDF has an identifier**, which PDF 2.0 requires: a hash of the bytes before its trailer, so the same pages make
+  the same file. Its XMP metadata gives its title and language, and a tagged PDF claims PDF/UA-2 there.
+
+### Native, lowered and rasterized
+
+Commands keep what the producer meant, so a writer draws each one as natively as its format allows, and lowers it
+through the shared utilities where the format has no equivalent: a border into its pieces (`prDrawBorderLower`), a
+decoration into its area, a stroke the format cannot express into fills (`prDrawLowerStroke`), and a gradient into stops
+that sample its ramp (`prDrawGradientRamp`), which the format interpolates between.
+
+What has no native form and no lowering is rasterized: the CPU renderer draws the affected commands, and the writer
+places the pixels as an image where they lie. This covers filters, backdrops, shadows, masks, projected groups, gradient
+forms, blend modes and operators that the format does not have, nine-slices, color glyphs, and brushes over lists.
+
+A renderer renders a part of a list (`PrDrawPart`, `prDrawFramePreparePart`) as it renders a group's contents into a
+layer: a range of the list's commands that closes every scope it opens, under the transform that the walk holds where
+they lie, placed in the render. Every renderer takes a part, so the writer rasterizes the command or the whole group in
+the list where it was recorded, and builds no list and copies no command. The region is the bounds of the commands
+(`prDrawCommandsBounds`), mapped to the page and cut to the clips around them, and the writer renders it at its raster
+scale (`PrDrawWriterOptions::rasterScale`), in target pixels per px. The clips around the commands do not play in the
+render: the writer places the image inside the format's own clips, which cut it. A rasterized group is one image, so
+what it holds is no longer text. The image is in the first mark that the group holds, so the structure still reaches
+it.
+
+### Marks
+
+A list carries the semantics of its content only as marks: `PushMark` and `PopMark` commands, which nest with the
+list's other pushes and label the commands between them with a producer's key, such as the DOM node behind a layout
+box. A mark has no effect on pixels, and a renderer skips it. A key may have many marks, such as the lines of a
+paragraph or the pages of a table, and the list is in paint order, which is not reading order.
+
+A producer marks content only: text and replaced elements. Box decoration, such as backgrounds, borders and rules, is
+left unmarked, so it is decoration by default, an artifact in PDF's terms. Layout marks only when its client asks, so a
+tree painting for a screen records no marks.
+
+### The structure tree
+
+The structure (`pr/draw_structure.h`) is an object of its own, beside the lists, that says what the content means:
+nodes in reading order, each with a type and children. A node's type is one of PDF's standard structure types (ISO
+32000-2, 14.8.4), a closed set that names roles a reader recognizes: headings, paragraphs, lists, tables, figures,
+links. A child is a node or a key, which stands for every mark of that key, in paint order. A node also holds what a
+reader needs beyond the content: alternate text, replacement text, the expansion of an abbreviation, its language, a
+title, and for a link its URI or the key whose marks it leads to. The tree knows nothing of the web. Its producer
+decides reading order, and the tree's order is reading order, whatever the paint order was.
+
+The tree serves more than PDF. A platform's accessibility tree is the same tree joined to the same keys, with bounds
+from layout in place of marks. Its nodes leave room for what later producers add: the header cells of a table cell,
+MathML, and inline SVG.
+
+### The join
+
+The writer joins the marks to the tree. As it writes each page, it records each mark: its key, its page, the id of
+its marked content, and its bounds on the page. At the end it resolves the tree.
+
+- A key child becomes the marked content of each of its marks, as content references, on whatever pages they fell.
+  One node may span pages.
+- Content in no mark, or in a mark whose key no node names, is an artifact.
+- A link's annotations are the bounds of its content's marks, one rectangle for each mark, and an annotation for each
+  page that they fall on, each a child of the link's node.
+- A link to a key goes to the first mark of that key: its page, and the top left of its bounds.
+- The outline (bookmarks) follows the headings, nested by level, each going to its first mark.
+- A key without a mark, or a destination that has none, leaves out the reference. Nothing fails.
+
+A writer given no structure writes no tags, and every mark is ignored.
+
 ## Producers
 
 This table shows how producers' features map to commands.
@@ -419,9 +539,9 @@ This table shows how producers' features map to commands.
 - Unit tests check primitives exactly, and geometry tests measure area at 8× resolution. Lowering utilities are tested
   as geometry.
 - Backends are measured against `cpu`, within a declared tolerance.
-- `./dev.sh viewer` is where changes are checked by eye. Every list feature gets a captioned drawing in the viewer's
-  features collection when it lands. `--render` writes renders and differences as PNGs. Every document renders
-  continuously on its clock, one render per display refresh, so its figures are those of a steady frame. Back to back
-  (`B`, or `--rendering back-to-back`), renders run as fast as the device allows, which measures throughput; paced
-  renders find the device idle between them, so their times are longer.
+- Every list feature gets a captioned drawing when it lands, in `examples/draw_features`, a library of drawings and an
+  application that shows them (`./dev.sh example draw_features`). The library also holds dense workloads that measure
+  the renderers.
 - `./dev.sh bench draw` renders every drawing on every backend, and reports CPU and device time (`PrDrawStats`).
+  `--images <directory>` writes what each row rendered as a PNG, so that the renderers' renders of a drawing can be
+  compared by eye.

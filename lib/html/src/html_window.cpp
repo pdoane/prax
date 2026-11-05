@@ -82,42 +82,52 @@ PrCssPresentation* PR_NULLABLE presentationOf(const PrHtmlWindow* window) {
     return presentation != nullptr ? presentation : nullptr;
 }
 
-// Returns the time of the next rendering opportunity that runs a frame. This is normally the next opportunity. Suppose
-// that the window runs only the frames that are observed (PrHtmlAnimationFrames_Observed), and a frame would change
-// nothing but the styles that animations animate. Then it is the last opportunity at or before the next animation event
-// or timer, on the same grid, so that the frame that runs then sees the same state that it would have seen otherwise.
-double frameDue(const PrHtmlWindow* window) {
-    double due = nextFrame(window);
+// Returns the number of frame intervals from the last frame to the next rendering opportunity that runs a frame. This
+// is normally one, the next opportunity. Suppose that the window runs only the frames that are observed
+// (PrHtmlAnimationFrames_Observed), and a frame would change nothing but the styles that animations animate. Then it is
+// the number to the last opportunity at or before the next animation event or timer, on the same grid, so that the
+// frame that runs then sees the same state that it would have seen otherwise.
+double framesToDue(const PrHtmlWindow* window) {
     PrCssPresentation* presentation = presentationOf(window);
     if (window->animationFrames != PrHtmlAnimationFrames_Observed || window->frameRequests.count != 0 ||
             window->revealing || window->taskHead != window->tasks.count || presentation == nullptr ||
             cssPresentationHasWork(presentation))
-        return due;
+        return 1;
     double event = cssAnimateNextEventTime(&presentation->animations);
     double target = event >= 0 ? window->timeOrigin + event : -1;
     uint32_t timer = nextTimerIndex(window);
     if (timer != window->timers.count && (target < 0 || window->timers.data[timer].deadline < target))
         target = window->timers.data[timer].deadline;
     if (target < 0)
-        return due;
+        return 1;
     double frames = prF64Floor((target - window->lastFrame) / kHtmlFrameInterval);
-    return frames > 1 ? window->lastFrame + frames * kHtmlFrameInterval : due;
+    return frames > 1 ? frames : 1;
+}
+
+// Returns the time of the next rendering opportunity that runs a frame (framesToDue).
+double frameDue(const PrHtmlWindow* window) {
+    double frames = framesToDue(window);
+    return frames > 1 ? window->lastFrame + frames * kHtmlFrameInterval : nextFrame(window);
+}
+
+// Returns true if a rendering update has steps to run for the window's document that a script observes: a top-level
+// document's autofocus candidates to flush, or resize or intersection observations to compute for the first time.
+bool awaitsRenderingSteps(const PrHtmlWindow* window) {
+    PrDomDocument* document = window->document;
+    return document != nullptr && ((window->parent == nullptr && htmlFocusHasAutofocus(document)) ||
+        prCssDocumentResizeObservationsPending(document) || prCssDocumentIntersectionObservationsPending(document));
 }
 
 // Returns true if the next rendering opportunity updates the rendering. It does if there are frame requests, if the
-// document is to be revealed, if a top-level document has autofocus candidates, if its animations are running, if
-// scroll or animation events are due, if a canvas or a video shows a picture that is out of date, or if its styles
-// changed.
+// document is to be revealed, if it awaits the steps of a rendering update (awaitsRenderingSteps), if its animations
+// are running, if scroll or animation events are due, if a canvas or a video shows a picture that is out of date, or if
+// its styles changed.
 bool wantsFrame(const PrHtmlWindow* window) {
     if (htmlWindowRenderBlocked(window))
         return false;
     PrCssPresentation* presentation = presentationOf(window);
     return window->frameRequests.count != 0 || window->revealing || window->canvases.count != 0 ||
-        htmlMediaWantsFrame(window) ||
-        (window->parent == nullptr && window->document != nullptr && htmlFocusHasAutofocus(window->document)) ||
-        (window->document != nullptr && prCssDocumentResizeObservationsPending(window->document)) ||
-        (window->document != nullptr && prCssDocumentIntersectionObservationsPending(window->document)) ||
-        (presentation != nullptr &&
+        htmlMediaWantsFrame(window) || awaitsRenderingSteps(window) || (presentation != nullptr &&
             (prCssPresentationIsAnimating(presentation) || cssPresentationHasWork(presentation)));
 }
 
@@ -658,7 +668,14 @@ void htmlWindowCancelIdleCallback(PrHtmlWindow* window, uint32_t handle) {
 }
 
 double htmlWindowIdleTimeRemaining(const PrHtmlWindow* window, double deadline) {
-    double remaining = idleCap(window, deadline) - htmlWindowClock(window);
+    double now = htmlWindowClock(window);
+    double remaining = idleCap(window, deadline) - now;
+    // The time to the next frame is also measured from the last frame, which is no later than now. A frame's time
+    // rounds by its magnitude, which can put it past its intervals from now, and the time left never exceeds them.
+    if (wantsFrame(window)) {
+        double toFrame = (window->lastFrame - now) + framesToDue(window) * kHtmlFrameInterval;
+        remaining = toFrame < remaining ? toFrame : remaining;
+    }
     return remaining > 0 ? remaining : 0;
 }
 
@@ -730,7 +747,8 @@ bool htmlWindowIsIdle(const PrHtmlWindow* window) {
     }
     PrCssPresentation* presentation = presentationOf(window);
     return window->taskHead == window->tasks.count && window->frameRequests.count == 0 && !window->revealing &&
-        !htmlMediaAwaitsPicture(window) && (presentation == nullptr || (!cssPresentationHasWork(presentation) &&
+        !awaitsRenderingSteps(window) && !htmlMediaAwaitsPicture(window) &&
+        (presentation == nullptr || (!cssPresentationHasWork(presentation) &&
             !cssAnimateHaveEventsAhead(&presentation->animations)));
 }
 

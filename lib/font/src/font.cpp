@@ -73,6 +73,7 @@ struct Font {
     bool truetype;                      // true if glyf holds the outlines, and false for CFF or none
     bool outlined;                      // false for a face of bitmap strikes only
     bool strikes;                       // true if the font has color bitmap strikes
+    bool svg;                           // true if the font has SVG documents of glyphs
     uint32_t unitsPerEm;
     uint32_t glyphCount;
     SfntCmap cmap;
@@ -168,6 +169,7 @@ bool openReaders(Font* font) {
         font->glyphCount = cffGlyphCount(font->cff);
     font->strikes =
         sfntTable(sfnt, tagOf('s', 'b', 'i', 'x')).size != 0 || sfntTable(sfnt, tagOf('C', 'B', 'L', 'C')).size != 0;
+    font->svg = sfntTable(sfnt, tagOf('S', 'V', 'G', ' ')).size != 0;
     if ((!font->outlined && !font->strikes) || font->glyphCount == 0)
         return false;
     font->boundsFilled = static_cast<Atomic<uint8_t>*>(prMemoryAllocZeroed(sizeof(Atomic<uint8_t>) * font->glyphCount));
@@ -888,6 +890,46 @@ PrRawString prFontStyleName(const PrFont* font) {
     return name;
 }
 
+PrRawString prFontPostScriptName(const PrFont* font) {
+    bool instance = false;
+    for (uint32_t i = 0; i < prFontAxisCount(font); ++i)
+        instance = instance || prFontAxisValue(font, i) != prFontAxis(font, i).defaultValue;
+    if (!instance)
+        return sfntName(font->sfnt, 6);
+    // The prefix is the variations PostScript name prefix (name ID 25), or else the family's name with only its ASCII
+    // letters and digits.
+    PrRawString prefix = sfntName(font->sfnt, 25);
+    if (prRawStringIsNull(&prefix))
+        prefix = sfntFamily(font->sfnt);
+    PrStringView view = prRawStringView(&prefix);
+    char text[256];
+    uint32_t length = 0;
+    for (size_t i = 0; i < view.size && length < 64; ++i) {
+        char c = view.data[i];
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+            text[length++] = c;
+    }
+    prRawStringReset(&prefix);
+    if (length == 0)
+        return prRawStringNull();
+    // Each axis away from its default adds an underscore, its value with at most five decimals and no trailing zeros,
+    // and its tag without trailing spaces.
+    for (uint32_t i = 0; i < prFontAxisCount(font); ++i) {
+        PrFontAxis axis = prFontAxis(font, i);
+        float value = prFontAxisValue(font, i);
+        if (value == axis.defaultValue || length + 1 + kPrF64TextMaxBytes + 4 > sizeof(text))
+            continue;
+        text[length++] = '_';
+        length += uint32_t(prF64Format(prF64Round(double(value) * 1e5) / 1e5, text + length));
+        for (uint32_t k = 0; k < 4; ++k) {
+            char c = char((axis.tag >> (24 - 8 * k)) & 0xff);
+            if (c != ' ')
+                text[length++] = c;
+        }
+    }
+    return prRawStringCopy(PrStringView{text, length});
+}
+
 float prFontSizeAdjust(const PrFont* font) {
     return font->sizeAdjust;
 }
@@ -1173,7 +1215,7 @@ bool prFontGlyphSvg(const PrFont* font, uint16_t glyph, PrFontGlyphSvg* out) {
     const Font* data = font;
     SfntTable document{};
     uint32_t index = 0;
-    if (!sfntGlyphSvg(data->sfnt, glyph, &document, &index))
+    if (!data->svg || !sfntGlyphSvg(data->sfnt, glyph, &document, &index))
         return false;
     out->document = PrByteView{document.data, document.size};
     out->index = index;

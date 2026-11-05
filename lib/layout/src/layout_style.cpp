@@ -222,6 +222,8 @@ void countCompounds(LayoutStyles* c, const PrLayoutLength& length, uint32_t delt
 void countCompounds(LayoutStyles* c, const PrLayoutBoxStyle& box, uint32_t delta) {
     if (box.position == PrLayoutPosition_Sticky)
         c->stickyGroups += delta;
+    if (box.display == PrLayoutDisplay_PageMargin)
+        c->pageMarginGroups += delta;
     const PrLayoutLength* sizes[] = {
         &box.width, &box.height, &box.minWidth, &box.minHeight, &box.maxWidth,
         &box.maxHeight,
@@ -295,6 +297,18 @@ void countCompounds(LayoutStyles* c, const PrLayoutFlexStyle& flex, uint32_t del
 void countCompounds(LayoutStyles* c, const PrLayoutGridStyle& grid, uint32_t delta) {
     // The group holds its track lists and areas in the same way as its compounds.
     layoutGridTemplatesCount(&c->grids, grid, delta);
+}
+void countCompounds(LayoutStyles* c, const PrLayoutFragmentationStyle& fragmentation, uint32_t delta) {
+    if (fragmentation.breakBefore >= PrLayoutBreak_Always || fragmentation.breakAfter >= PrLayoutBreak_Always ||
+            fragmentation.page != kPrLayoutNameNone)
+        c->forcedBreakGroups += delta;
+    PR_ASSERT(layoutLengthIsAuto(fragmentation.columnWidth) ||
+        prLayoutWordKind(fragmentation.columnWidth.bits) < PrLayoutWordKind_Number ||
+        prLayoutWordKind(fragmentation.columnWidth.bits) == PrLayoutWordKind_Compound);
+    layoutCompoundsCount(&c->compounds, fragmentation.columnWidth.bits, delta);
+}
+void countCompounds(LayoutStyles* c, const PrLayoutTableStyle& table, uint32_t delta) {
+    countCompounds(c, table.fragmentation, delta);
 }
 
 // Returns true if a table group's values are in their ranges.
@@ -682,7 +696,7 @@ void layoutStylesCollect(LayoutStyles* styles) {
     collect(c->decoration, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->decoration, i), 0xffffffffu); });
     collect(c->effects, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->effects, i), 0xffffffffu); });
     collect(c->flex, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->flex, i), 0xffffffffu); });
-    collect(c->table, [](uint32_t) {});
+    collect(c->table, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->table, i), 0xffffffffu); });
     collect(c->compositing, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->compositing, i), 0xffffffffu); });
     collect(c->grid, [&](uint32_t i) { countCompounds(c, layoutTableAt(c->grid, i), 0xffffffffu); });
     if (c->backgrounds.candidates.count != 0)
@@ -773,11 +787,17 @@ uint32_t prLayoutGroupReferences(const PrLayoutTree* tree, PrLayoutGroup kind, P
     }
 }
 
+PrLayoutName prLayoutNameIntern(PrLayoutTree* tree, PrStringView name) {
+    return layoutGridTemplatesInternName(&tree->styles->grids, name);
+}
+
 PrLayoutFontStyle prLayoutFontStyleDefault(void) {
     PrLayoutFontStyle font{};
     font.lineHeight = prLayoutLineHeightNormal();
     font.textIndent = prLayoutLengthPx(0);
     font.textAlignLast = PrLayoutTextAlign_Auto;
+    font.orphans = 2;
+    font.widows = 2;
     return font;
 }
 
@@ -1112,29 +1132,32 @@ PrLayoutFlexStyle prLayoutFlexStyleRecord(const PrLayoutTree* tree, uint32_t ind
     return layoutTableAt(tree->styles->flex, index);
 }
 
+PrLayoutFragmentationStyle prLayoutFragmentationStyleDefault(void) {
+    PrLayoutFragmentationStyle fragmentation{};
+    fragmentation.columnWidth = prLayoutLengthAuto();
+    return fragmentation;
+}
+
 PrLayoutTableStyle prLayoutTableStyleDefault(void) {
     PrLayoutTableStyle table{};
     table.columnSpan = 1;
     table.rowSpan = 1;
+    table.fragmentation = prLayoutFragmentationStyleDefault();
     return table;
 }
 
 uint32_t prLayoutTableStyleIntern(PrLayoutTree* tree, const PrLayoutTableStyle* table) {
     PR_ASSERT(isValid(*table));
-    return tableIntern(tree->styles->table, *table);
+    return internNaming(tree->styles, tree->styles->table, *table);
 }
 
 uint32_t prLayoutTableStyleCreate(PrLayoutTree* tree, const PrLayoutTableStyle* table) {
     PR_ASSERT(isValid(*table));
-    return tableAdd(tree->styles->table, *table, 0, false);
+    return createNaming(tree->styles, tree->styles->table, *table);
 }
 
 PrLayoutTableStyle prLayoutTableStyleRecord(const PrLayoutTree* tree, uint32_t index) {
     return layoutTableAt(tree->styles->table, index);
-}
-
-PrLayoutGridName prLayoutGridNameIntern(PrLayoutTree* tree, PrStringView name) {
-    return layoutGridTemplatesInternName(&tree->styles->grids, name);
 }
 
 PrLayoutGridTracksIndex prLayoutGridTracksIntern(PrLayoutTree* tree, const PrLayoutGridTrackList* list) {
