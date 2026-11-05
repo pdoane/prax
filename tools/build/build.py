@@ -196,13 +196,14 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False):
     mimalloc = "OFF" if wasm else "ON"
 
     # CMake fetches what the build needs (cmake/dependencies.cmake) and keeps the archives in third_party/downloads,
-    # which every build directory and worktree shares. A development build has the tests, the tools and the examples,
-    # with warnings as errors, and every backend that the platform supports. CMake's own warnings are errors too, as
-    # the compiler's and the linker's are. Development and the benchmarks allocate with mimalloc, which a library build
-    # leaves to its embedder. The options are computed only when CMake configures, which a build that is current skips.
+    # which every build directory and worktree shares. A development build has the tests, the tools, the examples and
+    # the apps, with warnings as errors, and every backend that the platform supports. CMake's own warnings are errors
+    # too, as the compiler's and the linker's are. Development and the benchmarks allocate with mimalloc, which a
+    # library build leaves to its embedder. The options are computed only when CMake configures, which a build that is
+    # current skips.
     def options():
         found = ["-DPR_DOWNLOAD_DIR=" + os.path.join(dev.ROOT, "third_party", "downloads"), "-DPR_DEVELOP=ON",
-                 "-DPR_EXAMPLES=ON", "-DPR_PLATFORM_MIMALLOC=" + mimalloc, *strict_warnings()]
+                 "-DPR_EXAMPLES=ON", "-DPR_APPS=ON", "-DPR_PLATFORM_MIMALLOC=" + mimalloc, *strict_warnings()]
         if openssl:
             found.append("-DOPENSSL_ROOT_DIR=" + openssl)
         # The WebAssembly build's programs run under emsdk's Node.js, as the tests and their discovery run them.
@@ -232,7 +233,8 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False):
                  *options()], stdout=out, stderr=out)
     # A configure that was stopped before it generated leaves a cache and no build.ninja, which CMake finishes.
     elif (not os.path.exists(os.path.join(directory, "build.ninja"))
-          or "PR_DEVELOP:BOOL=ON" not in lines or "PR_PLATFORM_MIMALLOC:BOOL=" + mimalloc not in lines
+          or "PR_DEVELOP:BOOL=ON" not in lines or "PR_APPS:BOOL=ON" not in lines
+          or "PR_PLATFORM_MIMALLOC:BOOL=" + mimalloc not in lines
           or "CMAKE_BUILD_TYPE:STRING=" + build_type not in lines
           or (wasm and not any(line.startswith("CMAKE_CROSSCOMPILING_EMULATOR:") and line.endswith("=" + emsdk.node())
                                for line in lines))

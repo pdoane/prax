@@ -38,7 +38,7 @@ tools/harness/                    what the harnesses, the tools and the librarie
   which only constructors and friends on the type can give, stay in its C header under `__cplusplus`.
 - The C++ API is in namespace `pr`, and the implementation is in `pr_impl`. `pr/base.h` makes `pr` visible in
   `pr_impl`, so implementation code names the C++ API without a qualifier, and so does code that takes `pr_impl` with a
-  using-directive. Applications, under `examples` and `tools`, use `pr` and never name `pr_impl` (`lint.py`,
+  using-directive. Applications, under `examples`, `apps` and `tools`, use `pr` and never name `pr_impl` (`lint.py`,
   `application-namespace`). Code that tools share has a namespace of its own, such as `harness`.
 - A binding reaches every module through its public headers, its own module's too, and includes no implementation but
   its own layer's (`lint.py`, `binding-include`). The QuickJS layers build on core's QuickJS toolkit

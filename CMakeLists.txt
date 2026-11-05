@@ -45,11 +45,12 @@ if (PR_DEVELOP AND CMAKE_VERSION VERSION_LESS 4.0)
     message(FATAL_ERROR "A development build needs CMake 4.0 or newer, and this is CMake ${CMAKE_VERSION}")
 endif()
 option(PR_EXAMPLES "Build the examples" OFF)
+option(PR_APPS "Build the apps" OFF)
 option(PR_INSTALL "Install the libraries, their headers and the CMake package" ${PROJECT_IS_TOP_LEVEL})
 
-# JavaScript, over QuickJS: the JS bindings, pr_shell, and Lottie's expressions. The examples need it.
+# JavaScript, over QuickJS: the JS bindings, pr_shell, and Lottie's expressions. The browser needs it.
 option(PR_JS "Run JavaScript, over QuickJS" ON)
-if (PR_EXAMPLES)
+if (PR_APPS)
     set(PR_JS ON)
 endif()
 
@@ -67,8 +68,8 @@ option(PR_PLATFORM_THREADS "Start threads where the build leaves threads to the 
     ${PR_PLATFORM_THREADS_DEFAULT})
 
 # The font bundles whose files the build fetches, into font_bundle in the build directory, for the tests, the tools and
-# the examples (lib/font_bundle/font_bundle.cmake). A consumer fetches its own with pr_font_bundle_fetch.
-if (PR_DEVELOP OR PR_EXAMPLES)
+# the examples and the apps (lib/font_bundle/font_bundle.cmake). A consumer fetches its own with pr_font_bundle_fetch.
+if (PR_DEVELOP OR PR_EXAMPLES OR PR_APPS)
     set(PR_FONT_BUNDLES_DEFAULT "Noto;Standard14")
 endif()
 set(PR_FONT_BUNDLES "${PR_FONT_BUNDLES_DEFAULT}" CACHE STRING "The font bundles whose files the build fetches")
@@ -137,7 +138,7 @@ include(cmake/dependencies.cmake)
 # The backends that the libraries build (README.md). A library holds each of its backends that the build turns on, and
 # a program that brings its own implementation of an interface turns the library's off. A backend is on by default
 # where it is the platform's own API or the library's own code, and off where it builds on a third-party library. The
-# tests, the tools and the examples build every backend that the platform supports.
+# tests, the tools, the examples and the apps build every backend that the platform supports.
 if (CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
     set(PR_LINUX ON)
 endif()
@@ -153,7 +154,7 @@ endif()
 if (CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
     set(PR_POSIX_PROCESSES ON)
 endif()
-if (PR_DEVELOP OR PR_EXAMPLES OR PR_UNIX_OTHER)
+if (PR_DEVELOP OR PR_EXAMPLES OR PR_APPS OR PR_UNIX_OTHER)
     find_package(OpenSSL 3...<4 QUIET)
 endif()
 pr_backend_option(PR_APP_COCOA "lib/app's Cocoa backend" "${APPLE}" "${APPLE}")
@@ -246,6 +247,10 @@ if (PR_DEVELOP)
 endif()
 if (PR_EXAMPLES AND (APPLE OR WIN32 OR EMSCRIPTEN))
     add_subdirectory(examples)
+endif()
+# The apps run on the desktop.
+if (PR_APPS AND (APPLE OR WIN32))
+    add_subdirectory(apps)
 endif()
 if (PR_INSTALL)
     include(cmake/install.cmake)

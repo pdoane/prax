@@ -177,11 +177,13 @@ it covers. `./dev.sh lint` checks the pages' indexes, eyebrows and citations aga
 (`tools/suite/prax/suite.py`), `./dev.sh prax stills` captures them in the browsers beside the engine, and `./dev.sh
 prax fit` lists the pages that do not fit their 600 by 800 viewport.
 
-## Examples
+## Examples and apps
 
-The examples under `examples/` are applications over the public headers, each a window on lib/app's default backend
-(`prAppCreate`) whose `main()` composes everything that runs it. Each is checked by running it.
-`./dev.sh example <name> [args...]` builds one and runs it.
+The examples under `examples/` and the apps under `apps/` are applications over the public headers, each a window on
+lib/app's default backend (`prAppCreate`) whose `main()` composes everything that runs it. An example shows what a
+library does. An app is for daily use, and keeps its model in a library of its own, which its unit tests link. Each is
+checked by running it. `./dev.sh example <name> [args...]` builds an example and runs it, and `./dev.sh app <name>
+[args...]` an app.
 
 `./dev.sh package` checks the libraries as a consumer takes them. It builds them with the build's defaults and installs
 them, then builds `tools/package`, a program over their public headers, against the installed package and against the
@@ -195,7 +197,12 @@ source tree as FetchContent adds it, and runs each.
 - `editor` is a level editor of Studio Kit's widgets and a HUD library of its own, composed in one tree.
 - `perspective` stands Kit panels in 3D over a background that it draws with its own pipeline, as a 3D engine would.
 - `incremental` renders Markdown and HTML as they arrive in pieces.
+
+The apps:
+
 - `browser` shows a web page in a window, and navigates from it, as a browser's threads do.
+- `scribe` is Studio's text editor in a window.
+- `alchemy` generates images with a ComfyUI server.
 
 The tools that measure and compare the engine are under `tools/`: the viewer (`./dev.sh viewer`, whose header
 comment in tools/viewer/viewer.cpp describes it), and the benchmarks that `./dev.sh bench` runs.

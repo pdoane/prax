@@ -32,6 +32,7 @@ COMMANDS = {
     "viewer": "tools.viewer.commands",
     "document": "tools.shell.commands",
     "example": "tools.build.commands",
+    "app": "tools.build.commands",
     "fetch": "tools.fetch.commands",
     "clean": "tools.build.commands",
 }

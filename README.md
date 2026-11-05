@@ -68,7 +68,7 @@ against its hash (`cmake/dependencies.cmake`). To use your own copy of a depende
 - A module defines an interface, and its library contains every backend of that interface that the build enables (the
   `PR_<MODULE>_<BACKEND>` options below). A program chooses among them at run time, or disables them and provides its
   own implementation.
-- The applications in `examples/` are built this way; `examples/draw_gallery` is the smallest.
+- The applications in `examples/` and `apps/` are built this way; `examples/draw_gallery` is the smallest.
 
 Add the source tree to a project with FetchContent:
 
@@ -110,8 +110,8 @@ recursion limits assume that much, as macOS and Linux give a main thread. The op
 | `PR_DOWNLOAD_DIR` | the environment variable of that name, or else `prax/downloads` in the user's cache directory | the download cache that builds share; empty disables it |
 
 A backend is on by default when it uses the platform's own API or Prax's own code, and off when it depends on a
-third-party library. A development build (`PR_DEVELOP`) or an examples build (`PR_EXAMPLES`) enables every backend the
-platform supports.
+third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_EXAMPLES`) or an apps build
+(`PR_APPS`) enables every backend the platform supports.
 
 | interface | option | backend | builds on | default |
 | --- | --- | --- | --- | --- |
@@ -168,8 +168,8 @@ after `find_package(prax)` or when the source tree is added to the project.
 
 `./dev.sh` runs the development workflow: building, testing, running the conformance suites, benchmarking, regenerating
 generated sources, linting, and checking the package the way a consumer uses it. `./dev.sh help` lists its commands.
-It and its tools are written in Python 3, which development also needs. Its builds use Ninja and enable `PR_EXAMPLES`
-and `PR_DEVELOP`, which builds the tests, tools and comparisons with warnings as errors. They cache
+It and its tools are written in Python 3, which development also needs. Its builds use Ninja and enable `PR_EXAMPLES`,
+`PR_APPS` and `PR_DEVELOP`, which builds the tests, tools and comparisons with warnings as errors. They cache
 downloads in `third_party/downloads`. The suites' test corpora are fetched into `third_party` at pinned revisions.
 
 ### CMake versions

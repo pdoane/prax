@@ -46,11 +46,11 @@ function(pr_js_library target file)
 endfunction()
 
 # Declares PR_<MODULE>_<BACKEND>, the option that builds a backend into its library. It is ON by default where
-# `default` is true, and in a development build or the examples' wherever `supported` is true.
+# `default` is true, and in a development build or the examples' or the apps' wherever `supported` is true.
 #
 #   pr_backend_option(<option> <doc> <default> <supported>)
 function(pr_backend_option option doc default supported)
-    if (default OR ((PR_DEVELOP OR PR_EXAMPLES) AND supported))
+    if (default OR ((PR_DEVELOP OR PR_EXAMPLES OR PR_APPS) AND supported))
         option(${option} "${doc}" ON)
     else()
         option(${option} "${doc}" OFF)

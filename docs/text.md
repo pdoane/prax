@@ -331,7 +331,7 @@ same spans again records nothing.
 To motion, each logical line is a node (`PrTextEditGeometry`), so a motion reads one line's text and the window's rows,
 and never the whole document. A line outside the window answers from its own bytes until a row shows it. Commands act at
 every selection, as one transaction for an edit, and selections that meet join. `prUiTextView` connects a view to
-immediate-mode frames, and `examples/scribe` is an editor over it, whose operations are commands (`lib/studio/command`).
+immediate-mode frames, and `apps/scribe` is an editor over it, whose operations are commands (`lib/studio/command`).
 
 ### Syntax (`pr/syntax.h`)
 

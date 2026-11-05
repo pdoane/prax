@@ -1,4 +1,4 @@
-"""`./dev.sh build`, `test`, `example` and `clean`: the builds, the unit tests, and the examples."""
+"""`./dev.sh build`, `test`, `example`, `app` and `clean`: the builds, the unit tests, the examples and the apps."""
 
 import os
 import shutil
@@ -31,6 +31,9 @@ USAGE = {
     web, serves the checkout, and opens its page in the system's browser, with the arguments in the page's query, until
     interrupted. --screenshot instead captures the page in headless Chrome, at 960x720, after it has run for S seconds
     (4 by default), and prints what the page logged""",
+    "app": """\
+./dev.sh app <name> [args...]
+    build an app under apps, and only what it needs, and run it with the arguments""",
     "clean": """\
 ./dev.sh clean
     delete the build directories""",
@@ -105,15 +108,28 @@ def test(argv):
         dev.run([binary, *args])
 
 
+def application_names(folder):
+    """The applications under `folder`, examples or apps, each a directory whose name is its target's."""
+    root = os.path.join(dev.ROOT, folder)
+    return sorted(name for name in os.listdir(root) if os.path.isdir(os.path.join(root, name)))
+
+
+def app(argv):
+    dev.usage(argv, USAGE["app"], None if argv else 1)
+    names = application_names("apps")
+    if argv[0] not in names:
+        dev.fail("no app named %s; one of: %s" % (argv[0], " ".join(names)))
+    chosen = builds.build(targets=[argv[0]])
+    dev.run([dev.executable(chosen.directory, argv[0]), *argv[1:]])
+
+
 def example(argv):
     dev.usage(argv, USAGE["example"], None if argv else 1)
     wasm = argv[0] == "wasm"
     if wasm:
         argv = argv[1:]
         dev.usage(argv, USAGE["example"], None if argv else 1)
-    # An example's target is its directory's name.
-    examples = os.path.join(dev.ROOT, "examples")
-    names = sorted(name for name in os.listdir(examples) if os.path.isdir(os.path.join(examples, name)))
+    names = application_names("examples")
     if argv[0] not in names:
         dev.fail("no example named %s; one of: %s" % (argv[0], " ".join(names)))
     if argv[0] in builds.EXAMPLE_CHECKOUTS:

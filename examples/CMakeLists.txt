@@ -45,26 +45,6 @@ if (EMSCRIPTEN)
     return()
 endif()
 
-# Scribe: Studio's text editor in a window, whose operations are commands of lib/studio/command.
-# Its interface is a library of its own, which the application and the tests of its interface share.
-add_library(scribe_editor STATIC scribe/scribe.cpp)
-target_include_directories(scribe_editor PUBLIC ${PROJECT_SOURCE_DIR})
-target_link_libraries(scribe_editor PUBLIC prax::app prax::process prax::syntax prax::studio_command prax::studio_kit
-                                           prax::studio_text_editor prax::layout prax::ui prax::core_cpp
-                                    PRIVATE pr_warnings)
-if (PR_SYNTAX_TREESITTER)
-    target_compile_definitions(scribe_editor PUBLIC SCRIBE_HAS_TREESITTER)
-endif()
-
-pr_example(scribe scribe/main.cpp)
-target_link_libraries(scribe PRIVATE scribe_editor prax::app prax::draw prax::gpu prax::font prax::font_bundle
-                                     prax::layout prax::studio_kit prax::text prax::ui)
-
-if (PR_DEVELOP)
-    pr_module_tests(scribe_editor scribe/tests/test_scribe.cpp)
-    target_link_libraries(scribe_editor_tests PRIVATE kit_fixture prax::font prax::layout prax::text prax::ui)
-endif()
-
 # The draw gallery: animated scenes drawn with lib/draw alone, rendered on the GPU and mapped to the display.
 pr_example(draw_gallery draw_gallery/main.cpp draw_gallery/scenes.cpp)
 target_link_libraries(draw_gallery PRIVATE prax::app prax::draw prax::gpu
@@ -142,71 +122,3 @@ pr_example(incremental incremental/incremental.cpp)
 target_link_libraries(incremental PRIVATE prax::app prax::studio_kit prax::draw
                                           prax::gpu prax::layout prax::text prax::font_bundle prax::html
                                           prax::dom prax::css prax::markdown prax::core_cpp)
-
-# The alchemy example: a studio for generating images with a ComfyUI server. Its model, the server's protocol and the
-# graphs that it submits are a library of their own, which the application and the tests link.
-add_library(alchemy_studio STATIC
-    alchemy/comfy_client.cpp
-    alchemy/comfy_graph.cpp
-    alchemy/dimensions.cpp
-    alchemy/gallery.cpp
-    alchemy/image_cache.cpp
-    alchemy/models.cpp
-    alchemy/prompt_text.cpp
-    alchemy/provenance.cpp
-    alchemy/recipes.cpp
-    alchemy/state.cpp
-)
-target_include_directories(alchemy_studio PUBLIC ${PROJECT_SOURCE_DIR})
-target_link_libraries(alchemy_studio PUBLIC prax::json prax::image prax::compress prax::net prax::http prax::websocket
-                                            prax::draw prax::task prax::cache prax::studio_kit prax::core_cpp
-                                     PRIVATE pr_warnings)
-
-# The application: alchemy's interface over the library, composed in main().
-pr_example(alchemy
-    alchemy/main.cpp
-    alchemy/commands.cpp
-    alchemy/view.cpp
-)
-target_link_libraries(alchemy PRIVATE alchemy_studio prax::app prax::studio_command prax::studio_kit prax::draw
-                                      prax::gpu prax::layout prax::ui prax::text prax::font prax::font_bundle
-                                      prax::net prax::http prax::tls prax::websocket prax::core_cpp)
-
-if (PR_DEVELOP)
-    pr_module_tests(alchemy_studio
-        alchemy/tests/test_dimensions.cpp
-        alchemy/tests/test_models.cpp
-        alchemy/tests/test_prompt_text.cpp
-        alchemy/tests/test_provenance.cpp
-        alchemy/tests/test_recipes.cpp
-        alchemy/tests/test_state.cpp
-    )
-    target_link_libraries(alchemy_studio_tests PRIVATE prax::json prax::image prax::compress)
-
-    # The client's tests, which talk to the fake ComfyUI server of tools/harness/net_peer.py.
-    pr_net_tests(alchemy_comfy_tests alchemy/tests/test_comfy_client.cpp)
-    target_link_libraries(alchemy_comfy_tests PRIVATE alchemy_studio prax::http prax::websocket)
-endif()
-
-# The browser example: a tabbed web browser, whose pages' scripts run, rendered through lib/layout, inside chrome built
-# with Studio Kit. Its addresses, favorites and history are a library of their own, which the application and the tests
-# link.
-add_library(browser_model STATIC browser/address.cpp browser/favorites.cpp browser/history.cpp browser/profile.cpp)
-target_include_directories(browser_model PUBLIC ${PROJECT_SOURCE_DIR})
-target_link_libraries(browser_model PUBLIC prax::json prax::core_cpp PRIVATE pr_warnings)
-
-pr_example(browser browser/main.cpp browser/browser.cpp browser/chrome.cpp browser/commands.cpp browser/icons.cpp
-    browser/tab.cpp)
-target_link_libraries(browser PRIVATE browser_model prax::app prax::html_quickjs prax::url_quickjs prax::xhr_quickjs
-                                      prax::charset_quickjs prax::svg_quickjs prax::mathml_quickjs
-                                      prax::studio_kit prax::studio_command prax::ui
-                                      prax::text prax::font_bundle prax::font
-                                      prax::audio prax::draw prax::gpu prax::image prax::media
-                                      prax::compress prax::fetch prax::html prax::css prax::dom prax::layout
-                                      prax::net prax::http prax::tls prax::storage prax::cache
-                                      prax::task prax::core_cpp)
-
-if (PR_DEVELOP)
-    pr_module_tests(browser_model browser/tests/test_address.cpp browser/tests/test_favorites.cpp
-        browser/tests/test_history.cpp)
-endif()

@@ -533,8 +533,8 @@ def check_linkage(report, path, text):
 
 
 def check_example_includes(report, path, text):
-    """examples/ holds applications, which a library and its tests never depend on."""
-    for match in re.finditer(r'#include [<"](examples/[^">]+)[">]', text):
+    """examples/ and apps/ hold applications, which a library and its tests never depend on."""
+    for match in re.finditer(r'#include [<"]((?:examples|apps)/[^">]+)[">]', text):
         report.add(path, line_of(text, match.start()), "example-include",
                    "a library includes %s" % match.group(1))
 
@@ -2118,10 +2118,11 @@ def check_include_paths(report, path, text):
 # which * crosses directories: the allocator's wrapper, the bindings and the code that drives them, and the tests. The
 # harness's doctest header stands in for doctest's own, so it sorts and is allowed as doctest is (check_test_include).
 THIRD_PARTY = {
-    "tools/harness/test.h": ("lib/*/tests/*", "examples/*/tests/*", "tools/*/tests/*", "tools/harness/kit_fixture.h"),
+    "tools/harness/test.h": ("lib/*/tests/*", "examples/*/tests/*", "apps/*/tests/*", "tools/*/tests/*",
+                             "tools/harness/kit_fixture.h"),
     "mimalloc.h": ("lib/core/backends/mimalloc/src/core_mimalloc.cpp",),
     "quickjs.h": ("lib/*/quickjs/*", "lib/*/quickjs_cpp/*", "lib/lottie/src/lottie_expression.cpp", "tools/shell/page_host.cpp",
-                  "examples/browser/main.cpp"),
+                  "apps/browser/main.cpp"),
     "doctest/doctest.h": DOCTEST_OWNERS,
     "blend2d/blend2d.h": ("lib/draw/comparisons/blend2d/src/draw_blend2d.cpp",),
     "rlottie.h": ("tools/viewer/source_rlottie.cpp", "tools/suite/lottie/rlottie_reference.cpp"),
@@ -2997,14 +2998,14 @@ def check_spec_free(report, path, text, ids):
 # Applications
 
 def is_application(path):
-    """Returns true for a file of an application, under examples or tools, which keeps its own namespace. The rules of
-    structure and naming apply there as anywhere."""
-    return os.path.relpath(path, ROOT).replace(os.sep, "/").startswith(("examples/", "tools/"))
+    """Returns true for a file of an application, under examples, apps or tools, which keeps its own namespace. The
+    rules of structure and naming apply there as anywhere."""
+    return os.path.relpath(path, ROOT).replace(os.sep, "/").startswith(("examples/", "apps/", "tools/"))
 
 
-# The applications that are written on core, which are the examples: they reach the standard library through it, as
-# the library does, and lint checks their includes as it checks the library's.
-ON_CORE = ("examples/",)
+# The applications that are written on core, which are the examples and the apps: they reach the standard library
+# through it, as the library does, and lint checks their includes as it checks the library's.
+ON_CORE = ("examples/", "apps/")
 
 
 def is_on_core(path):
@@ -3108,8 +3109,8 @@ shared = None
 
 
 def check_code_file(path):
-    """Runs the checks of one file of the library, the examples or the shell, and returns their report's problems and
-    fixes."""
+    """Runs the checks of one file of the library, the examples, the apps or the shell, and returns their report's
+    problems and fixes."""
     report = Report()
     text = shared.texts[path]
     header = path.endswith(".h")
@@ -3258,9 +3259,9 @@ def main():
 
     # Every hand-written C and C++ file of the library, its tests and bindings, the examples, and the tools. The rules
     # below apply to each file that their subject covers: a C++ rule to C++, a header rule to headers.
-    headers = code_files("lib/**/*.h", "examples/**/*.h", "tools/**/*.h")
-    sources = code_files("lib/**/*.cpp", "lib/**/*.mm", "examples/**/*.cpp", "examples/**/*.mm", "tools/**/*.cpp",
-                         "tools/**/*.mm")
+    headers = code_files("lib/**/*.h", "examples/**/*.h", "apps/**/*.h", "tools/**/*.h")
+    sources = code_files("lib/**/*.cpp", "lib/**/*.mm", "examples/**/*.cpp", "examples/**/*.mm", "apps/**/*.cpp",
+                         "apps/**/*.mm", "tools/**/*.cpp", "tools/**/*.mm")
 
     texts = {}
     for path in headers + sources:
@@ -3288,8 +3289,8 @@ def main():
 
     # Every hand-written C and C++ file, including the harnesses of tools.
     every_source = code_files("lib/**/*.[ch]", "lib/**/*.cpp", "lib/**/*.mm", "examples/**/*.[ch]",
-                              "examples/**/*.cpp", "examples/**/*.mm", "tools/**/*.[ch]", "tools/**/*.cpp",
-                              "tools/**/*.mm")
+                              "examples/**/*.cpp", "examples/**/*.mm", "apps/**/*.[ch]", "apps/**/*.cpp",
+                              "apps/**/*.mm", "tools/**/*.[ch]", "tools/**/*.cpp", "tools/**/*.mm")
     # Shaders define names too, such as the macros of pr/gpu.slang that the C headers cite, and so do the JavaScript
     # libraries that the web's backends link, whose names the C++ and the headers cite.
     defined = defined_names(every_source + code_files("lib/**/*.slang", "lib/**/*.js"))
@@ -3320,7 +3321,8 @@ def main():
              + glob.glob(os.path.join(ROOT, "lib", "**", "*.cmake"), recursive=True)
              + glob.glob(os.path.join(ROOT, "tools", "**", "CMakeLists.txt"), recursive=True)
              + glob.glob(os.path.join(ROOT, "tools", "**", "*.sh"), recursive=True)
-             + glob.glob(os.path.join(ROOT, "examples", "CMakeLists.txt")))
+             + glob.glob(os.path.join(ROOT, "examples", "CMakeLists.txt"))
+             + glob.glob(os.path.join(ROOT, "apps", "**", "CMakeLists.txt"), recursive=True))
     for path in sorted(prose):
         with open(path, encoding="utf-8") as f:
             text = f.read()

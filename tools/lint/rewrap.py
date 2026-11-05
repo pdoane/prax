@@ -27,8 +27,8 @@ EXTENSIONS = (".c", ".h", ".cpp", ".mm", ".slang")
 def sources():
     """Returns every hand-written C, C++, Objective-C and Slang file that lint reads."""
     patterns = ["lib/**/*.[ch]", "lib/**/*.cpp", "lib/**/*.mm", "lib/**/*.slang", "examples/**/*.[ch]",
-                "examples/**/*.cpp", "examples/**/*.mm", "examples/**/*.slang", "tools/**/*.[ch]", "tools/**/*.cpp",
-                "tools/**/*.mm"]
+                "examples/**/*.cpp", "examples/**/*.mm", "examples/**/*.slang", "apps/**/*.[ch]", "apps/**/*.cpp",
+                "apps/**/*.mm", "tools/**/*.[ch]", "tools/**/*.cpp", "tools/**/*.mm"]
     return sorted({p for pattern in patterns for p in glob.glob(os.path.join(lint.ROOT, pattern), recursive=True)})
 
 

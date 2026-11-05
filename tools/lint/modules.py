@@ -182,8 +182,9 @@ def targets(root):
             # A test binary of the network modules links their test servers' support and the platform's sockets.
             create(name, "executable", path, line, rest, directory)
             link(name, [("net_peer", line), ("prax::net", line), ("prax::core_cpp", line)], path)
-        elif command in ("pr_harness", "pr_example") and rest:
-            # A harness links the module it exercises and the harness support. An example links what it names.
+        elif command in ("pr_harness", "pr_example", "pr_app") and rest:
+            # A harness links the module it exercises and the harness support. An example or an app links what it
+            # names.
             if command == "pr_harness":
                 create(name, "executable", path, line, rest[1:], directory)
                 link(name, [(rest[0][0], line), ("harness", line)], path)
