@@ -16,7 +16,7 @@ namespace pr_impl {
 // A record's bytes in memory, counted by the store that holds them and by each record read from them.
 struct StorageBuffer {
     Atomic<uint32_t> references;
-    uint64_t size;
+    size_t size;
 
     uint8_t* bytes() { return reinterpret_cast<uint8_t*>(this + 1); }
 };

@@ -467,7 +467,12 @@ PrGpuTextureDesc textureDesc(const PrGpuDevice* device, PrGpuTexture texture) {
     return vulkanResourceAt(vulkanDevice(device), texture.id).textureDesc;
 }
 
-// Shaders write a texture through its storage image, in a slot of its own.
+// Shaders write a texture through its storage image, in a slot of its own. A texture's native object is its VkImage.
+bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind, void* out) {
+    *static_cast<uint64_t*>(out) = reinterpret_cast<uint64_t>(vulkanDevice(device)->resources.data[texture.id].image);
+    return true;
+}
+
 uint32_t textureStorageHandle(const PrGpuDevice* device, PrGpuTexture texture) {
     const VulkanResource& r = vulkanResourceAt(vulkanDevice(device), texture.id);
     PR_ASSERT(r.storage != 0);
@@ -749,7 +754,7 @@ bool vulkanMemoryAllocate(VulkanDevice* d, VkMemoryRequirements requirements, Vk
             return false;
         out->memory = reinterpret_cast<VkDeviceMemory>(memory);
         out->offset = offset;
-        out->host = true;
+        out->application = true;
         return true;
     }
     uint32_t type = memoryType(d, requirements.memoryTypeBits, required, preferred);
@@ -776,7 +781,7 @@ bool vulkanMemoryAllocate(VulkanDevice* d, VkMemoryRequirements requirements, Vk
 void vulkanMemoryFree(VulkanDevice* d, VulkanMemory& memory) {
     if (memory.memory == VK_NULL_HANDLE)
         return;
-    if (memory.host)
+    if (memory.application)
         d->free(d->memoryContext, reinterpret_cast<uint64_t>(memory.memory), memory.offset);
     else
         d->vk.FreeMemory(d->device, memory.memory, nullptr);
@@ -1112,6 +1117,7 @@ void vulkanResourceFunctions(VulkanDevice* d) {
     d->textureDestroy = textureDestroy;
     d->textureDesc = textureDesc;
     d->textureStorageHandle = textureStorageHandle;
+    d->textureNative = textureNative;
     d->textureUpload = textureUpload;
     d->samplerCreate = samplerCreate;
 }

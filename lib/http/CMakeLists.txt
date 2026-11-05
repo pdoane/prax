@@ -11,7 +11,8 @@ if (PR_HTTP_BUILTIN)
     target_link_libraries(pr_http PRIVATE prax::url)
 endif()
 
-if (PR_DEVELOP)
+# Its tests run over the platform's sockets (lib/net).
+if (PR_DEVELOP AND PR_NET_SOCKETS)
     pr_net_tests(http_tests tests/test_http.cpp tests/test_http_c.c)
     target_link_libraries(http_tests PRIVATE prax::http prax::tls)
 endif()

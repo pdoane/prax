@@ -13,6 +13,9 @@
 #if defined(PR_MEDIA_HAS_BUILTIN)
 #include "pr/media_builtin.h"
 #endif
+#if defined(PR_MEDIA_HAS_WEB)
+#include "pr/media_web.h"
+#endif
 #if defined(PR_MEDIA_HAS_WINDOWS)
 #include "pr/media_windows.h"
 #endif
@@ -21,10 +24,10 @@ namespace pr_impl {
 
 namespace {
 
-constexpr PrStringView kBackendNames[PrMediaCodecBackend_Count] = {"default", "apple", "windows", "builtin"};
+constexpr PrStringView kBackendNames[PrMediaCodecBackend_Count] = {"default", "apple", "windows", "web", "builtin"};
 
-// The backends that the build has, the platform's own first, which Default creates the first of, and then Default, so
-// that a build without backends creates none.
+// The backends in the build, the platform's own first, and then Default. Default creates the first of these that it
+// can. Listing Default last means that a build without backends creates none.
 constexpr PrMediaCodecBackend kBuilt[] = {
 #if defined(PR_MEDIA_HAS_APPLE)
     PrMediaCodecBackend_Apple,
@@ -32,11 +35,33 @@ constexpr PrMediaCodecBackend kBuilt[] = {
 #if defined(PR_MEDIA_HAS_WINDOWS)
     PrMediaCodecBackend_Windows,
 #endif
+#if defined(PR_MEDIA_HAS_WEB)
+    PrMediaCodecBackend_Web,
+#endif
 #if defined(PR_MEDIA_HAS_BUILTIN)
     PrMediaCodecBackend_Builtin,
 #endif
     PrMediaCodecBackend_Default,
 };
+
+// Creates a codec by `backend`, which is not Default.
+PrMediaCodec* PR_NULLABLE create(PrMediaCodecBackend backend) {
+    switch (backend) {
+#if defined(PR_MEDIA_HAS_APPLE)
+        case PrMediaCodecBackend_Apple: return prMediaAppleCreate();
+#endif
+#if defined(PR_MEDIA_HAS_WINDOWS)
+        case PrMediaCodecBackend_Windows: return prMediaWindowsCreate();
+#endif
+#if defined(PR_MEDIA_HAS_WEB)
+        case PrMediaCodecBackend_Web: return prMediaWebCreate();
+#endif
+#if defined(PR_MEDIA_HAS_BUILTIN)
+        case PrMediaCodecBackend_Builtin: return prMediaBuiltinCreate();
+#endif
+        default: return nullptr;
+    }
+}
 
 } // namespace
 
@@ -65,18 +90,16 @@ bool prMediaCodecBackendIsBuilt(PrMediaCodecBackend backend) {
 }
 
 PrMediaCodec* PR_NULLABLE prMediaCodecCreate(PrMediaCodecBackend backend) {
-    switch (backend == PrMediaCodecBackend_Default ? kBuilt[0] : backend) {
-#if defined(PR_MEDIA_HAS_APPLE)
-        case PrMediaCodecBackend_Apple: return prMediaAppleCreate();
-#endif
-#if defined(PR_MEDIA_HAS_WINDOWS)
-        case PrMediaCodecBackend_Windows: return prMediaWindowsCreate();
-#endif
-#if defined(PR_MEDIA_HAS_BUILTIN)
-        case PrMediaCodecBackend_Builtin: return prMediaBuiltinCreate();
-#endif
-        default: return nullptr;
+    if (backend != PrMediaCodecBackend_Default)
+        return create(backend);
+    // Default takes the first backend whose constructor succeeds. The web's constructor succeeds only in a page.
+    for (PrMediaCodecBackend built : kBuilt) {
+        if (built == PrMediaCodecBackend_Default)
+            break;
+        if (PrMediaCodec* codec = create(built))
+            return codec;
     }
+    return nullptr;
 }
 
 void prMediaCodecDestroy(PrMediaCodec* PR_NULLABLE codec) {
@@ -131,7 +154,10 @@ bool prMediaDecoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* 
         out->current = true;
         return false;
     }
-    return codec->decoderFrame(codec, decoder, seconds, out);
+    if (!codec->decoderFrame(codec, decoder, seconds, out))
+        return false;
+    PR_ASSERT(out->image.handle != nullptr);
+    return true;
 }
 
 bool prMediaDecoderAudioStart(PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {

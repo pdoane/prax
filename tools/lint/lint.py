@@ -658,6 +658,8 @@ WRAPPERS = {
     "lib/app/backends/win32/src/win32_browser.cpp": {"windows.h", "wincodec.h", "wrl.h",
                                                      "WebView2EnvironmentOptions.h"},
     "lib/app/backends/win32/src/win32_text.cpp": {"windows.h"},
+    "lib/app/backends/web/src/app_web.cpp": {"emscripten/emscripten.h", "emscripten/eventloop.h",
+                                             "emscripten/html5.h"},
     "lib/gpu/src/gpu.cpp": {"stdlib.h"},
     "lib/gpu/backends/d3d12/src/gpu_d3d12.cpp": {"windows.h", "d3d12.h", "dxgi1_6.h", "stdio.h"},
     "lib/gpu/backends/vulkan/src/vulkan_internal.h": {"vulkan/vulkan_core.h"},
@@ -3286,8 +3288,9 @@ def main():
     every_source = code_files("lib/**/*.[ch]", "lib/**/*.cpp", "lib/**/*.mm", "examples/**/*.[ch]",
                               "examples/**/*.cpp", "examples/**/*.mm", "tools/**/*.[ch]", "tools/**/*.cpp",
                               "tools/**/*.mm")
-    # Shaders define names too, such as the macros of pr/gpu.slang that the C headers cite.
-    defined = defined_names(every_source + code_files("lib/**/*.slang"))
+    # Shaders define names too, such as the macros of pr/gpu.slang that the C headers cite, and so do the JavaScript
+    # libraries that the web's backends link, whose names the C++ and the headers cite.
+    defined = defined_names(every_source + code_files("lib/**/*.slang", "lib/**/*.js"))
     shared.defined = defined
     check_each(report, check_any_source, every_source)
     for path in sorted(glob.glob(os.path.join(ROOT, "tools", "**", "*.py"), recursive=True)):
@@ -3295,7 +3298,7 @@ def main():
             text = f.read()
         check_line_length(report, path, text, python_literals(text))
         check_sections(report, path, text)
-    for path in sorted(glob.glob(os.path.join(ROOT, "tools", "**", "*.js"), recursive=True)):
+    for path in sorted(glob.glob(os.path.join(ROOT, "tools", "**", "*.js"), recursive=True)) + code_files("lib/**/*.js"):
         with open(path, encoding="utf-8") as f:
             text = f.read()
         check_line_length(report, path, text, c_literals(text))

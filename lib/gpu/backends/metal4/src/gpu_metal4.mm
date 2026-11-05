@@ -36,7 +36,7 @@ typedef uint8_t HeldKind;
 
 struct Commands : GpuMetalCommands {
     id<MTL4CommandBuffer> buffer;                      // retained
-    id<MTL4CommandAllocator> PR_NULLABLE allocator;    // retained; null for the host's command buffer
+    id<MTL4CommandAllocator> PR_NULLABLE allocator;    // retained; null for the application's command buffer
     id<MTL4ArgumentTable> table;                       // retained
     id<MTL4ComputeCommandEncoder> PR_NULLABLE compute; // the encoder that takes dispatches and copies, retained
     id<MTL4CommandEncoder> PR_NULLABLE tail;           // the last encoder, open for barriers, retained
@@ -299,7 +299,7 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
         [c->table setAddress:d->resourceHeap.gpuAddress atIndex:GpuMetalBinding_Resources];
         [c->table setAddress:d->samplerHeap.gpuAddress atIndex:GpuMetalBinding_Samplers];
         if (options->native != nullptr) {
-            c->host = true;
+            c->native = true;
             c->buffer = [static_cast<id<MTL4CommandBuffer>>(options->native) retain];
         } else {
             if (c->allocator == nil)
@@ -424,13 +424,13 @@ void commandsGenerateMipmaps(PrGpuDevice* device, PrGpuCommands* commands, PrGpu
     barrier(c, PrGpuAccessFlag_CopyRead | PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_ShaderRead);
 }
 
-PrGpuHostStateFlags hostStateSync(PrGpuDevice*, PrGpuCommands* commands) {
+PrGpuNativeStateFlags nativeStateSync(PrGpuDevice*, PrGpuCommands* commands) {
     Commands* c = commandsFrom(commands);
     @autoreleasepool {
         if (c->pass == nullptr)
             endTail(c);
     }
-    PrGpuHostStateFlags changed = c->changed;
+    PrGpuNativeStateFlags changed = c->changed;
     c->changed = 0;
     return changed;
 }
@@ -440,7 +440,7 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     Commands* c = commandsFrom(commands);
     @autoreleasepool {
         endTail(c);
-        if (!c->host)
+        if (!c->native)
             [c->buffer endCommandBuffer];
         uint32_t doneCount = c->dones.count;
         GpuMetalDone* dones = gpuMetalDonesCopy(c);
@@ -472,18 +472,35 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Passes
 
+// A texture's native object is its id<MTLTexture>.
+bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind, void* out) {
+    *static_cast<void**>(out) = gpuMetalTexture(gpuMetalDeviceFrom(device), texture.id);
+    return true;
+}
+
+// Binds the device's argument table in the pass's encoder, and, in a pass of the device's own, the viewport and scissor
+// over the whole attachments.
+void passBind(Commands* c, GpuMetalPass* pass) {
+    id<MTL4RenderCommandEncoder> encoder = passEncoder(pass);
+    [encoder setArgumentTable:c->table atStages:MTLRenderStageVertex | MTLRenderStageFragment];
+    if (!pass->native) {
+        [encoder setViewport:MTLViewport{0, 0, double(pass->extent.x), double(pass->extent.y), 0, 1}];
+        [encoder setScissorRect:MTLScissorRect{0, 0, pass->extent.x, pass->extent.y}];
+    }
+}
+
 PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     Commands* c = commandsFrom(commands);
     @autoreleasepool {
         GpuMetalPass* pass = allocZeroed<GpuMetalPass>();
         pass->commands = commands;
-        if (desc->host != nullptr) {
-            pass->host = true;
-            pass->formats = desc->hostFormats;
-            pass->extent = desc->hostExtent;
-            pass->encoder = [static_cast<id<MTL4RenderCommandEncoder>>(desc->host) retain];
-            c->changed |= PrGpuHostStateFlag_Bindings;
+        if (desc->native != nullptr) {
+            pass->native = true;
+            pass->formats = desc->nativeFormats;
+            pass->extent = desc->nativeExtent;
+            pass->encoder = [static_cast<id<MTL4RenderCommandEncoder>>(desc->native) retain];
+            c->changed |= PrGpuNativeStateFlag_Bindings;
         } else {
             MTL4RenderPassDescriptor* rp = [[MTL4RenderPassDescriptor new] autorelease];
             gpuMetalPassAttachmentsFill(d, rp, desc, pass);
@@ -492,14 +509,25 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
             if (desc->name.size != 0)
                 [pass->encoder setLabel:gpuMetalString(desc->name)];
         }
-        id<MTL4RenderCommandEncoder> encoder = passEncoder(pass);
-        [encoder setArgumentTable:c->table atStages:MTLRenderStageVertex | MTLRenderStageFragment];
-        if (!pass->host) {
-            [encoder setViewport:MTLViewport{0, 0, double(pass->extent.x), double(pass->extent.y), 0, 1}];
-        }
+        passBind(c, pass);
         c->pass = pass;
         c->pipeline = 0;
         return pass;
+    }
+}
+
+// Hands the pass's encoder to a native draw, then binds the device's argument table again, and leaves the pass's
+// pipeline unset. An application's pass reports every state as changed, since the native draw may have changed any of
+// it.
+void passNativeDraw(PrGpuDevice*, PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
+    Commands* c = commandsFrom(pass->commands);
+    @autoreleasepool {
+        PrGpuMetal4NativePass native{.encoder = pass->encoder, .commandBuffer = c->buffer};
+        draw(context, &native);
+        passBind(c, pass);
+        c->pipeline = 0;
+        gpuMetalPassChanged(pass, PrGpuNativeStateFlags(~0u));
     }
 }
 
@@ -507,7 +535,7 @@ void passEnd(PrGpuDevice*, PrGpuPass* handle) {
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     Commands* c = static_cast<Commands*>(pass->commands);
     c->pass = nullptr;
-    if (pass->host) {
+    if (pass->native) {
         [pass->encoder release];
     } else {
         // The pass's encoder stays open for the barriers after it.
@@ -631,15 +659,18 @@ PrStatus prGpuMetal4Create(const PrGpuMetal4Options* PR_NULLABLE options, PrGpuD
         d->commandsBufferBarrier = commandsBufferBarrier;
         d->commandsTextureBarrier = commandsTextureBarrier;
         d->commandsGlobalBarrier = commandsGlobalBarrier;
-        d->hostStateSync = hostStateSync;
+        d->nativeStateSync = nativeStateSync;
         d->passBegin = passBegin;
         d->passEnd = passEnd;
+        d->passNativeDraw = passNativeDraw;
+        d->textureNative = textureNative;
         d->passDraw = passDraw;
         d->passDrawIndexed = passDrawIndexed;
         d->passDrawIndirect = passDrawIndirect;
         d->passDrawIndexedIndirect = passDrawIndexedIndirect;
         d->swapChainAcquire = swapChainAcquire;
         d->info.backend = "Metal 4";
+        d->nativeKinds = 1u << PrGpuNativeKind_Metal4;
         *out = d;
         return PrStatus_Ok;
     }
@@ -655,10 +686,6 @@ void* prGpuMetal4Queue(const PrGpuDevice* device) {
 
 void* prGpuMetal4ResidencySet(const PrGpuDevice* device) {
     return gpuMetalDeviceFrom(device)->residency;
-}
-
-void* prGpuMetal4Texture(const PrGpuDevice* device, PrGpuTexture texture) {
-    return gpuMetalTexture(gpuMetalDeviceFrom(device), texture.id);
 }
 
 PrStatus prGpuMetal4TextureWrap(PrGpuDevice* device, void* texture, PrGpuTextureUsageFlags usage, PrGpuTexture* out) {

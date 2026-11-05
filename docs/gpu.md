@@ -10,13 +10,15 @@ each backend runs it on one graphics API.
 | `metal4` | Metal 4, kept for experiments | macOS (`PR_GPU_METAL4`) |
 | `d3d12` | Direct3D 12, shader model 6.6, enhanced barriers | Windows (`PR_GPU_D3D12`) |
 | `vulkan` | Vulkan 1.3, with mutable descriptors and push descriptors | Linux and Android (`PR_GPU_VULKAN`) |
+| `memory` | memory, with no shaders, for renderers that draw on the CPU | every platform (`PR_GPU_MEMORY`) |
+| `canvas2d` | memory and a web page's canvases, with no shaders | the web (`PR_GPU_CANVAS2D`) |
 
-The library holds the backends that the build turns on, and builds with none of them for a host that brings its own
-(`pr/gpu_backend.h`). `prGpuDeviceCreate` creates a device by a backend, or by `PrGpuBackend_Default`: the platform's
-own if the build has it. A backend's header creates one over the host's native device and queue (`pr/gpu_metal.h`,
-`pr/gpu_metal4.h`, `pr/gpu_d3d12.h`, `pr/gpu_vulkan.h`). The environment variable `PR_GPU_BACKEND` (`metal`, `metal4`,
-`d3d12` or `vulkan`) chooses the backend that Default creates, so a program and its tests run on any backend that the
-build has.
+The library holds the backends that the build turns on. It builds with none of them for an application that brings
+its own (`pr/gpu_backend.h`). `prGpuDeviceCreate` creates a device by a backend, or by `PrGpuBackend_Default`, which
+tries the build's backends that the system supports in order: the platform's own first, and the memory backend last.
+The environment variable `PR_GPU_BACKEND` (such as `metal` or `vulkan`) chooses the backend that Default creates, so a
+program and its tests run on any backend in the build. A backend's header creates a device over the application's
+native device and queue (`pr/gpu_metal.h`, `pr/gpu_metal4.h`, `pr/gpu_d3d12.h`, `pr/gpu_vulkan.h`).
 
 ## The model
 
@@ -44,7 +46,7 @@ a 3D renderer needs it.
 - **Lifetimes need no thought.** An object may be destroyed as soon as the work that uses it is recorded. The device
   keeps it until every command buffer that began before the destruction is done.
 - **One timeline.** Each submission returns a fence, and fences rise in the order of submission. A command buffer that
-  records into the host's native one is submitted through the device too, so the host never signals anything.
+  records into the application's native one is submitted through the device too, so the application never signals anything.
 - **Uploads are unbounded and ordered.** `prGpuBufferUpload` and `prGpuTextureUpload` take any amount of
   data, which the device stages and copies in a command buffer of its own ahead of the next submission. Several
   uploads to one resource land as if copied in order.
@@ -52,7 +54,7 @@ a 3D renderer needs it.
   reclaimed once its work completes, and grows as recording needs it. Running out of memory loses the device, which
   hosts already handle.
 - **Device loss** is a state, not an error path. A lost device refuses new work, completes every fence, and reads back
-  zeros. The host destroys every object and makes them again on a new device.
+  zeros. The application destroys every object and makes them again on a new device.
 
 ## Shaders
 
@@ -80,7 +82,7 @@ undefined value, so a renderer splits such draws, as `lib/draw`'s fragment rende
 A swap chain presents to an application's surface (`pr/surface.h`), and its device chooses the format and color space
 of its textures for what the swap chain shows. SDR is 8-bit sRGB everywhere. For HDR, Metal presents extended sRGB in
 half floats, Direct3D 12 presents HDR10 to a display in HDR mode and scRGB elsewhere, and Vulkan presents scRGB where
-the surface takes it and HDR10 where it takes that. A host converts its colors for
+the surface takes it and HDR10 where it takes that. An application converts its colors for
 what `prGpuSwapChainInfo` reports, as the examples' presenter does.
 
 Without `PrGpuSwapChainFlag_Threaded`, a frame presents within the window's display transaction, so a window that is
@@ -89,21 +91,53 @@ resize within them waits for no work and allocates nothing.
 
 ## Embedding
 
-A host engine brings its own device, and Prax's renderers run inside its frames. A device is made over the host's
-device and queue. A command buffer begins over the host's native command buffer (`PrGpuCommandsOptions::native`), and a
-pass can wrap a pass that the host has open (`PrGpuPassDesc::host`). Whoever begins a pass ends it. The device's work
-changes the host's pipeline, root data and dynamic state. Between the device's work and its own, the host syncs
-(`prGpuHostStateSync`), which ends what the device has open outside a pass, such as a Metal encoder, and returns what
-the device changed, which the host sets again or marks stale in its own cache. Each backend's header says which native
-objects these are. On Direct3D 12, the
-device's heaps are bound on every command list that it records into, and a pass of the host's has them bound. On
-Vulkan, the host shares its bindless set, its pipeline layout and its memory with the device, so that nothing is bound
-again between the host's work and the device's.
+An application engine brings its own device, and Prax's renderers run inside its frames. A device is made over the
+application's device and queue. A command buffer begins over the application's native command buffer
+(`PrGpuCommandsOptions::native`), and a pass can wrap a pass that the application has open (`PrGpuPassDesc::native`).
+Whoever begins a pass ends it. The device's work changes the application's pipeline, root data and dynamic state.
+Between the device's work and its own, the application syncs (`prGpuNativeStateSync`), which ends what the device has
+open outside a pass, such as a Metal encoder, and returns what the device changed, which the application sets again or
+marks stale in its own cache. Each backend's header says which native objects these are. On Direct3D 12, the device's
+heaps are bound on every command list that it records into, and a pass of the application's has them bound. On Vulkan,
+the application shares its bindless set, its pipeline layout and its memory with the device, so that nothing is bound
+again between the application's work and the device's.
+
+## Native objects
+
+Code beneath lib/gpu reaches a device's work through native objects. This is the reverse of embedding. A device names
+the kinds of native object that it hands out (`prGpuDeviceHasNative`), such as Metal's encoders and textures, a
+web page's canvases, or texels in memory. A native draw (`prGpuPassNativeDraw`) gets the pass's object of its kind,
+such as the pass's Metal encoder or its attachment's canvas. `prGpuTextureNative` gets a texture's object.
+
+A native draw is the same handoff as an application's sync, made within a pass. After the draw, the device binds its own
+state again, and the pass's pipeline and dynamic state are unset. A GPU backend calls the draw while it records it. A
+memory or canvas device runs work when it is submitted, so it calls the draw while the draw's work runs, and hands out
+its textures' objects only then. A device that hands out several kinds keeps them in step, so that work through each
+kind sees what the others drew. lib/draw's CPU and Canvas 2D renderers are native draws.
+
+## Imported images
+
+A device makes a texture of an image that was made outside lib/gpu (`prGpuTextureImport`), such as a frame that a video
+decoder made, or one that a camera or another API drew. The caller writes the same code on every device. A device
+reports the kinds of image that it imports in place, without a copy (`prGpuDeviceImportsInPlace`): CVPixelBuffers
+backed by IOSurfaces on Metal, and a web page's images, such as a VideoFrame, on a canvas device. For an image in place,
+the device takes a reference of its own, and drops it once the texture is destroyed and the work that read it is done.
+It then tells the importer, which may recycle the image. A device copies an image of any other kind into a new texture
+if the build can read the image's texels, and tells the importer at once.
+
+lib/media gives each decoded frame as an image to import (`PrGpuImport`). It is the backend's own image if the backend
+has one, and otherwise the frame's pixels in memory. So a frame reaches the screen without a copy on a device that
+imports the backend's images in place. Code that draws on the CPU reads an image's texels with `prGpuImportLock`,
+which needs no device.
+
+An imported image must hold what it shows when it is imported. A producer whose GPU work may still be writing the image
+will pass a point on its own timeline for the device to wait for, as an event of the native API and a value, once a
+producer needs it.
 
 ## Testing
 
 `gpu_tests` runs every test on each backend that the build has and the system has a device for, with validation, and
-tests each backend's embedding with the same shaders: recording into the host's command buffers and drawing in its
+tests each backend's embedding with the same shaders: recording into the application's command buffers and drawing in its
 passes. It runs under Metal's API validation, which it turns on with `MTL_DEBUG_LAYER` unless the environment sets it,
 and tests a window's swap chain on Vulkan and a view's on Metal. The renderers'
 tests compare their images with the `cpu` backend's ([draw.md](draw.md)), on the backend that `PR_GPU_BACKEND` chooses.

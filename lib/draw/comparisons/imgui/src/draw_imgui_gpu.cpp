@@ -25,7 +25,6 @@ struct CachedTexture {
 };
 
 struct ImGuiGpu : ImGuiBackend {
-    PrGpuDevice* device;
     RawArray<CachedTexture> textures;
 };
 

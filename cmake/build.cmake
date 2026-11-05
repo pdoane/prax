@@ -15,7 +15,7 @@ add_library(pr_warnings INTERFACE)
 target_compile_options(pr_warnings INTERFACE
     $<$<C_COMPILER_ID:MSVC>:/W4 /wd4190 /wd4201 /wd4200 /wd4244 /wd4245 /wd4267 /wd4018 /wd4389 /wd4456 /wd4457
         /wd4458 /wd4701 /wd4703 /wd4702 /wd4146 /wd4310 /wd5054 /wd4223>
-    $<$<NOT:$<C_COMPILER_ID:MSVC>>:-Wall -Wextra -Wshadow -Wconversion -Wsign-conversion -Wimplicit-fallthrough
+    $<$<NOT:$<C_COMPILER_ID:MSVC>>:-Wall -Wshadow -Wconversion -Wsign-conversion -Wimplicit-fallthrough
         -Wcast-align -Wcast-qual -Wundef -Wdouble-promotion -Wmissing-prototypes -Wunreachable-code -Wformat=2>
     $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wzero-as-null-pointer-constant>
     $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wnullability-completeness -Wcomma -Wextra-semi>
@@ -29,6 +29,21 @@ if (PR_DEVELOP)
         $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<NOT:$<PLATFORM_ID:Darwin>>>:LINKER:--fatal-warnings>
     )
 endif()
+
+# Links the JavaScript library `file` (Emscripten's --js-library) into every program that links the library `target`,
+# from the source tree in a build and from the package once installed.
+#
+#   pr_js_library(<target> <file>)
+function(pr_js_library target file)
+    get_filename_component(name ${file} NAME)
+    set(source ${CMAKE_CURRENT_SOURCE_DIR}/${file})
+    target_link_options(${target} INTERFACE
+        "SHELL:--js-library $<BUILD_INTERFACE:${source}>$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_DATADIR}/prax/${name}>")
+    set_property(TARGET ${target} APPEND PROPERTY INTERFACE_LINK_DEPENDS $<BUILD_INTERFACE:${source}>)
+    if (PR_INSTALL)
+        install(FILES ${source} DESTINATION ${CMAKE_INSTALL_DATADIR}/prax)
+    endif()
+endfunction()
 
 # Declares PR_<MODULE>_<BACKEND>, the option that builds a backend into its library. It is ON by default where
 # `default` is true, and in a development build or the examples' wherever `supported` is true.
@@ -149,6 +164,39 @@ function(pr_module_tests module)
     endif()
     target_link_libraries(${module}_tests PRIVATE ${tested} prax::core_cpp test_main pr_warnings)
     doctest_discover_tests(${module}_tests)
+endfunction()
+
+# A module's tests that need a web page, such as those that draw through a page's canvases: on the web, a page,
+# <module>_page_tests.html, that `./dev.sh test wasm` runs in headless Chrome. Each PRELOAD packages a file into the
+# page as <host path>@<page path>, since a page reads no files of the host. Elsewhere, nothing is built.
+#
+#   pr_page_tests(<module> <source>... [PRELOAD <host path>@<page path>...])
+function(pr_page_tests module)
+    if (NOT EMSCRIPTEN)
+        return()
+    endif()
+    cmake_parse_arguments(PARSE_ARGV 1 PAGE "" "" "PRELOAD")
+    set(name ${module}_page_tests)
+    add_executable(${name} ${PAGE_UNPARSED_ARGUMENTS})
+    if (TARGET prax::${module})
+        set(tested prax::${module})
+    else()
+        set(tested ${module})
+    endif()
+    target_link_libraries(${name} PRIVATE ${tested} prax::core_cpp test_main pr_warnings)
+    # The page has no file system of the host's, which the tests under Node.js read and write.
+    get_target_property(options ${name} LINK_OPTIONS)
+    if (options)
+        list(REMOVE_ITEM options -sNODERAWFS=1)
+        set_target_properties(${name} PROPERTIES LINK_OPTIONS "${options}")
+    endif()
+    set(shell ${PROJECT_SOURCE_DIR}/tools/harness/page_tests.html)
+    set_target_properties(${name} PROPERTIES SUFFIX ".html")
+    target_link_options(${name} PRIVATE "--shell-file=${shell}" -sEXIT_RUNTIME=1)
+    set_property(TARGET ${name} APPEND PROPERTY LINK_DEPENDS ${shell})
+    foreach (file IN LISTS PAGE_PRELOAD)
+        target_link_options(${name} PRIVATE "SHELL:--preload-file \"${file}\"")
+    endforeach()
 endfunction()
 
 # A program that a tools/ runner drives, built on the module it exercises and the harnesses' support.

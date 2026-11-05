@@ -52,7 +52,7 @@ struct PrGpuShaderLibrary {
 // The start of every command buffer's state.
 struct PrGpuCommands {
     PrGpuDevice* device;
-    bool host;                      // records into the host's native command buffer
+    bool native;                    // records into the application's native command buffer
     bool inPass;
     bool submitted;
 };
@@ -62,7 +62,7 @@ struct PrGpuPass {
     PrGpuCommands* commands;
     PrGpuAttachmentFormats formats;
     PrUVec2 extent;
-    bool host;                      // records into a pass that the host has open
+    bool native;                    // records into a pass that the application has open
 };
 
 // The start of every swap chain's state.
@@ -100,6 +100,21 @@ struct PrGpuDevice {
     uint32_t (*textureStorageHandle)(const PrGpuDevice* device, PrGpuTexture texture);
     void (*textureUpload)(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureRegion* region,
         const void* data, uint32_t rowBytes, uint32_t layerBytes);
+
+    // Set by a device that imports images in place (prGpuDeviceImportsInPlace), and null on any other. Called only with
+    // an image of a kind that the device imports in place.
+    PrStatus (*PR_NULLABLE textureImport)(PrGpuDevice* device, const PrGpuImport* image,
+        PrGpuReleaseFn PR_NULLABLE release, void* PR_NULLABLE context, PrGpuTexture* out);
+
+    // Set by a device that hands out PrGpuNativeKind_Pixels, and null on any other.
+    PrStatus (*PR_NULLABLE textureCreateOverPixels)(PrGpuDevice* device, PrGpuFormat format, PrPixels pixels,
+        PrGpuTextureUsageFlags usage, PrGpuTexture* out);
+
+    // Set by a device that hands out native objects (prGpuDeviceHasNative), and null on any other. Called only with a
+    // kind that the device hands out.
+    bool (*PR_NULLABLE textureNative)(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind kind, void* out);
+    void (*PR_NULLABLE passNativeDraw)(PrGpuDevice* device, PrGpuPass* pass, PrGpuNativeKind kind, PrGpuNativeDrawFn draw,
+        void* PR_NULLABLE context);
 
     // Creates the sampler for a description that the device has not seen. pr/gpu.h keeps one sampler for each.
     PrStatus (*samplerCreate)(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuSampler* out);
@@ -152,7 +167,7 @@ struct PrGpuDevice {
         PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after);
     void (*commandsGlobalBarrier)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuAccessFlags before,
         PrGpuAccessFlags after);
-    PrGpuHostStateFlags (*hostStateSync)(PrGpuDevice* device, PrGpuCommands* commands);
+    PrGpuNativeStateFlags (*nativeStateSync)(PrGpuDevice* device, PrGpuCommands* commands);
 
     PrGpuPass* PR_NONNULL (*PR_NONNULL passBegin)(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc);
     void (*passEnd)(PrGpuDevice* device, PrGpuPass* pass);
@@ -179,6 +194,8 @@ struct PrGpuDevice {
 
     PrGpuShaderTarget shaderTarget;               // the code that the backend runs
     PrGpuDeviceInfo info;                         // filled in by the backend
+    uint32_t nativeKinds;                         // bit k is set if the device hands out PrGpuNativeKind k
+    uint32_t inPlaceImports;                      // bit k is set if the device imports PrGpuImportKind k in place
     struct PrGpuDeviceShared* PR_NULLABLE shared; // pr/gpu.h's own state of the device, made on first use
 };
 

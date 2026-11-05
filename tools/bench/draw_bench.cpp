@@ -134,7 +134,7 @@ struct BenchTarget {
 // same renderer.
 Times render(PrDrawRenderer* renderer, PrDrawFrame* PR_NULLABLE& frame, BenchTarget& target, PrColor color,
         const std::vector<uint8_t>& background, const PrDrawList* list, PrStatus* status) {
-    if (!prDrawRendererIsOnDevice(renderer)) {
+    if (prDrawRendererDevice(renderer) != target.device) {
         target.pixels = background;
         PrPixels into{target.pixels.data(), size_t(target.width) * 4, {target.width, target.height}};
         double started = nowMillis();
@@ -297,8 +297,8 @@ int main(int argc, char** argv) {
                     asked = asked || std::strcmp(n, config.name) == 0;
                 if (!asked)
                     continue;
-                bool onDevice = prDrawRendererIsOnDevice(config.renderer);
                 for (BenchTarget& target : targets) {
+                    bool onDevice = prDrawRendererDevice(config.renderer) == target.device;
                     if (!onDevice && target.output.format != PrPixelFormat_Bgra8)
                         continue;
                     PrDrawFrame* frame = nullptr;

@@ -25,6 +25,8 @@ PrStringView domNamedNamespaceUrl(DomNamespaceId space);
 // already holds as many namespaces as a DomNamespaceId can name.
 bool domNamespaceFromUrl(PrDomDocument* document, PrStringView url, DomNamespaceId* out);
 
+// The nodes' sizes where a pointer is 64 bits.
+#if UINTPTR_MAX == UINT64_MAX
 static_assert(sizeof(DomAttr) == 168);
 static_assert(sizeof(DomElement) == 136);
 static_assert(sizeof(DomText) == 128);
@@ -32,6 +34,7 @@ static_assert(sizeof(DomComment) == 128);
 static_assert(sizeof(DomProcessingInstruction) == 160);
 static_assert(sizeof(DomDocumentType) == 192);
 static_assert(sizeof(DomDocument) == 616);
+#endif
 
 // Returns the fragment that a template element holds (html/#the-template-element), or null for any other element.
 inline PrDomNode* PR_NULLABLE domElementContents(const PrDomElement* element) {

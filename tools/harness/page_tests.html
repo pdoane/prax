@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- The page that runs a module's page tests (pr_page_tests) in a browser. The program's output goes to the console, and
+     the last message is "pr-page-tests-exit" and the program's exit status, which the runner waits for. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prax page tests</title>
+</head>
+<body>
+<!-- The page's query holds the program's arguments, as in examples/shell.html. -->
+<script>
+var Module = {
+    arguments: [],
+    print: text => console.log(text),
+    printErr: text => console.error(text),
+    onExit: status => console.log("pr-page-tests-exit " + status),
+    onAbort: reason => console.log("pr-page-tests-exit 1 " + reason),
+};
+for (const [name, value] of new URLSearchParams(location.search)) {
+    if (name !== "arg")
+        Module.arguments.push(name);
+    if (value !== "")
+        Module.arguments.push(value);
+}
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>

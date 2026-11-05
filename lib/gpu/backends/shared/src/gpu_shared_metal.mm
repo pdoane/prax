@@ -50,7 +50,17 @@ void setHeapEntry(id<MTLBuffer> heap, uint32_t slot, uint64_t value) {
     static_cast<uint64_t*>(heap.contents)[slot] = value;
 }
 
-// Frees a resource slot and what it holds. The caller holds the mutex.
+// Frees a resource slot and what it holds. The caller holds the mutex. For an imported texture, releases the texture's
+// references to its image, and tells the importer.
+void releaseImage(GpuMetalResource& r) {
+    if (r.imageTexture != nullptr)
+        CFRelease(r.imageTexture);
+    if (r.image != nullptr)
+        CVPixelBufferRelease(r.image);
+    if (r.release != nullptr)
+        r.release(r.releaseContext);
+}
+
 void freeResource(GpuMetalDevice* d, uint32_t slot) {
     GpuMetalResource& r = d->resources[slot];
     if (r.object != nil) {
@@ -58,6 +68,7 @@ void freeResource(GpuMetalDevice* d, uint32_t slot) {
         d->residencyDirty = true;
         [r.object release];
     }
+    releaseImage(r);
     r = GpuMetalResource{};
     setHeapEntry(d->resourceHeap, slot, 0);
     d->freeResources.push(slot);
@@ -449,7 +460,7 @@ void passSetViewport(PrGpuDevice*, PrGpuPass* handle, PrRect viewport, float min
     [pass->encoder setViewport:MTLViewport{double(viewport.left), double(viewport.top),
         double(viewport.right - viewport.left),
         double(viewport.bottom - viewport.top), double(minDepth), double(maxDepth)}];
-    gpuMetalPassChanged(pass, PrGpuHostStateFlag_Viewport);
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_Viewport);
 }
 
 void passSetScissor(PrGpuDevice*, PrGpuPass* handle, PrIRect scissor) {
@@ -465,19 +476,19 @@ void passSetScissor(PrGpuDevice*, PrGpuPass* handle, PrIRect scissor) {
         bottom = top;
     [pass->encoder setScissorRect:MTLScissorRect{NSUInteger(left), NSUInteger(top), NSUInteger(right - left),
         NSUInteger(bottom - top)}];
-    gpuMetalPassChanged(pass, PrGpuHostStateFlag_Scissor);
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_Scissor);
 }
 
 void passSetBlendConstant(PrGpuDevice*, PrGpuPass* handle, PrColor constant) {
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     [pass->encoder setBlendColorRed:constant.r green:constant.g blue:constant.b alpha:constant.a];
-    gpuMetalPassChanged(pass, PrGpuHostStateFlag_BlendConstant);
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_BlendConstant);
 }
 
 void passSetStencilReference(PrGpuDevice*, PrGpuPass* handle, uint8_t reference) {
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     [pass->encoder setStencilReferenceValue:reference];
-    gpuMetalPassChanged(pass, PrGpuHostStateFlag_StencilReference);
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_StencilReference);
 }
 
 void passSetIndexBuffer(PrGpuDevice*, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, bool wide) {
@@ -1038,7 +1049,7 @@ void gpuMetalCommandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, P
     if (GpuMetalPass* pass = c->pass) {
         PR_ASSERT(!p.compute);
         gpuMetalRenderPipelineSet(p, pass->encoder);
-        gpuMetalPassChanged(pass, PrGpuHostStateFlag_Pipeline);
+        gpuMetalPassChanged(pass, PrGpuNativeStateFlag_Pipeline);
     }
 }
 
@@ -1115,8 +1126,8 @@ void gpuMetalEncodeTextureCopy(id encoder, const GpuMetalTextureCopy& copy) {
     }
 }
 
-void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuHostStateFlags flags) {
-    if (pass->host)
+void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags) {
+    if (pass->native)
         gpuMetalCommandsFrom(pass->commands)->changed |= flags;
 }
 
@@ -1190,6 +1201,8 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
     d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc |
         PrGpuFeatureFlag_OrderedTargetReads |
         (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0);
+    d->inPlaceImports = 1u << PrGpuImportKind_CoreVideo;
+    d->textureImport = gpuMetalTextureImport;
     d->info.maxTextureSize = 16384;
     d->info.maxResourceHandles = kGpuMetalMaxResources - 1;
     d->info.maxSamplerHandles = kGpuMetalMaxSamplers - 1;
@@ -1205,8 +1218,10 @@ void gpuMetalDeviceReset(GpuMetalDevice* d) {
     gpuMetalCollect(d);
     for (uint32_t i = 0; i < d->held.count; ++i)
         [d->held.data[i].object release];
-    for (uint32_t i = 1; i < d->nextResource; ++i)
+    for (uint32_t i = 1; i < d->nextResource; ++i) {
         [d->resources[i].object release];
+        releaseImage(d->resources[i]);
+    }
     for (uint32_t i = 1; i < d->nextSampler; ++i)
         [d->samplers[i] release];
     for (uint32_t i = 1; i < d->nextPipeline; ++i) {
@@ -1231,6 +1246,8 @@ void gpuMetalDeviceReset(GpuMetalDevice* d) {
     [d->resourceHeap release];
     [d->samplerHeap release];
     [d->residency release];
+    if (d->textureCache != nullptr)
+        CFRelease(d->textureCache);
     [d->queue release];
     [d->device release];
     prMutexReset(&d->mutex);
@@ -1253,6 +1270,42 @@ PrStatus gpuMetalTextureWrap(GpuMetalDevice* d, id<MTLTexture> texture, PrGpuTex
     };
     out->id = slot;
     return PrStatus_Ok;
+}
+
+PrStatus gpuMetalTextureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuReleaseFn PR_NULLABLE release,
+        void* PR_NULLABLE context, PrGpuTexture* out) {
+    GpuMetalDevice* d = gpuMetalDeviceFrom(device);
+    *out = PrGpuTexture{};
+    CVPixelBufferRef buffer = static_cast<CVPixelBufferRef>(const_cast<void*>(image->handle));
+    if (CVPixelBufferGetPixelFormatType(buffer) != kCVPixelFormatType_32BGRA || CVPixelBufferIsPlanar(buffer) ||
+            CVPixelBufferGetIOSurface(buffer) == nullptr)
+        return PrStatus_NotSupported;
+    @autoreleasepool {
+        prMutexLock(&d->mutex);
+        if (d->textureCache == nullptr)
+            CVMetalTextureCacheCreate(kCFAllocatorDefault, nullptr, d->device, nullptr, &d->textureCache);
+        CVMetalTextureCacheRef cache = d->textureCache;
+        prMutexUnlock(&d->mutex);
+        if (cache == nullptr)
+            return PrStatus_NotSupported;
+        CVMetalTextureRef made = nullptr;
+        size_t width = CVPixelBufferGetWidth(buffer);
+        size_t height = CVPixelBufferGetHeight(buffer);
+        if (CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, cache, buffer, nullptr,
+                MTLPixelFormatBGRA8Unorm, width, height, 0, &made) != kCVReturnSuccess)
+            return PrStatus_NotSupported;
+        PrStatus status = gpuMetalTextureWrap(d, CVMetalTextureGetTexture(made), PrGpuTextureUsageFlag_Sampled, out);
+        if (status != PrStatus_Ok) {
+            CFRelease(made);
+            return status;
+        }
+        GpuMetalResource& r = d->resources[out->id];
+        r.image = CVPixelBufferRetain(buffer);
+        r.imageTexture = made;
+        r.release = release;
+        r.releaseContext = context;
+        return PrStatus_Ok;
+    }
 }
 
 } // namespace pr_impl

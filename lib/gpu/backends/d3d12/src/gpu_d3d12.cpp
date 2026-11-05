@@ -242,7 +242,7 @@ struct D3d12SwapChain;
 struct D3d12Commands : PrGpuCommands {
     uint64_t serial;                        // the order in which command buffers began
     D3d12Pass* PR_NULLABLE pass;            // the open pass
-    D3d12List list;                         // a null allocator for the host's command list
+    D3d12List list;                         // a null allocator for the application's command list
     D3d12AttachmentHeaps attachments;
     uint32_t pipeline;                         // the pipeline of dispatches and draws
     RawArray<D3d12Block> blocks;               // the blocks of the stream
@@ -256,7 +256,7 @@ struct D3d12Commands : PrGpuCommands {
     uint32_t pushWords;
     D3D12_GPU_VIRTUAL_ADDRESS uniforms;
     D3d12DirtyFlags dirty;
-    PrGpuHostStateFlags changed;            // the state that the device changed since the last sync
+    PrGpuNativeStateFlags changed;            // the state that the device changed since the last sync
 
     // The texture that a pipeline that reads its target reads a copy of the target from, or zero.
     PrGpuTexture targetCopy;
@@ -1736,7 +1736,7 @@ void bindRoot(D3d12Device* d, D3d12Commands* c) {
     list->SetGraphicsRoot32BitConstant(D3d12Root_TargetCopy, 0, 0);
     list->SetComputeRoot32BitConstant(D3d12Root_TargetCopy, 0, 0);
     c->dirty = D3d12DirtyFlag_All;
-    c->changed |= PrGpuHostStateFlag_Bindings;
+    c->changed |= PrGpuNativeStateFlag_Bindings;
 }
 
 // Returns attachment heaps from the free ones, or new, or null heaps if the device cannot make them. The caller holds
@@ -1784,13 +1784,13 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
     }
     D3d12Commands* c = allocZeroed<D3d12Commands>();
     c->device = device;
-    c->host = options->native != nullptr;
+    c->native = options->native != nullptr;
     c->list = list;
     c->attachments = heaps;
     c->serial = d->serial++;
     d->inFlight.push(D3d12InFlight{c->serial, 0});
     c->timestamp = kTimestampPairs;
-    if (!c->host && d->freeTimestamps.count != 0) {
+    if (!c->native && d->freeTimestamps.count != 0) {
         c->timestamp = d->freeTimestamps.last();
         d->freeTimestamps.pop();
     }
@@ -1867,7 +1867,7 @@ void flushGraphicsRoot(D3d12Commands* c) {
     if (c->dirty & D3d12DirtyFlag_GraphicsPush) {
         if (c->pushWords != 0)
             list->SetGraphicsRoot32BitConstants(D3d12Root_Push, c->pushWords, c->push, 0);
-        c->changed |= PrGpuHostStateFlag_Push;
+        c->changed |= PrGpuNativeStateFlag_Push;
     }
     if (c->dirty & D3d12DirtyFlag_GraphicsUniforms)
         list->SetGraphicsRootConstantBufferView(D3d12Root_Uniforms, c->uniforms);
@@ -1879,7 +1879,7 @@ void flushComputeRoot(D3d12Commands* c) {
     ID3D12GraphicsCommandList7* list = c->list.list;
     if ((c->dirty & D3d12DirtyFlag_ComputePush) && c->pushWords != 0) {
         list->SetComputeRoot32BitConstants(D3d12Root_Push, c->pushWords, c->push, 0);
-        c->changed |= PrGpuHostStateFlag_Push;
+        c->changed |= PrGpuNativeStateFlag_Push;
     }
     if (c->dirty & D3d12DirtyFlag_ComputeUniforms)
         list->SetComputeRootConstantBufferView(D3d12Root_Uniforms, c->uniforms);
@@ -1894,7 +1894,7 @@ void commandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipe
         PR_ASSERT(!p.compute);
         c->list.list->SetPipelineState(p.state);
         c->list.list->IASetPrimitiveTopology(p.topology);
-        c->changed |= PrGpuHostStateFlag_Pipeline;
+        c->changed |= PrGpuNativeStateFlag_Pipeline;
     }
 }
 
@@ -1903,7 +1903,7 @@ void commandsDispatch(PrGpuDevice* device, PrGpuCommands* commands, PrGpuExtent 
     const D3d12Pipeline& p = d3d12Of(device)->pipelines[c->pipeline];
     PR_ASSERT(p.compute);
     c->list.list->SetPipelineState(p.state);
-    c->changed |= PrGpuHostStateFlag_Pipeline;
+    c->changed |= PrGpuNativeStateFlag_Pipeline;
     flushComputeRoot(c);
     c->list.list->Dispatch(groups.width, groups.height, groups.depth);
 }
@@ -1914,7 +1914,7 @@ void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGp
     const D3d12Pipeline& p = d->pipelines[c->pipeline];
     PR_ASSERT(p.compute);
     c->list.list->SetPipelineState(p.state);
-    c->changed |= PrGpuHostStateFlag_Pipeline;
+    c->changed |= PrGpuNativeStateFlag_Pipeline;
     flushComputeRoot(c);
     c->list.list->ExecuteIndirect(d->dispatchSignature, 1, resourceOf(d, buffer.id), offset, nullptr, 0);
 }
@@ -2071,7 +2071,7 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
         list->ResolveQueryData(d->timestamps, D3D12_QUERY_TYPE_TIMESTAMP, c->timestamp * 2, 2, d->timestampReadback,
             uint64_t(c->timestamp) * 16);
     }
-    if (!c->host)
+    if (!c->native)
         list->Close();
     // The functions to call once the work is done, with its time.
     uint32_t doneCount = c->dones.count;
@@ -2090,7 +2090,7 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     }
     for (uint32_t i = 0; i < c->blocks.count; ++i)
         d->held.push(D3d12Held{fence, D3d12HeldKind_StreamBlock, c->blocks.data[i], {}, 0});
-    if (c->host)
+    if (c->native)
         release(c->list.list);
     else
         d->held.push(D3d12Held{fence, D3d12HeldKind_List, {}, c->list, 0});
@@ -2192,7 +2192,7 @@ void coverAttachments(D3d12Pass* pass, ID3D12GraphicsCommandList7* list) {
     D3D12_RECT scissor{0, 0, LONG(pass->extent.x), LONG(pass->extent.y)};
     list->RSSetScissorRects(1, &scissor);
     pass->scissor = PrIRect{0, 0, int32_t(pass->extent.x), int32_t(pass->extent.y)};
-    commandsOf(pass->commands)->changed |= PrGpuHostStateFlag_Viewport | PrGpuHostStateFlag_Scissor;
+    commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_Viewport | PrGpuNativeStateFlag_Scissor;
 }
 
 PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc) {
@@ -2201,16 +2201,16 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
     ID3D12GraphicsCommandList7* list = c->list.list;
     D3d12Pass* pass = allocZeroed<D3d12Pass>();
     pass->commands = commands;
-    if (desc->host != nullptr) {
-        // The host may have bound another root signature since the command buffer began.
-        pass->host = true;
-        pass->formats = desc->hostFormats;
-        pass->extent = desc->hostExtent;
+    if (desc->native != nullptr) {
+        // The application may have bound another root signature since the command buffer began.
+        pass->native = true;
+        pass->formats = desc->nativeFormats;
+        pass->extent = desc->nativeExtent;
         pass->scissor = PrIRect{0, 0, int32_t(pass->extent.x), int32_t(pass->extent.y)};
         list->SetGraphicsRootSignature(d->rootSignature);
         list->SetGraphicsRoot32BitConstant(D3d12Root_TargetCopy, 0, 0);
         c->dirty |= D3d12DirtyFlag_GraphicsPush | D3d12DirtyFlag_GraphicsUniforms;
-        c->changed |= PrGpuHostStateFlag_Bindings;
+        c->changed |= PrGpuNativeStateFlag_Bindings;
     } else {
         pass->formats.samples = 1;
         D3D12_CPU_DESCRIPTOR_HANDLE colors[kPrGpuMaxColorAttachments]{};
@@ -2310,7 +2310,7 @@ void passEnd(PrGpuDevice* device, PrGpuPass* handle) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     D3d12Commands* c = commandsOf(pass->commands);
     c->pass = nullptr;
-    if (!pass->host) {
+    if (!pass->native) {
         for (uint8_t i = 0; i < pass->formats.colorCount; ++i) {
             if (pass->color[i].store == PrGpuStore_Resolve)
                 resolve(d, c->list.list, pass->color[i]);
@@ -2321,9 +2321,31 @@ void passEnd(PrGpuDevice* device, PrGpuPass* handle) {
     prMemoryFree(pass);
 }
 
-PrGpuHostStateFlags hostStateSync(PrGpuDevice*, PrGpuCommands* commands) {
+// Hands the pass's command list to a native draw, then binds the device's heaps and root signature again, covers a pass
+// of the device's own with the viewport and the scissor, and leaves the pass's pipeline and root data unset. An
+// application's pass reports every state as changed, since the native draw may have changed any of it.
+void passNativeDraw(PrGpuDevice* device, PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+    D3d12Device* d = d3d12Of(device);
+    D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
+    D3d12Commands* c = commandsOf(pass->commands);
+    PrGpuD3d12NativePass native{.commandList = c->list.list};
+    draw(context, &native);
+    bindRoot(d, c);
+    if (!pass->native)
+        coverAttachments(pass, c->list.list);
+    c->pipeline = 0;
+    c->changed |= PrGpuNativeStateFlags(~0u);
+}
+
+// A texture's native object is its ID3D12Resource, which a view shares with its texture.
+bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind, void* out) {
+    *static_cast<void**>(out) = textureOf(d3d12Of(device), texture.id).resource;
+    return true;
+}
+
+PrGpuNativeStateFlags nativeStateSync(PrGpuDevice*, PrGpuCommands* commands) {
     D3d12Commands* c = commandsOf(commands);
-    PrGpuHostStateFlags changed = c->changed;
+    PrGpuNativeStateFlags changed = c->changed;
     c->changed = 0;
     return changed;
 }
@@ -2335,7 +2357,7 @@ void passSetViewport(PrGpuDevice*, PrGpuPass* handle, PrRect viewport, float min
         minDepth, maxDepth,
     };
     commandsOf(pass->commands)->list.list->RSSetViewports(1, &v);
-    commandsOf(pass->commands)->changed |= PrGpuHostStateFlag_Viewport;
+    commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_Viewport;
 }
 
 void passSetScissor(PrGpuDevice*, PrGpuPass* handle, PrIRect scissor) {
@@ -2351,20 +2373,20 @@ void passSetScissor(PrGpuDevice*, PrGpuPass* handle, PrIRect scissor) {
     pass->scissor = PrIRect{left, top, right, bottom};
     D3D12_RECT r{left, top, right, bottom};
     commandsOf(pass->commands)->list.list->RSSetScissorRects(1, &r);
-    commandsOf(pass->commands)->changed |= PrGpuHostStateFlag_Scissor;
+    commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_Scissor;
 }
 
 void passSetBlendConstant(PrGpuDevice*, PrGpuPass* handle, PrColor constant) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     const float rgba[4] = {constant.r, constant.g, constant.b, constant.a};
     commandsOf(pass->commands)->list.list->OMSetBlendFactor(rgba);
-    commandsOf(pass->commands)->changed |= PrGpuHostStateFlag_BlendConstant;
+    commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_BlendConstant;
 }
 
 void passSetStencilReference(PrGpuDevice*, PrGpuPass* handle, uint8_t reference) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     commandsOf(pass->commands)->list.list->OMSetStencilRef(reference);
-    commandsOf(pass->commands)->changed |= PrGpuHostStateFlag_StencilReference;
+    commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_StencilReference;
 }
 
 void passSetIndexBuffer(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, bool wide) {
@@ -2376,7 +2398,7 @@ void passSetIndexBuffer(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buff
         wide ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT,
     };
     commandsOf(pass->commands)->list.list->IASetIndexBuffer(&view);
-    commandsOf(pass->commands)->changed |= PrGpuHostStateFlag_IndexBuffer;
+    commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_IndexBuffer;
 }
 
 // Copies the pass's first color attachment, over the scissor, into the command buffer's copy of it, which the draw's
@@ -2423,7 +2445,7 @@ const D3d12Pipeline& prepareDraw(D3d12Device* d, D3d12Pass* pass) {
     const D3d12Pipeline& p = d->pipelines[c->pipeline];
     flushGraphicsRoot(c);
     if (p.readsTarget) {
-        PR_ASSERT(!pass->host && pass->formats.colorCount != 0 && pass->formats.samples == 1);
+        PR_ASSERT(!pass->native && pass->formats.colorCount != 0 && pass->formats.samples == 1);
         copyTarget(d, c, pass);
     }
     return p;
@@ -3002,9 +3024,11 @@ PrStatus prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options, PrGpuDev
     d->commandsBufferBarrier = commandsBufferBarrier;
     d->commandsTextureBarrier = commandsTextureBarrier;
     d->commandsGlobalBarrier = commandsGlobalBarrier;
-    d->hostStateSync = hostStateSync;
+    d->nativeStateSync = nativeStateSync;
     d->passBegin = passBegin;
     d->passEnd = passEnd;
+    d->passNativeDraw = passNativeDraw;
+    d->textureNative = textureNative;
     d->passSetViewport = passSetViewport;
     d->passSetScissor = passSetScissor;
     d->passSetBlendConstant = passSetBlendConstant;
@@ -3022,6 +3046,7 @@ PrStatus prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options, PrGpuDev
     d->shaderTarget = PrGpuShaderTarget_Dxil;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     d->info.backend = "Direct3D 12";
+    d->nativeKinds = 1u << PrGpuNativeKind_D3d12;
     d->info.features = PrGpuFeatureFlag_TextureCompressionBc |
         (d->timestampTicks != nullptr ? PrGpuFeatureFlag_Timestamps : 0);
     d->info.maxTextureSize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
@@ -3037,10 +3062,6 @@ void* prGpuD3d12Device(const PrGpuDevice* device) {
 
 void* prGpuD3d12Queue(const PrGpuDevice* device) {
     return d3d12Of(device)->queue;
-}
-
-void* prGpuD3d12Texture(const PrGpuDevice* device, PrGpuTexture texture) {
-    return textureOf(d3d12Of(device), texture.id).resource;
 }
 
 PrStatus prGpuD3d12TextureWrap(PrGpuDevice* device, void* resource, PrGpuTextureUsageFlags usage, PrGpuTexture* out) {

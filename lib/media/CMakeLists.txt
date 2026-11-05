@@ -6,7 +6,7 @@ pr_library(media INCLUDE include
     src/media_source.cpp
     src/media_source_decoder.cpp
 )
-target_link_libraries(pr_media PUBLIC prax::core PRIVATE prax::core_cpp prax::mime)
+target_link_libraries(pr_media PUBLIC prax::core prax::gpu PRIVATE prax::core_cpp prax::mime)
 
 if (PR_MEDIA_BUILTIN)
     target_sources(pr_media PRIVATE backends/builtin/src/media_builtin.cpp)
@@ -21,6 +21,15 @@ if (PR_MEDIA_APPLE)
     target_compile_definitions(pr_media PRIVATE PR_MEDIA_HAS_APPLE)
     target_link_libraries(pr_media PUBLIC "-framework AVFoundation" "-framework CoreMedia" "-framework CoreVideo"
         "-framework CoreGraphics" "-framework Foundation" "-framework AudioToolbox" "-framework VideoToolbox")
+endif()
+
+# The web backend plays a resource in a page's video element, and gives its frames as the page's images, which a Canvas
+# 2D device imports. It reads a resource's metadata with the built-in backend.
+if (PR_MEDIA_WEB)
+    target_sources(pr_media PRIVATE backends/web/src/media_web.cpp)
+    pr_headers(pr_media PUBLIC backends/web/include)
+    target_compile_definitions(pr_media PRIVATE PR_MEDIA_HAS_WEB)
+    pr_js_library(pr_media backends/web/src/media_web.js)
 endif()
 
 if (PR_MEDIA_WINDOWS)

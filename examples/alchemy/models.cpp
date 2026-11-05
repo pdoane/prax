@@ -176,10 +176,10 @@ ModelArchitecture architectureFromPrefix(PrByteView leading) {
 }
 
 ModelArchitecture readArchitecture(PrStringView path) {
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (!prFileMap(path, &mapping))
         return ModelArchitecture_Unknown;
-    ModelArchitecture arch = architectureFromPrefix(PrByteView{mapping.data, mapping.size});
+    ModelArchitecture arch = architectureFromPrefix(mapping);
     prFileUnmap(&mapping);
     return arch;
 }

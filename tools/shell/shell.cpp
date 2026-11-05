@@ -149,7 +149,7 @@ bool renderPage(PageHost& host, Page* page, PrVec2 viewport, float pixelRatio, P
     out->height = uint32_t(prF64Ceil(double(viewport.y) * double(pixelRatio)));
     out->rgba.assign(size_t(out->width) * out->height * 4, 0);
     PrPixels into{out->rgba.data(), size_t(out->width) * 4, {out->width, out->height}};
-    if (ok && prDrawRendererBackendIsDevice(backend)) {
+    if (ok && backend != PrDrawRendererBackend_Cpu) {
         ok = renderOnDevice(renderers, backend, list, into.extent, out->rgba.data());
         if (!ok)
             fprintf(stderr, "%s: the %s renderer could not render\n", file, prDrawRendererBackendName(backend).data);
@@ -526,7 +526,12 @@ int main(int argc, char** argv) {
     std::unique_ptr<PrAudioOutput, decltype(&prAudioOutputDestroy)> audioOutputOwner(audioOutput, prAudioOutputDestroy);
     PrAudioMixer* mixer = audioOutput != nullptr ? prAudioMixerCreate(audioOutput) : nullptr;
     std::unique_ptr<PrAudioMixer, decltype(&prAudioMixerDestroy)> mixerOwner(mixer, prAudioMixerDestroy);
+    // The pages' canvases are textures on the device that the cpu renderer draws on, which outlives the pages.
+    PrGpuDevice* memory = nullptr;
+    prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &memory);
+    std::unique_ptr<PrGpuDevice, decltype(&prGpuDeviceDestroy)> memoryOwner(memory, prGpuDeviceDestroy);
     PageHost host(shaper.get(), mediaCodec.get(), mixer);
+    host.setDevice(memory);
     // The hinter lives as long as the process, because the fonts that name it are kept.
     host.setHinting(hinting, hinting != PrFontHinting_None ? prFontHinterCreate(PrFontHinterBackend_Default) : nullptr);
     Run run;
@@ -536,6 +541,7 @@ int main(int argc, char** argv) {
     // differently from its reference draw alike, as reftests expect.
     PrDrawCpuOptions cpuOptions = prDrawCpuOptionsDefault();
     cpuOptions.glyphPhases = true;
+    cpuOptions.device = memory;
     renderers.cpu = prDrawCpuCreate(&cpuOptions);
     int status = !run.ok ? 1 : run.serve ? serve(host, run, renderers) : finish(host, run, renderers);
     renderers.reset();

@@ -2,13 +2,13 @@
 //
 // html - https://html.spec.whatwg.org/
 //
-// A context draws into a bitmap: pixels in memory, or a texture on a device. The context records its drawing into draw
-// lists. The renderer that presents the context draws each recording into the bitmap once, as a group with the bitmap
-// as its layer (PrDrawGroupLayer). The calls that read or write the context's pixels (prCanvasGetImageData,
-// prCanvasPutImageData, prCanvasSnapshot, and the calls that draw the bitmap) first draw what the bitmap does not hold
-// yet, with a renderer of the context's own, and then see everything that the context drew. That renderer is made the
-// first time that the pixels are read or written. Whichever renderer draws a recording first draws it, and no other
-// does. A context and the objects that it draws are used by one thread at a time.
+// A context draws into a bitmap, which is a texture on a device. The context records its drawing into draw lists. The
+// renderer that presents the context draws each recording into the bitmap once, as a group with the bitmap as its layer
+// (PrDrawGroupLayer). The calls that read or write the context's pixels (prCanvasGetImageData, prCanvasPutImageData,
+// prCanvasSnapshot, and the calls that draw the bitmap) first draw what the bitmap does not hold yet, with a renderer
+// of the context's own, and then see everything that the context drew. That renderer is made the first time that the
+// pixels are read or written. Only the renderer that draws a recording first draws it. A context and the objects that
+// it draws are used by one thread at a time.
 //
 // A context resolves CSS values as its canvas element's style resolves them: currentcolor is the element's color, and
 // relative font sizes are relative to its font. A context without an element resolves them against the initial values.
@@ -208,8 +208,8 @@ typedef struct PrCanvasTextSource {
 // `textSourceContext`.
 typedef bool (*PrCanvasTextSourceFn)(void* PR_NULLABLE context, PrCanvasTextSource* out);
 
-// What a context is made from. The bitmap is a texture on `device`, or pixels in memory if `device` is null. The
-// renderer that presents the context must render on that device, or in memory if `device` is null. `element` is the
+// What a context is made from. The bitmap is a texture on `device`, which the renderer that presents the context
+// renders on. A context without a device has no bitmap: it records, and draws and reads nothing. `element` is the
 // canvas element whose style CSS values resolve against, or null, and must outlive the context. `changed` is called
 // when the bitmap changes, or is null. `textSource` is null for a context that sets no text.
 typedef struct PrCanvasDesc {

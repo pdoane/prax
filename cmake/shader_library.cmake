@@ -405,10 +405,12 @@ foreach (target IN LISTS TARGETS)
     set(CODES_${target} ${CODES})
 endforeach()
 list(LENGTH ENTRIES entry_count)
-if (entry_count EQUAL 0)
+list(LENGTH TARGETS target_count)
+# A build with no backend compiles for no target, and its library is empty. The entry points are what the compiled code
+# reflects, so a library of no target has none.
+if (entry_count EQUAL 0 AND target_count GREATER 0)
     message(FATAL_ERROR "${SOURCE}: no entry points")
 endif()
-list(LENGTH TARGETS target_count)
 
 # The library's bytes, as hex: the tables, the names, then the blobs, each placed once however many entry points share
 # it.

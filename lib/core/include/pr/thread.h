@@ -19,6 +19,10 @@ typedef struct PrThread {
 // The function that a thread runs. It receives the context that prThreadStart was given.
 typedef void (*PrThreadRunFn)(void* PR_NULLABLE context);
 
+// Returns true if the platform starts threads. A build without them (PR_PLATFORM_THREADS) runs on one thread: starting
+// a thread and waiting on a condition are fatal, since nothing else would run, and a mutex is never contended.
+bool prThreadSupported(void);
+
 // Starts a thread that calls `run` with `context`, and returns at once. A thread that cannot start is fatal. The
 // thread's stack is as large as a main thread's on the platforms that the library runs on, 8 MiB, so that a thread runs
 // what a main thread does, such as a script that QuickJS bounds by its stack size.

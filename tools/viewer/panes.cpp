@@ -149,7 +149,7 @@ Rendered renderSlot(Slot& slot, const std::vector<RendererConfig>& configs, uint
     r.width = prGpuTextureExtent(slot.device, slot.texture).x;
     r.height = prGpuTextureExtent(slot.device, slot.texture).y;
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    if (!prDrawRendererIsOnDevice(configs[config].renderer)) {
+    if (prDrawRendererDevice(configs[config].renderer) != slot.device) {
         std::vector<uint8_t> pixels = pixelsOf(background, size_t(r.width) * r.height, output.format);
         PrPixels into{pixels.data(), size_t(r.width) * prPixelFormatSize(output.format), {r.width, r.height}};
         r.status = prDrawRendererRenderPixels(configs[config].renderer, list, into, output.format);
@@ -426,7 +426,7 @@ void Pane::render(const PaneSource& source, double time, Slot& slot) {
         prDrawListPopTransform(list);
         r.recordMs = millisSince(recording);
         r.commands = prDrawListCommandCount(list);
-        if (!prDrawRendererIsOnDevice(config.renderer)) {
+        if (prDrawRendererDevice(config.renderer) != c.device) {
             bgra = pixelsOf(source.background, size_t(source.width) * source.height, output.format);
             PrPixels into{bgra.data(), size_t(source.width) * bytes, {source.width, source.height}};
             std::lock_guard<std::mutex> lock(*(*c.configLocks)[source.config]);

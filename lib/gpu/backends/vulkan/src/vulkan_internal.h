@@ -181,16 +181,16 @@ constexpr uint64_t kStagingPageBytes = uint64_t(8) << 20;
 // The frames that a swap chain has in flight.
 constexpr uint32_t kSwapChainFrames = 2;
 
-// Device memory: an allocation of the device's own, or a range of the host's.
+// Device memory: an allocation of the device's own, or a range of the application's.
 struct VulkanMemory {
     VkDeviceMemory memory;
     uint64_t offset;
-    uint8_t* mapped;            // the bytes, for memory that the host maps, or null
-    bool host;                  // allocated through the host's functions
+    uint8_t* mapped;            // the bytes, for memory that the CPU maps, or null
+    bool application;           // true if allocated through the application's functions
 };
 
 // An image and its memory, held by the texture that made it and by each view of it, and freed with the last of them.
-// The image of a swap chain or of the host is not the device's to free.
+// The image of a swap chain or of the application is not the device's to free.
 struct VulkanImage {
     VkImage image;
     VulkanMemory memory;
@@ -217,7 +217,7 @@ struct VulkanAttachmentView {
 // A slot of the bindless array, and what it holds.
 struct VulkanResource {
     VulkanSlotKind kind;
-    bool wrapped;               // the buffer is the host's
+    bool wrapped;               // true if the buffer is the application's
     uint32_t owner;             // for a storage view, the texture; otherwise zero
     uint32_t storage;           // a texture's storage slot, or zero
     VulkanMemory memory;        // the memory of a buffer that the device made
@@ -246,7 +246,7 @@ struct VulkanPipeline {
     bool readsTarget;
 };
 
-// A chunk of the stream: memory that the GPU reads and the host writes, with a slot of the bindless array.
+// A chunk of the stream: memory that the GPU reads and the CPU writes, with a slot of the bindless array.
 struct VulkanStreamChunk {
     uint32_t slot;
     VkBuffer buffer;
@@ -311,8 +311,8 @@ struct VulkanCommandSlot {
     VkQueryPool queries;
 };
 
-// A pass that a command buffer records, the device's own or one that the host has open. A pass of the device's own
-// keeps its attachments, so that it can end its rendering and begin it again when a draw reads its target.
+// A pass that a command buffer records, the device's own or one that the application has open. A pass of the device's
+// own keeps its attachments, so that it can end its rendering and begin it again when a draw reads its target.
 struct VulkanPass : PrGpuPass {
     VkRenderingAttachmentInfo colors[kPrGpuMaxColorAttachments];
     VkRenderingAttachmentInfo depth;
@@ -339,7 +339,7 @@ struct VulkanPresent {
 
 // A command buffer: the state of its recording, and what it holds until it is done.
 struct VulkanCommands : PrGpuCommands {
-    VulkanCommandSlot slot;         // the device's own, which ends a command buffer that records into the host's
+    VulkanCommandSlot slot;         // the device's own, which ends a command buffer that records into the application's
     VkCommandBuffer buffer;
     uint64_t serial;
     uint64_t fence;                 // the value on the command buffer's timeline, once submitted
@@ -352,7 +352,7 @@ struct VulkanCommands : PrGpuCommands {
     uint64_t uniformOffset;
     uint32_t uniformSize;
     bool pushDirty[2];              // for graphics and compute
-    PrGpuHostStateFlags changed;    // the state that the device changed since the last sync
+    PrGpuNativeStateFlags changed;  // the state that the device changed since the last sync
 
     // The stream: the chunks that the command buffer took, the last of which it fills.
     RawArray<VulkanStreamChunk> chunks;
@@ -419,12 +419,12 @@ struct VulkanDevice : PrGpuDevice {
     VkPhysicalDeviceMemoryProperties memoryProperties;
     bool localRead;                 // true if a draw reads its target as an input attachment, not as a copy
 
-    // Memory from the host, or the device's own.
+    // Memory from the application, or the device's own.
     PrGpuVulkanAllocateFn PR_NULLABLE allocate;
     PrGpuVulkanFreeFn PR_NULLABLE free;
     void* PR_NULLABLE memoryContext;
 
-    // The bindless set and the pipeline layout, the host's or the device's own.
+    // The bindless set and the pipeline layout, the application's or the device's own.
     bool ownsDescriptors;
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout emptyLayout;

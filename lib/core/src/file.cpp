@@ -13,6 +13,12 @@
 #error "a build without the default platform binds PR_PLATFORM_FILE_MAP"
 #endif
 
+// Windows' paths have drive letters and backslashes. So may the web's, whose file system can be a Windows host's
+// through Node.js.
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
+#define PR_FILE_WINDOWS_PATHS 1
+#endif
+
 namespace pr_impl {
 
 namespace {
@@ -31,7 +37,7 @@ void filterEntry(void* PR_NULLABLE context, const PrFileEntry* entry) {
 
 // Returns true if `c` separates the parts of a path.
 bool isSeparator(char c) {
-#if defined(_WIN32)
+#if defined(PR_FILE_WINDOWS_PATHS)
     return c == '/' || c == '\\';
 #else
     return c == '/';
@@ -50,7 +56,7 @@ size_t lastSeparator(PrStringView path) {
 // Returns the length of the root that begins `path`, or zero if it is relative. A root is a separator, and on Windows
 // also two separators, which begin a UNC path, or a drive letter and a colon with or without a separator after them.
 size_t rootLength(PrStringView path) {
-#if defined(_WIN32)
+#if defined(PR_FILE_WINDOWS_PATHS)
     if (path.size >= 2 && prAsciiIsLetter(path.data[0]) && path.data[1] == ':')
         return path.size >= 3 && isSeparator(path.data[2]) ? 3 : 2;
     if (path.size >= 2 && isSeparator(path.data[0]) && isSeparator(path.data[1]))
@@ -101,17 +107,17 @@ void appendParts(PrTextBuffer* out, uint32_t rootEnd, PrStringView path, size_t 
 
 using namespace pr_impl;
 
-bool prFileMap(PrStringView path, PrFileMapping* out) {
+bool prFileMap(PrStringView path, PrByteView* out) {
     if (PR_PLATFORM_FILE_MAP(path, out))
         return true;
-    *out = PrFileMapping{nullptr, 0};
+    *out = PrByteView{};
     return false;
 }
 
-void prFileUnmap(PrFileMapping* mapping) {
+void prFileUnmap(PrByteView* mapping) {
     if (mapping->data != nullptr)
         PR_PLATFORM_FILE_UNMAP(mapping);
-    *mapping = PrFileMapping{nullptr, 0};
+    *mapping = PrByteView{};
 }
 
 bool prFileInfo(PrStringView path, PrFileInfo* out) {

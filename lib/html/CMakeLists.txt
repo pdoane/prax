@@ -73,8 +73,11 @@ if (PR_DEVELOP)
         tests/test_html_view.cpp
         tests/test_timer.cpp
         tests/test_tokenizer.cpp
-        tests/test_html_fetch_thread.cpp
     )
+    # A browsing context's fetches on a network whose loop is a thread of its own, over the platform's sockets.
+    if (PR_NET_SOCKETS AND PR_PLATFORM_THREADS)
+        target_sources(html_tests PRIVATE tests/test_html_fetch_thread.cpp)
+    endif()
     # Rendering sets text with HarfBuzz in the fonts the checkout holds. The fetches of a browsing context run on a
     # network whose loop is a thread of its own.
     target_link_libraries(html_tests PRIVATE prax::css  prax::text prax::image prax::compress
@@ -135,9 +138,14 @@ if (PR_DEVELOP)
                                                          prax::svg_quickjs prax::mathml_quickjs prax::url_quickjs
                                                          prax::webidl_quickjs_cpp Threads::Threads)
         target_compile_definitions(html_quickjs_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
-        add_test(NAME html_host_scripts COMMAND ${Python3_EXECUTABLE} -m tools.shell.test_shell
-                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-        set_tests_properties(html_host_scripts PROPERTIES ENVIRONMENT "PR_SHELL=$<TARGET_FILE:pr_shell>" TIMEOUT 60)
+        # The host scripts' tests drive the native pr_shell. The web's build runs pr_shell under Node.js, so it has no
+        # such tests.
+        if (NOT EMSCRIPTEN)
+            add_test(NAME html_host_scripts COMMAND ${Python3_EXECUTABLE} -m tools.shell.test_shell
+                     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+            set_tests_properties(html_host_scripts PROPERTIES ENVIRONMENT "PR_SHELL=$<TARGET_FILE:pr_shell>"
+                                 TIMEOUT 60)
+        endif()
         add_test(NAME html_js_timers COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/timers.html)
         set_tests_properties(html_js_timers PROPERTIES PASS_REGULAR_EXPRESSION "timer host tests passed" TIMEOUT 10)
     endif()

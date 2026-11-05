@@ -62,10 +62,10 @@ const PrFont* PR_NULLABLE fontVaried(const char* file, const PrFontVariation* PR
         font = base != nullptr ? prFontCreateDerived(base, &derivation) : nullptr;
     } else {
         // The font copies the file's bytes, so the mapping goes as soon as the font is made.
-        PrFileMapping mapping = {};
+        PrByteView mapping = {};
         String path = format("{}/{}", fontDirectory, file);
         bool mapped = prFileMap(path, &mapping);
-        if (!mapped || prFontCreate(PrByteView{mapping.data, mapping.size}, 0, nullptr, &font) != PrStatus_Ok)
+        if (!mapped || prFontCreate(mapping, 0, nullptr, &font) != PrStatus_Ok)
             font = nullptr;
         prFileUnmap(&mapping);
     }

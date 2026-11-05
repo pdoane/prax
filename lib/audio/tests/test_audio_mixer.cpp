@@ -1,6 +1,7 @@
 #include "pr/audio_memory.h"
 #include "pr/audio_mixer.h"
 #include "pr/float.h"
+#include "pr/thread.h"
 
 #include "tools/harness/test.h"
 
@@ -89,7 +90,7 @@ float largestStep(const std::vector<float>& samples) {
 
 using namespace pr_impl;
 
-TEST_CASE("a source plays once it starts, at its gain") {
+TEST_CASE("a source plays once it starts, at its gain" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     std::vector<float> samples = f.render(kRate / 4);
     CHECK(rootMeanSquare(samples, 1024) == doctest::Approx(0.707).epsilon(0.01));
@@ -99,7 +100,7 @@ TEST_CASE("a source plays once it starts, at its gain") {
     CHECK(rootMeanSquare(f.render(kRate / 4)) == doctest::Approx(0.354).epsilon(0.01));
 }
 
-TEST_CASE("a source that stops is silent and keeps its place") {
+TEST_CASE("a source that stops is silent and keeps its place" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     f.render(kRate / 4);
     prAudioSourceSetPlaying(f.source, false);
@@ -112,7 +113,7 @@ TEST_CASE("a source that stops is silent and keeps its place") {
     CHECK(f.tone.frames == place + kRate / 4);
 }
 
-TEST_CASE("starting, stopping and running out do not click") {
+TEST_CASE("starting, stopping and running out do not click" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     // A 1 kHz sine at 48 kHz steps by at most 0.131 from one sample to the next.
     constexpr float kLargestSineStep = 0.14f;
@@ -125,7 +126,7 @@ TEST_CASE("starting, stopping and running out do not click") {
     CHECK(largestStep(f.render(kRate / 4)) < kLargestSineStep);
 }
 
-TEST_CASE("sources add") {
+TEST_CASE("sources add" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     Tone second{.frequency = 3000};
     PrAudioSource* other = prAudioSourceCreate(f.mixer, readTone, &second);
@@ -139,7 +140,7 @@ TEST_CASE("sources add") {
     prAudioSourceDestroy(other);
 }
 
-TEST_CASE("a rate that preserves pitch changes speed and not frequency") {
+TEST_CASE("a rate that preserves pitch changes speed and not frequency" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     prAudioSourceSetRate(f.source, 1.5, true);
     std::vector<float> samples = f.render(kRate);
@@ -148,7 +149,7 @@ TEST_CASE("a rate that preserves pitch changes speed and not frequency") {
     CHECK(rootMeanSquare(samples, 4096) == doctest::Approx(0.707).epsilon(0.05));
 }
 
-TEST_CASE("a slow rate that preserves pitch changes speed and not frequency") {
+TEST_CASE("a slow rate that preserves pitch changes speed and not frequency" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     prAudioSourceSetRate(f.source, 0.5, true);
     std::vector<float> samples = f.render(kRate);
@@ -156,7 +157,7 @@ TEST_CASE("a slow rate that preserves pitch changes speed and not frequency") {
     CHECK(frequencyOf(samples) == doctest::Approx(1000).epsilon(0.02));
 }
 
-TEST_CASE("a rate that does not preserve pitch changes speed and frequency") {
+TEST_CASE("a rate that does not preserve pitch changes speed and frequency" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     prAudioSourceSetRate(f.source, 2, false);
     std::vector<float> samples = f.render(kRate);
@@ -164,7 +165,7 @@ TEST_CASE("a rate that does not preserve pitch changes speed and frequency") {
     CHECK(frequencyOf(samples) == doctest::Approx(2000).epsilon(0.02));
 }
 
-TEST_CASE("the clock follows what plays, and a reset invalidates it") {
+TEST_CASE("the clock follows what plays, and a reset invalidates it" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     CHECK(!prAudioSourceClock(f.source).valid);
     f.render(kRate / 2);
@@ -176,7 +177,7 @@ TEST_CASE("the clock follows what plays, and a reset invalidates it") {
     CHECK(!prAudioSourceClock(f.source).valid);
 }
 
-TEST_CASE("the clock reports the end of a source") {
+TEST_CASE("the clock reports the end of a source" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     f.tone.limit = 1000;
     f.render(4096);

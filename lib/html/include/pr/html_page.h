@@ -238,37 +238,7 @@ typedef struct PrHtmlHost {
 // Returns the default host, with every member null. Its navigator compatibility mode is
 // PrHtmlNavigatorCompatibilityMode_Gecko, which names no vendor. It runs no scripts.
 static inline PrHtmlHost prHtmlHostDefault(void) {
-    PrHtmlHost value;
-    value.context = NULL;
-    value.fetcher = NULL;
-    value.execute = NULL;
-    value.parseModule = NULL;
-    value.settle = NULL;
-    value.compile = NULL;
-    value.evaluate = NULL;
-    value.openWindow = NULL;
-    value.microtask = NULL;
-    value.frame = NULL;
-    value.windowOpened = NULL;
-    value.windowClosed = NULL;
-    value.closed = NULL;
-    value.loaded = NULL;
-    value.elementState = NULL;
-    value.agent = NULL;
-    value.font = NULL;
-    value.shaper = NULL;
-    value.images = NULL;
-    value.device = NULL;
-    value.compress = NULL;
-    value.localStorage = NULL;
-    value.sessionStorage = NULL;
-    value.sessionHistory = NULL;
-    value.now = NULL;
-    value.wallNow = NULL;
-    value.documentCommitted = NULL;
-    value.animationFrames = PrHtmlAnimationFrames_All;
-    value.navigatorCompatibilityMode = PrHtmlNavigatorCompatibilityMode_Gecko;
-    value.rendered = NULL;
+    PrHtmlHost value = {.navigatorCompatibilityMode = PrHtmlNavigatorCompatibilityMode_Gecko};
     return value;
 }
 

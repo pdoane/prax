@@ -325,7 +325,7 @@ Face fileFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const Sfnt& 
 
 // Adds every face of the file at the path as `descriptor` describes it, and returns the number added.
 uint32_t addFile(FontSet* set, const PrFontFaceDescriptor* descriptor, PrStringView path) {
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (!prFileMap(path, &mapping))
         return 0;
     uint32_t faces = sfntFaceCount(mapping.data, mapping.size);
@@ -356,7 +356,7 @@ void readFile(FontSet* set, uint32_t at) {
     PrStringView family = prRawStringView(&unread.family);
     PrStringView path = prRawStringView(&unread.path);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (prFileMap(path, &mapping)) {
         uint32_t faces = sfntFaceCount(mapping.data, mapping.size);
         uint32_t added = 0;

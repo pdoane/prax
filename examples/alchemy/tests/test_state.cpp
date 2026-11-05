@@ -55,9 +55,9 @@ struct Fixture {
         REQUIRE(confirmImport(state));
         const GalleryEntry* entry = gallerySelected(state.gallery);
         REQUIRE(entry != nullptr);
-        PrFileMapping mapping{};
+        PrByteView mapping{};
         REQUIRE(prFileMap(entry->path, &mapping));
-        Array<uint8_t> png = provenanceWrite(PrByteView{mapping.data, mapping.size}, record);
+        Array<uint8_t> png = provenanceWrite(mapping, record);
         prFileUnmap(&mapping);
         REQUIRE(prFileWrite(entry->path, png));
         galleryRescan(state.gallery);

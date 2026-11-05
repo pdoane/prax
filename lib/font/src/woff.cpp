@@ -916,7 +916,7 @@ bool writeFont(Woff2File& file, RawArray<uint8_t>* out) {
     }
     out->resize(uint32_t(size));
     uint8_t* font = out->data;
-    prMemZero(font, size);
+    prMemZero(font, size_t(size));
     for (uint32_t i = 0; i < file.tables.count; ++i) {
         Woff2Table& table = file.tables.data[i];
         if (table.offset == 0)

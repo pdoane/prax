@@ -29,7 +29,8 @@ void raise(void* PR_NULLABLE context) {
 
 using namespace pr_impl;
 
-TEST_CASE("a thread runs beside its starter, which waits on a condition for what it does") {
+TEST_CASE("a thread runs beside its starter, which waits on a condition for what it does" *
+        doctest::skip(!prThreadSupported())) {
     Shared shared{};
     prMutexInit(&shared.mutex);
     prConditionInit(&shared.changed);
@@ -48,7 +49,7 @@ TEST_CASE("a thread runs beside its starter, which waits on a condition for what
     prMutexReset(&shared.mutex);
 }
 
-TEST_CASE("a timed wait returns false once its time passes, and true when it is signaled first") {
+TEST_CASE("a timed wait returns false once its time passes") {
     Shared shared{};
     prMutexInit(&shared.mutex);
     prConditionInit(&shared.changed);
@@ -56,6 +57,16 @@ TEST_CASE("a timed wait returns false once its time passes, and true when it is 
     CHECK_FALSE(prConditionWaitFor(&shared.changed, &shared.mutex, 5));
     CHECK_FALSE(prConditionWaitFor(&shared.changed, &shared.mutex, 0));
     CHECK_FALSE(prConditionWaitFor(&shared.changed, &shared.mutex, -1));
+    prMutexUnlock(&shared.mutex);
+    prConditionReset(&shared.changed);
+    prMutexReset(&shared.mutex);
+}
+
+TEST_CASE("a timed wait returns true when it is signaled first" * doctest::skip(!prThreadSupported())) {
+    Shared shared{};
+    prMutexInit(&shared.mutex);
+    prConditionInit(&shared.changed);
+    prMutexLock(&shared.mutex);
     PrThread thread{};
     prThreadStart(&thread, raise, &shared);
     bool signaled = false;
@@ -66,4 +77,13 @@ TEST_CASE("a timed wait returns false once its time passes, and true when it is 
     CHECK(signaled);
     prConditionReset(&shared.changed);
     prMutexReset(&shared.mutex);
+}
+
+TEST_CASE("a build without threads runs on one, whose mutexes are never contended" * doctest::skip(prThreadSupported())) {
+    CHECK(prThreadHardwareCount() == 1);
+    PrMutex mutex;
+    prMutexInit(&mutex);
+    prMutexLock(&mutex);
+    prMutexUnlock(&mutex);
+    prMutexReset(&mutex);
 }

@@ -11,6 +11,7 @@
 #include "pr/layout_worker.h"
 #include "pr/memory.h"
 #include "pr/text_harfbuzz.h"
+#include "pr/thread.h"
 
 #include "layout/src/layout_tree.h"
 #include "layout/tests/layout_fixture.h"
@@ -2720,7 +2721,8 @@ TEST_CASE("a compositor plays a scene with its tracks' effects, and no paint") {
     prLayoutCompositorDestroy(compositor);
 }
 
-TEST_CASE("a compositor with a thread presents frames while the caller's thread commits") {
+TEST_CASE("a compositor with a thread presents frames while the caller's thread commits" *
+        doctest::skip(!prThreadSupported())) {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     PrLayoutDecorationStyle green = background(PrColor{0, 1, 0, 1});

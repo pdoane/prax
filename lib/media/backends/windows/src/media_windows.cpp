@@ -684,8 +684,12 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
         d->shown = nullptr;
         return false;
     }
-    *out = PrMediaFrame{
+    d->pixels = PrGpuImportPixels{
         .pixels = PrPixelView{pixels, size_t(frame.extent.x) * 4, frame.extent},
+        .format = PrGpuFormat_Bgra8,
+    };
+    *out = PrMediaFrame{
+        .image = PrGpuImport{.kind = PrGpuImportKind_Pixels, .handle = &d->pixels},
         .time = frame.time,
         .serial = frame.serial,
         .current = current,

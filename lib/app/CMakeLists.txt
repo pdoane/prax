@@ -52,6 +52,14 @@ if (PR_APP_WIN32)
                                  PRIVATE prax::json)
 endif()
 
+# The web backend: a web page's canvas and its event loop, through Emscripten's HTML5 API.
+if (PR_APP_WEB)
+    target_sources(pr_app PRIVATE backends/web/src/app_web.cpp)
+    pr_headers(pr_app PUBLIC backends/web/include)
+    target_compile_definitions(pr_app PRIVATE PR_APP_HAS_WEB)
+    pr_js_library(pr_app backends/web/src/app_web.js)
+endif()
+
 if (PR_DEVELOP)
     pr_module_tests(app
         tests/test_app.cpp

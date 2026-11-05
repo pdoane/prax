@@ -1393,15 +1393,16 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
 
     // A frame renders the same colors, encoded, whatever the display it is shown on, and refuses a target of 10-bit
     // channels.
-    PrDrawFrame* frame = prDrawFrameCreate(renderer);
-    PrDrawTarget wideTarget{.extent = {kWidth, 8}, .format = PrPixelFormat_RgbaF16};
-    REQUIRE(prDrawFramePrepare(frame, list, &wideTarget) == PrStatus_Ok);
     std::fill(wide.begin(), wide.end(), PrFloat16{});
-    prDrawFrameRenderPixels(frame, pixels, PrPixelFormat_RgbaF16);
+    REQUIRE(prDrawRendererRenderPixels(renderer, list, pixels, PrPixelFormat_RgbaF16) == PrStatus_Ok);
     CHECK(near(at(0), bright));
     CHECK(near(at(1), PrColor{3, 3, 3, 1}));
-    PrDrawTarget packed{.extent = {kWidth, 8}, .format = PrPixelFormat_Rgb10A2};
+    PrDrawFrame* frame = prDrawFrameCreate(renderer);
+    PrGpuCommands* commands = nullptr;
+    REQUIRE(prGpuCommandsBegin(prDrawRendererDevice(renderer), nullptr, &commands));
+    PrDrawTarget packed{.extent = {kWidth, 8}, .format = PrPixelFormat_Rgb10A2, .commands = commands};
     CHECK(prDrawFramePrepare(frame, list, &packed) == PrStatus_NotSupported);
+    prGpuCommandsSubmit(commands);
     prDrawFrameDestroy(frame);
 
     // An image brush with a limit scales its texels down to it in linear light.
@@ -1427,11 +1428,20 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
 }
 
 TEST_CASE("a group draws into the host's pixels, which keep each revision's contents once") {
+    // The pixels are a texture on the device that the renderer renders on.
+    PrGpuDevice* device = nullptr;
+    REQUIRE(prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
+    PrDrawCpuOptions options = prDrawCpuOptionsDefault();
+    options.device = device;
+    PrDrawRenderer* renderer = prDrawCpuCreate(&options);
+    REQUIRE(renderer != nullptr);
     Target held = target(4, 4);
-    PrDrawCpuTexture texture{held.pixels, held.format};
+    PrGpuTexture texture{};
+    REQUIRE(prGpuTextureCreateOverPixels(device, PrGpuFormat_Rgba8, held.pixels,
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget, &texture) == PrStatus_Ok);
     uint64_t drawn = 0;
     PrDrawGroupLayer layer{
-        .texture = prDrawCpuTexture(&texture),
+        .texture = prDrawGpuTexture(texture),
         .extent = {4, 4},
         .drawn = &drawn,
         .sampling = PrDrawSampling_Nearest,
@@ -1461,7 +1471,7 @@ TEST_CASE("a group draws into the host's pixels, which keep each revision's cont
     };
     auto drawnOnce = [&](const PrDrawList* l) {
         Target t = target(8, 8);
-        REQUIRE(render(t, l) == PrStatus_Ok);
+        REQUIRE(prDrawRendererRenderPixels(renderer, l, t.pixels, t.format) == PrStatus_Ok);
         return t;
     };
     PrDrawList* first = list(1, 1);
@@ -1480,4 +1490,43 @@ TEST_CASE("a group draws into the host's pixels, which keep each revision's cont
     CHECK(pixel(drawnOnce(second), 1, 1) == pixel(blended, 1, 1));
     prDrawListRelease(first);
     prDrawListRelease(second);
+    prGpuTextureDestroy(device, texture);
+    prDrawRendererDestroy(renderer);
+    prGpuDeviceDestroy(device);
+}
+
+TEST_CASE("a texture of the device draws as a source, read in place, and again as it changes") {
+    PrGpuDevice* device = nullptr;
+    REQUIRE(prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
+    PrDrawCpuOptions options = prDrawCpuOptionsDefault();
+    options.device = device;
+    PrDrawRenderer* renderer = prDrawCpuCreate(&options);
+    REQUIRE(renderer != nullptr);
+    // A texture of 2 by 1 BGRA texels, red then blue.
+    PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Bgra8, PrUVec2{2, 1}, PrGpuTextureUsageFlag_Sampled);
+    PrGpuTexture texture{};
+    REQUIRE(prGpuTextureCreate(device, &desc, &texture) == PrStatus_Ok);
+    const uint8_t bgra[8] = {0, 0, 255, 255, 255, 0, 0, 255};
+    prGpuTextureWrite(device, texture, PrIVec2{0, 0}, PrPixelView{bgra, 8, PrUVec2{2, 1}});
+
+    PrDrawList* list = prDrawListCreate();
+    PrDrawSource source = prDrawSourceTexture(prDrawGpuTexture(texture), PrUVec2{2, 1}, PrRect{0, 0, 2, 1},
+        PrDrawAlpha_Opaque);
+    PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 4, 2}, PrDrawSampling_Nearest);
+    prDrawListRect(list, PrRect{0, 0, 4, 2}, {.brush = &brush});
+    Target t = target(4, 2);
+    REQUIRE(prDrawRendererRenderPixels(renderer, list, t.pixels, t.format) == PrStatus_Ok);
+    CHECK(pixel(t, 0, 0) == "255 0 0 255");
+    CHECK(pixel(t, 3, 1) == "0 0 255 255");
+
+    // What the texture holds now draws in the next render.
+    const uint8_t green[8] = {0, 255, 0, 255, 0, 255, 0, 255};
+    prGpuTextureWrite(device, texture, PrIVec2{0, 0}, PrPixelView{green, 8, PrUVec2{2, 1}});
+    REQUIRE(prDrawRendererRenderPixels(renderer, list, t.pixels, t.format) == PrStatus_Ok);
+    CHECK(pixel(t, 0, 0) == "0 255 0 255");
+
+    prDrawListRelease(list);
+    prGpuTextureDestroy(device, texture);
+    prDrawRendererDestroy(renderer);
+    prGpuDeviceDestroy(device);
 }

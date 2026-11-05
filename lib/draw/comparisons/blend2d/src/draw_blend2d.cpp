@@ -29,6 +29,8 @@
 #include "pr/raw_array.h"
 #include "pr/vec.h"
 
+#include "draw/backends/shared/src/draw_shared_memory.h"
+
 #include "blend2d/blend2d.h"
 
 namespace pr_impl {
@@ -48,6 +50,7 @@ struct CachedImage {
 };
 
 struct Blend2dBackend : PrDrawRenderer {
+    bool ownsDevice;                    // true if the renderer created its device, and frees it
     PrDrawBlend2dOptions options;
     RawArray<CachedImage> images;
     KeyIndex imageIndex;                // `images`, by id
@@ -56,9 +59,6 @@ struct Blend2dBackend : PrDrawRenderer {
 };
 
 // A frame: the list that it renders, once there are pixels.
-struct Blend2dFrame : PrDrawFrame {
-    const PrDrawList* list;
-};
 
 // An image that a render draws into, with its origin at (box.left, box.top) in target pixels. It is the target's image,
 // or an offscreen for a clip, a group or an operator.
@@ -1260,11 +1260,13 @@ void destroyBackend(PrDrawRenderer* renderer) {
     b2->images.reset();
     b2->imageIndex.reset();
     prDrawGlyphCacheDestroy(b2->glyphs);
+    if (b2->ownsDevice)
+        prGpuDeviceDestroy(b2->device);
     prMemoryFree(b2);
 }
 
 void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
-    prMemoryFree(frame);
+    drawMemoryFrameDestroy(static_cast<DrawMemoryFrame*>(frame));
 }
 
 // Drops the cached data that the render did not use.
@@ -1319,19 +1321,17 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
 }
 
 PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
-    Blend2dFrame* frame = allocZeroed<Blend2dFrame>();
-    frame->renderer = renderer;
-    return frame;
+    return drawMemoryFrameCreate(renderer, renderPixels, false);
 }
 
-// Keeps the list, which renders once there are pixels.
+// Keeps the list, which renders when the frame's pass runs.
 PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget*) {
-    static_cast<Blend2dFrame*>(frame)->list = list;
+    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list);
     return PrStatus_Ok;
 }
 
-void renderFrame(PrDrawRenderer* renderer, PrDrawFrame* frame, PrPixels pixels, PrPixelFormat format) {
-    renderPixels(renderer, pixels, format, static_cast<Blend2dFrame*>(frame)->list);
+void renderFrame(PrDrawRenderer*, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
+    drawMemoryFrameRender(static_cast<DrawMemoryFrame*>(frame), pass, origin);
 }
 
 } // namespace
@@ -1341,17 +1341,24 @@ void renderFrame(PrDrawRenderer* renderer, PrDrawFrame* frame, PrPixels pixels, 
 using namespace pr_impl;
 
 PrDrawBlend2dOptions prDrawBlend2dOptionsDefault(void) {
-    return PrDrawBlend2dOptions{0, nullptr};
+    return PrDrawBlend2dOptions{};
 }
 
-PrDrawRenderer* prDrawBlend2dCreate(const PrDrawBlend2dOptions* PR_NULLABLE options) {
+PrDrawRenderer* PR_NULLABLE prDrawBlend2dCreate(const PrDrawBlend2dOptions* PR_NULLABLE options) {
+    PrDrawBlend2dOptions o = options != nullptr ? *options : prDrawBlend2dOptionsDefault();
+    bool owned = false;
+    PrGpuDevice* device = drawMemoryDevice(o.device, &owned);
+    if (device == nullptr)
+        return nullptr;
     Blend2dBackend* b2 = allocZeroed<Blend2dBackend>();
-    b2->options = options != nullptr ? *options : prDrawBlend2dOptionsDefault();
+    b2->device = device;
+    b2->ownsDevice = owned;
+    b2->options = o;
     b2->glyphs = prDrawGlyphCacheCreate(b2->options.glyphDecoder);
     b2->destroy = destroyBackend;
     b2->frameCreate = createFrame;
     b2->frameDestroy = destroyFrame;
     b2->framePrepare = prepare;
-    b2->frameRenderPixels = renderFrame;
+    b2->frameRender = renderFrame;
     return b2;
 }

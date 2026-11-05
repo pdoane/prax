@@ -18,17 +18,20 @@ namespace pr_impl {
 
 namespace {
 
-// A context in memory, which reads its pixels as straight-alpha sRGB bytes.
+// A context on a memory device. Its pixels read as straight-alpha sRGB bytes.
 struct MemoryCanvas {
+    PrGpuDevice* device = nullptr;
     PrCanvas* handle;
 
     explicit MemoryCanvas(uint32_t width = 100, uint32_t height = 50,
             PrCanvasSettings settings = prCanvasSettingsDefault()) {
-        PrCanvasDesc desc{.extent = PrUVec2{width, height}, .settings = settings};
+        REQUIRE(prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
+        PrCanvasDesc desc{.extent = PrUVec2{width, height}, .settings = settings, .device = device};
         handle = prCanvasCreate(&desc);
     }
     ~MemoryCanvas() {
         prCanvasDestroy(handle);
+        prGpuDeviceDestroy(device);
     }
 
     // Returns the pixel at (x, y) as "r,g,b,a".
@@ -69,6 +72,12 @@ struct MemoryCanvas {
         return std::string(view.data != nullptr ? view.data : "", view.size);
     }
 };
+
+// Returns true if the build has a renderer that draws on a device.
+bool deviceRenderers() {
+    return prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Fragment) ||
+        prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Triangles);
+}
 
 } // namespace
 
@@ -327,12 +336,12 @@ TEST_CASE("isPointInStroke tests the stroke at the line width") {
     CHECK(!prCanvasIsPointInStroke(canvas.handle, nullptr, 50, 31));
 }
 
-TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there, and reads back what it drew") {
+TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there, and reads back what it drew" *
+        doctest::skip(!deviceRenderers())) {
     PrGpuDevice* device = nullptr;
     REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
     PrDrawRenderer* renderer = nullptr;
     REQUIRE(prDrawRendererCreate(PrDrawRendererBackend_Default, device, nullptr, &renderer) == PrStatus_Ok);
-    REQUIRE(prDrawRendererIsOnDevice(renderer));
     PrCanvasDesc desc{.extent = PrUVec2{8, 8}, .settings = prCanvasSettingsDefault(), .device = device};
     PrCanvas* canvas = prCanvasCreate(&desc);
     prCanvasSetStyleColor(canvas, PrCanvasStyleRole_Fill, "#f00");
@@ -387,7 +396,8 @@ TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there,
     prGpuDeviceDestroy(device);
 }
 
-TEST_CASE("a bitmap on a device reads back what the context drew before any presentation, which draws it no more") {
+TEST_CASE("a bitmap on a device reads back what the context drew before any presentation, which draws it no more" *
+        doctest::skip(!deviceRenderers())) {
     PrGpuDevice* device = nullptr;
     REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
     PrCanvasDesc desc{.extent = PrUVec2{8, 8}, .settings = prCanvasSettingsDefault(), .device = device};

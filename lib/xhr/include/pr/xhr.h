@@ -42,11 +42,7 @@ typedef struct PrXhrProgressEventInit {
 
 // The defaults of ProgressEventInit: no length, and nothing loaded.
 static inline PrXhrProgressEventInit prXhrProgressEventInitDefault(void) {
-    PrXhrProgressEventInit init;
-    init.event = prDomEventInitDefault();
-    init.lengthComputable = false;
-    init.loaded = 0;
-    init.total = 0;
+    PrXhrProgressEventInit init = {.event = prDomEventInitDefault()};
     return init;
 }
 

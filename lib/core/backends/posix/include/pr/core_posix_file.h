@@ -15,10 +15,10 @@ extern "C" {
 #endif
 
 // Maps the file at `path` into `out`. Returns false and leaves `out` empty if the file cannot be mapped.
-bool prCorePosixFileMap(PrStringView path, PrFileMapping* out);
+bool prCorePosixFileMap(PrStringView path, PrByteView* out);
 
 // Unmaps `mapping`, which is not empty.
-void prCorePosixFileUnmap(PrFileMapping* mapping);
+void prCorePosixFileUnmap(PrByteView* mapping);
 
 // Reads what the file system records about the file at `path` into `out`. Returns false if there is no such file or it
 // cannot be read.

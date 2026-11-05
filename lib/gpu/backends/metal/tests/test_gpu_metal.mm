@@ -1,9 +1,9 @@
-// The tests of what only the Metal backend has: recording into the host's command buffers and passes. The interface's
-// own tests run on Metal as well.
+// The tests of what only the Metal backend has: recording into the application's command buffers and passes. The
+// interface's own tests run on Metal as well.
 
 #include "pr/gpu_metal.h"
 
-#include "gpu/tests/kTestGpuHostShaders.h"
+#include "gpu/tests/kTestGpuNativeShaders.h"
 
 #include "tools/harness/test.h"
 
@@ -12,6 +12,7 @@
 #include <vector>
 
 #import <AppKit/AppKit.h>
+#import <CoreVideo/CoreVideo.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
@@ -24,7 +25,7 @@ namespace {
 // the environment gives is kept.
 const int kValidation = setenv("MTL_DEBUG_LAYER", "1", 0);
 
-// The root data of the test shaders, as test_gpu_host.slang declares it.
+// The root data of the test shaders, as test_gpu_native.slang declares it.
 struct Push {
     uint32_t output;
     uint32_t count;
@@ -50,7 +51,7 @@ struct Fixture {
             return;
         }
         REQUIRE(status == PrStatus_Ok);
-        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuHostShaders, sizeof(kTestGpuHostShaders), &library) ==
+        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuNativeShaders, sizeof(kTestGpuNativeShaders), &library) ==
             PrStatus_Ok);
     }
 
@@ -104,11 +105,11 @@ struct Fixture {
     }
 };
 
-// A host's own use of Metal on the device's queue: a command buffer that the device's submission commits.
-struct HostMetal {
+// An application's own use of Metal on the device's queue: a command buffer that the device's submission commits.
+struct AppMetal {
     id<MTLCommandBuffer> buffer;
 
-    explicit HostMetal(PrGpuDevice* gpu) {
+    explicit AppMetal(PrGpuDevice* gpu) {
         buffer = [(__bridge id<MTLCommandQueue>)prGpuMetalQueue(gpu) commandBuffer];
     }
 };
@@ -135,18 +136,19 @@ PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
 
 using namespace pr_impl;
 
-TEST_CASE("metal records into the host's command buffer, around the host's own work, and submits it") {
+TEST_CASE("metal records into the application's command buffer, around the application's own work, and submits it") {
     Fixture f;
     if (f.device == nullptr)
         return;
-    HostMetal host(f.device);
+    AppMetal app(f.device);
 
-    // An upload made before the submission is visible to all of its work, the host's native command buffer's too.
+    // An upload made before the submission is visible to all of the submission's work, including the work in the
+    // application's native command buffer.
     PrGpuBuffer output = f.buffer(16, PrGpuBufferUsageFlag_Storage);
     PrGpuPipeline pipeline{};
     REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "fill", "fill", &pipeline) == PrStatus_Ok);
     PrGpuCommandsOptions options = prGpuCommandsOptionsDefault();
-    options.native = (__bridge void*)host.buffer;
+    options.native = (__bridge void*)app.buffer;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(f.device, &options, &commands));
     uint32_t seed[4] = {9, 9, 9, 9};
@@ -155,8 +157,8 @@ TEST_CASE("metal records into the host's command buffer, around the host's own w
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuCommandsSetPush(commands, &push, sizeof(push));
     prGpuCommandsDispatch(commands, PrGpuExtent{1, 1, 1});
-    // The device's state ends with its encoder, so the host sets nothing again.
-    CHECK(prGpuHostStateSync(commands) == 0);
+    // The device's state ends with its encoder, so the application sets nothing again.
+    CHECK(prGpuNativeStateSync(commands) == 0);
     PrGpuFence fence = prGpuCommandsSubmit(commands);
     prGpuDeviceWait(f.device, fence);
     CHECK(prGpuDeviceIsComplete(f.device, fence));
@@ -165,51 +167,54 @@ TEST_CASE("metal records into the host's command buffer, around the host's own w
     prGpuBufferDestroy(f.device, output);
 }
 
-TEST_CASE("metal draws into the host's pass, and says which of the pass's state its draws changed") {
+TEST_CASE("metal draws into the application's pass, and says which of the pass's state its draws changed") {
     Fixture f;
     if (f.device == nullptr)
         return;
-    HostMetal host(f.device);
+    AppMetal app(f.device);
     PrGpuTexture target = f.target();
     PrGpuPipeline pipeline = f.upperHalf();
 
     PrGpuCommandsOptions options = prGpuCommandsOptionsDefault();
-    options.native = (__bridge void*)host.buffer;
+    options.native = (__bridge void*)app.buffer;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(f.device, &options, &commands));
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
         PrGpuAccessFlag_ColorAttachment);
-    prGpuHostStateSync(commands);
+    prGpuNativeStateSync(commands);
 
-    // The host begins its pass, which clears the target to blue, and the device draws the upper half red into it.
+    // The application begins its pass, which clears the target to blue, and the device draws the upper half red into
+    // it.
     MTLRenderPassDescriptor* rp = [MTLRenderPassDescriptor new];
-    rp.colorAttachments[0].texture = (__bridge id<MTLTexture>)prGpuMetalTexture(f.device, target);
+    void* native = nullptr;
+    REQUIRE(prGpuTextureNative(f.device, target, PrGpuNativeKind_Metal, &native));
+    rp.colorAttachments[0].texture = (__bridge id<MTLTexture>)native;
     rp.colorAttachments[0].loadAction = MTLLoadActionClear;
     rp.colorAttachments[0].storeAction = MTLStoreActionStore;
     rp.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 1, 1);
-    id<MTLRenderCommandEncoder> encoder = [host.buffer renderCommandEncoderWithDescriptor:rp];
+    id<MTLRenderCommandEncoder> encoder = [app.buffer renderCommandEncoderWithDescriptor:rp];
     PrGpuPassDesc passDesc{};
-    passDesc.host = (__bridge void*)encoder;
-    passDesc.hostFormats.colorCount = 1;
-    passDesc.hostFormats.color[0] = PrGpuFormat_Rgba8;
-    passDesc.hostFormats.samples = 1;
-    passDesc.hostExtent = PrUVec2{8, 8};
+    passDesc.native = (__bridge void*)encoder;
+    passDesc.nativeFormats.colorCount = 1;
+    passDesc.nativeFormats.color[0] = PrGpuFormat_Rgba8;
+    passDesc.nativeFormats.samples = 1;
+    passDesc.nativeExtent = PrUVec2{8, 8};
     PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
     Uniforms uniforms{.color = {1, 0, 0, 1}};
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuCommandsSetUniforms(commands, &uniforms, sizeof(uniforms));
     prGpuPassDraw(pass, 4, 1, 0, 0);
-    PrGpuHostStateFlags changed = prGpuHostStateSync(commands);
-    CHECK((changed & PrGpuHostStateFlag_Pipeline) != 0);
-    CHECK((changed & PrGpuHostStateFlag_Bindings) != 0);
-    CHECK((changed & PrGpuHostStateFlag_IndexBuffer) == 0);
-    CHECK(prGpuHostStateSync(commands) == 0);
+    PrGpuNativeStateFlags changed = prGpuNativeStateSync(commands);
+    CHECK((changed & PrGpuNativeStateFlag_Pipeline) != 0);
+    CHECK((changed & PrGpuNativeStateFlag_Bindings) != 0);
+    CHECK((changed & PrGpuNativeStateFlag_IndexBuffer) == 0);
+    CHECK(prGpuNativeStateSync(commands) == 0);
     prGpuPassEnd(pass);
     [encoder endEncoding];
 
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
         PrGpuAccessFlag_CopyRead);
-    prGpuHostStateSync(commands);
+    prGpuNativeStateSync(commands);
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
     prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
@@ -218,6 +223,92 @@ TEST_CASE("metal draws into the host's pass, and says which of the pass's state 
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
     prGpuPipelineDestroy(f.device, pipeline);
     prGpuTextureDestroy(f.device, target);
+}
+
+TEST_CASE("metal hands a native draw the pass's encoder, and draws after it with its own state again") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    REQUIRE(prGpuDeviceHasNative(f.device, PrGpuNativeKind_Metal));
+    PrGpuTexture target = f.target();
+    PrGpuPipeline pipeline = f.upperHalf();
+    PrGpuCommands* commands = nullptr;
+    REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+    prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
+        PrGpuAccessFlag_ColorAttachment);
+    PrGpuPassDesc desc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{0, 0, 1, 1});
+    PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+
+    // The native draw narrows the scissor to the left half, which the device's draw after it does not keep.
+    bool drawn = false;
+    prGpuPassNativeDraw(pass, PrGpuNativeKind_Metal, [](void* context, const void* native) {
+        const PrGpuMetalNativePass& objects = *static_cast<const PrGpuMetalNativePass*>(native);
+        CHECK(objects.commandBuffer != nullptr);
+        id<MTLRenderCommandEncoder> encoder = (__bridge id<MTLRenderCommandEncoder>)objects.encoder;
+        [encoder setScissorRect:MTLScissorRect{0, 0, 4, 8}];
+        *static_cast<bool*>(context) = true;
+    }, &drawn);
+    CHECK(drawn);
+    Uniforms uniforms{.color = {1, 0, 0, 1}};
+    prGpuCommandsSetPipeline(commands, pipeline);
+    prGpuCommandsSetUniforms(commands, &uniforms, sizeof(uniforms));
+    prGpuPassDraw(pass, 4, 1, 0, 0);
+    prGpuPassEnd(pass);
+    prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+        PrGpuAccessFlag_CopyRead);
+    prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
+    uint32_t pixels[8 * 8]{};
+    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+        PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
+    CHECK(pixels[7] == 0xff0000ffu);
+    CHECK(pixels[7 * 8] == 0xffff0000u);
+    prGpuPipelineDestroy(f.device, pipeline);
+    prGpuTextureDestroy(f.device, target);
+}
+
+TEST_CASE("metal imports a CVPixelBuffer as a texture without copying it, and releases it once the texture is gone") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    REQUIRE(prGpuDeviceImportsInPlace(f.device, PrGpuImportKind_CoreVideo));
+    // A buffer of 4 by 2 BGRA texels backed by an IOSurface, its first row blue and its second red.
+    NSDictionary* attributes = @{
+        (id)kCVPixelBufferIOSurfacePropertiesKey: @{},
+        (id)kCVPixelBufferMetalCompatibilityKey: @YES,
+    };
+    CVPixelBufferRef buffer = nullptr;
+    REQUIRE(CVPixelBufferCreate(kCFAllocatorDefault, 4, 2, kCVPixelFormatType_32BGRA,
+        (__bridge CFDictionaryRef)attributes, &buffer) == kCVReturnSuccess);
+    CVPixelBufferLockBaseAddress(buffer, 0);
+    uint8_t* texels = static_cast<uint8_t*>(CVPixelBufferGetBaseAddress(buffer));
+    size_t stride = CVPixelBufferGetBytesPerRow(buffer);
+    for (uint32_t y = 0; y < 2; ++y) {
+        for (uint32_t x = 0; x < 4; ++x) {
+            const uint8_t bgra[4] = {uint8_t(y == 0 ? 255 : 0), 0, uint8_t(y == 1 ? 255 : 0), 255};
+            memcpy(texels + y * stride + x * 4, bgra, 4);
+        }
+    }
+    CVPixelBufferUnlockBaseAddress(buffer, 0);
+
+    bool released = false;
+    PrGpuImport image{.kind = PrGpuImportKind_CoreVideo, .handle = buffer};
+    PrGpuTexture texture{};
+    REQUIRE(prGpuTextureImport(f.device, &image, [](void* context) { *static_cast<bool*>(context) = true; },
+        &released, &texture) == PrStatus_Ok);
+    CVPixelBufferRelease(buffer);
+    PrGpuTextureDesc desc = prGpuTextureDesc(f.device, texture);
+    CHECK(desc.format == PrGpuFormat_Bgra8);
+    CHECK(desc.extent.width == 4);
+    CHECK(desc.extent.height == 2);
+    uint32_t read[4 * 2]{};
+    prGpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
+        PrPixels{reinterpret_cast<uint8_t*>(read), 4 * 4, PrUVec2{4, 2}});
+    CHECK(read[0] == 0xff0000ffu);
+    CHECK(read[4] == 0xffff0000u);
+    CHECK(!released);
+    prGpuTextureDestroy(f.device, texture);
+    prGpuDeviceWaitIdle(f.device);
+    CHECK(released);
 }
 
 TEST_CASE("metal presents frames, with the transaction always unless threaded") {

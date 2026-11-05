@@ -23,7 +23,7 @@ VkImageAspectFlags vulkanAspect(PrGpuFormat format);
 VkImageLayout vulkanLayoutFromAccess(PrGpuAccessFlags access);
 
 // Allocates memory for `requirements` with every property of `required`, preferring those of `preferred`, and maps
-// memory that the host's processor sees. Returns false if no memory is left.
+// memory that the CPU sees. Returns false if no memory is left.
 bool vulkanMemoryAllocate(VulkanDevice* d, VkMemoryRequirements requirements, VkMemoryPropertyFlags required,
     VkMemoryPropertyFlags preferred, VulkanMemory* out);
 void vulkanMemoryFree(VulkanDevice* d, VulkanMemory& memory);
@@ -48,14 +48,14 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
 // Returns the view of a texture's `level` and `layer` as an attachment, made the first time that a pass asks for it.
 VkImageView vulkanAttachmentView(VulkanDevice* d, uint32_t slot, uint8_t level, uint16_t layer);
 
-// Puts an image that the device does not own, a swap chain's or the host's, into a new slot as a texture that `desc`
-// describes, with its views. Returns the slot, or zero if no slot is left. Called with the device's mutex held.
+// Puts an image that the device does not own, a swap chain's or the application's, into a new slot as a texture that
+// `desc` describes, with its views. Returns the slot, or zero if no slot is left. Called with the device's mutex held.
 uint32_t vulkanTextureAdd(VulkanDevice* d, VkImage image, const PrGpuTextureDesc* desc);
 
 // Frees a slot and what it holds at once, for work that is done with it. Called with the device's mutex held.
 void vulkanSlotFree(VulkanDevice* d, uint32_t slot);
 
-// Implement the wrapping of the host's images and buffers (pr/gpu_vulkan.h).
+// Implement the wrapping of the application's images and buffers (pr/gpu_vulkan.h).
 PrStatus vulkanTextureWrap(VulkanDevice* d, VkImage image, const PrGpuTextureDesc* desc, PrGpuTexture* out);
 PrStatus vulkanBufferWrap(VulkanDevice* d, VkBuffer buffer, const PrGpuBufferDesc* desc, PrGpuBuffer* out);
 

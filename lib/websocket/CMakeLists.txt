@@ -11,7 +11,8 @@ if (PR_WEBSOCKET_BUILTIN)
     target_link_libraries(pr_websocket PRIVATE prax::url)
 endif()
 
-if (PR_DEVELOP)
+# Its tests run over the platform's sockets (lib/net).
+if (PR_DEVELOP AND PR_NET_SOCKETS)
     pr_net_tests(websocket_tests tests/test_websocket.cpp tests/test_websocket_c.c)
     target_link_libraries(websocket_tests PRIVATE prax::websocket prax::tls)
 endif()

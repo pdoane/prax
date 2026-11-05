@@ -19,7 +19,7 @@ implementation does not wait with a mutex from another, and one allocator does n
 | --- | --- | --- |
 | memory | `PR_PLATFORM_ALLOC_BYTES`, `REALLOC_BYTES` and `FREE_BYTES`, with `ALLOC_ZEROED_BYTES` and `USABLE_BYTES` if the embedder has them | the C library, or mimalloc with `PR_PLATFORM_MIMALLOC` |
 | failure | `PR_PLATFORM_FAIL`, and `PR_ASSERT`, which replaces the library's assertions | POSIX, or the Windows family on Windows |
-| threads | `PR_PLATFORM_THREAD_START`, `_JOIN`, `_HARDWARE_COUNT` and `_SLEEP`, `PR_PLATFORM_MUTEX_INIT`, `_RESET`, `_LOCK` and `_UNLOCK`, and `PR_PLATFORM_CONDITION_INIT`, `_RESET`, `_WAIT`, `_WAIT_FOR`, `_SIGNAL` and `_BROADCAST` | POSIX, or the Windows family on Windows |
+| threads | `PR_PLATFORM_THREAD_SUPPORTED`, `_START`, `_JOIN`, `_HARDWARE_COUNT` and `_SLEEP`, `PR_PLATFORM_MUTEX_INIT`, `_RESET`, `_LOCK` and `_UNLOCK`, and `PR_PLATFORM_CONDITION_INIT`, `_RESET`, `_WAIT`, `_WAIT_FOR`, `_SIGNAL` and `_BROADCAST` | POSIX, or the Windows family on Windows, or none with `PR_PLATFORM_THREADS` off |
 | files | `PR_PLATFORM_FILE_MAP`, `_UNMAP`, `_INFO`, `_SAME`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_CACHE_DIRECTORY`, `_DATA_DIRECTORY`, `_WORKING_DIRECTORY`, `_STREAM_WRITE` and `_STREAM_READ` | POSIX, or the Windows family on Windows |
 | address space | `PR_PLATFORM_VMEM_RESERVE`, `_COMMIT` and `_FREE` | POSIX, or the Windows family on Windows |
 | clocks | `PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS`, `_WALL_MILLISECONDS` and `_LOCAL_OFFSET_MILLISECONDS` | POSIX, or the Windows family on Windows |
@@ -54,6 +54,12 @@ that shares it, so one target's defaults may come from several families. The `li
 every target, the `posix` family serves the Unix-like ones, and the `windows` family serves Windows: it fails without
 the C runtime's abort dialog, maps files with file mapping objects, runs Win32 threads with slim reader/writer locks and
 condition variables, reads the performance counter and the precise system time, and reserves with `VirtualAlloc`.
+
+A build without threads binds them to the `no_threads` family, which serves every target. No thread starts, a mutex
+does nothing, and core fails a wait on a condition, because nothing else could signal it. The CMake option
+`PR_PLATFORM_THREADS` chooses this family. It is off on the web, where a page shares memory between threads only if it
+is served to allow that, and on everywhere else. `prThreadSupported` tells a program which it has. A task pool with no
+threads runs its work on the thread that posts it.
 
 Memory comes from the C library unless the build sets `PR_PLATFORM_MIMALLOC`, a CMake option that makes mimalloc the
 default instead. A library leaves the choice of allocator to its embedder, and `./dev.sh` sets the option for

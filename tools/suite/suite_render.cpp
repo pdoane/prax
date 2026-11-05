@@ -101,7 +101,7 @@ bool readLine(SuiteRender* out, PrStringView line, PrStringView root) {
 bool suiteRenderRead(SuiteRender* out, PrStringView path, PrStringView root) {
     suiteRenderReset(out);
     out->fonts = prFontSetCreate(nullptr);
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (!prFileMap(path, &mapping))
         return false;
     const char* data = reinterpret_cast<const char*>(mapping.data);

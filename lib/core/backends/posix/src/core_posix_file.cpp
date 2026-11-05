@@ -70,8 +70,8 @@ PrFileInfo infoOf(const struct stat& status) {
 
 using namespace pr_impl;
 
-bool prCorePosixFileMap(PrStringView path, PrFileMapping* out) {
-    *out = PrFileMapping{nullptr, 0};
+bool prCorePosixFileMap(PrStringView path, PrByteView* out) {
+    *out = PrByteView{};
     char* terminated = terminate(path);
     if (terminated == nullptr)
         return false;
@@ -86,7 +86,7 @@ bool prCorePosixFileMap(PrStringView path, PrFileMapping* out) {
         mapped = info.st_size == 0;
         void* data = mapped ? MAP_FAILED : mmap(nullptr, size_t(info.st_size), PROT_READ, MAP_PRIVATE, fd, 0);
         if (data != MAP_FAILED) {
-            *out = PrFileMapping{static_cast<const uint8_t*>(data), size_t(info.st_size)};
+            *out = PrByteView{static_cast<const uint8_t*>(data), size_t(info.st_size)};
             mapped = true;
         }
     }
@@ -94,7 +94,7 @@ bool prCorePosixFileMap(PrStringView path, PrFileMapping* out) {
     return mapped;
 }
 
-void prCorePosixFileUnmap(PrFileMapping* mapping) {
+void prCorePosixFileUnmap(PrByteView* mapping) {
     munmap(const_cast<uint8_t*>(mapping->data), mapping->size);
 }
 
@@ -203,19 +203,21 @@ bool prCorePosixFileCreateDirectory(PrStringView path) {
     char* terminated = terminate(path);
     if (terminated == nullptr)
         return false;
-    // Each directory from the root down is made, so that a parent exists before its child.
+    // Each directory from the root down is made, so that a parent exists before its child. A directory that exists may
+    // refuse to be made with an error other than EEXIST, as a drive's root does under Node.js on Windows, so it is
+    // looked at instead.
+    struct stat info;
     for (size_t i = 1; i <= path.size; ++i) {
         if (i != path.size && terminated[i] != '/')
             continue;
         char saved = terminated[i];
         terminated[i] = 0;
-        if (mkdir(terminated, 0755) != 0 && errno != EEXIST) {
+        if (mkdir(terminated, 0755) != 0 && errno != EEXIST && !(stat(terminated, &info) == 0 && S_ISDIR(info.st_mode))) {
             free(terminated);
             return false;
         }
         terminated[i] = saved;
     }
-    struct stat info;
     bool exists = stat(terminated, &info) == 0 && S_ISDIR(info.st_mode);
     free(terminated);
     return exists;

@@ -587,12 +587,12 @@ class BackendIncludes(unittest.TestCase):
         report = lint.Report()
         path = os.path.join(lint.ROOT, 'lib/gpu/backends/metal/tests/test_gpu_metal.mm')
         lint.check_backend_includes(report, path,
-                                    '#include "gpu/tests/kTestGpuHostShaders.h"\n'
+                                    '#include "gpu/tests/kTestGpuNativeShaders.h"\n'
                                     '#include "draw/tests/draw_testing.h"\n')
         self.assertEqual([rule for _, _, rule, _ in report.problems], ['backend-include'])
         report = lint.Report()
         path = os.path.join(lint.ROOT, 'lib/gpu/backends/metal/src/gpu_metal.mm')
-        lint.check_backend_includes(report, path, '#include "gpu/tests/kTestGpuHostShaders.h"\n')
+        lint.check_backend_includes(report, path, '#include "gpu/tests/kTestGpuNativeShaders.h"\n')
         self.assertEqual([rule for _, _, rule, _ in report.problems], ['backend-include'])
 
     def test_only_nested_modules_are_backends(self):

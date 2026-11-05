@@ -298,10 +298,13 @@ PrMediaSampleSink sinkOf(Decoded* decoded) {
     sink.context = decoded;
     sink.image = [](void* context, void* image, double presentation) {
         Decoded* d = static_cast<Decoded*>(context);
-        PrPixelView pixels{};
-        REQUIRE(d->codec->imageLock(d->codec, image, &pixels));
-        uint8_t red = pixels.data[(pixels.extent.y / 2) * pixels.stride + (pixels.extent.x / 2) * 4 + 2];
-        d->codec->imageUnlock(d->codec, image);
+        PrGpuImport imported{};
+        d->codec->imageImport(d->codec, image, &imported);
+        PrGpuImportPixels pixels{};
+        REQUIRE(prGpuImportLock(&imported, &pixels));
+        PrPixelView view = pixels.pixels;
+        uint8_t red = view.data[(view.extent.y / 2) * view.stride + (view.extent.x / 2) * 4 + 2];
+        prGpuImportUnlock(&imported);
         d->codec->imageRelease(d->codec, image);
         d->images.emplace_back(presentation, red);
     };
@@ -312,9 +315,23 @@ PrMediaSampleSink sinkOf(Decoded* decoded) {
     return sink;
 }
 
+// Returns the frame's extent.
+PrUVec2 extentOf(const PrMediaFrame& frame) {
+    PrGpuImportPixels pixels{};
+    REQUIRE(prGpuImportLock(&frame.image, &pixels));
+    PrUVec2 extent = pixels.pixels.extent;
+    prGpuImportUnlock(&frame.image);
+    return extent;
+}
+
 // Returns the red level at the frame's center.
 uint8_t centerRed(const PrMediaFrame& frame) {
-    return frame.pixels.data[(frame.pixels.extent.y / 2) * frame.pixels.stride + (frame.pixels.extent.x / 2) * 4 + 2];
+    PrGpuImportPixels pixels{};
+    REQUIRE(prGpuImportLock(&frame.image, &pixels));
+    PrPixelView view = pixels.pixels;
+    uint8_t red = view.data[(view.extent.y / 2) * view.stride + (view.extent.x / 2) * 4 + 2];
+    prGpuImportUnlock(&frame.image);
+    return red;
 }
 
 } // namespace
@@ -424,8 +441,7 @@ TEST_CASE("the AVFoundation codec reads a movie from memory and decodes the fram
     PrMediaFrame frame{};
     REQUIRE(waitForFrame(decoder, 0, &frame));
     CHECK(frame.time == 0);
-    CHECK(frame.pixels.extent.x == kWidth);
-    CHECK(frame.pixels.extent.y == kHeight);
+    CHECK(extentOf(frame) == PrUVec2{uint32_t(kWidth), uint32_t(kHeight)});
     CHECK(centerRed(frame) <= redOf(0) + 16);
     uint64_t first = frame.serial;
     // The same time answers the same frame.

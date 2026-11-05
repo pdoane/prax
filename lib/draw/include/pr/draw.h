@@ -155,8 +155,7 @@ enum {
 typedef uint8_t PrDrawAlpha;
 
 // A texture of the host's, as Dear ImGui names a texture. It names a texture on the device of the renderer that renders
-// the list (prDrawGpuTexture), or pixels in CPU memory for a renderer in memory (prDrawCpuTexture). Zero names no
-// texture.
+// the list (prDrawGpuTexture). Zero names no texture.
 typedef uint64_t PrDrawTextureId;
 
 // What a source draws from.
@@ -175,7 +174,7 @@ typedef uint8_t PrDrawSourceKind;
 // - Texture: the texels of the host's texture. The texture is on the device of the backend that renders the list, in
 //   a format the backend samples, and `alpha` says how its alpha relates to its color. `extent` is its size in texels.
 //   The host keeps it alive and unchanged until the frames that draw it are done. Its mip levels are the ones the host
-//   gave it. A backend that renders in memory draws nothing from a texture.
+//   gave it.
 PR_NO_PADDING_BEGIN
 typedef struct PrDrawSource {
     PrDrawSourceKind kind;
@@ -288,6 +287,7 @@ typedef struct PrDrawBrush {
     uint32_t stopCount;
     float opacity;                            // multiplies the brush's alpha
     const PrDrawColorStop* PR_NULLABLE stops; // gradients: offsets nondecreasing
+    PR_PAD(0, 4)
     union {
         PrDrawLinearGradient linear;        // Linear
         PrDrawRadialGradient radial;        // Radial

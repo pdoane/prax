@@ -1,4 +1,5 @@
-// The Blend2D draw backend, which renders with Blend2D into pixels in memory.
+// The Blend2D draw backend, which renders with Blend2D on a memory device (PrGpuNativeKind_Pixels), natively into the
+// passes that frames render into.
 
 #pragma once
 
@@ -19,13 +20,18 @@ typedef struct PrDrawBlend2dOptions {
     uint32_t threads;
 
     PrDrawGlyphDecoder* PR_NULLABLE glyphDecoder;   // draws the glyphs that are pictures; without it, they draw nothing
+
+    // The memory device that the renderer renders on. If it is null, the renderer creates a memory device and frees it
+    // with itself.
+    PrGpuDevice* PR_NULLABLE device;
 } PrDrawBlend2dOptions;
 
-// Returns options for synchronous rendering, without a glyph decoder.
+// Returns options for synchronous rendering, without a glyph decoder, on a device of the renderer's own.
 PrDrawBlend2dOptions prDrawBlend2dOptionsDefault(void);
 
-// Creates a renderer that renders in memory, into pixels of either format. Null options mean the defaults.
-PrDrawRenderer* prDrawBlend2dCreate(const PrDrawBlend2dOptions* PR_NULLABLE options);
+// Creates a renderer that renders on a memory device, into attachments of Rgba8 and Bgra8. Null options mean the
+// defaults. Returns null if the device is not a memory device, or if it is null and the build has no memory device.
+PrDrawRenderer* PR_NULLABLE prDrawBlend2dCreate(const PrDrawBlend2dOptions* PR_NULLABLE options);
 
 #if defined(__cplusplus)
 }

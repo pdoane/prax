@@ -23,6 +23,8 @@
 #include "pr/raw_array.h"
 #include "pr/vec.h"
 
+#include "draw/backends/shared/src/draw_shared_memory.h"
+
 #include <CoreGraphics/CoreGraphics.h>
 #include <CoreText/CoreText.h>
 
@@ -59,6 +61,7 @@ struct SizedFont {
 };
 
 struct CgBackend : PrDrawRenderer {
+    bool ownsDevice;                    // true if the renderer created its device, and frees it
     PrDrawCoreGraphicsOptions options;
     CGColorSpaceRef srgb;
     CGColorSpaceRef extended;
@@ -69,11 +72,6 @@ struct CgBackend : PrDrawRenderer {
     RawArray<CachedFont> fonts;
     RawArray<SizedFont> sized;
     uint64_t render;
-};
-
-// A frame: the list that it renders, once there are pixels.
-struct CgFrame : PrDrawFrame {
-    const PrDrawList* list;
 };
 
 // A push of a transform, clip or group, whether it saved the graphics state or began a layer, and whether it is a
@@ -1299,11 +1297,13 @@ void destroyBackend(PrDrawRenderer* renderer) {
     CGColorSpaceRelease(cg->srgb);
     CGColorSpaceRelease(cg->extended);
     CGColorSpaceRelease(cg->gray);
+    if (cg->ownsDevice)
+        prGpuDeviceDestroy(cg->device);
     prMemoryFree(cg);
 }
 
 void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
-    prMemoryFree(frame);
+    drawMemoryFrameDestroy(static_cast<DrawMemoryFrame*>(frame));
 }
 
 // Drops the cached data that the render did not use.
@@ -1348,21 +1348,17 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
 }
 
 PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
-    CgFrame* frame = allocZeroed<CgFrame>();
-    frame->renderer = renderer;
-    return frame;
+    return drawMemoryFrameCreate(renderer, renderPixels, false);
 }
 
-// Keeps the list, which renders once there are pixels.
+// Keeps the list, which renders when the frame's pass runs.
 PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget*) {
-    CgFrame* target = static_cast<CgFrame*>(frame);
-    target->list = list;
+    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list);
     return PrStatus_Ok;
 }
 
-void renderFrame(PrDrawRenderer* renderer, PrDrawFrame* frame, PrPixels pixels, PrPixelFormat format) {
-    CgFrame* target = static_cast<CgFrame*>(frame);
-    renderPixels(renderer, pixels, format, target->list);
+void renderFrame(PrDrawRenderer*, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
+    drawMemoryFrameRender(static_cast<DrawMemoryFrame*>(frame), pass, origin);
 }
 
 } // namespace
@@ -1372,18 +1368,25 @@ void renderFrame(PrDrawRenderer* renderer, PrDrawFrame* frame, PrPixels pixels, 
 using namespace pr_impl;
 
 PrDrawCoreGraphicsOptions prDrawCoreGraphicsOptionsDefault(void) {
-    return PrDrawCoreGraphicsOptions{true, nullptr};
+    return PrDrawCoreGraphicsOptions{.fontSmoothing = true};
 }
 
-PrDrawRenderer* prDrawCoreGraphicsCreate(const PrDrawCoreGraphicsOptions* PR_NULLABLE options) {
+PrDrawRenderer* PR_NULLABLE prDrawCoreGraphicsCreate(const PrDrawCoreGraphicsOptions* PR_NULLABLE options) {
+    PrDrawCoreGraphicsOptions o = options != nullptr ? *options : prDrawCoreGraphicsOptionsDefault();
+    bool owned = false;
+    PrGpuDevice* device = drawMemoryDevice(o.device, &owned);
+    if (device == nullptr)
+        return nullptr;
     CgBackend* cg = allocZeroed<CgBackend>();
-    cg->options = options != nullptr ? *options : prDrawCoreGraphicsOptionsDefault();
+    cg->device = device;
+    cg->ownsDevice = owned;
+    cg->options = o;
     cg->glyphs = prDrawGlyphCacheCreate(cg->options.glyphDecoder);
     cg->destroy = destroyBackend;
     cg->frameCreate = createFrame;
     cg->frameDestroy = destroyFrame;
     cg->framePrepare = prepare;
-    cg->frameRenderPixels = renderFrame;
+    cg->frameRender = renderFrame;
     cg->srgb = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     cg->extended = CGColorSpaceCreateWithName(kCGColorSpaceExtendedSRGB);
     cg->gray = CGColorSpaceCreateDeviceGray();

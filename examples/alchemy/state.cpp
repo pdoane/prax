@@ -23,7 +23,7 @@ constexpr double kHeldEventMaxAge = 5.0;
 constexpr size_t kHistoryLimit = 100;
 
 Array<uint8_t> readFile(PrStringView path) {
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (!prFileMap(path, &mapping))
         return Array<uint8_t>();
     Array<uint8_t> bytes;

@@ -63,6 +63,8 @@ bool prTlsBackendIsBuilt(PrTlsBackend backend) {
 }
 
 PrTls* PR_NULLABLE prTlsCreate(PrTlsBackend backend, PrNet* net) {
+    // A build without a backend has no use for the network.
+    (void)net;
     switch (backend == PrTlsBackend_Default ? kBuilt[0] : backend) {
 #if defined(PR_TLS_HAS_APPLE)
         case PrTlsBackend_Apple: return prTlsAppleCreate(net);

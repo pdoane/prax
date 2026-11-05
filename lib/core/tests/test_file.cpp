@@ -18,7 +18,7 @@ std::string pathOf(const char* name) {
     return std::string(PR_CORE_TEST_DIR) + "/" + name;
 }
 
-std::string contentsOf(const PrFileMapping& mapping) {
+std::string contentsOf(const PrByteView& mapping) {
     return std::string(reinterpret_cast<const char*>(mapping.data), mapping.size);
 }
 
@@ -51,12 +51,12 @@ TEST_CASE("a file is written whole, replaced while a mapping of it stays valid, 
     REQUIRE(prFileCreateDirectory(PR_CORE_TEST_DIR));
     std::string path = pathOf("written.txt");
     REQUIRE(prFileWrite(path, bytesOf("first")));
-    PrFileMapping first{};
+    PrByteView first{};
     REQUIRE(prFileMap(path, &first));
     CHECK(contentsOf(first) == "first");
 
     REQUIRE(prFileWrite(path, bytesOf("second, and longer")));
-    PrFileMapping second{};
+    PrByteView second{};
     REQUIRE(prFileMap(path, &second));
     CHECK(contentsOf(second) == "second, and longer");
     CHECK(contentsOf(first) == "first");
@@ -65,14 +65,14 @@ TEST_CASE("a file is written whole, replaced while a mapping of it stays valid, 
 
     // An empty file maps to an empty mapping.
     REQUIRE(prFileWrite(path, PrByteView{nullptr, 0}));
-    PrFileMapping empty{};
+    PrByteView empty{};
     CHECK(prFileMap(path, &empty));
     CHECK(empty.size == 0);
     prFileUnmap(&empty);
 
     CHECK(prFileRemove(path));
     CHECK(!prFileRemove(path));
-    PrFileMapping gone{};
+    PrByteView gone{};
     CHECK(!prFileMap(path, &gone));
     // A file in a directory that does not exist cannot be written.
     CHECK(!prFileWrite(pathOf("missing/written.txt"), bytesOf("x")));
@@ -151,6 +151,11 @@ TEST_CASE("a directory's entries are its files and directories, without its link
 
 TEST_CASE("the platform names directories for the user's caches and data") {
     PrRawString directories[] = {prFileCacheDirectory(), prFileDataDirectory()};
+#if defined(__EMSCRIPTEN__)
+    // The web keeps no directories for the user, unless the host that runs the program names its home.
+    if (prRawStringIsEmpty(&directories[0]) && prRawStringIsEmpty(&directories[1]))
+        return;
+#endif
     for (PrRawString& directory : directories) {
         PrStringView view = prRawStringView(&directory);
         REQUIRE(view.size != 0);
@@ -178,7 +183,7 @@ TEST_CASE("a path's parts are read from its text") {
     CHECK(prFilePathExtension("archive.tar.gz") == ".gz");
     CHECK(prFilePathExtension("dir.d/README") == "");
     CHECK(prFilePathExtension(".profile") == "");
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
     CHECK(prFilePathName("C:\\dir\\notes.txt") == "notes.txt");
     CHECK(prFilePathParent("C:\\dir\\notes.txt") == "C:\\dir");
 #endif
@@ -217,10 +222,12 @@ TEST_CASE("an absolute path is normalized from its text, and a relative one is u
     CHECK(absolute("dir/../notes.txt") == expected);
     CHECK(absolute("./notes.txt") == expected);
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
     CHECK(absolute("C:\\a\\..\\b") == "C:/b");
     CHECK(absolute("C:") == "C:/");
     CHECK(absolute("\\\\server\\share\\x") == "//server/share/x");
+#endif
+#if defined(_WIN32)
     // A lone separator is the root of the working directory's drive.
     String drive = absolute("\\x");
     CHECK(prStringSlice(drive, 1, drive.count() - 1) == ":/x");

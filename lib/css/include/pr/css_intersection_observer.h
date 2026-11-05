@@ -43,14 +43,7 @@ typedef struct PrCssIntersectionObserverInit {
 
 // Returns an init with the dictionary's defaults: no root, margins of 0px, a threshold of 0, and no delay.
 static inline PrCssIntersectionObserverInit prCssIntersectionObserverInitDefault(void) {
-    PrCssIntersectionObserverInit value;
-    value.root = NULL;
-    value.rootMargin = PR_SV("0px");
-    value.scrollMargin = PR_SV("0px");
-    value.thresholds = NULL;
-    value.thresholdCount = 0;
-    value.delay = 0;
-    value.trackVisibility = false;
+    PrCssIntersectionObserverInit value = {.rootMargin = PR_SV("0px"), .scrollMargin = PR_SV("0px")};
     return value;
 }
 

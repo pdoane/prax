@@ -52,7 +52,7 @@ struct DiskStorage : PrStorage {
 // A record read from a store: the buffer of a record that is not yet written, or the mapping of its file.
 struct DiskRecord {
     StorageBuffer* PR_NULLABLE buffer;
-    PrFileMapping mapping;
+    PrByteView mapping;
 };
 
 void appendPath(const DiskStorage* storage, uint64_t file, PrTextBuffer* out) {
@@ -169,7 +169,7 @@ void unlockAndDrain(DiskStorage* storage) {
 void readIndex(DiskStorage* storage) {
     PrTextBuffer path{};
     appendPath(storage, 0, &path);
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     bool mapped = prFileMap(prTextBufferView(&path), &mapping);
     prTextBufferReset(&path);
     if (!mapped)
@@ -262,7 +262,7 @@ bool readStorage(PrStorage* base, PrStringView key, PrStorageRecord* out) {
     bool mapped = size == 0 || prFileMap(prTextBufferView(&path), &record->mapping);
     prTextBufferReset(&path);
     if (mapped && record->mapping.size == size) {
-        *out = PrStorageRecord{PrByteView{record->mapping.data, record->mapping.size}, record};
+        *out = PrStorageRecord{record->mapping, record};
         return true;
     }
     // A file that is missing or of another size than the index says is not the record. The entry goes, unless another

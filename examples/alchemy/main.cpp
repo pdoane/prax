@@ -88,7 +88,8 @@ struct Window {
 // Renders the list on the CPU into a PNG file at `path`, at `extent` target pixels on the `canvas` color.
 bool capture(Window& w, PrStringView path, PrUVec2 extent, PrColor canvas) {
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
-    PrDrawFrame* cpuFrame = prDrawFrameCreate(cpu);
+    if (cpu == nullptr)
+        return false;
     Array<uint8_t> pixels(size_t(extent.x) * extent.y * 4);
     for (uint32_t i = 0; i < pixels.count(); i += 4) {
         pixels[i] = uint8_t(canvas.r * 255.0f + 0.5f);
@@ -96,10 +97,9 @@ bool capture(Window& w, PrStringView path, PrUVec2 extent, PrColor canvas) {
         pixels[i + 2] = uint8_t(canvas.b * 255.0f + 0.5f);
         pixels[i + 3] = 255;
     }
-    PrDrawTarget target{.extent = extent, .format = PrPixelFormat_Rgba8};
     bool written = false;
-    if (prDrawFramePrepare(cpuFrame, w.list, &target) == PrStatus_Ok) {
-        prDrawFrameRenderPixels(cpuFrame, PrPixels{pixels.data(), extent.x * 4, extent}, PrPixelFormat_Rgba8);
+    PrPixels into{pixels.data(), extent.x * 4, extent};
+    if (prDrawRendererRenderPixels(cpu, w.list, into, PrPixelFormat_Rgba8) == PrStatus_Ok) {
         PrPixelView view{pixels.data(), extent.x * 4, extent};
         size_t size = 0;
         prImageCodecEncode(w.state.codec, "image/png", view, nullptr, 0, &size);
@@ -107,7 +107,6 @@ bool capture(Window& w, PrStringView path, PrUVec2 extent, PrColor canvas) {
         if (prImageCodecEncode(w.state.codec, "image/png", view, png.data(), png.count(), &size) == PrStatus_Ok)
             written = prFileWrite(path, PrByteView{png.data(), size});
     }
-    prDrawFrameDestroy(cpuFrame);
     prDrawRendererDestroy(cpu);
     return written;
 }
@@ -132,8 +131,6 @@ void build(void* context, PrUi*, const PrUiRound*) {
 }
 
 void closeDevice(Window& w) {
-    if (w.device != nullptr)
-        prGpuDeviceWaitIdle(w.device);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
     prGpuSwapChainDestroy(w.swapChain);

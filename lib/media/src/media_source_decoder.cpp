@@ -58,12 +58,10 @@ struct SourceDecoder : PrMediaDecoder {
     bool stopping;
     uint64_t serials;
 
-    // The image last returned, which stays locked while it shows, and its pixels. The list does not release the image
-    // that shows: it sets `shownDropped` instead, and the user releases the image once another replaces it. Guarded by
-    // `mutex`, except `shownPixels`, which is the user's alone.
+    // The image last returned. The list does not release the image that shows: it sets `shownDropped` instead, and the
+    // user releases the image once another replaces it. Guarded by `mutex`.
     void* PR_NULLABLE shown;
     bool shownDropped;
-    PrPixelView shownPixels;
 
     // The audio track, and its thread once the audio starts.
     PrMediaSourceBuffer* PR_NULLABLE audioBuffer;
@@ -268,10 +266,8 @@ void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
     }
     releaseImages(d);
     d->images.reset();
-    if (d->shown != nullptr) {
-        d->backend->imageUnlock(d->backend, d->shown);
+    if (d->shown != nullptr)
         d->backend->imageRelease(d->backend, d->shown);
-    }
     if (d->video != nullptr)
         d->backend->sampleDecoderDestroy(d->backend, d->video);
     if (d->audio != nullptr)
@@ -321,23 +317,11 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
         out->current = false;
         return false;
     }
-    if (image.image != previous) {
-        if (previous != nullptr) {
-            d->backend->imageUnlock(d->backend, previous);
-            if (previousDropped)
-                d->backend->imageRelease(d->backend, previous);
-        }
-        d->shownPixels = PrPixelView{};
-        if (!d->backend->imageLock(d->backend, image.image, &d->shownPixels))
-            d->shownPixels = PrPixelView{};
-    }
-    *out = PrMediaFrame{
-        .pixels = d->shownPixels,
-        .time = image.presentation,
-        .serial = image.serial,
-        .current = current,
-    };
-    return d->shownPixels.data != nullptr;
+    if (image.image != previous && previous != nullptr && previousDropped)
+        d->backend->imageRelease(d->backend, previous);
+    *out = PrMediaFrame{.time = image.presentation, .serial = image.serial, .current = current};
+    d->backend->imageImport(d->backend, image.image, &out->image);
+    return true;
 }
 
 bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {

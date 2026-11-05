@@ -125,7 +125,15 @@ bool waitForFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
 
 // Returns the byte `channel` of the frame's center pixel.
 uint8_t centerChannel(const PrMediaFrame& frame, uint32_t channel) {
-    return frame.pixels.data[(frame.pixels.extent.y / 2) * frame.pixels.stride + (frame.pixels.extent.x / 2) * 4 + channel];
+    REQUIRE(frame.image.kind == PrGpuImportKind_Pixels);
+    PrPixelView view = static_cast<const PrGpuImportPixels*>(frame.image.handle)->pixels;
+    return view.data[(view.extent.y / 2) * view.stride + (view.extent.x / 2) * 4 + channel];
+}
+
+// Returns the frame's extent.
+PrUVec2 extentOf(const PrMediaFrame& frame) {
+    REQUIRE(frame.image.kind == PrGpuImportKind_Pixels);
+    return static_cast<const PrGpuImportPixels*>(frame.image.handle)->pixels.extent;
 }
 
 } // namespace
@@ -152,8 +160,7 @@ TEST_CASE("the Media Foundation codec reads a movie from memory and decodes the 
     PrMediaFrame frame{};
     REQUIRE(waitForFrame(decoder, 0, &frame));
     CHECK(frame.time == 0);
-    CHECK(frame.pixels.extent.x == kWidth);
-    CHECK(frame.pixels.extent.y == kHeight);
+    CHECK(extentOf(frame) == PrUVec2{kWidth, kHeight});
     CHECK(centerChannel(frame, 2) <= redOf(0) + 16);
     CHECK(centerChannel(frame, 3) == 255);
     uint64_t first = frame.serial;

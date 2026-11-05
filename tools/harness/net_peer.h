@@ -30,7 +30,7 @@ struct NetPeer {
     uint16_t wss;               // WebSocket over TLS
     uint16_t comfy;             // a fake ComfyUI server, over TCP
     uint16_t closed;            // a port that nothing listens on
-    PrFileMapping ca;           // DER
+    PrByteView ca;              // DER
 };
 
 // Reads the peer from the directory that PR_NET_PEER names. Returns false if the tests run without the peer.

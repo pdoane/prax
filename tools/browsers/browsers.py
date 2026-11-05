@@ -143,7 +143,8 @@ def url_of(path):
     relative = os.path.relpath(path, tools.ROOT)
     if relative.startswith(".."):
         sys.exit("%s is not under %s, which is what a browser is served" % (path, tools.ROOT))
-    return "/" + relative
+    # A URL's path separates its segments with '/', as Windows' paths do not.
+    return "/" + relative.replace(os.sep, "/")
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -200,6 +201,12 @@ class Server(http.server.ThreadingHTTPServer):
         self.browser = None         # the browser's main process; /cpu reports the time on cores of its processes
         self.others = set()         # processes that the browser named but did not launch itself
         threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def handle_error(self, request, client_address):
+        # A browser that closes a page drops its open requests, which is no error of the page's.
+        if isinstance(sys.exc_info()[1], ConnectionError):
+            return
+        super().handle_error(request, client_address)
 
     def wait(self, timeout=None):
         """Returns what the page reported, or None if it reported nothing in time. If the page posted an error, the run

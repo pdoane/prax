@@ -88,10 +88,7 @@ typedef struct PrDomEventInit {
 
 // Returns an init with every member false.
 static inline PrDomEventInit prDomEventInitDefault(void) {
-    PrDomEventInit value;
-    value.bubbles = false;
-    value.cancelable = false;
-    value.composed = false;
+    PrDomEventInit value = {};
     return value;
 }
 
@@ -237,11 +234,7 @@ typedef struct PrDomUiEventInit {
 
 // Returns an init with every member false, null or zero.
 static inline PrDomUiEventInit prDomUiEventInitDefault(void) {
-    PrDomUiEventInit value;
-    value.event = prDomEventInitDefault();
-    value.view = NULL;
-    value.detail = 0;
-    value.which = 0;
+    PrDomUiEventInit value = {.event = prDomEventInitDefault()};
     return value;
 }
 
@@ -281,9 +274,7 @@ typedef struct PrDomFocusEventInit {
 
 // Returns an init with every member false, null or zero.
 static inline PrDomFocusEventInit prDomFocusEventInitDefault(void) {
-    PrDomFocusEventInit value;
-    value.ui = prDomUiEventInitDefault();
-    value.relatedTarget = NULL;
+    PrDomFocusEventInit value = {.ui = prDomUiEventInitDefault()};
     return value;
 }
 
@@ -348,16 +339,7 @@ typedef struct PrDomMouseEventInit {
 
 // Returns an init with every member false, null or zero.
 static inline PrDomMouseEventInit prDomMouseEventInitDefault(void) {
-    PrDomMouseEventInit value;
-    value.ui = prDomUiEventInitDefault();
-    value.modifiers = 0;
-    value.screenX = 0;
-    value.screenY = 0;
-    value.clientX = 0;
-    value.clientY = 0;
-    value.button = 0;
-    value.buttons = 0;
-    value.relatedTarget = NULL;
+    PrDomMouseEventInit value = {.ui = prDomUiEventInitDefault()};
     return value;
 }
 
@@ -404,12 +386,7 @@ typedef struct PrDomWheelEventInit {
 
 // Returns an init with every member false, null or zero.
 static inline PrDomWheelEventInit prDomWheelEventInitDefault(void) {
-    PrDomWheelEventInit value;
-    value.mouse = prDomMouseEventInitDefault();
-    value.deltaX = 0;
-    value.deltaY = 0;
-    value.deltaZ = 0;
-    value.deltaMode = PrDomDeltaMode_Pixel;
+    PrDomWheelEventInit value = {.mouse = prDomMouseEventInitDefault(), .deltaMode = PrDomDeltaMode_Pixel};
     return value;
 }
 
@@ -459,18 +436,12 @@ typedef struct PrDomKeyboardEventInit {
 
 // Returns an init with every member false, empty or zero.
 static inline PrDomKeyboardEventInit prDomKeyboardEventInitDefault(void) {
-    PrDomKeyboardEventInit value;
-    value.ui = prDomUiEventInitDefault();
-    value.modifiers = 0;
-    value.key.data = "";
-    value.key.size = 0;
-    value.code.data = "";
-    value.code.size = 0;
-    value.location = PrDomKeyLocation_Standard;
-    value.repeat = false;
-    value.isComposing = false;
-    value.charCode = 0;
-    value.keyCode = 0;
+    PrDomKeyboardEventInit value = {
+        .ui = prDomUiEventInitDefault(),
+        .key = PR_SV(""),
+        .code = PR_SV(""),
+        .location = PrDomKeyLocation_Standard,
+    };
     return value;
 }
 
@@ -597,8 +568,7 @@ typedef struct PrDomEventListenerOptions {
 
 // Returns the default options, which are not capturing.
 static inline PrDomEventListenerOptions prDomEventListenerOptionsDefault(void) {
-    PrDomEventListenerOptions value;
-    value.capture = false;
+    PrDomEventListenerOptions value = {};
     return value;
 }
 
@@ -865,8 +835,7 @@ typedef struct PrDomElementCreationOptions {
 
 // Returns the default options, which name no customized built-in element.
 static inline PrDomElementCreationOptions prDomElementCreationOptionsDefault(void) {
-    PrDomElementCreationOptions value;
-    value.is = PR_LITERAL(PrStringView){NULL, 0};
+    PrDomElementCreationOptions value = {};
     return value;
 }
 
@@ -1079,12 +1048,7 @@ typedef struct PrDomShadowRootInit {
 
 // Returns the defaults of the members that a ShadowRootInit may omit, with the required `mode`.
 static inline PrDomShadowRootInit prDomShadowRootInitDefault(PrDomShadowRootMode mode) {
-    PrDomShadowRootInit value;
-    value.mode = mode;
-    value.delegatesFocus = false;
-    value.slotAssignment = PrDomSlotAssignmentMode_Named;
-    value.clonable = false;
-    value.serializable = false;
+    PrDomShadowRootInit value = {.mode = mode, .slotAssignment = PrDomSlotAssignmentMode_Named};
     return value;
 }
 
@@ -1535,16 +1499,7 @@ typedef struct PrDomMutationObserverInit {
 
 // Returns an init with every member false and none given.
 static inline PrDomMutationObserverInit prDomMutationObserverInitDefault(void) {
-    PrDomMutationObserverInit value;
-    value.childList = false;
-    value.attributes = false;
-    value.hasAttributes = false;
-    value.characterData = false;
-    value.hasCharacterData = false;
-    value.subtree = false;
-    value.attributeOldValue = false;
-    value.characterDataOldValue = false;
-    value.hasAttributeFilter = false;
+    PrDomMutationObserverInit value = {};
     return value;
 }
 

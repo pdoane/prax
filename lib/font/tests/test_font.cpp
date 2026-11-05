@@ -1,4 +1,5 @@
 #include "pr/font.h"
+#include "pr/thread.h"
 #include "pr/vec.h"
 
 #include "font/src/sfnt.h"
@@ -416,7 +417,7 @@ TEST_CASE("one state of a font's face is one font, while it is open") {
     prFontRelease(font);
 }
 
-TEST_CASE("threads that derive one state at once share one font") {
+TEST_CASE("threads that derive one state at once share one font" * doctest::skip(!prThreadSupported())) {
     const PrFont* font = load("NotoSans.ttf");
     std::vector<std::thread> threads;
     std::vector<const PrFont*> made(8);
@@ -441,7 +442,7 @@ TEST_CASE("threads that derive one state at once share one font") {
     prFontRelease(font);
 }
 
-TEST_CASE("a font is read from several threads at once") {
+TEST_CASE("a font is read from several threads at once" * doctest::skip(!prThreadSupported())) {
     const PrFont* font = load("NotoSans.ttf");
     std::vector<std::thread> threads;
     std::vector<float> widths(4);

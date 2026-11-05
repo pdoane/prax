@@ -89,15 +89,15 @@ PR_NO_PADDING_END
 
 // Return a size in px, a percentage of the parent's size, or the room that the parent leaves across its axis.
 static inline PrKitSize prKitPx(float px) {
-    PrKitSize size = {px, PrKitSizeKind_Px, {0, 0, 0}};
+    PrKitSize size = {.value = px, .kind = PrKitSizeKind_Px};
     return size;
 }
 static inline PrKitSize prKitPercent(float percent) {
-    PrKitSize size = {percent, PrKitSizeKind_Percent, {0, 0, 0}};
+    PrKitSize size = {.value = percent, .kind = PrKitSizeKind_Percent};
     return size;
 }
 static inline PrKitSize prKitFill(void) {
-    PrKitSize size = {0, PrKitSizeKind_Fill, {0, 0, 0}};
+    PrKitSize size = {.kind = PrKitSizeKind_Fill};
     return size;
 }
 

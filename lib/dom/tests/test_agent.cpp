@@ -52,7 +52,8 @@ void stopFromThread(void* PR_NULLABLE context) {
 
 using namespace pr_impl;
 
-TEST_CASE("a task posted from another thread wakes the host and runs on the agent's thread in the order posted") {
+TEST_CASE("a task posted from another thread wakes the host and runs on the agent's thread in the order posted" *
+        doctest::skip(!prThreadSupported())) {
     PrDomAgent* agent = prDomAgentCreate(nullptr);
     Posts posts{agent, ""};
     prDomAgentSetWake(agent, woken, &posts);
@@ -82,7 +83,8 @@ TEST_CASE("an agent runs the tasks posted to it that have not run when it is des
     CHECK(posts.ran == "a");
 }
 
-TEST_CASE("an agent's loop waits for a posted task, runs it with its checkpoints, then updates, until it stops") {
+TEST_CASE("an agent's loop waits for a posted task, runs it with its checkpoints, then updates, until it stops" *
+        doctest::skip(!prThreadSupported())) {
     Posts posts{};
     posts.agent = prDomAgentCreate(nullptr);
     prDomAgentAddCheckpoint(posts.agent, checkpoint, &posts);

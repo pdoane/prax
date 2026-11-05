@@ -1,9 +1,10 @@
-// The tests of what only the Vulkan backend has: recording into the host's command buffers and passes, presenting to a
-// window's swap chain, and a clean run under the validation layer. The interface's own tests run on Vulkan as well.
+// The tests of what only the Vulkan backend has: recording into the application's command buffers and passes,
+// presenting to a window's swap chain, and a clean run under the validation layer. The interface's own tests run on
+// Vulkan as well.
 
 #include "pr/gpu_vulkan.h"
 
-#include "gpu/tests/kTestGpuHostShaders.h"
+#include "gpu/tests/kTestGpuNativeShaders.h"
 
 #include "tools/harness/test.h"
 
@@ -23,7 +24,7 @@ namespace pr_impl {
 
 namespace {
 
-// The root data of the test shaders, as test_gpu_host.slang declares it.
+// The root data of the test shaders, as test_gpu_native.slang declares it.
 struct Push {
     uint32_t output;
     uint32_t count;
@@ -49,7 +50,7 @@ struct Fixture {
             return;
         }
         REQUIRE(status == PrStatus_Ok);
-        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuHostShaders, sizeof(kTestGpuHostShaders), &library) ==
+        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuNativeShaders, sizeof(kTestGpuNativeShaders), &library) ==
             PrStatus_Ok);
     }
 
@@ -105,9 +106,9 @@ struct Fixture {
     }
 };
 
-// A host's own use of Vulkan on the device's VkDevice: a command pool whose command buffers it records, and views of
-// the images that it renders into.
-struct HostVulkan {
+// An application's own use of Vulkan on the device's VkDevice: a command pool whose command buffers it records, and
+// views of the images that it renders into.
+struct AppVulkan {
     VkDevice device = VK_NULL_HANDLE;
     VkCommandPool pool = VK_NULL_HANDLE;
     PFN_vkDestroyCommandPool destroyPool = nullptr;
@@ -118,8 +119,9 @@ struct HostVulkan {
     PFN_vkDestroyImageView destroyImageView = nullptr;
     PFN_vkCmdBeginRendering cmdBeginRendering = nullptr;
     PFN_vkCmdEndRendering cmdEndRendering = nullptr;
+    PFN_vkCmdSetScissor cmdSetScissor = nullptr;
 
-    explicit HostVulkan(PrGpuDevice* gpu) {
+    explicit AppVulkan(PrGpuDevice* gpu) {
         PFN_vkGetInstanceProcAddr getInstanceProcAddr =
             reinterpret_cast<PFN_vkGetInstanceProcAddr>(prGpuVulkanGetInstanceProcAddr(gpu));
         VkInstance instance = static_cast<VkInstance>(prGpuVulkanInstance(gpu));
@@ -136,12 +138,13 @@ struct HostVulkan {
         destroyImageView = reinterpret_cast<PFN_vkDestroyImageView>(get(device, "vkDestroyImageView"));
         cmdBeginRendering = reinterpret_cast<PFN_vkCmdBeginRendering>(get(device, "vkCmdBeginRendering"));
         cmdEndRendering = reinterpret_cast<PFN_vkCmdEndRendering>(get(device, "vkCmdEndRendering"));
+        cmdSetScissor = reinterpret_cast<PFN_vkCmdSetScissor>(get(device, "vkCmdSetScissor"));
         VkCommandPoolCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         REQUIRE(createPool(device, &info, nullptr, &pool) == VK_SUCCESS);
     }
 
-    ~HostVulkan() {
+    ~AppVulkan() {
         destroyPool(device, pool, nullptr);
     }
 
@@ -180,14 +183,15 @@ struct HostVulkan {
 
 using namespace pr_impl;
 
-TEST_CASE("vulkan records into the host's command buffer, around the host's own work, and submits it") {
+TEST_CASE("vulkan records into the application's command buffer, around the application's own work, and submits it") {
     Fixture f;
     if (f.device == nullptr)
         return;
-    HostVulkan host(f.device);
-    VkCommandBuffer native = host.begin();
+    AppVulkan app(f.device);
+    VkCommandBuffer native = app.begin();
 
-    // An upload made before the submission is visible to all of its work, the host's native command buffer's too.
+    // An upload made before the submission is visible to all of the submission's work, including the work in the
+    // application's native command buffer.
     PrGpuBuffer output = f.buffer(16, PrGpuBufferUsageFlag_Storage);
     PrGpuPipeline pipeline{};
     REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "fill", "fill", &pipeline) == PrStatus_Ok);
@@ -201,10 +205,10 @@ TEST_CASE("vulkan records into the host's command buffer, around the host's own 
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuCommandsSetPush(commands, &push, sizeof(push));
     prGpuCommandsDispatch(commands, PrGpuExtent{1, 1, 1});
-    PrGpuHostStateFlags changed = prGpuHostStateSync(commands);
-    CHECK((changed & PrGpuHostStateFlag_Pipeline) != 0);
-    CHECK((changed & PrGpuHostStateFlag_Push) != 0);
-    host.endBuffer(native);
+    PrGpuNativeStateFlags changed = prGpuNativeStateSync(commands);
+    CHECK((changed & PrGpuNativeStateFlag_Pipeline) != 0);
+    CHECK((changed & PrGpuNativeStateFlag_Push) != 0);
+    app.endBuffer(native);
     PrGpuFence fence = prGpuCommandsSubmit(commands);
     prGpuDeviceWait(f.device, fence);
     CHECK(prGpuDeviceIsComplete(f.device, fence));
@@ -213,26 +217,29 @@ TEST_CASE("vulkan records into the host's command buffer, around the host's own 
     prGpuBufferDestroy(f.device, output);
 }
 
-TEST_CASE("vulkan draws into the host's pass, and says which of the pass's state its draws changed") {
+TEST_CASE("vulkan draws into the application's pass, and says which of the pass's state its draws changed") {
     Fixture f;
     if (f.device == nullptr)
         return;
-    HostVulkan host(f.device);
+    AppVulkan app(f.device);
     PrGpuTexture target = f.target();
     PrGpuPipeline pipeline = f.upperHalf();
     PrGpuBuffer readback = f.buffer(8 * 8 * 4, 0, PrGpuMemory_Readback);
-    VkImageView view = host.view(reinterpret_cast<VkImage>(prGpuVulkanImage(f.device, target)));
+    uint64_t image = 0;
+    REQUIRE(prGpuTextureNative(f.device, target, PrGpuNativeKind_Vulkan, &image));
+    VkImageView view = app.view(reinterpret_cast<VkImage>(image));
 
-    VkCommandBuffer native = host.begin();
+    VkCommandBuffer native = app.begin();
     PrGpuCommandsOptions options = prGpuCommandsOptionsDefault();
     options.native = native;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(f.device, &options, &commands));
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
         PrGpuAccessFlag_ColorAttachment);
-    prGpuHostStateSync(commands);
+    prGpuNativeStateSync(commands);
 
-    // The host begins its pass, which clears the target to blue, and the device draws the upper half red into it.
+    // The application begins its pass, which clears the target to blue, and the device draws the upper half red into
+    // it.
     VkRenderingAttachmentInfo attachment{};
     attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     attachment.imageView = view;
@@ -246,39 +253,85 @@ TEST_CASE("vulkan draws into the host's pass, and says which of the pass's state
     rendering.layerCount = 1;
     rendering.colorAttachmentCount = 1;
     rendering.pColorAttachments = &attachment;
-    host.cmdBeginRendering(native, &rendering);
+    app.cmdBeginRendering(native, &rendering);
     PrGpuPassDesc passDesc{};
-    passDesc.host = native;
-    passDesc.hostFormats.colorCount = 1;
-    passDesc.hostFormats.color[0] = PrGpuFormat_Rgba8;
-    passDesc.hostFormats.samples = 1;
-    passDesc.hostExtent = PrUVec2{8, 8};
+    passDesc.native = native;
+    passDesc.nativeFormats.colorCount = 1;
+    passDesc.nativeFormats.color[0] = PrGpuFormat_Rgba8;
+    passDesc.nativeFormats.samples = 1;
+    passDesc.nativeExtent = PrUVec2{8, 8};
     PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
     Uniforms uniforms{.color = {1, 0, 0, 1}};
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuCommandsSetUniforms(commands, &uniforms, sizeof(uniforms));
     prGpuPassDraw(pass, 4, 1, 0, 0);
-    PrGpuHostStateFlags changed = prGpuHostStateSync(commands);
-    CHECK((changed & PrGpuHostStateFlag_Pipeline) != 0);
-    CHECK((changed & PrGpuHostStateFlag_Viewport) != 0);
-    CHECK((changed & PrGpuHostStateFlag_Scissor) != 0);
-    CHECK((changed & PrGpuHostStateFlag_IndexBuffer) == 0);
-    CHECK(prGpuHostStateSync(commands) == 0);
+    PrGpuNativeStateFlags changed = prGpuNativeStateSync(commands);
+    CHECK((changed & PrGpuNativeStateFlag_Pipeline) != 0);
+    CHECK((changed & PrGpuNativeStateFlag_Viewport) != 0);
+    CHECK((changed & PrGpuNativeStateFlag_Scissor) != 0);
+    CHECK((changed & PrGpuNativeStateFlag_IndexBuffer) == 0);
+    CHECK(prGpuNativeStateSync(commands) == 0);
     prGpuPassEnd(pass);
-    host.cmdEndRendering(native);
+    app.cmdEndRendering(native);
 
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
         PrGpuAccessFlag_CopyRead);
     PrGpuTextureRegion region = prGpuTextureRegion2d(PrUVec2{0, 0}, PrUVec2{8, 8});
     prGpuCommandsCopyTextureToBuffer(commands, target, &region, readback, 0, 32, 0);
-    prGpuHostStateSync(commands);
-    host.endBuffer(native);
+    prGpuNativeStateSync(commands);
+    app.endBuffer(native);
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     const uint32_t* pixels = static_cast<const uint32_t*>(prGpuBufferMap(f.device, readback));
     CHECK(pixels[0] == 0xff0000ffu);
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
-    host.destroyImageView(host.device, view, nullptr);
+    app.destroyImageView(app.device, view, nullptr);
     prGpuBufferDestroy(f.device, readback);
+    prGpuPipelineDestroy(f.device, pipeline);
+    prGpuTextureDestroy(f.device, target);
+}
+
+TEST_CASE("vulkan hands a native draw the pass's command buffer, and draws after it with its own state again") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    REQUIRE(prGpuDeviceHasNative(f.device, PrGpuNativeKind_Vulkan));
+    AppVulkan app(f.device);
+    PrGpuTexture target = f.target();
+    PrGpuPipeline pipeline = f.upperHalf();
+    PrGpuCommands* commands = nullptr;
+    REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+    prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
+        PrGpuAccessFlag_ColorAttachment);
+    PrGpuPassDesc desc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{0, 0, 1, 1});
+    PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+
+    // The native draw narrows the scissor to the left half, which the device's draw after it does not keep.
+    struct Drawn {
+        AppVulkan* app;
+        bool drawn;
+    } drawn{&app, false};
+    prGpuPassNativeDraw(pass, PrGpuNativeKind_Vulkan, [](void* context, const void* native) {
+        const PrGpuVulkanNativePass& objects = *static_cast<const PrGpuVulkanNativePass*>(native);
+        Drawn& d = *static_cast<Drawn*>(context);
+        CHECK(objects.pipelineLayout != 0);
+        VkRect2D left{{0, 0}, {4, 8}};
+        d.app->cmdSetScissor(reinterpret_cast<VkCommandBuffer>(objects.commandBuffer), 0, 1, &left);
+        d.drawn = true;
+    }, &drawn);
+    CHECK(drawn.drawn);
+    Uniforms uniforms{.color = {1, 0, 0, 1}};
+    prGpuCommandsSetPipeline(commands, pipeline);
+    prGpuCommandsSetUniforms(commands, &uniforms, sizeof(uniforms));
+    prGpuPassDraw(pass, 4, 1, 0, 0);
+    prGpuPassEnd(pass);
+    prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+        PrGpuAccessFlag_CopyRead);
+    prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
+    uint32_t pixels[8 * 8]{};
+    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+        PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
+    CHECK(pixels[7] == 0xff0000ffu);
+    CHECK(pixels[7 * 8] == 0xffff0000u);
     prGpuPipelineDestroy(f.device, pipeline);
     prGpuTextureDestroy(f.device, target);
 }

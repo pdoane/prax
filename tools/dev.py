@@ -50,9 +50,10 @@ def python(module, *args, cwd=ROOT, env=None, check=True):
     return run([sys.executable, "-m", module, *args], cwd=cwd, env=env, check=check)
 
 
-def executable(directory, name):
-    """Returns the path of the program `name` in `directory`, with the platform's extension."""
-    return os.path.join(directory, name + (".exe" if WINDOWS else ""))
+def executable(directory, name, wasm=False):
+    """Returns the path of the program `name` in `directory`, with the platform's extension, or the extension of
+    Emscripten's script that loads a WebAssembly program."""
+    return os.path.join(directory, name + (".js" if wasm else ".exe" if WINDOWS else ""))
 
 
 def has(program):

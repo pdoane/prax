@@ -182,19 +182,17 @@ struct CanvasState {
     PrCanvasTextRendering textRendering;
 };
 
-// A context's bitmap as the renderers that draw it see it: a texture on a device, or pixels in memory, which holds what
-// the context drew up to the revision `drawn` (PrDrawGroupLayer). The context and each snapshot that shows it hold a
-// reference, so a list that draws it after the context is gone draws into storage that is still there.
+// A context's bitmap as the renderers that draw it see it: a texture on a device, which holds what the context drew up
+// to the revision `drawn` (PrDrawGroupLayer). The context and each snapshot that shows the bitmap hold a reference to
+// it, so a list that draws the bitmap after the context is gone draws into storage that still exists.
 struct CanvasBitmap {
     Atomic<uint32_t> references;
     PrUVec2 extent;
     PrPixelFormat format;
     uint64_t drawn;                             // read and raised atomically (PrDrawGroupLayer)
-    PrGpuDevice* PR_NULLABLE device;
-    PrGpuTexture texture;                       // on a device
-    PrDrawTextureId id;                         // the texture's id, or the id of `cpu`
-    uint8_t* PR_NULLABLE pixels;                // in memory
-    PrDrawCpuTexture cpu;
+    PrGpuDevice* device;
+    PrGpuTexture texture;
+    PrDrawTextureId id;                         // the texture's id
 };
 
 // Drawing that is recorded and waits to be drawn into the bitmap: a frozen list, and its revision.
@@ -221,9 +219,9 @@ struct CanvasContext {
     void* PR_NULLABLE changedContext;
     bool notified;
 
-    // The bitmap: premultiplied extended sRGB in `format`, or no pixels for a bitmap of no area or past
-    // kPrCanvasBitmapMaxSize. `bitmap` holds it. In memory, `pixels` are the bitmap's. On a device, the texture holds
-    // it, and `pixels` hold a copy of it while `pixelsCurrent`.
+    // The bitmap: premultiplied extended sRGB in `format`. A bitmap of no area, past kPrCanvasBitmapMaxSize, or without
+    // a device has no pixels. `bitmap` holds the bitmap in its texture, and `pixels` holds a copy of it while
+    // `pixelsCurrent` is true.
     PrUVec2 extent;
     PrPixelFormat format;
     uint8_t* PR_NULLABLE pixels;
@@ -235,12 +233,12 @@ struct CanvasContext {
     PrGpuDevice* PR_NULLABLE device;
     bool pixelsCurrent;
 
-    // The context's own renderer, which draws the segments into the bitmap when its pixels are read or written: on
-    // `device`, or in memory without one. It is made on first use. On a device, the frame that it prepares holds the
-    // list that it drew until the next draw.
+    // The context's own renderer on `device`, which draws the segments into the bitmap when its pixels are read or
+    // written. It is made on first use. The frame that it prepares holds the list that it drew until the next draw.
     PrDrawRenderer* PR_NULLABLE renderer;
     PrDrawFrame* PR_NULLABLE frame;
     PrDrawList* PR_NULLABLE drawnList;
+    PrGpuTexture scratch;                       // a 1x1 target for the frame, which nothing shows
 
     // The drawing that is recorded and not yet a segment, the clips that it holds open (the ids of the areas of a
     // clipping region, outermost first), the segments that the bitmap may not hold yet, and the last revision given.
@@ -489,9 +487,7 @@ PrColor clearColorOf(const CanvasContext* c) {
 void bitmapRelease(CanvasBitmap* PR_NULLABLE bitmap) {
     if (bitmap == nullptr || bitmap->references.fetchSub(1) != 1)
         return;
-    if (bitmap->device != nullptr)
-        prGpuTextureDestroy(bitmap->device, bitmap->texture);
-    prMemoryFree(bitmap->pixels);
+    prGpuTextureDestroy(bitmap->device, bitmap->texture);
     prMemoryFree(bitmap);
 }
 
@@ -604,60 +600,66 @@ void paintShown(void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
 }
 
 // Draws the segments that the bitmap may not hold into it with the context's own renderer, so that the bitmap holds
-// everything that the context drew. In memory, the pixels hold it when the call returns. On a device, the call submits
-// the commands that draw it, and work submitted after them sees it.
+// everything that the context drew. The call submits the commands that draw it, and work submitted after them sees it.
 void flush(CanvasContext* c) {
     commit(c);
     dropDrawn(c);
     if (c->segments.count == 0 || c->bitmap == nullptr)
         return;
-    if (c->renderer == nullptr) {
-        PrDrawRendererBackend backend =
-            c->device != nullptr ? PrDrawRendererBackend_Default : PrDrawRendererBackend_Cpu;
-        if (prDrawRendererCreate(backend, c->device, nullptr, &c->renderer) != PrStatus_Ok)
-            return;
-    }
+    if (c->renderer == nullptr &&
+            prDrawRendererCreate(PrDrawRendererBackend_Default, c->device, nullptr, &c->renderer) != PrStatus_Ok)
+        return;
     CanvasShown* shown = show(c, PrDrawSampling_Nearest);
     PrDrawList* list = prDrawListCreate();
     paintShown(shown, PrVec2{1, 1}, list);
     prDrawListFreeze(list);
     shownRelease(shown);
-    // The list draws into the bitmap as it is prepared, and renders over a pixel that nothing shows.
-    if (c->device == nullptr) {
-        uint8_t pixel[8] = {};
-        prDrawRendererRenderPixels(c->renderer, list, PrPixels{pixel, sizeof(pixel), {1, 1}}, PrPixelFormat_RgbaF16);
-        prDrawListRelease(list);
-    } else {
-        if (c->frame == nullptr)
-            c->frame = prDrawFrameCreate(c->renderer);
-        PrGpuCommands* commands = nullptr;
-        if (prGpuCommandsBegin(c->device, nullptr, &commands)) {
-            PrDrawTarget target{.extent = PrUVec2{1, 1}, .format = PrPixelFormat_RgbaF16, .commands = commands};
-            prDrawFramePrepare(c->frame, list, &target);
-            prGpuCommandsSubmit(commands);
-        }
-        prDrawListRelease(c->drawnList);
-        c->drawnList = list;
+    // The list's group draws into the bitmap. A GPU renderer draws the group while preparing, and a renderer that draws
+    // natively, such as the CPU renderer, draws it while rendering. So the frame also renders, into a pixel that
+    // nothing shows.
+    if (c->frame == nullptr) {
+        c->frame = prDrawFrameCreate(c->renderer);
+        PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba16F, PrUVec2{1, 1},
+            PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+        desc.name = "canvas scratch";
+        prGpuTextureCreate(c->device, &desc, &c->scratch);
     }
+    PrGpuCommands* commands = nullptr;
+    if (c->scratch.id != 0 && prGpuCommandsBegin(c->device, nullptr, &commands)) {
+        PrDrawTarget target{.extent = PrUVec2{1, 1}, .format = PrPixelFormat_RgbaF16, .commands = commands};
+        if (prDrawFramePrepare(c->frame, list, &target) == PrStatus_Ok) {
+            PrGpuSubresources all{};
+            prGpuCommandsTextureBarrier(commands, c->scratch, all, PrGpuAccessFlag_ShaderRead | PrGpuAccessFlag_Discard,
+                PrGpuAccessFlag_ColorAttachment);
+            PrGpuPassDesc pass = prGpuPassDescColor(c->scratch, PrGpuLoad_Discard, PrColor{});
+            PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
+            prDrawFrameRender(c->frame, encoder, PrIVec2{0, 0});
+            prGpuPassEnd(encoder);
+            prGpuCommandsTextureBarrier(commands, c->scratch, all, PrGpuAccessFlag_ColorAttachment,
+                PrGpuAccessFlag_ShaderRead);
+        }
+        prGpuCommandsSubmit(commands);
+    }
+    prDrawListRelease(c->drawnList);
+    c->drawnList = list;
     dropDrawn(c);
     prDrawImageRelease(c->snapshot);
     c->snapshot = nullptr;
 }
 
-// Draws what the context recorded into the bitmap, and brings the pixels up to date with a bitmap on a device, which
-// waits for the device.
+// Draws what the context recorded into the bitmap, and brings the pixels up to date with it. This waits for the device.
 void readPixels(CanvasContext* c) {
     flush(c);
-    if (c->device == nullptr || c->pixelsCurrent || c->bitmap == nullptr || c->bitmap->texture.id == 0)
+    if (c->pixelsCurrent || c->bitmap == nullptr)
         return;
     prGpuTextureRead(c->device, c->bitmap->texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, pixelsOf(c));
     c->pixelsCurrent = true;
 }
 
-// Writes the bitmap's pixels to a bitmap on a device, once they have changed in memory. The write is an upload, which
-// waits for the work that reads the texture.
+// Writes the pixels to the bitmap if they have changed. The write is an upload, which waits for the work that reads the
+// texture.
 void writePixels(CanvasContext* c) {
-    if (c->bitmap == nullptr || c->bitmap->texture.id == 0)
+    if (c->bitmap == nullptr)
         return;
     prGpuTextureWrite(c->device, c->bitmap->texture, PrIVec2{0, 0}, prPixelsView(pixelsOf(c)));
 }
@@ -680,39 +682,31 @@ void clearBitmap(CanvasContext* c) {
     changed(c);
 }
 
-// Allocates the bitmap at `extent`, transparent or opaque black, and frees the one before. On a device, a bitmap that
-// the device cannot make has no pixels.
+// Allocates the bitmap at `extent`, transparent or opaque black, and frees the previous one. A bitmap that the device
+// cannot make, or that has no device, has no pixels.
 void allocateBitmap(CanvasContext* c, PrUVec2 extent) {
-    if (c->device != nullptr)
-        prMemoryFree(c->pixels);
+    prMemoryFree(c->pixels);
     c->pixels = nullptr;
     bitmapRelease(c->bitmap);
     c->bitmap = nullptr;
     c->extent = extent;
-    if (extent.x != 0 && extent.y != 0 && extent.x <= kPrCanvasBitmapMaxSize && extent.y <= kPrCanvasBitmapMaxSize) {
-        CanvasBitmap* bitmap = allocZeroed<CanvasBitmap>();
-        bitmap->references.storeRelaxed(1);
-        bitmap->extent = extent;
-        bitmap->format = c->format;
-        c->pixels = static_cast<uint8_t*>(prMemoryAlloc(strideOf(c) * extent.y));
-        if (c->device == nullptr) {
-            bitmap->pixels = c->pixels;
-            bitmap->cpu = PrDrawCpuTexture{pixelsOf(c), c->format};
-            bitmap->id = prDrawCpuTexture(&bitmap->cpu);
+    bool sized = extent.x != 0 && extent.y != 0 && extent.x <= kPrCanvasBitmapMaxSize &&
+        extent.y <= kPrCanvasBitmapMaxSize;
+    if (sized && c->device != nullptr) {
+        PrGpuTexture texture{};
+        PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(c->format), extent,
+            PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+        desc.name = "canvas";
+        if (prGpuTextureCreate(c->device, &desc, &texture) == PrStatus_Ok) {
+            CanvasBitmap* bitmap = allocZeroed<CanvasBitmap>();
+            bitmap->references.storeRelaxed(1);
+            bitmap->extent = extent;
+            bitmap->format = c->format;
+            bitmap->device = c->device;
+            bitmap->texture = texture;
+            bitmap->id = prDrawGpuTexture(texture);
             c->bitmap = bitmap;
-        } else {
-            PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(c->format), extent,
-                PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
-            desc.name = "canvas";
-            if (prGpuTextureCreate(c->device, &desc, &bitmap->texture) == PrStatus_Ok) {
-                bitmap->device = c->device;
-                bitmap->id = prDrawGpuTexture(bitmap->texture);
-                c->bitmap = bitmap;
-            } else {
-                bitmapRelease(bitmap);
-                prMemoryFree(c->pixels);
-                c->pixels = nullptr;
-            }
+            c->pixels = static_cast<uint8_t*>(prMemoryAlloc(strideOf(c) * extent.y));
         }
     }
     clearBitmap(c);
@@ -1366,15 +1360,12 @@ void prCanvasDestroy(PrCanvas* PR_NULLABLE canvas) {
     prDrawListRelease(canvas->pending);
     segmentsReset(&canvas->segments);
     prDrawImageRelease(canvas->snapshot);
-    // The renderer's resources on the device last until the device finishes what the renderer drew.
-    if (canvas->device != nullptr && canvas->frame != nullptr)
-        prGpuDeviceWaitIdle(canvas->device);
     prDrawFrameDestroy(canvas->frame);
+    if (canvas->scratch.id != 0)
+        prGpuTextureDestroy(canvas->device, canvas->scratch);
     prDrawListRelease(canvas->drawnList);
     prDrawRendererDestroy(canvas->renderer);
-    // In memory, the pixels are the bitmap's.
-    if (canvas->device != nullptr)
-        prMemoryFree(canvas->pixels);
+    prMemoryFree(canvas->pixels);
     bitmapRelease(canvas->bitmap);
     stateReset(&canvas->state);
     for (uint32_t i = 0; i < canvas->saved.count; ++i)

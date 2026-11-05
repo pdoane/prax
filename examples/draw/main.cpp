@@ -1,11 +1,14 @@
 // The draw example: animated scenes drawn with lib/draw alone, in a window.
 //
-// main() is the composition root. Each frame records the scene into a draw list at the window's size and renders the
-// list with lib/draw's fragment renderer into the window's swap chain, which is made for HDR. Where the swap chain
-// holds more than 8-bit sRGB, as it does for a display that shows more, the list renders into a texture of half floats,
-// which the display shader then maps to the display (pr/draw_display.h); elsewhere into the swap chain itself. Left and
-// Right turn through the scenes, and Space pauses the clock, as the caption under each scene says. The pointer and the
-// primary button reach the scenes, which follow the pointer and answer a held button.
+// main() is the composition root. Each frame records the scene into a draw list at the window's size, and renders the
+// list into the window's swap chain, which is made for HDR, with lib/draw's default renderer for the device. If the
+// swap chain holds more than 8-bit sRGB, as it does for a display that shows more, the list renders into a texture of
+// half floats, and the display shader then maps that texture to the display (pr/draw_display.h). Otherwise the list
+// renders into the swap chain itself. Left and Right step through the scenes, and Space pauses the clock, as the
+// caption under each scene says. The scenes follow the pointer and respond to a held primary button.
+//
+// Usage: draw [--renderer NAME] [--scene NUMBER]. NAME is the name of one of lib/draw's backends, and Default if it is
+// not given. NUMBER is the scene shown first, counted from 1. On the web, the page's query passes the arguments.
 
 #include "pr/app.h"
 #include "pr/assert.h"
@@ -14,6 +17,7 @@
 #include "pr/draw_renderer.h"
 #include "pr/float.h"
 #include "pr/gpu.h"
+#include "pr/integer.h"
 #include "pr/print.h"
 #include "pr/text.h"
 
@@ -36,6 +40,7 @@ struct Window {
     float hold = 0;             // eases toward 1 while the button is held, and toward 0 after
     bool paused = false;
     PrDrawList* list = nullptr;
+    PrDrawRendererBackend backend = PrDrawRendererBackend_Default;
 
     PrApp* app = nullptr;
     PrGpuDevice* device = nullptr;
@@ -43,8 +48,8 @@ struct Window {
     PrDrawRenderer* renderer = nullptr;
     PrDrawFrame* frame = nullptr;
 
-    // Where the swap chain holds more than 8-bit sRGB: the texture of half floats that the list renders into, and the
-    // shader that maps it to the display.
+    // If the swap chain holds more than 8-bit sRGB, these are the texture of half floats that the list renders into,
+    // and the shader that maps it to the display, which is made for the first frame that needs it.
     PrGpuTexture rendered{};
     PrDrawDisplay* display = nullptr;
 };
@@ -55,10 +60,8 @@ void announce(const Window& w) {
 
 // Frees what the window made on its device, and the device.
 void closeDevice(Window& w) {
-    if (w.device != nullptr) {
-        prGpuDeviceWaitIdle(w.device);
+    if (w.device != nullptr)
         prGpuTextureDestroy(w.device, w.rendered);
-    }
     prDrawDisplayDestroy(w.display);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
@@ -80,8 +83,7 @@ bool openDevice(Window& w) {
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
             prAppSurface(w.app, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
-            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok ||
-            prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
+            prDrawRendererCreate(w.backend, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
         closeDevice(w);
         return false;
     }
@@ -110,11 +112,18 @@ void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
             !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     PrGpuSwapChainInfo info = prGpuSwapChainInfo(w.swapChain);
-    bool mapped = info.format != PrGpuFormat_Bgra8 || info.space != PrColorSpace_Srgb;
+    // The list renders straight into an 8-bit sRGB drawable, and into any other drawable through the display shader.
+    PrPixelFormat direct{};
+    bool mapped = info.space != PrColorSpace_Srgb || !prGpuFormatToPixelFormat(info.format, &direct) ||
+        direct == PrPixelFormat_RgbaF16;
+    if (mapped && w.display == nullptr && prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
+        prGpuCommandsSubmit(commands);
+        return;
+    }
     PrGpuTexture target = mapped ? renderedFor(w, extent) : drawable;
     PrDrawTarget into{
         .extent = extent,
-        .format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8),
+        .format = mapped ? PrPixelFormat(PrPixelFormat_RgbaF16) : direct,
         .commands = commands,
     };
     prDrawFramePrepare(w.frame, w.list, &into);
@@ -148,6 +157,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
         prAppStop(app);
         return;
     }
+    print("draw: rendering with {} on {}\n", prDrawRendererBackendName(w.backend), prGpuDeviceInfo(w.device).backend);
     announce(w);
     prAppRequestFrame(app);
 }
@@ -211,12 +221,31 @@ void shutdown(void* context, PrApp*) {
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     prCrashHandler();
     static Window w;
+    uint32_t first = 1;
+    for (int i = 1; i < argc; ++i) {
+        PrStringView argument = argv[i];
+        if (argument == "--renderer" && i + 1 < argc) {
+            w.backend = prDrawRendererBackendFromName(argv[++i]);
+            if (!prDrawRendererBackendIsBuilt(w.backend)) {
+                printError("draw: no renderer named {} in this build\n", PrStringView{argv[i]});
+                return 1;
+            }
+        } else if (argument == "--scene" && i + 1 < argc) {
+            PrStringView number = argv[++i];
+            uint64_t parsed = 0;
+            first = prU64Parse(number.data, number.size, &parsed, 10) && parsed <= UINT32_MAX ? uint32_t(parsed) : 0;
+        } else {
+            printError("usage: draw [--renderer NAME] [--scene NUMBER]\n");
+            return 1;
+        }
+    }
     PrTextShaper* shaper = prTextShaperCreate(PrTextShaperBackend_Default);
     scenesOpen(shaper, PR_FONT_BUNDLE_DIR);
     w.scenes = allScenes(&w.sceneCount);
+    w.scene = first >= 1 && first <= w.sceneCount ? first - 1 : 0;
     w.list = prDrawListCreate();
 
     PrAppDesc desc{.title = "Prax Draw", .extent = {960, 720}};

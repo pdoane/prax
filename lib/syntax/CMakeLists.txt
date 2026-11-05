@@ -49,6 +49,8 @@ if (PR_SYNTAX_TREESITTER)
     set_target_properties(pr_tree_sitter PROPERTIES EXPORT_NAME tree_sitter)
     target_include_directories(pr_tree_sitter SYSTEM PUBLIC $<BUILD_INTERFACE:${tree_sitter_SOURCE_DIR}/lib/include>
         PRIVATE ${tree_sitter_SOURCE_DIR}/lib/src)
+    # The POSIX functions that it calls, such as fdopen, as its own build declares them.
+    target_compile_definitions(pr_tree_sitter PRIVATE _POSIX_C_SOURCE=200112L _DEFAULT_SOURCE)
     pr_third_party(pr_tree_sitter)
     set_property(GLOBAL APPEND PROPERTY PR_LIBRARIES pr_tree_sitter)
 

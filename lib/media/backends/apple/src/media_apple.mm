@@ -149,7 +149,12 @@ AVAssetReaderTrackOutput* PR_NULLABLE startReading(PrMediaAppleSource* source, d
     if (reader == nil)
         return nil;
     reader.timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(seconds, 90000), kCMTimePositiveInfinity);
-    NSDictionary* settings = @{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+    // Frames backed by IOSurfaces, which a Metal device imports without copying them.
+    NSDictionary* settings = @{
+        (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
+        (id)kCVPixelBufferIOSurfacePropertiesKey: @{},
+        (id)kCVPixelBufferMetalCompatibilityKey: @YES,
+    };
     AVAssetReaderTrackOutput* output = [[AVAssetReaderTrackOutput alloc] initWithTrack:source.video
         outputSettings:settings];
     output.alwaysCopiesSampleData = NO;
@@ -403,10 +408,8 @@ void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
         prMutexUnlock(&d->mutex);
         prThreadJoin(&d->thread);
     }
-    if (d->shown != nullptr) {
-        CVPixelBufferUnlockBaseAddress(d->shown, kCVPixelBufferLock_ReadOnly);
+    if (d->shown != nullptr)
         CVPixelBufferRelease(d->shown);
-    }
     releaseFrames(&d->frames);
     d->frames.reset();
     prConditionReset(&d->wake);
@@ -456,21 +459,16 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
         out->current = done;
         return false;
     }
-    if (d->shown != nullptr) {
-        CVPixelBufferUnlockBaseAddress(d->shown, kCVPixelBufferLock_ReadOnly);
+    if (d->shown != nullptr)
         CVPixelBufferRelease(d->shown);
-    }
     d->shown = frame.buffer;
-    CVPixelBufferLockBaseAddress(frame.buffer, kCVPixelBufferLock_ReadOnly);
-    PrUVec2 extent{uint32_t(CVPixelBufferGetWidth(frame.buffer)), uint32_t(CVPixelBufferGetHeight(frame.buffer))};
-    const uint8_t* pixels = static_cast<const uint8_t*>(CVPixelBufferGetBaseAddress(frame.buffer));
     *out = PrMediaFrame{
-        .pixels = PrPixelView{pixels, CVPixelBufferGetBytesPerRow(frame.buffer), extent},
+        .image = PrGpuImport{.kind = PrGpuImportKind_CoreVideo, .handle = frame.buffer},
         .time = frame.time,
         .serial = frame.serial,
         .current = current,
     };
-    return pixels != nullptr;
+    return true;
 }
 
 bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
@@ -845,20 +843,9 @@ void sampleDecoderFlush(PrMediaCodec*, PrMediaSampleDecoder* decoder) {
     VTDecompressionSessionWaitForAsynchronousFrames(d->session);
 }
 
-bool imageLock(PrMediaCodec*, void* image, PrPixelView* out) {
-    CVPixelBufferRef buffer = static_cast<CVPixelBufferRef>(image);
-    if (CVPixelBufferLockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess)
-        return false;
-    PrUVec2 extent{uint32_t(CVPixelBufferGetWidth(buffer)), uint32_t(CVPixelBufferGetHeight(buffer))};
-    *out = PrPixelView{
-        static_cast<const uint8_t*>(CVPixelBufferGetBaseAddress(buffer)),
-        CVPixelBufferGetBytesPerRow(buffer), extent,
-    };
-    return out->data != nullptr;
-}
-
-void imageUnlock(PrMediaCodec*, void* image) {
-    CVPixelBufferUnlockBaseAddress(static_cast<CVPixelBufferRef>(image), kCVPixelBufferLock_ReadOnly);
+// An image is a CVPixelBuffer, which a device imports as it is.
+void imageImport(PrMediaCodec*, void* image, PrGpuImport* out) {
+    *out = PrGpuImport{.kind = PrGpuImportKind_CoreVideo, .handle = image};
 }
 
 void imageRelease(PrMediaCodec*, void* image) {
@@ -878,8 +865,7 @@ constexpr PrMediaCodec kApple = {
     .sampleDecoderDestroy = sampleDecoderDestroy,
     .sampleDecode = sampleDecode,
     .sampleDecoderFlush = sampleDecoderFlush,
-    .imageLock = imageLock,
-    .imageUnlock = imageUnlock,
+    .imageImport = imageImport,
     .imageRelease = imageRelease,
 };
 

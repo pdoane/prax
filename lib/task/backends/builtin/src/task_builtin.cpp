@@ -156,6 +156,8 @@ PrTaskPool* prTaskBuiltinCreate(uint32_t threads) {
     prMutexInit(&pool->mutex);
     prConditionInit(&pool->started);
     prConditionInit(&pool->finished);
+    if (!prThreadSupported())
+        threads = 0;
     pool->threadCount = threads;
     if (threads != 0)
         pool->threads = static_cast<PrThread*>(prMemoryAllocZeroed(sizeof(PrThread) * threads));

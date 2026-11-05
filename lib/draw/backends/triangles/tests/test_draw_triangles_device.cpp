@@ -157,7 +157,7 @@ using namespace pr_impl;
 
 TEST_CASE("the triangles renderer draws a frame on the device") {
     Device device(64, 64);
-    CHECK(prDrawRendererIsOnDevice(device.renderer));
+    CHECK(prDrawRendererDevice(device.renderer) == device.gpuDevice);
     PrDrawList* list = prDrawListCreate();
     prDrawListClearRect(list, PrRect{0, 0, 64, 64}, PrColor{1, 1, 1, 1});
     prDrawListEllipse(list, PrVec2{32, 32}, PrVec2{20, 12}, 0.4f, {.color = PrColor{1, 0, 0, 1}});

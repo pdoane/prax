@@ -8,6 +8,7 @@
 #include "pr/mathml_quickjs.h"
 #include "pr/quickjs_binding.h"
 #include "pr/svg_quickjs.h"
+#include "pr/thread.h"
 #include "pr/url_quickjs.h"
 #include "pr/webidl_quickjs.h"
 
@@ -78,7 +79,7 @@ bool runAgent(const PrCssSelectors* shared) {
 
 using namespace pr_impl;
 
-TEST_CASE("agents run at once on threads of their own, sharing a selector list") {
+TEST_CASE("agents run at once on threads of their own, sharing a selector list" * doctest::skip(!prThreadSupported())) {
     PrCssSelectors* shared = nullptr;
     REQUIRE(prCssSelectorsCreate("ul > li.a", &shared) == PrStatus_Ok);
     std::vector<char> ok(kAgents, 0);

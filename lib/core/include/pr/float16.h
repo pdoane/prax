@@ -14,8 +14,9 @@ extern "C" {
 // conversions below compute. In C++, such a value is a record that reads as a float implicitly, and a number does not
 // convert to it, so that storing a number without prFloat16FromFloat fails to compile rather than storing the number as
 // bits. The bits are a scoped enum, which no integer initializes implicitly, even in a braced list of channels. The
-// record has no constructor, so that it passes and returns as C's integer does.
-#if defined(__clang__) || defined(__GNUC__)
+// record has no constructor, so that it passes and returns as C's integer does. Clang and GCC define __FLT16_MAX__ on
+// the targets where they have the type, which WebAssembly is not.
+#if (defined(__clang__) || defined(__GNUC__)) && defined(__FLT16_MAX__)
 #define PR_FLOAT16_NATIVE 1
 typedef _Float16 PrFloat16;
 #elif defined(__cplusplus)

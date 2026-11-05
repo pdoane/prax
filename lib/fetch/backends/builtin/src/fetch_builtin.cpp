@@ -1180,7 +1180,7 @@ bool readFile(BuiltinFetch* fetch, PrStringView url, PrStringView* type) {
     PrStringView decoded = prTextBufferView(&path);
     if (decoded.size >= 3 && decoded.data[0] == '/' && prAsciiIsLetter(decoded.data[1]) && decoded.data[2] == ':')
         decoded = prStringSlice(decoded, 1, decoded.size - 1);
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     bool read = prStringFindByte(decoded, '\0') == decoded.size && prFileMap(decoded, &mapping);
     if (read)
         fetch->content.append(mapping.data, uint32_t(mapping.size));

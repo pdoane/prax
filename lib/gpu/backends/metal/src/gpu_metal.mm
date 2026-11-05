@@ -281,7 +281,7 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
         gpuMetalCommandsInit(d, c);
         prMutexUnlock(&d->mutex);
         if (options->native != nullptr) {
-            c->host = true;
+            c->native = true;
             c->buffer = [static_cast<id<MTLCommandBuffer>>(options->native) retain];
         } else {
             c->buffer = newCommandBuffer(d);
@@ -443,13 +443,13 @@ void commandsGenerateMipmaps(PrGpuDevice* device, PrGpuCommands* commands, PrGpu
     barrier(d, c, PrGpuAccessFlag_CopyRead | PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_ShaderRead);
 }
 
-PrGpuHostStateFlags hostStateSync(PrGpuDevice* device, PrGpuCommands* commands) {
+PrGpuNativeStateFlags nativeStateSync(PrGpuDevice* device, PrGpuCommands* commands) {
     Commands* c = commandsFrom(commands);
     @autoreleasepool {
         if (c->pass == nullptr)
             endEncoders(deviceFrom(device), c);
     }
-    PrGpuHostStateFlags changed = c->changed;
+    PrGpuNativeStateFlags changed = c->changed;
     c->changed = 0;
     return changed;
 }
@@ -494,10 +494,35 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Passes
 
-// Joins a render encoder to the chain of fences. A host's pass joins it as well, so that its draws see the work before.
+// Joins a render encoder to the chain of fences. An application's pass joins the chain too, so that its draws see the
+// work before it.
 void renderEncoderWait(Device* d, id<MTLRenderCommandEncoder> encoder) {
     [encoder waitForFence:d->vertexFence beforeStages:MTLRenderStageVertex];
     [encoder waitForFence:d->orderFence beforeStages:MTLRenderStageFragment];
+}
+
+// A texture's native object is its id<MTLTexture>.
+bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind, void* out) {
+    *static_cast<void**>(out) = gpuMetalTexture(gpuMetalDeviceFrom(device), texture.id);
+    return true;
+}
+
+// Binds the device's buffers in the pass's encoder: the root data and the heaps that its shaders read, and, in a pass
+// of the device's own, the viewport and scissor over the whole attachments.
+void passBind(Device* d, Commands* c, GpuMetalPass* pass) {
+    id<MTLRenderCommandEncoder> encoder = passEncoder(pass);
+    [encoder setVertexBuffer:c->push.buffer offset:c->push.offset atIndex:GpuMetalBinding_Push];
+    [encoder setFragmentBuffer:c->push.buffer offset:c->push.offset atIndex:GpuMetalBinding_Push];
+    [encoder setVertexBuffer:c->uniforms.buffer offset:c->uniforms.offset atIndex:GpuMetalBinding_Uniforms];
+    [encoder setFragmentBuffer:c->uniforms.buffer offset:c->uniforms.offset atIndex:GpuMetalBinding_Uniforms];
+    [encoder setVertexBuffer:d->resourceHeap offset:0 atIndex:GpuMetalBinding_Resources];
+    [encoder setFragmentBuffer:d->resourceHeap offset:0 atIndex:GpuMetalBinding_Resources];
+    [encoder setVertexBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
+    [encoder setFragmentBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
+    if (!pass->native) {
+        [encoder setViewport:MTLViewport{0, 0, double(pass->extent.x), double(pass->extent.y), 0, 1}];
+        [encoder setScissorRect:MTLScissorRect{0, 0, pass->extent.x, pass->extent.y}];
+    }
 }
 
 PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc) {
@@ -506,12 +531,12 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
     @autoreleasepool {
         GpuMetalPass* pass = allocZeroed<GpuMetalPass>();
         pass->commands = commands;
-        if (desc->host != nullptr) {
-            pass->host = true;
-            pass->formats = desc->hostFormats;
-            pass->extent = desc->hostExtent;
-            pass->encoder = [static_cast<id<MTLRenderCommandEncoder>>(desc->host) retain];
-            c->changed |= PrGpuHostStateFlag_Bindings;
+        if (desc->native != nullptr) {
+            pass->native = true;
+            pass->formats = desc->nativeFormats;
+            pass->extent = desc->nativeExtent;
+            pass->encoder = [static_cast<id<MTLRenderCommandEncoder>>(desc->native) retain];
+            c->changed |= PrGpuNativeStateFlag_Bindings;
         } else {
             MTLRenderPassDescriptor* rp = [[MTLRenderPassDescriptor new] autorelease];
             gpuMetalPassAttachmentsFill(d, rp, desc, pass);
@@ -522,20 +547,25 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
         }
         id<MTLRenderCommandEncoder> encoder = passEncoder(pass);
         renderEncoderWait(d, encoder);
-        [encoder setVertexBuffer:c->push.buffer offset:c->push.offset atIndex:GpuMetalBinding_Push];
-        [encoder setFragmentBuffer:c->push.buffer offset:c->push.offset atIndex:GpuMetalBinding_Push];
-        [encoder setVertexBuffer:c->uniforms.buffer offset:c->uniforms.offset atIndex:GpuMetalBinding_Uniforms];
-        [encoder setFragmentBuffer:c->uniforms.buffer offset:c->uniforms.offset atIndex:GpuMetalBinding_Uniforms];
-        [encoder setVertexBuffer:d->resourceHeap offset:0 atIndex:GpuMetalBinding_Resources];
-        [encoder setFragmentBuffer:d->resourceHeap offset:0 atIndex:GpuMetalBinding_Resources];
-        [encoder setVertexBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
-        [encoder setFragmentBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
-        if (!pass->host) {
-            [encoder setViewport:MTLViewport{0, 0, double(pass->extent.x), double(pass->extent.y), 0, 1}];
-        }
+        passBind(d, c, pass);
         c->pass = pass;
         c->pipeline = 0;
         return pass;
+    }
+}
+
+// Hands the pass's encoder to a native draw, then binds the device's buffers again, and leaves the pass's pipeline
+// unset. An application's pass reports every state as changed, since the native draw may have changed any of it.
+void passNativeDraw(PrGpuDevice* device, PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+    Device* d = deviceFrom(device);
+    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
+    Commands* c = commandsFrom(pass->commands);
+    @autoreleasepool {
+        PrGpuMetalNativePass native{.encoder = pass->encoder, .commandBuffer = c->buffer};
+        draw(context, &native);
+        passBind(d, c, pass);
+        c->pipeline = 0;
+        gpuMetalPassChanged(pass, PrGpuNativeStateFlags(~0u));
     }
 }
 
@@ -546,9 +576,10 @@ void passEnd(PrGpuDevice* device, PrGpuPass* handle) {
     id<MTLRenderCommandEncoder> encoder = passEncoder(pass);
     PR_ASSERT(c->passGroups == 0);
     c->pass = nullptr;
-    // A host's pass stays open for the host to end. The work after it waits for it through the fence all the same.
+    // An application's pass stays open for the application to end. The work after it still waits for it through the
+    // fence.
     [encoder updateFence:d->orderFence afterStages:MTLRenderStageFragment];
-    if (!pass->host)
+    if (!pass->native)
         [encoder endEncoding];
     [encoder release];
     for (; c->passPops != 0; --c->passPops)
@@ -663,14 +694,17 @@ PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDev
         d->commandsBufferBarrier = commandsBufferBarrier;
         d->commandsTextureBarrier = commandsTextureBarrier;
         d->commandsGlobalBarrier = commandsGlobalBarrier;
-        d->hostStateSync = hostStateSync;
+        d->nativeStateSync = nativeStateSync;
         d->passBegin = passBegin;
         d->passEnd = passEnd;
+        d->passNativeDraw = passNativeDraw;
+        d->textureNative = textureNative;
         d->passDraw = passDraw;
         d->passDrawIndexed = passDrawIndexed;
         d->passDrawIndirect = passDrawIndirect;
         d->passDrawIndexedIndirect = passDrawIndexedIndirect;
         d->info.backend = "Metal";
+        d->nativeKinds = 1u << PrGpuNativeKind_Metal;
         *out = d;
         return PrStatus_Ok;
     }
@@ -690,10 +724,6 @@ void* prGpuMetalResidencySet(const PrGpuDevice* device) {
 
 void* prGpuMetalOrderFence(const PrGpuDevice* device) {
     return static_cast<const Device*>(gpuMetalDeviceFrom(device))->orderFence;
-}
-
-void* prGpuMetalTexture(const PrGpuDevice* device, PrGpuTexture texture) {
-    return gpuMetalTexture(gpuMetalDeviceFrom(device), texture.id);
 }
 
 PrStatus prGpuMetalTextureWrap(PrGpuDevice* device, void* texture, PrGpuTextureUsageFlags usage, PrGpuTexture* out) {

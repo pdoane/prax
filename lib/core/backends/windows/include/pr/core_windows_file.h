@@ -15,10 +15,10 @@ extern "C" {
 #endif
 
 // Maps the file at the UTF-8 `path` into `out`. Returns false and leaves `out` empty if the file cannot be mapped.
-bool prCoreWindowsFileMap(PrStringView path, PrFileMapping* out);
+bool prCoreWindowsFileMap(PrStringView path, PrByteView* out);
 
 // Unmaps `mapping`, which is not empty.
-void prCoreWindowsFileUnmap(PrFileMapping* mapping);
+void prCoreWindowsFileUnmap(PrByteView* mapping);
 
 // Reads what the file system records about the file at the UTF-8 `path` into `out`. Returns false if there is no such
 // file or it cannot be read.

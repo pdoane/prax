@@ -626,8 +626,10 @@ BrotliStep switchBlock(BrotliState& d, BitReader& r, uint32_t category) {
 void flush(BrotliState& d, BrotliOutput& out) {
     while (d.flushed < d.position && out.written < out.capacity) {
         const uint32_t at = uint32_t(d.flushed & (d.ringSize - 1));
-        size_t count = d.position - d.flushed;
-        count = count < d.ringSize - at ? count : d.ringSize - at;
+        // The unflushed bytes number fewer than the window's size, so they fit a size_t.
+        const uint64_t pending = d.position - d.flushed;
+        const uint32_t left = d.ringSize - at;
+        size_t count = pending < left ? size_t(pending) : left;
         count = count < out.capacity - out.written ? count : out.capacity - out.written;
         prMemCopy(out.data + out.written, d.ring + at, count);
         out.written += count;

@@ -26,6 +26,7 @@
 
 // The system APIs that the structures below name.
 #import <AppKit/AppKit.h>
+#import <CoreVideo/CoreVideo.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
@@ -78,6 +79,13 @@ struct GpuMetalResource {
         PrGpuTextureDesc texture;
     };
     id PR_NULLABLE object;              // id<MTLBuffer> or id<MTLTexture>, retained
+
+    // An imported texture's image and the Metal texture of the image, both retained, and the function that is called
+    // once they are released.
+    CVPixelBufferRef PR_NULLABLE image;
+    CVMetalTextureRef PR_NULLABLE imageTexture;
+    PrGpuReleaseFn PR_NULLABLE release;
+    void* PR_NULLABLE releaseContext;
 };
 
 // A pipeline of either kind, with the state that a render encoder sets for it.
@@ -162,7 +170,7 @@ struct GpuMetalPass;
 struct GpuMetalCommands : PrGpuCommands {
     uint64_t serial;                    // the order in which command buffers began
     GpuMetalPass* PR_NULLABLE pass;     // the open pass
-    PrGpuHostStateFlags changed;        // the host's pass's state changed since the last sync
+    PrGpuNativeStateFlags changed;      // the state of the application's pass that changed since the last sync
     uint32_t pipeline;                  // the pipeline of dispatches and draws
     RawArray<GpuMetalBlock> blocks;     // the blocks of the stream
     RawArray<GpuMetalDrawable> drawables;
@@ -202,15 +210,17 @@ struct GpuMetalTextureCopy {
 
 // The state of a device that the backends share, at the start of each backend's own.
 struct GpuMetalDevice : PrGpuDevice {
-    id<MTLDevice> device;                   // retained
-    id queue;                               // id<MTLCommandQueue> or id<MTL4CommandQueue>, retained
-    Atomic<uint64_t> done;                  // the fence of the last submission that is done
-    PrMutex doneMutex;                      // guards raising `done`, for doneSignal
-    PrCondition doneSignal;                 // broadcast when `done` rises
-    RawArray<PrGpuFence> doneAhead;         // the fences that completed ahead of one before them, under doneMutex
-    id<MTLResidencySet> residency;          // retained
-    id<MTLBuffer> resourceHeap;             // retained
-    id<MTLBuffer> samplerHeap;              // retained
+    id<MTLDevice> device;                            // retained
+    id queue;                                        // id<MTLCommandQueue> or id<MTL4CommandQueue>, retained
+    Atomic<uint64_t> done;                           // the fence of the last submission that is done
+    PrMutex doneMutex;                               // guards raising `done`, for doneSignal
+    PrCondition doneSignal;                          // broadcast when `done` rises
+    RawArray<PrGpuFence> doneAhead;                  // the fences that completed ahead of one before them, under
+                                                     // doneMutex
+    id<MTLResidencySet> residency;                   // retained
+    CVMetalTextureCacheRef PR_NULLABLE textureCache; // made the first time an image is imported, under `mutex`
+    id<MTLBuffer> resourceHeap;                      // retained
+    id<MTLBuffer> samplerHeap;                       // retained
     Atomic<bool> lost;
     char adapter[128];                      // the adapter's name, in UTF-8
 
@@ -352,8 +362,9 @@ void gpuMetalEncodeCopyTextureToBuffer(const GpuMetalDevice* d, id encoder, PrGp
 void gpuMetalEncodeUploadCopies(const GpuMetalDevice* d, id encoder);
 void gpuMetalEncodeTextureCopy(id encoder, const GpuMetalTextureCopy& copy);
 
-// Marks the state of the host's pass that the device changed. The state of the device's own encoders ends with them.
-void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuHostStateFlags flags);
+// Marks the state of the application's pass that the device changed. The state of the device's own encoders ends with
+// them.
+void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags);
 
 // Fills a device's shared state and the functions that the backends share, over `device`, which it takes. The backend
 // then creates the queue and calls gpuMetalDeviceAddQueue, which takes the queue and adds the residency set to it.
@@ -363,8 +374,13 @@ void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue);
 // Frees a device's shared state. The backend has freed its own.
 void gpuMetalDeviceReset(GpuMetalDevice* d);
 
-// Wraps the host's texture as a texture of the device.
+// Wraps the application's texture as a texture of the device.
 PrStatus gpuMetalTextureWrap(GpuMetalDevice* d, id<MTLTexture> texture, PrGpuTextureUsageFlags usage, PrGpuTexture* out);
+
+// Imports a CVPixelBuffer of one plane in BGRA, backed by an IOSurface, through the device's texture cache
+// (PrGpuDevice::textureImport).
+PrStatus gpuMetalTextureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuReleaseFn PR_NULLABLE release,
+    void* PR_NULLABLE context, PrGpuTexture* out);
 
 // Fills a pass's color attachment in a pipeline descriptor of either API, other than whether it blends.
 template <typename Attachment>

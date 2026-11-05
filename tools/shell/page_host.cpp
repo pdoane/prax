@@ -428,8 +428,12 @@ std::string encodedPath(const std::filesystem::path& relative) {
     return path;
 }
 
-// Returns the file: URL of the page at `path`.
+// Returns the file: URL of the page at `path`. A path that starts with a Windows drive is absolute, including under
+// Node.js on Windows, where a WebAssembly program's paths are the host's but std::filesystem knows no drives.
 std::string urlOfPath(const std::filesystem::path& path) {
+    std::string text = path.generic_string();
+    if (text.size() >= 3 && prAsciiIsLetter(text[0]) && text[1] == ':' && text[2] == '/')
+        return "file:///" + text.substr(0, 2) + encodedPath(std::filesystem::path(text.substr(2)).lexically_normal());
     return "file://" + encodedPath(std::filesystem::absolute(path).lexically_normal());
 }
 

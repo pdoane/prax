@@ -18,8 +18,8 @@
 //
 // A device can be lost: the system takes the GPU away, as when its driver resets after a hang. A lost device never
 // comes back. Every call on it and its objects stays safe. The calls that make something new fail with Lost, recorded
-// work does nothing, and readbacks see zeros. The host recovers by destroying every object of the device, then the
-// device, and making them again on a new device.
+// work does nothing, and readbacks see zeros. The application recovers by destroying every object of the device, then
+// the device, and making them again on a new device.
 
 #pragma once
 
@@ -42,22 +42,25 @@ extern "C" {
 // ---------------------------------------------------------------------------------------------------------------------
 // Devices
 
-// A GPU, created over the host's native device or over one that the backend creates.
+// A GPU, created over the application's native device or over one that the backend creates.
 typedef struct PrGpuDevice PrGpuDevice;
 
 // A point that a device reaches once the work that returned it is done. Zero is reached on every device.
 typedef uint64_t PrGpuFence;
 
-// The library's backends of devices, which the build turns on (README.md), and Default: the backend that the
-// environment variable PR_GPU_BACKEND names, as prGpuBackendFromName reads it, if the build has it, and otherwise the
-// platform's own if the build has it, and otherwise the first that it has. So a program and its tests run on any
-// backend that the build has.
+// The library's device backends, which the build turns on (README.md), and Default. Default is the backend that the
+// environment variable PR_GPU_BACKEND names (prGpuBackendFromName), if the build has it. Otherwise it is the first
+// backend in the build that the system supports, trying the platform's own first and the memory backend last. So a
+// program and its tests run on any backend in the build, and a portable program runs on any build that has the memory
+// backend.
 enum {
     PrGpuBackend_Default,
     PrGpuBackend_Metal,
     PrGpuBackend_Metal4,
     PrGpuBackend_Vulkan,
     PrGpuBackend_D3d12,
+    PrGpuBackend_Memory,
+    PrGpuBackend_Canvas2d,
     PrGpuBackend_Count,
 };
 typedef uint8_t PrGpuBackend;
@@ -74,6 +77,44 @@ enum {
 };
 typedef uint32_t PrGpuFeatureFlags;
 
+// The kinds of native object through which code beneath lib/gpu reaches a device's work. A native draw
+// (prGpuPassNativeDraw) gets a pass's object, such as its encoder or its first color attachment's canvas, and
+// prGpuTextureNative gets a texture's object. The header of each kind defines its objects. A device hands out some of
+// the kinds (prGpuDeviceHasNative).
+//
+// A memory or canvas device runs no shaders, and runs work when it is submitted.
+enum {
+    PrGpuNativeKind_Pixels,     // texels in memory (PrGpuNativePixels)
+    PrGpuNativeKind_Canvas2d,   // a web page's canvas (pr/gpu_canvas2d.h)
+    PrGpuNativeKind_Metal,      // Metal's encoders and textures (pr/gpu_metal.h)
+    PrGpuNativeKind_Metal4,     // Metal 4's encoders and textures (pr/gpu_metal4.h)
+    PrGpuNativeKind_Vulkan,     // Vulkan's command buffers and images (pr/gpu_vulkan.h)
+    PrGpuNativeKind_D3d12,      // Direct3D 12's command lists and resources (pr/gpu_d3d12.h)
+    PrGpuNativeKind_Count,
+};
+typedef uint8_t PrGpuNativeKind;
+
+// The kinds of image, made outside lib/gpu, that a device imports as a texture (prGpuTextureImport). Examples are a
+// frame that a video decoder made, or one that a camera or another API drew. A device imports some kinds in place
+// (prGpuDeviceImportsInPlace). It copies the texels of other kinds if the build can read them.
+enum {
+    PrGpuImportKind_Pixels,       // texels in memory (PrGpuImportPixels)
+    PrGpuImportKind_CoreVideo,    // a CVPixelBufferRef of one plane in BGRA, backed by an IOSurface
+    PrGpuImportKind_WebImage,     // an image of a web page, such as a VideoFrame (pr/gpu_canvas2d.h)
+    PrGpuImportKind_Count,
+};
+typedef uint8_t PrGpuImportKind;
+
+// An image made outside lib/gpu. Its kind says what its handle is.
+typedef struct PrGpuImport {
+    PrGpuImportKind kind;
+    const void* PR_NULLABLE handle;
+} PrGpuImport;
+
+// Called once a device is done with what it was given, with the context that it was given with. It may be called on any
+// thread, and must not call the device.
+typedef void (*PrGpuReleaseFn)(void* PR_NULLABLE context);
+
 // The maximum sizes of a draw's or a dispatch's root data.
 enum {
     kPrGpuMaxPushBytes = 128,       // copied into the command, read as push constants where the API has them
@@ -86,7 +127,7 @@ enum { kPrGpuMaxColorAttachments = 8 };
 // What a device is and what it can do. The strings are valid while the device lives.
 typedef struct PrGpuDeviceInfo {
     PrStringView adapter;           // the adapter's name, as the system reports it
-    PrStringView backend;           // the backend's name, for messages, as a backend of the host's reports its own
+    PrStringView backend;           // the backend's name, for messages; an application's backend reports its own
     PrGpuFeatureFlags features;
     uint32_t maxTextureSize;        // the largest width or height of a 2D texture
 
@@ -113,8 +154,8 @@ bool prGpuBackendIsBuilt(PrGpuBackend backend);
 PrGpuDeviceOptions prGpuDeviceOptionsDefault(void);
 
 // Creates a device by the backend on the system's default adapter. Null options mean the defaults. A backend's own
-// header creates one over the host's native device. Returns NotSupported if the build does not have the backend or the
-// system has no adapter that it supports.
+// header creates one over the application's native device. Returns NotSupported if the build does not have the backend
+// or the system has no adapter that it supports.
 PrStatus prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NULLABLE options,
     PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
 
@@ -124,17 +165,23 @@ void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device);
 // Returns what the device is and what it can do.
 PrGpuDeviceInfo prGpuDeviceInfo(const PrGpuDevice* device);
 
+// Returns true if the device hands out native objects of `kind`.
+bool prGpuDeviceHasNative(const PrGpuDevice* device, PrGpuNativeKind kind);
+
+// Returns true if the device imports images of `kind` in place, without a copy (prGpuTextureImport).
+bool prGpuDeviceImportsInPlace(const PrGpuDevice* device, PrGpuImportKind kind);
+
 // Returns true if the device is lost. Once true, it stays true.
 bool prGpuDeviceIsLost(const PrGpuDevice* device);
 
-// Loses the device as the system would, so that a host can test its recovery.
+// Loses the device as the system would, so that an application can test its recovery.
 void prGpuDeviceSimulateLoss(PrGpuDevice* device);
 
 // Returns true if the device has reached `fence`. A lost device has reached every fence.
 bool prGpuDeviceIsComplete(const PrGpuDevice* device, PrGpuFence fence);
 
-// Waits until the device reaches `fence`. Only a host that must read what the GPU wrote waits, and it waits where it
-// reads, not where it submits.
+// Waits until the device reaches `fence`. Only an application that must read what the GPU wrote waits, and it waits
+// where it reads, not where it submits.
 void prGpuDeviceWait(PrGpuDevice* device, PrGpuFence fence);
 
 // Waits until the work submitted before the call is done.
@@ -231,8 +278,8 @@ typedef uint8_t PrGpuBufferUsageFlags;
 // Where a buffer's memory lives.
 enum {
     PrGpuMemory_Device,     // device memory, written by uploads and by the GPU
-    PrGpuMemory_Upload,     // memory that the host writes through a mapping and the GPU reads
-    PrGpuMemory_Readback,   // memory that the GPU writes and the host reads through a mapping
+    PrGpuMemory_Upload,     // memory that the application writes through a mapping and the GPU reads
+    PrGpuMemory_Readback,   // memory that the GPU writes and the application reads through a mapping
 };
 typedef uint8_t PrGpuMemory;
 
@@ -258,8 +305,8 @@ PrGpuBufferDesc prGpuBufferDesc(const PrGpuDevice* device, PrGpuBuffer buffer);
 // from the buffer's id, which shaders read it through.
 uint32_t prGpuBufferStorageHandle(const PrGpuDevice* device, PrGpuBuffer buffer);
 
-// Returns the bytes of an Upload or Readback buffer, valid while the buffer lives. The host synchronizes its writes and
-// reads with the GPU's through fences.
+// Returns the bytes of an Upload or Readback buffer, valid while the buffer lives. The application synchronizes its
+// writes and reads with the GPU's through fences.
 void* prGpuBufferMap(const PrGpuDevice* device, PrGpuBuffer buffer);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -349,6 +396,70 @@ PrUVec2 prGpuTextureExtent(const PrGpuDevice* device, PrGpuTexture texture);
 // PrGpuTextureUsageFlag_Storage and covers the first level of the texture or view. The texture's id is the handle that
 // a shader samples it through.
 uint32_t prGpuTextureStorageHandle(const PrGpuDevice* device, PrGpuTexture texture);
+
+// Creates a 2D texture over `pixels` in `format`, with one level, one sample and the extent of the pixels. `format`
+// must match a pixel format (prGpuFormatToPixelFormat). The texture's texels are the pixels, with rows `pixels.stride`
+// bytes apart. The caller keeps the pixels alive while the texture lives. It reads or writes them only while no work
+// that was submitted for the texture is unfinished. Requires PrGpuNativeKind_Pixels. Returns NotSupported for another
+// format or usage.
+PrStatus prGpuTextureCreateOverPixels(PrGpuDevice* device, PrGpuFormat format, PrPixels pixels,
+    PrGpuTextureUsageFlags usage, PrGpuTexture* out);
+
+// The native object of PrGpuNativeKind_Canvas2d, for both a texture and a pass's attachment: a canvas of a web page, by
+// the name that the page's side of the backend gives it (pr/gpu_canvas2d.h). Zero names no canvas.
+typedef uint32_t PrGpuCanvas;
+
+// The handle of a PrGpuImportKind_Pixels image: texels in memory in `format`, which must match a pixel format
+// (prGpuFormatToPixelFormat).
+typedef struct PrGpuImportPixels {
+    PrPixelView pixels;
+    PrGpuFormat format;
+} PrGpuImportPixels;
+
+// The native object of PrGpuNativeKind_Pixels: texels in memory in `format`, with rows `pixels.stride` bytes apart.
+typedef struct PrGpuNativePixels {
+    PrPixels pixels;
+    PrGpuFormat format;
+} PrGpuNativePixels;
+
+// Makes `*texture` a texture of an image made outside lib/gpu. The texture is 2D, with one level and the extent and
+// format of the image, and shaders and native draws sample it.
+//
+// `*texture` is zero, or a texture that an earlier import on the device made, which the import replaces. Work submitted
+// before the call reads what the texture held before it, and work submitted after the call reads the image. A device
+// that copies the image may write it into the same texture, and keep its handle. Any other replaced texture is
+// destroyed.
+//
+// A device that imports the image's kind in place makes the texture over the image, without a copy. It takes a
+// reference of its own to the image, so the caller may drop its reference once this returns. The device drops its
+// reference once the texture is destroyed and the work that read it is done. Any other device copies the image's texels
+// into the texture and keeps nothing of the image.
+//
+// The device calls `release`, if it is not null, once it is done with the image. The image must hold what it shows when
+// the call is made.
+//
+// Returns NotSupported for an image whose texels the build cannot read, and Limit if the device has no handle or memory
+// left. On failure, `*texture` is left as it was, and `release` is never called: the caller keeps the image.
+PrStatus prGpuTextureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuReleaseFn PR_NULLABLE release,
+    void* PR_NULLABLE context, PrGpuTexture* texture);
+
+// Locks the texels of an image made outside lib/gpu for reading on the CPU, and writes them to `out`. They stay valid
+// until prGpuImportUnlock. This is for code that draws on the CPU; a device imports an image without it. Returns false,
+// and locks nothing, for an image whose texels the build cannot read, such as an image of a web page.
+bool prGpuImportLock(const PrGpuImport* image, PrGpuImportPixels* out);
+
+// Unlocks the texels of an image that prGpuImportLock locked.
+void prGpuImportUnlock(const PrGpuImport* image);
+
+// Writes the texture's native object of kind `kind` to `out` and returns true. The device must hand out the kind, and
+// the kind's header names the object. Returns false for a texture that the kind does not hold, such as a texture that
+// no canvas holds. The object of PrGpuNativeKind_Pixels is the first level and layer of the texture, which the caller
+// may draw into.
+//
+// A device that runs work when it is submitted hands out the native objects of its textures only while a native draw
+// runs (prGpuPassNativeDraw). A device that hands out several kinds keeps them in step, so that each holds what work
+// through the others drew. On any other device, the objects are valid while the texture lives.
+bool prGpuTextureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind kind, void* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Samplers
@@ -633,13 +744,13 @@ PrGpuExtent prGpuPipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipe
 // Command buffers
 
 // Work recorded for a device: passes, dispatches, copies and barriers. A command buffer records into a native command
-// buffer of the device's own, or into the host's, between the host's own work.
+// buffer of the device's own, or into the application's, between the application's own work.
 typedef struct PrGpuCommands PrGpuCommands;
 
 // How a command buffer begins.
 typedef struct PrGpuCommandsOptions {
-    // The host's native command buffer to record into, as the backend's header says, or null for one of the device's
-    // own.
+    // The application's native command buffer to record into, as the backend's header says, or null for one of the
+    // device's own.
     void* PR_NULLABLE native;
 } PrGpuCommandsOptions;
 
@@ -654,32 +765,35 @@ bool prGpuCommandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* PR_NULL
 // Returns the device that the command buffer records for.
 PrGpuDevice* prGpuCommandsDevice(const PrGpuCommands* commands);
 
-// The state of the native command buffer that the device's work changes, which a host that records its own work into
-// the same native command buffer sets again. The device never binds descriptor sets or heaps in the host's pass, so
-// they are not in the set.
+// The state of the native command buffer that the device's work changes. An application that records its own work into
+// the same native command buffer sets this state again. The device never binds descriptor sets or heaps in the
+// application's pass, so they are not in the set.
 enum {
-    PrGpuHostStateFlag_Pipeline = 1u << 0,
-    PrGpuHostStateFlag_Push = 1u << 1,
-    PrGpuHostStateFlag_IndexBuffer = 1u << 2,
-    PrGpuHostStateFlag_Viewport = 1u << 3,
-    PrGpuHostStateFlag_Scissor = 1u << 4,
-    PrGpuHostStateFlag_BlendConstant = 1u << 5,
-    PrGpuHostStateFlag_StencilReference = 1u << 6,
-    PrGpuHostStateFlag_Bindings = 1u << 7,      // Metal's argument table, and Direct3D 12's root signature
+    PrGpuNativeStateFlag_Pipeline = 1u << 0,
+    PrGpuNativeStateFlag_Push = 1u << 1,
+    PrGpuNativeStateFlag_IndexBuffer = 1u << 2,
+    PrGpuNativeStateFlag_Viewport = 1u << 3,
+    PrGpuNativeStateFlag_Scissor = 1u << 4,
+    PrGpuNativeStateFlag_BlendConstant = 1u << 5,
+    PrGpuNativeStateFlag_StencilReference = 1u << 6,
+    PrGpuNativeStateFlag_Bindings = 1u << 7,      // Metal's argument table, and Direct3D 12's root signature
 };
-typedef uint8_t PrGpuHostStateFlags;
+typedef uint8_t PrGpuNativeStateFlags;
 
-// Hands the native command buffer to the host, which records its own work after the call, and returns the state that
-// the device's work changed since the last call, which the host sets again, or marks stale in its own cache, before it
-// records. Outside a pass, it ends what the device has open in the native command buffer, such as a Metal encoder. In a
-// pass, the pass stays open. The host calls it after the device's work and before its own, and before it ends the
-// native command buffer.
-PrGpuHostStateFlags prGpuHostStateSync(PrGpuCommands* commands);
+// Hands the native command buffer to the application, which records its own work after the call. Returns the state that
+// the device's work changed since the last call. The application sets that state again, or marks it stale in its own
+// cache, before it records.
+//
+// Outside a pass, the call ends what the device has open in the native command buffer, such as a Metal encoder. In a
+// pass, the pass stays open. The application calls it after the device's work and before its own, and before it ends
+// the native command buffer. A native draw (prGpuPassNativeDraw) is the same handoff within a pass, made by code
+// beneath lib/gpu.
+PrGpuNativeStateFlags prGpuNativeStateSync(PrGpuCommands* commands);
 
 // Submits the command buffer to the device's queue, and returns the fence that its work completes at. Fences increase
 // in the order of submission. Uploads made before the call are visible to its work. A command buffer that records into
-// the host's is submitted once the host has ended its native command buffer, which the host does not submit itself. The
-// command buffer is released.
+// the application's is submitted once the application has ended its native command buffer, which the application does
+// not submit itself. The command buffer is released.
 PrGpuFence prGpuCommandsSubmit(PrGpuCommands* commands);
 
 // Submits the command buffer and waits for its work. Returns the seconds that the device spent on it, which are zero
@@ -813,11 +927,12 @@ void prGpuCommandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before
 // ---------------------------------------------------------------------------------------------------------------------
 // Passes
 
-// Drawing to a set of attachments, recorded into a command buffer. A pass is either the device's own, which it begins
-// and ends, or wraps a pass that the host has open in its native command buffer. No barriers are recorded in a pass.
+// Drawing to a set of attachments, recorded into a command buffer. A pass is either the device's own, which the device
+// begins and ends, or it wraps a pass that the application has open in its native command buffer. No barriers are
+// recorded in a pass.
 typedef struct PrGpuPass PrGpuPass;
 
-// What a pass does with an attachment's contents where it begins.
+// What a pass does with an attachment's contents when it begins.
 enum {
     PrGpuLoad_Keep,
     PrGpuLoad_Clear,
@@ -825,7 +940,7 @@ enum {
 };
 typedef uint8_t PrGpuLoad;
 
-// What a pass does with an attachment's contents where it ends.
+// What a pass does with an attachment's contents when it ends.
 enum {
     PrGpuStore_Keep,
     PrGpuStore_Discard,
@@ -843,15 +958,15 @@ typedef struct PrGpuAttachment {
     PrGpuStore store;
 } PrGpuAttachment;
 
-// The attachments of a pass of the device's own, and the values that it clears them to, or a pass that the host has
-// open in its native command buffer.
+// The attachments of a pass of the device's own, and the values that the pass clears them to. Or, a pass that the
+// application has open in its native command buffer.
 typedef struct PrGpuPassDesc {
-    // A pass that the host began, in the native command buffer that the commands record into, as the backend's header
-    // says, with these attachment formats and an extent in target pixels. The device begins nothing, and reads none of
-    // the fields below.
-    void* PR_NULLABLE host;
-    PrGpuAttachmentFormats hostFormats;
-    PrUVec2 hostExtent;
+    // A pass that the application began in the native command buffer that the commands record into, as the backend's
+    // header describes it. `nativeFormats` are its attachment formats, and `nativeExtent` is its extent in target
+    // pixels. The device begins nothing, and reads none of the fields below.
+    void* PR_NULLABLE native;
+    PrGpuAttachmentFormats nativeFormats;
+    PrUVec2 nativeExtent;
 
     uint8_t colorCount;
     PrGpuAttachment color[kPrGpuMaxColorAttachments];   // by color attachment
@@ -872,9 +987,23 @@ PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor c
 // PrGpuAccessFlag_ColorAttachment and _DepthStencilWrite. A command buffer has at most one pass open.
 PrGpuPass* prGpuPassBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc);
 
-// Ends the pass. Whoever begins a pass ends it. A pass of the device's own ends. A pass of the host's stays open for
-// the host to draw more and end.
+// Ends the pass. Whoever begins a pass ends it. A pass of the device's own ends. A pass of the application's stays
+// open, so that the application can draw more and end it.
 void prGpuPassEnd(PrGpuPass* pass);
+
+// Draws into a pass from beneath lib/gpu. `native` is the pass's object of the native draw's kind, which the kind's
+// header names. On a device that runs work when it is submitted, the object is that of the first color attachment, at
+// the attachment's level and layer, and the draw reaches the textures that it reads through prGpuTextureNative.
+typedef void (*PrGpuNativeDrawFn)(void* PR_NULLABLE context, const void* native);
+
+// Records a native draw of kind `kind` into the pass, in order with the pass's other work. The device must hand out the
+// kind. The device calls `draw` while it records the draw, or, if it runs work when it is submitted, while the draw's
+// work runs. A caller writes the same code for both.
+//
+// The draw may change any state of the pass that the native object reaches, as an application's own work does
+// (prGpuNativeStateSync). So the pass's pipeline, root data, index buffer, viewport, scissor, blend constant and
+// stencil reference are unset after it, and the pass's next draw sets those that it uses.
+void prGpuPassNativeDraw(PrGpuPass* pass, PrGpuNativeKind kind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context);
 
 // Returns the command buffer that the pass records into, through which its draws set their pipeline and root data.
 PrGpuCommands* prGpuPassCommands(const PrGpuPass* pass);
@@ -920,7 +1049,7 @@ enum {
 
     // Colors past sRGB's gamut and SDR white, where the window's display shows them. The textures hold what the
     // platform presents such colors in for the display, as each backend documents, and for a display that shows no more
-    // than sRGB, what SDR holds, so that a host draws no more than the display shows.
+    // than sRGB, what SDR holds, so that an application draws no more than the display shows.
     PrGpuSwapChainIntent_Hdr,
 };
 typedef uint8_t PrGpuSwapChainIntent;
@@ -980,13 +1109,13 @@ void prGpuSwapChainDestroy(PrGpuSwapChain* PR_NULLABLE swapChain);
 
 // Returns the format and the color space of the textures that the swap chain presents. They follow the window's display
 // for the swap chain's intent, and change when a texture is acquired after the window moves to another display or the
-// display's mode changes, so a host reads them for each texture that it acquires.
+// display's mode changes, so an application reads them for each texture that it acquires.
 PrGpuSwapChainInfo prGpuSwapChainInfo(const PrGpuSwapChain* swapChain);
 
 // Waits until the swap chain can take another frame: until the display has taken enough of the frames presented before.
-// A host that calls it before it reads input and builds a frame builds the frame from the latest input. Acquiring a
-// texture waits as this does if the host has not waited since its last frame. Where the platform waits only to acquire
-// a texture, as Metal does, this returns at once.
+// An application that calls it before it reads input and builds a frame builds the frame from the latest input. If the
+// application has not waited since its last frame, acquiring a texture waits as this does. On a platform that waits
+// only to acquire a texture, such as Metal, this returns at once.
 void prGpuSwapChainWait(PrGpuSwapChain* swapChain);
 
 // Acquires the texture that the next frame draws to, at `extent` in target pixels. The texture is a render target that
@@ -996,8 +1125,8 @@ void prGpuSwapChainWait(PrGpuSwapChain* swapChain);
 PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out);
 
 // Presents the acquired texture once `commands` are done. The texture must be in the accesses of
-// PrGpuAccessFlag_Present by the end of the commands. The host submits `commands` after this call, and does not use the
-// texture again.
+// PrGpuAccessFlag_Present by the end of the commands. The application submits `commands` after this call, and does not
+// use the texture again.
 void prGpuSwapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands);
 
 #if defined(__cplusplus)

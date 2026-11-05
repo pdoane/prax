@@ -32,7 +32,8 @@ if (PR_JS)
                                            prax::core_quickjs_cpp)
 endif()
 
-if (PR_DEVELOP)
+# Its tests run over the platform's sockets (lib/net).
+if (PR_DEVELOP AND PR_NET_SOCKETS)
     pr_net_tests(fetch_tests tests/test_fetch.cpp tests/test_fetch_c.c)
     target_link_libraries(fetch_tests PRIVATE prax::fetch prax::http prax::compress prax::storage
                                               prax::task)

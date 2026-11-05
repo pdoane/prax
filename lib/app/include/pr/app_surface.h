@@ -12,8 +12,9 @@ extern "C" {
 
 // The kinds of native surface.
 enum {
-    PrAppSurfaceKind_NsView,   // `handle` is an NSView
-    PrAppSurfaceKind_Hwnd,     // `handle` is a Win32 window's HWND
+    PrAppSurfaceKind_NsView,     // `handle` is an NSView
+    PrAppSurfaceKind_Hwnd,       // `handle` is a Win32 window's HWND
+    PrAppSurfaceKind_HtmlCanvas, // `handle` is the CSS selector of a page's canvas, a NUL-terminated string
 };
 typedef uint8_t PrAppSurfaceKind;
 

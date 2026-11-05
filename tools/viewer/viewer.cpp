@@ -201,7 +201,7 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
         const Document& document = documents.documents()[d];
         // Each renderer configuration renders a load of its own, presented where its renderer renders.
         auto recordFor = [&](uint32_t config) {
-            PrGpuDevice* presenter = prDrawRendererIsOnDevice(configs[config].renderer) ? device : nullptr;
+            PrGpuDevice* presenter = prDrawRendererDevice(configs[config].renderer);
             std::shared_ptr<Loaded> loaded = load(document.source, text, presenter);
             record(list, *loaded, documents.width, documents.height, pixelRatio, time);
             return loaded;
@@ -831,7 +831,7 @@ std::shared_ptr<Loaded> paneDocument(Viewer& v, Opened& document, uint32_t index
     PaneLoad& pane = document.panes[index];
     if (pane.loaded == nullptr || pane.text != choice.text || pane.config != choice.config) {
         const Document& listed = allCollections()[v.openCollection].documents()[v.openDocument];
-        PrGpuDevice* device = prDrawRendererIsOnDevice(v.configs[choice.config].renderer) ? v.device : nullptr;
+        PrGpuDevice* device = prDrawRendererDevice(v.configs[choice.config].renderer);
         pane = PaneLoad{choice.text, choice.config, load(listed.source, choice.text, device)};
     }
     return pane.loaded;

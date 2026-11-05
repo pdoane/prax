@@ -67,8 +67,6 @@ void build(void* context, PrUi*, const PrUiRound*) {
 
 // Frees what the window made on its device, and the device.
 void closeDevice(Window& w) {
-    if (w.device != nullptr)
-        prGpuDeviceWaitIdle(w.device);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
     prGpuSwapChainDestroy(w.swapChain);

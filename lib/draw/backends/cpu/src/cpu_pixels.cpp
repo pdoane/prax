@@ -301,14 +301,11 @@ CpuTexture* newTexture(CpuTextureCache& cache, uint64_t key, bool fromList) {
     return texture;
 }
 
-// Converts an image's pixels to a level of premultiplied RGBA: half floats for an image in half floats, and otherwise 8
-// bits, clamped.
-void convertImage(const PrDrawImage* image, CpuTextureLevel& level) {
-    uint32_t width = prDrawImageExtent(image).x;
-    uint32_t height = prDrawImageExtent(image).y;
-    PrPixelFormat format = prDrawImageFormat(image);
-    PrDrawAlpha alpha = prDrawImageAlpha(image);
-    const PrPixelView source = prDrawImagePixels(image);
+// Converts pixels of `format`, whose alpha means what `alpha` says, to a level of premultiplied RGBA. The level holds
+// half floats for pixels in half floats, and otherwise 8 bits, clamped.
+void convertPixels(PrPixelView source, PrPixelFormat format, PrDrawAlpha alpha, CpuTextureLevel& level) {
+    uint32_t width = source.extent.x;
+    uint32_t height = source.extent.y;
     const uint8_t* pixels = source.data;
     size_t stride = source.stride;
     level.width = width;
@@ -345,6 +342,10 @@ void convertImage(const PrDrawImage* image, CpuTextureLevel& level) {
             cpuWritePixel(out + x * bytes, level.format, c);
         }
     }
+}
+
+void convertImage(const PrDrawImage* image, CpuTextureLevel& level) {
+    convertPixels(prDrawImagePixels(image), prDrawImageFormat(image), prDrawImageAlpha(image), level);
 }
 
 // Returns the texel at (x, y), or transparent if either index is -1.
@@ -972,6 +973,29 @@ CpuTexture* cpuTextureFromImage(CpuTextureCache& cache, const PrDrawImage* image
     CpuTextureLevel level{};
     convertImage(image, level);
     texture->levels.push(level);
+    return texture;
+}
+
+CpuTexture* cpuTextureFromPixels(CpuTextureCache& cache, uint64_t key, PrPixelView pixels, PrPixelFormat format,
+        PrDrawAlpha alpha) {
+    uint32_t found = cache.images.find(key, [&](uint32_t i) { return cache.textures.data[i]->key; });
+    CpuTexture* texture = nullptr;
+    if (found != kHashMissing) {
+        texture = cache.textures.data[found];
+        if (texture->lastUsed == cache.render && texture->ready)
+            return texture;
+        texture->lastUsed = cache.render;
+        for (uint32_t i = 0; i < texture->levels.count; ++i)
+            prMemoryFree(texture->levels.data[i].data);
+        texture->levels.clear();
+    } else {
+        cache.images.insert(key, cache.textures.count);
+        texture = newTexture(cache, key, false);
+    }
+    CpuTextureLevel level{};
+    convertPixels(pixels, format, alpha, level);
+    texture->levels.push(level);
+    texture->ready = true;
     return texture;
 }
 

@@ -57,6 +57,14 @@ endif()
 set(PR_USER_CONFIG "" CACHE FILEPATH "A header that binds platform facilities at compile time")
 option(PR_PLATFORM_NO_DEFAULT "Leave the default platform backends out, so that PR_USER_CONFIG binds every group" OFF)
 option(PR_PLATFORM_MIMALLOC "Allocate with mimalloc where the build leaves memory to the default backends" OFF)
+# The web runs a program on one thread unless its page has shared memory, which Prax does not ask of it.
+if (EMSCRIPTEN)
+    set(PR_PLATFORM_THREADS_DEFAULT OFF)
+else()
+    set(PR_PLATFORM_THREADS_DEFAULT ON)
+endif()
+option(PR_PLATFORM_THREADS "Start threads where the build leaves threads to the default backends"
+    ${PR_PLATFORM_THREADS_DEFAULT})
 
 # The font bundles whose files the build fetches, into font_bundle in the build directory, for the tests, the tools and
 # the examples (lib/font_bundle/font_bundle.cmake). A consumer fetches its own with pr_font_bundle_fetch.
@@ -101,12 +109,25 @@ if (MSVC)
     add_link_options(/STACK:8388608)
 endif()
 
+# Emscripten's programs get 8 MB of stack, as the platforms' main threads do, and a heap that grows. WebAssembly's
+# 128-bit SIMD, which every browser that runs WebAssembly well has, lets loops vectorize.
+if (EMSCRIPTEN)
+    add_compile_options(-msimd128)
+    add_link_options(-sSTACK_SIZE=8388608 -sALLOW_MEMORY_GROWTH=1)
+endif()
+
 if (PR_DEVELOP)
     # Warnings are errors in every target, whatever warnings each enables. Third-party targets build with their
     # warnings off (pr_third_party).
     set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
     # The programs are in the build directory's root, where dev.sh and the runners find them.
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+    # Under Emscripten, the tests run under Node.js and read and write the host's files, and doctest's failed
+    # requirements throw, which WebAssembly's own exceptions carry.
+    if (EMSCRIPTEN)
+        add_compile_options(-fwasm-exceptions)
+        add_link_options(-fwasm-exceptions -sNODERAWFS=1)
+    endif()
 endif()
 
 include(GNUInstallDirs)
@@ -120,8 +141,13 @@ include(cmake/dependencies.cmake)
 if (CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$")
     set(PR_LINUX ON)
 endif()
-if (UNIX AND NOT APPLE)
+if (UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     set(PR_UNIX_OTHER ON)
+endif()
+# The targets that run on an operating system's own interfaces, which the web lacks: its sockets, and a GPU through
+# Vulkan or a system's own API.
+if (NOT EMSCRIPTEN)
+    set(PR_SYSTEM ON)
 endif()
 # The POSIX targets whose applications may start programs: the desktop systems, and not the mobile ones.
 if (CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
@@ -132,11 +158,14 @@ if (PR_DEVELOP OR PR_EXAMPLES OR PR_UNIX_OTHER)
 endif()
 pr_backend_option(PR_APP_COCOA "lib/app's Cocoa backend" "${APPLE}" "${APPLE}")
 pr_backend_option(PR_APP_WIN32 "lib/app's Win32 backend" "${WIN32}" "${WIN32}")
+pr_backend_option(PR_APP_WEB "lib/app's web backend" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
 pr_backend_option(PR_GPU_METAL "lib/gpu's Metal backend, on Metal 3" "${APPLE}" "${APPLE}")
 pr_backend_option(PR_GPU_METAL4 "lib/gpu's Metal 4 backend, for experiments" "${APPLE}" "${APPLE}")
 pr_backend_option(PR_GPU_D3D12 "lib/gpu's Direct3D 12 backend" "${WIN32}" "${WIN32}")
-pr_backend_option(PR_GPU_VULKAN "lib/gpu's Vulkan backend" "${PR_LINUX}" ON)
-pr_backend_option(PR_NET_SOCKETS "lib/net's backend over the system's sockets" ON ON)
+pr_backend_option(PR_GPU_VULKAN "lib/gpu's Vulkan backend" "${PR_LINUX}" "${PR_SYSTEM}")
+pr_backend_option(PR_GPU_MEMORY "lib/gpu's memory backend" ON ON)
+pr_backend_option(PR_GPU_CANVAS2D "lib/gpu's Canvas 2D backend" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
+pr_backend_option(PR_NET_SOCKETS "lib/net's backend over the system's sockets" "${PR_SYSTEM}" "${PR_SYSTEM}")
 pr_backend_option(PR_NET_NULL "lib/net's null network, whose loop its owner runs" ON ON)
 pr_backend_option(PR_PROCESS_POSIX "lib/process's POSIX backend" "${PR_POSIX_PROCESSES}" "${PR_POSIX_PROCESSES}")
 pr_backend_option(PR_PROCESS_WINDOWS "lib/process's Windows backend" "${WIN32}" "${WIN32}")
@@ -156,6 +185,7 @@ pr_backend_option(PR_AUDIO_MEMORY "lib/audio's memory backend" ON ON)
 pr_backend_option(PR_MEDIA_APPLE "lib/media's AVFoundation backend" "${APPLE}" "${APPLE}")
 pr_backend_option(PR_MEDIA_WINDOWS "lib/media's Media Foundation backend" "${WIN32}" "${WIN32}")
 pr_backend_option(PR_MEDIA_BUILTIN "lib/media's built-in backend" ON ON)
+pr_backend_option(PR_MEDIA_WEB "lib/media's web backend, over a page's video element" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
 pr_backend_option(PR_FONT_CORETEXT "lib/font's CoreText backend of the system's fonts" "${APPLE}" "${APPLE}")
 pr_backend_option(PR_FONT_DIRECTWRITE "lib/font's DirectWrite backend of the system's fonts" "${WIN32}" "${WIN32}")
 pr_backend_option(PR_FONT_FREETYPE "lib/font's FreeType hinter" OFF ON)
@@ -165,8 +195,9 @@ pr_backend_option(PR_TEXT_CORETEXT "lib/text's CoreText shaper" "${APPLE}" "${AP
 pr_backend_option(PR_TEXT_SIMPLE "lib/text's simple shaper" ON ON)
 pr_backend_option(PR_SYNTAX_TREESITTER "lib/syntax's tree-sitter languages" OFF ON)
 pr_backend_option(PR_DRAW_CPU "lib/draw's CPU renderer" ON ON)
-pr_backend_option(PR_DRAW_TRIANGLES "lib/draw's triangles renderer" ON ON)
-pr_backend_option(PR_DRAW_FRAGMENT "lib/draw's fragment renderer" ON ON)
+pr_backend_option(PR_DRAW_CANVAS "lib/draw's Canvas 2D renderer" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
+pr_backend_option(PR_DRAW_TRIANGLES "lib/draw's triangles renderer" "${PR_SYSTEM}" "${PR_SYSTEM}")
+pr_backend_option(PR_DRAW_FRAGMENT "lib/draw's fragment renderer" "${PR_SYSTEM}" "${PR_SYSTEM}")
 include(lib/font_bundle/font_bundle.cmake)
 
 # The compiler of the shaders, and the shader libraries that it compiles for each backend.
@@ -211,7 +242,7 @@ add_subdirectory(lib)
 if (PR_DEVELOP)
     add_subdirectory(tools)
 endif()
-if (PR_EXAMPLES AND (APPLE OR WIN32))
+if (PR_EXAMPLES AND (APPLE OR WIN32 OR EMSCRIPTEN))
     add_subdirectory(examples)
 endif()
 if (PR_INSTALL)

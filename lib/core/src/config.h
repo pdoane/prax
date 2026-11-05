@@ -38,6 +38,9 @@
 #if defined(PR_PLATFORM_THREAD_START) != defined(PR_PLATFORM_THREAD_SLEEP)
 #error "PR_PLATFORM_THREAD_START and PR_PLATFORM_THREAD_SLEEP are defined together or not at all"
 #endif
+#if defined(PR_PLATFORM_THREAD_START) != defined(PR_PLATFORM_THREAD_SUPPORTED)
+#error "PR_PLATFORM_THREAD_START and PR_PLATFORM_THREAD_SUPPORTED are defined together or not at all"
+#endif
 #if defined(PR_PLATFORM_THREAD_START) != defined(PR_PLATFORM_MUTEX_INIT)
 #error "PR_PLATFORM_THREAD_START and PR_PLATFORM_MUTEX_INIT are defined together or not at all"
 #endif
@@ -152,9 +155,34 @@
 #define PR_PLATFORM_CRASH_HANDLER() prCorePosixCrashHandler()
 #endif
 
-// The default threads, mutexes and conditions, from Windows or POSIX, if the build binds none.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_THREAD_START) && defined(_WIN32)
+// The default threads, mutexes and conditions, if the build binds none. A build without threads
+// (PR_PLATFORM_NO_THREADS) takes the no_threads family, with the target's own sleep. Any other takes Windows or POSIX.
+#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_THREAD_START) && defined(PR_PLATFORM_NO_THREADS)
+#include "pr/core_no_threads_thread.h"
+#define PR_PLATFORM_THREAD_SUPPORTED() false
+#define PR_PLATFORM_THREAD_START(thread, run, context) prCoreNoThreadsThreadStart(thread, run, context)
+#define PR_PLATFORM_THREAD_JOIN(thread) prCoreNoThreadsThreadJoin(thread)
+#define PR_PLATFORM_THREAD_HARDWARE_COUNT() prCoreNoThreadsThreadHardwareCount()
+#if defined(_WIN32)
 #include "pr/core_windows_thread.h"
+#define PR_PLATFORM_THREAD_SLEEP(milliseconds) prCoreWindowsThreadSleep(milliseconds)
+#else
+#include "pr/core_posix_thread.h"
+#define PR_PLATFORM_THREAD_SLEEP(milliseconds) prCorePosixThreadSleep(milliseconds)
+#endif
+#define PR_PLATFORM_MUTEX_INIT(mutex) prCoreNoThreadsMutexInit(mutex)
+#define PR_PLATFORM_MUTEX_RESET(mutex) prCoreNoThreadsMutexReset(mutex)
+#define PR_PLATFORM_MUTEX_LOCK(mutex) prCoreNoThreadsMutexLock(mutex)
+#define PR_PLATFORM_MUTEX_UNLOCK(mutex) prCoreNoThreadsMutexUnlock(mutex)
+#define PR_PLATFORM_CONDITION_INIT(condition) prCoreNoThreadsConditionInit(condition)
+#define PR_PLATFORM_CONDITION_RESET(condition) prCoreNoThreadsConditionReset(condition)
+#define PR_PLATFORM_CONDITION_WAIT(condition, mutex) prCoreNoThreadsConditionWait(condition, mutex)
+#define PR_PLATFORM_CONDITION_WAIT_FOR(condition, mutex, ms) prCoreNoThreadsConditionWaitFor(condition, mutex, ms)
+#define PR_PLATFORM_CONDITION_SIGNAL(condition) prCoreNoThreadsConditionSignal(condition)
+#define PR_PLATFORM_CONDITION_BROADCAST(condition) prCoreNoThreadsConditionBroadcast(condition)
+#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_THREAD_START) && defined(_WIN32)
+#include "pr/core_windows_thread.h"
+#define PR_PLATFORM_THREAD_SUPPORTED() true
 #define PR_PLATFORM_THREAD_START(thread, run, context) prCoreWindowsThreadStart(thread, run, context)
 #define PR_PLATFORM_THREAD_JOIN(thread) prCoreWindowsThreadJoin(thread)
 #define PR_PLATFORM_THREAD_HARDWARE_COUNT() prCoreWindowsThreadHardwareCount()
@@ -171,6 +199,7 @@
 #define PR_PLATFORM_CONDITION_BROADCAST(condition) prCoreWindowsConditionBroadcast(condition)
 #elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_THREAD_START)
 #include "pr/core_posix_thread.h"
+#define PR_PLATFORM_THREAD_SUPPORTED() true
 #define PR_PLATFORM_THREAD_START(thread, run, context) prCorePosixThreadStart(thread, run, context)
 #define PR_PLATFORM_THREAD_JOIN(thread) prCorePosixThreadJoin(thread)
 #define PR_PLATFORM_THREAD_HARDWARE_COUNT() prCorePosixThreadHardwareCount()

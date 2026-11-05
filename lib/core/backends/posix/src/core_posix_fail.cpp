@@ -2,17 +2,22 @@
 
 #include "pr/core_posix_fail.h"
 
-#include <execinfo.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+// The C library's backtraces, where it has them. WebAssembly's has none, and its runtime reports the stack of an abort.
+#if __has_include(<execinfo.h>)
+#include <execinfo.h>
+#define PR_POSIX_BACKTRACE 1
+#else
+#define PR_POSIX_BACKTRACE 0
+#endif
+
 namespace pr_impl {
 namespace {
-
-constexpr int kMaxFrames = 128;
 
 // The stack that a crash is reported on, so that a thread that overflows its own stack still reports.
 alignas(16) char crashStack[64 * 1024];
@@ -39,10 +44,15 @@ void writeHex(uintptr_t value) {
 // Writes the stack of the calling thread to the standard error, one frame a line, without its `skip` innermost frames.
 // It allocates nothing, so a signal handler may call it.
 void writeStack(int skip) {
+#if PR_POSIX_BACKTRACE
+    constexpr int kMaxFrames = 128;
     void* frames[kMaxFrames];
     int count = backtrace(frames, kMaxFrames);
     if (count > skip)
         backtrace_symbols_fd(frames + skip, count - skip, STDERR_FILENO);
+#else
+    (void)skip;
+#endif
 }
 
 const char* nameOf(int number) {
@@ -92,7 +102,8 @@ void prCorePosixCrashHandler(void) {
     sigaltstack(&stack, nullptr);
     struct sigaction action {};
     action.sa_sigaction = crashed;
-    action.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_RESETHAND;
+    // Some C libraries' flags are unsigned, as musl's SA_RESETHAND is, and the field is an int.
+    action.sa_flags = int(SA_SIGINFO | SA_ONSTACK | SA_RESETHAND);
     sigemptyset(&action.sa_mask);
     constexpr int kCrashes[] = {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGTRAP, SIGABRT};
     for (int number : kCrashes)

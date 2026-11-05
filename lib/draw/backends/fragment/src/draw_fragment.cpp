@@ -3962,7 +3962,7 @@ void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawTarget& targ
 
 // The renderer: what builds its frames, and its state on its device.
 struct FragmentRenderer : PrDrawRenderer {
-    FragmentDevice* device;
+    FragmentDevice* state;              // what the renderer keeps on its device
     Fragment* fragment;
 };
 
@@ -3982,7 +3982,7 @@ PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
 void destroyFrame(PrDrawRenderer* renderer, PrDrawFrame* handle) {
     FragmentRenderer* r = static_cast<FragmentRenderer*>(renderer);
     FragmentDrawFrame* frame = static_cast<FragmentDrawFrame*>(handle);
-    fragmentDeviceReleaseFrame(r->device, &frame->built);
+    fragmentDeviceReleaseFrame(r->state, &frame->built);
     storageDestroy(frame->storage);
     prMemoryFree(frame);
 }
@@ -3991,20 +3991,20 @@ PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList
     FragmentRenderer* r = static_cast<FragmentRenderer*>(renderer);
     FragmentDrawFrame* frame = static_cast<FragmentDrawFrame*>(handle);
     fragmentBuild(r->fragment, list, *target, frame->storage, &frame->built);
-    fragmentDevicePrepare(r->device, &frame->built, target->commands, target->format, target->beneath);
+    fragmentDevicePrepare(r->state, &frame->built, target->commands, target->format, target->beneath);
     return PrStatus_Ok;
 }
 
 void render(PrDrawRenderer* renderer, PrDrawFrame* handle, PrGpuPass* pass, PrIVec2 origin) {
     FragmentRenderer* r = static_cast<FragmentRenderer*>(renderer);
     FragmentDrawFrame* frame = static_cast<FragmentDrawFrame*>(handle);
-    fragmentDeviceRender(r->device, &frame->built, pass, origin);
+    fragmentDeviceRender(r->state, &frame->built, pass, origin);
 }
 
 void dropResources(PrDrawRenderer* renderer) {
     FragmentRenderer* r = static_cast<FragmentRenderer*>(renderer);
     fragmentForgetResources(r->fragment);
-    fragmentDeviceDropResources(r->device);
+    fragmentDeviceDropResources(r->state);
 }
 
 void stats(PrDrawRenderer*, const PrDrawFrame* handle, PrDrawStats* out) {
@@ -4049,13 +4049,13 @@ void stats(PrDrawRenderer*, const PrDrawFrame* handle, PrDrawStats* out) {
 void destroyRenderer(PrDrawRenderer* renderer) {
     FragmentRenderer* r = static_cast<FragmentRenderer*>(renderer);
     fragmentDestroy(r->fragment);
-    fragmentDeviceDestroy(r->device);
+    fragmentDeviceDestroy(r->state);
     prMemoryFree(r);
 }
 
 FragmentRenderer* createRenderer(FragmentDevice* device, const PrDrawFragmentOptions* PR_NULLABLE options) {
     FragmentRenderer* r = allocZeroed<FragmentRenderer>();
-    r->device = device;
+    r->state = device;
     r->fragment = fragmentCreate(options != nullptr ? *options : prDrawFragmentOptionsDefault());
     r->destroy = destroyRenderer;
     r->frameCreate = createFrame;
@@ -4087,6 +4087,8 @@ PrStatus prDrawFragmentCreate(PrGpuDevice* device, const PrDrawFragmentOptions* 
     PrStatus status = fragmentDeviceCreate(device, &state);
     if (status != PrStatus_Ok)
         return status;
-    *out = createRenderer(state, options);
+    PrDrawRenderer* renderer = createRenderer(state, options);
+    renderer->device = device;
+    *out = renderer;
     return PrStatus_Ok;
 }

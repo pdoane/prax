@@ -3,6 +3,7 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/float.h"
+#include "pr/gpu.h"
 #include "pr/string_ops.h"
 #include "pr/time.h"
 #include "pr/url.h"
@@ -264,9 +265,11 @@ bool decodeFrame(HtmlMedia* media) {
     PrMediaFrame frame{};
     if (!prMediaDecoderFrame(media->decoder, currentPosition(media), &frame))
         return frame.current;
-    if (frame.serial != media->frameSerial) {
+    // The page draws on the CPU, so it keeps a copy of the frame's texels as an image.
+    PrGpuImportPixels pixels{};
+    if (frame.serial != media->frameSerial && prGpuImportLock(&frame.image, &pixels)) {
         PrDrawImageDesc desc{
-            .pixels = frame.pixels,
+            .pixels = pixels.pixels,
             .format = PrPixelFormat_Bgra8,
             .alpha = PrDrawAlpha_Premultiplied,
             .space = PrColorSpace_Srgb,
@@ -277,6 +280,7 @@ bool decodeFrame(HtmlMedia* media) {
             media->frame = image;
             media->frameSerial = frame.serial;
         }
+        prGpuImportUnlock(&frame.image);
     }
     return frame.current;
 }

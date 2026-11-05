@@ -135,7 +135,7 @@ struct CpuTexture {
     uint64_t key;               // the id of the image or list
     PrRect region;              // List: the area of its space that the texture holds
     bool fromList;              // true if it holds what a list draws instead of an image's texels
-    bool ready;                 // List: true if it was rendered in this render
+    bool ready;                 // List: true if it was rendered in this render. Pixels: true once converted
     uint64_t lastUsed;          // the render that last used the texture
     RawArray<CpuTextureLevel> levels;
 };
@@ -149,6 +149,11 @@ struct CpuTextureCache {
 
 // Returns the image's texture, which is created on first use. An image in half floats keeps them.
 CpuTexture* cpuTextureFromImage(CpuTextureCache& cache, const PrDrawImage* image);
+
+// Returns a texture of the pixels of a texture of the caller's, cached under `key`, which must differ from every
+// image's id. The pixels are converted once per render, because what the texture holds may change between renders.
+CpuTexture* cpuTextureFromPixels(CpuTextureCache& cache, uint64_t key, PrPixelView pixels, PrPixelFormat format,
+    PrDrawAlpha alpha);
 
 // Returns a list's texture of an area of its space at a size, in `format`. The caller renders the texture unless it is
 // ready.

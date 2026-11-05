@@ -138,7 +138,7 @@ using namespace pr_impl;
 
 TEST_CASE("imgui renders on the device") {
     Device device(16, 16);
-    CHECK(prDrawRendererIsOnDevice(device.renderer));
+    CHECK(prDrawRendererDevice(device.renderer) == device.gpuDevice);
 }
 
 TEST_CASE("imgui fills a rect over a cleared texture, and blends a translucent one over it") {

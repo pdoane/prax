@@ -16,18 +16,13 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// The bytes of a file, read only, mapped or read by the platform. They stay valid until prFileUnmap.
-typedef struct PrFileMapping {
-    const uint8_t* PR_NULLABLE data;
-    size_t size;
-} PrFileMapping;
+// Maps the file at the UTF-8 `path` and writes its bytes to `out`. The bytes are read only, and stay valid until
+// prFileUnmap. The platform either maps the file or reads it. An empty file maps to an empty view. Returns false, and
+// leaves `out` empty, if the file cannot be opened or is not a regular file.
+bool prFileMap(PrStringView path, PrByteView* out);
 
-// Maps the file at the UTF-8 `path` into `out`. An empty file maps to an empty mapping. Returns false, and leaves `out`
-// empty, if the file cannot be opened or is not a regular file.
-bool prFileMap(PrStringView path, PrFileMapping* out);
-
-// Unmaps the file and leaves `mapping` empty. An empty mapping is left as it is.
-void prFileUnmap(PrFileMapping* mapping);
+// Unmaps the bytes that prFileMap wrote to `mapping`, and leaves `mapping` empty. An empty view is left as it is.
+void prFileUnmap(PrByteView* mapping);
 
 // What a path names.
 enum {
@@ -116,7 +111,8 @@ bool prFileStreamWrite(PrFileStream stream, PrByteView bytes);
 size_t prFileStreamRead(PrFileStream stream, void* out, size_t capacity);
 
 // The parts of a UTF-8 path, read from its text alone: the file system is not asked, and a part that names a link is
-// not followed. A slash separates the parts, and so does a backslash on Windows.
+// not followed. A slash separates the parts, and so does a backslash on Windows and the web, whose file system can be a
+// Windows host's.
 
 // Returns the last part of `path`: what follows its last separator, or all of it if it has none.
 PrStringView prFilePathName(PrStringView path);

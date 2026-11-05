@@ -81,7 +81,7 @@ if (PR_DEVELOP)
         text_editor/tests/test_text_editor_c.c
     )
     target_link_libraries(studio_text_editor_tests PRIVATE kit_fixture prax::layout prax::text prax::ui
-                                                           prax::studio_command prax::syntax)
+                                                           prax::studio_command prax::syntax prax::process)
     target_compile_definitions(studio_text_editor_tests PRIVATE
         TEXT_EDITOR_TESTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/text_editor/tests"
         TEXT_EDITOR_TESTS_PYTHON="${Python3_EXECUTABLE}")

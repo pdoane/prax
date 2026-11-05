@@ -5,11 +5,19 @@ pr_library(gpu INCLUDE include
 )
 target_link_libraries(pr_gpu PUBLIC prax::core prax::geom prax::app prax::color PRIVATE prax::core_cpp)
 pr_slang(pr_gpu src/gpu_mipmaps.slang VARIABLE kGpuMipmapShaders)
+# On Apple's platforms, any device copies a CVPixelBuffer that it does not import in place.
+if (APPLE)
+    target_sources(pr_gpu PRIVATE src/gpu_corevideo.mm)
+    set_source_files_properties(src/gpu_corevideo.mm PROPERTIES COMPILE_OPTIONS -fno-objc-arc)
+    target_compile_definitions(pr_gpu PRIVATE PR_GPU_HAS_COREVIDEO)
+    target_link_libraries(pr_gpu PUBLIC "-framework CoreVideo")
+endif()
 if (PR_GPU_METAL OR PR_GPU_METAL4)
     # The Metal backends hold Objective-C objects in plain structures, with manual reference counting.
     target_sources(pr_gpu PRIVATE backends/shared/src/gpu_shared_metal.mm)
     set_source_files_properties(backends/shared/src/gpu_shared_metal.mm PROPERTIES COMPILE_OPTIONS -fno-objc-arc)
-    target_link_libraries(pr_gpu PUBLIC "-framework Metal" "-framework QuartzCore" "-framework AppKit")
+    target_link_libraries(pr_gpu PUBLIC "-framework Metal" "-framework QuartzCore" "-framework AppKit"
+                                 "-framework CoreVideo")
 endif()
 if (PR_GPU_METAL)
     target_sources(pr_gpu PRIVATE backends/metal/src/gpu_metal.mm)
@@ -49,14 +57,31 @@ if (PR_GPU_D3D12)
     target_link_libraries(pr_gpu PUBLIC d3d12 dxgi)
 endif()
 
+# The memory devices: the memory backend, which presents nothing, and the Canvas 2D backend, whose textures are also a
+# web page's canvases and which builds only for the web. Both backends create the same device.
+if (PR_GPU_MEMORY OR PR_GPU_CANVAS2D)
+    target_sources(pr_gpu PRIVATE backends/shared/src/gpu_shared_memory.cpp)
+endif()
+if (PR_GPU_MEMORY)
+    target_sources(pr_gpu PRIVATE backends/memory/src/gpu_memory.cpp)
+    pr_headers(pr_gpu PUBLIC backends/memory/include)
+    target_compile_definitions(pr_gpu PRIVATE PR_GPU_HAS_MEMORY)
+endif()
+if (PR_GPU_CANVAS2D)
+    target_sources(pr_gpu PRIVATE backends/canvas2d/src/gpu_canvas2d.cpp)
+    pr_headers(pr_gpu PUBLIC backends/canvas2d/include)
+    target_compile_definitions(pr_gpu PRIVATE PR_GPU_HAS_CANVAS2D)
+    pr_js_library(pr_gpu backends/canvas2d/src/gpu_canvas2d.js)
+endif()
+
 if (PR_DEVELOP)
     pr_module_tests(gpu
         tests/test_gpu.cpp
         tests/test_gpu_c.c
     )
     pr_slang(gpu_tests tests/test_gpu.slang VARIABLE kTestGpuShaders)
-    # Each backend's own tests, which record into the host's command buffers and passes with the same shaders.
-    pr_slang(gpu_tests tests/test_gpu_host.slang VARIABLE kTestGpuHostShaders)
+    # Each backend's own tests, which record into the application's command buffers and passes with the same shaders.
+    pr_slang(gpu_tests tests/test_gpu_native.slang VARIABLE kTestGpuNativeShaders)
     if (PR_GPU_METAL)
         target_sources(gpu_tests PRIVATE backends/metal/tests/test_gpu_metal.mm)
         set_source_files_properties(backends/metal/tests/test_gpu_metal.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
@@ -71,5 +96,12 @@ if (PR_DEVELOP)
     endif()
     if (PR_GPU_D3D12)
         target_sources(gpu_tests PRIVATE backends/d3d12/tests/test_gpu_d3d12.cpp)
+    endif()
+    if (PR_GPU_MEMORY)
+        target_sources(gpu_tests PRIVATE backends/memory/tests/test_gpu_memory.cpp)
+        target_link_libraries(gpu_tests PRIVATE prax::app)
+    endif()
+    if (PR_GPU_CANVAS2D)
+        target_sources(gpu_tests PRIVATE backends/canvas2d/tests/test_gpu_canvas2d.cpp)
     endif()
 endif()

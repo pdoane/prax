@@ -10,11 +10,13 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// MSVC's bit scan and 128-bit product.
+// MSVC's bit scan, and its 128-bit product, which x64 alone has.
 #if defined(_MSC_VER) && !defined(__clang__)
 unsigned char _BitScanForward64(unsigned long* index, unsigned __int64 mask);
-unsigned __int64 _umul128(unsigned __int64 a, unsigned __int64 b, unsigned __int64* high);
 #pragma intrinsic(_BitScanForward64)
+#endif
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_X64)
+unsigned __int64 _umul128(unsigned __int64 a, unsigned __int64 b, unsigned __int64* high);
 #pragma intrinsic(_umul128)
 #endif
 
@@ -51,14 +53,23 @@ static inline uint32_t prU64LowestBit(uint64_t word) {
 
 // Returns the low half of the 128-bit product of `a` and `b`, and writes the high half to `*high`.
 static inline uint64_t prU64Mul128(uint64_t a, uint64_t b, uint64_t* high) {
-#if defined(_MSC_VER) && !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_X64)
     return _umul128(a, b, high);
 #elif defined(__SIZEOF_INT128__)
     unsigned __int128 product = PR_VALUE_CAST(unsigned __int128, a) * b;
     *high = PR_VALUE_CAST(uint64_t, product >> 64);
     return PR_VALUE_CAST(uint64_t, product);
 #else
-#error "prU64Mul128 needs the MSVC intrinsic or a 128-bit integer type"
+    // The products of the 32-bit halves, summed by columns. The middle column's carries reach the high half.
+    uint64_t aLow = a & 0xffffffffu;
+    uint64_t aHigh = a >> 32;
+    uint64_t bLow = b & 0xffffffffu;
+    uint64_t bHigh = b >> 32;
+    uint64_t low = aLow * bLow;
+    uint64_t middle = aHigh * bLow + (low >> 32);
+    uint64_t middle2 = aLow * bHigh + (middle & 0xffffffffu);
+    *high = aHigh * bHigh + (middle >> 32) + (middle2 >> 32);
+    return (middle2 << 32) | (low & 0xffffffffu);
 #endif
 }
 

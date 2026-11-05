@@ -22,12 +22,14 @@ struct GpuMipmapPipeline {
     PrGpuPipeline pipeline;
 };
 
-// pr/gpu.h's own state of a device: samplers by description, and what it draws mip levels with. The mutex guards it.
+// pr/gpu.h's own state of a device: samplers by description, what it draws mip levels with, and the textures that
+// imports made by copying. The mutex guards it.
 struct GpuDeviceShared {
     PrMutex mutex;
     RawArray<GpuSamplerEntry> samplers;
     PrGpuShaderLibrary* PR_NULLABLE mipmapLibrary;
     RawArray<GpuMipmapPipeline> mipmapPipelines;
+    RawArray<uint32_t> importCopies;    // the ids of textures that a later import may write its copy into
 };
 
 } // namespace pr_impl

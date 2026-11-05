@@ -1,4 +1,4 @@
-// The shaders of the tests of recording into the host's command buffers and passes, which each backend runs.
+// The shaders of the tests of recording into the application's command buffers and passes, which each backend runs.
 
 #include "pr/gpu.slang"
 

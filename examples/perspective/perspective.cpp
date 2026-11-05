@@ -316,7 +316,7 @@ bool openPanels(Panels& p) {
     p.frosted = prDrawFilterCreate(builder);
     prDrawFilterBuilderDestroy(builder);
 
-    PrFileMapping file = {};
+    PrByteView file = {};
     if (!prFileMap(PR_PERSPECTIVE_PICTURE, &file))
         return false;
     PrCompressCodec* compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
@@ -406,10 +406,8 @@ void redrawBeneath(void* PR_NULLABLE context, PrGpuPass* pass, PrIRect area) {
 
 // Frees what the window made on its device, and the device.
 void closeDevice(Window& w) {
-    if (w.device != nullptr) {
-        prGpuDeviceWaitIdle(w.device);
+    if (w.device != nullptr)
         prGpuTextureDestroy(w.device, w.background);
-    }
     pipelinesDestroy(w.pipelines);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);

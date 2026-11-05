@@ -126,8 +126,9 @@ constexpr Case kCases[] = {
     },
 };
 
+#if defined(__APPLE__)
 // Returns true if two shapers draw the same: the same glyphs in the same places, in any order, and the same total
-// advance.
+// advance. The comparisons of CoreText with HarfBuzz use it.
 bool drawAlike(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>& b, float tolerance) {
     struct Placed {
         uint32_t id;
@@ -163,6 +164,7 @@ bool drawAlike(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>
     }
     return true;
 }
+#endif
 
 // Returns the shapers that shape features, one of each.
 std::vector<PrTextShaper*> featureShapers() {

@@ -40,6 +40,9 @@ endif()
 if (PR_PLATFORM_MIMALLOC)
     target_compile_definitions(pr_core PUBLIC PR_PLATFORM_MIMALLOC)
 endif()
+if (NOT PR_PLATFORM_THREADS)
+    target_compile_definitions(pr_core PUBLIC PR_PLATFORM_NO_THREADS)
+endif()
 
 # The platform's backends, which core binds to by default (docs/platform.md): the C library for memory on every target,
 # or mimalloc if the build chooses it, and a family of the target for the other groups. They include core's headers
@@ -66,6 +69,12 @@ if (PR_PLATFORM_MIMALLOC OR PR_DEVELOP)
     endif()
     pr_dependency_available(mimalloc)
     pr_third_party_directory(${mimalloc_SOURCE_DIR})
+    # Its WebAssembly primitives call getentropy, which the C library declares only for a source that asks for more than
+    # ISO C. They take their memory from emmalloc, which a program that links mimalloc then allocates from.
+    if (EMSCRIPTEN)
+        target_compile_definitions(mimalloc-static PRIVATE _DEFAULT_SOURCE)
+        target_link_options(mimalloc-static INTERFACE -sMALLOC=emmalloc)
+    endif()
     # MSVC refuses to optimize a Debug build's runtime checks, so mimalloc stays unoptimized there.
     if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT MSVC)
         target_compile_options(mimalloc-static PRIVATE -O2)
@@ -77,6 +86,12 @@ if (PR_PLATFORM_MIMALLOC OR PR_DEVELOP)
     target_include_directories(pr_core_mimalloc PRIVATE ${PROJECT_SOURCE_DIR}/lib include)
     target_link_libraries(pr_core_mimalloc PRIVATE mimalloc-static)
 endif()
+
+# The no_threads family, which serves threads on every target in a build without them.
+pr_library(core_no_threads INCLUDE backends/no_threads/include
+    backends/no_threads/src/core_no_threads_thread.cpp
+)
+target_include_directories(pr_core_no_threads PRIVATE ${PROJECT_SOURCE_DIR}/lib include)
 
 # The POSIX family, which serves the groups other than memory on the Unix-like targets, and the Windows family, which
 # serves them on Windows. A target builds the family that it has.
@@ -117,6 +132,9 @@ if (NOT PR_PLATFORM_NO_DEFAULT AND WIN32)
     target_link_libraries(pr_core PUBLIC prax::core_windows)
 elseif (NOT PR_PLATFORM_NO_DEFAULT)
     target_link_libraries(pr_core PUBLIC prax::core_posix)
+endif()
+if (NOT PR_PLATFORM_NO_DEFAULT AND NOT PR_PLATFORM_THREADS)
+    target_link_libraries(pr_core PUBLIC prax::core_no_threads)
 endif()
 
 # Core's C++ layer: the toolkit that every library's implementation is written with, and the C++ side of the platform.
@@ -229,7 +247,7 @@ if (PR_DEVELOP)
     target_include_directories(core_configured PRIVATE cpp/include)
     target_compile_definitions(core_configured PUBLIC
         "PR_USER_CONFIG=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/test_platform_config.h\"")
-    target_link_libraries(core_configured PRIVATE prax::core_libc prax::core_mimalloc pr_warnings)
+    target_link_libraries(core_configured PRIVATE prax::core_libc prax::core_mimalloc prax::core_no_threads pr_warnings)
     if (WIN32)
         target_link_libraries(core_tests PRIVATE prax::core_windows)
         target_link_libraries(core_configured PRIVATE prax::core_windows)

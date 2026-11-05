@@ -4,12 +4,13 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
-#include "pr/float.h"
-#include "pr/float16.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/vec.h"
 
+#if defined(PR_DRAW_HAS_CANVAS)
+#include "pr/draw_canvas.h"
+#endif
 #if defined(PR_DRAW_HAS_CPU)
 #include "pr/draw_cpu.h"
 #endif
@@ -24,10 +25,10 @@ namespace pr_impl {
 
 namespace {
 
-constexpr PrStringView kBackendNames[PrDrawRendererBackend_Count] = {"default", "cpu", "triangles", "fragment"};
+constexpr PrStringView kBackendNames[PrDrawRendererBackend_Count] = {"default", "cpu", "canvas", "triangles", "fragment"};
 
-// The backends that the build has, in the order of preference, which Default creates the first of that the device
-// allow, and then Default, so that a build without backends creates none.
+// The backends in the build, in the order of preference, and then Default. Default creates the first of these that the
+// device runs. Listing Default last means that a build without backends creates none.
 constexpr PrDrawRendererBackend kBuilt[] = {
 #if defined(PR_DRAW_HAS_FRAGMENT)
     PrDrawRendererBackend_Fragment,
@@ -35,11 +36,54 @@ constexpr PrDrawRendererBackend kBuilt[] = {
 #if defined(PR_DRAW_HAS_TRIANGLES)
     PrDrawRendererBackend_Triangles,
 #endif
+#if defined(PR_DRAW_HAS_CANVAS)
+    PrDrawRendererBackend_Canvas,
+#endif
 #if defined(PR_DRAW_HAS_CPU)
     PrDrawRendererBackend_Cpu,
 #endif
     PrDrawRendererBackend_Default,
 };
+
+// Creates a renderer by `backend`, which is not Default. Only the CPU renderer makes a device of its own.
+PrStatus create(PrDrawRendererBackend backend, PrGpuDevice* PR_NULLABLE device, const PrDrawRendererOptions& o,
+        PrDrawRenderer* PR_NULLABLE* PR_NONNULL out) {
+    if (backend != PrDrawRendererBackend_Cpu && device == nullptr)
+        return PrStatus_NotSupported;
+    switch (backend) {
+#if defined(PR_DRAW_HAS_CPU)
+        case PrDrawRendererBackend_Cpu: {
+            PrDrawCpuOptions cpu = prDrawCpuOptionsDefault();
+            cpu.glyphDecoder = o.glyphDecoder;
+            cpu.device = device;
+            *out = prDrawCpuCreate(&cpu);
+            return *out != nullptr ? PrStatus_Ok : PrStatus_NotSupported;
+        }
+#endif
+#if defined(PR_DRAW_HAS_CANVAS)
+        case PrDrawRendererBackend_Canvas: {
+            PrDrawCanvasOptions canvas = prDrawCanvasOptionsDefault();
+            canvas.glyphDecoder = o.glyphDecoder;
+            return prDrawCanvasCreate(device, &canvas, out);
+        }
+#endif
+#if defined(PR_DRAW_HAS_TRIANGLES)
+        case PrDrawRendererBackend_Triangles: {
+            PrDrawTrianglesOptions triangles = prDrawTrianglesOptionsDefault();
+            triangles.glyphDecoder = o.glyphDecoder;
+            return prDrawTrianglesCreate(device, &triangles, out);
+        }
+#endif
+#if defined(PR_DRAW_HAS_FRAGMENT)
+        case PrDrawRendererBackend_Fragment: {
+            PrDrawFragmentOptions fragment = prDrawFragmentOptionsDefault();
+            fragment.glyphDecoder = o.glyphDecoder;
+            return prDrawFragmentCreate(device, &fragment, out);
+        }
+#endif
+        default: return PrStatus_NotSupported;
+    }
+}
 
 } // namespace
 
@@ -67,10 +111,6 @@ bool prDrawRendererBackendIsBuilt(PrDrawRendererBackend backend) {
     return false;
 }
 
-bool prDrawRendererBackendIsDevice(PrDrawRendererBackend backend) {
-    return backend == PrDrawRendererBackend_Triangles || backend == PrDrawRendererBackend_Fragment;
-}
-
 PrDrawRendererOptions prDrawRendererOptionsDefault(void) {
     return PrDrawRendererOptions{};
 }
@@ -79,40 +119,17 @@ PrStatus prDrawRendererCreate(PrDrawRendererBackend backend, PrGpuDevice* PR_NUL
         const PrDrawRendererOptions* PR_NULLABLE options, PrDrawRenderer* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     PrDrawRendererOptions o = options != nullptr ? *options : prDrawRendererOptionsDefault();
-    if (backend == PrDrawRendererBackend_Default) {
-        for (PrDrawRendererBackend built : kBuilt) {
-            backend = built;
-            if (device != nullptr || !prDrawRendererBackendIsDevice(built))
-                break;
-        }
+    if (backend != PrDrawRendererBackend_Default)
+        return create(backend, device, o, out);
+    // Default takes the first backend that the device runs.
+    for (PrDrawRendererBackend built : kBuilt) {
+        if (built == PrDrawRendererBackend_Default)
+            break;
+        PrStatus status = create(built, device, o, out);
+        if (status != PrStatus_NotSupported)
+            return status;
     }
-    if (prDrawRendererBackendIsDevice(backend) && device == nullptr)
-        return PrStatus_NotSupported;
-    switch (backend) {
-#if defined(PR_DRAW_HAS_CPU)
-        case PrDrawRendererBackend_Cpu: {
-            PrDrawCpuOptions cpu = prDrawCpuOptionsDefault();
-            cpu.glyphDecoder = o.glyphDecoder;
-            *out = prDrawCpuCreate(&cpu);
-            return PrStatus_Ok;
-        }
-#endif
-#if defined(PR_DRAW_HAS_TRIANGLES)
-        case PrDrawRendererBackend_Triangles: {
-            PrDrawTrianglesOptions triangles = prDrawTrianglesOptionsDefault();
-            triangles.glyphDecoder = o.glyphDecoder;
-            return prDrawTrianglesCreate(device, &triangles, out);
-        }
-#endif
-#if defined(PR_DRAW_HAS_FRAGMENT)
-        case PrDrawRendererBackend_Fragment: {
-            PrDrawFragmentOptions fragment = prDrawFragmentOptionsDefault();
-            fragment.glyphDecoder = o.glyphDecoder;
-            return prDrawFragmentCreate(device, &fragment, out);
-        }
-#endif
-        default: return PrStatus_NotSupported;
-    }
+    return PrStatus_NotSupported;
 }
 
 void prDrawRendererDestroy(PrDrawRenderer* PR_NULLABLE renderer) {
@@ -120,8 +137,8 @@ void prDrawRendererDestroy(PrDrawRenderer* PR_NULLABLE renderer) {
         renderer->destroy(renderer);
 }
 
-bool prDrawRendererIsOnDevice(const PrDrawRenderer* renderer) {
-    return renderer->frameRender != nullptr;
+PrGpuDevice* prDrawRendererDevice(const PrDrawRenderer* renderer) {
+    return renderer->device;
 }
 
 void prDrawRendererDropResources(PrDrawRenderer* renderer) {
@@ -146,7 +163,7 @@ void prDrawFrameDestroy(PrDrawFrame* PR_NULLABLE frame) {
 PrStatus prDrawFramePrepare(PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget* target) {
     PrDrawRenderer* renderer = frame->renderer;
     PR_ASSERT(prDrawListDepth(list) == 0);
-    PR_ASSERT(!prDrawRendererIsOnDevice(renderer) || target->commands != nullptr);
+    PR_ASSERT(target->commands != nullptr);
     PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Texture ||
         target->beneath->texture != 0);
     PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Draw || target->beneath->draw != nullptr);
@@ -173,53 +190,53 @@ PrDrawStats prDrawFrameStats(const PrDrawFrame* frame) {
 }
 
 void prDrawFrameRender(PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
-    PR_ASSERT(frame->renderer->frameRender != nullptr && frame->prepared);
+    PR_ASSERT(frame->prepared);
     frame->renderer->frameRender(frame->renderer, frame, pass, origin);
 }
 
-void prDrawFrameRenderPixels(PrDrawFrame* frame, PrPixels pixels, PrPixelFormat format) {
-    PR_ASSERT(frame->renderer->frameRenderPixels != nullptr && frame->prepared);
+PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels, PrPixelFormat format) {
     PR_ASSERT(format == PrPixelFormat_Rgba8 || format == PrPixelFormat_Bgra8 || format == PrPixelFormat_RgbaF16);
     PR_ASSERT(size_t(pixels.extent.x) * prPixelFormatSize(format) <= pixels.stride);
-    PR_ASSERT(pixels.extent.x == frame->extent.x && pixels.extent.y == frame->extent.y);
-    if (format != PrPixelFormat_RgbaF16 || frame->renderer->rendersHalfFloat) {
-        frame->renderer->frameRenderPixels(frame->renderer, frame, pixels, format);
-        return;
+    PrGpuDevice* device = renderer->device;
+    PrGpuFormat textureFormat = prGpuFormatFromPixelFormat(format);
+    constexpr PrGpuTextureUsageFlags kUsage = PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget;
+    // A memory device draws into the pixels themselves, and any other device draws into a copy of them.
+    bool inPlace = prGpuDeviceHasNative(device, PrGpuNativeKind_Pixels);
+    PrGpuTexture texture{};
+    PrStatus status = PrStatus_Ok;
+    if (inPlace) {
+        status = prGpuTextureCreateOverPixels(device, textureFormat, pixels, kUsage, &texture);
+    } else {
+        PrGpuTextureDesc desc = prGpuTextureDesc2d(textureFormat, pixels.extent, kUsage);
+        status = prGpuTextureCreate(device, &desc, &texture);
+        if (status == PrStatus_Ok)
+            prGpuTextureWrite(device, texture, PrIVec2{0, 0}, prPixelsView(pixels));
     }
-    // Rendered over the pixels' own colors, clamped, then widened back.
-    size_t stride = size_t(pixels.extent.x) * 4;
-    uint8_t* narrow = static_cast<uint8_t*>(prMemoryAlloc(stride * pixels.extent.y + 1));
-    for (uint32_t y = 0; y < pixels.extent.y; ++y) {
-        for (uint32_t x = 0; x < pixels.extent.x; ++x) {
-            PrFloat16 wide[4];
-            prMemCopy(wide, pixels.data + y * pixels.stride + x * 8, sizeof(wide));
-            float a = prF32Clamp(prFloat16ToFloat(wide[3]), 0, 1);
-            for (uint32_t k = 0; k < 4; ++k) {
-                float v = prF32Clamp(prFloat16ToFloat(wide[k]), 0, k < 3 ? a : 1);
-                narrow[y * stride + x * 4 + k] = uint8_t(v * 255 + 0.5f);
-            }
-        }
+    PrGpuCommands* commands = nullptr;
+    if (status == PrStatus_Ok && !prGpuCommandsBegin(device, nullptr, &commands))
+        status = PrStatus_Lost;
+    if (status != PrStatus_Ok) {
+        prGpuTextureDestroy(device, texture);
+        return status;
     }
-    frame->renderer->frameRenderPixels(frame->renderer, frame, PrPixels{narrow, stride, pixels.extent},
-        PrPixelFormat_Rgba8);
-    for (uint32_t y = 0; y < pixels.extent.y; ++y) {
-        for (uint32_t x = 0; x < pixels.extent.x; ++x) {
-            PrFloat16 wide[4];
-            for (uint32_t k = 0; k < 4; ++k)
-                wide[k] = prFloat16FromFloat(float(narrow[y * stride + x * 4 + k]) / 255);
-            prMemCopy(pixels.data + y * pixels.stride + x * 8, wide, sizeof(wide));
-        }
-    }
-    prMemoryFree(narrow);
-}
-
-PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels, PrPixelFormat format) {
-    PrDrawTarget target{};
-    target.extent = pixels.extent;
+    PrDrawTarget target{.extent = pixels.extent, .format = format, .commands = commands};
     PrDrawFrame* frame = prDrawFrameCreate(renderer);
-    PrStatus status = prDrawFramePrepare(frame, list, &target);
-    if (status == PrStatus_Ok)
-        prDrawFrameRenderPixels(frame, pixels, format);
+    status = prDrawFramePrepare(frame, list, &target);
+    if (status == PrStatus_Ok) {
+        PrGpuSubresources all{};
+        prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_ColorAttachment);
+        PrGpuPassDesc desc = prGpuPassDescColor(texture, PrGpuLoad_Keep, PrColor{});
+        PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+        prDrawFrameRender(frame, pass, PrIVec2{0, 0});
+        prGpuPassEnd(pass);
+        prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_ShaderRead);
+    }
+    prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
+    if (status == PrStatus_Ok && !inPlace)
+        prGpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, pixels);
     prDrawFrameDestroy(frame);
+    prGpuTextureDestroy(device, texture);
     return status;
 }

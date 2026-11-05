@@ -21,7 +21,8 @@ if (PR_PROCESS_WINDOWS)
     target_compile_definitions(pr_process PRIVATE PR_PROCESS_HAS_WINDOWS)
 endif()
 
-if (PR_DEVELOP)
+# Its tests start the system's processes.
+if (PR_DEVELOP AND (PR_PROCESS_POSIX OR PR_PROCESS_WINDOWS))
     pr_module_tests(process
         tests/test_process.cpp
         tests/test_process_c.c

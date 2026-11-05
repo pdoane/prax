@@ -3,7 +3,8 @@
 //
 // A worker is the layout stage of a pipeline. It runs the jobs posted to it one at a time, in the order they were
 // posted, whatever trees they are for. A job takes its tree from the caller until the worker is waited for, so the
-// caller changes a tree and interns its records only while the worker has no job for it.
+// caller changes a tree and interns its records only while the worker has no job for it. In a build without threads
+// (prThreadSupported), a worker has no thread, and the caller's thread runs each job before posting it returns.
 
 #pragma once
 
@@ -22,8 +23,9 @@ extern "C" {
 // A thread that runs jobs in turn.
 typedef struct PrLayoutWorker PrLayoutWorker;
 
-// Called on a worker's thread when it finishes the last job posted to it, at the point when waiting for it would not
-// wait. It must call no function of the worker.
+// Called when a worker finishes the last job posted to it, at the point when waiting for the worker would not block. It
+// is called on the worker's thread, or on the caller's thread in a build without threads. It must call no function of
+// the worker.
 typedef void (*PrLayoutWorkerDoneFn)(void* PR_NULLABLE context);
 
 // Starts a worker's thread, which waits for jobs.

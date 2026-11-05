@@ -7,6 +7,7 @@
 
 #include "pr/base.h"
 #include "pr/byte_view.h"
+#include "pr/gpu.h"
 #include "pr/media_segment.h"
 #include "pr/media_source.h"
 #include "pr/pixels.h"
@@ -42,9 +43,11 @@ typedef struct PrMediaInfo {
     bool hasAudio;
 } PrMediaInfo;
 
-// A decoded frame of a resource's video: opaque sRGB in Bgra8.
+// A decoded frame of a resource's video: opaque sRGB in Bgra8. A GPU device makes a texture of its image
+// (prGpuTextureImport), in place if the device imports the image's kind. The image is the backend's own, such as a
+// CVPixelBuffer, or pixels in memory (PrGpuImportKind_Pixels) for a backend that decodes into memory.
 typedef struct PrMediaFrame {
-    PrPixelView pixels;
+    PrGpuImport image;
     double time;            // when the frame starts to show, in seconds on the resource's timeline
     uint64_t serial;        // distinct for each frame that a decoder returns
 
@@ -60,9 +63,11 @@ typedef struct PrMediaAudioChunk {
     bool ended;             // no frames follow until the decoder seeks
 } PrMediaAudioChunk;
 
-// The start of every decoder's state. `codec` is the codec that created the decoder.
+// The start of every decoder's state. `codec` is the codec that created the decoder. A codec that decodes into memory
+// keeps the handle of the frame that it last returned in `pixels` (PrGpuImportKind_Pixels).
 struct PrMediaDecoder {
     PrMediaCodec* codec;
+    PrGpuImportPixels pixels;
 };
 
 // A decoder of one track's coded frames, one frame at a time, which a codec creates for a media source. It is used by
@@ -92,7 +97,7 @@ typedef struct PrMediaSampleSink {
 // decodes none, and then the other sample members are null too, and a null `supportsSourceType` means that the codec's
 // answer for a media source is its answer for a resource. `sampleDecode` returns false if the frame does not decode,
 // and `sampleDecoderFlush` drops what the decoder holds of the frames before, for a jump on the timeline. An image is a
-// decoded video frame: `imageLock` makes its pixels readable, which stay so until `imageUnlock`.
+// decoded video frame: `imageImport` writes it as an image to import, which stays valid until `imageRelease`.
 struct PrMediaCodec {
     void (*PR_NULLABLE destroy)(PrMediaCodec* codec);
     PrMediaSupport (*supportsType)(PrMediaCodec* codec, PrStringView type);
@@ -112,17 +117,17 @@ struct PrMediaCodec {
     bool (*PR_NULLABLE sampleDecode)(PrMediaCodec* codec, PrMediaSampleDecoder* decoder,
         const PrMediaBufferedFrame* frame, const PrMediaSampleSink* sink);
     void (*PR_NULLABLE sampleDecoderFlush)(PrMediaCodec* codec, PrMediaSampleDecoder* decoder);
-    bool (*PR_NULLABLE imageLock)(PrMediaCodec* codec, void* image, PrPixelView* out);
-    void (*PR_NULLABLE imageUnlock)(PrMediaCodec* codec, void* image);
+    void (*PR_NULLABLE imageImport)(PrMediaCodec* codec, void* image, PrGpuImport* out);
     void (*PR_NULLABLE imageRelease)(PrMediaCodec* codec, void* image);
 };
 
-// The library's backends of codecs, which the build turns on (README.md), and Default, the platform's own or else the
-// first that the build has.
+// The library's codec backends, which the build turns on (README.md), and Default. Default is the first backend in the
+// build whose constructor succeeds, trying the platform's own first.
 enum {
     PrMediaCodecBackend_Default,
     PrMediaCodecBackend_Apple,      // AVFoundation
     PrMediaCodecBackend_Windows,    // Media Foundation
+    PrMediaCodecBackend_Web,        // a web page's video element
     PrMediaCodecBackend_Builtin,
     PrMediaCodecBackend_Count,
 };
@@ -176,9 +181,9 @@ void prMediaDecoderDestroy(PrMediaDecoder* PR_NULLABLE decoder);
 bool prMediaDecoderHasFrames(const PrMediaDecoder* decoder);
 
 // Writes the frame of the video that shows at `seconds`, the last that starts at or before it, to `out`, or if that
-// frame is not decoded yet, the last frame that the decoder reached on its way there. The pixels are valid until the
-// next call on the decoder. Returns false if the decoder has no frame to write, or decodes no frames, and then sets
-// `out->current` if no frame will come. The call does not wait: the decoder decodes toward `seconds` on its own
+// frame is not decoded yet, the last frame that the decoder reached on its way there. The image is valid until the next
+// call on the decoder. Returns false if the decoder has no frame to write, or decodes no frames. In that case, the call
+// sets `out->current` if no frame will come. The call does not wait: the decoder decodes toward `seconds` on its own
 // threads, so that a later call returns the frame that shows there. A time before what the decoder kept, or far past
 // what it reached, seeks.
 bool prMediaDecoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out);

@@ -2186,7 +2186,7 @@ void trianglesBuild(Triangles* t, const PrDrawList* list, uint32_t width, uint32
 
 // The renderer: what builds its frames, and its state on its device.
 struct TrianglesRenderer : PrDrawRenderer {
-    TrianglesDevice* device;
+    TrianglesDevice* state;              // what the renderer keeps on its device
     Triangles* triangles;
 };
 
@@ -2213,20 +2213,20 @@ PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList
     TrianglesRenderer* r = static_cast<TrianglesRenderer*>(renderer);
     TrianglesDrawFrame* frame = static_cast<TrianglesDrawFrame*>(handle);
     trianglesBuild(r->triangles, list, target->extent.x, target->extent.y, frame->storage, &frame->built);
-    trianglesDevicePrepare(r->device, &frame->built, target->commands);
+    trianglesDevicePrepare(r->state, &frame->built, target->commands);
     return PrStatus_Ok;
 }
 
 void render(PrDrawRenderer* renderer, PrDrawFrame* handle, PrGpuPass* pass, PrIVec2 origin) {
     TrianglesRenderer* r = static_cast<TrianglesRenderer*>(renderer);
     TrianglesDrawFrame* frame = static_cast<TrianglesDrawFrame*>(handle);
-    trianglesDeviceRender(r->device, &frame->built, pass, origin);
+    trianglesDeviceRender(r->state, &frame->built, pass, origin);
 }
 
 void dropResources(PrDrawRenderer* renderer) {
     TrianglesRenderer* r = static_cast<TrianglesRenderer*>(renderer);
     trianglesForgetResources(r->triangles);
-    trianglesDeviceDropResources(r->device);
+    trianglesDeviceDropResources(r->state);
 }
 
 void stats(PrDrawRenderer*, const PrDrawFrame* handle, PrDrawStats* out) {
@@ -2246,13 +2246,13 @@ void stats(PrDrawRenderer*, const PrDrawFrame* handle, PrDrawStats* out) {
 void destroyRenderer(PrDrawRenderer* renderer) {
     TrianglesRenderer* r = static_cast<TrianglesRenderer*>(renderer);
     trianglesDestroy(r->triangles);
-    trianglesDeviceDestroy(r->device);
+    trianglesDeviceDestroy(r->state);
     prMemoryFree(r);
 }
 
 TrianglesRenderer* createRenderer(TrianglesDevice* device, const PrDrawTrianglesOptions* PR_NULLABLE options) {
     TrianglesRenderer* r = allocZeroed<TrianglesRenderer>();
-    r->device = device;
+    r->state = device;
     r->triangles = trianglesCreate(options != nullptr ? *options : prDrawTrianglesOptionsDefault());
     r->destroy = destroyRenderer;
     r->frameCreate = createFrame;
@@ -2283,6 +2283,8 @@ PrStatus prDrawTrianglesCreate(PrGpuDevice* device, const PrDrawTrianglesOptions
     PrStatus status = trianglesDeviceCreate(device, &state);
     if (status != PrStatus_Ok)
         return status;
-    *out = createRenderer(state, options);
+    PrDrawRenderer* renderer = createRenderer(state, options);
+    renderer->device = device;
+    *out = renderer;
     return PrStatus_Ok;
 }

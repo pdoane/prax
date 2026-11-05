@@ -32,7 +32,8 @@ if (PR_TLS_OPENSSL)
     target_link_libraries(pr_tls PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 endif()
 
-if (PR_DEVELOP)
+# Its tests run over the platform's sockets (lib/net).
+if (PR_DEVELOP AND PR_NET_SOCKETS)
     pr_net_tests(tls_tests tests/test_tls.cpp tests/test_tls_c.c)
     target_link_libraries(tls_tests PRIVATE prax::tls)
 endif()

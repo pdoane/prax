@@ -94,7 +94,9 @@ Otherwise the stroke is computed in shape space and then mapped. Non-scaling str
 a hairline is a non-scaling stroke of width one, never of width zero. An aligned stroke is computed at double width and
 then cut. Brush mapping is evaluated in a unit square along the stroke. Producers resolve markers, arrowheads and
 corner-aligned dashes. Borders, shadows and decorations follow CSS through the lowering utilities. A drop shadow paints
-only outside its caster, and shadows of anything other than a box are a group with a shadow filter. A wavy
+only outside its caster, and shadows of anything other than a box are a group with a shadow filter. A box's shadow may
+approximate its Gaussian blur for speed, as long as it stays plausible, so backends' shadows differ slightly in their
+falloff. A wavy
 decoration's phase is the origin's offset into the wave.
 
 ## Text
@@ -180,12 +182,19 @@ lowers both kinds to lists. Hinting applies only under a plain scale, and shapin
 | --- | --- | --- |
 | `triangles` | a renderer of textured, colored triangles (Dear ImGui-class) | limited, by design |
 | `cpu` | memory for pixels | complete |
+| `canvas` | a web page's canvases | the browser's Canvas 2D |
 | `fragment` | a `lib/gpu` device | complete |
 | `coregraphics`, `blend2d`, `imgui` | a platform renderer to compare with | the platform's |
 
 - `triangles` tessellates with a one-pixel fringe, evaluates paint at vertices on meshes cut where gradients turn,
   draws glyphs from an atlas, and draws shadows as bands. Anything per-pixel belongs to `fragment`.
 - `cpu` is tiled and multithreaded.
+- `canvas` walks a list into calls on a canvas's 2D context, so the browser rasterizes paths, strokes, gradients,
+  patterns, images and shadows. The walk lowers what the context cannot express into fills and stops: borders,
+  decorations, strokes that the context does not stroke, and ramps that mix in other spaces. It evaluates a brush that
+  the context has no paint for per pixel, and caches glyphs' outlines from one frame to the next. A group with an
+  effect draws into a canvas of its own. The context cannot apply filters other than chains of blurs and drop shadows,
+  and cannot draw projected groups.
 - `fragment` draws instances (quads, parallelograms, triangles) with analytic coverage for common shapes. Glyphs and
   small paths, filled or stroked, come from the atlas if they are unrotated and unskewed, so unchanged frames
   rasterize nothing. An embedded list's instances and records are kept once two frames have embedded it in the same
@@ -306,14 +315,21 @@ Each is rasterized once, with the coverage that the uncached fill would have. An
 - The host owns the device and the passes. Preparing a list (outside any pass, given only the size and the target
   format) records uploads and offscreen passes into the host's command buffer. Rendering draws into a rectangle of a
   pass that the host opened, over what the pass holds. Several lists may share a pass.
-- A device backend is created over a `lib/gpu` device. The target's `commands` and the render's pass are the
-  device's (`PrGpuCommands`, `PrGpuPass`), which may wrap the host's native ones, and a host texture is a
-  `PrDrawTextureId` that names a texture of the device (`prDrawGpuTexture`). A backend may destroy what it creates as soon
+- Every backend is created over a `lib/gpu` device. The target's `commands` and the render's pass are the device's
+  (`PrGpuCommands`, `PrGpuPass`), which may wrap the host's native ones, and a host texture is a `PrDrawTextureId`
+  that names a texture of the device (`prDrawGpuTexture`). A backend may destroy what it creates as soon
   as the work that uses it is recorded, and the device keeps it until that work is done.
 - A backdrop is provided at prepare time as a texture or a redraw function. Otherwise, what lies beneath is
   transparent.
-- Memory backends render into the host's pixels and never upload or read back. A host texture is a
-  `PrDrawTextureId` that names the host's pixels in CPU memory (`prDrawCpuTexture`).
+- The backends that draw on the CPU render on a memory device (`PrGpuNativeKind_Pixels`), such as the memory and
+  Canvas 2D devices. A frame renders natively into the texels of the pass's attachment, over what they hold, while the
+  pass runs (`prGpuPassNativeDraw`). It reads the textures that it draws in place (`prGpuTextureNative`). To draw into
+  pixels of its own, an application renders over a texture made on them (`prGpuTextureCreateOverPixels`), as
+  `prDrawRendererRenderPixels` does.
+- The `canvas` backend renders on a device whose textures are a web page's canvases (`PrGpuNativeKind_Canvas2d`). A
+  frame draws through the 2D context of the pass's attachment while the pass runs (`prGpuPassNativeDraw`). The device
+  keeps each texture's canvas and texels in step, so `canvas` and `cpu` can share one device, its textures and its swap
+  chains.
 - There is no global device state, and a backend never assumes that it is the device's only user.
 - A device renderer belongs to the native device that its driver was made on. When the device is lost (`pr/gpu.h`),
   the host destroys the renderer with the device and makes one on the new device, whose first prepare makes again what

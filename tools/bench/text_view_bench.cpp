@@ -317,7 +317,7 @@ void timed(const char* label, Work work) {
 
 // Prints what a real file costs cold.
 int measureFile(const char* path) {
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (!prFileMap(path, &mapping)) {
         fprintf(stderr, "text_view_bench: cannot read %s\n", path);
         return 1;

@@ -18,7 +18,7 @@ TEST_CASE("a backend's name round trips, ignoring case") {
     CHECK(prAudioOutputBackendFromName("nothing") == PrAudioOutputBackend_Count);
 }
 
-TEST_CASE("a memory output keeps what it renders, at the pace of the clock") {
+TEST_CASE("a memory output keeps what it renders, at the pace of the clock" * doctest::skip(!prThreadSupported())) {
     PrAudioOutput* output = prAudioOutputCreate(PrAudioOutputBackend_Memory, PrAudioFormat{48000, 2});
     REQUIRE(output != nullptr);
     CHECK(prAudioOutputLatency(output) == 0);

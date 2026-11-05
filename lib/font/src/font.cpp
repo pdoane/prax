@@ -47,7 +47,7 @@ struct FontData {
     Atomic<uint32_t> references;
     const uint8_t* bytes;
     size_t size;
-    PrFileMapping mapping;
+    PrByteView mapping;
     uint8_t* PR_NULLABLE owned;     // bytes allocated apart from the data, which the data frees
 
     // The fonts open over the data, among which prFontCreateDerived looks for one equal to the font that it would make.
@@ -818,7 +818,7 @@ PrStatus prFontCreateFromFile(PrStringView path, uint32_t index, const PrFontDer
         const PrFont* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(validDerivation(derivation));
     *out = nullptr;
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (!prFileMap(path, &mapping))
         return PrStatus_Io;
     FontData* data = allocZeroed<FontData>();

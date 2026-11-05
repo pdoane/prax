@@ -348,6 +348,12 @@ CHECKOUTS = {
     # release; a benchmark records the hash of the copy it read, so runs compare only on the same one.
     "docs": lambda: [Files("docs", [("vulkan.html",
                                      "https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html")])],
+    # The video example's video (examples/video): a ginger cat on a side table, from the Internet Archive under the
+    # Public Domain Mark 1.0 (archive.org/details/the-table-and-the-kitten). H.264 High in MP4, 720 by 1280, BT.709,
+    # 30 seconds, which every platform's media backend and every browser plays.
+    "videos": lambda: [Files("videos", [
+        ("cat.mp4", "https://archive.org/download/the-table-and-the-kitten/The%20Table%20And%20The%20Kitten.mp4"),
+    ])],
     # The named character references, which html-parsing provides as one JSON file.
     "entities": lambda: [Files("html", [("entities.json", "https://html.spec.whatwg.org/entities.json")])],
     # The Encoding Standard's encodings, with their labels, and its indexes, for the charset generator.

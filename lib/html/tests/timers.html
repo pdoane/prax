@@ -48,9 +48,13 @@ setTimeout(() => {
 const start = performance.now();
 setTimeout(() => {
     check(performance.now() - start >= 10, "positive delay must elapse");
-    check(calls.join() === "sync,string,arguments,first,microtask,exception,nested",
-          "timer and microtask ordering");
-    print("timer host tests passed");
+    // A loaded host may reach the first timer after this one is due, and then this one runs before the nested timer
+    // that the first sets. A timer set from here is due after the nested one in either case.
+    setTimeout(() => {
+        check(calls.join() === "sync,string,arguments,first,microtask,exception,nested",
+              "timer and microtask ordering");
+        print("timer host tests passed");
+    }, 0);
 }, 10);
 calls.push("sync");
 </script>

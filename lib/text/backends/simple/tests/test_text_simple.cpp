@@ -115,7 +115,7 @@ std::vector<uint8_t> withKernTable(const std::vector<uint8_t>& font, uint16_t le
         uint32_t offset = uint32At(at + 8);
         uint32_t length = uint32At(at + 12);
         record(&font[at], uint32_t(directory + tables.size()), length);
-        tables.insert(tables.end(), font.begin() + offset, font.begin() + offset + length);
+        tables.insert(tables.end(), font.begin() + ptrdiff_t(offset), font.begin() + ptrdiff_t(offset + length));
         while (tables.size() % 4 != 0)
             tables.push_back(0);
     }

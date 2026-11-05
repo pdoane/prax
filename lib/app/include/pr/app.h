@@ -392,6 +392,7 @@ enum {
     PrAppBackend_Default,
     PrAppBackend_Cocoa,
     PrAppBackend_Win32,
+    PrAppBackend_Web,
     PrAppBackend_Count,
 };
 typedef uint8_t PrAppBackend;

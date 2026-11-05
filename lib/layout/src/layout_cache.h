@@ -179,8 +179,11 @@ struct LayoutCacheEntry {
 };
 PR_NO_PADDING_END
 
-// Reuse reads one entry for each box that a layout reaches, so an entry fits in one cache line.
+// Reuse reads one entry for each box that a layout reaches, so an entry fits in one cache line. Its size where a
+// pointer is 64 bits:
+#if UINTPTR_MAX == UINT64_MAX
 static_assert(sizeof(LayoutCacheEntry) == 64);
+#endif
 
 // The intrinsic sizes that a measurement of a box gave (css-sizing-3/#intrinsic-sizes), and the inputs it was measured
 // with. An inline formatting context keeps no entry of its own, because the entry of its container holds its

@@ -38,7 +38,8 @@ uint32_t threadsUsed(const Calls& calls, uint32_t width) {
 
 using namespace pr_impl;
 
-TEST_CASE("a loop calls each index once, from the pool's threads and the caller's") {
+TEST_CASE("a loop calls each index once, from the pool's threads and the caller's" *
+        doctest::skip(!prThreadSupported())) {
     PrTaskPool* pool = prTaskBuiltinCreate(3);
     CHECK(prTaskPoolWidth(pool) == 4);
     for (uint32_t loop = 0; loop < 20; ++loop) {
@@ -94,7 +95,8 @@ TEST_CASE("a loop of fewer indices than threads runs on no more threads than it 
     prTaskPoolDestroy(pool);
 }
 
-TEST_CASE("every job posted runs once, from any thread, before the pool is destroyed") {
+TEST_CASE("every job posted runs once, from any thread, before the pool is destroyed" *
+        doctest::skip(!prThreadSupported())) {
     PrTaskPool* pool = prTaskBuiltinCreate(3);
     Atomic<uint32_t> runs{};
     auto job = [](void* PR_NULLABLE context) { static_cast<Atomic<uint32_t>*>(context)->fetchAdd(1); };
@@ -116,7 +118,7 @@ TEST_CASE("every job posted runs once, from any thread, before the pool is destr
     CHECK(runs.load() == 200);
 }
 
-TEST_CASE("a loop runs while a job blocks one of the pool's threads") {
+TEST_CASE("a loop runs while a job blocks one of the pool's threads" * doctest::skip(!prThreadSupported())) {
     PrTaskPool* pool = prTaskBuiltinCreate(2);
     Atomic<uint32_t> release{};
     prTaskPoolPost(pool, [](void* PR_NULLABLE context) {
@@ -134,6 +136,19 @@ TEST_CASE("a loop runs while a job blocks one of the pool's threads") {
 
 TEST_CASE("a pool of no threads runs a job on the thread that posts it") {
     PrTaskPool* pool = prTaskBuiltinCreate(0);
+    uint32_t runs = 0;
+    prTaskPoolPost(pool, [](void* PR_NULLABLE context) { ++*static_cast<uint32_t*>(context); }, &runs);
+    CHECK(runs == 1);
+    prTaskPoolDestroy(pool);
+}
+
+TEST_CASE("in a build without threads, a pool has none, and runs its loops and jobs on the caller" *
+        doctest::skip(prThreadSupported())) {
+    PrTaskPool* pool = prTaskBuiltinCreate(3);
+    CHECK(prTaskPoolWidth(pool) == 1);
+    Calls calls{};
+    prTaskPoolRun(pool, 10, 4, count, &calls);
+    CHECK(calls.threads[0].load() == 10);
     uint32_t runs = 0;
     prTaskPoolPost(pool, [](void* PR_NULLABLE context) { ++*static_cast<uint32_t*>(context); }, &runs);
     CHECK(runs == 1);

@@ -29,7 +29,17 @@ if (PR_DRAW_CPU)
     target_compile_definitions(pr_draw PRIVATE PR_DRAW_HAS_CPU)
 endif()
 
-# What the backends share: the atlas that the GPU renderers keep glyphs and paths in.
+# The Canvas 2D renderer, which draws through a web page's canvases, and so builds only for the web.
+if (PR_DRAW_CANVAS AND PR_GPU_CANVAS2D)
+    target_sources(pr_draw PRIVATE backends/canvas/src/draw_canvas.cpp)
+    pr_headers(pr_draw PUBLIC backends/canvas/include)
+    target_compile_definitions(pr_draw PRIVATE PR_DRAW_HAS_CANVAS)
+    pr_js_library(pr_draw backends/canvas/src/draw_canvas.js)
+endif()
+
+# What the backends share: the frames of the renderers that draw on the CPU, which the comparisons that draw on the CPU
+# also use, and the atlas that the GPU renderers keep glyphs and paths in.
+target_sources(pr_draw PRIVATE backends/shared/src/draw_shared_memory.cpp)
 if (PR_DRAW_TRIANGLES OR PR_DRAW_FRAGMENT)
     target_sources(pr_draw PRIVATE backends/shared/src/draw_shared_atlas.cpp)
     pr_headers(pr_draw PUBLIC backends/shared/include)
@@ -59,7 +69,10 @@ if (PR_DRAW_TRIANGLES)
 endif()
 
 if (PR_DEVELOP)
-    add_subdirectory(comparisons)
+    # The native tools compare lib/draw with the comparisons, so the web's build has no comparisons.
+    if (NOT EMSCRIPTEN)
+        add_subdirectory(comparisons)
+    endif()
 
     pr_module_tests(draw
         tests/test_compare.cpp
@@ -79,6 +92,12 @@ if (PR_DEVELOP)
             backends/cpu/tests/test_draw_cpu_glyph_bitmap.cpp
             backends/cpu/tests/test_draw_cpu_text.cpp
         )
+    endif()
+    if (PR_DRAW_CANVAS)
+        target_sources(draw_tests PRIVATE backends/canvas/tests/test_draw_canvas.cpp)
+        pr_page_tests(draw backends/canvas/tests/test_draw_canvas_page.cpp
+            PRELOAD "${PROJECT_SOURCE_DIR}/third_party/fonts/NotoSans.ttf@/fonts/NotoSans.ttf")
+        target_link_libraries(draw_page_tests PRIVATE prax::font prax::path prax::gpu)
     endif()
     if (PR_DRAW_TRIANGLES OR PR_DRAW_FRAGMENT)
         target_sources(draw_tests PRIVATE

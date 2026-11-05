@@ -10,7 +10,13 @@
 #error "a build without the default platform binds PR_PLATFORM_THREAD_START"
 #endif
 
+bool prThreadSupported(void) {
+    return PR_PLATFORM_THREAD_SUPPORTED();
+}
+
 void prThreadStart(PrThread* thread, PrThreadRunFn run, void* PR_NULLABLE context) {
+    if (!PR_PLATFORM_THREAD_SUPPORTED())
+        PR_FATAL("cannot start a thread in a build without threads");
     if (!PR_PLATFORM_THREAD_START(thread, run, context))
         PR_FATAL("cannot start a thread");
 }
@@ -37,11 +43,20 @@ void prConditionReset(PrCondition* condition) {
 }
 
 void prConditionWait(PrCondition* condition, PrMutex* mutex) {
+    // With one thread, the state that the caller waits for cannot change.
+    if (!PR_PLATFORM_THREAD_SUPPORTED())
+        PR_FATAL("waits on a condition that no thread can signal");
     PR_PLATFORM_CONDITION_WAIT(condition, mutex);
 }
 
 bool prConditionWaitFor(PrCondition* condition, PrMutex* mutex, double milliseconds) {
-    return PR_PLATFORM_CONDITION_WAIT_FOR(condition, mutex, milliseconds > 0 ? milliseconds : 0);
+    double bounded = milliseconds > 0 ? milliseconds : 0;
+    // With one thread, no signal comes, so the wait lasts its whole time.
+    if (!PR_PLATFORM_THREAD_SUPPORTED()) {
+        PR_PLATFORM_THREAD_SLEEP(bounded);
+        return false;
+    }
+    return PR_PLATFORM_CONDITION_WAIT_FOR(condition, mutex, bounded);
 }
 
 void prConditionSignal(PrCondition* condition) {

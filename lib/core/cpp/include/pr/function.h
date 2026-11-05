@@ -33,9 +33,11 @@ struct Function<Result(Arguments...)> {
             requires isConvertible<decltype(held(forward<Arguments>(arguments)...)), Result>;
         }) {
         using Held = Decay<Fn>;
-        // A function pointer can be null, and a null one makes an empty function.
+        // A function pointer can be null, and a null one makes an empty function. The pointer is compared, not `fn`,
+        // which may name a function that is never null.
         if constexpr (requires { static_cast<Held>(nullptr); }) {
-            if (fn == nullptr)
+            Held pointer = fn;
+            if (pointer == nullptr)
                 return;
         }
         if constexpr (sizeof(Held) <= sizeof(storage) && alignof(Held) <= alignof(void*)) {

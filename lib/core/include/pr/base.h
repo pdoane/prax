@@ -107,6 +107,29 @@
 #define PR_NO_PADDING_END
 #endif
 
+// Declares padding whose size depends on the width of a pointer: `bytes64` bytes on a target of 64-bit pointers and
+// `bytes32` on one of 32-bit pointers, each an integer literal below 8. It is a field declaration, written without a
+// semicolon, and a count of zero declares nothing. The field is named for its line, so a record holds one per line.
+#if UINTPTR_MAX == UINT32_MAX
+#define PR_PAD(bytes64, bytes32) PR_PAD_BYTES(bytes32)
+#else
+#define PR_PAD(bytes64, bytes32) PR_PAD_BYTES(bytes64)
+#endif
+#define PR_PAD_BYTES(bytes) PR_PAD_JOIN(PR_PAD_BYTES_, bytes)
+#define PR_PAD_JOIN(a, b) PR_PAD_JOIN_(a, b)
+#define PR_PAD_JOIN_(a, b) a##b
+#define PR_PAD_FIELD(bytes) uint8_t PR_PAD_NAME(_pad, __LINE__)[bytes];
+#define PR_PAD_NAME(a, b) PR_PAD_NAME_(a, b)
+#define PR_PAD_NAME_(a, b) a##b
+#define PR_PAD_BYTES_0
+#define PR_PAD_BYTES_1 PR_PAD_FIELD(1)
+#define PR_PAD_BYTES_2 PR_PAD_FIELD(2)
+#define PR_PAD_BYTES_3 PR_PAD_FIELD(3)
+#define PR_PAD_BYTES_4 PR_PAD_FIELD(4)
+#define PR_PAD_BYTES_5 PR_PAD_FIELD(5)
+#define PR_PAD_BYTES_6 PR_PAD_FIELD(6)
+#define PR_PAD_BYTES_7 PR_PAD_FIELD(7)
+
 PR_ASSUME_NONNULL_BEGIN
 
 // Fails compilation if `condition` is false, in C and C++.

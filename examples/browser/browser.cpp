@@ -353,10 +353,8 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
 void shutdown(void* context, PrApp*) {
     Browser& b = *static_cast<Browser*>(context);
     tabsShutdown(b);
-    if (b.device != nullptr) {
-        prGpuDeviceWaitIdle(b.device);
+    if (b.device != nullptr)
         prGpuTextureDestroy(b.device, b.rendered);
-    }
     prDrawDisplayDestroy(b.display);
     prDrawFrameDestroy(b.pageFrame);
     prDrawFrameDestroy(b.chromeFrame);

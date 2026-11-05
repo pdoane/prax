@@ -105,7 +105,7 @@ bool netPeerOpen(NetPeer* out) {
         ++size;
     }
     prMemCopy(path + size, "/ports", 6);
-    PrFileMapping ports{};
+    PrByteView ports{};
     if (!prFileMap(PrStringView{path, size + 6}, &ports))
         return false;
     PrStringView text{reinterpret_cast<const char*>(ports.data), ports.size};

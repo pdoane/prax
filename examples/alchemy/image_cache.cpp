@@ -44,7 +44,7 @@ void runDecode(void* PR_NULLABLE context) {
     Decode* decode = static_cast<Decode*>(context);
     ImageCache* images = decode->scale->images;
     const PrDrawImage* image = nullptr;
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (prFileMap(decode->path, &mapping)) {
         image = imageDecode(images->codec, mapping.data, mapping.size);
         prFileUnmap(&mapping);

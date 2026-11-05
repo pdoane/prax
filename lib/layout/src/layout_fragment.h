@@ -322,8 +322,10 @@ struct LayoutFragment {
     };
 };
 
-// Every box, line and text run of a layout has a fragment.
+// Every box, line and text run of a layout has a fragment. Its size where a pointer is 64 bits:
+#if UINTPTR_MAX == UINT64_MAX
 static_assert(sizeof(LayoutFragment) == 88);
+#endif
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Making and sharing

@@ -85,7 +85,7 @@ struct TextEditorDocument {
 
     // The text that streams into the document as it loads: the file, mapped, or a copy of the text that it was given,
     // and how much of it the buffer holds. The document is loading until the buffer holds all of it.
-    PrFileMapping mapping;
+    PrByteView mapping;
     RawArray<char> source;
     uint32_t loaded;
     bool loading;
@@ -429,7 +429,7 @@ void finishLoad(TextEditorDocument* document) {
     document->savedVersion = prTextEditBufferVersion(document->buffer);
     if (document->mapping.data != nullptr)
         prFileUnmap(&document->mapping);
-    document->mapping = PrFileMapping{};
+    document->mapping = PrByteView{};
     document->source.reset();
     attachServer(document->editor, document);
 }
@@ -1137,7 +1137,7 @@ void registerCommands(TextEditor* e) {
         if (young == nullptr || prRawStringIsEmpty(&young->path) || young->loading)
             return;
         // The saved text is a document of no file of its own, which the file's name gives the same language.
-        PrFileMapping mapping{};
+        PrByteView mapping{};
         if (!prFileMap(prRawStringView(&young->path), &mapping)) {
             setStatus(&editor, "the saved file cannot be read");
             return;
@@ -1904,7 +1904,7 @@ PrStringView prTextEditorStatus(const PrTextEditor* editor) {
 PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocumentDesc* desc,
         PrTextEditorDocument* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     bool crlf = false;
     if (!desc->path.isEmpty()) {
         if (!prFileMap(desc->path, &mapping))

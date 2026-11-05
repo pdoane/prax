@@ -94,7 +94,8 @@ find_package(prax 0.1 REQUIRED COMPONENTS app draw text)
 
 The libraries are static. On Apple platforms, the linker warns when a link line repeats a static library;
 `set(CMAKE_LINK_LIBRARIES_STRATEGY REORDER_FREELY)` in the program's project avoids it. On Windows, link the program
-with `/STACK:8388608`, which reserves 8 MB of stack for each thread that does not choose its own size. The library's
+with `/STACK:8388608`, which reserves 8 MB of stack for each thread that does not choose its own size, and with
+Emscripten, link it with `-sSTACK_SIZE=8388608`. The library's
 recursion limits assume that much, as macOS and Linux give a main thread. The options:
 
 | option | default | what it does |
@@ -103,6 +104,7 @@ recursion limits assume that much, as macOS and Linux give a main thread. The op
 | `PR_<MODULE>_<BACKEND>` | see below | builds a backend of a module's interface |
 | `PR_INSTALL` | `ON` when Prax is the top-level project | generates the install rules and the CMake package |
 | `PR_PLATFORM_MIMALLOC` | `OFF` | allocates with mimalloc instead of the C library |
+| `PR_PLATFORM_THREADS` | `ON`, and `OFF` on the web | starts threads; without them, the program runs on one thread |
 | `PR_USER_CONFIG`, `PR_PLATFORM_NO_DEFAULT` | | bind platform facilities at compile time from a header |
 | `PR_SLANGC` | | the Slang compiler to use instead of the release the build fetches |
 | `PR_DOWNLOAD_DIR` | the environment variable of that name, or else `prax/downloads` in the user's cache directory | the download cache that builds share; empty disables it |
@@ -115,11 +117,14 @@ platform supports.
 | --- | --- | --- | --- | --- |
 | app | `PR_APP_COCOA` | Cocoa | Apple platforms | on |
 | app | `PR_APP_WIN32` | Win32 | Windows | on |
+| app | `PR_APP_WEB` | a web page's canvas | the web | on |
 | gpu | `PR_GPU_METAL` | Metal 3 | Apple platforms | on |
 | gpu | `PR_GPU_METAL4` | Metal 4, for experiments | Apple platforms | on |
 | gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
-| gpu | `PR_GPU_VULKAN` | Vulkan | every platform | on for Linux and Android |
-| net | `PR_NET_SOCKETS` | BSD sockets, or Winsock on Windows | every platform | on |
+| gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web | on for Linux and Android |
+| gpu | `PR_GPU_MEMORY` | memory, without shaders or presentation | every platform | on |
+| gpu | `PR_GPU_CANVAS2D` | memory and a web page's canvases, without shaders | the web | on |
+| net | `PR_NET_SOCKETS` | BSD sockets, or Winsock on Windows | every platform but the web | on |
 | net | `PR_NET_NULL` | no connections, and an event loop that the caller runs | every platform | on |
 | process launcher | `PR_PROCESS_POSIX` | posix_spawn | macOS and Linux | on |
 | process launcher | `PR_PROCESS_WINDOWS` | CreateProcessW | Windows | on |
@@ -138,6 +143,7 @@ platform supports.
 | audio | `PR_AUDIO_WINDOWS` | WASAPI | Windows | on |
 | media | `PR_MEDIA_BUILTIN` | Prax | every platform | on |
 | media | `PR_MEDIA_APPLE` | AVFoundation | Apple platforms | on |
+| media | `PR_MEDIA_WEB` | a web page's video element | the web | on |
 | media | `PR_MEDIA_WINDOWS` | Media Foundation | Windows | on |
 | system fonts | `PR_FONT_CORETEXT` | CoreText | Apple platforms | on |
 | system fonts | `PR_FONT_DIRECTWRITE` | DirectWrite | Windows | on |
@@ -148,8 +154,9 @@ platform supports.
 | text shaper | `PR_TEXT_KB` | kb | every platform | off |
 | syntax languages | `PR_SYNTAX_TREESITTER` | tree-sitter's grammars | every platform | off |
 | draw renderer | `PR_DRAW_CPU` | CPU renderer | every platform | on |
-| draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform | on |
-| draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform | on |
+| draw renderer | `PR_DRAW_CANVAS` | the browser's Canvas 2D | the web | on |
+| draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform but the web | on |
+| draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform but the web | on |
 
 `prax::font_bundle` maps the generic font families and font fallback to font files that the application provides.
 `pr_font_bundle_fetch(<directory> Noto)` downloads a bundle's files into a directory at configure time. It is available

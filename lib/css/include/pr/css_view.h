@@ -45,9 +45,10 @@ typedef struct PrCssScrollIntoViewOptions {
 
 // Returns the default options: start along the block axis and nearest along the inline axis.
 static inline PrCssScrollIntoViewOptions prCssScrollIntoViewOptionsDefault(void) {
-    PrCssScrollIntoViewOptions value;
-    value.block = PrCssScrollLogicalPosition_Start;
-    value.inlinePosition = PrCssScrollLogicalPosition_Nearest;
+    PrCssScrollIntoViewOptions value = {
+        .block = PrCssScrollLogicalPosition_Start,
+        .inlinePosition = PrCssScrollLogicalPosition_Nearest,
+    };
     return value;
 }
 

@@ -3,7 +3,8 @@
 The default build is optimized, with debug symbols and without link-time optimization. Everything runs against it
 except the benchmarks, which read their numbers from Release. Debug keeps the assertions. The sanitizer builds are
 Debug as well. One catches reads past the end of a buffer that the others let through, and the other catches races
-between threads.
+between threads. The WebAssembly build compiles with Emscripten (emsdk.py), runs on one thread, and runs its tests under
+Node.js.
 """
 
 import json
@@ -14,6 +15,7 @@ import sys
 import tempfile
 
 from tools import dev
+from tools.build import emsdk
 
 # The build directories, under the root. PR_BUILD_DIR names the default build's directory in place of build, for a
 # second checkout's work beside the first's, or work that must not share a build with another running at the same time.
@@ -22,6 +24,7 @@ DEBUG = os.path.join(dev.ROOT, "build-debug")
 RELEASE = os.path.join(dev.ROOT, "build-release")
 ASAN = os.path.join(dev.ROOT, "build-asan")
 TSAN = os.path.join(dev.ROOT, "build-tsan")
+WASM = os.path.join(dev.ROOT, "build-wasm")
 # The base of an A/B comparison: its sources, its builds, and its harnesses by commit (ab.py).
 AB = os.path.join(dev.ROOT, "build-ab")
 # The libraries built and installed as a consumer takes them, and the consumers built against them.
@@ -37,15 +40,16 @@ ASAN_SLOWDOWN = 4
 
 
 class Mode:
-    """A build: its directory, its CMake build type, its compiler and linker flags, and how many times longer its
-    harnesses take than the default build's."""
+    """A build: its directory, its CMake build type, its compiler and linker flags, how many times longer its
+    harnesses take than the default build's, and whether it compiles to WebAssembly."""
 
-    def __init__(self, name, directory, build_type, flags="", slowdown=1):
+    def __init__(self, name, directory, build_type, flags="", slowdown=1, wasm=False):
         self.name = name
         self.directory = directory
         self.build_type = build_type
         self.flags = flags
         self.slowdown = slowdown
+        self.wasm = wasm
 
     def environment(self):
         """The environment that the runners read the build from (tools/suite/corpus.py)."""
@@ -58,11 +62,12 @@ MODES = {
     "release": Mode("release", RELEASE, "Release"),
     "asan": Mode("asan", ASAN, "Debug", SANITIZE, ASAN_SLOWDOWN),
     "tsan": Mode("tsan", TSAN, "Debug", THREAD_SANITIZE),
+    "wasm": Mode("wasm", WASM, "RelWithDebInfo", wasm=True),
 }
 
 
 def mode(name):
-    """Returns the build that `name` names: default, debug, release, asan or tsan."""
+    """Returns the build that `name` names: default, debug, release, asan, tsan or wasm."""
     found = MODES[name or "default"]
     if found.flags is None:
         dev.fail("MSVC has no thread sanitizer")
@@ -170,15 +175,21 @@ def openssl_root():
     return dev.output(["brew", "--prefix", "openssl"], check=False)
 
 
-def configure(source, directory, build_type, flags="", out=None):
+def configure(source, directory, build_type, flags="", out=None, wasm=False):
     """Configures the build of the sources in `source` into `directory`, of `build_type`, with the compiler and linker
-    flags `flags`, with Ninja. CMake writes to `out`, or to the standard output."""
-    if dev.WINDOWS:
+    flags `flags`, with Ninja, for the host or, with `wasm`, for WebAssembly. CMake writes to `out`, or to the standard
+    output."""
+    if wasm:
+        emsdk.fetch()
+        emsdk.environment()
+    elif dev.WINDOWS:
         msvc_environment(directory)
     if not dev.has("ninja"):
         dev.fail("ninja is required (brew install ninja, or winget install Ninja-build.Ninja)")
     # lib/tls's OpenSSL backend builds where CMake finds OpenSSL: the system's, or Homebrew's on macOS.
-    openssl = openssl_root()
+    openssl = None if wasm else openssl_root()
+    # The WebAssembly build allocates through the C library, until mimalloc is tried there.
+    mimalloc = "OFF" if wasm else "ON"
 
     # CMake fetches what the build needs (cmake/dependencies.cmake) and keeps the archives in third_party/downloads,
     # which every build directory and worktree shares. A development build has the tests, the tools and the examples,
@@ -187,9 +198,13 @@ def configure(source, directory, build_type, flags="", out=None):
     # leaves to its embedder. The options are computed only when CMake configures, which a build that is current skips.
     def options():
         found = ["-DPR_DOWNLOAD_DIR=" + os.path.join(dev.ROOT, "third_party", "downloads"), "-DPR_DEVELOP=ON",
-                 "-DPR_EXAMPLES=ON", "-DPR_PLATFORM_MIMALLOC=ON", *strict_warnings()]
+                 "-DPR_EXAMPLES=ON", "-DPR_PLATFORM_MIMALLOC=" + mimalloc, *strict_warnings()]
         if openssl:
             found.append("-DOPENSSL_ROOT_DIR=" + openssl)
+        # The WebAssembly build's programs run under emsdk's Node.js, as the tests and their discovery run them.
+        # Emscripten's toolchain finds Node.js only on the path.
+        if wasm:
+            found.append("-DCMAKE_CROSSCOMPILING_EMULATOR=" + emsdk.node())
         return found
 
     # A tree that another generator configured, or that was configured from another checkout's sources, is configured
@@ -199,7 +214,10 @@ def configure(source, directory, build_type, flags="", out=None):
                               or not same_path(cached_home(lines), source)):
         shutil.rmtree(directory)
         lines = None
-    if lines is None and dev.WINDOWS:
+    if lines is None and wasm:
+        dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
+                 "-DCMAKE_TOOLCHAIN_FILE=" + emsdk.toolchain(), *options()], stdout=out, stderr=out)
+    elif lines is None and dev.WINDOWS:
         # MSVC's default flags, such as /EHsc, stay, and the build's flags add to them. The linker takes none.
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
                  "-DCMAKE_C_FLAGS_INIT=" + flags, "-DCMAKE_CXX_FLAGS_INIT=" + flags, *options()], stdout=out,
@@ -210,8 +228,10 @@ def configure(source, directory, build_type, flags="", out=None):
                  *options()], stdout=out, stderr=out)
     # A configure that was stopped before it generated leaves a cache and no build.ninja, which CMake finishes.
     elif (not os.path.exists(os.path.join(directory, "build.ninja"))
-          or "PR_DEVELOP:BOOL=ON" not in lines or "PR_PLATFORM_MIMALLOC:BOOL=ON" not in lines
+          or "PR_DEVELOP:BOOL=ON" not in lines or "PR_PLATFORM_MIMALLOC:BOOL=" + mimalloc not in lines
           or "CMAKE_BUILD_TYPE:STRING=" + build_type not in lines
+          or (wasm and not any(line.startswith("CMAKE_CROSSCOMPILING_EMULATOR:") and line.endswith("=" + emsdk.node())
+                               for line in lines))
           or (openssl and not any(line.startswith("OPENSSL_ROOT_DIR:") and line.endswith("=" + openssl)
                                   for line in lines))):
         dev.run(["cmake", "-S", source, "-B", directory, "-DCMAKE_BUILD_TYPE=" + build_type, *options()], stdout=out,
@@ -230,7 +250,7 @@ def build(name="default", targets=(), keep_going=False):
     """Configures and builds the build that `name` names, or only `targets` and what they need, and returns it. With
     `keep_going`, Ninja builds everything that does not depend on a failure, so one build reports every error."""
     chosen = mode(name)
-    configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags)
+    configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags, wasm=chosen.wasm)
     command = ["cmake", "--build", chosen.directory]
     for target in targets:
         command += ["--target", target]

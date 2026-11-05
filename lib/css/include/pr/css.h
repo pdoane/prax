@@ -330,10 +330,7 @@ typedef struct PrCssDeclarationName {
 
 // Returns the name of `property`.
 static inline PrCssDeclarationName prCssDeclarationNameFromProperty(PrCssProperty property) {
-    PrCssDeclarationName value;
-    value.property = property;
-    value.descriptor = PrCssDescriptor_None;
-    value.author = prRawStringNull();
+    PrCssDeclarationName value = {.property = property, .descriptor = PrCssDescriptor_None};
     return value;
 }
 
@@ -436,10 +433,7 @@ typedef struct PrCssStyleSheetInit {
 
 // Returns the options that apply if a caller leaves them out: no base URL, no media, and enabled.
 static inline PrCssStyleSheetInit prCssStyleSheetInitDefault(void) {
-    PrCssStyleSheetInit value;
-    value.baseUrl = PR_LITERAL(PrStringView){NULL, 0};
-    value.media = PR_LITERAL(PrCssMediaListOrString){NULL, PR_SV("")};
-    value.disabled = false;
+    PrCssStyleSheetInit value = {.media = {.string = PR_SV("")}};
     return value;
 }
 
@@ -1380,12 +1374,7 @@ typedef struct PrCssPropertyDefinition {
 // Returns the members that apply if a caller leaves them out: the universal syntax `*`, not inherited, and no initial
 // value.
 static inline PrCssPropertyDefinition prCssPropertyDefinitionDefault(void) {
-    PrCssPropertyDefinition value;
-    value.name = PR_SV("");
-    value.syntax = PR_SV("*");
-    value.inherits = false;
-    value.initialValue.data = NULL;
-    value.initialValue.size = 0;
+    PrCssPropertyDefinition value = {.name = PR_SV(""), .syntax = PR_SV("*")};
     return value;
 }
 
@@ -1900,10 +1889,7 @@ typedef struct PrCssFontFaceSetLoadEventInit {
 
 // Returns an init with every member false and no faces.
 static inline PrCssFontFaceSetLoadEventInit prCssFontFaceSetLoadEventInitDefault(void) {
-    PrCssFontFaceSetLoadEventInit value;
-    value.event = prDomEventInitDefault();
-    value.fontfaces = NULL;
-    value.count = 0;
+    PrCssFontFaceSetLoadEventInit value = {.event = prDomEventInitDefault()};
     return value;
 }
 
@@ -1943,11 +1929,7 @@ typedef struct PrCssAnimationEventInit {
 
 // Returns an init with every member false, empty or zero.
 static inline PrCssAnimationEventInit prCssAnimationEventInitDefault(void) {
-    PrCssAnimationEventInit value;
-    value.event = prDomEventInitDefault();
-    value.name = PR_SV("");
-    value.elapsedTime = 0;
-    value.pseudoElement = PR_SV("");
+    PrCssAnimationEventInit value = {.event = prDomEventInitDefault(), .name = PR_SV(""), .pseudoElement = PR_SV("")};
     return value;
 }
 

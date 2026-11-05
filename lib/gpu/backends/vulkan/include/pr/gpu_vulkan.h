@@ -24,23 +24,24 @@
 // A swap chain for SDR holds Bgra8 in sRGB. One for HDR holds scRGB, Rgba16F in SrgbLinear, where the surface takes it,
 // and otherwise HDR10, Rgb10A2 in Rec2100Pq, where the surface takes that, and otherwise SDR.
 //
-// A host that brings its own device shares three things with the backend, so that the backend's work runs inside the
-// host's frames without rebinding anything:
+// An application that brings its own device shares three things with the backend, so that the backend's work runs
+// inside the application's frames without rebinding anything:
 //
-// - Descriptors. The host's bindless set holds the backend's descriptors, in ranges of its arrays that the host gives
-//   the backend. Binding a second set in the middle of a pass would stall many GPUs, so the backend never binds a set
-//   on a command buffer that it shares with the host.
-// - The pipeline layout. Every pipeline of the backend is created with the host's layout, which matches the one above
-//   in sets 1 and 2 and push constants, so that the host's set and push constants stay bound across the backend's
-//   draws.
-// - Memory. The backend allocates device memory through the host's functions, so that the host's budget and residency
-//   cover it.
+// - Descriptors. The application's bindless set holds the backend's descriptors, in ranges of its arrays that the
+//   application gives the backend. Binding a second set in the middle of a pass would stall many GPUs, so the backend
+//   never binds a set on a command buffer that it shares with the application.
+// - The pipeline layout. Every pipeline of the backend is created with the application's layout, which matches the one
+//   above in sets 1 and 2 and push constants, so that the application's set and push constants stay bound across the
+//   backend's draws.
+// - Memory. The backend allocates device memory through the application's functions, so that the application's budget
+//   and residency cover it.
 //
-// A command buffer records into the host's when PrGpuCommandsOptions::native is the host's VkCommandBuffer, which is
-// recording and outside any render pass. The host records its own work around the backend's, binds its descriptor set
-// and pipeline layout for the backend's draws and dispatches, and ends the VkCommandBuffer. The host then submits it
-// with prGpuCommandsSubmit, which submits it to the device's queue (prGpuVulkanQueue), never with vkQueueSubmit. A pass
-// of the host's is the dynamic rendering instance that the host has begun in that command buffer.
+// A command buffer records into the application's when PrGpuCommandsOptions::native is the application's
+// VkCommandBuffer, which is recording and outside any render pass. The application records its own work around the
+// backend's, binds its descriptor set and pipeline layout for the backend's draws and dispatches, and ends the
+// VkCommandBuffer. The application then submits it with prGpuCommandsSubmit, which submits it to the device's queue
+// (prGpuVulkanQueue), never with vkQueueSubmit. A pass of the application's is the dynamic rendering instance that the
+// application has begun in that command buffer.
 
 #pragma once
 
@@ -56,18 +57,18 @@ extern "C" {
 // Allocates and frees device memory for the backend's buffers and textures: `size` bytes aligned to `alignment`, of a
 // device-local memory type in `memoryTypeBits`, as a VkMemoryRequirements gives them. The allocation returns its
 // VkDeviceMemory and the offset of the bytes within it, and false if no memory is left. The functions are called from
-// any thread. The memory that the host's processor maps, for uploads, the stream and readback, the backend allocates
-// itself.
+// any thread. The memory that the application's processor maps, for uploads, the stream and readback, the backend
+// allocates itself.
 typedef bool (*PrGpuVulkanAllocateFn)(void* PR_NULLABLE context, uint64_t size, uint64_t alignment,
     uint32_t memoryTypeBits, uint64_t* memory, uint64_t* offset);
 typedef void (*PrGpuVulkanFreeFn)(void* PR_NULLABLE context, uint64_t memory, uint64_t offset);
 
-// The host's bindless set and pipeline layout, and the ranges of the set's arrays that the backend writes. Slots
-// outside the ranges belong to the host. The first slot of each range is never a handle, so that zero stays no
+// The application's bindless set and pipeline layout, and the ranges of the set's arrays that the backend writes. Slots
+// outside the ranges belong to the application. The first slot of each range is never a handle, so that zero stays no
 // resource.
 typedef struct PrGpuVulkanDescriptors {
-    uint64_t set;                   // the host's VkDescriptorSet, bound at set 2 on every command buffer it records
-    uint64_t pipelineLayout;        // the host's VkPipelineLayout
+    uint64_t set;                   // the application's VkDescriptorSet, bound at set 2 on each of its command buffers
+    uint64_t pipelineLayout;        // the application's VkPipelineLayout
     uint32_t firstResource;
     uint32_t resourceCount;
     uint32_t firstSampler;
@@ -77,18 +78,18 @@ typedef struct PrGpuVulkanDescriptors {
 // The Vulkan objects that a device is created over. With every object null, the backend creates an instance and a
 // device on the system's first discrete adapter, or its first adapter if none is discrete.
 typedef struct PrGpuVulkanOptions {
-    void* PR_NULLABLE instance;             // the host's VkInstance
-    void* PR_NULLABLE physicalDevice;       // the host's VkPhysicalDevice
-    void* PR_NULLABLE device;               // the host's VkDevice, created with prGpuVulkanDeviceFeatures
+    void* PR_NULLABLE instance;             // the application's VkInstance
+    void* PR_NULLABLE physicalDevice;       // the application's VkPhysicalDevice
+    void* PR_NULLABLE device;               // the application's VkDevice, created with prGpuVulkanDeviceFeatures
     void* PR_NULLABLE queue;                // a VkQueue that the backend submits its own command buffers to
     uint32_t queueFamily;
 
-    // True if the host's device enabled VK_KHR_dynamic_rendering_local_read and its dynamicRenderingLocalRead feature.
-    // A host enables them if the adapter has them.
+    // True if the application's device enabled VK_KHR_dynamic_rendering_local_read and its dynamicRenderingLocalRead
+    // feature. An application enables them if the adapter has them.
     bool localRead;
 
-    // The host's descriptors, required with the host's device. Null `allocate` makes the backend allocate memory
-    // itself.
+    // The application's descriptors, required with the application's device. Null `allocate` makes the backend allocate
+    // memory itself.
     const PrGpuVulkanDescriptors* PR_NULLABLE descriptors;
     PrGpuVulkanAllocateFn PR_NULLABLE allocate;
     PrGpuVulkanFreeFn PR_NULLABLE free;
@@ -122,34 +123,44 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
 // without the validation layer. Tests check it after each case.
 uint32_t prGpuVulkanValidationErrors(const PrGpuDevice* device);
 
-// Returns the device extensions that a host enables on a device that it creates for the backend, and a chain of Vulkan
-// feature structures, starting with a VkPhysicalDeviceFeatures2, to pass to vkCreateDevice. The strings and the chain
-// live as long as the process. A host that enables more features adds its own structures to a copy of the chain. Local
-// read is one of those features (PrGpuVulkanOptions::localRead).
+// Returns the device extensions that an application enables on a device that it creates for the backend, and a chain of
+// Vulkan feature structures, starting with a VkPhysicalDeviceFeatures2, to pass to vkCreateDevice. The strings and the
+// chain live as long as the process. An application that enables more features adds its own structures to a copy of the
+// chain. Local read is one of those features (PrGpuVulkanOptions::localRead).
 uint32_t prGpuVulkanDeviceExtensions(const char* PR_NONNULL const* PR_NULLABLE* PR_NONNULL out);
 const void* prGpuVulkanDeviceFeatures(void);
 
-// Return the native objects behind the device and its resources, valid while each lives: the VkInstance, the
-// VkPhysicalDevice, the VkDevice, the VkQueue that the device submits to, a buffer's VkBuffer and a texture's VkImage.
+// Return the native objects behind the device and its resources, each valid while it lives: the VkInstance, the
+// VkPhysicalDevice, the VkDevice, the VkQueue that the device submits to, and a buffer's VkBuffer. A texture's VkImage
+// is its native object (PrGpuNativeKind_Vulkan).
 void* prGpuVulkanInstance(const PrGpuDevice* device);
 void* prGpuVulkanPhysicalDevice(const PrGpuDevice* device);
 void* prGpuVulkanDevice(const PrGpuDevice* device);
 void* prGpuVulkanQueue(const PrGpuDevice* device);
 uint64_t prGpuVulkanBuffer(const PrGpuDevice* device, PrGpuBuffer buffer);
-uint64_t prGpuVulkanImage(const PrGpuDevice* device, PrGpuTexture texture);
+
+// The native objects of PrGpuNativeKind_Vulkan. A texture's object is its VkImage (uint64_t), which is valid while the
+// texture lives. A pass's object is the command buffer that the pass records into, within the pass's rendering, and the
+// device's pipeline layout. A native draw (prGpuPassNativeDraw) records its own work into that command buffer with that
+// layout while the device records the draw, and both are valid only during the draw. A native draw leaves the rendering
+// open. It binds no descriptor set at the sets that the device binds, unless it binds the same set.
+typedef struct PrGpuVulkanNativePass {
+    uint64_t commandBuffer;     // VkCommandBuffer
+    uint64_t pipelineLayout;    // VkPipelineLayout
+} PrGpuVulkanNativePass;
 
 // Returns the loader's vkGetInstanceProcAddr that the device calls Vulkan through, as a PFN_vkGetInstanceProcAddr, for
-// a host that has no loader of its own.
+// an application that has no loader of its own.
 void* prGpuVulkanGetInstanceProcAddr(const PrGpuDevice* device);
 
-// Wraps the host's VkImage or VkBuffer in a texture or buffer of the device, with handles, so that the backend's work
-// reads or writes it. The host keeps ownership of the native object, which must outlive the wrapper. `desc` describes
-// the native object as the host created it.
+// Wraps the application's VkImage or VkBuffer in a texture or buffer of the device, with handles, so that the backend's
+// work reads or writes it. The application keeps ownership of the native object, which must outlive the wrapper. `desc`
+// describes the native object as the application created it.
 PrStatus prGpuVulkanTextureWrap(PrGpuDevice* device, uint64_t image, const PrGpuTextureDesc* desc, PrGpuTexture* out);
 PrStatus prGpuVulkanBufferWrap(PrGpuDevice* device, uint64_t buffer, const PrGpuBufferDesc* desc, PrGpuBuffer* out);
 
-// Returns the VkImageLayout that a texture has in `access`, for a host that moves its own images into the accesses that
-// the backend's work expects.
+// Returns the VkImageLayout that a texture has in `access`, for an application that moves its own images into the
+// accesses that the backend's work expects.
 uint32_t prGpuVulkanLayout(PrGpuAccessFlags access);
 
 #if defined(__cplusplus)

@@ -7,6 +7,7 @@
 #include "pr/file.h"
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
+#include "pr/process.h"
 #include "pr/text_editor.h"
 #include "pr/text_font.h"
 #include "pr/thread.h"
@@ -190,7 +191,7 @@ TEST_CASE("text editor: a file opens, saves with its line endings, and a missing
     e.settle();
     e.run("file.save");
     CHECK(e.status() == "saved");
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     REQUIRE(prFileMap(path, &mapping));
     CHECK(std::string(reinterpret_cast<const char*>(mapping.data), mapping.size) == "za\r\nb\r\n");
     prFileUnmap(&mapping);
@@ -309,7 +310,8 @@ TEST_CASE("text editor: breakpoints follow their lines, and go with a removed li
     CHECK(prTextEditorDocumentBreakpoints(document, nullptr, 0) == 0);
 }
 
-TEST_CASE("text editor: a debugging session stops at a breakpoint, steps, shows its stack and variables, and ends") {
+TEST_CASE("text editor: a debugging session stops at a breakpoint, steps, shows its stack and variables, and ends" *
+        doctest::skip(!prProcessBackendIsBuilt(PrProcessBackend_Default))) {
     Editor e;
     PrStringView arguments[] = {TEXT_EDITOR_TESTS_DIR "/fake_debug_adapter.py"};
     PrTextEditorDebuggerDesc debugger{
@@ -390,7 +392,8 @@ TEST_CASE("text editor: Compare with Saved compares a document with its file, an
 
 #if defined(TEXT_EDITOR_TESTS_HAVE_TREESITTER)
 
-TEST_CASE("text editor: a language server's diagnostics, hover and definition reach the document") {
+TEST_CASE("text editor: a language server's diagnostics, hover and definition reach the document" *
+        doctest::skip(!prProcessBackendIsBuilt(PrProcessBackend_Default))) {
     Editor e;
     PrStringView languages[] = {"c"};
     PrStringView arguments[] = {TEXT_EDITOR_TESTS_DIR "/fake_language_server.py"};

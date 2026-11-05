@@ -38,7 +38,7 @@ typedef struct PrRawString {
             const char* data;
             uint32_t size;
             uint32_t capacity;   // allocated bytes
-            uint8_t _pad[15];
+            uint8_t _pad[kPrRawStringInlineCapacity - sizeof(const char*) - 2 * sizeof(uint32_t)];
             PrRawStringKind tag;
         } heap;                  // Owned and External
         struct {

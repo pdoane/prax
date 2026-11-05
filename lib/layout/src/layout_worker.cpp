@@ -61,6 +61,20 @@ const PrLayoutScene* runJob(PrLayoutTree* tree, const PrLayoutRoot* roots, uint3
     return scene;
 }
 
+// Runs the job without the lock, and keeps its scene and its time with the lock held again.
+void runLocked(LayoutWorker* w, WorkerJob job) {
+    prMutexUnlock(&w->mutex);
+    double started = prTimeMonotonicMilliseconds();
+    const PrLayoutScene* scene = runJob(job.tree, job.roots, job.rootCount);
+    prMemoryFree(job.roots);
+    double took = prTimeMonotonicMilliseconds() - started;
+    prMutexLock(&w->mutex);
+    WorkerResult& result = resultOf(w, job.tree);
+    prLayoutSceneRelease(result.scene);
+    result.scene = scene;
+    result.jobTime = took;
+}
+
 void serve(void* PR_NULLABLE context) {
     LayoutWorker* w = static_cast<LayoutWorker*>(context);
     prMutexLock(&w->mutex);
@@ -69,17 +83,7 @@ void serve(void* PR_NULLABLE context) {
             prConditionWait(&w->changed, &w->mutex);
         if (w->next == w->jobs.count)
             break;
-        WorkerJob job = w->jobs.data[w->next++];
-        prMutexUnlock(&w->mutex);
-        double started = prTimeMonotonicMilliseconds();
-        const PrLayoutScene* scene = runJob(job.tree, job.roots, job.rootCount);
-        prMemoryFree(job.roots);
-        double took = prTimeMonotonicMilliseconds() - started;
-        prMutexLock(&w->mutex);
-        WorkerResult& result = resultOf(w, job.tree);
-        prLayoutSceneRelease(result.scene);
-        result.scene = scene;
-        result.jobTime = took;
+        runLocked(w, w->jobs.data[w->next++]);
         if (w->next != w->jobs.count)
             continue;
         w->jobs.clear();
@@ -117,7 +121,8 @@ PrLayoutWorker* prLayoutWorkerCreate(void) {
     PrLayoutWorker* w = allocZeroed<PrLayoutWorker>();
     prMutexInit(&w->mutex);
     prConditionInit(&w->changed);
-    prThreadStart(&w->thread, serve, w);
+    if (prThreadSupported())
+        prThreadStart(&w->thread, serve, w);
     return w;
 }
 
@@ -129,7 +134,8 @@ void prLayoutWorkerDestroy(PrLayoutWorker* PR_NULLABLE worker) {
     worker->ending = true;
     prConditionBroadcast(&worker->changed);
     prMutexUnlock(&worker->mutex);
-    prThreadJoin(&worker->thread);
+    if (prThreadSupported())
+        prThreadJoin(&worker->thread);
     for (uint32_t i = 0; i < worker->results.count; ++i)
         prLayoutSceneRelease(worker->results.data[i].scene);
     worker->results.reset();
@@ -146,6 +152,16 @@ void prLayoutWorkerPost(PrLayoutWorker* worker, PrLayoutTree* tree, const PrLayo
     prMutexLock(&worker->mutex);
     for (uint32_t i = worker->next; i < worker->jobs.count; ++i)
         PR_ASSERT(worker->jobs.data[i].tree != tree);
+    // Without threads, the caller's thread runs the job before the post returns, and the worker is never busy.
+    if (!prThreadSupported()) {
+        runLocked(worker, WorkerJob{tree, copied, count});
+        PrLayoutWorkerDoneFn done = worker->done;
+        void* doneContext = worker->doneContext;
+        prMutexUnlock(&worker->mutex);
+        if (done != nullptr)
+            done(doneContext);
+        return;
+    }
     worker->jobs.push(WorkerJob{tree, copied, count});
     worker->running = true;
     prConditionBroadcast(&worker->changed);

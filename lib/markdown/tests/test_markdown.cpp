@@ -68,9 +68,10 @@ struct Client {
             for (uint32_t i = 0; i < count; ++i) {
                 const PrMarkdownChange& change = taken[i];
                 changes.push_back(change);
-                blocks.erase(blocks.begin() + change.first, blocks.begin() + change.first + change.removedCount);
+                blocks.erase(blocks.begin() + ptrdiff_t(change.first),
+                    blocks.begin() + ptrdiff_t(change.first + change.removedCount));
                 for (uint32_t b = 0; b < change.insertedCount; ++b)
-                    blocks.insert(blocks.begin() + change.first + b, blocksHtml(document, change.first + b, 1));
+                    blocks.insert(blocks.begin() + ptrdiff_t(change.first + b), blocksHtml(document, change.first + b, 1));
             }
         }
     }

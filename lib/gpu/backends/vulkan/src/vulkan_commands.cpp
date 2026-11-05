@@ -3,8 +3,8 @@
 //
 // Every command buffer is submitted to the device's one queue, in order, and signals the device's timeline semaphore
 // with its fence. Uploads made before a submission are copied by a command buffer of the device's own, submitted just
-// ahead of it. A command buffer that records into the host's is submitted with the host's native command buffer, which
-// the host has ended, followed by a command buffer of the device's own that ends its work.
+// ahead of it. A command buffer that records into the application's is submitted with the application's native command
+// buffer, which the application has ended, followed by a command buffer of the device's own that ends its work.
 //
 // Clip space has y up, as Direct3D and Metal have it, so every viewport is flipped: its origin is its bottom edge, and
 // its height is negative.
@@ -47,8 +47,9 @@ VulkanCommands* commandsOfPass(PrGpuPass* pass) {
     return static_cast<VulkanCommands*>(pass->commands);
 }
 
-// Marks the state of the command buffer that the device changed, which lasts past its passes into the host's work.
-void changed(VulkanCommands* c, PrGpuHostStateFlags flags) {
+// Marks the state of the command buffer that the device changed, which lasts past its passes into the application's
+// work.
+void changed(VulkanCommands* c, PrGpuNativeStateFlags flags) {
     c->changed |= flags;
 }
 
@@ -94,7 +95,7 @@ VulkanCommands* commandsTake(VulkanDevice* d) {
         c = allocZeroed<VulkanCommands>();
     }
     c->device = d;
-    c->host = false;
+    c->native = false;
     c->inPass = false;
     c->submitted = false;
     c->serial = d->nextSerial++;
@@ -107,7 +108,7 @@ VulkanCommands* commandsTake(VulkanDevice* d) {
     c->streamUsed = 0;
     c->upload = VulkanCommandSlot{};
     c->pass.commands = c;
-    c->pass.host = false;
+    c->pass.native = false;
     c->pass.localRead = false;
     c->pass.copied = false;
     return c;
@@ -121,8 +122,8 @@ void beginBuffer(VulkanDevice* d, VkCommandBuffer buffer) {
     d->vk.BeginCommandBuffer(buffer, &info);
 }
 
-// Begins the timing of a command buffer, and binds the device's own set if the device has one. The host binds its own
-// set in the command buffers that it records.
+// Begins the timing of a command buffer, and binds the device's own set if the device has one. The application binds
+// its own set in the command buffers that it records.
 void beginWork(VulkanDevice* d, VulkanCommands* c) {
     c->timed = (d->info.features & PrGpuFeatureFlag_Timestamps) != 0;
     if (c->timed) {
@@ -135,8 +136,8 @@ void beginWork(VulkanDevice* d, VulkanCommands* c) {
     }
 }
 
-// Ends a command buffer's work: makes its writes visible to the host's processor, which reads what it copied into
-// readback memory once the fence is reached, and ends its timing.
+// Ends a command buffer's work, and ends its timing. Makes the work's writes visible to the CPU, which reads what the
+// work copied into readback memory once the fence is reached.
 void endWork(VulkanDevice* d, VulkanCommands* c) {
     VkMemoryBarrier2 barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
@@ -377,9 +378,9 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
     VulkanCommands* c = commandsTake(d);
     prMutexUnlock(&d->mutex);
     c->slot = slot;
-    c->host = options->native != nullptr;
-    c->buffer = c->host ? static_cast<VkCommandBuffer>(options->native) : slot.buffer;
-    if (!c->host)
+    c->native = options->native != nullptr;
+    c->buffer = c->native ? static_cast<VkCommandBuffer>(options->native) : slot.buffer;
+    if (!c->native)
         beginBuffer(d, c->buffer);
     beginWork(d, c);
     *out = c;
@@ -389,9 +390,10 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
 PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
-    // The host has ended its native command buffer, so the work's end goes in the device's own, submitted after it.
+    // The application has ended its native command buffer, so the end of the work goes in a command buffer of the
+    // device's own, which is submitted after it.
     VkCommandBuffer native = c->buffer;
-    if (c->host) {
+    if (c->native) {
         c->buffer = c->slot.buffer;
         beginBuffer(d, c->buffer);
     }
@@ -408,7 +410,7 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
         buffers[bufferCount].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
         buffers[bufferCount++].commandBuffer = c->upload.buffer;
     }
-    if (c->host) {
+    if (c->native) {
         buffers[bufferCount].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
         buffers[bufferCount++].commandBuffer = native;
     }
@@ -478,7 +480,7 @@ void commandsSetPush(PrGpuDevice* device, PrGpuCommands* commands, const void* d
     VulkanCommands* c = vulkanCommands(commands);
     if (size != 0)
         d->vk.CmdPushConstants(c->buffer, d->layout, VK_SHADER_STAGE_ALL, 0, alignUp(size, 4u), data);
-    changed(c, PrGpuHostStateFlag_Push);
+    changed(c, PrGpuNativeStateFlag_Push);
 }
 
 void commandsSetUniforms(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size) {
@@ -506,7 +508,7 @@ void commandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipe
     PR_ASSERT((p.bindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS) == c->inPass);
     d->vk.CmdBindPipeline(c->buffer, p.bindPoint, p.pipeline);
     c->pipeline = pipeline.id;
-    changed(c, PrGpuHostStateFlag_Pipeline);
+    changed(c, PrGpuNativeStateFlag_Pipeline);
 }
 
 void commandsDispatch(PrGpuDevice* device, PrGpuCommands* commands, PrGpuExtent groups) {
@@ -742,7 +744,7 @@ void coverPass(VulkanDevice* d, VulkanCommands* c, PrUVec2 extent) {
     setViewport(d, c, PrRect{0, 0, float(extent.x), float(extent.y)}, 0, 1);
     c->pass.scissor = VkRect2D{{0, 0}, {extent.x, extent.y}};
     d->vk.CmdSetScissor(c->buffer, 0, 1, &c->pass.scissor);
-    changed(c, PrGpuHostStateFlag_Viewport | PrGpuHostStateFlag_Scissor);
+    changed(c, PrGpuNativeStateFlag_Viewport | PrGpuNativeStateFlag_Scissor);
 }
 
 VkRenderingAttachmentInfo attachmentOf(VulkanDevice* d, const PrGpuAttachment& attachment, PrGpuLoad load, PrGpuStore store) {
@@ -782,15 +784,16 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
     pass.localRead = false;
     pass.copied = false;
     pass.named = false;
-    if (desc->host) {
-        // The device sets the viewport and the scissor of the host's pass, so the host sets them again after it.
-        pass.formats = desc->hostFormats;
-        pass.extent = desc->hostExtent;
-        pass.host = true;
+    if (desc->native) {
+        // The device sets the viewport and the scissor of the application's pass, so the application sets them again
+        // after the device's work.
+        pass.formats = desc->nativeFormats;
+        pass.extent = desc->nativeExtent;
+        pass.native = true;
         coverPass(d, c, pass.extent);
         return &pass;
     }
-    pass.host = false;
+    pass.native = false;
     pass.formats = PrGpuAttachmentFormats{};
     pass.formats.colorCount = desc->colorCount;
     pass.formats.samples = 1;
@@ -1011,7 +1014,7 @@ void copyTarget(VulkanDevice* d, VulkanCommands* c) {
 
 // Prepares a draw that reads its target, by the device's kind of target read.
 void prepareTargetRead(VulkanDevice* d, VulkanCommands* c) {
-    PR_ASSERT(!c->pass.host && c->pass.formats.colorCount != 0);
+    PR_ASSERT(!c->pass.native && c->pass.formats.colorCount != 0);
     if (d->localRead)
         prepareLocalRead(d, c);
     else
@@ -1022,8 +1025,8 @@ void passEnd(PrGpuDevice* device, PrGpuPass* pass) {
     VulkanDevice* d = vulkanDevice(device);
     VulkanPass* p = passOf(pass);
     VulkanCommands* c = commandsOfPass(pass);
-    if (p->host) {
-        p->host = false;
+    if (p->native) {
+        p->native = false;
         return;
     }
     d->vk.CmdEndRendering(c->buffer);
@@ -1035,9 +1038,29 @@ void passEnd(PrGpuDevice* device, PrGpuPass* pass) {
         commandsPopGroup(device, pass->commands);
 }
 
-PrGpuHostStateFlags hostStateSync(PrGpuDevice*, PrGpuCommands* commands) {
+// Hands the pass's command buffer to a native draw, within the pass's rendering, then binds the device's set again if
+// it has one of its own, covers the pass with the viewport and the scissor, and leaves the pass's pipeline and root
+// data unset. An application's pass reports every state as changed, since the native draw may have changed any of it.
+void passNativeDraw(PrGpuDevice* device, PrGpuPass* pass, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+    VulkanDevice* d = vulkanDevice(device);
+    VulkanCommands* c = commandsOfPass(pass);
+    PrGpuVulkanNativePass native{
+        .commandBuffer = reinterpret_cast<uint64_t>(c->buffer),
+        .pipelineLayout = reinterpret_cast<uint64_t>(d->layout),
+    };
+    draw(context, &native);
+    if (d->ownsDescriptors)
+        d->vk.CmdBindDescriptorSets(c->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, d->layout, VulkanSet_Bindless, 1, &d->set,
+            0, nullptr);
+    coverPass(d, c, pass->extent);
+    c->pipeline = 0;
+    c->pushDirty[0] = c->pushDirty[1] = true;
+    changed(c, PrGpuNativeStateFlags(~0u));
+}
+
+PrGpuNativeStateFlags nativeStateSync(PrGpuDevice*, PrGpuCommands* commands) {
     VulkanCommands* c = vulkanCommands(commands);
-    PrGpuHostStateFlags flags = c->changed;
+    PrGpuNativeStateFlags flags = c->changed;
     c->changed = 0;
     return flags;
 }
@@ -1045,7 +1068,7 @@ PrGpuHostStateFlags hostStateSync(PrGpuDevice*, PrGpuCommands* commands) {
 void passSetViewport(PrGpuDevice* device, PrGpuPass* pass, PrRect viewport, float minDepth, float maxDepth) {
     VulkanCommands* c = commandsOfPass(pass);
     setViewport(vulkanDevice(device), c, viewport, minDepth, maxDepth);
-    changed(c, PrGpuHostStateFlag_Viewport);
+    changed(c, PrGpuNativeStateFlag_Viewport);
 }
 
 void passSetScissor(PrGpuDevice* device, PrGpuPass* pass, PrIRect scissor) {
@@ -1058,20 +1081,20 @@ void passSetScissor(PrGpuDevice* device, PrGpuPass* pass, PrIRect scissor) {
     VkRect2D rect{{left, top}, {right > left ? uint32_t(right - left) : 0, bottom > top ? uint32_t(bottom - top) : 0}};
     c->pass.scissor = rect;
     vulkanDevice(device)->vk.CmdSetScissor(c->buffer, 0, 1, &rect);
-    changed(c, PrGpuHostStateFlag_Scissor);
+    changed(c, PrGpuNativeStateFlag_Scissor);
 }
 
 void passSetBlendConstant(PrGpuDevice* device, PrGpuPass* pass, PrColor constant) {
     VulkanCommands* c = commandsOfPass(pass);
     float values[4] = {constant.r, constant.g, constant.b, constant.a};
     vulkanDevice(device)->vk.CmdSetBlendConstants(c->buffer, values);
-    changed(c, PrGpuHostStateFlag_BlendConstant);
+    changed(c, PrGpuNativeStateFlag_BlendConstant);
 }
 
 void passSetStencilReference(PrGpuDevice* device, PrGpuPass* pass, uint8_t reference) {
     VulkanCommands* c = commandsOfPass(pass);
     vulkanDevice(device)->vk.CmdSetStencilReference(c->buffer, VK_STENCIL_FACE_FRONT_AND_BACK, reference);
-    changed(c, PrGpuHostStateFlag_StencilReference);
+    changed(c, PrGpuNativeStateFlag_StencilReference);
 }
 
 void passSetIndexBuffer(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, bool wide) {
@@ -1079,7 +1102,7 @@ void passSetIndexBuffer(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer
     VulkanCommands* c = commandsOfPass(pass);
     d->vk.CmdBindIndexBuffer(c->buffer, vulkanResourceAt(d, buffer.id).buffer, offset,
         wide ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
-    changed(c, PrGpuHostStateFlag_IndexBuffer);
+    changed(c, PrGpuNativeStateFlag_IndexBuffer);
 }
 
 // Prepares a draw: the target read of a pipeline that reads its target, and the push descriptors.
@@ -1250,7 +1273,8 @@ void vulkanCommandsFunctions(VulkanDevice* d) {
     d->commandsGlobalBarrier = commandsGlobalBarrier;
     d->passBegin = passBegin;
     d->passEnd = passEnd;
-    d->hostStateSync = hostStateSync;
+    d->nativeStateSync = nativeStateSync;
+    d->passNativeDraw = passNativeDraw;
     d->passSetViewport = passSetViewport;
     d->passSetScissor = passSetScissor;
     d->passSetBlendConstant = passSetBlendConstant;

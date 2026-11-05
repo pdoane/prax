@@ -60,16 +60,11 @@ typedef struct PrFontFamily {
 
 // Returns the family named `name`, or the generic family `generic`.
 static inline PrFontFamily prFontFamilyFromName(PrStringView name) {
-    PrFontFamily family;
-    family.name = name;
-    family.generic = PrFontGeneric_None;
+    PrFontFamily family = {.name = name, .generic = PrFontGeneric_None};
     return family;
 }
 static inline PrFontFamily prFontFamilyGeneric(PrFontGeneric generic) {
-    PrFontFamily family;
-    family.name.data = NULL;
-    family.name.size = 0;
-    family.generic = generic;
+    PrFontFamily family = {.generic = generic};
     return family;
 }
 

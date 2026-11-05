@@ -84,7 +84,7 @@ static inline void prTextBufferAppendU64(PrTextBuffer* buffer, uint64_t value, u
 // Returns a view of the text, which is valid until the buffer changes. A buffer that has never been written to gives
 // the empty string, not the null view.
 static inline PrStringView prTextBufferView(const PrTextBuffer* buffer) {
-    if (buffer->data != NULL)
+    if (buffer->data)
         return PR_LITERAL(PrStringView){buffer->data, buffer->size};
     return PR_LITERAL(PrStringView){"", 0};
 }

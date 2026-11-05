@@ -79,8 +79,8 @@ PrFileInfo infoOf(DWORD attributes, DWORD sizeHigh, DWORD sizeLow, FILETIME writ
 
 using namespace pr_impl;
 
-bool prCoreWindowsFileMap(PrStringView path, PrFileMapping* out) {
-    *out = PrFileMapping{nullptr, 0};
+bool prCoreWindowsFileMap(PrStringView path, PrByteView* out) {
+    *out = PrByteView{};
     wchar_t* wide = widen(path);
     if (wide == nullptr)
         return false;
@@ -101,7 +101,7 @@ bool prCoreWindowsFileMap(PrStringView path, PrFileMapping* out) {
             // The view keeps the mapping object alive, so neither handle outlives this call.
             void* data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
             if (data != nullptr) {
-                *out = PrFileMapping{static_cast<const uint8_t*>(data), size_t(size.QuadPart)};
+                *out = PrByteView{static_cast<const uint8_t*>(data), size_t(size.QuadPart)};
                 mapped = true;
             }
             CloseHandle(mapping);
@@ -111,7 +111,7 @@ bool prCoreWindowsFileMap(PrStringView path, PrFileMapping* out) {
     return mapped;
 }
 
-void prCoreWindowsFileUnmap(PrFileMapping* mapping) {
+void prCoreWindowsFileUnmap(PrByteView* mapping) {
     UnmapViewOfFile(mapping->data);
 }
 

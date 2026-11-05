@@ -31,11 +31,18 @@ struct Fixture {
     PrGpuDevice* device = nullptr;
     PrGpuShaderLibrary* library = nullptr;
 
+    // A device that runs no shaders, such as a memory device, has no fixture, because the tests draw and dispatch.
     explicit Fixture(PrGpuBackend backend) {
         PrGpuDeviceOptions options{.validation = true};
         if (prGpuDeviceCreate(backend, &options, &device) != PrStatus_Ok)
             return;
-        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuShaders, sizeof(kTestGpuShaders), &library) == PrStatus_Ok);
+        PrStatus status = prGpuShaderLibraryCreate(device, kTestGpuShaders, sizeof(kTestGpuShaders), &library);
+        if (status == PrStatus_NotSupported) {
+            prGpuDeviceDestroy(device);
+            device = nullptr;
+            return;
+        }
+        REQUIRE(status == PrStatus_Ok);
     }
 
     ~Fixture() {
@@ -84,8 +91,8 @@ struct Fixture {
             PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, size);
         prGpuCommandsSubmitAndWait(commands);
-        std::vector<uint8_t> bytes(size);
-        prMemCopy(bytes.data(), prGpuBufferMap(device, readback), size);
+        std::vector<uint8_t> bytes(static_cast<size_t>(size));
+        prMemCopy(bytes.data(), prGpuBufferMap(device, readback), size_t(size));
         prGpuBufferDestroy(device, readback);
         return bytes;
     }
@@ -156,7 +163,7 @@ TEST_CASE("a backend's name names it, in any case") {
     CHECK(prGpuBackendFromName("opengl") == PrGpuBackend_Count);
     CHECK(prGpuBackendIsBuilt(PrGpuBackend_Default) == (prGpuBackendIsBuilt(PrGpuBackend_Metal) ||
         prGpuBackendIsBuilt(PrGpuBackend_Metal4) || prGpuBackendIsBuilt(PrGpuBackend_Vulkan) ||
-        prGpuBackendIsBuilt(PrGpuBackend_D3d12)));
+        prGpuBackendIsBuilt(PrGpuBackend_D3d12) || prGpuBackendIsBuilt(PrGpuBackend_Canvas2d)));
 }
 
 TEST_CASE("a device reports its backend and limits") {
@@ -196,7 +203,7 @@ TEST_CASE("a texture's texels are written and read back, clipped to the texture"
     });
 }
 
-TEST_CASE("a buffer is created zeroed, in device memory and in memory that the host maps") {
+TEST_CASE("a buffer is created zeroed, in device memory and in memory that the application maps") {
     onEachBackend([](Fixture& f) {
         PrGpuBufferDesc desc{.size = 4096};
         PrGpuBuffer device{};
@@ -229,9 +236,9 @@ TEST_CASE("uploads to one resource before a submission land as they would copied
             {0, 1000, 6}, {999, 3, 7},   {1001, 1, 8}, {4000, 96, 9}, {3, 1, 10},
         };
         for (const Write& w : writes) {
-            std::vector<uint8_t> bytes(w.size, w.value);
+            std::vector<uint8_t> bytes(size_t(w.size), w.value);
             prGpuBufferUpload(f.device, buffer, w.offset, bytes.data(), w.size);
-            prMemFill(&expected[w.offset], w.value, w.size);
+            prMemFill(&expected[size_t(w.offset)], w.value, size_t(w.size));
         }
         CHECK(f.read(buffer, 4096) == expected);
         // Writes to one texture land in order too.
@@ -257,9 +264,9 @@ TEST_CASE("a large upload is staged in pieces and lands whole") {
         PrGpuBufferDesc desc{.size = size};
         PrGpuBuffer buffer{};
         REQUIRE(prGpuBufferCreate(f.device, &desc, &buffer) == PrStatus_Ok);
-        std::vector<uint8_t> bytes(size);
+        std::vector<uint8_t> bytes(static_cast<size_t>(size));
         for (uint64_t i = 0; i < size; ++i)
-            bytes[i] = uint8_t(i * 7 + (i >> 20));
+            bytes[size_t(i)] = uint8_t(i * 7 + (i >> 20));
         prGpuBufferUpload(f.device, buffer, 0, bytes.data(), size);
         CHECK(f.read(buffer, size) == bytes);
         prGpuBufferDestroy(f.device, buffer);

@@ -113,10 +113,7 @@ typedef struct PrHtmlFocusOptions {
 
 // Returns the options that a focus without options uses, with every member false.
 static inline PrHtmlFocusOptions prHtmlFocusOptionsDefault(void) {
-    PrHtmlFocusOptions value;
-    value.preventScroll = false;
-    value.focusVisible = false;
-    value.hasFocusVisible = false;
+    PrHtmlFocusOptions value = {};
     return value;
 }
 
@@ -927,12 +924,7 @@ typedef struct PrHtmlErrorEventInit {
 
 // Returns an init with every member false, empty or zero.
 static inline PrHtmlErrorEventInit prHtmlErrorEventInitDefault(void) {
-    PrHtmlErrorEventInit value;
-    value.event = prDomEventInitDefault();
-    value.message = PR_SV("");
-    value.filename = PR_SV("");
-    value.lineno = 0;
-    value.colno = 0;
+    PrHtmlErrorEventInit value = {.event = prDomEventInitDefault(), .message = PR_SV(""), .filename = PR_SV("")};
     return value;
 }
 
@@ -970,11 +962,7 @@ typedef struct PrHtmlMessageEventInit {
 
 // Returns an init with every member false or empty, and no source.
 static inline PrHtmlMessageEventInit prHtmlMessageEventInitDefault(void) {
-    PrHtmlMessageEventInit value;
-    value.event = prDomEventInitDefault();
-    value.origin = PR_SV("");
-    value.lastEventId = PR_SV("");
-    value.source = NULL;
+    PrHtmlMessageEventInit value = {.event = prDomEventInitDefault(), .origin = PR_SV(""), .lastEventId = PR_SV("")};
     return value;
 }
 

@@ -26,6 +26,7 @@
 #include "draw/backends/cpu/src/cpu_filter.h"
 #include "draw/backends/cpu/src/cpu_pixels.h"
 #include "draw/backends/shared/src/draw_shared_layer.h"
+#include "draw/backends/shared/src/draw_shared_memory.h"
 
 namespace pr_impl {
 
@@ -165,6 +166,7 @@ struct Renderer {
 // The backend, and the state that it keeps between renders: textures of images and lists, the lists that color glyphs
 // paint, and a renderer for each depth of nesting. It drops whatever a render does not use.
 struct CpuBackend : PrDrawRenderer {
+    bool ownsDevice;                    // true if the renderer created its device, and frees it
     bool glyphPhases;                   // PrDrawCpuOptions
     CpuTextureCache textures;
     PrDrawGlyphCache* glyphs;
@@ -172,9 +174,6 @@ struct CpuBackend : PrDrawRenderer {
 };
 
 // A frame: the list that it renders once there are pixels.
-struct CpuFrame : PrDrawFrame {
-    const PrDrawList* list;
-};
 
 // Flattens the path into `out` in target pixels under the transform, and returns `out`.
 const PrPathPolyline& land(const PrDrawTransform& x, const PrPath* path, PrPathPolyline& out) {
@@ -357,6 +356,10 @@ bool shapeCoverage(Renderer& r, const PrDrawCommand& c, PrIRect limit, CpuCovera
 // `tile` at `scale` target pixels per unit of brush space along each axis.
 CpuTexture* listTexture(Renderer& r, const PrDrawList* drawn, PrRect area, PrRect tile, PrVec2 scale);
 
+// Returns a texture of a source if a unit of the source's rect covers `scale` target pixels along each axis, and writes
+// the rect of the texels that the source covers. Returns null if the source has no texture.
+CpuTexture* PR_NULLABLE sourceTexture(Renderer& r, const PrDrawSource& source, PrVec2 scale, PrRect* texels);
+
 // Returns the gradient's ramp, which is created on first use in a render by any gradient with the same ramp.
 const Ramp& rampOf(Renderer& r, const PrDrawBrush* brush) {
     constexpr PrColor kWhite{1, 1, 1, 1};
@@ -439,8 +442,10 @@ bool makePaint(Renderer& r, const PrDrawBrush* PR_NULLABLE brush, PrColor color,
     if (image.kind == PrDrawSourceKind_Image) {
         texture = cpuTextureFromImage(r.cpu->textures, image.image);
         source.texels = image.rect;
-    } else if (image.kind != PrDrawSourceKind_List) {
-        return false;
+    } else if (image.kind == PrDrawSourceKind_Texture) {
+        texture = sourceTexture(r, image, PrVec2{1, 1}, &source.texels);
+        if (texture == nullptr)
+            return false;
     } else {
         PrAffine2 toDevice{};
         if (!prAffine2Invert(placement.transform, &toDevice))
@@ -685,6 +690,19 @@ CpuTexture* PR_NULLABLE sourceTexture(Renderer& r, const PrDrawSource& source, P
     if (source.kind == PrDrawSourceKind_Image) {
         *texels = source.rect;
         return cpuTextureFromImage(r.cpu->textures, source.image);
+    }
+    if (source.kind == PrDrawSourceKind_Texture) {
+        // A texture of the caller's on the device, read in place while the render runs. Its key never equals an image's
+        // id.
+        PrGpuNativePixels native{};
+        PrPixelFormat format{};
+        PrGpuTexture texture{uint32_t(source.texture)};
+        if (!prGpuTextureNative(r.cpu->device, texture, PrGpuNativeKind_Pixels, &native) ||
+                !prGpuFormatToPixelFormat(native.format, &format))
+            return nullptr;
+        *texels = source.rect;
+        return cpuTextureFromPixels(r.cpu->textures, source.texture | (uint64_t(1) << 63), prPixelsView(native.pixels),
+            format, source.alpha);
     }
     if (source.kind != PrDrawSourceKind_List)
         return nullptr;
@@ -1065,7 +1083,19 @@ Frame* PR_NULLABLE hostFrameOf(Renderer& r) {
 // its contents draw there in that space. A group that covers nothing draws into nothing.
 void pushHostGroup(Renderer& r, Frame& frame) {
     const PrDrawGroup* g = frame.group;
-    const PrDrawCpuTexture* texture = PR_POINTER_CAST(const PrDrawCpuTexture*, uintptr_t(g->layer->texture));
+    // The layer is a texture on the device, whose texels the renderer reads and writes in place.
+    PrPixels texels{};
+    PrPixelFormat format = r.target.format;
+    if (g->layer->texture != 0) {
+        PrGpuTexture texture{uint32_t(g->layer->texture)};
+        PrPixelFormat held{};
+        if (prGpuFormatToPixelFormat(prGpuTextureDesc(r.cpu->device, texture).format, &held)) {
+            PrGpuNativePixels native{};
+            prGpuTextureNative(r.cpu->device, texture, PrGpuNativeKind_Pixels, &native);
+            texels = native.pixels;
+            format = held;
+        }
+    }
     PrUVec2 extent = g->layer->extent;
     float width = prRectWidth(g->bounds);
     float height = prRectHeight(g->bounds);
@@ -1073,8 +1103,8 @@ void pushHostGroup(Renderer& r, Frame& frame) {
     frame.host = true;
     frame.drawn = drawSharedClaimLayer(*g->layer);
     PrIRect box{0, 0, int32_t(extent.x), int32_t(extent.y)};
-    bool covers = texture != nullptr && extent.x != 0 && extent.y != 0 && width > 0 && height > 0 &&
-        texture->pixels.extent.x >= extent.x && texture->pixels.extent.y >= extent.y;
+    bool covers = texels.data != nullptr && extent.x != 0 && extent.y != 0 && width > 0 && height > 0 &&
+        texels.extent.x >= extent.x && texels.extent.y >= extent.y;
     if (!covers)
         box = PrIRect{0, 0, 0, 0};
     double sx = covers ? double(extent.x) / double(width) : 1;
@@ -1085,11 +1115,7 @@ void pushHostGroup(Renderer& r, Frame& frame) {
     PrDAffine2 fromLocal{1 / sx, 0, 0, 1 / sy, left, top};
     frame.localToDevice = prDrawTransformFromDAffine2(prDAffine2Concat(fromLocal, frame.xform.daffine));
     frame.xform = prDrawTransformFromDAffine2(toLocal);
-    uint8_t* pixels = covers ? static_cast<uint8_t*>(texture->pixels.data) : nullptr;
-    CpuTarget layer{
-        pixels, covers ? texture->pixels.stride : 0, box,
-        covers ? texture->format : r.target.format, g->knockout, box,
-    };
+    CpuTarget layer{covers ? texels.data : nullptr, covers ? texels.stride : 0, box, format, g->knockout, box};
     r.frames.push(frame);
     r.transforms.push(frame.xform);
     r.target = layer;
@@ -1693,11 +1719,13 @@ void destroyBackend(PrDrawRenderer* renderer) {
     for (uint32_t i = 0; i < cpu->renderers.count; ++i)
         destroyRenderer(cpu->renderers.data[i]);
     cpu->renderers.reset();
+    if (cpu->ownsDevice)
+        prGpuDeviceDestroy(cpu->device);
     prMemoryFree(cpu);
 }
 
 void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
-    prMemoryFree(frame);
+    drawMemoryFrameDestroy(static_cast<DrawMemoryFrame*>(frame));
 }
 
 // Renders the list into the pixels. A backdrop reads what the pixels held as well as what the list drew.
@@ -1720,19 +1748,17 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
 }
 
 PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
-    CpuFrame* frame = allocZeroed<CpuFrame>();
-    frame->renderer = renderer;
-    return frame;
+    return drawMemoryFrameCreate(renderer, renderPixels, true);
 }
 
-// Keeps the list, which renders once there are pixels.
+// Keeps the list, which renders when the frame's pass runs.
 PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget*) {
-    static_cast<CpuFrame*>(frame)->list = list;
+    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list);
     return PrStatus_Ok;
 }
 
-void renderFrame(PrDrawRenderer* renderer, PrDrawFrame* frame, PrPixels pixels, PrPixelFormat format) {
-    renderPixels(renderer, pixels, format, static_cast<CpuFrame*>(frame)->list);
+void renderFrame(PrDrawRenderer*, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
+    drawMemoryFrameRender(static_cast<DrawMemoryFrame*>(frame), pass, origin);
 }
 } // namespace
 
@@ -1741,19 +1767,24 @@ void renderFrame(PrDrawRenderer* renderer, PrDrawFrame* frame, PrPixels pixels, 
 using namespace pr_impl;
 
 PrDrawCpuOptions prDrawCpuOptionsDefault(void) {
-    return PrDrawCpuOptions{.glyphDecoder = nullptr, .glyphPhases = false};
+    return PrDrawCpuOptions{};
 }
 
-PrDrawRenderer* prDrawCpuCreate(const PrDrawCpuOptions* PR_NULLABLE options) {
-    CpuBackend* cpu = allocZeroed<CpuBackend>();
+PrDrawRenderer* PR_NULLABLE prDrawCpuCreate(const PrDrawCpuOptions* PR_NULLABLE options) {
     PrDrawCpuOptions o = options != nullptr ? *options : prDrawCpuOptionsDefault();
+    bool owned = false;
+    PrGpuDevice* device = drawMemoryDevice(o.device, &owned);
+    if (device == nullptr)
+        return nullptr;
+    CpuBackend* cpu = allocZeroed<CpuBackend>();
+    cpu->device = device;
+    cpu->ownsDevice = owned;
     cpu->glyphs = prDrawGlyphCacheCreate(o.glyphDecoder);
     cpu->glyphPhases = o.glyphPhases;
     cpu->destroy = destroyBackend;
     cpu->frameCreate = createFrame;
     cpu->frameDestroy = destroyFrame;
     cpu->framePrepare = prepare;
-    cpu->frameRenderPixels = renderFrame;
-    cpu->rendersHalfFloat = true;
+    cpu->frameRender = renderFrame;
     return cpu;
 }

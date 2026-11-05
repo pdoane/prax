@@ -710,7 +710,8 @@ TEST_CASE("the codec encodes PNG alone, and reads rows a stride apart") {
     // The same pixels with padding after each row encode to the same bytes.
     std::vector<uint8_t> padded(2 * 12, 0xEE);
     for (uint32_t row = 0; row < 2; ++row)
-        std::copy(pixels.begin() + row * 8, pixels.begin() + row * 8 + 8, padded.begin() + row * 12);
+        std::copy(pixels.begin() + ptrdiff_t(row * 8), pixels.begin() + ptrdiff_t(row * 8 + 8),
+            padded.begin() + ptrdiff_t(row * 12));
     const size_t packedSize = testEncodePng(PrPixelView{pixels.data(), 8, {2, 2}}, nullptr, 0);
     std::vector<uint8_t> packed(packedSize);
     std::vector<uint8_t> strided(packedSize);

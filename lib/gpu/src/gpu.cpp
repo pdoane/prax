@@ -24,8 +24,17 @@
 #if defined(PR_GPU_HAS_D3D12)
 #include "pr/gpu_d3d12.h"
 #endif
+#if defined(PR_GPU_HAS_CANVAS2D)
+#include "pr/gpu_canvas2d.h"
+#endif
+#if defined(PR_GPU_HAS_MEMORY)
+#include "pr/gpu_memory.h"
+#endif
 
 #include "gpu/src/gpu_device_state.h"
+#if defined(PR_GPU_HAS_COREVIDEO)
+#include "gpu/src/gpu_corevideo.h"
+#endif
 #include "gpu/src/kGpuMipmapShaders.h"
 
 #include <stdlib.h>
@@ -82,6 +91,46 @@ PrGpuDeviceShared* sharedOf(PrGpuDevice* device) {
         device->shared = shared;
     }
     return device->shared;
+}
+
+// Returns true if an import made `texture` by copying, so that a later import may write into it.
+bool isImportCopy(PrGpuDevice* device, PrGpuTexture texture) {
+    if (texture.id == 0)
+        return false;
+    PrGpuDeviceShared* shared = sharedOf(device);
+    prMutexLock(&shared->mutex);
+    bool found = false;
+    for (uint32_t id : shared->importCopies.span())
+        found |= id == texture.id;
+    prMutexUnlock(&shared->mutex);
+    return found;
+}
+
+// Makes `*texture` a texture that shaders sample, holding a copy of texels in memory. The texture that `*texture`
+// names, if any, is written into if an import made it by copying and it has the texels' extent and format, and is
+// replaced otherwise.
+PrStatus importCopy(PrGpuDevice* device, const PrGpuImportPixels& pixels, PrGpuTexture* texture) {
+    if (isImportCopy(device, *texture)) {
+        PrGpuTextureDesc held = device->textureDesc(device, *texture);
+        if (held.format == pixels.format && held.extent.width == pixels.pixels.extent.x &&
+                held.extent.height == pixels.pixels.extent.y) {
+            prGpuTextureWrite(device, *texture, PrIVec2{0, 0}, pixels.pixels);
+            return PrStatus_Ok;
+        }
+    }
+    PrGpuTextureDesc desc = prGpuTextureDesc2d(pixels.format, pixels.pixels.extent, PrGpuTextureUsageFlag_Sampled);
+    PrGpuTexture made{};
+    PrStatus status = device->textureCreate(device, &desc, &made);
+    if (status != PrStatus_Ok)
+        return status;
+    prGpuTextureWrite(device, made, PrIVec2{0, 0}, pixels.pixels);
+    PrGpuDeviceShared* shared = sharedOf(device);
+    prMutexLock(&shared->mutex);
+    shared->importCopies.push(made.id);
+    prMutexUnlock(&shared->mutex);
+    prGpuTextureDestroy(device, *texture);
+    *texture = made;
+    return PrStatus_Ok;
 }
 
 // The part of a `size` rectangle at `origin` that lies inside `extent`, as its origin and size, and its start within
@@ -192,10 +241,12 @@ void submittedDone(void* PR_NULLABLE context, double seconds) {
     *static_cast<double*>(context) = seconds;
 }
 
-constexpr PrStringView kBackendNames[PrGpuBackend_Count] = {"default", "metal", "metal4", "vulkan", "d3d12"};
+constexpr PrStringView kBackendNames[PrGpuBackend_Count] = {
+    "default", "metal", "metal4", "vulkan", "d3d12", "memory", "canvas2d",
+};
 
-// The backends that the build has, the platform's own first, which Default creates the first of, and then Default, so
-// that a build without backends creates none.
+// The backends in the build, the platform's own first and memory last, and then Default. Default creates the first of
+// these that the system supports. Listing Default last means that a build without backends creates none.
 constexpr PrGpuBackend kBuilt[] = {
 #if defined(PR_GPU_HAS_METAL)
     PrGpuBackend_Metal,
@@ -209,8 +260,60 @@ constexpr PrGpuBackend kBuilt[] = {
 #if defined(PR_GPU_HAS_VULKAN)
     PrGpuBackend_Vulkan,
 #endif
+#if defined(PR_GPU_HAS_CANVAS2D)
+    PrGpuBackend_Canvas2d,
+#endif
+#if defined(PR_GPU_HAS_MEMORY)
+    PrGpuBackend_Memory,
+#endif
     PrGpuBackend_Default,
 };
+
+// Creates a device by `backend`, which is not Default.
+PrStatus create(PrGpuBackend backend, const PrGpuDeviceOptions& o, PrGpuDevice* PR_NULLABLE* PR_NONNULL out) {
+    // A build without a backend has no use for the options.
+    (void)o;
+    switch (backend) {
+#if defined(PR_GPU_HAS_METAL)
+        case PrGpuBackend_Metal: {
+            PrGpuMetalOptions metal = prGpuMetalOptionsDefault();
+            metal.validation = o.validation;
+            return prGpuMetalCreate(&metal, out);
+        }
+#endif
+#if defined(PR_GPU_HAS_METAL4)
+        case PrGpuBackend_Metal4: {
+            PrGpuMetal4Options metal = prGpuMetal4OptionsDefault();
+            metal.validation = o.validation;
+            return prGpuMetal4Create(&metal, out);
+        }
+#endif
+#if defined(PR_GPU_HAS_VULKAN)
+        case PrGpuBackend_Vulkan: {
+            PrGpuVulkanOptions vulkan = prGpuVulkanOptionsDefault();
+            vulkan.validation = vulkan.validation || o.validation;
+            return prGpuVulkanCreate(&vulkan, out);
+        }
+#endif
+#if defined(PR_GPU_HAS_D3D12)
+        case PrGpuBackend_D3d12: {
+            PrGpuD3d12Options d3d12 = prGpuD3d12OptionsDefault();
+            d3d12.validation = d3d12.validation || o.validation;
+            return prGpuD3d12Create(&d3d12, out);
+        }
+#endif
+#if defined(PR_GPU_HAS_CANVAS2D)
+        case PrGpuBackend_Canvas2d:
+            return prGpuCanvas2dCreate(out);
+#endif
+#if defined(PR_GPU_HAS_MEMORY)
+        case PrGpuBackend_Memory:
+            return prGpuMemoryCreate(out);
+#endif
+        default:
+            return PrStatus_NotSupported;
+    }
+}
 
 } // namespace
 
@@ -249,44 +352,22 @@ PrStatus prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NU
         PrGpuDevice* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     PrGpuDeviceOptions o = options != nullptr ? *options : prGpuDeviceOptionsDefault();
-    if (backend == PrGpuBackend_Default) {
-        const char* named = getenv("PR_GPU_BACKEND");
-        backend = named != nullptr ? prGpuBackendFromName(named) : PrGpuBackend_Count;
-        if (backend == PrGpuBackend_Default || !prGpuBackendIsBuilt(backend))
-            backend = kBuilt[0];
+    if (backend != PrGpuBackend_Default)
+        return create(backend, o, out);
+    const char* named = getenv("PR_GPU_BACKEND");
+    backend = named != nullptr ? prGpuBackendFromName(named) : PrGpuBackend_Count;
+    if (backend != PrGpuBackend_Default && prGpuBackendIsBuilt(backend))
+        return create(backend, o, out);
+    // Default takes the first backend that the system supports.
+    PrStatus status = PrStatus_NotSupported;
+    for (PrGpuBackend built : kBuilt) {
+        if (built == PrGpuBackend_Default)
+            break;
+        status = create(built, o, out);
+        if (status != PrStatus_NotSupported)
+            return status;
     }
-    switch (backend) {
-#if defined(PR_GPU_HAS_METAL)
-        case PrGpuBackend_Metal: {
-            PrGpuMetalOptions metal = prGpuMetalOptionsDefault();
-            metal.validation = o.validation;
-            return prGpuMetalCreate(&metal, out);
-        }
-#endif
-#if defined(PR_GPU_HAS_METAL4)
-        case PrGpuBackend_Metal4: {
-            PrGpuMetal4Options metal = prGpuMetal4OptionsDefault();
-            metal.validation = o.validation;
-            return prGpuMetal4Create(&metal, out);
-        }
-#endif
-#if defined(PR_GPU_HAS_VULKAN)
-        case PrGpuBackend_Vulkan: {
-            PrGpuVulkanOptions vulkan = prGpuVulkanOptionsDefault();
-            vulkan.validation = vulkan.validation || o.validation;
-            return prGpuVulkanCreate(&vulkan, out);
-        }
-#endif
-#if defined(PR_GPU_HAS_D3D12)
-        case PrGpuBackend_D3d12: {
-            PrGpuD3d12Options d3d12 = prGpuD3d12OptionsDefault();
-            d3d12.validation = d3d12.validation || o.validation;
-            return prGpuD3d12Create(&d3d12, out);
-        }
-#endif
-        default:
-            return PrStatus_NotSupported;
-    }
+    return status;
 }
 
 void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device) {
@@ -299,6 +380,7 @@ void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device) {
         shared->mipmapPipelines.reset();
         prGpuShaderLibraryDestroy(shared->mipmapLibrary);
         shared->samplers.reset();
+        shared->importCopies.reset();
         prMutexReset(&shared->mutex);
         prMemoryFree(shared);
         device->shared = nullptr;
@@ -309,6 +391,14 @@ void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device) {
 
 PrGpuDeviceInfo prGpuDeviceInfo(const PrGpuDevice* device) {
     return device->info;
+}
+
+bool prGpuDeviceHasNative(const PrGpuDevice* device, PrGpuNativeKind kind) {
+    return kind < PrGpuNativeKind_Count && (device->nativeKinds & (1u << kind)) != 0;
+}
+
+bool prGpuDeviceImportsInPlace(const PrGpuDevice* device, PrGpuImportKind kind) {
+    return kind < PrGpuImportKind_Count && (device->inPlaceImports & (1u << kind)) != 0;
 }
 
 bool prGpuDeviceIsLost(const PrGpuDevice* device) {
@@ -478,8 +568,14 @@ PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpu
 }
 
 void prGpuTextureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
-    if (texture.id != 0)
-        device->textureDestroy(device, texture);
+    if (texture.id == 0)
+        return;
+    if (PrGpuDeviceShared* shared = device->shared) {
+        prMutexLock(&shared->mutex);
+        shared->importCopies.removeFirst(texture.id);
+        prMutexUnlock(&shared->mutex);
+    }
+    device->textureDestroy(device, texture);
 }
 
 PrGpuTextureDesc prGpuTextureDesc(const PrGpuDevice* device, PrGpuTexture texture) {
@@ -496,6 +592,70 @@ uint32_t prGpuTextureStorageHandle(const PrGpuDevice* device, PrGpuTexture textu
     PR_ASSERT(texture.id != 0);
     PR_ASSERT(device->textureDesc(device, texture).usage & PrGpuTextureUsageFlag_Storage);
     return device->textureStorageHandle(device, texture);
+}
+
+PrStatus prGpuTextureCreateOverPixels(PrGpuDevice* device, PrGpuFormat format, PrPixels pixels,
+        PrGpuTextureUsageFlags usage, PrGpuTexture* out) {
+    *out = PrGpuTexture{};
+    PR_ASSERT(prGpuDeviceHasNative(device, PrGpuNativeKind_Pixels));
+    PR_ASSERT(pixels.extent.x != 0 && pixels.extent.y != 0);
+    if (device->isLost(device))
+        return PrStatus_Lost;
+    return device->textureCreateOverPixels(device, format, pixels, usage, out);
+}
+
+PrStatus prGpuTextureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuReleaseFn PR_NULLABLE release,
+        void* PR_NULLABLE context, PrGpuTexture* texture) {
+    PR_ASSERT(image->handle != nullptr);
+    if (device->isLost(device))
+        return PrStatus_Lost;
+    if (prGpuDeviceImportsInPlace(device, image->kind)) {
+        PrGpuTexture made{};
+        PrStatus status = device->textureImport(device, image, release, context, &made);
+        if (status == PrStatus_Ok) {
+            prGpuTextureDestroy(device, *texture);
+            *texture = made;
+        }
+        return status;
+    }
+    PrGpuImportPixels pixels{};
+    if (!prGpuImportLock(image, &pixels))
+        return PrStatus_NotSupported;
+    PrStatus status = importCopy(device, pixels, texture);
+    prGpuImportUnlock(image);
+    if (status == PrStatus_Ok && release != nullptr)
+        release(context);
+    return status;
+}
+
+bool prGpuImportLock(const PrGpuImport* image, PrGpuImportPixels* out) {
+    *out = PrGpuImportPixels{};
+    switch (image->kind) {
+        case PrGpuImportKind_Pixels:
+            *out = *static_cast<const PrGpuImportPixels*>(image->handle);
+            return true;
+#if defined(PR_GPU_HAS_COREVIDEO)
+        case PrGpuImportKind_CoreVideo:
+            return gpuCoreVideoLock(image->handle, out);
+#endif
+        default:
+            return false;
+    }
+}
+
+void prGpuImportUnlock(const PrGpuImport* image) {
+#if defined(PR_GPU_HAS_COREVIDEO)
+    if (image->kind == PrGpuImportKind_CoreVideo)
+        gpuCoreVideoUnlock(image->handle);
+#else
+    (void)image;
+#endif
+}
+
+bool prGpuTextureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind kind, void* out) {
+    PR_ASSERT(prGpuDeviceHasNative(device, kind));
+    PR_ASSERT(texture.id != 0);
+    return device->textureNative(device, texture, kind, out);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -745,8 +905,8 @@ PrGpuDevice* prGpuCommandsDevice(const PrGpuCommands* commands) {
     return commands->device;
 }
 
-PrGpuHostStateFlags prGpuHostStateSync(PrGpuCommands* commands) {
-    return commands->device->hostStateSync(commands->device, commands);
+PrGpuNativeStateFlags prGpuNativeStateSync(PrGpuCommands* commands) {
+    return commands->device->nativeStateSync(commands->device, commands);
 }
 
 PrGpuFence prGpuCommandsSubmit(PrGpuCommands* commands) {
@@ -932,7 +1092,7 @@ PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor c
 
 PrGpuPass* prGpuPassBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     PR_ASSERT(!commands->inPass);
-    PR_ASSERT(desc->host != nullptr || desc->colorCount != 0 || desc->depthStencil.texture.id != 0);
+    PR_ASSERT(desc->native != nullptr || desc->colorCount != 0 || desc->depthStencil.texture.id != 0);
     commands->inPass = true;
     return commands->device->passBegin(commands->device, commands, desc);
 }
@@ -941,6 +1101,13 @@ void prGpuPassEnd(PrGpuPass* pass) {
     PrGpuCommands* commands = pass->commands;
     commands->device->passEnd(commands->device, pass);
     commands->inPass = false;
+}
+
+void prGpuPassNativeDraw(PrGpuPass* pass, PrGpuNativeKind kind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+    PrGpuDevice* device = pass->commands->device;
+    PR_ASSERT(prGpuDeviceHasNative(device, kind));
+    PR_ASSERT(pass->formats.colorCount != 0);
+    device->passNativeDraw(device, pass, kind, draw, context);
 }
 
 PrGpuCommands* prGpuPassCommands(const PrGpuPass* pass) {

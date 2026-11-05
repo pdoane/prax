@@ -1,5 +1,5 @@
-// The Vulkan GPU backend: creating a device over the backend's own instance or the host's device, and the functions of
-// pr/gpu_vulkan.h. The other sources of the backend implement the device's operations.
+// The Vulkan GPU backend: creating a device over the backend's own instance or the application's device, and the
+// functions of pr/gpu_vulkan.h. The other sources of the backend implement the device's operations.
 
 #include "pr/gpu_vulkan.h"
 
@@ -638,13 +638,13 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
         status = createDevice(d);
     }
     if (status == PrStatus_Ok && o.descriptors != nullptr) {
-        const PrGpuVulkanDescriptors& host = *o.descriptors;
-        d->set = reinterpret_cast<VkDescriptorSet>(host.set);
-        d->layout = reinterpret_cast<VkPipelineLayout>(host.pipelineLayout);
-        d->firstResource = host.firstResource;
-        d->resourceCount = host.resourceCount;
-        d->firstSampler = host.firstSampler;
-        d->samplerCount = host.samplerCount;
+        const PrGpuVulkanDescriptors& given = *o.descriptors;
+        d->set = reinterpret_cast<VkDescriptorSet>(given.set);
+        d->layout = reinterpret_cast<VkPipelineLayout>(given.pipelineLayout);
+        d->firstResource = given.firstResource;
+        d->resourceCount = given.resourceCount;
+        d->firstSampler = given.firstSampler;
+        d->samplerCount = given.samplerCount;
     } else if (status == PrStatus_Ok) {
         status = createDescriptors(d, o.resourceHandles, o.samplerHandles);
     }
@@ -675,6 +675,7 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
     while (d->adapter[d->info.adapter.size] != '\0')
         ++d->info.adapter.size;
     d->info.backend = "Vulkan";
+    d->nativeKinds = 1u << PrGpuNativeKind_Vulkan;
     if (d->limits.timestampComputeAndGraphics)
         d->info.features |= PrGpuFeatureFlag_Timestamps;
     d->info.maxTextureSize = d->limits.maxImageDimension2D;
@@ -732,10 +733,6 @@ void* prGpuVulkanQueue(const PrGpuDevice* device) {
 
 uint64_t prGpuVulkanBuffer(const PrGpuDevice* device, PrGpuBuffer buffer) {
     return reinterpret_cast<uint64_t>(vulkanDevice(device)->resources.data[buffer.id].buffer);
-}
-
-uint64_t prGpuVulkanImage(const PrGpuDevice* device, PrGpuTexture texture) {
-    return reinterpret_cast<uint64_t>(vulkanDevice(device)->resources.data[texture.id].image);
 }
 
 void* prGpuVulkanGetInstanceProcAddr(const PrGpuDevice* device) {

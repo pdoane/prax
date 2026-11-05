@@ -9,7 +9,7 @@
 namespace browser {
 
 bool profileRead(PrStringView path, String* out) {
-    PrFileMapping mapping{};
+    PrByteView mapping{};
     if (!prFileMap(path, &mapping))
         return false;
     *out = PrStringView{reinterpret_cast<const char*>(mapping.data), mapping.size};
