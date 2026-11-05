@@ -46,12 +46,26 @@ struct TextDiffSequence {
     RawArray<int64_t> backward;
 };
 
+// Writes a key of each line of `text` to `keys`: a hash of its bytes, FNV-1a.
+void textDiffLineKeys(const PrTextDiffText* text, RawArray<uint64_t>& keys);
+
+// Two texts whose lines a comparison reads, as the context of textDiffSameLines.
+struct TextDiffLines {
+    const PrTextDiffText* old;
+    const PrTextDiffText* young;
+};
+
+// Returns true if line `a` of the old text has the bytes of line `b` of the new one. The context is a TextDiffLines.
+bool textDiffSameLines(void* PR_NULLABLE context, uint32_t a, uint32_t b);
+
 // Frees the memory of comparisons.
 void textDiffSequenceReset(TextDiffSequence* sequence);
 
-// Replaces `changes` with the changes between the sequences of `desc`, in order. The keys are read only during the
-// call.
-void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, RawArray<PrTextDiffChange>& changes);
+// Appends the changes between the elements of `whole` of the sequences of `desc`, in order. A change that this call
+// appends joins another that it appended where they meet, and never a change that `changes` held before. The keys are
+// read only during the call.
+void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, TextDiffPart whole,
+    RawArray<PrTextDiffChange>& changes);
 
 } // namespace pr_impl
 

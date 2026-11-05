@@ -37,53 +37,51 @@ void addCommand(Scribe& s, const char* id, const char* title, const char* chord,
         prCommandKeymapBind(s.keymap, parsed, id, "", PrCommandBindingKind_Normal);
 }
 
-// A menu of the menu bar: its commands in order, an empty id for a separator, up to the first null.
-struct Menu {
-    const char* title;
-    const char* items[12];
-};
+// A menu of `items`.
+template <uint32_t N>
+Menu menuOf(PrStringView title, const PrStringView (&items)[N]) {
+    return Menu{title, Array<PrStringView>(items)};
+}
 
-constexpr Menu kMenus[] = {
-    {"File", {"file.save", "", "view.palette", "", "app.quit"}},
-    {"Edit", {"edit.undo", "edit.redo", "", "edit.cut", "edit.copy", "edit.paste", "", "edit.selectAll"}},
-    {"Selection", {"cursor.addAbove", "cursor.addBelow", "cursor.single"}},
-    {
-        "View",
-        {
-            "view.toggleWrap", "view.lineNumbers", "", "view.directionLtr", "view.directionRtl", "view.directionAuto",
-            "", "view.horizontal", "view.verticalRl", "view.verticalLr",
-        },
-    },
-    {
-        "Go",
-        {
-            "language.definition", "language.hover", "", "language.nextProblem", "language.previousProblem", "",
-            "diff.compareSaved", "diff.nextChange", "diff.previousChange", "diff.close",
-        },
-    },
-    {
-        "Debug",
-        {
-            "debug.continue", "debug.stop", "", "debug.stepOver", "debug.stepInto", "debug.stepOut", "",
-            "debug.toggleBreakpoint",
-        },
-    },
-};
+// Scribe's menus.
+Array<Menu> scribeMenus() {
+    Array<Menu> menus;
+    menus.push(menuOf("File", {"file.save", "", "view.palette", "", "app.quit"}));
+    menus.push(menuOf("Edit", {
+        "edit.undo", "edit.redo", "", "edit.cut", "edit.copy", "edit.paste", "", "edit.selectAll",
+    }));
+    menus.push(menuOf("Selection", {"cursor.addAbove", "cursor.addBelow", "cursor.single"}));
+    menus.push(menuOf("View", {
+        "view.toggleWrap", "view.lineNumbers", "", "view.directionLtr", "view.directionRtl", "view.directionAuto", "",
+        "view.horizontal", "view.verticalRl", "view.verticalLr",
+    }));
+    menus.push(menuOf("Go", {
+        "language.definition", "language.hover", "", "language.nextProblem", "language.previousProblem",
+    }));
+    menus.push(menuOf("Compare", {
+        "diff.compareSaved", "diff.nextChange", "diff.previousChange", "", "diff.toggleSync", "diff.clearSyncs", "",
+        "diff.close",
+    }));
+    menus.push(menuOf("Debug", {
+        "debug.continue", "debug.stop", "", "debug.stepOver", "debug.stepInto", "debug.stepOut", "",
+        "debug.toggleBreakpoint",
+    }));
+    return menus;
+}
 
 // Declares the menu bar, whose height afterLayout keeps for the text below it. Returns true if a menu is open.
 bool buildMenus(Scribe& s, PrLayoutNode root) {
     s.menuBar = prKitMenuBar(s.kit, root, {});
     bool open = false;
-    for (const Menu& menu : kMenus) {
+    for (const Menu& menu : s.menus) {
         PrLayoutNode title = prKitMenuBarItem(s.kit, s.menuBar, {.text = menu.title});
         PrLayoutNode popover = prKitPopover(s.kit, title, {}, {});
         if (popover == kPrLayoutNodeNone)
             continue;
         open = true;
         PrLayoutNode list = prKitMenu(s.kit, popover, {}, {.minWidth = 240});
-        for (uint32_t i = 0; i < countOf(menu.items) && menu.items[i] != nullptr; ++i) {
-            const char* id = menu.items[i];
-            if (id[0] == 0)
+        for (PrStringView id : menu.items) {
+            if (id.isEmpty())
                 prKitMenuSeparator(s.kit, list, {});
             else
                 prCommandMenuItem(s.kit, list, s.commands, s.keymap, id, {});
@@ -120,6 +118,11 @@ String statusLine(Scribe& s) {
     PrStringView endings = info.crlf ? "  CRLF" : "  LF";
     String line = format("{}   {}  Ln {}, Col {}  {} lines  {}{}  {}", path, state, view.caret.line + 1,
         view.caret.column + 1, view.lineCount, wrap, endings, language);
+    PrTextEditorDiff* diff = prTextEditorShownDiff(s.editor);
+    if (diff != nullptr && prTextEditorDiffIsMerge(diff)) {
+        uint32_t conflicts = prTextEditorDiffConflictCount(diff);
+        formatTo(line, "   {} {}", conflicts, conflicts == 1 ? "conflict" : "conflicts");
+    }
     PrStringView said = prTextEditorStatus(s.editor);
     if (!said.isEmpty())
         formatTo(line, "   {}", said);
@@ -135,6 +138,7 @@ void openEditor(Scribe& s) {
 #if defined(SCRIBE_HAS_TREESITTER)
     prSyntaxTreeSitterAddLanguages(s.languages);
 #endif
+    s.menus = scribeMenus();
     s.launcher = prProcessLauncherCreate(PrProcessBackend_Default);
     PrTextEditorDesc desc{
         .kit = s.kit,
@@ -197,7 +201,7 @@ void setDebuggee(Scribe& s, PrStringView program) {
 }
 
 bool openDiff(Scribe& s, PrStringView oldPath, PrStringView newPath) {
-    PrTextEditorDocumentDesc oldDesc{.path = oldPath, .readOnly = true};
+    PrTextEditorDocumentDesc oldDesc{.path = oldPath};
     PrTextEditorDocumentDesc newDesc{.path = newPath};
     PrTextEditorDocument* old = nullptr;
     PrTextEditorDocument* young = nullptr;

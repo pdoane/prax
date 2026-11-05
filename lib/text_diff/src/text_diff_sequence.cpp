@@ -1,9 +1,10 @@
 // The comparison of sequences (text_diff_sequence.h): Myers's search for the middle snake, which splits each part of
-// the comparison in two, over a stack of parts in place of recursion.
+// the comparison in two, over a stack of parts in place of recursion, and the keys and equality of lines.
 
 #include "text_diff/src/text_diff_sequence.h"
 
 #include "pr/assert.h"
+#include "pr/mem.h"
 
 namespace pr_impl {
 
@@ -23,12 +24,12 @@ bool same(const TextDiffSequenceDesc& desc, uint32_t a, uint32_t b) {
     return desc.equal == nullptr || desc.equal(desc.equalContext, a, b);
 }
 
-// Adds a change, joined to the last if they meet.
-void addChange(RawArray<PrTextDiffChange>& changes, uint32_t oldStart, uint32_t oldCount, uint32_t newStart,
-        uint32_t newCount) {
+// Adds a change, joined to the last if they meet and the last is at or after `first`.
+void addChange(RawArray<PrTextDiffChange>& changes, uint32_t first, uint32_t oldStart, uint32_t oldCount,
+        uint32_t newStart, uint32_t newCount) {
     if (oldCount == 0 && newCount == 0)
         return;
-    if (changes.count != 0) {
+    if (changes.count > first) {
         PrTextDiffChange& last = changes.last();
         if (last.oldStart + last.oldCount == oldStart && last.newStart + last.newCount == newStart) {
             last.oldCount += oldCount;
@@ -101,18 +102,39 @@ bool middleSnake(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, c
 
 } // namespace
 
+void textDiffLineKeys(const PrTextDiffText* text, RawArray<uint64_t>& keys) {
+    keys.resize(text->lineCount);
+    for (uint32_t line = 0; line < text->lineCount; ++line) {
+        PrStringView bytes = text->line(text->context, line);
+        uint64_t hash = 14695981039346656037ull;
+        for (size_t i = 0; i < bytes.size; ++i)
+            hash = (hash ^ uint8_t(bytes.data[i])) * 1099511628211ull;
+        keys.data[line] = hash;
+    }
+}
+
+bool textDiffSameLines(void* PR_NULLABLE context, uint32_t a, uint32_t b) {
+    const TextDiffLines* lines = static_cast<const TextDiffLines*>(context);
+    PrStringView first = lines->old->line(lines->old->context, a);
+    PrStringView second = lines->young->line(lines->young->context, b);
+    return first.size == second.size && prMemEquals(first.data, second.data, first.size);
+}
+
 void textDiffSequenceReset(TextDiffSequence* sequence) {
     sequence->parts.reset();
     sequence->forward.reset();
     sequence->backward.reset();
 }
 
-void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, RawArray<PrTextDiffChange>& changes) {
+void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceDesc& desc, TextDiffPart whole,
+        RawArray<PrTextDiffChange>& changes) {
     PR_ASSERT(desc.oldCount == 0 || desc.oldKeys != nullptr);
     PR_ASSERT(desc.newCount == 0 || desc.newKeys != nullptr);
+    PR_ASSERT(whole.oldStart <= whole.oldEnd && whole.oldEnd <= desc.oldCount);
+    PR_ASSERT(whole.newStart <= whole.newEnd && whole.newEnd <= desc.newCount);
     PR_ASSERT(sequence->maxCost != 0);
-    changes.clear();
-    sequence->parts.push(TextDiffPart{0, desc.oldCount, 0, desc.newCount});
+    uint32_t first = changes.count;
+    sequence->parts.push(whole);
     while (sequence->parts.count != 0) {
         TextDiffPart part = sequence->parts.last();
         sequence->parts.pop();
@@ -129,7 +151,7 @@ void textDiffSequenceCompare(TextDiffSequence* sequence, const TextDiffSequenceD
         uint32_t newCount = part.newEnd - part.newStart;
         DiffSnake snake{};
         if (oldCount == 0 || newCount == 0 || !middleSnake(sequence, desc, part, &snake)) {
-            addChange(changes, part.oldStart, oldCount, part.newStart, newCount);
+            addChange(changes, first, part.oldStart, oldCount, part.newStart, newCount);
             continue;
         }
         // The part before the snake is compared first, so the stack holds the part after it beneath.

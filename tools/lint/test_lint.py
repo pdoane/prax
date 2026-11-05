@@ -141,6 +141,22 @@ class ManagedLayer(unittest.TestCase):
             self.assertEqual(self.rules("lib/core/cpp/include/pr/array.h", "    ~Array() { reset(); }\n"), [])
 
 
+class ApplicationIncludes(unittest.TestCase):
+    def rules(self, path, source):
+        report = lint.Report()
+        lint.check_application_includes(report, os.path.join(lint.ROOT, path), source)
+        return [rule for _, _, rule, _ in report.problems]
+
+    def test_an_application_includes_no_other_applications_headers(self):
+        self.assertEqual(self.rules("apps/merge/main.cpp", '#include "apps/merge/merge.h"\n'), [])
+        self.assertEqual(self.rules("apps/merge/main.cpp", '#include "apps/scribe/scribe.h"\n'),
+                         ["application-include"])
+        self.assertEqual(self.rules("examples/a/a.cpp", '#include "apps/scribe/scribe.h"\n'), ["application-include"])
+        self.assertEqual(self.rules("apps/merge/main.cpp", '#include "examples/editor/hud.h"\n'),
+                         ["application-include"])
+        self.assertEqual(self.rules("tools/bench/a.cpp", '#include "examples/draw_features/drawing.h"\n'), [])
+
+
 class TestIncludes(unittest.TestCase):
     def rules(self, path, source):
         report = lint.Report()

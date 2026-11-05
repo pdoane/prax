@@ -4,6 +4,7 @@
 #include "pr/text_diff.h"
 
 #include "pr/alloc.h"
+#include "pr/assert.h"
 #include "pr/mem.h"
 #include "pr/utf8.h"
 
@@ -34,25 +35,6 @@ struct TextDiff {
     RawArray<PrTextDiffChange> characters;                       // the changes of characters of a pair of lines
     const PrTextDiffText* PR_NULLABLE texts[TextDiffSide_Count]; // during a comparison
 };
-
-// Writes a hash of each line of `text` to `keys`, FNV-1a over its bytes.
-void hashLines(const PrTextDiffText* text, RawArray<uint64_t>& keys) {
-    keys.resize(text->lineCount);
-    for (uint32_t line = 0; line < text->lineCount; ++line) {
-        PrStringView bytes = text->line(text->context, line);
-        uint64_t hash = 14695981039346656037ull;
-        for (size_t i = 0; i < bytes.size; ++i)
-            hash = (hash ^ uint8_t(bytes.data[i])) * 1099511628211ull;
-        keys.data[line] = hash;
-    }
-}
-
-bool sameLines(void* PR_NULLABLE context, uint32_t a, uint32_t b) {
-    TextDiff* diff = static_cast<TextDiff*>(context);
-    PrStringView first = diff->texts[TextDiffSide_Old]->line(diff->texts[TextDiffSide_Old]->context, a);
-    PrStringView second = diff->texts[TextDiffSide_New]->line(diff->texts[TextDiffSide_New]->context, b);
-    return first.size == second.size && prMemEquals(first.data, second.data, first.size);
-}
 
 // Writes a key of each character of `line` to `keys`, which its bytes make, and the offset of each to `offsets`, with
 // the line's size last. An ill-formed byte is a character of its own.
@@ -96,7 +78,9 @@ void compareLines(TextDiff* diff, uint32_t oldLine, uint32_t newLine) {
         .newKeys = diff->keys[TextDiffSide_New].data,
         .newCount = diff->keys[TextDiffSide_New].count,
     };
-    textDiffSequenceCompare(&diff->sequence, desc, diff->characters);
+    diff->characters.clear();
+    TextDiffPart whole{0, desc.oldCount, 0, desc.newCount};
+    textDiffSequenceCompare(&diff->sequence, desc, whole, diff->characters);
     const uint32_t* oldOffsets = diff->offsets[TextDiffSide_Old].data;
     const uint32_t* newOffsets = diff->offsets[TextDiffSide_New].data;
     for (uint32_t i = 0; i < diff->characters.count; ++i) {
@@ -148,20 +132,43 @@ void prTextDiffDestroy(PrTextDiff* PR_NULLABLE diff) {
     prMemoryFree(diff);
 }
 
-void prTextDiffCompare(PrTextDiff* diff, const PrTextDiffText* old, const PrTextDiffText* young) {
+void prTextDiffCompare(PrTextDiff* diff, const PrTextDiffText* old, const PrTextDiffText* young,
+        const PrTextDiffSync* PR_NULLABLE syncs, uint32_t syncCount) {
     diff->texts[TextDiffSide_Old] = old;
     diff->texts[TextDiffSide_New] = young;
-    hashLines(old, diff->keys[TextDiffSide_Old]);
-    hashLines(young, diff->keys[TextDiffSide_New]);
+    textDiffLineKeys(old, diff->keys[TextDiffSide_Old]);
+    textDiffLineKeys(young, diff->keys[TextDiffSide_New]);
+    TextDiffLines lines{old, young};
     TextDiffSequenceDesc desc{
         .oldKeys = diff->keys[TextDiffSide_Old].data,
         .oldCount = diff->keys[TextDiffSide_Old].count,
         .newKeys = diff->keys[TextDiffSide_New].data,
         .newCount = diff->keys[TextDiffSide_New].count,
-        .equal = sameLines,
-        .equalContext = diff,
+        .equal = textDiffSameLines,
+        .equalContext = &lines,
     };
-    textDiffSequenceCompare(&diff->sequence, desc, diff->changes);
+    // The texts between sync points compare apart, and a sync point's lines pair as one change if they differ.
+    diff->changes.clear();
+    uint32_t oldAt = 0;
+    uint32_t newAt = 0;
+    for (uint32_t i = 0; i <= syncCount; ++i) {
+        PrTextDiffSync sync{old->lineCount, young->lineCount};
+        if (i < syncCount) {
+            sync = syncs[i];
+            PR_ASSERT(sync.oldLine >= oldAt && sync.oldLine < old->lineCount);
+            PR_ASSERT(sync.newLine >= newAt && sync.newLine < young->lineCount);
+        }
+        textDiffSequenceCompare(&diff->sequence, desc, TextDiffPart{oldAt, sync.oldLine, newAt, sync.newLine},
+            diff->changes);
+        if (i == syncCount)
+            break;
+        bool same = desc.oldKeys[sync.oldLine] == desc.newKeys[sync.newLine] &&
+            textDiffSameLines(&lines, sync.oldLine, sync.newLine);
+        if (!same)
+            diff->changes.push(PrTextDiffChange{sync.oldLine, 1, sync.newLine, 1});
+        oldAt = sync.oldLine + 1;
+        newAt = sync.newLine + 1;
+    }
     diff->lineChanges.clear();
     if (diff->options.maxLineBytes != 0) {
         for (uint32_t i = 0; i < diff->changes.count; ++i) {

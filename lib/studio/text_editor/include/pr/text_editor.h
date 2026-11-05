@@ -23,6 +23,7 @@
 #include "pr/string_view.h"
 #include "pr/syntax.h"
 #include "pr/text_diff.h"
+#include "pr/text_diff_merge.h"
 #include "pr/text_edit.h"
 #include "pr/text_font.h"
 #include "pr/text_view.h"
@@ -191,26 +192,72 @@ PrTextEditorDocumentInfo prTextEditorDocumentInfo(const PrTextEditorDocument* do
 PrStatus prTextEditorDocumentSave(PrTextEditorDocument* document);
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Diffs
+// Comparisons
 
-// A comparison of two documents, shown side by side: the old on the left and the new on the right, each line beside its
-// counterpart, with space where one side has lines that the other does not, and what changed tinted, the lines and the
-// bytes within them. The sides scroll together, and lines do not wrap. The comparison follows both documents' edits,
-// and the new document takes the editor's commands while the comparison shows.
+// A comparison of documents, shown side by side in panes: each line beside its counterparts, with space where a pane
+// has fewer lines than another, and what changed tinted, the lines and the bytes within them. The panes scroll
+// together, and their lines do not wrap. The comparison follows its documents' edits. The document of the pane whose
+// text has focus is the one that shows, and takes the editor's commands. A document that refuses its user's edits
+// refuses them in its pane too.
+//
+// A comparison compares an old document with a new one, or the documents of a merge: two sides that each changed a
+// base, and the result, whose text marks the conflicts between them (pr/text_diff_merge.h). It holds sync points: a
+// line of each of its documents that it aligns whatever their text (pr/text_diff.h), in the order old and new, or base,
+// left, right and result. A sync point follows its lines as the documents change, and goes once any of them is removed,
+// or once it crosses another.
 typedef struct PrTextEditorDiff PrTextEditorDiff;
 
-// Creates a comparison of `old` with `young`, documents of the editor that outlive it, and shows it, or frees one. A
-// comparison that shows when it is freed shows its new document.
+// The documents of a merge, documents of the editor that outlive its comparison.
+typedef struct PrTextEditorDiffMergeDesc {
+    PrTextEditorDocument* base;
+    PrTextEditorDocument* left;
+    PrTextEditorDocument* right;
+    PrTextEditorDocument* result;
+    bool baseShown;                             // a pane shows the base, between the left side and the result
+} PrTextEditorDiffMergeDesc;
+
+// Creates a comparison of `old` with `young`, documents of the editor that outlive it, which shows the new document; or
+// a comparison of a merge, whose panes show the left side, the result and the right side, and which shows the result.
+// The comparison shows once it is created. A comparison that shows when it is freed shows its new document, or its
+// result.
 PrTextEditorDiff* prTextEditorDiffCreate(PrTextEditor* editor, PrTextEditorDocument* old, PrTextEditorDocument* young);
+PrTextEditorDiff* prTextEditorDiffCreateMerge(PrTextEditor* editor, const PrTextEditorDiffMergeDesc* desc);
 void prTextEditorDiffDestroy(PrTextEditorDiff* PR_NULLABLE diff);
 
 // The comparison that shows, or null if a document shows alone. Showing a document ends the showing of a comparison.
 PrTextEditorDiff* PR_NULLABLE prTextEditorShownDiff(const PrTextEditor* editor);
 void prTextEditorShowDiff(PrTextEditor* editor, PrTextEditorDiff* diff);
 
-// The runs of lines that changed, as of the last frame, in the order of the documents (pr/text_diff.h).
+// Returns true if the comparison is of a merge.
+bool prTextEditorDiffIsMerge(const PrTextEditorDiff* diff);
+
+// The runs of lines that changed from the first document to the last, as of the last frame: of the new document from
+// the old, or of a merge's result from its base, in the order of the documents (pr/text_diff.h).
 uint32_t prTextEditorDiffChangeCount(const PrTextEditorDiff* diff);
 PrTextDiffChange prTextEditorDiffChange(const PrTextEditorDiff* diff, uint32_t index);
+
+// The chunks of a merge's sides, as of the last frame, or none for a comparison of two documents.
+uint32_t prTextEditorDiffMergeChunkCount(const PrTextEditorDiff* diff);
+PrTextDiffMergeChunk prTextEditorDiffMergeChunk(const PrTextEditorDiff* diff, uint32_t index);
+
+// The conflicts that a merge's result marks, as of the last frame, or none for a comparison of two documents.
+uint32_t prTextEditorDiffConflictCount(const PrTextEditorDiff* diff);
+PrTextDiffConflict prTextEditorDiffConflict(const PrTextEditorDiff* diff, uint32_t index);
+
+// Whether a pane shows a merge's base.
+bool prTextEditorDiffBaseShown(const PrTextEditorDiff* diff);
+void prTextEditorDiffSetBaseShown(PrTextEditorDiff* diff, bool shown);
+
+// Writes the lines of up to `capacity` of the sync points to `out`, a line of each document to each point, and returns
+// the number of points, in order.
+uint32_t prTextEditorDiffSyncs(const PrTextEditorDiff* diff, uint32_t* PR_NULLABLE out, uint32_t capacity);
+
+// Adds a sync point of `lines`, a line of each document. Returns false if a line is past its document, if the point
+// shares a line with another, or if it would cross one.
+bool prTextEditorDiffAddSync(PrTextEditorDiff* diff, const uint32_t* lines);
+
+// Removes every sync point.
+void prTextEditorDiffClearSyncs(PrTextEditorDiff* diff);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Debugging

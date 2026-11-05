@@ -540,6 +540,19 @@ def check_example_includes(report, path, text):
                    "a library includes %s" % match.group(1))
 
 
+def check_application_includes(report, path, text):
+    """An application under examples/ or apps/ depends on no other application: what two of them share belongs in a
+    library."""
+    relative = os.path.relpath(path, ROOT).replace(os.sep, "/")
+    if not relative.startswith(("examples/", "apps/")):
+        return
+    own = "/".join(relative.split("/")[:2]) + "/"
+    for match in re.finditer(r'#include [<"]((?:examples|apps)/[^/">]+/[^">]+)[">]', text):
+        if not match.group(1).startswith(own):
+            report.add(path, line_of(text, match.start()), "application-include",
+                       "an application includes %s, of another application" % match.group(1))
+
+
 def check_constant_names(report, path, text):
     """Constants take the k prefix, including inside the anonymous namespace. k marks a constant, and pr/Pr/PR_ marks
     the library. In C++ a constant is `constexpr`, so that no work runs before main. A unit test may do that work, and
@@ -2600,6 +2613,7 @@ TAGS = {
     "lib/webidl": ("WebIdl",),
     "lib/websocket": ("WebSocket",),
     "lib/mathml": ("MathMl",),
+    "lib/studio/window": ("StudioWindow",),
 }
 
 # The vocabulary modules, whose headers declare names of several tags rather than of their own.
@@ -3194,6 +3208,7 @@ def check_any_source(path):
     if not path.endswith(".c"):
         check_literal_views(report, path, text)
         check_container_views(report, path, text)
+    check_application_includes(report, path, text)
     if os.path.relpath(path, ROOT).replace(os.sep, "/").startswith("lib/"):
         check_example_includes(report, path, text)
         if not is_test(path):

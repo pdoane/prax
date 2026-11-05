@@ -6,6 +6,10 @@
 // what it compares times the size of the difference, so a difference past the limit of a diff's options is reported
 // coarsely instead: as one change over what remains.
 //
+// A comparison may be given sync points: pairs of lines, one of each text, that it aligns whatever their text. The
+// texts between sync points compare apart, so a sync point says where a change ends when the shortest script would pair
+// the wrong lines.
+//
 // One thread uses a diff at a time.
 
 #pragma once
@@ -47,7 +51,8 @@ typedef struct PrTextDiffOptions {
 PrTextDiffOptions prTextDiffOptionsDefault(void);
 
 // A run of the old text that the new one replaces with a run of its own, in lines, or in bytes within a pair of lines.
-// Either run may be empty, for what one side adds. Between changes, the texts are equal.
+// Either run may be empty, for what one side adds. Between changes, the texts are equal. Changes on either side of a
+// sync point stay apart, so they may meet with nothing between them.
 typedef struct PrTextDiffChange {
     uint32_t oldStart;
     uint32_t oldCount;
@@ -66,8 +71,17 @@ typedef struct PrTextDiffLineChange {
 PrTextDiff* prTextDiffCreate(const PrTextDiffOptions* PR_NULLABLE options);
 void prTextDiffDestroy(PrTextDiff* PR_NULLABLE diff);
 
-// Compares `old` with `young`, and replaces the diff's changes with theirs. The texts are read only during the call.
-void prTextDiffCompare(PrTextDiff* diff, const PrTextDiffText* old, const PrTextDiffText* young);
+// A line of the old text and a line of the new one that a comparison aligns.
+typedef struct PrTextDiffSync {
+    uint32_t oldLine;
+    uint32_t newLine;
+} PrTextDiffSync;
+
+// Compares `old` with `young`, and replaces the diff's changes with theirs. The lines of each of `syncs` pair: as one
+// change of a line on each side if they differ, and otherwise as lines that are equal. The sync points ascend strictly
+// in both texts, and name lines that the texts hold. The texts are read only during the call.
+void prTextDiffCompare(PrTextDiff* diff, const PrTextDiffText* old, const PrTextDiffText* young,
+    const PrTextDiffSync* PR_NULLABLE syncs, uint32_t syncCount);
 
 // The changes of lines of the last comparison, in order. The pointer is valid until the diff compares again.
 uint32_t prTextDiffChangeCount(const PrTextDiff* diff);

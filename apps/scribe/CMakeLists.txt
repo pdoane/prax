@@ -10,8 +10,7 @@ if (PR_SYNTAX_TREESITTER)
 endif()
 
 pr_app(scribe main.cpp)
-target_link_libraries(scribe PRIVATE scribe_editor prax::app prax::draw prax::gpu prax::font prax::font_bundle
-                                     prax::layout prax::studio_kit prax::text prax::ui)
+target_link_libraries(scribe PRIVATE scribe_editor prax::studio_window prax::text)
 
 if (PR_DEVELOP)
     pr_module_tests(scribe_editor tests/test_scribe.cpp)

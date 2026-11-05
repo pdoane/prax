@@ -118,19 +118,25 @@ struct TextEditorDocument {
     bool sent;
 };
 
-// A comparison of two documents, as it shows. A comparison with the saved file owns the document of the file's text.
+// A comparison of documents, as it shows. A comparison with the saved file owns the document of the file's text.
 struct TextEditorDiff {
     PrTextEditorDiff* handle;
     TextEditor* editor;
-    TextEditorDocument* old;
-    TextEditorDocument* young;
-    bool ownsOld;
     TextEditorDiffModel model;
-    PrLayoutNode oldPort;                     // the element that shows the old side, in the last frame
+    TextEditorDocument* documents[kTextEditorDiffMaxBuffers];     // by slot
+    bool owned[kTextEditorDiffMaxBuffers];                        // by slot: the comparison frees the document
+    bool baseShown;
 
-    // Of each side's scroll at the last layout, along the block axis and along the lines.
-    double offsets[TextEditorDiffSide_Count];
-    double inlineOffsets[TextEditorDiffSide_Count];
+    // The sync points, by slot: anchors at the start and the end of the line of each point, in pairs, in the order the
+    // points were added. A change that removes the line holds one of them strictly inside.
+    RawArray<PrTextEditAnchor> syncs[kTextEditorDiffMaxBuffers];
+    RawArray<uint32_t> syncLines;               // a line of each slot to each live sync point, in order of the lines
+
+    // By slot: the element that shows the document in the last frame, or kPrLayoutNodeNone, and the scroll at the last
+    // layout, along the block axis and along the lines.
+    PrLayoutNode ports[kTextEditorDiffMaxBuffers];
+    double offsets[kTextEditorDiffMaxBuffers];
+    double inlineOffsets[kTextEditorDiffMaxBuffers];
 };
 
 // A command of a key that the view carries out.
@@ -272,11 +278,13 @@ struct LineSeverity {
     PrLspSeverity severity;
 };
 
-// The context of a view's gutter: the editor, and whether its numbers take the colors of the shown document's
-// diagnostics.
+// The context of a view's gutter: the editor, whether its numbers take the colors of the shown document's diagnostics,
+// and the comparison whose sync points it marks, with the slot of its document.
 struct GutterSide {
     TextEditor* editor;
     bool severities;
+    const TextEditorDiff* PR_NULLABLE diff;
+    TextEditorDiffSlot slot;
 };
 
 struct TextEditor {
@@ -302,8 +310,9 @@ struct TextEditor {
     uint64_t debugStops;
     RawArray<uint32_t> breakpointLines;         // of the shown document, for a frame's gutter
     PrLayoutStyleIndex breakpointStyle;         // the record of a number on a line with a breakpoint
+    PrLayoutStyleIndex syncStyle;               // the record of a number on a line of a sync point
 
-    // The comparisons, and the one that shows beside its new document, which is the one that shows.
+    // The comparisons, and the one that shows, whose pane of the shown document has focus.
     RawArray<TextEditorDiff*> diffs;
     TextEditorDiff* PR_NULLABLE diff;
 
@@ -334,12 +343,13 @@ struct TextEditor {
     PrLayoutStyleIndex numberStyle;
     PrLayoutStyleIndex numberStyles[PrLspSeverity_Hint + 1];   // by PrLspSeverity: a number's record on such a line
     RawArray<LineSeverity> lineSeverities;
-    GutterSide gutters[TextEditorDiffSide_Count];               // the gutters' contexts: the old side has no severities
+    GutterSide gutters[kTextEditorDiffMaxBuffers];              // the gutters' contexts, by pane
 
     ChoiceContext keyContexts[countOf(kKeyCommands)];
     ChoiceContext directionContexts[countOf(kDirections)];
     ChoiceContext writingModeContexts[countOf(kWritingModes)];
     ChoiceContext stepContexts[3];
+    ChoiceContext resolveContexts[5];
 };
 
 TextEditor& editorOf(void* PR_NULLABLE context) {
@@ -506,11 +516,54 @@ void showDocument(TextEditor* editor, TextEditorDocument* document) {
     editor->hoverDocument = nullptr;
 }
 
+// Returns the slot of the document that a comparison shows on its own: its new document, or its result.
+TextEditorDiffSlot primarySlot(const TextEditorDiff* diff) {
+    return diff->model.kind == TextEditorDiffKind_Merge ? TextEditorDiffSlot_Result : TextEditorDiffSlot_New;
+}
+
+// Writes the slots of the comparison's panes to `out`, left to right, and returns their number.
+uint32_t panesOf(const TextEditorDiff* diff, TextEditorDiffSlot* out) {
+    if (diff->model.kind == TextEditorDiffKind_TwoWay) {
+        out[0] = TextEditorDiffSlot_Old;
+        out[1] = TextEditorDiffSlot_New;
+        return 2;
+    }
+    uint32_t count = 0;
+    out[count++] = TextEditorDiffSlot_Left;
+    if (diff->baseShown)
+        out[count++] = TextEditorDiffSlot_Base;
+    out[count++] = TextEditorDiffSlot_Result;
+    out[count++] = TextEditorDiffSlot_Right;
+    return count;
+}
+
+// Returns the slot of the comparison's pane that shows `document`, or -1.
+int32_t paneSlotOf(const TextEditorDiff* diff, const TextEditorDocument* PR_NULLABLE document) {
+    TextEditorDiffSlot panes[kTextEditorDiffMaxBuffers];
+    uint32_t count = panesOf(diff, panes);
+    for (uint32_t i = 0; i < count; ++i) {
+        if (diff->documents[panes[i]] == document)
+            return int32_t(panes[i]);
+    }
+    return -1;
+}
+
+// Shows the comparison, with focus on its new document or its result.
 void showDiff(TextEditor* editor, TextEditorDiff* diff) {
-    showDocument(editor, diff->young);
+    showDocument(editor, diff->documents[primarySlot(diff)]);
     editor->diff = diff;
-    for (uint32_t side = 0; side < TextEditorDiffSide_Count; ++side)
-        diff->offsets[side] = -1;
+    for (uint32_t slot = 0; slot < kTextEditorDiffMaxBuffers; ++slot) {
+        diff->offsets[slot] = -1;
+        diff->inlineOffsets[slot] = -1;
+        diff->ports[slot] = kPrLayoutNodeNone;
+    }
+}
+
+// Shows `document`, a pane of the comparison that shows, and gives its text focus.
+void focusPane(TextEditor* editor, TextEditorDocument* document) {
+    editor->shown = document;
+    editor->focusAsked = true;
+    editor->hoverDocument = nullptr;
 }
 
 // Refuses every edit of the document's user.
@@ -518,28 +571,352 @@ bool refuseEdits(void* PR_NULLABLE, PrTextEditOrigin, PrTextEditChange*, uint32_
     return false;
 }
 
-// Moves the caret to the start of the next change after the caret's line, or the previous before it.
+uint32_t lineOfOffset(const TextEditorDocument* document, uint32_t offset) {
+    return prTextEditBufferPointFromOffset(document->buffer, offset).line;
+}
+
+// Moves the caret of the shown pane to the start of the next block of changes after the caret's line, or the previous
+// before it.
 void stepChange(TextEditor* editor, bool forward) {
     TextEditorDiff* diff = editor->diff;
-    if (diff == nullptr || diff->model.changes.count == 0) {
+    int32_t slot = diff != nullptr ? paneSlotOf(diff, editor->shown) : -1;
+    if (slot < 0 || diff->model.blocks.count == 0) {
         setStatus(editor, "no changes");
         return;
     }
-    TextEditorDocument* young = diff->young;
-    uint32_t line = prTextEditBufferPointFromOffset(young->buffer, caretOf(young)).line;
-    const RawArray<PrTextDiffChange>& changes = diff->model.changes;
-    uint32_t chosen = forward ? 0 : changes.count - 1;
-    for (uint32_t i = 0; i < changes.count; ++i) {
-        uint32_t k = forward ? i : changes.count - 1 - i;
-        uint32_t start = changes.data[k].newStart;
+    TextEditorDocument* document = editor->shown;
+    uint32_t line = lineOfOffset(document, caretOf(document));
+    const RawArray<TextEditorDiffBlock>& blocks = diff->model.blocks;
+    uint32_t chosen = forward ? 0 : blocks.count - 1;
+    for (uint32_t i = 0; i < blocks.count; ++i) {
+        uint32_t k = forward ? i : blocks.count - 1 - i;
+        uint32_t start = blocks.data[k].starts[slot];
         if (forward ? start > line : start < line) {
             chosen = k;
             break;
         }
     }
-    uint32_t start = changes.data[chosen].newStart;
-    uint32_t lines = prTextEditBufferLineCount(young->buffer);
-    moveCaret(young, prTextEditBufferLineStart(young->buffer, start < lines ? start : lines - 1));
+    uint32_t start = blocks.data[chosen].starts[slot];
+    uint32_t lines = prTextEditBufferLineCount(document->buffer);
+    moveCaret(document, prTextEditBufferLineStart(document->buffer, start < lines ? start : lines - 1));
+}
+
+// Sync points
+
+// The number of the comparison's sync points.
+uint32_t syncCountOf(const TextEditorDiff* diff) {
+    return diff->syncs[0].count / 2;
+}
+
+// Removes sync point `index` of the comparison, and its anchors.
+void removeSync(TextEditorDiff* diff, uint32_t index) {
+    for (uint32_t slot = 0; slot < diff->model.count; ++slot) {
+        PrTextEditBuffer* buffer = diff->documents[slot]->buffer;
+        prTextEditAnchorRemove(buffer, diff->syncs[slot].data[2 * index]);
+        prTextEditAnchorRemove(buffer, diff->syncs[slot].data[2 * index + 1]);
+        diff->syncs[slot].erase(2 * index, 2);
+    }
+}
+
+// The line of sync point `index` in the document of `slot`.
+uint32_t syncLineOf(const TextEditorDiff* diff, uint32_t slot, uint32_t index) {
+    const TextEditorDocument* document = diff->documents[slot];
+    return lineOfOffset(document, prTextEditAnchorOffset(document->buffer, diff->syncs[slot].data[2 * index]));
+}
+
+// Brings the lines of the comparison's sync points up to date: removes each point that lost a line, and each that
+// crosses or shares a line with a point whose line in the first document is earlier, and writes the lines of the rest
+// in order.
+void updateSyncs(TextEditorDiff* diff) {
+    uint32_t count = diff->model.count;
+    for (uint32_t i = syncCountOf(diff); i-- > 0;) {
+        bool live = true;
+        for (uint32_t slot = 0; slot < count; ++slot) {
+            const PrTextEditBuffer* buffer = diff->documents[slot]->buffer;
+            live = live && prTextEditAnchorIsLive(buffer, diff->syncs[slot].data[2 * i]) &&
+                prTextEditAnchorIsLive(buffer, diff->syncs[slot].data[2 * i + 1]);
+        }
+        if (!live)
+            removeSync(diff, i);
+    }
+    // The points in order of their lines in the first document.
+    uint32_t points = syncCountOf(diff);
+    RawArray<uint32_t> lines;
+    lines.resize(points * count);
+    RawArray<uint32_t> order;
+    for (uint32_t i = 0; i < points; ++i) {
+        for (uint32_t slot = 0; slot < count; ++slot)
+            lines.data[i * count + slot] = syncLineOf(diff, slot, i);
+        order.push(i);
+        for (uint32_t k = order.count - 1; k > 0 && lines.data[order.data[k - 1] * count] > lines.data[i * count]; --k) {
+            order.data[k] = order.data[k - 1];
+            order.data[k - 1] = i;
+        }
+    }
+    RawArray<bool> kept;
+    kept.resize(points);
+    diff->syncLines.clear();
+    for (uint32_t k = 0; k < order.count; ++k) {
+        const uint32_t* point = lines.data + order.data[k] * count;
+        bool after = true;
+        const uint32_t* last = diff->syncLines.count != 0 ? diff->syncLines.data + diff->syncLines.count - count : nullptr;
+        for (uint32_t slot = 0; last != nullptr && slot < count; ++slot)
+            after = after && point[slot] > last[slot];
+        kept.data[order.data[k]] = after;
+        if (after)
+            diff->syncLines.append(point, count);
+    }
+    for (uint32_t i = points; i-- > 0;) {
+        if (!kept.data[i])
+            removeSync(diff, i);
+    }
+    lines.reset();
+    order.reset();
+    kept.reset();
+}
+
+// Adds a sync point of `lines`, a line of each document, unless a line is past its document, or the point shares a line
+// with another or crosses one.
+bool addSync(TextEditorDiff* diff, const uint32_t* lines) {
+    updateSyncs(diff);
+    uint32_t count = diff->model.count;
+    for (uint32_t slot = 0; slot < count; ++slot) {
+        if (lines[slot] >= prTextEditBufferLineCount(diff->documents[slot]->buffer))
+            return false;
+    }
+    for (uint32_t at = 0; at < diff->syncLines.count; at += count) {
+        const uint32_t* point = diff->syncLines.data + at;
+        bool before = true;
+        bool after = true;
+        for (uint32_t slot = 0; slot < count; ++slot) {
+            before = before && lines[slot] < point[slot];
+            after = after && lines[slot] > point[slot];
+        }
+        if (!before && !after)
+            return false;
+    }
+    for (uint32_t slot = 0; slot < count; ++slot) {
+        PrTextEditBuffer* buffer = diff->documents[slot]->buffer;
+        uint32_t start = prTextEditBufferLineStart(buffer, lines[slot]);
+        uint32_t end = prTextEditBufferLineEnd(buffer, lines[slot]);
+        diff->syncs[slot].push(prTextEditAnchorCreate(buffer, start, PrTextEditBias_Left));
+        diff->syncs[slot].push(prTextEditAnchorCreate(buffer, end, PrTextEditBias_Right));
+    }
+    updateSyncs(diff);
+    return true;
+}
+
+void clearSyncs(TextEditorDiff* diff) {
+    while (syncCountOf(diff) != 0)
+        removeSync(diff, syncCountOf(diff) - 1);
+    diff->syncLines.clear();
+}
+
+// Adds a sync point of the carets' lines of the comparison's panes, or removes the point of the shown pane's caret's
+// line. A document that no pane shows takes the line of the hub beside the shown pane's caret.
+void toggleSync(TextEditor* editor) {
+    TextEditorDiff* diff = editor->diff;
+    int32_t focused = diff != nullptr ? paneSlotOf(diff, editor->shown) : -1;
+    if (focused < 0)
+        return;
+    updateSyncs(diff);
+    uint32_t count = diff->model.count;
+    uint32_t lines[kTextEditorDiffMaxBuffers] = {};
+    for (uint32_t slot = 0; slot < count; ++slot) {
+        const TextEditorDocument* document = diff->documents[slot];
+        lines[slot] = lineOfOffset(document, caretOf(document));
+    }
+    for (uint32_t at = 0; at < diff->syncLines.count; at += count) {
+        if (diff->syncLines.data[at + uint32_t(focused)] != lines[focused])
+            continue;
+        // The point to remove is the one whose line in the shown pane is the caret's.
+        for (uint32_t i = 0; i < syncCountOf(diff); ++i) {
+            if (syncLineOf(diff, uint32_t(focused), i) == lines[focused]) {
+                removeSync(diff, i);
+                break;
+            }
+        }
+        updateSyncs(diff);
+        setStatus(editor, "removed the sync point");
+        return;
+    }
+    if (paneSlotOf(diff, diff->documents[0]) < 0)
+        lines[0] = textEditorDiffHubLine(&diff->model, TextEditorDiffSlot(focused), lines[focused]);
+    if (addSync(diff, lines))
+        setStatus(editor, "synced the lines");
+    else
+        setStatus(editor, "the lines cross a sync point");
+}
+
+// Conflicts
+
+// Copies line `index` of a document's buffer, as the line of a PrTextDiffText.
+struct DocumentLines {
+    const TextEditorDocument* document;
+    RawArray<char> line;
+};
+
+PrStringView documentLine(void* PR_NULLABLE context, uint32_t index) {
+    DocumentLines* lines = static_cast<DocumentLines*>(context);
+    const PrTextEditBuffer* buffer = lines->document->buffer;
+    uint32_t start = prTextEditBufferLineStart(buffer, index);
+    uint32_t end = prTextEditBufferLineEnd(buffer, index);
+    lines->line.resize(end - start);
+    prTextEditBufferCopy(buffer, start, end, lines->line.data);
+    return PrStringView{lines->line.data, lines->line.count};
+}
+
+// Writes the conflicts that `document` marks to `out`.
+void conflictsOf(const TextEditorDocument* document, RawArray<PrTextDiffConflict>& out) {
+    DocumentLines lines{document, {}};
+    PrTextDiffText text{
+        .lineCount = prTextEditBufferLineCount(document->buffer),
+        .line = documentLine,
+        .context = &lines,
+    };
+    out.resize(prTextDiffConflicts(&text, nullptr, 0));
+    prTextDiffConflicts(&text, out.data, out.count);
+    lines.line.reset();
+}
+
+// Returns the index of the conflict that holds `line`, or of the first after it, or -1.
+int32_t conflictAt(const RawArray<PrTextDiffConflict>& conflicts, uint32_t line) {
+    for (uint32_t i = 0; i < conflicts.count; ++i) {
+        if (line < conflicts.data[i].end)
+            return int32_t(i);
+    }
+    return -1;
+}
+
+// Which of a conflict's texts its resolution keeps, in order.
+enum {
+    ConflictChoice_Left,
+    ConflictChoice_Right,
+    ConflictChoice_LeftThenRight,
+    ConflictChoice_RightThenLeft,
+    ConflictChoice_Base,
+};
+typedef uint8_t ConflictChoice;
+
+// A run of lines of a document.
+struct LineRun {
+    uint32_t start;
+    uint32_t count;
+};
+
+// Replaces the conflict of the merge's result that holds its caret, or the first after it, with the texts that `choice`
+// keeps, as one step of the result's history, and puts the caret at the start of what replaced it.
+void resolveConflict(TextEditor* editor, ConflictChoice choice) {
+    TextEditorDiff* diff = editor->diff;
+    if (diff == nullptr || diff->model.kind != TextEditorDiffKind_Merge)
+        return;
+    TextEditorDocument* result = diff->documents[TextEditorDiffSlot_Result];
+    RawArray<PrTextDiffConflict> conflicts;
+    conflictsOf(result, conflicts);
+    int32_t found = conflictAt(conflicts, lineOfOffset(result, caretOf(result)));
+    if (found < 0) {
+        conflicts.reset();
+        setStatus(editor, "no conflicts");
+        return;
+    }
+    PrTextDiffConflict conflict = conflicts.data[found];
+    conflicts.reset();
+    if (choice == ConflictChoice_Base && !conflict.hasBase) {
+        setStatus(editor, "the conflict holds no base");
+        return;
+    }
+    LineRun left{conflict.leftStart, conflict.leftCount};
+    LineRun right{conflict.rightStart, conflict.rightCount};
+    LineRun kept[2] = {};
+    uint32_t keptCount = 0;
+    switch (choice) {
+        case ConflictChoice_Left:
+            kept[keptCount++] = left;
+            break;
+        case ConflictChoice_Right:
+            kept[keptCount++] = right;
+            break;
+        case ConflictChoice_LeftThenRight:
+            kept[keptCount++] = left;
+            kept[keptCount++] = right;
+            break;
+        case ConflictChoice_RightThenLeft:
+            kept[keptCount++] = right;
+            kept[keptCount++] = left;
+            break;
+        case ConflictChoice_Base:
+            kept[keptCount++] = LineRun{conflict.baseStart, conflict.baseCount};
+            break;
+    }
+    // The kept lines, each ended by a line feed.
+    PrTextEditBuffer* buffer = result->buffer;
+    RawArray<char> text;
+    for (uint32_t i = 0; i < keptCount; ++i) {
+        for (uint32_t line = kept[i].start; line < kept[i].start + kept[i].count; ++line) {
+            uint32_t start = prTextEditBufferLineStart(buffer, line);
+            uint32_t end = prTextEditBufferLineEnd(buffer, line);
+            uint32_t at = text.count;
+            text.resize(at + end - start);
+            prTextEditBufferCopy(buffer, start, end, text.data + at);
+            text.push('\n');
+        }
+    }
+    // A conflict that closes on the last line has no line feed after it, so the replaced range takes the one before it,
+    // and the text puts it first.
+    PrTextEditChange change{
+        .start = prTextEditBufferLineStart(buffer, conflict.start),
+        .end = prTextEditBufferSize(buffer),
+    };
+    uint32_t caret = change.start;
+    if (conflict.end < prTextEditBufferLineCount(buffer)) {
+        change.end = prTextEditBufferLineStart(buffer, conflict.end);
+    } else if (text.count != 0) {
+        text.pop();
+        if (conflict.start > 0) {
+            change.start = prTextEditBufferLineEnd(buffer, conflict.start - 1);
+            text.insert(0, '\n');
+            caret = change.start + 1;
+        }
+    } else if (conflict.start > 0) {
+        change.start = prTextEditBufferLineEnd(buffer, conflict.start - 1);
+        caret = change.start;
+    }
+    change.text = PrStringView{text.data, text.count};
+    PrTextEditView* edit = prTextViewEdit(result->view);
+    if (prTextEditViewApply(edit, &change, 1, PrTextEditOrigin_Local, PrTextEditMerge_None))
+        moveCaret(result, caret);
+    else
+        setStatus(editor, "the result refuses edits");
+    text.reset();
+}
+
+// Moves the result's caret to the next conflict after the caret's line, or the previous before it, and shows the
+// result.
+void stepConflict(TextEditor* editor, bool forward) {
+    TextEditorDiff* diff = editor->diff;
+    if (diff == nullptr || diff->model.kind != TextEditorDiffKind_Merge)
+        return;
+    TextEditorDocument* result = diff->documents[TextEditorDiffSlot_Result];
+    RawArray<PrTextDiffConflict> conflicts;
+    conflictsOf(result, conflicts);
+    if (conflicts.count == 0) {
+        conflicts.reset();
+        setStatus(editor, "no conflicts");
+        return;
+    }
+    uint32_t line = lineOfOffset(result, caretOf(result));
+    uint32_t chosen = forward ? 0 : conflicts.count - 1;
+    for (uint32_t i = 0; i < conflicts.count; ++i) {
+        uint32_t k = forward ? i : conflicts.count - 1 - i;
+        uint32_t start = conflicts.data[k].start;
+        if (forward ? start > line : start < line) {
+            chosen = k;
+            break;
+        }
+    }
+    moveCaret(result, prTextEditBufferLineStart(result->buffer, conflicts.data[chosen].start));
+    conflicts.reset();
+    focusPane(editor, result);
 }
 
 TextEditorDocument* PR_NULLABLE documentFromPath(const TextEditor* editor, PrStringView path) {
@@ -1158,7 +1535,7 @@ void registerCommands(TextEditor* e) {
         editor.documents.pop();
         old->listed = false;
         prTextEditorDiffCreate(editor.handle, saved, young->handle);
-        editor.diff->ownsOld = true;
+        editor.diff->owned[TextEditorDiffSlot_Old] = true;
     }, e, [](void* c) -> PrCommandStateFlags {
         const TextEditorDocument* document = editorOf(c).shown;
         bool comparable = document != nullptr && !prRawStringIsEmpty(&document->path) && !document->loading;
@@ -1180,6 +1557,63 @@ void registerCommands(TextEditor* e) {
         stepChange(&editorOf(c), false);
     }, e, [](void* c) -> PrCommandStateFlags {
         return editorOf(c).diff != nullptr ? 0 : PrCommandStateFlag_Disabled;
+    });
+    addCommand(e, "diff.toggleSync", "Sync Lines", nullptr, [](void* c, const PrCommandArgs*) {
+        toggleSync(&editorOf(c));
+    }, e, [](void* c) -> PrCommandStateFlags {
+        return editorOf(c).diff != nullptr ? 0 : PrCommandStateFlag_Disabled;
+    });
+    addCommand(e, "diff.clearSyncs", "Remove Sync Points", nullptr, [](void* c, const PrCommandArgs*) {
+        TextEditor& editor = editorOf(c);
+        if (editor.diff != nullptr)
+            clearSyncs(editor.diff);
+    }, e, [](void* c) -> PrCommandStateFlags {
+        const TextEditorDiff* diff = editorOf(c).diff;
+        return diff != nullptr && syncCountOf(diff) != 0 ? 0 : PrCommandStateFlag_Disabled;
+    });
+    struct ResolveCommand {
+        const char* id;
+        const char* title;
+        const char* chord;
+        ConflictChoice choice;
+    };
+    static const ResolveCommand kResolves[] = {
+        {"merge.takeLeft", "Take Left", "Cmd Alt Left", ConflictChoice_Left},
+        {"merge.takeRight", "Take Right", "Cmd Alt Right", ConflictChoice_Right},
+        {"merge.takeLeftThenRight", "Take Both, Left First", nullptr, ConflictChoice_LeftThenRight},
+        {"merge.takeRightThenLeft", "Take Both, Right First", nullptr, ConflictChoice_RightThenLeft},
+        {"merge.takeBase", "Take Base", nullptr, ConflictChoice_Base},
+    };
+    auto merging = [](void* c) -> PrCommandStateFlags {
+        const TextEditorDiff* diff = static_cast<ChoiceContext*>(c)->editor->diff;
+        return diff != nullptr && diff->model.kind == TextEditorDiffKind_Merge ? 0 : PrCommandStateFlag_Disabled;
+    };
+    for (uint32_t i = 0; i < countOf(kResolves); ++i) {
+        e->resolveContexts[i] = ChoiceContext{e, i};
+        addCommand(e, kResolves[i].id, kResolves[i].title, kResolves[i].chord, [](void* c, const PrCommandArgs*) {
+            ChoiceContext& choice = *static_cast<ChoiceContext*>(c);
+            resolveConflict(choice.editor, kResolves[choice.index].choice);
+        }, &e->resolveContexts[i], merging);
+    }
+    auto isMerge = [](void* c) -> PrCommandStateFlags {
+        const TextEditorDiff* diff = editorOf(c).diff;
+        return diff != nullptr && diff->model.kind == TextEditorDiffKind_Merge ? 0 : PrCommandStateFlag_Disabled;
+    };
+    addCommand(e, "merge.nextConflict", "Next Conflict", "F8", [](void* c, const PrCommandArgs*) {
+        stepConflict(&editorOf(c), true);
+    }, e, isMerge);
+    addCommand(e, "merge.previousConflict", "Previous Conflict", "Shift F8", [](void* c, const PrCommandArgs*) {
+        stepConflict(&editorOf(c), false);
+    }, e, isMerge);
+    addCommand(e, "merge.toggleBase", "Show Base", nullptr, [](void* c, const PrCommandArgs*) {
+        TextEditor& editor = editorOf(c);
+        if (editor.diff != nullptr)
+            prTextEditorDiffSetBaseShown(editor.diff->handle, !editor.diff->baseShown);
+    }, e, [](void* c) -> PrCommandStateFlags {
+        const TextEditorDiff* diff = editorOf(c).diff;
+        if (diff == nullptr || diff->model.kind != TextEditorDiffKind_Merge)
+            return PrCommandStateFlag_Disabled;
+        return diff->baseShown ? PrCommandStateFlag_Checked : 0;
     });
 }
 
@@ -1337,17 +1771,26 @@ void gutterOf(void* PR_NULLABLE context, PrLayoutTree* tree, PrLayoutNode cell, 
         if (editor->lineSeverities.data[i].line == line)
             style = editor->numberStyles[editor->lineSeverities.data[i].severity];
     }
-    // A breakpoint marks its line's number.
+    // A breakpoint marks its line's number, and so does a sync point of a comparison.
     bool marked = false;
     for (uint32_t i = 0; side->severities && i < editor->breakpointLines.count && !marked; ++i)
         marked = editor->breakpointLines.data[i] == line;
-    char digits[kPrU64TextMaxBytes + 4];
+    bool synced = false;
+    if (side->diff != nullptr) {
+        const RawArray<uint32_t>& syncs = side->diff->syncLines;
+        uint32_t count = side->diff->model.count;
+        for (uint32_t at = side->slot; at < syncs.count && !synced; at += count)
+            synced = syncs.data[at] == line;
+    }
+    char digits[kPrU64TextMaxBytes + 8];
     size_t length = 0;
-    if (marked) {
-        const char dot[] = "\xE2\x97\x8F ";
-        for (size_t i = 0; i < sizeof(dot) - 1; ++i)
-            digits[length++] = dot[i];
-        style = editor->breakpointStyle;
+    if (marked || synced) {
+        PrStringView mark = "\xE2\x87\x94 ";
+        if (marked)
+            mark = "\xE2\x97\x8F ";
+        for (size_t i = 0; i < mark.size; ++i)
+            digits[length++] = mark.data[i];
+        style = marked ? editor->breakpointStyle : editor->syncStyle;
     }
     length += prU64Format(uint64_t(line) + 1, digits + length, 10);
     PrLayoutNode number = prLayoutTreeFrameElement(tree, cell, 0, style);
@@ -1383,6 +1826,10 @@ void prepareGutter(TextEditor* editor, PrLayoutTree* tree, PrLayoutGroupIndex fo
     marked.color = prColor16FromColor(palette.danger);
     style.groups[PrLayoutGroup_Color] = prLayoutColorStyleIntern(tree, &marked);
     editor->breakpointStyle = prLayoutStyleIntern(tree, &style);
+    PrLayoutColorStyle synced = prLayoutColorStyleDefault();
+    synced.color = prColor16FromColor(palette.accent);
+    style.groups[PrLayoutGroup_Color] = prLayoutColorStyleIntern(tree, &synced);
+    editor->syncStyle = prLayoutStyleIntern(tree, &style);
 }
 
 // Returns the gutter's size for the shown document's line count.
@@ -1480,25 +1927,27 @@ void buildHover(TextEditor* editor, TextEditorDocument* document, PrLayoutNode h
         {.role = PrKitTextRole_Mono, .wrap = PrKitWrap_Wrap, .preserve = true});
 }
 
-// A side of a comparison, as the context of its view's colors of lines and spans.
+// A pane of a comparison, as the context of its view's colors of lines and spans: the slot of its document, and the
+// pane's place among the comparison's panes.
 struct DiffSideView {
     TextEditorDiff* diff;
-    TextEditorDiffSide side;
+    TextEditorDiffSlot slot;
+    uint32_t pane;
 };
 
 PrColor16 diffLineColor(void* PR_NULLABLE context, uint32_t line) {
     const DiffSideView* view = static_cast<const DiffSideView*>(context);
-    return textEditorDiffLineColor(&view->diff->model, view->side, line);
+    return textEditorDiffLineColor(&view->diff->model, view->slot, line);
 }
 
 uint32_t diffSpans(void* PR_NULLABLE context, uint32_t start, uint32_t end, PrTextViewSpan* PR_NULLABLE out,
         uint32_t capacity) {
     const DiffSideView* view = static_cast<const DiffSideView*>(context);
-    return textEditorDiffSpans(&view->diff->model, view->side, start, end, out, capacity);
+    return textEditorDiffSpans(&view->diff->model, view->slot, start, end, out, capacity);
 }
 
 // Declares the view of `document` under `holder`, at `at` in px and in `extent`, and returns the element that shows its
-// text. A side of a comparison is laid horizontally and does not wrap, and its lines take the comparison's colors.
+// text. A pane of a comparison is laid horizontally and does not wrap, and its lines take the comparison's colors.
 PrLayoutNode buildDocument(TextEditor* editor, TextEditorDocument* document, PrLayoutNode holder, PrVec2 at,
         PrVec2 extent, const DiffSideView* PR_NULLABLE side) {
     PrLayoutTree* tree = prUiTree(editor->ui);
@@ -1565,8 +2014,13 @@ PrLayoutNode buildDocument(TextEditor* editor, TextEditorDocument* document, PrL
         layers[layerCount++] = PrTextViewSpanLayer{diagnosticSpans, document};
     // Numbers set along the lines' axis, so a vertical view shows none.
     bool numbered = options.lineNumbers && !vertical;
-    GutterSide& gutter = editor->gutters[shown ? TextEditorDiffSide_New : TextEditorDiffSide_Old];
-    gutter = GutterSide{editor, shown};
+    GutterSide& gutter = editor->gutters[side != nullptr ? side->pane : 0];
+    gutter = GutterSide{
+        .editor = editor,
+        .severities = shown,
+        .diff = side != nullptr ? side->diff : nullptr,
+        .slot = side != nullptr ? side->slot : TextEditorDiffSlot(0),
+    };
     if (numbered) {
         prepareGutter(editor, tree, fontGroup);
         if (shown) {
@@ -1756,41 +2210,72 @@ void prTextEditorFrame(PrTextEditor* editor, PrLayoutNode parent, PrVec2 extent)
     holderBox.height = prLayoutLengthPx(extent.y);
     PrLayoutNode holder = prLayoutTreeFrameElement(tree, parent, 0, record(tree, holderBox));
     editor->holder = holder;
+    TextEditorDiff* diff = editor->diff;
+    // The pane whose text has focus shows its document.
+    if (diff != nullptr) {
+        PrLayoutNode focus = prUiFocus(editor->ui);
+        for (uint32_t slot = 0; slot < diff->model.count; ++slot) {
+            if (focus != kPrLayoutNodeNone && diff->ports[slot] == focus && editor->shown != diff->documents[slot]) {
+                editor->shown = diff->documents[slot];
+                editor->hoverDocument = nullptr;
+            }
+        }
+    }
     TextEditorDocument* document = editor->shown;
     if (document == nullptr) {
         editor->port = kPrLayoutNodeNone;
         return;
     }
-    TextEditorDiff* diff = editor->diff;
     // A session's panel takes the bottom of the extent, and the text the rest.
     float panel = editor->debug != nullptr && extent.y > 2 * kDebugPanelHeight ? kDebugPanelHeight : 0;
     PrVec2 area{extent.x, extent.y - panel};
     loadPieces(document, kLoadMilliseconds);
-    if (diff != nullptr)
-        loadPieces(diff->old, kLoadMilliseconds);
+    bool compared = diff != nullptr;
+    for (uint32_t slot = 0; diff != nullptr && slot < diff->model.count; ++slot) {
+        TextEditorDocument* side = diff->documents[slot];
+        if (side != document)
+            loadPieces(side, kLoadMilliseconds);
+        compared = compared && !side->loading;
+    }
     revealPending(document);
     updateCategoryColors(editor);
     if (document->syntax != nullptr && prSyntaxTreeUpdate(document->syntax, kParseMilliseconds))
         ++document->syntaxChanges;
-    if (diff != nullptr && diff->old->syntax != nullptr && prSyntaxTreeUpdate(diff->old->syntax, kParseMilliseconds))
-        ++diff->old->syntaxChanges;
-    if (diff != nullptr && !diff->old->loading && !document->loading) {
+    TextEditorDiffSlot panes[kTextEditorDiffMaxBuffers];
+    uint32_t paneCount = diff != nullptr ? panesOf(diff, panes) : 0;
+    for (uint32_t i = 0; i < paneCount; ++i) {
+        TextEditorDocument* side = diff->documents[panes[i]];
+        if (side != document && side->syntax != nullptr && prSyntaxTreeUpdate(side->syntax, kParseMilliseconds))
+            ++side->syntaxChanges;
+    }
+    if (compared) {
+        updateSyncs(diff);
+        auto tint = [](PrColor color, float alpha) {
+            color.a = alpha;
+            return prColor16FromColor(color);
+        };
         TextEditorDiffColors colors{};
-        PrColor removed = palette.danger;
-        PrColor added = palette.success;
-        removed.a = 0.16f;
-        added.a = 0.16f;
-        colors.lines[TextEditorDiffSide_Old] = prColor16FromColor(removed);
-        colors.lines[TextEditorDiffSide_New] = prColor16FromColor(added);
-        removed.a = 0.36f;
-        added.a = 0.36f;
-        colors.bytes[TextEditorDiffSide_Old] = prColor16FromColor(removed);
-        colors.bytes[TextEditorDiffSide_New] = prColor16FromColor(added);
-        if (textEditorDiffModelUpdate(&diff->model, diff->old->buffer, document->buffer, colors, kLineHeight)) {
-            for (uint32_t side = 0; side < TextEditorDiffSide_Count; ++side) {
-                const RawArray<PrTextViewGap>& gaps = diff->model.sides[side].gaps;
-                TextEditorDocument* shown = side == TextEditorDiffSide_Old ? diff->old : document;
-                prTextViewSetGaps(shown->view, gaps.data, gaps.count);
+        colors.lines[TextEditorDiffRole_Old] = tint(palette.danger, 0.16f);
+        colors.lines[TextEditorDiffRole_New] = tint(palette.success, 0.16f);
+        colors.lines[TextEditorDiffRole_Base] = tint(palette.text3, 0.14f);
+        colors.lines[TextEditorDiffRole_Left] = tint(palette.accent, 0.18f);
+        colors.lines[TextEditorDiffRole_Right] = tint(palette.warning, 0.18f);
+        colors.lines[TextEditorDiffRole_Result] = tint(palette.success, 0.16f);
+        colors.bytes[TextEditorDiffRole_Old] = tint(palette.danger, 0.36f);
+        colors.bytes[TextEditorDiffRole_New] = tint(palette.success, 0.36f);
+        colors.bytes[TextEditorDiffRole_Base] = tint(palette.text3, 0.3f);
+        colors.bytes[TextEditorDiffRole_Left] = tint(palette.accent, 0.38f);
+        colors.bytes[TextEditorDiffRole_Right] = tint(palette.warning, 0.38f);
+        colors.bytes[TextEditorDiffRole_Result] = tint(palette.success, 0.36f);
+        colors.conflict = tint(palette.danger, 0.24f);
+        const PrTextEditBuffer* buffers[kTextEditorDiffMaxBuffers] = {};
+        for (uint32_t slot = 0; slot < diff->model.count; ++slot)
+            buffers[slot] = diff->documents[slot]->buffer;
+        uint32_t syncCount = diff->syncLines.count / diff->model.count;
+        if (textEditorDiffModelUpdate(&diff->model, buffers, diff->syncLines.data, syncCount, colors, kLineHeight)) {
+            for (uint32_t slot = 0; slot < diff->model.count; ++slot) {
+                const RawArray<PrTextViewGap>& gaps = diff->model.buffers[slot].gaps;
+                prTextViewSetGaps(diff->documents[slot]->view, gaps.data, gaps.count);
             }
         }
     }
@@ -1806,16 +2291,22 @@ void prTextEditorFrame(PrTextEditor* editor, PrLayoutNode parent, PrVec2 extent)
     if (diff == nullptr) {
         editor->port = buildDocument(editor, document, holder, PrVec2{}, PrVec2{width, height}, nullptr);
     } else {
-        // A comparison sets its sides horizontally, without wrap, so that each line of a side lies beside its own.
-        float half = (area.x - kScrollbarWidth - kDiffDivider) / 2;
-        half = half > 0 ? half : 0;
-        DiffSideView sides[TextEditorDiffSide_Count] = {{diff, TextEditorDiffSide_Old}, {diff, TextEditorDiffSide_New}};
-        // The shown document comes first, so that its element keeps its place, and its focus and scroll, whether or not
-        // it is compared.
-        editor->port = buildDocument(editor, document, holder, PrVec2{half + kDiffDivider, 0},
-            PrVec2{half, area.y}, &sides[TextEditorDiffSide_New]);
-        diff->oldPort = buildDocument(editor, diff->old, holder, PrVec2{}, PrVec2{half, area.y},
-            &sides[TextEditorDiffSide_Old]);
+        // A comparison sets its panes horizontally, without wrap, so that each line of a pane lies beside its own. The
+        // panes keep their order, so that each element keeps its document's focus and scroll.
+        float dividers = kDiffDivider * float(paneCount - 1);
+        float each = (area.x - kScrollbarWidth - dividers) / float(paneCount);
+        each = each > 0 ? each : 0;
+        for (uint32_t slot = 0; slot < kTextEditorDiffMaxBuffers; ++slot)
+            diff->ports[slot] = kPrLayoutNodeNone;
+        for (uint32_t i = 0; i < paneCount; ++i) {
+            DiffSideView side{diff, panes[i], i};
+            TextEditorDocument* shown = diff->documents[panes[i]];
+            PrVec2 at{float(i) * (each + kDiffDivider), 0};
+            PrLayoutNode port = buildDocument(editor, shown, holder, at, PrVec2{each, area.y}, &side);
+            diff->ports[panes[i]] = port;
+            if (shown == document)
+                editor->port = port;
+        }
     }
     buildScrollbar(editor, document, holder, area);
     if (placed)
@@ -1823,7 +2314,8 @@ void prTextEditorFrame(PrTextEditor* editor, PrLayoutNode parent, PrVec2 extent)
     if (panel > 0)
         buildDebugPanel(editor, holder, area.y, PrVec2{extent.x, panel});
     bool pending = document->loading || (document->syntax != nullptr && prSyntaxTreeIsPending(document->syntax));
-    pending = pending || (diff != nullptr && diff->old->loading);
+    for (uint32_t slot = 0; diff != nullptr && slot < diff->model.count; ++slot)
+        pending = pending || diff->documents[slot]->loading;
     if (pending)
         prUiRequestMotionAt(editor->ui, editor->port, prUiCurrentRound(editor->ui)->time);
 }
@@ -1836,36 +2328,44 @@ bool prTextEditorLaidOut(PrTextEditor* editor) {
     TextEditorDiff* diff = editor->diff;
     if (diff == nullptr)
         return prTextViewRefine(document->view, kRefineMilliseconds) || again || document->loading;
-    again = prTextViewLaidOut(diff->old->view) || again;
-    // The sides scroll together along both axes: whichever moved since the last layout leads, and the new side if both
-    // did.
-    TextEditorDocument* views[] = {diff->old, document};
-    PrTextViewInfo infos[TextEditorDiffSide_Count];
-    for (uint32_t side = 0; side < TextEditorDiffSide_Count; ++side)
-        infos[side] = prTextViewInfo(views[side]->view);
+    TextEditorDiffSlot panes[kTextEditorDiffMaxBuffers];
+    uint32_t paneCount = panesOf(diff, panes);
+    for (uint32_t i = 0; i < paneCount; ++i) {
+        if (diff->documents[panes[i]] != document)
+            again = prTextViewLaidOut(diff->documents[panes[i]]->view) || again;
+    }
+    // The panes scroll together along both axes. The shown pane leads if it moved since the last layout, and otherwise
+    // the first pane that moved.
     for (uint32_t axis = 0; axis < 2; ++axis) {
         double* last = axis == 0 ? diff->offsets : diff->inlineOffsets;
-        double offsets[TextEditorDiffSide_Count];
-        for (uint32_t side = 0; side < TextEditorDiffSide_Count; ++side)
-            offsets[side] = axis == 0 ? infos[side].offset : infos[side].inlineOffset;
-        bool oldMoved = offsets[TextEditorDiffSide_Old] != last[TextEditorDiffSide_Old];
-        bool newMoved = offsets[TextEditorDiffSide_New] != last[TextEditorDiffSide_New];
-        if (offsets[TextEditorDiffSide_Old] != offsets[TextEditorDiffSide_New] && (oldMoved || newMoved)) {
-            TextEditorDiffSide leader = newMoved ? TextEditorDiffSide_New : TextEditorDiffSide_Old;
-            TextEditorDiffSide follower =
-                leader == TextEditorDiffSide_New ? TextEditorDiffSide_Old : TextEditorDiffSide_New;
+        double offsets[kTextEditorDiffMaxBuffers] = {};
+        int32_t leader = -1;
+        for (uint32_t i = 0; i < paneCount; ++i) {
+            PrTextViewInfo info = prTextViewInfo(diff->documents[panes[i]]->view);
+            offsets[i] = axis == 0 ? info.offset : info.inlineOffset;
+            bool moved = offsets[i] != last[panes[i]];
+            if (moved && (leader < 0 || diff->documents[panes[i]] == document))
+                leader = int32_t(i);
+        }
+        for (uint32_t i = 0; leader >= 0 && i < paneCount; ++i) {
+            if (int32_t(i) == leader || offsets[i] == offsets[leader])
+                continue;
+            PrTextView* view = diff->documents[panes[i]]->view;
             if (axis == 0)
-                prTextViewScrollTo(views[follower]->view, offsets[leader]);
+                prTextViewScrollTo(view, offsets[leader]);
             else
-                prTextViewScrollInlineTo(views[follower]->view, offsets[leader]);
-            PrTextViewInfo followed = prTextViewInfo(views[follower]->view);
-            offsets[follower] = axis == 0 ? followed.offset : followed.inlineOffset;
+                prTextViewScrollInlineTo(view, offsets[leader]);
+            PrTextViewInfo followed = prTextViewInfo(view);
+            offsets[i] = axis == 0 ? followed.offset : followed.inlineOffset;
             again = true;
         }
-        last[TextEditorDiffSide_Old] = offsets[TextEditorDiffSide_Old];
-        last[TextEditorDiffSide_New] = offsets[TextEditorDiffSide_New];
+        for (uint32_t i = 0; i < paneCount; ++i)
+            last[panes[i]] = offsets[i];
     }
-    return again || document->loading || diff->old->loading;
+    bool loading = false;
+    for (uint32_t slot = 0; slot < diff->model.count; ++slot)
+        loading = loading || diff->documents[slot]->loading;
+    return again || loading;
 }
 
 PrLayoutNode prTextEditorTextNode(const PrTextEditor* editor) {
@@ -1965,7 +2465,10 @@ void prTextEditorDocumentDestroy(PrTextEditorDocument* PR_NULLABLE document) {
     // A comparison does not outlive its documents.
     for (uint32_t i = editor->diffs.count; i-- > 0;) {
         TextEditorDiff* diff = editor->diffs.data[i];
-        if (diff->young == document || diff->old == document)
+        bool uses = false;
+        for (uint32_t slot = 0; slot < diff->model.count; ++slot)
+            uses = uses || diff->documents[slot] == document;
+        if (uses)
             prTextEditorDiffDestroy(diff->handle);
     }
     editor->documents.removeFirst(document);
@@ -2049,13 +2552,32 @@ PrStatus prTextEditorDocumentSave(PrTextEditorDocument* document) {
 }
 
 PrTextEditorDiff* prTextEditorDiffCreate(PrTextEditor* editor, PrTextEditorDocument* old, PrTextEditorDocument* young) {
+    PR_ASSERT(old != young);
     PrTextEditorDiff* diff = allocZeroed<PrTextEditorDiff>();
     diff->handle = diff;
     diff->editor = editor;
-    diff->old = old;
-    diff->young = young;
-    diff->oldPort = kPrLayoutNodeNone;
-    textEditorDiffModelInit(&diff->model);
+    textEditorDiffModelInit(&diff->model, TextEditorDiffKind_TwoWay);
+    diff->documents[TextEditorDiffSlot_Old] = old;
+    diff->documents[TextEditorDiffSlot_New] = young;
+    editor->diffs.push(diff);
+    showDiff(editor, diff);
+    return diff;
+}
+
+PrTextEditorDiff* prTextEditorDiffCreateMerge(PrTextEditor* editor, const PrTextEditorDiffMergeDesc* desc) {
+    PrTextEditorDiff* diff = allocZeroed<PrTextEditorDiff>();
+    diff->handle = diff;
+    diff->editor = editor;
+    textEditorDiffModelInit(&diff->model, TextEditorDiffKind_Merge);
+    diff->documents[TextEditorDiffSlot_Base] = desc->base;
+    diff->documents[TextEditorDiffSlot_Left] = desc->left;
+    diff->documents[TextEditorDiffSlot_Right] = desc->right;
+    diff->documents[TextEditorDiffSlot_Result] = desc->result;
+    for (uint32_t i = 0; i < kTextEditorDiffMaxBuffers; ++i) {
+        for (uint32_t k = i + 1; k < kTextEditorDiffMaxBuffers; ++k)
+            PR_ASSERT(diff->documents[i] != diff->documents[k]);
+    }
+    diff->baseShown = desc->baseShown;
     editor->diffs.push(diff);
     showDiff(editor, diff);
     return diff;
@@ -2067,16 +2589,22 @@ void prTextEditorDiffDestroy(PrTextEditorDiff* PR_NULLABLE diff) {
     TextEditor* editor = diff->editor;
     editor->diffs.removeFirst(diff);
     if (editor->diff == diff)
-        showDocument(editor, diff->young);
-    // The documents keep the gaps that align them no longer.
-    prTextViewSetGaps(diff->young->view, nullptr, 0);
-    prTextViewSetGaps(diff->old->view, nullptr, 0);
+        showDocument(editor, diff->documents[primarySlot(diff)]);
+    // The documents keep the gaps that align them, and the sync points, no longer.
+    clearSyncs(diff);
+    TextEditorDocument* owned[kTextEditorDiffMaxBuffers] = {};
+    uint32_t ownedCount = 0;
+    for (uint32_t slot = 0; slot < diff->model.count; ++slot) {
+        prTextViewSetGaps(diff->documents[slot]->view, nullptr, 0);
+        diff->syncs[slot].reset();
+        if (diff->owned[slot])
+            owned[ownedCount++] = diff->documents[slot];
+    }
+    diff->syncLines.reset();
     textEditorDiffModelReset(&diff->model);
-    TextEditorDocument* old = diff->old;
-    bool owned = diff->ownsOld;
     prMemoryFree(diff);
-    if (owned)
-        prTextEditorDocumentDestroy(old->handle);
+    for (uint32_t i = 0; i < ownedCount; ++i)
+        prTextEditorDocumentDestroy(owned[i]->handle);
 }
 
 PrTextEditorDiff* PR_NULLABLE prTextEditorShownDiff(const PrTextEditor* editor) {
@@ -2087,13 +2615,72 @@ void prTextEditorShowDiff(PrTextEditor* editor, PrTextEditorDiff* diff) {
     showDiff(editor, diff);
 }
 
+bool prTextEditorDiffIsMerge(const PrTextEditorDiff* diff) {
+    return diff->model.kind == TextEditorDiffKind_Merge;
+}
+
 uint32_t prTextEditorDiffChangeCount(const PrTextEditorDiff* diff) {
-    return diff->model.changes.count;
+    return prTextDiffChangeCount(diff->model.diffs[diff->model.count - 2]);
 }
 
 PrTextDiffChange prTextEditorDiffChange(const PrTextEditorDiff* diff, uint32_t index) {
-    PR_ASSERT(index < diff->model.changes.count);
-    return diff->model.changes.data[index];
+    const PrTextDiff* last = diff->model.diffs[diff->model.count - 2];
+    PR_ASSERT(index < prTextDiffChangeCount(last));
+    return prTextDiffChanges(last)[index];
+}
+
+uint32_t prTextEditorDiffMergeChunkCount(const PrTextEditorDiff* diff) {
+    return diff->model.chunks.count;
+}
+
+PrTextDiffMergeChunk prTextEditorDiffMergeChunk(const PrTextEditorDiff* diff, uint32_t index) {
+    PR_ASSERT(index < diff->model.chunks.count);
+    return diff->model.chunks.data[index];
+}
+
+uint32_t prTextEditorDiffConflictCount(const PrTextEditorDiff* diff) {
+    return diff->model.conflicts.count;
+}
+
+PrTextDiffConflict prTextEditorDiffConflict(const PrTextEditorDiff* diff, uint32_t index) {
+    PR_ASSERT(index < diff->model.conflicts.count);
+    return diff->model.conflicts.data[index];
+}
+
+bool prTextEditorDiffBaseShown(const PrTextEditorDiff* diff) {
+    return diff->baseShown;
+}
+
+void prTextEditorDiffSetBaseShown(PrTextEditorDiff* diff, bool shown) {
+    if (diff->model.kind != TextEditorDiffKind_Merge || diff->baseShown == shown)
+        return;
+    diff->baseShown = shown;
+    TextEditor* editor = diff->editor;
+    // A hidden base gives the focus of its pane to the result.
+    if (!shown && editor->diff == diff && editor->shown == diff->documents[TextEditorDiffSlot_Base])
+        focusPane(editor, diff->documents[TextEditorDiffSlot_Result]);
+    for (uint32_t slot = 0; slot < kTextEditorDiffMaxBuffers; ++slot) {
+        diff->offsets[slot] = -1;
+        diff->inlineOffsets[slot] = -1;
+    }
+}
+
+uint32_t prTextEditorDiffSyncs(const PrTextEditorDiff* diff, uint32_t* PR_NULLABLE out, uint32_t capacity) {
+    TextEditorDiff* updated = const_cast<PrTextEditorDiff*>(diff);
+    updateSyncs(updated);
+    uint32_t count = diff->model.count;
+    uint32_t points = updated->syncLines.count / count;
+    for (uint32_t i = 0; i < points && i < capacity; ++i)
+        prMemCopy(out + i * count, updated->syncLines.data + i * count, count * sizeof(uint32_t));
+    return points;
+}
+
+bool prTextEditorDiffAddSync(PrTextEditorDiff* diff, const uint32_t* lines) {
+    return addSync(diff, lines);
+}
+
+void prTextEditorDiffClearSyncs(PrTextEditorDiff* diff) {
+    clearSyncs(diff);
 }
 
 void prTextEditorSetDebugger(PrTextEditor* editor, const PrTextEditorDebuggerDesc* desc) {

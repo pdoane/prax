@@ -89,3 +89,18 @@ if (PR_DEVELOP)
         target_compile_definitions(studio_text_editor_tests PRIVATE TEXT_EDITOR_TESTS_HAVE_TREESITTER)
     endif()
 endif()
+
+# Studio's window: an application's kit in a window of the platform, rendered with lib/draw on the platform's GPU.
+pr_library(studio_window INCLUDE window/include
+    window/src/studio_window.cpp
+)
+target_link_libraries(pr_studio_window PUBLIC prax::app prax::color prax::draw prax::font prax::layout prax::studio_kit
+                                              prax::text prax::ui
+                                       PRIVATE prax::core_cpp prax::font_bundle prax::gpu)
+
+if (PR_DEVELOP)
+    pr_module_tests(studio_window
+        window/tests/test_studio_window.cpp
+        window/tests/test_studio_window_c.c
+    )
+endif()

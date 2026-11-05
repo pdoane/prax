@@ -17,6 +17,7 @@
 #include "pr/syntax_treesitter_c.h"
 #endif
 
+#include "studio/text_editor/src/text_editor_diff.h"
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
@@ -150,6 +151,23 @@ PrTextEditorDocument* open(Editor& e, const std::string& path) {
     return document;
 }
 
+// Creates a document of `text`, which the user may edit.
+PrTextEditorDocument* textDocument(Editor& e, const std::string& text) {
+    PrTextEditorDocumentDesc desc{.text = text};
+    PrTextEditorDocument* document = nullptr;
+    REQUIRE(prTextEditorDocumentCreate(e.editor, &desc, &document) == PrStatus_Ok);
+    return document;
+}
+
+std::string textOf(PrTextEditorDocument* document) {
+    PrStringView all = prTextEditBufferText(prTextEditorDocumentBuffer(document));
+    return std::string(all.data, all.size);
+}
+
+double documentSize(PrTextEditorDocument* document) {
+    return prTextViewInfo(prTextEditorDocumentView(document)).documentSize;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -279,6 +297,173 @@ TEST_CASE("text editor: a comparison aligns its sides, tints what changed, and s
     prTextEditorShow(e.editor, after);
     CHECK(prTextEditorShownDiff(e.editor) == nullptr);
     prTextEditorDiffDestroy(diff);
+}
+
+TEST_CASE("text editor: each pane of a comparison takes edits, and the pane that is clicked shows") {
+    Editor e;
+    PrTextEditorDocument* before = textDocument(e, "a\nb\nc\n");
+    PrTextEditorDocument* after = textDocument(e, "a\nB\nc\n");
+    PrTextEditorDiff* diff = prTextEditorDiffCreate(e.editor, before, after);
+    e.settle();
+    CHECK(e.shown() == after);
+    // The old pane is the left half of the editor.
+    e.f.click(PrVec2{200, 8});
+    e.settle();
+    CHECK(prTextEditorShownDiff(e.editor) == diff);
+    CHECK(e.shown() == before);
+    e.run("cursor.textStart");
+    e.f.type("x");
+    e.settle();
+    CHECK(textOf(before) == "xa\nb\nc\n");
+    // The changed lines meet, so they are one change.
+    REQUIRE(prTextEditorDiffChangeCount(diff) == 1);
+    CHECK(prTextEditorDiffChange(diff, 0).oldStart == 0);
+    CHECK(prTextEditorDiffChange(diff, 0).oldCount == 2);
+    // Back to the new pane.
+    e.f.click(PrVec2{600, 8});
+    e.settle();
+    CHECK(e.shown() == after);
+    prTextEditorDiffDestroy(diff);
+}
+
+TEST_CASE("text editor: a sync point aligns its lines, follows edits, and goes with a removed line") {
+    Editor e;
+    PrTextEditorDocument* before = textDocument(e, "a\nb\nc\n");
+    PrTextEditorDocument* after = textDocument(e, "a\nx\ny\nb2\nc\n");
+    PrTextEditorDiff* diff = prTextEditorDiffCreate(e.editor, before, after);
+    e.settle();
+    REQUIRE(prTextEditorDiffChangeCount(diff) == 1);
+    uint32_t lines[] = {1, 3};
+    REQUIRE(prTextEditorDiffAddSync(diff, lines));
+    e.settle();
+    REQUIRE(prTextEditorDiffChangeCount(diff) == 2);
+    CHECK(prTextEditorDiffChange(diff, 1).oldStart == 1);
+    CHECK(prTextEditorDiffChange(diff, 1).newStart == 3);
+    CHECK(documentSize(before) == doctest::Approx(documentSize(after)));
+    // A point that crosses another, or shares a line with it, is refused.
+    uint32_t crossing[] = {2, 0};
+    CHECK_FALSE(prTextEditorDiffAddSync(diff, crossing));
+    uint32_t sharing[] = {1, 4};
+    CHECK_FALSE(prTextEditorDiffAddSync(diff, sharing));
+    uint32_t past[] = {9, 9};
+    CHECK_FALSE(prTextEditorDiffAddSync(diff, past));
+
+    // A line added above moves the point with its line.
+    PrTextEditChange top{.start = 0, .end = 0, .text = "top\n"};
+    REQUIRE(prTextEditBufferApply(prTextEditorDocumentBuffer(after), &top, 1, PrTextEditOrigin_Local));
+    e.settle();
+    uint32_t synced[2] = {};
+    REQUIRE(prTextEditorDiffSyncs(diff, synced, 1) == 1);
+    CHECK(synced[0] == 1);
+    CHECK(synced[1] == 4);
+    // Removing the old side's line removes the point.
+    PrTextEditBuffer* old = prTextEditorDocumentBuffer(before);
+    PrTextEditChange removal{.start = prTextEditBufferLineStart(old, 1), .end = prTextEditBufferLineStart(old, 2)};
+    REQUIRE(prTextEditBufferApply(old, &removal, 1, PrTextEditOrigin_Local));
+    e.settle();
+    CHECK(prTextEditorDiffSyncs(diff, nullptr, 0) == 0);
+
+    // The command syncs the carets' lines, and again removes the point.
+    PrTextViewInfo info = prTextViewInfo(prTextEditorDocumentView(before));
+    CHECK(info.caret.line == 0);
+    e.run("diff.toggleSync");
+    CHECK(prTextEditorDiffSyncs(diff, nullptr, 0) == 1);
+    CHECK(e.textUnder(prTextEditorTextNode(e.editor)).find("\xE2\x87\x94 1") != std::string::npos);
+    e.run("diff.toggleSync");
+    CHECK(prTextEditorDiffSyncs(diff, nullptr, 0) == 0);
+    prTextEditorDiffDestroy(diff);
+}
+
+TEST_CASE("text editor: a merge shows its sides beside the result, and resolves the result's conflicts") {
+    Editor e;
+    PrTextEditorDocument* base = textDocument(e, "a\nb\nc\nd\n");
+    PrTextEditorDocument* left = textDocument(e, "A\nb\nc\nleft\n");
+    PrTextEditorDocument* right = textDocument(e, "a\nb\nc\nright\n");
+    PrTextEditorDocument* result = textDocument(e, "A\nb\nc\n<<<<<<<\nleft\n|||||||\nd\n=======\nright\n>>>>>>>\n");
+    PrTextEditorDiffMergeDesc desc{.base = base, .left = left, .right = right, .result = result};
+    PrTextEditorDiff* diff = prTextEditorDiffCreateMerge(e.editor, &desc);
+    e.settle();
+    CHECK(prTextEditorDiffIsMerge(diff));
+    CHECK(e.shown() == result);
+    CHECK(prTextEditorDiffConflictCount(diff) == 1);
+    uint32_t conflicts = 0;
+    uint32_t lefts = 0;
+    for (uint32_t i = 0; i < prTextEditorDiffMergeChunkCount(diff); ++i) {
+        PrTextDiffMergeKind kind = prTextEditorDiffMergeChunk(diff, i).kind;
+        conflicts += kind == PrTextDiffMergeKind_Conflict ? 1 : 0;
+        lefts += kind == PrTextDiffMergeKind_Left ? 1 : 0;
+    }
+    CHECK(conflicts == 1);
+    CHECK(lefts == 1);
+    // The panes are as long as each other: the sides leave room for the result's markers.
+    CHECK(documentSize(left) == doctest::Approx(documentSize(result)));
+    CHECK(documentSize(right) == doctest::Approx(documentSize(result)));
+
+    e.run("merge.takeRight");
+    CHECK(textOf(result) == "A\nb\nc\nright\n");
+    CHECK(prTextEditorDiffConflictCount(diff) == 0);
+    e.run("edit.undo");
+    CHECK(prTextEditorDiffConflictCount(diff) == 1);
+    e.run("cursor.textStart");
+    e.run("merge.nextConflict");
+    CHECK(e.caret().line == 3);
+    e.run("merge.takeLeftThenRight");
+    CHECK(textOf(result) == "A\nb\nc\nleft\nright\n");
+    e.run("edit.undo");
+    e.run("merge.takeBase");
+    CHECK(textOf(result) == "A\nb\nc\nd\n");
+
+    // Showing the base adds its pane, aligned with the others.
+    e.run("merge.toggleBase");
+    CHECK(prTextEditorDiffBaseShown(diff));
+    CHECK(documentSize(base) == doctest::Approx(documentSize(result)));
+    prTextEditorDiffDestroy(diff);
+}
+
+TEST_CASE("text editor: a merge tints each chunk in every side, and the result by where its lines came from") {
+    // The left side adds a line at the top, and the right side changes f. Both change e alike, and conflict over V and
+    // T, which meet, and over g and m. The result took the right side's V, T and g, and the left side's m.
+    PrTextEditBuffer* base = prTextEditBufferCreate("a\nV1\nT30\nx\ng\ny\nf\nz\nm\nw\ne\n");
+    PrTextEditBuffer* left = prTextEditBufferCreate("OS\na\nV11\nT30\nx\ngL\ny\nf\nz\nmL\nw\nE\n");
+    PrTextEditBuffer* right = prTextEditBufferCreate("a\nV1\nT60\nx\ngR\ny\nfR\nz\nmR\nw\nE\n");
+    PrTextEditBuffer* result = prTextEditBufferCreate("OS\na\nV1\nT60\nx\ngR\ny\nfR\nz\nmL\nw\nE\n");
+    TextEditorDiffColors colors{};
+    for (uint32_t role = 0; role < TextEditorDiffRole_Count; ++role)
+        colors.lines[role] = prColor16FromColor(PrColor{.a = float(role + 1) / 16});
+    colors.conflict = prColor16FromColor(PrColor{.a = 0.75f});
+    TextEditorDiffModel model{};
+    textEditorDiffModelInit(&model, TextEditorDiffKind_Merge);
+    const PrTextEditBuffer* buffers[] = {base, left, right, result};
+    REQUIRE(textEditorDiffModelUpdate(&model, buffers, nullptr, 0, colors, 19));
+    auto tint = [&](TextEditorDiffSlot slot, uint32_t line) {
+        return float(textEditorDiffLineColor(&model, slot, line).a);
+    };
+    float leftColor = float(colors.lines[TextEditorDiffRole_Left].a);
+    float rightColor = float(colors.lines[TextEditorDiffRole_Right].a);
+    float bothColor = float(colors.lines[TextEditorDiffRole_Base].a);
+    float conflictColor = float(colors.conflict.a);
+    // The right side's change of f shows in the left side, and the conflicts in both.
+    CHECK(tint(TextEditorDiffSlot_Left, 7) == rightColor);
+    CHECK(tint(TextEditorDiffSlot_Right, 6) == rightColor);
+    CHECK(tint(TextEditorDiffSlot_Left, 0) == leftColor);
+    CHECK(tint(TextEditorDiffSlot_Right, 1) == conflictColor);
+    CHECK(tint(TextEditorDiffSlot_Left, 2) == conflictColor);
+    CHECK(tint(TextEditorDiffSlot_Left, 11) == bothColor);
+    CHECK(tint(TextEditorDiffSlot_Left, 1) == 0);
+    // The result shows where each run came from, the line that equals the base included.
+    CHECK(tint(TextEditorDiffSlot_Result, 0) == leftColor);
+    CHECK(tint(TextEditorDiffSlot_Result, 2) == rightColor);
+    CHECK(tint(TextEditorDiffSlot_Result, 3) == rightColor);
+    CHECK(tint(TextEditorDiffSlot_Result, 5) == rightColor);
+    CHECK(tint(TextEditorDiffSlot_Result, 7) == rightColor);
+    CHECK(tint(TextEditorDiffSlot_Result, 9) == leftColor);
+    CHECK(tint(TextEditorDiffSlot_Result, 11) == bothColor);
+    CHECK(tint(TextEditorDiffSlot_Result, 1) == 0);
+    textEditorDiffModelReset(&model);
+    prTextEditBufferDestroy(result);
+    prTextEditBufferDestroy(right);
+    prTextEditBufferDestroy(left);
+    prTextEditBufferDestroy(base);
 }
 
 TEST_CASE("text editor: breakpoints follow their lines, and go with a removed line") {

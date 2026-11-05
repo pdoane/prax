@@ -202,6 +202,8 @@ The apps:
 
 - `browser` shows a web page in a window, and navigates from it, as a browser's threads do.
 - `scribe` is Studio's text editor in a window.
+- `merge` compares two files, or merges two files that each changed a base, in Scribe's window, as Git's difftool and
+  mergetool and Perforce's P4DIFF and P4MERGE run it.
 - `alchemy` generates images with a ComfyUI server.
 
 The tools that measure and compare the engine are under `tools/`: the viewer (`./dev.sh viewer`, whose header

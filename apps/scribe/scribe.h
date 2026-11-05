@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/app.h"
+#include "pr/array.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
 #include "pr/kit.h"
@@ -18,6 +19,12 @@ namespace scribe {
 
 using namespace pr;
 
+// A menu of the menu bar: the ids of its commands in order, with an empty id for a separator.
+struct Menu {
+    PrStringView title;
+    Array<PrStringView> items;
+};
+
 // The editor and what Scribe puts around it.
 struct Scribe {
     PrKit* PR_NULLABLE kit = nullptr;
@@ -31,6 +38,8 @@ struct Scribe {
     PrProcessLauncher* PR_NULLABLE launcher = nullptr;     // of language servers and debug adapters
     PrTextEditor* PR_NULLABLE editor = nullptr;
 
+    // The menus of the menu bar, which openEditor sets to Scribe's, and an application may change.
+    Array<Menu> menus;
     float menuHeight = 0;           // of the menu bar, at the last layout
     PrLayoutNode menuBar = kPrLayoutNodeNone;
     bool paletteRequested = false;    // a command asked to open the palette in the next round
@@ -50,8 +59,7 @@ bool openDocument(Scribe& s, PrStringView path);
 // Makes lldb-dap the editor's debugger, launching the program at `program`.
 void setDebuggee(Scribe& s, PrStringView program);
 
-// Opens the files at `oldPath` and `newPath`, the old read-only, and shows their comparison. Returns false if either
-// cannot be read.
+// Opens the files at `oldPath` and `newPath`, and shows their comparison. Returns false if either cannot be read.
 bool openDiff(Scribe& s, PrStringView oldPath, PrStringView newPath);
 
 // Opens a document of `text` that belongs to no file and streams in as a file does. `name` is a file name that chooses

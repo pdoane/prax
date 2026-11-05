@@ -13,16 +13,12 @@
 // frame laid out. The pane is a replaced element whose painter embeds that list.
 
 #include "pr/app.h"
-#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #include "pr/css_view.h"
 #include "pr/dom.h"
 #include "pr/draw_list.h"
-#include "pr/draw_renderer.h"
 #include "pr/float.h"
-#include "pr/font_bundle.h"
-#include "pr/gpu.h"
 #include "pr/html.h"
 #include "pr/html_markdown.h"
 #include "pr/html_page.h"
@@ -33,14 +29,13 @@
 #include "pr/kit_input.h"
 #include "pr/kit_surface.h"
 #include "pr/kit_text.h"
-#include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
-#include "pr/layout_scene.h"
 #include "pr/layout_unit.h"
 #include "pr/markdown.h"
 #include "pr/min_max.h"
 #include "pr/print.h"
 #include "pr/string.h"
+#include "pr/studio_window.h"
 #include "pr/text.h"
 #include "pr/text_font.h"
 #include "pr/time.h"
@@ -756,213 +751,93 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
 // ---------------------------------------------------------------------------------------------------------------------
 // The window
 
-// The example in a window: the stream, its UI, and the device that it renders on.
-struct Window {
+// The example in Studio's window: the stream, and where the pointer last moved, in logical pixels.
+struct Example {
     Stream stream;
-    PrVec2 pointer{};               // where the pointer last moved, in logical pixels
-
-    PrFontSet* fonts = nullptr;
-    PrTextShaper* shaper = nullptr;
-    PrLayoutTree* tree = nullptr;
-    PrUi* ui = nullptr;
-    PrKit* kit = nullptr;
-    const PrLayoutScene* scene = nullptr;   // the scene of the last frame, which its list plays
-    PrDrawList* list = nullptr;
-    Array<PrLayoutSceneScroll> scrolls;
-
-    PrApp* app = nullptr;
-    PrGpuDevice* device = nullptr;
-    PrGpuSwapChain* swapChain = nullptr;
-    PrDrawRenderer* renderer = nullptr;
-    PrDrawFrame* frame = nullptr;
+    PrVec2 pointer{};
 };
 
-// Declares a round: a surface on the app's ground that fills the viewport, and the example under it.
-void build(void* context, PrUi*, const PrUiRound*) {
-    Window& w = *static_cast<Window*>(context);
-    PrKitSurfaceStyle style{
-        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-        .ground = PrKitGround_App,
-    };
-    buildApp(&w.stream, w.kit, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style));
+Example& exampleOf(void* context) {
+    return *static_cast<Example*>(context);
 }
 
-// Frees what the window made on its device, and the device.
-void closeDevice(Window& w) {
-    prDrawFrameDestroy(w.frame);
-    prDrawRendererDestroy(w.renderer);
-    prGpuSwapChainDestroy(w.swapChain);
-    prGpuDeviceDestroy(w.device);
-    w.frame = nullptr;
-    w.renderer = nullptr;
-    w.swapChain = nullptr;
-    w.device = nullptr;
-}
-
-// Makes the platform's device, a swap chain over the window for SDR, and the renderer. Returns false if the window has
-// no device to render with.
-bool openDevice(Window& w) {
-    PrAppSurface surface{};
-    PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
-            prAppSurface(w.app, &surface) != PrStatus_Ok ||
-            prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
-            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
-        closeDevice(w);
-        return false;
-    }
-    w.frame = prDrawFrameCreate(w.renderer);
+// Opens the stream, whose page renders its text in the window's fonts and shaper, as the UI does.
+bool open(void* context, PrStudioWindow* window) {
+    Example& e = exampleOf(context);
+    PrTextFontDesc font{.set = prStudioWindowFonts(window), .style = prFontStyleDefault()};
+    e.stream.font = prTextFontCreate(&font);
+    e.stream.shaper = prStudioWindowShaper(window);
+    restart(e.stream);
     return true;
 }
 
-// Renders the list into the swap chain's texture at `extent` target pixels, clearing it to the canvas, and presents it.
-void render(Window& w, PrUVec2 extent, PrColor canvas) {
-    PrGpuTexture drawable{};
-    PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok ||
-            !prGpuCommandsBegin(w.device, nullptr, &commands))
-        return;
-    PrDrawTarget into{.extent = extent, .format = PrPixelFormat_Bgra8, .commands = commands};
-    prDrawFramePrepare(w.frame, w.list, &into);
-    PrGpuSubresources all{};
-    prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
-    PrGpuPassDesc pass = prGpuPassDescColor(drawable, PrGpuLoad_Clear, canvas);
-    PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
-    prDrawFrameRender(w.frame, encoder, PrIVec2{0, 0});
-    prGpuPassEnd(encoder);
-    prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
-    prGpuSwapChainPresent(w.swapChain, commands);
-    prGpuCommandsSubmit(commands);
+// Delivers the pieces of the stream that its rate allows before the frame's rounds read the page.
+void beginFrame(void* context, PrStudioWindow*, const PrAppFrame* f) {
+    Example& e = exampleOf(context);
+    e.stream.display = f->display;
+    e.stream.preferences = f->preferences;
+    advance(e.stream, f->delta);
 }
 
-void start(void* context, PrApp* app, const PrAppFrame*) {
-    Window& w = *static_cast<Window*>(context);
-    w.app = app;
-    if (!openDevice(w)) {
-        printError("incremental: no GPU device to render with\n");
-        prAppStop(app);
-        return;
+// Takes Escape, which quits, and the wheel over the pane, which scrolls the page and stops it following the end when it
+// scrolls up.
+bool event(void* context, PrStudioWindow* window, const PrAppEvent* ev) {
+    Example& e = exampleOf(context);
+    if (ev->kind == PrAppEventKind_KeyDown && ev->key == PrAppKey_Escape) {
+        prAppStop(prStudioWindowApp(window));
+        return true;
     }
-    prAppRequestFrame(app);
-}
-
-PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
-    Window& w = *static_cast<Window*>(context);
-    // A lost device is made again, with everything on it.
-    if (w.device != nullptr && prGpuDeviceIsLost(w.device))
-        closeDevice(w);
-    if (w.device == nullptr && !openDevice(w))
-        return {};
-    prGpuSwapChainWait(w.swapChain);
-    w.stream.display = f->display;
-    w.stream.preferences = f->preferences;
-    advance(w.stream, f->delta);
-
-    PrUiFrameDesc desc{
-        .time = f->time,
-        .delta = f->delta,
-        .extent = f->extent,
-        .maxRounds = 4,
-        .display = f->display,
-        .preferences = f->preferences,
-    };
-    prUiFrame(w.ui, &desc, build, &w);
-
-    // The tree's scene plays into the list in target pixels, each scroll container at the tree's offset for it. The
-    // pass clears to the canvas's color, so the list leaves the canvas unfilled.
-    const PrLayoutScene* scene = prLayoutTreeScene(w.tree);
-    prLayoutSceneRelease(w.scene);
-    w.scene = scene;
-    w.scrolls.resize(prLayoutSceneScrolls(w.tree, scene, nullptr, 0));
-    prLayoutSceneScrolls(w.tree, scene, w.scrolls.data(), w.scrolls.count());
-    PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
-    options.scrolls = w.scrolls.data();
-    options.scrollCount = w.scrolls.count();
-    options.canvasFilled = true;
-    float ratio = f->display.pixelRatio;
-    prDrawListClear(w.list);
-    prDrawListPushTransformAffine2(w.list, prAffine2Scale(PrVec2{ratio, ratio}));
-    prLayoutScenePlay(scene, w.list, &options);
-    prDrawListPopTransform(w.list);
-    PrColor canvas = prColorFromColor16(prLayoutSceneCanvasColor(scene));
-
-    PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
-    if (extent.x != 0 && extent.y != 0)
-        render(w, extent, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a});
-    // A stream that is delivering, or a page that has tasks, needs the next frame.
-    PrAppOutput output = prUiOutput(w.ui);
-    bool streaming = !w.stream.paused && !finished(w.stream);
-    if (streaming || prDomAgentNextTaskDelay(prHtmlPageAgent(w.stream.page)) >= 0)
-        output.wantsFrame = true;
-    return output;
-}
-
-void event(void* context, PrApp* app, const PrAppEvent* e) {
-    Window& w = *static_cast<Window*>(context);
-    if (e->kind == PrAppEventKind_KeyDown && e->key == PrAppKey_Escape) {
-        prAppStop(app);
-        return;
-    }
-    if (e->kind == PrAppEventKind_PointerMove)
-        w.pointer = e->position;
-    // The wheel over the pane scrolls the page, and scrolling up stops it following the end.
-    const PrRect& pane = w.stream.pane;
+    if (ev->kind == PrAppEventKind_PointerMove)
+        e.pointer = ev->position;
+    const PrRect& pane = e.stream.pane;
     bool overPane =
-        w.pointer.x >= pane.left && w.pointer.x < pane.right && w.pointer.y >= pane.top && w.pointer.y < pane.bottom;
-    if (e->kind == PrAppEventKind_Scroll && overPane) {
-        float delta = prAppEventScrollPixels(e, kLineHeight).y;
-        w.stream.scrollBy += double(delta);
-        if (delta < 0)
-            w.stream.follow = false;
-        prAppRequestFrame(app);
-        return;
-    }
-    prUiPushEvent(w.ui, e);
-    prAppRequestFrame(app);
+        e.pointer.x >= pane.left && e.pointer.x < pane.right && e.pointer.y >= pane.top && e.pointer.y < pane.bottom;
+    if (ev->kind != PrAppEventKind_Scroll || !overPane)
+        return false;
+    float delta = prAppEventScrollPixels(ev, kLineHeight).y;
+    e.stream.scrollBy += double(delta);
+    if (delta < 0)
+        e.stream.follow = false;
+    return true;
 }
 
-void shutdown(void* context, PrApp*) {
-    closeDevice(*static_cast<Window*>(context));
+// A stream that is delivering, or a page that has tasks, needs the next frame.
+bool laidOut(void* context, PrStudioWindow*) {
+    const Stream& s = exampleOf(context).stream;
+    bool streaming = !s.paused && !finished(s);
+    return streaming || prDomAgentNextTaskDelay(prHtmlPageAgent(s.page)) >= 0;
 }
 
 } // namespace
 
 int main() {
     prCrashHandler();
-    static Window w;
-    w.fonts = prFontSetCreate(nullptr);
-    if (prFontBundleInstall(w.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR) == 0) {
+    static Example e;
+    PrStudioWindowDesc desc{
+        .title = "Prax Incremental",
+        .extent = {1280, 860},
+        .fontDirectory = PR_FONT_BUNDLE_DIR,
+        .open = open,
+        .theme = [](void*, PrStudioWindow*, const PrAppUserPreferences*) -> PrKitThemeVariant {
+            return PrKitThemeVariant_Dark;
+        },
+        .beginFrame = beginFrame,
+        .event = event,
+        .build = [](void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
+            buildApp(&exampleOf(context).stream, prStudioWindowKit(window), root);
+        },
+        .laidOut = laidOut,
+        .close = [](void* context, PrStudioWindow*) {
+            Stream& s = exampleOf(context).stream;
+            closeStream(s);
+            prTextFontRelease(s.font);
+        },
+        .context = &e,
+    };
+    PrStatus status = prStudioWindowRun(&desc);
+    if (status == PrStatus_NotFound)
         printError("incremental: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
-        return 1;
-    }
-    w.shaper = prTextShaperCreate(PrTextShaperBackend_Default);
-    PrLayoutTreeDesc treeDesc{.shaper = w.shaper};
-    w.tree = prLayoutTreeCreate(&treeDesc);
-    w.ui = prUiCreate(w.tree);
-    PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Dark, w.fonts);
-    w.kit = prKitCreate(w.ui, &theme);
-    w.list = prDrawListCreate();
-
-    // The stream's page renders its text in the same fonts and shaper as the UI.
-    PrTextFontDesc font{.set = w.fonts, .style = prFontStyleDefault()};
-    w.stream.font = prTextFontCreate(&font);
-    w.stream.shaper = w.shaper;
-    restart(w.stream);
-
-    PrAppDesc desc{.title = "Prax Incremental", .extent = {1280, 860}};
-    PrApp* app = prAppCreate(PrAppBackend_Default, &desc);
-    PrAppHandler handler{&w, start, frame, event, shutdown};
-    prAppRun(app, &handler);
-    prAppDestroy(app);
-
-    closeStream(w.stream);
-    prTextFontRelease(w.stream.font);
-    prDrawListRelease(w.list);
-    prLayoutSceneRelease(w.scene);
-    prKitDestroy(w.kit);
-    prUiDestroy(w.ui);
-    prLayoutTreeDestroy(w.tree);
-    prTextShaperDestroy(w.shaper);
-    prFontSetDestroy(w.fonts);
-    return 0;
+    else if (status == PrStatus_NotSupported)
+        printError("incremental: no GPU device to render with\n");
+    return status == PrStatus_Ok ? 0 : 1;
 }

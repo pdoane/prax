@@ -25,7 +25,7 @@ std::vector<PrTextDiffChange> changesOf(const std::string& a, const std::string&
         .newCount = uint32_t(newKeys.size()),
     };
     RawArray<PrTextDiffChange> found;
-    textDiffSequenceCompare(&sequence, desc, found);
+    textDiffSequenceCompare(&sequence, desc, TextDiffPart{0, desc.oldCount, 0, desc.newCount}, found);
     std::vector<PrTextDiffChange> changes(found.data, found.data + found.count);
     found.reset();
     textDiffSequenceReset(&sequence);
@@ -92,11 +92,12 @@ struct Compared {
     std::vector<PrTextDiffLineChange> lineChanges;
 };
 
-Compared compare(const Lines& a, const Lines& b, const PrTextDiffOptions* options = nullptr) {
+Compared compare(const Lines& a, const Lines& b, const PrTextDiffOptions* options = nullptr,
+        const std::vector<PrTextDiffSync>& syncs = {}) {
     PrTextDiff* diff = prTextDiffCreate(options);
     PrTextDiffText old = a.text();
     PrTextDiffText young = b.text();
-    prTextDiffCompare(diff, &old, &young);
+    prTextDiffCompare(diff, &old, &young, syncs.data(), uint32_t(syncs.size()));
     Compared compared{
         .changes = {prTextDiffChanges(diff), prTextDiffChanges(diff) + prTextDiffChangeCount(diff)},
         .lineChanges = {prTextDiffLineChanges(diff), prTextDiffLineChanges(diff) + prTextDiffLineChangeCount(diff)},
@@ -188,7 +189,7 @@ TEST_CASE("text diff: the equal function confirms keys that collide") {
         .equalContext = &pair,
     };
     RawArray<PrTextDiffChange> changes;
-    textDiffSequenceCompare(&sequence, desc, changes);
+    textDiffSequenceCompare(&sequence, desc, TextDiffPart{0, 4, 0, 4}, changes);
     REQUIRE(changes.count == 1);
     CHECK(changes.data[0].oldStart == 2);
     CHECK(changes.data[0].oldCount == 1);
@@ -250,4 +251,67 @@ TEST_CASE("text diff: a pair with a line past the limit changes whole, and a lim
     Compared lines = compare(a, b, &options);
     CHECK(lines.changes.size() == 1);
     CHECK(lines.lineChanges.empty());
+}
+
+TEST_CASE("text diff: a part compares alone, and its changes join only each other") {
+    // The parts meet at index 2, where each has a change, which stay apart.
+    std::vector<uint64_t> oldKeys{1, 2, 3, 4};
+    std::vector<uint64_t> newKeys{1, 9, 8, 4};
+    TextDiffSequence sequence{.maxCost = 4096};
+    TextDiffSequenceDesc desc{.oldKeys = oldKeys.data(), .oldCount = 4, .newKeys = newKeys.data(), .newCount = 4};
+    RawArray<PrTextDiffChange> changes;
+    textDiffSequenceCompare(&sequence, desc, TextDiffPart{0, 2, 0, 2}, changes);
+    textDiffSequenceCompare(&sequence, desc, TextDiffPart{2, 4, 2, 4}, changes);
+    REQUIRE(changes.count == 2);
+    CHECK(changes.data[0].oldStart == 1);
+    CHECK(changes.data[0].oldCount == 1);
+    CHECK(changes.data[1].oldStart == 2);
+    CHECK(changes.data[1].oldCount == 1);
+    changes.reset();
+    textDiffSequenceReset(&sequence);
+}
+
+TEST_CASE("text diff: a sync point pairs its lines, and the texts on either side compare apart") {
+    // The shortest script keeps "b" in place and pairs nothing else. A sync point of old line 1 with new line 3 says
+    // that "b" moved down past the lines added above it.
+    Lines a{{"a", "b", "c"}};
+    Lines b{{"a", "x", "y", "b2", "c"}};
+    Compared plain = compare(a, b);
+    REQUIRE(plain.changes.size() == 1);
+    CHECK(plain.changes[0].oldStart == 1);
+    CHECK(plain.changes[0].oldCount == 1);
+    CHECK(plain.changes[0].newCount == 3);
+
+    Compared synced = compare(a, b, nullptr, {{1, 3}});
+    REQUIRE(synced.changes.size() == 2);
+    CHECK(synced.changes[0].oldStart == 1);
+    CHECK(synced.changes[0].oldCount == 0);
+    CHECK(synced.changes[0].newStart == 1);
+    CHECK(synced.changes[0].newCount == 2);
+    // The sync point's lines differ, so they are a change of their own, beside the one before it.
+    CHECK(synced.changes[1].oldStart == 1);
+    CHECK(synced.changes[1].oldCount == 1);
+    CHECK(synced.changes[1].newStart == 3);
+    CHECK(synced.changes[1].newCount == 1);
+    REQUIRE(synced.lineChanges.size() == 1);
+    CHECK(synced.lineChanges[0].oldLine == 1);
+    CHECK(synced.lineChanges[0].newLine == 3);
+    CHECK(synced.lineChanges[0].bytes.oldCount == 0);
+    CHECK(synced.lineChanges[0].bytes.newStart == 1);
+    CHECK(synced.lineChanges[0].bytes.newCount == 1);
+}
+
+TEST_CASE("text diff: a sync point of equal lines is no change, and moves lines that the script would match") {
+    // Without the sync point, the script matches the two "same" lines in place.
+    Lines a{{"same", "one", "two"}};
+    Lines b{{"one", "two", "same"}};
+    Compared synced = compare(a, b, nullptr, {{0, 2}});
+    REQUIRE(synced.changes.size() == 2);
+    CHECK(synced.changes[0].oldStart == 0);
+    CHECK(synced.changes[0].oldCount == 0);
+    CHECK(synced.changes[0].newCount == 2);
+    CHECK(synced.changes[1].oldStart == 1);
+    CHECK(synced.changes[1].oldCount == 2);
+    CHECK(synced.changes[1].newStart == 3);
+    CHECK(synced.changes[1].newCount == 0);
 }
