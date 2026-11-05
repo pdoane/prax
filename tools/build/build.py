@@ -16,6 +16,10 @@ import tempfile
 
 from tools import dev
 from tools.build import emsdk
+from tools.fetch import checkouts
+
+# The checkouts that an example reads: at run time on the host, and packaged into its page when the web build links it.
+EXAMPLE_CHECKOUTS = {"video": ["videos"]}
 
 # The build directories, under the root. PR_BUILD_DIR names the default build's directory in place of build, for a
 # second checkout's work beside the first's, or work that must not share a build with another running at the same time.
@@ -250,6 +254,10 @@ def build(name="default", targets=(), keep_going=False):
     """Configures and builds the build that `name` names, or only `targets` and what they need, and returns it. With
     `keep_going`, Ninja builds everything that does not depend on a failure, so one build reports every error."""
     chosen = mode(name)
+    if chosen.wasm:
+        for example, names in EXAMPLE_CHECKOUTS.items():
+            if not targets or example in targets:
+                checkouts.fetch(*names)
     configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags, wasm=chosen.wasm)
     command = ["cmake", "--build", chosen.directory]
     for target in targets:

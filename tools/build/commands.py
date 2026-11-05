@@ -105,10 +105,6 @@ def test(argv):
         dev.run([binary, *args])
 
 
-# The checkouts that an example reads, which `example` fetches before it builds the example.
-EXAMPLE_CHECKOUTS = {"video": ["videos"]}
-
-
 def example(argv):
     dev.usage(argv, USAGE["example"], None if argv else 1)
     wasm = argv[0] == "wasm"
@@ -120,8 +116,8 @@ def example(argv):
     names = sorted(name for name in os.listdir(examples) if os.path.isdir(os.path.join(examples, name)))
     if argv[0] not in names:
         dev.fail("no example named %s; one of: %s" % (argv[0], " ".join(names)))
-    if argv[0] in EXAMPLE_CHECKOUTS:
-        checkouts.fetch(*EXAMPLE_CHECKOUTS[argv[0]])
+    if argv[0] in builds.EXAMPLE_CHECKOUTS:
+        checkouts.fetch(*builds.EXAMPLE_CHECKOUTS[argv[0]])
     if not wasm:
         chosen = builds.build(targets=[argv[0]])
         dev.run([dev.executable(chosen.directory, argv[0]), *argv[1:]])
