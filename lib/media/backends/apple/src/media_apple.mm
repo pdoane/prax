@@ -490,6 +490,10 @@ PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float
     return prMediaAudioQueueRead(static_cast<AppleDecoder*>(decoder)->queue, samples, frames);
 }
 
+void decoderAudioWait(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t frames) {
+    prMediaAudioQueueWait(static_cast<AppleDecoder*>(decoder)->queue, frames);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Sample decoders, for media sources
 
@@ -860,6 +864,7 @@ constexpr PrMediaCodec kApple = {
     .decoderAudioStart = decoderAudioStart,
     .decoderAudioSeek = decoderAudioSeek,
     .decoderAudioRead = decoderAudioRead,
+    .decoderAudioWait = decoderAudioWait,
     .supportsSourceType = supportsSourceType,
     .sampleDecoderCreate = sampleDecoderCreate,
     .sampleDecoderDestroy = sampleDecoderDestroy,

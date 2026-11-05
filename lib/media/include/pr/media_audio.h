@@ -2,8 +2,9 @@
 // which codecs fill for their decoders' audio.
 //
 // The queue has one writer and one reader, and any thread may ask the writer to seek. Between a request and the
-// writer's prMediaAudioQueueBegin, reads return nothing, so that no sample from before the seek plays after it. The
-// reader never waits, and the writer waits only while the queue is full.
+// writer's prMediaAudioQueueBegin, reads return nothing, so that no sample from before the seek plays after it. A read
+// never waits, and the writer waits only while the queue is full. A reader that is not on a real-time thread may wait
+// for the writer first (prMediaAudioQueueWait).
 
 #pragma once
 
@@ -64,6 +65,10 @@ void prMediaAudioQueueFinish(PrMediaAudioQueue* queue, uint32_t id);
 // The reader's side. Writes up to `frames` frames to `samples`. Never waits or allocates, so that a real-time thread
 // may call it.
 PrMediaAudioChunk prMediaAudioQueueRead(PrMediaAudioQueue* queue, float* samples, uint32_t frames);
+
+// Waits until a read of `frames` frames, or of as many as the queue holds, would give them all, or the writer has
+// written the last frame for the latest request, or the queue is stopping.
+void prMediaAudioQueueWait(const PrMediaAudioQueue* queue, uint32_t frames);
 
 #if defined(__cplusplus)
 }

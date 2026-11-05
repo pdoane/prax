@@ -172,3 +172,8 @@ void prMediaDecoderAudioSeek(PrMediaDecoder* decoder, double seconds) {
 PrMediaAudioChunk prMediaDecoderAudioRead(PrMediaDecoder* decoder, float* samples, uint32_t frames) {
     return decoder->codec->decoderAudioRead(decoder->codec, decoder, samples, frames);
 }
+
+void prMediaDecoderAudioWait(PrMediaDecoder* decoder, uint32_t frames) {
+    if (decoder->codec->decoderAudioWait != nullptr)
+        decoder->codec->decoderAudioWait(decoder->codec, decoder, frames);
+}

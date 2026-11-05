@@ -1,7 +1,8 @@
 // Media: reading audio and video resources, and decoding their audio and the frames of their video.
 //
 // A codec may be used from any number of threads at once. A decoder is used by one thread at a time, and decodes ahead
-// on threads of its own. The exception is prMediaDecoderAudioRead, which one other thread may call at any time.
+// on threads of its own. The exceptions are prMediaDecoderAudioRead and prMediaDecoderAudioWait, which one other thread
+// may call at any time.
 
 #pragma once
 
@@ -90,8 +91,9 @@ typedef struct PrMediaSampleSink {
 
 // The function table of a codec, placed at the start of the backend's state. Each function member implements the public
 // function of the same name. A null `destroy` means there is nothing to free, a null `decoderFrame` that the codec
-// decodes no frames, and a null `decoderAudioStart` that it decodes no audio, and then `decoderAudioSeek` and
-// `decoderAudioRead` are null too. Callers use the functions below, never these members.
+// decodes no frames, and a null `decoderAudioStart` that it decodes no audio, and then `decoderAudioSeek`,
+// `decoderAudioRead` and `decoderAudioWait` are null too. A null `decoderAudioWait` means that its audio is read
+// without waiting. Callers use the functions below, never these members.
 //
 // The sample members decode the coded frames of media sources. A null `sampleDecoderCreate` means that the codec
 // decodes none, and then the other sample members are null too, and a null `supportsSourceType` means that the codec's
@@ -110,6 +112,7 @@ struct PrMediaCodec {
     void (*PR_NULLABLE decoderAudioSeek)(PrMediaCodec* codec, PrMediaDecoder* decoder, double seconds);
     PrMediaAudioChunk (*PR_NULLABLE decoderAudioRead)(PrMediaCodec* codec, PrMediaDecoder* decoder, float* samples,
         uint32_t frames);
+    void (*PR_NULLABLE decoderAudioWait)(PrMediaCodec* codec, PrMediaDecoder* decoder, uint32_t frames);
     PrMediaSupport (*PR_NULLABLE supportsSourceType)(PrMediaCodec* codec, PrStringView type);
     PrStatus (*PR_NULLABLE sampleDecoderCreate)(PrMediaCodec* codec, const PrMediaTrackInfo* track, uint32_t sampleRate,
         uint32_t channels, PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out);
@@ -201,6 +204,11 @@ void prMediaDecoderAudioSeek(PrMediaDecoder* decoder, double seconds);
 // or allocate, so a real-time thread may make it, while other calls on the decoder run. Destroying the decoder must not
 // overlap it.
 PrMediaAudioChunk prMediaDecoderAudioRead(PrMediaDecoder* decoder, float* samples, uint32_t frames);
+
+// Waits until a read of `frames` frames would give them all, or the audio has ended, so that what a read gives does not
+// depend on how far the decoder's thread has come. The audio must have started. The call may be made where a read may.
+// A decoder of a media source's buffers does not wait, because its audio comes from the decoder's user.
+void prMediaDecoderAudioWait(PrMediaDecoder* decoder, uint32_t frames);
 
 #if defined(__cplusplus)
 }

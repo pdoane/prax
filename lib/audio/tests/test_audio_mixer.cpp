@@ -21,7 +21,7 @@ struct Tone {
     uint64_t limit = UINT64_MAX;
 };
 
-PrAudioChunk readTone(void* context, float* samples, uint32_t frames) {
+PrAudioChunk readTone(void* context, float* samples, uint32_t frames, PrAudioReadMode) {
     Tone* tone = static_cast<Tone*>(context);
     PrAudioChunk chunk{.time = double(tone->frames) / kRate};
     uint64_t left = tone->limit - tone->frames;
@@ -34,15 +34,14 @@ PrAudioChunk readTone(void* context, float* samples, uint32_t frames) {
 }
 
 struct Fixture {
-    PrAudioOutput* output = prAudioMemoryCreate(PrAudioFormat{kRate, 1});
+    // The tests render the mixer themselves, so the output renders only when a test advances it.
+    PrAudioOutput* output = prAudioMemoryCreate(PrAudioFormat{kRate, 1}, PrAudioMemoryPace_Host);
     PrAudioMixer* mixer = prAudioMixerCreate(output);
     Tone tone;
     PrAudioSource* source = nullptr;
 
     Fixture() {
-        // The output's own thread would race the renders that the tests make, so it stops.
         source = prAudioSourceCreate(mixer, readTone, &tone);
-        prAudioOutputStop(output);
         prAudioSourceSetPlaying(source, true);
     }
 
@@ -130,7 +129,6 @@ TEST_CASE("sources add" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     Tone second{.frequency = 3000};
     PrAudioSource* other = prAudioSourceCreate(f.mixer, readTone, &second);
-    prAudioOutputStop(f.output);
     prAudioSourceSetPlaying(other, true);
     prAudioSourceSetGain(f.source, 0.25f);
     prAudioSourceSetGain(other, 0.25f);
@@ -182,4 +180,14 @@ TEST_CASE("the clock reports the end of a source" * doctest::skip(!prThreadSuppo
     f.tone.limit = 1000;
     f.render(4096);
     CHECK(prAudioSourceClock(f.source).ended);
+}
+
+TEST_CASE("a source's clock is stamped on the output's clock, when its block is heard") {
+    Fixture f;
+    prAudioMemoryAdvance(f.output, 500);
+    PrAudioClock clock = prAudioSourceClock(f.source);
+    CHECK(clock.stamp < prAudioMixerNow(f.mixer));
+    CHECK(prAudioMixerNow(f.mixer) == doctest::Approx(500));
+    // The position advances with the output's clock from the moment that it was heard.
+    CHECK(clock.position + (prAudioMixerNow(f.mixer) - clock.stamp) / 1000 == doctest::Approx(0.5).epsilon(1e-9));
 }

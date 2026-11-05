@@ -10,7 +10,6 @@
 #include "pr/memory.h"
 #include "pr/raw_array.h"
 #include "pr/thread.h"
-#include "pr/time.h"
 
 namespace pr_impl {
 
@@ -84,6 +83,7 @@ struct AudioMixer {
     RawArray<AudioSource*> sources;
     float* block;               // by frame and channel
     double latency;             // the output's latency, read when it starts
+    PrAudioReadMode readMode;   // how the sources are read, by the output's pace, read when it starts
 
     // Held by a change to the sources, or by a render. A render does not wait for it.
     Atomic<uint32_t> busy;
@@ -115,11 +115,11 @@ PrAudioClock readClock(const AudioSource* source) {
     }
 }
 
-void publishClock(AudioSource* source, double position, bool valid, bool ended) {
+void publishClock(AudioSource* source, double position, double stamp, bool valid, bool ended) {
     uint32_t sequence = source->clockSequence.loadRelaxed();
     source->clockSequence.store(sequence + 1);
     source->clockPosition.store(position);
-    source->clockStamp.store(prTimeMonotonicMilliseconds());
+    source->clockStamp.store(stamp);
     source->clockValid.store(valid);
     source->clockEnded.store(ended);
     source->clockSequence.store(sequence + 2);
@@ -131,7 +131,8 @@ bool fillQueue(AudioSource* source, uint32_t frames) {
     uint32_t channels = source->mixer->format.channels;
     while (source->queueFrames < frames) {
         float* at = source->queue + size_t(source->queueFrames) * channels;
-        PrAudioChunk chunk = source->read(source->context, at, source->queueCapacity - source->queueFrames);
+        PrAudioChunk chunk = source->read(source->context, at, source->queueCapacity - source->queueFrames,
+            source->mixer->readMode);
         source->ended = chunk.ended;
         if (chunk.frames == 0)
             return false;
@@ -171,7 +172,8 @@ uint32_t playDirect(AudioSource* source, float* out, uint32_t frames, double* ti
         dropFromQueue(source, held + count);
     }
     while (written < frames) {
-        PrAudioChunk chunk = source->read(source->context, out + size_t(written) * format.channels, frames - written);
+        PrAudioChunk chunk = source->read(source->context, out + size_t(written) * format.channels, frames - written,
+            source->mixer->readMode);
         source->ended = chunk.ended;
         if (chunk.frames == 0)
             break;
@@ -281,8 +283,9 @@ uint32_t playStretched(AudioSource* source, float* out, uint32_t frames, double*
     return written;
 }
 
-// Adds one block of the source to `mix`.
-void mixSource(AudioMixer* mixer, AudioSource* source, float* mix, uint32_t frames) {
+// Adds one block of the source to `mix`. The block's first frame is heard at `stamp` on the output's clock, plus the
+// output's latency.
+void mixSource(AudioMixer* mixer, AudioSource* source, float* mix, uint32_t frames, double stamp) {
     uint32_t channels = mixer->format.channels;
     float target = source->playing ? source->gain : 0;
     uint32_t written = 0;
@@ -297,7 +300,7 @@ void mixSource(AudioMixer* mixer, AudioSource* source, float* mix, uint32_t fram
     }
     if (written != 0) {
         // The block's first frame is heard after the output's latency.
-        publishClock(source, time - mixer->latency * source->rate, true, false);
+        publishClock(source, time - mixer->latency * source->rate, stamp, true, false);
         float step = (target - source->gainNow) / float(frames);
         for (uint32_t i = 0; i < written; ++i) {
             float gain = source->gainNow + step * float(i);
@@ -317,7 +320,7 @@ void mixSource(AudioMixer* mixer, AudioSource* source, float* mix, uint32_t fram
         source->gainNow = 0;
         if (source->ended && written == 0 && source->playing) {
             PrAudioClock clock = readClock(source);
-            publishClock(source, clock.position, clock.valid, true);
+            publishClock(source, clock.position, clock.stamp, clock.valid, true);
         }
     } else {
         source->gainNow = target;
@@ -363,11 +366,13 @@ void prAudioMixerRender(void* PR_NULLABLE context, float* samples, uint32_t fram
     prMemZero(samples, size_t(frames) * channels * sizeof(float));
     if (mixer->busy.exchange(1) != 0)
         return;
+    double now = prAudioOutputNow(mixer->output);
     for (uint32_t at = 0; at < frames; at += kBlockFrames) {
         uint32_t count = frames - at < kBlockFrames ? frames - at : kBlockFrames;
         float* mix = samples + size_t(at) * channels;
+        double stamp = now + double(at) * 1000 / mixer->format.sampleRate;
         for (uint32_t i = 0; i < mixer->sources.count; ++i)
-            mixSource(mixer, mixer->sources.data[i], mix, count);
+            mixSource(mixer, mixer->sources.data[i], mix, count, stamp);
     }
     unlock(mixer);
     for (size_t i = 0; i < size_t(frames) * channels; ++i) {
@@ -382,11 +387,16 @@ PrAudioFormat prAudioMixerFormat(const PrAudioMixer* mixer) {
     return mixer->format;
 }
 
+double prAudioMixerNow(const PrAudioMixer* mixer) {
+    return prAudioOutputNow(mixer->output);
+}
+
 PrAudioSource* PR_NULLABLE prAudioSourceCreate(PrAudioMixer* mixer, PrAudioSourceReadFn read, void* PR_NULLABLE context) {
     if (mixer->sources.count == 0) {
         if (!prAudioOutputStart(mixer->output, prAudioMixerRender, mixer))
             return nullptr;
         mixer->latency = prAudioOutputLatency(mixer->output);
+        mixer->readMode = prAudioOutputIsHostPaced(mixer->output) ? PrAudioReadMode_Wait : PrAudioReadMode_Ready;
     }
     PrAudioFormat format = mixer->format;
     PrAudioSource* source = allocZeroed<PrAudioSource>();
@@ -481,7 +491,7 @@ void prAudioSourceReset(PrAudioSource* source) {
         source->tailFrames = kFadeFrames;
     }
     source->gainNow = 0;
-    publishClock(source, 0, false, false);
+    publishClock(source, 0, prAudioOutputNow(mixer->output), false, false);
     unlock(mixer);
 }
 

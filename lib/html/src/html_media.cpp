@@ -172,7 +172,7 @@ double currentPosition(const HtmlMedia* media) {
     }
     if (followsAudio) {
         // The position holds until the audio begins, and never falls behind where it last settled.
-        double elapsed = prTimeMonotonicMilliseconds() - clock.stamp;
+        double elapsed = prAudioMixerNow(media->window->mixer) - clock.stamp;
         elapsed = elapsed > kAudioClockHoldMilliseconds ? kAudioClockHoldMilliseconds : elapsed;
         position = clock.valid ? clock.position + elapsed / 1000 * media->rate : media->position;
         position = position < media->position ? media->position : position;
@@ -510,8 +510,11 @@ void startAudio(HtmlMedia* media, const PrMediaInfo& info) {
     PrAudioFormat format = prAudioMixerFormat(mixer);
     if (!prMediaDecoderAudioStart(media->decoder, format.sampleRate, format.channels, media->position))
         return;
-    PrAudioSourceReadFn read = [](void* context, float* samples, uint32_t frames) {
-        PrMediaAudioChunk chunk = prMediaDecoderAudioRead(static_cast<PrMediaDecoder*>(context), samples, frames);
+    PrAudioSourceReadFn read = [](void* context, float* samples, uint32_t frames, PrAudioReadMode mode) {
+        PrMediaDecoder* decoder = static_cast<PrMediaDecoder*>(context);
+        if (mode == PrAudioReadMode_Wait)
+            prMediaDecoderAudioWait(decoder, frames);
+        PrMediaAudioChunk chunk = prMediaDecoderAudioRead(decoder, samples, frames);
         return PrAudioChunk{.frames = chunk.frames, .time = chunk.time, .ended = chunk.ended};
     };
     media->source = prAudioSourceCreate(mixer, read, media->decoder);

@@ -715,6 +715,10 @@ PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float
     return prMediaAudioQueueRead(static_cast<WindowsDecoder*>(decoder)->queue, samples, frames);
 }
 
+void decoderAudioWait(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t frames) {
+    prMediaAudioQueueWait(static_cast<WindowsDecoder*>(decoder)->queue, frames);
+}
+
 void destroy(PrMediaCodec* codec) {
     WindowsCodec* windows = static_cast<WindowsCodec*>(codec);
     MFShutdown();
@@ -745,6 +749,7 @@ PrMediaCodec* PR_NULLABLE prMediaWindowsCreate(void) {
     codec->decoderAudioStart = decoderAudioStart;
     codec->decoderAudioSeek = decoderAudioSeek;
     codec->decoderAudioRead = decoderAudioRead;
+    codec->decoderAudioWait = decoderAudioWait;
     codec->apartment = apartment;
     return codec;
 }

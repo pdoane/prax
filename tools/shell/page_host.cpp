@@ -5,6 +5,7 @@
 #include "tools/shell/page_host.h"
 
 #include "pr/ascii.h"
+#include "pr/audio_memory.h"
 #include "pr/base64.h"
 #include "pr/callback.h"
 #include "pr/charset_quickjs.h"
@@ -121,17 +122,19 @@ struct HostState {
     // The script that waits for a captured page to be ready (setCaptureWait), or empty.
     std::string captureWait;
 
-    // The virtual clock that the pages run on, in milliseconds, which advances only when they wait. `now` points to it
-    // if the clock is virtual, and is null if the pages run on the system's clock.
+    // The virtual clock that the pages run on, in milliseconds, which advances only when they wait. Each run starts it
+    // at kVirtualStart. `now` points to it if the clock is virtual, and is null if the pages run on the system's clock.
     double virtualTime = 0;
     double* PR_NULLABLE now = nullptr;
 
-    // The wall clock that the pages' dates read with a virtual clock (wallNow). It is the virtual clock's time plus the
-    // system's time since the virtual clock last moved, so that a script that waits on dates in a loop ends, and it
-    // never goes back. Each is in milliseconds: the wall time and virtual time at which the host started, the system's
-    // monotonic time at which the virtual clock last moved, and the last wall time read.
+    // The memory output that renders in step with the virtual clock (paceAudio), or null.
+    PrAudioOutput* PR_NULLABLE pacedAudio = nullptr;
+
+    // The wall clock that the pages' dates read with a virtual clock (wallNow). It is the virtual clock's time since
+    // the run started plus the system's time since the virtual clock last moved, so that a script that waits on dates
+    // in a loop ends, and it never goes back. Each is in milliseconds: the wall time at which the run started, the
+    // system's monotonic time at which the virtual clock last moved, and the last wall time read.
     double wallStart = 0;
-    double virtualStart = 0;
     double movedAt = 0;
     double lastWall = 0;
     bool allFrames = false;                     // run every animation frame, rather than the observed ones
@@ -229,10 +232,17 @@ bool runFile(JSContext* ctx, const char* path, bool window = false) {
 // The virtual time that a document's commit takes, in milliseconds, which puts its scripts after its time origin.
 constexpr double kCommitDuration = 1;
 
+// The virtual clock's time when a run starts, in milliseconds. It is the same in every run, so that the times that
+// pages read, and the order of the timers and frames that fall due together, never depend on when the run started: the
+// sum of a time and a delay rounds by the time's magnitude.
+constexpr double kVirtualStart = 0;
+
 // Advances the virtual clock by `delay` milliseconds.
 void moveClock(HostState& host, double delay) {
     *host.now += delay;
     host.movedAt = prTimeMonotonicMilliseconds();
+    if (host.pacedAudio != nullptr)
+        prAudioMemoryAdvance(host.pacedAudio, *host.now);
 }
 
 void committedHtml(void* context, PrHtmlPage*) {
@@ -247,7 +257,7 @@ double virtualNow(void* context) {
 // Returns the wall clock's time on a virtual clock (HostState::wallStart).
 double virtualWallNow(void* context) {
     HostState& host = *static_cast<Page*>(context)->host;
-    double wall = host.wallStart + (*host.now - host.virtualStart) + (prTimeMonotonicMilliseconds() - host.movedAt);
+    double wall = host.wallStart + (*host.now - kVirtualStart) + (prTimeMonotonicMilliseconds() - host.movedAt);
     host.lastWall = wall > host.lastWall ? wall : host.lastWall;
     return host.lastWall;
 }
@@ -770,8 +780,8 @@ void realmOpened(void* context, JSContext* ctx, PrHtmlPage* PR_NULLABLE htmlPage
         run->ok = runFile(ctx, prelude.c_str(), true) && run->ok;
 }
 
-// Starts what pages run on: the script runtime, the event loop, and the clock, which starts at the system's time, as
-// pages expect. The network outlives the run.
+// Starts what pages run on: the script runtime, the event loop, and the clock. The pages' dates start at the system's
+// time, as pages expect. The network outlives the run.
 void startRun(HostState& s) {
     PrJsHtmlBind* const binds[] = {prJsSvgBind, prJsMathMlBind, prJsUrlBind, prJsCharsetBind, prJsXhrBind};
     PrJsHtmlEngineDesc engine = {
@@ -791,9 +801,11 @@ void startRun(HostState& s) {
     options.restylePool = s.workers;
     s.agent = prDomAgentCreate(&options);
     prDomAgentSetWake(s.agent, wakeHost, &s);
-    s.virtualTime = prTimeMonotonicMilliseconds();
-    s.virtualStart = s.virtualTime;
-    s.movedAt = s.virtualTime;
+    s.virtualTime = kVirtualStart;
+    // The last run's pages are gone, and with them the sources that ran the output, so its clock may start over.
+    if (s.pacedAudio != nullptr)
+        prAudioMemoryAdvance(s.pacedAudio, s.virtualTime);
+    s.movedAt = prTimeMonotonicMilliseconds();
     s.wallStart = prTimeWallMilliseconds();
     s.lastWall = s.wallStart;
     s.awaitingRender = false;
@@ -1026,6 +1038,11 @@ void PageHost::setDevice(PrGpuDevice* PR_NULLABLE device) {
 
 void PageHost::useVirtualTime() {
     state_->now = &state_->virtualTime;
+}
+
+void PageHost::paceAudio(PrAudioOutput* output) {
+    state_->pacedAudio = output;
+    prAudioMemoryAdvance(output, state_->virtualTime);
 }
 
 void PageHost::runAllAnimationFrames() {

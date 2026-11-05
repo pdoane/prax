@@ -1,7 +1,8 @@
 // Audio: outputs that play sound on a device.
 //
-// An output pulls interleaved 32-bit float samples from a render function. The output calls that function on a
-// real-time thread of its own, so the function must not wait on a lock or allocate.
+// An output pulls interleaved 32-bit float samples from a render function. A device's output calls that function on a
+// real-time thread of its own, so the function must not wait on a lock or allocate. An output that its host paces
+// (prAudioOutputIsHostPaced) calls it on the host's thread instead, where it may wait.
 
 #pragma once
 
@@ -23,7 +24,7 @@ typedef struct PrAudioFormat {
     uint32_t channels;      // samples per frame, at most kPrAudioMaxChannels
 } PrAudioFormat;
 
-// Writes `frames` frames to `samples`. Called on the output's real-time thread.
+// Writes `frames` frames to `samples`. Called on the output's thread.
 typedef void (*PrAudioRenderFn)(void* PR_NULLABLE context, float* samples, uint32_t frames);
 
 // A device that plays sound. Each backend provides its own constructor.
@@ -37,6 +38,8 @@ struct PrAudioOutput {
     bool (*start)(PrAudioOutput* output, PrAudioRenderFn render, void* PR_NULLABLE context);
     void (*stop)(PrAudioOutput* output);
     double (*latency)(PrAudioOutput* output);
+    double (*PR_NULLABLE now)(const PrAudioOutput* output);    // null for the system's monotonic clock
+    bool hostPaced;                                            // renders as its host advances it
 };
 
 // The library's backends of outputs, which the build turns on (README.md), and Default, the platform's own or else the
@@ -78,6 +81,16 @@ void prAudioOutputStop(PrAudioOutput* output);
 
 // The time between a render call and the moment that its first sample is heard, in seconds.
 double prAudioOutputLatency(PrAudioOutput* output);
+
+// The time on the output's clock, in milliseconds. It is the system's monotonic clock (prTimeMonotonicMilliseconds)
+// unless the output keeps a clock of its own. During a render, the render's first frame is heard at this time plus the
+// output's latency.
+double prAudioOutputNow(const PrAudioOutput* output);
+
+// Returns true if the output renders on its host's thread as the host advances it, rather than in real time on a thread
+// of its own. A render of such an output may wait for what it plays, so what it renders does not depend on how fast its
+// sources are produced.
+bool prAudioOutputIsHostPaced(const PrAudioOutput* output);
 
 #if defined(__cplusplus)
 }

@@ -94,13 +94,16 @@ class HtmlHostTests(unittest.TestCase):
         return subprocess.run([SHELL, *options, "--html", str(page)], capture_output=True, encoding="utf-8", timeout=10)
 
     def run_audio(self, root, tones, script, attributes=""):
-        """Runs a page with an audio element of `tones`, which `script` drives, and returns what the page played."""
+        """Runs a page with an audio element of `tones`, which `script` drives, and returns what the page played. The
+        page runs on the virtual clock, which the memory output renders in step with, so what it plays depends on
+        nothing but the page."""
         (root / "pages").mkdir(exist_ok=True)
         (root / "pages" / "tone.wav").write_bytes(wave(tones))
         written = root / "written.wav"
         result = self.run_page(root,
             "<audio id=a src=tone.wav %s></audio><script>%s</script>" % (attributes, script),
-            "--media", "apple", "--audio", "memory", "--audio-write", str(written), "--timeout", "15000")
+            "--media", "apple", "--audio", "memory", "--audio-write", str(written), "--virtual-time",
+            "--timeout", "15000")
         self.assertEqual(result.returncode, 0, result.stderr)
         samples, rate = played(written)
         return result.stdout, samples, rate
@@ -158,12 +161,15 @@ class HtmlHostTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "pages").mkdir()
+            # The two pages play tones of different frequencies, whose loudness together does not depend on their
+            # phases.
             (root / "pages" / "tone.wav").write_bytes(wave([(1000, 5)]))
+            (root / "pages" / "other.wav").write_bytes(wave([(1500, 5)]))
             (root / "pages" / "child.html").write_text(
                 "<iframe src=grandchild.html></iframe><audio id=a src=tone.wav></audio><script>"
                 "a.addEventListener('canplay', async () => { await a.play(); parent.postMessage('on', '*'); });"
                 "</script>")
-            (root / "pages" / "grandchild.html").write_text("<audio id=a src=tone.wav autoplay></audio>")
+            (root / "pages" / "grandchild.html").write_text("<audio id=a src=other.wav autoplay></audio>")
             written = root / "written.wav"
             result = self.run_page(root,
                 "<div id=d><iframe src=child.html></iframe></div><script>"
@@ -171,13 +177,15 @@ class HtmlHostTests(unittest.TestCase):
                 "  await new Promise(r => setTimeout(r, 500)); d.innerHTML = '';"
                 "  await new Promise(r => setTimeout(r, 700)); print('removed');"
                 "});</script>",
-                "--media", "apple", "--audio", "memory", "--audio-write", str(written), "--timeout", "15000")
+                "--media", "apple", "--audio", "memory", "--audio-write", str(written), "--virtual-time",
+                "--timeout", "15000")
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.strip(), "removed")
             samples, rate = played(written)
-            self.assertGreater(loudness(samples[rate // 4:rate // 2]), 0.1)
-            # The sound ends at the removal, half a second after it began, and the page runs on for 0.7 seconds.
-            self.assertLess(len(sounding(samples, rate)) / rate, 0.9)
+            # Both pages sound, which is louder than one tone.
+            self.assertGreater(loudness(samples[rate // 4:rate // 2]), 0.4)
+            # The sound ends at the removal, half a second after it began, though the page runs on for 0.7 seconds.
+            self.assertAlmostEqual(len(sounding(samples, rate)) / rate, 0.5, delta=0.02)
 
     @unittest.skipUnless(sys.platform == "darwin", "reads audio with the AVFoundation codec")
     def test_a_playback_rate_keeps_the_pitch_unless_told_otherwise(self):
@@ -494,6 +502,29 @@ class HtmlHostTests(unittest.TestCase):
                                    "</script>")
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.splitlines(), ["timer", "idle false true"])
+
+    def test_the_virtual_clock_gives_every_run_the_same_times_and_order(self):
+        # The frames and the timer read times that are whole multiples of the frame interval and the delay. A clock
+        # that started at the system's time would round them by the system's uptime instead.
+        page = ("<!doctype html><script>\n"
+                "const seen = [];\n"
+                "let frames = 0;\n"
+                "function frame(t) {\n"
+                "  seen.push('frame ' + t);\n"
+                "  if (frames == 2)\n"
+                "    setTimeout(() => seen.push('timer ' + performance.now()), 50);\n"
+                "  if (++frames < 7)\n"
+                "    requestAnimationFrame(frame);\n"
+                "  else\n"
+                "    print(seen.join(' '));\n"
+                "}\n"
+                "requestAnimationFrame(frame);\n"
+                "</script>")
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory), page, "--virtual-time")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), "frame 16.6 frame 33.3 frame 50 frame 66.6 frame 83.3 timer 100 "
+                                                    "frame 100 frame 116.6")
 
     def test_template_contents_are_inert_and_their_observers_still_run(self):
         with tempfile.TemporaryDirectory() as directory:

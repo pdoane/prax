@@ -11,9 +11,21 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Creates an output that renders on a thread of its own, at the pace of the system's clock, and appends what it renders
-// to its samples. Its latency is zero.
-PrAudioOutput* prAudioMemoryCreate(PrAudioFormat format);
+// What sets the pace at which a memory output renders.
+enum {
+    PrAudioMemoryPace_System,   // a thread of its own renders at the pace of the system's clock
+    PrAudioMemoryPace_Host,     // the host's thread renders as the host moves the output's clock (prAudioMemoryAdvance)
+};
+typedef uint8_t PrAudioMemoryPace;
+
+// Creates an output that renders at `pace` and appends what it renders to its samples. Its latency is zero. An output
+// that its host paces keeps a clock of its own (prAudioOutputNow), which starts at zero.
+PrAudioOutput* prAudioMemoryCreate(PrAudioFormat format, PrAudioMemoryPace pace);
+
+// Moves the clock of an output that its host paces to `time`, in milliseconds. A started output first renders, on the
+// caller's thread, the frames that play until `time`, and its clock must not move back. A stopped output's clock moves
+// anywhere. `output` must come from prAudioMemoryCreate with PrAudioMemoryPace_Host.
+void prAudioMemoryAdvance(PrAudioOutput* output, double time);
 
 // The frames rendered so far, and their samples, valid until the output starts again or is destroyed. The output must
 // be stopped. `output` must come from prAudioMemoryCreate.

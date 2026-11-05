@@ -3,8 +3,9 @@
 // A mixer sums its sources into its output. It runs each source at its own gain and rate, and ramps every change so
 // that the change does not click. The mixer runs its output only while it has sources.
 //
-// Calls that change a source come from one thread at a time. The output's thread reads the sources without waiting, and
-// a render that finds a change in progress plays silence for that render.
+// Calls that change a source come from one thread at a time. A render never waits for a change: one that finds a change
+// in progress plays silence. A device's output reads the sources without waiting, and an output that its host paces
+// waits for what they play (PrAudioReadMode).
 
 #pragma once
 
@@ -34,14 +35,23 @@ typedef struct PrAudioChunk {
     bool ended;             // no frames follow until the source is reset
 } PrAudioChunk;
 
-// Writes up to `frames` frames to `samples`, in the mixer's format. Returns no frames if none are ready. Called on the
-// output's real-time thread, so the function must not wait on a lock or allocate.
-typedef PrAudioChunk (*PrAudioSourceReadFn)(void* PR_NULLABLE context, float* samples, uint32_t frames);
+// How a read of a source may wait for its frames.
+enum {
+    PrAudioReadMode_Ready,      // gives the frames that are ready and never waits, as a real-time thread reads
+    PrAudioReadMode_Wait,       // waits until the frames are ready, or until no more come without a change elsewhere
+};
+typedef uint8_t PrAudioReadMode;
+
+// Writes up to `frames` frames to `samples`, in the mixer's format, reading as `mode` says. Returns no frames if none
+// are ready. Called on the output's thread. The mode is Wait for an output that its host paces
+// (prAudioOutputIsHostPaced). Otherwise the thread is a real-time thread, so the function must not wait on a lock or
+// allocate.
+typedef PrAudioChunk (*PrAudioSourceReadFn)(void* PR_NULLABLE context, float* samples, uint32_t frames, PrAudioReadMode mode);
 
 // What a source plays, as of one moment.
 typedef struct PrAudioClock {
     double position;        // the time on the source's timeline that is heard at `stamp`, in seconds
-    double stamp;           // the moment, as prTimeMonotonicMilliseconds gives it
+    double stamp;           // the moment, on the output's clock (prAudioMixerNow)
     bool valid;             // the source has played since it was created or last reset
     bool ended;             // the source has played all of its frames
 } PrAudioClock;
@@ -58,6 +68,10 @@ void prAudioMixerRender(void* PR_NULLABLE context, float* samples, uint32_t fram
 
 // The layout of the mixer's samples.
 PrAudioFormat prAudioMixerFormat(const PrAudioMixer* mixer);
+
+// The time on the clock of the mixer's output (prAudioOutputNow), in milliseconds, on which the sources' clocks are
+// stamped.
+double prAudioMixerNow(const PrAudioMixer* mixer);
 
 // Creates a source that reads through `read`, stopped, at a gain and a rate of one, and starts the output if the source
 // is the only one. Returns null if the output does not start.

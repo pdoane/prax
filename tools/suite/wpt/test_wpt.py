@@ -50,7 +50,8 @@ class RunnerTests(unittest.TestCase):
         self.assertIsNone(result.harness)
         self.assertEqual([(status, name) for status, name, _ in result.results],
                          [("PASS", "synchronous"), ("PASS", "timer")])
-        self.assertLess(time.monotonic() - start, 2)
+        # A run that waited for the runner's deadline would end there, however fast the machine.
+        self.assertLess(time.monotonic() - start, wpt.TIMEOUT)
 
     def test_runner_times_out_a_stalled_script(self):
         with patch.object(wpt, "TIMEOUT", 0.1):

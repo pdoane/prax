@@ -19,6 +19,10 @@ constexpr double kAheadSeconds = 2;
 // because the reader runs on a real-time thread.
 constexpr double kPollMilliseconds = 10;
 
+// How often a reader that waits looks again for the writer's frames, in milliseconds. The writer does not signal it, so
+// that a writer has nothing to do for a reader that never waits.
+constexpr double kReaderPollMilliseconds = 1;
+
 struct MediaAudioQueue {
     float* samples;             // interleaved, by frame modulo `capacity`
     uint32_t capacity;          // in frames
@@ -158,4 +162,18 @@ PrMediaAudioChunk prMediaAudioQueueRead(PrMediaAudioQueue* queue, float* samples
     }
     queue->consumed.store(read);
     return chunk;
+}
+
+void prMediaAudioQueueWait(const PrMediaAudioQueue* queue, uint32_t frames) {
+    uint64_t wanted = frames < queue->capacity ? frames : queue->capacity;
+    while (!queue->stopping.load()) {
+        if (queue->seekWanted.load() == queue->seekDone.load()) {
+            uint64_t base = queue->baseFrame.load();
+            uint64_t read = queue->consumed.loadRelaxed();
+            read = read < base ? base : read;
+            if (queue->ended.load() || queue->written.load() - read >= wanted)
+                return;
+        }
+        prThreadSleep(kReaderPollMilliseconds);
+    }
 }

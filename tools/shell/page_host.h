@@ -99,11 +99,16 @@ public:
     // describes: 0 means one thread per core. Call it before any page loads.
     void setRestyleThreads(uint32_t threads);
 
-    // Runs the pages on a virtual clock, in milliseconds starting from the system's time, which advances only when the
-    // pages wait. A wait for a timer or a frame takes no time, and the animation frames that nothing observes are
-    // skipped (PrHtmlAnimationFrames_Observed). Without this call, pages run on the system's clock. The clock stands
-    // while a fetch waits for the network.
+    // Runs the pages on a virtual clock, in milliseconds, which starts at the same time in every run and advances only
+    // when the pages wait. A wait for a timer or a frame takes no time, and the animation frames that nothing observes
+    // are skipped (PrHtmlAnimationFrames_Observed). Without this call, pages run on the system's clock. The clock
+    // stands while a fetch waits for the network.
     void useVirtualTime();
+
+    // Renders `output`, a memory output that its host paces (PrAudioMemoryPace_Host), in step with the virtual clock:
+    // each time the clock moves, the output renders the frames up to it, on the host's thread. So what the pages play
+    // on it depends only on the virtual clock. The output must outlive the host.
+    void paceAudio(PrAudioOutput* output);
 
     // Has painting wait for no more responses, for a run that has passed its timeout and answers with what it reached.
     void stopWaiting();

@@ -41,7 +41,9 @@
 // media resources with the codec of lib/media that it names, the built-in codec otherwise, which decodes no frames.
 // --audio plays their media elements' audio on the output of lib/audio that it names, and on none otherwise, and
 // --audio-write writes what a memory output rendered to the WAVE file that it names when the run ends. Each sets the
-// process's backend, so a served run (--serve) uses the backends that the process started with.
+// process's backend, so a served run (--serve) uses the backends that the process started with. A memory output in a
+// process started with --virtual-time renders in step with the virtual clock (PageHost::paceAudio), so what it writes
+// depends on nothing but the pages.
 //
 // --restyle-threads N restyles on N threads, including the event loop's own thread, as
 // PrDomAgentOptions::restyleThreads describes: 0, the default, means one thread per core, and 1 means the event loop's
@@ -487,6 +489,7 @@ int main(int argc, char** argv) {
     PrMediaCodecBackend media = PrMediaCodecBackend_Builtin;
     PrAudioOutputBackend audio = PrAudioOutputBackend_Count;
     std::string audioPath;
+    bool virtualTime = std::find(args.begin(), args.end(), "--virtual-time") != args.end();
     for (size_t i = 0; i + 1 < args.size(); ++i) {
         if (args[i] == "--shaper") {
             chosen = prTextShaperBackendFromName(args[i + 1]);
@@ -521,8 +524,12 @@ int main(int argc, char** argv) {
     std::unique_ptr<PrMediaCodec, decltype(&prMediaCodecDestroy)> mediaCodec(prMediaCodecCreate(media),
         prMediaCodecDestroy);
     PrAudioOutput* audioOutput = nullptr;
-    if (audio != PrAudioOutputBackend_Count)
-        audioOutput = prAudioOutputCreate(audio, PrAudioFormat{kAudioSampleRate, kAudioChannels});
+    PrAudioFormat audioFormat{kAudioSampleRate, kAudioChannels};
+    bool pacedAudio = virtualTime && audio == PrAudioOutputBackend_Memory;
+    if (pacedAudio)
+        audioOutput = prAudioMemoryCreate(audioFormat, PrAudioMemoryPace_Host);
+    else if (audio != PrAudioOutputBackend_Count)
+        audioOutput = prAudioOutputCreate(audio, audioFormat);
     std::unique_ptr<PrAudioOutput, decltype(&prAudioOutputDestroy)> audioOutputOwner(audioOutput, prAudioOutputDestroy);
     PrAudioMixer* mixer = audioOutput != nullptr ? prAudioMixerCreate(audioOutput) : nullptr;
     std::unique_ptr<PrAudioMixer, decltype(&prAudioMixerDestroy)> mixerOwner(mixer, prAudioMixerDestroy);
@@ -532,6 +539,8 @@ int main(int argc, char** argv) {
     std::unique_ptr<PrGpuDevice, decltype(&prGpuDeviceDestroy)> memoryOwner(memory, prGpuDeviceDestroy);
     PageHost host(shaper.get(), mediaCodec.get(), mixer);
     host.setDevice(memory);
+    if (pacedAudio)
+        host.paceAudio(audioOutput);
     // The hinter lives as long as the process, because the fonts that name it are kept.
     host.setHinting(hinting, hinting != PrFontHinting_None ? prFontHinterCreate(PrFontHinterBackend_Default) : nullptr);
     Run run;
