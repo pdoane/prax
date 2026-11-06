@@ -2,7 +2,7 @@
 # Studio Kit. Its addresses, favorites and history are a library of their own, which the application and the tests link.
 add_library(browser_model STATIC address.cpp favorites.cpp history.cpp profile.cpp)
 target_include_directories(browser_model PUBLIC ${PROJECT_SOURCE_DIR})
-target_link_libraries(browser_model PUBLIC prax::json prax::core_cpp PRIVATE pr_warnings)
+target_link_libraries(browser_model PUBLIC prax::json prax::core_cpp PRIVATE prax::url pr_warnings)
 
 pr_app(browser main.cpp browser.cpp chrome.cpp commands.cpp icons.cpp tab.cpp)
 target_link_libraries(browser PRIVATE browser_model prax::app prax::html_quickjs prax::url_quickjs prax::xhr_quickjs

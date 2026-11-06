@@ -199,17 +199,22 @@ void prFilePathAppend(PrTextBuffer* path, PrStringView part) {
     prTextBufferAppend(path, part);
 }
 
+bool prFilePathIsAbsolute(PrStringView path) {
+    size_t root = rootLength(path);
+#if defined(_WIN32)
+    // On Windows, one separator is the root of the base's drive.
+    return root > 1;
+#else
+    return root != 0;
+#endif
+}
+
 PrRawString prFilePathAbsolute(PrStringView path, PrStringView base) {
     if (path.isEmpty())
         return prRawStringNull();
     size_t root = rootLength(path);
     PrTextBuffer out = {};
-    // A path with a root of its own is absolute, but on Windows a lone separator is the root of the drive of `base`.
-    bool underWorking = root == 0;
-#if defined(_WIN32)
-    underWorking = underWorking || root == 1;
-#endif
-    if (!underWorking) {
+    if (prFilePathIsAbsolute(path)) {
         appendRoot(&out, path, root);
         appendParts(&out, out.size, path, root);
         return prTextBufferTake(&out);

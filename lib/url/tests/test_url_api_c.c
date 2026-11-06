@@ -1,4 +1,5 @@
 #include "pr/url.h"
+#include "pr/url_file.h"
 
 int prTestUrlCApi(void);
 

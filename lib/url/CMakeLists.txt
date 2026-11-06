@@ -1,6 +1,7 @@
 # URL and URLSearchParams, as the URL Standard specifies them.
 pr_library(url INCLUDE include
     src/url_data.cpp
+    src/url_file.cpp
     src/url_percent.cpp
     src/url.cpp
     src/url_record.cpp
@@ -22,6 +23,7 @@ if (PR_DEVELOP)
         tests/test_url_api.cpp
         tests/test_url_data.cpp
         tests/test_url_data_c.c
+        tests/test_url_file.cpp
         tests/test_url_percent.cpp
         tests/test_url_percent_c.c
         tests/test_url.cpp

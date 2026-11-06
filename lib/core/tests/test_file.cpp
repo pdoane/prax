@@ -206,6 +206,20 @@ TEST_CASE("a part appends to a path after one separator") {
     prTextBufferReset(&path);
 }
 
+TEST_CASE("a path is absolute if it has a root of its own") {
+    CHECK_FALSE(prFilePathIsAbsolute(""));
+    CHECK_FALSE(prFilePathIsAbsolute("notes.txt"));
+    CHECK_FALSE(prFilePathIsAbsolute("dir/notes.txt"));
+#if defined(_WIN32)
+    CHECK_FALSE(prFilePathIsAbsolute("/notes.txt"));
+    CHECK(prFilePathIsAbsolute("C:\\dir\\notes.txt"));
+    CHECK(prFilePathIsAbsolute("c:/notes.txt"));
+    CHECK(prFilePathIsAbsolute("\\\\server\\share\\notes.txt"));
+#else
+    CHECK(prFilePathIsAbsolute("/notes.txt"));
+#endif
+}
+
 TEST_CASE("an absolute path is normalized from its text, and a relative one is under the working directory") {
     // The root is "/", or on Windows the root of the working directory's drive.
     String root = absolute("/");

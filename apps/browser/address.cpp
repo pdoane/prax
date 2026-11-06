@@ -6,6 +6,7 @@
 #include "pr/file.h"
 #include "pr/format.h"
 #include "pr/string_ops.h"
+#include "pr/url_file.h"
 
 namespace browser {
 
@@ -100,7 +101,7 @@ String fileUrl(PrStringView path) {
     String absolute = String::adopt(prFilePathAbsolute(path, ""));
     if (absolute.isEmpty())
         return String();
-    return format("file://{}", absolute);
+    return String::adopt(prUrlFromFilePath(absolute));
 }
 
 // Returns `text` percent-encoded as a query's value (url/#application-x-www-form-urlencoded-percent-encode-set), with

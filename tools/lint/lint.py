@@ -852,6 +852,19 @@ def check_line_length(report, path, text, literals=None):
         start = end + 1
 
 
+def binary_extensions():
+    """Returns the extensions that .gitattributes marks binary, as `*.png binary` does, each with its dot."""
+    extensions = set()
+    path = os.path.join(ROOT, ".gitattributes")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) == 2 and parts[1] == "binary" and parts[0].startswith("*."):
+                    extensions.add(parts[0][1:])
+    return extensions
+
+
 def check_whitespace(report, path, data):
     """A text file's lines end with LF alone, never with a space or a tab, and its last line ends too. `data` is the
     file's bytes, as a text read would hide a CR. A diff's context lines may end with a space, so a patch may too."""
@@ -3358,12 +3371,14 @@ def main():
     for line, problem in web_features.check(features, wpt.tested_features(wpt.WPT, features)):
         report.add(web_features.RULINGS_FILE, max(line, 1), "features", problem)
 
-    # Every text file of the working tree, tracked or new, has the line endings that .gitattributes keeps.
+    # Every text file of the working tree, tracked or new, has the line endings that .gitattributes keeps. A file whose
+    # extension .gitattributes marks binary is not text, whatever its bytes.
     files = subprocess.run(["git", "-C", ROOT, "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
                            capture_output=True, text=True, check=True).stdout.split("\0")
+    binary = binary_extensions()
     for path in sorted(set(files) - {""}):
         path = os.path.join(ROOT, path)
-        if os.path.isfile(path):
+        if os.path.isfile(path) and os.path.splitext(path)[1] not in binary:
             with open(path, "rb") as f:
                 check_whitespace(report, path, f.read())
 

@@ -100,6 +100,14 @@ The tree generators in `tools/bench/flex_bench/flex_bench.cpp` follow Taffy's be
 
 Copyright (c) 2018 Visly Inc., Copyright (c) 2026 Taffy Authors. Used under the MIT License (below).
 
+## ascii.rest
+
+`lib/vterm/tests/captures` holds the output of pieces of ascii.rest (https://ascii.rest/,
+https://github.com/bas3line/ascii), recorded as they write it to a terminal and to a pipe. The output contains their art
+and the escape sequences that draw it.
+
+Copyright (c) 2026 bas3line. Used under the MIT License (below).
+
 ## Nerd Fonts
 
 The `NerdFontSymbols` font bundle (`lib/font_bundle`) and the tests that draw its icons rely on the private-use code

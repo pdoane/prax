@@ -142,6 +142,10 @@ PrStringView prFilePathExtension(PrStringView path);
 // Appends `part` to the path in `path`, after a separator unless the path is empty or already ends in one.
 void prFilePathAppend(PrTextBuffer* path, PrStringView part);
 
+// Returns true if prFilePathAbsolute ignores the base for `path`. On Windows, `path` begins with a drive letter and a
+// colon, or with two separators. Elsewhere, it begins with a separator.
+bool prFilePathIsAbsolute(PrStringView path);
+
 // Returns `path` as an absolute path, normalized from its text. A relative `path` is resolved against the directory
 // `base`. An empty `base` means the working directory, and a relative `base` is resolved against the working directory.
 // Normalizing removes each empty part and each "." part, removes each ".." part with the part before it, and writes

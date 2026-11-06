@@ -21,3 +21,8 @@
 *.woff2 binary
 *.pdf binary
 *.zip binary
+
+# Terminal captures (lib/vterm/tests/captures): a program's output to a terminal and to a pipe, recorded byte for byte.
+# They are binary so that git keeps their CRs and escape sequences unchanged.
+*.tty binary
+*.pipe binary
