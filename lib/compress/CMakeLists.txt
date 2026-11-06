@@ -7,12 +7,17 @@ target_link_libraries(pr_compress PUBLIC prax::core PRIVATE prax::core_cpp)
 
 if (PR_COMPRESS_BUILTIN)
     target_sources(pr_compress PRIVATE
-        backends/builtin/src/brotli.cpp
-        backends/builtin/src/brotli_tables.cpp
         backends/builtin/src/compress_builtin.cpp
         backends/builtin/src/deflate.cpp
         backends/builtin/src/inflate.cpp
     )
+    if (PR_COMPRESS_BROTLI)
+        target_sources(pr_compress PRIVATE
+            backends/builtin/src/brotli.cpp
+            backends/builtin/src/brotli_tables.cpp
+        )
+        target_compile_definitions(pr_compress PRIVATE PR_COMPRESS_HAS_BROTLI)
+    endif()
     pr_headers(pr_compress PUBLIC backends/builtin/include)
     target_compile_definitions(pr_compress PRIVATE PR_COMPRESS_HAS_BUILTIN)
 endif()

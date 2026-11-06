@@ -26,6 +26,20 @@ constexpr uint32_t kMaxPipelines = 65536;
 
 const char* const kValidationLayer = "VK_LAYER_KHRONOS_validation";
 
+// The SPIR-V targets that the build compiles shaders for (PR_SHADER_TARGETS). A device reads its target as an input
+// attachment if it has dynamic rendering local read and the build compiles the local-read target. Otherwise it reads a
+// copy of the target, which needs the baseline target. A build without the baseline needs local read on every device.
+#if defined(PR_GPU_HAS_SPIRV)
+constexpr bool kHasSpirv = true;
+#else
+constexpr bool kHasSpirv = false;
+#endif
+#if defined(PR_GPU_HAS_SPIRV_LOCAL_READ)
+constexpr bool kHasSpirvLocalRead = true;
+#else
+constexpr bool kHasSpirvLocalRead = false;
+#endif
+
 // The device extensions that the backend needs, and those that it uses where the device has them.
 const char* const kRequiredExtensions[] = {
     VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
@@ -287,7 +301,8 @@ uint32_t queueFamilyOf(VulkanDevice* d, VkPhysicalDevice physical) {
     return found;
 }
 
-// Returns true if `physical` has what the backend needs.
+// Returns true if `physical` has what the backend needs, which includes dynamic rendering local read in a build without
+// the baseline SPIR-V target.
 bool suitable(VulkanDevice* d, VkPhysicalDevice physical) {
     VkPhysicalDeviceProperties properties;
     d->vk.GetPhysicalDeviceProperties(physical, &properties);
@@ -298,12 +313,15 @@ bool suitable(VulkanDevice* d, VkPhysicalDevice physical) {
     bool found = true;
     for (const char* name : kRequiredExtensions)
         found = found && hasExtension(extensions, name);
+    bool localRead = hasExtension(extensions, VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME);
     extensions.reset();
-    if (!found)
+    if (!found || (!kHasSpirv && !localRead))
         return false;
     FeatureChain supported{};
-    link(supported, false);
+    link(supported, localRead);
     d->vk.GetPhysicalDeviceFeatures2(physical, &supported.features);
+    if (!kHasSpirv && !supported.localRead.dynamicRenderingLocalRead)
+        return false;
     FeatureChain wanted{};
     require(wanted);
     return covers(supported, wanted);
@@ -363,7 +381,7 @@ PrStatus createDevice(VulkanDevice* d) {
     FeatureChain supported{};
     link(supported, localRead);
     d->vk.GetPhysicalDeviceFeatures2(d->physical, &supported.features);
-    d->localRead = localRead && supported.localRead.dynamicRenderingLocalRead;
+    d->localRead = kHasSpirvLocalRead && localRead && supported.localRead.dynamicRenderingLocalRead;
     FeatureChain enabled{};
     link(enabled, localRead);
     require(enabled);

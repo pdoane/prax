@@ -8,6 +8,7 @@
 #include "pr/charset_names.h"
 #include "pr/raw_string.h"
 #include "pr/string_view.h"
+#include "pr/utf8.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -18,13 +19,18 @@ extern "C" {
 // ---------------------------------------------------------------------------------------------------------------------
 // Charsets
 
-// Returns the charset that `label` names, or PrCharset_None if it names none (encoding/#concept-encoding-get). Leading
-// and trailing ASCII whitespace is ignored, and ASCII letters match in either case.
+// Returns the charset that `label` names, or PrCharset_None if it names none (encoding/#concept-encoding-get) or the
+// build lacks it (prCharsetIsBuilt). Leading and trailing ASCII whitespace is ignored, and ASCII letters match in
+// either case.
 PrCharset prCharsetFromLabel(PrStringView label);
 
 // Returns the charset that the charset parameter of the MIME type `type` names (fetch/#legacy-extract-an-encoding), or
 // PrCharset_None if the type does not parse, has no charset parameter, or names no charset.
 PrCharset prCharsetFromMimeType(PrStringView type);
+
+// Returns true if the build includes `charset`. A build without the legacy charsets (README.md) has only UTF-8,
+// UTF-16BE, UTF-16LE, replacement and x-user-defined.
+bool prCharsetIsBuilt(PrCharset charset);
 
 // Returns the canonical name of `charset` (encoding/#name), or the null view for PrCharset_None.
 PrStringView prCharsetName(PrCharset charset);
@@ -70,20 +76,17 @@ typedef struct PrCharsetDecoder {
 
     // The state of a decode in progress, which only the decoder reads and writes. The meaning of each member depends on
     // the charset.
+    PrUtf8Decoder utf8;
     bool bomSeen;
     bool outputFlag;
     uint8_t state;
     uint8_t outputState;
     uint8_t needed;
-    uint8_t seen;
-    uint8_t lower;
-    uint8_t upper;
     uint8_t lead[3];
     uint16_t surrogate;
-    uint32_t codePoint;
 } PrCharsetDecoder;
 
-// Returns a decoder of `charset`, which is not PrCharset_None, at the start of its input.
+// Returns a decoder of `charset` at the start of its input. The build must have `charset` (prCharsetIsBuilt).
 PrCharsetDecoder prCharsetDecoderMake(PrCharset charset, PrCharsetDecoderFlags flags);
 
 // Returns the most bytes that decoding the next `size` bytes of input can write.
@@ -116,7 +119,8 @@ typedef struct PrCharsetEncoder {
 // The code point that stops no encode: every code point of the text had bytes in the charset.
 enum { kPrCharsetUnencodedNone = 0x110000 };
 
-// Returns an encoder of `charset`, which has one: it is its own prCharsetOutput.
+// Returns an encoder of `charset`. The build must have `charset` (prCharsetIsBuilt), and `charset` must have an
+// encoder, which is the case if it is its own prCharsetOutput.
 PrCharsetEncoder prCharsetEncoderMake(PrCharset charset);
 
 // Returns the most bytes that encoding the next `size` bytes of text can write.

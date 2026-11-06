@@ -1,9 +1,13 @@
 # Charsets: the encodings of the Encoding Standard, decoded to UTF-8 and encoded from it.
 pr_library(charset INCLUDE include
     src/charset.cpp
-    src/charset_tables.cpp
+    src/charset_labels.cpp
 )
 target_link_libraries(pr_charset PUBLIC prax::core PRIVATE prax::core_cpp prax::mime)
+if (PR_CHARSET_LEGACY)
+    target_sources(pr_charset PRIVATE src/charset_tables.cpp)
+    target_compile_definitions(pr_charset PRIVATE PR_CHARSET_HAS_LEGACY)
+endif()
 
 if (PR_JS)
     pr_library(charset_quickjs INCLUDE quickjs/include

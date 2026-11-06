@@ -64,6 +64,11 @@ void prCompressCodecDestroy(PrCompressCodec* PR_NULLABLE codec) {
         codec->destroy(codec);
 }
 
+bool prCompressCodecDecodes(PrCompressCodec* codec, PrCompressFormat format) {
+    PR_ASSERT(format <= PrCompressFormat_Brotli);
+    return codec->decodes == nullptr || codec->decodes(codec, format);
+}
+
 PrStatus prCompressDecoderCreate(PrCompressCodec* codec, PrCompressFormat format,
         PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(format <= PrCompressFormat_Brotli);

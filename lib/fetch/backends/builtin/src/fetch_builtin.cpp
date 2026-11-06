@@ -808,8 +808,10 @@ void request(BuiltinFetch* fetch, const PrUrl* current) {
         headersAdd(&fetch->sent, "User-Agent", fetcher->userAgent);
     if (headersFind(&fetch->sent, "accept").data == nullptr)
         headersAdd(&fetch->sent, "Accept", acceptOf(fetch->destination));
-    if (headersFind(&fetch->sent, "accept-encoding").data == nullptr && fetcher->compress != nullptr)
-        headersAdd(&fetch->sent, "Accept-Encoding", "gzip, deflate, br");
+    if (headersFind(&fetch->sent, "accept-encoding").data == nullptr && fetcher->compress != nullptr) {
+        bool brotli = prCompressCodecDecodes(fetcher->compress, PrCompressFormat_Brotli);
+        headersAdd(&fetch->sent, "Accept-Encoding", brotli ? "gzip, deflate, br" : "gzip, deflate");
+    }
     RawArray<PrFetchHeader> sent{};
     headersView(&fetch->sent, &sent);
     fetch->timing.requestStart = prTimeMonotonicMilliseconds();

@@ -6,7 +6,6 @@
 
 #include "pr/base.h"
 #include "pr/charset_names.h"
-#include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -16,13 +15,6 @@ namespace pr_impl {
 constexpr PrCharset kCharsetSingleByteFirst = PrCharset_Ibm866;
 constexpr PrCharset kCharsetSingleByteLast = PrCharset_XMacCyrillic;
 constexpr uint32_t kCharsetSingleByteCount = 28;
-
-// Returns the charset that `label` names, or PrCharset_None. `label` has no surrounding whitespace, and its ASCII
-// letters may be in either case.
-PrCharset charsetOfLabel(PrStringView label);
-
-// Returns the name of `charset`, or the empty view for PrCharset_None.
-PrStringView charsetName(PrCharset charset);
 
 // The code points of the bytes 0x80 to 0xff in each single-byte charset, by charset from kCharsetSingleByteFirst, as
 // UTF-8 packed into a word: the bytes in order from the low byte, and their count in the high byte. A byte that has no

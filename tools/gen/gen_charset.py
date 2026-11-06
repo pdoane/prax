@@ -3,7 +3,8 @@
 and encode them.
 
     pr/charset_names.h          PrCharset, one member for each encoding
-    charset/src/charset_tables  the lookup of a label, each charset's name, and the indexes
+    charset/src/charset_labels  the lookup of a label, and each charset's name
+    charset/src/charset_tables  the indexes of the legacy single-byte and multi-byte charsets
 """
 
 import json
@@ -120,11 +121,6 @@ def main():
               "constexpr PrCharset kCharsetSingleByteFirst = %s;\n" % first,
               "constexpr PrCharset kCharsetSingleByteLast = PrCharset_%s;\n" % ident(singles[-1]),
               "constexpr uint32_t kCharsetSingleByteCount = %d;\n" % len(singles),
-              "\n// Returns the charset that `label` names, or PrCharset_None. `label` has no surrounding whitespace, "
-              "and its ASCII\n// letters may be in either case.\n",
-              "PrCharset charsetOfLabel(PrStringView label);\n",
-              "\n// Returns the name of `charset`, or the empty view for PrCharset_None.\n",
-              "PrStringView charsetName(PrCharset charset);\n",
               "\n// The code points of the bytes 0x80 to 0xff in each single-byte charset, by charset from "
               "kCharsetSingleByteFirst,\n// as UTF-8 packed into a word: the bytes in order from the low byte, and "
               "their count in the high byte. A\n// byte that has no code point is zero.\n",
@@ -156,7 +152,17 @@ def main():
                "\n} // namespace pr_impl\n\nPR_ASSUME_NONNULL_END\n"]
     write(os.path.join(source, "charset_tables.h"), header)
 
-    body = [generated, '\n#include "charset/src/charset_tables.h"\n', '\n#include "pr/name_table.h"\n',
+    labels = [generated, '\n#pragma once\n\n#include "pr/base.h"\n#include "pr/charset_names.h"\n',
+              '#include "pr/string_view.h"\n', "\nPR_ASSUME_NONNULL_BEGIN\n\nnamespace pr_impl {\n",
+              "\n// Returns the charset that `label` names, or PrCharset_None. `label` has no surrounding whitespace, "
+              "and its ASCII\n// letters may be in either case.\n",
+              "PrCharset charsetOfLabel(PrStringView label);\n",
+              "\n// Returns the name of `charset`, or the empty view for PrCharset_None.\n",
+              "PrStringView charsetName(PrCharset charset);\n",
+              "\n} // namespace pr_impl\n\nPR_ASSUME_NONNULL_END\n"]
+    write(os.path.join(source, "charset_labels.h"), labels)
+
+    body = [generated, '\n#include "charset/src/charset_labels.h"\n', '\n#include "pr/name_table.h"\n',
             "\nnamespace pr_impl {\nnamespace {\n", lookup.tables(),
             table("constexpr PrCharset kCharsetOfLabel[]", ["PrCharset_None"]
                   + ["PrCharset_" + ident(names[number - 1]) for number in charsets], 4),
@@ -165,6 +171,10 @@ def main():
             "    return %s ? kCharsetOfLabel[index] : PrCharset_None;\n}\n"
             % lookup.confirm("label", lookup.name("index")),
             "\nPrStringView charsetName(PrCharset charset) {\n    return %s;\n}\n" % blob.view("charset"),
+            "\n} // namespace pr_impl\n"]
+    write(os.path.join(source, "charset_labels.cpp"), body)
+
+    body = [generated, '\n#include "charset/src/charset_tables.h"\n', "\nnamespace pr_impl {\n",
             "\nextern const uint32_t kCharsetSingleByte[kCharsetSingleByteCount][128] = {\n"]
     for name in singles:
         # ISO-8859-8-I decodes with the index of ISO-8859-8 (encoding/#legacy-single-byte-encodings).

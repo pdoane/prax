@@ -58,10 +58,12 @@ struct PrCompressDecoder {
 };
 
 // The function table of a codec, placed at the start of the backend's state. Each member implements the public function
-// of the same name. A null `destroy` means there is nothing to free. Null `encodeBound` and `encode` mean the codec
-// encodes nothing. Callers use the functions below, never these members.
+// of the same name. A null `destroy` means there is nothing to free. A null `decodes` means the codec decodes every
+// format. Null `encodeBound` and `encode` mean the codec encodes nothing. Callers use the functions below, never these
+// members.
 struct PrCompressCodec {
     void (*PR_NULLABLE destroy)(PrCompressCodec* codec);
+    bool (*PR_NULLABLE decodes)(PrCompressCodec* codec, PrCompressFormat format);
     PrStatus (*decoderCreate)(PrCompressCodec* codec, PrCompressFormat format,
         PrCompressDecoder* PR_NULLABLE* PR_NONNULL out);
     void (*decoderDestroy)(PrCompressCodec* codec, PrCompressDecoder* decoder);
@@ -96,6 +98,9 @@ PrCompressCodec* PR_NULLABLE prCompressCodecCreate(PrCompressCodecBackend backen
 
 // Frees the codec. Its decoders must be destroyed first.
 void prCompressCodecDestroy(PrCompressCodec* PR_NULLABLE codec);
+
+// Returns true if the codec decodes `format`. If it does, prCompressDecoderCreate does not return NotSupported for it.
+bool prCompressCodecDecodes(PrCompressCodec* codec, PrCompressFormat format);
 
 // Creates a decoder at the start of a stream in `format`. Returns NotSupported for a format the codec does not read. On
 // failure, `*out` is null.

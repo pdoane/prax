@@ -8,7 +8,8 @@
 #
 # Vulkan has two targets. `spirv` is the baseline, which reads a copy of a pipeline's target. `spirv_local_read` is for
 # devices with dynamic rendering local read, and reads the target as an input attachment. It is compiled with
-# PR_GPU_LOCAL_READ also defined. A module that reads no target serves both, so the library holds it once.
+# PR_GPU_LOCAL_READ also defined. A build names either target or both. If it names both, a module that does not read
+# the target serves both, and the library holds it once.
 #
 # The layout is the one that lib/gpu's prGpuShaderLibraryCreate reads. Every number is a little-endian 32-bit word.
 #
@@ -365,11 +366,11 @@ function(align variable)
     set(${variable} "${${variable}}${zeros}" PARENT_SCOPE)
 endfunction()
 
-# A source compiled for Vulkan is compiled for both of its targets. The local-read module comes first, because it shows
-# whether the source reads the target.
-if ("spirv" IN_LIST TARGETS)
+# If both Vulkan targets are named, the local-read module compiles first, because it shows whether the source reads the
+# target.
+if ("spirv" IN_LIST TARGETS AND "spirv_local_read" IN_LIST TARGETS)
     list(REMOVE_ITEM TARGETS spirv)
-    list(APPEND TARGETS spirv_local_read spirv)
+    list(APPEND TARGETS spirv)
 endif()
 
 set(INPUTS "${SOURCE}")
@@ -387,7 +388,7 @@ foreach (target IN LISTS TARGETS)
         # module's header.
         file(READ "${scratch}/library.spv" module HEX)
         string(FIND "${module}" "1100020028000000" READS_TARGET)
-    elseif (target STREQUAL "spirv" AND READS_TARGET EQUAL -1)
+    elseif (target STREQUAL "spirv" AND DEFINED READS_TARGET AND READS_TARGET EQUAL -1)
         set(CODES ${CODES_spirv_local_read})
     elseif (target STREQUAL "spirv")
         compile_spirv(spirv "${scratch}")

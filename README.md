@@ -101,6 +101,8 @@ recursion limits assume that much, as macOS and Linux give a main thread. The op
 | option | default | what it does |
 | --- | --- | --- |
 | `PR_JS` | `ON` | builds the QuickJS bindings and Lottie expressions |
+| `PR_CHARSET_LEGACY` | `ON` | decodes and encodes the Encoding Standard's legacy single-byte and multi-byte charsets; if it is off, a program has only UTF-8, UTF-16, replacement and x-user-defined |
+| `PR_COMPRESS_BROTLI` | `ON` | decodes Brotli in the built-in codec, which WOFF2 fonts and Brotli responses need |
 | `PR_<MODULE>_<BACKEND>` | see below | builds a backend of a module's interface |
 | `PR_INSTALL` | `ON` when Prax is the top-level project | generates the install rules and the CMake package |
 | `PR_PLATFORM_MIMALLOC` | `OFF` | allocates with mimalloc instead of the C library |

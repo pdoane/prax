@@ -53,6 +53,13 @@ option(PR_JS "Run JavaScript, over QuickJS" ON)
 if (PR_APPS)
     set(PR_JS ON)
 endif()
+# Optional parts of libraries. A program that does not need a part can leave out its tables. If a part is left out, a
+# request for it reports NotSupported or finds no charset. A development build tests every part, so it needs them all.
+option(PR_CHARSET_LEGACY "Decode and encode the Encoding Standard's legacy single-byte and multi-byte charsets" ON)
+option(PR_COMPRESS_BROTLI "Decode Brotli in lib/compress's built-in codec" ON)
+if (PR_DEVELOP AND NOT (PR_CHARSET_LEGACY AND PR_COMPRESS_BROTLI))
+    message(FATAL_ERROR "PR_DEVELOP tests every charset and Brotli, so it needs PR_CHARSET_LEGACY and PR_COMPRESS_BROTLI")
+endif()
 
 # The platform's build configuration (docs/platform.md).
 set(PR_USER_CONFIG "" CACHE FILEPATH "A header that binds platform facilities at compile time")
@@ -221,7 +228,14 @@ endif()
 if (PR_GPU_VULKAN)
     pr_dependency_available(vulkan_headers)
     set(PR_VULKAN_HEADERS ${vulkan_headers_SOURCE_DIR}/include)
-    list(APPEND PR_SHADER_TARGETS spirv)
+    # Vulkan has two shader targets, the baseline and local read (cmake/shader_library.cmake). The build compiles those
+    # that the system's drivers support. KosmicKrisp on Apple's systems and the drivers on Windows lack dynamic rendering
+    # local read, so they get only the baseline. Other systems compile both.
+    if (APPLE OR WIN32)
+        list(APPEND PR_SHADER_TARGETS spirv)
+    else()
+        list(APPEND PR_SHADER_TARGETS spirv_local_read spirv)
+    endif()
 endif()
 
 # Where the build's programs find the font bundles' files.

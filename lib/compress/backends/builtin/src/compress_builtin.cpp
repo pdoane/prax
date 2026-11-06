@@ -4,7 +4,9 @@
 
 #include "pr/alloc.h"
 
+#if defined(PR_COMPRESS_HAS_BROTLI)
 #include "compress/backends/builtin/src/brotli.h"
+#endif
 #include "compress/backends/builtin/src/deflate.h"
 #include "compress/backends/builtin/src/inflate.h"
 
@@ -15,7 +17,9 @@ namespace {
 // A decoder of a Deflate format, or of Brotli.
 struct BuiltinDecoder : PrCompressDecoder {
     Inflate* PR_NULLABLE inflate;
+#if defined(PR_COMPRESS_HAS_BROTLI)
     Brotli* PR_NULLABLE brotli;
+#endif
 };
 
 // The framing of each Deflate format, by PrCompressFormat.
@@ -25,15 +29,31 @@ constexpr InflateFormat kInflateFormat[] = {
     InflateFormat_Gzip, // PrCompressFormat_Gzip
 };
 
+// Returns true if the build decodes `format`: every Deflate format, and Brotli if the build has it.
+bool decodes(PrCompressCodec*, PrCompressFormat format) {
+#if defined(PR_COMPRESS_HAS_BROTLI)
+    (void)format;
+    return true;
+#else
+    return format != PrCompressFormat_Brotli;
+#endif
+}
+
 PrStatus createDecoder(PrCompressCodec* codec, PrCompressFormat format, PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
+    if (!decodes(codec, format))
+        return PrStatus_NotSupported;
     BuiltinDecoder* decoder = alloc<BuiltinDecoder>();
     decoder->codec = codec;
     decoder->inflate = nullptr;
+#if defined(PR_COMPRESS_HAS_BROTLI)
     decoder->brotli = nullptr;
-    if (format == PrCompressFormat_Brotli)
+    if (format == PrCompressFormat_Brotli) {
         decoder->brotli = brotliCreate();
-    else
-        decoder->inflate = inflateCreate(kInflateFormat[format]);
+        *out = decoder;
+        return PrStatus_Ok;
+    }
+#endif
+    decoder->inflate = inflateCreate(kInflateFormat[format]);
     *out = decoder;
     return PrStatus_Ok;
 }
@@ -41,13 +61,16 @@ PrStatus createDecoder(PrCompressCodec* codec, PrCompressFormat format, PrCompre
 void destroyDecoder(PrCompressCodec*, PrCompressDecoder* decoder) {
     BuiltinDecoder* builtin = static_cast<BuiltinDecoder*>(decoder);
     inflateDestroy(builtin->inflate);
+#if defined(PR_COMPRESS_HAS_BROTLI)
     brotliDestroy(builtin->brotli);
+#endif
     prMemoryFree(builtin);
 }
 
 PrStatus read(PrCompressCodec*, PrCompressDecoder* decoder, PrByteView input, bool final,
         uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out) {
     BuiltinDecoder* builtin = static_cast<BuiltinDecoder*>(decoder);
+#if defined(PR_COMPRESS_HAS_BROTLI)
     if (builtin->brotli != nullptr) {
         switch (brotliRead(builtin->brotli, input, final, &out->consumed, output, capacity, &out->written)) {
             case BrotliResult_Input:
@@ -65,6 +88,7 @@ PrStatus read(PrCompressCodec*, PrCompressDecoder* decoder, PrByteView input, bo
                 return PrStatus_InvalidData;
         }
     }
+#endif
     InflateResult result = inflateRead(builtin->inflate, input, final, &out->consumed, output, capacity, &out->written);
     switch (result) {
         case InflateResult_Input:
@@ -98,7 +122,14 @@ PrStatus encode(PrCompressCodec*, PrCompressFormat format, PrCompressLevel level
 }
 
 // The single backend. It has no state, so nothing is created per call and nothing is destroyed.
-PrCompressCodec gBackend = {nullptr, createDecoder, destroyDecoder, read, encodeBound, encode};
+PrCompressCodec gBackend = {
+    .decodes = decodes,
+    .decoderCreate = createDecoder,
+    .decoderDestroy = destroyDecoder,
+    .decoderRead = read,
+    .encodeBound = encodeBound,
+    .encode = encode,
+};
 
 } // namespace
 

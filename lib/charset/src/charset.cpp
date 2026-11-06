@@ -14,7 +14,10 @@
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
 
+#include "charset/src/charset_labels.h"
+#if defined(PR_CHARSET_HAS_LEGACY)
 #include "charset/src/charset_tables.h"
+#endif
 
 namespace pr_impl {
 
@@ -133,9 +136,11 @@ constexpr bool isAscii(int32_t byte) {
     return byte >= 0 && byte < 0x80;
 }
 
+#if defined(PR_CHARSET_HAS_LEGACY)
 constexpr bool inRange(int32_t byte, int32_t low, int32_t high) {
     return byte >= low && byte <= high;
 }
+#endif
 
 // Returns the length of the run of ASCII bytes that starts `bytes`. Eight bytes are read at a time, and the lowest high
 // bit of a word that has one is the end of the run.
@@ -261,56 +266,24 @@ size_t utf8Run(const uint8_t* bytes, size_t size) {
 
 CharsetResult utf8Handler(PrCharsetDecoder* d, CharsetQueue* queue, int32_t byte, CharsetWriter* w) {
     if (byte == kEndOfQueue) {
-        if (d->needed == 0)
+        if (!prUtf8DecoderIsInSequence(&d->utf8))
             return CharsetResult_Finished;
-        d->needed = 0;
+        d->utf8 = PrUtf8Decoder{};
         return CharsetResult_Error;
     }
-    if (d->needed == 0) {
-        if (isAscii(byte)) {
-            emit(w, uint32_t(byte));
-        } else if (inRange(byte, 0xc2, 0xdf)) {
-            d->needed = 1;
-            d->codePoint = uint32_t(byte) & 0x1f;
-        } else if (inRange(byte, 0xe0, 0xef)) {
-            if (byte == 0xe0)
-                d->lower = 0xa0;
-            if (byte == 0xed)
-                d->upper = 0x9f;
-            d->needed = 2;
-            d->codePoint = uint32_t(byte) & 0xf;
-        } else if (inRange(byte, 0xf0, 0xf4)) {
-            if (byte == 0xf0)
-                d->lower = 0x90;
-            if (byte == 0xf4)
-                d->upper = 0x8f;
-            d->needed = 3;
-            d->codePoint = uint32_t(byte) & 0x7;
-        } else {
+    uint32_t codePoint = 0;
+    switch (prUtf8DecoderPush(&d->utf8, uint8_t(byte), &codePoint)) {
+        case PrUtf8Step_Continue:
+            return CharsetResult_Continue;
+        case PrUtf8Step_CodePoint:
+            emit(w, codePoint);
+            return CharsetResult_Continue;
+        case PrUtf8Step_Interrupted:
+            queueRestore(queue, byte);
             return CharsetResult_Error;
-        }
-        return CharsetResult_Continue;
+        default:
+            return CharsetResult_Error;
     }
-    if (!inRange(byte, d->lower, d->upper)) {
-        d->codePoint = 0;
-        d->needed = 0;
-        d->seen = 0;
-        d->lower = 0x80;
-        d->upper = 0xbf;
-        queueRestore(queue, byte);
-        return CharsetResult_Error;
-    }
-    d->lower = 0x80;
-    d->upper = 0xbf;
-    d->codePoint = (d->codePoint << 6) | (uint32_t(byte) & 0x3f);
-    if (++d->seen != d->needed)
-        return CharsetResult_Continue;
-    uint32_t codePoint = d->codePoint;
-    d->codePoint = 0;
-    d->needed = 0;
-    d->seen = 0;
-    emit(w, codePoint);
-    return CharsetResult_Continue;
 }
 
 CharsetResult xUserDefinedHandler(int32_t byte, CharsetWriter* w) {
@@ -320,6 +293,7 @@ CharsetResult xUserDefinedHandler(int32_t byte, CharsetWriter* w) {
     return CharsetResult_Continue;
 }
 
+#if defined(PR_CHARSET_HAS_LEGACY)
 // Returns the code point of `pointer` in index gb18030 ranges, or zero for none
 // (encoding/#index-gb18030-ranges-code-point).
 uint32_t gb18030RangesCodePoint(uint32_t pointer) {
@@ -702,6 +676,8 @@ CharsetResult eucKrHandler(PrCharsetDecoder* d, CharsetQueue* queue, int32_t byt
     return CharsetResult_Error;
 }
 
+#endif
+
 // The decoder of replacement, whose error returned flag is `outputFlag`.
 CharsetResult replacementHandler(PrCharsetDecoder* d, int32_t byte) {
     if (byte == kEndOfQueue || d->outputFlag)
@@ -749,15 +725,19 @@ CharsetResult utf16Handler(PrCharsetDecoder* d, CharsetQueue* queue, int32_t byt
     return CharsetResult_Continue;
 }
 
+#if defined(PR_CHARSET_HAS_LEGACY)
 bool isSingleByte(PrCharset charset) {
     return charset >= kCharsetSingleByteFirst && charset <= kCharsetSingleByteLast;
 }
+
+#endif
 
 // Returns true if the decoder holds no part of a sequence, so that the end of the input is no error.
 bool holdsNothing(const PrCharsetDecoder* d) {
     switch (d->charset) {
         case PrCharset_Utf8:
-            return d->needed == 0;
+            return !prUtf8DecoderIsInSequence(&d->utf8);
+#if defined(PR_CHARSET_HAS_LEGACY)
         case PrCharset_Gbk:
         case PrCharset_Gb18030:
         case PrCharset_Big5:
@@ -767,6 +747,7 @@ bool holdsNothing(const PrCharsetDecoder* d) {
             return d->lead[0] == 0 && d->lead[1] == 0 && d->lead[2] == 0;
         case PrCharset_Iso2022Jp:
             return d->state <= Iso2022JpState_LeadByte;
+#endif
         case PrCharset_Utf16Be:
         case PrCharset_Utf16Le:
             return d->needed == 0 && d->surrogate == 0;
@@ -795,6 +776,7 @@ size_t runLength(PrCharset charset, const uint8_t* bytes, size_t size) {
     return charset == PrCharset_Utf8 ? utf8Run(bytes, size) : asciiRun(bytes, size);
 }
 
+#if defined(PR_CHARSET_HAS_LEGACY)
 // Decodes the queue of a single-byte charset into `w`. Returns false at the first error of a fatal decoder.
 bool runSingleByte(PrCharsetDecoder* d, CharsetQueue* queue, CharsetWriter* w) {
     const uint32_t* table = kCharsetSingleByte[d->charset - kCharsetSingleByteFirst];
@@ -835,10 +817,14 @@ bool runSingleByte(PrCharsetDecoder* d, CharsetQueue* queue, CharsetWriter* w) {
     return true;
 }
 
+#endif
+
 // Decodes the queue into `w`. Returns false at the first error of a fatal decoder.
 bool run(PrCharsetDecoder* d, CharsetQueue* queue, CharsetWriter* w) {
+#if defined(PR_CHARSET_HAS_LEGACY)
     if (isSingleByte(d->charset))
         return runSingleByte(d, queue, w);
+#endif
     bool fatal = (d->flags & PrCharsetDecoderFlag_Fatal) != 0;
     bool copies = copiesRuns(d->charset);
     for (;;) {
@@ -855,6 +841,7 @@ bool run(PrCharsetDecoder* d, CharsetQueue* queue, CharsetWriter* w) {
             case PrCharset_Utf8:
                 result = utf8Handler(d, queue, byte, w);
                 break;
+#if defined(PR_CHARSET_HAS_LEGACY)
             case PrCharset_Gbk:
             case PrCharset_Gb18030:
                 result = gb18030Handler(d, queue, byte, w);
@@ -874,6 +861,7 @@ bool run(PrCharsetDecoder* d, CharsetQueue* queue, CharsetWriter* w) {
             case PrCharset_EucKr:
                 result = eucKrHandler(d, queue, byte, w);
                 break;
+#endif
             case PrCharset_Replacement:
                 result = replacementHandler(d, byte);
                 break;
@@ -935,6 +923,7 @@ enum {
 };
 typedef uint8_t Iso2022JpEncoderState;
 
+#if defined(PR_CHARSET_HAS_LEGACY)
 // A pointer that encodes nothing.
 constexpr uint32_t kNoPointer = 0xffff;
 
@@ -966,6 +955,8 @@ uint32_t gb18030RangesPointer(uint32_t codePoint) {
     return range.pointer + codePoint - range.codePoint;
 }
 
+#endif
+
 // The bytes of a encode, written two at a time where a charset needs them.
 struct CharsetBytes {
     char* out;
@@ -978,6 +969,7 @@ struct CharsetBytes {
     }
 };
 
+#if defined(PR_CHARSET_HAS_LEGACY)
 // The private use code points that gb18030 encodes as GB18030-2005 did (encoding/#gb18030-encoder), and their bytes.
 struct Gb18030Private {
     uint16_t codePoint;
@@ -992,11 +984,14 @@ constexpr Gb18030Private kGb18030Private[] = {
     {0xe843, 0xfe, 0x7e}, {0xe854, 0xfe, 0x90}, {0xe864, 0xfe, 0xa0},
 };
 
+#endif
+
 // Encodes one code point that is not ASCII, or ISO-2022-JP's every code point, in the encoder's charset. Returns false
 // if the charset cannot encode it, and sets `*error` to the code point that the error reports.
 bool encodeOne(PrCharsetEncoder* e, uint32_t codePoint, CharsetBytes* b, uint32_t* error) {
     *error = codePoint;
     switch (e->charset) {
+#if defined(PR_CHARSET_HAS_LEGACY)
         case PrCharset_Gbk:
         case PrCharset_Gb18030: {
             bool gbk = e->charset == PrCharset_Gbk;
@@ -1091,11 +1086,13 @@ bool encodeOne(PrCharsetEncoder* e, uint32_t codePoint, CharsetBytes* b, uint32_
             b->put(pointer / 190 + 0x81, pointer % 190 + 0x41);
             return true;
         }
+#endif
         case PrCharset_XUserDefined:
             if (codePoint < 0xf780 || codePoint > 0xf7ff)
                 return false;
             b->put(codePoint - 0xf780 + 0x80);
             return true;
+#if defined(PR_CHARSET_HAS_LEGACY)
         case PrCharset_Iso2022Jp:
             // The handler restores the code point to the queue after each escape, so it runs again in the new state.
             for (;;) {
@@ -1167,6 +1164,10 @@ bool encodeOne(PrCharsetEncoder* e, uint32_t codePoint, CharsetBytes* b, uint32_
             }
             return false;
         }
+#else
+        default:
+            return false;
+#endif
     }
 }
 
@@ -1176,7 +1177,8 @@ bool encodeOne(PrCharsetEncoder* e, uint32_t codePoint, CharsetBytes* b, uint32_
 using namespace pr_impl;
 
 PrCharset prCharsetFromLabel(PrStringView label) {
-    return charsetOfLabel(prStringTrim(label));
+    PrCharset charset = charsetOfLabel(prStringTrim(label));
+    return prCharsetIsBuilt(charset) ? charset : PrCharset_None;
 }
 
 PrCharset prCharsetFromMimeType(PrStringView type) {
@@ -1186,6 +1188,24 @@ PrCharset prCharsetFromMimeType(PrStringView type) {
     PrCharset charset = prCharsetFromLabel(prRawStringView(&label));
     prRawStringReset(&label);
     return charset;
+}
+
+bool prCharsetIsBuilt(PrCharset charset) {
+    PR_ASSERT(charset < PrCharset_Count);
+#if defined(PR_CHARSET_HAS_LEGACY)
+    return charset != PrCharset_None;
+#else
+    switch (charset) {
+        case PrCharset_Utf8:
+        case PrCharset_Replacement:
+        case PrCharset_Utf16Be:
+        case PrCharset_Utf16Le:
+        case PrCharset_XUserDefined:
+            return true;
+        default:
+            return false;
+    }
+#endif
 }
 
 PrStringView prCharsetName(PrCharset charset) {
@@ -1228,12 +1248,10 @@ bool prCharsetIsBomDecided(PrStringView bytes) {
 }
 
 PrCharsetDecoder prCharsetDecoderMake(PrCharset charset, PrCharsetDecoderFlags flags) {
-    PR_ASSERT(charset != PrCharset_None && charset < PrCharset_Count);
+    PR_ASSERT(prCharsetIsBuilt(charset));
     PrCharsetDecoder decoder = {};
     decoder.charset = charset;
     decoder.flags = flags;
-    decoder.lower = 0x80;
-    decoder.upper = 0xbf;
     return decoder;
 }
 
@@ -1285,7 +1303,7 @@ PrStringView prCharsetDecodeView(PrCharsetDecoder* decoder, PrStringView bytes, 
 }
 
 PrCharsetEncoder prCharsetEncoderMake(PrCharset charset) {
-    PR_ASSERT(charset != PrCharset_None && charset < PrCharset_Count && prCharsetOutput(charset) == charset);
+    PR_ASSERT(prCharsetIsBuilt(charset) && prCharsetOutput(charset) == charset);
     PrCharsetEncoder encoder = {};
     encoder.charset = charset;
     return encoder;
