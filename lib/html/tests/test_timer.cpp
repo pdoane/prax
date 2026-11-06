@@ -149,12 +149,32 @@ TEST_CASE("a Window clears only its own timers, and a new document releases the 
     CHECK(state.references == 1);
     CHECK(prHtmlPageLoad(first, "<p>second", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(state.references == 0);
-    // What remains is the new document's reveal, at the next rendering opportunity.
+    // What remains is the new document's reveal, at the next rendering opportunity. The time of that opportunity is
+    // rounded to the clock's precision, which depends on its magnitude, so the delay is one frame interval give or take
+    // that rounding.
     double delay = prDomAgentNextTaskDelay(prHtmlPageAgent(first));
     CHECK(delay >= 0);
-    CHECK(delay <= 1000.0 / 60.0);
+    CHECK(delay <= doctest::Approx(1000.0 / 60.0));
     prHtmlPageDestroy(first);
     prHtmlPageDestroy(second);
+}
+
+TEST_CASE("a host that waits the delay to the next rendering opportunity finds it due, whatever the clock's magnitude") {
+    // At this time, adding a frame interval rounds up, so the next frame is slightly more than one interval away.
+    static double now = 100000000.5;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.now = [](void* PR_NULLABLE) { return now; };
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    CHECK(prHtmlPageLoad(page, "<p>shown", "about:blank", nullptr) == PrStatus_Ok);
+    PrDomAgent* agent = prHtmlPageAgent(page);
+    double delay = prDomAgentNextTaskDelay(agent);
+    CHECK(delay >= 0);
+    CHECK(delay <= doctest::Approx(1000.0 / 60.0));
+    now += delay;
+    CHECK(prDomAgentNextTaskDelay(agent) == 0);
+    CHECK(prDomAgentRunTask(agent));
+    CHECK(prDomAgentNextTaskDelay(agent) == -1);
+    prHtmlPageDestroy(page);
 }
 
 TEST_CASE("no timer runs while the parser is running a script") {
