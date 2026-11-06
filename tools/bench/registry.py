@@ -85,6 +85,8 @@ TESTS = os.path.join(common.ROOT, "lib")
 # The directory of the flex benchmark's harness and its Taffy library. The library's lockfile pins the crates that
 # Taffy depends on.
 FLEX = os.path.join(common.ROOT, "tools", "bench", "flex_bench")
+# The directory that holds the vterm benchmark's harness and the adapters for its engines.
+VTERM = os.path.join(common.ROOT, "tools", "bench", "vterm_bench")
 
 BENCHES = [
     # Scripted benchmarks: the same file runs in pr_shell and in browsers.
@@ -147,6 +149,11 @@ BENCHES = [
           ["flex_bench"], run=engine.flex, options=engine.flex_options,
           sources=sorted(glob.glob(os.path.join(FLEX, "*.*")) + glob.glob(os.path.join(FLEX, "taffy", "*.*"))
                          + glob.glob(os.path.join(FLEX, "taffy", "src", "*.rs")))),
+    Bench("vterm", "programs' output written to a terminal in lib/vterm and libvterm: captures, floods, SGR, Unicode, a "
+          "TUI, long lines and a resize",
+          ["vterm_bench"], run=engine.vterm, options=engine.vterm_options,
+          sources=sorted(glob.glob(os.path.join(VTERM, "*.*")))
+          + sorted(glob.glob(os.path.join(common.ROOT, "lib", "vterm", "tests", "captures", "*.tty")))),
     Bench("page-changes", "the real pages after each kind of change: their style, layout and recording",
           ["invalidation"], fetch=["pages", "fonts"], run=engine.page_changes, options=engine.page_changes_options,
           sources=[os.path.join(common.ROOT, "tools", "pages", "invalidation.cpp")]),
@@ -161,6 +168,11 @@ BENCHES = [
 ]
 
 BY_NAME = {bench.name: bench for bench in BENCHES}
+
+# What `./dev.sh bench terminals` measures (tools/bench/terminals.py). It is not in BENCHES, because it opens the
+# windows of other applications, and no other command should run it.
+TERMINALS = ("floods of text, Unicode, long lines and a paced TUI in the Prax terminal app, Ghostty, kitty, WezTerm, "
+             "Alacritty, iTerm2 and Terminal.app: throughput, CPU, energy, GPU, memory")
 
 
 def named(names):
@@ -180,5 +192,8 @@ def table():
         out.append(title)
         out += ["  %s  %s" % (b.name.ljust(width), b.summary) for b in BENCHES if b.scripted == scripted]
         out.append("")
-    out.append("Every benchmark is counted in instructions by ./dev.sh bench and ./dev.sh bench ab.")
+    out.append("end to end: whole terminal applications, on macOS, run only by ./dev.sh bench terminals")
+    out.append("  %s  %s" % ("terminals".ljust(width), TERMINALS))
+    out.append("")
+    out.append("Every benchmark in the first two groups is counted in instructions by ./dev.sh bench and ./dev.sh bench ab.")
     return "\n".join(out)

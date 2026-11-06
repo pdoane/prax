@@ -154,6 +154,14 @@ pr_dependency(cmark_gfm
     SOURCE_SUBDIR none
 )
 
+# libvterm 0.3.3, the terminal emulator that the vterm benchmark measures lib/vterm against. The release archive
+# includes the tables that its Makefile generates, so the sources compile without running the Makefile.
+pr_dependency(libvterm
+    URL https://www.leonerd.org.uk/code/libvterm/libvterm-0.3.3.tar.gz
+    URL_HASH SHA256=09156f43dd2128bd347cbeebe50d9a571d32c64e0cf18d211197946aff7226e0
+    SOURCE_SUBDIR none
+)
+
 # Yoga v3.2.1 and Taffy v0.14.0, the flex layouts that the flex benchmark measures the engine against.
 pr_dependency(yoga
     URL https://github.com/facebook/yoga/archive/042f5013152eb81c1552dec945b88f7b95ca350f.tar.gz

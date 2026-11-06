@@ -193,6 +193,125 @@ void denseText(PrDrawList* list, float, float, double) {
     }
 }
 
+// A run of cells in a terminal's row, in one pair of colors. A run whose background is the screen's draws no
+// background.
+struct TerminalRun {
+    String text;
+    PrColor foreground;
+    PrColor background;
+};
+
+// Returns the runs of one row of a process monitor's frame, on a terminal `columns` cells wide. The frame has meters, a
+// header, a list of processes with one selected, and a bar of function keys.
+Array<TerminalRun> processMonitorRow(uint32_t row, uint32_t rows, uint32_t columns, PrColor screen) {
+    const PrColor text{.85f, .85f, .82f, 1};
+    const PrColor black{0, 0, 0, 1};
+    const PrColor cyan{.30f, .75f, .80f, 1};
+    const PrColor green{.40f, .78f, .40f, 1};
+    const PrColor yellow{.90f, .78f, .30f, 1};
+    const PrColor red{.85f, .35f, .30f, 1};
+    static const char* const commands[] = {
+        "/usr/libexec/trustd --agent",
+        "/System/Library/CoreServices/Finder.app/Contents/MacOS/Finder",
+        "node /usr/local/lib/node_modules/npm/bin/npm-cli.js run build",
+        "/Applications/Xcode.app/Contents/MacOS/Xcode",
+        "python3 -m http.server 8000",
+        "/usr/sbin/cfprefsd agent",
+        "zsh -l",
+        "ninja -C build -j 16",
+    };
+    // Pads `s`, which starts at column `from`, with spaces to the end of the row.
+    auto toEnd = [&](String s, uint32_t from) {
+        while (from + s.count() < columns)
+            s.append(" ");
+        return s;
+    };
+    Array<TerminalRun> runs;
+    if (row < 4) {
+        uint32_t bars = 10 + row * 13 % 37;
+        String meter;
+        for (uint32_t i = 0; i < 40; ++i)
+            meter.append(i < bars ? "|" : " ");
+        runs.push({format("{:3}[", row), text, screen});
+        runs.push({meter, green, screen});
+        runs.push({"]   Tasks: 412, 1873 thr; 3 running   Load average: 2.31 1.94 1.70", text, screen});
+    } else if (row == 5) {
+        runs.push({toEnd("  PID USER      PRI  NI  VIRT   RES   SHR S CPU% MEM%   TIME+  Command", 0), black, green});
+    } else if (row + 1 == rows) {
+        const char* keys[] = {"Help", "Setup", "Search", "Filter", "Tree", "SortBy", "Nice -", "Nice +", "Kill", "Quit"};
+        for (uint32_t i = 0; i < 10; ++i) {
+            runs.push({format("F{}", i + 1), text, screen});
+            runs.push({format("{:6}", keys[i]), black, cyan});
+        }
+    } else if (row > 5) {
+        uint32_t process = row - 6;
+        bool selected = process == 7;
+        PrColor back = selected ? cyan : screen;
+        runs.push({format("{:5} pdoane     17   0 ", 300 + process * 37), selected ? black : text, back});
+        runs.push({format("{:4}G {:4}M ", 30 + process % 9, 120 + process * 11), selected ? black : yellow, back});
+        runs.push({
+            format("{:4}M S {:4.1f} {:4.1f}  {:2}:{:02}.{:02}  ", 40 + process * 3, float(process % 7) * 3.7f,
+                float(process % 4) * 1.3f, process % 60, process * 7 % 60, process * 13 % 100),
+            selected ? black : process % 5 == 0 ? red : text, back,
+        });
+        runs.push({commands[process % 8], selected ? black : process % 3 == 0 ? cyan : text, back});
+        if (selected)
+            runs.push({toEnd("", 0), black, back});
+    }
+    return runs;
+}
+
+// The background color of the terminal's screen. The window's pass clears to it.
+constexpr PrColor kTerminalScreen{.11f, .11f, .13f, 1};
+
+// Draws a process monitor's frame on a terminal of 120 by 40 cells, as a terminal emulator draws it. Each row embeds
+// two lists at its position: first the backgrounds that differ from the screen's, then the glyphs, each in runs of one
+// color. Nothing paints the screen's background, because the window's pass clears to it.
+void terminal(PrDrawList* list, float, float, double) {
+    constexpr uint32_t kColumns = 120;
+    constexpr uint32_t kRows = 40;
+    constexpr float kLine = 17;
+    constexpr float kBaseline = 13;
+    const PrColor screen = kTerminalScreen;
+    TextStyle style = uiText(13);
+    style.font = fontNamed("Cousine.ttf");
+    // A terminal's cells are whole pixels wide.
+    float cell = prF32Ceil(textAdvance(style, "M"));
+    PrRect area{kArea.left, kArea.top, kArea.left + cell * kColumns, kArea.top + kLine * kRows};
+    auto sameColor = [](PrColor a, PrColor b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; };
+    for (uint32_t row = 0; row < kRows; ++row) {
+        PrDrawList* backgrounds = prDrawListCreate();
+        PrDrawList* glyphs = prDrawListCreate();
+        uint32_t column = 0;
+        // The background run in progress, from `start`. The next cells extend it if their background matches.
+        uint32_t start = 0;
+        PrColor background = screen;
+        for (const TerminalRun& run : processMonitorRow(row, kRows, kColumns, screen)) {
+            uint32_t end = column + run.text.count();
+            end = end < kColumns ? end : kColumns;
+            if (!sameColor(run.background, background)) {
+                if (!sameColor(background, screen))
+                    prDrawListRect(backgrounds, PrRect{float(start) * cell, 0, float(column) * cell, kLine},
+                        {.color = background});
+                start = column;
+                background = run.background;
+            }
+            style.paint.color = run.foreground;
+            PrStringView text = run.text.view();
+            drawText(glyphs, style, PrStringView{text.data, end - column}, PrVec2{float(column) * cell, kBaseline});
+            column = end;
+        }
+        if (!sameColor(background, screen))
+            prDrawListRect(backgrounds, PrRect{float(start) * cell, 0, float(column) * cell, kLine},
+                {.color = background});
+        PrDVec2 at{double(area.left), double(area.top) + double(row) * double(kLine)};
+        prDrawListEmbed(list, backgrounds, at);
+        prDrawListEmbed(list, glyphs, at);
+        prDrawListRelease(backgrounds);
+        prDrawListRelease(glyphs);
+    }
+}
+
 // Draws rows of a list in a scroll view: each row clipped, with a label and a value.
 void clippedCells(PrDrawList* list, float, float, double time) {
     float scroll = prF32Fmod(float(time) * 20, 26.0f);
@@ -413,6 +532,10 @@ const Array<Drawing>& workloadDrawings() {
         {"Opacity groups", "Buttons faded by opacity groups.", opacityGroups},
         {"Gradients", "Buttons filled with linear and radial gradients.", gradients},
         {"Interface", "A settings window, drawn as a tree of views paints it.", interface},
+        {
+            "Terminal", "A process monitor's frame on a terminal of 120 by 40 cells, its rows embedded.", terminal,
+            kTerminalScreen,
+        },
     });
     return workloads;
 }

@@ -5,6 +5,7 @@ is under suites/, in the directory that its runner names.
 """
 
 import os
+import sys
 
 from tools import dev
 
@@ -12,14 +13,16 @@ from tools import dev
 class Suite:
     """A suite. `checkouts` are what it reads (tools/fetch/checkouts.py), and `corpus` the paths under third_party whose
     presence says that it is checked out. `runner` is the module that runs it and the arguments before the run's own,
-    and `harnesses` the build's targets that the runner drives."""
+    and `harnesses` the build's targets that the runner drives. `unsupported` says why the suite cannot run on this
+    platform, or is None if it can."""
 
-    def __init__(self, name, checkouts, corpus, runner, harnesses):
+    def __init__(self, name, checkouts, corpus, runner, harnesses, unsupported=None):
         self.name = name
         self.checkouts = checkouts
         self.corpus = corpus
         self.runner = runner
         self.harnesses = harnesses
+        self.unsupported = unsupported
 
     def ready(self, directory):
         """Returns true if the suite's corpus is checked out and its harnesses are built in `directory`."""
@@ -58,6 +61,9 @@ SUITES = [
           ("markdown_spec",)),
     Suite("markdown-dom", ("commonmark", "cmark_gfm"), ("commonmark-spec/spec.txt", "cmark-gfm/test/spec.txt"),
           ("tools.suite.markdown.markdown_dom",), ("markdown_dom",)),
+    # esctest needs termios, and a Windows pseudoconsole would rewrite the sequences that it tests.
+    Suite("esctest", ("esctest",), ("esctest2/esctest",), ("tools.suite.esctest",), ("vterm_esctest",),
+          "esctest runs on a POSIX pseudoterminal" if sys.platform == "win32" else None),
 ]
 
 BY_NAME = {suite.name: suite for suite in SUITES}

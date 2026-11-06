@@ -75,6 +75,9 @@ def suite(argv):
         # Every suite runs, whichever fail, and the run fails after them if any did.
         failed = []
         for each in registry.SUITES:
+            if each.unsupported:
+                print("--- %s: not run on this platform: %s" % (each.name, each.unsupported), flush=True)
+                continue
             if not each.ready(env["PR_BUILD"]):
                 print("--- %s: not checked out or not built; ./dev.sh suite %s fetches and runs it"
                       % (each.name, each.name), flush=True)
@@ -86,6 +89,8 @@ def suite(argv):
             dev.fail("failed: " + " ".join(failed))
         return
     chosen = registry.named(argv[0])
+    if chosen.unsupported:
+        dev.fail("%s does not run on this platform: %s" % (chosen.name, chosen.unsupported))
     args = argv[1:]
     checkouts.fetch(*chosen.checkouts)
     if "--ab" in args:

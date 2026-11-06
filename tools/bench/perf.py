@@ -119,31 +119,60 @@ def engine_suffix(engine):
 
 
 # Other engines whose rows a benchmark may measure beside the engine's own rows, as the flex benchmark measures Yoga and
-# Taffy. The show command compares the engine with them.
-OTHERS = ("yoga", "taffy")
+# Taffy and the vterm benchmark measures libvterm. The show command compares the engine with them.
+OTHERS = ("yoga", "taffy", "libvterm")
+
+
+def throughput(row):
+    """Returns the MiB per second at which a row processed its `bytes`, or "-" if the row has no size or time."""
+    if row is None or not row.get("bytes") or not row.get("time"):
+        return "-"
+    return "%.0f" % (row["bytes"] / (1 << 20) / (row["time"] / 1e3))
 
 
 def print_engines(results):
-    """Prints each row of the engine beside the rows of the same name from the other engines. The columns are each
-    engine's instructions, each other engine's instructions and cycles as multiples of the engine's, and the work that
-    each engine did, from the row's shape: the boxes laid out, reused and measured.
+    """Prints each row of the engine beside the rows of the same name from the other engines. The columns are the
+    engine's instructions, each other engine's instructions and cycles as multiples of the engine's, and each engine's
+    time for one call. Further columns appear if the rows carry the data: MiB per second for rows that count their
+    bytes, the work that each engine did from a row's shape (the boxes laid out, reused and measured), the bytes that a
+    terminal's lines hold per line, and how many rows of the screen match the engine's.
 
     Instructions compare two builds of one engine reliably, but not two engines. Waiting, such as on memory that an
     engine allocates, costs cycles that retire no instructions, so the cycles compare the engines."""
     engines = [e for e in OTHERS if e in results["engines"]]
     by_name = {engine: {row["name"]: row for row in rows} for engine, rows in results["engines"].items()}
     ours = by_name.get("prax", {})
+    every = [row for rows in results["engines"].values() for row in rows]
+    sized = any("bytes" in row for row in every)
+    shaped = any("shape" in row for row in every)
+    screens = any("sameRows" in row for row in every)
+    lined = any("lineBytes" in row for row in every)
+    def line_bytes(row):
+        return "%.0f" % row["lineBytes"] if row and "lineBytes" in row else "-"
     def shape(row):
         if row is None:
             return "-"
         work = row.get("shape", {})
         cells = "/".join(str(work[key]) if key in work else "-" for key in ("laidOut", "reused", "measured"))
         return cells if work else "-"
+    def same(row):
+        return "%d/%d" % (row["sameRows"], row["rows"]) if row and "sameRows" in row else "-"
     header = (["measure", "prax"] + engines + ["x " + e for e in engines] + ["cyc x " + e for e in engines]
-              + ["work"] + ["work " + e for e in engines])
+              + ["time"] + ["time " + e for e in engines])
+    if sized:
+        header += ["MiB/s"] + ["MiB/s " + e for e in engines]
+    if shaped:
+        header += ["work"] + ["work " + e for e in engines]
+    if lined:
+        header += ["B/line"] + ["B/line " + e for e in engines]
+    if screens:
+        header += ["same " + e for e in engines]
     def ratio(row, mine, key):
         theirs = row["counts"]["time"].get(key, 0) if row else 0
-        return "%.2f" % (theirs / mine) if theirs and mine else "-"
+        if not theirs or not mine:
+            return "-"
+        # A ratio below 0.01 gets two significant figures, because two decimals would round it to zero.
+        return "%.2f" % (theirs / mine) if theirs / mine >= 0.01 else "%.2g" % (theirs / mine)
     lines = []
     for name, row in ours.items():
         counts = row["counts"]["time"]
@@ -152,12 +181,28 @@ def print_engines(results):
         cells += [scaled(r["counts"]["time"]["instructions"]) if r else "-" for r in theirs]
         cells += [ratio(r, counts["instructions"], "instructions") for r in theirs]
         cells += [ratio(r, counts.get("cycles", 0), "cycles") for r in theirs]
-        cells += [shape(row)] + [shape(r) for r in theirs]
+        cells += [duration(counts["time"])] + [duration(r["counts"]["time"]["time"]) if r else "-" for r in theirs]
+        if sized:
+            cells += [throughput(row)] + [throughput(r) for r in theirs]
+        if shaped:
+            cells += [shape(row)] + [shape(r) for r in theirs]
+        if lined:
+            cells += [line_bytes(row)] + [line_bytes(r) for r in theirs]
+        if screens:
+            cells += [same(r) for r in theirs]
         lines.append(cells)
     print(common.text_table(header, lines))
     print("x: the other's instructions as a multiple of the engine's, and cyc x its cycles; above 1, the engine is "
           "faster.")
-    print("work: laid out/reused/measured.")
+    if sized:
+        print("MiB/s: the bytes processed per second, on the clock.")
+    if shaped:
+        print("work: laid out/reused/measured.")
+    if lined:
+        print("B/line: the bytes that the terminal's lines hold for each line of its screen and scrollback, after the "
+              "input.")
+    if screens:
+        print("same: the rows of the screen whose text is the engine's, after the same input.")
 
 
 def timings(results):

@@ -10,6 +10,7 @@ from tools import dev
 from tools.bench import browser
 from tools.bench import perf
 from tools.bench import registry
+from tools.bench import terminals as terminal_apps
 from tools.build import ab
 from tools.build import build as builds
 from tools.fetch import checkouts
@@ -33,14 +34,24 @@ USAGE = {
     named, side by side, and each browser's time as a multiple of the engine's. Nothing is recorded. --serve serves one
     benchmark's page to open by hand
 ./dev.sh bench kept [name...] [--count N]
-    what N runs of each case of those benchmarks keep, which must stay flat as N grows""",
+    what N runs of each case of those benchmarks keep, which must stay flat as N grows
+./dev.sh bench terminals [workload...] [--terminal NAME]... [--runs N]
+    macOS: the terminals benchmark's workloads, or those whose names start with a workload named, in the Prax terminal
+    app and in every terminal application installed, or those named, end to end, one terminal at a time in one
+    session each: the throughput of each workload or the cost of a second of a paced one, and the CPU time, energy,
+    GPU time and peak memory of the terminal's processes, as medians of N runs (2) after a warm-up, and each
+    terminal's memory at idle and after its scrollback fills. Only this command runs it. Nothing is recorded""",
     "profile": """\
 ./dev.sh profile [--base REF] [--seconds N] [--under NAME] [--rows N] <harness> [args...]
 ./dev.sh profile [--base REF] [--seconds N] [--under NAME] [--rows N] bench <name> <case>
+./dev.sh profile --gpu [--seconds N] <harness> [args...]
     where a harness of the default build spends its time, by function and by the innermost inlined line
     (tools/bench/profile.py, macOS), and with --base, the same harness of REF beside it, as shares of each side's
     samples. A frame_bench case or the invalidation harness's --element narrows it. `bench` runs one case of a scripted
-    benchmark, as in ./dev.sh profile bench layout "cards style", over and over in pr_shell""",
+    benchmark, as in ./dev.sh profile bench layout "cards style", over and over in pr_shell. --gpu records the
+    harness's work on the GPU instead (tools/bench/gpu_profile.py, macOS): each encoder's time on each stage, the code
+    size of the shaders that it compiled, and the registers that their pipelines spilled, as in ./dev.sh profile --gpu
+    draw_bench --collection work terminal""",
 }
 
 
@@ -62,10 +73,9 @@ def harnesses(names):
     return sorted({target for bench in registry.named(names) for target in bench.harnesses})
 
 
-def build(names, extra=()):
-    """Builds the release build's harnesses of the benchmarks, and the `extra` targets."""
+def build(targets):
+    """Builds the `targets` of the release build, such as the benchmarks' harnesses."""
     builds.configure(dev.ROOT, builds.RELEASE, "Release")
-    targets = harnesses(names) + list(extra)
     present = builds.build_targets(builds.RELEASE)
     missing = [target for target in targets if target not in present]
     if missing:
@@ -91,7 +101,7 @@ def run(args):
     names, rest = split(args)
     # The checkouts first, because the build has a benchmark's harness only where they are there.
     fetch(names)
-    build(names)
+    build(harnesses(names))
     power()
     sys.exit(0 if perf.run(names, builds.RELEASE, rest) else 1)
 
@@ -121,7 +131,7 @@ def compare(args):
             rest.append(argument)
     names, rest = split(rest)
     fetch(names)
-    build(names)
+    build(harnesses(names))
     base = ab.Base(ref, directory)
     base_bin, absent = base.harnesses(harnesses(names))
     # A benchmark whose harness the base's build does not have, such as one that a later commit added, has nothing to
@@ -146,7 +156,7 @@ def scripted(command, args):
     benches = perf.scripted_named(names)
     names = [bench.name for bench in benches]
     # The system's WebKit runs in a window of the build's own.
-    build(names, ["webkit_host"] if command == "browser" and dev.darwin() else [])
+    build(harnesses(names) + (["webkit_host"] if command == "browser" and dev.darwin() else []))
     power()
     fetch(names)
     options = {"--browser": [], "--timeout": 300, "--serve": False, "--count": 100}
@@ -166,12 +176,40 @@ def scripted(command, args):
     perf.kept(benches, builds.RELEASE, options["--count"])
 
 
+def terminals(args):
+    """The terminal applications end to end, on the release build's terminal app."""
+    if not dev.darwin():
+        print("terminals: the terminals benchmark runs on macOS only; skipped")
+        return
+    names = []
+    workloads = []
+    runs = terminal_apps.RUNS
+    arguments = iter(args)
+    for argument in arguments:
+        if argument in ("--terminal", "--runs"):
+            value = next(arguments, None) or dev.fail(argument + " takes a value")
+            if argument == "--terminal":
+                names.append(value)
+            else:
+                runs = max(1, int(value))
+        elif argument.startswith("--"):
+            dev.usage([], USAGE["bench"], 1)
+        else:
+            workloads.append(argument)
+    build(["terminal", "terminal_feed"])
+    power()
+    sys.exit(terminal_apps.main(names, workloads, runs, builds.RELEASE,
+                                dev.executable(builds.RELEASE, "terminal_feed")))
+
+
 def bench(argv):
     dev.usage(argv, USAGE["bench"])
     if argv[:1] == ["list"]:
         print(registry.table())
     elif argv[:1] == ["ab"]:
         compare(argv[1:])
+    elif argv[:1] == ["terminals"]:
+        terminals(argv[1:])
     elif argv[:1] in (["browser"], ["kept"]):
         scripted(argv[0], argv[1:])
     else:
@@ -181,8 +219,13 @@ def bench(argv):
 def profile(argv):
     dev.usage(argv, USAGE["profile"])
     ref = None
+    gpu = False
     options = []
-    while argv[:1] in (["--base"], ["--seconds"], ["--under"], ["--rows"]):
+    while argv[:1] in (["--base"], ["--seconds"], ["--under"], ["--rows"], ["--gpu"]):
+        if argv[0] == "--gpu":
+            gpu = True
+            argv = argv[1:]
+            continue
         if len(argv) < 2:
             dev.usage(argv, USAGE["profile"], 1)
         if argv[0] == "--base":
@@ -202,6 +245,11 @@ def profile(argv):
         args = perf.case_args(args[0], args[1], builds.DEFAULT)
         harness = "pr_shell"
     dev.run(["cmake", "--build", builds.DEFAULT, "--target", harness])
+    if gpu:
+        if ref or any(option in options for option in ("--under", "--rows")):
+            dev.usage(argv, USAGE["profile"], 1)
+        dev.python("tools.bench.gpu_profile", "--binary", dev.executable(builds.DEFAULT, harness), *options, "--", *args)
+        return
     base_binary = []
     if ref:
         base = ab.Base(ref)

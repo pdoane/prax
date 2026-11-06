@@ -2,7 +2,7 @@
 
 Each runner's docstring (`tools/suite/wpt/wpt.py`, `tools/suite/css_parsing.py`, `tools/suite/html_tokens.py`,
 `tools/suite/html_tree.py`, `tools/suite/markdown/markdown_spec.py`, `tools/suite/markdown/markdown_dom.py`,
-`tools/suite/reftest.py`) documents its selection, counting and exclusions.
+`tools/suite/reftest.py`, `tools/suite/esctest.py`) documents its selection, counting and exclusions.
 
 ## Running
 
@@ -16,6 +16,7 @@ Each runner's docstring (`tools/suite/wpt/wpt.py`, `tools/suite/css_parsing.py`,
 | MathML | `mathml-wpt` |
 | Markdown | `commonmark`, `gfm`, `markdown-dom` |
 | URL | `url-parsing`, `url-wpt` |
+| terminals (`lib/vterm`) | `esctest` |
 | shell, runner, anything every page uses | every `*-wpt` suite |
 | SVG, Lottie rendering | `resvg`, `lottie-web`, `skottie`, `rlottie`, `lottie-ios` |
 | the build, a library's public headers or its links | `./dev.sh package` |
@@ -204,6 +205,7 @@ The apps:
 - `scribe` is Studio's text editor in a window.
 - `merge` compares two files, or merges two files that each changed a base, in Scribe's window, as Git's difftool and
   mergetool and Perforce's P4DIFF and P4MERGE run it.
+- `terminal` runs the user's shell, or a program, in tabs of terminals in a window.
 - `alchemy` generates images with a ComfyUI server.
 
 The tools that measure and compare the engine are under `tools/`: the viewer (`./dev.sh viewer`, whose header

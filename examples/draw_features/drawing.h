@@ -33,13 +33,23 @@ constexpr PrColor kTeal{0.10f, 0.60f, 0.62f, 1};
 constexpr PrColor kWhite{1, 1, 1, 1};
 constexpr PrColor kGray{0.55f, 0.55f, 0.58f, 1};
 
-// A drawing: its name, a line describing what it shows, and the function that draws it. `draw` draws at `width` by
-// `height` logical pixels, at `time` in seconds. A feature drawing ignores the time, and captions each case it draws.
+// A drawing: its name, a line describing what it shows, the function that draws it, and the color beneath it. `draw`
+// draws at `width` by `height` logical pixels, at `time` in seconds. A feature drawing ignores the time, and captions
+// each case it draws.
 struct Drawing {
     const char* name;
     const char* description;
     void (*draw)(PrDrawList* list, float width, float height, double time);
+
+    // The color that the target is cleared to before drawing, such as a terminal's screen. A transparent color means
+    // the paper (drawingCanvas).
+    PrColor canvas;
 };
+
+// Returns the color that the target is cleared to before `drawing` is drawn.
+inline PrColor drawingCanvas(const Drawing& drawing) {
+    return drawing.canvas.a > 0 ? drawing.canvas : kPaper;
+}
 
 // The height of the band under a grid cell that holds its caption.
 constexpr float kCaptionBand = 16;

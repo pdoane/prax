@@ -19,6 +19,46 @@ pr_harness(text_view_bench prax::text_view text_view_bench.cpp)
 target_link_libraries(text_view_bench PRIVATE prax::draw prax::font prax::gpu prax::syntax prax::layout prax::text)
 target_compile_definitions(text_view_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
 
+# The vterm benchmark (./dev.sh bench vterm), which writes the same program output to lib/vterm and to libvterm.
+# libvterm is built from its sources, as its Makefile builds them.
+pr_dependency_available(libvterm)
+file(GLOB PR_LIBVTERM_SOURCES CONFIGURE_DEPENDS ${libvterm_SOURCE_DIR}/src/*.c)
+add_library(libvterm STATIC ${PR_LIBVTERM_SOURCES})
+target_include_directories(libvterm SYSTEM PUBLIC ${libvterm_SOURCE_DIR}/include)
+target_include_directories(libvterm PRIVATE ${libvterm_SOURCE_DIR}/src)
+set_target_properties(libvterm PROPERTIES C_STANDARD 99)
+pr_third_party(libvterm)
+
+pr_harness(vterm_bench prax::vterm
+    vterm_bench/vterm_bench.cpp
+    vterm_bench/vterm_workloads.cpp
+    vterm_bench/prax_engine.cpp
+    vterm_bench/libvterm_engine.cpp
+)
+target_link_libraries(vterm_bench PRIVATE libvterm)
+target_compile_definitions(vterm_bench PRIVATE
+    PR_VTERM_CAPTURES_DIR="${PROJECT_SOURCE_DIR}/lib/vterm/tests/captures")
+
+# The program that the terminals benchmark (./dev.sh bench terminals, macOS only) runs in each terminal application.
+# It writes the vterm benchmark's workloads to its tty.
+if (APPLE)
+    add_executable(terminal_feed terminal_feed.cpp vterm_bench/vterm_workloads.cpp)
+    target_include_directories(terminal_feed PRIVATE ${PROJECT_SOURCE_DIR})
+    target_link_libraries(terminal_feed PRIVATE harness pr_warnings)
+    target_compile_definitions(terminal_feed PRIVATE
+        PR_VTERM_CAPTURES_DIR="${PROJECT_SOURCE_DIR}/lib/vterm/tests/captures")
+endif()
+
+# Checks that the benchmark's adapters for lib/vterm and libvterm hold the same text after the same input.
+add_executable(vterm_libvterm_check
+    vterm_bench/vterm_libvterm_check.cpp
+    vterm_bench/prax_engine.cpp
+    vterm_bench/libvterm_engine.cpp
+)
+target_include_directories(vterm_libvterm_check PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(vterm_libvterm_check PRIVATE prax::vterm prax::core_cpp libvterm pr_warnings)
+add_test(NAME vterm_libvterm_check COMMAND vterm_libvterm_check)
+
 # The flex benchmark, which lays the same trees out in lib/layout, Yoga and Taffy (./dev.sh bench flex). Taffy's side
 # is a Rust static library, which Cargo builds, optimized whatever the build type. Where Cargo is not installed, the
 # harness lays the trees out in lib/layout and Yoga only, with no reference to check their boxes against.

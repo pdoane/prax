@@ -10,6 +10,7 @@ corpus. What the engine decides about the cases, and the scores, are the suite's
 import argparse
 import fnmatch
 import json
+import math
 import os
 import subprocess
 import sys
@@ -98,6 +99,30 @@ SUITES = os.path.join(ROOT, "suites")
 
 # The scoreboard that a plain run writes into a suite's data.
 SCOREBOARD = "scoreboard.md"
+# The row of a scoreboard's table that covers the run as a whole.
+TOTAL = "total"
+
+
+def pass_rate(passed, count):
+    """Returns `passed` as a percentage of `count`, rounded down to a tenth, as a scoreboard records it. A part with
+    nothing to pass passes in full."""
+    return math.floor(100.0 * passed / count * 10) / 10 if count else 100.0
+
+
+def table(header, rows):
+    """Returns the lines of a scoreboard table with `header` and `rows`, which are tuples of cells as text. The cells
+    are padded so that the columns line up: the first column to the left, as names, and the others to the right, as
+    counts."""
+    cells = [header] + list(rows)
+    widths = [max(len(row[i]) for row in cells) for i in range(len(header))]
+    lines = []
+    for i, row in enumerate(cells):
+        lines.append("| %s | %s |" % (row[0].ljust(widths[0]),
+                                      " | ".join(row[j].rjust(widths[j]) for j in range(1, len(header)))))
+        if i == 0:
+            lines.append("|%s|%s|" % ("-" * (widths[0] + 2),
+                                      "|".join("-" * (widths[j] + 1) + ":" for j in range(1, len(header)))))
+    return lines
 
 
 def file_of(key):
@@ -162,14 +187,19 @@ class Data:
                                                   ("deferred", self.deferred), ("skip", self.skip))
                 for key in sorted(entries) if key not in keys and key not in files]
 
-    def write_scoreboard(self, rows, unit="cases"):
-        """Writes the scoreboard: a row for each part of the suite, as (name, passed, count), and their total."""
-        rows = list(rows) + [("TOTAL", sum(r[1] for r in rows), sum(r[2] for r in rows))]
+    def write_scoreboard(self, rows):
+        """Writes the scoreboard: a row for each part of the suite, from (name, passed, count), and their total, each
+        with its pass rate."""
+        rows = list(rows)
+        total = (TOTAL, sum(r[1] for r in rows), sum(r[2] for r in rows))
+        cells = [(name, "%d/%d" % (passed, count), "%.1f%%" % pass_rate(passed, count))
+                 for name, passed, count in rows]
+        name, passed, count = total
+        cells.append(("**%s**" % name, "%d/%d" % (passed, count), "%.1f%%" % pass_rate(passed, count)))
         lines = ["# %s scoreboard" % self.name, "",
-                 "The %s that a plain run passes, by part of the suite. The run writes this table, and the diff of a"
-                 % unit, "change to it is what the change did.", "",
-                 "| part | passing |", "| --- | --- |"]
-        lines += ["| %s | %d/%d |" % row for row in rows]
+                 "The cases that a plain run passes, by part of the suite, and the rate. The run writes this table, and",
+                 "the diff of a change to it is what the change did.", ""]
+        lines += table(("Part", "Cases", "Passing"), cells)
         os.makedirs(self.directory, exist_ok=True)
         with open(self.path(SCOREBOARD), "w", encoding="utf-8", newline="\n") as f:
             f.write("\n".join(lines) + "\n")
@@ -308,6 +338,20 @@ def outcomes(args, passed):
             print("  %-7s %s  %s -> %s" % (title, key, "-" if was is None else was, "-" if now is None else now))
 
 
+def report_parts(args, data, parts):
+    """Prints a row for each part of a run, from (name, agreed, recorded, count). A row shows the cases that count,
+    which are those that agree and those that the errata record, out of the part's cases, and their rate. Writes the
+    parts as the suite's scoreboard if the run is a plain run of the default build."""
+    column = max(len(name) for name, _, _, _ in parts)
+    counts = ["%d/%d" % (agreed + known, count) for _, agreed, known, count in parts]
+    width = max(len(text) for text in counts)
+    for (name, agreed, known, count), text in zip(parts, counts):
+        print("%s  %s  %5.1f%%%s" % (name.ljust(column), text.rjust(width), pass_rate(agreed + known, count),
+                                     "   (%d recorded)" % known if known else ""))
+    if writes_scoreboard(args):
+        data.write_scoreboard([(name, agreed + known, count) for name, agreed, known, count in parts])
+
+
 def compare(files, args, data, width, answer, agrees, show):
     """Runs the cases of `files`, a list of (name, cases), that the run was asked for, with the suite's `data`. Prints
     a row per file and a total, writes the scoreboard if the run is a plain run of the default build, and returns the
@@ -352,19 +396,13 @@ def compare(files, args, data, width, answer, agrees, show):
     if not totals:
         sys.exit("no cases matched %s" % args.match)
 
-    column = max(len(name) for name, _, _, _ in totals)
-    for name, agreed, known, count in totals:
-        print("%s  %d/%d%s" % (name.ljust(column), agreed, count,
-                               "   (%d recorded)" % known if known else ""))
-
+    report_parts(args, data, totals)
     agreed = sum(t[1] for t in totals)
     recorded = sum(t[2] for t in totals)
     count = sum(t[3] for t in totals)
     print("\n%d cases, %d agreeing, %d recorded as the corpus getting it wrong%s"
           % (count, agreed, recorded, ", %d left out as cut or deferred" % left if left else ""))
     outcomes(args, passed)
-    if writes_scoreboard(args):
-        data.write_scoreboard([(name, a + k, c) for name, a, k, c in totals])
 
     # A narrowed run cannot tell a key that names no case from a key whose case it left out.
     stale = [] if args.match else data.stale(keys)

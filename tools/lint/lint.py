@@ -2161,6 +2161,7 @@ THIRD_PARTY = {
     "imgui_internal.h": ("lib/draw/comparisons/imgui/src/draw_imgui.cpp",),
     "misc/freetype/imgui_freetype.cpp": ("lib/draw/comparisons/imgui/src/draw_imgui.cpp",),
     "kb_text_shape.h": ("lib/text/backends/kb/src/text_kb.cpp",),
+    "vterm.h": ("tools/bench/vterm_bench/libvterm_engine.cpp",),
     "cmark-gfm.h": ("tools/suite/markdown/cmark_gfm_reference.cpp",),
     "cmark-gfm-core-extensions.h": ("tools/suite/markdown/cmark_gfm_reference.cpp",),
     "hb.h": ("lib/text/backends/harfbuzz/src/text_harfbuzz.cpp",),

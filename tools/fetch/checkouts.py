@@ -212,6 +212,9 @@ PRINCE_SAMPLES = {
     "webarch": ("webarch.html",),
     "winelist": ("winelist.html",),
 }
+# Thomas E. Dickey's esctest2, the maintained fork of George Nachman's esctest. Its tests send escape sequences to a
+# terminal and read the screen back through the terminal's reports.
+ESCTEST2_COMMIT = "2798f12149a19c3295e9b4853ab2da4b2eff1b2b"
 # Fred Wang's MathFonts, which holds math fonts as web fonts and Mozilla's MathML torture test, whose formulas stand
 # beside images of TeX's setting of them. The commit is of the site's branch (gh-pages), which holds the built fonts.
 MATHFONTS_COMMIT = "9182b146cb64ac1a5e9cb92a09cd79612ca95d1c"
@@ -551,7 +554,8 @@ CHECKOUTS = {
             "auxiliary/GraphemeBreakTest.txt",
             "auxiliary/WordBreakProperty.txt", "auxiliary/WordBreakTest.txt",
             "emoji/emoji-data.txt", "DerivedCoreProperties.txt", "PropList.txt",
-            "UnicodeData.txt", "SpecialCasing.txt", "CaseFolding.txt", "Scripts.txt", "VerticalOrientation.txt",
+            "UnicodeData.txt", "SpecialCasing.txt", "CaseFolding.txt", "Scripts.txt", "ScriptExtensions.txt",
+            "VerticalOrientation.txt",
             "PropertyValueAliases.txt", "CompositionExclusions.txt", "NormalizationTest.txt")] + [
         ("IdnaMappingTable.txt", "https://www.unicode.org/Public/17.0.0/idna/IdnaMappingTable.txt"),
         ("IdnaTestV2.txt", "https://www.unicode.org/Public/17.0.0/idna/IdnaTestV2.txt"),
@@ -587,6 +591,8 @@ CHECKOUTS = {
     # github/cmark-gfm: GFM's specification and its tests of the extensions. The build compiles cmark-gfm itself at
     # the same commit (cmake/dependencies.cmake).
     "cmark_gfm": lambda: [Git("cmark-gfm", "https://github.com/github/cmark-gfm.git", CMARK_GFM_COMMIT, "test")],
+    # ThomasDickey/esctest2: the corpus of the esctest suite, which lib/vterm runs (tools/suite/esctest.py).
+    "esctest": lambda: [Git("esctest2", "https://github.com/ThomasDickey/esctest2.git", ESCTEST2_COMMIT, "esctest")],
     # yeslogic/prince-samples: documents written for print, each with the PDF that Prince made of it, which the viewer
     # shows beside the engine's own PDF (tools/viewer/suite_prince.cpp). The repository provides a file without license
     # information only for evaluating Prince, so only the directories whose README licenses both the HTML and its PDF

@@ -72,7 +72,6 @@ import atexit
 import collections
 import concurrent.futures
 import json
-import math
 import fnmatch
 import os
 import pathlib
@@ -449,14 +448,12 @@ SCOREBOARD_FILE = DATA.path(corpus.SCOREBOARD)
 # A row of the scoreboard: the files complete or excused and the tests passed, each as
 # "done/count", and the pass rate.
 Score = collections.namedtuple("Score", "files tests rate")
-# The row of a suite's table that covers the run as a whole.
-TOTAL = "total"
 
 
 def score(counts):
     """Returns the Score of `counts`."""
     return Score("%d/%d" % (counts["completed"] + counts["excused"], counts["files"]),
-                 "%d/%d" % (counts["passed"], counts["tests"]), measured(counts))
+                 "%d/%d" % (counts["passed"], counts["tests"]), corpus.pass_rate(counts["passed"], counts["tests"]))
 
 
 def parse_scoreboard(text):
@@ -481,20 +478,11 @@ def format_scoreboard(boards):
             "diff", "of a change to it is what the change did.", ""]
     for suite in sorted(boards):
         rows = [(module, boards[suite][module]) for module in sorted(boards[suite])
-                if module != TOTAL]
-        if TOTAL in boards[suite]:
-            rows.append(("**%s**" % TOTAL, boards[suite][TOTAL]))
-        cells = [("Module", "Files", "Tests", "Passing")] + [
-            (module, row.files, row.tests, "%.1f%%" % row.rate) for module, row in rows]
-        widths = [max(len(cell[i]) for cell in cells) for i in range(4)]
-        text += ["## " + suite, ""]
-        for i, cell in enumerate(cells):
-            text.append("| %s | %s |" % (cell[0].ljust(widths[0]),
-                                         " | ".join(cell[j].rjust(widths[j]) for j in range(1, 4))))
-            if i == 0:
-                text.append("|%s|%s|" % ("-" * (widths[0] + 2), "|".join("-" * (widths[j] + 1) + ":"
-                                                                         for j in range(1, 4))))
-        text.append("")
+                if module != corpus.TOTAL]
+        if corpus.TOTAL in boards[suite]:
+            rows.append(("**%s**" % corpus.TOTAL, boards[suite][corpus.TOTAL]))
+        cells = [(module, row.files, row.tests, "%.1f%%" % row.rate) for module, row in rows]
+        text += ["## " + suite, ""] + corpus.table(("Module", "Files", "Tests", "Passing"), cells) + [""]
     return "\n".join(text)
 
 
@@ -1220,11 +1208,6 @@ def rate(counts):
     return 100.0 * counts["passed"] / counts["tests"] if counts["tests"] else 100.0
 
 
-def measured(counts):
-    """Returns a module's pass rate to a tenth of a percent, rounded down, as the scoreboard records it."""
-    return math.floor(rate(counts) * 10) / 10
-
-
 def main():
     global TEXT, WRITE, FUZZY_OVERRIDES
     ap = corpus.arguments(SHELL, WPT)
@@ -1483,7 +1466,7 @@ def main():
     if plain and os.path.abspath(args.binary) == corpus.binary("pr_shell", corpus.DEFAULT):
         total = sum(modules.values(), collections.Counter())
         table = {module: score(counts) for module, counts in modules.items() if counts["files"]}
-        table[TOTAL] = score(total)
+        table[corpus.TOTAL] = score(total)
         record_scoreboard(args.suite, table)
         print("\nThe scoreboard is written to %s." % os.path.relpath(SCOREBOARD_FILE, corpus.ROOT))
     return 0

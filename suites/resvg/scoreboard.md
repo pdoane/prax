@@ -1,115 +1,115 @@
 # resvg scoreboard
 
-The cases that a plain run passes, by part of the suite. The run writes this table, and the diff of a
-change to it is what the change did.
+The cases that a plain run passes, by part of the suite, and the rate. The run writes this table, and
+the diff of a change to it is what the change did.
 
-| part | passing |
-| --- | --- |
-| filters/enable-background | 20/20 |
-| filters/feBlend | 10/10 |
-| filters/feColorMatrix | 14/14 |
-| filters/feComponentTransfer | 22/22 |
-| filters/feComposite | 18/18 |
-| filters/feConvolveMatrix | 21/21 |
-| filters/feDiffuseLighting | 22/22 |
-| filters/feDisplacementMap | 1/1 |
-| filters/feDistantLight | 4/4 |
-| filters/feDropShadow | 8/8 |
-| filters/feFlood | 8/8 |
-| filters/feGaussianBlur | 13/13 |
-| filters/feImage | 26/27 |
-| filters/feMerge | 3/3 |
-| filters/feMorphology | 14/14 |
-| filters/feOffset | 9/9 |
-| filters/fePointLight | 4/4 |
-| filters/feSpecularLighting | 8/8 |
-| filters/feSpotLight | 11/12 |
-| filters/feTile | 2/6 |
-| filters/feTurbulence | 18/18 |
-| filters/filter | 67/67 |
-| filters/filter-functions | 41/42 |
-| filters/flood-color | 7/7 |
-| filters/flood-opacity | 2/2 |
-| masking/clip | 0/1 |
-| masking/clip-rule | 1/1 |
-| masking/clipPath | 49/51 |
-| masking/mask | 37/38 |
-| paint-servers/linearGradient | 37/37 |
-| paint-servers/pattern | 21/29 |
-| paint-servers/radialGradient | 40/40 |
-| paint-servers/stop | 30/32 |
-| paint-servers/stop-color | 1/1 |
-| paint-servers/stop-opacity | 2/2 |
-| painting/color | 4/4 |
-| painting/context | 9/15 |
-| painting/display | 8/9 |
-| painting/fill | 53/58 |
-| painting/fill-opacity | 8/8 |
-| painting/fill-rule | 2/2 |
-| painting/image-rendering | 1/3 |
-| painting/isolation | 2/2 |
-| painting/marker | 59/61 |
-| painting/mix-blend-mode | 20/20 |
-| painting/opacity | 9/9 |
-| painting/overflow | 5/5 |
-| painting/paint-order | 14/14 |
-| painting/shape-rendering | 8/8 |
-| painting/stroke | 19/20 |
-| painting/stroke-dasharray | 17/17 |
-| painting/stroke-dashoffset | 6/6 |
-| painting/stroke-linecap | 9/9 |
-| painting/stroke-linejoin | 4/4 |
-| painting/stroke-miterlimit | 5/5 |
-| painting/stroke-opacity | 8/8 |
-| painting/stroke-width | 4/4 |
-| painting/visibility | 7/7 |
-| shapes/circle | 6/6 |
-| shapes/ellipse | 12/12 |
-| shapes/line | 10/10 |
-| shapes/path | 57/57 |
-| shapes/polygon | 5/5 |
-| shapes/polyline | 5/5 |
-| shapes/rect | 37/38 |
-| structure/a | 5/5 |
-| structure/defs | 7/7 |
-| structure/g | 2/2 |
-| structure/image | 43/45 |
-| structure/style | 15/16 |
-| structure/style-attribute | 4/4 |
-| structure/svg | 27/38 |
-| structure/switch | 12/13 |
-| structure/symbol | 15/16 |
-| structure/systemLanguage | 8/10 |
-| structure/transform | 19/19 |
-| structure/transform-origin | 15/23 |
-| structure/use | 41/41 |
-| text/alignment-baseline | 6/15 |
-| text/baseline-shift | 18/22 |
-| text/direction | 0/1 |
-| text/dominant-baseline | 0/19 |
-| text/font | 1/2 |
-| text/font-family | 5/12 |
-| text/font-kerning | 3/3 |
-| text/font-size | 14/19 |
-| text/font-size-adjust | 0/1 |
-| text/font-stretch | 2/3 |
-| text/font-style | 3/3 |
-| text/font-variant | 2/2 |
-| text/font-weight | 9/12 |
-| text/glyph-orientation-horizontal | 0/1 |
-| text/glyph-orientation-vertical | 0/1 |
-| text/kerning | 0/2 |
-| text/lengthAdjust | 2/4 |
-| text/letter-spacing | 8/11 |
-| text/text | 39/44 |
-| text/text-anchor | 11/13 |
-| text/text-decoration | 9/21 |
-| text/text-rendering | 4/5 |
-| text/textLength | 9/12 |
-| text/textPath | 9/42 |
-| text/tref | 2/11 |
-| text/tspan | 24/31 |
-| text/unicode-bidi | 1/1 |
-| text/word-spacing | 6/6 |
-| text/writing-mode | 10/21 |
-| TOTAL | 1414/1622 |
+| Part                              |     Cases | Passing |
+|-----------------------------------|----------:|--------:|
+| filters/enable-background         |     20/20 |  100.0% |
+| filters/feBlend                   |     10/10 |  100.0% |
+| filters/feColorMatrix             |     14/14 |  100.0% |
+| filters/feComponentTransfer       |     22/22 |  100.0% |
+| filters/feComposite               |     18/18 |  100.0% |
+| filters/feConvolveMatrix          |     21/21 |  100.0% |
+| filters/feDiffuseLighting         |     22/22 |  100.0% |
+| filters/feDisplacementMap         |       1/1 |  100.0% |
+| filters/feDistantLight            |       4/4 |  100.0% |
+| filters/feDropShadow              |       8/8 |  100.0% |
+| filters/feFlood                   |       8/8 |  100.0% |
+| filters/feGaussianBlur            |     13/13 |  100.0% |
+| filters/feImage                   |     26/27 |   96.2% |
+| filters/feMerge                   |       3/3 |  100.0% |
+| filters/feMorphology              |     14/14 |  100.0% |
+| filters/feOffset                  |       9/9 |  100.0% |
+| filters/fePointLight              |       4/4 |  100.0% |
+| filters/feSpecularLighting        |       8/8 |  100.0% |
+| filters/feSpotLight               |     11/12 |   91.6% |
+| filters/feTile                    |       2/6 |   33.3% |
+| filters/feTurbulence              |     18/18 |  100.0% |
+| filters/filter                    |     67/67 |  100.0% |
+| filters/filter-functions          |     41/42 |   97.6% |
+| filters/flood-color               |       7/7 |  100.0% |
+| filters/flood-opacity             |       2/2 |  100.0% |
+| masking/clip                      |       0/1 |    0.0% |
+| masking/clip-rule                 |       1/1 |  100.0% |
+| masking/clipPath                  |     49/51 |   96.0% |
+| masking/mask                      |     37/38 |   97.3% |
+| paint-servers/linearGradient      |     37/37 |  100.0% |
+| paint-servers/pattern             |     21/29 |   72.4% |
+| paint-servers/radialGradient      |     40/40 |  100.0% |
+| paint-servers/stop                |     30/32 |   93.7% |
+| paint-servers/stop-color          |       1/1 |  100.0% |
+| paint-servers/stop-opacity        |       2/2 |  100.0% |
+| painting/color                    |       4/4 |  100.0% |
+| painting/context                  |      9/15 |   60.0% |
+| painting/display                  |       8/9 |   88.8% |
+| painting/fill                     |     53/58 |   91.3% |
+| painting/fill-opacity             |       8/8 |  100.0% |
+| painting/fill-rule                |       2/2 |  100.0% |
+| painting/image-rendering          |       1/3 |   33.3% |
+| painting/isolation                |       2/2 |  100.0% |
+| painting/marker                   |     59/61 |   96.7% |
+| painting/mix-blend-mode           |     20/20 |  100.0% |
+| painting/opacity                  |       9/9 |  100.0% |
+| painting/overflow                 |       5/5 |  100.0% |
+| painting/paint-order              |     14/14 |  100.0% |
+| painting/shape-rendering          |       8/8 |  100.0% |
+| painting/stroke                   |     19/20 |   95.0% |
+| painting/stroke-dasharray         |     17/17 |  100.0% |
+| painting/stroke-dashoffset        |       6/6 |  100.0% |
+| painting/stroke-linecap           |       9/9 |  100.0% |
+| painting/stroke-linejoin          |       4/4 |  100.0% |
+| painting/stroke-miterlimit        |       5/5 |  100.0% |
+| painting/stroke-opacity           |       8/8 |  100.0% |
+| painting/stroke-width             |       4/4 |  100.0% |
+| painting/visibility               |       7/7 |  100.0% |
+| shapes/circle                     |       6/6 |  100.0% |
+| shapes/ellipse                    |     12/12 |  100.0% |
+| shapes/line                       |     10/10 |  100.0% |
+| shapes/path                       |     57/57 |  100.0% |
+| shapes/polygon                    |       5/5 |  100.0% |
+| shapes/polyline                   |       5/5 |  100.0% |
+| shapes/rect                       |     37/38 |   97.3% |
+| structure/a                       |       5/5 |  100.0% |
+| structure/defs                    |       7/7 |  100.0% |
+| structure/g                       |       2/2 |  100.0% |
+| structure/image                   |     43/45 |   95.5% |
+| structure/style                   |     15/16 |   93.7% |
+| structure/style-attribute         |       4/4 |  100.0% |
+| structure/svg                     |     27/38 |   71.0% |
+| structure/switch                  |     12/13 |   92.3% |
+| structure/symbol                  |     15/16 |   93.7% |
+| structure/systemLanguage          |      8/10 |   80.0% |
+| structure/transform               |     19/19 |  100.0% |
+| structure/transform-origin        |     15/23 |   65.2% |
+| structure/use                     |     41/41 |  100.0% |
+| text/alignment-baseline           |      6/15 |   40.0% |
+| text/baseline-shift               |     18/22 |   81.8% |
+| text/direction                    |       0/1 |    0.0% |
+| text/dominant-baseline            |      0/19 |    0.0% |
+| text/font                         |       1/2 |   50.0% |
+| text/font-family                  |      5/12 |   41.6% |
+| text/font-kerning                 |       3/3 |  100.0% |
+| text/font-size                    |     14/19 |   73.6% |
+| text/font-size-adjust             |       0/1 |    0.0% |
+| text/font-stretch                 |       2/3 |   66.6% |
+| text/font-style                   |       3/3 |  100.0% |
+| text/font-variant                 |       2/2 |  100.0% |
+| text/font-weight                  |      9/12 |   75.0% |
+| text/glyph-orientation-horizontal |       0/1 |    0.0% |
+| text/glyph-orientation-vertical   |       0/1 |    0.0% |
+| text/kerning                      |       0/2 |    0.0% |
+| text/lengthAdjust                 |       2/4 |   50.0% |
+| text/letter-spacing               |      8/11 |   72.7% |
+| text/text                         |     39/44 |   88.6% |
+| text/text-anchor                  |     11/13 |   84.6% |
+| text/text-decoration              |      9/21 |   42.8% |
+| text/text-rendering               |       4/5 |   80.0% |
+| text/textLength                   |      9/12 |   75.0% |
+| text/textPath                     |      9/42 |   21.4% |
+| text/tref                         |      2/11 |   18.1% |
+| text/tspan                        |     24/31 |   77.4% |
+| text/unicode-bidi                 |       1/1 |  100.0% |
+| text/word-spacing                 |       6/6 |  100.0% |
+| text/writing-mode                 |     10/21 |   47.6% |
+| **total**                         | 1414/1622 |   87.1% |

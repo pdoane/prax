@@ -17,7 +17,9 @@
 // features and its workloads (examples/draw_features).
 //
 // A renderer on a device renders each drawing twice, each in a row of its own: to 8 bits, and to half floats (`kHdr`),
-// whose rows end in "hdr". A renderer in memory renders to 8 bits.
+// whose rows end in "hdr". A renderer in memory renders to 8 bits. A row on a device also has a draw measure. It
+// prepares the frame and draws it in kDrawPasses passes of one command buffer. Its GPU time is that of one pass, at the
+// clocks of a steady stream of frames.
 //
 // `--images DIR` also writes what each row rendered into DIR, as a PNG named for the row. A half-float render is
 // clamped to 8 bits.
@@ -216,6 +218,52 @@ Times render(PrDrawRenderer* renderer, PrDrawFrame* PR_NULLABLE& frame, BenchTar
     return Times{submitted - started, gpu};
 }
 
+// The number of passes in which a draw measure renders a prepared frame, one after another in one command buffer.
+constexpr uint32_t kDrawPasses = 256;
+
+// Prepares `list` in `frame`, which an earlier render created, and renders it kDrawPasses times in one command buffer.
+// Each pass clears the target first. Waits for completion, and returns the time until submission and the device's time
+// for one pass. The device runs the passes back to back, at the clocks of a steady stream of frames, so the time is
+// steadier than that of one render. The frame's preparation is a small share of it.
+Times drawPasses(PrDrawFrame* frame, BenchTarget& target, PrColor color, const std::vector<uint8_t>& background,
+        const PrDrawList* list, PrStatus* status) {
+    double started = nowMillis();
+    PrGpuCommands* commands = nullptr;
+    if (!prGpuCommandsBegin(target.device, nullptr, &commands)) {
+        *status = PrStatus_Lost;
+        return Times{};
+    }
+    PrDrawBeneath beneath{};
+    beneath.color = color;
+    PrDrawTarget prepared{
+        .extent = {target.width, target.height},
+        .format = target.output.format,
+        .commands = commands,
+        .beneath = &beneath,
+    };
+    *status = prDrawFramePrepare(frame, list, &prepared);
+    if (*status == PrStatus_Ok) {
+        PrGpuSubresources all{};
+        prGpuCommandsTextureBarrier(commands, target.texture, all, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_ColorAttachment);
+        PrColor clear{
+            float(background[2]) / 255, float(background[1]) / 255, float(background[0]) / 255,
+            float(background[3]) / 255,
+        };
+        for (uint32_t i = 0; i < kDrawPasses; ++i) {
+            PrGpuPassDesc desc = prGpuPassDescColor(target.texture, PrGpuLoad_Clear, clear);
+            PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+            prDrawFrameRender(frame, pass, PrIVec2{0, 0});
+            prGpuPassEnd(pass);
+        }
+        prGpuCommandsTextureBarrier(commands, target.texture, all, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_ShaderRead);
+    }
+    double submitted = nowMillis();
+    double gpu = prGpuCommandsSubmitAndWait(commands) * 1000;
+    return Times{submitted - started, gpu / kDrawPasses};
+}
+
 // Writes what the target holds after a render as a PNG at `path`. The pixels are premultiplied, which a PNG reads as
 // straight, so only an opaque render is exact.
 void writeImage(PrImageCodec* codec, const BenchTarget& target, const std::string& path) {
@@ -323,7 +371,7 @@ int main(int argc, char** argv) {
             // Each drawing sets its text with a shaper of its own.
             std::unique_ptr<PrTextShaper, decltype(&prTextShaperDestroy)> textShaper(prTextShaperCreate(shaper),
                 prTextShaperDestroy);
-            PrColor clear = kPaper;
+            PrColor clear = drawingCanvas(drawing);
             std::vector<uint8_t> backgroundPixels = pixelsOf(clear, size_t(width) * height);
             Times recordTimes{};
             HarnessCounters recorded = measure([&] {
@@ -366,6 +414,14 @@ int main(int argc, char** argv) {
                     rendering.gpu = t.gpu;
                     HarnessCounts counts{};
                     harnessCountsAdd(&counts, "render", rendering);
+                    if (onDevice) {
+                        Times drawn{};
+                        HarnessCounters drawCost = measure([&] {
+                            return drawPasses(frame, target, clear, backgroundPixels, list, &rendered);
+                        }, &drawn);
+                        drawCost.gpu = drawn.gpu;
+                        harnessCountsAdd(&counts, "draw", drawCost);
+                    }
                     PrDrawStats stats = frame != nullptr ? prDrawFrameStats(frame) : PrDrawStats{};
                     prDrawFrameDestroy(frame);
                     // Recording belongs to the drawing, whichever renderer renders it, so it goes on the first row.

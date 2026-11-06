@@ -44,7 +44,18 @@ class MeasuresTest(unittest.TestCase):
         output = io.StringIO()
         with redirect_stdout(output):
             perf.print_engines(run)
-        self.assertRegex(output.getvalue(), r"tree cold\s+30\s+60\s+2\.00\s+2\.00\s+4/0/0\s+4/-/-")
+        self.assertRegex(output.getvalue(), r"tree cold\s+30\s+60\s+2\.00\s+2\.00\s+1ms\s+1ms\s+4/0/0\s+4/-/-")
+
+    def test_rows_of_bytes_show_their_throughput_and_screens_their_agreement(self):
+        row = {"name": "flood", "bytes": 1 << 20, "time": 10, "counts": {"time": dict(counts(100), time=10)}}
+        run = results([row])
+        run["engines"]["libvterm"] = [dict(row, time=100, counts={"time": dict(counts(700), time=100)}, rows=40,
+                                           sameRows=38)]
+        output = io.StringIO()
+        with redirect_stdout(output):
+            perf.print_engines(run)
+        self.assertRegex(output.getvalue(), r"flood\s+100\s+700\s+7\.00\s+\S+\s+10ms\s+100ms\s+100\s+10\s+38/40")
+        self.assertNotIn("work", output.getvalue())
 
 
 class ChangeTest(unittest.TestCase):

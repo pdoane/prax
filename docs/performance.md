@@ -9,7 +9,9 @@
 - `p-core` is the share of the instructions retired on performance cores. If the time changed and the instructions did
   not, it explains why.
 - If a measure drives a device, `gpu ms` is the time that the device spent executing, beside the CPU's count. It varies
-  with the device's clocks.
+  with the device's clocks, which drop while the device idles between submissions. The draw benchmark's `draw` measures
+  draw a prepared frame many times in one submission, which keeps the device busy. Their GPU time is the steadier
+  measure of what a frame costs the device.
 - Power matters more than wall time. A change that buys time with more instructions, as going wide on threads does,
   needs a case in which someone waits for the work. Going wide is for work that someone waits on, never for background
   work.
@@ -92,6 +94,64 @@ and Taffy round their results to whole pixels after a layout. The engine does no
 - The other engines' rows are recorded with the engine's, so a comparison of runs shows whether their rows held still,
   which shows whether the machine and the harness did.
 
+## Comparing with other terminals
+
+The `vterm` benchmark compares `lib/vterm` with libvterm, which the build fetches as a release. Both engines are
+linked into one harness (`tools/bench/vterm_bench`) and receive the same program output. Each engine has an adapter
+through which the harness writes output, resizes the screen, and reads text and cells. The workloads are the captures
+in `lib/vterm/tests/captures` and generated output: floods of plain text, of SGR colors, and of wide, combining and
+emoji characters; a TUI's redraws; long lines; a resize that rewraps a full scrollback; and a read of the cells of
+every line in a full scrollback, as a view scrolled back would draw them.
+
+- `B/line` is the memory that an engine's lines hold after a workload, divided by the number of lines in its screen
+  and scrollback. For lib/vterm the memory is `prVtermLinesMemorySize`. For libvterm it is what libvterm allocated,
+  plus the scrollback that its adapter holds. After the floods, which fill the scrollback, it is the cost of one line
+  of scrollback.
+- `./dev.sh bench vterm` prints each engine's throughput. For libvterm, it also prints how many of the screen's rows
+  show the same text as lib/vterm's after the workload. If the screens differ, the engines did different work, and
+  their times do not compare.
+- `vterm_libvterm_check`, which the unit tests run, checks that both adapters hold the same text after the same input.
+  It covers what the screen's rows do not: the scrollback and its limit, the alternate screen, and resizes.
+
+`./dev.sh bench terminals` compares whole terminal applications end to end on macOS. It runs the Prax terminal app and
+whichever of Ghostty, kitty, WezTerm, Alacritty, iTerm2 and Terminal.app are installed. No other command runs it,
+because it opens their windows. Each terminal is launched once, at 120x40 cells with 100,000 lines of scrollback. Its
+configuration is given on its command line or in a temporary file, never the user's. The terminal runs
+`terminal_feed`, which runs one workload at a time when the runner asks over a FIFO. The terminal's startup is
+therefore not measured, and the runner reads the counters between runs. The terminals run one after another, because
+a window that another window covers may skip drawing.
+
+- The workloads are few and distinct. A scrollback fill of 100,000 full lines measures memory. Floods of a service's
+  colored log, of wide characters, combining marks and emoji, and of lines that wrap across many rows measure
+  throughput in MiB/s. htop's full-screen frames, 60 per second for 5 seconds with each frame in synchronized output,
+  measure the cost of one second of drawing. The captures are left to `vterm`, because played as fast as possible
+  they mostly measure switches to the alternate screen.
+- Wall time ends when the terminal answers a cursor position report (DSR 6) sent after the workload. A terminal
+  answers it when it parses it, so the answer marks the end of parsing. The end of the writes marks only that the pty
+  buffered the bytes.
+- CPU time, instructions, the cores' energy (`proc_pid_rusage`) and GPU time are summed over the terminal's processes.
+  GPU time is the accumulated time of the processes' Metal clients, which the I/O Registry publishes and Activity
+  Monitor reads. Each measure runs from the start until the terminal goes idle, so the frames that it draws after
+  parsing count. The compositor's work belongs to WindowServer and counts for no terminal.
+- Memory is the physical footprint of the terminal's processes. It is read at idle after the launch, after the fill as
+  bytes for each line of scrollback over the idle footprint, and as its peak during each workload. An idle footprint
+  is the least over two seconds, because a terminal may release memory a while after it goes idle. Each run starts
+  from an empty screen and scrollback, but memory that a terminal freed and its allocator kept counts in the next
+  run's peak. Memory that a terminal reserved at its launch counts in its idle footprint, not in its lines. The idle
+  footprint is broken down by the categories of `footprint(1)`. A window's drawables are IOSurface, the GPU's buffers
+  and textures are IOAccelerator, and the system's malloc is Malloc. The engine's heap, which mimalloc tags as the
+  application's, is App-Specific Tag 1.
+- A run starts once the terminal is idle, not after a fixed wait. Each workload except the fill runs once on a fifth
+  of its output to warm up, and then twice. Instruction counts and CPU time barely vary, so each cell shows the median
+  of the two runs and their spread. A run stops after 10 seconds, plus the length of a paced workload's frames, and
+  shows as `> 10 s`. Each row is printed when its workload finishes, so a stopped run still reports. The comparison
+  follows once every terminal has run. Nothing is recorded.
+- Terminal.app and iTerm2 are driven by AppleScript, which needs the user's permission (Privacy & Security >
+  Automation). Each runs all of its windows in one process, so each is measured only if it is not already running. The
+  run launches it, closes the windows that its launch opened, and quits it at the end. Terminal.app uses the font and
+  scrollback of its default profile. Ghostty limits its scrollback in bytes, which the run sets to about 100,000
+  lines.
+
 ## Comparing with browsers
 
 - `./dev.sh bench browser [name...]` runs the scripted benchmarks in pr_shell and in every installed browser
@@ -144,5 +204,9 @@ and Taffy round their results to whole pixels after a layout. The engine does no
   failure report, make the function that holds the call larger, and a larger function may no longer be inlined into its
   hot callers. So `PR_ASSERT` and `PR_FATAL` pass one pointer to a constant record of the message, file and line. When
   they passed the three as arguments, mutation's node builds ran up to 7% more instructions.
+- `./dev.sh profile --gpu <harness> [args...]` records a harness's work on the GPU with Instruments' Metal System
+  Trace. The trace shows each encoder's time on each stage, and the bytes of registers that the compiler spilled for
+  each pipeline. A spill costs every thread of a pipeline, whichever path the thread takes. A shader that serves many
+  kinds of work, such as the fragment renderer's, should therefore spill nothing.
 - To confirm what a suspect costs in instructions, take it out in a scratch build and run the one row. The difference
   is its cost, whatever the profile says. Put it back before doing anything else.

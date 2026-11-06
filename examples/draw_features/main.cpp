@@ -105,7 +105,7 @@ PrGpuTexture renderedFor(Window& w, PrUVec2 extent) {
     return w.rendered;
 }
 
-// Renders the list over the drawings' paper into the swap chain's texture at `extent` target pixels and presents it.
+// Renders the list over the drawing's canvas into the swap chain's texture at `extent` target pixels and presents it.
 void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
@@ -125,7 +125,7 @@ void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,
         PrGpuAccessFlag_ColorAttachment);
-    PrGpuPassDesc pass = prGpuPassDescColor(target, PrGpuLoad_Clear, kPaper);
+    PrGpuPassDesc pass = prGpuPassDescColor(target, PrGpuLoad_Clear, drawingCanvas(w.drawings[w.drawing]));
     PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
     prDrawFrameRender(w.frame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);

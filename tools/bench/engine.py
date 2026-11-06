@@ -90,6 +90,22 @@ def flex(args):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# vterm
+
+def vterm_options(parser):
+    parser.add_argument("workloads", nargs="*", help="workloads by the start of the name; every workload by default")
+
+
+def vterm(args):
+    """Runs vterm_bench and groups its rows by engine. Each row is one engine's measure of a workload. The rows of
+    lib/vterm are filed as prax, beside those of libvterm."""
+    engines = {}
+    for row in common.run_json([common.binary(args.bin, "vterm_bench")] + args.workloads, "vterm_bench"):
+        engines.setdefault(row.pop("engine"), []).append(row)
+    return engines, []
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 # page-changes
 
 # The number of elements changed on each page. It is large enough that each kind of change meets several kinds of

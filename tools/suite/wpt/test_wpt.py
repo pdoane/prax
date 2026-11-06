@@ -256,16 +256,12 @@ class RunnerTests(unittest.TestCase):
 
 
 class GateTests(unittest.TestCase):
-    def test_a_rate_is_measured_to_a_tenth_rounded_down(self):
-        self.assertEqual(wpt.measured(dict(tests=3, passed=2)), 66.6)
-        self.assertEqual(wpt.measured(dict(tests=0, passed=0)), 100.0)
-
     def test_scoreboard_round_trip(self):
         boards = {"css": {"css/b": wpt.Score("2/2", "1/8", 12.5),
                           "css/a": wpt.Score("1/1", "40/40", 100.0),
-                          wpt.TOTAL: wpt.Score("3/3", "41/48", 85.4)},
+                          corpus.TOTAL: wpt.Score("3/3", "41/48", 85.4)},
                   "url": {"url": wpt.Score("1/1", "1/2", 50.0),
-                          wpt.TOTAL: wpt.Score("1/1", "1/2", 50.0)}}
+                          corpus.TOTAL: wpt.Score("1/1", "1/2", 50.0)}}
         text = wpt.format_scoreboard(boards)
         self.assertEqual(wpt.parse_scoreboard(text), boards)
         self.assertLess(text.index("| css/b"), text.index("| **total**"))
@@ -336,7 +332,7 @@ class GateTests(unittest.TestCase):
                 wpt.main()
             if recorded:
                 record.assert_called_once_with("css", {"css-a": wpt.Score("1/1", "9/10", 90.0),
-                                                       wpt.TOTAL: wpt.Score("1/1", "9/10", 90.0)})
+                                                       corpus.TOTAL: wpt.Score("1/1", "9/10", 90.0)})
             else:
                 record.assert_not_called()
 
