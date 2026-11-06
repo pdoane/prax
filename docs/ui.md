@@ -19,7 +19,7 @@ content take input as regions of the element's box.
 and shaper, creates a context over the tree, runs frames, and paints the tree's scene with the renderer it chose. This
 composition is what lets a host replace any piece, so there is deliberately no single call that runs a UI in a window.
 Each Kit example's `main()` composes its own. A root that draws no background lets a UI stand over what the host drew,
-such as a 3D engine's frame, as the perspective example's root, a surface on `PrKitGround_None`, does.
+such as a 3D engine's frame, as the perspective example's root, a surface on `PrKitBackground_None`, does.
 
 Input arrives as `lib/app` events (`PrAppEvent`). A host that has its own window system translates its events into
 them. Documents take the same events, so one host feeds native UI and documents alike.

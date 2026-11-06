@@ -39,10 +39,10 @@ TEST_CASE("an image takes its own size unless it is placed, and keeps its record
     const PrDrawImage* image = whiteImage(64, 32);
     PrLayoutNode natural = kPrLayoutNodeNone;
     PrLayoutNode framed = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         // The row aligns its items at their start, so that the framed image's height does not stretch the other.
         PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_Start};
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, line);
+        PrLayoutNode row = prKitBox(f.kit, root, {}, line);
         natural = prKitImage(f.kit, row, {.image = image}, {});
         PrKitImageStyle cover{
             .fit = PrKitImageFit_Cover,

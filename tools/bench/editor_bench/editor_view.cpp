@@ -38,9 +38,9 @@ constexpr PrKitTextStyle kMeta = {.role = PrKitTextRole_Meta};
 
 constexpr const char* kRenderModes[] = {"PBR", "Unlit", "Wireframe", "Overdraw"};
 
-// Creates a row of fixed height on a ground, with a rule on each side that `rules` names.
-PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitGround ground, PrKitRuleFlags rules, float height, float gap) {
-    PrKitSurfaceStyle surface{.ground = ground, .rules = rules};
+// Creates a row of fixed `height` on `background`, with a rule on each side that `rules` names.
+PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitBackground background, PrKitRuleFlags rules, float height, float gap) {
+    PrKitSurfaceStyle surface{.background = background, .rules = rules};
     surface.box.direction = PrKitDirection_Row;
     surface.box.align = PrKitAlign_Center;
     surface.box.gap = gap;
@@ -290,7 +290,7 @@ PrLayoutNode renderModeButton(PrKit* kit, PrLayoutNode parent, EditorState& edit
 }
 
 void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
-    PrLayoutNode toolbar = bar(kit, parent, PrKitGround_Panel, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace1);
+    PrLayoutNode toolbar = bar(kit, parent, PrKitBackground_Panel, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace1);
     struct ToolDef {
         Tool tool;
         PrKitIconKind icon;
@@ -441,7 +441,7 @@ void buildAssetGrid(PrKit* kit, PrLayoutNode parent, EditorState& editor, uint32
     PrLayoutNode cells = prKitBox(kit, parent, {}, grid);
     for (uint32_t i = 0; i < count && i < countOf(kAssets); ++i) {
         bool selected = editor.selectedAsset == i;
-        PrKitSurfaceStyle cell{.ground = PrKitGround(selected ? PrKitGround_Select : PrKitGround_None)};
+        PrKitSurfaceStyle cell{.background = PrKitBackground(selected ? PrKitBackground_Select : PrKitBackground_None)};
         cell.box.justify = PrKitJustify_Center;
         cell.box.align = PrKitAlign_Center;
         cell.box.gap = kPrKitSpace2;
@@ -465,7 +465,7 @@ void buildProjectPanel(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     PrLayoutNode header = prKitPanelHeader(kit, parent, {.title = "PROJECT"});
     headerButton(kit, header, PrKitIconKind_Plus, false);
     headerButton(kit, header, PrKitIconKind_Filter, false);
-    PrLayoutNode crumbs = bar(kit, parent, PrKitGround_Panel, PrKitRuleFlag_Bottom, kPrKitHeightSm, kPrKitSpace2);
+    PrLayoutNode crumbs = bar(kit, parent, PrKitBackground_Panel, PrKitRuleFlag_Bottom, kPrKitHeightSm, kPrKitSpace2);
     const char* segments[] = {"Assets", "Models", "Textures"};
     for (uint32_t i = 0; i < 3; ++i) {
         PrKitTextStyle style{
@@ -541,7 +541,7 @@ void buildViewport(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
 // --- Console ---
 
 void buildConsole(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
-    PrLayoutNode tabs = bar(kit, parent, PrKitGround_Header, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace1);
+    PrLayoutNode tabs = bar(kit, parent, PrKitBackground_Header, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace1);
     struct ConsoleTabDef {
         ConsoleTab tab;
         PrStringView label;
@@ -589,7 +589,7 @@ void buildInspector(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         editor.lockedEntity = editor.inspectorLocked && sel != nullptr ? sel->id : 0;
     }
     headerButton(kit, header, PrKitIconKind_DotsV, false);
-    PrLayoutNode identity = bar(kit, parent, PrKitGround_None, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace3);
+    PrLayoutNode identity = bar(kit, parent, PrKitBackground_None, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace3);
     if (sel != nullptr) {
         prKitCheckbox(kit, identity, {.value = &sel->enabled}, {});
     }
@@ -678,7 +678,7 @@ void buildInspector(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
 // --- Status bar ---
 
 void buildStatusBar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
-    PrLayoutNode status = bar(kit, parent, PrKitGround_Header, PrKitRuleFlag_Top, kPrKitHeightSm, kPrKitSpace4);
+    PrLayoutNode status = bar(kit, parent, PrKitBackground_Header, PrKitRuleFlag_Top, kPrKitHeightSm, kPrKitSpace4);
     prKitIcon(kit, status, {.icon = PrKitIconKind_Check}, {.size = 10, .tone = PrKitTone_Success});
     PrKitTextStyle success{.role = PrKitTextRole_Caption, .tone = PrKitTone_Success};
     prKitLabel(kit, status, {.text = "BUILD OK"}, success);
@@ -735,13 +735,13 @@ void countEdit(void* context, PrLayoutNode, PrUiEditPhase phase) {
 
 } // namespace
 
-void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
-    prUiSetEditSink(kit->ui, ground, countEdit, &editor);
-    buildMenubar(kit, ground, editor);
-    buildToolbar(kit, ground, editor);
+void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor) {
+    prUiSetEditSink(kit->ui, root, countEdit, &editor);
+    buildMenubar(kit, root, editor);
+    buildToolbar(kit, root, editor);
     if (editor.dock == nullptr)
         editor.dock = makeDock();
-    PrLayoutNode dock = prKitDockBuild(kit, ground, {.dock = editor.dock, .describe = describePanel});
+    PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = editor.dock, .describe = describePanel});
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, dock, &fill);
     for (uint32_t i = 0; i < prKitDockPaneCount(editor.dock); ++i) {
@@ -766,7 +766,7 @@ void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
                 break;
         }
     }
-    buildStatusBar(kit, ground, editor);
+    buildStatusBar(kit, root, editor);
     buildPalette(kit, prLayoutTreeRoot(kit->tree), editor);
 }
 

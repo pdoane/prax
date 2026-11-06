@@ -40,7 +40,7 @@ constexpr PrKitButtonStyle kPrimary = {.variant = PrKitButtonVariant_Primary};
 constexpr PrKitButtonStyle kGhost = {.variant = PrKitButtonVariant_Ghost};
 constexpr PrKitButtonStyle kDanger = {.variant = PrKitButtonVariant_Danger};
 
-// Creates a card: a box on the panel ground with a rule on every side, laid out as `box` says.
+// Creates a card: a box on the panel background with a rule on every side, laid out as `box` says.
 PrLayoutNode card(PrKit* kit, PrLayoutNode parent, const PrKitBoxStyle& box);
 
 // Creates a label of `text` in `style` that takes the room its parent leaves.

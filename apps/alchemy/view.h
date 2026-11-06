@@ -21,11 +21,10 @@ struct View {
     PrKitDock* dock = nullptr;
     String paletteQuery;
 
-    // Whether each dialog was told of the state's request, and whether the import's has taken focus.
+    // Whether each dialog was told of the state's request.
     bool deleteShown = false;
     bool serverShown = false;
     bool importShown = false;
-    bool importFocused = false;
 };
 
 // Creates the dock's arrangement, or frees it.

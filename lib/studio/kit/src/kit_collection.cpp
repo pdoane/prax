@@ -626,10 +626,11 @@ bool itemSelected(const PrKit& kit, PrLayoutNode node) {
     return item != nullptr && item->selected;
 }
 
-// Creates a tile's thumbnail box on a ground of `tint`, or of the theme's raised ground if `tint` is fully transparent.
+// Creates a tile's thumbnail box on a background of `tint`, or on the theme's raised background if `tint` is fully
+// transparent.
 PrLayoutNode tileThumbnail(PrKit& kit, PrLayoutNode tile, PrColor tint) {
-    KitColors ground{.background = tint.a > 0 ? tint : kit.theme.palette.bg3};
-    return prLayoutTreeFrameElement(kit.tree, tile, 0, kitStyle(kit, ThumbBox{}, ThumbFlex{}, ground));
+    KitColors background{.background = tint.a > 0 ? tint : kit.theme.palette.bg3};
+    return prLayoutTreeFrameElement(kit.tree, tile, 0, kitStyle(kit, ThumbBox{}, ThumbFlex{}, background));
 }
 
 // Applies a click on the node of row or tile `index` to the view's selection.

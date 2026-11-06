@@ -66,7 +66,7 @@ void closeDevice(Window& w) {
 // device to render with.
 bool openDevice(Window& w) {
     PrAppSurface surface{};
-    PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
+    PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
             prAppSurface(w.app, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||

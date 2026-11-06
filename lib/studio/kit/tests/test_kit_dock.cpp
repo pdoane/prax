@@ -46,8 +46,8 @@ struct DockFixture : KitFixture {
 
     DockFixture() {
         seed(dock);
-        build = [this](PrLayoutNode ground) {
-            area = prKitDockBuild(kit, ground, {.dock = dock, .describe = describe});
+        build = [this](PrLayoutNode root) {
+            area = prKitDockBuild(kit, root, {.dock = dock, .describe = describe});
             panes.clear();
             for (uint32_t i = 0; i < prKitDockPaneCount(dock); ++i) {
                 PrKitDockPane pane = prKitDockPane(dock, i);
@@ -255,8 +255,8 @@ TEST_CASE("clicking a tab opens its panel") {
     DockFixture f;
     PrKitDockNode inspector = prKitDockPanelLeaf(f.dock, kInspector);
     prKitDockAddPanel(f.dock, inspector, kProject + 100);
-    f.build = [&](PrLayoutNode ground) {
-        prKitDockBuild(f.kit, ground, {.dock = f.dock, .describe = describeLeaf});
+    f.build = [&](PrLayoutNode root) {
+        prKitDockBuild(f.kit, root, {.dock = f.dock, .describe = describeLeaf});
     };
     // The second tab is open, and the first tab sits at the strip's start.
     f.frame();
@@ -409,9 +409,9 @@ TEST_CASE("a split's panes divide its box by weight, and its band moves weight b
     float weights[2] = {1, 3};
     PrLayoutNode panes[2] = {};
     PrLayoutNode split = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitSplitStyle style{.direction = PrKitDirection_Column, .minShare = 0.1f, .place = {.flex = PrKitFlex_Fill}};
-        split = prKitSplit(f.kit, ground, {.count = 2, .weights = weights}, style);
+        split = prKitSplit(f.kit, root, {.count = 2, .weights = weights}, style);
         panes[0] = prKitSplitPane(f.kit, split, 0);
         panes[1] = prKitSplitPane(f.kit, split, 1);
     };

@@ -670,7 +670,7 @@ String statusOf(const Stream& s) {
 }
 
 // Declares the round: a bar of the stream's controls, the pane that shows the page, and the status line.
-void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
+void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     Stream& s = *static_cast<Stream*>(context);
     PrLayoutTree* tree = kit->tree;
     PrKitSurfaceStyle header{
@@ -680,10 +680,10 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
             .gap = 14,
             .padding = prKitEdgesXY(10, 14),
         },
-        .ground = PrKitGround_Hud,
+        .background = PrKitBackground_Hud,
         .rules = PrKitRuleFlag_Bottom,
     };
-    PrLayoutNode bar = prKitSurface(kit, ground, {}, header);
+    PrLayoutNode bar = prKitSurface(kit, root, {}, header);
     PrKitTextStyle title{.role = PrKitTextRole_Heading};
     prKitLabel(kit, bar, {.text = "Incremental"}, title);
 
@@ -727,7 +727,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     prKitPlace(kit, progress, &grow);
 
     // The pane is a replaced element that fills the room under the bar, and its painter embeds the page.
-    PrLayoutNode pane = prLayoutTreeFrameReplaced(tree, ground, 0, 0);
+    PrLayoutNode pane = prLayoutTreeFrameReplaced(tree, root, 0, 0);
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, pane, &fill);
     if (s.recorded != nullptr) {
@@ -741,10 +741,10 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
 
     PrKitSurfaceStyle footer{
         .box = {.padding = prKitEdgesXY(6, 14)},
-        .ground = PrKitGround_Hud,
+        .background = PrKitBackground_Hud,
         .rules = PrKitRuleFlag_Top,
     };
-    PrLayoutNode status = prKitSurface(kit, ground, {}, footer);
+    PrLayoutNode status = prKitSurface(kit, root, {}, footer);
     String line = statusOf(s);
     prKitLabel(kit, status, {.text = line}, meta);
 }

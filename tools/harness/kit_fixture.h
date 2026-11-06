@@ -5,11 +5,15 @@
 #pragma once
 
 #include "pr/callback.h"
+#include "pr/compress.h"
 #include "pr/count_of.h"
 #include "pr/draw_commands.h"
+#include "pr/draw_glyph.h"
 #include "pr/draw_list.h"
+#include "pr/draw_renderer.h"
 #include "pr/font_bundle.h"
 #include "pr/font_set.h"
+#include "pr/image.h"
 #include "pr/kit.h"
 #include "pr/kit_surface.h"
 #include "pr/layout_frame.h"
@@ -20,6 +24,8 @@
 #include "pr/text_harfbuzz.h"
 #include "pr/ui.h"
 
+#include "tools/harness/harness_png.h"
+
 #include "tools/harness/test.h"
 
 #include <functional>
@@ -29,6 +35,8 @@
 PR_ASSUME_NONNULL_BEGIN
 
 namespace harness {
+
+using namespace pr;
 
 // Returns true if the tree's incremental work matches a layout from scratch, and reports the first difference if not.
 inline bool kitVerified(PrLayoutTree* tree) {
@@ -41,6 +49,14 @@ inline bool kitVerified(PrLayoutTree* tree) {
     }
     return same;
 }
+
+// The pixels that KitFixture::render starts from, beneath the tree's content. render plays the scene without filling
+// the canvas (PrLayoutScenePlayOptions::canvasFilled), so these pixels stand in for it.
+enum {
+    KitCanvas_Cleared,          // the canvas color, as a Studio window's pass clears to it (KitFixture::canvas)
+    KitCanvas_Unfilled,         // transparent, so that the pixels show only what the content draws
+};
+typedef uint8_t KitCanvas;
 
 // The fonts of a fixture's font set: the bundles that it installs, and the font system that it queries, if any.
 struct KitFonts {
@@ -55,8 +71,14 @@ struct KitFixture {
     PrLayoutTree* tree;
     PrUi* ui;
     PrKit* kit;
-    PrLayoutNode root = kPrLayoutNodeNone;   // a surface that fills the viewport and holds the build's widgets
-    PrKitGround ground = PrKitGround_App;    // what the root is drawn on
+
+    // The decoder for glyphs that are images, as a Studio window's renderer has, and the codecs that it uses.
+    PrCompressCodec* compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
+    PrImageCodec* images = prImageCodecCreate(PrImageCodecBackend_Default, compress);
+    PrDrawGlyphDecoder* glyphs = prDrawGlyphBitmapCreate(images);
+
+    PrLayoutNode root = kPrLayoutNodeNone;            // a surface that fills the viewport and holds the build's widgets
+    PrKitBackground background = PrKitBackground_App; // what the root is drawn on
     double time = 0;
     PrAppDisplay display = prAppDisplayDefault();  // the display that each frame is shown on
     PrAppUserPreferences preferences{};
@@ -84,6 +106,9 @@ struct KitFixture {
         prLayoutTreeDestroy(tree);
         prTextShaperDestroy(shaper);
         prFontSetDestroy(fonts);
+        prDrawGlyphDecoderDestroy(glyphs);
+        prImageCodecDestroy(images);
+        prCompressCodecDestroy(compress);
     }
 
     // Runs a frame `delta` seconds after the previous one, in a viewport of 800 by 600 px. A frame that gives a key
@@ -93,7 +118,7 @@ struct KitFixture {
         PrUiFrameDesc desc{
             .time = time,
             .delta = delta,
-            .extent = PrVec2{800, 600},
+            .extent = PrVec2{float(kRenderWidth), float(kRenderHeight)},
             .maxRounds = rounds,
             .display = display,
             .preferences = preferences,
@@ -104,7 +129,7 @@ struct KitFixture {
                     .overflow = PrKitOverflow_Clip,
                     .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
                 },
-                .ground = ground,
+                .background = background,
             };
             root = prKitSurface(kit, kPrLayoutNodeNone, {}, style);
             if (edit != nullptr)
@@ -151,6 +176,62 @@ struct KitFixture {
     }
     void type(PrStringView text) {
         push(PrAppEvent{.kind = PrAppEventKind_Text, .text = text});
+    }
+
+    // The extent of the viewport that frames lay out in, and that render draws, in px.
+    static constexpr uint32_t kRenderWidth = 800;
+    static constexpr uint32_t kRenderHeight = 600;
+
+    // Returns the color that a Studio window would clear to beneath the last frame. It is the scene's canvas color
+    // (prLayoutSceneCanvasColor), which comes from the root's background.
+    PrColor canvas() {
+        const PrLayoutScene* scene = prLayoutTreeScene(tree);
+        PrColor color = prColorFromColor16(prLayoutSceneCanvasColor(scene));
+        prLayoutSceneRelease(scene);
+        return color;
+    }
+
+    // Paints the tree as the last frame laid it out and renders it on the CPU, at one target pixel per px. `*rgba`
+    // receives kRenderWidth by kRenderHeight pixels of Rgba8, row by row. `canvas` sets the pixels beneath the content.
+    // Returns false if rendering fails.
+    bool render(std::vector<uint8_t>* rgba, KitCanvas canvas = KitCanvas_Cleared) {
+        PrDrawRenderer* renderer = nullptr;
+        PrDrawRendererOptions rendererOptions = prDrawRendererOptionsDefault();
+        rendererOptions.glyphDecoder = glyphs;
+        if (prDrawRendererCreate(PrDrawRendererBackend_Cpu, nullptr, &rendererOptions, &renderer) != PrStatus_Ok)
+            return false;
+        PrDrawList* list = prDrawListCreate();
+        const PrLayoutScene* scene = prLayoutTreeScene(tree);
+        std::vector<PrLayoutSceneScroll> scrolls(prLayoutSceneScrolls(tree, scene, nullptr, 0));
+        prLayoutSceneScrolls(tree, scene, scrolls.data(), uint32_t(scrolls.size()));
+        PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
+        options.scrolls = scrolls.data();
+        options.scrollCount = uint32_t(scrolls.size());
+        options.canvasFilled = true;
+        prLayoutScenePlay(scene, list, &options);
+        prLayoutSceneRelease(scene);
+        rgba->assign(size_t(kRenderWidth) * kRenderHeight * 4, 0);
+        if (canvas == KitCanvas_Cleared) {
+            // Rgba8 holds premultiplied values.
+            PrColor fill = this->canvas();
+            auto channel = [&](float value) { return uint8_t(value * fill.a * 255 + 0.5f); };
+            uint8_t clear[4] = {channel(fill.r), channel(fill.g), channel(fill.b), uint8_t(fill.a * 255 + 0.5f)};
+            for (size_t i = 0; i < rgba->size(); ++i)
+                (*rgba)[i] = clear[i % 4];
+        }
+        PrPixels pixels{rgba->data(), size_t(kRenderWidth) * 4, {kRenderWidth, kRenderHeight}};
+        bool rendered = prDrawRendererRenderPixels(renderer, list, pixels, PrPixelFormat_Rgba8) == PrStatus_Ok;
+        prDrawListRelease(list);
+        prDrawRendererDestroy(renderer);
+        return rendered;
+    }
+
+    // Renders the tree (render) and writes it to `path` as a PNG, so that a person can see what a test drove. Returns
+    // false if it cannot.
+    bool screenshot(const char* path) {
+        std::vector<uint8_t> rgba;
+        return render(&rgba) &&
+            harnessWritePng(path, PrPixelView{rgba.data(), size_t(kRenderWidth) * 4, {kRenderWidth, kRenderHeight}});
     }
 
     // Returns the number of commands that painting the tree records, including those in the lists that it embeds.

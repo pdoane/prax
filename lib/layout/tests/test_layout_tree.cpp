@@ -344,6 +344,34 @@ TEST_CASE("a scene's canvas is the root's background over the tree's canvas colo
     prLayoutTreeDestroy(tree);
 }
 
+TEST_CASE("a box that covers the canvas paints its own background, which the canvas does not take") {
+    Fixture f;
+    PrLayoutDecorationStyle blue = prLayoutDecorationStyleDefault();
+    blue.background = prColor16FromColor(PrColor{0, 0, 1, 1});
+    PrLayoutDecorationStyle red = prLayoutDecorationStyleDefault();
+    red.background = prColor16FromColor(PrColor{1, 0, 0, 1});
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block(20), &blue);
+    f.element(root, block(20), &red);
+    f.layout(px(20, 20));
+    const PrLayoutScene* scene = prLayoutTreeScene(f.tree);
+    PrColor canvas = prColorFromColor16(prLayoutSceneCanvasColor(scene));
+    CHECK(canvas.r == 0.0f);
+    CHECK(canvas.b == 1.0f);
+    // Play the scene over a canvas that the application has filled. The child's background still paints.
+    PrDrawList* list = prDrawListCreate();
+    PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
+    options.canvasFilled = true;
+    prLayoutScenePlay(scene, list, &options);
+    prLayoutSceneRelease(scene);
+    std::vector<uint8_t> bytes(size_t(20) * 20 * 4, 0);
+    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrPixels into{bytes.data(), size_t(20) * 4, {20, 20}};
+    REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
+    prDrawRendererDestroy(renderer);
+    prDrawListRelease(list);
+    CHECK(pixel(bytes, 20, 10, 15) == "255 0 0 255");
+}
+
 TEST_CASE("block boxes stack in the block axis and fill the inline axis") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());

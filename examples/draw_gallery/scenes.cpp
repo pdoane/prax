@@ -1,5 +1,5 @@
 // The scenes (scenes.h): animated pictures that combine what lib/draw does, each laid out for 960 by 720 and fitted to
-// the size it is drawn at. Their text is shaped by the shaper that scenesOpen gives, in fonts of the Noto bundle.
+// the size it is drawn at. Their text is shaped by the shaper that scenesOpen gives, in fonts of the Complete bundle.
 
 #include "examples/draw_gallery/scenes.h"
 

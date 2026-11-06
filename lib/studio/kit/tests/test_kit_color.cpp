@@ -44,9 +44,9 @@ struct PickerScene {
     explicit PickerScene(KitFixture& fixture) : f(fixture) {
         f.edit = Edits::record;
         f.editContext = &edits;
-        f.build = [this](PrLayoutNode ground) {
+        f.build = [this](PrLayoutNode root) {
             PrKitColorPicker content{.color = &color, .mode = mode, .gamut = prUiDisplay(f.ui).gamut, .opaque = opaque};
-            picker = prKitColorPicker(f.kit, ground, content);
+            picker = prKitColorPicker(f.kit, root, content);
         };
     }
     // Returns child `index` of `node`.
@@ -106,8 +106,8 @@ TEST_CASE("a color field shows its color's hex, and a click opens its picker and
     KitFixture f;
     PrColor color{1, 0.5f, 0, 1};
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         field = prKitColorField(f.kit, row, {.color = &color}, {});
     };
     f.frame();

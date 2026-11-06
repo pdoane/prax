@@ -1,4 +1,4 @@
-// Studio Kit's surfaces: the grounds that the application, its panels, bars and cards are drawn on.
+// Studio Kit's surfaces: the backgrounds that the application, its panels, bars and cards are drawn on.
 
 #pragma once
 
@@ -13,18 +13,18 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// The ground that a surface is drawn on, from the application's ground up to a selected row.
+// The background of a surface, from the application's background up to a selected row.
 enum {
-    PrKitGround_None,
-    PrKitGround_App,                // bg0
-    PrKitGround_Panel,              // bg1
-    PrKitGround_Header,             // bg2
-    PrKitGround_Raised,             // bg3
-    PrKitGround_Select,             // the accent wash
-    PrKitGround_Viewport,
-    PrKitGround_Hud,                // a chip over the viewport
+    PrKitBackground_None,
+    PrKitBackground_App,                // bg0
+    PrKitBackground_Panel,              // bg1
+    PrKitBackground_Header,             // bg2
+    PrKitBackground_Raised,             // bg3
+    PrKitBackground_Select,             // the accent wash
+    PrKitBackground_Viewport,
+    PrKitBackground_Hud,                // a chip over the viewport
 };
-typedef uint8_t PrKitGround;
+typedef uint8_t PrKitBackground;
 
 // The sides on which a surface draws a rule, in its theme's faintest line color.
 enum {
@@ -36,22 +36,23 @@ enum {
 };
 typedef uint8_t PrKitRuleFlags;
 
-// How a surface looks: a box drawn on a ground, with rules on some of its sides.
+// How a surface looks: a box drawn on a background, with rules on some of its sides.
 PR_NO_PADDING_BEGIN
 typedef struct PrKitSurfaceStyle {
     PrKitBoxStyle box;
-    PrKitGround ground;
+    PrKitBackground background;
     PrKitRuleFlags rules;
     uint8_t _pad[2];
 } PrKitSurfaceStyle;
 PR_NO_PADDING_END
 
-// Creates a surface under `parent`, or as the tree's root if `parent` is kPrLayoutNodeNone, as the application's ground
-// is.
+// Creates a surface under `parent`. If `parent` is kPrLayoutNodeNone, the surface is the tree's root, as the
+// application's background is.
 PrLayoutNode prKitSurface(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitSurfaceStyle style);
 
-// A box that the pointer selects, such as a row of a navigation list or a cell of a grid of choices: drawn on the
-// select ground while `selected` is true, on the raised ground while the pointer is over it, and on none otherwise.
+// A box that the pointer selects, such as a row of a navigation list or a cell of a grid of choices. It is drawn on the
+// select background while `selected` is true, on the raised background while the pointer is over it, and on no
+// background otherwise.
 typedef struct PrKitSelectable {
     PrUiKey key;
     bool selected;
@@ -62,8 +63,8 @@ typedef struct PrKitSelectable {
 // Enter or Space while it has focus.
 PrLayoutNode prKitSelectable(PrKit* kit, PrLayoutNode parent, PrKitSelectable selectable, PrKitBoxStyle style);
 
-// A panel's header: a bar on the header ground with a rule below it, which shows the title in the caption role, then
-// `meta`, if any, faint at its end.
+// A panel's header: a bar on the header background with a rule below it. It shows the title in the caption role, and
+// then `meta`, if any, faint at its end.
 typedef struct PrKitPanelHeader {
     PrUiKey key;
     PrStringView title;

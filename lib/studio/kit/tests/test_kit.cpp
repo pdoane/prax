@@ -26,7 +26,7 @@ TEST_CASE("the public headers compile as C") {
     CHECK(prTestKitCApi() == 0);
 }
 
-TEST_CASE("a surface made as the root fills the viewport, and draws its ground or, on none, nothing") {
+TEST_CASE("a surface made as the root fills the viewport, and draws its background or, on none, nothing") {
     KitFixture f;
     f.frame();
     PrRect bounds = f.bounds(f.root);
@@ -39,7 +39,7 @@ TEST_CASE("a surface made as the root fills the viewport, and draws its ground o
         return prColorFromColor16(decoration.background);
     };
     CHECK(background().a != 0.0f);
-    f.ground = PrKitGround_None;
+    f.background = PrKitBackground_None;
     f.frame();
     CHECK(background().a == 0.0f);
     CHECK(kitVerified(f.tree));
@@ -49,8 +49,8 @@ TEST_CASE("a button is activated by a click, through the transparent overlay abo
     KitFixture f;
     PrLayoutNode button = kPrLayoutNodeNone;
     uint32_t activations = 0;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace4});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace4});
         PrKitButton content{.text = "Save", .icon = PrKitIconKind_Check};
         button = prKitButton(f.kit, row, content, {});
         activations += prKitActivated(f.kit, button) ? 1 : 0;
@@ -68,11 +68,11 @@ TEST_CASE("a button is activated by a click, through the transparent overlay abo
 TEST_CASE("a box that scrolls in its block axis scrolls under the wheel") {
     KitFixture f;
     PrLayoutNode view = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitBoxStyle box{.overflow = PrKitOverflow_ScrollY};
         box.place.height = prKitPx(100);
         box.place.flex = PrKitFlex_Fixed;
-        view = prKitBox(f.kit, ground, {}, box);
+        view = prKitBox(f.kit, root, {}, box);
         for (uint32_t i = 0; i < 10; ++i) {
             PrKitBoxStyle row{};
             row.place.height = prKitPx(40);
@@ -92,8 +92,8 @@ TEST_CASE("a box that scrolls in its block axis scrolls under the wheel") {
 
 TEST_CASE("a frame of the same widgets makes no record, lays nothing out and records nothing") {
     KitFixture f;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode panel = prKitBox(f.kit, ground, {}, {.gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode panel = prKitBox(f.kit, root, {}, {.gap = 0});
         prKitPanelHeader(f.kit, panel, {.title = "SCENE", .meta = "23"});
         for (uint32_t i = 0; i < 10; ++i) {
             PrLayoutNode row = prKitBox(f.kit, panel, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
@@ -121,8 +121,8 @@ TEST_CASE("a frame of the same widgets makes no record, lays nothing out and rec
 TEST_CASE("a hovered button fades to its hover fill, and keeps one record once it is there") {
     KitFixture f;
     PrLayoutNode button = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitButton content{.text = "Hover"};
         button = prKitButton(f.kit, row, content, {});
     };
@@ -149,13 +149,13 @@ TEST_CASE("a widget that holds still keeps its record past the cache's age, when
     KitFixture f;
     PrLayoutNode label = kPrLayoutNodeNone;
     bool shifted = false;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         // The first widget of the round follows the overlay, which the screen made first, so the label is not first. A
         // box ahead of the label moves it to another position in the round, where the memo holds nothing for it.
-        prKitBox(f.kit, ground, {}, {});
+        prKitBox(f.kit, root, {}, {});
         if (shifted)
-            prKitBox(f.kit, ground, {}, {});
-        label = prKitLabel(f.kit, ground, {.key = prUiKey(f.kit->ui, ground, "label"), .text = "Still"},
+            prKitBox(f.kit, root, {}, {});
+        label = prKitLabel(f.kit, root, {.key = prUiKey(f.kit->ui, root, "label"), .text = "Still"},
             {.tone = PrKitTone_Accent});
     };
     f.frame();
@@ -172,8 +172,8 @@ TEST_CASE("a widget that holds still keeps its record past the cache's age, when
 TEST_CASE("a widget placed by its caller takes the placement, and keeps the placed record") {
     KitFixture f;
     PrLayoutNode button = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitButton content{.text = "Wide"};
         button = prKitButton(f.kit, row, content, {});
         PrKitPlace place{.width = prKitPx(200)};
@@ -190,9 +190,9 @@ TEST_CASE("a disabled container's buttons take no press and no focus") {
     KitFixture f;
     PrLayoutNode button = kPrLayoutNodeNone;
     uint32_t activations = 0;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitButton content{.text = "Off"};
-        button = prKitButton(f.kit, prKitBox(f.kit, ground, {.disabled = true}, {}), content, {});
+        button = prKitButton(f.kit, prKitBox(f.kit, root, {.disabled = true}, {}), content, {});
         activations += prKitActivated(f.kit, button) ? 1 : 0;
     };
     f.frame();
@@ -205,11 +205,11 @@ TEST_CASE("a disabled container's buttons take no press and no focus") {
 TEST_CASE("an icon draws its path, and a label its text") {
     KitFixture f;
     bool icon = true;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         if (icon)
-            prKitIcon(f.kit, ground, {.icon = PrKitIconKind_Settings}, {.size = 24, .tone = PrKitTone_Primary});
+            prKitIcon(f.kit, root, {.icon = PrKitIconKind_Settings}, {.size = 24, .tone = PrKitTone_Primary});
         else
-            prKitLabel(f.kit, ground, {.text = "Inspector"}, {});
+            prKitLabel(f.kit, root, {.text = "Inspector"}, {});
     };
     f.frame();
     uint32_t withIcon = f.paintedCommands();
@@ -241,8 +241,8 @@ TEST_CASE("an icon keeps what it draws until that changes, and the tree holds it
     PrPath* path = prPathCreate();
     PrColor color{1, 0, 0, 1};
     PrLayoutNode icon = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        icon = prKitPathIcon(f.kit, ground, {.path = path, .color = color}, {});
+    f.build = [&](PrLayoutNode root) {
+        icon = prKitPathIcon(f.kit, root, {.path = path, .color = color}, {});
     };
     f.frame();
     PrLayoutPainter first = prLayoutNodeContent(f.tree, icon).painter;

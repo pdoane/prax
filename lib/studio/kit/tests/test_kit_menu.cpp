@@ -36,12 +36,12 @@ struct MenuScene {
     bool open = false;
 
     explicit MenuScene(KitFixture& fixture) : f(fixture) {
-        f.build = [this](PrLayoutNode ground) { build(ground); };
+        f.build = [this](PrLayoutNode root) { build(root); };
     }
 
-    void build(PrLayoutNode ground) {
+    void build(PrLayoutNode root) {
         PrKit* kit = f.kit;
-        PrLayoutNode row = prKitBox(kit, ground, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace4});
+        PrLayoutNode row = prKitBox(kit, root, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace4});
         PrKitButton content{.text = "File"};
         trigger = prKitButton(kit, row, content, {});
         if (prKitActivated(kit, trigger))
@@ -88,8 +88,8 @@ struct BarScene {
     PrLayoutNode popovers[3] = {};
 
     explicit BarScene(KitFixture& fixture) : f(fixture) {
-        f.build = [this](PrLayoutNode ground) {
-            PrLayoutNode bar = prKitMenuBar(f.kit, ground, {});
+        f.build = [this](PrLayoutNode root) {
+            PrLayoutNode bar = prKitMenuBar(f.kit, root, {});
             const char* names[] = {"File", "Edit", "View"};
             for (uint32_t i = 0; i < 3; ++i) {
                 items[i] = prKitMenuBarItem(f.kit, bar, {.text = names[i]});
@@ -105,7 +105,7 @@ struct BarScene {
     }
 };
 
-// A button that opens a modal of two buttons, over a ground with one more button.
+// A button that opens a modal of two buttons, over a root with one more button.
 struct ModalScene {
     KitFixture& f;
     PrLayoutNode trigger = kPrLayoutNodeNone;
@@ -114,8 +114,8 @@ struct ModalScene {
     bool open = false;
 
     explicit ModalScene(KitFixture& fixture) : f(fixture) {
-        f.build = [this](PrLayoutNode ground) {
-            PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+        f.build = [this](PrLayoutNode root) {
+            PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
             PrKitButton label{.text = "Open"};
             trigger = prKitButton(f.kit, row, label, {});
             if (prKitActivated(f.kit, trigger))
@@ -167,9 +167,9 @@ TEST_CASE("a select opens its menu, an option's activation closes it, and Up and
     KitFixture f;
     uint32_t chosen = 1;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         const PrStringView names[] = {"Transform", "Collider", "Camera"};
-        field = prKitSelect(f.kit, ground, {.label = names[chosen]}, {});
+        field = prKitSelect(f.kit, root, {.label = names[chosen]}, {});
         int32_t step = 0;
         if (prKitStepped(f.kit, field, &step))
             chosen = uint32_t(int32_t(chosen) + step);
@@ -205,9 +205,9 @@ TEST_CASE("a drag's ghost follows the pointer in the overlay, and is gone when t
     KitFixture f;
     PrLayoutNode source = kPrLayoutNodeNone;
     PrLayoutNode ghost = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitButton content{.text = "player_base.mesh"};
-        source = prKitButton(f.kit, ground, content, {});
+        source = prKitButton(f.kit, root, content, {});
         prUiDragStart(f.ui, source, 4, 7, 0);
         PrKitDragGhost look{.text = "player_base.mesh", .icon = PrKitIconKind_Cube};
         ghost = prKitDragGhost(f.kit, look);
@@ -285,8 +285,8 @@ TEST_CASE("a press on another button closes a popover and reaches the button") {
     KitFixture f;
     MenuScene scene(f);
     uint32_t others = 0;
-    f.build = [&](PrLayoutNode ground) {
-        scene.build(ground);
+    f.build = [&](PrLayoutNode root) {
+        scene.build(root);
         others += prKitActivated(f.kit, scene.other) ? 1 : 0;
     };
     scene.openMenu();
@@ -329,9 +329,9 @@ TEST_CASE("a popover that does not fit below its trigger opens above it, inside 
     KitFixture f;
     PrLayoutNode trigger = kPrLayoutNodeNone;
     PrLayoutNode popover = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        prKitSpacer(f.kit, ground, {});
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        prKitSpacer(f.kit, root, {});
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         prKitSpacer(f.kit, row, {});
         PrKitButton content{.text = "Corner"};
         trigger = prKitButton(f.kit, row, content, {});
@@ -364,8 +364,8 @@ TEST_CASE("triggers keep their own open state") {
     PrLayoutNode b = kPrLayoutNodeNone;
     bool openA = false;
     bool openB = false;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitButton content{.text = "A"};
         a = prKitButton(f.kit, row, content, {});
         b = prKitButton(f.kit, row, content, {});
@@ -418,9 +418,9 @@ TEST_CASE("a secondary click opens a context menu at the pointer, and an item's 
     PrLayoutNode menu = kPrLayoutNodeNone;
     PrLayoutNode item = kPrLayoutNodeNone;
     uint32_t deletes = 0;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitBoxStyle box{.place = {.flex = PrKitFlex_Fill}};
-        host = prKitBox(f.kit, ground, {}, box);
+        host = prKitBox(f.kit, root, {}, box);
         menu = prKitContextMenu(f.kit, host, {}, {});
         item = kPrLayoutNodeNone;
         if (menu != kPrLayoutNodeNone) {
@@ -451,9 +451,9 @@ TEST_CASE("Escape and a press outside close a context menu") {
     KitFixture f;
     PrLayoutNode host = kPrLayoutNodeNone;
     PrLayoutNode menu = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitBoxStyle box{.place = {.flex = PrKitFlex_Fill}};
-        host = prKitBox(f.kit, ground, {}, box);
+        host = prKitBox(f.kit, root, {}, box);
         menu = prKitContextMenu(f.kit, host, {}, {});
         if (menu != kPrLayoutNodeNone) {
             PrKitMenuItem content{.text = "Rename"};
@@ -483,8 +483,8 @@ TEST_CASE("a tooltip shows once the pointer has rested on its anchor for the del
     KitFixture f;
     PrLayoutNode anchor = kPrLayoutNodeNone;
     PrLayoutNode tip = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         anchor = prKitButton(f.kit, row, {.icon = PrKitIconKind_Grid},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip content{.text = "Show Grid", .shortcut = "G"};
@@ -544,8 +544,8 @@ TEST_CASE("a dialog's close button closes it, and its footer sits in its body") 
     PrLayoutNode body = kPrLayoutNodeNone;
     PrLayoutNode footer = kPrLayoutNodeNone;
     bool open = false;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitButton label{.text = "Rename"};
         trigger = prKitButton(f.kit, row, label, {});
         if (prKitActivated(f.kit, trigger))
@@ -579,6 +579,34 @@ TEST_CASE("a dialog's close button closes it, and its footer sits in its body") 
     CHECK(kitVerified(f.tree));
 }
 
+TEST_CASE("a dialog opens with focus on the node that its autofocus names, and focus then stays where the user puts it") {
+    KitFixture f;
+    PrLayoutNode trigger = kPrLayoutNodeNone;
+    PrLayoutNode cancel = kPrLayoutNodeNone;
+    PrLayoutNode ok = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode root) {
+        trigger = prKitButton(f.kit, root, {.text = "Rename"}, {});
+        if (prKitActivated(f.kit, trigger))
+            prKitSetOpen(f.kit, trigger, true);
+        PrLayoutNode body = prKitDialog(f.kit, trigger, {.title = "Rename Entity"}, {});
+        if (body == kPrLayoutNodeNone)
+            return;
+        PrLayoutNode footer = prKitDialogFooter(f.kit, body);
+        cancel = prKitButton(f.kit, footer, {.text = "Cancel"}, {});
+        ok = prKitButton(f.kit, footer, {.text = "OK"}, {.variant = PrKitButtonVariant_Primary});
+        prKitModalAutofocus(f.kit, ok);
+    };
+    f.frame();
+    f.click(f.center(trigger));
+    f.frame();
+    f.frame();
+    CHECK(prUiFocus(f.ui) == ok);
+    f.key(PrAppKey_Tab, PrAppModifierFlag_Shift);
+    f.frame();
+    f.frame();
+    CHECK(prUiFocus(f.ui) == cancel);
+}
+
 TEST_CASE("a command palette's selection moves by Up and Down, and Enter runs the selected command") {
     KitFixture f;
     PrLayoutNode trigger = kPrLayoutNodeNone;
@@ -586,8 +614,8 @@ TEST_CASE("a command palette's selection moves by Up and Down, and Enter runs th
     uint32_t ran = 0;
     uint32_t runs = 0;
     bool open = false;
-    f.build = [&](PrLayoutNode ground) {
-        trigger = ground;
+    f.build = [&](PrLayoutNode root) {
+        trigger = root;
         list = prKitCommandPalette(f.kit, trigger, {.prompt = "Type a command", .count = 3});
         if (list != kPrLayoutNodeNone) {
             const char* names[] = {"New Scene", "Save", "Build and Run"};
@@ -635,8 +663,8 @@ TEST_CASE("a command palette's item runs on a click and closes the palette") {
     PrLayoutNode second = kPrLayoutNodeNone;
     uint32_t runs = 0;
     bool open = false;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitButton label{.text = "Search"};
         trigger = prKitButton(f.kit, row, label, {});
         if (prKitActivated(f.kit, trigger))
@@ -684,13 +712,13 @@ TEST_CASE("a frame with an open menu that changes nothing lays nothing out and m
 TEST_CASE("a frame with an open palette and a shown tooltip that changes nothing lays nothing out") {
     KitFixture f;
     PrLayoutNode anchor = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         anchor = prKitButton(f.kit, row, {.icon = PrKitIconKind_Grid},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip tip{.text = "Grid"};
         prKitTooltip(f.kit, anchor, tip);
-        PrLayoutNode list = prKitCommandPalette(f.kit, ground, {.prompt = "Search", .count = 1});
+        PrLayoutNode list = prKitCommandPalette(f.kit, root, {.prompt = "Search", .count = 1});
         if (list != kPrLayoutNodeNone) {
             prKitCommandItem(f.kit, list, {.text = "Save"});
             prKitCommandPaletteFooter(f.kit, list);

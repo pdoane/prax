@@ -19,6 +19,7 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/process.h"
+#include "pr/raw_string.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
 #include "pr/syntax.h"
@@ -90,9 +91,8 @@ PrTextEditorOptions prTextEditorOptions(const PrTextEditor* editor);
 void prTextEditorSetOptions(PrTextEditor* editor, const PrTextEditorOptions* options);
 
 // A language server, which serves the documents of `languages`, by their names in the syntax registry, such as "cpp".
-// The editor starts one process of the program for each workspace that a document of those languages opens in: the
-// nearest folder above the file that holds .git, or else the file's own folder. The protocol's language id of a
-// document is its language's name.
+// The editor starts one process of the program for each workspace that a document of those languages opens in
+// (prTextEditorDocumentWorkspace). The protocol's language id of a document is its language's name.
 typedef struct PrTextEditorServerDesc {
     const PrStringView* languages;
     uint32_t languageCount;
@@ -152,6 +152,12 @@ PrTextEditorDocument* PR_NULLABLE prTextEditorDocumentFromPath(const PrTextEdito
 PrTextEditorDocument* PR_NULLABLE prTextEditorShown(const PrTextEditor* editor);
 void prTextEditorShow(PrTextEditor* editor, PrTextEditorDocument* document);
 
+// Shows the document with a single caret at `line` and `column`, and scrolls the caret into view. Both count from 0,
+// and `column` counts code points. If the document is still loading, the caret moves once that line has loaded. A
+// column past the end of its line puts the caret at the end of the line. A line past the last line puts it at the end
+// of the text.
+void prTextEditorShowAt(PrTextEditor* editor, PrTextEditorDocument* document, uint32_t line, uint32_t column);
+
 // The parts of a document. Its view's selections are the document's own, and its history is its local edits'.
 PrTextEditBuffer* prTextEditorDocumentBuffer(const PrTextEditorDocument* document);
 PrTextView* prTextEditorDocumentView(const PrTextEditorDocument* document);
@@ -159,6 +165,11 @@ PrTextEditHistory* prTextEditorDocumentHistory(const PrTextEditorDocument* docum
 
 // The document's file, or empty for a text of no file.
 PrStringView prTextEditorDocumentPath(const PrTextEditorDocument* document);
+
+// Returns the folder of the project that the document's file belongs to. That is the nearest folder that contains .git,
+// starting from the file's own folder and moving up, or else the file's own folder. Returns the null string if the
+// document has no file. The caller releases the string with prRawStringReset.
+PrRawString prTextEditorDocumentWorkspace(const PrTextEditorDocument* document);
 
 // The document's language, or null.
 const PrSyntaxLanguage* PR_NULLABLE prTextEditorDocumentLanguage(const PrTextEditorDocument* document);

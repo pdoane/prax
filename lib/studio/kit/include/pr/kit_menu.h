@@ -158,8 +158,8 @@ typedef struct PrKitMenuBar {
     PrUiKey key;
 } PrKitMenuBar;
 
-// Creates an application's menu bar: a row on the header ground with a rule below it. While one of its items is open,
-// moving the pointer onto another item closes the open item and opens the other.
+// Creates an application's menu bar: a row on the header background with a rule below it. While one of its items is
+// open, moving the pointer onto another item closes the open item and opens the other.
 PrLayoutNode prKitMenuBar(PrKit* kit, PrLayoutNode parent, PrKitMenuBar bar);
 
 // The content of an item of a menu bar.
@@ -246,9 +246,15 @@ typedef struct PrKitModalStyle {
 
 // Creates the modal that `trigger` opens and returns its content, which is a column that is a focus scope. Returns none
 // while the modal is closed. A scrim covers the viewport under the content and takes the pointer from what is under it.
-// Focus moves into the content once it has been laid out, and Tab keeps focus there. Escape, or a primary press outside
-// the content, closes the modal, and the call returns none.
+// Once the content has been laid out, focus moves to the node that prKitModalAutofocus names, or else to the content's
+// first focusable node. Tab keeps focus within the content. Escape, or a primary press outside the content, closes the
+// modal, and the call returns none.
 PrLayoutNode prKitModal(PrKit* kit, PrLayoutNode trigger, PrKitModal modal, PrKitModalStyle style);
+
+// Makes `node` the node that receives focus when the modal opens, like the autofocus attribute in an HTML dialog.
+// `node` is focusable, created in the current round, and inside an open modal's content. The call does nothing if focus
+// is already in the modal.
+void prKitModalAutofocus(PrKit* kit, PrLayoutNode node);
 
 // The content of a dialog.
 typedef struct PrKitDialog {

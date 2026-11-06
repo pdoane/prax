@@ -277,7 +277,7 @@ void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     ToolbarState& toolbar = state.toolbar;
     PrLayoutNode section = sectionFrame(kit, parent, "12", "Toolbar", "The tool row and the transport beside it.", {});
     PrLayoutNode panel = demoPanel(kit, section, "VIEWPORT TOOLBAR", "MAIN", true);
-    PrKitSurfaceStyle strip{.ground = PrKitGround_Panel};
+    PrKitSurfaceStyle strip{.background = PrKitBackground_Panel};
     strip.box.direction = PrKitDirection_Row;
     strip.box.align = PrKitAlign_Center;
     strip.box.gap = kPrKitSpace1;
@@ -320,7 +320,7 @@ void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrLayoutNode sizes = demoPanel(kit, section, "CELL SIZES", "XS . SM . MD . LG", false);
     PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_End, .gap = kPrKitSpace8};
     PrLayoutNode row = prKitBox(kit, sizes, {}, line);
-    // Each cell is shown selected, so that its ground shows its size.
+    // Each cell is shown selected, so that its background shows its size.
     const PrKitControlSize steps[] = {
         PrKitControlSize_Xs, PrKitControlSize_Sm, PrKitControlSize_Md,
         PrKitControlSize_Lg,

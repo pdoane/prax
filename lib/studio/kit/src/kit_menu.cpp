@@ -72,6 +72,12 @@ struct Closer {
     uint64_t key;
 };
 
+// The context that a modal's content provides to what is created in it. `opening` is true while focus has yet to move
+// into the content.
+struct ModalFocus {
+    bool opening;
+};
+
 // The context that a command palette provides to its list for the current round. It holds the palette's closer and
 // card, the selected item's index, and the number of items created so far. `entered` is true if Enter activates the
 // selected item in the round, and `moved` is true if the selection moved in the round.
@@ -870,13 +876,21 @@ PrLayoutNode prKitModal(PrKit* kit, PrLayoutNode trigger, PrKitModal modal, PrKi
     if (state.surface != content)
         prUiKeyPressed(ui, content, PrAppKey_Escape, 0);
     state.surface = content;
-    if (!prUiIsFocusWithin(ui, content)) {
+    bool opening = !prUiIsFocusWithin(ui, content);
+    kitProvide<ModalFocus>(*kit, content, KitContext_Modal).opening = opening;
+    if (opening) {
         if (laidOut(*kit, content))
             prUiFocusMove(ui, content, false);
         else
             prUiRequestFrame(ui);
     }
     return content;
+}
+
+void prKitModalAutofocus(PrKit* kit, PrLayoutNode node) {
+    const ModalFocus* focus = kitContext<ModalFocus>(*kit, node, KitContext_Modal);
+    if (focus != nullptr && focus->opening)
+        prUiSetFocus(kit->ui, node);
 }
 
 PrLayoutNode prKitDialog(PrKit* kit, PrLayoutNode trigger, PrKitDialog dialog, PrKitDialogStyle style) {

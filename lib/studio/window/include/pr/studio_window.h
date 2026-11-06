@@ -5,7 +5,10 @@
 // unless the application chooses one.
 //
 // Each frame runs the rounds that the application declares, plays the tree's scene into a draw list, and renders the
-// list into the window's swap chain.
+// list into the window's swap chain. The render pass clears to the scene's canvas color (prLayoutSceneCanvasColor), and
+// the list does not fill the canvas. The canvas color is the root's background. If a view covers the window beneath the
+// rest of the application, the canvas color is the view's background instead. Such a view declares its background on
+// its box, and does not paint it, because the clear already fills it.
 //
 // If the swap chain holds more than 8-bit sRGB, the list renders into a texture of half floats, which the display
 // shader maps to the display (pr/draw_display.h). A lost device is made again.
@@ -19,6 +22,7 @@
 #include "pr/color.h"
 #include "pr/draw_list.h"
 #include "pr/font_set.h"
+#include "pr/gpu.h"
 #include "pr/kit.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_tree.h"
@@ -51,8 +55,8 @@ typedef PrKitThemeVariant (*PrStudioWindowThemeFn)(void* PR_NULLABLE context, Pr
 // the context then never sees. The window asks for a frame either way.
 typedef bool (*PrStudioWindowEventFn)(void* PR_NULLABLE context, PrStudioWindow* window, const PrAppEvent* event);
 
-// Declares a round of the application under `root`, a surface on the app's ground that fills the viewport, which is
-// `extent` px.
+// Declares a round of the application under `root`, which is a surface on the app background that fills the viewport.
+// The viewport is `extent` px.
 typedef void (*PrStudioWindowBuildFn)(void* PR_NULLABLE context, PrStudioWindow* window, PrLayoutNode root, PrVec2 extent);
 
 // Called once a frame's rounds are laid out. Returns true if another frame would show something different.
@@ -89,6 +93,12 @@ typedef void (*PrStudioWindowTraceFn)(void* PR_NULLABLE context, const PrStudioW
 typedef struct PrStudioWindowDesc {
     PrStringView title;
     PrUVec2 extent;                 // of the window at first, in px
+
+    // What the window's swap chain shows. Sdr, the zero value, suits a window whose colors are all in sRGB. Hdr shows
+    // colors outside sRGB's gamut and brighter than SDR white, as a color picker or a wide-gamut image needs. On a
+    // display that can show them, Hdr costs textures of half floats: each image of the swap chain, and a texture of the
+    // window's size that the list renders into.
+    PrGpuSwapChainIntent intent;
 
     // The fonts for the window's text. The application owns them, and they must outlive the run.
     PrFontSet* fonts;

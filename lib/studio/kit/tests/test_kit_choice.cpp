@@ -76,7 +76,7 @@ TEST_CASE("clicking a tab selects it") {
     KitFixture f;
     uint32_t selected = 0;
     PrLayoutNode nodes[3] = {};
-    f.build = [&](PrLayoutNode ground) { tabs(f, prKitTabStrip(f.kit, ground, {}, {}), kTabs, 3, &selected, nodes); };
+    f.build = [&](PrLayoutNode root) { tabs(f, prKitTabStrip(f.kit, root, {}, {}), kTabs, 3, &selected, nodes); };
     f.frame();
     CHECK(widthOf(f, nodes[1]) > 20.0f);
     f.click(f.center(nodes[2]));
@@ -99,8 +99,8 @@ TEST_CASE("a tab holds what its caller creates under it, in order") {
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrLayoutNode tab = kPrLayoutNodeNone;
     PrLayoutNode close = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        tab = prKitTab(f.kit, prKitTabStrip(f.kit, ground, {}, {}), {.selected = true});
+    f.build = [&](PrLayoutNode root) {
+        tab = prKitTab(f.kit, prKitTabStrip(f.kit, root, {}, {}), {.selected = true});
         prKitImage(f.kit, tab, {.image = image}, {});
         prKitTabLabel(f.kit, tab, {.text = "Page"});
         close = prKitTabClose(f.kit, tab);
@@ -118,7 +118,7 @@ TEST_CASE("the arrow keys move a focused tab strip's focus and activate the tab 
     KitFixture f;
     uint32_t selected = 0;
     PrLayoutNode nodes[3] = {};
-    f.build = [&](PrLayoutNode ground) { tabs(f, prKitTabStrip(f.kit, ground, {}, {}), kTabs, 3, &selected, nodes); };
+    f.build = [&](PrLayoutNode root) { tabs(f, prKitTabStrip(f.kit, root, {}, {}), kTabs, 3, &selected, nodes); };
     f.frame();
     // Keys reach nothing until a tab has focus.
     f.key(PrAppKey_Right);
@@ -147,9 +147,9 @@ TEST_CASE("a tab's close control reports its click, and leaves the selection to 
     uint32_t selected = 0;
     PrLayoutNode nodes[2] = {};
     uint32_t closes = 0;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         const TabContent items[] = {{"a.cpp", nullptr, true}, {"b.cpp", nullptr, true}};
-        uint32_t closed = tabs(f, prKitTabStrip(f.kit, ground, {}, {}), items, 2, &selected, nodes);
+        uint32_t closed = tabs(f, prKitTabStrip(f.kit, root, {}, {}), items, 2, &selected, nodes);
         CHECK(closed != 0);
         closes += closed == 1 ? 1 : 0;
     };
@@ -169,8 +169,8 @@ TEST_CASE("a reorderable tab dragged past its neighbor reports the move on its s
     uint32_t moves = 0;
     uint32_t from = 0;
     uint32_t to = 0;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode strip = prKitTabStrip(f.kit, ground, {.reorderable = true}, {});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode strip = prKitTabStrip(f.kit, root, {.reorderable = true}, {});
         tabs(f, strip, kTabs, 3, &selected, nodes);
         moves += prKitMoved(f.kit, strip, &from, &to) ? 1 : 0;
     };
@@ -198,8 +198,8 @@ TEST_CASE("a segment reports its click, and the arrow keys move the focus and ac
     KitFixture f;
     uint32_t selected = 0;
     PrLayoutNode track = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         track = prKitSegmented(f.kit, row, {}, {.size = PrKitControlSize_Sm});
         choices(f, track, &selected, prKitSegment);
         PrKitPlace place{.width = prKitPx(240)};
@@ -227,8 +227,8 @@ TEST_CASE("a hovered segment fades to its hover fill, and keeps one record once 
     KitFixture f;
     uint32_t selected = 0;
     PrLayoutNode track = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        track = prKitSegmented(f.kit, ground, {}, {});
+    f.build = [&](PrLayoutNode root) {
+        track = prKitSegmented(f.kit, root, {}, {});
         choices(f, track, &selected, prKitSegment);
     };
     f.frame();
@@ -252,8 +252,8 @@ TEST_CASE("a checkbox flips its flag on a click of its label, and on Space while
     KitFixture f;
     bool value = false;
     PrLayoutNode row = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        row = prKitCheckbox(f.kit, ground, {.value = &value, .label = "Cast shadows"}, {});
+    f.build = [&](PrLayoutNode root) {
+        row = prKitCheckbox(f.kit, root, {.value = &value, .label = "Cast shadows"}, {});
     };
     f.frame();
     PrLayoutNode box = prLayoutNodeFirstChild(f.tree, row);
@@ -275,8 +275,8 @@ TEST_CASE("a toggle flips its flag on a click and on Enter") {
     KitFixture f;
     bool value = false;
     PrLayoutNode row = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        row = prKitToggle(f.kit, ground, {.value = &value}, {});
+    f.build = [&](PrLayoutNode root) {
+        row = prKitToggle(f.kit, root, {.value = &value}, {});
     };
     f.frame();
     f.click(f.center(prLayoutNodeFirstChild(f.tree, row)));
@@ -294,9 +294,9 @@ TEST_CASE("a disabled checkbox and toggle take no click, no focus and no key") {
     bool on = true;
     PrLayoutNode box = kPrLayoutNodeNone;
     PrLayoutNode toggle = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        box = prKitCheckbox(f.kit, ground, {.value = &checked, .label = "Off", .disabled = true}, {});
-        PrLayoutNode disabled = prKitBox(f.kit, ground, {.disabled = true}, {});
+    f.build = [&](PrLayoutNode root) {
+        box = prKitCheckbox(f.kit, root, {.value = &checked, .label = "Off", .disabled = true}, {});
+        PrLayoutNode disabled = prKitBox(f.kit, root, {.disabled = true}, {});
         toggle = prKitToggle(f.kit, disabled, {.value = &on, .label = "On"}, {});
     };
     f.frame();
@@ -316,8 +316,8 @@ TEST_CASE("a toggle's knob eases across its track, then keeps the record of its 
     KitFixture f;
     bool value = false;
     PrLayoutNode row = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        row = prKitToggle(f.kit, ground, {.value = &value}, {});
+    f.build = [&](PrLayoutNode root) {
+        row = prKitToggle(f.kit, root, {.value = &value}, {});
     };
     f.frame();
     PrLayoutNode rail = prLayoutNodeFirstChild(f.tree, row);
@@ -349,8 +349,8 @@ TEST_CASE("a radio reports its click, and Up and Down move to its neighbors in a
     KitFixture f;
     uint32_t selected = 0;
     PrLayoutNode group = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        group = prKitRadioGroup(f.kit, ground, {}, {});
+    f.build = [&](PrLayoutNode root) {
+        group = prKitRadioGroup(f.kit, root, {}, {});
         choices(f, group, &selected, prKitRadio);
     };
     f.frame();
@@ -376,8 +376,8 @@ TEST_CASE("a progress bar's run covers its fraction of the track, clamped to the
     KitFixture f;
     float value = 0.25f;
     PrLayoutNode bar = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        bar = prKitProgress(f.kit, ground, {.value = value});
+    f.build = [&](PrLayoutNode root) {
+        bar = prKitProgress(f.kit, root, {.value = value});
         PrKitPlace place{.width = prKitPx(200)};
         prKitPlace(f.kit, bar, &place);
     };
@@ -402,8 +402,8 @@ TEST_CASE("a progress bar's run covers its fraction of the track, clamped to the
 TEST_CASE("an indeterminate bar sweeps its band and requests the frames that move it") {
     KitFixture f;
     PrLayoutNode bar = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        bar = prKitProgress(f.kit, ground, {.indeterminate = true});
+    f.build = [&](PrLayoutNode root) {
+        bar = prKitProgress(f.kit, root, {.indeterminate = true});
     };
     f.frame();
     f.frame(0.3);
@@ -420,7 +420,7 @@ TEST_CASE("a meter lights the segments up to its reading, within its range") {
     KitFixture f;
     PrKitMeter meter{.value = 15, .low = 10, .high = 20};
     PrLayoutNode bar = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) { bar = prKitMeter(f.kit, ground, meter, {.tone = PrKitTone_Success}); };
+    f.build = [&](PrLayoutNode root) { bar = prKitMeter(f.kit, root, meter, {.tone = PrKitTone_Success}); };
     f.frame();
     uint32_t segments = 0;
     for (PrLayoutNode n = prLayoutNodeFirstChild(f.tree, bar); n != kPrLayoutNodeNone;
@@ -441,8 +441,8 @@ TEST_CASE("a meter lights the segments up to its reading, within its range") {
 TEST_CASE("a spinner turns by kept steps, requesting frames, and paints nothing again") {
     KitFixture f;
     PrLayoutNode spinner = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         spinner = prKitSpinner(f.kit, row, {}, {.size = 16});
     };
     f.frame();
@@ -462,11 +462,11 @@ TEST_CASE("a spinner turns by kept steps, requesting frames, and paints nothing 
 TEST_CASE("a spinner scrolled out of view requests no frames, and requests them again once it shows") {
     KitFixture f;
     PrLayoutNode view = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitBoxStyle box{.overflow = PrKitOverflow_ScrollY};
         box.place.height = prKitPx(100);
         box.place.flex = PrKitFlex_Fixed;
-        view = prKitBox(f.kit, ground, {}, box);
+        view = prKitBox(f.kit, root, {}, box);
         PrKitBoxStyle filler{};
         filler.place.height = prKitPx(400);
         filler.place.flex = PrKitFlex_Fixed;
@@ -490,8 +490,8 @@ TEST_CASE("a frame of the same choices makes no node and lays nothing out") {
     uint32_t radio = 2;
     bool checked = true;
     bool on = true;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode column = prKitBox(f.kit, ground, {}, {.gap = kPrKitSpace4});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode column = prKitBox(f.kit, root, {}, {.gap = kPrKitSpace4});
         const TabContent items[] = {{"Console", "3", false}, {"Output", nullptr, true}};
         PrLayoutNode nodes[2] = {};
         tabs(f, prKitTabStrip(f.kit, column, {.reorderable = true}, {}), items, 2, &tab, nodes);
@@ -519,9 +519,9 @@ TEST_CASE("a disabled strip takes no click and no key") {
     uint32_t selected = 0;
     PrLayoutNode nodes[3] = {};
     PrLayoutNode track = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        tabs(f, prKitTabStrip(f.kit, ground, {.disabled = true}, {}), kTabs, 3, &selected, nodes);
-        track = prKitSegmented(f.kit, ground, {.disabled = true}, {});
+    f.build = [&](PrLayoutNode root) {
+        tabs(f, prKitTabStrip(f.kit, root, {.disabled = true}, {}), kTabs, 3, &selected, nodes);
+        track = prKitSegmented(f.kit, root, {.disabled = true}, {});
         choices(f, track, &selected, prKitSegment);
     };
     f.frame();

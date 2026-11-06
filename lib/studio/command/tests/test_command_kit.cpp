@@ -108,9 +108,9 @@ TEST_CASE("a scope runs the command of a chord while focus is within it, and the
     PrLayoutNode panel = kPrLayoutNodeNone;
     PrLayoutNode field = kPrLayoutNodeNone;
     std::string text;
-    f.build = [&](PrLayoutNode ground) {
-        prCommandScope(f.ui, ground, c.registry, c.keymap, "");
-        panel = prKitBox(f.kit, ground, {}, {});
+    f.build = [&](PrLayoutNode root) {
+        prCommandScope(f.ui, root, c.registry, c.keymap, "");
+        panel = prKitBox(f.kit, root, {}, {});
         prCommandScope(f.ui, panel, c.registry, c.keymap, "panel");
         field = taken(f.kit, prKitTextField(f.kit, panel, {.text = text}, {}), text);
     };
@@ -140,9 +140,9 @@ TEST_CASE("an override takes a chord that a focused text field claims, and a nor
     c.bind("Left", "image.left");
     PrLayoutNode field = kPrLayoutNodeNone;
     std::string text = "abc";
-    f.build = [&](PrLayoutNode ground) {
-        prCommandScope(f.ui, ground, c.registry, c.keymap, "");
-        field = taken(f.kit, prKitTextField(f.kit, ground, {.text = text}, {}), text);
+    f.build = [&](PrLayoutNode root) {
+        prCommandScope(f.ui, root, c.registry, c.keymap, "");
+        field = taken(f.kit, prKitTextField(f.kit, root, {.text = text}, {}), text);
     };
     f.frame();
     f.click(f.center(field));
@@ -164,7 +164,7 @@ TEST_CASE("a disabled command's chord is taken and does nothing, and a command w
     c.add("app.named", "Named", "", 0, required, 1);
     c.bind("Cmd R", "app.run");
     c.bind("Cmd N", "app.named");
-    f.build = [&](PrLayoutNode ground) { prCommandScope(f.ui, ground, c.registry, c.keymap, ""); };
+    f.build = [&](PrLayoutNode root) { prCommandScope(f.ui, root, c.registry, c.keymap, ""); };
     f.frame();
     c.disabled = true;
     f.key('R', kPrCommandPrimaryModifier);
@@ -188,8 +188,8 @@ TEST_CASE("a command's menu item shows its title, chord and check, and runs it")
     PrLayoutNode trigger = kPrLayoutNodeNone;
     PrLayoutNode item = kPrLayoutNodeNone;
     PrLayoutNode missing = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        trigger = ground;
+    f.build = [&](PrLayoutNode root) {
+        trigger = root;
         item = kPrLayoutNodeNone;
         PrLayoutNode popover = prKitPopover(f.kit, trigger, {}, {});
         if (popover == kPrLayoutNodeNone)
@@ -222,8 +222,8 @@ TEST_CASE("the command palette lists the commands that match its query, and runs
     std::string query;
     PrLayoutNode trigger = kPrLayoutNodeNone;
     PrLayoutNode list = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        trigger = ground;
+    f.build = [&](PrLayoutNode root) {
+        trigger = root;
         list = prCommandPalette(f.kit, trigger, c.registry, c.keymap, query);
         if (list != kPrLayoutNodeNone)
             taken(f.kit, list, query);

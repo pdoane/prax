@@ -13,9 +13,9 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace editor {
 
-// Declares the editor under the screen's ground, and applies the round's input to the model. The editor's HUD must
-// exist (editorAttach).
-void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor);
+// Declares the editor under `root`, the screen's surface, and applies the round's input to the model. The editor's HUD
+// must exist (editorAttach).
+void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor);
 
 // Make and destroy the HUD of the editor whose state is `context`, for the host's context (Host::attach and
 // Host::detach).

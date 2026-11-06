@@ -41,13 +41,13 @@ constexpr Principle kPrinciples[] = {
 struct SurfaceStep {
     const char* label;
     const char* key;
-    PrKitGround ground;
+    PrKitBackground background;
 };
 
 constexpr SurfaceStep kSurfaces[] = {
-    {"App", "bg-0", PrKitGround_App},          {"Panel", "bg-1", PrKitGround_Panel},
-    {"Header", "bg-2", PrKitGround_Header},    {"Raised", "bg-3", PrKitGround_Raised},
-    {"Select", "accent-weak", PrKitGround_Select}, {"Viewport", "bg-viewport", PrKitGround_Viewport},
+    {"App", "bg-0", PrKitBackground_App},          {"Panel", "bg-1", PrKitBackground_Panel},
+    {"Header", "bg-2", PrKitBackground_Header},    {"Raised", "bg-3", PrKitBackground_Raised},
+    {"Select", "accent-weak", PrKitBackground_Select}, {"Viewport", "bg-viewport", PrKitBackground_Viewport},
 };
 
 // A role of the type scale.
@@ -164,9 +164,9 @@ PrLayoutNode fixedColumn(PrKit* kit, PrLayoutNode row, float width) {
     return prKitBox(kit, row, {}, box);
 }
 
-// Creates a pane of a splitter's specimen, on `ground`, with `label` in it.
-void pane(PrKit* kit, PrLayoutNode parent, PrKitGround ground, PrStringView label) {
-    PrKitSurfaceStyle surface{.ground = ground};
+// Creates a pane of a splitter's specimen, on `background`, with `label` in it.
+void pane(PrKit* kit, PrLayoutNode parent, PrKitBackground background, PrStringView label) {
+    PrKitSurfaceStyle surface{.background = background};
     surface.box.padding = prKitEdgesAll(kPrKitSpace2);
     surface.box.place.flex = PrKitFlex_Fill;
     prKitLabel(kit, prKitSurface(kit, parent, {}, surface), {.text = label}, kCaption);
@@ -246,7 +246,7 @@ void sectionColor(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitBoxStyle line{.direction = PrKitDirection_Row};
         PrLayoutNode row = prKitBox(kit, panel, {}, line);
         for (const SurfaceStep& step : kSurfaces) {
-            PrKitSurfaceStyle surface{.ground = step.ground, .rules = PrKitRuleFlag_Right};
+            PrKitSurfaceStyle surface{.background = step.background, .rules = PrKitRuleFlag_Right};
             surface.box.gap = kPrKitSpace1;
             surface.box.padding = prKitEdgesXY(kPrKitSpace3, kPrKitSpace4);
             surface.box.place.flex = PrKitFlex_Fill;
@@ -345,12 +345,12 @@ void sectionSpace(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrLayoutNode splitters = demoPanel(kit, section, "SPLITTERS", "DRAG THE DIVIDERS", false);
     PrKitSplitStyle row{.direction = PrKitDirection_Row, .place = {.height = prKitPx(90), .flex = PrKitFlex_Fixed}};
     PrLayoutNode two = prKitSplit(kit, splitters, {.count = 2, .weights = state.splitWeights}, row);
-    pane(kit, prKitSplitPane(kit, two, 0), PrKitGround_Header, "SHARE A");
-    pane(kit, prKitSplitPane(kit, two, 1), PrKitGround_Panel, "SHARE B");
+    pane(kit, prKitSplitPane(kit, two, 0), PrKitBackground_Header, "SHARE A");
+    pane(kit, prKitSplitPane(kit, two, 1), PrKitBackground_Panel, "SHARE B");
     PrLayoutNode three = prKitSplit(kit, splitters, {.count = 3, .weights = state.splitThirds}, row);
-    pane(kit, prKitSplitPane(kit, three, 0), PrKitGround_Header, "1");
-    pane(kit, prKitSplitPane(kit, three, 1), PrKitGround_Panel, "2");
-    pane(kit, prKitSplitPane(kit, three, 2), PrKitGround_Header, "1");
+    pane(kit, prKitSplitPane(kit, three, 0), PrKitBackground_Header, "1");
+    pane(kit, prKitSplitPane(kit, three, 1), PrKitBackground_Panel, "2");
+    pane(kit, prKitSplitPane(kit, three, 2), PrKitBackground_Header, "1");
 }
 
 void sectionIcons(PrKit* kit, PrLayoutNode parent) {

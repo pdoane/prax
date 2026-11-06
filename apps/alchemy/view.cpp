@@ -366,7 +366,7 @@ void buildRunBar(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& com
             .gap = kPrKitSpace2,
             .padding = prKitEdgesXY(kPrKitSpace2, kPrKitSpace3),
         },
-        .ground = PrKitGround_Header,
+        .background = PrKitBackground_Header,
     };
     PrLayoutNode strip = prKitSurface(kit, parent, {}, bar);
     PrLayoutNode run = commandButton(kit, strip, commands, "alchemy.generate", kRuns[state.mode], PrKitIconKind_Play,
@@ -585,7 +585,7 @@ void buildRecord(PrKit* kit, PrLayoutNode stack, AppState& state, Commands& comm
             .padding = prKitEdgesAll(kPrKitSpace3),
             .place = {.width = prKitPx(kRecordWidth), .maxHeight = prKitPx(kRecordMaxHeight), .flex = PrKitFlex_Auto},
         },
-        .ground = PrKitGround_Panel,
+        .background = PrKitBackground_Panel,
     };
     PrLayoutNode card = prKitSurface(kit, over, {}, panel);
     PrLayoutNode header = row(kit, card, kPrKitSpace2);
@@ -637,7 +637,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
             .gap = kPrKitSpace2,
             .padding = prKitEdgesXY(kPrKitSpace2, kPrKitSpace3),
         },
-        .ground = PrKitGround_Header,
+        .background = PrKitBackground_Header,
     };
     PrLayoutNode toolbar = prKitSurface(kit, content, {}, bar);
     commandButton(kit, toolbar, commands, "alchemy.back", "", PrKitIconKind_ArrowLeft);
@@ -668,7 +668,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
         prKitLabel(kit, toolbar, {.text = label}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
     }
 
-    PrKitSurfaceStyle ground{
+    PrKitSurfaceStyle background{
         .box = {
             .justify = PrKitJustify_Center,
             .align = PrKitAlign_Center,
@@ -676,9 +676,9 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
             .padding = prKitEdgesAll(kPrKitSpace5),
             .place = {.flex = PrKitFlex_Fill},
         },
-        .ground = PrKitGround_Viewport,
+        .background = PrKitBackground_Viewport,
     };
-    PrLayoutNode stage = prKitSurface(kit, content, {}, ground);
+    PrLayoutNode stage = prKitSurface(kit, content, {}, background);
     PrLayoutNode stack = prKitStack(kit, stage, {}, {
         .justify = PrKitJustify_Center,
         .align = PrKitAlign_Center,
@@ -809,7 +809,7 @@ PrLayoutNode buildStatus(PrKit* kit, PrLayoutNode parent, AppState& state) {
             .gap = kPrKitSpace4,
             .padding = prKitEdgesXY(kPrKitSpace2, kPrKitSpace5),
         },
-        .ground = PrKitGround_Header,
+        .background = PrKitBackground_Header,
     };
     PrLayoutNode status = prKitSurface(kit, parent, {}, bar);
     static const char* const kStates[] = {"Disconnected", "Connecting", "Connected"};
@@ -891,7 +891,6 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         {.width = kImportPreview + 2 * kPrKitSpace5});
     if (body == kPrLayoutNodeNone) {
         closeImport(state);
-        view.importFocused = false;
         return;
     }
     prCommandScope(kit->ui, body, commands.registry, commands.keymap, kContextImport);
@@ -902,7 +901,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
             .overflow = PrKitOverflow_Clip,
             .place = {.height = prKitPx(kImportPreview), .flex = PrKitFlex_Fixed},
         },
-        .ground = PrKitGround_Viewport,
+        .background = PrKitBackground_Viewport,
     };
     PrLayoutNode preview = prKitSurface(kit, body, {}, stage);
     const PrDrawImage* image = state.import.image;
@@ -931,13 +930,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
     PrLayoutNode paste = commandButton(kit, footer, commands, "alchemy.pasteImage", "Paste", PrKitIconKind_Image,
         PrKitButtonVariant_Default, PrKitControlSize_Md);
     // The dialog's chord applies while focus is in its body, which the first focusable of the dialog is not.
-    PrUi* ui = kit->ui;
-    if (!view.importFocused) {
-        if (prUiIsFocusWithin(ui, body))
-            view.importFocused = true;
-        else
-            prUiSetFocus(ui, paste);
-    }
+    prKitModalAutofocus(kit, paste);
     prKitSpacer(kit, footer, {});
     if (prKitActivated(kit, prKitButton(kit, footer, {.text = "Cancel"}, {})))
         closeImport(state);

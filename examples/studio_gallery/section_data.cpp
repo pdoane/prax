@@ -202,7 +202,7 @@ void sectionCollections(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     }
 
     PrLayoutNode empty = demoPanel(kit, section, "EMPTY STATE", "NO RESULTS", true);
-    PrKitSurfaceStyle region{.ground = PrKitGround_Panel};
+    PrKitSurfaceStyle region{.background = PrKitBackground_Panel};
     region.box.place.height = prKitPx(140);
     region.box.place.flex = PrKitFlex_Fixed;
     prKitEmptyState(kit, prKitSurface(kit, empty, {}, region), {

@@ -1,4 +1,4 @@
-// Studio Kit's surfaces: the grounds that the application, its panels, bars and cards are drawn on.
+// Studio Kit's surfaces: the backgrounds that the application, its panels, bars and cards are drawn on.
 
 #include "pr/kit_surface.h"
 
@@ -10,22 +10,22 @@ namespace pr_impl {
 
 namespace {
 
-PrColor groundColor(const PrKit& kit, PrKitGround ground) {
+PrColor backgroundColor(const PrKit& kit, PrKitBackground background) {
     const PrKitPalette& p = kit.theme.palette;
-    switch (ground) {
-        case PrKitGround_App:
+    switch (background) {
+        case PrKitBackground_App:
             return p.bg0;
-        case PrKitGround_Panel:
+        case PrKitBackground_Panel:
             return p.bg1;
-        case PrKitGround_Header:
+        case PrKitBackground_Header:
             return p.bg2;
-        case PrKitGround_Raised:
+        case PrKitBackground_Raised:
             return p.bg3;
-        case PrKitGround_Select:
+        case PrKitBackground_Select:
             return p.accentWeak;
-        case PrKitGround_Viewport:
+        case PrKitBackground_Viewport:
             return p.bgViewport;
-        case PrKitGround_Hud:
+        case PrKitBackground_Hud:
             return p.hudFill;
         default:
             return PrColor{0, 0, 0, 0};
@@ -54,22 +54,22 @@ struct SurfaceBox {
 };
 PR_NO_PADDING_END
 
-// Returns a surface's colors: its ground, and its rules', which are the HUD's border on the HUD ground.
-KitColors surfaceColors(const PrKit& kit, PrKitGround ground) {
+// Returns a surface's background and rule colors. Rules on the HUD background use the HUD's border color.
+KitColors surfaceColors(const PrKit& kit, PrKitBackground background) {
     const PrKitPalette& p = kit.theme.palette;
     return KitColors{
-        .background = groundColor(kit, ground),
-        .border = ground == PrKitGround_Hud ? p.hudBorder : p.line1,
+        .background = backgroundColor(kit, background),
+        .border = background == PrKitBackground_Hud ? p.hudBorder : p.line1,
     };
 }
 
 // Returns the record of a surface in `style`.
 PrLayoutStyleIndex surfaceStyle(PrKit& kit, const PrKitSurfaceStyle& style) {
     return kitStyle(kit, SurfaceBox{.style = style.box, .rules = style.rules}, kitContainerFlex(style.box),
-        surfaceColors(kit, style.ground));
+        surfaceColors(kit, style.background));
 }
 
-// A panel header's bar: a row on the header ground with a rule below it, a medium control's height.
+// A panel header's bar: a row on the header background with a rule below it, a medium control's height.
 PrKitSurfaceStyle headerBar() {
     return {
         .box = {
@@ -79,7 +79,7 @@ PrKitSurfaceStyle headerBar() {
             .padding = {0, kPrKitSpace4, 0, kPrKitSpace4},
             .place = {.height = prKitPx(kPrKitHeightMd), .flex = PrKitFlex_Fixed},
         },
-        .ground = PrKitGround_Header,
+        .background = PrKitBackground_Header,
         .rules = PrKitRuleFlag_Bottom,
     };
 }

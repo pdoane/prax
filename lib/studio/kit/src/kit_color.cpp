@@ -411,7 +411,7 @@ struct MarkerBox {
 };
 PR_NO_PADDING_END
 
-// A marker's decoration: a white border, outlined in the app's ground so that it shows over any color.
+// A marker's decoration: a white border, outlined in the app's background so that it shows over any color.
 struct MarkerFill {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Decoration;
     void make(const PrKit& kit, PrLayoutDecorationStyle& decoration) const {

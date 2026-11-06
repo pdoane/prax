@@ -75,7 +75,7 @@ struct GraphScene {
     explicit GraphScene(KitFixture& fixture) : f(fixture) {
         f.edit = Phases::record;
         f.editContext = &phases;
-        f.build = [this](PrLayoutNode ground) {
+        f.build = [this](PrLayoutNode root) {
             PrKitGraph graph{
                 .nodes = nodes.data(),
                 .nodeCount = uint32_t(nodes.size()),
@@ -85,7 +85,7 @@ struct GraphScene {
                 .typeCount = 2,
                 .view = &view,
             };
-            canvas = prKitGraph(f.kit, ground, graph,
+            canvas = prKitGraph(f.kit, root, graph,
                 {.place = {.width = prKitPx(600), .height = prKitPx(400), .flex = PrKitFlex_Fixed}});
             for (uint32_t i = 0; i < 3; ++i)
                 bodies[i] = prKitGraphBody(f.kit, canvas, i);

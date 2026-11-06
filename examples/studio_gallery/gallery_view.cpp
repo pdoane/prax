@@ -108,7 +108,7 @@ void sidebarRow(PrKit* kit, PrLayoutNode list, const SidebarEntry& entry, Galler
 
 void buildSidebar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     findActiveSection(kit, state);
-    PrKitSurfaceStyle sidebar{.ground = PrKitGround_App, .rules = PrKitRuleFlag_Right};
+    PrKitSurfaceStyle sidebar{.background = PrKitBackground_App, .rules = PrKitRuleFlag_Right};
     sidebar.box.overflow = PrKitOverflow_Clip;
     sidebar.box.place.width = prKitPx(kSidebarWidth);
     sidebar.box.place.flex = PrKitFlex_Fixed;
@@ -153,10 +153,10 @@ PrLayoutNode sectionAnchor(PrKit* kit, PrLayoutNode content, GalleryState& state
 
 } // namespace
 
-void buildGallery(PrKit* kit, PrLayoutNode ground, GalleryState& state) {
+void buildGallery(PrKit* kit, PrLayoutNode root, GalleryState& state) {
     PrKitBoxStyle page{.direction = PrKitDirection_Row};
     page.place.flex = PrKitFlex_Fill;
-    PrLayoutNode row = prKitBox(kit, ground, {}, page);
+    PrLayoutNode row = prKitBox(kit, root, {}, page);
     buildSidebar(kit, row, state);
     PrKitBoxStyle scroll{
         .overflow = PrKitOverflow_ScrollY,

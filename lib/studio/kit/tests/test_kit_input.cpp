@@ -125,8 +125,8 @@ TEST_CASE("dragging a number field changes its value by the step for each px, an
     KitFixture f;
     float value = 1;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitNumber number{.value = prKitScalarF32(&value), .range = {.step = 0.1, .max = 4, .hasMax = true}};
         field = prKitNumberField(f.kit, row, number, {});
     };
@@ -143,12 +143,12 @@ TEST_CASE("a scrub past a bound turns back as soon as the pointer does") {
     KitFixture f;
     double value = 0;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitNumber number{
             .value = prKitScalarF64(&value),
             .range = {.step = 1, .min = 0, .max = 5, .hasMin = true, .hasMax = true},
         };
-        field = prKitNumberField(f.kit, ground, number, {});
+        field = prKitNumberField(f.kit, root, number, {});
     };
     f.frame();
     dragBy(f, f.center(field), {20, -3});
@@ -159,9 +159,9 @@ TEST_CASE("Shift scrubs a tenth of a step for each px") {
     KitFixture f;
     float value = 0;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitNumber number{.value = prKitScalarF32(&value), .range = {.step = 0.1}};
-        field = prKitNumberField(f.kit, ground, number, {});
+        field = prKitNumberField(f.kit, root, number, {});
     };
     f.frame();
     PrVec2 at = f.center(field);
@@ -181,9 +181,9 @@ TEST_CASE("an integer field scrubs in whole values, and stops at its kind's boun
     KitFixture f;
     uint8_t value = 250;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitNumber number{.value = prKitScalarU8(&value), .range = {.step = 0.5}};
-        field = prKitNumberField(f.kit, ground, number, {});
+        field = prKitNumberField(f.kit, root, number, {});
     };
     f.frame();
     PrVec2 at = f.center(field);
@@ -199,10 +199,10 @@ TEST_CASE("a focused number field steps by arrow keys, by ten steps and by one w
     int32_t count = 0;
     PrLayoutNode field = kPrLayoutNodeNone;
     PrLayoutNode intField = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitNumberRange range{.step = 0.1};
-        field = prKitNumberField(f.kit, ground, {.value = prKitScalarF32(&value), .range = range}, {});
-        intField = prKitNumberField(f.kit, ground, {.value = prKitScalarI32(&count)}, {});
+        field = prKitNumberField(f.kit, root, {.value = prKitScalarF32(&value), .range = range}, {});
+        intField = prKitNumberField(f.kit, root, {.value = prKitScalarI32(&count)}, {});
     };
     f.frame();
     f.key(PrAppKey_Up);
@@ -230,8 +230,8 @@ TEST_CASE("a disabled number field takes no scrub and no focus") {
     KitFixture f;
     float value = 1;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        field = prKitNumberField(f.kit, prKitBox(f.kit, ground, {.disabled = true}, {}),
+    f.build = [&](PrLayoutNode root) {
+        field = prKitNumberField(f.kit, prKitBox(f.kit, root, {.disabled = true}, {}),
             {.value = prKitScalarF32(&value)}, {});
     };
     f.frame();
@@ -244,9 +244,9 @@ TEST_CASE("a vector edits each component through its own field, tagged in the ax
     KitFixture f;
     float xyz[3] = {1, 2, 3};
     PrLayoutNode vector = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitNumberRange range{.step = 0.5};
-        vector = prKitVectorField(f.kit, ground, {.value = prKitScalarF32(xyz), .count = 3, .range = range}, {});
+        vector = prKitVectorField(f.kit, root, {.value = prKitScalarF32(xyz), .count = 3, .range = range}, {});
     };
     f.frame();
     PrRect row = f.bounds(vector);
@@ -267,8 +267,8 @@ TEST_CASE("a slider takes the fraction a press stands at, and follows the drag")
     KitFixture f;
     float value = 0;
     PrLayoutNode slider = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         slider = prKitSlider(f.kit, row, {.value = prKitScalarF32(&value), .min = 0, .max = 10}, {});
     };
     f.frame();
@@ -296,7 +296,7 @@ TEST_CASE("controls on a plane turned in perspective take input where they are d
     PrLayoutNode button = kPrLayoutNodeNone;
     const float distance = 300;
     PrMatrix4 turn = prMatrix4Rotate(PrVec3{0, 1, 0}, 1.0f);
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         // A stage that is the eye for the panel under it, and the panel turned in it.
         PrKitPlaneStyle outer{
             .box = {
@@ -305,7 +305,7 @@ TEST_CASE("controls on a plane turned in perspective take input where they are d
             },
             .perspective = distance,
         };
-        stage = prKitPlane(f.kit, ground, {}, outer);
+        stage = prKitPlane(f.kit, root, {}, outer);
         PrKitPlaneStyle inner{
             .box = {
                 .align = PrKitAlign_Start,
@@ -359,12 +359,12 @@ TEST_CASE("a plane that hides its back takes no input while it shows it, and a p
     PrMatrix4 flip = prMatrix4Rotate(PrVec3{0, 1, 0}, 3.1415927f);
     bool hidden = false;
     int32_t level = 0;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitPlaneStyle outer{
             .box = {.place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed,}},
             .perspective = 300,
         };
-        stage = prKitPlane(f.kit, ground, {}, outer);
+        stage = prKitPlane(f.kit, root, {}, outer);
         PrKitBoxStyle cover{.place = {.width = prKitPercent(100), .height = prKitPercent(100)}};
         back = prKitPlane(f.kit, prKitStack(f.kit, stage, {}, cover), {}, {.box = cover, .zIndex = level});
         // The layer that holds the front plane lets the pointer through to what is under it.
@@ -400,9 +400,9 @@ TEST_CASE("a focused slider moves by its step with Left and Right, and to its en
     KitFixture f;
     double value = 0.5;
     PrLayoutNode slider = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitSlider content{.value = prKitScalarF64(&value), .step = 0.1f};
-        slider = prKitSlider(f.kit, ground, content, {});
+        slider = prKitSlider(f.kit, root, content, {});
     };
     f.frame();
     f.click(f.center(slider));
@@ -423,9 +423,9 @@ TEST_CASE("a ratio slider stands its midpoint at the geometric mean of its range
     KitFixture f;
     float value = 0;
     PrLayoutNode slider = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitSlider content{.value = prKitScalarF32(&value), .min = 1, .max = 100, .scale = PrKitSliderScale_Ratio};
-        slider = prKitSlider(f.kit, ground, content, {});
+        slider = prKitSlider(f.kit, root, content, {});
     };
     f.frame();
     f.click(f.center(slider));
@@ -439,9 +439,9 @@ TEST_CASE("a drag reports one begin and one commit, with its changes between") {
     float level = 0;
     PrLayoutNode field = kPrLayoutNodeNone;
     PrLayoutNode slider = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        field = prKitNumberField(f.kit, ground, {.value = prKitScalarF32(&value)}, {});
-        slider = prKitSlider(f.kit, ground, {.value = prKitScalarF32(&level), .min = 0, .max = 1}, {});
+    f.build = [&](PrLayoutNode root) {
+        field = prKitNumberField(f.kit, root, {.value = prKitScalarF32(&value)}, {});
+        slider = prKitSlider(f.kit, root, {.value = prKitScalarF32(&level), .min = 0, .max = 1}, {});
     };
     f.frame();
     dragBy(f, f.center(field), {10, 10, 10});
@@ -465,8 +465,8 @@ TEST_CASE("a press that does not scrub opens no gesture, and a key press is a ge
     EditFixture f;
     float value = 0;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        field = prKitNumberField(f.kit, ground, {.value = prKitScalarF32(&value)}, {});
+    f.build = [&](PrLayoutNode root) {
+        field = prKitNumberField(f.kit, root, {.value = prKitScalarF32(&value)}, {});
     };
     f.frame();
     f.click(f.center(field));
@@ -484,19 +484,19 @@ TEST_CASE("an inspector group's header discloses and collapses its body") {
     PrLayoutNode body = kPrLayoutNodeNone;
     PrLayoutNode row = kPrLayoutNodeNone;
     PrLayoutNode kept = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitInspectorGroup group{
             .name = "Transform",
             .badge = "CORE",
             .badgeVariant = PrKitBadgeVariant_Accent,
             .open = &open,
         };
-        body = prKitInspectorGroup(f.kit, ground, group);
+        body = prKitInspectorGroup(f.kit, root, group);
         row = kPrLayoutNodeNone;
         if (body != kPrLayoutNodeNone)
             row = prKitInspectorRow(f.kit, body, {.label = "Position"}, {});
         PrKitInspectorGroup own{.name = "Mesh"};
-        kept = prKitInspectorGroup(f.kit, ground, own);
+        kept = prKitInspectorGroup(f.kit, root, own);
     };
     f.frame();
     REQUIRE(body != kPrLayoutNodeNone);
@@ -518,9 +518,9 @@ TEST_CASE("an inspector group's header discloses and collapses its body") {
 TEST_CASE("a group the caller keeps no flag for is open at first, and keeps its own") {
     KitFixture f;
     PrLayoutNode body = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitInspectorGroup group{.name = "Rigidbody"};
-        body = prKitInspectorGroup(f.kit, ground, group);
+        body = prKitInspectorGroup(f.kit, root, group);
     };
     f.frame();
     CHECK(body != kPrLayoutNodeNone);
@@ -536,8 +536,8 @@ TEST_CASE("an inspector row lays its control out after its label column") {
     PrLayoutNode controls = kPrLayoutNodeNone;
     PrLayoutNode field = kPrLayoutNodeNone;
     float value = 0;
-    f.build = [&](PrLayoutNode ground) {
-        controls = prKitInspectorRow(f.kit, ground, {.label = "Mass"}, {});
+    f.build = [&](PrLayoutNode root) {
+        controls = prKitInspectorRow(f.kit, root, {.label = "Mass"}, {});
         PrKitNumber number{.value = prKitScalarF32(&value), .unit = "kg"};
         field = prKitNumberField(f.kit, controls, number, {});
     };
@@ -557,13 +557,13 @@ TEST_CASE("an asset field takes a dropped payload of its kind, and passes others
     PrLayoutNode field = kPrLayoutNodeNone;
     uint32_t drops = 0;
     uint64_t dropped = 0;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitButton content{.text = "cube.mesh"};
-        source = prKitButton(f.kit, ground, content, {});
+        source = prKitButton(f.kit, root, content, {});
         if (prUiIsPressed(f.ui, source, 0))
             prUiDragStart(f.ui, source, 4, kind, 42);
         PrKitAssetField ref{.name = "player.mesh", .icon = PrKitIconKind_Cube, .kind = 7};
-        field = prKitAssetField(f.kit, ground, ref);
+        field = prKitAssetField(f.kit, root, ref);
         uint64_t value = 0;
         if (prKitDropped(f.kit, field, &value)) {
             ++drops;
@@ -596,9 +596,9 @@ TEST_CASE("an empty asset field offers browsing alone, and reports its gutter's 
     KitFixture f;
     PrLayoutNode field = kPrLayoutNodeNone;
     uint32_t browsed = 0;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitAssetField ref{.name = "None", .empty = true};
-        field = prKitAssetField(f.kit, ground, ref);
+        field = prKitAssetField(f.kit, root, ref);
         browsed += prKitBrowsed(f.kit, field) ? 1 : 0;
         CHECK_FALSE(prKitLocated(f.kit, field));
         CHECK_FALSE(prKitCleared(f.kit, field));
@@ -618,9 +618,9 @@ TEST_CASE("a frame of the same inspector makes no node and lays nothing out") {
     float mass = 1;
     float drag = 0.25f;
     PrColor tint{0.2f, 0.4f, 0.8f, 1};
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitInspectorGroup transform{.name = "Transform", .badge = "CORE", .open = &open};
-        PrLayoutNode body = prKitInspectorGroup(f.kit, ground, transform);
+        PrLayoutNode body = prKitInspectorGroup(f.kit, root, transform);
         PrLayoutNode positionRow = prKitInspectorRow(f.kit, body, {.label = "Position"}, {});
         prKitVectorField(f.kit, positionRow, {.value = prKitScalarF32(position), .count = 3}, {});
         PrKitNumber number{.value = prKitScalarF32(&mass), .unit = "kg"};
@@ -644,10 +644,10 @@ TEST_CASE("a scrub changes the field's text alone, and leaves its siblings' layo
     KitFixture f;
     float value = 0;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         for (uint32_t i = 0; i < 4; ++i)
-            prKitInspectorRow(f.kit, ground, {.label = "Other"}, {});
-        PrLayoutNode speed = prKitInspectorRow(f.kit, ground, {.label = "Speed"}, {});
+            prKitInspectorRow(f.kit, root, {.label = "Other"}, {});
+        PrLayoutNode speed = prKitInspectorRow(f.kit, root, {.label = "Speed"}, {});
         field = prKitNumberField(f.kit, speed, {.value = prKitScalarF32(&value)}, {});
     };
     f.frame();
@@ -669,8 +669,8 @@ TEST_CASE("a text field's clear control empties its text as one gesture, and sho
     };
     f.editContext = &commits;
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitTextField content{.text = text, .placeholder = "Search", .clearable = true};
         field = taken(f.kit, prKitTextField(f.kit, row, content, {}), text);
     };
@@ -689,9 +689,9 @@ TEST_CASE("Up and Down recall a text field's history while it has focus, and pas
     std::string text;
     const PrStringView history[] = {"build", "bench"};
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitTextField content{.text = text, .history = history, .historyCount = 2};
-        field = taken(f.kit, prKitTextField(f.kit, ground, content, {}), text);
+        field = taken(f.kit, prKitTextField(f.kit, root, content, {}), text);
     };
     f.frame();
     f.click(f.center(field));
@@ -715,9 +715,9 @@ TEST_CASE("a suggest field opens its list as it takes focus, and a suggestion re
     std::string text = "lib/g";
     const PrStringView suggestions[] = {"lib/gpu", "lib/geom"};
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitSuggestField content{.field = {.text = text}, .suggestions = suggestions, .count = 2};
-        field = taken(f.kit, prKitSuggestField(f.kit, ground, content, {}), text);
+        field = taken(f.kit, prKitSuggestField(f.kit, root, content, {}), text);
     };
     f.frame();
     f.click(f.center(field));

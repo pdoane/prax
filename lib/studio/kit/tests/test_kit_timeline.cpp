@@ -54,7 +54,7 @@ struct TimelineScene {
     explicit TimelineScene(KitFixture& fixture) : f(fixture) {
         f.edit = Phases::record;
         f.editContext = &phases;
-        f.build = [this](PrLayoutNode ground) {
+        f.build = [this](PrLayoutNode root) {
             PrKitTimeline timeline{
                 .tracks = tracks,
                 .trackCount = 2,
@@ -66,11 +66,11 @@ struct TimelineScene {
                 .playhead = &playhead,
                 .snap = snap,
             };
-            PrLayoutNode parent = ground;
+            PrLayoutNode parent = root;
             if (above > 0) {
                 PrKitBoxStyle box{.overflow = PrKitOverflow_ScrollY};
                 box.place = {.height = prKitPx(300), .flex = PrKitFlex_Fixed};
-                scroller = prKitBox(f.kit, ground, {}, box);
+                scroller = prKitBox(f.kit, root, {}, box);
                 PrKitBoxStyle spacer{};
                 spacer.place = {.height = prKitPx(above), .flex = PrKitFlex_Fixed};
                 prKitBox(f.kit, scroller, {}, spacer);

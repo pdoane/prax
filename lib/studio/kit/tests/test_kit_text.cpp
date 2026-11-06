@@ -57,8 +57,8 @@ struct Edited {
     PrLayoutNode node = kPrLayoutNodeNone;
 
     explicit Edited(std::string initial, bool area = false, uint32_t rows = 3) : text(std::move(initial)) {
-        f.build = [this, area, rows](PrLayoutNode ground) {
-            PrLayoutNode column = prKitBox(f.kit, ground, {}, {.place = {.width = prKitPx(200)}});
+        f.build = [this, area, rows](PrLayoutNode root) {
+            PrLayoutNode column = prKitBox(f.kit, root, {}, {.place = {.width = prKitPx(200)}});
             if (area)
                 node = taken(f.kit, prKitTextArea(f.kit, column, {.text = text, .rows = rows}, {}), text);
             else
@@ -182,8 +182,8 @@ TEST_CASE("an edit's description chooses how its arrows move at a change of dire
         KitFixture f;
         std::string text = "abc \xd7\x90\xd7\x91\xd7\x92 z";
         PrLayoutNode control = kPrLayoutNodeNone;
-        f.build = [&](PrLayoutNode ground) {
-            control = prKitBox(f.kit, ground, {}, {.place = {.width = prKitPx(200)}});
+        f.build = [&](PrLayoutNode root) {
+            control = prKitBox(f.kit, root, {}, {.place = {.width = prKitPx(200)}});
             prUiAddFlags(f.ui, control, PrUiFlag_Pressable | PrUiFlag_Focusable);
             if (prUiFocus(f.ui) != control)
                 prUiSetFocus(f.ui, control);
@@ -217,8 +217,8 @@ TEST_CASE("a text area shows a buffer's styles in their roles and tones, and edi
         {PrKitTextRole_Strong, PrKitTone_Accent},
     };
     PrLayoutNode area = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode column = prKitBox(f.kit, ground, {}, {.place = {.width = prKitPx(200)}});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode column = prKitBox(f.kit, root, {}, {.place = {.width = prKitPx(200)}});
         area = prKitTextArea(f.kit, column, {.buffer = buffer, .rows = 3, .styles = styles, .styleCount = 2}, {});
     };
     f.frame();
@@ -242,7 +242,7 @@ TEST_CASE("a text field shows a styled buffer as its plain text") {
     PrTextEditBuffer* buffer = prTextEditBufferCreate("plain strong");
     prTextEditBufferSetStyle(buffer, 6, 12, 1);
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) { field = prKitTextField(f.kit, ground, {.buffer = buffer}, {}); };
+    f.build = [&](PrLayoutNode root) { field = prKitTextField(f.kit, root, {.buffer = buffer}, {}); };
     f.frame();
     f.frame();
     CHECK(field != kPrLayoutNodeNone);
@@ -459,9 +459,9 @@ TEST_CASE("a field over the caller's buffer edits it, and the caller's other edi
     PrTextEditHistory* history = prTextEditHistoryCreate(buffer);
     PrLayoutNode field = kPrLayoutNodeNone;
     bool reported = false;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitTextField content{.buffer = buffer};
-        field = prKitTextField(f.kit, ground, content, {});
+        field = prKitTextField(f.kit, root, content, {});
         PrStringView text{};
         reported = prKitTextChanged(f.kit, field, &text) || reported;
     };
@@ -555,9 +555,9 @@ TEST_CASE("marked text in the caller's buffer leaves with focus") {
     PrTextEditBuffer* buffer = prTextEditBufferCreate("ab");
     PrLayoutNode field = kPrLayoutNodeNone;
     bool reported = false;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitTextField content{.buffer = buffer};
-        field = prKitTextField(f.kit, ground, content, {});
+        field = prKitTextField(f.kit, root, content, {});
         PrStringView text{};
         reported = prKitTextChanged(f.kit, field, &text) || reported;
     };
@@ -579,8 +579,8 @@ TEST_CASE("a disabled field takes no text and shows no caret") {
     KitFixture f;
     std::string text = "fixed";
     PrLayoutNode field = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        field = taken(f.kit, prKitTextField(f.kit, ground, {.text = text, .disabled = true}, {}), text);
+    f.build = [&](PrLayoutNode root) {
+        field = taken(f.kit, prKitTextField(f.kit, root, {.text = text, .disabled = true}, {}), text);
     };
     f.frame();
     f.click(f.center(field));

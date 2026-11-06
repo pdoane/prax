@@ -4,10 +4,13 @@
 #include "pr/studio_window.h"
 
 #include "pr/alloc.h"
+#include "pr/compress.h"
 #include "pr/draw_display.h"
+#include "pr/draw_glyph.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/gpu.h"
+#include "pr/image.h"
 #include "pr/kit_surface.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
@@ -47,6 +50,11 @@ struct WindowRun {
     PrDrawRenderer* PR_NULLABLE renderer;
     PrDrawFrame* PR_NULLABLE frame;
 
+    // The decoder for glyphs that are images, such as those of a bitmap emoji font, and the codecs that it uses.
+    PrCompressCodec* PR_NULLABLE compress;
+    PrImageCodec* PR_NULLABLE images;
+    PrDrawGlyphDecoder* PR_NULLABLE glyphs;
+
     // Where the swap chain holds more than 8-bit sRGB: the texture of half floats that the list renders into, and the
     // shader that maps it to the display.
     PrGpuTexture rendered;
@@ -57,12 +65,12 @@ PrKitThemeVariant variantOf(PrAppColorScheme scheme) {
     return scheme == PrAppColorScheme_Dark ? PrKitThemeVariant_Dark : PrKitThemeVariant_Light;
 }
 
-// Declares a round: a surface on the app's ground that fills the viewport, and the application's round under it.
+// Declares a round: a surface on the app background that fills the viewport, and the application's round under it.
 void build(void* context, PrUi*, const PrUiRound*) {
     WindowRun& w = *static_cast<WindowRun*>(context);
     PrKitSurfaceStyle style{
         .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-        .ground = PrKitGround_App,
+        .background = PrKitBackground_App,
     };
     PrLayoutNode root = prKitSurface(w.kit, kPrLayoutNodeNone, {}, style);
     w.desc.build(w.desc.context, w.handle, root, w.extent);
@@ -85,15 +93,17 @@ void closeDevice(WindowRun& w) {
     w.device = nullptr;
 }
 
-// Makes the platform's device, a swap chain over the window for HDR, and the renderer. Returns false if the window has
-// no device to render with.
+// Makes the platform's device, a swap chain over the window with the desc's intent, and the renderer. Returns false if
+// the window has no device to render with.
 bool openDevice(WindowRun& w) {
     PrAppSurface surface{};
-    PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
+    PrGpuSwapChainDesc desc{.intent = w.desc.intent};
+    PrDrawRendererOptions options = prDrawRendererOptionsDefault();
+    options.glyphDecoder = w.glyphs;
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
             prAppSurface(w.app, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
-            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, &options, &w.renderer) != PrStatus_Ok ||
             prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
         closeDevice(w);
         return false;
@@ -295,6 +305,9 @@ PrStatus prStudioWindowRun(const PrStudioWindowDesc* desc) {
     PrKitTheme theme = prKitThemeStudio(w->variant, w->fonts);
     w->kit = prKitCreate(w->ui, &theme);
     w->list = prDrawListCreate();
+    w->compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
+    w->images = w->compress != nullptr ? prImageCodecCreate(PrImageCodecBackend_Default, w->compress) : nullptr;
+    w->glyphs = w->images != nullptr ? prDrawGlyphBitmapCreate(w->images) : nullptr;
 
     PrAppDesc appDesc{.title = desc->title, .extent = desc->extent};
     w->app = prAppCreate(PrAppBackend_Default, &appDesc);
@@ -311,6 +324,9 @@ PrStatus prStudioWindowRun(const PrStudioWindowDesc* desc) {
     PrStatus status = w->status;
     prAppDestroy(w->app);
     prDrawListRelease(w->list);
+    prDrawGlyphDecoderDestroy(w->glyphs);
+    prImageCodecDestroy(w->images);
+    prCompressCodecDestroy(w->compress);
     prLayoutSceneRelease(w->scene);
     w->scrolls.reset();
     prKitDestroy(w->kit);

@@ -30,7 +30,7 @@ struct Scene {
     void (*draw)(PrDrawList* list, float width, float height, double time, const SceneInput& input);
 };
 
-// Gets the scenes ready to draw, with their text shaped by `shaper` in the fonts of the Noto bundle under `fonts`.
+// Gets the scenes ready to draw, with their text shaped by `shaper` in the fonts of the Complete bundle under `fonts`.
 // `shaper` must outlive the scenes' use.
 void scenesOpen(PrTextShaper* shaper, const char* fonts);
 

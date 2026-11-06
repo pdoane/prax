@@ -140,8 +140,8 @@ typedef struct PrKitTileImageStyle {
     float hoverZoom;
 } PrKitTileImageStyle;
 
-// Create a tile's thumbnail: `image` fitted to cover it, or `icon` on a ground of `tint`, or of the theme's raised
-// ground if `tint` is fully transparent.
+// Creates a tile's thumbnail. prKitTileImage fits `image` to cover the tile. prKitTileIcon shows `icon` on a background
+// of `tint`, or on the theme's raised background if `tint` is fully transparent.
 PrLayoutNode prKitTileImage(PrKit* kit, PrLayoutNode tile, PrKitImage image, PrKitTileImageStyle style);
 PrLayoutNode prKitTileIcon(PrKit* kit, PrLayoutNode tile, PrKitIcon icon, PrColor tint);
 

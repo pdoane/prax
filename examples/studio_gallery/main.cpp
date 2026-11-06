@@ -43,6 +43,7 @@ int main() {
     PrStudioWindowDesc desc{
         .title = "Studio Kit Gallery",
         .extent = {1440, 900},
+        .intent = PrGpuSwapChainIntent_Hdr,
         .fonts = fonts,
         .theme = themeOf,
         .build = [](void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {

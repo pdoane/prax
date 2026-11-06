@@ -164,7 +164,7 @@ bool opensInNewTab(Browser& b, PrLayoutNode node) {
 void buildTabs(Browser& b, PrLayoutNode root) {
     PrKitSurfaceStyle style{
         .box = {.direction = PrKitDirection_Row, .align = PrKitAlign_End, .gap = 4, .padding = {6, 8, 0, 8}},
-        .ground = PrKitGround_Header,
+        .background = PrKitBackground_Header,
     };
     PrLayoutNode row = prKitSurface(b.kit, root, {}, style);
     PrLayoutNode strip = prKitTabStrip(b.kit, row, {.reorderable = true}, {});
@@ -380,7 +380,7 @@ void buildToolbar(Browser& b, PrLayoutNode root, Tab& tab) {
     PrLayoutNode stack = prKitStack(b.kit, root, {}, {});
     PrKitSurfaceStyle style{
         .box = {.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = 2, .padding = prKitEdgesXY(5, 8)},
-        .ground = PrKitGround_Panel,
+        .background = PrKitBackground_Panel,
         .rules = PrKitRuleFlag_Bottom,
     };
     PrLayoutNode toolbar = prKitSurface(b.kit, stack, {}, style);
@@ -415,7 +415,7 @@ void buildFavorites(Browser& b, PrLayoutNode root) {
             .gap = 2,
             .padding = prKitEdgesXY(3, 8),
         },
-        .ground = PrKitGround_Panel,
+        .background = PrKitBackground_Panel,
         .rules = PrKitRuleFlag_Bottom,
     };
     PrLayoutNode bar = prKitSurface(b.kit, root, {}, style);
@@ -483,7 +483,7 @@ void buildStart(Browser& b, PrLayoutNode root) {
             .padding = prKitEdgesXY(56, 24),
             .place = {.flex = PrKitFlex_Fill},
         },
-        .ground = PrKitGround_App,
+        .background = PrKitBackground_App,
     };
     PrLayoutNode page = prKitSurface(b.kit, root, {}, style);
     prKitLabel(b.kit, page, {.text = "Prax"}, {.role = PrKitTextRole_Display});
@@ -606,7 +606,7 @@ void buildHistory(Browser& b, PrLayoutNode root) {
             .padding = prKitEdgesXY(32, 24),
             .place = {.flex = PrKitFlex_Fill},
         },
-        .ground = PrKitGround_App,
+        .background = PrKitBackground_App,
     };
     PrLayoutNode page = prKitSurface(b.kit, root, {}, style);
     PrKitPlace column{.width = prKitPx(kStartWidth), .maxWidth = prKitPercent(100)};

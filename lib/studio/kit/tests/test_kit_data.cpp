@@ -35,11 +35,11 @@ using namespace pr_impl;
 TEST_CASE("a log line's message takes the room that its row leaves, and the same lines make nothing again") {
     KitFixture f;
     PrLayoutNode lines[2] = {};
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitBoxStyle column{};
         column.place.width = prKitPx(400);
         column.place.flex = PrKitFlex_Fixed;
-        PrLayoutNode log = prKitBox(f.kit, ground, {}, column);
+        PrLayoutNode log = prKitBox(f.kit, root, {}, column);
         PrKitLogLine info{.time = "12:04", .message = "Loaded", .source = "Scene"};
         lines[0] = prKitLogLine(f.kit, log, info);
         PrKitLogLine error{.message = "Failed", .level = PrKitLogLevel_Error};
@@ -61,8 +61,8 @@ TEST_CASE("a log line's message takes the room that its row leaves, and the same
 TEST_CASE("a stat tile stacks its caption, reading and note, and a tile without a note has two lines") {
     KitFixture f;
     PrLayoutNode tiles[2] = {};
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
         PrKitStatTile frame{.label = "FRAME", .value = "16.6 ms", .note = "60 fps target"};
         tiles[0] = prKitStatTile(f.kit, row, frame);
         PrKitStatTile bare{.label = "ERRORS", .value = "1"};
@@ -81,8 +81,8 @@ TEST_CASE("a chip's remove control reports the removal, and a read-only chip has
     PrLayoutNode removable = kPrLayoutNodeNone;
     PrLayoutNode fixed = kPrLayoutNodeNone;
     uint32_t removals = 0;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
         removable = prKitChip(f.kit, row, {.label = "player", .removable = true});
         removals += prKitRemoved(f.kit, removable) ? 1 : 0;
         fixed = prKitChip(f.kit, row, {.label = "static"});
@@ -102,8 +102,8 @@ TEST_CASE("the buttons of a group draw no border of their own, and a button outs
     PrLayoutNode grouped = kPrLayoutNodeNone;
     PrLayoutNode alone = kPrLayoutNodeNone;
     PrLayoutNode group = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
         group = prKitButtonGroup(f.kit, row, {});
         PrKitButton local{.text = "Local"};
         grouped = prKitButton(f.kit, group, local, {});

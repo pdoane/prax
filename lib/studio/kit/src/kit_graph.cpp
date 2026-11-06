@@ -46,7 +46,7 @@ constexpr float kMaxZoom = 3;
 constexpr float kArrangeColumnGap = 72;
 constexpr float kArrangeRowGap = 24;
 
-// The canvas: a box that clips what is drawn and placed on it, in the viewport's ground.
+// The canvas: a box that clips what is drawn and placed on it, in the viewport's background.
 struct CanvasBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     void make(const PrKit&, PrLayoutBoxStyle& box) const {
@@ -122,7 +122,7 @@ struct NodeFlex {
     }
 };
 
-// A node's header: a row of its title and meta, on a raised ground.
+// A node's header: a row of its title and meta, on a raised background.
 struct HeaderBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     void make(const PrKit&, PrLayoutBoxStyle& box) const {

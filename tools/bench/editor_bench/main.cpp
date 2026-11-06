@@ -127,8 +127,8 @@ constexpr BenchCase kCases[] = {
     {"editor resize (pixel ratio 1.5)", nothing, false, 1.5f, true},
 };
 
-void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
-    buildEditor(kit, ground, *static_cast<EditorState*>(context));
+void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
+    buildEditor(kit, root, *static_cast<EditorState*>(context));
 }
 
 // The host, the editor, the device that it renders on, and what the case in progress has counted.

@@ -81,7 +81,7 @@ if (PR_DEVELOP)
         text_editor/tests/test_text_editor_c.c
     )
     target_link_libraries(studio_text_editor_tests PRIVATE kit_fixture prax::layout prax::text prax::ui
-                                                           prax::studio_command prax::syntax prax::process)
+                                                           prax::studio_command prax::studio_kit prax::syntax prax::process)
     target_compile_definitions(studio_text_editor_tests PRIVATE
         TEXT_EDITOR_TESTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/text_editor/tests"
         TEXT_EDITOR_TESTS_PYTHON="${Python3_EXECUTABLE}")
@@ -94,9 +94,9 @@ endif()
 pr_library(studio_window INCLUDE window/include
     window/src/studio_window.cpp
 )
-target_link_libraries(pr_studio_window PUBLIC prax::app prax::color prax::draw prax::font prax::layout prax::studio_kit
-                                              prax::text prax::ui
-                                       PRIVATE prax::core_cpp prax::gpu)
+target_link_libraries(pr_studio_window PUBLIC prax::app prax::color prax::draw prax::font prax::gpu
+                                              prax::layout prax::studio_kit prax::text prax::ui
+                                       PRIVATE prax::core_cpp prax::compress prax::image)
 
 if (PR_DEVELOP)
     pr_module_tests(studio_window

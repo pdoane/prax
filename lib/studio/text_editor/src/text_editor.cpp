@@ -103,8 +103,8 @@ struct TextEditorDocument {
     TextEditorServer* PR_NULLABLE server;
     PrLspDocument* PR_NULLABLE lsp;
 
-    // A place that a definition named in the document, shown once the buffer holds its line, in the encoding of the
-    // server that named it.
+    // A place to show once the buffer holds its line: a definition's target, a debugger's stop, or the place given to
+    // prTextEditorShowAt. The position is in the encoding of whatever named it.
     bool revealPending;
     PrLspPosition revealPosition;
     PrLspEncoding revealEncoding;
@@ -499,7 +499,7 @@ void moveCaret(TextEditorDocument* document, uint32_t offset) {
     prTextViewReveal(document->view);
 }
 
-// Shows a place that a definition named once the buffer holds its line.
+// Moves the caret to the pending place, if there is one and the buffer holds its line.
 void revealPending(TextEditorDocument* document) {
     if (!document->revealPending)
         return;
@@ -1138,7 +1138,7 @@ void buildDebugPanel(TextEditor* editor, PrLayoutNode parent, float top, PrVec2 
             .padding = prKitEdgesXY(kPrKitSpace3, kPrKitSpace4),
             .place = {.width = prKitPx(extent.x), .height = prKitPx(extent.y)},
         },
-        .ground = PrKitGround_Panel,
+        .background = PrKitBackground_Panel,
     };
     PrLayoutBoxStyle placed = prLayoutBoxStyleDefault();
     placed.display = PrLayoutDisplay_Block;
@@ -1844,8 +1844,9 @@ float gutterSize(TextEditor* editor, const TextEditorDocument* document) {
 }
 
 // Declares the scrollbar along the block axis of the text: at the right of horizontal lines, and below vertical ones,
-// where the start of the document is at the side that the lines stack from. A drag moves the thumb. The document's size
-// is an estimate outside the window, so the thumb can jump as estimates settle, while the reader's place holds.
+// where the start of the document is at the side that the lines stack from. A press or a drag puts the thumb's middle
+// under the pointer. The document's size is an estimate outside the window, so the thumb can jump as estimates settle,
+// while the reader's place holds.
 void buildScrollbar(TextEditor* editor, TextEditorDocument* document, PrLayoutNode parent, PrVec2 extent) {
     PrLayoutTree* tree = prUiTree(editor->ui);
     const PrKitPalette& palette = editor->kit->theme.palette;
@@ -1865,14 +1866,19 @@ void buildScrollbar(TextEditor* editor, TextEditorDocument* document, PrLayoutNo
         return;
     float length = float(double(size) * double(size) / info.documentSize);
     length = length > kThumbMinLength ? length : kThumbMinLength;
+    length = length < size ? length : size;
     double range = info.documentSize - double(size);
     float room = size - length;
     float start = float(info.offset / range) * room;
     start = reversed ? room - start : start;
+    // The drag reports viewport px, so its position is converted to the track's coordinates.
     PrUiDrag drag{};
-    if (prUiDrag(editor->ui, track, 0, 0, &drag) && drag.active) {
-        double at = double(vertical ? drag.position.x : drag.position.y) - double(length) / 2;
+    PrVec2 local{};
+    if (prUiDrag(editor->ui, track, 0, 0, &drag) && drag.active && room > 0 &&
+            prUiLocalPoint(editor->ui, track, drag.position, &local)) {
+        double at = double(vertical ? local.x : local.y) - double(length) / 2;
         at = reversed ? double(room) - at : at;
+        at = at < 0 ? 0 : (at > double(room) ? double(room) : at);
         prTextViewScrollTo(document->view, at / double(room) * range);
     }
     PrLayoutBoxStyle thumbBox = prLayoutBoxStyleDefault();
@@ -2050,7 +2056,8 @@ PrLayoutNode buildDocument(TextEditor* editor, TextEditorDocument* document, PrL
     return port;
 }
 
-// Brings the colors of the categories up to date with the theme, which is dark if its text is lighter than its ground.
+// Brings the colors of the categories up to date with the theme, which is dark if its text is lighter than its
+// background.
 void updateCategoryColors(TextEditor* editor) {
     if (editor->languages == nullptr)
         return;
@@ -2505,6 +2512,14 @@ void prTextEditorShow(PrTextEditor* editor, PrTextEditorDocument* document) {
     showDocument(editor, document);
 }
 
+void prTextEditorShowAt(PrTextEditor* editor, PrTextEditorDocument* document, uint32_t line, uint32_t column) {
+    showDocument(editor, document);
+    document->revealPending = true;
+    document->revealPosition = PrLspPosition{line, column};
+    document->revealEncoding = PrLspEncoding_Utf32;
+    revealPending(document);
+}
+
 PrTextEditBuffer* prTextEditorDocumentBuffer(const PrTextEditorDocument* document) {
     return document->buffer;
 }
@@ -2519,6 +2534,12 @@ PrTextEditHistory* prTextEditorDocumentHistory(const PrTextEditorDocument* docum
 
 PrStringView prTextEditorDocumentPath(const PrTextEditorDocument* document) {
     return prRawStringView(&document->path);
+}
+
+PrRawString prTextEditorDocumentWorkspace(const PrTextEditorDocument* document) {
+    if (prRawStringIsEmpty(&document->path))
+        return prRawStringNull();
+    return workspaceOf(prRawStringView(&document->path));
 }
 
 const PrSyntaxLanguage* PR_NULLABLE prTextEditorDocumentLanguage(const PrTextEditorDocument* document) {

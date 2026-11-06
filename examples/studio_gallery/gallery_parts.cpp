@@ -16,7 +16,7 @@ constexpr float kMeasure = 600;
 } // namespace
 
 PrLayoutNode card(PrKit* kit, PrLayoutNode parent, const PrKitBoxStyle& box) {
-    PrKitSurfaceStyle surface{.box = box, .ground = PrKitGround_Panel, .rules = PrKitRuleFlag_All};
+    PrKitSurfaceStyle surface{.box = box, .background = PrKitBackground_Panel, .rules = PrKitRuleFlag_All};
     return prKitSurface(kit, parent, {}, surface);
 }
 
@@ -66,7 +66,7 @@ PrLayoutNode sectionFrame(PrKit* kit, PrLayoutNode parent, PrStringView number, 
 
 PrLayoutNode demoPanel(PrKit* kit, PrLayoutNode parent, PrStringView title, PrStringView tags, bool bare) {
     PrLayoutNode frame = card(kit, parent, PrKitBoxStyle{});
-    PrKitSurfaceStyle header{.ground = PrKitGround_Header, .rules = PrKitRuleFlag_Bottom};
+    PrKitSurfaceStyle header{.background = PrKitBackground_Header, .rules = PrKitRuleFlag_Bottom};
     header.box.direction = PrKitDirection_Row;
     header.box.align = PrKitAlign_Center;
     header.box.gap = kPrKitSpace3;

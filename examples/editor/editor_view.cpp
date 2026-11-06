@@ -46,10 +46,10 @@ constexpr const char* kRenderModes[RenderMode_Count] = {"Shaded", "Flat", "Wiref
 constexpr uint64_t kDragEntity = 1;
 constexpr uint64_t kDragAsset = 2;
 
-// Creates a row of fixed height on a ground, with the rules that `rules` names, whose items `gap` px apart sit centered
-// across it.
-PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitGround ground, PrKitRuleFlags rules, float height, float gap) {
-    PrKitSurfaceStyle surface{.ground = ground, .rules = rules};
+// Creates a row of fixed `height` on `background`, with the rules that `rules` names. Its items are `gap` px apart and
+// centered across the row.
+PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitBackground background, PrKitRuleFlags rules, float height, float gap) {
+    PrKitSurfaceStyle surface{.background = background, .rules = rules};
     surface.box.direction = PrKitDirection_Row;
     surface.box.align = PrKitAlign_Center;
     surface.box.gap = gap;
@@ -62,7 +62,7 @@ PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitGround ground, PrKitRuleF
 
 // Creates the bar of a panel's actions under the dock's tab, which names the panel.
 PrLayoutNode actionBar(PrKit* kit, PrLayoutNode panel) {
-    return bar(kit, panel, PrKitGround_Panel, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace2);
+    return bar(kit, panel, PrKitBackground_Panel, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace2);
 }
 
 // Creates a box that fills the rest of its panel and scrolls down.
@@ -222,7 +222,7 @@ void buildPalette(PrKit* kit, PrLayoutNode root, EditorState& editor) {
 // Toolbar and status bar
 
 void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
-    PrLayoutNode toolbar = bar(kit, parent, PrKitGround_Panel, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace1);
+    PrLayoutNode toolbar = bar(kit, parent, PrKitBackground_Panel, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace1);
     struct ToolDef {
         Tool tool;
         PrKitIconKind icon;
@@ -264,7 +264,7 @@ void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
 }
 
 void buildStatusBar(PrKit* kit, PrLayoutNode parent, const EditorState& editor) {
-    PrLayoutNode status = bar(kit, parent, PrKitGround_Header, PrKitRuleFlag_Top, kPrKitHeightSm, kPrKitSpace3);
+    PrLayoutNode status = bar(kit, parent, PrKitBackground_Header, PrKitRuleFlag_Top, kPrKitHeightSm, kPrKitSpace3);
     prKitLabel(kit, status, {.text = editor.levelName}, kCaption);
     char entities[32];
     char edits[32];
@@ -410,7 +410,7 @@ void buildProjectPanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrUi* ui = kit->ui;
     for (uint32_t i = 0; i < countOf(kAssets); ++i) {
         bool selected = editor.selectedAsset == i;
-        PrKitSurfaceStyle cell{.ground = PrKitGround(selected ? PrKitGround_Select : PrKitGround_None)};
+        PrKitSurfaceStyle cell{.background = PrKitBackground(selected ? PrKitBackground_Select : PrKitBackground_None)};
         cell.box.justify = PrKitJustify_Center;
         cell.box.align = PrKitAlign_Center;
         cell.box.gap = kPrKitSpace2;
@@ -751,14 +751,14 @@ void countEdit(void* context, PrLayoutNode, PrUiEditPhase phase) {
 
 } // namespace
 
-void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
-    prUiSetEditSink(kit->ui, ground, countEdit, &editor);
-    buildMenuBar(kit, ground, editor);
-    buildToolbar(kit, ground, editor);
+void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor) {
+    prUiSetEditSink(kit->ui, root, countEdit, &editor);
+    buildMenuBar(kit, root, editor);
+    buildToolbar(kit, root, editor);
     if (editor.dock == nullptr)
         editor.dock = makeDock();
-    PrLayoutNode dock = prKitDockBuild(kit, ground, {
-        .key = prUiKey(kit->ui, ground, "dock"),
+    PrLayoutNode dock = prKitDockBuild(kit, root, {
+        .key = prUiKey(kit->ui, root, "dock"),
         .dock = editor.dock,
         .describe = describePanel,
     });
@@ -775,7 +775,7 @@ void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
             default: break;
         }
     }
-    buildStatusBar(kit, ground, editor);
+    buildStatusBar(kit, root, editor);
     buildPalette(kit, prLayoutTreeRoot(kit->tree), editor);
 }
 

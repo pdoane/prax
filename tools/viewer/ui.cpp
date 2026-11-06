@@ -435,7 +435,7 @@ void build(void* context, PrUi*, const PrUiRound*) {
             .padding = prKitEdgesXY(kPrKitSpace4, kPrKitSpace4),
             .place = {.width = prKitPx(kPanel), .height = prKitFill(), .flex = PrKitFlex_Fixed},
         },
-        .ground = PrKitGround_Panel,
+        .background = PrKitBackground_Panel,
         .rules = PrKitRuleFlag_Right,
     };
     PrLayoutNode panel = prKitSurface(kit, root, {}, panelStyle);

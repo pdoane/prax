@@ -688,7 +688,7 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
     PrKit* kit = b.kit;
     PrUi* ui = kit->ui;
     PrKitSurfaceStyle surface{};
-    surface.ground = PrKitGround_Header;
+    surface.background = PrKitBackground_Header;
     surface.rules = PrKitRuleFlag_Bottom;
     surface.box.direction = PrKitDirection_Row;
     surface.box.overflow = PrKitOverflow_Clip;
@@ -760,7 +760,7 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
 void buildLeaf(DockBuild& b, PrLayoutNode parent, PrKitDockNode leaf) {
     PrKit* kit = b.kit;
     PrKitSurfaceStyle surface{};
-    surface.ground = PrKitGround_Panel;
+    surface.background = PrKitBackground_Panel;
     surface.box.overflow = PrKitOverflow_Clip;
     surface.box.place.flex = PrKitFlex_Fill;
     PrLayoutNode column = prKitSurface(kit, parent, {}, surface);

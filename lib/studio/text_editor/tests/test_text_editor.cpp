@@ -5,9 +5,11 @@
 #include "pr/command_keymap.h"
 #include "pr/command_kit.h"
 #include "pr/file.h"
+#include "pr/kit_box.h"
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
 #include "pr/process.h"
+#include "pr/string_ops.h"
 #include "pr/text_editor.h"
 #include "pr/text_font.h"
 #include "pr/thread.h"
@@ -36,9 +38,10 @@ namespace {
 // How long a test waits for a language server, in milliseconds.
 constexpr double kPatience = 10000;
 
-// An editor in a kit of its own, at 800 by 600 px.
+// An editor in a kit of its own. The kit is 800 by 600 px, and the editor fills it below `top` px of empty space.
 struct Editor {
     KitFixture f;
+    float top = 0;
     PrCommandRegistry* commands = prCommandRegistryCreate();
     PrCommandKeymap* keymap = prCommandKeymapCreate();
     PrSyntaxRegistry* languages = prSyntaxRegistryCreate();
@@ -66,7 +69,9 @@ struct Editor {
         editor = prTextEditorCreate(&desc);
         f.build = [this](PrLayoutNode root) {
             prCommandScope(f.ui, root, commands, keymap, "");
-            prTextEditorFrame(editor, root, PrVec2{800, 600});
+            if (top > 0)
+                prKitStack(f.kit, root, {}, PrKitBoxStyle{.place = {.width = prKitPx(800), .height = prKitPx(top)}});
+            prTextEditorFrame(editor, root, PrVec2{800, 600 - top});
         };
     }
 
@@ -199,6 +204,36 @@ TEST_CASE("text editor: a document of text shows, takes focus, and numbers its l
     CHECK(e.textUnder(prTextEditorTextNode(e.editor)).find("xonetwothree") != std::string::npos);
 }
 
+TEST_CASE("text editor: a press on the scrollbar puts the thumb's middle under the pointer, wherever the editor is") {
+    Editor e;
+    e.top = 300;
+    std::string text;
+    for (uint32_t i = 0; i < 2000; ++i)
+        text += "line\n";
+    PrTextEditorDocument* document = textDocument(e, text);
+    e.settle();
+    PrTextView* view = prTextEditorDocumentView(document);
+    PrRect port = e.f.bounds(prTextEditorTextNode(e.editor));
+    REQUIRE(port.top == doctest::Approx(300.0));
+    float x = port.right + 6;
+
+    // A press at the bottom of the track shows the end, and a press at the top shows the start, even though the track
+    // starts far below the top of the viewport.
+    PrVec2 bottom{x, port.bottom - 1};
+    e.f.move(bottom);
+    e.f.frame();
+    e.f.click(bottom);
+    e.settle();
+    PrTextViewInfo info = prTextViewInfo(view);
+    CHECK(info.offset == doctest::Approx(info.documentSize - double(port.bottom - port.top)).epsilon(0.02));
+    PrVec2 top{x, port.top + 1};
+    e.f.move(top);
+    e.f.frame();
+    e.f.click(top);
+    e.settle();
+    CHECK(prTextViewInfo(view).offset == doctest::Approx(0.0));
+}
+
 TEST_CASE("text editor: a file opens, saves with its line endings, and a missing file is NotFound") {
     Editor e;
     std::string path = writeFile("crlf.txt", "a\r\nb\r\n");
@@ -219,6 +254,28 @@ TEST_CASE("text editor: a file opens, saves with its line endings, and a missing
     PrTextEditorDocument* none = document;
     CHECK(prTextEditorDocumentCreate(e.editor, &missing, &none) == PrStatus_NotFound);
     CHECK(none == nullptr);
+}
+
+TEST_CASE("text editor: a document's workspace is the folder above it that holds .git, or its own folder") {
+    Editor e;
+    std::string path = writeFile("plain.txt", "a\n");
+    std::string folder = path.substr(0, path.rfind('/'));
+    REQUIRE(prFileCreateDirectory(folder + "/workspace/.git"));
+    REQUIRE(prFileCreateDirectory(folder + "/workspace/sub"));
+    std::string nested = writeFile("workspace/sub/nested.txt", "b\n");
+    auto workspace = [](PrTextEditorDocument* document) {
+        PrRawString root = prTextEditorDocumentWorkspace(document);
+        std::string text(prRawStringView(&root).data, prRawStringView(&root).size);
+        prRawStringReset(&root);
+        return text;
+    };
+    CHECK(workspace(open(e, nested)) == folder + "/workspace");
+    // A folder above the tests' folder may contain .git, so the workspace of a file there is its own folder or a folder
+    // above it.
+    std::string own = workspace(open(e, path));
+    CHECK(prStringStartsWith(folder, own));
+    PrRawString none = prTextEditorDocumentWorkspace(textDocument(e, "c\n"));
+    CHECK(prRawStringIsNull(&none));
 }
 
 TEST_CASE("text editor: a comparison aligns its sides, tints what changed, and scrolls them together") {

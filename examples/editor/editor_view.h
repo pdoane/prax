@@ -13,8 +13,8 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace editor {
 
-// Declares the editor under `ground`, a column that fills the window, and applies the round's input to the model.
-void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor);
+// Declares the editor under `root`, a column that fills the window, and applies the round's input to the model.
+void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor);
 
 } // namespace editor
 

@@ -12,8 +12,8 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace gallery {
 
-// Declares the gallery under the screen's ground, and applies the round's input to the model.
-void buildGallery(PrKit* kit, PrLayoutNode ground, GalleryState& state);
+// Declares the gallery under `root`, the screen's surface, and applies the round's input to the model.
+void buildGallery(PrKit* kit, PrLayoutNode root, GalleryState& state);
 
 } // namespace gallery
 

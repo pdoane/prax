@@ -32,7 +32,7 @@ typedef struct PrKitPalette {
     PrColor warning;
     PrColor danger;
 
-    // The surfaces, from the application's ground up to a raised control, and the viewport's.
+    // The surfaces, from the application's background up to a raised control, and the viewport's.
     PrColor bg0;
     PrColor bg1;
     PrColor bg2;

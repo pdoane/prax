@@ -51,10 +51,10 @@ if (NOT EMSCRIPTEN)
     endif()
 endif()
 
-# The fixture of the tests of Studio Kit and of the libraries over it (kit_fixture.h): a kit that sets text in the Noto
-# fonts that the build fetched, and the frames that drive it.
+# The fixture of the tests of Studio Kit and of the libraries over it (kit_fixture.h): a kit that sets text in the font
+# bundles that the build fetched, and the frames that drive it.
 add_library(kit_fixture INTERFACE kit_fixture.h)
 target_include_directories(kit_fixture INTERFACE ${PROJECT_SOURCE_DIR})
 target_compile_definitions(kit_fixture INTERFACE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
 target_link_libraries(kit_fixture INTERFACE prax::studio_kit prax::font_bundle prax::font prax::text prax::draw
-                                            prax::layout prax::ui doctest::doctest)
+                                            prax::layout prax::ui prax::compress prax::image harness_png doctest::doctest)

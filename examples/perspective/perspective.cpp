@@ -3,8 +3,8 @@
 //
 // Four panels are planes (prKitPlane) in a row that is itself a plane with a perspective, so they share one eye. The
 // panels turn to face the pointer, and a click on a panel tweens it to the front and raises its level. The button and
-// the slider on each panel answer where they are drawn, under the turn. Each panel's ground blurs what lies beneath it,
-// which is the application's background, read through the panel's projection.
+// the slider on each panel answer where they are drawn, under the turn. Each panel's background blurs the application's
+// background beneath it, as read through the panel's projection.
 //
 // A frame of the window is one command buffer. The application draws its background with its own pipeline, and lib/draw
 // renders the UI over it in the same pass. The UI is prepared before that pass begins, so its backdrops cannot read the
@@ -123,7 +123,7 @@ constexpr float kBottom[3] = {0.20f, 0.09f, 0.24f};
 // The example's state: the panels' values, which panel is in front, and what the panels' painters draw with.
 struct Panels {
     const PrDrawImage* picture = nullptr;
-    const PrDrawFilter* frosted = nullptr;      // the blur that a panel's ground applies to what lies beneath it
+    const PrDrawFilter* frosted = nullptr;      // the blur that a panel's background applies to what lies beneath it
     PrColor glass{};
     PrColor rim{};
     float sliders[kPanels] = {0.35f, 0.5f, 0.65f, 0.8f};
@@ -132,7 +132,7 @@ struct Panels {
     bool redraw = false;                        // the host provides what lies beneath as a function, not a texture
 };
 
-// Draws a panel's ground: a rounded pane that blurs what lies beneath it under a translucent tint, and its rim.
+// Draws a panel's background: a rounded pane that blurs what lies beneath it under a translucent tint, and its rim.
 void paintGlass(void* context, PrVec2 size, PrDrawList* list) {
     const Panels& p = *static_cast<const Panels*>(context);
     PrRect pane{0, 0, size.x, size.y};
@@ -192,16 +192,16 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
     if (prUiClicked(ui, panel, 0))
         p.chosen = p.chosen == index ? kPanels : index;
 
-    // The ground and the content are layers of the panel, so that the content paints over the ground.
+    // The background and the content are layers of the panel, so that the content paints over the background.
     PrKitBoxStyle cover{};
     PrLayoutNode under = prKitLayer(kit, panel, {}, cover);
     PrLayoutNode glass = prLayoutTreeFrameReplaced(tree, under, 0, 0);
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, glass, &fill);
-    PrLayoutContent ground{.kind = PrLayoutContentKind_Painter};
-    ground.painter.paint = paintGlass;
-    ground.painter.context = &p;
-    prLayoutTreeFrameSetContent(tree, glass, &ground);
+    PrLayoutContent background{.kind = PrLayoutContentKind_Painter};
+    background.painter.paint = paintGlass;
+    background.painter.context = &p;
+    prLayoutTreeFrameSetContent(tree, glass, &background);
 
     PrKitBoxStyle column{.gap = 10, .padding = prKitEdgesAll(16)};
     PrLayoutNode content = prKitLayer(kit, panel, {}, column);
@@ -234,7 +234,7 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
 }
 
 // Declares the round: a header with the backdrop's toggle, and the row of panels in perspective.
-void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
+void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     Panels& p = *static_cast<Panels*>(context);
     const PrKitPalette& palette = kit->theme.palette;
     p.glass = PrColor{palette.bg1.r, palette.bg1.g, palette.bg1.b, 0.5f};
@@ -248,11 +248,11 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
             .gap = 16,
             .padding = prKitEdgesXY(10, 14),
         },
-        .ground = PrKitGround_Hud,
+        .background = PrKitBackground_Hud,
         .rules = PrKitRuleFlag_All,
     };
     // The header stands at a level above the row, so that a panel tweened to the front passes under it.
-    PrLayoutNode bar = prKitSurface(kit, prKitPlane(kit, ground, {}, {.zIndex = 1}), {}, header);
+    PrLayoutNode bar = prKitSurface(kit, prKitPlane(kit, root, {}, {.zIndex = 1}), {}, header);
     PrLayoutNode titles = prKitBox(kit, bar, {}, {.gap = 4});
     PrKitPlace grow{.flex = PrKitFlex_Grow};
     prKitPlace(kit, titles, &grow);
@@ -277,13 +277,13 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
         },
         .perspective = kEye,
     };
-    PrLayoutNode row = prKitPlane(kit, ground, {}, stage);
+    PrLayoutNode row = prKitPlane(kit, root, {}, stage);
 
     PrVec2 extent{};
     PrVec2 pointer{};
     float reach = 0;
     float lift = 0;
-    PrRect viewport = prLayoutRectToPx(prLayoutNodeBounds(kit->tree, ground, PrLayoutCoordinates_Viewport));
+    PrRect viewport = prLayoutRectToPx(prLayoutNodeBounds(kit->tree, root, PrLayoutCoordinates_Viewport));
     extent = PrVec2{viewport.right - viewport.left, viewport.bottom - viewport.top};
     if (prUiPointer(ui, &pointer) && extent.x > 1 && extent.y > 1) {
         reach = pointer.x / extent.x - 0.5f;
@@ -366,12 +366,13 @@ struct Window {
     float height = 0;               // this frame's viewport's, in logical pixels
 };
 
-// Declares a round: a surface on no ground, so that the background shows beneath the UI, and the panels under it.
+// Declares a round: a surface with no background, so that the application's background shows beneath the UI, and the
+// panels under the surface.
 void build(void* context, PrUi*, const PrUiRound*) {
     Window& w = *static_cast<Window*>(context);
     PrKitSurfaceStyle style{
         .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-        .ground = PrKitGround_None,
+        .background = PrKitBackground_None,
     };
     buildApp(&w.panels, w.kit, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style));
 }

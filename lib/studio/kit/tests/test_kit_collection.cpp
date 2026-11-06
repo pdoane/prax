@@ -58,12 +58,12 @@ struct ListScene {
     PrLayoutNode cells[kMaxRows] = {};
 
     explicit ListScene(KitFixture& fixture) : f(fixture) {
-        f.build = [this](PrLayoutNode ground) { build(ground); };
+        f.build = [this](PrLayoutNode root) { build(root); };
     }
 
-    void build(PrLayoutNode ground) {
+    void build(PrLayoutNode root) {
         PrKitListView list{.count = count, .selection = bound ? &selection : nullptr};
-        PrLayoutNode view = prKitListView(f.kit, ground, list,
+        PrLayoutNode view = prKitListView(f.kit, root, list,
             {.rowHeight = kRowHeight, .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}});
         rows = rowsOf(f, view);
         if (focus) {
@@ -117,7 +117,7 @@ struct TreeScene {
     uint32_t toggled = 0;
 
     explicit TreeScene(KitFixture& fixture) : f(fixture) {
-        f.build = [this](PrLayoutNode ground) { build(ground); };
+        f.build = [this](PrLayoutNode root) { build(root); };
     }
 
     void order() {
@@ -135,7 +135,7 @@ struct TreeScene {
         }
     }
 
-    void build(PrLayoutNode ground) {
+    void build(PrLayoutNode root) {
         order();
         PrKitTreeView tree{
             .count = uint32_t(items.size()),
@@ -143,7 +143,7 @@ struct TreeScene {
             .items = items.data(),
             .dragKind = kRowKind,
         };
-        PrLayoutNode view = prKitTreeView(f.kit, ground, tree,
+        PrLayoutNode view = prKitTreeView(f.kit, root, tree,
             {.rowHeight = kRowHeight, .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}});
         rows = rowsOf(f, view);
         nodes.assign(items.size(), kPrLayoutNodeNone);
@@ -203,10 +203,10 @@ struct TableScene {
     PrLayoutNode cells[kRows][3] = {};
 
     explicit TableScene(KitFixture& fixture) : f(fixture) {
-        f.build = [this](PrLayoutNode ground) { build(ground); };
+        f.build = [this](PrLayoutNode root) { build(root); };
     }
 
-    void build(PrLayoutNode ground) {
+    void build(PrLayoutNode root) {
         const PrKitTableColumn columns[] = {
             {.label = "NAME", .width = nameWidth, .flex = PrKitFlex_Fill, .sortable = true},
             {.label = "TYPE", .width = 80, .sortable = true},
@@ -219,7 +219,7 @@ struct TableScene {
         };
         if (limited)
             style.place = {.height = prKitPx(kViewHeight), .maxWidth = prKitPx(width), .flex = PrKitFlex_Fixed};
-        PrLayoutNode view = prKitTable(f.kit, prKitBox(f.kit, ground, {}, {.gap = 0}), table, style);
+        PrLayoutNode view = prKitTable(f.kit, prKitBox(f.kit, root, {}, {.gap = 0}), table, style);
         rows = rowsOf(f, view);
         if (prKitSorted(f.kit, view))
             ++sorts;
@@ -260,16 +260,16 @@ struct GridScene {
     PrLayoutNode tiles[kTiles] = {};
 
     explicit GridScene(KitFixture& fixture) : f(fixture) {
-        f.build = [this](PrLayoutNode ground) { build(ground); };
+        f.build = [this](PrLayoutNode root) { build(root); };
     }
 
-    void build(PrLayoutNode ground) {
+    void build(PrLayoutNode root) {
         PrKitListViewStyle style{
             .rowHeight = 80,
             .tileWidth = 100,
             .place = {.width = prKitPx(410), .height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed},
         };
-        PrLayoutNode view = prKitListView(f.kit, ground, {.count = kTiles, .selection = &selection}, style);
+        PrLayoutNode view = prKitListView(f.kit, root, {.count = kTiles, .selection = &selection}, style);
         rows = rowsOf(f, view);
         for (uint32_t i = rows.first; i < rows.first + rows.count; ++i) {
             tiles[i] = prKitListTile(f.kit, view, {.index = i, .item = i, .selected = selected[i]});
@@ -651,8 +651,8 @@ TEST_CASE("a visibility toggle shows while its row is hovered or hidden, and a c
 TEST_CASE("an empty state shows its icon over its title and hint") {
     KitFixture f;
     PrLayoutNode column = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
-        column = prKitEmptyState(f.kit, ground,
+    f.build = [&](PrLayoutNode root) {
+        column = prKitEmptyState(f.kit, root,
             {.icon = PrKitIconKind_Search, .title = "NO ASSETS", .hint = "Clear the filter to see them all"});
     };
     f.frame();
@@ -768,13 +768,13 @@ TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrLayoutNode tile = kPrLayoutNodeNone;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitListViewStyle style{
             .rowHeight = 80,
             .tileWidth = 100,
             .place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed},
         };
-        PrLayoutNode view = prKitListView(f.kit, ground, {.count = 1}, style);
+        PrLayoutNode view = prKitListView(f.kit, root, {.count = 1}, style);
         tile = prKitListTile(f.kit, view, {.index = 0, .item = 7});
         prKitTileImage(f.kit, tile, {.image = image}, {});
         prKitTileLabel(f.kit, tile, {.text = "fox.png"});
@@ -809,13 +809,13 @@ TEST_CASE("a tile's image grows inside its thumbnail under the pointer, and a ti
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrLayoutNode tile = kPrLayoutNodeNone;
     bool secondary = false;
-    f.build = [&](PrLayoutNode ground) {
+    f.build = [&](PrLayoutNode root) {
         PrKitListViewStyle style{
             .rowHeight = 80,
             .tileWidth = 100,
             .place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed},
         };
-        PrLayoutNode view = prKitListView(f.kit, ground, {.key = 1, .count = 1}, style);
+        PrLayoutNode view = prKitListView(f.kit, root, {.key = 1, .count = 1}, style);
         tile = prKitListTile(f.kit, view, {.index = 0, .item = 7});
         prKitTileImage(f.kit, tile, {.image = image}, {.hoverZoom = 0.5f});
         secondary = prUiClicked(f.ui, tile, 1) || secondary;

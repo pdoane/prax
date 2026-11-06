@@ -269,6 +269,7 @@ enum : uint64_t {
     KitContext_Graph,
     KitContext_Timeline,
     KitContext_Split,
+    KitContext_Modal,
 };
 typedef uint64_t KitContext;
 

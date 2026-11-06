@@ -203,7 +203,7 @@ void buildContextMenu(PrKit* kit, PrLayoutNode section, MenuState& state) {
     PrLayoutNode panel = demoPanel(kit, section, "CONTEXT MENU", "RIGHT-CLICK", false);
     PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_Start, .gap = kPrKitSpace4};
     PrLayoutNode row = prKitBox(kit, panel, {}, line);
-    PrKitSurfaceStyle zone{.ground = PrKitGround_Viewport};
+    PrKitSurfaceStyle zone{.background = PrKitBackground_Viewport};
     zone.box.direction = PrKitDirection_Row;
     zone.box.justify = PrKitJustify_Center;
     zone.box.align = PrKitAlign_Center;
