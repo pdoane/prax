@@ -18,33 +18,50 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// The bundles. A bundle decides which fonts the generic families, and the other names that the bundle gives, refer to.
-// Every bundle falls back to the same families: Noto for the scripts in modern use, with symbols, math and color emoji,
-// and finally Last Resort, which draws the missing glyph of a code point that no face serves.
+// The bundles. Each bundle gives the fonts that the generic families and its other names refer to, and the families
+// that text falls back to. A bundle uses only its own files.
 enum {
-    // Maps serif, sans-serif and monospace to Noto Serif, Noto Sans and Noto Sans Mono, and math to New Computer Modern
-    // Math.
-    PrFontBundle_Noto,
+    // Covers every script in modern use, with the same fonts on every platform. Maps serif to Noto Serif, sans-serif
+    // and system-ui to Noto Sans, monospace to Noto Sans Mono, and math to New Computer Modern Math. Falls back to Noto
+    // for the scripts in modern use, with symbols, math and color emoji, and finally to Last Resort, which draws the
+    // missing glyph of a code point that no face serves.
+    PrFontBundle_Complete,
+
+    // Maps monospace to Noto Sans Mono, and has no fallback families. It is for an application that takes the rest of
+    // its fonts from the system (prFontSetSetSystem).
+    PrFontBundle_NotoMono,
 
     // Substitutes for PDF's standard 14 fonts. Times, Helvetica and Courier map to Tinos, Arimo and Cousine, which have
     // the same metrics, and those fonts also serve as serif, sans-serif and monospace. Symbol and ZapfDingbats map to
-    // LeviSymbol and Levibats.
+    // LeviSymbol and Levibats, and math to New Computer Modern Math. Falls back to its own text faces and math face.
     PrFontBundle_Standard14,
+
+    // Maps serif to IBM Plex Serif, sans-serif and system-ui to IBM Plex Sans, monospace to IBM Plex Mono, and math to
+    // IBM Plex Math. Falls back to IBM Plex's families for Arabic, Hebrew, Devanagari, Thai, Chinese, Japanese and
+    // Korean.
+    PrFontBundle_Plex,
+
+    // Symbols Nerd Font Mono: the Nerd Fonts icons that shell prompts and file listings use, at the private-use code
+    // points that Nerd Fonts assigns. Each icon is as wide as it is high. The bundle names no family. Its only fallback
+    // family serves private-use code points, so it goes after a bundle of text faces.
+    PrFontBundle_NerdFontSymbols,
 };
 typedef uint8_t PrFontBundle;
 
-// Installs the bundle into `set`.
+// Installs the stacks of `bundles`, in order, into `set`.
 //
-// The call adds the faces of the bundle's files in `directory` to `set`. It names the bundle's fonts by the generic
-// families, and by the other names that the bundle gives them as aliases. It makes serif the default family, and sets
-// the fallback families in the order that they are tried (prFontSetSetFallbackFamilies). Each fallback family carries
-// the language that it is made for, if its faces do not say. A file that is not in the directory is left out.
+// The call adds the faces of the bundles' files in `directory` to `set`, each file once. It binds the generic families
+// to the bundles' fonts, and adds the bundles' other names as aliases. A name refers to the fonts of the first bundle
+// that gives it. The call makes serif the default family. It sets the fallback families in the order that they are
+// tried (prFontSetSetFallbackFamilies): the families of each bundle in turn, so that a later bundle serves what the
+// earlier ones lack. Each fallback family carries the language that it is made for, if its faces do not say. A file
+// that is not in the directory is left out.
 //
-// Returns the number of files added, out of prFontBundleFileCount(bundle).
-uint32_t prFontBundleInstall(PrFontSet* set, PrFontBundle bundle, PrStringView directory);
+// Returns the number of files added, out of prFontBundleFileCount(bundles, count).
+uint32_t prFontBundleInstall(PrFontSet* set, const PrFontBundle* bundles, uint32_t count, PrStringView directory);
 
-// Returns the number of files that the bundle installs.
-uint32_t prFontBundleFileCount(PrFontBundle bundle);
+// Returns the number of files that the bundles install together.
+uint32_t prFontBundleFileCount(const PrFontBundle* bundles, uint32_t count);
 
 #if defined(__cplusplus)
 }

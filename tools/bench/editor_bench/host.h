@@ -55,7 +55,7 @@ struct Host {
     std::vector<PrLayoutSceneScroll> scrolls;   // the offsets that the last frame played its scene with
 };
 
-// Opens a host in Studio's dark theme, with its text in the Noto bundle under `fontDirectory`. Returns false if the
+// Opens a host in Studio's dark theme, with its text in the Complete bundle under `fontDirectory`. Returns false if the
 // fonts could not be installed.
 bool hostOpen(Host& host, const char* fontDirectory);
 void hostClose(Host& host);

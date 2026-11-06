@@ -27,7 +27,6 @@
 #include "pr/draw_list.h"
 #include "pr/fetch_intercept.h"
 #include "pr/file.h"
-#include "pr/font_bundle.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_tree.h"
 #include "pr/mathml_quickjs.h"
@@ -104,8 +103,8 @@ void answerBrowserPage(void* PR_NULLABLE, PrFetchInterceptRequest* request) {
 // history.
 void openShared(Browser& b) {
     b.fonts = prFontSetCreate(nullptr);
-    prFontBundleInstall(b.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR);
-    prFontSystemInstall(PrFontSystemBackend_Default, b.fonts);
+    b.system = prFontSystemCreate(PrFontSystemBackend_Default);
+    prFontSetSetSystem(b.fonts, b.system);
     b.shaper = prTextShaperCreate(PrTextShaperBackend_Default);
     PrTextFontDesc font{.set = b.fonts, .style = prFontStyleDefault()};
     b.font = prTextFontCreate(&font);
@@ -250,5 +249,6 @@ int main(int argc, char** argv) {
     closeChrome(b);
     closeShared(b);
     prFontSetDestroy(b.fonts);
+    prFontSystemDestroy(b.system);
     return 0;
 }

@@ -88,8 +88,8 @@ pr_example(editor
     editor/editor_view.cpp
     editor/hud.cpp
 )
-target_link_libraries(editor PRIVATE prax::studio_window prax::studio_kit prax::draw prax::layout prax::ui prax::ui_cpp
-                                     prax::text prax::font prax::color prax::core_cpp)
+target_link_libraries(editor PRIVATE prax::studio_window prax::font_bundle prax::studio_kit prax::draw prax::layout prax::ui
+                                     prax::ui_cpp prax::text prax::font prax::color prax::core_cpp)
 
 # The Studio Kit gallery: every widget of the kit, live, over a model of its own.
 pr_example(studio_gallery
@@ -103,7 +103,7 @@ pr_example(studio_gallery
     studio_gallery/section_feedback.cpp
     studio_gallery/section_data.cpp
 )
-target_link_libraries(studio_gallery PRIVATE prax::studio_window prax::text_edit prax::studio_kit prax::draw
+target_link_libraries(studio_gallery PRIVATE prax::studio_window prax::font_bundle prax::text_edit prax::studio_kit prax::draw
                                              prax::layout prax::ui prax::color prax::core_cpp)
 
 # The perspective example: Kit panels standing in 3D over a background that the application draws with its own
@@ -118,5 +118,5 @@ target_compile_definitions(perspective PRIVATE
 
 # The incremental example: Markdown and HTML rendered as they arrive in pieces, beside Kit's controls for the stream.
 pr_example(incremental incremental/incremental.cpp)
-target_link_libraries(incremental PRIVATE prax::studio_window prax::app prax::studio_kit prax::draw prax::layout
+target_link_libraries(incremental PRIVATE prax::studio_window prax::font_bundle prax::app prax::studio_kit prax::draw prax::layout
                                           prax::text prax::html prax::dom prax::css prax::markdown prax::core_cpp)

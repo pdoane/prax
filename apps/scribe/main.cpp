@@ -10,6 +10,8 @@
 // gap between frames, and how long input waited for the frame that took it, all in milliseconds.
 
 #include "pr/assert.h"
+#include "pr/count_of.h"
+#include "pr/font_bundle.h"
 #include "pr/print.h"
 #include "pr/string_view.h"
 #include "pr/studio_window.h"
@@ -92,10 +94,21 @@ int main(int argc, char** argv) {
             return 2;
         }
     }
+    // The text is set in Noto Sans Mono, and the terminal adds icons from Nerd Fonts. Everything else uses the system's
+    // fonts.
+    PrFontSet* fonts = prFontSetCreate(nullptr);
+    const PrFontBundle bundles[] = {PrFontBundle_NotoMono, PrFontBundle_NerdFontSymbols};
+    if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles)), PR_FONT_BUNDLE_DIR) == 0) {
+        printError("scribe: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
+        prFontSetDestroy(fonts);
+        return 1;
+    }
+    PrFontSystem* system = prFontSystemCreate(PrFontSystemBackend_Default);
+    prFontSetSetSystem(fonts, system);
     PrStudioWindowDesc desc{
         .title = "Scribe",
         .extent = {1200, 900},
-        .fontDirectory = PR_FONT_BUNDLE_DIR,
+        .fonts = fonts,
         .open = open,
         .build = [](void* context, PrStudioWindow*, PrLayoutNode root, PrVec2 extent) {
             buildScribe(runOf(context).scribe, root, extent);
@@ -110,9 +123,9 @@ int main(int argc, char** argv) {
         .context = &r,
     };
     PrStatus status = prStudioWindowRun(&desc);
-    if (status == PrStatus_NotFound)
-        printError("scribe: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
-    else if (status == PrStatus_NotSupported)
+    prFontSetDestroy(fonts);
+    prFontSystemDestroy(system);
+    if (status == PrStatus_NotSupported)
         printError("scribe: no GPU device to render with\n");
     return status == PrStatus_Ok ? 0 : 1;
 }

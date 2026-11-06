@@ -7,7 +7,8 @@ target_link_libraries(merge_model PUBLIC prax::core_cpp PRIVATE prax::text_diff 
 
 pr_app(merge main.cpp)
 target_link_libraries(merge PRIVATE merge_model prax::layout prax::studio_command prax::studio_kit
-                                    prax::studio_text_editor prax::studio_window prax::syntax prax::text prax::ui)
+                                    prax::studio_text_editor prax::studio_window prax::font_bundle prax::syntax prax::text
+                                    prax::ui)
 if (PR_SYNTAX_TREESITTER)
     target_compile_definitions(merge PRIVATE MERGE_HAS_TREESITTER)
 endif()

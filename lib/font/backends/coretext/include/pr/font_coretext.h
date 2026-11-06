@@ -1,4 +1,5 @@
-// The CoreText backend of lib/font: the system's fonts, as the files that CoreText's font manager makes available.
+// The CoreText backend of lib/font: the system's fonts, as CoreText finds them by family name and by its fallback
+// cascade.
 
 #pragma once
 
@@ -11,9 +12,8 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Adds the families of the fonts that CoreText makes available to `set`, each by the file that holds it, without
-// reading the files (prFontSetAddFileFamily), and returns how many it added.
-uint32_t prFontCoreTextInstall(PrFontSet* set);
+// Returns the CoreText system. It has no state, so one system serves every set and thread. Destroying it does nothing.
+PrFontSystem* prFontCoreTextCreate(void);
 
 #if defined(__cplusplus)
 }

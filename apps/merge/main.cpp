@@ -27,7 +27,9 @@
 #include "pr/command.h"
 #include "pr/command_keymap.h"
 #include "pr/command_kit.h"
+#include "pr/count_of.h"
 #include "pr/file.h"
+#include "pr/font_bundle.h"
 #include "pr/kit_menu.h"
 #include "pr/kit_text.h"
 #include "pr/layout_query.h"
@@ -297,10 +299,20 @@ int main(int argc, char** argv) {
     PrStringView title = "Prax Merge: Compare";
     if (merging)
         title = "Prax Merge";
+    // The text is set in Noto Sans Mono. Everything else uses the system's fonts.
+    PrFontSet* fonts = prFontSetCreate(nullptr);
+    const PrFontBundle bundles[] = {PrFontBundle_NotoMono};
+    if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles)), PR_FONT_BUNDLE_DIR) == 0) {
+        printError("merge: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
+        prFontSetDestroy(fonts);
+        return 1;
+    }
+    PrFontSystem* system = prFontSystemCreate(PrFontSystemBackend_Default);
+    prFontSetSetSystem(fonts, system);
     PrStudioWindowDesc desc{
         .title = title,
         .extent = {1400, 900},
-        .fontDirectory = PR_FONT_BUNDLE_DIR,
+        .fonts = fonts,
         .open = open,
         .build = build,
         .laidOut = laidOut,
@@ -312,9 +324,9 @@ int main(int argc, char** argv) {
         .context = &m,
     };
     PrStatus status = prStudioWindowRun(&desc);
-    if (status == PrStatus_NotFound)
-        printError("merge: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
-    else if (status == PrStatus_NotSupported)
+    prFontSetDestroy(fonts);
+    prFontSystemDestroy(system);
+    if (status == PrStatus_NotSupported)
         printError("merge: no GPU device to render with\n");
     if (status != PrStatus_Ok)
         return 1;

@@ -5,8 +5,9 @@
 // and the axis values that it sets. Matching the same style again therefore returns the same font.
 //
 // Each set has a lock, which guards its faces, instances and requests. A match holds the lock of a set and then the
-// lock of its parent, never the other way around. The stamp of a set comes from one counter for the process, taken at
-// each change. The version of a set is the latest of its own stamp and the stamps of its parents.
+// lock of its parent, never the other way around. No lock is held while the system is asked, because the system adds
+// its faces to the set. The stamp of a set comes from one counter for the process, taken at each change. The version of
+// a set is the latest of its own stamp and the stamps of its parents.
 
 #include "pr/font_set.h"
 
@@ -123,6 +124,22 @@ struct Alias {
     PrRawString family;
 };
 
+// A family that text falls back to (PrFontFallbackFamily), with its name copied.
+struct FontFallback {
+    PrRawString family;
+    PrLocale locale;
+    PrFontGeneric generic;
+    bool privateUse;
+    bool system;
+};
+
+// A fallback question that a set asked its system (prFontSetRequestFallback).
+struct FallbackQuestion {
+    PrRawString text;
+    PrLocale locale;
+    PrFontGeneric generic;
+};
+
 // A face that a match gives. Its ranges start at `rangeStart` in the ranges of the match.
 struct MatchedFace {
     PrFontFace face;                            // with null ranges; the match gives them
@@ -147,9 +164,7 @@ struct FontSet {
     PrRawString defaultName;                   // the default family if it is a name, with defaultSet
     PrFontGeneric defaultGeneric;              // the default family if it is a generic
     bool defaultSet;
-    RawArray<PrRawString> fallback;           // the families that text falls back to, in order
-    RawArray<PrLocale> fallbackLocales;       // for each fallback family
-    RawArray<PrFontGeneric> fallbackGenerics; // for each fallback family
+    RawArray<FontFallback> fallback;          // the families that text falls back to, in order
     RawArray<uint64_t> requests;              // the pending faces requested since the last take
     uint64_t nextRank;                        // the rank of the next face added, or the next face ordered
     uint64_t nextFaceId;                      // the id of the next face added
@@ -163,6 +178,13 @@ struct FontSet {
 
     // The number of requests, which a take reads without the lock to return at once if there are none.
     Atomic<uint32_t> requestCount;
+
+    // The system that the set asks (prFontSetSetSystem), and the questions that the set has asked it, so that it asks
+    // each once: families by name, generic families, and clusters to fall back for.
+    PrFontSystem* PR_NULLABLE system;
+    RawArray<PrRawString> systemFamilies;
+    bool systemGenerics[PrFontGeneric_Count];
+    RawArray<FallbackQuestion> systemFallback;
 };
 
 // The counter that the stamp of every set is taken from.
@@ -626,6 +648,13 @@ bool definesFamily(const FontSet* set, PrStringView family) {
     return false;
 }
 
+// Returns the set whose fallback families a set falls back to: the outermost of it and its parents.
+const FontSet* fallbackSet(const FontSet* set) {
+    while (set->parent != nullptr)
+        set = set->parent;
+    return set;
+}
+
 // Returns the set, among `set` and its parents, whose faces are those of `family`, or null if none has any.
 FontSet* PR_NULLABLE definingSet(FontSet* set, PrStringView family) {
     for (FontSet* at = set; at != nullptr; at = at->parent) {
@@ -657,8 +686,9 @@ PrStringView aliasOf(const FontSet* set, PrStringView name) {
 }
 
 // Returns the family that the generic family stands for in the set or its parents, the nearest binding first, or the
-// empty view.
+// empty view. Where none binds it, the outermost set binds the family that its system gives, asked once.
 PrStringView genericOf(const FontSet* set, PrFontGeneric generic) {
+    const FontSet* root = set;
     for (const FontSet* at = set; at != nullptr; at = at->parent) {
         prMutexLock(&at->lock);
         bool bound = !prRawStringIsNull(&at->generics[generic]);
@@ -666,8 +696,41 @@ PrStringView genericOf(const FontSet* set, PrFontGeneric generic) {
         prMutexUnlock(&at->lock);
         if (bound)
             return family;
+        root = at;
     }
-    return PrStringView{};
+    FontSet* asked = const_cast<FontSet*>(root);
+    prMutexLock(&asked->lock);
+    PrFontSystem* PR_NULLABLE system = asked->systemGenerics[generic] ? nullptr : asked->system;
+    asked->systemGenerics[generic] = true;
+    prMutexUnlock(&asked->lock);
+    if (system == nullptr)
+        return PrStringView{};
+    PrRawString given = system->genericFamily(system, generic);
+    prMutexLock(&asked->lock);
+    PrStringView family = {};
+    if (prRawStringIsNull(&asked->generics[generic]) && prRawStringView(&given).size != 0) {
+        asked->generics[generic] = given;
+        given = prRawStringNull();
+        bindingChanged(asked);
+    }
+    family = prRawStringView(&asked->generics[generic]);
+    prMutexUnlock(&asked->lock);
+    prRawStringReset(&given);
+    return family;
+}
+
+// Returns the system of `root` if it has one that it has not asked for `family`, and records the question. Returns null
+// otherwise.
+PrFontSystem* PR_NULLABLE systemToAsk(FontSet* root, PrStringView family) {
+    prMutexLock(&root->lock);
+    bool asked = root->system == nullptr;
+    for (uint32_t i = 0; i < root->systemFamilies.count && !asked; ++i)
+        asked = prAsciiEqualsFold(prRawStringView(&root->systemFamilies.data[i]), family);
+    if (!asked)
+        root->systemFamilies.push(prRawStringCopy(family));
+    PrFontSystem* PR_NULLABLE system = asked ? nullptr : root->system;
+    prMutexUnlock(&root->lock);
+    return system;
 }
 
 // Returns how `set` hints the faces that it matches: its own hinting, or the nearest parent's.
@@ -763,11 +826,11 @@ constexpr PrStringView kGenericNames[PrFontGeneric_Count] = {
     "nastaliq",
 };
 
-// Returns the set whose fallback families a set falls back to: the outermost of it and its parents.
-const FontSet* fallbackSet(const FontSet* set) {
-    while (set->parent != nullptr)
-        set = set->parent;
-    return set;
+// Empties the fallback families, keeping their storage.
+void fallbackClear(RawArray<FontFallback>& fallback) {
+    for (uint32_t i = 0; i < fallback.count; ++i)
+        prRawStringReset(&fallback.data[i].family);
+    fallback.clear();
 }
 
 constexpr PrStringView kSystemBackendNames[PrFontSystemBackend_Count] = {"default", "coretext", "directwrite"};
@@ -855,9 +918,12 @@ void prFontSetDestroy(PrFontSet* PR_NULLABLE set) {
     for (PrRawString& generic : set->generics)
         prRawStringReset(&generic);
     prRawStringReset(&set->defaultName);
-    stringsReset(&set->fallback);
-    set->fallbackLocales.reset();
-    set->fallbackGenerics.reset();
+    fallbackClear(set->fallback);
+    set->fallback.reset();
+    stringsReset(&set->systemFamilies);
+    for (uint32_t i = 0; i < set->systemFallback.count; ++i)
+        prRawStringReset(&set->systemFallback.data[i].text);
+    set->systemFallback.reset();
     set->requests.reset();
     set->instances.reset();
     set->faces.reset();
@@ -959,16 +1025,69 @@ bool prFontSystemBackendIsBuilt(PrFontSystemBackend backend) {
     return false;
 }
 
-uint32_t prFontSystemInstall(PrFontSystemBackend backend, PrFontSet* set) {
+PrFontSystem* PR_NULLABLE prFontSystemCreate(PrFontSystemBackend backend) {
     switch (backend == PrFontSystemBackend_Default ? kSystemBuilt[0] : backend) {
 #if defined(PR_FONT_HAS_CORETEXT)
-        case PrFontSystemBackend_CoreText: return prFontCoreTextInstall(set);
+        case PrFontSystemBackend_CoreText: return prFontCoreTextCreate();
 #endif
 #if defined(PR_FONT_HAS_DIRECTWRITE)
-        case PrFontSystemBackend_DirectWrite: return prFontDirectWriteInstall(set);
+        case PrFontSystemBackend_DirectWrite: return prFontDirectWriteCreate();
 #endif
-        default: (void)set; return 0;
+        default: return nullptr;
     }
+}
+
+void prFontSystemDestroy(PrFontSystem* PR_NULLABLE system) {
+    if (system != nullptr && system->destroy != nullptr)
+        system->destroy(system);
+}
+
+void prFontSetSetSystem(PrFontSet* set, PrFontSystem* PR_NULLABLE system) {
+    prMutexLock(&set->lock);
+    set->system = system;
+    stringsReset(&set->systemFamilies);
+    for (bool& asked : set->systemGenerics)
+        asked = false;
+    for (uint32_t i = 0; i < set->systemFallback.count; ++i)
+        prRawStringReset(&set->systemFallback.data[i].text);
+    set->systemFallback.clear();
+    bindingChanged(set);
+    prMutexUnlock(&set->lock);
+}
+
+bool prFontSetRequestFallback(PrFontSet* set, PrStringView text, PrLocale locale, PrFontGeneric generic) {
+    PR_ASSERT(generic < PrFontGeneric_Count);
+    FontSet* root = const_cast<FontSet*>(fallbackSet(set));
+    prMutexLock(&root->lock);
+    bool asked = root->system == nullptr;
+    for (uint32_t i = 0; i < root->systemFallback.count && !asked; ++i) {
+        const FallbackQuestion& question = root->systemFallback.data[i];
+        asked = question.locale == locale && question.generic == generic && prRawStringView(&question.text) == text;
+    }
+    if (!asked)
+        root->systemFallback.push(FallbackQuestion{prRawStringCopy(text), locale, generic});
+    PrFontSystem* PR_NULLABLE system = root->system;
+    prMutexUnlock(&root->lock);
+    if (asked)
+        return false;
+    PrRawString family = system->addFallback(system, static_cast<PrFontSet*>(root), text, locale, generic);
+    if (prRawStringView(&family).size == 0) {
+        prRawStringReset(&family);
+        return false;
+    }
+    prMutexLock(&root->lock);
+    bool known = false;
+    for (uint32_t i = 0; i < root->fallback.count && !known; ++i)
+        known = root->fallback.data[i].locale == locale &&
+            prAsciiEqualsFold(prRawStringView(&root->fallback.data[i].family), prRawStringView(&family));
+    if (!known) {
+        root->fallback.push(FontFallback{.family = family, .locale = locale, .generic = generic, .system = true});
+        family = prRawStringNull();
+        bindingChanged(root);
+    }
+    prMutexUnlock(&root->lock);
+    prRawStringReset(&family);
+    return !known;
 }
 
 void prFontSetAddPending(PrFontSet* set, const PrFontFaceDescriptor* descriptor, uint64_t key) {
@@ -1185,13 +1304,16 @@ PrFontHinting prFontSetHinting(const PrFontSet* set, PrFontHinter* PR_NULLABLE* 
 
 void prFontSetSetFallbackFamilies(PrFontSet* set, const PrFontFallbackFamily* PR_NULLABLE families, uint32_t count) {
     prMutexLock(&set->lock);
-    stringsClear(&set->fallback);
-    set->fallbackLocales.clear();
-    set->fallbackGenerics.clear();
+    fallbackClear(set->fallback);
     for (uint32_t i = 0; i < count; ++i) {
-        set->fallback.push(prRawStringCopy(families[i].family));
-        set->fallbackLocales.push(families[i].locale);
-        set->fallbackGenerics.push(families[i].generic);
+        const PrFontFallbackFamily& family = families[i];
+        set->fallback.push(FontFallback{
+            .family = prRawStringCopy(family.family),
+            .locale = family.locale,
+            .generic = family.generic,
+            .privateUse = family.privateUse,
+            .system = family.system,
+        });
     }
     bindingChanged(set);
     prMutexUnlock(&set->lock);
@@ -1209,9 +1331,13 @@ PrFontFallbackFamily prFontSetFallbackFamily(const PrFontSet* set, uint32_t inde
     const FontSet* root = fallbackSet(set);
     prMutexLock(&root->lock);
     PR_ASSERT(index < root->fallback.count);
+    const FontFallback& entry = root->fallback.data[index];
     PrFontFallbackFamily family = {
-        prRawStringView(&root->fallback.data[index]), root->fallbackLocales.data[index],
-        root->fallbackGenerics.data[index],
+        .family = prRawStringView(&entry.family),
+        .locale = entry.locale,
+        .generic = entry.generic,
+        .privateUse = entry.privateUse,
+        .system = entry.system,
     };
     prMutexUnlock(&root->lock);
     return family;
@@ -1285,13 +1411,19 @@ void prFontSetMatch(PrFontSet* set, PrFontFamily family, const PrFontStyle* styl
     FontSet* defining = definingSet(set, name);
     if (defining == nullptr) {
         PrStringView aliased = aliasOf(set, name);
-        if (aliased.size == 0)
-            return;
-        name = aliased;
-        defining = definingSet(set, name);
-        if (defining == nullptr)
-            return;
+        if (aliased.size != 0) {
+            name = aliased;
+            defining = definingSet(set, name);
+        }
     }
+    if (defining == nullptr) {
+        PrFontSet* root = static_cast<PrFontSet*>(const_cast<FontSet*>(fallbackSet(set)));
+        PrFontSystem* PR_NULLABLE system = systemToAsk(root, name);
+        if (system != nullptr && system->addFamily(system, root, name))
+            defining = definingSet(set, name);
+    }
+    if (defining == nullptr)
+        return;
     matchIn(defining, style, name, hintingOf(set), *out);
 }
 
@@ -1299,7 +1431,7 @@ void prFontSetMatchFallback(PrFontSet* set, uint32_t index, const PrFontStyle* s
     FontSet* root = const_cast<FontSet*>(fallbackSet(set));
     prMutexLock(&root->lock);
     PR_ASSERT(index < root->fallback.count);
-    PrRawString name = prRawStringClone(&root->fallback.data[index]);
+    PrRawString name = prRawStringClone(&root->fallback.data[index].family);
     prMutexUnlock(&root->lock);
     if (definingSet(root, prRawStringView(&name)) == root)
         matchIn(root, style, prRawStringView(&name), hintingOf(set), *out);

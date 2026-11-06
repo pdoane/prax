@@ -175,6 +175,7 @@ struct Browser {
     // What every page shares: text, images, media, storage, the network, the agent whose event loop runs the pages, and
     // the script engine of the agent.
     PrFontSet* PR_NULLABLE fonts = nullptr;
+    PrFontSystem* PR_NULLABLE system = nullptr;
     PrTextShaper* PR_NULLABLE shaper = nullptr;
     PrTextFont* PR_NULLABLE font = nullptr;
     PrCompressCodec* PR_NULLABLE compress = nullptr;

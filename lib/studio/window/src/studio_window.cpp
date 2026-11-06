@@ -7,7 +7,6 @@
 #include "pr/draw_display.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
-#include "pr/font_bundle.h"
 #include "pr/gpu.h"
 #include "pr/kit_surface.h"
 #include "pr/kit_theme.h"
@@ -278,12 +277,7 @@ PrStatus prStudioWindowRun(const PrStudioWindowDesc* desc) {
     w->handle = w;
     w->desc = *desc;
     w->variant = PrKitThemeVariant_Dark;
-    w->fonts = prFontSetCreate(nullptr);
-    if (prFontBundleInstall(w->fonts, PrFontBundle_Noto, desc->fontDirectory) == 0) {
-        prFontSetDestroy(w->fonts);
-        prMemoryFree(w);
-        return PrStatus_NotFound;
-    }
+    w->fonts = desc->fonts;
     w->shaper = prTextShaperCreate(PrTextShaperBackend_Default);
     PrLayoutTreeDesc treeDesc{.shaper = w->shaper};
     w->tree = prLayoutTreeCreate(&treeDesc);
@@ -313,7 +307,6 @@ PrStatus prStudioWindowRun(const PrStudioWindowDesc* desc) {
     prUiDestroy(w->ui);
     prLayoutTreeDestroy(w->tree);
     prTextShaperDestroy(w->shaper);
-    prFontSetDestroy(w->fonts);
     prMemoryFree(w);
     return status;
 }

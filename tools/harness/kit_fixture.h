@@ -1,9 +1,11 @@
-// The fixture for the tests of Studio Kit and of the libraries over it: a kit in Studio's dark theme, for a context and
-// a tree that set text in the Noto stack, and frames that declare a root surface and the test's widgets.
+// The fixture for the tests of Studio Kit and of the libraries over it. It holds a kit in Studio's dark theme, for a
+// context and a tree that set text in the font stack of Studio's applications: Noto and the Nerd Fonts symbols. Its
+// frames declare a root surface and the test's widgets.
 
 #pragma once
 
 #include "pr/callback.h"
+#include "pr/count_of.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_list.h"
 #include "pr/font_bundle.h"
@@ -22,6 +24,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -38,6 +41,12 @@ inline bool kitVerified(PrLayoutTree* tree) {
     }
     return same;
 }
+
+// The fonts of a fixture's font set: the bundles that it installs, and the font system that it queries, if any.
+struct KitFonts {
+    std::vector<PrFontBundle> bundles{PrFontBundle_Complete, PrFontBundle_NerdFontSymbols};
+    PrFontSystem* PR_NULLABLE system = nullptr;
+};
 
 // A kit with a context and tree of its own. Each frame declares the root and then runs the test's build.
 struct KitFixture {
@@ -57,9 +66,10 @@ struct KitFixture {
     PrUiEditFn PR_NULLABLE edit = nullptr;
     void* PR_NULLABLE editContext = nullptr;
 
-    KitFixture() {
+    explicit KitFixture(const KitFonts& kitFonts = KitFonts{}) {
         fonts = prFontSetCreate(nullptr);
-        prFontBundleInstall(fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR);
+        prFontBundleInstall(fonts, kitFonts.bundles.data(), uint32_t(kitFonts.bundles.size()), PR_FONT_BUNDLE_DIR);
+        prFontSetSetSystem(fonts, kitFonts.system);
         shaper = prTextHarfBuzzCreate();
         PrLayoutTreeDesc desc{.shaper = shaper, .targetPixelRatio = 1};
         tree = prLayoutTreeCreate(&desc);

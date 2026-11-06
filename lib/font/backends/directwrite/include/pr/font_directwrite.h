@@ -1,5 +1,5 @@
-// The DirectWrite backend of lib/font: the system's fonts, as the files that DirectWrite's set of the system's fonts
-// holds.
+// The DirectWrite backend of lib/font: the system's fonts, as DirectWrite finds them by family name and by its
+// fallback.
 
 #pragma once
 
@@ -12,9 +12,8 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Adds the families of the fonts in DirectWrite's set of the system's fonts to `set`, each by the file that holds it,
-// without reading the files (prFontSetAddFileFamily), and returns how many it added.
-uint32_t prFontDirectWriteInstall(PrFontSet* set);
+// Creates the DirectWrite system, or returns null if DirectWrite is not available.
+PrFontSystem* PR_NULLABLE prFontDirectWriteCreate(void);
 
 #if defined(__cplusplus)
 }

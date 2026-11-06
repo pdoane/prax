@@ -13,6 +13,9 @@ int prTestUnicodeCApi(void) {
     PrUnicodeLineBreakFlags flags = 0;
     PrStringView text = PR_SV("ab");
     uint32_t folded[3];
+    PrUnicodeGraphemeState cluster = prUnicodeGraphemeStateBegin('e');
+    if (!prUnicodeGraphemeStatePush(&cluster, 0x301))
+        return 1;
     return prUnicodeBidiClass('a') != PrUnicodeBidiClass_L ||
         prUnicodeLineBreakClass(' ', &flags) != PrUnicodeLineBreakClass_SP || prUnicodeGraphemeNext(text, 0) != 1 ||
         prUnicodeScript('a') != PrScript_Latn || kPrUnicodeBidiMaxDepth != 125 ||

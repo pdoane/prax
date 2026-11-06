@@ -19,6 +19,7 @@
 #include "pr/dom.h"
 #include "pr/draw_list.h"
 #include "pr/float.h"
+#include "pr/font_bundle.h"
 #include "pr/html.h"
 #include "pr/html_markdown.h"
 #include "pr/html_page.h"
@@ -813,10 +814,17 @@ bool laidOut(void* context, PrStudioWindow*) {
 int main() {
     prCrashHandler();
     static Example e;
+    PrFontSet* fonts = prFontSetCreate(nullptr);
+    const PrFontBundle bundles[] = {PrFontBundle_Complete};
+    if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles)), PR_FONT_BUNDLE_DIR) == 0) {
+        printError("incremental: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
+        prFontSetDestroy(fonts);
+        return 1;
+    }
     PrStudioWindowDesc desc{
         .title = "Prax Incremental",
         .extent = {1280, 860},
-        .fontDirectory = PR_FONT_BUNDLE_DIR,
+        .fonts = fonts,
         .open = open,
         .theme = [](void*, PrStudioWindow*, const PrAppUserPreferences*) -> PrKitThemeVariant {
             return PrKitThemeVariant_Dark;
@@ -835,9 +843,8 @@ int main() {
         .context = &e,
     };
     PrStatus status = prStudioWindowRun(&desc);
-    if (status == PrStatus_NotFound)
-        printError("incremental: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
-    else if (status == PrStatus_NotSupported)
+    prFontSetDestroy(fonts);
+    if (status == PrStatus_NotSupported)
         printError("incremental: no GPU device to render with\n");
     return status == PrStatus_Ok ? 0 : 1;
 }

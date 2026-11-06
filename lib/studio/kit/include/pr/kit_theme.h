@@ -121,7 +121,7 @@ typedef uint8_t PrKitTextRole;
 // The face and size of a text role, and the tone and wrap that text of the role takes when its style leaves them Auto.
 // Letter spacing comes from the design, and the kit applies it once layout spaces letters.
 typedef struct PrKitType {
-    bool mono;                      // the theme's monospaced family rather than its sans
+    bool mono;                      // the theme's monospaced family rather than its ui family
     bool italic;
     PrKitTone tone;                 // Auto is the primary tone
     PrKitWrap wrap;                 // Auto wraps
@@ -197,17 +197,18 @@ typedef struct PrKitLook {
 // ---------------------------------------------------------------------------------------------------------------------
 // Themes
 
-// What a kit draws with. `fonts` must outlive every kit that the theme is set on. An empty family name uses the set's
-// generic family: sans-serif for `sans`, and monospace for `mono`.
+// What a kit draws with. `fonts` must outlive every kit that the theme is set on. Text is set in the family `ui`, or in
+// `mono` if its role's type is monospaced (PrKitType::mono).
 typedef struct PrKitTheme {
     PrKitPalette palette;
     PrKitType types[PrKitTextRole_Count];   // by PrKitTextRole
     PrFontSet* PR_NULLABLE fonts;
-    PrStringView sans;
-    PrStringView mono;
+    PrFontFamily ui;
+    PrFontFamily mono;
 } PrKitTheme;
 
-// Returns Studio's theme of `variant`, in the generic families of `fonts`.
+// Returns Studio's theme of `variant`, which uses the generic families of `fonts`: system-ui for `ui`, and monospace
+// for `mono`.
 PrKitTheme prKitThemeStudio(PrKitThemeVariant variant, PrFontSet* PR_NULLABLE fonts);
 
 // ---------------------------------------------------------------------------------------------------------------------

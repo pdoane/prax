@@ -39,6 +39,13 @@ bool split(PrStringView text, char separator, PrStringView* first, PrStringView*
     return false;
 }
 
+// Returns the font system that the font sets of every suite query, or null if there is none. It is created once and
+// lives for the process.
+PrFontSystem* PR_NULLABLE systemFonts() {
+    static PrFontSystem* PR_NULLABLE system = prFontSystemCreate(PrFontSystemBackend_Default);
+    return system;
+}
+
 // Reads a line of settings into `fonts` and `background`.
 bool readLine(PrFontSet* fonts, PrColor* background, PrStringView line, PrStringView root) {
     for (size_t i = 0; i < line.size; ++i)
@@ -48,7 +55,7 @@ bool readLine(PrFontSet* fonts, PrColor* background, PrStringView line, PrString
     if (line.size == 0)
         return true;
     if (line == "system") {
-        prFontSystemInstall(PrFontSystemBackend_Default, fonts);
+        prFontSetSetSystem(fonts, systemFonts());
         return true;
     }
     PrStringView setting;

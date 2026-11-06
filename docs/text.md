@@ -73,13 +73,19 @@ that a fully hinted font advances as hinted, and shapes it again when the target
 
 - **Installed fonts come from the host.** `prFontSetAddFile` adds a file's faces, reading their tables but creating no
   font. `prFontSetAddFileFamily` adds a family by a file that holds it without reading the file, which a match reads
-  when it first asks for the family. The backends of `lib/font` add the system's fonts that way, by the families that
-  CoreText (`prFontCoreTextInstall`) and DirectWrite (`prFontDirectWriteInstall`) know them by, so the files of the
-  families that no text asks for are never read. `lib/font_bundle` adds the fonts that a build fetches. `lib/font`
-  itself calls no platform API.
+  when it first asks for the family. `lib/font_bundle` adds the fonts that a build fetches. `lib/font` itself calls no
+  platform API.
+- **The system's fonts are asked for, not listed.** A host gives the root set a `PrFontSystem`
+  (`prFontSetSetSystem`), which is the CoreText or DirectWrite backend. The set asks the system only for what its own
+  faces and bindings lack, when text first needs it. It asks for the faces of a family that no set defines, for the
+  family of a generic that no set binds, and for a family to set a cluster that no fallback family serves
+  (`prFontSetRequestFallback`). A family from the last question joins the fallback families. The set asks each
+  question once. The system answers with files, and the set reads a file only when a match first asks for its family.
+  A host that bundles only a few fonts can therefore set any text in the system's fonts without enumerating them.
 - **Families are names or generics.** An entry of a family list (`PrFontFamily`) is a name or a `PrFontGeneric`. A
-  generic is never matched as a name. The set binds each generic to a family (`prFontSetSetGeneric`), and a generic
-  bound to nothing matches nothing, so the list continues. The default family may be either.
+  generic is never matched as a name. The set binds each generic to a family (`prFontSetSetGeneric`). If no set binds a
+  generic, the root set's system gives its family. A generic bound to nothing matches nothing, and the list continues.
+  The default family may be either.
 - **Sets are layered.** A set may have a parent. A family that the set defines is matched in that set alone, whether
   its faces are loaded or not, and any other family is matched in the parent. A document's `@font-face` faces are a
   set over the host's set, so they shadow the installed families with the same names, and a family whose faces have
@@ -114,13 +120,20 @@ outermost set (`prFontSetMatchFallback`).
 ## Font bundles (`pr/font_bundle.h`)
 
 A font bundle is a set of bindings that an application installs into its font set: the generic families, other names
-that the bundle gives its fonts, and the families to fall back to, with the locales that each is made for. Every bundle
-falls back to the same families: Noto for the scripts in modern use, symbols, math and color emoji, and Last Resort
-last.
+that the bundle gives its fonts, and the families to fall back to, with the locales that each is made for. Each bundle
+uses only its own files. An application installs several bundles in order, and a later bundle serves what the earlier
+ones lack.
 
-- `Noto` names serif, sans-serif and monospace in Noto, and math in New Computer Modern Math.
+- `Complete` names serif, sans-serif, system-ui and monospace in Noto, and math in New Computer Modern Math. It falls
+  back to Noto for the scripts in modern use, symbols, math and color emoji, and to Last Resort last.
+- `NotoMono` names monospace in Noto Sans Mono and has no fallback families, for an application that takes the rest
+  from the system.
 - `Standard14` substitutes for PDF's standard 14 fonts: Tinos, Arimo and Cousine for Times, Helvetica and Courier,
   with their metrics, also bound as the generic families; and LeviSymbol and Levibats for Symbol and ZapfDingbats.
+- `Plex` names the generic families in IBM Plex, and falls back to IBM Plex's families for the scripts that they
+  cover.
+- `NerdFontSymbols` names no family. Its only fallback family is Symbols Nerd Font Mono, which serves private-use code
+  points with the Nerd Fonts icons that shell prompts and file listings use. It goes after a bundle of text faces.
 - The library knows its files by name. `lib/font_bundle/font_bundle.cmake` pins each file by URL and SHA-256, and
   `pr_font_bundle_fetch` fetches them with FetchContent into a directory. The application passes that directory, or
   ships its own copy of the files. The engine's build fetches every bundle into `font_bundle` in its build directory.
@@ -137,7 +150,9 @@ counted, so a producer makes it once and names it wherever its text is set. Layo
 - A cluster takes the first requested face that covers all of it, in the order for its presentation: color faces come
   first for a cluster with emoji presentation, and last for any other cluster. Then come the fallback families, those
   that declare the cluster's script first, each ranked by how well its locale suits the text's and whether its generic
-  matches the style's. A cluster with a private-use code point or a control character does not fall back.
+  matches the style's. A cluster with a control character does not fall back. A cluster with a private-use code point
+  falls back only to a family that serves private-use code points. The glyphs of such a family follow a convention
+  that text relies on without naming the family, as the Nerd Fonts icons do.
 - A cluster with a variation sequence first looks, through the requested faces and then the fallback families, for a
   face that lists the sequence, and takes the first face with its base character only if no face lists it
   (css-fonts-4/#cluster-matching). The emoji presentation selectors choose by presentation instead.

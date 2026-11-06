@@ -3,6 +3,8 @@
 // main() is the composition root: the gallery's model, whose choice of theme the window's kit draws in.
 
 #include "pr/assert.h"
+#include "pr/count_of.h"
+#include "pr/font_bundle.h"
 #include "pr/print.h"
 #include "pr/studio_window.h"
 
@@ -31,10 +33,17 @@ PrKitThemeVariant themeOf(void* context, PrStudioWindow*, const PrAppUserPrefere
 int main() {
     prCrashHandler();
     static GalleryState state;
+    PrFontSet* fonts = prFontSetCreate(nullptr);
+    const PrFontBundle bundles[] = {PrFontBundle_Complete};
+    if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles)), PR_FONT_BUNDLE_DIR) == 0) {
+        printError("studio_gallery: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
+        prFontSetDestroy(fonts);
+        return 1;
+    }
     PrStudioWindowDesc desc{
         .title = "Studio Kit Gallery",
         .extent = {1440, 900},
-        .fontDirectory = PR_FONT_BUNDLE_DIR,
+        .fonts = fonts,
         .theme = themeOf,
         .build = [](void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
             buildGallery(prStudioWindowKit(window), root, stateOf(context));
@@ -42,9 +51,8 @@ int main() {
         .context = &state,
     };
     PrStatus status = prStudioWindowRun(&desc);
-    if (status == PrStatus_NotFound)
-        printError("studio_gallery: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
-    else if (status == PrStatus_NotSupported)
+    prFontSetDestroy(fonts);
+    if (status == PrStatus_NotSupported)
         printError("studio_gallery: no GPU device to render with\n");
     return status == PrStatus_Ok ? 0 : 1;
 }

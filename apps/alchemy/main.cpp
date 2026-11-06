@@ -9,6 +9,7 @@
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/callback.h"
+#include "pr/count_of.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
@@ -208,10 +209,14 @@ int main() {
     galleryOpen(a.state.gallery, galleryDirectory());
     viewInit(a.view);
 
+    // Alchemy uses only the system's fonts.
+    PrFontSystem* system = prFontSystemCreate(PrFontSystemBackend_Default);
+    PrFontSet* fonts = prFontSetCreate(nullptr);
+    prFontSetSetSystem(fonts, system);
     PrStudioWindowDesc desc{
         .title = "Alchemy",
         .extent = {1500, 940},
-        .fontDirectory = PR_FONT_BUNDLE_DIR,
+        .fonts = fonts,
         .open = open,
         .beginFrame = beginFrame,
         .event = event,
@@ -224,9 +229,9 @@ int main() {
         .context = &a,
     };
     PrStatus status = prStudioWindowRun(&desc);
-    if (status == PrStatus_NotFound)
-        printError("alchemy: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
-    else if (status == PrStatus_NotSupported)
+    prFontSetDestroy(fonts);
+    prFontSystemDestroy(system);
+    if (status == PrStatus_NotSupported)
         printError("alchemy: no GPU device to render with\n");
     return status == PrStatus_Ok ? 0 : 1;
 }

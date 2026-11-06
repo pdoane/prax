@@ -4,6 +4,8 @@
 // main() is the composition root: the editor's model, and the HUD over the window's context and fonts.
 
 #include "pr/assert.h"
+#include "pr/count_of.h"
+#include "pr/font_bundle.h"
 #include "pr/print.h"
 #include "pr/studio_window.h"
 
@@ -25,10 +27,17 @@ int main() {
     static EditorState state;
     state.loadLevel();
     String title = format("Editor: {}", state.levelName);
+    PrFontSet* fonts = prFontSetCreate(nullptr);
+    const PrFontBundle bundles[] = {PrFontBundle_Complete};
+    if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles)), PR_FONT_BUNDLE_DIR) == 0) {
+        printError("editor: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
+        prFontSetDestroy(fonts);
+        return 1;
+    }
     PrStudioWindowDesc desc{
         .title = title,
         .extent = {1440, 900},
-        .fontDirectory = PR_FONT_BUNDLE_DIR,
+        .fonts = fonts,
         // The HUD lives as long as the context that its records belong to.
         .open = [](void* context, PrStudioWindow* window) {
             stateOf(context).hud = hudCreate(prStudioWindowUi(window), prStudioWindowFonts(window));
@@ -41,9 +50,8 @@ int main() {
         .context = &state,
     };
     PrStatus status = prStudioWindowRun(&desc);
-    if (status == PrStatus_NotFound)
-        printError("editor: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
-    else if (status == PrStatus_NotSupported)
+    prFontSetDestroy(fonts);
+    if (status == PrStatus_NotSupported)
         printError("editor: no GPU device to render with\n");
     return status == PrStatus_Ok ? 0 : 1;
 }

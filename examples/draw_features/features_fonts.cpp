@@ -26,6 +26,7 @@ constexpr uint32_t kWght = PR_FONT_TAG('w', 'g', 'h', 't');
 
 PrFontSet* fileSet;
 PrFontSet* systemSet;
+PrFontSystem* fontSystem;
 const PrFont* adjusted;
 Array<const PrFont*> matchedFonts;      // a reference to each font that a match returned
 PrDrawGlyphDecoder* svgDecoder;         // the drawings' own decoder, created on first use
@@ -67,7 +68,8 @@ PrFontSet* fontsOfFiles() {
 PrFontSet* fontsOfSystem() {
     if (systemSet == nullptr) {
         systemSet = prFontSetCreate(nullptr);
-        prFontSystemInstall(PrFontSystemBackend_Default, systemSet);
+        fontSystem = prFontSystemCreate(PrFontSystemBackend_Default);
+        prFontSetSetSystem(systemSet, fontSystem);
     }
     return systemSet;
 }
@@ -1206,6 +1208,8 @@ void releaseDrawingFonts() {
     fileSet = nullptr;
     prFontSetDestroy(systemSet);
     systemSet = nullptr;
+    prFontSystemDestroy(fontSystem);
+    fontSystem = nullptr;
     for (const PrFont*& face : collectionFaces) {
         prFontRelease(face);
         face = nullptr;

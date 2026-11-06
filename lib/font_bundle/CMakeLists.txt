@@ -8,5 +8,6 @@ if (PR_DEVELOP)
     pr_module_tests(font_bundle
         tests/test_font_bundle.cpp
     )
+    target_link_libraries(font_bundle_tests PRIVATE prax::locale prax::text)
     target_compile_definitions(font_bundle_tests PRIVATE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
 endif()

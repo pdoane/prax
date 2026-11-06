@@ -42,12 +42,39 @@ TEST_CASE("grapheme clusters break as every case of GraphemeBreakTest.txt says")
             at = prUnicodeGraphemeNext(view, at);
             actual.push_back(at);
         }
+        // Segmenting one code point at a time with the state breaks at the same offsets.
+        std::vector<size_t> pushed;
+        PrUnicodeGraphemeState state{};
+        for (size_t at = 0; at < text.size();) {
+            uint32_t codePoint = 0;
+            uint32_t length = prUtf8Decode(view, at, &codePoint);
+            if (at == 0)
+                state = prUnicodeGraphemeStateBegin(codePoint);
+            else if (!prUnicodeGraphemeStatePush(&state, codePoint))
+                pushed.push_back(at);
+            at += length;
+        }
+        pushed.push_back(text.size());
         INFO(data);
         CHECK(actual == expected);
+        CHECK(pushed == expected);
         ++cases;
     }
     std::fclose(file);
     CHECK(cases > 700);
+}
+
+TEST_CASE("a printable ASCII character begins a cluster in the state of all zeros") {
+    // A terminal relies on this to begin a run of ASCII clusters without reading their properties.
+    for (uint32_t codePoint = 0x20; codePoint < 0x7f; ++codePoint) {
+        PrUnicodeGraphemeState state = prUnicodeGraphemeStateBegin(codePoint);
+        INFO(codePoint);
+        CHECK(state.regional == 0);
+        CHECK(state.before == PrUnicodeGraphemeBreak_Other);
+        CHECK(!state.pictographic);
+        CHECK(!state.pictographicZwj);
+        CHECK(state.conjunct == 0);
+    }
 }
 
 TEST_CASE("word segments break as every case of WordBreakTest.txt says") {
@@ -123,6 +150,28 @@ TEST_CASE("character properties read from the database") {
         CHECK((prUnicodeFlags(selector) & PrUnicodeFlag_VariationSelector) != 0);
     for (uint32_t other : {0x180Eu, 0xFE10u, 0xE00FFu, 0xE01F0u, uint32_t('A')})
         CHECK((prUnicodeFlags(other) & PrUnicodeFlag_VariationSelector) == 0);
+    // Wide (CJK, an emoji presentation) and Fullwidth (a fullwidth A) are wide; Halfwidth, Ambiguous and Neutral are
+    // not.
+    for (uint32_t wide : {0x4E2Du, 0x1F600u, 0xFF21u})
+        CHECK((prUnicodeFlags(wide) & PrUnicodeFlag_EastAsianWide) != 0);
+    for (uint32_t narrow : {0xFF61u, 0x00A1u, uint32_t('A'), 0x2764u})
+        CHECK((prUnicodeFlags(narrow) & PrUnicodeFlag_EastAsianWide) == 0);
+    // An arrow is used with no script, a Latin letter with its own, and the danda with each script that writes it.
+    PrScript scripts[kPrUnicodeMaxScriptExtensions];
+    CHECK(prUnicodeScriptExtensions(0x2190, scripts) == 1);
+    CHECK(scripts[0] == PrScript_Zyyy);
+    CHECK(prUnicodeScriptExtensions('a', scripts) == 1);
+    CHECK(scripts[0] == PrScript_Latn);
+    uint32_t danda = prUnicodeScriptExtensions(0x0964, scripts);
+    CHECK(danda > 10);
+    bool bengali = false;
+    bool devanagari = false;
+    for (uint32_t i = 0; i < danda; ++i) {
+        bengali = bengali || scripts[i] == PrScript_Beng;
+        devanagari = devanagari || scripts[i] == PrScript_Deva;
+    }
+    CHECK(bengali);
+    CHECK(devanagari);
     uint32_t upper[3];
     CHECK(prUnicodeUppercase('q', upper) == 1);
     CHECK(upper[0] == 'Q');

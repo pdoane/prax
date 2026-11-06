@@ -1,11 +1,11 @@
 // Text fonts: the fonts that text is set in, and the face that sets each grapheme cluster.
 //
 // A text font is a family list and a style in a font set, at a size and for a locale. Its faces are those of the
-// families that the list names, then those of the default family of the set, matched at the style, and then the
-// fallback families of the set. It answers which face sets each grapheme cluster, and keeps the answer, so the same
-// text in the same text font uses the same faces wherever it is set. An answer is an index into a table of the fonts
-// that the text font has answered with. The table keeps its indices until a change of the set changes an answer
-// (prTextFontUpdate).
+// families that the list names, matched at the style, and then the fallback families of the set. If the list's families
+// have no face, as when the list names no family that the set has, the default family of the set takes their place. It
+// answers which face sets each grapheme cluster, and keeps the answer, so the same text in the same text font uses the
+// same faces wherever it is set. An answer is an index into a table of the fonts that the text font has answered with.
+// The table keeps its indices until a change of the set changes an answer (prTextFontUpdate).
 //
 // A text font is reference counted. One thread uses it at a time. Its references may be taken and released on any
 // thread.
@@ -32,7 +32,7 @@ typedef struct PrTextFont PrTextFont;
 // The description of a text font.
 typedef struct PrTextFontDesc {
     PrFontSet* set;                             // must outlive the text font
-    const PrFontFamily* PR_NULLABLE families;   // the first is preferred; the default family of the set follows them
+    const PrFontFamily* PR_NULLABLE families;   // the first is preferred
     uint32_t familyCount;
     PrFontStyle style;
     PrLocale locale;                            // the language of the text, which fallback reads; zero for none
@@ -55,16 +55,22 @@ PrLocale prTextFontLocale(const PrTextFont* font);
 
 // Matches the grapheme cluster `cluster`, whose script is `script` as itemization resolved it, to the face that sets
 // it, and returns the index of that face's font among the text font's matched fonts. The face is chosen as follows:
-// - The first face that serves the whole cluster, from the families that the list names and then the default family.
-//   Faces are tried in the order of the presentation of the cluster: faces flagged Emoji come first for a cluster with
-//   emoji presentation, and last for any other cluster. A face whose font has not loaded serves nothing. It is
-//   requested (prFontSetRequestLoad) if the search passes it and its ranges hold the first code point of the cluster.
-// - Otherwise, the first face of the fallback families of the set that serves the cluster and whose font declares its
-//   script, and then the first face that serves it at all. In each search, color faces come first for an emoji, and
-//   then the families that suit the text font best: those made for its locale, the closest first, and then those drawn
-//   in its generic family. That generic family is the first that its list names, or else that of the default family.
-//   A face from the fallback families joins the faces of the text font. A cluster with a private-use code point or a
-//   control character uses no fallback family.
+// - The first face that serves the whole cluster, from the families that the list names, or from the default family
+//   if those have no face. Faces are tried in the order of the presentation of the cluster: faces flagged Emoji come
+//   first for a cluster with emoji presentation, and last for any other cluster. A face whose font has not loaded
+//   serves nothing. It is requested (prFontSetRequestLoad) if the search passes it and its ranges hold the first code
+//   point of the cluster.
+// - Otherwise, the first face of the set's fallback families that serves the cluster and whose font declares the
+//   cluster's script, and then the first face that serves it at all. A cluster has a script only if one of its
+//   characters is used with that script (Script_Extensions, UAX #24). Itemization gives a character of no script, such
+//   as an arrow, the script of the surrounding text. A cluster of such characters has no script of its own, so a face
+//   of any script may set it. In each search, color faces come first for an emoji. Then come the families that suit
+//   the text font best: those made for its locale, the closest first, and then those drawn in its generic family. That
+//   generic family is the first that the list names, or else that of the default family. If no fallback family serves
+//   the cluster, the text font asks the set's system for one (prFontSetRequestFallback). A face from the fallback
+//   families joins the faces of the text font. A cluster with a control character uses no fallback family. A cluster
+//   with a private-use code point uses only the families that serve private-use code points (PrFontFallbackFamily),
+//   and does not ask the system.
 // - Otherwise, the face that serves its first code point, or the first available face (prTextFontFirst).
 //
 // A cluster that holds a variation sequence first goes through the first two steps with only the faces whose character

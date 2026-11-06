@@ -96,7 +96,7 @@ pr_library(studio_window INCLUDE window/include
 )
 target_link_libraries(pr_studio_window PUBLIC prax::app prax::color prax::draw prax::font prax::layout prax::studio_kit
                                               prax::text prax::ui
-                                       PRIVATE prax::core_cpp prax::font_bundle prax::gpu)
+                                       PRIVATE prax::core_cpp prax::gpu)
 
 if (PR_DEVELOP)
     pr_module_tests(studio_window

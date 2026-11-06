@@ -51,12 +51,14 @@ LINE_BREAK_FLAGS = {"InitialQuote": 0, "FinalQuote": 1, "EastAsian": 2, "Mark": 
 DATA_BANNER = gen_common.banner(__file__, UCD_URL + "auxiliary/GraphemeBreakProperty.txt",
                                 UCD_URL + "emoji/emoji-data.txt",
                                 UCD_URL + "DerivedCoreProperties.txt",
-                                UCD_URL + "Scripts.txt", UCD_URL + "PropertyValueAliases.txt",
+                                UCD_URL + "Scripts.txt", UCD_URL + "ScriptExtensions.txt",
+                                UCD_URL + "PropertyValueAliases.txt",
                                 UCD_URL + "extracted/DerivedJoiningType.txt",
                                 UCD_URL + "UnicodeData.txt", UCD_URL + "SpecialCasing.txt",
                                 UCD_URL + "VerticalOrientation.txt",
                                 UCD_URL + "extracted/DerivedGeneralCategory.txt",
-                                UCD_URL + "CaseFolding.txt", UCD_URL + "PropList.txt")
+                                UCD_URL + "CaseFolding.txt", UCD_URL + "PropList.txt",
+                                UCD_URL + "EastAsianWidth.txt")
 
 NORMALIZATION_BANNER = gen_common.banner(__file__, UCD_URL + "UnicodeData.txt", UCD_URL + "CompositionExclusions.txt")
 
@@ -86,7 +88,7 @@ EMOJI_FLAGS = {"Emoji": "PrUnicodeFlag_Emoji", "Emoji_Presentation": "PrUnicodeF
 FLAG_BITS = {"Emoji": 0, "Emoji_Presentation": 1, "Emoji_Modifier": 2, "Emoji_Modifier_Base": 3,
              "Emoji_Component": 4, "Extended_Pictographic": 5, "Lowercase": 6, "Uppercase": 7,
              "Default_Ignorable_Code_Point": 8, "Mark": 9, "Cased": 10, "Case_Ignorable": 11, "Soft_Dotted": 12,
-             "Variation_Selector": 13}
+             "Variation_Selector": 13, "East_Asian_Wide": 14}
 
 MAX_CODE_POINT = 0x10FFFF
 
@@ -712,6 +714,10 @@ def emit_data(path, ucd):
         if category in ("Mn", "Mc", "Me"):
             for code_point in range(first, last + 1):
                 flags[code_point] |= 1 << FLAG_BITS["Mark"]
+    for first, last, width in ranges(os.path.join(ucd, "EastAsianWidth.txt")):
+        if width in ("W", "F"):
+            for code_point in range(first, last + 1):
+                flags[code_point] |= 1 << FLAG_BITS["East_Asian_Wide"]
     codes = script_codes(os.path.join(ucd, "PropertyValueAliases.txt"))
     scripts = fill("Unknown", ranges(os.path.join(ucd, "Scripts.txt")))
     # The PrScript of each Script value: the position of its ISO 15924 code in the language generator's order.
@@ -719,6 +725,24 @@ def emit_data(path, ucd):
     missing = sorted({codes[name] for name in set(scripts)} - set(script_index))
     if missing:
         raise SystemExit("gen_unicode: scripts that PrScript does not name: %s" % missing)
+    # Script_Extensions. extension_sets holds each distinct set of scripts that the database lists. extension_of maps
+    # each code point to one more than the index of its set, or to zero if the code point has no Script_Extensions
+    # beyond its Script.
+    extension_sets = []
+    extension_of = [0] * (MAX_CODE_POINT + 1)
+    for first, last, value in ranges(os.path.join(ucd, "ScriptExtensions.txt")):
+        members = tuple(value.split())
+        unknown = sorted(set(members) - set(script_index))
+        if unknown:
+            raise SystemExit("gen_unicode: Script_Extensions scripts that PrScript does not name: %s" % unknown)
+        if members not in extension_sets:
+            extension_sets.append(members)
+        extension_of[first:last + 1] = [extension_sets.index(members) + 1] * (last - first + 1)
+    extension_starts = [0]
+    extension_scripts = []
+    for members in extension_sets:
+        extension_scripts.extend(script_index[code] for code in members)
+        extension_starts.append(len(extension_scripts))
     joining = fill("Non_Joining", ranges(os.path.join(ucd, "DerivedJoiningType.txt")))
     vertical = fill("R", ranges(os.path.join(ucd, "VerticalOrientation.txt")))
     upper = case_mapping(os.path.join(ucd, "UnicodeData.txt"), os.path.join(ucd, "SpecialCasing.txt"), UPPERCASE)
@@ -756,10 +780,16 @@ def emit_data(path, ucd):
             staged("IndicConjunct", [incb_index[v] for v in incb], "uint8_t", "%d", 32),
             staged("Flag", flags, "uint16_t", "0x%04x", 12),
             staged("Script", [script_index[codes[v]] for v in scripts], "uint8_t", "%d", 24),
+            staged("ScriptExtension", extension_of, index_type(len(extension_sets) + 1), "%d", 32),
             staged("Joining", [joining_members.index(JOINING[v]) for v in joining], "uint8_t", "%d", 32),
             staged("Vertical", [list(VERTICAL).index(v) for v in vertical], "uint8_t", "%d", 32),
             staged("Combining", classes, "uint8_t", "%d", 32),
             staged("Category", [category_index[v] for v in categories], "uint8_t", "%d", 32),
+            "\n// The sets of Script_Extensions. Each set runs from its start in kScriptExtensionScripts to the next set's start.\n",
+            table("constexpr uint16_t kScriptExtensionStarts[]", extension_starts, 16),
+            table("constexpr uint8_t kScriptExtensionScripts[]", extension_scripts, 24),
+            "\nstatic_assert(%d <= kPrUnicodeMaxScriptExtensions, \"a set of Script_Extensions is past the most\");\n"
+            % max(len(members) for members in extension_sets),
             "\n// Code points whose uppercase differs from themselves, in order, and what they map to: up to "
             "three code\n// points, padded with zeros.\n",
             table("constexpr uint32_t kUpperFrom[]", ["0x%06x" % cp for cp, _ in upper], 8),
@@ -806,6 +836,17 @@ def emit_data(path, ucd):
             "    return PrUnicodeFlags(unicodeStagedValue(kFlagTop, kFlagMiddle, kFlagLeaves, codePoint));\n}\n",
             "\nPrScript prUnicodeScript(uint32_t codePoint) {\n"
             "    return PrScript(unicodeStagedValue(kScriptTop, kScriptMiddle, kScriptLeaves, codePoint));\n}\n",
+            "\nuint32_t prUnicodeScriptExtensions(uint32_t codePoint, PrScript out[kPrUnicodeMaxScriptExtensions]) {\n"
+            "    uint32_t set = unicodeStagedValue(kScriptExtensionTop, kScriptExtensionMiddle, kScriptExtensionLeaves, "
+            "codePoint);\n"
+            "    if (set == 0) {\n"
+            "        out[0] = prUnicodeScript(codePoint);\n"
+            "        return 1;\n"
+            "    }\n"
+            "    uint32_t count = 0;\n"
+            "    for (uint32_t i = kScriptExtensionStarts[set - 1]; i < kScriptExtensionStarts[set]; ++i)\n"
+            "        out[count++] = PrScript(kScriptExtensionScripts[i]);\n"
+            "    return count;\n}\n",
             "\nPrUnicodeJoiningType prUnicodeJoiningType(uint32_t codePoint) {\n"
             "    return PrUnicodeJoiningType(unicodeStagedValue(kJoiningTop, kJoiningMiddle, kJoiningLeaves, codePoint));\n}\n",
             "\nPrUnicodeVerticalOrientation prUnicodeVerticalOrientation(uint32_t codePoint) {\n"

@@ -1335,6 +1335,73 @@ TEST_CASE("a text font whose record passed its bound gives up its answers at the
     prTextFontRelease(font);
 }
 
+TEST_CASE("a text font sets what its families and the fallback families lack in the font that the system gives") {
+    PrFontSystem* system = prFontSystemCreate(PrFontSystemBackend_Default);
+    if (system == nullptr) {
+        MESSAGE("the build has no system's fonts");
+        return;
+    }
+    PrFontSet* set = setOf({{"NotoSans.ttf"}});
+    prFontSetSetSystem(set, system);
+    PrTextFont* font = fontOf(set, {"Noto Sans"});
+    CHECK(familyFor(font, "a") == "Noto Sans");
+    // U+6F22, a Han ideograph, which Noto Sans lacks and the set has no fallback family for.
+    uint32_t han = prTextFontMatch(font, "\xE6\xBC\xA2", PrScript_Hani);
+    REQUIRE(han != kPrTextMatchNone);
+    CHECK(prFontCodePointGlyph(prTextFontMatchedFont(font, han), 0x6f22) != 0);
+    CHECK(familyFor(font, "\xE6\xBC\xA2", PrScript_Hani) != "Noto Sans");
+    CHECK(prFontSetFallbackCount(set) == 1);
+    // The family that joined the fallback families serves another ideograph, and the system is not asked again.
+    CHECK(prTextFontMatch(font, "\xE5\xAD\x97", PrScript_Hani) != kPrTextMatchNone);
+    CHECK(prFontSetFallbackCount(set) == 1);
+    prTextFontRelease(font);
+    prFontSetDestroy(set);
+    prFontSystemDestroy(system);
+}
+
+TEST_CASE("a text font falls back to the font that the system gives for its own locale, whatever text came first") {
+    PrFontSystem* system = prFontSystemCreate(PrFontSystemBackend_Default);
+    if (system == nullptr) {
+        MESSAGE("the build has no system's fonts");
+        return;
+    }
+    // U+9AA8, which Japanese and Simplified Chinese fonts draw differently, and U+5B57, another ideograph.
+    const char* bone = "\xE9\xAA\xA8";
+    const char* character = "\xE5\xAD\x97";
+    for (const char* first : {"ja", "zh-Hans"}) {
+        CAPTURE(first);
+        PrFontSet* set = setOf({{"NotoSans.ttf"}});
+        prFontSetSetSystem(set, system);
+        PrFontFamily noto = prFontFamilyFromName("Noto Sans");
+        auto fontIn = [&](const char* tag) {
+            PrTextFontDesc desc{
+                .set = set,
+                .families = &noto,
+                .familyCount = 1,
+                .style = prFontStyleDefault(),
+                .locale = prLocaleFromTag(tag),
+            };
+            return prTextFontCreate(&desc);
+        };
+        const char* second = std::strcmp(first, "ja") == 0 ? "zh-Hans" : "ja";
+        PrTextFont* before = fontIn(first);
+        PrTextFont* after = fontIn(second);
+        std::string earlier = familyFor(before, bone, PrScript_Hani);
+        std::string later = familyFor(after, bone, PrScript_Hani);
+        CHECK(!earlier.empty());
+        CHECK(!later.empty());
+        CHECK(earlier != later);
+        // Each text font keeps the family for its own locale, for the next ideograph and for the first one again.
+        CHECK(familyFor(before, character, PrScript_Hani) == earlier);
+        CHECK(familyFor(after, character, PrScript_Hani) == later);
+        CHECK(familyFor(before, bone, PrScript_Hani) == earlier);
+        prTextFontRelease(after);
+        prTextFontRelease(before);
+        prFontSetDestroy(set);
+    }
+    prFontSystemDestroy(system);
+}
+
 TEST_CASE("a text font takes the set's new default family") {
     Layered sets;
     PrTextFont* font = fontOf(sets.document, {});
@@ -1343,6 +1410,23 @@ TEST_CASE("a text font takes the set's new default family") {
     CHECK(prTextFontUpdate(font));
     CHECK(familyFor(font, "a") == "Noto Sans");
     prTextFontRelease(font);
+}
+
+TEST_CASE("a cluster that the list's faces lack falls back past the default family, which stands in for an empty list") {
+    PrFontCodePointRange basicLatin{0x20, 0x7e};
+    PrFontSet* set = setOf({{"RobotoFlex.ttf", "Latin Only", &basicLatin}, {"NotoSans.ttf"}, {"NotoSerif.ttf"}});
+    prFontSetSetGeneric(set, PrFontGeneric_Serif, "Noto Serif");
+    prFontSetSetDefaultFamily(set, prFontFamilyGeneric(PrFontGeneric_Serif));
+    PrFontFallbackFamily fallback{.family = "Noto Sans", .generic = PrFontGeneric_SansSerif};
+    prFontSetSetFallbackFamilies(set, &fallback, 1);
+    PrTextFont* listed = fontOf(set, {"Latin Only"});
+    CHECK(familyFor(listed, "a") == "Roboto Flex");
+    CHECK(familyFor(listed, "\xce\xb1", PrScript_Grek) == "Noto Sans");
+    PrTextFont* missing = fontOf(set, {"No Such Family"});
+    CHECK(familyFor(missing, "\xce\xb1", PrScript_Grek) == "Noto Serif");
+    prTextFontRelease(missing);
+    prTextFontRelease(listed);
+    prFontSetDestroy(set);
 }
 
 TEST_CASE("a feature set gives a run its forms, kerning, synthesis and features, and null gives the defaults") {

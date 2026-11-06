@@ -2,11 +2,17 @@
 
 int prTestFontCoreTextCApi(void);
 
-// The public headers compile as C. Installing into a set adds no fewer faces than the set then holds.
+// The public headers compile as C. A set that asks the system matches the system's families.
 int prTestFontCoreTextCApi(void) {
+    PrFontSystem* system = prFontCoreTextCreate();
     PrFontSet* set = prFontSetCreate(NULL);
-    uint32_t added = prFontCoreTextInstall(set);
-    int result = added != prFontSetFaceCount(set);
+    prFontSetSetSystem(set, system);
+    PrFontStyle style = prFontStyleDefault();
+    PrFontMatch* match = prFontMatchCreate();
+    prFontSetMatch(set, prFontFamilyFromName(PR_SV("Helvetica")), &style, match);
+    int result = prFontMatchFaceCount(match) == 0;
+    prFontMatchDestroy(match);
     prFontSetDestroy(set);
+    prFontSystemDestroy(system);
     return result;
 }

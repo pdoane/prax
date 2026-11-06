@@ -28,12 +28,7 @@ void makeFonts(PrKit& kit) {
         return;
     for (uint32_t role = 0; role < PrKitTextRole_Count; ++role) {
         const PrKitType& type = kit.theme.types[role];
-        PrStringView name = type.mono ? kit.theme.mono : kit.theme.sans;
-        PrFontFamily family;
-        if (name.size != 0)
-            family = prFontFamilyFromName(name);
-        else
-            family = prFontFamilyGeneric(type.mono ? PrFontGeneric_Monospace : PrFontGeneric_SansSerif);
+        PrFontFamily family = type.mono ? kit.theme.mono : kit.theme.ui;
         PrFontStyle style = prFontStyleDefault();
         style.size = type.size;
         style.weight = type.weight;

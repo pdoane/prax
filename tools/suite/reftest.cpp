@@ -248,7 +248,7 @@ PrFontSet* lottieFonts() {
     static LottieFonts text;
     if (text.fonts == nullptr) {
         text.fonts = prFontSetCreate(nullptr);
-        prFontSystemInstall(PrFontSystemBackend_Default, text.fonts);
+        prFontSetSetSystem(text.fonts, prFontSystemCreate(PrFontSystemBackend_Default));
         prFontSetSetDefaultFamily(text.fonts, prFontFamilyFromName("Times"));
     }
     return text.fonts;

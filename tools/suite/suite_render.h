@@ -22,7 +22,7 @@ struct SuiteRender {
 // suites/<suite>/render.txt, with one setting per line, and `#` starts a comment:
 //
 //   font <path>                 a font file that text is set in, relative to `root`
-//   system                      the system's fonts, which text is also set in (prFontSystemInstall)
+//   system                      the system's fonts, which text is also set in (prFontSetSetSystem)
 //   alias <name> = <family>     a family name, or a generic family's keyword, that matches another family's faces
 //                               (prFontSetAlias, prFontSetSetGeneric)
 //   default <family>            the family that text falls back to after the families it names

@@ -579,7 +579,8 @@ int main() {
     if (!openPanels(w.panels))
         printError("perspective: the picture at {} could not be read\n", PR_PERSPECTIVE_PICTURE);
     w.fonts = prFontSetCreate(nullptr);
-    if (prFontBundleInstall(w.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR) == 0) {
+    PrFontBundle bundle = PrFontBundle_Complete;
+    if (prFontBundleInstall(w.fonts, &bundle, 1, PR_FONT_BUNDLE_DIR) == 0) {
         printError("perspective: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
         return 1;
     }

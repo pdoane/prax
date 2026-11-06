@@ -69,6 +69,8 @@ typedef uint8_t PrUnicodeIndicConjunctBreak;
 // Binary properties of a code point, from the Unicode Character Database and UTS #51. Mark is a General_Category of
 // Mark. Cased, Case_Ignorable and Soft_Dotted are the properties that the conditions of case mapping read. A renderer
 // that does not support a default-ignorable code point shows nothing for it (The Unicode Standard, section 5.21).
+// EastAsianWide is an East_Asian_Width of Wide or Fullwidth (UAX #11). A character grid gives such a character two
+// cells.
 enum {
     PrUnicodeFlag_Emoji = 1u << 0,
     PrUnicodeFlag_EmojiPresentation = 1u << 1,
@@ -84,6 +86,7 @@ enum {
     PrUnicodeFlag_CaseIgnorable = 1u << 11,
     PrUnicodeFlag_SoftDotted = 1u << 12,
     PrUnicodeFlag_VariationSelector = 1u << 13,
+    PrUnicodeFlag_EastAsianWide = 1u << 14,
 };
 typedef uint16_t PrUnicodeFlags;
 
@@ -151,6 +154,14 @@ PrUnicodeFlags prUnicodeFlags(uint32_t codePoint);
 
 // Returns the Script of `codePoint` by its ISO 15924 code: Common is Zyyy, Inherited is Zinh and Unknown is Zzzz.
 PrScript prUnicodeScript(uint32_t codePoint);
+
+// The most scripts in the Script_Extensions of a code point.
+enum { kPrUnicodeMaxScriptExtensions = 32 };
+
+// Writes the Script_Extensions of `codePoint` (UAX #24), the scripts that the character is used with, to `out`, and
+// returns their count. If the database lists no extensions for a character, its extensions are its Script alone. An
+// arrow therefore has only Common, and the Devanagari danda has every script that uses it.
+uint32_t prUnicodeScriptExtensions(uint32_t codePoint, PrScript out[PR_NONNULL kPrUnicodeMaxScriptExtensions]);
 
 // Returns the Joining_Type of `codePoint`.
 PrUnicodeJoiningType prUnicodeJoiningType(uint32_t codePoint);

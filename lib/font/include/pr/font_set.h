@@ -175,6 +175,33 @@ uint32_t prFontSetAddFile(PrFontSet* set, const PrFontFaceDescriptor* descriptor
 // the set. Adding the same family of the same file again adds nothing.
 void prFontSetAddFileFamily(PrFontSet* set, PrStringView family, PrStringView path);
 
+// ---------------------------------------------------------------------------------------------------------------------
+// The system's fonts
+
+// The fonts installed on the system. When text first needs one, a set asks its system for a family that no set defines,
+// for the family of a generic family that no set binds, or for a fallback family for a cluster that no fallback family
+// serves. The system answers by adding the files that hold the family to the set (prFontSetAddFileFamily). The set
+// reads such a file only when text first matches its family. A system is thread-safe.
+typedef struct PrFontSystem PrFontSystem;
+
+// The function table of a system, placed at the start of the backend's state. A null `destroy` means there is nothing
+// to free.
+struct PrFontSystem {
+    void (*PR_NULLABLE destroy)(PrFontSystem* system);
+
+    // Adds the files of `family` to `set`. Returns false if the system has no such family.
+    bool (*addFamily)(PrFontSystem* system, PrFontSet* set, PrStringView family);
+
+    // Returns the system's family for `generic`, or the null string if it has none. The caller releases it with
+    // prRawStringReset.
+    PrRawString (*genericFamily)(PrFontSystem* system, PrFontGeneric generic);
+
+    // Adds to `set` the files of a family that serves the cluster `text` in `locale`. The family suits `generic`, or is
+    // the system's UI font if `generic` is None. Returns the family, or the null string if the system has none. The
+    // caller releases it with prRawStringReset.
+    PrRawString (*addFallback)(PrFontSystem* system, PrFontSet* set, PrStringView text, PrLocale locale, PrFontGeneric generic);
+};
+
 // The library's backends of the system's fonts, which the build turns on (README.md), and Default, the first that the
 // build has.
 enum {
@@ -195,9 +222,20 @@ PrStringView prFontSystemBackendName(PrFontSystemBackend backend);
 // Returns true if the build has the backend. The build has Default if it has any backend.
 bool prFontSystemBackendIsBuilt(PrFontSystemBackend backend);
 
-// Adds the families of the system's fonts that the backend lists to `set`, each by the file that holds it
-// (prFontSetAddFileFamily), and returns how many it added. A backend that the build does not have adds none.
-uint32_t prFontSystemInstall(PrFontSystemBackend backend, PrFontSet* set);
+// Creates the system of `backend`, or returns null if the build does not have the backend. Destroy frees the system.
+PrFontSystem* PR_NULLABLE prFontSystemCreate(PrFontSystemBackend backend);
+void prFontSystemDestroy(PrFontSystem* PR_NULLABLE system);
+
+// Sets the system that the set asks for families, generic families and fallback families. A null `system` removes it.
+// Only the outermost set of a chain of parents asks its system, and the system adds its files to that set. The system
+// must outlive the set. A host sets it before text uses the set.
+void prFontSetSetSystem(PrFontSet* set, PrFontSystem* PR_NULLABLE system);
+
+// Asks the system of the outermost set for a family that serves the cluster `text` in `locale` and suits `generic`. The
+// family is appended to the fallback families, made for `locale` (PrFontFallbackFamily::system). Returns true if a
+// family was appended. A family already among the fallback families for `locale` is not appended again. The set asks
+// the system each question once, until the system is set again.
+bool prFontSetRequestFallback(PrFontSet* set, PrStringView text, PrLocale locale, PrFontGeneric generic);
 
 // Adds a face whose font is not loaded yet, as the font rule of a document does. The face is described by `descriptor`,
 // whose automatic descriptors read the defaults, and is known to the caller by `key`. A match keeps it like any other
@@ -234,7 +272,8 @@ uint32_t prFontSetFaceCount(const PrFontSet* set);
 void prFontSetAlias(PrFontSet* set, PrStringView name, PrStringView family);
 
 // Makes the generic family `generic` match the faces of `family`, or nothing if `family` is empty. A set without its
-// own binding uses the binding of its parent. A name read stays valid until the generic is set again.
+// own binding uses the binding of its parent. If no set binds it, the outermost set binds the family that its system
+// gives (prFontSetSetSystem). A name read stays valid until the generic is set again.
 void prFontSetSetGeneric(PrFontSet* set, PrFontGeneric generic, PrStringView family);
 PrStringView prFontSetGenericFamily(const PrFontSet* set, PrFontGeneric generic);
 
@@ -258,10 +297,20 @@ PrFontHinting prFontSetHinting(const PrFontSet* set, PrFontHinter* PR_NULLABLE* 
 // if any. The locales it is made for are those whose parts match each part that `locale` sets. A locale of only a
 // script, such as `und-Hant`, names Traditional Chinese whatever language it writes, and `und-Hant-HK` names the forms
 // of Hong Kong, which text of that locale prefers to the first. A `locale` of zero is made for no locale.
+//
+// A private-use code point means whatever the font that sets it says. Text with one falls back only to a family that
+// sets `privateUse`. The private-use glyphs of such a family follow a convention that text relies on without naming the
+// family, as the Nerd Fonts icons do.
+//
+// A family that the system gave for text in `locale` sets `system` (prFontSetRequestFallback). The system's choice
+// depends on the locale, because Chinese, Japanese and Korean fonts draw the same code points differently. The family
+// therefore ranks first only for text in `locale`, and text in another locale asks the system again.
 typedef struct PrFontFallbackFamily {
     PrStringView family;
     PrLocale locale;
     PrFontGeneric generic;
+    bool privateUse;
+    bool system;
 } PrFontFallbackFamily;
 
 // The families that text falls back to, in the order in which they are tried, if no family that its style names serves
@@ -331,7 +380,8 @@ PrFontFace prFontMatchFace(const PrFontMatch* match, uint32_t index);
 //
 // A generic family matches the faces of the family bound to it (prFontSetSetGeneric). The faces of a family are the
 // set's own faces if it has any, including pending or failed ones, and otherwise those of its parent. A family that a
-// document defines therefore hides the family of that name in the host, even if none of its faces loads.
+// document defines therefore hides the family of that name in the host, even if none of its faces loads. If no set
+// defines a family, the outermost set asks its system for it, or for the family that an alias maps it to.
 //
 // Matching narrows the faces of the family by width, then slope, then weight. Each step keeps the faces nearest the
 // style. A value within the range of a face is nearest. If the value is outside every range, the search first goes away

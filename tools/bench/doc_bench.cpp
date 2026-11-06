@@ -155,6 +155,7 @@ struct Measure {
 
 struct Bench {
     PrFontSet* fonts = nullptr;
+    PrFontSystem* system = nullptr;
     PrTextShaper* shaper = nullptr;
     PrTextFont* font = nullptr;     // the page's default text font
     PrCompressCodec* compress = nullptr;
@@ -236,8 +237,10 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
 
 bool setUp(Bench& b) {
     b.fonts = prFontSetCreate(nullptr);
-    prFontBundleInstall(b.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR);
-    prFontSystemInstall(PrFontSystemBackend_Default, b.fonts);
+    PrFontBundle bundle = PrFontBundle_Complete;
+    prFontBundleInstall(b.fonts, &bundle, 1, PR_FONT_BUNDLE_DIR);
+    b.system = prFontSystemCreate(PrFontSystemBackend_Default);
+    prFontSetSetSystem(b.fonts, b.system);
     b.shaper = prTextHarfBuzzCreate();
     b.compress = prCompressBuiltinCreate();
     b.images = prImageBuiltinCreate(b.compress);
@@ -269,6 +272,7 @@ void tearDown(Bench& b) {
     prCompressCodecDestroy(b.compress);
     prTextShaperDestroy(b.shaper);
     prFontSetDestroy(b.fonts);
+    prFontSystemDestroy(b.system);
     if (b.device != nullptr)
         prGpuTextureDestroy(b.device, b.target);
     prDrawFrameDestroy(b.frame);

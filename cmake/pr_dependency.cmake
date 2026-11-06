@@ -2,6 +2,12 @@
 
 include(FetchContent)
 
+# FetchContent populates dependencies without a sub-build where CMake supports it. A sub-build's paths can exceed
+# Windows' 260-character limit.
+if (POLICY CMP0168)
+    cmake_policy(SET CMP0168 NEW)
+endif()
+
 # The download cache, which an empty PR_DOWNLOAD_DIR disables. A machine downloads each file once, across build
 # directories and projects. FetchContent has no shared cache, and the policies of the calling project decide where it
 # downloads. So this file downloads each dependency and passes FetchContent the local copy.

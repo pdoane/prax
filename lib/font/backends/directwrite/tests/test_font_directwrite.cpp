@@ -1,5 +1,4 @@
-// The DirectWrite backend: the files in DirectWrite's set of the system's fonts become faces of a set that match by
-// family and style.
+// The DirectWrite backend: a set asks DirectWrite for families by name and for fallback.
 
 #include "pr/font.h"
 #include "pr/font_directwrite.h"
@@ -48,10 +47,12 @@ TEST_CASE("the public headers compile as C") {
     CHECK(prTestFontDirectWriteCApi() == 0);
 }
 
-TEST_CASE("the system's fonts are a set") {
+TEST_CASE("a family that no set defines is the system's, read only when text matches it") {
+    PrFontSystem* system = prFontDirectWriteCreate();
+    REQUIRE(system != nullptr);
     PrFontSet* set = prFontSetCreate(nullptr);
-    CHECK(prFontDirectWriteInstall(set) > 0);
-    CHECK(prFontSetFamilyCount(set) > 0);
+    prFontSetSetSystem(set, system);
+    CHECK(prFontSetFaceCount(set) == 0);
     std::vector<PrFontFace> faces = matchAll(set, "Segoe UI", 700);
     REQUIRE(!faces.empty());
     CHECK(prFontEmbolden(faces[0].font) == 0.0f);
@@ -60,5 +61,11 @@ TEST_CASE("the system's fonts are a set") {
     REQUIRE(!faces.empty());
     CHECK(faces[0].flags == PrFontFaceFlag_Emoji);
     release(faces);
+    // U+6F22, a Han ideograph, in Japanese, falls back to the family that the system gives. The set asks only once.
+    PrLocale japanese = prLocaleFromTag("ja");
+    CHECK(prFontSetRequestFallback(set, "\xE6\xBC\xA2", japanese, PrFontGeneric_SansSerif));
+    CHECK(prFontSetFallbackCount(set) == 1);
+    CHECK_FALSE(prFontSetRequestFallback(set, "\xE6\xBC\xA2", japanese, PrFontGeneric_SansSerif));
     prFontSetDestroy(set);
+    prFontSystemDestroy(system);
 }

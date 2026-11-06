@@ -1,11 +1,14 @@
 // Studio's window: an application's kit in a window of the platform, rendered with lib/draw on the platform's GPU.
 //
-// A window makes what a kit draws with: a font set that holds the Noto bundle, the platform's shaper, a layout tree,
-// lib/ui's context over it, and a kit in Studio's theme, which follows the system's color scheme unless the application
-// chooses one. Each frame runs the kit's rounds, which the application declares, plays the tree's scene into a draw
-// list, and renders the list into the window's swap chain. Where the swap chain holds more than 8-bit sRGB, the list
-// renders into a texture of half floats, which the display shader maps to the display (pr/draw_display.h). A device
-// that is lost is made again.
+// A window makes what a kit draws with, from the font set that the application provides: the platform's shaper, a
+// layout tree, lib/ui's context over the tree, and a kit in Studio's theme. The theme follows the system's color scheme
+// unless the application chooses one.
+//
+// Each frame runs the rounds that the application declares, plays the tree's scene into a draw list, and renders the
+// list into the window's swap chain.
+//
+// If the swap chain holds more than 8-bit sRGB, the list renders into a texture of half floats, which the display
+// shader maps to the display (pr/draw_display.h). A lost device is made again.
 //
 // One thread runs a window: the thread that calls prStudioWindowRun, which the platform's application runs on.
 
@@ -86,7 +89,10 @@ typedef void (*PrStudioWindowTraceFn)(void* PR_NULLABLE context, const PrStudioW
 typedef struct PrStudioWindowDesc {
     PrStringView title;
     PrUVec2 extent;                 // of the window at first, in px
-    PrStringView fontDirectory;     // where the files of the Noto bundle are (pr/font_bundle.h)
+
+    // The fonts for the window's text. The application owns them, and they must outlive the run.
+    PrFontSet* fonts;
+
     PrStudioWindowOpenFn PR_NULLABLE open;
     PrStudioWindowThemeFn PR_NULLABLE theme;    // or null for the variant of the user's preferred color scheme
     PrStudioWindowFrameFn PR_NULLABLE beginFrame;
@@ -99,10 +105,9 @@ typedef struct PrStudioWindowDesc {
     void* PR_NULLABLE context;
 } PrStudioWindowDesc;
 
-// Runs a window until its application stops, and then frees it. Returns NotFound if the fonts cannot be installed,
-// InvalidState if `open` returned false, NotSupported if the window has no device to render with, and Ok once the
-// application stops. Unless the fonts cannot be installed, `close` is called as the run ends, whether or not the
-// application ran.
+// Runs a window until its application stops, and then frees it. Returns InvalidState if `open` returned false,
+// NotSupported if the window has no device to render with, and Ok once the application stops. `close` is called as the
+// run ends, whether or not the application ran.
 PrStatus prStudioWindowRun(const PrStudioWindowDesc* desc);
 
 // What the window's kit draws with, while it runs.

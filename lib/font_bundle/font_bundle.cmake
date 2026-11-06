@@ -2,17 +2,18 @@
 #
 #   pr_font_bundle_fetch(<directory> <bundle>...)
 #
-# makes the files of the bundles named, and of the fallback every bundle installs, available in <directory>, where
-# prFontBundleInstall finds them, each linked there under its name upstream. The bundles are Noto and Standard14.
+# makes the files of the bundles named available in <directory>, where prFontBundleInstall finds them, each linked there
+# under its name upstream. The bundles are Complete, NotoMono, Standard14, Plex and NerdFontSymbols. The list of each
+# bundle holds every file that it installs.
 
 # Noto's site, at the commit the fonts are pinned to.
 set(_pr_noto https://raw.githubusercontent.com/notofonts/notofonts.github.io/b966e2e80feb783346a7d3b7c14c8d6e7e1a757b/fonts)
 # Noto's CJK repository, at the tag of each release.
 set(_pr_noto_cjk https://raw.githubusercontent.com/notofonts/noto-cjk)
 
-# The fallback: Noto for every script UAX #31's Table 5 lists as in modern use, with Mongolian, math, symbols and emoji,
-# in sans and serif where Noto has both, from Noto's site and its CJK releases; and the Unicode Consortium's Last
-# Resort, which draws the missing glyph of a code point no face serves.
+# Noto's fallback, from Noto's site and its CJK releases. It has Noto for every script that UAX #31's Table 5 lists as
+# in modern use, with Mongolian, math, symbols and emoji, in sans and serif where Noto has both. Last of all comes the
+# Unicode Consortium's Last Resort, which draws the missing glyph of a code point that no face serves.
 pr_dependency(font_NotoSans
     URL ${_pr_noto}/NotoSans/unhinted/variable-ttf/NotoSans%5Bwdth%2Cwght%5D.ttf
     URL_HASH SHA256=511cc04b442ffcc3b24d65c2cc780bdffaf482b20ba0aebdc8f27b37017ff0f5
@@ -328,7 +329,7 @@ pr_dependency(font_NotoColorEmoji
     URL_HASH SHA256=39ee3c587e10e89669b9ff32703261d10d5f9c4dd5ad147b6b5a1c5200591817
     DOWNLOAD_NO_EXTRACT ON
     DOWNLOAD_NAME NotoColorEmoji.ttf)
-set(PR_FONT_BUNDLE_Fallback
+set(_pr_noto_fallback
     "font_NotoSans/NotoSans[wdth,wght].ttf"
     "font_NotoSansItalic/NotoSans-Italic[wdth,wght].ttf"
     "font_NotoSansMono/NotoSansMono[wdth,wght].ttf"
@@ -393,15 +394,22 @@ set(PR_FONT_BUNDLE_Fallback
     "font_LastResortRegular/LastResort-Regular.ttf"
     "font_NotoColorEmoji/NotoColorEmoji.ttf")
 
-# Noto: its generic families are in the fallback, and math is New Computer Modern's, from TeX Live 2025's final archive.
+# Complete: Noto's fallback, which holds the faces of its generic families and Last Resort, and New Computer Modern Math
+# from TeX Live 2025's final archive.
 pr_dependency(font_NewCM
     URL https://texlive.info/historic/systems/texlive/2025/tlnet-final/archive/newcomputermodern.tar.xz
     URL_HASH SHA256=1c94581b200952e002aa73d979680948f356af8948a5d1d7a142fb42c193ce71)
-set(PR_FONT_BUNDLE_Noto
-    "font_NewCM/fonts/opentype/public/newcomputermodern/NewCMMath-Regular.otf")
+set(PR_FONT_BUNDLE_Complete
+    "font_NewCM/fonts/opentype/public/newcomputermodern/NewCMMath-Regular.otf"
+    ${_pr_noto_fallback})
+
+# NotoMono: Noto Sans Mono alone.
+set(PR_FONT_BUNDLE_NotoMono
+    "font_NotoSansMono/NotoSansMono[wdth,wght].ttf")
 
 # Standard14: substitutes for PDF's standard 14 fonts, from documentplatform-standard14-fonts: Tinos, Arimo and Cousine,
-# with the metrics of Times, Helvetica and Courier, and LeviSymbol and Levibats for Symbol and ZapfDingbats.
+# with the metrics of Times, Helvetica and Courier, and LeviSymbol and Levibats for Symbol and ZapfDingbats. Its math font
+# is New Computer Modern Math.
 set(_pr_standard14
     https://raw.githubusercontent.com/levigo/documentplatform-standard14-fonts/9f7388d8129612cae823aea06dc980e045e0c092/src/main/resources/com/levigo/jadice/fonts)
 pr_dependency(font_TinosRegular
@@ -474,16 +482,234 @@ set(PR_FONT_BUNDLE_Standard14
     "font_CousineItalic/Cousine-Italic.ttf"
     "font_CousineBoldItalic/Cousine-BoldItalic.ttf"
     "font_LeviSymbolRegular/LeviSymbol-Regular.ttf"
-    "font_LevibatsRegular/Levibats-Regular.ttf")
+    "font_LevibatsRegular/Levibats-Regular.ttf"
+    "font_NewCM/fonts/opentype/public/newcomputermodern/NewCMMath-Regular.otf")
+
+# Plex: IBM Plex, from IBM's repository at the commit that the fonts are pinned to. Plex Sans, Plex Serif and Plex Mono
+# are variable fonts that cover every weight. The script families come in the weights that Studio's kit sets text in,
+# and bold. The CJK families are IBM's OTF files, unhinted if IBM publishes both, because they are smaller than its TTF
+# files.
+set(_pr_plex https://raw.githubusercontent.com/IBM/plex/48e8676114c04f29033b4b53da4ec579f8846297/packages)
+pr_dependency(font_IBMPlexSansVarRoman
+    URL ${_pr_plex}/plex-sans-variable/fonts/complete/ttf/IBM%20Plex%20Sans%20Var-Roman.ttf
+    URL_HASH SHA256=3ed3ea3b1b3854afdf3306e9ab60773ec03cd7466bf0017131c166d943408713
+    DOWNLOAD_NO_EXTRACT ON
+    DOWNLOAD_NAME IBMPlexSansVar-Roman.ttf)
+pr_dependency(font_IBMPlexSansVarItalic
+    URL ${_pr_plex}/plex-sans-variable/fonts/complete/ttf/IBM%20Plex%20Sans%20Var-Italic.ttf
+    URL_HASH SHA256=ad691c8be9352a5c024e3d158856b3a073841280347c25bfba2ce75cc349b7ad
+    DOWNLOAD_NO_EXTRACT ON
+    DOWNLOAD_NAME IBMPlexSansVar-Italic.ttf)
+pr_dependency(font_IBMPlexSerifVarRoman
+    URL ${_pr_plex}/plex-serif-variable/fonts/complete/ttf/IBM%20Plex%20Serif%20Var-Roman.ttf
+    URL_HASH SHA256=9ad35cae7ba68f7c146e100094feee2a9a7136a5be7e69fe8fc55053650b79c1
+    DOWNLOAD_NO_EXTRACT ON
+    DOWNLOAD_NAME IBMPlexSerifVar-Roman.ttf)
+pr_dependency(font_IBMPlexSerifVarItalic
+    URL ${_pr_plex}/plex-serif-variable/fonts/complete/ttf/IBM%20Plex%20Serif%20Var-Italic.ttf
+    URL_HASH SHA256=d7a5505e9827f4a66d74f872045a21626ac948febcb16d8d7d67d825e3eb0b4a
+    DOWNLOAD_NO_EXTRACT ON
+    DOWNLOAD_NAME IBMPlexSerifVar-Italic.ttf)
+pr_dependency(font_IBMPlexMonoVarRoman
+    URL ${_pr_plex}/plex-mono-variable/fonts/complete/ttf/IBM%20Plex%20Mono%20Var-Roman.ttf
+    URL_HASH SHA256=7e514ee3a359d82b2f572751dc2184f380a72160299c040b4c978a7093013743
+    DOWNLOAD_NO_EXTRACT ON
+    DOWNLOAD_NAME IBMPlexMonoVar-Roman.ttf)
+pr_dependency(font_IBMPlexMonoVarItalic
+    URL ${_pr_plex}/plex-mono-variable/fonts/complete/ttf/IBM%20Plex%20Mono%20Var-Italic.ttf
+    URL_HASH SHA256=6242bbf32814be87c33a7f2eeaed2bdc90ea0088dac25be712ba7fe8981bd6d4
+    DOWNLOAD_NO_EXTRACT ON
+    DOWNLOAD_NAME IBMPlexMonoVar-Italic.ttf)
+pr_dependency(font_IBMPlexMathRegular
+    URL ${_pr_plex}/plex-math/fonts/complete/ttf/IBMPlexMath-Regular.ttf
+    URL_HASH SHA256=10d07a23cb322725f83ca51748a4c7a61cf14caf2c4d880d793c65d3a1402533
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansArabicRegular
+    URL ${_pr_plex}/plex-sans-arabic/fonts/complete/ttf/IBMPlexSansArabic-Regular.ttf
+    URL_HASH SHA256=8e0f1046c736bf939d4939ee3ae0116acf61cbcd6592deae7656761627080981
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansArabicMedium
+    URL ${_pr_plex}/plex-sans-arabic/fonts/complete/ttf/IBMPlexSansArabic-Medium.ttf
+    URL_HASH SHA256=eef162792cf2a6ba5af7943af9f86843b1286ab67aaf615c18c07fd8e97a4a90
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansArabicSemiBold
+    URL ${_pr_plex}/plex-sans-arabic/fonts/complete/ttf/IBMPlexSansArabic-SemiBold.ttf
+    URL_HASH SHA256=1d4ab8b6ebadbb9d85f2ecdcb7cb0bb672420a8ff3388ab4f69d7b98056562aa
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansArabicBold
+    URL ${_pr_plex}/plex-sans-arabic/fonts/complete/ttf/IBMPlexSansArabic-Bold.ttf
+    URL_HASH SHA256=b74f809dead12442ed56e02a12c3bcc02076c9ad4e32f17d0a9ca6fc1aafc89e
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansHebrewRegular
+    URL ${_pr_plex}/plex-sans-hebrew/fonts/complete/ttf/IBMPlexSansHebrew-Regular.ttf
+    URL_HASH SHA256=98cd8ca13fef47fb57c20faed17a346639bb418b7abeb096fd9693ea3eecc445
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansHebrewMedium
+    URL ${_pr_plex}/plex-sans-hebrew/fonts/complete/ttf/IBMPlexSansHebrew-Medium.ttf
+    URL_HASH SHA256=acecc14c42eb520254699450d4de991dec423e70583bdaef8bb1e8ef0d9b6185
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansHebrewSemiBold
+    URL ${_pr_plex}/plex-sans-hebrew/fonts/complete/ttf/IBMPlexSansHebrew-SemiBold.ttf
+    URL_HASH SHA256=7d90b813182ef463b1e7cf8515699e94946003c6e3b2d0ceebc1825c4fc5b955
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansHebrewBold
+    URL ${_pr_plex}/plex-sans-hebrew/fonts/complete/ttf/IBMPlexSansHebrew-Bold.ttf
+    URL_HASH SHA256=628c5dac15f61b8c981629426cc75d2123cf25520926bf28fa1a060c2cd096fb
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansDevanagariRegular
+    URL ${_pr_plex}/plex-sans-devanagari/fonts/complete/ttf/IBMPlexSansDevanagari-Regular.ttf
+    URL_HASH SHA256=f3d82e82797c8cd29e9171f32174ed5ee1a88e132d1baafbe21237c42320304b
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansDevanagariMedium
+    URL ${_pr_plex}/plex-sans-devanagari/fonts/complete/ttf/IBMPlexSansDevanagari-Medium.ttf
+    URL_HASH SHA256=ebdc1e1394b801279a6b54e17784e4cf08cbd438e4be70b58fd94db5370527b1
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansDevanagariSemiBold
+    URL ${_pr_plex}/plex-sans-devanagari/fonts/complete/ttf/IBMPlexSansDevanagari-SemiBold.ttf
+    URL_HASH SHA256=d3f1aaeb0f0895246967f0d643938c832e1fcd799f4a7b4d681f526fc2af5b04
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansDevanagariBold
+    URL ${_pr_plex}/plex-sans-devanagari/fonts/complete/ttf/IBMPlexSansDevanagari-Bold.ttf
+    URL_HASH SHA256=5ee14898f3bf5719ec0dddc74d5f0984d1e5c5201dbe30889326a620147bc251
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansThaiRegular
+    URL ${_pr_plex}/plex-sans-thai/fonts/complete/ttf/IBMPlexSansThai-Regular.ttf
+    URL_HASH SHA256=83e1db8e8bad06bb760981f1dd528f5f209d20dfadebac12b21bf2f12453c8c6
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansThaiMedium
+    URL ${_pr_plex}/plex-sans-thai/fonts/complete/ttf/IBMPlexSansThai-Medium.ttf
+    URL_HASH SHA256=a88c2ecd469b3a29bf9e77e40930aed43644062f0e4d604de3db4e31755a9f59
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansThaiSemiBold
+    URL ${_pr_plex}/plex-sans-thai/fonts/complete/ttf/IBMPlexSansThai-SemiBold.ttf
+    URL_HASH SHA256=c0d88539aa6117a845a19ea4e83c2c0efc56dc43ebe41935b54d316ad2d6c7d5
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansThaiBold
+    URL ${_pr_plex}/plex-sans-thai/fonts/complete/ttf/IBMPlexSansThai-Bold.ttf
+    URL_HASH SHA256=64451229916cfbfa8bb1bbdf3674b8ba96c00e04d3bc81d148b7bfb8330d8fd8
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansSCRegular
+    URL ${_pr_plex}/plex-sans-sc/fonts/complete/otf/unhinted/IBMPlexSansSC-Regular.otf
+    URL_HASH SHA256=12c6e1aa24e4f002425acf80a68a3d8d1db465c93f8c4ed9af4b5e38e42a73bb
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansSCMedium
+    URL ${_pr_plex}/plex-sans-sc/fonts/complete/otf/unhinted/IBMPlexSansSC-Medium.otf
+    URL_HASH SHA256=94a5126f3078ee08272ea9bb2809dafec288cbf0fc75f73978f30372c93b4327
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansSCSemiBold
+    URL ${_pr_plex}/plex-sans-sc/fonts/complete/otf/unhinted/IBMPlexSansSC-SemiBold.otf
+    URL_HASH SHA256=084caa92edc0409fc58fce557a9402bd593eef64257974a94c0491722ce8bdcc
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansSCBold
+    URL ${_pr_plex}/plex-sans-sc/fonts/complete/otf/unhinted/IBMPlexSansSC-Bold.otf
+    URL_HASH SHA256=a49fe54ebcc24fd3300f7414b77a2aa165ea8bbc6702efba2eedf3319071799e
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansTCRegular
+    URL ${_pr_plex}/plex-sans-tc/fonts/complete/otf/unhinted/IBMPlexSansTC-Regular.otf
+    URL_HASH SHA256=2750012d2773349c069b16b3dd8dfce6e4910f90683b2f1979d74d4d0532695f
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansTCMedium
+    URL ${_pr_plex}/plex-sans-tc/fonts/complete/otf/unhinted/IBMPlexSansTC-Medium.otf
+    URL_HASH SHA256=5169e71fc15ed73eda337ce07399873db39eb594ecf22247134f4e761c8e787f
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansTCSemiBold
+    URL ${_pr_plex}/plex-sans-tc/fonts/complete/otf/unhinted/IBMPlexSansTC-SemiBold.otf
+    URL_HASH SHA256=756cdccf81b293826b85800556b848c50dc3dd8d0b1c53972a53c56c2dae81c2
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansTCBold
+    URL ${_pr_plex}/plex-sans-tc/fonts/complete/otf/unhinted/IBMPlexSansTC-Bold.otf
+    URL_HASH SHA256=d532594b5835c644cf28d46fa17d6a65153a6189b63b3127a42bba78c7424d6f
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansJPRegular
+    URL ${_pr_plex}/plex-sans-jp/fonts/complete/otf/unhinted/IBMPlexSansJP-Regular.otf
+    URL_HASH SHA256=76a7fafcdbdb3fff1c37d862fcfa1d433fb801b1674704a1351d5a7497e20a37
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansJPMedium
+    URL ${_pr_plex}/plex-sans-jp/fonts/complete/otf/unhinted/IBMPlexSansJP-Medium.otf
+    URL_HASH SHA256=b9b70d1a39902f5a8d87beeb499e6a260e63dbff40c87a95e4e27cbfdd8bdc80
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansJPSemiBold
+    URL ${_pr_plex}/plex-sans-jp/fonts/complete/otf/unhinted/IBMPlexSansJP-SemiBold.otf
+    URL_HASH SHA256=e56ee58815d7c71eb365a92856571ea3378494fe187424fec1eea24c2056f12e
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansJPBold
+    URL ${_pr_plex}/plex-sans-jp/fonts/complete/otf/unhinted/IBMPlexSansJP-Bold.otf
+    URL_HASH SHA256=e36616bdb0a1b8a0fae6900e439682dc1011e8f0663ab908f2a46e2021a697b8
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansKRRegular
+    URL ${_pr_plex}/plex-sans-kr/fonts/complete/otf/IBMPlexSansKR-Regular.otf
+    URL_HASH SHA256=3638df0e5b7f8cc131d90e6d755f7b9fe8b78b01e59aadf9f64faa0a826aaa92
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansKRMedium
+    URL ${_pr_plex}/plex-sans-kr/fonts/complete/otf/IBMPlexSansKR-Medium.otf
+    URL_HASH SHA256=d42f23d1ab94c7851156d48bf08fb8878f8bfec11041577a961fc4a13fe51efe
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansKRSemiBold
+    URL ${_pr_plex}/plex-sans-kr/fonts/complete/otf/IBMPlexSansKR-SemiBold.otf
+    URL_HASH SHA256=74751b835a0643eb6e6ab3040dda9f1342616c1ca2dff436eb79de51ce676d20
+    DOWNLOAD_NO_EXTRACT ON)
+pr_dependency(font_IBMPlexSansKRBold
+    URL ${_pr_plex}/plex-sans-kr/fonts/complete/otf/IBMPlexSansKR-Bold.otf
+    URL_HASH SHA256=0c453bf67c976edaef9b544d120bcfa28ec96e7900e5d629392e0b60df50bd90
+    DOWNLOAD_NO_EXTRACT ON)
+set(PR_FONT_BUNDLE_Plex
+    "font_IBMPlexSansVarRoman/IBMPlexSansVar-Roman.ttf"
+    "font_IBMPlexSansVarItalic/IBMPlexSansVar-Italic.ttf"
+    "font_IBMPlexSerifVarRoman/IBMPlexSerifVar-Roman.ttf"
+    "font_IBMPlexSerifVarItalic/IBMPlexSerifVar-Italic.ttf"
+    "font_IBMPlexMonoVarRoman/IBMPlexMonoVar-Roman.ttf"
+    "font_IBMPlexMonoVarItalic/IBMPlexMonoVar-Italic.ttf"
+    "font_IBMPlexMathRegular/IBMPlexMath-Regular.ttf"
+    "font_IBMPlexSansArabicRegular/IBMPlexSansArabic-Regular.ttf"
+    "font_IBMPlexSansArabicMedium/IBMPlexSansArabic-Medium.ttf"
+    "font_IBMPlexSansArabicSemiBold/IBMPlexSansArabic-SemiBold.ttf"
+    "font_IBMPlexSansArabicBold/IBMPlexSansArabic-Bold.ttf"
+    "font_IBMPlexSansHebrewRegular/IBMPlexSansHebrew-Regular.ttf"
+    "font_IBMPlexSansHebrewMedium/IBMPlexSansHebrew-Medium.ttf"
+    "font_IBMPlexSansHebrewSemiBold/IBMPlexSansHebrew-SemiBold.ttf"
+    "font_IBMPlexSansHebrewBold/IBMPlexSansHebrew-Bold.ttf"
+    "font_IBMPlexSansDevanagariRegular/IBMPlexSansDevanagari-Regular.ttf"
+    "font_IBMPlexSansDevanagariMedium/IBMPlexSansDevanagari-Medium.ttf"
+    "font_IBMPlexSansDevanagariSemiBold/IBMPlexSansDevanagari-SemiBold.ttf"
+    "font_IBMPlexSansDevanagariBold/IBMPlexSansDevanagari-Bold.ttf"
+    "font_IBMPlexSansThaiRegular/IBMPlexSansThai-Regular.ttf"
+    "font_IBMPlexSansThaiMedium/IBMPlexSansThai-Medium.ttf"
+    "font_IBMPlexSansThaiSemiBold/IBMPlexSansThai-SemiBold.ttf"
+    "font_IBMPlexSansThaiBold/IBMPlexSansThai-Bold.ttf"
+    "font_IBMPlexSansSCRegular/IBMPlexSansSC-Regular.otf"
+    "font_IBMPlexSansSCMedium/IBMPlexSansSC-Medium.otf"
+    "font_IBMPlexSansSCSemiBold/IBMPlexSansSC-SemiBold.otf"
+    "font_IBMPlexSansSCBold/IBMPlexSansSC-Bold.otf"
+    "font_IBMPlexSansTCRegular/IBMPlexSansTC-Regular.otf"
+    "font_IBMPlexSansTCMedium/IBMPlexSansTC-Medium.otf"
+    "font_IBMPlexSansTCSemiBold/IBMPlexSansTC-SemiBold.otf"
+    "font_IBMPlexSansTCBold/IBMPlexSansTC-Bold.otf"
+    "font_IBMPlexSansJPRegular/IBMPlexSansJP-Regular.otf"
+    "font_IBMPlexSansJPMedium/IBMPlexSansJP-Medium.otf"
+    "font_IBMPlexSansJPSemiBold/IBMPlexSansJP-SemiBold.otf"
+    "font_IBMPlexSansJPBold/IBMPlexSansJP-Bold.otf"
+    "font_IBMPlexSansKRRegular/IBMPlexSansKR-Regular.otf"
+    "font_IBMPlexSansKRMedium/IBMPlexSansKR-Medium.otf"
+    "font_IBMPlexSansKRSemiBold/IBMPlexSansKR-SemiBold.otf"
+    "font_IBMPlexSansKRBold/IBMPlexSansKR-Bold.otf")
+
+# NerdFontSymbols: Symbols Nerd Font Mono, from the symbols-only archive of a Nerd Fonts release.
+pr_dependency(font_NerdFontsSymbolsOnly
+    URL https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/NerdFontsSymbolsOnly.tar.xz
+    URL_HASH SHA256=01172f37db8543edb102e5cb5c64101c9f4686630804d49b419aa07b23a69996)
+set(PR_FONT_BUNDLE_NerdFontSymbols
+    "font_NerdFontsSymbolsOnly/SymbolsNerdFontMono-Regular.ttf")
 
 function(pr_font_bundle_fetch directory)
-    set(files ${PR_FONT_BUNDLE_Fallback})
+    set(files)
     foreach (bundle IN LISTS ARGN)
         if (NOT DEFINED PR_FONT_BUNDLE_${bundle})
             message(FATAL_ERROR "pr_font_bundle_fetch: no font bundle named ${bundle}")
         endif()
         list(APPEND files ${PR_FONT_BUNDLE_${bundle}})
     endforeach()
+    # Bundles may share files.
+    list(REMOVE_DUPLICATES files)
     file(MAKE_DIRECTORY "${directory}")
     # Each file is its content's name, then its path in that content.
     foreach (file IN LISTS files)

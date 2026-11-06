@@ -47,7 +47,7 @@ PrFontSet* lottieFonts() {
     static PrFontSet* fonts = nullptr;
     if (fonts == nullptr) {
         fonts = prFontSetCreate(nullptr);
-        prFontSystemInstall(PrFontSystemBackend_Default, fonts);
+        prFontSetSetSystem(fonts, prFontSystemCreate(PrFontSystemBackend_Default));
         prFontSetSetDefaultFamily(fonts, prFontFamilyFromName("Times"));
     }
     return fonts;

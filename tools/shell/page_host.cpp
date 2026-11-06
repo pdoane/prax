@@ -987,7 +987,9 @@ PageHost::PageHost(PrTextShaper* shaper, PrMediaCodec* PR_NULLABLE media, PrAudi
         state_(std::make_unique<HostState>()) {
     HostState& s = *state_;
     s.fonts = prFontSetCreate(nullptr);
-    prFontBundleInstall(s.fonts, PrFontBundle_Standard14, PR_FONT_BUNDLE_DIR);
+    // The PDF standard fonts, and the Complete bundle for the characters that they lack.
+    const PrFontBundle bundles[] = {PrFontBundle_Standard14, PrFontBundle_Complete};
+    prFontBundleInstall(s.fonts, bundles, 2, PR_FONT_BUNDLE_DIR);
     PrTextFontDesc defaultFontDesc{.set = s.fonts, .style = prFontStyleDefault()};
     s.font = prTextFontCreate(&defaultFontDesc);
     s.shaper = shaper;

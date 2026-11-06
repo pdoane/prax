@@ -11,20 +11,13 @@
 namespace pr_impl {
 namespace {
 
-// State from earlier code points, for the rules that look back further than one code point.
-struct Look {
-    uint32_t regional;          // the number of consecutive regional indicators
-    bool pictographic;          // true after Extended_Pictographic Extend*
-    bool pictographicZwj;       // true after Extended_Pictographic Extend* ZWJ
-    uint8_t conjunct;           // 1 after a Consonant [Extend]*, 2 once a Linker follows
-};
-
 bool isControl(PrUnicodeGraphemeBreak b) {
     return b == PrUnicodeGraphemeBreak_Control || b == PrUnicodeGraphemeBreak_CR || b == PrUnicodeGraphemeBreak_LF;
 }
 
-// Returns true if the rules keep `next` in the same cluster as `before`.
-bool keeps(PrUnicodeGraphemeBreak before, PrUnicodeGraphemeBreak next, uint32_t nextCodePoint, const Look& look) {
+// Returns true if the rules keep `next` in the cluster that `look` ends.
+bool keeps(const PrUnicodeGraphemeState& look, PrUnicodeGraphemeBreak next, uint32_t nextCodePoint) {
+    PrUnicodeGraphemeBreak before = look.before;
     if (before == PrUnicodeGraphemeBreak_CR && next == PrUnicodeGraphemeBreak_LF)
         return true;                                                // GB3
     if (isControl(before) || isControl(next))
@@ -54,7 +47,9 @@ bool keeps(PrUnicodeGraphemeBreak before, PrUnicodeGraphemeBreak next, uint32_t 
     return false;                                                   // GB999
 }
 
-void advance(Look& look, uint32_t codePoint, PrUnicodeGraphemeBreak b) {
+// Adds `codePoint`, whose Grapheme_Cluster_Break is `b`, to the end of the cluster that `look` ends.
+void advance(PrUnicodeGraphemeState& look, uint32_t codePoint, PrUnicodeGraphemeBreak b) {
+    look.before = b;
     look.regional = b == PrUnicodeGraphemeBreak_RegionalIndicator ? look.regional + 1 : 0;
     bool pictographic = (prUnicodeFlags(codePoint) & PrUnicodeFlag_ExtendedPictographic) != 0;
     look.pictographicZwj = look.pictographic && b == PrUnicodeGraphemeBreak_ZWJ;
@@ -147,22 +142,34 @@ bool wordKeeps(PrUnicodeWordBreak earlier, PrUnicodeWordBreak before, PrUnicodeW
 
 using namespace pr_impl;
 
+PrUnicodeGraphemeState prUnicodeGraphemeStateBegin(uint32_t codePoint) {
+    PrUnicodeGraphemeState state{};
+    advance(state, codePoint, prUnicodeGraphemeBreak(codePoint));
+    return state;
+}
+
+bool prUnicodeGraphemeStatePush(PrUnicodeGraphemeState* state, uint32_t codePoint) {
+    PrUnicodeGraphemeBreak b = prUnicodeGraphemeBreak(codePoint);
+    if (keeps(*state, b, codePoint)) {
+        advance(*state, codePoint, b);
+        return true;
+    }
+    *state = PrUnicodeGraphemeState{};
+    advance(*state, codePoint, b);
+    return false;
+}
+
 size_t prUnicodeGraphemeNext(PrStringView text, size_t at) {
     if (at >= text.size)
         return text.size;
     uint32_t codePoint = 0;
     at += prUtf8Decode(text, at, &codePoint);
-    PrUnicodeGraphemeBreak before = prUnicodeGraphemeBreak(codePoint);
-    Look look{};
-    advance(look, codePoint, before);
+    PrUnicodeGraphemeState state = prUnicodeGraphemeStateBegin(codePoint);
     while (at < text.size) {
         uint32_t next = 0;
         uint32_t length = prUtf8Decode(text, at, &next);
-        PrUnicodeGraphemeBreak b = prUnicodeGraphemeBreak(next);
-        if (!keeps(before, b, next, look))
+        if (!prUnicodeGraphemeStatePush(&state, next))
             break;
-        advance(look, next, b);
-        before = b;
         at += length;
     }
     return at;

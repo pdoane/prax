@@ -1,10 +1,12 @@
 // Text fonts.
 //
 // A text font chooses faces from a match order. The order holds the faces of its families, which the set matches when a
-// cluster first needs them, and then the faces of the fallback families of the set that clusters need. Matching opens
-// no file that the font of a face was not already opened from, and loads no pending face. A pending face is requested
-// only if a cluster reaches it. The order is matched again if a change may have changed it (prFontSetFamilyStamp), so a
-// question always reads the current state of the set.
+// cluster first needs them, and then the faces of the fallback families of the set that clusters need. If no fallback
+// family serves a cluster, the text font asks the set's system for one (prFontSetRequestFallback). The set appends the
+// family to its fallback families, and the order matches it. Matching opens no file that the font of a face was not
+// already opened from, and loads no pending face. A pending face is requested only if a cluster reaches it. The order
+// is matched again if a change may have changed it (prFontSetFamilyStamp), so a question always reads the current state
+// of the set.
 //
 // An answer is an index into a table of the fonts that the text font has answered with. The table keeps its indices
 // while the answers hold. The text font records each question that it answered. When the order is matched again, the
@@ -27,9 +29,11 @@
 namespace pr_impl {
 namespace {
 
-// The highest rank of a fallback face (FallbackFace::rank). The rank is twice the locale rank, which counts the
-// language, script and region, plus one if the family is drawn in the generic family of the text font.
-constexpr uint32_t kMaxFallbackRank = 3 * 2 + 1;
+// The rank of a fallback face (FallbackFace::rank) is twice the locale rank, which counts the language, script and
+// region, plus one if the family is drawn in the generic family of the text font. A family that the system gave for the
+// locale of the text font ranks above every other, because it is the system's choice for that locale.
+constexpr uint32_t kSystemFallbackRank = 3 * 2 + 2;
+constexpr uint32_t kMaxFallbackRank = kSystemFallbackRank;
 
 // The largest number of questions that a text font records, and the largest number of bytes in the recorded clusters of
 // more than one code point. A question past either limit is answered but not recorded.
@@ -51,13 +55,18 @@ struct FallbackFace {
     uint32_t scriptCount;
     uint32_t rank;
     uint32_t index;                     // its index among the faces of the order, or kPrTextMatchNone
+    bool privateUse;                    // true if its family serves private-use code points (PrFontFallbackFamily)
+
+    // The locale that the system gave the family for, if `system` (PrFontFallbackFamily).
+    PrLocale locale;
+    bool system;
 };
 
 // The faces that a text font chooses among, as its set matched them.
 struct Order {
     RawArray<PrFontFamily> families;       // the list's families, then the set's default family; names are in `names`
     RawArray<PrRawString> names;
-    PrFontGeneric generic;              // the first generic family of the families
+    PrFontGeneric generic;                 // the first generic family of the families
 
     // The faces matched so far: the faces of each family in turn, then those of the fallback families that clusters
     // needed.
@@ -66,10 +75,11 @@ struct Order {
     RawArray<PrFontCodePointRange> ranges; // the ranges of the faces and of the fallback faces
     uint32_t familiesMatched;              // the number of families whose faces are among `faces`
     uint32_t requested;                    // the number of faces of those families, which come first
+    uint32_t listed;                       // the number of faces of the list's families, which come first of all
 
     RawArray<FallbackFace> fallback;
     RawArray<uint32_t> fallbackScripts;
-    bool fallbackMatched;
+    uint32_t fallbackFamilies;             // the number of fallback families whose faces are among `fallback`
 };
 
 // A question about one code point that the text font answered, keyed by its code point and script, and the answer: an
@@ -187,6 +197,8 @@ bool matchNextFamily(TextFont& t, Order& o) {
     for (uint32_t k = 0; k < prFontMatchFaceCount(t.match); ++k)
         o.faces.push(keep(o, prFontMatchFace(t.match, k)));
     o.requested = o.faces.count;
+    if (o.familiesMatched <= t.listed.count)
+        o.listed = o.faces.count;
     prFontMatchClear(t.match);
     return true;
 }
@@ -197,15 +209,17 @@ void matchFamilies(TextFont& t, Order& o) {
     }
 }
 
-// Matches the fallback families of the set at the style of the text font, recording the scripts that each face declares
-// and how well each family suits the text font.
+// Matches the fallback families that the order has not matched yet, at the style of the text font, and records the
+// scripts that each face declares and how well each family suits the text font.
 void matchFallback(TextFont& t, Order& o) {
-    o.fallbackMatched = true;
     uint32_t tags[64];
-    for (uint32_t i = 0; i < prFontSetFallbackCount(t.set); ++i) {
+    uint32_t count = prFontSetFallbackCount(t.set);
+    for (uint32_t i = o.fallbackFamilies; i < count; ++i) {
         PrFontFallbackFamily family = prFontSetFallbackFamily(t.set, i);
         bool drawnIn = family.generic != PrFontGeneric_None && family.generic == o.generic;
         uint32_t rank = localeRank(family.locale, t.locale) * 2 + (drawnIn ? 1 : 0);
+        if (family.system && family.locale == t.locale)
+            rank = kSystemFallbackRank;
         prFontMatchClear(t.match);
         prFontSetMatchFallback(t.set, i, &t.style, t.match);
         for (uint32_t k = 0; k < prFontMatchFaceCount(t.match); ++k) {
@@ -217,6 +231,9 @@ void matchFallback(TextFont& t, Order& o) {
                 .scriptStart = o.fallbackScripts.count,
                 .rank = rank,
                 .index = kPrTextMatchNone,
+                .privateUse = family.privateUse,
+                .locale = family.locale,
+                .system = family.system,
             };
             uint32_t scripts = prFontScriptTags(matched.font, tags, 64);
             o.fallbackScripts.append(tags, scripts < 64 ? scripts : 64);
@@ -224,6 +241,7 @@ void matchFallback(TextFont& t, Order& o) {
             o.fallback.push(face);
         }
     }
+    o.fallbackFamilies = count;
     prFontMatchClear(t.match);
 }
 
@@ -243,19 +261,49 @@ bool declares(const Order& o, const FallbackFace& face, PrScript script) {
     return false;
 }
 
-// Returns true if the cluster holds a code point that falls back to no installed family. That is a private-use code
-// point, which only a face that a list names may serve, or a control character, whose visible glyph is the missing
-// glyph of the first available face, a visible mark of the character.
-bool fallsBackToNothing(PrStringView cluster) {
+// Returns the script that a fallback face must declare to set the cluster in the first search. That is `script`, as
+// itemization resolved it, if a code point of the cluster is used with it (UAX #24), and otherwise Common, which every
+// face declares. Itemization gives a character of no script, such as an arrow, the script of the surrounding text. That
+// script says nothing about which faces suit the character, so a face of any script may set it.
+PrScript declaredScript(PrStringView cluster, PrScript script) {
+    if (script == PrScript_Zzzz || script == PrScript_Zyyy || script == PrScript_Zinh)
+        return script;
     for (size_t at = 0; at < cluster.size;) {
         uint32_t codePoint = 0;
         at += prUtf8Decode(cluster, at, &codePoint);
-        bool privateUse = (codePoint >= 0xE000 && codePoint <= 0xF8FF) || codePoint >= 0xF0000;
-        bool control = codePoint < 0x20 || (codePoint >= 0x7F && codePoint <= 0x9F);
-        if (privateUse || control)
-            return true;
+        PrScript scripts[kPrUnicodeMaxScriptExtensions];
+        uint32_t count = prUnicodeScriptExtensions(codePoint, scripts);
+        for (uint32_t i = 0; i < count; ++i) {
+            if (scripts[i] == script)
+                return script;
+        }
     }
-    return false;
+    return PrScript_Zyyy;
+}
+
+// The fallback families that a cluster may fall back to.
+enum {
+    FallbackReach_All,
+    FallbackReach_PrivateUse,           // only those that serve private-use code points
+    FallbackReach_None,
+};
+typedef uint8_t FallbackReach;
+
+// Returns the fallback families that the cluster may fall back to. A cluster with a control character falls back to
+// none, because the missing glyph of the first available face is its visible mark. A private-use code point means
+// whatever the font that sets it says. A cluster with one falls back only to a family whose private-use glyphs follow a
+// convention (PrFontFallbackFamily).
+FallbackReach fallbackReach(PrStringView cluster) {
+    FallbackReach reach = FallbackReach_All;
+    for (size_t at = 0; at < cluster.size;) {
+        uint32_t codePoint = 0;
+        at += prUtf8Decode(cluster, at, &codePoint);
+        if (codePoint < 0x20 || (codePoint >= 0x7F && codePoint <= 0x9F))
+            return FallbackReach_None;
+        if (prUnicodeGeneralCategory(codePoint) == PrUnicodeGeneralCategory_PrivateUse)
+            reach = FallbackReach_PrivateUse;
+    }
+    return reach;
 }
 
 // Returns true for a code point that a face does not need a glyph for to serve a cluster. These are the default
@@ -314,12 +362,15 @@ bool covers(const PrFontFace& face, PrStringView cluster, Coverage coverage) {
 }
 
 // Returns the first requested face that serves the cluster with the coverage, or kPrTextMatchNone. The faces that match
-// the presentation of the cluster come first, then the others, each group in the order of the list. The search requests
-// the load of each unloaded face that it passes if the ranges of the face hold the first code point of the cluster.
+// the presentation of the cluster come first, then the others, each group in the order of the list. The faces of the
+// default family are searched only if the list's families have none. A cluster that the list's faces lack then falls
+// back to a face that suits the text font, rather than to the default family. The search requests the load of each
+// unloaded face that it passes if the ranges of the face hold the first code point of the cluster.
 uint32_t requestedFace(TextFont& t, Order& o, PrStringView cluster, uint32_t first, bool emoji, Coverage coverage) {
     matchFamilies(t, o);
+    uint32_t searched = o.listed != 0 ? o.listed : o.requested;
     for (uint32_t pass = 0; pass < 2; ++pass) {
-        for (uint32_t i = 0; i < o.requested; ++i) {
+        for (uint32_t i = 0; i < searched; ++i) {
             PrFontFace face = faceAt(o, o.faces.data[i]);
             if (face.font == nullptr) {
                 if (pass == 0 && face.pending != 0 && prFontFaceInRanges(&face, first))
@@ -334,15 +385,14 @@ uint32_t requestedFace(TextFont& t, Order& o, PrStringView cluster, uint32_t fir
     return kPrTextMatchNone;
 }
 
-// Returns the fallback face that serves the cluster with the coverage, or kPrTextMatchNone. The face found joins the
-// faces of the order.
-uint32_t fallbackFace(TextFont& t, Order& o, PrStringView cluster, PrScript script, bool emoji, Coverage coverage) {
-    if (fallsBackToNothing(cluster))
-        return kPrTextMatchNone;
-    if (!o.fallbackMatched)
-        matchFallback(t, o);
-    // The first face that declares the script, or else the first that serves the cluster. In each pass, color faces
-    // come first for an emoji, then the families by how well they suit the text font, then in the order of the set.
+// Returns the index of the fallback face of the order that serves the cluster with the coverage, or kPrTextMatchNone.
+// The first pass looks for a face that declares the cluster's script, and the second for any face that serves the
+// cluster. In each pass, color faces come first for an emoji, then the families by how well they suit the text font,
+// then in the order of the set. A family that the system gave for the locale of the text font counts as declaring every
+// script, because the system chose it for text in that locale, whatever its tables declare.
+uint32_t searchFallback(const Order& o, PrStringView cluster, PrScript script, bool emoji, Coverage coverage,
+        FallbackReach reach) {
+    PrScript declared = declaredScript(cluster, script);
     uint32_t found = kPrTextMatchNone;
     for (uint32_t pass = 0; pass < 2 && found == kPrTextMatchNone; ++pass) {
         for (uint32_t colors = 0; colors < (emoji ? 2u : 1u) && found == kPrTextMatchNone; ++colors) {
@@ -353,13 +403,34 @@ uint32_t fallbackFace(TextFont& t, Order& o, PrStringView cluster, PrScript scri
                     bool color = (face.flags & PrFontFaceFlag_Emoji) != 0;
                     if ((emoji && color != (colors == 0)) || candidate.rank != rank)
                         continue;
-                    if ((pass == 0 && !declares(o, candidate, script)) || !covers(face, cluster, coverage))
+                    if (reach == FallbackReach_PrivateUse && !candidate.privateUse)
+                        continue;
+                    bool chosen = candidate.rank == kSystemFallbackRank;
+                    if ((pass == 0 && !chosen && !declares(o, candidate, declared)) || !covers(face, cluster, coverage))
                         continue;
                     found = i;
                     break;
                 }
             }
         }
+    }
+    return found;
+}
+
+// Returns the fallback face that serves the cluster with the coverage, or kPrTextMatchNone. The face found joins the
+// faces of the order. The text font asks the set's system for a family if no face serves the cluster, or if the face
+// that serves it comes from a family that the system gave for another locale. It asks only for a cluster that may fall
+// back to any family.
+uint32_t fallbackFace(TextFont& t, Order& o, PrStringView cluster, PrScript script, bool emoji, Coverage coverage) {
+    FallbackReach reach = fallbackReach(cluster);
+    if (reach == FallbackReach_None)
+        return kPrTextMatchNone;
+    matchFallback(t, o);
+    uint32_t found = searchFallback(o, cluster, script, emoji, coverage, reach);
+    bool ask = found == kPrTextMatchNone || (o.fallback.data[found].system && o.fallback.data[found].locale != t.locale);
+    if (ask && reach == FallbackReach_All && prFontSetRequestFallback(t.set, cluster, t.locale, o.generic)) {
+        matchFallback(t, o);
+        found = searchFallback(o, cluster, script, emoji, coverage, reach);
     }
     if (found == kPrTextMatchNone)
         return kPrTextMatchNone;

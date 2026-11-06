@@ -23,8 +23,9 @@ pr_app(alchemy
     commands.cpp
     view.cpp
 )
-target_link_libraries(alchemy PRIVATE alchemy_studio prax::studio_window prax::app prax::studio_command prax::studio_kit
-                                      prax::draw prax::ui prax::net prax::http prax::tls prax::websocket prax::core_cpp)
+target_link_libraries(alchemy PRIVATE alchemy_studio prax::studio_window prax::app prax::studio_command
+                                      prax::studio_kit prax::draw prax::ui prax::net prax::http prax::tls prax::websocket
+                                      prax::core_cpp)
 
 if (PR_DEVELOP)
     pr_module_tests(alchemy_studio

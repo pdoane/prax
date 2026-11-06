@@ -67,12 +67,14 @@ endif()
 option(PR_PLATFORM_THREADS "Start threads where the build leaves threads to the default backends"
     ${PR_PLATFORM_THREADS_DEFAULT})
 
-# The font bundles whose files the build fetches, into font_bundle in the build directory, for the tests, the tools and
-# the examples and the apps (lib/font_bundle/font_bundle.cmake). A consumer fetches its own with pr_font_bundle_fetch.
+# The font bundles whose files the build fetches into font_bundle in the build directory, for the tests, the tools, the
+# examples and the apps (lib/font_bundle/font_bundle.cmake). It fetches every bundle, because the tests install them
+# all. A consumer fetches its own with pr_font_bundle_fetch.
 if (PR_DEVELOP OR PR_EXAMPLES OR PR_APPS)
-    set(PR_FONT_BUNDLES_DEFAULT "Noto;Standard14")
+    set(PR_FONT_BUNDLES Complete NotoMono Standard14 Plex NerdFontSymbols)
+else()
+    set(PR_FONT_BUNDLES "")
 endif()
-set(PR_FONT_BUNDLES "${PR_FONT_BUNDLES_DEFAULT}" CACHE STRING "The font bundles whose files the build fetches")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -127,5 +127,7 @@ PrKitTheme prKitThemeStudio(PrKitThemeVariant variant, PrFontSet* PR_NULLABLE fo
     for (uint32_t role = 0; role < PrKitTextRole_Count; ++role)
         theme.types[role] = kTypes[role];
     theme.fonts = fonts;
+    theme.ui = prFontFamilyGeneric(PrFontGeneric_SystemUi);
+    theme.mono = prFontFamilyGeneric(PrFontGeneric_Monospace);
     return theme;
 }

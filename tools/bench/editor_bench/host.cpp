@@ -48,7 +48,8 @@ void destroyTree(Host& host) {
 
 bool hostOpen(Host& host, const char* fontDirectory) {
     host.fonts = prFontSetCreate(nullptr);
-    if (prFontBundleInstall(host.fonts, PrFontBundle_Noto, fontDirectory) == 0)
+    PrFontBundle bundle = PrFontBundle_Complete;
+    if (prFontBundleInstall(host.fonts, &bundle, 1, fontDirectory) == 0)
         return false;
     host.shaper = prTextHarfBuzzCreate();
     createTree(host, prKitThemeStudio(PrKitThemeVariant_Dark, host.fonts));
