@@ -90,6 +90,36 @@ if (PR_DEVELOP)
     endif()
 endif()
 
+# Studio's terminal: runs a program on a pseudoterminal, and draws its screen in cells of a monospaced font, with
+# input, selection and scrollback.
+pr_library(studio_terminal INCLUDE terminal/include
+    terminal/src/terminal.cpp
+    terminal/src/terminal_draw.cpp
+    terminal/src/terminal_link.cpp
+    terminal/src/terminal_shell.cpp
+)
+pr_embed(pr_studio_terminal terminal/shell VARIABLE kTerminalShellScripts FILES
+    zsh/.zshenv
+    zsh/prax.zsh
+    bash/prax.bash
+    fish/vendor_conf.d/prax-shell-integration.fish
+)
+target_link_libraries(pr_studio_terminal PUBLIC prax::app prax::color prax::layout prax::process prax::studio_kit
+                                                prax::text prax::vterm
+                                         PRIVATE prax::core_cpp prax::compress prax::draw prax::image prax::ui
+                                                 prax::url)
+# The version that the terminal sets in TERM_PROGRAM_VERSION.
+target_compile_definitions(pr_studio_terminal PRIVATE PR_TERMINAL_VERSION="${PROJECT_VERSION}")
+
+if (PR_DEVELOP)
+    pr_module_tests(studio_terminal
+        terminal/tests/test_terminal.cpp
+        terminal/tests/test_terminal_c.c
+    )
+    target_link_libraries(studio_terminal_tests PRIVATE kit_fixture prax::draw prax::layout prax::text prax::ui
+                                                prax::process prax::url prax::vterm prax::studio_kit)
+endif()
+
 # Studio's window: an application's kit in a window of the platform, rendered with lib/draw on the platform's GPU.
 pr_library(studio_window INCLUDE window/include
     window/src/studio_window.cpp

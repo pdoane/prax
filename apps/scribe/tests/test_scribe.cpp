@@ -9,7 +9,9 @@
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/text_font.h"
+#include "pr/thread.h"
 #include "pr/ui.h"
+#include "pr/url_file.h"
 
 #include "apps/scribe/scribe.h"
 #include "tools/harness/kit_fixture.h"
@@ -32,6 +34,7 @@ struct Editor {
         style.size = 13;
         PrTextFontDesc desc{.set = f.fonts, .families = &mono, .familyCount = 1, .style = style};
         s.font = prTextFontCreate(&desc);
+        s.fonts = f.fonts;
         s.kit = f.kit;
         s.ui = f.ui;
         openEditor(s);
@@ -133,6 +136,142 @@ TEST_CASE("the text sits below the menu bar and above the status line, and takes
     CHECK(e.portBox().bottom < 600);
     e.type("x");
     CHECK(e.text() == "xhello");
+}
+
+TEST_CASE("the terminal panel opens below the text with focus, and its toggle hides it and gives the text focus") {
+    Editor e("hello");
+    float textBottom = e.portBox().bottom;
+    e.run("terminal.toggle");
+    // The terminal receives focus in the frame after it asks for it.
+    e.settle();
+    REQUIRE(e.s.terminals.count() == 1);
+    CHECK(e.s.terminalShown);
+    PrLayoutNode screen = prTerminalNode(e.s.terminals[0]);
+    REQUIRE(screen != kPrLayoutNodeNone);
+    CHECK(prUiFocus(e.f.ui) == screen);
+    CHECK(prTerminalHasFocus(e.s.terminals[0]));
+    CHECK(e.portBox().bottom < textBottom);
+    CHECK(e.f.bounds(screen).top >= e.portBox().bottom);
+    e.run("terminal.toggle");
+    CHECK(!e.s.terminalShown);
+    CHECK(e.portBox().bottom == doctest::Approx(double(textBottom)));
+    e.type("x");
+    CHECK(e.text() == "xhello");
+    e.run("terminal.new");
+    e.settle();
+    e.run("terminal.close");
+    CHECK(e.s.terminals.count() == 1);
+}
+
+TEST_CASE("the terminal panel paints the terminal's background beneath its view, and follows the program's") {
+    Editor e("hello");
+    e.run("terminal.toggle");
+    e.settle();
+    REQUIRE(e.s.terminals.count() == 1);
+    PrTerminal* terminal = e.s.terminals[0];
+    PrStringView magenta = "\x1b]11;#ff00ff\x07";
+    prVtermWrite(prTerminalVtermLock(terminal), PrByteView{prStringBytes(magenta), magenta.size});
+    prTerminalVtermUnlock(terminal);
+    e.settle();
+    PrColor background = prTerminalBackground(terminal);
+    CHECK(background.r == 1.0f);
+    CHECK(background.g == 0.0f);
+    std::vector<uint8_t> rgba;
+    REQUIRE(e.f.render(&rgba));
+    auto isMagenta = [&](PrVec2 at) {
+        size_t i = (size_t(at.y) * KitFixture::kRenderWidth + size_t(at.x)) * 4;
+        return rgba[i] > 250 && rgba[i + 1] < 5 && rgba[i + 2] > 250;
+    };
+    // A blank cell, the gutter, and the leftover space past the last whole cell, at the view's bottom right.
+    PrRect view = e.f.bounds(prTerminalNode(terminal));
+    PrVec2 cell = prTerminalCellExtent(terminal);
+    PrVec2 origin = prTerminalScreenOrigin(terminal);
+    CHECK(isMagenta(PrVec2{view.left + origin.x + cell.x * 20.5f, view.top + cell.y * 2.5f}));
+    CHECK(isMagenta(PrVec2{view.left + origin.x / 2, view.top + cell.y * 2.5f}));
+    CHECK(isMagenta(PrVec2{view.right - 1, view.bottom - 1}));
+    // The text above the panel keeps its own background.
+    PrRect text = e.portBox();
+    CHECK_FALSE(isMagenta(PrVec2{text.right - 20, text.bottom - 4}));
+}
+
+TEST_CASE("the first terminal starts in the document's workspace, and a new one where the shown one is") {
+    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
+    String folder = format("{}/prax-tests/scribe/workspace", prRawStringView(&cache));
+    prRawStringReset(&cache);
+    REQUIRE(prFileCreateDirectory(format("{}/.git", folder)));
+    REQUIRE(prFileCreateDirectory(format("{}/sub", folder)));
+    String path = format("{}/sub/notes.txt", folder);
+    REQUIRE(prFileWrite(path, PrByteView{prStringBytes("notes\n"), 6}));
+    Editor e("");
+    REQUIRE(openDocument(e.s, path));
+    prTextEditorShow(e.s.editor, prTextEditorDocumentFromPath(e.s.editor, path));
+    e.settle();
+    // Returns the working directory of the terminal at `index`.
+    auto directory = [&](uint32_t index) {
+        PrRawString text = prTerminalWorkingDirectory(e.s.terminals[index]);
+        String out(prRawStringView(&text));
+        prRawStringReset(&text);
+        return out;
+    };
+    // Runs frames until `done` returns true, or at most 5000 times. Returns the last result of `done`.
+    auto settleUntil = [&](auto done) {
+        for (uint32_t i = 0; i < 5000 && !done(); ++i) {
+            prThreadSleep(2);
+            e.settle();
+        }
+        return done();
+    };
+
+    e.run("terminal.new");
+    REQUIRE(e.s.terminals.count() == 1);
+    CHECK(settleUntil([&] { return prStringEndsWith(directory(0), "/prax-tests/scribe/workspace"); }));
+
+    // The shell reports the workspace's sub directory.
+    String sub = String::adopt(prFilePathAbsolute(format("{}/sub", folder), ""));
+    PrRawString url = prUrlFromFilePath(sub);
+    String report = format("\x1b]7;{}\x07", prRawStringView(&url));
+    prRawStringReset(&url);
+    prVtermWrite(prTerminalVtermLock(e.s.terminals[0]), PrByteView{prStringBytes(report), report.count()});
+    prTerminalVtermUnlock(e.s.terminals[0]);
+    e.run("terminal.new");
+    REQUIRE(e.s.terminals.count() == 2);
+    CHECK(settleUntil([&] { return directory(1) == sub; }));
+}
+
+TEST_CASE("a click on a terminal's notification shows the panel with that terminal, and gives it focus") {
+    Editor e("hello");
+    e.run("terminal.new");
+    e.settle();
+    e.run("terminal.new");
+    e.settle();
+    REQUIRE(e.s.terminals.count() == 2);
+    CHECK(prTerminalNotificationTag(e.s.terminals[0]) != prTerminalNotificationTag(e.s.terminals[1]));
+    e.run("terminal.toggle");
+    REQUIRE(!e.s.terminalShown);
+    PrAppEvent click{.kind = PrAppEventKind_Notification, .tag = prTerminalNotificationTag(e.s.terminals[0])};
+    CHECK(handleEvent(e.s, click));
+    e.settle();
+    e.settle();
+    CHECK(e.s.terminalShown);
+    CHECK(e.s.terminal == 0);
+    CHECK(prTerminalHasFocus(e.s.terminals[0]));
+    PrAppEvent key{.kind = PrAppEventKind_KeyDown, .key = 'A'};
+    CHECK_FALSE(handleEvent(e.s, key));
+}
+
+TEST_CASE("the commands of the shell's integration run on the terminal that shows, and do nothing without one") {
+    Editor e("hello");
+    const char* commands[] = {
+        "terminal.copyCommandOutput", "terminal.selectCommandOutput", "terminal.previousPrompt", "terminal.nextPrompt",
+    };
+    for (const char* command : commands)
+        e.run(command);
+    CHECK(e.s.terminals.isEmpty());
+    e.run("terminal.toggle");
+    REQUIRE(e.s.terminals.count() == 1);
+    for (const char* command : commands)
+        e.run(command);
+    CHECK(e.s.terminalShown);
 }
 
 TEST_CASE("a command runs on the text, and typing goes on in it") {
@@ -381,4 +520,34 @@ TEST_CASE("Save waits for the load to finish") {
         e.settle();
     uint32_t index = prCommandRegistryFind(e.s.commands, "file.save");
     CHECK((prCommandRegistryState(e.s.commands, index) & PrCommandStateFlag_Disabled) == 0);
+}
+
+TEST_CASE("a click with the primary modifier on a terminal's reference to a file shows the file at its line") {
+    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
+    String folder = format("{}/prax-tests/scribe", prRawStringView(&cache));
+    prRawStringReset(&cache);
+    REQUIRE(prFileCreateDirectory(folder));
+    String path = format("{}/linked.txt", folder);
+    String text = document(5);
+    REQUIRE(prFileWrite(path, PrByteView{prStringBytes(text), text.count()}));
+    Editor e("hello");
+    e.run("terminal.toggle");
+    e.settle();
+    REQUIRE(e.s.terminals.count() == 1);
+    PrTerminal* terminal = e.s.terminals[0];
+    // The reference is printed on row 9, below the shell's prompt, in the form a compiler uses.
+    String printed = format("\x1b[9;1H{}:3:4: note\r\n", path);
+    prVtermWrite(prTerminalVtermLock(terminal), PrByteView{prStringBytes(printed), printed.count()});
+    prTerminalVtermUnlock(terminal);
+    e.settle();
+    PrRect box = e.f.bounds(prTerminalNode(terminal));
+    PrVec2 cell = prTerminalCellExtent(terminal);
+    e.click(PrVec2{box.left + 2.5f * cell.x, box.top + 8.5f * cell.y}, kCommand);
+    REQUIRE(e.document() != nullptr);
+    // The editor normalizes the document's path.
+    CHECK(prTextEditorDocumentPath(e.document()) == String::adopt(prFilePathAbsolute(path, "")));
+    for (uint32_t i = 0; i < 100 && prTextEditorDocumentInfo(e.document()).loading; ++i)
+        e.settle();
+    CHECK(e.info().caret.line == 2);
+    CHECK(e.info().caret.column == 3);
 }

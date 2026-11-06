@@ -49,6 +49,7 @@ bool open(void* context, PrStudioWindow* window) {
     style.size = 13;
     PrTextFontDesc font{.set = prStudioWindowFonts(window), .families = &mono, .familyCount = 1, .style = style};
     s.font = prTextFontCreate(&font);
+    s.fonts = prStudioWindowFonts(window);
     s.kit = prStudioWindowKit(window);
     s.ui = prStudioWindowUi(window);
     s.app = prStudioWindowApp(window);
@@ -110,6 +111,9 @@ int main(int argc, char** argv) {
         .extent = {1200, 900},
         .fonts = fonts,
         .open = open,
+        .event = [](void* context, PrStudioWindow*, const PrAppEvent* event) {
+            return handleEvent(runOf(context).scribe, *event);
+        },
         .build = [](void* context, PrStudioWindow*, PrLayoutNode root, PrVec2 extent) {
             buildScribe(runOf(context).scribe, root, extent);
         },

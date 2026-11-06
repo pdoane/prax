@@ -34,8 +34,8 @@ The libraries, by area. The first comment of each library's `CMakeLists.txt` say
 | Text | `font`, `font_bundle`, `text`, `text_edit`, `text_view`, `syntax`, `regex`, `text_diff` |
 | Graphics | `path`, `draw`, `canvas`, `lottie` |
 | Documents | `css`, `dom`, `layout`, `html`, `svg`, `mathml`, `tex`, `markdown` |
-| Developer tools | `lsp`, `dap` |
-| Interface | `ui`, `studio/kit`, `studio/command`, `studio/text_editor` |
+| Developer tools | `lsp`, `dap`, `vterm` |
+| Interface | `ui`, `studio/kit`, `studio/command`, `studio/text_editor`, `studio/terminal` |
 
 **Verified.** WPT, the test suites of CommonMark, GFM, resvg and the Lottie players, and Prax's own suites check
 conformance. Benchmarks measure immediate-mode frames and dynamic retained documents.
