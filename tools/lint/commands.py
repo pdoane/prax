@@ -24,10 +24,10 @@ USAGE = {
     continues, and break its lines no sooner than the column limit makes them, in the files named or in every source
     that lint reads""",
     "prose": """\
-./dev.sh prose [--base REV] [path...]
-    check a prose pass (docs/technical_writing.md): the files named, or every file changed from REV (HEAD), must have
-    the same code as at REV once comments are removed; then rewrap them and report what lint finds in them
-    (tools/lint/prose.py)""",
+./dev.sh prose [--base REV | --staged] [path...]
+    check a change that rewrites only comments (docs/technical_writing.md). The files named, or every file changed from REV (HEAD), must have
+    the same code as at REV once comments are removed. With --staged, the files are those staged, and they are compared
+    with the index. Then rewrap them and report what lint finds in them (tools/lint/prose.py)""",
 }
 
 

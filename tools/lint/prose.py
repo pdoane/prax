@@ -8,9 +8,10 @@ Then refills the files' comments (rewrap.py) and reports what lint finds in them
 C, C++, Objective-C and JavaScript sources compare without their `//` and `/* */` comments, and Python sources without
 their `#` comments and docstrings. Other files, such as Markdown, are prose throughout and are only reported as changed.
 
-Usage: python3 -m tools.lint.prose [--base REV] [path...]
+Usage: python3 -m tools.lint.prose [--base REV | --staged] [path...]
 
-With no paths, checks every file that differs from REV in the working tree. REV is HEAD by default.
+With no paths, checks every file that differs from REV in the working tree. REV is HEAD by default. With --staged,
+compares the working tree with the index, and with no paths checks the files that are staged.
 """
 
 import argparse
@@ -70,8 +71,11 @@ def git(*args):
     return subprocess.run(["git", *args], cwd=lint.ROOT, capture_output=True, text=True)
 
 
-def changed_files(base):
-    """Returns the files that differ from `base` in the working tree, and the files that git does not track."""
+def changed_files(base, staged):
+    """Returns the files that differ from `base` in the working tree, and the files that git does not track. With
+    `staged`, returns the files that the index changes from HEAD instead."""
+    if staged:
+        return sorted(set(git("diff", "--name-only", "--cached").stdout.split()))
     out = git("diff", "--name-only", base).stdout.split()
     out += git("ls-files", "--others", "--exclude-standard").stdout.split()
     return sorted(set(out))
@@ -88,10 +92,13 @@ def first_difference(old, new):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base", default="HEAD", help="the revision to compare with")
+    parser.add_argument("--staged", action="store_true", help="compare with the index instead of a revision")
     parser.add_argument("paths", nargs="*")
     args = parser.parse_args()
+    base = "" if args.staged else args.base  # git spells the index as an empty revision
 
-    paths = [os.path.relpath(os.path.abspath(p), lint.ROOT) for p in args.paths] or changed_files(args.base)
+    paths = [os.path.relpath(os.path.abspath(p), lint.ROOT) for p in args.paths]
+    paths = paths or changed_files(args.base, args.staged)
     files = []
     for path in paths:
         full = os.path.join(lint.ROOT, path)
@@ -112,7 +119,7 @@ def main():
         if new is None:
             continue
         sources.append(os.path.join(lint.ROOT, path))
-        shown = git("show", f"{args.base}:{path}")
+        shown = git("show", f"{base}:{path}")
         if shown.returncode != 0:
             continue
         old = code_of(path, shown.stdout)
