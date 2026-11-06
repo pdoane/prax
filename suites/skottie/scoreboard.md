@@ -5,5 +5,5 @@ change to it is what the change did.
 
 | part | passing |
 | --- | --- |
-| skottie | 239/736 |
-| TOTAL | 239/736 |
+| skottie | 256/736 |
+| TOTAL | 256/736 |
