@@ -1,4 +1,8 @@
 // The Win32 application backend: a Windows window and the Win32 message loop.
+//
+// A notification is a balloon on the window's icon in the notification area, and Windows shows it as a toast. The first
+// notification adds the icon, and the end of the run removes it. A new notification replaces the previous one. A click
+// on the icon also brings the window forward. A headless window posts no notifications.
 
 #pragma once
 

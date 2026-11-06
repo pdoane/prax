@@ -795,6 +795,12 @@ bool emit(Walk& w, FragmentInstance instance, const Ink& ink, const PrIRect& box
     if (ink.reads)
         instance.flags |= FragmentInstanceFlag_ReadsDestination;
     instance.clip = clipRecord(w);
+    uint32_t kind = instance.flags & FragmentInstanceFlag_Coverage;
+    bool covers = kind == FragmentCoverage_Solid || kind == FragmentCoverage_Rect ||
+        kind == FragmentCoverage_Triangle || kind == FragmentCoverage_Atlas;
+    const FragmentClip* clip = instance.clip != 0 ? &w.b->clips.data[instance.clip - 1] : nullptr;
+    if (covers && ink.paint == 0 && !ink.reads && (clip == nullptr || (clip->shapeCount == 0 && clip->mask == 0)))
+        instance.flags |= FragmentInstanceFlag_Basic;
     w.b->instances.push(instance);
     if (w.tracks.last())
         w.drawn.last() = prIRectUnion(w.drawn.last(), prIRectIntersect(box, clipOf(w).box));

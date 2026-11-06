@@ -10,6 +10,8 @@
 #include "pr/search.h"
 #include "pr/thread.h"
 
+#include "gpu/backends/shared/src/gpu_shared_metal_display.h"
+
 namespace pr_impl {
 
 namespace {
@@ -106,6 +108,13 @@ GpuMetalBlock blockTake(GpuMetalDevice* d, RawArray<GpuMetalBlock>& free, uint64
     return GpuMetalBlock{buffer, slot, 0};
 }
 
+// Makes a staging block volatile once the uploads that read it are done. Uploads come in bursts, so the system may
+// reclaim the memory of a free block between them, and an idle device holds no staging memory. The block becomes free
+// only when the submission's fence is reached, which is after this runs. Taking the block makes it nonvolatile again.
+void stagingDone(void* context, double) {
+    [static_cast<id<MTLBuffer>>(context) setPurgeableState:MTLPurgeableStateVolatile];
+}
+
 // Returns room for `size` bytes in the batch's staging, as the block's index in the batch and the offset in it. Returns
 // false if the device has no memory for it. The caller holds the mutex.
 bool stage(GpuMetalDevice* d, uint64_t size, uint32_t* block, uint64_t* offset) {
@@ -118,6 +127,9 @@ bool stage(GpuMetalDevice* d, uint64_t size, uint32_t* block, uint64_t* offset) 
         GpuMetalBlock added = blockTake(d, d->stagingBlocks, kGpuMetalStagingBlock, size);
         if (added.buffer == nil)
             return false;
+        // A free staging block is volatile and may have been purged. Its contents are not needed, so a purge is
+        // harmless.
+        [added.buffer setPurgeableState:MTLPurgeableStateNonVolatile];
         d->uploadBlocks.push(added);
         last = &d->uploadBlocks.last();
         at = 0;
@@ -498,6 +510,30 @@ void passSetIndexBuffer(PrGpuDevice*, PrGpuPass* handle, PrGpuBuffer buffer, uin
     pass->indexType = wide ? MTLIndexTypeUInt32 : MTLIndexTypeUInt16;
 }
 
+// Returns the capabilities of the screen that shows most of the view's window, or of the main screen if the view is not
+// in a window. It reads AppKit, so it must be called on the main thread.
+PrAppDisplay displayOf(NSView* view) {
+    PrAppDisplay display = prAppDisplayDefault();
+    NSScreen* screen = view.window != nil ? view.window.screen : NSScreen.mainScreen;
+    if (screen != nil) {
+        display.headroom = float(screen.maximumExtendedDynamicRangeColorComponentValue);
+        display.potentialHeadroom = float(screen.maximumPotentialExtendedDynamicRangeColorComponentValue);
+        if ([screen canRepresentDisplayGamut:NSDisplayGamutP3])
+            display.gamut = PrColorSpace_DisplayP3;
+    }
+    return display;
+}
+
+// Makes the layer present `info`: half floats in extended sRGB, with EDR, or 8-bit sRGB.
+void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
+    bool extended = info.format == PrGpuFormat_Rgba16F;
+    layer.pixelFormat = gpuMetalPixelFormat(info.format);
+    CGColorSpaceRef space = CGColorSpaceCreateWithName(extended ? kCGColorSpaceExtendedSRGB : kCGColorSpaceSRGB);
+    layer.colorspace = space;
+    CGColorSpaceRelease(space);
+    layer.wantsExtendedDynamicRangeContent = extended ? YES : NO;
+}
+
 PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
@@ -509,18 +545,8 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         // resizes. Any other view hosts a new Metal layer.
         CAMetalLayer* layer = [view.layer isKindOfClass:CAMetalLayer.class] ? (CAMetalLayer*)view.layer : [CAMetalLayer layer];
         layer.device = d->device;
-        // HDR presents extended sRGB, encoded, in half floats, which the layer shows past SDR white.
-        bool hdr = desc->intent == PrGpuSwapChainIntent_Hdr;
-        PrGpuSwapChainInfo info;
-        if (hdr)
-            info = PrGpuSwapChainInfo{PrGpuFormat_Rgba16F, PrColorSpace_Srgb};
-        else
-            info = PrGpuSwapChainInfo{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
-        layer.pixelFormat = gpuMetalPixelFormat(info.format);
-        CGColorSpaceRef space = CGColorSpaceCreateWithName(hdr ? kCGColorSpaceExtendedSRGB : kCGColorSpaceSRGB);
-        layer.colorspace = space;
-        CGColorSpaceRelease(space);
-        layer.wantsExtendedDynamicRangeContent = hdr ? YES : NO;
+        PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(desc->intent, displayOf(view));
+        layerTakeInfo(layer, info);
         // The layer is readable, so that a frame can be copied or read back.
         layer.framebufferOnly = NO;
         layer.contentsScale = view.window != nil ? view.window.backingScaleFactor : 1;
@@ -545,6 +571,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         GpuMetalSwapChain* sc = allocZeroed<GpuMetalSwapChain>();
         sc->device = device;
         sc->info = info;
+        sc->intent = desc->intent;
         sc->layer = [layer retain];
         sc->view = view;
         sc->transactional = layer.presentsWithTransaction;
@@ -895,6 +922,16 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* handle, P
     @autoreleasepool {
         releaseDrawable(d, sc);
 
+        // An HDR swap chain follows its window's display, which changes if the window moves to another display or the
+        // display's mode changes. AppKit can be read only on the main thread, so an acquire on another thread keeps the
+        // choice that was last made on the main thread.
+        if (sc->intent == PrGpuSwapChainIntent_Hdr && [NSThread isMainThread]) {
+            PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(sc->intent, displayOf(sc->view));
+            if (info.format != sc->info.format || info.space != sc->info.space) {
+                layerTakeInfo(sc->layer, info);
+                sc->info = info;
+            }
+        }
         CGSize size = CGSizeMake(extent.x, extent.y);
         if (!CGSizeEqualToSize(sc->layer.drawableSize, size))
             sc->layer.drawableSize = size;
@@ -963,6 +1000,16 @@ void gpuMetalSubmissionRecord(GpuMetalDevice* d, GpuMetalCommands* c, PrGpuFence
     for (uint32_t i = 0; i < c->blocks.count; ++i) {
         d->held.push(GpuMetalHeld{.fence = fence, .kind = GpuMetalHeldKind_StreamBlock, .block = c->blocks.data[i]});
     }
+}
+
+GpuMetalDone* PR_NULLABLE gpuMetalUploadsDones(const GpuMetalDevice* d, uint32_t* count) {
+    *count = d->uploadBlocks.count;
+    if (d->uploadBlocks.count == 0)
+        return nullptr;
+    GpuMetalDone* dones = static_cast<GpuMetalDone*>(prMemoryAlloc(sizeof(GpuMetalDone) * d->uploadBlocks.count));
+    for (uint32_t i = 0; i < d->uploadBlocks.count; ++i)
+        dones[i] = GpuMetalDone{.done = stagingDone, .context = d->uploadBlocks.data[i].buffer};
+    return dones;
 }
 
 void gpuMetalUploadsRecord(GpuMetalDevice* d, PrGpuFence fence) {

@@ -185,6 +185,27 @@ void prAppSetTitle(PrApp* app, PrStringView title) {
     app->setTitle(app, title);
 }
 
+void prAppSetExtent(PrApp* app, PrUVec2 extent) {
+    if (app->setExtent != nullptr)
+        app->setExtent(app, extent);
+}
+
+void prAppRequestAttention(PrApp* app) {
+    if (app->requestAttention != nullptr)
+        app->requestAttention(app);
+}
+
+bool prAppIsActive(PrApp* app) {
+    return app->isActive == nullptr || app->isActive(app);
+}
+
+PrStatus prAppNotificationPost(PrApp* app, const PrAppNotificationDesc* desc) {
+    PR_ASSERT(prUtf8Validate(desc->title) == desc->title.size && prUtf8Validate(desc->body) == desc->body.size);
+    if (app->notificationPost == nullptr)
+        return PrStatus_NotSupported;
+    return app->notificationPost(app, desc);
+}
+
 PrStatus prAppSurface(PrApp* app, PrAppSurface* out) {
     return app->surface(app, out);
 }

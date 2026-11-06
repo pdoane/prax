@@ -190,6 +190,7 @@ struct GpuMetalPass : PrGpuPass {
 struct GpuMetalSwapChain : PrGpuSwapChain {
     CAMetalLayer* layer;                      // retained
     NSView* view;                             // the view that the layer backs or the view hosts, not retained
+    PrGpuSwapChainIntent intent;
     bool transactional;                       // true unless the swap chain was created PrGpuSwapChainFlag_Threaded
     id<CAMetalDrawable> PR_NULLABLE drawable; // the drawable of the acquired frame, retained
     PrGpuTexture texture;                     // the drawable's texture, while it is acquired
@@ -331,6 +332,11 @@ void gpuMetalSubmissionDone(GpuMetalDevice* d, PrGpuFence fence, GpuMetalDone* P
 // Records that a submission committed at `fence`: its command buffer's serial, and the stream blocks that it holds. The
 // caller holds the mutex.
 void gpuMetalSubmissionRecord(GpuMetalDevice* d, GpuMetalCommands* c, PrGpuFence fence);
+
+// Returns the functions to call once the open batch of uploads is done, or null if there are none, and writes their
+// count to `count`. The functions make the batch's staging blocks volatile. The submission's completion frees the
+// returned array. The caller holds the mutex.
+GpuMetalDone* PR_NULLABLE gpuMetalUploadsDones(const GpuMetalDevice* d, uint32_t* count);
 
 // Records that the open batch of uploads committed at `fence`, and empties the batch. The caller holds the mutex.
 void gpuMetalUploadsRecord(GpuMetalDevice* d, PrGpuFence fence);

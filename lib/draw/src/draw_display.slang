@@ -139,7 +139,16 @@ float4 wholeVertex(uint id : SV_VertexID) : SV_Position {
 
 [shader("fragment")]
 float4 convertPixel(float4 position : SV_Position) : SV_Target {
-    float3 light = gamutMapped(toneMapped(linearOf(frame.Load(int3(int2(position.xy), 0)).rgb)));
+    float3 color = frame.Load(int3(int2(position.xy), 0)).rgb;
+    // Most of a frame's colors lie within sRGB and at or below SDR white. Such a color is inside every gamut that the
+    // shader maps into and below the tone map's knee, so neither mapping changes it and the shader skips both.
+    if (all(color >= 0) && all(color <= 1)) {
+        if (arguments.output == kOutputEncoded)
+            return float4(color, 1);
+        if (arguments.output == kOutputLinear)
+            return float4(linearOf(color), 1);
+    }
+    float3 light = gamutMapped(toneMapped(linearOf(color)));
     float3 c = arguments.output == kOutputEncoded  ? encodedOf(light)
                : arguments.output == kOutputLinear ? light
                                                    : pqOf(times(arguments.toOutput, light) * arguments.pqWhite);

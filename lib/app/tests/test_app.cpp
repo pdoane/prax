@@ -19,6 +19,17 @@ struct FakeApp {
     double frameTime;
 };
 
+// A fake application that also records the notifications posted to it and reports whether its window is active.
+struct FakeNotifier {
+    FakeApp fake;
+    bool active;
+    std::vector<std::string> posted;
+};
+
+FakeNotifier& notifierOf(PrApp* app) {
+    return *reinterpret_cast<FakeNotifier*>(app);
+}
+
 FakeApp& fakeOf(PrApp* app) {
     return *reinterpret_cast<FakeApp*>(app);
 }
@@ -42,6 +53,7 @@ void createFake(FakeApp& fake) {
     fake.record.requestFrameAt = [](PrApp* app, double time) { fakeOf(app).frameTime = time; };
     fake.record.setCursor = [](PrApp* app, PrAppCursor) { fakeOf(app).calls.push_back("cursor"); };
     fake.record.setTitle = [](PrApp* app, PrStringView) { fakeOf(app).calls.push_back("title"); };
+    fake.record.requestAttention = [](PrApp* app) { fakeOf(app).calls.push_back("attention"); };
     fake.record.surface = [](PrApp*, PrAppSurface*) -> PrStatus { return PrStatus_InvalidState; };
     fake.record.openUrl = [](PrApp*, PrStringView) -> PrStatus { return PrStatus_Ok; };
     fake.record.requestClipboardText = [](PrApp* app) { fakeOf(app).calls.push_back("clipboard"); };
@@ -93,6 +105,7 @@ TEST_CASE("the interface passes calls through") {
     prAppRequestFrame(app);
     prAppWake(app);
     prAppSetTitle(app, "Title");
+    prAppRequestAttention(app);
     prAppRequestClipboardText(app);
     prAppRequestClipboardImage(app);
     prAppStop(app);
@@ -105,8 +118,36 @@ TEST_CASE("the interface passes calls through") {
     prAppDestroy(app);
     prAppDestroy(nullptr);
     CHECK(fake.calls == std::vector<std::string>{
-        "frame", "wake", "title", "clipboard", "clipboard image", "stop", "destroy",
+        "frame", "wake", "title", "attention", "clipboard", "clipboard image", "stop", "destroy",
     });
+}
+
+TEST_CASE("an application without notifications posts none, and one that cannot tell its window is active") {
+    FakeApp fake{};
+    createFake(fake);
+    PrAppNotificationDesc desc{.title = "Title", .body = "Body", .tag = 7};
+    CHECK(prAppNotificationPost(&fake.record, &desc) == PrStatus_NotSupported);
+    CHECK(prAppIsActive(&fake.record));
+}
+
+TEST_CASE("a notification reaches the backend, and the backend says whether the window is active") {
+    FakeNotifier notifier{};
+    createFake(notifier.fake);
+    PrApp* app = &notifier.fake.record;
+    app->isActive = [](PrApp* app) { return notifierOf(app).active; };
+    app->notificationPost = [](PrApp* app, const PrAppNotificationDesc* desc) -> PrStatus {
+        notifierOf(app).posted.push_back(std::string(desc->title.data, desc->title.size) + "|" +
+            std::string(desc->body.data, desc->body.size) + "|" + std::to_string(desc->tag));
+        return PrStatus_Ok;
+    };
+    CHECK_FALSE(prAppIsActive(app));
+    notifier.active = true;
+    CHECK(prAppIsActive(app));
+    PrAppNotificationDesc desc{.title = "Build", .body = "done", .tag = 42};
+    CHECK(prAppNotificationPost(app, &desc) == PrStatus_Ok);
+    PrAppNotificationDesc untitled{.body = "only a body"};
+    CHECK(prAppNotificationPost(app, &untitled) == PrStatus_Ok);
+    CHECK(notifier.posted == std::vector<std::string>{"Build|done|42", "|only a body|0"});
 }
 
 TEST_CASE("named keys and codes take the names of UI Events") {

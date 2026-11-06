@@ -305,3 +305,27 @@ TEST_CASE("metal4 presents frames, with the transaction only in a live resize un
         prGpuSwapChainDestroy(threaded);
     }
 }
+
+TEST_CASE("metal4's HDR swap chain reports what its layer holds, for the display that shows it") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    @autoreleasepool {
+        // A view outside a window is shown on the main screen.
+        NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
+        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
+        PrGpuSwapChain* swapChain = nullptr;
+        REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);
+        NSScreen* screen = NSScreen.mainScreen;
+        bool beyondSdr = screen != nil && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1;
+        CAMetalLayer* layer = (CAMetalLayer*)view.layer;
+        prGpuDeviceWait(f.device, presentFrame(f.device, swapChain));
+        PrGpuSwapChainInfo info = prGpuSwapChainInfo(swapChain);
+        CHECK(info.format == (beyondSdr ? PrGpuFormat_Rgba16F : PrGpuFormat_Bgra8));
+        CHECK(info.space == PrColorSpace_Srgb);
+        CHECK(layer.pixelFormat == (beyondSdr ? MTLPixelFormatRGBA16Float : MTLPixelFormatBGRA8Unorm));
+        CHECK(layer.wantsExtendedDynamicRangeContent == beyondSdr);
+        prGpuSwapChainDestroy(swapChain);
+    }
+}

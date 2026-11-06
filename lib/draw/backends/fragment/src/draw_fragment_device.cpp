@@ -4,9 +4,11 @@
 // allocation, and the shaders read each array from its offset there (draw_fragment.slang). The frame's texture table is
 // an array of texture handles, which instances and records index, so that any instance can read any texture. A pass
 // draws its instances as instanced strips. It issues one draw for each run of instances that either all read the
-// destination or all do not, with a pipeline for its target's format and that mode. Where the device's reads of the
-// target are not ordered within a draw, a run that reads the destination is drawn in batches of instances that cover
-// disjoint pixels.
+// destination or all do not, with a pipeline for its target's format and that mode. Within a run that does not read the
+// destination, long runs of basic instances draw with a separate pipeline. Its shader handles only basic instances,
+// which make up most of a frame of text and rectangles, and it is much smaller than the shader for every instance.
+// Where the device's reads of the target are not ordered within a draw, a run that reads the destination is drawn in
+// batches of instances that cover disjoint pixels.
 //
 // The textures that the frames request are the renderer's own, and rest in the accesses of shader reads. Layers come
 // from a pool. The queue executes the commands that read a returned layer before those of the frame that takes it next,
@@ -26,18 +28,24 @@
 
 namespace pr_impl {
 
-// How a pipeline draws: painting blended over the destination, painting that reads the destination, or a filter step
-// that replaces the destination.
+// How a pipeline draws: painting blended over the destination, painting that reads the destination, a filter step that
+// replaces the destination, or basic instances blended over the destination (FragmentInstanceFlag_Basic).
 enum {
     FragmentMode_Blend,
     FragmentMode_Read,
     FragmentMode_Filter,
+    FragmentMode_Basic,
     FragmentMode_Count,
 };
 typedef uint8_t FragmentMode;
 
 // The entry points of each mode.
-constexpr const char* kFragmentEntries[FragmentMode_Count] = {"fragmentShade", "fragmentBlend", "filterStep"};
+constexpr const char* kFragmentEntries[FragmentMode_Count] = {
+    "fragmentShade",
+    "fragmentBlend",
+    "filterStep",
+    "fragmentShadeBasic",
+};
 
 struct FragmentPipeline {
     PrGpuFormat format;
@@ -168,7 +176,7 @@ PrGpuPipeline pipelineFor(FragmentDevice* d, PrGpuFormat format, FragmentMode mo
     desc.topology = PrGpuTopology_TriangleStrip;
     desc.formats.colorCount = 1;
     desc.formats.color[0] = format;
-    if (mode == FragmentMode_Blend)
+    if (mode == FragmentMode_Blend || mode == FragmentMode_Basic)
         desc.blend[0] = prGpuBlendPremultiplied();
     desc.readsTarget = mode == FragmentMode_Read;
     desc.name = "fragment";
@@ -329,9 +337,39 @@ PrIRect instancePixels(const FragmentInstance& i, const float offset[2], const P
     return intersection(box, limit);
 }
 
+// The number of target pixels that a run of basic instances must cover to draw on its own with the basic pipeline. A
+// smaller run draws with the instances around it in the blend pipeline. One draw costs the CPU about as much as the
+// basic pipeline saves the GPU over tens of thousands of pixels. The threshold keeps a list that alternates between
+// kinds of instances to a few draws.
+constexpr float kBasicRunPixels = 65536;
+
+// A run of basic instances: its end, and the target pixels that their quads cover.
+struct BasicRun {
+    uint32_t end;
+    float pixels;
+};
+
+// Returns the run of basic instances that starts at `start` and stops at or before `end`. The pixel count stops once it
+// reaches kBasicRunPixels, and triangles add nothing to it.
+BasicRun basicRun(const FragmentFrame* frame, uint32_t start, uint32_t end) {
+    BasicRun run{start, 0};
+    for (; run.end < end; ++run.end) {
+        const FragmentInstance& i = frame->instances[run.end];
+        if ((i.flags & FragmentInstanceFlag_Basic) == 0)
+            break;
+        if (run.pixels < kBasicRunPixels && (i.flags & FragmentInstanceFlag_Coverage) != FragmentCoverage_Triangle) {
+            const PrAffine2& m = i.transform;
+            run.pixels += prF32Abs((i.bounds.right - i.bounds.left) * (i.bounds.bottom - i.bounds.top) *
+                (m.a * m.d - m.b * m.c));
+        }
+    }
+    return run;
+}
+
 // Draws the pass's instances into `pass`, whose attachment is the target or the pass's layer. It issues one draw for
 // each run of instances that either all read the destination or all do not, or runs the pass's filter step over them.
-// The target's pixel (0, 0) is at `at` of the attachment, and `scissor` limits the draws.
+// In a run that does not read the destination, long runs of basic instances draw with the basic pipeline. The target's
+// pixel (0, 0) is at `at` of the attachment, and `scissor` limits the draws.
 void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPass& fp, PrGpuPass* pass,
         PrIVec2 at, PrIRect scissor) {
     if (fp.count == 0)
@@ -381,15 +419,43 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
         uint32_t stop = start + 1;
         while (stop < end && ((frame->instances[stop].flags & FragmentInstanceFlag_ReadsDestination) != 0) == reads)
             ++stop;
-        PrGpuPipeline pipeline = pipelineFor(d, format, reads ? FragmentMode_Read : FragmentMode_Blend);
-        if (pipeline.id == 0 && reads)
+        if (!reads) {
+            // Alternates draws between the basic pipeline and the blend pipeline, which shades every kind of instance.
+            while (start < stop) {
+                BasicRun run = basicRun(frame, start, stop);
+                uint32_t to = run.end;
+                bool basic = run.pixels >= kBasicRunPixels || run.end == stop;
+                if (!basic) {
+                    // The blend pipeline draws up to the next long run of basic instances.
+                    while (to < stop) {
+                        BasicRun next = basicRun(frame, to, stop);
+                        if (next.pixels >= kBasicRunPixels)
+                            break;
+                        to = next.end == to ? to + 1 : next.end;
+                    }
+                }
+                PrGpuPipeline pipeline = pipelineFor(d, format, basic ? FragmentMode_Basic : FragmentMode_Blend);
+                if (pipeline.id == 0 && basic)
+                    pipeline = pipelineFor(d, format, FragmentMode_Blend);
+                if (pipeline.id != 0) {
+                    prGpuCommandsSetPipeline(commands, pipeline);
+                    push.first = start;
+                    prGpuCommandsSetPush(commands, &push, sizeof(push));
+                    prGpuPassDraw(pass, 4, to - start, 0, 0);
+                }
+                start = to;
+            }
+            continue;
+        }
+        PrGpuPipeline pipeline = pipelineFor(d, format, FragmentMode_Read);
+        if (pipeline.id == 0)
             pipeline = pipelineFor(d, format, FragmentMode_Blend);
         if (pipeline.id == 0) {
             start = stop;
             continue;
         }
         prGpuCommandsSetPipeline(commands, pipeline);
-        if (!reads || d->orderedReads) {
+        if (d->orderedReads) {
             push.first = start;
             prGpuCommandsSetPush(commands, &push, sizeof(push));
             prGpuPassDraw(pass, 4, stop - start, 0, 0);

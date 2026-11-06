@@ -48,6 +48,8 @@ enum {
     // committed follows as a Text event, so that a program that takes no composition still receives it.
     PrAppEventKind_CompositionUpdate,
     PrAppEventKind_CompositionEnd,
+
+    PrAppEventKind_Notification,   // the user clicked a notification posted with prAppNotificationPost
 };
 typedef uint8_t PrAppEventKind;
 
@@ -332,6 +334,7 @@ typedef struct PrAppEvent {
     PrStringView text;          // KeyDown, KeyUp, Text, Clipboard, CompositionUpdate, CompositionEnd
     PrAppTextRange selection;   // CompositionUpdate: the part of the text that the input method selects
     PrPixelView pixels;         // ClipboardImage: straight-alpha sRGB Rgba8, empty if the clipboard holds no image
+    uint64_t tag;               // Notification: the tag from PrAppNotificationDesc
     double time;                // seconds, from a monotonic clock
 } PrAppEvent;
 
@@ -413,6 +416,13 @@ typedef struct PrAppDesc {
     bool headless;              // the window stays off the screen, and the process is never activated
 } PrAppDesc;
 
+// A desktop notification. The title and body are UTF-8.
+typedef struct PrAppNotificationDesc {
+    PrStringView title;
+    PrStringView body;
+    uint64_t tag;               // chosen by the program, and reported by the Notification event of a click
+} PrAppNotificationDesc;
+
 // Called once a page has loaded or failed to load. `status` is Ok if the page loaded.
 typedef void (*PrAppBrowserDoneFn)(void* PR_NULLABLE context, PrStatus status);
 
@@ -456,7 +466,8 @@ struct PrAppBrowser {
 // The functions of an application, at the start of its backend's state. Each member implements the function that it is
 // named for. A null `destroy` leaves nothing to free. An application with no browser engine leaves all the browser
 // functions null. Callers use the functions below, never these members. A backend delivers each frame with
-// prAppDeliverFrame. `requestFrameAt` replaces the time of the last call, and zero leaves no time.
+// prAppDeliverFrame. `requestFrameAt` replaces the time of the last call, and zero leaves no time. A backend that
+// implements `isActive` requests a frame whenever its result changes.
 struct PrApp {
     void (*PR_NULLABLE destroy)(PrApp* app);
     void (*run)(PrApp* app, const PrAppHandler* handler);
@@ -467,6 +478,10 @@ struct PrApp {
     void (*setCursor)(PrApp* app, PrAppCursor cursor);
     void (*PR_NULLABLE setTextInputRect)(PrApp* app, PrRect rect);
     void (*setTitle)(PrApp* app, PrStringView title);
+    void (*PR_NULLABLE setExtent)(PrApp* app, PrUVec2 extent);
+    void (*PR_NULLABLE requestAttention)(PrApp* app);
+    bool (*PR_NULLABLE isActive)(PrApp* app);
+    PrStatus (*PR_NULLABLE notificationPost)(PrApp* app, const PrAppNotificationDesc* desc);
     PrStatus (*surface)(PrApp* app, PrAppSurface* out);
     PrStatus (*openUrl)(PrApp* app, PrStringView url);
     void (*requestClipboardText)(PrApp* app);
@@ -525,6 +540,30 @@ PrAppOutput prAppOutputMerge(PrAppOutput first, PrAppOutput second, bool pointer
 
 // Sets the title of the window, which PrAppDesc::title sets first. The window copies `title`.
 void prAppSetTitle(PrApp* app, PrStringView title);
+
+// Resizes the window's content to `extent` logical pixels, clamped to the screen. PrAppDesc::extent sets the initial
+// size. The window keeps its position, and the next frame has the new extent. This does nothing on a backend whose
+// window is sized by the page or the system, such as the web backend.
+void prAppSetExtent(PrApp* app, PrUVec2 extent);
+
+// Asks for the user's attention if the window is not active, for example by bouncing its Dock icon or flashing its
+// taskbar button. This does nothing on a platform that has no such request.
+void prAppRequestAttention(PrApp* app);
+
+// Returns true if the window is the active window, which receives keyboard input, of the application that the user is
+// using. Returns true if the backend cannot tell. A change requests a frame, so the next frame sees the new value.
+bool prAppIsActive(PrApp* app);
+
+// Posts a desktop notification. The system copies the title and body. A click on the notification brings the window
+// forward and delivers a Notification event with its tag.
+//
+// The system may ask the user's permission on the first post, and the notification shows once permission is given. The
+// system decides how a notification shows, and may hold it back, for example while the user has asked not to be
+// disturbed.
+//
+// Returns NotSupported if the backend or the process cannot post notifications, NotAllowed if the user refused them,
+// InvalidState if the application is not running, and Io if the system refuses the notification.
+PrStatus prAppNotificationPost(PrApp* app, const PrAppNotificationDesc* desc);
 
 // Writes the window's native surface to `out`. The surface is valid until shutdown. Returns InvalidState if the
 // application is not running.

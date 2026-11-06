@@ -14,7 +14,8 @@ if (PR_APP_COCOA)
     set_source_files_properties(backends/cocoa/src/app_cocoa.mm backends/cocoa/src/cocoa_browser.mm
                                 PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     target_compile_definitions(pr_app PRIVATE PR_APP_HAS_COCOA)
-    target_link_libraries(pr_app PUBLIC "-framework AppKit" "-framework QuartzCore" "-framework WebKit")
+    target_link_libraries(pr_app PUBLIC "-framework AppKit" "-framework QuartzCore" "-framework UserNotifications"
+                                        "-framework WebKit")
 endif()
 
 # The Win32 backend: a Win32 window and its message loop, and the system's browser through WebView2.

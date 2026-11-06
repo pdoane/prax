@@ -133,7 +133,9 @@ void uploadsSubmit(GpuMetalDevice* device) {
     [d->uploads endCommandBuffer];
     gpuMetalCommitResidency(d);
     PrGpuFence fence = ++d->submitted;
-    commit(d, d->uploads, fence, nullptr, 0);
+    uint32_t doneCount = 0;
+    GpuMetalDone* dones = gpuMetalUploadsDones(d, &doneCount);
+    commit(d, d->uploads, fence, dones, doneCount);
     gpuMetalUploadsRecord(d, fence);
     d->held.push(GpuMetalHeld{.fence = fence, .kind = HeldKind_Allocator, .object = d->uploadAllocator});
     [d->uploads release];

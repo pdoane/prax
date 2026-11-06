@@ -33,6 +33,10 @@ constexpr UINT kMessageFrame = WM_APP + 0;      // the pacer saw the display ref
 constexpr UINT kMessageWake = WM_APP + 1;
 constexpr UINT kMessageClipboard = WM_APP + 2;      // the program requested the clipboard's text
 constexpr UINT kMessageClipboardImage = WM_APP + 3; // the program requested the clipboard's image
+constexpr UINT kMessageNotifyIcon = WM_APP + 4;     // the user acted on the icon in the notification area
+
+// The identifier of the window's icon in the notification area.
+constexpr UINT kNotifyIconId = 1;
 
 // The timer that times the frames of a window that is not composed, and its period.
 constexpr UINT_PTR kTimerFrame = 1;
@@ -138,6 +142,13 @@ struct Win32App : PrApp {
     // The text of the event being delivered, and scratch storage for conversions.
     RawArray<char> utf8;
     RawArray<wchar_t> utf16;
+
+    // Notifications. `notifyIcon` is true once the window's icon is in the notification area. `notificationTag` is the
+    // tag of the last notification, whose balloon replaced any earlier one. `taskbarCreated` is the shell's message
+    // that the taskbar was recreated, as when Explorer restarts, which means the icon is gone.
+    bool notifyIcon;
+    uint64_t notificationTag;
+    UINT taskbarCreated;
 };
 
 // The window's style. The title bar's minimize and maximize buttons set a least width that no window message lowers, so
@@ -1029,6 +1040,36 @@ void deliverClipboardImage(Win32App* app) {
     pixels.reset();
 }
 
+// Brings the window forward after a click on its notification or its icon. The click allows the process to take the
+// foreground.
+void bringForward(Win32App* app) {
+    if (IsIconic(app->window))
+        ShowWindow(app->window, SW_RESTORE);
+    SetForegroundWindow(app->window);
+}
+
+// Handles a user action on the icon in the notification area. A click on the balloon of the last notification brings
+// the window forward and delivers the click. A click on the icon brings the window forward.
+void notifyIconAction(Win32App* app, UINT action) {
+    switch (action) {
+        case NIN_BALLOONUSERCLICK: {
+            bringForward(app);
+            PrAppEvent event{};
+            event.kind = PrAppEventKind_Notification;
+            event.tag = app->notificationTag;
+            event.time = secondsNow();
+            deliver(app, event);
+            break;
+        }
+        case NIN_SELECT:
+        case NIN_KEYSELECT:
+            bringForward(app);
+            break;
+        default:
+            break;
+    }
+}
+
 LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
     if (message == WM_NCCREATE) {
         const CREATESTRUCTW* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
@@ -1038,6 +1079,8 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     Win32App* app = appOf(window);
     if (app == nullptr)
         return DefWindowProcW(window, message, wParam, lParam);
+    if (message == app->taskbarCreated && app->taskbarCreated != 0)
+        app->notifyIcon = false;
     switch (message) {
         case WM_CLOSE:
             app->stop(app);
@@ -1150,6 +1193,14 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         case WM_KILLFOCUS:
             releaseKeys(app);
             break;
+        case WM_ACTIVATE:
+            // Activation changes what prAppIsActive returns, so the next frame should see it.
+            app->requestFrame(app);
+            break;
+        case kMessageNotifyIcon:
+            // With NOTIFYICON_VERSION_4, the low word of lParam is the user's action.
+            notifyIconAction(app, LOWORD(lParam));
+            return 0;
         case WM_MOUSEMOVE:
         case WM_LBUTTONDOWN:
         case WM_LBUTTONUP:
@@ -1273,9 +1324,16 @@ void registerClass(HINSTANCE instance) {
     RegisterClassExW(&windowClass);
 }
 
-// Sizes the window's client area to the extent that the application opens at. A window that is shown is clamped to its
-// display's work area and centered on it.
-void placeWindow(Win32App* app) {
+// Where placeWindow puts a window that is shown: centered on its display's work area, or where it already is.
+enum {
+    Placement_Center,
+    Placement_Keep,
+};
+typedef uint8_t Placement;
+
+// Sizes the window's client area to the application's extent. A window that is shown is clamped to its display's work
+// area, and centered on it if `placement` is Center.
+void placeWindow(Win32App* app, Placement placement) {
     DWORD style = styleOf(app);
     RECT frame{0, 0, MulDiv(int(app->extent.x), int(app->dpi), 96), MulDiv(int(app->extent.y), int(app->dpi), 96)};
     AdjustWindowRectExForDpi(&frame, style, FALSE, 0, app->dpi);
@@ -1294,6 +1352,8 @@ void placeWindow(Win32App* app) {
         height = height < work.bottom - work.top ? height : work.bottom - work.top;
         x = work.left + (work.right - work.left - width) / 2;
         y = work.top + (work.bottom - work.top - height) / 2;
+        if (placement == Placement_Keep)
+            flags |= SWP_NOMOVE;
     }
     SetWindowPos(app->window, nullptr, x, y, width, height, flags);
 }
@@ -1315,6 +1375,7 @@ void run(PrApp* base, const PrAppHandler* handler) {
     bool com = SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE));
     HINSTANCE instance = GetModuleHandleW(nullptr);
     registerClass(instance);
+    app->taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
     app->window = CreateWindowExW(0, kClassName, app->title, styleOf(app), CW_USEDEFAULT, CW_USEDEFAULT,
         CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, instance, app);
     if (app->window == nullptr)
@@ -1322,7 +1383,7 @@ void run(PrApp* base, const PrAppHandler* handler) {
     app->dpi = GetDpiForWindow(app->window);
     if (app->dpi == 0)
         app->dpi = 96;
-    placeWindow(app);
+    placeWindow(app, Placement_Center);
     app->cursor = cursorFor(app->shape);
     refreshPreferences(app);
     app->display = prAppDisplayDefault();
@@ -1383,6 +1444,14 @@ void run(PrApp* base, const PrAppHandler* handler) {
     if (GetCapture() == app->window)
         ReleaseCapture();
     releaseDisplayObjects(app);
+    if (app->notifyIcon) {
+        NOTIFYICONDATAW icon{};
+        icon.cbSize = sizeof(icon);
+        icon.hWnd = app->window;
+        icon.uID = kNotifyIconId;
+        Shell_NotifyIconW(NIM_DELETE, &icon);
+        app->notifyIcon = false;
+    }
     SetWindowLongPtrW(app->window, GWLP_USERDATA, 0);
     DestroyWindow(app->window);
     app->window = nullptr;
@@ -1474,6 +1543,13 @@ void setTitle(PrApp* base, PrStringView title) {
         SetWindowTextW(app->window, app->title);
 }
 
+void setExtent(PrApp* base, PrUVec2 extent) {
+    Win32App* app = static_cast<Win32App*>(base);
+    app->extent = extent;
+    if (app->window != nullptr)
+        placeWindow(app, Placement_Keep);
+}
+
 PrStatus surface(PrApp* base, PrAppSurface* out) {
     Win32App* app = static_cast<Win32App*>(base);
     if (app->window == nullptr)
@@ -1505,6 +1581,88 @@ bool isUrl(PrStringView text) {
             return false;
     }
     return true;
+}
+
+void requestAttention(PrApp* base) {
+    Win32App* app = static_cast<Win32App*>(base);
+    if (app->window == nullptr || GetForegroundWindow() == app->window)
+        return;
+    // The taskbar button flashes until the window comes to the foreground.
+    FLASHWINFO flash{.cbSize = sizeof(FLASHWINFO), .hwnd = app->window, .dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG};
+    FlashWindowEx(&flash);
+}
+
+bool isActive(PrApp* base) {
+    Win32App* app = static_cast<Win32App*>(base);
+    return app->window != nullptr && GetForegroundWindow() == app->window;
+}
+
+// Copies `text` to `out`, a NUL-terminated field of `capacity` UTF-16 units. Text that does not fit is cut before the
+// first character that does not fit, so a surrogate pair is never split.
+void copyField(Win32App* app, PrStringView text, wchar_t* out, size_t capacity) {
+    win32Widen(text, app->utf16);
+    size_t count = app->utf16.count - 1;
+    if (count > capacity - 1) {
+        count = capacity - 1;
+        wchar_t last = app->utf16.data[count - 1];
+        if (last >= 0xD800 && last <= 0xDBFF)
+            --count;
+    }
+    prMemCopy(out, app->utf16.data, count * sizeof(wchar_t));
+    out[count] = 0;
+}
+
+// Adds the window's icon to the notification area, if it is not there. Notifications appear as balloons on this icon.
+// Returns false if the shell refuses the icon.
+bool addNotifyIcon(Win32App* app) {
+    if (app->notifyIcon)
+        return true;
+    NOTIFYICONDATAW icon{};
+    icon.cbSize = sizeof(icon);
+    icon.hWnd = app->window;
+    icon.uID = kNotifyIconId;
+    icon.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP;
+    icon.uCallbackMessage = kMessageNotifyIcon;
+    icon.hIcon = reinterpret_cast<HICON>(GetClassLongPtrW(app->window, GCLP_HICON));
+    lstrcpynW(icon.szTip, app->title, int(countOf(icon.szTip)));
+    if (!Shell_NotifyIconW(NIM_ADD, &icon))
+        return false;
+    icon.uVersion = NOTIFYICON_VERSION_4;
+    Shell_NotifyIconW(NIM_SETVERSION, &icon);
+    app->notifyIcon = true;
+    return true;
+}
+
+// A notification is a balloon on the window's icon in the notification area, which Windows 10 and later show as a
+// toast. A real toast needs an application user model ID, which only a packaged or installed application has. A balloon
+// needs nothing from the process. A new balloon replaces the previous one.
+PrStatus notificationPost(PrApp* base, const PrAppNotificationDesc* desc) {
+    Win32App* app = static_cast<Win32App*>(base);
+    if (!app->running || app->window == nullptr)
+        return PrStatus_InvalidState;
+    // A headless window posts nothing, because no user sees the window.
+    if (app->headless)
+        return PrStatus_NotSupported;
+    // A balloon without text removes the balloon, so a notification with only a title shows the title as its text. A
+    // notification with neither posts nothing.
+    PrStringView text = desc->body.size != 0 ? desc->body : desc->title;
+    PrStringView title = desc->body.size != 0 ? desc->title : PrStringView{};
+    if (text.size == 0)
+        return PrStatus_Ok;
+    if (!addNotifyIcon(app))
+        return PrStatus_Io;
+    NOTIFYICONDATAW icon{};
+    icon.cbSize = sizeof(icon);
+    icon.hWnd = app->window;
+    icon.uID = kNotifyIconId;
+    icon.uFlags = NIF_INFO;
+    icon.dwInfoFlags = NIIF_INFO | NIIF_RESPECT_QUIET_TIME;
+    copyField(app, title, icon.szInfoTitle, countOf(icon.szInfoTitle));
+    copyField(app, text, icon.szInfo, countOf(icon.szInfo));
+    if (!Shell_NotifyIconW(NIM_MODIFY, &icon))
+        return PrStatus_Io;
+    app->notificationTag = desc->tag;
+    return PrStatus_Ok;
 }
 
 PrStatus openUrl(PrApp* base, PrStringView url) {
@@ -1631,6 +1789,10 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->setCursor = setCursor;
     app->setTextInputRect = setTextInputRect;
     app->setTitle = setTitle;
+    app->setExtent = setExtent;
+    app->requestAttention = requestAttention;
+    app->isActive = isActive;
+    app->notificationPost = notificationPost;
     app->surface = surface;
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;

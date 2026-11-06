@@ -3,6 +3,7 @@
 
 #include "pr/gpu_metal.h"
 
+#include "gpu/backends/shared/src/gpu_shared_metal_display.h"
 #include "gpu/tests/kTestGpuNativeShaders.h"
 
 #include "tools/harness/test.h"
@@ -342,5 +343,72 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
             prGpuDeviceWait(f.device, fence);
         }
         prGpuSwapChainDestroy(threaded);
+    }
+}
+
+TEST_CASE("metal chooses half floats for HDR only on a display that shows past SDR white, whatever its gamut") {
+    const PrGpuSwapChainInfo kSdr{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
+    const PrGpuSwapChainInfo kExtended{PrGpuFormat_Rgba16F, PrColorSpace_Srgb};
+    struct Case {
+        PrGpuSwapChainIntent intent;
+        float potentialHeadroom;
+        PrColorSpace gamut;
+        PrGpuSwapChainInfo expected;
+    };
+    const Case cases[] = {
+        {PrGpuSwapChainIntent_Sdr, 1, PrColorSpace_Srgb, kSdr},
+        {PrGpuSwapChainIntent_Sdr, 16, PrColorSpace_DisplayP3, kSdr},
+        {PrGpuSwapChainIntent_Hdr, 1, PrColorSpace_Srgb, kSdr},
+        {PrGpuSwapChainIntent_Hdr, 2, PrColorSpace_Srgb, kExtended},
+        {PrGpuSwapChainIntent_Hdr, 1, PrColorSpace_DisplayP3, kSdr},
+        {PrGpuSwapChainIntent_Hdr, 16, PrColorSpace_DisplayP3, kExtended},
+    };
+    for (const Case& c : cases) {
+        PrAppDisplay display = prAppDisplayDefault();
+        display.potentialHeadroom = c.potentialHeadroom;
+        display.gamut = c.gamut;
+        PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(c.intent, display);
+        CAPTURE(c.intent);
+        CAPTURE(c.potentialHeadroom);
+        CHECK(info.format == c.expected.format);
+        CHECK(info.space == c.expected.space);
+    }
+}
+
+TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, for the display that shows it") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    @autoreleasepool {
+        // A view outside a window is shown on the main screen.
+        NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
+        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
+        PrGpuSwapChain* swapChain = nullptr;
+        REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);
+        NSScreen* screen = NSScreen.mainScreen;
+        bool beyondSdr = screen != nil && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1;
+        CAMetalLayer* layer = (CAMetalLayer*)view.layer;
+        for (int frame = 0; frame < 2; ++frame) {
+            PrGpuTexture texture{};
+            REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &texture) == PrStatus_Ok);
+            PrGpuSwapChainInfo info = prGpuSwapChainInfo(swapChain);
+            CHECK(info.format == (beyondSdr ? PrGpuFormat_Rgba16F : PrGpuFormat_Bgra8));
+            CHECK(info.space == PrColorSpace_Srgb);
+            CHECK(prGpuTextureDesc(f.device, texture).format == info.format);
+            CHECK(layer.pixelFormat == (beyondSdr ? MTLPixelFormatRGBA16Float : MTLPixelFormatBGRA8Unorm));
+            CHECK(layer.wantsExtendedDynamicRangeContent == beyondSdr);
+            PrGpuCommands* commands = nullptr;
+            REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+            prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
+                PrGpuAccessFlag_ColorAttachment);
+            PrGpuPassDesc pass = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0, 1, 0, 1});
+            prGpuPassEnd(prGpuPassBegin(commands, &pass));
+            prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+                PrGpuAccessFlag_Present);
+            prGpuSwapChainPresent(swapChain, commands);
+            prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
+        }
+        prGpuSwapChainDestroy(swapChain);
     }
 }

@@ -103,6 +103,8 @@ bool openDevice(WindowRun& w) {
 }
 
 // Returns true if the swap chain holds more than 8-bit sRGB, which the list then renders into a texture of its own for.
+// The swap chain chooses its format for the window's display, and chooses again if the display changes, so a frame asks
+// after it acquires its texture.
 bool mapsToDisplay(const WindowRun& w) {
     PrGpuSwapChainInfo info = prGpuSwapChainInfo(w.swapChain);
     return info.format != PrGpuFormat_Bgra8 || info.space != PrColorSpace_Srgb;
@@ -129,20 +131,28 @@ void render(WindowRun& w, PrUVec2 extent, PrColor canvas, const PrAppDisplay& di
             !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     bool mapped = mapsToDisplay(w);
+    // If the swap chain changes to 8-bit sRGB, for example after a move to an SDR display, the half-float texture is
+    // freed.
+    if (!mapped && w.rendered.id != 0) {
+        prGpuTextureDestroy(w.device, w.rendered);
+        w.rendered = PrGpuTexture{};
+    }
     PrGpuTexture target = mapped ? renderedFor(w, extent) : drawable;
     PrPixelFormat format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8);
     PrDrawTarget into{.extent = extent, .format = format, .commands = commands};
     prDrawFramePrepare(w.frame, w.list, &into);
-    // The half floats rest in the accesses of shader reads between frames, and the drawable holds nothing yet.
+    // Between frames, the half-float texture is left in the fragment-read state. The display shader reads it only in
+    // the fragment stage, so no barrier waits on the vertex stage. The drawable holds nothing yet.
     PrGpuSubresources all{};
-    prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,
+    prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_FragmentRead : PrGpuAccessFlag_Discard,
         PrGpuAccessFlag_ColorAttachment);
     PrGpuPassDesc pass = prGpuPassDescColor(target, PrGpuLoad_Clear, canvas);
     PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
     prDrawFrameRender(w.frame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
     if (mapped) {
-        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_FragmentRead);
         prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
         PrGpuSwapChainInfo info = prGpuSwapChainInfo(w.swapChain);
         PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Discard, PrColor{});

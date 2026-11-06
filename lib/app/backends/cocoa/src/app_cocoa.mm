@@ -13,6 +13,7 @@
 
 #import <AppKit/AppKit.h>
 #import <QuartzCore/QuartzCore.h>
+#import <UserNotifications/UserNotifications.h>
 
 @class PrCocoaHost;
 
@@ -24,7 +25,7 @@
 @property(nonatomic) NSRange markedSelection;   // the selection within the marked text
 @end
 
-@interface PrCocoaHost : NSObject <NSApplicationDelegate, NSWindowDelegate>
+@interface PrCocoaHost : NSObject <NSApplicationDelegate, NSWindowDelegate, UNUserNotificationCenterDelegate>
 @property(nonatomic) PrApp* app;
 @property(nonatomic) PrAppHandler handler;
 @property(nonatomic, copy) NSString* title;
@@ -39,6 +40,10 @@
 @property(nonatomic, strong) CADisplayLink* displayLink;
 @property(nonatomic, strong) NSTimer* timer;
 @property(nonatomic, strong) NSTimer* frameTimer;
+@property(nonatomic) uint8_t permission;    // notification permission, a CocoaPermission
+
+// Notifications that wait for the user to answer the permission request, oldest first.
+@property(nonatomic, strong) NSMutableArray<UNNotificationRequest*>* waiting;
 - (void)deliver:(const PrAppEvent&)event;
 - (void)endCallback;
 - (void)forgetHeld;
@@ -51,6 +56,7 @@
 - (void)requestFrame;
 - (void)requestFrameAt:(double)time;
 - (void)stop;
+- (PrStatus)postNotification:(const PrAppNotificationDesc*)desc;
 @end
 
 namespace pr_impl {
@@ -72,6 +78,21 @@ struct HeldKey {
 
 // The pointer buttons that the view can report down, by PrAppEvent::button.
 constexpr uint8_t kPointerButtons = 32;
+
+// The state of the user's permission for notifications. The application asks at its first post.
+enum {
+    CocoaPermission_Unasked,
+    CocoaPermission_Asking,
+    CocoaPermission_Granted,
+    CocoaPermission_Refused,
+};
+typedef uint8_t CocoaPermission;
+
+// The most notifications that wait for the user's answer. If more are posted, the oldest is dropped.
+constexpr NSUInteger kWaitingNotificationsMax = 16;
+
+// The key in a notification's user info that holds its tag.
+NSString* const kNotificationTagKey = @"tag";
 
 struct CocoaApp : PrApp {
     void* host;                 // the PrCocoaHost, retained
@@ -218,6 +239,13 @@ void destroy(PrApp* app) {
     CocoaApp* cocoa = static_cast<CocoaApp*>(app);
     PrCocoaHost* host = (__bridge_transfer PrCocoaHost*)cocoa->host;
     host.app = nullptr;
+    // Only a process that has posted has touched the notification center. Any other process must not touch it, because
+    // the center raises an exception outside an application bundle.
+    UNUserNotificationCenter* center = nil;
+    if (host.permission != CocoaPermission_Unasked)
+        center = UNUserNotificationCenter.currentNotificationCenter;
+    if (center != nil && center.delegate == host)
+        center.delegate = nil;
     prMemoryFree(cocoa);
 }
 
@@ -383,6 +411,50 @@ void setTitle(PrApp* app, PrStringView title) {
     host.title = string != nil ? string : @"";
     if (host.window != nil)
         host.window.title = host.title;
+}
+
+void setExtent(PrApp* app, PrUVec2 extent) {
+    PrCocoaHost* host = hostOf(app);
+    NSSize size = NSMakeSize(extent.x, extent.y);
+    if (host.window == nil) {
+        host.size = size;
+        return;
+    }
+    if (!host.headless) {
+        NSScreen* screen = host.window.screen != nil ? host.window.screen : NSScreen.mainScreen;
+        NSRect available = [NSWindow contentRectForFrameRect:screen.visibleFrame styleMask:host.window.styleMask];
+        size.width = MIN(size.width, available.size.width);
+        size.height = MIN(size.height, available.size.height);
+    }
+    [host.window setContentSize:size];
+}
+
+void requestAttention(PrApp*) {
+    // An informational request bounces the Dock icon once, and does nothing while the application is active.
+    [NSApp requestUserAttention:NSInformationalRequest];
+}
+
+bool isActive(PrApp* app) {
+    PrCocoaHost* host = hostOf(app);
+    return NSApp.isActive && host.window != nil && host.window.isKeyWindow;
+}
+
+// Returns true if the process runs from an application bundle. In any other process, the notification center raises an
+// exception, even if the executable embeds an Info.plist with a bundle identifier. The older NSUserNotificationCenter
+// has no default center in such a process.
+bool isBundled() {
+    NSBundle* bundle = NSBundle.mainBundle;
+    return bundle.bundleIdentifier != nil && [bundle.bundleURL.pathExtension isEqualToString:@"app"];
+}
+
+PrStatus notificationPost(PrApp* app, const PrAppNotificationDesc* desc) {
+    PrCocoaHost* host = hostOf(app);
+    if (!host.running)
+        return PrStatus_InvalidState;
+    // A headless window posts nothing, because the permission request would go to a user who never sees the window.
+    if (host.headless || !isBundled())
+        return PrStatus_NotSupported;
+    return [host postNotification:desc];
 }
 
 PrStatus surface(PrApp* app, PrAppSurface* out) {
@@ -943,9 +1015,103 @@ using namespace pr_impl;
     [NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0
         timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0] atStart:YES];
 }
+// Posts a notification once the user allows notifications. The first post asks for permission.
+- (PrStatus)postNotification:(const PrAppNotificationDesc*)desc {
+    if (self.permission == CocoaPermission_Refused)
+        return PrStatus_NotAllowed;
+    NSString* title = [[NSString alloc] initWithBytes:desc->title.data length:desc->title.size
+        encoding:NSUTF8StringEncoding];
+    NSString* body = [[NSString alloc] initWithBytes:desc->body.data length:desc->body.size
+        encoding:NSUTF8StringEncoding];
+    UNMutableNotificationContent* content = [[UNMutableNotificationContent alloc] init];
+    content.title = title != nil ? title : @"";
+    content.body = body != nil ? body : @"";
+    content.userInfo = @{kNotificationTagKey: @(desc->tag)};
+    UNNotificationRequest* request = [UNNotificationRequest requestWithIdentifier:NSUUID.UUID.UUIDString content:content
+        trigger:nil];
+    UNUserNotificationCenter* center = UNUserNotificationCenter.currentNotificationCenter;
+    if (self.permission == CocoaPermission_Granted) {
+        [center addNotificationRequest:request withCompletionHandler:nil];
+        return PrStatus_Ok;
+    }
+    if (self.waiting == nil)
+        self.waiting = [NSMutableArray array];
+    if (self.waiting.count == kWaitingNotificationsMax)
+        [self.waiting removeObjectAtIndex:0];
+    [self.waiting addObject:request];
+    if (self.permission == CocoaPermission_Unasked) {
+        self.permission = CocoaPermission_Asking;
+        center.delegate = self;
+        __weak PrCocoaHost* weak = self;
+        [center requestAuthorizationWithOptions:UNAuthorizationOptionAlert completionHandler:^(BOOL granted, NSError*) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [weak answered:granted];
+            });
+        }];
+    }
+    return PrStatus_Ok;
+}
+// Records the user's answer about notifications. If the user allowed them, posts the notifications that waited.
+- (void)answered:(BOOL)granted {
+    self.permission = granted ? CocoaPermission_Granted : CocoaPermission_Refused;
+    UNUserNotificationCenter* center = UNUserNotificationCenter.currentNotificationCenter;
+    if (granted) {
+        for (UNNotificationRequest* request in self.waiting)
+            [center addNotificationRequest:request withCompletionHandler:nil];
+    }
+    [self.waiting removeAllObjects];
+}
+// Brings the window forward for a click on a notification, and delivers the click.
+- (void)notificationClicked:(uint64_t)tag {
+    if (!self.running)
+        return;
+    [NSApp activate];
+    if (self.window.miniaturized)
+        [self.window deminiaturize:nil];
+    [self.window makeKeyAndOrderFront:nil];
+    PrAppEvent event{};
+    event.kind = PrAppEventKind_Notification;
+    event.tag = tag;
+    event.time = NSProcessInfo.processInfo.systemUptime;
+    [self deliver:event];
+}
+// Shows a notification even while the application is active, because the program chose to post it.
+- (void)userNotificationCenter:(UNUserNotificationCenter*)center willPresentNotification:(UNNotification*)notification
+        withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
+    (void)center;
+    (void)notification;
+    completionHandler(UNNotificationPresentationOptionBanner | UNNotificationPresentationOptionList);
+}
+- (void)userNotificationCenter:(UNUserNotificationCenter*)center
+        didReceiveNotificationResponse:(UNNotificationResponse*)response
+        withCompletionHandler:(void (^)(void))completionHandler {
+    (void)center;
+    if ([response.actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
+        id tag = response.notification.request.content.userInfo[kNotificationTagKey];
+        uint64_t value = [tag isKindOfClass:NSNumber.class] ? [tag unsignedLongLongValue] : 0;
+        __weak PrCocoaHost* weak = self;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [weak notificationClicked:value];
+        });
+    }
+    completionHandler();
+}
+- (void)windowDidBecomeKey:(NSNotification*)note {
+    (void)note;
+    [self requestFrame];
+}
 - (void)windowDidResignKey:(NSNotification*)note {
     (void)note;
     [self releaseHeld];
+    [self requestFrame];
+}
+- (void)applicationDidBecomeActive:(NSNotification*)note {
+    (void)note;
+    [self requestFrame];
+}
+- (void)applicationDidResignActive:(NSNotification*)note {
+    (void)note;
+    [self requestFrame];
 }
 - (void)windowWillClose:(NSNotification*)note {
     (void)note;
@@ -981,6 +1147,10 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->setCursor = setCursor;
     app->setTextInputRect = setTextInputRect;
     app->setTitle = setTitle;
+    app->setExtent = setExtent;
+    app->requestAttention = requestAttention;
+    app->isActive = isActive;
+    app->notificationPost = notificationPost;
     app->surface = surface;
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;

@@ -18,6 +18,8 @@ extern "C" void prAppWebSetCursor(const char* selector, const char* cursor);
 extern "C" void prAppWebCanvasOrigin(const char* selector, double* x, double* y);
 extern "C" void prAppWebOpenUrl(const char* url);
 extern "C" void prAppWebWriteClipboard(const char* text);
+extern "C" bool prAppWebHasFocus(void);
+extern "C" int prAppWebNotify(const char* title, const char* body, uint32_t tagLow, uint32_t tagHigh);
 
 namespace pr_impl {
 
@@ -56,6 +58,9 @@ struct WebApp : PrApp {
 WebApp* appOf(void* app) {
     return static_cast<WebApp*>(app);
 }
+
+// The running application, which receives notification clicks, or null if none is running.
+WebApp* PR_NULLABLE runningApp = nullptr;
 
 double now() {
     return prTimeMonotonicMilliseconds() / 1000;
@@ -262,6 +267,12 @@ bool resize(int, const EmscriptenUiEvent*, void* context) {
     return false;
 }
 
+// Requests a frame when the page gains or loses focus, because that changes what prAppIsActive returns.
+bool focusChanged(int, const EmscriptenFocusEvent*, void* context) {
+    requestFrame(appOf(context));
+    return false;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // The application's functions
 
@@ -282,6 +293,9 @@ void run(PrApp* base, const PrAppHandler* handler) {
     emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, app, false, key);
     emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, app, false, key);
     emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, app, false, resize);
+    emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, app, false, focusChanged);
+    emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, app, false, focusChanged);
+    runningApp = app;
     PrAppFrame window = frameNow(app);
     app->handler.start(app->handler.context, app, &window);
     // The page's event loop runs the application from here, and main() does not continue.
@@ -293,6 +307,7 @@ void stop(PrApp* base) {
     if (!app->running)
         return;
     app->running = false;
+    runningApp = nullptr;
     emscripten_html5_remove_all_event_listeners();
     if (app->frameTimeout != 0)
         emscripten_clear_timeout(app->frameTimeout);
@@ -313,6 +328,27 @@ void setTitle(PrApp* base, PrStringView title) {
     prRawStringAppend(&terminated, PrStringView{"", 1});
     prAppWebSetTitle(prRawStringView(&terminated).data);
     prRawStringReset(&terminated);
+}
+
+bool isActive(PrApp*) {
+    return prAppWebHasFocus();
+}
+
+PrStatus notificationPost(PrApp* base, const PrAppNotificationDesc* desc) {
+    if (!appOf(base)->running)
+        return PrStatus_InvalidState;
+    // The page reads NUL-terminated copies.
+    PrRawString title = prRawStringCopy(desc->title);
+    prRawStringAppend(&title, PrStringView{"", 1});
+    PrRawString body = prRawStringCopy(desc->body);
+    prRawStringAppend(&body, PrStringView{"", 1});
+    int shown = prAppWebNotify(prRawStringView(&title).data, prRawStringView(&body).data, uint32_t(desc->tag),
+        uint32_t(desc->tag >> 32));
+    prRawStringReset(&title);
+    prRawStringReset(&body);
+    if (shown == 1)
+        return PrStatus_NotAllowed;
+    return shown == 0 ? PrStatus_Ok : PrStatus_NotSupported;
 }
 
 PrStatus surface(PrApp*, PrAppSurface* out) {
@@ -365,6 +401,8 @@ PrApp* prAppWebCreate(const PrAppDesc* desc) {
     app->requestFrameAt = requestFrameAt;
     app->setCursor = setCursor;
     app->setTitle = setTitle;
+    app->isActive = isActive;
+    app->notificationPost = notificationPost;
     app->surface = surface;
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;
@@ -373,4 +411,12 @@ PrApp* prAppWebCreate(const PrAppDesc* desc) {
     app->setClipboardImage = setClipboardImage;
     setTitle(app, desc->title);
     return app;
+}
+
+// The page calls this function by name, so the build keeps it.
+EMSCRIPTEN_KEEPALIVE void prAppWebNotificationClicked(uint32_t tagLow, uint32_t tagHigh) {
+    if (runningApp == nullptr)
+        return;
+    PrAppEvent event{.kind = PrAppEventKind_Notification, .tag = (uint64_t(tagHigh) << 32) | tagLow, .time = now()};
+    deliver(runningApp, event);
 }

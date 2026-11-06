@@ -118,6 +118,30 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
     CHECK(run.seen == std::vector<std::string>{"start", "frame", "wake", "shutdown"});
 }
 
+TEST_CASE("a process outside an application bundle posts no notification, and does not crash trying") {
+    PrAppDesc appDesc{.title = "Cocoa test", .extent = {64, 32}, .headless = true};
+    PrApp* app = prAppCocoaCreate(&appDesc);
+    PrAppNotificationDesc desc{.title = "Title", .body = "Body", .tag = 1};
+    CHECK(prAppNotificationPost(app, &desc) == PrStatus_InvalidState);
+    PrStatus posted = PrStatus_Ok;
+    PrAppHandler handler{
+        &posted,
+        [](void* context, PrApp* app, const PrAppFrame*) {
+            PrAppNotificationDesc desc{.title = "Title", .body = "Body", .tag = 1};
+            *static_cast<PrStatus*>(context) = prAppNotificationPost(app, &desc);
+            // A window that is never shown is never the active window.
+            CHECK_FALSE(prAppIsActive(app));
+            prAppStop(app);
+        },
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
+        [](void*, PrApp*, const PrAppEvent*) {},
+        [](void*, PrApp*) {},
+    };
+    prAppRun(app, &handler);
+    prAppDestroy(app);
+    CHECK(posted == PrStatus_NotSupported);
+}
+
 TEST_CASE("a browser loads a page, runs a script in it and captures it at two pixels per CSS pixel") {
     // A capture waits for the screen's frames, which stop while the display is off.
     if (CGDisplayIsAsleep(CGMainDisplayID()))

@@ -159,6 +159,33 @@ float2 mapPoint(FragmentMatrix3 m, float2 p) {
     return float2(dot(x, h), dot(y, h)) / dot(w, h);
 }
 
+// Returns the value at index `k` of four. It selects rather than indexes, because the compiler would put an indexed
+// array in stack memory on every thread.
+float pick4(float a, float b, float c, float d, uint k) {
+    return k < 2 ? (k == 0 ? a : b) : (k == 2 ? c : d);
+}
+
+float2 pick4(float2 a, float2 b, float2 c, float2 d, uint k) {
+    return k < 2 ? (k == 0 ? a : b) : (k == 2 ? c : d);
+}
+
+float3 pick4(float3 a, float3 b, float3 c, float3 d, uint k) {
+    return k < 2 ? (k == 0 ? a : b) : (k == 2 ? c : d);
+}
+
+float4 pick4(float4 a, float4 b, float4 c, float4 d, uint k) {
+    return k < 2 ? (k == 0 ? a : b) : (k == 2 ? c : d);
+}
+
+// The radii and the shape K of corner `k`.
+float2 cornerRadii(FragmentCornerRect s, uint k) {
+    return pick4(s.radii[0], s.radii[1], s.radii[2], s.radii[3], k);
+}
+
+float cornerShape(FragmentCornerRect s, uint k) {
+    return pick4(s.shapes[0], s.shapes[1], s.shapes[2], s.shapes[3], k);
+}
+
 // The norm of a point of the first quadrant with exponent `n`, and its gradient: the max norm for an infinite `n`. It
 // divides by the larger coordinate first, so that no power overflows.
 float3 cornerNorm(float2 u, float n) {
@@ -184,9 +211,9 @@ float3 shapedDistance(FragmentCornerRect s, float2 p) {
     float2 side = float2(q.x < 0 ? -1.0 : 1.0, q.y < 0 ? -1.0 : 1.0);
     float2 halfSize = (hi - lo) * 0.5;
     uint k = q.x < 0 ? (q.y < 0 ? 0 : 3) : (q.y < 0 ? 1 : 2);
-    float2 r = min(s.radii[k], halfSize);
+    float2 r = min(cornerRadii(s, k), halfSize);
     float2 a = abs(q);
-    float shape = s.shapes[k];
+    float shape = cornerShape(s, k);
     if (r.x > 0 && r.y > 0) {
         float2 u = (a - (halfSize - r)) / r;
         if (u.x > 0 && u.y > 0) {
@@ -264,7 +291,8 @@ float blurredCoverage(FragmentCornerRect s, float2 p, float sigma) {
     float2 halfSize = (rect.zw - rect.xy) * 0.5;
     p -= (rect.xy + rect.zw) * 0.5;
     uint k = p.x < 0 ? (p.y < 0 ? 0 : 3) : (p.y < 0 ? 1 : 2);
-    float corner = min((s.radii[k].x + s.radii[k].y) * 0.5, min(halfSize.x, halfSize.y));
+    float2 radii = cornerRadii(s, k);
+    float corner = min((radii.x + radii.y) * 0.5, min(halfSize.x, halfSize.y));
     float low = p.y - halfSize.y;
     float high = p.y + halfSize.y;
     float start = clamp(-3 * sigma, low, high);
@@ -1010,20 +1038,35 @@ float halfPlaneArea(float d, float2 g) {
 float4 sidedColor(FragmentSidedRing r, float2 p) {
     float2 split = r.split;
     uint corner = p.y < split.y ? (p.x < split.x ? 0u : 1u) : (p.x < split.x ? 3u : 2u);
-    float3 divide = float3(r.divides[corner][0], r.divides[corner][1], r.divides[corner][2]);
+    float3 divide = pick4(float3(r.divides[0][0], r.divides[0][1], r.divides[0][2]),
+        float3(r.divides[1][0], r.divides[1][1], r.divides[1][2]),
+        float3(r.divides[2][0], r.divides[2][1], r.divides[2][2]),
+        float3(r.divides[3][0], r.divides[3][1], r.divides[3][2]), corner);
     float d = dot(divide.xy, p) + divide.z;
     float2 g = float2(dot(divide.xy, prGpuDdxFine(p)), dot(divide.xy, prGpuDdyFine(p)));
     float after = halfPlaneArea(d, g);
-    return lerp(r.colors[corner][0], r.colors[corner][1], after);
+    float4 before = pick4(r.colors[0][0], r.colors[1][0], r.colors[2][0], r.colors[3][0], corner);
+    float4 next = pick4(r.colors[0][1], r.colors[1][1], r.colors[2][1], r.colors[3][1], corner);
+    return lerp(before, next, after);
 }
 
 // The instance's coverage of the pixel. Bytes and Tiles coverage read the pixel of the quad nearest to the point: the
 // root views that hold their records are not bounds checked, and a point can fall just outside the quad, as at its edge
-// or in a helper lane that runs only for derivatives, where an index from it would read far outside the records.
-float instanceCoverage(VertexOut input, FragmentInstance i, float2 pixel) {
+// or in a helper lane that runs only for derivatives, where an index from it would read far outside the records. If
+// `Basic` is true, the instance must be basic (fragmentShadeBasic), and the code for every other kind of coverage is
+// compiled out.
+float instanceCoverage<let Basic : bool>(VertexOut input, FragmentInstance i, float2 pixel) {
     uint kind = i.flags & FragmentInstanceFlag_Coverage;
     uint v = i.data * 4;            // the record's byte offset in the values
     int2 at = int2(floor(input.local));
+    if (Basic) {
+        switch (kind) {
+        case FragmentCoverage_Rect: return rectArea(frameValues.Load<float4>(v), floor(pixel));
+        case FragmentCoverage_Triangle: return input.coverage;
+        case FragmentCoverage_Atlas: return textureAt(i.data - 1).Load(int3(at, 0)).r;
+        default: return 1;
+        }
+    }
     switch (kind) {
     case FragmentCoverage_Rect: return rectArea(frameValues.Load<float4>(v), floor(pixel));
     case FragmentCoverage_Shape: return shapedCoverage(frameValues.Load<FragmentCornerRect>(v), input.local);
@@ -1056,12 +1099,18 @@ float instanceCoverage(VertexOut input, FragmentInstance i, float2 pixel) {
     }
 }
 
-Shaded shade(VertexOut input) {
+// Shades the pixel. If `Basic` is true, the instance must be basic (fragmentShadeBasic), and the code that only other
+// instances need is compiled out.
+Shaded shade<let Basic : bool>(VertexOut input) {
     FragmentInstance i = frameInstances[input.instance];
     float2 pixel = input.position.xy + draw.origin;
     Shaded result;
-    result.shape = instanceCoverage(input, i, pixel);
+    result.shape = instanceCoverage<Basic>(input, i, pixel);
     result.clip = rectArea(input.clipRect, floor(pixel));
+    if (Basic) {
+        result.paint = halfColor(i.color);
+        return result;
+    }
     if (i.clip != 0) {
         FragmentClip c = frameClips[i.clip - 1];
         for (uint k = 0; k < c.shapeCount; ++k)
@@ -1200,14 +1249,23 @@ float4 composite(float4 s, float4 d, uint op, uint mode) {
 
 [shader("fragment")]
 float4 fragmentShade(VertexOut input) : SV_Target {
-    Shaded s = shade(input);
+    Shaded s = shade<false>(input);
+    return s.paint * (s.shape * s.clip);
+}
+
+// Shades basic instances only. A basic instance has Solid, Rect, Triangle or Atlas coverage, paints only its own color,
+// and has at most a rectangular clip. The result matches fragmentShade for these instances. Without the code for every
+// other instance, the shader is small and fast, and most of a user interface's pixels are basic.
+[shader("fragment")]
+float4 fragmentShadeBasic(VertexOut input) : SV_Target {
+    Shaded s = shade<true>(input);
     return s.paint * (s.shape * s.clip);
 }
 
 // Composites onto the destination, which it reads from the target.
 [shader("fragment")]
 float4 fragmentBlend(VertexOut input PR_GPU_TARGET_PARAM) : SV_Target {
-    Shaded s = shade(input);
+    Shaded s = shade<false>(input);
     float4 under = prGpuTarget(input.position);
     FragmentInstance i = frameInstances[input.instance];
     FragmentPaint r = framePaints[i.paint - 1];
