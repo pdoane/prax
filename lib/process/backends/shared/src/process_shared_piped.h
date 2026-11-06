@@ -38,6 +38,8 @@ struct ProcessPiped : PrProcess {
     ProcessPipedNotifyFn notify;
     PrProcessWakeFn PR_NULLABLE wake;
     void* PR_NULLABLE wakeContext;
+    PrProcessReceiveFn PR_NULLABLE receive;
+    void* PR_NULLABLE receiveContext;
 
     PrMutex mutex;
     ProcessReceived received[2];    // by PrProcessStream
@@ -57,8 +59,9 @@ void processPipedInit(ProcessPiped* process, const PrProcessDesc* desc, ProcessP
 // Frees the shared state, once the backend's thread has stopped.
 void processPipedReset(ProcessPiped* process);
 
-// Appends `size` bytes that arrived on `stream`, and calls the wake function if the caller had read all that arrived
-// before. Returns true if the stream still has room, so that the pipe is read again.
+// Passes `size` bytes that arrived on `stream` to the receive function, if the process has one. Otherwise appends them
+// to the stream, and calls the wake function if the caller had read everything before them. Returns true if the stream
+// still has room, so that the pipe is read again.
 bool processPipedReceive(ProcessPiped* process, PrProcessStream stream, const uint8_t* data, size_t size);
 
 // Returns true if `stream` holds less than kProcessReceivedMaxBytes that were not read.

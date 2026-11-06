@@ -86,8 +86,11 @@ void processPipedInit(ProcessPiped* process, const PrProcessDesc* desc, ProcessP
     process->notify = notify;
     process->wake = desc->wake;
     process->wakeContext = desc->wakeContext;
+    process->receive = desc->receive;
+    process->receiveContext = desc->receiveContext;
     prMutexInit(&process->mutex);
-    process->received[PrProcessStream_Error].ended = desc->errors != PrProcessErrors_Pipe;
+    bool errorPiped = desc->streams == PrProcessStreams_Pipes && desc->errors == PrProcessErrors_Pipe;
+    process->received[PrProcessStream_Error].ended = !errorPiped;
 }
 
 void processPipedReset(ProcessPiped* process) {
@@ -98,6 +101,11 @@ void processPipedReset(ProcessPiped* process) {
 }
 
 bool processPipedReceive(ProcessPiped* process, PrProcessStream stream, const uint8_t* data, size_t size) {
+    PR_ASSERT(size <= kProcessReadChunkBytes);
+    if (process->receive != nullptr) {
+        process->receive(process->receiveContext, process, stream, PrByteView{data, size});
+        return true;
+    }
     prMutexLock(&process->mutex);
     ProcessReceived& received = process->received[stream];
     bool waiting = received.bytes.count > received.start;
@@ -105,7 +113,6 @@ bool processPipedReceive(ProcessPiped* process, PrProcessStream stream, const ui
         received.bytes.clear();
         received.start = 0;
     }
-    PR_ASSERT(size <= kProcessReadChunkBytes);
     received.bytes.append(data, uint32_t(size));
     bool room = received.bytes.count - received.start < kProcessReceivedMaxBytes;
     prMutexUnlock(&process->mutex);

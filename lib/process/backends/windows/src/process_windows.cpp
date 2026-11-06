@@ -1,6 +1,6 @@
-// The launcher of Windows processes (process_windows.h): CreateProcessW, over named pipes whose parent's ends are
-// overlapped, and one thread for each process that waits on the pipes' reads and writes, the process and an event that
-// wakes it.
+// The launcher of Windows processes (process_windows.h). It starts each process with CreateProcessW, over named pipes
+// whose parent ends are overlapped. A process on a terminal gets a pseudoconsole that is attached to such pipes. Each
+// process has a thread that waits on the pipe operations, the process itself, and an event that wakes the thread.
 
 #include "pr/process_windows.h"
 
@@ -29,6 +29,12 @@ struct ProcessPipe {
 
 // The process's handle, the parent's ends of its pipes, the event that wakes the thread, and the thread. `stopping` is
 // guarded by the process's mutex.
+//
+// A process on a terminal has a pseudoconsole, which holds the child ends of its pipes. The pseudoconsole keeps its
+// output open until it is closed, even after the process exits. A separate thread, `closer`, closes it once the process
+// exits, while the serving thread goes on reading the remaining output. `console` is guarded by the process's mutex. It
+// is null once closing begins, so a resize never uses a closed pseudoconsole. The input pipe of a process on a terminal
+// stays open when the caller closes the input, because the pseudoconsole ends its programs when that pipe closes.
 struct WindowsProcess : ProcessPiped {
     HANDLE handle;
     ProcessPipe input;
@@ -36,6 +42,10 @@ struct WindowsProcess : ProcessPiped {
     HANDLE wakeEvent;
     PrThread thread;
     bool stopping;
+    bool onTerminal;
+    HPCON console;
+    PrThread closer;
+    bool closerStarted;
 };
 
 // The bytes that the system buffers in each pipe.
@@ -97,6 +107,50 @@ void appendArgument(RawArray<wchar_t>* line, PrStringView argument) {
     prMemoryFree(wide);
 }
 
+// Returns true if the environment block entry `entry` and `variable` have the same name. Both are NAME=value in UTF-16.
+// Names compare without case, as Windows treats them. A leading `=` is part of the name, as in the block's entries for
+// the current directory of each drive.
+bool sameName(const wchar_t* entry, const wchar_t* variable) {
+    int length = 1;
+    while (variable[length] != L'=')
+        ++length;
+    int entryLength = 1;
+    while (entry[entryLength] != 0 && entry[entryLength] != L'=')
+        ++entryLength;
+    return entryLength == length && CompareStringOrdinal(entry, length, variable, length, TRUE) == CSTR_EQUAL;
+}
+
+// Appends the process's environment block to `block`. It is the launcher's variables, except those that `desc` sets,
+// followed by the variables of `desc`. Each variable ends with a NUL, and one more NUL ends the block.
+void buildEnvironment(const PrProcessDesc* desc, RawArray<wchar_t>* block) {
+    RawArray<wchar_t*> variables;
+    for (uint32_t i = 0; i < desc->environmentCount; ++i)
+        variables.push(wideString(desc->environment[i]));
+    wchar_t* inherited = GetEnvironmentStringsW();
+    for (const wchar_t* entry = inherited; entry != nullptr && *entry != 0;) {
+        size_t length = 0;
+        while (entry[length] != 0)
+            ++length;
+        bool replaced = false;
+        for (uint32_t i = 0; i < variables.count && !replaced; ++i)
+            replaced = sameName(entry, variables.data[i]);
+        if (!replaced)
+            block->append(entry, uint32_t(length + 1));
+        entry += length + 1;
+    }
+    if (inherited != nullptr)
+        FreeEnvironmentStringsW(inherited);
+    for (wchar_t* variable : variables.span()) {
+        size_t length = 0;
+        while (variable[length] != 0)
+            ++length;
+        block->append(variable, uint32_t(length + 1));
+        prMemoryFree(variable);
+    }
+    variables.reset();
+    block->push(0);
+}
+
 // Makes a pipe whose parent's end is overlapped and whose child's end the child inherits. `inbound` is true for a pipe
 // that the parent reads.
 bool openPipe(bool inbound, HANDLE* parent, HANDLE* child) {
@@ -154,7 +208,7 @@ void finishRead(WindowsProcess* process, PrProcessStream stream) {
 }
 
 // Starts a write of what is queued if none is in flight, or closes the input once the queue drains if the caller closed
-// it.
+// it and the process is not on a terminal.
 void startWrite(WindowsProcess* process) {
     ProcessPipe& pipe = process->input;
     if (pipe.handle == INVALID_HANDLE_VALUE || pipe.pending)
@@ -166,7 +220,7 @@ void startWrite(WindowsProcess* process) {
     bool closing = process->inputClosing;
     prMutexUnlock(&process->mutex);
     if (taken == 0) {
-        if (closing)
+        if (closing && !process->onTerminal)
             closeHandle(&pipe.handle);
         return;
     }
@@ -210,6 +264,17 @@ void cancel(ProcessPipe& pipe) {
     DWORD moved = 0;
     GetOverlappedResult(pipe.handle, &pipe.operation, &moved, TRUE);
     pipe.pending = false;
+}
+
+// Closes the pseudoconsole, if it is still open, once the process has exited.
+void closeConsole(void* PR_NULLABLE context) {
+    WindowsProcess* process = static_cast<WindowsProcess*>(context);
+    prMutexLock(&process->mutex);
+    HPCON console = process->console;
+    process->console = nullptr;
+    prMutexUnlock(&process->mutex);
+    if (console != nullptr)
+        ClosePseudoConsole(console);
 }
 
 void serve(void* PR_NULLABLE context) {
@@ -260,6 +325,10 @@ void serve(void* PR_NULLABLE context) {
             GetExitCodeProcess(process->handle, &code);
             reaped = true;
             processPipedExit(process, false, int32_t(code));
+            if (!process->closerStarted && process->console != nullptr) {
+                process->closerStarted = true;
+                prThreadStart(&process->closer, closeConsole, process);
+            }
         }
     }
     cancel(process->outputs[0]);
@@ -267,6 +336,8 @@ void serve(void* PR_NULLABLE context) {
     cancel(process->input);
 }
 
+// Frees the process's handles. The output pipe closes first, because closing the pseudoconsole while the pipe is open
+// waits for its output to be read.
 void freeProcess(WindowsProcess* process) {
     closeHandle(&process->input.handle);
     closeHandle(&process->input.operation.hEvent);
@@ -274,6 +345,9 @@ void freeProcess(WindowsProcess* process) {
         closeHandle(&pipe.handle);
         closeHandle(&pipe.operation.hEvent);
     }
+    if (process->closerStarted)
+        prThreadJoin(&process->closer);
+    closeConsole(process);
     closeHandle(&process->wakeEvent);
     closeHandle(&process->handle);
     processPipedReset(process);
@@ -301,9 +375,20 @@ void killProcess(PrProcess* base) {
     prMutexUnlock(&process->mutex);
 }
 
-// Starts the program, its pipes and the thread that serves them.
+// A pseudoconsole has no pixel size, so `pixelExtent` is ignored.
+void resizeTerminal(PrProcess* base, PrUVec2 extent, PrUVec2) {
+    WindowsProcess* process = static_cast<WindowsProcess*>(base);
+    prMutexLock(&process->mutex);
+    if (process->console != nullptr)
+        ResizePseudoConsole(process->console, COORD{SHORT(extent.x), SHORT(extent.y)});
+    prMutexUnlock(&process->mutex);
+}
+
+// Starts the program on pipes or a pseudoconsole, and the thread that serves them.
 PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out) {
+    bool onTerminal = desc->streams == PrProcessStreams_Terminal;
     WindowsProcess* process = allocZeroed<WindowsProcess>();
+    process->onTerminal = onTerminal;
     processPipedInit(process, desc, notify);
     process->destroy = destroyProcess;
     process->kill = killProcess;
@@ -316,7 +401,16 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     bool piped = openPipe(false, &process->input.handle, &childInput) &&
         openPipe(true, &process->outputs[PrProcessStream_Output].handle, &childOutput);
     SECURITY_ATTRIBUTES inherited{.nLength = sizeof(SECURITY_ATTRIBUTES), .bInheritHandle = TRUE};
-    if (piped && desc->errors == PrProcessErrors_Pipe) {
+    if (piped && onTerminal) {
+        // The pseudoconsole reads the input pipe and writes the output pipe, which also carries standard error. It
+        // duplicates the handles it is given, so this program closes its copies.
+        COORD size{SHORT(desc->terminalExtent.x), SHORT(desc->terminalExtent.y)};
+        piped = SUCCEEDED(CreatePseudoConsole(size, childInput, childOutput, 0, &process->console));
+        closeHandle(&childInput);
+        closeHandle(&childOutput);
+        if (!piped)
+            process->console = nullptr;
+    } else if (piped && desc->errors == PrProcessErrors_Pipe) {
         piped = openPipe(true, &process->outputs[PrProcessStream_Error].handle, &childError);
     } else if (piped && desc->errors == PrProcessErrors_Discard) {
         childError = CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &inherited, OPEN_EXISTING,
@@ -329,7 +423,7 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
             childError = CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &inherited,
                 OPEN_EXISTING, 0, nullptr);
     }
-    if (!piped || childError == INVALID_HANDLE_VALUE) {
+    if (!piped || (!onTerminal && childError == INVALID_HANDLE_VALUE)) {
         closeHandle(&childInput);
         closeHandle(&childOutput);
         closeHandle(&childError);
@@ -337,19 +431,31 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
         return PrStatus_Io;
     }
 
-    // Only the child's ends of the pipes pass to it, whatever else the program holds that is inheritable.
+    // Only the child's ends of the pipes pass to it, whatever else the program holds that is inheritable. A process on
+    // a terminal inherits no handles, and its streams come from its pseudoconsole.
     HANDLE passed[3] = {childInput, childOutput, childError};
     SIZE_T listSize = 0;
     InitializeProcThreadAttributeList(nullptr, 1, 0, &listSize);
     LPPROC_THREAD_ATTRIBUTE_LIST list = static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(prMemoryAlloc(listSize));
     InitializeProcThreadAttributeList(list, 1, 0, &listSize);
-    UpdateProcThreadAttribute(list, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, passed, sizeof(passed), nullptr, nullptr);
     STARTUPINFOEXW startup{};
     startup.StartupInfo.cb = sizeof(startup);
-    startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-    startup.StartupInfo.hStdInput = childInput;
-    startup.StartupInfo.hStdOutput = childOutput;
-    startup.StartupInfo.hStdError = childError;
+    if (onTerminal) {
+        UpdateProcThreadAttribute(list, 0, PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, process->console, sizeof(HPCON),
+            nullptr, nullptr);
+        // The standard handles are explicitly invalid, so the process uses its pseudoconsole instead of inheriting this
+        // program's standard handles, which may be redirected.
+        startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+        startup.StartupInfo.hStdInput = INVALID_HANDLE_VALUE;
+        startup.StartupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+        startup.StartupInfo.hStdError = INVALID_HANDLE_VALUE;
+    } else {
+        UpdateProcThreadAttribute(list, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, passed, sizeof(passed), nullptr, nullptr);
+        startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+        startup.StartupInfo.hStdInput = childInput;
+        startup.StartupInfo.hStdOutput = childOutput;
+        startup.StartupInfo.hStdError = childError;
+    }
     startup.lpAttributeList = list;
 
     RawArray<wchar_t> line;
@@ -358,11 +464,17 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
         appendArgument(&line, desc->arguments[i]);
     line.push(0);
     wchar_t* directory = desc->directory.data != nullptr ? wideString(desc->directory) : nullptr;
+    RawArray<wchar_t> environment;
+    if (desc->environmentCount != 0)
+        buildEnvironment(desc, &environment);
     PROCESS_INFORMATION started{};
-    BOOL created = CreateProcessW(nullptr, line.data, nullptr, nullptr, TRUE,
-        EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW, nullptr, directory,
-        &startup.StartupInfo, &started);
+    DWORD flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
+    if (!onTerminal)
+        flags |= CREATE_NO_WINDOW;
+    BOOL created = CreateProcessW(nullptr, line.data, nullptr, nullptr, onTerminal ? FALSE : TRUE, flags,
+        environment.data, directory, &startup.StartupInfo, &started);
     line.reset();
+    environment.reset();
     prMemoryFree(directory);
     DeleteProcThreadAttributeList(list);
     prMemoryFree(list);
@@ -376,6 +488,8 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     }
     CloseHandle(started.hThread);
     process->handle = started.hProcess;
+    if (onTerminal)
+        process->terminalResize = resizeTerminal;
     process->wakeEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     process->input.operation.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     for (ProcessPipe& pipe : process->outputs)

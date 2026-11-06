@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/string_ops.h"
 
 #if defined(PR_PROCESS_HAS_POSIX)
 #include "pr/process_posix.h"
@@ -75,6 +76,11 @@ void prProcessLauncherDestroy(PrProcessLauncher* PR_NULLABLE launcher) {
 
 PrStatus prProcessLaunch(PrProcessLauncher* launcher, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
+    PR_ASSERT(desc->streams != PrProcessStreams_Terminal || (desc->terminalExtent.x > 0 && desc->terminalExtent.y > 0));
+    for (uint32_t i = 0; i < desc->environmentCount; ++i) {
+        PrStringView variable = desc->environment[i];
+        PR_ASSERT(prStringFindByte(variable, '=') != 0 && prStringFindByte(variable, '=') < variable.size);
+    }
     PrStatus status = launcher->launch(launcher, desc, out);
     PR_ASSERT((status == PrStatus_Ok) == (*out != nullptr));
     return status;
@@ -104,4 +110,16 @@ PrProcessInfo prProcessInfo(const PrProcess* process) {
 
 void prProcessKill(PrProcess* process) {
     process->kill(process);
+}
+
+void prProcessTerminalResize(PrProcess* process, PrUVec2 extent, PrUVec2 pixelExtent) {
+    PR_ASSERT(extent.x > 0 && extent.y > 0);
+    PR_ASSERT(process->terminalResize != nullptr);
+    process->terminalResize(process, extent, pixelExtent);
+}
+
+PrRawString prProcessTerminalForegroundDirectory(const PrProcess* process) {
+    if (process->terminalForegroundDirectory == nullptr)
+        return prRawStringNull();
+    return process->terminalForegroundDirectory(process);
 }
