@@ -23,6 +23,9 @@
 #if defined(PR_PLATFORM_USABLE_BYTES) && !defined(PR_PLATFORM_ALLOC_BYTES)
 #error "PR_PLATFORM_USABLE_BYTES comes with PR_PLATFORM_ALLOC_BYTES"
 #endif
+#if defined(PR_PLATFORM_TRIM_BYTES) && !defined(PR_PLATFORM_ALLOC_BYTES)
+#error "PR_PLATFORM_TRIM_BYTES comes with PR_PLATFORM_ALLOC_BYTES"
+#endif
 
 // The other groups are bound together or not at all. A build without the defaults binds each group that it compiles.
 // The source that uses a group checks that the group is bound.
@@ -92,11 +95,8 @@
 #if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_CREATE_DIRECTORY)
 #error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_CREATE_DIRECTORY are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_CACHE_DIRECTORY)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_CACHE_DIRECTORY are defined together or not at all"
-#endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_DATA_DIRECTORY)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_DATA_DIRECTORY are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_USER_DIRECTORY)
+#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_USER_DIRECTORY are defined together or not at all"
 #endif
 #if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_STREAM_WRITE)
 #error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_STREAM_WRITE are defined together or not at all"
@@ -135,6 +135,7 @@
 #define PR_PLATFORM_REALLOC_BYTES(memory, size) prCoreMimallocReallocBytes(memory, size)
 #define PR_PLATFORM_FREE_BYTES(memory) prCoreMimallocFreeBytes(memory)
 #define PR_PLATFORM_USABLE_BYTES(memory) prCoreMimallocUsableBytes(memory)
+#define PR_PLATFORM_TRIM_BYTES() prCoreMimallocTrimBytes()
 #elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_ALLOC_BYTES)
 #include "pr/core_libc.h"
 #define PR_PLATFORM_ALLOC_BYTES(size) prCoreLibcAllocBytes(size)
@@ -142,6 +143,7 @@
 #define PR_PLATFORM_REALLOC_BYTES(memory, size) prCoreLibcReallocBytes(memory, size)
 #define PR_PLATFORM_FREE_BYTES(memory) prCoreLibcFreeBytes(memory)
 #define PR_PLATFORM_USABLE_BYTES(memory) prCoreLibcUsableBytes(memory)
+#define PR_PLATFORM_TRIM_BYTES() prCoreLibcTrimBytes()
 #endif
 
 // The default report of a failure, from Windows or POSIX, if the build binds none.
@@ -227,8 +229,7 @@
 #define PR_PLATFORM_FILE_WRITE(path, bytes) prCoreWindowsFileWrite(path, bytes)
 #define PR_PLATFORM_FILE_REMOVE(path) prCoreWindowsFileRemove(path)
 #define PR_PLATFORM_FILE_CREATE_DIRECTORY(path) prCoreWindowsFileCreateDirectory(path)
-#define PR_PLATFORM_FILE_CACHE_DIRECTORY() prCoreWindowsFileCacheDirectory()
-#define PR_PLATFORM_FILE_DATA_DIRECTORY() prCoreWindowsFileDataDirectory()
+#define PR_PLATFORM_FILE_USER_DIRECTORY(directory) prCoreWindowsFileUserDirectory(directory)
 #define PR_PLATFORM_FILE_WORKING_DIRECTORY() prCoreWindowsFileWorkingDirectory()
 #define PR_PLATFORM_FILE_STREAM_WRITE(stream, bytes) prCoreWindowsFileStreamWrite(stream, bytes)
 #define PR_PLATFORM_FILE_STREAM_READ(stream, out, capacity) prCoreWindowsFileStreamRead(stream, out, capacity)
@@ -242,8 +243,7 @@
 #define PR_PLATFORM_FILE_WRITE(path, bytes) prCorePosixFileWrite(path, bytes)
 #define PR_PLATFORM_FILE_REMOVE(path) prCorePosixFileRemove(path)
 #define PR_PLATFORM_FILE_CREATE_DIRECTORY(path) prCorePosixFileCreateDirectory(path)
-#define PR_PLATFORM_FILE_CACHE_DIRECTORY() prCorePosixFileCacheDirectory()
-#define PR_PLATFORM_FILE_DATA_DIRECTORY() prCorePosixFileDataDirectory()
+#define PR_PLATFORM_FILE_USER_DIRECTORY(directory) prCorePosixFileUserDirectory(directory)
 #define PR_PLATFORM_FILE_WORKING_DIRECTORY() prCorePosixFileWorkingDirectory()
 #define PR_PLATFORM_FILE_STREAM_WRITE(stream, bytes) prCorePosixFileStreamWrite(stream, bytes)
 #define PR_PLATFORM_FILE_STREAM_READ(stream, out, capacity) prCorePosixFileStreamRead(stream, out, capacity)
@@ -279,9 +279,11 @@
 #if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_ENVIRONMENT_VARIABLE) && defined(_WIN32)
 #include "pr/core_windows_environment.h"
 #define PR_PLATFORM_ENVIRONMENT_VARIABLE(name) prCoreWindowsEnvironmentVariable(name)
+#define PR_PLATFORM_ENVIRONMENT_HOST_NAME() prCoreWindowsEnvironmentHostName()
 #elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_ENVIRONMENT_VARIABLE)
 #include "pr/core_posix_environment.h"
 #define PR_PLATFORM_ENVIRONMENT_VARIABLE(name) prCorePosixEnvironmentVariable(name)
+#define PR_PLATFORM_ENVIRONMENT_HOST_NAME() prCorePosixEnvironmentHostName()
 #endif
 
 // The default random bytes, from Windows or POSIX, if the build binds none.

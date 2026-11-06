@@ -363,7 +363,7 @@ TEST_CASE("Save waits for the load to finish") {
     String program;
     while (program.count() < (1u << 20))
         program.append("int value = 1;\n");
-    PrRawString cache = prFileCacheDirectory();
+    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
     String folder = format("{}/prax-tests/scribe", prRawStringView(&cache));
     prRawStringReset(&cache);
     REQUIRE(prFileCreateDirectory(folder));

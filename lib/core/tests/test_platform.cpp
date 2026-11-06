@@ -55,6 +55,8 @@ TEST_CASE("the mimalloc backend allocates, resizes and frees") {
     REQUIRE(zeroed != nullptr);
     CHECK(zeroed[0] == 0);
     CHECK(zeroed[63] == 0);
+    prCoreMimallocTrimBytes();
+    CHECK(zeroed[63] == 0);
     prCoreMimallocFreeBytes(zeroed);
 }
 
@@ -67,6 +69,8 @@ TEST_CASE("the C library backend allocates, resizes and frees") {
     bytes = static_cast<uint8_t*>(prCoreLibcReallocBytes(bytes, 4096));
     REQUIRE(bytes != nullptr);
     CHECK(bytes[0] == 7);
+    CHECK(bytes[31] == 7);
+    prCoreLibcTrimBytes();
     CHECK(bytes[31] == 7);
     prCoreLibcFreeBytes(bytes);
 

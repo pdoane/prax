@@ -317,3 +317,32 @@ TEST_CASE("clear empties a string and keeps the storage that it owns") {
     prRawStringClear(&null);
     CHECK(prRawStringIsNull(&null));
 }
+
+TEST_CASE("truncate shortens a string and keeps the storage that it owns") {
+    PrRawString owned = prRawStringCopy(pattern(100));
+    const char* storage = owned.heap.data;
+    prRawStringTruncate(&owned, 40);
+    CHECK(prRawStringKind(&owned) == PrRawStringKind_Owned);
+    CHECK(prRawStringView(&owned) == pattern(40));
+    prRawStringAppend(&owned, "again");
+    CHECK(owned.heap.data == storage);
+    CHECK(prRawStringView(&owned).size == 45);
+    prRawStringTruncate(&owned, 45);
+    CHECK(prRawStringView(&owned).size == 45);
+    prRawStringReset(&owned);
+
+    PrRawString small = prRawStringCopy("short");
+    prRawStringTruncate(&small, 2);
+    CHECK(prRawStringKind(&small) == PrRawStringKind_Inline);
+    CHECK(prRawStringView(&small) == "sh");
+
+    PrRawString external = prRawStringExternal("text");
+    prRawStringTruncate(&external, 0);
+    CHECK(prRawStringKind(&external) == PrRawStringKind_External);
+    CHECK(prRawStringIsEmpty(&external));
+    CHECK(!prRawStringIsNull(&external));
+
+    PrRawString null = prRawStringNull();
+    prRawStringTruncate(&null, 0);
+    CHECK(prRawStringIsNull(&null));
+}

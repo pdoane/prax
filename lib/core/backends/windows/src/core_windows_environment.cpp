@@ -35,3 +35,23 @@ PrRawString prCoreWindowsEnvironmentVariable(PrStringView name) {
     free(wideName);
     return value;
 }
+
+PrRawString prCoreWindowsEnvironmentHostName(void) {
+    // The first call measures the name with its terminator, and the second reads it.
+    DWORD count = 0;
+    GetComputerNameExW(ComputerNameDnsHostname, nullptr, &count);
+    if (count == 0)
+        return prRawStringEmpty();
+    wchar_t* wide = static_cast<wchar_t*>(malloc(size_t(count) * sizeof(wchar_t)));
+    PrRawString value = prRawStringEmpty();
+    if (wide != nullptr && GetComputerNameExW(ComputerNameDnsHostname, wide, &count) && count != 0) {
+        int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, int(count), nullptr, 0, nullptr, nullptr);
+        char* utf8 = size > 0 ? static_cast<char*>(malloc(size_t(size))) : nullptr;
+        if (utf8 != nullptr &&
+                WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, int(count), utf8, size, nullptr, nullptr) == size)
+            value = prRawStringCopy(PrStringView{utf8, size_t(size)});
+        free(utf8);
+    }
+    free(wide);
+    return value;
+}

@@ -80,7 +80,7 @@ String galleryDirectory() {
     String named = String::adopt(prEnvironmentVariable("ALCHEMY_DIR"));
     if (!named.isEmpty())
         return named;
-    String base = String::adopt(prFileDataDirectory());
+    String base = String::adopt(prFileUserDirectory(PrFileUserDirectory_Data));
     return base.isEmpty() ? String("Alchemy/images") : joinPath(base, "Alchemy/images");
 }
 

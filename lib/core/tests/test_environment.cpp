@@ -1,4 +1,5 @@
 #include "pr/environment.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
 
@@ -14,4 +15,12 @@ TEST_CASE("an environment variable reads as its value, and one that is not set a
     PrRawString unnamed = prEnvironmentVariable("");
     CHECK(prRawStringIsEmpty(&unnamed));
     prRawStringReset(&unnamed);
+}
+
+TEST_CASE("the host name is the machine's name, which has text and no NUL") {
+    PrRawString name = prEnvironmentHostName();
+    PrStringView text = prRawStringView(&name);
+    CHECK(text.size != 0);
+    CHECK(prStringFindByte(text, '\0') == text.size);
+    prRawStringReset(&name);
 }

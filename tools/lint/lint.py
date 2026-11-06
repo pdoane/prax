@@ -643,7 +643,7 @@ WRAPPERS = {
     "lib/tls/backends/schannel/src/tls_schannel.cpp": {"schannel.h", "security.h", "subauth.h", "wincrypt.h",
                                                        "windows.h"},
     "lib/core/backends/posix/src/core_posix_vmem.cpp": {"sys/mman.h"},
-    "lib/core/backends/posix/src/core_posix_environment.cpp": {"stdlib.h", "string.h"},
+    "lib/core/backends/posix/src/core_posix_environment.cpp": {"stdlib.h", "string.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_random.cpp": {"sys/random.h", "unistd.h"},
     "lib/core/backends/windows/src/core_windows_environment.cpp": {"windows.h", "stdlib.h"},
     "lib/core/backends/windows/src/core_windows_random.cpp": {"windows.h", "bcrypt.h"},

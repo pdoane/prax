@@ -89,6 +89,21 @@ struct RawArray {
     // Grows the capacity to at least `minCapacity`, and keeps the elements. Growth at least doubles the capacity.
     void reserve(uint32_t minCapacity);
 
+    // Sets the capacity to `newCapacity`, which is at least the count, and keeps the elements. A capacity of zero frees
+    // the storage. Use it for storage whose size is final, for which the growth of `reserve` would allocate more than
+    // it needs.
+    void reserveExact(uint32_t newCapacity) {
+        PR_ASSERT(newCapacity >= count);
+        if (newCapacity == capacity)
+            return;
+        if (newCapacity == 0) {
+            reset();
+            return;
+        }
+        data = static_cast<T*>(prMemoryRealloc(data, size_t(newCapacity) * sizeof(T)));
+        capacity = newCapacity;
+    }
+
     // Sets the count to `newCount`, growing once if it is larger than the capacity. Elements past the old count are
     // uninitialized.
     void resize(uint32_t newCount) {

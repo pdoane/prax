@@ -141,6 +141,14 @@ void prRawStringClear(PrRawString* string) {
     }
 }
 
+void prRawStringTruncate(PrRawString* string, size_t size) {
+    PR_ASSERT(string != nullptr && size <= prRawStringView(string).size);
+    if (prRawStringKind(string) == PrRawStringKind_Inline)
+        string->small.tag = inlineTag(size);
+    else if (string->heap.data != nullptr)
+        string->heap.size = uint32_t(size);
+}
+
 void prRawStringReset(PrRawString* string) {
     PR_ASSERT(string != nullptr);
     if (prRawStringKind(string) == PrRawStringKind_Owned)

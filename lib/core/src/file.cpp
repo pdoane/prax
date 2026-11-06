@@ -148,12 +148,9 @@ bool prFileCreateDirectory(PrStringView path) {
     return path.size != 0 && PR_PLATFORM_FILE_CREATE_DIRECTORY(path);
 }
 
-PrRawString prFileCacheDirectory(void) {
-    return PR_PLATFORM_FILE_CACHE_DIRECTORY();
-}
-
-PrRawString prFileDataDirectory(void) {
-    return PR_PLATFORM_FILE_DATA_DIRECTORY();
+PrRawString prFileUserDirectory(PrFileUserDirectory directory) {
+    PR_ASSERT(directory < PrFileUserDirectory_Count);
+    return PR_PLATFORM_FILE_USER_DIRECTORY(directory);
 }
 
 PrRawString prFileWorkingDirectory(void) {
@@ -202,13 +199,12 @@ void prFilePathAppend(PrTextBuffer* path, PrStringView part) {
     prTextBufferAppend(path, part);
 }
 
-PrRawString prFilePathAbsolute(PrStringView path) {
+PrRawString prFilePathAbsolute(PrStringView path, PrStringView base) {
     if (path.isEmpty())
         return prRawStringNull();
     size_t root = rootLength(path);
     PrTextBuffer out = {};
-    // A path with a root of its own is absolute, but on Windows a lone separator is the root of the working directory's
-    // drive.
+    // A path with a root of its own is absolute, but on Windows a lone separator is the root of the drive of `base`.
     bool underWorking = root == 0;
 #if defined(_WIN32)
     underWorking = underWorking || root == 1;
@@ -218,18 +214,20 @@ PrRawString prFilePathAbsolute(PrStringView path) {
         appendParts(&out, out.size, path, root);
         return prTextBufferTake(&out);
     }
-    PrRawString working = PR_PLATFORM_FILE_WORKING_DIRECTORY();
-    PrStringView base = prRawStringView(&working);
-    size_t baseRoot = rootLength(base);
-    if (baseRoot == 0) {
-        prRawStringReset(&working);
+    // The absolute directory to resolve against: the working directory if `base` is empty, and otherwise `base` made
+    // absolute.
+    PrRawString directory = base.isEmpty() ? PR_PLATFORM_FILE_WORKING_DIRECTORY() : prFilePathAbsolute(base, "");
+    PrStringView parent = prRawStringView(&directory);
+    size_t parentRoot = rootLength(parent);
+    if (parentRoot == 0) {
+        prRawStringReset(&directory);
         return prRawStringNull();
     }
-    appendRoot(&out, base, baseRoot);
+    appendRoot(&out, parent, parentRoot);
     uint32_t rootEnd = out.size;
     if (root == 0)
-        appendParts(&out, rootEnd, base, baseRoot);
+        appendParts(&out, rootEnd, parent, parentRoot);
     appendParts(&out, rootEnd, path, root);
-    prRawStringReset(&working);
+    prRawStringReset(&directory);
     return prTextBufferTake(&out);
 }

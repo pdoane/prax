@@ -17,13 +17,13 @@ implementation does not wait with a mutex from another, and one allocator does n
 
 | group | macros | default |
 | --- | --- | --- |
-| memory | `PR_PLATFORM_ALLOC_BYTES`, `REALLOC_BYTES` and `FREE_BYTES`, with `ALLOC_ZEROED_BYTES` and `USABLE_BYTES` if the embedder has them | the C library, or mimalloc with `PR_PLATFORM_MIMALLOC` |
+| memory | `PR_PLATFORM_ALLOC_BYTES`, `REALLOC_BYTES` and `FREE_BYTES`, with `ALLOC_ZEROED_BYTES`, `USABLE_BYTES` and `TRIM_BYTES` if the embedder has them | the C library, or mimalloc with `PR_PLATFORM_MIMALLOC` |
 | failure | `PR_PLATFORM_FAIL`, and `PR_ASSERT`, which replaces the library's assertions | POSIX, or the Windows family on Windows |
 | threads | `PR_PLATFORM_THREAD_SUPPORTED`, `_START`, `_JOIN`, `_HARDWARE_COUNT` and `_SLEEP`, `PR_PLATFORM_MUTEX_INIT`, `_RESET`, `_LOCK` and `_UNLOCK`, and `PR_PLATFORM_CONDITION_INIT`, `_RESET`, `_WAIT`, `_WAIT_FOR`, `_SIGNAL` and `_BROADCAST` | POSIX, or the Windows family on Windows, or none with `PR_PLATFORM_THREADS` off |
-| files | `PR_PLATFORM_FILE_MAP`, `_UNMAP`, `_INFO`, `_SAME`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_CACHE_DIRECTORY`, `_DATA_DIRECTORY`, `_WORKING_DIRECTORY`, `_STREAM_WRITE` and `_STREAM_READ` | POSIX, or the Windows family on Windows |
+| files | `PR_PLATFORM_FILE_MAP`, `_UNMAP`, `_INFO`, `_SAME`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_USER_DIRECTORY`, `_WORKING_DIRECTORY`, `_STREAM_WRITE` and `_STREAM_READ` | POSIX, or the Windows family on Windows |
 | address space | `PR_PLATFORM_VMEM_RESERVE`, `_COMMIT` and `_FREE` | POSIX, or the Windows family on Windows |
 | clocks | `PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS`, `_WALL_MILLISECONDS` and `_LOCAL_OFFSET_MILLISECONDS` | POSIX, or the Windows family on Windows |
-| environment | `PR_PLATFORM_ENVIRONMENT_VARIABLE` | POSIX, or the Windows family on Windows |
+| environment | `PR_PLATFORM_ENVIRONMENT_VARIABLE` and `_HOST_NAME` | POSIX, or the Windows family on Windows |
 | random bytes | `PR_PLATFORM_RANDOM_BYTES` | POSIX, or the Windows family on Windows |
 
 Each macro behaves as the backend function of the same name. For example, `PR_PLATFORM_MUTEX_LOCK(mutex)` behaves as

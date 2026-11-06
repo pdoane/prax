@@ -261,12 +261,19 @@ bool prCoreWindowsFileCreateDirectory(PrStringView path) {
     return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
-PrRawString prCoreWindowsFileCacheDirectory(void) {
-    return directoryOf(L"LOCALAPPDATA");
-}
-
-PrRawString prCoreWindowsFileDataDirectory(void) {
-    return directoryOf(L"APPDATA");
+PrRawString prCoreWindowsFileUserDirectory(PrFileUserDirectory directory) {
+    switch (directory) {
+        case PrFileUserDirectory_Home:
+            return directoryOf(L"USERPROFILE");
+        case PrFileUserDirectory_Cache:
+            return directoryOf(L"LOCALAPPDATA");
+        case PrFileUserDirectory_Data:
+            return directoryOf(L"APPDATA");
+        case PrFileUserDirectory_Temporary:
+            return directoryOf(L"TEMP");
+        default:
+            return prRawStringNull();
+    }
 }
 
 PrRawString prCoreWindowsFileWorkingDirectory(void) {

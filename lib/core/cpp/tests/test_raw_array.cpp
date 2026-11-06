@@ -53,6 +53,25 @@ TEST_CASE("reserve grows without disturbing the elements") {
     array.reset();
 }
 
+TEST_CASE("an exact reservation sets the capacity, shrinking it or freeing it") {
+    RawArray<uint32_t> array;
+    array.reserveExact(3);
+    CHECK(array.capacity == 3);
+    for (uint32_t i = 0; i < 3; ++i)
+        array.push(i);
+    CHECK(array.capacity == 3);
+    array.reserve(100);
+    array.pop();
+    array.reserveExact(2);
+    CHECK(array.capacity == 2);
+    CHECK(array.data[0] == 0);
+    CHECK(array.data[1] == 1);
+    array.clear();
+    array.reserveExact(0);
+    CHECK(array.data == nullptr);
+    CHECK(array.capacity == 0);
+}
+
 TEST_CASE("growth at least doubles") {
     RawArray<uint32_t> array;
     array.reserve(1);

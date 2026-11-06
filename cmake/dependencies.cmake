@@ -77,10 +77,14 @@ pr_dependency(freetype
     SYSTEM
 )
 
-# mimalloc, the allocator that core's mimalloc backend is built on.
+# mimalloc, the allocator that core's mimalloc backend is built on, with the changes in patches/mimalloc. On macOS, the
+# patch tags its memory with the first application-specific tag. vmmap and footprint then report it as the
+# application's heap, not as GPU memory (VM_MEMORY_IOACCELERATOR, which mimalloc uses by default).
+pr_patch_arguments(PR_MIMALLOC_PATCH mimalloc ${PROJECT_SOURCE_DIR}/patches/mimalloc)
 pr_dependency(mimalloc
     URL https://github.com/microsoft/mimalloc/archive/refs/tags/v3.5.3.tar.gz
     URL_HASH SHA256=3b4a15153a59905995f7070296ed604bb5ccc00cabb8b93446931aff77224d47
+    ${PR_MIMALLOC_PATCH}
     EXCLUDE_FROM_ALL
     SYSTEM
 )

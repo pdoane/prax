@@ -34,3 +34,11 @@ size_t prCoreLibcUsableBytes(const void* memory) {
     return malloc_usable_size(const_cast<void*>(memory));
 #endif
 }
+
+void prCoreLibcTrimBytes(void) {
+#if defined(__APPLE__)
+    malloc_zone_pressure_relief(nullptr, 0);
+#elif defined(__GLIBC__)
+    malloc_trim(0);
+#endif
+}

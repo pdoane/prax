@@ -60,7 +60,7 @@ generator takes them from WHATWG's `entities.json`.
   quota, in memory or on disk (`lib/storage`). Local storage is shared by every browsing context, and session storage
   by a tab's navigations. An opaque origin, or a host that gives no provider, has no storage, and the attribute throws.
   `pr_shell` keeps both in memory and empties them for each run, and the browser keeps local storage in the user's
-  data directory (`prFileDataDirectory`).
+  data directory (`prFileUserDirectory`).
 - Scripts run in this order:
   - A parser-blocking script pauses the parse until it is fetched and no sheet that the parser inserted is still being
     fetched (html/#pending-parsing-blocking-script). Then the script runs, and the parse continues in tasks. The XML

@@ -223,20 +223,38 @@ bool prCorePosixFileCreateDirectory(PrStringView path) {
     return exists;
 }
 
-PrRawString prCorePosixFileCacheDirectory(void) {
+PrRawString prCorePosixFileUserDirectory(PrFileUserDirectory directory) {
+    switch (directory) {
+        case PrFileUserDirectory_Home: {
+            const char* home = getenv("HOME");
+            if (home == nullptr || home[0] != '/')
+                return prRawStringNull();
+            return prRawStringCopy(PrStringView{home, strlen(home)});
+        }
+        case PrFileUserDirectory_Cache:
 #if defined(__APPLE__)
-    return userDirectory(nullptr, "/Library/Caches");
+            return userDirectory(nullptr, "/Library/Caches");
 #else
-    return userDirectory("XDG_CACHE_HOME", "/.cache");
+            return userDirectory("XDG_CACHE_HOME", "/.cache");
 #endif
-}
-
-PrRawString prCorePosixFileDataDirectory(void) {
+        case PrFileUserDirectory_Data:
 #if defined(__APPLE__)
-    return userDirectory(nullptr, "/Library/Application Support");
+            return userDirectory(nullptr, "/Library/Application Support");
 #else
-    return userDirectory("XDG_DATA_HOME", "/.local/share");
+            return userDirectory("XDG_DATA_HOME", "/.local/share");
 #endif
+        case PrFileUserDirectory_Temporary: {
+            const char* variable = getenv("TMPDIR");
+            PrStringView temporary = "/tmp";
+            if (variable != nullptr && variable[0] == '/')
+                temporary = PrStringView{variable, strlen(variable)};
+            while (temporary.size > 1 && temporary.data[temporary.size - 1] == '/')
+                --temporary.size;
+            return prRawStringCopy(temporary);
+        }
+        default:
+            return prRawStringNull();
+    }
 }
 
 PrRawString prCorePosixFileWorkingDirectory(void) {

@@ -89,6 +89,12 @@ size_t prMemoryUsableSize(const void* memory) {
 #endif
 }
 
+void prMemoryTrim(void) {
+#if defined(PR_PLATFORM_TRIM_BYTES)
+    PR_PLATFORM_TRIM_BYTES();
+#endif
+}
+
 size_t prMemoryLiveCount(void) {
 #if defined(PR_ALLOC_COUNT)
     return live.loadRelaxed();

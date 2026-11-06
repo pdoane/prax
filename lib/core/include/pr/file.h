@@ -78,17 +78,31 @@ bool prFileRemove(PrStringView path);
 // exists after the call.
 bool prFileCreateDirectory(PrStringView path);
 
-// Returns the directory where the platform keeps the user's caches, which applications share by naming their own
-// directories under it: ~/Library/Caches on Apple's platforms, %LOCALAPPDATA% on Windows, and $XDG_CACHE_HOME or
-// ~/.cache on other Unix-like platforms. Returns the null string if the platform names none. The caller releases the
-// string with prRawStringReset.
-PrRawString prFileCacheDirectory(void);
+// The directories that the platform names for the user. Applications share the cache and data directories, and each
+// application keeps its files in a directory of its own under them.
+enum {
+    // The user's home directory: $HOME on Unix-like platforms, and %USERPROFILE% on Windows.
+    PrFileUserDirectory_Home,
 
-// Returns the directory where the platform keeps the data that applications keep for the user, as the cache directory
-// does: ~/Library/Application Support on Apple's platforms, %APPDATA% on Windows, and $XDG_DATA_HOME or ~/.local/share
-// on other Unix-like platforms. Returns the null string if the platform names none. The caller releases the string with
+    // The user's caches: ~/Library/Caches on Apple's platforms, %LOCALAPPDATA% on Windows, and $XDG_CACHE_HOME or
+    // ~/.cache on other Unix-like platforms.
+    PrFileUserDirectory_Cache,
+
+    // The data that applications keep for the user: ~/Library/Application Support on Apple's platforms, %APPDATA% on
+    // Windows, and $XDG_DATA_HOME or ~/.local/share on other Unix-like platforms.
+    PrFileUserDirectory_Data,
+
+    // The directory for temporary files: $TMPDIR on Unix-like platforms, or /tmp if $TMPDIR is not an absolute path,
+    // and %TEMP% on Windows. It does not end in a separator.
+    PrFileUserDirectory_Temporary,
+
+    PrFileUserDirectory_Count,
+};
+typedef uint8_t PrFileUserDirectory;
+
+// Returns the user's `directory`, or the null string if the platform names none. The caller releases the string with
 // prRawStringReset.
-PrRawString prFileDataDirectory(void);
+PrRawString prFileUserDirectory(PrFileUserDirectory directory);
 
 // Returns the process's working directory, against which a relative path is read, or the null string if it cannot be
 // read. The caller releases the string with prRawStringReset.
@@ -128,13 +142,14 @@ PrStringView prFilePathExtension(PrStringView path);
 // Appends `part` to the path in `path`, after a separator unless the path is empty or already ends in one.
 void prFilePathAppend(PrTextBuffer* path, PrStringView part);
 
-// Returns `path` as an absolute path: under the working directory if it is relative, and normalized from its text.
+// Returns `path` as an absolute path, normalized from its text. A relative `path` is resolved against the directory
+// `base`. An empty `base` means the working directory, and a relative `base` is resolved against the working directory.
 // Normalizing removes each empty part and each "." part, removes each ".." part with the part before it, and writes
 // each separator as a slash. A ".." at the root stays at the root. A link is not followed, so the path names the file
 // that `path` does only if no ".." part follows a link. On Windows, a path that begins with one separator is under the
-// working directory's drive. Returns the null string if `path` is empty, or is relative and the working directory
-// cannot be read. The caller releases the string with prRawStringReset.
-PrRawString prFilePathAbsolute(PrStringView path);
+// drive of `base`. Returns the null string if `path` is empty, or if resolving it needs the working directory and the
+// working directory cannot be read. The caller releases the string with prRawStringReset.
+PrRawString prFilePathAbsolute(PrStringView path, PrStringView base);
 
 #if defined(__cplusplus)
 }

@@ -1,4 +1,5 @@
-// The process's environment through the platform: the variables that it was started with.
+// The process's environment through the platform: the variables that it was started with, and the machine that it runs
+// on.
 
 #pragma once
 
@@ -16,6 +17,11 @@ extern "C" {
 // nothing, or has a value that is not valid UTF-8. A name of the empty string is set to nothing. The caller releases
 // the string with prRawStringReset. May be called from any thread, while no thread changes the environment.
 PrRawString prEnvironmentVariable(PrStringView name);
+
+// Returns the name of the machine that the process runs on, as the system reports it. Returns the empty string if the
+// system reports no name, or a name that is not valid UTF-8. The caller releases the string with prRawStringReset. May
+// be called from any thread.
+PrRawString prEnvironmentHostName(void);
 
 #if defined(__cplusplus)
 }

@@ -85,6 +85,10 @@ static inline void prRawStringAppendU64(PrRawString* string, uint64_t value, uin
 // and an external string becomes the empty string.
 void prRawStringClear(PrRawString* string);
 
+// Shortens `string` to its first `size` bytes, where `size` is at most its size. The string keeps the storage that it
+// owns. An external string stays external and views fewer bytes, and a null string stays null.
+void prRawStringTruncate(PrRawString* string, size_t size);
+
 // Frees the heap memory of `string`, if any, and leaves the null string behind. Safe to call twice.
 void prRawStringReset(PrRawString* string);
 

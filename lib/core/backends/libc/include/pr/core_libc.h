@@ -28,6 +28,10 @@ void prCoreLibcFreeBytes(void* memory);
 // Returns the number of bytes that `memory` can hold, which is at least the number it was allocated with.
 size_t prCoreLibcUsableBytes(const void* memory);
 
+// Gives the free memory that the C library holds back to the system: that of the default zone on macOS, and the top of
+// the heap on glibc. On other platforms it does nothing.
+void prCoreLibcTrimBytes(void);
+
 #if defined(__cplusplus)
 }
 #endif

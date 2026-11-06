@@ -1,5 +1,5 @@
-// The Windows backend of the environment, which reads it as UTF-16 with GetEnvironmentVariableW. It is the default
-// binding of the environment on Windows.
+// The Windows backend of the environment, which reads its variables as UTF-16 with GetEnvironmentVariableW and the host
+// name with GetComputerNameExW. It is the default binding of the environment on Windows.
 
 #pragma once
 
@@ -15,6 +15,9 @@ extern "C" {
 
 // Implements prEnvironmentVariable for `name`, which is not empty.
 PrRawString prCoreWindowsEnvironmentVariable(PrStringView name);
+
+// Implements prEnvironmentHostName.
+PrRawString prCoreWindowsEnvironmentHostName(void);
 
 #if defined(__cplusplus)
 }

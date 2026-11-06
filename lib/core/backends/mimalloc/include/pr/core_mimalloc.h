@@ -29,6 +29,10 @@ void prCoreMimallocFreeBytes(void* memory);
 // Returns the number of bytes that `memory` can hold, which is at least the number it was allocated with.
 size_t prCoreMimallocUsableBytes(const void* memory);
 
+// Gives the free memory of the calling thread's heap and of the arenas back to the system now, rather than after
+// mimalloc's purge delay.
+void prCoreMimallocTrimBytes(void);
+
 #if defined(__cplusplus)
 }
 #endif

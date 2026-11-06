@@ -26,9 +26,9 @@ PrByteView bytesOf(const char* text) {
     return PrByteView{reinterpret_cast<const uint8_t*>(text), std::char_traits<char>::length(text)};
 }
 
-// Returns the absolute form of `path`, which prFilePathAbsolute makes.
-String absolute(PrStringView path) {
-    return String::adopt(prFilePathAbsolute(path));
+// Returns the absolute form of `path` under `base`, which prFilePathAbsolute makes.
+String absolute(PrStringView path, PrStringView base = "") {
+    return String::adopt(prFilePathAbsolute(path, base));
 }
 
 } // namespace
@@ -149,11 +149,14 @@ TEST_CASE("a directory's entries are its files and directories, without its link
     CHECK(!prFileInfo(pathOf("listed"), &removed));
 }
 
-TEST_CASE("the platform names directories for the user's caches and data") {
-    PrRawString directories[] = {prFileCacheDirectory(), prFileDataDirectory()};
+TEST_CASE("the platform names each of the user's directories, and they differ") {
+    PrRawString directories[PrFileUserDirectory_Count];
+    for (uint32_t i = 0; i < PrFileUserDirectory_Count; ++i)
+        directories[i] = prFileUserDirectory(PrFileUserDirectory(i));
 #if defined(__EMSCRIPTEN__)
     // The web keeps no directories for the user, unless the host that runs the program names its home.
-    if (prRawStringIsEmpty(&directories[0]) && prRawStringIsEmpty(&directories[1]))
+    if (prRawStringIsEmpty(&directories[PrFileUserDirectory_Cache]) &&
+            prRawStringIsEmpty(&directories[PrFileUserDirectory_Data]))
         return;
 #endif
     for (PrRawString& directory : directories) {
@@ -166,7 +169,10 @@ TEST_CASE("the platform names directories for the user's caches and data") {
         CHECK(view.data[0] == '/');
 #endif
     }
-    CHECK(prRawStringView(&directories[0]) != prRawStringView(&directories[1]));
+    for (uint32_t i = 0; i < PrFileUserDirectory_Count; ++i) {
+        for (uint32_t j = i + 1; j < PrFileUserDirectory_Count; ++j)
+            CHECK(prRawStringView(&directories[i]) != prRawStringView(&directories[j]));
+    }
     for (PrRawString& directory : directories)
         prRawStringReset(&directory);
 }
@@ -207,7 +213,7 @@ TEST_CASE("an absolute path is normalized from its text, and a relative one is u
     CHECK(absolute("/a/b/../c/./d//e") == format("{}a/c/d/e", root));
     CHECK(absolute("/a/b/..") == format("{}a", root));
     CHECK(absolute("/../x") == format("{}x", root));
-    PrRawString empty = prFilePathAbsolute("");
+    PrRawString empty = prFilePathAbsolute("", "");
     CHECK(prRawStringIsNull(&empty));
 
     PrRawString working = prFileWorkingDirectory();
@@ -227,6 +233,12 @@ TEST_CASE("an absolute path is normalized from its text, and a relative one is u
     CHECK(absolute("C:") == "C:/");
     CHECK(absolute("\\\\server\\share\\x") == "//server/share/x");
 #endif
+    // A relative path is resolved against the base directory. A relative base is itself resolved against the working
+    // directory.
+    CHECK(absolute("c/../d.txt", "/a/b") == format("{}a/b/d.txt", root));
+    CHECK(absolute("/x/y", "/a/b") == format("{}x/y", root));
+    CHECK(absolute("notes.txt", "dir/..") == expected);
+
 #if defined(_WIN32)
     // A lone separator is the root of the working directory's drive.
     String drive = absolute("\\x");

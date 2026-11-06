@@ -79,6 +79,12 @@ The decimal-to-binary conversion (Eisel-Lemire) in `lib/core/src/float_convert.c
 Copyright (c) 2021 The fast_float authors. Used under the MIT License (below), at the licensee's option among it, the
 Apache License, Version 2.0, and the Boost Software License, Version 1.0.
 
+## mimalloc
+
+`patches/mimalloc` holds changes to mimalloc (https://github.com/microsoft/mimalloc) with lines of its source.
+
+Copyright (c) 2018-2025 Microsoft Corporation, Daan Leijen. Used under the MIT License (below).
+
 ## QuickJS
 
 `patches/quickjs` holds changes to QuickJS (https://github.com/quickjs-ng/quickjs) with lines of its source.
@@ -92,8 +98,6 @@ The tree generators in `tools/bench/flex_bench/flex_bench.cpp` follow Taffy's be
 (https://github.com/DioxusLabs/taffy).
 
 Copyright (c) 2018 Visly Inc., Copyright (c) 2026 Taffy Authors. Used under the MIT License (below).
-
----
 
 ## License texts
 

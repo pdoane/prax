@@ -13,7 +13,7 @@ namespace {
 
 // Writes `text` to a file of `name` in a folder of the tests' own, and returns its path.
 String writeFile(PrStringView name, PrStringView text) {
-    PrRawString cache = prFileCacheDirectory();
+    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
     String folder = format("{}/prax-tests/merge", prRawStringView(&cache));
     prRawStringReset(&cache);
     REQUIRE(prFileCreateDirectory(folder));

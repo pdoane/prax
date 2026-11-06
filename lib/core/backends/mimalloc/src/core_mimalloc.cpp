@@ -55,3 +55,13 @@ size_t prCoreMimallocUsableBytes(const void* memory) {
     return mi_usable_size(memory);
 #endif
 }
+
+void prCoreMimallocTrimBytes(void) {
+#if PR_ADDRESS_SANITIZER && defined(__APPLE__)
+    malloc_zone_pressure_relief(nullptr, 0);
+#elif PR_ADDRESS_SANITIZER
+    malloc_trim(0);
+#else
+    mi_collect(true);
+#endif
+}

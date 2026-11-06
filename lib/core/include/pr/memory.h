@@ -28,6 +28,12 @@ void prMemoryFree(void* PR_NULLABLE memory);
 // the platform cannot tell.
 size_t prMemoryUsableSize(const void* memory);
 
+// Gives the free memory that the allocator holds back to the system. Otherwise the allocator may keep that memory for a
+// while in case it is allocated again. A program calls this after it frees a large amount at once, so that its
+// footprint falls immediately. The cost grows with the amount of free memory held. On a platform that has no such call,
+// it does nothing.
+void prMemoryTrim(void);
+
 // Returns the number of allocations made and not yet freed, or zero in a build that does not count them.
 size_t prMemoryLiveCount(void);
 

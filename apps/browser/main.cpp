@@ -122,7 +122,7 @@ void openShared(Browser& b) {
     // they outlive the run.
     String directory = b.cacheDirectory;
     if (directory.isEmpty())
-        directory = userDirectory(prFileCacheDirectory(), "Cache");
+        directory = userDirectory(prFileUserDirectory(PrFileUserDirectory_Cache), "Cache");
     if (!directory.isEmpty()) {
         PrStorageDiskDesc disk{.directory = directory, .limitBytes = kCacheBytes, .pool = b.io};
         if (prStorageDiskCreate(&disk, &b.cache) != PrStatus_Ok)
@@ -131,15 +131,15 @@ void openShared(Browser& b) {
     if (b.cache == nullptr)
         b.cache = prStorageMemoryCreate(kCacheBytes, PrStorageEviction_LeastRecentlyUsed);
     // A platform that names no data directory keeps local storage in memory.
-    String localDirectory = userDirectory(prFileDataDirectory(), "Local Storage");
+    String localDirectory = userDirectory(prFileUserDirectory(PrFileUserDirectory_Data), "Local Storage");
     PrHtmlStorageProviderDesc local{.directory = localDirectory, .quotaBytes = kPrHtmlStorageQuotaBytes, .pool = b.io};
     b.localStorage = prHtmlStorageProviderCreate(&local);
     PrHtmlStorageProviderDesc session{.quotaBytes = kPrHtmlStorageQuotaBytes};
     b.sessionStorage = prHtmlStorageProviderCreate(&session);
-    b.favoritesPath = userDirectory(prFileDataDirectory(), "Favorites.json");
+    b.favoritesPath = userDirectory(prFileUserDirectory(PrFileUserDirectory_Data), "Favorites.json");
     if (b.favoritesPath.isEmpty() || !favoritesLoad(b.favoritesPath, &b.favorites))
         b.favorites = favoritesDefault();
-    b.historyPath = userDirectory(prFileDataDirectory(), "History.json");
+    b.historyPath = userDirectory(prFileUserDirectory(PrFileUserDirectory_Data), "History.json");
     if (!b.historyPath.isEmpty())
         historyLoad(b.historyPath, &b.history);
     for (const Visit& visit : b.history)

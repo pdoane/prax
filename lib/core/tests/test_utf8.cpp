@@ -148,6 +148,43 @@ TEST_CASE("repaired text has U+FFFD in place of each maximal subpart") {
     CHECK(repair("a\xf0\x9f\x98") == "a\xef\xbf\xbd");
 }
 
+TEST_CASE("a decoder of bytes one at a time agrees with decoding the whole text as scalar values") {
+    // Returns the code points that a decoder gives for `text`, with a replacement for a sequence that is incomplete at
+    // the end. The decoder keeps U+0000, which prUtf8DecodeScalar replaces.
+    auto pushed = [](const std::string& text) {
+        std::u32string out;
+        PrUtf8Decoder decoder = {};
+        for (size_t at = 0; at < text.size();) {
+            uint32_t codePoint = 0;
+            PrUtf8Step step = prUtf8DecoderPush(&decoder, uint8_t(text[at]), &codePoint);
+            if (step != PrUtf8Step_Interrupted)
+                ++at;
+            if (step == PrUtf8Step_CodePoint)
+                out += char32_t(codePoint);
+            else if (step != PrUtf8Step_Continue)
+                out += char32_t(kPrUtf8Replacement);
+        }
+        if (prUtf8DecoderIsInSequence(&decoder))
+            out += char32_t(kPrUtf8Replacement);
+        return out;
+    };
+    auto whole = [](const std::string& text) {
+        std::u32string out;
+        for (size_t at = 0; at < text.size();) {
+            uint32_t codePoint = 0;
+            at += prUtf8DecodeScalar(text, at, &codePoint);
+            out += char32_t(codePoint);
+        }
+        return out;
+    };
+    for (const std::string text : {"caf\xc3\xa9 \xe2\x82\xac \xf0\x9f\x98\x80", "a\xe2\x82""b", "\xe0\x80\x80",
+        "\xed\xa0\x80", "a\xf0\x9f\x98", "\xc0\xaf\xff", "\xf4\x90\x80\x80", "\xf0\x9f\x98\x80\x80", "\xc3"}) {
+        CAPTURE(text);
+        CHECK(pushed(text) == whole(text));
+    }
+    CHECK(pushed(std::string("\0", 1)) == std::u32string(1, U'\0'));
+}
+
 TEST_CASE("a code point encodes to the sequence that spells it") {
     CHECK(encode('a') == "a");
     CHECK(encode(0xe9) == "\xc3\xa9");

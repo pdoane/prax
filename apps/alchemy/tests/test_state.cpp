@@ -30,7 +30,7 @@ struct Fixture {
     String dir;
 
     Fixture() {
-        PrRawString cache = prFileCacheDirectory();
+        PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
         dir = format("{}/prax-tests/alchemy_state_{}", prRawStringView(&cache), prRandomSeed());
         prRawStringReset(&cache);
         state.compress = prCompressCodecCreate(PrCompressCodecBackend_Default);

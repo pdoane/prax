@@ -97,7 +97,7 @@ String fileUrl(PrStringView path) {
     PrFileInfo info = {};
     if (!prFileInfo(path, &info) || info.kind != PrFileKind_Regular)
         return String();
-    String absolute = String::adopt(prFilePathAbsolute(path));
+    String absolute = String::adopt(prFilePathAbsolute(path, ""));
     if (absolute.isEmpty())
         return String();
     return format("file://{}", absolute);
