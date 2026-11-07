@@ -325,6 +325,12 @@ typedef struct PrAppEvent {
     PrAppModifierFlags modifiers;
     uint8_t button;             // pointer buttons: 0 for the primary one
     bool repeat;                // KeyDown: true if the event repeats a held key
+
+    // KeyDown: true if the input method takes the key for a composition, which it continues, begins or ends. Such a key
+    // is the input method's to interpret, as Enter that commits a composition is, so a program acts only on the
+    // composition's events and on the text it commits.
+    bool composing;
+
     uint32_t clicks;            // PointerDown: the presses of a multi-click, by the user's system settings, counting it
     PrAppKey key;               // KeyDown, KeyUp
     PrAppKeyCode code;          // KeyDown, KeyUp

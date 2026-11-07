@@ -570,7 +570,11 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
                 case PrAppEventKind_PointerDown:
                 case PrAppEventKind_PointerMove:
                 case PrAppEventKind_PointerUp: editor.pointer(e); break;
-                case PrAppEventKind_KeyDown: editor.key(e); break;
+                case PrAppEventKind_KeyDown:
+                    // A key that the input method takes edits the composition, not the text.
+                    if (!e.composing)
+                        editor.key(e);
+                    break;
                 case PrAppEventKind_Text:
                     if (state.markEnd > state.markStart) {
                         editor.anchor = state.markStart;
