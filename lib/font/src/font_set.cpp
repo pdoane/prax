@@ -17,6 +17,7 @@
 #include "pr/count_of.h"
 #include "pr/file.h"
 #include "pr/float.h"
+#include "pr/font_system_backend.h"
 #include "pr/mem.h"
 #include "pr/mutex.h"
 #include "pr/raw_array.h"
@@ -705,7 +706,7 @@ PrStringView genericOf(const FontSet* set, PrFontGeneric generic) {
     prMutexUnlock(&asked->lock);
     if (system == nullptr)
         return PrStringView{};
-    PrRawString given = system->genericFamily(system, generic);
+    PrRawString given = system->genericFamilyFn(system, generic);
     prMutexLock(&asked->lock);
     PrStringView family = {};
     if (prRawStringIsNull(&asked->generics[generic]) && prRawStringView(&given).size != 0) {
@@ -1038,8 +1039,8 @@ PrFontSystem* PR_NULLABLE prFontSystemCreate(PrFontSystemBackend backend) {
 }
 
 void prFontSystemDestroy(PrFontSystem* PR_NULLABLE system) {
-    if (system != nullptr && system->destroy != nullptr)
-        system->destroy(system);
+    if (system != nullptr && system->destroyFn != nullptr)
+        system->destroyFn(system);
 }
 
 void prFontSetSetSystem(PrFontSet* set, PrFontSystem* PR_NULLABLE system) {
@@ -1070,7 +1071,7 @@ bool prFontSetRequestFallback(PrFontSet* set, PrStringView text, PrLocale locale
     prMutexUnlock(&root->lock);
     if (asked)
         return false;
-    PrRawString family = system->addFallback(system, static_cast<PrFontSet*>(root), text, locale, generic);
+    PrRawString family = system->addFallbackFn(system, static_cast<PrFontSet*>(root), text, locale, generic);
     if (prRawStringView(&family).size == 0) {
         prRawStringReset(&family);
         return false;
@@ -1419,7 +1420,7 @@ void prFontSetMatch(PrFontSet* set, PrFontFamily family, const PrFontStyle* styl
     if (defining == nullptr) {
         PrFontSet* root = static_cast<PrFontSet*>(const_cast<FontSet*>(fallbackSet(set)));
         PrFontSystem* PR_NULLABLE system = systemToAsk(root, name);
-        if (system != nullptr && system->addFamily(system, root, name))
+        if (system != nullptr && system->addFamilyFn(system, root, name))
             defining = definingSet(set, name);
     }
     if (defining == nullptr)

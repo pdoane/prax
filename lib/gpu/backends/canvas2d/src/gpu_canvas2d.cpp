@@ -82,9 +82,12 @@ PrStatus textureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuRelea
 // ---------------------------------------------------------------------------------------------------------------------
 // Swap chains
 
+// The functions of the device's swap chains, which their creation installs.
+extern const PrGpuSwapChain kSwapChainFunctions;
+
 // A swap chain: the page's canvas, by its selector with its NUL, and the texture that the canvas is. The texture is
 // made again when the frame's extent changes.
-struct SwapChain : PrGpuSwapChain {
+struct SwapChain : GpuSharedSwapChain {
     PrRawString selector;
     PrGpuTexture texture;
 };
@@ -102,6 +105,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     if (surface->kind != PrAppSurfaceKind_HtmlCanvas)
         return PrStatus_NotSupported;
     SwapChain* s = allocZeroed<SwapChain>();
+    static_cast<PrGpuSwapChain&>(*s) = kSwapChainFunctions;
     s->device = device;
     s->info = PrGpuSwapChainInfo{.format = PrGpuFormat_Rgba8, .space = PrColorSpace_Srgb};
     // The selector is kept with its NUL, which the page reads up to.
@@ -111,18 +115,19 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     return PrStatus_Ok;
 }
 
-void swapChainDestroy(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
+void swapChainDestroy(PrGpuSwapChain* swapChain) {
     SwapChain* s = static_cast<SwapChain*>(swapChain);
-    prGpuTextureDestroy(device, s->texture);
+    prGpuTextureDestroy(s->device, s->texture);
     prRawStringReset(&s->selector);
     prMemoryFree(s);
 }
 
 // The page paces its frames with its animation frames, so the swap chain has nothing to wait for.
-void swapChainWait(PrGpuDevice*, PrGpuSwapChain*) {}
+void swapChainWait(PrGpuSwapChain*) {}
 
-PrStatus swapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
     SwapChain* s = static_cast<SwapChain*>(swapChain);
+    PrGpuDevice* device = s->device;
     if (s->texture.id != 0) {
         PrUVec2 held = prGpuTextureExtent(device, s->texture);
         if (held.x != extent.x || held.y != extent.y) {
@@ -149,9 +154,19 @@ PrStatus swapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* swapChain, PrUVec
     return PrStatus_Ok;
 }
 
-void swapChainPresent(PrGpuDevice*, PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
+void swapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
     gpuMemoryRecordCall(commands, present, swapChain);
 }
+
+// The functions of the device's swap chains.
+constexpr PrGpuSwapChain kSwapChainFunctions = {
+    .deviceFn = gpuSharedSwapChainDevice,
+    .infoFn = gpuSharedSwapChainInfo,
+    .destroyFn = swapChainDestroy,
+    .waitFn = swapChainWait,
+    .acquireFn = swapChainAcquire,
+    .presentFn = swapChainPresent,
+};
 
 } // namespace
 
@@ -163,14 +178,10 @@ PrStatus prGpuCanvas2dCreate(PrGpuDevice* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (!prGpuCanvas2dAvailable())
         return PrStatus_NotSupported;
-    PrGpuDevice* device = gpuMemoryCreate("canvas2d", &kCanvases);
+    GpuSharedDevice* device = static_cast<GpuSharedDevice*>(gpuMemoryCreate("canvas2d", &kCanvases));
     device->inPlaceImports = 1u << PrGpuImportKind_WebImage;
-    device->textureImport = textureImport;
-    device->swapChainCreate = swapChainCreate;
-    device->swapChainDestroy = swapChainDestroy;
-    device->swapChainWait = swapChainWait;
-    device->swapChainAcquire = swapChainAcquire;
-    device->swapChainPresent = swapChainPresent;
+    device->textureImportInPlace = textureImport;
+    device->swapChainCreateFn = swapChainCreate;
     *out = device;
     return PrStatus_Ok;
 }

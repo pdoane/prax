@@ -5,9 +5,8 @@
 #pragma once
 
 #include "pr/base.h"
-#include "pr/net.h"
 #include "pr/raw_array.h"
-#include "pr/tls.h"
+#include "pr/tls_backend.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -49,6 +48,9 @@ struct TlsSharedEngine {
 // The session's memory outlives its destruction while `holds` is not zero: while one of its handlers runs, which a
 // client may destroy it from, and while a task that it posted waits.
 struct TlsSharedSession : PrTlsSession {
+    PrNet* net;                     // the network whose loop runs the callback
+    PrNetStreamFn PR_NULLABLE event;
+    void* PR_NULLABLE context;
     const TlsSharedEngine* engine;
     PrNetStream* PR_NULLABLE transport;
     TlsSharedState state;
@@ -87,6 +89,7 @@ void tlsSharedTransportEvent(void* PR_NULLABLE context, PrNetStream* transport, 
 // The session's calls of PrNetStream and PrTlsSession that do not depend on the engine.
 size_t tlsSharedRead(PrNetStream* stream, uint8_t* output, size_t capacity);
 PrStatus tlsSharedFinish(PrNetStream* stream);
+void tlsSharedSetEvent(PrNetStream* stream, PrNetStreamFn PR_NULLABLE event, void* PR_NULLABLE context);
 size_t tlsSharedQueued(const PrNetStream* stream);
 PrNetError tlsSharedError(const PrNetStream* stream);
 PrTlsSessionInfo tlsSharedInfo(const PrTlsSession* tlsSession);

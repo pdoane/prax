@@ -20,7 +20,9 @@ extern "C" {
 // A source of TLS sessions over a network. Each backend provides its own constructor.
 typedef struct PrTls PrTls;
 
-// A TLS session, which is a stream.
+// A TLS session, which is a stream. Its stream delivers Open once the handshake completes and the certificate is
+// verified, and End for the peer's close_notify. prNetStreamFinish sends the session's own close_notify if the backend
+// can end its sending side alone.
 typedef struct PrTlsSession PrTlsSession;
 
 // The versions of TLS that a session negotiates. Nothing older than TLS 1.2 is negotiated.
@@ -78,27 +80,8 @@ typedef struct PrTlsSessionInfo {
     PrStringView protocol;
 } PrTlsSessionInfo;
 
-// The start of every session's state: its stream, whose events are the session's, and the function table of the
-// session's backend. Open is delivered once the handshake completes and the certificate is verified. End is delivered
-// for the peer's close_notify, and prNetStreamFinish sends the session's own where the backend can end its sending side
-// alone.
-struct PrTlsSession {
-    PrNetStream stream;
-    PrTlsSessionInfo (*info)(const PrTlsSession* session);
-};
-
 // Returns the session's stream, which is the same object.
 PR_HANDLE_UPCAST(TlsSession, NetStream, Stream)
-
-// The start of every source's state: the function table of its backend, then its network. Each member of the table
-// implements the public function of the same name. A null `destroy` means there is nothing to free. Callers use the
-// functions below, never these members.
-struct PrTls {
-    void (*PR_NULLABLE destroy)(PrTls* tls);
-    PrStatus (*connect)(PrTls* tls, const PrTlsSessionDesc* desc, PrTlsSession* PR_NULLABLE* PR_NONNULL out);
-
-    PrNet* net;                 // the network that the sessions are streams of
-};
 
 // The library's backends of TLS, which the build turns on (README.md), and Default, which creates the platform's own if
 // the build has it, and otherwise the first that it has.

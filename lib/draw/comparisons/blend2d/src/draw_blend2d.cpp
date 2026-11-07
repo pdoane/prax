@@ -21,6 +21,7 @@
 #include "pr/draw_glyph.h"
 #include "pr/draw_lower.h"
 #include "pr/draw_projection.h"
+#include "pr/draw_renderer_backend.h"
 #include "pr/draw_transform.h"
 #include "pr/float.h"
 #include "pr/hash_index.h"
@@ -50,6 +51,7 @@ struct CachedImage {
 };
 
 struct Blend2dBackend : PrDrawRenderer {
+    PrGpuDevice* device;
     bool ownsDevice;                    // true if the renderer created its device, and frees it
     PrDrawBlend2dOptions options;
     RawArray<CachedImage> images;
@@ -1266,10 +1268,6 @@ void destroyBackend(PrDrawRenderer* renderer) {
     prMemoryFree(b2);
 }
 
-void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
-    drawMemoryFrameDestroy(static_cast<DrawMemoryFrame*>(frame));
-}
-
 // Drops the cached data that the render did not use.
 void endRender(Blend2dBackend* b2) {
     uint32_t kept = 0;
@@ -1329,19 +1327,12 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
     endRender(b2);
 }
 
+PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
+    return static_cast<const Blend2dBackend*>(renderer)->device;
+}
+
 PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
     return drawMemoryFrameCreate(renderer, renderPixels, false);
-}
-
-// Keeps the part of the list, which renders when the frame's pass runs.
-PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
-        const PrDrawTarget*) {
-    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list, *part);
-    return PrStatus_Ok;
-}
-
-void renderFrame(PrDrawRenderer*, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
-    drawMemoryFrameRender(static_cast<DrawMemoryFrame*>(frame), pass, origin);
 }
 
 } // namespace
@@ -1365,10 +1356,8 @@ PrDrawRenderer* PR_NULLABLE prDrawBlend2dCreate(const PrDrawBlend2dOptions* PR_N
     b2->ownsDevice = owned;
     b2->options = o;
     b2->glyphs = prDrawGlyphCacheCreate(b2->options.glyphDecoder);
-    b2->destroy = destroyBackend;
-    b2->frameCreate = createFrame;
-    b2->frameDestroy = destroyFrame;
-    b2->framePrepare = prepare;
-    b2->frameRender = renderFrame;
+    b2->destroyFn = destroyBackend;
+    b2->frameCreateFn = createFrame;
+    b2->deviceFn = rendererDevice;
     return b2;
 }

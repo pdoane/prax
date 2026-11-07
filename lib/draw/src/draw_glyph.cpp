@@ -5,6 +5,7 @@
 
 #include "pr/alloc.h"
 #include "pr/count_of.h"
+#include "pr/draw_glyph_backend.h"
 #include "pr/float.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
@@ -435,13 +436,13 @@ float prDrawGlyphPixelsPerEm(const PrFontGlyphRun* run, uint32_t index, PrAffine
 // Glyph decoders
 
 void prDrawGlyphDecoderDestroy(PrDrawGlyphDecoder* PR_NULLABLE decoder) {
-    if (decoder != nullptr && decoder->destroy != nullptr)
-        decoder->destroy(decoder);
+    if (decoder != nullptr && decoder->destroyFn != nullptr)
+        decoder->destroyFn(decoder);
 }
 
 bool prDrawGlyphDecoderDecode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
         const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list) {
-    return decoder->decode(decoder, font, glyph, pixelsPerEm, palette, foreground, list);
+    return decoder->decodeFn(decoder, font, glyph, pixelsPerEm, palette, foreground, list);
 }
 
 bool prDrawGlyphImage(PrImageCodec* codec, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrDrawList* list) {
@@ -460,8 +461,8 @@ bool prDrawGlyphImage(PrImageCodec* codec, const PrFont* font, uint16_t glyph, f
 
 PrDrawGlyphDecoder* prDrawGlyphBitmapCreate(PrImageCodec* codec) {
     BitmapDecoder* decoder = allocZeroed<BitmapDecoder>();
-    decoder->destroy = destroyBitmapDecoder;
-    decoder->decode = decodeBitmap;
+    decoder->destroyFn = destroyBitmapDecoder;
+    decoder->decodeFn = decodeBitmap;
     decoder->codec = codec;
     return decoder;
 }

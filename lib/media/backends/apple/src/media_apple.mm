@@ -8,6 +8,7 @@
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/media_audio.h"
+#include "pr/media_backend.h"
 #include "pr/memory.h"
 #include "pr/mime.h"
 #include "pr/mutex.h"
@@ -340,61 +341,7 @@ bool loadValues(id<AVAsynchronousKeyValueLoading> object, NSArray<NSString*>* ke
     return true;
 }
 
-PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
-    @autoreleasepool {
-        NSString* type = containerType(bytes);
-        if (type == nil)
-            return PrStatus_NotSupported;
-        PrMediaAppleSource* source = [[PrMediaAppleSource alloc] init];
-        source.loader = [[PrMediaAppleLoader alloc] init];
-        source.loader.data = [NSData dataWithBytes:bytes.data length:bytes.size];
-        source.loader.contentType = type;
-        source.queue = dispatch_queue_create("prax.media.loader", DISPATCH_QUEUE_SERIAL);
-        source.asset = [AVURLAsset URLAssetWithURL:[NSURL URLWithString:@"prax-media://resource"] options:nil];
-        [source.asset.resourceLoader setDelegate:source.loader queue:source.queue];
-        if (!loadValues(source.asset, @[@"tracks", @"duration", @"playable"]))
-            return PrStatus_NotSupported;
-        if (!source.asset.playable)
-            return PrStatus_InvalidData;
-        double duration = secondsOf(source.asset.duration);
-        info->duration = duration;
-        NSArray<AVAssetTrack*>* tracks = source.asset.tracks;
-        for (AVAssetTrack* track in tracks) {
-            if ([track.mediaType isEqualToString:AVMediaTypeAudio]) {
-                info->hasAudio = true;
-                if (source.audio == nil)
-                    source.audio = track;
-            }
-            if (![track.mediaType isEqualToString:AVMediaTypeVideo] || source.video != nil)
-                continue;
-            if (!loadValues(track, @[@"naturalSize", @"preferredTransform"]))
-                continue;
-            source.video = track;
-            CGRect shown = CGRectApplyAffineTransform(
-                CGRectMake(0, 0, track.naturalSize.width, track.naturalSize.height), track.preferredTransform);
-            info->hasVideo = true;
-            info->videoExtent = PrUVec2{
-                uint32_t(lround(fabs(shown.size.width))),
-                uint32_t(lround(fabs(shown.size.height))),
-            };
-        }
-        AppleDecoder* d = allocZeroed<AppleDecoder>();
-        d->source = (__bridge_retained void*)source;
-        d->seekTo = kPrF64Nan;
-        d->through = -kPrF64Infinity;
-        d->ended = source.video == nil;
-        prMutexInit(&d->mutex);
-        prConditionInit(&d->wake);
-        if (source.video != nil) {
-            d->seekTo = 0;
-            prThreadStart(&d->thread, [](void* context) { decodeFrames(static_cast<AppleDecoder*>(context)); }, d);
-        }
-        *out = d;
-        return PrStatus_Ok;
-    }
-}
-
-void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
+void decoderDestroy(PrMediaDecoder* decoder) {
     AppleDecoder* d = static_cast<AppleDecoder*>(decoder);
     if (d->audioStarted) {
         prMediaAudioQueueStop(d->queue);
@@ -421,7 +368,7 @@ void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
     prMemoryFree(d);
 }
 
-bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
+bool decoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
     AppleDecoder* d = static_cast<AppleDecoder*>(decoder);
     prMutexLock(&d->mutex);
     d->wanted = seconds;
@@ -471,7 +418,7 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
     return true;
 }
 
-bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
+bool decoderAudioStart(PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
     AppleDecoder* d = static_cast<AppleDecoder*>(decoder);
     PR_ASSERT(!d->audioStarted);
     if (sourceOf(d).audio == nil || channels > 2)
@@ -482,16 +429,76 @@ bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRa
     return true;
 }
 
-void decoderAudioSeek(PrMediaCodec*, PrMediaDecoder* decoder, double seconds) {
+void decoderAudioSeek(PrMediaDecoder* decoder, double seconds) {
     prMediaAudioQueueSeek(static_cast<AppleDecoder*>(decoder)->queue, seconds);
 }
 
-PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float* samples, uint32_t frames) {
+PrMediaAudioChunk decoderAudioRead(PrMediaDecoder* decoder, float* samples, uint32_t frames) {
     return prMediaAudioQueueRead(static_cast<AppleDecoder*>(decoder)->queue, samples, frames);
 }
 
-void decoderAudioWait(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t frames) {
+void decoderAudioWait(PrMediaDecoder* decoder, uint32_t frames) {
     prMediaAudioQueueWait(static_cast<AppleDecoder*>(decoder)->queue, frames);
+}
+
+PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+    @autoreleasepool {
+        NSString* type = containerType(bytes);
+        if (type == nil)
+            return PrStatus_NotSupported;
+        PrMediaAppleSource* source = [[PrMediaAppleSource alloc] init];
+        source.loader = [[PrMediaAppleLoader alloc] init];
+        source.loader.data = [NSData dataWithBytes:bytes.data length:bytes.size];
+        source.loader.contentType = type;
+        source.queue = dispatch_queue_create("prax.media.loader", DISPATCH_QUEUE_SERIAL);
+        source.asset = [AVURLAsset URLAssetWithURL:[NSURL URLWithString:@"prax-media://resource"] options:nil];
+        [source.asset.resourceLoader setDelegate:source.loader queue:source.queue];
+        if (!loadValues(source.asset, @[@"tracks", @"duration", @"playable"]))
+            return PrStatus_NotSupported;
+        if (!source.asset.playable)
+            return PrStatus_InvalidData;
+        double duration = secondsOf(source.asset.duration);
+        info->duration = duration;
+        NSArray<AVAssetTrack*>* tracks = source.asset.tracks;
+        for (AVAssetTrack* track in tracks) {
+            if ([track.mediaType isEqualToString:AVMediaTypeAudio]) {
+                info->hasAudio = true;
+                if (source.audio == nil)
+                    source.audio = track;
+            }
+            if (![track.mediaType isEqualToString:AVMediaTypeVideo] || source.video != nil)
+                continue;
+            if (!loadValues(track, @[@"naturalSize", @"preferredTransform"]))
+                continue;
+            source.video = track;
+            CGRect shown = CGRectApplyAffineTransform(
+                CGRectMake(0, 0, track.naturalSize.width, track.naturalSize.height), track.preferredTransform);
+            info->hasVideo = true;
+            info->videoExtent = PrUVec2{
+                uint32_t(lround(fabs(shown.size.width))),
+                uint32_t(lround(fabs(shown.size.height))),
+            };
+        }
+        AppleDecoder* d = allocZeroed<AppleDecoder>();
+        d->destroyFn = decoderDestroy;
+        d->frameFn = decoderFrame;
+        d->audioStartFn = decoderAudioStart;
+        d->audioSeekFn = decoderAudioSeek;
+        d->audioReadFn = decoderAudioRead;
+        d->audioWaitFn = decoderAudioWait;
+        d->source = (__bridge_retained void*)source;
+        d->seekTo = kPrF64Nan;
+        d->through = -kPrF64Infinity;
+        d->ended = source.video == nil;
+        prMutexInit(&d->mutex);
+        prConditionInit(&d->wake);
+        if (source.video != nil) {
+            d->seekTo = 0;
+            prThreadStart(&d->thread, [](void* context) { decodeFrames(static_cast<AppleDecoder*>(context)); }, d);
+        }
+        *out = d;
+        return PrStatus_Ok;
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -587,7 +594,6 @@ PrStatus videoDecoderCreate(const PrMediaTrackInfo* track, PrMediaSampleDecoder*
                 int32_t(track->extent.y), (__bridge CFDictionaryRef)extensions, &format) != noErr)
             return PrStatus_InvalidData;
         AppleSampleVideo* d = allocZeroed<AppleSampleVideo>();
-        d->kind = PrMediaTrackKind_Video;
         d->format = format;
         NSDictionary* attributes = @{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
         VTDecompressionOutputCallbackRecord callback{videoOutput, d};
@@ -702,7 +708,6 @@ PrStatus audioDecoderCreate(const PrMediaTrackInfo* track, uint32_t sampleRate, 
         AudioConverterSetProperty(converter, kAudioConverterChannelMap, sizeof(map), map);
     }
     AppleSampleAudio* d = allocZeroed<AppleSampleAudio>();
-    d->kind = PrMediaTrackKind_Audio;
     d->converter = converter;
     d->inputChannels = inputChannels;
     d->channels = channels;
@@ -781,35 +786,15 @@ PrMediaSupport supportsSourceType(PrMediaCodec*, PrStringView type) {
     return support;
 }
 
-PrStatus sampleDecoderCreate(PrMediaCodec*, const PrMediaTrackInfo* track, uint32_t sampleRate, uint32_t channels,
-        PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out) {
-    *out = nullptr;
-    if (track->kind == PrMediaTrackKind_Video)
-        return videoDecoderCreate(track, out);
-    if (track->kind == PrMediaTrackKind_Audio)
-        return audioDecoderCreate(track, sampleRate, channels, out);
-    return PrStatus_NotSupported;
-}
-
-void sampleDecoderDestroy(PrMediaCodec*, PrMediaSampleDecoder* decoder) {
-    if (decoder->kind == PrMediaTrackKind_Video) {
-        AppleSampleVideo* d = static_cast<AppleSampleVideo*>(decoder);
-        VTDecompressionSessionInvalidate(d->session);
-        CFRelease(d->session);
-        CFRelease(d->format);
-        prMemoryFree(d);
-        return;
-    }
-    AppleSampleAudio* d = static_cast<AppleSampleAudio*>(decoder);
-    AudioConverterDispose(d->converter);
-    d->output.reset();
+void videoSampleDestroy(PrMediaSampleDecoder* decoder) {
+    AppleSampleVideo* d = static_cast<AppleSampleVideo*>(decoder);
+    VTDecompressionSessionInvalidate(d->session);
+    CFRelease(d->session);
+    CFRelease(d->format);
     prMemoryFree(d);
 }
 
-bool sampleDecode(PrMediaCodec*, PrMediaSampleDecoder* decoder, const PrMediaBufferedFrame* frame,
-        const PrMediaSampleSink* sink) {
-    if (decoder->kind == PrMediaTrackKind_Audio)
-        return audioDecode(static_cast<AppleSampleAudio*>(decoder), frame, sink);
+bool videoSampleDecode(PrMediaSampleDecoder* decoder, const PrMediaBufferedFrame* frame, const PrMediaSampleSink* sink) {
     AppleSampleVideo* d = static_cast<AppleSampleVideo*>(decoder);
     CMBlockBufferRef block = nullptr;
     if (CMBlockBufferCreateWithMemoryBlock(kCFAllocatorDefault, nullptr, frame->bytes.size, kCFAllocatorDefault,
@@ -837,16 +822,51 @@ bool sampleDecode(PrMediaCodec*, PrMediaSampleDecoder* decoder, const PrMediaBuf
     return status == noErr;
 }
 
-void sampleDecoderFlush(PrMediaCodec*, PrMediaSampleDecoder* decoder) {
-    if (decoder->kind == PrMediaTrackKind_Audio) {
-        AudioConverterReset(static_cast<AppleSampleAudio*>(decoder)->converter);
-        return;
-    }
-    // The frames that the session held back for reordering are dropped, since no sink receives them.
+// The frames that the session held back for reordering are dropped, since no sink receives them.
+void videoSampleFlush(PrMediaSampleDecoder* decoder) {
     AppleSampleVideo* d = static_cast<AppleSampleVideo*>(decoder);
     d->sink = nullptr;
     VTDecompressionSessionFinishDelayedFrames(d->session);
     VTDecompressionSessionWaitForAsynchronousFrames(d->session);
+}
+
+void audioSampleDestroy(PrMediaSampleDecoder* decoder) {
+    AppleSampleAudio* d = static_cast<AppleSampleAudio*>(decoder);
+    AudioConverterDispose(d->converter);
+    d->output.reset();
+    prMemoryFree(d);
+}
+
+bool audioSampleDecode(PrMediaSampleDecoder* decoder, const PrMediaBufferedFrame* frame, const PrMediaSampleSink* sink) {
+    return audioDecode(static_cast<AppleSampleAudio*>(decoder), frame, sink);
+}
+
+void audioSampleFlush(PrMediaSampleDecoder* decoder) {
+    AudioConverterReset(static_cast<AppleSampleAudio*>(decoder)->converter);
+}
+
+PrStatus sampleDecoderCreate(PrMediaCodec*, const PrMediaTrackInfo* track, uint32_t sampleRate, uint32_t channels,
+        PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out) {
+    *out = nullptr;
+    if (track->kind == PrMediaTrackKind_Video) {
+        PrStatus status = videoDecoderCreate(track, out);
+        if (status == PrStatus_Ok) {
+            (*out)->destroyFn = videoSampleDestroy;
+            (*out)->decodeFn = videoSampleDecode;
+            (*out)->flushFn = videoSampleFlush;
+        }
+        return status;
+    }
+    if (track->kind == PrMediaTrackKind_Audio) {
+        PrStatus status = audioDecoderCreate(track, sampleRate, channels, out);
+        if (status == PrStatus_Ok) {
+            (*out)->destroyFn = audioSampleDestroy;
+            (*out)->decodeFn = audioSampleDecode;
+            (*out)->flushFn = audioSampleFlush;
+        }
+        return status;
+    }
+    return PrStatus_NotSupported;
 }
 
 // An image is a CVPixelBuffer, which a device imports as it is.
@@ -859,21 +879,12 @@ void imageRelease(PrMediaCodec*, void* image) {
 }
 
 constexpr PrMediaCodec kApple = {
-    .supportsType = supportsType,
-    .decoderCreate = decoderCreate,
-    .decoderDestroy = decoderDestroy,
-    .decoderFrame = decoderFrame,
-    .decoderAudioStart = decoderAudioStart,
-    .decoderAudioSeek = decoderAudioSeek,
-    .decoderAudioRead = decoderAudioRead,
-    .decoderAudioWait = decoderAudioWait,
-    .supportsSourceType = supportsSourceType,
-    .sampleDecoderCreate = sampleDecoderCreate,
-    .sampleDecoderDestroy = sampleDecoderDestroy,
-    .sampleDecode = sampleDecode,
-    .sampleDecoderFlush = sampleDecoderFlush,
-    .imageImport = imageImport,
-    .imageRelease = imageRelease,
+    .supportsTypeFn = supportsType,
+    .decoderCreateFn = decoderCreate,
+    .supportsSourceTypeFn = supportsSourceType,
+    .sampleDecoderCreateFn = sampleDecoderCreate,
+    .imageImportFn = imageImport,
+    .imageReleaseFn = imageRelease,
 };
 
 } // namespace

@@ -7,6 +7,7 @@
 #include "pr/assert.h"
 #include "pr/mem.h"
 #include "pr/mutex.h"
+#include "pr/net_backend.h"
 #include "pr/raw_array.h"
 #include "pr/thread.h"
 
@@ -51,6 +52,9 @@ typedef uint8_t StreamState;
 // A TCP connection. Its bytes are buffered both ways: `received` from `receivedStart` holds what arrived and was not
 // read, and `unsent` from `unsentStart` holds what was written and not yet sent.
 struct Stream : PrNetStream {
+    PrNet* net;                     // the network whose loop runs the callback
+    PrNetStreamFn PR_NULLABLE event;
+    void* PR_NULLABLE context;
     SocketsHandle socket;           // kSocketsHandleNone while none is open
     StreamState state;
     ResolveJob* PR_NULLABLE job;
@@ -333,6 +337,12 @@ void serveLoop(void* PR_NULLABLE argument) {
 
 // Stream functions
 
+void setEventStream(PrNetStream* base, PrNetStreamFn PR_NULLABLE event, void* PR_NULLABLE context) {
+    Stream* stream = static_cast<Stream*>(base);
+    stream->event = event;
+    stream->context = context;
+}
+
 void destroyStream(PrNetStream* base) {
     Stream* stream = static_cast<Stream*>(base);
     PR_ASSERT(!stream->dead);
@@ -426,12 +436,13 @@ PrStatus connectNetwork(PrNet* base, const PrNetConnectDesc* desc, PrNetStream* 
     stream->net = network;
     stream->event = desc->event;
     stream->context = desc->context;
-    stream->destroy = destroyStream;
-    stream->read = readStream;
-    stream->write = writeStream;
-    stream->finish = finishStream;
-    stream->queued = queuedStream;
-    stream->error = errorStream;
+    stream->destroyFn = destroyStream;
+    stream->setEventFn = setEventStream;
+    stream->readFn = readStream;
+    stream->writeFn = writeStream;
+    stream->finishFn = finishStream;
+    stream->queuedFn = queuedStream;
+    stream->errorFn = errorStream;
     stream->socket = kSocketsHandleNone;
     stream->state = StreamState_Resolving;
     stream->lastAttempt = PrNetError_Unreachable;
@@ -458,9 +469,9 @@ using namespace pr_impl;
 
 PrNet* prNetSocketsCreate(void) {
     Network* network = allocZeroed<Network>();
-    network->destroy = destroyNetwork;
-    network->post = post;
-    network->connect = connectNetwork;
+    network->destroyFn = destroyNetwork;
+    network->postFn = post;
+    network->connectFn = connectNetwork;
     network->system = socketsSystemCreate();
     prMutexInit(&network->mutex);
     prConditionInit(&network->jobsChanged);

@@ -8,6 +8,7 @@
 #include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
+#include "pr/draw_renderer_backend.h"
 #include "pr/font.h"
 #include "pr/pixels.h"
 #include "pr/raw_array.h"
@@ -36,6 +37,7 @@ struct ImGuiBackend : PrDrawRenderer {
 // A frame: its draw data, with its own copies of the draw lists, because the next prepare rebuilds the context's draw
 // lists. A platform's frame begins with it.
 struct ImGuiFrame : PrDrawFrame {
+    ImGuiBackend* renderer;
     ImDrawData data;
 };
 

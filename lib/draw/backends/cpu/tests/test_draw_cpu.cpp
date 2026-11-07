@@ -421,7 +421,6 @@ TEST_CASE("a render larger than the limit is refused") {
     PrDrawTarget huge{.extent = {kPrDrawRenderMaxSize + 1, 1}, .format = PrPixelFormat_Rgba8, .commands = commands};
     PrDrawFrame* frame = prDrawFrameCreate(renderer);
     CHECK(prDrawFramePrepare(frame, list, &huge) == PrStatus_Limit);
-    CHECK(!frame->prepared);
     prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
     prDrawFrameDestroy(frame);
     prDrawListRelease(list);

@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/image_backend.h"
 #include "pr/mem.h"
 
 #include "image/src/convert.h"
@@ -128,12 +129,12 @@ PrImageCodec* PR_NULLABLE prImageCodecCreate(PrImageCodecBackend backend, PrComp
 struct PrImageDecoder : ImageDecoder {};
 
 void prImageCodecDestroy(PrImageCodec* PR_NULLABLE codec) {
-    if (codec != nullptr && codec->destroy != nullptr)
-        codec->destroy(codec);
+    if (codec != nullptr && codec->destroyFn != nullptr)
+        codec->destroyFn(codec);
 }
 
 bool prImageCodecSupportsType(PrImageCodec* codec, PrStringView type) {
-    return codec->supportsType(codec, type);
+    return codec->supportsTypeFn(codec, type);
 }
 
 PrStatus prImageCodecEncode(PrImageCodec* codec, PrStringView type, PrPixelView pixels, uint8_t* PR_NULLABLE out,
@@ -141,9 +142,9 @@ PrStatus prImageCodecEncode(PrImageCodec* codec, PrStringView type, PrPixelView 
     PR_ASSERT(pixels.extent.x != 0 && pixels.extent.y != 0 && size_t(pixels.extent.x) * 4 <= pixels.stride);
     PR_ASSERT(out != nullptr || capacity == 0);
     *size = 0;
-    if (codec->encode == nullptr)
+    if (codec->encodeFn == nullptr)
         return PrStatus_NotSupported;
-    return codec->encode(codec, type, pixels, out, capacity, size);
+    return codec->encodeFn(codec, type, pixels, out, capacity, size);
 }
 
 PrImageLimits prImageLimitsDefault(void) {
@@ -198,9 +199,10 @@ PrStatus prImageDecoderOpen(PrImageDecoder* decoder, PrImageSource source, const
         return PrStatus_Limit;
     if (size == 0)
         return PrStatus_NotSupported;
-    if (codec->headerBytes > budget.headerBytes)
+    uint32_t headerBytes = codec->headerBytesFn(codec);
+    if (headerBytes > budget.headerBytes)
         return PrStatus_Limit;
-    size_t prefixSize = size < codec->headerBytes ? size_t(size) : codec->headerBytes;
+    size_t prefixSize = size < headerBytes ? size_t(size) : headerBytes;
     uint64_t overhead = sizeof(ImageDecoder) + uint64_t(prefixSize);
     if (overhead > budget.workingBytes)
         return PrStatus_Limit;
@@ -212,7 +214,7 @@ PrStatus prImageDecoderOpen(PrImageDecoder* decoder, PrImageSource source, const
     PrStatus status = prImageSourceRead(&source, 0, data->prefix, prefixSize);
     if (status != PrStatus_Ok)
         return status;
-    if (!codec->recognize(codec, PrByteView{data->prefix, prefixSize}))
+    if (!codec->recognizeFn(codec, PrByteView{data->prefix, prefixSize}))
         return PrStatus_NotSupported;
     data->original = source;
     data->limits = budget;
@@ -221,7 +223,7 @@ PrStatus prImageDecoderOpen(PrImageDecoder* decoder, PrImageSource source, const
     data->source.readAt = readCached;
     data->source.stream.context = data;
     data->source.stream.size = size;
-    status = codec->decoderOpen(codec, &data->source, &data->limits, &data->reader, &data->info);
+    status = codec->decoderOpenFn(codec, &data->source, &data->limits, &data->reader, &data->info);
     if (usable(status)) {
         PrStatus validation = validateInfo(data->info, data->limits);
         if (data->reader == nullptr)
@@ -236,7 +238,7 @@ PrStatus prImageDecoderOpen(PrImageDecoder* decoder, PrImageSource source, const
 
 void prImageDecoderClose(PrImageDecoder* decoder) {
     if (decoder->reader != nullptr)
-        decoder->codec->decoderClose(decoder->codec, decoder->reader);
+        decoder->reader->closeFn(decoder->reader);
     decoder->reader = nullptr;
     decoder->info = PrImageInfo{};
     decoder->prefixSize = 0;
@@ -250,7 +252,7 @@ PrStatus prImageDecoderFrameInfo(PrImageDecoder* decoder, uint32_t frame, PrImag
     *out = PrImageFrameInfo{};
     if (!hasFrame(decoder->info, frame))
         return PrStatus_OutOfRange;
-    return decoder->codec->decoderFrameInfo(decoder->codec, decoder->reader, frame, out);
+    return decoder->reader->frameInfoFn(decoder->reader, frame, out);
 }
 
 PrStatus prImageDecoderRead(PrImageDecoder* decoder, uint32_t frame, PrPixels output) {
@@ -262,7 +264,7 @@ PrStatus prImageDecoderRead(PrImageDecoder* decoder, uint32_t frame, PrPixels ou
     packedBytes(decoder->info.format, output.extent.x, output.extent.y, &required);
     if (required > decoder->limits.outputBytes)
         return PrStatus_Limit;
-    return decoder->codec->decoderRead(decoder->codec, decoder->reader, frame, output);
+    return decoder->reader->readFn(decoder->reader, frame, output);
 }
 
 PrStatus prImageDecoderReadRgba8(PrImageDecoder* decoder, uint32_t frame, PrImageAlpha alpha,

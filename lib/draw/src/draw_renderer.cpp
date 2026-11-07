@@ -5,6 +5,7 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/draw_commands.h"
+#include "pr/draw_renderer_backend.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/vec.h"
@@ -143,31 +144,26 @@ PrStatus prDrawRendererCreate(PrDrawRendererBackend backend, PrGpuDevice* PR_NUL
 }
 
 void prDrawRendererDestroy(PrDrawRenderer* PR_NULLABLE renderer) {
-    if (renderer != nullptr && renderer->destroy != nullptr)
-        renderer->destroy(renderer);
+    if (renderer != nullptr && renderer->destroyFn != nullptr)
+        renderer->destroyFn(renderer);
 }
 
 PrGpuDevice* prDrawRendererDevice(const PrDrawRenderer* renderer) {
-    return renderer->device;
+    return renderer->deviceFn(renderer);
 }
 
 void prDrawRendererDropResources(PrDrawRenderer* renderer) {
-    if (renderer->dropResources != nullptr)
-        renderer->dropResources(renderer);
+    if (renderer->dropResourcesFn != nullptr)
+        renderer->dropResourcesFn(renderer);
 }
 
 PrDrawFrame* prDrawFrameCreate(PrDrawRenderer* renderer) {
-    PrDrawFrame* frame = renderer->frameCreate(renderer);
-    PR_ASSERT(frame->renderer == renderer);
-    frame->extent.x = 0;
-    frame->extent.y = 0;
-    frame->prepared = false;
-    return frame;
+    return renderer->frameCreateFn(renderer);
 }
 
 void prDrawFrameDestroy(PrDrawFrame* PR_NULLABLE frame) {
     if (frame != nullptr)
-        frame->renderer->frameDestroy(frame->renderer, frame);
+        frame->destroyFn(frame);
 }
 
 PrStatus prDrawFramePrepare(PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget* target) {
@@ -176,38 +172,29 @@ PrStatus prDrawFramePrepare(PrDrawFrame* frame, const PrDrawList* list, const Pr
 }
 
 PrStatus prDrawFramePreparePart(PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part, const PrDrawTarget* target) {
-    PrDrawRenderer* renderer = frame->renderer;
     PR_ASSERT(part->first <= prDrawListCommandCount(list) && part->count <= prDrawListCommandCount(list) - part->first);
     PR_ASSERT(prDrawListDepth(list) == 0);
     PR_ASSERT(target->commands != nullptr);
     PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Texture ||
         target->beneath->texture != 0);
     PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Draw || target->beneath->draw != nullptr);
-    frame->prepared = false;
     if (target->extent.x > kPrDrawRenderMaxSize || target->extent.y > kPrDrawRenderMaxSize)
         return PrStatus_Limit;
     if (target->format != PrPixelFormat_Rgba8 && target->format != PrPixelFormat_Bgra8 &&
             target->format != PrPixelFormat_RgbaF16)
         return PrStatus_NotSupported;
-    PrStatus status = renderer->framePrepare(renderer, frame, list, part, target);
-    if (status != PrStatus_Ok)
-        return status;
-    frame->extent.x = target->extent.x;
-    frame->extent.y = target->extent.y;
-    frame->prepared = true;
-    return status;
+    return frame->prepareFn(frame, list, part, target);
 }
 
 PrDrawStats prDrawFrameStats(const PrDrawFrame* frame) {
     PrDrawStats stats{};
-    if (frame->renderer->frameStats != nullptr)
-        frame->renderer->frameStats(frame->renderer, frame, &stats);
+    if (frame->statsFn != nullptr)
+        frame->statsFn(frame, &stats);
     return stats;
 }
 
 void prDrawFrameRender(PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
-    PR_ASSERT(frame->prepared);
-    frame->renderer->frameRender(frame->renderer, frame, pass, origin);
+    frame->renderFn(frame, pass, origin);
 }
 
 PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels, PrPixelFormat format) {
@@ -219,7 +206,7 @@ PrStatus prDrawRendererRenderPartPixels(PrDrawRenderer* renderer, const PrDrawLi
         PrPixels pixels, PrPixelFormat format) {
     PR_ASSERT(format == PrPixelFormat_Rgba8 || format == PrPixelFormat_Bgra8 || format == PrPixelFormat_RgbaF16);
     PR_ASSERT(size_t(pixels.extent.x) * prPixelFormatSize(format) <= pixels.stride);
-    PrGpuDevice* device = renderer->device;
+    PrGpuDevice* device = prDrawRendererDevice(renderer);
     PrGpuFormat textureFormat = prGpuFormatFromPixelFormat(format);
     constexpr PrGpuTextureUsageFlags kUsage = PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget;
     // A memory device draws into the pixels themselves, and any other device draws into a copy of them.

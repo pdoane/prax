@@ -8,6 +8,7 @@
 
 #include "pr/alloc.h"
 #include "pr/float.h"
+#include "pr/font_hinter_backend.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
 #include "pr/raw_array.h"
@@ -266,10 +267,10 @@ using namespace pr_impl;
 
 PrFontHinter* prFontFreeTypeCreate(void) {
     FreeTypeHinter* hinter = allocZeroed<FreeTypeHinter>();
-    hinter->destroy = destroyHinter;
-    hinter->outline = hintOutline;
-    hinter->advance = hintAdvance;
-    hinter->forget = forget;
+    hinter->destroyFn = destroyHinter;
+    hinter->outlineFn = hintOutline;
+    hinter->advanceFn = hintAdvance;
+    hinter->forgetFn = forget;
     prMutexInit(&hinter->mutex);
     hinter->memory.alloc = ftAlloc;
     hinter->memory.free = ftFree;

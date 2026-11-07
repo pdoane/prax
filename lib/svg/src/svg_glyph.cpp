@@ -10,6 +10,7 @@
 #include "pr/dom.h"
 #include "pr/dom_xml.h"
 #include "pr/draw_commands.h"
+#include "pr/draw_glyph_backend.h"
 #include "pr/raw_array.h"
 #include "pr/svg.h"
 #include "pr/svg_render.h"
@@ -212,8 +213,8 @@ using namespace pr_impl;
 PrDrawGlyphDecoder* prSvgGlyphDecoderCreate(PrImageCodec* PR_NULLABLE imageCodec,
         PrCompressCodec* PR_NULLABLE compressCodec) {
     SvgDecoder* decoder = allocZeroed<SvgDecoder>();
-    decoder->destroy = destroyDecoder;
-    decoder->decode = decode;
+    decoder->destroyFn = destroyDecoder;
+    decoder->decodeFn = decode;
     decoder->imageCodec = imageCodec;
     decoder->compressCodec = compressCodec;
     return decoder;

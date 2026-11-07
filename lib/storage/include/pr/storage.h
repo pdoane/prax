@@ -36,20 +36,6 @@ typedef struct PrStorageRecord {
     void* PR_NULLABLE handle;
 } PrStorageRecord;
 
-// The function table of a store, placed at the start of the backend's state. Each member implements the public function
-// of the same name. Callers use the functions below, never these members.
-struct PrStorage {
-    void (*destroy)(PrStorage* storage);
-    bool (*read)(PrStorage* storage, PrStringView key, PrStorageRecord* out);
-    void (*release)(PrStorage* storage, PrStorageRecord* record);
-    bool (*write)(PrStorage* storage, PrStringView key, PrByteView bytes);
-    void (*remove)(PrStorage* storage, PrStringView key);
-    void (*clear)(PrStorage* storage);
-    uint64_t (*size)(const PrStorage* storage);
-    uint32_t (*count)(const PrStorage* storage);
-    PrRawString (*key)(const PrStorage* storage, uint32_t position);
-};
-
 // Finishes the store's work, such as the writes that a disk store has queued, and frees it. Its records must be
 // released first.
 void prStorageDestroy(PrStorage* PR_NULLABLE storage);

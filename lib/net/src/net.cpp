@@ -5,6 +5,7 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/mutex.h"
+#include "pr/net_backend.h"
 #include "pr/thread.h"
 
 #if defined(PR_NET_HAS_SOCKETS)
@@ -72,16 +73,16 @@ PrNet* PR_NULLABLE prNetCreate(PrNetBackend backend) {
 
 void prNetDestroy(PrNet* PR_NULLABLE net) {
     if (net != nullptr)
-        net->destroy(net);
+        net->destroyFn(net);
 }
 
 void prNetPost(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context) {
-    net->post(net, fn, context);
+    net->postFn(net, fn, context);
 }
 
 void prNetPostBlocking(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context) {
-    if (net->postBlocking != nullptr) {
-        net->postBlocking(net, fn, context);
+    if (net->postBlockingFn != nullptr) {
+        net->postBlockingFn(net, fn, context);
         return;
     }
     // The task runs on the loop's thread, and the caller waits until it has.
@@ -113,44 +114,43 @@ void prNetPostBlocking(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context) {
 
 PrStatus prNetConnect(PrNet* net, const PrNetConnectDesc* desc, PrNetStream* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    PrStatus status = net->connect(net, desc, out);
-    PR_ASSERT(status != PrStatus_Ok || ((*out) != nullptr && (*out)->net == net));
+    PrStatus status = net->connectFn(net, desc, out);
+    PR_ASSERT(status != PrStatus_Ok || *out != nullptr);
     return status;
 }
 
 void prNetStreamDestroy(PrNetStream* PR_NULLABLE stream) {
     if (stream != nullptr)
-        stream->destroy(stream);
+        stream->destroyFn(stream);
 }
 
 void prNetStreamSetEvent(PrNetStream* stream, PrNetStreamFn PR_NULLABLE event, void* PR_NULLABLE context) {
-    stream->event = event;
-    stream->context = context;
+    stream->setEventFn(stream, event, context);
 }
 
 size_t prNetStreamRead(PrNetStream* stream, uint8_t* PR_NULLABLE output, size_t capacity) {
     PR_ASSERT(output != nullptr || capacity == 0);
     if (capacity == 0)
         return 0;
-    return stream->read(stream, output, capacity);
+    return stream->readFn(stream, output, capacity);
 }
 
 void prNetStreamWrite(PrNetStream* stream, PrByteView bytes) {
     PR_ASSERT(bytes.data != nullptr || bytes.size == 0);
     if (bytes.size != 0)
-        stream->write(stream, bytes);
+        stream->writeFn(stream, bytes);
 }
 
 PrStatus prNetStreamFinish(PrNetStream* stream) {
-    if (stream->finish == nullptr)
+    if (stream->finishFn == nullptr)
         return PrStatus_NotSupported;
-    return stream->finish(stream);
+    return stream->finishFn(stream);
 }
 
 size_t prNetStreamQueued(const PrNetStream* stream) {
-    return stream->queued(stream);
+    return stream->queuedFn(stream);
 }
 
 PrNetError prNetStreamError(const PrNetStream* stream) {
-    return stream->error(stream);
+    return stream->errorFn(stream);
 }

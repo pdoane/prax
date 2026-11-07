@@ -3,6 +3,7 @@
 #include "pr/font_directwrite.h"
 
 #include "pr/alloc.h"
+#include "pr/font_system_backend.h"
 #include "pr/locale.h"
 #include "pr/memory.h"
 
@@ -303,10 +304,10 @@ PrFontSystem* PR_NULLABLE prFontDirectWriteCreate(void) {
         return nullptr;
     }
     DirectWriteSystem* system = allocZeroed<DirectWriteSystem>();
-    system->destroy = destroy;
-    system->addFamily = addFamily;
-    system->genericFamily = genericFamily;
-    system->addFallback = addFallback;
+    system->destroyFn = destroy;
+    system->addFamilyFn = addFamily;
+    system->genericFamilyFn = genericFamily;
+    system->addFallbackFn = addFallback;
     system->factory = factory;
     system->fonts = fonts;
     system->fallback = fallback;

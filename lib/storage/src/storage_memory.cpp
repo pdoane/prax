@@ -3,6 +3,7 @@
 #include "pr/storage_memory.h"
 
 #include "pr/alloc.h"
+#include "pr/storage_backend.h"
 #include "pr/thread.h"
 
 #include "storage/src/storage_index.h"
@@ -136,15 +137,15 @@ using namespace pr_impl;
 
 PrStorage* prStorageMemoryCreate(uint64_t limitBytes, PrStorageEviction eviction) {
     MemoryStorage* storage = allocZeroed<MemoryStorage>();
-    storage->destroy = destroyStorage;
-    storage->read = readStorage;
-    storage->release = releaseRecord;
-    storage->write = writeStorage;
-    storage->remove = removeStorage;
-    storage->clear = clearStorage;
-    storage->size = sizeStorage;
-    storage->count = countStorage;
-    storage->key = keyStorage;
+    storage->destroyFn = destroyStorage;
+    storage->readFn = readStorage;
+    storage->releaseFn = releaseRecord;
+    storage->writeFn = writeStorage;
+    storage->removeFn = removeStorage;
+    storage->clearFn = clearStorage;
+    storage->sizeFn = sizeStorage;
+    storage->countFn = countStorage;
+    storage->keyFn = keyStorage;
     storage->limit = limitBytes;
     storage->eviction = eviction;
     prMutexInit(&storage->mutex);

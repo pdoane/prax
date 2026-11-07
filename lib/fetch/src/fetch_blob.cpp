@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/ascii.h"
+#include "pr/fetch_backend.h"
 #include "pr/memory.h"
 #include "pr/random.h"
 #include "pr/text_buffer.h"
@@ -222,7 +223,7 @@ PrRawString prFetchBlobUrlGenerate(PrStringView origin) {
 
 PrRawString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, PrStringView origin) {
     PrRawString result = prFetchBlobUrlGenerate(origin);
-    PrFetchBlobStore* store = fetcher->blobStore;
+    PrFetchBlobStore* store = fetcher->blobStoreFn(fetcher);
     if (store == nullptr)
         return result;
     prFetchBlobRetain(blob);
@@ -233,12 +234,12 @@ PrRawString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blo
 }
 
 void prFetchBlobUrlRevoke(PrFetchNetwork* fetcher, PrStringView url, PrStringView origin) {
-    PrFetchBlobStore* store = fetcher->blobStore;
+    PrFetchBlobStore* store = fetcher->blobStoreFn(fetcher);
     if (store == nullptr)
         return;
     BlobRevocation* revocation = allocZeroed<BlobRevocation>();
     revocation->store = store;
     revocation->url = prRawStringCopy(withoutFragment(url));
     revocation->origin = prRawStringCopy(origin);
-    prNetPost(fetcher->net, revokeOnLoop, revocation);
+    prNetPost(prFetchNetworkNet(fetcher), revokeOnLoop, revocation);
 }

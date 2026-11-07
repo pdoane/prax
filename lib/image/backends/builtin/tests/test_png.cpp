@@ -1,5 +1,6 @@
 
 #include "pr/checksum.h"
+#include "pr/compress_backend.h"
 #include "pr/mem.h"
 
 #include "image/backends/builtin/tests/image_builtin_test.h"
@@ -758,8 +759,8 @@ TEST_CASE("an encoding filters and compresses its rows") {
 TEST_CASE("an image that a codec without an encoder stores encodes every block") {
     // The built-in codec without its encoder.
     PrCompressCodec decodeOnly = *prCompressBuiltinCreate();
-    decodeOnly.encodeBound = nullptr;
-    decodeOnly.encode = nullptr;
+    decodeOnly.encodeBoundFn = nullptr;
+    decodeOnly.encodeFn = nullptr;
     PrImageCodec* codec = prImageBuiltinCreate(&decodeOnly);
     const std::vector<uint8_t> pixels(64 * 600 * 4, 0x11);
     const PrPixelView view{pixels.data(), size_t(64) * 4, {64, 600}};

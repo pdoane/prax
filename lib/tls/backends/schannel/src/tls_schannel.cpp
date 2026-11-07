@@ -55,6 +55,7 @@ struct VerifyJob {
 
 // `mutex` guards the fields after it, which the verifier's thread reaches.
 struct SchannelTls : PrTls {
+    PrNet* net;                 // the network that the sessions are streams of
     CredHandle credentials;
     PrThread verifier;
     PrMutex mutex;
@@ -202,7 +203,7 @@ void completeHandshake(Session* session) {
     }
     session->state = TlsSharedState_Verifying;
     VerifyJob* job = allocZeroed<VerifyJob>();
-    job->net = session->stream.net;
+    job->net = session->net;
     job->session = session;
     job->certificate = certificate;
     job->anchors = session->anchors != nullptr ? CertDuplicateStore(session->anchors) : nullptr;
@@ -633,16 +634,17 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
         return status;
     Session* session = allocZeroed<Session>();
     session->engine = &kEngine;
-    session->stream.net = tls->net;
-    session->stream.event = desc->event;
-    session->stream.context = desc->context;
-    session->stream.destroy = destroySession;
-    session->stream.read = tlsSharedRead;
-    session->stream.write = writeSession;
-    session->stream.finish = tlsSharedFinish;
-    session->stream.queued = tlsSharedQueued;
-    session->stream.error = tlsSharedError;
-    session->info = tlsSharedInfo;
+    session->net = tls->net;
+    session->event = desc->event;
+    session->context = desc->context;
+    session->stream.destroyFn = destroySession;
+    session->stream.setEventFn = tlsSharedSetEvent;
+    session->stream.readFn = tlsSharedRead;
+    session->stream.writeFn = writeSession;
+    session->stream.finishFn = tlsSharedFinish;
+    session->stream.queuedFn = tlsSharedQueued;
+    session->stream.errorFn = tlsSharedError;
+    session->infoFn = tlsSharedInfo;
     session->tls = tls;
     session->anchors = anchors;
     prMemCopy(session->name, name, sizeof(name));
@@ -676,8 +678,8 @@ using namespace pr_impl;
 PrTls* prTlsSchannelCreate(PrNet* net) {
     SchannelTls* tls = allocZeroed<SchannelTls>();
     tls->net = net;
-    tls->destroy = destroyTls;
-    tls->connect = connectTls;
+    tls->destroyFn = destroyTls;
+    tls->connectFn = connectTls;
     TLS_PARAMETERS parameters{};
     parameters.grbitDisabledProtocols = ~DWORD(SP_PROT_TLS1_2_CLIENT | SP_PROT_TLS1_3_CLIENT);
     SCH_CREDENTIALS credentials{};

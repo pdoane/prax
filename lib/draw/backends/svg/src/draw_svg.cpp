@@ -8,6 +8,7 @@
 #include "pr/base64.h"
 #include "pr/draw_glyph.h"
 #include "pr/draw_lower.h"
+#include "pr/draw_writer_backend.h"
 #include "pr/float.h"
 #include "pr/hash_index.h"
 #include "pr/raw_array.h"
@@ -556,10 +557,10 @@ using namespace pr_impl;
 
 PrDrawWriter* prDrawSvgCreate(const PrDrawWriterOptions* PR_NULLABLE options) {
     SvgWriter* s = allocZeroed<SvgWriter>();
-    s->destroy = destroyWriter;
-    s->begin = begin;
-    s->addPage = addPage;
-    s->end = end;
+    s->destroyFn = destroyWriter;
+    s->beginFn = begin;
+    s->addPageFn = addPage;
+    s->endFn = end;
     s->options = options != nullptr ? *options : prDrawWriterOptionsDefault();
     s->path = prPathCreate();
     DrawSharedWriterOps ops{

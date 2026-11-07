@@ -8,6 +8,7 @@
 #include "pr/atom_table.h"
 #include "pr/raw_array.h"
 #include "pr/regex.h"
+#include "pr/syntax_backend.h"
 
 namespace pr_impl {
 
@@ -122,19 +123,19 @@ PrSyntaxTree* prSyntaxTreeCreate(const PrSyntaxLanguage* language, PrSyntaxRegis
 
 void prSyntaxTreeDestroy(PrSyntaxTree* PR_NULLABLE tree) {
     if (tree != nullptr)
-        tree->destroy(tree);
+        tree->destroyFn(tree);
 }
 
 bool prSyntaxTreeUpdate(PrSyntaxTree* tree, double milliseconds) {
-    return tree->update(tree, milliseconds);
+    return tree->updateFn(tree, milliseconds);
 }
 
 bool prSyntaxTreeIsPending(const PrSyntaxTree* tree) {
-    return tree->pending != nullptr && tree->pending(tree);
+    return tree->pendingFn != nullptr && tree->pendingFn(tree);
 }
 
 uint32_t prSyntaxTreeSpans(PrSyntaxTree* tree, uint32_t start, uint32_t end,
         PrSyntaxSpan* PR_NULLABLE out, uint32_t capacity) {
     PR_ASSERT(start <= end);
-    return tree->spans(tree, start, end, out, capacity);
+    return tree->spansFn(tree, start, end, out, capacity);
 }

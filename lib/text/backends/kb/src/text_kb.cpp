@@ -13,6 +13,8 @@
 #include "pr/utf8.h"
 #include "pr/vec.h"
 
+#include "text/backends/shared/src/text_shared_font_cache.h"
+
 #define KB_TEXT_SHAPE_IMPLEMENTATION
 #include "kb_text_shape.h"
 
@@ -103,6 +105,7 @@ struct FeatureSet {
 };
 
 struct KbBackend : PrTextShaper {
+    TextSharedFontCache fonts;
     kbts_glyph_storage storage;
     RawArray<FeatureSet> sets;             // the feature sets of the run, emptied after the run
     RawArray<kbts_feature_override> overrides;
@@ -187,6 +190,7 @@ kbts_glyph_config* PR_NULLABLE configAt(KbBackend* kb, const PrTextRun* run, KbC
 
 void destroyBackend(PrTextShaper* shaper) {
     KbBackend* kb = static_cast<KbBackend*>(shaper);
+    textSharedFontCacheReset(shaper, &kb->fonts);
     kb->sets.reset();
     kb->overrides.reset();
     kb->unitFeatures.reset();
@@ -306,6 +310,20 @@ PrStatus shape(PrTextShaper* shaper, void* faceState, void* fontState, const PrT
     return shapeAcross(kb, faceState, fontState, run, out);
 }
 
+constexpr TextSharedFontStates kStates = {
+    .faceSize = sizeof(KbFace),
+    .fontSize = sizeof(KbFont),
+    .createFace = createFace,
+    .destroyFace = destroyFace,
+    .createFont = createFont,
+    .destroyFont = destroyFont,
+    .shape = shape,
+};
+
+PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer* out) {
+    return textSharedFontCacheShape(shaper, &static_cast<KbBackend*>(shaper)->fonts, run, out);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -314,14 +332,9 @@ using namespace pr_impl;
 
 PrTextShaper* prTextKbCreate(void) {
     KbBackend* kb = allocZeroed<KbBackend>();
-    kb->destroy = destroyBackend;
-    kb->shape = shape;
-    kb->faceSize = sizeof(KbFace);
-    kb->fontSize = sizeof(KbFont);
-    kb->createFace = createFace;
-    kb->destroyFace = destroyFace;
-    kb->createFont = createFont;
-    kb->destroyFont = destroyFont;
+    kb->destroyFn = destroyBackend;
+    kb->shapeFn = shapeRun;
+    kb->fonts.states = &kStates;
     kbts_InitializeGlyphStorage(&kb->storage, kbAllocate, nullptr);
     return kb;
 }

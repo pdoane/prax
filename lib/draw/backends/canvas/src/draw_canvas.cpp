@@ -15,6 +15,7 @@
 #include "pr/draw_filter.h"
 #include "pr/draw_image.h"
 #include "pr/draw_lower.h"
+#include "pr/draw_renderer_backend.h"
 #include "pr/draw_transform.h"
 #include "pr/float.h"
 #include "pr/hash_index.h"
@@ -140,6 +141,7 @@ struct CanvasGlyph {
 
 // The renderer: its caches, and the scratch storage of its plays.
 struct CanvasBackend : PrDrawRenderer {
+    PrGpuDevice* device;
     uint32_t pageState;                  // the page's caches for this renderer (prDrawCanvasOpen)
     PrDrawGlyphCache* glyphCache;
     HashIndex glyphIndex;           // the glyphs' slots, by font and glyph
@@ -1251,6 +1253,8 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
 // A frame: the part of its list, and the origin of each render since it was prepared. The frame's plays read the
 // origins in the order that they run.
 struct CanvasFrame : PrDrawFrame {
+    CanvasBackend* renderer;
+    PrUVec2 extent;                 // the extent of the target that the frame was prepared for
     const PrDrawList* PR_NULLABLE list;
     PrDrawPart part;
     RawArray<PrIVec2> origins;
@@ -1262,7 +1266,7 @@ void play(void* PR_NULLABLE context, const void* native) {
     CanvasFrame* frame = static_cast<CanvasFrame*>(context);
     PrGpuCanvas canvas = *static_cast<const PrGpuCanvas*>(native);
     PrIVec2 origin = frame->origins.data[frame->played++];
-    CanvasBackend* backend = static_cast<CanvasBackend*>(frame->renderer);
+    CanvasBackend* backend = frame->renderer;
     if (++backend->serial % 64 == 0)
         dropGlyphs(backend);
     prDrawGlyphCacheBegin(backend->glyphCache);
@@ -1307,22 +1311,20 @@ void destroyBackend(PrDrawRenderer* renderer) {
     prMemoryFree(backend);
 }
 
-PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
-    CanvasFrame* frame = allocZeroed<CanvasFrame>();
-    frame->renderer = renderer;
-    return frame;
+PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
+    return static_cast<const CanvasBackend*>(renderer)->device;
 }
 
-void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
+void destroyFrame(PrDrawFrame* frame) {
     CanvasFrame* f = static_cast<CanvasFrame*>(frame);
     f->origins.reset();
     prMemoryFree(f);
 }
 
 // Keeps the part of the list, which the frame's pass walks when it runs.
-PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
-        const PrDrawTarget*) {
+PrStatus prepare(PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part, const PrDrawTarget* target) {
     CanvasFrame* f = static_cast<CanvasFrame*>(frame);
+    f->extent = target->extent;
     f->list = list;
     f->part = *part;
     f->origins.clear();
@@ -1330,10 +1332,19 @@ PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, co
     return PrStatus_Ok;
 }
 
-void renderFrame(PrDrawRenderer*, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
+void renderFrame(PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
     CanvasFrame* f = static_cast<CanvasFrame*>(frame);
     f->origins.push(origin);
     prGpuPassNativeDraw(pass, PrGpuNativeKind_Canvas2d, play, f);
+}
+
+PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
+    CanvasFrame* frame = allocZeroed<CanvasFrame>();
+    frame->destroyFn = destroyFrame;
+    frame->prepareFn = prepare;
+    frame->renderFn = renderFrame;
+    frame->renderer = static_cast<CanvasBackend*>(renderer);
+    return frame;
 }
 
 } // namespace
@@ -1360,11 +1371,9 @@ PrStatus prDrawCanvasCreate(PrGpuDevice* device, const PrDrawCanvasOptions* PR_N
     backend->path = prPathCreate();
     backend->extra = prPathCreate();
     backend->device = device;
-    backend->destroy = destroyBackend;
-    backend->frameCreate = createFrame;
-    backend->frameDestroy = destroyFrame;
-    backend->framePrepare = prepare;
-    backend->frameRender = renderFrame;
+    backend->destroyFn = destroyBackend;
+    backend->frameCreateFn = createFrame;
+    backend->deviceFn = rendererDevice;
     *out = backend;
     return PrStatus_Ok;
 }

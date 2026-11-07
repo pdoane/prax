@@ -7,6 +7,7 @@
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
+#include "pr/process_backend.h"
 #include "pr/string_ops.h"
 #include "pr/thread.h"
 #include "pr/utf8.h"
@@ -733,8 +734,8 @@ PrStatus spawnOnPipes(const PrProcessDesc* desc, const int input[2], const int o
 PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out) {
     PosixProcess* process = allocZeroed<PosixProcess>();
     processPipedInit(process, desc, notify);
-    process->destroy = destroyProcess;
-    process->kill = killProcess;
+    process->destroyFn = destroyProcess;
+    process->killFn = killProcess;
     process->input = -1;
     process->outputs[0] = process->outputs[1] = -1;
     process->wakePipe[0] = process->wakePipe[1] = -1;
@@ -807,8 +808,8 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     process->pid = pid;
     process->exitWatch = watchExit(pid);
     if (onTerminal) {
-        process->terminalResize = resizeTerminal;
-        process->terminalForegroundDirectory = terminalForegroundDirectory;
+        process->terminalResizeFn = resizeTerminal;
+        process->terminalForegroundDirectoryFn = terminalForegroundDirectory;
     }
     process->input = input[1];
     process->outputs[PrProcessStream_Output] = output[0];
@@ -838,7 +839,7 @@ using namespace pr_impl;
 
 PrProcessLauncher* prProcessPosixCreate(void) {
     PrProcessLauncher* launcher = allocZeroed<PrProcessLauncher>();
-    launcher->destroy = destroyLauncher;
-    launcher->launch = launch;
+    launcher->destroyFn = destroyLauncher;
+    launcher->launchFn = launch;
     return launcher;
 }

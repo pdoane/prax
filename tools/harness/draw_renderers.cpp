@@ -130,13 +130,16 @@ uint32_t nextInFamily(const std::vector<RendererConfig>& configs, uint32_t index
     return index;
 }
 
-PrDrawFrame* PR_NONNULL frameFor(PrDrawFrame* PR_NULLABLE& frame, PrDrawRenderer* PR_NONNULL renderer) {
-    if (frame != nullptr && frame->renderer != renderer) {
+PrDrawFrame* PR_NONNULL frameFor(PrDrawFrame* PR_NULLABLE& frame, PrDrawRenderer* PR_NULLABLE& madeBy,
+        PrDrawRenderer* PR_NONNULL renderer) {
+    if (frame != nullptr && madeBy != renderer) {
         prDrawFrameDestroy(frame);
         frame = nullptr;
     }
-    if (frame == nullptr)
+    if (frame == nullptr) {
         frame = prDrawFrameCreate(renderer);
+        madeBy = renderer;
+    }
     return frame;
 }
 

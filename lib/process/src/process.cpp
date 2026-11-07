@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/process_backend.h"
 #include "pr/string_ops.h"
 
 #if defined(PR_PROCESS_HAS_POSIX)
@@ -71,7 +72,7 @@ PrProcessLauncher* PR_NULLABLE prProcessLauncherCreate(PrProcessBackend backend)
 
 void prProcessLauncherDestroy(PrProcessLauncher* PR_NULLABLE launcher) {
     if (launcher != nullptr)
-        launcher->destroy(launcher);
+        launcher->destroyFn(launcher);
 }
 
 PrStatus prProcessLaunch(PrProcessLauncher* launcher, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out) {
@@ -81,45 +82,45 @@ PrStatus prProcessLaunch(PrProcessLauncher* launcher, const PrProcessDesc* desc,
         PrStringView variable = desc->environment[i];
         PR_ASSERT(prStringFindByte(variable, '=') != 0 && prStringFindByte(variable, '=') < variable.size);
     }
-    PrStatus status = launcher->launch(launcher, desc, out);
+    PrStatus status = launcher->launchFn(launcher, desc, out);
     PR_ASSERT((status == PrStatus_Ok) == (*out != nullptr));
     return status;
 }
 
 void prProcessDestroy(PrProcess* PR_NULLABLE process) {
     if (process != nullptr)
-        process->destroy(process);
+        process->destroyFn(process);
 }
 
 void prProcessWrite(PrProcess* process, PrByteView bytes) {
     if (bytes.size != 0)
-        process->write(process, bytes);
+        process->writeFn(process, bytes);
 }
 
 void prProcessCloseInput(PrProcess* process) {
-    process->closeInput(process);
+    process->closeInputFn(process);
 }
 
 size_t prProcessRead(PrProcess* process, PrProcessStream stream, uint8_t* PR_NULLABLE output, size_t capacity) {
-    return process->read(process, stream, output, capacity);
+    return process->readFn(process, stream, output, capacity);
 }
 
 PrProcessInfo prProcessInfo(const PrProcess* process) {
-    return process->info(process);
+    return process->infoFn(process);
 }
 
 void prProcessKill(PrProcess* process) {
-    process->kill(process);
+    process->killFn(process);
 }
 
 void prProcessTerminalResize(PrProcess* process, PrUVec2 extent, PrUVec2 pixelExtent) {
     PR_ASSERT(extent.x > 0 && extent.y > 0);
-    PR_ASSERT(process->terminalResize != nullptr);
-    process->terminalResize(process, extent, pixelExtent);
+    PR_ASSERT(process->terminalResizeFn != nullptr);
+    process->terminalResizeFn(process, extent, pixelExtent);
 }
 
 PrRawString prProcessTerminalForegroundDirectory(const PrProcess* process) {
-    if (process->terminalForegroundDirectory == nullptr)
+    if (process->terminalForegroundDirectoryFn == nullptr)
         return prRawStringNull();
-    return process->terminalForegroundDirectory(process);
+    return process->terminalForegroundDirectoryFn(process);
 }

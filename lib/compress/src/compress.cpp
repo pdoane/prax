@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/compress_backend.h"
 
 #if defined(PR_COMPRESS_HAS_BUILTIN)
 #include "pr/compress_builtin.h"
@@ -60,27 +61,27 @@ PrCompressCodec* PR_NULLABLE prCompressCodecCreate(PrCompressCodecBackend backen
 }
 
 void prCompressCodecDestroy(PrCompressCodec* PR_NULLABLE codec) {
-    if (codec != nullptr && codec->destroy != nullptr)
-        codec->destroy(codec);
+    if (codec != nullptr && codec->destroyFn != nullptr)
+        codec->destroyFn(codec);
 }
 
 bool prCompressCodecDecodes(PrCompressCodec* codec, PrCompressFormat format) {
     PR_ASSERT(format <= PrCompressFormat_Brotli);
-    return codec->decodes == nullptr || codec->decodes(codec, format);
+    return codec->decodesFn == nullptr || codec->decodesFn(codec, format);
 }
 
 PrStatus prCompressDecoderCreate(PrCompressCodec* codec, PrCompressFormat format,
         PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(format <= PrCompressFormat_Brotli);
     *out = nullptr;
-    PrStatus status = codec->decoderCreate(codec, format, out);
-    PR_ASSERT(status != PrStatus_Ok || ((*out) != nullptr && (*out)->codec == codec));
+    PrStatus status = codec->decoderCreateFn(codec, format, out);
+    PR_ASSERT(status != PrStatus_Ok || *out != nullptr);
     return status;
 }
 
 void prCompressDecoderDestroy(PrCompressDecoder* PR_NULLABLE decoder) {
     if (decoder != nullptr)
-        decoder->codec->decoderDestroy(decoder->codec, decoder);
+        decoder->destroyFn(decoder);
 }
 
 PrStatus prCompressDecoderRead(PrCompressDecoder* decoder, PrByteView input, bool final,
@@ -88,7 +89,7 @@ PrStatus prCompressDecoderRead(PrCompressDecoder* decoder, PrByteView input, boo
     PR_ASSERT(input.data != nullptr || input.size == 0);
     PR_ASSERT(output != nullptr || capacity == 0);
     *out = PrCompressRead{0, 0, PrCompressProgress_Input};
-    return decoder->codec->decoderRead(decoder->codec, decoder, input, final, output, capacity, out);
+    return decoder->readFn(decoder, input, final, output, capacity, out);
 }
 
 PrStatus prCompressCodecDecode(PrCompressCodec* codec, PrCompressFormat format, PrByteView input,
@@ -105,7 +106,7 @@ PrStatus prCompressCodecDecode(PrCompressCodec* codec, PrCompressFormat format, 
 
 size_t prCompressCodecEncodeBound(PrCompressCodec* codec, PrCompressFormat format, size_t size) {
     PR_ASSERT(format <= PrCompressFormat_Brotli);
-    return codec->encodeBound != nullptr ? codec->encodeBound(codec, format, size) : 0;
+    return codec->encodeBoundFn != nullptr ? codec->encodeBoundFn(codec, format, size) : 0;
 }
 
 PrStatus prCompressCodecEncode(PrCompressCodec* codec, PrCompressFormat format, PrCompressLevel level,
@@ -113,7 +114,7 @@ PrStatus prCompressCodecEncode(PrCompressCodec* codec, PrCompressFormat format, 
     PR_ASSERT(format <= PrCompressFormat_Brotli && level <= PrCompressLevel_Small);
     PR_ASSERT(input.data != nullptr || input.size == 0);
     *written = 0;
-    if (codec->encode == nullptr)
+    if (codec->encodeFn == nullptr)
         return PrStatus_NotSupported;
-    return codec->encode(codec, format, level, input, output, written);
+    return codec->encodeFn(codec, format, level, input, output, written);
 }

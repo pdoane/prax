@@ -1,4 +1,5 @@
 #include "pr/task.h"
+#include "pr/task_backend.h"
 
 #include "tools/harness/test.h"
 
@@ -34,10 +35,10 @@ void hostPost(PrTaskPool*, PrTaskJobFn fn, void* PR_NULLABLE context) {
 
 HostPool hostPool(uint32_t width) {
     HostPool pool;
-    pool.destroy = nullptr;
-    pool.width = hostWidth;
-    pool.run = hostRun;
-    pool.post = hostPost;
+    pool.destroyFn = nullptr;
+    pool.widthFn = hostWidth;
+    pool.runFn = hostRun;
+    pool.postFn = hostPost;
     pool.poolWidth = width;
     return pool;
 }

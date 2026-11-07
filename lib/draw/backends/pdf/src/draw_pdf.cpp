@@ -8,6 +8,7 @@
 #include "pr/alloc.h"
 #include "pr/draw_glyph.h"
 #include "pr/draw_lower.h"
+#include "pr/draw_writer_backend.h"
 #include "pr/float.h"
 #include "pr/font_subset.h"
 #include "pr/hash.h"
@@ -2572,10 +2573,10 @@ using namespace pr_impl;
 
 PrDrawWriter* prDrawPdfCreate(const PrDrawWriterOptions* PR_NULLABLE options) {
     PdfWriter* p = allocZeroed<PdfWriter>();
-    p->destroy = destroyWriter;
-    p->begin = begin;
-    p->addPage = addPage;
-    p->end = end;
+    p->destroyFn = destroyWriter;
+    p->beginFn = begin;
+    p->addPageFn = addPage;
+    p->endFn = end;
     p->options = options != nullptr ? *options : prDrawWriterOptionsDefault();
     p->path = prPathCreate();
     DrawSharedWriterOps ops{

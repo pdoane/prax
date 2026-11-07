@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/audio_backend.h"
 #include "pr/time.h"
 
 #if defined(PR_AUDIO_HAS_APPLE)
@@ -81,29 +82,29 @@ PrAudioOutput* PR_NULLABLE prAudioOutputCreate(PrAudioOutputBackend backend, PrA
 
 void prAudioOutputDestroy(PrAudioOutput* PR_NULLABLE output) {
     if (output != nullptr)
-        output->destroy(output);
+        output->destroyFn(output);
 }
 
 PrAudioFormat prAudioOutputFormat(const PrAudioOutput* output) {
-    return output->format;
+    return output->formatFn(output);
 }
 
 bool prAudioOutputStart(PrAudioOutput* output, PrAudioRenderFn render, void* PR_NULLABLE context) {
-    return output->start(output, render, context);
+    return output->startFn(output, render, context);
 }
 
 void prAudioOutputStop(PrAudioOutput* output) {
-    output->stop(output);
+    output->stopFn(output);
 }
 
 double prAudioOutputLatency(PrAudioOutput* output) {
-    return output->latency(output);
+    return output->latencyFn(output);
 }
 
 double prAudioOutputNow(const PrAudioOutput* output) {
-    return output->now != nullptr ? output->now(output) : prTimeMonotonicMilliseconds();
+    return output->nowFn != nullptr ? output->nowFn(output) : prTimeMonotonicMilliseconds();
 }
 
 bool prAudioOutputIsHostPaced(const PrAudioOutput* output) {
-    return output->hostPaced;
+    return output->isHostPacedFn != nullptr && output->isHostPacedFn(output);
 }

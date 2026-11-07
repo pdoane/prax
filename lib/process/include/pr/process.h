@@ -102,26 +102,6 @@ typedef struct PrProcessInfo {
     int32_t code;               // the status that the process exited with, once `exited` is true
 } PrProcessInfo;
 
-// The function table of a launcher, placed at the start of the backend's state. Each member implements the public
-// function of the same name. Callers use the functions below, never these members.
-struct PrProcessLauncher {
-    void (*destroy)(PrProcessLauncher* launcher);
-    PrStatus (*launch)(PrProcessLauncher* launcher, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out);
-};
-
-// The function table of a process, placed at the start of the backend's state. Each member implements the public
-// function of the same name. Callers use the functions below, never these members.
-struct PrProcess {
-    void (*destroy)(PrProcess* process);
-    void (*write)(PrProcess* process, PrByteView bytes);
-    void (*closeInput)(PrProcess* process);
-    size_t (*read)(PrProcess* process, PrProcessStream stream, uint8_t* PR_NULLABLE output, size_t capacity);
-    PrProcessInfo (*info)(const PrProcess* process);
-    void (*kill)(PrProcess* process);
-    void (*terminalResize)(PrProcess* process, PrUVec2 extent, PrUVec2 pixelExtent);
-    PrRawString (*terminalForegroundDirectory)(const PrProcess* process);
-};
-
 // The library's backends of launchers, which the build turns on (README.md), and Default, the first that the build has.
 enum {
     PrProcessBackend_Default,

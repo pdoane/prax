@@ -1,4 +1,5 @@
 #include "pr/media_apple.h"
+#include "pr/media_backend.h"
 #include "pr/thread.h"
 
 #include "tools/harness/test.h"
@@ -299,13 +300,13 @@ PrMediaSampleSink sinkOf(Decoded* decoded) {
     sink.image = [](void* context, void* image, double presentation) {
         Decoded* d = static_cast<Decoded*>(context);
         PrGpuImport imported{};
-        d->codec->imageImport(d->codec, image, &imported);
+        d->codec->imageImportFn(d->codec, image, &imported);
         PrGpuImportPixels pixels{};
         REQUIRE(prGpuImportLock(&imported, &pixels));
         PrPixelView view = pixels.pixels;
         uint8_t red = view.data[(view.extent.y / 2) * view.stride + (view.extent.x / 2) * 4 + 2];
         prGpuImportUnlock(&imported);
-        d->codec->imageRelease(d->codec, image);
+        d->codec->imageReleaseFn(d->codec, image);
         d->images.emplace_back(presentation, red);
     };
     sink.samples = [](void* context, const float* samples, uint32_t frames, double) {
@@ -347,13 +348,13 @@ TEST_CASE("the AVFoundation codec decodes a video track's frames one at a time, 
     CHECK(prMediaCodecSupportsSourceType(codec, "video/mp4; codecs=\"avc1.42E01E\"") == PrMediaSupport_Probably);
     CHECK(prMediaCodecSupportsSourceType(codec, "video/mp4; codecs=\"xyz1\"") == PrMediaSupport_No);
     PrMediaSampleDecoder* decoder = nullptr;
-    REQUIRE(codec->sampleDecoderCreate(codec, &video.track, 0, 0, &decoder) == PrStatus_Ok);
+    REQUIRE(codec->sampleDecoderCreateFn(codec, &video.track, 0, 0, &decoder) == PrStatus_Ok);
     Decoded decoded;
     decoded.codec = codec;
     PrMediaSampleSink sink = sinkOf(&decoded);
     for (const PrMediaBufferedFrame& frame : video.frames)
-        CHECK(codec->sampleDecode(codec, decoder, &frame, &sink));
-    codec->sampleDecoderFlush(codec, decoder);
+        CHECK(decoder->decodeFn(decoder, &frame, &sink));
+    decoder->flushFn(decoder);
     REQUIRE(decoded.images.size() == size_t(kFrames));
     // The decoder gives images in decode order, which B-frames make differ from presentation order. Each frame keeps
     // its time and its color through the decoder.
@@ -366,7 +367,7 @@ TEST_CASE("the AVFoundation codec decodes a video track's frames one at a time, 
         CHECK(int(decoded.images[size_t(i)].second) - int(redOf(i)) < 16);
         CHECK(int(decoded.images[size_t(i)].second) - int(redOf(i)) > -16);
     }
-    codec->sampleDecoderDestroy(codec, decoder);
+    decoder->destroyFn(decoder);
     prMediaCodecDestroy(codec);
 }
 
@@ -376,18 +377,18 @@ TEST_CASE("the AVFoundation codec decodes an AAC track's frames one at a time, a
     REQUIRE(!audio.config.empty());
     PrMediaCodec* codec = prMediaAppleCreate();
     PrMediaSampleDecoder* decoder = nullptr;
-    REQUIRE(codec->sampleDecoderCreate(codec, &audio.track, 48000, 1, &decoder) == PrStatus_Ok);
+    REQUIRE(codec->sampleDecoderCreateFn(codec, &audio.track, 48000, 1, &decoder) == PrStatus_Ok);
     Decoded decoded;
     decoded.codec = codec;
     PrMediaSampleSink sink = sinkOf(&decoded);
     for (const PrMediaBufferedFrame& frame : audio.frames)
-        CHECK(codec->sampleDecode(codec, decoder, &frame, &sink));
+        CHECK(decoder->decodeFn(decoder, &frame, &sink));
     // About a second at 48 kHz, less the frames that the decoder keeps for its delay.
     CHECK(decoded.samples.size() > 40000);
     CHECK(decoded.samples.size() < 52000);
     std::vector<float> middle(decoded.samples.begin() + 12000, decoded.samples.begin() + 36000);
     CHECK(frequencyOf(middle, 48000) == doctest::Approx(1000).epsilon(0.02));
-    codec->sampleDecoderDestroy(codec, decoder);
+    decoder->destroyFn(decoder);
     prMediaCodecDestroy(codec);
 }
 

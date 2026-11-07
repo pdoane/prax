@@ -15,21 +15,6 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// The function table of a hinter, placed at the start of the backend's state. Each member implements the public
-// function of the same name. A null `destroy` means there is nothing to free, and a null `forget` that the hinter keeps
-// nothing for a font. Callers use the functions below, never these members.
-//
-// A hinter is called from any thread, so it locks whatever it shares between calls. It reads the fonts that it hints
-// through their public functions: their bytes, index and axis values.
-struct PrFontHinter {
-    void (*PR_NULLABLE destroy)(PrFontHinter* hinter);
-    bool (*outline)(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontHinting hinting,
-        float embolden, PrPath* out);
-    bool (*advance)(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontHinting hinting,
-        float* out);
-    void (*PR_NULLABLE forget)(PrFontHinter* hinter, uint64_t fontId);
-};
-
 // The library's backends of hinters, which the build turns on (README.md), and Default, the first that the build has.
 enum {
     PrFontHinterBackend_Default,

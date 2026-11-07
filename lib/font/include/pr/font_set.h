@@ -184,24 +184,6 @@ void prFontSetAddFileFamily(PrFontSet* set, PrStringView family, PrStringView pa
 // reads such a file only when text first matches its family. A system is thread-safe.
 typedef struct PrFontSystem PrFontSystem;
 
-// The function table of a system, placed at the start of the backend's state. A null `destroy` means there is nothing
-// to free.
-struct PrFontSystem {
-    void (*PR_NULLABLE destroy)(PrFontSystem* system);
-
-    // Adds the files of `family` to `set`. Returns false if the system has no such family.
-    bool (*addFamily)(PrFontSystem* system, PrFontSet* set, PrStringView family);
-
-    // Returns the system's family for `generic`, or the null string if it has none. The caller releases it with
-    // prRawStringReset.
-    PrRawString (*genericFamily)(PrFontSystem* system, PrFontGeneric generic);
-
-    // Adds to `set` the files of a family that serves the cluster `text` in `locale`. The family suits `generic`, or is
-    // the system's UI font if `generic` is None. Returns the family, or the null string if the system has none. The
-    // caller releases it with prRawStringReset.
-    PrRawString (*addFallback)(PrFontSystem* system, PrFontSet* set, PrStringView text, PrLocale locale, PrFontGeneric generic);
-};
-
 // The library's backends of the system's fonts, which the build turns on (README.md), and Default, the first that the
 // build has.
 enum {

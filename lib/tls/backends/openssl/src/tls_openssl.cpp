@@ -24,6 +24,7 @@ constexpr uint32_t kChunkBytes = 16 * 1024;
 constexpr uint32_t kNameMaxBytes = 254;
 
 struct OpensslTls : PrTls {
+    PrNet* net;                 // the network that the sessions are streams of
     SSL_CTX* context;
 };
 
@@ -297,10 +298,11 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
     }
     Session* session = allocZeroed<Session>();
     session->engine = &kEngine;
-    session->stream.net = tls->net;
-    session->stream.event = desc->event;
-    session->stream.context = desc->context;
+    session->net = tls->net;
+    session->event = desc->event;
+    session->context = desc->context;
     session->stream.destroy = destroySession;
+    session->stream.setEvent = tlsSharedSetEvent;
     session->stream.read = tlsSharedRead;
     session->stream.write = writeSession;
     session->stream.finish = tlsSharedFinish;

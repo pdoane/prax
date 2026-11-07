@@ -1194,7 +1194,7 @@ class BackendNames(unittest.TestCase):
                          ["prDrawCpuBackend makes a PrDrawRenderer, so it is named like prdrawcpucreate"])
 
     def test_a_record_of_functions_is_an_interface(self):
-        interface = 'struct PrDrawRenderer {\n    void (*PR_NULLABLE destroy)(PrDrawRenderer* renderer);\n};\n'
+        interface = 'struct PrDrawRenderer {\n    void (*PR_NULLABLE destroyFn)(PrDrawRenderer* renderer);\n};\n'
         self.assertEqual(self.problems(interface, 'PrDrawRenderer* prDrawCpuRenderer(void);\n'),
                          ["prDrawCpuRenderer makes a PrDrawRenderer, so it is named like prdrawcpucreate"])
 
@@ -1260,7 +1260,7 @@ class Creators(unittest.TestCase):
                                        'lib/draw/include/pr/draw_renderer.h'), [])
 
     def test_a_record_is_made_by_its_backends(self):
-        header = ('struct PrDrawRenderer {\n    void (*PR_NULLABLE destroy)(PrDrawRenderer* renderer);\n};\n'
+        header = ('struct PrDrawRenderer {\n    void (*PR_NULLABLE destroyFn)(PrDrawRenderer* renderer);\n};\n'
                   'void prDrawRendererDestroy(PrDrawRenderer* PR_NULLABLE renderer);\n')
         self.assertEqual(self.problems(header, 'lib/draw/include/pr/draw_renderer.h'), [])
 

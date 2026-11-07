@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/mutex.h"
+#include "pr/net_backend.h"
 #include "pr/raw_array.h"
 
 namespace pr_impl {
@@ -82,15 +83,15 @@ using namespace pr_impl;
 
 PrNet* prNetNullCreate(void) {
     NullNet* network = allocZeroed<NullNet>();
-    network->destroy = destroyNetwork;
-    network->post = post;
-    network->postBlocking = postBlocking;
-    network->connect = connectNetwork;
+    network->destroyFn = destroyNetwork;
+    network->postFn = post;
+    network->postBlockingFn = postBlocking;
+    network->connectFn = connectNetwork;
     prMutexInit(&network->mutex);
     return network;
 }
 
 bool prNetNullRun(PrNet* net) {
-    PR_ASSERT(net->destroy == destroyNetwork);
+    PR_ASSERT(net->destroyFn == destroyNetwork);
     return run(static_cast<NullNet*>(net));
 }

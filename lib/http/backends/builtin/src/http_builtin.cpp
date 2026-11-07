@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/http_backend.h"
 #include "pr/mem.h"
 #include "pr/raw_array.h"
 #include "pr/string_ops.h"
@@ -74,6 +75,7 @@ struct Held {
 };
 
 struct Exchange : PrHttpExchange {
+    BuiltinHttp* http;              // the source that made the exchange
     Held held;
     PrHttpExchangeFn PR_NULLABLE event;
     void* PR_NULLABLE context;
@@ -128,6 +130,7 @@ struct HostRule {
 };
 
 struct BuiltinHttp : PrHttp {
+    PrNet* net;                     // the network whose loop runs the exchanges' callbacks
     PrTls* PR_NULLABLE tls;
     const PrByteView* PR_NULLABLE anchors;
     uint32_t anchorCount;
@@ -820,6 +823,72 @@ void destroyHttp(PrHttp* base) {
     freeHttp(http);
 }
 
+void destroyExchange(PrHttpExchange* handle) {
+    Exchange* exchange = static_cast<Exchange*>(handle);
+    BuiltinHttp* http = exchange->http;
+    PR_ASSERT(!exchange->held.dead);
+    exchange->held.dead = true;
+    if (exchange->state == ExchangeState_Queued)
+        http->queue.removeFirst(exchange);
+    // An exchange abandoned before its response ended leaves its connection with no way to find the next response. A
+    // response with no content, such as a 304, ends with its head.
+    bool ended = exchange->state == ExchangeState_Done ||
+        (exchange->state == ExchangeState_Content && exchange->framing == Framing_None);
+    if (ended && exchange->state != ExchangeState_Done && exchange->connection != nullptr)
+        ++exchange->connection->served;
+    detach(exchange, ended);
+    if (exchange->held.holds == 0)
+        freeExchange(exchange);
+}
+
+uint16_t exchangeStatus(const PrHttpExchange* handle) {
+    return static_cast<const Exchange*>(handle)->status;
+}
+
+uint32_t exchangeHeaderCount(const PrHttpExchange* handle) {
+    const Exchange* exchange = static_cast<const Exchange*>(handle);
+    return exchange->status != 0 ? exchange->fields.count : 0;
+}
+
+PrHttpHeader exchangeHeader(const PrHttpExchange* handle, uint32_t index) {
+    const Exchange* exchange = static_cast<const Exchange*>(handle);
+    PrStringView stored = viewOf(exchange->response);
+    const FieldSpan& span = exchange->fields.data[index];
+    return PrHttpHeader{
+        prStringSlice(stored, span.nameStart, span.nameSize),
+        prStringSlice(stored, span.valueStart, span.valueSize),
+    };
+}
+
+size_t exchangeRead(PrHttpExchange* handle, uint8_t* output, size_t capacity) {
+    Exchange* exchange = static_cast<Exchange*>(handle);
+    uint32_t available = exchange->content.count - exchange->contentStart;
+    uint32_t taken = capacity < available ? uint32_t(capacity) : available;
+    prMemCopy(output, exchange->content.data + exchange->contentStart, taken);
+    exchange->contentStart += taken;
+    if (exchange->contentStart == exchange->content.count) {
+        exchange->content.clear();
+        exchange->contentStart = 0;
+    }
+    // Input that waited for room is parsed in a task, so that its events come after this call.
+    Connection* connection = exchange->connection;
+    if (connection != nullptr && !connection->resumePosted &&
+            (connection->inputStart != connection->input.count || connection->stalled || connection->ended)) {
+        connection->resumePosted = true;
+        hold(&connection->held);
+        prNetPost(exchange->http->net, resume, connection);
+    }
+    return taken;
+}
+
+PrNetError exchangeError(const PrHttpExchange* handle) {
+    return static_cast<const Exchange*>(handle)->error;
+}
+
+PrStringView exchangeProtocol(const PrHttpExchange*) {
+    return kProtocols[0];
+}
+
 PrStatus createExchange(PrHttp* base, const PrHttpRequestDesc* desc, PrHttpExchange* PR_NULLABLE* PR_NONNULL out) {
     BuiltinHttp* http = static_cast<BuiltinHttp*>(base);
     PrUrl* url = nullptr;
@@ -840,6 +909,13 @@ PrStatus createExchange(PrHttp* base, const PrHttpRequestDesc* desc, PrHttpExcha
         return PrStatus_InvalidData;
     }
     Exchange* exchange = allocZeroed<Exchange>();
+    exchange->destroyFn = destroyExchange;
+    exchange->statusFn = exchangeStatus;
+    exchange->headerCountFn = exchangeHeaderCount;
+    exchange->headerFn = exchangeHeader;
+    exchange->readFn = exchangeRead;
+    exchange->errorFn = exchangeError;
+    exchange->protocolFn = exchangeProtocol;
     exchange->http = http;
     exchange->event = desc->event;
     exchange->context = desc->context;
@@ -878,72 +954,6 @@ PrStatus createExchange(PrHttp* base, const PrHttpRequestDesc* desc, PrHttpExcha
     return PrStatus_Ok;
 }
 
-void destroyExchange(PrHttp* base, PrHttpExchange* handle) {
-    BuiltinHttp* http = static_cast<BuiltinHttp*>(base);
-    Exchange* exchange = static_cast<Exchange*>(handle);
-    PR_ASSERT(!exchange->held.dead);
-    exchange->held.dead = true;
-    if (exchange->state == ExchangeState_Queued)
-        http->queue.removeFirst(exchange);
-    // An exchange abandoned before its response ended leaves its connection with no way to find the next response. A
-    // response with no content, such as a 304, ends with its head.
-    bool ended = exchange->state == ExchangeState_Done ||
-        (exchange->state == ExchangeState_Content && exchange->framing == Framing_None);
-    if (ended && exchange->state != ExchangeState_Done && exchange->connection != nullptr)
-        ++exchange->connection->served;
-    detach(exchange, ended);
-    if (exchange->held.holds == 0)
-        freeExchange(exchange);
-}
-
-uint16_t exchangeStatus(const PrHttp*, const PrHttpExchange* handle) {
-    return static_cast<const Exchange*>(handle)->status;
-}
-
-uint32_t exchangeHeaderCount(const PrHttp*, const PrHttpExchange* handle) {
-    const Exchange* exchange = static_cast<const Exchange*>(handle);
-    return exchange->status != 0 ? exchange->fields.count : 0;
-}
-
-PrHttpHeader exchangeHeader(const PrHttp*, const PrHttpExchange* handle, uint32_t index) {
-    const Exchange* exchange = static_cast<const Exchange*>(handle);
-    PrStringView stored = viewOf(exchange->response);
-    const FieldSpan& span = exchange->fields.data[index];
-    return PrHttpHeader{
-        prStringSlice(stored, span.nameStart, span.nameSize),
-        prStringSlice(stored, span.valueStart, span.valueSize),
-    };
-}
-
-size_t exchangeRead(PrHttp* base, PrHttpExchange* handle, uint8_t* output, size_t capacity) {
-    Exchange* exchange = static_cast<Exchange*>(handle);
-    uint32_t available = exchange->content.count - exchange->contentStart;
-    uint32_t taken = capacity < available ? uint32_t(capacity) : available;
-    prMemCopy(output, exchange->content.data + exchange->contentStart, taken);
-    exchange->contentStart += taken;
-    if (exchange->contentStart == exchange->content.count) {
-        exchange->content.clear();
-        exchange->contentStart = 0;
-    }
-    // Input that waited for room is parsed in a task, so that its events come after this call.
-    Connection* connection = exchange->connection;
-    if (connection != nullptr && !connection->resumePosted &&
-            (connection->inputStart != connection->input.count || connection->stalled || connection->ended)) {
-        connection->resumePosted = true;
-        hold(&connection->held);
-        prNetPost(base->net, resume, connection);
-    }
-    return taken;
-}
-
-PrNetError exchangeError(const PrHttp*, const PrHttpExchange* handle) {
-    return static_cast<const Exchange*>(handle)->error;
-}
-
-PrStringView exchangeProtocol(const PrHttp*, const PrHttpExchange*) {
-    return kProtocols[0];
-}
-
 } // namespace
 
 } // namespace pr_impl
@@ -952,15 +962,8 @@ using namespace pr_impl;
 
 PrHttp* prHttpBuiltinCreate(const PrHttpDesc* desc) {
     BuiltinHttp* http = allocZeroed<BuiltinHttp>();
-    http->destroy = destroyHttp;
-    http->exchangeCreate = createExchange;
-    http->exchangeDestroy = destroyExchange;
-    http->exchangeStatus = exchangeStatus;
-    http->exchangeHeaderCount = exchangeHeaderCount;
-    http->exchangeHeader = exchangeHeader;
-    http->exchangeRead = exchangeRead;
-    http->exchangeError = exchangeError;
-    http->exchangeProtocol = exchangeProtocol;
+    http->destroyFn = destroyHttp;
+    http->exchangeCreateFn = createExchange;
     http->net = desc->net;
     http->tls = desc->tls;
     http->anchors = desc->anchors;

@@ -244,7 +244,7 @@ PrFetchLoad* prFetchLoadCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc
     load->request.headers = load->requestViews.data;
     load->request.body = PrByteView{load->requestBody.data, load->requestBody.count};
     prMutexInit(&load->mutex);
-    prNetPost(fetcher->net, begin, load);
+    prNetPost(prFetchNetworkNet(fetcher), begin, load);
     return load;
 }
 
@@ -257,7 +257,7 @@ void prFetchLoadDestroy(PrFetchLoad* PR_NULLABLE load) {
     // A load that has not delivered may still be fetching, which the loop stops.
     if (!load->delivered) {
         load->references.fetchAdd(1);
-        prNetPost(load->fetcher->net, cancel, load);
+        prNetPost(prFetchNetworkNet(load->fetcher), cancel, load);
     }
     release(load);
 }

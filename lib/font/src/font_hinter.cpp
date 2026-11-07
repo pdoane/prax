@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/font_hinter_backend.h"
 
 #if defined(PR_FONT_HAS_FREETYPE)
 #include "pr/font_freetype.h"
@@ -60,23 +61,23 @@ PrFontHinter* PR_NULLABLE prFontHinterCreate(PrFontHinterBackend backend) {
 }
 
 void prFontHinterDestroy(PrFontHinter* PR_NULLABLE hinter) {
-    if (hinter != nullptr && hinter->destroy != nullptr)
-        hinter->destroy(hinter);
+    if (hinter != nullptr && hinter->destroyFn != nullptr)
+        hinter->destroyFn(hinter);
 }
 
 bool prFontHinterOutline(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm,
         PrFontHinting hinting, float embolden, PrPath* out) {
     PR_ASSERT(hinting != PrFontHinting_None && pixelsPerEm > 0);
-    return hinter->outline(hinter, font, glyph, pixelsPerEm, hinting, embolden, out);
+    return hinter->outlineFn(hinter, font, glyph, pixelsPerEm, hinting, embolden, out);
 }
 
 bool prFontHinterAdvance(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm,
         PrFontHinting hinting, float* out) {
     PR_ASSERT(hinting != PrFontHinting_None && pixelsPerEm > 0);
-    return hinter->advance(hinter, font, glyph, pixelsPerEm, hinting, out);
+    return hinter->advanceFn(hinter, font, glyph, pixelsPerEm, hinting, out);
 }
 
 void prFontHinterForget(PrFontHinter* hinter, uint64_t fontId) {
-    if (hinter->forget != nullptr)
-        hinter->forget(hinter, fontId);
+    if (hinter->forgetFn != nullptr)
+        hinter->forgetFn(hinter, fontId);
 }

@@ -16,12 +16,11 @@
 #include "pr/locale_common.h"
 #include "pr/raw_array.h"
 #include "pr/sort.h"
+#include "pr/text_backend.h"
 #include "pr/unicode.h"
 #include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
 #include "pr/vec.h"
-
-#include "text/src/font_cache.h"
 
 #if defined(PR_TEXT_HAS_HARFBUZZ)
 #include "pr/text_harfbuzz.h"
@@ -210,11 +209,7 @@ void spacingOf(const PrTextRun& run, PrStringView text, const PrTextGlyph* glyph
 // Shapes the run as given, into `out`.
 PrStatus shapeWith(PrTextShaper* shaper, const PrTextRun& run, PrTextGlyphBuffer& out) {
     out.glyphs.clear();
-    void* face = nullptr;
-    void* font = nullptr;
-    if (!textFontCacheFind(shaper, run.font, &face, &font))
-        return PrStatus_NotSupported;
-    return shaper->shape(shaper, face, font, &run, &out);
+    return shaper->shapeFn(shaper, &run, &out);
 }
 
 // Returns true if the font provides the feature for the text of the run. It shapes with the feature and without it. If
@@ -656,9 +651,7 @@ PrTextShaper* PR_NULLABLE prTextShaperCreate(PrTextShaperBackend backend) {
 void prTextShaperDestroy(PrTextShaper* PR_NULLABLE shaper) {
     if (shaper == nullptr)
         return;
-    textFontCacheDestroy(shaper);
-    if (shaper->destroy != nullptr)
-        shaper->destroy(shaper);
+    shaper->destroyFn(shaper);
 }
 
 PrStatus prTextShaperShape(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer* out) {

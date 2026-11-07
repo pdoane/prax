@@ -40,9 +40,10 @@ uint32_t familyCount(const std::vector<RendererConfig>& configs);
 // its first.
 uint32_t nextInFamily(const std::vector<RendererConfig>& configs, uint32_t index);
 
-// Returns the frame to render with `renderer`. That is `frame` if the renderer made it. Otherwise, `frame` is destroyed
-// and replaced with a new frame.
-PrDrawFrame* PR_NONNULL frameFor(PrDrawFrame* PR_NULLABLE& frame, PrDrawRenderer* PR_NONNULL renderer);
+// Returns the frame to render with `renderer`. That is `frame` if `madeBy`, the renderer that made it, is `renderer`.
+// Otherwise, `frame` is destroyed and replaced with a new frame, and `madeBy` with `renderer`.
+PrDrawFrame* PR_NONNULL frameFor(PrDrawFrame* PR_NULLABLE& frame, PrDrawRenderer* PR_NULLABLE& madeBy,
+    PrDrawRenderer* PR_NONNULL renderer);
 
 } // namespace harness
 

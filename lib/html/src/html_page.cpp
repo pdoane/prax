@@ -329,7 +329,7 @@ void dropFetch(void* data) {
     bool posted = fetch->posted;
     prMutexUnlock(&fetch->lock);
     if (!posted)
-        prNetPost(fetch->fetcher->net, cancelOnLoop, fetch);
+        prNetPost(prFetchNetworkNet(fetch->fetcher), cancelOnLoop, fetch);
 }
 
 // Drops every fetch that the context waits for and whose response has not arrived. A fetch whose response arrived
@@ -584,7 +584,7 @@ HtmlFetch* createFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination d
 // Starts the fetch on the fetcher's loop, with a reference for each side.
 void postFetch(HtmlFetch* fetch) {
     fetch->references.store(2);
-    prNetPost(fetch->fetcher->net, beginOnLoop, fetch);
+    prNetPost(prFetchNetworkNet(fetch->fetcher), beginOnLoop, fetch);
 }
 
 // Answers the fetch without its fetcher, with `status`, in a task as the loop's answer would be. The agent holds the
@@ -3310,7 +3310,7 @@ void dropDocumentLoad(PrHtmlPage* page) {
     load->dropped = true;
     prMutexUnlock(&load->lock);
     // The cancel takes the page's reference.
-    prNetPost(load->fetcher->net, cancelLoadOnLoop, load);
+    prNetPost(prFetchNetworkNet(load->fetcher), cancelLoadOnLoop, load);
 }
 
 // Cancels the fetch of an iframe's source that its container's document runs, which would otherwise replace the
@@ -3430,7 +3430,7 @@ PrStatus startNavigation(PrHtmlPage* page, PrStringView url, PrStringView origin
     prMutexInit(&load->lock);
     load->references.store(2);
     page->documentLoad = load;
-    prNetPost(load->fetcher->net, beginLoadOnLoop, load);
+    prNetPost(prFetchNetworkNet(load->fetcher), beginLoadOnLoop, load);
     return PrStatus_Ok;
 }
 

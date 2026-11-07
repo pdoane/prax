@@ -14,6 +14,7 @@
 #include "pr/draw_glyph.h"
 #include "pr/draw_lower.h"
 #include "pr/draw_projection.h"
+#include "pr/draw_renderer_backend.h"
 #include "pr/draw_transform.h"
 #include "pr/float.h"
 #include "pr/hash.h"
@@ -166,6 +167,7 @@ struct Renderer {
 // The backend, and the state that it keeps between renders: textures of images and lists, the lists that color glyphs
 // paint, and a renderer for each depth of nesting. It drops whatever a render does not use.
 struct CpuBackend : PrDrawRenderer {
+    PrGpuDevice* device;
     bool ownsDevice;                    // true if the renderer created its device, and frees it
     bool glyphPhases;                   // PrDrawCpuOptions
     CpuTextureCache textures;
@@ -1732,10 +1734,6 @@ void destroyBackend(PrDrawRenderer* renderer) {
     prMemoryFree(cpu);
 }
 
-void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
-    drawMemoryFrameDestroy(static_cast<DrawMemoryFrame*>(frame));
-}
-
 // Renders the part of the list into the pixels. A backdrop reads what the pixels held as well as what the list drew.
 void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat format, const PrDrawList* list,
         const PrDrawPart& part) {
@@ -1757,19 +1755,12 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
     prDrawGlyphCacheEnd(cpu->glyphs);
 }
 
+PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
+    return static_cast<const CpuBackend*>(renderer)->device;
+}
+
 PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
     return drawMemoryFrameCreate(renderer, renderPixels, true);
-}
-
-// Keeps the part of the list, which renders when the frame's pass runs.
-PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
-        const PrDrawTarget*) {
-    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list, *part);
-    return PrStatus_Ok;
-}
-
-void renderFrame(PrDrawRenderer*, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
-    drawMemoryFrameRender(static_cast<DrawMemoryFrame*>(frame), pass, origin);
 }
 } // namespace
 
@@ -1792,10 +1783,8 @@ PrDrawRenderer* PR_NULLABLE prDrawCpuCreate(const PrDrawCpuOptions* PR_NULLABLE 
     cpu->ownsDevice = owned;
     cpu->glyphs = prDrawGlyphCacheCreate(o.glyphDecoder);
     cpu->glyphPhases = o.glyphPhases;
-    cpu->destroy = destroyBackend;
-    cpu->frameCreate = createFrame;
-    cpu->frameDestroy = destroyFrame;
-    cpu->framePrepare = prepare;
-    cpu->frameRender = renderFrame;
+    cpu->destroyFn = destroyBackend;
+    cpu->frameCreateFn = createFrame;
+    cpu->deviceFn = rendererDevice;
     return cpu;
 }

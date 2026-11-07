@@ -22,7 +22,7 @@ extern "C" {
 // A source of image readers and encodings. Each backend provides its own constructor.
 typedef struct PrImageCodec PrImageCodec;
 
-// The state of a backend for one image that its codec opened. Only that codec reads it, and only through a decoder.
+// The state of a backend for one image that its codec opened. Only a decoder reads it.
 typedef struct PrImageReader PrImageReader;
 
 // Opens images with a codec, one at a time, and reads the open image. The decoder holds the reader that the codec
@@ -134,44 +134,6 @@ typedef struct PrImageLimits {
     uint32_t metadataBytes;
     uint32_t headerBytes;
 } PrImageLimits;
-
-// The start of every reader's state. `codec` is the codec that opened the reader.
-struct PrImageReader {
-    PrImageCodec* codec;
-};
-
-// The function table of a codec, placed at the start of the backend's state. Each function member implements the public
-// function of the same name. A null `destroy` means there is nothing to free. Callers use the functions below, never
-// these members.
-//
-// The decoder functions operate on a reader. prImageDecoderOpen reads the first `headerBytes` of the image, asks
-// `recognize` whether the codec decodes it, and then calls `decoderOpen` to create the reader. Each other decoder
-// function passes the reader of the open image to the member of the same name. A reader may keep the source and the
-// limits that it was opened with until it is closed, and it enforces the limits.
-struct PrImageCodec {
-    void (*PR_NULLABLE destroy)(PrImageCodec* codec);
-
-    // The number of bytes that `recognize` examines.
-    uint32_t headerBytes;
-
-    bool (*supportsType)(PrImageCodec* codec, PrStringView type);
-
-    // Returns true if the first bytes of an image are in a format that the codec decodes.
-    bool (*recognize)(PrImageCodec* codec, PrByteView prefix);
-
-    // Opens an image, and creates a reader if the status is Ok or Truncated.
-    PrStatus (*decoderOpen)(PrImageCodec* codec, const PrImageSource* source,
-        const PrImageLimits* limits, PrImageReader* PR_NULLABLE* PR_NONNULL out, PrImageInfo* info);
-    void (*decoderClose)(PrImageCodec* codec, PrImageReader* reader);
-    PrStatus (*decoderFrameInfo)(PrImageCodec* codec, PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info);
-
-    // Decodes a frame into pixels of the format and size that the reader reported.
-    PrStatus (*decoderRead)(PrImageCodec* codec, PrImageReader* reader, uint32_t frame, PrPixels output);
-
-    // Null for a codec that encodes nothing.
-    PrStatus (*PR_NULLABLE encode)(PrImageCodec* codec, PrStringView type, PrPixelView pixels,
-        uint8_t* PR_NULLABLE out, size_t capacity, size_t* size);
-};
 
 // The assumptions a conversion may make when color is uncharacterized.
 enum {

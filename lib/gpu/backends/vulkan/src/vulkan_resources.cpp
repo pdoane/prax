@@ -456,6 +456,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
 
 void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
     VulkanDevice* d = vulkanDevice(device);
+    gpuSharedTextureForget(d, texture);
     prMutexLock(&d->mutex);
     PR_ASSERT(vulkanResourceAt(d, texture.id).kind == VulkanSlotKind_Texture);
     vulkanRetire(d, VulkanRetired{VulkanRetireKind_Slot, texture.id, 0});
@@ -1105,20 +1106,20 @@ void vulkanResourcesReset(VulkanDevice* d) {
 }
 
 void vulkanResourceFunctions(VulkanDevice* d) {
-    d->supportsFormat = supportsFormat;
-    d->bufferCreate = bufferCreate;
-    d->bufferDestroy = bufferDestroy;
-    d->bufferDesc = bufferDesc;
-    d->bufferStorageHandle = bufferStorageHandle;
-    d->bufferMap = bufferMap;
-    d->bufferUpload = bufferUpload;
-    d->textureCreate = textureCreate;
-    d->textureCreateView = textureCreateView;
-    d->textureDestroy = textureDestroy;
-    d->textureDesc = textureDesc;
-    d->textureStorageHandle = textureStorageHandle;
-    d->textureNative = textureNative;
-    d->textureUpload = textureUpload;
+    d->supportsFormatFn = supportsFormat;
+    d->bufferCreateFn = bufferCreate;
+    d->bufferDestroyFn = bufferDestroy;
+    d->bufferDescFn = bufferDesc;
+    d->bufferStorageHandleFn = bufferStorageHandle;
+    d->bufferMapFn = bufferMap;
+    d->bufferUploadFn = bufferUpload;
+    d->textureCreateFn = textureCreate;
+    d->textureCreateViewFn = textureCreateView;
+    d->textureDestroyFn = textureDestroy;
+    d->textureDescFn = textureDesc;
+    d->textureStorageHandleFn = textureStorageHandle;
+    d->textureNativeFn = textureNative;
+    d->textureUploadFn = textureUpload;
     d->samplerCreate = samplerCreate;
 }
 

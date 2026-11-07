@@ -15,6 +15,7 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/locale.h"
+#include "pr/task_backend.h"
 #include "pr/text_harfbuzz.h"
 
 #include "css/src/css_presentation.h"
@@ -58,15 +59,15 @@ struct HostPool : PrTaskPool {
     uint32_t widest = 0;
 
     explicit HostPool(uint32_t count) : PrTaskPool{}, threads(count) {
-        width = [](const PrTaskPool* base) -> uint32_t { return static_cast<const HostPool*>(base)->threads; };
-        run = [](PrTaskPool* base, uint32_t count, uint32_t wide, PrTaskFn fn, void* PR_NULLABLE context) {
+        widthFn = [](const PrTaskPool* base) -> uint32_t { return static_cast<const HostPool*>(base)->threads; };
+        runFn = [](PrTaskPool* base, uint32_t count, uint32_t wide, PrTaskFn fn, void* PR_NULLABLE context) {
             HostPool* pool = static_cast<HostPool*>(base);
             ++pool->loops;
             pool->widest = wide > pool->widest ? wide : pool->widest;
             for (uint32_t i = 0; i < count; ++i)
                 fn(context, i, i % wide);
         };
-        post = [](PrTaskPool*, PrTaskJobFn fn, void* PR_NULLABLE context) { fn(context); };
+        postFn = [](PrTaskPool*, PrTaskJobFn fn, void* PR_NULLABLE context) { fn(context); };
     }
 };
 

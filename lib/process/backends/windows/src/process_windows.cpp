@@ -390,8 +390,8 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     WindowsProcess* process = allocZeroed<WindowsProcess>();
     process->onTerminal = onTerminal;
     processPipedInit(process, desc, notify);
-    process->destroy = destroyProcess;
-    process->kill = killProcess;
+    process->destroyFn = destroyProcess;
+    process->killFn = killProcess;
     process->handle = INVALID_HANDLE_VALUE;
     process->input.handle = INVALID_HANDLE_VALUE;
     process->outputs[0].handle = process->outputs[1].handle = INVALID_HANDLE_VALUE;
@@ -489,7 +489,7 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     CloseHandle(started.hThread);
     process->handle = started.hProcess;
     if (onTerminal)
-        process->terminalResize = resizeTerminal;
+        process->terminalResizeFn = resizeTerminal;
     process->wakeEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     process->input.operation.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     for (ProcessPipe& pipe : process->outputs)
@@ -511,7 +511,7 @@ using namespace pr_impl;
 
 PrProcessLauncher* prProcessWindowsCreate(void) {
     PrProcessLauncher* launcher = allocZeroed<PrProcessLauncher>();
-    launcher->destroy = destroyLauncher;
-    launcher->launch = launch;
+    launcher->destroyFn = destroyLauncher;
+    launcher->launchFn = launch;
     return launcher;
 }

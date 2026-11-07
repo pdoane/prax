@@ -17,6 +17,9 @@ namespace pr_impl {
 
 namespace {
 
+// The functions of the device's objects, which their creation installs.
+extern const PrGpuShaderLibrary kLibraryFunctions;
+
 const VulkanLibrary* libraryOf(const PrGpuShaderLibrary* library) {
     return static_cast<const VulkanLibrary*>(library);
 }
@@ -175,15 +178,21 @@ PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uin
     if (!vulkanCheck(d, result))
         return result == VK_ERROR_DEVICE_LOST ? PrStatus_Lost : PrStatus_InvalidData;
     VulkanLibrary* library = allocZeroed<VulkanLibrary>();
+    static_cast<PrGpuShaderLibrary&>(*library) = kLibraryFunctions;
+    library->device = device;
+    library->entryCount = entryCount;
+    library->entries = entries;
     library->module = module;
     *out = library;
     return PrStatus_Ok;
 }
 
-void shaderLibraryDestroy(PrGpuDevice* device, PrGpuShaderLibrary* library) {
+void shaderLibraryDestroy(PrGpuShaderLibrary* library) {
+    PrGpuDevice* device = static_cast<GpuSharedLibrary*>(library)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanLibrary* l = static_cast<VulkanLibrary*>(library);
     d->vk.DestroyShaderModule(d->device, l->module, nullptr);
+    prMemoryFree(l->entries);
     prMemoryFree(l);
 }
 
@@ -341,15 +350,20 @@ PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline)
     return vulkanDevice(device)->pipelines.data[pipeline.id - 1].groupSize;
 }
 
+// The functions of the device's objects.
+constexpr PrGpuShaderLibrary kLibraryFunctions = {
+    .destroyFn = shaderLibraryDestroy,
+    .entriesFn = gpuSharedLibraryEntries,
+};
+
 } // namespace
 
 void vulkanPipelineFunctions(VulkanDevice* d) {
-    d->shaderLibraryCreate = shaderLibraryCreate;
-    d->shaderLibraryDestroy = shaderLibraryDestroy;
-    d->graphicsPipelineCreate = graphicsPipelineCreate;
-    d->computePipelineCreate = computePipelineCreate;
-    d->pipelineDestroy = pipelineDestroy;
-    d->pipelineGroupSize = pipelineGroupSize;
+    d->shaderLibraryCreateFn = shaderLibraryCreate;
+    d->graphicsPipelineCreateFn = graphicsPipelineCreate;
+    d->computePipelineCreateFn = computePipelineCreate;
+    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineGroupSizeFn = pipelineGroupSize;
 }
 
 } // namespace pr_impl

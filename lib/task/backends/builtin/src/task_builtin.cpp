@@ -6,6 +6,7 @@
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/raw_array.h"
+#include "pr/task_backend.h"
 #include "pr/thread.h"
 
 namespace pr_impl {
@@ -148,10 +149,10 @@ using namespace pr_impl;
 
 PrTaskPool* prTaskBuiltinCreate(uint32_t threads) {
     BuiltinPool* pool = allocZeroed<BuiltinPool>();
-    pool->destroy = destroyPool;
-    pool->width = poolWidth;
-    pool->run = run;
-    pool->post = post;
+    pool->destroyFn = destroyPool;
+    pool->widthFn = poolWidth;
+    pool->runFn = run;
+    pool->postFn = post;
     pool->next.storeRelaxed(0);
     prMutexInit(&pool->mutex);
     prConditionInit(&pool->started);
