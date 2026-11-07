@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -38,8 +39,8 @@ std::vector<uint8_t> readFile(const std::string& path) {
     return bytes;
 }
 
-// A tree whose math is set in a math font, New Computer Modern Math unless a WPT font or a font's path is named, at
-// kSize px.
+// A tree whose math is set at kSize px in New Computer Modern Math, or in the font that the constructor names: a font
+// file's path, or the name of a WPT math test font such as "radical-rtlm".
 struct MathFixture {
     Fixture f;
     const PrFont* font = nullptr;
@@ -48,7 +49,7 @@ struct MathFixture {
 
     explicit MathFixture(const char* wpt = nullptr) {
         PrStatus status = PrStatus_Ok;
-        if (wpt == nullptr || wpt[0] == '/') {
+        if (wpt == nullptr || std::strchr(wpt, '/') != nullptr) {
             std::string path = wpt != nullptr ? wpt : std::string(PR_FONT_BUNDLE_DIR) + "/NewCMMath-Regular.otf";
             std::vector<uint8_t> bytes = readFile(path);
             status = prFontCreate(bytes, 0, nullptr, &font);
