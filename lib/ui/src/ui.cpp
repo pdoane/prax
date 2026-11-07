@@ -621,6 +621,12 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
     bool modifier = e.key == PrAppKey_Shift || e.key == PrAppKey_Control || e.key == PrAppKey_Alt ||
         e.key == PrAppKey_Meta || e.key == PrAppKey_CapsLock || e.key == PrAppKey_Fn;
     ui->focusVisible = ui->focusVisible || !modifier;
+    // A key that the input method takes belongs to the composition, which the focus receives. It claims no binding and
+    // moves no focus.
+    if (e.composing) {
+        deliver(ui, ui->focus, e);
+        return;
+    }
     PrLayoutNode start = ui->focus != kPrLayoutNodeNone ? ui->focus : prLayoutTreeRoot(ui->tree);
     const UiClaim* captured = nullptr;
     for (PrLayoutNode at = start; at != kPrLayoutNodeNone; at = parentOf(ui, at)) {

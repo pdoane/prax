@@ -15,6 +15,7 @@
 #include "pr/kit_text.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
+#include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
@@ -159,6 +160,7 @@ struct TerminalShown {
     float flash;                // the opacity of the bell's flash
     bool hasJump;
     uint64_t jumpLine;
+    uint32_t composition;       // the revision of the input method's composition
 
     // Whether the drawing is in the blink phase that hides blinking text, and whether any of its rows has blinking
     // text. The phase matters only if a row has blinking text.
@@ -173,7 +175,7 @@ bool isSame(const TerminalShown& a, const TerminalShown& b) {
     bool jump = a.hasJump == b.hasJump && a.jumpLine == b.jumpLine;
     return a.revision == b.revision && a.top == b.top && selection && link && a.extent.x == b.extent.x &&
         a.extent.y == b.extent.y && a.focused == b.focused && a.cursorOn == b.cursorOn &&
-        a.generation == b.generation && a.flash == b.flash && jump;
+        a.generation == b.generation && a.flash == b.flash && jump && a.composition == b.composition;
 }
 
 // A line of the view copied from the screen. `line` points into `cells` and `codePoints`.
@@ -286,6 +288,16 @@ struct Terminal {
     // A multi-line paste that waits for the user's confirmation, or the null string. The confirmation dialog is open
     // while it waits.
     PrRawString paste;
+
+    // The text that the input method composes, and the part of it that the input method selects, in bytes. It shows
+    // over the cells from the cursor until the input method commits or cancels it, and never reaches the program, which
+    // receives the committed text. `compositionRevision` changes with the composition. `compositionColumn` is the
+    // column where the last drawing placed it, where the input method's windows open.
+    bool composing;
+    PrRawString composition;
+    PrAppTextRange compositionSelection;
+    uint32_t compositionRevision;
+    uint32_t compositionColumn;
 
     RawArray<TerminalRow> rows;         // by row of the view
     uint64_t rowsColorRevision;         // the screen's color revision when the rows were drawn
@@ -1421,6 +1433,15 @@ bool promptKey(Terminal* terminal, PrAppKey key) {
     return false;
 }
 
+// Ends the composition, if there is one. The text that it committed, if any, arrives as a Text event.
+void compositionEnd(Terminal* terminal) {
+    if (!terminal->composing)
+        return;
+    terminal->composing = false;
+    prRawStringClear(&terminal->composition);
+    ++terminal->compositionRevision;
+}
+
 // Handles the events that the view received in this round. The caller holds the screen's lock.
 void handleEvents(Terminal* terminal) {
     PrUi* ui = terminal->ui;
@@ -1446,6 +1467,9 @@ void handleEvents(Terminal* terminal) {
             terminal->dropTextSize = 0;
         switch (event.kind) {
             case PrAppEventKind_KeyDown:
+                // A key that the input method takes edits the composition, and never reaches the program.
+                if (event.composing)
+                    continue;
                 setProgramKey(terminal, event.code, false);
                 if (ClipboardKey action = clipboardKey(terminal, event.key, modifiers); action != ClipboardKey_None) {
                     if (action == ClipboardKey_Paste) {
@@ -1502,6 +1526,17 @@ void handleEvents(Terminal* terminal) {
                     terminal->hasSelection = false;
                     terminal->blinkStart = prUiCurrentRound(ui)->time;
                 }
+                continue;
+            case PrAppEventKind_CompositionUpdate:
+                terminal->composing = true;
+                prRawStringClear(&terminal->composition);
+                prRawStringAppend(&terminal->composition, event.text);
+                terminal->compositionSelection = event.selection;
+                ++terminal->compositionRevision;
+                scrollToBottom(terminal);
+                continue;
+            case PrAppEventKind_CompositionEnd:
+                compositionEnd(terminal);
                 continue;
             case PrAppEventKind_Clipboard:
                 if (asksBeforePaste(terminal, event.text)) {
@@ -1628,6 +1663,13 @@ void drawLink(const Terminal* terminal, PrDrawList* list) {
     }
 }
 
+// The thickness of the cursor's lines in px: the font's underline, rounded to whole target pixels, and at least one.
+float cursorThickness(const Terminal* terminal) {
+    float ratio = terminal->drawer.pixelRatio;
+    float thickness = prF32Round(terminal->drawer.metrics.underlineThickness * ratio);
+    return (thickness < 1 ? 1 : thickness) / ratio;
+}
+
 // Records the cursor over the screen. It blinks off if `on` is false, and is a hollow block without focus.
 void drawCursor(Terminal* terminal, PrDrawList* list, bool on) {
     const TerminalSnapshot& snapshot = terminal->snapshot;
@@ -1644,8 +1686,7 @@ void drawCursor(Terminal* terminal, PrDrawList* list, bool on) {
     float top = float(cursor.position.y) * m.cell.y;
     PrRect rect{left, top, left + float(columns) * m.cell.x, top + m.cell.y};
     PrColor color = prColorFromColor8(snapshot.colors.roles[PrVtermColorRole_Cursor]);
-    float thickness = prF32Round(m.underlineThickness * terminal->drawer.pixelRatio);
-    thickness = (thickness < 1 ? 1 : thickness) / terminal->drawer.pixelRatio;
+    float thickness = cursorThickness(terminal);
     PrDrawPaint paint{};
     paint.color = prColor16FromColor(color);
     if (!terminal->focused) {
@@ -1672,6 +1713,62 @@ void drawCursor(Terminal* terminal, PrDrawList* list, bool on) {
             terminalDrawCell(&terminal->drawer, list, line, column, PrVec2{rect.left, rect.top}, colors);
             return;
         }
+    }
+}
+
+// Records the input method's composition in place of the cursor, from the cursor's cell. The composition is underlined,
+// the part that the input method selects is underlined twice, and a bar marks the input method's caret if it selects
+// nothing. The composition's cells cover the cells under them. A scratch screen of one row lays it out as the screen
+// lays out text, in clusters of one or two cells. If the composition would pass the end of the row, it moves left until
+// it fits, or to the first column.
+void drawComposition(Terminal* terminal, PrDrawList* list) {
+    const TerminalSnapshot& snapshot = terminal->snapshot;
+    PrVtermCursor cursor = snapshot.cursor;
+    if (terminal->scrolledBack || cursor.position.y >= snapshot.lines.count ||
+            prRawStringIsEmpty(&terminal->composition))
+        return;
+    PrStringView text = prRawStringView(&terminal->composition);
+    uint32_t size = uint32_t(text.size);
+    uint32_t end = terminal->compositionSelection.end < size ? terminal->compositionSelection.end : size;
+    uint32_t start = terminal->compositionSelection.start < end ? terminal->compositionSelection.start : end;
+
+    // No cluster takes more than two cells, so the scratch row holds the whole composition.
+    uint32_t columns = snapshot.extent.x;
+    uint32_t room = 2 * size + 1;
+    PrVtermDesc desc{.extent = {room > columns ? room : columns, 1}};
+    PrVterm* scratch = prVtermCreate(&desc);
+    auto write = [scratch](PrStringView bytes) {
+        prVtermWrite(scratch, PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
+    };
+    write("\x1b[4m");
+    write(PrStringView{text.data, start});
+    uint32_t caret = prVtermCursor(scratch).position.x;
+    write("\x1b[4:2m");
+    write(PrStringView{text.data + start, end - start});
+    write("\x1b[4m");
+    write(PrStringView{text.data + end, size - end});
+    uint32_t width = prVtermCursor(scratch).position.x;
+
+    uint32_t column = cursor.position.x;
+    if (column + width > columns)
+        column = width < columns ? columns - width : 0;
+    terminal->compositionColumn = column;
+    const PrTextGridMetrics& m = terminal->drawer.metrics;
+    float left = float(column) * m.cell.x;
+    float top = float(cursor.position.y) * m.cell.y;
+    PrDrawPaint background{};
+    background.color = prColor16FromColor(terminalBackground(snapshot.colors));
+    prDrawListRect(list, PrRect{left, top, left + float(width) * m.cell.x, top + m.cell.y}, background);
+    PrDrawList* row = prDrawListCreate();
+    terminalDrawRow(&terminal->drawer, row, row, snapshot.colors, prVtermLine(scratch, 0), 0, 0, false);
+    prDrawListEmbed(list, row, PrDVec2{double(left), double(top)});
+    prDrawListRelease(row);
+    prVtermDestroy(scratch);
+    if (start == end) {
+        PrDrawPaint paint{};
+        paint.color = prColor16FromColor(prColorFromColor8(snapshot.colors.roles[PrVtermColorRole_Cursor]));
+        float x = left + float(caret) * m.cell.x;
+        prDrawListRect(list, PrRect{x, top, x + 2 * cursorThickness(terminal), top + m.cell.y}, paint);
     }
 }
 
@@ -1938,6 +2035,7 @@ void draw(Terminal* terminal, PrLayoutNode screen, PrVec2 extent, double time) {
     shown.hasJump = terminal->hasJump;
     if (terminal->hasJump)
         shown.jumpLine = terminal->jumpLine;
+    shown.composition = terminal->compositionRevision;
     PrLayoutTree* tree = terminal->kit->tree;
     bool drawn = prLayoutNodeContent(tree, screen).kind == PrLayoutContentKind_DrawList;
     bool same = terminal->hasShown && isSame(shown, terminal->shown) &&
@@ -2005,7 +2103,10 @@ void draw(Terminal* terminal, PrLayoutNode screen, PrVec2 extent, double time) {
         prDrawListEmbed(list, terminal->rows.data[row].list, PrDVec2{0, double(row) * double(m.cell.y)});
     drawImages(terminal, list, 0, INT64_MAX);
     imagesTrim(terminal);
-    drawCursor(terminal, list, cursorOn);
+    if (terminal->composing)
+        drawComposition(terminal, list);
+    else
+        drawCursor(terminal, list, cursorOn);
 
     if (terminal->hasLink)
         drawLink(terminal, list);
@@ -2212,6 +2313,7 @@ void prTerminalDestroy(PrTerminal* PR_NULLABLE terminal) {
     prRawStringReset(&terminal->link.target);
     prRawStringReset(&terminal->opened.target);
     prRawStringReset(&terminal->paste);
+    prRawStringReset(&terminal->composition);
     prMemoryFree(terminal);
 }
 
@@ -2266,6 +2368,9 @@ void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, P
         terminal->focused = focused;
         terminal->blinkStart = time;
         prVtermInputFocus(vterm, focused);
+        // Nothing commits a composition once the view loses focus.
+        if (!focused)
+            compositionEnd(terminal);
     }
     service(terminal);
     snapshotTake(terminal, time);
@@ -2291,6 +2396,16 @@ void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, P
     PrLayoutNode screen = prLayoutTreeFrameReplaced(tree, node, 0, boxStyle(tree, extent));
     prUiSetFlags(ui, screen, PrUiFlag_Transparent);
     draw(terminal, screen, extent, time);
+
+    // The input method's windows open at the cursor's cell, or at the composition's first cell while there is one.
+    const TerminalSnapshot& snapshot = terminal->snapshot;
+    if (terminal->focused && !terminal->scrolledBack && snapshot.cursor.position.y < snapshot.lines.count) {
+        PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(tree, node, PrLayoutCoordinates_Viewport));
+        uint32_t column = terminal->composing ? terminal->compositionColumn : snapshot.cursor.position.x;
+        float left = bounds.left + kGutterWidth + float(column) * cell.x;
+        float top = bounds.top + float(snapshot.cursor.position.y) * cell.y;
+        prUiSetTextInput(ui, PrRect{left, top, left + cell.x, top + cell.y});
+    }
 
     // The user sees a terminal that shows in the active window, so its alerts clear.
     if (isWindowActive(terminal)) {
@@ -2320,6 +2435,7 @@ void prTerminalUpdate(PrTerminal* terminal) {
     if (terminal->focused) {
         terminal->focused = false;
         prVtermInputFocus(terminal->vterm, false);
+        compositionEnd(terminal);
     }
     service(terminal);
     unlockScreen(terminal);

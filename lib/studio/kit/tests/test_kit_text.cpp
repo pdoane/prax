@@ -518,6 +518,31 @@ TEST_CASE("marked text stays inside a value's edit until it commits") {
     CHECK(commits == 1);
 }
 
+TEST_CASE("the keys that an input method takes for its composition do not edit the text") {
+    Edited e("ab");
+    uint32_t commits = 0;
+    e.f.editContext = &commits;
+    e.f.edit = [](void* context, PrLayoutNode, PrUiEditPhase phase) {
+        *static_cast<uint32_t*>(context) += phase == PrUiEditPhase_Commit ? 1 : 0;
+    };
+    e.focus();
+
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = 'K', .text = "k"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "k"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = PrAppKey_Backspace});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "\xe3\x81\x8b"});
+    e.f.frame();
+    e.f.frame();
+    CHECK(prLayoutNodeText(e.f.tree, e.textNode()) == "ab\xe3\x81\x8b");
+
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = PrAppKey_Enter});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .text = "\xe3\x81\x8b"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"});
+    e.f.frame();
+    CHECK(e.text == "ab\xe3\x81\x8b");
+    CHECK(commits == 1);
+}
+
 TEST_CASE("text that the caller changes during a composition ends the composition") {
     Edited e("ab");
     e.focus();

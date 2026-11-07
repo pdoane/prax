@@ -343,7 +343,8 @@ const PrUiPayload* PR_NULLABLE prUiDropped(const PrUi* ui, PrLayoutNode node);
 //
 // Claims made in one round decide routing in the next. A key press goes to the nearest node, starting at the focused
 // node and walking up through its ancestors, that claimed the key. If nothing is focused, the walk starts at the root.
-// If no node claimed the key, it is used for focus traversal and activation.
+// If no node claimed the key, it is used for focus traversal and activation. A key press that the input method takes
+// for a composition (PrAppEvent::composing) is neither claimed nor captured. It goes to the focused node.
 bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers);
 
 // Captures `key` with exactly `modifiers` for the node, and returns true if such a key press was routed to the node in
