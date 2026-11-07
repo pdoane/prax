@@ -6,6 +6,7 @@
 #include "pr/ascii.h"
 #include "pr/float.h"
 #include "pr/media_audio.h"
+#include "pr/media_backend.h"
 #include "pr/memory.h"
 #include "pr/mime.h"
 #include "pr/mutex.h"
@@ -59,6 +60,7 @@ struct WindowsFrame {
 };
 
 struct WindowsDecoder : PrMediaDecoder {
+    PrGpuImportPixels pixels;       // the frame last returned, which its image points to (PrGpuImportKind_Pixels)
     IMFSourceReader* reader;
     DWORD videoStream;
     bool hasVideo;
@@ -552,62 +554,7 @@ HRESULT selectAudio(IMFSourceReader* reader, DWORD stream, uint32_t sampleRate, 
     return result;
 }
 
-PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
-    const wchar_t* container = containerType(bytes);
-    if (container == nullptr || bytes.size > UINT32_MAX)
-        return PrStatus_NotSupported;
-    IMFSourceReader* reader = nullptr;
-    HRESULT result = readerCreate(bytes, container, &reader);
-    if (FAILED(result))
-        return statusFromResult(result);
-    DWORD videoStream = 0;
-    DWORD audioStream = 0;
-    readStreams(reader, info, &videoStream, &audioStream);
-    if (!info->hasVideo && !info->hasAudio) {
-        reader->Release();
-        return PrStatus_InvalidData;
-    }
-    SampleLayout layout{};
-    if (info->hasVideo) {
-        result = selectVideo(reader, videoStream);
-        if (FAILED(result)) {
-            reader->Release();
-            return statusFromResult(result);
-        }
-        if (!readLayout(reader, videoStream, &layout)) {
-            reader->Release();
-            return PrStatus_InvalidData;
-        }
-    }
-    info->duration = kPrF64Nan;
-    PROPVARIANT duration{};
-    if (SUCCEEDED(reader->GetPresentationAttribute(DWORD(MF_SOURCE_READER_MEDIASOURCE), MF_PD_DURATION, &duration))) {
-        if (duration.vt == VT_UI8)
-            info->duration = double(duration.uhVal.QuadPart) / kTicksPerSecond;
-        PropVariantClear(&duration);
-    }
-    WindowsDecoder* d = allocZeroed<WindowsDecoder>();
-    if (info->hasAudio && FAILED(readerCreate(bytes, container, &d->audioReader)))
-        d->audioReader = nullptr;
-    d->audioStream = audioStream;
-    d->reader = reader;
-    d->videoStream = videoStream;
-    d->hasVideo = info->hasVideo;
-    d->layout = layout;
-    d->seekTo = kPrF64Nan;
-    d->through = -kPrF64Infinity;
-    d->ended = !info->hasVideo;
-    prMutexInit(&d->mutex);
-    prConditionInit(&d->wake);
-    if (info->hasVideo) {
-        d->seekTo = 0;
-        prThreadStart(&d->thread, [](void* context) { decodeFrames(static_cast<WindowsDecoder*>(context)); }, d);
-    }
-    *out = d;
-    return PrStatus_Ok;
-}
-
-void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
+void decoderDestroy(PrMediaDecoder* decoder) {
     WindowsDecoder* d = static_cast<WindowsDecoder*>(decoder);
     if (d->audioStarted) {
         prMediaAudioQueueStop(d->queue);
@@ -635,7 +582,7 @@ void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
     prMemoryFree(d);
 }
 
-bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
+bool decoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
     WindowsDecoder* d = static_cast<WindowsDecoder*>(decoder);
     prMutexLock(&d->mutex);
     d->wanted = seconds;
@@ -697,7 +644,7 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
     return true;
 }
 
-bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
+bool decoderAudioStart(PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
     WindowsDecoder* d = static_cast<WindowsDecoder*>(decoder);
     if (d->audioReader == nullptr || FAILED(selectAudio(d->audioReader, d->audioStream, sampleRate, channels)))
         return false;
@@ -707,16 +654,77 @@ bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRa
     return true;
 }
 
-void decoderAudioSeek(PrMediaCodec*, PrMediaDecoder* decoder, double seconds) {
+void decoderAudioSeek(PrMediaDecoder* decoder, double seconds) {
     prMediaAudioQueueSeek(static_cast<WindowsDecoder*>(decoder)->queue, seconds);
 }
 
-PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float* samples, uint32_t frames) {
+PrMediaAudioChunk decoderAudioRead(PrMediaDecoder* decoder, float* samples, uint32_t frames) {
     return prMediaAudioQueueRead(static_cast<WindowsDecoder*>(decoder)->queue, samples, frames);
 }
 
-void decoderAudioWait(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t frames) {
+void decoderAudioWait(PrMediaDecoder* decoder, uint32_t frames) {
     prMediaAudioQueueWait(static_cast<WindowsDecoder*>(decoder)->queue, frames);
+}
+
+PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+    const wchar_t* container = containerType(bytes);
+    if (container == nullptr || bytes.size > UINT32_MAX)
+        return PrStatus_NotSupported;
+    IMFSourceReader* reader = nullptr;
+    HRESULT result = readerCreate(bytes, container, &reader);
+    if (FAILED(result))
+        return statusFromResult(result);
+    DWORD videoStream = 0;
+    DWORD audioStream = 0;
+    readStreams(reader, info, &videoStream, &audioStream);
+    if (!info->hasVideo && !info->hasAudio) {
+        reader->Release();
+        return PrStatus_InvalidData;
+    }
+    SampleLayout layout{};
+    if (info->hasVideo) {
+        result = selectVideo(reader, videoStream);
+        if (FAILED(result)) {
+            reader->Release();
+            return statusFromResult(result);
+        }
+        if (!readLayout(reader, videoStream, &layout)) {
+            reader->Release();
+            return PrStatus_InvalidData;
+        }
+    }
+    info->duration = kPrF64Nan;
+    PROPVARIANT duration{};
+    if (SUCCEEDED(reader->GetPresentationAttribute(DWORD(MF_SOURCE_READER_MEDIASOURCE), MF_PD_DURATION, &duration))) {
+        if (duration.vt == VT_UI8)
+            info->duration = double(duration.uhVal.QuadPart) / kTicksPerSecond;
+        PropVariantClear(&duration);
+    }
+    WindowsDecoder* d = allocZeroed<WindowsDecoder>();
+    d->destroyFn = decoderDestroy;
+    d->frameFn = decoderFrame;
+    d->audioStartFn = decoderAudioStart;
+    d->audioSeekFn = decoderAudioSeek;
+    d->audioReadFn = decoderAudioRead;
+    d->audioWaitFn = decoderAudioWait;
+    if (info->hasAudio && FAILED(readerCreate(bytes, container, &d->audioReader)))
+        d->audioReader = nullptr;
+    d->audioStream = audioStream;
+    d->reader = reader;
+    d->videoStream = videoStream;
+    d->hasVideo = info->hasVideo;
+    d->layout = layout;
+    d->seekTo = kPrF64Nan;
+    d->through = -kPrF64Infinity;
+    d->ended = !info->hasVideo;
+    prMutexInit(&d->mutex);
+    prConditionInit(&d->wake);
+    if (info->hasVideo) {
+        d->seekTo = 0;
+        prThreadStart(&d->thread, [](void* context) { decodeFrames(static_cast<WindowsDecoder*>(context)); }, d);
+    }
+    *out = d;
+    return PrStatus_Ok;
 }
 
 void destroy(PrMediaCodec* codec) {
@@ -741,15 +749,9 @@ PrMediaCodec* PR_NULLABLE prMediaWindowsCreate(void) {
         return nullptr;
     }
     WindowsCodec* codec = allocZeroed<WindowsCodec>();
-    codec->destroy = destroy;
-    codec->supportsType = supportsType;
-    codec->decoderCreate = decoderCreate;
-    codec->decoderDestroy = decoderDestroy;
-    codec->decoderFrame = decoderFrame;
-    codec->decoderAudioStart = decoderAudioStart;
-    codec->decoderAudioSeek = decoderAudioSeek;
-    codec->decoderAudioRead = decoderAudioRead;
-    codec->decoderAudioWait = decoderAudioWait;
+    codec->destroyFn = destroy;
+    codec->supportsTypeFn = supportsType;
+    codec->decoderCreateFn = decoderCreate;
     codec->apartment = apartment;
     return codec;
 }

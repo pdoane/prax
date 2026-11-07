@@ -36,6 +36,10 @@ namespace pr_impl {
 
 namespace {
 
+// The functions of the device's objects, which their creation installs.
+extern const PrGpuCommands kCommandsFunctions;
+extern const PrGpuPass kPassFunctions;
+
 // The bind points by the index that VulkanCommands keeps their push descriptors' state at.
 constexpr VkPipelineBindPoint kBindPoints[2] = {VK_PIPELINE_BIND_POINT_GRAPHICS, VK_PIPELINE_BIND_POINT_COMPUTE};
 
@@ -44,7 +48,7 @@ VulkanPass* passOf(PrGpuPass* pass) {
 }
 
 VulkanCommands* commandsOfPass(PrGpuPass* pass) {
-    return static_cast<VulkanCommands*>(pass->commands);
+    return static_cast<VulkanCommands*>(static_cast<GpuSharedPass*>(pass)->commands);
 }
 
 // Marks the state of the command buffer that the device changed, which lasts past its passes into the application's
@@ -93,6 +97,8 @@ VulkanCommands* commandsTake(VulkanDevice* d) {
         d->freeCommands.pop();
     } else {
         c = allocZeroed<VulkanCommands>();
+        static_cast<PrGpuCommands&>(*c) = kCommandsFunctions;
+        static_cast<PrGpuPass&>(c->pass) = kPassFunctions;
     }
     c->device = d;
     c->native = false;
@@ -387,9 +393,11 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
     return true;
 }
 
-PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
+PrGpuFence commandsSubmit(PrGpuCommands* commands) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
+    gpuSharedSubmitted(c);
     // The application has ended its native command buffer, so the end of the work goes in a command buffer of the
     // device's own, which is submitted after it.
     VkCommandBuffer native = c->buffer;
@@ -458,7 +466,8 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     return fence;
 }
 
-void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
+void* commandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
     uint32_t slot = 0;
@@ -475,7 +484,8 @@ void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size
     return c->scratch.data;
 }
 
-void commandsSetPush(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size) {
+void commandsSetPush(PrGpuCommands* commands, const void* data, uint32_t size) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
     if (size != 0)
@@ -483,7 +493,8 @@ void commandsSetPush(PrGpuDevice* device, PrGpuCommands* commands, const void* d
     changed(c, PrGpuNativeStateFlag_Push);
 }
 
-void commandsSetUniforms(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size) {
+void commandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t size) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
     uint32_t slot = 0;
@@ -501,7 +512,8 @@ void commandsSetUniforms(PrGpuDevice* device, PrGpuCommands* commands, const voi
     c->pushDirty[0] = c->pushDirty[1] = true;
 }
 
-void commandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipeline pipeline) {
+void commandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
     const VulkanPipeline& p = d->pipelines.data[pipeline.id - 1];
@@ -511,22 +523,28 @@ void commandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipe
     changed(c, PrGpuNativeStateFlag_Pipeline);
 }
 
-void commandsDispatch(PrGpuDevice* device, PrGpuCommands* commands, PrGpuExtent groups) {
+void commandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
     flushPush(d, c, 1);
     d->vk.CmdDispatch(c->buffer, groups.width, groups.height, groups.depth);
 }
 
-void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset) {
+void commandsDispatchIndirect(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
     flushPush(d, c, 1);
     d->vk.CmdDispatchIndirect(c->buffer, vulkanResourceAt(d, buffer.id).buffer, offset);
 }
 
-void commandsCopyBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
+void commandsCopyBuffer(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
         PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VkBufferCopy copy{sourceOffset, targetOffset, size};
     d->vk.CmdCopyBuffer(vulkanCommands(commands)->buffer, vulkanResourceAt(d, source.id).buffer,
@@ -554,8 +572,10 @@ VkExtent3D extentOf(const VulkanResource& r, const PrGpuTextureRegion& region) {
     return VkExtent3D{region.extent.width, region.extent.height, is3d ? region.extent.depth : 1};
 }
 
-void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
+void commandsCopyTexture(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& from = vulkanResourceAt(d, source.id);
     const VulkanResource& to = vulkanResourceAt(d, target.id);
@@ -582,9 +602,11 @@ VkBufferImageCopy bufferCopyOf(const VulkanResource& texture, const PrGpuTexture
     return copy;
 }
 
-void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source,
+void commandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source,
         uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
         const PrGpuTextureRegion* targetRegion) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& to = vulkanResourceAt(d, target.id);
     VkBufferImageCopy copy = bufferCopyOf(to, *targetRegion, sourceOffset, rowBytes, layerBytes);
@@ -592,9 +614,11 @@ void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, P
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 }
 
-void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
+void commandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
         uint32_t layerBytes) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& from = vulkanResourceAt(d, source.id);
     VkBufferImageCopy copy = bufferCopyOf(from, *sourceRegion, targetOffset, rowBytes, layerBytes);
@@ -602,11 +626,12 @@ void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, P
         vulkanResourceAt(d, target.id).buffer, 1, &copy);
 }
 
-void commandsOnDone(PrGpuDevice*, PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
+void commandsOnDone(PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
     vulkanCommands(commands)->done.push(VulkanDoneCall{done, context});
 }
 
-void commandsPushGroup(PrGpuDevice* device, PrGpuCommands* commands, PrStringView name) {
+void commandsPushGroup(PrGpuCommands* commands, PrStringView name) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     if (d->vk.CmdBeginDebugUtilsLabelEXT == nullptr || d->messenger == VK_NULL_HANDLE)
         return;
@@ -620,7 +645,8 @@ void commandsPushGroup(PrGpuDevice* device, PrGpuCommands* commands, PrStringVie
     d->vk.CmdBeginDebugUtilsLabelEXT(vulkanCommands(commands)->buffer, &label);
 }
 
-void commandsPopGroup(PrGpuDevice* device, PrGpuCommands* commands) {
+void commandsPopGroup(PrGpuCommands* commands) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     if (d->vk.CmdEndDebugUtilsLabelEXT != nullptr && d->messenger != VK_NULL_HANDLE)
         d->vk.CmdEndDebugUtilsLabelEXT(vulkanCommands(commands)->buffer);
@@ -629,8 +655,9 @@ void commandsPopGroup(PrGpuDevice* device, PrGpuCommands* commands) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Barriers
 
-void commandsBufferBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before,
-        PrGpuAccessFlags after) {
+void commandsBufferBarrier(PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     Scope source = scopeOf(before);
     Scope target = scopeOf(after);
@@ -664,8 +691,10 @@ VkImageSubresourceRange rangeOf(const VulkanResource& r, PrGpuSubresources s) {
     return range;
 }
 
-void commandsTextureBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture,
+void commandsTextureBarrier(PrGpuCommands* commands, PrGpuTexture texture,
         PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& r = vulkanResourceAt(d, texture.id);
     Scope source = scopeOf(before);
@@ -692,7 +721,9 @@ void commandsTextureBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuT
     d->vk.CmdPipelineBarrier2(vulkanCommands(commands)->buffer, &dependency);
 }
 
-void commandsGlobalBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+void commandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     Scope source = scopeOf(before);
     Scope target = scopeOf(after);
@@ -777,9 +808,11 @@ void beginRendering(VulkanDevice* d, VulkanCommands* c) {
     d->vk.CmdBeginRendering(c->buffer, &info);
 }
 
-PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc) {
+PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
+    gpuSharedPassBegan(c);
     VulkanPass& pass = c->pass;
     pass.localRead = false;
     pass.copied = false;
@@ -839,7 +872,7 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
     coverPass(d, c, pass.extent);
     pass.named = desc->name.size != 0;
     if (pass.named)
-        commandsPushGroup(device, commands, desc->name);
+        commandsPushGroup(commands, desc->name);
     return &pass;
 }
 
@@ -947,12 +980,12 @@ bool takeTargetCopy(VulkanDevice* d, VulkanCommands* c) {
             extent.x = held.extent.width > extent.x ? held.extent.width : extent.x;
             extent.y = held.extent.height > extent.y ? held.extent.height : extent.y;
         }
-        d->textureDestroy(d, c->targetCopy);
+        d->textureDestroyFn(d, c->targetCopy);
         c->targetCopy = PrGpuTexture{};
     }
     PrGpuTextureDesc desc = prGpuTextureDesc2d(format, extent, PrGpuTextureUsageFlag_Sampled);
     desc.name = "target copy";
-    return d->textureCreate(d, &desc, &c->targetCopy) == PrStatus_Ok;
+    return d->textureCreateFn(d, &desc, &c->targetCopy) == PrStatus_Ok;
 }
 
 // Prepares a draw that samples a copy of its target. The draw samples the copy of the pass's first color attachment at
@@ -1021,12 +1054,14 @@ void prepareTargetRead(VulkanDevice* d, VulkanCommands* c) {
         copyTarget(d, c);
 }
 
-void passEnd(PrGpuDevice* device, PrGpuPass* pass) {
+void passEnd(PrGpuPass* pass) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanPass* p = passOf(pass);
     VulkanCommands* c = commandsOfPass(pass);
     if (p->native) {
         p->native = false;
+        gpuSharedPassEnded(c);
         return;
     }
     d->vk.CmdEndRendering(c->buffer);
@@ -1035,13 +1070,15 @@ void passEnd(PrGpuDevice* device, PrGpuPass* pass) {
     p->localRead = false;
     p->copied = false;
     if (p->named)
-        commandsPopGroup(device, pass->commands);
+        commandsPopGroup(c);
+    gpuSharedPassEnded(c);
 }
 
 // Hands the pass's command buffer to a native draw, within the pass's rendering, then binds the device's set again if
 // it has one of its own, covers the pass with the viewport and the scissor, and leaves the pass's pipeline and root
 // data unset. An application's pass reports every state as changed, since the native draw may have changed any of it.
-void passNativeDraw(PrGpuDevice* device, PrGpuPass* pass, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+void passNativeDraw(PrGpuPass* pass, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     PrGpuVulkanNativePass native{
@@ -1052,28 +1089,30 @@ void passNativeDraw(PrGpuDevice* device, PrGpuPass* pass, PrGpuNativeKind, PrGpu
     if (d->ownsDescriptors)
         d->vk.CmdBindDescriptorSets(c->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, d->layout, VulkanSet_Bindless, 1, &d->set,
             0, nullptr);
-    coverPass(d, c, pass->extent);
+    coverPass(d, c, c->pass.extent);
     c->pipeline = 0;
     c->pushDirty[0] = c->pushDirty[1] = true;
     changed(c, PrGpuNativeStateFlags(~0u));
 }
 
-PrGpuNativeStateFlags nativeStateSync(PrGpuDevice*, PrGpuCommands* commands) {
+PrGpuNativeStateFlags nativeStateSync(PrGpuCommands* commands) {
     VulkanCommands* c = vulkanCommands(commands);
     PrGpuNativeStateFlags flags = c->changed;
     c->changed = 0;
     return flags;
 }
 
-void passSetViewport(PrGpuDevice* device, PrGpuPass* pass, PrRect viewport, float minDepth, float maxDepth) {
+void passSetViewport(PrGpuPass* pass, PrRect viewport, float minDepth, float maxDepth) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanCommands* c = commandsOfPass(pass);
     setViewport(vulkanDevice(device), c, viewport, minDepth, maxDepth);
     changed(c, PrGpuNativeStateFlag_Viewport);
 }
 
-void passSetScissor(PrGpuDevice* device, PrGpuPass* pass, PrIRect scissor) {
+void passSetScissor(PrGpuPass* pass, PrIRect scissor) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanCommands* c = commandsOfPass(pass);
-    PrUVec2 extent = pass->extent;
+    PrUVec2 extent = c->pass.extent;
     int32_t left = scissor.left < 0 ? 0 : scissor.left;
     int32_t top = scissor.top < 0 ? 0 : scissor.top;
     int32_t right = scissor.right > int32_t(extent.x) ? int32_t(extent.x) : scissor.right;
@@ -1084,20 +1123,23 @@ void passSetScissor(PrGpuDevice* device, PrGpuPass* pass, PrIRect scissor) {
     changed(c, PrGpuNativeStateFlag_Scissor);
 }
 
-void passSetBlendConstant(PrGpuDevice* device, PrGpuPass* pass, PrColor constant) {
+void passSetBlendConstant(PrGpuPass* pass, PrColor constant) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanCommands* c = commandsOfPass(pass);
     float values[4] = {constant.r, constant.g, constant.b, constant.a};
     vulkanDevice(device)->vk.CmdSetBlendConstants(c->buffer, values);
     changed(c, PrGpuNativeStateFlag_BlendConstant);
 }
 
-void passSetStencilReference(PrGpuDevice* device, PrGpuPass* pass, uint8_t reference) {
+void passSetStencilReference(PrGpuPass* pass, uint8_t reference) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanCommands* c = commandsOfPass(pass);
     vulkanDevice(device)->vk.CmdSetStencilReference(c->buffer, VK_STENCIL_FACE_FRONT_AND_BACK, reference);
     changed(c, PrGpuNativeStateFlag_StencilReference);
 }
 
-void passSetIndexBuffer(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, bool wide) {
+void passSetIndexBuffer(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, bool wide) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     d->vk.CmdBindIndexBuffer(c->buffer, vulkanResourceAt(d, buffer.id).buffer, offset,
@@ -1112,32 +1154,34 @@ void prepareDraw(VulkanDevice* d, VulkanCommands* c) {
     flushPush(d, c, 0);
 }
 
-void passDraw(PrGpuDevice* device, PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
+void passDraw(PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
         uint32_t firstInstance) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     prepareDraw(d, c);
     d->vk.CmdDraw(c->buffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
-void passDrawIndexed(PrGpuDevice* device, PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount,
+void passDrawIndexed(PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount,
         uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     prepareDraw(d, c);
     d->vk.CmdDrawIndexed(c->buffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
-void passDrawIndirect(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-        uint32_t stride) {
+void passDrawIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     prepareDraw(d, c);
     d->vk.CmdDrawIndirect(c->buffer, vulkanResourceAt(d, buffer.id).buffer, offset, count, stride);
 }
 
-void passDrawIndexedIndirect(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-        uint32_t stride) {
+void passDrawIndexedIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(pass)->commands->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     prepareDraw(d, c);
@@ -1186,6 +1230,48 @@ void retire(VulkanDevice* d, VulkanCommands* c, bool lost) {
     vulkanRetireDone(d);
     prMutexUnlock(&d->mutex);
 }
+
+// The functions of the device's objects.
+constexpr PrGpuCommands kCommandsFunctions = {
+    .deviceFn = gpuSharedCommandsDevice,
+    .submitFn = commandsSubmit,
+    .streamFn = commandsStream,
+    .setPushFn = commandsSetPush,
+    .setUniformsFn = commandsSetUniforms,
+    .setPipelineFn = commandsSetPipeline,
+    .dispatchFn = commandsDispatch,
+    .dispatchIndirectFn = commandsDispatchIndirect,
+    .copyBufferFn = commandsCopyBuffer,
+    .copyTextureFn = commandsCopyTexture,
+    .copyBufferToTextureFn = commandsCopyBufferToTexture,
+    .copyTextureToBufferFn = commandsCopyTextureToBuffer,
+    .generateMipmapsFn = gpuSharedGenerateMipmaps,
+    .onDoneFn = commandsOnDone,
+    .pushGroupFn = commandsPushGroup,
+    .popGroupFn = commandsPopGroup,
+    .bufferBarrierFn = commandsBufferBarrier,
+    .textureBarrierFn = commandsTextureBarrier,
+    .globalBarrierFn = commandsGlobalBarrier,
+    .nativeStateSyncFn = nativeStateSync,
+    .passBeginFn = passBegin,
+};
+
+constexpr PrGpuPass kPassFunctions = {
+    .commandsFn = gpuSharedPassCommands,
+    .formatsFn = gpuSharedPassFormats,
+    .extentFn = gpuSharedPassExtent,
+    .endFn = passEnd,
+    .nativeDrawFn = passNativeDraw,
+    .setViewportFn = passSetViewport,
+    .setScissorFn = passSetScissor,
+    .setBlendConstantFn = passSetBlendConstant,
+    .setStencilReferenceFn = passSetStencilReference,
+    .setIndexBufferFn = passSetIndexBuffer,
+    .drawFn = passDraw,
+    .drawIndexedFn = passDrawIndexed,
+    .drawIndirectFn = passDrawIndirect,
+    .drawIndexedIndirectFn = passDrawIndexedIndirect,
+};
 
 } // namespace
 
@@ -1250,40 +1336,10 @@ void vulkanCommandsReset(VulkanDevice* d) {
 }
 
 void vulkanCommandsFunctions(VulkanDevice* d) {
-    d->isComplete = isComplete;
-    d->wait = wait;
-    d->waitIdle = waitIdle;
-    d->commandsBegin = commandsBegin;
-    d->commandsSubmit = commandsSubmit;
-    d->commandsStream = commandsStream;
-    d->commandsSetPush = commandsSetPush;
-    d->commandsSetUniforms = commandsSetUniforms;
-    d->commandsSetPipeline = commandsSetPipeline;
-    d->commandsDispatch = commandsDispatch;
-    d->commandsDispatchIndirect = commandsDispatchIndirect;
-    d->commandsCopyBuffer = commandsCopyBuffer;
-    d->commandsCopyTexture = commandsCopyTexture;
-    d->commandsCopyBufferToTexture = commandsCopyBufferToTexture;
-    d->commandsCopyTextureToBuffer = commandsCopyTextureToBuffer;
-    d->commandsOnDone = commandsOnDone;
-    d->commandsPushGroup = commandsPushGroup;
-    d->commandsPopGroup = commandsPopGroup;
-    d->commandsBufferBarrier = commandsBufferBarrier;
-    d->commandsTextureBarrier = commandsTextureBarrier;
-    d->commandsGlobalBarrier = commandsGlobalBarrier;
-    d->passBegin = passBegin;
-    d->passEnd = passEnd;
-    d->nativeStateSync = nativeStateSync;
-    d->passNativeDraw = passNativeDraw;
-    d->passSetViewport = passSetViewport;
-    d->passSetScissor = passSetScissor;
-    d->passSetBlendConstant = passSetBlendConstant;
-    d->passSetStencilReference = passSetStencilReference;
-    d->passSetIndexBuffer = passSetIndexBuffer;
-    d->passDraw = passDraw;
-    d->passDrawIndexed = passDrawIndexed;
-    d->passDrawIndirect = passDrawIndirect;
-    d->passDrawIndexedIndirect = passDrawIndexedIndirect;
+    d->isCompleteFn = isComplete;
+    d->waitFn = wait;
+    d->waitIdleFn = waitIdle;
+    d->commandsBeginFn = commandsBegin;
 }
 
 } // namespace pr_impl

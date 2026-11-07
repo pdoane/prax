@@ -179,38 +179,6 @@ typedef struct PrTextGlyph {
     PrTextGlyphFlags flags;
 } PrTextGlyph;
 
-// A shaper, placed at the start of the backend's state. It holds the functions that the backend implements, each named
-// for what it does, and the sizes of the state that the backend keeps for a face and for a font.
-//
-// A face is a face of a font file as the backend reads it, and every font made from those bytes shares it. A variable
-// instance or a derived font differs from its base in its design point and features, not in its tables, and reading the
-// tables is the costly part. The state of a font therefore holds only what the font adds to its face. The shaper keeps
-// the states of the fonts that it shaped with most recently, and of the faces that they read. Each state starts zeroed
-// and stays at its address while it is kept. The shaper keeps alive the bytes that a face reads.
-//
-// prTextShaperShape passes `shape` the states of the font and face of the run. The run that it passes has its kerning,
-// caps and position already expressed as features, with the font's own features before the run's. Its script is the one
-// that the text starts in, which is Zzzz only for text with no script other than Common and Inherited.
-// prTextShaperShape then scales and marks the glyphs that `shape` appends. One thread uses a shaper at a time. Threads
-// that shape at the same time each use a shaper of their own.
-struct PrTextShaper {
-    void (*PR_NULLABLE destroy)(PrTextShaper* shaper);
-    PrStatus (*shape)(PrTextShaper* shaper, void* face, void* font, const PrTextRun* run, PrTextGlyphBuffer* out);
-
-    uint32_t faceSize;
-    uint32_t fontSize;
-
-    // Reads the face for the bytes and index of the font. Returns false if the backend cannot read it.
-    bool (*createFace)(PrTextShaper* shaper, const PrFont* font, void* face);
-    void (*destroyFace)(PrTextShaper* shaper, void* face);
-
-    // Creates the state of the font over the face that it reads.
-    void (*createFont)(PrTextShaper* shaper, void* face, const PrFont* font, void* state);
-    void (*destroyFont)(PrTextShaper* shaper, void* state);
-
-    struct PrTextFontCache* PR_NULLABLE fonts;      // the kept states; the backend leaves this field zeroed
-};
-
 // The library's backends of shapers, which the build turns on (README.md), and Default, the first that the build has of
 // HarfBuzz, kb, CoreText and the simple shaper.
 enum {

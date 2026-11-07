@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/http_backend.h"
 
 #if defined(PR_HTTP_HAS_BUILTIN)
 #include "pr/http_builtin.h"
@@ -61,47 +62,47 @@ PrHttp* PR_NULLABLE prHttpCreate(PrHttpBackend backend, const PrHttpDesc* desc) 
 
 void prHttpDestroy(PrHttp* PR_NULLABLE http) {
     if (http != nullptr)
-        http->destroy(http);
+        http->destroyFn(http);
 }
 
 PrStatus prHttpExchangeCreate(PrHttp* http, const PrHttpRequestDesc* desc, PrHttpExchange* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(desc->headers != nullptr || desc->headerCount == 0);
     PR_ASSERT(desc->body.data != nullptr || desc->body.size == 0);
     *out = nullptr;
-    PrStatus status = http->exchangeCreate(http, desc, out);
-    PR_ASSERT(status != PrStatus_Ok || ((*out) != nullptr && (*out)->http == http));
+    PrStatus status = http->exchangeCreateFn(http, desc, out);
+    PR_ASSERT(status != PrStatus_Ok || *out != nullptr);
     return status;
 }
 
 void prHttpExchangeDestroy(PrHttpExchange* PR_NULLABLE exchange) {
     if (exchange != nullptr)
-        exchange->http->exchangeDestroy(exchange->http, exchange);
+        exchange->destroyFn(exchange);
 }
 
 uint16_t prHttpExchangeStatus(const PrHttpExchange* exchange) {
-    return exchange->http->exchangeStatus(exchange->http, exchange);
+    return exchange->statusFn(exchange);
 }
 
 uint32_t prHttpExchangeHeaderCount(const PrHttpExchange* exchange) {
-    return exchange->http->exchangeHeaderCount(exchange->http, exchange);
+    return exchange->headerCountFn(exchange);
 }
 
 PrHttpHeader prHttpExchangeHeader(const PrHttpExchange* exchange, uint32_t index) {
     PR_ASSERT(index < prHttpExchangeHeaderCount(exchange));
-    return exchange->http->exchangeHeader(exchange->http, exchange, index);
+    return exchange->headerFn(exchange, index);
 }
 
 size_t prHttpExchangeRead(PrHttpExchange* exchange, uint8_t* PR_NULLABLE output, size_t capacity) {
     PR_ASSERT(output != nullptr || capacity == 0);
     if (capacity == 0)
         return 0;
-    return exchange->http->exchangeRead(exchange->http, exchange, output, capacity);
+    return exchange->readFn(exchange, output, capacity);
 }
 
 PrNetError prHttpExchangeError(const PrHttpExchange* exchange) {
-    return exchange->http->exchangeError(exchange->http, exchange);
+    return exchange->errorFn(exchange);
 }
 
 PrStringView prHttpExchangeProtocol(const PrHttpExchange* exchange) {
-    return exchange->http->exchangeProtocol(exchange->http, exchange);
+    return exchange->protocolFn(exchange);
 }

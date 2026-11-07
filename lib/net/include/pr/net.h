@@ -63,34 +63,6 @@ typedef struct PrNetConnectDesc {
     void* PR_NULLABLE context;
 } PrNetConnectDesc;
 
-// The function table of a network, placed at the start of the backend's state. Each member implements the public
-// function of the same name. Callers use the functions below, never these members.
-struct PrNet {
-    void (*destroy)(PrNet* net);
-    void (*post)(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context);
-
-    // Null for a backend whose loop is a thread of its own, which prNetPostBlocking waits for.
-    void (*PR_NULLABLE postBlocking)(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context);
-    PrStatus (*connect)(PrNet* net, const PrNetConnectDesc* desc, PrNetStream* PR_NULLABLE* PR_NONNULL out);
-};
-
-// The start of every stream's state: the function table of the stream's backend, then the network whose loop runs the
-// stream's callbacks and the client's callback. Each member of the table implements the public function of the same
-// name. A null `finish` means the stream cannot end its sending side alone. Callers use the functions below, never
-// these members.
-struct PrNetStream {
-    void (*destroy)(PrNetStream* stream);
-    size_t (*read)(PrNetStream* stream, uint8_t* output, size_t capacity);
-    void (*write)(PrNetStream* stream, PrByteView bytes);
-    PrStatus (*PR_NULLABLE finish)(PrNetStream* stream);
-    size_t (*queued)(const PrNetStream* stream);
-    PrNetError (*error)(const PrNetStream* stream);
-
-    PrNet* net;
-    PrNetStreamFn PR_NULLABLE event;
-    void* PR_NULLABLE context;
-};
-
 // The library's backends of networks, which the build turns on (README.md), and Default, the first that the build has.
 enum {
     PrNetBackend_Default,

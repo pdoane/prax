@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/tls_backend.h"
 
 #if defined(PR_TLS_HAS_APPLE)
 #include "pr/tls_apple.h"
@@ -80,20 +81,19 @@ PrTls* PR_NULLABLE prTlsCreate(PrTlsBackend backend, PrNet* net) {
 }
 
 void prTlsDestroy(PrTls* PR_NULLABLE tls) {
-    if (tls != nullptr && tls->destroy != nullptr)
-        tls->destroy(tls);
+    if (tls != nullptr)
+        tls->destroyFn(tls);
 }
 
 PrStatus prTlsConnect(PrTls* tls, const PrTlsSessionDesc* desc, PrTlsSession* PR_NULLABLE* PR_NONNULL out) {
-    PR_ASSERT(desc->transport == nullptr || desc->transport->net == tls->net);
     PR_ASSERT(desc->protocols != nullptr || desc->protocolCount == 0);
     PR_ASSERT(desc->anchors != nullptr || desc->anchorCount == 0);
     *out = nullptr;
-    PrStatus status = tls->connect(tls, desc, out);
-    PR_ASSERT(status != PrStatus_Ok || ((*out) != nullptr && (*out)->stream.net == tls->net));
+    PrStatus status = tls->connectFn(tls, desc, out);
+    PR_ASSERT(status != PrStatus_Ok || *out != nullptr);
     return status;
 }
 
 PrTlsSessionInfo prTlsSessionInfo(const PrTlsSession* session) {
-    return session->info(session);
+    return session->infoFn(session);
 }

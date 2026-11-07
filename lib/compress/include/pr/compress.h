@@ -17,7 +17,7 @@ extern "C" {
 // A source of decoders. Each backend provides its own constructor.
 typedef struct PrCompressCodec PrCompressCodec;
 
-// One compressed stream being decoded. Only the codec that made it reads it.
+// One compressed stream being decoded.
 typedef struct PrCompressDecoder PrCompressDecoder;
 
 // The encodings a decoder reads. A decoder checks the checksums of the framed formats.
@@ -51,28 +51,6 @@ typedef struct PrCompressRead {
     size_t written;                 // number of output bytes written
     PrCompressProgress progress;
 } PrCompressRead;
-
-// The start of every decoder's state. `codec` is the codec that made the decoder.
-struct PrCompressDecoder {
-    PrCompressCodec* codec;
-};
-
-// The function table of a codec, placed at the start of the backend's state. Each member implements the public function
-// of the same name. A null `destroy` means there is nothing to free. A null `decodes` means the codec decodes every
-// format. Null `encodeBound` and `encode` mean the codec encodes nothing. Callers use the functions below, never these
-// members.
-struct PrCompressCodec {
-    void (*PR_NULLABLE destroy)(PrCompressCodec* codec);
-    bool (*PR_NULLABLE decodes)(PrCompressCodec* codec, PrCompressFormat format);
-    PrStatus (*decoderCreate)(PrCompressCodec* codec, PrCompressFormat format,
-        PrCompressDecoder* PR_NULLABLE* PR_NONNULL out);
-    void (*decoderDestroy)(PrCompressCodec* codec, PrCompressDecoder* decoder);
-    PrStatus (*decoderRead)(PrCompressCodec* codec, PrCompressDecoder* decoder, PrByteView input,
-        bool final, uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out);
-    size_t (*PR_NULLABLE encodeBound)(PrCompressCodec* codec, PrCompressFormat format, size_t size);
-    PrStatus (*PR_NULLABLE encode)(PrCompressCodec* codec, PrCompressFormat format, PrCompressLevel level,
-        PrByteView input, uint8_t* output, size_t* written);
-};
 
 // The library's backends of codecs, which the build turns on (README.md), and Default, the first that the build has.
 enum {

@@ -64,66 +64,6 @@ typedef struct PrMediaAudioChunk {
     bool ended;             // no frames follow until the decoder seeks
 } PrMediaAudioChunk;
 
-// The start of every decoder's state. `codec` is the codec that created the decoder. A codec that decodes into memory
-// keeps the handle of the frame that it last returned in `pixels` (PrGpuImportKind_Pixels).
-struct PrMediaDecoder {
-    PrMediaCodec* codec;
-    PrGpuImportPixels pixels;
-};
-
-// A decoder of one track's coded frames, one frame at a time, which a codec creates for a media source. It is used by
-// one thread at a time. `kind` is the kind of its track.
-typedef struct PrMediaSampleDecoder PrMediaSampleDecoder;
-struct PrMediaSampleDecoder {
-    PrMediaCodec* codec;
-    PrMediaTrackKind kind;
-};
-
-// What a sample decoder produces as it decodes, during the call that decodes. A video decoder gives images, each with
-// one reference that passes to the sink, which the codec's imageRelease releases. An audio decoder gives interleaved
-// samples in the format that it was created for, which are valid only during the call, and `time` says where the first
-// lies on the track's timeline.
-typedef struct PrMediaSampleSink {
-    void (*PR_NULLABLE image)(void* PR_NULLABLE context, void* image, double presentation);
-    void (*PR_NULLABLE samples)(void* PR_NULLABLE context, const float* samples, uint32_t frames, double time);
-    void* PR_NULLABLE context;
-} PrMediaSampleSink;
-
-// The function table of a codec, placed at the start of the backend's state. Each function member implements the public
-// function of the same name. A null `destroy` means there is nothing to free, a null `decoderFrame` that the codec
-// decodes no frames, and a null `decoderAudioStart` that it decodes no audio, and then `decoderAudioSeek`,
-// `decoderAudioRead` and `decoderAudioWait` are null too. A null `decoderAudioWait` means that its audio is read
-// without waiting. Callers use the functions below, never these members.
-//
-// The sample members decode the coded frames of media sources. A null `sampleDecoderCreate` means that the codec
-// decodes none, and then the other sample members are null too, and a null `supportsSourceType` means that the codec's
-// answer for a media source is its answer for a resource. `sampleDecode` returns false if the frame does not decode,
-// and `sampleDecoderFlush` drops what the decoder holds of the frames before, for a jump on the timeline. An image is a
-// decoded video frame: `imageImport` writes it as an image to import, which stays valid until `imageRelease`.
-struct PrMediaCodec {
-    void (*PR_NULLABLE destroy)(PrMediaCodec* codec);
-    PrMediaSupport (*supportsType)(PrMediaCodec* codec, PrStringView type);
-    PrStatus (*decoderCreate)(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
-        PrMediaInfo* info);
-    void (*decoderDestroy)(PrMediaCodec* codec, PrMediaDecoder* decoder);
-    bool (*PR_NULLABLE decoderFrame)(PrMediaCodec* codec, PrMediaDecoder* decoder, double seconds, PrMediaFrame* out);
-    bool (*PR_NULLABLE decoderAudioStart)(PrMediaCodec* codec, PrMediaDecoder* decoder, uint32_t sampleRate,
-        uint32_t channels, double seconds);
-    void (*PR_NULLABLE decoderAudioSeek)(PrMediaCodec* codec, PrMediaDecoder* decoder, double seconds);
-    PrMediaAudioChunk (*PR_NULLABLE decoderAudioRead)(PrMediaCodec* codec, PrMediaDecoder* decoder, float* samples,
-        uint32_t frames);
-    void (*PR_NULLABLE decoderAudioWait)(PrMediaCodec* codec, PrMediaDecoder* decoder, uint32_t frames);
-    PrMediaSupport (*PR_NULLABLE supportsSourceType)(PrMediaCodec* codec, PrStringView type);
-    PrStatus (*PR_NULLABLE sampleDecoderCreate)(PrMediaCodec* codec, const PrMediaTrackInfo* track, uint32_t sampleRate,
-        uint32_t channels, PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out);
-    void (*PR_NULLABLE sampleDecoderDestroy)(PrMediaCodec* codec, PrMediaSampleDecoder* decoder);
-    bool (*PR_NULLABLE sampleDecode)(PrMediaCodec* codec, PrMediaSampleDecoder* decoder,
-        const PrMediaBufferedFrame* frame, const PrMediaSampleSink* sink);
-    void (*PR_NULLABLE sampleDecoderFlush)(PrMediaCodec* codec, PrMediaSampleDecoder* decoder);
-    void (*PR_NULLABLE imageImport)(PrMediaCodec* codec, void* image, PrGpuImport* out);
-    void (*PR_NULLABLE imageRelease)(PrMediaCodec* codec, void* image);
-};
-
 // The library's codec backends, which the build turns on (README.md), and Default. Default is the first backend in the
 // build whose constructor succeeds, trying the platform's own first.
 enum {

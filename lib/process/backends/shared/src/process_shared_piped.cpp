@@ -79,10 +79,10 @@ PrProcessInfo infoOf(const PrProcess* base) {
 } // namespace
 
 void processPipedInit(ProcessPiped* process, const PrProcessDesc* desc, ProcessPipedNotifyFn notify) {
-    process->write = writeProcess;
-    process->closeInput = closeInput;
-    process->read = readProcess;
-    process->info = infoOf;
+    process->writeFn = writeProcess;
+    process->closeInputFn = closeInput;
+    process->readFn = readProcess;
+    process->infoFn = infoOf;
     process->notify = notify;
     process->wake = desc->wake;
     process->wakeContext = desc->wakeContext;

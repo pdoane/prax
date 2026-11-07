@@ -1,10 +1,11 @@
 # GPUs: the interface, and the backends that the build turns on.
 pr_library(gpu INCLUDE include
     src/gpu.cpp
+    backends/shared/src/gpu_shared_device.cpp
     backends/shared/src/gpu_shared_upload.cpp
 )
 target_link_libraries(pr_gpu PUBLIC prax::core prax::geom prax::app prax::color PRIVATE prax::core_cpp)
-pr_slang(pr_gpu src/gpu_mipmaps.slang VARIABLE kGpuMipmapShaders)
+pr_slang(pr_gpu backends/shared/src/gpu_shared_mipmaps.slang VARIABLE kGpuSharedMipmapShaders)
 # On Apple's platforms, any device copies a CVPixelBuffer that it does not import in place.
 if (APPLE)
     target_sources(pr_gpu PRIVATE src/gpu_corevideo.mm)

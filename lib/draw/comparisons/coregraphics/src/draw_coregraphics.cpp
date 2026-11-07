@@ -15,6 +15,7 @@
 #include "pr/draw_glyph.h"
 #include "pr/draw_lower.h"
 #include "pr/draw_projection.h"
+#include "pr/draw_renderer_backend.h"
 #include "pr/draw_transform.h"
 #include "pr/float.h"
 #include "pr/hash.h"
@@ -61,6 +62,7 @@ struct SizedFont {
 };
 
 struct CgBackend : PrDrawRenderer {
+    PrGpuDevice* device;
     bool ownsDevice;                    // true if the renderer created its device, and frees it
     PrDrawCoreGraphicsOptions options;
     CGColorSpaceRef srgb;
@@ -1305,10 +1307,6 @@ void destroyBackend(PrDrawRenderer* renderer) {
     prMemoryFree(cg);
 }
 
-void destroyFrame(PrDrawRenderer*, PrDrawFrame* frame) {
-    drawMemoryFrameDestroy(static_cast<DrawMemoryFrame*>(frame));
-}
-
 // Drops the cached data that the render did not use.
 void endRender(CgBackend* cg) {
     uint32_t kept = 0;
@@ -1356,19 +1354,12 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
     endRender(cg);
 }
 
+PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
+    return static_cast<const CgBackend*>(renderer)->device;
+}
+
 PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
     return drawMemoryFrameCreate(renderer, renderPixels, false);
-}
-
-// Keeps the part of the list, which renders when the frame's pass runs.
-PrStatus prepare(PrDrawRenderer*, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
-        const PrDrawTarget*) {
-    drawMemoryFramePrepare(static_cast<DrawMemoryFrame*>(frame), list, *part);
-    return PrStatus_Ok;
-}
-
-void renderFrame(PrDrawRenderer*, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
-    drawMemoryFrameRender(static_cast<DrawMemoryFrame*>(frame), pass, origin);
 }
 
 } // namespace
@@ -1392,11 +1383,9 @@ PrDrawRenderer* PR_NULLABLE prDrawCoreGraphicsCreate(const PrDrawCoreGraphicsOpt
     cg->ownsDevice = owned;
     cg->options = o;
     cg->glyphs = prDrawGlyphCacheCreate(cg->options.glyphDecoder);
-    cg->destroy = destroyBackend;
-    cg->frameCreate = createFrame;
-    cg->frameDestroy = destroyFrame;
-    cg->framePrepare = prepare;
-    cg->frameRender = renderFrame;
+    cg->destroyFn = destroyBackend;
+    cg->frameCreateFn = createFrame;
+    cg->deviceFn = rendererDevice;
     cg->srgb = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     cg->extended = CGColorSpaceCreateWithName(kCGColorSpaceExtendedSRGB);
     cg->gray = CGColorSpaceCreateDeviceGray();

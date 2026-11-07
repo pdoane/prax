@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/draw_image.h"
+#include "pr/draw_renderer_backend.h"
 #include "pr/mem.h"
 #include "pr/pixels.h"
 #include "pr/raw_array.h"
@@ -25,17 +26,16 @@ struct CachedTexture {
 };
 
 struct ImGuiGpu : ImGuiBackend {
+    PrGpuDevice* device;
     RawArray<CachedTexture> textures;
 };
 
-PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
-    ImGuiFrame* frame = allocZeroed<ImGuiFrame>();
-    frame->renderer = renderer;
-    return frame;
+PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
+    return static_cast<const ImGuiGpu*>(renderer)->device;
 }
 
-void destroyFrame(PrDrawRenderer* renderer, PrDrawFrame* handle) {
-    ImGui::SetCurrentContext(static_cast<ImGuiGpu*>(renderer)->context);
+void destroyFrame(PrDrawFrame* handle) {
+    ImGui::SetCurrentContext(static_cast<ImGuiFrame*>(handle)->renderer->context);
     ImGuiFrame* frame = static_cast<ImGuiFrame*>(handle);
     imguiFrameClear(frame);
     prMemoryFree(frame);
@@ -54,11 +54,10 @@ void dropUnusedTextures(ImGuiGpu* g) {
     g->textures.count = kept;
 }
 
-PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* part,
-        const PrDrawTarget* target) {
-    ImGuiGpu* g = static_cast<ImGuiGpu*>(renderer);
-    ImGui::SetCurrentContext(g->context);
+PrStatus prepare(PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* part, const PrDrawTarget* target) {
     ImGuiFrame* frame = static_cast<ImGuiFrame*>(handle);
+    ImGuiGpu* g = static_cast<ImGuiGpu*>(frame->renderer);
+    ImGui::SetCurrentContext(g->context);
     imguiFrameClear(frame);
     ++g->render;
     imguiRecord(g, frame, list, *part, target);
@@ -68,14 +67,23 @@ PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList
 
 // Draws the lists with the render's pixel (0, 0) at `origin`. Their projection starts at the negated origin over the
 // whole attachments. Every draw has a clip at the render's bounds, which keeps it within the render.
-void render(PrDrawRenderer* renderer, PrDrawFrame* handle, PrGpuPass* pass, PrIVec2 origin) {
-    ImGui::SetCurrentContext(static_cast<ImGuiGpu*>(renderer)->context);
+void render(PrDrawFrame* handle, PrGpuPass* pass, PrIVec2 origin) {
+    ImGui::SetCurrentContext(static_cast<ImGuiFrame*>(handle)->renderer->context);
     ImGuiFrame* frame = static_cast<ImGuiFrame*>(handle);
     PrUVec2 extent = prGpuPassExtent(pass);
     frame->data.DisplayPos = ImVec2(-float(origin.x), -float(origin.y));
     frame->data.DisplaySize = ImVec2(float(extent.x), float(extent.y));
     frame->data.FramebufferScale = ImVec2(1, 1);
     imguiGpuRender(&frame->data, pass);
+}
+
+PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
+    ImGuiFrame* frame = allocZeroed<ImGuiFrame>();
+    frame->destroyFn = destroyFrame;
+    frame->prepareFn = prepare;
+    frame->renderFn = render;
+    frame->renderer = static_cast<ImGuiGpu*>(renderer);
+    return frame;
 }
 
 void dropResources(PrDrawRenderer* renderer) {
@@ -136,12 +144,10 @@ ImGuiBackend* PR_NULLABLE imguiDeviceCreate(PrGpuDevice* device) {
         return nullptr;
     ImGuiGpu* g = allocZeroed<ImGuiGpu>();
     g->device = device;
-    g->destroy = destroyBackend;
-    g->frameCreate = createFrame;
-    g->frameDestroy = destroyFrame;
-    g->framePrepare = prepare;
-    g->frameRender = render;
-    g->dropResources = dropResources;
+    g->destroyFn = destroyBackend;
+    g->frameCreateFn = createFrame;
+    g->deviceFn = rendererDevice;
+    g->dropResourcesFn = dropResources;
     return g;
 }
 

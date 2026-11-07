@@ -30,6 +30,11 @@ namespace pr_impl {
 
 namespace {
 
+// The functions of the device's objects, which their creation installs.
+extern const PrGpuCommands kCommandsFunctions;
+extern const PrGpuPass kPassFunctions;
+extern const PrGpuSwapChain kSwapChainFunctions;
+
 // What a binding holds for the next encoders.
 struct RootBinding {
     id<MTLBuffer> PR_NULLABLE buffer;   // held by the command buffer's stream
@@ -314,15 +319,19 @@ void setRoot(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uin
     }
 }
 
-void commandsSetPush(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size) {
+void commandsSetPush(PrGpuCommands* commands, const void* data, uint32_t size) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     setRoot(device, commands, data, size, GpuMetalBinding_Push, &commandsFrom(commands)->push);
 }
 
-void commandsSetUniforms(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size) {
+void commandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t size) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     setRoot(device, commands, data, size, GpuMetalBinding_Uniforms, &commandsFrom(commands)->uniforms);
 }
 
-void commandsDispatch(PrGpuDevice* device, PrGpuCommands* commands, PrGpuExtent groups) {
+void commandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     Commands* c = commandsFrom(commands);
     const GpuMetalPipeline& p = d->pipelines[c->pipeline];
@@ -332,7 +341,9 @@ void commandsDispatch(PrGpuDevice* device, PrGpuCommands* commands, PrGpuExtent 
     [e dispatchThreadgroups:MTLSizeMake(groups.width, groups.height, groups.depth) threadsPerThreadgroup:p.groupSize];
 }
 
-void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset) {
+void commandsDispatchIndirect(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     Commands* c = commandsFrom(commands);
     const GpuMetalPipeline& p = d->pipelines[c->pipeline];
@@ -342,30 +353,38 @@ void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGp
         threadsPerThreadgroup:p.groupSize];
 }
 
-void commandsCopyBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
+void commandsCopyBuffer(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
         PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     [blitEncoder(d, commandsFrom(commands)) copyFromBuffer:gpuMetalBuffer(d, source.id) sourceOffset:sourceOffset
         toBuffer:gpuMetalBuffer(d, target.id) destinationOffset:targetOffset size:size];
 }
 
-void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
+void commandsCopyTexture(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     gpuMetalEncodeCopyTexture(d, blitEncoder(d, commandsFrom(commands)), source, sourceRegion, target, targetRegion);
 }
 
-void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source,
+void commandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source,
         uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
         const PrGpuTextureRegion* targetRegion) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     gpuMetalEncodeCopyBufferToTexture(d, blitEncoder(d, commandsFrom(commands)), source, sourceOffset, rowBytes,
         layerBytes, target, targetRegion);
 }
 
-void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
+void commandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
         uint32_t layerBytes) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     gpuMetalEncodeCopyTextureToBuffer(d, blitEncoder(d, commandsFrom(commands)), source, sourceRegion, target,
         targetOffset, rowBytes, layerBytes);
@@ -373,7 +392,8 @@ void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, P
 
 // A command buffer takes debug groups only between encoders, so a group in a pass goes on the pass's encoder, and a
 // group begun outside a pass that ends in one ends with the pass. A group begun in a pass ends in it.
-void commandsPushGroup(PrGpuDevice* device, PrGpuCommands* commands, PrStringView name) {
+void commandsPushGroup(PrGpuCommands* commands, PrStringView name) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     Commands* c = commandsFrom(commands);
     @autoreleasepool {
@@ -387,7 +407,8 @@ void commandsPushGroup(PrGpuDevice* device, PrGpuCommands* commands, PrStringVie
     }
 }
 
-void commandsPopGroup(PrGpuDevice* device, PrGpuCommands* commands) {
+void commandsPopGroup(PrGpuCommands* commands) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     Commands* c = commandsFrom(commands);
     if (c->pass != nullptr) {
@@ -423,21 +444,27 @@ void barrier(Device* d, Commands* c, PrGpuAccessFlags before, PrGpuAccessFlags a
     }
 }
 
-void commandsBufferBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer, PrGpuAccessFlags before,
-        PrGpuAccessFlags after) {
+void commandsBufferBarrier(PrGpuCommands* commands, PrGpuBuffer, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     barrier(deviceFrom(device), commandsFrom(commands), before, after);
 }
 
-void commandsTextureBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture, PrGpuSubresources,
+void commandsTextureBarrier(PrGpuCommands* commands, PrGpuTexture, PrGpuSubresources,
         PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     barrier(deviceFrom(device), commandsFrom(commands), before, after);
 }
 
-void commandsGlobalBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+void commandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     barrier(deviceFrom(device), commandsFrom(commands), before, after);
 }
 
-void commandsGenerateMipmaps(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture, PrGpuAccessFlags before) {
+void commandsGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, PrGpuAccessFlags before) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     Commands* c = commandsFrom(commands);
     barrier(d, c, before, PrGpuAccessFlag_CopyRead | PrGpuAccessFlag_CopyWrite);
@@ -445,7 +472,8 @@ void commandsGenerateMipmaps(PrGpuDevice* device, PrGpuCommands* commands, PrGpu
     barrier(d, c, PrGpuAccessFlag_CopyRead | PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_ShaderRead);
 }
 
-PrGpuNativeStateFlags nativeStateSync(PrGpuDevice* device, PrGpuCommands* commands) {
+PrGpuNativeStateFlags nativeStateSync(PrGpuCommands* commands) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Commands* c = commandsFrom(commands);
     @autoreleasepool {
         if (c->pass == nullptr)
@@ -456,9 +484,11 @@ PrGpuNativeStateFlags nativeStateSync(PrGpuDevice* device, PrGpuCommands* comman
     return changed;
 }
 
-PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
+PrGpuFence commandsSubmit(PrGpuCommands* commands) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     Commands* c = commandsFrom(commands);
+    gpuSharedSubmitted(c);
     @autoreleasepool {
         endEncoders(d, c);
         uint32_t doneCount = c->dones.count;
@@ -527,12 +557,15 @@ void passBind(Device* d, Commands* c, GpuMetalPass* pass) {
     }
 }
 
-PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc) {
+PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     Device* d = deviceFrom(device);
     Commands* c = commandsFrom(commands);
+    gpuSharedPassBegan(c);
     @autoreleasepool {
         GpuMetalPass* pass = allocZeroed<GpuMetalPass>();
-        pass->commands = commands;
+        static_cast<PrGpuPass&>(*pass) = kPassFunctions;
+        pass->commands = c;
         if (desc->native != nullptr) {
             pass->native = true;
             pass->formats = desc->nativeFormats;
@@ -558,7 +591,8 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
 
 // Hands the pass's encoder to a native draw, then binds the device's buffers again, and leaves the pass's pipeline
 // unset. An application's pass reports every state as changed, since the native draw may have changed any of it.
-void passNativeDraw(PrGpuDevice* device, PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+void passNativeDraw(PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     Device* d = deviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     Commands* c = commandsFrom(pass->commands);
@@ -571,10 +605,12 @@ void passNativeDraw(PrGpuDevice* device, PrGpuPass* handle, PrGpuNativeKind, PrG
     }
 }
 
-void passEnd(PrGpuDevice* device, PrGpuPass* handle) {
+void passEnd(PrGpuPass* handle) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     Device* d = deviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     Commands* c = commandsFrom(pass->commands);
+    gpuSharedPassEnded(c);
     id<MTLRenderCommandEncoder> encoder = passEncoder(pass);
     PR_ASSERT(c->passGroups == 0);
     c->pass = nullptr;
@@ -593,15 +629,17 @@ const GpuMetalPipeline& passPipeline(PrGpuDevice* device, GpuMetalPass* pass) {
     return gpuMetalDeviceFrom(device)->pipelines[gpuMetalCommandsFrom(pass->commands)->pipeline];
 }
 
-void passDraw(PrGpuDevice* device, PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
+void passDraw(PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
         uint32_t firstVertex, uint32_t firstInstance) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     [passEncoder(pass) drawPrimitives:passPipeline(device, pass).primitive vertexStart:firstVertex
         vertexCount:vertexCount instanceCount:instanceCount baseInstance:firstInstance];
 }
 
-void passDrawIndexed(PrGpuDevice* device, PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCount,
+void passDrawIndexed(PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCount,
         uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     uint64_t at = pass->indexOffset + uint64_t(firstIndex) * (pass->indexType == MTLIndexTypeUInt32 ? 4 : 2);
@@ -610,8 +648,8 @@ void passDrawIndexed(PrGpuDevice* device, PrGpuPass* handle, uint32_t indexCount
         instanceCount:instanceCount baseVertex:vertexOffset baseInstance:firstInstance];
 }
 
-void passDrawIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-        uint32_t stride) {
+void passDrawIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     id<MTLBuffer> arguments = gpuMetalBuffer(d, buffer.id);
@@ -620,8 +658,8 @@ void passDrawIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer
             indirectBufferOffset:offset + uint64_t(i) * stride];
 }
 
-void passDrawIndexedIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset,
-        uint32_t count, uint32_t stride) {
+void passDrawIndexedIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     id<MTLBuffer> arguments = gpuMetalBuffer(d, buffer.id);
@@ -630,6 +668,57 @@ void passDrawIndexedIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer
             indexBuffer:gpuMetalBuffer(d, pass->indexBuffer.id) indexBufferOffset:pass->indexOffset
             indirectBuffer:arguments indirectBufferOffset:offset + uint64_t(i) * stride];
 }
+
+// The functions of the device's objects.
+constexpr PrGpuCommands kCommandsFunctions = {
+    .deviceFn = gpuSharedCommandsDevice,
+    .submitFn = commandsSubmit,
+    .streamFn = gpuMetalCommandsStream,
+    .setPushFn = commandsSetPush,
+    .setUniformsFn = commandsSetUniforms,
+    .setPipelineFn = gpuMetalCommandsSetPipeline,
+    .dispatchFn = commandsDispatch,
+    .dispatchIndirectFn = commandsDispatchIndirect,
+    .copyBufferFn = commandsCopyBuffer,
+    .copyTextureFn = commandsCopyTexture,
+    .copyBufferToTextureFn = commandsCopyBufferToTexture,
+    .copyTextureToBufferFn = commandsCopyTextureToBuffer,
+    .generateMipmapsFn = commandsGenerateMipmaps,
+    .onDoneFn = gpuMetalCommandsOnDone,
+    .pushGroupFn = commandsPushGroup,
+    .popGroupFn = commandsPopGroup,
+    .bufferBarrierFn = commandsBufferBarrier,
+    .textureBarrierFn = commandsTextureBarrier,
+    .globalBarrierFn = commandsGlobalBarrier,
+    .nativeStateSyncFn = nativeStateSync,
+    .passBeginFn = passBegin,
+};
+
+constexpr PrGpuPass kPassFunctions = {
+    .commandsFn = gpuSharedPassCommands,
+    .formatsFn = gpuSharedPassFormats,
+    .extentFn = gpuSharedPassExtent,
+    .endFn = passEnd,
+    .nativeDrawFn = passNativeDraw,
+    .setViewportFn = gpuMetalPassSetViewport,
+    .setScissorFn = gpuMetalPassSetScissor,
+    .setBlendConstantFn = gpuMetalPassSetBlendConstant,
+    .setStencilReferenceFn = gpuMetalPassSetStencilReference,
+    .setIndexBufferFn = gpuMetalPassSetIndexBuffer,
+    .drawFn = passDraw,
+    .drawIndexedFn = passDrawIndexed,
+    .drawIndirectFn = passDrawIndirect,
+    .drawIndexedIndirectFn = passDrawIndexedIndirect,
+};
+
+constexpr PrGpuSwapChain kSwapChainFunctions = {
+    .deviceFn = gpuSharedSwapChainDevice,
+    .infoFn = gpuSharedSwapChainInfo,
+    .destroyFn = gpuMetalSwapChainDestroy,
+    .waitFn = gpuMetalSwapChainWait,
+    .acquireFn = gpuMetalSwapChainAcquire,
+    .presentFn = gpuMetalSwapChainPresent,
+};
 
 } // namespace
 
@@ -677,34 +766,13 @@ PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDev
         d->uploadsOpen = uploadsOpen;
         d->uploadsSubmit = uploadsSubmit;
         d->uploadsCopyTexture = uploadsCopyTexture;
-        d->destroy = destroyDevice;
-        d->graphicsPipelineCreate = graphicsPipelineCreate;
-        d->computePipelineCreate = computePipelineCreate;
-        d->commandsBegin = commandsBegin;
-        d->commandsSubmit = commandsSubmit;
-        d->commandsSetPush = commandsSetPush;
-        d->commandsSetUniforms = commandsSetUniforms;
-        d->commandsDispatch = commandsDispatch;
-        d->commandsDispatchIndirect = commandsDispatchIndirect;
-        d->commandsCopyBuffer = commandsCopyBuffer;
-        d->commandsCopyTexture = commandsCopyTexture;
-        d->commandsGenerateMipmaps = commandsGenerateMipmaps;
-        d->commandsCopyBufferToTexture = commandsCopyBufferToTexture;
-        d->commandsCopyTextureToBuffer = commandsCopyTextureToBuffer;
-        d->commandsPushGroup = commandsPushGroup;
-        d->commandsPopGroup = commandsPopGroup;
-        d->commandsBufferBarrier = commandsBufferBarrier;
-        d->commandsTextureBarrier = commandsTextureBarrier;
-        d->commandsGlobalBarrier = commandsGlobalBarrier;
-        d->nativeStateSync = nativeStateSync;
-        d->passBegin = passBegin;
-        d->passEnd = passEnd;
-        d->passNativeDraw = passNativeDraw;
-        d->textureNative = textureNative;
-        d->passDraw = passDraw;
-        d->passDrawIndexed = passDrawIndexed;
-        d->passDrawIndirect = passDrawIndirect;
-        d->passDrawIndexedIndirect = passDrawIndexedIndirect;
+        d->destroyFn = destroyDevice;
+        d->graphicsPipelineCreateFn = graphicsPipelineCreate;
+        d->computePipelineCreateFn = computePipelineCreate;
+        d->commandsBeginFn = commandsBegin;
+        d->commandsFunctions = &kCommandsFunctions;
+        d->swapChainFunctions = &kSwapChainFunctions;
+        d->textureNativeFn = textureNative;
         d->info.backend = "Metal";
         d->nativeKinds = 1u << PrGpuNativeKind_Metal;
         *out = d;

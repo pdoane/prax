@@ -30,18 +30,6 @@ typedef void (*PrAudioRenderFn)(void* PR_NULLABLE context, float* samples, uint3
 // A device that plays sound. Each backend provides its own constructor.
 typedef struct PrAudioOutput PrAudioOutput;
 
-// The function table of an output, placed at the start of the backend's state. Each function member implements the
-// public function of the same name. Callers use the functions below, never these members.
-struct PrAudioOutput {
-    PrAudioFormat format;
-    void (*destroy)(PrAudioOutput* output);
-    bool (*start)(PrAudioOutput* output, PrAudioRenderFn render, void* PR_NULLABLE context);
-    void (*stop)(PrAudioOutput* output);
-    double (*latency)(PrAudioOutput* output);
-    double (*PR_NULLABLE now)(const PrAudioOutput* output);    // null for the system's monotonic clock
-    bool hostPaced;                                            // renders as its host advances it
-};
-
 // The library's backends of outputs, which the build turns on (README.md), and Default, the platform's own or else the
 // first that the build has.
 enum {

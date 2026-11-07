@@ -15,6 +15,7 @@
 #include "pr/text_buffer.h"
 #include "pr/url.h"
 #include "pr/utf8.h"
+#include "pr/websocket_backend.h"
 
 namespace pr_impl {
 
@@ -48,12 +49,15 @@ enum {
 typedef uint8_t Opcode;
 
 struct BuiltinNetwork : PrWebSocketNetwork {
+    PrNet* net;                     // the network whose loop runs the sockets' callbacks
     PrTls* PR_NULLABLE tls;
     const PrByteView* PR_NULLABLE anchors;
     uint32_t anchorCount;
 };
 
 struct Socket : PrWebSocket {
+    BuiltinNetwork* network;        // the source that made the socket
+
     // The callbacks that are running, and the posted tasks that wait, each of which keeps the memory alive after the
     // client destroys the socket.
     uint32_t holds;
@@ -467,7 +471,7 @@ void streamEvent(void* PR_NULLABLE context, PrNetStream* stream, PrNetStreamEven
 void connect(void* PR_NULLABLE context) {
     Socket* socket = static_cast<Socket*>(context);
     if (!socket->dead && socket->state == PrWebSocketState_Connecting) {
-        BuiltinNetwork* network = static_cast<BuiltinNetwork*>(socket->network);
+        BuiltinNetwork* network = socket->network;
         PrStatus status = PrStatus_NotSupported;
         if (socket->secure && network->tls != nullptr) {
             constexpr PrStringView kProtocols[] = {"http/1.1"};
@@ -572,6 +576,66 @@ void destroyNetwork(PrWebSocketNetwork* base) {
     prMemoryFree(static_cast<BuiltinNetwork*>(base));
 }
 
+void destroySocket(PrWebSocket* handle) {
+    Socket* socket = static_cast<Socket*>(handle);
+    PR_ASSERT(!socket->dead);
+    socket->dead = true;
+    closeStream(socket);
+    if (socket->holds == 0)
+        freeSocket(socket);
+}
+
+PrWebSocketState socketState(const PrWebSocket* handle) {
+    return static_cast<const Socket*>(handle)->state;
+}
+
+PrStringView socketProtocol(const PrWebSocket* handle) {
+    return viewOf(static_cast<const Socket*>(handle)->protocol);
+}
+
+size_t socketBufferedAmount(const PrWebSocket* handle) {
+    const Socket* socket = static_cast<const Socket*>(handle);
+    return socket->stream != nullptr ? prNetStreamQueued(socket->stream) : 0;
+}
+
+PrStatus socketSend(PrWebSocket* handle, PrWebSocketMessageKind kind, PrByteView data) {
+    Socket* socket = static_cast<Socket*>(handle);
+    if (socket->state != PrWebSocketState_Open)
+        return PrStatus_InvalidState;
+    writeFrame(socket, kind == PrWebSocketMessageKind_Text ? Opcode_Text : Opcode_Binary, data);
+    return PrStatus_Ok;
+}
+
+void socketClose(PrWebSocket* handle, uint16_t code, PrStringView reason) {
+    Socket* socket = static_cast<Socket*>(handle);
+    if (socket->state == PrWebSocketState_Connecting) {
+        // A connection that has not opened is failed (websockets/#dom-websocket-close).
+        closeStream(socket);
+        socket->state = PrWebSocketState_Closing;
+        hold(socket);
+        prNetPost(socket->network->net, closeConnecting, socket);
+        return;
+    }
+    if (socket->state != PrWebSocketState_Open)
+        return;
+    socket->state = PrWebSocketState_Closing;
+    writeClose(socket, code, reason);
+}
+
+PrWebSocketMessage socketMessage(const PrWebSocket* handle) {
+    return static_cast<const Socket*>(handle)->delivered;
+}
+
+PrWebSocketCloseInfo socketCloseInfo(const PrWebSocket* handle) {
+    const Socket* socket = static_cast<const Socket*>(handle);
+    return PrWebSocketCloseInfo{
+        .wasClean = socket->wasClean,
+        .code = socket->closeCode,
+        .reason = prRawStringIsNull(&socket->closeReason) ? PrStringView{""} : viewOf(socket->closeReason),
+        .error = socket->error,
+    };
+}
+
 PrStatus createSocket(PrWebSocketNetwork* base, const PrWebSocketDesc* desc, PrWebSocket* PR_NULLABLE* PR_NONNULL out) {
     PrUrl* url = nullptr;
     if (prUrlCreate(desc->url, nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
@@ -589,7 +653,15 @@ PrStatus createSocket(PrWebSocketNetwork* base, const PrWebSocketDesc* desc, PrW
         return status;
     }
     Socket* socket = allocZeroed<Socket>();
-    socket->network = base;
+    socket->destroyFn = destroySocket;
+    socket->stateFn = socketState;
+    socket->protocolFn = socketProtocol;
+    socket->bufferedAmountFn = socketBufferedAmount;
+    socket->sendFn = socketSend;
+    socket->closeFn = socketClose;
+    socket->messageFn = socketMessage;
+    socket->closeInfoFn = socketCloseInfo;
+    socket->network = static_cast<BuiltinNetwork*>(base);
     socket->event = desc->event;
     socket->context = desc->context;
     socket->secure = secure;
@@ -603,69 +675,9 @@ PrStatus createSocket(PrWebSocketNetwork* base, const PrWebSocketDesc* desc, PrW
     writeRequest(socket, url, desc);
     prUrlDestroy(url);
     hold(socket);
-    prNetPost(base->net, connect, socket);
+    prNetPost(socket->network->net, connect, socket);
     *out = socket;
     return PrStatus_Ok;
-}
-
-void destroySocket(PrWebSocketNetwork*, PrWebSocket* handle) {
-    Socket* socket = static_cast<Socket*>(handle);
-    PR_ASSERT(!socket->dead);
-    socket->dead = true;
-    closeStream(socket);
-    if (socket->holds == 0)
-        freeSocket(socket);
-}
-
-PrWebSocketState socketState(const PrWebSocketNetwork*, const PrWebSocket* handle) {
-    return static_cast<const Socket*>(handle)->state;
-}
-
-PrStringView socketProtocol(const PrWebSocketNetwork*, const PrWebSocket* handle) {
-    return viewOf(static_cast<const Socket*>(handle)->protocol);
-}
-
-size_t socketBufferedAmount(const PrWebSocketNetwork*, const PrWebSocket* handle) {
-    const Socket* socket = static_cast<const Socket*>(handle);
-    return socket->stream != nullptr ? prNetStreamQueued(socket->stream) : 0;
-}
-
-PrStatus socketSend(PrWebSocketNetwork*, PrWebSocket* handle, PrWebSocketMessageKind kind, PrByteView data) {
-    Socket* socket = static_cast<Socket*>(handle);
-    if (socket->state != PrWebSocketState_Open)
-        return PrStatus_InvalidState;
-    writeFrame(socket, kind == PrWebSocketMessageKind_Text ? Opcode_Text : Opcode_Binary, data);
-    return PrStatus_Ok;
-}
-
-void socketClose(PrWebSocketNetwork* base, PrWebSocket* handle, uint16_t code, PrStringView reason) {
-    Socket* socket = static_cast<Socket*>(handle);
-    if (socket->state == PrWebSocketState_Connecting) {
-        // A connection that has not opened is failed (websockets/#dom-websocket-close).
-        closeStream(socket);
-        socket->state = PrWebSocketState_Closing;
-        hold(socket);
-        prNetPost(base->net, closeConnecting, socket);
-        return;
-    }
-    if (socket->state != PrWebSocketState_Open)
-        return;
-    socket->state = PrWebSocketState_Closing;
-    writeClose(socket, code, reason);
-}
-
-PrWebSocketMessage socketMessage(const PrWebSocketNetwork*, const PrWebSocket* handle) {
-    return static_cast<const Socket*>(handle)->delivered;
-}
-
-PrWebSocketCloseInfo socketCloseInfo(const PrWebSocketNetwork*, const PrWebSocket* handle) {
-    const Socket* socket = static_cast<const Socket*>(handle);
-    return PrWebSocketCloseInfo{
-        .wasClean = socket->wasClean,
-        .code = socket->closeCode,
-        .reason = prRawStringIsNull(&socket->closeReason) ? PrStringView{""} : viewOf(socket->closeReason),
-        .error = socket->error,
-    };
 }
 
 } // namespace
@@ -676,16 +688,8 @@ using namespace pr_impl;
 
 PrWebSocketNetwork* prWebSocketBuiltinCreate(const PrWebSocketNetworkDesc* desc) {
     BuiltinNetwork* network = allocZeroed<BuiltinNetwork>();
-    network->destroy = destroyNetwork;
-    network->socketCreate = createSocket;
-    network->socketDestroy = destroySocket;
-    network->socketState = socketState;
-    network->socketProtocol = socketProtocol;
-    network->socketBufferedAmount = socketBufferedAmount;
-    network->socketSend = socketSend;
-    network->socketClose = socketClose;
-    network->socketMessage = socketMessage;
-    network->socketCloseInfo = socketCloseInfo;
+    network->destroyFn = destroyNetwork;
+    network->socketCreateFn = createSocket;
     network->net = desc->net;
     network->tls = desc->tls;
     network->anchors = desc->anchors;

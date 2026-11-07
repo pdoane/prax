@@ -92,29 +92,6 @@ typedef struct PrWebSocketDesc {
     void* PR_NULLABLE context;
 } PrWebSocketDesc;
 
-// The start of every socket's state. `network` is the source that made the socket.
-struct PrWebSocket {
-    PrWebSocketNetwork* network;
-};
-
-// The start of every source's state: the function table of its backend, then its network. Each member of the table
-// implements the public function of the same name. Callers use the functions below, never these members.
-struct PrWebSocketNetwork {
-    void (*destroy)(PrWebSocketNetwork* network);
-    PrStatus (*socketCreate)(PrWebSocketNetwork* network, const PrWebSocketDesc* desc,
-        PrWebSocket* PR_NULLABLE* PR_NONNULL out);
-    void (*socketDestroy)(PrWebSocketNetwork* network, PrWebSocket* socket);
-    PrWebSocketState (*socketState)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
-    PrStringView (*socketProtocol)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
-    size_t (*socketBufferedAmount)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
-    PrStatus (*socketSend)(PrWebSocketNetwork* network, PrWebSocket* socket, PrWebSocketMessageKind kind, PrByteView data);
-    void (*socketClose)(PrWebSocketNetwork* network, PrWebSocket* socket, uint16_t code, PrStringView reason);
-    PrWebSocketMessage (*socketMessage)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
-    PrWebSocketCloseInfo (*socketCloseInfo)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
-
-    PrNet* net;                 // the network whose loop runs the sockets' callbacks
-};
-
 // The library's backends of sources, which the build turns on (README.md), and Default, the first that the build has.
 enum {
     PrWebSocketNetworkBackend_Default,

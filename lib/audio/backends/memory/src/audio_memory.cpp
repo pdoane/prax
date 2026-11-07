@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
+#include "pr/audio_backend.h"
 #include "pr/memory.h"
 #include "pr/raw_array.h"
 #include "pr/thread.h"
@@ -18,6 +19,7 @@ namespace {
 constexpr double kRenderMilliseconds = 10;
 
 struct MemoryOutput : PrAudioOutput {
+    PrAudioFormat format;
     PrAudioMemoryPace pace;
     PrThread thread;
     PrAudioRenderFn render;
@@ -104,6 +106,14 @@ void destroy(PrAudioOutput* base) {
     prMemoryFree(output);
 }
 
+PrAudioFormat formatOf(const PrAudioOutput* output) {
+    return static_cast<const MemoryOutput*>(output)->format;
+}
+
+bool isHostPaced(const PrAudioOutput*) {
+    return true;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -113,14 +123,15 @@ using namespace pr_impl;
 PrAudioOutput* prAudioMemoryCreate(PrAudioFormat format, PrAudioMemoryPace pace) {
     MemoryOutput* output = allocZeroed<MemoryOutput>();
     output->format = format;
-    output->destroy = destroy;
-    output->start = start;
-    output->stop = stop;
-    output->latency = latency;
+    output->destroyFn = destroy;
+    output->formatFn = formatOf;
+    output->startFn = start;
+    output->stopFn = stop;
+    output->latencyFn = latency;
     output->pace = pace;
     if (pace == PrAudioMemoryPace_Host) {
-        output->now = hostNow;
-        output->hostPaced = true;
+        output->nowFn = hostNow;
+        output->isHostPacedFn = isHostPaced;
     }
     return output;
 }
@@ -144,7 +155,8 @@ void prAudioMemoryAdvance(PrAudioOutput* output, double time) {
 }
 
 uint64_t prAudioMemoryFrameCount(const PrAudioOutput* output) {
-    return static_cast<const MemoryOutput*>(output)->samples.count / output->format.channels;
+    const MemoryOutput* memory = static_cast<const MemoryOutput*>(output);
+    return memory->samples.count / memory->format.channels;
 }
 
 const float* PR_NULLABLE prAudioMemorySamples(const PrAudioOutput* output) {

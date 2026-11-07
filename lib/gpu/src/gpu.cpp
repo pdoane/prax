@@ -31,11 +31,9 @@
 #include "pr/gpu_memory.h"
 #endif
 
-#include "gpu/src/gpu_device_state.h"
 #if defined(PR_GPU_HAS_COREVIDEO)
 #include "gpu/src/gpu_corevideo.h"
 #endif
-#include "gpu/src/kGpuMipmapShaders.h"
 
 #include <stdlib.h>
 
@@ -84,55 +82,6 @@ constexpr PrGpuFormatBlock kFormatBlocks[PrGpuFormat_Count] = {
 // The alignment of the rows of a texture's texels in a buffer that a copy reads or writes, which every API accepts.
 constexpr uint32_t kRowAlignment = 256;
 
-PrGpuDeviceShared* sharedOf(PrGpuDevice* device) {
-    if (device->shared == nullptr) {
-        PrGpuDeviceShared* shared = allocZeroed<PrGpuDeviceShared>();
-        prMutexInit(&shared->mutex);
-        device->shared = shared;
-    }
-    return device->shared;
-}
-
-// Returns true if an import made `texture` by copying, so that a later import may write into it.
-bool isImportCopy(PrGpuDevice* device, PrGpuTexture texture) {
-    if (texture.id == 0)
-        return false;
-    PrGpuDeviceShared* shared = sharedOf(device);
-    prMutexLock(&shared->mutex);
-    bool found = false;
-    for (uint32_t id : shared->importCopies.span())
-        found |= id == texture.id;
-    prMutexUnlock(&shared->mutex);
-    return found;
-}
-
-// Makes `*texture` a texture that shaders sample, holding a copy of texels in memory. The texture that `*texture`
-// names, if any, is written into if an import made it by copying and it has the texels' extent and format, and is
-// replaced otherwise.
-PrStatus importCopy(PrGpuDevice* device, const PrGpuImportPixels& pixels, PrGpuTexture* texture) {
-    if (isImportCopy(device, *texture)) {
-        PrGpuTextureDesc held = device->textureDesc(device, *texture);
-        if (held.format == pixels.format && held.extent.width == pixels.pixels.extent.x &&
-                held.extent.height == pixels.pixels.extent.y) {
-            prGpuTextureWrite(device, *texture, PrIVec2{0, 0}, pixels.pixels);
-            return PrStatus_Ok;
-        }
-    }
-    PrGpuTextureDesc desc = prGpuTextureDesc2d(pixels.format, pixels.pixels.extent, PrGpuTextureUsageFlag_Sampled);
-    PrGpuTexture made{};
-    PrStatus status = device->textureCreate(device, &desc, &made);
-    if (status != PrStatus_Ok)
-        return status;
-    prGpuTextureWrite(device, made, PrIVec2{0, 0}, pixels.pixels);
-    PrGpuDeviceShared* shared = sharedOf(device);
-    prMutexLock(&shared->mutex);
-    shared->importCopies.push(made.id);
-    prMutexUnlock(&shared->mutex);
-    prGpuTextureDestroy(device, *texture);
-    *texture = made;
-    return PrStatus_Ok;
-}
-
 // The part of a `size` rectangle at `origin` that lies inside `extent`, as its origin and size, and its start within
 // the rectangle. Returns false if none of it does.
 bool clip(PrIVec2 origin, PrUVec2 size, PrUVec2 extent, PrUVec2* at, PrUVec2* clipped, PrUVec2* from) {
@@ -150,49 +99,18 @@ bool clip(PrIVec2 origin, PrUVec2 size, PrUVec2 extent, PrUVec2* at, PrUVec2* cl
     return true;
 }
 
-bool sameSampler(const PrGpuSamplerDesc& a, const PrGpuSamplerDesc& b) {
-    return a.magnify == b.magnify && a.minify == b.minify && a.mip == b.mip && a.address[0] == b.address[0] &&
-        a.address[1] == b.address[1] && a.address[2] == b.address[2] && a.maxAnisotropy == b.maxAnisotropy &&
-        a.compare == b.compare && a.minLod == b.minLod && a.maxLod == b.maxLod && a.lodBias == b.lodBias;
-}
-
 uint32_t readWord(const uint8_t* bytes, uint64_t at) {
     return prMemReadLeU32(bytes + at);
 }
 
 const PrGpuShaderEntry* PR_NULLABLE entryNamed(const PrGpuShaderLibrary* library, PrStringView name) {
-    for (uint32_t i = 0; i < library->entryCount; ++i) {
-        if (library->entries[i].name == name)
-            return &library->entries[i];
+    uint32_t count = 0;
+    const PrGpuShaderEntry* entries = library->entriesFn(library, &count);
+    for (uint32_t i = 0; i < count; ++i) {
+        if (entries[i].name == name)
+            return &entries[i];
     }
     return nullptr;
-}
-
-// Returns the pipeline that draws mip levels of `format`, made on first use, or zero if the device cannot make it.
-PrGpuPipeline mipmapPipeline(PrGpuDevice* device, PrGpuFormat format) {
-    PrGpuDeviceShared* shared = sharedOf(device);
-    prMutexLock(&shared->mutex);
-    PrGpuPipeline pipeline{};
-    for (uint32_t i = 0; i < shared->mipmapPipelines.count; ++i) {
-        if (shared->mipmapPipelines.data[i].format == format)
-            pipeline = shared->mipmapPipelines.data[i].pipeline;
-    }
-    if (pipeline.id == 0) {
-        if (shared->mipmapLibrary == nullptr)
-            prGpuShaderLibraryCreate(device, kGpuMipmapShaders, sizeof(kGpuMipmapShaders), &shared->mipmapLibrary);
-        if (shared->mipmapLibrary != nullptr) {
-            PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(shared->mipmapLibrary);
-            desc.vertex = "mipVertex";
-            desc.fragment = "mipFragment";
-            desc.formats.colorCount = 1;
-            desc.formats.color[0] = format;
-            desc.name = "mipmaps";
-            if (prGpuPipelineCreateGraphics(device, &desc, &pipeline) == PrStatus_Ok)
-                shared->mipmapPipelines.push(GpuMipmapPipeline{format, pipeline});
-        }
-    }
-    prMutexUnlock(&shared->mutex);
-    return pipeline;
 }
 
 // A read of a texture that a command buffer records: the buffer that the texels are copied into, and where the call
@@ -221,7 +139,7 @@ void textureReadDone(void* PR_NULLABLE context, double) {
 // with rows `rowBytes` apart. The texture is in `access` before and after the copy.
 PrGpuBuffer recordRead(PrGpuCommands* commands, PrGpuTexture texture, uint32_t access, PrUVec2 origin,
         PrUVec2 extent, uint32_t rowBytes) {
-    PrGpuDevice* device = commands->device;
+    PrGpuDevice* device = prGpuCommandsDevice(commands);
     PrGpuBufferDesc desc{.size = uint64_t(rowBytes) * extent.y, .memory = PrGpuMemory_Readback, .name = "texture read"};
     PrGpuBuffer buffer{};
     if (prGpuBufferCreate(device, &desc, &buffer) != PrStatus_Ok)
@@ -373,53 +291,41 @@ PrStatus prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NU
 void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device) {
     if (device == nullptr)
         return;
-    device->waitIdle(device);
-    if (PrGpuDeviceShared* shared = device->shared) {
-        for (uint32_t i = 0; i < shared->mipmapPipelines.count; ++i)
-            device->pipelineDestroy(device, shared->mipmapPipelines.data[i].pipeline);
-        shared->mipmapPipelines.reset();
-        prGpuShaderLibraryDestroy(shared->mipmapLibrary);
-        shared->samplers.reset();
-        shared->importCopies.reset();
-        prMutexReset(&shared->mutex);
-        prMemoryFree(shared);
-        device->shared = nullptr;
-    }
-    if (device->destroy != nullptr)
-        device->destroy(device);
+    device->waitIdleFn(device);
+    device->destroyFn(device);
 }
 
 PrGpuDeviceInfo prGpuDeviceInfo(const PrGpuDevice* device) {
-    return device->info;
+    return device->infoFn(device);
 }
 
 bool prGpuDeviceHasNative(const PrGpuDevice* device, PrGpuNativeKind kind) {
-    return kind < PrGpuNativeKind_Count && (device->nativeKinds & (1u << kind)) != 0;
+    return kind < PrGpuNativeKind_Count && (device->nativeKindsFn(device) & (1u << kind)) != 0;
 }
 
 bool prGpuDeviceImportsInPlace(const PrGpuDevice* device, PrGpuImportKind kind) {
-    return kind < PrGpuImportKind_Count && (device->inPlaceImports & (1u << kind)) != 0;
+    return kind < PrGpuImportKind_Count && (device->inPlaceImportsFn(device) & (1u << kind)) != 0;
 }
 
 bool prGpuDeviceIsLost(const PrGpuDevice* device) {
-    return device->isLost(device);
+    return device->isLostFn(device);
 }
 
 void prGpuDeviceSimulateLoss(PrGpuDevice* device) {
-    device->simulateLoss(device);
+    device->simulateLossFn(device);
 }
 
 bool prGpuDeviceIsComplete(const PrGpuDevice* device, PrGpuFence fence) {
-    return fence == 0 || device->isComplete(device, fence);
+    return fence == 0 || device->isCompleteFn(device, fence);
 }
 
 void prGpuDeviceWait(PrGpuDevice* device, PrGpuFence fence) {
     if (fence != 0)
-        device->wait(device, fence);
+        device->waitFn(device, fence);
 }
 
 void prGpuDeviceWaitIdle(PrGpuDevice* device) {
-    device->waitIdle(device);
+    device->waitIdleFn(device);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -491,31 +397,31 @@ bool prGpuFormatToPixelFormat(PrGpuFormat format, PrPixelFormat* out) {
 PrStatus prGpuBufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuffer* out) {
     *out = PrGpuBuffer{};
     PR_ASSERT(desc->size != 0);
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
-    return device->bufferCreate(device, desc, out);
+    return device->bufferCreateFn(device, desc, out);
 }
 
 void prGpuBufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer) {
     if (buffer.id != 0)
-        device->bufferDestroy(device, buffer);
+        device->bufferDestroyFn(device, buffer);
 }
 
 PrGpuBufferDesc prGpuBufferDesc(const PrGpuDevice* device, PrGpuBuffer buffer) {
     PR_ASSERT(buffer.id != 0);
-    return device->bufferDesc(device, buffer);
+    return device->bufferDescFn(device, buffer);
 }
 
 uint32_t prGpuBufferStorageHandle(const PrGpuDevice* device, PrGpuBuffer buffer) {
     PR_ASSERT(buffer.id != 0);
-    PR_ASSERT(device->bufferDesc(device, buffer).usage & PrGpuBufferUsageFlag_Storage);
-    return device->bufferStorageHandle(device, buffer);
+    PR_ASSERT(device->bufferDescFn(device, buffer).usage & PrGpuBufferUsageFlag_Storage);
+    return device->bufferStorageHandleFn(device, buffer);
 }
 
 void* prGpuBufferMap(const PrGpuDevice* device, PrGpuBuffer buffer) {
     PR_ASSERT(buffer.id != 0);
-    PR_ASSERT(device->bufferDesc(device, buffer).memory != PrGpuMemory_Device);
-    return device->bufferMap(device, buffer);
+    PR_ASSERT(device->bufferDescFn(device, buffer).memory != PrGpuMemory_Device);
+    return device->bufferMapFn(device, buffer);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -542,7 +448,7 @@ uint8_t prGpuMipLevels(PrUVec2 extent) {
 }
 
 bool prGpuDeviceSupportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureUsageFlags usage) {
-    return format != PrGpuFormat_None && format < PrGpuFormat_Count && device->supportsFormat(device, format, usage);
+    return format != PrGpuFormat_None && format < PrGpuFormat_Count && device->supportsFormatFn(device, format, usage);
 }
 
 PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out) {
@@ -550,37 +456,32 @@ PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, P
     PR_ASSERT(desc->format != PrGpuFormat_None && desc->format < PrGpuFormat_Count);
     PR_ASSERT(desc->levels >= 1 && desc->samples >= 1);
     PR_ASSERT(desc->extent.width != 0 && desc->extent.height != 0 && desc->extent.depth != 0);
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
-    if (desc->kind != PrGpuTextureKind_3d && (desc->extent.width > device->info.maxTextureSize ||
-            desc->extent.height > device->info.maxTextureSize))
+    if (desc->kind != PrGpuTextureKind_3d && (desc->extent.width > device->infoFn(device).maxTextureSize ||
+            desc->extent.height > device->infoFn(device).maxTextureSize))
         return PrStatus_Limit;
-    return device->textureCreate(device, desc, out);
+    return device->textureCreateFn(device, desc, out);
 }
 
 PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
         PrGpuSubresources subresources, PrGpuTexture* out) {
     *out = PrGpuTexture{};
     PR_ASSERT(texture.id != 0);
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
-    return device->textureCreateView(device, texture, kind, subresources, out);
+    return device->textureCreateViewFn(device, texture, kind, subresources, out);
 }
 
 void prGpuTextureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
     if (texture.id == 0)
         return;
-    if (PrGpuDeviceShared* shared = device->shared) {
-        prMutexLock(&shared->mutex);
-        shared->importCopies.removeFirst(texture.id);
-        prMutexUnlock(&shared->mutex);
-    }
-    device->textureDestroy(device, texture);
+    device->textureDestroyFn(device, texture);
 }
 
 PrGpuTextureDesc prGpuTextureDesc(const PrGpuDevice* device, PrGpuTexture texture) {
     PR_ASSERT(texture.id != 0);
-    return device->textureDesc(device, texture);
+    return device->textureDescFn(device, texture);
 }
 
 PrUVec2 prGpuTextureExtent(const PrGpuDevice* device, PrGpuTexture texture) {
@@ -590,8 +491,8 @@ PrUVec2 prGpuTextureExtent(const PrGpuDevice* device, PrGpuTexture texture) {
 
 uint32_t prGpuTextureStorageHandle(const PrGpuDevice* device, PrGpuTexture texture) {
     PR_ASSERT(texture.id != 0);
-    PR_ASSERT(device->textureDesc(device, texture).usage & PrGpuTextureUsageFlag_Storage);
-    return device->textureStorageHandle(device, texture);
+    PR_ASSERT(device->textureDescFn(device, texture).usage & PrGpuTextureUsageFlag_Storage);
+    return device->textureStorageHandleFn(device, texture);
 }
 
 PrStatus prGpuTextureCreateOverPixels(PrGpuDevice* device, PrGpuFormat format, PrPixels pixels,
@@ -599,33 +500,17 @@ PrStatus prGpuTextureCreateOverPixels(PrGpuDevice* device, PrGpuFormat format, P
     *out = PrGpuTexture{};
     PR_ASSERT(prGpuDeviceHasNative(device, PrGpuNativeKind_Pixels));
     PR_ASSERT(pixels.extent.x != 0 && pixels.extent.y != 0);
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
-    return device->textureCreateOverPixels(device, format, pixels, usage, out);
+    return device->textureCreateOverPixelsFn(device, format, pixels, usage, out);
 }
 
 PrStatus prGpuTextureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuReleaseFn PR_NULLABLE release,
         void* PR_NULLABLE context, PrGpuTexture* texture) {
     PR_ASSERT(image->handle != nullptr);
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
-    if (prGpuDeviceImportsInPlace(device, image->kind)) {
-        PrGpuTexture made{};
-        PrStatus status = device->textureImport(device, image, release, context, &made);
-        if (status == PrStatus_Ok) {
-            prGpuTextureDestroy(device, *texture);
-            *texture = made;
-        }
-        return status;
-    }
-    PrGpuImportPixels pixels{};
-    if (!prGpuImportLock(image, &pixels))
-        return PrStatus_NotSupported;
-    PrStatus status = importCopy(device, pixels, texture);
-    prGpuImportUnlock(image);
-    if (status == PrStatus_Ok && release != nullptr)
-        release(context);
-    return status;
+    return device->textureImportFn(device, image, release, context, texture);
 }
 
 bool prGpuImportLock(const PrGpuImport* image, PrGpuImportPixels* out) {
@@ -655,7 +540,7 @@ void prGpuImportUnlock(const PrGpuImport* image) {
 bool prGpuTextureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind kind, void* out) {
     PR_ASSERT(prGpuDeviceHasNative(device, kind));
     PR_ASSERT(texture.id != 0);
-    return device->textureNative(device, texture, kind, out);
+    return device->textureNativeFn(device, texture, kind, out);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -674,20 +559,7 @@ PrGpuSamplerDesc prGpuSamplerDescDefault(PrGpuFilter filter, PrGpuAddress addres
 
 PrStatus prGpuSamplerIntern(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuSampler* out) {
     *out = PrGpuSampler{};
-    PrGpuDeviceShared* shared = sharedOf(device);
-    prMutexLock(&shared->mutex);
-    for (uint32_t i = 0; i < shared->samplers.count; ++i) {
-        if (sameSampler(shared->samplers.data[i].desc, *desc)) {
-            *out = shared->samplers.data[i].sampler;
-            prMutexUnlock(&shared->mutex);
-            return PrStatus_Ok;
-        }
-    }
-    PrStatus status = device->isLost(device) ? PrStatus_Lost : device->samplerCreate(device, desc, out);
-    if (status == PrStatus_Ok)
-        shared->samplers.push(GpuSamplerEntry{*desc, *out});
-    prMutexUnlock(&shared->mutex);
-    return status;
+    return device->samplerInternFn(device, desc, out);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -695,9 +567,9 @@ PrStatus prGpuSamplerIntern(PrGpuDevice* device, const PrGpuSamplerDesc* desc, P
 
 void prGpuBufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, const void* data, uint64_t size) {
     PR_ASSERT(buffer.id != 0);
-    PR_ASSERT(offset + size <= device->bufferDesc(device, buffer).size);
-    if (size != 0 && !device->isLost(device))
-        device->bufferUpload(device, buffer, offset, data, size);
+    PR_ASSERT(offset + size <= device->bufferDescFn(device, buffer).size);
+    if (size != 0 && !device->isLostFn(device))
+        device->bufferUploadFn(device, buffer, offset, data, size);
 }
 
 PrGpuTextureRegion prGpuTextureRegion2d(PrUVec2 origin, PrUVec2 extent) {
@@ -709,8 +581,8 @@ void prGpuTextureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTe
     PR_ASSERT(texture.id != 0);
     if (region->extent.width == 0 || region->extent.height == 0 || region->extent.depth == 0)
         return;
-    if (!device->isLost(device))
-        device->textureUpload(device, texture, region, data, rowBytes, layerBytes);
+    if (!device->isLostFn(device))
+        device->textureUploadFn(device, texture, region, data, rowBytes, layerBytes);
 }
 
 void prGpuTextureWrite(PrGpuDevice* device, PrGpuTexture texture, PrIVec2 origin, PrPixelView texels) {
@@ -744,7 +616,7 @@ void prGpuTextureRead(PrGpuDevice* device, PrGpuTexture texture, uint32_t access
     prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
     if (buffer.id == 0)
         return;
-    if (!device->isLost(device)) {
+    if (!device->isLostFn(device)) {
         const uint8_t* from = static_cast<const uint8_t*>(prGpuBufferMap(device, buffer));
         for (uint32_t y = 0; y < size.y; ++y)
             prMemCopy(out.data + (to.y + y) * out.stride + size_t(to.x) * bytes, from + size_t(y) * rowBytes,
@@ -772,12 +644,12 @@ PrStatus prGpuShaderLibraryCreate(PrGpuDevice* device, const void* bytes, uint64
         return PrStatus_InvalidData;
     uint64_t codesAt = 0;
     for (uint32_t t = 0; t < targetCount && codesAt == 0; ++t) {
-        if (readWord(b, targetsAt + targetSize * t) == device->shaderTarget)
+        if (readWord(b, targetsAt + targetSize * t) == device->shaderTargetFn(device))
             codesAt = targetsAt + targetSize * t + 4;
     }
     if (codesAt == 0)
         return PrStatus_NotSupported;
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
     PrGpuShaderEntry* entries = static_cast<PrGpuShaderEntry*>(prMemoryAlloc(sizeof(PrGpuShaderEntry) * entryCount));
     for (uint32_t i = 0; i < entryCount; ++i) {
@@ -800,14 +672,11 @@ PrStatus prGpuShaderLibraryCreate(PrGpuDevice* device, const void* bytes, uint64
         };
     }
     PrGpuShaderLibrary* library = nullptr;
-    PrStatus status = device->shaderLibraryCreate(device, entries, entryCount, &library);
+    PrStatus status = device->shaderLibraryCreateFn(device, entries, entryCount, &library);
     if (status != PrStatus_Ok) {
         prMemoryFree(entries);
         return status;
     }
-    library->device = device;
-    library->entryCount = entryCount;
-    library->entries = entries;
     *out = library;
     return PrStatus_Ok;
 }
@@ -815,9 +684,7 @@ PrStatus prGpuShaderLibraryCreate(PrGpuDevice* device, const void* bytes, uint64
 void prGpuShaderLibraryDestroy(PrGpuShaderLibrary* PR_NULLABLE library) {
     if (library == nullptr)
         return;
-    PrGpuShaderEntry* entries = library->entries;
-    library->device->shaderLibraryDestroy(library->device, library);
-    prMemoryFree(entries);
+    library->destroyFn(library);
 }
 
 PrGpuBlend prGpuBlendPremultiplied(void) {
@@ -857,9 +724,9 @@ PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPip
     if (vertex->stage != PrGpuShaderStage_Vertex ||
             (fragment != nullptr && fragment->stage != PrGpuShaderStage_Fragment))
         return PrStatus_WrongType;
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
-    return device->graphicsPipelineCreate(device, desc, vertex, fragment, out);
+    return device->graphicsPipelineCreateFn(device, desc, vertex, fragment, out);
 }
 
 PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrary* library, PrStringView compute,
@@ -870,19 +737,19 @@ PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrar
         return PrStatus_NotFound;
     if (entry->stage != PrGpuShaderStage_Compute)
         return PrStatus_WrongType;
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
-    return device->computePipelineCreate(device, library, entry, name, out);
+    return device->computePipelineCreateFn(device, library, entry, name, out);
 }
 
 void prGpuPipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
     if (pipeline.id != 0)
-        device->pipelineDestroy(device, pipeline);
+        device->pipelineDestroyFn(device, pipeline);
 }
 
 PrGpuExtent prGpuPipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline) {
     PR_ASSERT(pipeline.id != 0);
-    return device->pipelineGroupSize(device, pipeline);
+    return device->pipelineGroupSizeFn(device, pipeline);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -895,28 +762,26 @@ PrGpuCommandsOptions prGpuCommandsOptionsDefault(void) {
 bool prGpuCommandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* PR_NULLABLE options,
         PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return false;
     PrGpuCommandsOptions o = options != nullptr ? *options : prGpuCommandsOptionsDefault();
-    return device->commandsBegin(device, &o, out);
+    return device->commandsBeginFn(device, &o, out);
 }
 
 PrGpuDevice* prGpuCommandsDevice(const PrGpuCommands* commands) {
-    return commands->device;
+    return commands->deviceFn(commands);
 }
 
 PrGpuNativeStateFlags prGpuNativeStateSync(PrGpuCommands* commands) {
-    return commands->device->nativeStateSync(commands->device, commands);
+    return commands->nativeStateSyncFn(commands);
 }
 
 PrGpuFence prGpuCommandsSubmit(PrGpuCommands* commands) {
-    PR_ASSERT(!commands->inPass && !commands->submitted);
-    commands->submitted = true;
-    return commands->device->commandsSubmit(commands->device, commands);
+    return commands->submitFn(commands);
 }
 
 double prGpuCommandsSubmitAndWait(PrGpuCommands* commands) {
-    PrGpuDevice* device = commands->device;
+    PrGpuDevice* device = prGpuCommandsDevice(commands);
     double seconds = 0;
     prGpuCommandsOnDone(commands, submittedDone, &seconds);
     prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
@@ -924,121 +789,79 @@ double prGpuCommandsSubmitAndWait(PrGpuCommands* commands) {
 }
 
 void* prGpuCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
-    return commands->device->commandsStream(commands->device, commands, size, buffer, offset);
+    return commands->streamFn(commands, size, buffer, offset);
 }
 
 void prGpuCommandsSetPush(PrGpuCommands* commands, const void* data, uint32_t size) {
     PR_ASSERT(size <= kPrGpuMaxPushBytes);
-    commands->device->commandsSetPush(commands->device, commands, data, size);
+    commands->setPushFn(commands, data, size);
 }
 
 void prGpuCommandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t size) {
     PR_ASSERT(size <= kPrGpuMaxUniformBytes);
-    commands->device->commandsSetUniforms(commands->device, commands, data, size);
+    commands->setUniformsFn(commands, data, size);
 }
 
 void prGpuCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
     PR_ASSERT(pipeline.id != 0);
-    commands->device->commandsSetPipeline(commands->device, commands, pipeline);
+    commands->setPipelineFn(commands, pipeline);
 }
 
 void prGpuCommandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {
-    PR_ASSERT(!commands->inPass);
     if (groups.width != 0 && groups.height != 0 && groups.depth != 0)
-        commands->device->commandsDispatch(commands->device, commands, groups);
+        commands->dispatchFn(commands, groups);
 }
 
 void prGpuCommandsDispatchIndirect(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset) {
-    PR_ASSERT(!commands->inPass && buffer.id != 0);
-    commands->device->commandsDispatchIndirect(commands->device, commands, buffer, offset);
+    PR_ASSERT(buffer.id != 0);
+    commands->dispatchIndirectFn(commands, buffer, offset);
 }
 
 void prGpuCommandsCopyBuffer(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset, PrGpuBuffer target,
         uint64_t targetOffset, uint64_t size) {
-    PR_ASSERT(!commands->inPass && source.id != 0 && target.id != 0);
+    PR_ASSERT(source.id != 0 && target.id != 0);
     if (size != 0)
-        commands->device->commandsCopyBuffer(commands->device, commands, source, sourceOffset, target, targetOffset, size);
+        commands->copyBufferFn(commands, source, sourceOffset, target, targetOffset, size);
 }
 
 void prGpuCommandsCopyTexture(PrGpuCommands* commands, PrGpuTexture source, const PrGpuTextureRegion* sourceRegion,
         PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
-    PR_ASSERT(!commands->inPass && source.id != 0 && target.id != 0);
-    commands->device->commandsCopyTexture(commands->device, commands, source, sourceRegion, target, targetRegion);
+    PR_ASSERT(source.id != 0 && target.id != 0);
+    commands->copyTextureFn(commands, source, sourceRegion, target, targetRegion);
 }
 
 void prGpuCommandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
         uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
-    PR_ASSERT(!commands->inPass && source.id != 0 && target.id != 0);
-    commands->device->commandsCopyBufferToTexture(commands->device, commands, source, sourceOffset, rowBytes,
-        layerBytes, target, targetRegion);
+    PR_ASSERT(source.id != 0 && target.id != 0);
+    commands->copyBufferToTextureFn(commands, source, sourceOffset, rowBytes, layerBytes, target, targetRegion);
 }
 
 void prGpuCommandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
         uint32_t layerBytes) {
-    PR_ASSERT(!commands->inPass && source.id != 0 && target.id != 0);
-    commands->device->commandsCopyTextureToBuffer(commands->device, commands, source, sourceRegion, target,
-        targetOffset, rowBytes, layerBytes);
+    PR_ASSERT(source.id != 0 && target.id != 0);
+    commands->copyTextureToBufferFn(commands, source, sourceRegion, target, targetOffset, rowBytes, layerBytes);
 }
 
 void prGpuCommandsGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, uint32_t before) {
-    PrGpuDevice* device = commands->device;
-    PrGpuTextureDesc desc = prGpuTextureDesc(device, texture);
+    PrGpuTextureDesc desc = prGpuTextureDesc(prGpuCommandsDevice(commands), texture);
     PR_ASSERT(desc.kind == PrGpuTextureKind_2d);
     PR_ASSERT((desc.usage & PrGpuTextureUsageFlag_Sampled) && (desc.usage & PrGpuTextureUsageFlag_RenderTarget));
-    PrGpuSubresources first{.levels = 1, .layers = 1};
-    if (desc.levels <= 1) {
-        if (before != PrGpuAccessFlag_ShaderRead)
-            prGpuCommandsTextureBarrier(commands, texture, first, before, PrGpuAccessFlag_ShaderRead);
-        return;
+    if (desc.levels > 1) {
+        commands->generateMipmapsFn(commands, texture, before);
+    } else if (before != PrGpuAccessFlag_ShaderRead) {
+        prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{.levels = 1, .layers = 1}, before,
+            PrGpuAccessFlag_ShaderRead);
     }
-    if (device->commandsGenerateMipmaps != nullptr) {
-        device->commandsGenerateMipmaps(device, commands, texture, before);
-        return;
-    }
-    PrGpuPipeline pipeline = mipmapPipeline(device, desc.format);
-    PrGpuSampler sampler{};
-    PrGpuSamplerDesc linear = prGpuSamplerDescDefault(PrGpuFilter_Linear, PrGpuAddress_Clamp);
-    linear.mip = PrGpuFilter_Nearest;
-    if (pipeline.id == 0 || prGpuSamplerIntern(device, &linear, &sampler) != PrStatus_Ok)
-        return;
-    prGpuCommandsPushGroup(commands, "mipmaps");
-    prGpuCommandsTextureBarrier(commands, texture, first, before, PrGpuAccessFlag_FragmentRead);
-    prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{.firstLevel = 1, .layers = 1},
-        PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
-    for (uint8_t level = 1; level < desc.levels; ++level) {
-        PrGpuTexture from{};
-        PrGpuTexture into{};
-        prGpuTextureCreateView(device, texture, PrGpuTextureKind_2d,
-            PrGpuSubresources{.firstLevel = uint8_t(level - 1), .levels = 1, .layers = 1}, &from);
-        prGpuTextureCreateView(device, texture, PrGpuTextureKind_2d,
-            PrGpuSubresources{.firstLevel = level, .levels = 1, .layers = 1}, &into);
-        PrGpuPassDesc pass = prGpuPassDescColor(into, PrGpuLoad_Discard, PrColor{});
-        pass.name = "mip level";
-        PrGpuPass* p = prGpuPassBegin(commands, &pass);
-        prGpuCommandsSetPipeline(commands, pipeline);
-        uint32_t push[2] = {from.id, sampler.id};
-        prGpuCommandsSetPush(commands, push, sizeof(push));
-        prGpuPassDraw(p, 3, 1, 0, 0);
-        prGpuPassEnd(p);
-        prGpuTextureDestroy(device, from);
-        prGpuTextureDestroy(device, into);
-        prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{.firstLevel = level, .levels = 1, .layers = 1},
-            PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_FragmentRead);
-    }
-    prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{.layers = 1}, PrGpuAccessFlag_FragmentRead,
-        PrGpuAccessFlag_ShaderRead);
-    prGpuCommandsPopGroup(commands);
 }
 
 void prGpuCommandsOnDone(PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
-    commands->device->commandsOnDone(commands->device, commands, done, context);
+    commands->onDoneFn(commands, done, context);
 }
 
 void prGpuCommandsReadTexture(PrGpuCommands* commands, PrGpuTexture texture, uint32_t access, PrGpuReadFn read,
         void* PR_NULLABLE context) {
-    PR_ASSERT(!commands->inPass);
-    PrGpuDevice* device = commands->device;
+    PrGpuDevice* device = prGpuCommandsDevice(commands);
     PrGpuTextureDesc desc = prGpuTextureDesc(device, texture);
     PrUVec2 extent{desc.extent.width, desc.extent.height};
     uint32_t rowBytes = alignUp(extent.x * kFormatBlocks[desc.format].bytes, kRowAlignment);
@@ -1053,30 +876,29 @@ void prGpuCommandsReadTexture(PrGpuCommands* commands, PrGpuTexture texture, uin
 }
 
 void prGpuCommandsPushGroup(PrGpuCommands* commands, PrStringView name) {
-    commands->device->commandsPushGroup(commands->device, commands, name);
+    commands->pushGroupFn(commands, name);
 }
 
 void prGpuCommandsPopGroup(PrGpuCommands* commands) {
-    commands->device->commandsPopGroup(commands->device, commands);
+    commands->popGroupFn(commands);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Barriers
 
 void prGpuCommandsBufferBarrier(PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before, PrGpuAccessFlags after) {
-    PR_ASSERT(!commands->inPass && buffer.id != 0);
-    commands->device->commandsBufferBarrier(commands->device, commands, buffer, before, after);
+    PR_ASSERT(buffer.id != 0);
+    commands->bufferBarrierFn(commands, buffer, before, after);
 }
 
 void prGpuCommandsTextureBarrier(PrGpuCommands* commands, PrGpuTexture texture, PrGpuSubresources subresources,
         PrGpuAccessFlags before, PrGpuAccessFlags after) {
-    PR_ASSERT(!commands->inPass && texture.id != 0);
-    commands->device->commandsTextureBarrier(commands->device, commands, texture, subresources, before, after);
+    PR_ASSERT(texture.id != 0);
+    commands->textureBarrierFn(commands, texture, subresources, before, after);
 }
 
 void prGpuCommandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after) {
-    PR_ASSERT(!commands->inPass);
-    commands->device->commandsGlobalBarrier(commands->device, commands, before, after);
+    commands->globalBarrierFn(commands, before, after);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1091,82 +913,75 @@ PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor c
 }
 
 PrGpuPass* prGpuPassBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
-    PR_ASSERT(!commands->inPass);
     PR_ASSERT(desc->native != nullptr || desc->colorCount != 0 || desc->depthStencil.texture.id != 0);
-    commands->inPass = true;
-    return commands->device->passBegin(commands->device, commands, desc);
+    return commands->passBeginFn(commands, desc);
 }
 
 void prGpuPassEnd(PrGpuPass* pass) {
-    PrGpuCommands* commands = pass->commands;
-    commands->device->passEnd(commands->device, pass);
-    commands->inPass = false;
+    pass->endFn(pass);
 }
 
 void prGpuPassNativeDraw(PrGpuPass* pass, PrGpuNativeKind kind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
-    PrGpuDevice* device = pass->commands->device;
-    PR_ASSERT(prGpuDeviceHasNative(device, kind));
-    PR_ASSERT(pass->formats.colorCount != 0);
-    device->passNativeDraw(device, pass, kind, draw, context);
+    PR_ASSERT(prGpuDeviceHasNative(prGpuCommandsDevice(prGpuPassCommands(pass)), kind));
+    PR_ASSERT(pass->formatsFn(pass).colorCount != 0);
+    pass->nativeDrawFn(pass, kind, draw, context);
 }
 
 PrGpuCommands* prGpuPassCommands(const PrGpuPass* pass) {
-    return pass->commands;
+    return pass->commandsFn(pass);
 }
 
 PrGpuAttachmentFormats prGpuPassFormats(const PrGpuPass* pass) {
-    return pass->formats;
+    return pass->formatsFn(pass);
 }
 
 PrUVec2 prGpuPassExtent(const PrGpuPass* pass) {
-    return pass->extent;
+    return pass->extentFn(pass);
 }
 
 void prGpuPassSetViewport(PrGpuPass* pass, PrRect viewport, float minDepth, float maxDepth) {
-    pass->commands->device->passSetViewport(pass->commands->device, pass, viewport, minDepth, maxDepth);
+    pass->setViewportFn(pass, viewport, minDepth, maxDepth);
 }
 
 void prGpuPassSetScissor(PrGpuPass* pass, PrIRect scissor) {
-    pass->commands->device->passSetScissor(pass->commands->device, pass, scissor);
+    pass->setScissorFn(pass, scissor);
 }
 
 void prGpuPassSetBlendConstant(PrGpuPass* pass, PrColor constant) {
-    pass->commands->device->passSetBlendConstant(pass->commands->device, pass, constant);
+    pass->setBlendConstantFn(pass, constant);
 }
 
 void prGpuPassSetStencilReference(PrGpuPass* pass, uint8_t reference) {
-    pass->commands->device->passSetStencilReference(pass->commands->device, pass, reference);
+    pass->setStencilReferenceFn(pass, reference);
 }
 
 void prGpuPassSetIndexBuffer(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, bool wide) {
     PR_ASSERT(buffer.id != 0);
-    pass->commands->device->passSetIndexBuffer(pass->commands->device, pass, buffer, offset, wide);
+    pass->setIndexBufferFn(pass, buffer, offset, wide);
 }
 
 void prGpuPassDraw(PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
         uint32_t firstInstance) {
     if (vertexCount != 0 && instanceCount != 0)
-        pass->commands->device->passDraw(pass->commands->device, pass, vertexCount, instanceCount, firstVertex,
-            firstInstance);
+        pass->drawFn(pass, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 void prGpuPassDrawIndexed(PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
         int32_t vertexOffset, uint32_t firstInstance) {
     if (indexCount != 0 && instanceCount != 0)
-        pass->commands->device->passDrawIndexed(pass->commands->device, pass, indexCount, instanceCount, firstIndex,
-            vertexOffset, firstInstance);
+        pass->drawIndexedFn(pass, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 void prGpuPassDrawIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
     PR_ASSERT(buffer.id != 0);
     if (count != 0)
-        pass->commands->device->passDrawIndirect(pass->commands->device, pass, buffer, offset, count, stride);
+        pass->drawIndirectFn(pass, buffer, offset, count, stride);
 }
 
 void prGpuPassDrawIndexedIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
     PR_ASSERT(buffer.id != 0);
     if (count != 0)
-        pass->commands->device->passDrawIndexedIndirect(pass->commands->device, pass, buffer, offset, count, stride);
+        pass->drawIndexedIndirectFn(pass, buffer, offset, count, stride);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1175,37 +990,37 @@ void prGpuPassDrawIndexedIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t 
 PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (device->isLost(device))
+    if (device->isLostFn(device))
         return PrStatus_Lost;
-    return device->swapChainCreate(device, surface, desc, out);
+    return device->swapChainCreateFn(device, surface, desc, out);
 }
 
 void prGpuSwapChainDestroy(PrGpuSwapChain* PR_NULLABLE swapChain) {
     if (swapChain != nullptr)
-        swapChain->device->swapChainDestroy(swapChain->device, swapChain);
+        swapChain->destroyFn(swapChain);
 }
 
 PrGpuSwapChainInfo prGpuSwapChainInfo(const PrGpuSwapChain* swapChain) {
-    return swapChain->info;
+    return swapChain->infoFn(swapChain);
 }
 
 void prGpuSwapChainWait(PrGpuSwapChain* swapChain) {
-    swapChain->device->swapChainWait(swapChain->device, swapChain);
+    swapChain->waitFn(swapChain);
 }
 
 PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
     *out = PrGpuTexture{};
-    PrGpuDevice* device = swapChain->device;
-    if (device->isLost(device))
+    PrGpuDevice* device = swapChain->deviceFn(swapChain);
+    if (device->isLostFn(device))
         return PrStatus_Lost;
     if (extent.x == 0 || extent.y == 0)
         return PrStatus_InvalidState;
-    if (extent.x > device->info.maxTextureSize || extent.y > device->info.maxTextureSize)
+    if (extent.x > device->infoFn(device).maxTextureSize || extent.y > device->infoFn(device).maxTextureSize)
         return PrStatus_Limit;
-    return device->swapChainAcquire(device, swapChain, extent, out);
+    return swapChain->acquireFn(swapChain, extent, out);
 }
 
 void prGpuSwapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
-    PR_ASSERT(commands->device == swapChain->device);
-    swapChain->device->swapChainPresent(swapChain->device, swapChain, commands);
+    PR_ASSERT(prGpuCommandsDevice(commands) == swapChain->deviceFn(swapChain));
+    swapChain->presentFn(swapChain, commands);
 }

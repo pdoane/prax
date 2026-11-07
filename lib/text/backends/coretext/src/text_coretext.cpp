@@ -13,6 +13,8 @@
 #include "pr/utf8.h"
 #include "pr/vec.h"
 
+#include "text/backends/shared/src/text_shared_font_cache.h"
+
 #include <CoreText/CoreText.h>
 
 namespace pr_impl {
@@ -105,6 +107,7 @@ struct FeaturedFont {
 };
 
 struct CtBackend : PrTextShaper {
+    TextSharedFontCache fonts;
     RawArray<UniChar> utf16;
     RawArray<uint32_t> byteOf;             // for each UTF-16 unit, its byte in the text of the run
     RawArray<CGGlyph> glyphs;
@@ -244,6 +247,7 @@ CFAttributedStringRef createText(CtBackend* c, const PrTextRun* run, CTFontRef f
 
 void destroyBackend(PrTextShaper* shaper) {
     CtBackend* c = static_cast<CtBackend*>(shaper);
+    textSharedFontCacheReset(shaper, &c->fonts);
     c->utf16.reset();
     c->byteOf.reset();
     c->glyphs.reset();
@@ -326,6 +330,20 @@ PrStatus shape(PrTextShaper* shaper, void*, void* fontState, const PrTextRun* ru
     return PrStatus_Ok;
 }
 
+constexpr TextSharedFontStates kStates = {
+    .faceSize = sizeof(CtFace),
+    .fontSize = sizeof(CtFont),
+    .createFace = createFace,
+    .destroyFace = destroyFace,
+    .createFont = createFont,
+    .destroyFont = destroyFont,
+    .shape = shape,
+};
+
+PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer* out) {
+    return textSharedFontCacheShape(shaper, &static_cast<CtBackend*>(shaper)->fonts, run, out);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -334,13 +352,8 @@ using namespace pr_impl;
 
 PrTextShaper* prTextCoreTextCreate(void) {
     CtBackend* c = allocZeroed<CtBackend>();
-    c->destroy = destroyBackend;
-    c->shape = shape;
-    c->faceSize = sizeof(CtFace);
-    c->fontSize = sizeof(CtFont);
-    c->createFace = createFace;
-    c->destroyFace = destroyFace;
-    c->createFont = createFont;
-    c->destroyFont = destroyFont;
+    c->destroyFn = destroyBackend;
+    c->shapeFn = shapeRun;
+    c->fonts.states = &kStates;
     return c;
 }

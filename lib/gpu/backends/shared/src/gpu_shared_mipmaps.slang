@@ -1,4 +1,5 @@
-// lib/gpu's own shaders: each mip level drawn from the level before it (prGpuCommandsGenerateMipmaps).
+// The shaders of the backends' shared mip levels: each level drawn from the level before it
+// (prGpuCommandsGenerateMipmaps).
 
 #include "pr/gpu.slang"
 

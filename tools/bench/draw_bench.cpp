@@ -195,7 +195,9 @@ Times render(PrDrawRenderer* renderer, PrDrawFrame* PR_NULLABLE& frame, BenchTar
         .commands = commands,
         .beneath = &beneath,
     };
-    *status = prDrawFramePrepare(frameFor(frame, renderer), list, &prepared);
+    if (frame == nullptr)
+        frame = prDrawFrameCreate(renderer);
+    *status = prDrawFramePrepare(frame, list, &prepared);
     if (*status == PrStatus_Ok) {
         // The pass clears to the background: the color of its first pixel, which is premultiplied BGRA, reordered as
         // RGBA.

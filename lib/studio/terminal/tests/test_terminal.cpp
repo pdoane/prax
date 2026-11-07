@@ -14,6 +14,7 @@
 #include "pr/layout_frame.h"
 #include "pr/min_max.h"
 #include "pr/process.h"
+#include "pr/process_backend.h"
 #include "pr/raw_array.h"
 #include "pr/span.h"
 #include "pr/string.h"
@@ -108,8 +109,8 @@ struct FakeLauncher {
 
     FakeLauncher() {
         prMutexInit(&mutex);
-        launcher.destroy = [](PrProcessLauncher*) {};
-        launcher.launch = [](PrProcessLauncher* l, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* out) -> PrStatus {
+        launcher.destroyFn = [](PrProcessLauncher*) {};
+        launcher.launchFn = [](PrProcessLauncher* l, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* out) -> PrStatus {
             FakeLauncher* fake = reinterpret_cast<FakeLauncher*>(l);
             fake->receive = desc->receive;
             fake->receiveContext = desc->receiveContext;
@@ -117,20 +118,20 @@ struct FakeLauncher {
             return PrStatus_Ok;
         };
         PrProcess& p = process.process;
-        p.destroy = [](PrProcess*) {};
+        p.destroyFn = [](PrProcess*) {};
         // The terminal writes from the UI's thread and from the parser's.
-        p.write = [](PrProcess* written, PrByteView bytes) {
+        p.writeFn = [](PrProcess* written, PrByteView bytes) {
             FakeLauncher* fake = reinterpret_cast<FakeProcess*>(written)->launcher;
             prMutexLock(&fake->mutex);
             fake->written.append(prStringFromBytes(bytes));
             prMutexUnlock(&fake->mutex);
         };
-        p.closeInput = [](PrProcess*) {};
-        p.read = [](PrProcess*, PrProcessStream, uint8_t* PR_NULLABLE, size_t) { return size_t(0); };
-        p.info = [](const PrProcess*) { return PrProcessInfo{}; };
-        p.kill = [](PrProcess*) {};
-        p.terminalResize = [](PrProcess*, PrUVec2, PrUVec2) {};
-        p.terminalForegroundDirectory = [](const PrProcess*) { return prRawStringNull(); };
+        p.closeInputFn = [](PrProcess*) {};
+        p.readFn = [](PrProcess*, PrProcessStream, uint8_t* PR_NULLABLE, size_t) { return size_t(0); };
+        p.infoFn = [](const PrProcess*) { return PrProcessInfo{}; };
+        p.killFn = [](PrProcess*) {};
+        p.terminalResizeFn = [](PrProcess*, PrUVec2, PrUVec2) {};
+        p.terminalForegroundDirectoryFn = [](const PrProcess*) { return prRawStringNull(); };
     }
 
     ~FakeLauncher() { prMutexReset(&mutex); }

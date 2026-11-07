@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/media_backend.h"
 
 #include "media/src/media_source_decoder.h"
 
@@ -103,28 +104,26 @@ PrMediaCodec* PR_NULLABLE prMediaCodecCreate(PrMediaCodecBackend backend) {
 }
 
 void prMediaCodecDestroy(PrMediaCodec* PR_NULLABLE codec) {
-    if (codec != nullptr && codec->destroy != nullptr)
-        codec->destroy(codec);
+    if (codec != nullptr && codec->destroyFn != nullptr)
+        codec->destroyFn(codec);
 }
 
 PrMediaSupport prMediaCodecSupportsType(PrMediaCodec* codec, PrStringView type) {
-    return codec->supportsType(codec, type);
+    return codec->supportsTypeFn(codec, type);
 }
 
 PrMediaSupport prMediaCodecSupportsSourceType(PrMediaCodec* codec, PrStringView type) {
-    if (codec->supportsSourceType != nullptr)
-        return codec->supportsSourceType(codec, type);
-    return codec->supportsType(codec, type);
+    if (codec->supportsSourceTypeFn != nullptr)
+        return codec->supportsSourceTypeFn(codec, type);
+    return codec->supportsTypeFn(codec, type);
 }
 
 PrStatus prMediaDecoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
         PrMediaInfo* info) {
     *out = nullptr;
     *info = PrMediaInfo{};
-    PrStatus status = codec->decoderCreate(codec, bytes, out, info);
+    PrStatus status = codec->decoderCreateFn(codec, bytes, out, info);
     PR_ASSERT((status == PrStatus_Ok) == (*out != nullptr));
-    if (status == PrStatus_Ok)
-        (*out)->codec = codec;
     return status;
 }
 
@@ -140,40 +139,38 @@ void prMediaDecoderSetSourceEnded(PrMediaDecoder* decoder, bool ended) {
 
 void prMediaDecoderDestroy(PrMediaDecoder* PR_NULLABLE decoder) {
     if (decoder != nullptr)
-        decoder->codec->decoderDestroy(decoder->codec, decoder);
+        decoder->destroyFn(decoder);
 }
 
 bool prMediaDecoderHasFrames(const PrMediaDecoder* decoder) {
-    return decoder->codec->decoderFrame != nullptr;
+    return decoder->frameFn != nullptr;
 }
 
 bool prMediaDecoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
     *out = PrMediaFrame{};
-    PrMediaCodec* codec = decoder->codec;
-    if (codec->decoderFrame == nullptr) {
+    if (decoder->frameFn == nullptr) {
         out->current = true;
         return false;
     }
-    if (!codec->decoderFrame(codec, decoder, seconds, out))
+    if (!decoder->frameFn(decoder, seconds, out))
         return false;
     PR_ASSERT(out->image.handle != nullptr);
     return true;
 }
 
 bool prMediaDecoderAudioStart(PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
-    PrMediaCodec* codec = decoder->codec;
-    return codec->decoderAudioStart != nullptr && codec->decoderAudioStart(codec, decoder, sampleRate, channels, seconds);
+    return decoder->audioStartFn != nullptr && decoder->audioStartFn(decoder, sampleRate, channels, seconds);
 }
 
 void prMediaDecoderAudioSeek(PrMediaDecoder* decoder, double seconds) {
-    decoder->codec->decoderAudioSeek(decoder->codec, decoder, seconds);
+    decoder->audioSeekFn(decoder, seconds);
 }
 
 PrMediaAudioChunk prMediaDecoderAudioRead(PrMediaDecoder* decoder, float* samples, uint32_t frames) {
-    return decoder->codec->decoderAudioRead(decoder->codec, decoder, samples, frames);
+    return decoder->audioReadFn(decoder, samples, frames);
 }
 
 void prMediaDecoderAudioWait(PrMediaDecoder* decoder, uint32_t frames) {
-    if (decoder->codec->decoderAudioWait != nullptr)
-        decoder->codec->decoderAudioWait(decoder->codec, decoder, frames);
+    if (decoder->audioWaitFn != nullptr)
+        decoder->audioWaitFn(decoder, frames);
 }

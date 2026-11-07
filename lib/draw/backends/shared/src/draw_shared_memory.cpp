@@ -61,6 +61,30 @@ void drawFrame(void* PR_NULLABLE context, const void* native) {
         frame->render(frame->renderer, at, format, frame->list, frame->part);
 }
 
+void destroyFrame(PrDrawFrame* handle) {
+    DrawMemoryFrame* frame = static_cast<DrawMemoryFrame*>(handle);
+    frame->origins.reset();
+    frame->narrow.reset();
+    prMemoryFree(frame);
+}
+
+PrStatus prepareFrame(PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* part, const PrDrawTarget* target) {
+    DrawMemoryFrame* frame = static_cast<DrawMemoryFrame*>(handle);
+    frame->extent = target->extent;
+    frame->list = list;
+    frame->part = *part;
+    frame->origins.clear();
+    frame->drawn = 0;
+    return PrStatus_Ok;
+}
+
+// Records a render of the frame into the pass at `origin`. The render runs while the pass's work runs.
+void renderFrame(PrDrawFrame* handle, PrGpuPass* pass, PrIVec2 origin) {
+    DrawMemoryFrame* frame = static_cast<DrawMemoryFrame*>(handle);
+    frame->origins.push(origin);
+    prGpuPassNativeDraw(pass, PrGpuNativeKind_Pixels, drawFrame, frame);
+}
+
 } // namespace
 
 PrGpuDevice* PR_NULLABLE drawMemoryDevice(PrGpuDevice* PR_NULLABLE device, bool* owned) {
@@ -74,28 +98,13 @@ PrGpuDevice* PR_NULLABLE drawMemoryDevice(PrGpuDevice* PR_NULLABLE device, bool*
 
 DrawMemoryFrame* drawMemoryFrameCreate(PrDrawRenderer* renderer, DrawMemoryRenderFn render, bool halfFloat) {
     DrawMemoryFrame* frame = allocZeroed<DrawMemoryFrame>();
+    frame->destroyFn = destroyFrame;
+    frame->prepareFn = prepareFrame;
+    frame->renderFn = renderFrame;
     frame->renderer = renderer;
     frame->render = render;
     frame->halfFloat = halfFloat;
     return frame;
-}
-
-void drawMemoryFrameDestroy(DrawMemoryFrame* frame) {
-    frame->origins.reset();
-    frame->narrow.reset();
-    prMemoryFree(frame);
-}
-
-void drawMemoryFramePrepare(DrawMemoryFrame* frame, const PrDrawList* list, const PrDrawPart& part) {
-    frame->list = list;
-    frame->part = part;
-    frame->origins.clear();
-    frame->drawn = 0;
-}
-
-void drawMemoryFrameRender(DrawMemoryFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
-    frame->origins.push(origin);
-    prGpuPassNativeDraw(pass, PrGpuNativeKind_Pixels, drawFrame, frame);
 }
 
 } // namespace pr_impl

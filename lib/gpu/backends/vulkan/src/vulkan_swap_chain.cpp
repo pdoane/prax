@@ -19,6 +19,9 @@ namespace pr_impl {
 
 namespace {
 
+// The functions of the device's objects, which their creation installs.
+extern const PrGpuSwapChain kSwapChainFunctions;
+
 VulkanSwapChain* swapChainOf(PrGpuSwapChain* swapChain) {
     return static_cast<VulkanSwapChain*>(swapChain);
 }
@@ -32,7 +35,7 @@ void waitFrames(VulkanDevice* d, VulkanSwapChain* s) {
             latest = fence;
     }
     if (latest != 0)
-        d->wait(d, latest);
+        d->waitFn(d, latest);
     if (!d->lost.load()) {
         prMutexLock(&d->mutex);
         vulkanCheck(d, d->vk.QueueWaitIdle(d->queue));
@@ -199,6 +202,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     VkSurfaceCapabilitiesKHR capabilities{};
     d->vk.GetPhysicalDeviceSurfaceCapabilitiesKHR(d->physical, native, &capabilities);
     VulkanSwapChain* s = allocZeroed<VulkanSwapChain>();
+    static_cast<PrGpuSwapChain&>(*s) = kSwapChainFunctions;
     s->device = device;
     s->surface = native;
     s->presentMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -218,7 +222,8 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     return PrStatus_Ok;
 }
 
-void swapChainDestroy(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
+void swapChainDestroy(PrGpuSwapChain* swapChain) {
+    PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(swapChain)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanSwapChain* s = swapChainOf(swapChain);
     waitFrames(d, s);
@@ -232,20 +237,22 @@ void swapChainDestroy(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
     prMemoryFree(s);
 }
 
-void swapChainWait(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
+void swapChainWait(PrGpuSwapChain* swapChain) {
+    PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(swapChain)->device;
     VulkanSwapChain* s = swapChainOf(swapChain);
     PrGpuFence fence = s->frameFences[s->frame];
     if (fence != 0)
-        device->wait(device, fence);
+        device->waitFn(device, fence);
     s->waited = true;
 }
 
-PrStatus swapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+    PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(swapChain)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanSwapChain* s = swapChainOf(swapChain);
     PR_ASSERT(s->current == UINT32_MAX);
     if (!s->waited)
-        swapChainWait(device, swapChain);
+        swapChainWait(swapChain);
     s->waited = false;
     for (uint32_t attempt = 0; attempt < 2; ++attempt) {
         if (s->swapChain == VK_NULL_HANDLE || s->extent.width != extent.x || s->extent.height != extent.y) {
@@ -271,12 +278,22 @@ PrStatus swapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* swapChain, PrUVec
     return PrStatus_InvalidState;
 }
 
-void swapChainPresent(PrGpuDevice*, PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
+void swapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
     VulkanSwapChain* s = swapChainOf(swapChain);
     if (s->current == UINT32_MAX)
         return;
     vulkanCommands(commands)->presents.push(VulkanPresent{s, s->current, s->acquired[s->frame]});
 }
+
+// The functions of the device's objects.
+constexpr PrGpuSwapChain kSwapChainFunctions = {
+    .deviceFn = gpuSharedSwapChainDevice,
+    .infoFn = gpuSharedSwapChainInfo,
+    .destroyFn = swapChainDestroy,
+    .waitFn = swapChainWait,
+    .acquireFn = swapChainAcquire,
+    .presentFn = swapChainPresent,
+};
 
 } // namespace
 
@@ -304,11 +321,7 @@ void vulkanSwapChainPresentAll(VulkanDevice* d, VulkanCommands* c) {
 }
 
 void vulkanSwapChainFunctions(VulkanDevice* d) {
-    d->swapChainCreate = swapChainCreate;
-    d->swapChainDestroy = swapChainDestroy;
-    d->swapChainWait = swapChainWait;
-    d->swapChainAcquire = swapChainAcquire;
-    d->swapChainPresent = swapChainPresent;
+    d->swapChainCreateFn = swapChainCreate;
 }
 
 } // namespace pr_impl

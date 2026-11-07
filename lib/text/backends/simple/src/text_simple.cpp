@@ -14,6 +14,8 @@
 #include "pr/utf8.h"
 #include "pr/vec.h"
 
+#include "text/backends/shared/src/text_shared_font_cache.h"
+
 namespace pr_impl {
 
 namespace {
@@ -544,8 +546,28 @@ PrStatus shape(PrTextShaper*, void* faceState, void* fontState, const PrTextRun*
     return shapeAcross(*static_cast<SimpleFace*>(faceState), *static_cast<SimpleFont*>(fontState), run, out);
 }
 
+// The shaper, which keeps nothing but the states of its faces and fonts.
+struct SimpleBackend : PrTextShaper {
+    TextSharedFontCache fonts;
+};
+
 void destroyBackend(PrTextShaper* shaper) {
+    textSharedFontCacheReset(shaper, &static_cast<SimpleBackend*>(shaper)->fonts);
     prMemoryFree(shaper);
+}
+
+constexpr TextSharedFontStates kStates = {
+    .faceSize = sizeof(SimpleFace),
+    .fontSize = sizeof(SimpleFont),
+    .createFace = createFace,
+    .destroyFace = destroyFace,
+    .createFont = createFont,
+    .destroyFont = destroyFont,
+    .shape = shape,
+};
+
+PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer* out) {
+    return textSharedFontCacheShape(shaper, &static_cast<SimpleBackend*>(shaper)->fonts, run, out);
 }
 
 } // namespace
@@ -555,14 +577,9 @@ void destroyBackend(PrTextShaper* shaper) {
 using namespace pr_impl;
 
 PrTextShaper* prTextSimpleCreate(void) {
-    PrTextShaper* shaper = allocZeroed<PrTextShaper>();
-    shaper->destroy = destroyBackend;
-    shaper->shape = shape;
-    shaper->faceSize = sizeof(SimpleFace);
-    shaper->fontSize = sizeof(SimpleFont);
-    shaper->createFace = createFace;
-    shaper->destroyFace = destroyFace;
-    shaper->createFont = createFont;
-    shaper->destroyFont = destroyFont;
+    SimpleBackend* shaper = allocZeroed<SimpleBackend>();
+    shaper->destroyFn = destroyBackend;
+    shaper->shapeFn = shapeRun;
+    shaper->fonts.states = &kStates;
     return shaper;
 }

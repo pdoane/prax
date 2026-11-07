@@ -1,6 +1,6 @@
-// The face and font states that a shaper keeps (font_cache.h).
+// The face and font states that a shaper keeps, which the backends share.
 
-#include "text/src/font_cache.h"
+#include "text/backends/shared/src/text_shared_font_cache.h"
 
 #include "pr/align.h"
 #include "pr/alloc.h"
@@ -9,7 +9,7 @@
 
 namespace pr_impl {
 
-struct CachedFace {
+struct TextSharedFace {
     const uint8_t* data;
     uint32_t index;
     const PrFont* owner;                // a reference to a font of these bytes
@@ -17,17 +17,11 @@ struct CachedFace {
     uint64_t used;
 };
 
-struct CachedFont {
-    CachedFace* face;
+struct TextSharedFont {
+    TextSharedFace* face;
     const PrFont* font;                 // a reference
     uint64_t id;
     uint64_t used;
-};
-
-struct FontCache {
-    RawArray<CachedFace*> faces;
-    RawArray<CachedFont*> fonts;
-    uint64_t clock;
 };
 
 namespace {
@@ -43,35 +37,29 @@ constexpr size_t stateOffset(size_t size) {
     return alignUp(size, kStateAlignment);
 }
 
-void* stateOf(CachedFace* face) {
-    return reinterpret_cast<uint8_t*>(face) + stateOffset(sizeof(CachedFace));
+void* stateOf(TextSharedFace* face) {
+    return reinterpret_cast<uint8_t*>(face) + stateOffset(sizeof(TextSharedFace));
 }
 
-void* stateOf(CachedFont* font) {
-    return reinterpret_cast<uint8_t*>(font) + stateOffset(sizeof(CachedFont));
+void* stateOf(TextSharedFont* font) {
+    return reinterpret_cast<uint8_t*>(font) + stateOffset(sizeof(TextSharedFont));
 }
 
-FontCache* cacheOf(PrTextShaper* shaper) {
-    if (shaper->fonts == nullptr)
-        shaper->fonts = reinterpret_cast<PrTextFontCache*>(allocZeroed<FontCache>());
-    return reinterpret_cast<FontCache*>(shaper->fonts);
-}
-
-void destroyFace(PrTextShaper* shaper, CachedFace* face) {
-    shaper->destroyFace(shaper, stateOf(face));
+void destroyFace(PrTextShaper* shaper, TextSharedFontCache* cache, TextSharedFace* face) {
+    cache->states->destroyFace(shaper, stateOf(face));
     prFontRelease(face->owner);
     prMemoryFree(face);
 }
 
-void destroyFont(PrTextShaper* shaper, CachedFont* font) {
-    shaper->destroyFont(shaper, stateOf(font));
+void destroyFont(PrTextShaper* shaper, TextSharedFontCache* cache, TextSharedFont* font) {
+    cache->states->destroyFont(shaper, stateOf(font));
     --font->face->fonts;
     prFontRelease(font->font);
     prMemoryFree(font);
 }
 
 // Frees the idle faces beyond the number kept, least recently used first.
-void trimFaces(PrTextShaper* shaper, FontCache* cache) {
+void trimFaces(PrTextShaper* shaper, TextSharedFontCache* cache) {
     for (;;) {
         uint32_t idle = 0;
         uint32_t oldest = cache->faces.count;
@@ -84,26 +72,26 @@ void trimFaces(PrTextShaper* shaper, FontCache* cache) {
         }
         if (idle <= kIdleFaces)
             return;
-        destroyFace(shaper, cache->faces.data[oldest]);
+        destroyFace(shaper, cache, cache->faces.data[oldest]);
         cache->faces.data[oldest] = cache->faces.last();
         cache->faces.pop();
     }
 }
 
 // Returns the face for the bytes and index of the font, read on its first use, or null if the backend cannot read it.
-CachedFace* PR_NULLABLE faceOf(PrTextShaper* shaper, FontCache* cache, const PrFont* font) {
+TextSharedFace* PR_NULLABLE faceOf(PrTextShaper* shaper, TextSharedFontCache* cache, const PrFont* font) {
     const uint8_t* data = prFontData(font).data;
     uint32_t index = prFontIndex(font);
     for (uint32_t i = 0; i < cache->faces.count; ++i) {
-        CachedFace* face = cache->faces.data[i];
+        TextSharedFace* face = cache->faces.data[i];
         if (face->data == data && face->index == index) {
             face->used = cache->clock;
             return face;
         }
     }
-    CachedFace* face =
-        static_cast<CachedFace*>(prMemoryAllocZeroed(stateOffset(sizeof(CachedFace)) + shaper->faceSize));
-    if (!shaper->createFace(shaper, font, stateOf(face))) {
+    TextSharedFace* face = static_cast<TextSharedFace*>(prMemoryAllocZeroed(stateOffset(sizeof(TextSharedFace)) +
+        cache->states->faceSize));
+    if (!cache->states->createFace(shaper, font, stateOf(face))) {
         prMemoryFree(face);
         return nullptr;
     }
@@ -116,15 +104,14 @@ CachedFace* PR_NULLABLE faceOf(PrTextShaper* shaper, FontCache* cache, const PrF
     return face;
 }
 
-} // namespace
-
-bool textFontCacheFind(PrTextShaper* shaper, const PrFont* font, void* PR_NULLABLE* PR_NONNULL face,
+// Writes the states of the font and of its face to `face` and `state`, creating them on the first use of the font. They
+// are kept at least until the next call. Returns false and writes nothing if the backend cannot read the face.
+bool find(PrTextShaper* shaper, TextSharedFontCache* cache, const PrFont* font, void* PR_NULLABLE* PR_NONNULL face,
         void* PR_NULLABLE* PR_NONNULL state) {
-    FontCache* cache = cacheOf(shaper);
     uint64_t id = prFontId(font);
     ++cache->clock;
     for (uint32_t i = 0; i < cache->fonts.count; ++i) {
-        CachedFont* cached = cache->fonts.data[i];
+        TextSharedFont* cached = cache->fonts.data[i];
         if (cached->id == id) {
             cached->used = cache->clock;
             cached->face->used = cache->clock;
@@ -133,18 +120,18 @@ bool textFontCacheFind(PrTextShaper* shaper, const PrFont* font, void* PR_NULLAB
             return true;
         }
     }
-    CachedFace* cachedFace = faceOf(shaper, cache, font);
+    TextSharedFace* cachedFace = faceOf(shaper, cache, font);
     if (cachedFace == nullptr)
         return false;
-    CachedFont* cached =
-        static_cast<CachedFont*>(prMemoryAllocZeroed(stateOffset(sizeof(CachedFont)) + shaper->fontSize));
+    TextSharedFont* cached = static_cast<TextSharedFont*>(prMemoryAllocZeroed(stateOffset(sizeof(TextSharedFont)) +
+        cache->states->fontSize));
     cached->face = cachedFace;
     ++cachedFace->fonts;
     cached->font = font;
     prFontRetain(font);
     cached->id = id;
     cached->used = cache->clock;
-    shaper->createFont(shaper, stateOf(cachedFace), font, stateOf(cached));
+    cache->states->createFont(shaper, stateOf(cachedFace), font, stateOf(cached));
     if (cache->fonts.count < kFonts) {
         cache->fonts.push(cached);
     } else {
@@ -153,7 +140,7 @@ bool textFontCacheFind(PrTextShaper* shaper, const PrFont* font, void* PR_NULLAB
             if (cache->fonts.data[i]->used < cache->fonts.data[oldest]->used)
                 oldest = i;
         }
-        destroyFont(shaper, cache->fonts.data[oldest]);
+        destroyFont(shaper, cache, cache->fonts.data[oldest]);
         cache->fonts.data[oldest] = cached;
         trimFaces(shaper, cache);
     }
@@ -162,18 +149,24 @@ bool textFontCacheFind(PrTextShaper* shaper, const PrFont* font, void* PR_NULLAB
     return true;
 }
 
-void textFontCacheDestroy(PrTextShaper* shaper) {
-    if (shaper->fonts == nullptr)
-        return;
-    FontCache* cache = reinterpret_cast<FontCache*>(shaper->fonts);
+} // namespace
+
+PrStatus textSharedFontCacheShape(PrTextShaper* shaper, TextSharedFontCache* cache, const PrTextRun* run,
+        PrTextGlyphBuffer* out) {
+    void* face = nullptr;
+    void* font = nullptr;
+    if (!find(shaper, cache, run->font, &face, &font))
+        return PrStatus_NotSupported;
+    return cache->states->shape(shaper, face, font, run, out);
+}
+
+void textSharedFontCacheReset(PrTextShaper* shaper, TextSharedFontCache* cache) {
     for (uint32_t i = 0; i < cache->fonts.count; ++i)
-        destroyFont(shaper, cache->fonts.data[i]);
+        destroyFont(shaper, cache, cache->fonts.data[i]);
     cache->fonts.reset();
     for (uint32_t i = 0; i < cache->faces.count; ++i)
-        destroyFace(shaper, cache->faces.data[i]);
+        destroyFace(shaper, cache, cache->faces.data[i]);
     cache->faces.reset();
-    prMemoryFree(cache);
-    shaper->fonts = nullptr;
 }
 
 } // namespace pr_impl

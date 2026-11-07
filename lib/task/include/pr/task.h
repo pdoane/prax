@@ -27,22 +27,6 @@ typedef void (*PrTaskFn)(void* PR_NULLABLE context, uint32_t index, uint32_t thr
 // A job that a pool runs once (prTaskPoolPost).
 typedef void (*PrTaskJobFn)(void* PR_NULLABLE context);
 
-// The function table of a pool, placed at the start of the backend's state. Each member implements the public function
-// of the same name. A null `destroy` means there is nothing to free. Callers use the functions below, never these
-// members.
-//
-// `run` is called only for a loop of at least two indices and a width from 2 to the pool's width, no more than the
-// number of indices. It calls `fn` once with each index, on the caller's thread as thread 0 and on at most `width - 1`
-// other threads, numbered from 1, and returns once every call has returned.
-//
-// `post` may be called from any thread, at any time, including from a job, and returns without waiting for the job.
-struct PrTaskPool {
-    void (*PR_NULLABLE destroy)(PrTaskPool* pool);
-    uint32_t (*width)(const PrTaskPool* pool);
-    void (*run)(PrTaskPool* pool, uint32_t count, uint32_t width, PrTaskFn fn, void* PR_NULLABLE context);
-    void (*post)(PrTaskPool* pool, PrTaskJobFn fn, void* PR_NULLABLE context);
-};
-
 // The library's backends of pools, which the build turns on (README.md), and Default, the first that the build has.
 enum {
     PrTaskPoolBackend_Default,

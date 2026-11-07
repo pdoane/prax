@@ -5,6 +5,7 @@
 
 #include "pr/base.h"
 #include "pr/draw_renderer.h"
+#include "pr/draw_renderer_backend.h"
 #include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -20,6 +21,8 @@ using DrawMemoryRenderFn = void (*)(PrDrawRenderer* renderer, PrPixels pixels, P
 // only 8 bits renders an RgbaF16 target by clamping its colors to Rgba8, drawing over them, and widening the result
 // back.
 struct DrawMemoryFrame : PrDrawFrame {
+    PrDrawRenderer* renderer;
+    PrUVec2 extent;                 // the extent of the target that the frame was prepared for
     const PrDrawList* PR_NULLABLE list;
     PrDrawPart part;
     DrawMemoryRenderFn render;
@@ -34,15 +37,9 @@ struct DrawMemoryFrame : PrDrawFrame {
 // `device` is null and the build has no memory device.
 PrGpuDevice* PR_NULLABLE drawMemoryDevice(PrGpuDevice* PR_NULLABLE device, bool* owned);
 
-// Creates a frame that renders with `render`, or frees one. `halfFloat` is true if `render` draws RgbaF16 itself.
+// Creates a frame that renders with `render`. `halfFloat` is true if `render` draws RgbaF16 itself. The frame's prepare
+// keeps the part of the list, which renders when the frame's passes run.
 DrawMemoryFrame* drawMemoryFrameCreate(PrDrawRenderer* renderer, DrawMemoryRenderFn render, bool halfFloat);
-void drawMemoryFrameDestroy(DrawMemoryFrame* frame);
-
-// Keeps the part of the list, which renders when the frame's passes run.
-void drawMemoryFramePrepare(DrawMemoryFrame* frame, const PrDrawList* list, const PrDrawPart& part);
-
-// Records a render of the frame into the pass at `origin`. The render runs while the pass's work runs.
-void drawMemoryFrameRender(DrawMemoryFrame* frame, PrGpuPass* pass, PrIVec2 origin);
 
 } // namespace pr_impl
 

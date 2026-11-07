@@ -22,6 +22,7 @@
 #include "pr/raw_array.h"
 #include "pr/thread.h"
 
+#include "gpu/backends/shared/src/gpu_shared_device.h"
 #include "gpu/backends/shared/src/gpu_shared_upload.h"
 
 // The system APIs that the structures below name.
@@ -154,7 +155,7 @@ struct GpuMetalDone {
 };
 
 // A shader library, one metallib that holds every entry point.
-struct GpuMetalLibrary : PrGpuShaderLibrary {
+struct GpuMetalLibrary : GpuSharedLibrary {
     id<MTLLibrary> library;             // retained
 };
 
@@ -167,7 +168,7 @@ struct GpuMetalDrawable {
 struct GpuMetalPass;
 
 // The state of a command buffer that the backends share, at the start of each backend's own.
-struct GpuMetalCommands : PrGpuCommands {
+struct GpuMetalCommands : GpuSharedCommands {
     uint64_t serial;                    // the order in which command buffers began
     GpuMetalPass* PR_NULLABLE pass;     // the open pass
     PrGpuNativeStateFlags changed;      // the state of the application's pass that changed since the last sync
@@ -179,7 +180,7 @@ struct GpuMetalCommands : PrGpuCommands {
 };
 
 // A pass of either API.
-struct GpuMetalPass : PrGpuPass {
+struct GpuMetalPass : GpuSharedPass {
     id encoder;                         // id<MTLRenderCommandEncoder> or id<MTL4RenderCommandEncoder>, retained
     PrGpuBuffer indexBuffer;
     uint64_t indexOffset;
@@ -187,7 +188,7 @@ struct GpuMetalPass : PrGpuPass {
 };
 
 // A swap chain over a Metal layer.
-struct GpuMetalSwapChain : PrGpuSwapChain {
+struct GpuMetalSwapChain : GpuSharedSwapChain {
     CAMetalLayer* layer;                      // retained
     NSView* view;                             // the view that the layer backs or the view hosts, not retained
     PrGpuSwapChainIntent intent;
@@ -210,7 +211,7 @@ struct GpuMetalTextureCopy {
 };
 
 // The state of a device that the backends share, at the start of each backend's own.
-struct GpuMetalDevice : PrGpuDevice {
+struct GpuMetalDevice : GpuSharedDevice {
     id<MTLDevice> device;                            // retained
     id queue;                                        // id<MTLCommandQueue> or id<MTL4CommandQueue>, retained
     Atomic<uint64_t> done;                           // the fence of the last submission that is done
@@ -232,6 +233,10 @@ struct GpuMetalDevice : PrGpuDevice {
     void (*uploadsSubmit)(GpuMetalDevice* d);
     void (*uploadsCopyTexture)(GpuMetalDevice* d, const GpuMetalTextureCopy& copy);
     void (*PR_NULLABLE heldRecycle)(GpuMetalDevice* d, GpuMetalHeld& held);
+
+    // The functions of the backend's command buffers and swap chains, which the shared code installs as it makes them.
+    const PrGpuCommands* commandsFunctions;
+    const PrGpuSwapChain* swapChainFunctions;
 
     // The mutex guards everything below. The tables have fixed capacities, so that recording reads them without it.
     PrMutex mutex;
@@ -273,6 +278,18 @@ inline const GpuMetalDevice* gpuMetalDeviceFrom(const PrGpuDevice* device) {
 inline GpuMetalCommands* gpuMetalCommandsFrom(PrGpuCommands* commands) {
     return static_cast<GpuMetalCommands*>(commands);
 }
+
+// The functions of command buffers, passes and swap chains that the backends share, which their tables name.
+void* gpuMetalCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset);
+void gpuMetalCommandsOnDone(PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context);
+void gpuMetalPassSetViewport(PrGpuPass* handle, PrRect viewport, float minDepth, float maxDepth);
+void gpuMetalPassSetScissor(PrGpuPass* handle, PrIRect scissor);
+void gpuMetalPassSetBlendConstant(PrGpuPass* handle, PrColor constant);
+void gpuMetalPassSetStencilReference(PrGpuPass* handle, uint8_t reference);
+void gpuMetalPassSetIndexBuffer(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, bool wide);
+void gpuMetalSwapChainDestroy(PrGpuSwapChain* handle);
+void gpuMetalSwapChainWait(PrGpuSwapChain* handle);
+void gpuMetalSwapChainPresent(PrGpuSwapChain* handle, PrGpuCommands* commands);
 
 // Returns an autoreleased string of the view.
 NSString* gpuMetalString(PrStringView view);
@@ -322,7 +339,7 @@ void* gpuMetalStream(GpuMetalDevice* d, GpuMetalCommands* c, uint64_t size, uint
 void gpuMetalRenderPipelineSet(const GpuMetalPipeline& p, id encoder);
 
 // Acquires a swap chain's next drawable, at `extent`.
-PrStatus gpuMetalSwapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out);
+PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out);
 
 // Runs what a submission's completion does: reports an error, calls `dones` and frees them, and raises the device's
 // count of fences done. Called once for each fence, in any order.
@@ -355,7 +372,7 @@ void gpuMetalCommandsDestroy(GpuMetalCommands* c);
 GpuMetalPipeline gpuMetalPipelineFromDesc(GpuMetalDevice* d, const PrGpuGraphicsPipelineDesc* desc);
 
 // Sets the pipeline of the command buffer's next dispatches and draws, on the open pass if there is one.
-void gpuMetalCommandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipeline pipeline);
+void gpuMetalCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline);
 
 // Encode copies on an encoder of either API that takes copies.
 void gpuMetalEncodeCopyTexture(const GpuMetalDevice* d, id encoder, PrGpuTexture source,

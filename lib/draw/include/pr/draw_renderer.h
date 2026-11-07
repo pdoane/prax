@@ -104,13 +104,6 @@ typedef struct PrDrawPart {
     PrDrawTransform transform;
 } PrDrawPart;
 
-// The fields at the start of every frame's state.
-struct PrDrawFrame {
-    PrDrawRenderer* renderer;
-    PrUVec2 extent;             // the extent of the render
-    bool prepared;              // true if the last prepare succeeded
-};
-
 // Counts of the work that preparing a frame produced, for measuring a renderer. A renderer fills the counts that apply
 // to how it renders, and leaves the rest zero.
 typedef struct PrDrawStats {
@@ -122,21 +115,6 @@ typedef struct PrDrawStats {
     uint32_t pathFills;         // paths whose coverage the CPU prepared, tessellated or rasterized
     uint64_t uploadBytes;       // bytes copied to the device: the frame's data and texels
 } PrDrawStats;
-
-// The functions of a renderer, at the start of its backend's state, and the device that it renders on. Each function
-// carries out the function that it is named for. `frameStats` is null for a renderer that counts nothing.
-// `dropResources` is null for a renderer that keeps nothing on its device.
-struct PrDrawRenderer {
-    void (*PR_NULLABLE destroy)(PrDrawRenderer* renderer);
-    PrDrawFrame* PR_NONNULL (*PR_NONNULL frameCreate)(PrDrawRenderer* renderer);
-    void (*frameDestroy)(PrDrawRenderer* renderer, PrDrawFrame* frame);
-    PrStatus (*framePrepare)(PrDrawRenderer* renderer, PrDrawFrame* frame, const PrDrawList* list, const PrDrawPart* part,
-        const PrDrawTarget* target);
-    void (*frameRender)(PrDrawRenderer* renderer, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin);
-    void (*PR_NULLABLE frameStats)(PrDrawRenderer* renderer, const PrDrawFrame* frame, PrDrawStats* out);
-    void (*PR_NULLABLE dropResources)(PrDrawRenderer* renderer);
-    PrGpuDevice* device;
-};
 
 // The library's renderer backends, which the build turns on (README.md), and Default. Default is the first of the
 // fragment renderer, the triangles renderer, the Canvas 2D renderer and the CPU renderer that the device runs. The
