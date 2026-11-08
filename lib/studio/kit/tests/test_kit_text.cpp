@@ -45,7 +45,7 @@ struct Clipboard {
     void deliver(KitFixture& f) {
         REQUIRE(requested);
         requested = false;
-        f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .text = text});
+        f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = text}});
     }
 };
 
@@ -499,21 +499,21 @@ TEST_CASE("marked text stays inside a value's edit until it commits") {
     };
     e.focus();
 
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "k"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = "k"}});
     e.f.frame();
     e.f.frame();
     CHECK(e.text == "ab");
     CHECK(commits == 0);
     CHECK(prLayoutNodeText(e.f.tree, e.textNode()) == "abk");
 
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "\xe3\x81\x8b"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = "\xe3\x81\x8b"}});
     e.f.frame();
     e.f.frame();
     CHECK(e.text == "ab");
     CHECK(prLayoutNodeText(e.f.tree, e.textNode()) == "ab\xe3\x81\x8b");
 
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd});
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .input = {}});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_Text, .input = {.text = "\xe3\x81\x8b"}});
     e.f.frame();
     CHECK(e.text == "ab\xe3\x81\x8b");
     CHECK(commits == 1);
@@ -528,17 +528,17 @@ TEST_CASE("the keys that an input method takes for its composition do not edit t
     };
     e.focus();
 
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = 'K', .text = "k"});
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "k"});
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = PrAppKey_Backspace});
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "\xe3\x81\x8b"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = 'K', .composing = true, .text = "k"}});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = "k"}});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_Backspace, .composing = true}});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = "\xe3\x81\x8b"}});
     e.f.frame();
     e.f.frame();
     CHECK(prLayoutNodeText(e.f.tree, e.textNode()) == "ab\xe3\x81\x8b");
 
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = PrAppKey_Enter});
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .text = "\xe3\x81\x8b"});
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_Enter, .composing = true}});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .input = {.text = "\xe3\x81\x8b"}});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_Text, .input = {.text = "\xe3\x81\x8b"}});
     e.f.frame();
     CHECK(e.text == "ab\xe3\x81\x8b");
     CHECK(commits == 1);
@@ -547,7 +547,7 @@ TEST_CASE("the keys that an input method takes for its composition do not edit t
 TEST_CASE("text that the caller changes during a composition ends the composition") {
     Edited e("ab");
     e.focus();
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "k"});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = "k"}});
     e.f.frame();
     e.text = "xy";
     e.f.frame();
@@ -590,7 +590,7 @@ TEST_CASE("marked text in the caller's buffer leaves with focus") {
     f.frame();
     f.click(f.center(field));
     f.frame();
-    f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "k"});
+    f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = "k"}});
     f.frame();
     CHECK(prTextEditBufferSize(buffer) == 3);
     CHECK_FALSE(reported);

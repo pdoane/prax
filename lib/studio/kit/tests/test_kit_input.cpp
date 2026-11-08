@@ -19,13 +19,13 @@ namespace pr_impl {
 namespace {
 
 void down(KitFixture& f, PrVec2 at) {
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = at});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = at}});
 }
 void moveTo(KitFixture& f, PrVec2 at, PrAppModifierFlags modifiers = 0) {
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .modifiers = modifiers, .position = at});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .modifiers = modifiers, .pointer = {.position = at}});
 }
 void up(KitFixture& f, PrVec2 at) {
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = at});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = at}});
 }
 
 // Drags from `from` by each of `steps` px horizontally, a frame each, and releases.

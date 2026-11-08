@@ -200,7 +200,7 @@ PrTextEditCommand prTextEditCommandFromKey(const PrAppEvent* event, bool* extend
     bool control = (modifiers & PrAppModifierFlag_Control) != 0;
     bool byWord = (modifiers & (PrAppModifierFlag_Alt | PrAppModifierFlag_Control)) != 0;
     uint32_t group = command ? 2 : byWord ? 1 : 0;
-    switch (event->key) {
+    switch (event->keyboard.key) {
         case PrAppKey_Left: return PrTextEditCommand(PrTextEditCommand_Left + 4 * group);
         case PrAppKey_Right: return PrTextEditCommand(PrTextEditCommand_Right + 4 * group);
         case PrAppKey_Up: return PrTextEditCommand(PrTextEditCommand_Up + 4 * group);
@@ -214,7 +214,7 @@ PrTextEditCommand prTextEditCommandFromKey(const PrAppEvent* event, bool* extend
     }
     if (!command && !control)
         return PrTextEditCommand_None;
-    switch (event->key) {
+    switch (event->keyboard.key) {
         case 'A': return PrTextEditCommand_SelectAll;
         case 'C': return PrTextEditCommand_Copy;
         case 'X': return PrTextEditCommand_Cut;

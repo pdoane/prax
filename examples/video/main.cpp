@@ -203,9 +203,9 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
     Window& w = *static_cast<Window*>(context);
     if (e->kind != PrAppEventKind_KeyDown)
         return;
-    if (e->key == ' ')
+    if (e->keyboard.key == ' ')
         w.paused = !w.paused;
-    else if (e->key == PrAppKey_Escape)
+    else if (e->keyboard.key == PrAppKey_Escape)
         prAppStop(app);
 }
 

@@ -304,14 +304,14 @@ void buildAddress(Browser& b, PrLayoutNode toolbar, Tab& tab) {
         const PrAppEvent& e = events.events[i];
         if (e.kind != PrAppEventKind_KeyDown)
             continue;
-        if (e.key == PrAppKey_Enter) {
+        if (e.keyboard.key == PrAppKey_Enter) {
             String url = addressResolve(chrome.address);
             if (!url.isEmpty())
                 tabsLoad(b, url, (e.modifiers & kCommand) != 0 ? TabTarget_New : TabTarget_Active);
             leaveAddress(b, node);
             return;
         }
-        if (e.key == PrAppKey_Escape) {
+        if (e.keyboard.key == PrAppKey_Escape) {
             leaveAddress(b, node);
             return;
         }

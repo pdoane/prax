@@ -882,7 +882,7 @@ double scrubbed(const PrKit& kit, PrLayoutNode node, PrVec2 from, PrVec2 to) {
     for (uint32_t i = 0; i < events.count; ++i) {
         const PrAppEvent& e = events.events[i];
         if (e.kind == PrAppEventKind_PointerMove || e.kind == PrAppEventKind_PointerUp)
-            moveTo(e.position, (e.modifiers & PrAppModifierFlag_Shift) != 0 ? kFineFactor : 1);
+            moveTo(e.pointer.position, (e.modifiers & PrAppModifierFlag_Shift) != 0 ? kFineFactor : 1);
     }
     // Motion that no event accounts for, such as the round's last position past its events, is scaled as the last event
     // was.

@@ -197,20 +197,20 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
     Window& w = *static_cast<Window*>(context);
     if (e->kind == PrAppEventKind_PointerMove || e->kind == PrAppEventKind_PointerDown ||
             e->kind == PrAppEventKind_PointerUp) {
-        w.pointer = e->position;
+        w.pointer = e->pointer.position;
         w.pointed = true;
-        if (e->button == 0 && e->kind != PrAppEventKind_PointerMove)
+        if (e->pointer.button == 0 && e->kind != PrAppEventKind_PointerMove)
             w.held = e->kind == PrAppEventKind_PointerDown;
         return;
     }
     if (e->kind != PrAppEventKind_KeyDown)
         return;
-    if (e->key == PrAppKey_Right || e->key == PrAppKey_Left) {
-        w.scene = (w.scene + (e->key == PrAppKey_Right ? 1 : w.sceneCount - 1)) % w.sceneCount;
+    if (e->keyboard.key == PrAppKey_Right || e->keyboard.key == PrAppKey_Left) {
+        w.scene = (w.scene + (e->keyboard.key == PrAppKey_Right ? 1 : w.sceneCount - 1)) % w.sceneCount;
         announce(w);
-    } else if (e->key == ' ') {
+    } else if (e->keyboard.key == ' ') {
         w.paused = !w.paused;
-    } else if (e->key == PrAppKey_Escape) {
+    } else if (e->keyboard.key == PrAppKey_Escape) {
         prAppStop(app);
     }
 }

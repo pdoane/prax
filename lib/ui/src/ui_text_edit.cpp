@@ -331,11 +331,11 @@ struct TextEditor {
             return;
         }
         bool press = e.kind == PrAppEventKind_PointerDown;
-        if ((press && e.button != 0) || (!press && !state.dragging))
+        if ((press && e.pointer.button != 0) || (!press && !state.dragging))
             return;
         uint32_t at = 0;
         PrLayoutTextAffinity side = 0;
-        if (!positionAt(e.position, &at, &side))
+        if (!positionAt(e.pointer.position, &at, &side))
             return;
         PrStringView t = text();
         if (!press) {
@@ -386,7 +386,7 @@ struct TextEditor {
             erase(caret, PrTextEditOrigin_Composition);
             return;
         }
-        insert(e.text, false, PrTextEditOrigin_Composition, PrTextEditMerge_None);
+        insert(e.input.text, false, PrTextEditOrigin_Composition, PrTextEditMerge_None);
         if (caret > start) {
             state.markStart = start;
             state.markEnd = caret;
@@ -572,7 +572,7 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
                 case PrAppEventKind_PointerUp: editor.pointer(e); break;
                 case PrAppEventKind_KeyDown:
                     // A key that the input method takes edits the composition, not the text.
-                    if (!e.composing)
+                    if (!e.keyboard.composing)
                         editor.key(e);
                     break;
                 case PrAppEventKind_Text:
@@ -580,11 +580,11 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
                         editor.anchor = state.markStart;
                         editor.caret = state.markEnd;
                     }
-                    editor.insert(e.text, false, PrTextEditOrigin_Local, PrTextEditMerge_Typing);
+                    editor.insert(e.input.text, false, PrTextEditOrigin_Local, PrTextEditMerge_Typing);
                     break;
                 case PrAppEventKind_Clipboard:
                     if (state.pasting)
-                        editor.insert(e.text, true, PrTextEditOrigin_Local, PrTextEditMerge_None);
+                        editor.insert(e.input.text, true, PrTextEditOrigin_Local, PrTextEditMerge_None);
                     state.pasting = false;
                     break;
                 case PrAppEventKind_CompositionUpdate:

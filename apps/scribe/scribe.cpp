@@ -493,7 +493,7 @@ bool handleEvent(Scribe& s, const PrAppEvent& event) {
     if (event.kind != PrAppEventKind_Notification)
         return false;
     for (uint32_t i = 0; i < s.terminals.count(); ++i) {
-        if (prTerminalNotificationTag(s.terminals[i]) != event.tag)
+        if (prTerminalNotificationTag(s.terminals[i]) != event.notification.tag)
             continue;
         s.terminal = i;
         s.terminalShown = true;

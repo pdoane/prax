@@ -189,12 +189,12 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
     if (e->kind != PrAppEventKind_KeyDown)
         return;
     uint32_t count = w.drawings.count();
-    if (e->key == PrAppKey_Right || e->key == PrAppKey_Left) {
-        w.drawing = (w.drawing + (e->key == PrAppKey_Right ? 1 : count - 1)) % count;
+    if (e->keyboard.key == PrAppKey_Right || e->keyboard.key == PrAppKey_Left) {
+        w.drawing = (w.drawing + (e->keyboard.key == PrAppKey_Right ? 1 : count - 1)) % count;
         announce(w);
-    } else if (e->key == ' ') {
+    } else if (e->keyboard.key == ' ') {
         w.paused = !w.paused;
-    } else if (e->key == PrAppKey_Escape) {
+    } else if (e->keyboard.key == PrAppKey_Escape) {
         prAppStop(app);
     }
 }

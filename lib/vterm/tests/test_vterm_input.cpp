@@ -41,9 +41,7 @@ struct Term {
         return press(PrAppEvent{
             .kind = PrAppEventKind_KeyDown,
             .modifiers = modifiers,
-            .key = key,
-            .code = code,
-            .text = text,
+            .keyboard = {.key = key, .code = code, .text = text},
         });
     }
 
@@ -53,16 +51,13 @@ struct Term {
         return press(PrAppEvent{
             .kind = PrAppEventKind_KeyDown,
             .modifiers = modifiers,
-            .repeat = true,
-            .key = key,
-            .code = code,
-            .text = text,
+            .keyboard = {.key = key, .code = code, .repeat = true, .text = text},
         });
     }
 
     // Releases `key`, and returns what the release sent.
     String release(PrAppKey key, PrAppModifierFlags modifiers = 0, PrAppKeyCode code = PrAppKeyCode_Unidentified) {
-        PrAppEvent up{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .key = key, .code = code};
+        PrAppEvent up{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .keyboard = {.key = key, .code = code}};
         bool taken = prVtermInputEvent(vterm, &up, &desc);
         String sent = output();
         CHECK(taken == !sent.isEmpty());
@@ -71,30 +66,28 @@ struct Term {
 
     String press(const PrAppEvent& down) {
         prVtermInputEvent(vterm, &down, &desc);
-        if (down.text.size != 0) {
-            PrAppEvent typed{.kind = PrAppEventKind_Text, .text = down.text};
+        if (down.keyboard.text.size != 0) {
+            PrAppEvent typed{.kind = PrAppEventKind_Text, .input = {.text = down.keyboard.text}};
             prVtermInputEvent(vterm, &typed, &desc);
         }
         return output();
     }
 
     String text(const char* typed) {
-        PrAppEvent event{.kind = PrAppEventKind_Text, .text = typed};
+        PrAppEvent event{.kind = PrAppEventKind_Text, .input = {.text = typed}};
         prVtermInputEvent(vterm, &event, &desc);
         return output();
     }
 
     bool pointer(PrAppEventKind kind, PrVec2 position, uint8_t button = 0, PrAppModifierFlags modifiers = 0) {
-        PrAppEvent event{.kind = kind, .modifiers = modifiers, .button = button, .position = position};
+        PrAppEvent event{.kind = kind, .modifiers = modifiers, .pointer = {.position = position, .button = button}};
         return prVtermInputEvent(vterm, &event, &desc);
     }
 
     bool scroll(float lines, PrVec2 position = {5, 5}) {
         PrAppEvent event{
             .kind = PrAppEventKind_Scroll,
-            .scrollUnit = PrAppScrollUnit_Line,
-            .position = position,
-            .delta = {0, lines},
+            .scroll = {.position = position, .delta = {0, lines}, .unit = PrAppScrollUnit_Line},
         };
         return prVtermInputEvent(vterm, &event, &desc);
     }
@@ -129,7 +122,11 @@ TEST_CASE("vterm input: only the text that a key typed is dropped, and text from
     CHECK(term.key(PrAppKey_Up) == "\x1b[A");
     CHECK(term.text("\xf0\x9f\x98\x80") == "\xf0\x9f\x98\x80");
     // A key whose text the platform does not deliver, then other text.
-    PrAppEvent down{.kind = PrAppEventKind_KeyDown, .modifiers = PrAppModifierFlag_Control, .key = 'A', .text = "a"};
+    PrAppEvent down{
+        .kind = PrAppEventKind_KeyDown,
+        .modifiers = PrAppModifierFlag_Control,
+        .keyboard = {.key = 'A', .text = "a"},
+    };
     prVtermInputEvent(term.vterm, &down, &term.desc);
     CHECK(term.output() == "\x01");
     CHECK(term.text("\xc3\xa9") == "\xc3\xa9");
@@ -359,7 +356,7 @@ TEST_CASE("vterm input: a paste is bracketed if the program asked, and loses the
     term.write("\x1b[?2004h");
     prVtermInputPaste(term.vterm, "x\x1b[201~y");
     CHECK(term.output() == "\x1b[200~x[201~y\x1b[201~");
-    PrAppEvent clipboard{.kind = PrAppEventKind_Clipboard, .text = "z"};
+    PrAppEvent clipboard{.kind = PrAppEventKind_Clipboard, .input = {.text = "z"}};
     CHECK(prVtermInputEvent(term.vterm, &clipboard, &term.desc));
     CHECK(term.output() == "\x1b[200~z\x1b[201~");
 }

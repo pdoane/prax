@@ -122,7 +122,7 @@ void beginFrame(void* context, PrStudioWindow*, const PrAppFrame* f) {
 bool event(void* context, PrStudioWindow*, const PrAppEvent* e) {
     if (e->kind != PrAppEventKind_ClipboardImage)
         return false;
-    stageImport(alchemyOf(context).state, e->pixels);
+    stageImport(alchemyOf(context).state, e->image.pixels);
     return true;
 }
 

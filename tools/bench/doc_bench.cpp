@@ -455,7 +455,10 @@ int main(int argc, char** argv) {
         // The pointer moves over the page as it loads, as a user's would. The hit test waits for the running job.
         if (firstFrame != 0 && hoverMade == 0 && ++frames % kLoadHoverFrames == 0) {
             hoverMade = now();
-            PrAppEvent move{.kind = PrAppEventKind_PointerMove, .position = PrVec2{random(kWidth), random(kHeight)}};
+            PrAppEvent move{
+                .kind = PrAppEventKind_PointerMove,
+                .pointer = {.position = PrVec2{random(kWidth), random(kHeight)}},
+            };
             prHtmlViewEvent(b.view, &move, 0);
             hoverJobs = jobs;
         }

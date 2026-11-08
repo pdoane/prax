@@ -165,18 +165,22 @@ struct KitFixture {
         prUiPushEvent(ui, &event);
     }
     void move(PrVec2 at) {
-        push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = at});
+        push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = at}});
     }
     void click(PrVec2 at, PrAppModifierFlags modifiers = 0, uint32_t clicks = 1) {
-        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .clicks = clicks, .position = at});
-        push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .position = at});
+        push(PrAppEvent{
+            .kind = PrAppEventKind_PointerDown,
+            .modifiers = modifiers,
+            .pointer = {.position = at, .clicks = clicks},
+        });
+        push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .pointer = {.position = at}});
     }
     void key(PrAppKey key, PrAppModifierFlags modifiers = 0) {
-        push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .key = key});
-        push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .key = key});
+        push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .keyboard = {.key = key}});
+        push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .keyboard = {.key = key}});
     }
     void type(PrStringView text) {
-        push(PrAppEvent{.kind = PrAppEventKind_Text, .text = text});
+        push(PrAppEvent{.kind = PrAppEventKind_Text, .input = {.text = text}});
     }
 
     // The extent of the viewport that frames lay out in, and that render draws, in px.

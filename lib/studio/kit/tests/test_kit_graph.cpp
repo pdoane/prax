@@ -105,11 +105,11 @@ struct GraphScene {
     }
 
     void drag(PrVec2 from, PrVec2 to, PrAppModifierFlags modifiers = 0) {
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .position = from});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .pointer = {.position = from}});
         f.frame();
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .modifiers = modifiers, .position = to});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .modifiers = modifiers, .pointer = {.position = to}});
         f.frame();
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .position = to});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .pointer = {.position = to}});
         f.frame();
     }
 };
@@ -191,15 +191,14 @@ TEST_CASE("the wheel pans a graph, and with Command zooms it about the pointer, 
     REQUIRE(scene.bodies[2] != kPrLayoutNodeNone);
     PrVec2 over = scene.at({300, 300});
     f.move(over);
-    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .position = over, .delta = PrVec2{20, 10}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scroll = {.position = over, .delta = PrVec2{20, 10}}});
     f.frame();
     CHECK(scene.view.offset.x == -20.0f);
     CHECK(scene.view.offset.y == -10.0f);
     f.push(PrAppEvent{
         .kind = PrAppEventKind_Scroll,
         .modifiers = PrAppModifierFlag_Super,
-        .position = over,
-        .delta = PrVec2{0, -70},
+        .scroll = {.position = over, .delta = PrVec2{0, -70}},
     });
     f.frame();
     CHECK(scene.view.zoom == doctest::Approx(2.01).epsilon(0.01));

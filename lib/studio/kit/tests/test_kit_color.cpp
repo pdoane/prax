@@ -69,13 +69,16 @@ struct PickerScene {
     }
 
     void drag(PrVec2 from, PrVec2 to) {
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = from});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = from}});
         f.frame();
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = PrVec2{(from.x + to.x) / 2, from.y}});
+        f.push(PrAppEvent{
+            .kind = PrAppEventKind_PointerMove,
+            .pointer = {.position = PrVec2{(from.x + to.x) / 2, from.y}},
+        });
         f.frame();
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = to});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = to}});
         f.frame();
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = to});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = to}});
         f.frame();
     }
 

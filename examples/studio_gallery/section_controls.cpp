@@ -395,7 +395,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         // The field leaves Enter to its caller, which submits the line.
         PrUiEvents events = prUiEvents(kit->ui, field);
         for (uint32_t i = 0; i < events.count; ++i) {
-            if (events.events[i].kind == PrAppEventKind_KeyDown && events.events[i].key == PrAppKey_Enter)
+            if (events.events[i].kind == PrAppEventKind_KeyDown && events.events[i].keyboard.key == PrAppKey_Enter)
                 submitCommand(inputs);
         }
         char submitted[32];
