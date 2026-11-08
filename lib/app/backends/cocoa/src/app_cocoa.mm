@@ -75,11 +75,12 @@ struct HeldEvent {
 // Returns a held copy of `event`, with its own copy of its text or pixels.
 HeldEvent heldOf(const PrAppEvent& event) {
     HeldEvent held{.event = event};
-    if (event.text.size != 0)
-        held.text.append(event.text.data, uint32_t(event.text.size));
-    if (event.kind == PrAppEventKind_ClipboardImage && event.pixels.extent.y != 0) {
-        held.text.append(reinterpret_cast<const char*>(event.pixels.data),
-            uint32_t(event.pixels.stride * event.pixels.extent.y));
+    PrStringView text = prAppEventText(&event);
+    if (text.size != 0)
+        held.text.append(text.data, uint32_t(text.size));
+    if (event.kind == PrAppEventKind_ClipboardImage && event.image.pixels.extent.y != 0) {
+        const PrPixelView& pixels = event.image.pixels;
+        held.text.append(reinterpret_cast<const char*>(pixels.data), uint32_t(pixels.stride * pixels.extent.y));
     }
     return held;
 }
@@ -93,7 +94,7 @@ struct HeldKey {
     PrAppKey key;
 };
 
-// The pointer buttons that the view can report down, by PrAppEvent::button.
+// The pointer buttons that the view can report down, by PrAppPointerEvent::button.
 constexpr uint8_t kPointerButtons = 32;
 
 // The state of the user's permission for notifications. The application asks at its first post.
@@ -499,7 +500,7 @@ void requestClipboardText(PrApp* app) {
         PrAppEvent event{};
         event.kind = PrAppEventKind_Clipboard;
         event.time = NSProcessInfo.processInfo.systemUptime;
-        event.text = viewOf(bytes);
+        event.input.text = viewOf(bytes);
         [(__bridge PrCocoaHost*)cocoa->host deliver:event];
     });
 }
@@ -563,7 +564,7 @@ void requestClipboardImage(PrApp* app) {
         PrAppEvent event{};
         event.kind = PrAppEventKind_ClipboardImage;
         event.time = NSProcessInfo.processInfo.systemUptime;
-        event.pixels = PrPixelView{static_cast<const uint8_t*>(pixels.bytes), size_t(extent.x) * 4, extent};
+        event.image.pixels = PrPixelView{static_cast<const uint8_t*>(pixels.bytes), size_t(extent.x) * 4, extent};
         [(__bridge PrCocoaHost*)cocoa->host deliver:event];
     });
 }
@@ -637,23 +638,25 @@ using namespace pr_impl;
     PrAppEvent event{};
     event.kind = kind;
     event.time = source.timestamp;
-    event.position.x = float(p.x);
-    event.position.y = float(p.y);
-    event.button = uint8_t(source.buttonNumber);
     event.modifiers = modifiersOf(source.modifierFlags);
+    PrVec2 position{float(p.x), float(p.y)};
     if (kind == PrAppEventKind_Scroll) {
         // A mouse wheel's deltas are lines, and a trackpad's are pixels.
-        event.scrollUnit = source.hasPreciseScrollingDeltas ? PrAppScrollUnit_Pixel : PrAppScrollUnit_Line;
-        event.delta.x = -float(source.scrollingDeltaX);
-        event.delta.y = -float(source.scrollingDeltaY);
+        event.scroll.position = position;
+        event.scroll.unit = source.hasPreciseScrollingDeltas ? PrAppScrollUnit_Pixel : PrAppScrollUnit_Line;
+        event.scroll.delta.x = -float(source.scrollingDeltaX);
+        event.scroll.delta.y = -float(source.scrollingDeltaY);
+    } else {
+        event.pointer.position = position;
+        event.pointer.button = uint8_t(source.buttonNumber);
     }
-    [self.host pointerAt:event.position];
+    [self.host pointerAt:position];
     // A button that the window released as it stopped being the key window reports no release of its own.
     if (kind == PrAppEventKind_PointerDown) {
-        event.clicks = uint32_t(source.clickCount);
-        [self.host pointerDown:event.button];
+        event.pointer.clicks = uint32_t(source.clickCount);
+        [self.host pointerDown:event.pointer.button];
     }
-    else if (kind == PrAppEventKind_PointerUp && ![self.host pointerUp:event.button])
+    else if (kind == PrAppEventKind_PointerUp && ![self.host pointerUp:event.pointer.button])
         return;
     [self.host deliver:event];
 }
@@ -697,22 +700,22 @@ using namespace pr_impl;
     PrAppEvent event{};
     event.kind = kind;
     event.time = source.timestamp;
-    event.code = mac.code;
+    event.keyboard.code = mac.code;
     event.modifiers = modifiersOf(source.modifierFlags);
-    event.repeat = kind == PrAppEventKind_KeyDown && source.isARepeat;
-    event.composing = composing;
+    event.keyboard.repeat = kind == PrAppEventKind_KeyDown && source.isARepeat;
+    event.keyboard.composing = composing;
     NSData* bytes = nil;
     if (mac.key != PrAppKey_Unknown) {
-        event.key = mac.key;
+        event.keyboard.key = mac.key;
     } else if (NSString* character = characterOf(source)) {
         bytes = [character dataUsingEncoding:NSUTF8StringEncoding];
-        event.text = viewOf(bytes);
+        event.keyboard.text = viewOf(bytes);
         unichar first = [character.uppercaseString characterAtIndex:0];
-        event.key = first < 128 ? PrAppKey(first) : PrAppKey_Unknown;
+        event.keyboard.key = first < 128 ? PrAppKey(first) : PrAppKey_Unknown;
     } else if (isDead(source)) {
-        event.key = PrAppKey_Dead;
+        event.keyboard.key = PrAppKey_Dead;
     }
-    [self.host key:event.code down:kind == PrAppEventKind_KeyDown key:event.key];
+    [self.host key:event.keyboard.code down:kind == PrAppEventKind_KeyDown key:event.keyboard.key];
     if (mark == kNoMark)
         [self.host deliver:event];
     else
@@ -751,9 +754,9 @@ using namespace pr_impl;
     PrAppEvent event{};
     event.kind = kind;
     event.time = NSProcessInfo.processInfo.systemUptime;
-    event.text = viewOf(bytes);
+    event.input.text = viewOf(bytes);
     if (selection.location != NSNotFound)
-        event.selection = PrAppTextRange{
+        event.input.selection = PrAppTextRange{
             utf8Length(text, selection.location),
             utf8Length(text, selection.location + selection.length),
         };
@@ -840,9 +843,9 @@ using namespace pr_impl;
     RawArray<HeldEvent> _held;
     BOOL _holding;              // events wait in `_held` while a key's input method runs (holdEvents)
 
-    // The pointer buttons that are down, by bit of PrAppEvent::button, where the pointer last was, and the keys that
-    // are down, by their position. The window releases them when it stops being the key window, as the releases then go
-    // to another window.
+    // The pointer buttons that are down, by bit of PrAppPointerEvent::button, where the pointer last was, and the keys
+    // that are down, by their position. The window releases them when it stops being the key window, as the releases
+    // then go to another window.
     uint32_t _buttons;
     PrVec2 _pointer;
     HeldKey _keys[PrAppKeyCode_Count];
@@ -863,12 +866,10 @@ using namespace pr_impl;
     for (uint32_t i = 0; i < _held.count && self.running; ++i) {
         // An event that its delivery holds goes to the end of the array, which may move the array but not the text.
         PrAppEvent event = _held.data[i].event;
-        event.text = PrStringView{
-            _held.data[i].text.data != nullptr ? _held.data[i].text.data : "",
-            _held.data[i].text.count,
-        };
+        PrStringView text{_held.data[i].text.data != nullptr ? _held.data[i].text.data : "", _held.data[i].text.count};
+        prAppEventSetText(&event, text);
         if (event.kind == PrAppEventKind_ClipboardImage)
-            event.pixels.data = reinterpret_cast<const uint8_t*>(_held.data[i].text.data);
+            event.image.pixels.data = reinterpret_cast<const uint8_t*>(_held.data[i].text.data);
         [self callEvent:event];
     }
     for (uint32_t i = 0; i < _held.count; ++i)
@@ -937,8 +938,8 @@ using namespace pr_impl;
         event.kind = PrAppEventKind_PointerUp;
         event.time = now;
         event.modifiers = modifiers;
-        event.button = button;
-        event.position = _pointer;
+        event.pointer.button = button;
+        event.pointer.position = _pointer;
         [self deliver:event];
     }
     for (uint32_t code = 0; code < countOf(_keys); ++code) {
@@ -949,9 +950,9 @@ using namespace pr_impl;
         event.kind = PrAppEventKind_KeyUp;
         event.time = now;
         event.modifiers = modifiers;
-        event.key = _keys[code].key;
-        event.code = PrAppKeyCode(code);
-        event.text = "";
+        event.keyboard.key = _keys[code].key;
+        event.keyboard.code = PrAppKeyCode(code);
+        event.keyboard.text = "";
         [self deliver:event];
     }
 }
@@ -1118,7 +1119,7 @@ using namespace pr_impl;
     [self.window makeKeyAndOrderFront:nil];
     PrAppEvent event{};
     event.kind = PrAppEventKind_Notification;
-    event.tag = tag;
+    event.notification.tag = tag;
     event.time = NSProcessInfo.processInfo.systemUptime;
     [self deliver:event];
 }

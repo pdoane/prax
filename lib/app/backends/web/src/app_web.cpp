@@ -161,25 +161,26 @@ bool mouse(int type, const EmscriptenMouseEvent* e, void* context) {
     WebApp* app = appOf(context);
     PrAppEvent event{
         .modifiers = modifiersOf(e->shiftKey, e->ctrlKey, e->altKey, e->metaKey),
-        .position = positionOf(e),
         .time = now(),
+        .pointer = {.position = positionOf(e)},
     };
+    PrAppPointerEvent& pointer = event.pointer;
     if (type == EMSCRIPTEN_EVENT_MOUSEMOVE) {
         event.kind = PrAppEventKind_PointerMove;
     } else {
         event.kind = type == EMSCRIPTEN_EVENT_MOUSEDOWN ? PrAppEventKind_PointerDown : PrAppEventKind_PointerUp;
-        event.button = buttonOf(e->button);
+        pointer.button = buttonOf(e->button);
     }
     if (event.kind == PrAppEventKind_PointerDown) {
-        PrVec2 moved{event.position.x - app->clickPosition.x, event.position.y - app->clickPosition.y};
-        bool continues = app->clicks != 0 && event.button == app->clickButton &&
+        PrVec2 moved{pointer.position.x - app->clickPosition.x, pointer.position.y - app->clickPosition.y};
+        bool continues = app->clicks != 0 && pointer.button == app->clickButton &&
             event.time - app->clickTime <= kClickSeconds && moved.x * moved.x + moved.y * moved.y <=
             kClickDistance * kClickDistance;
         app->clicks = continues ? app->clicks + 1 : 1;
-        app->clickButton = event.button;
+        app->clickButton = pointer.button;
         app->clickTime = event.time;
-        app->clickPosition = event.position;
-        event.clicks = app->clicks;
+        app->clickPosition = pointer.position;
+        pointer.clicks = app->clicks;
     }
     deliver(app, event);
     // A press keeps the page from selecting text or dragging the canvas.
@@ -191,10 +192,12 @@ bool wheel(int, const EmscriptenWheelEvent* e, void* context) {
     PrAppEvent event{
         .kind = PrAppEventKind_Scroll,
         .modifiers = modifiersOf(e->mouse.shiftKey, e->mouse.ctrlKey, e->mouse.altKey, e->mouse.metaKey),
-        .scrollUnit = PrAppScrollUnit(e->deltaMode == DOM_DELTA_PIXEL ? PrAppScrollUnit_Pixel : PrAppScrollUnit_Line),
-        .position = positionOf(&e->mouse),
-        .delta = PrVec2{float(e->deltaX), float(e->deltaY)},
         .time = now(),
+        .scroll = {
+            .position = positionOf(&e->mouse),
+            .delta = PrVec2{float(e->deltaX), float(e->deltaY)},
+            .unit = PrAppScrollUnit(e->deltaMode == DOM_DELTA_PIXEL ? PrAppScrollUnit_Pixel : PrAppScrollUnit_Line),
+        },
     };
     // A page of scrolling is a screenful of lines.
     if (e->deltaMode == DOM_DELTA_PAGE) {
@@ -202,7 +205,7 @@ bool wheel(int, const EmscriptenWheelEvent* e, void* context) {
         double height = 0;
         emscripten_get_element_css_size(PR_APP_WEB_CANVAS, &width, &height);
         float lines = float(height) / kPrAppScrollLineHeight;
-        event.delta = PrVec2{event.delta.x * lines, event.delta.y * lines};
+        event.scroll.delta = PrVec2{event.scroll.delta.x * lines, event.scroll.delta.y * lines};
     }
     deliver(app, event);
     return true;
@@ -244,21 +247,19 @@ bool key(int type, const EmscriptenKeyboardEvent* e, void* context) {
     PrAppEvent event{
         .kind = PrAppEventKind(type == EMSCRIPTEN_EVENT_KEYDOWN ? PrAppEventKind_KeyDown : PrAppEventKind_KeyUp),
         .modifiers = modifiersOf(e->shiftKey, e->ctrlKey, e->altKey, e->metaKey),
-        .repeat = e->repeat,
-        .key = keyOf(value, code),
-        .code = code,
         .time = now(),
+        .keyboard = {.key = keyOf(value, code), .code = code, .repeat = e->repeat},
     };
     // A key's text is its key value if that is one character, and the key is not pressed with Control or Command.
     uint32_t codePoint = 0;
     bool types = value.size != 0 && prUtf8Decode(value, 0, &codePoint) == value.size && !e->ctrlKey && !e->metaKey;
     if (types)
-        event.text = value;
+        event.keyboard.text = value;
     deliver(app, event);
     if (types && type == EMSCRIPTEN_EVENT_KEYDOWN)
-        deliver(app, PrAppEvent{.kind = PrAppEventKind_Text, .text = value, .time = event.time});
+        deliver(app, PrAppEvent{.kind = PrAppEventKind_Text, .time = event.time, .input = {.text = value}});
     // The page keeps the keys of its own shortcuts, and the application takes the rest.
-    bool function = event.key >= PrAppKey_F1 && event.key <= PrAppKey_F20;
+    bool function = event.keyboard.key >= PrAppKey_F1 && event.keyboard.key <= PrAppKey_F20;
     return !e->ctrlKey && !e->metaKey && !function;
 }
 
@@ -417,6 +418,10 @@ PrApp* prAppWebCreate(const PrAppDesc* desc) {
 EMSCRIPTEN_KEEPALIVE void prAppWebNotificationClicked(uint32_t tagLow, uint32_t tagHigh) {
     if (runningApp == nullptr)
         return;
-    PrAppEvent event{.kind = PrAppEventKind_Notification, .tag = (uint64_t(tagHigh) << 32) | tagLow, .time = now()};
+    PrAppEvent event{
+        .kind = PrAppEventKind_Notification,
+        .time = now(),
+        .notification = {.tag = (uint64_t(tagHigh) << 32) | tagLow},
+    };
     deliver(runningApp, event);
 }

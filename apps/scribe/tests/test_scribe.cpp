@@ -248,14 +248,17 @@ TEST_CASE("a click on a terminal's notification shows the panel with that termin
     CHECK(prTerminalNotificationTag(e.s.terminals[0]) != prTerminalNotificationTag(e.s.terminals[1]));
     e.run("terminal.toggle");
     REQUIRE(!e.s.terminalShown);
-    PrAppEvent click{.kind = PrAppEventKind_Notification, .tag = prTerminalNotificationTag(e.s.terminals[0])};
+    PrAppEvent click{
+        .kind = PrAppEventKind_Notification,
+        .notification = {.tag = prTerminalNotificationTag(e.s.terminals[0])},
+    };
     CHECK(handleEvent(e.s, click));
     e.settle();
     e.settle();
     CHECK(e.s.terminalShown);
     CHECK(e.s.terminal == 0);
     CHECK(prTerminalHasFocus(e.s.terminals[0]));
-    PrAppEvent key{.kind = PrAppEventKind_KeyDown, .key = 'A'};
+    PrAppEvent key{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = 'A'}};
     CHECK_FALSE(handleEvent(e.s, key));
 }
 
@@ -345,18 +348,18 @@ TEST_CASE("the wheel scrolls the text, and the scrollbar's drag moves it") {
     PrVec2 inside{(port.left + port.right) / 2, (port.top + port.bottom) / 2};
     e.f.move(inside);
     e.f.frame();
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .position = inside, .delta = PrVec2{0, 200}});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scroll = {.position = inside, .delta = PrVec2{0, 200}}});
     e.settle();
     CHECK(e.info().offset == doctest::Approx(200.0));
 
     PrVec2 middle = e.trackMiddle();
     e.f.move(middle);
     e.f.frame();
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = middle});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = middle}});
     e.f.frame();
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = PrVec2{middle.x, middle.y + 2}});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{middle.x, middle.y + 2}}});
     e.settle();
-    e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = middle});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = middle}});
     e.settle();
     CHECK(e.info().offset > e.info().documentSize / 4);
     CHECK(e.info().offset < e.info().documentSize * 3 / 4);
@@ -384,7 +387,7 @@ TEST_CASE("the View menu sets vertical lines, whose arrows, wheel and scrollbar 
         PrVec2 inside{(port.left + port.right) / 2, (port.top + port.bottom) / 2};
         e.f.move(inside);
         e.f.frame();
-        e.f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .position = inside, .delta = PrVec2{0, 200}});
+        e.f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scroll = {.position = inside, .delta = PrVec2{0, 200}}});
         e.settle();
         CHECK(e.info().offset == doctest::Approx(200.0));
 
@@ -392,11 +395,14 @@ TEST_CASE("the View menu sets vertical lines, whose arrows, wheel and scrollbar 
         PrVec2 middle = e.trackMiddle();
         e.f.move(middle);
         e.f.frame();
-        e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = middle});
+        e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = middle}});
         e.f.frame();
-        e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = PrVec2{middle.x + 2, middle.y}});
+        e.f.push(PrAppEvent{
+            .kind = PrAppEventKind_PointerMove,
+            .pointer = {.position = PrVec2{middle.x + 2, middle.y}},
+        });
         e.settle();
-        e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = middle});
+        e.f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = middle}});
         e.settle();
         CHECK(e.info().offset > e.info().documentSize / 4);
         CHECK(e.info().offset < e.info().documentSize * 3 / 4);

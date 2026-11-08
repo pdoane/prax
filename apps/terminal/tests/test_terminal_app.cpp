@@ -178,17 +178,17 @@ TEST_CASE("terminal app: a click on a tab's notification shows the tab and gives
     CHECK(prTerminalNotificationTag(a.t.terminals[1]) != prTerminalNotificationTag(a.t.terminals[2]));
     CHECK(a.t.shown == 2);
 
-    PrAppEvent click{.kind = PrAppEventKind_Notification, .tag = first};
+    PrAppEvent click{.kind = PrAppEventKind_Notification, .notification = {.tag = first}};
     CHECK(handleEvent(a.t, click));
     a.settle();
     CHECK(a.t.shown == 0);
     CHECK(prTerminalHasFocus(a.t.terminals[0]));
 
     // A click on the notification of a tab that has since closed leaves the shown tab as it is.
-    PrAppEvent stale{.kind = PrAppEventKind_Notification, .tag = 1000};
+    PrAppEvent stale{.kind = PrAppEventKind_Notification, .notification = {.tag = 1000}};
     CHECK(handleEvent(a.t, stale));
     CHECK(a.t.shown == 0);
-    PrAppEvent key{.kind = PrAppEventKind_KeyDown, .key = 'A'};
+    PrAppEvent key{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = 'A'}};
     CHECK_FALSE(handleEvent(a.t, key));
 }
 

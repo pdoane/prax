@@ -178,13 +178,13 @@ TEST_CASE("a reorderable tab dragged past its neighbor reports the move on its s
     PrVec2 start = f.center(nodes[0]);
     PrRect last = f.bounds(nodes[2]);
     PrVec2 end{last.right - 2, start.y};
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = start});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = start}});
     f.frame();
     f.move(PrVec2{start.x + 10, start.y});
     f.frame();
     f.move(end);
     f.frame();
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = end});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = end}});
     f.frame();
     CHECK(moves == 1);
     CHECK(from == 0);

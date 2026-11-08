@@ -82,7 +82,7 @@ TEST_CASE("a box that scrolls in its block axis scrolls under the wheel") {
     };
     f.frame();
     f.move(f.center(view));
-    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .position = f.center(view), .delta = PrVec2{0, 60}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scroll = {.position = f.center(view), .delta = PrVec2{0, 60}}});
     f.frame();
     PrLayoutVec offset = prLayoutNodeScroll(f.tree, view);
     CHECK(offset.y.raw != 0);

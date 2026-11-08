@@ -317,8 +317,8 @@ TEST_CASE("a window that stops being the key window releases the buttons and key
     });
     for (const PrAppEvent& event : input.events) {
         if (event.kind == PrAppEventKind_KeyUp)
-            CHECK(event.code == PrAppKeyCode_KeyA);
+            CHECK(event.keyboard.code == PrAppKeyCode_KeyA);
         if (event.kind == PrAppEventKind_PointerUp)
-            CHECK(event.button == 0);
+            CHECK(event.pointer.button == 0);
     }
 }

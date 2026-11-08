@@ -1325,10 +1325,10 @@ bool translateEditingKey(PrAppEvent* event, PrAppModifierFlags modifiers) {
         {PrAppModifierFlag_Super, PrAppKey_Backspace, PrAppModifierFlag_Control, 'U'},
     };
     for (const Translation& translation : kTranslations) {
-        if (translation.modifiers == modifiers && translation.key == event->key) {
-            event->key = translation.sentKey;
+        if (translation.modifiers == modifiers && translation.key == event->keyboard.key) {
+            event->keyboard.key = translation.sentKey;
             event->modifiers = translation.sentModifiers;
-            event->text = PrStringView{};
+            event->keyboard.text = PrStringView{};
             return true;
         }
     }
@@ -1455,11 +1455,12 @@ void handleEvents(Terminal* terminal) {
         bool pointer = event.kind == PrAppEventKind_PointerDown || event.kind == PrAppEventKind_PointerUp ||
             event.kind == PrAppEventKind_PointerMove || event.kind == PrAppEventKind_Scroll;
         // Pointer positions are relative to the screen's first cell. Over the gutter, x is negative.
-        if (pointer) {
+        PrVec2 position{};
+        if (pointer && prAppEventPosition(&event, &position)) {
             PrVec2 local{};
-            if (!prUiLocalPoint(ui, node, event.position, &local))
+            if (!prUiLocalPoint(ui, node, position, &local))
                 continue;
-            event.position = PrVec2{local.x - kGutterWidth, local.y};
+            prAppEventSetPosition(&event, PrVec2{local.x - kGutterWidth, local.y});
         }
         terminal->modifiers = modifiers;
         uint8_t dropTextSize = terminal->dropTextSize;
@@ -1468,29 +1469,30 @@ void handleEvents(Terminal* terminal) {
         switch (event.kind) {
             case PrAppEventKind_KeyDown:
                 // A key that the input method takes edits the composition, and never reaches the program.
-                if (event.composing)
+                if (event.keyboard.composing)
                     continue;
-                setProgramKey(terminal, event.code, false);
-                if (ClipboardKey action = clipboardKey(terminal, event.key, modifiers); action != ClipboardKey_None) {
+                setProgramKey(terminal, event.keyboard.code, false);
+                if (ClipboardKey action =
+                        clipboardKey(terminal, event.keyboard.key, modifiers); action != ClipboardKey_None) {
                     if (action == ClipboardKey_Paste) {
                         terminalPaste(terminal);
                     } else {
                         terminalCopy(terminal);
                         // The next Control with C goes to the program.
-                        if (modifiers == PrAppModifierFlag_Control && event.key == 'C')
+                        if (modifiers == PrAppModifierFlag_Control && event.keyboard.key == 'C')
                             terminal->hasSelection = false;
                     }
-                    if (event.text.size <= sizeof(terminal->dropText)) {
-                        prMemCopy(terminal->dropText, event.text.data, event.text.size);
-                        terminal->dropTextSize = uint8_t(event.text.size);
+                    if (event.keyboard.text.size <= sizeof(terminal->dropText)) {
+                        prMemCopy(terminal->dropText, event.keyboard.text.data, event.keyboard.text.size);
+                        terminal->dropTextSize = uint8_t(event.keyboard.text.size);
                     }
                     continue;
                 }
-                if (modifiers == PrAppModifierFlag_Shift && scrollbackKey(terminal, event.key))
+                if (modifiers == PrAppModifierFlag_Shift && scrollbackKey(terminal, event.keyboard.key))
                     continue;
-                if (modifiers == promptModifiers() && promptKey(terminal, event.key))
+                if (modifiers == promptModifiers() && promptKey(terminal, event.keyboard.key))
                     continue;
-                setProgramKey(terminal, event.code, true);
+                setProgramKey(terminal, event.keyboard.code, true);
                 if (translateEditingKey(&event, modifiers)) {
                     // Alt in a translated key is the meta key, whatever the user's setting for Option.
                     PrVtermInputDesc editing = desc;
@@ -1509,7 +1511,7 @@ void handleEvents(Terminal* terminal) {
             case PrAppEventKind_KeyUp: {
                 // A release goes to the program only if the press did, and is translated as the press was. The program
                 // reports releases only if it asked for event types.
-                if (!takeProgramKey(terminal, event.code))
+                if (!takeProgramKey(terminal, event.keyboard.code))
                     continue;
                 PrVtermInputDesc editing = desc;
                 if (translateEditingKey(&event, modifiers))
@@ -1518,10 +1520,10 @@ void handleEvents(Terminal* terminal) {
                 continue;
             }
             case PrAppEventKind_Text:
-                if (dropTextSize != 0 && PrStringView{terminal->dropText, dropTextSize} == event.text)
+                if (dropTextSize != 0 && PrStringView{terminal->dropText, dropTextSize} == event.input.text)
                     continue;
                 prVtermInputEvent(vterm, &event, &desc);
-                if (event.text.size != 0) {
+                if (event.input.text.size != 0) {
                     scrollToBottom(terminal);
                     terminal->hasSelection = false;
                     terminal->blinkStart = prUiCurrentRound(ui)->time;
@@ -1530,8 +1532,8 @@ void handleEvents(Terminal* terminal) {
             case PrAppEventKind_CompositionUpdate:
                 terminal->composing = true;
                 prRawStringClear(&terminal->composition);
-                prRawStringAppend(&terminal->composition, event.text);
-                terminal->compositionSelection = event.selection;
+                prRawStringAppend(&terminal->composition, event.input.text);
+                terminal->compositionSelection = event.input.selection;
                 ++terminal->compositionRevision;
                 scrollToBottom(terminal);
                 continue;
@@ -1539,8 +1541,8 @@ void handleEvents(Terminal* terminal) {
                 compositionEnd(terminal);
                 continue;
             case PrAppEventKind_Clipboard:
-                if (asksBeforePaste(terminal, event.text)) {
-                    askBeforePaste(terminal, event.text);
+                if (asksBeforePaste(terminal, event.input.text)) {
+                    askBeforePaste(terminal, event.input.text);
                     continue;
                 }
                 prVtermInputEvent(vterm, &event, &desc);
@@ -1549,26 +1551,26 @@ void handleEvents(Terminal* terminal) {
             case PrAppEventKind_PointerDown:
                 prUiSetFocus(ui, node);
                 // The view handles clicks in the gutter. A click there selects the output of the command on that line.
-                if (event.position.x < 0) {
-                    uint64_t line = cellAt(terminal, event.position).line;
-                    if (event.button == 0 && !selectOutputAt(terminal, uint32_t(line - firstLine(terminal))))
+                if (event.pointer.position.x < 0) {
+                    uint64_t line = cellAt(terminal, event.pointer.position).line;
+                    if (event.pointer.button == 0 && !selectOutputAt(terminal, uint32_t(line - firstLine(terminal))))
                         terminal->hasSelection = false;
                     continue;
                 }
                 // Shift selects even while the program reads the pointer, as in other terminals.
                 if ((modifiers & PrAppModifierFlag_Shift) == 0 && prVtermInputEvent(vterm, &event, &desc))
                     continue;
-                if (event.button == 0) {
+                if (event.pointer.button == 0) {
                     terminal->unit = TerminalUnit_Cell;
-                    if (event.clicks >= 3)
+                    if (event.pointer.clicks >= 3)
                         terminal->unit = TerminalUnit_Line;
-                    else if (event.clicks == 2)
+                    else if (event.pointer.clicks == 2)
                         terminal->unit = TerminalUnit_Word;
                     terminal->columnSelection = terminal->unit == TerminalUnit_Cell &&
                         (modifiers & PrAppModifierFlag_Alt) != 0;
                     terminal->selecting = true;
                     terminal->moved = false;
-                    terminal->press = cellAt(terminal, event.position);
+                    terminal->press = cellAt(terminal, event.pointer.position);
                     terminal->pressModifiers = modifiers;
                     terminal->anchor = unitAt(terminal, terminal->press);
                     terminal->head = terminal->anchor;
@@ -1576,8 +1578,8 @@ void handleEvents(Terminal* terminal) {
                 }
                 continue;
             case PrAppEventKind_PointerMove: {
-                TerminalSpan cell = cellAt(terminal, event.position);
-                terminal->pointer = event.position;
+                TerminalSpan cell = cellAt(terminal, event.pointer.position);
+                terminal->pointer = event.pointer.position;
                 if (terminal->selecting) {
                     terminal->moved = terminal->moved || !isSameSpan(cell, terminal->press);
                     terminal->head = terminal->columnSelection ? cell : unitAt(terminal, cell);
@@ -1588,7 +1590,7 @@ void handleEvents(Terminal* terminal) {
                 continue;
             }
             case PrAppEventKind_PointerUp:
-                if (terminal->selecting && event.button == 0) {
+                if (terminal->selecting && event.pointer.button == 0) {
                     terminal->selecting = false;
                     // A click that did not move and did not select a word or line selects nothing. With the link
                     // modifier, it opens the link under it.
@@ -1605,15 +1607,15 @@ void handleEvents(Terminal* terminal) {
                     prRawStringReset(&link.target);
                     continue;
                 }
-                if (event.position.x < 0)
+                if (event.pointer.position.x < 0)
                     continue;
                 prVtermInputEvent(vterm, &event, &desc);
                 continue;
             case PrAppEventKind_Scroll: {
                 if (prVtermInputEvent(vterm, &event, &desc))
                     continue;
-                float lines = event.delta.y;
-                if (event.scrollUnit == PrAppScrollUnit_Pixel)
+                float lines = event.scroll.delta.y;
+                if (event.scroll.unit == PrAppScrollUnit_Pixel)
                     lines /= terminal->drawer.metrics.cell.y;
                 terminal->scrollRemainder += lines;
                 int32_t whole = int32_t(terminal->scrollRemainder);

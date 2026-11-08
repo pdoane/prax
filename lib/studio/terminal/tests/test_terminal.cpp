@@ -229,15 +229,19 @@ struct Term {
     }
 
     void press(PrVec2 at, uint32_t clicks, PrAppModifierFlags modifiers = 0) {
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .clicks = clicks, .position = at});
+        f.push(PrAppEvent{
+            .kind = PrAppEventKind_PointerDown,
+            .modifiers = modifiers,
+            .pointer = {.position = at, .clicks = clicks},
+        });
     }
 
     void release(PrVec2 at, PrAppModifierFlags modifiers = 0) {
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .position = at});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .pointer = {.position = at}});
     }
 
     void move(PrVec2 at, PrAppModifierFlags modifiers) {
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .modifiers = modifiers, .position = at});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .modifiers = modifiers, .pointer = {.position = at}});
     }
 
     // Writes `text` to the screen as if the program wrote it.
@@ -523,7 +527,7 @@ float textInputColumn(Term& t) {
 // Queues an update of the input method's composition to `text`, with the input method's caret at its end.
 void compose(Term& t, PrStringView text) {
     uint32_t size = uint32_t(text.size);
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = text, .selection = {size, size}});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = text, .selection = {size, size}}});
 }
 
 } // namespace
@@ -1045,7 +1049,11 @@ TEST_CASE("terminal: the key that pastes drops only its own text, and text typed
     prTerminalFocus(t.terminal);
     t.f.frame();
     // The platform delivers no text for the chord.
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .modifiers = clipboardModifiers(), .key = 'V', .text = "v"});
+    t.f.push(PrAppEvent{
+        .kind = PrAppEventKind_KeyDown,
+        .modifiers = clipboardModifiers(),
+        .keyboard = {.key = 'V', .text = "v"},
+    });
     t.f.frame();
     CHECK(app.clipboardRequested);
     t.f.type("x");
@@ -1110,13 +1118,11 @@ TEST_CASE("terminal: a program that asks for key releases has them, but for the 
         t.f.push(PrAppEvent{
             .kind = PrAppEventKind_KeyDown,
             .modifiers = modifiers,
-            .key = key,
-            .code = code,
-            .text = text,
+            .keyboard = {.key = key, .code = code, .text = text},
         });
         if (text[0] != 0)
             t.f.type(text);
-        t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .key = key, .code = code});
+        t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .keyboard = {.key = key, .code = code}});
     };
     stroke('A', 0, "a", PrAppKeyCode_KeyA);
     stroke('C', clipboardModifiers(), "c", PrAppKeyCode_KeyC);
@@ -1139,16 +1145,16 @@ TEST_CASE("terminal: an input method composes at the cursor, and only the text t
 
     // Three wide characters cover six cells from the cursor, underlined, and the screen holds none of them. The keys
     // that the input method takes, Enter among them, never reach the program.
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = 'N', .text = "n"});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = 'N', .composing = true, .text = "n"}});
     compose(t, "\xe3\x81\xab\xe3\x81\xbb\xe3\x82\x93");
     t.f.frame();
     CHECK(cellHasColor(t, 5, 0, foreground));
     CHECK_FALSE(cellHasColor(t, 9, 0, foreground));
     CHECK(t.screen().find('\xe3') == std::string::npos);
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = PrAppKey_Enter});
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .text = "\xe6\x97\xa5\xe6\x9c\xac"});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_Enter, .composing = true}});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .input = {.text = "\xe6\x97\xa5\xe6\x9c\xac"}});
     t.f.type("\xe6\x97\xa5\xe6\x9c\xac");
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .key = PrAppKey_Enter});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .keyboard = {.key = PrAppKey_Enter}});
     t.f.key(PrAppKey_Enter);
     t.frameUntil([&] { return t.shows("ab\xe6\x97\xa5\xe6\x9c\xac\nab\xe6\x97\xa5\xe6\x9c\xac\n"); });
 
@@ -1156,7 +1162,7 @@ TEST_CASE("terminal: an input method composes at the cursor, and only the text t
     compose(t, "xyz");
     t.f.frame();
     CHECK(cellHasColor(t, 1, 2, foreground));
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .text = ""});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .input = {.text = ""}});
     t.f.frame();
     CHECK_FALSE(cellHasColor(t, 1, 2, foreground));
 }
@@ -1460,7 +1466,7 @@ TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Es
     Term t("cat", {}, &app.app);
     prTerminalFocus(t.terminal);
     t.f.frame();
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .text = "one\ntwo\n"});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = "one\ntwo\n"}});
     for (uint32_t i = 0; i < 4; ++i)
         t.f.frame();
     CHECK(prUiFocus(t.f.ui) != prTerminalNode(t.terminal));
@@ -1474,7 +1480,7 @@ TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Es
     t.frameUntil([&] { return t.shows("one\ntwo\none\ntwo\n"); });
 #endif
 
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .text = "three\nfour"});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = "three\nfour"}});
     for (uint32_t i = 0; i < 4; ++i)
         t.f.frame();
     t.f.key(PrAppKey_Escape);
@@ -1486,10 +1492,10 @@ TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Es
     CHECK_FALSE(t.shows("three"));
 
     // A single line pastes at once, and so do several lines if the program asked for bracketed paste.
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .text = "solo"});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = "solo"}});
     t.frameUntil([&] { return t.shows("solo"); });
     t.write("\x1b[?2004h");
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .text = "five\nsix"});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = "five\nsix"}});
     t.frameUntil([&] { return t.shows("five"); });
 }
 
@@ -1810,9 +1816,7 @@ TEST_CASE("terminal: an image scrolls with its text, into the scrollback that th
     t.f.frame();
     t.f.push(PrAppEvent{
         .kind = PrAppEventKind_Scroll,
-        .scrollUnit = PrAppScrollUnit_Line,
-        .position = t.cellCenter(10, 5),
-        .delta = PrVec2{0, -3},
+        .scroll = {.position = t.cellCenter(10, 5), .delta = PrVec2{0, -3}, .unit = PrAppScrollUnit_Line},
     });
     t.f.frame();
     CHECK(near(t.pixel(t.cellCenter(5, 1)), kImageRed));

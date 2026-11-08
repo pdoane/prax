@@ -93,11 +93,11 @@ struct TimelineScene {
     }
 
     void drag(PrVec2 from, PrVec2 to, PrAppModifierFlags modifiers = 0) {
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .position = from});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .pointer = {.position = from}});
         f.frame();
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .modifiers = modifiers, .position = to});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .modifiers = modifiers, .pointer = {.position = to}});
         f.frame();
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .position = to});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .pointer = {.position = to}});
         f.frame();
     }
 
@@ -206,15 +206,14 @@ TEST_CASE("the wheel pans a timeline's view, and with Command zooms it about the
     f.frame();
     PrVec2 over = scene.at(4, 0);
     f.move(over);
-    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .position = over, .delta = PrVec2{50, 0}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scroll = {.position = over, .delta = PrVec2{50, 0}}});
     f.frame();
     CHECK(scene.view.start == doctest::Approx(1.0));
     CHECK(scene.view.end == doctest::Approx(9.0));
     f.push(PrAppEvent{
         .kind = PrAppEventKind_Scroll,
         .modifiers = PrAppModifierFlag_Super,
-        .position = over,
-        .delta = PrVec2{0, -70},
+        .scroll = {.position = over, .delta = PrVec2{0, -70}},
     });
     f.frame();
     // The time under the pointer stays where it was, 5 s, and the view spans half as much.
@@ -286,15 +285,15 @@ TEST_CASE("a drag that snaps to a source shows a guide at its time, until the dr
     f.frame();
     PrVec2 from = scene.at(4.5f, 0);
     PrVec2 to = scene.at(4.5f - 0.92f, 0);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = from});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = from}});
     f.frame();
     uint32_t still = scene.nodes(scene.frame);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = to});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = to}});
     f.frame();
     // The guide is a line in each of the two lanes and in the ruler.
     CHECK(scene.blocks[1].start == doctest::Approx(3.0));
     CHECK(scene.nodes(scene.frame) == still + 3);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = to});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = to}});
     f.frame();
     CHECK(scene.nodes(scene.frame) == still);
     CHECK(kitVerified(f.tree));

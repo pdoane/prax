@@ -784,12 +784,12 @@ void beginFrame(void* context, PrStudioWindow*, const PrAppFrame* f) {
 // scrolls up.
 bool event(void* context, PrStudioWindow* window, const PrAppEvent* ev) {
     Example& e = exampleOf(context);
-    if (ev->kind == PrAppEventKind_KeyDown && ev->key == PrAppKey_Escape) {
+    if (ev->kind == PrAppEventKind_KeyDown && ev->keyboard.key == PrAppKey_Escape) {
         prAppStop(prStudioWindowApp(window));
         return true;
     }
     if (ev->kind == PrAppEventKind_PointerMove)
-        e.pointer = ev->position;
+        e.pointer = ev->pointer.position;
     const PrRect& pane = e.stream.pane;
     bool overPane =
         e.pointer.x >= pane.left && e.pointer.x < pane.right && e.pointer.y >= pane.top && e.pointer.y < pane.bottom;

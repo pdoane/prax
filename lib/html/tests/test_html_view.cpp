@@ -331,8 +331,8 @@ void listenForKeys(PrDomElement* target, PrDomEventListener* listener) {
 
 // Returns the events of pressing and releasing a key, with the text that it types between them.
 std::vector<PrAppEvent> press(PrAppKey key, PrAppKeyCode code, const char* text, PrAppModifierFlags modifiers = 0) {
-    PrAppEvent down{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .key = key, .code = code, .text = text};
-    PrAppEvent typed{.kind = PrAppEventKind_Text, .modifiers = modifiers, .text = text};
+    PrAppEvent down{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .keyboard = {.key = key, .code = code, .text = text}};
+    PrAppEvent typed{.kind = PrAppEventKind_Text, .modifiers = modifiers, .input = {.text = text}};
     PrAppEvent up = down;
     up.kind = PrAppEventKind_KeyUp;
     if (text[0] == '\0')
@@ -357,7 +357,7 @@ std::string hitAt(Viewed& page, double x, double y) {
 
 // Sends a press and a release of the primary button at `point`.
 void clickAt(Viewed& page, PrVec2 point) {
-    PrAppEvent event{.kind = PrAppEventKind_PointerMove, .position = point};
+    PrAppEvent event{.kind = PrAppEventKind_PointerMove, .pointer = {.position = point}};
     prHtmlViewEvent(page.view, &event, 0);
     prHtmlViewUpdate(page.view);
     event.kind = PrAppEventKind_PointerDown;
@@ -397,7 +397,7 @@ PrDomEventListener wheelRecorder(HeardWheels* heard) {
 
 // Returns a wheel's scroll by `pixels` down at `at`, at `time` in seconds.
 PrAppEvent wheelAt(PrVec2 at, float pixels, double time) {
-    return PrAppEvent{.kind = PrAppEventKind_Scroll, .position = at, .delta = PrVec2{0, pixels}, .time = time};
+    return PrAppEvent{.kind = PrAppEventKind_Scroll, .time = time, .scroll = {.position = at, .delta = PrVec2{0, pixels}}};
 }
 
 // The edits heard at a textarea, each as its type, input type, data and whether it is composing, and its value after
@@ -656,19 +656,19 @@ TEST_CASE("a view routes the pointer to the elements under it") {
         prDomEventTargetAddEventListener(a, type, &listener, nullptr);
 
     // A move hovers at the view's next update.
-    PrAppEvent event{.kind = PrAppEventKind_PointerMove, .position = PrVec2{10, 10}};
+    PrAppEvent event{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{10, 10}}};
     CHECK(prHtmlViewEvent(page.view, &event, 0) == PrHtmlViewEventResult_Handled);
     CHECK_FALSE(page.matches("a", ":hover"));
     prHtmlViewUpdate(page.view);
     CHECK(page.matches("a", ":hover"));
-    event.position = PrVec2{10, 60};
+    event.pointer.position = PrVec2{10, 60};
     prHtmlViewEvent(page.view, &event, 0);
     prHtmlViewUpdate(page.view);
     CHECK_FALSE(page.matches("a", ":hover"));
     CHECK(page.matches("b", ":hover"));
 
     // A press and a release over one element click it; a release over another does not.
-    event.position = PrVec2{10, 10};
+    event.pointer.position = PrVec2{10, 10};
     event.kind = PrAppEventKind_PointerDown;
     prHtmlViewEvent(page.view, &event, 0);
     CHECK(page.matches("a", ":active"));
@@ -678,7 +678,7 @@ TEST_CASE("a view routes the pointer to the elements under it") {
     event.kind = PrAppEventKind_PointerDown;
     prHtmlViewEvent(page.view, &event, 0);
     event.kind = PrAppEventKind_PointerUp;
-    event.position = PrVec2{10, 60};
+    event.pointer.position = PrVec2{10, 60};
     prHtmlViewEvent(page.view, &event, 0);
     CHECK(heard.types == std::vector<std::string>{"mousedown", "mouseup", "click", "mousedown"});
 }
@@ -850,15 +850,15 @@ TEST_CASE("undo reverts a run of typing in a textarea, and setting the value emp
 
 TEST_CASE("a composition marks its text in a textarea, and commits it once, ahead of compositionend") {
     EditedArea e("<textarea id=t>a</textarea>");
-    PrAppEvent update{.kind = PrAppEventKind_CompositionUpdate, .text = "k"};
+    PrAppEvent update{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = "k"}};
     prHtmlViewEvent(e.page.view, &update, 0);
     CHECK(valueOf(e.area) == "ak");
-    update.text = "\xe3\x81\x8b";
+    update.input.text = "\xe3\x81\x8b";
     prHtmlViewEvent(e.page.view, &update, 0);
     CHECK(valueOf(e.area) == "a\xe3\x81\x8b");
-    PrAppEvent end{.kind = PrAppEventKind_CompositionEnd, .text = "\xe3\x81\x8b"};
+    PrAppEvent end{.kind = PrAppEventKind_CompositionEnd, .input = {.text = "\xe3\x81\x8b"}};
     prHtmlViewEvent(e.page.view, &end, 0);
-    PrAppEvent committed{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"};
+    PrAppEvent committed{.kind = PrAppEventKind_Text, .input = {.text = "\xe3\x81\x8b"}};
     prHtmlViewEvent(e.page.view, &committed, 0);
     CHECK(valueOf(e.area) == "a\xe3\x81\x8b");
     CHECK(e.heard.events == std::vector<std::string>{
@@ -885,10 +885,10 @@ TEST_CASE("a drag in a textarea extends its selection from the press") {
     e.page.settle();
     clickAt(e.page, PrVec2{6, 8});
     uint32_t start = prHtmlTextControlSelectionStart(e.area);
-    PrAppEvent event{.kind = PrAppEventKind_PointerDown, .position = PrVec2{6, 8}};
+    PrAppEvent event{.kind = PrAppEventKind_PointerDown, .pointer = {.position = PrVec2{6, 8}}};
     prHtmlViewEvent(e.page.view, &event, 0);
     event.kind = PrAppEventKind_PointerMove;
-    event.position = PrVec2{60, 8};
+    event.pointer.position = PrVec2{60, 8};
     prHtmlViewEvent(e.page.view, &event, 0);
     CHECK(prHtmlTextControlSelectionStart(e.area) == start);
     CHECK(prHtmlTextControlSelectionEnd(e.area) > start);
@@ -899,12 +899,12 @@ TEST_CASE("a text control's multi-click selects a word, a line, and the text") {
     e.page.settle();
     for (uint32_t clicks : {2u, 3u, 4u}) {
         CAPTURE(clicks);
-        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = 1, .position = PrVec2{10, 8}};
+        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .pointer = {.position = PrVec2{10, 8}, .clicks = 1}};
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_PointerUp;
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_PointerDown;
-        event.clicks = clicks;
+        event.pointer.clicks = clicks;
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_PointerUp;
         prHtmlViewEvent(e.page.view, &event, 0);
@@ -917,7 +917,7 @@ TEST_CASE("the keys of a text control move by line and by word, and delete by wo
     EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40 rows=3>one two\nthree</textarea>");
     e.page.settle();
     auto key = [&](PrAppKey k, PrAppModifierFlags modifiers = 0) {
-        PrAppEvent event{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .key = k};
+        PrAppEvent event{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .keyboard = {.key = k}};
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_KeyUp;
         prHtmlViewEvent(e.page.view, &event, 0);
@@ -942,7 +942,7 @@ TEST_CASE("a view asks for frames until a selection that a press made is shown, 
     EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40>alpha beta</textarea>");
     e.page.settle();
     for (uint32_t clicks : {1u, 2u}) {
-        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = clicks, .position = PrVec2{10, 8}};
+        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .pointer = {.position = PrVec2{10, 8}, .clicks = clicks}};
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_PointerUp;
         prHtmlViewEvent(e.page.view, &event, 0);
@@ -993,7 +993,7 @@ TEST_CASE("a host that paints the document itself shows a selection at once, wit
     PrLayoutTree* tree = prCssPresentationTree(presentation);
     REQUIRE(text != kPrLayoutNodeNone);
     for (uint32_t clicks : {1u, 2u}) {
-        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = clicks, .position = PrVec2{10, 8}};
+        PrAppEvent event{.kind = PrAppEventKind_PointerDown, .pointer = {.position = PrVec2{10, 8}, .clicks = clicks}};
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_PointerUp;
         prHtmlViewEvent(e.page.view, &event, 0);
@@ -1011,7 +1011,7 @@ TEST_CASE("a caret asks for a frame when it next blinks, and comes into view as 
     EditedArea e("<style>body { margin: 0 }</style><input id=t style='width: 40px' value='a long value that overflows'>");
     e.page.settle();
     CHECK(prHtmlViewOutput(e.page.view).frameTime != 0);
-    PrAppEvent event{.kind = PrAppEventKind_KeyDown, .key = PrAppKey_End};
+    PrAppEvent event{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_End}};
     prHtmlViewEvent(e.page.view, &event, 0);
     e.page.settle();
     e.page.settle();
@@ -1080,7 +1080,7 @@ TEST_CASE("cut, copy and paste use the clipboard, and fire events that can take 
     prHtmlViewSetApp(e.page.view, &app);
     e.page.settle();
     auto command = [&](PrAppKey key) {
-        PrAppEvent event{.kind = PrAppEventKind_KeyDown, .modifiers = PrAppModifierFlag_Super, .key = key};
+        PrAppEvent event{.kind = PrAppEventKind_KeyDown, .modifiers = PrAppModifierFlag_Super, .keyboard = {.key = key}};
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_KeyUp;
         prHtmlViewEvent(e.page.view, &event, 0);
@@ -1096,7 +1096,7 @@ TEST_CASE("cut, copy and paste use the clipboard, and fire events that can take 
     uint32_t before = requested;
     command('V');
     CHECK(requested == before + 1);
-    PrAppEvent arrived{.kind = PrAppEventKind_Clipboard, .text = "pasted"};
+    PrAppEvent arrived{.kind = PrAppEventKind_Clipboard, .input = {.text = "pasted"}};
     prHtmlViewEvent(e.page.view, &arrived, 0);
     CHECK(valueOf(e.area) == "pasted two");
 
@@ -1189,7 +1189,7 @@ TEST_CASE("Tab past the last area leaves the document with the focus at the view
     prHtmlViewUpdate(page.view);
     page.settle();
     PrDomNode* document = prDomDocumentAsNode(page.document());
-    PrAppEvent tab{.kind = PrAppEventKind_KeyDown, .key = PrAppKey_Tab, .code = PrAppKeyCode_Tab};
+    PrAppEvent tab{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_Tab, .code = PrAppKeyCode_Tab}};
     CHECK(prHtmlViewEvent(page.view, &tab, 0) == PrHtmlViewEventResult_Handled);
     CHECK(prHtmlActiveElement(document) == page.byId("a"));
     CHECK(page.matches("a", ":focus-visible"));
@@ -1213,7 +1213,7 @@ TEST_CASE("a press focuses the nearest focusable ancestor, or the viewport, and 
     prHtmlViewUpdate(page.view);
     page.settle();
     PrDomNode* document = prDomDocumentAsNode(page.document());
-    PrAppEvent down{.kind = PrAppEventKind_PointerDown, .position = PrVec2{5, 10}};
+    PrAppEvent down{.kind = PrAppEventKind_PointerDown, .pointer = {.position = PrVec2{5, 10}}};
     PrAppEvent up = down;
     up.kind = PrAppEventKind_PointerUp;
     send(page.view, {down, up});
@@ -1221,18 +1221,21 @@ TEST_CASE("a press focuses the nearest focusable ancestor, or the viewport, and 
     CHECK_FALSE(page.matches("box", ":focus-visible"));
 
     // A key shows the focus that a press moved, and a modifier key alone does not.
-    PrAppEvent shift{.kind = PrAppEventKind_KeyDown, .key = PrAppKey_Shift, .code = PrAppKeyCode_ShiftLeft};
+    PrAppEvent shift{
+        .kind = PrAppEventKind_KeyDown,
+        .keyboard = {.key = PrAppKey_Shift, .code = PrAppKeyCode_ShiftLeft},
+    };
     prHtmlViewEvent(page.view, &shift, 0);
     CHECK_FALSE(page.matches("box", ":focus-visible"));
     send(page.view, press(PrAppKey_Escape, PrAppKeyCode_Escape, ""));
     CHECK(page.matches("box", ":focus-visible"));
 
-    down.position = up.position = PrVec2{5, 30};
+    down.pointer.position = up.pointer.position = PrVec2{5, 30};
     send(page.view, {down, up});
     CHECK(prHtmlActiveElement(document) == page.byId("field"));
     CHECK(page.matches("field", ":focus-visible"));
 
-    down.position = up.position = PrVec2{5, 50};
+    down.pointer.position = up.pointer.position = PrVec2{5, 50};
     send(page.view, {down, up});
     CHECK(prHtmlActiveElement(document) == prDomDocumentBody(page.document()));
 }
@@ -1318,8 +1321,8 @@ TEST_CASE("the wheel fires at the element under the pointer and scrolls from its
     PrAppEvent event = wheelAt(PrVec2{10, 10}, 30, 0);
     CHECK(prHtmlViewEvent(page.view, &event, 0) == PrHtmlViewEventResult_Handled);
     CHECK(prCssElementScrollTop(page.byId("s")) == 30.0);
-    event.scrollUnit = PrAppScrollUnit_Line;
-    event.delta = PrVec2{0, 1};
+    event.scroll.unit = PrAppScrollUnit_Line;
+    event.scroll.delta = PrVec2{0, 1};
     prHtmlViewEvent(page.view, &event, 0);
     CHECK(prCssElementScrollTop(page.byId("s")) == 70.0);
     CHECK(heard.events == std::vector<std::string>{"in 30 cancelable", "in 40"});
@@ -1455,7 +1458,7 @@ TEST_CASE("the pointer reaches the elements of a frame's document, in that docum
     };
     PrDomEventTarget* d = prDomNodeAsEventTarget(prDomElementAsNode(page.inner("d")));
     prDomEventTargetAddEventListener(d, "mousedown", &listener, nullptr);
-    PrAppEvent event{.kind = PrAppEventKind_PointerMove, .position = PrVec2{15, 20}};
+    PrAppEvent event{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{15, 20}}};
     prHtmlViewEvent(page.view, &event, 0);
     prHtmlViewUpdate(page.view);
     // The element under the pointer and the frame that holds its document both match :hover.
@@ -1497,12 +1500,12 @@ TEST_CASE("a composition fires its events, its keys report Process, and its comm
     listenForKeys(page.byId("a"), &listener);
     prHtmlFocus(page.byId("a"), nullptr);
     std::vector<PrAppEvent> k = press('K', PrAppKeyCode_KeyK, "k");
-    PrAppEvent update{.kind = PrAppEventKind_CompositionUpdate, .text = "k"};
-    PrAppEvent end{.kind = PrAppEventKind_CompositionEnd, .text = "\xe3\x81\x8b"};
-    PrAppEvent commit{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"};
+    PrAppEvent update{.kind = PrAppEventKind_CompositionUpdate, .input = {.text = "k"}};
+    PrAppEvent end{.kind = PrAppEventKind_CompositionEnd, .input = {.text = "\xe3\x81\x8b"}};
+    PrAppEvent commit{.kind = PrAppEventKind_Text, .input = {.text = "\xe3\x81\x8b"}};
     send(page.view, {k[0], update, k[2]});
     std::vector<PrAppEvent> a = press('A', PrAppKeyCode_KeyA, "a");
-    update.text = "\xe3\x81\x8b";
+    update.input.text = "\xe3\x81\x8b";
     send(page.view, {a[0], update, end, commit, a[2]});
     CHECK(heard.events == std::vector<std::string>{
         "keydown k 75", "compositionstart ", "compositionupdate k", "keyup k 75 composing",
@@ -1517,7 +1520,7 @@ TEST_CASE("the moves since the view's last update hover once, at the latest") {
     page.settle();
     PrAppEvent move{.kind = PrAppEventKind_PointerMove};
     for (float y : {10.0f, 20.0f, 30.0f, 60.0f}) {
-        move.position = PrVec2{10, y};
+        move.pointer.position = PrVec2{10, y};
         prHtmlViewEvent(page.view, &move, 0);
     }
     prHtmlViewUpdate(page.view);
@@ -1531,7 +1534,7 @@ TEST_CASE("a scroll the compositor made hovers what comes under a pointer that h
     prHtmlViewUpdate(page.view);
     page.settle();
     PrAppEvent move{.kind = PrAppEventKind_PointerMove};
-    move.position = PrVec2{10, 10};
+    move.pointer.position = PrVec2{10, 10};
     prHtmlViewEvent(page.view, &move, 0);
     prHtmlViewUpdate(page.view);
     CHECK(page.matches("a", ":hover"));
@@ -1549,7 +1552,7 @@ TEST_CASE("a pointer that moves while the layout thread lays out hovers as the v
     prDomElementSetAttribute(page.byId("b"), "style", "height: 60px");
     CHECK(prHtmlViewUpdate(page.view).started);
     PrAppEvent move{.kind = PrAppEventKind_PointerMove};
-    move.position = PrVec2{10, 10};
+    move.pointer.position = PrVec2{10, 10};
     prHtmlViewEvent(page.view, &move, 0);
     page.settle();
     CHECK(page.matches("a", ":hover"));
@@ -1566,7 +1569,7 @@ TEST_CASE("the cursor at the pointer is its element's, and auto shows the text c
     page.settle();
     CHECK(prHtmlViewOutput(page.view).cursor == PrAppCursor_Arrow);
     auto cursorAt = [&](float x, float y) {
-        PrAppEvent move{.kind = PrAppEventKind_PointerMove, .position = PrVec2{x, y}};
+        PrAppEvent move{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{x, y}}};
         prHtmlViewEvent(page.view, &move, 0);
         prHtmlViewUpdate(page.view);
         page.settle();
@@ -1598,7 +1601,7 @@ TEST_CASE("the text of a widget other than a text control shows the arrow") {
     prHtmlViewSetViewport(page.view, PrVec2{400, 400});
     prHtmlViewUpdate(page.view);
     page.settle();
-    PrAppEvent move{.kind = PrAppEventKind_PointerMove, .position = PrVec2{100, 25}};
+    PrAppEvent move{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{100, 25}}};
     prHtmlViewEvent(page.view, &move, 0);
     prHtmlViewUpdate(page.view);
     page.settle();
@@ -2813,7 +2816,7 @@ TEST_CASE("the pointer hovers and clicks SVG content, and a click on an SVG link
     Heard heard;
     PrDomEventListener listener = recorder(&heard);
     prDomEventTargetAddEventListener(prDomNodeAsEventTarget(page.node("other")), "click", &listener, nullptr);
-    PrAppEvent move{.kind = PrAppEventKind_PointerMove, .position = PrVec2{10, 10}};
+    PrAppEvent move{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{10, 10}}};
     prHtmlViewEvent(page.view, &move, 0);
     prHtmlViewUpdate(page.view);
     CHECK(page.matches("r", ":hover"));

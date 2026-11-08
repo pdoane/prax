@@ -68,15 +68,15 @@ struct DockFixture : KitFixture {
 
     // Drags with the primary button from `from` to `to`, over frames, and releases.
     void drag(PrVec2 from, PrVec2 to) {
-        push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = from});
-        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = from});
+        push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = from}});
+        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = from}});
         frame();
         move(PrVec2{from.x + 10, from.y + 10});
         frame();
         move(to);
         frame();
         frame();
-        push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = to});
+        push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = to}});
         frame();
     }
 };
@@ -199,11 +199,11 @@ TEST_CASE("dragging a band moves weight between the panes beside it") {
     f.move(band);
     f.frame();
     CHECK(prUiOutput(f.ui).cursor == PrAppCursor_ResizeX);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = band});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = band}});
     f.frame();
     f.move(PrVec2{band.x + 79, 300});
     f.frame();
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = PrVec2{band.x + 79, 300}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = PrVec2{band.x + 79, 300}}});
     f.frame();
     f.frame();
     PrKitDockNode root = prKitDockRoot(f.dock);
@@ -221,12 +221,12 @@ TEST_CASE("a band dragged past its neighbour leaves it the minimum share") {
     PrRect scene = f.bounds(f.content(kScene));
     PrRect viewport = f.bounds(f.content(kViewport));
     PrVec2 band{(scene.right + viewport.left) / 2, 300};
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = band});
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = band});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = band}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = band}});
     f.frame();
     f.move(PrVec2{790, 300});
     f.frame();
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = PrVec2{790, 300}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = PrVec2{790, 300}}});
     f.frame();
     PrKitDockNode root = prKitDockRoot(f.dock);
     CHECK(prKitDockSplitWeight(f.dock, root, 1) == doctest::Approx(0.04).epsilon(0.001));
@@ -240,8 +240,8 @@ TEST_CASE("a dragged band lays out the panes it resizes, and a frame after it no
     f.frame();
     PrRect scene = f.bounds(f.content(kScene));
     PrVec2 band{scene.right + kPrKitSplitBand / 2, 300};
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = band});
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = band});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = band}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = band}});
     f.frame();
     f.move(PrVec2{band.x + 20, 300});
     f.frame();
@@ -311,8 +311,8 @@ TEST_CASE("a tab dragged onto the middle of another leaf joins its tabs, keeping
     PrVec2 from{consoleBox.left + 10, consoleBox.top - 11};
     PrRect inspector = f.bounds(f.content(kInspector));
     PrVec2 to{(inspector.left + inspector.right) / 2, (inspector.top + inspector.bottom) / 2};
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = from});
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = from});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = from}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = from}});
     f.frame();
     f.move(PrVec2{from.x + 10, from.y + 10});
     f.frame();
@@ -324,7 +324,7 @@ TEST_CASE("a tab dragged onto the middle of another leaf joins its tabs, keeping
     CHECK(prUiDragging(f.ui)->value == kConsole);
     // The model holds until the drop.
     CHECK(prKitDockPanelLeaf(f.dock, kConsole) != prKitDockPanelLeaf(f.dock, kInspector));
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = to});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = to}});
     f.frame();
     PrKitDockNode leaf = prKitDockPanelLeaf(f.dock, kInspector);
     CHECK(prKitDockPanelLeaf(f.dock, kConsole) == leaf);
@@ -343,8 +343,8 @@ TEST_CASE("a tab in flight previews its drop in the overlay, and the preview goe
     PrVec2 from{consoleBox.left + 10, consoleBox.top - 11};
     PrRect inspector = f.bounds(f.content(kInspector));
     PrVec2 to{(inspector.left + inspector.right) / 2, (inspector.top + inspector.bottom) / 2};
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = from});
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = from});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = from}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = from}});
     f.frame();
     f.move(to);
     f.frame();
@@ -423,11 +423,11 @@ TEST_CASE("a split's panes divide its box by weight, and its band moves weight b
     f.move(band);
     f.frame();
     CHECK(prUiOutput(f.ui).cursor == PrAppCursor_ResizeY);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = band});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = band}});
     f.frame();
     f.move(PrVec2{400, 0});
     f.frame();
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = PrVec2{400, 0}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = PrVec2{400, 0}}});
     f.frame();
     CHECK(weights[0] == doctest::Approx(0.4));
     CHECK(weights[1] == doctest::Approx(3.6));

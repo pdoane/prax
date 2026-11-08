@@ -163,12 +163,31 @@ Nesting& nestingOf(void* context) {
 }
 
 Seen seenOf(const PrAppEvent* event) {
-    return Seen{
-        event->kind,     event->key,        event->code,
-        event->repeat,   event->button,     event->scrollUnit,
-        event->position, event->delta,
-        std::string(event->text.data != nullptr ? event->text.data : "", event->text.size),
-    };
+    Seen seen{};
+    seen.kind = event->kind;
+    PrStringView text = prAppEventText(event);
+    seen.text = std::string(text.data != nullptr ? text.data : "", text.size);
+    prAppEventPosition(event, &seen.position);
+    switch (event->kind) {
+        case PrAppEventKind_KeyDown:
+        case PrAppEventKind_KeyUp:
+            seen.key = event->keyboard.key;
+            seen.code = event->keyboard.code;
+            seen.repeat = event->keyboard.repeat;
+            break;
+        case PrAppEventKind_Scroll:
+            seen.scrollUnit = event->scroll.unit;
+            seen.delta = event->scroll.delta;
+            break;
+        case PrAppEventKind_PointerMove:
+        case PrAppEventKind_PointerDown:
+        case PrAppEventKind_PointerUp:
+            seen.button = event->pointer.button;
+            break;
+        default:
+            break;
+    }
+    return seen;
 }
 
 } // namespace
@@ -316,12 +335,7 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
                 prAppStop(app);
                 return;
             }
-            Seen seen{
-                event->kind, event->key, event->code, event->repeat, event->button, event->scrollUnit,
-                event->position, event->delta, std::string(event->text.data != nullptr ? event->text.data : "",
-                    event->text.size),
-            };
-            in.events.push_back(seen);
+            in.events.push_back(seenOf(event));
         },
         [](void*, PrApp*) {},
     };

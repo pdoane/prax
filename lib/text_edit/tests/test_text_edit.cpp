@@ -845,17 +845,17 @@ TEST_CASE("an editor's units follow its text's clusters, words and lines") {
 
 TEST_CASE("a key press names a command") {
     bool extend = false;
-    PrAppEvent left{.kind = PrAppEventKind_KeyDown, .key = PrAppKey_Left};
+    PrAppEvent left{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_Left}};
     CHECK(prTextEditCommandFromKey(&left, &extend) == PrTextEditCommand_Left);
     CHECK(!extend);
     left.modifiers = PrAppModifierFlag_Alt | PrAppModifierFlag_Shift;
     CHECK(prTextEditCommandFromKey(&left, &extend) == PrTextEditCommand_WordLeft);
     CHECK(extend);
-    PrAppEvent undo{.kind = PrAppEventKind_KeyDown, .modifiers = PrAppModifierFlag_Super, .key = 'Z'};
+    PrAppEvent undo{.kind = PrAppEventKind_KeyDown, .modifiers = PrAppModifierFlag_Super, .keyboard = {.key = 'Z'}};
     CHECK(prTextEditCommandFromKey(&undo, &extend) == PrTextEditCommand_Undo);
     undo.modifiers = PrAppModifierFlag_Super | PrAppModifierFlag_Shift;
     CHECK(prTextEditCommandFromKey(&undo, &extend) == PrTextEditCommand_Redo);
-    PrAppEvent letter{.kind = PrAppEventKind_KeyDown, .key = 'Z'};
+    PrAppEvent letter{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = 'Z'}};
     CHECK(prTextEditCommandFromKey(&letter, &extend) == PrTextEditCommand_None);
 }
 

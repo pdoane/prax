@@ -397,12 +397,12 @@ TEST_CASE("a click reports the modifiers its press was made with") {
     f.push(PrAppEvent{
         .kind = PrAppEventKind_PointerDown,
         .modifiers = PrAppModifierFlag_Shift,
-        .position = PrVec2{10, 10},
+        .pointer = {.position = PrVec2{10, 10}},
     });
     f.push(PrAppEvent{
         .kind = PrAppEventKind_PointerUp,
         .modifiers = PrAppModifierFlag_Shift,
-        .position = PrVec2{10, 10},
+        .pointer = {.position = PrVec2{10, 10}},
     });
     f.frame();
     CHECK(seen == PrAppModifierFlag_Shift);
@@ -634,7 +634,7 @@ TEST_CASE("Enter and Space activate the focused pressable node, and text goes to
         PrUiEvents events = prUiEvents(f.ui, button);
         for (uint32_t i = 0; i < events.count; ++i) {
             if (events.events[i].kind == PrAppEventKind_Text)
-                typed += std::string(events.events[i].text.data, events.events[i].text.size);
+                typed += std::string(events.events[i].input.text.data, events.events[i].input.text.size);
         }
     };
     f.frame();
@@ -703,9 +703,7 @@ TEST_CASE("a wheel that turns by lines scrolls by lines of the default line heig
     f.frame();
     f.push(PrAppEvent{
         .kind = PrAppEventKind_Scroll,
-        .scrollUnit = PrAppScrollUnit_Line,
-        .position = PrVec2{50, 50},
-        .delta = PrVec2{0, 2},
+        .scroll = {.position = PrVec2{50, 50}, .delta = PrVec2{0, 2}, .unit = PrAppScrollUnit_Line},
     });
     f.frame();
     CHECK(prLayoutNodeScroll(f.tree, scroller).y.raw == prLayoutUnitFromPx(2 * kPrAppScrollLineHeight).raw);
@@ -934,7 +932,7 @@ TEST_CASE("the node that holds a press keeps its cursor while the pointer leaves
     f.down(10, 10);
     f.frame();
     CHECK(prUiOutput(f.ui).cursor == PrAppCursor_ResizeX);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = PrVec2{120, 10}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{120, 10}}});
     f.frame();
     CHECK(prUiOutput(f.ui).cursor == PrAppCursor_ResizeX);
     f.up(120, 10);
