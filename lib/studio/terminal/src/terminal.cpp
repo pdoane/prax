@@ -200,7 +200,11 @@ struct TerminalSnapshot {
 struct Terminal {
     PrKit* kit;
     PrUi* ui;
+
+    // The window that shows the terminal and its application, or null for none.
+    PrAppWindow* PR_NULLABLE window;
     PrApp* PR_NULLABLE app;
+
     PrProcess* PR_NULLABLE process;
     PrVterm* vterm;
     TerminalDrawer drawer;
@@ -540,7 +544,7 @@ PrStringView terminalTitle(const Terminal* terminal) {
 
 // Returns true if the window is active. Without an application, the window counts as active.
 bool isWindowActive(const Terminal* terminal) {
-    return terminal->app == nullptr || prAppIsActive(terminal->app);
+    return terminal->app == nullptr || prAppWindowIsActive(terminal->window);
 }
 
 // Returns true if the terminal shows: a frame is declaring it, or one declared it since the last update.
@@ -553,7 +557,7 @@ void askAttention(Terminal* terminal) {
     if (terminal->app == nullptr || terminal->attentionAsked)
         return;
     terminal->attentionAsked = true;
-    prAppRequestAttention(terminal->app);
+    prAppWindowRequestAttention(terminal->window);
 }
 
 // Answers the bell. Flashes the screen if the terminal shows, records an alert if the user cannot see it, and requests
@@ -633,7 +637,7 @@ void service(Terminal* terminal) {
     PrVtermEventFlags events = terminal->parsedEvents | prVtermTakeEvents(vterm);
     terminal->parsedEvents = 0;
     if ((events & PrVtermEventFlag_Clipboard) != 0 && terminal->app != nullptr)
-        prAppSetClipboardText(terminal->app, prVtermClipboard(vterm));
+        prAppDataWriteText(terminal->app, kPrAppDataSourceClipboard, prVtermClipboard(vterm));
     if ((events & PrVtermEventFlag_Bell) != 0)
         ring(terminal);
     if ((events & PrVtermEventFlag_Notification) != 0)
@@ -1017,14 +1021,14 @@ void terminalCopy(Terminal* terminal) {
     if (terminal->app == nullptr || !terminal->hasSelection)
         return;
     PrRawString text = selectionText(terminal);
-    prAppSetClipboardText(terminal->app, prRawStringView(&text));
+    prAppDataWriteText(terminal->app, kPrAppDataSourceClipboard, prRawStringView(&text));
     prRawStringReset(&text);
 }
 
-// Requests the clipboard's text. It arrives later as a Clipboard event, which the view pastes.
+// Reads the clipboard's text, which arrives as a Paste event in a later round.
 void terminalPaste(Terminal* terminal) {
-    if (terminal->app != nullptr)
-        prAppRequestClipboardText(terminal->app);
+    if (terminal->node != kPrLayoutNodeNone)
+        prUiPaste(terminal->ui, terminal->node);
 }
 
 // Returns true if a paste of `text` must ask the user first. That is the case if the text holds a line break, which
@@ -1540,7 +1544,7 @@ void handleEvents(Terminal* terminal) {
             case PrAppEventKind_CompositionEnd:
                 compositionEnd(terminal);
                 continue;
-            case PrAppEventKind_Clipboard:
+            case PrAppEventKind_Paste:
                 if (asksBeforePaste(terminal, event.input.text)) {
                     askBeforePaste(terminal, event.input.text);
                     continue;
@@ -2167,7 +2171,8 @@ PrStatus prTerminalCreate(const PrTerminalDesc* desc, PrTerminal* PR_NULLABLE* P
     PrTerminal* terminal = allocZeroed<PrTerminal>();
     terminal->kit = desc->kit;
     terminal->ui = desc->kit->ui;
-    terminal->app = desc->app;
+    terminal->window = desc->window;
+    terminal->app = desc->window != nullptr ? prAppWindowApp(desc->window) : nullptr;
     terminal->synchronizedSince = -1;
     terminal->openFile = desc->openFile;
     terminal->openFileContext = desc->openFileContext;
@@ -2265,8 +2270,8 @@ PrStatus prTerminalCreate(const PrTerminalDesc* desc, PrTerminal* PR_NULLABLE* P
         .streams = PrProcessStreams_Terminal,
         .terminalExtent = prVtermExtent(terminal->vterm),
         .terminalPixelExtent = {80 * cellPixels(terminal).x, 24 * cellPixels(terminal).y},
-        .wake = desc->app != nullptr ? wakeApp : nullptr,
-        .wakeContext = desc->app,
+        .wake = terminal->app != nullptr ? wakeApp : nullptr,
+        .wakeContext = terminal->app,
         .receive = receiveOutput,
         .receiveContext = terminal,
     };
@@ -2406,7 +2411,7 @@ void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, P
         uint32_t column = terminal->composing ? terminal->compositionColumn : snapshot.cursor.position.x;
         float left = bounds.left + kGutterWidth + float(column) * cell.x;
         float top = bounds.top + float(snapshot.cursor.position.y) * cell.y;
-        prUiSetTextInput(ui, PrRect{left, top, left + cell.x, top + cell.y});
+        prUiSetTextInput(ui, PrRect{left, top, left + cell.x, top + cell.y}, PrAppTextInputKind_Text);
     }
 
     // The user sees a terminal that shows in the active window, so its alerts clear.
@@ -2562,7 +2567,7 @@ void prTerminalCopyCommandOutput(PrTerminal* terminal) {
         return;
     PrRawString text = prTerminalCommandOutput(terminal);
     if (!prRawStringIsEmpty(&text))
-        prAppSetClipboardText(terminal->app, prRawStringView(&text));
+        prAppDataWriteText(terminal->app, kPrAppDataSourceClipboard, prRawStringView(&text));
     prRawStringReset(&text);
 }
 

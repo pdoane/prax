@@ -7,7 +7,7 @@
 #include "pr/count_of.h"
 #include "pr/font_bundle.h"
 #include "pr/print.h"
-#include "pr/studio_window.h"
+#include "pr/studio_app.h"
 
 #include "examples/editor/editor_view.h"
 #include "examples/editor/hud.h"
@@ -37,7 +37,6 @@ int main() {
     PrStudioWindowDesc desc{
         .title = title,
         .extent = {1440, 900},
-        .fonts = fonts,
         // The HUD lives as long as the context that its records belong to.
         .open = [](void* context, PrStudioWindow* window) {
             stateOf(context).hud = hudCreate(prStudioWindowUi(window), prStudioWindowFonts(window));
@@ -49,7 +48,8 @@ int main() {
         .close = [](void* context, PrStudioWindow*) { hudDestroy(stateOf(context).hud); },
         .context = &state,
     };
-    PrStatus status = prStudioWindowRun(&desc);
+    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     if (status == PrStatus_NotSupported)
         printError("editor: no GPU device to render with\n");

@@ -14,7 +14,7 @@
 // order, or in BGRA order if `bgra` is set.
 extern "C" bool prGpuCanvas2dAvailable(void);
 extern "C" uint32_t prGpuCanvas2dCreateCanvas(uint32_t width, uint32_t height);
-extern "C" uint32_t prGpuCanvas2dAttach(const char* selector, uint32_t width, uint32_t height);
+extern "C" uint32_t prGpuCanvas2dAttach(const char* selector, uint32_t width, uint32_t height, bool alpha);
 extern "C" void prGpuCanvas2dRelease(uint32_t canvas);
 extern "C" uint32_t prGpuCanvas2dImport(uint32_t image, uint32_t* width, uint32_t* height);
 extern "C" void prGpuCanvas2dClear(uint32_t canvas, float r, float g, float b, float a);
@@ -86,10 +86,11 @@ PrStatus textureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuRelea
 extern const PrGpuSwapChain kSwapChainFunctions;
 
 // A swap chain: the page's canvas, by its selector with its NUL, and the texture that the canvas is. The texture is
-// made again when the frame's extent changes.
+// made again when the frame's extent changes. A transparent swap chain's canvas shows the page behind it.
 struct SwapChain : GpuSharedSwapChain {
     PrRawString selector;
     PrGpuTexture texture;
+    bool transparent;
 };
 
 // Brings the canvas up to date with what the frame drew, whether through the canvas or into the texels.
@@ -99,7 +100,7 @@ void present(void* PR_NULLABLE context) {
     prGpuTextureNative(s->device, s->texture, PrGpuNativeKind_Canvas2d, &canvas);
 }
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc*,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (surface->kind != PrAppSurfaceKind_HtmlCanvas)
@@ -108,6 +109,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     static_cast<PrGpuSwapChain&>(*s) = kSwapChainFunctions;
     s->device = device;
     s->info = PrGpuSwapChainInfo{.format = PrGpuFormat_Rgba8, .space = PrColorSpace_Srgb};
+    s->transparent = (desc->flags & PrGpuSwapChainFlag_Transparent) != 0;
     // The selector is kept with its NUL, which the page reads up to.
     s->selector = prRawStringCopy(static_cast<const char*>(surface->handle));
     prRawStringAppend(&s->selector, PrStringView{"", 1});
@@ -142,7 +144,7 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
         if (status != PrStatus_Ok)
             return status;
         // Sizing the page's canvas to the extent clears it, as the new texture's texels are clear.
-        uint32_t canvas = prGpuCanvas2dAttach(prRawStringView(&s->selector).data, extent.x, extent.y);
+        uint32_t canvas = prGpuCanvas2dAttach(prRawStringView(&s->selector).data, extent.x, extent.y, s->transparent);
         if (canvas == 0) {
             prGpuTextureDestroy(device, s->texture);
             s->texture = PrGpuTexture{};

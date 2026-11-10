@@ -101,11 +101,11 @@ void prWebViewEvaluate(PrWebView* view, PrStringView script, PrWebViewResultFn d
 // `size` pixels in sRGB, and calls `done` with the pixels.
 void prWebViewCapture(PrWebView* view, PrRect rect, PrUVec2 size, PrWebViewCaptureFn done, void* PR_NULLABLE context);
 
-// Shows the page live over `host`, a window's surface (prAppSurface), above what the program presents. The viewport is
-// scaled to fill `frame` and clipped to `clip`, both in the host's logical pixels. The platform renders and composites
-// the page on its own schedule, as it does any page it shows. The program neither draws it nor waits for it. Whether or
-// not it is shown, the page lays out and captures at the size of its viewport. A host of a kind that the backend does
-// not show over leaves the page where it is.
+// Shows the page live over `host`, a window's surface (prAppWindowSurface), above what the program presents. The
+// viewport is scaled to fill `frame` and clipped to `clip`, both in the host's logical pixels. The platform renders and
+// composites the page on its own schedule, as it does any page it shows. The program neither draws it nor waits for it.
+// Whether or not it is shown, the page lays out and captures at the size of its viewport. A host of a kind that the
+// backend does not show over leaves the page where it is.
 void prWebViewShow(PrWebView* view, const PrAppSurface* host, PrRect clip, PrRect frame);
 
 // Removes the page from its host and moves it back to its own window, which no one sees.

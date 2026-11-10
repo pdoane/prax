@@ -46,7 +46,7 @@ if (PR_FONT_DIRECTWRITE)
     target_sources(pr_font PRIVATE backends/directwrite/src/font_directwrite.cpp)
     pr_headers(pr_font PUBLIC backends/directwrite/include)
     target_compile_definitions(pr_font PRIVATE PR_FONT_HAS_DIRECTWRITE)
-    target_link_libraries(pr_font PUBLIC dwrite)
+    target_link_libraries(pr_font PUBLIC dwrite PRIVATE prax::core_windows)
 endif()
 
 if (PR_DEVELOP)

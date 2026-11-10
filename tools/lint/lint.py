@@ -672,7 +672,8 @@ WRAPPERS = {
     "lib/core/backends/windows/src/core_windows_time.cpp": {"windows.h"},
     "lib/core/backends/windows/src/core_windows_vmem.cpp": {"windows.h"},
     "lib/app/backends/win32/src/app_win32.cpp": {"windows.h", "dwmapi.h", "dxgi1_6.h", "imm.h", "objbase.h",
-                                                 "shellapi.h"},
+                                                 "ole2.h", "shellapi.h", "shellscalingapi.h", "shlobj.h",
+                                                 "shobjidl.h", "wtsapi32.h"},
     "lib/webview/backends/webview2/src/webview_webview2.cpp": {"windows.h", "wincodec.h", "wrl.h",
                                                                "WebView2EnvironmentOptions.h"},
     "lib/app/backends/win32/src/win32_text.cpp": {"windows.h"},
@@ -1067,7 +1068,10 @@ def layout(text):
         leading = original[own:own + 1]  # the line's first character, which may begin a literal that the mask hides
         if directive or stripped.startswith("#"):
             directive = original.rstrip().endswith("\\")
-            previous = ""
+            # Within brackets, as around some items of an initializer list, the code reads on past a directive. Outside
+            # them, a directive ends the statement before it, which may be a macro without a semicolon.
+            if not stack or stack[-1][0] not in ("expression", "data"):
+                previous = ""
             continue
         # A line that begins inside a raw string keeps its indentation, which is the string's text. What follows the
         # string's end is still code: its brackets close what the string's line opened, and it may end the statement.
@@ -2642,7 +2646,7 @@ TAGS = {
     "lib/websocket": ("WebSocket",),
     "lib/webview": ("WebView",),
     "lib/mathml": ("MathMl",),
-    "lib/studio/window": ("StudioWindow",),
+    "lib/studio/app": ("StudioApp", "StudioWindow"),
 }
 
 # The vocabulary modules, whose headers declare names of several tags rather than of their own.
@@ -2803,8 +2807,12 @@ def check_header_names(report, paths, texts):
     """A public header is named for the tag of the names that it declares: pr/<tag>.h for a module's main header, and
     pr/<tag>_<topic>.h for the others. The names of a backend's headers start with its directories,
     <interface>_<backend>. A QuickJS layer's header is named for its module's tag, as <tag>_quickjs.h or
-    <tag>_<topic>_quickjs.h, and declares names of the layer's tag, Js<tag>."""
+    <tag>_<topic>_quickjs.h, and declares names of the layer's tag, Js<tag>. An umbrella header declares nothing: its
+    code is only the includes of the module's other headers."""
     for path in paths:
+        code = mask_non_code(texts[path])
+        if all(re.fullmatch(r"\s*(#pragma once|#include\s.*)?\s*", line) for line in code.splitlines()):
+            continue
         stem = os.path.basename(path)[:-2]
         module = os.path.relpath(public_module(path), ROOT).replace(os.sep, "/")
         backend = backend_of(path)

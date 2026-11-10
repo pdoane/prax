@@ -17,6 +17,7 @@ namespace {
 struct Browse {
     PrApp* app = nullptr;
     PrWebView* view = nullptr;
+    PrAppWindow* window = nullptr;     // a window that a view shows over
     PrWebViewDesc desc{.viewport = PrUVec2{40, 20}};
     void (*begin)(Browse& b) = nullptr;
     bool supported = true;
@@ -40,30 +41,30 @@ Browse& browseOf(void* context) {
 // Runs a headless application that creates a view as `b.desc` describes and calls `b.begin` with it. A step stops the
 // application to end the run. Without a WebView2 runtime, the run ends at once.
 void runBrowser(Browse& b) {
-    PrAppDesc appDesc{.title = "WebView2 test", .extent = {64, 32}, .headless = true};
-    b.app = prAppWin32Create(&appDesc);
-    PrAppHandler handler{
-        &b,
-        [](void* context, PrApp* app, const PrAppFrame*) {
+    PrAppOptions options{.headless = true};
+    b.app = prAppWin32Create(&options);
+    prAppRun(b.app, {
+        .context = &b,
+        .start = [](void* context, PrApp*) {
             Browse& b = browseOf(context);
             PrStatus created = prWebViewWebView2Create(&b.desc, &b.view);
             if (created == PrStatus_NotSupported) {
                 b.supported = false;
-                prAppStop(app);
-                return;
+                return false;
             }
             REQUIRE(created == PrStatus_Ok);
             b.begin(b);
+            return true;
         },
-        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
-        [](void*, PrApp*, const PrAppEvent*) {},
-        [](void* context, PrApp*) {
+        .event = [](void*, PrApp*, const PrAppEvent*) {},
+        .shutdown = [](void* context, PrApp*) {
             Browse& b = browseOf(context);
             prWebViewDestroy(b.view);
             b.view = nullptr;
+            prAppWindowDestroy(b.window);
+            b.window = nullptr;
         },
-    };
-    prAppRun(b.app, &handler);
+    });
     prAppDestroy(b.app);
     if (!b.supported)
         MESSAGE("no WebView2 runtime; skipped");
@@ -279,8 +280,18 @@ TEST_CASE("a page shown in the window keeps its viewport, captures as it does hi
     Browse browse;
     browse.begin = [](Browse& b) {
         std::string url = fileUrl("pr-webview-shown.html", "<!doctype html><style>body { margin: 0; background: #00ff00; }</style>");
+        PrAppWindowDesc desc{
+            .title = "WebView2 test",
+            .extent = {64, 32},
+            .handler = {
+                .open = [](void*, PrAppWindow*, const PrAppFrame*) { return true; },
+                .frame = [](void*, PrAppWindow*, const PrAppFrame*) { return PrAppOutput{}; },
+                .event = [](void*, PrAppWindow*, const PrAppEvent*) {},
+            },
+        };
+        REQUIRE(prAppWindowCreate(b.app, &desc, &b.window) == PrStatus_Ok);
         PrAppSurface host{};
-        REQUIRE(prAppSurface(b.app, &host) == PrStatus_Ok);
+        REQUIRE(prAppWindowSurface(b.window, &host) == PrStatus_Ok);
         prWebViewShow(b.view, &host, PrRect{8, 4, 48, 24}, PrRect{0, 0, 80, 40});
         prWebViewLoad(b.view, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);

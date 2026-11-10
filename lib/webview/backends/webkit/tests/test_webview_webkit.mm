@@ -1,5 +1,4 @@
 #include "pr/app.h"
-#include "pr/app_cocoa.h"
 #include "pr/webview_webkit.h"
 
 #include "tools/harness/test.h"
@@ -38,25 +37,24 @@ std::string fileUrl(NSString* name, NSString* text) {
 
 // Runs a headless application that creates a view and calls `b.begin` with it. A step stops the application.
 void runBrowse(Browse& b) {
-    PrAppDesc appDesc{.title = "WebKit test", .extent = {64, 32}, .headless = true};
-    b.app = prAppCocoaCreate(&appDesc);
-    PrAppHandler handler{
-        &b,
-        [](void* context, PrApp*, const PrAppFrame*) {
+    PrAppOptions options{.headless = true};
+    b.app = prAppCreate(PrAppBackend_Default, &options);
+    prAppRun(b.app, {
+        .context = &b,
+        .start = [](void* context, PrApp*) {
             Browse& b = browseOf(context);
             PrWebViewDesc desc{.viewport = PrUVec2{40, 20}};
             REQUIRE(prWebViewWebKitCreate(&desc, &b.view) == PrStatus_Ok);
             b.begin(b);
+            return true;
         },
-        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
-        [](void*, PrApp*, const PrAppEvent*) {},
-        [](void* context, PrApp*) {
+        .event = [](void*, PrApp*, const PrAppEvent*) {},
+        .shutdown = [](void* context, PrApp*) {
             Browse& b = browseOf(context);
             prWebViewDestroy(b.view);
             b.view = nullptr;
         },
-    };
-    prAppRun(b.app, &handler);
+    });
     prAppDestroy(b.app);
 }
 
@@ -131,13 +129,25 @@ TEST_CASE("a page from a file reads the files beside it, and a promise answers o
 TEST_CASE("a page shows over a window's view, and moves back to its own window when hidden") {
     Browse browse;
     browse.begin = [](Browse& b) {
+        PrAppWindowDesc desc{
+            .title = "WebKit test",
+            .extent = {64, 32},
+            .handler = {
+                .open = [](void*, PrAppWindow*, const PrAppFrame*) { return true; },
+                .frame = [](void*, PrAppWindow*, const PrAppFrame*) { return PrAppOutput{}; },
+                .event = [](void*, PrAppWindow*, const PrAppEvent*) {},
+            },
+        };
+        PrAppWindow* window = nullptr;
+        REQUIRE(prAppWindowCreate(b.app, &desc, &window) == PrStatus_Ok);
         PrAppSurface surface{};
-        REQUIRE(prAppSurface(b.app, &surface) == PrStatus_Ok);
+        REQUIRE(prAppWindowSurface(window, &surface) == PrStatus_Ok);
         NSView* host = (__bridge NSView*)surface.handle;
         prWebViewShow(b.view, &surface, PrRect{0, 0, 32, 16}, PrRect{0, 0, 32, 16});
         b.width = uint32_t(host.subviews.count);
         prWebViewHide(b.view);
         b.height = uint32_t(host.subviews.count);
+        prAppWindowDestroy(window);
         prAppStop(b.app);
     };
     runBrowse(browse);

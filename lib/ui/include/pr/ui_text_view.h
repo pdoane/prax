@@ -54,9 +54,6 @@ typedef struct PrUiTextViewDesc {
 // prTextViewLaidOut and prTextViewRefine, and requests another frame if either returns true.
 void prUiTextView(PrUi* ui, const PrUiTextViewDesc* desc);
 
-// Asks the application's clipboard for its text, which the view inserts when it arrives.
-void prUiTextViewPaste(PrUi* ui, PrLayoutNode control);
-
 #if defined(__cplusplus)
 }
 #endif

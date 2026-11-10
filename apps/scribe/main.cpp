@@ -14,7 +14,7 @@
 #include "pr/font_bundle.h"
 #include "pr/print.h"
 #include "pr/string_view.h"
-#include "pr/studio_window.h"
+#include "pr/studio_app.h"
 #include "pr/text_font.h"
 
 #include "apps/scribe/scribe.h"
@@ -53,6 +53,7 @@ bool open(void* context, PrStudioWindow* window) {
     s.kit = prStudioWindowKit(window);
     s.ui = prStudioWindowUi(window);
     s.app = prStudioWindowApp(window);
+    s.window = prStudioWindowAppWindow(window);
     openEditor(s);
     if (!r.debuggee.isEmpty())
         setDebuggee(s, r.debuggee);
@@ -109,7 +110,6 @@ int main(int argc, char** argv) {
     PrStudioWindowDesc desc{
         .title = "Scribe",
         .extent = {1200, 900},
-        .fonts = fonts,
         .open = open,
         .event = [](void* context, PrStudioWindow*, const PrAppEvent* event) {
             return handleEvent(runOf(context).scribe, *event);
@@ -126,7 +126,8 @@ int main(int argc, char** argv) {
         .trace = tracing ? trace : nullptr,
         .context = &r,
     };
-    PrStatus status = prStudioWindowRun(&desc);
+    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     prFontSystemDestroy(system);
     if (status == PrStatus_NotSupported)

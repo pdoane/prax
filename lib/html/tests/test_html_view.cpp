@@ -1,3 +1,4 @@
+#include "pr/app_backend.h"
 #include "pr/checksum.h"
 #include "pr/compress_builtin.h"
 #include "pr/css_presentation.h"
@@ -1068,16 +1069,36 @@ TEST_CASE("::selection colors what a text control has selected") {
 }
 
 TEST_CASE("cut, copy and paste use the clipboard, and fire events that can take them over") {
+    // An application whose clipboard is a string, and whose reads wait until the test answers them.
     static std::string clipboard;
-    static uint32_t requested;
-    PrApp app{};
-    app.setClipboardText = [](PrApp*, PrStringView text) -> PrStatus {
-        clipboard = std::string(text.data, text.size);
+    static PrAppDataTextFn pending;
+    static void* pendingContext;
+    static PrApp app;
+    app = PrApp{};
+    app.dataReadFn = [](PrApp*, const PrAppDataRead* read) {
+        pending = reinterpret_cast<PrAppDataTextFn>(read->done);
+        pendingContext = read->context;
+    };
+    app.cancelFn = [](PrApp*, void* PR_NULLABLE context) {
+        if (pendingContext == context)
+            pending = nullptr;
+    };
+    app.dataWriteFn = [](PrApp*, PrAppDataSource, const PrAppDataContent* content) -> PrStatus {
+        clipboard = std::string(content->text.data, content->text.size);
         return PrStatus_Ok;
     };
-    app.requestClipboardText = [](PrApp*) { ++requested; };
+    PrAppWindow window{};
+    window.appFn = [](const PrAppWindow*) -> PrApp* { return &app; };
+    window.requestFrameFn = [](PrAppWindow*) {};
+    auto answer = [](PrStringView text) {
+        REQUIRE(pending != nullptr);
+        PrAppDataTextFn done = pending;
+        pending = nullptr;
+        done(pendingContext, PrStatus_Ok, text);
+    };
     EditedArea e("<textarea id=t>one two</textarea>");
-    prHtmlViewSetApp(e.page.view, &app);
+    auto runTasks = [&] { e.page.fetcher.settle(prHtmlPageAgent(e.page.page)); };
+    prHtmlViewSetWindow(e.page.view, &window);
     e.page.settle();
     auto command = [&](PrAppKey key) {
         PrAppEvent event{.kind = PrAppEventKind_KeyDown, .modifiers = PrAppModifierFlag_Super, .keyboard = {.key = key}};
@@ -1093,12 +1114,16 @@ TEST_CASE("cut, copy and paste use the clipboard, and fire events that can take 
     CHECK(clipboard == "one");
     CHECK(valueOf(e.area) == " two");
     prHtmlTextControlSetSelectionRange(e.area, 0, 0, PrDomSelectionDirection_None);
-    uint32_t before = requested;
     command('V');
-    CHECK(requested == before + 1);
-    PrAppEvent arrived{.kind = PrAppEventKind_Clipboard, .input = {.text = "pasted"}};
-    prHtmlViewEvent(e.page.view, &arrived, 0);
+    CHECK(valueOf(e.area) == " two");
+    // The answer reaches the document through the agent.
+    answer("pasted");
+    runTasks();
     CHECK(valueOf(e.area) == "pasted two");
+    // A paste that the user chose from a menu inserts at the caret.
+    PrAppEvent chosen{.kind = PrAppEventKind_Paste, .input = {.text = "!"}};
+    prHtmlViewEvent(e.page.view, &chosen, 0);
+    CHECK(valueOf(e.area) == "pasted! two");
 
     // A listener takes over a copy by canceling it and setting the event's data, and refuses a paste by canceling it.
     PrDomEventListener takeOver{
@@ -1120,10 +1145,16 @@ TEST_CASE("cut, copy and paste use the clipboard, and fire events that can take 
     command('C');
     CHECK(clipboard == "theirs");
     command('X');
-    CHECK(valueOf(e.area) == "pasted two");
+    CHECK(valueOf(e.area) == "pasted! two");
     command('V');
-    prHtmlViewEvent(e.page.view, &arrived, 0);
-    CHECK(valueOf(e.area) == "pasted two");
+    answer("refused");
+    runTasks();
+    CHECK(valueOf(e.area) == "pasted! two");
+    // The view cancels a read that is pending when it leaves the window.
+    command('V');
+    REQUIRE(pending != nullptr);
+    prHtmlViewSetWindow(e.page.view, nullptr);
+    CHECK(pending == nullptr);
 }
 
 TEST_CASE("a read-only textarea takes no text") {

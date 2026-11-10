@@ -827,7 +827,7 @@ bool prVtermInputEvent(PrVterm* vterm, const PrAppEvent* event, const PrVtermInp
             vtermPut(vterm, event->input.text);
             return true;
         }
-        case PrAppEventKind_Clipboard:
+        case PrAppEventKind_Paste:
             prVtermInputPaste(vterm, event->input.text);
             return true;
         case PrAppEventKind_PointerDown:

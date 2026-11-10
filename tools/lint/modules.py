@@ -13,6 +13,9 @@ import re
 # The ways a target can link another, as CMake spells them.
 VISIBILITIES = ("PUBLIC", "PRIVATE", "INTERFACE")
 
+# The keywords of pr_example (examples/CMakeLists.txt), which follow its sources.
+EXAMPLE_KEYWORDS = ("FONT_BUNDLES", "FONT_FILES", "DATA", "INFO_PLIST")
+
 
 class Target:
     def __init__(self, name):
@@ -189,7 +192,9 @@ def targets(root):
                 create(name, "executable", path, line, rest[1:], directory)
                 link(name, [(rest[0][0], line), ("harness", line)], path)
             else:
-                create(name, "executable", path, line, rest, directory)
+                # An example's sources end at its first keyword.
+                keyword = next((i for i, (value, _) in enumerate(rest) if value in EXAMPLE_KEYWORDS), len(rest))
+                create(name, "executable", path, line, rest[:keyword], directory)
     return found
 
 

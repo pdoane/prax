@@ -6,7 +6,7 @@
 #include "pr/count_of.h"
 #include "pr/font_bundle.h"
 #include "pr/print.h"
-#include "pr/studio_window.h"
+#include "pr/studio_app.h"
 
 #include "examples/studio_gallery/gallery_view.h"
 
@@ -44,14 +44,14 @@ int main() {
         .title = "Studio Kit Gallery",
         .extent = {1440, 900},
         .intent = PrGpuSwapChainIntent_Hdr,
-        .fonts = fonts,
         .theme = themeOf,
         .build = [](void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
             buildGallery(prStudioWindowKit(window), root, stateOf(context));
         },
         .context = &state,
     };
-    PrStatus status = prStudioWindowRun(&desc);
+    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     if (status == PrStatus_NotSupported)
         printError("studio_gallery: no GPU device to render with\n");

@@ -3,6 +3,7 @@
 #include "pr/font_directwrite.h"
 
 #include "pr/alloc.h"
+#include "pr/core_windows_string.h"
 #include "pr/font_system_backend.h"
 #include "pr/locale.h"
 #include "pr/memory.h"
@@ -32,21 +33,21 @@ struct Utf8 {
 
 Utf8 utf8Of(const wchar_t* wide, UINT32 length) {
     Utf8 text;
-    int bytes = WideCharToMultiByte(CP_UTF8, 0, wide, int(length), nullptr, 0, nullptr, nullptr);
-    if (bytes <= 0)
+    uint32_t bytes = prCoreWindowsNarrow(wide, length, nullptr, 0, PrCoreWindowsString_Substitute);
+    if (bytes == 0)
         return text;
-    text.data = static_cast<char*>(prMemoryAlloc(size_t(bytes)));
-    text.size = size_t(WideCharToMultiByte(CP_UTF8, 0, wide, int(length), text.data, bytes, nullptr, nullptr));
+    text.data = static_cast<char*>(prMemoryAlloc(bytes));
+    text.size = prCoreWindowsNarrow(wide, length, text.data, bytes, PrCoreWindowsString_Substitute);
     return text;
 }
 
 // Returns `text` as NUL-terminated UTF-16, which the caller frees, or null if it is not UTF-8.
 wchar_t* PR_NULLABLE wideOf(PrStringView text, UINT32* PR_NULLABLE outLength) {
-    int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data, int(text.size), nullptr, 0);
-    if (length <= 0 && text.size != 0)
+    uint32_t length = prCoreWindowsWiden(text, nullptr, 0, PrCoreWindowsString_Exact);
+    if (length == kPrCoreWindowsStringInvalid)
         return nullptr;
     wchar_t* wide = static_cast<wchar_t*>(prMemoryAlloc((size_t(length) + 1) * sizeof(wchar_t)));
-    MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), wide, length);
+    prCoreWindowsWiden(text, wide, length, PrCoreWindowsString_Exact);
     wide[length] = 0;
     if (outLength != nullptr)
         *outLength = UINT32(length);

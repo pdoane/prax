@@ -141,8 +141,7 @@ struct HtmlView {
     uint32_t unitLow;
     uint32_t unitHigh;
 
-    PrApp* PR_NULLABLE app;         // whose clipboard the view reads and writes
-    bool pasting;                   // true if a paste asked for the clipboard's text, which a Clipboard event brings
+    PrAppWindow* PR_NULLABLE window; // whose application's clipboard the view reads and writes
 
     bool typing;                    // true from a keydown that no listener canceled until its text or its release
     bool composing;                 // true during an input method's composition
@@ -1046,6 +1045,19 @@ bool moveCaret(PrLayoutTree* PR_NULLABLE tree, PrLayoutNode node, PrDomElement* 
     return motion != PrTextEditMotion_None;
 }
 
+// Posts the clipboard's text to the view's agent as a Paste event, and requests the frame that shows it. The read
+// answers on the window's thread. A read that fails pastes nothing.
+void pasteRead(void* PR_NULLABLE context, PrStatus status, PrStringView text) {
+    HtmlView* v = static_cast<HtmlView*>(context);
+    PrHtmlView* view = v->inbox->view;
+    if (status != PrStatus_Ok || text.size == 0 || view == nullptr)
+        return;
+    PrAppEvent event{.kind = PrAppEventKind_Paste, .input = {.text = text}};
+    prHtmlViewPostEvent(view, &event);
+    if (v->window != nullptr)
+        prAppWindowRequestFrame(v->window);
+}
+
 // Runs what a key does in an editable text control, and returns true if it does anything. A shortcut that the control
 // does not take goes on to the document's defaults.
 bool editKey(HtmlView* v, PrDomElement* target, const PrAppEvent* event) {
@@ -1103,20 +1115,20 @@ bool editKey(HtmlView* v, PrDomElement* target, const PrAppEvent* event) {
                 bool proceed = dispatchTrusted(prDomNodeAsEventTarget(prDomElementAsNode(target)),
                     prDomClipboardEventAsEvent(fired));
                 PrDomDataTransfer* data = prDomClipboardEventClipboardData(fired);
-                if (v->app != nullptr && proceed)
-                    prAppSetClipboardText(v->app, PrStringView{text.data + low, high - low});
-                else if (v->app != nullptr && prDomDataTransferHasText(data))
-                    prAppSetClipboardText(v->app, prDomDataTransferText(data));
+                if (v->window != nullptr && proceed)
+                    prAppDataWriteText(prAppWindowApp(v->window), kPrAppDataSourceClipboard,
+                        PrStringView{text.data + low, high - low});
+                else if (v->window != nullptr && prDomDataTransferHasText(data))
+                    prAppDataWriteText(prAppWindowApp(v->window), kPrAppDataSourceClipboard,
+                        prDomDataTransferText(data));
                 prDomEventRelease(prDomClipboardEventAsEvent(fired));
                 if (proceed && cut)
                     htmlTextControlDelete(target, s.caret, "deleteByCut");
             }
             break;
         case PrTextEditCommand_Paste:
-            if (v->app != nullptr) {
-                v->pasting = true;
-                prAppRequestClipboardText(v->app);
-            }
+            if (v->window != nullptr)
+                prAppDataReadText(prAppWindowApp(v->window), kPrAppDataSourceClipboard, pasteRead, v);
             break;
         case PrTextEditCommand_Undo: htmlTextControlUndo(target, false); break;
         case PrTextEditCommand_Redo: htmlTextControlUndo(target, true); break;
@@ -1126,12 +1138,9 @@ bool editKey(HtmlView* v, PrDomElement* target, const PrAppEvent* event) {
     return true;
 }
 
-// Inserts the text of a Clipboard event that a paste asked for, unless a listener of paste cancels it
+// Inserts the text of a Paste event into the focused text control, unless a listener of paste cancels it
 // (clipboard-apis/#paste-action). Line endings become line feeds, and a one-line control drops them.
 void pasted(HtmlView* v, const PrAppEvent* event) {
-    if (!v->pasting)
-        return;
-    v->pasting = false;
     PrDomElement* target = keyTarget(v);
     if (target == nullptr || target != target->document->focused || !htmlTextControlIsEditable(target))
         return;
@@ -1153,7 +1162,8 @@ void pasted(HtmlView* v, const PrAppEvent* event) {
     }
     htmlTextControlInsert(target, prTextBufferView(&text), "insertFromPaste");
     prTextBufferReset(&text);
-    caretMoved(v, event->time);
+    // A paste that a read of the clipboard answers carries no time of its own.
+    caretMoved(v, v->time);
 }
 
 // Runs the default actions of a keydown that no listener canceled, and returns what the document did with the key. Tab
@@ -1626,6 +1636,8 @@ PrHtmlView* prHtmlViewCreate(const PrHtmlViewDesc* desc) {
 void prHtmlViewDestroy(PrHtmlView* PR_NULLABLE view) {
     if (view == nullptr)
         return;
+    if (view->window != nullptr)
+        prAppCancel(prAppWindowApp(view->window), static_cast<HtmlView*>(view));
     if (view->compositor != nullptr)
         prDomAgentRemoveUpdate(view->inbox->agent, updateView, view->inbox);
     view->inbox->view = nullptr;
@@ -1773,8 +1785,10 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
     return update;
 }
 
-void prHtmlViewSetApp(PrHtmlView* view, PrApp* PR_NULLABLE app) {
-    view->app = app;
+void prHtmlViewSetWindow(PrHtmlView* view, PrAppWindow* PR_NULLABLE window) {
+    if (view->window != nullptr && view->window != window)
+        prAppCancel(prAppWindowApp(view->window), static_cast<HtmlView*>(view));
+    view->window = window;
 }
 
 void prHtmlViewSetCaretHidden(PrHtmlView* view, bool hidden) {
@@ -1921,7 +1935,7 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
         case PrAppEventKind_CompositionUpdate:
         case PrAppEventKind_CompositionEnd:
             return compose(view, event);
-        case PrAppEventKind_Clipboard:
+        case PrAppEventKind_Paste:
             pasted(view, event);
             return PrHtmlViewEventResult_Handled;
         case PrAppEventKind_PointerMove:

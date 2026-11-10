@@ -250,6 +250,7 @@ struct Browser {
     // What the window's thread presents with. A frame renders the active tab's page through `pageFrame` and the chrome
     // through `chromeFrame`, in one pass.
     PrApp* PR_NULLABLE app = nullptr;
+    PrAppWindow* PR_NULLABLE window = nullptr;
     PrGpuDevice* PR_NULLABLE device = nullptr;
     PrGpuSwapChain* PR_NULLABLE swapChain = nullptr;
     PrDrawRenderer* PR_NULLABLE renderer = nullptr;

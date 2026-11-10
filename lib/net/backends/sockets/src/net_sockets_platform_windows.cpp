@@ -3,6 +3,7 @@
 
 #include "pr/alloc.h"
 #include "pr/assert.h"
+#include "pr/core_windows_string.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
 
@@ -232,8 +233,13 @@ void socketsShutdownSend(SocketsHandle socket) {
 
 PrNetError socketsResolve(const char* host, uint16_t port, RawArray<SocketsAddress>* out) {
     wchar_t wide[kHostMaxBytes + 1];
-    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, host, -1, wide, int(countOf(wide))) == 0)
+    size_t hostSize = 0;
+    while (host[hostSize] != 0)
+        ++hostSize;
+    uint32_t count = prCoreWindowsWiden(PrStringView{host, hostSize}, wide, kHostMaxBytes, PrCoreWindowsString_Exact);
+    if (count == 0 || count > kHostMaxBytes)
         return PrNetError_NameNotResolved;
+    wide[count] = 0;
     wchar_t service[8];
     uint32_t digits = 0;
     wchar_t reversed[8];

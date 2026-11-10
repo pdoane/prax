@@ -506,6 +506,8 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         layer.framebufferOnly = NO;
         layer.contentsScale = view.window != nil ? view.window.backingScaleFactor : 1;
         layer.presentsWithTransaction = (desc->flags & PrGpuSwapChainFlag_Threaded) == 0;
+        // The compositor blends a layer that is not opaque by its premultiplied alpha.
+        layer.opaque = (desc->flags & PrGpuSwapChainFlag_Transparent) == 0;
         if (view.layer != layer) {
             view.layer = layer;
             view.wantsLayer = YES;

@@ -19,6 +19,14 @@ namespace {
 // The key under which an edit keeps its state on its control.
 constexpr char kUiTextEditOwner = 0;
 
+// The character that a masked edit shows for each code point, U+2022 BULLET.
+constexpr PrStringView kMask = "\xE2\x80\xA2";
+
+// Returns true if `byte` begins a code point in UTF-8.
+bool startsCodePoint(char byte) {
+    return (uint8_t(byte) & 0xC0) != 0x80;
+}
+
 // What an edit keeps between rounds.
 struct TextEditState {
     // The selection of an edit of a value. A view holds the selection of an edit of the caller's buffer.
@@ -43,7 +51,6 @@ struct TextEditState {
     bool changed;                   // the last prUiTextEdit changed the text
     bool dragging;                  // a press is moving the caret
     bool focused;                   // the control had focus in the last round
-    bool pasting;                   // a paste asked for the clipboard's text, which a Clipboard event brings
     bool reveal;                    // the next round scrolls the caret into view, once the layout shows it
     double activity;                // the time of the last move of the caret, from which it blinks
 };
@@ -90,9 +97,11 @@ struct TextEditor {
     RawArray<PrLayoutNode> boxes;         // the inline box of each of `pieces`, if the text has style runs
     TextEditState& state;
     bool multiline;
+    bool masked;                          // a password's edit, which shows a mask in place of each code point
     bool changed;
     bool moved;
     RawArray<char> scratch;
+    RawArray<char> mask;                  // the text's mask, if `masked`
 
     // The selection, as this round moves it.
     uint32_t anchor;
@@ -109,6 +118,43 @@ struct TextEditor {
 
     uint32_t low() const { return anchor < caret ? anchor : caret; }
     uint32_t high() const { return anchor < caret ? caret : anchor; }
+
+    // Converts an offset in the text to the offset in the text node that shows it, and back. They differ only in a
+    // masked edit.
+    uint32_t shownOffset(uint32_t offset) const {
+        if (!masked)
+            return offset;
+        PrStringView t = text();
+        uint32_t points = 0;
+        for (uint32_t i = 0; i < offset && i < t.size; ++i)
+            points += startsCodePoint(t.data[i]) ? 1 : 0;
+        return points * uint32_t(kMask.size);
+    }
+    uint32_t textOffset(uint32_t offset) const {
+        if (!masked)
+            return offset;
+        PrStringView t = text();
+        uint32_t points = offset / uint32_t(kMask.size);
+        uint32_t i = 0;
+        for (; i < t.size; ++i) {
+            if (startsCodePoint(t.data[i]) && points-- == 0)
+                break;
+        }
+        return i;
+    }
+
+    // Returns the text, or its mask in a masked edit.
+    PrStringView shownText() {
+        PrStringView t = text();
+        if (!masked)
+            return t;
+        mask.clear();
+        for (uint32_t i = 0; i < t.size; ++i) {
+            if (startsCodePoint(t.data[i]))
+                mask.append(kMask.data, uint32_t(kMask.size));
+        }
+        return PrStringView{mask.data, mask.count};
+    }
 
     // Reads the selection from its owner: the view of the caller's buffer, or the state.
     void loadSelection() {
@@ -241,7 +287,7 @@ struct TextEditor {
                     start = pieces.data[i].start;
             }
         }
-        *out = prTextEditCodePointStart(text(), start + offset);
+        *out = prTextEditCodePointStart(text(), textOffset(start + offset));
         return true;
     }
 
@@ -249,31 +295,32 @@ struct TextEditor {
     bool caretAt(uint32_t offset, PrLayoutTextAffinity side, PrRect* out) {
         PrLayoutRect rect{};
         const PrTextEditLayoutRun& piece = pieceAt(offset, side);
-        if (!prLayoutNodeTextCaret(tree, piece.node, offset - piece.start, side, PrLayoutCoordinates_Viewport, &rect))
+        if (!prLayoutNodeTextCaret(tree, piece.node, shownOffset(offset) - piece.start, side,
+                PrLayoutCoordinates_Viewport, &rect))
             return false;
         *out = prLayoutRectToPx(rect);
         return true;
     }
 
-    // Carries out a motion of the caret, and returns false if the edit does not take it.
+    // Carries out a motion of the caret, and returns false if the edit does not take it. The motion runs over the text
+    // that the node shows, so a mask moves as one word.
     bool move(PrTextEditCommand command, bool extend) {
-        PrStringView t = text();
-        PrTextEditGeometry shape = geometry(t);
-        PrTextEditPosition at{node, caret, affinity};
+        PrTextEditGeometry shape = geometry(shownText());
+        PrTextEditPosition at{node, shownOffset(caret), affinity};
         PrTextEditMotion motion = prTextEditMotionFromCommand(&shape, at, command, desc.arrowMotion);
         bool between = motion == PrTextEditMotion_LinePrevious || motion == PrTextEditMotion_LineNext;
         if (motion != PrTextEditMotion_None && (multiline || !between)) {
             PrTextEditSelection s{
-                .anchor = anchor,
-                .caret = caret,
+                .anchor = shownOffset(anchor),
+                .caret = shownOffset(caret),
                 .goal = column,
                 .hasGoal = hasColumn,
                 .affinity = affinity,
             };
             PrTextEditSelectionMove kind = extend ? PrTextEditSelectionMove_Extend : PrTextEditSelectionMove_Collapse;
             s = prTextEditSelectionMove(&shape, node, s, motion, kind);
-            anchor = s.anchor;
-            caret = s.caret;
+            anchor = textOffset(s.anchor);
+            caret = textOffset(s.caret);
             affinity = s.affinity;
             column = s.goal;
             hasColumn = s.hasGoal;
@@ -293,8 +340,11 @@ struct TextEditor {
         switch (command) {
             case PrTextEditCommand_DeleteBackward: erase(prTextEditBackspaceStart(t, caret)); return;
             case PrTextEditCommand_DeleteForward: erase(prTextEditClusterAfter(t, caret)); return;
-            case PrTextEditCommand_DeleteWordBefore: erase(prTextEditWordBefore(t, caret)); return;
-            case PrTextEditCommand_DeleteWordAfter: erase(prTextEditWordAfter(t, caret)); return;
+            // A masked edit hides where its words end, so it deletes to the ends of the text.
+            case PrTextEditCommand_DeleteWordBefore: erase(masked ? 0 : prTextEditWordBefore(t, caret)); return;
+            case PrTextEditCommand_DeleteWordAfter:
+                erase(masked ? uint32_t(t.size) : prTextEditWordAfter(t, caret));
+                return;
             case PrTextEditCommand_InsertLineBreak:
                 if (multiline)
                     insert("\n", true, PrTextEditOrigin_Local, PrTextEditMerge_None);
@@ -305,20 +355,19 @@ struct TextEditor {
                 return;
             case PrTextEditCommand_Copy:
             case PrTextEditCommand_Cut: {
-                PrApp* app = prUiApp(ui);
-                if (!selected)
+                // A password stays out of the clipboard.
+                PrAppWindow* window = prUiWindow(ui);
+                if (!selected || masked)
                     return;
-                if (app != nullptr)
-                    prAppSetClipboardText(app, PrStringView{t.data + low(), high() - low()});
+                if (window != nullptr)
+                    prAppDataWriteText(prAppWindowApp(window), kPrAppDataSourceClipboard,
+                        PrStringView{t.data + low(), high() - low()});
                 if (command == PrTextEditCommand_Cut)
                     erase(caret);
                 return;
             }
             case PrTextEditCommand_Paste:
-                if (PrApp* app = prUiApp(ui)) {
-                    prAppRequestClipboardText(app);
-                    state.pasting = true;
-                }
+                prUiPaste(ui, desc.control);
                 return;
             default:
                 return;
@@ -368,6 +417,8 @@ struct TextEditor {
             state.unit = PrTextEditUnit_Line;
         else
             state.unit = PrTextEditUnit_All;
+        if (masked && state.unit != PrTextEditUnit_Character)
+            state.unit = PrTextEditUnit_All;
         prTextEditUnitAround(t, at, state.unit, &state.unitLow, &state.unitHigh);
         anchor = state.unitLow;
         moveTo(state.unit == PrTextEditUnit_Character ? at : state.unitHigh, true, side);
@@ -409,9 +460,9 @@ struct TextEditor {
             }
         }
         // Up and Down run along the line where lines are vertical, even in a one-line edit.
-        PrTextEditGeometry shape = geometry(text());
+        PrTextEditGeometry shape = geometry(shownText());
         PrTextEditLine line{};
-        bool vertical = shape.line(shape.context, PrTextEditPosition{node, caret, affinity},
+        bool vertical = shape.line(shape.context, PrTextEditPosition{node, shownOffset(caret), affinity},
             PrTextEditLineStep_Same, &line) && line.flow != PrTextEditFlow_HorizontalTb;
         prTextEditGeometryReset(&shape);
         static const PrAppKey kLines[] = {PrAppKey_Up, PrAppKey_Down};
@@ -432,10 +483,10 @@ struct TextEditor {
         }
     }
 
-    // Returns the text that the text node shows: the text, with a space after it if it is empty or ends in a line feed,
-    // so that the line the caret stands on has text to place it.
+    // Returns the text that the text node shows: the text or its mask, with a space after it if it is empty or ends in
+    // a line feed, so that the line the caret stands on has text to place it.
     PrStringView shown() {
-        PrStringView t = text();
+        PrStringView t = shownText();
         if (t.size != 0 && t.data[t.size - 1] != '\n')
             return t;
         scratch.clear();
@@ -478,7 +529,7 @@ struct TextEditor {
 
     // Declares the nodes that show the text, as the runs stand when the round begins.
     void declare() {
-        bool styled = desc.buffer != nullptr && prTextEditBufferStyleRunCount(desc.buffer) != 0;
+        bool styled = !masked && desc.buffer != nullptr && prTextEditBufferStyleRunCount(desc.buffer) != 0;
         if (styled) {
             showRuns();
         } else {
@@ -489,7 +540,7 @@ struct TextEditor {
 
     // Shows what this round's edits left. The next round declares the nodes for them.
     void showEdited() {
-        if (boxes.count != 0 && prTextEditBufferStyleRunCount(desc.buffer) != 0) {
+        if (!masked && boxes.count != 0 && prTextEditBufferStyleRunCount(desc.buffer) != 0) {
             showRuns();
             return;
         }
@@ -514,6 +565,7 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
         .node = kPrLayoutNodeNone,
         .state = state,
         .multiline = (desc->flags & PrUiTextEditFlag_Multiline) != 0,
+        .masked = desc->inputKind == PrAppTextInputKind_Password,
     };
     double time = prUiCurrentRound(ui)->time;
     bool disabled = prUiIsDisabled(ui, desc->control);
@@ -544,8 +596,8 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
         state.reveal = false;
         PrLayoutRect rect{};
         const PrTextEditLayoutRun& piece = editor.pieceAt(editor.caret, editor.affinity);
-        if (prLayoutNodeTextCaret(editor.tree, piece.node, editor.caret - piece.start, editor.affinity,
-                PrLayoutCoordinates_Viewport, &rect)) {
+        if (prLayoutNodeTextCaret(editor.tree, piece.node, editor.shownOffset(editor.caret) - piece.start,
+                editor.affinity, PrLayoutCoordinates_Viewport, &rect)) {
             rect.right = rect.left + prLayoutUnitFromPx(1);
             prUiRevealRect(ui, piece.node, rect);
         }
@@ -582,10 +634,8 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
                     }
                     editor.insert(e.input.text, false, PrTextEditOrigin_Local, PrTextEditMerge_Typing);
                     break;
-                case PrAppEventKind_Clipboard:
-                    if (state.pasting)
-                        editor.insert(e.input.text, true, PrTextEditOrigin_Local, PrTextEditMerge_None);
-                    state.pasting = false;
+                case PrAppEventKind_Paste:
+                    editor.insert(e.input.text, true, PrTextEditOrigin_Local, PrTextEditMerge_None);
                     break;
                 case PrAppEventKind_CompositionUpdate:
                 case PrAppEventKind_CompositionEnd: editor.compose(e); break;
@@ -594,7 +644,6 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
         }
     } else {
         state.dragging = false;
-        state.pasting = false;
         // Marked text in the caller's buffer leaves with focus, since nothing will commit it.
         if (desc->buffer != nullptr && state.markEnd > state.markStart) {
             PrTextEditChange marked{.start = state.markStart, .end = state.markEnd};
@@ -623,20 +672,24 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
             uint32_t to = editor.high() < end ? editor.high() : end;
             if (from >= to)
                 continue;
-            PrLayoutHighlight selection{.start = from - start, .end = to - start, .background = desc->selection};
+            PrLayoutHighlight selection{
+                .start = editor.shownOffset(from) - start,
+                .end = editor.shownOffset(to) - start,
+                .background = desc->selection,
+            };
             prLayoutTreeFrameSetHighlights(editor.tree, editor.pieces.data[i].node, &selection, 1);
         }
     }
     if (focused) {
         PrRect inputRect{};
         if (editor.caretAt(editor.caret, editor.affinity, &inputRect))
-            prUiSetTextInput(ui, inputRect);
+            prUiSetTextInput(ui, inputRect, desc->inputKind);
         bool still = prUiUserPreferences(ui).reducedMotion;
         PrTextEditCaretBlink blink = prTextEditCaretBlinkAt(state.activity, time);
         if (editor.anchor == editor.caret) {
             const PrTextEditLayoutRun& piece = editor.pieceAt(editor.caret, editor.affinity);
             PrLayoutCaret shownCaret{
-                .position = {piece.node, editor.caret - piece.start},
+                .position = {piece.node, editor.shownOffset(editor.caret) - piece.start},
                 .affinity = editor.affinity,
                 .color = desc->caret,
             };
@@ -648,6 +701,7 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
     }
     PrLayoutNode first = editor.node;
     editor.scratch.reset();
+    editor.mask.reset();
     editor.pieces.reset();
     editor.boxes.reset();
     return first;

@@ -20,7 +20,7 @@ if (PR_TLS_SCHANNEL)
     target_sources(pr_tls PRIVATE backends/schannel/src/tls_schannel.cpp)
     pr_headers(pr_tls PUBLIC backends/schannel/include)
     target_compile_definitions(pr_tls PRIVATE PR_TLS_HAS_SCHANNEL)
-    target_link_libraries(pr_tls PUBLIC secur32 crypt32)
+    target_link_libraries(pr_tls PUBLIC secur32 crypt32 PRIVATE prax::core_windows)
 endif()
 
 # The OpenSSL backend is written against OpenSSL 3.

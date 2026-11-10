@@ -648,11 +648,9 @@ PrLayoutNode rowElement(PrKit& kit, PrLayoutNode view, View& v, uint32_t index, 
     PrLayoutNode node = prLayoutTreeFrameElement(tree, v.content, prUiKeyIndex(kit.ui, view, item), 0);
     bool disabled = kitSetFlags(kit, node, PrUiFlag_Pressable);
     bool hover = prUiIsHovered(ui, node) && !disabled;
-    // A row is a target while a payload of the view's kind is in flight, according to the last layout.
+    // A row is a target for payloads of the view's kind, and shows its zone under the pointer at the last layout.
     PrKitDropZone drop = PrKitDropZone_None;
-    const PrUiPayload* dragging = prUiDragging(ui);
-    if (v.dragKind != 0 && dragging != nullptr && dragging->kind == v.dragKind && dragging->source != node &&
-            prUiIsDropTarget(ui, node))
+    if (v.dragKind != 0 && prUiIsDropTarget(ui, node, v.dragKind))
         drop = dropZoneOf(kit, node);
     PrLayoutStyleIndex record =
         kitStyle(kit, RowBox{.height = v.rowHeight, .indent = indent, .minWidth = v.minWidth}, RowFlex{.kind = kind},
@@ -849,7 +847,7 @@ PrLayoutNode prKitTreeRow(PrKit* kit, PrLayoutNode view, PrKitRow row) {
     }
     if (v.dragKind != 0) {
         if (prUiIsPressed(ui, node, 0))
-            prUiDragStart(ui, node, kDragThreshold, v.dragKind, row.item);
+            prUiDragStart(ui, node, kDragThreshold, v.dragKind, row.item, 0);
         const PrUiPayload* dropped = prUiDropped(ui, node);
         if (dropped != nullptr && dropped->kind == v.dragKind && dropped->source != node) {
             PrKitDropZone zone = dropZoneOf(k, node);

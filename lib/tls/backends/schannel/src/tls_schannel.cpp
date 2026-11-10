@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/assert.h"
+#include "pr/core_windows_string.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
 #include "pr/raw_array.h"
@@ -536,8 +537,8 @@ bool copyName(PrStringView name, wchar_t* out) {
         if (name.data[i] == 0)
             return false;
     }
-    int written = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.data, int(name.size), out, int(kNameMaxBytes - 1));
-    if (written <= 0)
+    uint32_t written = prCoreWindowsWiden(name, out, uint32_t(kNameMaxBytes - 1), PrCoreWindowsString_Exact);
+    if (written == 0 || written > kNameMaxBytes - 1)
         return false;
     out[written] = 0;
     return true;

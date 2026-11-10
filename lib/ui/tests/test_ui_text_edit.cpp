@@ -1,5 +1,5 @@
-// Styled text in prUiTextEdit: each style run shows as an inline box, and editing, motion, the selection and the caret
-// count in the whole text.
+// prUiTextEdit's styled text, where each style run shows as an inline box and editing, motion, the selection and the
+// caret count in the whole text, and its mask of a password.
 
 #include "pr/font_set.h"
 #include "pr/layout_frame.h"
@@ -36,6 +36,7 @@ struct Styled {
     uint32_t width = 400;
 
     PrTextDirection direction = PrTextDirection_Ltr;
+    PrAppTextInputKind inputKind = PrAppTextInputKind_Text;
 
     explicit Styled(const char* text, PrTextDirection paragraph = PrTextDirection_Ltr) : direction(paragraph) {
         std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
@@ -105,6 +106,7 @@ struct Styled {
                 .styles = styles,
                 .styleCount = 2,
                 .flags = PrUiTextEditFlag_Multiline,
+                .inputKind = s->inputKind,
             };
             s->first = prUiTextEdit(s->ui, &edit);
         }, this);
@@ -271,4 +273,33 @@ TEST_CASE("in right-to-left text, Left runs forward across a run boundary, and a
     s.key(PrAppKey_End);
     s.frame();
     CHECK(s.selection().caret == 12);
+}
+
+TEST_CASE("a password shows a bullet for each code point, and edits and moves in the text") {
+    // "a", then e with an acute accent in two bytes, then "b".
+    Styled s("a\xc3\xa9" "b");
+    s.inputKind = PrAppTextInputKind_Password;
+    s.settle();
+    const std::string bullet = "\xe2\x80\xa2";
+    PrStringView shown = prLayoutNodeText(s.tree, s.first);
+    CHECK(std::string(shown.data, shown.size) == bullet + bullet + bullet);
+    s.select(4, 4);
+    s.key(PrAppKey_Left);
+    s.frame();
+    CHECK(s.selection().caret == 3);
+    s.key(PrAppKey_Left);
+    s.frame();
+    CHECK(s.selection().caret == 1);
+    s.key(PrAppKey_Backspace);
+    s.settle();
+    CHECK(s.text() == "\xc3\xa9" "b");
+    s.type("xy");
+    CHECK(s.text() == "xy\xc3\xa9" "b");
+    shown = prLayoutNodeText(s.tree, s.first);
+    CHECK(std::string(shown.data, shown.size) == bullet + bullet + bullet + bullet);
+
+    // The mask hides where words end, so a word's deletion reaches the start.
+    s.key(PrAppKey_Backspace, PrAppModifierFlag_Alt);
+    s.settle();
+    CHECK(s.text() == "\xc3\xa9" "b");
 }

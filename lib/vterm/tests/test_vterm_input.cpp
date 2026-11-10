@@ -354,7 +354,7 @@ TEST_CASE("vterm input: a paste is bracketed if the program asked, and loses the
     term.write("\x1b[?2004h");
     prVtermInputPaste(term.vterm, "x\x1b[201~y");
     CHECK(term.output() == "\x1b[200~x[201~y\x1b[201~");
-    PrAppEvent clipboard{.kind = PrAppEventKind_Clipboard, .input = {.text = "z"}};
+    PrAppEvent clipboard{.kind = PrAppEventKind_Paste, .input = {.text = "z"}};
     CHECK(prVtermInputEvent(term.vterm, &clipboard, &term.desc));
     CHECK(term.output() == "\x1b[200~z\x1b[201~");
 }

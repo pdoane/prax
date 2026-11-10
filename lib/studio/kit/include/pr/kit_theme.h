@@ -180,6 +180,8 @@ enum {
     PrKitLookId_Radio,
     PrKitLookId_RadioOn,
     PrKitLookId_RadioOnDisabled,
+    PrKitLookId_WindowButton,           // a window's minimize or maximize button in a custom title bar
+    PrKitLookId_WindowClose,            // a window's close button, which turns to the danger color when hovered
     PrKitLookId_Count,
 };
 typedef uint16_t PrKitLookId;

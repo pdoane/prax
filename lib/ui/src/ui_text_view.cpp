@@ -26,7 +26,6 @@ struct TextViewState {
     PrTextEditUnit unit;
 
     bool dragging;                  // a press is moving the caret
-    bool pasting;                   // a paste asked for the clipboard's text
     double activity;                // the time of the last change of the caret, from which it blinks
     uint32_t caret;                 // where the caret stood in the last round
 };
@@ -144,10 +143,8 @@ void prUiTextView(PrUi* ui, const PrUiTextViewDesc* desc) {
                 }
                 insertOutside(view, e.input.text, PrTextEditMerge_Typing);
                 break;
-            case PrAppEventKind_Clipboard:
-                if (state.pasting)
-                    insertOutside(view, e.input.text, PrTextEditMerge_None);
-                state.pasting = false;
+            case PrAppEventKind_Paste:
+                insertOutside(view, e.input.text, PrTextEditMerge_None);
                 break;
             case PrAppEventKind_CompositionUpdate:
             case PrAppEventKind_CompositionEnd:
@@ -191,7 +188,7 @@ void prUiTextView(PrUi* ui, const PrUiTextViewDesc* desc) {
     if (focused) {
         PrRect rect{};
         if (prTextViewCaretRect(view, &rect))
-            prUiSetTextInput(ui, rect);
+            prUiSetTextInput(ui, rect, PrAppTextInputKind_Text);
         PrTextEditView* edit = prTextViewEdit(view);
         bool anyCaret = false;
         for (uint32_t i = 0; i < prTextEditViewSelectionCount(edit); ++i) {
@@ -201,12 +198,4 @@ void prUiTextView(PrUi* ui, const PrUiTextViewDesc* desc) {
         if (!still && anyCaret)
             prUiRequestMotionAt(ui, desc->control, blink.next);
     }
-}
-
-void prUiTextViewPaste(PrUi* ui, PrLayoutNode control) {
-    PrApp* app = prUiApp(ui);
-    if (app == nullptr)
-        return;
-    prAppRequestClipboardText(app);
-    stateOf(ui, control).pasting = true;
 }

@@ -19,6 +19,7 @@ if (PR_PROCESS_WINDOWS)
     target_sources(pr_process PRIVATE backends/windows/src/process_windows.cpp)
     pr_headers(pr_process PUBLIC backends/windows/include)
     target_compile_definitions(pr_process PRIVATE PR_PROCESS_HAS_WINDOWS)
+    target_link_libraries(pr_process PRIVATE prax::core_windows)
 endif()
 
 # Its tests start the system's processes.

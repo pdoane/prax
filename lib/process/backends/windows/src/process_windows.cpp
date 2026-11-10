@@ -7,6 +7,7 @@
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
+#include "pr/core_windows_string.h"
 #include "pr/mem.h"
 #include "pr/thread.h"
 
@@ -63,10 +64,9 @@ void closeHandle(HANDLE* handle) {
 
 // Converts UTF-8 to a NUL-terminated UTF-16 string that the caller frees.
 wchar_t* wideString(PrStringView text) {
-    int count = text.size != 0 ? MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), nullptr, 0) : 0;
+    uint32_t count = prCoreWindowsWiden(text, nullptr, 0, PrCoreWindowsString_Substitute);
     wchar_t* wide = static_cast<wchar_t*>(prMemoryAlloc((size_t(count) + 1) * sizeof(wchar_t)));
-    if (count != 0)
-        MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), wide, count);
+    prCoreWindowsWiden(text, wide, count, PrCoreWindowsString_Substitute);
     wide[count] = 0;
     return wide;
 }

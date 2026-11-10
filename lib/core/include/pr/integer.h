@@ -40,6 +40,11 @@ bool prU64Parse(const char* data, size_t size, uint64_t* out, uint32_t radix);
 // digits. Returns zero, and leaves `*out` unchanged, if `data` does not start with a digit.
 size_t prU64ParsePrefix(const char* data, size_t size, uint64_t* out, uint32_t radix);
 
+// Returns true if `word` is a power of two: exactly one of its bits is set.
+static inline bool prU64IsPowerOfTwo(uint64_t word) {
+    return word != 0 && (word & (word - 1)) == 0;
+}
+
 // Returns the index of the lowest set bit of `word`, which is the number of zeros below it. `word` must not be zero.
 static inline uint32_t prU64LowestBit(uint64_t word) {
 #if defined(_MSC_VER) && !defined(__clang__)

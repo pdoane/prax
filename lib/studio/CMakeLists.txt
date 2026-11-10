@@ -17,8 +17,9 @@ pr_library(studio_kit INCLUDE kit/include
     kit/src/kit_surface.cpp
     kit/src/kit_text.cpp
     kit/src/kit_theme.cpp
+    kit/src/kit_title_bar.cpp
 )
-target_link_libraries(pr_studio_kit PUBLIC prax::ui prax::layout prax::path prax::draw prax::text prax::text_edit
+target_link_libraries(pr_studio_kit PUBLIC prax::app prax::ui prax::layout prax::path prax::draw prax::text prax::text_edit
                                            prax::geom prax::font prax::color
                                     PRIVATE prax::core_cpp prax::ui_cpp)
 
@@ -37,9 +38,10 @@ if (PR_DEVELOP)
         kit/tests/test_kit_input.cpp
         kit/tests/test_kit_text.cpp
         kit/tests/test_kit_menu.cpp
+        kit/tests/test_kit_title_bar.cpp
     )
-    target_link_libraries(studio_kit_tests PRIVATE kit_fixture prax::text_edit prax::text prax::draw prax::layout prax::ui
-                                                   prax::ui_cpp prax::color)
+    target_link_libraries(studio_kit_tests PRIVATE kit_fixture prax::app prax::text_edit prax::text prax::draw
+                                                   prax::layout prax::ui prax::ui_cpp prax::color)
 endif()
 
 # Studio's commands: an application's verbs, their key bindings, and the scopes, menu items and command palette that
@@ -117,21 +119,24 @@ if (PR_DEVELOP AND (PR_PROCESS_POSIX OR PR_PROCESS_WINDOWS))
         terminal/tests/test_terminal.cpp
         terminal/tests/test_terminal_c.c
     )
-    target_link_libraries(studio_terminal_tests PRIVATE kit_fixture prax::draw prax::layout prax::text prax::ui
+    target_link_libraries(studio_terminal_tests PRIVATE kit_fixture prax::app prax::draw prax::layout prax::text prax::ui
                                                 prax::process prax::url prax::vterm prax::studio_kit)
 endif()
 
-# Studio's window: an application's kit in a window of the platform, rendered with lib/draw on the platform's GPU.
-pr_library(studio_window INCLUDE window/include
-    window/src/studio_window.cpp
+# Studio's applications and their windows: an application's kits in windows of the platform, rendered with lib/draw on
+# one GPU device.
+pr_library(studio_app INCLUDE app/include
+    app/src/studio_app.cpp
+    app/src/studio_app_shared.cpp
+    app/src/studio_window.cpp
 )
-target_link_libraries(pr_studio_window PUBLIC prax::app prax::color prax::draw prax::font prax::gpu
-                                              prax::layout prax::studio_kit prax::text prax::ui
-                                       PRIVATE prax::core_cpp prax::compress prax::image)
+target_link_libraries(pr_studio_app PUBLIC prax::app prax::color prax::draw prax::font prax::gpu
+                                           prax::layout prax::studio_kit prax::text prax::ui
+                                    PRIVATE prax::core_cpp prax::compress prax::image)
 
 if (PR_DEVELOP)
-    pr_module_tests(studio_window
-        window/tests/test_studio_window.cpp
-        window/tests/test_studio_window_c.c
+    pr_module_tests(studio_app
+        app/tests/test_studio_app.cpp
+        app/tests/test_studio_app_c.c
     )
 endif()

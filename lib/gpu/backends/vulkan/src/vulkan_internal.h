@@ -392,6 +392,7 @@ struct VulkanSwapChain : GpuSharedSwapChain {
     VkFormat format;
     VkColorSpaceKHR space;
     VkPresentModeKHR presentMode;
+    VkCompositeAlphaFlagBitsKHR compositeAlpha;
     VkImageUsageFlags usage;
     VkExtent2D extent;              // the extent that the last acquire asked for, which the images may clamp
     RawArray<VulkanSwapImage> images;

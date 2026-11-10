@@ -76,10 +76,15 @@ PrLayoutNode prKitToggle(PrKit* kit, PrLayoutNode parent, PrKitCheck check, PrKi
 
 // The content of a tab strip. If the strip is reorderable, the user can drag a tab to another place in it, and an
 // accent caret marks where the tab will go.
+//
+// Reorderable strips of the same nonzero `group` exchange tabs, in any of the application's windows. The application
+// chooses the group, which is the kind of the tabs' payload. A zero group gives the strip a group of its own. A tab of
+// a group is dragged by its key, which must be unique among the tabs of the group.
 typedef struct PrKitTabStrip {
     PrUiKey key;
     bool disabled;                  // true to disable every tab in the strip
     bool reorderable;
+    uint64_t group;
 } PrKitTabStrip;
 
 // One tab in a strip: its identity and its state.
@@ -108,6 +113,11 @@ PrLayoutNode prKitTabClose(PrKit* kit, PrLayoutNode tab);
 // the tab's old index to `from` and its new index to `to`. Both indices count the tabs in the order that the previous
 // round created them. To apply the move, the caller removes the tab at `from` and inserts it at `to`.
 bool prKitMoved(const PrKit* kit, PrLayoutNode strip, uint32_t* from, uint32_t* to);
+
+// Returns true if the user dropped a tab of another strip of the strip's group on the strip in the current round.
+// Writes the tab's key to `key`, and to `to` the index that the tab goes to, counting the tabs that the previous round
+// created. To apply the move, the caller removes the tab from its strip and inserts it at `to`.
+bool prKitTabReceived(const PrKit* kit, PrLayoutNode strip, PrUiKey* key, uint32_t* to);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Progress

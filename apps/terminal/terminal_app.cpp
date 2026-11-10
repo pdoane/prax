@@ -181,7 +181,7 @@ PrStatus openTab(TerminalApp& t) {
     PrTerminalDesc desc{
         .kit = t.kit,
         .font = fontOf(t),
-        .app = t.app,
+        .window = t.window,
         .launcher = t.launcher,
         .program = t.program,
         .arguments = arguments.isEmpty() ? nullptr : &arguments[0],
@@ -259,20 +259,20 @@ void buildApp(TerminalApp& t, PrLayoutNode root, PrVec2 extent) {
     PrTerminal* shown = t.terminals[t.shown];
     prTerminalFrame(shown, root, PrVec2{extent.x, height > 0 ? height : 0}, PrTerminalBackground_Parent);
     PrVec2 cell = prTerminalCellExtent(shown);
-    if (t.grid.x > 0 && t.grid.y > 0 && cell.x > 0 && cell.y > 0 && t.app != nullptr) {
+    if (t.grid.x > 0 && t.grid.y > 0 && cell.x > 0 && cell.y > 0 && t.window != nullptr) {
         // The window is sized to fit the grid in whole cells from the screen's origin. The tab strip keeps its height.
         PrVec2 origin = prTerminalScreenOrigin(shown);
         float windowWidth = origin.x + float(t.grid.x) * cell.x;
         float windowHeight = extent.y - height + origin.y + float(t.grid.y) * cell.y;
-        prAppSetExtent(t.app, PrUVec2{uint32_t(prF32Ceil(windowWidth)), uint32_t(prF32Ceil(windowHeight))});
+        prAppWindowSetExtent(t.window, PrUVec2{uint32_t(prF32Ceil(windowWidth)), uint32_t(prF32Ceil(windowHeight))});
         t.grid = PrUVec2{};
     }
 
     // The window's title is the title of the terminal that shows.
     PrStringView title = prTerminalTitle(shown);
-    if (t.app != nullptr && title != PrStringView(t.title)) {
+    if (t.window != nullptr && title != PrStringView(t.title)) {
         t.title = title;
-        prAppSetTitle(t.app, title);
+        prAppWindowSetTitle(t.window, title);
     }
 }
 
@@ -292,7 +292,7 @@ bool handleEvent(TerminalApp& t, const PrAppEvent& event) {
     if (event.kind != PrAppEventKind_Notification)
         return false;
     for (uint32_t i = 0; i < t.terminals.count(); ++i) {
-        if (prTerminalNotificationTag(t.terminals[i]) != event.notification.tag)
+        if (prTerminalNotificationTag(t.terminals[i]) != event.tag)
             continue;
         t.shown = i;
         prTerminalFocus(t.terminals[i]);

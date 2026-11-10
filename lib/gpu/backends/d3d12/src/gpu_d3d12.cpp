@@ -29,6 +29,8 @@
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
+#include "pr/core_windows_string.h"
+#include "pr/count_of.h"
 #include "pr/gpu_backend.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
@@ -371,9 +373,11 @@ D3d12Commands* commandsOf(PrGpuCommands* commands) {
 void nameObject(ID3D12Object* object, PrStringView name) {
     if (name.size == 0)
         return;
+    // A name longer than the buffer is cut, and a character that the cut splits becomes U+FFFD.
     wchar_t wide[256];
-    int count = MultiByteToWideChar(CP_UTF8, 0, name.data, int(name.size < 255 ? name.size : 255), wide, 255);
-    wide[count > 0 ? count : 0] = 0;
+    PrStringView cut{name.data, name.size < 255 ? name.size : 255};
+    uint32_t count = prCoreWindowsWiden(cut, wide, 255, PrCoreWindowsString_Substitute);
+    wide[count <= 255 ? count : 0] = 0;
     object->SetName(wide);
 }
 
@@ -2944,9 +2948,15 @@ void nameAdapter(D3d12Device* d) {
     if (d->factory != nullptr && SUCCEEDED(d->factory->EnumAdapterByLuid(luid, IID_PPV_ARGS(&adapter))))
         adapter->GetDesc1(&desc);
     release(adapter);
-    int size = WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, d->adapter, int(sizeof(d->adapter)), nullptr, nullptr);
-    if (size <= 1)
+    uint32_t units = 0;
+    while (units < countOf(desc.Description) && desc.Description[units] != 0)
+        ++units;
+    uint32_t size = prCoreWindowsNarrow(desc.Description, units, d->adapter, uint32_t(sizeof(d->adapter) - 1),
+        PrCoreWindowsString_Substitute);
+    if (size == 0 || size >= sizeof(d->adapter))
         prMemCopy(d->adapter, "Direct3D 12", sizeof("Direct3D 12"));
+    else
+        d->adapter[size] = 0;
 }
 
 // The functions of the device's objects.
