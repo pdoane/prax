@@ -45,7 +45,7 @@ view and its rows, a menu and its items. No content carries an array of items, a
 What happened to a widget in a round is asked of the node that it returned. lib/ui answers activation
 (`prUiActivated`), and a library marks its own events as signals on the node (`prUiSignal`, `prUiSignaled`).
 Studio Kit's queries read both: `prKitActivated`, `prKitRemoved`. An event that carries values
-writes them through an out parameter (`prKitMoved(kit, strip, &from, &to)`).
+writes them through an out parameter (`prKitTabMoved(kit, strip, &move)`).
 
 ## State: bound, kept or chosen
 
@@ -53,6 +53,11 @@ writes them through an out parameter (`prKitMoved(kit, strip, &from, &to)`).
   reads as it creates its nodes and writes in the round that edits it.
 - A choice among items is not bound. Each item says whether it is selected, and reports its activation, so the
   caller's value keeps its own type.
+- A container whose items the user rearranges, such as a tab strip or a dock, has a model that the caller creates,
+  owns and passes to it in each round (`PrKitTabs`, `PrKitDock`). The caller adds and removes the items through the
+  model, and the container changes their arrangement and selection there. The model is the only record of the
+  arrangement, so the caller keeps no copy of it, and reads the order and the selection from the model when it needs
+  them.
 - State that the caller does not bind is kept on the node by the library (`prUiState`), under the library's owner and
   a key. A popover's open flag and a group's disclosure are kept this way.
 

@@ -57,10 +57,11 @@ struct OpenState {
     bool open;
 };
 
-// The open state of a host's context menu, where the menu opens, and its floating node in the last round in which it
-// was open.
+// The open state of a host's context menu, where the menu opens, in px of `viewport`, and its floating node in the last
+// round in which it was open.
 struct ContextState {
     PrLayoutNode surface;
+    PrUiViewport viewport;
     PrVec2 point;
     bool open;
 };
@@ -181,27 +182,6 @@ bool dismissed(PrKit& kit, PrLayoutNode surface, PrLayoutNode from) {
     return escape || (prUiPressedOutside(kit.ui, surface, 0) && prUiPressedOutside(kit.ui, from, 0));
 }
 
-// Returns the insets from the overlay's corner that place a box of `extent` at `offset` from the bottom left corner of
-// `anchor`, inside `bounds`. The box goes below the anchor if it fits, and above it otherwise, and moves left if it
-// runs past the right edge. An extent of zero, before the box has been laid out, is placed as given. An empty `bounds`
-// places the box with no limit.
-PrVec2 placeFloating(PrRect bounds, PrRect anchor, PrVec2 extent, PrVec2 offset) {
-    float x = anchor.left + offset.x;
-    float y = anchor.bottom + offset.y;
-    bool bounded = bounds.right > bounds.left && bounds.bottom > bounds.top;
-    if (!bounded)
-        return PrVec2{x, y};
-    if (x + extent.x > bounds.right)
-        x = bounds.right - extent.x;
-    if (y + extent.y > bounds.bottom) {
-        float above = anchor.top - offset.y - extent.y;
-        y = above >= bounds.top ? above : bounds.bottom - extent.y;
-    }
-    x = x < bounds.left ? bounds.left : x;
-    y = y < bounds.top ? bounds.top : y;
-    return PrVec2{x - bounds.left, y - bounds.top};
-}
-
 // A row of `height` px, or of its content's height for 0, padded by `padding`, with a one px rule on the sides that
 // `rules` names, a one px border on every side if `bordered`, and clipping its content, which lets its parent shrink
 // it, if `clips`.
@@ -272,16 +252,13 @@ enum : uint8_t {
 };
 typedef uint8_t FloatLook;
 
-// A floating node's box: its look's, at least `minWidth` px wide if that is nonzero, placed at `left` and `top` in the
-// overlay. The place moves with what the node floats against, and only this group with it.
+// A floating node's box: its look's, at least `minWidth` px wide if that is nonzero.
 PR_NO_PADDING_BEGIN
 struct FloatBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     FloatLook look;
     uint8_t _pad[3];
     float minWidth;
-    float left;
-    float top;
 
     void make(const PrKit& kit, PrLayoutBoxStyle& box) const {
         if (look == FloatLook_Tooltip)
@@ -294,9 +271,6 @@ struct FloatBox {
             kitSetBorderWidth(box, 1);
         if (minWidth > 0)
             box.minWidth = prLayoutLengthPx(minWidth);
-        box.position = PrLayoutPosition_Absolute;
-        box.inset[PrRectSide_Left] = prLayoutLengthPx(left);
-        box.inset[PrRectSide_Top] = prLayoutLengthPx(top);
     }
 };
 
@@ -311,19 +285,26 @@ struct FloatEffects {
 };
 PR_NO_PADDING_END
 
-// Creates a node under the overlay in `look`, at least `minWidth` px wide, placed against `anchor` by `offset`. A node
-// that has not been laid out yet has no extent to place by, so it requests the frame that places it.
-PrLayoutNode floating(PrKit& kit, PrUiKey key, PrUiFlags flags, PrRect anchor, PrVec2 offset, FloatLook look,
-        float minWidth) {
-    PrLayoutNode overlay = prUiOverlay(kit.ui);
-    PrLayoutNode node = prUiElement(kit.ui, overlay, key, 0, flags);
-    PrRect bounds = boundsOf(kit, node);
-    PrVec2 extent{bounds.right - bounds.left, bounds.bottom - bounds.top};
-    if (extent.x <= 0 && extent.y <= 0)
-        prUiRequestFrame(kit.ui);
-    PrVec2 at = placeFloating(boundsOf(kit, overlay), anchor, extent, offset);
+// Creates a popup surface that takes `flags`, and returns the node in it in `look`, at least `minWidth` px wide. The
+// surface opens `offset` from the bottom left corner of `anchor`, in px of viewport `parent`, or above the anchor if it
+// does not fit below, and slides to stay in view.
+PrLayoutNode floating(PrKit& kit, PrUiKey key, PrUiFlags flags, PrUiViewport parent, PrRect anchor, PrVec2 offset,
+        FloatLook look, float minWidth) {
+    PrUiSurfaceDesc desc{
+        .kind = PrUiSurfaceKind_Popup,
+        .parent = parent,
+        .placement = {
+            .anchor = anchor,
+            .side = PrAppPopupSide_Below,
+            .align = PrAppPopupAlign_Start,
+            .adjust = PrAppPopupAdjustFlag_Flip | PrAppPopupAdjustFlag_Slide,
+            .offset = offset,
+        },
+    };
+    PrLayoutNode surface = prUiSurface(kit.ui, key, &desc, flags);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, surface, 0, 0);
     const PrKitPalette& p = kit.theme.palette;
-    FloatBox box{.look = look, .minWidth = minWidth, .left = at.x, .top = at.y};
+    FloatBox box{.look = look, .minWidth = minWidth};
     PrLayoutStyleIndex record = 0;
     if (look == FloatLook_Surface) {
         record = kitStyle(kit, box, ColumnFlex{}, KitColors{.background = p.bg2, .border = p.line3});
@@ -493,35 +474,7 @@ struct BarFlex {
 // ---------------------------------------------------------------------------------------------------------------------
 // Modals, dialogs and palettes
 
-// A modal's scrim: a layer over the whole overlay that centers its content, or holds it `inset` px from the top if
-// `top` is set.
 PR_NO_PADDING_BEGIN
-struct ScrimBox {
-    static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
-    float inset;
-    bool top;
-    uint8_t _pad[3];
-
-    void make(const PrKit&, PrLayoutBoxStyle& box) const {
-        box.display = PrLayoutDisplay_Flex;
-        box.position = PrLayoutPosition_Absolute;
-        for (uint32_t side = 0; side < PrRectSide_Count; ++side)
-            box.inset[side] = prLayoutLengthPx(0);
-        if (top)
-            box.padding[PrRectSide_Top] = prLayoutLengthPx(inset);
-    }
-};
-struct ScrimFlex {
-    static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
-    bool top;
-
-    void make(const PrKit&, PrLayoutFlexStyle& flex) const {
-        flex.direction = PrLayoutFlexDirection_Column;
-        flex.alignItems = PrLayoutAlignment_Center;
-        flex.justifyContent = top ? PrLayoutAlignment_FlexStart : PrLayoutAlignment_Center;
-    }
-};
-
 // A dialog's or a palette's card: a bordered column `width` px wide.
 struct CardBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
@@ -588,7 +541,7 @@ PrLayoutNode prKitPopover(PrKit* kit, PrLayoutNode trigger, PrKitPopover popover
         return kPrLayoutNodeNone;
     }
     PrLayoutNode node = floating(*kit, floatKey(kit->ui, trigger, FloatKind_Popover, popover.key), 0,
-        boundsOf(*kit, trigger), style.offset, FloatLook_Surface, style.minWidth);
+        prUiNodeViewport(kit->ui, trigger), boundsOf(*kit, trigger), style.offset, FloatLook_Surface, style.minWidth);
     if (state.surface != node)
         prUiKeyPressed(kit->ui, node, PrAppKey_Escape, 0);
     state.surface = node;
@@ -780,6 +733,7 @@ PrLayoutNode prKitMenuBarItem(PrKit* kit, PrLayoutNode bar, PrKitMenuBarItem ite
 void prKitOpenContextMenu(PrKit* kit, PrLayoutNode host, PrVec2 at) {
     ContextState& state = contextOf(*kit, host);
     state.open = true;
+    state.viewport = prUiNodeViewport(kit->ui, host);
     state.point = at;
     prUiRequestFrame(kit->ui);
 }
@@ -800,8 +754,10 @@ PrLayoutNode prKitContextMenu(PrKit* kit, PrLayoutNode host, PrKitContextMenu me
             state.open = false;
     }
     PrVec2 pointer{};
-    if (prUiClicked(ui, host, 1) && prUiPointer(ui, &pointer)) {
+    PrUiViewport viewport = kPrUiViewportMain;
+    if (prUiClicked(ui, host, 1) && prUiPointer(ui, &viewport, &pointer)) {
         state.open = true;
+        state.viewport = viewport;
         state.point = pointer;
     }
     if (!state.open) {
@@ -809,8 +765,8 @@ PrLayoutNode prKitContextMenu(PrKit* kit, PrLayoutNode host, PrKitContextMenu me
         return kPrLayoutNodeNone;
     }
     PrRect at{state.point.x, state.point.y, state.point.x, state.point.y};
-    PrLayoutNode surface = floating(*kit, floatKey(kit->ui, host, FloatKind_Context, menu.key), 0, at, PrVec2{},
-        FloatLook_Surface, 0);
+    PrLayoutNode surface = floating(*kit, floatKey(kit->ui, host, FloatKind_Context, menu.key), 0, state.viewport, at,
+        PrVec2{}, FloatLook_Surface, 0);
     if (state.surface != surface)
         prUiKeyPressed(ui, surface, PrAppKey_Escape, 0);
     state.surface = surface;
@@ -828,7 +784,7 @@ PrLayoutNode prKitTooltip(PrKit* kit, PrLayoutNode anchor, PrKitTooltip tooltip)
         return kPrLayoutNodeNone;
     }
     PrLayoutNode node = floating(*kit, floatKey(kit->ui, anchor, FloatKind_Tooltip, tooltip.key),
-        PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, boundsOf(*kit, anchor),
+        PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, prUiNodeViewport(ui, anchor), boundsOf(*kit, anchor),
         PrVec2{0, kPrKitSpace2}, FloatLook_Tooltip, 0);
     PrKitTextStyle text{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap, .preserve = true};
     prKitLabel(kit, node, {.text = tooltip.text}, text);
@@ -840,11 +796,12 @@ PrLayoutNode prKitTooltip(PrKit* kit, PrLayoutNode anchor, PrKitTooltip tooltip)
 PrLayoutNode prKitDragGhost(PrKit* kit, PrKitDragGhost ghost) {
     const PrUiPayload* payload = prUiDragging(kit->ui);
     PrVec2 pointer{};
-    if (payload == nullptr || !prUiPointer(kit->ui, &pointer))
+    PrUiViewport viewport = kPrUiViewportMain;
+    if (payload == nullptr || !prUiPointer(kit->ui, &viewport, &pointer))
         return kPrLayoutNodeNone;
     PrRect at{pointer.x, pointer.y, pointer.x, pointer.y};
     PrLayoutNode node = floating(*kit, floatKey(kit->ui, payload->source, FloatKind_Ghost, ghost.key),
-        PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, at,
+        PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, viewport, at,
         PrVec2{kPrKitSpace6, kPrKitSpace6 - kPrKitHeightSm / 2}, FloatLook_Ghost, 0);
     if (ghost.icon != PrKitIconKind_None)
         prKitIcon(kit, node, {.icon = ghost.icon}, {.size = kItemIcon, .tone = PrKitTone_Secondary});
@@ -867,10 +824,14 @@ PrLayoutNode prKitModal(PrKit* kit, PrLayoutNode trigger, PrKitModal modal, PrKi
         return kPrLayoutNodeNone;
     }
     bool top = style.placement == PrKitModalPlacement_Top;
-    ScrimBox scrim{.inset = top ? (style.inset > 0 ? style.inset : kModalInset) : 0, .top = top};
-    PrLayoutStyleIndex record = kitStyle(*kit, scrim, ScrimFlex{.top = top}, KitColors{.background = kScrim});
-    PrUiKey key = floatKey(kit->ui, trigger, FloatKind_Modal, modal.key);
-    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, prUiOverlay(ui), key, record);
+    PrUiSurfaceDesc desc{
+        .kind = PrUiSurfaceKind_Dialog,
+        .parent = prUiNodeViewport(ui, trigger),
+        .top = top ? (style.inset > 0 ? style.inset : kModalInset) : 0,
+        .modal = true,
+        .cover = kitStyle(*kit, KitColors{.background = kScrim}),
+    };
+    PrLayoutNode node = prUiSurface(ui, floatKey(kit->ui, trigger, FloatKind_Modal, modal.key), &desc, 0);
     PrLayoutNode content =
         prUiElement(ui, node, 0, kitStyle(*kit, FlexBox{}, ColumnFlex{.fixed = true}), PrUiFlag_FocusScope);
     if (state.surface != content)

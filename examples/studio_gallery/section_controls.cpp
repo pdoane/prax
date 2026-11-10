@@ -712,34 +712,24 @@ void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             {"Animator", nullptr, false},
             {"Shader Graph", nullptr, true},
         };
-        // The strip shows the tabs in the model's order, keyed by the model's tab, and the model applies a drag.
-        PrLayoutNode strip = prKitTabStrip(kit, panel, {.reorderable = true}, {});
+        PrLayoutNode strip = prKitTabStrip(kit, panel, {.tabs = tabs.panels, .reorderable = true}, {});
         for (uint32_t i = 0; i < 5; ++i) {
-            const PanelTab& shown = all[tabs.panelOrder[i]];
-            PrLayoutNode tab = prKitTab(kit, strip, {
-                .key = prUiKeyIndex(kit->ui, strip, tabs.panelOrder[i]),
-                .selected = tabs.panel == i,
-            });
+            const PanelTab& shown = all[i];
+            PrLayoutNode tab = prKitTab(kit, strip, {.id = i + 1u});
             prKitTabLabel(kit, tab, {.text = shown.label});
             if (shown.badge != nullptr)
                 prKitBadge(kit, tab, {.text = shown.badge}, {.variant = PrKitBadgeVariant_Warning});
             if (shown.closable)
                 prKitTabClose(kit, tab);
-            if (prKitActivated(kit, tab))
-                tabs.panel = i;
         }
-        uint32_t from = 0;
-        uint32_t to = 0;
-        if (prKitMoved(kit, strip, &from, &to))
-            moveTab(tabs, from, to);
         PrKitBoxStyle body{.padding = prKitEdgesAll(kPrKitSpace5)};
         const char* const bodies[] = {
             "The scene the viewport renders.", "The game view, at the target resolution.",
             "Three frames over budget.", "The state machine of the selected rig.",
             "The material graph of the selected mesh.",
         };
-        uint32_t at = tabs.panel < 5 ? tabs.panel : 0;
-        prKitLabel(kit, prKitBox(kit, panel, {}, body), {.text = bodies[tabs.panelOrder[at]]}, kBodySecondary);
+        uint32_t shown = uint32_t(prKitTabsSelected(tabs.panels) - 1);
+        prKitLabel(kit, prKitBox(kit, panel, {}, body), {.text = bodies[shown]}, kBodySecondary);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "SEGMENTED", "VIEW MODE", false);

@@ -552,18 +552,17 @@ void buildConsole(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         {ConsoleTab_Timeline, "Timeline"},
         {ConsoleTab_Profiler, "Profiler"},
     };
-    PrLayoutNode strip = prKitTabStrip(kit, tabs, {}, {});
+    PrLayoutNode strip = prKitTabStrip(kit, tabs, {.tabs = editor.consoleTabs}, {});
     for (const ConsoleTabDef& def : kTabs) {
-        PrLayoutNode tab = prKitTab(kit, strip, {.selected = editor.consoleTab == def.tab});
+        PrLayoutNode tab = prKitTab(kit, strip, {.id = uint64_t(def.tab) + 1});
         prKitTabLabel(kit, tab, {.text = def.label});
-        if (prKitActivated(kit, tab))
-            editor.consoleTab = def.tab;
     }
+    ConsoleTab shown = ConsoleTab(prKitTabsSelected(editor.consoleTabs) - 1);
     prKitSpacer(kit, tabs, {});
     PrKitBoxStyle list{.overflow = PrKitOverflow_ScrollY, .padding = prKitEdgesXY(kPrKitSpace2, 0)};
     list.place.flex = PrKitFlex_Fill;
     PrLayoutNode body = prKitBox(kit, parent, {}, list);
-    if (editor.consoleTab == ConsoleTab_AssetBrowser) {
+    if (shown == ConsoleTab_AssetBrowser) {
         buildAssetGrid(kit, body, editor, 12);
         return;
     }

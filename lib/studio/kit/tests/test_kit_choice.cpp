@@ -23,22 +23,34 @@ struct TabContent {
 constexpr TabContent kTabs[] = {{"Console", nullptr, false}, {"Output", nullptr, false}, {"Profiler", nullptr, false}};
 constexpr PrKitChoice kItems[] = {{.label = "Local"}, {.label = "World"}, {.label = "Parent"}};
 
-// Creates the tabs of `items` under `strip`, the tab at `*selected` selected, and fills each with its content. Writes
-// each tab's node to `nodes`, and chooses a tab that is activated. Returns the index of the tab whose close control was
-// activated, or `count` if none was.
-uint32_t tabs(KitFixture& f, PrLayoutNode strip, const TabContent* items, uint32_t count, uint32_t* selected,
-        PrLayoutNode* nodes) {
+// The tabs of a test's strip, `count` of them with ids from `first`, which the test keeps. The strips of a test hold
+// tabs of distinct ids, as a tab is in one strip.
+struct TestTabs {
+    PrKitTabs* tabs = prKitTabsCreate();
+    explicit TestTabs(uint32_t count, uint64_t first = 1) {
+        for (uint32_t i = 0; i < count; ++i)
+            prKitTabsInsert(tabs, first + i, i);
+    }
+    TestTabs(const TestTabs&) = delete;
+    TestTabs& operator=(const TestTabs&) = delete;
+    ~TestTabs() { prKitTabsDestroy(tabs); }
+};
+
+// Creates the tabs of `items` under `strip`, whose tabs are `kept`, with ids from 1, and fills each with its content.
+// Writes each tab's node to `nodes`, and the index of the selected tab to `*selected`. Returns the index of the tab
+// whose close control was activated, or `count` if none was.
+uint32_t tabs(KitFixture& f, PrLayoutNode strip, PrKitTabs* kept, const TabContent* items, uint32_t count,
+        uint32_t* selected, PrLayoutNode* nodes) {
     uint32_t closed = count;
     for (uint32_t i = 0; i < count; ++i) {
-        nodes[i] = prKitTab(f.kit, strip, {.selected = *selected == i});
+        nodes[i] = prKitTab(f.kit, strip, {.id = i + 1});
         prKitTabLabel(f.kit, nodes[i], {.text = items[i].label});
         if (items[i].badge != nullptr)
             prKitBadge(f.kit, nodes[i], {.text = items[i].badge}, {});
         if (items[i].closable && prKitActivated(f.kit, prKitTabClose(f.kit, nodes[i])))
             closed = i;
-        if (prKitActivated(f.kit, nodes[i]))
-            *selected = i;
     }
+    *selected = uint32_t(prKitTabsSelected(kept) - 1);
     return closed;
 }
 
@@ -75,9 +87,12 @@ using namespace pr_impl;
 
 TEST_CASE("clicking a tab selects it") {
     KitFixture f;
+    TestTabs t(3);
     uint32_t selected = 0;
     PrLayoutNode nodes[3] = {};
-    f.build = [&](PrLayoutNode root) { tabs(f, prKitTabStrip(f.kit, root, {}, {}), kTabs, 3, &selected, nodes); };
+    f.build = [&](PrLayoutNode root) {
+        tabs(f, prKitTabStrip(f.kit, root, {.tabs = t.tabs}, {}), t.tabs, kTabs, 3, &selected, nodes);
+    };
     f.frame();
     CHECK(widthOf(f, nodes[1]) > 20.0f);
     f.click(f.center(nodes[2]));
@@ -100,8 +115,9 @@ TEST_CASE("a tab holds what its caller creates under it, in order") {
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrLayoutNode tab = kPrLayoutNodeNone;
     PrLayoutNode close = kPrLayoutNodeNone;
+    TestTabs t(1);
     f.build = [&](PrLayoutNode root) {
-        tab = prKitTab(f.kit, prKitTabStrip(f.kit, root, {}, {}), {.selected = true});
+        tab = prKitTab(f.kit, prKitTabStrip(f.kit, root, {.tabs = t.tabs}, {}), {.id = 1});
         prKitImage(f.kit, tab, {.image = image}, {});
         prKitTabLabel(f.kit, tab, {.text = "Page"});
         close = prKitTabClose(f.kit, tab);
@@ -115,11 +131,14 @@ TEST_CASE("a tab holds what its caller creates under it, in order") {
     prDrawImageRelease(image);
 }
 
-TEST_CASE("the arrow keys move a focused tab strip's focus and activate the tab they reach, stopping at the ends") {
+TEST_CASE("the arrow keys move a focused tab strip's focus and select the tab they reach, stopping at the ends") {
     KitFixture f;
+    TestTabs t(3);
     uint32_t selected = 0;
     PrLayoutNode nodes[3] = {};
-    f.build = [&](PrLayoutNode root) { tabs(f, prKitTabStrip(f.kit, root, {}, {}), kTabs, 3, &selected, nodes); };
+    f.build = [&](PrLayoutNode root) {
+        tabs(f, prKitTabStrip(f.kit, root, {.tabs = t.tabs}, {}), t.tabs, kTabs, 3, &selected, nodes);
+    };
     f.frame();
     // Keys reach nothing until a tab has focus.
     f.key(PrAppKey_Right);
@@ -145,12 +164,13 @@ TEST_CASE("the arrow keys move a focused tab strip's focus and activate the tab 
 
 TEST_CASE("a tab's close control reports its click, and leaves the selection to its caller") {
     KitFixture f;
+    TestTabs t(2);
     uint32_t selected = 0;
     PrLayoutNode nodes[2] = {};
     uint32_t closes = 0;
     f.build = [&](PrLayoutNode root) {
         const TabContent items[] = {{"a.cpp", nullptr, true}, {"b.cpp", nullptr, true}};
-        uint32_t closed = tabs(f, prKitTabStrip(f.kit, root, {}, {}), items, 2, &selected, nodes);
+        uint32_t closed = tabs(f, prKitTabStrip(f.kit, root, {.tabs = t.tabs}, {}), t.tabs, items, 2, &selected, nodes);
         CHECK(closed != 0);
         closes += closed == 1 ? 1 : 0;
     };
@@ -163,17 +183,51 @@ TEST_CASE("a tab's close control reports its click, and leaves the selection to 
     CHECK(kitVerified(f.tree));
 }
 
-TEST_CASE("a reorderable tab dragged past its neighbor reports the move on its strip") {
+TEST_CASE("removing the selected tab selects the tab after it, or the last tab") {
+    TestTabs t(3);
+    prKitTabsSelect(t.tabs, 2);
+    prKitTabsRemove(t.tabs, 2);
+    CHECK(prKitTabsSelected(t.tabs) == 3);
+    prKitTabsRemove(t.tabs, 3);
+    CHECK(prKitTabsSelected(t.tabs) == 1);
+    prKitTabsInsert(t.tabs, 4, 0);
+    prKitTabsRemove(t.tabs, 4);
+    CHECK(prKitTabsSelected(t.tabs) == 1);
+    prKitTabsRemove(t.tabs, 1);
+    CHECK(prKitTabsSelected(t.tabs) == 0);
+    CHECK(prKitTabsCount(t.tabs) == 0);
+}
+
+TEST_CASE("a strip that collapses while single takes no room in the round that it holds one tab") {
     KitFixture f;
+    TestTabs t(2);
+    PrLayoutNode strip = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode root) {
+        strip = prKitTabStrip(f.kit, root, {.tabs = t.tabs, .collapsesSingle = true}, {});
+        for (uint32_t i = 0; i < prKitTabsCount(t.tabs); ++i)
+            prKitTab(f.kit, strip, {.id = prKitTabsAt(t.tabs, i)});
+    };
+    f.frame();
+    PrRect shown = f.bounds(strip);
+    CHECK(shown.bottom - shown.top > 0);
+    prKitTabsRemove(t.tabs, 1);
+    f.frame();
+    PrRect collapsed = f.bounds(strip);
+    CHECK(collapsed.bottom - collapsed.top == 0);
+    CHECK(kitVerified(f.tree));
+}
+
+TEST_CASE("a reorderable tab dragged past its neighbor moves in the strip's order, whatever order the tabs are made in") {
+    KitFixture f;
+    TestTabs t(3);
     uint32_t selected = 0;
     PrLayoutNode nodes[3] = {};
     uint32_t moves = 0;
-    uint32_t from = 0;
-    uint32_t to = 0;
     f.build = [&](PrLayoutNode root) {
-        PrLayoutNode strip = prKitTabStrip(f.kit, root, {.reorderable = true}, {});
-        tabs(f, strip, kTabs, 3, &selected, nodes);
-        moves += prKitMoved(f.kit, strip, &from, &to) ? 1 : 0;
+        PrLayoutNode strip = prKitTabStrip(f.kit, root, {.tabs = t.tabs, .reorderable = true}, {});
+        tabs(f, strip, t.tabs, kTabs, 3, &selected, nodes);
+        PrKitTabMove made{};
+        moves += prKitTabMoved(f.kit, strip, &made) ? 1 : 0;
     };
     f.frame();
     PrVec2 start = f.center(nodes[0]);
@@ -187,25 +241,62 @@ TEST_CASE("a reorderable tab dragged past its neighbor reports the move on its s
     f.frame();
     f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = end}});
     f.frame();
-    CHECK(moves == 1);
-    CHECK(from == 0);
-    CHECK(to == 2);
-    // The release that drops a tab chooses nothing.
+    f.frame();
+    // A move within the strip is the strip's own. The first tab goes last, and shows last though the round makes it
+    // first.
+    CHECK(moves == 0);
+    REQUIRE(prKitTabsCount(t.tabs) == 3);
+    CHECK(prKitTabsAt(t.tabs, 0) == 2);
+    CHECK(prKitTabsAt(t.tabs, 1) == 3);
+    CHECK(prKitTabsAt(t.tabs, 2) == 1);
+    CHECK(f.bounds(nodes[0]).left > f.bounds(nodes[2]).left);
     CHECK(selected == 0);
     CHECK(kitVerified(f.tree));
 }
 
-TEST_CASE("a strip of a group receives a tab of the group from another window, and passes its own to the system") {
+TEST_CASE("a tab moves within its strip and to another, where it is selected") {
+    TestTabs a(3);
+    TestTabs b(1, 10);
+    prKitTabsMove(a.tabs, a.tabs, 1, 2);
+    CHECK(prKitTabsAt(a.tabs, 0) == 2);
+    CHECK(prKitTabsAt(a.tabs, 2) == 1);
+    CHECK(prKitTabsSelected(a.tabs) == 1);
+    // The strip that the tab leaves selects the tab after it, or the last.
+    prKitTabsMove(a.tabs, b.tabs, 1, 0);
+    CHECK(prKitTabsCount(a.tabs) == 2);
+    CHECK(prKitTabsSelected(a.tabs) == 3);
+    REQUIRE(prKitTabsCount(b.tabs) == 2);
+    CHECK(prKitTabsAt(b.tabs, 0) == 1);
+    CHECK(prKitTabsSelected(b.tabs) == 1);
+}
+
+TEST_CASE("a strip of a group receives a tab of the group from another window, and tears off its own") {
     KitFixture f;
+    TestTabs t(3);
+    // The other window's strip, which holds the tab that arrives.
+    TestTabs other(0);
+    prKitTabsInsert(other.tabs, 1234, 0);
     uint32_t selected = 0;
     PrLayoutNode nodes[3] = {};
-    uint32_t receives = 0;
-    PrUiKey key = 0;
-    uint32_t to = 0;
+    uint32_t moves = 0;
+    PrKitTabMove move{};
+    bool received = false;
     f.build = [&](PrLayoutNode root) {
-        PrLayoutNode strip = prKitTabStrip(f.kit, root, {.reorderable = true, .group = 77}, {});
-        tabs(f, strip, kTabs, 3, &selected, nodes);
-        receives += prKitTabReceived(f.kit, strip, &key, &to) ? 1 : 0;
+        PrLayoutNode strip = prKitTabStrip(f.kit, root, {.tabs = t.tabs, .group = 77, .reorderable = true}, {});
+        PrKitTabMove made{};
+        // The application moves a received tab to where it was dropped.
+        if (prKitTabMoved(f.kit, strip, &made)) {
+            ++moves;
+            move = made;
+            if (made.kind == PrKitTabMoveKind_Received) {
+                received = true;
+                prKitTabsMove(other.tabs, t.tabs, made.id, made.index);
+            }
+        }
+        // The received tab is made after the others, and shows where it was dropped.
+        if (received)
+            prKitTab(f.kit, strip, {.id = 1234});
+        tabs(f, strip, t.tabs, kTabs, 3, &selected, nodes);
     };
     f.frame();
     // A tab of another window's strip arrives over the second tab's right half, and goes after it.
@@ -224,11 +315,16 @@ TEST_CASE("a strip of a group receives a tab of the group from another window, a
     drag.operation = PrAppDragOperation_Move;
     f.push(PrAppEvent{.kind = PrAppEventKind_Drop, .drag = drag});
     f.frame();
-    CHECK(receives == 1);
-    CHECK(key == 1234);
-    CHECK(to == 2);
+    f.frame();
+    CHECK(moves == 1);
+    CHECK(move.id == 1234);
+    CHECK(move.kind == PrKitTabMoveKind_Received);
+    CHECK(move.index == 2);
+    REQUIRE(prKitTabsCount(t.tabs) == 4);
+    CHECK(prKitTabsAt(t.tabs, 2) == 1234);
 
-    // A tab of the group dragged out of the window goes to the system, by its key.
+    // A tab of the group dragged out of the window goes to the system, by its id, and tears off where the system's drag
+    // ends outside every window.
     harness::DragWindow window;
     prUiSetWindow(f.ui, &window);
     PrVec2 start = f.center(nodes[0]);
@@ -240,6 +336,12 @@ TEST_CASE("a strip of a group receives a tab of the group from another window, a
     f.frame();
     REQUIRE(window.starts == 1);
     CHECK(window.started.content.payload.kind == 77);
+    CHECK(window.started.content.payload.value == 1);
+    f.push(PrAppEvent{.kind = PrAppEventKind_DragEnd, .drag = {.operation = PrAppDragOperation_None}});
+    f.frame();
+    CHECK(moves == 2);
+    CHECK(move.id == 1);
+    CHECK(move.kind == PrKitTabMoveKind_TornOff);
     prUiSetWindow(f.ui, nullptr);
     CHECK(kitVerified(f.tree));
 }
@@ -535,6 +637,8 @@ TEST_CASE("a spinner scrolled out of view requests no frames, and requests them 
 
 TEST_CASE("a frame of the same choices makes no node and lays nothing out") {
     KitFixture f;
+    TestTabs t(2);
+    prKitTabsSelect(t.tabs, 2);
     uint32_t tab = 1;
     uint32_t segment = 0;
     uint32_t radio = 2;
@@ -544,7 +648,7 @@ TEST_CASE("a frame of the same choices makes no node and lays nothing out") {
         PrLayoutNode column = prKitBox(f.kit, root, {}, {.gap = kPrKitSpace4});
         const TabContent items[] = {{"Console", "3", false}, {"Output", nullptr, true}};
         PrLayoutNode nodes[2] = {};
-        tabs(f, prKitTabStrip(f.kit, column, {.reorderable = true}, {}), items, 2, &tab, nodes);
+        tabs(f, prKitTabStrip(f.kit, column, {.tabs = t.tabs, .reorderable = true}, {}), t.tabs, items, 2, &tab, nodes);
         choices(f, prKitSegmented(f.kit, column, {}, {}), &segment, prKitSegment);
         choices(f, prKitRadioGroup(f.kit, column, {}, {.direction = PrKitDirection_Row}), &radio, prKitRadio);
         prKitCheckbox(f.kit, column, {.value = &checked, .label = "Receive"}, {});
@@ -566,13 +670,15 @@ TEST_CASE("a frame of the same choices makes no node and lays nothing out") {
 
 TEST_CASE("a disabled strip takes no click and no key") {
     KitFixture f;
+    TestTabs t(3);
     uint32_t selected = 0;
+    uint32_t segment = 0;
     PrLayoutNode nodes[3] = {};
     PrLayoutNode track = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
-        tabs(f, prKitTabStrip(f.kit, root, {.disabled = true}, {}), kTabs, 3, &selected, nodes);
+        tabs(f, prKitTabStrip(f.kit, root, {.tabs = t.tabs, .disabled = true}, {}), t.tabs, kTabs, 3, &selected, nodes);
         track = prKitSegmented(f.kit, root, {.disabled = true}, {});
-        choices(f, track, &selected, prKitSegment);
+        choices(f, track, &segment, prKitSegment);
     };
     f.frame();
     f.click(f.center(nodes[2]));
@@ -582,6 +688,7 @@ TEST_CASE("a disabled strip takes no click and no key") {
     f.key(PrAppKey_Right);
     f.frame();
     CHECK(selected == 0);
+    CHECK(segment == 0);
     CHECK(prUiFocus(f.ui) == kPrLayoutNodeNone);
     CHECK(kitVerified(f.tree));
 }

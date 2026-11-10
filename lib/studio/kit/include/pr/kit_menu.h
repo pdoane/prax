@@ -1,9 +1,8 @@
 // Studio Kit's menus, popovers, the menu bar, context menus, tooltips, modals and the command palette.
 //
-// A floating widget is created under the round's overlay (prUiOverlay). In place of a parent, it takes the node that it
-// floats from: the trigger that opens it, the host of its context menu, or the anchor of its tooltip. Its key must be
-// unique among the widgets that float from that node. A floating widget is placed against its node's box at the last
-// layout, and kept inside the overlay.
+// A floating widget is a surface (prUiSurface). In place of a parent, it takes the node that it floats from: the
+// trigger that opens it, the host of its context menu, or the anchor of its tooltip. Its key must be unique among the
+// widgets that float from that node. A floating widget is placed against its node's box at the last layout.
 //
 // A trigger's open state is retained on the trigger's node as long as every round asks for it. A widget that floats
 // from a trigger asks for the state in each round that creates the widget. It closes the state when the round's input
@@ -176,7 +175,7 @@ PrLayoutNode prKitMenuBarItem(PrKit* kit, PrLayoutNode bar, PrKitMenuBarItem ite
 // ---------------------------------------------------------------------------------------------------------------------
 // Context menus
 
-// Opens the context menu of `host` at `at`, in viewport px, or closes it.
+// Opens the context menu of `host` at `at`, in px of the host's viewport, or closes it.
 void prKitOpenContextMenu(PrKit* kit, PrLayoutNode host, PrVec2 at);
 void prKitCloseContextMenu(PrKit* kit, PrLayoutNode host);
 
@@ -245,10 +244,10 @@ typedef struct PrKitModalStyle {
 } PrKitModalStyle;
 
 // Creates the modal that `trigger` opens and returns its content, which is a column that is a focus scope. Returns none
-// while the modal is closed. A scrim covers the viewport under the content and takes the pointer from what is under it.
-// Once the content has been laid out, focus moves to the node that prKitModalAutofocus names, or else to the content's
-// first focusable node. Tab keeps focus within the content. Escape, or a primary press outside the content, closes the
-// modal, and the call returns none.
+// while the modal is closed. The modal is a modal Dialog surface. In the overlay, a scrim covers the viewport under the
+// content and takes the pointer from what is under it. Once the content has been laid out, focus moves to the node that
+// prKitModalAutofocus names, or else to the content's first focusable node. Tab keeps focus within the content. Escape,
+// or a primary press outside the content, closes the modal, and the call returns none.
 PrLayoutNode prKitModal(PrKit* kit, PrLayoutNode trigger, PrKitModal modal, PrKitModalStyle style);
 
 // Makes `node` the node that receives focus when the modal opens, like the autofocus attribute in an HTML dialog.

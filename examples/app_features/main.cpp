@@ -54,6 +54,7 @@ constexpr SidebarEntry kSidebar[] = {
     {"WINDOWS", "Dock and taskbar", Page_Taskbar, pageTaskbar},
     {"WINDOWS", "Popups and dialogs", Page_Popups, pagePopups},
     {"WINDOWS", "Backdrops and overlays", Page_Backdrops, pageBackdrops},
+    {"WINDOWS", "Tabs between windows", Page_Tabs, pageTabs},
     {"INPUT", "Pointer and cursors", Page_Pointer, pagePointer},
     {"INPUT", "Keys and text", Page_Keys, pageKeys},
     {"INPUT", "Gestures and trackpad", Page_Gestures, pageGestures},
@@ -165,6 +166,7 @@ bool controlEvent(void* context, PrStudioWindow* window, const PrAppEvent* e) {
         logEvent(f, "control", *e);
     bool consumed = inputWindowEvent(f, window, *e);
     consumed = menusWindowEvent(f, *e) || consumed;
+    consumed = dataWindowEvent(f, *e) || consumed;
     return consumed;
 }
 
@@ -211,6 +213,8 @@ int main(int argc, char** argv) {
     features.page = kSidebar[0].page;
     for (int i = 1; i < argc; ++i)
         features.launchArguments.push(String(argv[i]));
+    for (uint32_t i = 0; i < 4; ++i)
+        prKitTabsInsert(features.controlTabs.tabs, features.nextTab++, i);
     // The system's fonts, or Standard14 where the build has no system to ask, as on the web.
     PrFontSet* fonts = prFontSetCreate(nullptr);
     PrFontSystem* system = prFontSystemCreate(PrFontSystemBackend_Default);

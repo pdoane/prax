@@ -811,6 +811,7 @@ void drawRoots(LayoutTree* tree) {
         }
         prDrawListRelease(root.drawing);
         root.drawing = list;
+        root.revision = ++tree->rootDrawings;
         for (uint32_t k = 0; k < tree->rootReaders.count; ++k) {
             if (tree->rootReaders.data[k].root == root.node)
                 layoutTreeRepaintContent(tree, tree->rootReaders.data[k].replaced, tree->paint.paints - 1);
@@ -1229,4 +1230,13 @@ void prLayoutNodeDraw(PrLayoutTree* tree, PrLayoutNode root, PrDrawList* list) {
             prDrawListEmbed(list, laid.drawing, PrDVec2{0, 0});
         return;
     }
+}
+
+uint64_t prLayoutNodeDrawingRevision(const PrLayoutTree* tree, PrLayoutNode root) {
+    LayoutNodeIndex index = layoutNodeIndex(tree, root);
+    for (uint32_t i = 0; i < tree->roots.count; ++i) {
+        if (tree->roots.data[i].node == index)
+            return tree->roots.data[i].revision;
+    }
+    return 0;
 }

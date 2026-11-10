@@ -109,6 +109,31 @@ TEST_CASE("a press and its release are rounds of their own, and a round that set
     CHECK(seen == Array<String>({"pressed", "clicked", "activated"}));
 }
 
+TEST_CASE("a round that reads a node's extent runs again if its layout changes the extent, as far as the limit") {
+    UiFixture f;
+    float width = 100;
+    Array<float> read;
+    f.build = [&] {
+        PrLayoutNode node = f.block(f.root, width, 40);
+        PrVec2 extent{};
+        bool measured = prUiExtent(f.ui, node, &extent);
+        read.push(measured ? extent.x : -1);
+    };
+    // The first round reads no extent, and the round after it reads the one that the first laid out.
+    CHECK(f.frame() == 2);
+    CHECK(read == Array<float>({-1, 100}));
+    // A frame whose layout keeps the extent runs one round.
+    read.clear();
+    CHECK(f.frame() == 1);
+    width = 140;
+    read.clear();
+    CHECK(f.frame() == 2);
+    CHECK(read == Array<float>({100, 140}));
+    // A frame stops at its limit, whatever the extent.
+    width = 180;
+    CHECK(f.frame(1.0 / 60, 1) == 1);
+}
+
 TEST_CASE("a node with no interest passes the press to the pressable node around it") {
     UiFixture f;
     PrLayoutNode button = kPrLayoutNodeNone;
@@ -842,6 +867,7 @@ TEST_CASE("a payload dragged from its source drops on the innermost target under
     const PrUiPayload* dropped = nullptr;
     uint64_t droppedValue = 0;
     bool sourceClicked = false;
+    bool draggedAtDrop = false;
     f.build = [&] {
         source = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
         if (prUiIsPressed(f.ui, source, 0))
@@ -852,8 +878,11 @@ TEST_CASE("a payload dragged from its source drops on the innermost target under
         target = f.box(outer, 10, 10, 50, 50);
         over = prUiIsDropTarget(f.ui, target, 1);
         dropped = prUiDropped(f.ui, target);
-        if (dropped != nullptr)
+        if (dropped != nullptr) {
             droppedValue = dropped->value;
+            // The round that drops the payload still reports it, so the target that takes it is still built.
+            draggedAtDrop = prUiDragging(f.ui) != nullptr && prUiDragging(f.ui)->value == 42;
+        }
     };
     f.frame();
     f.down(10, 10);
@@ -868,6 +897,7 @@ TEST_CASE("a payload dragged from its source drops on the innermost target under
     f.up(220, 220);
     f.frame();
     CHECK(droppedValue == 42);
+    CHECK(draggedAtDrop);
     CHECK_FALSE(sourceClicked);
     CHECK(prUiDragging(f.ui) == nullptr);
 }
@@ -978,6 +1008,53 @@ TEST_CASE("a drag that leaves the window ends the system's payload, and a refuse
     f.push(PrAppEvent{.kind = PrAppEventKind_DragLeave, .drag = drag});
     f.frame();
     CHECK(prUiDragging(f.ui) == nullptr);
+}
+
+TEST_CASE("a drag of content passes to the system once its press moves past the threshold, once for the press") {
+    UiFixture f;
+    harness::DragWindow window;
+    prUiSetWindow(f.ui, &window);
+    PrLayoutNode source = kPrLayoutNodeNone;
+    PrAppDragDesc desc{
+        .content = {.forms = PrAppDataFormFlag_Text, .text = "dragged"},
+        .operations = PrAppDragOperationFlag_Copy,
+    };
+    f.build = [&] {
+        source = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
+        prUiDragStartContent(f.ui, source, 4, &desc);
+    };
+    f.frame();
+    f.down(10, 10);
+    f.move(12, 10);
+    f.frame();
+    CHECK(window.starts == 0);
+    f.move(30, 30);
+    f.frame();
+    f.move(40, 30);
+    f.frame();
+    REQUIRE(window.starts == 1);
+    CHECK(window.started.content.forms == PrAppDataFormFlag_Text);
+    CHECK(window.started.operations == PrAppDragOperationFlag_Copy);
+
+    // The system takes the pointer, and the drag's end reports the content that left.
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerCancel, .pointer = {.position = {40, 30}}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_DragEnd, .drag = {.operation = PrAppDragOperation_Copy}});
+    PrAppDragOperation operation = PrAppDragOperation_None;
+    uint32_t ends = 0;
+    f.build = [&] {
+        source = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
+        prUiDragStartContent(f.ui, source, 4, &desc);
+        PrAppDragOperation ended = PrAppDragOperation_None;
+        const PrUiPayload* payload = prUiExportEnded(f.ui, &ended);
+        if (payload != nullptr && payload->kind == kPrUiPayloadKindSystem) {
+            ++ends;
+            operation = ended;
+        }
+    };
+    f.frame();
+    CHECK(ends == 1);
+    CHECK(operation == PrAppDragOperation_Copy);
+    CHECK(window.starts == 1);
 }
 
 TEST_CASE("a payload that may leave the window passes to the system as the pointer leaves") {
@@ -1097,7 +1174,7 @@ TEST_CASE("a pointer that leaves the window hovers nothing until it comes back")
     f.frame();
     CHECK_FALSE(hovered);
     PrVec2 at{};
-    CHECK_FALSE(prUiPointer(f.ui, &at));
+    CHECK_FALSE(prUiPointer(f.ui, nullptr, &at));
     f.push(PrAppEvent{.kind = PrAppEventKind_PointerEnter, .pointer = {.position = PrVec2{10, 10}}});
     f.frame();
     f.frame();
@@ -1244,6 +1321,181 @@ TEST_CASE("the overlay covers the root above its content, lets the pointer throu
     floating = false;
     f.frame();
     CHECK_FALSE(prLayoutNodeIsValid(f.tree, first));
+}
+
+TEST_CASE("without a host, a popup floats in the overlay against its anchor, and a modal dialog covers its parent") {
+    UiFixture f;
+    bool dialog = false;
+    PrLayoutNode under = kPrLayoutNodeNone;
+    PrLayoutNode popup = kPrLayoutNodeNone;
+    PrLayoutNode shown = kPrLayoutNodeNone;
+    bool underPressed = false;
+    f.build = [&] {
+        under = f.box(f.root, 0, 0, 800, 600, PrUiFlag_Pressable);
+        underPressed = underPressed || prUiIsPressed(f.ui, under, 0);
+        PrUiSurfaceDesc desc{
+            .kind = PrUiSurfaceKind_Popup,
+            .placement = {.anchor = PrRect{10, 560, 110, 590}, .adjust = PrAppPopupAdjustFlag_Flip},
+        };
+        if (dialog)
+            desc = PrUiSurfaceDesc{.kind = PrUiSurfaceKind_Dialog, .modal = true};
+        popup = prUiSurface(f.ui, prUiKey(f.ui, kPrLayoutNodeNone, "popup"), &desc, 0);
+        shown = f.block(popup, 200, 100);
+    };
+    // The first layout gives the popup its extent, by which the next round places it above its anchor.
+    f.frame();
+    f.frame();
+    PrRect r = prLayoutRectToPx(prLayoutNodeBounds(f.tree, shown, PrLayoutCoordinates_Viewport));
+    CHECK(r.left == 10.0f);
+    CHECK(r.top == 460.0f);
+    CHECK(r.bottom == 560.0f);
+    CHECK(prUiNodeViewport(f.ui, shown) == kPrUiViewportMain);
+    CHECK(prUiViewports(f.ui, nullptr, 0) == 0);
+    // A press beside the popup reaches what is under it.
+    f.down(400, 100);
+    f.frame();
+    CHECK(underPressed);
+    f.up(400, 100);
+    f.frame();
+    // A modal dialog is centered, and its cover takes the press.
+    dialog = true;
+    underPressed = false;
+    f.frame();
+    f.frame();
+    r = prLayoutRectToPx(prLayoutNodeBounds(f.tree, shown, PrLayoutCoordinates_Viewport));
+    CHECK(r.left == 300.0f);
+    CHECK(r.top == 250.0f);
+    f.down(20, 20);
+    f.frame();
+    CHECK_FALSE(underPressed);
+}
+
+// A window whose content is at `origin` on one display, which converts its points to and from that display.
+struct PlacedWindow : PrAppWindow {
+    PrVec2 origin{};
+
+    explicit PlacedWindow(PrVec2 at) : PrAppWindow{}, origin(at) {
+        pointToDisplayFn = [](const PrAppWindow* window, PrVec2 point, PrAppDisplayPosition* out) {
+            PrVec2 o = static_cast<const PlacedWindow*>(window)->origin;
+            *out = PrAppDisplayPosition{.display = 1, .position = PrVec2{o.x + point.x, o.y + point.y}};
+            return true;
+        };
+        pointFromDisplayFn = [](const PrAppWindow* window, const PrAppDisplayPosition* position, PrVec2* out) {
+            PrVec2 o = static_cast<const PlacedWindow*>(window)->origin;
+            *out = PrVec2{position->position.x - o.x, position->position.y - o.y};
+            return true;
+        };
+    }
+};
+
+// A host that shows every surface in one window.
+struct OneWindowHost {
+    PlacedWindow* window;
+
+    static PrAppWindow* PR_NULLABLE windowOf(void* context, PrUiViewport) {
+        return static_cast<OneWindowHost*>(context)->window;
+    }
+};
+
+TEST_CASE("a host shows each surface in a viewport of its own, which the pointer reaches from a capture elsewhere") {
+    UiFixture f;
+    PlacedWindow main{PrVec2{100, 100}};
+    PlacedWindow popupWindow{PrVec2{400, 300}};
+    OneWindowHost host{.window = &popupWindow};
+    prUiSetWindow(f.ui, &main);
+    PrUiHost desc{.window = OneWindowHost::windowOf, .context = &host};
+    prUiSetHost(f.ui, &desc);
+    PrLayoutNode handle = kPrLayoutNodeNone;
+    PrLayoutNode item = kPrLayoutNodeNone;
+    bool itemHovered = false;
+    bool itemClicked = false;
+    f.build = [&] {
+        handle = f.box(f.root, 10, 10, 50, 50, PrUiFlag_Pressable);
+        PrUiSurfaceDesc popup{.kind = PrUiSurfaceKind_Popup, .placement = {.anchor = PrRect{10, 10, 60, 60}}};
+        PrLayoutNode surface = prUiSurface(f.ui, prUiKey(f.ui, kPrLayoutNodeNone, "menu"), &popup, 0);
+        item = f.block(surface, 100, 40, PrUiFlag_Pressable | PrUiFlag_Focusable);
+        itemHovered = prUiIsHovered(f.ui, item);
+        itemClicked = itemClicked || prUiClicked(f.ui, item, 0);
+        if (prUiFocus(f.ui) == item)
+            prUiSetTextInput(f.ui, PrRect{5, 6, 6, 20}, PrAppTextInputKind_Text);
+    };
+    f.frame();
+    PrUiViewportInfo info{};
+    REQUIRE(prUiViewports(f.ui, &info, 1) == 1);
+    CHECK(info.parent == kPrUiViewportMain);
+    CHECK(info.extent.x == 100.0f);
+    CHECK(info.extent.y == 40.0f);
+    CHECK(prLayoutNodeIsValid(f.tree, info.root));
+    CHECK(prUiNodeViewport(f.ui, item) == info.viewport);
+    CHECK(prUiNodeViewport(f.ui, handle) == kPrUiViewportMain);
+
+    // A move that the main viewport reports over the surface's viewport hovers the item, in the surface's px.
+    f.move(320, 210);
+    f.frame();
+    CHECK(itemHovered);
+    PrUiViewport over = kPrUiViewportMain;
+    PrVec2 at{};
+    CHECK(prUiPointer(f.ui, &over, &at));
+    CHECK(over == info.viewport);
+    CHECK(at.x == 20.0f);
+    CHECK(at.y == 10.0f);
+    // The main viewport's Leave after the pointer entered the surface's leaves the hover where it is.
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerLeave, .pointer = {.position = PrVec2{801, 210}}});
+    f.viewport = info.viewport;
+    f.move(30, 10);
+    f.frame();
+    CHECK(itemHovered);
+
+    // A press that the handle captures in the main viewport keeps its drag in the main viewport's px, while the pointer
+    // hovers the item in the other.
+    f.viewport = kPrUiViewportMain;
+    f.down(30, 30);
+    f.frame();
+    f.move(330, 215);
+    f.frame();
+    PrUiDrag drag{};
+    CHECK(prUiDrag(f.ui, handle, 0, 0, &drag));
+    CHECK(drag.position.x == 330.0f);
+    CHECK(drag.position.y == 215.0f);
+    CHECK(itemHovered);
+    f.up(330, 215);
+    f.frame();
+    CHECK_FALSE(itemClicked);
+
+    // A click that the surface's viewport reports reaches the item, which takes the focus. The caret of its text is in
+    // the surface's window.
+    f.viewport = info.viewport;
+    f.press(20, 10);
+    f.frame();
+    CHECK(itemClicked);
+    f.frame();
+    PrAppOutput output = prUiOutput(f.ui);
+    CHECK(output.hasTextInput);
+    CHECK(output.textInputWindow == &popupWindow);
+    CHECK(output.textInput.left == 5.0f);
+    prUiSetWindow(f.ui, nullptr);
+}
+
+TEST_CASE("with nothing focused, a key starts at the key root, and claims below it go unheard without one") {
+    UiFixture f;
+    bool keyRoot = false;
+    uint32_t heard = 0;
+    f.build = [&] {
+        PrLayoutNode app = f.box(f.root, 0, 30, 800, 570);
+        if (keyRoot)
+            prUiSetKeyRoot(f.ui, app);
+        if (prUiKeyPressed(f.ui, app, 'P', PrAppModifierFlag_Super | PrAppModifierFlag_Shift))
+            ++heard;
+    };
+    f.frame();
+    f.key(PrAppKey('P'), PrAppModifierFlag_Super | PrAppModifierFlag_Shift);
+    f.frame();
+    CHECK(heard == 0);
+    keyRoot = true;
+    f.frame();
+    f.key(PrAppKey('P'), PrAppModifierFlag_Super | PrAppModifierFlag_Shift);
+    f.frame();
+    CHECK(heard == 1);
 }
 
 TEST_CASE("a control reports its gestures to the nearest sink above it, and a null sink passes them nowhere") {

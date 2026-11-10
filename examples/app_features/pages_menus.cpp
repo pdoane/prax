@@ -71,7 +71,7 @@ void chosen(Features& f, uint64_t tag) {
     switch (tag) {
         case Tag_NewWindow:
             if (f.second == nullptr)
-                openSecond(f);
+                openSecond(f, nullptr);
             break;
         case Tag_Toolbar:
             f.toolbarShown = !f.toolbarShown;
@@ -205,7 +205,7 @@ void pageMenus(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
     PrUi* ui = prStudioWindowUi(window);
     prUiSetFlags(ui, area, PrUiFlag_Pressable);
     PrVec2 at{};
-    if (prUiClicked(ui, area, 1) && prUiPointer(ui, &at)) {
+    if (prUiClicked(ui, area, 1) && prUiPointer(ui, nullptr, &at)) {
         static const PrAppMenuItem kItems[] = {
             {.tag = Tag_ContextCopy, .title = "Copy"},
             {.tag = Tag_ContextInspect, .title = "Inspect"},

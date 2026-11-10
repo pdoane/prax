@@ -201,6 +201,7 @@ void openChrome(Browser& b) {
     b.ui = prUiCreate(b.tree);
     PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Light, b.fonts);
     b.kit = prKitCreate(b.ui, &theme);
+    b.tabStrip = prKitTabsCreate();
     b.icons = iconsCreate(b);
     commandsCreate(b);
     b.chromeList = prDrawListCreate();
@@ -212,6 +213,8 @@ void closeChrome(Browser& b) {
     prDrawListRelease(b.chromeList);
     prLayoutSceneRelease(b.scene);
     prKitDestroy(b.kit);
+    prKitTabsDestroy(b.tabStrip);
+    b.tabStrip = nullptr;
     prUiDestroy(b.ui);
     prLayoutTreeDestroy(b.tree);
     prTextShaperDestroy(b.chromeShaper);

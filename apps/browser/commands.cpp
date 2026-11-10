@@ -76,12 +76,16 @@ void toggleFavorite(Browser& b) {
 // The index that selectTab takes for the last tab.
 constexpr uint32_t kLastTab = UINT32_MAX;
 
-// Makes the tab at `index` active, or the last tab for kLastTab, if there is such a tab.
+// Makes the tab at `index` in the tab strip active, or the last tab for kLastTab, if there is such a tab.
 void selectTab(Browser& b, uint32_t index) {
-    uint32_t count = b.tabs.count();
-    uint32_t chosen = index == kLastTab ? count - 1 : index;
-    if (chosen < count)
-        tabActivate(b, chosen);
+    if (Tab* tab = tabAt(b, index == kLastTab ? b.tabs.count() - 1 : index))
+        tabActivate(b, *tab);
+}
+
+// Makes the tab `step` places after the active one in the tab strip active, wrapping around the ends.
+void stepTab(Browser& b, int32_t step) {
+    prKitTabsStep(b.tabStrip, step);
+    tabsShowActive(b);
 }
 
 PrCommandStateFlags whenOtherTabs(const Browser& b) {
@@ -134,14 +138,17 @@ constexpr CommandSpec kSpecs[] = {
         .id = "tab.close",
         .title = "Close Tab",
         .category = "Tabs",
-        .run = [](Browser& b) { tabClose(b, b.active); },
+        .run = [](Browser& b) {
+            if (Tab* tab = browserActiveTab(b))
+                tabClose(b, *tab);
+        },
         .chords = {"Cmd W"},
     },
     {
         .id = "tab.next",
         .title = "Next Tab",
         .category = "Tabs",
-        .run = [](Browser& b) { tabActivate(b, (b.active + 1) % b.tabs.count()); },
+        .run = [](Browser& b) { stepTab(b, 1); },
         .state = whenOtherTabs,
         .chords = {"Ctrl Tab"},
     },
@@ -149,10 +156,7 @@ constexpr CommandSpec kSpecs[] = {
         .id = "tab.previous",
         .title = "Previous Tab",
         .category = "Tabs",
-        .run = [](Browser& b) {
-            uint32_t count = b.tabs.count();
-            tabActivate(b, (b.active + count - 1) % count);
-        },
+        .run = [](Browser& b) { stepTab(b, -1); },
         .state = whenOtherTabs,
         .chords = {"Ctrl Shift Tab"},
     },

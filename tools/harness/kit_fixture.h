@@ -82,7 +82,7 @@ struct KitFixture {
     PrKitBackground background = PrKitBackground_App; // what the root is drawn on
     double time = 0;
     PrAppDisplay display = prAppDisplayDefault();  // the display that each frame is shown on
-    PrAppUserPreferences preferences{};
+    PrAppUserPreferences preferences = prAppUserPreferencesDefault();
     Function<void(PrLayoutNode root)> build;
 
     // The edit sink that each frame sets on the root, if `edit` is not null.
@@ -162,7 +162,7 @@ struct KitFixture {
 
     void push(PrAppEvent event) {
         event.time = time;
-        prUiPushEvent(ui, &event);
+        prUiPushEvent(ui, kPrUiViewportMain, &event);
     }
     void move(PrVec2 at) {
         push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = at}});

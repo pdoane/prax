@@ -14,6 +14,12 @@
 // If the swap chain holds more than 8-bit sRGB, the list renders into a texture of half floats, which the display
 // shader maps to the display (pr/draw_display.h).
 //
+// In an application of Multiple windows, the window hosts the surfaces of its context (prUiSetHost): each menu, tooltip
+// or dialog that floats over the window shows in a Popup or Dialog window that the window owns. The window's frame lays
+// them out with the rest of its tree, and each of their windows draws its surface from that frame. Their windows take
+// the window's cursor and drop answer, and the window's output names the one that holds the caret of the text being
+// edited. Each Studio window hosts only its own surfaces.
+//
 // The user's request to close a window closes it unless the window's event callback takes the request.
 //
 // A window is used from the thread that runs its application.
@@ -58,8 +64,9 @@ typedef void (*PrStudioWindowFrameFn)(void* PR_NULLABLE context, PrStudioWindow*
 typedef PrKitThemeVariant (*PrStudioWindowThemeFn)(void* PR_NULLABLE context, PrStudioWindow* window,
     const PrAppUserPreferences* preferences);
 
-// Called with each event before the window's context takes it. Returns true if the application took the event, which
-// the context then never sees. The window asks for a frame either way.
+// Called with each event of the window before the window's context takes it. Returns true if the application took the
+// event, which the context then never sees. The window asks for a frame either way. The events of the windows that show
+// the context's surfaces go to the context alone.
 typedef bool (*PrStudioWindowEventFn)(void* PR_NULLABLE context, PrStudioWindow* window, const PrAppEvent* event);
 
 // Declares a round of the application under `root`, which is a surface on the app background that fills the viewport

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/color.h"
+#include "pr/kit_choice.h"
 #include "pr/kit_collection.h"
 #include "pr/kit_data.h"
 #include "pr/kit_dock.h"
@@ -104,11 +105,18 @@ struct EditorState {
     std::vector<EntityId> sceneRows;       // the entities that the scene tree shows, in order
     std::vector<PrKitTreeItem> sceneItems; // by scene row
     PrKitSelection sceneCursor = {kPrKitRowNone, kPrKitRowNone};
-    PrKitDock* dock = nullptr;            // the dock's model, created by the first build
-    Hud* hud = nullptr;                   // the viewport's HUD, for the host's context (editorAttach)
+    PrKitDock* dock = nullptr;                  // the dock's model, created by the first build
+    PrKitTabs* consoleTabs = prKitTabsCreate(); // the console's tabs, by ConsoleTab plus one, and the one it shows
+    Hud* hud = nullptr;                         // the viewport's HUD, for the host's context (editorAttach)
 
-    EditorState() = default;
-    ~EditorState() { prKitDockDestroy(dock); }
+    EditorState() {
+        for (ConsoleTab tab : {ConsoleTab_Console, ConsoleTab_AssetBrowser, ConsoleTab_Timeline, ConsoleTab_Profiler})
+            prKitTabsInsert(consoleTabs, uint64_t(tab) + 1, tab);
+    }
+    ~EditorState() {
+        prKitDockDestroy(dock);
+        prKitTabsDestroy(consoleTabs);
+    }
     EditorState(const EditorState&) = delete;
     EditorState& operator=(const EditorState&) = delete;
     EntityId selected = 0;
@@ -123,7 +131,6 @@ struct EditorState {
     uint32_t space = 0;
     uint32_t viewportTab = 0;
     Tool tool = Tool_Select;
-    ConsoleTab consoleTab = ConsoleTab_Console;
     float drag = 0.35f;
     float scriptSpeed = 6.5f;
     float scriptJump = 1.2f;

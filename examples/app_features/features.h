@@ -9,6 +9,7 @@
 #include "pr/app.h"
 #include "pr/array.h"
 #include "pr/kit.h"
+#include "pr/kit_choice.h"
 #include "pr/string.h"
 #include "pr/studio_app.h"
 
@@ -27,6 +28,7 @@ enum {
     Page_Taskbar,
     Page_Popups,
     Page_Backdrops,
+    Page_Tabs,
     Page_Pointer,
     Page_Keys,
     Page_Gestures,
@@ -60,6 +62,19 @@ constexpr uint64_t kTimerUnhide = 4;
 
 // The tag of the global hotkey, Control-Option-Space, which toggles the overlay.
 constexpr uint64_t kOverlayHotkey = 1;
+
+// The payload kind of the tabs that move between the control window and the second window.
+constexpr uint64_t kTabGroup = 0x6665617475726573ull;
+
+// The tabs of a window's strip (PrKitTabs), which the model keeps.
+struct KeptTabs {
+    PrKitTabs* tabs = prKitTabsCreate();
+
+    KeptTabs() = default;
+    KeptTabs(const KeptTabs&) = delete;
+    KeptTabs& operator=(const KeptTabs&) = delete;
+    ~KeptTabs() { prKitTabsDestroy(tabs); }
+};
 
 // The model of every window.
 struct Features {
@@ -138,6 +153,11 @@ struct Features {
     uint32_t smartMagnifies = 0;
     Array<PrAppTrackpadTouch> touches;
 
+    // The tabs of the control window's strip and of the second window's, by id.
+    KeptTabs controlTabs;
+    KeptTabs secondTabs;
+    uint64_t nextTab = 1;
+
     // The global hotkey, and the status of its last registration, if one was tried.
     bool hotkeyRegistered = false;
     bool hotkeyTried = false;
@@ -151,6 +171,8 @@ struct Features {
     // The clipboard: how often it changed, and what its reads answered.
     uint32_t clipboardChanges = 0;
     String clipboardRead;
+
+    uint32_t promiseIndex = 0;      // the promise of a drag that the drop asked for
 
     // The last path that a dialog or a drop gave, which the file manager can reveal. A Save dialog's answer is written
     // to, and the temporary files that the Files page trashes are numbered.

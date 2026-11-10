@@ -2,6 +2,7 @@
 
 #include "pr/kit_choice.h"
 
+#include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/geom.h"
 #include "pr/hash.h"
@@ -11,6 +12,23 @@
 #include "studio/kit/src/kit.h"
 
 namespace pr_impl {
+
+// A tab that a strip holds: its id, and its node in `round`, the last round that created it.
+struct HeldTab {
+    uint64_t id;
+    PrLayoutNode node;
+    uint32_t round;
+};
+
+// The tabs of a strip (PrKitTabs), in the strip's order, and the selected tab. `round` counts the rounds that declared
+// the strip. `focusing` is a tab that an arrow key selected before the round created it, which takes focus as the round
+// creates it, or 0.
+struct KitTabs {
+    RawArray<HeldTab> order;
+    uint64_t selected;
+    uint64_t focusing;
+    uint32_t round;
+};
 
 namespace {
 
@@ -67,16 +85,23 @@ KitFont choiceFont(PrKitTextRole role) {
     return KitFont{.role = role, .wrap = PrKitWrap_Nowrap};
 }
 
-// A tab strip: a row that its caret is placed in, which gives way to its parent, with a rule below it.
+// A tab strip: a row that its caret is placed in, which gives way to its parent, with a rule below it. A tab strip, as
+// tall as a tab while it is empty, so that a tab can be dropped on it.
+PR_NO_PADDING_BEGIN
 struct StripBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
+    PrKitControlSize size;
+    bool collapsed;                 // the strip takes no room
+
     void make(const PrKit&, PrLayoutBoxStyle& box) const {
-        box.display = PrLayoutDisplay_Flex;
+        box.display = collapsed ? PrLayoutDisplay_None : PrLayoutDisplay_Flex;
         box.position = PrLayoutPosition_Relative;
         box.minWidth = prLayoutLengthPx(0);
+        box.minHeight = prLayoutLengthPx(kitControlHeight(size) + 4);
         box.border[PrRectSide_Bottom] = prLayoutUnitFromPx(1);
     }
 };
+PR_NO_PADDING_END
 
 // A tab: a row a little taller than its control size, padded at its ends, with a rule below it two px thick that its
 // look draws while it is chosen, so that choosing a tab moves no content.
@@ -96,10 +121,13 @@ struct TabBox {
 PR_NO_PADDING_END
 struct TabFlex {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Flex;
+    int32_t order;                  // the tab's place in its strip's order
+
     void make(const PrKit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
         flex.columnGap = prLayoutLengthPx(kPrKitSpace3);
         flex.shrink = 0;
+        flex.order = order;
     }
 };
 
@@ -357,24 +385,21 @@ typedef uint8_t StripKind;
 // The context that a choice container provides to its items for the current round. It holds the container's kind and
 // style, the arrow keys that move between items, the most recently created item, and the number of items created so
 // far. `focusNext` is true if the next item created takes focus. A tab strip also records whether its tabs can be
-// dragged, the payload kind of a tab drag, whether the strip belongs to a group, and the move that a drop made. A move
-// within the strip goes from `from` to `to`. A tab of another strip, whose key is `received`, goes to `to`.
+// dragged, the payload kind of a tab drag, its group, and the move that a drop made in the round, if `moved`.
 struct Strip {
     PrKitChoiceStyle style;
     PrAppKey back;
     PrAppKey forward;
     PrLayoutNode previous;
     uint64_t payload;
-    PrUiKey received;
+    uint64_t group;
+    KitTabs* PR_NULLABLE tabs;
     uint32_t count;
-    uint32_t from;
-    uint32_t to;
     StripKind kind;
     bool focusNext;
     bool reorders;
-    bool grouped;
     bool moved;
-    bool receives;
+    PrKitTabMove move;
 };
 
 // Provides a choice container's context on `node`, and returns it.
@@ -489,11 +514,22 @@ struct TabStripState {
     PrLayoutNode caret;
 };
 
+// Returns the place of the tab `id` in the strip's order, or the number of tabs if the strip does not hold it.
+uint32_t tabIndexOf(const KitTabs& tabs, uint64_t id) {
+    uint32_t i = 0;
+    while (i < tabs.order.count && tabs.order.data[i].id != id)
+        ++i;
+    return i;
+}
+
 } // namespace
 
 } // namespace pr_impl
 
 using namespace pr_impl;
+
+// C opaque types
+struct PrKitTabs : KitTabs {};
 
 PrLayoutNode prKitSegmented(PrKit* kit, PrLayoutNode parent, PrKitChoices choices, PrKitChoiceStyle style) {
     PrKit& k = *kit;
@@ -574,95 +610,216 @@ PrLayoutNode prKitToggle(PrKit* kit, PrLayoutNode parent, PrKitCheck check, PrKi
     return checkRow(kit, parent, check, style.size, true);
 }
 
+PrKitTabs* prKitTabsCreate(void) {
+    return allocZeroed<PrKitTabs>();
+}
+
+void prKitTabsDestroy(PrKitTabs* PR_NULLABLE tabs) {
+    if (tabs == nullptr)
+        return;
+    tabs->order.reset();
+    prMemoryFree(tabs);
+}
+
+uint32_t prKitTabsCount(const PrKitTabs* tabs) {
+    return tabs->order.count;
+}
+
+uint64_t prKitTabsAt(const PrKitTabs* tabs, uint32_t index) {
+    return index < tabs->order.count ? tabs->order.data[index].id : 0;
+}
+
+uint32_t prKitTabsIndex(const PrKitTabs* tabs, uint64_t id) {
+    return tabIndexOf(*tabs, id);
+}
+
+uint64_t prKitTabsSelected(const PrKitTabs* tabs) {
+    return tabs->selected;
+}
+
+void prKitTabsInsert(PrKitTabs* tabs, uint64_t id, uint32_t index) {
+    PR_ASSERT(id != 0);
+    uint32_t count = tabs->order.count;
+    PR_ASSERT(tabIndexOf(*tabs, id) == count);
+    tabs->order.insert(index < count ? index : count, HeldTab{.id = id, .node = kPrLayoutNodeNone});
+    if (tabs->selected == 0)
+        tabs->selected = id;
+}
+
+void prKitTabsRemove(PrKitTabs* tabs, uint64_t id) {
+    uint32_t at = tabIndexOf(*tabs, id);
+    PR_ASSERT(at < tabs->order.count);
+    tabs->order.erase(at);
+    if (tabs->focusing == id)
+        tabs->focusing = 0;
+    if (tabs->selected != id)
+        return;
+    uint32_t count = tabs->order.count;
+    tabs->selected = count == 0 ? 0 : tabs->order.data[at < count ? at : count - 1].id;
+}
+
+void prKitTabsMove(PrKitTabs* from, PrKitTabs* to, uint64_t id, uint32_t index) {
+    prKitTabsRemove(from, id);
+    prKitTabsInsert(to, id, index);
+    to->selected = id;
+}
+
+void prKitTabsSelect(PrKitTabs* tabs, uint64_t id) {
+    PR_ASSERT(tabIndexOf(*tabs, id) < tabs->order.count);
+    tabs->selected = id;
+}
+
+uint64_t prKitTabsStep(PrKitTabs* tabs, int32_t step) {
+    uint32_t count = tabs->order.count;
+    if (count == 0)
+        return 0;
+    int64_t at = int64_t(tabIndexOf(*tabs, tabs->selected));
+    int64_t to = ((at + step) % int64_t(count) + int64_t(count)) % int64_t(count);
+    tabs->selected = tabs->order.data[to].id;
+    return tabs->selected;
+}
+
 PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip, PrKitChoiceStyle style) {
+    PR_ASSERT(strip.tabs != nullptr);
     PrKit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     PrUi* ui = k.ui;
+    KitTabs& tabs = *strip.tabs;
+    ++tabs.round;
+    const PrUiPayload* dragging = prUiDragging(ui);
+    bool groupOver = strip.group != 0 && dragging != nullptr && dragging->kind == strip.group;
+    bool collapsed = strip.collapsesSingle && !groupOver && tabs.order.count <= 1;
     PrLayoutNode node =
         kitBoxNode(k, parent, PrKitBox{.key = strip.key, .disabled = strip.disabled}, PrKitOverflow_Visible,
-            kitStyle(k, StripBox{}, KitColors{.background = p.bg1, .border = p.line2}));
+            kitStyle(k, StripBox{.size = style.size, .collapsed = collapsed},
+                KitColors{.background = p.bg1, .border = p.line2}));
     Strip& context = provideStrip(k, node, StripKind_Tabs, style);
     TabStripState& state = kitState<TabStripState>(k, node, ChoiceStateKey_TabStrip);
+    context.tabs = &tabs;
     context.reorders = strip.reorderable && !disabledUnder(k, node);
-    context.grouped = strip.group != 0;
-    context.payload = context.grouped ? strip.group : tabPayloadOf(node);
-    const PrUiPayload* carried = context.reorders ? prUiDragging(ui) : nullptr;
+    context.group = strip.group;
+    context.payload = strip.group != 0 ? strip.group : tabPayloadOf(node);
+    const PrUiPayload* carried = context.reorders ? dragging : nullptr;
     bool ours = carried != nullptr && carried->kind == context.payload;
     const PrUiPayload* dropped = context.reorders ? prUiDropped(ui, node) : nullptr;
     bool drop = dropped != nullptr && dropped->kind == context.payload;
 
-    // A dragged tab goes before the first tab whose middle is past the pointer. The tabs are the strip's children from
-    // the previous round, other than its caret, at their last layout. The pointer is measured in each tab's own plane,
-    // and the caret is placed in the strip's content box from the tabs' positions. Both stay correct when the strip is
-    // transformed or scrolled.
+    // A dragged tab goes before the first tab whose middle is past the pointer, in the strip's order, at the tabs' last
+    // layout. The pointer is measured in each tab's own plane, and the caret is placed in the strip's content box from
+    // the tabs' positions. Both stay correct when the strip is transformed or scrolled.
     PrVec2 pointer{};
-    uint32_t tabs = 0;
     uint32_t slot = 0;
-    uint32_t source = UINT32_MAX;   // the dropped tab's index, if the tab belongs to this strip
     float caret = 0;
-    bool found = false;
-    if ((ours || drop) && prUiPointer(ui, &pointer)) {
+    if ((ours || drop) && prUiPointer(ui, nullptr, &pointer)) {
         PrRect stripBox = prLayoutRectToPx(prLayoutNodeBounds(k.tree, node, PrLayoutCoordinates_Layout));
-        for (PrLayoutNode tab = prLayoutNodeFirstChild(k.tree, node); tab != kPrLayoutNodeNone;
-                tab = prLayoutNodeNextSibling(k.tree, tab)) {
-            if (tab == state.caret)
+        bool found = false;
+        for (uint32_t i = 0; i < tabs.order.count && !found; ++i) {
+            PrLayoutNode tab = tabs.order.data[i].node;
+            if (!prLayoutNodeIsValid(k.tree, tab))
                 continue;
-            if (drop && tab == dropped->source)
-                source = tabs;
-            if (!found) {
-                PrRect box = prLayoutRectToPx(prLayoutNodeBounds(k.tree, tab, PrLayoutCoordinates_Layout));
-                PrVec2 at{};
-                if (prUiLocalPoint(ui, tab, pointer, &at) && at.x < (box.right - box.left) / 2) {
-                    slot = tabs;
-                    caret = box.left - stripBox.left;
-                    found = true;
-                } else {
-                    caret = box.right - stripBox.left;
-                }
+            PrRect box = prLayoutRectToPx(prLayoutNodeBounds(k.tree, tab, PrLayoutCoordinates_Layout));
+            PrVec2 at{};
+            if (prUiLocalPoint(ui, tab, pointer, &at) && at.x < (box.right - box.left) / 2) {
+                slot = i;
+                caret = box.left - stripBox.left;
+                found = true;
+            } else {
+                caret = box.right - stripBox.left;
             }
-            ++tabs;
         }
         if (!found)
-            slot = tabs;
+            slot = tabs.order.count;
     }
     state.caret = kPrLayoutNodeNone;
     if (ours && prUiIsDropTarget(ui, node, context.payload)) {
         state.caret = prLayoutTreeFrameElement(k.tree, node, kCaretKey,
             kitStyle(k, CaretBox{.left = caret}, KitColors{.background = p.accent}));
     }
-    if (drop && source != UINT32_MAX) {
-        // The slot counts the places between the tabs. Taking the dragged tab out closes the place that it left.
+    uint32_t source = drop ? tabIndexOf(tabs, dropped->value) : tabs.order.count;
+    if (drop && source < tabs.order.count) {
+        // A tab moves within the strip. The slot counts the places between the tabs, and taking the tab out closes the
+        // place that it left.
         uint32_t to = slot > source ? slot - 1 : slot;
-        context.moved = to != source;
-        context.from = source;
-        context.to = to;
-    } else if (drop && context.grouped) {
-        context.receives = true;
-        context.received = dropped->value;
-        context.to = slot;
+        HeldTab moved = tabs.order.data[source];
+        tabs.order.erase(source);
+        tabs.order.insert(to, moved);
+        tabs.selected = moved.id;
+    } else if (drop && strip.group != 0) {
+        context.moved = true;
+        context.move = PrKitTabMove{.id = dropped->value, .kind = PrKitTabMoveKind_Received, .index = slot};
+    }
+    // A tab of the strip that the user dropped outside every window tears off, where the pointer let it go.
+    PrAppDragOperation ended = PrAppDragOperation_None;
+    const PrUiPayload* left = strip.group != 0 ? prUiExportEnded(ui, &ended) : nullptr;
+    bool tornOff = left != nullptr && left->kind == context.payload && ended == PrAppDragOperation_None &&
+        tabIndexOf(tabs, left->value) < tabs.order.count;
+    if (tornOff) {
+        PrAppDisplayPosition at{};
+        PrAppWindow* window = prUiWindow(ui);
+        if (window != nullptr)
+            prAppPointerPosition(prAppWindowApp(window), &at);
+        context.moved = true;
+        context.move = PrKitTabMove{.id = left->value, .kind = PrKitTabMoveKind_TornOff, .position = at};
     }
     return node;
 }
 
 PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab) {
+    PR_ASSERT(tab.id != 0);
     PrKit& k = *kit;
+    PrUi* ui = k.ui;
     Strip& s = stripOf(k, strip, StripKind_Tabs);
-    KitControl cell = kitControl(k, strip, tab.key, PrUiFlag_Pressable | PrUiFlag_Focusable, tab.disabled);
-    bool on = tab.selected;
+    KitTabs& tabs = *s.tabs;
+    uint32_t at = tabIndexOf(tabs, tab.id);
+    PR_ASSERT(at < tabs.order.count);
+    // A tab of a group has the same key in every window, so that it keeps its identity as it moves between strips.
+    PrUiKey key = prUiKeyIndex(ui, strip, tab.id);
+    if (s.group != 0)
+        key = prUiKeyIndex(ui, kPrLayoutNodeNone, prHashMixKeys(s.group, tab.id));
+    KitControl cell = kitControl(k, strip, key, PrUiFlag_Pressable | PrUiFlag_Focusable, tab.disabled);
+    tabs.order.data[at].node = cell.node;
+    tabs.order.data[at].round = tabs.round;
+    if (prUiActivated(ui, cell.node))
+        tabs.selected = tab.id;
+    if (tabs.focusing == tab.id) {
+        prUiSetFocus(ui, cell.node);
+        tabs.focusing = 0;
+    }
+    bool on = tabs.selected == tab.id;
     PrKitLookId look;
     if (cell.disabled)
         look = (on ? PrKitLookId_TabChosenDisabled : PrKitLookId_TabDisabled);
     else
         look = (on ? PrKitLookId_TabChosen : PrKitLookId_Tab);
     KitDress dress = kitDress(k, cell, look);
-    prLayoutTreeFrameSetStyle(k.tree, cell.node,
-        kitStyle(k, TabBox{.size = s.style.size}, TabFlex{}, choiceFont(PrKitTextRole_Body), dress.fill, dress.ink));
-    // A tab of a group may leave the window for a strip of the group in another window.
-    if (s.reorders && !cell.disabled && prUiIsPressed(k.ui, cell.node, 0)) {
-        PrUiPayloadFlags flags = s.grouped ? PrUiPayloadFlags(PrUiPayloadFlag_AnyWindow) : PrUiPayloadFlags(0);
-        prUiDragStart(k.ui, cell.node, kTabDragThreshold, s.payload, tab.key, flags);
+    // The tab shows at its place in the strip's order, whatever order the round creates the tabs in.
+    PrLayoutStyleIndex record = kitStyle(k, TabBox{.size = s.style.size}, TabFlex{.order = int32_t(at)},
+        choiceFont(PrKitTextRole_Body), dress.fill, dress.ink);
+    prLayoutTreeFrameSetStyle(k.tree, cell.node, record);
+    // Left and Right select the neighbor in the strip's order, which takes focus. A neighbor that the round has not
+    // created yet takes focus as the round creates it.
+    if (!cell.disabled) {
+        uint32_t neighbor = tabs.order.count;
+        if (prUiKeyPressed(ui, cell.node, s.back, 0) && at > 0)
+            neighbor = at - 1;
+        if (prUiKeyPressed(ui, cell.node, s.forward, 0) && at + 1 < tabs.order.count)
+            neighbor = at + 1;
+        if (neighbor < tabs.order.count) {
+            const HeldTab& next = tabs.order.data[neighbor];
+            tabs.selected = next.id;
+            if (next.node != kPrLayoutNodeNone && next.round == tabs.round)
+                prUiSetFocus(ui, next.node);
+            else
+                tabs.focusing = next.id;
+        }
     }
-    stripItem(k, s, cell);
+    // A tab of a group may leave the window for a strip of the group in another window.
+    if (s.reorders && !cell.disabled && prUiIsPressed(ui, cell.node, 0)) {
+        PrUiPayloadFlags flags = s.group != 0 ? PrUiPayloadFlags(PrUiPayloadFlag_AnyWindow) : PrUiPayloadFlags(0);
+        prUiDragStart(ui, cell.node, kTabDragThreshold, s.payload, tab.id, flags);
+    }
+    s.previous = cell.node;
+    ++s.count;
     return cell.node;
 }
 
@@ -682,21 +839,12 @@ PrLayoutNode prKitTabClose(PrKit* kit, PrLayoutNode tab) {
     return close.node;
 }
 
-bool prKitMoved(const PrKit* kit, PrLayoutNode strip, uint32_t* from, uint32_t* to) {
+bool prKitTabMoved(const PrKit* kit, PrLayoutNode strip, PrKitTabMove* out) {
     const Strip* s = kitContext<Strip>(*kit, strip, KitContext_Strip);
+    *out = PrKitTabMove{};
     if (s == nullptr || !s->moved)
         return false;
-    *from = s->from;
-    *to = s->to;
-    return true;
-}
-
-bool prKitTabReceived(const PrKit* kit, PrLayoutNode strip, PrUiKey* key, uint32_t* to) {
-    const Strip* s = kitContext<Strip>(*kit, strip, KitContext_Strip);
-    if (s == nullptr || !s->receives)
-        return false;
-    *key = s->received;
-    *to = s->to;
+    *out = s->move;
     return true;
 }
 
