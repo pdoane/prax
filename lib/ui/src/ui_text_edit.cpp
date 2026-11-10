@@ -474,8 +474,12 @@ struct TextEditor {
                 prUiKeyPressed(ui, desc.control, kLines[i], modifiers | PrAppModifierFlag_Shift);
             }
         }
-        if (multiline)
+        // Return inserts a line break, with Shift or without, so that an application that captures Return for itself
+        // leaves Shift-Return to the edit.
+        if (multiline) {
             prUiKeyPressed(ui, desc.control, PrAppKey_Enter, 0);
+            prUiKeyPressed(ui, desc.control, PrAppKey_Enter, PrAppModifierFlag_Shift);
+        }
         static const PrAppKey kCommands[] = {'A', 'C', 'X', 'V'};
         for (PrAppKey key : kCommands) {
             prUiKeyPressed(ui, desc.control, key, PrAppModifierFlag_Super);

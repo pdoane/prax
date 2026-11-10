@@ -340,7 +340,7 @@ FrontMatter findFrontMatter(PrStringView source, bool ended, PrStringView* outCo
     size_t start = first + 1;
     size_t line = start;
     while (line < source.size) {
-        size_t end = line + prStringFindByte(prStringSlice(source, line, source.size - line), '\n');
+        size_t end = line + prStringFindByte(prStringFrom(source, line), '\n');
         bool complete = end < source.size;
         if ((complete || ended) && isFrontMatterFence(prStringSlice(source, line, end - line), true)) {
             *outContent = prStringSlice(source, start, line - start);

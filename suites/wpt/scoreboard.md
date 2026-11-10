@@ -38,7 +38,7 @@ of a change to it is what the change did.
 | css/CSS2/stacking-context        |         7/7 |           7/7 |  100.0% |
 | css/CSS2/syntax                  |     276/276 |     1463/1467 |   99.7% |
 | css/CSS2/tables                  |     373/373 |       393/455 |   86.3% |
-| css/CSS2/text                    |     410/410 |       404/410 |   98.5% |
+| css/CSS2/text                    |     410/410 |       402/410 |   98.0% |
 | css/CSS2/ui                      |       52/52 |         44/52 |   84.6% |
 | css/CSS2/values                  |       25/25 |         25/25 |  100.0% |
 | css/CSS2/visudet                 |       39/39 |         32/39 |   82.0% |
@@ -68,12 +68,12 @@ of a change to it is what the change did.
 | css/css-env                      |       11/11 |         12/53 |   22.6% |
 | css/css-flexbox                  |   1412/1412 |     5130/5794 |   88.5% |
 | css/css-font-loading             |       32/32 |       180/249 |   72.2% |
-| css/css-fonts                    |     557/558 |     7261/9046 |   80.2% |
+| css/css-fonts                    |     557/558 |     7263/9046 |   80.2% |
 | css/css-forced-color-adjust      |         4/4 |          9/14 |   64.2% |
 | css/css-forms                    |       23/23 |         64/81 |   79.0% |
 | css/css-gaps                     |     549/549 |     3106/4622 |   67.2% |
 | css/css-grid                     |   1354/1354 |   11347/12793 |   88.6% |
-| css/css-highlight-api            |     134/134 |       195/290 |   67.2% |
+| css/css-highlight-api            |     134/134 |       176/290 |   60.6% |
 | css/css-image-animation          |       23/23 |         13/27 |   48.1% |
 | css/css-images                   |     506/508 |     2577/4061 |   63.4% |
 | css/css-inline                   |     251/251 |      684/1047 |   65.3% |
@@ -90,7 +90,7 @@ of a change to it is what the change did.
 | css/css-parser-api               |         1/1 |          5/71 |    7.0% |
 | css/css-position                 |     377/388 |     1393/1770 |   78.7% |
 | css/css-properties-values-api    |     123/123 |      686/1393 |   49.2% |
-| css/css-pseudo                   |     339/342 |      700/1126 |   62.1% |
+| css/css-pseudo                   |     339/342 |      699/1126 |   62.0% |
 | css/css-ruby                     |     178/178 |       118/247 |   47.7% |
 | css/css-scroll-anchoring         |       78/78 |         89/98 |   90.8% |
 | css/css-scroll-snap              |     181/197 |       366/838 |   43.6% |
@@ -102,8 +102,8 @@ of a change to it is what the change did.
 | css/css-style-attr               |       16/16 |         14/16 |   87.5% |
 | css/css-syntax                   |       50/50 |       376/446 |   84.3% |
 | css/css-tables                   |     340/340 |      910/1113 |   81.7% |
-| css/css-text                     |   1866/1877 |     4229/6185 |   68.3% |
-| css/css-text-decor               |     365/365 |     1200/1693 |   70.8% |
+| css/css-text                     |   1866/1877 |     4228/6185 |   68.3% |
+| css/css-text-decor               |     365/365 |     1158/1693 |   68.3% |
 | css/css-transforms               |     896/922 |     4229/6326 |   66.8% |
 | css/css-transitions              |     131/142 |     1000/1492 |   67.0% |
 | css/css-typed-om                 |     370/372 |    9291/12919 |   71.9% |
@@ -113,7 +113,7 @@ of a change to it is what the change did.
 | css/css-view-transitions         |     451/494 |     1194/1753 |   68.1% |
 | css/css-viewport                 |     134/137 |       451/681 |   66.2% |
 | css/css-will-change              |       53/53 |       186/221 |   84.1% |
-| css/css-writing-modes            |   1234/1234 |     1295/1555 |   83.2% |
+| css/css-writing-modes            |   1234/1234 |     1294/1555 |   83.2% |
 | css/css-zoom                     |         1/1 |           1/1 |  100.0% |
 | css/cssom                        |     282/283 |     3397/4403 |   77.1% |
 | css/cssom-view                   |     229/237 |     1364/2578 |   52.9% |
@@ -133,7 +133,7 @@ of a change to it is what the change did.
 | web-animations/interfaces        |       45/47 |        80/834 |    9.5% |
 | web-animations/responsive        |       40/46 |         0/105 |    0.0% |
 | web-animations/timing-model      |       25/34 |         2/402 |    0.4% |
-| **total**                        | 32145/32468 | 154299/209301 |   73.7% |
+| **total**                        | 32145/32468 | 154235/209301 |   73.6% |
 
 ## dom
 
@@ -244,7 +244,7 @@ of a change to it is what the change did.
 | quirks/crashtests                                   |       1/1 |           1/1 |  100.0% |
 | quirks/hashless-hex-color                           |       3/3 |     1974/2060 |   95.8% |
 | quirks/historical                                   |       2/2 |           2/2 |  100.0% |
-| quirks/text-decoration-doesnt-propagate-into-tables |       2/2 |           2/2 |  100.0% |
+| quirks/text-decoration-doesnt-propagate-into-tables |       2/2 |           1/2 |   50.0% |
 | quirks/unitless-length                              |       6/6 |     4637/4819 |   96.2% |
 | requestidlecallback                                 |     18/20 |         48/57 |   84.2% |
 | webmessaging                                        |     43/47 |         55/64 |   85.9% |
@@ -264,7 +264,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8388/9541 | 127543/157122 |   81.1% |
+| **total**                                           | 8388/9541 | 127542/157122 |   81.1% |
 
 ## infrastructure
 
@@ -371,7 +371,7 @@ of a change to it is what the change did.
 
 | Module                         |   Files |     Tests | Passing |
 |--------------------------------|--------:|----------:|--------:|
-| hr-time                        |   13/13 |     42/52 |   80.7% |
+| hr-time                        |   13/13 |     41/52 |   78.8% |
 | navigation-timing              |   55/58 |   395/449 |   87.9% |
 | performance-timeline           |   34/38 |   101/116 |   87.0% |
 | resource-timing                |  85/101 |   631/929 |   67.9% |
@@ -379,7 +379,7 @@ of a change to it is what the change did.
 | resource-timing/tentative      |   19/31 |      0/62 |    0.0% |
 | server-timing                  |     8/9 |   421/444 |   94.8% |
 | user-timing                    |   36/36 |   625/629 |   99.3% |
-| **total**                      | 264/302 | 2242/2725 |   82.2% |
+| **total**                      | 264/302 | 2241/2725 |   82.2% |
 
 ## svg
 

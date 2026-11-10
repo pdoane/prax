@@ -84,7 +84,7 @@ void readAnimations(LottieArchive& a) {
         for (PrStringView folder : folders) {
             if (!prStringStartsWith(name, folder) || !prStringEndsWith(name, ".json"))
                 continue;
-            PrStringView inFolder = prStringSlice(name, folder.size, name.size - folder.size);
+            PrStringView inFolder = prStringFrom(name, folder.size);
             if (prStringFindByte(inFolder, '/') == inFolder.size)
                 addAnimation(a, prStringSlice(inFolder, 0, inFolder.size - 5), i);
         }
@@ -102,7 +102,7 @@ bool loadEntry(void* PR_NULLABLE context, PrStringView path, PrByteView* out) {
     ArchiveFiles* files = static_cast<ArchiveFiles*>(context);
     // Asset folders are named relative to the archive's root, as in "/images/".
     while (path.size > 0 && path.data[0] == '/')
-        path = prStringSlice(path, 1, path.size - 1);
+        path = prStringFrom(path, 1);
     uint32_t index = prCompressZipFind(files->zip, path);
     if (index >= prCompressZipEntryCount(files->zip))
         return false;

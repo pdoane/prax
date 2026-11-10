@@ -421,6 +421,52 @@ TEST_CASE("Return inserts a line feed in a text area, and Up and Down move betwe
     CHECK(kitVerified(e.f.tree));
 }
 
+TEST_CASE("wrapping text breaks a word that fits no line inside its box, and clipped text stays on one line") {
+    KitFixture f;
+    PrLayoutNode column = kPrLayoutNodeNone;
+    PrLayoutNode wrapped = kPrLayoutNodeNone;
+    PrLayoutNode clipped = kPrLayoutNodeNone;
+    const char* word = "/a/path/that/is/one/word/and/much/longer/than/its/box";
+    f.build = [&](PrLayoutNode root) {
+        column = prKitBox(f.kit, root, {}, {.place = {.width = prKitPx(80)}});
+        wrapped = prKitLabel(f.kit, column, {.text = word}, {.wrap = PrKitWrap_Wrap});
+        clipped = prKitLabel(f.kit, column, {.text = word}, {.wrap = PrKitWrap_Clip});
+    };
+    f.frame();
+    PrRect box = f.bounds(column);
+    PrRect one = f.bounds(clipped);
+    PrRect lines = f.bounds(wrapped);
+    CHECK(lines.right <= box.right);
+    CHECK(lines.bottom - lines.top > 2 * (one.bottom - one.top));
+}
+
+TEST_CASE("Shift-Return inserts a line feed in a text area whose ancestor captures Return, as a chat's composer does") {
+    KitFixture f;
+    String text = "one";
+    PrLayoutNode area = kPrLayoutNodeNone;
+    uint32_t sent = 0;
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode composer = prKitBox(f.kit, root, {}, {.place = {.width = prKitPx(200)}});
+        if (prUiKeyCaptured(f.ui, composer, PrAppKey_Enter, 0))
+            ++sent;
+        area = taken(f.kit, prKitTextArea(f.kit, composer, {.text = text}, {}), text);
+    };
+    f.frame();
+    PrRect box = f.bounds(area);
+    f.click(PrVec2{box.right - 4, box.top + 4});
+    f.frame();
+    f.key(PrAppKey_Enter, PrAppModifierFlag_Shift);
+    f.frame();
+    f.type("two");
+    f.frame();
+    CHECK(text == "one\ntwo");
+    CHECK(sent == 0);
+    f.key(PrAppKey_Enter);
+    f.frame();
+    CHECK(text == "one\ntwo");
+    CHECK(sent == 1);
+}
+
 TEST_CASE("a text area scrolls to keep the caret in view") {
     Edited e("", true, 2);
     e.focus();

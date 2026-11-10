@@ -2733,6 +2733,34 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         decoration.outlineWidth = prLayoutUnitFromPxDouble(pxOf(cssComputedValue(style, PrCssProperty_OutlineWidth)));
         decoration.outlineOffset = prLayoutUnitFromPxDouble(pxOf(cssComputedValue(style, PrCssProperty_OutlineOffset)));
     }
+    // The lines that decorate the box's text and its in-flow content's (css-text-decor-3/#line-decoration). A thickness
+    // of auto or from-font is the font's, which painting reads.
+    CssValueRun lines = cssComputedValue(style, PrCssProperty_TextDecorationLine);
+    for (uint32_t i = 0; i < lines.count; i += lines.values[i].next) {
+        if (lines.values[i].kind != PrCssValueKind_Keyword)
+            continue;
+        switch (cssValueKeyword(lines.values + i)) {
+            case PrCssKeyword_Underline: decoration.textDecorationLine |= PrLayoutTextDecorationLine_Underline; break;
+            case PrCssKeyword_Overline: decoration.textDecorationLine |= PrLayoutTextDecorationLine_Overline; break;
+            case PrCssKeyword_LineThrough: decoration.textDecorationLine |= PrLayoutTextDecorationLine_LineThrough; break;
+            default: break;
+        }
+    }
+    if (decoration.textDecorationLine != 0) {
+        PrColor line = currentColor;
+        cssResolveColor(cssComputedValue(style, PrCssProperty_TextDecorationColor), 0, colors, &line);
+        decoration.textDecorationColor = prColor16FromColor(capped(line));
+        switch (cssValueRunFirstKeyword(cssComputedValue(style, PrCssProperty_TextDecorationStyle))) {
+            case PrCssKeyword_Double: decoration.textDecorationStyle = PrDrawDecorationStyle_Double; break;
+            case PrCssKeyword_Dotted: decoration.textDecorationStyle = PrDrawDecorationStyle_Dotted; break;
+            case PrCssKeyword_Dashed: decoration.textDecorationStyle = PrDrawDecorationStyle_Dashed; break;
+            case PrCssKeyword_Wavy: decoration.textDecorationStyle = PrDrawDecorationStyle_Wavy; break;
+            default: decoration.textDecorationStyle = PrDrawDecorationStyle_Solid; break;
+        }
+        CssValueRun thickness = cssComputedValue(style, PrCssProperty_TextDecorationThickness);
+        if (thickness.count != 0 && thickness.values[0].kind != PrCssValueKind_Keyword)
+            decoration.textDecorationThickness = prLayoutUnitFromPxDouble(pxOf(thickness));
+    }
     // A column rule of style none has no width (css-multicol-1/#crw).
     if (style->groups[CssStyleGroup_Fragmentation] != r->styles.initial[CssStyleGroup_Fragmentation]) {
         decoration.columnRuleStyle = borderStyleOf(cssComputedValue(style, PrCssProperty_ColumnRuleStyle));

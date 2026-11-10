@@ -26,6 +26,11 @@ CocoaMacKey cocoaMacKeyOf(NSEvent* event);
 // that types none. A dead key types none until the key that it combines with.
 NSString* PR_NULLABLE cocoaCharacterOf(NSEvent* event);
 
+// Returns the key that a key that types a character means: the character that it types in the layout with Shift applied
+// and no other modifier, uppercase for a letter. Option-1 is the 1 key with Alt held, though it types "¡", as Alt-1 is
+// on other systems. Returns PrAppKey_Unknown for a character outside ASCII, or a key that types none.
+PrAppKey cocoaKeyOfCharacter(NSEvent* event);
+
 // Returns true if a key is a dead key: it types nothing itself, though it types a character without its modifiers.
 bool cocoaIsDead(NSEvent* event);
 

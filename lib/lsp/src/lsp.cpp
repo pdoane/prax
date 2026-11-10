@@ -695,7 +695,7 @@ void handleMessage(LspClient* client, PrStringView body) {
 bool contentLength(PrStringView header, uint64_t* out) {
     size_t at = 0;
     while (at < header.size) {
-        size_t end = prStringFind(prStringSlice(header, at, header.size - at), "\r\n");
+        size_t end = prStringFind(prStringFrom(header, at), "\r\n");
         end = end == header.size - at ? header.size : at + end;
         PrStringView line = prStringSlice(header, at, end - at);
         size_t colon = prStringFindByte(line, ':');
@@ -761,7 +761,7 @@ PrLspClient* prLspClientCreate(const PrLspClientDesc* desc) {
         size_t slash = root.size;
         while (slash > 0 && root.data[slash - 1] != '/' && root.data[slash - 1] != '\\')
             --slash;
-        client->rootName = prRawStringCopy(prStringSlice(root, slash, root.size - slash));
+        client->rootName = prRawStringCopy(prStringFrom(root, slash));
     }
 
     PrJsonWriter* writer = client->writer;
@@ -1183,10 +1183,10 @@ PrRawString prLspUriFromPath(PrStringView path) {
 PrRawString prLspPathFromUri(PrStringView uri) {
     if (uri.size < 7 || !prAsciiEqualsFold(prStringSlice(uri, 0, 7), "file://"))
         return prRawStringNull();
-    PrStringView rest = prStringSlice(uri, 7, uri.size - 7);
+    PrStringView rest = prStringFrom(uri, 7);
     size_t slash = prStringFindByte(rest, '/');
     PrStringView authority = prStringSlice(rest, 0, slash);
-    PrStringView path = prStringSlice(rest, slash, rest.size - slash);
+    PrStringView path = prStringFrom(rest, slash);
     PrRawString decoded = prRawStringEmpty();
     // A host other than the local one names a share, as a UNC path does.
     if (authority.size != 0 && !prAsciiEqualsFold(authority, "localhost")) {
@@ -1204,7 +1204,7 @@ PrRawString prLspPathFromUri(PrStringView uri) {
 #if defined(_WIN32)
     PrStringView view = prRawStringView(&decoded);
     if (view.size >= 3 && view.data[0] == '/' && prAsciiIsLetter(view.data[1]) && view.data[2] == ':') {
-        PrRawString drive = prRawStringCopy(prStringSlice(view, 1, view.size - 1));
+        PrRawString drive = prRawStringCopy(prStringFrom(view, 1));
         prRawStringReset(&decoded);
         decoded = drive;
     }

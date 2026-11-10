@@ -95,7 +95,7 @@ constexpr size_t kNotMissing = ~size_t(0);
 size_t after(PrStringView text, size_t start, PrStringView needle, MarkdownTagScan* PR_NULLABLE scan, MarkdownTagEnd end) {
     if (start > text.size || (scan != nullptr && start >= scan->missing[end]))
         return 0;
-    PrStringView rest = prStringSlice(text, start, text.size - start);
+    PrStringView rest = prStringFrom(text, start);
     size_t found = prStringFind(rest, needle);
     if (found == rest.size) {
         if (scan != nullptr && start < scan->missing[end])
@@ -174,7 +174,7 @@ size_t openOrClosingTag(PrStringView text, size_t start, PrStringView* outName, 
 
 // Returns true if the text at `start` in `text` begins with `prefix`, compared without regard to ASCII case.
 bool startsWithFold(PrStringView text, size_t start, PrStringView prefix) {
-    return start <= text.size && prAsciiStartsWithFold(prStringSlice(text, start, text.size - start), prefix);
+    return start <= text.size && prAsciiStartsWithFold(prStringFrom(text, start), prefix);
 }
 
 bool containsFold(PrStringView text, PrStringView needle) {
@@ -248,7 +248,7 @@ size_t markdownScanHtmlTag(PrStringView text, size_t start, MarkdownTagScan* sca
         size_t end = after(text, start + 4, "-->", scan, MarkdownTagEnd_Comment);
         return end == 0 ? 0 : end - start;
     }
-    if (prStringStartsWith(prStringSlice(text, start, text.size - start), "<![CDATA[")) {
+    if (prStringStartsWith(prStringFrom(text, start), "<![CDATA[")) {
         size_t end = after(text, start + 9, "]]>", scan, MarkdownTagEnd_Cdata);
         return end == 0 ? 0 : end - start;
     }
@@ -276,7 +276,7 @@ uint8_t markdownHtmlBlockStart(PrStringView line, size_t start, bool interruptsP
         return 3;
     if (at(line, start + 1) == '!' && prAsciiIsLetter(at(line, start + 2)))
         return 4;
-    if (prStringStartsWith(prStringSlice(line, start, line.size - start), "<![CDATA["))
+    if (prStringStartsWith(prStringFrom(line, start), "<![CDATA["))
         return 5;
     size_t nameStart = at(line, start + 1) == '/' ? start + 2 : start + 1;
     size_t blockName = tagName(line, nameStart);
@@ -470,7 +470,7 @@ void markdownAppendFilteredHtml(PrStringView html, RawArray<char>* out) {
 
 bool markdownIsUnsafeDestination(PrStringView destination) {
     if (prAsciiStartsWithFold(destination, "data:image/")) {
-        PrStringView type = prStringSlice(destination, 11, destination.size - 11);
+        PrStringView type = prStringFrom(destination, 11);
         if (prAsciiStartsWithFold(type, "png") || prAsciiStartsWithFold(type, "gif") || prAsciiStartsWithFold(type, "jpeg") ||
                 prAsciiStartsWithFold(type, "webp"))
             return false;

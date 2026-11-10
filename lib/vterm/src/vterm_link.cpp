@@ -182,9 +182,9 @@ void vtermLinkCommand(Vterm* vterm, PrStringView rest) {
         size_t colon = prStringFindByte(params, ':');
         PrStringView param = prStringSlice(params, 0, colon);
         size_t next = colon < params.size ? colon + 1 : params.size;
-        params = prStringSlice(params, next, params.size - next);
+        params = prStringFrom(params, next);
         if (prStringStartsWith(param, "id="))
-            id = prStringSlice(param, 3, param.size - 3);
+            id = prStringFrom(param, 3);
     }
     if (id.size > kPrVtermLinkMaxIdBytes || !isPrintable(id, false))
         return;

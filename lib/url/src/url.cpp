@@ -18,7 +18,7 @@ namespace pr_impl {
 namespace {
 
 PrStringView withoutPrefix(PrStringView value, char prefix) {
-    return value.size != 0 && value.data[0] == prefix ? prStringSlice(value, 1, value.size - 1) : value;
+    return value.size != 0 && value.data[0] == prefix ? prStringFrom(value, 1) : value;
 }
 
 bool matches(const UrlPair* pair, PrStringView name, PrStringView value) {

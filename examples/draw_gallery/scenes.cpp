@@ -1411,7 +1411,7 @@ void readRuby(PrStringView text, Array<Character>& characters, Array<Reading>& r
         if (c == U'｜') {
             marked = characters.count();
         } else if (c == U'《') {
-            size_t close = prStringFind(prStringSlice(text, at, text.size - at), closing);
+            size_t close = prStringFind(prStringFrom(text, at), closing);
             uint32_t first = characters.count();
             while (marked == UINT32_MAX && first > 0 && isKanji(characters[first - 1].codePoint))
                 --first;

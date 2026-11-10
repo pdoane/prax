@@ -121,9 +121,13 @@ constexpr PrKitType kTypes[PrKitTextRole_Count] = {
 
 using namespace pr_impl;
 
+PrKitPalette prKitPaletteStudio(PrKitThemeVariant variant) {
+    return variant == PrKitThemeVariant_Light ? kLight : kDark;
+}
+
 PrKitTheme prKitThemeStudio(PrKitThemeVariant variant, PrFontSet* PR_NULLABLE fonts) {
     PrKitTheme theme{};
-    theme.palette = variant == PrKitThemeVariant_Light ? kLight : kDark;
+    theme.palette = prKitPaletteStudio(variant);
     for (uint32_t role = 0; role < PrKitTextRole_Count; ++role)
         theme.types[role] = kTypes[role];
     theme.fonts = fonts;

@@ -1901,7 +1901,7 @@ PrRawString prHtmlNavigatorAppVersion(const PrHtmlWindow* window) {
     PrStringView userAgent = prHtmlNavigatorUserAgent(window);
     if (!prStringStartsWith(userAgent, "Mozilla/5.0 ("))
         return prRawStringCopy("");
-    PrStringView trail = prStringSlice(userAgent, 8, userAgent.size - 8);
+    PrStringView trail = prStringFrom(userAgent, 8);
     if (window->navigatorCompatibilityMode != PrHtmlNavigatorCompatibilityMode_Gecko)
         return prRawStringCopy(trail);
     if (prStringStartsWith(trail, "5.0 (Windows"))

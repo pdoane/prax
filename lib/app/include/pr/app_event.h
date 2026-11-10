@@ -283,6 +283,12 @@ PrAppDataSource prAppEventSource(const PrAppEvent* event);
 void prAppEventRetain(PrApp* app, const PrAppEvent* event);
 void prAppEventRelease(PrApp* app, const PrAppEvent* event);
 
+// Returns a window's event in the logical pixels of a view placed in the window, as prAppOutputPlaced places the view's
+// output: `origin` is the view's origin in the window, and `scale` is the number of window logical pixels per view
+// logical pixel. The event's position, a pointer's movement and contact size, and a scroll's delta in pixels are the
+// view's. Its other members are the window's.
+PrAppEvent prAppEventPlaced(const PrAppEvent* event, PrVec2 origin, float scale);
+
 #if defined(__cplusplus)
 }
 #endif

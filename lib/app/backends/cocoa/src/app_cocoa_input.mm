@@ -243,6 +243,13 @@ NSString* PR_NULLABLE cocoaCharacterOf(NSEvent* event) {
     return printable ? characters : nil;
 }
 
+PrAppKey cocoaKeyOfCharacter(NSEvent* event) {
+    // charactersIgnoringModifiers keeps Shift and drops Option, Control and Command.
+    NSString* plain = event.charactersIgnoringModifiers;
+    unichar first = plain.length != 0 ? [plain.uppercaseString characterAtIndex:0] : 0;
+    return first >= ' ' && first < 127 ? PrAppKey(first) : PrAppKey_Unknown;
+}
+
 bool cocoaIsDead(NSEvent* event) {
     if (event.characters.length != 0)
         return false;

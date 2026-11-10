@@ -39,7 +39,7 @@ bool exists(PrStringView path) {
 String galleryFilename(PrStringView filename) {
     PrStringView base = prFilePathName(filename);
     while (!base.isEmpty() && base.data[0] == '.')
-        base = prStringSlice(base, 1, base.size - 1);
+        base = prStringFrom(base, 1);
     if (base.isEmpty())
         return "image.png";
     String out(base);

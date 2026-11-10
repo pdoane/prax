@@ -28,7 +28,7 @@ PrStringView argumentsOf(PrStringView text, PrStringView name) {
 // image draws.
 void applySvgView(PrStringView specification, SvgRootView* view) {
     for (size_t start = 0; start <= specification.size;) {
-        size_t end = start + prStringFindByte(prStringSlice(specification, start, specification.size - start), ';');
+        size_t end = start + prStringFindByte(prStringFrom(specification, start), ';');
         PrStringView part = prStringTrim(prStringSlice(specification, start, end - start));
         PrStringView viewBox = argumentsOf(part, "viewBox");
         PrStringView aspect = argumentsOf(part, "preserveAspectRatio");
@@ -55,7 +55,7 @@ void applySvgView(PrStringView specification, SvgRootView* view) {
 bool parseCoordinates(PrStringView text, bool percent, float* out) {
     uint32_t count = 0;
     for (size_t start = 0; start <= text.size && count < 4;) {
-        size_t end = start + prStringFindByte(prStringSlice(text, start, text.size - start), ',');
+        size_t end = start + prStringFindByte(prStringFrom(text, start), ',');
         PrStringView number = prStringSlice(text, start, end - start);
         start = end + 1;
         double value = 0;
@@ -92,17 +92,17 @@ bool parseCoordinates(PrStringView text, bool percent, float* out) {
 // nothing.
 void applyMediaFragment(PrStringView fragment, PrRect image, bool hasImage, SvgRootView* view) {
     for (size_t start = 0; start <= fragment.size;) {
-        size_t end = start + prStringFindByte(prStringSlice(fragment, start, fragment.size - start), '&');
+        size_t end = start + prStringFindByte(prStringFrom(fragment, start), '&');
         PrStringView pair = prStringSlice(fragment, start, end - start);
         start = end + 1;
         if (pair.size < 5 || prStringSlice(pair, 0, 5) != "xywh=")
             continue;
-        PrStringView value = prStringSlice(pair, 5, pair.size - 5);
+        PrStringView value = prStringFrom(pair, 5);
         bool percent = false;
         if (value.size >= 6 && prStringSlice(value, 0, 6) == "pixel:") {
-            value = prStringSlice(value, 6, value.size - 6);
+            value = prStringFrom(value, 6);
         } else if (value.size >= 8 && prStringSlice(value, 0, 8) == "percent:") {
-            value = prStringSlice(value, 8, value.size - 8);
+            value = prStringFrom(value, 8);
             percent = true;
         }
         float n[4];
@@ -186,7 +186,7 @@ const PrDomElement* PR_NULLABLE svgImageView(PrStringView fragment, const PrDomE
     if (call != 0) {
         // An SVG view may be followed only by a media fragment's temporal dimension, which changes nothing that an
         // image draws. Any other fragment that starts with one is in error, and names nothing.
-        PrStringView rest = prStringSlice(text, call, text.size - call);
+        PrStringView rest = prStringFrom(text, call);
         if (rest.size == 0 || (rest.size >= 3 && prStringSlice(rest, 0, 3) == "&t="))
             applySvgView(argumentsOf(prStringSlice(text, 0, call), "svgView"), view);
     } else if (prStringFindByte(text, '=') < text.size) {
@@ -246,8 +246,8 @@ void svgImageRelease(const SvgImage* PR_NULLABLE image) {
 
 PrLayoutPainter svgImagePainter(const SvgImage* image) {
     return PrLayoutPainter{
-        .paint = painterDraw,
         .context = const_cast<SvgImage*>(image),
+        .paint = painterDraw,
         .retain = painterRetain,
         .release = painterRelease,
     };

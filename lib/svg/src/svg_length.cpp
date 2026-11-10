@@ -108,7 +108,7 @@ bool parse(PrStringView text, LengthValue* out) {
     float number = 0;
     if (!numberListRead(text, &at, &number))
         return false;
-    PrStringView unit = prStringTrimEnd(prStringSlice(text, at, text.size - at));
+    PrStringView unit = prStringTrimEnd(prStringFrom(text, at));
     for (uint32_t type = PrSvgLengthType_Percentage; type < countOf(kUnits); ++type) {
         if (prAsciiEqualsFold(unit, kUnits[type])) {
             *out = LengthValue{.type = PrSvgLengthType(type), .factor = number};

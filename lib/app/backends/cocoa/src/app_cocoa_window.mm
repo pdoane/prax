@@ -952,13 +952,16 @@ using namespace pr_impl;
     PrRawString text = prRawStringNull();
     if (mac.key != PrAppKey_Unknown) {
         event.keyboard.key = mac.key;
-    } else if (NSString* character = cocoaCharacterOf(source)) {
-        text = prAppleNSStringToRawString(character);
-        event.keyboard.text = prRawStringView(&text);
-        unichar first = [character.uppercaseString characterAtIndex:0];
-        event.keyboard.key = first < 128 ? PrAppKey(first) : PrAppKey_Unknown;
-    } else if (cocoaIsDead(source)) {
-        event.keyboard.key = PrAppKey_Dead;
+    } else {
+        if (NSString* character = cocoaCharacterOf(source)) {
+            text = prAppleNSStringToRawString(character);
+            event.keyboard.text = prRawStringView(&text);
+        }
+        // A key that is dead with Option held, as Option-E is in the US layout, means its key in a shortcut.
+        NSEventModifierFlags chord =
+            NSEventModifierFlagOption | NSEventModifierFlagCommand | NSEventModifierFlagControl;
+        bool dead = (source.modifierFlags & chord) == 0 && cocoaIsDead(source);
+        event.keyboard.key = dead ? PrAppKey_Dead : cocoaKeyOfCharacter(source);
     }
     PrCocoaWindow* owner = self.owner;
     [owner key:event.keyboard.code down:kind == PrAppEventKind_KeyDown key:event.keyboard.key];

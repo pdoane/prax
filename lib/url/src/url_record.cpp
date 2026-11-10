@@ -116,10 +116,10 @@ bool parseIpv4Number(PrStringView text, uint64_t* out) {
     uint32_t radix = 10;
     if (text.size >= 2 && text.data[0] == '0' && prAsciiLower(text.data[1]) == 'x') {
         radix = 16;
-        text = prStringSlice(text, 2, text.size - 2);
+        text = prStringFrom(text, 2);
     } else if (text.size >= 2 && text.data[0] == '0') {
         radix = 8;
-        text = prStringSlice(text, 1, text.size - 1);
+        text = prStringFrom(text, 1);
     }
     // "0x" alone is zero.
     uint64_t value = 0;
@@ -136,7 +136,7 @@ bool endsInNumber(PrStringView text) {
     size_t first = text.size;
     while (first != 0 && text.data[first - 1] != '.')
         --first;
-    PrStringView last = prStringSlice(text, first, text.size - first);
+    PrStringView last = prStringFrom(text, first);
     bool digits = last.size != 0;
     for (size_t i = 0; i < last.size; ++i)
         digits = digits && prAsciiIsDigit(last.data[i]);
@@ -151,7 +151,7 @@ PrStatus parseIpv4(PrStringView text, uint32_t* out) {
     uint64_t numbers[4];
     uint32_t count = 0;
     for (size_t first = 0;;) {
-        size_t end = first + prStringFindByte(prStringSlice(text, first, text.size - first), '.');
+        size_t end = first + prStringFindByte(prStringFrom(text, first), '.');
         if (count == 4 || !parseIpv4Number(prStringSlice(text, first, end - first), &numbers[count]))
             return PrStatus_Syntax;
         ++count;
@@ -367,7 +367,7 @@ int codePoint(const Parser* p) {
 
 PrStringView remaining(const Parser* p) {
     size_t next = p->pointer + 1;
-    return next < p->input.size ? prStringSlice(p->input, next, p->input.size - next) : "";
+    return next < p->input.size ? prStringFrom(p->input, next) : "";
 }
 
 bool remainingStartsWith(const Parser* p, char c) {
@@ -377,7 +377,7 @@ bool remainingStartsWith(const Parser* p, char c) {
 
 // Returns the input from the pointer onward.
 PrStringView fromPointer(const Parser* p) {
-    return prStringSlice(p->input, p->pointer, p->input.size - p->pointer);
+    return prStringFrom(p->input, p->pointer);
 }
 
 bool isSpecial(const Parser* p) {
@@ -411,7 +411,7 @@ void appendSegment(Parser* p, PrStringView segment) {
 PrStringView firstSegment(PrStringView path) {
     if (path.size == 0)
         return path;
-    PrStringView rest = prStringSlice(path, 1, path.size - 1);
+    PrStringView rest = prStringFrom(path, 1);
     return prStringSlice(rest, 0, prStringFindByte(rest, '/'));
 }
 
@@ -892,7 +892,7 @@ PrRawString formDecode(PrTextBuffer* bytes, PrStringView text) {
 // Encodes a name or value for url/#concept-urlencoded-serializer.
 void formEncode(PrTextBuffer* out, PrStringView text) {
     for (size_t first = 0; first <= text.size;) {
-        PrStringView rest = prStringSlice(text, first, text.size - first);
+        PrStringView rest = prStringFrom(text, first);
         size_t space = prStringFindByte(rest, ' ');
         urlAppendPercentEncoded(out, prStringSlice(rest, 0, space), PrUrlPercentEncodeSet_Form);
         if (space != rest.size)
@@ -1021,7 +1021,7 @@ void urlSearchParamsParse(UrlSearchParams* params, PrStringView input) {
     urlSearchParamsClear(params);
     PrTextBuffer bytes = {};
     for (size_t first = 0; first < input.size;) {
-        PrStringView rest = prStringSlice(input, first, input.size - first);
+        PrStringView rest = prStringFrom(input, first);
         PrStringView sequence = prStringSlice(rest, 0, prStringFindByte(rest, '&'));
         first += sequence.size + 1;
         if (sequence.size == 0)

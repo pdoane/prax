@@ -452,7 +452,7 @@ void comfyConnect(ComfyClient* client, PrStringView origin) {
         PrStringView scheme = "";
         if (prStringStartsWith(rest, "http")) {
             scheme = "ws";
-            rest = prStringSlice(rest, 4, rest.size - 4);
+            rest = prStringFrom(rest, 4);
         }
         String url = format("{}{}/ws?clientId={}", scheme, rest, client->clientId);
         PrWebSocketDesc desc{.url = url, .event = socketEvent, .context = client};

@@ -65,7 +65,7 @@ void urlAppendPercentEncodedIn(PrTextBuffer* out, PrStringView text, PrCharset c
     PrCharsetEncoder encoder = prCharsetEncoderMake(charset);
     PrTextBuffer bytes = {};
     for (size_t at = 0;;) {
-        PrStringView rest = prStringSlice(text, at, text.size - at);
+        PrStringView rest = prStringFrom(text, at);
         prTextBufferClear(&bytes);
         prTextBufferResize(&bytes, uint32_t(prCharsetEncodeMaxSize(&encoder, rest.size)));
         size_t size = 0;

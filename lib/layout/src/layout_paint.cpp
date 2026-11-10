@@ -1990,7 +1990,76 @@ struct Painter : LayoutWalkVisitor {
     // batch, and the batch ends after the fragment if it holds enough commands. The exception is a fragment whose own
     // commands fill a batch, as a long line with many fonts may: its batch ends among its ranges. The ranges are in
     // placement order, so each batch holds a part of the line that playback can skip if it is outside the clip. A turn
-    // is closed at the end of a batch and opened again in the next.
+    // is closed at the end of a batch and opened again in the next. Records the lines that decorate the text of a
+    // horizontal fragment, which the boxes around it give: each box from the text's parent outward, to the first that
+    // is an atomic inline, floats or is out of flow, whose content does not take the decoration of the boxes outside it
+    // (css-text-decor-3/#line-decoration). Records the underlines and overlines if `under`, which paint below the text,
+    // and the lines through it otherwise. Each line spans the fragment, placed by the metrics of its first font, in the
+    // frame that snaps its glyphs.
+    void decorate(const LayoutFragment* fragment, PrLayoutVec at, bool under) {
+        const LayoutFragmentText& text = fragment->text;
+        if (text.glyphCount == 0 || text.rangeCount == 0 || fragment->turn != LayoutTextTurn_None ||
+                layoutStyleTraits(styles, layoutFragmentStyle(tree, fragment)).vertical)
+            return;
+        PrLayoutTextDecorationLines wanted = PrLayoutTextDecorationLine_LineThrough;
+        if (under)
+            wanted = PrLayoutTextDecorationLine_Underline | PrLayoutTextDecorationLine_Overline;
+        const LayoutFragmentFontRange& range = layoutFragmentTextRanges(fragment)[0];
+        const PrFont* font = layoutFragmentTextFonts(fragment)[range.font];
+        float size = text.size * range.scale;
+        PrVec2 offset = prLayoutVecToPx(at - origin);
+        float baseline = text.glyphs[0].position.y;
+        float length = layoutTextLength(tree, fragment);
+        PrDrawList* into = nullptr;
+        PrFontMetrics metrics{};
+        for (LayoutNodeIndex n = layoutTreeNode(tree, fragment->node).parent; n != kPrLayoutNodeNone;
+                n = layoutTreeNode(tree, n).parent) {
+            const PrLayoutDecorationStyle& d = layoutDecorationStyle(styles, layoutTreeNode(tree, n).style);
+            PrLayoutTextDecorationLines lines = PrLayoutTextDecorationLines(d.textDecorationLine & wanted);
+            for (PrLayoutTextDecorationLines line = 1; lines != 0 && line <= PrLayoutTextDecorationLine_LineThrough;
+                    line = PrLayoutTextDecorationLines(line << 1)) {
+                if ((lines & line) == 0)
+                    continue;
+                if (into == nullptr) {
+                    metrics = prFontMetrics(font);
+                    into = out();
+                    prDrawListPushTransformSnapped(into,
+                        prDAffine2FromAffine2(prAffine2Translate(PrVec2{0, offset.y})), PrDrawSnapFlag_Y);
+                }
+                bool through = line == PrLayoutTextDecorationLine_LineThrough;
+                float thickness = (through ? metrics.strikeoutThickness : metrics.underlineThickness) * size;
+                if (d.textDecorationThickness.raw > 0)
+                    thickness = prLayoutUnitToPx(d.textDecorationThickness);
+                thickness = thickness > 1 ? thickness : 1;
+                float center = metrics.underlinePosition * size;
+                if (line == PrLayoutTextDecorationLine_Overline)
+                    center = -metrics.ascent * size + thickness / 2;
+                else if (line == PrLayoutTextDecorationLine_LineThrough)
+                    center = metrics.strikeoutPosition * size;
+                PrDrawDecoration drawn{
+                    .origin = PrVec2{offset.x, baseline + center},
+                    .length = length,
+                    .thickness = thickness,
+                    .style = d.textDecorationStyle,
+                    .wavelength = thickness * 4,
+                    .amplitude = thickness,
+                };
+                prDrawListDecoration(into, &drawn, {.color = d.textDecorationColor});
+                ++commands;
+                ++stats->commandsRecorded;
+                ++batched;
+            }
+            if (layoutIsAtomicInline(tree, n) || layoutIsOutOfFlow(tree, n) || layoutIsFloat(tree, n))
+                break;
+        }
+        if (into != nullptr) {
+            prDrawListPopTransform(into);
+            commands += 2;
+            stats->commandsRecorded += 2;
+            batched += 2;
+        }
+    }
+
     void text(const LayoutFragment* fragment, PrLayoutVec at, bool visible) {
         ++visits;
         repainted(fragment->node);
@@ -2007,6 +2076,7 @@ struct Painter : LayoutWalkVisitor {
             caretSlots(fragment, at);
             return;
         }
+        decorate(fragment, at, true);
         PrVec2 offset = prLayoutVecToPx(at - origin);
         PrColor16 color = layoutColorStyle(styles, layoutFragmentStyle(tree, fragment)).color;
         // The glyphs are placed from the fragment's corner, in the frame of a horizontal line that a turn rotates by a
@@ -2070,6 +2140,7 @@ struct Painter : LayoutWalkVisitor {
                 prDrawListPopMark(into);
             prDrawListPopTransform(into);
         }
+        decorate(fragment, at, false);
         ++stats->textFragmentsRecorded;
         stats->glyphCommandsRecorded += text.rangeCount;
         caretSlots(fragment, at);
@@ -2083,8 +2154,9 @@ struct Painter : LayoutWalkVisitor {
         PrColor16 base = layoutColorStyle(styles, layoutFragmentStyle(tree, fragment)).color;
         float length = layoutTextLength(tree, fragment);
         uint32_t start = layoutTextStart(fragment);
-        PrDrawList* into = out();
         uint32_t before = commands;
+        decorate(fragment, at, true);
+        PrDrawList* into = out();
         auto record = [&]() {
             ++commands;
             ++stats->commandsRecorded;
@@ -2191,6 +2263,7 @@ struct Painter : LayoutWalkVisitor {
             }
             record();
         }
+        decorate(fragment, at, false);
         ++stats->textFragmentsRecorded;
         if (commands != before && batched >= kPaintBatch)
             flush();

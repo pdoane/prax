@@ -25,7 +25,7 @@ char byteAt(const Prescan* p) {
 }
 
 bool startsWith(const Prescan* p, PrStringView prefix) {
-    return prStringStartsWith(prStringSlice(p->bytes, p->at, p->bytes.size - p->at), prefix);
+    return prStringStartsWith(prStringFrom(p->bytes, p->at), prefix);
 }
 
 // An attribute that the prescan read, its name and value in ASCII lowercase.

@@ -87,7 +87,7 @@ bool prUrlToFilePath(PrStringView url, PrRawString* out) {
         PrStringView path{decoded.data, decoded.count};
 #if defined(_WIN32)
         if (path.size >= 3 && path.data[0] == '/' && path.data[2] == ':')
-            path = prStringSlice(path, 1, path.size - 1);
+            path = prStringFrom(path, 1);
 #endif
         found = path.size != 0 && prStringFindByte(path, '\0') == path.size && prUtf8Validate(path) == path.size;
         if (found)

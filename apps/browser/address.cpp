@@ -33,7 +33,7 @@ size_t schemeLength(PrStringView text) {
 
 // Returns true if `text` has "://" after the scheme of `length` bytes that it begins with.
 bool hasAuthority(PrStringView text, size_t length) {
-    return prStringStartsWith(prStringSlice(text, length, text.size - length), "://");
+    return prStringStartsWith(prStringFrom(text, length), "://");
 }
 
 // Returns true if `text` begins with a scheme that makes it a URL as written.
@@ -167,7 +167,7 @@ PrStringView addressHost(PrStringView url) {
         authority = prStringSlice(authority, at + 1, authority.size - at - 1);
     PrStringView host = hostOf(authority);
     if (prStringStartsWith(host, "www."))
-        host = prStringSlice(host, 4, host.size - 4);
+        host = prStringFrom(host, 4);
     return host;
 }
 

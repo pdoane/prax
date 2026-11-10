@@ -92,7 +92,7 @@ int main() {
         PrStatus status =
             hasBase ? urlParse(prStringSlice(payload, 0, size), nullptr, PrCharset_Utf8, &base) : PrStatus_Ok;
         if (status == PrStatus_Ok)
-            status = urlParse(prStringSlice(payload, size, payload.size - size), base, PrCharset_Utf8, &url);
+            status = urlParse(prStringFrom(payload, size), base, PrCharset_Utf8, &url);
 
         PrTextBuffer out = {};
         prTextBufferAppend(&out, "{\"status\":");

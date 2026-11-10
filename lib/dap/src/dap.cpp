@@ -346,7 +346,7 @@ void handleMessage(DapClient* client, PrStringView body) {
 bool contentLength(PrStringView header, uint64_t* out) {
     size_t at = 0;
     while (at < header.size) {
-        size_t end = prStringFind(prStringSlice(header, at, header.size - at), "\r\n");
+        size_t end = prStringFind(prStringFrom(header, at), "\r\n");
         end = end == header.size - at ? header.size : at + end;
         PrStringView line = prStringSlice(header, at, end - at);
         size_t colon = prStringFindByte(line, ':');

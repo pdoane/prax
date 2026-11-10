@@ -502,7 +502,8 @@ const PrUiPayload* PR_NULLABLE prUiExportEnded(const PrUi* ui, PrAppDragOperatio
 // node and walking up through its ancestors, that claimed the key. If nothing is focused, the walk starts at the key
 // root (prUiSetKeyRoot). If no node claimed the key, it is used for focus traversal and activation. A key press that
 // the input method takes for a composition (PrAppKeyboardEvent::composing) is neither claimed nor captured. It goes to
-// the focused node.
+// the focused node. Caps Lock is not a modifier for routing: a claim never names it, and a key press matches whether it
+// is on or off.
 bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers);
 
 // Captures `key` with exactly `modifiers` for the node, and returns true if such a key press was routed to the node in
@@ -670,6 +671,13 @@ void prUiForget(PrUi* ui, const void* owner);
 // layout.
 void prUiReveal(PrUi* ui, PrLayoutNode node);
 void prUiRevealRect(PrUi* ui, PrLayoutNode node, PrLayoutRect rect);
+
+// Keeps the bottom of the scroll container `node` in view as its content grows, as a log or a chat transcript does. A
+// round calls it for the container, and the container follows while it shows its bottom as of the last layout, which it
+// does before its first: a scroll away from the bottom stops it, and a scroll back to the bottom resumes it. While it
+// does not follow, content added at the bottom leaves the view where it is, and scroll anchoring holds the view still
+// as content above it changes.
+void prUiFollowEnd(PrUi* ui, PrLayoutNode node);
 
 #if defined(__cplusplus)
 }

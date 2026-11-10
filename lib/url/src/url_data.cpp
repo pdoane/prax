@@ -17,7 +17,7 @@ PrStatus prUrlProcessData(PrStringView url, PrRawString* body, PrRawString* mime
     *mimeType = PrRawString{};
     if (!prAsciiStartsWithFold(url, "data:"))
         return PrStatus_NotFound;
-    PrStringView input = prStringSlice(url, 5, url.size - 5);
+    PrStringView input = prStringFrom(url, 5);
     size_t hash = prStringFindByte(input, '#');
     if (hash < input.size)
         input.size = hash;

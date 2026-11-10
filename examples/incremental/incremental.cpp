@@ -730,7 +730,12 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     prKitPlace(kit, pane, {.flex = PrKitFlex_Fill});
     if (s.recorded != nullptr) {
         PrLayoutContent content{.kind = PrLayoutContentKind_Painter};
-        content.painter = PrLayoutPainter{paintPage, s.recorded, retainPage, releasePage};
+        content.painter = PrLayoutPainter{
+            .context = s.recorded,
+            .paint = paintPage,
+            .retain = retainPage,
+            .release = releasePage,
+        };
         prLayoutTreeFrameSetContent(tree, pane, &content);
     }
     PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(tree, pane, PrLayoutCoordinates_Viewport));
@@ -823,8 +828,8 @@ int main() {
         .title = "Prax Incremental",
         .extent = {1280, 860},
         .open = open,
-        .theme = [](void*, PrStudioWindow*, const PrAppUserPreferences*) -> PrKitThemeVariant {
-            return PrKitThemeVariant_Dark;
+        .palette = [](void*, PrStudioWindow*, const PrAppUserPreferences*, PrKitPalette* palette) {
+            *palette = prKitPaletteStudio(PrKitThemeVariant_Dark);
         },
         .beginFrame = beginFrame,
         .event = event,
