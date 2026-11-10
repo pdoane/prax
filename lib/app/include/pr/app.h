@@ -25,11 +25,6 @@ extern "C" {
 // A window and its event loop, created by its backend's constructor.
 typedef struct PrApp PrApp;
 
-// The system's browser engine, created by an application. A page loads into a viewport of a size in CSS pixels, and
-// scripts run in it. The page's rendering is captured, or shown live in the application's window, where the platform
-// composites it.
-typedef struct PrAppBrowser PrAppBrowser;
-
 // The kinds of input event.
 enum {
     PrAppEventKind_PointerMove,
@@ -471,51 +466,10 @@ typedef struct PrAppNotificationDesc {
     uint64_t tag;               // chosen by the program, and reported by the Notification event of a click
 } PrAppNotificationDesc;
 
-// Called once a page has loaded or failed to load. `status` is Ok if the page loaded.
-typedef void (*PrAppBrowserDoneFn)(void* PR_NULLABLE context, PrStatus status);
-
-// Called with a script's result as JSON, or the null view if it has none. If the script fails, `status` is InvalidData
-// and `json` is the message of its error.
-typedef void (*PrAppBrowserResultFn)(void* PR_NULLABLE context, PrStatus status, PrStringView json);
-
-// Called with the pixels of a capture as premultiplied Bgra8. The pixels are valid during the call, and empty if the
-// capture failed.
-typedef void (*PrAppBrowserCaptureFn)(void* PR_NULLABLE context, PrStatus status, PrPixelView pixels);
-
-// What a browser is created with.
-typedef struct PrAppBrowserDesc {
-    PrUVec2 viewport;           // CSS pixels
-    float pixelRatio;           // pixels per CSS pixel that the browser renders the page at, or zero for the display's
-
-    // The preferences that the page's media queries read, of which the engine takes the color scheme, or null to follow
-    // the system's as they change.
-    const PrAppUserPreferences* PR_NULLABLE preferences;
-} PrAppBrowserDesc;
-
-// The roles of the processes that a browser engine runs a page in.
-enum {
-    PrAppBrowserProcessRole_Content,    // runs the page's scripts and lays it out
-    PrAppBrowserProcessRole_Gpu,
-    PrAppBrowserProcessRole_Network,
-};
-typedef uint8_t PrAppBrowserProcessRole;
-
-// A process that a browser engine runs a page in.
-typedef struct PrAppBrowserProcess {
-    PrAppBrowserProcessRole role;
-    int32_t id;                 // the system's process identifier
-} PrAppBrowserProcess;
-
-// The start of every browser's state. `app` is the application that created the browser.
-struct PrAppBrowser {
-    PrApp* app;
-};
-
 // The functions of an application, at the start of its backend's state. Each member implements the function that it is
-// named for. A null `destroy` leaves nothing to free. An application with no browser engine leaves all the browser
-// functions null. Callers use the functions below, never these members. A backend delivers each frame with
-// prAppDeliverFrame. `requestFrameAt` replaces the time of the last call, and zero leaves no time. A backend that
-// implements `isActive` requests a frame whenever its result changes.
+// named for. A null `destroy` leaves nothing to free. Callers use the functions below, never these members. A backend
+// delivers each frame with prAppDeliverFrame. `requestFrameAt` replaces the time of the last call, and zero leaves no
+// time. A backend that implements `isActive` requests a frame whenever its result changes.
 struct PrApp {
     void (*PR_NULLABLE destroy)(PrApp* app);
     void (*run)(PrApp* app, const PrAppHandler* handler);
@@ -536,29 +490,13 @@ struct PrApp {
     PrStatus (*setClipboardText)(PrApp* app, PrStringView text);
     void (*requestClipboardImage)(PrApp* app);
     PrStatus (*setClipboardImage)(PrApp* app, PrPixelView pixels);
-    PrStatus (*PR_NULLABLE browserCreate)(PrApp* app, const PrAppBrowserDesc* desc,
-        PrAppBrowser* PR_NULLABLE* PR_NONNULL out);
-    void (*PR_NULLABLE browserDestroy)(PrApp* app, PrAppBrowser* browser);
-    void (*PR_NULLABLE browserResize)(PrApp* app, PrAppBrowser* browser, PrUVec2 viewport);
-    void (*PR_NULLABLE browserLoad)(PrApp* app, PrAppBrowser* browser, PrStringView url,
-        PrAppBrowserDoneFn done, void* PR_NULLABLE context);
-    void (*PR_NULLABLE browserEvaluate)(PrApp* app, PrAppBrowser* browser, PrStringView script,
-        PrAppBrowserResultFn done, void* PR_NULLABLE context);
-    void (*PR_NULLABLE browserCapture)(PrApp* app, PrAppBrowser* browser, PrRect rect, PrUVec2 size,
-        PrAppBrowserCaptureFn done, void* PR_NULLABLE context);
-    void (*PR_NULLABLE browserShow)(PrApp* app, PrAppBrowser* browser, PrRect clip, PrRect frame);
-    void (*PR_NULLABLE browserHide)(PrApp* app, PrAppBrowser* browser);
-    void (*PR_NULLABLE browserPrint)(PrApp* app, PrAppBrowser* browser, PrStringView path, PrVec2 paper,
-        PrAppBrowserDoneFn done, void* PR_NULLABLE context);
-    uint32_t (*PR_NULLABLE browserProcesses)(PrApp* app, PrAppBrowser* browser, PrAppBrowserProcess* PR_NULLABLE out,
-        uint32_t capacity);
 };
 
-// Creates an application by the backend, as `desc` describes. A backend's own header documents what its windows and
-// browsers are. Returns null if the build does not have the backend.
+// Creates an application by the backend, as `desc` describes. A backend's own header documents what its windows are.
+// Returns null if the build does not have the backend.
 PrApp* PR_NULLABLE prAppCreate(PrAppBackend backend, const PrAppDesc* desc);
 
-// Frees the application, which must not be running. Its browsers must be destroyed first.
+// Frees the application, which must not be running.
 void prAppDestroy(PrApp* PR_NULLABLE app);
 
 // Creates the window and delivers events to a copy of `handler` until the program stops. Closing the window also stops
@@ -633,55 +571,6 @@ void prAppRequestClipboardImage(PrApp* app);
 // Replaces the clipboard's contents with the image of `pixels`, which are straight-alpha sRGB Rgba8 of nonzero size.
 // Returns Io if the system refuses.
 PrStatus prAppSetClipboardImage(PrApp* app, PrPixelView pixels);
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Browsers
-//
-// Each call completes through its callback on the thread that runs the application, never during the call. Once a
-// browser is destroyed, its pending callbacks are not called.
-
-// Creates a browser as `desc` describes it, empty until a page loads. Its page keeps no data once the browser is
-// destroyed, and renders at full speed whether or not it is seen. Returns NotSupported if the backend has no browser
-// engine. On failure, `*out` is null.
-PrStatus prAppBrowserCreate(PrApp* app, const PrAppBrowserDesc* desc, PrAppBrowser* PR_NULLABLE* PR_NONNULL out);
-
-// Frees the browser.
-void prAppBrowserDestroy(PrAppBrowser* PR_NULLABLE browser);
-
-// Sets the viewport to `viewport` in CSS pixels.
-void prAppBrowserResize(PrAppBrowser* browser, PrUVec2 viewport);
-
-// Loads the page at `url`, and calls `done` once it has loaded or failed. A page from a file URL, and its scripts, may
-// read the files beside it.
-void prAppBrowserLoad(PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done, void* PR_NULLABLE context);
-
-// Runs `script` in the page as global code, and calls `done` with its result. If the result is a promise, `done` is
-// called once the promise settles.
-void prAppBrowserEvaluate(PrAppBrowser* browser, PrStringView script, PrAppBrowserResultFn done, void* PR_NULLABLE context);
-
-// Captures `rect` of the viewport, in CSS pixels, as the page is displayed once its latest changes have rendered, at
-// `size` pixels in sRGB, and calls `done` with the pixels.
-void prAppBrowserCapture(PrAppBrowser* browser, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done, void* PR_NULLABLE context);
-
-// Shows the page live in the application's window, over what the program presents. The viewport is scaled to fill
-// `frame` and clipped to `clip`, both in the window's logical pixels. The platform renders and composites the page on
-// its own schedule, as it does any page it shows. The program neither draws it nor waits for it. Whether or not it is
-// shown, the page lays out and captures at the size of its viewport.
-void prAppBrowserShow(PrAppBrowser* browser, PrRect clip, PrRect frame);
-
-// Removes the page from the window and moves it back to its own window, which no one sees.
-void prAppBrowserHide(PrAppBrowser* browser);
-
-// Prints the page to a PDF at `path`, on paper of `paper` CSS pixels with no margins of its own, or on US Letter if
-// `paper` is zero, as the page's print styles lay it out with backgrounds drawn, and calls `done` once the file is
-// written or the print failed. Returns NotSupported, and calls nothing, if the engine does not print.
-PrStatus prAppBrowserPrint(PrAppBrowser* browser, PrStringView path, PrVec2 paper, PrAppBrowserDoneFn done,
-    void* PR_NULLABLE context);
-
-// Writes up to `capacity` of the processes that the engine runs the page in, other than the application's own, to
-// `out`, and returns how many it runs. Processes appear as the engine starts them, once a page begins to load, and an
-// engine that runs pages in the application's own process has none.
-uint32_t prAppBrowserProcesses(PrAppBrowser* browser, PrAppBrowserProcess* PR_NULLABLE out, uint32_t capacity);
 
 #if defined(__cplusplus)
 }

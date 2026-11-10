@@ -1371,7 +1371,7 @@ class BackendHeaders(unittest.TestCase):
 
     def test_another_librarys_backend_does_not_include_cores_backends(self):
         report = lint.Report()
-        path = os.path.join(lint.ROOT, 'lib/app/backends/win32/src/win32_browser.cpp')
+        path = os.path.join(lint.ROOT, 'lib/webview/backends/webview2/src/webview_webview2.cpp')
         lint.check_backend_headers(report, path, '#include "pr/core_windows_file.h"\n#include "pr/windows_string.h"\n',
                                    lint.backend_headers())
         self.assertEqual([message for _, _, _, message in report.problems],

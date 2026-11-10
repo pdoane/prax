@@ -110,10 +110,6 @@ TEST_CASE("the interface passes calls through") {
     prAppStop(app);
     PrAppSurface surface{};
     CHECK(prAppSurface(app, &surface) == PrStatus_InvalidState);
-    PrAppBrowser* browser = nullptr;
-    PrAppBrowserDesc desc{.viewport = PrUVec2{10, 10}};
-    CHECK(prAppBrowserCreate(app, &desc, &browser) == PrStatus_NotSupported);
-    CHECK(browser == nullptr);
     prAppDestroy(app);
     prAppDestroy(nullptr);
     CHECK(fake.calls == Array<String>({

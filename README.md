@@ -120,47 +120,49 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | app | `PR_APP_COCOA` | Cocoa | macOS | on |
 | app | `PR_APP_WIN32` | Win32 | Windows | on |
 | app | `PR_APP_WEB` | a web page's canvas | the web | on |
-| gpu | `PR_GPU_METAL` | Metal 3 | macOS | on |
-| gpu | `PR_GPU_METAL4` | Metal 4, for experiments | macOS | on |
-| gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
-| gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web and iOS | on for Linux and Android |
-| gpu | `PR_GPU_MEMORY` | memory, without shaders or presentation | every platform | on |
-| gpu | `PR_GPU_CANVAS2D` | memory and a web page's canvases, without shaders | the web | on |
-| net | `PR_NET_SOCKETS` | BSD sockets, or Winsock on Windows | every platform but the web | on |
-| net | `PR_NET_NULL` | no connections, and an event loop that the caller runs | every platform | on |
-| process launcher | `PR_PROCESS_POSIX` | posix_spawn | macOS and Linux | on |
-| process launcher | `PR_PROCESS_WINDOWS` | CreateProcessW | Windows | on |
-| tls | `PR_TLS_APPLE` | Network.framework | Apple platforms | on |
-| tls | `PR_TLS_SCHANNEL` | SChannel | Windows | on |
-| tls | `PR_TLS_OPENSSL` | OpenSSL 3 | where the build finds it | on for Unix-like systems other than Apple's |
-| http | `PR_HTTP_BUILTIN` | HTTP/1.1 over `lib/net` and `lib/tls` | every platform | on |
-| websocket | `PR_WEBSOCKET_BUILTIN` | the WebSocket protocol over `lib/net` and `lib/tls` | every platform | on |
-| fetch | `PR_FETCH_BUILTIN` | the Fetch Standard over `lib/http` | every platform | on |
-| fetch | `PR_FETCH_INTERCEPT` | requests that the host answers, or passes to the next fetcher | every platform | on |
-| task pool | `PR_TASK_BUILTIN` | Prax | every platform | on |
-| compression | `PR_COMPRESS_BUILTIN` | Prax | every platform | on |
-| image codecs | `PR_IMAGE_BUILTIN` | Prax | every platform | on |
 | audio | `PR_AUDIO_MEMORY` | output kept in memory, for a run without a device | every platform | on |
 | audio | `PR_AUDIO_APPLE` | Core Audio | Apple platforms | on |
 | audio | `PR_AUDIO_WINDOWS` | WASAPI | Windows | on |
-| media | `PR_MEDIA_BUILTIN` | Prax | every platform | on |
-| media | `PR_MEDIA_APPLE` | AVFoundation | Apple platforms | on |
-| media | `PR_MEDIA_WEB` | a web page's video element | the web | on |
-| media | `PR_MEDIA_WINDOWS` | Media Foundation | Windows | on |
-| system fonts | `PR_FONT_CORETEXT` | CoreText | Apple platforms | on |
-| system fonts | `PR_FONT_DIRECTWRITE` | DirectWrite | Windows | on |
-| font hinter | `PR_FONT_FREETYPE` | FreeType | every platform | off |
-| text shaper | `PR_TEXT_SIMPLE` | one glyph per character, with pair kerning | every platform | on |
-| text shaper | `PR_TEXT_CORETEXT` | CoreText | Apple platforms | on |
-| text shaper | `PR_TEXT_HARFBUZZ` | HarfBuzz | every platform | off |
-| text shaper | `PR_TEXT_KB` | kb | every platform | off |
-| syntax languages | `PR_SYNTAX_TREESITTER` | tree-sitter's grammars | every platform | off |
+| compression | `PR_COMPRESS_BUILTIN` | Prax | every platform | on |
 | draw renderer | `PR_DRAW_CPU` | CPU renderer | every platform | on |
 | draw renderer | `PR_DRAW_CANVAS` | the browser's Canvas 2D | the web | on |
 | draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform but the web | on |
 | draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform but the web | on |
 | draw writer | `PR_DRAW_SVG` | SVG documents, which need `PR_DRAW_CPU` | every platform | on |
 | draw writer | `PR_DRAW_PDF` | tagged PDF documents, which need `PR_DRAW_CPU` | every platform | on |
+| fetch | `PR_FETCH_BUILTIN` | the Fetch Standard over `lib/http` | every platform | on |
+| fetch | `PR_FETCH_INTERCEPT` | requests that the host answers, or passes to the next fetcher | every platform | on |
+| font hinter | `PR_FONT_FREETYPE` | FreeType | every platform | off |
+| system fonts | `PR_FONT_CORETEXT` | CoreText | Apple platforms | on |
+| system fonts | `PR_FONT_DIRECTWRITE` | DirectWrite | Windows | on |
+| gpu | `PR_GPU_METAL` | Metal 3 | macOS | on |
+| gpu | `PR_GPU_METAL4` | Metal 4, for experiments | macOS | on |
+| gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
+| gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web and iOS | on for Linux and Android |
+| gpu | `PR_GPU_MEMORY` | memory, without shaders or presentation | every platform | on |
+| gpu | `PR_GPU_CANVAS2D` | memory and a web page's canvases, without shaders | the web | on |
+| http | `PR_HTTP_BUILTIN` | HTTP/1.1 over `lib/net` and `lib/tls` | every platform | on |
+| image codecs | `PR_IMAGE_BUILTIN` | Prax | every platform | on |
+| media | `PR_MEDIA_BUILTIN` | Prax | every platform | on |
+| media | `PR_MEDIA_APPLE` | AVFoundation | Apple platforms | on |
+| media | `PR_MEDIA_WEB` | a web page's video element | the web | on |
+| media | `PR_MEDIA_WINDOWS` | Media Foundation | Windows | on |
+| net | `PR_NET_SOCKETS` | BSD sockets, or Winsock on Windows | every platform but the web | on |
+| net | `PR_NET_NULL` | no connections, and an event loop that the caller runs | every platform | on |
+| process launcher | `PR_PROCESS_POSIX` | posix_spawn | macOS and Linux | on |
+| process launcher | `PR_PROCESS_WINDOWS` | CreateProcessW | Windows | on |
+| syntax languages | `PR_SYNTAX_TREESITTER` | tree-sitter's grammars | every platform | off |
+| task pool | `PR_TASK_BUILTIN` | Prax | every platform | on |
+| text shaper | `PR_TEXT_SIMPLE` | one glyph per character, with pair kerning | every platform | on |
+| text shaper | `PR_TEXT_CORETEXT` | CoreText | Apple platforms | on |
+| text shaper | `PR_TEXT_HARFBUZZ` | HarfBuzz | every platform | off |
+| text shaper | `PR_TEXT_KB` | kb | every platform | off |
+| tls | `PR_TLS_APPLE` | Network.framework | Apple platforms | on |
+| tls | `PR_TLS_SCHANNEL` | SChannel | Windows | on |
+| tls | `PR_TLS_OPENSSL` | OpenSSL 3 | where the build finds it | on for Unix-like systems other than Apple's |
+| websocket | `PR_WEBSOCKET_BUILTIN` | the WebSocket protocol over `lib/net` and `lib/tls` | every platform | on |
+| webview | `PR_WEBVIEW_WEBKIT` | WebKit | macOS | on |
+| webview | `PR_WEBVIEW_WEBVIEW2` | Microsoft Edge WebView2 | Windows | on |
 
 `prax::font_bundle` maps the generic font families and font fallback to font files that the application provides.
 `pr_font_bundle_fetch(<directory> Noto)` downloads a bundle's files into a directory at configure time. It is available

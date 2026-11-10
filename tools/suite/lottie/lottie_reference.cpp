@@ -11,6 +11,7 @@
 #include "pr/app_cocoa.h"
 #include "pr/assert.h"
 #include "pr/vec.h"
+#include "pr/webview.h"
 
 #include "tools/harness/harness.h"
 #include "tools/harness/harness_png.h"
@@ -35,7 +36,7 @@ struct Case {
 
 struct Capturing {
     PrApp* app = nullptr;
-    PrAppBrowser* browser = nullptr;
+    PrWebView* browser = nullptr;
     std::vector<Case> cases;
     size_t next = 0;
     std::string loaded;             // the page that the browser has loaded
@@ -74,14 +75,14 @@ void timed(void* context, PrStatus status, PrStringView message) {
         return;
     }
     const Case& now = c.cases[c.next];
-    prAppBrowserCapture(c.browser, PrRect{0, 0, float(now.width), float(now.height)}, PrUVec2{now.width, now.height},
+    prWebViewCapture(c.browser, PrRect{0, 0, float(now.width), float(now.height)}, PrUVec2{now.width, now.height},
         captured, context);
 }
 
 void seek(Capturing& c) {
     char script[128];
     std::snprintf(script, sizeof(script), "window.prSetFrame(%.6f)", c.cases[c.next].frame);
-    prAppBrowserEvaluate(c.browser, script, timed, &c);
+    prWebViewEvaluate(c.browser, script, timed, &c);
 }
 
 void loaded(void* context, PrStatus status) {
@@ -100,13 +101,13 @@ void runNext(Capturing& c) {
         return;
     }
     const Case& now = c.cases[c.next];
-    prAppBrowserResize(c.browser, PrUVec2{now.width, now.height});
+    prWebViewResize(c.browser, PrUVec2{now.width, now.height});
     if (c.loaded == now.url) {
         seek(c);
         return;
     }
     c.loaded = now.url;
-    prAppBrowserLoad(c.browser, now.url, loaded, &c);
+    prWebViewLoad(c.browser, now.url, loaded, &c);
 }
 
 } // namespace
@@ -142,8 +143,8 @@ int main() {
         &c,
         [](void* context, PrApp* app, const PrAppFrame*) {
             Capturing& c = *static_cast<Capturing*>(context);
-            PrAppBrowserDesc desc{.viewport = PrUVec2{c.cases[0].width, c.cases[0].height}};
-            if (prAppBrowserCreate(app, &desc, &c.browser) != PrStatus_Ok) {
+            PrWebViewDesc desc{.viewport = PrUVec2{c.cases[0].width, c.cases[0].height}};
+            if (prWebViewCreate(PrWebViewBackend_WebKit, &desc, &c.browser) != PrStatus_Ok) {
                 for (; c.next < c.cases.size(); ++c.next)
                     answer(PrStatus_NotSupported);
                 prAppStop(app);
@@ -155,7 +156,7 @@ int main() {
         [](void*, PrApp*, const PrAppEvent*) {},
         [](void* context, PrApp*) {
             Capturing& c = *static_cast<Capturing*>(context);
-            prAppBrowserDestroy(c.browser);
+            prWebViewDestroy(c.browser);
             c.browser = nullptr;
         },
     };

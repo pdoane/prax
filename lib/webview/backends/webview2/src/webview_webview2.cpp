@@ -1,14 +1,14 @@
-// A WebView2 controller that the Win32 backend's browser loads, runs and captures. When hidden, it is in a window of
-// its own beyond the left edge of the desktop, where the page renders but no one sees it. When shown, it is in a
-// clipping window over the app's own window. The engine starts asynchronously, so the calls made before it has started
-// wait for it, in order.
+// The WebView2 backend of web views: a WebView2 controller that it loads, runs and captures. When hidden, it is in a
+// window of its own beyond the left edge of the desktop, where the page renders but no one sees it. When shown, it is
+// in a clipping window over its host's window. The engine starts asynchronously, so the calls made before it has
+// started wait for it, in order.
 //
 // The engine holds its handlers past a browser's destruction, and may call them after it. Each handler holds the
 // browser's memory until it runs, and does nothing once the browser is destroyed. A browser destroyed while the engine
 // creates its page lets the creation finish and then closes the page, because a process that exits while an environment
 // has never had a controller can hang in the kernel as it exits.
 
-#include "app/backends/win32/src/win32_browser.h"
+#include "pr/webview_webview2.h"
 
 #include "pr/alloc.h"
 #include "pr/base64.h"
@@ -17,6 +17,7 @@
 #include "pr/json.h"
 #include "pr/raw_array.h"
 #include "pr/text_buffer.h"
+#include "pr/webview_backend.h"
 #include "pr/windows_string.h"
 
 #define NOMINMAX
@@ -37,7 +38,7 @@ using Microsoft::WRL::Make;
 // The message that a browser posts to its window to deliver the completions that failed during their calls.
 constexpr UINT kMessageFailed = WM_APP + 0;
 
-constexpr wchar_t kClassName[] = L"PrAppWin32Browser";
+constexpr wchar_t kClassName[] = L"PrWebViewWebView2";
 
 // The folder of the engine's profile, under the user's temporary folder. Pages run in private mode, so the profile
 // keeps no data of theirs.
@@ -74,14 +75,14 @@ struct Request {
     PrRect rect;
     PrUVec2 size;
     PrVec2 paper;
-    PrAppBrowserDoneFn done;
-    PrAppBrowserResultFn result;
-    PrAppBrowserCaptureFn capture;
+    PrWebViewDoneFn done;
+    PrWebViewResultFn result;
+    PrWebViewCaptureFn capture;
     void* context;
 };
 
-struct Win32Browser : PrAppBrowser {
-    HWND host;                  // the application's window, which a shown page is placed over, or null
+struct Win32Browser : PrWebView {
+    HWND host;                  // the window that the page was last shown over, or null
     HWND window;                // the window beyond the desktop that holds the hidden page
     HWND clip;                  // the child of `host` that clips the shown page, or null
     ICoreWebView2Environment* environment;
@@ -104,7 +105,7 @@ struct Win32Browser : PrAppBrowser {
     uint64_t navigation;        // the latest navigation that started since the last load, or zero
 
     // The completion of the pending load, or null.
-    PrAppBrowserDoneFn loaded;
+    PrWebViewDoneFn loaded;
     void* loadedContext;
 
     RawArray<Request> waiting;     // the calls made before the engine started
@@ -304,7 +305,7 @@ void layOut(Win32Browser* b) {
 
 // Completes the pending load with `status`.
 void finishLoad(Win32Browser* b, PrStatus status) {
-    PrAppBrowserDoneFn done = b->loaded;
+    PrWebViewDoneFn done = b->loaded;
     void* context = b->loadedContext;
     b->loaded = nullptr;
     if (done != nullptr)
@@ -329,7 +330,7 @@ void navigate(Win32Browser* b, Request& request) {
 }
 
 // Calls `done` with the result of an evaluation, from the engine's answer to Runtime.evaluate.
-void answer(Win32Browser* b, HRESULT error, LPCWSTR json, PrAppBrowserResultFn done, void* PR_NULLABLE context) {
+void answer(Win32Browser* b, HRESULT error, LPCWSTR json, PrWebViewResultFn done, void* PR_NULLABLE context) {
     PrJson* document = prJsonCreate();
     PrStringView text = json != nullptr ? windowsNarrow(json, uint32_t(lstrlenW(json)), b->utf8) : PrStringView{""};
     if (!prJsonParse(document, text, nullptr)) {
@@ -372,7 +373,7 @@ void evaluate(Win32Browser* b, Request& request) {
     prTextBufferReset(&expression);
     prTextBufferReset(&params);
     request.text.reset();
-    PrAppBrowserResultFn done = request.result;
+    PrWebViewResultFn done = request.result;
     void* context = request.context;
     HRESULT called = b->view->CallDevToolsProtocolMethod(L"Runtime.evaluate", b->utf16.data,
         Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
@@ -421,7 +422,7 @@ bool decodePng(IWICImagingFactory* imaging, const RawArray<char>& png, PrUVec2 e
 }
 
 // Calls `done` with the pixels of a capture, from the engine's answer to Page.captureScreenshot.
-void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, PrAppBrowserCaptureFn done,
+void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, PrWebViewCaptureFn done,
         void* PR_NULLABLE context) {
     RawArray<char> png;
     RawArray<uint8_t> pixels;
@@ -452,7 +453,7 @@ void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, 
 }
 
 // Captures `rect` of the document, in CSS pixels. Returns false if the engine refused the call, and calls nothing.
-bool screenshot(Win32Browser* b, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done, void* PR_NULLABLE context) {
+bool screenshot(Win32Browser* b, PrRect rect, PrUVec2 size, PrWebViewCaptureFn done, void* PR_NULLABLE context) {
     PrTextBuffer params = {};
     prTextBufferAppend(&params, "{\"format\":\"png\",\"fromSurface\":true,\"clip\":{\"x\":");
     appendJsonNumber(&params, double(rect.left));
@@ -497,7 +498,7 @@ bool scrollOf(Win32Browser* b, LPCWSTR json, PrVec2* out) {
 void capture(Win32Browser* b, Request& request) {
     PrRect rect = request.rect;
     PrUVec2 size = request.size;
-    PrAppBrowserCaptureFn done = request.capture;
+    PrWebViewCaptureFn done = request.capture;
     void* context = request.context;
     HRESULT called = b->view->CallDevToolsProtocolMethod(L"Page.getLayoutMetrics", L"{}",
         Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
@@ -544,7 +545,7 @@ void print(Win32Browser* b, Request& request) {
         ok = GetFullPathNameW(b->utf16.data, path.count, path.data, nullptr) != 0;
     }
     if (ok) {
-        PrAppBrowserDoneFn done = request.done;
+        PrWebViewDoneFn done = request.done;
         void* context = request.context;
         auto printed = [b = hold(b), done, context](HRESULT error, BOOL written) -> HRESULT {
             if (unhold(b))
@@ -700,9 +701,7 @@ void copyText(Request& request, PrStringView text) {
         request.text.append(text.data, uint32_t(text.size));
 }
 
-} // namespace
-
-void win32BrowserDestroy(PrApp*, PrAppBrowser* browser) {
+void destroy(PrWebView* browser) {
     Win32Browser* b = static_cast<Win32Browser*>(browser);
     b->destroyed = true;
     b->loaded = nullptr;
@@ -710,16 +709,25 @@ void win32BrowserDestroy(PrApp*, PrAppBrowser* browser) {
         teardown(b);
 }
 
-void win32BrowserResize(PrApp*, PrAppBrowser* browser, PrUVec2 viewport) {
+void resize(PrWebView* browser, PrUVec2 viewport) {
     Win32Browser* b = static_cast<Win32Browser*>(browser);
     b->viewport = viewport;
     layOut(b);
 }
 
-void win32BrowserShow(PrApp*, PrAppBrowser* browser, PrRect clip, PrRect frame) {
-    Win32Browser* b = static_cast<Win32Browser*>(browser);
-    if (b->host == nullptr)
+void show(PrWebView* browser, const PrAppSurface* surface, PrRect clip, PrRect frame) {
+    if (surface->kind != PrAppSurfaceKind_Hwnd)
         return;
+    Win32Browser* b = static_cast<Win32Browser*>(browser);
+    HWND host = static_cast<HWND>(surface->handle);
+    // A page shown over another window moves to a clipping window of that one.
+    if (b->host != host && b->clip != nullptr) {
+        if (b->controller != nullptr)
+            b->controller->put_ParentWindow(b->window);
+        DestroyWindow(b->clip);
+        b->clip = nullptr;
+    }
+    b->host = host;
     if (b->clip == nullptr)
         b->clip = CreateWindowExW(0, kClassName, L"", WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0, 0, 0, 0,
             b->host, nullptr, GetModuleHandleW(nullptr), nullptr);
@@ -731,7 +739,7 @@ void win32BrowserShow(PrApp*, PrAppBrowser* browser, PrRect clip, PrRect frame) 
     layOut(b);
 }
 
-void win32BrowserHide(PrApp*, PrAppBrowser* browser) {
+void hide(PrWebView* browser) {
     Win32Browser* b = static_cast<Win32Browser*>(browser);
     if (!b->shown)
         return;
@@ -740,15 +748,14 @@ void win32BrowserHide(PrApp*, PrAppBrowser* browser) {
     ShowWindow(b->clip, SW_HIDE);
 }
 
-void win32BrowserLoad(PrApp*, PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done, void* PR_NULLABLE context) {
+void load(PrWebView* browser, PrStringView url, PrWebViewDoneFn done, void* PR_NULLABLE context) {
     Request request = requestOf(RequestKind_Load, context);
     request.done = done;
     copyText(request, url);
     submit(static_cast<Win32Browser*>(browser), request);
 }
 
-void win32BrowserEvaluate(PrApp*, PrAppBrowser* browser, PrStringView script, PrAppBrowserResultFn done,
-        void* PR_NULLABLE context) {
+void evaluate(PrWebView* browser, PrStringView script, PrWebViewResultFn done, void* PR_NULLABLE context) {
     Request request = requestOf(RequestKind_Evaluate, context);
     request.result = done;
     copyText(request, script);
@@ -757,8 +764,7 @@ void win32BrowserEvaluate(PrApp*, PrAppBrowser* browser, PrStringView script, Pr
 
 // The engine's screenshot renders a frame of the page's latest changes and copies it, so it shows what the page's
 // scripts have changed.
-void win32BrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done,
-        void* PR_NULLABLE context) {
+void capture(PrWebView* browser, PrRect rect, PrUVec2 size, PrWebViewCaptureFn done, void* PR_NULLABLE context) {
     Request request = requestOf(RequestKind_Capture, context);
     request.capture = done;
     request.rect = rect;
@@ -766,8 +772,7 @@ void win32BrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 siz
     submit(static_cast<Win32Browser*>(browser), request);
 }
 
-void win32BrowserPrint(PrApp*, PrAppBrowser* browser, PrStringView path, PrVec2 paper, PrAppBrowserDoneFn done,
-        void* PR_NULLABLE context) {
+void print(PrWebView* browser, PrStringView path, PrVec2 paper, PrWebViewDoneFn done, void* PR_NULLABLE context) {
     Request request = requestOf(RequestKind_Print, context);
     request.done = done;
     request.paper = paper;
@@ -777,7 +782,7 @@ void win32BrowserPrint(PrApp*, PrAppBrowser* browser, PrStringView path, PrVec2 
 
 // The engine names the kind of each process that it runs, but not which service a utility process runs, so the network
 // process is left out.
-uint32_t win32BrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProcess* PR_NULLABLE out, uint32_t capacity) {
+uint32_t listProcesses(PrWebView* browser, PrWebViewProcess* PR_NULLABLE out, uint32_t capacity) {
     Win32Browser* b = static_cast<Win32Browser*>(browser);
     ICoreWebView2Environment8* environment = nullptr;
     ICoreWebView2ProcessInfoCollection* processes = nullptr;
@@ -795,12 +800,12 @@ uint32_t win32BrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProces
             process->get_ProcessId(&id);
             process->Release();
         }
-        PrAppBrowserProcess found{};
+        PrWebViewProcess found{};
         found.id = id;
         if (kind == COREWEBVIEW2_PROCESS_KIND_RENDERER)
-            found.role = PrAppBrowserProcessRole_Content;
+            found.role = PrWebViewProcessRole_Content;
         else if (kind == COREWEBVIEW2_PROCESS_KIND_GPU)
-            found.role = PrAppBrowserProcessRole_Gpu;
+            found.role = PrWebViewProcessRole_Gpu;
         else
             continue;
         if (id <= 0)
@@ -814,8 +819,13 @@ uint32_t win32BrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProces
     return count;
 }
 
-PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrowserDesc* desc,
-        PrAppBrowser* PR_NULLABLE* PR_NONNULL out) {
+} // namespace
+
+} // namespace pr_impl
+
+using namespace pr_impl;
+
+PrStatus prWebViewWebView2Create(const PrWebViewDesc* desc, PrWebView* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     LPWSTR version = nullptr;
     HRESULT found = GetAvailableCoreWebView2BrowserVersionString(nullptr, &version);
@@ -826,8 +836,15 @@ PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrows
     HINSTANCE instance = GetModuleHandleW(nullptr);
     registerClass(instance);
     Win32Browser* b = allocZeroed<Win32Browser>();
-    b->app = app;
-    b->host = static_cast<HWND>(host);
+    b->destroyFn = destroy;
+    b->resizeFn = resize;
+    b->loadFn = load;
+    b->evaluateFn = evaluate;
+    b->captureFn = capture;
+    b->showFn = show;
+    b->hideFn = hide;
+    b->printFn = print;
+    b->processesFn = listProcesses;
     b->viewport = desc->viewport;
     b->pixelRatio = desc->pixelRatio;
     b->colorScheme = COREWEBVIEW2_PREFERRED_COLOR_SCHEME_AUTO;
@@ -881,5 +898,3 @@ PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrows
     *out = b;
     return PrStatus_Ok;
 }
-
-} // namespace pr_impl

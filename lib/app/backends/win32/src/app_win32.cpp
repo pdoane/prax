@@ -13,8 +13,6 @@
 #include "pr/vec.h"
 #include "pr/windows_string.h"
 
-#include "app/backends/win32/src/win32_browser.h"
-
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -1805,18 +1803,6 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->setClipboardText = setClipboardText;
     app->requestClipboardImage = requestClipboardImage;
     app->setClipboardImage = setClipboardImage;
-    app->browserCreate = [](PrApp* base, const PrAppBrowserDesc* browserDesc, PrAppBrowser** out) {
-        return win32BrowserCreate(base, static_cast<Win32App*>(base)->window, browserDesc, out);
-    };
-    app->browserDestroy = win32BrowserDestroy;
-    app->browserResize = win32BrowserResize;
-    app->browserLoad = win32BrowserLoad;
-    app->browserEvaluate = win32BrowserEvaluate;
-    app->browserCapture = win32BrowserCapture;
-    app->browserShow = win32BrowserShow;
-    app->browserHide = win32BrowserHide;
-    app->browserPrint = win32BrowserPrint;
-    app->browserProcesses = win32BrowserProcesses;
     RawArray<wchar_t> title;
     windowsWiden(desc->title, title);
     app->title = title.data;

@@ -70,6 +70,7 @@
 #include "pr/draw_list.h"
 #include "pr/image_builtin.h"
 #include "pr/vec.h"
+#include "pr/webview.h"
 
 #include "tools/harness/compare.h"
 #include "tools/harness/draw_renderers.h"
@@ -501,7 +502,7 @@ struct PaneLoad {
 // (prLayoutPageBoxDefault). Its callbacks run on the application's thread, so no frame waits for the print. The print
 // ends with its browser, which calls nothing more once destroyed.
 struct BrowserPrint {
-    PrAppBrowser* PR_NULLABLE browser = nullptr;
+    PrWebView* PR_NULLABLE browser = nullptr;
     std::filesystem::path path;                     // where the PDF is written
     PrintState state = PrintState_Pending;
     std::shared_ptr<Loaded> loaded;                 // the PDF as a source, once printed, if the platform draws PDFs
@@ -509,7 +510,7 @@ struct BrowserPrint {
     BrowserPrint() = default;
     BrowserPrint(const BrowserPrint&) = delete;
     BrowserPrint& operator=(const BrowserPrint&) = delete;
-    ~BrowserPrint() { prAppBrowserDestroy(browser); }
+    ~BrowserPrint() { prWebViewDestroy(browser); }
 };
 
 // A document, loaded with the references that the engine draws, and loaded again by each pane, so that each pane's view
@@ -530,7 +531,7 @@ struct Opened {
 // pane and plays on its own. The fields hold the page it has, whether a command is pending, what it was last told, and
 // how fast it reports drawing. It was told either to play from the clock's setting or to stand at a time.
 struct PaneBrowser {
-    PrAppBrowser* PR_NULLABLE browser = nullptr;
+    PrWebView* PR_NULLABLE browser = nullptr;
     std::string url;
     bool loaded = false;
     bool busy = false;
@@ -801,7 +802,7 @@ void browserStood(void* context, PrStatus status, PrStringView json) {
     const PaneSource& source = c->source;
     // The capture holds the part of the viewport that the pane's texture holds.
     PrRect region{0, 0, float(source.width) / source.pixelRatio, float(source.height) / source.pixelRatio};
-    prAppBrowserCapture(c->v->browsers[c->index].browser, region, PrUVec2{source.width, source.height}, browserCaptured, c);
+    prWebViewCapture(c->v->browsers[c->index].browser, region, PrUVec2{source.width, source.height}, browserCaptured, c);
 }
 
 // Tells the browser of pane `index`, which shows a page, the next thing that the pane needs, if nothing is pending.
@@ -817,17 +818,17 @@ void browserNext(Viewer& v, uint32_t index, bool running) {
     // Another page loads immediately, regardless of what the last page is doing, and the last page's answers no longer
     // count.
     if (b.url != source.url) {
-        prAppBrowserResize(b.browser, PrUVec2{viewport(source.docWidth), viewport(source.docHeight)});
+        prWebViewResize(b.browser, PrUVec2{viewport(source.docWidth), viewport(source.docHeight)});
         b.url = source.url;
         b.loaded = false;
         b.busy = true;
         ++b.generation;
-        prAppBrowserLoad(b.browser, source.url, browserLoaded, new BrowserCommand{&v, index, b.generation});
+        prWebViewLoad(b.browser, source.url, browserLoaded, new BrowserCommand{&v, index, b.generation});
         return;
     }
     if (b.busy)
         return;
-    prAppBrowserResize(b.browser, PrUVec2{viewport(source.docWidth), viewport(source.docHeight)});
+    prWebViewResize(b.browser, PrUVec2{viewport(source.docWidth), viewport(source.docHeight)});
     if (!b.loaded)
         return;
     char script[2048];
@@ -836,7 +837,7 @@ void browserNext(Viewer& v, uint32_t index, bool running) {
         std::snprintf(script, sizeof(script), "window.scrollTo(%g, %g)", double(source.scroll.x),
             double(source.scroll.y));
         b.busy = true;
-        prAppBrowserEvaluate(b.browser, script, browserPlays, new BrowserCommand{&v, index, b.generation});
+        prWebViewEvaluate(b.browser, script, browserPlays, new BrowserCommand{&v, index, b.generation});
         return;
     }
     if (running) {
@@ -850,11 +851,11 @@ void browserNext(Viewer& v, uint32_t index, bool running) {
             b.asked = std::chrono::steady_clock::now();
             std::snprintf(script, sizeof(script), "window.prPlay && window.prPlay(%.6f)", v.clock.now());
             b.busy = true;
-            prAppBrowserEvaluate(b.browser, script, browserPlays, new BrowserCommand{&v, index, b.generation});
+            prWebViewEvaluate(b.browser, script, browserPlays, new BrowserCommand{&v, index, b.generation});
         } else if (millisSince(b.asked) >= 1000) {
             b.asked = std::chrono::steady_clock::now();
             b.busy = true;
-            prAppBrowserEvaluate(b.browser, "window.prStats ? window.prStats() : null", browserStats,
+            prWebViewEvaluate(b.browser, "window.prStats ? window.prStats() : null", browserStats,
                 new BrowserCommand{&v, index, b.generation});
         }
         return;
@@ -874,7 +875,7 @@ void browserNext(Viewer& v, uint32_t index, bool running) {
         " if (root && root.pauseAnimations) { root.pauseAnimations(); root.setCurrentTime(t); }"
         " if (document.getAnimations)"
         " for (var a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; }})(%.6f)", time);
-    prAppBrowserEvaluate(b.browser, script, browserStood, c);
+    prWebViewEvaluate(b.browser, script, browserStood, c);
 }
 
 // Shows the page of pane `index` live where the view shows the pane, placed where its texture would be. Otherwise,
@@ -885,7 +886,7 @@ void browserShow(Viewer& v, uint32_t index) {
         return;
     const PaneSource& source = v.panes[index]->source();
     if (source.url.empty() || !paneShown(v, index)) {
-        prAppBrowserHide(b.browser);
+        prWebViewHide(b.browser);
         return;
     }
     float zoom = v.choices.zoom;
@@ -895,7 +896,9 @@ void browserShow(Viewer& v, uint32_t index) {
         source.at.left + source.docWidth * zoom,
         source.at.top + source.docHeight * zoom,
     };
-    prAppBrowserShow(b.browser, source.at, viewport);
+    PrAppSurface host{};
+    if (prAppSurface(v.app, &host) == PrStatus_Ok)
+        prWebViewShow(b.browser, &host, source.at, viewport);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -971,7 +974,7 @@ void browserPrintDone(void* context, PrStatus status) {
 void browserPrintReady(void* context, PrStatus, PrStringView) {
     BrowserPrint* print = static_cast<BrowserPrint*>(context);
     PrLayoutVec paper = prLayoutPageBoxDefault().extent;
-    if (prAppBrowserPrint(print->browser, print->path.string(), prLayoutVecToPx(paper), browserPrintDone, print) !=
+    if (prWebViewPrint(print->browser, print->path.string(), prLayoutVecToPx(paper), browserPrintDone, print) !=
             PrStatus_Ok)
         print->state = PrintState_Failed;
 }
@@ -982,7 +985,7 @@ void browserPrintLoaded(void* context, PrStatus status) {
         print->state = PrintState_Failed;
         return;
     }
-    prAppBrowserEvaluate(print->browser, "document.fonts.ready.then(() => 0)", browserPrintReady, print);
+    prWebViewEvaluate(print->browser, "document.fonts.ready.then(() => 0)", browserPrintReady, print);
 }
 
 // Starts the browser's print of the document's page at `url`, unless it has started, and returns it.
@@ -996,11 +999,11 @@ BrowserPrint& browserPrint(Viewer& v, Opened& document, const std::string& url) 
         std::filesystem::create_directories(print.path.parent_path(), error);
         PrLayoutVec paper = prLayoutPageBoxDefault().extent;
         PrVec2 px = prLayoutVecToPx(paper);
-        PrAppBrowserDesc desc{.viewport = PrUVec2{uint32_t(std::lround(px.x)), uint32_t(std::lround(px.y))}};
-        if (prAppBrowserCreate(v.app, &desc, &print.browser) != PrStatus_Ok) {
+        PrWebViewDesc desc{.viewport = PrUVec2{uint32_t(std::lround(px.x)), uint32_t(std::lround(px.y))}};
+        if (prWebViewCreate(PrWebViewBackend_Default, &desc, &print.browser) != PrStatus_Ok) {
             print.state = PrintState_Failed;
         } else {
-            prAppBrowserLoad(print.browser, url, browserPrintLoaded, &print);
+            prWebViewLoad(print.browser, url, browserPrintLoaded, &print);
         }
     }
     BrowserPrint& print = *document.browserPrint;
@@ -1324,10 +1327,10 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
         const PaneSource& page = v.panes[i]->source();
         live[i] = i < paneCount && !page.url.empty();
         if (live[i] && v.browsers[i].browser == nullptr) {
-            PrAppBrowserDesc desc{
+            PrWebViewDesc desc{
                 .viewport = PrUVec2{uint32_t(std::lround(page.docWidth)), uint32_t(std::lround(page.docHeight))},
             };
-            prAppBrowserCreate(app, &desc, &v.browsers[i].browser);
+            prWebViewCreate(PrWebViewBackend_Default, &desc, &v.browsers[i].browser);
         }
         if (live[i])
             browserNext(v, i, running);
@@ -1624,7 +1627,7 @@ void shutdown(void* context, PrApp*) {
     for (std::unique_ptr<Pane>& pane : v.panes)
         pane.reset();
     for (PaneBrowser& b : v.browsers) {
-        prAppBrowserDestroy(b.browser);
+        prWebViewDestroy(b.browser);
         b.browser = nullptr;
     }
     v.comparer.reset();
