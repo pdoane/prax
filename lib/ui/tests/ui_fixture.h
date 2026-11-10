@@ -23,6 +23,7 @@ struct UiFixture {
     PrUi* ui;
     double time = 0;
     PrLayoutNode root = kPrLayoutNodeNone;
+    PrUiViewport viewport = kPrUiViewportMain;     // the viewport that the queued input comes from
     std::function<void()> build;
 
     UiFixture() {
@@ -90,6 +91,15 @@ struct UiFixture {
         return prUiElement(ui, parent, key, styleOf(b, zIndex, zIndexed), flags);
     }
 
+    // Creates a block of `w` by `h` px in flow, with `flags`.
+    PrLayoutNode block(PrLayoutNode parent, float w, float h, PrUiFlags flags = 0) {
+        PrLayoutBoxStyle b = prLayoutBoxStyleDefault();
+        b.display = PrLayoutDisplay_Block;
+        b.width = prLayoutLengthPx(w);
+        b.height = prLayoutLengthPx(h);
+        return prUiElement(ui, parent, 0, styleOf(b), flags);
+    }
+
     // Creates a scroll container of `w` by `h` px at `x`, `y` that holds a block of `contentW` by `contentH` px.
     PrLayoutNode scroller(PrLayoutNode parent, float x, float y, float w, float h, float contentW, float contentH,
             PrLayoutNode* PR_NULLABLE content = nullptr) {
@@ -115,7 +125,7 @@ struct UiFixture {
 
     void push(PrAppEvent event) {
         event.time = time;
-        prUiPushEvent(ui, &event);
+        prUiPushEvent(ui, viewport, &event);
     }
     void move(float x, float y) {
         push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{x, y}}});

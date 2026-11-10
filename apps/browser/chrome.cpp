@@ -167,19 +167,17 @@ void buildTabs(Browser& b, PrLayoutNode root) {
         .background = PrKitBackground_Header,
     };
     PrLayoutNode row = prKitSurface(b.kit, root, {}, style);
-    PrLayoutNode strip = prKitTabStrip(b.kit, row, {.reorderable = true}, {});
+    PrLayoutNode strip = prKitTabStrip(b.kit, row, {.tabs = b.tabStrip, .reorderable = true}, {});
     PrKitPlace shrink{.flex = PrKitFlex_Auto};
     prKitPlace(b.kit, strip, &shrink);
-    // The tabs change after the strip is built, so that each tab's node stays with its tab during the round. `chosen`
-    // is the tab that the user chose in the round, if any.
-    uint32_t chosen = UINT32_MAX;
-    uint32_t closing = UINT32_MAX;
-    uint32_t closingOthers = UINT32_MAX;
-    uint32_t duplicating = UINT32_MAX;
-    for (uint32_t i = 0; i < b.tabs.count(); ++i) {
-        Tab& tab = *b.tabs[i];
+    // Tabs close and open once the loop has created every tab, so that the loop walks a list that does not change.
+    Tab* closing = nullptr;
+    Tab* closingOthers = nullptr;
+    Tab* duplicating = nullptr;
+    for (Tab* each : b.tabs) {
+        Tab& tab = *each;
         // A tab shows its page's icon, if it has one, its label, and its close control.
-        PrLayoutNode node = prKitTab(b.kit, strip, {.selected = i == b.active});
+        PrLayoutNode node = prKitTab(b.kit, strip, {.id = tabId(tab)});
         if (const PrDrawImage* image = iconsGet(b, tab.info.iconUrl)) {
             PrKitImageStyle icon{
                 .fit = PrKitImageFit_Contain,
@@ -188,10 +186,8 @@ void buildTabs(Browser& b, PrLayoutNode root) {
             prKitImage(b.kit, node, {.image = image}, icon);
         }
         prKitTabLabel(b.kit, node, {.text = tabLabel(tab)});
-        if (prKitActivated(b.kit, node))
-            chosen = i;
         if (prKitActivated(b.kit, prKitTabClose(b.kit, node)) || prUiClicked(b.ui, node, 2))
-            closing = i;
+            closing = &tab;
         PrStringView tip = tab.info.title;
         if (tip.isEmpty())
             tip = addressShown(tab.info.url);
@@ -203,45 +199,34 @@ void buildTabs(Browser& b, PrLayoutNode root) {
         if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Reload"}, {})))
             tabTraverse(tab, 0);
         if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Duplicate"}, {})))
-            duplicating = i;
+            duplicating = &tab;
         prKitMenuSeparator(b.kit, menu, {});
         if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Close Tab"}, {})))
-            closing = i;
+            closing = &tab;
         PrKitMenuItem others{.text = "Close Other Tabs", .disabled = b.tabs.count() < 2};
         if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, others, {})))
-            closingOthers = i;
+            closingOthers = &tab;
     }
-    uint32_t from = 0;
-    uint32_t to = 0;
-    if (prKitMoved(b.kit, strip, &from, &to) && from < b.tabs.count() && to < b.tabs.count()) {
-        Tab* active = b.tabs[b.active];
-        Tab* moved = b.tabs[from];
-        b.tabs.erase(from);
-        b.tabs.insert(to, moved);
-        b.active = b.tabs.find(active);
-    }
+    // A click or a key in the strip may have chosen another tab.
+    tabsShowActive(b);
     PrKitButtonStyle small{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
     PrLayoutNode plus = commandButton(b, row, {.icon = PrKitIconKind_Plus}, small, kCommandNewTab);
     PrKitPlace below{.margin = {0, 0, 4, 0}};
     prKitPlace(b.kit, plus, &below);
 
-    if (duplicating != UINT32_MAX) {
-        String url = b.tabs[duplicating]->info.url;
-        tabOpen(b, url, duplicating + 1);
-        chosen = duplicating + 1;
+    if (duplicating != nullptr) {
+        uint32_t after = prKitTabsIndex(b.tabStrip, tabId(*duplicating)) + 1;
+        tabActivate(b, *tabOpen(b, duplicating->info.url, after));
     }
-    if (closingOthers != UINT32_MAX) {
-        Tab* kept = b.tabs[closingOthers];
+    if (closingOthers != nullptr) {
         for (uint32_t i = b.tabs.count(); i-- > 0;) {
-            if (b.tabs[i] != kept)
-                tabClose(b, i);
+            if (b.tabs[i] != closingOthers)
+                tabClose(b, *b.tabs[i]);
         }
-        chosen = 0;
+        tabActivate(b, *closingOthers);
+    } else if (closing != nullptr) {
+        tabClose(b, *closing);
     }
-    if (closing != UINT32_MAX && closingOthers == UINT32_MAX)
-        tabClose(b, closing);
-    if (chosen != UINT32_MAX)
-        tabActivate(b, min(chosen, uint32_t(b.tabs.count() - 1)));
 }
 
 // Returns the address bar's suggestions for the text that the user typed: favorites first, then the history's pages,
@@ -271,7 +256,7 @@ Array<Favorite> suggestionsFor(const Browser& b, const String& typed) {
 void leaveAddress(Browser& b, PrLayoutNode field) {
     prUiSetFocus(b.ui, kPrLayoutNodeNone);
     prKitSetOpen(b.kit, field, false);
-    b.chrome.addressTab = 0;
+    b.chrome.addressTab = nullptr;
 }
 
 // The address bar, and the suggestions under it while the user types. Enter loads what the text means (addressResolve)
@@ -279,10 +264,10 @@ void leaveAddress(Browser& b, PrLayoutNode field) {
 void buildAddress(Browser& b, PrLayoutNode toolbar, Tab& tab) {
     Chrome& chrome = b.chrome;
     // The bar follows the active tab while the user is not editing it.
-    if (!chrome.addressFocused || chrome.addressTab != tab.key) {
+    if (!chrome.addressFocused || chrome.addressTab != &tab) {
         chrome.address = addressShown(tab.info.url);
         chrome.typed = chrome.address;
-        chrome.addressTab = tab.key;
+        chrome.addressTab = &tab;
     }
     PrKitTextField field{
         .text = chrome.address,

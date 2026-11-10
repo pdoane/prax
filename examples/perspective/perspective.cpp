@@ -285,7 +285,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     float lift = 0;
     PrRect viewport = prLayoutRectToPx(prLayoutNodeBounds(kit->tree, root, PrLayoutCoordinates_Viewport));
     extent = PrVec2{viewport.right - viewport.left, viewport.bottom - viewport.top};
-    if (prUiPointer(ui, &pointer) && extent.x > 1 && extent.y > 1) {
+    if (prUiPointer(ui, nullptr, &pointer) && extent.x > 1 && extent.y > 1) {
         reach = pointer.x / extent.x - 0.5f;
         lift = pointer.y / extent.y - 0.5f;
     }
@@ -562,7 +562,7 @@ void event(void* context, PrAppWindow*, const PrAppEvent* e) {
         prAppStop(w.app);
         return;
     }
-    prUiPushEvent(w.ui, e);
+    prUiPushEvent(w.ui, kPrUiViewportMain, e);
     prAppWindowRequestFrame(w.window);
 }
 

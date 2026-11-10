@@ -211,6 +211,7 @@ struct LayoutLaidRoot {
     PrLayoutVec extent;
     const LayoutFragment* PR_NULLABLE fragment;
     PrDrawList* PR_NULLABLE drawing;
+    uint64_t revision;          // the drawing's number among the tree's root drawings, or 0 before the first
 };
 
 // A root that the last drawing of a replaced node's painter drew.
@@ -265,6 +266,7 @@ struct LayoutTree {
     const LayoutFragment* PR_NULLABLE fragment; // the viewport's fragment from the last layout, held by the tree
     PrLayoutVec viewport;                       // the extent the last layout was given
     RawArray<LayoutLaidRoot> roots;             // the last layout's other roots, in the order it was given them
+    uint64_t rootDrawings;                      // the number of root drawings that paints made, which numbers each
 
     // How the viewport's root is paginated, with no box function for continuous media, and the last layout's pages.
     PrLayoutPagination pagination;

@@ -471,7 +471,7 @@ PrKitDropZone dropZoneOf(PrKit& kit, PrLayoutNode node) {
     // The pointer is measured in the row's own plane, so that the zones hold under a transform.
     PrVec2 pointer{};
     PrVec2 at{};
-    if (!prUiPointer(kit.ui, &pointer) || !prUiLocalPoint(kit.ui, node, pointer, &at))
+    if (!prUiPointer(kit.ui, nullptr, &pointer) || !prUiLocalPoint(kit.ui, node, pointer, &at))
         return PrKitDropZone_None;
     PrVec2 extent = kitExtent(kit, node);
     if (extent.y <= 0 || at.x < 0 || at.x >= extent.x || at.y < 0 || at.y >= extent.y)

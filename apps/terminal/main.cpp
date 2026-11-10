@@ -1,13 +1,14 @@
-// Terminal: terminals in tabs, in Studio's window.
+// Terminal: terminals in tabs, in Studio's windows.
 //
-// main() is the composition root. It runs the app's interface (apps/terminal/terminal_app.h) in Studio's window
-// (pr/studio_window.h), and sets the terminals in the monospace face of the window's fonts.
+// main() is the composition root. It runs the app's interface (apps/terminal/terminal_app.h) in a Studio application of
+// Multiple windows (pr/studio_app.h), and sets the terminals in the monospace face of the application's fonts.
 //
 // Usage: terminal [--grid COLUMNSxROWS] [--scrollback LINES] [program [arguments...]]
 //
-// Each tab runs the program, or the user's shell if no program is given. --grid sizes the window for that many columns
-// and rows, once the first frame knows the cell size. --scrollback sets the number of lines of scrollback that each tab
-// keeps, up to kPrVtermMaxScrollback. A tab closes once its program exits, and the app quits when its last tab closes.
+// Each tab runs the program, or the user's shell if no program is given. --grid sizes the first window for that many
+// columns and rows, once its first frame knows the cell size. --scrollback sets the number of lines of scrollback that
+// each tab keeps, up to kPrVtermMaxScrollback. A tab closes once its program exits, a window closes when its last tab
+// closes, and the app quits when its last window closes.
 
 #include "pr/assert.h"
 #include "pr/count_of.h"
@@ -29,21 +30,12 @@ TerminalApp& appOf(void* context) {
     return *static_cast<TerminalApp*>(context);
 }
 
-// Creates the app on the window's kit, ui and fonts, and opens its first tab. Returns false if the tab cannot start.
-bool open(void* context, PrStudioWindow* window) {
+// Opens the app's first window. A first tab that cannot start fails the run.
+bool start(void* context, PrStudioApp* studio) {
     TerminalApp& t = appOf(context);
-    t.kit = prStudioWindowKit(window);
-    t.ui = prStudioWindowUi(window);
-    t.app = prStudioWindowApp(window);
-    t.window = prStudioWindowAppWindow(window);
-    t.fonts = prStudioWindowFonts(window);
-    openApp(t);
-    PrStatus status = openTab(t);
-    if (status == PrStatus_NotFound)
-        printError("terminal: cannot start {}\n", t.program.isEmpty() ? PrStringView("the shell") : t.program.view());
-    else if (status != PrStatus_Ok)
-        printError("terminal: cannot make a terminal\n");
-    return status == PrStatus_Ok;
+    t.studio = studio;
+    TerminalWindow* w = newWindow(t, nullptr);
+    return w != nullptr && startWindow(*w);
 }
 
 // The largest number of columns or rows that --grid accepts.
@@ -110,26 +102,19 @@ int main(int argc, char** argv) {
     }
     PrFontSystem* system = prFontSystemCreate(PrFontSystemBackend_Default);
     prFontSetSetSystem(fonts, system);
-    PrStudioWindowDesc desc{
-        .title = "Terminal",
-        .extent = {820, 560},
-        .open = open,
-        .event = [](void* context, PrStudioWindow*, const PrAppEvent* event) {
-            return handleEvent(appOf(context), *event);
-        },
-        .build = [](void* context, PrStudioWindow*, PrLayoutNode root, PrVec2 extent) {
-            buildApp(appOf(context), root, extent);
-        },
-        .laidOut = [](void* context, PrStudioWindow*) { return afterLayout(appOf(context)); },
-        .close = [](void* context, PrStudioWindow*) {
-            TerminalApp& t = appOf(context);
-            if (t.commands != nullptr)
-                closeApp(t);
-        },
+    t.fonts = fonts;
+    openApp(t);
+    PrAppOptions options = prAppOptionsDefault();
+    options.windowModel = PrAppWindowModel_Multiple;
+    PrStudioAppDesc app{
+        .fonts = fonts,
+        .options = &options,
+        .start = start,
+        .event = [](void* context, PrStudioApp*, const PrAppEvent* event) { handleEvent(appOf(context), *event); },
         .context = &t,
     };
-    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
     PrStatus status = prStudioAppRun(&app);
+    closeApp(t);
     prFontSetDestroy(fonts);
     prFontSystemDestroy(system);
     if (status == PrStatus_NotSupported)

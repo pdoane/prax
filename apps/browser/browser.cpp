@@ -209,7 +209,7 @@ bool open(void* context, PrAppWindow* window, const PrAppFrame* first) {
         tabOpen(b, PrStringView{}, 0);
         b.chrome.focusAddress = true;
     }
-    tabActivate(b, 0);
+    tabActivate(b, *tabAt(b, 0));
     prThreadStart(&b.thread, [](void* PR_NULLABLE context) { tabsRun(*static_cast<Browser*>(context)); }, &b);
     b.started = true;
     prAppWindowRequestFrame(window);
@@ -353,7 +353,7 @@ void event(void* context, PrAppWindow* window, const PrAppEvent* e) {
         PrAppEvent moved = toPage(b, *tab, *e);
         prHtmlViewPostEvent(view, &moved);
     }
-    prUiPushEvent(b.ui, e);
+    prUiPushEvent(b.ui, kPrUiViewportMain, e);
     prAppWindowRequestFrame(window);
 }
 
@@ -400,7 +400,7 @@ void browserWantFrame(Browser& b) {
 }
 
 Tab* PR_NULLABLE browserActiveTab(const Browser& b) {
-    return b.active < b.tabs.count() ? b.tabs[b.active] : nullptr;
+    return tabFromId(prKitTabsSelected(b.tabStrip));
 }
 
 void browserPresent(Browser& b, PrDrawList* list, PrColor16 canvas) {

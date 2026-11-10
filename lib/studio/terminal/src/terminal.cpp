@@ -62,6 +62,9 @@ constexpr float kGutterWidth = 6;
 constexpr float kGutterMarkWidth = 2;
 constexpr float kGutterMarkInset = 2;
 
+// The address that owns the terminal's retained state on its element (prUiStateWithDestroy).
+constexpr char kTerminalOwner = 0;
+
 // The environment variables that identify the terminal. The caller's values take precedence. TERM_PROGRAM_VERSION
 // replaces the version of the terminal that launched this one.
 constexpr PrStringView kEnvironment[] = {
@@ -197,13 +200,24 @@ struct TerminalSnapshot {
     RawArray<TerminalViewLine> lines;   // by row of the view, as many as it shows
 };
 
-struct Terminal {
-    PrKit* kit;
-    PrUi* ui;
+struct Terminal;
 
-    // The window that shows the terminal and its application, or null for none.
+// The terminal's retained state on its element in the window that shows it (prUiStateWithDestroy). The window frees it
+// once it stops declaring the terminal, or closes, which ends the terminal's binding to the window (shownEnded). It
+// names no terminal once the terminal binds to another element or is destroyed.
+struct TerminalShownState {
+    Terminal* PR_NULLABLE terminal;
+};
+
+struct Terminal {
+    PrApp* PR_NULLABLE app;             // the application, or null for none
+
+    // The window that shows the terminal, as the latest frame bound it: its kit and context, its platform window, and
+    // the terminal's state on its element there. All are null while no window shows the terminal.
+    PrKit* PR_NULLABLE kit;
+    PrUi* PR_NULLABLE ui;
     PrAppWindow* PR_NULLABLE window;
-    PrApp* PR_NULLABLE app;
+    TerminalShownState* PR_NULLABLE shownState;
 
     PrProcess* PR_NULLABLE process;
     PrVterm* vterm;
@@ -285,9 +299,11 @@ struct Terminal {
     PrTerminalOpenFileFn PR_NULLABLE openFile;
     void* PR_NULLABLE openFileContext;
 
-    // A multi-line paste that waits for the user's confirmation, or the null string. The confirmation dialog is open
-    // while it waits.
+    // A multi-line paste that waits for the user's confirmation, or the null string, and the node that the open state
+    // of its confirmation dialog is kept on. The dialog is open while the paste waits, and opens again on the
+    // terminal's new node once the terminal shows again, in another tab or another window.
     PrRawString paste;
+    PrLayoutNode pasteNode;
 
     // The text that the input method composes, and the part of it that the input method selects, in bytes. It shows
     // over the cells from the cursor until the input method commits or cancels it, and never reaches the program, which
@@ -314,10 +330,7 @@ struct Terminal {
     bool bellPending;
     double bellTime;
 
-    // Whether a frame is declaring the terminal now, and whether a frame declared it since the last update. The
-    // terminal counts as shown if either is set (isVisible).
-    bool inFrame;
-    bool declared;
+    bool inFrame;                       // a frame is declaring the terminal now
 
     // A link that a click opened. It opens after the frame releases the screen's lock, because its handler may call the
     // terminal.
@@ -542,39 +555,82 @@ PrStringView terminalTitle(const Terminal* terminal) {
     return prRawStringView(&terminal->name);
 }
 
-// Returns true if the window is active. Without an application, the window counts as active.
+void compositionEnd(Terminal* terminal);
+
+// Returns true if the window that shows the terminal is active. Without an application, the window counts as active. A
+// terminal that no window shows has no active window.
 bool isWindowActive(const Terminal* terminal) {
-    return terminal->app == nullptr || prAppWindowIsActive(terminal->window);
+    return terminal->app == nullptr || (terminal->window != nullptr && prAppWindowIsActive(terminal->window));
 }
 
-// Returns true if the terminal shows: a frame is declaring it, or one declared it since the last update.
+// Returns true if the terminal shows: a window declares it.
 bool isVisible(const Terminal* terminal) {
-    return terminal->inFrame || terminal->declared;
+    return terminal->inFrame || terminal->ui != nullptr;
 }
 
-// Requests the user's attention, at most once until the window is active again.
-void askAttention(Terminal* terminal) {
-    if (terminal->app == nullptr || terminal->attentionAsked)
+// Requests the user's attention for `holder`, the window that holds the terminal, if it is inactive. It asks at most
+// once until the user sees the terminal.
+void askAttention(Terminal* terminal, PrAppWindow* PR_NULLABLE holder) {
+    if (holder == nullptr || terminal->attentionAsked || prAppWindowIsActive(holder))
         return;
     terminal->attentionAsked = true;
-    prAppWindowRequestAttention(terminal->window);
+    prAppWindowRequestAttention(holder);
+}
+
+// Requests a frame of the window that shows the terminal, if one does.
+void requestFrame(const Terminal* terminal) {
+    if (terminal->ui != nullptr)
+        prUiRequestFrame(terminal->ui);
+}
+
+// Ends the terminal's binding to the window that showed it: the terminal has no element, no focus, and no pointer or
+// drag over it until a frame binds it again. The window's state on the element names the terminal no more.
+void leaveWindow(Terminal* terminal) {
+    if (terminal->shownState != nullptr)
+        terminal->shownState->terminal = nullptr;
+    terminal->shownState = nullptr;
+    terminal->kit = nullptr;
+    terminal->ui = nullptr;
+    terminal->window = nullptr;
+    terminal->node = kPrLayoutNodeNone;
+    terminal->selecting = false;
+    terminal->hasPointer = false;
+    terminal->hasLink = false;
+    lockScreen(terminal);
+    terminal->showing = false;
+    if (terminal->focused) {
+        terminal->focused = false;
+        prVtermInputFocus(terminal->vterm, false);
+        compositionEnd(terminal);
+    }
+    unlockScreen(terminal);
+}
+
+// Called as the window that showed the terminal frees its state on the terminal's element: the window stopped declaring
+// the terminal, or closed.
+void shownEnded(void* state) {
+    TerminalShownState* shown = static_cast<TerminalShownState*>(state);
+    Terminal* terminal = shown->terminal;
+    if (terminal != nullptr && terminal->shownState == shown)
+        leaveWindow(terminal);
 }
 
 // Answers the bell. Flashes the screen if the terminal shows, records an alert if the user cannot see it, and requests
-// attention if the window is inactive.
-void ring(Terminal* terminal) {
+// the attention of `holder`, the window that holds the terminal.
+void ring(Terminal* terminal, PrAppWindow* PR_NULLABLE holder) {
     bool visible = isVisible(terminal);
     bool active = isWindowActive(terminal);
     terminal->bellPending = visible;
-    if (!visible || !active)
+    if (!visible || !active) {
         terminal->alerts |= PrTerminalAlertFlag_Bell;
-    if (!active)
-        askAttention(terminal);
+        askAttention(terminal, holder);
+    }
 }
 
 // Posts each of the program's notifications as a desktop notification, unless its condition says that the user already
-// sees the terminal. Records an alert if the user cannot see the terminal.
-void notify(Terminal* terminal) {
+// sees the terminal. Records an alert if the user cannot see the terminal. A notification that the system cannot post
+// requests the attention of `holder`, the window that holds the terminal.
+void notify(Terminal* terminal, PrAppWindow* PR_NULLABLE holder) {
     PrVtermNotification notifications[kPrVtermMaxNotifications];
     uint32_t count = prVtermTakeNotifications(terminal->vterm, notifications, kPrVtermMaxNotifications);
     bool visible = isVisible(terminal);
@@ -596,15 +652,15 @@ void notify(Terminal* terminal) {
             .body = notification.body,
             .tag = terminal->notificationTag,
         };
-        if (prAppNotificationPost(terminal->app, &desc) != PrStatus_Ok && !active)
-            askAttention(terminal);
+        if (prAppNotificationPost(terminal->app, &desc) != PrStatus_Ok)
+            askAttention(terminal, holder);
     }
 }
 
-// Services the terminal on the UI thread. Shows the program's exit once its output ends, sends the screen's output to
-// the program, and acts on the screen's events, including those that the parser took. The caller holds the screen's
-// lock.
-void service(Terminal* terminal) {
+// Services the terminal on the UI thread for `holder`, the window that holds it. Shows the program's exit once its
+// output ends, sends the screen's output to the program, and acts on the screen's events, including those that the
+// parser took. The caller holds the screen's lock.
+void service(Terminal* terminal, PrAppWindow* PR_NULLABLE holder) {
     PrVterm* vterm = terminal->vterm;
     terminal->wakePending = false;
     if (terminal->process != nullptr) {
@@ -639,11 +695,9 @@ void service(Terminal* terminal) {
     if ((events & PrVtermEventFlag_Clipboard) != 0 && terminal->app != nullptr)
         prAppDataWriteText(terminal->app, kPrAppDataSourceClipboard, prVtermClipboard(vterm));
     if ((events & PrVtermEventFlag_Bell) != 0)
-        ring(terminal);
+        ring(terminal, holder);
     if ((events & PrVtermEventFlag_Notification) != 0)
-        notify(terminal);
-    if (!terminal->inFrame)
-        terminal->declared = false;
+        notify(terminal, holder);
 }
 
 // Creates the regular, bold, italic and bold italic fonts from the families and size of `font`.
@@ -664,7 +718,8 @@ void setFonts(Terminal* terminal, const PrTextFontDesc& font) {
 
 // Recomputes the cell metrics if the tree's target pixel ratio or the font revision changed.
 void updateMetrics(Terminal* terminal) {
-    float ratio = prLayoutTreeTargetPixelRatio(terminal->kit->tree);
+    // Before a window shows the terminal, the metrics are at a ratio of 1.
+    float ratio = terminal->kit != nullptr ? prLayoutTreeTargetPixelRatio(terminal->kit->tree) : 1;
     if (ratio <= 0)
         ratio = 1;
     uint64_t revision = prTextFontRevision(terminal->drawer.fonts[0]);
@@ -681,6 +736,9 @@ void updateMetrics(Terminal* terminal) {
 // Sets the screen's color roles and the selection color from the kit's theme if its palette changed. A color that the
 // program set lasts until the palette changes.
 void updateTheme(Terminal* terminal) {
+    // The theme is the kit's, so it takes effect once a window shows the terminal.
+    if (terminal->kit == nullptr)
+        return;
     const PrKitTheme& theme = terminal->kit->theme;
     const PrKitPalette& palette = theme.palette;
     if (terminal->hasPalette && prMemCompare(&palette, &terminal->palette, sizeof(palette)) == 0)
@@ -1044,14 +1102,14 @@ bool asksBeforePaste(const Terminal* terminal, PrStringView text) {
 void dropPaste(Terminal* terminal) {
     prRawStringReset(&terminal->paste);
     terminal->focusAsked = true;
-    prUiRequestFrame(terminal->ui);
+    requestFrame(terminal);
 }
 
 // Holds a paste of `text` until the user confirms it, and opens the confirmation. It replaces any paste that waits.
 void askBeforePaste(Terminal* terminal, PrStringView text) {
     prRawStringReset(&terminal->paste);
     terminal->paste = prRawStringCopy(text);
-    prKitSetOpen(terminal->kit, terminal->node, true);
+    terminal->pasteNode = kPrLayoutNodeNone;
 }
 
 // Appends the first kPreviewLines lines of `text` to `preview`, each cut at a character boundary after at most
@@ -1090,6 +1148,12 @@ void buildPasteConfirmation(Terminal* terminal) {
     if (text.data == nullptr)
         return;
     PrKit* kit = terminal->kit;
+    // The dialog's open state goes with the node that it was kept on. On the node that kept it, a closed dialog was
+    // dismissed. On another, the dialog opens.
+    if (terminal->pasteNode != terminal->node) {
+        prKitSetOpen(kit, terminal->node, true);
+        terminal->pasteNode = terminal->node;
+    }
     PrRawString preview = prRawStringNull();
     uint32_t lines = appendPastePreview(&preview, text);
     PrRawString title = prRawStringNull();
@@ -2135,6 +2199,27 @@ void draw(Terminal* terminal, PrLayoutNode screen, PrVec2 extent, double time) {
     prDrawListRelease(view);
 }
 
+// The style of the view: a box that clips its contents and fills its parent, whether the parent lays it out in a row or
+// a column of a flex box, or as a block of a definite extent.
+PrLayoutStyleIndex viewStyle(PrLayoutTree* tree) {
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Block;
+    box.width = prLayoutLengthPercent(100);
+    box.height = prLayoutLengthPercent(100);
+    box.minWidth = prLayoutLengthPx(0);
+    box.minHeight = prLayoutLengthPx(0);
+    box.overflowX = PrLayoutOverflow_Hidden;
+    box.overflowY = PrLayoutOverflow_Hidden;
+    PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
+    flex.grow = 1;
+    flex.shrink = 1;
+    flex.basis = prLayoutLengthPx(0);
+    PrLayoutStyle style = prLayoutStyleDefault();
+    style.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
+    style.groups[PrLayoutGroup_Flex] = prLayoutFlexStyleIntern(tree, &flex);
+    return prLayoutStyleIntern(tree, &style);
+}
+
 // The style of a block box of `extent` px that clips its contents.
 PrLayoutStyleIndex boxStyle(PrLayoutTree* tree, PrVec2 extent) {
     PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
@@ -2169,10 +2254,7 @@ struct PrTerminal : Terminal {};
 PrStatus prTerminalCreate(const PrTerminalDesc* desc, PrTerminal* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     PrTerminal* terminal = allocZeroed<PrTerminal>();
-    terminal->kit = desc->kit;
-    terminal->ui = desc->kit->ui;
-    terminal->window = desc->window;
-    terminal->app = desc->window != nullptr ? prAppWindowApp(desc->window) : nullptr;
+    terminal->app = desc->app;
     terminal->synchronizedSince = -1;
     terminal->openFile = desc->openFile;
     terminal->openFileContext = desc->openFileContext;
@@ -2294,8 +2376,11 @@ PrStatus prTerminalCreate(const PrTerminalDesc* desc, PrTerminal* PR_NULLABLE* P
 void prTerminalDestroy(PrTerminal* PR_NULLABLE terminal) {
     if (terminal == nullptr)
         return;
-    // The process's thread parses into the screen until the process is destroyed, so the process goes first.
+    // The process's thread parses into the screen until the process is destroyed, so the process goes first. The window
+    // that shows the terminal frees its state later, which then names no terminal.
     prProcessDestroy(terminal->process);
+    if (terminal->shownState != nullptr)
+        terminal->shownState->terminal = nullptr;
     prConditionReset(&terminal->turn);
     prMutexReset(&terminal->mutex);
     snapshotReset(&terminal->snapshot);
@@ -2324,23 +2409,46 @@ void prTerminalDestroy(PrTerminal* PR_NULLABLE terminal) {
     prMemoryFree(terminal);
 }
 
-void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, PrTerminalBackground background) {
+void prTerminalFrame(PrTerminal* terminal, PrKit* kit, PrLayoutNode parent, PrTerminalBackground background) {
     PR_ASSERT(background <= PrTerminalBackground_Parent);
-    PrUi* ui = terminal->ui;
-    PrLayoutTree* tree = terminal->kit->tree;
+    // A frame in another window moves the terminal there. It takes that window's pixel ratio, and its theme if the
+    // palette differs (updateTheme), so that a color that the program set lasts as long as the palette.
+    if (kit != terminal->kit) {
+        leaveWindow(terminal);
+        terminal->kit = kit;
+        terminal->ui = kit->ui;
+        terminal->window = prUiWindow(kit->ui);
+        terminal->metricsRatio = 0;
+        terminal->attentionAsked = false;
+    }
+    PrUi* ui = kit->ui;
+    PrLayoutTree* tree = kit->tree;
     double time = prUiCurrentRound(ui)->time;
     terminal->inFrame = true;
-    terminal->declared = true;
     updateMetrics(terminal);
 
-    // The screen fills the extent right of the gutter with whole cells, at least one column and one row.
+    PrUiFlags flags = PrUiFlag_Pressable | PrUiFlag_Focusable | PrUiFlag_Wheel;
+    PrLayoutNode node = prUiElement(ui, parent, 0, viewStyle(tree), flags);
+    terminal->node = node;
+    // The screen fills the view's extent right of the gutter with whole cells, at least one column and one row. Before
+    // the view's first layout, the screen keeps its columns and rows.
+    PrVec2 extent{};
+    bool measured = prUiExtent(ui, node, &extent);
     const PrVec2 cell = terminal->drawer.metrics.cell;
     uint32_t columns = uint32_t(prF32Max(1, prF32Floor((extent.x - kGutterWidth) / cell.x)));
     uint32_t rows = uint32_t(prF32Max(1, prF32Floor(extent.y / cell.y)));
-
-    PrLayoutNode node = prUiElement(ui, parent, 0, boxStyle(tree, extent),
-        PrUiFlag_Pressable | PrUiFlag_Focusable | PrUiFlag_Wheel);
-    terminal->node = node;
+    void* state = prUiStateWithDestroy(ui, node, &kTerminalOwner, 0, uint32_t(sizeof(TerminalShownState)), shownEnded);
+    TerminalShownState* shown = static_cast<TerminalShownState*>(state);
+    if (shown != terminal->shownState) {
+        if (terminal->shownState != nullptr)
+            terminal->shownState->terminal = nullptr;
+        // An element that showed another terminal shows this one now, and the other leaves the window, so that it names
+        // a state no more that the window frees as this terminal's.
+        if (shown->terminal != nullptr && shown->terminal != terminal)
+            leaveWindow(shown->terminal);
+        shown->terminal = terminal;
+        terminal->shownState = shown;
+    }
     // A focus request repeats each frame until the view has focus. Focus shows only in the frame after the request.
     if (terminal->focusAsked) {
         if (prUiIsFocusWithin(ui, node)) {
@@ -2364,7 +2472,7 @@ void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, P
     if (known.x != pixels.x || known.y != pixels.y)
         prVtermSetCellPixelExtent(vterm, pixels);
     PrUVec2 size = prVtermExtent(vterm);
-    if (size.x != columns || size.y != rows) {
+    if (measured && (size.x != columns || size.y != rows)) {
         prVtermResize(vterm, PrUVec2{columns, rows});
         terminal->hasSelection = false;
     }
@@ -2379,7 +2487,7 @@ void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, P
         if (!focused)
             compositionEnd(terminal);
     }
-    service(terminal);
+    service(terminal, terminal->window);
     snapshotTake(terminal, time);
     unlockScreen(terminal);
     PrLayoutNode backgroundNode = background == PrTerminalBackground_Parent ? parent : node;
@@ -2387,7 +2495,8 @@ void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, P
 
     // The pseudoterminal resizes after the screen, so that the screen already has the new size when the program redraws
     // for it.
-    resizeProcess(terminal, PrUVec2{columns, rows});
+    if (measured)
+        resizeProcess(terminal, PrUVec2{columns, rows});
     if (terminal->hasOpened) {
         terminal->hasOpened = false;
         openLink(terminal, terminal->opened);
@@ -2431,20 +2540,10 @@ PrColor prTerminalBackground(const PrTerminal* terminal) {
     return color;
 }
 
-void prTerminalUpdate(PrTerminal* terminal) {
-    // A terminal that does not show has no element, no focus, and no pointer or drag over it.
-    terminal->node = kPrLayoutNodeNone;
-    terminal->selecting = false;
-    terminal->hasPointer = false;
-    terminal->hasLink = false;
+void prTerminalService(PrTerminal* terminal, PrAppWindow* PR_NULLABLE window) {
+    PR_ASSERT(!terminal->inFrame);
     lockScreen(terminal);
-    terminal->showing = false;
-    if (terminal->focused) {
-        terminal->focused = false;
-        prVtermInputFocus(terminal->vterm, false);
-        compositionEnd(terminal);
-    }
-    service(terminal);
+    service(terminal, window);
     unlockScreen(terminal);
 }
 
@@ -2454,7 +2553,7 @@ PrLayoutNode prTerminalNode(const PrTerminal* terminal) {
 
 void prTerminalFocus(PrTerminal* terminal) {
     terminal->focusAsked = true;
-    prUiRequestFrame(terminal->ui);
+    requestFrame(terminal);
 }
 
 bool prTerminalHasFocus(const PrTerminal* terminal) {
@@ -2514,7 +2613,7 @@ PrVec2 prTerminalCellExtent(const PrTerminal* terminal) {
 void prTerminalSetFont(PrTerminal* terminal, const PrTextFontDesc* font) {
     setFonts(terminal, *font);
     updateMetrics(terminal);
-    prUiRequestFrame(terminal->ui);
+    requestFrame(terminal);
 }
 
 PrRawString prTerminalSelection(const PrTerminal* terminal) {
@@ -2551,7 +2650,7 @@ bool prTerminalScrollToPrompt(PrTerminal* terminal, PrTerminalDirection directio
     bool moved = scrollToPrompt(terminal, direction);
     unlockScreen(terminal);
     if (moved)
-        prUiRequestFrame(terminal->ui);
+        requestFrame(terminal);
     return moved;
 }
 
@@ -2582,6 +2681,6 @@ bool prTerminalSelectCommandOutput(PrTerminal* terminal) {
         selectLines(terminal, first, end);
     unlockScreen(terminal);
     if (found)
-        prUiRequestFrame(terminal->ui);
+        requestFrame(terminal);
     return found;
 }

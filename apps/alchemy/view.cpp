@@ -720,7 +720,7 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
         // A secondary click acts on what it lands on: a press outside the selection replaces it, and a press inside a
         // selection of several leaves all of them for the menu to act on.
         PrVec2 pointer{};
-        if (prUiClicked(ui, tile, 1) && prUiPointer(ui, &pointer)) {
+        if (prUiClicked(ui, tile, 1) && prUiPointer(ui, nullptr, &pointer)) {
             if (gallery.selected[i] == 0)
                 pendingSelect = i;
             prKitOpenContextMenu(kit, view, pointer);

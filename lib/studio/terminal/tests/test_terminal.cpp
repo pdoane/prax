@@ -140,22 +140,20 @@ struct Locked {
     operator PrVterm*() const { return vterm; }
 };
 
-// A terminal in its own kit, with a viewport of 640 by 480 px. It runs `program` with `arguments` in `directory`, or in
-// the launcher's directory if `directory` is the null view. `window` may be null.
+// A terminal in its own kit, which fills the kit's viewport of 800 by 600 px. It runs `program` with `arguments` in
+// `directory`, or in the launcher's directory if `directory` is the null view. `window` may be null.
 struct Term {
     KitFixture f;
     PrProcessLauncher* launcher = prProcessLauncherCreate(PrProcessBackend_Default);
     PrTerminal* terminal = nullptr;
-    PrVec2 viewport{640, 480};
 
     // If `setup` is set, it edits the terminal's description before the terminal is created.
     Term(PrStringView program, std::initializer_list<PrStringView> arguments, PrAppWindow* PR_NULLABLE window = nullptr,
             PrStringView directory = {}, const std::function<void(PrTerminalDesc*)>& setup = nullptr,
             const KitFonts& fonts = KitFonts{}) : f(fonts) {
         PrTerminalDesc desc{
-            .kit = f.kit,
+            .app = window != nullptr ? prAppWindowApp(window) : nullptr,
             .font = font(13),
-            .window = window,
             .launcher = launcher,
             .program = program,
             .arguments = arguments.begin(),
@@ -170,7 +168,7 @@ struct Term {
         // As in a studio window, the kit's context pastes through the window.
         prUiSetWindow(f.ui, window);
         // As in the terminal app, the terminal gives its background to the root, and the canvas shows it.
-        f.build = [this](PrLayoutNode root) { prTerminalFrame(terminal, root, viewport, PrTerminalBackground_Parent); };
+        f.build = [this](PrLayoutNode root) { prTerminalFrame(terminal, f.kit, root, PrTerminalBackground_Parent); };
         f.frame();
     }
 
@@ -784,7 +782,6 @@ TEST_CASE("terminal: the screen takes the colors of the kit's theme, and follows
 
 TEST_CASE("terminal: the view paints no background, and its owner's shows under the cells, the gutter and the edges") {
     Term t("sleep", {"10"});
-    t.viewport = PrVec2{float(KitFixture::kRenderWidth), float(KitFixture::kRenderHeight)};
     t.f.frame();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     CHECK(near(color8Of(prTerminalBackground(t.terminal)), background));
@@ -834,19 +831,45 @@ TEST_CASE("terminal: the view paints no background, and its owner's shows under 
     CHECK(kitVerified(t.f.tree));
 }
 
-TEST_CASE("terminal: a terminal that paints its background in its view shows it within the view alone") {
+TEST_CASE("terminal: the screen fits its whole cells to the view's box within the frame that sizes the box") {
     Term t("sleep", {"10"});
-    // A panel in the window holds the terminal, which paints its own background, as in Scribe.
-    t.f.build = [&t](PrLayoutNode root) {
+    float width = 400;
+    t.f.build = [&](PrLayoutNode root) {
         PrLayoutTree* tree = t.f.tree;
         PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
         box.display = PrLayoutDisplay_Block;
-        box.width = prLayoutLengthPx(t.viewport.x);
-        box.height = prLayoutLengthPx(t.viewport.y);
+        box.width = prLayoutLengthPx(width);
+        box.height = prLayoutLengthPx(300);
         PrLayoutStyle style = prLayoutStyleDefault();
         style.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
         PrLayoutNode panel = prLayoutTreeFrameElement(tree, root, 0, prLayoutStyleIntern(tree, &style));
-        prTerminalFrame(t.terminal, panel, t.viewport, PrTerminalBackground_View);
+        prTerminalFrame(t.terminal, t.f.kit, panel, PrTerminalBackground_View);
+    };
+    PrVec2 cell = prTerminalCellExtent(t.terminal);
+    PrVec2 origin = prTerminalScreenOrigin(t.terminal);
+    for (float wanted : {400.0f, 560.0f}) {
+        width = wanted;
+        t.f.frame();
+        PrUVec2 extent = prVtermExtent(Locked(t.terminal));
+        CHECK(extent.x == uint32_t((wanted - origin.x) / cell.x));
+        CHECK(extent.y == uint32_t((300 - origin.y) / cell.y));
+    }
+}
+
+TEST_CASE("terminal: a terminal that paints its background in its view shows it within the view alone") {
+    Term t("sleep", {"10"});
+    // A panel of part of the window holds the terminal, which paints its own background, as in Scribe.
+    const PrVec2 panelExtent{640, 480};
+    t.f.build = [&](PrLayoutNode root) {
+        PrLayoutTree* tree = t.f.tree;
+        PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+        box.display = PrLayoutDisplay_Block;
+        box.width = prLayoutLengthPx(panelExtent.x);
+        box.height = prLayoutLengthPx(panelExtent.y);
+        PrLayoutStyle style = prLayoutStyleDefault();
+        style.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
+        PrLayoutNode panel = prLayoutTreeFrameElement(tree, root, 0, prLayoutStyleIntern(tree, &style));
+        prTerminalFrame(t.terminal, t.f.kit, panel, PrTerminalBackground_View);
     };
     t.write("\x1b]11;#ff00ff\x07");
     t.f.frame();
@@ -854,7 +877,7 @@ TEST_CASE("terminal: a terminal that paints its background in its view shows it 
     PrColor8 magenta{0xff, 0x00, 0xff, 0xff};
     CHECK(near(t.pixel(t.cellCenter(10, 5)), magenta));
     CHECK(near(t.pixel(gutterAt(t, 5)), magenta));
-    CHECK(near(t.pixel(PrVec2{t.viewport.x - 1, t.viewport.y - 1}), magenta));
+    CHECK(near(t.pixel(PrVec2{panelExtent.x - 1, panelExtent.y - 1}), magenta));
     // Past the panel, the window's background shows.
     CHECK(near(t.pixel(PrVec2{700, 500}), color8Of(t.f.kit->theme.palette.bg0)));
     CHECK(kitVerified(t.f.tree));
@@ -895,6 +918,25 @@ TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention
     t.write("\a");
     t.f.frame();
     CHECK(app.attention == 2);
+}
+
+TEST_CASE("terminal: a bell in a terminal that does not show asks once for the attention of the window that holds it") {
+    FakeApp app;
+    Term t("sleep", {"10"}, &app.window);
+    t.f.build = [&](PrLayoutNode) { prTerminalService(t.terminal, &app.window); };
+    t.f.frame();
+    REQUIRE(prTerminalNode(t.terminal) == kPrLayoutNodeNone);
+    // The holding window is active, so the user sees its other tab, and the bell leaves only an alert.
+    t.write("\a");
+    t.f.frame();
+    CHECK(app.attention == 0);
+    CHECK(prTerminalAlerts(t.terminal) == PrTerminalAlertFlag_Bell);
+    app.active = false;
+    t.write("\a");
+    t.f.frame();
+    t.write("\a");
+    t.f.frame();
+    CHECK(app.attention == 1);
 }
 
 TEST_CASE("terminal: with reduced motion, the bell's flash holds still and ends at its time") {
@@ -1041,7 +1083,7 @@ TEST_CASE("terminal: a terminal that does not show wakes the application for the
         "-c", "printf '\\033]0;started\\007'; sleep 0.3; i=0; while [ $i -lt 20 ]; do echo line $i; sleep 0.01; "
             "i=$((i+1)); done; printf '\\a'; sleep 10",
     }, &app.window);
-    t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
+    t.f.build = [&](PrLayoutNode) { prTerminalService(t.terminal, prUiWindow(t.f.ui)); };
     t.frameUntil([&] { return prTerminalTitle(t.terminal) == "started"; });
     app.woke();
     uint32_t wakes = 0;
@@ -1275,7 +1317,7 @@ TEST_CASE("terminal: a terminal that does not show reads past what its buffers h
     Term t("sh", {"-c", "sleep 0.2; head -c 8000000 /dev/zero | tr '\\0' a; echo; echo hidden-done; sleep 10"},
         &app.window);
     PrUVec2 extent = prVtermExtent(Locked(t.terminal));
-    t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
+    t.f.build = [&](PrLayoutNode) { prTerminalService(t.terminal, prUiWindow(t.f.ui)); };
     t.f.frame();
     CHECK(prTerminalNode(t.terminal) == kPrLayoutNodeNone);
     // Frames run as an application runs them: only if the program woke it or the terminal asks for a frame.
@@ -1296,7 +1338,7 @@ TEST_CASE("terminal: a terminal that stops showing loses focus, which the progra
     Term t("sh", {"-c", "stty raw -echo; printf '\\033[?1004h'; echo ready; cat -v"});
     prTerminalFocus(t.terminal);
     t.frameUntil([&] { return t.shows("ready") && prTerminalHasFocus(t.terminal); });
-    t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
+    t.f.build = [&](PrLayoutNode) { prTerminalService(t.terminal, prUiWindow(t.f.ui)); };
     t.f.frame();
     CHECK_FALSE(prTerminalHasFocus(t.terminal));
     t.frameUntil([&] { return t.shows("^[[O"); });
@@ -1515,6 +1557,58 @@ TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Es
     t.write("\x1b[?2004h");
     t.f.push(PrAppEvent{.kind = PrAppEventKind_Paste, .input = {.text = "five\nsix"}});
     t.frameUntil([&] { return t.shows("five"); });
+}
+
+TEST_CASE("terminal: a paste that waits keeps waiting while the terminal does not show, and asks again when it shows") {
+    FakeApp app;
+    Term t("cat", {}, &app.window);
+    prTerminalFocus(t.terminal);
+    t.f.frame();
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Paste, .input = {.text = "one\ntwo\n"}});
+    for (uint32_t i = 0; i < 4; ++i)
+        t.f.frame();
+    CHECK(prUiFocus(t.f.ui) != prTerminalNode(t.terminal));
+
+    // As in a tab that does not show, the rounds declare nothing of the terminal, and its dialog's state goes.
+    t.f.build = [&](PrLayoutNode) { prTerminalService(t.terminal, prUiWindow(t.f.ui)); };
+    for (uint32_t i = 0; i < 4; ++i)
+        t.f.frame();
+    t.f.build = [&](PrLayoutNode root) {
+        prTerminalFrame(t.terminal, t.f.kit, root, PrTerminalBackground_Parent);
+    };
+    for (uint32_t i = 0; i < 4; ++i)
+        t.f.frame();
+    CHECK(prUiFocus(t.f.ui) != prTerminalNode(t.terminal));
+    CHECK_FALSE(t.shows("one"));
+    t.f.key(PrAppKey_Enter);
+    t.frameUntil([&] { return t.shows("one"); });
+}
+
+TEST_CASE("terminal: a frame in another window moves the terminal there, and the window it left lets it go") {
+    Term t("cat", {});
+    t.write("before the move\r\n");
+    // The other window declares the terminal before the window that showed it stops declaring it.
+    KitFixture other;
+    other.build = [&](PrLayoutNode root) {
+        prTerminalFrame(t.terminal, other.kit, root, PrTerminalBackground_Parent);
+    };
+    prTerminalFocus(t.terminal);
+    other.frame();
+    other.frame();
+    t.f.build = nullptr;
+    t.f.frame();
+    other.frame();
+    CHECK(prTerminalHasFocus(t.terminal));
+    CHECK(prUiFocus(other.ui) == prTerminalNode(t.terminal));
+    CHECK(t.shows("before the move"));
+    other.type("x");
+    other.key(PrAppKey_Enter);
+    double end = prTimeMonotonicMilliseconds() + kPatience;
+    while (!t.shows("x\nx\n") && prTimeMonotonicMilliseconds() < end) {
+        prThreadSleep(2);
+        other.frame();
+    }
+    CHECK(t.shows("x\nx\n"));
 }
 
 TEST_CASE("terminal: URLs are found in the text without the brackets and punctuation around them") {

@@ -120,14 +120,14 @@ struct Styled {
     void key(PrAppKey key, PrAppModifierFlags modifiers = 0) {
         PrAppEvent down{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .keyboard = {.key = key}};
         down.time = time;
-        prUiPushEvent(ui, &down);
+        prUiPushEvent(ui, kPrUiViewportMain, &down);
         frame();
     }
 
     void type(const char* text) {
         PrAppEvent event{.kind = PrAppEventKind_Text, .input = {.text = text}};
         event.time = time;
-        prUiPushEvent(ui, &event);
+        prUiPushEvent(ui, kPrUiViewportMain, &event);
         settle();
     }
 
@@ -251,7 +251,7 @@ TEST_CASE("a press lands in the run under it, and counts in the whole text") {
     PrRect box = prLayoutRectToPx(prLayoutNodeBounds(s.tree, secondBox, PrLayoutCoordinates_Viewport));
     PrAppEvent down{.kind = PrAppEventKind_PointerDown, .pointer = {.position = PrVec2{box.right - 1, box.top + 5}}};
     down.time = s.time;
-    prUiPushEvent(s.ui, &down);
+    prUiPushEvent(s.ui, kPrUiViewportMain, &down);
     s.frame();
     CHECK(s.selection().caret == 6);
 }

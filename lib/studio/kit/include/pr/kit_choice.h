@@ -74,31 +74,72 @@ PrLayoutNode prKitToggle(PrKit* kit, PrLayoutNode parent, PrKitCheck check, PrKi
 // ---------------------------------------------------------------------------------------------------------------------
 // Tabs
 
-// The content of a tab strip. If the strip is reorderable, the user can drag a tab to another place in it, and an
-// accent caret marks where the tab will go.
+// The tabs of a strip: which tabs it holds, their order, and the selected tab. The application creates one for each
+// strip and passes it to the strip in each round. The application adds and removes the tabs, and the strip changes
+// their order and the selection as the user drags and chooses them. So the application's own list of tabs needs no
+// order. A tab is an id that the application chooses, nonzero and unique within the strip's group.
+typedef struct PrKitTabs PrKitTabs;
+
+// Creates the tabs of a strip that holds no tabs yet.
+PrKitTabs* prKitTabsCreate(void);
+void prKitTabsDestroy(PrKitTabs* PR_NULLABLE tabs);
+
+// Returns the number of tabs, the tab at `index` in the strip's order, or 0 past the last, and the index of the tab
+// `id`, or the number of tabs if the strip does not hold it.
+uint32_t prKitTabsCount(const PrKitTabs* tabs);
+uint64_t prKitTabsAt(const PrKitTabs* tabs, uint32_t index);
+uint32_t prKitTabsIndex(const PrKitTabs* tabs, uint64_t id);
+
+// Returns the selected tab, or 0 if there are no tabs.
+uint64_t prKitTabsSelected(const PrKitTabs* tabs);
+
+// Adds the tab `id`, which the strip does not hold, at `index` in the strip's order, or last if `index` is past the
+// last tab. The first tab is selected.
+void prKitTabsInsert(PrKitTabs* tabs, uint64_t id, uint32_t index);
+
+// Removes the tab `id`, which the strip holds. If it was selected, the tab after it is selected, or the last tab.
+void prKitTabsRemove(PrKitTabs* tabs, uint64_t id);
+
+// Moves the tab `id` from the strip `from`, which holds it, to `index` in the order of the strip `to`, counted without
+// the tab, or last if `index` is past the last tab, and selects it there. `from` selects another tab as prKitTabsRemove
+// does. `from` and `to` may be the same strip.
+void prKitTabsMove(PrKitTabs* from, PrKitTabs* to, uint64_t id, uint32_t index);
+
+// Selects the tab `id`, which the strip holds.
+void prKitTabsSelect(PrKitTabs* tabs, uint64_t id);
+
+// Selects the tab `step` places after the selected one in the strip's order, wrapping around the ends, and returns it,
+// or returns 0 if there are no tabs.
+uint64_t prKitTabsStep(PrKitTabs* tabs, int32_t step);
+
+// The content of a tab strip of `tabs`. If the strip is reorderable, the user can drag a tab to another place in it,
+// and an accent caret marks where the tab will go.
 //
-// Reorderable strips of the same nonzero `group` exchange tabs, in any of the application's windows. The application
-// chooses the group, which is the kind of the tabs' payload. A zero group gives the strip a group of its own. A tab of
-// a group is dragged by its key, which must be unique among the tabs of the group.
+// Reorderable strips of the same nonzero `group` exchange tabs, in any of the application's windows, and a tab dropped
+// outside every window tears off. The application chooses the group, which is the kind of a dragged tab's payload
+// (prUiDragging). A zero group gives the strip a group of its own. A strip that `collapsesSingle` takes no room while
+// it holds one tab, unless a tab of its group is dragged over its window.
 typedef struct PrKitTabStrip {
     PrUiKey key;
-    bool disabled;                  // true to disable every tab in the strip
-    bool reorderable;
+    PrKitTabs* tabs;
     uint64_t group;
+    bool reorderable;
+    bool collapsesSingle;
+    bool disabled;                  // true to disable every tab in the strip
 } PrKitTabStrip;
 
-// One tab in a strip: its identity and its state.
+// One tab of a strip, by its id.
 typedef struct PrKitTab {
-    PrUiKey key;                   // identity within the strip, or 0 to match by position
-    bool selected;
+    uint64_t id;
     bool disabled;
 } PrKitTab;
 
 // Creates a tab strip, or a tab under one. The strip has a rule along its bottom, and the selected tab is underlined in
-// the accent. Left and Right move between tabs.
+// the accent. A click on a tab selects it, and Left and Right select the neighboring tab.
 //
-// A tab is a cell that the caller fills: what it shows goes under it, in order, from the tab's parts below or any of
-// the kit's widgets, such as an image (prKitImage) or a badge (prKitBadge).
+// A round creates the tabs that the strip holds, in any order, and the strip shows them in its own order. A tab is a
+// cell that the caller fills: what it shows goes under it, in order, from the tab's parts below or any of the kit's
+// widgets, such as an image (prKitImage) or a badge (prKitBadge).
 PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip, PrKitChoiceStyle style);
 PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab);
 
@@ -106,18 +147,31 @@ PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab);
 PrLayoutNode prKitTabLabel(PrKit* kit, PrLayoutNode tab, PrKitLabel label);
 
 // Creates a tab's close control, which only the pointer can use, so that the arrow keys move between tabs. A click
-// activates it (prKitActivated). The tab remains until the caller stops creating it.
+// activates it (prKitActivated).
 PrLayoutNode prKitTabClose(PrKit* kit, PrLayoutNode tab);
 
-// Returns true if the user dropped one of the strip's tabs at another place in the strip in the current round. Writes
-// the tab's old index to `from` and its new index to `to`. Both indices count the tabs in the order that the previous
-// round created them. To apply the move, the caller removes the tab at `from` and inserts it at `to`.
-bool prKitMoved(const PrKit* kit, PrLayoutNode strip, uint32_t* from, uint32_t* to);
+// Where the user dropped a tab of another strip, or of this one.
+enum {
+    PrKitTabMoveKind_Received,      // on this strip, from another strip of its group
+    PrKitTabMoveKind_TornOff,       // from this strip, outside every window, as into a window of its own
+};
+typedef uint8_t PrKitTabMoveKind;
 
-// Returns true if the user dropped a tab of another strip of the strip's group on the strip in the current round.
-// Writes the tab's key to `key`, and to `to` the index that the tab goes to, counting the tabs that the previous round
-// created. To apply the move, the caller removes the tab from its strip and inserts it at `to`.
-bool prKitTabReceived(const PrKit* kit, PrLayoutNode strip, PrUiKey* key, uint32_t* to);
+// A tab that the user moved out of its strip: its id, and where it went. A received tab was dropped at `index` in the
+// strip's order. A torn-off tab was dropped at `position`, whose display is kPrAppDisplayNone if the platform does not
+// report it.
+typedef struct PrKitTabMove {
+    uint64_t id;
+    PrKitTabMoveKind kind;
+    uint32_t index;
+    PrAppDisplayPosition position;
+} PrKitTabMove;
+
+// Returns true if the user moved a tab out of its strip in the current round, and writes the move to `out`. The strip
+// reports the move as it is created, before its tabs, and the application carries it out (prKitTabsMove): a received
+// tab goes to this strip at the move's index, and a torn-off tab to a strip of its own. A move within the strip is the
+// strip's own, and is not reported.
+bool prKitTabMoved(const PrKit* kit, PrLayoutNode strip, PrKitTabMove* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Progress

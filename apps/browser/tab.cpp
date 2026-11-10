@@ -384,7 +384,6 @@ void record(Browser& b, Tab& tab) {
 Tab* tabOpen(Browser& b, PrStringView url, uint32_t index) {
     Tab* tab = new Tab;
     tab->browser = &b;
-    tab->key = b.nextKey++;
     tab->view.store(nullptr);
     tab->shown.store(false);
     prMutexInit(&tab->mutex);
@@ -399,16 +398,28 @@ Tab* tabOpen(Browser& b, PrStringView url, uint32_t index) {
     tab->compositor = prLayoutCompositorCreate(&compositor);
     tab->info.url = url;
     tab->info.loading = !url.isEmpty();
-    b.tabs.insert(min(index, b.tabs.count()), tab);
+    b.tabs.push(tab);
+    prKitTabsInsert(b.tabStrip, tabId(*tab), index);
     post(b,
         new TabTask{.browser = &b, .tab = tab, .kind = TaskKind_Open, .url = tab->info.url, .window = b.pageWindow});
     return tab;
 }
 
+uint64_t tabId(const Tab& tab) {
+    return uint64_t(uintptr_t(&tab));
+}
+
+Tab* PR_NULLABLE tabFromId(uint64_t id) {
+    return reinterpret_cast<Tab*>(uintptr_t(id));
+}
+
+Tab* PR_NULLABLE tabAt(const Browser& b, uint32_t index) {
+    return tabFromId(prKitTabsAt(b.tabStrip, index));
+}
+
 void tabOpenNext(Browser& b, PrStringView url) {
-    uint32_t at = b.tabs.isEmpty() ? 0 : b.active + 1;
-    tabOpen(b, url, at);
-    tabActivate(b, at);
+    uint32_t at = prKitTabsIndex(b.tabStrip, prKitTabsSelected(b.tabStrip)) + 1;
+    tabActivate(b, *tabOpen(b, url, at));
 }
 
 void tabsLoad(Browser& b, PrStringView url, TabTarget target) {
@@ -420,9 +431,9 @@ void tabsLoad(Browser& b, PrStringView url, TabTarget target) {
 }
 
 void tabsShowHistory(Browser& b) {
-    for (uint32_t i = 0; i < b.tabs.count(); ++i) {
-        if (b.tabs[i]->info.url == kAddressHistory) {
-            tabActivate(b, i);
+    for (Tab* tab : b.tabs) {
+        if (tab->info.url == kAddressHistory) {
+            tabActivate(b, *tab);
             return;
         }
     }
@@ -431,34 +442,36 @@ void tabsShowHistory(Browser& b) {
     tabsLoad(b, kAddressHistory, start ? TabTarget_Active : TabTarget_New);
 }
 
-void tabClose(Browser& b, uint32_t index) {
-    Tab* tab = b.tabs[index];
-    if (!addressIsBlank(tab->info.url)) {
-        b.closed.push(tab->info.url);
+void tabClose(Browser& b, Tab& tab) {
+    if (!addressIsBlank(tab.info.url)) {
+        b.closed.push(tab.info.url);
         if (b.closed.count() > kMaxClosed)
             b.closed.erase(0);
     }
-    b.tabs.erase(index);
-    post(b, new TabTask{.browser = &b, .tab = tab, .kind = TaskKind_Close});
+    b.tabs.erase(b.tabs.find(&tab));
+    prKitTabsRemove(b.tabStrip, tabId(tab));
+    post(b, new TabTask{.browser = &b, .tab = &tab, .kind = TaskKind_Close});
     // The window keeps a tab: closing the last one opens the start page.
     if (b.tabs.isEmpty())
         tabOpen(b, PrStringView{}, 0);
-    uint32_t active = b.active;
-    if (index < active || active >= b.tabs.count())
-        active = active > 0 ? active - 1 : 0;
-    tabActivate(b, active);
+    tabsShowActive(b);
 }
 
-void tabActivate(Browser& b, uint32_t index) {
-    b.active = index;
-    for (uint32_t i = 0; i < b.tabs.count(); ++i) {
-        Tab* tab = b.tabs[i];
-        bool shown = i == index;
-        if (tab->shown.exchange(shown) != shown) {
+void tabActivate(Browser& b, Tab& tab) {
+    prKitTabsSelect(b.tabStrip, tabId(tab));
+    tabsShowActive(b);
+}
+
+void tabsShowActive(Browser& b) {
+    Tab* active = browserActiveTab(b);
+    if (active == nullptr || active->shown.load())
+        return;
+    for (Tab* tab : b.tabs) {
+        bool shown = tab == active;
+        if (tab->shown.exchange(shown) != shown)
             post(b, new TabTask{.browser = &b, .tab = tab, .kind = TaskKind_Show, .shown = shown});
-        }
     }
-    b.chrome.addressTab = 0;
+    b.chrome.addressTab = nullptr;
     browserWantFrame(b);
 }
 

@@ -34,6 +34,7 @@
 #include "pr/http.h"
 #include "pr/image.h"
 #include "pr/kit.h"
+#include "pr/kit_choice.h"
 #include "pr/layout_compositor.h"
 #include "pr/layout_scene.h"
 #include "pr/media.h"
@@ -91,7 +92,6 @@ struct CommandContext {
 // tab once the page closes.
 struct Tab {
     Browser* browser = nullptr;
-    uint64_t key = 0;               // the tab's identity in the tab strip, unique for the run
     PrLayoutCompositor* compositor = nullptr;
 
     // The view of the tab's page, which is null until the page's thread opens the page. The window's thread posts input
@@ -142,7 +142,7 @@ struct Chrome {
     // `typed` is the text that the user last typed, which the suggestions under the bar match. `addressFocused` is true
     // if the bar had focus at the end of the last round.
     String address;
-    uint64_t addressTab = 0;        // the key of the tab whose URL the bar shows
+    const Tab* PR_NULLABLE addressTab = nullptr; // the tab whose URL the bar shows
     String typed;
     bool addressFocused = false;
 
@@ -207,11 +207,11 @@ struct Browser {
     // restyles. main() fills it from the history before the thread starts.
     Set<String> visitedUrls;
 
-    // The window's thread's tabs, in the order of the tab strip, and the index of the active one. Each new tab takes
-    // the next key. `closed` holds the URLs of closed tabs, the most recent last, which reopen in turn.
+    // The window's thread's tabs, in no order, and the tab strip's tabs, by their ids (tabId): their order, and the
+    // active tab, which the strip selects. `closed` holds the URLs of closed tabs, the most recent last, which reopen
+    // in turn.
     Array<Tab*> tabs;
-    uint32_t active = 0;
-    uint64_t nextKey = 1;
+    PrKitTabs* PR_NULLABLE tabStrip = nullptr;
     Array<String> closed;
 
     // The user's favorites and history, and the files that keep them, which are empty if the platform names no data

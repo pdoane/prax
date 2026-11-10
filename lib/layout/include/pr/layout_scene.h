@@ -156,6 +156,11 @@ void prLayoutTreePaint(PrLayoutTree* tree, PrDrawList* list);
 // only roots that come after it in the layout's roots.
 void prLayoutNodeDraw(PrLayoutTree* tree, PrLayoutNode root, PrDrawList* list);
 
+// Returns a number that changes each time a paint draws `root` again, a root of the last layout other than the
+// viewport's, so that a client that shows the root's drawing (prLayoutNodeDraw) on its own draws it again only then.
+// Returns 0 for a node that is no such root, or that no paint has drawn.
+uint64_t prLayoutNodeDrawingRevision(const PrLayoutTree* tree, PrLayoutNode root);
+
 #if defined(__cplusplus)
 }
 #endif

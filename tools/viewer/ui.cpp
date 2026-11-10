@@ -555,18 +555,18 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
                 ui->pressed = false;
             // The controls see every move, so that their hover follows the pointer out of them, and every press, so
             // that a press elsewhere closes their menus.
-            prUiPushEvent(ui->ui, &event);
+            prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return taken;
         }
         case PrAppEventKind_Scroll:
             if (!overControls(*ui, ui->pointer))
                 return false;
-            prUiPushEvent(ui->ui, &event);
+            prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return true;
         case PrAppEventKind_KeyDown:
         case PrAppEventKind_KeyUp: {
             if (holdsKeys(*ui)) {
-                prUiPushEvent(ui->ui, &event);
+                prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
                 return true;
             }
             // The tree takes the arrow and page keys. The rest are the viewer's.
@@ -575,7 +575,7 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
                 event.keyboard.key == PrAppKey_Right || event.keyboard.key == PrAppKey_PageUp ||
                 event.keyboard.key == PrAppKey_PageDown;
             if (moves)
-                prUiPushEvent(ui->ui, &event);
+                prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return moves;
         }
         case PrAppEventKind_Text:
@@ -583,10 +583,10 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
         case PrAppEventKind_CompositionEnd:
             if (!holdsKeys(*ui))
                 return false;
-            prUiPushEvent(ui->ui, &event);
+            prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return true;
         case PrAppEventKind_Paste:
-            prUiPushEvent(ui->ui, &event);
+            prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return true;
         default:
             return false;

@@ -72,7 +72,7 @@ void hostReset(Host& host) {
 }
 
 void hostEvent(Host& host, const PrAppEvent& event) {
-    prUiPushEvent(host.ui, &event);
+    prUiPushEvent(host.ui, kPrUiViewportMain, &event);
 }
 
 void hostFrame(Host& host, double time, double delta, PrVec2 extent, const PrAppDisplay& display,

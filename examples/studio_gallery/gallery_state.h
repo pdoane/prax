@@ -6,6 +6,7 @@
 #include "pr/array.h"
 #include "pr/color.h"
 #include "pr/draw_image.h"
+#include "pr/kit_choice.h"
 #include "pr/kit_collection.h"
 #include "pr/kit_graph.h"
 #include "pr/kit_icon.h"
@@ -215,13 +216,19 @@ struct MenuState {
     bool wrap = false;
 };
 
-// The tab strip and the segmented controls. `panelOrder` is the order in which the strip shows its tabs, which a drag
-// permutes.
+// The tab strip and the segmented controls. `panels` holds the strip's tabs, five panels by their numbers plus one.
 struct TabsState {
-    uint32_t panelOrder[5] = {0, 1, 2, 3, 4};
-    uint32_t panel = 0;
+    PrKitTabs* panels = prKitTabsCreate();
     uint32_t viewMode = 1;
     uint32_t shape = 0;
+
+    TabsState() {
+        for (uint32_t i = 0; i < 5; ++i)
+            prKitTabsInsert(panels, i + 1, i);
+    }
+    TabsState(const TabsState&) = delete;
+    TabsState& operator=(const TabsState&) = delete;
+    ~TabsState() { prKitTabsDestroy(panels); }
 };
 
 // The viewport toolbar's tool, space and transport.
@@ -428,9 +435,6 @@ bool redoAvailable(const UndoState& undo);
 // Steps the history one state back, or forward if `forward` is true, and writes that state to the values. Returns false
 // if there is no state to step to.
 bool undoStep(UndoState& undo, bool forward);
-
-// Moves a tab in the strip's order, keeping the chosen tab chosen.
-void moveTab(TabsState& tabs, uint32_t from, uint32_t to);
 
 // Returns the node of `key`, or null.
 TreeNode* PR_NULLABLE findTreeNode(TreeState& tree, uint32_t key);

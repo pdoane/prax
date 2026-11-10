@@ -1052,7 +1052,7 @@ PrLayoutNode prKitDockBuild(PrKit* kit, PrLayoutNode parent, PrKitDockView view)
     DockBuild b{.kit = kit, .dock = dock, .describe = describe, .context = context, .node = area};
     b.area = boundsOf(*kit, area);
     b.dragging = dragged != 0;
-    prUiPointer(kit->ui, &b.pointer);
+    prUiPointer(kit->ui, nullptr, &b.pointer);
     buildNode(b, area, dock->root);
     if (b.dragging)
         buildFloating(b, dragged);

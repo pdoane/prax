@@ -523,7 +523,7 @@ void paintViewport(void* context, PrVec2 size, PrDrawList* list) {
 void pickEntity(PrKit* kit, PrLayoutNode viewport, EditorState& editor) {
     PrUi* ui = kit->ui;
     PrVec2 pointer{};
-    if (!prUiClicked(ui, viewport, 0) || !prUiPointer(ui, &pointer))
+    if (!prUiClicked(ui, viewport, 0) || !prUiPointer(ui, nullptr, &pointer))
         return;
     PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(kit->tree, viewport, PrLayoutCoordinates_Viewport));
     PrVec2 size{bounds.right - bounds.left, bounds.bottom - bounds.top};

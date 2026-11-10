@@ -11,8 +11,7 @@ bool studioAppMakeDevice(StudioAppState* app) {
     PrDrawRendererOptions options = prDrawRendererOptionsDefault();
     options.glyphDecoder = app->glyphs;
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &app->device) != PrStatus_Ok ||
-            prDrawRendererCreate(PrDrawRendererBackend_Default, app->device, &options, &app->renderer) != PrStatus_Ok ||
-            prDrawDisplayCreate(app->device, &app->display) != PrStatus_Ok) {
+            prDrawRendererCreate(PrDrawRendererBackend_Default, app->device, &options, &app->renderer) != PrStatus_Ok) {
         studioAppCloseDevice(app);
         return false;
     }
@@ -44,15 +43,23 @@ void studioAppWindowClosed(StudioAppState* app, StudioWindowState* window) {
         prAppStop(app->app);
 }
 
+void studioWindowTargetClose(StudioAppState* app, StudioWindowTarget* target) {
+    if (app->device != nullptr)
+        prGpuTextureDestroy(app->device, target->rendered);
+    prDrawFrameDestroy(target->frame);
+    prGpuSwapChainDestroy(target->swapChain);
+    target->rendered = PrGpuTexture{};
+    target->frame = nullptr;
+    target->swapChain = nullptr;
+}
+
 void studioWindowCloseDevice(StudioWindowState* window) {
-    PrGpuDevice* device = window->studio->device;
-    if (device != nullptr)
-        prGpuTextureDestroy(device, window->rendered);
-    prDrawFrameDestroy(window->frame);
-    prGpuSwapChainDestroy(window->swapChain);
-    window->rendered = PrGpuTexture{};
-    window->frame = nullptr;
-    window->swapChain = nullptr;
+    studioWindowTargetClose(window->studio, &window->target);
+    // A surface's window draws again on the next device, whether or not its root's drawing changed.
+    for (uint32_t i = 0; i < window->surfaces.count; ++i) {
+        studioWindowTargetClose(window->studio, &window->surfaces.data[i]->target);
+        window->surfaces.data[i]->drawn = 0;
+    }
 }
 
 } // namespace pr_impl

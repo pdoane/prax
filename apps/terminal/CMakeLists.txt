@@ -2,8 +2,9 @@
 # which the application and its tests share.
 add_library(terminal_app STATIC terminal_app.cpp)
 target_include_directories(terminal_app PUBLIC ${PROJECT_SOURCE_DIR})
-target_link_libraries(terminal_app PUBLIC prax::app prax::color prax::font prax::process prax::studio_command
-                                          prax::studio_kit prax::studio_terminal prax::ui prax::core_cpp
+target_link_libraries(terminal_app PUBLIC prax::app prax::color prax::font prax::process prax::studio_app
+                                          prax::studio_command prax::studio_kit prax::studio_terminal prax::ui
+                                          prax::core_cpp
                                    PRIVATE prax::layout pr_warnings)
 
 pr_app(terminal main.cpp)
