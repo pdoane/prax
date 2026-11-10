@@ -337,6 +337,32 @@ TEST_CASE("input that a callback's own run loop dispatches arrives after the cal
     CHECK(run.seen == std::vector<std::string>{"start", "open", "wake", "shutdown"});
 }
 
+TEST_CASE("a key with Option held means the key that it types without Option, as Alt-1 means 1 on other systems") {
+    Run run;
+    run.begin = [](Run& r) {
+        NSView* view = viewOf(r.window);
+        for (NSEventType type : {NSEventTypeKeyDown, NSEventTypeKeyUp}) {
+            NSEvent* optionOne = [NSEvent keyEventWithType:type location:NSZeroPoint
+                modifierFlags:NSEventModifierFlagOption timestamp:0 windowNumber:view.window.windowNumber context:nil
+                characters:@"¡" charactersIgnoringModifiers:@"1" isARepeat:NO keyCode:18];
+            if (type == NSEventTypeKeyDown)
+                [view keyDown:optionOne];
+            else
+                [view keyUp:optionOne];
+        }
+        prAppWake(r.app);
+    };
+    runHeadless(run);
+    REQUIRE(kindsOf(run.events) == std::vector<PrAppEventKind>{PrAppEventKind_KeyDown, PrAppEventKind_KeyUp});
+    for (const PrAppEvent& e : run.events) {
+        if (e.kind != PrAppEventKind_KeyDown && e.kind != PrAppEventKind_KeyUp)
+            continue;
+        CHECK(e.keyboard.key == PrAppKey('1'));
+        CHECK(e.keyboard.code == PrAppKeyCode_Digit1);
+        CHECK(e.modifiers == PrAppModifierFlag_Alt);
+    }
+}
+
 TEST_CASE("a pen's press reports its pressure, tilt and twist, and its eraser presses the eraser button") {
     Run run;
     run.begin = [](Run& r) {

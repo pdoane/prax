@@ -20,7 +20,8 @@ extern "C" {
 // Palettes
 
 // A theme's colors, in straight alpha. Accent and semantic colors keep their roles across variants. The surface, rule
-// and text ramps give each variant its contrast.
+// and text ramps give each variant its contrast. The looks of a kit's widgets derive from its palette.
+PR_NO_PADDING_BEGIN
 typedef struct PrKitPalette {
     PrColor accent;
     PrColor accentWeak;             // a selected item's wash
@@ -59,6 +60,7 @@ typedef struct PrKitPalette {
     PrColor axisZ;
     PrColor axisW;
 } PrKitPalette;
+PR_NO_PADDING_END
 
 // The palettes Studio ships.
 enum {
@@ -94,7 +96,7 @@ typedef uint8_t PrKitTone;
 // What text does at the end of its box. Auto is the wrap of the text's role (PrKitType).
 enum {
     PrKitWrap_Auto,
-    PrKitWrap_Wrap,                 // breaks onto additional lines
+    PrKitWrap_Wrap,                 // breaks onto additional lines, inside a word that fits no line
     PrKitWrap_Nowrap,               // stays on one line, extending past the box
     PrKitWrap_Clip,                 // stays on one line, cut at the box
 };
@@ -208,6 +210,9 @@ typedef struct PrKitTheme {
     PrFontFamily ui;
     PrFontFamily mono;
 } PrKitTheme;
+
+// Returns Studio's palette of `variant`.
+PrKitPalette prKitPaletteStudio(PrKitThemeVariant variant);
 
 // Returns Studio's theme of `variant`, which uses the generic families of `fonts`: system-ui for `ui`, and monospace
 // for `mono`.

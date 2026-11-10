@@ -525,7 +525,8 @@ void prLayoutTreeFrameSetContent(PrLayoutTree* tree, PrLayoutNode replaced, cons
     bool same = was.kind == content->kind && was.revision == content->revision &&
         (content->kind != PrLayoutContentKind_DrawList || was.list == content->list) &&
         (content->kind != PrLayoutContentKind_Painter ||
-            (was.painter.paint == content->painter.paint && was.painter.context == content->painter.context)) &&
+            (was.painter.paint == content->painter.paint && was.painter.measure == content->painter.measure &&
+                was.painter.context == content->painter.context)) &&
         (content->kind != PrLayoutContentKind_Embed || was.embed == content->embed) &&
         (content->kind != PrLayoutContentKind_Image || was.image == content->image);
     if (!same)

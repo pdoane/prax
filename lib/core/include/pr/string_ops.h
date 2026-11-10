@@ -19,6 +19,11 @@ PR_CONSTEXPR PrStringView prStringSlice(PrStringView text, size_t start, size_t 
     return PR_LITERAL(PrStringView){text.data + start, count};
 }
 
+// Returns the bytes of `text` from `start` to its end. `start` may be the end, which gives the empty view.
+PR_CONSTEXPR PrStringView prStringFrom(PrStringView text, size_t start) {
+    return PR_LITERAL(PrStringView){text.data + start, text.size - start};
+}
+
 // Returns true if `text` starts with `prefix`.
 static inline bool prStringStartsWith(PrStringView text, PrStringView prefix) {
     return text.size >= prefix.size && (prefix.size == 0 || prMemEquals(text.data, prefix.data, prefix.size));

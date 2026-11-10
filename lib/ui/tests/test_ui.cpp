@@ -615,6 +615,31 @@ TEST_CASE("a key press goes to the nearest claim on the focused node's ancestors
     CHECK(seen == std::vector<std::string>{"root save", "field escape", "panel find", "root save"});
 }
 
+TEST_CASE("caps lock takes no part in routing a key press to claims, focus traversal and activation") {
+    UiFixture f;
+    PrLayoutNode first = kPrLayoutNodeNone;
+    PrLayoutNode second = kPrLayoutNodeNone;
+    std::vector<std::string> seen;
+    f.build = [&] {
+        first = f.box(f.root, 10, 10, 100, 40, PrUiFlag_Focusable | PrUiFlag_Pressable);
+        second = f.box(f.root, 10, 60, 100, 40, PrUiFlag_Focusable | PrUiFlag_Pressable);
+        if (prUiKeyPressed(f.ui, f.root, PrAppKey_Enter, PrAppModifierFlag_Shift))
+            seen.push_back("shift enter");
+        if (prUiActivated(f.ui, second))
+            seen.push_back("second activated");
+    };
+    f.frame();
+    f.press(20, 20);
+    f.frame();
+    f.key(PrAppKey_Enter, PrAppModifierFlag_Shift | PrAppModifierFlag_CapsLock);
+    f.key(PrAppKey_Tab, PrAppModifierFlag_CapsLock);
+    f.frame();
+    CHECK(prUiFocus(f.ui) == second);
+    f.key(PrAppKey_Enter, PrAppModifierFlag_CapsLock);
+    f.frame();
+    CHECK(seen == std::vector<std::string>{"shift enter", "second activated"});
+}
+
 TEST_CASE("a captured key goes to the outermost capture on the focus path, ahead of every claim") {
     UiFixture f;
     PrLayoutNode panel = kPrLayoutNodeNone;
@@ -1215,6 +1240,42 @@ TEST_CASE("reveal scrolls a node into its scroll container's view") {
     reveal = true;
     f.frame();
     CHECK(prLayoutNodeScroll(f.tree, scroller).y.raw == prLayoutUnitFromPx(350).raw);
+}
+
+TEST_CASE("a container that follows its end keeps its bottom in view as it grows, until a scroll leaves the bottom") {
+    UiFixture f;
+    PrLayoutNode scroller = kPrLayoutNodeNone;
+    float height = 400;
+    f.build = [&] {
+        scroller = f.scroller(f.root, 0, 0, 200, 200, 200, height);
+        prUiFollowEnd(f.ui, scroller);
+    };
+    // Returns how far the container shows from its bottom, in px.
+    auto above = [&] {
+        PrLayoutScrollInfo info{};
+        REQUIRE(prLayoutNodeScrollInfo(f.tree, scroller, &info));
+        return prLayoutUnitToPx(PrLayoutUnit{info.range.bottom.raw - info.offset.y.raw});
+    };
+    f.frame();
+    CHECK(above() == 0);
+    height = 500;
+    f.frame();
+    CHECK(above() == 0);
+
+    f.wheel(100, 100, 0, -60);
+    f.frame();
+    CHECK(above() == 60);
+    height = 600;
+    f.frame();
+    f.frame();
+    CHECK(above() == 160);
+
+    f.wheel(100, 100, 0, 1000);
+    f.frame();
+    CHECK(above() == 0);
+    height = 700;
+    f.frame();
+    CHECK(above() == 0);
 }
 
 TEST_CASE("a frame that declares the same tree lays nothing out, with input or without") {

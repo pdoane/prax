@@ -569,6 +569,20 @@ TEST_CASE("a view's viewport is the window's media environment and the extent th
     CHECK(prCssElementGetBoundingClientRect(page.byId("a")).width == 400.0);
 }
 
+TEST_CASE("a view's painter measures the document as tall as its content at an inline size, and paints it there") {
+    Viewed page("<style>body { margin: 0 } div { display: flex; flex-wrap: wrap } span { width: 50px; height: 10px }"
+        "</style><div><span></span><span></span><span></span><span></span><span></span><span></span></div>");
+    PrLayoutPainter painter = prHtmlViewPainter(page.view);
+    REQUIRE(painter.measure != nullptr);
+    CHECK(painter.measure(painter.context, 300) == 10.0f);
+    CHECK(painter.measure(painter.context, 100) == 30.0f);
+    PrDrawList* list = prDrawListCreate();
+    painter.paint(painter.context, PrVec2{100, 30}, list);
+    prDrawListRelease(list);
+    CHECK(prCssElementGetBoundingClientRect(prDomDocumentElement(page.document())).width == 100.0);
+    CHECK(painter.measure(painter.context, 100) == 30.0f);
+}
+
 TEST_CASE("an inline box split by a block has its parts and its row as client rects, and bounds of those with area") {
     Viewed page("<style>body { margin: 0 } .w { width: 500px } b { display: inline-block; height: 1px }</style>"
         "<div class=w><span id=empty><b style='width: 100px'></b><div></div><b style='width: 200px'></b></span></div>"

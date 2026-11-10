@@ -1302,7 +1302,7 @@ bool checkFeatureName(CssMatcher* m, const CssMatchFrame& f) {
         else if (prAsciiStartsWithFold(text, "max-"))
             prefix = CssValueAuxFlag_FeatureMax;
         if (prefix != 0)
-            descriptor = cssDescriptorFromText(m->features, prStringSlice(text, 4, text.size - 4));
+            descriptor = cssDescriptorFromText(m->features, prStringFrom(text, 4));
         if (descriptor != PrCssDescriptor_None && !bitsetTest(kCssDescriptorRange, descriptor))
             descriptor = PrCssDescriptor_None;
     }

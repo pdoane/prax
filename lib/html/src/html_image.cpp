@@ -91,7 +91,7 @@ uint32_t svgLength(PrStringView value) {
         while (at < value.size && prAsciiIsDigit(value.data[at]))
             ++at;
     }
-    PrStringView unit = prStringSlice(value, at, value.size - at);
+    PrStringView unit = prStringFrom(value, at);
     return unit.size == 0 || unit == "px" ? uint32_t(whole < UINT32_MAX ? whole : UINT32_MAX) : 0;
 }
 
@@ -104,15 +104,15 @@ bool svgSize(PrStringView text, uint32_t* width, uint32_t* height) {
         return false;
     size_t root = start;
     for (;;) {
-        root += prStringFindByte(prStringSlice(text, root, text.size - root), '<');
+        root += prStringFindByte(prStringFrom(text, root), '<');
         if (root >= text.size)
             return false;
-        PrStringView rest = prStringSlice(text, root, text.size - root);
+        PrStringView rest = prStringFrom(text, root);
         if (!prStringStartsWith(rest, "<?") && !prStringStartsWith(rest, "<!"))
             break;
         ++root;
     }
-    PrStringView rest = prStringSlice(text, root, text.size - root);
+    PrStringView rest = prStringFrom(text, root);
     if (!prStringStartsWith(rest, "<svg") || rest.size == 4 || !(prAsciiIsSpace(rest.data[4]) || rest.data[4] == '>'))
         return false;
     *width = 0;

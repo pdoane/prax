@@ -174,7 +174,28 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
     double defaultBlock = double(defaultSize.blockSize.raw);
     bool autoInline = inlineSize < 0;
     bool autoBlock = blockSize < 0;
-    if (autoInline && autoBlock) {
+    // Content that measures has no natural size. An auto inline size fills the containing block, as a block's does, and
+    // an auto block size is what the content measures at the inline size that the limits leave.
+    const LayoutReplaced& replaced = layoutReplaced(state.tree, node);
+    PrLayoutMeasureFn measure = replaced.contentKind == PrLayoutContentKind_Painter ? replaced.painter.measure : nullptr;
+    if (measure != nullptr) {
+        if (autoInline && policy.fit == ReplacedFit_MinContent) {
+            inlineSize = 0;
+        } else if (autoInline && policy.fit == ReplacedFit_MaxContent) {
+            inlineSize = double(layoutLogicalSize(space.mode, state.viewport).inlineSize.raw);
+            if (state.reuse)
+                layoutTreeReadViewport(state.tree, node);
+        } else if (autoInline && layoutIsDefinite(stretchInline)) {
+            inlineSize = double(layoutUnitMax(kLayoutUnitZero, stretchInline - edgesInline).raw);
+        } else if (autoInline) {
+            inlineSize = defaultInline;
+        }
+        inlineSize = prF64Min(prF64Max(inlineSize, minInline), maxInline);
+        if (autoBlock) {
+            float measured = measure(replaced.painter.context, float(inlineSize / double(kPrLayoutUnitsPerPx)));
+            blockSize = prF64Max(0, double(measured) * double(kPrLayoutUnitsPerPx));
+        }
+    } else if (autoInline && autoBlock) {
         if (naturalInline >= 0) {
             inlineSize = naturalInline;
             blockSize = naturalBlock >= 0 ? naturalBlock : ratio > 0 ? toBlock(inlineSize) : defaultBlock;
@@ -217,7 +238,7 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
         blockSize = ratio > 0 ? toBlock(inlineSize) : naturalBlock >= 0 ? naturalBlock : defaultBlock;
     }
 
-    if (autoInline && autoBlock && ratio > 0 && inlineSize > 0 && blockSize > 0) {
+    if (measure == nullptr && autoInline && autoBlock && ratio > 0 && inlineSize > 0 && blockSize > 0) {
         // CSS2's table, which names the inline size w and the block size h.
         double w = inlineSize;
         double h = blockSize;

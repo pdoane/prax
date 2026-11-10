@@ -190,7 +190,7 @@ PrStringView prFilePathExtension(PrStringView path) {
     size_t dot = prStringFindLastByte(name, '.');
     if (dot == name.size || dot == 0)
         return prStringSlice(name, name.size, 0);
-    return prStringSlice(name, dot, name.size - dot);
+    return prStringFrom(name, dot);
 }
 
 void prFilePathAppend(PrTextBuffer* path, PrStringView part) {

@@ -274,6 +274,12 @@ void prAppEventSetText(PrAppEvent* event, PrStringView text);
 bool prAppEventPosition(const PrAppEvent* event, PrVec2* out);
 void prAppEventSetPosition(PrAppEvent* event, PrVec2 position);
 
+// Returns a window's event in the logical pixels of a surface placed in the window, as prAppOutputPlaced places the
+// surface's output: `origin` is the surface's origin in the window, and `scale` is the number of window logical pixels
+// per surface logical pixel. The event's position, a pointer's movement and contact size, and a scroll's delta in
+// pixels are the surface's. Its other members are the window's.
+PrAppEvent prAppEventPlaced(const PrAppEvent* event, PrVec2 origin, float scale);
+
 #if defined(__cplusplus)
 }
 #endif

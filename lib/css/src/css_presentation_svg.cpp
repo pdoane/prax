@@ -75,7 +75,7 @@ void cssPresentationSvgUpdated(PrCssPresentation* presentation, CssPresentationS
     if (current.kind != PrLayoutContentKind_Painter || current.painter.context != svg->content) {
         PrLayoutContent content{
             .kind = PrLayoutContentKind_Painter,
-            .painter = {.paint = svg->functions->paint, .context = svg->content},
+            .painter = {.context = svg->content, .paint = svg->functions->paint},
         };
         prLayoutNodeSetContent(tree, box, &content);
         laidOut = true;

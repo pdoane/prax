@@ -835,7 +835,7 @@ bool resolveFile(const Terminal* terminal, PrStringView path, PrRawString* out) 
     PrRawString base = prRawStringNull();
     if (prStringStartsWith(path, "~/")) {
         base = prFileUserDirectory(PrFileUserDirectory_Home);
-        path = prStringSlice(path, 2, path.size - 2);
+        path = prStringFrom(path, 2);
     } else {
         base = workingDirectory(terminal);
     }

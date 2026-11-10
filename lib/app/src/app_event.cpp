@@ -104,3 +104,17 @@ void prAppEventSetPosition(PrAppEvent* event, PrVec2 position) {
     else if (isPlacedDragEvent(event->kind))
         event->drag.position = position;
 }
+
+PrAppEvent prAppEventPlaced(const PrAppEvent* event, PrVec2 origin, float scale) {
+    PrAppEvent placed = *event;
+    PrVec2 at{};
+    if (prAppEventPosition(event, &at))
+        prAppEventSetPosition(&placed, PrVec2{(at.x - origin.x) / scale, (at.y - origin.y) / scale});
+    if (isPointerEvent(event->kind)) {
+        placed.pointer.movement = PrVec2{event->pointer.movement.x / scale, event->pointer.movement.y / scale};
+        placed.pointer.contactSize = PrVec2{event->pointer.contactSize.x / scale, event->pointer.contactSize.y / scale};
+    }
+    if (event->kind == PrAppEventKind_Scroll && event->scroll.unit == PrAppScrollUnit_Pixel)
+        placed.scroll.delta = PrVec2{event->scroll.delta.x / scale, event->scroll.delta.y / scale};
+    return placed;
+}
