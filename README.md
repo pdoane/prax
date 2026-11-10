@@ -56,10 +56,10 @@ Coming soon:
 
 ## Usage
 
-Prax builds with CMake 3.28 or newer, a C17 and C++20 compiler (MSVC on Windows), and Git. It targets arm64, and
-x86-64 with x86-64-v3 (AVX2). It runs on macOS 26 or newer on Apple Silicon, and on Windows 10 version 1809 or newer;
-configuring a build for anything older fails. The build fetches its dependencies at pinned releases and checks each
-against its hash (`cmake/dependencies.cmake`). To use your own copy of a dependency, set
+Prax builds with CMake 3.28 or newer, a C17 and C++20 compiler (MSVC on Windows), and Git. It targets arm64, and x86-64
+with x86-64-v3 (AVX2). It runs on macOS 26 or newer on Apple Silicon, on iOS 26 or newer, and on Windows 10 version 1809
+or newer; configuring a build for anything older fails. The build fetches its dependencies at pinned releases and checks
+each against its hash (`cmake/dependencies.cmake`). To use your own copy of a dependency, set
 `FETCHCONTENT_SOURCE_DIR_<NAME>` to its source directory.
 
 - Each library is a CMake target named for its module (`prax::draw`, `prax::layout`), or for its module and language
@@ -117,13 +117,13 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 
 | interface | option | backend | builds on | default |
 | --- | --- | --- | --- | --- |
-| app | `PR_APP_COCOA` | Cocoa | Apple platforms | on |
+| app | `PR_APP_COCOA` | Cocoa | macOS | on |
 | app | `PR_APP_WIN32` | Win32 | Windows | on |
 | app | `PR_APP_WEB` | a web page's canvas | the web | on |
-| gpu | `PR_GPU_METAL` | Metal 3 | Apple platforms | on |
-| gpu | `PR_GPU_METAL4` | Metal 4, for experiments | Apple platforms | on |
+| gpu | `PR_GPU_METAL` | Metal 3 | macOS | on |
+| gpu | `PR_GPU_METAL4` | Metal 4, for experiments | macOS | on |
 | gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
-| gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web | on for Linux and Android |
+| gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web and iOS | on for Linux and Android |
 | gpu | `PR_GPU_MEMORY` | memory, without shaders or presentation | every platform | on |
 | gpu | `PR_GPU_CANVAS2D` | memory and a web page's canvases, without shaders | the web | on |
 | net | `PR_NET_SOCKETS` | BSD sockets, or Winsock on Windows | every platform but the web | on |

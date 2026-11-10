@@ -37,10 +37,6 @@ namespace pr_impl {
 
 namespace {
 
-// The most bytes of output that the parser parses before it yields the screen's lock to a waiting UI thread. This
-// bounds how long the UI waits.
-constexpr size_t kParseSliceBytes = 16 * 1024;
-
 // If one delivery of output drops at least this many scrollback lines, as a clear does, the parser returns their memory
 // to the system immediately instead of waiting for the allocator's next purge.
 constexpr uint32_t kTrimLines = 4096;
@@ -327,6 +323,7 @@ struct Terminal {
     RawArray<char> title;               // the program's title as of the last frame or update, or empty
     TerminalSnapshot snapshot;
     PrTerminalLockInfo waits;           // the UI thread's waits for the screen's lock
+    Atomic<uint64_t> parsedBytes;       // the output that the parser has taken, which the UI's waits compare
 
     // Threading. The parser runs on the process's thread (receiveOutput) and writes into `vterm`. `mutex` guards
     // `vterm` and the fields after it. The parser holds the mutex for one slice of output at a time. If `uiWaiting` is
@@ -357,9 +354,10 @@ void wakeApp(void* PR_NULLABLE context) {
     prAppWake(static_cast<PrApp*>(context));
 }
 
-// Records a wait of `milliseconds` for the screen's lock.
-void lockWaitAdd(PrTerminalLockInfo* info, double milliseconds) {
+// Records a wait of `milliseconds` for the screen's lock, during which the parser took `bytes` of output.
+void lockWaitAdd(PrTerminalLockInfo* info, double milliseconds, uint64_t bytes) {
     ++info->count;
+    info->worstBytes = bytes > info->worstBytes ? bytes : info->worstBytes;
     info->totalMilliseconds += milliseconds;
     info->worstMilliseconds = milliseconds > info->worstMilliseconds ? milliseconds : info->worstMilliseconds;
     uint32_t bucket = 0;
@@ -374,8 +372,9 @@ void lockScreen(const Terminal* constTerminal) {
     Terminal* terminal = const_cast<Terminal*>(constTerminal);
     terminal->uiWaiting.fetchAdd(1);
     double start = prTimeMonotonicMilliseconds();
+    uint64_t parsed = terminal->parsedBytes.load();
     prMutexLock(&terminal->mutex);
-    lockWaitAdd(&terminal->waits, prTimeMonotonicMilliseconds() - start);
+    lockWaitAdd(&terminal->waits, prTimeMonotonicMilliseconds() - start, terminal->parsedBytes.load() - parsed);
     terminal->uiWaiting.fetchSub(1);
 }
 
@@ -434,8 +433,9 @@ void receiveOutput(void* PR_NULLABLE context, PrProcess* process, PrProcessStrea
             publish(terminal, process);
             yieldScreen(terminal);
         }
-        size_t size = bytes.size - at < kParseSliceBytes ? bytes.size - at : kParseSliceBytes;
+        size_t size = bytes.size - at < kPrTerminalParseSliceBytes ? bytes.size - at : kPrTerminalParseSliceBytes;
         prVtermWrite(terminal->vterm, PrByteView{bytes.data + at, size});
+        terminal->parsedBytes.fetchAdd(size);
         at += size;
     }
     publish(terminal, process);

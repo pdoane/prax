@@ -213,12 +213,20 @@ void prTerminalSetColorScheme(PrTerminal* terminal, PrAppColorScheme scheme);
 // waits from 2^(i-1) up to 2^i microseconds. The last bucket counts every longer wait.
 enum { kPrTerminalLockBuckets = 16 };
 
-// The waits of the terminal's thread for the screen's lock since the terminal was created.
+// The most output, in bytes, that the parser takes while the UI thread waits for the screen's lock: one slice. The
+// parser yields the lock at the end of the slice, so the UI waits for one slice of parsing at most, however busy the
+// program keeps the parser.
+enum { kPrTerminalParseSliceBytes = 16 * 1024 };
+
+// The UI thread's waits for the screen's lock since the terminal was created. A wait's duration also counts the time
+// that the scheduler kept the parser off the processor while it held the lock, which load alone can make long. The
+// output that the parser took during a wait does not depend on load.
 typedef struct PrTerminalLockInfo {
     uint64_t count;
     double totalMilliseconds;
     double worstMilliseconds;
     uint64_t buckets[kPrTerminalLockBuckets];   // wait counts by duration (kPrTerminalLockBuckets)
+    uint64_t worstBytes;                        // the most output that the parser took during one wait
 } PrTerminalLockInfo;
 
 // Returns the terminal's waits for the screen's lock.

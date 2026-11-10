@@ -6,7 +6,10 @@ Each runner's docstring (`tools/suite/wpt/wpt.py`, `tools/suite/css_parsing.py`,
 
 ## Running
 
-`./dev.sh` is the fast loop: lint, build and unit tests. Then run the suites for the areas that a change touches:
+`./dev.sh test` is the fast loop: lint, build and unit tests on the host. `./dev.sh ci` checks every target that the
+machine builds: the host in its default and debug builds, the web, and on macOS, iOS, whose tests are built and not
+run. The debug build is the one that checks the assertions. Then run the suites for the
+areas that a change touches:
 
 | area | suites |
 | --- | --- |

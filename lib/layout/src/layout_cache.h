@@ -96,6 +96,7 @@ struct LayoutMathStretch {
     uint8_t _pad[6];
 
     const PrLayoutUnit* PR_NULLABLE columns;
+    PR_PAD(0, 4)
 };
 PR_NO_PADDING_END
 

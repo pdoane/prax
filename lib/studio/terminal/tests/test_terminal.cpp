@@ -496,17 +496,6 @@ std::string cellImage(PrTerminal* terminal, uint32_t columns, uint32_t rows, con
 
 constexpr PrColor8 kImageRed = {0xff, 0x00, 0x00, 0xff};
 
-// The longest time, in milliseconds, that the UI thread may wait for the screen lock while the program floods the
-// terminal. The bound is one slice of parsing, plus room for the scheduler. A build without the optimizer, or with a
-// sanitizer, parses many times slower. The tests run more threads than the machine has cores, so the scheduler may
-// preempt the parser while it holds the lock. No lock can bound that delay, so the bound applies to all but a
-// thousandth of the waits.
-#if defined(NDEBUG)
-constexpr double kLockWaitBound = 5;
-#else
-constexpr double kLockWaitBound = 250;
-#endif
-
 // Returns an upper bound on the wait at the `share` quantile of `info`: the upper edge of the histogram bucket that
 // holds that quantile.
 double waitAtShare(const PrTerminalLockInfo& info, double share) {
@@ -965,6 +954,9 @@ TEST_CASE("terminal: a flood of output goes on showing in the frames that the te
     CHECK_FALSE(prUiOutput(t.f.ui).wantsFrame);
 }
 
+// The wait's duration is reported, and not checked: the scheduler can preempt the parser while it holds the lock, for
+// as long as the machine's load keeps it off the processor. What the parser took during a wait is the bound that load
+// cannot move.
 TEST_CASE("terminal: while the program floods the screen, the UI waits for it no longer than a slice of parsing") {
     FakeApp app;
     // Colored text, wide characters and scrolling lines, which parse slower than plain text, followed by a marker. A
@@ -990,9 +982,11 @@ TEST_CASE("terminal: while the program floods the screen, the UI waits for it no
     PrTerminalLockInfo info = prTerminalLockInfo(t.terminal);
     MESSAGE("frames " << frames << ", waits " << info.count << ", median under " << waitAtShare(info, 0.5) * 1000 <<
         " us, 99.9% under " << waitAtShare(info, 0.999) * 1000 << " us, mean " <<
-        info.totalMilliseconds / double(info.count) * 1000 << " us, worst " << info.worstMilliseconds * 1000 << " us");
+        info.totalMilliseconds / double(info.count) * 1000 << " us, worst " << info.worstMilliseconds * 1000 <<
+        " us, most parsed during a wait " << info.worstBytes << " bytes");
     CHECK(frames > 10);
-    CHECK(waitAtShare(info, 0.999) < kLockWaitBound);
+    CHECK(info.count > 10);
+    CHECK(info.worstBytes <= kPrTerminalParseSliceBytes);
 }
 
 TEST_CASE("terminal: a synchronized update wakes the application as it begins and as it ends, and not between") {

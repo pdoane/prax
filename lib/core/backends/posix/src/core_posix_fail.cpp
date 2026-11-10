@@ -67,8 +67,12 @@ const char* nameOf(int number) {
     }
 }
 
-// Reports the crash, then lets the signal end the process as it would have: the handler is reset as it runs.
+// Reports the crash, then lets the signal end the process as it would have. The handler restores the default action
+// itself, because another handler that chains to it, as a test framework's does, may have reinstalled it without the
+// reset on delivery (SA_RESETHAND). The signal raised here waits until the handler returns, and the default action then
+// ends the process.
 void crashed(int number, siginfo_t* info, void*) {
+    signal(number, SIG_DFL);
     writeText("crashed: ");
     writeText(nameOf(number));
     writeText(" at address ");

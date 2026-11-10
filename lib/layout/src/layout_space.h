@@ -145,8 +145,11 @@ struct LayoutSpace {
     const LayoutMathStretch* PR_NULLABLE stretch;
 };
 
-// A box's space is copied for each child, so its fields are ordered to leave no padding.
+// A box's space is copied for each child, so its fields are ordered to leave no padding. This is its size where a
+// pointer is 64 bits.
+#if UINTPTR_MAX == UINT64_MAX
 static_assert(sizeof(LayoutSpace) == 80);
+#endif
 
 // Returns the fragmentainer that a box laid out in `space` is laid out in, or null outside a fragmentation context.
 inline const LayoutFragmentainer* PR_NULLABLE layoutSpaceFragmentainer(const LayoutSpace& space) {

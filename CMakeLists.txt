@@ -1,11 +1,12 @@
 # The consumer minimum (README.md, CMake versions). shader_library.cmake and tools/package state it too.
 cmake_minimum_required(VERSION 3.28)
-# Where Prax is built on its own, macOS builds target Apple Silicon and the oldest macOS that Prax runs on. A build that
-# includes Prax chooses its own, and Prax checks them below. These precede project(), which reads them.
+# Where Prax is built on its own, Apple builds target Apple Silicon and the oldest macOS or iOS that Prax runs on, which
+# share a version. A build that includes Prax chooses its own, and Prax checks them below. These precede project(), which
+# reads them.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "The architectures that macOS builds target")
+    set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "The architectures that Apple builds target")
     if (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-        set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0 CACHE STRING "The oldest macOS that the build runs on" FORCE)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0 CACHE STRING "The oldest macOS or iOS that the build runs on" FORCE)
     endif()
 endif()
 project(prax
@@ -17,10 +18,15 @@ if (APPLE)
     enable_language(OBJCXX)
 endif()
 
-# The platforms that Prax runs on (README.md): macOS 26 or newer on Apple Silicon, and Windows 10 version 1809 or newer.
-# A build that targets an older system or another architecture fails here rather than in a library's sources. On
-# Windows, the system headers then declare only what 1809 has.
+# The platforms that Prax runs on (README.md): macOS 26 or newer on Apple Silicon, iOS 26 or newer, and Windows 10
+# version 1809 or newer. A build that targets an older system or another architecture fails here rather than in a
+# library's sources. On Windows, the system headers then declare only what 1809 has.
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(PR_MACOS ON)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(PR_IOS ON)
+endif()
+if (APPLE)
     if (CMAKE_OSX_ARCHITECTURES)
         set(PR_OSX_ARCHITECTURES ${CMAKE_OSX_ARCHITECTURES})
     else()
@@ -30,7 +36,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         message(FATAL_ERROR "Prax runs on Apple Silicon only, and this build targets ${PR_OSX_ARCHITECTURES}")
     endif()
     if (CMAKE_OSX_DEPLOYMENT_TARGET AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 26.0)
-        message(FATAL_ERROR "Prax runs on macOS 26 or newer, and this build targets ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+        message(FATAL_ERROR "Prax runs on ${CMAKE_SYSTEM_NAME} 26 or newer, and this build targets ${CMAKE_OSX_DEPLOYMENT_TARGET}")
     endif()
 elseif (WIN32)
     add_compile_definitions(WINVER=0x0A00 _WIN32_WINNT=0x0A00 NTDDI_VERSION=0x0A000006)
@@ -159,6 +165,10 @@ endif()
 if (NOT EMSCRIPTEN)
     set(PR_SYSTEM ON)
 endif()
+# The targets whose Vulkan the Vulkan backend presents through: the desktop systems.
+if (PR_SYSTEM AND NOT PR_IOS)
+    set(PR_DESKTOP_VULKAN ON)
+endif()
 # The POSIX targets whose applications may start programs: the desktop systems, and not the mobile ones.
 if (CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
     set(PR_POSIX_PROCESSES ON)
@@ -166,13 +176,13 @@ endif()
 if (PR_DEVELOP OR PR_EXAMPLES OR PR_APPS OR PR_UNIX_OTHER)
     find_package(OpenSSL 3...<4 QUIET)
 endif()
-pr_backend_option(PR_APP_COCOA "lib/app's Cocoa backend" "${APPLE}" "${APPLE}")
+pr_backend_option(PR_APP_COCOA "lib/app's Cocoa backend" "${PR_MACOS}" "${PR_MACOS}")
 pr_backend_option(PR_APP_WIN32 "lib/app's Win32 backend" "${WIN32}" "${WIN32}")
 pr_backend_option(PR_APP_WEB "lib/app's web backend" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
-pr_backend_option(PR_GPU_METAL "lib/gpu's Metal backend, on Metal 3" "${APPLE}" "${APPLE}")
-pr_backend_option(PR_GPU_METAL4 "lib/gpu's Metal 4 backend, for experiments" "${APPLE}" "${APPLE}")
+pr_backend_option(PR_GPU_METAL "lib/gpu's Metal backend, on Metal 3" "${PR_MACOS}" "${PR_MACOS}")
+pr_backend_option(PR_GPU_METAL4 "lib/gpu's Metal 4 backend, for experiments" "${PR_MACOS}" "${PR_MACOS}")
 pr_backend_option(PR_GPU_D3D12 "lib/gpu's Direct3D 12 backend" "${WIN32}" "${WIN32}")
-pr_backend_option(PR_GPU_VULKAN "lib/gpu's Vulkan backend" "${PR_LINUX}" "${PR_SYSTEM}")
+pr_backend_option(PR_GPU_VULKAN "lib/gpu's Vulkan backend" "${PR_LINUX}" "${PR_DESKTOP_VULKAN}")
 pr_backend_option(PR_GPU_MEMORY "lib/gpu's memory backend" ON ON)
 pr_backend_option(PR_GPU_CANVAS2D "lib/gpu's Canvas 2D backend" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
 pr_backend_option(PR_NET_SOCKETS "lib/net's backend over the system's sockets" "${PR_SYSTEM}" "${PR_SYSTEM}")
@@ -261,11 +271,12 @@ add_subdirectory(lib)
 if (PR_DEVELOP)
     add_subdirectory(tools)
 endif()
-if (PR_EXAMPLES AND (APPLE OR WIN32 OR EMSCRIPTEN))
+# The examples run where lib/app has a backend.
+if (PR_EXAMPLES AND (PR_MACOS OR WIN32 OR EMSCRIPTEN))
     add_subdirectory(examples)
 endif()
 # The apps run on the desktop.
-if (PR_APPS AND (APPLE OR WIN32))
+if (PR_APPS AND (PR_MACOS OR WIN32))
     add_subdirectory(apps)
 endif()
 if (PR_INSTALL)

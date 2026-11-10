@@ -4,12 +4,17 @@
 
 #include "pr/core_posix_fail.h"
 
-#include <unistd.h>
 #if defined(__APPLE__)
-#include <sys/random.h>
+#include <stdlib.h>
+#else
+#include <unistd.h>
 #endif
 
 void prCorePosixRandomBytes(void* out, size_t size) {
+#if defined(__APPLE__)
+    // Apple's systems draw it from the kernel's generator and never fail. iOS declares no getentropy.
+    arc4random_buf(out, size);
+#else
     // getentropy fills at most 256 bytes in one call.
     constexpr size_t kMaxChunk = 256;
     uint8_t* bytes = static_cast<uint8_t*>(out);
@@ -19,4 +24,5 @@ void prCorePosixRandomBytes(void* out, size_t size) {
             prCorePosixFailed("the system's random generator is unavailable", PrStringView(__FILE__),
                 uint32_t(__LINE__));
     }
+#endif
 }

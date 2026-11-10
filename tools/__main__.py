@@ -1,6 +1,5 @@
 """The developer workflow, which ./dev.sh runs: `./dev.sh help` lists the commands, and `./dev.sh <command> --help`
-describes one. With no command, it lints, builds, and runs the unit tests and the tools' tests: the fast loop, which
-runs no suite. Lint runs beside the rest, and every failure is reported before the run fails.
+describes one. With no command, it prints the everyday commands and the state of the builds.
 
 Nothing under third_party is committed, and every command fetches what it needs (tools/fetch/checkouts.py). Benchmark
 results are kept under perf, which is not committed either.
@@ -14,6 +13,7 @@ import sys
 COMMANDS = {
     "build": "tools.build.commands",
     "test": "tools.build.commands",
+    "ci": "tools.build.commands",
     "suite": "tools.suite.commands",
     "bench": "tools.bench.commands",
     "profile": "tools.bench.commands",
@@ -38,11 +38,48 @@ COMMANDS = {
 }
 
 
-def everything():
-    """The whole of `./dev.sh test`: lint beside the unit tests and the tools' tests."""
-    from tools.build import commands as build
+# The everyday commands, which ./dev.sh with no command prints.
+EVERYDAY = (
+    ("test", "lint, build, and run the unit tests and the tools' tests on the host: the fast loop"),
+    ("ci [asan]", "lint, build and test every target that this machine builds, and report each"),
+    ("build [mode]", "configure and build: debug, release, asan, tsan, wasm or ios"),
+    ("suite [name]", "run a conformance suite, or every suite that is checked out"),
+    ("app <name>", "build and run an app under apps"),
+    ("example <name>", "build and run an example under examples"),
+    ("help", "every command, and what it takes"),
+)
 
-    build.test([])
+
+def age(seconds):
+    """Returns how long ago `seconds` was, in the largest unit that fits."""
+    for unit, size in (("d", 86400), ("h", 3600), ("m", 60)):
+        if seconds >= size:
+            return "%d%s ago" % (seconds // size, unit)
+    return "just now"
+
+
+def overview():
+    """Prints the everyday commands, and each build directory with when it last built."""
+    import os
+    import time
+
+    from tools import dev
+    from tools.build import build as builds
+
+    print("Prax's developer workflow, which ./dev.sh runs.\n")
+    width = max(len(command) for command, _ in EVERYDAY)
+    for command, text in EVERYDAY:
+        print("    ./dev.sh %s  %s" % (command.ljust(width), text))
+    print("\nbuilds:")
+    found = False
+    for name, chosen in builds.MODES.items():
+        log = os.path.join(chosen.directory, ".ninja_log")
+        if os.path.exists(log):
+            found = True
+            print("    %-8s %-24s built %s" % (name, os.path.relpath(chosen.directory, dev.ROOT),
+                                              age(time.time() - os.path.getmtime(log))))
+    if not found:
+        print("    none yet; ./dev.sh test makes the default build")
 
 
 def help(code=0):
@@ -60,7 +97,7 @@ def help(code=0):
 
 def main(argv):
     if not argv:
-        everything()
+        overview()
         return
     command, args = argv[0], argv[1:]
     if command in ("help", "-h", "--help"):

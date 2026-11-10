@@ -921,7 +921,8 @@ LayoutNodeIndex layoutTreeCreateNode(LayoutTree* tree, PrLayoutNodeKind kind) {
         // A sticky box's container is named by its node with a bit that no node index reaches.
         if (node >= kLayoutContainerSticky)
             PR_FATAL("layout tree has too many nodes");
-        tree->nodes.emplace();
+        // A new slot starts at generation zero. A freed slot keeps its generation, which its free advanced.
+        tree->nodes.emplace().generation = 0;
     }
     LayoutTreeNode& n = tree->nodes.data[node];
     uint32_t generation = n.generation;
@@ -1487,8 +1488,11 @@ PrLayoutNode prLayoutNodeCreateElement(PrLayoutTree* tree, PrLayoutNode parent, 
 PrLayoutNode prLayoutNodeCreateText(PrLayoutTree* tree, PrLayoutNode parent, PrStringView text) {
     LayoutTree* t = tree;
     LayoutNodeIndex at = layoutNodeIndex(t, parent);
+    // The text is copied first, because it may be a view of another node's text, which a short text holds inline in the
+    // texts that creating the node can reallocate.
+    PrRawString copy = prRawStringCopy(text);
     LayoutNodeIndex node = layoutTreeCreateNode(t, PrLayoutNodeKind_Text);
-    t->texts.data[t->nodes.data[node].text] = prRawStringCopy(text);
+    t->texts.data[t->nodes.data[node].text] = copy;
     appendNew(t, at, node);
     return layoutNodeName(t, node);
 }

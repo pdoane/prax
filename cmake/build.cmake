@@ -25,8 +25,8 @@ if (PR_DEVELOP)
     target_compile_options(pr_warnings INTERFACE $<IF:$<C_COMPILER_ID:MSVC>,/WX,-Werror>)
     target_link_options(pr_warnings INTERFACE
         $<$<C_COMPILER_ID:MSVC>:/WX>
-        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<PLATFORM_ID:Darwin>>:LINKER:-fatal_warnings>
-        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<NOT:$<PLATFORM_ID:Darwin>>>:LINKER:--fatal-warnings>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<PLATFORM_ID:Darwin,iOS>>:LINKER:-fatal_warnings>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<NOT:$<PLATFORM_ID:Darwin,iOS>>>:LINKER:--fatal-warnings>
     )
 endif()
 
@@ -184,7 +184,8 @@ function(pr_embed target directory)
 endfunction()
 
 # One test binary per module, named after it, which links the module, the toolkit and the tests' main(). The module is
-# a library of the engine, or a library of test support.
+# a library of the engine, or a library of test support. CTest runs the binaries that the host runs, and a build for
+# iOS only builds them.
 #
 #   pr_module_tests(<module> <source>...)
 function(pr_module_tests module)
@@ -195,7 +196,9 @@ function(pr_module_tests module)
         set(tested ${module})
     endif()
     target_link_libraries(${module}_tests PRIVATE ${tested} prax::core_cpp test_main pr_warnings)
-    doctest_discover_tests(${module}_tests)
+    if (NOT PR_IOS)
+        doctest_discover_tests(${module}_tests)
+    endif()
 endfunction()
 
 # A module's tests that need a web page, such as those that draw through a page's canvases: on the web, a page,

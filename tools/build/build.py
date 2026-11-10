@@ -4,7 +4,7 @@ The default build is optimized, with debug symbols and without link-time optimiz
 except the benchmarks, which read their numbers from Release. Debug keeps the assertions. The sanitizer builds are
 Debug as well. One catches reads past the end of a buffer that the others let through, and the other catches races
 between threads. The WebAssembly build compiles with Emscripten (emsdk.py), runs on one thread, and runs its tests under
-Node.js.
+Node.js. The iOS build is the default cross-compiled for iOS devices with Xcode's iOS SDK, on macOS, and only builds.
 """
 
 import json
@@ -29,6 +29,7 @@ RELEASE = os.path.join(dev.ROOT, "build-release")
 ASAN = os.path.join(dev.ROOT, "build-asan")
 TSAN = os.path.join(dev.ROOT, "build-tsan")
 WASM = os.path.join(dev.ROOT, "build-wasm")
+IOS = os.path.join(dev.ROOT, "build-ios")
 # The base of an A/B comparison: its sources, its builds, and its harnesses by commit (ab.py).
 AB = os.path.join(dev.ROOT, "build-ab")
 # The libraries built and installed as a consumer takes them, and the consumers built against them.
@@ -45,15 +46,16 @@ ASAN_SLOWDOWN = 4
 
 class Mode:
     """A build: its directory, its CMake build type, its compiler and linker flags, how many times longer its
-    harnesses take than the default build's, and whether it compiles to WebAssembly."""
+    harnesses take than the default build's, and whether it compiles to WebAssembly or for iOS."""
 
-    def __init__(self, name, directory, build_type, flags="", slowdown=1, wasm=False):
+    def __init__(self, name, directory, build_type, flags="", slowdown=1, wasm=False, ios=False):
         self.name = name
         self.directory = directory
         self.build_type = build_type
         self.flags = flags
         self.slowdown = slowdown
         self.wasm = wasm
+        self.ios = ios
 
     def environment(self):
         """The environment that the runners read the build from (tools/suite/corpus.py)."""
@@ -67,15 +69,24 @@ MODES = {
     "asan": Mode("asan", ASAN, "Debug", SANITIZE, ASAN_SLOWDOWN),
     "tsan": Mode("tsan", TSAN, "Debug", THREAD_SANITIZE),
     "wasm": Mode("wasm", WASM, "RelWithDebInfo", wasm=True),
+    "ios": Mode("ios", IOS, "RelWithDebInfo", ios=True),
 }
 
 
 def mode(name):
-    """Returns the build that `name` names: default, debug, release, asan, tsan or wasm."""
+    """Returns the build that `name` names: default, debug, release, asan, tsan, wasm or ios."""
     found = MODES[name or "default"]
     if found.flags is None:
         dev.fail("MSVC has no thread sanitizer")
+    if found.ios and not dev.darwin():
+        dev.fail("the iOS build needs macOS and Xcode")
     return found
+
+
+def ios_sdk():
+    """Fails unless Xcode has its iOS SDK, which the iOS build compiles against."""
+    if dev.output(["xcrun", "--sdk", "iphoneos", "--show-sdk-path"], check=False) is None:
+        dev.fail("the iOS build needs Xcode's iOS SDK (xcodebuild -downloadPlatform iOS)")
 
 
 # The file in a build directory that keeps what vcvars added to the environment, since vcvars takes a second to run.
@@ -179,19 +190,21 @@ def openssl_root():
     return dev.output(["brew", "--prefix", "openssl"], check=False)
 
 
-def configure(source, directory, build_type, flags="", out=None, wasm=False):
+def configure(source, directory, build_type, flags="", out=None, wasm=False, ios=False):
     """Configures the build of the sources in `source` into `directory`, of `build_type`, with the compiler and linker
-    flags `flags`, with Ninja, for the host or, with `wasm`, for WebAssembly. CMake writes to `out`, or to the standard
-    output."""
+    flags `flags`, with Ninja, for the host or, with `wasm`, for WebAssembly, or with `ios`, for iOS devices. CMake
+    writes to `out`, or to the standard output."""
     if wasm:
         emsdk.fetch()
         emsdk.environment()
+    elif ios:
+        ios_sdk()
     elif dev.WINDOWS:
         msvc_environment(directory)
     if not dev.has("ninja"):
         dev.fail("ninja is required (brew install ninja, or winget install Ninja-build.Ninja)")
     # lib/tls's OpenSSL backend builds where CMake finds OpenSSL: the system's, or Homebrew's on macOS.
-    openssl = None if wasm else openssl_root()
+    openssl = None if wasm or ios else openssl_root()
     # The WebAssembly build allocates through the C library, until mimalloc is tried there.
     mimalloc = "OFF" if wasm else "ON"
 
@@ -222,6 +235,9 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False):
     if lines is None and wasm:
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
                  "-DCMAKE_TOOLCHAIN_FILE=" + emsdk.toolchain(), *options()], stdout=out, stderr=out)
+    elif lines is None and ios:
+        dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
+                 "-DCMAKE_SYSTEM_NAME=iOS", *options()], stdout=out, stderr=out)
     elif lines is None and dev.WINDOWS:
         # MSVC's default flags, such as /EHsc, stay, and the build's flags add to them. The linker takes none.
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
@@ -260,7 +276,7 @@ def build(name="default", targets=(), keep_going=False):
         for example, names in EXAMPLE_CHECKOUTS.items():
             if not targets or example in targets:
                 checkouts.fetch(*names)
-    configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags, wasm=chosen.wasm)
+    configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags, wasm=chosen.wasm, ios=chosen.ios)
     command = ["cmake", "--build", chosen.directory]
     for target in targets:
         command += ["--target", target]

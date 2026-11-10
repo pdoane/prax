@@ -1,7 +1,10 @@
-"""`./dev.sh build`, `test`, `example`, `app` and `clean`: the builds, the unit tests, the examples and the apps."""
+"""`./dev.sh build`, `test`, `ci`, `example`, `app` and `clean`: the builds, the unit tests, the examples and the
+apps."""
 
 import os
 import shutil
+import sys
+import time
 
 from tools import dev
 from tools.build import build as builds
@@ -11,12 +14,13 @@ from tools.lint import commands as lint
 
 USAGE = {
     "build": """\
-./dev.sh build [debug|release|asan|tsan|wasm] [--keep-going] [--target NAME]...
+./dev.sh build [debug|release|asan|tsan|wasm|ios] [--keep-going] [--target NAME]...
     configure and build. The default is optimized, with debug symbols and without link-time optimization. `debug`
     builds without the optimizer and with the assertions. `release` adds link-time optimization. `asan` is Debug with
     the address and undefined behavior sanitizers, and `tsan` is Debug with the thread sanitizer. `wasm` is the default
-    compiled to WebAssembly with Emscripten, which it fetches into third_party/emsdk. --keep-going builds past a failure
-    and reports every error. --target builds only the targets named, and what they need""",
+    compiled to WebAssembly with Emscripten, which it fetches into third_party/emsdk. `ios` is the default compiled
+    for iOS devices with Xcode's iOS SDK, on macOS. --keep-going builds past a failure and reports every error.
+    --target builds only the targets named, and what they need""",
     "test": """\
 ./dev.sh test [debug|asan|tsan|wasm] [module] [args...]
     the unit tests and the tools' tests against that build's harnesses, with lint beside them, or one module's doctest
@@ -24,6 +28,13 @@ USAGE = {
     binary. `wasm` runs the unit tests under Node.js, then the page tests (pr_page_tests) in headless Chrome, and not
     the tools' tests, whose harnesses are the host's. A module's page tests are named <module>_page, as in
     ./dev.sh test wasm draw_page""",
+    "ci": """\
+./dev.sh ci [asan]
+    whether the tree is in a good state on this machine: lint beside every target that the machine builds, each run
+    past the failures of the others, and then a table of their outcomes. The targets are the host's build and its
+    debug build, each with its unit tests and the tools' tests, the WebAssembly build with its unit tests and page
+    tests, and on macOS the iOS build, whose tests are built and not run. `asan` checks the host's sanitizer build in
+    place of the targets""",
     "example": """\
 ./dev.sh example [wasm] <name> [args...]
 ./dev.sh example wasm <name> --screenshot <png> [--seconds S] [args...]
@@ -106,6 +117,35 @@ def test(argv):
         dev.python("tools.harness.net_peer", binary, *args)
     else:
         dev.run([binary, *args])
+
+
+def ci(argv):
+    dev.usage(argv, USAGE["ci"])
+    if argv not in ([], ["asan"]):
+        dev.usage(argv, USAGE["ci"], 1)
+    mode = argv[0] if argv else None
+    checkouts.fetch("fonts", "unicode", "html5lib")
+    host = ("macOS" if dev.darwin() else "Windows" if dev.WINDOWS else sys.platform) + (" " + mode if mode else "")
+    steps = [(host, lambda: unit_tests(mode))]
+    if mode is None:
+        # The debug build checks the assertions, which the default build compiles out.
+        steps.append((host + " debug", lambda: unit_tests("debug")))
+        steps.append(("wasm", lambda: unit_tests("wasm")))
+        if dev.darwin():
+            steps.append(("iOS (build)", lambda: builds.build("ios")))
+    linting = lint.Background()
+    outcomes = []
+    for name, work in steps:
+        print("\nci: %s" % name, flush=True)
+        start = time.monotonic()
+        status = lint.attempt(work)
+        outcomes.append((name, status, "%.0fs" % (time.monotonic() - start)))
+    outcomes.append(("lint", linting.finish(), ""))
+    print("\nci:")
+    width = max(len(name) for name, _, _ in outcomes)
+    for name, status, took in outcomes:
+        print("    %s  %s  %s" % (name.ljust(width), "ok    " if status == 0 else "FAILED", took))
+    sys.exit(1 if any(status for _, status, _ in outcomes) else 0)
 
 
 def application_names(folder):
@@ -328,6 +368,6 @@ def run_page_tests(page, args):
 
 def clean(argv):
     dev.usage(argv, USAGE["clean"])
-    for directory in (builds.DEFAULT, builds.DEBUG, builds.RELEASE, builds.ASAN, builds.TSAN, builds.WASM, builds.AB,
-                      builds.PACKAGE):
+    for directory in (builds.DEFAULT, builds.DEBUG, builds.RELEASE, builds.ASAN, builds.TSAN, builds.WASM, builds.IOS,
+                      builds.AB, builds.PACKAGE):
         shutil.rmtree(directory, ignore_errors=True)
