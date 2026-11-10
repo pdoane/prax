@@ -169,6 +169,20 @@ target_link_libraries(perspective PRIVATE prax::app prax::studio_kit prax::draw
                                           prax::gpu prax::layout prax::text prax::font_bundle
                                           prax::image prax::compress prax::core_cpp)
 
+# The agent harness example: an agent harness's shape, on the session transcripts of Claude Code.
+pr_example(agent_harness
+    agent_harness/agent_harness.cpp
+    agent_harness/conversation.cpp
+    agent_harness/transcript.cpp
+    FONT_BUNDLES Complete
+)
+target_link_libraries(agent_harness PRIVATE prax::studio_app prax::font_bundle prax::app prax::studio_kit prax::ui prax::json
+                                      prax::html prax::html_quickjs prax::svg_quickjs prax::mathml_quickjs
+                                      prax::url_quickjs prax::charset_quickjs prax::xhr_quickjs prax::quickjs
+                                      prax::fetch prax::net prax::http prax::tls prax::storage prax::dom prax::css
+                                      prax::markdown prax::layout prax::gpu prax::text prax::draw
+                                      prax::image prax::compress prax::core prax::core_cpp)
+
 # The incremental example: Markdown and HTML rendered as they arrive in pieces, beside Kit's controls for the stream.
 pr_example(incremental
     incremental/incremental.cpp
