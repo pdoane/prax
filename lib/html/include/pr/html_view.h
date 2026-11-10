@@ -144,6 +144,13 @@ PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list);
 // changes. The caller keeps the view alive while the tree may call the painter.
 PrLayoutPainter prHtmlViewPainter(PrHtmlView* view);
 
+// Returns a painter that shows the view's document in a replaced element of another layout tree as its viewport: the
+// document is laid out in the element's content box, which the host sizes, and scrolls within it, as a browser's page
+// does in its window. Painting sets the view's viewport and records only what the viewport shows. The painter does not
+// measure. A tree that holds the painter paints on the agent's thread, and a host gives the element a new revision when
+// the document changes or scrolls. The caller keeps the view alive while the tree may call the painter.
+PrLayoutPainter prHtmlViewViewportPainter(PrHtmlView* view);
+
 // Brings the document up to date for prHtmlViewPaint without recording it: its styles and layout, and a text control's
 // caret and selection. Computing a style starts the fetches that it names. A host runs what those fetches deliver, and
 // repeats this until they deliver nothing, so that it records the document once.

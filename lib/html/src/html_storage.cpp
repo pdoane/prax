@@ -178,7 +178,8 @@ PrHtmlStorage* PR_NULLABLE prHtmlWindowStorage(PrHtmlWindow* window, PrHtmlStora
     // A file: URL's origin is the implementation's to define (url/#concept-url-origin). Its document's origin is
     // opaque, and its storage is the one area that every file: document shares, so that a page opened from its files
     // keeps what it stores.
-    if (prRawStringView(&origin) == "null" && prUrlScheme(window->document->url) == "file")
+    if (prRawStringView(&origin) == "null" && prUrlScheme(window->document->url) == "file" &&
+            (window->sandbox & HtmlSandboxFlag_Origin) == 0)
         prRawStringReplace(&origin, "file://");
     if (storage->area == nullptr || prRawStringView(&storage->origin) != prRawStringView(&origin)) {
         htmlStorageReset(storage);

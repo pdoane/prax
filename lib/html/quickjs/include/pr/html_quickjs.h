@@ -81,6 +81,13 @@ bool prJsHtmlEngineCheckpoint(PrJsHtmlEngine* engine);
 // any document.
 JSContext* prJsHtmlEngineContext(PrJsHtmlEngine* engine);
 
+// Reads `serialized`, a message's data as a script of the engine's serialized it (prHtmlMessageEventSerializedData),
+// and writes the value as JSON to `out` (JSON.stringify), which the caller releases with prRawStringReset. This is how
+// a host that runs no script of its own reads what a document's scripts post to it. Returns false, and writes the null
+// string, if the bytes do not deserialize, a port or a value with none has no JSON (as undefined has none), or the
+// serialization throws.
+bool prJsHtmlEngineMessageJson(PrJsHtmlEngine* engine, PrStringView serialized, PrRawString* out);
+
 // Returns the realm of a browsing context, or null if the engine does not run its scripts.
 JSContext* PR_NULLABLE prJsHtmlEngineRealm(PrJsHtmlEngine* engine, PrHtmlPage* page);
 

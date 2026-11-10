@@ -135,6 +135,7 @@ if (PR_DEVELOP)
             quickjs/tests/test_collection_quickjs.cpp
             quickjs/tests/test_html_quickjs_c.c
             quickjs/tests/test_lifetime_quickjs.cpp
+            quickjs/tests/test_sandbox_quickjs.cpp
             quickjs/tests/test_style_quickjs.cpp
         )
         # test_agents_quickjs runs agents on their own threads.

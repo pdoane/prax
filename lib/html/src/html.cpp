@@ -413,6 +413,38 @@ PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document) {
     return window->document == document ? window : nullptr;
 }
 
+PrRawString prHtmlDocumentDomain(PrDomDocument* document) {
+    PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
+    PrStringView domain = window != nullptr ? htmlWindowEffectiveDomain(window) : PrStringView{};
+    return prRawStringCopy(domain.data != nullptr ? domain : PrStringView(""));
+}
+
+PrStatus prHtmlDocumentSetDomain(PrDomDocument* document, PrStringView value) {
+    PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
+    if (window == nullptr || (window->sandbox & HtmlSandboxFlag_DocumentDomain) != 0)
+        return PrStatus_NotAllowed;
+    PrStringView original = htmlWindowEffectiveDomain(window);
+    PrRawString parsed = prRawStringNull();
+    if (original.data == nullptr || value.size == 0 || prUrlHostParse(value, &parsed) != PrStatus_Ok)
+        return PrStatus_NotAllowed;
+    // html/#is-a-registrable-domain-suffix-of-or-is-equal-to
+    PrStringView suffix = prRawStringView(&parsed);
+    bool allowed = suffix == original;
+    if (!allowed) {
+        PrStringView suffixOfSuffix = prUrlHostPublicSuffix(suffix);
+        PrStringView suffixOfOriginal = prUrlHostPublicSuffix(original);
+        auto endsAfterDot = [](PrStringView text, PrStringView end) {
+            return text.size > end.size && prStringEndsWith(text, end) && text.data[text.size - end.size - 1] == '.';
+        };
+        allowed = suffixOfSuffix.data != nullptr && suffixOfOriginal.data != nullptr && endsAfterDot(original, suffix) &&
+            suffix != suffixOfSuffix && !endsAfterDot(suffixOfOriginal, suffix);
+    }
+    if (allowed)
+        htmlWindowSetDomain(window, suffix);
+    prRawStringReset(&parsed);
+    return allowed ? PrStatus_Ok : PrStatus_NotAllowed;
+}
+
 PrStringView prHtmlDocumentReferrer(PrDomDocument* document) {
     PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
     if (window == nullptr || prRawStringIsNull(&window->referrer))
@@ -906,6 +938,13 @@ PrHtmlWindow* PR_NULLABLE prHtmlIFrameElementContentWindow(PrHtmlIFrameElement* 
 PrDomDocument* PR_NULLABLE prHtmlIFrameElementContentDocument(PrHtmlIFrameElement* element) {
     PrHtmlWindow* window = htmlFrameWindow(element);
     return window != nullptr ? window->document : nullptr;
+}
+
+PrDomTokenList* prHtmlIFrameElementSandbox(PrHtmlIFrameElement* element) {
+    PrDomTokenList* list = domTokenListCreate(element, "sandbox");
+    list->supported = kHtmlSandboxTokens;
+    list->supportedCount = kHtmlSandboxTokenCount;
+    return list;
 }
 
 PrHtmlImageElement* PR_NULLABLE prHtmlImageElementQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -1655,6 +1694,22 @@ PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrS
     return PrStatus_Ok;
 }
 
+bool prHtmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b) {
+    return htmlWindowIsSameOrigin(a, b);
+}
+
+bool prHtmlWindowIsSameOriginDomain(const PrHtmlWindow* a, const PrHtmlWindow* b) {
+    return htmlWindowIsSameOriginDomain(a, b);
+}
+
+bool prHtmlWindowIsClosed(const PrHtmlWindow* window) {
+    return window->document == nullptr || htmlDocumentPage(window->document) == nullptr;
+}
+
+PrRawString prHtmlWindowOrigin(const PrHtmlWindow* window) {
+    return htmlWindowOrigin(window);
+}
+
 PrRawString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component) {
     return prUrlComponent(window->document->url, component);
 }
@@ -1768,7 +1823,7 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowFrameFromName(PrHtmlWindow* window, PrStri
                 PrDomNodePosition_Preceding) != 0)
             first = frame;
     }
-    return first != nullptr && htmlWindowIsSameOrigin(first->window, window) ? first->window : nullptr;
+    return first != nullptr && htmlWindowIsSameOriginDomain(first->window, window) ? first->window : nullptr;
 }
 
 PrDomElement* PR_NULLABLE prHtmlWindowNamedItem(PrHtmlWindow* window, PrStringView name) {

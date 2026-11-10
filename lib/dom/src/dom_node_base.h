@@ -104,6 +104,7 @@ struct DomElementState {
     void (*PR_NULLABLE forgetEmbedded)(void* embedded); // called when the element is freed
     uint8_t script;                                     // the DomScriptFlags of a script element
     uint8_t linkEvent;                                  // the event that a link has yet to fire (html_link.h)
+    void* PR_NULLABLE detailsToggle;                    // a details element's queued toggle (html_forms.h), or null
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

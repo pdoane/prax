@@ -3,6 +3,7 @@
 // html - https://html.spec.whatwg.org/multipage/document-sequences.html
 
 #include "pr/compress.h"
+#include "pr/html_forms.h"
 #include "pr/html_page.h"
 #include "pr/image.h"
 #include "pr/string_ops.h"
@@ -1430,4 +1431,190 @@ TEST_CASE("a document without an icon link has the favicon of its HTTP origin, a
     CHECK(iconUrl(nullptr, "<p>no icon", "http://example.test/") == "http://example.test/favicon.ico");
     CHECK(iconUrl(nullptr, "<p>no icon", "file:///dir/page.html") == "(none)");
     CHECK(iconUrl(nullptr, "<p>no icon", "about:blank") == "(none)");
+}
+
+TEST_CASE("a sandboxed iframe navigates the page around it only as its sandbox allows") {
+    TestFetcher fetcher;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.fetcher = fetcher.fetcher;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(page, "<iframe sandbox srcdoc=a></iframe><iframe sandbox=allow-top-navigation srcdoc=b>"
+        "</iframe><iframe sandbox=allow-top-navigation-by-user-activation srcdoc=c></iframe><iframe srcdoc=d></iframe>",
+        "https://example.test/", nullptr) == PrStatus_Ok);
+    fetcher.settle(prHtmlPageAgent(page));
+    PrHtmlWindow* top = prHtmlPageWindow(page);
+    REQUIRE(prHtmlWindowLength(top) == 4);
+    auto navigates = [&](uint32_t frame) {
+        PrHtmlWindow* source = prHtmlWindowFrame(top, frame);
+        return prHtmlWindowSetLocation(top, source, PrUrlComponent_Href, "https://example.test/away",
+            PrHtmlHistoryHandling_Push) == PrStatus_Ok;
+    };
+    CHECK(!navigates(0));
+    CHECK(navigates(1));
+    CHECK(!navigates(2));
+    CHECK(navigates(3));
+    // A sandboxed frame still navigates itself.
+    PrHtmlWindow* sandboxed = prHtmlWindowFrame(top, 0);
+    CHECK(prHtmlWindowSetLocation(sandboxed, sandboxed, PrUrlComponent_Href, "https://example.test/inside",
+        PrHtmlHistoryHandling_Push) == PrStatus_Ok);
+    prHtmlPageDestroy(page);
+}
+
+TEST_CASE("a sandboxed iframe opens a new browsing context only if its sandbox allows popups") {
+    struct Opened {
+        std::vector<std::string> urls;
+
+        static void open(void* context, PrHtmlPage*, PrStringView url) {
+            static_cast<Opened*>(context)->urls.emplace_back(url.data, url.size);
+        }
+    } opened;
+    TestFetcher fetcher;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.context = &opened;
+    host.fetcher = fetcher.fetcher;
+    host.openWindow = Opened::open;
+    // Each iframe opens windows as the page does.
+    host.frame = [](void* context, PrHtmlPage*, PrHtmlHost* child) {
+        child->context = context;
+        child->openWindow = Opened::open;
+    };
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(page, "<iframe sandbox srcdoc='<a id=a target=_blank href=https://example.test/a>a</a>'>"
+        "</iframe><iframe sandbox=allow-popups srcdoc='<a id=a target=_blank href=https://example.test/b>b</a>'>"
+        "</iframe>", "https://example.test/", nullptr) == PrStatus_Ok);
+    fetcher.settle(prHtmlPageAgent(page));
+    PrHtmlWindow* top = prHtmlPageWindow(page);
+    for (uint32_t i = 0; i < 2; ++i) {
+        PrHtmlWindow* frame = prHtmlWindowFrame(top, i);
+        REQUIRE(frame != nullptr);
+        prHtmlWindowNotifyUserActivation(frame);
+        PrDomElement* link = prDomNodeGetElementById(prDomDocumentAsNode(prHtmlWindowDocument(frame)), "a");
+        prHtmlElementClick(prHtmlElementQuery(prDomElementAsEventTarget(link)));
+    }
+    CHECK(opened.urls == std::vector<std::string>{"https://example.test/b"});
+    prHtmlPageDestroy(page);
+}
+
+TEST_CASE("document.domain sets a suffix of the host, which makes windows of two origins same origin-domain") {
+    TestFetcher fetcher;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.fetcher = fetcher.fetcher;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(page, "<iframe></iframe>", "https://www.example.test/", nullptr) == PrStatus_Ok);
+    PrHtmlPage* other = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(other, "", "https://api.example.test/", nullptr) == PrStatus_Ok);
+    PrHtmlWindow* a = prHtmlPageWindow(page);
+    PrHtmlWindow* b = prHtmlPageWindow(other);
+    PrDomDocument* document = prHtmlWindowDocument(a);
+    auto domain = [](PrDomDocument* of) {
+        PrRawString text = prHtmlDocumentDomain(of);
+        std::string value(prRawStringView(&text).data, prRawStringView(&text).size);
+        prRawStringReset(&text);
+        return value;
+    };
+    CHECK(domain(document) == "www.example.test");
+    CHECK_FALSE(prHtmlWindowIsSameOriginDomain(a, b));
+    CHECK(prHtmlDocumentSetDomain(document, "other.test") == PrStatus_NotAllowed);
+    // A public suffix is no registrable domain suffix.
+    CHECK(prHtmlDocumentSetDomain(document, "test") == PrStatus_NotAllowed);
+    CHECK(prHtmlDocumentSetDomain(document, "Example.Test") == PrStatus_Ok);
+    CHECK(domain(document) == "example.test");
+    // A domain set on one side alone leaves the origins apart.
+    CHECK_FALSE(prHtmlWindowIsSameOriginDomain(a, b));
+    CHECK(prHtmlDocumentSetDomain(prHtmlWindowDocument(b), "example.test") == PrStatus_Ok);
+    CHECK(prHtmlWindowIsSameOriginDomain(a, b));
+    CHECK_FALSE(prHtmlWindowIsSameOrigin(a, b));
+    // The iframe's about:blank shares its container's origin, and so its domain.
+    CHECK(domain(prHtmlWindowDocument(prHtmlWindowFrame(a, 0))) == "example.test");
+    // A suffix within the host's public suffix, which the Public Suffix List gives, is refused.
+    PrHtmlPage* british = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(british, "", "https://www.example.co.uk/", nullptr) == PrStatus_Ok);
+    PrDomDocument* britishDocument = prHtmlWindowDocument(prHtmlPageWindow(british));
+    CHECK(prHtmlDocumentSetDomain(britishDocument, "co.uk") == PrStatus_NotAllowed);
+    CHECK(prHtmlDocumentSetDomain(britishDocument, "example.co.uk") == PrStatus_Ok);
+    prHtmlPageDestroy(british);
+    prHtmlPageDestroy(other);
+    prHtmlPageDestroy(page);
+}
+
+TEST_CASE("details elements that share a name are open one at a time") {
+    PrHtmlPage* page = prHtmlPageCreate(nullptr);
+    REQUIRE(prHtmlPageLoad(page, "<details id=a name=g open></details><details id=b name=g></details>"
+        "<details id=c name=other open></details><details id=d open></details>", "https://example.test/",
+        nullptr) == PrStatus_Ok);
+    PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
+    auto details = [&](const char* id) { return prDomNodeGetElementById(root, id); };
+    auto open = [&](const char* id) { return prDomElementHasAttribute(details(id), "open"); };
+    // Opening one closes the others of its group, and no other.
+    prDomElementSetAttribute(details("b"), "open", "");
+    CHECK(!open("a"));
+    CHECK(open("b"));
+    CHECK(open("c"));
+    CHECK(open("d"));
+    // An open element that joins a group with an open member closes.
+    prDomElementSetAttribute(details("c"), "name", "g");
+    CHECK(!open("c"));
+    CHECK(open("b"));
+    // So does one that is inserted into a tree where its group has an open member.
+    PrDomElement* inserted = nullptr;
+    REQUIRE(prDomElementCreate(prHtmlWindowDocument(prHtmlPageWindow(page)), "details", nullptr, &inserted) ==
+        PrStatus_Ok);
+    prDomElementSetAttribute(inserted, "name", "g");
+    prDomElementSetAttribute(inserted, "open", "");
+    prDomNodeAppendChild(prDomElementAsNode(prDomDocumentBody(prHtmlWindowDocument(prHtmlPageWindow(page)))),
+        prDomElementAsNode(inserted));
+    CHECK(!prDomElementHasAttribute(inserted, "open"));
+    CHECK(open("b"));
+    prDomNodeRelease(prDomElementAsNode(inserted));
+    prHtmlPageDestroy(page);
+}
+
+TEST_CASE("a click on a details element's summary opens and closes it, and each change fires one toggle") {
+    PrHtmlPage* page = prHtmlPageCreate(nullptr);
+    REQUIRE(prHtmlPageLoad(page, "<details id=d><summary id=s>More</summary><summary id=other>Not</summary>"
+        "<p>Body</p></details>", "https://example.test/", nullptr) == PrStatus_Ok);
+    PrHtmlWindow* window = prHtmlPageWindow(page);
+    PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(window));
+    PrDomElement* details = prDomNodeGetElementById(root, "d");
+    struct Toggles {
+        std::vector<std::string> states;
+    } toggles;
+    PrDomEventListener listener{
+        .invoke = [](void* PR_NULLABLE context, PrDomEvent* event) {
+            PrHtmlToggleEvent* toggle = prHtmlToggleEventQuery(event);
+            REQUIRE(toggle != nullptr);
+            PrStringView oldState = prHtmlToggleEventOldState(toggle);
+            PrStringView newState = prHtmlToggleEventNewState(toggle);
+            static_cast<Toggles*>(context)->states.push_back(std::string(oldState.data, oldState.size) + ">" +
+                std::string(newState.data, newState.size));
+        },
+        .context = &toggles,
+        .identity = 1,
+    };
+    prDomEventTargetAddEventListener(prDomElementAsEventTarget(details), "toggle", &listener, nullptr);
+    auto click = [&](const char* id) {
+        prHtmlElementClick(prHtmlElementQuery(prDomElementAsEventTarget(prDomNodeGetElementById(root, id))));
+    };
+    auto settle = [&] {
+        while (prDomAgentNextTaskDelay(prHtmlPageAgent(page)) == 0 && prDomAgentRunTask(prHtmlPageAgent(page))) {
+        }
+    };
+    click("s");
+    CHECK(prDomElementHasAttribute(details, "open"));
+    settle();
+    CHECK(toggles.states == std::vector<std::string>{"closed>open"});
+    // Only the first summary is the details element's.
+    click("other");
+    CHECK(prDomElementHasAttribute(details, "open"));
+    // Changes before the task runs coalesce into one event, from the first old state to the last new one.
+    click("s");
+    click("s");
+    click("s");
+    settle();
+    CHECK(toggles.states == std::vector<std::string>{"closed>open", "open>closed"});
+    prDomElementSetAttribute(details, "open", "");
+    prDomElementRemoveAttribute(details, "open");
+    settle();
+    CHECK(toggles.states == std::vector<std::string>{"closed>open", "open>closed", "closed>closed"});
+    prHtmlPageDestroy(page);
 }

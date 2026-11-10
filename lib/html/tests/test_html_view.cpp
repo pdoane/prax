@@ -583,6 +583,21 @@ TEST_CASE("a view's painter measures the document as tall as its content at an i
     CHECK(painter.measure(painter.context, 100) == 30.0f);
 }
 
+TEST_CASE("a view's viewport painter lays the document out in the box it paints, which the document scrolls in") {
+    Viewed page("<style>body { margin: 0 } div { height: 1000px }</style><div></div>");
+    PrLayoutPainter painter = prHtmlViewViewportPainter(page.view);
+    CHECK(painter.measure == nullptr);
+    PrDrawList* list = prDrawListCreate();
+    painter.paint(painter.context, PrVec2{200, 150}, list);
+    prDrawListRelease(list);
+    PrHtmlWindow* window = prHtmlPageWindow(page.page);
+    CHECK(prHtmlWindowInnerWidth(window) == 200);
+    CHECK(prHtmlWindowInnerHeight(window) == 150);
+    PrCssScrollToOptions to{.hasTop = true, .top = 400};
+    prHtmlWindowScroll(window, &to);
+    CHECK(prHtmlWindowScrollY(window) == 400.0);
+}
+
 TEST_CASE("an inline box split by a block has its parts and its row as client rects, and bounds of those with area") {
     Viewed page("<style>body { margin: 0 } .w { width: 500px } b { display: inline-block; height: 1px }</style>"
         "<div class=w><span id=empty><b style='width: 100px'></b><div></div><b style='width: 200px'></b></span></div>"
@@ -1227,6 +1242,15 @@ TEST_CASE("Enter activates a focused button or link as it goes down, and Space a
     send(page.view, press(PrAppKey_Enter, PrAppKeyCode_Enter, ""));
     send(page.view, press(' ', PrAppKeyCode_Space, " "));
     CHECK(heard.events == std::vector<std::string>{"keydown Enter 13", "keyup Enter 13", "keydown   32", "keyup   32"});
+}
+
+TEST_CASE("Enter and Space open and close a focused details element's summary, as they activate a button") {
+    Viewed page("<details id=d><summary id=s>More</summary>Body</details>");
+    prHtmlFocus(page.byId("s"), nullptr);
+    send(page.view, press(PrAppKey_Enter, PrAppKeyCode_Enter, ""));
+    CHECK(prDomElementHasAttribute(page.byId("d"), "open"));
+    send(page.view, press(' ', PrAppKeyCode_Space, " "));
+    CHECK_FALSE(prDomElementHasAttribute(page.byId("d"), "open"));
 }
 
 TEST_CASE("Tab past the last area leaves the document with the focus at the viewport, and the next Tab starts again") {

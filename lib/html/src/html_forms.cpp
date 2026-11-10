@@ -314,6 +314,100 @@ bool editControl(PrDomElement* element, uint32_t start, uint32_t end, PrStringVi
     return applied;
 }
 
+// A queued toggle event of a details element, which a later change of its open attribute cancels in favor of one that
+// keeps this one's old state (html/#details-toggle-task-tracker).
+struct DetailsToggle {
+    PrDomElement* element;
+    bool oldOpen;
+    bool newOpen;
+    bool canceled;
+};
+
+// Forgets the toggle, as the element's tracker if it still is.
+void forgetToggle(DetailsToggle* toggle) {
+    if (!toggle->canceled)
+        domElementState(toggle->element)->detailsToggle = nullptr;
+    domNodeUnhold(toggle->element);
+    prMemoryFree(toggle);
+}
+
+void fireToggle(void* data) {
+    DetailsToggle* toggle = static_cast<DetailsToggle*>(data);
+    if (!toggle->canceled) {
+        domElementState(toggle->element)->detailsToggle = nullptr;
+        toggle->canceled = true;
+        PrHtmlToggleEvent* event = prHtmlToggleEventCreate("toggle", nullptr, toggle->oldOpen ? "open" : "closed",
+            toggle->newOpen ? "open" : "closed", nullptr);
+        event->trusted = true;
+        domEventDispatch(prDomNodeAsEventTarget(prDomElementAsNode(toggle->element)), event);
+        domEventRelease(event);
+    }
+    forgetToggle(toggle);
+}
+
+void dropToggle(void* data) {
+    forgetToggle(static_cast<DetailsToggle*>(data));
+}
+
+// Calls `fn` with each other member of the name group of `details` in tree order, until `fn` returns false. The group
+// is the details elements of its tree with its name, if that is not empty (html/#details-name-group).
+template <typename Fn>
+void eachInGroup(PrDomElement* details, Fn fn) {
+    PrStringView name = domAttributeValue(details, "name");
+    if (name.size == 0)
+        return;
+    PrDomNode* root = domTreeRoot(details);
+    for (PrDomNode* at = root; at != nullptr; at = domNodeNext(root, at)) {
+        PrDomElement* other = domElementFromNode(at);
+        if (other != nullptr && other != details && domIsHtml(other, PrDomTag_Details) &&
+                domAttributeValue(other, "name") == name && !fn(other))
+            return;
+    }
+}
+
+// Returns true if `element` is interactive content (html/#interactive-content), which takes a click for its own use.
+bool isInteractive(const PrDomElement* element) {
+    if (element->space == PrDomNamespace_Svg)
+        return element->tag == PrDomTag_A;
+    if (element->space != PrDomNamespace_Html)
+        return false;
+    switch (element->tag) {
+        case PrDomTag_A:
+            return domHasAttribute(element, "href");
+        case PrDomTag_Audio:
+        case PrDomTag_Video:
+            return domHasAttribute(element, "controls");
+        case PrDomTag_Img:
+            return domHasAttribute(element, "usemap");
+        case PrDomTag_Input:
+            return !prAsciiEqualsFold(domAttributeValue(element, "type"), "hidden");
+        case PrDomTag_Button:
+        case PrDomTag_Details:
+        case PrDomTag_Embed:
+        case PrDomTag_Iframe:
+        case PrDomTag_Label:
+        case PrDomTag_Select:
+        case PrDomTag_Textarea:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Closes `details` if it is open and another of its name group is too
+// (html/#ensure-details-exclusivity-by-closing-the-given-element-if-needed).
+void closeIfGroupOpen(PrDomElement* details) {
+    if (!domHasAttribute(details, "open"))
+        return;
+    bool another = false;
+    eachInGroup(details, [&](PrDomElement* other) {
+        another = domHasAttribute(other, "open");
+        return !another;
+    });
+    if (another)
+        prDomElementRemoveAttribute(details, "open");
+}
+
 } // namespace
 
 void htmlColorWellValue(const PrDomElement* input, PrStringView text, PrTextBuffer* out) {
@@ -422,6 +516,76 @@ void htmlTextControlSetSelection(PrDomElement* element, const PrTextEditSelectio
     control->selectionDirection = backward ? PrDomSelectionDirection_Backwards : PrDomSelectionDirection_Forwards;
     if (next.anchor != next.caret && (next.anchor != s.anchor || next.caret != s.caret))
         queueSelect(element, control);
+}
+
+void htmlDetailsAttributeChanged(PrDomElement* details, PrStringView name, bool had, bool has) {
+    if (name == "name") {
+        closeIfGroupOpen(details);
+        return;
+    }
+    const DomDocumentHost* host = details->document->host;
+    if (name != "open" || had == has || host == nullptr)
+        return;
+    DomElementState* state = domElementState(details);
+    bool oldOpen = had;
+    if (DetailsToggle* queued = static_cast<DetailsToggle*>(state->detailsToggle)) {
+        oldOpen = queued->oldOpen;
+        queued->canceled = true;
+    }
+    DetailsToggle* toggle = static_cast<DetailsToggle*>(prMemoryAlloc(sizeof(DetailsToggle)));
+    *toggle = DetailsToggle{.element = details, .oldOpen = oldOpen, .newOpen = has};
+    state->detailsToggle = toggle;
+    domNodeHold(details);
+    host->queueTask(host->context, fireToggle, toggle, dropToggle);
+    // html/#ensure-details-exclusivity-by-closing-other-elements-if-needed
+    if (has) {
+        eachInGroup(details, [](PrDomElement* other) {
+            if (domHasAttribute(other, "open"))
+                prDomElementRemoveAttribute(other, "open");
+            return true;
+        });
+    }
+}
+
+void htmlDetailsInserted(PrDomNode* node) {
+    // An inserted text node, the most common insertion, needs no search.
+    if (domElementFromNode(node) == nullptr)
+        return;
+    for (PrDomNode* at = node; at != nullptr; at = domNodeNext(node, at)) {
+        PrDomElement* element = domElementFromNode(at);
+        if (element != nullptr && domIsHtml(element, PrDomTag_Details))
+            closeIfGroupOpen(element);
+    }
+}
+
+bool htmlSummaryActivates(const PrDomElement* element) {
+    if (!domIsHtml(element, PrDomTag_Summary))
+        return false;
+    const PrDomElement* parent = domElementFromNode(element->parent);
+    if (!domIsHtml(parent, PrDomTag_Details))
+        return false;
+    for (const PrDomNode* child = parent->first; child != nullptr; child = child->next) {
+        const PrDomElement* sibling = domElementFromNode(child);
+        if (domIsHtml(sibling, PrDomTag_Summary))
+            return sibling == element;
+    }
+    return false;
+}
+
+void htmlSummaryActivate(PrDomElement* summary, PrDomEvent* click) {
+    if (!htmlSummaryActivates(summary))
+        return;
+    PrDomNode* target = prDomNodeQuery(prDomEventTarget(click));
+    for (PrDomNode* at = target; at != nullptr && at != summary; at = at->parent) {
+        PrDomElement* element = domElementFromNode(at);
+        if (element != nullptr && isInteractive(element))
+            return;
+    }
+    PrDomElement* details = domElementFromNode(summary->parent);
+    if (domHasAttribute(details, "open"))
+        prDomElementRemoveAttribute(details, "open");
+    else
+        prDomElementSetAttribute(details, "open", "");
 }
 
 } // namespace pr_impl

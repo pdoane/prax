@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "pr/count_of.h"
 #include "pr/dom.h"
 #include "pr/html.h"
 #include "pr/html_media_source.h"
@@ -63,6 +64,49 @@ constexpr double kHtmlFrameInterval = 1000.0 / kHtmlFrameRate;
 struct HtmlWindow;
 struct HtmlMedia;
 
+// The flags of a sandboxing flag set (html/#sandboxing-flag-set). A set flag takes the capability away.
+enum {
+    HtmlSandboxFlag_Navigation = 1u << 0,
+    HtmlSandboxFlag_AuxiliaryNavigation = 1u << 1,
+    HtmlSandboxFlag_TopLevelNavigationWithoutActivation = 1u << 2,
+    HtmlSandboxFlag_TopLevelNavigationWithActivation = 1u << 3,
+    HtmlSandboxFlag_Plugins = 1u << 4,
+    HtmlSandboxFlag_Origin = 1u << 5,
+    HtmlSandboxFlag_Forms = 1u << 6,
+    HtmlSandboxFlag_PointerLock = 1u << 7,
+    HtmlSandboxFlag_Scripts = 1u << 8,
+    HtmlSandboxFlag_AutomaticFeatures = 1u << 9,
+    HtmlSandboxFlag_DocumentDomain = 1u << 10,
+    HtmlSandboxFlag_PropagatesToAuxiliary = 1u << 11,
+    HtmlSandboxFlag_Modals = 1u << 12,
+    HtmlSandboxFlag_OrientationLock = 1u << 13,
+    HtmlSandboxFlag_Presentation = 1u << 14,
+    HtmlSandboxFlag_Downloads = 1u << 15,
+    HtmlSandboxFlag_CustomProtocolsNavigation = 1u << 16,
+    HtmlSandboxFlag_StorageAccessByUserActivation = 1u << 17,
+    HtmlSandboxFlag_All = (1u << 18) - 1,
+};
+typedef uint32_t HtmlSandboxFlags;
+
+// The keywords of the sandbox attribute (html/#attr-iframe-sandbox).
+inline constexpr PrStringView kHtmlSandboxTokens[] = {
+    "allow-top-navigation",
+    "allow-top-navigation-by-user-activation",
+    "allow-same-origin",
+    "allow-forms",
+    "allow-pointer-lock",
+    "allow-scripts",
+    "allow-popups",
+    "allow-popups-to-escape-sandbox",
+    "allow-modals",
+    "allow-orientation-lock",
+    "allow-presentation",
+    "allow-downloads",
+    "allow-top-navigation-to-custom-protocols",
+    "allow-storage-access-by-user-activation",
+};
+constexpr uint32_t kHtmlSandboxTokenCount = uint32_t(countOf(kHtmlSandboxTokens));
+
 // An iframe element and the window of the browsing context that it contains (html/#content-navigable).
 struct HtmlFrame {
     PrDomElement* container;
@@ -90,6 +134,8 @@ struct HtmlWindow : DomCountedTarget {
     CssMediaEnvironment media;                // the environment that its document's media queries are evaluated against
     PrHtmlPreferenceObject preferences[PrHtmlPreference_Count];
     PrHtmlWindow* PR_NULLABLE parent;         // the window whose document holds the iframe of this window
+    HtmlSandboxFlags sandbox;                 // its document's active sandboxing flag set
+    PrRawString domain;                       // the domain of the origin it is the source of, or null
     PrDomElement* PR_NULLABLE currentScript;  // the current script of its document (html/#dom-document-currentscript)
     RawArray<HtmlFrame> frames;               // the iframes of its document, each with its current window
     RawArray<HtmlMedia*> mediaElements;       // the media elements of its document, which it runs
@@ -228,8 +274,29 @@ void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* da
 
 // Returns the origin of the window's document (html/#concept-origin), serialized
 // (html/#ascii-serialisation-of-an-origin). This is the origin of the document's URL, or the origin of the parent
-// window for a document at about:blank or about:srcdoc.
+// window for a document at about:blank or about:srcdoc, or an opaque origin of its own for a document that is sandboxed
+// into one (HtmlSandboxFlag_Origin).
 PrRawString htmlWindowOrigin(const PrHtmlWindow* window);
+
+// Returns the flags that a sandbox attribute's value sets (html/#parse-a-sandboxing-directive): every flag, except
+// those that its tokens allow.
+HtmlSandboxFlags htmlSandboxParse(PrStringView value);
+
+// Returns true if the sandbox of `source` lets it navigate `target` (html/#allowed-to-navigate). A sandboxed document
+// navigates itself and the frames inside it, and its top-level traversable only as its sandbox's top-level navigation
+// flags allow.
+bool htmlWindowAllowedToNavigate(const PrHtmlWindow* source, const PrHtmlWindow* target);
+
+// Returns true if two windows' documents have the same origin-domain (html/#same-origin-domain): the same origin and no
+// domain set on either, or the same scheme and the same domain set on both.
+bool htmlWindowIsSameOriginDomain(const PrHtmlWindow* a, const PrHtmlWindow* b);
+
+// Returns the effective domain of the window's origin (html/#concept-origin-effective-domain): its domain if one is
+// set, or else its host, or the null view for an opaque origin.
+PrStringView htmlWindowEffectiveDomain(const PrHtmlWindow* window);
+
+// Sets the domain of the window's origin (html/#concept-origin-domain), which every window of that origin shares.
+void htmlWindowSetDomain(PrHtmlWindow* window, PrStringView domain);
 
 // Returns true if two windows' documents have the same origin (html/#same-origin).
 bool htmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b);

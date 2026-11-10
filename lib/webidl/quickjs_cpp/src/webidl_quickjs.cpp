@@ -1163,10 +1163,12 @@ JSValue jsDefineClass(JSContext* ctx, const JsClassDefinition& definition) {
         JS_SetPropertyFunctionList(ctx, constructor, definition.statics, definition.staticCount);
     JS_SetClassProto(ctx, id, proto);
 
-    JSValue global = JS_GetGlobalObject(ctx);
-    JS_DefinePropertyValueStr(ctx, global, definition.name, JS_DupValue(ctx, constructor),
-        JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-    JS_FreeValue(ctx, global);
+    if (!definition.unexposed) {
+        JSValue global = JS_GetGlobalObject(ctx);
+        JS_DefinePropertyValueStr(ctx, global, definition.name, JS_DupValue(ctx, constructor),
+            JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        JS_FreeValue(ctx, global);
+    }
     return constructor;
 }
 

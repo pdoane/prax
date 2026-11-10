@@ -90,6 +90,8 @@ JSClassID htmlStorageClass;
 JSClassID htmlAnimationTimelineClass;
 JSClassID htmlDocumentTimelineClass;
 JSClassID htmlWindowPropertiesClass;
+JSClassID htmlCrossOriginWindowClass;
+JSClassID htmlCrossOriginLocationClass;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Classifiers, which map the DOM's handles to HTML's classes
@@ -213,10 +215,14 @@ enum {
 typedef uint8_t WindowSlot;
 
 // Returns the global object whose Window is `window`: its context's global, or else the window's own object, for a
-// window that runs no scripts.
+// window that runs no scripts. A window of another origin is its cross-origin object instead
+// (html/#cross-origin-objects).
 JSValue globalOf(JSContext* ctx, PrHtmlWindow* PR_NULLABLE window) {
     if (window == nullptr)
         return JS_NULL;
+    PrHtmlWindow* current = globalWindow(ctx);
+    if (current != nullptr && current != window && !prHtmlWindowIsSameOriginDomain(current, window))
+        return jsWrap(ctx, htmlCrossOriginWindowClass, JS_NULL, window, false);
     JSValue object = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
     JSValue global = jsReference(ctx, object, WindowSlot_Global);
     if (JS_IsUndefined(global))
@@ -1251,6 +1257,20 @@ JSValue relList(JSContext* ctx, JSValueConst elementObject) {
     });
 }
 
+// sandbox, the same DOMTokenList of the sandbox attribute at each read.
+JSValue iframeSandbox(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlIFrameElement* element = jsThis<PrHtmlIFrameElement>(ctx, elementObject, htmlIFrameElementClass);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    return jsSameObject(ctx, elementObject, "sandbox", [&] {
+        PrDomTokenList* list = prHtmlIFrameElementSandbox(element);
+        JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, elementObject, list, true);
+        if (JS_IsException(object))
+            prDomTokenListDestroy(list);
+        return object;
+    });
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLLinkElement (html/#htmllinkelement)
 
@@ -1544,8 +1564,7 @@ JSValue messagePorts(JSContext* ctx, JSValueConst eventObject) {
 // postMessage(message, targetOrigin, transfer) and postMessage(message, options). The source is the window of the
 // incumbent realm. A message that the engine cannot serialize throws a DataCloneError, and a target origin that is not
 // a URL throws a SyntaxError.
-JSValue postMessage(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+JSValue postMessageTo(JSContext* ctx, PrHtmlWindow* PR_NULLABLE window, int argc, JSValueConst* argv) {
     PrHtmlWindow* source = globalWindow(jsIncumbentRealm(ctx));
     StringArgument targetOrigin = {ctx, "/"};
     if (window == nullptr || source == nullptr || !jsArgCount(ctx, argc, 1))
@@ -1576,6 +1595,10 @@ JSValue postMessage(JSContext* ctx, JSValueConst windowObject, int argc, JSValue
     message.ports.reset();
     prRawStringReset(&message.bytes);
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "SyntaxError");
+}
+
+JSValue postMessage(JSContext* ctx, JSValueConst windowObject, int argc, JSValueConst* argv) {
+    return postMessageTo(ctx, jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass), argc, argv);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2053,10 +2076,9 @@ JSValue cancelAnimationFrame(JSContext* ctx, JSValueConst windowObject, int argc
 // The magic of the [Replaceable] parent attribute, by which setReplaceable names it.
 constexpr int kParentMagic = 7;
 
-// html/#dom-parent and html/#dom-top, selected by the magic. Returns the global of the window's parent for
-// kParentMagic, and otherwise of its outermost ancestor. Returns the window's own global if it has no such ancestor.
-JSValue ancestor(JSContext* ctx, JSValueConst windowObject, int magic) {
-    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+// html/#dom-parent and html/#dom-top, selected by the magic: the global of the window's parent for kParentMagic, and
+// otherwise of its outermost ancestor, or the window's own global if it has no such ancestor.
+JSValue ancestorOf(JSContext* ctx, PrHtmlWindow* PR_NULLABLE window, int magic) {
     if (window == nullptr)
         return JS_EXCEPTION;
     for (PrHtmlWindow* parent = prHtmlWindowParent(window); parent != nullptr; parent = prHtmlWindowParent(window)) {
@@ -2065,6 +2087,16 @@ JSValue ancestor(JSContext* ctx, JSValueConst windowObject, int magic) {
             break;
     }
     return globalOf(ctx, window);
+}
+
+JSValue ancestor(JSContext* ctx, JSValueConst windowObject, int magic) {
+    return ancestorOf(ctx, jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass), magic);
+}
+
+// html/#dom-window-closed.
+JSValue windowClosed(JSContext* ctx, JSValueConst windowObject) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+    return window != nullptr ? JS_NewBool(ctx, prHtmlWindowIsClosed(window)) : JS_EXCEPTION;
 }
 
 // [Replaceable] performance (hr-time-3/#the-performance-attribute). The window owns it, and the window's object holds
@@ -2093,11 +2125,22 @@ JSValue setReplaceable(JSContext* ctx, JSValueConst object, JSValueConst input, 
     constexpr const char* kNames[] = {
         "performance", "innerWidth",  "innerHeight", "scrollX",
         "scrollY",     "pageXOffset", "pageYOffset", "parent",
-        "devicePixelRatio", "length",
+        "devicePixelRatio", "length",      "origin",
     };
     if (JS_DefinePropertyValueStr(ctx, object, kNames[magic], JS_DupValue(ctx, input), JS_PROP_C_W_E) < 0)
         return JS_EXCEPTION;
     return JS_UNDEFINED;
+}
+
+// [Replaceable] origin (html/#dom-origin).
+JSValue windowOrigin(JSContext* ctx, JSValueConst windowObject, int) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
+    if (window == nullptr)
+        return JS_EXCEPTION;
+    PrRawString origin = prHtmlWindowOrigin(window);
+    JSValue value = jsNewString(ctx, &origin);
+    prRawStringReset(&origin);
+    return value;
 }
 
 // The [Replaceable] measures of the viewport (cssom-view-1/#extensions-to-the-window-interface), selected by the magic
@@ -2385,6 +2428,112 @@ JSValue setWindowLocation(JSContext* ctx, JSValueConst windowObject, JSValueCons
         ctx, prHtmlWindowSetLocation(window, source, PrUrlComponent_Href, value.value(), PrHtmlHistoryHandling_Push));
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Cross-origin objects (html/#cross-origin-objects)
+//
+// A window of another origin is an object with the members of html/#crossoriginproperties-(-o-): window, self, frames,
+// length, top, parent, opener, closed, location and postMessage, and its frames by index. Its location can only be set,
+// or replaced. Reading or setting any other name throws a SecurityError.
+
+PrHtmlWindow* PR_NULLABLE crossOriginWindow(JSContext* ctx, JSValueConst object) {
+    return jsThis<PrHtmlWindow>(ctx, object, htmlCrossOriginWindowClass);
+}
+
+// window, self and frames.
+JSValue crossOriginSelf(JSContext* ctx, JSValueConst object) {
+    PrHtmlWindow* window = crossOriginWindow(ctx, object);
+    return window != nullptr ? globalOf(ctx, window) : JS_EXCEPTION;
+}
+
+JSValue crossOriginAncestor(JSContext* ctx, JSValueConst object, int magic) {
+    return ancestorOf(ctx, crossOriginWindow(ctx, object), magic);
+}
+
+JSValue crossOriginLength(JSContext* ctx, JSValueConst object) {
+    PrHtmlWindow* window = crossOriginWindow(ctx, object);
+    return window != nullptr ? JS_NewUint32(ctx, prHtmlWindowLength(window)) : JS_EXCEPTION;
+}
+
+JSValue crossOriginClosed(JSContext* ctx, JSValueConst object) {
+    PrHtmlWindow* window = crossOriginWindow(ctx, object);
+    return window != nullptr ? JS_NewBool(ctx, prHtmlWindowIsClosed(window)) : JS_EXCEPTION;
+}
+
+// A browsing context that no script opened has no opener.
+JSValue crossOriginOpener(JSContext* ctx, JSValueConst object) {
+    return crossOriginWindow(ctx, object) != nullptr ? JS_NULL : JS_EXCEPTION;
+}
+
+JSValue crossOriginLocation(JSContext* ctx, JSValueConst object) {
+    PrHtmlWindow* window = crossOriginWindow(ctx, object);
+    return window != nullptr ? jsWrap(ctx, htmlCrossOriginLocationClass, object, window, false) : JS_EXCEPTION;
+}
+
+// Navigates the window to `input`, as setting its location's href does.
+JSValue navigateCrossOrigin(JSContext* ctx, PrHtmlWindow* PR_NULLABLE window, JSValueConst input,
+        PrHtmlHistoryHandling handling) {
+    PrHtmlWindow* source = globalWindow(jsIncumbentRealm(ctx));
+    StringArgument value = {ctx};
+    if (window == nullptr || source == nullptr || !value.read(input))
+        return JS_EXCEPTION;
+    return locationStatus(ctx, prHtmlWindowSetLocation(window, source, PrUrlComponent_Href, value.value(), handling));
+}
+
+JSValue setCrossOriginLocation(JSContext* ctx, JSValueConst object, JSValueConst input) {
+    return navigateCrossOrigin(ctx, crossOriginWindow(ctx, object), input, PrHtmlHistoryHandling_Push);
+}
+
+JSValue crossOriginPostMessage(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    return postMessageTo(ctx, crossOriginWindow(ctx, object), argc, argv);
+}
+
+// A cross-origin Location's href, which can be set but not read.
+JSValue crossOriginHref(JSContext* ctx, JSValueConst) {
+    return jsDomExceptionThrow(ctx, "SecurityError");
+}
+
+JSValue setCrossOriginHref(JSContext* ctx, JSValueConst object, JSValueConst input) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, object, htmlCrossOriginLocationClass);
+    return navigateCrossOrigin(ctx, window, input, PrHtmlHistoryHandling_Push);
+}
+
+JSValue crossOriginReplace(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, object, htmlCrossOriginLocationClass);
+    if (window == nullptr || !jsArgCount(ctx, argc, 1))
+        return JS_EXCEPTION;
+    return navigateCrossOrigin(ctx, window, argv[0], PrHtmlHistoryHandling_Replace);
+}
+
+// Any other name of a cross-origin object throws a SecurityError, except "then", which reads as undefined so that a
+// promise can resolve to the object (html/#crossoriginpropertyfallback-(-p-)).
+bool crossOriginNames(JSContext*, void*, RawArray<JSAtom>*) {
+    return true;
+}
+
+JSValue crossOriginItem(JSContext* ctx, JSValueConst, void*, PrStringView name) {
+    if (name == "then")
+        return JS_UNDEFINED;
+    return jsDomExceptionThrow(ctx, "SecurityError");
+}
+
+bool setCrossOriginItem(JSContext* ctx, JSValueConst, void*, PrStringView, JSValueConst) {
+    jsDomExceptionThrow(ctx, "SecurityError");
+    return false;
+}
+
+constexpr JsNamed kCrossOriginNamed = {crossOriginNames, crossOriginItem, setCrossOriginItem, nullptr, 0};
+
+// A cross-origin window's frames, by index.
+uint32_t crossOriginFrameCount(void* handle) {
+    return prHtmlWindowLength(static_cast<PrHtmlWindow*>(handle));
+}
+
+JSValue crossOriginFrame(JSContext* ctx, JSValueConst, void* handle, uint32_t index) {
+    return globalOf(ctx, prHtmlWindowFrame(static_cast<PrHtmlWindow*>(handle), index));
+}
+
+constexpr JsIndexed kCrossOriginFrames = {crossOriginFrameCount, crossOriginFrame, nullptr};
+
 JSValue windowName(JSContext* ctx, JSValueConst windowObject) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     return window != nullptr ? jsTakeString(ctx, prHtmlWindowName(window)) : JS_EXCEPTION;
@@ -2415,7 +2564,22 @@ JSValue defaultView(JSContext* ctx, JSValueConst documentObject) {
 }
 
 // open(), which returns the document, and open(url, name, features), which is window.open(). The engine opens no
-// windows.
+// windows. html/#dom-document-domain
+JSValue documentDomain(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
+    return document != nullptr ? jsTakeString(ctx, prHtmlDocumentDomain(document)) : JS_EXCEPTION;
+}
+
+JSValue setDocumentDomain(JSContext* ctx, JSValueConst documentObject, JSValueConst input) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
+    StringArgument value = {ctx};
+    if (document == nullptr || !value.read(input))
+        return JS_EXCEPTION;
+    if (prHtmlDocumentSetDomain(document, value.value()) != PrStatus_Ok)
+        return jsDomExceptionThrow(ctx, "SecurityError");
+    return JS_UNDEFINED;
+}
+
 JSValue documentOpen(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst*) {
     PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
@@ -3320,6 +3484,7 @@ constexpr JSCFunctionListEntry kDocumentProto[] = {
     PR_JS_MAGIC_GET("anchors", documentCollection, PrHtmlDocumentCollection_Anchors),
     PR_JS_GET("timeline", documentTimeline),
     PR_JS_METHOD("open", 0, documentOpen),
+    PR_JS_GET_SET("domain", documentDomain, setDocumentDomain),
     PR_JS_MAGIC("write", 1, documentWrite, 0),
     PR_JS_MAGIC("writeln", 1, documentWrite, 1),
     PR_JS_METHOD("close", 0, documentClose),
@@ -3399,6 +3564,7 @@ constexpr JSCFunctionListEntry kIFrameElementProto[] = {
     PR_REFLECT_URL("src", "src"),
     PR_REFLECT_STRING("srcdoc", "srcdoc"),
     PR_REFLECT_STRING("name", "name"),
+    PR_JS_GET_SET("sandbox", iframeSandbox, (jsPutForwards<"sandbox", "value">)),
     PR_REFLECT_STRING("width", "width"),
     PR_REFLECT_STRING("height", "height"),
     PR_JS_GET("contentWindow", contentWindow),
@@ -3856,6 +4022,24 @@ constexpr JSCFunctionListEntry kAnimationTimelineProto[] = {
 
 constexpr JSCFunctionListEntry kDocumentTimelineProto[] = {PR_JS_TAG("DocumentTimeline")};
 
+constexpr JSCFunctionListEntry kCrossOriginWindowProto[] = {
+    PR_JS_GET("window", crossOriginSelf),
+    PR_JS_GET("self", crossOriginSelf),
+    PR_JS_GET("frames", crossOriginSelf),
+    PR_JS_GET("length", crossOriginLength),
+    PR_JS_MAGIC_GET("top", crossOriginAncestor, 0),
+    PR_JS_MAGIC_GET("parent", crossOriginAncestor, kParentMagic),
+    PR_JS_GET("opener", crossOriginOpener),
+    PR_JS_GET("closed", crossOriginClosed),
+    PR_JS_GET_SET("location", crossOriginLocation, setCrossOriginLocation),
+    PR_JS_METHOD("postMessage", 1, crossOriginPostMessage),
+};
+
+constexpr JSCFunctionListEntry kCrossOriginLocationProto[] = {
+    PR_JS_GET_SET("href", crossOriginHref, setCrossOriginHref),
+    PR_JS_METHOD("replace", 1, crossOriginReplace),
+};
+
 constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_TAG("Window"),
     PR_JS_METHOD("postMessage", 1, postMessage),
@@ -3870,6 +4054,7 @@ constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_MAGIC_GET_SET("innerHeight", viewportGet, setReplaceable, 2),
     PR_JS_MAGIC_GET_SET("devicePixelRatio", viewportGet, setReplaceable, 8),
     PR_JS_MAGIC_GET_SET("length", windowLength, setReplaceable, 9),
+    PR_JS_MAGIC_GET_SET("origin", windowOrigin, setReplaceable, 10),
     PR_JS_MAGIC_GET_SET("scrollX", viewportGet, setReplaceable, 3),
     PR_JS_MAGIC_GET_SET("scrollY", viewportGet, setReplaceable, 4),
     PR_JS_MAGIC_GET_SET("pageXOffset", viewportGet, setReplaceable, 5),
@@ -3879,6 +4064,7 @@ constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_MAGIC("scrollBy", 0, windowScroll, 1),
     PR_JS_MAGIC_GET_SET("parent", ancestor, setReplaceable, kParentMagic),
     PR_JS_MAGIC_GET("top", ancestor, 0),
+    PR_JS_GET("closed", windowClosed),
     PR_JS_GET_SET("location", windowLocation, setWindowLocation),
     PR_JS_GET_SET("name", windowName, setWindowName),
     PR_JS_GET("history", windowHistory),
@@ -4121,6 +4307,19 @@ constexpr JsClassDefinition kClasses[] = {
             (jsFinalizer<&htmlDocumentTimelineClass, prHtmlDocumentTimelineDestroy>), kDocumentTimelineProto),
         .constructor = timelineConstruct,
         .base = &htmlAnimationTimelineClass,
+    },
+    {
+        PR_JS_CLASS("CrossOriginWindow", htmlCrossOriginWindowClass, jsViewFinalizer<&htmlCrossOriginWindowClass>,
+            kCrossOriginWindowProto),
+        .indexed = &kCrossOriginFrames,
+        .named = &kCrossOriginNamed,
+        .references = &kTargetReferences,
+        .unexposed = true,
+    },
+    {
+        PR_JS_CLASS("CrossOriginLocation", htmlCrossOriginLocationClass,
+            jsViewFinalizer<&htmlCrossOriginLocationClass>, kCrossOriginLocationProto),
+        .unexposed = true,
     },
     {
         PR_JS_CLASS("Window", htmlWindowClass, jsViewFinalizer<&htmlWindowClass>, kWindowProto),

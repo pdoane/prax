@@ -16,6 +16,7 @@
 #include "dom/src/dom_microsyntax.h"
 #include "dom/src/dom_node.h"
 #include "dom/src/dom_slot.h"
+#include "html/src/html_forms.h"
 #include "html/src/html_window.h"
 
 namespace pr_impl {
@@ -39,21 +40,6 @@ bool hiddenOrInert(const PrDomElement* element) {
                 (domAttribute(ancestor, PrDomNamespace_None, "hidden") != nullptr ||
                     domAttribute(ancestor, PrDomNamespace_None, "inert") != nullptr))
             return true;
-    }
-    return false;
-}
-
-// Returns true if the element is the summary for its parent details (html/#summary-for-its-parent-details).
-bool isDetailsSummary(const PrDomElement* element) {
-    if (!domIsHtml(element, PrDomTag_Summary))
-        return false;
-    const PrDomElement* parent = domElementFromNode(element->parent);
-    if (!domIsHtml(parent, PrDomTag_Details))
-        return false;
-    for (const PrDomNode* child = parent->first; child != nullptr; child = child->next) {
-        const PrDomElement* sibling = domElementFromNode(child);
-        if (domIsHtml(sibling, PrDomTag_Summary))
-            return sibling == element;
     }
     return false;
 }
@@ -83,7 +69,7 @@ bool focusableKind(const PrDomElement* element) {
         case PrDomTag_Video:
             return domAttribute(element, PrDomNamespace_None, "controls") != nullptr;
         case PrDomTag_Summary:
-            return isDetailsSummary(element);
+            return htmlSummaryActivates(element);
         default: {
             // An editing host (html/#editing-host).
             DomContentEditable editable = domContentEditable(domAttributeValue(element, "contenteditable"));
@@ -465,15 +451,11 @@ bool sameOriginAncestors(const PrDomDocument* document) {
     const PrHtmlWindow* window = windowOf(document);
     if (window == nullptr)
         return false;
-    PrRawString origin = htmlWindowOrigin(window);
-    bool same = true;
-    for (const PrHtmlWindow* parent = window->parent; same && parent != nullptr; parent = parent->parent) {
-        PrRawString other = htmlWindowOrigin(parent);
-        same = prRawStringView(&other) == prRawStringView(&origin);
-        prRawStringReset(&other);
+    for (const PrHtmlWindow* parent = window->parent; parent != nullptr; parent = parent->parent) {
+        if (!htmlWindowIsSameOrigin(window, parent))
+            return false;
     }
-    prRawStringReset(&origin);
-    return same;
+    return true;
 }
 
 // Returns true if `document`, or a document that holds it through frames, has a target element.
@@ -487,24 +469,11 @@ bool targetAround(const PrDomDocument* document) {
     return false;
 }
 
-// Returns true if an iframe around `document` sandboxes automatic features: its sandbox attribute does not allow
-// scripts (html/#sandboxed-automatic-features-browsing-context-flag). The iframe's attribute is read as it is now.
+// Returns true if the document's window is sandboxed from automatic features
+// (html/#sandboxed-automatic-features-browsing-context-flag).
 bool sandboxedAutomatic(const PrDomDocument* document) {
-    for (const PrDomElement* container = htmlFrameContainer(document); container != nullptr;
-            container = htmlFrameContainer(container->document)) {
-        const PrDomAttr* sandbox = domAttribute(container, PrDomNamespace_None, "sandbox");
-        if (sandbox == nullptr)
-            continue;
-        RawArray<PrStringView> tokens;
-        domOrderedSetParse(prRawStringView(&sandbox->value), &tokens);
-        bool scripts = false;
-        for (uint32_t i = 0; i < tokens.count && !scripts; ++i)
-            scripts = prAsciiEqualsFold(tokens.data[i], "allow-scripts");
-        tokens.reset();
-        if (!scripts)
-            return true;
-    }
-    return false;
+    const PrHtmlWindow* window = windowOf(document);
+    return window != nullptr && (window->sandbox & HtmlSandboxFlag_AutomaticFeatures) != 0;
 }
 
 // Removes `element` from its document's autofocus candidates.
@@ -555,7 +524,7 @@ int32_t htmlTabIndex(const PrDomElement* element) {
         case PrDomTag_Input: case PrDomTag_Object: case PrDomTag_Select: case PrDomTag_Textarea:
             return 0;
         default:
-            return isDetailsSummary(element) ? 0 : -1;
+            return htmlSummaryActivates(element) ? 0 : -1;
     }
 }
 

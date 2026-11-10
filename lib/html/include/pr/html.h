@@ -138,6 +138,16 @@ void prHtmlSetTabIndex(PrDomElement* element, int32_t value);
 // Returns the window whose document this is, or null if there is none (html/#dom-document-defaultview).
 PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document);
 
+// Returns the effective domain of the document's origin (html/#dom-document-domain), or the empty string for an opaque
+// origin or a document with no window. The caller releases the text.
+PrRawString prHtmlDocumentDomain(PrDomDocument* document);
+
+// Sets the domain of the document's origin to `value`, parsed as a host (html/#dom-document-domain). Returns NotAllowed
+// if the document has no window, is sandboxed from setting its domain, or has no effective domain, or if `value` is
+// neither that domain nor a registrable domain suffix of it (html/#is-a-registrable-domain-suffix-of-or-is-equal-to): a
+// suffix after a dot that is not within its public suffix.
+PrStatus prHtmlDocumentSetDomain(PrDomDocument* document, PrStringView value);
+
 // Returns the URL of the document that navigated to `document`, as its referrer policy left it, or the empty view for
 // none (html/#dom-document-referrer).
 PrStringView prHtmlDocumentReferrer(PrDomDocument* document);
@@ -436,6 +446,10 @@ PrHtmlWindow* PR_NULLABLE prHtmlIFrameElementContentWindow(PrHtmlIFrameElement* 
 
 // Returns the document of that window, or null if there is no window.
 PrDomDocument* PR_NULLABLE prHtmlIFrameElementContentDocument(PrHtmlIFrameElement* element);
+
+// Creates the token list of the sandbox attribute, whose supported tokens are its keywords (html/#dom-iframe-sandbox).
+// The caller destroys the list.
+PrDomTokenList* prHtmlIFrameElementSandbox(PrHtmlIFrameElement* element);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLImageElement : HTMLElement (html)
@@ -1232,6 +1246,20 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* window);
 // document's origin does not match. Returns Syntax if `targetOrigin` is none of those.
 PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrStringView serialized,
     PrDomEventTarget* PR_NONNULL const* PR_NULLABLE ports, uint32_t portCount, PrStringView targetOrigin);
+
+// Returns true if the documents of two windows have the same origin (html/#same-origin), or the same origin-domain
+// (html/#same-origin-domain), which document.domain changes and which decides what script may reach. Distinct opaque
+// origins differ.
+bool prHtmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b);
+bool prHtmlWindowIsSameOriginDomain(const PrHtmlWindow* a, const PrHtmlWindow* b);
+
+// Returns true if the window's browsing context is gone (html/#dom-window-closed): its page was destroyed, or its
+// iframe removed.
+bool prHtmlWindowIsClosed(const PrHtmlWindow* window);
+
+// Returns the origin of the window's document, serialized (html/#dom-origin): "null" for an opaque origin, as that of a
+// document that an iframe's sandbox gives one of its own.
+PrRawString prHtmlWindowOrigin(const PrHtmlWindow* window);
 
 // Returns a component of the URL of the window's document (html/#the-location-interface).
 PrRawString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component);

@@ -18,6 +18,7 @@
 #include "pr/webidl_quickjs.h"
 
 #include "html/quickjs/src/html_bindings_quickjs.h"
+#include "html/quickjs/src/html_clone_quickjs.h"
 
 namespace pr_impl {
 
@@ -994,6 +995,30 @@ bool prJsHtmlEngineCheckpoint(PrJsHtmlEngine* engine) {
 
 JSContext* prJsHtmlEngineContext(PrJsHtmlEngine* engine) {
     return engine->own->ctx;
+}
+
+bool prJsHtmlEngineMessageJson(PrJsHtmlEngine* engine, PrStringView serialized, PrRawString* out) {
+    *out = prRawStringNull();
+    JSContext* ctx = engine->own->ctx;
+    JSValue value = jsHtmlDeserialize(ctx, serialized, JS_UNDEFINED);
+    if (JS_IsException(value)) {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        return false;
+    }
+    JSValue json = JS_JSONStringify(ctx, value, JS_UNDEFINED, JS_UNDEFINED);
+    JS_FreeValue(ctx, value);
+    if (JS_IsException(json)) {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        return false;
+    }
+    JsString text = {};
+    bool read = JS_IsString(json) && jsStringRead(ctx, json, &text);
+    if (read) {
+        *out = prRawStringCopy(jsStringView(&text));
+        jsStringReset(ctx, &text);
+    }
+    JS_FreeValue(ctx, json);
+    return read;
 }
 
 JSContext* PR_NULLABLE prJsHtmlEngineRealm(PrJsHtmlEngine* engine, PrHtmlPage* page) {

@@ -20,6 +20,7 @@
 #include "css/src/css_presentation_hooks.h"
 #include "css/src/css_root.h"
 #include "css/src/css_view.h"
+#include "dom/src/dom_collection.h"
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_event.h"
 #include "html/src/html_canvas.h"
@@ -30,7 +31,26 @@
 #include "html/src/html_page.h"
 
 namespace pr_impl {
+
 namespace {
+
+// The flags that each of kHtmlSandboxTokens clears, by token.
+constexpr HtmlSandboxFlags kAllowed[kHtmlSandboxTokenCount] = {
+    HtmlSandboxFlag_TopLevelNavigationWithoutActivation | HtmlSandboxFlag_TopLevelNavigationWithActivation,
+    HtmlSandboxFlag_TopLevelNavigationWithActivation,
+    HtmlSandboxFlag_Origin,
+    HtmlSandboxFlag_Forms,
+    HtmlSandboxFlag_PointerLock,
+    HtmlSandboxFlag_Scripts | HtmlSandboxFlag_AutomaticFeatures,
+    HtmlSandboxFlag_AuxiliaryNavigation,
+    HtmlSandboxFlag_PropagatesToAuxiliary,
+    HtmlSandboxFlag_Modals,
+    HtmlSandboxFlag_OrientationLock,
+    HtmlSandboxFlag_Presentation,
+    HtmlSandboxFlag_Downloads,
+    HtmlSandboxFlag_CustomProtocolsNavigation,
+    HtmlSandboxFlag_StorageAccessByUserActivation,
+};
 
 uint32_t timerIndex(const PrHtmlWindow* window, int32_t id) {
     for (uint32_t i = 0; i < window->timers.count; ++i) {
@@ -429,10 +449,12 @@ void freeWindow(DomCountedTarget* target) {
 // Returns the window whose document's URL gives the window's document its origin. Two windows with the same source
 // share an origin even if it is opaque, whose serialization does not distinguish one from another.
 const PrHtmlWindow* originSource(const PrHtmlWindow* window) {
-    while (window->parent != nullptr) {
-        PrRawString href = prUrlSerialize(window->document->url, PrUrlSerialization_ExcludeFragment);
-        bool inherits = prRawStringView(&href) == "about:blank" || prRawStringView(&href) == "about:srcdoc";
-        prRawStringReset(&href);
+    while (window->parent != nullptr && (window->sandbox & HtmlSandboxFlag_Origin) == 0) {
+        // A document at a URL that matches about:blank (html/#matches-about:blank), whose query may be anything, or at
+        // about:srcdoc, inherits its origin.
+        const PrUrl* url = window->document->url;
+        bool inherits = prUrlScheme(url) == "about" && (prUrlPath(url) == "blank" ||
+            (prUrlPath(url) == "srcdoc" && prUrlQuery(url).data == nullptr));
         if (!inherits)
             break;
         window = window->parent;
@@ -477,6 +499,15 @@ PrStringView hyperlinkTarget(const PrDomDocument* document, const PrDomElement* 
         hasLess = hasLess || target.data[i] == '<';
     }
     return hasBreak && hasLess ? PrStringView{"_blank"} : target;
+}
+
+// Returns true if `ancestor` holds `window` through frames.
+bool isAncestor(const PrHtmlWindow* ancestor, const PrHtmlWindow* window) {
+    for (const PrHtmlWindow* at = window->parent; at != nullptr; at = at->parent) {
+        if (at == ancestor)
+            return true;
+    }
+    return false;
 }
 
 } // namespace
@@ -612,12 +643,83 @@ void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* da
 }
 
 PrRawString htmlWindowOrigin(const PrHtmlWindow* window) {
-    return prUrlOrigin(originSource(window)->document->url);
+    const PrHtmlWindow* source = originSource(window);
+    if ((source->sandbox & HtmlSandboxFlag_Origin) != 0)
+        return prRawStringCopy("null");
+    return prUrlOrigin(source->document->url);
+}
+
+HtmlSandboxFlags htmlSandboxParse(PrStringView value) {
+    RawArray<PrStringView> tokens;
+    domOrderedSetParse(value, &tokens);
+    HtmlSandboxFlags allowed = 0;
+    for (uint32_t i = 0; i < tokens.count; ++i) {
+        for (uint32_t t = 0; t < kHtmlSandboxTokenCount; ++t) {
+            if (prAsciiEqualsFold(tokens.data[i], kHtmlSandboxTokens[t]))
+                allowed |= kAllowed[t];
+        }
+    }
+    tokens.reset();
+    return HtmlSandboxFlag_All & ~allowed;
+}
+
+bool htmlWindowAllowedToNavigate(const PrHtmlWindow* source, const PrHtmlWindow* target) {
+    HtmlSandboxFlags sandbox = source->sandbox;
+    bool top = target->parent == nullptr;
+    if (source != target && !isAncestor(source, target) && !top && (sandbox & HtmlSandboxFlag_Navigation) != 0)
+        return false;
+    if (top && isAncestor(target, source)) {
+        bool activated = prHtmlWindowHasTransientActivation(source);
+        if (activated && (sandbox & HtmlSandboxFlag_TopLevelNavigationWithActivation) != 0)
+            return false;
+        if (!activated && (sandbox & HtmlSandboxFlag_TopLevelNavigationWithoutActivation) != 0)
+            return false;
+    }
+    // A sandboxed document is no top-level traversable's one permitted sandboxed navigator, since it opens none.
+    if (top && source != target && !isAncestor(target, source) && (sandbox & HtmlSandboxFlag_Navigation) != 0)
+        return false;
+    return true;
+}
+
+bool htmlWindowIsSameOriginDomain(const PrHtmlWindow* a, const PrHtmlWindow* b) {
+    const PrHtmlWindow* sourceA = originSource(a);
+    const PrHtmlWindow* sourceB = originSource(b);
+    if (sourceA == sourceB)
+        return true;
+    bool domainA = !prRawStringIsNull(&sourceA->domain);
+    bool domainB = !prRawStringIsNull(&sourceB->domain);
+    if (!domainA && !domainB)
+        return htmlWindowIsSameOrigin(a, b);
+    if (!domainA || !domainB || htmlWindowEffectiveDomain(a).data == nullptr || htmlWindowEffectiveDomain(b).data == nullptr)
+        return false;
+    return prUrlScheme(sourceA->document->url) == prUrlScheme(sourceB->document->url) &&
+        prRawStringView(&sourceA->domain) == prRawStringView(&sourceB->domain);
+}
+
+PrStringView htmlWindowEffectiveDomain(const PrHtmlWindow* window) {
+    const PrHtmlWindow* source = originSource(window);
+    if ((source->sandbox & HtmlSandboxFlag_Origin) != 0)
+        return PrStringView{};
+    if (!prRawStringIsNull(&source->domain))
+        return prRawStringView(&source->domain);
+    PrStringView host = prUrlHost(source->document->url);
+    return host.size != 0 ? host : PrStringView{};
+}
+
+void htmlWindowSetDomain(PrHtmlWindow* window, PrStringView domain) {
+    PrHtmlWindow* source = const_cast<PrHtmlWindow*>(originSource(window));
+    prRawStringReplace(&source->domain, domain);
 }
 
 bool htmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b) {
-    if (originSource(a) == originSource(b))
+    const PrHtmlWindow* sourceA = originSource(a);
+    const PrHtmlWindow* sourceB = originSource(b);
+    if (sourceA == sourceB)
         return true;
+    // A file: URL's origin is the implementation's to define (url/#concept-url-origin). The documents of file: URLs
+    // share one, unless a sandbox gives one an opaque origin of its own, as they share one storage area.
+    if (prUrlScheme(sourceA->document->url) == "file" && prUrlScheme(sourceB->document->url) == "file")
+        return ((sourceA->sandbox | sourceB->sandbox) & HtmlSandboxFlag_Origin) == 0;
     PrRawString originA = htmlWindowOrigin(a);
     PrRawString originB = htmlWindowOrigin(b);
     bool same = prRawStringView(&originA) == prRawStringView(&originB) && prRawStringView(&originA) != "null";
