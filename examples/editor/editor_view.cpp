@@ -16,7 +16,7 @@
 #include "pr/kit_icon.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
@@ -49,15 +49,15 @@ constexpr uint64_t kDragAsset = 2;
 // Creates a row of fixed `height` on `background`, with the rules that `rules` names. Its items are `gap` px apart and
 // centered across the row.
 PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitBackground background, PrKitRuleFlags rules, float height, float gap) {
-    PrKitSurfaceStyle surface{.background = background, .rules = rules};
-    surface.box.direction = PrKitDirection_Row;
-    surface.box.align = PrKitAlign_Center;
-    surface.box.gap = gap;
-    surface.box.padding = prKitEdgesXY(0, kPrKitSpace3);
-    surface.box.overflow = PrKitOverflow_Clip;
-    surface.box.place.height = prKitPx(height);
-    surface.box.place.flex = PrKitFlex_Fixed;
-    return prKitSurface(kit, parent, {}, surface);
+    PrKitPanelStyle look{.background = background, .rules = rules};
+    look.box.direction = PrKitDirection_Row;
+    look.box.align = PrKitAlign_Center;
+    look.box.gap = gap;
+    look.box.padding = prKitEdgesXY(0, kPrKitSpace3);
+    look.box.overflow = PrKitOverflow_Clip;
+    look.box.place.height = prKitPx(height);
+    look.box.place.flex = PrKitFlex_Fixed;
+    return prKitPanel(kit, parent, {}, look);
 }
 
 // Creates the bar of a panel's actions under the dock's tab, which names the panel.
@@ -410,13 +410,13 @@ void buildProjectPanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrUi* ui = kit->ui;
     for (uint32_t i = 0; i < countOf(kAssets); ++i) {
         bool selected = editor.selectedAsset == i;
-        PrKitSurfaceStyle cell{.background = PrKitBackground(selected ? PrKitBackground_Select : PrKitBackground_None)};
+        PrKitPanelStyle cell{.background = PrKitBackground(selected ? PrKitBackground_Select : PrKitBackground_None)};
         cell.box.justify = PrKitJustify_Center;
         cell.box.align = PrKitAlign_Center;
         cell.box.gap = kPrKitSpace2;
         cell.box.place.width = prKitPx(84);
         cell.box.place.height = prKitPx(76);
-        PrLayoutNode node = prKitSurface(kit, cells, {}, cell);
+        PrLayoutNode node = prKitPanel(kit, cells, {}, cell);
         // An asset drags onto the inspector's mesh field.
         prUiSetFlags(ui, node, PrUiFlag_Pressable);
         if (prUiIsPressed(ui, node, 0))
@@ -523,7 +523,7 @@ void paintViewport(void* context, PrVec2 size, PrDrawList* list) {
 void pickEntity(PrKit* kit, PrLayoutNode viewport, EditorState& editor) {
     PrUi* ui = kit->ui;
     PrVec2 pointer{};
-    if (!prUiClicked(ui, viewport, 0) || !prUiPointer(ui, &pointer))
+    if (!prUiClicked(ui, viewport, 0) || !prUiPointer(ui, nullptr, &pointer))
         return;
     PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(kit->tree, viewport, PrLayoutCoordinates_Viewport));
     PrVec2 size{bounds.right - bounds.left, bounds.bottom - bounds.top};

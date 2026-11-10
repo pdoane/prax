@@ -1,6 +1,6 @@
 // The fixture for the tests of Studio Kit and of the libraries over it. It holds a kit in Studio's dark theme, for a
 // context and a tree that set text in the font stack of Studio's applications: Noto and the Nerd Fonts symbols. Its
-// frames declare a root surface and the test's widgets.
+// frames declare a root panel and the test's widgets.
 
 #pragma once
 
@@ -17,7 +17,7 @@
 #include "pr/function.h"
 #include "pr/image.h"
 #include "pr/kit.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
@@ -78,11 +78,11 @@ struct KitFixture {
     PrImageCodec* images = prImageCodecCreate(PrImageCodecBackend_Default, compress);
     PrDrawGlyphDecoder* glyphs = prDrawGlyphBitmapCreate(images);
 
-    PrLayoutNode root = kPrLayoutNodeNone;            // a surface that fills the viewport and holds the build's widgets
+    PrLayoutNode root = kPrLayoutNodeNone;            // a panel that fills the viewport and holds the build's widgets
     PrKitBackground background = PrKitBackground_App; // what the root is drawn on
     double time = 0;
     PrAppDisplay display = prAppDisplayDefault();  // the display that each frame is shown on
-    PrAppUserPreferences preferences{};
+    PrAppUserPreferences preferences = prAppUserPreferencesDefault();
     Function<void(PrLayoutNode root)> build;
 
     // The edit sink that each frame sets on the root, if `edit` is not null.
@@ -125,14 +125,14 @@ struct KitFixture {
             .preferences = preferences,
         };
         auto round = [this](PrUi*, const PrUiRound*) {
-            PrKitSurfaceStyle style{
+            PrKitPanelStyle style{
                 .box = {
                     .overflow = PrKitOverflow_Clip,
                     .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
                 },
                 .background = background,
             };
-            root = prKitSurface(kit, kPrLayoutNodeNone, {}, style);
+            root = prKitPanel(kit, kPrLayoutNodeNone, {}, style);
             if (edit != nullptr)
                 prUiSetEditSink(ui, root, edit, editContext);
             if (build)
@@ -162,7 +162,7 @@ struct KitFixture {
 
     void push(PrAppEvent event) {
         event.time = time;
-        prUiPushEvent(ui, &event);
+        prUiPushEvent(ui, kPrUiViewportMain, &event);
     }
     void move(PrVec2 at) {
         push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = at}});

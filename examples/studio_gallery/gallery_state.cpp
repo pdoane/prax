@@ -499,27 +499,6 @@ bool undoStep(UndoState& undo, bool forward) {
     return true;
 }
 
-void moveTab(TabsState& tabs, uint32_t from, uint32_t to) {
-    uint32_t count = uint32_t(countOf(tabs.panelOrder));
-    if (from >= count || to >= count || from == to)
-        return;
-    uint32_t moved = tabs.panelOrder[from];
-    if (from < to) {
-        for (uint32_t i = from; i < to; ++i)
-            tabs.panelOrder[i] = tabs.panelOrder[i + 1];
-    } else {
-        for (uint32_t i = from; i > to; --i)
-            tabs.panelOrder[i] = tabs.panelOrder[i - 1];
-    }
-    tabs.panelOrder[to] = moved;
-    if (tabs.panel == from)
-        tabs.panel = to;
-    else if (from < to && tabs.panel > from && tabs.panel <= to)
-        --tabs.panel;
-    else if (to < from && tabs.panel >= to && tabs.panel < from)
-        ++tabs.panel;
-}
-
 TreeNode* findTreeNode(TreeState& tree, uint32_t key) {
     uint32_t index = indexOfKey(tree.nodes, key);
     return index < tree.nodes.count() ? &tree.nodes[index] : nullptr;

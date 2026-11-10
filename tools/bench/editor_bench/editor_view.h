@@ -4,7 +4,7 @@
 #pragma once
 
 #include "pr/kit.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 
 #include "tools/bench/editor_bench/editor_state.h"
 #include "tools/bench/editor_bench/host.h"
@@ -13,7 +13,7 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace editor {
 
-// Declares the editor under `root`, the screen's surface, and applies the round's input to the model. The editor's HUD
+// Declares the editor under `root`, the screen's panel, and applies the round's input to the model. The editor's HUD
 // must exist (editorAttach).
 void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor);
 

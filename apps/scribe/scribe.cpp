@@ -179,13 +179,9 @@ PrLayoutStyleIndex blockStyle(PrLayoutTree* tree, PrVec2 extent) {
 }
 
 // Declares the terminal panel: a header line and the terminal that shows below it. The header names the terminal and
-// counts the other terminals that need attention. The terminals that do not show are updated with prTerminalUpdate.
+// counts the other terminals that need attention.
 void buildTerminalPanel(Scribe& s, PrLayoutNode root, PrVec2 extent) {
     PrTerminal* terminal = shownTerminal(s);
-    for (PrTerminal* other : s.terminals) {
-        if (other != terminal || !s.terminalShown)
-            prTerminalUpdate(other);
-    }
     if (!s.terminalShown || terminal == nullptr)
         return;
     String header = format("Terminal {} of {}: {}", s.terminal + 1, s.terminals.count(), prTerminalTitle(terminal));
@@ -205,7 +201,7 @@ void buildTerminalPanel(Scribe& s, PrLayoutNode root, PrVec2 extent) {
     // The terminal's view paints its own background, below the header.
     PrLayoutTree* tree = prUiTree(s.ui);
     PrLayoutNode box = prUiElement(s.ui, root, prUiKey(s.ui, root, "terminal"), blockStyle(tree, screen), 0);
-    prTerminalFrame(terminal, box, screen, PrTerminalBackground_View);
+    prTerminalFrame(terminal, s.kit, box, PrTerminalBackground_View);
 }
 
 // A menu of `items`.
@@ -407,9 +403,8 @@ void openTerminal(Scribe& s) {
     else if (document != nullptr)
         directory = prTextEditorDocumentWorkspace(document);
     PrTerminalDesc desc{
-        .kit = s.kit,
+        .app = s.app,
         .font = PrTextFontDesc{.set = s.fonts, .families = &mono, .familyCount = 1, .style = style},
-        .window = s.window,
         .launcher = s.launcher,
         .directory = prRawStringView(&directory),
         .scrollback = kPrTerminalScrollbackDefault,
@@ -488,6 +483,11 @@ bool afterLayout(Scribe& s) {
 }
 
 bool handleEvent(Scribe& s, const PrAppEvent& event) {
+    if (event.kind == PrAppEventKind_Wake) {
+        for (PrTerminal* terminal : s.terminals)
+            prTerminalService(terminal, prUiWindow(s.ui));
+        return false;
+    }
     if (event.kind != PrAppEventKind_Notification)
         return false;
     for (uint32_t i = 0; i < s.terminals.count(); ++i) {

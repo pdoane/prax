@@ -99,9 +99,16 @@ struct UiTitleBarPart {
     PrAppTitleBarRegionKind kind;
 };
 
-// A queued event. Its text starts at `textStart` in the queue's text buffer.
+// An extent of a node that the current round's build read from the last layout (prUiExtent).
+struct UiMeasured {
+    PrLayoutNode node;
+    PrLayoutVec extent;
+};
+
+// A queued event, whose position is in px of `viewport`. Its text starts at `textStart` in the queue's text buffer.
 struct UiQueued {
     PrAppEvent event;
+    PrUiViewport viewport;
     uint32_t textStart;
     PrLayoutNode target;            // the node that receives the event, or kPrLayoutNodeNone to route it by its kind
     PrApp* PR_NULLABLE retainer;    // the application that retained the event's source while it waits, or null
@@ -127,8 +134,9 @@ struct UiClaim {
     bool capture;
 };
 
-// The state of one pointer button: the node that its press captured, and its drag.
+// The state of one pointer button: the node that its press captured, and its drag, in px of the viewport of the press.
 struct UiButton {
+    PrUiViewport viewport;
     PrLayoutNode capture;
     PrLayoutNode node;              // the node that owns the drag, kept through the round that ends it
     PrLayoutNode pressed;           // the node that captured the press, kept until the next press
@@ -160,6 +168,22 @@ struct UiCarry {
     bool armed;
     bool carried;
     bool external;                  // true for a drag of the system, which no press of the context holds
+};
+
+// A portal (prUiPortal), kept while every round creates it. The entry holds a reference to each of its records.
+struct UiPortal {
+    PrUiKey key;
+    PrUiPortalDesc desc;
+    PrUiFlags flags;
+    uint32_t round;                 // the round that last created it
+    uint32_t order;                 // its place among the portals of that round
+    PrLayoutNode root;              // the root of its own viewport, or none in the overlay
+    PrLayoutNode node;
+    PrVec2 extent;                  // of `node` at the last layout, in px
+    PrVec2 at;                      // where `style` places `node` in its parent, in px
+    PrLayoutStyleIndex style;       // the record of `node`, or 0 before the first round places it
+    PrLayoutStyleIndex coverBase;   // the cover's record that `cover` places
+    PrLayoutStyleIndex cover;       // the record of the element beneath a modal Dialog in the overlay, or 0
 };
 
 // A drop target that a build declared, and the kind of payload it takes.
@@ -233,6 +257,11 @@ enum : uint64_t {
 
 // The overlay's key, and the stack level that puts it above everything in flow.
 constexpr uint64_t kUiOverlayKey = 0x6f7665726c6179ull;
+
+// The values that a portal's key is mixed with to key the root of its own viewport, and the cover beneath a modal
+// Dialog in the overlay.
+constexpr uint64_t kUiPortalRootKey = 0x726f6f74ull;
+constexpr uint64_t kUiPortalCoverKey = 0x636f766572ull;
 constexpr int32_t kUiOverlayLevel = 1000;
 
 // The greatest number of duplicate keys that a round outlines, and the width in px and the colors of an outline.
@@ -291,24 +320,27 @@ struct Ui {
     RawArray<UiRouted> routed;      // events routed in the current round, grouped by node once routing ends
     RawArray<PrAppEvent> events;    // the events of `routed`, in the same order
     bool transitioned;              // true if the current round routed a press, a release or a key press
+    RawArray<UiMeasured> measured;  // the extents that the current round read, which its layout may change
 
     // --- Pointer ---
 
     bool hasPointer;
+    PrUiViewport pointerViewport;   // the viewport that `pointer` is in
     PrVec2 pointer;
     PrLayoutNode hovered;           // the node under the pointer, where the hover chain starts
     UiButton buttons[kUiButtons];
     PrLayoutNode clicked[kUiButtons];
     bool pressedRound[kUiButtons];  // true if the button was pressed in the current round
     PrRect textInput;               // the caret of the text being edited, if hasTextInput
-    PrAppTextInputKind textInputKind;
     bool hasTextInput;
+    PrAppTextInputKind textInputKind;
     PrAppCursor cursor;
     RawArray<UiWheel> wheels;
     UiCarry payload;
     PrLayoutNode dropOver;          // the innermost of the previous round's drop targets under the pointer
     PrLayoutNode dropped;           // the drop target in the current round, or none
     PrUiPayload droppedPayload;
+    bool dropEnded;                 // the current round dropped `droppedPayload`, on a target or on none
 
     // The events with sources that the current round routed, which the context retained. An event's source is valid
     // only during the event, and the program reads it in the round's build, such as a drop's.
@@ -318,10 +350,10 @@ struct Ui {
 
     PrAppDragOperationFlags dragOperations; // the operations that the source of a drag of the system allows
 
-    // A payload that may leave the window. Once the pointer that carries it leaves the viewport, the context hands it
+    // A payload that may leave the window. Once the pointer that carries it leaves every viewport, the context hands it
     // to the system. It stays `exported` until the system's drag ends, so that it keeps its source if it returns to the
     // window.
-    PrVec2 viewport;                // the extent of the latest frame, in px
+    PrVec2 viewport;                // the extent of the main viewport in the latest frame, in px
     bool hasExported;
     PrUiPayload exported;
 
@@ -361,6 +393,18 @@ struct Ui {
     PrLayoutStyleIndex overlayStyle; // the overlay's record, or 0 before a round first asks for the overlay
     PrLayoutNode overlay;
     uint32_t overlayRound;           // the round that created `overlay`
+
+    // --- Portals ---
+
+    // The portals of the committed tree and of the round being built, by their place in their last round. A host shows
+    // each in a viewport of its own, whose root has `portalRootStyle`, laid out in `portalExtent`.
+    RawArray<UiPortal> portals;
+    uint32_t portalOrder;           // the number of portals that the round being built has created
+    bool hosted;
+    PrUiHost host;
+    PrLayoutStyleIndex portalRootStyle;
+    PrVec2 portalExtent;
+    RawArray<PrLayoutRoot> roots;    // the roots of the round's layout
 };
 
 // Returns the entry for the slot of `node`. If the entry belonged to another node, it is reset for `node`.
@@ -458,13 +502,79 @@ PrLayoutNode innermost(const Ui* ui, PrLayoutNode node, PrUiFlags flag) {
     return kPrLayoutNodeNone;
 }
 
-// Returns the node under `point`, in viewport px, using the paint order of the committed tree. The result is the
+// Returns the portal whose own viewport is `viewport`, or null.
+const UiPortal* PR_NULLABLE hostedPortal(const Ui* ui, PrUiViewport viewport) {
+    if (viewport == kPrUiViewportMain)
+        return nullptr;
+    for (uint32_t i = 0; i < ui->portals.count; ++i) {
+        const UiPortal& s = ui->portals.data[i];
+        if (s.key == viewport && s.root != kPrLayoutNodeNone)
+            return &s;
+    }
+    return nullptr;
+}
+
+// Returns the window that shows `viewport`, or null if none does.
+PrAppWindow* PR_NULLABLE viewportWindow(const Ui* ui, PrUiViewport viewport) {
+    if (viewport == kPrUiViewportMain)
+        return ui->window;
+    return ui->hosted ? ui->host.window(ui->host.context, viewport) : nullptr;
+}
+
+// Writes `point`, in px of viewport `from`, to `out` in px of viewport `to`, through the display that their windows are
+// on, and returns true. Returns false if a viewport has no window, or the platform does not report positions.
+bool mapPoint(const Ui* ui, PrUiViewport from, PrUiViewport to, PrVec2 point, PrVec2* out) {
+    if (from == to) {
+        *out = point;
+        return true;
+    }
+    PrAppWindow* source = viewportWindow(ui, from);
+    PrAppWindow* target = viewportWindow(ui, to);
+    PrAppDisplayPosition at{};
+    return source != nullptr && target != nullptr && prAppWindowPointToDisplay(source, point, &at) &&
+        prAppWindowPointFromDisplay(target, &at, out);
+}
+
+// Returns true if `point` lies inside a viewport of `extent`.
+bool insideViewport(PrVec2 point, PrVec2 extent) {
+    return point.x >= 0 && point.y >= 0 && point.x < extent.x && point.y < extent.y;
+}
+
+// Finds the topmost viewport that shows `point`, in px of `from`, which a portal that lets the pointer through does
+// not. Writes it to `viewport` and the point in its px to `local`, and returns true, or returns false if no viewport
+// shows the point.
+bool viewportAt(const Ui* ui, PrUiViewport from, PrVec2 point, PrUiViewport* viewport, PrVec2* local) {
+    PrVec2 at{};
+    for (uint32_t i = ui->portals.count; i-- > 0;) {
+        const UiPortal& s = ui->portals.data[i];
+        if (s.root == kPrLayoutNodeNone || (s.flags & (PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent)) != 0)
+            continue;
+        if (mapPoint(ui, from, s.key, point, &at) && insideViewport(at, s.extent)) {
+            *viewport = s.key;
+            *local = at;
+            return true;
+        }
+    }
+    if (mapPoint(ui, from, kPrUiViewportMain, point, &at) && insideViewport(at, ui->viewport)) {
+        *viewport = kPrUiViewportMain;
+        *local = at;
+        return true;
+    }
+    return false;
+}
+
+// Returns the node under `point`, in px of `viewport`, using the paint order of the committed tree. The result is the
 // topmost node that lets the pointer through neither itself nor through an ancestor.
-PrLayoutNode hitAt(const Ui* ui, PrVec2 point) {
+PrLayoutNode hitAt(const Ui* ui, PrUiViewport viewport, PrVec2 point) {
     if (ui->built == 0 || prLayoutTreeRoot(ui->tree) == kPrLayoutNodeNone)
         return kPrLayoutNodeNone;
     PrLayoutNode hits[kUiHitCapacity];
-    uint32_t count = prLayoutTreeHitTest(ui->tree, prLayoutVecFromPx(point), hits, kUiHitCapacity);
+    uint32_t count = 0;
+    if (viewport == kPrUiViewportMain) {
+        count = prLayoutTreeHitTest(ui->tree, prLayoutVecFromPx(point), hits, kUiHitCapacity);
+    } else if (const UiPortal* s = hostedPortal(ui, viewport)) {
+        count = prLayoutNodeHitTest(ui->tree, s->root, prLayoutVecFromPx(point), hits, kUiHitCapacity);
+    }
     if (count > kUiHitCapacity)
         count = kUiHitCapacity;
     for (uint32_t i = 0; i < count; ++i) {
@@ -596,11 +706,6 @@ PrAppDragOperation dropOperationOf(const Ui* ui) {
             return operation;
     }
     return PrAppDragOperation_None;
-}
-
-// Returns true if `point` lies outside a viewport of `extent`.
-bool outsideViewport(PrVec2 point, PrVec2 extent) {
-    return point.x < 0 || point.y < 0 || point.x >= extent.x || point.y >= extent.y;
 }
 
 // Gives the wheel deltas, in px, to the scroll containers and wheel nodes from `node` outward. Each one takes as much
@@ -777,30 +882,55 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
     deliver(ui, ui->focus, e);
 }
 
-// Routes one event against the committed tree.
-void route(Ui* ui, const PrAppEvent& e) {
+// Returns the position of the event `e` from `viewport` in px of the viewport of `b`'s press. A point that the host
+// cannot convert stays where the press's viewport last saw the pointer.
+PrVec2 pressPosition(const Ui* ui, const UiButton& b, PrUiViewport viewport, PrVec2 position) {
+    PrVec2 at{};
+    return mapPoint(ui, viewport, b.viewport, position, &at) ? at : b.position;
+}
+
+// Returns the event `e` from `viewport` with its position in px of the viewport of `b`'s press.
+PrAppEvent atPress(const Ui* ui, const UiButton& b, PrUiViewport viewport, const PrAppEvent& e) {
+    PrAppEvent moved = e;
+    prAppEventSetPosition(&moved, pressPosition(ui, b, viewport, e.pointer.position));
+    return moved;
+}
+
+// Routes one event from `viewport` against the committed tree.
+void route(Ui* ui, PrUiViewport viewport, const PrAppEvent& raw) {
+    // The event that reaches the node under the pointer has its position in px of the viewport that shows the pointer.
+    PrAppEvent e = raw;
     PrVec2 position{};
-    if (prAppEventPosition(&e, &position)) {
+    bool shown = false;
+    if (prAppEventPosition(&raw, &position)) {
+        PrUiViewport over = viewport;
+        PrVec2 at = position;
+        shown = viewportAt(ui, viewport, position, &over, &at);
         ui->hasPointer = true;
-        ui->pointer = position;
-        ui->hovered = hitAt(ui, position);
+        ui->pointerViewport = over;
+        ui->pointer = at;
+        ui->hovered = shown ? hitAt(ui, over, at) : kPrLayoutNodeNone;
+        prAppEventSetPosition(&e, at);
     }
     switch (e.kind) {
         case PrAppEventKind_PointerMove: {
             PrLayoutNode to = ui->hovered;
+            PrAppEvent delivered = e;
             for (uint32_t b = 0; b < kUiButtons; ++b) {
                 UiButton& button = ui->buttons[b];
                 if (button.dragging)
-                    moveDrag(button, e.pointer.position);
-                if (button.capture != kPrLayoutNodeNone)
+                    moveDrag(button, pressPosition(ui, button, viewport, raw.pointer.position));
+                if (button.capture != kPrLayoutNodeNone) {
                     to = button.capture;
+                    delivered = atPress(ui, button, viewport, raw);
+                }
             }
             carry(ui);
             const UiCarry& p = ui->payload;
             bool leaves = p.carried && !p.external && (p.flags & PrUiPayloadFlag_AnyWindow) != 0;
-            if (leaves && ui->window != nullptr && outsideViewport(e.pointer.position, ui->viewport))
+            if (leaves && ui->window != nullptr && !shown)
                 handOff(ui);
-            deliver(ui, to, e);
+            deliver(ui, to, delivered);
             break;
         }
         case PrAppEventKind_PointerDown: {
@@ -820,13 +950,14 @@ void route(Ui* ui, const PrAppEvent& e) {
             bool sequence = target != kPrLayoutNodeNone && target == b.pressed && e.pointer.clicks > 1;
             uint32_t presses = sequence ? e.pointer.clicks : 1;
             b = UiButton{
+                .viewport = ui->pointerViewport,
                 .capture = target,
                 .node = target,
                 .pressed = target,
                 .pressTime = ui->time,
                 .repeatTime = ui->time,
-                .origin = e.pointer.position,
-                .position = e.pointer.position,
+                .origin = ui->pointer,
+                .position = ui->pointer,
                 .modifiers = e.modifiers,
                 .presses = presses,
                 .dragging = target != kPrLayoutNodeNone,
@@ -841,17 +972,21 @@ void route(Ui* ui, const PrAppEvent& e) {
                 break;
             UiButton& b = ui->buttons[e.pointer.button];
             if (b.dragging)
-                moveDrag(b, e.pointer.position);
+                moveDrag(b, pressPosition(ui, b, viewport, raw.pointer.position));
             bool carried = e.pointer.button == 0 && ui->payload.carried && !ui->payload.external;
             if (carried) {
                 ui->dropped = dropTargetOf(ui, ui->hovered);
                 ui->droppedPayload = ui->payload.payload;
+                ui->dropEnded = true;
             } else if (b.capture != kPrLayoutNodeNone && within(ui, ui->hovered, b.capture)) {
                 ui->clicked[e.pointer.button] = b.capture;
             }
             if (e.pointer.button == 0 && !ui->payload.external)
                 ui->payload = UiCarry{};
-            deliver(ui, b.capture != kPrLayoutNodeNone ? b.capture : ui->hovered, e);
+            if (b.capture != kPrLayoutNodeNone)
+                deliver(ui, b.capture, atPress(ui, b, viewport, raw));
+            else
+                deliver(ui, ui->hovered, e);
             endDrag(b, true);
             b.capture = kPrLayoutNodeNone;
             break;
@@ -875,6 +1010,9 @@ void route(Ui* ui, const PrAppEvent& e) {
             deliver(ui, ui->hovered, e);
             break;
         case PrAppEventKind_DragLeave:
+            // A viewport that the drag left after it entered another leaves the drag where it is.
+            if (viewport != ui->pointerViewport)
+                break;
             if (ui->payload.external)
                 ui->payload = UiCarry{};
             ui->hovered = kPrLayoutNodeNone;
@@ -883,6 +1021,7 @@ void route(Ui* ui, const PrAppEvent& e) {
             carryExternal(ui, e.drag);
             ui->dropped = dropTargetOf(ui, ui->hovered);
             ui->droppedPayload = ui->payload.payload;
+            ui->dropEnded = true;
             ui->payload = UiCarry{};
             deliver(ui, ui->dropped != kPrLayoutNodeNone ? ui->dropped : ui->hovered, e);
             break;
@@ -895,7 +1034,10 @@ void route(Ui* ui, const PrAppEvent& e) {
             ui->hasExported = false;
             break;
         case PrAppEventKind_PointerLeave:
-            // The backend sends Leave once no button is down, so no capture holds the pointer.
+            // The backend sends Leave once no button is down, so no capture holds the pointer. A viewport that the
+            // pointer left after it entered another leaves the pointer where it is.
+            if (viewport != ui->pointerViewport)
+                break;
             ui->hasPointer = false;
             ui->hovered = kPrLayoutNodeNone;
             break;
@@ -1127,6 +1269,100 @@ PrLayoutNode overlayOf(Ui* ui) {
     return ui->overlay;
 }
 
+// Returns a record that the context holds a reference to: `base` with its box group replaced by `box`.
+PrLayoutStyleIndex boxedStyle(Ui* ui, PrLayoutStyleIndex base, const PrLayoutBoxStyle& box) {
+    PrLayoutStyle record = prLayoutStyleRecord(ui->tree, base);
+    record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(ui->tree, &box);
+    PrLayoutStyleIndex style = prLayoutStyleIntern(ui->tree, &record);
+    prLayoutStyleRetain(ui->tree, style);
+    return style;
+}
+
+// Returns a box that is absolutely positioned at `at` px from its containing block's top left, as large as its content.
+PrLayoutBoxStyle placedBox(PrVec2 at) {
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Block;
+    box.position = PrLayoutPosition_Absolute;
+    box.inset[PrRectSide_Left] = prLayoutLengthPx(at.x);
+    box.inset[PrRectSide_Top] = prLayoutLengthPx(at.y);
+    return box;
+}
+
+// Gives the portal's node the record that places it at `at`, if it has no such record yet.
+void placePortal(Ui* ui, UiPortal& s, PrVec2 at) {
+    if (s.style != 0 && s.at.x == at.x && s.at.y == at.y)
+        return;
+    if (s.style != 0)
+        prLayoutStyleRelease(ui->tree, s.style);
+    s.style = boxedStyle(ui, 0, placedBox(at));
+    s.at = at;
+}
+
+// Returns the record of the element that covers the parent of the portal, a modal Dialog in the overlay: the desc's
+// cover, over the whole overlay.
+PrLayoutStyleIndex coverOf(Ui* ui, UiPortal& s) {
+    if (s.cover != 0 && s.coverBase == s.desc.cover)
+        return s.cover;
+    if (s.cover != 0)
+        prLayoutStyleRelease(ui->tree, s.cover);
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Block;
+    box.position = PrLayoutPosition_Absolute;
+    for (uint32_t side = 0; side < PrRectSide_Count; ++side)
+        box.inset[side] = prLayoutLengthPx(0);
+    s.cover = boxedStyle(ui, s.desc.cover, box);
+    s.coverBase = s.desc.cover;
+    return s.cover;
+}
+
+// Returns where the portal goes in the overlay, whose bounds are `area` in px of the main viewport, from the overlay's
+// top left: a Popup against its anchor, and a Dialog centered, or at its desc's distance from the top.
+PrVec2 portalPlace(const UiPortal& s, PrRect area) {
+    PrVec2 extent = s.extent;
+    if (s.desc.kind == PrUiPortalKind_Popup) {
+        PrRect r = prAppPopupRect(&s.desc.placement, extent, area, PrAppLayoutDirection_LeftToRight);
+        return PrVec2{r.left - area.left, r.top - area.top};
+    }
+    float x = (area.right - area.left - extent.x) / 2;
+    float y = s.desc.top > 0 ? s.desc.top : (area.bottom - area.top - extent.y) / 2;
+    return PrVec2{x > 0 ? x : 0, y > 0 ? y : 0};
+}
+
+// Frees the portals that the current round did not create, and puts the others in the round's order.
+void sweepPortals(Ui* ui) {
+    RawArray<UiPortal>& portals = ui->portals;
+    uint32_t kept = 0;
+    for (uint32_t i = 0; i < portals.count; ++i) {
+        UiPortal s = portals.data[i];
+        if (s.round == ui->roundId) {
+            portals.data[kept++] = s;
+            continue;
+        }
+        if (s.style != 0)
+            prLayoutStyleRelease(ui->tree, s.style);
+        if (s.cover != 0)
+            prLayoutStyleRelease(ui->tree, s.cover);
+    }
+    portals.count = kept;
+    for (uint32_t i = 1; i < kept; ++i) {
+        UiPortal moving = portals.data[i];
+        uint32_t at = i;
+        while (at > 0 && portals.data[at - 1].order > moving.order) {
+            portals.data[at] = portals.data[at - 1];
+            --at;
+        }
+        portals.data[at] = moving;
+    }
+}
+
+// Makes the record of a portal's own root, a block that the portal's node is placed in, and returns it with a reference
+// that the context holds.
+PrLayoutStyleIndex makePortalRootStyle(Ui* ui) {
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Block;
+    return boxedStyle(ui, 0, box);
+}
+
 // Outlines `node` in the overlay, if the node is in the tree and had a box at the last layout. `origin` is the top left
 // of the overlay's box at the last layout, in viewport px.
 void outlineDuplicate(Ui* ui, PrLayoutNode node, PrVec2 origin) {
@@ -1203,10 +1439,12 @@ void beginRound(Ui* ui, uint32_t index, const PrUiFrameDesc* desc) {
     ui->block = 0;
     ui->blockUsed = 0;
     ui->transitioned = false;
+    ui->measured.clear();
     ui->keyed = UiClaim{};
     ui->keyActivated = kPrLayoutNodeNone;
     ui->dropped = kPrLayoutNodeNone;
     releaseRetained(ui);
+    ui->dropEnded = false;
     ui->exportEnded = false;
     ui->tweening = false;
     for (uint32_t b = 0; b < kUiButtons; ++b) {
@@ -1223,7 +1461,8 @@ void beginRound(Ui* ui, uint32_t index, const PrUiFrameDesc* desc) {
     ui->activations = ui->nextActivations;
     ui->nextActivations = swap;
     ui->nextActivations.clear();
-    ui->hovered = ui->hasPointer ? hitAt(ui, ui->pointer) : kPrLayoutNodeNone;
+    ui->hovered = ui->hasPointer ? hitAt(ui, ui->pointerViewport, ui->pointer) : kPrLayoutNodeNone;
+    ui->portalOrder = 0;
     // The memo's positions start again with the round's first lookup.
     ui->memo.slot = kPrLayoutFrameCursorEnd;
     ui->memo.calls = 0;
@@ -1282,7 +1521,7 @@ void routeQueue(Ui* ui) {
         if (queued.target != kPrLayoutNodeNone)
             deliver(ui, queued.target, event);
         else
-            route(ui, event);
+            route(ui, queued.viewport, event);
     }
 }
 
@@ -1319,6 +1558,7 @@ void endRound(Ui* ui) {
         }
     }
     sweepStates(ui);
+    sweepPortals(ui);
     RawArray<UiClaim> claims = ui->lastClaims;
     ui->lastClaims = ui->claims;
     ui->claims = claims;
@@ -1372,6 +1612,44 @@ void compactQueue(Ui* ui) {
     ui->queue.count = kept;
     ui->queueText.resize(text);
     ui->consumed = 0;
+}
+
+// Lays out the round: the first root that the build created in the main viewport, of `extent`, and the root of each
+// portal's own viewport. Then takes each portal's extent, which places it in the next round.
+void layoutRound(Ui* ui, PrLayoutVec extent) {
+    ui->roots.clear();
+    PrLayoutRoot viewport{kPrLayoutNodeNone, extent};
+    prLayoutTreeFrameRoots(ui->tree, &viewport.node, 1);
+    ui->roots.push(viewport);
+    PrLayoutVec portalExtent = prLayoutVecFromPx(ui->portalExtent);
+    for (uint32_t i = 0; i < ui->portals.count; ++i) {
+        const UiPortal& s = ui->portals.data[i];
+        if (s.root != kPrLayoutNodeNone)
+            ui->roots.push(PrLayoutRoot{s.root, portalExtent});
+    }
+    prLayoutTreeLayout(ui->tree, ui->roots.data, ui->roots.count);
+    for (uint32_t i = 0; i < ui->portals.count; ++i) {
+        UiPortal& s = ui->portals.data[i];
+        PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(ui->tree, s.node, PrLayoutCoordinates_Layout));
+        s.extent = PrVec2{bounds.right - bounds.left, bounds.bottom - bounds.top};
+    }
+}
+
+// Returns the extent of `node` in the tree's latest layout.
+PrLayoutVec extentOf(const Ui* ui, PrLayoutNode node) {
+    PrLayoutRect bounds = prLayoutNodeBounds(ui->tree, node, PrLayoutCoordinates_Layout);
+    return PrLayoutVec{bounds.right - bounds.left, bounds.bottom - bounds.top};
+}
+
+// Returns true if the round's layout gave a node another extent than the round read (prUiExtent).
+bool remeasured(const Ui* ui) {
+    for (uint32_t i = 0; i < ui->measured.count; ++i) {
+        const UiMeasured& m = ui->measured.data[i];
+        PrLayoutVec extent = extentOf(ui, m.node);
+        if (extent.x != m.extent.x || extent.y != m.extent.y)
+            return true;
+    }
+    return false;
 }
 
 // Returns true if a change on `node` would be seen: the node was shown at the last layout or has not been laid out yet.
@@ -1448,6 +1726,7 @@ void prUiDestroy(PrUi* PR_NULLABLE ui) {
     ui->queue.reset();
     ui->queueText.reset();
     ui->titleBarParts.reset();
+    ui->measured.reset();
     ui->titleBarRegions.reset();
     ui->routed.reset();
     ui->events.reset();
@@ -1475,6 +1754,17 @@ void prUiDestroy(PrUi* PR_NULLABLE ui) {
     ui->memo.bytes.reset();
     if (ui->overlayStyle != 0)
         prLayoutStyleRelease(ui->tree, ui->overlayStyle);
+    for (uint32_t i = 0; i < ui->portals.count; ++i) {
+        const UiPortal& s = ui->portals.data[i];
+        if (s.style != 0)
+            prLayoutStyleRelease(ui->tree, s.style);
+        if (s.cover != 0)
+            prLayoutStyleRelease(ui->tree, s.cover);
+    }
+    ui->portals.reset();
+    ui->roots.reset();
+    if (ui->portalRootStyle != 0)
+        prLayoutStyleRelease(ui->tree, ui->portalRootStyle);
     prMemoryFree(ui);
 }
 
@@ -1492,9 +1782,14 @@ PrAppWindow* PR_NULLABLE prUiWindow(const PrUi* ui) {
     return ui->window;
 }
 
-void prUiPushEvent(PrUi* ui, const PrAppEvent* event) {
+void prUiPushEvent(PrUi* ui, PrUiViewport viewport, const PrAppEvent* event) {
     PR_ASSERT(!ui->building);
-    UiQueued queued{.event = *event, .textStart = ui->queueText.count, .target = kPrLayoutNodeNone};
+    UiQueued queued{
+        .event = *event,
+        .viewport = viewport,
+        .textStart = ui->queueText.count,
+        .target = kPrLayoutNodeNone,
+    };
     // The queue holds the text, and the event holds its size alone.
     PrStringView text = prAppEventText(event);
     prAppEventSetText(&queued.event, PrStringView{nullptr, text.size});
@@ -1524,6 +1819,8 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
     ui->display = desc->display;
     ui->preferences = desc->preferences;
     ui->viewport = desc->extent;
+    bool bounded = desc->portalExtent.x > 0 && desc->portalExtent.y > 0;
+    ui->portalExtent = bounded ? desc->portalExtent : desc->extent;
     if (prLayoutTreeTargetPixelRatio(ui->tree) != desc->display.pixelRatio)
         prLayoutTreeSetTargetPixelRatio(ui->tree, desc->display.pixelRatio);
     uint32_t limit = desc->maxRounds != 0 ? desc->maxRounds : 1;
@@ -1547,12 +1844,9 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
         outlineDuplicates(ui);
         ui->building = false;
         endRound(ui);
-        // The first root that the build created is the viewport's.
-        PrLayoutRoot viewport{kPrLayoutNodeNone, extent};
-        prLayoutTreeFrameRoots(ui->tree, &viewport.node, 1);
-        prLayoutTreeLayout(ui->tree, &viewport, 1);
+        layoutRound(ui, extent);
         ui->built = ui->roundId;
-        settle = ui->transitioned;
+        settle = ui->transitioned || remeasured(ui);
         ++rounds;
     } while (rounds < limit && (ui->consumed < ui->queue.count || settle));
     buildTitleBarRegions(ui);
@@ -1633,6 +1927,93 @@ PrLayoutNode prUiOverlay(PrUi* ui) {
     return overlayOf(ui);
 }
 
+PrLayoutNode prUiPortal(PrUi* ui, PrUiKey key, const PrUiPortalDesc* desc, PrUiFlags flags) {
+    PR_ASSERT(ui->building && key != 0);
+    UiPortal* found = nullptr;
+    for (uint32_t i = 0; i < ui->portals.count && found == nullptr; ++i) {
+        if (ui->portals.data[i].key == key)
+            found = &ui->portals.data[i];
+    }
+    if (found == nullptr) {
+        found = &ui->portals.emplace();
+        *found = UiPortal{};
+    }
+    UiPortal& s = *found;
+    PR_ASSERT(s.round != ui->roundId);
+    s.key = key;
+    s.desc = *desc;
+    s.flags = flags;
+    s.round = ui->roundId;
+    s.order = ui->portalOrder++;
+    PrLayoutTree* tree = ui->tree;
+    if (ui->hosted) {
+        // The portal's node is at the top left of its own viewport, which is as large as the node.
+        if (ui->portalRootStyle == 0)
+            ui->portalRootStyle = makePortalRootStyle(ui);
+        s.root = prLayoutTreeFrameElement(tree, kPrLayoutNodeNone, prHashMixKeys(key, kUiPortalRootKey),
+            ui->portalRootStyle);
+        setFlags(ui, s.root, PrUiFlag_Transparent);
+        placePortal(ui, s, PrVec2{});
+        s.node = prUiElement(ui, s.root, key, s.style, flags);
+        return s.node;
+    }
+    s.root = kPrLayoutNodeNone;
+    PrLayoutNode overlay = overlayOf(ui);
+    if (desc->kind == PrUiPortalKind_Dialog && desc->modal) {
+        PrLayoutNode cover = prLayoutTreeFrameElement(tree, overlay, prHashMixKeys(key, kUiPortalCoverKey), coverOf(ui, s));
+        setFlags(ui, cover, 0);
+    }
+    // A portal that has not been laid out yet has no extent to place by, so it requests the frame that places it.
+    if (s.extent.x <= 0 && s.extent.y <= 0)
+        prUiRequestFrame(ui);
+    PrRect area = prLayoutRectToPx(prLayoutNodeBounds(tree, overlay, PrLayoutCoordinates_Viewport));
+    placePortal(ui, s, portalPlace(s, area));
+    s.node = prUiElement(ui, overlay, key, s.style, flags);
+    return s.node;
+}
+
+PrUiViewport prUiNodeViewport(const PrUi* ui, PrLayoutNode node) {
+    PrLayoutNode top = node;
+    for (PrLayoutNode at = node; at != kPrLayoutNodeNone; at = parentOf(ui, at))
+        top = at;
+    for (uint32_t i = 0; i < ui->portals.count; ++i) {
+        const UiPortal& s = ui->portals.data[i];
+        if (s.root != kPrLayoutNodeNone && s.root == top)
+            return s.key;
+    }
+    return kPrUiViewportMain;
+}
+
+void prUiSetHost(PrUi* ui, const PrUiHost* PR_NULLABLE host) {
+    PR_ASSERT(!ui->building);
+    ui->hosted = host != nullptr;
+    ui->host = host != nullptr ? *host : PrUiHost{};
+}
+
+uint32_t prUiViewports(const PrUi* ui, PrUiViewportInfo* PR_NULLABLE out, uint32_t capacity) {
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < ui->portals.count; ++i) {
+        const UiPortal& s = ui->portals.data[i];
+        if (s.root == kPrLayoutNodeNone)
+            continue;
+        if (count < capacity) {
+            out[count] = PrUiViewportInfo{
+                .viewport = s.key,
+                .parent = s.desc.parent,
+                .kind = s.desc.kind,
+                .modal = s.desc.modal,
+                .passthrough = (s.flags & (PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent)) != 0,
+                .placement = s.desc.placement,
+                .top = s.desc.top,
+                .root = s.root,
+                .extent = s.extent,
+            };
+        }
+        ++count;
+    }
+    return count;
+}
+
 void* prUiProvide(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, uint32_t size) {
     PR_ASSERT(ui->building);
     UiSlot& s = slotOf(ui, node);
@@ -1686,9 +2067,19 @@ bool prUiSignaled(const PrUi* ui, PrLayoutNode node, const void* owner, uint32_t
     return s != nullptr && s->signalRound == ui->roundId && s->signalOwner == owner && (s->signals & signals) != 0;
 }
 
-bool prUiPointer(const PrUi* ui, PrVec2* out) {
+bool prUiPointer(const PrUi* ui, PrUiViewport* PR_NULLABLE viewport, PrVec2* out) {
+    if (viewport != nullptr)
+        *viewport = ui->pointerViewport;
     *out = ui->pointer;
     return ui->hasPointer;
+}
+
+bool prUiExtent(PrUi* ui, PrLayoutNode node, PrVec2* out) {
+    PR_ASSERT(ui->building);
+    PrLayoutVec extent = extentOf(ui, node);
+    ui->measured.push(UiMeasured{node, extent});
+    *out = prLayoutVecToPx(extent);
+    return extent.x.raw != 0 || extent.y.raw != 0;
 }
 
 bool prUiLocalPoint(const PrUi* ui, PrLayoutNode node, PrVec2 point, PrVec2* out) {
@@ -1727,6 +2118,9 @@ void prUiTitleBarRegion(PrUi* ui, PrLayoutNode node, PrAppTitleBarRegionKind kin
 }
 
 PrAppOutput prUiOutput(const PrUi* ui) {
+    // A caret in a portal's viewport is in that viewport's window.
+    PrUiViewport focused = prUiNodeViewport(ui, ui->focus);
+    PrAppWindow* textInputWindow = focused != kPrUiViewportMain ? viewportWindow(ui, focused) : nullptr;
     return PrAppOutput{
         .cursor = ui->cursor,
         .wantsFrame = ui->frameRequested || ui->tweening || ui->repeating || ui->nextActivations.count != 0 ||
@@ -1734,6 +2128,7 @@ PrAppOutput prUiOutput(const PrUi* ui) {
         .hasTextInput = ui->hasTextInput,
         .textInputKind = ui->textInputKind,
         .textInput = ui->textInput,
+        .textInputWindow = textInputWindow,
         .frameTime = ui->frameTime,
         .titleBarRegions = ui->titleBarRegions.data,
         .titleBarRegionCount = ui->titleBarRegions.count,
@@ -1841,8 +2236,22 @@ void prUiDragStart(PrUi* ui, PrLayoutNode source, float threshold, uint64_t kind
     carry(ui);
 }
 
+void prUiDragStartContent(PrUi* ui, PrLayoutNode source, float threshold, const PrAppDragDesc* desc) {
+    PR_ASSERT(ui->building);
+    const UiButton& b = ui->buttons[0];
+    if (ui->window == nullptr || !prUiIsPressed(ui, source, 0) || ui->payload.armed || ui->hasExported)
+        return;
+    if (!b.dragging || b.reach < threshold * threshold)
+        return;
+    ui->exported = PrUiPayload{.kind = kPrUiPayloadKindSystem, .source = source, .forms = desc->content.forms};
+    ui->hasExported = true;
+    prAppWindowDragStart(ui->window, desc);
+}
+
 const PrUiPayload* PR_NULLABLE prUiDragging(const PrUi* ui) {
-    return ui->payload.carried ? &ui->payload.payload : nullptr;
+    if (ui->payload.carried)
+        return &ui->payload.payload;
+    return ui->dropEnded ? &ui->droppedPayload : nullptr;
 }
 
 bool prUiIsDropTarget(PrUi* ui, PrLayoutNode node, uint64_t kind) {

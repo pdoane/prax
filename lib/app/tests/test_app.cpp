@@ -347,7 +347,7 @@ TEST_CASE("an event's source is a drop's content or an open's files, which retai
     CHECK(released == Array<PrAppDataSource>({7}));
 }
 
-TEST_CASE("two surfaces' outputs take the earlier frame time") {
+TEST_CASE("two views' outputs take the earlier frame time") {
     PrAppOutput none{};
     PrAppOutput early{.frameTime = 1};
     PrAppOutput late{.frameTime = 2};
@@ -358,7 +358,7 @@ TEST_CASE("two surfaces' outputs take the earlier frame time") {
     CHECK(prAppOutputMerge(none, none, false).frameTime == 0);
 }
 
-TEST_CASE("a surface's output is placed in the window, and two surfaces' outputs merge") {
+TEST_CASE("a view's output is placed in the window, and two views' outputs merge") {
     PrAppOutput page{.cursor = PrAppCursor_Hand, .hasTextInput = true, .textInput = {1, 2, 3, 4}};
     PrAppOutput placed = prAppOutputPlaced(page, PrVec2{10, 20}, 2);
     CHECK(placed.textInput.left == 12);
@@ -387,7 +387,7 @@ TEST_CASE("a caret in another window stays as it is when its output is placed, a
     CHECK(prAppOutputMerge(PrAppOutput{}, placed, false).textInputWindow == &fake.window);
 }
 
-TEST_CASE("merged outputs take the drop operation of the surface under the pointer") {
+TEST_CASE("merged outputs take the drop operation of the view under the pointer") {
     PrAppOutput chrome{.dropOperation = PrAppDragOperation_None};
     PrAppOutput page{.dropOperation = PrAppDragOperation_Copy};
     CHECK(prAppOutputMerge(chrome, page, true).dropOperation == PrAppDragOperation_Copy);

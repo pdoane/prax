@@ -1,4 +1,4 @@
-// Studio Kit's surfaces: the backgrounds that the application, its panels, bars and cards are drawn on.
+// Studio Kit's panels: the backgrounds that the application, its panels, bars and cards are drawn on.
 
 #pragma once
 
@@ -13,7 +13,7 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// The background of a surface, from the application's background up to a selected row.
+// The background of a panel, from the application's background up to a selected row.
 enum {
     PrKitBackground_None,
     PrKitBackground_App,                // bg0
@@ -26,7 +26,7 @@ enum {
 };
 typedef uint8_t PrKitBackground;
 
-// The sides on which a surface draws a rule, in its theme's faintest line color.
+// The sides on which a panel draws a rule, in its theme's faintest line color.
 enum {
     PrKitRuleFlag_Top = 1u << 0,
     PrKitRuleFlag_Right = 1u << 1,
@@ -36,19 +36,19 @@ enum {
 };
 typedef uint8_t PrKitRuleFlags;
 
-// How a surface looks: a box drawn on a background, with rules on some of its sides.
+// How a panel looks: a box drawn on a background, with rules on some of its sides.
 PR_NO_PADDING_BEGIN
-typedef struct PrKitSurfaceStyle {
+typedef struct PrKitPanelStyle {
     PrKitBoxStyle box;
     PrKitBackground background;
     PrKitRuleFlags rules;
     uint8_t _pad[2];
-} PrKitSurfaceStyle;
+} PrKitPanelStyle;
 PR_NO_PADDING_END
 
-// Creates a surface under `parent`. If `parent` is kPrLayoutNodeNone, the surface is the tree's root, as the
-// application's background is.
-PrLayoutNode prKitSurface(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitSurfaceStyle style);
+// Creates a panel under `parent`. If `parent` is kPrLayoutNodeNone, the panel is the tree's root, as the application's
+// background is.
+PrLayoutNode prKitPanel(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitPanelStyle style);
 
 // A box that the pointer selects, such as a row of a navigation list or a cell of a grid of choices. It is drawn on the
 // select background while `selected` is true, on the raised background while the pointer is over it, and on no

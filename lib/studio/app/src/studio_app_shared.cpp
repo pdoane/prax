@@ -49,15 +49,23 @@ void studioAppWindowClosed(StudioAppState* app, StudioWindowState* window) {
         prAppStop(app->app);
 }
 
+void studioWindowTargetClose(StudioAppState* app, StudioWindowTarget* target) {
+    if (app->device != nullptr)
+        prGpuTextureDestroy(app->device, target->rendered);
+    prDrawFrameDestroy(target->frame);
+    prGpuSwapChainDestroy(target->swapChain);
+    target->rendered = PrGpuTexture{};
+    target->frame = nullptr;
+    target->swapChain = nullptr;
+}
+
 void studioWindowCloseDevice(StudioWindowState* window) {
-    PrGpuDevice* device = window->studio->device;
-    if (device != nullptr)
-        prGpuTextureDestroy(device, window->rendered);
-    prDrawFrameDestroy(window->frame);
-    prGpuSwapChainDestroy(window->swapChain);
-    window->rendered = PrGpuTexture{};
-    window->frame = nullptr;
-    window->swapChain = nullptr;
+    studioWindowTargetClose(window->studio, &window->target);
+    // A portal's window draws again on the next device, whether or not its root's drawing changed.
+    for (uint32_t i = 0; i < window->portals.count; ++i) {
+        studioWindowTargetClose(window->studio, &window->portals.data[i]->target);
+        window->portals.data[i]->drawn = 0;
+    }
 }
 
 } // namespace pr_impl

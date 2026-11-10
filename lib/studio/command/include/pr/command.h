@@ -1,10 +1,10 @@
 // Commands: an application's verbs, each named by an id, which its menus, its command palette, its key bindings and its
 // automation run alike.
 //
-// A command's id is its identity: a keymap binds chords to ids, and every surface that runs a command looks it up by
-// id, so a verb behaves the same whichever surface reached it. A command declares the arguments that it takes, which a
-// caller passes as a JSON object and the registry checks before the command runs. A command may write a result as JSON
-// for a caller that asks for one.
+// A command's id is its identity: a keymap binds chords to ids, and every entry point that runs a command looks it up
+// by id, so a verb behaves the same whichever entry point reached it. A command declares the arguments that it takes,
+// which a caller passes as a JSON object and the registry checks before the command runs. A command may write a result
+// as JSON for a caller that asks for one.
 //
 // A registry is used from one thread at a time. Commands run on the thread that runs them.
 
@@ -55,9 +55,9 @@ enum {
 };
 typedef uint8_t PrCommandFlags;
 
-// The state of a command at the moment that a surface asks.
+// The state of a command at the moment that an entry point asks.
 enum {
-    PrCommandStateFlag_Disabled = 1u << 0,  // the command cannot run; surfaces show it faint
+    PrCommandStateFlag_Disabled = 1u << 0,  // the command cannot run; entry points show it faint
     PrCommandStateFlag_Checked = 1u << 1,   // the command toggles a setting that is on; menus show a check
 };
 typedef uint8_t PrCommandStateFlags;
@@ -115,8 +115,8 @@ PrCommandIndex prCommandRegistryFind(const PrCommandRegistry* registry, PrString
 // Returns the state of the command at `index`, which its state function reports.
 PrCommandStateFlags prCommandRegistryState(const PrCommandRegistry* registry, PrCommandIndex index);
 
-// Returns true if a surface that passes no arguments, such as a menu, a key binding or the palette, can run the command
-// at `index`: it takes no required parameter.
+// Returns true if an entry point that passes no arguments, such as a menu, a key binding or the palette, can run the
+// command at `index`: it takes no required parameter.
 bool prCommandRegistryIsDirect(const PrCommandRegistry* registry, PrCommandIndex index);
 
 // Runs the command whose id is `id` with `args`, or with no arguments if `args` is null. Returns NotFound if no command

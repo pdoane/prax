@@ -53,7 +53,6 @@ bool open(void* context, PrStudioWindow* window) {
     s.kit = prStudioWindowKit(window);
     s.ui = prStudioWindowUi(window);
     s.app = prStudioWindowApp(window);
-    s.window = prStudioWindowAppWindow(window);
     openEditor(s);
     if (!r.debuggee.isEmpty())
         setDebuggee(s, r.debuggee);
@@ -111,9 +110,6 @@ int main(int argc, char** argv) {
         .title = "Scribe",
         .extent = {1200, 900},
         .open = open,
-        .event = [](void* context, PrStudioWindow*, const PrAppEvent* event) {
-            return handleEvent(runOf(context).scribe, *event);
-        },
         .build = [](void* context, PrStudioWindow*, PrLayoutNode root, PrVec2 extent) {
             buildScribe(runOf(context).scribe, root, extent);
         },
@@ -126,7 +122,12 @@ int main(int argc, char** argv) {
         .trace = tracing ? trace : nullptr,
         .context = &r,
     };
-    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    PrStudioAppDesc app{
+        .fonts = fonts,
+        .window = &desc,
+        .event = [](void* context, PrStudioApp*, const PrAppEvent* event) { handleEvent(runOf(context).scribe, *event); },
+        .context = &r,
+    };
     PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     prFontSystemDestroy(system);

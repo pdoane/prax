@@ -1,9 +1,9 @@
 // Commands in an interface: the scopes that put key bindings on the nodes of a tree, and the menu items and the command
 // palette of Studio Kit that run commands.
 //
-// Each surface runs a command by its id, through its registry, so a verb behaves the same whichever surface reached it.
-// A surface runs only the commands that take no required parameter (prCommandRegistryIsDirect), and a disabled command
-// shows faint and does not run. A command runs during the build of the round whose input asked for it.
+// Each entry point runs a command by its id, through its registry, so a verb behaves the same whichever entry point
+// reached it. An entry point runs only the commands that take no required parameter (prCommandRegistryIsDirect), and a
+// disabled command shows faint and does not run. A command runs during the build of the round whose input asked for it.
 
 #pragma once
 
@@ -46,8 +46,8 @@ bool prCommandMatches(PrStringView query, PrStringView title, PrStringView categ
 
 // Creates the command palette that `trigger` opens (prKitCommandPalette), with an item for each command that matches
 // `query`, in the registry's order. The caller takes a new query from prKitTextChanged on the list. The palette leaves
-// out hidden commands and those that a surface cannot run. Activating an item runs its command. Returns the palette's
-// list, or none while it is closed.
+// out hidden commands and those that an entry point cannot run. Activating an item runs its command. Returns the
+// palette's list, or none while it is closed.
 PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandRegistry* registry,
     const PrCommandKeymap* keymap, PrStringView query);
 

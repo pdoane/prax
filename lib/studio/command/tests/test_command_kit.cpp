@@ -242,7 +242,7 @@ TEST_CASE("the command palette lists the commands that match its query, and runs
     f.frame();
     f.frame();
     REQUIRE(list != kPrLayoutNodeNone);
-    // Every command that a surface runs and the palette does not hide.
+    // Every command that an entry point runs and the palette does not hide.
     CHECK(childCount(f.tree, list) == 3);
     f.type("file");
     f.frame();

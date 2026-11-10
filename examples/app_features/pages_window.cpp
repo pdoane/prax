@@ -1,5 +1,5 @@
-// The windows' pages: a window's state, place and look, the Dock or the taskbar, popups and dialogs, and backdrops and
-// the overlay.
+// The windows' pages: a window's state, place and look, the Dock or the taskbar, popups and dialogs, backdrops and the
+// overlay, and tabs that move between windows.
 
 #include "examples/app_features/pages_window.h"
 
@@ -8,7 +8,7 @@
 #include "pr/kit_box.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/layout_tree.h"
 #include "pr/print.h"
@@ -50,13 +50,44 @@ bool logWindowEvent(Features& f, PrStringView who, const PrAppEvent& e) {
     return false;
 }
 
-void buildSecond(void*, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
+// ---------------------------------------------------------------------------------------------------------------------
+// Tabs that move between windows
+
+// Builds the window's strip of `tabs`. It takes tabs from the other window's strip, `other`, and tears tabs of the
+// control window off into the second window.
+void buildTabs(Features& f, PrStudioWindow* window, PrLayoutNode parent, PrKitTabs* tabs, PrKitTabs* other) {
+    PrKit* kit = prStudioWindowKit(window);
+    PrLayoutNode strip = prKitTabStrip(kit, parent, {.tabs = tabs, .group = kTabGroup, .reorderable = true}, {});
+    PrKitTabMove move{};
+    if (prKitTabMoved(kit, strip, &move) && move.kind == PrKitTabMoveKind_Received) {
+        logLine(f, format("tab {} received", move.id));
+        prKitTabsMove(other, tabs, move.id, move.index);
+    } else if (move.kind == PrKitTabMoveKind_TornOff) {
+        // A tab of the control window dropped outside every window tears off into the second window, under the pointer.
+        logLine(f, format("tab {} torn off", move.id));
+        if (tabs == f.controlTabs.tabs) {
+            bool placed = move.position.display != kPrAppDisplayNone;
+            if (f.second == nullptr)
+                openSecond(f, placed ? &move.position : nullptr);
+            prKitTabsMove(tabs, f.secondTabs.tabs, move.id, prKitTabsCount(f.secondTabs.tabs));
+        }
+    }
+    for (uint32_t i = 0; i < prKitTabsCount(tabs); ++i) {
+        uint64_t id = prKitTabsAt(tabs, i);
+        PrLayoutNode tab = prKitTab(kit, strip, {.id = id});
+        prKitTabLabel(kit, tab, {.text = format("Tab {}", id)});
+    }
+}
+
+void buildSecond(void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
+    Features& f = featuresOf(context);
     PrKit* kit = prStudioWindowKit(window);
     PrLayoutNode body = prKitBox(kit, root, {}, PrKitBoxStyle{
         .gap = kPrKitSpace4,
         .padding = prKitEdgesAll(kPrKitSpace4),
     });
-    note(kit, body, "A second window of the application, which the Window menu lists.");
+    note(kit, body, "Drag a tab to the control window's strip, or within this strip.");
+    buildTabs(f, window, body, f.secondTabs.tabs, f.controlTabs.tabs);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -78,14 +109,14 @@ void buildBackdrop(void* context, PrStudioWindow* window, PrLayoutNode root, PrV
         .place = {.flex = PrKitFlex_Fill},
     });
     prKitLabel(kit, body, {.text = "Backdrop"}, {.role = PrKitTextRole_Title});
-    note(kit, body, "The window's surface has no background, so what lies behind it shows through.");
+    note(kit, body, "The window's panel has no background, so what lies behind it shows through.");
     const PrStringView names[] = {"Opaque", "Transparent", "Blur"};
     uint32_t chosen = f.chosenBackdrop;
     if (segmented(kit, body, names, 3, &chosen)) {
         f.chosenBackdrop = PrAppWindowBackdrop(chosen);
         prAppWindowSetBackdrop(prStudioWindowAppWindow(window), f.chosenBackdrop);
     }
-    PrLayoutNode chip = prKitSurface(kit, body, {}, PrKitSurfaceStyle{
+    PrLayoutNode chip = prKitPanel(kit, body, {}, PrKitPanelStyle{
         .box = {.padding = {kPrKitSpace3, kPrKitSpace4, kPrKitSpace3, kPrKitSpace4}},
         .background = PrKitBackground_Hud,
     });
@@ -141,7 +172,7 @@ void openOverlay(Features& f) {
 void buildPopup(void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
     Features& f = featuresOf(context);
     PrKit* kit = prStudioWindowKit(window);
-    PrLayoutNode body = prKitSurface(kit, root, {}, PrKitSurfaceStyle{
+    PrLayoutNode body = prKitPanel(kit, root, {}, PrKitPanelStyle{
         .box = {.gap = kPrKitSpace1, .padding = prKitEdgesAll(kPrKitSpace2), .place = {.flex = PrKitFlex_Fill}},
         .background = PrKitBackground_Raised,
         .rules = PrKitRuleFlag_All,
@@ -255,17 +286,27 @@ void openBackdrop(Features& f) {
     prStudioWindowCreate(f.app, &desc, &f.backdrop);
 }
 
-void openSecond(Features& f) {
+void openSecond(Features& f, const PrAppDisplayPosition* PR_NULLABLE at) {
     PrStudioWindowDesc desc{
         .title = "Second Window",
         .extent = {520, 240},
         .decoration = PrAppWindowDecoration_Custom,
+        .placement = PrAppWindowPlacement(at != nullptr ? PrAppWindowPlacement_Position : PrAppWindowPlacement_Default),
+        .position = at != nullptr ? *at : PrAppDisplayPosition{},
         .event = [](void* context, PrStudioWindow*, const PrAppEvent* e) {
             return logWindowEvent(featuresOf(context), "second", *e);
         },
         .build = buildSecond,
         .titleBar = titleBar,
-        .close = [](void* context, PrStudioWindow*) { featuresOf(context).second = nullptr; },
+        .close = [](void* context, PrStudioWindow*) {
+            Features& f = featuresOf(context);
+            f.second = nullptr;
+            // The tabs of a window that closes go back to the control window.
+            PrKitTabs* control = f.controlTabs.tabs;
+            PrKitTabs* second = f.secondTabs.tabs;
+            while (prKitTabsCount(second) > 0)
+                prKitTabsMove(second, control, prKitTabsAt(second, 0), prKitTabsCount(control));
+        },
         .context = &f,
     };
     prStudioWindowCreate(f.app, &desc, &f.second);
@@ -440,6 +481,37 @@ void pagePopups(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
         "On the web, it stays inside the page, and flips and slides at its edges. A press outside it, or switching to "
         "another application, asks it to close. A Single application has no popup or dialog windows.");
 
+    PrLayoutNode k = section(kit, parent, "KIT PORTALS");
+    PrLayoutNode kr = row(kit, k);
+    PrLayoutNode menuButton = prKitButton(kit, kr, {.text = "Kit menu"}, {});
+    if (prKitActivated(kit, menuButton))
+        prKitToggleOpen(kit, menuButton);
+    PrLayoutNode popover = prKitPopover(kit, menuButton, {}, {.offset = PrVec2{0, 2}});
+    if (popover != kPrLayoutNodeNone) {
+        PrLayoutNode menu = prKitMenu(kit, popover, {}, {});
+        for (uint32_t i = 0; i < 5; ++i) {
+            String text = format("Kit item {}", i + 1);
+            PrUiKey key = prUiKeyIndex(prStudioWindowUi(window), menu, i);
+            PrLayoutNode item = prKitMenuItem(kit, menu, {.key = key, .text = text}, {});
+            if (prKitActivated(kit, item))
+                logLine(f, format("kit item {} chosen", i + 1));
+        }
+    }
+    PrLayoutNode tipped = prKitButton(kit, kr, {.text = "Tooltip"}, {});
+    prKitTooltip(kit, tipped, {.text = "A tooltip of the kit"});
+    PrLayoutNode dialogButton = prKitButton(kit, kr, {.text = "Kit dialog"}, {});
+    if (prKitActivated(kit, dialogButton))
+        prKitSetOpen(kit, dialogButton, true);
+    PrLayoutNode body = prKitDialog(kit, dialogButton, {.title = "Kit dialog"}, {});
+    if (body != kPrLayoutNodeNone) {
+        prKitLabel(kit, body, {.text = "A modal dialog of the kit."}, {});
+        PrLayoutNode footer = prKitDialogFooter(kit, body);
+        if (prKitActivated(kit, prKitButton(kit, footer, {.text = "Close"}, {})))
+            prKitSetOpen(kit, dialogButton, false);
+    }
+    note(kit, k, "The kit's menus, tooltips and dialogs float over the window. A Multiple application shows each in a "
+        "window of its own, which may extend past this window, and a Single application draws them in its window.");
+
     PrLayoutNode d = section(kit, parent, "DIALOGS AND DECORATION");
     PrLayoutNode r = row(kit, d);
     prKitToggle(kit, r, {.value = &f.modal, .label = "Modal"}, {});
@@ -499,6 +571,27 @@ void pageBackdrops(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
         line(kit, keys, "not registered");
     note(kit, s, "Switch to another application and press the chord: the overlay shows over it, and takes the "
         "keyboard without activating this application.");
+}
+
+void pageTabs(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
+    PrKit* kit = prStudioWindowKit(window);
+    PrLayoutNode s = section(kit, parent, "TABS BETWEEN WINDOWS");
+    buildTabs(f, window, s, f.controlTabs.tabs, f.secondTabs.tabs);
+    PrLayoutNode r = row(kit, s);
+    if (button(kit, r, f.second == nullptr ? "Open second window" : "Close second window")) {
+        if (f.second == nullptr)
+            openSecond(f, nullptr);
+        else
+            prStudioWindowDestroy(f.second);
+    }
+    if (f.second != nullptr) {
+        PrAppWindow* second = prStudioWindowAppWindow(f.second);
+        bool shown = prAppWindowIsVisible(second);
+        if (button(kit, r, shown ? "Hide second window" : "Show second window"))
+            prAppWindowSetVisible(second, !shown);
+    }
+    note(kit, s, "Drag a tab out of the window and drop it on the second window's strip, or anywhere else to tear it "
+        "off into the second window.");
 }
 
 bool windowsAppEvent(Features& f, const PrAppEvent& e) {

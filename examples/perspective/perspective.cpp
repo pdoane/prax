@@ -28,7 +28,7 @@
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_input.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
@@ -241,7 +241,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     p.rim = palette.line2;
     PrUi* ui = kit->ui;
 
-    PrKitSurfaceStyle header{
+    PrKitPanelStyle header{
         .box = {
             .direction = PrKitDirection_Row,
             .align = PrKitAlign_Center,
@@ -252,7 +252,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
         .rules = PrKitRuleFlag_All,
     };
     // The header stands at a level above the row, so that a panel tweened to the front passes under it.
-    PrLayoutNode bar = prKitSurface(kit, prKitPlane(kit, root, {}, {.zIndex = 1}), {}, header);
+    PrLayoutNode bar = prKitPanel(kit, prKitPlane(kit, root, {}, {.zIndex = 1}), {}, header);
     PrLayoutNode titles = prKitBox(kit, bar, {}, {.gap = 4});
     PrKitPlace grow{.flex = PrKitFlex_Grow};
     prKitPlace(kit, titles, &grow);
@@ -285,7 +285,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     float lift = 0;
     PrRect viewport = prLayoutRectToPx(prLayoutNodeBounds(kit->tree, root, PrLayoutCoordinates_Viewport));
     extent = PrVec2{viewport.right - viewport.left, viewport.bottom - viewport.top};
-    if (prUiPointer(ui, &pointer) && extent.x > 1 && extent.y > 1) {
+    if (prUiPointer(ui, nullptr, &pointer) && extent.x > 1 && extent.y > 1) {
         reach = pointer.x / extent.x - 0.5f;
         lift = pointer.y / extent.y - 0.5f;
     }
@@ -367,15 +367,15 @@ struct Window {
     float height = 0;               // this frame's viewport's, in logical pixels
 };
 
-// Declares a round: a surface with no background, so that the application's background shows beneath the UI, and the
-// panels under the surface.
+// Declares a round: a panel with no background, so that the application's background shows beneath the UI, and the
+// panels on it.
 void build(void* context, PrUi*, const PrUiRound*) {
     Window& w = *static_cast<Window*>(context);
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
         .background = PrKitBackground_None,
     };
-    buildApp(&w.panels, w.kit, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style));
+    buildApp(&w.panels, w.kit, prKitPanel(w.kit, kPrLayoutNodeNone, {}, style));
 }
 
 // Draws the background into the pass. The pass's pixel (0, 0) is the background's target pixel `origin`.
@@ -562,7 +562,7 @@ void event(void* context, PrAppWindow*, const PrAppEvent* e) {
         prAppStop(w.app);
         return;
     }
-    prUiPushEvent(w.ui, e);
+    prUiPushEvent(w.ui, kPrUiViewportMain, e);
     prAppWindowRequestFrame(w.window);
 }
 

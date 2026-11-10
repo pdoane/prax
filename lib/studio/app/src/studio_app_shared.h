@@ -49,6 +49,36 @@ struct StudioAppState {
     RawArray<PrStudioWindow*> windows;  // in the order they opened
 };
 
+// What a platform window renders with on its application's device, made on the device of `generation`: its swap chain,
+// which presents alpha if `transparent`, the frame of the renderer, and, where the swap chain holds more than 8-bit
+// sRGB, the texture of half floats that the list renders into.
+struct StudioWindowTarget {
+    PrGpuSwapChain* PR_NULLABLE swapChain;
+    PrDrawFrame* PR_NULLABLE frame;
+    uint32_t generation;
+    bool transparent;
+    PrGpuTexture rendered;
+};
+
+struct StudioWindowState;
+
+// A portal of a window's context that shows in a platform window of its own (prUiSetHost), as the context reported it
+// at the window's last frame.
+struct StudioWindowPortal {
+    StudioWindowState* window;
+    PrUiViewportInfo info;
+    PrAppWindow* appWindow;
+    StudioWindowTarget target;
+    PrDrawList* list;
+
+    // What the portal's window last drew and returned: the revision of the root's drawing
+    // (prLayoutNodeDrawingRevision), the cursor and the drop answer. The window draws again only when one of them
+    // changes.
+    uint64_t drawn;
+    PrAppCursor cursor;
+    PrAppDragOperation dropOperation;
+};
+
 // A window while it runs: its description, its kit and what the kit draws with, and what it renders with on its
 // application's device.
 struct StudioWindowState {
@@ -76,14 +106,13 @@ struct StudioWindowState {
     const PrLayoutScene* PR_NULLABLE scene; // the scene of the last frame, which its list plays
     PrDrawList* list;
     RawArray<PrLayoutSceneScroll> scrolls;
+    StudioWindowTarget target;
 
-    // What the window renders with on its application's device, made on the device of `generation`.
-    PrGpuSwapChain* PR_NULLABLE swapChain;
-    PrDrawFrame* PR_NULLABLE frame;
-    uint32_t generation;
-
-    // Where the swap chain holds more than 8-bit sRGB: the texture of half floats that the list renders into.
-    PrGpuTexture rendered;
+    // The portals of the context that show in platform windows of their own, what the context reported of them at the
+    // last frame, and the window's output of the last frame, whose cursor and drop answer their windows take too.
+    RawArray<StudioWindowPortal*> portals;
+    RawArray<PrUiViewportInfo> viewports;
+    PrAppOutput output;
 };
 
 // Makes the application's device and the renderer on it, freeing what the application and every window made on the
@@ -100,7 +129,10 @@ void studioAppCloseDevice(StudioAppState* app);
 // so.
 void studioAppWindowClosed(StudioAppState* app, StudioWindowState* window);
 
-// Frees what the window made on its application's device.
+// Frees what the target made on the device of `app`.
+void studioWindowTargetClose(StudioAppState* app, StudioWindowTarget* target);
+
+// Frees what the window and its portals made on their application's device.
 void studioWindowCloseDevice(StudioWindowState* window);
 
 } // namespace pr_impl

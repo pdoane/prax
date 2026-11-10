@@ -9,19 +9,19 @@ namespace pr_impl {
 
 namespace {
 
-// Runs a command that a surface reached, if it is enabled.
-void runFromSurface(const PrCommandRegistry* registry, PrCommandIndex index) {
+// Runs a command that an entry point reached, if it is enabled.
+void runFromEntryPoint(const PrCommandRegistry* registry, PrCommandIndex index) {
     if ((prCommandRegistryState(registry, index) & PrCommandStateFlag_Disabled) != 0)
         return;
     prCommandRegistryRun(registry, prCommandRegistryCommand(registry, index).id, nullptr, nullptr);
 }
 
-// Returns true if a surface may offer the command: it exists and takes no required parameter.
+// Returns true if an entry point may offer the command: it exists and takes no required parameter.
 bool isOffered(const PrCommandRegistry* registry, PrCommandIndex index) {
     return index != kPrCommandMissing && prCommandRegistryIsDirect(registry, index);
 }
 
-// Returns the text that a surface shows for the chord of `commandId`, or the null string if nothing binds it.
+// Returns the text that an entry point shows for the chord of `commandId`, or the null string if nothing binds it.
 PrRawString shortcutOf(const PrCommandKeymap* keymap, PrStringView commandId) {
     PrCommandChord chord{};
     return prCommandKeymapChord(keymap, commandId, &chord) ? prCommandChordText(chord) : prRawStringNull();
@@ -55,7 +55,7 @@ void prCommandScope(PrUi* ui, PrLayoutNode node, const PrCommandRegistry* regist
         else
             pressed = prUiKeyPressed(ui, node, binding.chord.key, binding.chord.modifiers);
         if (pressed)
-            runFromSurface(registry, index);
+            runFromEntryPoint(registry, index);
     }
 }
 
@@ -76,7 +76,7 @@ PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandReg
     PrLayoutNode node = prKitMenuItem(kit, menu, item, style);
     prRawStringReset(&shortcut);
     if (prKitActivated(kit, node))
-        runFromSurface(registry, index);
+        runFromEntryPoint(registry, index);
     return node;
 }
 
@@ -141,6 +141,6 @@ PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandR
     }
     prKitCommandPaletteFooter(kit, list);
     if (chosen != kPrCommandMissing)
-        runFromSurface(registry, chosen);
+        runFromEntryPoint(registry, chosen);
     return list;
 }

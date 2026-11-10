@@ -7,7 +7,7 @@
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_input.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/print.h"
 #include "pr/span.h"

@@ -369,7 +369,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
         }
         PrVec2 pointer{};
         PrVec2 at{};
-        if (zoom && prUiPointer(ui, &pointer) && prUiLocalPoint(ui, ruler, pointer, &at)) {
+        if (zoom && prUiPointer(ui, nullptr, &pointer) && prUiLocalPoint(ui, ruler, pointer, &at)) {
             float pivot = span.timeAt(at.x);
             float seconds = span.seconds * prF32Exp(wheel.y * kZoomPerPx);
             seconds = seconds < kMinSpan ? kMinSpan : seconds > kMaxSpan ? kMaxSpan : seconds;
@@ -516,7 +516,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
             float width = kitExtent(k, node).x;
             PrVec2 pointer{};
             PrVec2 local{};
-            bool near = prUiPointer(ui, &pointer) && prUiLocalPoint(ui, node, pointer, &local) && width > 0 &&
+            bool near = prUiPointer(ui, nullptr, &pointer) && prUiLocalPoint(ui, node, pointer, &local) && width > 0 &&
                 (local.x < kEdgeZone || local.x > width - kEdgeZone);
             // A block that a resize holds keeps the resize cursor wherever the drag takes the pointer.
             bool resizing = state->block == b.id &&

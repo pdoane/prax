@@ -2,7 +2,7 @@
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_icon.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 
 #include "studio/kit/src/kit.h"
@@ -24,7 +24,7 @@ TEST_CASE("the public headers compile as C") {
     CHECK(prTestKitCApi() == 0);
 }
 
-TEST_CASE("a surface made as the root fills the viewport, and draws its background or, on none, nothing") {
+TEST_CASE("a panel made as the root fills the viewport, and draws its background or, on none, nothing") {
     KitFixture f;
     f.frame();
     PrRect bounds = f.bounds(f.root);

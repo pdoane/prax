@@ -4,7 +4,7 @@
 #pragma once
 
 #include "pr/kit.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 
 #include "examples/studio_gallery/gallery_state.h"
 
@@ -12,7 +12,7 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace gallery {
 
-// Declares the gallery under `root`, the screen's surface, and applies the round's input to the model.
+// Declares the gallery under `root`, the screen's panel, and applies the round's input to the model.
 void buildGallery(PrKit* kit, PrLayoutNode root, GalleryState& state);
 
 } // namespace gallery

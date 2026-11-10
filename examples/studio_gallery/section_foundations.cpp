@@ -25,7 +25,7 @@ struct Principle {
 constexpr Principle kPrinciples[] = {
     {
         "01", "Age well",
-        "Neutral surfaces, zero radius, restrained color. What ships today still reads the same in year five.",
+        "Neutral panels, zero radius, restrained color. What ships today still reads the same in year five.",
     },
     {"02", "Density without noise", "A four-pixel grid and 22 to 26 pixel controls. Every pixel earns its place."},
     {
@@ -33,18 +33,18 @@ constexpr Principle kPrinciples[] = {
         "Progressive disclosure, a chord on every action, and search wherever a list grows long.",
     },
     {"04", "Legible structure", "Monospaced ids and addresses, predictable node structure. A reader reasons about it."},
-    {"05", "Indie to studio", "The same surfaces carry a solo project and a two hundred person team."},
+    {"05", "Indie to studio", "The same panels carry a solo project and a two hundred person team."},
     {"06", "Full parity in light", "Dark is the default. Light is never a downgrade."},
 };
 
-// A step of the surface ramp.
-struct SurfaceStep {
+// A step of the panel ramp.
+struct PanelStep {
     const char* label;
     const char* key;
     PrKitBackground background;
 };
 
-constexpr SurfaceStep kSurfaces[] = {
+constexpr PanelStep kPanels[] = {
     {"App", "bg-0", PrKitBackground_App},          {"Panel", "bg-1", PrKitBackground_Panel},
     {"Header", "bg-2", PrKitBackground_Header},    {"Raised", "bg-3", PrKitBackground_Raised},
     {"Select", "accent-weak", PrKitBackground_Select}, {"Viewport", "bg-viewport", PrKitBackground_Viewport},
@@ -147,13 +147,13 @@ void rampCell(PrKit* kit, PrLayoutNode parent, PrStringView name, PrColor band, 
 
 // Creates a row ruled below, laid out across with `gap` between its children, and returns it.
 PrLayoutNode ruledRow(PrKit* kit, PrLayoutNode parent, float gap, PrKitAlign align) {
-    PrKitSurfaceStyle row{.rules = PrKitRuleFlag_Bottom};
+    PrKitPanelStyle row{.rules = PrKitRuleFlag_Bottom};
     row.box.direction = PrKitDirection_Row;
     row.box.align = align;
     row.box.gap = gap;
     row.box.padding = prKitEdgesXY(kPrKitSpace2, 0);
     row.box.place.flex = PrKitFlex_Fixed;
-    return prKitSurface(kit, parent, {}, row);
+    return prKitPanel(kit, parent, {}, row);
 }
 
 // Creates a column `width` px wide in a row, and returns it.
@@ -166,10 +166,10 @@ PrLayoutNode fixedColumn(PrKit* kit, PrLayoutNode row, float width) {
 
 // Creates a pane of a splitter's specimen, on `background`, with `label` in it.
 void pane(PrKit* kit, PrLayoutNode parent, PrKitBackground background, PrStringView label) {
-    PrKitSurfaceStyle surface{.background = background};
-    surface.box.padding = prKitEdgesAll(kPrKitSpace2);
-    surface.box.place.flex = PrKitFlex_Fill;
-    prKitLabel(kit, prKitSurface(kit, parent, {}, surface), {.text = label}, kCaption);
+    PrKitPanelStyle look{.background = background};
+    look.box.padding = prKitEdgesAll(kPrKitSpace2);
+    look.box.place.flex = PrKitFlex_Fill;
+    prKitLabel(kit, prKitPanel(kit, parent, {}, look), {.text = label}, kCaption);
 }
 
 } // namespace
@@ -242,15 +242,15 @@ void sectionColor(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         }
     }
     {
-        PrLayoutNode panel = demoPanel(kit, section, "SURFACE RAMP", "6 STEPS", true);
+        PrLayoutNode panel = demoPanel(kit, section, "PANEL RAMP", "6 STEPS", true);
         PrKitBoxStyle line{.direction = PrKitDirection_Row};
         PrLayoutNode row = prKitBox(kit, panel, {}, line);
-        for (const SurfaceStep& step : kSurfaces) {
-            PrKitSurfaceStyle surface{.background = step.background, .rules = PrKitRuleFlag_Right};
-            surface.box.gap = kPrKitSpace1;
-            surface.box.padding = prKitEdgesXY(kPrKitSpace3, kPrKitSpace4);
-            surface.box.place.flex = PrKitFlex_Fill;
-            PrLayoutNode cell = prKitSurface(kit, row, {}, surface);
+        for (const PanelStep& step : kPanels) {
+            PrKitPanelStyle look{.background = step.background, .rules = PrKitRuleFlag_Right};
+            look.box.gap = kPrKitSpace1;
+            look.box.padding = prKitEdgesXY(kPrKitSpace3, kPrKitSpace4);
+            look.box.place.flex = PrKitFlex_Fill;
+            PrLayoutNode cell = prKitPanel(kit, row, {}, look);
             prKitLabel(kit, cell, {.text = step.label}, kStrong);
             prKitLabel(kit, cell, {.text = step.key}, kCaption);
         }

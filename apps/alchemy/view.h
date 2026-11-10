@@ -38,7 +38,7 @@ void viewReset(View& view);
 // Declares the title bar's content in `bar`, before each round's build of the view.
 void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& commands);
 
-// Declares the interface under `root`, a surface that fills the window below its title bar.
+// Declares the interface under `root`, a panel that fills the window below its title bar.
 void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands);
 
 } // namespace alchemy

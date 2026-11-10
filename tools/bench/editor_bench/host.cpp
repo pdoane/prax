@@ -11,15 +11,15 @@ namespace editor_bench {
 
 namespace {
 
-// Declares the round: the root, a surface on the app's background that fills the viewport, and the application's
-// widgets under it.
+// Declares the round: the root, a panel on the app's background that fills the viewport, and the application's widgets
+// under it.
 void buildRound(void* context, PrUi*, const PrUiRound*) {
     Host& host = *static_cast<Host*>(context);
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
         .background = PrKitBackground_App,
     };
-    PrLayoutNode root = prKitSurface(host.kit, kPrLayoutNodeNone, {}, style);
+    PrLayoutNode root = prKitPanel(host.kit, kPrLayoutNodeNone, {}, style);
     if (host.build != nullptr)
         host.build(host.context, host.kit, root);
 }
@@ -72,7 +72,7 @@ void hostReset(Host& host) {
 }
 
 void hostEvent(Host& host, const PrAppEvent& event) {
-    prUiPushEvent(host.ui, &event);
+    prUiPushEvent(host.ui, kPrUiViewportMain, &event);
 }
 
 void hostFrame(Host& host, double time, double delta, PrVec2 extent, const PrAppDisplay& display,

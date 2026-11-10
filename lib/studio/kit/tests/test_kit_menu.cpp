@@ -437,7 +437,7 @@ TEST_CASE("a secondary click opens a context menu at the pointer, and an item's 
     f.frame();
     REQUIRE(menu != kPrLayoutNodeNone);
     PrRect box = f.bounds(menu);
-    // The menu sits inside its surface's one px border.
+    // The menu sits inside its panel's one px border.
     CHECK(box.left == 321.0f);
     CHECK(box.top == 241.0f);
     f.click(f.center(item));

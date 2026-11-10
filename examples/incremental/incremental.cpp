@@ -28,7 +28,7 @@
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_input.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_unit.h"
@@ -673,7 +673,7 @@ String statusOf(const Stream& s) {
 void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     Stream& s = *static_cast<Stream*>(context);
     PrLayoutTree* tree = kit->tree;
-    PrKitSurfaceStyle header{
+    PrKitPanelStyle header{
         .box = {
             .direction = PrKitDirection_Row,
             .align = PrKitAlign_Center,
@@ -683,7 +683,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
         .background = PrKitBackground_Hud,
         .rules = PrKitRuleFlag_Bottom,
     };
-    PrLayoutNode bar = prKitSurface(kit, root, {}, header);
+    PrLayoutNode bar = prKitPanel(kit, root, {}, header);
     PrKitTextStyle title{.role = PrKitTextRole_Heading};
     prKitLabel(kit, bar, {.text = "Incremental"}, title);
 
@@ -739,12 +739,12 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     if (bounds.right - bounds.left >= 1 && bounds.bottom - bounds.top >= 1)
         s.pane = bounds;
 
-    PrKitSurfaceStyle footer{
+    PrKitPanelStyle footer{
         .box = {.padding = prKitEdgesXY(6, 14)},
         .background = PrKitBackground_Hud,
         .rules = PrKitRuleFlag_Top,
     };
-    PrLayoutNode status = prKitSurface(kit, root, {}, footer);
+    PrLayoutNode status = prKitPanel(kit, root, {}, footer);
     String line = statusOf(s);
     prKitLabel(kit, status, {.text = line}, meta);
 }

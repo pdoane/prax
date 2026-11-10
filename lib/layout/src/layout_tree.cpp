@@ -528,6 +528,7 @@ bool takeRoots(LayoutTree* tree, const PrLayoutRoot* roots, uint32_t count) {
             changed = changed || k != i - 1 || old.extent != root.extent;
             root.fragment = old.fragment;
             root.drawing = old.drawing;
+            root.revision = old.revision;
             old = LayoutLaidRoot{};
         }
         if (!found) {

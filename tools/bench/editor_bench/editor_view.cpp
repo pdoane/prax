@@ -40,15 +40,15 @@ constexpr const char* kRenderModes[] = {"PBR", "Unlit", "Wireframe", "Overdraw"}
 
 // Creates a row of fixed `height` on `background`, with a rule on each side that `rules` names.
 PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitBackground background, PrKitRuleFlags rules, float height, float gap) {
-    PrKitSurfaceStyle surface{.background = background, .rules = rules};
-    surface.box.direction = PrKitDirection_Row;
-    surface.box.align = PrKitAlign_Center;
-    surface.box.gap = gap;
-    surface.box.padding = prKitEdgesXY(0, kPrKitSpace4);
-    surface.box.overflow = PrKitOverflow_Clip;
-    surface.box.place.height = prKitPx(height);
-    surface.box.place.flex = PrKitFlex_Fixed;
-    return prKitSurface(kit, parent, {}, surface);
+    PrKitPanelStyle look{.background = background, .rules = rules};
+    look.box.direction = PrKitDirection_Row;
+    look.box.align = PrKitAlign_Center;
+    look.box.gap = gap;
+    look.box.padding = prKitEdgesXY(0, kPrKitSpace4);
+    look.box.overflow = PrKitOverflow_Clip;
+    look.box.place.height = prKitPx(height);
+    look.box.place.flex = PrKitFlex_Fixed;
+    return prKitPanel(kit, parent, {}, look);
 }
 
 // Creates a small square button in a panel's header, and returns true if it was activated.
@@ -441,13 +441,13 @@ void buildAssetGrid(PrKit* kit, PrLayoutNode parent, EditorState& editor, uint32
     PrLayoutNode cells = prKitBox(kit, parent, {}, grid);
     for (uint32_t i = 0; i < count && i < countOf(kAssets); ++i) {
         bool selected = editor.selectedAsset == i;
-        PrKitSurfaceStyle cell{.background = PrKitBackground(selected ? PrKitBackground_Select : PrKitBackground_None)};
+        PrKitPanelStyle cell{.background = PrKitBackground(selected ? PrKitBackground_Select : PrKitBackground_None)};
         cell.box.justify = PrKitJustify_Center;
         cell.box.align = PrKitAlign_Center;
         cell.box.gap = kPrKitSpace2;
         cell.box.place.width = prKitPx(84);
         cell.box.place.height = prKitPx(88);
-        PrLayoutNode node = prKitSurface(kit, cells, {}, cell);
+        PrLayoutNode node = prKitPanel(kit, cells, {}, cell);
         prUiSetFlags(ui, node, PrUiFlag_Pressable);
         if (prUiIsPressed(ui, node, 0))
             prUiDragStart(ui, node, 4, kDragAsset, i, 0);
@@ -552,18 +552,17 @@ void buildConsole(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         {ConsoleTab_Timeline, "Timeline"},
         {ConsoleTab_Profiler, "Profiler"},
     };
-    PrLayoutNode strip = prKitTabStrip(kit, tabs, {}, {});
+    PrLayoutNode strip = prKitTabStrip(kit, tabs, {.tabs = editor.consoleTabs}, {});
     for (const ConsoleTabDef& def : kTabs) {
-        PrLayoutNode tab = prKitTab(kit, strip, {.selected = editor.consoleTab == def.tab});
+        PrLayoutNode tab = prKitTab(kit, strip, {.id = uint64_t(def.tab) + 1});
         prKitTabLabel(kit, tab, {.text = def.label});
-        if (prKitActivated(kit, tab))
-            editor.consoleTab = def.tab;
     }
+    ConsoleTab shown = ConsoleTab(prKitTabsSelected(editor.consoleTabs) - 1);
     prKitSpacer(kit, tabs, {});
     PrKitBoxStyle list{.overflow = PrKitOverflow_ScrollY, .padding = prKitEdgesXY(kPrKitSpace2, 0)};
     list.place.flex = PrKitFlex_Fill;
     PrLayoutNode body = prKitBox(kit, parent, {}, list);
-    if (editor.consoleTab == ConsoleTab_AssetBrowser) {
+    if (shown == ConsoleTab_AssetBrowser) {
         buildAssetGrid(kit, body, editor, 12);
         return;
     }

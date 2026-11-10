@@ -175,7 +175,7 @@ void closeServices(void* context, PrStudioWindow*) {
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     prCrashHandler();
     static Alchemy a;
     // The services of the state.
@@ -227,7 +227,15 @@ int main() {
         .close = closeServices,
         .context = &a,
     };
-    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    // Alchemy asks for Multiple windows, so that its menus, tooltips and dialogs show in windows of their own, or for
+    // Single with --single-window. A capture asks for Single, so that the captured window shows what its commands open.
+    PrAppOptions options = prAppOptionsDefault();
+    options.windowModel = a.capturePath.isEmpty() ? PrAppWindowModel_Multiple : PrAppWindowModel_Single;
+    for (int i = 1; i < argc; ++i) {
+        if (PrStringView(argv[i]) == "--single-window")
+            options.windowModel = PrAppWindowModel_Single;
+    }
+    PrStudioAppDesc app{.fonts = fonts, .options = &options, .window = &desc};
     PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     prFontSystemDestroy(system);

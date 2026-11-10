@@ -7,7 +7,7 @@
 #include "pr/integer.h"
 #include "pr/kit_box.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/raw_array.h"

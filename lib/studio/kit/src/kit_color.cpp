@@ -12,7 +12,7 @@
 #include "pr/kit_choice.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/mem.h"
 #include "pr/raw_array.h"

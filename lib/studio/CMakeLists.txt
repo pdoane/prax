@@ -14,7 +14,7 @@ pr_library(studio_kit INCLUDE kit/include
     kit/src/kit_icon.cpp
     kit/src/kit_input.cpp
     kit/src/kit_menu.cpp
-    kit/src/kit_surface.cpp
+    kit/src/kit_panel.cpp
     kit/src/kit_text.cpp
     kit/src/kit_theme.cpp
     kit/src/kit_title_bar.cpp
