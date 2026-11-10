@@ -72,6 +72,9 @@ enum {
     PrKitIconKind_Info,
     PrKitIconKind_Spinner,
     PrKitIconKind_Atlas,
+    PrKitIconKind_WindowMinimize,       // a window's buttons, as a custom title bar draws them
+    PrKitIconKind_WindowMaximize,
+    PrKitIconKind_WindowRestore,
     PrKitIconKind_Count,
 };
 typedef uint16_t PrKitIconKind;

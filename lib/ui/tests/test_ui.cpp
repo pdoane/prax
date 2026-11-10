@@ -2,6 +2,7 @@
 #include "pr/mem.h"
 #include "pr/ui.h"
 
+#include "tools/harness/app_drag_window.h"
 #include "ui/tests/ui_fixture.h"
 
 #include "tools/harness/test.h"
@@ -844,12 +845,12 @@ TEST_CASE("a payload dragged from its source drops on the innermost target under
     f.build = [&] {
         source = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
         if (prUiIsPressed(f.ui, source, 0))
-            prUiDragStart(f.ui, source, 4, 1, 42);
+            prUiDragStart(f.ui, source, 4, 1, 42, 0);
         sourceClicked = sourceClicked || prUiClicked(f.ui, source, 0);
         PrLayoutNode outer = f.box(f.root, 200, 200, 200, 200);
-        prUiIsDropTarget(f.ui, outer);
+        prUiIsDropTarget(f.ui, outer, 1);
         target = f.box(outer, 10, 10, 50, 50);
-        over = prUiIsDropTarget(f.ui, target);
+        over = prUiIsDropTarget(f.ui, target, 1);
         dropped = prUiDropped(f.ui, target);
         if (dropped != nullptr)
             droppedValue = dropped->value;
@@ -876,7 +877,7 @@ TEST_CASE("Escape cancels a payload in flight") {
     f.build = [&] {
         PrLayoutNode source = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
         if (prUiIsPressed(f.ui, source, 0))
-            prUiDragStart(f.ui, source, 0, 1, 1);
+            prUiDragStart(f.ui, source, 0, 1, 1, 0);
     };
     f.frame();
     f.down(10, 10);
@@ -886,6 +887,240 @@ TEST_CASE("Escape cancels a payload in flight") {
     f.key(PrAppKey_Escape);
     f.frame();
     CHECK(prUiDragging(f.ui) == nullptr);
+}
+
+TEST_CASE("a target takes only payloads of its kind, and a payload of another kind reaches the target around it") {
+    UiFixture f;
+    bool innerOver = false;
+    bool outerOver = false;
+    const PrUiPayload* dropped = nullptr;
+    f.build = [&] {
+        PrLayoutNode source = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
+        if (prUiIsPressed(f.ui, source, 0))
+            prUiDragStart(f.ui, source, 0, 2, 7, 0);
+        PrLayoutNode outer = f.box(f.root, 200, 200, 200, 200);
+        outerOver = prUiIsDropTarget(f.ui, outer, 2);
+        PrLayoutNode inner = f.box(outer, 10, 10, 50, 50);
+        innerOver = prUiIsDropTarget(f.ui, inner, 1);
+        if (prUiDropped(f.ui, outer) != nullptr)
+            dropped = prUiDropped(f.ui, outer);
+    };
+    f.frame();
+    f.down(10, 10);
+    f.move(220, 220);
+    f.frame();
+    f.frame();
+    CHECK(outerOver);
+    CHECK_FALSE(innerOver);
+    f.up(220, 220);
+    f.frame();
+    CHECK(dropped != nullptr);
+}
+
+TEST_CASE("a system drag of files reaches a system target, which the output answers with a copy") {
+    UiFixture f;
+    bool over = false;
+    PrAppDataFormFlags offered = 0;
+    PrAppDataSource dropped = kPrAppDataSourceClipboard;
+    f.build = [&] {
+        PrLayoutNode target = f.box(f.root, 100, 100, 100, 100);
+        const PrUiPayload* dragging = prUiDragging(f.ui);
+        if (dragging != nullptr && dragging->kind == kPrUiPayloadKindSystem)
+            offered = dragging->forms;
+        over = prUiIsDropTarget(f.ui, target, kPrUiPayloadKindSystem);
+        if (const PrUiPayload* payload = prUiDropped(f.ui, target))
+            dropped = payload->drop;
+    };
+    f.frame();
+    PrAppDragEvent drag{
+        .position = {150, 150},
+        .forms = PrAppDataFormFlag_Files,
+        .operations = PrAppDragOperationFlag_Copy | PrAppDragOperationFlag_Move,
+    };
+    f.push(PrAppEvent{.kind = PrAppEventKind_DragEnter, .drag = drag});
+    f.frame();
+    f.frame();
+    CHECK(over);
+    CHECK(offered == PrAppDataFormFlag_Files);
+    CHECK(prUiOutput(f.ui).dropOperation == PrAppDragOperation_Copy);
+
+    // The drop names its content, which the target reads.
+    drag.operation = PrAppDragOperation_Copy;
+    drag.drop = 7;
+    f.push(PrAppEvent{.kind = PrAppEventKind_Drop, .drag = drag});
+    f.frame();
+    CHECK(dropped == 7);
+    CHECK(prUiDragging(f.ui) == nullptr);
+    CHECK(prUiOutput(f.ui).dropOperation == PrAppDragOperation_None);
+}
+
+TEST_CASE("a drag that leaves the window ends the system's payload, and a refused operation falls back") {
+    UiFixture f;
+    f.build = [&] {
+        PrLayoutNode target = f.box(f.root, 100, 100, 100, 100);
+        prUiIsDropTarget(f.ui, target, 5);
+    };
+    f.frame();
+    PrAppDragEvent drag{
+        .position = {150, 150},
+        .forms = PrAppDataFormFlag_Payload,
+        .operations = PrAppDragOperationFlag_Copy,
+        .payload = {.kind = 5, .value = 9},
+    };
+    f.push(PrAppEvent{.kind = PrAppEventKind_DragEnter, .drag = drag});
+    f.frame();
+    f.frame();
+    REQUIRE(prUiDragging(f.ui) != nullptr);
+    CHECK(prUiDragging(f.ui)->value == 9);
+    CHECK(prUiDragging(f.ui)->source == kPrLayoutNodeNone);
+    // A payload moves, but this source allows only a copy.
+    CHECK(prUiOutput(f.ui).dropOperation == PrAppDragOperation_Copy);
+    f.push(PrAppEvent{.kind = PrAppEventKind_DragLeave, .drag = drag});
+    f.frame();
+    CHECK(prUiDragging(f.ui) == nullptr);
+}
+
+TEST_CASE("a payload that may leave the window passes to the system as the pointer leaves") {
+    UiFixture f;
+    harness::DragWindow window;
+    prUiSetWindow(f.ui, &window);
+    PrLayoutNode source = kPrLayoutNodeNone;
+    bool sourceOver = false;
+    bool clicked = false;
+    f.build = [&] {
+        source = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
+        if (prUiIsPressed(f.ui, source, 0))
+            prUiDragStart(f.ui, source, 4, 3, 11, PrUiPayloadFlag_AnyWindow);
+        clicked = clicked || prUiClicked(f.ui, source, 0);
+        sourceOver = prUiIsDropTarget(f.ui, source, 3);
+    };
+    f.frame();
+    f.down(10, 10);
+    f.move(30, 30);
+    f.frame();
+    REQUIRE(prUiDragging(f.ui) != nullptr);
+    CHECK(window.starts == 0);
+    f.move(900, 30);
+    f.frame();
+    REQUIRE(window.starts == 1);
+    CHECK(window.started.content.forms == PrAppDataFormFlag_Payload);
+    CHECK(window.started.content.payload.kind == 3);
+    CHECK(window.started.content.payload.value == 11);
+    CHECK(window.started.operations == PrAppDragOperationFlag_Move);
+    CHECK(prUiDragging(f.ui) == nullptr);
+
+    // The system takes the pointer, and the press ends without a click.
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerCancel, .pointer = {.position = {900, 30}}});
+    f.frame();
+    CHECK_FALSE(prUiIsPressed(f.ui, source, 0));
+    // The payload returns over its own source, which is never its target.
+    PrAppDragEvent drag{
+        .position = {10, 10},
+        .forms = PrAppDataFormFlag_Payload,
+        .operations = PrAppDragOperationFlag_Move,
+        .fromThisWindow = true,
+        .payload = {.kind = 3, .value = 11},
+    };
+    f.push(PrAppEvent{.kind = PrAppEventKind_DragOver, .drag = drag});
+    f.frame();
+    f.frame();
+    REQUIRE(prUiDragging(f.ui) != nullptr);
+    CHECK(prUiDragging(f.ui)->source == source);
+    CHECK_FALSE(sourceOver);
+    CHECK(prUiOutput(f.ui).dropOperation == PrAppDragOperation_None);
+    CHECK_FALSE(clicked);
+    CHECK(window.starts == 1);
+}
+
+TEST_CASE("a payload that left the window reports how its drag ended, once, and a press forgets a lost end") {
+    UiFixture f;
+    harness::DragWindow window;
+    prUiSetWindow(f.ui, &window);
+    PrLayoutNode source = kPrLayoutNodeNone;
+    const PrUiPayload* ended = nullptr;
+    PrAppDragOperation operation = PrAppDragOperation_Copy;
+    f.build = [&] {
+        source = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
+        if (prUiIsPressed(f.ui, source, 0))
+            prUiDragStart(f.ui, source, 4, 3, 11, PrUiPayloadFlag_AnyWindow);
+        ended = prUiExportEnded(f.ui, &operation);
+    };
+    auto handOff = [&] {
+        f.frame();
+        f.down(10, 10);
+        f.move(30, 30);
+        f.frame();
+        f.move(900, 30);
+        f.frame();
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerCancel, .pointer = {.position = {900, 30}}});
+        f.frame();
+    };
+    handOff();
+    REQUIRE(window.starts == 1);
+    CHECK(ended == nullptr);
+    // No window took the payload.
+    f.push(PrAppEvent{.kind = PrAppEventKind_DragEnd, .drag = {.operation = PrAppDragOperation_None}});
+    f.frame();
+    REQUIRE(ended != nullptr);
+    CHECK(ended->kind == 3);
+    CHECK(ended->value == 11);
+    CHECK(operation == PrAppDragOperation_None);
+    f.frame();
+    CHECK(ended == nullptr);
+
+    // A DragEnd that never comes does not keep the next drag from starting.
+    handOff();
+    REQUIRE(window.starts == 2);
+    f.down(10, 10);
+    f.move(30, 30);
+    f.frame();
+    f.move(900, 30);
+    f.frame();
+    CHECK(window.starts == 3);
+}
+
+TEST_CASE("a pointer that leaves the window hovers nothing until it comes back") {
+    UiFixture f;
+    PrLayoutNode node = kPrLayoutNodeNone;
+    bool hovered = false;
+    f.build = [&] {
+        node = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
+        hovered = prUiIsHovered(f.ui, node);
+    };
+    f.frame();
+    f.move(10, 10);
+    f.frame();
+    f.frame();
+    CHECK(hovered);
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerLeave, .pointer = {.position = PrVec2{10, 10}}});
+    f.frame();
+    f.frame();
+    CHECK_FALSE(hovered);
+    PrVec2 at{};
+    CHECK_FALSE(prUiPointer(f.ui, &at));
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerEnter, .pointer = {.position = PrVec2{10, 10}}});
+    f.frame();
+    f.frame();
+    CHECK(hovered);
+}
+
+TEST_CASE("a pointer cancel ends a press without a click") {
+    UiFixture f;
+    PrLayoutNode node = kPrLayoutNodeNone;
+    bool clicked = false;
+    f.build = [&] {
+        node = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Pressable);
+        clicked = clicked || prUiClicked(f.ui, node, 0);
+    };
+    f.frame();
+    f.down(10, 10);
+    f.frame();
+    CHECK(prUiIsPressed(f.ui, node, 0));
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerCancel, .pointer = {.position = PrVec2{10, 10}}});
+    f.up(10, 10);
+    f.frame();
+    CHECK_FALSE(prUiIsPressed(f.ui, node, 0));
+    CHECK_FALSE(clicked);
 }
 
 TEST_CASE("reveal scrolls a node into its scroll container's view") {

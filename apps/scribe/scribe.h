@@ -32,6 +32,7 @@ struct Scribe {
     PrKit* PR_NULLABLE kit = nullptr;
     PrUi* PR_NULLABLE ui = nullptr;
     PrApp* PR_NULLABLE app = nullptr;
+    PrAppWindow* PR_NULLABLE window = nullptr;
     PrTextFont* PR_NULLABLE font = nullptr;    // what the text is set in
     PrFontSet* PR_NULLABLE fonts = nullptr;    // provides the terminals' monospaced faces
 

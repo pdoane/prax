@@ -264,7 +264,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitButton content{.text = kAssetChips[i].name, .icon = kAssetChips[i].icon};
         PrKitButtonStyle small{.size = PrKitControlSize_Sm};
         PrLayoutNode chip = prKitButton(kit, row, content, small);
-        prUiDragStart(kit->ui, chip, kDragThreshold, kDragAssetChip, i);
+        prUiDragStart(kit->ui, chip, kDragThreshold, kDragAssetChip, i, 0);
     }
     const PrUiPayload* carried = prUiDragging(kit->ui);
     if (carried != nullptr && carried->kind == kDragAssetChip && carried->value < countOf(kAssetChips)) {

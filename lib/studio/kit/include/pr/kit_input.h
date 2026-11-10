@@ -174,6 +174,7 @@ typedef struct PrKitTextField {
     bool clearable;                 // shows a control that empties the text while it has any
     bool selectOnFocus;             // focus that comes by a key rather than a press selects the whole text
     bool disabled;
+    PrAppTextInputKind inputKind;   // the kind of text, which chooses the on-screen keyboard. A password is masked
 } PrKitTextField;
 
 // Creates a text field: one line of text with a caret and a selection, edited by the pointer and the keys as

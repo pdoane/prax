@@ -189,6 +189,9 @@ inline constexpr KitIconData kKitIconData[PrKitIconKind_Count] = {
     {"info", "M2 12a10 10 0 1 1 20 0 10 10 0 0 1-20 0zM12 16v-4M12 8h.01", false},
     {"spinner", "M12 4a8 8 0 0 1 7.4 5", false},
     {"atlas", "M12 2 21 7v10L12 22 3 17V7zM3 7l9 5 9-5M7.5 4.5l9 15M16.5 4.5l-9 15", false},
+    {"window-minimize", "M3 12h18", false},
+    {"window-maximize", "M3 3h18v18H3z", false},
+    {"window-restore", "M3 7h14v14H3zM7 7V3h14v14h-4", false},
 };
 
 } // namespace pr_impl

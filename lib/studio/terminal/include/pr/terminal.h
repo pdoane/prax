@@ -35,8 +35,8 @@
 // next frame, or in its next update if it does not show.
 //
 // Alerts. The bell flashes the screen briefly if the terminal shows. The flash fades unless the user asks for reduced
-// motion. If the window is not active, the bell also requests the user's attention (prAppRequestAttention), once until
-// the window is active again.
+// motion. If the window is not active, the bell also requests the user's attention (prAppWindowRequestAttention), once
+// until the window is active again.
 //
 // The program's notifications (pr/vterm.h) post as desktop notifications (prAppNotificationPost), under the condition
 // that the program names. A notification with no condition posts unless the terminal has focus in the active window. A
@@ -100,9 +100,9 @@ typedef struct PrTerminalDesc {
     // bold italic fonts from the same families.
     PrTextFontDesc font;
 
-    // The application, or null for none. It provides the clipboard, opens URLs, posts notifications and wakes for the
-    // program's output.
-    PrApp* PR_NULLABLE app;
+    // The window that shows the terminal, or null for none. Its application takes the clipboard's writes, opens URLs,
+    // posts notifications and wakes for the program's output.
+    PrAppWindow* PR_NULLABLE window;
 
     // The launcher, which must outlive the terminal, and the program it runs (PrProcessDesc). The program is a path or
     // a name to search for in PATH. A null directory is the launcher's. The terminal adds the variables that name its
@@ -247,8 +247,9 @@ void prTerminalSetFont(PrTerminal* terminal, const PrTextFontDesc* font);
 // by that unit. A drag with Alt selects a rectangular block of cells, and each of its rows becomes a line.
 PrRawString prTerminalSelection(const PrTerminal* terminal);
 
-// prTerminalCopy copies the selected text to the clipboard. prTerminalPaste requests the clipboard's text, and pastes
-// it to the program when it arrives, as if the user pasted it. Both do nothing without an application.
+// prTerminalCopy copies the selected text to the clipboard, and does nothing without a window. prTerminalPaste reads
+// the clipboard's text through the kit's context (prUiPaste), and pastes it to the program when it arrives, as if the
+// user pasted it.
 void prTerminalCopy(PrTerminal* terminal);
 void prTerminalPaste(PrTerminal* terminal);
 

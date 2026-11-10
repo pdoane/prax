@@ -82,7 +82,7 @@ if (PR_DEVELOP)
     endif()
     # Rendering sets text with HarfBuzz in the fonts the checkout holds. The fetches of a browsing context run on a
     # network whose loop is a thread of its own.
-    target_link_libraries(html_tests PRIVATE prax::css  prax::text prax::image prax::compress
+    target_link_libraries(html_tests PRIVATE prax::app prax::css prax::text prax::image prax::compress
                                              prax::draw prax::dom prax::font prax::layout
                                              prax::markdown html_test_fetch prax::task prax::locale
                                              prax::net prax::fetch)

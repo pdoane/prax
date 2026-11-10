@@ -11,7 +11,7 @@ if (PR_SYNTAX_TREESITTER)
 endif()
 
 pr_app(scribe main.cpp)
-target_link_libraries(scribe PRIVATE scribe_editor prax::studio_window prax::font_bundle prax::text)
+target_link_libraries(scribe PRIVATE scribe_editor prax::studio_app prax::font_bundle prax::text)
 
 if (PR_DEVELOP)
     pr_module_tests(scribe_editor tests/test_scribe.cpp)

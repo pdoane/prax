@@ -37,6 +37,7 @@ constexpr NamedFont kStandard14[] = {
     {"Tinos-Italic.ttf", "Tinos"},
     {"Tinos-BoldItalic.ttf", "Tinos"},
     {"Arimo-Regular.ttf", "Arimo", PrFontGeneric_SansSerif, "Helvetica"},
+    {"Arimo-Regular.ttf", "Arimo", PrFontGeneric_SystemUi},
     {"Arimo-Bold.ttf", "Arimo"},
     {"Arimo-Italic.ttf", "Arimo"},
     {"Arimo-BoldItalic.ttf", "Arimo"},

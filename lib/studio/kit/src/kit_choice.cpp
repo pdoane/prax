@@ -357,20 +357,24 @@ typedef uint8_t StripKind;
 // The context that a choice container provides to its items for the current round. It holds the container's kind and
 // style, the arrow keys that move between items, the most recently created item, and the number of items created so
 // far. `focusNext` is true if the next item created takes focus. A tab strip also records whether its tabs can be
-// dragged, the payload kind of a tab drag, and the move that a drop made.
+// dragged, the payload kind of a tab drag, whether the strip belongs to a group, and the move that a drop made. A move
+// within the strip goes from `from` to `to`. A tab of another strip, whose key is `received`, goes to `to`.
 struct Strip {
     PrKitChoiceStyle style;
     PrAppKey back;
     PrAppKey forward;
     PrLayoutNode previous;
     uint64_t payload;
+    PrUiKey received;
     uint32_t count;
     uint32_t from;
     uint32_t to;
     StripKind kind;
     bool focusNext;
     bool reorders;
+    bool grouped;
     bool moved;
+    bool receives;
 };
 
 // Provides a choice container's context on `node`, and returns it.
@@ -580,7 +584,8 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
     Strip& context = provideStrip(k, node, StripKind_Tabs, style);
     TabStripState& state = kitState<TabStripState>(k, node, ChoiceStateKey_TabStrip);
     context.reorders = strip.reorderable && !disabledUnder(k, node);
-    context.payload = tabPayloadOf(node);
+    context.grouped = strip.group != 0;
+    context.payload = context.grouped ? strip.group : tabPayloadOf(node);
     const PrUiPayload* carried = context.reorders ? prUiDragging(ui) : nullptr;
     bool ours = carried != nullptr && carried->kind == context.payload;
     const PrUiPayload* dropped = context.reorders ? prUiDropped(ui, node) : nullptr;
@@ -593,6 +598,7 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
     PrVec2 pointer{};
     uint32_t tabs = 0;
     uint32_t slot = 0;
+    uint32_t source = UINT32_MAX;   // the dropped tab's index, if the tab belongs to this strip
     float caret = 0;
     bool found = false;
     if ((ours || drop) && prUiPointer(ui, &pointer)) {
@@ -601,6 +607,8 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
                 tab = prLayoutNodeNextSibling(k.tree, tab)) {
             if (tab == state.caret)
                 continue;
+            if (drop && tab == dropped->source)
+                source = tabs;
             if (!found) {
                 PrRect box = prLayoutRectToPx(prLayoutNodeBounds(k.tree, tab, PrLayoutCoordinates_Layout));
                 PrVec2 at{};
@@ -618,17 +626,20 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
             slot = tabs;
     }
     state.caret = kPrLayoutNodeNone;
-    if (ours && prUiIsDropTarget(ui, node)) {
+    if (ours && prUiIsDropTarget(ui, node, context.payload)) {
         state.caret = prLayoutTreeFrameElement(k.tree, node, kCaretKey,
             kitStyle(k, CaretBox{.left = caret}, KitColors{.background = p.accent}));
     }
-    if (drop && dropped->value < tabs) {
-        uint32_t from = uint32_t(dropped->value);
+    if (drop && source != UINT32_MAX) {
         // The slot counts the places between the tabs. Taking the dragged tab out closes the place that it left.
-        uint32_t to = slot > from ? slot - 1 : slot;
-        context.moved = to != from;
-        context.from = from;
+        uint32_t to = slot > source ? slot - 1 : slot;
+        context.moved = to != source;
+        context.from = source;
         context.to = to;
+    } else if (drop && context.grouped) {
+        context.receives = true;
+        context.received = dropped->value;
+        context.to = slot;
     }
     return node;
 }
@@ -646,8 +657,11 @@ PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab) {
     KitDress dress = kitDress(k, cell, look);
     prLayoutTreeFrameSetStyle(k.tree, cell.node,
         kitStyle(k, TabBox{.size = s.style.size}, TabFlex{}, choiceFont(PrKitTextRole_Body), dress.fill, dress.ink));
-    if (s.reorders && !cell.disabled && prUiIsPressed(k.ui, cell.node, 0))
-        prUiDragStart(k.ui, cell.node, kTabDragThreshold, s.payload, s.count);
+    // A tab of a group may leave the window for a strip of the group in another window.
+    if (s.reorders && !cell.disabled && prUiIsPressed(k.ui, cell.node, 0)) {
+        PrUiPayloadFlags flags = s.grouped ? PrUiPayloadFlags(PrUiPayloadFlag_AnyWindow) : PrUiPayloadFlags(0);
+        prUiDragStart(k.ui, cell.node, kTabDragThreshold, s.payload, tab.key, flags);
+    }
     stripItem(k, s, cell);
     return cell.node;
 }
@@ -673,6 +687,15 @@ bool prKitMoved(const PrKit* kit, PrLayoutNode strip, uint32_t* from, uint32_t* 
     if (s == nullptr || !s->moved)
         return false;
     *from = s->from;
+    *to = s->to;
+    return true;
+}
+
+bool prKitTabReceived(const PrKit* kit, PrLayoutNode strip, PrUiKey* key, uint32_t* to) {
+    const Strip* s = kitContext<Strip>(*kit, strip, KitContext_Strip);
+    if (s == nullptr || !s->receives)
+        return false;
+    *key = s->received;
     *to = s->to;
     return true;
 }

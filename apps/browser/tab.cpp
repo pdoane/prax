@@ -156,7 +156,7 @@ void openPage(Browser& b, Tab& tab, const PrAppFrame& window, bool shown, const 
         .updatedContext = &tab,
     };
     PrHtmlView* made = prHtmlViewCreate(&view);
-    prHtmlViewSetApp(made, b.app);
+    prHtmlViewSetWindow(made, b.window);
     tab.view.store(made);
     b.open.push(&tab);
     if (!url.isEmpty())

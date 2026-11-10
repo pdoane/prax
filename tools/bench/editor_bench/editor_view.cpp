@@ -450,7 +450,7 @@ void buildAssetGrid(PrKit* kit, PrLayoutNode parent, EditorState& editor, uint32
         PrLayoutNode node = prKitSurface(kit, cells, {}, cell);
         prUiSetFlags(ui, node, PrUiFlag_Pressable);
         if (prUiIsPressed(ui, node, 0))
-            prUiDragStart(ui, node, 4, kDragAsset, i);
+            prUiDragStart(ui, node, 4, kDragAsset, i, 0);
         prKitIcon(kit, node, {.icon = kAssets[i].icon},
             {.size = 24, .tone = PrKitTone(selected ? PrKitTone_Accent : PrKitTone_Muted)});
         PrKitTextStyle name = kMeta;

@@ -23,7 +23,7 @@
 #include "pr/print.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
-#include "pr/studio_window.h"
+#include "pr/studio_app.h"
 #include "pr/tls.h"
 #include "pr/websocket.h"
 
@@ -101,6 +101,7 @@ bool open(void* context, PrStudioWindow* window) {
     PrApp* app = prStudioWindowApp(window);
     a.app.store(app);
     a.shell.app = app;
+    a.shell.window = prStudioWindowAppWindow(window);
     a.shell.ui = prStudioWindowUi(window);
     a.commands = commandsCreate(&a.shell);
     connectServer(a.state);
@@ -117,13 +118,6 @@ void beginFrame(void* context, PrStudioWindow*, const PrAppFrame* f) {
     imageCachePump(a.state.images);
     applyDimensions(a.state);
     noteVisit(a.state);
-}
-
-bool event(void* context, PrStudioWindow*, const PrAppEvent* e) {
-    if (e->kind != PrAppEventKind_ClipboardImage)
-        return false;
-    stageImport(alchemyOf(context).state, e->image.pixels);
-    return true;
 }
 
 // Runs the capture's commands halfway to its moment, and at its moment writes the frame and quits. A capture waits for
@@ -152,7 +146,7 @@ void drawn(void* context, PrStudioWindow* window, const PrDrawList* list, PrUVec
         prAppStop(prStudioWindowApp(window));
         return;
     }
-    prAppRequestFrame(prStudioWindowApp(window));
+    prAppWindowRequestFrame(prStudioWindowAppWindow(window));
 }
 
 // The services go in the reverse of their making: the client lets go of the loop, the sources on the loop go on it, and
@@ -160,6 +154,8 @@ void drawn(void* context, PrStudioWindow* window, const PrDrawList* list, PrUVec
 void closeServices(void* context, PrStudioWindow*) {
     Alchemy& a = alchemyOf(context);
     a.app.store(nullptr);
+    if (a.shell.app != nullptr)
+        prAppCancel(a.shell.app, &a.shell);
     comfyClientDestroy(a.state.client);
     auto destroyOnLoop = [&] {
         prWebSocketNetworkDestroy(a.websockets);
@@ -216,19 +212,23 @@ int main() {
     PrStudioWindowDesc desc{
         .title = "Alchemy",
         .extent = {1500, 940},
-        .fonts = fonts,
+        .decoration = PrAppWindowDecoration_Custom,
         .open = open,
         .beginFrame = beginFrame,
-        .event = event,
         .build = [](void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
             Alchemy& alchemy = alchemyOf(context);
             buildView(prStudioWindowKit(window), root, alchemy.view, *alchemy.commands);
+        },
+        .titleBar = [](void* context, PrStudioWindow* window, PrLayoutNode bar) {
+            Alchemy& alchemy = alchemyOf(context);
+            buildTitleBarRow(prStudioWindowKit(window), bar, alchemy.view, *alchemy.commands);
         },
         .drawn = drawn,
         .close = closeServices,
         .context = &a,
     };
-    PrStatus status = prStudioWindowRun(&desc);
+    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     prFontSystemDestroy(system);
     if (status == PrStatus_NotSupported)

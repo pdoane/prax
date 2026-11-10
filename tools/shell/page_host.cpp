@@ -147,10 +147,12 @@ struct HostState {
 
     bool verify = false;                        // check each page's presentation after its rendering updates
     bool scripts = true;                        // run the pages' own scripts
-    PrAppUserPreferences preferences{};         // the user's preferences that the pages load with
     PrVec2 viewport = {800, 600};               // the viewport that the pages load in, in CSS pixels
     uint32_t restyleThreads = 0;                // as in PrDomAgentOptions::restyleThreads
     PrTaskPool* workers = nullptr;              // the threads that share the agent's work with the loop's thread
+
+    // The user's preferences that the pages load with.
+    PrAppUserPreferences preferences = prAppUserPreferencesDefault();
 
     // The wake of the host's thread when the loop posts a task to the agent, which a wait for the network sleeps on.
     std::mutex wakeLock;
@@ -1350,10 +1352,10 @@ PrAppOutput PageHost::output(Page* page, double time) {
     return prHtmlViewOutput(viewOf(page));
 }
 
-void PageHost::setInteractive(Page* page, PrApp* app) {
+void PageHost::setInteractive(Page* page, PrAppWindow* window) {
     if (page->htmlPage == nullptr)
         return;
-    prHtmlViewSetApp(viewOf(page), app);
+    prHtmlViewSetWindow(viewOf(page), window);
     prHtmlViewSetCaretHidden(viewOf(page), false);
 }
 

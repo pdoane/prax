@@ -407,7 +407,7 @@ PrStatus openTerminal(Scribe& s) {
     PrTerminalDesc desc{
         .kit = s.kit,
         .font = PrTextFontDesc{.set = s.fonts, .families = &mono, .familyCount = 1, .style = style},
-        .app = s.app,
+        .window = s.window,
         .launcher = s.launcher,
         .directory = prRawStringView(&directory),
         .scrollback = kPrTerminalScrollbackDefault,
@@ -493,7 +493,7 @@ bool handleEvent(Scribe& s, const PrAppEvent& event) {
     if (event.kind != PrAppEventKind_Notification)
         return false;
     for (uint32_t i = 0; i < s.terminals.count(); ++i) {
-        if (prTerminalNotificationTag(s.terminals[i]) != event.notification.tag)
+        if (prTerminalNotificationTag(s.terminals[i]) != event.tag)
             continue;
         s.terminal = i;
         s.terminalShown = true;

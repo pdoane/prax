@@ -140,15 +140,32 @@ void runUse(Shell& s, const PrCommandArgs* args) {
 void copyImage(Shell& s) {
     Array<uint8_t> pixels;
     PrUVec2 extent = selectedPixels(*s.state, &pixels);
+    PrAppDataContent content{
+        .forms = PrAppDataFormFlag_Image,
+        .image = PrPixelView{pixels.data(), size_t(extent.x) * 4, extent},
+    };
     bool copied = extent.x != 0 && s.app != nullptr &&
-        prAppSetClipboardImage(s.app, PrPixelView{pixels.data(), size_t(extent.x) * 4, extent}) == PrStatus_Ok;
+        prAppDataWrite(s.app, kPrAppDataSourceClipboard, &content) == PrStatus_Ok;
     setStatus(*s.state, copied ? "Copied the image." : "The image could not be copied.");
+}
+
+// Stages the clipboard's image in the import's dialog, and requests the frame that shows it.
+void imageRead(void* PR_NULLABLE context, PrStatus status, PrPixelView pixels) {
+    Shell& s = *static_cast<Shell*>(context);
+    if (status == PrStatus_Ok) {
+        stageImport(*s.state, pixels);
+    } else {
+        s.state->import.open = true;
+        s.state->import.message = "The clipboard could not be read.";
+    }
+    if (s.window != nullptr)
+        prAppWindowRequestFrame(s.window);
 }
 
 void pasteImage(Shell& s) {
     openImport(*s.state);
     if (s.app != nullptr)
-        prAppRequestClipboardImage(s.app);
+        prAppDataReadImage(s.app, kPrAppDataSourceClipboard, imageRead, &s);
 }
 
 void setMode(Shell& s, OperationMode mode) {

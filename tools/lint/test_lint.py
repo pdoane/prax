@@ -1515,6 +1515,9 @@ class Indentation(unittest.TestCase):
         self.assertEqual(self.problems('void f() {\n    PrX x{\n        .a = 1,\n        .b = 2,\n    };\n}\n'), [])
         self.assertEqual(self.problems('enum {\n    A,\n    B,\n};\n'), [])
 
+    def test_a_directive_within_an_initializer_list_leaves_its_items_alone(self):
+        self.assertEqual(self.problems('int k[] = {\n    1,\n#if A\n    2,\n#endif\n    3,\n};\n'), [])
+
     def test_blocks_switches_and_linkage(self):
         self.assertEqual(self.problems('void f() {\n    switch (x) {\n        case 1:\n            g();\n'
                                        '            break;\n    }\n}\n'), [])

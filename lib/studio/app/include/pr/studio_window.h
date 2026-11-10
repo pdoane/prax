@@ -1,8 +1,9 @@
-// Studio's window: an application's kit in a window of the platform, rendered with lib/draw on the platform's GPU.
+// Studio's windows: an application's kit in a window of the platform, rendered with lib/draw on the Studio
+// application's GPU device (pr/studio_app.h).
 //
-// A window makes what a kit draws with, from the font set that the application provides: the platform's shaper, a
-// layout tree, lib/ui's context over the tree, and a kit in Studio's theme. The theme follows the system's color scheme
-// unless the application chooses one.
+// A window makes what a kit draws with, over its Studio application's fonts and shaper: a layout tree, lib/ui's context
+// over the tree, and a kit in Studio's theme. The theme follows the system's color scheme unless the application
+// chooses one.
 //
 // Each frame runs the rounds that the application declares, plays the tree's scene into a draw list, and renders the
 // list into the window's swap chain. The render pass clears to the scene's canvas color (prLayoutSceneCanvasColor), and
@@ -11,9 +12,11 @@
 // its box, and does not paint it, because the clear already fills it.
 //
 // If the swap chain holds more than 8-bit sRGB, the list renders into a texture of half floats, which the display
-// shader maps to the display (pr/draw_display.h). A lost device is made again.
+// shader maps to the display (pr/draw_display.h).
 //
-// One thread runs a window: the thread that calls prStudioWindowRun, which the platform's application runs on.
+// The user's request to close a window closes it unless the window's event callback takes the request.
+//
+// A window is used from the thread that runs its application.
 
 #pragma once
 
@@ -25,6 +28,7 @@
 #include "pr/gpu.h"
 #include "pr/kit.h"
 #include "pr/kit_theme.h"
+#include "pr/kit_title_bar.h"
 #include "pr/layout_tree.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
@@ -41,7 +45,10 @@ extern "C" {
 // A window while it runs, and what its kit draws with.
 typedef struct PrStudioWindow PrStudioWindow;
 
-// Called once the window's kit and application are made, before the first frame. Returns false to end the run.
+// The Studio application that a window belongs to (pr/studio_app.h).
+typedef struct PrStudioApp PrStudioApp;
+
+// Called once the window, its kit and its device are made, before the first frame. Returns false to close the window.
 typedef bool (*PrStudioWindowOpenFn)(void* PR_NULLABLE context, PrStudioWindow* window);
 
 // Called at the start of each frame, before its rounds, as the application's model takes what arrived since the last.
@@ -55,9 +62,14 @@ typedef PrKitThemeVariant (*PrStudioWindowThemeFn)(void* PR_NULLABLE context, Pr
 // the context then never sees. The window asks for a frame either way.
 typedef bool (*PrStudioWindowEventFn)(void* PR_NULLABLE context, PrStudioWindow* window, const PrAppEvent* event);
 
-// Declares a round of the application under `root`, which is a surface on the app background that fills the viewport.
-// The viewport is `extent` px.
+// Declares a round of the application under `root`, which is a surface on the app background that fills the viewport
+// below the application's title bar, if it has one. The viewport is `extent` px.
 typedef void (*PrStudioWindowBuildFn)(void* PR_NULLABLE context, PrStudioWindow* window, PrLayoutNode root, PrVec2 extent);
+
+// Declares the content of the application's own title bar in each round, in `row`, which lies between the system's
+// buttons and the window's own (prKitTitleBar). The controls in it take presses, and the rest of the bar drags the
+// window. A fullscreen window has no title bar, and `row` then sits at the top of the content.
+typedef void (*PrStudioWindowTitleBarFn)(void* PR_NULLABLE context, PrStudioWindow* window, PrLayoutNode row);
 
 // Called once a frame's rounds are laid out. Returns true if another frame would show something different.
 typedef bool (*PrStudioWindowLaidOutFn)(void* PR_NULLABLE context, PrStudioWindow* window);
@@ -67,7 +79,7 @@ typedef bool (*PrStudioWindowLaidOutFn)(void* PR_NULLABLE context, PrStudioWindo
 typedef void (*PrStudioWindowDrawnFn)(void* PR_NULLABLE context, PrStudioWindow* window, const PrDrawList* list,
     PrUVec2 extent, PrColor canvas);
 
-// Called as the run ends, after the last frame and before the kit is freed.
+// Called as the window closes, after its last frame and before its kit is freed, whether or not it opened.
 typedef void (*PrStudioWindowCloseFn)(void* PR_NULLABLE context, PrStudioWindow* window);
 
 // How long a frame took, by its phases, in milliseconds: waiting for the swap chain, running the rounds, taking the
@@ -94,20 +106,36 @@ typedef struct PrStudioWindowDesc {
     PrStringView title;
     PrUVec2 extent;                 // of the window at first, in px
 
+    // The least and the greatest extent that the user can resize the window to (prAppWindowSetExtentLimits).
+    PrUVec2 minExtent;
+    PrUVec2 maxExtent;
+
+    // What the window is to the system, and how it opens (PrAppWindowDesc). A Dialog or a Popup belongs to `parent`.
+    // With a backdrop other than Opaque, the window's surface has no background, and the backdrop shows wherever the
+    // application's own surfaces do not cover it. A Custom decoration shows the title bar that `titleBar` fills.
+    PrAppWindowRole role;
+    PrStudioWindow* PR_NULLABLE parent;
+    bool modal;
+    PrAppWindowDecoration decoration;
+    PrAppWindowBackdrop backdrop;
+    bool hidden;
+    bool pointerPassthrough;
+    PrAppWindowPlacement placement;
+    PrAppDisplayPosition position;
+    PrAppPopupPlacement popup;
+
     // What the window's swap chain shows. Sdr, the zero value, suits a window whose colors are all in sRGB. Hdr shows
     // colors outside sRGB's gamut and brighter than SDR white, as a color picker or a wide-gamut image needs. On a
     // display that can show them, Hdr costs textures of half floats: each image of the swap chain, and a texture of the
     // window's size that the list renders into.
     PrGpuSwapChainIntent intent;
 
-    // The fonts for the window's text. The application owns them, and they must outlive the run.
-    PrFontSet* fonts;
-
     PrStudioWindowOpenFn PR_NULLABLE open;
     PrStudioWindowThemeFn PR_NULLABLE theme;    // or null for the variant of the user's preferred color scheme
     PrStudioWindowFrameFn PR_NULLABLE beginFrame;
     PrStudioWindowEventFn PR_NULLABLE event;
     PrStudioWindowBuildFn build;
+    PrStudioWindowTitleBarFn PR_NULLABLE titleBar;  // the content of a Custom title bar, or null for an empty one
     PrStudioWindowLaidOutFn PR_NULLABLE laidOut;
     PrStudioWindowDrawnFn PR_NULLABLE drawn;
     PrStudioWindowCloseFn PR_NULLABLE close;
@@ -115,13 +143,20 @@ typedef struct PrStudioWindowDesc {
     void* PR_NULLABLE context;
 } PrStudioWindowDesc;
 
-// Runs a window until its application stops, and then frees it. Returns InvalidState if `open` returned false,
-// NotSupported if the window has no device to render with, and Ok once the application stops. `close` is called as the
-// run ends, whether or not the application ran.
-PrStatus prStudioWindowRun(const PrStudioWindowDesc* desc);
+// Creates a window of the running Studio application `app` as `desc` describes. The window opens before its first
+// frame, never during this call. Returns what prAppWindowCreate returns. On failure, `*out` is null and `close` is not
+// called.
+PrStatus prStudioWindowCreate(PrStudioApp* app, const PrStudioWindowDesc* desc, PrStudioWindow* PR_NULLABLE* PR_NONNULL out);
 
-// What the window's kit draws with, while it runs.
+// Closes the window and frees it. During one of the window's own callbacks, the window closes once the callback
+// returns.
+void prStudioWindowDestroy(PrStudioWindow* PR_NULLABLE window);
+
+// The Studio application and the platform's application that the window belongs to, the platform's window, and what the
+// window's kit draws with, while it runs.
+PrStudioApp* prStudioWindowStudioApp(const PrStudioWindow* window);
 PrApp* prStudioWindowApp(const PrStudioWindow* window);
+PrAppWindow* prStudioWindowAppWindow(const PrStudioWindow* window);
 PrKit* prStudioWindowKit(const PrStudioWindow* window);
 PrUi* prStudioWindowUi(const PrStudioWindow* window);
 PrFontSet* prStudioWindowFonts(const PrStudioWindow* window);

@@ -19,7 +19,7 @@
 // the ends of the text. Up and Down move between lines, and with Command to the ends of the text. Shift extends the
 // selection with each of them. Backspace and Delete remove the selection, or the grapheme cluster or, with Option or
 // Control, the word beside the caret. Command or Control with A selects the whole text, and with X, C and V cuts,
-// copies and pastes through the application's clipboard (prUiSetApp).
+// copies and pastes through the window's clipboard (prUiSetWindow).
 
 #pragma once
 
@@ -68,6 +68,10 @@ typedef struct PrUiTextEditDesc {
 
     PrUiTextEditFlags flags;
     PrTextEditArrowMotion arrowMotion;
+
+    // The kind of text, which chooses the on-screen keyboard (prUiSetTextInput). A password shows as bullets and cannot
+    // be copied.
+    PrAppTextInputKind inputKind;
 
     // The background of the selected text and the color of the caret. The selected text keeps its color.
     PrColor16 selection;

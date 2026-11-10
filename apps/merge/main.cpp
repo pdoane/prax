@@ -36,7 +36,7 @@
 #include "pr/print.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
-#include "pr/studio_window.h"
+#include "pr/studio_app.h"
 #include "pr/syntax.h"
 #include "pr/text_editor.h"
 #include "pr/text_font.h"
@@ -312,7 +312,6 @@ int main(int argc, char** argv) {
     PrStudioWindowDesc desc{
         .title = title,
         .extent = {1400, 900},
-        .fonts = fonts,
         .open = open,
         .build = build,
         .laidOut = laidOut,
@@ -323,7 +322,8 @@ int main(int argc, char** argv) {
         .trace = m.invocation.trace ? trace : nullptr,
         .context = &m,
     };
-    PrStatus status = prStudioWindowRun(&desc);
+    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     prFontSystemDestroy(system);
     if (status == PrStatus_NotSupported)

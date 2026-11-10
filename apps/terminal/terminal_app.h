@@ -26,6 +26,7 @@ struct TerminalApp {
     PrKit* PR_NULLABLE kit = nullptr;
     PrUi* PR_NULLABLE ui = nullptr;
     PrApp* PR_NULLABLE app = nullptr;
+    PrAppWindow* PR_NULLABLE window = nullptr;
     PrFontSet* PR_NULLABLE fonts = nullptr;    // provides the terminals' monospaced faces
 
     PrProcessLauncher* PR_NULLABLE launcher = nullptr;

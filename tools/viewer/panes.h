@@ -65,7 +65,7 @@ std::vector<uint8_t> narrowed(PrPixelView texels);
 struct PaneOutput {
     PrPixelFormat format = PrPixelFormat_Bgra8;
     PrAppDisplay display = prAppDisplayDefault();
-    PrAppUserPreferences preferences{};
+    PrAppUserPreferences preferences = prAppUserPreferencesDefault();
 };
 
 // Records the commands that render the list into the slot with the renderer, over the background. A renderer on the

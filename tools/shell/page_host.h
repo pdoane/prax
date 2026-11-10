@@ -236,8 +236,8 @@ public:
     PrAppOutput output(Page* page, double time);
 
     // Readies the view that presents the page for a person to edit in: it shows its caret, which a host that compares
-    // renders keeps out of them, and it uses the application's clipboard.
-    void setInteractive(Page* page, PrApp* app);
+    // renders keeps out of them, and it uses the clipboard of `window`.
+    void setInteractive(Page* page, PrAppWindow* window);
 
     // Returns true if the page is done in the sense that a reftest uses: its root element no longer has the class
     // `reftest-wait`.

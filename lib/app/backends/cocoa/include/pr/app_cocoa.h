@@ -1,9 +1,12 @@
-// The Cocoa application backend: a macOS window and the AppKit event loop.
+// The Cocoa application backend: macOS windows and the AppKit event loop.
+//
+// A window's surface is a PrAppSurfaceKind_NsView. Each new window cascades from the last. The application stays open
+// while it has no windows, until the program stops it, and Quit in its menu asks the program to stop.
 //
 // Notifications use the system's UserNotifications framework. Only a process that runs from an application bundle with
-// a bundle identifier can post them. In any other process, and for a headless window, prAppNotificationPost returns
-// NotSupported. The first post asks for the user's permission. Notifications posted before the user answers wait for
-// the answer. A notification also shows while the application is active.
+// a bundle identifier can post them. In any other process, and for a headless application, prAppNotificationPost
+// returns NotSupported. The first post asks for the user's permission. Notifications posted before the user answers
+// wait for the answer. A notification also shows while the application is active.
 
 #pragma once
 
@@ -16,8 +19,8 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Creates an application that is a macOS window on the AppKit event loop, as `desc` describes.
-PrApp* prAppCocoaCreate(const PrAppDesc* desc);
+// Creates an application whose windows are macOS windows on the AppKit event loop.
+PrApp* prAppCocoaCreate(const PrAppOptions* options);
 
 #if defined(__cplusplus)
 }

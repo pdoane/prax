@@ -98,3 +98,12 @@ TEST_CASE("a parse saturates past the largest value, and reads letters of either
     CHECK_FALSE(prU64Parse("12a", 3, &value, 10));
     CHECK_FALSE(prU64Parse("", 0, &value, 10));
 }
+
+TEST_CASE("a power of two has one bit set, and its lowest bit is the number of zeros below it") {
+    CHECK(prU64IsPowerOfTwo(1));
+    CHECK(prU64IsPowerOfTwo(uint64_t(1) << 63));
+    CHECK_FALSE(prU64IsPowerOfTwo(0));
+    CHECK_FALSE(prU64IsPowerOfTwo(6));
+    CHECK(prU64LowestBit(1) == 0);
+    CHECK(prU64LowestBit(40) == 3);
+}

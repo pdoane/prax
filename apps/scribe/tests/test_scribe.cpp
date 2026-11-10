@@ -246,10 +246,7 @@ TEST_CASE("a click on a terminal's notification shows the panel with that termin
     CHECK(prTerminalNotificationTag(e.s.terminals[0]) != prTerminalNotificationTag(e.s.terminals[1]));
     e.run("terminal.toggle");
     REQUIRE(!e.s.terminalShown);
-    PrAppEvent click{
-        .kind = PrAppEventKind_Notification,
-        .notification = {.tag = prTerminalNotificationTag(e.s.terminals[0])},
-    };
+    PrAppEvent click{.kind = PrAppEventKind_Notification, .tag = prTerminalNotificationTag(e.s.terminals[0])};
     CHECK(handleEvent(e.s, click));
     e.settle();
     e.settle();

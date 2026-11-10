@@ -1,4 +1,5 @@
 #include "pr/app.h"
+#include "pr/app_backend.h"
 #include "pr/array.h"
 #include "pr/string.h"
 #include "pr/vec.h"
@@ -11,54 +12,106 @@ namespace pr_impl {
 
 namespace {
 
-// An application that runs by calling each handler function once, and records the calls made to it.
-struct FakeApp {
-    PrApp record;
-    Array<String> calls;
-    double frameTime;
+// A fake application's window, which records the calls made to it.
+struct FakeWindow : PrAppWindow {
+    Array<String>* calls;
+    PrApp* app;
+    bool active;
 };
 
-// A fake application that also records the notifications posted to it and reports whether its window is active.
-struct FakeNotifier {
-    FakeApp fake;
-    bool active;
+// An application whose run calls the handler's start, event and shutdown once each, and which records the calls made to
+// it and its window.
+struct FakeApp : PrApp {
+    Array<String> calls;
+    FakeWindow window;
+    bool running;
     Array<String> posted;
 };
 
-FakeNotifier& notifierOf(PrApp* app) {
-    return *reinterpret_cast<FakeNotifier*>(app);
+FakeApp& fakeOf(PrApp* app) {
+    return *static_cast<FakeApp*>(app);
 }
 
-FakeApp& fakeOf(PrApp* app) {
-    return *reinterpret_cast<FakeApp*>(app);
+FakeWindow& windowOf(PrAppWindow* window) {
+    return *static_cast<FakeWindow*>(window);
+}
+
+void call(PrAppWindow* window, const char* name) {
+    windowOf(window).calls->push(name);
+}
+
+void createFakeWindow(FakeApp& fake) {
+    FakeWindow& w = fake.window;
+    w.calls = &fake.calls;
+    w.app = &fake;
+    w.destroyFn = [](PrAppWindow* window) { call(window, "destroy window"); };
+    w.appFn = [](const PrAppWindow* window) { return static_cast<const FakeWindow*>(window)->app; };
+    w.requestFrameFn = [](PrAppWindow* window) { call(window, "frame"); };
+    w.setTitleFn = [](PrAppWindow* window, PrStringView) { call(window, "title"); };
+    w.titleFn = [](const PrAppWindow*) -> PrStringView { return "Fake"; };
+    w.requestAttentionFn = [](PrAppWindow* window) { call(window, "attention"); };
+    w.surfaceFn = [](const PrAppWindow*, PrAppSurface*) -> PrStatus { return PrStatus_InvalidState; };
 }
 
 void createFake(FakeApp& fake) {
-    fake.record.destroy = [](PrApp* app) { fakeOf(app).calls.push("destroy"); };
-    fake.record.run = [](PrApp* app, const PrAppHandler* handler) {
-        fakeOf(app).calls.push("run");
-        PrAppFrame frame{.extent = {100, 50}, .display = {.pixelRatio = 2, .headroom = 1, .potentialHeadroom = 1}};
-        handler->start(handler->context, app, &frame);
-        prAppDeliverFrame(app, handler, &frame);
-        PrAppEvent event{};
-        event.kind = PrAppEventKind_KeyDown;
-        event.keyboard.key = 'A';
-        handler->event(handler->context, app, &event);
-        handler->shutdown(handler->context, app);
+    fake.destroyFn = [](PrApp* app) { fakeOf(app).calls.push("destroy"); };
+    fake.runFn = [](PrApp* app, PrAppHandler handler) {
+        FakeApp& fake = fakeOf(app);
+        fake.calls.push("run");
+        fake.running = true;
+        if (handler.start(handler.context, app)) {
+            PrAppEvent wake{.kind = PrAppEventKind_Wake};
+            handler.event(handler.context, app, &wake);
+        }
+        handler.shutdown(handler.context, app);
+        fake.running = false;
     };
-    fake.record.stop = [](PrApp* app) { fakeOf(app).calls.push("stop"); };
-    fake.record.wake = [](PrApp* app) { fakeOf(app).calls.push("wake"); };
-    fake.record.requestFrame = [](PrApp* app) { fakeOf(app).calls.push("frame"); };
-    fake.record.requestFrameAt = [](PrApp* app, double time) { fakeOf(app).frameTime = time; };
-    fake.record.setCursor = [](PrApp* app, PrAppCursor) { fakeOf(app).calls.push("cursor"); };
-    fake.record.setTitle = [](PrApp* app, PrStringView) { fakeOf(app).calls.push("title"); };
-    fake.record.requestAttention = [](PrApp* app) { fakeOf(app).calls.push("attention"); };
-    fake.record.surface = [](PrApp*, PrAppSurface*) -> PrStatus { return PrStatus_InvalidState; };
-    fake.record.openUrl = [](PrApp*, PrStringView) -> PrStatus { return PrStatus_Ok; };
-    fake.record.requestClipboardText = [](PrApp* app) { fakeOf(app).calls.push("clipboard"); };
-    fake.record.setClipboardText = [](PrApp*, PrStringView) -> PrStatus { return PrStatus_Ok; };
-    fake.record.requestClipboardImage = [](PrApp* app) { fakeOf(app).calls.push("clipboard image"); };
-    fake.record.setClipboardImage = [](PrApp*, PrPixelView) -> PrStatus { return PrStatus_Ok; };
+    fake.stopFn = [](PrApp* app) { fakeOf(app).calls.push("stop"); };
+    fake.wakeFn = [](PrApp* app) { fakeOf(app).calls.push("wake"); };
+    fake.openUrlFn = [](PrApp*, PrStringView) -> PrStatus { return PrStatus_Ok; };
+    // A read of text answers at once, which a backend never does, and a read of an image never answers.
+    fake.dataReadFn = [](PrApp* app, const PrAppDataRead* read) {
+        if (read->kind == PrAppDataReadKind_Text) {
+            fakeOf(app).calls.push("read text");
+            reinterpret_cast<PrAppDataTextFn>(read->done)(read->context, PrStatus_Ok, "text");
+        } else if (read->kind == PrAppDataReadKind_Image) {
+            fakeOf(app).calls.push("read image");
+        }
+    };
+    fake.cancelFn = [](PrApp* app, void* PR_NULLABLE) { fakeOf(app).calls.push("cancel"); };
+    fake.dataWriteFn = [](PrApp* app, PrAppDataSource, const PrAppDataContent* content) -> PrStatus {
+        fakeOf(app).calls.push(format("write {}", content->text));
+        return PrStatus_Ok;
+    };
+    fake.windowCreateFn = [](PrApp* app, const PrAppWindowDesc*, PrAppWindow** out) -> PrStatus {
+        FakeApp& fake = fakeOf(app);
+        *out = nullptr;
+        if (!fake.running)
+            return PrStatus_InvalidState;
+        *out = &fake.window;
+        return PrStatus_Ok;
+    };
+    fake.displaysFn = [](const PrApp*, PrAppDisplayInfo* PR_NULLABLE out, uint32_t capacity) -> uint32_t {
+        if (capacity != 0)
+            out[0] = PrAppDisplayInfo{.id = 7, .display = prAppDisplayDefault(), .extent = {800, 600}, .main = true};
+        return 1;
+    };
+    fake.displayInfoFn = [](const PrApp*, PrAppDisplayId id, PrAppDisplayInfo* out) {
+        if (id != 7)
+            return false;
+        *out = PrAppDisplayInfo{.id = 7, .display = prAppDisplayDefault(), .extent = {800, 600}, .main = true};
+        return true;
+    };
+    createFakeWindow(fake);
+}
+
+// A window handler whose callbacks do nothing.
+PrAppWindowHandler idleHandler() {
+    return PrAppWindowHandler{
+        .open = [](void*, PrAppWindow*, const PrAppFrame*) { return true; },
+        .frame = [](void*, PrAppWindow*, const PrAppFrame*) { return PrAppOutput{}; },
+        .event = [](void*, PrAppWindow*, const PrAppEvent*) {},
+    };
 }
 
 } // namespace
@@ -71,77 +124,150 @@ TEST_CASE("the public header compiles as C") {
     CHECK(prTestAppCApi() == 0);
 }
 
-TEST_CASE("a run delivers to the handler in order") {
+TEST_CASE("a run passes the handler to the backend, and a window created during it belongs to the application") {
     FakeApp fake{};
     createFake(fake);
-    PrApp* app = &fake.record;
-    Array<String> seen;
-    PrAppHandler handler{
-        &seen,
-        [](void* context, PrApp*, const PrAppFrame*) {
-            static_cast<Array<String>*>(context)->push("start");
+    struct Run {
+        Array<String> seen;
+        PrAppWindow* window = nullptr;
+    } run;
+    prAppRun(&fake, {
+        .context = &run,
+        .start = [](void* context, PrApp* app) {
+            Run& r = *static_cast<Run*>(context);
+            r.seen.push("start");
+            PrAppWindowDesc desc{.title = "Window", .extent = {100, 50}, .handler = idleHandler()};
+            CHECK(prAppWindowCreate(app, &desc, &r.window) == PrStatus_Ok);
+            CHECK(prAppWindowApp(r.window) == app);
+            return true;
         },
-        [](void* context, PrApp*, const PrAppFrame* frame) {
-            static_cast<Array<String>*>(context)->push(
-                format("frame {}", int(frame->extent.x * frame->display.pixelRatio)));
-            return PrAppOutput{};
+        .event = [](void* context, PrApp*, const PrAppEvent* event) {
+            if (event->kind == PrAppEventKind_Wake)
+                static_cast<Run*>(context)->seen.push("wake");
         },
-        [](void* context, PrApp*, const PrAppEvent* event) {
-            static_cast<Array<String>*>(context)->push(String("key ").append(char(event->keyboard.key)));
-        },
-        [](void* context, PrApp*) {
-            static_cast<Array<String>*>(context)->push("shutdown");
-        },
-    };
-    prAppRun(app, &handler);
-    CHECK(seen == Array<String>({"start", "frame 200", "key A", "shutdown"}));
+        .shutdown = [](void* context, PrApp*) { static_cast<Run*>(context)->seen.push("shutdown"); },
+    });
+    CHECK(run.seen == Array<String>({"start", "wake", "shutdown"}));
+    CHECK(run.window == &fake.window);
+}
+
+TEST_CASE("a window is created only while its application runs") {
+    FakeApp fake{};
+    createFake(fake);
+    PrAppWindowDesc desc{.handler = idleHandler()};
+    PrAppWindow* window = &fake.window;
+    CHECK(prAppWindowCreate(&fake, &desc, &window) == PrStatus_InvalidState);
+    CHECK(window == nullptr);
 }
 
 TEST_CASE("the interface passes calls through") {
     FakeApp fake{};
     createFake(fake);
-    PrApp* app = &fake.record;
-    prAppRequestFrame(app);
+    PrApp* app = &fake;
+    PrAppWindow* window = &fake.window;
+    prAppWindowRequestFrame(window);
     prAppWake(app);
-    prAppSetTitle(app, "Title");
-    prAppRequestAttention(app);
-    prAppRequestClipboardText(app);
-    prAppRequestClipboardImage(app);
+    prAppWindowSetTitle(window, "Title");
+    prAppWindowRequestAttention(window);
+    prAppWindowSetExtent(window, PrUVec2{10, 10});
+    prAppWindowFocus(window);
     prAppStop(app);
+    CHECK(prAppWindowTitle(window) == "Fake");
     PrAppSurface surface{};
-    CHECK(prAppSurface(app, &surface) == PrStatus_InvalidState);
+    CHECK(prAppWindowSurface(window, &surface) == PrStatus_InvalidState);
+    prAppWindowDestroy(window);
+    prAppWindowDestroy(nullptr);
     prAppDestroy(app);
     prAppDestroy(nullptr);
-    CHECK(fake.calls == Array<String>({
-        "frame", "wake", "title", "attention", "clipboard", "clipboard image", "stop", "destroy",
-    }));
+    CHECK(fake.calls == Array<String>({"frame", "wake", "title", "attention", "stop", "destroy window", "destroy"}));
 }
 
-TEST_CASE("an application without notifications posts none, and one that cannot tell its window is active") {
+TEST_CASE("the clipboard's reads, cancels and writes reach the backend") {
+    FakeApp fake{};
+    createFake(fake);
+    String read;
+    prAppDataReadText(&fake, kPrAppDataSourceClipboard, [](void* context, PrStatus status, PrStringView text) {
+        CHECK(status == PrStatus_Ok);
+        *static_cast<String*>(context) = String(text);
+    }, &read);
+    prAppDataReadImage(&fake, kPrAppDataSourceClipboard, [](void*, PrStatus, PrPixelView) {}, nullptr);
+    prAppCancel(&fake, &read);
+    CHECK(prAppDataWriteText(&fake, kPrAppDataSourceClipboard, "copied") == PrStatus_Ok);
+    CHECK(read == "text");
+    CHECK(fake.calls == Array<String>({"read text", "read image", "cancel", "write copied"}));
+}
+
+TEST_CASE("an enumerator's name is the enumerator without its prefix, and a flag's name is that of one flag") {
+    CHECK(prAppEventKindName(PrAppEventKind_PointerMove) == "PointerMove");
+    CHECK(prAppEventKindName(PrAppEventKind_Sensor) == "Sensor");
+    CHECK(prAppEventKindName(PrAppEventKind(PrAppEventKind_Sensor + 1)).isNull());
+    CHECK(prAppCursorName(PrAppCursor_ZoomOut) == "ZoomOut");
+    CHECK(prAppWindowStateName(PrAppWindowState_Maximized) == "Maximized");
+    CHECK(prAppModifierName(PrAppModifierFlag_Alt) == "Alt");
+    CHECK(prAppModifierName(PrAppModifierFlag_Alt | PrAppModifierFlag_Shift).isNull());
+    CHECK(prAppModifierName(0).isNull());
+    CHECK(prAppDataFormName(PrAppDataFormFlag_Payload) == "Payload");
+}
+
+TEST_CASE("the displays come from the backend, and a window without positions reports none and stays Normal") {
+    FakeApp fake{};
+    createFake(fake);
+    CHECK(prAppDisplays(&fake, nullptr, 0) == 1);
+    PrAppDisplayInfo info{};
+    CHECK(prAppDisplays(&fake, &info, 1) == 1);
+    CHECK(info.id == 7);
+    CHECK(info.main);
+    PrAppDisplayInfo found{};
+    CHECK(prAppDisplayInfoFromId(&fake, 7, &found));
+    CHECK(found.extent.x == 800);
+    CHECK_FALSE(prAppDisplayInfoFromId(&fake, 3, &found));
+    PrAppDisplayPosition position{.display = 3};
+    CHECK_FALSE(prAppWindowPosition(&fake.window, &position));
+    CHECK(position.display == kPrAppDisplayNone);
+    CHECK_FALSE(prAppWindowPointToDisplay(&fake.window, PrVec2{1, 2}, &position));
+    PrVec2 point{3, 4};
+    CHECK_FALSE(prAppWindowPointFromDisplay(&fake.window, &position, &point));
+    CHECK(point.x == 0);
+    CHECK(point.y == 0);
+    prAppWindowSetPosition(&fake.window, &position);
+    prAppWindowSetState(&fake.window, PrAppWindowState_Fullscreen);
+    CHECK(prAppWindowState(&fake.window) == PrAppWindowState_Normal);
+}
+
+TEST_CASE("only the clipboard and the selection take writes") {
+    FakeApp fake{};
+    createFake(fake);
+    CHECK(prAppDataWriteText(&fake, kPrAppDataSourceNone, "lost") == PrStatus_InvalidData);
+    CHECK(prAppDataWriteText(&fake, kPrAppDataSourceSelection, "selected") == PrStatus_Ok);
+    CHECK(fake.calls == Array<String>({"write selected"}));
+}
+
+TEST_CASE("an application without notifications posts none, and a window that cannot tell is active") {
     FakeApp fake{};
     createFake(fake);
     PrAppNotificationDesc desc{.title = "Title", .body = "Body", .tag = 7};
-    CHECK(prAppNotificationPost(&fake.record, &desc) == PrStatus_NotSupported);
-    CHECK(prAppIsActive(&fake.record));
+    CHECK(prAppNotificationPost(&fake, &desc) == PrStatus_NotSupported);
+    CHECK(prAppWindowIsActive(&fake.window));
 }
 
 TEST_CASE("a notification reaches the backend, and the backend says whether the window is active") {
-    FakeNotifier notifier{};
-    createFake(notifier.fake);
-    PrApp* app = &notifier.fake.record;
-    app->isActive = [](PrApp* app) { return notifierOf(app).active; };
-    app->notificationPost = [](PrApp* app, const PrAppNotificationDesc* desc) -> PrStatus {
-        notifierOf(app).posted.push(format("{}|{}|{}", desc->title, desc->body, desc->tag));
+    FakeApp fake{};
+    createFake(fake);
+    PrApp* app = &fake;
+    PrAppWindow* window = &fake.window;
+    window->isActiveFn = [](const PrAppWindow* window) { return static_cast<const FakeWindow*>(window)->active; };
+    app->notificationPostFn = [](PrApp* app, const PrAppNotificationDesc* desc) -> PrStatus {
+        fakeOf(app).posted.push(format("{}|{}|{}", desc->title, desc->body, desc->tag));
         return PrStatus_Ok;
     };
-    CHECK_FALSE(prAppIsActive(app));
-    notifier.active = true;
-    CHECK(prAppIsActive(app));
+    CHECK_FALSE(prAppWindowIsActive(window));
+    fake.window.active = true;
+    CHECK(prAppWindowIsActive(window));
     PrAppNotificationDesc desc{.title = "Build", .body = "done", .tag = 42};
     CHECK(prAppNotificationPost(app, &desc) == PrStatus_Ok);
     PrAppNotificationDesc untitled{.body = "only a body"};
     CHECK(prAppNotificationPost(app, &untitled) == PrStatus_Ok);
-    CHECK(notifier.posted == Array<String>({"Build|done|42", "|only a body|0"}));
+    CHECK(fake.posted == Array<String>({"Build|done|42", "|only a body|0"}));
 }
 
 TEST_CASE("named keys and codes take the names of UI Events") {
@@ -168,30 +294,36 @@ TEST_CASE("a scroll resolves to pixels by its unit") {
     CHECK(resolved.y == -40.0f);
 }
 
-TEST_CASE("a frame's output reaches the window") {
-    FakeApp fake{};
-    createFake(fake);
-    PrAppHandler handler{};
-    handler.frame = [](void*, PrApp*, const PrAppFrame*) {
-        return PrAppOutput{.cursor = PrAppCursor_Hand, .wantsFrame = true};
-    };
-    PrAppFrame frame{};
-    prAppDeliverFrame(&fake.record, &handler, &frame);
-    CHECK(fake.calls == Array<String>({"cursor", "frame"}));
-}
+TEST_CASE("an event's text and position are those of the member that its kind uses") {
+    PrAppEvent key{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = 'A', .text = "a"}};
+    PrAppEvent paste{.kind = PrAppEventKind_Paste, .input = {.text = "pasted"}};
+    PrAppEvent press{.kind = PrAppEventKind_PointerDown, .pointer = {.position = {1, 2}, .button = 1}};
+    PrAppEvent wheel{.kind = PrAppEventKind_Scroll, .scroll = {.position = {3, 4}, .delta = {0, 5}}};
+    PrAppEvent wake{.kind = PrAppEventKind_Wake};
+    CHECK(prAppEventText(&key) == "a");
+    CHECK(prAppEventText(&paste) == "pasted");
+    CHECK(prAppEventText(&press) == "");
+    prAppEventSetText(&key, "b");
+    prAppEventSetText(&paste, "c");
+    prAppEventSetText(&press, "ignored");
+    CHECK(key.keyboard.text == "b");
+    CHECK(key.keyboard.key == 'A');
+    CHECK(paste.input.text == "c");
+    CHECK(press.pointer.button == 1);
 
-TEST_CASE("a frame's time reaches the window, requests no frame now, and the next frame's output replaces it") {
-    FakeApp fake{};
-    createFake(fake);
-    PrAppHandler handler{};
-    handler.frame = [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{.frameTime = 12.5}; };
-    PrAppFrame frame{};
-    prAppDeliverFrame(&fake.record, &handler, &frame);
-    CHECK(fake.calls == Array<String>({"cursor"}));
-    CHECK(fake.frameTime == 12.5);
-    handler.frame = [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; };
-    prAppDeliverFrame(&fake.record, &handler, &frame);
-    CHECK(fake.frameTime == 0);
+    PrVec2 at{9, 9};
+    CHECK(prAppEventPosition(&press, &at));
+    CHECK(at.x == 1);
+    CHECK(prAppEventPosition(&wheel, &at));
+    CHECK(at.y == 4);
+    CHECK_FALSE(prAppEventPosition(&wake, &at));
+    CHECK(at.x == 0);
+    // Moving a scroll keeps its delta.
+    prAppEventSetPosition(&wheel, PrVec2{6, 7});
+    prAppEventSetPosition(&key, PrVec2{6, 7});
+    CHECK(wheel.scroll.position.x == 6);
+    CHECK(wheel.scroll.delta.y == 5);
+    CHECK(key.keyboard.key == 'A');
 }
 
 TEST_CASE("two surfaces' outputs take the earlier frame time") {
@@ -221,4 +353,23 @@ TEST_CASE("a surface's output is placed in the window, and two surfaces' outputs
     CHECK(overPage.textInput.left == 12);
     CHECK(prAppOutputMerge(chrome, placed, false).cursor == PrAppCursor_Arrow);
     CHECK(!prAppOutputMerge(chrome, PrAppOutput{}, false).hasTextInput);
+}
+
+TEST_CASE("a caret in another window stays as it is when its output is placed, and goes with it when outputs merge") {
+    FakeApp fake{};
+    createFake(fake);
+    PrAppOutput page{.hasTextInput = true, .textInput = {1, 2, 3, 4}, .textInputWindow = &fake.window};
+    PrAppOutput placed = prAppOutputPlaced(page, PrVec2{10, 20}, 2);
+    CHECK(placed.textInput.left == 1);
+    CHECK(placed.textInput.bottom == 4);
+    CHECK(placed.textInputWindow == &fake.window);
+    CHECK(prAppOutputMerge(PrAppOutput{}, placed, false).textInputWindow == &fake.window);
+}
+
+TEST_CASE("merged outputs take the drop operation of the surface under the pointer") {
+    PrAppOutput chrome{.dropOperation = PrAppDragOperation_None};
+    PrAppOutput page{.dropOperation = PrAppDragOperation_Copy};
+    CHECK(prAppOutputMerge(chrome, page, true).dropOperation == PrAppDragOperation_Copy);
+    CHECK(prAppOutputMerge(chrome, page, false).dropOperation == PrAppDragOperation_None);
+    CHECK(prAppOutputPlaced(page, PrVec2{10, 20}, 2).dropOperation == PrAppDragOperation_Copy);
 }
