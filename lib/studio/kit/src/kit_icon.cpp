@@ -90,7 +90,12 @@ PrLayoutNode iconBox(PrKit& kit, PrLayoutNode parent, uint64_t key, const PrPath
     made->stroked = stroked;
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_Painter;
-    content.painter = PrLayoutPainter{paintIcon, made, retainPainted, releasePainted};
+    content.painter = PrLayoutPainter{
+        .context = made,
+        .paint = paintIcon,
+        .retain = retainPainted,
+        .release = releasePainted,
+    };
     prLayoutTreeFrameSetContent(tree, node, &content);
     releasePainted(made);
     return node;

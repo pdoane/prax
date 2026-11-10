@@ -1820,6 +1820,29 @@ PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list) {
     return playTree(view, presentation, list, view->canvasFilled);
 }
 
+PrLayoutPainter prHtmlViewPainter(PrHtmlView* view) {
+    // The document is laid out at the inline size, and keeps the block size that it was last painted at while the
+    // inline size stays, so that measuring and painting lay it out in one viewport.
+    auto measure = [](void* PR_NULLABLE context, float inlineSize) {
+        PrHtmlView* v = static_cast<PrHtmlView*>(context);
+        prHtmlViewSetViewport(v, PrVec2{inlineSize, v->extent.x == inlineSize ? v->extent.y : 0});
+        prHtmlViewPrepare(v);
+        PrCssPresentation* presentation = presentationOf(v);
+        if (presentation == nullptr)
+            return 0.0f;
+        PrLayoutScrollInfo info{};
+        if (!prLayoutNodeScrollInfo(prCssPresentationTree(presentation), kPrLayoutNodeNone, &info))
+            return 0.0f;
+        return prLayoutUnitToPx(info.content.bottom);
+    };
+    auto paint = [](void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
+        PrHtmlView* v = static_cast<PrHtmlView*>(context);
+        prHtmlViewSetViewport(v, extent);
+        prHtmlViewPaint(v, list);
+    };
+    return PrLayoutPainter{.context = view, .paint = paint, .measure = measure};
+}
+
 void prHtmlViewPrepare(PrHtmlView* view) {
     PrCssPresentation* presentation = presentationOf(view);
     if (presentation == nullptr || prHtmlPageIsRenderBlocked(view->page))

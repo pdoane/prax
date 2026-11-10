@@ -815,9 +815,9 @@ bool parseDimension(PrStringView text, float* outEm) {
         value = 1;
     while (i < text.size && prAsciiIsSpace(text.data[i]))
         ++i;
-    PrStringView unit = prStringTrim(prStringSlice(text, i, text.size - i));
+    PrStringView unit = prStringTrim(prStringFrom(text, i));
     if (prStringStartsWith(unit, "true"))
-        unit = prStringTrim(prStringSlice(unit, 4, unit.size - 4));
+        unit = prStringTrim(prStringFrom(unit, 4));
     struct Unit {
         const char* name;
         float em;
@@ -951,7 +951,7 @@ bool parseColor(PrStringView model, PrStringView spec, PrTextBuffer* out) {
         return count;
     };
     if (model.size == 0) {
-        if (spec.data[0] == '#' && isHex(prStringSlice(spec, 1, spec.size - 1))) {
+        if (spec.data[0] == '#' && isHex(prStringFrom(spec, 1))) {
             prTextBufferAppend(out, spec);
             return true;
         }
@@ -1482,7 +1482,7 @@ void delimiterText(PrStringView written, PrTextBuffer* out) {
         return;
     }
     if (written.data[0] == '\\') {
-        const TexEntry* entry = texEntryFromName(prStringSlice(written, 1, written.size - 1));
+        const TexEntry* entry = texEntryFromName(prStringFrom(written, 1));
         if (entry != nullptr && entry->text != nullptr)
             prTextBufferAppend(out, entry->text);
         return;
@@ -1815,7 +1815,7 @@ void parseText(Parser* p, const Context& context, TexTextFont font, TexNodeIndex
                     readTextArgument(p, &written);
                     PrStringView text = prTextBufferView(&written);
                     if (text.size != 0 && text.data[0] == '\\') {
-                        const TexEntry* letter = texEntryFromName(prStringSlice(text, 1, text.size - 1));
+                        const TexEntry* letter = texEntryFromName(prStringFrom(text, 1));
                         if (letter != nullptr && letter->text != nullptr)
                             prTextBufferAppend(&run.text, letter->text);
                     } else {
@@ -3439,10 +3439,10 @@ void parseColumnSpec(PrStringView spec, ColumnSpec* state, uint32_t depth) {
             }
             case '*': {
                 // *{count}{columns}.
-                size_t open = prStringFindByte(prStringSlice(spec, i, spec.size - i), '{') + i;
+                size_t open = prStringFindByte(prStringFrom(spec, i), '{') + i;
                 size_t close = spec.size;
                 if (open < spec.size)
-                    close = prStringFindByte(prStringSlice(spec, open, spec.size - open), '}') + open;
+                    close = prStringFindByte(prStringFrom(spec, open), '}') + open;
                 uint32_t count = 0;
                 for (size_t d = open + 1; d < close && d < spec.size; ++d) {
                     if (prAsciiIsDigit(spec.data[d]) && count < kMaxSpecifiedColumns)

@@ -705,7 +705,7 @@ bool ruleMatches(const HostRule& rule, PrStringView host) {
     PrStringView pattern = prRawStringView(&rule.host);
     if (!prStringStartsWith(pattern, "*."))
         return prAsciiEqualsFold(pattern, host);
-    PrStringView suffix = prStringSlice(pattern, 1, pattern.size - 1);
+    PrStringView suffix = prStringFrom(pattern, 1);
     return host.size > suffix.size && prAsciiEndsWithFold(host, suffix);
 }
 

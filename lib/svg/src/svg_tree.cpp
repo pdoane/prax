@@ -877,7 +877,7 @@ bool parseAngle(PrStringView text, float* radians) {
     float number = 0;
     if (!numberListRead(text, &pos, &number))
         return false;
-    PrStringView unit = prStringTrimEnd(prStringSlice(text, pos, text.size - pos));
+    PrStringView unit = prStringTrimEnd(prStringFrom(text, pos));
     double scale = kPrF64Pi / 180;
     if (unit.size != 0) {
         PrCssUnit css = cssUnitFromText(unit);
@@ -2693,7 +2693,7 @@ bool svgParseLength(PrStringView text, const CssComputedStyle* PR_NULLABLE style
     float number = 0;
     if (!numberListRead(text, &pos, &number))
         return false;
-    PrStringView unit = prStringTrimEnd(prStringSlice(text, pos, text.size - pos));
+    PrStringView unit = prStringTrimEnd(prStringFrom(text, pos));
     double em = style != nullptr ? cssStyleFontSize(style) : kCssMediumFontSize;
     if (unit.size == 0) {
         *out = SvgLengthPercentage{number, 0};

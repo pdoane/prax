@@ -221,6 +221,44 @@ Array<uint8_t> renderAt(PrLayoutTree* tree, uint32_t width, uint32_t height, flo
 const char* const kBlack = "0 0 0 255";
 const char* const kClear = "0 0 0 0";
 
+// A text decoration that a list draws: the y of its center line in the list's space, and whether the list drew glyphs
+// before it.
+struct DrawnDecoration {
+    double y;
+    float length;
+    float thickness;
+    bool afterGlyphs;
+};
+
+// Appends the decorations that `list` draws under `transform`, including through the lists it embeds, and sets `glyphs`
+// once it draws glyphs.
+void appendDecorations(const PrDrawList* list, PrDrawTransform transform, bool& glyphs, Array<DrawnDecoration>& out) {
+    Array<PrDrawTransform> stack;
+    stack.push(transform);
+    const PrDrawCommand* commands = prDrawListCommands(list);
+    for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
+        const PrDrawCommand& command = commands[i];
+        const PrDAffine2& t = stack.last().daffine;
+        switch (command.kind) {
+            case PrDrawCommandKind_Embed:
+                appendDecorations(command.embed.list, prDrawTransformMoved(&stack.last(), command.embed.offset), glyphs, out);
+                break;
+            case PrDrawCommandKind_PushTransformAffine2:
+                stack.push(prDrawTransformPush(&stack.last(), &command));
+                break;
+            case PrDrawCommandKind_PopTransform: stack.pop(); break;
+            case PrDrawCommandKind_Glyphs: glyphs = true; break;
+            case PrDrawCommandKind_Decoration: {
+                PrVec2 o = command.decoration->origin;
+                double y = t.b * double(o.x) + t.d * double(o.y) + t.f;
+                out.push(DrawnDecoration{y, command.decoration->length, command.decoration->thickness, glyphs});
+                break;
+            }
+            default: break;
+        }
+    }
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1839,6 +1877,90 @@ TEST_CASE("a painter draws a replaced box's content for its content box's size, 
     render(f.tree, 40, 40);
     CHECK(painted.calls == 3);
     // Verifying the tree's caches draws again from scratch, and finds the same drawing.
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("text decoration lines cross the text of a box and its inline content, but not an atomic inline's") {
+    Fixture f;
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutDecorationStyle decorated = prLayoutDecorationStyleDefault();
+    decorated.textDecorationLine = PrLayoutTextDecorationLine_Underline | PrLayoutTextDecorationLine_LineThrough;
+    decorated.textDecorationColor = PR_COLOR16(1, 0, 0, 1);
+    PrLayoutNode line = f.element(root, block(), &decorated);
+    PrLayoutBoxStyle inlineBox = prLayoutBoxStyleDefault();
+    inlineBox.display = PrLayoutDisplay_Inline;
+    f.text(f.element(line, inlineBox), "Hello");
+    PrLayoutBoxStyle atomic = prLayoutBoxStyleDefault();
+    atomic.display = PrLayoutDisplay_InlineBlock;
+    f.text(f.element(line, atomic), "World");
+    f.layout(px(400, 100));
+    PrDrawList* list = prDrawListCreate();
+    prLayoutTreePaint(f.tree, list);
+    bool glyphs = false;
+    Array<DrawnDecoration> drawn;
+    appendDecorations(list, prDrawTransformFromDAffine2(PrDAffine2{1, 0, 0, 1, 0, 0}), glyphs, drawn);
+    prDrawListRelease(list);
+    // The inline box's text has an underline before its glyphs, below the baseline, and a line through after them,
+    // above it. The inline-block's text has none.
+    REQUIRE(drawn.count() == 2);
+    CHECK_FALSE(drawn[0].afterGlyphs);
+    CHECK(drawn[1].afterGlyphs);
+    CHECK(drawn[0].y > drawn[1].y);
+    CHECK(drawn[0].length == doctest::Approx(drawn[1].length));
+    CHECK(drawn[0].length > 0);
+    CHECK(drawn[0].thickness >= 1);
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("a painter that measures fills the inline size and takes the block size that it measures there") {
+    Fixture f;
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    // Text of `area` px squared, as a document's: its height is its area over its width.
+    struct Measured {
+        float area = 2000;
+        float width = 0;
+    } measured;
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Painter;
+    content.painter.paint = [](void* PR_NULLABLE, PrVec2 extent, PrDrawList* list) {
+        prDrawListRect(list, PrRect{0, 0, extent.x, extent.y}, {.color = PrColor{0, 1, 0, 1}});
+    };
+    content.painter.measure = [](void* PR_NULLABLE context, float inlineSize) {
+        Measured* m = static_cast<Measured*>(context);
+        m->width = inlineSize;
+        return m->area / inlineSize;
+    };
+    content.painter.context = &measured;
+    PrLayoutBoxStyle box = block();
+    box.display = PrLayoutDisplay_Block;
+    PrLayoutNode node = replaced(f, root, box, prLayoutNaturalSizeNone());
+    prLayoutNodeSetContent(f.tree, node, &content);
+    PrLayoutNode after = f.element(root, block(10));
+    f.layout(px(100, 200));
+    auto bounds = [&](PrLayoutNode n) {
+        return prLayoutRectToPx(prLayoutNodeBounds(f.tree, n, PrLayoutCoordinates_Layout));
+    };
+    CHECK(measured.width == 100.0f);
+    CHECK(bounds(node).right == 100.0f);
+    CHECK(bounds(node).bottom == 20.0f);
+    CHECK(bounds(after).top == 20.0f);
+
+    // A narrower containing block measures again, and a limit applies before the content measures.
+    f.layout(px(50, 200));
+    CHECK(bounds(node).bottom == 40.0f);
+    box.maxWidth = prLayoutLengthPx(20);
+    prLayoutNodeSetStyle(f.tree, node, f.style(box));
+    f.layout(px(50, 200));
+    CHECK(measured.width == 20.0f);
+    CHECK(bounds(node).bottom == 100.0f);
+
+    // Content at a new revision that measures differently lays the box out again.
+    measured.area = 1000;
+    content.revision = 1;
+    prLayoutNodeSetContent(f.tree, node, &content);
+    f.layout(px(50, 200));
+    CHECK(bounds(node).bottom == 50.0f);
+    CHECK(bounds(after).top == 50.0f);
     CHECK(verified(f.tree));
 }
 

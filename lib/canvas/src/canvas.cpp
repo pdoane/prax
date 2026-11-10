@@ -1421,8 +1421,8 @@ PrCanvasPresentation prCanvasPresent(PrCanvas* canvas, PrDrawSampling sampling) 
         return presentation;
     CanvasShown* shown = show(canvas, sampling);
     presentation.painter = PrLayoutPainter{
-        .paint = paintShown,
         .context = shown,
+        .paint = paintShown,
         .retain = shownRetain,
         .release = shownRelease,
     };

@@ -1486,7 +1486,7 @@ void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& op
                 tree->nodes.data[node].values.kind = PrMarkdownNodeKind_Alert;
                 tree->nodes.data[node].values.alert = alert;
                 firstSkip = uint32_t(length);
-                firstDropped = prStringTrim(prStringSlice(text, length, text.size - length)).size == 0;
+                firstDropped = prStringTrim(prStringFrom(text, length)).size == 0;
             }
         }
 

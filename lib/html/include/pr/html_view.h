@@ -137,6 +137,13 @@ void prHtmlViewWait(PrHtmlView* view);
 // (PrHtmlViewDesc::canvasFilled), or transparent while the document is render-blocked.
 PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list);
 
+// Returns a painter that shows the view's document in a replaced element of another layout tree, as content of the
+// element's flow: it lays the document out at the element's inline size, as tall as the document's content, which it
+// measures, and records it as prHtmlViewPaint does. Measuring and painting set the view's viewport. A tree that holds
+// the painter lays out and paints on the agent's thread, and a host gives the element a new revision when the document
+// changes. The caller keeps the view alive while the tree may call the painter.
+PrLayoutPainter prHtmlViewPainter(PrHtmlView* view);
+
 // Brings the document up to date for prHtmlViewPaint without recording it: its styles and layout, and a text control's
 // caret and selection. Computing a style starts the fetches that it names. A host runs what those fetches deliver, and
 // repeats this until they deliver nothing, so that it records the document once.

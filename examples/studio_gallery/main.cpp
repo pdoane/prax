@@ -18,14 +18,13 @@ GalleryState& stateOf(void* context) {
     return *static_cast<GalleryState*>(context);
 }
 
-// Returns the variant of the theme that the gallery chose: its own, or the user's preferred color scheme's.
-PrKitThemeVariant themeOf(void* context, PrStudioWindow*, const PrAppUserPreferences* preferences) {
+// Gives the kit the palette of the theme that the gallery chose, or keeps the user's preferred color scheme's.
+void paletteOf(void* context, PrStudioWindow*, const PrAppUserPreferences*, PrKitPalette* palette) {
     switch (stateOf(context).theme) {
-        case GalleryTheme_Dark: return PrKitThemeVariant_Dark;
-        case GalleryTheme_Light: return PrKitThemeVariant_Light;
+        case GalleryTheme_Dark: *palette = prKitPaletteStudio(PrKitThemeVariant_Dark); break;
+        case GalleryTheme_Light: *palette = prKitPaletteStudio(PrKitThemeVariant_Light); break;
         default: break;
     }
-    return preferences->colorScheme == PrAppColorScheme_Dark ? PrKitThemeVariant_Dark : PrKitThemeVariant_Light;
 }
 
 } // namespace
@@ -44,7 +43,7 @@ int main() {
         .title = "Studio Kit Gallery",
         .extent = {1440, 900},
         .intent = PrGpuSwapChainIntent_Hdr,
-        .theme = themeOf,
+        .palette = paletteOf,
         .build = [](void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
             buildGallery(prStudioWindowKit(window), root, stateOf(context));
         },

@@ -817,11 +817,17 @@ PrLayoutNode focusScopeOf(const Ui* ui, PrLayoutNode node) {
     return kPrLayoutNodeNone;
 }
 
+// Returns the modifiers of the key press `e` that take part in routing it. Caps Lock is a lock, not a held modifier,
+// and does not.
+PrAppModifierFlags heldOf(const PrAppEvent& e) {
+    return PrAppModifierFlags(e.modifiers & ~PrAppModifierFlag_CapsLock);
+}
+
 // Returns the claim of `at` for the key press `e`, as a capture or as a plain claim, or null if there is none.
 const UiClaim* PR_NULLABLE claimOf(const Ui* ui, PrLayoutNode at, const PrAppEvent& e, bool capture) {
     for (uint32_t i = 0; i < ui->lastClaims.count; ++i) {
         const UiClaim& c = ui->lastClaims.data[i];
-        if (c.node == at && c.key == e.keyboard.key && c.modifiers == e.modifiers && c.capture == capture)
+        if (c.node == at && c.key == e.keyboard.key && c.modifiers == heldOf(e) && c.capture == capture)
             return &c;
     }
     return nullptr;
@@ -869,15 +875,16 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
         ui->payload = UiCarry{};
         return;
     }
-    if (e.keyboard.key == PrAppKey_Tab && (e.modifiers & ~PrAppModifierFlag_Shift) == 0) {
-        bool reverse = (e.modifiers & PrAppModifierFlag_Shift) != 0;
+    PrAppModifierFlags held = heldOf(e);
+    if (e.keyboard.key == PrAppKey_Tab && (held & ~PrAppModifierFlag_Shift) == 0) {
+        bool reverse = (held & PrAppModifierFlag_Shift) != 0;
         PrLayoutNode next = focusStep(ui, ui->focus, focusScopeOf(ui, ui->focus), reverse);
         if (next != kPrLayoutNodeNone)
             ui->focus = next;
         return;
     }
     bool activates = e.keyboard.key == PrAppKey_Enter || e.keyboard.key == ' ';
-    if (activates && e.modifiers == 0 && takes(ui, ui->focus, PrUiFlag_Pressable)) {
+    if (activates && held == 0 && takes(ui, ui->focus, PrUiFlag_Pressable)) {
         ui->keyActivated = ui->focus;
         deliver(ui, ui->focus, e);
         return;
@@ -2259,6 +2266,7 @@ const PrUiPayload* PR_NULLABLE prUiExportEnded(const PrUi* ui, PrAppDragOperatio
 
 bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers) {
     PR_ASSERT(ui->building);
+    PR_ASSERT((modifiers & PrAppModifierFlag_CapsLock) == 0);
     ui->claims.push(UiClaim{node, key, modifiers, false});
     return ui->keyed.node == node && node != kPrLayoutNodeNone && ui->keyed.key == key &&
         ui->keyed.modifiers == modifiers && !ui->keyed.capture;
@@ -2266,6 +2274,7 @@ bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlag
 
 bool prUiKeyCaptured(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers) {
     PR_ASSERT(ui->building);
+    PR_ASSERT((modifiers & PrAppModifierFlag_CapsLock) == 0);
     ui->claims.push(UiClaim{node, key, modifiers, true});
     return ui->keyed.node == node && node != kPrLayoutNodeNone && ui->keyed.key == key &&
         ui->keyed.modifiers == modifiers && ui->keyed.capture;
@@ -2469,4 +2478,18 @@ void prUiRevealRect(PrUi* ui, PrLayoutNode node, PrLayoutRect rect) {
     PrLayoutVec offset{};
     while ((node = prLayoutNodeRevealStep(ui->tree, node, &rect, &offset)) != kPrLayoutNodeNone)
         prLayoutNodeSetScroll(ui->tree, node, offset);
+}
+
+void prUiFollowEnd(PrUi* ui, PrLayoutNode node) {
+    PR_ASSERT(ui->building);
+    PrLayoutScrollInfo info{};
+    bool laidOut = prLayoutNodeScrollInfo(ui->tree, node, &info) && info.scrollContainer;
+    if (laidOut && info.offset.y.raw < info.range.bottom.raw)
+        return;
+    // The content of this round is not measured yet, so the offset overshoots, and layout clamps it to the bottom of
+    // the range that the content then makes. An offset that already overshoots is left as it is.
+    PrLayoutVec far{info.offset.x, PrLayoutUnit{INT32_MAX}};
+    PrLayoutVec offset = prLayoutNodeScroll(ui->tree, node);
+    if (offset.x.raw != far.x.raw || offset.y.raw != far.y.raw)
+        prLayoutNodeSetScroll(ui->tree, node, far);
 }

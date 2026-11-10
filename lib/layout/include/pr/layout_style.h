@@ -634,6 +634,14 @@ enum {
 };
 typedef uint8_t PrLayoutBackgroundAttachment;
 
+// The lines that decorate text (css-text-decor-3/#text-decoration-line-property).
+enum {
+    PrLayoutTextDecorationLine_Underline = 1u << 0,
+    PrLayoutTextDecorationLine_Overline = 1u << 1,
+    PrLayoutTextDecorationLine_LineThrough = 1u << 2,
+};
+typedef uint8_t PrLayoutTextDecorationLines;
+
 PR_NO_PADDING_BEGIN
 // What paints a box's background, border and outline, and places a replaced box's content in its content box. Sides are
 // indexed by PrRectSide. Not inherited, and read by painting. An outline is drawn around the border box,
@@ -651,11 +659,17 @@ PR_NO_PADDING_BEGIN
 //
 // A multi-column container paints its column rule in the middle of each gap between two of its columns that hold
 // content, and the rule takes no room (css-multicol-1/#column-gaps-and-rules). Its width is zero if its style is none.
+//
+// A box's text decoration lines are drawn across the text of the box and of its in-flow content, other than the content
+// of atomic inlines and of boxes out of flow (css-text-decor-3/#line-decoration), in their color, style and thickness,
+// or the thickness that the text's font gives where `textDecorationThickness` is zero. The lines are placed by the
+// metrics of each text's font. Underlines and overlines paint below the text, and lines through it above.
 typedef struct PrLayoutDecorationStyle {
     PrColor16 background;
     PrColor16 borderColor[PrRectSide_Count];
     PrColor16 outlineColor;
     PrColor16 columnRuleColor;
+    PrColor16 textDecorationColor;
     PrLayoutLength objectPositionX;     // where fitted content sits (css-images-3/#the-object-position)
     PrLayoutLength objectPositionY;
 
@@ -670,6 +684,7 @@ typedef struct PrLayoutDecorationStyle {
     PrLayoutUnit outlineWidth;
     PrLayoutUnit outlineOffset;
     PrLayoutUnit columnRuleWidth;
+    PrLayoutUnit textDecorationThickness;
     PrLayoutBackgroundIndex backgroundLayers;
     PrDrawBorderStyle borderStyle[PrRectSide_Count];
     PrDrawBorderStyle outlineStyle;
@@ -677,7 +692,9 @@ typedef struct PrLayoutDecorationStyle {
     PrLayoutBackgroundBox backgroundClip;
     PrLayoutBackgroundAttachment backgroundAttachment;
     PrDrawBorderStyle columnRuleStyle;
-    uint8_t _pad[3];
+    PrLayoutTextDecorationLines textDecorationLine;
+    PrDrawDecorationStyle textDecorationStyle;
+    uint8_t _pad[1];
 } PrLayoutDecorationStyle;
 PR_NO_PADDING_END
 
@@ -834,13 +851,25 @@ typedef uint8_t PrLayoutImageRendering;
 // may read only state that the client changes between jobs. It must be deterministic in `extent` and that state.
 typedef void (*PrLayoutPaintFn)(void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list);
 
+// Returns the block size in px that content takes at an inline size of `inlineSize` px, as a document's height follows
+// the width that it is laid out at. Called on the thread that lays out the tree, which may be a layout worker during a
+// job, so it may read only state that the client changes between jobs. It must be deterministic in `inlineSize` and
+// that state.
+typedef float (*PrLayoutMeasureFn)(void* PR_NULLABLE context, float inlineSize);
+
 // Content that draws itself at whatever size it is shown, as an SVG image or an application's canvas does, rather than
 // being scaled from one drawing: a callback, and the context that it is called with. A painter with `retain` and
 // `release` shares its context, which the tree holds a reference to while it uses the painter, and they may be called
 // on any thread. Without them, the client keeps the context alive while the tree may call the painter.
+//
+// A painter that measures has a block size for each inline size, and no natural size: an auto inline size fills the
+// containing block, as a block does, and an auto block size is what `measure` gives for the used inline size. Content
+// that measures differently at the same inline size has a new revision (PrLayoutContent::revision), which lays the
+// element out again.
 typedef struct PrLayoutPainter {
-    PrLayoutPaintFn paint;
     void* PR_NULLABLE context;
+    PrLayoutPaintFn paint;
+    PrLayoutMeasureFn PR_NULLABLE measure;
     void (*PR_NULLABLE retain)(void* PR_NULLABLE context);
     void (*PR_NULLABLE release)(void* PR_NULLABLE context);
 } PrLayoutPainter;

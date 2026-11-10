@@ -294,6 +294,26 @@ TEST_CASE("a scroll resolves to pixels by its unit") {
     CHECK(resolved.y == -40.0f);
 }
 
+TEST_CASE("an event placed in a surface has the surface's position and lengths, and a scroll by lines keeps its delta") {
+    PrAppEvent move{
+        .kind = PrAppEventKind_PointerMove,
+        .pointer = {.position = {30, 50}, .button = 2, .contactSize = {8, 8}, .movement = {4, -2}},
+    };
+    PrAppEvent placed = prAppEventPlaced(&move, PrVec2{10, 20}, 2);
+    CHECK(placed.pointer.position.x == 10);
+    CHECK(placed.pointer.position.y == 15);
+    CHECK(placed.pointer.movement.x == 2);
+    CHECK(placed.pointer.movement.y == -1);
+    CHECK(placed.pointer.contactSize.x == 4);
+    CHECK(placed.pointer.button == 2);
+    PrAppEvent pixels{.kind = PrAppEventKind_Scroll, .scroll = {.position = {10, 20}, .delta = {0, 40}}};
+    CHECK(prAppEventPlaced(&pixels, PrVec2{10, 20}, 2).scroll.delta.y == 20);
+    PrAppEvent lines{.kind = PrAppEventKind_Scroll, .scroll = {.delta = {0, 3}, .unit = PrAppScrollUnit_Line}};
+    CHECK(prAppEventPlaced(&lines, PrVec2{10, 20}, 2).scroll.delta.y == 3);
+    PrAppEvent key{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = 'A'}};
+    CHECK(prAppEventPlaced(&key, PrVec2{10, 20}, 2).keyboard.key == 'A');
+}
+
 TEST_CASE("an event's text and position are those of the member that its kind uses") {
     PrAppEvent key{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = 'A', .text = "a"}};
     PrAppEvent paste{.kind = PrAppEventKind_Paste, .input = {.text = "pasted"}};

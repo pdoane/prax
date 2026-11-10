@@ -118,6 +118,7 @@ void KitFont::make(const PrKit& kit, PrLayoutFontStyle& font) const {
     font.whiteSpaceCollapse = preserve ? PrLayoutWhiteSpaceCollapse_Preserve : PrLayoutWhiteSpaceCollapse_Collapse;
     PrKitWrap resolved = kitTextWrap(kit, role, wrap);
     font.textWrapMode = resolved == PrKitWrap_Wrap ? PrLayoutTextWrapMode_Wrap : PrLayoutTextWrapMode_Nowrap;
+    font.overflowWrap = resolved == PrKitWrap_Wrap ? PrTextOverflowWrap_Anywhere : PrTextOverflowWrap_Normal;
     static const PrLayoutTextAlign kAlign[] = {
         PrLayoutTextAlign_Start, PrLayoutTextAlign_Center,
         PrLayoutTextAlign_End,

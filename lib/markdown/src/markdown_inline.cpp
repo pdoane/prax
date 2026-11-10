@@ -653,7 +653,7 @@ size_t findCloser(Subject& s, size_t from, PrStringView needle, size_t* missingA
     if (from >= *missingAfter)
         return s.text.size;
     for (size_t at = from; at + needle.size <= s.text.size; ++at) {
-        if (prStringStartsWith(prStringSlice(s.text, at, s.text.size - at), needle) && closes(at))
+        if (prStringStartsWith(prStringFrom(s.text, at), needle) && closes(at))
             return at;
     }
     *missingAfter = from;
@@ -1021,7 +1021,7 @@ bool wwwAutolink(Subject& s) {
         if (before != '*' && before != '_' && before != '~' && before != '(' && !isAsciiSpace(before))
             return false;
     }
-    PrStringView rest = prStringSlice(s.text, s.pos, s.text.size - s.pos);
+    PrStringView rest = prStringFrom(s.text, s.pos);
     if (rest.size < 4 || !prStringStartsWith(rest, "www."))
         return false;
     size_t end = validDomain(rest, false);
@@ -1056,7 +1056,7 @@ void unput(Subject& s, size_t count) {
 // Matches an extended URL autolink whose scheme ends at the subject's position, which is a ':'
 // (gfm/#extended-url-autolink). The scheme's letters are text already, which the link takes back.
 bool urlAutolink(Subject& s) {
-    PrStringView rest = prStringSlice(s.text, s.pos, s.text.size - s.pos);
+    PrStringView rest = prStringFrom(s.text, s.pos);
     if (rest.size < 4 || rest.data[1] != '/' || rest.data[2] != '/')
         return false;
     size_t rewind = 0;
@@ -1072,7 +1072,7 @@ bool urlAutolink(Subject& s) {
     }
     if (!safe)
         return false;
-    size_t domain = validDomain(prStringSlice(rest, 3, rest.size - 3), true);
+    size_t domain = validDomain(prStringFrom(rest, 3), true);
     if (domain == 0)
         return false;
     size_t end = 3 + domain;
@@ -1107,7 +1107,7 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
         PrStringView text = markdownTreeText(s.tree, range);
         if (offset >= text.size)
             return;
-        size_t at = offset + prStringFindByte(prStringSlice(text, offset, text.size - offset), '@');
+        size_t at = offset + prStringFindByte(prStringFrom(text, offset), '@');
         if (at >= text.size)
             return;
         size_t maxRewind = at - offset;
@@ -1167,7 +1167,7 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
             offset = base + end;
             continue;
         }
-        end = trimAutolink(prStringSlice(text, base, text.size - base), end);
+        end = trimAutolink(prStringFrom(text, base), end);
         if (end == 0) {
             offset = base + 1;
             continue;

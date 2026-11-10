@@ -48,7 +48,7 @@ bool more(const Parser* p) {
 }
 
 PrStringView rest(const Parser* p) {
-    return prStringSlice(p->input, p->at, p->input.size - p->at);
+    return prStringFrom(p->input, p->at);
 }
 
 bool startsWith(const Parser* p, PrStringView literal) {
@@ -424,7 +424,7 @@ bool startTag(Parser* p) {
         bool declares = attribute == "xmlns" || prStringStartsWith(attribute, "xmlns:");
         if (!declares)
             continue;
-        PrStringView prefix = attribute.size > 5 ? prStringSlice(attribute, 6, attribute.size - 6) : "";
+        PrStringView prefix = attribute.size > 5 ? prStringFrom(attribute, 6) : "";
         if (prefix == "xmlns" || url == kXmlnsNamespace || ((prefix == "xml") != (url == kXmlNamespace)) ||
                 (prefix.size != 0 && url.size == 0))
             ok = fail(p, "a namespace declaration binds a reserved prefix or name, or undeclares a prefix");
@@ -558,7 +558,7 @@ bool entityDeclaration(Parser* p) {
         PrTextBuffer text = {};
         for (size_t i = 0; i < literal.size; ++i) {
             if (literal.data[i] == '&' && i + 1 < literal.size && literal.data[i + 1] == '#') {
-                size_t end = prStringFindByte(prStringSlice(literal, i, literal.size - i), ';');
+                size_t end = prStringFindByte(prStringFrom(literal, i), ';');
                 PrStringView input = p->input;
                 size_t at = p->at;
                 p->input = prStringSlice(literal, i + 1, end < literal.size - i ? end : literal.size - i - 1);
@@ -754,7 +754,7 @@ bool content(Parser* p) {
 // where the next look resumes: at the last bytes that could start `literal`.
 bool foundFrom(Parser* p, size_t start, PrStringView literal, size_t after) {
     size_t from = p->scanned > start ? p->scanned : start;
-    PrStringView tail = prStringSlice(p->input, from, p->input.size - from);
+    PrStringView tail = prStringFrom(p->input, from);
     size_t found = prStringFind(tail, literal);
     if (found < tail.size && from + found + literal.size + after <= p->input.size)
         return true;
@@ -809,7 +809,7 @@ bool doctypeArrived(const Parser* p, size_t start) {
     size_t at = start + 9;
     while (at < input.size) {
         char c = input.data[at];
-        PrStringView tail = prStringSlice(input, at, input.size - at);
+        PrStringView tail = prStringFrom(input, at);
         if (c == '"' || c == '\'') {
             at = skipQuoted(input, at);
             continue;
@@ -899,7 +899,7 @@ bool startArrived(const Parser* p) {
     if (startsPart(source, kByteOrderMark))
         return false;
     if (prStringStartsWith(source, kByteOrderMark))
-        source = prStringSlice(source, 3, source.size - 3);
+        source = prStringFrom(source, 3);
     if (source.size < 6)
         return !prStringStartsWith("<?xml", prStringSlice(source, 0, source.size < 5 ? source.size : 5));
     if (!prStringStartsWith(source, "<?xml") || !isSpace(source.data[5]))
@@ -984,7 +984,7 @@ PrCharset declaredCharset(PrStringView bytes) {
     if (at == declaration.size || (declaration.data[at] != '"' && declaration.data[at] != '\''))
         return PrCharset_None;
     char quote = declaration.data[at++];
-    PrStringView rest = prStringSlice(declaration, at, declaration.size - at);
+    PrStringView rest = prStringFrom(declaration, at);
     size_t close = prStringFindByte(rest, quote);
     if (close == rest.size)
         return PrCharset_None;
@@ -1052,7 +1052,7 @@ void prXmlParserAppend(PrXmlParser* parser, PrStringView text) {
         i += i + 1 < text.size && text.data[i + 1] == '\n';
         start = i + 1;
     }
-    prTextBufferAppend(&parser->source, prStringSlice(text, start, text.size - start));
+    prTextBufferAppend(&parser->source, prStringFrom(text, start));
     parser->carriageReturn = text.data[text.size - 1] == '\r';
     parser->input = prTextBufferView(&parser->source);
 }

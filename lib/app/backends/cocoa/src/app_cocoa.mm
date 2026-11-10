@@ -541,6 +541,16 @@ NSString* PR_NULLABLE characterOf(NSEvent* event) {
     return printable ? characters : nil;
 }
 
+// Returns the key that a key that types a character means: the character that it types in the layout with Shift applied
+// and no other modifier, uppercase for a letter. Option-1 is the 1 key with Alt held, though it types "¡", as Alt-1 is
+// on other systems. Returns PrAppKey_Unknown for a character outside ASCII, or a key that types none.
+PrAppKey keyOfCharacter(NSEvent* event) {
+    // charactersIgnoringModifiers keeps Shift and drops Option, Control and Command.
+    NSString* plain = event.charactersIgnoringModifiers;
+    unichar first = plain.length != 0 ? [plain.uppercaseString characterAtIndex:0] : 0;
+    return first >= ' ' && first < 127 ? PrAppKey(first) : PrAppKey_Unknown;
+}
+
 // Returns true if a key is a dead key: it types nothing itself, though it types a character without its modifiers.
 bool isDead(NSEvent* event) {
     if (event.characters.length != 0)
@@ -3337,13 +3347,16 @@ using namespace pr_impl;
     PrRawString text = prRawStringNull();
     if (mac.key != PrAppKey_Unknown) {
         event.keyboard.key = mac.key;
-    } else if (NSString* character = characterOf(source)) {
-        text = prAppleNSStringToRawString(character);
-        event.keyboard.text = prRawStringView(&text);
-        unichar first = [character.uppercaseString characterAtIndex:0];
-        event.keyboard.key = first < 128 ? PrAppKey(first) : PrAppKey_Unknown;
-    } else if (isDead(source)) {
-        event.keyboard.key = PrAppKey_Dead;
+    } else {
+        if (NSString* character = characterOf(source)) {
+            text = prAppleNSStringToRawString(character);
+            event.keyboard.text = prRawStringView(&text);
+        }
+        // A key that is dead with Option held, as Option-E is in the US layout, means its key in a shortcut.
+        NSEventModifierFlags chord =
+            NSEventModifierFlagOption | NSEventModifierFlagCommand | NSEventModifierFlagControl;
+        bool dead = (source.modifierFlags & chord) == 0 && isDead(source);
+        event.keyboard.key = dead ? PrAppKey_Dead : keyOfCharacter(source);
     }
     PrCocoaWindow* owner = self.owner;
     [owner key:event.keyboard.code down:kind == PrAppEventKind_KeyDown key:event.keyboard.key];

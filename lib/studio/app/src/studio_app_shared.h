@@ -100,7 +100,6 @@ struct StudioWindowState {
     PrLayoutTree* tree;
     PrUi* ui;
     PrKit* kit;
-    PrKitThemeVariant variant;              // the variant that the kit's theme is in
     const PrLayoutScene* PR_NULLABLE scene; // the scene of the last frame, which its list plays
     PrDrawList* list;
     RawArray<PrLayoutSceneScroll> scrolls;

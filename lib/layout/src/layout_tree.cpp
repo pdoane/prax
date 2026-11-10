@@ -1756,6 +1756,9 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
     r.image = image;
     PrLayoutPainter painter = content->kind == PrLayoutContentKind_Painter ? content->painter : PrLayoutPainter{};
     PR_ASSERT(content->kind != PrLayoutContentKind_Painter || painter.paint != nullptr);
+    // Content that measures sizes the element, so new content lays it out again.
+    if (painter.measure != nullptr || (r.contentKind == PrLayoutContentKind_Painter && r.painter.measure != nullptr))
+        markDirty(t, index);
     prLayoutPainterRetain(painter);
     prLayoutPainterRelease(r.painter);
     r.painter = painter;

@@ -7,6 +7,7 @@
 #include "pr/kit_surface.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
+#include "pr/mem.h"
 #include "pr/time.h"
 
 #include "studio/app/src/studio_app_shared.h"
@@ -401,11 +402,12 @@ PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
     prGpuSwapChainWait(w->target.swapChain);
 
     PrKitThemeVariant variant = variantOf(f->preferences.colorScheme);
-    if (w->desc.theme != nullptr)
-        variant = w->desc.theme(w->desc.context, w, &f->preferences);
-    if (variant != w->variant) {
-        w->variant = variant;
+    PrKitPalette palette = prKitPaletteStudio(variant);
+    if (w->desc.palette != nullptr)
+        w->desc.palette(w->desc.context, w, &f->preferences, &palette);
+    if (!prMemEquals(&palette, &w->kit->theme.palette, sizeof palette)) {
         PrKitTheme theme = prKitThemeStudio(variant, w->studio->desc.fonts);
+        theme.palette = palette;
         prKitSetTheme(w->kit, &theme);
     }
     if (w->desc.beginFrame != nullptr)
@@ -516,12 +518,12 @@ PrStatus prStudioWindowCreate(PrStudioApp* app, const PrStudioWindowDesc* desc, 
     w->studio = app;
     w->desc = *desc;
     w->status = PrStatus_Ok;
-    w->variant = PrKitThemeVariant_Dark;
     w->output.cursor = PrAppCursor_Arrow;
     PrLayoutTreeDesc treeDesc{.shaper = app->shaper};
     w->tree = prLayoutTreeCreate(&treeDesc);
     w->ui = prUiCreate(w->tree);
-    PrKitTheme theme = prKitThemeStudio(w->variant, app->desc.fonts);
+    // The first frame gives the kit its palette.
+    PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Dark, app->desc.fonts);
     w->kit = prKitCreate(w->ui, &theme);
     w->list = prDrawListCreate();
     PrAppWindowDesc windowDesc{

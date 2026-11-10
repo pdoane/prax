@@ -907,7 +907,7 @@ bool decodesToItself(PrCharsetDecoder* d, PrStringView bytes, PrStringView* text
     if (runLength(d->charset, data, bytes.size) != bytes.size)
         return false;
     if (!d->bomSeen && removesBom(d) && prStringStartsWith(bytes, "\xEF\xBB\xBF"))
-        *text = prStringSlice(bytes, 3, bytes.size - 3);
+        *text = prStringFrom(bytes, 3);
     d->bomSeen = true;
     return true;
 }
@@ -1299,7 +1299,7 @@ PrStringView prCharsetDecodeView(PrCharsetDecoder* decoder, PrStringView bytes, 
         prTextBufferReset(&text);
     }
     PrStringView all = prRawStringView(out);
-    return prStringSlice(all, before, all.size - before);
+    return prStringFrom(all, before);
 }
 
 PrCharsetEncoder prCharsetEncoderMake(PrCharset charset) {

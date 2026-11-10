@@ -1138,7 +1138,7 @@ bool readDoctype(HtmlTokenizer* t, uint32_t start) {
         return eof(at);
 
     PrStringView text = htmlInputText(t);
-    PrStringView rest = prStringSlice(text, at, text.size - at);
+    PrStringView rest = prStringFrom(text, at);
     bool isPublic = prAsciiStartsWithFold(rest, "public");
     bool isSystem = prAsciiStartsWithFold(rest, "system");
     if (!isPublic && !isSystem) {
@@ -1307,7 +1307,7 @@ bool readCdataSection(HtmlTokenizer* t) {
 bool readMarkupDeclaration(HtmlTokenizer* t, uint32_t start) {
     PrStringView text = htmlInputText(t);
     uint32_t at = t->input.pos;
-    PrStringView rest = prStringSlice(text, at, text.size - at);
+    PrStringView rest = prStringFrom(text, at);
     if (prStringStartsWith(rest, "--")) {
         t->input.pos = at + 2;
         return readComment(t, start);

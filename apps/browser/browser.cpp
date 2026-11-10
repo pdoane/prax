@@ -162,14 +162,7 @@ bool overPage(Browser& b, PrVec2 position) {
 // Returns the event as the tab's page sees it: its position in the page's viewport, and a scroll's delta in the page's
 // CSS pixels, at the tab's zoom.
 PrAppEvent toPage(const Browser& b, const Tab& tab, const PrAppEvent& e) {
-    PrAppEvent moved = e;
-    PrVec2 at{};
-    if (prAppEventPosition(&e, &at))
-        prAppEventSetPosition(&moved,
-            PrVec2{(at.x - b.chrome.page.left) / tab.zoom, (at.y - b.chrome.page.top) / tab.zoom});
-    if (e.kind == PrAppEventKind_Scroll)
-        moved.scroll.delta = PrVec2{e.scroll.delta.x / tab.zoom, e.scroll.delta.y / tab.zoom};
-    return moved;
+    return prAppEventPlaced(&e, PrVec2{b.chrome.page.left, b.chrome.page.top}, tab.zoom);
 }
 
 // Returns true while the keyboard goes to the page: the active tab shows a page, and nothing of the chrome has focus.

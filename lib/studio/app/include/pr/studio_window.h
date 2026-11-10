@@ -60,9 +60,11 @@ typedef bool (*PrStudioWindowOpenFn)(void* PR_NULLABLE context, PrStudioWindow* 
 // Called at the start of each frame, before its rounds, as the application's model takes what arrived since the last.
 typedef void (*PrStudioWindowFrameFn)(void* PR_NULLABLE context, PrStudioWindow* window, const PrAppFrame* frame);
 
-// Returns the variant of Studio's theme that the kit draws in, for the user's preferences, at the start of each frame.
-typedef PrKitThemeVariant (*PrStudioWindowThemeFn)(void* PR_NULLABLE context, PrStudioWindow* window,
-    const PrAppUserPreferences* preferences);
+// Called at the start of each frame with Studio's palette for the user's preferred color scheme in `palette`, which the
+// application changes or replaces to give the kit its colors. The kit takes the palette when it changes. Its fonts and
+// the looks of its widgets derive from the theme, and the window keeps them.
+typedef void (*PrStudioWindowPaletteFn)(void* PR_NULLABLE context, PrStudioWindow* window,
+    const PrAppUserPreferences* preferences, PrKitPalette* palette);
 
 // Called with each event of the window before the window's context takes it. Returns true if the application took the
 // event, which the context then never sees. The window asks for a frame either way. The events of the windows that show
@@ -138,7 +140,7 @@ typedef struct PrStudioWindowDesc {
     PrGpuSwapChainIntent intent;
 
     PrStudioWindowOpenFn PR_NULLABLE open;
-    PrStudioWindowThemeFn PR_NULLABLE theme;    // or null for the variant of the user's preferred color scheme
+    PrStudioWindowPaletteFn PR_NULLABLE palette;    // or null for Studio's palette of the preferred color scheme
     PrStudioWindowFrameFn PR_NULLABLE beginFrame;
     PrStudioWindowEventFn PR_NULLABLE event;
     PrStudioWindowBuildFn build;
