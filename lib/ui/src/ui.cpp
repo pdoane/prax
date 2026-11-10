@@ -93,10 +93,24 @@ struct UiTween {
     bool started;
 };
 
+// A part of a custom title bar that the current round's build declared (prUiTitleBarRegion).
+struct UiTitleBarPart {
+    PrLayoutNode node;
+    PrAppTitleBarRegionKind kind;
+};
+
 // A queued event. Its text starts at `textStart` in the queue's text buffer.
 struct UiQueued {
     PrAppEvent event;
     uint32_t textStart;
+    PrLayoutNode target;            // the node that receives the event, or kPrLayoutNodeNone to route it by its kind
+    PrApp* PR_NULLABLE retainer;    // the application that retained the event's source while it waits, or null
+};
+
+// An event whose source the context retained (prAppEventRetain), and the application that retained it.
+struct UiRetained {
+    PrApp* app;
+    PrAppEvent event;
 };
 
 // An event routed to a node in the current round.
@@ -138,12 +152,20 @@ struct UiWheel {
 };
 
 // A payload drag (prUiDragStart). A press on the source arms it, and the payload is carried once the pointer moves past
-// the threshold.
+// the threshold. A drag of the system over the window carries its payload from the start.
 struct UiCarry {
     PrUiPayload payload;
     float threshold;
+    PrUiPayloadFlags flags;
     bool armed;
     bool carried;
+    bool external;                  // true for a drag of the system, which no press of the context holds
+};
+
+// A drop target that a build declared, and the kind of payload it takes.
+struct UiDropTarget {
+    PrLayoutNode node;
+    uint64_t kind;
 };
 
 // A group that the context keeps (prUiGroup), with its recipe's type, owner, hash and bytes. The entry holds a
@@ -222,7 +244,17 @@ constexpr PrColor kUiDuplicateFill = {1, 0.25f, 0.25f, 0.15f};
 // A context: the data it holds for the tree's nodes, its rounds, and the input that it routes.
 struct Ui {
     PrLayoutTree* tree;
-    PrApp* PR_NULLABLE app;            // whose clipboard widgets use
+    PrAppWindow* PR_NULLABLE window;   // whose clipboard widgets use
+
+    // The control that receives the clipboard's text when the pending read answers (prUiPaste). `pasteRead` is true
+    // while a read is pending.
+    PrLayoutNode pasteTarget;
+    bool pasteRead;
+
+    // The custom title bar's parts that the current round declared, and the regions that prUiOutput made of them.
+    RawArray<UiTitleBarPart> titleBarParts;
+    RawArray<PrAppTitleBarRegion> titleBarRegions;
+
     PrAppDisplay display;              // the display of the frame that runs, or of the last frame
     PrAppUserPreferences preferences;
 
@@ -269,6 +301,7 @@ struct Ui {
     PrLayoutNode clicked[kUiButtons];
     bool pressedRound[kUiButtons];  // true if the button was pressed in the current round
     PrRect textInput;               // the caret of the text being edited, if hasTextInput
+    PrAppTextInputKind textInputKind;
     bool hasTextInput;
     PrAppCursor cursor;
     RawArray<UiWheel> wheels;
@@ -276,8 +309,26 @@ struct Ui {
     PrLayoutNode dropOver;          // the innermost of the previous round's drop targets under the pointer
     PrLayoutNode dropped;           // the drop target in the current round, or none
     PrUiPayload droppedPayload;
-    RawArray<PrLayoutNode> dropTargets;     // drop targets made by the current round's build (prUiIsDropTarget)
-    RawArray<PrLayoutNode> lastDropTargets; // drop targets made by the previous build; drops in this round land on them
+
+    // The events with sources that the current round routed, which the context retained. An event's source is valid
+    // only during the event, and the program reads it in the round's build, such as a drop's.
+    RawArray<UiRetained> retained;
+    RawArray<UiDropTarget> dropTargets;     // drop targets made by the current round's build (prUiIsDropTarget)
+    RawArray<UiDropTarget> lastDropTargets; // drop targets made by the previous build; drops in this round land on them
+
+    PrAppDragOperationFlags dragOperations; // the operations that the source of a drag of the system allows
+
+    // A payload that may leave the window. Once the pointer that carries it leaves the viewport, the context hands it
+    // to the system. It stays `exported` until the system's drag ends, so that it keeps its source if it returns to the
+    // window.
+    PrVec2 viewport;                // the extent of the latest frame, in px
+    bool hasExported;
+    PrUiPayload exported;
+
+    // The exported payload whose drag ended in the current round, and what the target did with it (prUiExportEnded).
+    bool exportEnded;
+    PrUiPayload endedPayload;
+    PrAppDragOperation endedOperation;
 
     // --- Keys and focus ---
 
@@ -289,6 +340,11 @@ struct Ui {
     PrLayoutNode focus;
     PrLayoutNode focusRequest;
     bool focusRequested;
+
+    // The node that key presses start at while nothing is focused, as the current round set it, and as the previous
+    // round did, which routes this round's keys. None is the root.
+    PrLayoutNode keyRoot;
+    PrLayoutNode lastKeyRoot;
     bool focusVisible;
     PrLayoutNode keyActivated;          // the node activated by Enter or Space
     RawArray<PrLayoutNode> activations; // nodes activated in this round, which prUiActivate marked in the previous
@@ -447,7 +503,8 @@ void deliver(Ui* ui, PrLayoutNode node, const PrAppEvent& event) {
 // Returns true if an event of this kind changes the answers to a round's queries, so that a second such event in the
 // same round would be lost.
 bool isTransition(PrAppEventKind kind) {
-    return kind == PrAppEventKind_PointerDown || kind == PrAppEventKind_PointerUp || kind == PrAppEventKind_KeyDown;
+    return kind == PrAppEventKind_PointerDown || kind == PrAppEventKind_PointerUp ||
+        kind == PrAppEventKind_PointerCancel || kind == PrAppEventKind_KeyDown || kind == PrAppEventKind_Drop;
 }
 
 // Moves the drag of `b` to `position`.
@@ -479,18 +536,71 @@ void carry(Ui* ui) {
         p.carried = true;
 }
 
-// Returns the innermost node, starting at `node` and walking up its ancestors, that was a drop target in the previous
-// round and is not the payload's source. Returns none if there is no such node.
+// Returns the innermost node, starting at `node` and walking up its ancestors, that was a drop target for the payload's
+// kind in the previous round and is not the payload's source. Returns none if there is no such node.
 PrLayoutNode dropTargetOf(const Ui* ui, PrLayoutNode node) {
     for (PrLayoutNode at = node; at != kPrLayoutNodeNone; at = parentOf(ui, at)) {
         if (at == ui->payload.payload.source)
             continue;
         for (uint32_t i = 0; i < ui->lastDropTargets.count; ++i) {
-            if (ui->lastDropTargets.data[i] == at)
+            const UiDropTarget& target = ui->lastDropTargets.data[i];
+            if (target.node == at && target.kind == ui->payload.payload.kind)
                 return at;
         }
     }
     return kPrLayoutNodeNone;
+}
+
+// Carries the payload of a drag of the system over the window: a payload from a window of this application, or the
+// system's content. A payload that returns to the window it left keeps its source.
+void carryExternal(Ui* ui, const PrAppDragEvent& drag) {
+    ui->dragOperations = drag.operations;
+    PrUiPayload payload{.kind = kPrUiPayloadKindSystem, .source = kPrLayoutNodeNone};
+    if ((drag.forms & PrAppDataFormFlag_Payload) != 0) {
+        payload.kind = drag.payload.kind;
+        payload.value = drag.payload.value;
+        const PrUiPayload& left = ui->exported;
+        if (drag.fromThisWindow && ui->hasExported && left.kind == payload.kind && left.value == payload.value)
+            payload.source = left.source;
+    } else {
+        payload.forms = drag.forms;
+        payload.drop = drag.drop;
+    }
+    ui->payload = UiCarry{.payload = payload, .armed = true, .carried = true, .external = true};
+}
+
+// Hands a payload that left the window to the system, which carries it from here on to the window under the pointer.
+void handOff(Ui* ui) {
+    const PrUiPayload& payload = ui->payload.payload;
+    ui->exported = payload;
+    ui->hasExported = true;
+    PrAppDragDesc desc{
+        .content = {.forms = PrAppDataFormFlag_Payload, .payload = {.kind = payload.kind, .value = payload.value}},
+        .operations = PrAppDragOperationFlag_Move,
+    };
+    prAppWindowDragStart(ui->window, &desc);
+    ui->payload = UiCarry{};
+}
+
+// Returns the operation that answers a drag of the system over a drop target. A payload moves, and the system's content
+// is copied. If the source does not allow that operation, the answer is the first operation that the source allows.
+PrAppDragOperation dropOperationOf(const Ui* ui) {
+    if (!ui->payload.external || ui->dropOver == kPrLayoutNodeNone)
+        return PrAppDragOperation_None;
+    PrAppDragOperation wanted =
+        ui->payload.payload.kind == kPrUiPayloadKindSystem ? PrAppDragOperation_Copy : PrAppDragOperation_Move;
+    if ((ui->dragOperations & (1u << wanted)) != 0)
+        return wanted;
+    for (PrAppDragOperation operation = PrAppDragOperation_Copy; operation <= PrAppDragOperation_Link; ++operation) {
+        if ((ui->dragOperations & (1u << operation)) != 0)
+            return operation;
+    }
+    return PrAppDragOperation_None;
+}
+
+// Returns true if `point` lies outside a viewport of `extent`.
+bool outsideViewport(PrVec2 point, PrVec2 extent) {
+    return point.x < 0 || point.y < 0 || point.x >= extent.x || point.y >= extent.y;
 }
 
 // Gives the wheel deltas, in px, to the scroll containers and wheel nodes from `node` outward. Each one takes as much
@@ -623,7 +733,8 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
         deliver(ui, ui->focus, e);
         return;
     }
-    PrLayoutNode start = ui->focus != kPrLayoutNodeNone ? ui->focus : prLayoutTreeRoot(ui->tree);
+    PrLayoutNode root = prLayoutNodeIsValid(ui->tree, ui->lastKeyRoot) ? ui->lastKeyRoot : prLayoutTreeRoot(ui->tree);
+    PrLayoutNode start = ui->focus != kPrLayoutNodeNone ? ui->focus : root;
     const UiClaim* captured = nullptr;
     for (PrLayoutNode at = start; at != kPrLayoutNodeNone; at = parentOf(ui, at)) {
         if ((builtFlags(ui, at) & PrUiFlag_Disabled) == 0) {
@@ -645,7 +756,7 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
             return;
         }
     }
-    if (e.keyboard.key == PrAppKey_Escape && ui->payload.carried) {
+    if (e.keyboard.key == PrAppKey_Escape && ui->payload.carried && !ui->payload.external) {
         endDrag(ui->buttons[0], false);
         ui->payload = UiCarry{};
         return;
@@ -685,6 +796,10 @@ void route(Ui* ui, const PrAppEvent& e) {
                     to = button.capture;
             }
             carry(ui);
+            const UiCarry& p = ui->payload;
+            bool leaves = p.carried && !p.external && (p.flags & PrUiPayloadFlag_AnyWindow) != 0;
+            if (leaves && ui->window != nullptr && outsideViewport(e.pointer.position, ui->viewport))
+                handOff(ui);
             deliver(ui, to, e);
             break;
         }
@@ -693,6 +808,10 @@ void route(Ui* ui, const PrAppEvent& e) {
                 break;
             ui->focusVisible = false;
             ui->pressedRound[e.pointer.button] = true;
+            // The system holds the pointer while it carries a payload, so a press means that the drag is over, even if
+            // the backend's DragEnd never came.
+            if (e.pointer.button == 0)
+                ui->hasExported = false;
             for (PrLayoutNode at = ui->hovered; at != kPrLayoutNodeNone; at = parentOf(ui, at))
                 slotOf(ui, at).pressRound = ui->roundId;
             PrLayoutNode target = innermost(ui, ui->hovered, PrUiFlag_Pressable);
@@ -723,20 +842,63 @@ void route(Ui* ui, const PrAppEvent& e) {
             UiButton& b = ui->buttons[e.pointer.button];
             if (b.dragging)
                 moveDrag(b, e.pointer.position);
-            bool carried = e.pointer.button == 0 && ui->payload.carried;
+            bool carried = e.pointer.button == 0 && ui->payload.carried && !ui->payload.external;
             if (carried) {
                 ui->dropped = dropTargetOf(ui, ui->hovered);
                 ui->droppedPayload = ui->payload.payload;
             } else if (b.capture != kPrLayoutNodeNone && within(ui, ui->hovered, b.capture)) {
                 ui->clicked[e.pointer.button] = b.capture;
             }
-            if (e.pointer.button == 0)
+            if (e.pointer.button == 0 && !ui->payload.external)
                 ui->payload = UiCarry{};
             deliver(ui, b.capture != kPrLayoutNodeNone ? b.capture : ui->hovered, e);
             endDrag(b, true);
             b.capture = kPrLayoutNodeNone;
             break;
         }
+        case PrAppEventKind_PointerCancel: {
+            // The system took the pointer, as it does when it carries a drag, and no release follows.
+            for (uint32_t b = 0; b < kUiButtons; ++b) {
+                UiButton& button = ui->buttons[b];
+                if (button.capture != kPrLayoutNodeNone)
+                    deliver(ui, button.capture, e);
+                endDrag(button, false);
+                button.capture = kPrLayoutNodeNone;
+            }
+            if (!ui->payload.external)
+                ui->payload = UiCarry{};
+            break;
+        }
+        case PrAppEventKind_DragEnter:
+        case PrAppEventKind_DragOver:
+            carryExternal(ui, e.drag);
+            deliver(ui, ui->hovered, e);
+            break;
+        case PrAppEventKind_DragLeave:
+            if (ui->payload.external)
+                ui->payload = UiCarry{};
+            ui->hovered = kPrLayoutNodeNone;
+            break;
+        case PrAppEventKind_Drop:
+            carryExternal(ui, e.drag);
+            ui->dropped = dropTargetOf(ui, ui->hovered);
+            ui->droppedPayload = ui->payload.payload;
+            ui->payload = UiCarry{};
+            deliver(ui, ui->dropped != kPrLayoutNodeNone ? ui->dropped : ui->hovered, e);
+            break;
+        case PrAppEventKind_DragEnd:
+            if (ui->hasExported) {
+                ui->exportEnded = true;
+                ui->endedPayload = ui->exported;
+                ui->endedOperation = e.drag.operation;
+            }
+            ui->hasExported = false;
+            break;
+        case PrAppEventKind_PointerLeave:
+            // The backend sends Leave once no button is down, so no capture holds the pointer.
+            ui->hasPointer = false;
+            ui->hovered = kPrLayoutNodeNone;
+            break;
         case PrAppEventKind_Scroll:
             scroll(ui, ui->hovered, prAppEventScrollPixels(&e, kPrAppScrollLineHeight), e);
             break;
@@ -745,7 +907,7 @@ void route(Ui* ui, const PrAppEvent& e) {
             break;
         case PrAppEventKind_KeyUp:
         case PrAppEventKind_Text:
-        case PrAppEventKind_Clipboard:
+        case PrAppEventKind_Paste:
         case PrAppEventKind_CompositionUpdate:
         case PrAppEventKind_CompositionEnd:
             deliver(ui, ui->focus, e);
@@ -1020,6 +1182,13 @@ uint64_t baseIdentity(const Ui* ui, PrLayoutNode base) {
     return key != 0 ? prHashMixKeys(key, 1) : prHashMixKeys(base, 2);
 }
 
+// Releases the sources of the events that the last round routed.
+void releaseRetained(Ui* ui) {
+    for (uint32_t i = 0; i < ui->retained.count; ++i)
+        prAppEventRelease(ui->retained.data[i].app, &ui->retained.data[i].event);
+    ui->retained.clear();
+}
+
 // Begins a round. Takes over what the previous round passed to the next, and finds the node under the pointer in the
 // committed tree.
 void beginRound(Ui* ui, uint32_t index, const PrUiFrameDesc* desc) {
@@ -1030,12 +1199,15 @@ void beginRound(Ui* ui, uint32_t index, const PrUiFrameDesc* desc) {
     ui->routed.clear();
     ui->wheels.clear();
     ui->contexts.clear();
+    ui->titleBarParts.clear();
     ui->block = 0;
     ui->blockUsed = 0;
     ui->transitioned = false;
     ui->keyed = UiClaim{};
     ui->keyActivated = kPrLayoutNodeNone;
     ui->dropped = kPrLayoutNodeNone;
+    releaseRetained(ui);
+    ui->exportEnded = false;
     ui->tweening = false;
     for (uint32_t b = 0; b < kUiButtons; ++b) {
         ui->clicked[b] = kPrLayoutNodeNone;
@@ -1059,7 +1231,38 @@ void beginRound(Ui* ui, uint32_t index, const PrUiFrameDesc* desc) {
     ageGroups(ui);
 }
 
-// Routes queued events until the round reaches its second transition.
+// Builds the title bar regions of the output from the parts that the last round marked, at their bounds in the latest
+// layout. The controls within a Drag part become Client regions after it.
+void buildTitleBarRegions(Ui* ui) {
+    ui->titleBarRegions.clear();
+    for (uint32_t i = 0; i < ui->titleBarParts.count; ++i) {
+        const UiTitleBarPart& part = ui->titleBarParts.data[i];
+        PrRect rect = prLayoutRectToPx(prLayoutNodeBounds(ui->tree, part.node, PrLayoutCoordinates_Viewport));
+        ui->titleBarRegions.push(PrAppTitleBarRegion{.rect = rect, .kind = part.kind});
+        if (part.kind != PrAppTitleBarRegionKind_Drag)
+            continue;
+        for (uint32_t s = 0; s < ui->slots.count; ++s) {
+            const UiSlot& slot = ui->slots.data[s];
+            bool control = slot.flagsRound == ui->roundId && (slot.flags & (PrUiFlag_Pressable | PrUiFlag_Focusable)) != 0;
+            // A node with a region of its own, such as a window button, takes no Client region.
+            bool declared = false;
+            for (uint32_t j = 0; j < ui->titleBarParts.count && !declared; ++j)
+                declared = ui->titleBarParts.data[j].node == slot.node;
+            if (!control || declared)
+                continue;
+            PrLayoutNode at = parentOf(ui, slot.node);
+            while (at != kPrLayoutNodeNone && at != part.node)
+                at = parentOf(ui, at);
+            if (at == part.node) {
+                PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(ui->tree, slot.node, PrLayoutCoordinates_Viewport));
+                ui->titleBarRegions.push(PrAppTitleBarRegion{.rect = bounds, .kind = PrAppTitleBarRegionKind_Client});
+            }
+        }
+    }
+}
+
+// Routes queued events until the round reaches its second transition. A Drop event hands its source's reference to the
+// round.
 void routeQueue(Ui* ui) {
     if (ui->built == 0)
         return;
@@ -1074,7 +1277,12 @@ void routeQueue(Ui* ui) {
         if (text.size != 0)
             prAppEventSetText(&event, PrStringView{ui->queueText.data + queued.textStart, text.size});
         ++ui->consumed;
-        route(ui, event);
+        if (queued.retainer != nullptr)
+            ui->retained.push(UiRetained{.app = queued.retainer, .event = queued.event});
+        if (queued.target != kPrLayoutNodeNone)
+            deliver(ui, queued.target, event);
+        else
+            route(ui, event);
     }
 }
 
@@ -1096,7 +1304,7 @@ void endRound(Ui* ui) {
         if (button.capture != kPrLayoutNodeNone && !declaredTaking(button.capture, PrUiFlag_Pressable)) {
             button.capture = kPrLayoutNodeNone;
             endDrag(button, false);
-            if (b == 0)
+            if (b == 0 && !ui->payload.external)
                 ui->payload = UiCarry{};
         }
     }
@@ -1115,7 +1323,9 @@ void endRound(Ui* ui) {
     ui->lastClaims = ui->claims;
     ui->claims = claims;
     ui->claims.clear();
-    RawArray<PrLayoutNode> targets = ui->lastDropTargets;
+    ui->lastKeyRoot = ui->keyRoot;
+    ui->keyRoot = kPrLayoutNodeNone;
+    RawArray<UiDropTarget> targets = ui->lastDropTargets;
     ui->lastDropTargets = ui->dropTargets;
     ui->dropTargets = targets;
     ui->dropTargets.clear();
@@ -1172,6 +1382,32 @@ bool motionShows(const Ui* ui, PrLayoutNode node) {
     return !laidOut || shown.right.raw > shown.left.raw;
 }
 
+// Cancels the pending read of the clipboard, if there is one.
+void cancelPaste(Ui* ui) {
+    if (ui->pasteRead && ui->window != nullptr)
+        prAppCancel(prAppWindowApp(ui->window), ui);
+    ui->pasteRead = false;
+}
+
+// Queues the clipboard's text as a Paste event for the control that asked for it, and requests the frame that routes
+// it. A read that fails pastes nothing, and a clipboard without text pastes the empty string (prUiPaste).
+void pasteRead(void* PR_NULLABLE context, PrStatus status, PrStringView text) {
+    Ui* ui = static_cast<Ui*>(context);
+    ui->pasteRead = false;
+    if (status != PrStatus_Ok)
+        return;
+    UiQueued queued{
+        .event = {.kind = PrAppEventKind_Paste, .time = ui->time, .input = {.text = PrStringView{nullptr, text.size}}},
+        .textStart = ui->queueText.count,
+        .target = ui->pasteTarget,
+    };
+    if (text.size != 0)
+        ui->queueText.append(text.data, uint32_t(text.size));
+    ui->queue.push(queued);
+    if (ui->window != nullptr)
+        prAppWindowRequestFrame(ui->window);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1192,6 +1428,14 @@ PrUi* prUiCreate(PrLayoutTree* tree) {
 void prUiDestroy(PrUi* PR_NULLABLE ui) {
     if (ui == nullptr)
         return;
+    cancelPaste(ui);
+    releaseRetained(ui);
+    ui->retained.reset();
+    for (uint32_t i = ui->consumed; i < ui->queue.count; ++i) {
+        const UiQueued& queued = ui->queue.data[i];
+        if (queued.retainer != nullptr)
+            prAppEventRelease(queued.retainer, &queued.event);
+    }
     for (uint32_t i = 0; i < ui->states.count; ++i) {
         const UiState& state = ui->states.data[i];
         if (state.destroy != nullptr)
@@ -1203,6 +1447,8 @@ void prUiDestroy(PrUi* PR_NULLABLE ui) {
     ui->freeStates.reset();
     ui->queue.reset();
     ui->queueText.reset();
+    ui->titleBarParts.reset();
+    ui->titleBarRegions.reset();
     ui->routed.reset();
     ui->events.reset();
     ui->wheels.reset();
@@ -1236,23 +1482,40 @@ PrLayoutTree* prUiTree(const PrUi* ui) {
     return ui->tree;
 }
 
-void prUiSetApp(PrUi* ui, PrApp* PR_NULLABLE app) {
-    ui->app = app;
+void prUiSetWindow(PrUi* ui, PrAppWindow* PR_NULLABLE window) {
+    if (window != ui->window)
+        cancelPaste(ui);
+    ui->window = window;
 }
 
-PrApp* PR_NULLABLE prUiApp(const PrUi* ui) {
-    return ui->app;
+PrAppWindow* PR_NULLABLE prUiWindow(const PrUi* ui) {
+    return ui->window;
 }
 
 void prUiPushEvent(PrUi* ui, const PrAppEvent* event) {
     PR_ASSERT(!ui->building);
-    UiQueued queued{.event = *event, .textStart = ui->queueText.count};
+    UiQueued queued{.event = *event, .textStart = ui->queueText.count, .target = kPrLayoutNodeNone};
     // The queue holds the text, and the event holds its size alone.
     PrStringView text = prAppEventText(event);
     prAppEventSetText(&queued.event, PrStringView{nullptr, text.size});
     if (text.size != 0)
         ui->queueText.append(text.data, uint32_t(text.size));
+    // An event's source is valid only during the event, so the queue keeps it until the round that routes the event.
+    if (prAppEventSource(event) != kPrAppDataSourceNone && ui->window != nullptr) {
+        queued.retainer = prAppWindowApp(ui->window);
+        prAppEventRetain(queued.retainer, event);
+    }
     ui->queue.push(queued);
+}
+
+void prUiPaste(PrUi* ui, PrLayoutNode control) {
+    if (ui->window == nullptr)
+        return;
+    ui->pasteTarget = control;
+    if (ui->pasteRead)
+        return;
+    ui->pasteRead = true;
+    prAppDataReadText(prAppWindowApp(ui->window), kPrAppDataSourceClipboard, pasteRead, ui);
 }
 
 uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void* PR_NULLABLE context) {
@@ -1260,6 +1523,7 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
     PR_ASSERT(desc->display.pixelRatio > 0);
     ui->display = desc->display;
     ui->preferences = desc->preferences;
+    ui->viewport = desc->extent;
     if (prLayoutTreeTargetPixelRatio(ui->tree) != desc->display.pixelRatio)
         prLayoutTreeSetTargetPixelRatio(ui->tree, desc->display.pixelRatio);
     uint32_t limit = desc->maxRounds != 0 ? desc->maxRounds : 1;
@@ -1291,6 +1555,7 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
         settle = ui->transitioned;
         ++rounds;
     } while (rounds < limit && (ui->consumed < ui->queue.count || settle));
+    buildTitleBarRegions(ui);
     compactQueue(ui);
     return rounds;
 }
@@ -1450,9 +1715,15 @@ void prUiSetCursor(PrUi* ui, PrLayoutNode node, PrAppCursor cursor) {
     s.cursorRound = ui->roundId;
 }
 
-void prUiSetTextInput(PrUi* ui, PrRect caret) {
+void prUiSetTextInput(PrUi* ui, PrRect caret, PrAppTextInputKind kind) {
     ui->hasTextInput = true;
     ui->textInput = caret;
+    ui->textInputKind = kind;
+}
+
+void prUiTitleBarRegion(PrUi* ui, PrLayoutNode node, PrAppTitleBarRegionKind kind) {
+    PR_ASSERT(ui->building);
+    ui->titleBarParts.push(UiTitleBarPart{.node = node, .kind = kind});
 }
 
 PrAppOutput prUiOutput(const PrUi* ui) {
@@ -1461,8 +1732,12 @@ PrAppOutput prUiOutput(const PrUi* ui) {
         .wantsFrame = ui->frameRequested || ui->tweening || ui->repeating || ui->nextActivations.count != 0 ||
             ui->queue.count != 0,
         .hasTextInput = ui->hasTextInput,
+        .textInputKind = ui->textInputKind,
         .textInput = ui->textInput,
         .frameTime = ui->frameTime,
+        .titleBarRegions = ui->titleBarRegions.data,
+        .titleBarRegionCount = ui->titleBarRegions.count,
+        .dropOperation = dropOperationOf(ui),
     };
 }
 
@@ -1551,12 +1826,16 @@ bool prUiWheel(const PrUi* ui, PrLayoutNode node, PrVec2* out) {
     return false;
 }
 
-void prUiDragStart(PrUi* ui, PrLayoutNode source, float threshold, uint64_t kind, uint64_t value) {
-    if (!prUiIsPressed(ui, source, 0) || ui->payload.armed)
+void prUiDragStart(PrUi* ui, PrLayoutNode source, float threshold, uint64_t kind, uint64_t value, PrUiPayloadFlags flags) {
+    PR_ASSERT(kind != kPrUiPayloadKindSystem);
+    // The press that handed a payload to the system holds its capture until the system takes the pointer, and arms no
+    // other payload while the system carries the first.
+    if (!prUiIsPressed(ui, source, 0) || ui->payload.armed || ui->hasExported)
         return;
     ui->payload = UiCarry{
         .payload = {.kind = kind, .value = value, .source = source},
         .threshold = threshold,
+        .flags = flags,
         .armed = true,
     };
     carry(ui);
@@ -1566,13 +1845,18 @@ const PrUiPayload* PR_NULLABLE prUiDragging(const PrUi* ui) {
     return ui->payload.carried ? &ui->payload.payload : nullptr;
 }
 
-bool prUiIsDropTarget(PrUi* ui, PrLayoutNode node) {
-    ui->dropTargets.push(node);
-    return node != kPrLayoutNodeNone && ui->dropOver == node;
+bool prUiIsDropTarget(PrUi* ui, PrLayoutNode node, uint64_t kind) {
+    ui->dropTargets.push(UiDropTarget{.node = node, .kind = kind});
+    return node != kPrLayoutNodeNone && ui->dropOver == node && ui->payload.payload.kind == kind;
 }
 
 const PrUiPayload* PR_NULLABLE prUiDropped(const PrUi* ui, PrLayoutNode node) {
     return node != kPrLayoutNodeNone && ui->dropped == node ? &ui->droppedPayload : nullptr;
+}
+
+const PrUiPayload* PR_NULLABLE prUiExportEnded(const PrUi* ui, PrAppDragOperation* operation) {
+    *operation = ui->exportEnded ? ui->endedOperation : PrAppDragOperation_None;
+    return ui->exportEnded ? &ui->endedPayload : nullptr;
 }
 
 bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers) {
@@ -1603,6 +1887,11 @@ PrUiEvents prUiEvents(const PrUi* ui, PrLayoutNode node) {
 
 PrLayoutNode prUiFocus(const PrUi* ui) {
     return ui->focus;
+}
+
+void prUiSetKeyRoot(PrUi* ui, PrLayoutNode node) {
+    PR_ASSERT(ui->building);
+    ui->keyRoot = node;
 }
 
 void prUiSetFocus(PrUi* ui, PrLayoutNode node) {

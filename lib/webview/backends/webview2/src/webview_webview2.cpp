@@ -788,8 +788,8 @@ uint32_t listProcesses(PrWebView* browser, PrWebViewProcess* PR_NULLABLE out, ui
     ICoreWebView2ProcessInfoCollection* processes = nullptr;
     UINT total = 0;
     if (b->environment == nullptr || FAILED(b->environment->QueryInterface(IID_PPV_ARGS(&environment))) ||
-        FAILED(environment->GetProcessInfos(&processes)) || FAILED(processes->get_Count(&total)))
-    total = 0;
+            FAILED(environment->GetProcessInfos(&processes)) || FAILED(processes->get_Count(&total)))
+        total = 0;
     uint32_t count = 0;
     for (UINT i = 0; i < total; ++i) {
         ICoreWebView2ProcessInfo* process = nullptr;

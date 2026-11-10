@@ -241,10 +241,8 @@ int main(int argc, char** argv) {
     }
     openShared(b);
     openChrome(b);
-    PrAppDesc desc{.title = "Prax", .extent = {1280, 860}};
-    PrApp* app = prAppCreate(PrAppBackend_Default, &desc);
-    PrAppHandler handler = browserHandler(b);
-    prAppRun(app, &handler);
+    PrApp* app = prAppCreate(PrAppBackend_Default, nullptr);
+    prAppRun(app, browserHandler(b));
     prAppDestroy(app);
     closeChrome(b);
     closeShared(b);

@@ -36,7 +36,7 @@
 #include "pr/min_max.h"
 #include "pr/print.h"
 #include "pr/string.h"
-#include "pr/studio_window.h"
+#include "pr/studio_app.h"
 #include "pr/text.h"
 #include "pr/text_font.h"
 #include "pr/time.h"
@@ -421,7 +421,7 @@ struct Stream {
 
     PrDrawList* recorded = nullptr; // the page as the last frame recorded it, frozen
     PrAppDisplay display = prAppDisplayDefault();
-    PrAppUserPreferences preferences{};
+    PrAppUserPreferences preferences = prAppUserPreferencesDefault();
 };
 
 // The page's clock: a monotonic clock in milliseconds.
@@ -824,7 +824,6 @@ int main() {
     PrStudioWindowDesc desc{
         .title = "Prax Incremental",
         .extent = {1280, 860},
-        .fonts = fonts,
         .open = open,
         .theme = [](void*, PrStudioWindow*, const PrAppUserPreferences*) -> PrKitThemeVariant {
             return PrKitThemeVariant_Dark;
@@ -842,7 +841,8 @@ int main() {
         },
         .context = &e,
     };
-    PrStatus status = prStudioWindowRun(&desc);
+    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     if (status == PrStatus_NotSupported)
         printError("incremental: no GPU device to render with\n");

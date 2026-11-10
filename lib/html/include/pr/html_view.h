@@ -105,9 +105,10 @@ void prHtmlViewSetUserPreferences(PrHtmlView* view, const PrAppUserPreferences* 
 // if the document, its scroll offsets or the viewport changed since the last job.
 PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view);
 
-// Sets the application whose clipboard a text control's cut, copy and paste use, which must outlive the view. With
-// none, they do nothing. A paste's text comes back as a Clipboard event, which the host passes to the view.
-void prHtmlViewSetApp(PrHtmlView* view, PrApp* PR_NULLABLE app);
+// Sets the window whose application's clipboard a text control's cut, copy and paste use, which must outlive the view.
+// With none, they do nothing. A paste reads the clipboard, and the view handles the text as a Paste event once the read
+// answers. Setting another window cancels a pending read.
+void prHtmlViewSetWindow(PrHtmlView* view, PrAppWindow* PR_NULLABLE window);
 
 // Sets whether a text control's caret is shown, which it is by default. A host that compares renders hides it, as a
 // test runner does, since a screenshot of a blinking caret says nothing about the page.

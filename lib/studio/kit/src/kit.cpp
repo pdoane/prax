@@ -76,6 +76,8 @@ void makeLooks(PrKit& kit) {
     look(PrKitLookId_Radio, p.bg2, p.bg3, p.bg4, p.line3, p.text1, p.text2);
     look(PrKitLookId_RadioOn, p.bg2, p.bg3, p.bg4, p.accent, p.text1, p.text2);
     look(PrKitLookId_RadioOnDisabled, p.bg2, p.bg2, p.bg2, p.bg4, p.text4, p.text2);
+    look(PrKitLookId_WindowButton, clear, p.bg3, p.bg4, clear, p.text2, p.text2);
+    look(PrKitLookId_WindowClose, clear, p.danger, p.danger, clear, p.text2, p.text2);
     // A row of a list marks the pointer at once, so that a pointer moving down a list leaves no trail.
     kit.looks[PrKitLookId_Selectable].eases = false;
 }

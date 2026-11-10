@@ -80,8 +80,8 @@ void htmlScrollTo(HtmlSource& html, PrVec2 offset);
 // Returns the width of what the page's viewport scrolls through as its last layout laid it out, in CSS pixels.
 float htmlContentWidth(HtmlSource& html);
 
-// Gives the page the application whose clipboard its text controls use.
-void htmlSetApp(HtmlSource& html, PrApp* app);
+// Gives the page the window whose clipboard its text controls use.
+void htmlSetWindow(HtmlSource& html, PrAppWindow* window);
 
 // Loads the page at `path` in a host of its own, with what it loads from other origins answered by `capture` if it is
 // not empty, and with or without its scripts. Runs it until it settles, and writes it to `out` as

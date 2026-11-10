@@ -16,7 +16,7 @@
 #include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/string_view.h"
-#include "pr/studio_window.h"
+#include "pr/studio_app.h"
 #include "pr/vterm.h"
 
 #include "apps/terminal/terminal_app.h"
@@ -35,6 +35,7 @@ bool open(void* context, PrStudioWindow* window) {
     t.kit = prStudioWindowKit(window);
     t.ui = prStudioWindowUi(window);
     t.app = prStudioWindowApp(window);
+    t.window = prStudioWindowAppWindow(window);
     t.fonts = prStudioWindowFonts(window);
     openApp(t);
     PrStatus status = openTab(t);
@@ -112,7 +113,6 @@ int main(int argc, char** argv) {
     PrStudioWindowDesc desc{
         .title = "Terminal",
         .extent = {820, 560},
-        .fonts = fonts,
         .open = open,
         .event = [](void* context, PrStudioWindow*, const PrAppEvent* event) {
             return handleEvent(appOf(context), *event);
@@ -128,7 +128,8 @@ int main(int argc, char** argv) {
         },
         .context = &t,
     };
-    PrStatus status = prStudioWindowRun(&desc);
+    PrStudioAppDesc app{.fonts = fonts, .window = &desc};
+    PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     prFontSystemDestroy(system);
     if (status == PrStatus_NotSupported)

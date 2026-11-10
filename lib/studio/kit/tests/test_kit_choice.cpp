@@ -2,6 +2,7 @@
 #include "pr/kit_choice.h"
 #include "pr/kit_image.h"
 
+#include "tools/harness/app_drag_window.h"
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
@@ -191,6 +192,55 @@ TEST_CASE("a reorderable tab dragged past its neighbor reports the move on its s
     CHECK(to == 2);
     // The release that drops a tab chooses nothing.
     CHECK(selected == 0);
+    CHECK(kitVerified(f.tree));
+}
+
+TEST_CASE("a strip of a group receives a tab of the group from another window, and passes its own to the system") {
+    KitFixture f;
+    uint32_t selected = 0;
+    PrLayoutNode nodes[3] = {};
+    uint32_t receives = 0;
+    PrUiKey key = 0;
+    uint32_t to = 0;
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode strip = prKitTabStrip(f.kit, root, {.reorderable = true, .group = 77}, {});
+        tabs(f, strip, kTabs, 3, &selected, nodes);
+        receives += prKitTabReceived(f.kit, strip, &key, &to) ? 1 : 0;
+    };
+    f.frame();
+    // A tab of another window's strip arrives over the second tab's right half, and goes after it.
+    PrRect second = f.bounds(nodes[1]);
+    PrVec2 at{second.right - 2, (second.top + second.bottom) / 2};
+    PrAppDragEvent drag{
+        .position = at,
+        .forms = PrAppDataFormFlag_Payload,
+        .operations = PrAppDragOperationFlag_Move,
+        .payload = {.kind = 77, .value = 1234},
+    };
+    f.push(PrAppEvent{.kind = PrAppEventKind_DragEnter, .drag = drag});
+    f.frame();
+    f.frame();
+    CHECK(prUiOutput(f.ui).dropOperation == PrAppDragOperation_Move);
+    drag.operation = PrAppDragOperation_Move;
+    f.push(PrAppEvent{.kind = PrAppEventKind_Drop, .drag = drag});
+    f.frame();
+    CHECK(receives == 1);
+    CHECK(key == 1234);
+    CHECK(to == 2);
+
+    // A tab of the group dragged out of the window goes to the system, by its key.
+    harness::DragWindow window;
+    prUiSetWindow(f.ui, &window);
+    PrVec2 start = f.center(nodes[0]);
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = start}});
+    f.frame();
+    f.move(PrVec2{start.x + 10, start.y});
+    f.frame();
+    f.move(PrVec2{start.x, -20});
+    f.frame();
+    REQUIRE(window.starts == 1);
+    CHECK(window.started.content.payload.kind == 77);
+    prUiSetWindow(f.ui, nullptr);
     CHECK(kitVerified(f.tree));
 }
 

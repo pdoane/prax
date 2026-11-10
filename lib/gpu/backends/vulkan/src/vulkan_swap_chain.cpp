@@ -91,7 +91,7 @@ PrStatus rebuild(VulkanDevice* d, VulkanSwapChain* s, VkExtent2D requested) {
     info.imageUsage = s->usage;
     info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     info.preTransform = capabilities.currentTransform;
-    info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    info.compositeAlpha = s->compositeAlpha;
     info.presentMode = s->presentMode;
     info.clipped = VK_TRUE;
     info.oldSwapchain = s->swapChain;
@@ -206,6 +206,11 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     s->device = device;
     s->surface = native;
     s->presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    // A transparent swap chain presents premultiplied alpha where the surface composes it, and opaque elsewhere.
+    s->compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    if ((desc->flags & PrGpuSwapChainFlag_Transparent) != 0 &&
+            (capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR) != 0)
+        s->compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
     s->current = UINT32_MAX;
     // The images may be copied from and into, because a draw that reads its target may copy it. They are also sampled
     // and read as input attachments if the surface allows it.

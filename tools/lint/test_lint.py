@@ -292,6 +292,22 @@ class Namespaces(unittest.TestCase):
         check(report, os.path.join(lint.ROOT, path), source, *args)
         return [(line, rule) for _, line, rule, _ in report.problems]
 
+    def test_an_objective_c_interface_is_documented_as_a_struct_is(self):
+        report = lint.Report()
+        lint.check_documented(report, 'lib/a/src/a.h', '#import <AppKit/AppKit.h>\n\n@class PrAView;\n\n'
+                              '// A view.\n@interface PrAView : NSView\n@property(nonatomic) BOOL shown;\n\n'
+                              '- (void)show;\n@end\n')
+        self.assertEqual(report.problems, [])
+        lint.check_documented(report, 'lib/a/src/a.h', '@interface PrAView : NSView\n@end\n')
+        self.assertEqual([p[2] for p in report.problems], ['undocumented'])
+
+    def test_an_objective_c_class_keeps_its_prefix_where_another_file_declares_it(self):
+        report = lint.Report()
+        lint.check_internal_names(report, 'lib/a/src/a_view.mm', 'void f(PrAView* view) {}\n', set(), {'PrAView'})
+        self.assertEqual(report.problems, [])
+        lint.check_internal_names(report, 'lib/a/src/a_view.mm', 'void f(PrAView* view) {}\n', set())
+        self.assertEqual([p[2] for p in report.problems], ['internal-name'])
+
     def test_pr_impl_is_spelled_out_only_by_a_macro(self):
         source = ('#define ASSERT(c) \\\n    ::pr_impl::fail(c)\n'
                   '// pr_impl::inComment\n'
@@ -1515,6 +1531,9 @@ class Indentation(unittest.TestCase):
         self.assertEqual(self.problems('void f() {\n    PrX x{\n        .a = 1,\n        .b = 2,\n    };\n}\n'), [])
         self.assertEqual(self.problems('enum {\n    A,\n    B,\n};\n'), [])
 
+    def test_a_directive_within_an_initializer_list_leaves_its_items_alone(self):
+        self.assertEqual(self.problems('int k[] = {\n    1,\n#if A\n    2,\n#endif\n    3,\n};\n'), [])
+
     def test_blocks_switches_and_linkage(self):
         self.assertEqual(self.problems('void f() {\n    switch (x) {\n        case 1:\n            g();\n'
                                        '            break;\n    }\n}\n'), [])
@@ -1582,6 +1601,13 @@ class LineBreaks(unittest.TestCase):
     def test_a_wrapped_head_is_indented_past_its_body(self):
         indented = layout.indented_text('void f(int a,\n    int b) {\n    g();\n    if (a &&\n        b)\n        h();\n}\n')
         self.assertEqual(indented, 'void f(int a,\n        int b) {\n    g();\n    if (a &&\n            b)\n        h();\n}\n')
+
+    def test_a_head_that_continues_with_a_macro_keeps_its_body(self):
+        text = 'void f() {\n    if (a &&\n        FAILED(g()))\n    b = 0;\n}\n'
+        self.assertEqual(layout.indented_text(text), 'void f() {\n    if (a &&\n            FAILED(g()))\n        b = 0;\n}\n')
+        # A macro that begins a statement still ends it.
+        self.assertEqual(layout.indented_text('struct S {\n    PR_X(a)\n    int b;\n};\n'),
+                         'struct S {\n    PR_X(a)\n    int b;\n};\n')
 
     def test_a_statement_continues_past_an_initializer_that_ends_a_line(self):
         self.assertEqual(layout.indented_text('void f() {\n    p = PrX{a}\n    + q;\n}\n'),

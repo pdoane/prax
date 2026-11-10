@@ -43,6 +43,7 @@ struct Window {
     PrDrawRendererBackend backend = PrDrawRendererBackend_Default;
 
     PrApp* app = nullptr;
+    PrAppWindow* window = nullptr;
     PrGpuDevice* device = nullptr;
     PrGpuSwapChain* swapChain = nullptr;
     PrDrawRenderer* renderer = nullptr;
@@ -81,7 +82,7 @@ bool openDevice(Window& w) {
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
-            prAppSurface(w.app, &surface) != PrStatus_Ok ||
+            prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
             prDrawRendererCreate(w.backend, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
         closeDevice(w);
@@ -149,20 +150,11 @@ void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
     prGpuCommandsSubmit(commands);
 }
 
-void start(void* context, PrApp* app, const PrAppFrame*) {
-    Window& w = *static_cast<Window*>(context);
-    w.app = app;
-    if (!openDevice(w)) {
-        printError("draw: no GPU device to render with\n");
-        prAppStop(app);
-        return;
-    }
-    print("draw: rendering with {} on {}\n", prDrawRendererBackendName(w.backend), prGpuDeviceInfo(w.device).backend);
-    announce(w);
-    prAppRequestFrame(app);
+bool open(void*, PrAppWindow*, const PrAppFrame*) {
+    return true;
 }
 
-PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
     // A lost device is made again, with everything on it.
     if (w.device != nullptr && prGpuDeviceIsLost(w.device))
@@ -193,8 +185,12 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     return PrAppOutput{.wantsFrame = true};
 }
 
-void event(void* context, PrApp* app, const PrAppEvent* e) {
+void event(void* context, PrAppWindow*, const PrAppEvent* e) {
     Window& w = *static_cast<Window*>(context);
+    if (e->kind == PrAppEventKind_CloseRequested) {
+        prAppStop(w.app);
+        return;
+    }
     if (e->kind == PrAppEventKind_PointerMove || e->kind == PrAppEventKind_PointerDown ||
             e->kind == PrAppEventKind_PointerUp) {
         w.pointer = e->pointer.position;
@@ -211,9 +207,31 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
     } else if (e->keyboard.key == ' ') {
         w.paused = !w.paused;
     } else if (e->keyboard.key == PrAppKey_Escape) {
-        prAppStop(app);
+        prAppStop(w.app);
     }
 }
+
+// Opens the window and the device that renders to it. The window's close stops the application.
+bool start(void* context, PrApp* app) {
+    Window& w = *static_cast<Window*>(context);
+    w.app = app;
+    PrAppWindowDesc desc{
+        .title = "Prax Draw",
+        .extent = {960, 720},
+        .handler = {.context = &w, .open = open, .frame = frame, .event = event},
+    };
+    if (prAppWindowCreate(app, &desc, &w.window) != PrStatus_Ok)
+        return false;
+    if (!openDevice(w)) {
+        printError("draw: no GPU device to render with\n");
+        return false;
+    }
+    print("draw: rendering with {} on {}\n", prDrawRendererBackendName(w.backend), prGpuDeviceInfo(w.device).backend);
+    announce(w);
+    return true;
+}
+
+void appEvent(void*, PrApp*, const PrAppEvent*) {}
 
 void shutdown(void* context, PrApp*) {
     closeDevice(*static_cast<Window*>(context));
@@ -248,10 +266,8 @@ int main(int argc, char** argv) {
     w.scene = first >= 1 && first <= w.sceneCount ? first - 1 : 0;
     w.list = prDrawListCreate();
 
-    PrAppDesc desc{.title = "Prax Draw", .extent = {960, 720}};
-    PrApp* app = prAppCreate(PrAppBackend_Default, &desc);
-    PrAppHandler handler{&w, start, frame, event, shutdown};
-    prAppRun(app, &handler);
+    PrApp* app = prAppCreate(PrAppBackend_Default, nullptr);
+    prAppRun(app, {.context = &w, .start = start, .event = appEvent, .shutdown = shutdown});
     prAppDestroy(app);
 
     prDrawListRelease(w.list);

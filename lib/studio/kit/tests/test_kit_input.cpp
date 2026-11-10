@@ -573,7 +573,7 @@ TEST_CASE("an asset field takes a dropped payload of its kind, and passes others
         PrKitButton content{.text = "cube.mesh"};
         source = prKitButton(f.kit, root, content, {});
         if (prUiIsPressed(f.ui, source, 0))
-            prUiDragStart(f.ui, source, 4, kind, 42);
+            prUiDragStart(f.ui, source, 4, kind, 42, 0);
         PrKitAssetField ref{.name = "player.mesh", .icon = PrKitIconKind_Cube, .kind = 7};
         field = prKitAssetField(f.kit, root, ref);
         uint64_t value = 0;

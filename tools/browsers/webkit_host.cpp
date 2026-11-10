@@ -22,7 +22,6 @@
 //                    [--appearance light|dark] <url>
 
 #include "pr/app.h"
-#include "pr/app_cocoa.h"
 #include "pr/assert.h"
 #include "pr/string_ops.h"
 #include "pr/webview.h"
@@ -64,7 +63,7 @@ struct Host {
     std::string pdf;                // where to print the page, or empty. With neither, the host runs until stopped
     PrUVec2 size{1024, 768};
     float pixelRatio = 0;
-    PrAppUserPreferences preferences{};
+    PrAppUserPreferences preferences = prAppUserPreferencesDefault();
     int status = 0;
 
     // The process last printed for each role, and the thread that wakes the application to look again. WebKit may move
@@ -187,17 +186,17 @@ int main(int argc, char** argv) {
     if (i != argc - 1 || (!h.screenshot.empty() && !h.pdf.empty()))
         return usage();
     h.url = argv[argc - 1];
-    PrAppDesc appDesc{.title = "WebKit host", .extent = {64, 64}, .headless = true};
-    h.app = prAppCocoaCreate(&appDesc);
-    PrAppHandler handler{
-        &h,
-        [](void* context, PrApp* app, const PrAppFrame*) {
+    PrAppOptions options{.headless = true};
+    h.app = prAppCreate(PrAppBackend_Default, &options);
+    prAppRun(h.app, {
+        .context = &h,
+        .start = [](void* context, PrApp* app) {
             Host& h = *static_cast<Host*>(context);
             PrWebViewDesc desc{.viewport = h.size, .pixelRatio = h.pixelRatio, .preferences = &h.preferences};
             if (prWebViewCreate(PrWebViewBackend_WebKit, &desc, &h.browser) != PrStatus_Ok) {
                 std::fprintf(stderr, "webkit_host: no browser\n");
-                stop(h, 1);
-                return;
+                h.status = 1;
+                return false;
             }
             // The processes start once the page begins to load, so the host looks for them until it has them all.
             h.poller = std::thread([&h, app] {
@@ -207,14 +206,14 @@ int main(int argc, char** argv) {
                 }
             });
             prWebViewLoad(h.browser, h.url, loaded, &h);
+            return true;
         },
-        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
-        [](void* context, PrApp*, const PrAppEvent* event) {
+        .event = [](void* context, PrApp*, const PrAppEvent* event) {
             Host& h = *static_cast<Host*>(context);
             if (event->kind == PrAppEventKind_Wake && h.browser != nullptr && h.polling)
                 nameProcesses(h);
         },
-        [](void* context, PrApp*) {
+        .shutdown = [](void* context, PrApp*) {
             Host& h = *static_cast<Host*>(context);
             h.polling = false;
             if (h.poller.joinable())
@@ -222,8 +221,7 @@ int main(int argc, char** argv) {
             prWebViewDestroy(h.browser);
             h.browser = nullptr;
         },
-    };
-    prAppRun(h.app, &handler);
+    });
     prAppDestroy(h.app);
     return h.status;
 }

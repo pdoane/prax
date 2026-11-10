@@ -1059,6 +1059,13 @@ enum {
     // Presents as soon as the frame's commands are done, from any thread, outside the window's display transaction.
     // While a window is being resized, it can show a frame at the wrong size.
     PrGpuSwapChainFlag_Threaded = 1 << 0,
+
+    // Presents the textures' alpha, with premultiplied colors, so that a window with a backdrop shows it where the
+    // alpha is less than one (PrAppWindowBackdrop). Without the flag, the window shows the textures as opaque. A window
+    // keeps the choice of its first swap chain: on Windows, a transparent swap chain on a window that has shown an
+    // opaque one shows that one's last frame through it. A window that may show a backdrop takes the flag from its
+    // first swap chain on.
+    PrGpuSwapChainFlag_Transparent = 1 << 1,
 };
 typedef uint8_t PrGpuSwapChainFlags;
 

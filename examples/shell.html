@@ -1,22 +1,20 @@
 <!doctype html>
-<!-- The page that hosts an example built for the web. lib/app's web backend draws into its canvas, which fills the
-     window. -->
+<!-- The page that hosts an example built for the web. lib/app's web backend adds the example's windows to the body, which
+     fills the browser's window. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prax</title>
 <style>
-html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
-canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1e1e1e; }
 </style>
 </head>
 <body>
-<canvas id="canvas" tabindex="0"></canvas>
 <!-- The page's query holds the program's arguments. Both ?--renderer=cpu&--scene=2 and ?arg=--renderer&arg=cpu pass
      them. -->
 <script>
-var Module = {canvas: document.getElementById("canvas"), arguments: []};
+var Module = {arguments: []};
 for (const [name, value] of new URLSearchParams(location.search)) {
     if (name !== "arg")
         Module.arguments.push(name);

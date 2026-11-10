@@ -507,7 +507,7 @@ page_host::Media paneMedia(const PaneChoice& pane, const Source& source) {
     return prints(source) ? pane.media : page_host::Media_Screen;
 }
 
-Ui* uiCreate(PrGpuDevice* device, PrApp* app) {
+Ui* uiCreate(PrGpuDevice* device, PrAppWindow* window) {
     Ui* ui = new Ui{};
     ui->device = device;
     ui->fonts = prFontSetCreate(nullptr);
@@ -517,7 +517,7 @@ Ui* uiCreate(PrGpuDevice* device, PrApp* app) {
     PrLayoutTreeDesc tree{.shaper = ui->shaper};
     ui->layout = prLayoutTreeCreate(&tree);
     ui->ui = prUiCreate(ui->layout);
-    prUiSetApp(ui->ui, app);
+    prUiSetWindow(ui->ui, window);
     PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Light, ui->fonts);
     ui->kit = prKitCreate(ui->ui, &theme);
     prDrawRendererCreate(PrDrawRendererBackend_Default, device, nullptr, &ui->renderer);
@@ -585,7 +585,7 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
                 return false;
             prUiPushEvent(ui->ui, &event);
             return true;
-        case PrAppEventKind_Clipboard:
+        case PrAppEventKind_Paste:
             prUiPushEvent(ui->ui, &event);
             return true;
         default:

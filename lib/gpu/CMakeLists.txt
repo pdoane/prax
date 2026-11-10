@@ -61,7 +61,7 @@ if (PR_GPU_D3D12)
     target_sources(pr_gpu PRIVATE backends/d3d12/src/gpu_d3d12.cpp)
     pr_headers(pr_gpu PUBLIC backends/d3d12/include)
     target_compile_definitions(pr_gpu PRIVATE PR_GPU_HAS_D3D12)
-    target_link_libraries(pr_gpu PUBLIC d3d12 dxgi)
+    target_link_libraries(pr_gpu PUBLIC d3d12 dcomp dxgi)
 endif()
 
 # The memory devices: the memory backend, which presents nothing, and the Canvas 2D backend, whose textures are also a

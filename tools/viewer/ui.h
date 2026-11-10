@@ -148,8 +148,8 @@ std::string paneName(const PaneChoice& pane, const std::vector<harness::Renderer
 page_host::Media paneMedia(const PaneChoice& pane, const Source& source);
 
 // Creates controls drawn on the device, a device of prGpuDeviceCreate, which renders them into the frame over the
-// documents.
-Ui* uiCreate(PrGpuDevice* device, PrApp* app);
+// documents, in `window`, whose clipboard they use.
+Ui* uiCreate(PrGpuDevice* device, PrAppWindow* window);
 
 // Destroys the controls.
 void uiDestroy(Ui* ui);

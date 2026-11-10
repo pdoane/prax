@@ -721,7 +721,7 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
         prLayoutTreeFrameSetStyle(kit->tree, tab, kitStyle(*kit, DockTabBox{}, DockTabFlex{}, fill,
             KitFont{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap}, ink));
         if (enabled && prUiIsPressed(ui, tab, 0))
-            prUiDragStart(ui, tab, kDragThreshold, kPrKitDockDragKind, panel);
+            prUiDragStart(ui, tab, kDragThreshold, kPrKitDockDragKind, panel, 0);
 
         PrKitDockTab info = b.describe(b.context, panel);
         prLayoutTreeFrameText(kit->tree, tab, 0, info.title);
@@ -736,7 +736,7 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
             stage(b, DockOp{.panel = panel, .kind = DockOpKind_Remove});
 
         // A drop on a tab inserts on the side of the tab's middle that the pointer is on.
-        bool over = prUiIsDropTarget(ui, tab);
+        bool over = prUiIsDropTarget(ui, tab, kPrKitDockDragKind);
         PrRect rect = boundsOf(*kit, tab);
         bool after = b.pointer.x > (rect.left + rect.right) / 2;
         PrKitDockPanelId dropped = panelOf(prUiDropped(ui, tab));
@@ -751,7 +751,7 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
     b.dock->scratch.resize(base);
 
     // A drop on the strip past its tabs appends.
-    prUiIsDropTarget(ui, strip);
+    prUiIsDropTarget(ui, strip, kPrKitDockDragKind);
     PrKitDockPanelId appended = panelOf(prUiDropped(ui, strip));
     if (appended != 0)
         stage(b, DockOp{.panel = appended, .leaf = leaf, .index = kArrayMissing, .kind = DockOpKind_ToTab});
@@ -785,7 +785,7 @@ void buildLeaf(DockBuild& b, PrLayoutNode parent, PrKitDockNode leaf) {
         prKitLabel(kit, content, {.text = "No panel"}, faint);
     }
 
-    bool over = prUiIsDropTarget(kit->ui, content);
+    bool over = prUiIsDropTarget(kit->ui, content, kPrKitDockDragKind);
     PrKitDockPanelId dropped = panelOf(prUiDropped(kit->ui, content));
     if (dropped == 0 && !(over && b.dragging))
         return;

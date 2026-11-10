@@ -315,9 +315,25 @@ function(pr_page_tests module)
     set_target_properties(${name} PROPERTIES SUFFIX ".html")
     target_link_options(${name} PRIVATE "--shell-file=${shell}" -sEXIT_RUNTIME=1)
     set_property(TARGET ${name} APPEND PROPERTY LINK_DEPENDS ${shell})
-    foreach (file IN LISTS PAGE_PRELOAD)
-        target_link_options(${name} PRIVATE "SHELL:--preload-file \"${file}\"")
+    pr_web_preload(${name} ${PAGE_PRELOAD})
+endfunction()
+
+# Packages files into a web page's file system, each as <host path>@<page path>. The linker reads them from a response
+# file, so that a page's command line stays within Windows' limit however many files the page packages.
+#
+#   pr_web_preload(<target> <host path>@<page path>...)
+function(pr_web_preload target)
+    if (NOT ARGN)
+        return()
+    endif()
+    set(content "")
+    foreach (file IN LISTS ARGN)
+        string(APPEND content "--preload-file \"${file}\"\n")
     endforeach()
+    set(response ${CMAKE_CURRENT_BINARY_DIR}/${target}_preload.rsp)
+    file(GENERATE OUTPUT ${response} CONTENT "${content}")
+    target_link_options(${target} PRIVATE "@${response}")
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS ${response})
 endfunction()
 
 # A program that a tools/ runner drives, built on the module it exercises and the harnesses' support.

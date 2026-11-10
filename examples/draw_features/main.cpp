@@ -41,6 +41,7 @@ struct Window {
     PrTextShaper* shaper = nullptr;
 
     PrApp* app = nullptr;
+    PrAppWindow* window = nullptr;
     PrGpuDevice* device = nullptr;
     PrGpuSwapChain* swapChain = nullptr;
     PrDrawRenderer* renderer = nullptr;
@@ -81,10 +82,9 @@ bool openDevice(Window& w) {
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
-            prAppSurface(w.app, &surface) != PrStatus_Ok ||
+            prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
-            prDrawRendererCreate(PrDrawRendererBackend_Fragment, w.device, nullptr, &w.renderer) != PrStatus_Ok ||
-            prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
+            prDrawRendererCreate(PrDrawRendererBackend_Fragment, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
         closeDevice(w);
         return false;
     }
@@ -113,11 +113,20 @@ void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
             !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     PrGpuSwapChainInfo info = prGpuSwapChainInfo(w.swapChain);
-    bool mapped = info.format != PrGpuFormat_Bgra8 || info.space != PrColorSpace_Srgb;
+    // The list renders straight into an 8-bit sRGB drawable, and into any other drawable through the display shader,
+    // which is made for the first such frame, as a device that never makes such a drawable may have no shaders to run
+    // it.
+    PrPixelFormat direct{};
+    bool mapped = info.space != PrColorSpace_Srgb || !prGpuFormatToPixelFormat(info.format, &direct) ||
+        direct == PrPixelFormat_RgbaF16;
+    if (mapped && w.display == nullptr && prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
+        prGpuCommandsSubmit(commands);
+        return;
+    }
     PrGpuTexture target = mapped ? renderedFor(w, extent) : drawable;
     PrDrawTarget into{
         .extent = extent,
-        .format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8),
+        .format = mapped ? PrPixelFormat(PrPixelFormat_RgbaF16) : direct,
         .commands = commands,
     };
     prDrawFramePrepare(w.frame, w.list, &into);
@@ -143,19 +152,11 @@ void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
     prGpuCommandsSubmit(commands);
 }
 
-void start(void* context, PrApp* app, const PrAppFrame*) {
-    Window& w = *static_cast<Window*>(context);
-    w.app = app;
-    if (!openDevice(w)) {
-        printError("draw_features: no GPU device to render with\n");
-        prAppStop(app);
-        return;
-    }
-    announce(w);
-    prAppRequestFrame(app);
+bool open(void*, PrAppWindow*, const PrAppFrame*) {
+    return true;
 }
 
-PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
     // A lost device is made again, with everything on it.
     if (w.device != nullptr && prGpuDeviceIsLost(w.device))
@@ -184,8 +185,12 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     return PrAppOutput{.wantsFrame = true};
 }
 
-void event(void* context, PrApp* app, const PrAppEvent* e) {
+void event(void* context, PrAppWindow*, const PrAppEvent* e) {
     Window& w = *static_cast<Window*>(context);
+    if (e->kind == PrAppEventKind_CloseRequested) {
+        prAppStop(w.app);
+        return;
+    }
     if (e->kind != PrAppEventKind_KeyDown)
         return;
     uint32_t count = w.drawings.count();
@@ -195,9 +200,30 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
     } else if (e->keyboard.key == ' ') {
         w.paused = !w.paused;
     } else if (e->keyboard.key == PrAppKey_Escape) {
-        prAppStop(app);
+        prAppStop(w.app);
     }
 }
+
+// Opens the window and the device that renders to it. The window's close stops the application.
+bool start(void* context, PrApp* app) {
+    Window& w = *static_cast<Window*>(context);
+    w.app = app;
+    PrAppWindowDesc desc{
+        .title = "Prax Draw Features",
+        .extent = {1100, 828},
+        .handler = {.context = &w, .open = open, .frame = frame, .event = event},
+    };
+    if (prAppWindowCreate(app, &desc, &w.window) != PrStatus_Ok)
+        return false;
+    if (!openDevice(w)) {
+        printError("draw_features: no GPU device to render with\n");
+        return false;
+    }
+    announce(w);
+    return true;
+}
+
+void appEvent(void*, PrApp*, const PrAppEvent*) {}
 
 void shutdown(void* context, PrApp*) {
     closeDevice(*static_cast<Window*>(context));
@@ -219,10 +245,8 @@ int main(int argc, char** argv) {
     w.shaper = prTextShaperCreate(PrTextShaperBackend_Default);
     w.list = prDrawListCreate();
 
-    PrAppDesc desc{.title = "Prax Draw Features", .extent = {1100, 828}};
-    PrApp* app = prAppCreate(PrAppBackend_Default, &desc);
-    PrAppHandler handler{&w, start, frame, event, shutdown};
-    prAppRun(app, &handler);
+    PrApp* app = prAppCreate(PrAppBackend_Default, nullptr);
+    prAppRun(app, {.context = &w, .start = start, .event = appEvent, .shutdown = shutdown});
     prAppDestroy(app);
 
     prDrawListRelease(w.list);

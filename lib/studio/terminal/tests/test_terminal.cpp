@@ -1,5 +1,6 @@
 // Tests the terminal frame by frame, driven as an application drives it, with programs that the tests run.
 
+#include "pr/app_backend.h"
 #include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/base64.h"
@@ -47,15 +48,23 @@ namespace {
 // How long a test waits for its program, in milliseconds.
 constexpr double kPatience = 10000;
 
-// An application that records what the terminal asks of it: the URLs to open, the clipboard text, the notifications to
-// post (as title|body|tag), and the requests for attention. It counts its wakes, which come from the threads of the
-// terminal's process. Its window is active until a test clears `active`. Each post returns `postStatus`.
+// An application and its window that record what the terminal asks of them: the URLs to open, the clipboard text, the
+// last read of the clipboard (which `answer` answers), the notifications to post (as title|body|tag), and the requests
+// for attention. It counts its wakes, which come from the threads of the terminal's process. Its window is active until
+// a test clears `active`. Each post returns `postStatus`.
 struct FakeApp {
+    // The window, which names the fake as its application.
+    struct Window : PrAppWindow {
+        FakeApp* fake;
+    };
+
     PrApp app;
+    Window window;
     Atomic<uint32_t> wakes{};
     Array<String> urls;
     String clipboard = "";
     bool clipboardRequested = false;
+    PrAppDataRead read{};
     bool active = true;
     Array<String> posted;
     PrStatus postStatus = PrStatus_Ok;
@@ -63,27 +72,42 @@ struct FakeApp {
 
     FakeApp() {
         app = PrApp{};
-        app.wake = [](PrApp* a) { reinterpret_cast<FakeApp*>(a)->wakes.fetchAdd(1); };
-        app.isActive = [](PrApp* a) { return reinterpret_cast<FakeApp*>(a)->active; };
-        app.requestAttention = [](PrApp* a) { ++reinterpret_cast<FakeApp*>(a)->attention; };
-        app.notificationPost = [](PrApp* a, const PrAppNotificationDesc* desc) -> PrStatus {
+        app.wakeFn = [](PrApp* a) { reinterpret_cast<FakeApp*>(a)->wakes.fetchAdd(1); };
+        app.notificationPostFn = [](PrApp* a, const PrAppNotificationDesc* desc) -> PrStatus {
             FakeApp* fake = reinterpret_cast<FakeApp*>(a);
             fake->posted.push(format("{}|{}|{}", desc->title, desc->body, desc->tag));
             return fake->postStatus;
         };
-        app.openUrl = [](PrApp* a, PrStringView url) -> PrStatus {
+        app.openUrlFn = [](PrApp* a, PrStringView url) -> PrStatus {
             reinterpret_cast<FakeApp*>(a)->urls.push(String(url));
             return PrStatus_Ok;
         };
-        app.setClipboardText = [](PrApp* a, PrStringView text) -> PrStatus {
-            reinterpret_cast<FakeApp*>(a)->clipboard.assign(text.isNull() ? PrStringView("") : text);
+        app.dataReadFn = [](PrApp* a, const PrAppDataRead* read) {
+            FakeApp* fake = reinterpret_cast<FakeApp*>(a);
+            fake->clipboardRequested = true;
+            fake->read = *read;
+        };
+        app.cancelFn = [](PrApp*, void* PR_NULLABLE) {};
+        app.dataWriteFn = [](PrApp* a, PrAppDataSource, const PrAppDataContent* content) -> PrStatus {
+            reinterpret_cast<FakeApp*>(a)->clipboard.assign(content->text.isNull() ? PrStringView("") : content->text);
             return PrStatus_Ok;
         };
-        app.requestClipboardText = [](PrApp* a) { reinterpret_cast<FakeApp*>(a)->clipboardRequested = true; };
+        window = Window{};
+        window.fake = this;
+        window.appFn = [](const PrAppWindow* w) -> PrApp* { return &static_cast<const Window*>(w)->fake->app; };
+        window.requestFrameFn = [](PrAppWindow*) {};
+        window.isActiveFn = [](const PrAppWindow* w) { return static_cast<const Window*>(w)->fake->active; };
+        window.requestAttentionFn = [](PrAppWindow* w) { ++static_cast<Window*>(w)->fake->attention; };
     }
 
     FakeApp(const FakeApp&) = delete;
     FakeApp& operator=(const FakeApp&) = delete;
+
+    // Answers the last read of the clipboard's text with `text`.
+    void answer(PrStringView text) {
+        REQUIRE(read.kind == PrAppDataReadKind_Text);
+        reinterpret_cast<PrAppDataTextFn>(read.done)(read.context, PrStatus_Ok, text);
+    }
 
     // Takes the wakes since the last call, and returns true if there were any.
     bool woke() { return wakes.exchange(0) != 0; }
@@ -222,7 +246,7 @@ struct Locked {
 };
 
 // A terminal in its own kit, with a viewport of 640 by 480 px. It runs `program` with `arguments` in `directory`, or in
-// the launcher's directory if `directory` is the null view. `app` may be null.
+// the launcher's directory if `directory` is the null view. `window` may be null.
 struct Term {
     KitFixture f;
     PrProcessLauncher* launcher = prProcessLauncherCreate(PrProcessBackend_Default);
@@ -230,13 +254,13 @@ struct Term {
     PrVec2 viewport{640, 480};
 
     // If `setup` is set, it edits the terminal's description before the terminal is created.
-    Term(PrStringView program, Span<const PrStringView> arguments, PrApp* PR_NULLABLE app = nullptr,
+    Term(PrStringView program, Span<const PrStringView> arguments, PrAppWindow* PR_NULLABLE window = nullptr,
             PrStringView directory = {}, const Function<void(PrTerminalDesc*)>& setup = {},
             const KitFonts& fonts = KitFonts{}) : f(fonts) {
         PrTerminalDesc desc{
             .kit = f.kit,
             .font = font(13),
-            .app = app,
+            .window = window,
             .launcher = launcher,
             .program = program,
             .arguments = arguments.data(),
@@ -248,6 +272,8 @@ struct Term {
         if (setup)
             setup(&desc);
         REQUIRE(prTerminalCreate(&desc, &terminal) == PrStatus_Ok);
+        // As in a studio window, the kit's context pastes through the window.
+        prUiSetWindow(f.ui, window);
         // As in the terminal app, the terminal gives its background to the root, and the canvas shows it.
         f.build = [this](PrLayoutNode root) { prTerminalFrame(terminal, root, viewport, PrTerminalBackground_Parent); };
         f.frame();
@@ -749,7 +775,7 @@ TEST_CASE("terminal: a click with the primary modifier opens the URL under it, a
     const PrStringView arguments[] = {
         "-c", "printf 'see (https://example.com/a) and www.example.org file:///tmp\\n'; sleep 5",
     };
-    Term t("sh", arguments, &app.app);
+    Term t("sh", arguments, &app.window);
     t.frameUntil([&] { return t.shows("file:///tmp"); });
     t.f.click(t.cellCenter(10, 0));
     t.f.frame();
@@ -768,7 +794,7 @@ TEST_CASE("terminal: a click with the primary modifier opens the URL under it, a
 TEST_CASE("terminal: a hyperlink under the pointer with the primary modifier underlines all of its cells") {
     FakeApp app;
     const PrStringView arguments[] = {"10"};
-    Term t("sleep", arguments, &app.app);
+    Term t("sleep", arguments, &app.window);
     t.settle();
     // One link in two parts, whose text differs from its URI, followed by a URL in plain text.
     t.write(concat(hyperlink("https://example.com/real", "id=a"), "one", kHyperlinkEnd, " gap ",
@@ -828,7 +854,7 @@ TEST_CASE("terminal: a hyperlink to a file that exists opens through the handler
         desc->openFileContext = &opened;
     };
     const PrStringView arguments[] = {"10"};
-    Term t("sleep", arguments, &app.app, {}, setup);
+    Term t("sleep", arguments, &app.window, {}, setup);
     t.settle();
     String uri = taken(prUrlFromFilePath(concat(folder, "/linked.txt")));
     t.write(concat(hyperlink(uri), "here", kHyperlinkEnd, " ", hyperlink("file:///nowhere/missing.txt"), "gone",
@@ -977,7 +1003,7 @@ TEST_CASE("terminal: a terminal that paints its background in its view shows it 
 TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention once while the window is inactive") {
     FakeApp app;
     const PrStringView arguments[] = {"10"};
-    Term t("sleep", arguments, &app.app);
+    Term t("sleep", arguments, &app.window);
     t.settle();
     PrVec2 blank = t.cellCenter(10, 5);
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
@@ -1016,7 +1042,7 @@ TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention
 TEST_CASE("terminal: with reduced motion, the bell's flash holds still and ends at its time") {
     FakeApp app;
     const PrStringView arguments[] = {"10"};
-    Term t("sleep", arguments, &app.app);
+    Term t("sleep", arguments, &app.window);
     t.settle();
     t.f.preferences.reducedMotion = true;
     t.f.frame();
@@ -1040,7 +1066,7 @@ TEST_CASE("terminal: a notification posts unless the terminal has focus in the a
     // The notifications take the program's name as their title, so the test does not settle (Term::settle), which waits
     // for a Windows pseudoconsole's title. A notification acts on the screen's events, not its contents.
     const PrStringView arguments[] = {"10"};
-    Term t("sleep", arguments, &app.app);
+    Term t("sleep", arguments, &app.window);
     // The terminal shows in the active window without focus. The default and unfocused conditions post, and the
     // invisible condition does not.
     t.write("\x1b]9;one\x07\x1b]99;o=unfocused;two\x1b\\\x1b]99;o=invisible;three\x1b\\");
@@ -1077,7 +1103,7 @@ TEST_CASE("terminal: a notification posts unless the terminal has focus in the a
 TEST_CASE("terminal: a flood of output goes on showing in the frames that the terminal and its program ask for") {
     FakeApp app;
     FakeLauncher fake;
-    Term t("program", {}, &app.app, {}, fake.setup());
+    Term t("program", {}, &app.window, {}, fake.setup());
     REQUIRE(fake.receive != nullptr);
     // Far more output than one frame parses, from the program's thread, followed by a marker.
     struct Output {
@@ -1138,7 +1164,7 @@ TEST_CASE("terminal: while the program floods the screen, the UI waits for it no
 TEST_CASE("terminal: a synchronized update wakes the application as it begins and as it ends, and not between") {
     FakeApp app;
     FakeLauncher fake;
-    Term t("program", {}, &app.app, {}, fake.setup());
+    Term t("program", {}, &app.window, {}, fake.setup());
     REQUIRE(fake.receive != nullptr);
     fake.output("before");
     runWoken(t, app);
@@ -1161,7 +1187,7 @@ TEST_CASE("terminal: a synchronized update wakes the application as it begins an
 TEST_CASE("terminal: a terminal that does not show wakes the application for the program's events, not its output") {
     FakeApp app;
     FakeLauncher fake;
-    Term t("program", {}, &app.app, {}, fake.setup());
+    Term t("program", {}, &app.window, {}, fake.setup());
     REQUIRE(fake.receive != nullptr);
     t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
     t.f.frame();
@@ -1181,7 +1207,7 @@ TEST_CASE("terminal: a terminal that does not show wakes the application for the
 
 TEST_CASE("terminal: the key that pastes drops only its own text, and text typed after it reaches the program") {
     FakeApp app;
-    Term t("cat", {}, &app.app);
+    Term t("cat", {}, &app.window);
     t.focus();
     t.f.frame();
     // The platform delivers no text for the chord.
@@ -1200,7 +1226,7 @@ TEST_CASE("terminal: the key that pastes drops only its own text, and text typed
 TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each platform's chords") {
     FakeApp app;
     FakeLauncher fake;
-    Term t("program", {}, &app.app, {}, fake.setup());
+    Term t("program", {}, &app.window, {}, fake.setup());
     REQUIRE(fake.receive != nullptr);
     t.focus();
     t.f.frame();
@@ -1219,6 +1245,9 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
     t.f.key('V', clipboardModifiers());
     t.f.frame();
     CHECK(app.clipboardRequested);
+    // A paste reads the clipboard once its last read is answered. An empty paste writes nothing to the program.
+    app.answer("");
+    t.f.frame();
 #if !defined(__APPLE__)
     app.clipboard.clear();
     app.clipboardRequested = false;
@@ -1228,6 +1257,8 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
     t.f.key(PrAppKey_Insert, PrAppModifierFlag_Shift);
     t.f.frame();
     CHECK(app.clipboardRequested);
+    app.answer("");
+    t.f.frame();
 #endif
 #if defined(_WIN32)
     app.clipboard.clear();
@@ -1235,6 +1266,8 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
     t.f.key('V', PrAppModifierFlag_Control);
     t.f.frame();
     CHECK(app.clipboardRequested);
+    app.answer("");
+    t.f.frame();
     // Control with C copies and clears the selection. Pressed again, it goes to the program, as the interrupt.
     t.f.key('C', PrAppModifierFlag_Control);
     t.f.frame();
@@ -1250,10 +1283,29 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
 #endif
 }
 
+TEST_CASE("terminal: a clipboard without text pastes nothing, which a bracketed paste still tells the program") {
+    FakeApp app;
+    FakeLauncher fake;
+    Term t("program", {}, &app.window, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
+    t.focus();
+    t.f.frame();
+    // A program such as one that reads images from the clipboard asks for bracketed paste, and takes an empty paste as
+    // the user pasting what it cannot see as text.
+    t.write("\x1b[?2004h");
+    t.f.frame();
+    t.f.key('V', clipboardModifiers());
+    t.f.frame();
+    REQUIRE(app.clipboardRequested);
+    app.answer("");
+    t.f.frame();
+    CHECK(fake.input() == "\x1b[200~\x1b[201~");
+}
+
 TEST_CASE("terminal: a program that asks for key releases has them, but for the keys that the view takes") {
     FakeApp app;
     const PrStringView arguments[] = {"-c", "stty raw -echo; printf '\\033[>2u'; echo ready; cat -v"};
-    Term t("sh", arguments, &app.app);
+    Term t("sh", arguments, &app.window);
     t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     auto stroke = [&](PrAppKey key, PrAppModifierFlags modifiers, const char* text, PrAppKeyCode code) {
@@ -1274,7 +1326,7 @@ TEST_CASE("terminal: a program that asks for key releases has them, but for the 
 
 TEST_CASE("terminal: an input method composes at the cursor, and only the text that it commits reaches the program") {
     FakeApp app;
-    Term t("cat", {}, &app.app);
+    Term t("cat", {}, &app.window);
     prTerminalFocus(t.terminal);
     t.f.frame();
     t.f.type("ab");
@@ -1400,7 +1452,7 @@ TEST_CASE("terminal: Control with an arrow, Backspace or Delete, and Home and En
 TEST_CASE("terminal: a terminal that does not show parses all of its program's output, and keeps its extent") {
     FakeApp app;
     FakeLauncher fake;
-    Term t("program", {}, &app.app, {}, fake.setup());
+    Term t("program", {}, &app.window, {}, fake.setup());
     REQUIRE(fake.receive != nullptr);
     PrUVec2 extent = prVtermExtent(Locked(t.terminal));
     t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
@@ -1640,10 +1692,10 @@ TEST_CASE("terminal: blinking text stays shown for a user who asks for less moti
 
 TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Escape drops them") {
     FakeApp app;
-    Term t("cat", {}, &app.app);
+    Term t("cat", {}, &app.window);
     t.focus();
     t.f.frame();
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = "one\ntwo\n"}});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Paste, .input = {.text = "one\ntwo\n"}});
     for (uint32_t i = 0; i < 4; ++i)
         t.f.frame();
     CHECK(prUiFocus(t.f.ui) != prTerminalNode(t.terminal));
@@ -1657,7 +1709,7 @@ TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Es
     t.frameUntil([&] { return t.shows("one\ntwo\none\ntwo\n"); });
 #endif
 
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = "three\nfour"}});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Paste, .input = {.text = "three\nfour"}});
     for (uint32_t i = 0; i < 4; ++i)
         t.f.frame();
     t.f.key(PrAppKey_Escape);
@@ -1669,10 +1721,10 @@ TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Es
     CHECK_FALSE(t.shows("three"));
 
     // A single line pastes at once, and so do several lines if the program asked for bracketed paste.
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = "solo"}});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Paste, .input = {.text = "solo"}});
     t.frameUntil([&] { return t.shows("solo"); });
     t.write("\x1b[?2004h");
-    t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = "five\nsix"}});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_Paste, .input = {.text = "five\nsix"}});
     t.frameUntil([&] { return t.shows("five"); });
 }
 
@@ -1741,7 +1793,7 @@ TEST_CASE("terminal: a reference to a file opens as a file URL without a handler
     FakeApp app;
     auto setup = [&](PrTerminalDesc* desc) { desc->directory = PrStringView(folder); };
     const PrStringView arguments[] = {"-c", "printf 'hello.txt:3\\n'; sleep 10"};
-    Term t("sh", arguments, &app.app, {}, setup);
+    Term t("sh", arguments, &app.window, {}, setup);
     t.frameUntil([&] { return t.shows("hello.txt"); });
     t.f.click(t.cellCenter(2, 0), primaryModifier());
     t.f.frame();
@@ -1870,7 +1922,7 @@ TEST_CASE("terminal: a terminal whose caller turns the integration off runs the 
 TEST_CASE("terminal: the last command's output and exit code are the application's to read and copy") {
     FakeApp app;
     const PrStringView arguments[] = {"10"};
-    Term t("sleep", arguments, &app.app);
+    Term t("sleep", arguments, &app.window);
     t.settle();
     CHECK(taken(prTerminalCommandOutput(t.terminal)).isEmpty());
     const PrStringView one[] = {"a"};

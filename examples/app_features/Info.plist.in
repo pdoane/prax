@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The bundle of app_features on macOS. It declares a viewer of any file, which recent documents need, at the lowest
+     rank, so that it never becomes a file's default application, and a URL scheme, prax-features, for Open events. -->
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
+    <key>CFBundleIdentifier</key>
+    <string>org.prax.app-features</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>App Features</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Any file</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>None</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.item</string>
+            </array>
+        </dict>
+    </array>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>org.prax.app-features</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>prax-features</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
