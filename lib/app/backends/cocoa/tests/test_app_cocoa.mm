@@ -63,16 +63,6 @@ std::vector<PrAppEventKind> kindsOf(const std::vector<PrAppEvent>& events) {
     return kinds;
 }
 
-struct Browse {
-    PrApp* app = nullptr;
-    PrAppBrowser* browser = nullptr;
-    PrStatus loaded = PrStatus_NotFound;
-    std::string result;
-    uint32_t width = 0;
-    uint32_t height = 0;
-    std::vector<uint8_t> center;    // BGRA
-};
-
 } // namespace
 
 } // namespace pr_impl
@@ -140,110 +130,6 @@ TEST_CASE("a process outside an application bundle posts no notification, and do
     prAppRun(app, &handler);
     prAppDestroy(app);
     CHECK(posted == PrStatus_NotSupported);
-}
-
-TEST_CASE("a browser loads a page, runs a script in it and captures it at two pixels per CSS pixel") {
-    // A capture waits for the screen's frames, which stop while the display is off.
-    if (CGDisplayIsAsleep(CGMainDisplayID()))
-        return;
-    Browse browse;
-    PrAppDesc appDesc{.title = "Browser test", .extent = {64, 32}, .headless = true};
-    browse.app = prAppCocoaCreate(&appDesc);
-    PrAppHandler handler{
-        &browse,
-        [](void* context, PrApp* app, const PrAppFrame*) {
-            Browse& b = *static_cast<Browse*>(context);
-            PrAppBrowserDesc desc{.viewport = PrUVec2{40, 20}};
-            REQUIRE(prAppBrowserCreate(app, &desc, &b.browser) == PrStatus_Ok);
-            // Load the page from a file, which is how the viewer loads documents.
-            NSString* path = [NSTemporaryDirectory() stringByAppendingPathComponent:@"pr-browser.svg"];
-            [@"<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' "
-                @"height='20' fill='#ff0000'/></svg>" writeToFile:path atomically:YES
-                encoding:NSUTF8StringEncoding error:nil];
-            NSString* url = [NSURL fileURLWithPath:path].absoluteString;
-            prAppBrowserLoad(b.browser, url.UTF8String, [](void* context, PrStatus status) {
-                Browse& b = *static_cast<Browse*>(context);
-                b.loaded = status;
-                prAppBrowserEvaluate(b.browser, "document.documentElement.getAttribute('width')",
-                    [](void* context, PrStatus, PrStringView json) {
-                        Browse& b = *static_cast<Browse*>(context);
-                        b.result.assign(json.data != nullptr ? json.data : "", json.size);
-                        prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{80, 40},
-                            [](void* context, PrStatus status, PrPixelView pixels) {
-                                Browse& b = *static_cast<Browse*>(context);
-                                if (status == PrStatus_Ok) {
-                                    b.width = pixels.extent.x;
-                                    b.height = pixels.extent.y;
-                                    const uint8_t* at = pixels.data + pixels.stride * 20 + 40 * 4;
-                                    b.center.assign(at, at + 4);
-                                }
-                                prAppStop(b.app);
-                            }, &b);
-                    }, &b);
-            }, &b);
-        },
-        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
-        [](void*, PrApp*, const PrAppEvent*) {},
-        [](void* context, PrApp*) {
-            Browse& b = *static_cast<Browse*>(context);
-            prAppBrowserDestroy(b.browser);
-            b.browser = nullptr;
-        },
-    };
-    prAppRun(browse.app, &handler);
-    prAppDestroy(browse.app);
-    CHECK(browse.loaded == PrStatus_Ok);
-    CHECK(browse.result == "\"40\"");
-    CHECK(browse.width == 80);
-    CHECK(browse.height == 40);
-    REQUIRE(browse.center.size() == 4);
-    CHECK(browse.center[2] > 240);      // red
-    CHECK(browse.center[1] < 16);
-    CHECK(browse.center[0] < 16);
-}
-
-TEST_CASE("a page from a file reads the files beside it, and a promise answers once it settles") {
-    Browse browse;
-    PrAppDesc appDesc{.title = "Browser test", .extent = {64, 32}, .headless = true};
-    browse.app = prAppCocoaCreate(&appDesc);
-    PrAppHandler handler{
-        &browse,
-        [](void* context, PrApp* app, const PrAppFrame*) {
-            Browse& b = *static_cast<Browse*>(context);
-            PrAppBrowserDesc desc{.viewport = PrUVec2{40, 20}};
-            REQUIRE(prAppBrowserCreate(app, &desc, &b.browser) == PrStatus_Ok);
-            NSString* directory = NSTemporaryDirectory();
-            NSString* page = [directory stringByAppendingPathComponent:@"pr-browser-read.html"];
-            [@"<!doctype html><title>read</title>" writeToFile:page atomically:YES encoding:NSUTF8StringEncoding
-                error:nil];
-            [@"beside" writeToFile:[directory stringByAppendingPathComponent:@"pr-browser-read.txt"] atomically:YES
-                encoding:NSUTF8StringEncoding error:nil];
-            NSString* url = [NSURL fileURLWithPath:page].absoluteString;
-            prAppBrowserLoad(b.browser, url.UTF8String, [](void* context, PrStatus status) {
-                Browse& b = *static_cast<Browse*>(context);
-                b.loaded = status;
-                prAppBrowserEvaluate(b.browser,
-                    "var request = new XMLHttpRequest(); request.open('GET', 'pr-browser-read.txt', false);"
-                        " request.send(); new Promise(resolve => setTimeout(() => resolve(request.responseText),"
-                        " 10))", [](void* context, PrStatus, PrStringView json) {
-                            Browse& b = *static_cast<Browse*>(context);
-                            b.result.assign(json.data != nullptr ? json.data : "", json.size);
-                            prAppStop(b.app);
-                        }, &b);
-            }, &b);
-        },
-        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
-        [](void*, PrApp*, const PrAppEvent*) {},
-        [](void* context, PrApp*) {
-            Browse& b = *static_cast<Browse*>(context);
-            prAppBrowserDestroy(b.browser);
-            b.browser = nullptr;
-        },
-    };
-    prAppRun(browse.app, &handler);
-    prAppDestroy(browse.app);
-    CHECK(browse.loaded == PrStatus_Ok);
-    CHECK(browse.result == "\"beside\"");
 }
 
 TEST_CASE("input that a callback's own run loop dispatches arrives after the callback, in order") {

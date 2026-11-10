@@ -673,9 +673,10 @@ WRAPPERS = {
     "lib/core/backends/windows/src/core_windows_vmem.cpp": {"windows.h"},
     "lib/app/backends/win32/src/app_win32.cpp": {"windows.h", "dwmapi.h", "dxgi1_6.h", "imm.h", "objbase.h",
                                                  "shellapi.h"},
-    "lib/app/backends/win32/src/win32_browser.cpp": {"windows.h", "wincodec.h", "wrl.h",
-                                                     "WebView2EnvironmentOptions.h"},
+    "lib/webview/backends/webview2/src/webview_webview2.cpp": {"windows.h", "wincodec.h", "wrl.h",
+                                                               "WebView2EnvironmentOptions.h"},
     "lib/app/backends/win32/src/win32_text.cpp": {"windows.h"},
+    "lib/core/backends/windows/src/core_windows_string.cpp": {"windows.h"},
     "lib/app/backends/web/src/app_web.cpp": {"emscripten/emscripten.h", "emscripten/eventloop.h",
                                              "emscripten/html5.h"},
     "lib/gpu/src/gpu.cpp": {"stdlib.h"},
@@ -2560,13 +2561,23 @@ def backend_headers():
     return found
 
 
+# The headers of core's platform families that the sources of other libraries for that platform share, because they
+# serve the platform rather than choose among implementations, by the system headers that mark a source of the
+# platform (WRAPPERS): the conversions to and from the UTF-16 of Windows' wide-character functions.
+PLATFORM_SHARED_HEADERS = {"core_windows_string.h": ("windows.h", "winsock2.h")}
+
+
 def check_backend_headers(report, path, text, headers):
     """A library uses another module's interface, never one of its backends, so that a program chooses the backend at
     run time or brings its own (README.md). Only the interface's own module includes a backend's header. A test is a
-    host, which chooses its backends."""
+    host, which chooses its backends. A source for a platform includes what core's family for that platform shares
+    (PLATFORM_SHARED_HEADERS)."""
     relative = os.path.relpath(path, ROOT).replace(os.sep, "/")
     for match in re.finditer(r'^#include "pr/([^"]+)"', text, re.M):
         interface = headers.get(match.group(1))
+        marker = PLATFORM_SHARED_HEADERS.get(match.group(1))
+        if marker is not None and any(m in WRAPPERS.get(relative, ()) for m in marker):
+            continue
         if interface is not None and not relative.startswith(interface):
             report.add(path, line_of(text, match.start()), "backend-header",
                        "pr/%s is a backend of %s; use its interface" % (match.group(1), interface[:-1]))
@@ -2629,6 +2640,7 @@ TAGS = {
     "lib/locale": ("Language", "Locale", "Region", "Script"),
     "lib/webidl": ("WebIdl",),
     "lib/websocket": ("WebSocket",),
+    "lib/webview": ("WebView",),
     "lib/mathml": ("MathMl",),
     "lib/studio/window": ("StudioWindow",),
 }

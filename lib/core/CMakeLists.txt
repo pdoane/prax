@@ -101,6 +101,7 @@ if (WIN32)
         backends/windows/src/core_windows_fail.cpp
         backends/windows/src/core_windows_file.cpp
         backends/windows/src/core_windows_random.cpp
+        backends/windows/src/core_windows_string.cpp
         backends/windows/src/core_windows_thread.cpp
         backends/windows/src/core_windows_time.cpp
         backends/windows/src/core_windows_vmem.cpp

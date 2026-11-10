@@ -9,8 +9,6 @@
 #include "pr/raw_array.h"
 #include "pr/vec.h"
 
-#include "app/backends/cocoa/src/cocoa_browser.h"
-
 #import <AppKit/AppKit.h>
 #import <QuartzCore/QuartzCore.h>
 #import <UserNotifications/UserNotifications.h>
@@ -1205,18 +1203,6 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->setClipboardText = setClipboardText;
     app->requestClipboardImage = requestClipboardImage;
     app->setClipboardImage = setClipboardImage;
-    app->browserCreate = [](PrApp* base, const PrAppBrowserDesc* desc, PrAppBrowser** out) {
-        return cocoaBrowserCreate(base, (__bridge void*)hostOf(base).view, desc, out);
-    };
-    app->browserDestroy = cocoaBrowserDestroy;
-    app->browserResize = cocoaBrowserResize;
-    app->browserLoad = cocoaBrowserLoad;
-    app->browserEvaluate = cocoaBrowserEvaluate;
-    app->browserCapture = cocoaBrowserCapture;
-    app->browserShow = cocoaBrowserShow;
-    app->browserHide = cocoaBrowserHide;
-    app->browserPrint = cocoaBrowserPrint;
-    app->browserProcesses = cocoaBrowserProcesses;
     PrCocoaHost* host = [[PrCocoaHost alloc] init];
     host.app = app;
     host.title = [[NSString alloc] initWithBytes:desc->title.data length:desc->title.size

@@ -2,6 +2,8 @@
 
 #include "pr/core_windows_file.h"
 
+#include "pr/core_windows_string.h"
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -19,28 +21,27 @@ volatile LONG writes = 0;
 
 // Returns `path` as a NUL-terminated UTF-16 string that the caller frees, or null if it is not valid UTF-8.
 wchar_t* PR_NULLABLE widen(PrStringView path) {
-    if (path.size > size_t(INT32_MAX))
-        return nullptr;
-    int count =
-        path.size == 0 ? 0 : MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data, int(path.size), nullptr, 0);
-    if (path.size != 0 && count == 0)
+    uint32_t count = prCoreWindowsWiden(path, nullptr, 0, PrCoreWindowsString_Exact);
+    if (count == kPrCoreWindowsStringInvalid)
         return nullptr;
     wchar_t* wide = static_cast<wchar_t*>(malloc((size_t(count) + 1) * sizeof(wchar_t)));
     if (wide == nullptr)
         return nullptr;
-    if (count != 0)
-        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data, int(path.size), wide, count);
+    prCoreWindowsWiden(path, wide, count, PrCoreWindowsString_Exact);
     wide[count] = 0;
     return wide;
 }
 
 // Returns the NUL-terminated `wide` as UTF-8, or the null string if it is empty or is not valid UTF-16.
 PrRawString narrow(const wchar_t* wide) {
-    int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, nullptr, 0, nullptr, nullptr);
-    char* utf8 = size > 1 ? static_cast<char*>(malloc(size_t(size))) : nullptr;
+    uint32_t units = 0;
+    while (wide[units] != 0)
+        ++units;
+    uint32_t size = prCoreWindowsNarrow(wide, units, nullptr, 0, PrCoreWindowsString_Exact);
+    char* utf8 = size != 0 && size != kPrCoreWindowsStringInvalid ? static_cast<char*>(malloc(size)) : nullptr;
     PrRawString text = prRawStringNull();
-    if (utf8 != nullptr && WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, utf8, size, nullptr, nullptr) == size)
-        text = prRawStringCopy(PrStringView{utf8, size_t(size - 1)});
+    if (utf8 != nullptr && prCoreWindowsNarrow(wide, units, utf8, size, PrCoreWindowsString_Exact) == size)
+        text = prRawStringCopy(PrStringView{utf8, size});
     free(utf8);
     return text;
 }
