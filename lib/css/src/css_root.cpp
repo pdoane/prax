@@ -5,6 +5,7 @@
 
 #include "css/src/css_hints.h"
 #include "css/src/css_inline_style.h"
+#include "css/src/css_object.h"
 #include "css/src/css_parser.h"
 #include "css/src/css_selector_match.h"
 
@@ -45,6 +46,7 @@ void cssRootDestroy(CssRoot* PR_NULLABLE style) {
         return;
     // The owner nodes own the sheets, and the document owns those of its processing instructions.
     style->sheets.sheets.reset();
+    cssRootResetSheets(style);
     for (uint32_t i = 0; i < style->instructionSheets.count; ++i)
         cssStyleSheetLeaveOwner(style->instructionSheets.data[i]);
     style->instructionSheets.reset();
@@ -156,6 +158,11 @@ const DomDocumentHooks* cssDocumentHooks() {
         .removing = structureChanged,
         .attributeChanged = attributeChanged,
         .dataChanged = structureChanged,
+        // cssom-1/#dom-documentorshadowroot-adoptedstylesheets: a shadow root that moves to another document lets go of
+        // its adopted sheets, which only their constructor document's trees may adopt.
+        .shadowRootAdopted = [](void*, PrDomShadowRoot* shadow) {
+            cssRootSetAdopted(shadow->style, shadow->document, nullptr, 0);
+        },
         .languageChanged = [](void*, PrDomDocument* document) { cssDocumentStyleChanged(document); },
         .styleBlockUpdate = [](void*, PrDomElement* element, DomInsertedBy by) { cssStyleBlockUpdate(element, by); },
         .instructionInserted = [](void*, PrDomNode* node) { cssXmlStylesheetInserted(node); },

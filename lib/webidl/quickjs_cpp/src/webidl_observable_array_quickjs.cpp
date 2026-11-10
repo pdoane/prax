@@ -115,14 +115,19 @@ bool setIndexed(JSContext* ctx, Handler* handler, uint32_t index, JSValueConst v
         *result = false;
         return true;
     }
-    JSValue item = handler->hooks->set(ctx, handler->owner, value, index);
+    JSValue item = handler->hooks->convert(ctx, handler->owner, value);
     if (JS_IsException(item))
         return false;
+    const JsObservableArrayHooks* hooks = handler->hooks;
+    bool ok = index == handler->list.count || hooks->remove == nullptr ||
+        hooks->remove(ctx, handler->owner, handler->list.data[index], index);
+    ok = ok && (hooks->set == nullptr || hooks->set(ctx, handler->owner, item, index));
+    if (!ok) {
+        JS_FreeValue(ctx, item);
+        return false;
+    }
+    // A hook may have run script that changed the list.
     if (index < handler->list.count) {
-        if (handler->hooks->remove != nullptr && !handler->hooks->remove(ctx, handler->owner, handler->list.data[index], index)) {
-            JS_FreeValue(ctx, item);
-            return false;
-        }
         JS_FreeValue(ctx, handler->list.data[index]);
         handler->list.data[index] = item;
     } else {

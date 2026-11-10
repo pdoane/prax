@@ -712,6 +712,7 @@ void transferDocument(PrDomDocument* document, PrDomNode* node, uint32_t* moved)
         if (PrDomShadowRoot* shadow = domShadowRootOfHost(element)) {
             domSlotsEnable(document);
             adoptTree(document, shadow, moved);
+            domNotifyShadowRootAdopted(shadow, from);
         }
     }
     for (PrDomNode* child = node->first; child != nullptr; child = child->next)

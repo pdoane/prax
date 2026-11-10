@@ -85,6 +85,32 @@ TEST_CASE("a removed node with no references is freed with its tree") {
     domNodeRelease(document);
 }
 
+TEST_CASE("an element appended as it is created is the tree's, which frees it with the tree") {
+    PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
+    PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Html, "");
+    domAttach(document, html, nullptr);
+    domDocumentTemplateDocument(document);
+    size_t before = prMemoryLiveCount();
+    PrDomElement* div = nullptr;
+    REQUIRE(prDomNodeAppendElement(html, "DIV", nullptr, &div) == PrStatus_Ok);
+    CHECK(div->tag == PrDomTag_Div);
+    CHECK(html->last == div);
+    // The document is the parent's: a document appends to itself.
+    PrDomElement* span = nullptr;
+    REQUIRE(prDomNodeAppendElement(div, "span", nullptr, &span) == PrStatus_Ok);
+    CHECK(span->document == document);
+    PrDomElement* invalid = div;
+    CHECK(prDomNodeAppendElement(div, "not valid", nullptr, &invalid) == PrStatus_InvalidData);
+    CHECK(invalid == nullptr);
+    // A document holds one element child at most.
+    PrDomElement* second = div;
+    CHECK(prDomNodeAppendElement(document, "p", nullptr, &second) == PrStatus_NotAllowed);
+    CHECK(second == nullptr);
+    domRemove(div);
+    CHECK(prMemoryLiveCount() == before);
+    domNodeRelease(document);
+}
+
 TEST_CASE("a reference to any node keeps its tree, and the tree its document") {
     size_t before = prMemoryLiveCount();
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);

@@ -117,7 +117,7 @@ PrCssValueKind kindAt(const PrCssValue* value, uint32_t node) {
 
 // Returns a style rule's block, from a sheet that the caller releases.
 PrCssStyleDeclaration* newBlock(PrCssStyleSheet** sheet) {
-    *sheet = prCssStyleSheetCreate(nullptr);
+    prCssStyleSheetCreate(nullptr, nullptr, sheet);
     REQUIRE(prCssStyleSheetReplaceSync(*sheet, "a {}") == PrStatus_Ok);
     PrCssStyleRule* rule = prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(*sheet), 0));
     return prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));

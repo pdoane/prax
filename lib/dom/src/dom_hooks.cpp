@@ -29,6 +29,8 @@ void updateFollowers(PrDomDocument* document) {
             document->followers[DomHook_SlotChanged] |= bit;
         if (hooks->shadowAttached != nullptr)
             document->followers[DomHook_ShadowAttached] |= bit;
+        if (hooks->shadowRootAdopted != nullptr)
+            document->followers[DomHook_ShadowRootAdopted] |= bit;
         if (hooks->wheelListenersChanged != nullptr)
             document->followers[DomHook_WheelListenersChanged] |= bit;
         if (hooks->statesChanged != nullptr)

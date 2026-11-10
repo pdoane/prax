@@ -8,6 +8,7 @@
 #include "pr/base.h"
 #include "pr/color.h"
 #include "pr/font_set.h"
+#include "pr/raw_string.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -217,6 +218,14 @@ PrKitPalette prKitPaletteStudio(PrKitThemeVariant variant);
 // Returns Studio's theme of `variant`, which uses the generic families of `fonts`: system-ui for `ui`, and monospace
 // for `mono`.
 PrKitTheme prKitThemeStudio(PrKitThemeVariant variant, PrFontSet* PR_NULLABLE fonts);
+
+// Returns a style sheet that gives HTML the theme, so that a document shown among the kit's widgets reads as one of
+// them. Its root carries the color scheme of the palette's background, and a custom property for each color of the
+// palette (--kit-accent, --kit-bg0, --kit-text-selection and so on, as the palette's members are named), for the ui and
+// mono families (--kit-family-ui, --kit-family-mono), and for each text role a font shorthand and its letter spacing
+// (--kit-font-body-small, --kit-tracking-body-small). Its rules set the root's text in the body role and the primary
+// tone, and selected text on the palette's selection color. The caller releases the text.
+PrRawString prKitThemeCss(const PrKitTheme* theme);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Measures

@@ -5522,18 +5522,32 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
 // Appends the sheets of the document's trees to `out`: the document's own, then those of each connected shadow root, in
 // shadow-including tree order. A document that has never had a shadow root has no other tree to walk for.
 void treeSheets(PrDomDocument* document, RawArray<CssTreeSheets>& out) {
-    PrCssStyleSheetList* sheets = cssDocumentStyleSheets(document);
-    out.push(CssTreeSheets{document, 0, sheets->sheets.data, sheets->sheets.count});
+    const CssRoot* root = cssDocumentRoot(document);
+    out.push(CssTreeSheets{
+        .tree = document,
+        .sheets = root->sheets.sheets.data,
+        .count = root->sheets.sheets.count,
+        .adopted = root->adopted.data,
+        .adoptedCount = root->adopted.count,
+    });
     if (document->slots == nullptr)
         return;
     for (PrDomNode* node = document; node != nullptr; node = domShadowIncludingNext(document, node)) {
         PrDomShadowRoot* shadow = domNodeShadowRoot(node);
-        if (shadow == nullptr || shadow->style == nullptr || shadow->style->sheets.sheets.count == 0)
+        if (shadow == nullptr || shadow->style == nullptr ||
+                shadow->style->sheets.sheets.count + shadow->style->adopted.count == 0)
             continue;
         uint32_t depth = 0;
         for (const PrDomShadowRoot* at = shadow; at != nullptr; at = domNodeShadowRoot(domNodeRoot(at->host)))
             ++depth;
-        out.push(CssTreeSheets{shadow, depth, shadow->style->sheets.sheets.data, shadow->style->sheets.sheets.count});
+        out.push(CssTreeSheets{
+            .tree = shadow,
+            .depth = depth,
+            .sheets = shadow->style->sheets.sheets.data,
+            .count = shadow->style->sheets.sheets.count,
+            .adopted = shadow->style->adopted.data,
+            .adoptedCount = shadow->style->adopted.count,
+        });
     }
 }
 

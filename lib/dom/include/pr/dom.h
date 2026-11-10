@@ -51,6 +51,7 @@ typedef struct PrDomImplementation PrDomImplementation;
 typedef struct PrDomDocumentFragment PrDomDocumentFragment;
 typedef struct PrDomShadowRoot PrDomShadowRoot;
 typedef struct PrDomElement PrDomElement;
+typedef struct PrDomElementCreationOptions PrDomElementCreationOptions;
 typedef struct PrDomAttr PrDomAttr;
 typedef struct PrDomCharacterData PrDomCharacterData;
 typedef struct PrDomText PrDomText;
@@ -737,6 +738,12 @@ PrStatus prDomNodeInsertBefore(PrDomNode* parent, PrDomNode* node, PrDomNode* PR
 // Inserts `node` as the last child (dom/#dom-node-appendchild).
 PrStatus prDomNodeAppendChild(PrDomNode* parent, PrDomNode* node);
 
+// Creates an element of the parent's node document, as prDomElementCreate does, appends it as the parent's last child,
+// and writes it to `out`. The tree holds the element, and the caller holds no reference to it. Returns the status of
+// either step that fails, and writes null.
+PrStatus prDomNodeAppendElement(PrDomNode* parent, PrStringView localName,
+    const PrDomElementCreationOptions* PR_NULLABLE options, PrDomElement* PR_NULLABLE* PR_NONNULL out);
+
 // Replaces `child` with `node` (dom/#dom-node-replacechild).
 PrStatus prDomNodeReplaceChild(PrDomNode* parent, PrDomNode* node, PrDomNode* child);
 
@@ -829,9 +836,9 @@ bool prDomNodeIsDefaultNamespace(PrDomNode* node, PrStringView namespaceUri);
 // A node that a document creates comes with a reference that the caller releases.
 
 // The options of createElement (dom/#dictdef-elementcreationoptions).
-typedef struct PrDomElementCreationOptions {
+struct PrDomElementCreationOptions {
     PrStringView is;                        // name of a customized built-in element, or the null view for none
-} PrDomElementCreationOptions;
+};
 
 // Returns the default options, which name no customized built-in element.
 static inline PrDomElementCreationOptions prDomElementCreationOptionsDefault(void) {

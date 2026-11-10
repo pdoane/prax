@@ -949,6 +949,23 @@ PrStatus prDomNodeAppendChild(PrDomNode* parent, PrDomNode* node) {
     return domPreInsert(parent, node, nullptr);
 }
 
+PrStatus prDomNodeAppendElement(PrDomNode* parent, PrStringView localName,
+        const PrDomElementCreationOptions* PR_NULLABLE options, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
+    *out = nullptr;
+    PrDomDocument* document = parent->document;
+    if (parent->type == PrDomNodeType_Document)
+        document = static_cast<PrDomDocument*>(parent);
+    PrDomElement* element = nullptr;
+    PrStatus status = prDomElementCreate(document, localName, options, &element);
+    if (status != PrStatus_Ok)
+        return status;
+    status = domPreInsert(parent, element, nullptr);
+    if (status == PrStatus_Ok)
+        *out = element;
+    domNodeRelease(element);
+    return status;
+}
+
 PrStatus prDomNodeReplaceChild(PrDomNode* parent, PrDomNode* node, PrDomNode* child) {
     return domReplace(parent, node, child);
 }

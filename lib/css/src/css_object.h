@@ -22,6 +22,7 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr_impl {
 
 struct CssFontFace;
+struct CssRoot;
 struct CssRule;
 struct CssStyleSheet;
 
@@ -72,6 +73,11 @@ struct CssStyleSheet {
     uint32_t retained;                    // references to the sheet's tree, if the sheet is a root
     bool disabled;
     bool constructed;                     // true if built by a caller rather than parsed from a document
+
+    // The constructor document of a constructed sheet (cssom-1/#concept-css-style-sheet-constructor-document), or null.
+    // The document lists the sheet among its constructed sheets, which hold no reference, and clears this as it goes.
+    PrDomDocument* PR_NULLABLE constructorDocument;
+    uint32_t adoptions;                   // the places in adopted sheet lists that hold the sheet
     PrCssRuleList cssRules;
     PrCssMediaList mediaList;
 };
@@ -167,6 +173,15 @@ const CssMediaQueries* cssMediaListQueries(const PrCssMediaList* list);
 // Returns the document whose elements the sheet styles: the document of its owner node, or of the sheet that imports
 // it. Returns null for a sheet that no node owns.
 const PrDomDocument* PR_NULLABLE cssStyleSheetDocument(const PrCssStyleSheet* sheet);
+
+// Replaces the adopted sheets of `root`, a document's or a shadow root's whose node document is `document`, with
+// `sheets` (cssom-1/#dom-documentorshadowroot-adoptedstylesheets). Returns NotAllowed, and changes nothing, if a sheet
+// is not constructed or its constructor document is not `document`.
+PrStatus cssRootSetAdopted(CssRoot* root, PrDomDocument* document, PrCssStyleSheet* const PR_NONNULL* PR_NULLABLE sheets,
+    uint32_t count);
+
+// Lets go of the root's adopted sheets, and of a document's constructed sheets, as the root is destroyed.
+void cssRootResetSheets(CssRoot* root);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Changes

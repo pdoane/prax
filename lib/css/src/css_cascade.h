@@ -298,6 +298,10 @@ struct CssTreeSheets {
     uint32_t depth;                 // the number of shadow roots around the tree, which is 0 for the document
     const PrCssStyleSheet* const PR_NONNULL* PR_NULLABLE sheets;
     uint32_t count;
+
+    // The tree's adopted sheets, which follow its own.
+    const PrCssStyleSheet* const PR_NONNULL* PR_NULLABLE adopted;
+    uint32_t adoptedCount;
 };
 
 // Files the style rules of each tree's sheets in order, after those of `base`, with their conditions evaluated against

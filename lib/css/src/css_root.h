@@ -113,6 +113,13 @@ struct CssRoot {
     // (cssom-1/#documentorshadowroot-document-or-shadow-root-css-style-sheets), in tree order of their owner nodes.
     PrCssStyleSheetList sheets;
 
+    // The adopted sheets (cssom-1/#dom-documentorshadowroot-adoptedstylesheets), which follow `sheets` in the cascade.
+    // The root holds a reference to each.
+    RawArray<PrCssStyleSheet* PR_NONNULL> adopted;
+
+    // For a document, the sheets constructed for it, which hold no reference. A sheet removes itself as it is freed.
+    RawArray<PrCssStyleSheet* PR_NONNULL> constructed;
+
     // The registered custom properties (css-properties-values-api-1/#dom-window-registeredpropertyset-slot), in the
     // order in which they were registered.
     RawArray<CssRegisteredProperty> registered;

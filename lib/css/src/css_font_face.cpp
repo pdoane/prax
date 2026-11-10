@@ -893,6 +893,8 @@ void cssDocumentFontFaces(const PrDomDocument* document, RawArray<PrCssFontFace*
         return;
     for (uint32_t i = 0; i < style->sheets.sheets.count; ++i)
         connectedFaces(style->sheets.sheets.data[i], out);
+    for (uint32_t i = 0; i < style->adopted.count; ++i)
+        connectedFaces(style->adopted.data[i], out);
     if (style->fonts != nullptr)
         out->append(style->fonts->faces.span());
 }

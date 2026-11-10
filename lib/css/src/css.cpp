@@ -758,14 +758,39 @@ void prCssStyleSheetSetDisabled(PrCssStyleSheet* sheet, bool value) {
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSStyleSheet
 
-PrCssStyleSheet* prCssStyleSheetCreate(const PrCssStyleSheetInit* PR_NULLABLE init) {
-    PrCssStyleSheet* sheet = cssStyleSheetCreate(cssSheetDataCreate());
-    cssStyleSheetRetain(sheet);
-    sheet->constructed = true;
+PrStatus prCssStyleSheetCreate(PrDomDocument* PR_NULLABLE document, const PrCssStyleSheetInit* PR_NULLABLE init,
+        PrCssStyleSheet* PR_NULLABLE* PR_NONNULL out) {
+    *out = nullptr;
     PrCssStyleSheetInit defaults = prCssStyleSheetInitDefault();
     if (init == nullptr)
         init = &defaults;
-    sheet->href = prRawStringCopy(init->baseUrl);
+    // cssom-1/#create-a-constructed-cssstylesheet: the sheet's location is the document's base URL, and its base URL is
+    // the given one, resolved against the document's.
+    PrUrl* documentBase = document != nullptr ? domDocumentBaseUrl(document) : nullptr;
+    PrRawString base = prRawStringNull();
+    if (documentBase != nullptr)
+        base = prUrlSerialize(documentBase, PrUrlSerialization_Whole);
+    if (init->baseUrl.data != nullptr) {
+        PrUrl* resolved = nullptr;
+        if (prUrlCreate(init->baseUrl, documentBase, PrCharset_Utf8, &resolved) != PrStatus_Ok) {
+            prUrlDestroy(resolved);
+            prUrlDestroy(documentBase);
+            prRawStringReset(&base);
+            return PrStatus_NotAllowed;
+        }
+        prRawStringReset(&base);
+        base = prUrlSerialize(resolved, PrUrlSerialization_Whole);
+        prUrlDestroy(resolved);
+    }
+    PrCssStyleSheet* sheet = cssStyleSheetCreate(cssSheetDataCreate());
+    cssStyleSheetRetain(sheet);
+    sheet->constructed = true;
+    sheet->constructorDocument = document;
+    if (document != nullptr)
+        cssDocumentRoot(document)->constructed.push(sheet);
+    sheet->href = documentBase != nullptr ? prUrlSerialize(documentBase, PrUrlSerialization_Whole) : prRawStringNull();
+    sheet->data->href = base;
+    prUrlDestroy(documentBase);
     sheet->disabled = init->disabled;
     // cssom-1/#dom-cssstylesheet-cssstylesheet: the media are a MediaList's queries, or the queries that the string
     // holds.
@@ -774,7 +799,8 @@ PrCssStyleSheet* prCssStyleSheetCreate(const PrCssStyleSheetInit* PR_NULLABLE in
         sheet->media.queries = cssValueListCopy(cssValueListRun(&cssMediaListQueries(media)->queries));
     else
         cssMediaListParse(&sheet->media, init->media.string);
-    return sheet;
+    *out = sheet;
+    return PrStatus_Ok;
 }
 
 void prCssStyleSheetRetain(PrCssStyleSheet* sheet) {
@@ -787,6 +813,10 @@ void prCssStyleSheetRelease(PrCssStyleSheet* PR_NULLABLE sheet) {
 
 PrCssRule* PR_NULLABLE prCssStyleSheetOwnerRule(PrCssStyleSheet* sheet) {
     return sheet->ownerRule;
+}
+
+PrDomDocument* PR_NULLABLE prCssStyleSheetConstructorDocument(const PrCssStyleSheet* sheet) {
+    return sheet->constructorDocument;
 }
 
 PrCssRuleList* prCssStyleSheetCssRules(PrCssStyleSheet* sheet) {
@@ -807,8 +837,13 @@ PrStatus prCssStyleSheetDeleteRule(PrCssStyleSheet* sheet, uint32_t index) {
 PrStatus prCssStyleSheetReplaceSync(PrCssStyleSheet* sheet, PrStringView text) {
     if (!sheet->constructed)
         return PrStatus_NotAllowed;
-
     cssStyleSheetReplace(sheet, text);
+    // A constructed sheet loads no other sheet, so its @import rules are dropped.
+    for (uint32_t i = sheet->data->rules.count; i-- != 0;) {
+        const CssRuleData* rule = sheet->data->rules.data[i];
+        if (rule->kind == CssRuleDataKind_At && rule->atRule == CssAtRule_Import)
+            cssStyleSheetDeleteRule(sheet, i);
+    }
     return PrStatus_Ok;
 }
 
@@ -2764,6 +2799,36 @@ PrCssStyleSheetList* prCssShadowRootStyleSheets(PrDomShadowRoot* shadow) {
     if (shadow->style == nullptr)
         shadow->style = allocZeroed<CssRoot>();
     return &shadow->style->sheets;
+}
+
+uint32_t prCssDocumentAdoptedStyleSheets(PrDomDocument* document, PrCssStyleSheet* PR_NONNULL* PR_NULLABLE out,
+        uint32_t capacity) {
+    const RawArray<PrCssStyleSheet* PR_NONNULL>& adopted = cssDocumentRoot(document)->adopted;
+    for (uint32_t i = 0; i < adopted.count && i < capacity; ++i)
+        out[i] = adopted.data[i];
+    return adopted.count;
+}
+
+PrStatus prCssDocumentSetAdoptedStyleSheets(PrDomDocument* document,
+        PrCssStyleSheet* const PR_NONNULL* PR_NULLABLE sheets, uint32_t count) {
+    return cssRootSetAdopted(cssDocumentRoot(document), document, sheets, count);
+}
+
+uint32_t prCssShadowRootAdoptedStyleSheets(PrDomShadowRoot* shadow, PrCssStyleSheet* PR_NONNULL* PR_NULLABLE out,
+        uint32_t capacity) {
+    if (shadow->style == nullptr)
+        return 0;
+    const RawArray<PrCssStyleSheet* PR_NONNULL>& adopted = shadow->style->adopted;
+    for (uint32_t i = 0; i < adopted.count && i < capacity; ++i)
+        out[i] = adopted.data[i];
+    return adopted.count;
+}
+
+PrStatus prCssShadowRootSetAdoptedStyleSheets(PrDomShadowRoot* shadow,
+        PrCssStyleSheet* const PR_NONNULL* PR_NULLABLE sheets, uint32_t count) {
+    if (shadow->style == nullptr)
+        shadow->style = allocZeroed<CssRoot>();
+    return cssRootSetAdopted(shadow->style, shadow->document, sheets, count);
 }
 
 PrCssStyleProperties* prCssElementStyle(PrDomElement* element) {

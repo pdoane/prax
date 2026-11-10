@@ -186,23 +186,34 @@ TEST_CASE("a nested rule reaches the rule that encloses it") {
 }
 
 TEST_CASE("a sheet a caller makes is a sheet a caller releases") {
-    PrCssStyleSheet* plain = prCssStyleSheetCreate(nullptr);
+    PrCssStyleSheet* plain = nullptr;
+    prCssStyleSheetCreate(nullptr, nullptr, &plain);
     CHECK(prCssStyleSheetDisabled(plain) == false);
     CHECK(textOf(prCssStyleSheetHref(plain)) == "");
     CHECK(prCssRuleListLength(prCssStyleSheetCssRules(plain)) == 0);
 
     // Explicit defaults and an omitted dictionary select the same options.
     PrCssStyleSheetInit defaults = prCssStyleSheetInitDefault();
-    PrCssStyleSheet* same = prCssStyleSheetCreate(&defaults);
+    PrCssStyleSheet* same = nullptr;
+    prCssStyleSheetCreate(nullptr, &defaults, &same);
     CHECK(prCssStyleSheetDisabled(same) == false);
 
     PrCssStyleSheetInit options = prCssStyleSheetInitDefault();
     options.baseUrl = "https://example.test/";
     options.disabled = true;
 
-    PrCssStyleSheet* sheet = prCssStyleSheetCreate(&options);
+    PrCssStyleSheet* sheet = nullptr;
+    REQUIRE(prCssStyleSheetCreate(nullptr, &options, &sheet) == PrStatus_Ok);
     CHECK(prCssStyleSheetDisabled(sheet) == true);
-    CHECK(textOf(prCssStyleSheetHref(sheet)) == "https://example.test/");
+    // The sheet's URL is its constructor document's base URL, and it has no constructor document.
+    CHECK(textOf(prCssStyleSheetHref(sheet)) == "");
+
+    // A base URL that does not parse makes no sheet.
+    PrCssStyleSheetInit invalid = prCssStyleSheetInitDefault();
+    invalid.baseUrl = "https://test:test/";
+    PrCssStyleSheet* none = nullptr;
+    CHECK(prCssStyleSheetCreate(nullptr, &invalid, &none) == PrStatus_NotAllowed);
+    CHECK(none == nullptr);
 
     // Only a constructed sheet accepts replaceSync, and this one is constructed.
     CHECK(prCssStyleSheetReplaceSync(sheet, "a { color: red }") == PrStatus_Ok);

@@ -260,7 +260,7 @@ struct DomDocumentSubscriber {
 constexpr uint32_t kDomDocumentSubscribers = 6;
 
 // The number of entries of DomDocumentHooks (DomHook_Count).
-constexpr uint32_t kDomDocumentHooks = 21;
+constexpr uint32_t kDomDocumentHooks = 22;
 
 // A document (dom/#interface-document).
 struct DomDocument : PrDomNode {

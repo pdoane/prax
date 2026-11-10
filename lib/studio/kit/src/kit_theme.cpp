@@ -2,6 +2,9 @@
 
 #include "pr/kit_theme.h"
 
+#include "pr/format.h"
+#include "pr/text_buffer.h"
+
 namespace pr_impl {
 
 namespace {
@@ -83,8 +86,8 @@ constexpr PrKitPalette kLight = {
     .axisW = rgb(140, 84, 178),
 };
 
-// Studio's type scale, by PrKitTextRole. Studio's type scale, by PrKitTextRole. Captions are muted and meta text is
-// faint, and the mono roles, which set identifiers, tags and readouts, stay on one line.
+// Studio's type scale, by PrKitTextRole. Captions are muted and meta text is faint, and the mono roles, which set
+// identifiers, tags and readouts, stay on one line.
 constexpr PrKitType kTypes[PrKitTextRole_Count] = {
     {.size = 12, .weight = 400, .lineHeight = 16},                                     // Body
     {.size = 11, .weight = 400, .lineHeight = 14},                                     // BodySmall
@@ -115,6 +118,70 @@ constexpr PrKitType kTypes[PrKitTextRole_Count] = {
     {.mono = true, .wrap = PrKitWrap_Nowrap, .size = 22, .weight = 500, .lineHeight = 26},     // MonoNum
 };
 
+// The palette's colors, by the names of their custom properties.
+struct NamedColor {
+    const char* name;
+    PrColor PrKitPalette::*color;
+};
+
+constexpr NamedColor kColors[] = {
+    {"accent", &PrKitPalette::accent},
+    {"accent-weak", &PrKitPalette::accentWeak},
+    {"text-selection", &PrKitPalette::textSelection},
+    {"accent-text", &PrKitPalette::accentText},
+    {"accent-hover", &PrKitPalette::accentHover},
+    {"accent-press", &PrKitPalette::accentPress},
+    {"success", &PrKitPalette::success},
+    {"warning", &PrKitPalette::warning},
+    {"danger", &PrKitPalette::danger},
+    {"bg0", &PrKitPalette::bg0},
+    {"bg1", &PrKitPalette::bg1},
+    {"bg2", &PrKitPalette::bg2},
+    {"bg3", &PrKitPalette::bg3},
+    {"bg4", &PrKitPalette::bg4},
+    {"bg-viewport", &PrKitPalette::bgViewport},
+    {"line1", &PrKitPalette::line1},
+    {"line2", &PrKitPalette::line2},
+    {"line3", &PrKitPalette::line3},
+    {"text1", &PrKitPalette::text1},
+    {"text2", &PrKitPalette::text2},
+    {"text3", &PrKitPalette::text3},
+    {"text4", &PrKitPalette::text4},
+    {"text-inverse", &PrKitPalette::textInverse},
+    {"hud-fill", &PrKitPalette::hudFill},
+    {"hud-border", &PrKitPalette::hudBorder},
+    {"axis-x", &PrKitPalette::axisX},
+    {"axis-y", &PrKitPalette::axisY},
+    {"axis-z", &PrKitPalette::axisZ},
+    {"axis-w", &PrKitPalette::axisW},
+};
+
+// The text roles, by the names of their custom properties.
+constexpr const char* kRoleNames[PrKitTextRole_Count] = {
+    "body", "body-small", "strong", "body-italic", "heading", "title", "display", "caption", "meta", "mono",
+    "mono-strong", "mono-num",
+};
+
+uint32_t channel(float value) {
+    return uint32_t(value * 255.0f + 0.5f);
+}
+
+// Appends `family` as font-family writes it: a generic by its keyword, and any other family as a string.
+void appendFamily(PrTextBuffer* out, PrFontFamily family) {
+    if (family.generic != PrFontGeneric_None) {
+        prTextBufferAppend(out, prFontGenericName(family.generic));
+        return;
+    }
+    prTextBufferAppendChar(out, '"');
+    for (size_t i = 0; i < family.name.size; ++i) {
+        char c = family.name.data[i];
+        if (c == '"' || c == '\\')
+            prTextBufferAppendChar(out, '\\');
+        prTextBufferAppendChar(out, c);
+    }
+    prTextBufferAppendChar(out, '"');
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -134,4 +201,39 @@ PrKitTheme prKitThemeStudio(PrKitThemeVariant variant, PrFontSet* PR_NULLABLE fo
     theme.ui = prFontFamilyGeneric(PrFontGeneric_SystemUi);
     theme.mono = prFontFamilyGeneric(PrFontGeneric_Monospace);
     return theme;
+}
+
+PrRawString prKitThemeCss(const PrKitTheme* theme) {
+    const PrKitPalette& p = theme->palette;
+    bool dark = 0.2126f * p.bg0.r + 0.7152f * p.bg0.g + 0.0722f * p.bg0.b < 0.5f;
+    PrTextBuffer css = {};
+    char line[160];
+    prTextBufferAppend(&css, formatToBuffer(Span(line), ":root {{\n  color-scheme: {};\n", dark ? "dark" : "light"));
+    for (const NamedColor& named : kColors) {
+        PrColor c = p.*named.color;
+        prTextBufferAppend(&css, formatToBuffer(Span(line), "  --kit-{}: rgb({} {} {} / {:.3f});\n", named.name,
+            channel(c.r), channel(c.g), channel(c.b), c.a));
+    }
+    PrTextBuffer ui = {};
+    PrTextBuffer mono = {};
+    appendFamily(&ui, theme->ui);
+    appendFamily(&mono, theme->mono);
+    prTextBufferAppend(&css, "  --kit-family-ui: ");
+    prTextBufferAppend(&css, prTextBufferView(&ui));
+    prTextBufferAppend(&css, ";\n  --kit-family-mono: ");
+    prTextBufferAppend(&css, prTextBufferView(&mono));
+    prTextBufferAppend(&css, ";\n");
+    for (uint32_t role = 0; role < PrKitTextRole_Count; ++role) {
+        const PrKitType& type = theme->types[role];
+        prTextBufferAppend(&css, formatToBuffer(Span(line), "  --kit-font-{}: {}{} {}px/{}px ", kRoleNames[role],
+            type.italic ? "italic " : "", type.weight, type.size, type.lineHeight));
+        prTextBufferAppend(&css, prTextBufferView(type.mono ? &mono : &ui));
+        prTextBufferAppend(&css, formatToBuffer(Span(line), ";\n  --kit-tracking-{}: {}px;\n", kRoleNames[role],
+            type.letterSpacing));
+    }
+    prTextBufferAppend(&css, "  font: var(--kit-font-body);\n  letter-spacing: var(--kit-tracking-body);\n"
+        "  color: var(--kit-text1);\n}\n::selection { background: var(--kit-text-selection); }\n");
+    prTextBufferReset(&ui);
+    prTextBufferReset(&mono);
+    return prTextBufferTake(&css);
 }

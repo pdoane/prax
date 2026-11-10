@@ -60,6 +60,8 @@ void freeRule(PrCssRule* rule) {
 }
 
 void freeSheet(PrCssStyleSheet* sheet) {
+    if (sheet->constructorDocument != nullptr)
+        cssDocumentRoot(sheet->constructorDocument)->constructed.removeFirst(sheet);
     for (uint32_t i = 0; i < sheet->rules.count; ++i) {
         if (sheet->rules.data[i] != nullptr)
             freeRule(sheet->rules.data[i]);
@@ -529,7 +531,45 @@ const CssMediaQueries* cssMediaListQueries(const PrCssMediaList* list) {
 const PrDomDocument* PR_NULLABLE cssStyleSheetDocument(const PrCssStyleSheet* sheet) {
     while (sheet->ownerRule != nullptr && sheet->ownerRule->sheet != nullptr)
         sheet = sheet->ownerRule->sheet;
-    return sheet->ownerNode != nullptr ? sheet->ownerNode->document : nullptr;
+    if (sheet->ownerNode != nullptr)
+        return sheet->ownerNode->document;
+    // An adopted sheet styles the trees of its constructor document.
+    return sheet->adoptions != 0 ? sheet->constructorDocument : nullptr;
+}
+
+PrStatus cssRootSetAdopted(CssRoot* root, PrDomDocument* document, PrCssStyleSheet* const PR_NONNULL* PR_NULLABLE sheets,
+        uint32_t count) {
+    for (uint32_t i = 0; i < count; ++i) {
+        if (!sheets[i]->constructed || sheets[i]->constructorDocument != document)
+            return PrStatus_NotAllowed;
+    }
+    for (uint32_t i = 0; i < count; ++i) {
+        cssStyleSheetRetain(sheets[i]);
+        ++sheets[i]->adoptions;
+    }
+    RawArray<PrCssStyleSheet* PR_NONNULL> old = root->adopted;
+    root->adopted = {};
+    for (uint32_t i = 0; i < count; ++i)
+        root->adopted.push(sheets[i]);
+    for (uint32_t i = 0; i < old.count; ++i) {
+        --old.data[i]->adoptions;
+        cssStyleSheetRelease(old.data[i]);
+    }
+    old.reset();
+    cssDocumentStyleChanged(document);
+    return PrStatus_Ok;
+}
+
+void cssRootResetSheets(CssRoot* root) {
+    // A sheet freed below must not reach back into a document that is going.
+    for (uint32_t i = 0; i < root->constructed.count; ++i)
+        root->constructed.data[i]->constructorDocument = nullptr;
+    root->constructed.reset();
+    for (uint32_t i = 0; i < root->adopted.count; ++i) {
+        --root->adopted.data[i]->adoptions;
+        cssStyleSheetRelease(root->adopted.data[i]);
+    }
+    root->adopted.reset();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -562,6 +602,10 @@ PrStatus cssStyleSheetInsertRule(PrCssStyleSheet* sheet, PrStringView text, uint
     CssEdit edit;
     cssEditBegin(&edit, &sheet->parser);
     PrStatus status = cssRuleListPrepareInsert(&edit, sheet->data, nullptr, text, index);
+    // cssom-1/#insert-a-css-rule: a constructed sheet takes no @import rule.
+    if (status == PrStatus_Ok && sheet->constructed && edit.rule->kind == CssRuleDataKind_At &&
+            edit.rule->atRule == CssAtRule_Import)
+        status = PrStatus_Syntax;
     if (status == PrStatus_Ok) {
         ownData(sheet, Notify_Caller);
         cssRuleListCommitInsert(&edit, sheet->data, nullptr);

@@ -3237,8 +3237,9 @@ void cssRuleSetBuild(CssRuleSet* set, const CssRuleSet* base, const CssTreeSheet
     for (uint32_t t = 0; t < treeCount; ++t) {
         f.scope = trees[t].tree;
         f.depth = trees[t].depth;
-        for (uint32_t i = 0; i < trees[t].count; ++i) {
-            const PrCssStyleSheet* sheet = trees[t].sheets[i];
+        for (uint32_t i = 0; i < trees[t].count + trees[t].adoptedCount; ++i) {
+            const PrCssStyleSheet* sheet =
+                i < trees[t].count ? trees[t].sheets[i] : trees[t].adopted[i - trees[t].count];
             if (sheet->disabled || (media != nullptr && !matchesMedia(f, &sheet->media)))
                 continue;
             f.sheet = sheet->data;

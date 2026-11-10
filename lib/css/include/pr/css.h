@@ -393,7 +393,7 @@ void prCssMediaQueryListRelease(PrCssMediaQueryList* PR_NULLABLE list);
 // StyleSheet (cssom), the interface that CSSStyleSheet inherits. Every style sheet is a CSSStyleSheet.
 
 // Returns the URL that the sheet was fetched from, or the null view if it was not fetched. A constructed sheet's URL is
-// its `baseUrl`.
+// its constructor document's base URL.
 PrStringView prCssStyleSheetHref(const PrCssStyleSheet* sheet);
 
 // Returns the element or processing instruction that owns the sheet (cssom-1/#dom-stylesheet-ownernode). Returns null
@@ -437,9 +437,13 @@ static inline PrCssStyleSheetInit prCssStyleSheetInitDefault(void) {
     return value;
 }
 
-// Creates a constructed sheet with no rules (cssom-1/#dom-cssstylesheet-cssstylesheet). The caller holds its one
-// reference. A null `init` means the defaults.
-PrCssStyleSheet* prCssStyleSheetCreate(const PrCssStyleSheetInit* PR_NULLABLE init);
+// Creates a constructed sheet with no rules (cssom-1/#dom-cssstylesheet-cssstylesheet), whose constructor document is
+// `document`, or none if it is null. Only the trees of its constructor document can adopt it. The relative URLs of its
+// rules resolve against `baseUrl` of `init`, resolved against the document's base URL, or against the document's base
+// URL if `baseUrl` is the null view. Writes the sheet to `out` with one reference, which the caller holds. Returns
+// NotAllowed, and writes null, if `baseUrl` does not parse. A null `init` means the defaults.
+PrStatus prCssStyleSheetCreate(PrDomDocument* PR_NULLABLE document, const PrCssStyleSheetInit* PR_NULLABLE init,
+    PrCssStyleSheet* PR_NULLABLE* PR_NONNULL out);
 
 // Adds or releases a reference. A reference to a sheet or a rule keeps its tree alive. A sheet that a node owns, and
 // its rules, keep the node's tree alive. A sheet or rule with no owner keeps alive the objects that it owns.
@@ -449,19 +453,25 @@ void prCssStyleSheetRelease(PrCssStyleSheet* PR_NULLABLE sheet);
 // Returns the @import rule that imports the sheet, or null.
 PrCssRule* PR_NULLABLE prCssStyleSheetOwnerRule(PrCssStyleSheet* sheet);
 
+// Returns the constructor document of a constructed sheet (cssom-1/#concept-css-style-sheet-constructor-document),
+// whose trees may adopt it, or null.
+PrDomDocument* PR_NULLABLE prCssStyleSheetConstructorDocument(const PrCssStyleSheet* sheet);
+
 // Returns the sheet's rules, which the sheet owns.
 PrCssRuleList* prCssStyleSheetCssRules(PrCssStyleSheet* sheet);
 
 // Inserts the rule in `rule` at `index`, and writes `index` to `out`. Returns OutOfRange if `index` is past the end,
-// Syntax if `rule` is not one valid rule, NotAllowed if the rule may not go at `index`, and InvalidState for an
-// @namespace rule while the sheet holds a rule that is neither @import nor @namespace.
+// Syntax if `rule` is not one valid rule or is an @import rule of a constructed sheet, NotAllowed if the rule may not
+// go at `index`, and InvalidState for an @namespace rule while the sheet holds a rule that is neither @import nor
+// @namespace.
 PrStatus prCssStyleSheetInsertRule(PrCssStyleSheet* sheet, PrStringView rule, uint32_t index, uint32_t* PR_NULLABLE out);
 
 // Removes the rule at `index`. Returns OutOfRange if there is none, and InvalidState for an @namespace rule while the
 // sheet holds a rule that is neither @import nor @namespace.
 PrStatus prCssStyleSheetDeleteRule(PrCssStyleSheet* sheet, uint32_t index);
 
-// Replaces the sheet's rules with the ones in `text`. Returns NotAllowed for a sheet that is not constructed.
+// Replaces the sheet's rules with the ones in `text`, without its @import rules
+// (cssom-1/#dom-cssstylesheet-replacesync). Returns NotAllowed for a sheet that is not constructed.
 PrStatus prCssStyleSheetReplaceSync(PrCssStyleSheet* sheet, PrStringView text);
 
 // Inserts the rule `selector { style }` at `index`, or at the end if `index` is null
@@ -1854,6 +1864,20 @@ PrCssHighlightRegistry* prCssDocumentHighlights(PrDomDocument* document);
 
 // Returns the shadow root's style sheets (cssom-1/#dom-documentorshadowroot-stylesheets), which are a view of the root.
 PrCssStyleSheetList* prCssShadowRootStyleSheets(PrDomShadowRoot* shadow);
+
+// The adopted sheets of a document or a shadow root (cssom-1/#dom-documentorshadowroot-adoptedstylesheets), which
+// follow its own sheets in the cascade. The getters write up to `capacity` sheets to `out` and return the number of
+// sheets. The setters replace the list with `sheets`, which may repeat a sheet, and hold a reference to each. They
+// return NotAllowed, and change nothing, if a sheet is not constructed or its constructor document is not the node
+// document.
+uint32_t prCssDocumentAdoptedStyleSheets(PrDomDocument* document, PrCssStyleSheet* PR_NONNULL* PR_NULLABLE out,
+    uint32_t capacity);
+PrStatus prCssDocumentSetAdoptedStyleSheets(PrDomDocument* document,
+    PrCssStyleSheet* const PR_NONNULL* PR_NULLABLE sheets, uint32_t count);
+uint32_t prCssShadowRootAdoptedStyleSheets(PrDomShadowRoot* shadow, PrCssStyleSheet* PR_NONNULL* PR_NULLABLE out,
+    uint32_t capacity);
+PrStatus prCssShadowRootSetAdoptedStyleSheets(PrDomShadowRoot* shadow,
+    PrCssStyleSheet* const PR_NONNULL* PR_NULLABLE sheets, uint32_t count);
 
 // Returns the declarations of the element's style attribute (cssom-1/#dom-elementcssinlinestyle-style), which the
 // element owns.

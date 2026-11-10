@@ -323,7 +323,7 @@ int main(int argc, char** argv) {
     buildSum(work.sum);
     buildTransform(work.transform);
     buildDeep(work.deep);
-    work.sheet = prCssStyleSheetCreate(nullptr);
+    prCssStyleSheetCreate(nullptr, nullptr, &work.sheet);
     prCssStyleSheetReplaceSync(work.sheet, "div {}");
     PrCssStyleRule* rule = prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(work.sheet), 0));
     work.map = prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
