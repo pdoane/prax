@@ -3,6 +3,7 @@ pr_library(url INCLUDE include
     src/url_data.cpp
     src/url_file.cpp
     src/url_percent.cpp
+    src/url_public_suffix.cpp
     src/url.cpp
     src/url_record.cpp
     src/url_scheme.cpp

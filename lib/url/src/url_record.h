@@ -14,6 +14,9 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+// url/#concept-host-parser, for a host that is not opaque. On success, writes the serialized host to `out`.
+PrStatus urlHostParse(PrStringView input, PrRawString* out);
+
 // A URL (url/#concept-url). Each component holds its text. A null host, query or fragment is the null string, and an
 // empty one is the empty string. A path that is not opaque has `/` before each segment, so the empty path is the empty
 // string. Views of a component stay valid until the URL changes.

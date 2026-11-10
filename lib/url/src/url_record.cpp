@@ -903,6 +903,11 @@ void formEncode(PrTextBuffer* out, PrStringView text) {
 
 } // namespace
 
+PrStatus urlHostParse(PrStringView input, PrRawString* out) {
+    *out = prRawStringNull();
+    return parseHost(input, false, out);
+}
+
 PrStatus urlParse(PrStringView input, const Url* PR_NULLABLE base, PrCharset charset, PrUrl* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(prCharsetOutput(charset) == charset);
     *out = nullptr;

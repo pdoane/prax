@@ -185,6 +185,8 @@ DOTLOTTIE_WEB_VERSION = "0.80.0"
 LOTTIE_SPEC_COMMIT = "4b55957472f8718e34e9c1298f0e8f021b6c597f"
 # The Encoding Standard's repository, whose encodings and indexes the charset generator reads.
 ENCODING_COMMIT = "be17ac5c49881336538acfc7b40dba3c8009144b"
+# The Public Suffix List's repository, whose list the URL generator reads.
+PUBLIC_SUFFIX_COMMIT = "3db7776283b0874634fea8b01168f785360d64f2"
 # release-48
 # MathML Core's repository, whose tables the MathML generator reads.
 MATHML_CORE_COMMIT = "66256baa0e7125171ff16b3831acfba3c43179c7"
@@ -536,6 +538,11 @@ CHECKOUTS = {
     "videos": lambda: [Files("videos", [
         ("cat.mp4", "https://archive.org/download/the-table-and-the-kitten/The%20Table%20And%20The%20Kitten.mp4"),
     ])],
+    # The Public Suffix List (publicsuffix.org), which gives URL hosts their public suffixes and registrable domains.
+    "publicsuffix": lambda: [Files("publicsuffix", [(
+        "public_suffix_list.dat",
+        "https://raw.githubusercontent.com/publicsuffix/list/%s/public_suffix_list.dat" % PUBLIC_SUFFIX_COMMIT,
+    )], ("commit", PUBLIC_SUFFIX_COMMIT))],
     # The named character references, which html-parsing provides as one JSON file.
     "entities": lambda: [Files("html", [("entities.json", "https://html.spec.whatwg.org/entities.json")])],
     # The Encoding Standard's encodings, with their labels, and its indexes, for the charset generator.

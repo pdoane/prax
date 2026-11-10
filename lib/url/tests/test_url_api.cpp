@@ -101,3 +101,53 @@ TEST_CASE("a query is percent-encoded in the charset of the document that a URL 
     CHECK(parsed("ws://example.test/?\xC3\xA9", PrCharset_Windows1252) == "ws://example.test/?%C3%A9");
     CHECK(parsed("https://example.test/?\xE3\x81\x82", PrCharset_Iso2022Jp) == "https://example.test/?%1B$B$%22%1B(B");
 }
+
+TEST_CASE("a host's public suffix and registrable domain follow the Public Suffix List") {
+    struct Case {
+        const char* host;
+        const char* suffix;         // null for none
+        const char* registrable;    // null for none
+    };
+    const Case cases[] = {
+        {"com", "com", nullptr},
+        {"example.com", "com", "example.com"},
+        {"a.b.example.com", "com", "example.com"},
+        {"example.co.uk", "co.uk", "example.co.uk"},
+        // A label that no rule covers is a public suffix of its own.
+        {"a.example.example", "example", "example.example"},
+        // A wildcard rule (*.ck) and its exception (!www.ck).
+        {"ck", "ck", nullptr},
+        {"test.ck", "test.ck", nullptr},
+        {"b.test.ck", "test.ck", "b.test.ck"},
+        {"www.ck", "ck", "www.ck"},
+        {"a.www.ck", "ck", "www.ck"},
+        {"a.b.kawasaki.jp", "b.kawasaki.jp", "a.b.kawasaki.jp"},
+        {"city.kawasaki.jp", "kawasaki.jp", "city.kawasaki.jp"},
+        // A rule of the list's private section, and an internationalized rule as its A-labels hold it.
+        {"foo.github.io", "github.io", "foo.github.io"},
+        {"xn--85x722f.xn--55qx5d.cn", "xn--55qx5d.cn", "xn--85x722f.xn--55qx5d.cn"},
+        // A trailing dot stays with the suffix.
+        {"example.com.", "com.", "example.com."},
+        // An IP address is no domain.
+        {"127.0.0.1", nullptr, nullptr},
+        {"[::1]", nullptr, nullptr},
+    };
+    for (const Case& c : cases) {
+        INFO(c.host);
+        PrStringView suffix = prUrlHostPublicSuffix(c.host);
+        PrStringView registrable = prUrlHostRegistrableDomain(c.host);
+        CHECK((suffix.data == nullptr) == (c.suffix == nullptr));
+        CHECK(text(suffix) == (c.suffix != nullptr ? c.suffix : ""));
+        CHECK((registrable.data == nullptr) == (c.registrable == nullptr));
+        CHECK(text(registrable) == (c.registrable != nullptr ? c.registrable : ""));
+    }
+}
+
+TEST_CASE("a host parses as a special URL's host does") {
+    PrRawString parsed{};
+    REQUIRE(prUrlHostParse("EXAMPLE.Com", &parsed) == PrStatus_Ok);
+    CHECK(take(parsed) == "example.com");
+    PrRawString failed{};
+    CHECK(prUrlHostParse("exa mple.com", &failed) == PrStatus_Syntax);
+    CHECK(prRawStringIsNull(&failed));
+}
