@@ -72,8 +72,17 @@ enum {
     PrGpuFeatureFlag_TextureCompressionAstc = 1u << 2,
 
     // A fragment shader that reads the target (pr/gpu.slang's prGpuTarget) reads what the fragments before it in the
-    // same draw wrote, in the order of the draw's primitives.
+    // same draw wrote, in the order of the draw's primitives. Only a device with PrGpuFeatureFlag_TargetReads has it.
     PrGpuFeatureFlag_OrderedTargetReads = 1u << 3,
+
+    // Shaders reach resources by handle, from any data that they read (pr/gpu.slang's prGpuGet and prGpuLoad). Without
+    // it, shaders reach only the resources bound to the command buffer's slots (prGpuCommandsSetBuffer and the others),
+    // which every device has.
+    PrGpuFeatureFlag_Bindless = 1u << 4,
+
+    // A graphics pipeline reads the pass's target (PrGpuGraphicsPipelineDesc::readsTarget). Without it, such a pipeline
+    // is not supported, and a renderer reads what earlier draws left from a texture of its own.
+    PrGpuFeatureFlag_TargetReads = 1u << 5,
 };
 typedef uint32_t PrGpuFeatureFlags;
 
@@ -131,14 +140,25 @@ typedef struct PrGpuDeviceInfo {
     PrGpuFeatureFlags features;
     uint32_t maxTextureSize;        // the largest width or height of a 2D texture
 
-    // The number of handles that the device can give out at once, of resources and of samplers.
+    // The number of handles that the device can give out at once, of resources and of samplers. Zero without
+    // PrGpuFeatureFlag_Bindless.
     uint32_t maxResourceHandles;
     uint32_t maxSamplerHandles;
+
+    // The number of slots of each kind that a command buffer binds (prGpuCommandsSetBuffer and the others).
+    uint32_t maxBufferSlots;
+    uint32_t maxRwBufferSlots;
+    uint32_t maxTextureSlots;
+    uint32_t maxRwTextureSlots;
 } PrGpuDeviceInfo;
 
 // How a device is created.
 typedef struct PrGpuDeviceOptions {
     bool validation;        // turns on the API's validation where it is installed
+
+    // Creates a device without PrGpuFeatureFlag_Bindless where the system has it, so that the slots alone are used and
+    // tested on any device.
+    bool slotsOnly;
 } PrGpuDeviceOptions;
 
 // Returns the backend that `name` names, as prGpuBackendName spells it, ignoring case, or Count if it names none.
@@ -716,8 +736,8 @@ typedef struct PrGpuGraphicsPipelineDesc {
     PrGpuAttachmentFormats formats;
     PrGpuBlend blend[kPrGpuMaxColorAttachments];    // by color attachment
 
-    // True if the fragment shader reads the pass's first color attachment at its pixel (pr/gpu.slang's prGpuTarget).
-    // The attachment's blending must be disabled.
+    // True if the fragment shader reads the pass's first color attachment at its pixel (pr/gpu.slang's prGpuTarget),
+    // which a device with PrGpuFeatureFlag_TargetReads supports. The attachment's blending must be disabled.
     bool readsTarget;
 
     PrStringView name;                              // a name for debuggers and captures, or empty
@@ -729,7 +749,8 @@ PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibr
 
 // Creates a pipeline for draws, or for dispatches of the compute entry point `compute` of `library`. Returns NotFound
 // if the library has no entry point by a name that the description gives, WrongType if an entry point is of the wrong
-// stage, and NotSupported for a state that the device does not have. On failure, `*out` is zero.
+// stage, and NotSupported for a state that the device does not have, or for an entry point that reaches resources by
+// handle on a device without PrGpuFeatureFlag_Bindless. On failure, `*out` is zero.
 PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc, PrGpuPipeline* out);
 PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrary* library, PrStringView compute,
     PrStringView name, PrGpuPipeline* out);
@@ -814,6 +835,25 @@ void prGpuCommandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_
 
 // Sets the pipeline of the dispatches recorded after the call, or, in a pass, of the draws.
 void prGpuCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline);
+
+// The alignment of the offset at which a buffer is bound to a slot, which the command buffer's stream meets.
+enum { kPrGpuSlotOffsetAlignment = 256 };
+
+// Bind resources to the command buffer's slots for the draws and dispatches recorded after the call, as root data is
+// set. A slot is of one kind, numbered from zero below the device's maximum of its kind (PrGpuDeviceInfo), and is
+// shared by every stage of a pipeline. A shader declares the slots that it reads (pr/gpu.slang's PR_GPU_BUFFER and the
+// others). A zero buffer or texture unbinds the slot.
+//
+// A Buffer slot is read from `offset` bytes into the buffer, which is a multiple of kPrGpuSlotOffsetAlignment. An
+// RwBuffer slot may also be written, and its buffer has PrGpuBufferUsageFlag_Storage. A Texture slot is sampled with
+// its sampler, or read without one if the sampler is zero, and its texture has PrGpuTextureUsageFlag_Sampled. An
+// RwTexture slot is read and written without a sampler, and its texture has PrGpuTextureUsageFlag_Storage.
+//
+// A native draw (prGpuPassNativeDraw) unbinds every slot.
+void prGpuCommandsSetBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
+void prGpuCommandsSetRwBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
+void prGpuCommandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler);
+void prGpuCommandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture);
 
 // Records dispatches outside any pass: `groups` groups of the pipeline's group size, or the groups that a
 // PrGpuDispatchIndirect at `offset` of `buffer` names.

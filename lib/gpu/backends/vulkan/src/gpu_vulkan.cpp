@@ -478,13 +478,22 @@ PrStatus createDescriptors(VulkanDevice* d, uint32_t resources, uint32_t sampler
         {VulkanBinding_Samplers, VK_DESCRIPTOR_TYPE_SAMPLER, samplers, VK_SHADER_STAGE_ALL, nullptr},
         {VulkanBinding_Resources, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, resources, VK_SHADER_STAGE_ALL, nullptr},
     };
-    const VkDescriptorSetLayoutBinding pushed[2] = {
-        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr},
-        {1, vulkanTargetDescriptor(d), 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+    VkDescriptorSetLayoutBinding pushed[VulkanPushBinding_Count] = {
+        {VulkanPushBinding_Uniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr},
+        {VulkanPushBinding_Target, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
     };
+    for (uint32_t i = VulkanPushBinding_Buffers; i < VulkanPushBinding_Textures; ++i)
+        pushed[i] = {i, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr};
+    for (uint32_t i = VulkanPushBinding_Textures; i < VulkanPushBinding_RwTextures; i += 2) {
+        pushed[i] = {i, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_ALL, nullptr};
+        pushed[i + 1] = {i + 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL, nullptr};
+    }
+    for (uint32_t i = VulkanPushBinding_RwTextures; i < VulkanPushBinding_Count; ++i)
+        pushed[i] = {i, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_ALL, nullptr};
     if (!createSetLayout(d, bindless, 2, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT, &flagsInfo,
-            &d->setLayout) || !createSetLayout(d, pushed, 2, VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR, nullptr,
-                &d->pushLayout) || !createSetLayout(d, nullptr, 0, 0, nullptr, &d->emptyLayout))
+            &d->setLayout) || !createSetLayout(d, pushed, VulkanPushBinding_Count,
+                VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR, nullptr, &d->pushLayout) ||
+            !createSetLayout(d, nullptr, 0, 0, nullptr, &d->emptyLayout))
         return PrStatus_NotSupported;
 
     VkDescriptorPoolSize sizes[2] = {
@@ -698,9 +707,14 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
     d->nativeKinds = 1u << PrGpuNativeKind_Vulkan;
     if (d->limits.timestampComputeAndGraphics)
         d->info.features |= PrGpuFeatureFlag_Timestamps;
+    d->info.features |= PrGpuFeatureFlag_Bindless | (d->localRead ? PrGpuFeatureFlag_TargetReads : 0);
     d->info.maxTextureSize = d->limits.maxImageDimension2D;
     d->info.maxResourceHandles = d->resourceCount - 1;
     d->info.maxSamplerHandles = d->samplerCount - 1;
+    d->info.maxBufferSlots = kVulkanBufferSlots;
+    d->info.maxRwBufferSlots = kVulkanRwBufferSlots;
+    d->info.maxTextureSlots = kVulkanTextureSlots;
+    d->info.maxRwTextureSlots = kVulkanRwTextureSlots;
     d->shaderTarget = d->localRead ? PrGpuShaderTarget_SpirvLocalRead : PrGpuShaderTarget_Spirv;
 
     d->destroyFn = destroy;

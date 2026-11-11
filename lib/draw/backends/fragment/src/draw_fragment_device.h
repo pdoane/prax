@@ -24,6 +24,10 @@ PrStatus fragmentDeviceCreate(PrGpuDevice* device, FragmentDevice* PR_NULLABLE* 
 // Frees the state. The device may still be executing work that reads it.
 void fragmentDeviceDestroy(FragmentDevice* PR_NULLABLE device);
 
+// Returns true if the device reads the target, so that instances that read the destination read it there rather than
+// from snapshots of their layers (FragmentPass).
+bool fragmentDeviceReadsTarget(const FragmentDevice* device);
+
 // Carries out the frame's requests and its passes into layers, recording into `commands`, outside any pass. The
 // render's pass draws into a texture of `format`. `beneath` gives the texture of the frame's beneath layer, or the
 // function that draws into the layers of passes marked beneath. The frame's data lives in the command buffer's stream,

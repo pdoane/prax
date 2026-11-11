@@ -4,8 +4,8 @@
 // shaders index directly (pr/gpu.slang). A buffer's slot holds a raw view of it, and a texture's a shader resource
 // view. A resource that shaders write takes a second slot for its unordered access view, which is its storage handle.
 // Every pipeline shares one root signature: push data as 32 root constants at b0, uniforms as a root constant buffer at
-// b1, and the handle of the target's copy as one root constant at b2. Root data is set on the command list where a draw
-// or a dispatch takes it, so that a set of push data serves both.
+// b1, and the slots. Root data is set on the command list where a draw or a dispatch takes it, so that a set of push
+// data serves both.
 //
 // The device tracks no layouts. A barrier maps the accesses before and after it to enhanced barriers' sync, access and,
 // for a texture, layout. A texture begins in the shader resource layout, which is what ShaderRead maps to.
@@ -17,9 +17,7 @@
 // Uploads are copied in a command list of the device's own, executed just before the next submission, or sooner once
 // its staging fills a few blocks. D3D12 completes the work of each ExecuteCommandLists before the next one begins on a
 // queue, so the uploads wait for the work before them, and the work after them waits for the uploads.
-//
-// A pipeline that reads its target draws after a copy of the target, over the draw's scissor, into a texture of the
-// command buffer's, which the shader reads at its pixel. Fragments of one draw read what the draws before it left.
+
 //
 // COM objects are held as raw pointers and released by hand, because the structures that hold them run no constructors.
 
@@ -59,16 +57,37 @@ extern const PrGpuSwapChain kSwapChainFunctions;
 extern const PrGpuShaderLibrary kLibraryFunctions;
 
 // The handles that a device gives out, of resources and of samplers, and the pipelines that it holds. Slot zero of each
-// is never used, so that zero is none. D3D12 allows no more than 2048 samplers in a shader-visible heap.
+// is never used, so that zero is none.
 constexpr uint32_t kMaxResources = 1u << 16;
-constexpr uint32_t kMaxSamplers = 2048;
+constexpr uint32_t kMaxSamplers = 1024;
 constexpr uint32_t kMaxPipelines = 4096;
 
-// The root signature's parameters, as pr/gpu.slang declares their registers.
+// The number of slots of each kind. Buffer slots are root descriptors, which the root signature's 64 words hold beside
+// the push data, and texture slots are descriptor tables.
+constexpr uint32_t kBufferSlots = 4;
+constexpr uint32_t kRwBufferSlots = 4;
+constexpr uint32_t kTextureSlots = 8;
+constexpr uint32_t kRwTextureSlots = 4;
+
+// The descriptors of the slots' tables, after the handles in each shader-visible heap, in blocks that a command buffer
+// takes and holds until its work is done. D3D12 allows no more than 2048 samplers in a shader-visible heap.
+constexpr uint32_t kTableDescriptors = 1u << 14;
+constexpr uint32_t kTableSamplers = 1024;
+constexpr uint32_t kTableBlock = 256;
+constexpr uint32_t kTableSamplerBlock = 64;
+
+// The root signature's parameters, as pr/gpu.slang declares their registers: the root data, the Buffer and RwBuffer
+// slots as root descriptors at t and u in space 1, and the tables of the Texture slots, their samplers and the
+// RwTexture slots at t, s and u in space 2.
 enum {
     D3d12Root_Push,         // b0
     D3d12Root_Uniforms,     // b1
-    D3d12Root_TargetCopy,   // b2
+    D3d12Root_Buffers,
+    D3d12Root_RwBuffers = D3d12Root_Buffers + kBufferSlots,
+    D3d12Root_Textures = D3d12Root_RwBuffers + kRwBufferSlots,
+    D3d12Root_Samplers,
+    D3d12Root_RwTextures,
+    D3d12Root_Count,
 };
 typedef uint32_t D3d12Root;
 
@@ -78,7 +97,9 @@ enum {
     D3d12DirtyFlag_ComputePush = 1u << 1,
     D3d12DirtyFlag_GraphicsUniforms = 1u << 2,
     D3d12DirtyFlag_ComputeUniforms = 1u << 3,
-    D3d12DirtyFlag_All = 0xf,
+    D3d12DirtyFlag_GraphicsSlots = 1u << 4,
+    D3d12DirtyFlag_ComputeSlots = 1u << 5,
+    D3d12DirtyFlag_All = 0x3f,
 };
 typedef uint8_t D3d12DirtyFlags;
 
@@ -147,7 +168,6 @@ struct D3d12Resource {
 struct D3d12Pipeline {
     ID3D12PipelineState* PR_NULLABLE state; // held
     bool compute;
-    bool readsTarget;
     D3D_PRIMITIVE_TOPOLOGY topology;
     PrGpuExtent groupSize;
 };
@@ -210,6 +230,8 @@ enum {
     D3d12HeldKind_StagingBlock,
     D3d12HeldKind_List,
     D3d12HeldKind_Timestamp,
+    D3d12HeldKind_TableBlock,
+    D3d12HeldKind_TableSamplerBlock,
 };
 typedef uint8_t D3d12HeldKind;
 
@@ -219,6 +241,14 @@ struct D3d12Held {
     D3d12Block block;
     D3d12List list;
     uint32_t timestamp;
+    uint32_t tableBlock;                    // the first descriptor of a block of the slots' tables
+};
+
+// The blocks of the slots' tables that a command buffer writes into, of resource views or of samplers: the blocks that
+// it holds, the last of which it fills, and how much of that one it used.
+struct D3d12TableBlocks {
+    RawArray<uint32_t> held;                // the first descriptor of each
+    uint32_t used;
 };
 
 // A command buffer that is begun or in flight, and the fence that it completes at once it is submitted.
@@ -266,8 +296,21 @@ struct D3d12Commands : GpuSharedCommands {
     D3d12DirtyFlags dirty;
     PrGpuNativeStateFlags changed;            // the state that the device changed since the last sync
 
-    // The texture that a pipeline that reads its target reads a copy of the target from, or zero.
-    PrGpuTexture targetCopy;
+    // The resources bound to the slots: the buffers' addresses, zero where unbound, Buffer slots then RwBuffer slots,
+    // and the resource slots of the textures and the sampler slots of their samplers. The tables are written again
+    // before a draw or a dispatch after their slots change.
+    D3D12_GPU_VIRTUAL_ADDRESS buffers[kBufferSlots + kRwBufferSlots];
+    uint32_t textures[kTextureSlots];
+    uint32_t samplers[kTextureSlots];
+    uint32_t rwTextures[kRwTextureSlots];
+    bool texturesChanged;
+    bool samplersChanged;
+    bool rwTexturesChanged;
+    D3D12_GPU_DESCRIPTOR_HANDLE textureTable;   // zero until written
+    D3D12_GPU_DESCRIPTOR_HANDLE samplerTable;
+    D3D12_GPU_DESCRIPTOR_HANDLE rwTextureTable;
+    D3d12TableBlocks tableBlocks;
+    D3d12TableBlocks tableSamplerBlocks;
 };
 
 struct D3d12Pass : GpuSharedPass {
@@ -297,12 +340,13 @@ struct D3d12SwapChain : GpuSharedSwapChain {
 };
 
 struct D3d12Device : GpuSharedDevice {
-    ID3D12Device10* device;                 // held
-    ID3D12CommandQueue* queue;              // held
-    IDXGIFactory6* PR_NULLABLE factory;     // held
-    ID3D12RootSignature* rootSignature;     // held
-    ID3D12DescriptorHeap* resourceHeap;     // held
-    ID3D12DescriptorHeap* samplerHeap;      // held
+    ID3D12Device10* device;                        // held
+    ID3D12CommandQueue* queue;                     // held
+    IDXGIFactory6* PR_NULLABLE factory;            // held
+    ID3D12RootSignature* rootSignature;            // held
+    ID3D12DescriptorHeap* resourceHeap;            // held
+    ID3D12DescriptorHeap* samplerHeap;             // held
+    D3D12_SAMPLER_DESC samplerDescs[kMaxSamplers]; // by slot, which the slots' tables write again
     uint32_t resourceIncrement;
     uint32_t samplerIncrement;
     uint32_t colorIncrement;
@@ -344,6 +388,8 @@ struct D3d12Device : GpuSharedDevice {
     RawArray<D3d12InFlight> inFlight;       // in the order of their submission
     RawArray<D3d12Retired> retired;
     RawArray<D3d12Held> held;
+    RawArray<uint32_t> freeTableBlocks;         // the first descriptor of each, under `mutex`
+    RawArray<uint32_t> freeTableSamplerBlocks;
     RawArray<D3d12List> lists;                      // free, with their allocators reset
     RawArray<D3d12AttachmentHeaps> attachmentHeaps; // free
     RawArray<D3d12Block> streamBlocks;              // free
@@ -655,6 +701,19 @@ D3D12_CPU_DESCRIPTOR_HANDLE samplerDescriptor(const D3d12Device* d, uint32_t slo
     return handle;
 }
 
+// Return where shaders read the descriptor at `index` of a heap, which a descriptor table points at.
+D3D12_GPU_DESCRIPTOR_HANDLE resourceTable(const D3d12Device* d, uint32_t index) {
+    D3D12_GPU_DESCRIPTOR_HANDLE handle = d->resourceHeap->GetGPUDescriptorHandleForHeapStart();
+    handle.ptr += uint64_t(index) * d->resourceIncrement;
+    return handle;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const D3d12Device* d, uint32_t index) {
+    D3D12_GPU_DESCRIPTOR_HANDLE handle = d->samplerHeap->GetGPUDescriptorHandleForHeapStart();
+    handle.ptr += uint64_t(index) * d->samplerIncrement;
+    return handle;
+}
+
 // Takes a free resource slot, or returns zero if none is left. The caller holds the mutex.
 uint32_t takeSlotLocked(D3d12Device* d) {
     uint32_t slot = 0;
@@ -748,6 +807,12 @@ void collect(D3d12Device* d) {
             case D3d12HeldKind_List:
                 h.list.allocator->Reset();
                 d->lists.push(h.list);
+                break;
+            case D3d12HeldKind_TableBlock:
+                d->freeTableBlocks.push(h.tableBlock);
+                break;
+            case D3d12HeldKind_TableSamplerBlock:
+                d->freeTableSamplerBlocks.push(h.tableBlock);
                 break;
             default:
                 d->freeTimestamps.push(h.timestamp);
@@ -1045,6 +1110,8 @@ void destroyDevice(PrGpuDevice* device) {
     d->inFlight.reset();
     d->retired.reset();
     d->held.reset();
+    d->freeTableBlocks.reset();
+    d->freeTableSamplerBlocks.reset();
     d->lists.reset();
     d->attachmentHeaps.reset();
     d->streamBlocks.reset();
@@ -1361,10 +1428,8 @@ void* bufferMap(const PrGpuDevice* device, PrGpuBuffer buffer) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Textures
 
-// Writes the shader resource view of a texture or view to its slot, and the unordered access view of its first level to
-// its storage slot, if it has one.
-void writeTextureViews(D3d12Device* d, uint32_t slot) {
-    const D3d12Resource& r = d->resources[slot];
+// Returns the shader resource view of a texture or view.
+D3D12_SHADER_RESOURCE_VIEW_DESC textureViewOf(const D3d12Resource& r) {
     const PrGpuTextureDesc& t = r.texture;
     bool array = r.resourceLayers > 1 || r.firstLayer != 0;
     D3D12_SHADER_RESOURCE_VIEW_DESC s{};
@@ -1412,9 +1477,13 @@ void writeTextureViews(D3d12Device* d, uint32_t slot) {
             }
             break;
     }
-    d->device->CreateShaderResourceView(r.resource, &s, resourceDescriptor(d, slot));
-    if (r.storage == 0)
-        return;
+    return s;
+}
+
+// Returns the unordered access view of the first level of a texture or view.
+D3D12_UNORDERED_ACCESS_VIEW_DESC storageViewOf(const D3d12Resource& r) {
+    const PrGpuTextureDesc& t = r.texture;
+    bool array = r.resourceLayers > 1 || r.firstLayer != 0;
     D3D12_UNORDERED_ACCESS_VIEW_DESC u{};
     u.Format = storageFormatOf(t.format);
     if (t.kind == PrGpuTextureKind_3d) {
@@ -1430,6 +1499,18 @@ void writeTextureViews(D3d12Device* d, uint32_t slot) {
         u.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
         u.Texture2D.MipSlice = r.firstLevel;
     }
+    return u;
+}
+
+// Writes the shader resource view of a texture or view to its slot, and the unordered access view of its first level to
+// its storage slot, if it has one.
+void writeTextureViews(D3d12Device* d, uint32_t slot) {
+    const D3d12Resource& r = d->resources[slot];
+    D3D12_SHADER_RESOURCE_VIEW_DESC s = textureViewOf(r);
+    d->device->CreateShaderResourceView(r.resource, &s, resourceDescriptor(d, slot));
+    if (r.storage == 0)
+        return;
+    D3D12_UNORDERED_ACCESS_VIEW_DESC u = storageViewOf(r);
     d->device->CreateUnorderedAccessView(r.resource, nullptr, &u, resourceDescriptor(d, r.storage));
 }
 
@@ -1577,6 +1658,7 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
     prMutexUnlock(&d->mutex);
     if (slot == 0)
         return PrStatus_Limit;
+    d->samplerDescs[slot] = s;
     d->device->CreateSampler(&s, samplerDescriptor(d, slot));
     out->id = slot;
     return PrStatus_Ok;
@@ -1694,7 +1776,6 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     nameObject(state, desc->name);
     D3d12Pipeline pipeline{};
     pipeline.state = state;
-    pipeline.readsTarget = desc->readsTarget;
     pipeline.topology = topologyOf(desc->topology);
     uint32_t id = addPipeline(d, pipeline);
     if (id == 0) {
@@ -1750,8 +1831,6 @@ void bindRoot(D3d12Device* d, D3d12Commands* c) {
     list->SetDescriptorHeaps(2, heaps);
     list->SetGraphicsRootSignature(d->rootSignature);
     list->SetComputeRootSignature(d->rootSignature);
-    list->SetGraphicsRoot32BitConstant(D3d12Root_TargetCopy, 0, 0);
-    list->SetComputeRoot32BitConstant(D3d12Root_TargetCopy, 0, 0);
     c->dirty = D3d12DirtyFlag_All;
     c->changed |= PrGpuNativeStateFlag_Bindings;
 }
@@ -1881,9 +1960,135 @@ void commandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t siz
     c->dirty |= D3d12DirtyFlag_GraphicsUniforms | D3d12DirtyFlag_ComputeUniforms;
 }
 
+// Returns the first of `count` descriptors of the slots' tables, of resource views or of samplers, from the command
+// buffer's last block or a new one. A block is free once the work of the command buffer that held it is done, so a
+// command buffer that finds none free waits for the oldest. If every block is held by work that is not submitted, the
+// device is lost, and the descriptors are those of the first block, which no work reads.
+uint32_t takeTable(D3d12Device* d, D3d12Commands* c, bool samplers, uint32_t count) {
+    D3d12TableBlocks& blocks = samplers ? c->tableSamplerBlocks : c->tableBlocks;
+    uint32_t size = samplers ? kTableSamplerBlock : kTableBlock;
+    if (blocks.held.count != 0 && blocks.used + count <= size) {
+        uint32_t first = blocks.held.last() + blocks.used;
+        blocks.used += count;
+        return first;
+    }
+    D3d12HeldKind kind = samplers ? D3d12HeldKind_TableSamplerBlock : D3d12HeldKind_TableBlock;
+    RawArray<uint32_t>& free = samplers ? d->freeTableSamplerBlocks : d->freeTableBlocks;
+    uint32_t block = 0;
+    for (;;) {
+        prMutexLock(&d->mutex);
+        collect(d);
+        if (free.count != 0) {
+            block = free.last();
+            free.pop();
+            prMutexUnlock(&d->mutex);
+            break;
+        }
+        PrGpuFence oldest = 0;
+        for (uint32_t i = 0; i < d->held.count; ++i) {
+            const D3d12Held& h = d->held.data[i];
+            if (h.kind == kind && (oldest == 0 || h.fence < oldest))
+                oldest = h.fence;
+        }
+        prMutexUnlock(&d->mutex);
+        if (oldest == 0) {
+            d->lost.store(true);
+            return samplers ? kMaxSamplers : kMaxResources;
+        }
+        wait(d, oldest);
+    }
+    blocks.held.push(block);
+    blocks.used = count;
+    return block;
+}
+
+// Writes the tables of the slots that changed since they were last written.
+void writeTables(D3d12Device* d, D3d12Commands* c) {
+    if (c->texturesChanged) {
+        c->texturesChanged = false;
+        uint32_t first = takeTable(d, c, false, kTextureSlots);
+        for (uint32_t i = 0; i < kTextureSlots; ++i) {
+            D3D12_CPU_DESCRIPTOR_HANDLE to = resourceDescriptor(d, first + i);
+            if (c->textures[i] != 0) {
+                const D3d12Resource& r = textureOf(d, c->textures[i]);
+                D3D12_SHADER_RESOURCE_VIEW_DESC v = textureViewOf(r);
+                d->device->CreateShaderResourceView(r.resource, &v, to);
+            } else {
+                D3D12_SHADER_RESOURCE_VIEW_DESC v{};
+                v.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                v.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+                v.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+                v.Texture2D.MipLevels = 1;
+                d->device->CreateShaderResourceView(nullptr, &v, to);
+            }
+        }
+        c->textureTable = resourceTable(d, first);
+    }
+    if (c->samplersChanged) {
+        c->samplersChanged = false;
+        uint32_t first = takeTable(d, c, true, kTextureSlots);
+        for (uint32_t i = 0; i < kTextureSlots; ++i) {
+            // An unbound sampler is the one at slot zero, which no sampler takes: points, clamped.
+            D3D12_SAMPLER_DESC s = d->samplerDescs[c->samplers[i]];
+            if (c->samplers[i] == 0) {
+                s.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+                s.AddressU = s.AddressV = s.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+                s.MaxAnisotropy = 1;
+                s.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+            }
+            d->device->CreateSampler(&s, samplerDescriptor(d, first + i));
+        }
+        c->samplerTable = samplerTable(d, first);
+    }
+    if (c->rwTexturesChanged) {
+        c->rwTexturesChanged = false;
+        uint32_t first = takeTable(d, c, false, kRwTextureSlots);
+        for (uint32_t i = 0; i < kRwTextureSlots; ++i) {
+            D3D12_CPU_DESCRIPTOR_HANDLE to = resourceDescriptor(d, first + i);
+            if (c->rwTextures[i] != 0) {
+                const D3d12Resource& r = textureOf(d, c->rwTextures[i]);
+                D3D12_UNORDERED_ACCESS_VIEW_DESC v = storageViewOf(r);
+                d->device->CreateUnorderedAccessView(r.resource, nullptr, &v, to);
+            } else {
+                D3D12_UNORDERED_ACCESS_VIEW_DESC v{};
+                v.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                v.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+                d->device->CreateUnorderedAccessView(nullptr, nullptr, &v, to);
+            }
+        }
+        c->rwTextureTable = resourceTable(d, first);
+    }
+}
+
+// Sets the slots on a bind point: the buffers that are bound, and the tables that were written.
+template <typename SetView, typename SetStorage, typename SetTable>
+void setSlots(const D3d12Commands* c, SetView setView, SetStorage setStorage, SetTable setTable) {
+    for (uint32_t i = 0; i < kBufferSlots; ++i) {
+        if (c->buffers[i] != 0)
+            setView(D3d12Root_Buffers + i, c->buffers[i]);
+    }
+    for (uint32_t i = 0; i < kRwBufferSlots; ++i) {
+        if (c->buffers[kBufferSlots + i] != 0)
+            setStorage(D3d12Root_RwBuffers + i, c->buffers[kBufferSlots + i]);
+    }
+    if (c->textureTable.ptr != 0)
+        setTable(D3d12Root_Textures, c->textureTable);
+    if (c->samplerTable.ptr != 0)
+        setTable(D3d12Root_Samplers, c->samplerTable);
+    if (c->rwTextureTable.ptr != 0)
+        setTable(D3d12Root_RwTextures, c->rwTextureTable);
+}
+
 // Sets the root data that the graphics bind point has yet to take, before a draw.
-void flushGraphicsRoot(D3d12Commands* c) {
+void flushGraphicsRoot(D3d12Device* d, D3d12Commands* c) {
     ID3D12GraphicsCommandList7* list = c->list.list;
+    if (c->dirty & D3d12DirtyFlag_GraphicsSlots) {
+        writeTables(d, c);
+        setSlots(c, [&](UINT at, D3D12_GPU_VIRTUAL_ADDRESS a) { list->SetGraphicsRootShaderResourceView(at, a); },
+            [&](UINT at, D3D12_GPU_VIRTUAL_ADDRESS a) { list->SetGraphicsRootUnorderedAccessView(at, a); },
+            [&](UINT at, D3D12_GPU_DESCRIPTOR_HANDLE t) { list->SetGraphicsRootDescriptorTable(at, t); });
+        c->dirty &= ~D3d12DirtyFlag_GraphicsSlots;
+    }
     if (c->dirty & D3d12DirtyFlag_GraphicsPush) {
         if (c->pushWords != 0)
             list->SetGraphicsRoot32BitConstants(D3d12Root_Push, c->pushWords, c->push, 0);
@@ -1895,8 +2100,15 @@ void flushGraphicsRoot(D3d12Commands* c) {
 }
 
 // Sets the root data that the compute bind point has yet to take, before a dispatch.
-void flushComputeRoot(D3d12Commands* c) {
+void flushComputeRoot(D3d12Device* d, D3d12Commands* c) {
     ID3D12GraphicsCommandList7* list = c->list.list;
+    if (c->dirty & D3d12DirtyFlag_ComputeSlots) {
+        writeTables(d, c);
+        setSlots(c, [&](UINT at, D3D12_GPU_VIRTUAL_ADDRESS a) { list->SetComputeRootShaderResourceView(at, a); },
+            [&](UINT at, D3D12_GPU_VIRTUAL_ADDRESS a) { list->SetComputeRootUnorderedAccessView(at, a); },
+            [&](UINT at, D3D12_GPU_DESCRIPTOR_HANDLE t) { list->SetComputeRootDescriptorTable(at, t); });
+        c->dirty &= ~D3d12DirtyFlag_ComputeSlots;
+    }
     if ((c->dirty & D3d12DirtyFlag_ComputePush) && c->pushWords != 0) {
         list->SetComputeRoot32BitConstants(D3d12Root_Push, c->pushWords, c->push, 0);
         c->changed |= PrGpuNativeStateFlag_Push;
@@ -1904,6 +2116,43 @@ void flushComputeRoot(D3d12Commands* c) {
     if (c->dirty & D3d12DirtyFlag_ComputeUniforms)
         list->SetComputeRootConstantBufferView(D3d12Root_Uniforms, c->uniforms);
     c->dirty &= ~(D3d12DirtyFlag_ComputePush | D3d12DirtyFlag_ComputeUniforms);
+}
+
+// Buffer slots bind the buffer's address from the offset, as a root descriptor.
+void setBufferSlot(PrGpuCommands* commands, uint32_t at, PrGpuBuffer buffer, uint64_t offset) {
+    D3d12Commands* c = commandsOf(commands);
+    c->buffers[at] = buffer.id != 0 ? d3d12Of(c->device)->resources[buffer.id].address + offset : 0;
+    c->dirty |= D3d12DirtyFlag_GraphicsSlots | D3d12DirtyFlag_ComputeSlots;
+}
+
+void commandsSetBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    setBufferSlot(commands, slot, buffer, offset);
+}
+
+void commandsSetRwBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    setBufferSlot(commands, kBufferSlots + slot, buffer, offset);
+}
+
+void commandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler) {
+    D3d12Commands* c = commandsOf(commands);
+    if (c->textures[slot] != texture.id) {
+        c->textures[slot] = texture.id;
+        c->texturesChanged = true;
+    }
+    if (c->samplers[slot] != sampler.id) {
+        c->samplers[slot] = sampler.id;
+        c->samplersChanged = true;
+    }
+    c->dirty |= D3d12DirtyFlag_GraphicsSlots | D3d12DirtyFlag_ComputeSlots;
+}
+
+void commandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture) {
+    D3d12Commands* c = commandsOf(commands);
+    if (c->rwTextures[slot] != texture.id) {
+        c->rwTextures[slot] = texture.id;
+        c->rwTexturesChanged = true;
+    }
+    c->dirty |= D3d12DirtyFlag_GraphicsSlots | D3d12DirtyFlag_ComputeSlots;
 }
 
 void commandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
@@ -1927,7 +2176,7 @@ void commandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {
     PR_ASSERT(p.compute);
     c->list.list->SetPipelineState(p.state);
     c->changed |= PrGpuNativeStateFlag_Pipeline;
-    flushComputeRoot(c);
+    flushComputeRoot(d3d12Of(c->device), c);
     c->list.list->Dispatch(groups.width, groups.height, groups.depth);
 }
 
@@ -1940,7 +2189,7 @@ void commandsDispatchIndirect(PrGpuCommands* commands, PrGpuBuffer buffer, uint6
     PR_ASSERT(p.compute);
     c->list.list->SetPipelineState(p.state);
     c->changed |= PrGpuNativeStateFlag_Pipeline;
-    flushComputeRoot(c);
+    flushComputeRoot(d3d12Of(c->device), c);
     c->list.list->ExecuteIndirect(d->dispatchSignature, 1, resourceOf(d, buffer.id), offset, nullptr, 0);
 }
 
@@ -2135,9 +2384,11 @@ PrGpuFence commandsSubmit(PrGpuCommands* commands) {
         d->held.push(D3d12Held{fence, D3d12HeldKind_List, {}, c->list, 0});
     if (c->timestamp != kTimestampPairs)
         d->held.push(D3d12Held{fence, D3d12HeldKind_Timestamp, {}, {}, c->timestamp});
+    for (uint32_t i = 0; i < c->tableBlocks.held.count; ++i)
+        d->held.push(D3d12Held{fence, D3d12HeldKind_TableBlock, {}, {}, 0, c->tableBlocks.held.data[i]});
+    for (uint32_t i = 0; i < c->tableSamplerBlocks.held.count; ++i)
+        d->held.push(D3d12Held{fence, D3d12HeldKind_TableSamplerBlock, {}, {}, 0, c->tableSamplerBlocks.held.data[i]});
     d->attachmentHeaps.push(c->attachments);
-    if (c->targetCopy.id != 0)
-        d->retired.push(D3d12Retired{d->serial, D3d12RetiredKind_Resource, c->targetCopy.id});
     prMutexUnlock(&d->mutex);
     // DXGI presents a frame once the work executed before it on the queue is done.
     for (uint32_t i = 0; i < c->presents.count; ++i) {
@@ -2151,6 +2402,8 @@ PrGpuFence commandsSubmit(PrGpuCommands* commands) {
     c->blocks.reset();
     c->presents.reset();
     c->dones.reset();
+    c->tableBlocks.held.reset();
+    c->tableSamplerBlocks.held.reset();
     prMemoryFree(c);
     return fence;
 }
@@ -2250,8 +2503,7 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
         pass->extent = desc->nativeExtent;
         pass->scissor = PrIRect{0, 0, int32_t(pass->extent.x), int32_t(pass->extent.y)};
         list->SetGraphicsRootSignature(d->rootSignature);
-        list->SetGraphicsRoot32BitConstant(D3d12Root_TargetCopy, 0, 0);
-        c->dirty |= D3d12DirtyFlag_GraphicsPush | D3d12DirtyFlag_GraphicsUniforms;
+        c->dirty |= D3d12DirtyFlag_GraphicsPush | D3d12DirtyFlag_GraphicsUniforms | D3d12DirtyFlag_GraphicsSlots;
         c->changed |= PrGpuNativeStateFlag_Bindings;
     } else {
         pass->formats.samples = 1;
@@ -2379,6 +2631,12 @@ void passNativeDraw(PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, 
     if (!pass->native)
         coverAttachments(pass, c->list.list);
     c->pipeline = 0;
+    prMemZero(c->buffers, sizeof(c->buffers));
+    prMemZero(c->textures, sizeof(c->textures));
+    prMemZero(c->samplers, sizeof(c->samplers));
+    prMemZero(c->rwTextures, sizeof(c->rwTextures));
+    c->texturesChanged = c->samplersChanged = c->rwTexturesChanged = false;
+    c->textureTable = c->samplerTable = c->rwTextureTable = D3D12_GPU_DESCRIPTOR_HANDLE{};
     c->changed |= PrGpuNativeStateFlags(~0u);
 }
 
@@ -2447,54 +2705,11 @@ void passSetIndexBuffer(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, 
     commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_IndexBuffer;
 }
 
-// Copies the pass's first color attachment, over the scissor, into the command buffer's copy of it, which the draw's
-// shader reads as the target, and points the root data at the copy. Returns false if the device cannot make the copy.
-bool copyTarget(D3d12Device* d, D3d12Commands* c, D3d12Pass* pass) {
-    ID3D12GraphicsCommandList7* list = c->list.list;
-    const PrGpuAttachment& a = pass->color[0];
-    const D3d12Resource& target = textureOf(d, a.texture.id);
-    PrUVec2 extent = pass->extent;
-    if (c->targetCopy.id != 0) {
-        const PrGpuTextureDesc& copy = d->resources[c->targetCopy.id].texture;
-        if (copy.format != target.texture.format || copy.extent.width < extent.x || copy.extent.height < extent.y) {
-            retire(d, D3d12RetiredKind_Resource, c->targetCopy.id);
-            c->targetCopy = PrGpuTexture{};
-        }
-    }
-    if (c->targetCopy.id == 0) {
-        PrGpuTextureDesc desc = prGpuTextureDesc2d(target.texture.format, extent, PrGpuTextureUsageFlag_Sampled);
-        desc.name = "target copy";
-        if (textureCreate(c->device, &desc, &c->targetCopy) != PrStatus_Ok)
-            return false;
-    }
-    const D3d12Resource& copy = d->resources[c->targetCopy.id];
-    PrIRect s = pass->scissor;
-    if (s.right <= s.left || s.bottom <= s.top)
-        return true;
-    D3D12_BARRIER_SUBRESOURCE_RANGE targetRange = rangeOf(target, PrGpuSubresources{a.level, 1, a.layer, 1});
-    D3D12_BARRIER_SUBRESOURCE_RANGE copyRange = rangeOf(copy, PrGpuSubresources{0, 1, 0, 1});
-    textureBarrier(list, target, targetRange, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_CopyRead);
-    textureBarrier(list, copy, copyRange, PrGpuAccessFlag_FragmentRead, PrGpuAccessFlag_CopyWrite);
-    D3D12_TEXTURE_COPY_LOCATION from = subresourceLocation(target, a.level, a.layer);
-    D3D12_TEXTURE_COPY_LOCATION to = subresourceLocation(copy, 0, 0);
-    D3D12_BOX box{UINT(s.left), UINT(s.top), 0, UINT(s.right), UINT(s.bottom), 1};
-    list->CopyTextureRegion(&to, UINT(s.left), UINT(s.top), 0, &from, &box);
-    textureBarrier(list, target, targetRange, PrGpuAccessFlag_CopyRead, PrGpuAccessFlag_ColorAttachment);
-    textureBarrier(list, copy, copyRange, PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_FragmentRead);
-    list->SetGraphicsRoot32BitConstant(D3d12Root_TargetCopy, c->targetCopy.id, 0);
-    return true;
-}
-
-// Prepares a draw: its root data, and the copy of the target that a pipeline that reads the target reads.
+// Prepares a draw: its root data.
 const D3d12Pipeline& prepareDraw(D3d12Device* d, D3d12Pass* pass) {
     D3d12Commands* c = commandsOf(pass->commands);
-    const D3d12Pipeline& p = d->pipelines[c->pipeline];
-    flushGraphicsRoot(c);
-    if (p.readsTarget) {
-        PR_ASSERT(!pass->native && pass->formats.colorCount != 0 && pass->formats.samples == 1);
-        copyTarget(d, c, pass);
-    }
-    return p;
+    flushGraphicsRoot(d, c);
+    return d->pipelines[c->pipeline];
 }
 
 void passDraw(PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
@@ -2856,16 +3071,38 @@ ID3D12Device10* PR_NULLABLE createDevice(IDXGIFactory6* factory) {
 
 // Creates the root signature that every pipeline shares, which pr/gpu.slang's registers name.
 ID3D12RootSignature* PR_NULLABLE createRootSignature(ID3D12Device* device) {
-    D3D12_ROOT_PARAMETER1 parameters[3]{};
+    D3D12_ROOT_PARAMETER1 parameters[D3d12Root_Count]{};
     parameters[D3d12Root_Push].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     parameters[D3d12Root_Push].Constants = D3D12_ROOT_CONSTANTS{0, 0, kPrGpuMaxPushBytes / 4};
     parameters[D3d12Root_Uniforms].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     parameters[D3d12Root_Uniforms].Descriptor = D3D12_ROOT_DESCRIPTOR1{1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE};
-    parameters[D3d12Root_TargetCopy].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    parameters[D3d12Root_TargetCopy].Constants = D3D12_ROOT_CONSTANTS{2, 0, 1};
+    // The slots' buffers may be written by the work before them, and an RwBuffer by the shader that reads it.
+    for (uint32_t i = 0; i < kBufferSlots; ++i) {
+        parameters[D3d12Root_Buffers + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+        parameters[D3d12Root_Buffers + i].Descriptor =
+                D3D12_ROOT_DESCRIPTOR1{i, 1, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE};
+    }
+    for (uint32_t i = 0; i < kRwBufferSlots; ++i) {
+        parameters[D3d12Root_RwBuffers + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
+        parameters[D3d12Root_RwBuffers + i].Descriptor =
+                D3D12_ROOT_DESCRIPTOR1{i, 1, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE};
+    }
+    // A table's unbound entries are null views, and its views' data may change while the table is set.
+    const D3D12_DESCRIPTOR_RANGE_FLAGS kVolatile =
+        D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
+    const D3D12_DESCRIPTOR_RANGE1 ranges[3] = {
+        {D3D12_DESCRIPTOR_RANGE_TYPE_SRV, kTextureSlots, 0, 2, kVolatile, 0},
+        {D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, kTextureSlots, 0, 2, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, 0},
+        {D3D12_DESCRIPTOR_RANGE_TYPE_UAV, kRwTextureSlots, 0, 2, kVolatile, 0},
+    };
+    for (uint32_t i = 0; i < 3; ++i) {
+        D3D12_ROOT_PARAMETER1& p = parameters[D3d12Root_Textures + i];
+        p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        p.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE1{1, &ranges[i]};
+    }
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc{};
     desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    desc.Desc_1_1.NumParameters = 3;
+    desc.Desc_1_1.NumParameters = D3d12Root_Count;
     desc.Desc_1_1.pParameters = parameters;
     desc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED |
         D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
@@ -2894,17 +3131,21 @@ ID3D12CommandSignature* PR_NULLABLE createSignature(ID3D12Device* device, D3D12_
 bool createObjects(D3d12Device* d) {
     ID3D12Device10* device = d->device;
     D3D12_DESCRIPTOR_HEAP_DESC resources{
-        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxResources,
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxResources + kTableDescriptors,
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0,
     };
     D3D12_DESCRIPTOR_HEAP_DESC samplers{
-        D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kMaxSamplers,
+        D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kMaxSamplers + kTableSamplers,
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0,
     };
     if (FAILED(device->CreateDescriptorHeap(&resources, IID_PPV_ARGS(&d->resourceHeap))) ||
         FAILED(device->CreateDescriptorHeap(&samplers, IID_PPV_ARGS(&d->samplerHeap))) ||
         FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d->fence))))
     return false;
+    for (uint32_t i = 0; i < kTableDescriptors; i += kTableBlock)
+        d->freeTableBlocks.push(kMaxResources + i);
+    for (uint32_t i = 0; i < kTableSamplers; i += kTableSamplerBlock)
+        d->freeTableSamplerBlocks.push(kMaxSamplers + i);
     d->resourceIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     d->samplerIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     d->colorIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -2962,6 +3203,10 @@ constexpr PrGpuCommands kCommandsFunctions = {
     .setPushFn = commandsSetPush,
     .setUniformsFn = commandsSetUniforms,
     .setPipelineFn = commandsSetPipeline,
+    .setBufferFn = commandsSetBuffer,
+    .setRwBufferFn = commandsSetRwBuffer,
+    .setTextureFn = commandsSetTexture,
+    .setRwTextureFn = commandsSetRwTexture,
     .dispatchFn = commandsDispatch,
     .dispatchIndirectFn = commandsDispatchIndirect,
     .copyBufferFn = commandsCopyBuffer,
@@ -3124,11 +3369,15 @@ PrStatus prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options, PrGpuDev
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     d->info.backend = "Direct3D 12";
     d->nativeKinds = 1u << PrGpuNativeKind_D3d12;
-    d->info.features = PrGpuFeatureFlag_TextureCompressionBc |
+    d->info.features = PrGpuFeatureFlag_TextureCompressionBc | PrGpuFeatureFlag_Bindless |
         (d->timestampTicks != nullptr ? PrGpuFeatureFlag_Timestamps : 0);
     d->info.maxTextureSize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
     d->info.maxResourceHandles = kMaxResources - 1;
     d->info.maxSamplerHandles = kMaxSamplers - 1;
+    d->info.maxBufferSlots = kBufferSlots;
+    d->info.maxRwBufferSlots = kRwBufferSlots;
+    d->info.maxTextureSlots = kTextureSlots;
+    d->info.maxRwTextureSlots = kRwTextureSlots;
     *out = d;
     return PrStatus_Ok;
 }

@@ -2,7 +2,8 @@
 //
 // The textures that frames request are the renderer's own, written by uploads, and rest in the accesses of shader
 // reads. Rendering copies the frame's vertices and indices into the stream of the pass's command buffer, then draws
-// each draw with one pipeline for the target's format. The vertex shader reads its vertex from the stream.
+// each draw with one pipeline for the target's format. The vertex shader reads its vertex from the stream, which Buffer
+// slot 0 holds, and each draw binds its texture and sampler to Texture slot 0, so the renderer runs on any device.
 
 #include "draw/backends/triangles/src/draw_triangles_device.h"
 
@@ -28,10 +29,6 @@ struct TrianglesPipeline {
 // The push data of each draw (draw_triangles.slang).
 struct TrianglesPush {
     float size[2];
-    uint32_t vertices;
-    uint32_t offset;
-    uint32_t texture;
-    uint32_t sampler;
 };
 
 struct TrianglesDevice {
@@ -198,7 +195,9 @@ void trianglesDeviceRender(TrianglesDevice* d, const TrianglesFrame* frame, PrGp
         float(origin.x), float(origin.y), float(origin.x) + float(frame->extent.x),
         float(origin.y) + float(frame->extent.y),
     }, 0, 1);
-    TrianglesPush push{{float(frame->extent.x), float(frame->extent.y)}, buffer.id, uint32_t(offset), 0, 0};
+    TrianglesPush push{{float(frame->extent.x), float(frame->extent.y)}};
+    prGpuCommandsSetPush(commands, &push, sizeof(push));
+    prGpuCommandsSetBuffer(commands, 0, buffer, offset);
     for (uint32_t i = 0; i < frame->drawCount; ++i) {
         const TrianglesDraw& draw = frame->draws[i];
         PrGpuTexture texture = draw.hostTexture != 0 ? PrGpuTexture{uint32_t(draw.hostTexture)} : PrGpuTexture{};
@@ -215,9 +214,7 @@ void trianglesDeviceRender(TrianglesDevice* d, const TrianglesFrame* frame, PrGp
         if (texture.id == 0 || draw.indexCount == 0 || scissor.right <= scissor.left || scissor.bottom <= scissor.top)
             continue;
         prGpuPassSetScissor(pass, scissor);
-        push.texture = texture.id;
-        push.sampler = d->samplers[draw.sampler];
-        prGpuCommandsSetPush(commands, &push, sizeof(push));
+        prGpuCommandsSetTexture(commands, 0, texture, PrGpuSampler{d->samplers[draw.sampler]});
         prGpuPassDrawIndexed(pass, draw.indexCount, 1, draw.indexOffset, 0, 0);
     }
     // The viewport and scissor over the whole attachments, so that the host can continue to draw in the pass.

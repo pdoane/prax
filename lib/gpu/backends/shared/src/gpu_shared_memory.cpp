@@ -823,6 +823,12 @@ void commandsSetPush(PrGpuCommands*, const void*, uint32_t) {}
 
 void commandsSetUniforms(PrGpuCommands*, const void*, uint32_t) {}
 
+// A memory device has no slots, so pr/gpu.h's checks refuse every call before it reaches these.
+void commandsSetBuffer(PrGpuCommands*, uint32_t, PrGpuBuffer, uint64_t) {}
+void commandsSetRwBuffer(PrGpuCommands*, uint32_t, PrGpuBuffer, uint64_t) {}
+void commandsSetTexture(PrGpuCommands*, uint32_t, PrGpuTexture, PrGpuSampler) {}
+void commandsSetRwTexture(PrGpuCommands*, uint32_t, PrGpuTexture) {}
+
 void commandsSetPipeline(PrGpuCommands*, PrGpuPipeline) {
     PR_ASSERT(false && "a memory device has no pipelines");
 }
@@ -1012,6 +1018,10 @@ constexpr PrGpuCommands kCommandsFunctions = {
     .setPushFn = commandsSetPush,
     .setUniformsFn = commandsSetUniforms,
     .setPipelineFn = commandsSetPipeline,
+    .setBufferFn = commandsSetBuffer,
+    .setRwBufferFn = commandsSetRwBuffer,
+    .setTextureFn = commandsSetTexture,
+    .setRwTextureFn = commandsSetRwTexture,
     .dispatchFn = commandsDispatch,
     .dispatchIndirectFn = commandsDispatchIndirect,
     .copyBufferFn = commandsCopyBuffer,

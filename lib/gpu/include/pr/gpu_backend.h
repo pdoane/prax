@@ -26,7 +26,7 @@ typedef uint8_t PrGpuShaderStage;
 // The code of a shader library, by the backend that runs it (cmake/shader_library.cmake).
 enum {
     PrGpuShaderTarget_Metal = 1,            // a metallib
-    PrGpuShaderTarget_Spirv = 2,            // a SPIR-V module that reads a copy of the target
+    PrGpuShaderTarget_Spirv = 2,            // a SPIR-V module that does not read the target
     PrGpuShaderTarget_SpirvLocalRead = 3,   // a SPIR-V module that reads the target with dynamic rendering local read
     PrGpuShaderTarget_Dxil = 4,             // DXIL, one blob for each entry point
 };
@@ -60,6 +60,10 @@ struct PrGpuCommands {
     void (*setPushFn)(PrGpuCommands* commands, const void* data, uint32_t size);
     void (*setUniformsFn)(PrGpuCommands* commands, const void* data, uint32_t size);
     void (*setPipelineFn)(PrGpuCommands* commands, PrGpuPipeline pipeline);
+    void (*setBufferFn)(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
+    void (*setRwBufferFn)(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
+    void (*setTextureFn)(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler);
+    void (*setRwTextureFn)(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture);
     void (*dispatchFn)(PrGpuCommands* commands, PrGpuExtent groups);
     void (*dispatchIndirectFn)(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset);
     void (*copyBufferFn)(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset, PrGpuBuffer target,

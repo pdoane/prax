@@ -49,6 +49,14 @@ struct DrawList {
     bool frozen;                    // another list references this list
     bool writesPixels;              // once frozen: prDrawListWritesPixels
     bool readsBackdrop;             // once frozen: prDrawListReadsBackdrop
+
+    // Once frozen: whether it reads the destination under any transform, whether it has a Clear that is not opaque
+    // within a clip, which reads the destination under some, and whether it has such a Clear at all, which a clip of a
+    // list that plays it may hold (prDrawListReadsDestination).
+    bool readsDestination;
+    bool clearsInClips;
+    bool clears;
+
     PrRect bounds;                  // once frozen
     DrawRecording recording;
     RawArray<PrDrawCommandKind> open;   // innermost last; a clip of any kind is stored as PushClipRect

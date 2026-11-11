@@ -9,8 +9,10 @@
 // display without EDR headroom, an HDR swap chain holds what an SDR one does, whatever the display's gamut. A swap
 // chain follows its window's display: each acquire on the main thread checks the display again.
 //
-// Every resource of the device is in one residency set, which the device's queue holds. An application that submits its
-// own command buffers that use the device's resources adds the set to its queue (prGpuMetalResidencySet).
+// A device on Metal 3 has PrGpuFeatureFlag_Bindless, and every resource of the device is in one residency set, which
+// the device's queue holds. An application that submits its own command buffers that use the device's resources adds
+// the set to its queue (prGpuMetalResidencySet). A device without Metal 3, such as the iOS simulator's, or one created
+// `slotsOnly`, binds resources only to slots, which makes them resident in the encoders that bind them.
 
 #pragma once
 
@@ -28,17 +30,18 @@ typedef struct PrGpuMetalOptions {
     void* PR_NULLABLE device;   // the application's id<MTLDevice>; null for the system's default
     void* PR_NULLABLE queue;    // the application's id<MTLCommandQueue> on the device; null to create one
     bool validation;            // labels objects for Metal's validation, which the environment turns on
+    bool slotsOnly;             // creates a device without PrGpuFeatureFlag_Bindless on Metal 3 too
 } PrGpuMetalOptions;
 
 // Returns the default options: the system's default device, with a queue of the device's own.
 PrGpuMetalOptions prGpuMetalOptionsDefault(void);
 
-// Creates a device over Metal 3. The device retains the application's Metal device and queue. Null `options` means the
-// defaults. Returns NotSupported if the system has no Metal device that supports Metal 3. On failure, `*out` is null.
+// Creates a device over Metal. The device retains the application's Metal device and queue. Null `options` means the
+// defaults. Returns NotSupported if the system has no Metal device. On failure, `*out` is null.
 PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
 
 // Return the native objects of the device, valid while it lives: its id<MTLDevice>, its id<MTLCommandQueue>, and the
-// id<MTLResidencySet> that holds its resources.
+// id<MTLResidencySet> that holds its resources, which is null on a device without PrGpuFeatureFlag_Bindless.
 void* prGpuMetalDevice(const PrGpuDevice* device);
 void* prGpuMetalQueue(const PrGpuDevice* device);
 void* prGpuMetalResidencySet(const PrGpuDevice* device);

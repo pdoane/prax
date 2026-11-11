@@ -283,6 +283,16 @@ id<MTL4ComputeCommandEncoder> computeEncoder(Commands* c) {
     return c->compute;
 }
 
+// Unbinds every slot in the command buffer's argument table, which an earlier command buffer may have bound.
+void clearSlots(Commands* c) {
+    for (uint32_t i = GpuMetalBinding_Buffers; i < GpuMetalBinding_Count; ++i)
+        [c->table setAddress:0 atIndex:i];
+    for (uint32_t i = 0; i < GpuMetalTextureBinding_Count; ++i)
+        [c->table setTexture:MTLResourceID{} atIndex:i];
+    for (uint32_t i = 0; i < kGpuMetalTextureSlots; ++i)
+        [c->table setSamplerState:MTLResourceID{} atIndex:i];
+}
+
 bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
     Device* d = deviceFrom(device);
     @autoreleasepool {
@@ -302,10 +312,13 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
         if (c->table == nil) {
             MTL4ArgumentTableDescriptor* td = [[MTL4ArgumentTableDescriptor new] autorelease];
             td.maxBufferBindCount = GpuMetalBinding_Count;
+            td.maxTextureBindCount = GpuMetalTextureBinding_Count;
+            td.maxSamplerStateBindCount = kGpuMetalTextureSlots;
             c->table = [d->device newArgumentTableWithDescriptor:td error:nil];
         }
         [c->table setAddress:d->resourceHeap.gpuAddress atIndex:GpuMetalBinding_Resources];
         [c->table setAddress:d->samplerHeap.gpuAddress atIndex:GpuMetalBinding_Samplers];
+        clearSlots(c);
         if (options->native != nullptr) {
             c->native = true;
             c->buffer = [static_cast<id<MTL4CommandBuffer>>(options->native) retain];
@@ -340,6 +353,46 @@ void commandsSetPush(PrGpuCommands* commands, const void* data, uint32_t size) {
 void commandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t size) {
     PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     setRoot(device, commands, data, size, GpuMetalBinding_Uniforms);
+}
+
+// The slots are entries of the argument table, which Metal snapshots at each draw and dispatch. An unbound entry is
+// zero.
+uint64_t bufferAddress(const GpuMetalDevice* d, PrGpuBuffer buffer, uint64_t offset) {
+    return buffer.id != 0 ? gpuMetalBuffer(d, buffer.id).gpuAddress + offset : 0;
+}
+
+MTLResourceID textureID(const GpuMetalDevice* d, PrGpuTexture texture) {
+    return texture.id != 0 ? gpuMetalTexture(d, texture.id).gpuResourceID : MTLResourceID{};
+}
+
+void commandsSetBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    Commands* c = commandsFrom(commands);
+    const GpuMetalDevice* d = gpuMetalDeviceFrom(c->device);
+    uint32_t index = gpuMetalSlotsSetBuffer(d, c, slot, buffer, offset);
+    [c->table setAddress:bufferAddress(d, buffer, offset) atIndex:index];
+}
+
+void commandsSetRwBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    Commands* c = commandsFrom(commands);
+    const GpuMetalDevice* d = gpuMetalDeviceFrom(c->device);
+    uint32_t index = gpuMetalSlotsSetRwBuffer(d, c, slot, buffer, offset);
+    [c->table setAddress:bufferAddress(d, buffer, offset) atIndex:index];
+}
+
+void commandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler) {
+    Commands* c = commandsFrom(commands);
+    const GpuMetalDevice* d = gpuMetalDeviceFrom(c->device);
+    uint32_t index = gpuMetalSlotsSetTexture(d, c, slot, texture, sampler);
+    [c->table setTexture:textureID(d, texture) atIndex:index];
+    MTLResourceID samplerID = sampler.id != 0 ? d->samplers[sampler.id].gpuResourceID : MTLResourceID{};
+    [c->table setSamplerState:samplerID atIndex:slot];
+}
+
+void commandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture) {
+    Commands* c = commandsFrom(commands);
+    const GpuMetalDevice* d = gpuMetalDeviceFrom(c->device);
+    uint32_t index = gpuMetalSlotsSetRwTexture(d, c, slot, texture);
+    [c->table setTexture:textureID(d, texture) atIndex:index];
 }
 
 void commandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {
@@ -548,14 +601,15 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
 }
 
 // Hands the pass's encoder to a native draw, then binds the device's argument table again, and leaves the pass's
-// pipeline unset. An application's pass reports every state as changed, since the native draw may have changed any of
-// it.
+// pipeline and slots unset. An application's pass reports every state as changed, since the native draw may have
+// changed any of it.
 void passNativeDraw(PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     Commands* c = commandsFrom(pass->commands);
     @autoreleasepool {
         PrGpuMetal4NativePass native{.encoder = pass->encoder, .commandBuffer = c->buffer};
         draw(context, &native);
+        clearSlots(c);
         passBind(c, pass);
         c->pipeline = 0;
         gpuMetalPassChanged(pass, PrGpuNativeStateFlags(~0u));
@@ -640,6 +694,10 @@ constexpr PrGpuCommands kCommandsFunctions = {
     .setPushFn = commandsSetPush,
     .setUniformsFn = commandsSetUniforms,
     .setPipelineFn = gpuMetalCommandsSetPipeline,
+    .setBufferFn = commandsSetBuffer,
+    .setRwBufferFn = commandsSetRwBuffer,
+    .setTextureFn = commandsSetTexture,
+    .setRwTextureFn = commandsSetRwTexture,
     .dispatchFn = commandsDispatch,
     .dispatchIndirectFn = commandsDispatchIndirect,
     .copyBufferFn = commandsCopyBuffer,
@@ -709,7 +767,7 @@ PrStatus prGpuMetal4Create(const PrGpuMetal4Options* PR_NULLABLE options, PrGpuD
             return PrStatus_NotSupported;
         }
         Device* d = allocZeroed<Device>();
-        gpuMetalDeviceInit(d, device);
+        gpuMetalDeviceInit(d, device, true);
         d->feedback = dispatch_queue_create("lib/gpu feedback", DISPATCH_QUEUE_SERIAL);
         if (o.queue != nullptr) {
             gpuMetalDeviceAddQueue(d, [static_cast<id<MTL4CommandQueue>>(o.queue) retain]);

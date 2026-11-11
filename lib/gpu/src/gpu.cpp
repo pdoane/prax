@@ -196,11 +196,15 @@ PrStatus create(PrGpuBackend backend, const PrGpuDeviceOptions& o, PrGpuDevice* 
         case PrGpuBackend_Metal: {
             PrGpuMetalOptions metal = prGpuMetalOptionsDefault();
             metal.validation = o.validation;
+            metal.slotsOnly = o.slotsOnly;
             return prGpuMetalCreate(&metal, out);
         }
 #endif
 #if defined(PR_GPU_HAS_METAL4)
         case PrGpuBackend_Metal4: {
+            // Metal 4 always has bindless, and its slots are tested beside it.
+            if (o.slotsOnly)
+                return PrStatus_NotSupported;
             PrGpuMetal4Options metal = prGpuMetal4OptionsDefault();
             metal.validation = o.validation;
             return prGpuMetal4Create(&metal, out);
@@ -208,6 +212,9 @@ PrStatus create(PrGpuBackend backend, const PrGpuDeviceOptions& o, PrGpuDevice* 
 #endif
 #if defined(PR_GPU_HAS_VULKAN)
         case PrGpuBackend_Vulkan: {
+            // Vulkan always has bindless, and its slots are tested beside it.
+            if (o.slotsOnly)
+                return PrStatus_NotSupported;
             PrGpuVulkanOptions vulkan = prGpuVulkanOptionsDefault();
             vulkan.validation = vulkan.validation || o.validation;
             return prGpuVulkanCreate(&vulkan, out);
@@ -215,6 +222,9 @@ PrStatus create(PrGpuBackend backend, const PrGpuDeviceOptions& o, PrGpuDevice* 
 #endif
 #if defined(PR_GPU_HAS_D3D12)
         case PrGpuBackend_D3d12: {
+            // Direct3D 12 always has bindless, and its slots are tested beside it.
+            if (o.slotsOnly)
+                return PrStatus_NotSupported;
             PrGpuD3d12Options d3d12 = prGpuD3d12OptionsDefault();
             d3d12.validation = d3d12.validation || o.validation;
             return prGpuD3d12Create(&d3d12, out);
@@ -724,6 +734,8 @@ PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPip
     if (vertex->stage != PrGpuShaderStage_Vertex ||
             (fragment != nullptr && fragment->stage != PrGpuShaderStage_Fragment))
         return PrStatus_WrongType;
+    if (desc->readsTarget && (device->infoFn(device).features & PrGpuFeatureFlag_TargetReads) == 0)
+        return PrStatus_NotSupported;
     if (device->isLostFn(device))
         return PrStatus_Lost;
     return device->graphicsPipelineCreateFn(device, desc, vertex, fragment, out);
@@ -805,6 +817,36 @@ void prGpuCommandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_
 void prGpuCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
     PR_ASSERT(pipeline.id != 0);
     commands->setPipelineFn(commands, pipeline);
+}
+
+void prGpuCommandsSetBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    PR_ASSERT(slot < prGpuDeviceInfo(prGpuCommandsDevice(commands)).maxBufferSlots);
+    PR_ASSERT(offset % kPrGpuSlotOffsetAlignment == 0);
+    PR_ASSERT(buffer.id == 0 || offset < prGpuBufferDesc(prGpuCommandsDevice(commands), buffer).size);
+    commands->setBufferFn(commands, slot, buffer, offset);
+}
+
+void prGpuCommandsSetRwBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    PR_ASSERT(slot < prGpuDeviceInfo(prGpuCommandsDevice(commands)).maxRwBufferSlots);
+    PR_ASSERT(offset % kPrGpuSlotOffsetAlignment == 0);
+    PR_ASSERT(buffer.id == 0 ||
+        (prGpuBufferDesc(prGpuCommandsDevice(commands), buffer).usage & PrGpuBufferUsageFlag_Storage) != 0);
+    PR_ASSERT(buffer.id == 0 || offset < prGpuBufferDesc(prGpuCommandsDevice(commands), buffer).size);
+    commands->setRwBufferFn(commands, slot, buffer, offset);
+}
+
+void prGpuCommandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler) {
+    PR_ASSERT(slot < prGpuDeviceInfo(prGpuCommandsDevice(commands)).maxTextureSlots);
+    PR_ASSERT(texture.id == 0 ||
+        (prGpuTextureDesc(prGpuCommandsDevice(commands), texture).usage & PrGpuTextureUsageFlag_Sampled) != 0);
+    commands->setTextureFn(commands, slot, texture, sampler);
+}
+
+void prGpuCommandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture) {
+    PR_ASSERT(slot < prGpuDeviceInfo(prGpuCommandsDevice(commands)).maxRwTextureSlots);
+    PR_ASSERT(texture.id == 0 ||
+        (prGpuTextureDesc(prGpuCommandsDevice(commands), texture).usage & PrGpuTextureUsageFlag_Storage) != 0);
+    commands->setRwTextureFn(commands, slot, texture);
 }
 
 void prGpuCommandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {

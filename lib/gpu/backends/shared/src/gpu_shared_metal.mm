@@ -466,6 +466,8 @@ PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline)
     return PrGpuExtent{uint32_t(size.width), uint32_t(size.height), uint32_t(size.depth)};
 }
 
+#if TARGET_OS_OSX
+
 // Returns the capabilities of the screen that shows most of the view's window, or of the main screen if the view is not
 // in a window. It reads AppKit, so it must be called on the main thread.
 PrAppDisplay displayOf(NSView* view) {
@@ -490,8 +492,17 @@ void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
     layer.wantsExtendedDynamicRangeContent = extended ? YES : NO;
 }
 
+#endif
+
 PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
+#if !TARGET_OS_OSX
+    (void)device;
+    (void)surface;
+    (void)desc;
+    (void)out;
+    return PrStatus_NotSupported;
+#else
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     @autoreleasepool {
         if (surface->kind != PrAppSurfaceKind_NsView)
@@ -525,7 +536,10 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
             layer.contentsGravity = kCAGravityBottomLeft;
         else
             layer.contentsGravity = kCAGravityTopLeft;
-        [d->queue addResidencySet:layer.residencySet];
+        // A bindless device's shaders may reach a drawable by handle, so its queue holds the layer's drawables. On a
+        // device without bindless, a drawable is resident in the encoders that bind it.
+        if (d->bindless)
+            [d->queue addResidencySet:layer.residencySet];
         GpuMetalSwapChain* sc = allocZeroed<GpuMetalSwapChain>();
         static_cast<PrGpuSwapChain&>(*sc) = *d->swapChainFunctions;
         sc->device = device;
@@ -537,6 +551,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         *out = sc;
         return PrStatus_Ok;
     }
+#endif
 }
 
 // Lets go of the acquired drawable's texture, whose slot stays until the work that drew into it is done.
@@ -617,7 +632,8 @@ void gpuMetalSwapChainDestroy(PrGpuSwapChain* handle) {
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     gpuMetalWaitIdle(device);
     releaseDrawable(d, sc);
-    [d->queue removeResidencySet:sc->layer.residencySet];
+    if (d->bindless)
+        [d->queue removeResidencySet:sc->layer.residencySet];
     [sc->layer release];
     prMemoryFree(sc);
 }
@@ -940,6 +956,7 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
     @autoreleasepool {
         releaseDrawable(d, sc);
 
+#if TARGET_OS_OSX
         // An HDR swap chain follows its window's display, which changes if the window moves to another display or the
         // display's mode changes. AppKit can be read only on the main thread, so an acquire on another thread keeps the
         // choice that was last made on the main thread.
@@ -950,6 +967,7 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
                 sc->info = info;
             }
         }
+#endif
         CGSize size = CGSizeMake(extent.x, extent.y);
         if (!CGSizeEqualToSize(sc->layer.drawableSize, size))
             sc->layer.drawableSize = size;
@@ -1119,6 +1137,43 @@ void gpuMetalCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline
     }
 }
 
+uint32_t gpuMetalSlotsSetBuffer(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuBuffer buffer,
+        uint64_t offset) {
+    c->slots.buffers[slot] = buffer.id != 0 ? gpuMetalBuffer(d, buffer.id) : nil;
+    c->slots.bufferOffsets[slot] = NSUInteger(offset);
+    return GpuMetalBinding_Buffers + slot;
+}
+
+uint32_t gpuMetalSlotsSetRwBuffer(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuBuffer buffer,
+        uint64_t offset) {
+    uint32_t index = kGpuMetalBufferSlots + slot;
+    c->slots.buffers[index] = buffer.id != 0 ? gpuMetalBuffer(d, buffer.id) : nil;
+    c->slots.bufferOffsets[index] = NSUInteger(offset);
+    return GpuMetalBinding_RwBuffers + slot;
+}
+
+uint32_t gpuMetalSlotsSetTexture(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuTexture texture,
+        PrGpuSampler sampler) {
+    c->slots.textures[GpuMetalTextureBinding_Textures + slot] = texture.id != 0 ? gpuMetalTexture(d, texture.id) : nil;
+    c->slots.samplers[slot] = sampler.id != 0 ? d->samplers[sampler.id] : nil;
+    return GpuMetalTextureBinding_Textures + slot;
+}
+
+uint32_t gpuMetalSlotsSetRwTexture(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuTexture texture) {
+    uint32_t index = GpuMetalTextureBinding_RwTextures + slot;
+    c->slots.textures[index] = texture.id != 0 ? gpuMetalTexture(d, texture.id) : nil;
+    return index;
+}
+
+bool gpuMetalBindingsReadHeaps(NSArray<id<MTLBinding>>* PR_NULLABLE bindings) {
+    for (id<MTLBinding> binding in bindings) {
+        if (binding.used && binding.type == MTLBindingTypeBuffer &&
+                (binding.index == GpuMetalBinding_Resources || binding.index == GpuMetalBinding_Samplers))
+            return true;
+    }
+    return false;
+}
+
 void gpuMetalEncodeCopyTexture(const GpuMetalDevice* d, id encoder, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
     bool is3d = d->resources[source.id].texture.kind == PrGpuTextureKind_3d;
@@ -1197,14 +1252,18 @@ void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags) {
         gpuMetalCommandsFrom(pass->commands)->changed |= flags;
 }
 
-void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
+void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) {
     gpuSharedDeviceInit(d);
     d->device = device;
+    d->bindless = bindless;
     prMutexInit(&d->doneMutex);
     prConditionInit(&d->doneSignal);
-    MTLResidencySetDescriptor* rd = [[MTLResidencySetDescriptor new] autorelease];
-    rd.initialCapacity = 256;
-    d->residency = [device newResidencySetWithDescriptor:rd error:nil];
+    // Without bindless, the residency set stays null, and the calls that add to it and commit it do nothing.
+    if (bindless) {
+        MTLResidencySetDescriptor* rd = [[MTLResidencySetDescriptor new] autorelease];
+        rd.initialCapacity = 256;
+        d->residency = [device newResidencySetWithDescriptor:rd error:nil];
+    }
     d->resourceHeap = [device newBufferWithLength:kGpuMetalMaxResources * sizeof(uint64_t)
         options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
     d->samplerHeap = [device newBufferWithLength:kGpuMetalMaxSamplers * sizeof(uint64_t)
@@ -1254,20 +1313,29 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
     else
         d->adapter[size] = 0;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
-    // Framebuffer fetch on Apple's GPUs reads in raster order.
+    // A pipeline reads its target with framebuffer fetch, which reads in raster order on Apple's GPUs. The iOS
+    // simulator's shader compiler has no framebuffer fetch.
     d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc |
-        PrGpuFeatureFlag_OrderedTargetReads |
+        (bindless ? PrGpuFeatureFlag_Bindless : 0) |
         (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0);
+#if !TARGET_OS_SIMULATOR
+    d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads;
+#endif
     d->inPlaceImports = 1u << PrGpuImportKind_CoreVideo;
     d->textureImportInPlace = gpuMetalTextureImport;
     d->info.maxTextureSize = 16384;
-    d->info.maxResourceHandles = kGpuMetalMaxResources - 1;
-    d->info.maxSamplerHandles = kGpuMetalMaxSamplers - 1;
+    d->info.maxResourceHandles = bindless ? kGpuMetalMaxResources - 1 : 0;
+    d->info.maxSamplerHandles = bindless ? kGpuMetalMaxSamplers - 1 : 0;
+    d->info.maxBufferSlots = kGpuMetalBufferSlots;
+    d->info.maxRwBufferSlots = kGpuMetalRwBufferSlots;
+    d->info.maxTextureSlots = kGpuMetalTextureSlots;
+    d->info.maxRwTextureSlots = kGpuMetalRwTextureSlots;
 }
 
 void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue) {
     d->queue = queue;
-    [d->queue addResidencySet:d->residency];
+    if (d->residency != nil)
+        [d->queue addResidencySet:d->residency];
 }
 
 void gpuMetalDeviceReset(GpuMetalDevice* d) {
@@ -1287,7 +1355,8 @@ void gpuMetalDeviceReset(GpuMetalDevice* d) {
         [d->pipelines[i].depthStencil release];
     }
     prMutexUnlock(&d->mutex);
-    [d->queue removeResidencySet:d->residency];
+    if (d->residency != nil)
+        [d->queue removeResidencySet:d->residency];
     prMemoryFree(d->resources);
     prMemoryFree(d->samplers);
     prMemoryFree(d->pipelines);

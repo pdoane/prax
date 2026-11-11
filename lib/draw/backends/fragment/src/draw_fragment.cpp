@@ -137,6 +137,7 @@ struct Fragment {
     // than a quarter of its entries.
     PrDrawFragmentEmbeds embeds;
     RawArray<PreparedList> prepared;
+    bool targetReads;                   // the device reads the target (PrGpuFeatureFlag_TargetReads)
     uint32_t embedded;                  // the lists that the build in progress embedded
 
     PrDrawFragmentPaths paths;
@@ -286,6 +287,11 @@ struct Walk {
     // The layer that the list draws into, as its index plus one, or zero for the target. That layer is entered first
     // and stays entered while the list draws, so its entry in `drawn` is the second.
     uint32_t root;
+
+    // On a device that cannot read its target, the batch of instances that read the destination from the snapshot that
+    // the copy pass `snapshotCopy` (its index plus one, or zero for none) takes, and the pixels that each covers.
+    uint32_t snapshotCopy;
+    RawArray<PrIRect> snapshotRects;
     RawArray<Stacked> stacked;
     RawArray<PrColor> rampColors;  // a ramp's colors before they are recorded
 };
@@ -505,6 +511,7 @@ struct Ink {
     PrColor16 color;
     uint32_t paint;             // the paint record's index plus one, or zero for the color alone
     bool reads;                 // true if its compositing reads the destination
+    bool writes;                // true if it replaces the destination with no blending (FragmentInstanceFlag_Writes)
 };
 
 // Returns a paint record of the color alone, composited with the walk's current operator and blend mode.
@@ -786,15 +793,77 @@ uint32_t clipRecord(Walk& w) {
     return c.record;
 }
 
+void beginPass(Walk& w, uint32_t layer, bool clear);
+void endPass(Walk& w);
+
+// Readies the instance that reads the destination over `pixels` to read a snapshot of its layer, on a device that
+// cannot read its target. It joins the open batch if its pixels touch none of the batch's, and otherwise a copy pass
+// takes a new snapshot of the layer, which the pass after it reads. The batch's copy grows to cover its pixels.
+void snapshotFor(Walk& w, PrIRect pixels) {
+    constexpr uint32_t kBatchMax = 64;
+    uint32_t layer = w.layers.last();
+    PR_ASSERT(layer != 0 && "a list that reads the destination draws into a layer of its own");
+    if (layer == 0)
+        return;
+    if (w.snapshotCopy != 0 && w.snapshotRects.count < kBatchMax) {
+        bool overlaps = false;
+        for (uint32_t i = 0; i < w.snapshotRects.count && !overlaps; ++i)
+            overlaps = !prIRectIsEmpty(prIRectIntersect(w.snapshotRects.data[i], pixels));
+        if (!overlaps) {
+            w.snapshotRects.push(pixels);
+            FragmentPass& copy = w.b->passes.data[w.snapshotCopy - 1];
+            copy.box = prIRectUnion(copy.box, pixels);
+            return;
+        }
+    }
+    FragmentLayer drawn = w.b->layers.data[layer - 1];
+    uint32_t snapshot = 0;
+    for (uint32_t i = w.b->passes.count; i-- > 0 && snapshot == 0;) {
+        if (w.b->passes.data[i].copy != 0 && w.b->passes.data[i].layer == layer)
+            snapshot = w.b->passes.data[i].copy;
+    }
+    if (snapshot == 0) {
+        uint32_t texture = ++w.f->nextTexture;
+        w.f->layerIndex.insert(texture, w.b->layers.count);
+        w.b->layers.push(FragmentLayer{
+            .texture = texture,
+            .origin = drawn.origin,
+            .extent = drawn.extent,
+            .precise = drawn.precise,
+        });
+        snapshot = w.b->layers.count;
+    }
+    endPass(w);
+    w.b->passes.push(FragmentPass{.layer = layer, .first = w.b->instances.count, .copy = snapshot, .box = pixels});
+    uint32_t copy = w.b->passes.count;
+    beginPass(w, layer, false);
+    w.b->passes.data[w.pass].snapshot = snapshot;
+    w.snapshotCopy = copy;
+    w.snapshotRects.clear();
+    w.snapshotRects.push(pixels);
+}
+
 // Adds the instance, painting with the ink under the clips in force, if any pixel of `box` shows through them. Returns
 // false if no pixel shows through.
 bool emit(Walk& w, FragmentInstance instance, const Ink& ink, const PrIRect& box) {
-    if (prIRectIsEmpty(prIRectIntersect(box, clipOf(w).box)))
+    PrIRect pixels = prIRectIntersect(box, clipOf(w).box);
+    if (prIRectIsEmpty(pixels))
         return false;
     instance.color = ink.color;
     instance.paint = ink.paint;
-    if (ink.reads)
+    if (ink.reads) {
         instance.flags |= FragmentInstanceFlag_ReadsDestination;
+        // The batch's pixels are all that each instance rasterizes, as the device bounds them, and not only those that
+        // the clip lets through: the shader writes what it reads from the snapshot wherever its coverage is zero.
+        if (!w.f->targetReads && w.layers.last() != 0) {
+            const FragmentLayer& l = w.b->layers.data[w.layers.last() - 1];
+            snapshotFor(w, fragmentInstancePixels(instance, PrVec2{0, 0}, prIRectAt(l.origin, l.extent)));
+        }
+    } else {
+        w.snapshotCopy = 0;
+    }
+    if (ink.writes)
+        instance.flags |= FragmentInstanceFlag_Writes;
     instance.clip = clipRecord(w);
     uint32_t kind = instance.flags & FragmentInstanceFlag_Coverage;
     bool covers = kind == FragmentCoverage_Solid || kind == FragmentCoverage_Rect ||
@@ -1690,7 +1759,15 @@ void drawClear(Walk& w, const PrDrawCommand& c) {
     bool opaque = color[3] >= 1 && r.knockout == 0;
     r.composite = opaque ? PrDrawComposite_SourceOver : PrDrawComposite_Copy;
     r.blendMode = PrDrawBlendMode_Normal;
-    drawSolid(w, box, inkOf(w, r, color));
+    Ink ink = inkOf(w, r, color);
+    // A clip that is one rectangle on pixels covers each pixel fully or not at all, so the color replaces what lies
+    // there without reading it (prDrawListReadsDestination).
+    const Clip& clip = clipOf(w);
+    if (!opaque && clip.count == 0 && clip.mask == 0 && prRectIsOnPixels(clip.rect)) {
+        ink.reads = false;
+        ink.writes = true;
+    }
+    drawSolid(w, box, ink);
 }
 
 // Draws a shadow as one instance in the shadow's space, which blurs its shape by the shadow's sigma. A drop shadow cuts
@@ -1943,9 +2020,11 @@ void drawGlyphs(Walk& w, const PrDrawCommand& c) {
 // for nothing. Such a pass draws nothing, filters nothing, has the host draw nothing, and clears nothing or clears the
 // same layer.
 void beginPass(Walk& w, uint32_t layer, bool clear) {
+    w.snapshotCopy = 0;
     if (w.b->passes.count != 0) {
         FragmentPass& last = w.b->passes.last();
-        if (last.count == 0 && last.filter == 0 && !last.beneath && !last.mipmaps && (!last.clear || last.layer == layer)) {
+        if (last.count == 0 && last.filter == 0 && !last.beneath && !last.mipmaps && last.copy == 0 &&
+                last.snapshot == 0 && (!last.clear || last.layer == layer)) {
             last.clear = last.clear || clear;
             last.layer = layer;
             last.first = w.b->instances.count;
@@ -3777,6 +3856,7 @@ void describe(const FrameStorage* b, uint32_t width, uint32_t height, FragmentFr
 // Creates the state that builds share, for the options.
 Fragment* fragmentCreate(const PrDrawFragmentOptions& o) {
     Fragment* f = allocZeroed<Fragment>();
+    f->targetReads = true;
     f->embeds = o.embeds;
     f->paths = o.paths;
     f->atlasSize = o.atlasSize < kPrDrawFragmentAtlasMinSize ? kPrDrawFragmentAtlasMinSize : o.atlasSize;
@@ -3926,10 +4006,13 @@ void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawPart& part, 
     beginPass(w, 0, false);
     // A group that reads what lies beneath it reads what the list drew before it, over what the host provides. The
     // target cannot be read while preparing, so a list with such a group draws into a layer of its own, which then
-    // draws over the target.
+    // draws over the target. So does a list that reads the destination on a device that cannot read its target, whose
+    // reads read snapshots of the layer.
     const PrDrawCommand* commands = prDrawListCommands(list) + part.first;
     uint32_t count = part.count;
-    bool root = width != 0 && height != 0 && prDrawListReadsBackdrop(list);
+    bool destination = !f->targetReads && prDrawListReadsDestination(list, &part.transform);
+    bool reads = prDrawListReadsBackdrop(list) || destination;
+    bool root = width != 0 && height != 0 && reads;
     uint32_t rootTexture = root ? enterLayer(w, w.target, false) : 0;
     w.root = root ? w.layers.last() : 0;
     if (root)
@@ -3955,6 +4038,7 @@ void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawPart& part, 
     w.groups.reset();
     w.stacked.reset();
     w.rampColors.reset();
+    w.snapshotRects.reset();
     describe(b, width, height, out);
 }
 
@@ -4068,6 +4152,7 @@ FragmentRenderer* createRenderer(FragmentDevice* device, const PrDrawFragmentOpt
     FragmentRenderer* r = allocZeroed<FragmentRenderer>();
     r->state = device;
     r->fragment = fragmentCreate(options != nullptr ? *options : prDrawFragmentOptionsDefault());
+    r->fragment->targetReads = fragmentDeviceReadsTarget(device);
     r->destroyFn = destroyRenderer;
     r->frameCreateFn = createFrame;
     r->deviceFn = rendererDevice;

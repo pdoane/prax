@@ -68,6 +68,10 @@ enum : uint32_t {
     FragmentInstanceFlag_Coverage = 0xff,             // its FragmentCoverage
     FragmentInstanceFlag_ReadsDestination = 0x100,    // its paint record composites by reading the destination
     FragmentInstanceFlag_Basic = 0x200,               // simple enough for the basic pipeline (fragmentShadeBasic)
+
+    // Its paint replaces the destination with no blending, which its coverage is whole wherever it draws (a Clear
+    // within a clip that lets through whole pixels).
+    FragmentInstanceFlag_Writes = 0x400,
 };
 typedef uint32_t FragmentInstanceFlags;
 

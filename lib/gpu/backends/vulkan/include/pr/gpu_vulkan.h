@@ -14,9 +14,11 @@
 // Shaders reach resources through one pipeline layout, which the shader libraries are compiled for:
 //
 // - Set 0 is empty.
-// - Set 1 holds push descriptors. Binding 0 is the uniform buffer of a draw or a dispatch. Binding 1 is the target that
-//   a pipeline that reads its target reads, for the fragment stage. It is an input attachment on a device with local
-//   read, and a sampled image of the copy otherwise.
+// - Set 1 holds push descriptors. Binding 0 is the uniform buffer of a draw or a dispatch. Binding 1 is the input
+//   attachment that a pipeline that reads its target reads, for the fragment stage, on a device with local read, which
+//   is the only kind that reads the target (PrGpuFeatureFlag_TargetReads). The slots follow, for every stage: four
+//   Buffer slots from binding 2 and four RwBuffer slots from 6, as storage buffers; eight Texture slots from 10, each a
+//   sampled image and then its sampler; and four RwTexture slots from 26, as storage images.
 // - Set 2 is the bindless set. Binding 0 is an array of samplers, and binding 2 an array of mutable descriptors that
 //   holds every buffer and image, updated after it is bound. A handle is an index into one of the arrays.
 // - Push constants are kPrGpuMaxPushBytes at offset zero, readable by every stage.

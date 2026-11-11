@@ -1,11 +1,13 @@
 // What the Metal backends share: resources and their residency, formats, the stream, uploads' staging, swap chains, and
 // the commands whose Objective-C selectors both APIs spell alike.
 //
-// Metal has no descriptor heap, so a device keeps two buffers of 8-byte entries that shaders index by handle
+// Metal has no descriptor heap, so a bindless device keeps two buffers of 8-byte entries that shaders index by handle
 // (pr/gpu.slang): resources, where an entry is a texture's MTLResourceID or a buffer's GPU address, and samplers, where
 // it is a sampler's MTLResourceID. A command buffer binds push data at buffer index 0, uniforms at 1, the resource heap
-// at 2 and the sampler heap at 3. Push data and uniforms go into the command buffer's stream. Resources are untracked,
-// so a backend orders work by itself. Every resource is in one residency set that the queue holds.
+// at 2 and the sampler heap at 3. Push data and uniforms go into the command buffer's stream. The slots follow at the
+// indices of GpuMetalBinding and GpuMetalTextureBinding, which pr/gpu.slang declares alike. Resources are untracked, so
+// a backend orders work by itself. On a bindless device, every resource is in one residency set that the queue holds. A
+// device without bindless has no residency set, and its resources are resident in the encoders that bind them to slots.
 //
 // A destroyed object is kept until every command buffer that began before its destruction is done, since any of them
 // may use it. A fence is reached once its submission and those before it are done and the functions that wait for the
@@ -25,8 +27,10 @@
 #include "gpu/backends/shared/src/gpu_shared_device.h"
 #include "gpu/backends/shared/src/gpu_shared_upload.h"
 
-// The system APIs that the structures below name.
+// The system APIs that the structures below name. A swap chain presents to an AppKit view on macOS.
+#if TARGET_OS_OSX
 #import <AppKit/AppKit.h>
+#endif
 #import <CoreVideo/CoreVideo.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -45,15 +49,32 @@ constexpr uint32_t kGpuMetalMaxResources = 1u << 16;
 constexpr uint32_t kGpuMetalMaxSamplers = 2048;
 constexpr uint32_t kGpuMetalMaxPipelines = 4096;
 
-// The buffer indices of root data and heaps, as pr/gpu.slang binds them.
+// The number of slots of each kind.
+constexpr uint32_t kGpuMetalBufferSlots = 8;
+constexpr uint32_t kGpuMetalRwBufferSlots = 8;
+constexpr uint32_t kGpuMetalTextureSlots = 16;
+constexpr uint32_t kGpuMetalRwTextureSlots = 8;
+
+// The buffer indices of root data, heaps and buffer slots, as pr/gpu.slang binds them.
 enum {
     GpuMetalBinding_Push = 0,
     GpuMetalBinding_Uniforms = 1,
     GpuMetalBinding_Resources = 2,
     GpuMetalBinding_Samplers = 3,
-    GpuMetalBinding_Count,
+    GpuMetalBinding_Buffers = 4,
+    GpuMetalBinding_RwBuffers = GpuMetalBinding_Buffers + kGpuMetalBufferSlots,
+    GpuMetalBinding_Count = GpuMetalBinding_RwBuffers + kGpuMetalRwBufferSlots,
 };
 typedef uint32_t GpuMetalBinding;
+
+// The texture indices of texture slots, as pr/gpu.slang binds them. A Texture slot's sampler is at the slot's own
+// sampler index.
+enum {
+    GpuMetalTextureBinding_Textures = 0,
+    GpuMetalTextureBinding_RwTextures = GpuMetalTextureBinding_Textures + kGpuMetalTextureSlots,
+    GpuMetalTextureBinding_Count = GpuMetalTextureBinding_RwTextures + kGpuMetalRwTextureSlots,
+};
+typedef uint32_t GpuMetalTextureBinding;
 
 // The stream's blocks, and the alignment of its allocations, which every use of a buffer's address accepts.
 constexpr uint64_t kGpuMetalStreamBlock = uint64_t(1) << 20;
@@ -167,12 +188,23 @@ struct GpuMetalDrawable {
 
 struct GpuMetalPass;
 
+// The resources bound to a command buffer's slots, by the indices that encoders bind them at: buffers by
+// GpuMetalBinding from GpuMetalBinding_Buffers, and textures by GpuMetalTextureBinding. The objects are held by the
+// device's tables.
+struct GpuMetalSlots {
+    id<MTLBuffer> PR_NULLABLE buffers[kGpuMetalBufferSlots + kGpuMetalRwBufferSlots];
+    NSUInteger bufferOffsets[kGpuMetalBufferSlots + kGpuMetalRwBufferSlots];
+    id<MTLTexture> PR_NULLABLE textures[GpuMetalTextureBinding_Count];
+    id<MTLSamplerState> PR_NULLABLE samplers[kGpuMetalTextureSlots];
+};
+
 // The state of a command buffer that the backends share, at the start of each backend's own.
 struct GpuMetalCommands : GpuSharedCommands {
     uint64_t serial;                    // the order in which command buffers began
     GpuMetalPass* PR_NULLABLE pass;     // the open pass
     PrGpuNativeStateFlags changed;      // the state of the application's pass that changed since the last sync
     uint32_t pipeline;                  // the pipeline of dispatches and draws
+    GpuMetalSlots slots;
     RawArray<GpuMetalBlock> blocks;     // the blocks of the stream
     RawArray<GpuMetalDrawable> drawables;
     RawArray<GpuMetalDone> dones;
@@ -190,7 +222,9 @@ struct GpuMetalPass : GpuSharedPass {
 // A swap chain over a Metal layer.
 struct GpuMetalSwapChain : GpuSharedSwapChain {
     CAMetalLayer* layer;                      // retained
+#if TARGET_OS_OSX
     NSView* view;                             // the view that the layer backs or the view hosts, not retained
+#endif
     PrGpuSwapChainIntent intent;
     bool transactional;                       // true unless the swap chain was created PrGpuSwapChainFlag_Threaded
     id<CAMetalDrawable> PR_NULLABLE drawable; // the drawable of the acquired frame, retained
@@ -219,7 +253,8 @@ struct GpuMetalDevice : GpuSharedDevice {
     PrCondition doneSignal;                          // broadcast when `done` rises
     RawArray<PrGpuFence> doneAhead;                  // the fences that completed ahead of one before them, under
                                                      // doneMutex
-    id<MTLResidencySet> residency;                   // retained
+    bool bindless;                                   // has PrGpuFeatureFlag_Bindless
+    id<MTLResidencySet> PR_NULLABLE residency;       // retained; null without bindless
     CVMetalTextureCacheRef PR_NULLABLE textureCache; // made the first time an image is imported, under `mutex`
     id<MTLBuffer> resourceHeap;                      // retained
     id<MTLBuffer> samplerHeap;                       // retained
@@ -373,6 +408,19 @@ GpuMetalPipeline gpuMetalPipelineFromDesc(GpuMetalDevice* d, const PrGpuGraphics
 // Sets the pipeline of the command buffer's next dispatches and draws, on the open pass if there is one.
 void gpuMetalCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline);
 
+// Record a resource bound to one of the command buffer's slots, and return the slot's buffer or texture index.
+uint32_t gpuMetalSlotsSetBuffer(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuBuffer buffer,
+    uint64_t offset);
+uint32_t gpuMetalSlotsSetRwBuffer(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuBuffer buffer,
+    uint64_t offset);
+uint32_t gpuMetalSlotsSetTexture(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuTexture texture,
+    PrGpuSampler sampler);
+uint32_t gpuMetalSlotsSetRwTexture(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuTexture texture);
+
+// Returns whether a pipeline's functions, as Metal reflects their bindings, read the heaps, which only a bindless
+// device has.
+bool gpuMetalBindingsReadHeaps(NSArray<id<MTLBinding>>* PR_NULLABLE bindings);
+
 // Encode copies on an encoder of either API that takes copies.
 void gpuMetalEncodeCopyTexture(const GpuMetalDevice* d, id encoder, PrGpuTexture source,
     const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion);
@@ -388,9 +436,10 @@ void gpuMetalEncodeTextureCopy(id encoder, const GpuMetalTextureCopy& copy);
 // them.
 void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags);
 
-// Fills a device's shared state and the functions that the backends share, over `device`, which it takes. The backend
-// then creates the queue and calls gpuMetalDeviceAddQueue, which takes the queue and adds the residency set to it.
-void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device);
+// Fills a device's shared state and the functions that the backends share, over `device`, which it takes. A device
+// without `bindless` binds resources only to slots. The backend then creates the queue and calls
+// gpuMetalDeviceAddQueue, which takes the queue and adds the residency set to it.
+void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device, bool bindless);
 void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue);
 
 // Frees a device's shared state. The backend has freed its own.

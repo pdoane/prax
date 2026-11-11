@@ -139,7 +139,8 @@ function(pr_slang target source)
     list(JOIN includes "|" includes)
     add_custom_command(OUTPUT ${header}
         COMMAND ${CMAKE_COMMAND} -DSLANGC=${PR_SLANGC} -DTARGETS=${targets} -DVARIABLE=${SLANG_VARIABLE}
-            -DINCLUDES=${includes} -DSOURCE=${source} -DHEADER=${header} -DDEPFILE=${header}.d
+            -DMETAL_SDK=${PR_METAL_SDK} -DINCLUDES=${includes} -DSOURCE=${source} -DHEADER=${header}
+            -DDEPFILE=${header}.d
             -DSCRATCH=${PROJECT_BINARY_DIR}/slang/${directory}/${SLANG_VARIABLE} -DROOT=${PROJECT_SOURCE_DIR}
             -P ${PROJECT_SOURCE_DIR}/cmake/shader_library.cmake
         DEPENDS ${source} ${PROJECT_SOURCE_DIR}/cmake/shader_library.cmake
@@ -263,17 +264,18 @@ function(pr_write_tests)
     file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/tests.json CONTENT "[\n${entries}\n]\n")
 endfunction()
 
-# Adds the doctest binary `target` as a test (pr_add_test), if the host runs it: a build for iOS only builds it.
+# Adds the doctest binary `target` as a test (pr_add_test), if the host runs it or the build's emulator does, as the
+# simulator's runner does for an iOS simulator build. A build for iOS devices only builds it.
 #
 #   pr_add_tests(<target>)
 function(pr_add_tests target)
-    if (NOT PR_IOS)
+    if (NOT PR_IOS OR CMAKE_CROSSCOMPILING_EMULATOR)
         pr_add_test(${target} KIND doctest COMMAND ${target})
     endif()
 endfunction()
 
 # One test binary per module, named after it, which links the module, the toolkit and the tests' main(). The module is
-# a library of the engine, or a library of test support. CTest runs it as pr_add_tests registers it.
+# a library of the engine, or a library of test support. It runs as pr_add_tests registers it.
 #
 #   pr_module_tests(<module> <source>...)
 function(pr_module_tests module)

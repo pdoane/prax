@@ -71,9 +71,11 @@ SPIR-V hold every entry point in one module. Direct3D 12 takes DXIL for each ent
 | handles | buffers of 8-byte entries that a handle indexes | the shader-visible heaps, indexed directly | the bindless set at set 2: an array of samplers and one of mutable descriptors |
 | push data | a buffer in the stream | 32 root constants at `b0` | push constants |
 | uniforms | a buffer in the stream | a root constant buffer at `b1` | a uniform buffer, pushed at set 1 |
-| reading the target | framebuffer fetch | a copy of the target over the draw's scissor | an input attachment read locally in the rendering, or a copy of the target over the draw's scissor on a device without local read; either is pushed at set 1 |
+| reading the target | framebuffer fetch, except in the iOS simulator | none | an input attachment read locally in the rendering, pushed at set 1, on a device with local read |
 
-A pipeline that reads its target (`readsTarget`, and `prGpuTarget` in the shader) reads what the draws before it left.
+A pipeline that reads its target (`readsTarget`, and `prGpuTarget` in the shader) reads what the draws before it left,
+on a device with `PrGpuFeatureFlag_TargetReads`. A device without it, such as Metal in the iOS simulator, refuses such
+a pipeline, and the renderer reads what earlier draws left from a texture of its own.
 Where the device lacks `PrGpuFeatureFlag_OrderedTargetReads`, fragments of one draw that cover the same pixel read an
 undefined value, so a renderer splits such draws, as `lib/draw`'s fragment renderer does.
 

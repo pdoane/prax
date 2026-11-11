@@ -13,6 +13,7 @@
 #include "pr/draw_lower.h"
 #include "pr/draw_projection.h"
 #include "pr/float.h"
+#include "pr/float16.h"
 #include "pr/mem.h"
 #include "pr/raw_array.h"
 #include "pr/vec.h"
@@ -596,6 +597,149 @@ bool commandsReadBackdrop(const PrDrawCommand* commands, uint32_t count) {
     return false;
 }
 
+// What commands read of the destination: whether they read it under any transform, and whether they have a Clear that
+// is not opaque within a clip (prDrawListReadsDestination).
+struct DestinationReads {
+    bool always;
+    bool clearsInClips;
+    bool clears;                // it has a Clear that is not opaque, within a clip or not
+};
+
+DestinationReads listDestinationReads(const PrDrawList* list);
+
+DestinationReads commandsDestinationReads(const PrDrawCommand* commands, uint32_t count) {
+    DestinationReads reads{};
+    uint32_t clips = 0;
+    for (uint32_t i = 0; i < count; ++i) {
+        const PrDrawCommand& c = commands[i];
+        if (c.composite != PrDrawComposite_SourceOver || c.blendMode != PrDrawBlendMode_Normal)
+            reads.always = true;
+        switch (c.kind) {
+            case PrDrawCommandKind_PushClipRect:
+            case PrDrawCommandKind_PushClipTargetRect:
+            case PrDrawCommandKind_PushClipCornerRect:
+            case PrDrawCommandKind_PushClipPath:
+                ++clips;
+                break;
+            case PrDrawCommandKind_PopClip:
+                clips = clips != 0 ? clips - 1 : 0;
+                break;
+            case PrDrawCommandKind_Clear:
+                if (prFloat16ToFloat(c.color.a) < 1) {
+                    reads.clears = true;
+                    reads.clearsInClips = reads.clearsInClips || clips != 0;
+                }
+                break;
+            case PrDrawCommandKind_PushGroup:
+                if (c.group->knockout)
+                    reads.always = true;
+                break;
+            case PrDrawCommandKind_Embed: {
+                DestinationReads inner = listDestinationReads(c.embed.list);
+                reads.always = reads.always || inner.always;
+                reads.clears = reads.clears || inner.clears;
+                // A Clear of the embedded list lies within the clips in force here too.
+                reads.clearsInClips = reads.clearsInClips || inner.clearsInClips || (clips != 0 && inner.clears);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    return reads;
+}
+
+// Returns what the list reads of the destination, as it was cached when the list was frozen.
+DestinationReads listDestinationReads(const PrDrawList* list) {
+    if (list->frozen)
+        return DestinationReads{list->readsDestination, list->clearsInClips, list->clears};
+    return commandsDestinationReads(list->recording.commands.data, list->recording.commands.count);
+}
+
+// Returns the rectangle of the pixels whose centers lie inside the rectangle, which an aliased edge covers.
+PrRect pixelCentersOf(PrRect r) {
+    return PrRect{prF32Ceil(r.left - 0.5f), prF32Ceil(r.top - 0.5f), prF32Ceil(r.right - 0.5f), prF32Ceil(r.bottom - 0.5f)};
+}
+
+// Returns true if a clip lets through whole pixels under `transform`: a rectangle that stays axis-aligned, whose edges
+// lie on pixels or are aliased.
+bool clipCoversWholePixels(const PrDrawCommand& c, const PrDrawTransform& transform) {
+    PrRect rect{};
+    if (c.kind == PrDrawCommandKind_PushClipTargetRect) {
+        rect = c.rect;
+    } else if (!prAffine2IsAxisAligned(transform.affine)) {
+        return false;
+    } else if (c.kind == PrDrawCommandKind_PushClipRect) {
+        rect = prAffine2MapRect(transform.affine, c.rect);
+    } else if (c.kind == PrDrawCommandKind_PushClipCornerRect) {
+        for (const PrCorner& corner : c.cornerRect->corners) {
+            if (corner.radii.x > 0 || corner.radii.y > 0)
+                return false;
+        }
+        rect = prAffine2MapRect(transform.affine, c.cornerRect->rect);
+    } else {
+        return false;
+    }
+    return prRectIsOnPixels(c.antialias ? rect : pixelCentersOf(rect));
+}
+
+// Returns true if a Clear among the commands, or in the lists that they play, that is not opaque lies within a clip
+// that covers pixels in part, under `transform`, with the clips in force covering whole pixels if `whole`.
+bool commandsClearInPart(const PrDrawCommand* commands, uint32_t count, PrDrawTransform transform, bool whole) {
+    RawArray<PrDrawTransform> transforms;
+    RawArray<bool> clips;           // for each clip in force, whether it and those under it cover whole pixels
+    transforms.push(transform);
+    bool found = false;
+    for (uint32_t i = 0; i < count && !found; ++i) {
+        const PrDrawCommand& c = commands[i];
+        bool inForce = clips.count != 0 ? clips.last() : whole;
+        switch (c.kind) {
+            case PrDrawCommandKind_PushTransformAffine2:
+                transforms.push(prDrawTransformPush(&transforms.last(), &c));
+                break;
+            case PrDrawCommandKind_PopTransform:
+                if (transforms.count > 1)
+                    transforms.pop();
+                break;
+            case PrDrawCommandKind_PushClipRect:
+            case PrDrawCommandKind_PushClipTargetRect:
+            case PrDrawCommandKind_PushClipCornerRect:
+            case PrDrawCommandKind_PushClipPath:
+                clips.push(inForce && clipCoversWholePixels(c, transforms.last()));
+                break;
+            case PrDrawCommandKind_PopClip:
+                if (clips.count != 0)
+                    clips.pop();
+                break;
+            // A group that draws in a space of its own maps its clips there, which this walk does not follow, so its
+            // contents count as covering pixels in part.
+            case PrDrawCommandKind_PushGroup:
+                clips.push(inForce && c.group->projection == nullptr && c.group->filter == nullptr &&
+                    c.group->backdrop == nullptr);
+                break;
+            case PrDrawCommandKind_PopGroup:
+                if (clips.count != 0)
+                    clips.pop();
+                break;
+            case PrDrawCommandKind_Clear:
+                found = !inForce && prFloat16ToFloat(c.color.a) < 1;
+                break;
+            case PrDrawCommandKind_Embed: {
+                const PrDrawList* embedded = c.embed.list;
+                found = listDestinationReads(embedded).clears &&
+                    commandsClearInPart(embedded->recording.commands.data, embedded->recording.commands.count,
+                        prDrawTransformMoved(&transforms.last(), c.embed.offset), inForce);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    transforms.reset();
+    clips.reset();
+    return found;
+}
+
 // Returns true if any of the commands, or any command in the lists that they play, writes pixels.
 bool commandsWritePixels(const PrDrawCommand* commands, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
@@ -731,6 +875,11 @@ void drawListFreeze(DrawList* list) {
         list->bounds = recordingBounds(list->recording);
         list->writesPixels = commandsWritePixels(list->recording.commands.data, list->recording.commands.count);
         list->readsBackdrop = commandsReadBackdrop(list->recording.commands.data, list->recording.commands.count);
+        const RawArray<PrDrawCommand>& commands = list->recording.commands;
+        DestinationReads reads = commandsDestinationReads(commands.data, commands.count);
+        list->readsDestination = reads.always;
+        list->clearsInClips = reads.clearsInClips;
+        list->clears = reads.clears;
         list->frozen = true;
     }
 }
@@ -1105,6 +1254,14 @@ bool prDrawListReadsBackdrop(const PrDrawList* list) {
     if (list->frozen)
         return list->readsBackdrop;
     return commandsReadBackdrop(list->recording.commands.data, list->recording.commands.count);
+}
+
+bool prDrawListReadsDestination(const PrDrawList* list, const PrDrawTransform* transform) {
+    DestinationReads reads = listDestinationReads(list);
+    if (reads.always)
+        return true;
+    return reads.clearsInClips &&
+        commandsClearInPart(list->recording.commands.data, list->recording.commands.count, *transform, true);
 }
 
 bool prDrawListWritesPixels(const PrDrawList* list) {

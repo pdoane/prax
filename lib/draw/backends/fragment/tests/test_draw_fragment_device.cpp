@@ -691,6 +691,61 @@ TEST_CASE("the fragment renderer filters what lies beneath a group as its backdr
     prDrawListRelease(list);
 }
 
+TEST_CASE("the fragment renderer clears to a translucent color, mixing with what lies beneath only at a clip's edges") {
+    Device device(64, 32);
+    PrDrawList* list = prDrawListCreate();
+    prDrawListRect(list, PrRect{0, 0, 64, 32}, {.color = PrColor{0.2f, 0.4f, 0.8f, 1}});
+    // Whole pixels: the color replaces what lies there.
+    prDrawListClearRect(list, PrRect{4, 4, 28, 28}, prColor16FromColor(PrColor{1, 0.5f, 0, 0.5f}));
+    // Turned, so that its edges cover pixels in part.
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.4f), prAffine2Translate(PrVec2{46, 16})));
+    prDrawListClearRect(list, PrRect{-10, -10, 10, 10}, prColor16FromColor(PrColor{0, 0, 0, 0}));
+    prDrawListPopTransform(list);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 32);
+    // The turned edges' coverage differs from the cpu backend's by a few levels.
+    CHECK(fractionDiffering(drawn, expected, 16) <= 0.01);
+    prDrawListRelease(list);
+}
+
+TEST_CASE("the fragment renderer stacks backdrops, each reading what lies beneath it, as the cpu backend does") {
+    Device device(128, 64);
+    PrDrawList* list = prDrawListCreate();
+    prDrawListRect(list, PrRect{0, 0, 128, 64}, {.color = PrColor{0.95f, 0.95f, 0.9f, 1}});
+    subject(list, PrRect{0, 0, 64, 64});
+    subject(list, PrRect{64, 0, 128, 64});
+    PrDrawFilterNode blur = nodeOf(PrDrawFilterKind_Blur);
+    blur.blur.sigma = PrVec2{3, 3};
+    PrDrawFilterNode invert = nodeOf(PrDrawFilterKind_ColorMatrix);
+    const float matrix[20] = {-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0};
+    for (uint32_t i = 0; i < 20; ++i)
+        invert.matrix.m[i / 5][i % 5] = matrix[i];
+    // Nested: the inner backdrop reads what the outer group drew over its own backdrop.
+    pushFiltered(list, PrRect{8, 8, 56, 56}, filterOf(blur), true);
+    prDrawListRect(list, PrRect{8, 8, 56, 56}, {.color = PrColor{1, 1, 1, 0.3f}});
+    pushFiltered(list, PrRect{20, 20, 44, 44}, filterOf(invert), true);
+    prDrawListRect(list, PrRect{24, 24, 40, 40}, {.color = PrColor{0.1f, 0.6f, 0.1f, 0.5f}});
+    prDrawListPopGroup(list);
+    prDrawListPopGroup(list);
+    // Siblings that overlap: the second reads the first where they meet, and blends by multiply.
+    pushFiltered(list, PrRect{68, 4, 108, 44}, filterOf(blur), true);
+    prDrawListRect(list, PrRect{68, 4, 108, 44}, {.color = PrColor{1, 1, 1, 0.2f}});
+    prDrawListPopGroup(list);
+    PrDrawGroup multiply = prDrawGroupDefault();
+    multiply.bounds = PrRect{84, 20, 124, 60};
+    multiply.backdrop = filterOf(invert);
+    multiply.blendMode = PrDrawBlendMode_Multiply;
+    prDrawListPushGroup(list, &multiply);
+    prDrawListRect(list, PrRect{90, 26, 118, 54}, {.color = PrColor{0.9f, 0.8f, 0.2f, 0.6f}});
+    prDrawListPopGroup(list);
+    prDrawFilterRelease(multiply.backdrop);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 64);
+    // The cpu backend's box blurs fall short of the Gaussian's tails.
+    CHECK(fractionDiffering(drawn, expected, 32) <= 0.005);
+    prDrawListRelease(list);
+}
+
 TEST_CASE("the fragment renderer composites a group in sRGB-linear as the cpu backend does") {
     Device device(64, 32);
     PrDrawList* list = prDrawListCreate();

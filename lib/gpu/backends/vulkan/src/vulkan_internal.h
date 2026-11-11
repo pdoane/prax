@@ -171,6 +171,33 @@ enum {
 };
 typedef uint32_t VulkanBinding;
 
+// The number of slots of each kind, which keeps the push set within the 32 descriptors that every device pushes.
+constexpr uint32_t kVulkanBufferSlots = 4;
+constexpr uint32_t kVulkanRwBufferSlots = 4;
+constexpr uint32_t kVulkanTextureSlots = 8;
+constexpr uint32_t kVulkanRwTextureSlots = 4;
+
+// The bindings of the push set, as pr/gpu.slang places them. A Texture slot is a sampled image and its sampler, at two
+// bindings.
+enum {
+    VulkanPushBinding_Uniforms = 0,
+    VulkanPushBinding_Target = 1,
+    VulkanPushBinding_Buffers = 2,
+    VulkanPushBinding_RwBuffers = VulkanPushBinding_Buffers + kVulkanBufferSlots,
+    VulkanPushBinding_Textures = VulkanPushBinding_RwBuffers + kVulkanRwBufferSlots,
+    VulkanPushBinding_RwTextures = VulkanPushBinding_Textures + 2 * kVulkanTextureSlots,
+    VulkanPushBinding_Count = VulkanPushBinding_RwTextures + kVulkanRwTextureSlots,
+};
+typedef uint32_t VulkanPushBinding;
+
+// The resources bound to a command buffer's slots, as they are pushed. A null buffer, view or sampler is unbound.
+struct VulkanSlots {
+    VkDescriptorBufferInfo buffers[kVulkanBufferSlots + kVulkanRwBufferSlots];
+    VkDescriptorImageInfo textures[kVulkanTextureSlots];
+    VkDescriptorImageInfo samplers[kVulkanTextureSlots];
+    VkDescriptorImageInfo rwTextures[kVulkanRwTextureSlots];
+};
+
 // The size of the stream's chunks. A larger allocation takes a chunk of its own.
 constexpr uint32_t kStreamChunkBytes = 4u << 20;
 
@@ -325,7 +352,6 @@ struct VulkanPass : GpuSharedPass {
     VkImageView targetView;
     VkRect2D scissor;               // the scissor of the draws, which bounds the copy of the target
     bool localRead;                 // true once the first color attachment is in the layout of local reads
-    bool copied;                    // true once a draw of the pass has copied the target
     bool named;                     // true if the pass opened a group of commands for debuggers
 };
 
@@ -353,6 +379,7 @@ struct VulkanCommands : GpuSharedCommands {
     VkBuffer uniformBuffer;
     uint64_t uniformOffset;
     uint32_t uniformSize;
+    VulkanSlots slots;
     bool pushDirty[2];              // for graphics and compute
     PrGpuNativeStateFlags changed;  // the state that the device changed since the last sync
 
@@ -367,10 +394,6 @@ struct VulkanCommands : GpuSharedCommands {
     RawArray<uint8_t> scratch;         // the stream's bytes once the device is lost, which the GPU never reads
     VulkanPass pass;
 
-    // The texture that holds the copy of the target, which a draw that reads its target samples on a device without
-    // local read. The texture is kept after the command buffer is done, for the next command buffer that reuses this
-    // recording. A pass that needs a larger texture or another format replaces it.
-    PrGpuTexture targetCopy;
 };
 
 // A shader library: one SPIR-V module that holds every entry point.
@@ -420,7 +443,7 @@ struct VulkanDevice : GpuSharedDevice {
     char adapter[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
     VkPhysicalDeviceLimits limits;
     VkPhysicalDeviceMemoryProperties memoryProperties;
-    bool localRead;                 // true if a draw reads its target as an input attachment, not as a copy
+    bool localRead;                 // true if a draw reads its target as an input attachment
 
     // Memory from the application, or the device's own.
     PrGpuVulkanAllocateFn PR_NULLABLE allocate;
@@ -483,12 +506,6 @@ inline VulkanResource& vulkanResourceAt(VulkanDevice* d, uint32_t slot) {
 inline const VulkanResource& vulkanResourceAt(const VulkanDevice* d, uint32_t slot) {
     PR_ASSERT(slot != 0 && slot < d->resources.count);
     return d->resources.data[slot];
-}
-
-// Returns the type of the push descriptor through which a pipeline that reads its target reads it: an input attachment
-// on a device with local read, and a sampled image of the copy otherwise.
-inline VkDescriptorType vulkanTargetDescriptor(const VulkanDevice* d) {
-    return d->localRead ? VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT : VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 }
 
 // Return the backend's state behind the interface's objects.

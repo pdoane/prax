@@ -10,7 +10,9 @@
 // Shaders reach every resource through the device's two shader-visible descriptor heaps, which the device binds on
 // every command list that it records into, its own and the application's, as it begins. An application that draws with
 // heaps of its own after the device's work binds them again, and a pass of the application's has the device's heaps
-// bound.
+// bound. The slots are parameters of the device's root signature: Buffer and RwBuffer slots are root descriptors, and
+// Texture slots, their samplers and RwTexture slots are tables of descriptors that the device writes into the heaps
+// past the handles.
 //
 // Copies between buffers and textures lay out rows at multiples of 256 bytes, and start at a multiple of 512 bytes into
 // the buffer, as D3D12 requires.

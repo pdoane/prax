@@ -35,6 +35,100 @@
 #define PR_GPU_PUSH(Type, name) [[vk::push_constant]] ConstantBuffer<Type> name : register(b0)
 #define PR_GPU_UNIFORMS(Type, name) [[vk::binding(0, 1)]] ConstantBuffer<Type> name : register(b1)
 
+// The slots, which every device has: the resources bound to a command buffer's slots (prGpuCommandsSetBuffer and the
+// others), declared as globals of the shader at a slot of each kind. `slot` is a literal number below the device's
+// maximum of the kind (PrGpuDeviceInfo).
+//
+//     PR_GPU_BUFFER(ByteAddressBuffer, vertices, 0);          // a Buffer slot, read
+//     PR_GPU_RW_BUFFER(RWByteAddressBuffer, counts, 0);       // an RwBuffer slot, read and written
+//     PR_GPU_TEXTURE(Texture2D<float4>, image, 0);            // a Texture slot, and its sampler as imageSampler
+//     PR_GPU_RW_TEXTURE(WTexture2D<float4>, written, 0);      // an RwTexture slot, written
+//
+// A buffer is any buffer type, such as ByteAddressBuffer or StructuredBuffer<T>, and a texture any texture type. An
+// RwTexture slot that a shader only writes is of a write-only type, such as WTexture2D, which every format that a
+// device stores allows. One that a shader reads and writes, such as RWTexture2D, takes only the formats that the device
+// reads and writes in place, which WebGPU and Metal without bindless limit to single 32-bit channels.
+//
+// Every target declares a slot with its Vulkan binding, which Slang checks every register against: Vulkan pushes the
+// slots in set 1 after the uniforms and the target, as vulkan_internal.h's VulkanPushBinding places them, with a
+// Texture slot's sampled image and sampler at two bindings. Each target then gives the slot its register, in space 1
+// for buffers and space 2 for textures.
+#define PR_GPU_PASTE_(a, b) a##b
+#define PR_GPU_PASTE(a, b) PR_GPU_PASTE_(a, b)
+
+#define PR_GPU_BUFFER(Type, name, slot) [[vk::binding(2 + slot, 1)]] Type name PR_GPU_BUFFER_REGISTER(slot)
+#define PR_GPU_RW_BUFFER(Type, name, slot) [[vk::binding(6 + slot, 1)]] Type name PR_GPU_RW_BUFFER_REGISTER(slot)
+#define PR_GPU_TEXTURE(Type, name, slot)                                        \
+    [[vk::binding(10 + 2 * slot, 1)]] Type name PR_GPU_TEXTURE_REGISTER(slot); \
+    [[vk::binding(11 + 2 * slot, 1)]] SamplerState name##Sampler PR_GPU_SAMPLER_REGISTER(slot)
+#define PR_GPU_RW_TEXTURE(Type, name, slot) \
+    [[vk::binding(26 + slot, 1)]] PR_GPU_RW_TEXTURE_ATTRIBUTE(slot) Type name PR_GPU_RW_TEXTURE_REGISTER(slot)
+
+#if defined(PR_GPU_METAL)
+
+// Metal binds every buffer in one table, after the root data and the heaps, and every texture in another, which Slang
+// chooses by the resource's type and numbers by the register. The tables below give each slot its index, as
+// gpu_shared_metal.h's GpuMetalBinding and GpuMetalTextureBinding place them. Metal ignores the spaces, which only keep
+// Slang from taking a texture's index for a buffer's. Slang numbers read-write textures in the order of their
+// declarations instead, so an RwTexture slot also names its index in an attribute, which the reflection keeps and
+// cmake/shader_library.cmake moves the texture to.
+[__AttributeUsage(_AttributeTargets.Var)]
+struct PrGpuMetalTextureAttribute {
+    int index;
+};
+
+#define PR_GPU_BUFFER_INDEX_0 4
+#define PR_GPU_BUFFER_INDEX_1 5
+#define PR_GPU_BUFFER_INDEX_2 6
+#define PR_GPU_BUFFER_INDEX_3 7
+#define PR_GPU_BUFFER_INDEX_4 8
+#define PR_GPU_BUFFER_INDEX_5 9
+#define PR_GPU_BUFFER_INDEX_6 10
+#define PR_GPU_BUFFER_INDEX_7 11
+#define PR_GPU_RW_BUFFER_INDEX_0 12
+#define PR_GPU_RW_BUFFER_INDEX_1 13
+#define PR_GPU_RW_BUFFER_INDEX_2 14
+#define PR_GPU_RW_BUFFER_INDEX_3 15
+#define PR_GPU_RW_BUFFER_INDEX_4 16
+#define PR_GPU_RW_BUFFER_INDEX_5 17
+#define PR_GPU_RW_BUFFER_INDEX_6 18
+#define PR_GPU_RW_BUFFER_INDEX_7 19
+#define PR_GPU_RW_TEXTURE_INDEX_0 16
+#define PR_GPU_RW_TEXTURE_INDEX_1 17
+#define PR_GPU_RW_TEXTURE_INDEX_2 18
+#define PR_GPU_RW_TEXTURE_INDEX_3 19
+#define PR_GPU_RW_TEXTURE_INDEX_4 20
+#define PR_GPU_RW_TEXTURE_INDEX_5 21
+#define PR_GPU_RW_TEXTURE_INDEX_6 22
+#define PR_GPU_RW_TEXTURE_INDEX_7 23
+#define PR_GPU_BUFFER_REGISTER(slot) : register(PR_GPU_PASTE(t, PR_GPU_BUFFER_INDEX_##slot), space1)
+#define PR_GPU_RW_BUFFER_REGISTER(slot) : register(PR_GPU_PASTE(u, PR_GPU_RW_BUFFER_INDEX_##slot), space1)
+#define PR_GPU_TEXTURE_REGISTER(slot) : register(t##slot, space2)
+#define PR_GPU_SAMPLER_REGISTER(slot) : register(s##slot, space2)
+#define PR_GPU_RW_TEXTURE_REGISTER(slot) : register(PR_GPU_PASTE(u, PR_GPU_RW_TEXTURE_INDEX_##slot), space2)
+#define PR_GPU_RW_TEXTURE_ATTRIBUTE(slot) [PrGpuMetalTexture(PR_GPU_RW_TEXTURE_INDEX_##slot)]
+
+#elif defined(PR_GPU_VULKAN)
+
+#define PR_GPU_BUFFER_REGISTER(slot)
+#define PR_GPU_RW_BUFFER_REGISTER(slot)
+#define PR_GPU_TEXTURE_REGISTER(slot)
+#define PR_GPU_SAMPLER_REGISTER(slot)
+#define PR_GPU_RW_TEXTURE_REGISTER(slot)
+#define PR_GPU_RW_TEXTURE_ATTRIBUTE(slot)
+
+#else
+
+// Direct3D 12 binds shader resources (t), unordered access (u) and samplers (s) at the slot's number.
+#define PR_GPU_BUFFER_REGISTER(slot) : register(t##slot, space1)
+#define PR_GPU_RW_BUFFER_REGISTER(slot) : register(u##slot, space1)
+#define PR_GPU_TEXTURE_REGISTER(slot) : register(t##slot, space2)
+#define PR_GPU_SAMPLER_REGISTER(slot) : register(s##slot, space2)
+#define PR_GPU_RW_TEXTURE_REGISTER(slot) : register(u##slot, space2)
+#define PR_GPU_RW_TEXTURE_ATTRIBUTE(slot)
+
+#endif
+
 #if defined(PR_GPU_METAL)
 
 // Metal has no descriptor heap. The device's heaps are buffers of 8-byte entries, a texture's or a sampler's
@@ -97,7 +191,8 @@ T prGpuLoad<T>(uint buffer, uint offset) {
 // attachment holds at its pixel, as the draws before it left it. Fragments of one draw that cover the same pixel read
 // an undefined value, unless the device has PrGpuFeatureFlag_OrderedTargetReads. The entry point declares
 // PR_GPU_TARGET_PARAM after its last parameter, and reads the target with prGpuTarget(position) in its own body, where
-// `position` is its SV_Position.
+// `position` is its SV_Position. Only a device with PrGpuFeatureFlag_TargetReads creates such a pipeline. On a target
+// that has no target reads, prGpuTarget reads zero, so that the source compiles for every target.
 #if defined(PR_GPU_METAL)
 
 // Framebuffer fetch.
@@ -106,28 +201,15 @@ T prGpuLoad<T>(uint buffer, uint offset) {
 
 #elif defined(PR_GPU_VULKAN) && defined(PR_GPU_LOCAL_READ)
 
-// An input attachment, read locally in a dynamic rendering pass, on a device with local read. It is pushed beside the
-// uniforms, because a pipeline layout has one set of push descriptors.
+// An input attachment, read locally in a dynamic rendering pass. It is pushed beside the uniforms, because a pipeline
+// layout has one set of push descriptors.
 [[vk::input_attachment_index(0)]] [[vk::binding(1, 1)]] SubpassInput<float4> prGpuTargetInput;
 #define PR_GPU_TARGET_PARAM
 #define prGpuTarget(position) prGpuTargetInput.SubpassLoad()
 
-#elif defined(PR_GPU_VULKAN)
-
-// A copy of the target, which the backend makes before each draw over the draw's scissor, at the target's coordinates.
-// It is pushed beside the uniforms, because a pipeline layout has one set of push descriptors.
-[[vk::binding(1, 1)]] Texture2D<float4> prGpuTargetCopy;
-#define PR_GPU_TARGET_PARAM
-#define prGpuTarget(position) prGpuTargetCopy.Load(int3(int2((position).xy), 0))
-
 #else
 
-// A copy of the target that the backend makes before each draw, over the draw's scissor, at the same place.
-struct PrGpuTargetCopy {
-    uint handle;
-};
-ConstantBuffer<PrGpuTargetCopy> prGpuTargetCopy : register(b2);
 #define PR_GPU_TARGET_PARAM
-#define prGpuTarget(position) prGpuGet<Texture2D<float4>>(prGpuTargetCopy.handle).Load(int3(int2((position).xy), 0))
+#define prGpuTarget(position) float4(0, 0, 0, 0)
 
 #endif

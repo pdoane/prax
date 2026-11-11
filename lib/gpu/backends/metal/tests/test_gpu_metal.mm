@@ -10,7 +10,9 @@
 
 #include "tools/harness/test.h"
 
+#if TARGET_OS_OSX
 #import <AppKit/AppKit.h>
+#endif
 #import <CoreVideo/CoreVideo.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -115,6 +117,8 @@ struct AppMetal {
     }
 };
 
+#if TARGET_OS_OSX
+
 // Clears the swap chain's next drawable and presents it.
 PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
     PrGpuTexture texture{};
@@ -130,6 +134,8 @@ PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
     prGpuSwapChainPresent(swapChain, commands);
     return prGpuCommandsSubmit(commands);
 }
+
+#endif
 
 } // namespace
 
@@ -147,16 +153,17 @@ TEST_CASE("metal records into the application's command buffer, around the appli
     // application's native command buffer.
     PrGpuBuffer output = f.buffer(16, PrGpuBufferUsageFlag_Storage);
     PrGpuPipeline pipeline{};
-    REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "fill", "fill", &pipeline) == PrStatus_Ok);
+    REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "slotFill", "slotFill", &pipeline) == PrStatus_Ok);
     PrGpuCommandsOptions options = prGpuCommandsOptionsDefault();
     options.native = (__bridge void*)app.buffer;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(f.device, &options, &commands));
     uint32_t seed[4] = {9, 9, 9, 9};
     prGpuBufferUpload(f.device, output, 0, seed, sizeof(seed));
-    Push push{.output = prGpuBufferStorageHandle(f.device, output), .count = 2, .scale = 11};
+    Push push{.count = 2, .scale = 11};
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuCommandsSetPush(commands, &push, sizeof(push));
+    prGpuCommandsSetRwBuffer(commands, 0, output, 0);
     prGpuCommandsDispatch(commands, PrGpuExtent{1, 1, 1});
     // The device's state ends with its encoder, so the application sets nothing again.
     CHECK(prGpuNativeStateSync(commands) == 0);
@@ -312,6 +319,8 @@ TEST_CASE("metal imports a CVPixelBuffer as a texture without copying it, and re
     CHECK(released);
 }
 
+#if TARGET_OS_OSX
+
 TEST_CASE("metal presents frames, with the transaction always unless threaded") {
     Fixture f;
     if (f.device == nullptr)
@@ -346,6 +355,8 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
     }
 }
 
+#endif
+
 TEST_CASE("metal chooses half floats for HDR only on a display that shows past SDR white, whatever its gamut") {
     const PrGpuSwapChainInfo kSdr{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
     const PrGpuSwapChainInfo kExtended{PrGpuFormat_Rgba16F, PrColorSpace_Srgb};
@@ -374,6 +385,8 @@ TEST_CASE("metal chooses half floats for HDR only on a display that shows past S
         CHECK(info.space == c.expected.space);
     }
 }
+
+#if TARGET_OS_OSX
 
 TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, for the display that shows it") {
     Fixture f;
@@ -412,3 +425,5 @@ TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, 
         prGpuSwapChainDestroy(swapChain);
     }
 }
+
+#endif

@@ -9,17 +9,11 @@
 // Clip space has y up, as Direct3D and Metal have it, so every viewport is flipped: its origin is its bottom edge, and
 // its height is negative.
 //
-// A pipeline that reads its target reads the pass's first color attachment. A pass begins with its attachments in the
-// attachment layout. The fragments of a draw read what earlier draws wrote, never what the same draw writes.
-//
-// On a device with local read, the draw reads the attachment as an input attachment. The first draw of a pass that
-// reads the target moves the attachment into the layout of local reads, and the pass's end moves it back. Moving it
-// requires ending the rendering and beginning it again. Each draw that reads the target waits, by region, for the
-// writes of the draws before it.
-//
-// On a device without local read, the draw samples a copy of the attachment instead. Before each draw that reads the
-// target, the backend ends the rendering, copies the attachment over the draw's scissor into a texture that the command
-// buffer owns, and begins the rendering again.
+// A pipeline that reads its target, on a device with local read, reads the pass's first color attachment as an input
+// attachment. A pass begins with its attachments in the attachment layout. The first draw of a pass that reads the
+// target moves the attachment into the layout of local reads, and the pass's end moves it back. Moving it requires
+// ending the rendering and beginning it again. Each draw that reads the target waits, by region, for the writes of the
+// draws before it, so the fragments of a draw read what earlier draws wrote, never what the same draw writes.
 
 #include "gpu/backends/vulkan/src/vulkan_commands.h"
 
@@ -109,6 +103,7 @@ VulkanCommands* commandsTake(VulkanDevice* d) {
     c->fence = 0;
     c->pipeline = 0;
     c->uniformBuffer = VK_NULL_HANDLE;
+    c->slots = VulkanSlots{};
     c->pushDirty[0] = c->pushDirty[1] = false;
     c->changed = 0;
     c->streamUsed = 0;
@@ -116,7 +111,6 @@ VulkanCommands* commandsTake(VulkanDevice* d) {
     c->pass.commands = c;
     c->pass.native = false;
     c->pass.localRead = false;
-    c->pass.copied = false;
     return c;
 }
 
@@ -160,14 +154,45 @@ void endWork(VulkanDevice* d, VulkanCommands* c) {
         d->vk.CmdWriteTimestamp2(c->buffer, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, c->slot.queries, 1);
 }
 
+// Appends the write of one descriptor of the push set.
+void pushWrite(VkWriteDescriptorSet* writes, uint32_t* count, uint32_t binding, VkDescriptorType type,
+        const VkDescriptorBufferInfo* PR_NULLABLE buffer, const VkDescriptorImageInfo* PR_NULLABLE image) {
+    VkWriteDescriptorSet& write = writes[(*count)++];
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstBinding = binding;
+    write.descriptorCount = 1;
+    write.descriptorType = type;
+    write.pBufferInfo = buffer;
+    write.pImageInfo = image;
+}
+
 // Pushes the descriptors of a draw or a dispatch at `point`, if they changed since the last one there: the uniform
-// buffer, and, for a draw in a pass that reads its target, the target.
+// buffer, the slots that are bound, and, for a draw in a pass that reads its target, the target.
 void flushPush(VulkanDevice* d, VulkanCommands* c, uint32_t point) {
     if (!c->pushDirty[point])
         return;
     c->pushDirty[point] = false;
-    VkWriteDescriptorSet writes[2] = {};
+    VkWriteDescriptorSet writes[VulkanPushBinding_Count] = {};
     uint32_t count = 0;
+    const VulkanSlots& slots = c->slots;
+    for (uint32_t i = 0; i < kVulkanBufferSlots + kVulkanRwBufferSlots; ++i) {
+        if (slots.buffers[i].buffer != VK_NULL_HANDLE)
+            pushWrite(writes, &count, VulkanPushBinding_Buffers + i, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                &slots.buffers[i], nullptr);
+    }
+    for (uint32_t i = 0; i < kVulkanTextureSlots; ++i) {
+        if (slots.textures[i].imageView != VK_NULL_HANDLE)
+            pushWrite(writes, &count, VulkanPushBinding_Textures + 2 * i, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, nullptr,
+                &slots.textures[i]);
+        if (slots.samplers[i].sampler != VK_NULL_HANDLE)
+            pushWrite(writes, &count, VulkanPushBinding_Textures + 2 * i + 1, VK_DESCRIPTOR_TYPE_SAMPLER, nullptr,
+                &slots.samplers[i]);
+    }
+    for (uint32_t i = 0; i < kVulkanRwTextureSlots; ++i) {
+        if (slots.rwTextures[i].imageView != VK_NULL_HANDLE)
+            pushWrite(writes, &count, VulkanPushBinding_RwTextures + i, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, nullptr,
+                &slots.rwTextures[i]);
+    }
     VkDescriptorBufferInfo uniform{c->uniformBuffer, c->uniformOffset, c->uniformSize};
     if (c->uniformBuffer != VK_NULL_HANDLE) {
         VkWriteDescriptorSet& write = writes[count++];
@@ -178,20 +203,13 @@ void flushPush(VulkanDevice* d, VulkanCommands* c, uint32_t point) {
         write.pBufferInfo = &uniform;
     }
     VkDescriptorImageInfo target{};
-    if (point == 0 && c->inPass && (c->pass.localRead || c->pass.copied)) {
-        if (c->pass.localRead)
-            target =
-                VkDescriptorImageInfo{VK_NULL_HANDLE, c->pass.targetView, VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ_KHR};
-        else
-            target = VkDescriptorImageInfo{
-                VK_NULL_HANDLE, vulkanResourceAt(d, c->targetCopy.id).view,
-                VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
-            };
+    if (point == 0 && c->inPass && c->pass.localRead) {
+        target = VkDescriptorImageInfo{VK_NULL_HANDLE, c->pass.targetView, VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ_KHR};
         VkWriteDescriptorSet& write = writes[count++];
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write.dstBinding = 1;
         write.descriptorCount = 1;
-        write.descriptorType = vulkanTargetDescriptor(d);
+        write.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
         write.pImageInfo = &target;
     }
     if (count != 0)
@@ -512,6 +530,53 @@ void commandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t siz
     c->pushDirty[0] = c->pushDirty[1] = true;
 }
 
+// Binds a buffer slot, at index `at` of the slots' buffers, from `offset` to the end of the buffer.
+void setBufferSlot(PrGpuCommands* commands, uint32_t at, PrGpuBuffer buffer, uint64_t offset) {
+    VulkanCommands* c = vulkanCommands(commands);
+    VulkanDevice* d = vulkanDevice(c->device);
+    c->slots.buffers[at] = VkDescriptorBufferInfo{};
+    if (buffer.id != 0)
+        c->slots.buffers[at] = VkDescriptorBufferInfo{vulkanResourceAt(d, buffer.id).buffer, offset, VK_WHOLE_SIZE};
+    c->pushDirty[0] = c->pushDirty[1] = true;
+}
+
+void commandsSetBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    setBufferSlot(commands, slot, buffer, offset);
+}
+
+void commandsSetRwBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    setBufferSlot(commands, kVulkanBufferSlots + slot, buffer, offset);
+}
+
+// A Texture slot reads the texture's sampled view in the layout of its shader reads.
+void commandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler) {
+    VulkanCommands* c = vulkanCommands(commands);
+    VulkanDevice* d = vulkanDevice(c->device);
+    c->slots.textures[slot] = VkDescriptorImageInfo{};
+    if (texture.id != 0) {
+        VkImageView view = vulkanResourceAt(d, texture.id).view;
+        c->slots.textures[slot] = VkDescriptorImageInfo{VK_NULL_HANDLE, view, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL};
+    }
+    c->slots.samplers[slot] = VkDescriptorImageInfo{};
+    if (sampler.id != 0)
+        c->slots.samplers[slot].sampler = d->samplers.data[sampler.id - d->firstSampler].sampler;
+    c->pushDirty[0] = c->pushDirty[1] = true;
+}
+
+// An RwTexture slot reads and writes the texture's storage view, in the general layout.
+void commandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture) {
+    VulkanCommands* c = vulkanCommands(commands);
+    VulkanDevice* d = vulkanDevice(c->device);
+    if (texture.id != 0) {
+        const VulkanResource& r = vulkanResourceAt(d, texture.id);
+        VkImageView view = r.storage != 0 ? vulkanResourceAt(d, r.storage).view : r.view;
+        c->slots.rwTextures[slot] = VkDescriptorImageInfo{VK_NULL_HANDLE, view, VK_IMAGE_LAYOUT_GENERAL};
+    } else {
+        c->slots.rwTextures[slot] = VkDescriptorImageInfo{};
+    }
+    c->pushDirty[0] = c->pushDirty[1] = true;
+}
+
 void commandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
     PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
@@ -815,7 +880,6 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     gpuSharedPassBegan(c);
     VulkanPass& pass = c->pass;
     pass.localRead = false;
-    pass.copied = false;
     pass.named = false;
     if (desc->native) {
         // The device sets the viewport and the scissor of the application's pass, so the application sets them again
@@ -936,122 +1000,10 @@ void prepareLocalRead(VulkanDevice* d, VulkanCommands* c) {
     d->vk.CmdPipelineBarrier2(c->buffer, &dependency);
 }
 
-// Returns a barrier that moves `range` of `image` from one layout, stage and access to another.
-VkImageMemoryBarrier2 imageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout,
-        VkPipelineStageFlags2 srcStage, VkAccessFlags2 srcAccess, VkImageLayout newLayout,
-        VkPipelineStageFlags2 dstStage, VkAccessFlags2 dstAccess) {
-    VkImageMemoryBarrier2 barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    barrier.srcStageMask = srcStage;
-    barrier.srcAccessMask = srcAccess;
-    barrier.dstStageMask = dstStage;
-    barrier.dstAccessMask = dstAccess;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange = range;
-    return barrier;
-}
-
-void imageBarriers(VulkanDevice* d, VulkanCommands* c, const VkImageMemoryBarrier2* barriers, uint32_t count) {
-    VkDependencyInfo dependency{};
-    dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependency.imageMemoryBarrierCount = count;
-    dependency.pImageMemoryBarriers = barriers;
-    d->vk.CmdPipelineBarrier2(c->buffer, &dependency);
-}
-
-// Ensures that the command buffer's copy texture has the format of the pass's first color attachment and covers the
-// pass. A texture that does not fit is replaced, and the device frees it once the work that used it is done. Returns
-// false if the device cannot create the texture.
-bool takeTargetCopy(VulkanDevice* d, VulkanCommands* c) {
-    const VulkanPass& pass = c->pass;
-    PrGpuFormat format = pass.formats.color[0];
-    PrUVec2 extent = pass.extent;
-    if (c->targetCopy.id != 0) {
-        const PrGpuTextureDesc& held = vulkanResourceAt(d, c->targetCopy.id).textureDesc;
-        if (held.format == format && held.extent.width >= extent.x && held.extent.height >= extent.y)
-            return true;
-        // A texture of another format is replaced by one of the pass's extent. A texture that is too small is replaced
-        // by one that covers both extents, so that passes of different sizes do not replace it in turn.
-        if (held.format == format) {
-            extent.x = held.extent.width > extent.x ? held.extent.width : extent.x;
-            extent.y = held.extent.height > extent.y ? held.extent.height : extent.y;
-        }
-        d->textureDestroyFn(d, c->targetCopy);
-        c->targetCopy = PrGpuTexture{};
-    }
-    PrGpuTextureDesc desc = prGpuTextureDesc2d(format, extent, PrGpuTextureUsageFlag_Sampled);
-    desc.name = "target copy";
-    return d->textureCreateFn(d, &desc, &c->targetCopy) == PrStatus_Ok;
-}
-
-// Prepares a draw that samples a copy of its target. The draw samples the copy of the pass's first color attachment at
-// its pixel, so the copy must hold what the earlier draws wrote over the scissor.
-void copyTarget(VulkanDevice* d, VulkanCommands* c) {
-    VulkanPass& pass = c->pass;
-    PR_ASSERT(pass.formats.samples == 1);
-    uint32_t held = c->targetCopy.id;
-    if (!takeTargetCopy(d, c)) {
-        d->lost.store(true);
-        return;
-    }
-    if (!pass.copied || c->targetCopy.id != held) {
-        pass.copied = true;
-        c->pushDirty[0] = true;
-    }
-    const VkRect2D& s = pass.scissor;
-    if (s.extent.width == 0 || s.extent.height == 0)
-        return;
-    const VulkanResource& target = vulkanResourceAt(d, pass.target.texture.id);
-    const VulkanResource& copy = vulkanResourceAt(d, c->targetCopy.id);
-    VkImageSubresourceRange targetRange = rangeOf(target, PrGpuSubresources{pass.target.level, 1, pass.target.layer, 1});
-    VkImageSubresourceRange copyRange = rangeOf(copy, PrGpuSubresources{0, 1, 0, 1});
-    d->vk.CmdEndRendering(c->buffer);
-    const VkImageMemoryBarrier2 before[2] = {
-        imageBarrier(target.image, targetRange, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT),
-        imageBarrier(copy.image, copyRange, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-            VK_ACCESS_2_NONE, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT,
-            VK_ACCESS_2_TRANSFER_WRITE_BIT),
-    };
-    imageBarriers(d, c, before, 2);
-    VkImageCopy region{};
-    region.srcSubresource = VkImageSubresourceLayers{
-        targetRange.aspectMask, targetRange.baseMipLevel,
-        targetRange.baseArrayLayer, 1,
-    };
-    region.srcOffset = VkOffset3D{s.offset.x, s.offset.y, 0};
-    region.dstSubresource = VkImageSubresourceLayers{
-        copyRange.aspectMask, copyRange.baseMipLevel,
-        copyRange.baseArrayLayer, 1,
-    };
-    region.dstOffset = region.srcOffset;
-    region.extent = VkExtent3D{s.extent.width, s.extent.height, 1};
-    d->vk.CmdCopyImage(c->buffer, target.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, copy.image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    const VkImageMemoryBarrier2 after[2] = {
-        imageBarrier(target.image, targetRange, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT,
-            VK_ACCESS_2_NONE, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT),
-        imageBarrier(copy.image, copyRange, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT,
-            VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT),
-    };
-    imageBarriers(d, c, after, 2);
-    resumeRendering(d, c);
-}
-
-// Prepares a draw that reads its target, by the device's kind of target read.
+// Prepares a draw that reads its target, which only a device with local read draws.
 void prepareTargetRead(VulkanDevice* d, VulkanCommands* c) {
-    PR_ASSERT(!c->pass.native && c->pass.formats.colorCount != 0);
-    if (d->localRead)
-        prepareLocalRead(d, c);
-    else
-        copyTarget(d, c);
+    PR_ASSERT(d->localRead && !c->pass.native && c->pass.formats.colorCount != 0);
+    prepareLocalRead(d, c);
 }
 
 void passEnd(PrGpuPass* pass) {
@@ -1068,7 +1020,6 @@ void passEnd(PrGpuPass* pass) {
     if (p->localRead)
         moveTarget(d, c, false);
     p->localRead = false;
-    p->copied = false;
     if (p->named)
         commandsPopGroup(c);
     gpuSharedPassEnded(c);
@@ -1091,6 +1042,7 @@ void passNativeDraw(PrGpuPass* pass, PrGpuNativeKind, PrGpuNativeDrawFn draw, vo
             0, nullptr);
     coverPass(d, c, c->pass.extent);
     c->pipeline = 0;
+    c->slots = VulkanSlots{};
     c->pushDirty[0] = c->pushDirty[1] = true;
     changed(c, PrGpuNativeStateFlags(~0u));
 }
@@ -1239,6 +1191,10 @@ constexpr PrGpuCommands kCommandsFunctions = {
     .setPushFn = commandsSetPush,
     .setUniformsFn = commandsSetUniforms,
     .setPipelineFn = commandsSetPipeline,
+    .setBufferFn = commandsSetBuffer,
+    .setRwBufferFn = commandsSetRwBuffer,
+    .setTextureFn = commandsSetTexture,
+    .setRwTextureFn = commandsSetRwTexture,
     .dispatchFn = commandsDispatch,
     .dispatchIndirectFn = commandsDispatchIndirect,
     .copyBufferFn = commandsCopyBuffer,

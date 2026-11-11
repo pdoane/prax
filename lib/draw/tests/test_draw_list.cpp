@@ -1,6 +1,7 @@
 #include "pr/draw_commands.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_list.h"
+#include "pr/draw_transform.h"
 #include "pr/float.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
@@ -211,6 +212,60 @@ TEST_CASE("a group in sRGB-linear is recorded as groups in sRGB, which one pop c
     CHECK(commands[2].group->opacity == 0.5f);
     CHECK(commands[2].composite == PrDrawComposite_SourceOver);
     prDrawListRelease(list);
+}
+
+TEST_CASE("a list reads the destination where it composites with it, and a clear does only at a clip's partial pixels") {
+    const PrDrawTransform identity = prDrawTransformFromAffine2(prAffine2Identity());
+    const PrDrawTransform half = prDrawTransformFromAffine2(prAffine2Translate(PrVec2{0.5f, 0}));
+    const PrDrawTransform turned = prDrawTransformFromAffine2(prAffine2Rotate(0.3f));
+    const PrColor16 clear = prColor16FromColor(PrColor{0, 0, 0, 0});
+
+    PrDrawList* plain = prDrawListCreate();
+    prDrawListRect(plain, PrRect{0, 0, 4, 4}, {.color = kRed});
+    CHECK_FALSE(prDrawListReadsDestination(plain, &identity));
+    prDrawListRect(plain, PrRect{0, 0, 4, 4}, {.color = kRed, .blendMode = PrDrawBlendMode_Multiply});
+    CHECK(prDrawListReadsDestination(plain, &identity));
+    prDrawListRelease(plain);
+
+    PrDrawList* knockout = prDrawListCreate();
+    PrDrawGroup group = prDrawGroupDefault();
+    group.knockout = true;
+    prDrawListPushGroup(knockout, &group);
+    prDrawListRect(knockout, PrRect{0, 0, 4, 4}, {.color = kRed});
+    prDrawListPopGroup(knockout);
+    CHECK(prDrawListReadsDestination(knockout, &identity));
+    prDrawListRelease(knockout);
+
+    // A clear within a rectangle on pixels writes, until a transform moves its edges off them or turns it.
+    PrDrawList* cleared = prDrawListCreate();
+    prDrawListClearRect(cleared, PrRect{1, 1, 5, 5}, clear);
+    prDrawListFreeze(cleared);
+    CHECK_FALSE(prDrawListReadsDestination(cleared, &identity));
+    CHECK(prDrawListReadsDestination(cleared, &half));
+    CHECK(prDrawListReadsDestination(cleared, &turned));
+    prDrawListRelease(cleared);
+
+    // An aliased clip covers whole pixels wherever its edges lie.
+    PrDrawList* aliased = prDrawListCreate();
+    prDrawListPushClipRect(aliased, PrRect{0.25f, 0.25f, 8.5f, 8.5f}, PrDrawEdges_Aliased);
+    prDrawListClearRect(aliased, PrRect{0, 0, 16, 16}, clear);
+    prDrawListPopClip(aliased);
+    CHECK_FALSE(prDrawListReadsDestination(aliased, &identity));
+    prDrawListRelease(aliased);
+
+    // A clear in an embedded list lies within the clips of the list that plays it.
+    PrDrawList* inner = prDrawListCreate();
+    prDrawListPushClipRect(inner, PrRect{0, 0, 4, 4}, PrDrawEdges_Antialiased);
+    prDrawListClearRect(inner, PrRect{0, 0, 4, 4}, clear);
+    prDrawListPopClip(inner);
+    prDrawListFreeze(inner);
+    PrDrawList* outer = prDrawListCreate();
+    prDrawListEmbed(outer, inner, PrDVec2{0, 0});
+    CHECK_FALSE(prDrawListReadsDestination(outer, &identity));
+    prDrawListEmbed(outer, inner, PrDVec2{0.5, 0});
+    CHECK(prDrawListReadsDestination(outer, &identity));
+    prDrawListRelease(outer);
+    prDrawListRelease(inner);
 }
 
 TEST_CASE("a brush is copied, and commands in an equal brush share the copy") {

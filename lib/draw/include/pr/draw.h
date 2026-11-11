@@ -25,6 +25,9 @@ typedef struct PrDrawList PrDrawList;
 // A command of a list, as a backend reads it (draw_commands.h).
 typedef struct PrDrawCommand PrDrawCommand;
 
+// The transform that commands play under (draw_transform.h).
+typedef struct PrDrawTransform PrDrawTransform;
+
 // Pixels that commands draw from (draw_image.h).
 typedef struct PrDrawImage PrDrawImage;
 

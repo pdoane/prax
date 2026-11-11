@@ -17,8 +17,12 @@ if (PR_GPU_METAL OR PR_GPU_METAL4)
     # The Metal backends hold Objective-C objects in plain structures, with manual reference counting.
     target_sources(pr_gpu PRIVATE backends/shared/src/gpu_shared_metal.mm)
     set_source_files_properties(backends/shared/src/gpu_shared_metal.mm PROPERTIES COMPILE_OPTIONS -fno-objc-arc)
-    target_link_libraries(pr_gpu PUBLIC "-framework Metal" "-framework QuartzCore" "-framework AppKit"
-                                 "-framework CoreVideo")
+    target_link_libraries(pr_gpu PUBLIC "-framework Metal" "-framework QuartzCore" "-framework CoreVideo"
+                                 "-framework Foundation" "-framework CoreFoundation")
+    # A swap chain presents to an AppKit view on macOS.
+    if (PR_MACOS)
+        target_link_libraries(pr_gpu PUBLIC "-framework AppKit")
+    endif()
 endif()
 if (PR_GPU_METAL)
     target_sources(pr_gpu PRIVATE backends/metal/src/gpu_metal.mm)
