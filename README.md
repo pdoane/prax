@@ -117,7 +117,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 
 | interface | option | backend | builds on | default |
 | --- | --- | --- | --- | --- |
-| app | `PR_APP_COCOA` | Cocoa | macOS | on |
+| app | `PR_APP_APPKIT` | AppKit | macOS | on |
 | app | `PR_APP_WIN32` | Win32 | Windows | on |
 | app | `PR_APP_WEB` | a web page's canvas | the web | on |
 | audio | `PR_AUDIO_MEMORY` | output kept in memory, for a run without a device | every platform | on |

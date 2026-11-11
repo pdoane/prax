@@ -1,10 +1,10 @@
-// The Cocoa backend's shell and device: notifications, URLs, the trash, recent documents, the Dock, sharing, power,
+// The AppKit backend's shell and device: notifications, URLs, the trash, recent documents, the Dock, sharing, power,
 // keeping awake and haptics.
 
-#include "app/backends/cocoa/src/app_cocoa_shell.h"
+#include "app/backends/appkit/src/app_appkit_shell.h"
 
-#include "app/backends/cocoa/src/app_cocoa_data.h"
-#include "app/backends/cocoa/src/app_cocoa_input.h"
+#include "app/backends/appkit/src/app_appkit_data.h"
+#include "app/backends/appkit/src/app_appkit_input.h"
 
 namespace pr_impl {
 
@@ -24,15 +24,15 @@ void holdAssertion(IOPMAssertionID& held, CFStringRef type, bool hold) {
 NSArray* shareItemsOf(const PrAppDataContent& content) {
     NSMutableArray* items = [NSMutableArray array];
     if ((content.forms & PrAppDataFormFlag_Text) != 0 && content.text.size != 0)
-        [items addObject:cocoaStringOf(content.text)];
+        [items addObject:appKitStringOf(content.text)];
     for (uint32_t i = 0; (content.forms & PrAppDataFormFlag_Urls) != 0 && i < content.urlCount; ++i) {
-        if (NSURL* url = [NSURL URLWithString:cocoaStringOf(content.urls[i])])
+        if (NSURL* url = [NSURL URLWithString:appKitStringOf(content.urls[i])])
             [items addObject:url];
     }
     for (uint32_t i = 0; (content.forms & PrAppDataFormFlag_Files) != 0 && i < content.pathCount; ++i)
-        [items addObject:[NSURL fileURLWithPath:cocoaStringOf(content.paths[i])]];
+        [items addObject:[NSURL fileURLWithPath:appKitStringOf(content.paths[i])]];
     if ((content.forms & PrAppDataFormFlag_Image) != 0) {
-        if (NSBitmapImageRep* rep = cocoaImageRepOf(content.image)) {
+        if (NSBitmapImageRep* rep = appKitImageRepOf(content.image)) {
             NSImage* image = [[NSImage alloc] initWithSize:rep.size];
             [image addRepresentation:rep];
             [items addObject:image];
@@ -43,17 +43,17 @@ NSArray* shareItemsOf(const PrAppDataContent& content) {
 
 } // namespace
 
-PrStatus cocoaNotificationPost(PrApp* app, const PrAppNotificationDesc* desc) {
-    PrCocoaHost* host = cocoaHostOf(app);
+PrStatus appKitNotificationPost(PrApp* app, const PrAppNotificationDesc* desc) {
+    PrAppKitHost* host = appKitHostOf(app);
     if (!host.running)
         return PrStatus_InvalidState;
     // A headless application posts nothing, because the permission request would go to a user who never sees it.
-    if (host.headless || !cocoaIsBundled())
+    if (host.headless || !appKitIsBundled())
         return PrStatus_NotSupported;
     return [host postNotification:desc];
 }
 
-PrStatus cocoaOpenUrl(PrApp*, PrStringView url) {
+PrStatus appKitOpenUrl(PrApp*, PrStringView url) {
     NSString* string = prAppleNSString(url);
     NSURL* address = string != nil ? [NSURL URLWithString:string] : nil;
     if (address == nil)
@@ -61,40 +61,40 @@ PrStatus cocoaOpenUrl(PrApp*, PrStringView url) {
     return [NSWorkspace.sharedWorkspace openURL:address] ? PrStatus_Ok : PrStatus_Io;
 }
 
-PrStatus cocoaRevealPath(PrApp* app, PrStringView path) {
-    NSString* string = cocoaStringOf(path);
+PrStatus appKitRevealPath(PrApp* app, PrStringView path) {
+    NSString* string = appKitStringOf(path);
     if (![NSFileManager.defaultManager fileExistsAtPath:string])
         return PrStatus_NotFound;
-    if (cocoaHostOf(app).headless)
+    if (appKitHostOf(app).headless)
         return PrStatus_NotSupported;
     [NSWorkspace.sharedWorkspace activateFileViewerSelectingURLs:@[ [NSURL fileURLWithPath:string] ]];
     return PrStatus_Ok;
 }
 
-PrStatus cocoaTrashPath(PrApp*, PrStringView path) {
-    NSString* string = cocoaStringOf(path);
+PrStatus appKitTrashPath(PrApp*, PrStringView path) {
+    NSString* string = appKitStringOf(path);
     if (![NSFileManager.defaultManager fileExistsAtPath:string])
         return PrStatus_NotFound;
     NSURL* url = [NSURL fileURLWithPath:string];
     return [NSFileManager.defaultManager trashItemAtURL:url resultingItemURL:nil error:nil] ? PrStatus_Ok : PrStatus_Io;
 }
 
-void cocoaRecentDocumentAdd(PrApp*, PrStringView path) {
-    NSURL* url = [NSURL fileURLWithPath:cocoaStringOf(path)];
+void appKitRecentDocumentAdd(PrApp*, PrStringView path) {
+    NSURL* url = [NSURL fileURLWithPath:appKitStringOf(path)];
     [NSDocumentController.sharedDocumentController noteNewRecentDocumentURL:url];
 }
 
-void cocoaRecentDocumentsClear(PrApp*) {
+void appKitRecentDocumentsClear(PrApp*) {
     [NSDocumentController.sharedDocumentController clearRecentDocuments:nil];
 }
 
-void cocoaSetBadge(PrApp* app, PrStringView badge) {
-    if (cocoaHostOf(app).headless)
+void appKitSetBadge(PrApp* app, PrStringView badge) {
+    if (appKitHostOf(app).headless)
         return;
-    NSApp.dockTile.badgeLabel = badge.size != 0 ? cocoaStringOf(badge) : nil;
+    NSApp.dockTile.badgeLabel = badge.size != 0 ? appKitStringOf(badge) : nil;
 }
 
-PrAppPower cocoaPower(const PrApp*) {
+PrAppPower appKitPower(const PrApp*) {
     PrAppPower result{.source = PrAppPowerSource_Unknown, .level = -1};
     result.lowPower = NSProcessInfo.processInfo.isLowPowerModeEnabled;
     CFTypeRef info = IOPSCopyPowerSourcesInfo();
@@ -124,13 +124,13 @@ PrAppPower cocoaPower(const PrApp*) {
     return result;
 }
 
-void cocoaSetAwake(PrApp* app, PrAppAwakeFlags flags) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
-    holdAssertion(cocoa->displayAwake, kIOPMAssertionTypePreventUserIdleDisplaySleep, (flags & PrAppAwakeFlag_Display) != 0);
-    holdAssertion(cocoa->systemAwake, kIOPMAssertionTypePreventUserIdleSystemSleep, (flags & PrAppAwakeFlag_System) != 0);
+void appKitSetAwake(PrApp* app, PrAppAwakeFlags flags) {
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
+    holdAssertion(appKit->displayAwake, kIOPMAssertionTypePreventUserIdleDisplaySleep, (flags & PrAppAwakeFlag_Display) != 0);
+    holdAssertion(appKit->systemAwake, kIOPMAssertionTypePreventUserIdleSystemSleep, (flags & PrAppAwakeFlag_System) != 0);
 }
 
-void cocoaHapticPlay(PrApp*, PrAppHaptic haptic) {
+void appKitHapticPlay(PrApp*, PrAppHaptic haptic) {
     NSHapticFeedbackPattern pattern = NSHapticFeedbackPatternGeneric;
     if (haptic == PrAppHaptic_Selection || haptic == PrAppHaptic_Light)
         pattern = NSHapticFeedbackPatternAlignment;
@@ -140,19 +140,19 @@ void cocoaHapticPlay(PrApp*, PrAppHaptic haptic) {
         performanceTime:NSHapticFeedbackPerformanceTimeNow];
 }
 
-void cocoaShare(PrAppWindow* window, const PrAppDataContent* content, PrRect anchor, PrAppShareFn done,
+void appKitShare(PrAppWindow* window, const PrAppDataContent* content, PrRect anchor, PrAppShareFn done,
         void* PR_NULLABLE context) {
-    PrApp* app = static_cast<CocoaWindow*>(window)->app;
-    uint32_t id = appDataRequestsAdd(static_cast<CocoaApp*>(app)->requests, kPrAppDataSourceNone, AppDataAnswer_Status,
+    PrApp* app = static_cast<AppKitWindow*>(window)->app;
+    uint32_t id = appDataRequestsAdd(static_cast<AppKitApp*>(app)->requests, kPrAppDataSourceNone, AppDataAnswer_Status,
         (void (*)(void))done, context);
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     NSArray* items = shareItemsOf(*content);
     if (object.host.headless || items.count == 0) {
         PrStatus status = object.host.headless ? PrStatus_NotSupported : PrStatus_InvalidData;
-        cocoaAnswerSoon(app, appAnswerCreate(AppAnswerKind_Status, id, status));
+        appKitAnswerSoon(app, appAnswerCreate(AppAnswerKind_Status, id, status));
         return;
     }
-    PrCocoaShare* picker = [[PrCocoaShare alloc] init];
+    PrAppKitShare* picker = [[PrAppKitShare alloc] init];
     picker.app = app;
     picker.request = id;
     picker.picker = [[NSSharingServicePicker alloc] initWithItems:items];
@@ -167,15 +167,15 @@ void cocoaShare(PrAppWindow* window, const PrAppDataContent* content, PrRect anc
 
 using namespace pr_impl;
 
-@implementation PrCocoaShare
+@implementation PrAppKitShare
 // The user chose a service, or none, which ends the share either way.
 - (void)sharingServicePicker:(NSSharingServicePicker*)sharingServicePicker
         didChooseSharingService:(NSSharingService*)service {
     (void)sharingServicePicker;
     (void)service;
     PrApp* app = self.app;
-    PrCocoaHost* host = cocoaHostOf(app);
-    cocoaAnswerSoon(app, appAnswerCreate(AppAnswerKind_Status, self.request, PrStatus_Ok));
+    PrAppKitHost* host = appKitHostOf(app);
+    appKitAnswerSoon(app, appAnswerCreate(AppAnswerKind_Status, self.request, PrStatus_Ok));
     [host.shares removeObject:self];
 }
 @end

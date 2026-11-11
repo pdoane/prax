@@ -9,8 +9,8 @@
 
 #include "app/src/app_names.h"
 
-#if defined(PR_APP_HAS_COCOA)
-#include "pr/app_cocoa.h"
+#if defined(PR_APP_HAS_APPKIT)
+#include "pr/app_appkit.h"
 #endif
 #if defined(PR_APP_HAS_WIN32)
 #include "pr/app_win32.h"
@@ -23,13 +23,13 @@ namespace pr_impl {
 
 namespace {
 
-constexpr PrStringView kBackendNames[PrAppBackend_Count] = {"default", "cocoa", "win32", "web"};
+constexpr PrStringView kBackendNames[PrAppBackend_Count] = {"default", "appkit", "win32", "web"};
 
 // The backends that the build has, which Default creates the first of, and then Default, so that a build without
 // backends creates none.
 constexpr PrAppBackend kBuilt[] = {
-#if defined(PR_APP_HAS_COCOA)
-    PrAppBackend_Cocoa,
+#if defined(PR_APP_HAS_APPKIT)
+    PrAppBackend_AppKit,
 #endif
 #if defined(PR_APP_HAS_WIN32)
     PrAppBackend_Win32,
@@ -79,8 +79,8 @@ PrApp* PR_NULLABLE prAppCreate(PrAppBackend backend, const PrAppOptions* PR_NULL
     (void)chosen;
     PrApp* app = nullptr;
     switch (backend == PrAppBackend_Default ? kBuilt[0] : backend) {
-#if defined(PR_APP_HAS_COCOA)
-        case PrAppBackend_Cocoa: app = prAppCocoaCreate(&chosen); break;
+#if defined(PR_APP_HAS_APPKIT)
+        case PrAppBackend_AppKit: app = prAppAppKitCreate(&chosen); break;
 #endif
 #if defined(PR_APP_HAS_WIN32)
         case PrAppBackend_Win32: app = prAppWin32Create(&chosen); break;

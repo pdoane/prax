@@ -1,8 +1,8 @@
-// The Cocoa backend's data transfer: the pasteboard, drags and drops, reads and writes of sources, and file dialogs.
+// The AppKit backend's data transfer: the pasteboard, drags and drops, reads and writes of sources, and file dialogs.
 
-#include "app/backends/cocoa/src/app_cocoa_data.h"
+#include "app/backends/appkit/src/app_appkit_data.h"
 
-#include "app/backends/cocoa/src/app_cocoa_input.h"
+#include "app/backends/appkit/src/app_appkit_input.h"
 
 namespace pr_impl {
 
@@ -78,7 +78,7 @@ NSArray<NSURL*>* webUrlsOf(NSPasteboard* board) {
 void readPasteboard(NSPasteboard* board, AppDataAnswer answer, PrStringView type, AppDataStore& out) {
     switch (answer) {
         case PrAppDataReadKind_Forms:
-            out.forms = cocoaFormsOf(board);
+            out.forms = appKitFormsOf(board);
             break;
         case PrAppDataReadKind_Text: {
             NSString* text = [board stringForType:NSPasteboardTypeString];
@@ -105,7 +105,7 @@ void readPasteboard(NSPasteboard* board, AppDataAnswer answer, PrStringView type
             break;
         case PrAppDataReadKind_Files:
             for (NSURL* url in [board readObjectsForClasses:@[ NSURL.class ] options:fileOptions()])
-                cocoaAddFile(url, out);
+                appKitAddFile(url, out);
             break;
         case PrAppDataReadKind_Image: {
             NSMutableData* pixels = [NSMutableData data];
@@ -118,7 +118,7 @@ void readPasteboard(NSPasteboard* board, AppDataAnswer answer, PrStringView type
             break;
         }
         case PrAppDataReadKind_Custom: {
-            NSData* bytes = [board dataForType:cocoaStringOf(type)];
+            NSData* bytes = [board dataForType:appKitStringOf(type)];
             if (bytes != nil)
                 appDataStoreAddCustom(out, type, PrByteView{static_cast<const uint8_t*>(bytes.bytes), bytes.length});
             break;
@@ -130,7 +130,7 @@ void readPasteboard(NSPasteboard* board, AppDataAnswer answer, PrStringView type
 
 // Decodes the image of a drop's store, kept as the custom content of its pasteboard type, into `out`.
 void readDropImage(AppDataStore& store, AppDataStore& out) {
-    for (NSPasteboardType type in cocoaImageTypes()) {
+    for (NSPasteboardType type in appKitImageTypes()) {
         PrRawString name = prAppleNSStringToRawString(type);
         PrByteView bytes = appDataStoreCustom(store, prRawStringView(&name));
         prRawStringReset(&name);
@@ -151,18 +151,18 @@ void readDropImage(AppDataStore& store, AppDataStore& out) {
 // Answers the request `id` of content from the main queue: from the general pasteboard, or from a source's store. A
 // source's store does not change, and the request's reference keeps it, so its answer copies only a decoded image.
 void readContent(PrApp* app, uint32_t id, PrAppDataSource source, AppDataAnswer kind, PrStringView type) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
     PrRawString custom = prRawStringCopy(type);
-    __weak PrCocoaHost* weak = cocoaHostOf(app);
+    __weak PrAppKitHost* weak = appKitHostOf(app);
     dispatch_async(dispatch_get_main_queue(), ^{
         PrRawString owned = custom;
-        PrCocoaHost* host = weak;
+        PrAppKitHost* host = weak;
         if (host == nil || host.app == nullptr) {
             prRawStringReset(&owned);
             return;
         }
         AppAnswer* answer = appAnswerCreate(AppAnswerKind_Store, id, PrStatus_Ok);
-        AppDataStore* store = appDataSourceStore(cocoa->sources, source);
+        AppDataStore* store = appDataSourceStore(appKit->sources, source);
         if (source == kPrAppDataSourceClipboard)
             readPasteboard(NSPasteboard.generalPasteboard, kind, prRawStringView(&owned), answer->store);
         else if (source == kPrAppDataSourceSelection || source == kPrAppDataSourceNone)
@@ -179,19 +179,19 @@ void readContent(PrApp* app, uint32_t id, PrAppDataSource source, AppDataAnswer 
 }
 
 // Returns the path of the file at `index` of a source's files, or nil if it has none.
-NSString* PR_NULLABLE filePathOf(CocoaApp* app, PrAppDataSource source, uint32_t index) {
+NSString* PR_NULLABLE filePathOf(AppKitApp* app, PrAppDataSource source, uint32_t index) {
     AppDataStore* store = appDataSourceStore(app->sources, source);
     uint32_t count = 0;
     const PrAppDataFile* files = store != nullptr ? appDataStoreFiles(*store, &count) : nullptr;
     if (index >= count || files[index].path.size == 0 || files[index].directory)
         return nil;
-    return cocoaStringOf(files[index].path);
+    return appKitStringOf(files[index].path);
 }
 
 // Reads a file's bytes on a queue of its own, and answers from the main queue.
 void readFile(PrApp* app, uint32_t id, PrAppDataSource source, uint32_t index, uint64_t offset, uint64_t size) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
-    NSString* path = filePathOf(cocoa, source, index);
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
+    NSString* path = filePathOf(appKit, source, index);
     AppAnswer* answer = appAnswerCreate(AppAnswerKind_Bytes, id, path != nil ? PrStatus_Ok : PrStatus_NotFound);
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSFileHandle* file = path != nil ? [NSFileHandle fileHandleForReadingAtPath:path] : nil;
@@ -203,7 +203,7 @@ void readFile(PrApp* app, uint32_t id, PrAppDataSource source, uint32_t index, u
         if (bytes != nil)
             answer->bytes.append(static_cast<const uint8_t*>(bytes.bytes), uint32_t(bytes.length));
         [file closeAndReturnError:nil];
-        cocoaAnswerSoon(app, answer);
+        appKitAnswerSoon(app, answer);
     });
 }
 
@@ -212,7 +212,7 @@ NSArray<UTType*>* contentTypesOf(const PrAppFileDialogDesc* desc) {
     NSMutableArray<UTType*>* types = [NSMutableArray array];
     NSCharacterSet* space = NSCharacterSet.whitespaceCharacterSet;
     for (uint32_t i = 0; i < desc->typeCount; ++i) {
-        for (NSString* extension in [cocoaStringOf(desc->types[i].extensions) componentsSeparatedByString:@","]) {
+        for (NSString* extension in [appKitStringOf(desc->types[i].extensions) componentsSeparatedByString:@","]) {
             NSString* trimmed = [extension stringByTrimmingCharactersInSet:space];
             UTType* type = trimmed.length != 0 ? [UTType typeWithFilenameExtension:trimmed] : nil;
             if (type != nil)
@@ -223,10 +223,10 @@ NSArray<UTType*>* contentTypesOf(const PrAppFileDialogDesc* desc) {
 }
 
 // Closes the dialogs whose reads were cancelled, whose answers then call nothing.
-void closeCancelledDialogs(PrCocoaHost* host) {
+void closeCancelledDialogs(PrAppKitHost* host) {
     if (host.app == nullptr)
         return;
-    AppDataRequests& requests = static_cast<CocoaApp*>(host.app)->requests;
+    AppDataRequests& requests = static_cast<AppKitApp*>(host.app)->requests;
     for (NSNumber* id in host.dialogs.allKeys) {
         PrAppDataSource source = kPrAppDataSourceNone;
         AppDataAnswer answer = AppDataAnswer_Source;
@@ -242,10 +242,10 @@ void closeCancelledDialogs(PrCocoaHost* host) {
 }
 
 // Starts the drag from the main queue once no callback runs, as a modal run loop within a callback may run the queue.
-void startDragSoon(PrCocoaWindow* object) {
-    __weak PrCocoaWindow* weak = object;
+void startDragSoon(PrAppKitWindow* object) {
+    __weak PrAppKitWindow* weak = object;
     dispatch_async(dispatch_get_main_queue(), ^{
-        PrCocoaWindow* window = weak;
+        PrAppKitWindow* window = weak;
         if (window == nil || window.record == nullptr)
             return;
         if (window.host.inCallback)
@@ -257,11 +257,11 @@ void startDragSoon(PrCocoaWindow* object) {
 
 } // namespace
 
-NSArray<NSPasteboardType>* cocoaImageTypes() {
+NSArray<NSPasteboardType>* appKitImageTypes() {
     return @[ NSPasteboardTypePNG, NSPasteboardTypeTIFF ];
 }
 
-PrAppDragOperation cocoaOperationOf(NSDragOperation operation) {
+PrAppDragOperation appKitOperationOf(NSDragOperation operation) {
     if ((operation & (NSDragOperationMove | NSDragOperationGeneric)) != 0)
         return PrAppDragOperation_Move;
     if ((operation & NSDragOperationCopy) != 0)
@@ -271,7 +271,7 @@ PrAppDragOperation cocoaOperationOf(NSDragOperation operation) {
     return PrAppDragOperation_None;
 }
 
-NSBitmapImageRep* PR_NULLABLE cocoaImageRepOf(PrPixelView pixels) {
+NSBitmapImageRep* PR_NULLABLE appKitImageRepOf(PrPixelView pixels) {
     NSBitmapImageRep* rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:nullptr
         pixelsWide:NSInteger(pixels.extent.x) pixelsHigh:NSInteger(pixels.extent.y) bitsPerSample:8 samplesPerPixel:4
         hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace bitmapFormat:NSBitmapFormatAlphaNonpremultiplied
@@ -284,7 +284,7 @@ NSBitmapImageRep* PR_NULLABLE cocoaImageRepOf(PrPixelView pixels) {
     return [rep bitmapImageRepByRetaggingWithColorSpace:NSColorSpace.sRGBColorSpace];
 }
 
-PrAppDragOperationFlags cocoaOperationsOf(NSDragOperation mask) {
+PrAppDragOperationFlags appKitOperationsOf(NSDragOperation mask) {
     PrAppDragOperationFlags operations = 0;
     if ((mask & NSDragOperationCopy) != 0)
         operations |= PrAppDragOperationFlag_Copy;
@@ -295,7 +295,7 @@ PrAppDragOperationFlags cocoaOperationsOf(NSDragOperation mask) {
     return operations;
 }
 
-NSDragOperation cocoaMaskOf(PrAppDragOperationFlags operations) {
+NSDragOperation appKitMaskOf(PrAppDragOperationFlags operations) {
     NSDragOperation mask = NSDragOperationNone;
     if ((operations & PrAppDragOperationFlag_Copy) != 0)
         mask |= NSDragOperationCopy;
@@ -306,7 +306,7 @@ NSDragOperation cocoaMaskOf(PrAppDragOperationFlags operations) {
     return mask;
 }
 
-NSDragOperation cocoaAnswerOf(PrAppDragOperation operation, NSDragOperation mask) {
+NSDragOperation appKitAnswerOf(PrAppDragOperation operation, NSDragOperation mask) {
     switch (operation) {
         case PrAppDragOperation_Copy: return NSDragOperationCopy;
         case PrAppDragOperation_Move:
@@ -316,7 +316,7 @@ NSDragOperation cocoaAnswerOf(PrAppDragOperation operation, NSDragOperation mask
     }
 }
 
-PrAppDataFormFlags cocoaFormsOf(NSPasteboard* board) {
+PrAppDataFormFlags appKitFormsOf(NSPasteboard* board) {
     PrAppDataFormFlags forms = 0;
     if ([board availableTypeFromArray:@[ NSPasteboardTypeString ]] != nil)
         forms |= PrAppDataFormFlag_Text;
@@ -326,7 +326,7 @@ PrAppDataFormFlags cocoaFormsOf(NSPasteboard* board) {
         forms |= PrAppDataFormFlag_Urls;
     if ([board canReadObjectForClasses:@[ NSURL.class ] options:fileOptions()])
         forms |= PrAppDataFormFlag_Files;
-    if ([board availableTypeFromArray:cocoaImageTypes()] != nil)
+    if ([board availableTypeFromArray:appKitImageTypes()] != nil)
         forms |= PrAppDataFormFlag_Image;
     for (NSPasteboardType type in board.types) {
         if (!isSystemType(type))
@@ -335,7 +335,7 @@ PrAppDataFormFlags cocoaFormsOf(NSPasteboard* board) {
     return forms;
 }
 
-void cocoaAddFile(NSURL* url, AppDataStore& out) {
+void appKitAddFile(NSURL* url, AppDataStore& out) {
     NSNumber* size = nil;
     NSNumber* directory = nil;
     [url getResourceValue:&size forKey:NSURLFileSizeKey error:nil];
@@ -350,8 +350,8 @@ void cocoaAddFile(NSURL* url, AppDataStore& out) {
     prRawStringReset(&name);
 }
 
-void cocoaReadDrop(NSPasteboard* board, AppDataStore& out) {
-    PrAppDataFormFlags forms = cocoaFormsOf(board);
+void appKitReadDrop(NSPasteboard* board, AppDataStore& out) {
+    PrAppDataFormFlags forms = appKitFormsOf(board);
     // The forms that the drop reads now, each with the answer that reads it.
     struct Read {
         PrAppDataFormFlags form;
@@ -368,7 +368,7 @@ void cocoaReadDrop(NSPasteboard* board, AppDataStore& out) {
             readPasteboard(board, read.answer, {}, out);
     }
     for (NSPasteboardType type in board.types) {
-        bool image = [cocoaImageTypes() containsObject:type];
+        bool image = [appKitImageTypes() containsObject:type];
         if (!image && isSystemType(type))
             continue;
         NSData* bytes = [board dataForType:type];
@@ -383,16 +383,16 @@ void cocoaReadDrop(NSPasteboard* board, AppDataStore& out) {
     out.forms = forms;
 }
 
-void cocoaWriteContent(const PrAppDataContent& content, uint64_t token, NSPasteboardItem* first,
+void appKitWriteContent(const PrAppDataContent& content, uint64_t token, NSPasteboardItem* first,
         NSMutableArray<id<NSPasteboardWriting>>* writers) {
     if ((content.forms & PrAppDataFormFlag_Text) != 0)
-        [first setString:cocoaStringOf(content.text) forType:NSPasteboardTypeString];
+        [first setString:appKitStringOf(content.text) forType:NSPasteboardTypeString];
     if ((content.forms & PrAppDataFormFlag_Html) != 0)
-        [first setString:cocoaStringOf(content.html) forType:NSPasteboardTypeHTML];
+        [first setString:appKitStringOf(content.html) forType:NSPasteboardTypeHTML];
     if ((content.forms & PrAppDataFormFlag_Urls) != 0 && content.urlCount != 0)
-        [first setString:cocoaStringOf(content.urls[0]) forType:NSPasteboardTypeURL];
+        [first setString:appKitStringOf(content.urls[0]) forType:NSPasteboardTypeURL];
     if ((content.forms & PrAppDataFormFlag_Image) != 0 && content.image.data != nullptr) {
-        NSBitmapImageRep* rep = cocoaImageRepOf(content.image);
+        NSBitmapImageRep* rep = appKitImageRepOf(content.image);
         NSData* png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
         if (png != nil)
             [first setData:png forType:NSPasteboardTypePNG];
@@ -402,12 +402,12 @@ void cocoaWriteContent(const PrAppDataContent& content, uint64_t token, NSPasteb
     for (uint32_t i = 0; (content.forms & PrAppDataFormFlag_Custom) != 0 && i < content.customCount; ++i) {
         const PrAppDataCustom& custom = content.custom[i];
         NSData* bytes = [NSData dataWithBytes:custom.bytes.data length:custom.bytes.size];
-        [first setData:bytes forType:cocoaStringOf(custom.type)];
+        [first setData:bytes forType:appKitStringOf(custom.type)];
     }
     if ((content.forms & PrAppDataFormFlag_Payload) != 0 && token != 0)
         [first setData:[NSData dataWithBytes:&token length:sizeof(token)] forType:kPayloadType];
     for (uint32_t i = 0; (content.forms & PrAppDataFormFlag_Files) != 0 && i < content.pathCount; ++i) {
-        NSString* url = [NSURL fileURLWithPath:cocoaStringOf(content.paths[i])].absoluteString;
+        NSString* url = [NSURL fileURLWithPath:appKitStringOf(content.paths[i])].absoluteString;
         NSPasteboardItem* item = i == 0 ? first : [[NSPasteboardItem alloc] init];
         [item setString:url forType:NSPasteboardTypeFileURL];
         if (i != 0)
@@ -415,7 +415,7 @@ void cocoaWriteContent(const PrAppDataContent& content, uint64_t token, NSPasteb
     }
 }
 
-bool cocoaCarriesDrag(NSPasteboard* board, const CocoaDrag& drag) {
+bool appKitCarriesDrag(NSPasteboard* board, const AppKitDrag& drag) {
     NSData* data = [board dataForType:kPayloadType];
     uint64_t token = 0;
     if (!drag.active || data.length != sizeof(token))
@@ -424,10 +424,10 @@ bool cocoaCarriesDrag(NSPasteboard* board, const CocoaDrag& drag) {
     return token == drag.token;
 }
 
-void cocoaAnswerSoon(PrApp* app, AppAnswer* answer) {
-    __weak PrCocoaHost* weak = cocoaHostOf(app);
+void appKitAnswerSoon(PrApp* app, AppAnswer* answer) {
+    __weak PrAppKitHost* weak = appKitHostOf(app);
     dispatch_async(dispatch_get_main_queue(), ^{
-        PrCocoaHost* host = weak;
+        PrAppKitHost* host = weak;
         if (host == nil || host.app == nullptr) {
             appAnswerDestroy(answer, nullptr);
             return;
@@ -436,41 +436,41 @@ void cocoaAnswerSoon(PrApp* app, AppAnswer* answer) {
     });
 }
 
-void cocoaDataRetain(PrApp* app, PrAppDataSource source) {
-    appDataSourceRetain(static_cast<CocoaApp*>(app)->sources, source);
+void appKitDataRetain(PrApp* app, PrAppDataSource source) {
+    appDataSourceRetain(static_cast<AppKitApp*>(app)->sources, source);
 }
 
-void cocoaDataRelease(PrApp* app, PrAppDataSource source) {
-    appDataSourceRelease(static_cast<CocoaApp*>(app)->sources, source);
+void appKitDataRelease(PrApp* app, PrAppDataSource source) {
+    appDataSourceRelease(static_cast<AppKitApp*>(app)->sources, source);
 }
 
-void cocoaDataRead(PrApp* app, const PrAppDataRead* read) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
+void appKitDataRead(PrApp* app, const PrAppDataRead* read) {
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
     AppDataAnswer kind = read->kind;
-    uint32_t id = appDataRequestsAdd(cocoa->requests, read->source, kind, read->done, read->context, read->type);
+    uint32_t id = appDataRequestsAdd(appKit->requests, read->source, kind, read->done, read->context, read->type);
     if (read->kind == PrAppDataReadKind_File)
         readFile(app, id, read->source, read->index, read->offset, read->size);
     else
         readContent(app, id, read->source, kind, read->type);
 }
 
-PrStatus cocoaDataWrite(PrApp* app, PrAppDataSource source, const PrAppDataContent* content) {
+PrStatus appKitDataWrite(PrApp* app, PrAppDataSource source, const PrAppDataContent* content) {
     (void)app;
     if (source == kPrAppDataSourceSelection)
         return PrStatus_NotSupported;
     NSPasteboardItem* first = [[NSPasteboardItem alloc] init];
     NSMutableArray<id<NSPasteboardWriting>>* writers = [NSMutableArray arrayWithObject:first];
-    cocoaWriteContent(*content, 0, first, writers);
+    appKitWriteContent(*content, 0, first, writers);
     NSPasteboard* board = NSPasteboard.generalPasteboard;
     [board clearContents];
     return [board writeObjects:writers] ? PrStatus_Ok : PrStatus_Io;
 }
 
-void cocoaDataWriteFile(PrApp* app, PrAppDataSource source, uint32_t index, uint64_t offset, PrByteView bytes,
+void appKitDataWriteFile(PrApp* app, PrAppDataSource source, uint32_t index, uint64_t offset, PrByteView bytes,
         PrAppDataStatusFn done, void* PR_NULLABLE context) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
-    uint32_t id = appDataRequestsAdd(cocoa->requests, source, AppDataAnswer_Status, (void (*)(void))done, context);
-    NSString* path = filePathOf(cocoa, source, index);
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
+    uint32_t id = appDataRequestsAdd(appKit->requests, source, AppDataAnswer_Status, (void (*)(void))done, context);
+    NSString* path = filePathOf(appKit, source, index);
     NSData* data = [NSData dataWithBytes:bytes.data length:bytes.size];
     AppAnswer* answer = appAnswerCreate(AppAnswerKind_Status, id, path != nil ? PrStatus_Ok : PrStatus_NotFound);
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
@@ -481,31 +481,31 @@ void cocoaDataWriteFile(PrApp* app, PrAppDataSource source, uint32_t index, uint
         if (path != nil && !written)
             answer->status = PrStatus_Io;
         [file closeAndReturnError:nil];
-        cocoaAnswerSoon(app, answer);
+        appKitAnswerSoon(app, answer);
     });
 }
 
-void cocoaDataCancel(PrApp* app, void* PR_NULLABLE context) {
-    appDataRequestsCancel(static_cast<CocoaApp*>(app)->requests, context);
+void appKitDataCancel(PrApp* app, void* PR_NULLABLE context) {
+    appDataRequestsCancel(static_cast<AppKitApp*>(app)->requests, context);
     // A dialog closes on the main thread, which alone holds the dialogs.
-    PrCocoaHost* host = cocoaHostOf(app);
+    PrAppKitHost* host = appKitHostOf(app);
     if (NSThread.isMainThread) {
         closeCancelledDialogs(host);
         return;
     }
-    __weak PrCocoaHost* weak = host;
+    __weak PrAppKitHost* weak = host;
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (PrCocoaHost* main = weak)
+        if (PrAppKitHost* main = weak)
             closeCancelledDialogs(main);
     });
 }
 
-void cocoaFileDialog(PrApp* app, const PrAppFileDialogDesc* desc, PrAppFileDialogFn done, void* PR_NULLABLE context) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
-    PrCocoaHost* host = cocoaHostOf(app);
-    uint32_t id = appDataRequestsAdd(cocoa->requests, kPrAppDataSourceNone, AppDataAnswer_Source, (void (*)(void))done, context);
+void appKitFileDialog(PrApp* app, const PrAppFileDialogDesc* desc, PrAppFileDialogFn done, void* PR_NULLABLE context) {
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
+    PrAppKitHost* host = appKitHostOf(app);
+    uint32_t id = appDataRequestsAdd(appKit->requests, kPrAppDataSourceNone, AppDataAnswer_Source, (void (*)(void))done, context);
     if (host.headless || !host.running) {
-        cocoaAnswerSoon(app, appAnswerCreate(AppAnswerKind_Source, id, PrStatus_NotSupported));
+        appKitAnswerSoon(app, appAnswerCreate(AppAnswerKind_Source, id, PrStatus_NotSupported));
         return;
     }
     bool directories = desc->kind == PrAppFileDialogKind_Open && (desc->flags & PrAppFileDialogFlag_Directories) != 0;
@@ -520,25 +520,25 @@ void cocoaFileDialog(PrApp* app, const PrAppFileDialogDesc* desc, PrAppFileDialo
         panel = [NSSavePanel savePanel];
         panel.canCreateDirectories = YES;
         if (desc->name.size != 0)
-            panel.nameFieldStringValue = cocoaStringOf(desc->name);
+            panel.nameFieldStringValue = appKitStringOf(desc->name);
     }
     // A sheet shows its message, and a panel of its own shows its title.
     if (desc->title.size != 0) {
-        panel.title = cocoaStringOf(desc->title);
-        panel.message = cocoaStringOf(desc->title);
+        panel.title = appKitStringOf(desc->title);
+        panel.message = appKitStringOf(desc->title);
     }
     if (desc->directory.size != 0)
-        panel.directoryURL = [NSURL fileURLWithPath:cocoaStringOf(desc->directory) isDirectory:YES];
+        panel.directoryURL = [NSURL fileURLWithPath:appKitStringOf(desc->directory) isDirectory:YES];
     NSArray<UTType*>* types = contentTypesOf(desc);
     if (types.count != 0 && !directories)
         panel.allowedContentTypes = types;
     if (host.dialogs == nil)
         host.dialogs = [NSMutableDictionary dictionary];
     host.dialogs[@(id)] = panel;
-    __weak PrCocoaHost* weak = host;
+    __weak PrAppKitHost* weak = host;
     __weak NSSavePanel* weakPanel = panel;
     void (^finished)(NSModalResponse) = ^(NSModalResponse response) {
-        PrCocoaHost* answering = weak;
+        PrAppKitHost* answering = weak;
         NSSavePanel* chosen = weakPanel;
         if (answering == nil || answering.app == nullptr)
             return;
@@ -551,12 +551,12 @@ void cocoaFileDialog(PrApp* app, const PrAppFileDialogDesc* desc, PrAppFileDialo
                 urls = ((NSOpenPanel*)chosen).URLs;
             AppDataStore* store = allocZeroed<AppDataStore>();
             for (NSURL* url in urls)
-                cocoaAddFile(url, *store);
-            answer->source = appDataSourceCreate(static_cast<CocoaApp*>(answering.app)->sources, store, nullptr);
+                appKitAddFile(url, *store);
+            answer->source = appDataSourceCreate(static_cast<AppKitApp*>(answering.app)->sources, store, nullptr);
         }
         [answering answer:answer];
     };
-    NSWindow* parent = desc->parent != nullptr ? cocoaObjectOf(desc->parent).window : nil;
+    NSWindow* parent = desc->parent != nullptr ? appKitObjectOf(desc->parent).window : nil;
     if (parent != nil && parent.isVisible && parent.attachedSheet == nil) {
         [panel beginSheetModalForWindow:parent completionHandler:finished];
     } else {
@@ -565,20 +565,20 @@ void cocoaFileDialog(PrApp* app, const PrAppFileDialogDesc* desc, PrAppFileDialo
     }
 }
 
-void cocoaDragPromiseEnd(PrAppWindow* window, uint32_t index, PrStatus status) {
-    [cocoaObjectOf(window) endPromise:index status:status];
+void appKitDragPromiseEnd(PrAppWindow* window, uint32_t index, PrStatus status) {
+    [appKitObjectOf(window) endPromise:index status:status];
 }
 
-void cocoaDragStart(PrAppWindow* window, const PrAppDragDesc* desc) {
-    appDragPendingSet(static_cast<CocoaWindow*>(window)->drag, *desc);
-    startDragSoon(cocoaObjectOf(window));
+void appKitDragStart(PrAppWindow* window, const PrAppDragDesc* desc) {
+    appDragPendingSet(static_cast<AppKitWindow*>(window)->drag, *desc);
+    startDragSoon(appKitObjectOf(window));
 }
 
 } // namespace pr_impl
 
 using namespace pr_impl;
 
-@implementation PrCocoaPromise
+@implementation PrAppKitPromise
 - (NSString*)filePromiseProvider:(NSFilePromiseProvider*)filePromiseProvider fileNameForType:(NSString*)fileType {
     (void)filePromiseProvider;
     (void)fileType;
@@ -588,7 +588,7 @@ using namespace pr_impl;
 - (void)filePromiseProvider:(NSFilePromiseProvider*)filePromiseProvider writePromiseToURL:(NSURL*)url
         completionHandler:(void (^)(NSError* PR_NULLABLE))completionHandler {
     (void)filePromiseProvider;
-    PrCocoaWindow* owner = self.owner;
+    PrAppKitWindow* owner = self.owner;
     if (owner == nil) {
         completionHandler([NSError errorWithDomain:NSCocoaErrorDomain code:NSUserCancelledError userInfo:nil]);
         return;

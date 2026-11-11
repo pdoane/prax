@@ -1,36 +1,36 @@
-// The Cocoa backend's windows: their windows, views and panels, their frames, and their placement.
+// The AppKit backend's windows: their windows, views and panels, their frames, and their placement.
 
-#include "app/backends/cocoa/src/app_cocoa_window.h"
+#include "app/backends/appkit/src/app_appkit_window.h"
 
-#include "app/backends/cocoa/src/app_cocoa_data.h"
-#include "app/backends/cocoa/src/app_cocoa_display.h"
-#include "app/backends/cocoa/src/app_cocoa_input.h"
-#include "app/backends/cocoa/src/app_cocoa_menu.h"
-#include "app/backends/cocoa/src/app_cocoa_shell.h"
+#include "app/backends/appkit/src/app_appkit_data.h"
+#include "app/backends/appkit/src/app_appkit_display.h"
+#include "app/backends/appkit/src/app_appkit_input.h"
+#include "app/backends/appkit/src/app_appkit_menu.h"
+#include "app/backends/appkit/src/app_appkit_shell.h"
 
 namespace pr_impl {
 
 namespace {
 
 PrApp* windowApp(const PrAppWindow* window) {
-    return static_cast<const CocoaWindow*>(window)->app;
+    return static_cast<const AppKitWindow*>(window)->app;
 }
 
 void setTextInputRect(PrAppWindow* window, PrRect rect) {
-    cocoaObjectOf(window).view.textInputRect = NSMakeRect(CGFloat(rect.left), CGFloat(rect.top),
+    appKitObjectOf(window).view.textInputRect = NSMakeRect(CGFloat(rect.left), CGFloat(rect.top),
         CGFloat(rect.right - rect.left), CGFloat(rect.bottom - rect.top));
 }
 
 // Returns the window whose latest output holds the text being edited in `window`: the window itself if its output has
 // some there, or else a window that owns it whose output names it. Returns null if no output does.
-const CocoaWindow* PR_NULLABLE textInputSource(PrAppWindow* window) {
-    const CocoaWindow* own = static_cast<const CocoaWindow*>(window);
+const AppKitWindow* PR_NULLABLE textInputSource(PrAppWindow* window) {
+    const AppKitWindow* own = static_cast<const AppKitWindow*>(window);
     if (own->textInputWindow == window)
         return own;
-    for (PrCocoaWindow* other in cocoaObjectOf(window).host.windows) {
-        const CocoaWindow* cocoa = static_cast<const CocoaWindow*>(other.record);
-        if (cocoa != nullptr && cocoa->textInputWindow == window)
-            return cocoa;
+    for (PrAppKitWindow* other in appKitObjectOf(window).host.windows) {
+        const AppKitWindow* appKit = static_cast<const AppKitWindow*>(other.record);
+        if (appKit != nullptr && appKit->textInputWindow == window)
+            return appKit;
     }
     return nullptr;
 }
@@ -38,28 +38,28 @@ const CocoaWindow* PR_NULLABLE textInputSource(PrAppWindow* window) {
 // Withdraws the text input that `window`, which is being destroyed, names in another window, and the text input that
 // other windows name in it.
 void forgetTextInput(PrAppWindow* window) {
-    CocoaWindow* cocoa = static_cast<CocoaWindow*>(window);
-    PrAppWindow* named = cocoa->textInputWindow;
-    cocoa->textInputWindow = nullptr;
+    AppKitWindow* appKit = static_cast<AppKitWindow*>(window);
+    PrAppWindow* named = appKit->textInputWindow;
+    appKit->textInputWindow = nullptr;
     if (named != nullptr && named != window)
-        cocoaApplyTextInput(named);
-    for (PrCocoaWindow* other in cocoaObjectOf(window).host.windows) {
-        CocoaWindow* owner = static_cast<CocoaWindow*>(other.record);
+        appKitApplyTextInput(named);
+    for (PrAppKitWindow* other in appKitObjectOf(window).host.windows) {
+        AppKitWindow* owner = static_cast<AppKitWindow*>(other.record);
         if (owner != nullptr && owner->textInputWindow == window)
             owner->textInputWindow = nullptr;
     }
 }
 
 void setTitle(PrAppWindow* window, PrStringView title) {
-    CocoaWindow* cocoa = static_cast<CocoaWindow*>(window);
-    prRawStringReset(&cocoa->title);
-    cocoa->title = prRawStringCopy(title);
-    cocoaObjectOf(window).window.title = cocoaStringOf(title);
-    cocoaRequestFrame(window);
+    AppKitWindow* appKit = static_cast<AppKitWindow*>(window);
+    prRawStringReset(&appKit->title);
+    appKit->title = prRawStringCopy(title);
+    appKitObjectOf(window).window.title = appKitStringOf(title);
+    appKitRequestFrame(window);
 }
 
 PrStringView title(const PrAppWindow* window) {
-    return prRawStringView(&static_cast<const CocoaWindow*>(window)->title);
+    return prRawStringView(&static_cast<const AppKitWindow*>(window)->title);
 }
 
 // Returns `size` within the content of the screen that shows `window`, or the main screen's.
@@ -70,7 +70,7 @@ NSSize clampedToScreen(NSWindow* window, NSSize size, NSWindowStyleMask style) {
 }
 
 void setExtent(PrAppWindow* window, PrUVec2 extent) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     // AppKit holds the user's resizes to the limits, but not the program's.
     NSSize min = object.window.contentMinSize;
     NSSize max = object.window.contentMaxSize;
@@ -88,7 +88,7 @@ NSSize maxSizeOf(PrUVec2 maxExtent) {
 }
 
 void setExtentLimits(PrAppWindow* window, PrUVec2 minExtent, PrUVec2 maxExtent) {
-    NSWindow* frame = cocoaObjectOf(window).window;
+    NSWindow* frame = appKitObjectOf(window).window;
     frame.contentMinSize = NSMakeSize(minExtent.x, minExtent.y);
     frame.contentMaxSize = maxSizeOf(maxExtent);
     // A window of one extent has no resize handles and no zoom. AppKit keeps the style of a fullscreen window. An
@@ -109,7 +109,7 @@ void setExtentLimits(PrAppWindow* window, PrUVec2 minExtent, PrUVec2 maxExtent) 
 }
 
 PrAppWindowState state(const PrAppWindow* window) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     NSWindow* frame = object.window;
     if (object.host.headless)
         return PrAppWindowState_Normal;
@@ -121,26 +121,26 @@ PrAppWindowState state(const PrAppWindow* window) {
 }
 
 bool position(const PrAppWindow* window, PrAppDisplayPosition* out) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     NSScreen* screen = object.window.screen;
     if (object.host.headless || screen == nil)
         return false;
-    PrRect content = cocoaRectOnScreen(screen, [object.window contentRectForFrameRect:object.window.frame]);
-    *out = PrAppDisplayPosition{.display = cocoaDisplayIdOf(screen), .position = PrVec2{content.left, content.top}};
+    PrRect content = appKitRectOnScreen(screen, [object.window contentRectForFrameRect:object.window.frame]);
+    *out = PrAppDisplayPosition{.display = appKitDisplayIdOf(screen), .position = PrVec2{content.left, content.top}};
     return true;
 }
 
 bool pointToDisplay(const PrAppWindow* window, PrVec2 point, PrAppDisplayPosition* out) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     if (object.host.headless)
         return false;
     NSRect content = [object.window contentRectForFrameRect:object.window.frame];
-    return cocoaDisplayPositionAt(NSMakePoint(NSMinX(content) + CGFloat(point.x), NSMaxY(content) - CGFloat(point.y)), out);
+    return appKitDisplayPositionAt(NSMakePoint(NSMinX(content) + CGFloat(point.x), NSMaxY(content) - CGFloat(point.y)), out);
 }
 
 bool pointFromDisplay(const PrAppWindow* window, const PrAppDisplayPosition* position, PrVec2* out) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
-    NSScreen* screen = cocoaScreenOf(position->display);
+    PrAppKitWindow* object = appKitObjectOf(window);
+    NSScreen* screen = appKitScreenOf(position->display);
     if (object.host.headless || screen == nil)
         return false;
     NSRect frame = screen.frame;
@@ -154,32 +154,32 @@ bool pointFromDisplay(const PrAppWindow* window, const PrAppDisplayPosition* pos
 void setState(PrAppWindow* window, PrAppWindowState wanted);
 
 void setPosition(PrAppWindow* window, const PrAppDisplayPosition* position) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     NSWindow* frame = object.window;
     if (object.host.headless || (frame.styleMask & NSWindowStyleMaskFullScreen) != 0)
         return;
     if (frame.zoomed)
         setState(window, PrAppWindowState_Normal);
-    NSScreen* screen = cocoaScreenOf(position->display);
+    NSScreen* screen = appKitScreenOf(position->display);
     if (screen != nil) {
-        cocoaPlaceOnScreen(frame, screen, position->position);
+        appKitPlaceOnScreen(frame, screen, position->position);
         return;
     }
     // A display that is gone gives the main display, at the same position if the window fits there.
     screen = NSScreen.screens.firstObject;
     NSRect content = [frame contentRectForFrameRect:frame.frame];
-    PrRect work = cocoaRectOnScreen(screen, screen.visibleFrame);
+    PrRect work = appKitRectOnScreen(screen, screen.visibleFrame);
     bool fits = position->position.x >= work.left && position->position.y >= work.top &&
         position->position.x + float(content.size.width) <= work.right &&
         position->position.y + float(content.size.height) <= work.bottom;
     if (fits)
-        cocoaPlaceOnScreen(frame, screen, position->position);
+        appKitPlaceOnScreen(frame, screen, position->position);
     else
-        cocoaCenterOnScreen(frame, screen);
+        appKitCenterOnScreen(frame, screen);
 }
 
 void setState(PrAppWindow* window, PrAppWindowState wanted) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     NSWindow* frame = object.window;
     if (object.host.headless)
         return;
@@ -216,12 +216,12 @@ void setState(PrAppWindow* window, PrAppWindowState wanted) {
 
 // An overlay is the key window without its application being active.
 bool isActive(const PrAppWindow* window) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     return object.window.isKeyWindow && (NSApp.isActive || object.overlay);
 }
 
 void focus(PrAppWindow* window) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     object.shown = YES;
     object.showing = NO;
     if (object.host.headless)
@@ -236,7 +236,7 @@ void focus(PrAppWindow* window) {
 }
 
 void setVisible(PrAppWindow* window, bool visible) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     if (object.shown == visible)
         return;
     object.shown = visible;
@@ -253,32 +253,32 @@ void setVisible(PrAppWindow* window, bool visible) {
 }
 
 bool isVisible(const PrAppWindow* window) {
-    return cocoaObjectOf(window).shown;
+    return appKitObjectOf(window).shown;
 }
 
 void setBackdrop(PrAppWindow* window, PrAppWindowBackdrop backdrop) {
-    [cocoaObjectOf(window) setBackdropOf:backdrop];
+    [appKitObjectOf(window) setBackdropOf:backdrop];
 }
 
 void setPointerPassthrough(PrAppWindow* window, bool passthrough) {
-    cocoaObjectOf(window).window.ignoresMouseEvents = passthrough;
+    appKitObjectOf(window).window.ignoresMouseEvents = passthrough;
 }
 
 // The window locks the pointer for Locked and LockedRaw alike, as AppKit reports only the cursor's movement.
 void setPointerMode(PrAppWindow* window, PrAppPointerMode mode) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     object.lockedMode = mode;
     [object setConfinement:mode == PrAppPointerMode_Confined];
     [object setLock:mode == PrAppPointerMode_Locked || mode == PrAppPointerMode_LockedRaw];
 }
 
 PrAppPointerMode pointerMode(const PrAppWindow* window) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     return object.locked || object.confined ? object.lockedMode : PrAppPointerMode(PrAppPointerMode_Free);
 }
 
 void setAspectRatio(PrAppWindow* window, float ratio) {
-    NSWindow* frame = cocoaObjectOf(window).window;
+    NSWindow* frame = appKitObjectOf(window).window;
     // The aspect ratio and the resize increments exclude each other, so increments of one point clear the ratio.
     if (ratio > 0)
         frame.contentAspectRatio = NSMakeSize(CGFloat(ratio), 1);
@@ -287,39 +287,39 @@ void setAspectRatio(PrAppWindow* window, float ratio) {
 }
 
 void setPopupPlacement(PrAppWindow* window, const PrAppPopupPlacement* placement) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     object.popup = *placement;
     [object place];
 }
 
 // A headless window is drawn off the screen, where nothing covers it.
 bool isOccluded(const PrAppWindow* window) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     if (object.host.headless || !object.window.isVisible)
         return false;
     return (object.window.occlusionState & NSWindowOcclusionStateVisible) == 0;
 }
 
 void setOpacity(PrAppWindow* window, float opacity) {
-    cocoaObjectOf(window).window.alphaValue = CGFloat(MIN(MAX(opacity, 0.0f), 1.0f));
+    appKitObjectOf(window).window.alphaValue = CGFloat(MIN(MAX(opacity, 0.0f), 1.0f));
 }
 
 void setKeepAbove(PrAppWindow* window, bool above) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     if (object.role == PrAppWindowRole_Normal)
         object.window.level = above ? NSFloatingWindowLevel : NSNormalWindowLevel;
 }
 
 // The Dock shows one progress for the application, so the window that set it last decides it.
 void setProgress(PrAppWindow* window, PrAppProgressState state, float progress) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     if (!object.host.headless)
         [object.host setDockProgress:state value:progress];
 }
 
 void setDocument(PrAppWindow* window, PrStringView path, bool edited) {
-    NSWindow* frame = cocoaObjectOf(window).window;
-    frame.representedURL = path.size != 0 ? [NSURL fileURLWithPath:cocoaStringOf(path)] : nil;
+    NSWindow* frame = appKitObjectOf(window).window;
+    frame.representedURL = path.size != 0 ? [NSURL fileURLWithPath:appKitStringOf(path)] : nil;
     frame.documentEdited = edited;
 }
 
@@ -330,21 +330,21 @@ void requestAttention(PrAppWindow*) {
 
 PrStatus surface(const PrAppWindow* window, PrAppSurface* out) {
     out->kind = PrAppSurfaceKind_NsView;
-    out->handle = (__bridge void*)cocoaObjectOf(window).view;
+    out->handle = (__bridge void*)appKitObjectOf(window).view;
     return PrStatus_Ok;
 }
 
 } // namespace
 
-PrAppFrame cocoaFrameState(PrAppWindow* window) {
-    return [cocoaObjectOf(window) frameAt:cocoaUptime()];
+PrAppFrame appKitFrameState(PrAppWindow* window) {
+    return [appKitObjectOf(window) frameAt:appKitUptime()];
 }
 
-void cocoaWindowDestroy(PrAppWindow* window) {
-    CocoaWindow* cocoa = static_cast<CocoaWindow*>(window);
-    if (appWindowDeliveryDeferDestroy(cocoa->delivery))
+void appKitWindowDestroy(PrAppWindow* window) {
+    AppKitWindow* appKit = static_cast<AppKitWindow*>(window);
+    if (appWindowDeliveryDeferDestroy(appKit->delivery))
         return;
-    PrCocoaWindow* object = (__bridge_transfer PrCocoaWindow*)cocoa->object;
+    PrAppKitWindow* object = (__bridge_transfer PrAppKitWindow*)appKit->object;
     [object.host forget:window];
     // A file dialog on the window closes as the user's cancel.
     if (NSWindow* sheet = object.window.attachedSheet)
@@ -356,31 +356,31 @@ void cocoaWindowDestroy(PrAppWindow* window) {
     object.menuBar = nil;
     [object close];
     [object.host showMenuBar];
-    CocoaDrag& drag = static_cast<CocoaApp*>(cocoa->app)->drag;
+    AppKitDrag& drag = static_cast<AppKitApp*>(appKit->app)->drag;
     if (drag.window == window)
         drag.window = nullptr;
-    appTitleBarRegionsReset(cocoa->titleBar);
-    appDragPendingReset(cocoa->drag);
-    prRawStringReset(&cocoa->title);
-    prMemoryFree(cocoa);
+    appTitleBarRegionsReset(appKit->titleBar);
+    appDragPendingReset(appKit->drag);
+    prRawStringReset(&appKit->title);
+    prMemoryFree(appKit);
 }
 
-void cocoaRequestFrame(PrAppWindow* window) {
-    [cocoaObjectOf(window) requestFrame];
+void appKitRequestFrame(PrAppWindow* window) {
+    [appKitObjectOf(window) requestFrame];
 }
 
-void cocoaRequestFrameAt(PrAppWindow* window, double time) {
-    [cocoaObjectOf(window) requestFrameAt:time];
+void appKitRequestFrameAt(PrAppWindow* window, double time) {
+    [appKitObjectOf(window) requestFrameAt:time];
 }
 
-void cocoaSetCursor(PrAppWindow* window, PrAppCursor cursor) {
+void appKitSetCursor(PrAppWindow* window, PrAppCursor cursor) {
     // A cursor is made once per shape, so that setting the same shape again finds the view's cursor unchanged. Only the
     // main thread reads the table.
     static NSCursor* made[PrAppCursor_Count];
     PrAppCursor shape = cursor < PrAppCursor_Count ? cursor : PrAppCursor_Arrow;
     if (made[shape] == nil)
-        made[shape] = cocoaCursorFor(shape);
-    PrCocoaWindow* object = cocoaObjectOf(window);
+        made[shape] = appKitCursorFor(shape);
+    PrAppKitWindow* object = appKitObjectOf(window);
     NSCursor* selected = made[shape];
     if (object.view.cursor == selected)
         return;
@@ -388,25 +388,25 @@ void cocoaSetCursor(PrAppWindow* window, PrAppCursor cursor) {
     [object.window invalidateCursorRectsForView:object.view];
 }
 
-void cocoaApplyTextInput(PrAppWindow* window) {
-    const CocoaWindow* source = textInputSource(window);
+void appKitApplyTextInput(PrAppWindow* window) {
+    const AppKitWindow* source = textInputSource(window);
     if (source != nullptr)
         setTextInputRect(window, source->textInput);
-    PrCocoaWindow* object = cocoaObjectOf(window);
+    PrAppKitWindow* object = appKitObjectOf(window);
     bool password = source != nullptr && source->textInputKind == PrAppTextInputKind_Password;
     [object setSecureInput:password && object.window.isKeyWindow];
 }
 
-PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow* PR_NULLABLE* PR_NONNULL out) {
-    PrCocoaHost* host = cocoaHostOf(app);
+PrStatus appKitWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow* PR_NULLABLE* PR_NONNULL out) {
+    PrAppKitHost* host = appKitHostOf(app);
     if (!host.running)
         return PrStatus_InvalidState;
-    if (static_cast<CocoaApp*>(app)->windowModel == PrAppWindowModel_Single && host.windows.count != 0)
+    if (static_cast<AppKitApp*>(app)->windowModel == PrAppWindowModel_Single && host.windows.count != 0)
         return PrStatus_NotSupported;
-    CocoaWindow* window = allocZeroed<CocoaWindow>();
-    window->destroyFn = cocoaWindowDestroy;
+    AppKitWindow* window = allocZeroed<AppKitWindow>();
+    window->destroyFn = appKitWindowDestroy;
     window->appFn = windowApp;
-    window->requestFrameFn = cocoaRequestFrame;
+    window->requestFrameFn = appKitRequestFrame;
     window->setTitleFn = setTitle;
     window->titleFn = title;
     window->setExtentFn = setExtent;
@@ -426,8 +426,8 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
     window->setPointerPassthroughFn = setPointerPassthrough;
     window->setPointerModeFn = setPointerMode;
     window->pointerModeFn = pointerMode;
-    window->dragStartFn = cocoaDragStart;
-    window->shareFn = cocoaShare;
+    window->dragStartFn = appKitDragStart;
+    window->shareFn = appKitShare;
     window->surfaceFn = surface;
     window->setAspectRatioFn = setAspectRatio;
     window->setPopupPlacementFn = setPopupPlacement;
@@ -436,12 +436,12 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
     window->setKeepAboveFn = setKeepAbove;
     window->setProgressFn = setProgress;
     window->setDocumentFn = setDocument;
-    window->setMenuBarFn = cocoaWindowSetMenuBar;
-    window->showMenuFn = cocoaShowMenu;
-    window->dragPromiseEndFn = cocoaDragPromiseEnd;
+    window->setMenuBarFn = appKitWindowSetMenuBar;
+    window->showMenuFn = appKitShowMenu;
+    window->dragPromiseEndFn = appKitDragPromiseEnd;
     window->app = app;
     window->delivery.handler = desc->handler;
-    PrCocoaWindow* object = [[PrCocoaWindow alloc] init];
+    PrAppKitWindow* object = [[PrAppKitWindow alloc] init];
     object.record = window;
     object.host = host;
     object.role = desc->role;
@@ -450,7 +450,7 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
     bool popup = desc->role == PrAppWindowRole_Popup;
     bool dialog = desc->role == PrAppWindowRole_Dialog;
     if (desc->parent != nullptr && (popup || dialog))
-        object.parent = cocoaObjectOf(desc->parent);
+        object.parent = appKitObjectOf(desc->parent);
     object.modal = dialog && desc->modal && object.parent != nil;
     object.sheet = object.modal && desc->decoration != PrAppWindowDecoration_None;
     object.popup = desc->popup;
@@ -477,7 +477,7 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
     }
     NSRect content = NSMakeRect(0, 0, size.width, size.height);
     if (object.overlay) {
-        PrCocoaPanel* panel = [[PrCocoaPanel alloc] initWithContentRect:content styleMask:style
+        PrAppKitPanel* panel = [[PrAppKitPanel alloc] initWithContentRect:content styleMask:style
             backing:NSBackingStoreBuffered defer:NO];
         panel.floatingPanel = YES;
         panel.hidesOnDeactivate = NO;
@@ -490,7 +490,7 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
         panel.hasShadow = NO;
         object.window = panel;
     } else if (popup) {
-        PrCocoaPanel* panel = [[PrCocoaPanel alloc] initWithContentRect:content styleMask:style
+        PrAppKitPanel* panel = [[PrAppKitPanel alloc] initWithContentRect:content styleMask:style
             backing:NSBackingStoreBuffered defer:NO];
         panel.refusesKey = YES;
         panel.hidesOnDeactivate = NO;
@@ -499,13 +499,13 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
         panel.hasShadow = YES;
         object.window = panel;
     } else if (borderless) {
-        object.window = [[PrCocoaBorderlessWindow alloc] initWithContentRect:content styleMask:style
+        object.window = [[PrAppKitBorderlessWindow alloc] initWithContentRect:content styleMask:style
             backing:NSBackingStoreBuffered defer:NO];
         object.window.hasShadow = YES;
     } else {
         object.window = [[NSWindow alloc] initWithContentRect:content styleMask:style backing:NSBackingStoreBuffered defer:NO];
     }
-    object.window.title = cocoaStringOf(desc->title);
+    object.window.title = appKitStringOf(desc->title);
     window->title = prRawStringCopy(desc->title);
     object.window.releasedWhenClosed = NO;
     object.window.ignoresMouseEvents = desc->pointerPassthrough;
@@ -517,7 +517,7 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
         // The program's drag regions move the window, and nothing else in the content does.
         object.window.movable = NO;
     }
-    object.view = [[PrCocoaView alloc] initWithFrame:object.window.contentView.bounds];
+    object.view = [[PrAppKitView alloc] initWithFrame:object.window.contentView.bounds];
     object.view.owner = object;
     object.view.host = host;
     object.view.cursor = NSCursor.arrowCursor;
@@ -527,7 +527,7 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
     object.view.layer.backgroundColor = NSColor.blackColor.CGColor;
     object.window.contentView = object.view;
     object.window.delegate = object;
-    NSMutableArray<NSPasteboardType>* types = [NSMutableArray arrayWithArray:cocoaImageTypes()];
+    NSMutableArray<NSPasteboardType>* types = [NSMutableArray arrayWithArray:appKitImageTypes()];
     [types addObjectsFromArray:@[
         NSPasteboardTypeString, NSPasteboardTypeHTML, NSPasteboardTypeURL, NSPasteboardTypeFileURL, kPayloadType,]];
     [object.view registerForDraggedTypes:types];
@@ -539,13 +539,13 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
     } else {
         // By default, a window cascades from the last, and the first is centered. A dialog is centered on its parent,
         // and a popup goes where its placement puts it.
-        PrCocoaWindow* previous = host.windows.lastObject;
-        NSScreen* chosen = desc->placement == PrAppWindowPlacement_Position ? cocoaScreenOf(desc->position.display) : nil;
+        PrAppKitWindow* previous = host.windows.lastObject;
+        NSScreen* chosen = desc->placement == PrAppWindowPlacement_Position ? appKitScreenOf(desc->position.display) : nil;
         NSWindow* parent = object.parent.window;
         if (popup && parent != nil) {
             [object place];
         } else if (chosen != nil) {
-            cocoaPlaceOnScreen(object.window, chosen, desc->position.position);
+            appKitPlaceOnScreen(object.window, chosen, desc->position.position);
         } else if (parent != nil) {
             NSRect around = parent.frame;
             NSRect frame = object.window.frame;
@@ -553,7 +553,7 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
                 NSMidY(around) - frame.size.height / 2)];
         } else if (desc->placement == PrAppWindowPlacement_Center) {
             NSScreen* active = NSApp.keyWindow.screen;
-            cocoaCenterOnScreen(object.window, active != nil ? active : NSScreen.screens.firstObject);
+            appKitCenterOnScreen(object.window, active != nil ? active : NSScreen.screens.firstObject);
         } else if (previous != nil) {
             [object.window cascadeTopLeftFromPoint:NSMakePoint(NSMinX(previous.window.frame),
                 NSMaxY(previous.window.frame))];
@@ -577,7 +577,7 @@ PrStatus cocoaWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
 
 using namespace pr_impl;
 
-@implementation PrCocoaPanel
+@implementation PrAppKitPanel
 - (BOOL)canBecomeKeyWindow {
     return !self.refusesKey;
 }
@@ -586,7 +586,7 @@ using namespace pr_impl;
 }
 @end
 
-@implementation PrCocoaBorderlessWindow
+@implementation PrAppKitBorderlessWindow
 - (BOOL)canBecomeKeyWindow {
     return YES;
 }
@@ -597,13 +597,13 @@ using namespace pr_impl;
 
 // The Dock has no states of progress, so the bar takes the taskbar's colors: the accent color, yellow while paused and
 // red for an error. An indeterminate bar is striped. The tile draws only when the Dock asks it to, so nothing animates.
-@implementation PrCocoaDockProgress
+@implementation PrAppKitDockProgress
 - (void)drawRect:(NSRect)dirty {
     (void)dirty;
     NSRect bounds = self.bounds;
     // An executable outside a bundle has no icon of its own, and the Dock shows the executable's icon from the Finder.
     NSImage* icon = NSApp.applicationIconImage;
-    if (!cocoaIsBundled())
+    if (!appKitIsBundled())
         icon = [NSWorkspace.sharedWorkspace iconForFile:NSBundle.mainBundle.executablePath];
     [icon drawInRect:bounds];
     CGFloat height = bounds.size.height * 0.12;
@@ -647,7 +647,7 @@ using namespace pr_impl;
 }
 @end
 
-@implementation PrCocoaView {
+@implementation PrAppKitView {
     // The ids of the touches on the trackpad, by their identities (NSTouch::identity).
     NSMutableDictionary<id, NSNumber*>* _touchIds;
 }
@@ -690,14 +690,14 @@ using namespace pr_impl;
 }
 // Delivers an event to the view's window. A window that a modal dialog blocks takes no input.
 - (void)deliver:(const PrAppEvent&)event {
-    PrCocoaWindow* owner = self.owner;
+    PrAppKitWindow* owner = self.owner;
     bool input = event.kind >= PrAppEventKind_PointerMove && event.kind <= PrAppEventKind_CompositionEnd;
     if (owner.record != nullptr && !(input && owner.blocker != nil))
         [owner.host deliver:event to:owner.record];
 }
 // Delivers the pointer's crossing into the view or out of it, at `position`, once for each crossing.
 - (void)cross:(PrAppEventKind)kind at:(PrVec2)position time:(double)time modifiers:(NSEventModifierFlags)modifiers {
-    PrCocoaWindow* owner = self.owner;
+    PrAppKitWindow* owner = self.owner;
     if (owner == nil)
         return;
     if (kind == PrAppEventKind_PointerEnter) {
@@ -722,7 +722,7 @@ using namespace pr_impl;
     PrAppEvent event{};
     event.kind = kind;
     event.time = time;
-    event.modifiers = cocoaModifiersOf(modifiers);
+    event.modifiers = appKitModifiersOf(modifiers);
     event.pointer = PrAppPointerEvent{
         .position = position,
         .type = PrAppPointerType_Mouse,
@@ -749,14 +749,14 @@ using namespace pr_impl;
 - (void)pointer:(NSEvent*)source kind:(PrAppEventKind)kind {
     NSPoint p = [self convertPoint:source.locationInWindow fromView:nil];
     PrVec2 position{float(p.x), float(p.y)};
-    PrCocoaWindow* owner = self.owner;
+    PrAppKitWindow* owner = self.owner;
     // A locked pointer stays where the lock began, and reports only its movement.
     if (owner.locked)
         position = owner.lockedAt;
     PrAppEvent event{};
     event.kind = kind;
     event.time = source.timestamp;
-    event.modifiers = cocoaModifiersOf(source.modifierFlags);
+    event.modifiers = appKitModifiersOf(source.modifierFlags);
     // The pointer is over the view before it moves or presses there, though the tracking area may not have seen it
     // come.
     if (kind != PrAppEventKind_Scroll && kind != PrAppEventKind_PointerUp && !owner.inside)
@@ -789,7 +789,7 @@ using namespace pr_impl;
     // A pen on a tablet reports as the mouse, with the tablet's measures in the event. Only mouse events have subtypes.
     bool pen = source.subtype == NSEventSubtypeTabletPoint;
     if (pen)
-        cocoaDescribePen(source, self.owner.eraser, &event);
+        appKitDescribePen(source, self.owner.eraser, &event);
     // A button that the window released as it stopped being the key window reports no release of its own.
     if (kind == PrAppEventKind_PointerDown) {
         event.pointer.clicks = uint32_t(source.clickCount);
@@ -829,7 +829,7 @@ using namespace pr_impl;
 }
 - (void)mouseDown:(NSEvent*)e {
     // A press on a window that a modal dialog blocks gives the dialog the keyboard.
-    if (PrCocoaWindow* blocker = self.owner.blocker) {
+    if (PrAppKitWindow* blocker = self.owner.blocker) {
         [blocker.window makeKeyWindow];
         return;
     }
@@ -864,7 +864,7 @@ using namespace pr_impl;
     PrAppEvent event{};
     event.kind = PrAppEventKind_Gesture;
     event.time = source.timestamp;
-    event.modifiers = cocoaModifiersOf(source.modifierFlags);
+    event.modifiers = appKitModifiersOf(source.modifierFlags);
     event.gesture.kind = kind;
     event.gesture.position = PrVec2{float(p.x), float(p.y)};
     event.gesture.phase = PrAppGesturePhase_Begin;
@@ -920,7 +920,7 @@ using namespace pr_impl;
     PrAppEvent event{};
     event.kind = PrAppEventKind_TrackpadTouches;
     event.time = e.timestamp;
-    event.modifiers = cocoaModifiersOf(e.modifierFlags);
+    event.modifiers = appKitModifiersOf(e.modifierFlags);
     event.trackpad.touches = touches.data;
     event.trackpad.count = touches.count;
     [self deliver:event];
@@ -941,29 +941,29 @@ using namespace pr_impl;
 // Delivers the key event of `source`. If `mark` is not kNoMark, the host holds the events since `mark`, and the key
 // goes ahead of them.
 - (void)key:(NSEvent*)source kind:(PrAppEventKind)kind composing:(BOOL)composing mark:(uint32_t)mark {
-    CocoaMacKey mac = cocoaMacKeyOf(source);
+    AppKitMacKey mac = appKitMacKeyOf(source);
     PrAppEvent event{};
     event.kind = kind;
     event.time = source.timestamp;
     event.keyboard.code = mac.code;
-    event.modifiers = cocoaModifiersOf(source.modifierFlags);
+    event.modifiers = appKitModifiersOf(source.modifierFlags);
     event.keyboard.repeat = kind == PrAppEventKind_KeyDown && source.isARepeat;
     event.keyboard.composing = composing;
     PrRawString text = prRawStringNull();
     if (mac.key != PrAppKey_Unknown) {
         event.keyboard.key = mac.key;
     } else {
-        if (NSString* character = cocoaCharacterOf(source)) {
+        if (NSString* character = appKitCharacterOf(source)) {
             text = prAppleNSStringToRawString(character);
             event.keyboard.text = prRawStringView(&text);
         }
         // A key that is dead with Option held, as Option-E is in the US layout, means its key in a shortcut.
         NSEventModifierFlags chord =
             NSEventModifierFlagOption | NSEventModifierFlagCommand | NSEventModifierFlagControl;
-        bool dead = (source.modifierFlags & chord) == 0 && cocoaIsDead(source);
-        event.keyboard.key = dead ? PrAppKey_Dead : cocoaKeyOfCharacter(source);
+        bool dead = (source.modifierFlags & chord) == 0 && appKitIsDead(source);
+        event.keyboard.key = dead ? PrAppKey_Dead : appKitKeyOfCharacter(source);
     }
-    PrCocoaWindow* owner = self.owner;
+    PrAppKitWindow* owner = self.owner;
     [owner key:event.keyboard.code down:kind == PrAppEventKind_KeyDown key:event.keyboard.key];
     if (mark == kNoMark)
         [self deliver:event];
@@ -994,21 +994,21 @@ using namespace pr_impl;
 }
 // A modifier key reports a change of the flags, which says whether the key went down or up.
 - (void)flagsChanged:(NSEvent*)e {
-    CocoaMacKey mac = cocoaMacKeyOf(e);
+    AppKitMacKey mac = appKitMacKeyOf(e);
     if (mac.key == PrAppKey_Unknown)
         return;
-    [self key:e kind:cocoaModifierDown(e, mac.code) ? PrAppEventKind_KeyDown : PrAppEventKind_KeyUp];
+    [self key:e kind:appKitModifierDown(e, mac.code) ? PrAppEventKind_KeyDown : PrAppEventKind_KeyUp];
 }
 - (void)deliverText:(NSString*)text kind:(PrAppEventKind)kind selection:(NSRange)selection {
     PrRawString utf8 = prAppleNSStringToRawString(text);
     PrAppEvent event{};
     event.kind = kind;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     event.input.text = prRawStringView(&utf8);
     if (selection.location != NSNotFound)
         event.input.selection = PrAppTextRange{
-            cocoaUtf8Length(text, selection.location),
-            cocoaUtf8Length(text, selection.location + selection.length),
+            appKitUtf8Length(text, selection.location),
+            appKitUtf8Length(text, selection.location + selection.length),
         };
     [self deliver:event];
     prRawStringReset(&utf8);
@@ -1040,7 +1040,7 @@ using namespace pr_impl;
         return;
     PrAppEvent event{};
     event.kind = PrAppEventKind_MenuItem;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     event.tag = uint64_t([(NSMenuItem*)sender tag]);
     [self deliver:event];
 }
@@ -1118,16 +1118,16 @@ using namespace pr_impl;
 // NSDraggingDestination. The window answers a drag with the drop operation of its latest output. Each of the drag's
 // events requests a frame, so that the program answers the drag's latest position.
 - (PrAppDragEvent)dragOf:(id<NSDraggingInfo>)sender {
-    PrCocoaWindow* owner = self.owner;
+    PrAppKitWindow* owner = self.owner;
     NSPasteboard* board = sender.draggingPasteboard;
     NSPoint p = [self convertPoint:sender.draggingLocation fromView:nil];
     PrAppDragEvent drag{
         .position = PrVec2{float(p.x), float(p.y)},
-        .forms = cocoaFormsOf(board),
-        .operations = cocoaOperationsOf(sender.draggingSourceOperationMask),
+        .forms = appKitFormsOf(board),
+        .operations = appKitOperationsOf(sender.draggingSourceOperationMask),
     };
-    const CocoaDrag& carried = static_cast<CocoaApp*>(owner.host.app)->drag;
-    if (cocoaCarriesDrag(board, carried)) {
+    const AppKitDrag& carried = static_cast<AppKitApp*>(owner.host.app)->drag;
+    if (appKitCarriesDrag(board, carried)) {
         drag.fromThisWindow = carried.window == owner.record;
         if (carried.hasPayload) {
             drag.forms |= PrAppDataFormFlag_Payload;
@@ -1137,7 +1137,7 @@ using namespace pr_impl;
     return drag;
 }
 - (void)deliverDrag:(PrAppEventKind)kind drag:(const PrAppDragEvent&)drag {
-    PrAppEvent event{.kind = kind, .modifiers = cocoaModifiersOf(NSEvent.modifierFlags), .time = cocoaUptime(), .drag = drag};
+    PrAppEvent event{.kind = kind, .modifiers = appKitModifiersOf(NSEvent.modifierFlags), .time = appKitUptime(), .drag = drag};
     [self deliver:event];
     [self.owner requestFrame];
 }
@@ -1146,16 +1146,16 @@ using namespace pr_impl;
     PrAppWindow* record = self.owner.record;
     if (record == nullptr)
         return PrAppDragOperation_None;
-    PrAppDragOperation wanted = static_cast<CocoaWindow*>(record)->dropOperation;
-    return appDragAnswer(wanted, cocoaOperationsOf(sender.draggingSourceOperationMask));
+    PrAppDragOperation wanted = static_cast<AppKitWindow*>(record)->dropOperation;
+    return appDragAnswer(wanted, appKitOperationsOf(sender.draggingSourceOperationMask));
 }
 - (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender {
     [self deliverDrag:PrAppEventKind_DragEnter drag:[self dragOf:sender]];
-    return cocoaAnswerOf([self answer:sender], sender.draggingSourceOperationMask);
+    return appKitAnswerOf([self answer:sender], sender.draggingSourceOperationMask);
 }
 - (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender {
     [self deliverDrag:PrAppEventKind_DragOver drag:[self dragOf:sender]];
-    return cocoaAnswerOf([self answer:sender], sender.draggingSourceOperationMask);
+    return appKitAnswerOf([self answer:sender], sender.draggingSourceOperationMask);
 }
 - (void)draggingExited:(id<NSDraggingInfo>)sender {
     if (sender != nil)
@@ -1177,8 +1177,8 @@ using namespace pr_impl;
     PrAppDragEvent drag = [self dragOf:sender];
     drag.operation = operation;
     AppDataStore* store = allocZeroed<AppDataStore>();
-    cocoaReadDrop(sender.draggingPasteboard, *store);
-    drag.drop = appDataSourceCreate(static_cast<CocoaApp*>(self.owner.host.app)->sources, store, nullptr);
+    appKitReadDrop(sender.draggingPasteboard, *store);
+    drag.drop = appDataSourceCreate(static_cast<AppKitApp*>(self.owner.host.app)->sources, store, nullptr);
     [self deliverDrag:PrAppEventKind_Drop drag:drag];
     return YES;
 }
@@ -1188,41 +1188,41 @@ using namespace pr_impl;
     (void)session;
     (void)context;
     PrAppWindow* record = self.owner.record;
-    return record != nullptr ? cocoaMaskOf(static_cast<CocoaWindow*>(record)->drag.operations) : NSDragOperationNone;
+    return record != nullptr ? appKitMaskOf(static_cast<AppKitWindow*>(record)->drag.operations) : NSDragOperationNone;
 }
 - (void)draggingSession:(NSDraggingSession*)session endedAtPoint:(NSPoint)screenPoint
         operation:(NSDragOperation)operation {
     (void)session;
     (void)screenPoint;
-    PrCocoaHost* host = self.host;
-    if (PrCocoaWindow* owner = self.owner) {
-        [owner endDrag:cocoaOperationOf(operation)];
+    PrAppKitHost* host = self.host;
+    if (PrAppKitWindow* owner = self.owner) {
+        [owner endDrag:appKitOperationOf(operation)];
     } else if (host.app != nullptr) {
         // The window closed during the drag, and receives no DragEnd. The drag is over all the same.
-        CocoaDrag& carried = static_cast<CocoaApp*>(host.app)->drag;
+        AppKitDrag& carried = static_cast<AppKitApp*>(host.app)->drag;
         if (carried.window == nullptr)
-            carried = CocoaDrag{};
+            carried = AppKitDrag{};
     }
     if (host.dragSource == self)
         host.dragSource = nil;
 }
 @end
 
-@implementation PrCocoaWindow {
+@implementation PrAppKitWindow {
     // The promises of the window's last drag, which hold their providers' delegates, since a provider's delegate is a
     // weak reference. The promises that wait for the program, by index, each a pair of its destination and AppKit's
     // completion.
-    NSMutableArray<PrCocoaPromise*>* _promises;
+    NSMutableArray<PrAppKitPromise*>* _promises;
     NSMutableDictionary<NSNumber*, NSArray*>* _promised;
     // The pointer buttons that are down, by bit of PrAppPointerEvent::button, where the pointer last was, and the keys
     // that are down, by their position. The window releases them when it stops being the key window, as the releases
     // then go to another window.
     uint32_t _buttons;
     PrVec2 _pointer;
-    CocoaHeldKey _keys[PrAppKeyCode_Count];
+    AppKitHeldKey _keys[PrAppKeyCode_Count];
 }
 - (void)frame {
-    PrCocoaHost* host = self.host;
+    PrAppKitHost* host = self.host;
     // A hidden window has no frames, but for the one that it shows with.
     if (self.record == nullptr || !host.running || (!self.shown && !self.showing))
         return;
@@ -1231,11 +1231,11 @@ using namespace pr_impl;
         [self requestFrame];
         return;
     }
-    double now = cocoaUptime();
+    double now = appKitUptime();
     PrAppFrame frame = [self frameAt:now];
     self.lastFrame = now;
     [host beginCallback];
-    cocoaDeliverFrame(self.record, frame);
+    appKitDeliverFrame(self.record, frame);
     [host endCallback];
     [self startDrag];
 }
@@ -1246,7 +1246,7 @@ using namespace pr_impl;
     frame.delta = self.lastFrame == 0 ? 0 : now - self.lastFrame;
     frame.extent.x = float(self.view.bounds.size.width);
     frame.extent.y = float(self.view.bounds.size.height);
-    frame.display = cocoaDisplayOf(self.window.screen, self.window.backingScaleFactor);
+    frame.display = appKitDisplayOf(self.window.screen, self.window.backingScaleFactor);
     frame.titleBar = [self titleBar];
     frame.backdrop = self.backdrop;
     frame.preferences = prAppUserPreferencesDefault();
@@ -1297,7 +1297,7 @@ using namespace pr_impl;
     if (!self.customTitleBar || self.record == nullptr || event.buttonNumber != 0)
         return NO;
     NSPoint p = [self.view convertPoint:event.locationInWindow fromView:nil];
-    const AppTitleBarRegions& regions = static_cast<CocoaWindow*>(self.record)->titleBar;
+    const AppTitleBarRegions& regions = static_cast<AppKitWindow*>(self.record)->titleBar;
     switch (appTitleBarRegionAt(regions, PrVec2{float(p.x), float(p.y)})) {
         case PrAppTitleBarRegionKind_Drag:
             if (event.clickCount == 2) {
@@ -1331,7 +1331,7 @@ using namespace pr_impl;
     if (self.record == nullptr)
         return YES;
     NSPoint p = [self.view convertPoint:event.locationInWindow fromView:nil];
-    const AppTitleBarRegions& regions = static_cast<CocoaWindow*>(self.record)->titleBar;
+    const AppTitleBarRegions& regions = static_cast<AppKitWindow*>(self.record)->titleBar;
     if (appTitleBarRegionAt(regions, PrVec2{float(p.x), float(p.y)}) != pressed)
         return YES;
     switch (pressed) {
@@ -1408,7 +1408,7 @@ using namespace pr_impl;
     // The key window then receives the mouse's moves outside its frame, which bring the cursor back.
     self.acceptedMoves = self.window.acceptsMouseMovedEvents;
     self.window.acceptsMouseMovedEvents = YES;
-    __weak PrCocoaWindow* weak = self;
+    __weak PrAppKitWindow* weak = self;
     NSEventMask mask = NSEventMaskMouseMoved | NSEventMaskLeftMouseDragged | NSEventMaskRightMouseDragged |
         NSEventMaskOtherMouseDragged | NSEventMaskMouseExited;
     self.confineMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:mask handler:^NSEvent* PR_NULLABLE(NSEvent* e) {
@@ -1441,9 +1441,9 @@ using namespace pr_impl;
 // Shows the window once no callback runs, after a frame that draws what it shows.
 - (void)showSoon {
     self.showing = YES;
-    __weak PrCocoaWindow* weak = self;
+    __weak PrAppKitWindow* weak = self;
     dispatch_async(dispatch_get_main_queue(), ^{
-        PrCocoaWindow* window = weak;
+        PrAppKitWindow* window = weak;
         if (window == nil || window.record == nullptr || !window.showing)
             return;
         if (window.host.inCallback) {
@@ -1492,7 +1492,7 @@ using namespace pr_impl;
 }
 // Blocks the window's input while `blocker`, a modal dialog without decoration, shows, and dims its content, or ends
 // the block for nil.
-- (void)blockBy:(PrCocoaWindow* PR_NULLABLE)blocker {
+- (void)blockBy:(PrAppKitWindow* PR_NULLABLE)blocker {
     self.blocker = blocker;
     if (blocker == nil) {
         [self.dim removeFromSuperlayer];
@@ -1517,7 +1517,7 @@ using namespace pr_impl;
     if (self.role != PrAppWindowRole_Popup || parent == nil || self.host.headless)
         return;
     NSRect content = [self.window contentRectForFrameRect:self.window.frame];
-    NSRect placed = cocoaPopupFrame(parent, content.size, self.popup);
+    NSRect placed = appKitPopupFrame(parent, content.size, self.popup);
     [self.window setFrame:[self.window frameRectForContentRect:placed] display:YES];
 }
 // Holds or releases secure event input, which keeps other processes from reading the keys of a password. The system
@@ -1544,9 +1544,9 @@ using namespace pr_impl;
     if (self.host.headless) {
         if (self.timer != nil)
             return;
-        __weak PrCocoaWindow* weak = self;
+        __weak PrAppKitWindow* weak = self;
         self.timer = [NSTimer timerWithTimeInterval:1.0 / 60.0 repeats:NO block:^(NSTimer*) {
-            PrCocoaWindow* window = weak;
+            PrAppKitWindow* window = weak;
             window.timer = nil;
             [window frame];
         }];
@@ -1565,10 +1565,10 @@ using namespace pr_impl;
     self.frameTimer = nil;
     if (self.record == nullptr || !self.host.running || time == 0)
         return;
-    double delay = MAX(time - cocoaUptime(), 0.0);
-    __weak PrCocoaWindow* weak = self;
+    double delay = MAX(time - appKitUptime(), 0.0);
+    __weak PrAppKitWindow* weak = self;
     self.frameTimer = [NSTimer timerWithTimeInterval:delay repeats:NO block:^(NSTimer*) {
-        PrCocoaWindow* window = weak;
+        PrAppKitWindow* window = weak;
         window.frameTimer = nil;
         [window requestFrame];
     }];
@@ -1613,13 +1613,13 @@ using namespace pr_impl;
 // Records a key's press or release. A lock key reports its state, not its movement, and is not held.
 - (void)key:(PrAppKeyCode)code down:(BOOL)down key:(PrAppKey)key {
     if (code != PrAppKeyCode_Unidentified && code != PrAppKeyCode_CapsLock)
-        _keys[code] = CocoaHeldKey{.down = bool(down), .key = key};
+        _keys[code] = AppKitHeldKey{.down = bool(down), .key = key};
 }
 // Releases the buttons and the keys that are down, the buttons where the pointer last was, for a window that stopped
 // being the key window.
 - (void)releaseHeld {
-    PrAppModifierFlags modifiers = cocoaModifiersOf(NSEvent.modifierFlags);
-    double now = cocoaUptime();
+    PrAppModifierFlags modifiers = appKitModifiersOf(NSEvent.modifierFlags);
+    double now = appKitUptime();
     for (uint8_t button = 0; button < kPointerButtons; ++button) {
         if ((_buttons & (1u << button)) == 0)
             continue;
@@ -1654,21 +1654,21 @@ using namespace pr_impl;
 - (NSArray<NSDraggingItem*>*)dragItems:(const PrAppDataContent&)content token:(uint64_t)token {
     NSPasteboardItem* first = [[NSPasteboardItem alloc] init];
     NSMutableArray<id<NSPasteboardWriting>>* writers = [NSMutableArray arrayWithObject:first];
-    cocoaWriteContent(content, token, first, writers);
+    appKitWriteContent(content, token, first, writers);
     if (first.types.count == 0)
         [writers removeObject:first];
     // Each promised file is a provider of its own, whose type the file's extension gives. A drag replaces the last
     // drag's promises, whose indices it reuses.
-    AppDragPending& pending = static_cast<CocoaWindow*>(self.record)->drag;
+    AppDragPending& pending = static_cast<AppKitWindow*>(self.record)->drag;
     if (_promises == nil)
         _promises = [NSMutableArray array];
     [_promises removeAllObjects];
     const PrStringView* names = appStringsViews(pending.promises);
     for (uint32_t i = 0; i < pending.promises.ends.count; ++i) {
-        NSString* name = cocoaStringOf(names[i]);
+        NSString* name = appKitStringOf(names[i]);
         UTType* type = [UTType typeWithFilenameExtension:name.pathExtension];
         NSString* identifier = type != nil ? type.identifier : UTTypeData.identifier;
-        PrCocoaPromise* promise = [[PrCocoaPromise alloc] init];
+        PrAppKitPromise* promise = [[PrAppKitPromise alloc] init];
         promise.owner = self;
         promise.index = i;
         promise.name = name;
@@ -1682,7 +1682,7 @@ using namespace pr_impl;
     NSRect frame = NSMakeRect(CGFloat(_pointer.x), CGFloat(_pointer.y), 1, 1);
     NSBitmapImageRep* rep = nil;
     if (pending.previewExtent.x != 0 && pending.previewExtent.y != 0)
-        rep = cocoaImageRepOf(PrPixelView{
+        rep = appKitImageRepOf(PrPixelView{
             pending.preview.data, size_t(pending.previewExtent.x) * 4,
             pending.previewExtent,
         });
@@ -1705,13 +1705,13 @@ using namespace pr_impl;
 // Starts the drag that prAppWindowDragStart asked for, once no callback runs. A drag starts only while the primary
 // button's press is still down, and the system then takes the pointer.
 - (void)startDrag {
-    CocoaWindow* cocoa = static_cast<CocoaWindow*>(self.record);
-    if (cocoa == nullptr || !cocoa->drag.pending)
+    AppKitWindow* appKit = static_cast<AppKitWindow*>(self.record);
+    if (appKit == nullptr || !appKit->drag.pending)
         return;
-    cocoa->drag.pending = false;
-    PrCocoaHost* host = self.host;
+    appKit->drag.pending = false;
+    PrAppKitHost* host = self.host;
     NSEvent* press = self.view.press;
-    PrAppDataContent content = appDataStoreContent(cocoa->drag.content);
+    PrAppDataContent content = appDataStoreContent(appKit->drag.content);
     uint64_t token = prRandomSeed();
     bool down = (_buttons & 1u) != 0 && press != nil && !host.headless;
     NSArray<NSDraggingItem*>* items = down ? [self dragItems:content token:token] : @[];
@@ -1719,10 +1719,10 @@ using namespace pr_impl;
         [self endDrag:PrAppDragOperation_None];
         return;
     }
-    static_cast<CocoaApp*>(host.app)->drag = CocoaDrag{
+    static_cast<AppKitApp*>(host.app)->drag = AppKitDrag{
         .active = true,
         .token = token,
-        .window = cocoa,
+        .window = appKit,
         .payload = content.payload,
         .hasPayload = (content.forms & PrAppDataFormFlag_Payload) != 0,
     };
@@ -1732,30 +1732,30 @@ using namespace pr_impl;
     self.view.press = nil;
     PrAppEvent cancel{
         .kind = PrAppEventKind_PointerCancel,
-        .modifiers = cocoaModifiersOf(NSEvent.modifierFlags),
-        .time = cocoaUptime(),
+        .modifiers = appKitModifiersOf(NSEvent.modifierFlags),
+        .time = appKitUptime(),
         .pointer = {.position = _pointer, .type = PrAppPointerType_Mouse, .primary = true, .id = kPrAppPointerMouse},
     };
     [self.view deliver:cancel];
 }
 // Ends the window's drag with the operation that the target performed.
 - (void)endDrag:(PrAppDragOperation)operation {
-    CocoaWindow* cocoa = static_cast<CocoaWindow*>(self.record);
-    if (cocoa == nullptr)
+    AppKitWindow* appKit = static_cast<AppKitWindow*>(self.record);
+    if (appKit == nullptr)
         return;
-    CocoaDrag& carried = static_cast<CocoaApp*>(cocoa->app)->drag;
-    if (carried.window == cocoa)
-        carried = CocoaDrag{};
+    AppKitDrag& carried = static_cast<AppKitApp*>(appKit->app)->drag;
+    if (carried.window == appKit)
+        carried = AppKitDrag{};
     PrAppEvent event{
         .kind = PrAppEventKind_DragEnd,
-        .modifiers = cocoaModifiersOf(NSEvent.modifierFlags),
-        .time = cocoaUptime(),
+        .modifiers = appKitModifiersOf(NSEvent.modifierFlags),
+        .time = appKitUptime(),
         .drag = {
-            .forms = cocoa->drag.content.forms,
-            .operations = cocoa->drag.operations,
+            .forms = appKit->drag.content.forms,
+            .operations = appKit->drag.operations,
             .operation = operation,
             .fromThisWindow = true,
-            .payload = cocoa->drag.content.payload,
+            .payload = appKit->drag.content.payload,
         },
     };
     [self.view deliver:event];
@@ -1763,13 +1763,13 @@ using namespace pr_impl;
 // Asks the program for the promise at `index`, whose file goes to `url`. The destination is a source of that one file,
 // which the window holds until the promise ends.
 - (void)promise:(uint32_t)index to:(NSURL*)url done:(void (^)(NSError* PR_NULLABLE))done {
-    CocoaWindow* cocoa = static_cast<CocoaWindow*>(self.record);
-    if (cocoa == nullptr || !self.host.running) {
+    AppKitWindow* appKit = static_cast<AppKitWindow*>(self.record);
+    if (appKit == nullptr || !self.host.running) {
         done([NSError errorWithDomain:NSCocoaErrorDomain code:NSUserCancelledError userInfo:nil]);
         return;
     }
     [self endPromise:index status:PrStatus_Io];
-    CocoaApp* app = static_cast<CocoaApp*>(cocoa->app);
+    AppKitApp* app = static_cast<AppKitApp*>(appKit->app);
     AppDataStore* store = allocZeroed<AppDataStore>();
     PrRawString name = prAppleNSStringToRawString(url.lastPathComponent);
     appDataStoreAddFile(*store, PrAppDataFile{.name = prRawStringView(&name), .path = url.fileSystemRepresentation});
@@ -1780,7 +1780,7 @@ using namespace pr_impl;
     _promised[@(index)] = @[ @(destination), [done copy] ];
     PrAppEvent event{};
     event.kind = PrAppEventKind_DragPromise;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     event.promise = PrAppDragPromiseEvent{.index = index, .destination = destination};
     [self.view deliver:event];
 }
@@ -1795,9 +1795,9 @@ using namespace pr_impl;
     if (status != PrStatus_Ok)
         error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileWriteUnknownError userInfo:nil];
     done(error);
-    CocoaWindow* cocoa = static_cast<CocoaWindow*>(self.record);
-    if (cocoa != nullptr)
-        appDataSourceRelease(static_cast<CocoaApp*>(cocoa->app)->sources,
+    AppKitWindow* appKit = static_cast<AppKitWindow*>(self.record);
+    if (appKit != nullptr)
+        appDataSourceRelease(static_cast<AppKitApp*>(appKit->app)->sources,
             PrAppDataSource([entry[0] unsignedLongLongValue]));
 }
 // Ends every promise that waits, as the window closes.
@@ -1809,7 +1809,7 @@ using namespace pr_impl;
 - (void)windowDidBecomeKey:(NSNotification*)note {
     (void)note;
     // The modal dialog that blocks the window keeps the keyboard.
-    if (PrCocoaWindow* blocker = self.blocker) {
+    if (PrAppKitWindow* blocker = self.blocker) {
         [blocker.window makeKeyWindow];
         return;
     }
@@ -1832,7 +1832,7 @@ using namespace pr_impl;
     (void)sender;
     PrAppEvent event{};
     event.kind = PrAppEventKind_CloseRequested;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     [self.view deliver:event];
     return NO;
 }

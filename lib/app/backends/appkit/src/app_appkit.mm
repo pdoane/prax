@@ -1,14 +1,14 @@
-// The Cocoa application backend: the application, its host's delegates, and the delivery of callbacks.
+// The AppKit application backend: the application, its host's delegates, and the delivery of callbacks.
 
-#include "pr/app_cocoa.h"
-#include "app/backends/cocoa/src/app_cocoa.h"
+#include "pr/app_appkit.h"
+#include "app/backends/appkit/src/app_appkit.h"
 
-#include "app/backends/cocoa/src/app_cocoa_data.h"
-#include "app/backends/cocoa/src/app_cocoa_display.h"
-#include "app/backends/cocoa/src/app_cocoa_input.h"
-#include "app/backends/cocoa/src/app_cocoa_menu.h"
-#include "app/backends/cocoa/src/app_cocoa_shell.h"
-#include "app/backends/cocoa/src/app_cocoa_window.h"
+#include "app/backends/appkit/src/app_appkit_data.h"
+#include "app/backends/appkit/src/app_appkit_display.h"
+#include "app/backends/appkit/src/app_appkit_input.h"
+#include "app/backends/appkit/src/app_appkit_menu.h"
+#include "app/backends/appkit/src/app_appkit_shell.h"
+#include "app/backends/appkit/src/app_appkit_window.h"
 
 namespace pr_impl {
 
@@ -22,38 +22,38 @@ NSApplicationActivationPolicy activationPolicyOf(PrAppPresence presence) {
 
 // Delivers a PowerChanged event for a change of the power sources, on the main run loop.
 void powerSourcesChanged(void* context) {
-    [(__bridge PrCocoaHost*)context deliverKind:PrAppEventKind_PowerChanged];
+    [(__bridge PrAppKitHost*)context deliverKind:PrAppEventKind_PowerChanged];
 }
 
 void destroy(PrApp* app) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
-    PrCocoaHost* host = (__bridge_transfer PrCocoaHost*)cocoa->host;
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
+    PrAppKitHost* host = (__bridge_transfer PrAppKitHost*)appKit->host;
     host.app = nullptr;
-    cocoaHotkeysReset(cocoa);
-    cocoaSetAwake(app, 0);
-    cocoaKeyLabelsReset(cocoa);
-    appDisplayListReset(cocoa->displays);
-    appDataRequestsReset(cocoa->requests);
-    appDataSourcesReset(cocoa->sources);
+    appKitHotkeysReset(appKit);
+    appKitSetAwake(app, 0);
+    appKitKeyLabelsReset(appKit);
+    appDisplayListReset(appKit->displays);
+    appDataRequestsReset(appKit->requests);
+    appDataSourcesReset(appKit->sources);
     // Only a process that has posted has touched the notification center. Any other process must not touch it, because
     // the center raises an exception outside an application bundle.
     UNUserNotificationCenter* center = nil;
-    if (host.permission != CocoaPermission_Unasked)
+    if (host.permission != AppKitPermission_Unasked)
         center = UNUserNotificationCenter.currentNotificationCenter;
     if (center != nil && center.delegate == host)
         center.delegate = nil;
-    prMemoryFree(cocoa);
+    prMemoryFree(appKit);
 }
 
 void stop(PrApp* app) {
-    [cocoaHostOf(app) stop];
+    [appKitHostOf(app) stop];
 }
 
 void run(PrApp* app, PrAppHandler handler) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
-    cocoa->handler = handler;
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
+    appKit->handler = handler;
     @autoreleasepool {
-        PrCocoaHost* host = cocoaHostOf(app);
+        PrAppKitHost* host = appKitHostOf(app);
         NSApplication* application = NSApplication.sharedApplication;
         // A second instance hands its request to the first, and its run ends without a callback.
         if (![host startServices])
@@ -61,8 +61,8 @@ void run(PrApp* app, PrAppHandler handler) {
         if (!host.headless) {
             [application setActivationPolicy:activationPolicyOf(host.presence)];
             if (host.menuBar == nil) {
-                host.menuBar = [[PrCocoaMenuTree alloc] init];
-                cocoaMenuBarOf(nullptr, host.menuBar, host, nil);
+                host.menuBar = [[PrAppKitMenuTree alloc] init];
+                appKitMenuBarOf(nullptr, host.menuBar, host, nil);
             }
             application.mainMenu = host.menuBar.root;
         }
@@ -77,7 +77,7 @@ void run(PrApp* app, PrAppHandler handler) {
         [host beginCallback];
         handler.shutdown(handler.context, app);
         [host endCallback];
-        cocoaHotkeysReset(cocoa);
+        appKitHotkeysReset(appKit);
         [host stopServices];
         // The windows that the program left open close with the run.
         while (host.windows.count != 0)
@@ -88,26 +88,26 @@ void run(PrApp* app, PrAppHandler handler) {
 }
 
 void wake(PrApp* app) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
-    if (cocoa->wakePending.exchange(true))
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
+    if (appKit->wakePending.exchange(true))
         return;
     dispatch_async(dispatch_get_main_queue(), ^{
-        cocoa->wakePending.store(false);
+        appKit->wakePending.store(false);
         PrAppEvent event{};
         event.kind = PrAppEventKind_Wake;
-        event.time = cocoaUptime();
-        [(__bridge PrCocoaHost*)cocoa->host deliver:event to:nullptr];
+        event.time = appKitUptime();
+        [(__bridge PrAppKitHost*)appKit->host deliver:event to:nullptr];
     });
 }
 
 void quitCancel(PrApp* app) {
-    PrCocoaHost* host = cocoaHostOf(app);
+    PrAppKitHost* host = appKitHostOf(app);
     if (host.quitDelivering)
         host.quitCancelled = YES;
 }
 
 void setHidden(PrApp* app, bool hidden) {
-    if (cocoaHostOf(app).headless)
+    if (appKitHostOf(app).headless)
         return;
     if (hidden)
         [NSApp hide:nil];
@@ -120,81 +120,81 @@ bool isHidden(const PrApp*) {
 }
 
 void setPresence(PrApp* app, PrAppPresence presence) {
-    [cocoaHostOf(app) setPresence:presence];
+    [appKitHostOf(app) setPresence:presence];
 }
 
 PrAppLifecycle lifecycle(const PrApp* app) {
-    return [cocoaHostOf(app) lifecycle];
+    return [appKitHostOf(app) lifecycle];
 }
 
 void timerSet(PrApp* app, uint64_t tag, double delay, double interval) {
-    [cocoaHostOf(app) setTimer:tag delay:delay interval:interval];
+    [appKitHostOf(app) setTimer:tag delay:delay interval:interval];
 }
 
 void timerCancel(PrApp* app, uint64_t tag) {
-    [cocoaHostOf(app) cancelTimer:tag];
+    [appKitHostOf(app) cancelTimer:tag];
 }
 
 // Calls the window's handler with an event. A window that the program destroyed during the call is freed.
 void deliverEvent(PrAppWindow* window, const PrAppEvent& event) {
-    if (!appWindowDeliverEvent(static_cast<CocoaWindow*>(window)->delivery, window, &event, cocoaFrameState))
-        cocoaWindowDestroy(window);
+    if (!appWindowDeliverEvent(static_cast<AppKitWindow*>(window)->delivery, window, &event, appKitFrameState))
+        appKitWindowDestroy(window);
 }
 
 PrAppWindowModel windowModel(const PrApp* app) {
-    return static_cast<const CocoaApp*>(app)->windowModel;
+    return static_cast<const AppKitApp*>(app)->windowModel;
 }
 
 } // namespace
 
-PrCocoaHost* cocoaHostOf(const PrApp* app) {
-    return (__bridge PrCocoaHost*)static_cast<const CocoaApp*>(app)->host;
+PrAppKitHost* appKitHostOf(const PrApp* app) {
+    return (__bridge PrAppKitHost*)static_cast<const AppKitApp*>(app)->host;
 }
 
-PrCocoaWindow* cocoaObjectOf(const PrAppWindow* window) {
-    return (__bridge PrCocoaWindow*)static_cast<const CocoaWindow*>(window)->object;
+PrAppKitWindow* appKitObjectOf(const PrAppWindow* window) {
+    return (__bridge PrAppKitWindow*)static_cast<const AppKitWindow*>(window)->object;
 }
 
-double cocoaUptime() {
+double appKitUptime() {
     return NSProcessInfo.processInfo.systemUptime;
 }
 
-bool cocoaIsBundled() {
+bool appKitIsBundled() {
     NSBundle* bundle = NSBundle.mainBundle;
     return bundle.bundleIdentifier != nil && [bundle.bundleURL.pathExtension isEqualToString:@"app"];
 }
 
-void cocoaDeliverFrame(PrAppWindow* window, const PrAppFrame& frame) {
+void appKitDeliverFrame(PrAppWindow* window, const PrAppFrame& frame) {
     PrAppOutput output{};
-    if (!appWindowDeliverFrame(static_cast<CocoaWindow*>(window)->delivery, window, &frame, &output)) {
-        cocoaWindowDestroy(window);
+    if (!appWindowDeliverFrame(static_cast<AppKitWindow*>(window)->delivery, window, &frame, &output)) {
+        appKitWindowDestroy(window);
         return;
     }
-    cocoaSetCursor(window, output.cursor);
-    CocoaWindow* cocoa = static_cast<CocoaWindow*>(window);
+    appKitSetCursor(window, output.cursor);
+    AppKitWindow* appKit = static_cast<AppKitWindow*>(window);
     // The text input applies to the window that the output names, which may be another than the one before.
-    PrAppWindow* before = cocoa->textInputWindow;
+    PrAppWindow* before = appKit->textInputWindow;
     PrAppWindow* named = output.textInputWindow != nullptr ? output.textInputWindow : window;
-    cocoa->textInputWindow = output.hasTextInput ? named : nullptr;
-    cocoa->textInputKind = output.textInputKind;
-    cocoa->textInput = output.textInput;
-    cocoaApplyTextInput(window);
+    appKit->textInputWindow = output.hasTextInput ? named : nullptr;
+    appKit->textInputKind = output.textInputKind;
+    appKit->textInput = output.textInput;
+    appKitApplyTextInput(window);
     if (before != nullptr && before != window)
-        cocoaApplyTextInput(before);
-    if (cocoa->textInputWindow != nullptr && cocoa->textInputWindow != window && cocoa->textInputWindow != before)
-        cocoaApplyTextInput(cocoa->textInputWindow);
-    appTitleBarRegionsSet(cocoa->titleBar, output);
-    cocoa->dropOperation = output.dropOperation;
+        appKitApplyTextInput(before);
+    if (appKit->textInputWindow != nullptr && appKit->textInputWindow != window && appKit->textInputWindow != before)
+        appKitApplyTextInput(appKit->textInputWindow);
+    appTitleBarRegionsSet(appKit->titleBar, output);
+    appKit->dropOperation = output.dropOperation;
     if (output.wantsFrame)
-        cocoaRequestFrame(window);
-    cocoaRequestFrameAt(window, output.frameTime);
+        appKitRequestFrame(window);
+    appKitRequestFrameAt(window, output.frameTime);
 }
 
 } // namespace pr_impl
 
 using namespace pr_impl;
 
-@implementation PrCocoaHost {
+@implementation PrAppKitHost {
     // The events that arrived during the running callback, in order. A callback that runs a run loop of its own, as a
     // modal panel does, has events delivered within it, and they wait here, so that no callback nests in another.
     AppEventQueue _held;
@@ -229,7 +229,7 @@ using namespace pr_impl;
 }
 // The application's sources, or null once the application is gone.
 - (AppDataSources*)sources {
-    return self.app != nullptr ? &static_cast<CocoaApp*>(self.app)->sources : nullptr;
+    return self.app != nullptr ? &static_cast<AppKitApp*>(self.app)->sources : nullptr;
 }
 // Calls the program with an event, as no other callback runs. The run stops after a QuitRequested event that the
 // program did not cancel.
@@ -241,7 +241,7 @@ using namespace pr_impl;
     if (window != nullptr) {
         deliverEvent(window, event);
     } else {
-        const PrAppHandler& handler = static_cast<CocoaApp*>(self.app)->handler;
+        const PrAppHandler& handler = static_cast<AppKitApp*>(self.app)->handler;
         handler.event(handler.context, self.app, &event);
     }
     self.quitDelivering = NO;
@@ -270,7 +270,7 @@ using namespace pr_impl;
 }
 // Calls the callback of an answer's request. No other callback may be running.
 - (void)call:(AppAnswer&)answer {
-    CocoaApp* app = static_cast<CocoaApp*>(self.app);
+    AppKitApp* app = static_cast<AppKitApp*>(self.app);
     self.inCallback = YES;
     appAnswerCall(answer, app->requests, app->sources);
     self.inCallback = NO;
@@ -325,7 +325,7 @@ using namespace pr_impl;
 // Drops the held events of a window that is closing, and the window.
 - (void)forget:(PrAppWindow*)window {
     appEventQueueForget(_held, window);
-    for (PrCocoaWindow* object in self.windows) {
+    for (PrAppKitWindow* object in self.windows) {
         if (object.record == window) {
             [self.windows removeObject:object];
             break;
@@ -336,7 +336,7 @@ using namespace pr_impl;
     if (!self.running)
         return;
     self.running = NO;
-    for (PrCocoaWindow* window in self.windows)
+    for (PrAppKitWindow* window in self.windows)
         [window stopFrames];
     [NSApp stop:nil];
     [NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0
@@ -344,16 +344,16 @@ using namespace pr_impl;
 }
 // Posts a notification once the user allows notifications. The first post asks for permission.
 - (PrStatus)postNotification:(const PrAppNotificationDesc*)desc {
-    if (self.permission == CocoaPermission_Refused)
+    if (self.permission == AppKitPermission_Refused)
         return PrStatus_NotAllowed;
     UNMutableNotificationContent* content = [[UNMutableNotificationContent alloc] init];
-    content.title = cocoaStringOf(desc->title);
-    content.body = cocoaStringOf(desc->body);
+    content.title = appKitStringOf(desc->title);
+    content.body = appKitStringOf(desc->body);
     content.userInfo = @{kNotificationTagKey: @(desc->tag)};
     UNNotificationRequest* request = [UNNotificationRequest requestWithIdentifier:NSUUID.UUID.UUIDString content:content
         trigger:nil];
     UNUserNotificationCenter* center = UNUserNotificationCenter.currentNotificationCenter;
-    if (self.permission == CocoaPermission_Granted) {
+    if (self.permission == AppKitPermission_Granted) {
         [center addNotificationRequest:request withCompletionHandler:nil];
         return PrStatus_Ok;
     }
@@ -362,10 +362,10 @@ using namespace pr_impl;
     if (self.waiting.count == kWaitingNotificationsMax)
         [self.waiting removeObjectAtIndex:0];
     [self.waiting addObject:request];
-    if (self.permission == CocoaPermission_Unasked) {
-        self.permission = CocoaPermission_Asking;
+    if (self.permission == AppKitPermission_Unasked) {
+        self.permission = AppKitPermission_Asking;
         center.delegate = self;
-        __weak PrCocoaHost* weak = self;
+        __weak PrAppKitHost* weak = self;
         [center requestAuthorizationWithOptions:UNAuthorizationOptionAlert completionHandler:^(BOOL granted, NSError*) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [weak answered:granted];
@@ -376,7 +376,7 @@ using namespace pr_impl;
 }
 // Records the user's answer about notifications. If the user allowed them, posts the notifications that waited.
 - (void)answered:(BOOL)granted {
-    self.permission = granted ? CocoaPermission_Granted : CocoaPermission_Refused;
+    self.permission = granted ? AppKitPermission_Granted : AppKitPermission_Refused;
     UNUserNotificationCenter* center = UNUserNotificationCenter.currentNotificationCenter;
     if (granted) {
         for (UNNotificationRequest* request in self.waiting)
@@ -392,7 +392,7 @@ using namespace pr_impl;
     PrAppEvent event{};
     event.kind = PrAppEventKind_Notification;
     event.tag = tag;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     [self deliver:event to:nullptr];
 }
 // Shows a notification even while the application is active, because the program chose to post it.
@@ -409,7 +409,7 @@ using namespace pr_impl;
     if ([response.actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
         id tag = response.notification.request.content.userInfo[kNotificationTagKey];
         uint64_t value = [tag isKindOfClass:NSNumber.class] ? [tag unsignedLongLongValue] : 0;
-        __weak PrCocoaHost* weak = self;
+        __weak PrAppKitHost* weak = self;
         dispatch_async(dispatch_get_main_queue(), ^{
             [weak notificationClicked:value];
         });
@@ -420,17 +420,17 @@ using namespace pr_impl;
     (void)note;
     // The names that the last event's displays had stay valid until this event, which may change them.
     if (self.app != nullptr)
-        appDisplayListReset(static_cast<CocoaApp*>(self.app)->displays);
+        appDisplayListReset(static_cast<AppKitApp*>(self.app)->displays);
     PrAppEvent event{};
     event.kind = PrAppEventKind_DisplaysChanged;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     [self deliver:event to:nullptr];
-    for (PrCocoaWindow* window in self.windows)
+    for (PrAppKitWindow* window in self.windows)
         [window requestFrame];
 }
 - (void)applicationDidBecomeActive:(NSNotification*)note {
     (void)note;
-    for (PrCocoaWindow* window in self.windows)
+    for (PrAppKitWindow* window in self.windows)
         [window requestFrame];
     [self lifecycleMayChange];
 }
@@ -440,7 +440,7 @@ using namespace pr_impl;
 }
 - (void)applicationDidResignActive:(NSNotification*)note {
     (void)note;
-    for (PrCocoaWindow* window in self.windows) {
+    for (PrAppKitWindow* window in self.windows) {
         if (!window.overlay)
             [window freePointer];
         [window requestFrame];
@@ -450,13 +450,13 @@ using namespace pr_impl;
 }
 - (void)applicationDidHide:(NSNotification*)note {
     (void)note;
-    for (PrCocoaWindow* window in self.windows)
+    for (PrAppKitWindow* window in self.windows)
         [window requestFrame];
     [self lifecycleMayChange];
 }
 - (void)applicationDidUnhide:(NSNotification*)note {
     (void)note;
-    for (PrCocoaWindow* window in self.windows)
+    for (PrAppKitWindow* window in self.windows)
         [window requestFrame];
     [self lifecycleMayChange];
 }
@@ -464,14 +464,14 @@ using namespace pr_impl;
 - (void)deliverHotkey:(uint32_t)id {
     if (self.app == nullptr || !self.running)
         return;
-    const RawArray<CocoaHotkey>& hotkeys = static_cast<CocoaApp*>(self.app)->hotkeys;
+    const RawArray<AppKitHotkey>& hotkeys = static_cast<AppKitApp*>(self.app)->hotkeys;
     for (uint32_t i = 0; i < hotkeys.count; ++i) {
         if (hotkeys.data[i].id != id)
             continue;
         PrAppEvent event{};
         event.kind = PrAppEventKind_Hotkey;
-        event.time = cocoaUptime();
-        event.modifiers = cocoaModifiersOf(NSEvent.modifierFlags);
+        event.time = appKitUptime();
+        event.modifiers = appKitModifiersOf(NSEvent.modifierFlags);
         event.tag = hotkeys.data[i].tag;
         [self deliver:event to:nullptr];
         return;
@@ -483,7 +483,7 @@ using namespace pr_impl;
     (void)application;
     PrAppEvent event{};
     event.kind = PrAppEventKind_QuitRequested;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     NSAppleEventDescriptor* request = NSAppleEventManager.sharedAppleEventManager.currentAppleEvent;
     OSType reason = [request attributeDescriptorForKeyword:kAEQuitReason].enumCodeValue;
     event.quit.sessionEnding = reason == kAELogOut || reason == kAEReallyLogOut || reason == kAEShowRestartDialog ||
@@ -496,7 +496,7 @@ using namespace pr_impl;
     if (self.headless || !self.running)
         return;
     NSMenu* bar = self.menuBar.root;
-    for (PrCocoaWindow* object in self.windows) {
+    for (PrAppKitWindow* object in self.windows) {
         if (object.window.isKeyWindow && object.menuBar != nil)
             bar = object.menuBar.root;
     }
@@ -506,14 +506,14 @@ using namespace pr_impl;
 // Asks each popup to close, but the one that shows `window`, as for a press elsewhere or the application's
 // deactivation.
 - (void)closePopupsExcept:(NSWindow* PR_NULLABLE)window {
-    for (PrCocoaWindow* object in [self.windows copy]) {
+    for (PrAppKitWindow* object in [self.windows copy]) {
         if (object.role != PrAppWindowRole_Popup || object.window == window || !object.window.isVisible)
             continue;
         if (object.record == nullptr)
             continue;
         PrAppEvent event{};
         event.kind = PrAppEventKind_CloseRequested;
-        event.time = cocoaUptime();
+        event.time = appKitUptime();
         [self deliver:event to:object.record];
     }
 }
@@ -525,11 +525,11 @@ using namespace pr_impl;
         [tile display];
         return;
     }
-    PrCocoaDockProgress* progress = nil;
-    if ([tile.contentView isKindOfClass:PrCocoaDockProgress.class])
-        progress = static_cast<PrCocoaDockProgress*>(tile.contentView);
+    PrAppKitDockProgress* progress = nil;
+    if ([tile.contentView isKindOfClass:PrAppKitDockProgress.class])
+        progress = static_cast<PrAppKitDockProgress*>(tile.contentView);
     if (progress == nil) {
-        progress = [[PrCocoaDockProgress alloc] initWithFrame:NSMakeRect(0, 0, tile.size.width, tile.size.height)];
+        progress = [[PrAppKitDockProgress alloc] initWithFrame:NSMakeRect(0, 0, tile.size.width, tile.size.height)];
         tile.contentView = progress;
     }
     progress.state = state;
@@ -542,7 +542,7 @@ using namespace pr_impl;
         return;
     PrAppEvent event{};
     event.kind = kind;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     [self deliver:event to:nullptr];
 }
 - (void)setPresence:(PrAppPresence)presence {
@@ -571,7 +571,7 @@ using namespace pr_impl;
 }
 // Timers fire in the common modes, so that they keep firing during a live resize or while a menu tracks.
 - (NSTimer*)timerFor:(uint64_t)tag after:(double)seconds repeats:(BOOL)repeats interval:(double)interval {
-    __weak PrCocoaHost* weak = self;
+    __weak PrAppKitHost* weak = self;
     NSTimer* timer = [NSTimer timerWithTimeInterval:MAX(seconds, 0.0) repeats:repeats block:^(NSTimer*) {
         [weak timerFired:tag repeating:repeats interval:interval];
     }];
@@ -600,19 +600,19 @@ using namespace pr_impl;
         return;
     PrAppEvent event{};
     event.kind = PrAppEventKind_Timer;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     event.tag = tag;
     [self deliver:event to:nullptr];
 }
 // Delivers an event of `kind` for each notification `name` of `center`.
 - (void)observe:(NSNotificationCenter*)center name:(NSString*)name kind:(PrAppEventKind)kind {
-    __weak PrCocoaHost* weak = self;
+    __weak PrAppKitHost* weak = self;
     id token = [center addObserverForName:name object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification*) {
-        PrCocoaHost* host = weak;
+        PrAppKitHost* host = weak;
         if (host == nil || host.app == nullptr)
             return;
         if (kind == PrAppEventKind_KeyboardLayoutChanged)
-            cocoaKeyLabelsReset(static_cast<CocoaApp*>(host.app));
+            appKitKeyLabelsReset(static_cast<AppKitApp*>(host.app));
         [host deliverKind:kind];
     }];
     [_observers addObject:@[ center, token ]];
@@ -625,7 +625,7 @@ using namespace pr_impl;
     NSDistributedNotificationCenter* center = NSDistributedNotificationCenter.defaultCenter;
     if (lock >= 0 && flock(lock, LOCK_EX | LOCK_NB) == 0) {
         _instanceLock = lock;
-        __weak PrCocoaHost* weak = self;
+        __weak PrAppKitHost* weak = self;
         id token = [center addObserverForName:name object:nil queue:NSOperationQueue.mainQueue
             usingBlock:^(NSNotification* note) {
                 [weak openArguments:note.userInfo[@"arguments"]];
@@ -658,7 +658,7 @@ using namespace pr_impl;
         [NSApp activate];
     PrAppEvent event{};
     event.kind = PrAppEventKind_Open;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     event.open.arguments = views.data;
     event.open.argumentCount = views.count;
     [self deliver:event to:nullptr];
@@ -674,7 +674,7 @@ using namespace pr_impl;
     AppDataStore* store = allocZeroed<AppDataStore>();
     for (NSURL* url in urls) {
         if (url.isFileURL)
-            cocoaAddFile(url, *store);
+            appKitAddFile(url, *store);
         else {
             PrRawString utf8 = prAppleNSStringToRawString(url.absoluteString);
             appDataStoreAddUrl(*store, prRawStringView(&utf8));
@@ -683,8 +683,8 @@ using namespace pr_impl;
     }
     PrAppEvent event{};
     event.kind = PrAppEventKind_Open;
-    event.time = cocoaUptime();
-    event.open.source = appDataSourceCreate(static_cast<CocoaApp*>(self.app)->sources, store, nullptr);
+    event.time = appKitUptime();
+    event.open.source = appDataSourceCreate(static_cast<AppKitApp*>(self.app)->sources, store, nullptr);
     [self deliver:event to:nullptr];
 }
 - (BOOL)startServices {
@@ -708,7 +708,7 @@ using namespace pr_impl;
         CFRunLoopAddSource(CFRunLoopGetMain(), _powerSource, kCFRunLoopCommonModes);
     _memory = dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE, 0,
         DISPATCH_MEMORYPRESSURE_WARN | DISPATCH_MEMORYPRESSURE_CRITICAL, dispatch_get_main_queue());
-    __weak PrCocoaHost* weak = self;
+    __weak PrAppKitHost* weak = self;
     dispatch_source_set_event_handler(_memory, ^{
         [weak deliverKind:PrAppEventKind_LowMemory];
     });
@@ -758,57 +758,57 @@ using namespace pr_impl;
 }
 @end
 
-PrApp* prAppCocoaCreate(const PrAppOptions* options) {
-    CocoaApp* app = allocZeroed<CocoaApp>();
+PrApp* prAppAppKitCreate(const PrAppOptions* options) {
+    AppKitApp* app = allocZeroed<AppKitApp>();
     app->destroyFn = destroy;
     app->runFn = run;
     app->stopFn = stop;
     app->wakeFn = wake;
-    app->notificationPostFn = cocoaNotificationPost;
-    app->openUrlFn = cocoaOpenUrl;
-    app->cancelFn = cocoaDataCancel;
+    app->notificationPostFn = appKitNotificationPost;
+    app->openUrlFn = appKitOpenUrl;
+    app->cancelFn = appKitDataCancel;
     app->quitCancelFn = quitCancel;
-    app->dataRetainFn = cocoaDataRetain;
-    app->dataReleaseFn = cocoaDataRelease;
-    app->dataReadFn = cocoaDataRead;
-    app->dataWriteFn = cocoaDataWrite;
-    app->dataWriteFileFn = cocoaDataWriteFile;
-    app->windowCreateFn = cocoaWindowCreate;
-    app->displaysFn = cocoaDisplays;
-    app->displayInfoFn = cocoaDisplayInfo;
-    app->pointerPositionFn = cocoaPointerPosition;
+    app->dataRetainFn = appKitDataRetain;
+    app->dataReleaseFn = appKitDataRelease;
+    app->dataReadFn = appKitDataRead;
+    app->dataWriteFn = appKitDataWrite;
+    app->dataWriteFileFn = appKitDataWriteFile;
+    app->windowCreateFn = appKitWindowCreate;
+    app->displaysFn = appKitDisplays;
+    app->displayInfoFn = appKitDisplayInfo;
+    app->pointerPositionFn = appKitPointerPosition;
     app->setHiddenFn = setHidden;
     app->isHiddenFn = isHidden;
-    app->revealPathFn = cocoaRevealPath;
-    app->hotkeyRegisterFn = cocoaHotkeyRegister;
-    app->hotkeyUnregisterFn = cocoaHotkeyUnregister;
-    app->fileDialogFn = cocoaFileDialog;
+    app->revealPathFn = appKitRevealPath;
+    app->hotkeyRegisterFn = appKitHotkeyRegister;
+    app->hotkeyUnregisterFn = appKitHotkeyUnregister;
+    app->fileDialogFn = appKitFileDialog;
     app->setPresenceFn = setPresence;
     app->windowModelFn = windowModel;
     app->lifecycleFn = lifecycle;
     app->timerSetFn = timerSet;
     app->timerCancelFn = timerCancel;
-    app->keyCodeLabelFn = cocoaKeyCodeLabel;
-    app->trashPathFn = cocoaTrashPath;
-    app->recentDocumentAddFn = cocoaRecentDocumentAdd;
-    app->recentDocumentsClearFn = cocoaRecentDocumentsClear;
-    app->setBadgeFn = cocoaSetBadge;
-    app->powerFn = cocoaPower;
-    app->setAwakeFn = cocoaSetAwake;
-    app->hapticPlayFn = cocoaHapticPlay;
-    app->setMenuBarFn = cocoaSetMenuBar;
-    app->statusItemCreateFn = cocoaStatusItemCreate;
+    app->keyCodeLabelFn = appKitKeyCodeLabel;
+    app->trashPathFn = appKitTrashPath;
+    app->recentDocumentAddFn = appKitRecentDocumentAdd;
+    app->recentDocumentsClearFn = appKitRecentDocumentsClear;
+    app->setBadgeFn = appKitSetBadge;
+    app->powerFn = appKitPower;
+    app->setAwakeFn = appKitSetAwake;
+    app->hapticPlayFn = appKitHapticPlay;
+    app->setMenuBarFn = appKitSetMenuBar;
+    app->statusItemCreateFn = appKitStatusItemCreate;
     app->displayAwake = kIOPMNullAssertionID;
     app->systemAwake = kIOPMNullAssertionID;
     appDataSourcesInit(app->sources);
     appDataRequestsInit(app->requests, app->sources);
-    PrCocoaHost* host = [[PrCocoaHost alloc] init];
+    PrAppKitHost* host = [[PrAppKitHost alloc] init];
     host.app = app;
     host.headless = options->headless;
     host.presence = options->presence;
     app->windowModel = options->windowModel;
     if (options->singleInstance.size != 0)
-        host.singleInstance = cocoaStringOf(options->singleInstance);
+        host.singleInstance = appKitStringOf(options->singleInstance);
     app->host = (__bridge_retained void*)host;
     return app;
 }

@@ -1,12 +1,12 @@
-// The Cocoa backend's input: keys, modifiers, cursors, global hotkeys and key labels.
+// The AppKit backend's input: keys, modifiers, cursors, global hotkeys and key labels.
 
-#include "app/backends/cocoa/src/app_cocoa_input.h"
+#include "app/backends/appkit/src/app_appkit_input.h"
 
 namespace pr_impl {
 
 namespace {
 
-constexpr CocoaMacKey kMacKeys[] = {
+constexpr AppKitMacKey kMacKeys[] = {
     {0, PrAppKeyCode_KeyA}, {1, PrAppKeyCode_KeyS}, {2, PrAppKeyCode_KeyD}, {3, PrAppKeyCode_KeyF},
     {4, PrAppKeyCode_KeyH}, {5, PrAppKeyCode_KeyG}, {6, PrAppKeyCode_KeyZ}, {7, PrAppKeyCode_KeyX},
     {8, PrAppKeyCode_KeyC}, {9, PrAppKeyCode_KeyV}, {10, PrAppKeyCode_IntlBackslash}, {11, PrAppKeyCode_KeyB},
@@ -128,7 +128,7 @@ OSStatus hotkeyPressed(EventHandlerCallRef, EventRef event, void* context) {
     OSStatus status = GetEventParameter(event, kEventParamDirectObject, typeEventHotKeyID, nullptr, sizeof(id), nullptr, &id);
     if (status != noErr || id.signature != kHotkeySignature)
         return eventNotHandledErr;
-    [(__bridge PrCocoaHost*)context deliverHotkey:id.id];
+    [(__bridge PrAppKitHost*)context deliverHotkey:id.id];
     return noErr;
 }
 
@@ -147,7 +147,7 @@ UInt32 carbonModifiersOf(PrAppModifierFlags modifiers) {
 
 // Writes the virtual key code of the key at `code` to `out`, and returns false for a key that a Mac's keyboard lacks.
 bool virtualKeyOf(PrAppKeyCode code, uint16_t* out) {
-    for (const CocoaMacKey& key : kMacKeys) {
+    for (const AppKitMacKey& key : kMacKeys) {
         if (key.code == code) {
             *out = key.virtualKey;
             return true;
@@ -181,7 +181,7 @@ NSString* PR_NULLABLE layoutCharacterOf(uint16_t virtualKey) {
 
 } // namespace
 
-bool cocoaModifierDown(NSEvent* event, PrAppKeyCode code) {
+bool appKitModifierDown(NSEvent* event, PrAppKeyCode code) {
     NSEventModifierFlags flags = event.modifierFlags;
     switch (code) {
         case PrAppKeyCode_ShiftLeft: return (flags & kLeftShift) != 0;
@@ -198,7 +198,7 @@ bool cocoaModifierDown(NSEvent* event, PrAppKeyCode code) {
     }
 }
 
-void cocoaDescribePen(NSEvent* source, bool eraser, PrAppEvent* event) {
+void appKitDescribePen(NSEvent* source, bool eraser, PrAppEvent* event) {
     event->pointer.type = PrAppPointerType_Pen;
     event->pointer.id = kPenPointerBase + uint32_t(source.deviceID);
     event->pointer.pressure = float(source.pressure);
@@ -210,7 +210,7 @@ void cocoaDescribePen(NSEvent* source, bool eraser, PrAppEvent* event) {
         event->pointer.button = kPrAppPointerButtonEraser;
 }
 
-PrAppModifierFlags cocoaModifiersOf(NSEventModifierFlags flags) {
+PrAppModifierFlags appKitModifiersOf(NSEventModifierFlags flags) {
     PrAppModifierFlags modifiers = 0;
     if ((flags & NSEventModifierFlagCapsLock) != 0)
         modifiers |= PrAppModifierFlag_CapsLock;
@@ -225,15 +225,15 @@ PrAppModifierFlags cocoaModifiersOf(NSEventModifierFlags flags) {
     return modifiers;
 }
 
-CocoaMacKey cocoaMacKeyOf(NSEvent* event) {
-    for (const CocoaMacKey& key : kMacKeys) {
+AppKitMacKey appKitMacKeyOf(NSEvent* event) {
+    for (const AppKitMacKey& key : kMacKeys) {
         if (key.virtualKey == event.keyCode)
             return key;
     }
-    return CocoaMacKey{event.keyCode, PrAppKeyCode_Unidentified, PrAppKey_Unknown};
+    return AppKitMacKey{event.keyCode, PrAppKeyCode_Unidentified, PrAppKey_Unknown};
 }
 
-NSString* PR_NULLABLE cocoaCharacterOf(NSEvent* event) {
+NSString* PR_NULLABLE appKitCharacterOf(NSEvent* event) {
     NSEventModifierFlags commands = NSEventModifierFlagCommand | NSEventModifierFlagControl;
     // charactersIgnoringModifiers keeps Shift and drops Option, Control and Command.
     NSString* characters = (event.modifierFlags & commands) != 0 ? event.charactersIgnoringModifiers : event.characters;
@@ -243,31 +243,31 @@ NSString* PR_NULLABLE cocoaCharacterOf(NSEvent* event) {
     return printable ? characters : nil;
 }
 
-PrAppKey cocoaKeyOfCharacter(NSEvent* event) {
+PrAppKey appKitKeyOfCharacter(NSEvent* event) {
     // charactersIgnoringModifiers keeps Shift and drops Option, Control and Command.
     NSString* plain = event.charactersIgnoringModifiers;
     unichar first = plain.length != 0 ? [plain.uppercaseString characterAtIndex:0] : 0;
     return first >= ' ' && first < 127 ? PrAppKey(first) : PrAppKey_Unknown;
 }
 
-bool cocoaIsDead(NSEvent* event) {
+bool appKitIsDead(NSEvent* event) {
     if (event.characters.length != 0)
         return false;
     NSString* plain = event.charactersIgnoringModifiers;
     return plain.length != 0 && [plain characterAtIndex:0] >= 32;
 }
 
-uint32_t cocoaUtf8Length(NSString* string, NSUInteger units) {
+uint32_t appKitUtf8Length(NSString* string, NSUInteger units) {
     uint32_t size = prAppleNSStringToUtf8([string substringToIndex:MIN(units, string.length)], nullptr, 0);
     return size != kPrAppleStringInvalid ? size : 0;
 }
 
-NSString* cocoaStringOf(PrStringView text) {
+NSString* appKitStringOf(PrStringView text) {
     NSString* string = prAppleNSString(text);
     return string != nil ? string : @"";
 }
 
-NSCursor* cocoaCursorFor(PrAppCursor cursor) {
+NSCursor* appKitCursorFor(PrAppCursor cursor) {
     constexpr NSCursorFrameResizeDirections kOutward = NSCursorFrameResizeDirectionsOutward;
     constexpr NSCursorFrameResizeDirections kBoth = NSCursorFrameResizeDirectionsAll;
     switch (cursor) {
@@ -309,8 +309,8 @@ NSCursor* cocoaCursorFor(PrAppCursor cursor) {
     }
 }
 
-void cocoaHotkeyUnregister(PrApp* app, uint64_t tag) {
-    RawArray<CocoaHotkey>& hotkeys = static_cast<CocoaApp*>(app)->hotkeys;
+void appKitHotkeyUnregister(PrApp* app, uint64_t tag) {
+    RawArray<AppKitHotkey>& hotkeys = static_cast<AppKitApp*>(app)->hotkeys;
     for (uint32_t i = 0; i < hotkeys.count; ++i) {
         if (hotkeys.data[i].tag == tag) {
             UnregisterEventHotKey(hotkeys.data[i].ref);
@@ -320,32 +320,32 @@ void cocoaHotkeyUnregister(PrApp* app, uint64_t tag) {
     }
 }
 
-PrStatus cocoaHotkeyRegister(PrApp* app, PrAppHotkey hotkey, uint64_t tag) {
-    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
-    PrCocoaHost* host = cocoaHostOf(app);
+PrStatus appKitHotkeyRegister(PrApp* app, PrAppHotkey hotkey, uint64_t tag) {
+    AppKitApp* appKit = static_cast<AppKitApp*>(app);
+    PrAppKitHost* host = appKitHostOf(app);
     if (!host.running)
         return PrStatus_InvalidState;
     uint16_t key = 0;
     if (host.headless || !virtualKeyOf(hotkey.code, &key))
         return PrStatus_NotSupported;
-    if (cocoa->hotkeyHandler == nullptr) {
+    if (appKit->hotkeyHandler == nullptr) {
         EventTypeSpec pressed{kEventClassKeyboard, kEventHotKeyPressed};
         EventHandlerRef handler = nullptr;
         if (InstallEventHandler(GetApplicationEventTarget(), hotkeyPressed, 1, &pressed, (__bridge void*)host, &handler) != noErr)
             return PrStatus_NotSupported;
-        cocoa->hotkeyHandler = handler;
+        appKit->hotkeyHandler = handler;
     }
-    cocoaHotkeyUnregister(app, tag);
-    uint32_t id = ++cocoa->lastHotkeyId;
+    appKitHotkeyUnregister(app, tag);
+    uint32_t id = ++appKit->lastHotkeyId;
     EventHotKeyRef ref = nullptr;
     if (RegisterEventHotKey(key, carbonModifiersOf(hotkey.modifiers), EventHotKeyID{kHotkeySignature, id},
             GetApplicationEventTarget(), 0, &ref) != noErr)
         return PrStatus_NotAllowed;
-    cocoa->hotkeys.push(CocoaHotkey{.tag = tag, .id = id, .ref = ref});
+    appKit->hotkeys.push(AppKitHotkey{.tag = tag, .id = id, .ref = ref});
     return PrStatus_Ok;
 }
 
-void cocoaHotkeysReset(CocoaApp* app) {
+void appKitHotkeysReset(AppKitApp* app) {
     for (uint32_t i = 0; i < app->hotkeys.count; ++i)
         UnregisterEventHotKey(app->hotkeys.data[i].ref);
     app->hotkeys.reset();
@@ -354,24 +354,24 @@ void cocoaHotkeysReset(CocoaApp* app) {
     app->hotkeyHandler = nullptr;
 }
 
-PrStringView cocoaKeyCodeLabel(const PrApp* app, PrAppKeyCode code) {
-    const CocoaApp* cocoa = static_cast<const CocoaApp*>(app);
+PrStringView appKitKeyCodeLabel(const PrApp* app, PrAppKeyCode code) {
+    const AppKitApp* appKit = static_cast<const AppKitApp*>(app);
     if (code >= PrAppKeyCode_Count)
         return prAppKeyCodeName(PrAppKeyCode_Unidentified);
-    if (!cocoa->keyLabeled[code]) {
-        cocoa->keyLabeled[code] = true;
+    if (!appKit->keyLabeled[code]) {
+        appKit->keyLabeled[code] = true;
         uint16_t virtualKey = 0;
         NSString* character = virtualKeyOf(code, &virtualKey) ? layoutCharacterOf(virtualKey) : nil;
-        prRawStringReset(&cocoa->keyLabels[code]);
+        prRawStringReset(&appKit->keyLabels[code]);
         if (character != nil)
-            cocoa->keyLabels[code] = prAppleNSStringToRawString(character);
+            appKit->keyLabels[code] = prAppleNSStringToRawString(character);
     }
-    if (!prRawStringIsEmpty(&cocoa->keyLabels[code]))
-        return prRawStringView(&cocoa->keyLabels[code]);
+    if (!prRawStringIsEmpty(&appKit->keyLabels[code]))
+        return prRawStringView(&appKit->keyLabels[code]);
     return prAppKeyCodeName(code);
 }
 
-void cocoaKeyLabelsReset(CocoaApp* app) {
+void appKitKeyLabelsReset(AppKitApp* app) {
     for (uint32_t i = 0; i < PrAppKeyCode_Count; ++i) {
         prRawStringReset(&app->keyLabels[i]);
         app->keyLabeled[i] = false;

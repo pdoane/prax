@@ -1,11 +1,11 @@
-// The Cocoa application backend's state: its classes, the application and its windows, and what the backend's parts
+// The AppKit application backend's state: its classes, the application and its windows, and what the backend's parts
 // share. Each part has a source and an internal header of its own.
 
 #pragma once
 
 #include "pr/alloc.h"
+#include "pr/app_appkit.h"
 #include "pr/app_backend.h"
-#include "pr/app_cocoa.h"
 #include "pr/apple_string.h"
 #include "pr/atomic.h"
 #include "pr/count_of.h"
@@ -33,32 +33,32 @@
 
 PR_ASSUME_NONNULL_BEGIN
 
-@class PrCocoaHost;
-@class PrCocoaMenuTree;
-@class PrCocoaWindow;
+@class PrAppKitHost;
+@class PrAppKitMenuTree;
+@class PrAppKitWindow;
 
 // The panel of an overlay or a popup. An overlay's panel becomes the key window when the program focuses it. A popup's
 // never does, so that its parent keeps the keyboard.
-@interface PrCocoaPanel : NSPanel
+@interface PrAppKitPanel : NSPanel
 @property(nonatomic) BOOL refusesKey;
 @end
 
 // The window of a Normal or Dialog window without decoration, which AppKit would otherwise never make the key window.
-@interface PrCocoaBorderlessWindow : NSWindow
+@interface PrAppKitBorderlessWindow : NSWindow
 @end
 
 // The Dock tile's content while it shows progress: the application's icon, with a bar over its lower part.
-@interface PrCocoaDockProgress : NSView
+@interface PrAppKitDockProgress : NSView
 @property(nonatomic) PrAppProgressState state;
 @property(nonatomic) float value;
 @end
 
 // A window's content: its layer, which the program draws to, and the input, the text editing and the drags in it.
-@interface PrCocoaView : NSView <CALayerDelegate, NSTextInputClient, NSDraggingSource>
-@property(nonatomic, weak) PrCocoaWindow* PR_NULLABLE owner;
+@interface PrAppKitView : NSView <CALayerDelegate, NSTextInputClient, NSDraggingSource>
+@property(nonatomic, weak) PrAppKitWindow* PR_NULLABLE owner;
 
 // The host, which outlives the owner, for a drag that ends after the window closes.
-@property(nonatomic, weak) PrCocoaHost* PR_NULLABLE host;
+@property(nonatomic, weak) PrAppKitHost* PR_NULLABLE host;
 
 // The latest event of the primary button while it is down, or nil.
 @property(nonatomic, strong) NSEvent* PR_NULLABLE press;
@@ -73,11 +73,11 @@ PR_ASSUME_NONNULL_BEGIN
 @end
 
 // A window: its NSWindow and view, its frames, and what is held down in it.
-@interface PrCocoaWindow : NSObject <NSWindowDelegate>
+@interface PrAppKitWindow : NSObject <NSWindowDelegate>
 @property(nonatomic) PrAppWindow* PR_NULLABLE record;      // null once the window is destroyed
-@property(nonatomic, weak) PrCocoaHost* PR_NULLABLE host;
+@property(nonatomic, weak) PrAppKitHost* PR_NULLABLE host;
 @property(nonatomic, strong) NSWindow* window;
-@property(nonatomic, strong) PrCocoaView* view;
+@property(nonatomic, strong) PrAppKitView* view;
 @property(nonatomic, strong) CADisplayLink* PR_NULLABLE displayLink;
 @property(nonatomic, strong) NSTimer* PR_NULLABLE timer;        // a headless window's frame
 @property(nonatomic, strong) NSTimer* PR_NULLABLE frameTimer;   // the frame at the time that the last frame asked for
@@ -99,20 +99,20 @@ PR_ASSUME_NONNULL_BEGIN
 
 // The window that a Dialog or a Popup belongs to, or nil. A modal Dialog with decoration shows as a sheet on its
 // parent, and one without as a child window that blocks its parent.
-@property(nonatomic, weak) PrCocoaWindow* PR_NULLABLE parent;
+@property(nonatomic, weak) PrAppKitWindow* PR_NULLABLE parent;
 @property(nonatomic) BOOL modal;
 @property(nonatomic) BOOL sheet;
 
 // The modal dialog without decoration that blocks the window's input, or nil, and the layer that dims the window's
 // content while it does.
-@property(nonatomic, weak) PrCocoaWindow* PR_NULLABLE blocker;
+@property(nonatomic, weak) PrAppKitWindow* PR_NULLABLE blocker;
 @property(nonatomic, strong) CALayer* PR_NULLABLE dim;
 @property(nonatomic) PrAppPopupPlacement popup;
 
-@property(nonatomic) BOOL secureInput;                                 // the window holds secure event input for a
-                                                                       // password
-@property(nonatomic, strong) PrCocoaMenuTree* PR_NULLABLE menuBar;     // the window's own menu bar, or nil
-@property(nonatomic, strong) PrCocoaMenuTree* PR_NULLABLE contextMenu; // the context menu that shows, or nil
+@property(nonatomic) BOOL secureInput;                                  // the window holds secure event input for a
+                                                                        // password
+@property(nonatomic, strong) PrAppKitMenuTree* PR_NULLABLE menuBar;     // the window's own menu bar, or nil
+@property(nonatomic, strong) PrAppKitMenuTree* PR_NULLABLE contextMenu; // the context menu that shows, or nil
 - (void)promise:(uint32_t)index to:(NSURL*)url done:(void (^)(NSError* PR_NULLABLE))done;
 - (void)endPromise:(uint32_t)index status:(PrStatus)status;
 - (void)endPromises;
@@ -146,7 +146,7 @@ PR_ASSUME_NONNULL_BEGIN
 - (void)showSoon;
 - (void)present:(BOOL)activate;
 - (void)dismiss;
-- (void)blockBy:(PrCocoaWindow* PR_NULLABLE)blocker;
+- (void)blockBy:(PrAppKitWindow* PR_NULLABLE)blocker;
 - (void)place;
 - (void)setSecureInput:(BOOL)secure;
 - (void)frame;
@@ -168,11 +168,11 @@ PR_ASSUME_NONNULL_BEGIN
 // A menu that AppKit shows for the program: its NSMenu, its tag, and where its events go. Each menu of a tree is its
 // menu's delegate and its items' target. A menu of the application sends its events to the application, and a menu of a
 // window to that window, or nowhere once the window is gone.
-@interface PrCocoaMenu : NSObject <NSMenuDelegate>
+@interface PrAppKitMenu : NSObject <NSMenuDelegate>
 @property(nonatomic) uint64_t tag;
 @property(nonatomic, strong) NSMenu* PR_NULLABLE menu;
-@property(nonatomic, weak) PrCocoaHost* PR_NULLABLE host;
-@property(nonatomic, weak) PrCocoaWindow* PR_NULLABLE owner;
+@property(nonatomic, weak) PrAppKitHost* PR_NULLABLE host;
+@property(nonatomic, weak) PrAppKitWindow* PR_NULLABLE owner;
 @property(nonatomic) BOOL ofWindow;
 - (void)chosen:(NSMenuItem*)item;
 - (void)deliverKind:(PrAppEventKind)kind tag:(uint64_t)tag;
@@ -180,44 +180,44 @@ PR_ASSUME_NONNULL_BEGIN
 
 // The menus that one description made, kept so that setting the description again updates them in place, as while one
 // of them is open. `root` is the menu bar, or the menu itself.
-@interface PrCocoaMenuTree : NSObject
-@property(nonatomic, strong) NSMutableArray<PrCocoaMenu*>* menus;
+@interface PrAppKitMenuTree : NSObject
+@property(nonatomic, strong) NSMutableArray<PrAppKitMenu*>* menus;
 @property(nonatomic, strong) NSMenu* root;
 @end
 
 // A status item in the menu bar, and the menu that a click opens, or the tag that a click sends if it has none.
-@interface PrCocoaStatusItem : NSObject
-@property(nonatomic, weak) PrCocoaHost* PR_NULLABLE host;
+@interface PrAppKitStatusItem : NSObject
+@property(nonatomic, weak) PrAppKitHost* PR_NULLABLE host;
 @property(nonatomic, strong) NSStatusItem* item;
-@property(nonatomic, strong) PrCocoaMenuTree* PR_NULLABLE tree;
+@property(nonatomic, strong) PrAppKitMenuTree* PR_NULLABLE tree;
 @property(nonatomic) uint64_t tag;
 - (void)clicked:(id)sender;
 @end
 
 // A file that a drag of the window promised. AppKit asks for it once the drop's target knows where it goes, and the
 // window then asks the program (PrAppEventKind_DragPromise).
-@interface PrCocoaPromise : NSObject <NSFilePromiseProviderDelegate>
-@property(nonatomic, weak) PrCocoaWindow* PR_NULLABLE owner;
+@interface PrAppKitPromise : NSObject <NSFilePromiseProviderDelegate>
+@property(nonatomic, weak) PrAppKitWindow* PR_NULLABLE owner;
 @property(nonatomic) uint32_t index;
 @property(nonatomic, copy) NSString* name;
 @end
 
 // A share picker that waits for the user's choice, and the request that the choice answers. The host keeps it until
 // then.
-@interface PrCocoaShare : NSObject <NSSharingServicePickerDelegate>
+@interface PrAppKitShare : NSObject <NSSharingServicePickerDelegate>
 @property(nonatomic) PrApp* app;
 @property(nonatomic) uint32_t request;
 @property(nonatomic, strong) NSSharingServicePicker* picker;
 @end
 
 // The application: its delegates, its windows, and the events that wait for a callback to return.
-@interface PrCocoaHost : NSObject <NSApplicationDelegate, UNUserNotificationCenterDelegate>
+@interface PrAppKitHost : NSObject <NSApplicationDelegate, UNUserNotificationCenterDelegate>
 @property(nonatomic) PrApp* PR_NULLABLE app;
 @property(nonatomic) BOOL headless;
 @property(nonatomic) BOOL running;
 @property(nonatomic) BOOL inCallback;    // a callback is running, and no other may start
-@property(nonatomic) uint8_t permission; // notification permission, a CocoaPermission
-@property(nonatomic, strong) NSMutableArray<PrCocoaWindow*>* windows;
+@property(nonatomic) uint8_t permission; // notification permission, a AppKitPermission
+@property(nonatomic, strong) NSMutableArray<PrAppKitWindow*>* windows;
 
 // Notifications that wait for the user to answer the permission request, oldest first.
 @property(nonatomic, strong) NSMutableArray<UNNotificationRequest*>* waiting;
@@ -239,15 +239,15 @@ PR_ASSUME_NONNULL_BEGIN
 - (BOOL)startServices;
 - (void)stopServices;
 
-@property(nonatomic, strong) NSMutableArray<PrCocoaShare*>* shares;     // the share pickers that wait for the user
-@property(nonatomic, strong) PrCocoaMenuTree* PR_NULLABLE menuBar;      // the application's menu bar
+@property(nonatomic, strong) NSMutableArray<PrAppKitShare*>* shares;     // the share pickers that wait for the user
+@property(nonatomic, strong) PrAppKitMenuTree* PR_NULLABLE menuBar;      // the application's menu bar
 - (void)showMenuBar;
 - (void)closePopupsExcept:(NSWindow* PR_NULLABLE)window;
 - (void)setDockProgress:(PrAppProgressState)state value:(float)value;
 
 // The view that a drag of the application's started from, which the host keeps while the system carries the drag, as
 // its window may close first.
-@property(nonatomic, strong) PrCocoaView* PR_NULLABLE dragSource;
+@property(nonatomic, strong) PrAppKitView* PR_NULLABLE dragSource;
 
 - (void)deliverHotkey:(uint32_t)id;
 - (void)deliver:(const PrAppEvent&)event to:(PrAppWindow* PR_NULLABLE)window;
@@ -269,7 +269,7 @@ namespace pr_impl {
 constexpr uint32_t kNoMark = UINT32_MAX;
 
 // What a key that is down reports, so that the window can release it when it stops being the key window.
-struct CocoaHeldKey {
+struct AppKitHeldKey {
     bool down;
     PrAppKey key;
 };
@@ -282,12 +282,12 @@ constexpr uint32_t kPenPointerBase = 2;
 
 // The state of the user's permission for notifications. The application asks at its first post.
 enum {
-    CocoaPermission_Unasked,
-    CocoaPermission_Asking,
-    CocoaPermission_Granted,
-    CocoaPermission_Refused,
+    AppKitPermission_Unasked,
+    AppKitPermission_Asking,
+    AppKitPermission_Granted,
+    AppKitPermission_Refused,
 };
-typedef uint8_t CocoaPermission;
+typedef uint8_t AppKitPermission;
 
 // The most notifications that wait for the user's answer. If more are posted, the oldest is dropped.
 constexpr NSUInteger kWaitingNotificationsMax = 16;
@@ -300,7 +300,7 @@ NSString* const kNotificationTagKey = @"tag";
 NSPasteboardType const kPayloadType = @"org.prax.app.drag-payload";
 
 // The drag that a window of the application started, while the system carries it.
-struct CocoaDrag {
+struct AppKitDrag {
     bool active;
     uint64_t token;             // a random value that names the drag on its pasteboard
     PrAppWindow* PR_NULLABLE window;
@@ -309,27 +309,27 @@ struct CocoaDrag {
 };
 
 // A global hotkey that the application registered: the program's tag, and Carbon's id and registration of it.
-struct CocoaHotkey {
+struct AppKitHotkey {
     uint64_t tag;
     uint32_t id;
     EventHotKeyRef ref;
 };
 
 // The application's state, after its function table (pr/app_backend.h).
-struct CocoaApp : PrApp {
-    void* host;                 // the PrCocoaHost, retained
+struct AppKitApp : PrApp {
+    void* host;                 // the PrAppKitHost, retained
     PrAppHandler handler;       // the handler of the run
     PrAppWindowModel windowModel;
     Atomic<bool> wakePending;
     AppDataSources sources;
     AppDataRequests requests;
-    CocoaDrag drag;
+    AppKitDrag drag;
 
     // The displays that queries reported, with their names, which stay valid until the next DisplaysChanged event.
     mutable AppDisplayList displays;
 
     // The global hotkeys, and Carbon's handler of their presses, which is installed with the first.
-    RawArray<CocoaHotkey> hotkeys;
+    RawArray<AppKitHotkey> hotkeys;
     uint32_t lastHotkeyId;
     EventHandlerRef PR_NULLABLE hotkeyHandler;
 
@@ -344,8 +344,8 @@ struct CocoaApp : PrApp {
 };
 
 // A window's state, after its function table (pr/app_backend.h).
-struct CocoaWindow : PrAppWindow {
-    void* object;               // the PrCocoaWindow, retained
+struct AppKitWindow : PrAppWindow {
+    void* object;               // the PrAppKitWindow, retained
     PrApp* app;
     AppWindowDelivery delivery;
     AppTitleBarRegions titleBar;
@@ -363,27 +363,27 @@ struct CocoaWindow : PrAppWindow {
 
 // A key of a Mac's keyboard: its virtual key code (kVK_ in HIToolbox's Events.h), its position, and for a key that
 // types no character, its name. A key that types a character takes its value from the character.
-struct CocoaMacKey {
+struct AppKitMacKey {
     uint16_t virtualKey;
     PrAppKeyCode code;
     PrAppKey key = PrAppKey_Unknown;
 };
 
 // Returns the host of the application, and the object of a window.
-PrCocoaHost* cocoaHostOf(const PrApp* app);
-PrCocoaWindow* cocoaObjectOf(const PrAppWindow* window);
+PrAppKitHost* appKitHostOf(const PrApp* app);
+PrAppKitWindow* appKitObjectOf(const PrAppWindow* window);
 
 // Returns the seconds since the system started, the clock of AppKit's events.
-double cocoaUptime();
+double appKitUptime();
 
 // Returns true if the process runs from an application bundle. In any other process, the notification center raises an
 // exception, even if the executable embeds an Info.plist with a bundle identifier. The older NSUserNotificationCenter
 // has no default center in such a process.
-bool cocoaIsBundled();
+bool appKitIsBundled();
 
 // Calls the window's handler with a frame and applies the output. A window that the program destroyed during the call
 // is freed.
-void cocoaDeliverFrame(PrAppWindow* window, const PrAppFrame& frame);
+void appKitDeliverFrame(PrAppWindow* window, const PrAppFrame& frame);
 
 } // namespace pr_impl
 

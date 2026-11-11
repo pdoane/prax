@@ -1,9 +1,9 @@
-// The Cocoa backend's menus: menu bars, context menus and status items.
+// The AppKit backend's menus: menu bars, context menus and status items.
 
-#include "app/backends/cocoa/src/app_cocoa_menu.h"
+#include "app/backends/appkit/src/app_appkit_menu.h"
 
-#include "app/backends/cocoa/src/app_cocoa_data.h"
-#include "app/backends/cocoa/src/app_cocoa_input.h"
+#include "app/backends/appkit/src/app_appkit_data.h"
+#include "app/backends/appkit/src/app_appkit_input.h"
 
 namespace pr_impl {
 
@@ -79,7 +79,7 @@ NSEventModifierFlags keyModifiersOf(PrAppModifierFlags modifiers) {
 
 // What AppKit does for an item of a role: the action that the responder chain takes, and the title and the key
 // equivalent of an item that the program leaves without them. A title of nil is the application's name after `title`.
-struct CocoaMenuRole {
+struct AppKitMenuRole {
     PrAppMenuRole role;
     SEL action;
     NSString* title;
@@ -87,8 +87,8 @@ struct CocoaMenuRole {
     PrAppModifierFlags modifiers;
 };
 
-const CocoaMenuRole* PR_NULLABLE menuRoleOf(PrAppMenuRole role) {
-    static const CocoaMenuRole kRoles[] = {
+const AppKitMenuRole* PR_NULLABLE menuRoleOf(PrAppMenuRole role) {
+    static const AppKitMenuRole kRoles[] = {
         {PrAppMenuRole_About, @selector(orderFrontStandardAboutPanel:), @"About ", PrAppKey_Unknown, 0},
         {PrAppMenuRole_Services, nullptr, @"Services", PrAppKey_Unknown, 0},
         {PrAppMenuRole_Hide, @selector(hide:), @"Hide ", PrAppKey('H'), PrAppModifierFlag_Super},
@@ -117,7 +117,7 @@ const CocoaMenuRole* PR_NULLABLE menuRoleOf(PrAppMenuRole role) {
         {PrAppMenuRole_WindowList, nullptr, @"Window", PrAppKey_Unknown, 0},
         {PrAppMenuRole_Help, nullptr, @"Help", PrAppKey_Unknown, 0},
     };
-    for (const CocoaMenuRole& entry : kRoles) {
+    for (const AppKitMenuRole& entry : kRoles) {
         if (entry.role == role)
             return &entry;
     }
@@ -125,26 +125,26 @@ const CocoaMenuRole* PR_NULLABLE menuRoleOf(PrAppMenuRole role) {
 }
 
 // Returns the title of a role's item: the role's title, which ends in a space where the application's name follows.
-NSString* roleTitleOf(const CocoaMenuRole& role) {
+NSString* roleTitleOf(const AppKitMenuRole& role) {
     if (![role.title hasSuffix:@" "])
         return role.title;
     return [role.title stringByAppendingString:NSProcessInfo.processInfo.processName];
 }
 
-NSMenu* menuOf(const PrAppMenu& description, PrCocoaMenuTree* tree, NSMutableArray<PrCocoaMenu*>* previous,
-    PrCocoaHost* host, PrCocoaWindow* PR_NULLABLE owner);
+NSMenu* menuOf(const PrAppMenu& description, PrAppKitMenuTree* tree, NSMutableArray<PrAppKitMenu*>* previous,
+    PrAppKitHost* host, PrAppKitWindow* PR_NULLABLE owner);
 
 // Returns the item that `description` describes in a menu of `tree`.
-NSMenuItem* menuItemOf(const PrAppMenuItem& description, PrCocoaMenu* parent, PrCocoaMenuTree* tree,
-        NSMutableArray<PrCocoaMenu*>* previous) {
+NSMenuItem* menuItemOf(const PrAppMenuItem& description, PrAppKitMenu* parent, PrAppKitMenuTree* tree,
+        NSMutableArray<PrAppKitMenu*>* previous) {
     if (description.role == PrAppMenuRole_Separator)
         return NSMenuItem.separatorItem;
-    const CocoaMenuRole* role = menuRoleOf(description.role);
-    NSString* title = description.title.size != 0 ? cocoaStringOf(description.title) : @"";
+    const AppKitMenuRole* role = menuRoleOf(description.role);
+    NSString* title = description.title.size != 0 ? appKitStringOf(description.title) : @"";
     if (description.title.size == 0 && role != nullptr)
         title = roleTitleOf(*role);
     if (description.title.size == 0 && description.submenu != nullptr)
-        title = cocoaStringOf(description.submenu->title);
+        title = appKitStringOf(description.submenu->title);
     PrAppKey key = description.key;
     PrAppModifierFlags modifiers = description.modifiers;
     if (key == PrAppKey_Unknown && role != nullptr) {
@@ -175,10 +175,10 @@ NSMenuItem* menuItemOf(const PrAppMenuItem& description, PrCocoaMenu* parent, Pr
 
 // Returns the menu that `description` describes, made a menu of `tree`. A menu of `previous` with the same tag is
 // filled again in place, so that a menu that is open shows the new items.
-NSMenu* menuOf(const PrAppMenu& description, PrCocoaMenuTree* tree, NSMutableArray<PrCocoaMenu*>* previous,
-        PrCocoaHost* host, PrCocoaWindow* PR_NULLABLE owner) {
-    PrCocoaMenu* node = nil;
-    for (PrCocoaMenu* candidate in previous) {
+NSMenu* menuOf(const PrAppMenu& description, PrAppKitMenuTree* tree, NSMutableArray<PrAppKitMenu*>* previous,
+        PrAppKitHost* host, PrAppKitWindow* PR_NULLABLE owner) {
+    PrAppKitMenu* node = nil;
+    for (PrAppKitMenu* candidate in previous) {
         if (candidate.tag == description.tag) {
             node = candidate;
             break;
@@ -188,14 +188,14 @@ NSMenu* menuOf(const PrAppMenu& description, PrCocoaMenuTree* tree, NSMutableArr
         [previous removeObject:node];
         [node.menu removeAllItems];
     } else {
-        node = [[PrCocoaMenu alloc] init];
+        node = [[PrAppKitMenu alloc] init];
         node.menu = [[NSMenu alloc] init];
         node.tag = description.tag;
     }
     node.host = host;
     node.owner = owner;
     node.ofWindow = owner != nil;
-    node.menu.title = cocoaStringOf(description.title);
+    node.menu.title = appKitStringOf(description.title);
     node.menu.delegate = node;
     node.menu.autoenablesItems = NO;
     [tree.menus addObject:node];
@@ -221,7 +221,7 @@ NSMenuItem* applicationMenuItem() {
             [menu addItem:NSMenuItem.separatorItem];
             continue;
         }
-        const CocoaMenuRole* role = menuRoleOf(description.role);
+        const AppKitMenuRole* role = menuRoleOf(description.role);
         NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:roleTitleOf(*role) action:role->action
             keyEquivalent:keyEquivalentOf(role->key)];
         item.keyEquivalentModifierMask = keyModifiersOf(role->modifiers);
@@ -239,10 +239,10 @@ NSMenuItem* applicationMenuItem() {
 
 // Shows a context menu from the main queue once no callback runs, so that its MenuOpening event reaches the program
 // before the menu opens.
-void showMenuSoon(PrCocoaWindow* object, PrVec2 position) {
-    __weak PrCocoaWindow* weak = object;
+void showMenuSoon(PrAppKitWindow* object, PrVec2 position) {
+    __weak PrAppKitWindow* weak = object;
     dispatch_async(dispatch_get_main_queue(), ^{
-        PrCocoaWindow* window = weak;
+        PrAppKitWindow* window = weak;
         if (window == nil || window.record == nullptr || window.contextMenu == nil)
             return;
         if (window.host.inCallback) {
@@ -256,13 +256,13 @@ void showMenuSoon(PrCocoaWindow* object, PrVec2 position) {
     });
 }
 
-struct CocoaStatusItem : PrAppStatusItem {
-    void* object;               // the PrCocoaStatusItem, retained
+struct AppKitStatusItem : PrAppStatusItem {
+    void* object;               // the PrAppKitStatusItem, retained
 };
 
 // Returns the icon of a status item at the menu bar's height, from straight-alpha pixels, or nil for none.
 NSImage* PR_NULLABLE statusIconOf(PrPixelView pixels, bool templated) {
-    NSBitmapImageRep* rep = cocoaImageRepOf(pixels);
+    NSBitmapImageRep* rep = appKitImageRepOf(pixels);
     if (rep == nil)
         return nil;
     CGFloat height = NSStatusBar.systemStatusBar.thickness - 4;
@@ -273,17 +273,17 @@ NSImage* PR_NULLABLE statusIconOf(PrPixelView pixels, bool templated) {
     return image;
 }
 
-void statusItemApply(PrCocoaStatusItem* object, const PrAppStatusItemDesc& desc) {
+void statusItemApply(PrAppKitStatusItem* object, const PrAppStatusItemDesc& desc) {
     NSStatusBarButton* button = object.item.button;
     object.tag = desc.tag;
     button.image = statusIconOf(desc.icon, desc.templateIcon);
-    button.title = cocoaStringOf(desc.title);
+    button.title = appKitStringOf(desc.title);
     button.imagePosition = desc.title.size != 0 ? NSImageLeft : NSImageOnly;
-    button.toolTip = desc.tooltip.size != 0 ? cocoaStringOf(desc.tooltip) : nil;
+    button.toolTip = desc.tooltip.size != 0 ? appKitStringOf(desc.tooltip) : nil;
     if (desc.menu != nullptr) {
-        NSMutableArray<PrCocoaMenu*>* previous = object.tree.menus != nil ? object.tree.menus : [NSMutableArray array];
+        NSMutableArray<PrAppKitMenu*>* previous = object.tree.menus != nil ? object.tree.menus : [NSMutableArray array];
         if (object.tree == nil)
-            object.tree = [[PrCocoaMenuTree alloc] init];
+            object.tree = [[PrAppKitMenuTree alloc] init];
         object.tree.menus = [NSMutableArray array];
         object.tree.root = menuOf(*desc.menu, object.tree, previous, object.host, nil);
         object.item.menu = object.tree.root;
@@ -296,21 +296,21 @@ void statusItemApply(PrCocoaStatusItem* object, const PrAppStatusItemDesc& desc)
 }
 
 void statusItemDestroy(PrAppStatusItem* item) {
-    CocoaStatusItem* cocoa = static_cast<CocoaStatusItem*>(item);
-    PrCocoaStatusItem* object = (__bridge_transfer PrCocoaStatusItem*)cocoa->object;
+    AppKitStatusItem* appKit = static_cast<AppKitStatusItem*>(item);
+    PrAppKitStatusItem* object = (__bridge_transfer PrAppKitStatusItem*)appKit->object;
     [NSStatusBar.systemStatusBar removeStatusItem:object.item];
-    prMemoryFree(cocoa);
+    prMemoryFree(appKit);
 }
 
 void statusItemSet(PrAppStatusItem* item, const PrAppStatusItemDesc* desc) {
-    statusItemApply((__bridge PrCocoaStatusItem*)static_cast<CocoaStatusItem*>(item)->object, *desc);
+    statusItemApply((__bridge PrAppKitStatusItem*)static_cast<AppKitStatusItem*>(item)->object, *desc);
 }
 
 } // namespace
 
-void cocoaMenuBarOf(const PrAppMenu* PR_NULLABLE description, PrCocoaMenuTree* tree, PrCocoaHost* host,
-        PrCocoaWindow* PR_NULLABLE owner) {
-    NSMutableArray<PrCocoaMenu*>* previous = tree.menus != nil ? tree.menus : [NSMutableArray array];
+void appKitMenuBarOf(const PrAppMenu* PR_NULLABLE description, PrAppKitMenuTree* tree, PrAppKitHost* host,
+        PrAppKitWindow* PR_NULLABLE owner) {
+    NSMutableArray<PrAppKitMenu*>* previous = tree.menus != nil ? tree.menus : [NSMutableArray array];
     tree.menus = [NSMutableArray array];
     if (tree.root == nil)
         tree.root = [[NSMenu alloc] init];
@@ -322,7 +322,7 @@ void cocoaMenuBarOf(const PrAppMenu* PR_NULLABLE description, PrCocoaMenuTree* t
             continue;
         NSMenuItem* item = [[NSMenuItem alloc] init];
         item.submenu = menuOf(*top.submenu, tree, previous, host, owner);
-        item.title = top.title.size != 0 ? cocoaStringOf(top.title) : cocoaStringOf(top.submenu->title);
+        item.title = top.title.size != 0 ? appKitStringOf(top.title) : appKitStringOf(top.submenu->title);
         item.submenu.title = item.title;
         if (top.role == PrAppMenuRole_WindowList)
             NSApp.windowsMenu = item.submenu;
@@ -332,48 +332,48 @@ void cocoaMenuBarOf(const PrAppMenu* PR_NULLABLE description, PrCocoaMenuTree* t
     }
 }
 
-void cocoaSetMenuBar(PrApp* app, const PrAppMenu* PR_NULLABLE menu) {
-    PrCocoaHost* host = cocoaHostOf(app);
+void appKitSetMenuBar(PrApp* app, const PrAppMenu* PR_NULLABLE menu) {
+    PrAppKitHost* host = appKitHostOf(app);
     if (host.menuBar == nil)
-        host.menuBar = [[PrCocoaMenuTree alloc] init];
-    cocoaMenuBarOf(menu, host.menuBar, host, nil);
+        host.menuBar = [[PrAppKitMenuTree alloc] init];
+    appKitMenuBarOf(menu, host.menuBar, host, nil);
     [host showMenuBar];
 }
 
-void cocoaWindowSetMenuBar(PrAppWindow* window, const PrAppMenu* PR_NULLABLE menu) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+void appKitWindowSetMenuBar(PrAppWindow* window, const PrAppMenu* PR_NULLABLE menu) {
+    PrAppKitWindow* object = appKitObjectOf(window);
     if (menu == nullptr) {
         object.menuBar = nil;
     } else {
         if (object.menuBar == nil)
-            object.menuBar = [[PrCocoaMenuTree alloc] init];
-        cocoaMenuBarOf(menu, object.menuBar, object.host, object);
+            object.menuBar = [[PrAppKitMenuTree alloc] init];
+        appKitMenuBarOf(menu, object.menuBar, object.host, object);
     }
     [object.host showMenuBar];
 }
 
-void cocoaShowMenu(PrAppWindow* window, const PrAppMenu* menu, PrVec2 position) {
-    PrCocoaWindow* object = cocoaObjectOf(window);
+void appKitShowMenu(PrAppWindow* window, const PrAppMenu* menu, PrVec2 position) {
+    PrAppKitWindow* object = appKitObjectOf(window);
     if (object.host.headless)
         return;
-    PrCocoaMenuTree* tree = [[PrCocoaMenuTree alloc] init];
+    PrAppKitMenuTree* tree = [[PrAppKitMenuTree alloc] init];
     tree.menus = [NSMutableArray array];
     tree.root = menuOf(*menu, tree, [NSMutableArray array], object.host, object);
     object.contextMenu = tree;
     showMenuSoon(object, position);
 }
 
-PrStatus cocoaStatusItemCreate(PrApp* app, const PrAppStatusItemDesc* desc, PrAppStatusItem* PR_NULLABLE* PR_NONNULL out) {
-    PrCocoaHost* host = cocoaHostOf(app);
+PrStatus appKitStatusItemCreate(PrApp* app, const PrAppStatusItemDesc* desc, PrAppStatusItem* PR_NULLABLE* PR_NONNULL out) {
+    PrAppKitHost* host = appKitHostOf(app);
     if (!host.running)
         return PrStatus_InvalidState;
     if (host.headless)
         return PrStatus_NotSupported;
-    PrCocoaStatusItem* object = [[PrCocoaStatusItem alloc] init];
+    PrAppKitStatusItem* object = [[PrAppKitStatusItem alloc] init];
     object.host = host;
     object.item = [NSStatusBar.systemStatusBar statusItemWithLength:NSVariableStatusItemLength];
     statusItemApply(object, *desc);
-    CocoaStatusItem* item = allocZeroed<CocoaStatusItem>();
+    AppKitStatusItem* item = allocZeroed<AppKitStatusItem>();
     item->destroyFn = statusItemDestroy;
     item->setFn = statusItemSet;
     item->object = (__bridge_retained void*)object;
@@ -385,10 +385,10 @@ PrStatus cocoaStatusItemCreate(PrApp* app, const PrAppStatusItemDesc* desc, PrAp
 
 using namespace pr_impl;
 
-@implementation PrCocoaMenu
+@implementation PrAppKitMenu
 // Delivers the item's tag to the menu's window or to the application.
 - (void)deliverKind:(PrAppEventKind)kind tag:(uint64_t)tag {
-    PrCocoaHost* host = self.host;
+    PrAppKitHost* host = self.host;
     if (host == nil || !host.running)
         return;
     PrAppWindow* target = nullptr;
@@ -399,9 +399,9 @@ using namespace pr_impl;
     }
     PrAppEvent event{};
     event.kind = kind;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     event.tag = tag;
-    event.modifiers = cocoaModifiersOf(NSEvent.modifierFlags);
+    event.modifiers = appKitModifiersOf(NSEvent.modifierFlags);
     [host deliver:event to:target];
 }
 - (void)chosen:(NSMenuItem*)item {
@@ -414,18 +414,18 @@ using namespace pr_impl;
 }
 @end
 
-@implementation PrCocoaMenuTree
+@implementation PrAppKitMenuTree
 @end
 
-@implementation PrCocoaStatusItem
+@implementation PrAppKitStatusItem
 - (void)clicked:(id)sender {
     (void)sender;
-    PrCocoaHost* host = self.host;
+    PrAppKitHost* host = self.host;
     if (host == nil || !host.running)
         return;
     PrAppEvent event{};
     event.kind = PrAppEventKind_StatusItem;
-    event.time = cocoaUptime();
+    event.time = appKitUptime();
     event.tag = self.tag;
     [host deliver:event to:nullptr];
 }

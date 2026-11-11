@@ -17,7 +17,7 @@ target_link_libraries(pr_app PUBLIC prax::core prax::color prax::geom PRIVATE pr
 # What the backends share: the delivery of a window's callbacks, the events and answers that wait for a callback, the
 # displays that they have reported, the reads of the clipboard and of drops that wait for their answer, the content of
 # drags, and the regions of a custom title bar.
-if (PR_APP_COCOA OR PR_APP_WIN32 OR PR_APP_WEB)
+if (PR_APP_APPKIT OR PR_APP_WIN32 OR PR_APP_WEB)
     target_sources(pr_app PRIVATE
         backends/shared/src/app_shared_data.cpp
         backends/shared/src/app_shared_delivery.cpp
@@ -28,20 +28,20 @@ if (PR_APP_COCOA OR PR_APP_WIN32 OR PR_APP_WEB)
     )
 endif()
 
-if (PR_APP_COCOA)
-    set(cocoa_sources
-        backends/cocoa/src/app_cocoa.mm
-        backends/cocoa/src/app_cocoa_data.mm
-        backends/cocoa/src/app_cocoa_display.mm
-        backends/cocoa/src/app_cocoa_input.mm
-        backends/cocoa/src/app_cocoa_menu.mm
-        backends/cocoa/src/app_cocoa_shell.mm
-        backends/cocoa/src/app_cocoa_window.mm
+if (PR_APP_APPKIT)
+    set(appkit_sources
+        backends/appkit/src/app_appkit.mm
+        backends/appkit/src/app_appkit_data.mm
+        backends/appkit/src/app_appkit_display.mm
+        backends/appkit/src/app_appkit_input.mm
+        backends/appkit/src/app_appkit_menu.mm
+        backends/appkit/src/app_appkit_shell.mm
+        backends/appkit/src/app_appkit_window.mm
     )
-    target_sources(pr_app PRIVATE ${cocoa_sources})
-    pr_headers(pr_app PUBLIC backends/cocoa/include)
-    set_source_files_properties(${cocoa_sources} PROPERTIES COMPILE_OPTIONS -fobjc-arc)
-    target_compile_definitions(pr_app PRIVATE PR_APP_HAS_COCOA)
+    target_sources(pr_app PRIVATE ${appkit_sources})
+    pr_headers(pr_app PUBLIC backends/appkit/include)
+    set_source_files_properties(${appkit_sources} PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+    target_compile_definitions(pr_app PRIVATE PR_APP_HAS_APPKIT)
     target_link_libraries(pr_app PUBLIC "-framework AppKit" "-framework Carbon" "-framework IOKit" "-framework QuartzCore"
                                  "-framework UniformTypeIdentifiers" "-framework UserNotifications")
 endif()
@@ -76,7 +76,7 @@ if (PR_DEVELOP)
         tests/test_app_c.c
         tests/test_app_popup.cpp
     )
-    if (PR_APP_COCOA OR PR_APP_WIN32 OR PR_APP_WEB)
+    if (PR_APP_APPKIT OR PR_APP_WIN32 OR PR_APP_WEB)
         target_sources(app_tests PRIVATE
             backends/shared/tests/test_app_shared_data.cpp
             backends/shared/tests/test_app_shared_delivery.cpp
@@ -88,8 +88,8 @@ if (PR_DEVELOP)
     if (PR_APP_WIN32)
         target_sources(app_tests PRIVATE backends/win32/tests/test_app_win32.cpp)
     endif()
-    if (PR_APP_COCOA)
-        target_sources(app_tests PRIVATE backends/cocoa/tests/test_app_cocoa.mm)
-        set_source_files_properties(backends/cocoa/tests/test_app_cocoa.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+    if (PR_APP_APPKIT)
+        target_sources(app_tests PRIVATE backends/appkit/tests/test_app_appkit.mm)
+        set_source_files_properties(backends/appkit/tests/test_app_appkit.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     endif()
 endif()

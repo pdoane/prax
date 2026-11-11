@@ -1,6 +1,6 @@
-// The Cocoa backend's displays: their list, their properties, and positions on them.
+// The AppKit backend's displays: their list, their properties, and positions on them.
 
-#include "app/backends/cocoa/src/app_cocoa_display.h"
+#include "app/backends/appkit/src/app_appkit_display.h"
 
 namespace pr_impl {
 
@@ -22,11 +22,11 @@ PrAppOrientation orientationOf(NSScreen* screen) {
 // Returns the connected screen. `name` is the screen's name, which the caller keeps for as long as the view must last.
 PrAppDisplayInfo infoOf(NSScreen* screen, bool main, PrStringView name) {
     return PrAppDisplayInfo{
-        .id = cocoaDisplayIdOf(screen),
+        .id = appKitDisplayIdOf(screen),
         .name = name,
-        .display = cocoaDisplayOf(screen, screen.backingScaleFactor),
+        .display = appKitDisplayOf(screen, screen.backingScaleFactor),
         .extent = PrVec2{float(screen.frame.size.width), float(screen.frame.size.height)},
-        .workArea = cocoaRectOnScreen(screen, screen.visibleFrame),
+        .workArea = appKitRectOnScreen(screen, screen.visibleFrame),
         .refreshRate = float(screen.maximumFramesPerSecond),
         .orientation = orientationOf(screen),
         .main = main,
@@ -36,8 +36,8 @@ PrAppDisplayInfo infoOf(NSScreen* screen, bool main, PrStringView name) {
 // Returns what the application reports of `screen`, whose name it keeps until the displays change. The first screen
 // holds the menu bar.
 PrAppDisplayInfo displayInfoOf(const PrApp* app, NSScreen* screen) {
-    AppDisplayList& displays = static_cast<const CocoaApp*>(app)->displays;
-    PrAppDisplayId id = cocoaDisplayIdOf(screen);
+    AppDisplayList& displays = static_cast<const AppKitApp*>(app)->displays;
+    PrAppDisplayId id = appKitDisplayIdOf(screen);
     PrStringView name{};
     if (!appDisplayListFind(displays, id, &name)) {
         PrRawString utf8 = prAppleNSStringToRawString(screen.localizedName);
@@ -49,7 +49,7 @@ PrAppDisplayInfo displayInfoOf(const PrApp* app, NSScreen* screen) {
 
 } // namespace
 
-PrAppDisplayId cocoaDisplayIdOf(NSScreen* screen) {
+PrAppDisplayId appKitDisplayIdOf(NSScreen* screen) {
     CGDirectDisplayID number = [screen.deviceDescription[@"NSScreenNumber"] unsignedIntValue];
     CFUUIDRef uuid = CGDisplayCreateUUIDFromDisplayID(number);
     if (uuid == nullptr)
@@ -63,15 +63,15 @@ PrAppDisplayId cocoaDisplayIdOf(NSScreen* screen) {
     return id != kPrAppDisplayNone ? id : 1;
 }
 
-NSScreen* PR_NULLABLE cocoaScreenOf(PrAppDisplayId id) {
+NSScreen* PR_NULLABLE appKitScreenOf(PrAppDisplayId id) {
     for (NSScreen* screen in NSScreen.screens) {
-        if (cocoaDisplayIdOf(screen) == id)
+        if (appKitDisplayIdOf(screen) == id)
             return screen;
     }
     return nil;
 }
 
-PrAppDisplay cocoaDisplayOf(NSScreen* PR_NULLABLE screen, CGFloat pixelRatio) {
+PrAppDisplay appKitDisplayOf(NSScreen* PR_NULLABLE screen, CGFloat pixelRatio) {
     PrAppDisplay display = prAppDisplayDefault();
     display.pixelRatio = float(pixelRatio);
     if (screen != nil) {
@@ -83,14 +83,14 @@ PrAppDisplay cocoaDisplayOf(NSScreen* PR_NULLABLE screen, CGFloat pixelRatio) {
     return display;
 }
 
-PrRect cocoaRectOnScreen(NSScreen* screen, NSRect rect) {
+PrRect appKitRectOnScreen(NSScreen* screen, NSRect rect) {
     NSRect frame = screen.frame;
     float left = float(NSMinX(rect) - NSMinX(frame));
     float top = float(NSMaxY(frame) - NSMaxY(rect));
     return PrRect{left, top, left + float(rect.size.width), top + float(rect.size.height)};
 }
 
-void cocoaPlaceOnScreen(NSWindow* window, NSScreen* screen, PrVec2 position) {
+void appKitPlaceOnScreen(NSWindow* window, NSScreen* screen, PrVec2 position) {
     NSRect content = [window contentRectForFrameRect:window.frame];
     NSRect frame = screen.frame;
     NSRect work = screen.visibleFrame;
@@ -102,15 +102,15 @@ void cocoaPlaceOnScreen(NSWindow* window, NSScreen* screen, PrVec2 position) {
     [window setFrameOrigin:[window frameRectForContentRect:content].origin];
 }
 
-void cocoaCenterOnScreen(NSWindow* window, NSScreen* screen) {
+void appKitCenterOnScreen(NSWindow* window, NSScreen* screen) {
     NSRect content = [window contentRectForFrameRect:window.frame];
     NSRect work = screen.visibleFrame;
     float x = float((work.size.width - content.size.width) / 2 + NSMinX(work) - NSMinX(screen.frame));
     float y = float(NSMaxY(screen.frame) - NSMaxY(work) + (work.size.height - content.size.height) / 2);
-    cocoaPlaceOnScreen(window, screen, PrVec2{x, y});
+    appKitPlaceOnScreen(window, screen, PrVec2{x, y});
 }
 
-NSRect cocoaPopupFrame(NSWindow* parent, NSSize size, const PrAppPopupPlacement& placement) {
+NSRect appKitPopupFrame(NSWindow* parent, NSSize size, const PrAppPopupPlacement& placement) {
     // AppKit's global y grows upward from the bottom of the first screen, and the placement's grows downward.
     CGFloat top = NSMaxY(NSScreen.screens.firstObject.frame);
     auto downward = [top](NSRect rect) {
@@ -130,7 +130,7 @@ NSRect cocoaPopupFrame(NSWindow* parent, NSSize size, const PrAppPopupPlacement&
         CGFloat(placed.bottom - placed.top));
 }
 
-bool cocoaDisplayPositionAt(NSPoint at, PrAppDisplayPosition* out) {
+bool appKitDisplayPositionAt(NSPoint at, PrAppDisplayPosition* out) {
     NSScreen* nearest = nil;
     CGFloat nearestDistance = 0;
     for (NSScreen* screen in NSScreen.screens) {
@@ -147,25 +147,25 @@ bool cocoaDisplayPositionAt(NSPoint at, PrAppDisplayPosition* out) {
         return false;
     NSRect frame = nearest.frame;
     *out = PrAppDisplayPosition{
-        .display = cocoaDisplayIdOf(nearest),
+        .display = appKitDisplayIdOf(nearest),
         .position = PrVec2{float(at.x - NSMinX(frame)), float(NSMaxY(frame) - at.y)},
     };
     return true;
 }
 
-bool cocoaPointerPosition(const PrApp* app, PrAppDisplayPosition* out) {
-    return !cocoaHostOf(app).headless && cocoaDisplayPositionAt(NSEvent.mouseLocation, out);
+bool appKitPointerPosition(const PrApp* app, PrAppDisplayPosition* out) {
+    return !appKitHostOf(app).headless && appKitDisplayPositionAt(NSEvent.mouseLocation, out);
 }
 
-uint32_t cocoaDisplays(const PrApp* app, PrAppDisplayInfo* PR_NULLABLE out, uint32_t capacity) {
+uint32_t appKitDisplays(const PrApp* app, PrAppDisplayInfo* PR_NULLABLE out, uint32_t capacity) {
     NSArray<NSScreen*>* screens = NSScreen.screens;
     for (NSUInteger i = 0; i < screens.count && i < capacity; ++i)
         out[i] = displayInfoOf(app, screens[i]);
     return uint32_t(screens.count);
 }
 
-bool cocoaDisplayInfo(const PrApp* app, PrAppDisplayId id, PrAppDisplayInfo* out) {
-    NSScreen* screen = cocoaScreenOf(id);
+bool appKitDisplayInfo(const PrApp* app, PrAppDisplayId id, PrAppDisplayInfo* out) {
+    NSScreen* screen = appKitScreenOf(id);
     if (screen == nil)
         return false;
     *out = displayInfoOf(app, screen);
