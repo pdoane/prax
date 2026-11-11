@@ -183,3 +183,10 @@ pr_example(incremental
 )
 target_link_libraries(incremental PRIVATE prax::studio_app prax::font_bundle prax::app prax::studio_kit prax::draw prax::layout
                                           prax::text prax::html prax::dom prax::css prax::markdown prax::core_cpp)
+
+# The immersive example: a spinning cube over a floor in an immersive space, which lib/app opens beside a window, a
+# session of lib/surface runs, and lib/gpu draws in one pass of every view. On a platform without immersive spaces, the
+# window says so.
+pr_example(immersive immersive/main.cpp MULTIPLE_SCENES)
+pr_slang(immersive immersive/immersive.slang VARIABLE kImmersiveShaders)
+target_link_libraries(immersive PRIVATE prax::app prax::gpu prax::surface prax::core_cpp)
