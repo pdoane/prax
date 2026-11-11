@@ -153,6 +153,15 @@ PrRect prDrawCommandsBounds(const PrDrawCommand* PR_NULLABLE commands, uint32_t 
 // backdrop, or a filter that reads the backdrop. A projected group is not a backdrop root, so a group inside it counts.
 bool prDrawListReadsBackdrop(const PrDrawList* list);
 
+// Returns true if the list, or a list that it plays, composites with what it draws over, played under `transform`: a
+// command or a group with an operator other than source-over or a blend mode other than normal, a knockout group, or a
+// Clear of a color that is not opaque within a clip that covers pixels in part, whose edges mix the color with what
+// lies under them. A clip lets through whole pixels if each clip in force is a rectangle, under a transform that keeps
+// it axis-aligned, whose edges lie on pixels or are aliased, and it lies outside any group that draws in a space of its
+// own (one with a projection, a filter or a backdrop). A renderer that cannot read its target draws such a list into a
+// layer of its own.
+bool prDrawListReadsDestination(const PrDrawList* list, const PrDrawTransform* transform);
+
 // Returns true if the list, or a list that it plays, writes pixels (prDrawListWritePixels) outside a projected group.
 // Written pixels land in the target's space wherever the list plays.
 bool prDrawListWritesPixels(const PrDrawList* list);

@@ -1,6 +1,7 @@
 // Math fonts: the MATH table of New Computer Modern Math and of WPT's math test fonts, whose values their generators
 // set, the fallbacks of fonts without one, and MATH tables that are malformed.
 
+#include "pr/align.h"
 #include "pr/array.h"
 #include "pr/compress_builtin.h"
 #include "pr/float.h"
@@ -12,6 +13,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 using namespace pr;
@@ -22,7 +25,7 @@ constexpr uint32_t kMath = PR_FONT_TAG('M', 'A', 'T', 'H');
 
 // Returns the bytes of the font file `name`, in the fonts directory.
 Array<uint8_t> fontFile(PrStringView name) {
-    return harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
+    return readFile(format("{}/{}", PR_FONTS_DIR, name));
 }
 
 Array<uint8_t> newCmBytes() {
@@ -111,7 +114,7 @@ Array<uint8_t> withTable(const Array<uint8_t>& font, uint32_t tag, const Array<u
         put32(out, 0);
         put32(out, offset);
         put32(out, t.bytes.count());
-        offset += (t.bytes.count() + 3) & ~3u;
+        offset += alignUp(t.bytes.count(), 4);
     }
     for (const Table& t : tables) {
         out.append(t.bytes.span());

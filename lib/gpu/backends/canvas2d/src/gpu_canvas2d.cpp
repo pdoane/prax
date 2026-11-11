@@ -170,20 +170,24 @@ constexpr PrGpuSwapChain kSwapChainFunctions = {
     .presentFn = swapChainPresent,
 };
 
+// Fails outside a web page, which has the canvases that the device draws into.
+PrStatus initialize(GpuSharedDevice*) {
+    return prGpuCanvas2dAvailable() ? PrStatus_Ok : PrStatus_NotSupported;
+}
+
 } // namespace
 
 } // namespace pr_impl
 
 using namespace pr_impl;
 
-PrStatus prGpuCanvas2dCreate(PrGpuDevice* PR_NULLABLE* PR_NONNULL out) {
-    *out = nullptr;
-    if (!prGpuCanvas2dAvailable())
-        return PrStatus_NotSupported;
+PrGpuDevice* prGpuCanvas2dCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
+    PrGpuDeviceOptions o = options != nullptr ? *options : prGpuDeviceOptionsDefault();
     GpuSharedDevice* device = static_cast<GpuSharedDevice*>(gpuMemoryCreate("canvas2d", &kCanvases));
     device->inPlaceImports = 1u << PrGpuImportKind_WebImage;
     device->textureImportInPlace = textureImport;
     device->swapChainCreateFn = swapChainCreate;
-    *out = device;
-    return PrStatus_Ok;
+    device->initialize = initialize;
+    gpuSharedDeviceStart(device, o.pool, o.ready, o.readyContext);
+    return device;
 }

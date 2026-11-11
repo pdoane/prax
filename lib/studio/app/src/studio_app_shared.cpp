@@ -7,16 +7,27 @@
 namespace pr_impl {
 
 bool studioAppMakeDevice(StudioAppState* app) {
-    studioAppCloseDevice(app);
-    PrDrawRendererOptions options = prDrawRendererOptionsDefault();
-    options.glyphDecoder = app->glyphs;
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &app->device) != PrStatus_Ok ||
-            prDrawRendererCreate(PrDrawRendererBackend_Default, app->device, &options, &app->renderer) != PrStatus_Ok) {
+    if (app->device != nullptr && prGpuDeviceIsLost(app->device))
         studioAppCloseDevice(app);
-        return false;
+    if (app->device == nullptr) {
+        PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
+        options.pool = app->desc.pool;
+        app->device = prGpuDeviceCreate(PrGpuBackend_Default, &options);
     }
-    ++app->generation;
+    if (app->device == nullptr || !prGpuDeviceIsReady(app->device) || prGpuDeviceIsLost(app->device))
+        return false;
+    if (app->renderer == nullptr) {
+        PrDrawRendererOptions options = prDrawRendererOptionsDefault();
+        options.glyphDecoder = app->glyphs;
+        if (prDrawRendererCreate(PrDrawRendererBackend_Default, app->device, &options, &app->renderer) != PrStatus_Ok)
+            return false;
+        ++app->generation;
+    }
     return true;
+}
+
+bool studioAppCreatingDevice(const StudioAppState* app) {
+    return app->device != nullptr && !prGpuDeviceIsReady(app->device);
 }
 
 PrDrawDisplay* PR_NULLABLE studioAppDisplay(StudioAppState* app) {

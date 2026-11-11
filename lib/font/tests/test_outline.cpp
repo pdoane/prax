@@ -16,6 +16,8 @@
 #include "freetype/ftmm.h"
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 using namespace pr;
@@ -45,7 +47,7 @@ struct Face {
 
 // Opens the font at `path`.
 void open(PrStringView path, Face& f) {
-    f.bytes = harness::readFile(path);
+    f.bytes = readFile(path);
     REQUIRE_MESSAGE(!f.bytes.isEmpty(), String(path));
     REQUIRE(sfntOpen(f.bytes.data(), f.bytes.count(), 0, &f.sfnt));
     fontGlyphMetricsOpen(f.sfnt, &f.metrics);

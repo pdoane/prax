@@ -1262,17 +1262,31 @@ float4 fragmentShadeBasic(VertexOut input) : SV_Target {
     return s.paint * (s.shape * s.clip);
 }
 
-// Composites onto the destination, which it reads from the target.
-[shader("fragment")]
-float4 fragmentBlend(VertexOut input PR_GPU_TARGET_PARAM) : SV_Target {
+// The instance composited onto the destination `under`.
+float4 compositeOver(VertexOut input, float4 under) {
     Shaded s = shade<false>(input);
-    float4 under = prGpuTarget(input.position);
     FragmentInstance i = frameInstances[input.instance];
     FragmentPaint r = framePaints[i.paint - 1];
     float covered = s.shape * s.clip;
     if (r.knockout != 0)
         return lerp(under, composite(s.paint, (float4)0, r.composite, r.blendMode), covered);
     return lerp(under, composite(s.paint, under, r.composite, r.blendMode), covered);
+}
+
+// Composites onto the destination, which it reads from the target.
+[shader("fragment")]
+float4 fragmentBlend(VertexOut input PR_GPU_TARGET_PARAM) : SV_Target {
+    return compositeOver(input, prGpuTarget(input.position));
+}
+
+// The snapshot of the layer that the pass draws into, on a device that cannot read its target (FragmentPass). Its texel
+// is the layer's at the same pixel.
+PR_GPU_TEXTURE(Texture2D<float4>, frameSnapshot, 0);
+
+// Composites onto the destination, which it reads from the snapshot of its layer.
+[shader("fragment")]
+float4 fragmentBlendSnapshot(VertexOut input) : SV_Target {
+    return compositeOver(input, frameSnapshot.Load(int3(int2(input.position.xy), 0)));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -6,7 +6,11 @@
 #include "pr/string.h"
 #include "pr/vec.h"
 
+#include "tools/harness/harness_gpu.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -21,7 +25,7 @@ struct Device {
     PrDrawFrame* frame = nullptr;
 
     Device(uint32_t width, uint32_t height) {
-        REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &gpuDevice) == PrStatus_Ok);
+        REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, nullptr, &gpuDevice) == PrStatus_Ok);
         REQUIRE(prDrawImGuiCreate(gpuDevice, &renderer));
         PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{width, height},
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
@@ -56,12 +60,12 @@ struct Device {
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         uint32_t width = prGpuTextureExtent(gpuDevice, texture).x;
         uint32_t height = prGpuTextureExtent(gpuDevice, texture).y;
         Array<uint8_t> pixels(size_t(width) * height * 4);
         PrPixels out{pixels.data(), size_t(width) * 4, {width, height}};
-        prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
+        gpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
         return pixels;
     }
 };

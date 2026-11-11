@@ -7,6 +7,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 extern "C" int prTestUiCApi(void);
 
 namespace pr_impl {
@@ -1095,7 +1097,7 @@ TEST_CASE("a drag that leaves the window ends the system's payload, and a refuse
 
 TEST_CASE("a drag of content passes to the system once its press moves past the threshold, once for the press") {
     UiFixture f;
-    harness::DragWindow window;
+    DragWindow window;
     prUiSetWindow(f.ui, &window);
     PrLayoutNode source = kPrLayoutNodeNone;
     PrAppDragDesc desc{
@@ -1142,7 +1144,7 @@ TEST_CASE("a drag of content passes to the system once its press moves past the 
 
 TEST_CASE("a payload that may leave the window passes to the system as the pointer leaves") {
     UiFixture f;
-    harness::DragWindow window;
+    DragWindow window;
     prUiSetWindow(f.ui, &window);
     PrLayoutNode source = kPrLayoutNodeNone;
     bool sourceOver = false;
@@ -1194,7 +1196,7 @@ TEST_CASE("a payload that may leave the window passes to the system as the point
 
 TEST_CASE("a payload that left the window reports how its drag ended, once, and a press forgets a lost end") {
     UiFixture f;
-    harness::DragWindow window;
+    DragWindow window;
     prUiSetWindow(f.ui, &window);
     PrLayoutNode source = kPrLayoutNodeNone;
     const PrUiPayload* ended = nullptr;

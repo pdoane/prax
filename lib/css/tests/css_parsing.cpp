@@ -18,9 +18,7 @@
 #include "tools/harness/harness.h"
 
 using namespace harness;
-
 using namespace pr;
-
 using namespace pr_impl;
 
 namespace {

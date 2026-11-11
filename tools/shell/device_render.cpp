@@ -3,6 +3,9 @@
 #include "pr/draw_renderer.h"
 #include "pr/gpu.h"
 
+#include "tools/harness/harness_gpu.h"
+
+using namespace harness;
 using namespace pr;
 
 namespace shell {
@@ -16,7 +19,7 @@ struct DeviceRender {
 DeviceRender* PR_NULLABLE deviceRenderCreate(PrDrawRendererBackend backend) {
     PrGpuDevice* device = nullptr;
     PrDrawRenderer* renderer = nullptr;
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) != PrStatus_Ok ||
+    if (gpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) != PrStatus_Ok ||
             prDrawRendererCreate(backend, device, nullptr, &renderer) != PrStatus_Ok) {
         prGpuDeviceDestroy(device);
         return nullptr;
@@ -54,9 +57,9 @@ bool deviceRenderPixels(DeviceRender* render, const PrDrawList* list, PrUVec2 ex
         prDrawFrameRender(render->frame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
     prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     PrPixels texels{rgba, size_t(extent.x) * 4, extent};
-    prGpuTextureRead(render->device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, texels);
+    gpuTextureRead(render->device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, texels);
     prGpuTextureDestroy(render->device, texture);
     return ok;
 }

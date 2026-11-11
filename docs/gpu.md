@@ -14,11 +14,13 @@ each backend runs it on one graphics API.
 | `canvas2d` | memory and a web page's canvases, with no shaders | the web (`PR_GPU_CANVAS2D`) |
 
 The library holds the backends that the build turns on. It builds with none of them for an application that brings
-its own (`pr/gpu_backend.h`). `prGpuDeviceCreate` creates a device by a backend, or by `PrGpuBackend_Default`, which
-tries the build's backends that the system supports in order: the platform's own first, and the memory backend last.
-The environment variable `PR_GPU_BACKEND` (such as `metal` or `vulkan`) chooses the backend that Default creates, so a
-program and its tests run on any backend in the build. A backend's header creates a device over the application's
-native device and queue (`pr/gpu_metal.h`, `pr/gpu_metal4.h`, `pr/gpu_d3d12.h`, `pr/gpu_vulkan.h`).
+its own (`pr/gpu_backend.h`). `prGpuDeviceCreate` creates a device by a backend, or by `PrGpuBackend_Default`. Default
+is the backend that the environment variable `PR_GPU_BACKEND` names, such as `metal` or `vulkan`, so a program and its
+tests run on any backend in the build. Otherwise Default tries the build's backends in order, the platform's own first
+and the memory backend last, and passes over a backend once a creation by it fails with NotSupported. A creation that
+fails on a pool leaves a lost device, so the application's recovery from the loss creates the next backend's device.
+A backend's header creates a device over the application's native device and queue (`pr/gpu_metal.h`,
+`pr/gpu_metal4.h`, `pr/gpu_d3d12.h`, `pr/gpu_vulkan.h`).
 
 ## The model
 
@@ -31,8 +33,9 @@ a 3D renderer needs it.
   `prGpuGet<T>`. A resource that shaders write may have a second handle for writing (`prGpuBufferStorageHandle`,
   `prGpuTextureStorageHandle`), because Direct3D 12 writes through a view of its own.
 - **Root data** is push data, at most 128 bytes, and uniforms, at most 64 KiB, set on the command buffer before a draw
-  or dispatch. Both are copied, and handles are `uint32_t` fields of either. A pipeline has no vertex layout: shaders
-  pull vertices from buffers by handle.
+  or dispatch. Both are copied, and handles are `uint32_t` fields of either.
+- **Vertices** reach the vertex shader through the pipeline's vertex layout, which reads the pass's vertex buffers. A
+  vertex shader may also pull its vertices from buffers by handle or slot.
 - **One layout for data.** A structure that a shader reads from a buffer (`prGpuLoad<T>`) lays out as C lays it out,
   with each field at a multiple of its alignment (16 bytes for a 4-vector, 8 for a 2-vector, 4 for a scalar) and no
   3-vectors, so C++ and Slang share one definition. Root data is read through the hardware's constant path, so it also
@@ -53,6 +56,9 @@ a 3D renderer needs it.
 - **The stream always succeeds.** A command buffer allocates per-frame data from a stream of upload memory that is
   reclaimed once its work completes, and grows as recording needs it. Running out of memory loses the device, which
   hosts already handle.
+- **Creation is asynchronous.** `prGpuDeviceCreate` returns the device at once. The creation runs on a task pool that
+  the application provides, or during the call without one. The device does no work until it is ready. A failed
+  creation leaves the device lost, so an application recovers from it as from a loss.
 - **Device loss** is a state, not an error path. A lost device refuses new work, completes every fence, and reads back
   zeros. The application destroys every object and makes them again on a new device.
 
@@ -71,9 +77,11 @@ SPIR-V hold every entry point in one module. Direct3D 12 takes DXIL for each ent
 | handles | buffers of 8-byte entries that a handle indexes | the shader-visible heaps, indexed directly | the bindless set at set 2: an array of samplers and one of mutable descriptors |
 | push data | a buffer in the stream | 32 root constants at `b0` | push constants |
 | uniforms | a buffer in the stream | a root constant buffer at `b1` | a uniform buffer, pushed at set 1 |
-| reading the target | framebuffer fetch | a copy of the target over the draw's scissor | an input attachment read locally in the rendering, or a copy of the target over the draw's scissor on a device without local read; either is pushed at set 1 |
+| reading the target | framebuffer fetch, except in the iOS simulator | none | an input attachment read locally in the rendering, pushed at set 1, on a device with local read |
 
-A pipeline that reads its target (`readsTarget`, and `prGpuTarget` in the shader) reads what the draws before it left.
+A pipeline that reads its target (`readsTarget`, and `prGpuTarget` in the shader) reads what the draws before it left,
+on a device with `PrGpuFeatureFlag_TargetReads`. A device without it, such as Metal in the iOS simulator, refuses such
+a pipeline, and the renderer reads what earlier draws left from a texture of its own.
 Where the device lacks `PrGpuFeatureFlag_OrderedTargetReads`, fragments of one draw that cover the same pixel read an
 undefined value, so a renderer splits such draws, as `lib/draw`'s fragment renderer does.
 

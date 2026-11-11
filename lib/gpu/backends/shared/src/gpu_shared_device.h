@@ -7,10 +7,12 @@
 #pragma once
 
 #include "pr/assert.h"
+#include "pr/atomic.h"
 #include "pr/base.h"
 #include "pr/gpu_backend.h"
 #include "pr/mutex.h"
 #include "pr/raw_array.h"
+#include "pr/thread.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -48,6 +50,25 @@ struct GpuSharedDevice : PrGpuDevice {
     PrGpuShaderLibrary* PR_NULLABLE mipmapLibrary;
     RawArray<GpuSharedMipmapPipeline> mipmapPipelines;
     RawArray<uint32_t> importCopies;
+
+    // The backend's operations on the device's lifetime. `initialize` makes the objects that the device runs on, and
+    // returns Ok or the status that the creation fails with. It runs on the creation's pool, or during the constructor.
+    // `removed` returns true once the system has taken a ready device away. `destroy` frees the device after its
+    // initialization succeeded or failed, so it frees only what was made.
+    PrStatus (*initialize)(GpuSharedDevice* device);
+    bool (*removed)(const GpuSharedDevice* device);
+    void (*destroy)(GpuSharedDevice* device);
+
+    // The creation's stage, a PrGpuDeviceStage, and the status that a failed creation returned. `stage` is written
+    // after `failure` and after everything that `initialize` made. `created` is set under `stageMutex` after the ready
+    // callback returns. A destroy waits on `stageSignal` until `created` is set.
+    Atomic<uint8_t> stage;
+    PrStatus failure;
+    PrGpuDeviceReadyFn PR_NULLABLE ready;
+    void* PR_NULLABLE readyContext;
+    PrMutex stageMutex;
+    PrCondition stageSignal;
+    bool created;
 };
 
 // A command buffer: its device, and what the checks of its calls read.
@@ -80,9 +101,22 @@ struct GpuSharedLibrary : PrGpuShaderLibrary {
 };
 
 // Installs the device's shared functions and initializes their state, or frees the state. The device frees it after its
-// work is done and before it destroys its own resources, since the state holds pipelines of the device.
+// work is done and before it destroys its own resources, since the state holds pipelines of the device. The shared
+// functions include the device's `stageFn`, `lostStatusFn` and `destroyFn`, which build on the backend's `removed` and
+// `destroy`.
 void gpuSharedDeviceInit(GpuSharedDevice* device);
 void gpuSharedDeviceReset(GpuSharedDevice* device);
+
+// Starts the device's creation. The constructor calls it after filling the function table and the backend's
+// `initialize`, `removed` and `destroy`. It runs `initialize` as a job of `pool`, or during the call if `pool` is null,
+// then publishes the stage and calls `ready`.
+void gpuSharedDeviceStart(GpuSharedDevice* device, PrTaskPool* PR_NULLABLE pool, PrGpuDeviceReadyFn PR_NULLABLE ready,
+    void* PR_NULLABLE readyContext);
+
+// Returns true if the device's creation succeeded, so that the backend may use what `initialize` made.
+inline bool gpuSharedDeviceIsReady(const GpuSharedDevice* device) {
+    return device->stage.load() == PrGpuDeviceStage_Ready;
+}
 
 // Forgets a texture that the device destroys, so that a later texture of the same id is not taken for an import's copy.
 // The backend's textureDestroyFn calls it.
@@ -96,6 +130,11 @@ PrUVec2 gpuSharedPassExtent(const PrGpuPass* pass);
 PrGpuDevice* gpuSharedSwapChainDevice(const PrGpuSwapChain* swapChain);
 PrGpuSwapChainInfo gpuSharedSwapChainInfo(const PrGpuSwapChain* swapChain);
 const PrGpuShaderEntry* gpuSharedLibraryEntries(const PrGpuShaderLibrary* library, uint32_t* count);
+
+// Returns the alignment of an allocation of a command buffer's stream for `usage`, which pr/gpu.h states.
+inline uint64_t gpuSharedStreamAlignment(const GpuSharedDevice* device, PrGpuBufferUsageFlags usage) {
+    return (usage & PrGpuBufferUsageFlag_Storage) != 0 ? device->info.storageOffsetAlignment : 16;
+}
 
 // Records the mip levels of a texture, each drawn from the one before, for a backend that has no operation of its own.
 void gpuSharedGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, PrGpuAccessFlags before);

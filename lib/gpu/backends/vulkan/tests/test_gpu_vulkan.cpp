@@ -7,6 +7,7 @@
 #include "pr/mem.h"
 
 #include "gpu/tests/kTestGpuNativeShaders.h"
+#include "tools/harness/harness_gpu.h"
 
 #include "tools/harness/test.h"
 
@@ -17,6 +18,8 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+using namespace harness;
 #endif
 
 namespace pr_impl {
@@ -45,9 +48,13 @@ struct Fixture {
     Fixture() {
         PrGpuVulkanOptions options = prGpuVulkanOptionsDefault();
         options.validation = true;
-        PrStatus status = prGpuVulkanCreate(&options, &device);
-        if (status == PrStatus_NotFound || status == PrStatus_NotSupported) {
+        // Without a pool, the device's creation is done when the constructor returns.
+        device = prGpuVulkanCreate(&options);
+        PrStatus status = prGpuDeviceLostStatus(device);
+        if (status == PrStatus_NotSupported) {
             MESSAGE("no Vulkan device with the features that the backend needs");
+            prGpuDeviceDestroy(device);
+            device = nullptr;
             return;
         }
         REQUIRE(status == PrStatus_Ok);
@@ -329,7 +336,7 @@ TEST_CASE("vulkan hands a native draw the pass's command buffer, and draws after
         PrGpuAccessFlag_CopyRead);
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
-    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+    gpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[7] == 0xff0000ffu);
     CHECK(pixels[7 * 8] == 0xffff0000u);

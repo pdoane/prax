@@ -37,10 +37,11 @@ struct StudioAppState {
     PrImageCodec* PR_NULLABLE images;
     PrDrawGlyphDecoder* PR_NULLABLE glyphs;
 
-    // The device that every window renders on, the renderer on it, and how many times the device has been made, so that
-    // a window knows to make its swap chain again on a new device. The display shader is made on the device for the
-    // first frame whose swap chain holds more than 8-bit sRGB (studioAppDisplay), as a device that never makes such a
-    // swap chain, such as a canvas's, may have no shaders to run it.
+    // The device that every window renders on, the renderer on it, and how many times the renderer has been made. A
+    // window compares the count with its own to know when to make its swap chain again. The device's creation runs on
+    // the description's pool. The display shader is made on the device for the first frame whose swap chain holds more
+    // than 8-bit sRGB (studioAppDisplay), because a device that never makes such a swap chain, such as a canvas's, may
+    // have no shaders to run it.
     PrGpuDevice* PR_NULLABLE device;
     PrDrawRenderer* PR_NULLABLE renderer;
     PrDrawDisplay* PR_NULLABLE display;
@@ -114,9 +115,13 @@ struct StudioWindowState {
     PrAppOutput output;
 };
 
-// Makes the application's device and the renderer on it, freeing what the application and every window made on the
-// device before, if there was one. Returns false if the platform has no device to render with.
+// Returns true if the application's device is ready and has a renderer. Otherwise frees a lost device, which includes
+// one whose creation failed, with everything that the application and its windows made on it, and creates another.
+// Makes the renderer once the device is ready. A window renders only if this returns true.
 bool studioAppMakeDevice(StudioAppState* app);
+
+// Returns true while the application's device is being created, so that a window keeps asking for frames.
+bool studioAppCreatingDevice(const StudioAppState* app);
 
 // Returns the display shader on the application's device, made on first use, or null if the device cannot run it.
 PrDrawDisplay* PR_NULLABLE studioAppDisplay(StudioAppState* app);

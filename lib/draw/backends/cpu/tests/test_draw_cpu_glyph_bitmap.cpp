@@ -8,6 +8,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 namespace {
@@ -96,7 +98,7 @@ Array<uint8_t> withSbixImage(Array<uint8_t> font, uint16_t glyph, uint16_t glyph
 using namespace pr_impl;
 
 TEST_CASE("a TIFF image in an sbix strike draws through the image codec") {
-    Array<uint8_t> file = harness::readFile(format("{}/TwemojiSmileySbix.ttf", PR_FONTS_DIR));
+    Array<uint8_t> file = readFile(format("{}/TwemojiSmileySbix.ttf", PR_FONTS_DIR));
     const PrFont* original = nullptr;
     REQUIRE(prFontCreate(file, 0, nullptr, &original) == PrStatus_Ok);
     uint16_t glyphs = uint16_t(prFontGlyphCount(original));

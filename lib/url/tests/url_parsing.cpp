@@ -12,7 +12,6 @@
 #include "url/src/url_record.h"
 
 using namespace harness;
-
 using namespace pr_impl;
 
 namespace {

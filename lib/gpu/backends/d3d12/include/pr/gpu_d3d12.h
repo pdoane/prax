@@ -10,7 +10,9 @@
 // Shaders reach every resource through the device's two shader-visible descriptor heaps, which the device binds on
 // every command list that it records into, its own and the application's, as it begins. An application that draws with
 // heaps of its own after the device's work binds them again, and a pass of the application's has the device's heaps
-// bound.
+// bound. The slots are parameters of the device's root signature: Buffer and RwBuffer slots are root descriptors, and
+// Texture slots, their samplers and RwTexture slots are tables of descriptors that the device writes into the heaps
+// past the handles.
 //
 // Copies between buffers and textures lay out rows at multiples of 256 bytes, and start at a multiple of 512 bytes into
 // the buffer, as D3D12 requires.
@@ -35,6 +37,12 @@ typedef struct PrGpuD3d12Options {
     // standard error. The layer must be installed, as Windows' Graphics Tools install it. Without it the device is
     // created as if the option were off.
     bool validation;
+
+    // The device's creation runs on `pool`, or during the call if it is null. `ready` is called once the creation is
+    // done (PrGpuDeviceOptions).
+    PrTaskPool* PR_NULLABLE pool;
+    PrGpuDeviceReadyFn PR_NULLABLE ready;
+    void* PR_NULLABLE readyContext;
 } PrGpuD3d12Options;
 
 // Returns the default options: a device on the system's high-performance adapter, with a queue of the device's own,
@@ -42,12 +50,13 @@ typedef struct PrGpuD3d12Options {
 // off. prGpuDeviceCreate turns the layer on where its options ask for validation.
 PrGpuD3d12Options prGpuD3d12OptionsDefault(void);
 
-// Creates a device over D3D12. The device holds a reference to the application's device and queue. Null `options` means
-// the defaults. Returns NotSupported if the system has no adapter with shader model 6.6, resource binding tier 3 and
-// enhanced barriers. On failure, `*out` is null.
-PrStatus prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options, PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
+// Creates a device over D3D12, as prGpuDeviceCreate does. Once ready, the device holds a reference to the application's
+// device and queue. Null `options` means the defaults. Its creation fails with NotSupported if the system has no
+// adapter with shader model 6.6, resource binding tier 3 and enhanced barriers.
+PrGpuDevice* prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options);
 
-// Return the native objects of the device, valid while it lives: its ID3D12Device and its direct ID3D12CommandQueue.
+// Return the native objects of a ready device, valid while it lives: its ID3D12Device and its direct
+// ID3D12CommandQueue.
 void* prGpuD3d12Device(const PrGpuDevice* device);
 void* prGpuD3d12Queue(const PrGpuDevice* device);
 

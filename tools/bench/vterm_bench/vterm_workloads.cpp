@@ -11,8 +11,8 @@
 #include <cstdio>
 #include <cstdlib>
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 
 namespace vterm_bench {
 

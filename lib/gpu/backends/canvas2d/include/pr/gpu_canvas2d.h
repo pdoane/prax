@@ -28,8 +28,9 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Creates a device. Returns NotSupported if the program runs without a page's canvases, such as under Node.js.
-PrStatus prGpuCanvas2dCreate(PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
+// Creates a device, as prGpuDeviceCreate does. Its creation fails with NotSupported outside a web page. Null `options`
+// means the defaults, of which only the pool and the ready callback apply.
+PrGpuDevice* prGpuCanvas2dCreate(const PrGpuDeviceOptions* PR_NULLABLE options);
 
 #if defined(__cplusplus)
 }

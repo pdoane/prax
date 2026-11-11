@@ -131,7 +131,7 @@ pr_library(studio_app INCLUDE app/include
     app/src/studio_window.cpp
 )
 target_link_libraries(pr_studio_app PUBLIC prax::app prax::color prax::draw prax::font prax::gpu
-                                           prax::layout prax::studio_kit prax::text prax::ui
+                                           prax::layout prax::studio_kit prax::task prax::text prax::ui
                                     PRIVATE prax::core_cpp prax::compress prax::image)
 
 if (PR_DEVELOP)

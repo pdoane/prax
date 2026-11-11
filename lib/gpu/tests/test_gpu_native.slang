@@ -23,6 +23,16 @@ void fill(uint3 id : SV_DispatchThreadID) {
         prGpuGet<RWByteAddressBuffer>(push.output).Store(id.x * 4, id.x * push.scale);
 }
 
+// `fill`, into the buffer of RwBuffer slot 0, for a device that may lack bindless.
+PR_GPU_RW_BUFFER(RWByteAddressBuffer, slotOutput, 0);
+
+[shader("compute")]
+[numthreads(64, 1, 1)]
+void slotFill(uint3 id : SV_DispatchThreadID) {
+    if (id.x < push.count)
+        slotOutput.Store(id.x * 4, id.x * push.scale);
+}
+
 struct VertexOut {
     float4 position : SV_Position;
 };

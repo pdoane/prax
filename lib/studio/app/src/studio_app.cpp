@@ -10,11 +10,11 @@ namespace pr_impl {
 
 namespace {
 
-// Makes the device and opens the description's window, and then calls the application's start. A run without a device
-// fails.
+// Asks for the device, opens the description's window, and calls the application's start. Without a pool, the run fails
+// if there is no device.
 bool start(void* context, PrApp*) {
     PrStudioApp* s = static_cast<PrStudioApp*>(context);
-    if (!studioAppMakeDevice(s)) {
+    if (!studioAppMakeDevice(s) && s->desc.pool == nullptr) {
         s->status = PrStatus_NotSupported;
         return false;
     }
@@ -105,7 +105,7 @@ PrTextShaper* prStudioAppShaper(const PrStudioApp* app) {
 }
 
 PrGpuDevice* PR_NULLABLE prStudioAppDevice(const PrStudioApp* app) {
-    return app->device;
+    return app->renderer != nullptr ? app->device : nullptr;
 }
 
 PrDrawRenderer* PR_NULLABLE prStudioAppRenderer(const PrStudioApp* app) {

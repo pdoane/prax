@@ -15,8 +15,8 @@
 #include "tools/harness/test.h"
 
 using namespace alchemy;
-using namespace pr;
 using namespace harness;
+using namespace pr;
 
 namespace {
 

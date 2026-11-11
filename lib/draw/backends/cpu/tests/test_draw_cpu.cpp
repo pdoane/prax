@@ -8,7 +8,11 @@
 #include "pr/string.h"
 #include "pr/vec.h"
 
+#include "tools/harness/harness_gpu.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 extern "C" int prTestDrawCpuCApi(void);
 
@@ -1470,7 +1474,7 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
 TEST_CASE("a group draws into the host's pixels, which keep each revision's contents once") {
     // The pixels are a texture on the device that the renderer renders on.
     PrGpuDevice* device = nullptr;
-    REQUIRE(prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
+    REQUIRE(gpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
     PrDrawCpuOptions options = prDrawCpuOptionsDefault();
     options.device = device;
     PrDrawRenderer* renderer = prDrawCpuCreate(&options);
@@ -1537,7 +1541,7 @@ TEST_CASE("a group draws into the host's pixels, which keep each revision's cont
 
 TEST_CASE("a texture of the device draws as a source, read in place, and again as it changes") {
     PrGpuDevice* device = nullptr;
-    REQUIRE(prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
+    REQUIRE(gpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
     PrDrawCpuOptions options = prDrawCpuOptionsDefault();
     options.device = device;
     PrDrawRenderer* renderer = prDrawCpuCreate(&options);

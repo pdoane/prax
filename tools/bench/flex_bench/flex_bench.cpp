@@ -41,8 +41,8 @@
 #include <functional>
 #include <string>
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 
 namespace flex_bench {
 namespace {

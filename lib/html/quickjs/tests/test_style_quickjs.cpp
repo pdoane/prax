@@ -18,6 +18,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 namespace {
@@ -216,7 +218,7 @@ TEST_CASE("a face's object made while it loads is held until the load settles it
     prJsMathMlBind(ctx);
     jsHtmlBind(ctx);
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    String bytes = harness::readText(format("{}/noto_handwriting-cff2_colr_1.otf", PR_FONTS_DIR));
+    String bytes = readText(format("{}/noto_handwriting-cff2_colr_1.otf", PR_FONTS_DIR));
     REQUIRE(!bytes.isEmpty());
     Array<char> encoded(uint32_t(prBase64EncodedSize(bytes.count())));
     prBase64Encode(bytes, encoded.data(), encoded.count());

@@ -34,6 +34,48 @@ uint32_t deviceInPlaceImports(const PrGpuDevice* device) {
     return sharedOf(device)->inPlaceImports;
 }
 
+PrGpuDeviceStage deviceStage(const PrGpuDevice* device) {
+    return sharedOf(device)->stage.load();
+}
+
+PrStatus deviceLostStatus(const PrGpuDevice* base) {
+    const GpuSharedDevice* device = sharedOf(base);
+    switch (device->stage.load()) {
+        case PrGpuDeviceStage_Ready:
+            return device->removed(device) ? PrStatus_Lost : PrStatus_Ok;
+        case PrGpuDeviceStage_Failed:
+            return device->failure;
+        default:
+            return PrStatus_Ok;
+    }
+}
+
+// Waits for the device's creation, including its ready callback, then frees it with the backend's `destroy`.
+void deviceDestroy(PrGpuDevice* base) {
+    GpuSharedDevice* device = sharedOf(base);
+    prMutexLock(&device->stageMutex);
+    while (!device->created)
+        prConditionWait(&device->stageSignal, &device->stageMutex);
+    prMutexUnlock(&device->stageMutex);
+    prConditionReset(&device->stageSignal);
+    prMutexReset(&device->stageMutex);
+    device->destroy(device);
+}
+
+// Runs the backend's initialization, publishes the stage that it reached, and calls the ready callback.
+void deviceInitialize(void* PR_NULLABLE context) {
+    GpuSharedDevice* device = static_cast<GpuSharedDevice*>(context);
+    PrStatus status = device->initialize(device);
+    device->failure = status;
+    device->stage.store(status == PrStatus_Ok ? PrGpuDeviceStage_Ready : PrGpuDeviceStage_Failed);
+    if (device->ready != nullptr)
+        device->ready(device->readyContext, device);
+    prMutexLock(&device->stageMutex);
+    device->created = true;
+    prConditionBroadcast(&device->stageSignal);
+    prMutexUnlock(&device->stageMutex);
+}
+
 bool sameSampler(const PrGpuSamplerDesc& a, const PrGpuSamplerDesc& b) {
     return a.magnify == b.magnify && a.minify == b.minify && a.mip == b.mip && a.address[0] == b.address[0] &&
         a.address[1] == b.address[1] && a.address[2] == b.address[2] && a.maxAnisotropy == b.maxAnisotropy &&
@@ -51,7 +93,7 @@ PrStatus samplerIntern(PrGpuDevice* base, const PrGpuSamplerDesc* desc, PrGpuSam
             return PrStatus_Ok;
         }
     }
-    PrStatus status = device->isLostFn(device) ? PrStatus_Lost : device->samplerCreate(device, desc, out);
+    PrStatus status = device->removed(device) ? PrStatus_Lost : device->samplerCreate(device, desc, out);
     if (status == PrStatus_Ok)
         device->samplers.push(GpuSharedSampler{*desc, *out});
     prMutexUnlock(&device->mutex);
@@ -150,13 +192,19 @@ PrGpuPipeline mipmapPipeline(GpuSharedDevice* device, PrGpuFormat format) {
 } // namespace
 
 void gpuSharedDeviceInit(GpuSharedDevice* device) {
+    device->destroyFn = deviceDestroy;
     device->infoFn = deviceInfo;
     device->shaderTargetFn = deviceShaderTarget;
     device->nativeKindsFn = deviceNativeKinds;
     device->inPlaceImportsFn = deviceInPlaceImports;
+    device->stageFn = deviceStage;
+    device->lostStatusFn = deviceLostStatus;
     device->samplerInternFn = samplerIntern;
     device->textureImportFn = textureImport;
+    device->stage.store(PrGpuDeviceStage_Creating);
     prMutexInit(&device->mutex);
+    prMutexInit(&device->stageMutex);
+    prConditionInit(&device->stageSignal);
 }
 
 void gpuSharedDeviceReset(GpuSharedDevice* device) {
@@ -168,6 +216,17 @@ void gpuSharedDeviceReset(GpuSharedDevice* device) {
     device->samplers.reset();
     device->importCopies.reset();
     prMutexReset(&device->mutex);
+}
+
+void gpuSharedDeviceStart(GpuSharedDevice* device, PrTaskPool* PR_NULLABLE pool, PrGpuDeviceReadyFn PR_NULLABLE ready,
+        void* PR_NULLABLE readyContext) {
+    PR_ASSERT(device->initialize != nullptr && device->removed != nullptr && device->destroy != nullptr);
+    device->ready = ready;
+    device->readyContext = readyContext;
+    if (pool != nullptr)
+        prTaskPoolPost(pool, deviceInitialize, device);
+    else
+        deviceInitialize(device);
 }
 
 void gpuSharedTextureForget(GpuSharedDevice* device, PrGpuTexture texture) {
@@ -229,10 +288,9 @@ void gpuSharedGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, PrG
             PrGpuSubresources{.firstLevel = level, .levels = 1, .layers = 1}, &into);
         PrGpuPassDesc pass = prGpuPassDescColor(into, PrGpuLoad_Discard, PrColor{});
         pass.name = "mip level";
+        prGpuCommandsSetTexture(commands, 0, from, sampler);
         PrGpuPass* p = prGpuPassBegin(commands, &pass);
         prGpuCommandsSetPipeline(commands, pipeline);
-        uint32_t push[2] = {from.id, sampler.id};
-        prGpuCommandsSetPush(commands, push, sizeof(push));
         prGpuPassDraw(p, 3, 1, 0, 0);
         prGpuPassEnd(p);
         prGpuTextureDestroy(device, from);
@@ -240,6 +298,7 @@ void gpuSharedGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, PrG
         prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{.firstLevel = level, .levels = 1, .layers = 1},
             PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_FragmentRead);
     }
+    prGpuCommandsSetTexture(commands, 0, PrGpuTexture{}, PrGpuSampler{});
     prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{.layers = 1}, PrGpuAccessFlag_FragmentRead,
         PrGpuAccessFlag_ShaderRead);
     prGpuCommandsPopGroup(commands);

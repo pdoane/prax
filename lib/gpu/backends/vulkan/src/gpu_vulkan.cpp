@@ -478,13 +478,22 @@ PrStatus createDescriptors(VulkanDevice* d, uint32_t resources, uint32_t sampler
         {VulkanBinding_Samplers, VK_DESCRIPTOR_TYPE_SAMPLER, samplers, VK_SHADER_STAGE_ALL, nullptr},
         {VulkanBinding_Resources, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, resources, VK_SHADER_STAGE_ALL, nullptr},
     };
-    const VkDescriptorSetLayoutBinding pushed[2] = {
-        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr},
-        {1, vulkanTargetDescriptor(d), 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+    VkDescriptorSetLayoutBinding pushed[VulkanPushBinding_Count] = {
+        {VulkanPushBinding_Uniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr},
+        {VulkanPushBinding_Target, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
     };
+    for (uint32_t i = VulkanPushBinding_Buffers; i < VulkanPushBinding_Textures; ++i)
+        pushed[i] = {i, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_ALL, nullptr};
+    for (uint32_t i = VulkanPushBinding_Textures; i < VulkanPushBinding_RwTextures; i += 2) {
+        pushed[i] = {i, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_ALL, nullptr};
+        pushed[i + 1] = {i + 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL, nullptr};
+    }
+    for (uint32_t i = VulkanPushBinding_RwTextures; i < VulkanPushBinding_Count; ++i)
+        pushed[i] = {i, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_ALL, nullptr};
     if (!createSetLayout(d, bindless, 2, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT, &flagsInfo,
-            &d->setLayout) || !createSetLayout(d, pushed, 2, VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR, nullptr,
-                &d->pushLayout) || !createSetLayout(d, nullptr, 0, 0, nullptr, &d->emptyLayout))
+            &d->setLayout) || !createSetLayout(d, pushed, VulkanPushBinding_Count,
+                VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR, nullptr, &d->pushLayout) ||
+            !createSetLayout(d, nullptr, 0, 0, nullptr, &d->emptyLayout))
         return PrStatus_NotSupported;
 
     VkDescriptorPoolSize sizes[2] = {
@@ -538,8 +547,8 @@ PrStatus createTimelines(VulkanDevice* d) {
     return PrStatus_Ok;
 }
 
-bool isLost(const PrGpuDevice* device) {
-    return vulkanDevice(device)->lost.load();
+bool removed(const GpuSharedDevice* device) {
+    return static_cast<const VulkanDevice*>(device)->lost.load();
 }
 
 // Vulkan has no call that removes a device, so the device only reports that it is lost and refuses new work.
@@ -547,8 +556,9 @@ void simulateLoss(PrGpuDevice* device) {
     vulkanDevice(device)->lost.store(true);
 }
 
-void destroy(PrGpuDevice* device) {
-    VulkanDevice* d = vulkanDevice(device);
+// Frees the device after its initialization succeeded or failed. What the initialization did not make is null.
+void destroy(GpuSharedDevice* device) {
+    VulkanDevice* d = static_cast<VulkanDevice*>(device);
     if (d->running) {
         if (d->ownsDevice)
             d->vk.DeviceWaitIdle(d->device);
@@ -594,39 +604,15 @@ void destroy(PrGpuDevice* device) {
     prMemoryFree(d);
 }
 
-} // namespace
-
-} // namespace pr_impl
-
-using namespace pr_impl;
-
-PrGpuVulkanOptions prGpuVulkanOptionsDefault(void) {
-    PrGpuVulkanOptions options{};
-    options.resourceHandles = kDefaultResourceHandles;
-    options.samplerHandles = kDefaultSamplerHandles;
-    options.adapter = vulkanEnvironment("PR_VULKAN_ADAPTER", -1);
-    options.validation = vulkanEnvironment("PR_VULKAN_DEBUG", 0) != 0;
-    return options;
-}
-
-PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuDevice* PR_NULLABLE* PR_NONNULL out) {
-    *out = nullptr;
-    PrGpuVulkanOptions defaults = prGpuVulkanOptionsDefault();
-    const PrGpuVulkanOptions& o = options != nullptr ? *options : defaults;
-    PR_ASSERT((o.device == nullptr) == (o.descriptors == nullptr));
-    PR_ASSERT((o.allocate == nullptr) == (o.free == nullptr));
-
-    VulkanDevice* d = allocZeroed<VulkanDevice>();
-    gpuSharedDeviceInit(d);
-    prMutexInit(&d->mutex);
-    prMutexInit(&d->doneMutex);
-    prConditionInit(&d->pendingSignal);
-    prConditionInit(&d->reachedSignal);
+// Loads Vulkan, makes the device's objects over the application's objects if the options name them, and starts the
+// completion thread. Returns NotSupported if the system has no Vulkan loader or no adapter, or if the adapter lacks a
+// feature that the backend needs.
+PrStatus initialize(GpuSharedDevice* device) {
+    VulkanDevice* d = static_cast<VulkanDevice*>(device);
+    const PrGpuVulkanOptions& o = d->options;
     d->loader = vulkanLoaderOpen(&d->vk.GetInstanceProcAddr);
-    if (d->loader == nullptr) {
-        destroy(d);
-        return PrStatus_NotFound;
-    }
+    if (d->loader == nullptr)
+        return PrStatus_NotSupported;
     loadGlobal(d);
 
     PrStatus status = PrStatus_Ok;
@@ -670,10 +656,8 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
     }
     if (status == PrStatus_Ok)
         status = createTimelines(d);
-    if (status != PrStatus_Ok) {
-        destroy(d);
-        return status;
-    }
+    if (status != PrStatus_Ok)
+        return status == PrStatus_NotFound ? PrStatus_NotSupported : status;
 
     d->allocate = o.allocate;
     d->free = o.free;
@@ -688,32 +672,72 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
     d->samplers.push(VulkanSampler{});
     d->pipelines.prepare(kMaxPipelines);
     d->pipelines.count = 0;
-    d->openPage = UINT32_MAX;
     d->nextSerial = 1;
 
     d->info.adapter = PrStringView{d->adapter, 0};
     while (d->adapter[d->info.adapter.size] != '\0')
         ++d->info.adapter.size;
-    d->info.backend = "Vulkan";
-    d->nativeKinds = 1u << PrGpuNativeKind_Vulkan;
     if (d->limits.timestampComputeAndGraphics)
         d->info.features |= PrGpuFeatureFlag_Timestamps;
+    d->info.features |= PrGpuFeatureFlag_Bindless | (d->localRead ? PrGpuFeatureFlag_TargetReads : 0);
     d->info.maxTextureSize = d->limits.maxImageDimension2D;
+    d->info.storageOffsetAlignment = uint32_t(d->limits.minStorageBufferOffsetAlignment);
+    if (d->info.storageOffsetAlignment < 16)
+        d->info.storageOffsetAlignment = 16;
     d->info.maxResourceHandles = d->resourceCount - 1;
     d->info.maxSamplerHandles = d->samplerCount - 1;
     d->shaderTarget = d->localRead ? PrGpuShaderTarget_SpirvLocalRead : PrGpuShaderTarget_Spirv;
 
-    d->destroyFn = destroy;
-    d->isLostFn = isLost;
+    prThreadStart(&d->completion, vulkanCompletionRun, d);
+    d->running = true;
+    return PrStatus_Ok;
+}
+
+} // namespace
+
+} // namespace pr_impl
+
+using namespace pr_impl;
+
+PrGpuVulkanOptions prGpuVulkanOptionsDefault(void) {
+    PrGpuVulkanOptions options{};
+    options.resourceHandles = kDefaultResourceHandles;
+    options.samplerHandles = kDefaultSamplerHandles;
+    options.adapter = vulkanEnvironment("PR_VULKAN_ADAPTER", -1);
+    options.validation = vulkanEnvironment("PR_VULKAN_DEBUG", 0) != 0;
+    return options;
+}
+
+PrGpuDevice* prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options) {
+    VulkanDevice* d = allocZeroed<VulkanDevice>();
+    gpuSharedDeviceInit(d);
+    d->options = options != nullptr ? *options : prGpuVulkanOptionsDefault();
+    PR_ASSERT((d->options.device == nullptr) == (d->options.descriptors == nullptr));
+    PR_ASSERT((d->options.allocate == nullptr) == (d->options.free == nullptr));
+    if (d->options.descriptors != nullptr) {
+        d->descriptors = *d->options.descriptors;
+        d->options.descriptors = &d->descriptors;
+    }
+    prMutexInit(&d->mutex);
+    prMutexInit(&d->doneMutex);
+    prConditionInit(&d->pendingSignal);
+    prConditionInit(&d->reachedSignal);
+    d->initialize = initialize;
+    d->removed = removed;
+    d->destroy = destroy;
     d->simulateLossFn = simulateLoss;
     vulkanResourceFunctions(d);
     vulkanPipelineFunctions(d);
     vulkanCommandsFunctions(d);
     vulkanSwapChainFunctions(d);
-    prThreadStart(&d->completion, vulkanCompletionRun, d);
-    d->running = true;
-    *out = d;
-    return PrStatus_Ok;
+    d->info.backend = "Vulkan";
+    d->nativeKinds = 1u << PrGpuNativeKind_Vulkan;
+    d->info.maxBufferSlots = kVulkanBufferSlots;
+    d->info.maxRwBufferSlots = kVulkanRwBufferSlots;
+    d->info.maxTextureSlots = kVulkanTextureSlots;
+    d->info.maxRwTextureSlots = kVulkanRwTextureSlots;
+    gpuSharedDeviceStart(d, d->options.pool, d->options.ready, d->options.readyContext);
+    return d;
 }
 
 uint32_t prGpuVulkanValidationErrors(const PrGpuDevice* device) {

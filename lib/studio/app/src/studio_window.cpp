@@ -48,10 +48,10 @@ void build(void* context, PrUi*, const PrUiRound*) {
 }
 
 // Makes the target's swap chain for `appWindow` with `intent`, presenting alpha if `transparent`, and its frame, on the
-// application's device, which is made again first if it was lost. Returns false if there is no device to render with.
+// application's device, which is made again first if it was lost. Returns false until there is a device to render with.
 bool openTarget(StudioAppState* app, StudioWindowTarget* target, PrAppWindow* appWindow, PrGpuSwapChainIntent intent,
         bool transparent) {
-    if ((app->device == nullptr || prGpuDeviceIsLost(app->device)) && !studioAppMakeDevice(app))
+    if (!studioAppMakeDevice(app))
         return false;
     // Presenting alpha costs the compositor a blend, so that a change to or from it makes the swap chain again.
     if (target->swapChain != nullptr && target->generation == app->generation && target->transparent == transparent)
@@ -206,8 +206,12 @@ PrAppOutput portalFrame(void* context, PrAppWindow*, const PrAppFrame* f) {
     PrAppOutput output{.cursor = w->output.cursor, .dropOperation = w->output.dropOperation};
     s->cursor = output.cursor;
     s->dropOperation = output.dropOperation;
-    if (w->closing || !openTarget(w->studio, &s->target, s->appWindow, w->desc.intent, false))
+    if (w->closing)
         return output;
+    if (!openTarget(w->studio, &s->target, s->appWindow, w->desc.intent, false)) {
+        output.wantsFrame = studioAppCreatingDevice(w->studio);
+        return output;
+    }
     prGpuSwapChainWait(s->target.swapChain);
     s->drawn = prLayoutNodeDrawingRevision(w->tree, s->info.root);
     float ratio = f->display.pixelRatio;
@@ -370,16 +374,14 @@ void endCallback(PrStudioWindow* w) {
         destroyWindow(w);
 }
 
-// Makes the swap chain as the window opens, and opens the application's window. Either failure closes the window. The
-// window closes through its own close, which calls the application's, so it opens as the platform sees it either way.
+// Opens the application's window, whose failure closes the window. The window closes through its own close, which calls
+// the application's, so it opens as the platform sees it either way. The first frame after the device is ready makes
+// the swap chain.
 bool open(void* context, PrAppWindow*, const PrAppFrame* first) {
     PrStudioWindow* w = static_cast<PrStudioWindow*>(context);
     ++w->callbacks;
     w->backdrop = first->backdrop;
-    if (!openSwapChain(w)) {
-        w->status = PrStatus_NotSupported;
-        w->closing = true;
-    } else if (w->desc.open != nullptr && !w->desc.open(w->desc.context, w)) {
+    if (w->desc.open != nullptr && !w->desc.open(w->desc.context, w)) {
         w->status = PrStatus_InvalidState;
         w->closing = true;
     } else {
@@ -393,9 +395,10 @@ bool open(void* context, PrAppWindow*, const PrAppFrame* first) {
 PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
     PrTimePerf started = prTimePerfNow();
     w->backdrop = f->backdrop;
-    // A lost device is made again, with everything on it. The frame draws from the model, as every frame does.
+    // A lost device is created again, with everything on it. Frames continue while the device is being created. The
+    // frame draws from the model, as every frame does.
     if (!openSwapChain(w))
-        return {};
+        return PrAppOutput{.wantsFrame = studioAppCreatingDevice(w->studio)};
     // Waiting first lets the frame read the latest input, and then wait for nothing once it is built.
     prGpuSwapChainWait(w->target.swapChain);
 

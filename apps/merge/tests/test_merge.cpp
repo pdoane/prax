@@ -8,13 +8,14 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
 using namespace merge;
 
 namespace {
 
 // Writes `text` to a file of `name` in the binary's folder (harness::testFolder), and returns its path.
 String writeFile(PrStringView name, PrStringView text) {
-    String path = format("{}/{}", PrStringView(harness::testFolder()), name);
+    String path = format("{}/{}", PrStringView(testFolder()), name);
     REQUIRE(prFileWrite(path, prStringBytes(text)));
     return path;
 }

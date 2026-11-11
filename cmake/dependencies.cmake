@@ -94,19 +94,19 @@ pr_dependency(mimalloc
 set(PR_SLANGC "" CACHE FILEPATH "The Slang compiler that builds the shaders, which the build fetches if this is empty")
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
     set(PR_SLANG_ASSET macos-aarch64.zip)
-    set(PR_SLANG_HASH ede1865bf086442c8786c5b7c0470ce5f4fd4f032eefe881356726ff9c445f40)
+    set(PR_SLANG_HASH f6d6fe9cace17ee74836805786163d63ddf29ff1ff6c516b7eae59855af61cc3)
 elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "ARM64|arm64")
     set(PR_SLANG_ASSET windows-aarch64.zip)
-    set(PR_SLANG_HASH 4f18a7e76a59969bc9bf6ea596bd9e496a3c689af173990ae028b18f03e1ac1a)
+    set(PR_SLANG_HASH 3b74b69e1924d359d3626949b3cde0f6e65068a7b5eb2457e83a351697fe4e71)
 elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     set(PR_SLANG_ASSET windows-x86_64.zip)
-    set(PR_SLANG_HASH e6dd32bbddf1720ebb4e679d55e9635ce792865a5bd84f3d2cd9af28647c0174)
+    set(PR_SLANG_HASH dd0c4a86bd44cdb7e9cf712af0c8ebf2fff1bba19fa5e3c128ff87384e8ff17b)
 else()
     set(PR_SLANG_ASSET linux-x86_64.tar.gz)
-    set(PR_SLANG_HASH e863e568c204810d6e8bc31852f056aef6763c55ea9925db2db7affa060347c9)
+    set(PR_SLANG_HASH a877b75c6ec515f5d8bf66ea4bae4f0a5ba85050b9540c2046670285808347e6)
 endif()
 pr_dependency(slang
-    URL https://github.com/shader-slang/slang/releases/download/v2026.20/slang-2026.20-${PR_SLANG_ASSET}
+    URL https://github.com/shader-slang/slang/releases/download/v2026.22/slang-2026.22-${PR_SLANG_ASSET}
     URL_HASH SHA256=${PR_SLANG_HASH}
     SOURCE_SUBDIR none
 )

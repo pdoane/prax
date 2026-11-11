@@ -194,10 +194,10 @@ PrDrawStats prDrawFrameStats(const PrDrawFrame* frame);
 // pass's viewport and scissor over the whole attachments, and any other state as the renderer set it.
 void prDrawFrameRender(PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin);
 
-// Renders the list over the caller's `pixels` on the renderer's device, and waits for the work. The pixels hold
-// premultiplied, encoded, extended sRGB, in Rgba8, Bgra8 or RgbaF16. A memory device draws over the pixels in place.
-// Any other device draws over a copy of them in a texture, which is read back, and the list's backdrops read nothing.
-// Returns what preparing returns.
+// Renders the list over the caller's `pixels` in place, on a renderer whose device draws into pixels
+// (PrGpuNativeKind_Pixels), such as a memory device. The pixels hold the render when the call returns. They hold
+// premultiplied, encoded, extended sRGB, in Rgba8, Bgra8 or RgbaF16. Returns NotSupported for a renderer on any other
+// device, and otherwise what preparing returns.
 PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels, PrPixelFormat format);
 
 // Renders a part of the list over `pixels` as prDrawRendererRenderPixels renders a whole list, and returns what it

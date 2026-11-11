@@ -10,6 +10,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 extern "C" int prTestSvgGlyphCApi(void);
 
 namespace pr_impl {
@@ -20,7 +22,7 @@ namespace {
 
 // Returns the bytes of the font file `name`, in the fonts directory.
 Array<uint8_t> fontFile(const char* name) {
-    return harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
+    return readFile(format("{}/{}", PR_FONTS_DIR, name));
 }
 
 const PrFont* load(const char* name) {

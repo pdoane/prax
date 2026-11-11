@@ -14,6 +14,7 @@
 #include "pr/layout_unit.h"
 #include "pr/min_max.h"
 #include "pr/print.h"
+#include "pr/status.h"
 #include "pr/string.h"
 #include "pr/time.h"
 
@@ -173,29 +174,8 @@ bool pageHasKeys(Browser& b) {
 // ---------------------------------------------------------------------------------------------------------------------
 // The window
 
-// Makes the device that the window renders with, the swap chain over the window and the renderer. Returns false if
-// there is no device to render with.
-bool openDevice(Browser& b) {
-    PrAppWindow* window = b.window;
-    PrAppSurface surface{};
-    PrGpuSwapChainDesc swapChain{.intent = PrGpuSwapChainIntent_Hdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok ||
-            prAppWindowSurface(window, &surface) != PrStatus_Ok ||
-            prGpuSwapChainCreate(b.device, &surface, &swapChain, &b.swapChain) != PrStatus_Ok ||
-            prDrawRendererCreate(PrDrawRendererBackend_Default, b.device, nullptr, &b.renderer) != PrStatus_Ok ||
-            prDrawDisplayCreate(b.device, &b.display) != PrStatus_Ok) {
-        printError("browser: no GPU device to render with\n");
-        return false;
-    }
-    b.pageFrame = prDrawFrameCreate(b.renderer);
-    b.chromeFrame = prDrawFrameCreate(b.renderer);
-    return true;
-}
-
-// Opens the tabs at the window's first frame, and starts the thread that runs them.
-bool open(void* context, PrAppWindow* window, const PrAppFrame* first) {
-    Browser& b = *static_cast<Browser*>(context);
-    b.pageWindow = *first;
+// Opens the tabs and starts the thread that runs them. The tabs' pages draw on the device.
+void openTabs(Browser& b) {
     for (const String& address : b.addresses)
         tabOpen(b, address, b.tabs.count());
     if (b.tabs.isEmpty()) {
@@ -205,6 +185,40 @@ bool open(void* context, PrAppWindow* window, const PrAppFrame* first) {
     tabActivate(b, *tabAt(b, 0));
     prThreadStart(&b.thread, [](void* PR_NULLABLE context) { tabsRun(*static_cast<Browser*>(context)); }, &b);
     b.started = true;
+}
+
+// Returns true if the window can render. Makes the swap chain, the renderer and the tabs once the device is ready. The
+// pages hold the device, so a lost device stops the browser, and so does a failed creation.
+bool openDevice(Browser& b) {
+    if (b.device == nullptr || !prGpuDeviceIsReady(b.device))
+        return false;
+    if (prGpuDeviceIsLost(b.device)) {
+        printError("browser: no GPU device to render with ({})\n", prStatusName(prGpuDeviceLostStatus(b.device)));
+        prAppStop(b.app);
+        return false;
+    }
+    if (b.swapChain != nullptr)
+        return true;
+    PrAppSurface surface{};
+    PrGpuSwapChainDesc swapChain{.intent = PrGpuSwapChainIntent_Hdr};
+    if (prAppWindowSurface(b.window, &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(b.device, &surface, &swapChain, &b.swapChain) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, b.device, nullptr, &b.renderer) != PrStatus_Ok ||
+            prDrawDisplayCreate(b.device, &b.display) != PrStatus_Ok) {
+        printError("browser: the device cannot render to the window\n");
+        prAppStop(b.app);
+        return false;
+    }
+    b.pageFrame = prDrawFrameCreate(b.renderer);
+    b.chromeFrame = prDrawFrameCreate(b.renderer);
+    openTabs(b);
+    return true;
+}
+
+// Records the window's first frame for the pages. The tabs open once the device is ready (openDevice).
+bool open(void* context, PrAppWindow* window, const PrAppFrame* first) {
+    Browser& b = *static_cast<Browser*>(context);
+    b.pageWindow = *first;
     prAppWindowRequestFrame(window);
     return true;
 }
@@ -214,6 +228,9 @@ bool open(void* context, PrAppWindow* window, const PrAppFrame* first) {
 // chrome over a blank page.
 PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     Browser& b = *static_cast<Browser*>(context);
+    // Frames continue while the device is being created.
+    if (!openDevice(b))
+        return PrAppOutput{.wantsFrame = b.device != nullptr && !prGpuDeviceIsReady(b.device)};
     prGpuSwapChainWait(b.swapChain);
     tabsRefresh(b);
     prCachePump(b.icons);
@@ -350,7 +367,7 @@ void event(void* context, PrAppWindow* window, const PrAppEvent* e) {
     prAppWindowRequestFrame(window);
 }
 
-// Opens the browser's window and its device. The window's close stops the application.
+// Opens the browser's window. The window renders once the device is ready, and its close stops the application.
 bool start(void* context, PrApp* app) {
     Browser& b = *static_cast<Browser*>(context);
     b.app = app;
@@ -362,7 +379,7 @@ bool start(void* context, PrApp* app) {
     if (prAppWindowCreate(app, &desc, &b.window) != PrStatus_Ok)
         return false;
     prUiSetWindow(b.ui, b.window);
-    return openDevice(b);
+    return true;
 }
 
 // A wake from a tab's thread asks for a frame, if one asked for it since the last.

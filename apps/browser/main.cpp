@@ -242,11 +242,17 @@ int main(int argc, char** argv) {
                 b.addresses.push(url);
         }
     }
+    // The device is created on the pool while the browser opens what its pages share.
+    b.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
+    PrGpuDeviceOptions device = prGpuDeviceOptionsDefault();
+    device.pool = b.pool;
+    b.device = prGpuDeviceCreate(PrGpuBackend_Default, &device);
     openShared(b);
     openChrome(b);
     PrApp* app = prAppCreate(PrAppBackend_Default, nullptr);
     prAppRun(app, browserHandler(b));
     prAppDestroy(app);
+    prTaskPoolDestroy(b.pool);
     closeChrome(b);
     closeShared(b);
     prFontSetDestroy(b.fonts);

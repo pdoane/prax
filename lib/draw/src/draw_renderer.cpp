@@ -207,20 +207,11 @@ PrStatus prDrawRendererRenderPartPixels(PrDrawRenderer* renderer, const PrDrawLi
     PR_ASSERT(format == PrPixelFormat_Rgba8 || format == PrPixelFormat_Bgra8 || format == PrPixelFormat_RgbaF16);
     PR_ASSERT(size_t(pixels.extent.x) * prPixelFormatSize(format) <= pixels.stride);
     PrGpuDevice* device = prDrawRendererDevice(renderer);
-    PrGpuFormat textureFormat = prGpuFormatFromPixelFormat(format);
+    if (!prGpuDeviceHasNative(device, PrGpuNativeKind_Pixels))
+        return PrStatus_NotSupported;
     constexpr PrGpuTextureUsageFlags kUsage = PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget;
-    // A memory device draws into the pixels themselves, and any other device draws into a copy of them.
-    bool inPlace = prGpuDeviceHasNative(device, PrGpuNativeKind_Pixels);
     PrGpuTexture texture{};
-    PrStatus status = PrStatus_Ok;
-    if (inPlace) {
-        status = prGpuTextureCreateOverPixels(device, textureFormat, pixels, kUsage, &texture);
-    } else {
-        PrGpuTextureDesc desc = prGpuTextureDesc2d(textureFormat, pixels.extent, kUsage);
-        status = prGpuTextureCreate(device, &desc, &texture);
-        if (status == PrStatus_Ok)
-            prGpuTextureWrite(device, texture, PrIVec2{0, 0}, prPixelsView(pixels));
-    }
+    PrStatus status = prGpuTextureCreateOverPixels(device, prGpuFormatFromPixelFormat(format), pixels, kUsage, &texture);
     PrGpuCommands* commands = nullptr;
     if (status == PrStatus_Ok && !prGpuCommandsBegin(device, nullptr, &commands))
         status = PrStatus_Lost;
@@ -242,9 +233,9 @@ PrStatus prDrawRendererRenderPartPixels(PrDrawRenderer* renderer, const PrDrawLi
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
     }
-    prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
-    if (status == PrStatus_Ok && !inPlace)
-        prGpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, pixels);
+    // A device that draws into pixels runs work when it is submitted, so the pixels hold the render after the
+    // submission.
+    prGpuCommandsSubmit(commands);
     prDrawFrameDestroy(frame);
     prGpuTextureDestroy(device, texture);
     return status;

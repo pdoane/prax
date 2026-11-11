@@ -12,6 +12,10 @@ namespace pr_impl {
 // the order of the fences.
 void vulkanPend(VulkanDevice* d, VulkanCommands* c);
 
+// Submits the waiting uploads on their own, and ends the staging's batch with the submission's fence. Called with the
+// device's mutex held.
+void vulkanUploadsSubmit(VulkanDevice* d);
+
 // Runs the completion thread, which waits for each command buffer's fence in turn, retires it, and raises the fence
 // that the device has reached.
 void vulkanCompletionRun(void* PR_NULLABLE context);

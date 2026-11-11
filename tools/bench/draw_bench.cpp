@@ -38,6 +38,7 @@
 #include "examples/draw_features/workloads.h"
 #include "tools/harness/draw_renderers.h"
 #include "tools/harness/harness.h"
+#include "tools/harness/harness_gpu.h"
 
 #include <algorithm>
 #include <chrono>
@@ -48,9 +49,9 @@
 #include <string>
 #include <vector>
 
-using namespace pr;
-using namespace harness;
 using namespace drawings;
+using namespace harness;
+using namespace pr;
 
 namespace {
 
@@ -216,7 +217,7 @@ Times render(PrDrawRenderer* renderer, PrDrawFrame* PR_NULLABLE& frame, BenchTar
             PrGpuAccessFlag_ShaderRead);
     }
     double submitted = nowMillis();
-    double gpu = prGpuCommandsSubmitAndWait(commands) * 1000;
+    double gpu = gpuSubmitAndWait(commands) * 1000;
     return Times{submitted - started, gpu};
 }
 
@@ -262,7 +263,7 @@ Times drawPasses(PrDrawFrame* frame, BenchTarget& target, PrColor color, const s
             PrGpuAccessFlag_ShaderRead);
     }
     double submitted = nowMillis();
-    double gpu = prGpuCommandsSubmitAndWait(commands) * 1000;
+    double gpu = gpuSubmitAndWait(commands) * 1000;
     return Times{submitted - started, gpu / kDrawPasses};
 }
 
@@ -283,7 +284,7 @@ void writeImage(PrImageCodec* codec, const BenchTarget& target, const std::strin
     } else {
         uint32_t bytes = prPixelFormatSize(target.output.format);
         std::vector<uint8_t> texels(count * bytes);
-        prGpuTextureRead(target.device, target.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
+        gpuTextureRead(target.device, target.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
             PrPixels{texels.data(), size_t(target.width) * bytes, {target.width, target.height}});
         for (size_t i = 0; i < count; ++i) {
             uint8_t* to = &rgba[i * 4];
@@ -343,7 +344,7 @@ int main(int argc, char** argv) {
     if (collectionNames.empty())
         collectionNames.push_back("features");
     PrGpuDevice* device = nullptr;
-    prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device);
+    gpuDeviceCreate(PrGpuBackend_Default, nullptr, &device);
     std::vector<RendererConfig> configs = createConfigs(device);
     if (configNames.empty() && !configs.empty())
         configNames.push_back(configs[defaultConfig(configs)].name);

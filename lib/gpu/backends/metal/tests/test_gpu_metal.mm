@@ -7,10 +7,15 @@
 
 #include "gpu/backends/shared/src/gpu_shared_metal_display.h"
 #include "gpu/tests/kTestGpuNativeShaders.h"
+#include "tools/harness/harness_gpu.h"
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
+#if TARGET_OS_OSX
 #import <AppKit/AppKit.h>
+#endif
 #import <CoreVideo/CoreVideo.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -46,9 +51,13 @@ struct Fixture {
     Fixture() {
         PrGpuMetalOptions options = prGpuMetalOptionsDefault();
         options.validation = true;
-        PrStatus status = prGpuMetalCreate(&options, &device);
+        // Without a pool, the device's creation is done when the constructor returns.
+        device = prGpuMetalCreate(&options);
+        PrStatus status = prGpuDeviceLostStatus(device);
         if (status == PrStatus_NotSupported) {
             MESSAGE("no Metal device that supports Metal 3");
+            prGpuDeviceDestroy(device);
+            device = nullptr;
             return;
         }
         REQUIRE(status == PrStatus_Ok);
@@ -115,6 +124,8 @@ struct AppMetal {
     }
 };
 
+#if TARGET_OS_OSX
+
 // Clears the swap chain's next drawable and presents it.
 PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
     PrGpuTexture texture{};
@@ -130,6 +141,8 @@ PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
     prGpuSwapChainPresent(swapChain, commands);
     return prGpuCommandsSubmit(commands);
 }
+
+#endif
 
 } // namespace
 
@@ -147,16 +160,17 @@ TEST_CASE("metal records into the application's command buffer, around the appli
     // application's native command buffer.
     PrGpuBuffer output = f.buffer(16, PrGpuBufferUsageFlag_Storage);
     PrGpuPipeline pipeline{};
-    REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "fill", "fill", &pipeline) == PrStatus_Ok);
+    REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "slotFill", "slotFill", &pipeline) == PrStatus_Ok);
     PrGpuCommandsOptions options = prGpuCommandsOptionsDefault();
     options.native = (__bridge void*)app.buffer;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(f.device, &options, &commands));
     uint32_t seed[4] = {9, 9, 9, 9};
     prGpuBufferUpload(f.device, output, 0, seed, sizeof(seed));
-    Push push{.output = prGpuBufferStorageHandle(f.device, output), .count = 2, .scale = 11};
+    Push push{.count = 2, .scale = 11};
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuCommandsSetPush(commands, &push, sizeof(push));
+    prGpuCommandsSetRwBuffer(commands, 0, output, 0);
     prGpuCommandsDispatch(commands, PrGpuExtent{1, 1, 1});
     // The device's state ends with its encoder, so the application sets nothing again.
     CHECK(prGpuNativeStateSync(commands) == 0);
@@ -218,7 +232,7 @@ TEST_CASE("metal draws into the application's pass, and says which of the pass's
     prGpuNativeStateSync(commands);
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
-    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+    gpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[0] == 0xff0000ffu);
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
@@ -259,7 +273,7 @@ TEST_CASE("metal hands a native draw the pass's encoder, and draws after it with
         PrGpuAccessFlag_CopyRead);
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
-    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+    gpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[7] == 0xff0000ffu);
     CHECK(pixels[7 * 8] == 0xffff0000u);
@@ -302,7 +316,7 @@ TEST_CASE("metal imports a CVPixelBuffer as a texture without copying it, and re
     CHECK(desc.extent.width == 4);
     CHECK(desc.extent.height == 2);
     uint32_t read[4 * 2]{};
-    prGpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
+    gpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(read), 4 * 4, PrUVec2{4, 2}});
     CHECK(read[0] == 0xff0000ffu);
     CHECK(read[4] == 0xffff0000u);
@@ -311,6 +325,8 @@ TEST_CASE("metal imports a CVPixelBuffer as a texture without copying it, and re
     prGpuDeviceWaitIdle(f.device);
     CHECK(released);
 }
+
+#if TARGET_OS_OSX
 
 TEST_CASE("metal presents frames, with the transaction always unless threaded") {
     Fixture f;
@@ -346,6 +362,8 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
     }
 }
 
+#endif
+
 TEST_CASE("metal chooses half floats for HDR only on a display that shows past SDR white, whatever its gamut") {
     const PrGpuSwapChainInfo kSdr{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
     const PrGpuSwapChainInfo kExtended{PrGpuFormat_Rgba16F, PrColorSpace_Srgb};
@@ -374,6 +392,8 @@ TEST_CASE("metal chooses half floats for HDR only on a display that shows past S
         CHECK(info.space == c.expected.space);
     }
 }
+
+#if TARGET_OS_OSX
 
 TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, for the display that shows it") {
     Fixture f;
@@ -412,3 +432,5 @@ TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, 
         prGpuSwapChainDestroy(swapChain);
     }
 }
+
+#endif

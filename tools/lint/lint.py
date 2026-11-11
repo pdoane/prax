@@ -182,7 +182,7 @@ def check_namespace(report, path, text, implements_public, name):
                    "the C++ API is in pr and its implementation in pr_impl; this file's namespace is %s" % name)
 
 
-QUALIFIED = re.compile(r"(?<![\w:])(?:::)?pr(?:_impl)?::")
+QUALIFIED = re.compile(r"(?<![\w:])(?:::)?(?:pr(?:_impl)?|harness)::")
 
 # Matches a C opaque type: the public handle, at global scope, derived from the internal type that it names.
 OPAQUE_TYPE = re.compile(r"^struct Pr\w+ : (?:pr_impl::)?\w+ \{\};$")
@@ -216,11 +216,11 @@ def specialization_lines(code):
 
 
 def check_qualified(report, path, text):
-    """Only a macro spells out `pr::` or `pr_impl::`, because it expands in its caller's scope. Code imports the
-    namespace with a using-directive: `using namespace pr;` in an application, and `using namespace pr_impl;` in the
-    library. A header names the base of each C opaque type that it declares. An explicit specialization of another
-    library's template names the pr types that it is for with `pr::`, since it is written in that library's
-    namespace."""
+    """Only a macro spells out `pr::`, `pr_impl::` or `harness::`, because it expands in its caller's scope. Code
+    imports the namespace with a using-directive: `using namespace pr;` in an application, `using namespace pr_impl;`
+    in the library, and `using namespace harness;` in a test or a tool. A header names the base of each C opaque type
+    that it declares. An explicit specialization of another library's template names the pr types that it is for with
+    `pr::`, since it is written in that library's namespace."""
     masked = mask_non_code(text)
     code = masked.split("\n")
     raw = text.split("\n")
@@ -238,6 +238,34 @@ def check_qualified(report, path, text):
         report.add(path, index + 1, "qualified",
                    "%s outside a macro; take the namespace with a using-directive"
                    % QUALIFIED.search(line).group(0).lstrip(":"))
+
+
+def check_using_directives(report, path, text):
+    """The using-directives of one scope are one block, without blank lines between them, sorted by namespace, so that
+    a reader finds what the scope takes in one place."""
+    lines = text.split("\n")
+    previous = None         # the namespace of the directive on the line before, or of the one before a blank line
+    blank = False
+    for index, line in enumerate(lines):
+        match = re.match(r"^(\s*)using namespace (\w+);$", line)
+        if match is None:
+            if line.strip() == "" and previous is not None and not blank:
+                blank = True
+            else:
+                previous = None
+                blank = False
+            continue
+        name = (match.group(1), match.group(2))
+        if previous is not None and previous[0] == name[0]:
+            if blank:
+                report.add(path, index + 1, "using-block",
+                           "using namespace %s; is apart from the directives above it; they are one block"
+                           % name[1])
+            elif name[1] < previous[1]:
+                report.add(path, index + 1, "using-block",
+                           "using namespace %s; comes before using namespace %s;" % (name[1], previous[1]))
+        previous = name
+        blank = False
 
 
 def check_application_namespace(report, path, text):
@@ -976,9 +1004,11 @@ ENUM_HEAD = re.compile(r"(?:typedef\s+)?enum\b")
 
 # What comes before a brace that opens code: a parameter list, a capture list, a member initialized by a list, a label,
 # an Objective-C block's caret, a lambda's or a function's specifier or attribute macro, a lambda's trailing return
-# type, or a keyword that a block follows. A brace after anything else opens data, an initializer list.
-CODE_BRACE = re.compile(r"(?:[)\]}^:]|\b(?:mutable|noexcept|const|override|final|else|do|try|[A-Z][A-Z0-9]*_[A-Z0-9_]+)"
-                        r"|->\s*[\w:<>,*& ]+)\s*$")
+# type, or a keyword that a block follows. A brace after anything else opens data, an initializer list. A space
+# separates a specifier macro from its brace. A type in capitals, such as D3D12_INPUT_ELEMENT_DESC, has no space before
+# the brace of its list.
+CODE_BRACE = re.compile(r"(?:[)\]}^:]|\b(?:mutable|noexcept|const|override|final|else|do|try)\b"
+                        r"|\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\s|->\s*[\w:<>,*& ]+)\s*$")
 
 # A line that begins a statement and ends it without a semicolon: a macro that expands to declarations, or a template's
 # header, which may end with its requires-clause.
@@ -1866,6 +1896,32 @@ def check_count_of(report, path, text):
                    "%s is countOf's; use pr/count_of.h" % match.group(0).strip())
 
 
+# An operand of a rounding: anything on one line, with at most one level of parentheses inside it.
+ROUNDED = r"(?:[^()\n]|\([^()\n]*\))+?"
+
+# Rounding a value up to a multiple by hand: `(v + m - 1) / m * m`, `(v + m - 1) & ~(m - 1)`, and the same with a
+# literal `m - 1`, as in `(v + 15) / 16 * 16` and `(v + 15) & ~15`.
+HAND_ALIGN = re.compile(
+    r"\(\s*" + ROUNDED + r"\+\s*(?P<m>[\w.:>()-]+?)\s*-\s*1\s*\)\s*"
+    r"(?:/\s*\(?\s*(?P=m)\s*\)?\s*\*\s*\(?\s*(?P=m)\s*\)?|&\s*~\s*\(\s*(?P=m)\s*-\s*1\s*\))"
+    r"|\(\s*" + ROUNDED + r"\+\s*(?P<low>\d+)\s*\)\s*/\s*(?P<step>\d+)\s*\*\s*(?P=step)\b"
+    r"|\(\s*" + ROUNDED + r"\+\s*(?P<mask>\d+)\s*\)\s*&\s*~\s*(?:\w+\s*\(\s*(?P=mask)u?\s*\)|(?P=mask)u?\b)")
+
+
+def check_align_up(report, path, text):
+    """A value is rounded up to a multiple with alignUp (pr/align.h). Spelling the rounding out is a second way to say
+    the same thing, and its mask form is right only for a power of two."""
+    if path.endswith("pr/align.h"):
+        return
+    for match in HAND_ALIGN.finditer(mask_non_code(text)):
+        if match.group("step") is not None and int(match.group("low")) + 1 != int(match.group("step")):
+            continue
+        if match.group("mask") is not None and int(match.group("mask")) & (int(match.group("mask")) + 1) != 0:
+            continue
+        report.add(path, line_of(text, match.start()), "align-up",
+                   "%s rounds up to a multiple; use alignUp from pr/align.h" % match.group(0).strip())
+
+
 # A PrStringView of a string literal and its length: written as a temporary, or as a declaration's initializer.
 LITERAL_VIEW = re.compile(r'\bPrStringView\s*(?:\w+\s*=\s*|\w+\s*)?[({]\s*"((?:[^"\\\n]|\\.)*)"\s*,\s*(\d+)\s*[)}]')
 
@@ -2567,12 +2623,13 @@ def check_backend_includes(report, path, text):
     """A backend reaches its interface, and every other module, through the public API. It includes public headers,
     which include core's C++ layer, never another module's implementation, except what its interface's backends share
     (lib/<interface>/backends/shared). A backend's tests also reach what its interface's tests share with them
-    (lib/<interface>/tests), as the interface's own tests run on every backend."""
+    (lib/<interface>/tests), as the interface's own tests run on every backend, and what every test shares
+    (tools/harness)."""
     own = backend_of(path)[len("lib/"):] + "/"
     interface = own.split("/")[0]
     allowed = ("pr/", own, interface + "/backends/shared/")
     if "/tests/" in os.path.relpath(path, ROOT).replace(os.sep, "/"):
-        allowed += (interface + "/tests/",)
+        allowed += (interface + "/tests/", "tools/harness/")
     for match in re.finditer(r'^#include "([^"]+)"', text, re.M):
         header = match.group(1)
         if not (header.startswith(allowed) or header in THIRD_PARTY):
@@ -3268,6 +3325,7 @@ def check_any_source(path):
         check_ternaries(report, path, text)
         check_blank_lines(report, path, text)
     check_qualified(report, path, text)
+    check_using_directives(report, path, text)
     if is_application(path):
         check_application_namespace(report, path, text)
     check_private_includes(report, path, text)
@@ -3275,6 +3333,7 @@ def check_any_source(path):
         check_linkage(report, path, text)
     if not path.endswith(".c") and not is_public(path):
         check_count_of(report, path, text)
+        check_align_up(report, path, text)
     if not path.endswith(".c"):
         check_literal_views(report, path, text)
         check_container_views(report, path, text)

@@ -5,9 +5,9 @@
 // A texture that shaders write takes a second slot for its storage image in the general layout. An image is held by the
 // texture that made it and by each view of it, and is freed with the last of them.
 //
-// Uploads copy into pages of staging memory at once, and the copies into their targets wait for the next command
-// buffer, which records them before its own work and frees the pages once it is done. The same batch zeroes each new
-// buffer in device memory, and moves each new texture into the read-only layout.
+// Uploads copy into the shared staging at once. The copies into their targets wait for the batch to be submitted: ahead
+// of the next command buffer, or on its own once its staging block is full. The same batch zeroes each new buffer in
+// device memory, and moves each new texture into the read-only layout.
 
 #include "gpu/backends/vulkan/src/vulkan_resources.h"
 
@@ -17,11 +17,13 @@
 #include "pr/integer.h"
 #include "pr/mem.h"
 
+#include "gpu/backends/vulkan/src/vulkan_commands.h"
+
 namespace pr_impl {
 
 namespace {
 
-// The alignment of an upload within its page, which a copy into a texture of any format accepts.
+// The alignment of an upload within its staging block, which a copy into a texture of any format accepts.
 constexpr uint64_t kUploadAlignment = 16;
 
 // Returns the index of a memory type in `bits` with every property of `required`, preferring one that also has those of
@@ -96,42 +98,28 @@ void freeSlot(VulkanDevice* d, uint32_t slot) {
     releaseSlot(d, slot);
 }
 
-// Returns staging memory for `size` bytes of an upload, in `*page` at `*offset`, or null if no memory is left. Called
-// with the device's mutex held.
-uint8_t* PR_NULLABLE stagingTake(VulkanDevice* d, uint64_t size, uint32_t* page, uint64_t* offset) {
-    if (d->openPage != UINT32_MAX) {
-        VulkanStagingPage& open = d->pages.data[d->openPage];
-        uint64_t at = alignUp(open.used, kUploadAlignment);
-        if (at + size <= open.size) {
-            open.used = at + size;
-            *page = d->openPage;
-            *offset = at;
-            return open.memory.mapped + at;
-        }
-    }
-    uint64_t pageSize = size > kStagingPageBytes ? alignUp(size, kUploadAlignment) : kStagingPageBytes;
+// The staging's functions, with the device's mutex held.
+bool stagingMake(void* context, uint64_t size, GpuSharedStagingBlock* out) {
+    VulkanDevice* d = static_cast<VulkanDevice*>(context);
     VkBufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    info.size = pageSize;
+    info.size = size;
     info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     VulkanStagingPage created{};
-    created.size = pageSize;
     if (!vulkanCheck(d, d->vk.CreateBuffer(d->device, &info, nullptr, &created.buffer)))
-        return nullptr;
+        return false;
     VkMemoryRequirements requirements;
     d->vk.GetBufferMemoryRequirements(d->device, created.buffer, &requirements);
     VkMemoryPropertyFlags mapped = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     if (!vulkanMemoryAllocate(d, requirements, mapped, 0, &created.memory)) {
         d->vk.DestroyBuffer(d->device, created.buffer, nullptr);
-        return nullptr;
+        return false;
     }
     d->vk.BindBufferMemory(d->device, created.buffer, created.memory.memory, created.memory.offset);
     uint32_t index = UINT32_MAX;
-    for (uint32_t i = 0; i < d->pages.count; ++i) {
-        if (d->pages.data[i].buffer == VK_NULL_HANDLE) {
+    for (uint32_t i = 0; i < d->pages.count && index == UINT32_MAX; ++i) {
+        if (d->pages.data[i].buffer == VK_NULL_HANDLE)
             index = i;
-            break;
-        }
     }
     if (index == UINT32_MAX) {
         index = d->pages.count;
@@ -139,13 +127,28 @@ uint8_t* PR_NULLABLE stagingTake(VulkanDevice* d, uint64_t size, uint32_t* page,
     } else {
         d->pages.data[index] = created;
     }
-    // A page of its own for a large upload leaves the open page open.
-    if (pageSize == kStagingPageBytes)
-        d->openPage = index;
-    d->pages.data[index].used = size;
-    *page = index;
-    *offset = 0;
-    return d->pages.data[index].memory.mapped;
+    *out = GpuSharedStagingBlock{created.memory.mapped, size, index};
+    return true;
+}
+
+void stagingFree(void* context, const GpuSharedStagingBlock& block) {
+    VulkanDevice* d = static_cast<VulkanDevice*>(context);
+    VulkanStagingPage& page = d->pages.data[block.id];
+    d->vk.DestroyBuffer(d->device, page.buffer, nullptr);
+    vulkanMemoryFree(d, page.memory);
+    page = VulkanStagingPage{};
+}
+
+void stagingSubmit(void* context) {
+    vulkanUploadsSubmit(static_cast<VulkanDevice*>(context));
+}
+
+// Returns staging memory for `size` bytes of an upload, at `*offset` in the staging's open block, or null if no memory
+// is left. Called with the device's mutex held.
+uint8_t* PR_NULLABLE stage(VulkanDevice* d, uint64_t size, uint64_t* offset) {
+    if (!gpuSharedStage(&d->staging, size, kUploadAlignment, offset))
+        return nullptr;
+    return d->staging.open.mapped + *offset;
 }
 
 VkImageViewType viewTypeOf(PrGpuTextureKind kind) {
@@ -247,6 +250,8 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     if ((desc->usage & PrGpuBufferUsageFlag_Index) != 0)
         info.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    if ((desc->usage & PrGpuBufferUsageFlag_Vertex) != 0)
+        info.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     if ((desc->usage & PrGpuBufferUsageFlag_Indirect) != 0)
         info.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     VkBuffer buffer = VK_NULL_HANDLE;
@@ -326,18 +331,23 @@ void* bufferMap(const PrGpuDevice* device, PrGpuBuffer buffer) {
 void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, const void* data, uint64_t size) {
     VulkanDevice* d = vulkanDevice(device);
     prMutexLock(&d->mutex);
-    uint32_t page = 0;
-    uint64_t at = 0;
-    uint8_t* staging = stagingTake(d, size, &page, &at);
-    if (staging != nullptr) {
-        prMemCopy(staging, data, size_t(size));
+    const uint8_t* bytes = static_cast<const uint8_t*>(data);
+    while (size != 0) {
+        uint64_t n = size < kGpuSharedStagingBlockBytes ? size : kGpuSharedStagingBlockBytes;
+        uint64_t at = 0;
+        uint8_t* staging = stage(d, n, &at);
+        if (staging == nullptr)
+            break;
+        prMemCopy(staging, bytes, size_t(n));
         VulkanUpload upload{};
-        upload.page = page;
         upload.offset = at;
         upload.target = buffer.id;
         upload.targetOffset = offset;
-        upload.size = size;
+        upload.size = n;
         d->uploads.push(upload);
+        bytes += n;
+        offset += n;
+        size -= n;
     }
     prMutexUnlock(&d->mutex);
 }
@@ -493,13 +503,11 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
     uint64_t imageBytes = layerBytes != 0 ? layerBytes : uint64_t(rowBytes) * blockRows;
     uint64_t size = imageBytes * (images - 1) + uint64_t(rowBytes) * (blockRows - 1) + packedRow;
     prMutexLock(&d->mutex);
-    uint32_t page = 0;
     uint64_t at = 0;
-    uint8_t* staging = stagingTake(d, size, &page, &at);
+    uint8_t* staging = stage(d, size, &at);
     if (staging != nullptr) {
         prMemCopy(staging, data, size_t(size));
         VulkanUpload upload{};
-        upload.page = page;
         upload.offset = at;
         upload.target = texture.id;
         upload.region = *region;
@@ -894,7 +902,7 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
                 d->vk.CmdFillBuffer(buffer, target.buffer, 0, VK_WHOLE_SIZE, 0);
             } else {
                 VkBufferCopy copy{upload.offset, upload.targetOffset, upload.size};
-                d->vk.CmdCopyBuffer(buffer, d->pages.data[upload.page].buffer, target.buffer, 1, &copy);
+                d->vk.CmdCopyBuffer(buffer, d->pages.data[d->staging.open.id].buffer, target.buffer, 1, &copy);
             }
             continue;
         }
@@ -951,7 +959,7 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
         copy.imageSubresource.layerCount = range.layerCount;
         copy.imageOffset = VkOffset3D{int32_t(region.x), int32_t(region.y), int32_t(is3d ? region.z : 0)};
         copy.imageExtent = VkExtent3D{region.extent.width, region.extent.height, is3d ? region.extent.depth : 1};
-        d->vk.CmdCopyBufferToImage(buffer, d->pages.data[upload.page].buffer, target.image,
+        d->vk.CmdCopyBufferToImage(buffer, d->pages.data[d->staging.open.id].buffer, target.image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 
         barrier.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
@@ -981,16 +989,7 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
                 retired.serial = c->serial + 1;
         }
     }
-    // Every page that the uploads used belongs to the command buffer now, and frees once it is done.
-    for (uint32_t i = 0; i < d->uploads.count; ++i) {
-        if (d->uploads.data[i].kind != VulkanUploadKind_Copy)
-            continue;
-        uint32_t page = d->uploads.data[i].page;
-        if (c->pages.find(page) == kArrayMissing)
-            c->pages.push(page);
-    }
     d->uploads.count = 0;
-    d->openPage = UINT32_MAX;
 }
 
 VkImageView vulkanAttachmentView(VulkanDevice* d, uint32_t slot, uint8_t level, uint16_t layer) {
@@ -1096,6 +1095,7 @@ void vulkanResourcesReset(VulkanDevice* d) {
         }
     }
     d->samplers.reset();
+    gpuSharedStagingReset(&d->staging);
     d->pages.reset();
     d->uploads.reset();
     d->retired.reset();
@@ -1106,6 +1106,12 @@ void vulkanResourcesReset(VulkanDevice* d) {
 }
 
 void vulkanResourceFunctions(VulkanDevice* d) {
+    d->staging = GpuSharedStaging{
+        .context = d,
+        .makeFn = stagingMake,
+        .freeFn = stagingFree,
+        .submitFn = stagingSubmit,
+    };
     d->supportsFormatFn = supportsFormat;
     d->bufferCreateFn = bufferCreate;
     d->bufferDestroyFn = bufferDestroy;

@@ -6,6 +6,7 @@
 #include "pr/mem.h"
 
 #include "gpu/tests/kTestGpuNativeShaders.h"
+#include "tools/harness/harness_gpu.h"
 
 #include "tools/harness/test.h"
 
@@ -13,6 +14,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d12.h>
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -40,9 +43,13 @@ struct Fixture {
     Fixture() {
         PrGpuD3d12Options options = prGpuD3d12OptionsDefault();
         options.validation = true;
-        PrStatus status = prGpuD3d12Create(&options, &device);
+        // Without a pool, the device's creation is done when the constructor returns.
+        device = prGpuD3d12Create(&options);
+        PrStatus status = prGpuDeviceLostStatus(device);
         if (status == PrStatus_NotSupported) {
             MESSAGE("no Direct3D 12 adapter with the features that the backend needs");
+            prGpuDeviceDestroy(device);
+            device = nullptr;
             return;
         }
         REQUIRE(status == PrStatus_Ok);
@@ -230,7 +237,7 @@ TEST_CASE("d3d12 draws into the application's pass, and says which of the pass's
     REQUIRE(SUCCEEDED(app.list->Close()));
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
-    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+    gpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[0] == 0xff0000ffu);
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
@@ -270,7 +277,7 @@ TEST_CASE("d3d12 hands a native draw the pass's command list, and draws after it
         PrGpuAccessFlag_CopyRead);
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
-    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+    gpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[7] == 0xff0000ffu);
     CHECK(pixels[7 * 8] == 0xffff0000u);

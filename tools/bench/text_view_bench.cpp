@@ -28,6 +28,7 @@
 #include "pr/time.h"
 
 #include "tools/harness/harness.h"
+#include "tools/harness/harness_gpu.h"
 
 #include <stdio.h>
 #include <string>
@@ -198,7 +199,7 @@ struct Rendering {
     // Returns false if the platform has no device.
     bool open(PrUVec2 size) {
         extent = size;
-        if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) != PrStatus_Ok ||
+        if (gpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) != PrStatus_Ok ||
                 prDrawRendererCreate(PrDrawRendererBackend_Default, device, nullptr, &renderer) != PrStatus_Ok)
             return false;
         frame = prDrawFrameCreate(renderer);
@@ -245,7 +246,7 @@ RenderCost render(Rendering& r, PrLayoutTree* tree) {
     prGpuPassEnd(pass);
     prGpuCommandsTextureBarrier(commands, r.texture, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
     PrTimePerf encoded = prTimePerfNow();
-    double gpu = prGpuCommandsSubmitAndWait(commands) * 1000;
+    double gpu = gpuSubmitAndWait(commands) * 1000;
     return RenderCost{prTimePerfMilliseconds(start, played), prTimePerfMilliseconds(played, encoded), gpu};
 }
 

@@ -6,8 +6,11 @@
 #include "pr/mem.h"
 
 #include "gpu/tests/kTestGpuNativeShaders.h"
+#include "tools/harness/harness_gpu.h"
 
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 #import <AppKit/AppKit.h>
 #import <Metal/Metal.h>
@@ -44,9 +47,13 @@ struct Fixture {
     Fixture() {
         PrGpuMetal4Options options = prGpuMetal4OptionsDefault();
         options.validation = true;
-        PrStatus status = prGpuMetal4Create(&options, &device);
+        // Without a pool, the device's creation is done when the constructor returns.
+        device = prGpuMetal4Create(&options);
+        PrStatus status = prGpuDeviceLostStatus(device);
         if (status == PrStatus_NotSupported) {
             MESSAGE("no Metal device that supports Metal 4");
+            prGpuDeviceDestroy(device);
+            device = nullptr;
             return;
         }
         REQUIRE(status == PrStatus_Ok);
@@ -223,7 +230,7 @@ TEST_CASE("metal4 draws into the application's pass, and says which of the pass'
     [app.buffer endCommandBuffer];
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
-    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+    gpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[0] == 0xff0000ffu);
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
@@ -264,7 +271,7 @@ TEST_CASE("metal4 hands a native draw the pass's encoder, and draws after it wit
         PrGpuAccessFlag_CopyRead);
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
-    prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
+    gpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[7] == 0xff0000ffu);
     CHECK(pixels[7 * 8] == 0xffff0000u);

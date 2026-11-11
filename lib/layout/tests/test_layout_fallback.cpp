@@ -1,6 +1,7 @@
 // Font fallback: a cluster that no family named by its style serves is set in an installed family, chosen by its
 // script, its language and its presentation, or in Last Resort if no family serves it.
 
+#include "pr/align.h"
 #include "pr/array.h"
 #include "pr/locale_common.h"
 #include "pr/map.h"
@@ -10,6 +11,8 @@
 #include "layout/tests/layout_fixture.h"
 
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -93,11 +96,11 @@ Array<uint8_t> renamed(const Array<uint8_t>& bytes, PrStringView family) {
         const uint32_t record[] = {table.tag, 0u, offset, table.data.count()};
         for (uint32_t value : record)
             put32(out, value);
-        offset += (table.data.count() + 3) & ~3u;
+        offset += alignUp(table.data.count(), 4);
     }
     for (const Table& table : tables) {
         out.append(table.data.span());
-        out.resize((out.count() + 3) & ~3u);
+        out.resize(alignUp(out.count(), 4));
     }
     return out;
 }
@@ -107,7 +110,7 @@ void installAs(Fixture& f, const char* family) {
     static Map<String, Array<uint8_t>> made;
     Array<uint8_t>& bytes = made[family];
     if (bytes.isEmpty())
-        bytes = renamed(harness::readFile(format("{}/NotoSansJP-VF.otf", PR_FONTS_DIR)), family);
+        bytes = renamed(readFile(format("{}/NotoSansJP-VF.otf", PR_FONTS_DIR)), family);
     const PrFont* PR_NULLABLE font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();

@@ -14,9 +14,11 @@
 // Shaders reach resources through one pipeline layout, which the shader libraries are compiled for:
 //
 // - Set 0 is empty.
-// - Set 1 holds push descriptors. Binding 0 is the uniform buffer of a draw or a dispatch. Binding 1 is the target that
-//   a pipeline that reads its target reads, for the fragment stage. It is an input attachment on a device with local
-//   read, and a sampled image of the copy otherwise.
+// - Set 1 holds push descriptors. Binding 0 is the uniform buffer of a draw or a dispatch. Binding 1 is the input
+//   attachment that a pipeline that reads its target reads, for the fragment stage, on a device with local read, which
+//   is the only kind that reads the target (PrGpuFeatureFlag_TargetReads). The slots follow, for every stage: four
+//   Buffer slots from binding 2 and four RwBuffer slots from 6, as storage buffers; eight Texture slots from 10, each a
+//   sampled image and then its sampler; and four RwTexture slots from 26, as storage images.
 // - Set 2 is the bindless set. Binding 0 is an array of samplers, and binding 2 an array of mutable descriptors that
 //   holds every buffer and image, updated after it is bound. A handle is an index into one of the arrays.
 // - Push constants are kPrGpuMaxPushBytes at offset zero, readable by every stage.
@@ -107,6 +109,12 @@ typedef struct PrGpuVulkanOptions {
     // error. The layer must be installed, as the Vulkan SDK installs it. Without it, the instance is created without
     // the layer.
     bool validation;
+
+    // The device's creation runs on `pool`, or during the call if it is null. `ready` is called once the creation is
+    // done (PrGpuDeviceOptions).
+    PrTaskPool* PR_NULLABLE pool;
+    PrGpuDeviceReadyFn PR_NULLABLE ready;
+    void* PR_NULLABLE readyContext;
 } PrGpuVulkanOptions;
 
 // Returns the default options: a device that the backend creates on the first discrete adapter, with 65536 resource
@@ -115,9 +123,9 @@ typedef struct PrGpuVulkanOptions {
 // PR_VULKAN_ADAPTER picks an adapter by its index.
 PrGpuVulkanOptions prGpuVulkanOptionsDefault(void);
 
-// Creates a device over Vulkan. Null `options` means the defaults. Returns NotFound if the system has no Vulkan loader
-// or no adapter, and NotSupported if the adapter lacks a feature that the backend needs. On failure, `*out` is null.
-PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
+// Creates a device over Vulkan, as prGpuDeviceCreate does. Null `options` means the defaults. Its creation fails with
+// NotSupported if the system has no Vulkan loader or no adapter, or the adapter lacks a feature that the backend needs.
+PrGpuDevice* prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options);
 
 // Returns the number of validation messages of error severity that the device's instance has reported. Always zero
 // without the validation layer. Tests check it after each case.

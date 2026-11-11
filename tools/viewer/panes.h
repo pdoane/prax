@@ -27,6 +27,8 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace viewer {
 
+using namespace harness;
+
 // Returns the milliseconds from `begin` to now.
 double millisSince(std::chrono::steady_clock::time_point begin);
 
@@ -72,7 +74,7 @@ struct PaneOutput {
 // device prepares the list, then encodes it into a pass that clears the slot's texture to the background. A renderer in
 // memory renders into pixels filled with the background, which are then written to the texture. The result's `ms` is
 // how long preparation or rendering took.
-Rendered renderSlot(Slot& slot, const std::vector<harness::RendererConfig>& configs, uint32_t config, const PrDrawList* list,
+Rendered renderSlot(Slot& slot, const std::vector<RendererConfig>& configs, uint32_t config, const PrDrawList* list,
     PrColor background, PrGpuCommands* commands, PaneOutput output);
 
 // The time that documents draw at. Every pane reads the clock when it starts a render, and the panes of one document
@@ -134,7 +136,7 @@ struct PaneSource {
 struct PaneContext {
     PrApp* app;
     PrGpuDevice* device;
-    const std::vector<harness::RendererConfig>* configs;
+    const std::vector<RendererConfig>* configs;
     std::vector<std::unique_ptr<std::mutex>>* configLocks; // one per renderer, held while the renderer is used
     SharedClock* clock;
 

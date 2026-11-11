@@ -3,6 +3,7 @@
 
 #include "core/tests/test_platform_config.h"
 
+#include "pr/align.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/raw_string.h"
@@ -30,7 +31,7 @@ size_t blockSize(const void* memory) {
 } // namespace
 
 void* PR_NULLABLE configAllocBytes(size_t size) {
-    size_t total = 16 + ((size + 15) & ~size_t(15));
+    size_t total = 16 + alignUp(size, 16);
     if (arenaUsed + total > sizeof(arena))
         return nullptr;
     uint8_t* block = arena + arenaUsed;

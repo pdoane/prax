@@ -325,7 +325,7 @@ TEST_CASE("a strip of a group receives a tab of the group from another window, a
 
     // A tab of the group dragged out of the window goes to the system, by its id, and tears off where the system's drag
     // ends outside every window.
-    harness::DragWindow window;
+    DragWindow window;
     prUiSetWindow(f.ui, &window);
     PrVec2 start = f.center(nodes[0]);
     f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = start}});

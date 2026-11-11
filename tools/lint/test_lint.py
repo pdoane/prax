@@ -316,6 +316,28 @@ class Namespaces(unittest.TestCase):
         self.assertEqual(self.rules(lint.check_qualified, 'examples/viewer/a.cpp', source),
                          [(5, 'qualified')])
 
+    def test_harness_is_taken_with_a_using_directive(self):
+        source = ('using namespace harness;\n'
+                  '// harness::inComment\n'
+                  'bool run = harness::gpuTests();\n'
+                  'bool same = gpuTests() == ::harness::gpuTests();\n')
+        self.assertEqual(self.rules(lint.check_qualified, 'lib/core/tests/a.cpp', source),
+                         [(3, 'qualified'), (4, 'qualified')])
+
+    def test_the_using_directives_of_a_scope_are_one_sorted_block(self):
+        source = ('using namespace pr;\n'
+                  'using namespace harness;\n'
+                  '\n'
+                  'using namespace alchemy;\n'
+                  '\n'
+                  'namespace pr_impl {\n'
+                  '\n'
+                  'using namespace pr;\n'
+                  '\n'
+                  'namespace {\n')
+        self.assertEqual(self.rules(lint.check_using_directives, 'lib/core/tests/a.cpp', source),
+                         [(2, 'using-block'), (4, 'using-block')])
+
     def test_pr_is_spelled_out_only_in_an_explicit_specialization(self):
         source = ('namespace doctest {\n'
                   'template <>\n'
@@ -1036,6 +1058,26 @@ class CountOf(unittest.TestCase):
                 self.assertEqual(self.problems('auto n = %s;\n' % expression), [])
 
 
+class AlignUp(unittest.TestCase):
+    def problems(self, source):
+        report = lint.Report()
+        lint.check_align_up(report, os.path.join(lint.ROOT, 'lib/core/src/example.cpp'), source)
+        return report.problems
+
+    def test_hand_rolled_roundings(self):
+        for expression in ('(size + 255) & ~uint64_t(255)', '(size + 15) & ~15u', '(total + 63) / 64 * 64',
+                           '(at + alignment - 1) / alignment * alignment', '(t.bytes.count() + 3) & ~3u',
+                           '(offset + alignof(T) - 1) & ~(alignof(T) - 1)'):
+            with self.subTest(expression=expression):
+                self.assertEqual(len(self.problems('auto n = %s;\n' % expression)), 1)
+
+    def test_other_arithmetic(self):
+        for expression in ('(size + 2) / 3 * 4', '(width + b.width - 1) / b.width * b.bytes', '(level + 2) & ~1',
+                           '(x + 3) & ~7', 'alignUp(size, 16)', '// (size + 15) & ~15'):
+            with self.subTest(expression=expression):
+                self.assertEqual(self.problems('auto n = %s;\n' % expression), [])
+
+
 class Enums(unittest.TestCase):
     def test_named_enums_are_rejected(self):
         for declaration in ('enum Value {', 'enum class Value {', 'enum Value : uint8_t {'):
@@ -1530,6 +1572,11 @@ class Indentation(unittest.TestCase):
     def test_an_initializer_list_is_data(self):
         self.assertEqual(self.problems('void f() {\n    PrX x{\n        .a = 1,\n        .b = 2,\n    };\n}\n'), [])
         self.assertEqual(self.problems('enum {\n    A,\n    B,\n};\n'), [])
+
+    def test_a_type_in_capitals_opens_a_list_and_a_macro_apart_from_its_brace_opens_a_body(self):
+        self.assertEqual(self.problems('void f() {\n    x = D3D12_DESC{\n        .a = 1,\n        .b = 2,\n    };\n}\n'),
+                         [])
+        self.assertEqual(self.problems('void f() PR_FORCE_INLINE {\n    g();\n}\n'), [])
 
     def test_a_directive_within_an_initializer_list_leaves_its_items_alone(self):
         self.assertEqual(self.problems('int k[] = {\n    1,\n#if A\n    2,\n#endif\n    3,\n};\n'), [])

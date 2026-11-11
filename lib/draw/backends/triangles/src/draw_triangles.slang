@@ -1,24 +1,22 @@
 // The triangles renderer's shaders, as draw_triangles_frame.h specifies them: the vertex color times the texture's
-// sample. A vertex shader reads its vertex from the frame's vertices, which are in a buffer that the push data names.
+// sample. The pipeline's vertex layout reads the frame's vertices. The fragment shader samples the draw's texture,
+// which Texture slot 0 holds with its sampler.
 
 #include "pr/gpu.slang"
 
-// The push data of each draw: the target's extent in pixels, the buffer of the vertices and their byte offset in it,
-// and the draw's texture and sampler.
+// The push data of each draw: the target's extent in pixels.
 struct Draw {
     float2 size;
-    uint vertices;
-    uint offset;
-    uint texture;
-    uint sampler;
 };
 PR_GPU_PUSH(Draw, draw);
 
-// A vertex as TrianglesVertex lays it out: position, uv, and straight RGBA with red in the lowest byte.
+PR_GPU_TEXTURE(Texture2D<float4>, drawTexture, 0);
+
+// A vertex, as TrianglesVertex lays it out. The layout reads the straight RGBA color as normalized floats.
 struct Vertex {
-    float2 position;
-    float2 uv;
-    uint color;
+    PR_GPU_ATTRIBUTE(float2, position, 0);
+    PR_GPU_ATTRIBUTE(float2, uv, 1);
+    PR_GPU_ATTRIBUTE(float4, color, 2);
 };
 
 struct VertexOut {
@@ -28,17 +26,15 @@ struct VertexOut {
 };
 
 [shader("vertex")]
-VertexOut trianglesVertex(uint index : SV_VertexID) {
-    Vertex v = prGpuGet<ByteAddressBuffer>(draw.vertices).Load<Vertex>(draw.offset + index * 20);
+VertexOut trianglesVertex(Vertex v) {
     VertexOut o;
     o.position = float4(v.position.x / draw.size.x * 2 - 1, 1 - v.position.y / draw.size.y * 2, 0, 1);
     o.uv = v.uv;
-    o.color = float4(v.color & 0xff, (v.color >> 8) & 0xff, (v.color >> 16) & 0xff, v.color >> 24) / 255;
+    o.color = v.color;
     return o;
 }
 
 [shader("fragment")]
 float4 trianglesFragment(VertexOut i) : SV_Target {
-    Texture2D<float4> source = prGpuGet<Texture2D<float4>>(draw.texture);
-    return i.color * source.Sample(prGpuGet<SamplerState>(draw.sampler), i.uv);
+    return i.color * drawTexture.Sample(drawTextureSampler, i.uv);
 }

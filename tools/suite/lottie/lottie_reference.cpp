@@ -20,8 +20,8 @@
 #include <string>
 #include <vector>
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 
 namespace {
 

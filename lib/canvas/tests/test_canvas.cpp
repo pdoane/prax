@@ -7,7 +7,11 @@
 #include "pr/gpu.h"
 #include "pr/string.h"
 
+#include "tools/harness/harness_gpu.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 extern "C" int prTestCanvasCApi(void);
 
@@ -24,7 +28,7 @@ struct MemoryCanvas {
 
     explicit MemoryCanvas(uint32_t width = 100, uint32_t height = 50,
             PrCanvasSettings settings = prCanvasSettingsDefault()) {
-        REQUIRE(prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
+        REQUIRE(gpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
         PrCanvasDesc desc{.extent = PrUVec2{width, height}, .settings = settings, .device = device};
         handle = prCanvasCreate(&desc);
     }
@@ -69,7 +73,7 @@ struct MemoryCanvas {
 // Returns true if the build has a renderer that draws on a device, and the run tests on the platform's GPU
 // (harness::gpuTests).
 bool deviceRenderers() {
-    return harness::gpuTests() && (prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Fragment) ||
+    return gpuTests() && (prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Fragment) ||
         prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Triangles));
 }
 
@@ -333,7 +337,7 @@ TEST_CASE("isPointInStroke tests the stroke at the line width") {
 TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there, and reads back what it drew" *
         doctest::skip(!deviceRenderers())) {
     PrGpuDevice* device = nullptr;
-    REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
+    REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
     PrDrawRenderer* renderer = nullptr;
     REQUIRE(prDrawRendererCreate(PrDrawRendererBackend_Default, device, nullptr, &renderer) == PrStatus_Ok);
     PrCanvasDesc desc{.extent = PrUVec2{8, 8}, .settings = prCanvasSettingsDefault(), .device = device};
@@ -363,9 +367,9 @@ TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there,
     prDrawFrameRender(frame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
     prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     uint8_t shown[8 * 8 * 4] = {};
-    prGpuTextureRead(device, target, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, PrPixels{shown, 8 * 4, {8, 8}});
+    gpuTextureRead(device, target, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, PrPixels{shown, 8 * 4, {8, 8}});
     CHECK(shown[(1 * 8 + 1) * 4 + 0] == 255);
     CHECK(shown[(1 * 8 + 1) * 4 + 3] == 255);
     CHECK(shown[(1 * 8 + 6) * 4 + 3] == 0);
@@ -393,7 +397,7 @@ TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there,
 TEST_CASE("a bitmap on a device reads back what the context drew before any presentation, which draws it no more" *
         doctest::skip(!deviceRenderers())) {
     PrGpuDevice* device = nullptr;
-    REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
+    REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
     PrCanvasDesc desc{.extent = PrUVec2{8, 8}, .settings = prCanvasSettingsDefault(), .device = device};
     PrCanvas* canvas = prCanvasCreate(&desc);
     PrCanvasImageData data{
@@ -425,7 +429,7 @@ TEST_CASE("a bitmap on a device reads back what the context drew before any pres
     REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
     PrDrawTarget into{.extent = PrUVec2{8, 8}, .format = PrPixelFormat_Rgba8, .commands = commands};
     REQUIRE(prDrawFramePrepare(frame, list, &into) == PrStatus_Ok);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     CHECK(halfOpaque(alphaAt(1, 1)));
 
     // A write follows the drawing before it, which the write's read draws first.

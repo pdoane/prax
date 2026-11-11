@@ -89,7 +89,10 @@ void renderFrame(PrDrawFrame* handle, PrGpuPass* pass, PrIVec2 origin) {
 
 PrGpuDevice* PR_NULLABLE drawMemoryDevice(PrGpuDevice* PR_NULLABLE device, bool* owned) {
     *owned = device == nullptr;
-    if (device == nullptr && prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) != PrStatus_Ok)
+    // A memory device created without a pool is ready on return.
+    if (device == nullptr)
+        device = prGpuDeviceCreate(PrGpuBackend_Memory, nullptr);
+    if (device == nullptr)
         return nullptr;
     if (!prGpuDeviceHasNative(device, PrGpuNativeKind_Pixels))
         return nullptr;

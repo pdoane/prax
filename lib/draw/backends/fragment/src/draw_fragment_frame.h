@@ -17,6 +17,7 @@
 #include "pr/draw_list.h"
 #include "pr/draw_lower.h"
 #include "pr/draw_renderer.h"
+#include "pr/float.h"
 #include "pr/geom.h"
 #include "pr/pixels.h"
 #include "pr/vec.h"
@@ -55,6 +56,12 @@ struct FragmentLayer {
 // step over its instances' pixels, and the result replaces what the layer held there. A pass with `mipmaps` has no
 // instances. It fills each mip level of its mipmapped layer after the first from the level before it, by the device's
 // filter.
+//
+// On a device that cannot read its target, an instance that reads the destination reads a snapshot of its layer
+// instead: a layer of its own at the same place, into which a copy pass copies a box of the layer between the passes
+// that draw into it. The instances that read one copy cover disjoint pixels within its box, so that each reads what the
+// instances before the copy left. The list's own layer is never the target on such a device, since a list that reads
+// the destination draws into a layer of its own (prDrawListReadsDestination).
 struct FragmentPass {
     uint32_t layer;                 // the layer's index plus one, or zero for the target
     bool clear;                     // whether the layer is cleared to transparent first
@@ -63,7 +70,51 @@ struct FragmentPass {
     uint32_t filter;                // the filter step's index plus one, or zero for instances that paint
     uint32_t first;                 // the index of its first instance
     uint32_t count;
+
+    // A copy pass copies `box`, in the target's pixels, from the layer into the snapshot layer `copy`, as its index
+    // plus one, and draws nothing. A pass that draws reads the snapshot layer `snapshot`, as its index plus one, where
+    // its instances read the destination, or reads the target if it is zero.
+    uint32_t copy;
+    PrIRect box;
+    uint32_t snapshot;
 };
+
+// The pixels of the pass's attachment that the instance can draw, within `limit`: the bounds of its corners, moved by
+// `offset` from the target's pixels to the attachment's, and widened by a pixel. An instance whose corners are not
+// finite may draw anywhere within `limit`.
+inline PrIRect fragmentInstancePixels(const FragmentInstance& i, PrVec2 offset, const PrIRect& limit) {
+    PrVec2 corners[4];
+    uint32_t count = 0;
+    if ((i.flags & FragmentInstanceFlag_Coverage) == FragmentCoverage_Triangle) {
+        for (uint32_t k = 0; k < 3; ++k)
+            corners[count++] = i.corners[k];
+    } else {
+        const PrAffine2& m = i.transform;
+        const float xs[2] = {i.bounds.left, i.bounds.right};
+        const float ys[2] = {i.bounds.top, i.bounds.bottom};
+        for (float y : ys) {
+            for (float x : xs)
+                corners[count++] = PrVec2{m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f};
+        }
+    }
+    float lo[2] = {corners[0].x, corners[0].y};
+    float hi[2] = {corners[0].x, corners[0].y};
+    for (uint32_t k = 0; k < count; ++k) {
+        const float p[2] = {corners[k].x, corners[k].y};
+        for (uint32_t axis = 0; axis < 2; ++axis) {
+            // A comparison with NaN is false, so a corner that is not finite fails both tests and the limit stands.
+            if (!(p[axis] > -1e9f && p[axis] < 1e9f))
+                return limit;
+            lo[axis] = p[axis] < lo[axis] ? p[axis] : lo[axis];
+            hi[axis] = p[axis] > hi[axis] ? p[axis] : hi[axis];
+        }
+    }
+    PrIRect box{
+        int32_t(prF32Floor(lo[0] + offset.x)) - 1, int32_t(prF32Floor(lo[1] + offset.y)) - 1,
+        int32_t(prF32Ceil(hi[0] + offset.x)) + 1, int32_t(prF32Ceil(hi[1] + offset.y)) + 1,
+    };
+    return prIRectIntersect(box, limit);
+}
 
 // What a texture request does.
 enum {

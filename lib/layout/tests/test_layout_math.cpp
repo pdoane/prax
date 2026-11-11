@@ -18,6 +18,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 namespace {
@@ -36,10 +38,10 @@ struct MathFixture {
         PrStatus status = PrStatus_Ok;
         if (wpt == nullptr || prStringContains(wpt, "/")) {
             String path = wpt != nullptr ? String(wpt) : format("{}/NewCMMath-Regular.otf", PR_FONTS_DIR);
-            Array<uint8_t> bytes = harness::readFile(path);
+            Array<uint8_t> bytes = readFile(path);
             status = prFontCreate(bytes, 0, nullptr, &font);
         } else {
-            Array<uint8_t> bytes = harness::readFile(format("{}/math/{}.woff", PR_FONTS_DIR, wpt));
+            Array<uint8_t> bytes = readFile(format("{}/math/{}.woff", PR_FONTS_DIR, wpt));
             PrCompressCodec* codec = prCompressBuiltinCreate();
             status = prFontCreateWoff(bytes, 0, nullptr, codec, &font);
             prCompressCodecDestroy(codec);

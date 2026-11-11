@@ -1,8 +1,9 @@
 // The Metal GPU backend, on Metal 3, which is the default Metal backend. pr/gpu_metal4.h is the same interface on Metal
 // 4.
 //
-// Every encoder binds the heaps and the command buffer's latest root data, since Metal 3's bindings end with their
-// encoder. Metal snapshots them at each draw and dispatch.
+// Every encoder binds the heaps, the command buffer's latest root data and its slots, since Metal 3's bindings end with
+// their encoder. Metal snapshots them at each draw and dispatch. A device without Metal 3, or one created `slotsOnly`,
+// has no bindless: its pipelines may not read the heaps, which their reflection shows.
 //
 // Metal 3 orders nothing between encoders that use untracked resources, so the device orders them with a chain of
 // fences on the queue. Metal evaluates a fence in the order that command buffers are committed, so a wait pairs with
@@ -53,6 +54,8 @@ struct Commands : GpuMetalCommands {
 };
 
 struct Device : GpuMetalDevice {
+    PrGpuMetalOptions options;              // what the device is created over
+
     id<MTLFence> orderFence;                // retained
     id<MTLFence> vertexFence;               // retained
 
@@ -129,9 +132,7 @@ void uploadsSubmit(GpuMetalDevice* device) {
     d->uploadEncoder = nil;
     gpuMetalCommitResidency(d);
     PrGpuFence fence = ++d->submitted;
-    uint32_t doneCount = 0;
-    GpuMetalDone* dones = gpuMetalUploadsDones(d, &doneCount);
-    commit(d, d->uploads, fence, dones, doneCount);
+    commit(d, d->uploads, fence, nullptr, 0);
     gpuMetalUploadsRecord(d, fence);
     [d->uploads release];
     d->uploads = nil;
@@ -151,8 +152,9 @@ void uploadsCopyTexture(GpuMetalDevice* device, const GpuMetalTextureCopy& copy)
 // ---------------------------------------------------------------------------------------------------------------------
 // The device
 
-void destroyDevice(PrGpuDevice* device) {
-    Device* d = deviceFrom(device);
+// Frees the device, whether its initialization succeeded or failed.
+void destroyDevice(GpuSharedDevice* device) {
+    Device* d = static_cast<Device*>(device);
     @autoreleasepool {
         [d->orderFence release];
         [d->vertexFence release];
@@ -173,6 +175,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
         pd.vertexFunction = [[library newFunctionWithName:prAppleNSString(vertex->name)] autorelease];
         if (fragment != nullptr)
             pd.fragmentFunction = [[library newFunctionWithName:prAppleNSString(fragment->name)] autorelease];
+        pd.vertexDescriptor = gpuMetalVertexDescriptor(desc->vertexLayout);
         pd.rasterSampleCount = desc->formats.samples;
         pd.inputPrimitiveTopology = gpuMetalTopologyClass(desc->topology);
         if (desc->name.size != 0)
@@ -189,9 +192,18 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
                 pd.stencilAttachmentPixelFormat = pd.depthAttachmentPixelFormat;
         }
         NSError* error = nil;
-        id<MTLRenderPipelineState> state = [d->device newRenderPipelineStateWithDescriptor:pd error:&error];
+        MTLRenderPipelineReflection* reflection = nil;
+        MTLPipelineOption options = d->bindless ? MTLPipelineOptionNone : MTLPipelineOptionBindingInfo;
+        id<MTLRenderPipelineState> state = [d->device newRenderPipelineStateWithDescriptor:pd options:options
+            reflection:&reflection error:&error];
         if (state == nil) {
             NSLog(@"lib/gpu: Metal made no pipeline for %@: %@", pd.vertexFunction, error);
+            return PrStatus_NotSupported;
+        }
+        bool readsHeaps = gpuMetalBindingsReadHeaps(reflection.vertexBindings) ||
+            gpuMetalBindingsReadHeaps(reflection.fragmentBindings);
+        if (!d->bindless && readsHeaps) {
+            [state release];
             return PrStatus_NotSupported;
         }
         GpuMetalPipeline p = gpuMetalPipelineFromDesc(d, desc);
@@ -217,10 +229,16 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* li
         if (name.size != 0)
             pd.label = prAppleNSString(name);
         NSError* error = nil;
-        id<MTLComputePipelineState> state = [d->device newComputePipelineStateWithDescriptor:pd
-            options:MTLPipelineOptionNone reflection:nil error:&error];
+        MTLComputePipelineReflection* reflection = nil;
+        MTLPipelineOption options = d->bindless ? MTLPipelineOptionNone : MTLPipelineOptionBindingInfo;
+        id<MTLComputePipelineState> state = [d->device newComputePipelineStateWithDescriptor:pd options:options
+            reflection:&reflection error:&error];
         if (state == nil) {
             NSLog(@"lib/gpu: Metal made no compute pipeline: %@", error);
+            return PrStatus_NotSupported;
+        }
+        if (!d->bindless && gpuMetalBindingsReadHeaps(reflection.bindings)) {
+            [state release];
             return PrStatus_NotSupported;
         }
         GpuMetalPipeline p{};
@@ -266,6 +284,11 @@ id<MTLComputeCommandEncoder> computeEncoder(Device* d, Commands* c) {
         [c->compute setBuffer:c->uniforms.buffer offset:c->uniforms.offset atIndex:GpuMetalBinding_Uniforms];
         [c->compute setBuffer:d->resourceHeap offset:0 atIndex:GpuMetalBinding_Resources];
         [c->compute setBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
+        const GpuMetalSlots& slots = c->slots;
+        [c->compute setBuffers:slots.buffers offsets:slots.bufferOffsets
+            withRange:NSMakeRange(GpuMetalBinding_Buffers, GpuMetalBinding_Vertices - GpuMetalBinding_Buffers)];
+        [c->compute setTextures:slots.textures withRange:NSMakeRange(0, GpuMetalTextureBinding_Count)];
+        [c->compute setSamplerStates:slots.samplers withRange:NSMakeRange(0, kGpuMetalTextureSlots)];
     }
     return c->compute;
 }
@@ -306,7 +329,7 @@ void setRoot(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uin
     Commands* c = commandsFrom(commands);
     uint32_t slot = 0;
     uint64_t offset = 0;
-    void* bytes = gpuMetalStream(d, c, size != 0 ? size : 16, &slot, &offset);
+    void* bytes = gpuMetalStream(d, c, size != 0 ? size : 16, kGpuMetalRootAlignment, &slot, &offset);
     prMemCopy(bytes, data, size);
     if (slot == 0)
         return;
@@ -328,6 +351,68 @@ void commandsSetPush(PrGpuCommands* commands, const void* data, uint32_t size) {
 void commandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t size) {
     PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     setRoot(device, commands, data, size, GpuMetalBinding_Uniforms, &commandsFrom(commands)->uniforms);
+}
+
+// Binds a buffer slot on the encoder that is open, as gpuMetalSlotsSetBuffer recorded it at `index`.
+void bindBufferSlot(Commands* c, uint32_t index) {
+    uint32_t at = index - GpuMetalBinding_Buffers;
+    id<MTLBuffer> buffer = c->slots.buffers[at];
+    NSUInteger offset = c->slots.bufferOffsets[at];
+    if (c->pass != nullptr) {
+        id<MTLRenderCommandEncoder> encoder = passEncoder(c->pass);
+        [encoder setVertexBuffer:buffer offset:offset atIndex:index];
+        [encoder setFragmentBuffer:buffer offset:offset atIndex:index];
+        gpuMetalPassChanged(c->pass, PrGpuNativeStateFlag_Bindings);
+    } else if (c->compute != nil) {
+        [c->compute setBuffer:buffer offset:offset atIndex:index];
+    }
+}
+
+// Binds a texture slot, and a Texture slot's sampler, on the encoder that is open.
+void bindTextureSlot(Commands* c, uint32_t index, bool sampled) {
+    id<MTLTexture> texture = c->slots.textures[index];
+    id<MTLSamplerState> sampler = sampled ? c->slots.samplers[index] : nil;
+    if (c->pass != nullptr) {
+        id<MTLRenderCommandEncoder> encoder = passEncoder(c->pass);
+        [encoder setVertexTexture:texture atIndex:index];
+        [encoder setFragmentTexture:texture atIndex:index];
+        if (sampled) {
+            [encoder setVertexSamplerState:sampler atIndex:index];
+            [encoder setFragmentSamplerState:sampler atIndex:index];
+        }
+        gpuMetalPassChanged(c->pass, PrGpuNativeStateFlag_Bindings);
+    } else if (c->compute != nil) {
+        [c->compute setTexture:texture atIndex:index];
+        if (sampled)
+            [c->compute setSamplerState:sampler atIndex:index];
+    }
+}
+
+void commandsSetBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    Commands* c = commandsFrom(commands);
+    bindBufferSlot(c, gpuMetalSlotsSetBuffer(gpuMetalDeviceFrom(c->device), c, slot, buffer, offset));
+}
+
+void passSetVertexBuffer(PrGpuPass* handle, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
+    const GpuMetalDevice* d = gpuMetalDeviceFrom(pass->commands->device);
+    [passEncoder(pass) setVertexBuffer:gpuMetalBuffer(d, buffer.id) offset:offset atIndex:GpuMetalBinding_Vertices + slot];
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_VertexBuffers);
+}
+
+void commandsSetRwBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    Commands* c = commandsFrom(commands);
+    bindBufferSlot(c, gpuMetalSlotsSetRwBuffer(gpuMetalDeviceFrom(c->device), c, slot, buffer, offset));
+}
+
+void commandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler) {
+    Commands* c = commandsFrom(commands);
+    bindTextureSlot(c, gpuMetalSlotsSetTexture(gpuMetalDeviceFrom(c->device), c, slot, texture, sampler), true);
+}
+
+void commandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture) {
+    Commands* c = commandsFrom(commands);
+    bindTextureSlot(c, gpuMetalSlotsSetRwTexture(gpuMetalDeviceFrom(c->device), c, slot, texture), false);
 }
 
 void commandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {
@@ -552,6 +637,14 @@ void passBind(Device* d, Commands* c, GpuMetalPass* pass) {
     [encoder setFragmentBuffer:d->resourceHeap offset:0 atIndex:GpuMetalBinding_Resources];
     [encoder setVertexBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
     [encoder setFragmentBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
+    const GpuMetalSlots& slots = c->slots;
+    NSRange buffers = NSMakeRange(GpuMetalBinding_Buffers, GpuMetalBinding_Vertices - GpuMetalBinding_Buffers);
+    [encoder setVertexBuffers:slots.buffers offsets:slots.bufferOffsets withRange:buffers];
+    [encoder setFragmentBuffers:slots.buffers offsets:slots.bufferOffsets withRange:buffers];
+    [encoder setVertexTextures:slots.textures withRange:NSMakeRange(0, GpuMetalTextureBinding_Count)];
+    [encoder setFragmentTextures:slots.textures withRange:NSMakeRange(0, GpuMetalTextureBinding_Count)];
+    [encoder setVertexSamplerStates:slots.samplers withRange:NSMakeRange(0, kGpuMetalTextureSlots)];
+    [encoder setFragmentSamplerStates:slots.samplers withRange:NSMakeRange(0, kGpuMetalTextureSlots)];
     if (!pass->native) {
         [encoder setViewport:MTLViewport{0, 0, double(pass->extent.x), double(pass->extent.y), 0, 1}];
         [encoder setScissorRect:MTLScissorRect{0, 0, pass->extent.x, pass->extent.y}];
@@ -590,8 +683,8 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     }
 }
 
-// Hands the pass's encoder to a native draw, then binds the device's buffers again, and leaves the pass's pipeline
-// unset. An application's pass reports every state as changed, since the native draw may have changed any of it.
+// Hands the pass's encoder to a native draw, then binds the device's buffers again, and leaves the pass's pipeline and
+// slots unset. An application's pass reports every state as changed, since the native draw may have changed any of it.
 void passNativeDraw(PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
     PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     Device* d = deviceFrom(device);
@@ -600,6 +693,7 @@ void passNativeDraw(PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, 
     @autoreleasepool {
         PrGpuMetalNativePass native{.encoder = pass->encoder, .commandBuffer = c->buffer};
         draw(context, &native);
+        c->slots = GpuMetalSlots{};
         passBind(d, c, pass);
         c->pipeline = 0;
         gpuMetalPassChanged(pass, PrGpuNativeStateFlags(~0u));
@@ -678,6 +772,10 @@ constexpr PrGpuCommands kCommandsFunctions = {
     .setPushFn = commandsSetPush,
     .setUniformsFn = commandsSetUniforms,
     .setPipelineFn = gpuMetalCommandsSetPipeline,
+    .setBufferFn = commandsSetBuffer,
+    .setRwBufferFn = commandsSetRwBuffer,
+    .setTextureFn = commandsSetTexture,
+    .setRwTextureFn = commandsSetRwTexture,
     .dispatchFn = commandsDispatch,
     .dispatchIndirectFn = commandsDispatchIndirect,
     .copyBufferFn = commandsCopyBuffer,
@@ -706,6 +804,7 @@ constexpr PrGpuPass kPassFunctions = {
     .setBlendConstantFn = gpuMetalPassSetBlendConstant,
     .setStencilReferenceFn = gpuMetalPassSetStencilReference,
     .setIndexBufferFn = gpuMetalPassSetIndexBuffer,
+    .setVertexBufferFn = passSetVertexBuffer,
     .drawFn = passDraw,
     .drawIndexedFn = passDrawIndexed,
     .drawIndirectFn = passDrawIndirect,
@@ -721,6 +820,39 @@ constexpr PrGpuSwapChain kSwapChainFunctions = {
     .presentFn = gpuMetalSwapChainPresent,
 };
 
+// Opens the device over the Metal device that the options name, or over the system's default device. Makes the queue
+// and the fences that order the device's work. Returns NotSupported if the system has no Metal device.
+PrStatus initializeDevice(GpuSharedDevice* device) {
+    Device* d = static_cast<Device*>(device);
+    const PrGpuMetalOptions& o = d->options;
+    @autoreleasepool {
+        id<MTLDevice> metal;
+        if (o.device != nullptr)
+            metal = [static_cast<id<MTLDevice>>(o.device) retain];
+        else
+            metal = MTLCreateSystemDefaultDevice();
+        if (metal == nil)
+            return PrStatus_NotSupported;
+        gpuMetalDeviceOpen(d, metal, [metal supportsFamily:MTLGPUFamilyMetal3] && !o.slotsOnly);
+        id<MTLCommandQueue> queue;
+        if (o.queue != nullptr)
+            queue = [static_cast<id<MTLCommandQueue>>(o.queue) retain];
+        else
+            queue = [metal newCommandQueue];
+        gpuMetalDeviceAddQueue(d, queue);
+        d->orderFence = [metal newFence];
+        d->vertexFence = [metal newFence];
+        // The first wait on each fence pairs with this update.
+        id<MTLCommandBuffer> prime = [queue commandBuffer];
+        id<MTLBlitCommandEncoder> encoder = [prime blitCommandEncoder];
+        [encoder updateFence:d->orderFence];
+        [encoder updateFence:d->vertexFence];
+        [encoder endEncoding];
+        [prime commit];
+    }
+    return PrStatus_Ok;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -731,54 +863,25 @@ PrGpuMetalOptions prGpuMetalOptionsDefault(void) {
     return PrGpuMetalOptions{};
 }
 
-PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDevice* PR_NULLABLE* PR_NONNULL out) {
-    *out = nullptr;
-    PrGpuMetalOptions o = options != nullptr ? *options : prGpuMetalOptionsDefault();
-    @autoreleasepool {
-        id<MTLDevice> device;
-        if (o.device != nullptr)
-            device = [static_cast<id<MTLDevice>>(o.device) retain];
-        else
-            device = MTLCreateSystemDefaultDevice();
-        if (device == nil)
-            return PrStatus_NotSupported;
-        if (![device supportsFamily:MTLGPUFamilyMetal3]) {
-            [device release];
-            return PrStatus_NotSupported;
-        }
-        Device* d = allocZeroed<Device>();
-        gpuMetalDeviceInit(d, device);
-        id<MTLCommandQueue> queue;
-        if (o.queue != nullptr)
-            queue = [static_cast<id<MTLCommandQueue>>(o.queue) retain];
-        else
-            queue = [device newCommandQueue];
-        gpuMetalDeviceAddQueue(d, queue);
-        d->orderFence = [device newFence];
-        d->vertexFence = [device newFence];
-        // The first wait on each fence pairs with this update.
-        id<MTLCommandBuffer> prime = [queue commandBuffer];
-        id<MTLBlitCommandEncoder> encoder = [prime blitCommandEncoder];
-        [encoder updateFence:d->orderFence];
-        [encoder updateFence:d->vertexFence];
-        [encoder endEncoding];
-        [prime commit];
-
-        d->uploadsOpen = uploadsOpen;
-        d->uploadsSubmit = uploadsSubmit;
-        d->uploadsCopyTexture = uploadsCopyTexture;
-        d->destroyFn = destroyDevice;
-        d->graphicsPipelineCreateFn = graphicsPipelineCreate;
-        d->computePipelineCreateFn = computePipelineCreate;
-        d->commandsBeginFn = commandsBegin;
-        d->commandsFunctions = &kCommandsFunctions;
-        d->swapChainFunctions = &kSwapChainFunctions;
-        d->textureNativeFn = textureNative;
-        d->info.backend = "Metal";
-        d->nativeKinds = 1u << PrGpuNativeKind_Metal;
-        *out = d;
-        return PrStatus_Ok;
-    }
+PrGpuDevice* prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options) {
+    Device* d = allocZeroed<Device>();
+    gpuMetalDeviceInstall(d);
+    d->options = options != nullptr ? *options : prGpuMetalOptionsDefault();
+    d->initialize = initializeDevice;
+    d->destroy = destroyDevice;
+    d->uploadsOpen = uploadsOpen;
+    d->uploadsSubmit = uploadsSubmit;
+    d->uploadsCopyTexture = uploadsCopyTexture;
+    d->graphicsPipelineCreateFn = graphicsPipelineCreate;
+    d->computePipelineCreateFn = computePipelineCreate;
+    d->commandsBeginFn = commandsBegin;
+    d->commandsFunctions = &kCommandsFunctions;
+    d->swapChainFunctions = &kSwapChainFunctions;
+    d->textureNativeFn = textureNative;
+    d->info.backend = "Metal";
+    d->nativeKinds = 1u << PrGpuNativeKind_Metal;
+    gpuSharedDeviceStart(d, d->options.pool, d->options.ready, d->options.readyContext);
+    return d;
 }
 
 void* prGpuMetalDevice(const PrGpuDevice* device) {

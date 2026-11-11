@@ -14,7 +14,11 @@
 #include "pr/path.h"
 #include "pr/string.h"
 
+#include "tools/harness/harness_gpu.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -36,7 +40,7 @@ struct Renderers {
     PrDrawRenderer* cpu = nullptr;
 
     Renderers() {
-        REQUIRE(prGpuDeviceCreate(PrGpuBackend_Canvas2d, nullptr, &device) == PrStatus_Ok);
+        REQUIRE(gpuDeviceCreate(PrGpuBackend_Canvas2d, nullptr, &device) == PrStatus_Ok);
         REQUIRE(prDrawCanvasCreate(device, nullptr, &canvas) == PrStatus_Ok);
         PrDrawCpuOptions options = prDrawCpuOptionsDefault();
         options.device = device;
@@ -70,9 +74,9 @@ struct Renderers {
         prGpuPassEnd(encoder);
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         Array<uint8_t> pixels(size_t(extent.x) * extent.y * 4);
-        prGpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
+        gpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
             PrPixels{pixels.data(), size_t(extent.x) * 4, extent});
         prDrawFrameDestroy(frame);
         prGpuTextureDestroy(device, texture);

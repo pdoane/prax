@@ -40,7 +40,7 @@ namespace harness {
 
 bool gpuTests() {
     PrRawString value = prEnvironmentVariable("PR_TEST_NO_GPU");
-    bool set = !prRawStringIsNull(&value);
+    bool set = !prRawStringIsEmpty(&value);
     prRawStringReset(&value);
     return !set;
 }

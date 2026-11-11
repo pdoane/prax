@@ -13,7 +13,6 @@
 #include "tools/harness/test.h"
 
 using namespace pr;
-
 using namespace pr_impl;
 
 TEST_CASE("an SVG document's elements are SVG elements, each owned by the svg element nearest it") {

@@ -27,17 +27,24 @@ typedef struct PrGpuMetal4Options {
     void* PR_NULLABLE device;   // the application's id<MTLDevice>; null for the system's default
     void* PR_NULLABLE queue;    // the application's id<MTL4CommandQueue> on the device; null to create one
     bool validation;            // labels objects for Metal's validation, which the environment turns on
+
+    // The device's creation runs on `pool`, or during the call if it is null. `ready` is called once the creation is
+    // done (PrGpuDeviceOptions).
+    PrTaskPool* PR_NULLABLE pool;
+    PrGpuDeviceReadyFn PR_NULLABLE ready;
+    void* PR_NULLABLE readyContext;
 } PrGpuMetal4Options;
 
 // Returns the default options: the system's default device, with a queue of the device's own.
 PrGpuMetal4Options prGpuMetal4OptionsDefault(void);
 
-// Creates a device over Metal 4. The device retains the application's Metal device and queue. Null `options` means the
-// defaults. Returns NotSupported if the system has no Metal device that supports Metal 4. On failure, `*out` is null.
-PrStatus prGpuMetal4Create(const PrGpuMetal4Options* PR_NULLABLE options, PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
+// Creates a device over Metal 4, as prGpuDeviceCreate does. Once ready, the device retains the application's Metal
+// device and queue. Null `options` means the defaults. Its creation fails with NotSupported if the system has no Metal
+// device that supports Metal 4.
+PrGpuDevice* prGpuMetal4Create(const PrGpuMetal4Options* PR_NULLABLE options);
 
-// Return the native objects of the device, valid while it lives: its id<MTLDevice>, its id<MTL4CommandQueue>, and the
-// id<MTLResidencySet> that holds its resources.
+// Return the native objects of a ready device, valid while it lives: its id<MTLDevice>, its id<MTL4CommandQueue>, and
+// the id<MTLResidencySet> that holds its resources.
 void* prGpuMetal4Device(const PrGpuDevice* device);
 void* prGpuMetal4Queue(const PrGpuDevice* device);
 void* prGpuMetal4ResidencySet(const PrGpuDevice* device);

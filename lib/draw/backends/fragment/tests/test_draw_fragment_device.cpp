@@ -11,7 +11,11 @@
 #include "pr/string.h"
 #include "pr/vec.h"
 
+#include "tools/harness/harness_gpu.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 extern "C" int prTestDrawFragmentCApi(void);
 
@@ -24,7 +28,7 @@ using namespace pr;
 // Creates a device on the platform's GPU.
 PrGpuDevice* createDevice() {
     PrGpuDevice* device = nullptr;
-    REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
+    REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
     return device;
 }
 
@@ -105,10 +109,10 @@ struct Device {
         PrGpuPass* pass = beginPass(commands, &desc);
         prDrawFrameRender(frame, pass, PrIVec2{0, 0});
         endPass(pass, &desc);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         Array<uint8_t> pixels(size_t(width) * height * 4);
         PrPixels out{pixels.data(), size_t(width) * 4, {width, height}};
-        prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
+        gpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
         return pixels;
     }
 
@@ -151,7 +155,7 @@ double fractionDiffering(const Array<uint8_t>& a, const Array<uint8_t>& b, int t
 }
 
 const PrFont* load(const char* name) {
-    Array<uint8_t> bytes = harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
+    Array<uint8_t> bytes = readFile(format("{}/{}", PR_FONTS_DIR, name));
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -250,7 +254,7 @@ TEST_CASE("the fragment header compiles as C") {
 }
 
 // The tests that draw on the platform's GPU, which a run without one skips (harness::gpuTests).
-TEST_SUITE_BEGIN("gpu" * doctest::skip(!harness::gpuTests()));
+TEST_SUITE_BEGIN("gpu" * doctest::skip(!gpuTests()));
 
 TEST_CASE("the fragment renderer evaluates superellipse corners as the cpu backend does, in fills and clips") {
     Device device(96, 64);
@@ -691,6 +695,61 @@ TEST_CASE("the fragment renderer filters what lies beneath a group as its backdr
     prDrawListRelease(list);
 }
 
+TEST_CASE("the fragment renderer clears to a translucent color, mixing with what lies beneath only at a clip's edges") {
+    Device device(64, 32);
+    PrDrawList* list = prDrawListCreate();
+    prDrawListRect(list, PrRect{0, 0, 64, 32}, {.color = PrColor{0.2f, 0.4f, 0.8f, 1}});
+    // Whole pixels: the color replaces what lies there.
+    prDrawListClearRect(list, PrRect{4, 4, 28, 28}, prColor16FromColor(PrColor{1, 0.5f, 0, 0.5f}));
+    // Turned, so that its edges cover pixels in part.
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.4f), prAffine2Translate(PrVec2{46, 16})));
+    prDrawListClearRect(list, PrRect{-10, -10, 10, 10}, prColor16FromColor(PrColor{0, 0, 0, 0}));
+    prDrawListPopTransform(list);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 32);
+    // The turned edges' coverage differs from the cpu backend's by a few levels.
+    CHECK(fractionDiffering(drawn, expected, 16) <= 0.01);
+    prDrawListRelease(list);
+}
+
+TEST_CASE("the fragment renderer stacks backdrops, each reading what lies beneath it, as the cpu backend does") {
+    Device device(128, 64);
+    PrDrawList* list = prDrawListCreate();
+    prDrawListRect(list, PrRect{0, 0, 128, 64}, {.color = PrColor{0.95f, 0.95f, 0.9f, 1}});
+    subject(list, PrRect{0, 0, 64, 64});
+    subject(list, PrRect{64, 0, 128, 64});
+    PrDrawFilterNode blur = nodeOf(PrDrawFilterKind_Blur);
+    blur.blur.sigma = PrVec2{3, 3};
+    PrDrawFilterNode invert = nodeOf(PrDrawFilterKind_ColorMatrix);
+    const float matrix[20] = {-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0};
+    for (uint32_t i = 0; i < 20; ++i)
+        invert.matrix.m[i / 5][i % 5] = matrix[i];
+    // Nested: the inner backdrop reads what the outer group drew over its own backdrop.
+    pushFiltered(list, PrRect{8, 8, 56, 56}, filterOf(blur), true);
+    prDrawListRect(list, PrRect{8, 8, 56, 56}, {.color = PrColor{1, 1, 1, 0.3f}});
+    pushFiltered(list, PrRect{20, 20, 44, 44}, filterOf(invert), true);
+    prDrawListRect(list, PrRect{24, 24, 40, 40}, {.color = PrColor{0.1f, 0.6f, 0.1f, 0.5f}});
+    prDrawListPopGroup(list);
+    prDrawListPopGroup(list);
+    // Siblings that overlap: the second reads the first where they meet, and blends by multiply.
+    pushFiltered(list, PrRect{68, 4, 108, 44}, filterOf(blur), true);
+    prDrawListRect(list, PrRect{68, 4, 108, 44}, {.color = PrColor{1, 1, 1, 0.2f}});
+    prDrawListPopGroup(list);
+    PrDrawGroup multiply = prDrawGroupDefault();
+    multiply.bounds = PrRect{84, 20, 124, 60};
+    multiply.backdrop = filterOf(invert);
+    multiply.blendMode = PrDrawBlendMode_Multiply;
+    prDrawListPushGroup(list, &multiply);
+    prDrawListRect(list, PrRect{90, 26, 118, 54}, {.color = PrColor{0.9f, 0.8f, 0.2f, 0.6f}});
+    prDrawListPopGroup(list);
+    prDrawFilterRelease(multiply.backdrop);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 64);
+    // The cpu backend's box blurs fall short of the Gaussian's tails.
+    CHECK(fractionDiffering(drawn, expected, 32) <= 0.005);
+    prDrawListRelease(list);
+}
+
 TEST_CASE("the fragment renderer composites a group in sRGB-linear as the cpu backend does") {
     Device device(64, 32);
     PrDrawList* list = prDrawListCreate();
@@ -800,12 +859,12 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
         prDrawFrameRender(panels[i], pass, PrIVec2{kAt, 0});
         endPass(pass, &framePass);
     }
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     Array<uint8_t> results[2];
     for (uint32_t i = 0; i < 2; ++i) {
         results[i].resize(size_t(kWidth) * kHeight * 4);
         PrPixels out{results[i].data(), size_t(kWidth) * 4, {kWidth, kHeight}};
-        prGpuTextureRead(device.gpuDevice, frames[i], PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
+        gpuTextureRead(device.gpuDevice, frames[i], PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
     }
 
     // The cpu backend reads what lies beneath from the pixels it draws into.
@@ -830,7 +889,7 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
     if (overTexture == nullptr)
         overTexture = prDrawFrameCreate(device.renderer);
     CHECK(prDrawFramePrepare(overTexture, panel, &part) == PrStatus_Ok);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
 
     prGpuTextureDestroy(device.gpuDevice, second);
     prGpuTextureDestroy(device.gpuDevice, backgroundTexture);
@@ -895,10 +954,10 @@ TEST_CASE("the fragment renderer reads the host's texture alone beneath a backdr
     PrGpuPass* pass = beginPass(commands, &passDesc);
     prDrawFrameRender(device.frame, pass, PrIVec2{0, 0});
     endPass(pass, &passDesc);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     Array<uint8_t> drawn(columns.count());
     PrPixels out{drawn.data(), size_t(kSize) * 4, {kSize, kSize}};
-    prGpuTextureRead(device.gpuDevice, device.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
+    gpuTextureRead(device.gpuDevice, device.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
 
     Array<uint8_t> expected = columns;
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
@@ -985,12 +1044,12 @@ TEST_CASE("the fragment renderer reads what lies beneath a turned group, as a te
         prDrawFrameRender(renders[i], pass, PrIVec2{0, 0});
         endPass(pass, &framePass);
     }
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     Array<uint8_t> results[2];
     for (uint32_t i = 0; i < 2; ++i) {
         results[i].resize(size_t(kSize) * kSize * 4);
         PrPixels out{results[i].data(), size_t(kSize) * 4, {kSize, kSize}};
-        prGpuTextureRead(device.gpuDevice, frames[i], PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
+        gpuTextureRead(device.gpuDevice, frames[i], PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
     }
 
     Array<uint8_t> expected = cpuRender(columns, kSize, kSize);
@@ -1049,10 +1108,10 @@ TEST_CASE("the fragment renderer reads a solid color beneath a render as the cpu
     PrGpuPass* pass = beginPass(commands, &desc);
     prDrawFrameRender(device.frame, pass, PrIVec2{0, 0});
     endPass(pass, &desc);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     Array<uint8_t> drawn(size_t(kSize) * kSize * 4);
     PrPixels out{drawn.data(), size_t(kSize) * 4, {kSize, kSize}};
-    prGpuTextureRead(device.gpuDevice, device.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
+    gpuTextureRead(device.gpuDevice, device.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
 
     Array<uint8_t> expected(drawn.count());
     for (uint32_t i = 0; i < expected.count(); i += 4) {
@@ -1693,10 +1752,10 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
         PrGpuPass* encoder = beginPass(commands, &pass);
         prDrawFrameRender(frame, encoder, PrIVec2{0, 0});
         endPass(encoder, &pass);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         Array<PrFloat16> pixels(size_t(kWidth) * kHeight * 4);
         PrPixels read{reinterpret_cast<uint8_t*>(pixels.data()), size_t(kWidth) * 8, {kWidth, kHeight}};
-        prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, read);
+        gpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, read);
         for (uint32_t column = 0; column < 3; ++column) {
             const PrFloat16* p = pixels.data() + (size_t(4) * kWidth + column * 16 + 8) * 4;
             out[column] = PrColor16{p[0], p[1], p[2], p[3]};
@@ -1744,14 +1803,14 @@ TEST_CASE("the fragment renderer renders into a half-float target without a laye
     PrGpuPass* encoder = beginPass(commands, &pass);
     prDrawFrameRender(frame, encoder, PrIVec2{0, 0});
     endPass(encoder, &pass);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     CHECK(prDrawFrameStats(frame).layers == 0);
     // A target of 10-bit channels is refused.
     PrGpuCommands* refused = nullptr;
     REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &refused));
     PrDrawTarget packed{.extent = {16, 16}, .format = PrPixelFormat_Rgb10A2, .commands = refused};
     CHECK(prDrawFramePrepare(frame, list, &packed) == PrStatus_NotSupported);
-    prGpuCommandsSubmitAndWait(refused);
+    gpuSubmitAndWait(refused);
     prDrawFrameDestroy(frame);
     prDrawListRelease(list);
     prDrawRendererDestroy(renderer);
@@ -1802,9 +1861,9 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
     PrGpuPass* encoder = beginPass(commands, &pass);
     prDrawFrameRender(frame, encoder, PrIVec2{0, 0});
     endPass(encoder, &pass);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     Array<PrFloat16> drawn(size_t(kSize) * kSize * 4);
-    prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
+    gpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(drawn.data()), size_t(kSize) * 8, {kSize, kSize}});
 
     Array<PrFloat16> expected(drawn.count());

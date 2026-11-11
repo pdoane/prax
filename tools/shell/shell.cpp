@@ -104,6 +104,7 @@
 
 #include "tools/harness/compare.h"
 #include "tools/harness/harness.h"
+#include "tools/harness/harness_gpu.h"
 #include "tools/harness/harness_png.h"
 #include "tools/harness/harness_streams.h"
 #include "tools/shell/device_render.h"
@@ -118,8 +119,8 @@
 #include <utility>
 #include <vector>
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 using namespace shell;
 using page_host::Media;
 using page_host::Page;
@@ -846,7 +847,7 @@ int main(int argc, char** argv) {
     std::unique_ptr<PrAudioMixer, decltype(&prAudioMixerDestroy)> mixerOwner(mixer, prAudioMixerDestroy);
     // The pages' canvases are textures on the device that the cpu renderer draws on, which outlives the pages.
     PrGpuDevice* memory = nullptr;
-    prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &memory);
+    gpuDeviceCreate(PrGpuBackend_Memory, nullptr, &memory);
     std::unique_ptr<PrGpuDevice, decltype(&prGpuDeviceDestroy)> memoryOwner(memory, prGpuDeviceDestroy);
     PageHost host(shaper.get(), mediaCodec.get(), mixer);
     host.setDevice(memory);

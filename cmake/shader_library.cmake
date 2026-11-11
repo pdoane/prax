@@ -6,7 +6,7 @@
 # that runs it: a metallib for Metal, a SPIR-V module for Vulkan, and DXIL for Direct3D 12. The source is compiled once
 # per target with PR_GPU_METAL, PR_GPU_VULKAN or PR_GPU_D3D12 defined to 1.
 #
-# Vulkan has two targets. `spirv` is the baseline, which reads a copy of a pipeline's target. `spirv_local_read` is for
+# Vulkan has two targets. `spirv` is the baseline, which does not read a pipeline's target. `spirv_local_read` is for
 # devices with dynamic rendering local read, and reads the target as an input attachment. It is compiled with
 # PR_GPU_LOCAL_READ also defined. A build names either target or both. If it names both, a module that does not read
 # the target serves both, and the library holds it once.
@@ -22,10 +22,11 @@
 # blob.
 #
 #   cmake -DSLANGC=<path> -DTARGETS=<target>[|<target>...] -DVARIABLE=<name> [-DINCLUDES=<directory>[|...]]
-#         -DSOURCE=<path> -DHEADER=<path> -DSCRATCH=<directory> -DROOT=<directory> [-DDEPFILE=<path>]
-#         -P shader_library.cmake
+#         [-DMETAL_SDK=<sdk>] -DSOURCE=<path> -DHEADER=<path> -DSCRATCH=<directory> -DROOT=<directory>
+#         [-DDEPFILE=<path>] -P shader_library.cmake
 #
-# ROOT is the directory that the header names the source relative to.
+# ROOT is the directory that the header names the source relative to. METAL_SDK is the SDK that the metallib runs on:
+# macosx, the default, iphoneos or iphonesimulator.
 
 cmake_minimum_required(VERSION 3.28)
 
@@ -147,14 +148,56 @@ endfunction()
 function(compile_metal directory)
     set(source "${directory}/library.metal")
     slang(metal "${directory}" "${source}" metal -target metal)
-    # Slang declares every buffer writable. The heaps are only read, and a vertex function that writes nothing may not
-    # take writable buffers without a warning.
+    # Slang declares every buffer writable. The heaps and the Buffer slots, at buffer indices 4 to 11 (pr/gpu.slang),
+    # are only read, and a vertex function that writes nothing may not take writable buffers without a warning.
     file(READ "${source}" text)
     string(REGEX REPLACE "uint32_t device\\* (prGpu(Resource|Sampler)Heap_[0-9]+)" "uint32_t const device* \\1"
            text "${text}")
+    # Slang copies each parameter into a field of a context, named alike but for its last number, so the field of each
+    # Buffer slot is const too.
+    string(REGEX MATCHALL "[A-Za-z_0-9]+ device\\* [A-Za-z_0-9]+ \\[\\[buffer\\(([4-9]|1[01])\\)\\]\\]" read_only
+           "${text}")
+    set(read_only_names "")
+    foreach (parameter IN LISTS read_only)
+        string(REGEX REPLACE ".* device\\* ([A-Za-z_0-9]+)_[0-9]+ .*" "\\1" name "${parameter}")
+        list(APPEND read_only_names "${name}")
+    endforeach()
+    list(REMOVE_DUPLICATES read_only_names)
+    foreach (name IN LISTS read_only_names)
+        string(REGEX REPLACE "([A-Za-z_0-9]+) device\\* (${name}_[0-9]+[ ;])" "\\1 const device* \\2" text
+               "${text}")
+    endforeach()
+    # Slang numbers read-write textures in the order of their declarations, whatever their registers say. An RwTexture
+    # slot names its index in a PrGpuMetalTexture attribute (pr/gpu.slang), which moves it from the index that Slang
+    # gave it, as the reflection's shader resource.
+    string(JSON count ERROR_VARIABLE missing LENGTH "${REFLECTED}" parameters)
+    if (NOT missing AND count GREATER 0)
+        math(EXPR last "${count} - 1")
+        foreach (index RANGE ${last})
+            string(JSON attribute ERROR_VARIABLE none GET "${REFLECTED}" parameters ${index} userAttribs 0)
+            if (none)
+                continue()
+            endif()
+            string(JSON attribute_name GET "${attribute}" name)
+            if (NOT attribute_name STREQUAL "PrGpuMetalTexture")
+                continue()
+            endif()
+            string(JSON declared GET "${attribute}" arguments 0)
+            string(JSON name GET "${REFLECTED}" parameters ${index} name)
+            string(JSON given GET "${REFLECTED}" parameters ${index} bindings 0 index)
+            string(REGEX REPLACE "(${name}_[0-9]+) \\[\\[texture\\(${given}\\)\\]\\]" "\\1 [[texture(${declared})]]"
+                   text "${text}")
+        endforeach()
+    endif()
     file(WRITE "${source}" "${text}")
-    run(xcrun -sdk macosx metal -std=metal4.0 -mmacosx-version-min=26.0 -c "${source}" -o "${directory}/library.air")
-    run(xcrun -sdk macosx metallib "${directory}/library.air" -o "${directory}/library.metallib")
+    if (NOT METAL_SDK)
+        set(METAL_SDK macosx)
+    endif()
+    set(minimum_macosx -mmacosx-version-min=26.0)
+    set(minimum_iphoneos -mios-version-min=26.0)
+    set(minimum_iphonesimulator -mios-simulator-version-min=26.0)
+    run(xcrun -sdk ${METAL_SDK} metal -std=metal4.0 ${minimum_${METAL_SDK}} -c "${source}" -o "${directory}/library.air")
+    run(xcrun -sdk ${METAL_SDK} metallib "${directory}/library.air" -o "${directory}/library.metallib")
     entry_records("${REFLECTED}")
     set(RECORDS ${RECORDS} PARENT_SCOPE)
     set(CODES "${directory}/library.metallib" PARENT_SCOPE)

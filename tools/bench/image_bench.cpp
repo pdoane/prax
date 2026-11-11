@@ -19,8 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 
 namespace {
 

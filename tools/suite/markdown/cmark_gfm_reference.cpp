@@ -12,8 +12,8 @@
 #include "cmark-gfm-core-extensions.h"
 #include "cmark-gfm.h"
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 
 namespace {
 

@@ -2,6 +2,7 @@
 
 #include "font/src/woff.h"
 
+#include "pr/align.h"
 #include "pr/assert.h"
 #include "pr/font.h"
 #include "pr/mem.h"
@@ -22,7 +23,7 @@ inline void writeBeU16(uint8_t* bytes, uint16_t value) {
 }
 
 inline uint64_t align4(uint64_t value) {
-    return (value + 3) & ~uint64_t(3);
+    return alignUp(value, 4);
 }
 
 // Returns the checksum of an sfnt table: the sum of its big-endian 32-bit words, with the last word padded with zeros.

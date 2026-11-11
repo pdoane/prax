@@ -9,6 +9,7 @@
 
 #include "css/src/css_style.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/atomic.h"
 #include "pr/bit_cast.h"
@@ -554,7 +555,7 @@ const CssStyleValues* intern(CssStyleBuilder* builder, CssStyleGroup group, uint
     uint32_t textSize = builder->pool.text.count;
     size_t spans = sizeof(CssStyleValues);
     size_t values = spans + sizeof(CssValueSpan) * slots;
-    values = (values + alignof(CssValueNode) - 1) & ~(alignof(CssValueNode) - 1);
+    values = alignUp(values, alignof(CssValueNode));
     size_t text = values + sizeof(CssValueNode) * valueCount;
     uint8_t* bytes = static_cast<uint8_t*>(prMemoryAlloc(text + textSize));
     CssStyleValues* made = reinterpret_cast<CssStyleValues*>(bytes);

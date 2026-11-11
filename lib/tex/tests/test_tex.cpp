@@ -5,6 +5,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 extern "C" int prTestTexCApi(void);
 
 namespace pr_impl {
@@ -870,7 +872,7 @@ TEST_CASE("the operator dictionary gives MathML Core's properties, with its fall
 TEST_CASE("every formula of the sample of mathematics converts without an error") {
     // tests/mathematics.md is a sample of real mathematics, for a person to review as it renders. Its math is $...$ and
     // $$...$$, as lib/markdown reads it.
-    String file = harness::readText(format("{}/mathematics.md", TEX_TESTS_DIR));
+    String file = readText(format("{}/mathematics.md", TEX_TESTS_DIR));
     PrStringView text = file;
     uint32_t formulas = 0;
     for (size_t at = prStringFind(text, "$"); at != text.size; at = prStringFindFrom(text, "$", at)) {

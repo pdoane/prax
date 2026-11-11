@@ -41,8 +41,8 @@ void vulkanRetire(VulkanDevice* d, VulkanRetired retired);
 // Frees what is retired and done. Called with the device's mutex held.
 void vulkanRetireDone(VulkanDevice* d);
 
-// Records the copies of the waiting uploads into `buffer`, a command buffer of the device's own that is submitted ahead
-// of `c`, and gives their pages to `c`. Called with the device's mutex held.
+// Records the waiting uploads into `buffer`, a command buffer of the device's own that is submitted with `c` or as `c`.
+// The caller ends the staging's batch with the fence of that submission. Called with the device's mutex held.
 void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buffer);
 
 // Returns the view of a texture's `level` and `layer` as an attachment, made the first time that a pass asks for it.

@@ -444,7 +444,7 @@ void run(Device* d, const Op& op) {
 // ---------------------------------------------------------------------------------------------------------------------
 // The device
 
-void destroy(PrGpuDevice* device) {
+void destroy(GpuSharedDevice* device) {
     Device* d = deviceOf(device);
     gpuSharedDeviceReset(d);
     PR_ASSERT(d->open.count == 0 && d->retired.count == 0);
@@ -459,7 +459,12 @@ void destroy(PrGpuDevice* device) {
     prMemoryFree(d);
 }
 
-bool isLost(const PrGpuDevice* device) {
+// A memory device needs nothing beyond what its constructor made.
+PrStatus initialize(GpuSharedDevice*) {
+    return PrStatus_Ok;
+}
+
+bool removed(const GpuSharedDevice* device) {
     return deviceOf(device)->lost;
 }
 
@@ -809,9 +814,9 @@ PrGpuFence commandsSubmit(PrGpuCommands* commands) {
     return fence;
 }
 
-void* commandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
+void* commandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBufferUsageFlags, PrGpuBuffer* buffer, uint64_t* offset) {
     PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
-    PrGpuBufferDesc desc{.size = size, .memory = PrGpuMemory_Upload};
+    PrGpuBufferDesc desc{.size = size, .usage = PrGpuBufferUsageFlag_All, .memory = PrGpuMemory_Upload};
     bufferCreate(device, &desc, buffer);
     commandsOf(commands)->streams.push(*buffer);
     *offset = 0;
@@ -822,6 +827,12 @@ void* commandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer
 void commandsSetPush(PrGpuCommands*, const void*, uint32_t) {}
 
 void commandsSetUniforms(PrGpuCommands*, const void*, uint32_t) {}
+
+// A memory device has no slots, so pr/gpu.h's checks refuse every call before it reaches these.
+void commandsSetBuffer(PrGpuCommands*, uint32_t, PrGpuBuffer, uint64_t) {}
+void commandsSetRwBuffer(PrGpuCommands*, uint32_t, PrGpuBuffer, uint64_t) {}
+void commandsSetTexture(PrGpuCommands*, uint32_t, PrGpuTexture, PrGpuSampler) {}
+void commandsSetRwTexture(PrGpuCommands*, uint32_t, PrGpuTexture) {}
 
 void commandsSetPipeline(PrGpuCommands*, PrGpuPipeline) {
     PR_ASSERT(false && "a memory device has no pipelines");
@@ -979,6 +990,8 @@ void passSetStencilReference(PrGpuPass*, uint8_t) {}
 
 void passSetIndexBuffer(PrGpuPass*, PrGpuBuffer, uint64_t, bool) {}
 
+void passSetVertexBuffer(PrGpuPass*, uint32_t, PrGpuBuffer, uint64_t) {}
+
 void passDraw(PrGpuPass*, uint32_t, uint32_t, uint32_t, uint32_t) {
     PR_ASSERT(false && "a memory device runs no draws");
 }
@@ -1012,6 +1025,10 @@ constexpr PrGpuCommands kCommandsFunctions = {
     .setPushFn = commandsSetPush,
     .setUniformsFn = commandsSetUniforms,
     .setPipelineFn = commandsSetPipeline,
+    .setBufferFn = commandsSetBuffer,
+    .setRwBufferFn = commandsSetRwBuffer,
+    .setTextureFn = commandsSetTexture,
+    .setRwTextureFn = commandsSetRwTexture,
     .dispatchFn = commandsDispatch,
     .dispatchIndirectFn = commandsDispatchIndirect,
     .copyBufferFn = commandsCopyBuffer,
@@ -1040,6 +1057,7 @@ constexpr PrGpuPass kPassFunctions = {
     .setBlendConstantFn = passSetBlendConstant,
     .setStencilReferenceFn = passSetStencilReference,
     .setIndexBufferFn = passSetIndexBuffer,
+    .setVertexBufferFn = passSetVertexBuffer,
     .drawFn = passDraw,
     .drawIndexedFn = passDrawIndexed,
     .drawIndirectFn = passDrawIndirect,
@@ -1053,8 +1071,9 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
     gpuSharedDeviceInit(d);
     prMutexInit(&d->mutex);
     d->mirror = mirror;
-    d->destroyFn = destroy;
-    d->isLostFn = isLost;
+    d->initialize = initialize;
+    d->removed = removed;
+    d->destroy = destroy;
     d->simulateLossFn = simulateLoss;
     d->isCompleteFn = isComplete;
     d->waitFn = wait;
@@ -1088,6 +1107,7 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
         .maxTextureSize = kMaxTextureSize,
         .maxResourceHandles = UINT32_MAX,
         .maxSamplerHandles = UINT32_MAX,
+        .storageOffsetAlignment = 16,
     };
     d->nativeKinds = 1u << PrGpuNativeKind_Pixels | (mirror != nullptr ? 1u << mirror->kind : 0u);
     return d;

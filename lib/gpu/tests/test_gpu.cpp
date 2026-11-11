@@ -1,11 +1,16 @@
 #include "pr/array.h"
 #include "pr/gpu.h"
 #include "pr/mem.h"
+#include "pr/task.h"
+#include "pr/task_backend.h"
 #include "pr/utf8.h"
 
 #include "gpu/tests/kTestGpuShaders.h"
+#include "tools/harness/harness_gpu.h"
 
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 extern "C" int prTestGpuCApi(void);
 
@@ -29,12 +34,15 @@ struct Push {
 struct Fixture {
     PrGpuDevice* device = nullptr;
     PrGpuShaderLibrary* library = nullptr;
+    bool bindless = false;          // the device has PrGpuFeatureFlag_Bindless
 
-    // A device that runs no shaders, such as a memory device, has no fixture, because the tests draw and dispatch.
-    explicit Fixture(PrGpuBackend backend) {
-        PrGpuDeviceOptions options{.validation = true};
-        if (prGpuDeviceCreate(backend, &options, &device) != PrStatus_Ok)
+    // A device that runs no shaders, such as a memory device, has no fixture, because the tests draw and dispatch. So
+    // has a backend that has no device of slots only.
+    Fixture(PrGpuBackend backend, bool slotsOnly) {
+        PrGpuDeviceOptions options{.validation = true, .slotsOnly = slotsOnly};
+        if (gpuDeviceCreate(backend, &options, &device) != PrStatus_Ok)
             return;
+        bindless = (prGpuDeviceInfo(device).features & PrGpuFeatureFlag_Bindless) != 0;
         PrStatus status = prGpuShaderLibraryCreate(device, kTestGpuShaders, sizeof(kTestGpuShaders), &library);
         if (status == PrStatus_NotSupported) {
             prGpuDeviceDestroy(device);
@@ -59,6 +67,15 @@ struct Fixture {
 
     PrGpuPipeline pipeline(const char* vertex, const char* fragment, PrGpuFormat format = PrGpuFormat_Rgba8,
             PrGpuTopology topology = PrGpuTopology_TriangleStrip, bool readsTarget = false) {
+        PrGpuGraphicsPipelineDesc desc = description(vertex, fragment, format, topology, readsTarget);
+        PrGpuPipeline p{};
+        REQUIRE(prGpuPipelineCreateGraphics(device, &desc, &p) == PrStatus_Ok);
+        return p;
+    }
+
+    PrGpuGraphicsPipelineDesc description(const char* vertex, const char* fragment,
+            PrGpuFormat format = PrGpuFormat_Rgba8,
+            PrGpuTopology topology = PrGpuTopology_TriangleStrip, bool readsTarget = false) {
         PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(library);
         desc.vertex = vertex;
         desc.fragment = fragment;
@@ -66,16 +83,14 @@ struct Fixture {
         desc.formats.colorCount = 1;
         desc.formats.color[0] = format;
         desc.readsTarget = readsTarget;
-        PrGpuPipeline p{};
-        REQUIRE(prGpuPipelineCreateGraphics(device, &desc, &p) == PrStatus_Ok);
-        return p;
+        return desc;
     }
 
     // Returns the texels of a texture of 8-bit RGBA that its passes left.
     Array<uint8_t> read(PrGpuTexture texture, uint32_t access = PrGpuAccessFlag_ShaderRead) {
         PrUVec2 extent = prGpuTextureExtent(device, texture);
         Array<uint8_t> texels(extent.x * extent.y * 4);
-        prGpuTextureRead(device, texture, access, PrIVec2{0, 0}, PrPixels{texels.data(), size_t(extent.x) * 4, extent});
+        gpuTextureRead(device, texture, access, PrIVec2{0, 0}, PrPixels{texels.data(), size_t(extent.x) * 4, extent});
         return texels;
     }
 
@@ -89,7 +104,7 @@ struct Fixture {
         prGpuCommandsBufferBarrier(commands, buffer, PrGpuAccessFlag_ShaderRead | PrGpuAccessFlag_ShaderWrite,
             PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, size);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         Array<uint8_t> bytes(size);
         prMemCopy(bytes.data(), prGpuBufferMap(device, readback), size_t(size));
         prGpuBufferDestroy(device, readback);
@@ -113,7 +128,7 @@ struct Fixture {
         prGpuPassDraw(pass, 4, 1, 0, 0);
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
     }
 };
 
@@ -132,21 +147,77 @@ bool near(const uint8_t* t, uint8_t r, uint8_t g, uint8_t b, uint8_t a, int tole
     return close(t[0], r) && close(t[1], g) && close(t[2], b) && close(t[3], a);
 }
 
-// Runs `test` on a fixture for each backend that the build has and the system has a device for. A run without the
-// platform's GPU (harness::gpuTests) tests the memory backend alone.
+// Runs `test` on a fixture for each backend that the build has and the system has a device for, and again on a device
+// of slots only where the backend makes one. A run without the platform's GPU (harness::gpuTests) tests the memory
+// backend alone.
 template <typename Test>
 void onEachBackend(Test test) {
+    const bool slotModes[] = {false, true};
     for (PrGpuBackend backend = PrGpuBackend_Default + 1; backend < PrGpuBackend_Count; ++backend) {
-        if (!harness::gpuTests() && backend != PrGpuBackend_Memory)
+        if (!gpuTests() && backend != PrGpuBackend_Memory)
             continue;
-        Fixture f(backend);
-        if (f.device == nullptr)
+        for (bool slotsOnly : slotModes) {
+            Fixture f(backend, slotsOnly);
+            if (f.device == nullptr)
+                continue;
+            PrStringView name = prGpuBackendName(backend);
+            CAPTURE(name);
+            CAPTURE(slotsOnly);
+            test(f);
+        }
+    }
+}
+
+// Runs `test` as onEachBackend does, on the devices that have PrGpuFeatureFlag_Bindless.
+template <typename Test>
+void onEachBindless(Test test) {
+    onEachBackend([&](Fixture& f) {
+        if (f.bindless)
+            test(f);
+    });
+}
+
+// Calls `test` with each backend that the build has and the tests run on, as onEachBackend chooses them.
+template <typename Test>
+void onEachBuilt(Test test) {
+    for (PrGpuBackend backend = PrGpuBackend_Default + 1; backend < PrGpuBackend_Count; ++backend) {
+        if (!prGpuBackendIsBuilt(backend) || (!gpuTests() && backend != PrGpuBackend_Memory))
             continue;
         PrStringView name = prGpuBackendName(backend);
         CAPTURE(name);
-        test(f);
+        test(backend);
     }
 }
+
+// A pool that holds the jobs posted to it until the test runs them, so that a test sees a device before and after its
+// creation.
+struct HeldPool : PrTaskPool {
+    struct Job {
+        PrTaskJobFn fn;
+        void* PR_NULLABLE context;
+    };
+    Array<Job> jobs;
+
+    HeldPool() : PrTaskPool{
+        .widthFn = [](const PrTaskPool*) { return 1u; },
+        .runFn = [](PrTaskPool*, uint32_t count, uint32_t, PrTaskFn fn, void* PR_NULLABLE context) {
+            for (uint32_t i = 0; i < count; ++i)
+                fn(context, i, 0);
+        },
+        .postFn = [](PrTaskPool* pool, PrTaskJobFn fn, void* PR_NULLABLE context) {
+            static_cast<HeldPool*>(pool)->jobs.push(Job{fn, context});
+        },
+    } {}
+
+    // Runs the jobs that were posted, in order, and returns how many ran.
+    uint32_t runJobs() {
+        Array<Job> run = static_cast<Array<Job>&&>(jobs);
+        jobs = Array<Job>();
+        for (const Job& job : run)
+            job.fn(job.context);
+        return run.count();
+    }
+};
 
 } // namespace
 
@@ -168,6 +239,57 @@ TEST_CASE("a backend's name names it, in any case") {
         prGpuBackendIsBuilt(PrGpuBackend_D3d12) || prGpuBackendIsBuilt(PrGpuBackend_Canvas2d)));
 }
 
+TEST_CASE("a device created on a pool refuses work until its creation runs, then calls back once") {
+    onEachBuilt([](PrGpuBackend backend) {
+        HeldPool pool;
+        uint32_t calls = 0;
+        PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
+        options.pool = &pool;
+        options.ready = [](void* PR_NULLABLE context, PrGpuDevice* device) {
+            ++*static_cast<uint32_t*>(context);
+            CHECK(prGpuDeviceIsReady(device));
+        };
+        options.readyContext = &calls;
+        PrGpuDevice* device = prGpuDeviceCreate(backend, &options);
+        REQUIRE(device != nullptr);
+        CHECK_FALSE(prGpuDeviceIsReady(device));
+        CHECK_FALSE(prGpuDeviceIsLost(device));
+        CHECK(prGpuDeviceLostStatus(device) == PrStatus_Ok);
+        CHECK(prGpuDeviceInfo(device).backend.size != 0);
+        PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{2, 2}, PrGpuTextureUsageFlag_Sampled);
+        PrGpuTexture texture{};
+        CHECK(prGpuTextureCreate(device, &desc, &texture) == PrStatus_InvalidState);
+        CHECK(texture.id == 0);
+        PrGpuCommands* commands = nullptr;
+        CHECK_FALSE(prGpuCommandsBegin(device, nullptr, &commands));
+        CHECK(calls == 0);
+
+        CHECK(pool.runJobs() == 1);
+        CHECK(prGpuDeviceIsReady(device));
+        CHECK(calls == 1);
+        // On a system without what the backend needs, the device is lost, and it refuses work.
+        if (prGpuDeviceLostStatus(device) == PrStatus_Ok) {
+            REQUIRE(prGpuTextureCreate(device, &desc, &texture) == PrStatus_Ok);
+            prGpuTextureDestroy(device, texture);
+        } else {
+            CHECK(prGpuDeviceLostStatus(device) == PrStatus_NotSupported);
+            CHECK(prGpuTextureCreate(device, &desc, &texture) == PrStatus_Lost);
+        }
+        prGpuDeviceDestroy(device);
+    });
+}
+
+TEST_CASE("a device destroyed while its creation runs is freed once the creation is done") {
+    PrTaskPool* pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
+    REQUIRE(pool != nullptr);
+    onEachBuilt([&](PrGpuBackend backend) {
+        PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
+        options.pool = pool;
+        prGpuDeviceDestroy(prGpuDeviceCreate(backend, &options));
+    });
+    prTaskPoolDestroy(pool);
+}
+
 TEST_CASE("a device reports its backend and limits") {
     onEachBackend([](Fixture& f) {
         PrGpuDeviceInfo info = prGpuDeviceInfo(f.device);
@@ -175,7 +297,14 @@ TEST_CASE("a device reports its backend and limits") {
         CHECK(info.adapter.size != 0);
         CHECK(prUtf8Validate(info.adapter) == info.adapter.size);
         CHECK(info.maxTextureSize >= 16384);
-        CHECK(info.maxResourceHandles > 1000);
+        if (f.bindless)
+            CHECK(info.maxResourceHandles > 1000);
+        else
+            CHECK(info.maxResourceHandles == 0);
+        CHECK(info.maxBufferSlots >= 4);
+        CHECK(info.maxRwBufferSlots >= 4);
+        CHECK(info.maxTextureSlots >= 8);
+        CHECK(info.maxRwTextureSlots >= 4);
         CHECK(prGpuDeviceSupportsFormat(f.device, PrGpuFormat_Rgba8, PrGpuTextureUsageFlag_RenderTarget));
         CHECK_FALSE(prGpuDeviceSupportsFormat(f.device, PrGpuFormat_D32F, PrGpuTextureUsageFlag_RenderTarget));
     });
@@ -198,7 +327,7 @@ TEST_CASE("a texture's texels are written and read back, clipped to the texture"
         CHECK(near(texel(after, 4, 1, 0), 4, 5, 6, 7, 0));
         // A read that hangs off the bottom right reads zeros outside.
         uint8_t corner[2 * 2 * 4];
-        prGpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{3, 2}, PrPixels{corner, 8, {2, 2}});
+        gpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{3, 2}, PrPixels{corner, 8, {2, 2}});
         CHECK(near(corner, 44, 45, 46, 47, 0));
         CHECK(near(corner + 4, 0, 0, 0, 0, 0));
         prGpuTextureDestroy(f.device, texture);
@@ -278,6 +407,33 @@ TEST_CASE("a large upload is staged in pieces and lands whole") {
     });
 }
 
+TEST_CASE("uploads land in order across the batches that fill their staging") {
+    onEachBackend([](Fixture& f) {
+        PrGpuBufferDesc desc{.size = 256};
+        PrGpuBuffer small{};
+        REQUIRE(prGpuBufferCreate(f.device, &desc, &small) == PrStatus_Ok);
+        uint8_t first[256];
+        prMemFill(first, 1, sizeof(first));
+        prGpuBufferUpload(f.device, small, 0, first, sizeof(first));
+        // A texture larger than a staging block fills batches of its own between the writes to `small`.
+        const PrUVec2 extent{1200, 1200};
+        PrGpuTexture large = f.target(extent);
+        Array<uint8_t> texels(extent.x * extent.y * 4);
+        for (uint32_t i = 0; i < texels.count(); ++i)
+            texels[i] = uint8_t(i * 13 + (i >> 16));
+        prGpuTextureWrite(f.device, large, PrIVec2{0, 0}, PrPixelView{texels.data(), extent.x * 4, extent});
+        uint8_t second[256];
+        prMemFill(second, 2, sizeof(second));
+        prGpuBufferUpload(f.device, small, 0, second, sizeof(second));
+        Array<uint8_t> expected;
+        expected.append(second, sizeof(second));
+        CHECK(f.read(small, 256) == expected);
+        CHECK(f.read(large) == texels);
+        prGpuTextureDestroy(f.device, large);
+        prGpuBufferDestroy(f.device, small);
+    });
+}
+
 TEST_CASE("a pass clears its target, and a draw covers what its vertices cover, with y down in the target") {
     onEachBackend([](Fixture& f) {
         PrGpuTexture target = f.target(PrUVec2{8, 8});
@@ -309,7 +465,7 @@ TEST_CASE("a draw reads its push data and uniforms") {
 }
 
 TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both by handle") {
-    onEachBackend([](Fixture& f) {
+    onEachBindless([](Fixture& f) {
         PrGpuTexture source = f.target(PrUVec2{2, 2});
         const uint8_t texels[] = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
         prGpuTextureWrite(f.device, source, PrIVec2{0, 0}, PrPixelView{texels, 8, {2, 2}});
@@ -352,7 +508,7 @@ TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both by 
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         out = f.read(target);
         CHECK(near(texel(out, 4, 0, 0), 0, 255, 0, 255));
         CHECK(near(texel(out, 4, 1, 3), 0, 255, 0, 255));
@@ -366,7 +522,7 @@ TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both by 
 }
 
 TEST_CASE("a shader follows a handle that it reads from a buffer, to a buffer in the stream") {
-    onEachBackend([](Fixture& f) {
+    onEachBindless([](Fixture& f) {
         PrGpuTexture target = f.target(PrUVec2{2, 2});
         PrGpuPipeline followed = f.pipeline("quadVertex", "followed");
         PrGpuCommands* commands = nullptr;
@@ -374,12 +530,12 @@ TEST_CASE("a shader follows a handle that it reads from a buffer, to a buffer in
         // The color, in the stream, and the buffer that names it.
         PrGpuBuffer colorBuffer{};
         uint64_t colorOffset = 0;
-        float* color = static_cast<float*>(prGpuCommandsStream(commands, 16, &colorBuffer, &colorOffset));
+        float* color = static_cast<float*>(prGpuCommandsStream(commands, 16, 0, &colorBuffer, &colorOffset));
         color[0] = 0;
         color[1] = 0;
         color[2] = 1;
         color[3] = 1;
-        CHECK(colorOffset % 256 == 0);
+        CHECK(colorOffset % 16 == 0);
         PrGpuBufferDesc desc{.size = 16};
         PrGpuBuffer names{};
         REQUIRE(prGpuBufferCreate(f.device, &desc, &names) == PrStatus_Ok);
@@ -397,7 +553,7 @@ TEST_CASE("a shader follows a handle that it reads from a buffer, to a buffer in
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         CHECK(near(texel(f.read(target), 2, 1, 1), 0, 0, 255, 255));
         prGpuBufferDestroy(f.device, names);
         prGpuPipelineDestroy(f.device, followed);
@@ -406,7 +562,7 @@ TEST_CASE("a shader follows a handle that it reads from a buffer, to a buffer in
 }
 
 TEST_CASE("a dispatch writes a buffer that a copy reads after a barrier") {
-    onEachBackend([](Fixture& f) {
+    onEachBindless([](Fixture& f) {
         PrGpuPipeline doubled{};
         REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "doubled", "doubled", &doubled) == PrStatus_Ok);
         PrGpuExtent group = prGpuPipelineGroupSize(f.device, doubled);
@@ -431,7 +587,7 @@ TEST_CASE("a dispatch writes a buffer that a copy reads after a barrier") {
         prGpuCommandsSetPush(commands, &push, sizeof(push));
         prGpuCommandsDispatch(commands, PrGpuExtent{count / 64, 1, 1});
         prGpuCommandsBufferBarrier(commands, out, PrGpuAccessFlag_ComputeWrite, PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         Array<uint8_t> bytes = f.read(out, count * 4);
         const uint32_t* words = reinterpret_cast<const uint32_t*>(bytes.data());
         CHECK(words[0] == 0);
@@ -439,6 +595,204 @@ TEST_CASE("a dispatch writes a buffer that a copy reads after a barrier") {
         CHECK(words[255] == 510);
         prGpuBufferDestroy(f.device, in);
         prGpuBufferDestroy(f.device, out);
+        prGpuPipelineDestroy(f.device, doubled);
+    });
+}
+
+TEST_CASE("a device without bindless refuses pipelines that reach resources by handle") {
+    onEachBackend([](Fixture& f) {
+        if (f.bindless)
+            return;
+        PrGpuPipeline p{};
+        PrGpuGraphicsPipelineDesc sampled = f.description("quadVertex", "sampled");
+        CHECK(prGpuPipelineCreateGraphics(f.device, &sampled, &p) == PrStatus_NotSupported);
+        PrGpuGraphicsPipelineDesc pulled = f.description("pulled", "solid");
+        CHECK(prGpuPipelineCreateGraphics(f.device, &pulled, &p) == PrStatus_NotSupported);
+        CHECK(prGpuPipelineCreateCompute(f.device, f.library, "doubled", "doubled", &p) == PrStatus_NotSupported);
+        CHECK(p.id == 0);
+    });
+}
+
+TEST_CASE("a draw fetches its vertices and instances through the pipeline's vertex layout") {
+    onEachBackend([](Fixture& f) {
+        // A triangle over the target's top left, red, from a buffer of the device's own.
+        struct Vertex {
+            float position[2];
+            uint8_t color[4];
+        };
+        const Vertex vertices[] = {{{-1, 1}, {255, 0, 0, 255}}, {{0, 1}, {255, 0, 0, 255}}, {{-1, -1}, {255, 0, 0, 255}}};
+        PrGpuBufferDesc desc{.size = sizeof(vertices), .usage = PrGpuBufferUsageFlag_Vertex};
+        PrGpuBuffer buffer{};
+        REQUIRE(prGpuBufferCreate(f.device, &desc, &buffer) == PrStatus_Ok);
+        prGpuBufferUpload(f.device, buffer, 0, vertices, sizeof(vertices));
+
+        PrGpuGraphicsPipelineDesc pipelineDesc = f.description("fetched", "colored", PrGpuFormat_Rgba8,
+            PrGpuTopology_TriangleList);
+        pipelineDesc.vertexLayout = PrGpuVertexLayout{
+            .bufferCount = 2,
+            .attributeCount = 3,
+            .buffers = {{.stride = sizeof(Vertex)}, {.stride = 8, .step = PrGpuVertexStep_Instance}},
+            .attributes = {
+                {.format = PrGpuVertexFormat_Float2, .buffer = 0, .offset = 0},
+                {.format = PrGpuVertexFormat_Unorm8x4, .buffer = 0, .offset = 8},
+                {.format = PrGpuVertexFormat_Float2, .buffer = 1, .offset = 0},
+            },
+        };
+        PrGpuPipeline pipeline{};
+        REQUIRE(prGpuPipelineCreateGraphics(f.device, &pipelineDesc, &pipeline) == PrStatus_Ok);
+
+        PrGpuTexture target = f.target(PrUVec2{4, 4});
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        // Two instances, the second a half of the target to the right, from the stream.
+        const float offsets[] = {0, 0, 1, 0};
+        PrGpuBuffer stream{};
+        uint64_t at = 0;
+        prMemCopy(prGpuCommandsStream(commands, sizeof(offsets), PrGpuBufferUsageFlag_Vertex, &stream, &at), offsets,
+            sizeof(offsets));
+        prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_ColorAttachment);
+        PrGpuPassDesc passDesc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{});
+        PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
+        prGpuCommandsSetPipeline(commands, pipeline);
+        prGpuPassSetVertexBuffer(pass, 0, buffer, 0);
+        prGpuPassSetVertexBuffer(pass, 1, stream, at);
+        prGpuPassDraw(pass, 3, 2, 0, 0);
+        prGpuPassEnd(pass);
+        prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_ShaderRead);
+        gpuSubmitAndWait(commands);
+
+        Array<uint8_t> out = f.read(target);
+        CHECK(near(texel(out, 4, 0, 0), 255, 0, 0, 255));
+        CHECK(near(texel(out, 4, 2, 0), 255, 0, 0, 255));
+        CHECK(near(texel(out, 4, 1, 3), 0, 0, 0, 0));
+        CHECK(near(texel(out, 4, 3, 3), 0, 0, 0, 0));
+        prGpuPipelineDestroy(f.device, pipeline);
+        prGpuBufferDestroy(f.device, buffer);
+        prGpuTextureDestroy(f.device, target);
+    });
+}
+
+TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both bound to slots") {
+    onEachBackend([](Fixture& f) {
+        PrGpuTexture source = f.target(PrUVec2{2, 2});
+        const uint8_t texels[] = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
+        prGpuTextureWrite(f.device, source, PrIVec2{0, 0}, PrPixelView{texels, 8, {2, 2}});
+        PrGpuSampler nearest{};
+        PrGpuSamplerDesc samplerDesc = prGpuSamplerDescDefault(PrGpuFilter_Nearest, PrGpuAddress_Clamp);
+        REQUIRE(prGpuSamplerIntern(f.device, &samplerDesc, &nearest) == PrStatus_Ok);
+
+        // The corners of a triangle over the left half, at a slot's offset into the buffer.
+        const float corners[] = {-1, 1, 0, 1, -1, -1, 0, 1, 0, -1, -1, -1};
+        uint32_t at = prGpuDeviceInfo(f.device).storageOffsetAlignment;
+        PrGpuBufferDesc desc{.size = at + sizeof(corners), .usage = PrGpuBufferUsageFlag_Storage};
+        PrGpuBuffer buffer{};
+        REQUIRE(prGpuBufferCreate(f.device, &desc, &buffer) == PrStatus_Ok);
+        prGpuBufferUpload(f.device, buffer, at, corners, sizeof(corners));
+
+        PrGpuTexture target = f.target(PrUVec2{4, 4});
+        PrGpuPipeline sampled = f.pipeline("quadVertex", "slotSampled");
+        PrGpuPipeline pulled = f.pipeline("slotPulled", "solid", PrGpuFormat_Rgba8, PrGpuTopology_TriangleList);
+        PrGpuTexture half = f.target(PrUVec2{4, 4});
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        // Bound before the pass begins, so that its encoder takes them, and the buffer once the pass is open.
+        prGpuCommandsSetTexture(commands, 2, source, nearest);
+        prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_ColorAttachment);
+        prGpuCommandsTextureBarrier(commands, half, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_ColorAttachment);
+        PrGpuPassDesc passDesc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{});
+        PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
+        Push push = fill(0, 0, 0, 0);
+        prGpuCommandsSetPipeline(commands, sampled);
+        prGpuCommandsSetPush(commands, &push, sizeof(push));
+        prGpuPassDraw(pass, 4, 1, 0, 0);
+        prGpuPassEnd(pass);
+        passDesc = prGpuPassDescColor(half, PrGpuLoad_Clear, PrColor{});
+        pass = prGpuPassBegin(commands, &passDesc);
+        Push color = fill(0, 1, 0, 1);
+        prGpuCommandsSetPipeline(commands, pulled);
+        prGpuCommandsSetPush(commands, &color, sizeof(color));
+        prGpuCommandsSetBuffer(commands, 1, buffer, at);
+        prGpuPassDraw(pass, 6, 1, 0, 0);
+        prGpuPassEnd(pass);
+        prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_ShaderRead);
+        prGpuCommandsTextureBarrier(commands, half, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_ShaderRead);
+        gpuSubmitAndWait(commands);
+
+        Array<uint8_t> out = f.read(target);
+        CHECK(near(texel(out, 4, 0, 0), 255, 0, 0, 255));
+        CHECK(near(texel(out, 4, 3, 0), 0, 255, 0, 255));
+        CHECK(near(texel(out, 4, 0, 3), 0, 0, 255, 255));
+        CHECK(near(texel(out, 4, 3, 3), 255, 255, 255, 255));
+        out = f.read(half);
+        CHECK(near(texel(out, 4, 0, 0), 0, 255, 0, 255));
+        CHECK(near(texel(out, 4, 1, 3), 0, 255, 0, 255));
+        CHECK(near(texel(out, 4, 2, 0), 0, 0, 0, 0));
+        prGpuPipelineDestroy(f.device, pulled);
+        prGpuPipelineDestroy(f.device, sampled);
+        prGpuBufferDestroy(f.device, buffer);
+        prGpuTextureDestroy(f.device, half);
+        prGpuTextureDestroy(f.device, target);
+        prGpuTextureDestroy(f.device, source);
+    });
+}
+
+TEST_CASE("a dispatch reads a Buffer slot and writes RwBuffer and RwTexture slots") {
+    onEachBackend([](Fixture& f) {
+        PrGpuPipeline doubled{};
+        REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "slotDoubled", "slotDoubled", &doubled) == PrStatus_Ok);
+        PrGpuPipeline filled{};
+        REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "slotFilled", "slotFilled", &filled) == PrStatus_Ok);
+        const uint32_t count = 256;
+        Array<uint32_t> input(count);
+        for (uint32_t i = 0; i < count; ++i)
+            input[i] = i;
+        PrGpuBufferDesc desc{.size = count * 4, .usage = PrGpuBufferUsageFlag_Storage};
+        PrGpuBuffer in{};
+        PrGpuBuffer out{};
+        REQUIRE(prGpuBufferCreate(f.device, &desc, &in) == PrStatus_Ok);
+        REQUIRE(prGpuBufferCreate(f.device, &desc, &out) == PrStatus_Ok);
+        prGpuBufferUpload(f.device, in, 0, input.data(), count * 4);
+        PrGpuTextureDesc textureDesc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{8, 8},
+            PrGpuTextureUsageFlag_Storage | PrGpuTextureUsageFlag_Sampled);
+        PrGpuTexture written{};
+        REQUIRE(prGpuTextureCreate(f.device, &textureDesc, &written) == PrStatus_Ok);
+
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        prGpuCommandsSetBuffer(commands, 3, in, 0);
+        prGpuCommandsSetRwBuffer(commands, 1, out, 0);
+        prGpuCommandsSetPipeline(commands, doubled);
+        prGpuCommandsDispatch(commands, PrGpuExtent{count / 64, 1, 1});
+        prGpuCommandsTextureBarrier(commands, written, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_ComputeWrite);
+        Push push = fill(0, 0, 1, 1);
+        prGpuCommandsSetPush(commands, &push, sizeof(push));
+        prGpuCommandsSetRwTexture(commands, 2, written);
+        prGpuCommandsSetPipeline(commands, filled);
+        prGpuCommandsDispatch(commands, PrGpuExtent{1, 1, 1});
+        prGpuCommandsBufferBarrier(commands, out, PrGpuAccessFlag_ComputeWrite, PrGpuAccessFlag_ShaderRead);
+        prGpuCommandsTextureBarrier(commands, written, PrGpuSubresources{}, PrGpuAccessFlag_ComputeWrite,
+            PrGpuAccessFlag_ShaderRead);
+        gpuSubmitAndWait(commands);
+
+        Array<uint8_t> bytes = f.read(out, count * 4);
+        const uint32_t* words = reinterpret_cast<const uint32_t*>(bytes.data());
+        CHECK(words[0] == 0);
+        CHECK(words[1] == 2);
+        CHECK(words[255] == 510);
+        Array<uint8_t> texels = f.read(written);
+        CHECK(near(texel(texels, 8, 0, 0), 0, 0, 255, 255));
+        CHECK(near(texel(texels, 8, 7, 7), 0, 0, 255, 255));
+        prGpuTextureDestroy(f.device, written);
+        prGpuBufferDestroy(f.device, in);
+        prGpuBufferDestroy(f.device, out);
+        prGpuPipelineDestroy(f.device, filled);
         prGpuPipelineDestroy(f.device, doubled);
     });
 }
@@ -455,6 +809,12 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
         desc.formats.color[0] = PrGpuFormat_Rgba8;
         desc.readsTarget = true;
         PrGpuPipeline inverted{};
+        if ((prGpuDeviceInfo(f.device).features & PrGpuFeatureFlag_TargetReads) == 0) {
+            CHECK(prGpuPipelineCreateGraphics(f.device, &desc, &inverted) == PrStatus_NotSupported);
+            prGpuPipelineDestroy(f.device, solid);
+            prGpuTextureDestroy(f.device, target);
+            return;
+        }
         REQUIRE(prGpuPipelineCreateGraphics(f.device, &desc, &inverted) == PrStatus_Ok);
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
@@ -476,7 +836,7 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         Array<uint8_t> texels = f.read(target);
         CHECK(near(texel(texels, 4, 0, 0), 0, 255, 255, 255));
         CHECK(near(texel(texels, 4, 3, 3), 255, 255, 255, 255));
@@ -492,7 +852,7 @@ TEST_CASE("objects destroyed after their work is recorded live until it is done"
         PrGpuTexture source = f.target(PrUVec2{1, 1});
         const uint8_t green[] = {0, 255, 0, 255};
         prGpuTextureWrite(f.device, source, PrIVec2{0, 0}, PrPixelView{green, 4, {1, 1}});
-        PrGpuPipeline sampled = f.pipeline("quadVertex", "sampled");
+        PrGpuPipeline sampled = f.pipeline("quadVertex", "slotSampled");
         PrGpuSampler sampler{};
         PrGpuSamplerDesc samplerDesc = prGpuSamplerDescDefault(PrGpuFilter_Nearest, PrGpuAddress_Clamp);
         REQUIRE(prGpuSamplerIntern(f.device, &samplerDesc, &sampler) == PrStatus_Ok);
@@ -503,8 +863,7 @@ TEST_CASE("objects destroyed after their work is recorded live until it is done"
         PrGpuPassDesc passDesc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{});
         PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
         Push push = fill(0, 0, 0, 0);
-        push.texture = source.id;
-        push.sampler = sampler.id;
+        prGpuCommandsSetTexture(commands, 2, source, sampler);
         prGpuCommandsSetPipeline(commands, sampled);
         prGpuCommandsSetPush(commands, &push, sizeof(push));
         prGpuPassDraw(pass, 4, 1, 0, 0);
@@ -515,7 +874,7 @@ TEST_CASE("objects destroyed after their work is recorded live until it is done"
         prGpuTextureDestroy(f.device, source);
         prGpuPipelineDestroy(f.device, sampled);
         PrGpuTexture other = f.target(PrUVec2{1, 1});
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         CHECK(near(texel(f.read(target), 4, 2, 2), 0, 255, 0, 255));
         prGpuTextureDestroy(f.device, other);
         prGpuTextureDestroy(f.device, target);
@@ -538,7 +897,7 @@ TEST_CASE("mip levels are filled with the average of the level before") {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
         prGpuCommandsGenerateMipmaps(commands, texture, PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         PrGpuTexture last{};
         REQUIRE(prGpuTextureCreateView(f.device, texture, PrGpuTextureKind_2d,
             PrGpuSubresources{.firstLevel = 2, .levels = 1, .layers = 1}, &last) == PrStatus_Ok);

@@ -12,6 +12,7 @@
 #include "tools/harness/test.h"
 
 using namespace alchemy;
+using namespace harness;
 
 namespace {
 
@@ -30,7 +31,7 @@ struct Fixture {
     String dir;
 
     Fixture() {
-        dir = format("{}/alchemy_state_{}", PrStringView(harness::testFolder()), prRandomSeed());
+        dir = format("{}/alchemy_state_{}", PrStringView(testFolder()), prRandomSeed());
         state.compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
         state.codec = prImageCodecCreate(PrImageCodecBackend_Default, state.compress);
         galleryOpen(state.gallery, dir);

@@ -6,6 +6,8 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/atomic.h"
+#include "pr/environment.h"
 #include "pr/gpu_backend.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
@@ -154,11 +156,6 @@ PrGpuBuffer recordRead(PrGpuCommands* commands, PrGpuTexture texture, uint32_t a
     return buffer;
 }
 
-// What prGpuCommandsSubmitAndWait waits for: the seconds that the device spent.
-void submittedDone(void* PR_NULLABLE context, double seconds) {
-    *static_cast<double*>(context) = seconds;
-}
-
 constexpr PrStringView kBackendNames[PrGpuBackend_Count] = {
     "default", "metal", "metal4", "vulkan", "d3d12", "memory", "canvas2d",
 };
@@ -187,8 +184,10 @@ constexpr PrGpuBackend kBuilt[] = {
     PrGpuBackend_Default,
 };
 
-// Creates a device by `backend`, which is not Default.
-PrStatus create(PrGpuBackend backend, const PrGpuDeviceOptions& o, PrGpuDevice* PR_NULLABLE* PR_NONNULL out) {
+// Creates a device by `backend`, which is not Default, with `o` in place of the backend's own options where they
+// overlap. Returns null if the build does not have the backend, or if the backend makes no device with the options, as
+// for slotsOnly on a backend that always has bindless.
+PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& o) {
     // A build without a backend has no use for the options.
     (void)o;
     switch (backend) {
@@ -196,41 +195,194 @@ PrStatus create(PrGpuBackend backend, const PrGpuDeviceOptions& o, PrGpuDevice* 
         case PrGpuBackend_Metal: {
             PrGpuMetalOptions metal = prGpuMetalOptionsDefault();
             metal.validation = o.validation;
-            return prGpuMetalCreate(&metal, out);
+            metal.slotsOnly = o.slotsOnly;
+            metal.pool = o.pool;
+            metal.ready = o.ready;
+            metal.readyContext = o.readyContext;
+            return prGpuMetalCreate(&metal);
         }
 #endif
 #if defined(PR_GPU_HAS_METAL4)
         case PrGpuBackend_Metal4: {
+            // Metal 4 always has bindless, and its slots are tested beside it.
+            if (o.slotsOnly)
+                return nullptr;
             PrGpuMetal4Options metal = prGpuMetal4OptionsDefault();
             metal.validation = o.validation;
-            return prGpuMetal4Create(&metal, out);
+            metal.pool = o.pool;
+            metal.ready = o.ready;
+            metal.readyContext = o.readyContext;
+            return prGpuMetal4Create(&metal);
         }
 #endif
 #if defined(PR_GPU_HAS_VULKAN)
         case PrGpuBackend_Vulkan: {
+            // Vulkan always has bindless, and its slots are tested beside it.
+            if (o.slotsOnly)
+                return nullptr;
             PrGpuVulkanOptions vulkan = prGpuVulkanOptionsDefault();
             vulkan.validation = vulkan.validation || o.validation;
-            return prGpuVulkanCreate(&vulkan, out);
+            vulkan.pool = o.pool;
+            vulkan.ready = o.ready;
+            vulkan.readyContext = o.readyContext;
+            return prGpuVulkanCreate(&vulkan);
         }
 #endif
 #if defined(PR_GPU_HAS_D3D12)
         case PrGpuBackend_D3d12: {
+            // Direct3D 12 always has bindless, and its slots are tested beside it.
+            if (o.slotsOnly)
+                return nullptr;
             PrGpuD3d12Options d3d12 = prGpuD3d12OptionsDefault();
             d3d12.validation = d3d12.validation || o.validation;
-            return prGpuD3d12Create(&d3d12, out);
+            d3d12.pool = o.pool;
+            d3d12.ready = o.ready;
+            d3d12.readyContext = o.readyContext;
+            return prGpuD3d12Create(&d3d12);
         }
 #endif
 #if defined(PR_GPU_HAS_CANVAS2D)
         case PrGpuBackend_Canvas2d:
-            return prGpuCanvas2dCreate(out);
+            return prGpuCanvas2dCreate(&o);
 #endif
 #if defined(PR_GPU_HAS_MEMORY)
         case PrGpuBackend_Memory:
-            return prGpuMemoryCreate(out);
+            return prGpuMemoryCreate(&o);
 #endif
         default:
-            return PrStatus_NotSupported;
+            return nullptr;
     }
+}
+
+// The backends that Default passes over, bit k for PrGpuBackend k: those whose creation failed with NotSupported. A
+// system that lacks a backend's API or adapter lacks it for the life of the process. Any thread may read and set it.
+Atomic<uint32_t> unsupported;
+
+// Returns the backend that PR_GPU_BACKEND names if the build has it, or Count.
+PrGpuBackend namedBackend() {
+    PrRawString named = prEnvironmentVariable("PR_GPU_BACKEND");
+    PrGpuBackend chosen = prGpuBackendFromName(prRawStringView(&named));
+    prRawStringReset(&named);
+    return chosen != PrGpuBackend_Default && prGpuBackendIsBuilt(chosen) ? chosen : PrGpuBackend_Count;
+}
+
+// Returns the first backend of the build that Default does not pass over, or Default if there is none.
+PrGpuBackend firstSupported() {
+    uint32_t passed = unsupported.load();
+    for (PrGpuBackend built : kBuilt) {
+        if (built == PrGpuBackend_Default || (passed & (1u << built)) == 0)
+            return built;
+    }
+    return PrGpuBackend_Default;
+}
+
+void passOver(PrGpuBackend backend) {
+    uint32_t passed = unsupported.load();
+    while (!unsupported.cas(passed, passed | (1u << backend))) {}
+}
+
+// A creation that Default started. `waiting` is true while the creating call, without a pool, decides what follows a
+// failed creation itself. It then sets `retry` if another backend remains to try.
+struct DefaultCreation {
+    PrGpuBackend backend;
+    PrGpuDeviceReadyFn PR_NULLABLE ready;
+    void* PR_NULLABLE readyContext;
+    bool waiting;
+    bool retry;
+};
+
+// Passes over the backend of a creation that failed with NotSupported, then calls the creator's ready callback, unless
+// the creating call tries another backend in its place.
+void defaultReady(void* PR_NULLABLE context, PrGpuDevice* device) {
+    DefaultCreation* c = static_cast<DefaultCreation*>(context);
+    bool failed = device->lostStatusFn(device) == PrStatus_NotSupported;
+    if (failed)
+        passOver(c->backend);
+    if (c->waiting) {
+        c->retry = failed && firstSupported() != PrGpuBackend_Default;
+        if (!c->retry && c->ready != nullptr)
+            c->ready(c->readyContext, device);
+        return;
+    }
+    if (c->ready != nullptr)
+        c->ready(c->readyContext, device);
+    prMemoryFree(c);
+}
+
+// Creates a device as Default does: by the backend that PR_GPU_BACKEND names, or else by the first backend that is not
+// passed over. A creation without a pool whose failure is known when it returns moves on to the next backend at once.
+// Otherwise the failed backend is passed over by the next creation.
+PrGpuDevice* PR_NULLABLE createDefault(const PrGpuDeviceOptions& o) {
+    PrGpuBackend named = namedBackend();
+    if (named != PrGpuBackend_Count)
+        return create(named, o);
+    for (;;) {
+        PrGpuBackend backend = firstSupported();
+        if (backend == PrGpuBackend_Default)
+            return nullptr;
+        DefaultCreation* c = allocZeroed<DefaultCreation>();
+        *c = DefaultCreation{
+            .backend = backend,
+            .ready = o.ready,
+            .readyContext = o.readyContext,
+            .waiting = o.pool == nullptr,
+        };
+        PrGpuDeviceOptions chained = o;
+        chained.ready = defaultReady;
+        chained.readyContext = c;
+        PrGpuDevice* device = create(backend, chained);
+        // On a pool, the ready callback frees the creation.
+        if (o.pool != nullptr)
+            return device;
+        if (device == nullptr) {
+            prMemoryFree(c);
+            return nullptr;
+        }
+        // A creation that runs on after the call, as on the web, frees itself once it is done.
+        if (!prGpuDeviceIsReady(device)) {
+            c->waiting = false;
+            return device;
+        }
+        bool retry = c->retry;
+        prMemoryFree(c);
+        if (!retry)
+            return device;
+        prGpuDeviceDestroy(device);
+    }
+}
+
+// Returns the status that the device's calls that make objects fail with, or Ok if the device takes work. The status is
+// InvalidState while the creation runs, and Lost once the device is lost, which includes a failed creation.
+PrStatus refusal(const PrGpuDevice* device) {
+    switch (device->stageFn(device)) {
+        case PrGpuDeviceStage_Creating:
+            return PrStatus_InvalidState;
+        case PrGpuDeviceStage_Failed:
+            return PrStatus_Lost;
+        default:
+            return device->lostStatusFn(device) != PrStatus_Ok ? PrStatus_Lost : PrStatus_Ok;
+    }
+}
+
+// Returns true if the device takes work: its creation succeeded and it is not lost.
+bool takesWork(const PrGpuDevice* device) {
+    return refusal(device) == PrStatus_Ok;
+}
+
+// Returns true if the device's creation succeeded. Only then may the backend's functions be called, whether the device
+// is lost or not.
+bool created(const PrGpuDevice* device) {
+    return device->stageFn(device) == PrGpuDeviceStage_Ready;
+}
+
+// Returns true if `buffer` may be bound to a slot at `offset`.
+bool bindsToSlot(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset) {
+    PrGpuDevice* device = prGpuCommandsDevice(commands);
+    if (buffer.id == 0)
+        return true;
+    PrGpuBufferDesc desc = prGpuBufferDesc(device, buffer);
+    return offset % prGpuDeviceInfo(device).storageOffsetAlignment == 0 && offset < desc.size &&
+        (desc.usage & PrGpuBufferUsageFlag_Storage) != 0;
 }
 
 } // namespace
@@ -266,33 +418,25 @@ PrGpuDeviceOptions prGpuDeviceOptionsDefault(void) {
     return PrGpuDeviceOptions{};
 }
 
-PrStatus prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NULLABLE options,
-        PrGpuDevice* PR_NULLABLE* PR_NONNULL out) {
-    *out = nullptr;
+PrGpuDevice* PR_NULLABLE prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NULLABLE options) {
     PrGpuDeviceOptions o = options != nullptr ? *options : prGpuDeviceOptionsDefault();
-    if (backend != PrGpuBackend_Default)
-        return create(backend, o, out);
-    const char* named = getenv("PR_GPU_BACKEND");
-    backend = named != nullptr ? prGpuBackendFromName(named) : PrGpuBackend_Count;
-    if (backend != PrGpuBackend_Default && prGpuBackendIsBuilt(backend))
-        return create(backend, o, out);
-    // Default takes the first backend that the system supports.
-    PrStatus status = PrStatus_NotSupported;
-    for (PrGpuBackend built : kBuilt) {
-        if (built == PrGpuBackend_Default)
-            break;
-        status = create(built, o, out);
-        if (status != PrStatus_NotSupported)
-            return status;
-    }
-    return status;
+    return backend == PrGpuBackend_Default ? createDefault(o) : create(backend, o);
 }
 
 void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device) {
     if (device == nullptr)
         return;
-    device->waitIdleFn(device);
+    if (created(device))
+        device->waitIdleFn(device);
     device->destroyFn(device);
+}
+
+bool prGpuDeviceIsReady(const PrGpuDevice* device) {
+    return device->stageFn(device) != PrGpuDeviceStage_Creating;
+}
+
+PrStatus prGpuDeviceLostStatus(const PrGpuDevice* device) {
+    return device->lostStatusFn(device);
 }
 
 PrGpuDeviceInfo prGpuDeviceInfo(const PrGpuDevice* device) {
@@ -300,32 +444,34 @@ PrGpuDeviceInfo prGpuDeviceInfo(const PrGpuDevice* device) {
 }
 
 bool prGpuDeviceHasNative(const PrGpuDevice* device, PrGpuNativeKind kind) {
-    return kind < PrGpuNativeKind_Count && (device->nativeKindsFn(device) & (1u << kind)) != 0;
+    return kind < PrGpuNativeKind_Count && created(device) && (device->nativeKindsFn(device) & (1u << kind)) != 0;
 }
 
 bool prGpuDeviceImportsInPlace(const PrGpuDevice* device, PrGpuImportKind kind) {
-    return kind < PrGpuImportKind_Count && (device->inPlaceImportsFn(device) & (1u << kind)) != 0;
+    return kind < PrGpuImportKind_Count && created(device) && (device->inPlaceImportsFn(device) & (1u << kind)) != 0;
 }
 
 bool prGpuDeviceIsLost(const PrGpuDevice* device) {
-    return device->isLostFn(device);
+    return device->lostStatusFn(device) != PrStatus_Ok;
 }
 
 void prGpuDeviceSimulateLoss(PrGpuDevice* device) {
-    device->simulateLossFn(device);
+    if (created(device))
+        device->simulateLossFn(device);
 }
 
 bool prGpuDeviceIsComplete(const PrGpuDevice* device, PrGpuFence fence) {
-    return fence == 0 || device->isCompleteFn(device, fence);
+    return fence == 0 || !created(device) || device->isCompleteFn(device, fence);
 }
 
 void prGpuDeviceWait(PrGpuDevice* device, PrGpuFence fence) {
-    if (fence != 0)
+    if (fence != 0 && created(device))
         device->waitFn(device, fence);
 }
 
 void prGpuDeviceWaitIdle(PrGpuDevice* device) {
-    device->waitIdleFn(device);
+    if (created(device))
+        device->waitIdleFn(device);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -397,8 +543,9 @@ bool prGpuFormatToPixelFormat(PrGpuFormat format, PrPixelFormat* out) {
 PrStatus prGpuBufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuffer* out) {
     *out = PrGpuBuffer{};
     PR_ASSERT(desc->size != 0);
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     return device->bufferCreateFn(device, desc, out);
 }
 
@@ -448,7 +595,8 @@ uint8_t prGpuMipLevels(PrUVec2 extent) {
 }
 
 bool prGpuDeviceSupportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureUsageFlags usage) {
-    return format != PrGpuFormat_None && format < PrGpuFormat_Count && device->supportsFormatFn(device, format, usage);
+    return format != PrGpuFormat_None && format < PrGpuFormat_Count && created(device) &&
+        device->supportsFormatFn(device, format, usage);
 }
 
 PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out) {
@@ -456,8 +604,9 @@ PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, P
     PR_ASSERT(desc->format != PrGpuFormat_None && desc->format < PrGpuFormat_Count);
     PR_ASSERT(desc->levels >= 1 && desc->samples >= 1);
     PR_ASSERT(desc->extent.width != 0 && desc->extent.height != 0 && desc->extent.depth != 0);
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     if (desc->kind != PrGpuTextureKind_3d && (desc->extent.width > device->infoFn(device).maxTextureSize ||
             desc->extent.height > device->infoFn(device).maxTextureSize))
         return PrStatus_Limit;
@@ -468,8 +617,9 @@ PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpu
         PrGpuSubresources subresources, PrGpuTexture* out) {
     *out = PrGpuTexture{};
     PR_ASSERT(texture.id != 0);
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     return device->textureCreateViewFn(device, texture, kind, subresources, out);
 }
 
@@ -500,16 +650,18 @@ PrStatus prGpuTextureCreateOverPixels(PrGpuDevice* device, PrGpuFormat format, P
     *out = PrGpuTexture{};
     PR_ASSERT(prGpuDeviceHasNative(device, PrGpuNativeKind_Pixels));
     PR_ASSERT(pixels.extent.x != 0 && pixels.extent.y != 0);
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     return device->textureCreateOverPixelsFn(device, format, pixels, usage, out);
 }
 
 PrStatus prGpuTextureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuReleaseFn PR_NULLABLE release,
         void* PR_NULLABLE context, PrGpuTexture* texture) {
     PR_ASSERT(image->handle != nullptr);
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     return device->textureImportFn(device, image, release, context, texture);
 }
 
@@ -559,6 +711,9 @@ PrGpuSamplerDesc prGpuSamplerDescDefault(PrGpuFilter filter, PrGpuAddress addres
 
 PrStatus prGpuSamplerIntern(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuSampler* out) {
     *out = PrGpuSampler{};
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     return device->samplerInternFn(device, desc, out);
 }
 
@@ -568,7 +723,7 @@ PrStatus prGpuSamplerIntern(PrGpuDevice* device, const PrGpuSamplerDesc* desc, P
 void prGpuBufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, const void* data, uint64_t size) {
     PR_ASSERT(buffer.id != 0);
     PR_ASSERT(offset + size <= device->bufferDescFn(device, buffer).size);
-    if (size != 0 && !device->isLostFn(device))
+    if (size != 0 && takesWork(device))
         device->bufferUploadFn(device, buffer, offset, data, size);
 }
 
@@ -581,7 +736,7 @@ void prGpuTextureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTe
     PR_ASSERT(texture.id != 0);
     if (region->extent.width == 0 || region->extent.height == 0 || region->extent.depth == 0)
         return;
-    if (!device->isLostFn(device))
+    if (takesWork(device))
         device->textureUploadFn(device, texture, region, data, rowBytes, layerBytes);
 }
 
@@ -596,33 +751,6 @@ void prGpuTextureWrite(PrGpuDevice* device, PrGpuTexture texture, PrIVec2 origin
     PrGpuTextureRegion region = prGpuTextureRegion2d(at, size);
     const uint8_t* first = texels.data + from.y * texels.stride + size_t(from.x) * bytes;
     prGpuTextureUpload(device, texture, &region, first, uint32_t(texels.stride), uint32_t(texels.stride * size.y));
-}
-
-void prGpuTextureRead(PrGpuDevice* device, PrGpuTexture texture, uint32_t access, PrIVec2 origin, PrPixels out) {
-    PrGpuTextureDesc desc = prGpuTextureDesc(device, texture);
-    uint32_t bytes = kFormatBlocks[desc.format].bytes;
-    for (uint32_t y = 0; y < out.extent.y; ++y)
-        prMemZero(out.data + y * out.stride, size_t(out.extent.x) * bytes);
-    PrUVec2 at{};
-    PrUVec2 size{};
-    PrUVec2 to{};
-    if (!clip(origin, out.extent, PrUVec2{desc.extent.width, desc.extent.height}, &at, &size, &to))
-        return;
-    PrGpuCommands* commands = nullptr;
-    if (!prGpuCommandsBegin(device, nullptr, &commands))
-        return;
-    uint32_t rowBytes = alignUp(size.x * bytes, kRowAlignment);
-    PrGpuBuffer buffer = recordRead(commands, texture, access, at, size, rowBytes);
-    prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
-    if (buffer.id == 0)
-        return;
-    if (!device->isLostFn(device)) {
-        const uint8_t* from = static_cast<const uint8_t*>(prGpuBufferMap(device, buffer));
-        for (uint32_t y = 0; y < size.y; ++y)
-            prMemCopy(out.data + (to.y + y) * out.stride + size_t(to.x) * bytes, from + size_t(y) * rowBytes,
-                size_t(size.x) * bytes);
-    }
-    prGpuBufferDestroy(device, buffer);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -649,8 +777,9 @@ PrStatus prGpuShaderLibraryCreate(PrGpuDevice* device, const void* bytes, uint64
     }
     if (codesAt == 0)
         return PrStatus_NotSupported;
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     PrGpuShaderEntry* entries = static_cast<PrGpuShaderEntry*>(prMemoryAlloc(sizeof(PrGpuShaderEntry) * entryCount));
     for (uint32_t i = 0; i < entryCount; ++i) {
         uint64_t at = 16 + uint64_t(i) * 24;
@@ -700,6 +829,14 @@ PrGpuBlend prGpuBlendPremultiplied(void) {
     };
 }
 
+uint32_t prGpuVertexFormatSize(PrGpuVertexFormat format) {
+    PR_ASSERT(format != PrGpuVertexFormat_None && format < PrGpuVertexFormat_Count);
+    constexpr uint8_t kSizes[PrGpuVertexFormat_Count] = {
+        0, 4, 8, 12, 16, 4, 8, 4, 8, 12, 16, 4, 8, 12, 16, 4, 4, 4, 4, 8, 4, 8,
+    };
+    return kSizes[format];
+}
+
 PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibrary* library) {
     PrGpuGraphicsPipelineDesc desc{};
     desc.library = library;
@@ -724,8 +861,20 @@ PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPip
     if (vertex->stage != PrGpuShaderStage_Vertex ||
             (fragment != nullptr && fragment->stage != PrGpuShaderStage_Fragment))
         return PrStatus_WrongType;
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    if (desc->readsTarget && (device->infoFn(device).features & PrGpuFeatureFlag_TargetReads) == 0)
+        return PrStatus_NotSupported;
+    const PrGpuVertexLayout& layout = desc->vertexLayout;
+    PR_ASSERT(layout.bufferCount <= kPrGpuMaxVertexBuffers && layout.attributeCount <= kPrGpuMaxVertexAttributes);
+    for (uint32_t i = 0; i < layout.attributeCount; ++i) {
+        const PrGpuVertexAttribute& a = layout.attributes[i];
+        PR_ASSERT(a.format != PrGpuVertexFormat_None && a.format < PrGpuVertexFormat_Count);
+        PR_ASSERT(a.buffer < layout.bufferCount && a.offset % 4 == 0);
+        PR_ASSERT(a.offset + prGpuVertexFormatSize(a.format) <= layout.buffers[a.buffer].stride);
+        (void)a;
+    }
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     return device->graphicsPipelineCreateFn(device, desc, vertex, fragment, out);
 }
 
@@ -737,8 +886,9 @@ PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrar
         return PrStatus_NotFound;
     if (entry->stage != PrGpuShaderStage_Compute)
         return PrStatus_WrongType;
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     return device->computePipelineCreateFn(device, library, entry, name, out);
 }
 
@@ -762,7 +912,7 @@ PrGpuCommandsOptions prGpuCommandsOptionsDefault(void) {
 bool prGpuCommandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* PR_NULLABLE options,
         PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (device->isLostFn(device))
+    if (!takesWork(device))
         return false;
     PrGpuCommandsOptions o = options != nullptr ? *options : prGpuCommandsOptionsDefault();
     return device->commandsBeginFn(device, &o, out);
@@ -780,16 +930,30 @@ PrGpuFence prGpuCommandsSubmit(PrGpuCommands* commands) {
     return commands->submitFn(commands);
 }
 
-double prGpuCommandsSubmitAndWait(PrGpuCommands* commands) {
-    PrGpuDevice* device = prGpuCommandsDevice(commands);
-    double seconds = 0;
-    prGpuCommandsOnDone(commands, submittedDone, &seconds);
-    prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
-    return seconds;
+void* prGpuCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBufferUsageFlags usage, PrGpuBuffer* buffer,
+        uint64_t* offset) {
+    return commands->streamFn(commands, size, usage, buffer, offset);
 }
 
-void* prGpuCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
-    return commands->streamFn(commands, size, buffer, offset);
+void* prGpuCommandsStreamGather(PrGpuCommands* commands, const PrByteView* parts, uint32_t count,
+        PrGpuBufferUsageFlags usage, PrGpuBuffer* buffer, uint64_t* offsets) {
+    uint64_t alignment = 16;
+    if ((usage & PrGpuBufferUsageFlag_Storage) != 0)
+        alignment = prGpuDeviceInfo(prGpuCommandsDevice(commands)).storageOffsetAlignment;
+    uint64_t size = 0;
+    for (uint32_t i = 0; i < count; ++i) {
+        size = alignUp(size, alignment);
+        offsets[i] = size;
+        size += parts[i].size;
+    }
+    uint64_t offset = 0;
+    uint8_t* bytes = static_cast<uint8_t*>(commands->streamFn(commands, size, usage, buffer, &offset));
+    for (uint32_t i = 0; i < count; ++i) {
+        if (parts[i].data != nullptr && parts[i].size != 0)
+            prMemCopy(bytes + offsets[i], parts[i].data, parts[i].size);
+        offsets[i] += offset;
+    }
+    return bytes;
 }
 
 void prGpuCommandsSetPush(PrGpuCommands* commands, const void* data, uint32_t size) {
@@ -805,6 +969,32 @@ void prGpuCommandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_
 void prGpuCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
     PR_ASSERT(pipeline.id != 0);
     commands->setPipelineFn(commands, pipeline);
+}
+
+void prGpuCommandsSetBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    PR_ASSERT(slot < prGpuDeviceInfo(prGpuCommandsDevice(commands)).maxBufferSlots);
+    PR_ASSERT(bindsToSlot(commands, buffer, offset));
+    commands->setBufferFn(commands, slot, buffer, offset);
+}
+
+void prGpuCommandsSetRwBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    PR_ASSERT(slot < prGpuDeviceInfo(prGpuCommandsDevice(commands)).maxRwBufferSlots);
+    PR_ASSERT(bindsToSlot(commands, buffer, offset));
+    commands->setRwBufferFn(commands, slot, buffer, offset);
+}
+
+void prGpuCommandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler) {
+    PR_ASSERT(slot < prGpuDeviceInfo(prGpuCommandsDevice(commands)).maxTextureSlots);
+    PR_ASSERT(texture.id == 0 ||
+        (prGpuTextureDesc(prGpuCommandsDevice(commands), texture).usage & PrGpuTextureUsageFlag_Sampled) != 0);
+    commands->setTextureFn(commands, slot, texture, sampler);
+}
+
+void prGpuCommandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture) {
+    PR_ASSERT(slot < prGpuDeviceInfo(prGpuCommandsDevice(commands)).maxRwTextureSlots);
+    PR_ASSERT(texture.id == 0 ||
+        (prGpuTextureDesc(prGpuCommandsDevice(commands), texture).usage & PrGpuTextureUsageFlag_Storage) != 0);
+    commands->setRwTextureFn(commands, slot, texture);
 }
 
 void prGpuCommandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {
@@ -960,6 +1150,11 @@ void prGpuPassSetIndexBuffer(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offse
     pass->setIndexBufferFn(pass, buffer, offset, wide);
 }
 
+void prGpuPassSetVertexBuffer(PrGpuPass* pass, uint32_t slot, PrGpuBuffer buffer, uint64_t offset) {
+    PR_ASSERT(slot < kPrGpuMaxVertexBuffers && buffer.id != 0 && offset % 4 == 0);
+    pass->setVertexBufferFn(pass, slot, buffer, offset);
+}
+
 void prGpuPassDraw(PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
         uint32_t firstInstance) {
     if (vertexCount != 0 && instanceCount != 0)
@@ -990,8 +1185,9 @@ void prGpuPassDrawIndexedIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t 
 PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     return device->swapChainCreateFn(device, surface, desc, out);
 }
 
@@ -1011,8 +1207,9 @@ void prGpuSwapChainWait(PrGpuSwapChain* swapChain) {
 PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
     *out = PrGpuTexture{};
     PrGpuDevice* device = swapChain->deviceFn(swapChain);
-    if (device->isLostFn(device))
-        return PrStatus_Lost;
+    PrStatus refused = refusal(device);
+    if (refused != PrStatus_Ok)
+        return refused;
     if (extent.x == 0 || extent.y == 0)
         return PrStatus_InvalidState;
     if (extent.x > device->infoFn(device).maxTextureSize || extent.y > device->infoFn(device).maxTextureSize)

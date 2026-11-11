@@ -231,7 +231,7 @@ int main() {
     // capture asks for Single, so that the captured window shows what its commands open.
     PrAppOptions options = prAppOptionsDefault();
     options.windowModel = a.capturePath.isEmpty() ? PrAppWindowModel_Multiple : PrAppWindowModel_Single;
-    PrStudioAppDesc app{.fonts = fonts, .options = &options, .window = &desc};
+    PrStudioAppDesc app{.fonts = fonts, .options = &options, .pool = a.state.pool, .window = &desc};
     PrStatus status = prStudioAppRun(&app);
     prFontSetDestroy(fonts);
     prFontSystemDestroy(system);

@@ -88,18 +88,9 @@ void freePipeline(GpuMetalDevice* d, uint32_t id) {
     d->freePipelines.push(id);
 }
 
-// Returns a block of shared memory of at least `size` bytes, from the free blocks or new, or one without a buffer if
-// the device has no memory or slot for it. A block larger than `blockSize` is made for its size. The caller holds the
-// mutex.
-GpuMetalBlock blockTake(GpuMetalDevice* d, RawArray<GpuMetalBlock>& free, uint64_t blockSize, uint64_t size) {
-    for (uint32_t i = 0; i < free.count; ++i) {
-        if (free.data[i].buffer.length >= size) {
-            GpuMetalBlock block = free.data[i];
-            free.erase(i);
-            return block;
-        }
-    }
-    uint64_t length = size > blockSize ? alignUp(size, kGpuMetalStreamAlignment) : blockSize;
+// Makes a block of `length` bytes of shared memory, or one without a buffer if the device has no memory or slot for it.
+// The caller holds the mutex.
+GpuMetalBlock blockMake(GpuMetalDevice* d, uint64_t length) {
     id<MTLBuffer> buffer = [d->device newBufferWithLength:length options:MTLResourceStorageModeShared |
         MTLResourceCPUCacheModeWriteCombined | MTLResourceHazardTrackingModeUntracked];
     if (buffer == nil)
@@ -112,36 +103,69 @@ GpuMetalBlock blockTake(GpuMetalDevice* d, RawArray<GpuMetalBlock>& free, uint64
     return GpuMetalBlock{buffer, slot, 0};
 }
 
-// Makes a staging block volatile once the uploads that read it are done. Uploads come in bursts, so the system may
-// reclaim the memory of a free block between them, and an idle device holds no staging memory. The block becomes free
-// only when the submission's fence is reached, which is after this runs. Taking the block makes it nonvolatile again.
-void stagingDone(void* context, double) {
-    [static_cast<id<MTLBuffer>>(context) setPurgeableState:MTLPurgeableStateVolatile];
+// Returns a block of the stream of at least `size` bytes, or one without a buffer if the device has no memory or slot
+// for it. A block is kGpuMetalStreamBlock bytes, from the free blocks or new, or made for `size` alone if that is
+// larger, which blockRecycle frees rather than keeping. The caller holds the mutex.
+GpuMetalBlock blockTake(GpuMetalDevice* d, uint64_t size) {
+    if (size <= kGpuMetalStreamBlock && d->streamBlocks.count != 0) {
+        GpuMetalBlock block = d->streamBlocks.last();
+        d->streamBlocks.pop();
+        return block;
+    }
+    GpuMetalBlock block =
+        blockMake(d, size > kGpuMetalStreamBlock ? alignUp(size, uint64_t(256)) : kGpuMetalStreamBlock);
+    if (block.buffer != nil)
+        d->resources[block.slot].buffer.usage = PrGpuBufferUsageFlag_All;
+    return block;
 }
 
-// Returns room for `size` bytes in the batch's staging, as the block's index in the batch and the offset in it. Returns
-// false if the device has no memory for it. The caller holds the mutex.
-bool stage(GpuMetalDevice* d, uint64_t size, uint32_t* block, uint64_t* offset) {
-    GpuMetalBlock* last = d->uploadBlocks.count != 0 ? &d->uploadBlocks.last() : nullptr;
-    uint64_t at = last != nullptr ? alignUp(last->used, 256) : 0;
-    if (last == nullptr || at + size > last->buffer.length) {
-        if (d->uploadBlocks.count >= kGpuMetalStagingFlushBlocks)
-            d->uploadsSubmit(d);
-        gpuMetalCollect(d);
-        GpuMetalBlock added = blockTake(d, d->stagingBlocks, kGpuMetalStagingBlock, size);
-        if (added.buffer == nil)
-            return false;
-        // A free staging block is volatile and may have been purged. Its contents are not needed, so a purge is
-        // harmless.
-        [added.buffer setPurgeableState:MTLPurgeableStateNonVolatile];
-        d->uploadBlocks.push(added);
-        last = &d->uploadBlocks.last();
-        at = 0;
+// Returns a stream block that no work uses any more to the free blocks, or frees it if blockTake made it for one
+// allocation. The caller holds the mutex.
+void blockRecycle(GpuMetalDevice* d, GpuMetalBlock block) {
+    if (block.buffer.length != kGpuMetalStreamBlock) {
+        freeResource(d, block.slot);
+        return;
     }
+    block.used = 0;
+    d->streamBlocks.push(block);
+}
+
+// The staging's functions, with the mutex held.
+bool stagingMake(void* context, uint64_t size, GpuSharedStagingBlock* out) {
+    GpuMetalBlock block = blockMake(static_cast<GpuMetalDevice*>(context), size);
+    if (block.buffer == nil)
+        return false;
+    *out = GpuSharedStagingBlock{static_cast<uint8_t*>(block.buffer.contents), size, block.slot};
+    return true;
+}
+
+void stagingFree(void* context, const GpuSharedStagingBlock& block) {
+    freeResource(static_cast<GpuMetalDevice*>(context), block.id);
+}
+
+void stagingSubmit(void* context) {
+    GpuMetalDevice* d = static_cast<GpuMetalDevice*>(context);
+    d->uploadsSubmit(d);
+}
+
+void stagingCollect(void* context) {
+    gpuMetalCollect(static_cast<GpuMetalDevice*>(context));
+}
+
+// Makes a free staging block volatile, so that the system may reclaim its memory between bursts of uploads, and an idle
+// device holds no staging memory. A purged block's contents are not needed, so taking it again only makes it
+// nonvolatile.
+void stagingIdle(void* context, const GpuSharedStagingBlock& block, bool idle) {
+    id<MTLBuffer> buffer = gpuMetalBuffer(static_cast<GpuMetalDevice*>(context), block.id);
+    [buffer setPurgeableState:idle ? MTLPurgeableStateVolatile : MTLPurgeableStateNonVolatile];
+}
+
+// Returns room for `size` bytes in the batch's staging block, at `*offset` in it, and opens the batch. Returns false if
+// the device has no memory for it. The caller holds the mutex.
+bool stage(GpuMetalDevice* d, uint64_t size, uint64_t* offset) {
+    if (!gpuSharedStage(&d->staging, size, 256, offset))
+        return false;
     d->uploadsOpen(d);
-    last->used = at + size;
-    *block = d->uploadBlocks.count - 1;
-    *offset = at;
     return true;
 }
 
@@ -151,13 +175,12 @@ void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, cons
         prMutexLock(&d->mutex);
         const uint8_t* bytes = static_cast<const uint8_t*>(data);
         while (size != 0) {
-            uint64_t n = size < kGpuMetalStagingBlock ? size : kGpuMetalStagingBlock;
-            uint32_t block = 0;
+            uint64_t n = size < kGpuSharedStagingBlockBytes ? size : kGpuSharedStagingBlockBytes;
             uint64_t at = 0;
-            if (!stage(d, n, &block, &at))
+            if (!stage(d, n, &at))
                 break;
-            prMemCopy(static_cast<uint8_t*>(d->uploadBlocks.data[block].buffer.contents) + at, bytes, n);
-            gpuSharedUploadAddCopy(&d->uploadBatch, GpuSharedUploadCopy{buffer.id, block, offset, at, n});
+            prMemCopy(d->staging.open.mapped + at, bytes, n);
+            gpuSharedUploadAddCopy(&d->uploadBatch, GpuSharedUploadCopy{buffer.id, offset, at, n});
             bytes += n;
             offset += n;
             size -= n;
@@ -179,14 +202,13 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
         uint64_t sliceBytes = uint64_t(row) * rows;
         prMutexLock(&d->mutex);
         // Staging holds the texels with rows packed. An upload larger than a block is staged in a block of its size.
-        uint32_t block = 0;
         uint64_t at = 0;
-        if (!stage(d, sliceBytes * slices, &block, &at)) {
+        if (!stage(d, sliceBytes * slices, &at)) {
             prMutexUnlock(&d->mutex);
             return;
         }
-        id<MTLBuffer> staging = d->uploadBlocks.data[block].buffer;
-        uint8_t* to = static_cast<uint8_t*>(staging.contents) + at;
+        id<MTLBuffer> staging = gpuMetalBuffer(d, d->staging.open.id);
+        uint8_t* to = d->staging.open.mapped + at;
         const uint8_t* from = static_cast<const uint8_t*>(data);
         for (uint32_t s = 0; s < slices; ++s) {
             for (uint32_t y = 0; y < rows; ++y)
@@ -208,8 +230,8 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
     }
 }
 
-bool isLost(const PrGpuDevice* device) {
-    return gpuMetalDeviceFrom(device)->lost.load();
+bool removed(const GpuSharedDevice* device) {
+    return static_cast<const GpuMetalDevice*>(device)->lost.load();
 }
 
 // Apple silicon's GPU is never removed, so the device only reports that it is lost and refuses new work.
@@ -466,6 +488,8 @@ PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline)
     return PrGpuExtent{uint32_t(size.width), uint32_t(size.height), uint32_t(size.depth)};
 }
 
+#if TARGET_OS_OSX
+
 // Returns the capabilities of the screen that shows most of the view's window, or of the main screen if the view is not
 // in a window. It reads AppKit, so it must be called on the main thread.
 PrAppDisplay displayOf(NSView* view) {
@@ -490,8 +514,17 @@ void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
     layer.wantsExtendedDynamicRangeContent = extended ? YES : NO;
 }
 
+#endif
+
 PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
+#if !TARGET_OS_OSX
+    (void)device;
+    (void)surface;
+    (void)desc;
+    (void)out;
+    return PrStatus_NotSupported;
+#else
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     @autoreleasepool {
         if (surface->kind != PrAppSurfaceKind_NsView)
@@ -525,7 +558,10 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
             layer.contentsGravity = kCAGravityBottomLeft;
         else
             layer.contentsGravity = kCAGravityTopLeft;
-        [d->queue addResidencySet:layer.residencySet];
+        // A bindless device's shaders may reach a drawable by handle, so its queue holds the layer's drawables. On a
+        // device without bindless, a drawable is resident in the encoders that bind it.
+        if (d->bindless)
+            [d->queue addResidencySet:layer.residencySet];
         GpuMetalSwapChain* sc = allocZeroed<GpuMetalSwapChain>();
         static_cast<PrGpuSwapChain&>(*sc) = *d->swapChainFunctions;
         sc->device = device;
@@ -537,6 +573,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         *out = sc;
         return PrStatus_Ok;
     }
+#endif
 }
 
 // Lets go of the acquired drawable's texture, whose slot stays until the work that drew into it is done.
@@ -554,12 +591,40 @@ constexpr PrGpuShaderLibrary kLibraryFunctions = {
     .entriesFn = gpuSharedLibraryEntries,
 };
 
+MTLVertexFormat vertexFormatOf(PrGpuVertexFormat format) {
+    switch (format) {
+        case PrGpuVertexFormat_Float: return MTLVertexFormatFloat;
+        case PrGpuVertexFormat_Float2: return MTLVertexFormatFloat2;
+        case PrGpuVertexFormat_Float3: return MTLVertexFormatFloat3;
+        case PrGpuVertexFormat_Float4: return MTLVertexFormatFloat4;
+        case PrGpuVertexFormat_Half2: return MTLVertexFormatHalf2;
+        case PrGpuVertexFormat_Half4: return MTLVertexFormatHalf4;
+        case PrGpuVertexFormat_Uint: return MTLVertexFormatUInt;
+        case PrGpuVertexFormat_Uint2: return MTLVertexFormatUInt2;
+        case PrGpuVertexFormat_Uint3: return MTLVertexFormatUInt3;
+        case PrGpuVertexFormat_Uint4: return MTLVertexFormatUInt4;
+        case PrGpuVertexFormat_Sint: return MTLVertexFormatInt;
+        case PrGpuVertexFormat_Sint2: return MTLVertexFormatInt2;
+        case PrGpuVertexFormat_Sint3: return MTLVertexFormatInt3;
+        case PrGpuVertexFormat_Sint4: return MTLVertexFormatInt4;
+        case PrGpuVertexFormat_Unorm8x4: return MTLVertexFormatUChar4Normalized;
+        case PrGpuVertexFormat_Snorm8x4: return MTLVertexFormatChar4Normalized;
+        case PrGpuVertexFormat_Uint8x4: return MTLVertexFormatUChar4;
+        case PrGpuVertexFormat_Unorm16x2: return MTLVertexFormatUShort2Normalized;
+        case PrGpuVertexFormat_Unorm16x4: return MTLVertexFormatUShort4Normalized;
+        case PrGpuVertexFormat_Snorm16x2: return MTLVertexFormatShort2Normalized;
+        case PrGpuVertexFormat_Snorm16x4: return MTLVertexFormatShort4Normalized;
+        default: return MTLVertexFormatInvalid;
+    }
+}
+
 } // namespace
 
-void* gpuMetalCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
-    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
+void* gpuMetalCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBufferUsageFlags usage, PrGpuBuffer* buffer,
+        uint64_t* offset) {
+    GpuMetalDevice* d = gpuMetalDeviceFrom(static_cast<GpuSharedCommands*>(commands)->device);
     uint32_t slot = 0;
-    void* bytes = gpuMetalStream(gpuMetalDeviceFrom(device), gpuMetalCommandsFrom(commands), size, &slot, offset);
+    void* bytes = gpuMetalStream(d, gpuMetalCommandsFrom(commands), size, gpuSharedStreamAlignment(d, usage), &slot, offset);
     buffer->id = slot;
     return bytes;
 }
@@ -617,7 +682,8 @@ void gpuMetalSwapChainDestroy(PrGpuSwapChain* handle) {
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     gpuMetalWaitIdle(device);
     releaseDrawable(d, sc);
-    [d->queue removeResidencySet:sc->layer.residencySet];
+    if (d->bindless)
+        [d->queue removeResidencySet:sc->layer.residencySet];
     [sc->layer release];
     prMemoryFree(sc);
 }
@@ -747,6 +813,27 @@ MTLPrimitiveTopologyClass gpuMetalTopologyClass(PrGpuTopology topology) {
     }
 }
 
+MTLVertexDescriptor* PR_NULLABLE gpuMetalVertexDescriptor(const PrGpuVertexLayout& layout) {
+    if (layout.attributeCount == 0)
+        return nil;
+    MTLVertexDescriptor* vd = [MTLVertexDescriptor vertexDescriptor];
+    for (uint32_t i = 0; i < layout.attributeCount; ++i) {
+        const PrGpuVertexAttribute& a = layout.attributes[i];
+        vd.attributes[i].format = vertexFormatOf(a.format);
+        vd.attributes[i].offset = a.offset;
+        vd.attributes[i].bufferIndex = GpuMetalBinding_Vertices + a.buffer;
+    }
+    for (uint32_t i = 0; i < layout.bufferCount; ++i) {
+        MTLVertexBufferLayoutDescriptor* b = vd.layouts[GpuMetalBinding_Vertices + i];
+        b.stride = layout.buffers[i].stride;
+        b.stepFunction = MTLVertexStepFunctionPerVertex;
+        if (layout.buffers[i].step == PrGpuVertexStep_Instance)
+            b.stepFunction = MTLVertexStepFunctionPerInstance;
+        b.stepRate = 1;
+    }
+    return vd;
+}
+
 // The stages of the work that makes accesses.
 MTLStages gpuMetalStages(PrGpuAccessFlags access) {
     MTLStages stages = 0;
@@ -825,12 +912,7 @@ void gpuMetalCollect(GpuMetalDevice* d) {
         }
         switch (h.kind) {
             case GpuMetalHeldKind_StreamBlock:
-                h.block.used = 0;
-                d->streamBlocks.push(h.block);
-                break;
-            case GpuMetalHeldKind_StagingBlock:
-                h.block.used = 0;
-                d->stagingBlocks.push(h.block);
+                blockRecycle(d, h.block);
                 break;
             default:
                 d->heldRecycle(d, h);
@@ -900,12 +982,13 @@ uint32_t gpuMetalPipelineAdd(GpuMetalDevice* d, const GpuMetalPipeline& pipeline
     return id;
 }
 
-void* gpuMetalStream(GpuMetalDevice* d, GpuMetalCommands* c, uint64_t size, uint32_t* slot, uint64_t* offset) {
+void* gpuMetalStream(GpuMetalDevice* d, GpuMetalCommands* c, uint64_t size, uint64_t alignment, uint32_t* slot,
+        uint64_t* offset) {
     GpuMetalBlock* last = c->blocks.count != 0 ? &c->blocks.last() : nullptr;
-    uint64_t at = last != nullptr ? alignUp(last->used, kGpuMetalStreamAlignment) : 0;
+    uint64_t at = last != nullptr ? alignUp(last->used, alignment) : 0;
     if (last == nullptr || at + size > last->buffer.length) {
         prMutexLock(&d->mutex);
-        GpuMetalBlock block = blockTake(d, d->streamBlocks, kGpuMetalStreamBlock, size);
+        GpuMetalBlock block = blockTake(d, size);
         prMutexUnlock(&d->mutex);
         if (block.buffer == nil) {
             // Out of memory loses the device, and the caller writes into memory that the GPU never reads.
@@ -940,6 +1023,7 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
     @autoreleasepool {
         releaseDrawable(d, sc);
 
+#if TARGET_OS_OSX
         // An HDR swap chain follows its window's display, which changes if the window moves to another display or the
         // display's mode changes. AppKit can be read only on the main thread, so an acquire on another thread keeps the
         // choice that was last made on the main thread.
@@ -950,6 +1034,7 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
                 sc->info = info;
             }
         }
+#endif
         CGSize size = CGSizeMake(extent.x, extent.y);
         if (!CGSizeEqualToSize(sc->layer.drawableSize, size))
             sc->layer.drawableSize = size;
@@ -1020,29 +1105,12 @@ void gpuMetalSubmissionRecord(GpuMetalDevice* d, GpuMetalCommands* c, PrGpuFence
     }
 }
 
-GpuMetalDone* PR_NULLABLE gpuMetalUploadsDones(const GpuMetalDevice* d, uint32_t* count) {
-    *count = d->uploadBlocks.count;
-    if (d->uploadBlocks.count == 0)
-        return nullptr;
-    GpuMetalDone* dones = static_cast<GpuMetalDone*>(prMemoryAlloc(sizeof(GpuMetalDone) * d->uploadBlocks.count));
-    for (uint32_t i = 0; i < d->uploadBlocks.count; ++i)
-        dones[i] = GpuMetalDone{.done = stagingDone, .context = d->uploadBlocks.data[i].buffer};
-    return dones;
-}
-
 void gpuMetalUploadsRecord(GpuMetalDevice* d, PrGpuFence fence) {
     for (uint32_t i = 0; i < d->inFlight.count; ++i) {
         if (d->inFlight.data[i].serial == d->uploadSerial)
             d->inFlight.data[i].fence = fence;
     }
-    for (uint32_t i = 0; i < d->uploadBlocks.count; ++i) {
-        d->held.push(GpuMetalHeld{
-            .fence = fence,
-            .kind = GpuMetalHeldKind_StagingBlock,
-            .block = d->uploadBlocks.data[i],
-        });
-    }
-    d->uploadBlocks.clear();
+    gpuSharedStagingSubmitted(&d->staging, fence);
     gpuSharedUploadBatchClear(&d->uploadBatch);
 }
 
@@ -1119,6 +1187,43 @@ void gpuMetalCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline
     }
 }
 
+uint32_t gpuMetalSlotsSetBuffer(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuBuffer buffer,
+        uint64_t offset) {
+    c->slots.buffers[slot] = buffer.id != 0 ? gpuMetalBuffer(d, buffer.id) : nil;
+    c->slots.bufferOffsets[slot] = NSUInteger(offset);
+    return GpuMetalBinding_Buffers + slot;
+}
+
+uint32_t gpuMetalSlotsSetRwBuffer(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuBuffer buffer,
+        uint64_t offset) {
+    uint32_t index = kGpuMetalBufferSlots + slot;
+    c->slots.buffers[index] = buffer.id != 0 ? gpuMetalBuffer(d, buffer.id) : nil;
+    c->slots.bufferOffsets[index] = NSUInteger(offset);
+    return GpuMetalBinding_RwBuffers + slot;
+}
+
+uint32_t gpuMetalSlotsSetTexture(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuTexture texture,
+        PrGpuSampler sampler) {
+    c->slots.textures[GpuMetalTextureBinding_Textures + slot] = texture.id != 0 ? gpuMetalTexture(d, texture.id) : nil;
+    c->slots.samplers[slot] = sampler.id != 0 ? d->samplers[sampler.id] : nil;
+    return GpuMetalTextureBinding_Textures + slot;
+}
+
+uint32_t gpuMetalSlotsSetRwTexture(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuTexture texture) {
+    uint32_t index = GpuMetalTextureBinding_RwTextures + slot;
+    c->slots.textures[index] = texture.id != 0 ? gpuMetalTexture(d, texture.id) : nil;
+    return index;
+}
+
+bool gpuMetalBindingsReadHeaps(NSArray<id<MTLBinding>>* PR_NULLABLE bindings) {
+    for (id<MTLBinding> binding in bindings) {
+        if (binding.used && binding.type == MTLBindingTypeBuffer &&
+                (binding.index == GpuMetalBinding_Resources || binding.index == GpuMetalBinding_Samplers))
+            return true;
+    }
+    return false;
+}
+
 void gpuMetalEncodeCopyTexture(const GpuMetalDevice* d, id encoder, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
     bool is3d = d->resources[source.id].texture.kind == PrGpuTextureKind_3d;
@@ -1173,7 +1278,7 @@ void gpuMetalEncodeUploadCopies(const GpuMetalDevice* d, id encoder) {
     for (uint32_t i = 0; i < copies.count; ++i) {
         const GpuSharedUploadCopy& c = copies.data[i];
         if (c.size != 0)
-            [encoder copyFromBuffer:d->uploadBlocks.data[c.block].buffer sourceOffset:c.source
+            [encoder copyFromBuffer:gpuMetalBuffer(d, d->staging.open.id) sourceOffset:c.source
                 toBuffer:gpuMetalBuffer(d, c.buffer) destinationOffset:c.target size:c.size];
     }
 }
@@ -1197,21 +1302,10 @@ void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags) {
         gpuMetalCommandsFrom(pass->commands)->changed |= flags;
 }
 
-void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
+void gpuMetalDeviceInstall(GpuMetalDevice* d) {
     gpuSharedDeviceInit(d);
-    d->device = device;
     prMutexInit(&d->doneMutex);
     prConditionInit(&d->doneSignal);
-    MTLResidencySetDescriptor* rd = [[MTLResidencySetDescriptor new] autorelease];
-    rd.initialCapacity = 256;
-    d->residency = [device newResidencySetWithDescriptor:rd error:nil];
-    d->resourceHeap = [device newBufferWithLength:kGpuMetalMaxResources * sizeof(uint64_t)
-        options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
-    d->samplerHeap = [device newBufferWithLength:kGpuMetalMaxSamplers * sizeof(uint64_t)
-        options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
-    [d->residency addAllocation:d->resourceHeap];
-    [d->residency addAllocation:d->samplerHeap];
-    [d->residency commit];
     prMutexInit(&d->mutex);
     d->resources =
         static_cast<GpuMetalResource*>(prMemoryAllocZeroed(sizeof(GpuMetalResource) * kGpuMetalMaxResources));
@@ -1222,8 +1316,16 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
     d->nextSampler = 1;
     d->nextPipeline = 1;
     d->serial = 1;
+    d->staging = GpuSharedStaging{
+        .context = d,
+        .makeFn = stagingMake,
+        .freeFn = stagingFree,
+        .submitFn = stagingSubmit,
+        .collectFn = stagingCollect,
+        .idleFn = stagingIdle,
+    };
 
-    d->isLostFn = isLost;
+    d->removed = removed;
     d->simulateLossFn = simulateLoss;
     d->isCompleteFn = isComplete;
     d->waitFn = gpuMetalWait;
@@ -1247,6 +1349,32 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
     d->pipelineGroupSizeFn = pipelineGroupSize;
     d->swapChainCreateFn = swapChainCreate;
     d->shaderTarget = PrGpuShaderTarget_Metal;
+    d->inPlaceImports = 1u << PrGpuImportKind_CoreVideo;
+    d->textureImportInPlace = gpuMetalTextureImport;
+    d->info.maxTextureSize = 16384;
+    d->info.maxBufferSlots = kGpuMetalBufferSlots;
+    d->info.maxRwBufferSlots = kGpuMetalRwBufferSlots;
+    d->info.maxTextureSlots = kGpuMetalTextureSlots;
+    d->info.maxRwTextureSlots = kGpuMetalRwTextureSlots;
+    d->info.storageOffsetAlignment = 16;
+}
+
+void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) {
+    d->device = device;
+    d->bindless = bindless;
+    // Without bindless, the residency set stays null, and the calls that add to it and commit it do nothing.
+    if (bindless) {
+        MTLResidencySetDescriptor* rd = [[MTLResidencySetDescriptor new] autorelease];
+        rd.initialCapacity = 256;
+        d->residency = [device newResidencySetWithDescriptor:rd error:nil];
+    }
+    d->resourceHeap = [device newBufferWithLength:kGpuMetalMaxResources * sizeof(uint64_t)
+        options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
+    d->samplerHeap = [device newBufferWithLength:kGpuMetalMaxSamplers * sizeof(uint64_t)
+        options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
+    [d->residency addAllocation:d->resourceHeap];
+    [d->residency addAllocation:d->samplerHeap];
+    [d->residency commit];
     // The name's UTF-8 lives no longer than the autorelease pool, so the device keeps a copy.
     uint32_t size = prAppleNSStringToUtf8(device.name, d->adapter, uint32_t(sizeof(d->adapter) - 1));
     if (size == 0 || size >= sizeof(d->adapter))
@@ -1254,26 +1382,29 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
     else
         d->adapter[size] = 0;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
-    // Framebuffer fetch on Apple's GPUs reads in raster order.
+    // A pipeline reads its target with framebuffer fetch, which reads in raster order on Apple's GPUs. The iOS
+    // simulator's shader compiler has no framebuffer fetch.
     d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc |
-        PrGpuFeatureFlag_OrderedTargetReads |
+        (bindless ? PrGpuFeatureFlag_Bindless : 0) |
         (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0);
-    d->inPlaceImports = 1u << PrGpuImportKind_CoreVideo;
-    d->textureImportInPlace = gpuMetalTextureImport;
-    d->info.maxTextureSize = 16384;
-    d->info.maxResourceHandles = kGpuMetalMaxResources - 1;
-    d->info.maxSamplerHandles = kGpuMetalMaxSamplers - 1;
+#if !TARGET_OS_SIMULATOR
+    d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads;
+#endif
+    d->info.maxResourceHandles = bindless ? kGpuMetalMaxResources - 1 : 0;
+    d->info.maxSamplerHandles = bindless ? kGpuMetalMaxSamplers - 1 : 0;
 }
 
 void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue) {
     d->queue = queue;
-    [d->queue addResidencySet:d->residency];
+    if (d->residency != nil)
+        [d->queue addResidencySet:d->residency];
 }
 
 void gpuMetalDeviceReset(GpuMetalDevice* d) {
     gpuSharedDeviceReset(d);
     prMutexLock(&d->mutex);
-    gpuMetalCollect(d);
+    if (gpuSharedDeviceIsReady(d))
+        gpuMetalCollect(d);
     for (uint32_t i = 0; i < d->held.count; ++i)
         [d->held.data[i].object release];
     for (uint32_t i = 1; i < d->nextResource; ++i) {
@@ -1287,7 +1418,8 @@ void gpuMetalDeviceReset(GpuMetalDevice* d) {
         [d->pipelines[i].depthStencil release];
     }
     prMutexUnlock(&d->mutex);
-    [d->queue removeResidencySet:d->residency];
+    if (d->residency != nil)
+        [d->queue removeResidencySet:d->residency];
     prMemoryFree(d->resources);
     prMemoryFree(d->samplers);
     prMemoryFree(d->pipelines);
@@ -1297,8 +1429,7 @@ void gpuMetalDeviceReset(GpuMetalDevice* d) {
     d->retired.reset();
     d->held.reset();
     d->streamBlocks.reset();
-    d->stagingBlocks.reset();
-    d->uploadBlocks.reset();
+    gpuSharedStagingReset(&d->staging);
     d->doneAhead.reset();
     gpuSharedUploadBatchReset(&d->uploadBatch);
     [d->resourceHeap release];

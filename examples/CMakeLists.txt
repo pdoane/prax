@@ -74,7 +74,7 @@ pr_example(draw_gallery
     draw_gallery/scenes.cpp
     FONT_FILES "NotoSans[wdth,wght].ttf" "NotoSerif[wdth,wght].ttf" "NotoSansJP-VF.otf"
 )
-target_link_libraries(draw_gallery PRIVATE prax::app prax::draw prax::gpu
+target_link_libraries(draw_gallery PRIVATE prax::app prax::draw prax::gpu prax::task
                                    prax::font prax::locale prax::text prax::core_cpp)
 
 # The video example: a video that lib/media decodes and lib/draw draws. The device imports each frame without a copy
@@ -83,7 +83,7 @@ pr_example(video
     video/main.cpp
     DATA PR_VIDEO_FILE ${PROJECT_SOURCE_DIR}/third_party/videos/cat.mp4
 )
-target_link_libraries(video PRIVATE prax::app prax::draw prax::gpu prax::media prax::core_cpp)
+target_link_libraries(video PRIVATE prax::app prax::draw prax::gpu prax::media prax::task prax::core_cpp)
 
 # The feature drawings: a captioned drawing of each feature of lib/draw's list, and dense workloads that measure its
 # renderers. They are a library of their own, which the application and draw_bench link. Their fonts are the files of
@@ -112,7 +112,7 @@ target_link_libraries(draw_features_drawings PUBLIC prax::app prax::draw prax::f
 
 # The feature drawings in a window, rendered on the GPU and mapped to the display.
 pr_example(draw_features draw_features/main.cpp DATA PR_FONTS_DIR ${PROJECT_SOURCE_DIR}/third_party/fonts)
-target_link_libraries(draw_features PRIVATE draw_features_drawings prax::app prax::draw prax::gpu prax::text
+target_link_libraries(draw_features PRIVATE draw_features_drawings prax::app prax::draw prax::gpu prax::task prax::text
                                             prax::core_cpp)
 
 # The editor example: Studio Kit's widgets and a HUD library of its own over an editor's model, composed in one tree.
@@ -169,7 +169,7 @@ pr_example(perspective
 )
 pr_slang(perspective perspective/perspective_gpu.slang VARIABLE kPerspectiveShaders)
 target_link_libraries(perspective PRIVATE prax::app prax::studio_kit prax::draw
-                                          prax::gpu prax::layout prax::text prax::font_bundle
+                                          prax::gpu prax::layout prax::task prax::text prax::font_bundle
                                           prax::image prax::compress prax::core_cpp)
 
 # The incremental example: Markdown and HTML rendered as they arrive in pieces, beside Kit's controls for the stream.

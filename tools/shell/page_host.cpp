@@ -60,8 +60,8 @@
 #include <string.h>
 #include <vector>
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 
 namespace page_host {
 

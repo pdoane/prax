@@ -55,6 +55,7 @@
 #include "pr/thread.h"
 
 #include "tools/harness/harness.h"
+#include "tools/harness/harness_gpu.h"
 
 #include <algorithm>
 #include <chrono>
@@ -69,8 +70,8 @@
 #include <string>
 #include <vector>
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 
 namespace {
 
@@ -231,7 +232,7 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
         prGpuCommandsTextureBarrier(commands, b.target, PrGpuSubresources{},
             PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
     }
-    gpuMillis += prGpuCommandsSubmitAndWait(commands) * 1000;
+    gpuMillis += gpuSubmitAndWait(commands) * 1000;
     b.presented = now() - started;
 }
 
@@ -247,7 +248,7 @@ bool setUp(Bench& b) {
     PrTextFontDesc defaultFontDesc{.set = b.fonts, .style = prFontStyleDefault()};
     b.font = prTextFontCreate(&defaultFontDesc);
 
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok ||
+    if (gpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok ||
             prDrawFragmentCreate(b.device, nullptr, &b.renderer) != PrStatus_Ok)
         return false;
     b.frame = prDrawFrameCreate(b.renderer);

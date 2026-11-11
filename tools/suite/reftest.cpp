@@ -48,8 +48,8 @@
 #include <utility>
 #include <vector>
 
-using namespace pr;
 using namespace harness;
+using namespace pr;
 using namespace suite;
 
 namespace {

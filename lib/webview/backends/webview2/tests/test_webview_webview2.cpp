@@ -8,6 +8,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 namespace {
@@ -71,13 +73,13 @@ void runBrowser(Browse& b) {
 
 // The path of `name` in the binary's folder (harness::testFolder).
 String tempPath(PrStringView name) {
-    return format("{}\\{}", harness::testFolder(), name);
+    return format("{}\\{}", testFolder(), name);
 }
 
 // Writes `contents` to `name` in the temporary folder (tempPath), and returns its file URL.
 String fileUrl(PrStringView name, PrStringView contents) {
     REQUIRE(prFileWrite(tempPath(name), prStringBytes(contents)));
-    return format("file:///{}/{}", harness::testFolder(), name);
+    return format("file:///{}/{}", testFolder(), name);
 }
 
 // Evaluates `script`, records its answer, and stops the application.
@@ -237,7 +239,7 @@ TEST_CASE("a view prints its page to a PDF") {
         return;
     CHECK(browse.loaded == PrStatus_Ok);
     CHECK(browse.status == PrStatus_Ok);
-    Array<uint8_t> pdf = harness::readFile(tempPath("pr-webview-print.pdf"));
+    Array<uint8_t> pdf = readFile(tempPath("pr-webview-print.pdf"));
     REQUIRE(pdf.count() >= 4);
     CHECK(PrStringView(reinterpret_cast<const char*>(pdf.data()), 4) == "%PDF");
 }

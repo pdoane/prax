@@ -26,14 +26,15 @@
 #include "tools/bench/editor_bench/editor_view.h"
 #include "tools/bench/editor_bench/host.h"
 #include "tools/harness/harness.h"
+#include "tools/harness/harness_gpu.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
-using namespace pr;
-using namespace harness;
 using namespace editor;
 using namespace editor_bench;
+using namespace harness;
+using namespace pr;
 
 namespace {
 
@@ -180,7 +181,7 @@ void runFrame(Run& r) {
     prGpuPassEnd(encoder);
     prGpuCommandsTextureBarrier(commands, r.target, PrGpuSubresources{},
         PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
-    prGpuCommandsSubmitAndWait(commands);
+    gpuSubmitAndWait(commands);
     lap(Stage_Render);
     ++r.runs;
 }
@@ -188,7 +189,7 @@ void runFrame(Run& r) {
 bool open(Run& r, float pixelRatio) {
     r.display.pixelRatio = pixelRatio;
     if (!hostOpen(r.host, PR_FONT_BUNDLE_DIR) ||
-            prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &r.device) != PrStatus_Ok ||
+            gpuDeviceCreate(PrGpuBackend_Default, nullptr, &r.device) != PrStatus_Ok ||
             prDrawFragmentCreate(r.device, nullptr, &r.renderer) != PrStatus_Ok)
         return false;
     r.drawFrame = prDrawFrameCreate(r.renderer);

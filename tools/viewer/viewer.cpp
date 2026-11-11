@@ -74,6 +74,7 @@
 
 #include "tools/harness/compare.h"
 #include "tools/harness/draw_renderers.h"
+#include "tools/harness/harness_gpu.h"
 #include "tools/viewer/documents.h"
 #include "tools/viewer/panes.h"
 #include "tools/viewer/source_html.h"
@@ -94,9 +95,9 @@
 #include <thread>
 #include <vector>
 
-using namespace viewer;
-using namespace pr;
 using namespace harness;
+using namespace pr;
+using namespace viewer;
 
 namespace {
 
@@ -129,7 +130,7 @@ Rendered renderSlotWaiting(PrGpuDevice* device, Slot& slot, const std::vector<Re
     if (!prGpuCommandsBegin(device, nullptr, &commands))
         return Rendered{.status = PrStatus_Lost};
     Rendered r = renderSlot(slot, configs, config, list, background, commands, PaneOutput{});
-    r.gpuMs = prGpuCommandsSubmitAndWait(commands) * 1000;
+    r.gpuMs = gpuSubmitAndWait(commands) * 1000;
     return r;
 }
 
@@ -151,7 +152,7 @@ std::vector<uint8_t> readSlot(const Slot& slot) {
     uint32_t height = prGpuTextureExtent(slot.device, slot.texture).y;
     std::vector<uint8_t> pixels(size_t(width) * height * 4);
     PrPixels texels{pixels.data(), size_t(width) * 4, {width, height}};
-    prGpuTextureRead(slot.device, slot.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, texels);
+    gpuTextureRead(slot.device, slot.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, texels);
     return pixels;
 }
 
@@ -196,7 +197,7 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
         return 1;
     }
     PrGpuDevice* device = nullptr;
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) != PrStatus_Ok) {
+    if (gpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) != PrStatus_Ok) {
         std::fprintf(stderr, "no GPU device\n");
         return 1;
     }
@@ -1119,7 +1120,7 @@ bool openViewer(Viewer& v) {
     PrAppWindow* window = v.window;
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc = swapChainDesc(false);
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &v.device) != PrStatus_Ok ||
+    if (gpuDeviceCreate(PrGpuBackend_Default, nullptr, &v.device) != PrStatus_Ok ||
             prAppWindowSurface(window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(v.device, &surface, &desc, &v.swapChain) != PrStatus_Ok) {
         std::fprintf(stderr, "viewer: no GPU device to present with\n");
@@ -1422,10 +1423,10 @@ PrAppOutput frame(void* context, PrAppWindow* window, const PrAppFrame* frame) {
     bool settled = !running && !printing && v.panes[0]->settled() && (!compare || v.panes[1]->settled()) &&
         !v.browsers[0].busy && !v.browsers[1].busy;
     if (settled && !v.figures.comparing && v.snapshot != nullptr) {
-        prGpuCommandsSubmitAndWait(commands);
+        gpuSubmitAndWait(commands);
         std::vector<uint8_t> pixels(size_t(width) * height * prPixelFormatSize(format));
         PrPixels texels{pixels.data(), size_t(width) * prPixelFormatSize(format), {width, height}};
-        prGpuTextureRead(v.device, v.frame, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, texels);
+        gpuTextureRead(v.device, v.frame, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, texels);
         if (format == PrPixelFormat_RgbaF16)
             pixels = narrowed(prPixelsView(texels));
         if (!writePng(v.snapshot, pixels, width, height))

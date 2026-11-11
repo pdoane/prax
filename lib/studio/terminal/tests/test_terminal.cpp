@@ -382,7 +382,7 @@ struct Term {
 // Returns the binary's folder (harness::testFolder), after writing a file of three lines named `name` in it. The path
 // is normalized, as the terminal's paths are.
 String folderWithFile(PrStringView name) {
-    String folder = String::adopt(prFilePathAbsolute(harness::testFolder(), ""));
+    String folder = String::adopt(prFilePathAbsolute(testFolder(), ""));
     PrStringView text = "one\ntwo\nthree\n";
     REQUIRE(prFileWrite(concat(folder, "/", name), prStringBytes(text)));
     return folder;
@@ -426,7 +426,7 @@ bool near(PrColor8 a, PrColor8 b) {
 
 // Creates and returns the folder `name` in the binary's folder (harness::testFolder).
 String subfolder(PrStringView name) {
-    String folder = concat(harness::testFolder(), "/", name);
+    String folder = concat(testFolder(), "/", name);
     REQUIRE(prFileCreateDirectory(folder));
     return folder;
 }

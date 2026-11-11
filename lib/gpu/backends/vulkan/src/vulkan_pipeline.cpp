@@ -17,6 +17,33 @@ namespace pr_impl {
 
 namespace {
 
+VkFormat vertexFormatOf(PrGpuVertexFormat format) {
+    switch (format) {
+        case PrGpuVertexFormat_Float: return VK_FORMAT_R32_SFLOAT;
+        case PrGpuVertexFormat_Float2: return VK_FORMAT_R32G32_SFLOAT;
+        case PrGpuVertexFormat_Float3: return VK_FORMAT_R32G32B32_SFLOAT;
+        case PrGpuVertexFormat_Float4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case PrGpuVertexFormat_Half2: return VK_FORMAT_R16G16_SFLOAT;
+        case PrGpuVertexFormat_Half4: return VK_FORMAT_R16G16B16A16_SFLOAT;
+        case PrGpuVertexFormat_Uint: return VK_FORMAT_R32_UINT;
+        case PrGpuVertexFormat_Uint2: return VK_FORMAT_R32G32_UINT;
+        case PrGpuVertexFormat_Uint3: return VK_FORMAT_R32G32B32_UINT;
+        case PrGpuVertexFormat_Uint4: return VK_FORMAT_R32G32B32A32_UINT;
+        case PrGpuVertexFormat_Sint: return VK_FORMAT_R32_SINT;
+        case PrGpuVertexFormat_Sint2: return VK_FORMAT_R32G32_SINT;
+        case PrGpuVertexFormat_Sint3: return VK_FORMAT_R32G32B32_SINT;
+        case PrGpuVertexFormat_Sint4: return VK_FORMAT_R32G32B32A32_SINT;
+        case PrGpuVertexFormat_Unorm8x4: return VK_FORMAT_R8G8B8A8_UNORM;
+        case PrGpuVertexFormat_Snorm8x4: return VK_FORMAT_R8G8B8A8_SNORM;
+        case PrGpuVertexFormat_Uint8x4: return VK_FORMAT_R8G8B8A8_UINT;
+        case PrGpuVertexFormat_Unorm16x2: return VK_FORMAT_R16G16_UNORM;
+        case PrGpuVertexFormat_Unorm16x4: return VK_FORMAT_R16G16B16A16_UNORM;
+        case PrGpuVertexFormat_Snorm16x2: return VK_FORMAT_R16G16_SNORM;
+        case PrGpuVertexFormat_Snorm16x4: return VK_FORMAT_R16G16B16A16_SNORM;
+        default: return VK_FORMAT_UNDEFINED;
+    }
+}
+
 // The functions of the device's objects, which their creation installs.
 extern const PrGpuShaderLibrary kLibraryFunctions;
 
@@ -247,8 +274,30 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
             rendering.stencilAttachmentFormat = vulkanFormat(desc->formats.depthStencil);
     }
 
+    // Attribute k is the vertex shader's input at location k.
+    const PrGpuVertexLayout& layout = desc->vertexLayout;
+    VkVertexInputBindingDescription bindings[kPrGpuMaxVertexBuffers]{};
+    for (uint32_t i = 0; i < layout.bufferCount; ++i) {
+        bindings[i] = VkVertexInputBindingDescription{.binding = i, .stride = layout.buffers[i].stride};
+        if (layout.buffers[i].step == PrGpuVertexStep_Instance)
+            bindings[i].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+    }
+    VkVertexInputAttributeDescription attributes[kPrGpuMaxVertexAttributes]{};
+    for (uint32_t i = 0; i < layout.attributeCount; ++i) {
+        const PrGpuVertexAttribute& a = layout.attributes[i];
+        attributes[i] = VkVertexInputAttributeDescription{
+            .location = i,
+            .binding = a.buffer,
+            .format = vertexFormatOf(a.format),
+            .offset = a.offset,
+        };
+    }
     VkPipelineVertexInputStateCreateInfo vertexInput{};
     vertexInput.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInput.vertexBindingDescriptionCount = layout.bufferCount;
+    vertexInput.pVertexBindingDescriptions = bindings;
+    vertexInput.vertexAttributeDescriptionCount = layout.attributeCount;
+    vertexInput.pVertexAttributeDescriptions = attributes;
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = topologyOf(desc->topology);

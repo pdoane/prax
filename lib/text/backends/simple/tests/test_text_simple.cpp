@@ -8,6 +8,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 extern "C" int prTestTextSimpleCApi(void);
 
 namespace pr_impl {
@@ -16,8 +18,8 @@ using namespace pr;
 
 namespace {
 
-Array<uint8_t> readFile(const char* name) {
-    return harness::readFile(format("{}/{}", PR_FONTS_DIR, PrStringView(name)));
+Array<uint8_t> readFont(const char* name) {
+    return readFile(format("{}/{}", PR_FONTS_DIR, PrStringView(name)));
 }
 
 const PrFont* load(const Array<uint8_t>& bytes) {
@@ -136,7 +138,7 @@ TEST_CASE("Latin, Greek and Cyrillic text kerns as HarfBuzz kerns it") {
     };
     for (const char* file : files) {
         CAPTURE(file);
-        Array<uint8_t> bytes = readFile(file);
+        Array<uint8_t> bytes = readFont(file);
         const PrFont* font = load(bytes);
         const char* const texts[] = {"AVATAR To We Ty yo P. LT", "Ταυτότητα ΑΥΤΟ", "Тест ТЬМА Гоу"};
         for (const char* text : texts) {
@@ -152,7 +154,7 @@ TEST_CASE("Latin, Greek and Cyrillic text kerns as HarfBuzz kerns it") {
 TEST_CASE("a variable font kerns at its instance, as HarfBuzz varies its kerning") {
     PrTextShaper* simple = prTextSimpleCreate();
     PrTextShaper* harfbuzz = prTextHarfBuzzCreate();
-    Array<uint8_t> bytes = readFile("NotoSans[wdth,wght].ttf");
+    Array<uint8_t> bytes = readFont("NotoSans[wdth,wght].ttf");
     const PrFont* font = load(bytes);
     const float weights[] = {100.0f, 900.0f};
     for (float weight : weights) {
@@ -171,7 +173,7 @@ TEST_CASE("a variable font kerns at its instance, as HarfBuzz varies its kerning
 
 TEST_CASE("a run without kerning advances by the font's advances alone") {
     PrTextShaper* simple = prTextSimpleCreate();
-    Array<uint8_t> bytes = readFile("NotoSans[wdth,wght].ttf");
+    Array<uint8_t> bytes = readFont("NotoSans[wdth,wght].ttf");
     const PrFont* font = load(bytes);
     PrTextRun run = runOf(font, "AVATAR");
     float kerned = positionsOf(shape(simple, run)).last().x;
@@ -187,7 +189,7 @@ TEST_CASE("a run without kerning advances by the font's advances alone") {
 TEST_CASE("a right-to-left run comes out in visual order, its clusters descending") {
     PrTextShaper* simple = prTextSimpleCreate();
     PrTextShaper* harfbuzz = prTextHarfBuzzCreate();
-    Array<uint8_t> bytes = readFile("NotoSansHebrew[wdth,wght].ttf");
+    Array<uint8_t> bytes = readFont("NotoSansHebrew[wdth,wght].ttf");
     const PrFont* font = load(bytes);
     PrTextRun run = runOf(font, "\xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d");
     run.direction = PrTextDirection_Rtl;
@@ -202,7 +204,7 @@ TEST_CASE("a right-to-left run comes out in visual order, its clusters descendin
 
 TEST_CASE("a font whose GPOS does not kern kerns by its kern table") {
     PrTextShaper* simple = prTextSimpleCreate();
-    Array<uint8_t> ahem = readFile("Ahem.ttf");
+    Array<uint8_t> ahem = readFont("Ahem.ttf");
     const PrFont* plain = load(ahem);
     uint16_t a = prFontCodePointGlyph(plain, 'A');
     uint16_t b = prFontCodePointGlyph(plain, 'B');
@@ -220,7 +222,7 @@ TEST_CASE("a font whose GPOS does not kern kerns by its kern table") {
 
 TEST_CASE("a vertical run stands each glyph at its vertical origin") {
     PrTextShaper* simple = prTextSimpleCreate();
-    Array<uint8_t> bytes = readFile("NotoSansJP-VF.otf");
+    Array<uint8_t> bytes = readFont("NotoSansJP-VF.otf");
     const PrFont* font = load(bytes);
     PrTextRun run = runOf(font, "\xe6\xbc\xa2\xe5\xad\x97");
     run.axis = PrTextAxis_Vertical;

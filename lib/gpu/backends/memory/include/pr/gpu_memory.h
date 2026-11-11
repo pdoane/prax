@@ -19,8 +19,9 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Creates a device. It always succeeds.
-PrStatus prGpuMemoryCreate(PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
+// Creates a device, as prGpuDeviceCreate does. Its creation always succeeds. Null `options` means the defaults, of
+// which only the pool and the ready callback apply.
+PrGpuDevice* prGpuMemoryCreate(const PrGpuDeviceOptions* PR_NULLABLE options);
 
 #if defined(__cplusplus)
 }

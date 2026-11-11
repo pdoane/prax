@@ -42,6 +42,31 @@ VertexOut pulled(uint vertex : SV_VertexID) {
     return out;
 }
 
+// A vertex that the pipeline's vertex layout fetches: its position and color, and its instance's offset.
+struct FetchedVertex {
+    PR_GPU_ATTRIBUTE(float2, position, 0);
+    PR_GPU_ATTRIBUTE(float4, color, 1);
+    PR_GPU_ATTRIBUTE(float2, offset, 2);
+};
+
+struct ColoredOut {
+    float4 position : SV_Position;
+    float4 color : COLOR0;
+};
+
+[shader("vertex")]
+ColoredOut fetched(FetchedVertex vertex) {
+    ColoredOut out;
+    out.position = float4(vertex.position + vertex.offset, 0, 1);
+    out.color = vertex.color;
+    return out;
+}
+
+[shader("fragment")]
+float4 colored(ColoredOut input) : SV_Target {
+    return input.color;
+}
+
 [shader("fragment")]
 float4 solid(VertexOut input) : SV_Target {
     return push.color;
@@ -81,4 +106,41 @@ void doubled(uint3 id : SV_DispatchThreadID) {
     ByteAddressBuffer input = prGpuGet<ByteAddressBuffer>(push.buffer);
     RWByteAddressBuffer output = prGpuGet<RWByteAddressBuffer>(push.output);
     output.Store(id.x * 4, input.Load(id.x * 4) * 2);
+}
+
+// The same shaders over slots, which every device has. The slots are not the first of their kinds, so that a backend
+// that places them at the wrong index fails.
+PR_GPU_BUFFER(ByteAddressBuffer, slotCorners, 1);
+PR_GPU_TEXTURE(Texture2D<float4>, slotImage, 2);
+PR_GPU_BUFFER(ByteAddressBuffer, slotInput, 3);
+PR_GPU_RW_BUFFER(RWByteAddressBuffer, slotOutput, 1);
+PR_GPU_RW_TEXTURE(WTexture2D<float4>, slotWritten, 2);
+
+// A triangle whose corners are read from a Buffer slot.
+[shader("vertex")]
+VertexOut slotPulled(uint vertex : SV_VertexID) {
+    VertexOut out;
+    out.position = float4(slotCorners.Load<float2>(vertex * 8), 0, 1);
+    out.uv = 0;
+    return out;
+}
+
+// The Texture slot, with its sampler.
+[shader("fragment")]
+float4 slotSampled(VertexOut input) : SV_Target {
+    return slotImage.SampleLevel(slotImageSampler, input.uv, 0);
+}
+
+// Each word of a Buffer slot, doubled, into an RwBuffer slot.
+[shader("compute")]
+[numthreads(64, 1, 1)]
+void slotDoubled(uint3 id : SV_DispatchThreadID) {
+    slotOutput.Store(id.x * 4, slotInput.Load(id.x * 4) * 2);
+}
+
+// The push data's color, over the RwTexture slot, which it only writes.
+[shader("compute")]
+[numthreads(8, 8, 1)]
+void slotFilled(uint3 id : SV_DispatchThreadID) {
+    slotWritten.Store(id.xy, push.color);
 }

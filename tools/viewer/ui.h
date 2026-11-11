@@ -19,7 +19,7 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace viewer {
 
-using harness::ImageDifference;
+using namespace harness;
 
 // What the documents' area shows: the first pane alone, or both panes compared.
 enum { View_Single, View_Compare };
@@ -135,12 +135,12 @@ struct Ui;
 
 // Shows the family's renderer in the pane, in the configuration that the pane last showed, and remembers the current
 // family's configuration.
-void chooseFamily(PaneChoice& pane, const std::vector<harness::RendererConfig>& configs, uint32_t family);
+void chooseFamily(PaneChoice& pane, const std::vector<RendererConfig>& configs, uint32_t family);
 
 // Returns the pane's name: Prax's configuration, or the reference's name. `references` are the shown document's. The
 // name of Prax, or of the browser showing the document's page, says "(print)" if `media` is print, the media that the
 // pane renders the document for (paneMedia).
-std::string paneName(const PaneChoice& pane, const std::vector<harness::RendererConfig>& configs,
+std::string paneName(const PaneChoice& pane, const std::vector<RendererConfig>& configs,
     const std::vector<Reference>& references, page_host::Media media);
 
 // Returns the media that the pane renders the document of `source` for: its choice for a source that the engine prints,
@@ -163,7 +163,7 @@ bool uiEvent(Ui* ui, const PrAppEvent& event);
 // Lays out the controls for the frame, and applies what they changed to `choices`. `pageKeys` is true while a page
 // holds the keyboard, so that the controls give up focus. `references` are the shown document's own references. Returns
 // the rectangle left for documents, in logical pixels.
-PrRect uiLayout(Ui* ui, const PrAppFrame* frame, bool pageKeys, const std::vector<harness::RendererConfig>& configs,
+PrRect uiLayout(Ui* ui, const PrAppFrame* frame, bool pageKeys, const std::vector<RendererConfig>& configs,
     const std::vector<Reference>& references, const Figures& figures, Choices& choices);
 
 // The cursor that the controls show at the pointer.

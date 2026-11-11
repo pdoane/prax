@@ -33,10 +33,8 @@ struct ImGuiGpu {
 struct ImGuiGpuPush {
     float scale[2];
     float translate[2];
-    uint32_t vertices;
     uint32_t offset;
-    uint32_t texture;
-    uint32_t sampler;
+    uint32_t _pad;
 };
 
 ImGuiGpu* backendOf() {
@@ -176,14 +174,18 @@ void imguiGpuRender(ImDrawData* data, PrGpuPass* pass) {
     PrGpuPipeline pipeline = pipelineFor(g, prGpuPassFormats(pass).color[0]);
     if (pipeline.id == 0)
         return;
-    // The vertices, then the indices, in the stream.
+    // The vertices, which the vertex shader reads through Buffer slot 0, then the indices, in one buffer of the stream.
+    // The lists' vertices and indices are copied in below.
     PrGpuCommands* commands = prGpuPassCommands(pass);
-    uint64_t vertexBytes = uint64_t(data->TotalVtxCount) * sizeof(ImDrawVert);
-    uint64_t indexAt = (vertexBytes + 255) / 256 * 256;
-    uint64_t indexBytes = uint64_t(data->TotalIdxCount) * sizeof(ImDrawIdx);
+    const PrByteView parts[2] = {
+        PrByteView{nullptr, size_t(data->TotalVtxCount) * sizeof(ImDrawVert)},
+        PrByteView{nullptr, size_t(data->TotalIdxCount) * sizeof(ImDrawIdx)},
+    };
     PrGpuBuffer buffer{};
-    uint64_t offset = 0;
-    uint8_t* bytes = static_cast<uint8_t*>(prGpuCommandsStream(commands, indexAt + indexBytes + 16, &buffer, &offset));
+    uint64_t offsets[2];
+    uint8_t* bytes = static_cast<uint8_t*>(prGpuCommandsStreamGather(commands, parts, 2,
+        PrGpuBufferUsageFlag_Storage | PrGpuBufferUsageFlag_Index, &buffer, offsets));
+    uint64_t indexAt = offsets[1] - offsets[0];
     uint64_t vertexAt = 0;
     uint64_t indexOffset = indexAt;
     for (const ImDrawList* list : data->CmdLists) {
@@ -193,14 +195,13 @@ void imguiGpuRender(ImDrawData* data, PrGpuPass* pass) {
         indexOffset += uint64_t(list->IdxBuffer.Size) * sizeof(ImDrawIdx);
     }
     prGpuCommandsSetPipeline(commands, pipeline);
-    prGpuPassSetIndexBuffer(pass, buffer, offset + indexAt, sizeof(ImDrawIdx) == 4);
+    prGpuCommandsSetBuffer(commands, 0, buffer, offsets[0]);
+    prGpuPassSetIndexBuffer(pass, buffer, offsets[1], sizeof(ImDrawIdx) == 4);
     prGpuPassSetViewport(pass, PrRect{0, 0, float(width), float(height)}, 0, 1);
     // Clip space from the display's coordinates, with y up.
     ImGuiGpuPush push{
         {2 / data->DisplaySize.x, -2 / data->DisplaySize.y},
         {-1 - data->DisplayPos.x * 2 / data->DisplaySize.x, 1 + data->DisplayPos.y * 2 / data->DisplaySize.y},
-        buffer.id,
-        0,
         0,
         0,
     };
@@ -228,9 +229,8 @@ void imguiGpuRender(ImDrawData* data, PrGpuPass* pass) {
             if (right <= left || bottom <= top || cmd.ElemCount == 0 || texture == ImTextureID_Invalid)
                 continue;
             prGpuPassSetScissor(pass, PrIRect{int32_t(left), int32_t(top), int32_t(right), int32_t(bottom)});
-            push.offset = uint32_t(offset + (listVertices + cmd.VtxOffset) * sizeof(ImDrawVert));
-            push.texture = uint32_t(texture);
-            push.sampler = g->sampler;
+            push.offset = uint32_t((listVertices + cmd.VtxOffset) * sizeof(ImDrawVert));
+            prGpuCommandsSetTexture(commands, 0, PrGpuTexture{uint32_t(texture)}, PrGpuSampler{g->sampler});
             prGpuCommandsSetPush(commands, &push, sizeof(push));
             prGpuPassDrawIndexed(pass, cmd.ElemCount, 1, uint32_t(listIndices + cmd.IdxOffset), 0, 0);
         }

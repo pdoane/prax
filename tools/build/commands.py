@@ -15,32 +15,34 @@ from tools.lint import commands as lint
 
 USAGE = {
     "build": """\
-./dev.sh build [debug|release|asan|tsan] [wasm|ios] [--lean] [--configure | --keep-going] [--target NAME]...
+./dev.sh build [debug|release|asan|tsan] [wasm|ios|ios-sim] [--lean] [--configure | --keep-going] [--target NAME]...
     configure and build a configuration for a platform, the host's by default. The default configuration is optimized,
     with debug symbols and without link-time optimization. `debug` builds without the optimizer and with the assertions.
     `release` adds link-time optimization. `asan` is Debug with the address and undefined behavior sanitizers, and
     `tsan` is Debug with the thread sanitizer. `wasm` compiles to WebAssembly with Emscripten, which it fetches into
-    third_party/emsdk, and `ios` for iOS devices with Xcode's iOS SDK, on macOS, each in the default configuration or
-    `debug`, as in ./dev.sh build debug wasm. --lean builds the lean form, for a machine that only tests: no tools,
-    comparisons or examples, one font bundle, and ccache where it is installed (tools/build/build.py). --configure
-    configures and builds nothing, which fetches everything that the build and its tests read. --keep-going builds past
-    a failure and reports every error. --target builds only the targets named, and what they need""",
+    third_party/emsdk, `ios` for iOS devices with Xcode's iOS SDK, on macOS, and `ios-sim` for the iOS simulator, each
+    in the default configuration or `debug`, as in ./dev.sh build debug wasm. --lean builds the lean form, for a
+    machine that only tests: no tools, comparisons or examples, one font bundle, and ccache where it is installed
+    (tools/build/build.py). --configure configures and builds nothing, which fetches everything that the build and its
+    tests read. --keep-going builds past a failure and reports every error. --target builds only the targets named, and
+    what they need""",
     "test": """\
-./dev.sh test [debug|asan|tsan] [wasm] [module] [args...]
+./dev.sh test [debug|asan|tsan] [wasm|ios-sim] [module] [args...]
     the unit tests and the tools' tests against that build's harnesses, with lint beside them, or one module's doctest
     binary with args, as in ./dev.sh test dom -ts="*keyword*" --success, from that build, which builds only that binary.
     With doctest's options and no module, as in ./dev.sh test -tc="*flood*", every binary runs the cases that the
     options choose (tools/build/unit_tests.py). `wasm` runs the unit tests under Node.js, then the page tests
     (pr_page_tests) in headless Chrome, and not the tools' tests, whose harnesses are the host's. A module's page tests
-    are named <module>_page, as in ./dev.sh test wasm draw_page""",
+    are named <module>_page, as in ./dev.sh test wasm draw_page. `ios-sim` runs the unit tests on a simulator device,
+    the one that PR_SIMULATOR_DEVICE names or else the booted one or the first iPhone, and not the tools' tests""",
     "ci": """\
-./dev.sh ci [--configure | --key] [default|debug|asan]... [macos|windows|linux|wasm|ios]...
+./dev.sh ci [--configure | --key] [default|debug|asan]... [macos|windows|linux|wasm|ios|ios-sim]...
     whether the tree is in a good state on this machine: lint beside each configuration of each platform named, each run
     past the failures of the others, and then a table of their outcomes, as in ./dev.sh ci debug ios. With no
     configuration named, they are the default and debug, and with no platform named, every platform that the machine
-    checks: its own, and on macOS WebAssembly and iOS too. Each runs the build's unit tests, with the tools' tests on
-    the host's platform and the page tests on WebAssembly, except iOS, whose tests are built and not run. `asan` is the
-    host's alone. Each build is its lean form, which fetches only what its tests read (./dev.sh build --lean), and
+    checks: its own, and on macOS WebAssembly and iOS too, and the iOS simulator only when it is named. Each runs the
+    build's unit tests, with the tools' tests on the host's platform and the page tests on WebAssembly, except iOS,
+    whose tests are built and not run. `asan` is the host's alone. Each build is its lean form, which fetches only what its tests read (./dev.sh build --lean), and
     builds past a compile error, so that it reports every error (./dev.sh build --keep-going). --configure configures
     each build and fetches what lint reads, and builds and runs nothing: everything that the run fetches, which CI
     caches before it runs (.github/workflows/ci.yml). In CI, where third_party then holds what the run fetched and
@@ -103,13 +105,13 @@ def unit_tests(mode=None, lean=False, keep_going=False):
         for name in sorted(os.listdir(chosen.directory)):
             if name.endswith("_page_tests.html"):
                 run_page_tests(os.path.join(chosen.directory, name), [])
-    else:
+    elif not chosen.simulator:
         lint.tools_tests(chosen.environment())
 
 
 def test(argv):
     dev.usage(argv, USAGE["test"])
-    mode = builds.take_mode(argv, ("debug", "asan", "tsan"), ("wasm",))
+    mode = builds.take_mode(argv, ("debug", "asan", "tsan"), ("wasm", "ios-sim"))
     if not argv:
         # The whole run lints beside the build.
         lint.beside(lambda: unit_tests(mode))
@@ -127,7 +129,7 @@ def test(argv):
     if chosen.wasm and os.path.exists(page):
         run_page_tests(page, args)
         return
-    binary = dev.executable(chosen.directory, module + "_tests", chosen.wasm)
+    binary = dev.executable(chosen.directory, module + "_tests", chosen.wasm, chosen.ios)
     if not os.path.exists(binary):
         suffix = ".js" if chosen.wasm else ""
         endings = ["_tests" + suffix] + (["_tests.html"] if chosen.wasm else [])
@@ -136,6 +138,8 @@ def test(argv):
         dev.fail("no unit tests named %s; one of: %s" % (module, " ".join(names)))
     if chosen.wasm:
         dev.run([emsdk.node(), binary, *args])
+    elif chosen.simulator:
+        dev.run([sys.executable, builds.SIMULATOR_RUNNER, binary, *args])
     elif module in NETWORK_MODULES:
         dev.python("tools.harness.net_peer", binary, *args)
     else:
@@ -148,7 +152,13 @@ CI_CONFIGURATIONS = ("default", "debug", "asan")
 CI_DEFAULT_CONFIGURATIONS = ("default", "debug")
 
 # The names of the platforms in the run's steps.
-PLATFORM_NAMES = {"macos": "macOS", "windows": "Windows", "linux": "Linux", "wasm": "wasm", "ios": "iOS"}
+PLATFORM_NAMES = {
+    "macos": "macOS", "windows": "Windows", "linux": "Linux", "wasm": "wasm", "ios": "iOS", "ios-sim": "iOS simulator",
+}
+
+# The platforms other than the host's that ./dev.sh ci checks on macOS when none is named. The simulator's tests run on
+# a simulator device, which a run checks only when it names the platform.
+CI_DEFAULT_CROSS_PLATFORMS = ("wasm", "ios")
 
 
 def ci(argv):
@@ -171,7 +181,7 @@ def ci(argv):
             dev.fail("%s builds on %s alone" % (platform, PLATFORM_NAMES[platform]))
     # Emscripten's SDK is two gigabytes, which a check of the web's build on one platform is enough to fetch.
     named = bool(platforms)
-    platforms = platforms or [host] + (list(builds.CROSS_PLATFORMS) if dev.darwin() else [])
+    platforms = platforms or [host] + (list(CI_DEFAULT_CROSS_PLATFORMS) if dev.darwin() else [])
     # Each step's name, its build, and its work, for each platform and configuration that has a build.
     steps = []
     for platform in platforms:

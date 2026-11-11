@@ -28,13 +28,17 @@
 
 namespace pr_impl {
 
-// How a pipeline draws: painting blended over the destination, painting that reads the destination, a filter step that
-// replaces the destination, or basic instances blended over the destination (FragmentInstanceFlag_Basic).
+// How a pipeline draws: painting blended over the destination, painting that reads the destination from the target, a
+// filter step that replaces the destination, basic instances blended over the destination (FragmentInstanceFlag_Basic),
+// painting that reads the destination from a snapshot of the layer, or painting that replaces the destination
+// (FragmentInstanceFlag_Writes).
 enum {
     FragmentMode_Blend,
     FragmentMode_Read,
     FragmentMode_Filter,
     FragmentMode_Basic,
+    FragmentMode_Snapshot,
+    FragmentMode_Write,
     FragmentMode_Count,
 };
 typedef uint8_t FragmentMode;
@@ -45,6 +49,8 @@ constexpr const char* kFragmentEntries[FragmentMode_Count] = {
     "fragmentBlend",
     "filterStep",
     "fragmentShadeBasic",
+    "fragmentBlendSnapshot",
+    "fragmentShade",
 };
 
 struct FragmentPipeline {
@@ -140,6 +146,7 @@ struct FragmentFrameState {
 struct FragmentDevice {
     PrGpuDevice* device;
     PrGpuShaderLibrary* library;
+    bool targetReads;               // the device reads the target (PrGpuFeatureFlag_TargetReads)
     bool orderedReads;              // the device's reads of the target are ordered within a draw
     uint32_t samplers[kFragmentSamplers];
     RawArray<FragmentPipeline> pipelines;
@@ -300,43 +307,6 @@ PrIRect intersection(const PrIRect& a, const PrIRect& b) {
     return c;
 }
 
-// The pixels of the pass's attachment that the instance can draw, within `limit`: the bounds of its corners, moved by
-// `offset` from the target's pixels to the attachment's, and widened by a pixel. An instance whose corners are not
-// finite may draw anywhere within `limit`.
-PrIRect instancePixels(const FragmentInstance& i, const float offset[2], const PrIRect& limit) {
-    PrVec2 corners[4];
-    uint32_t count = 0;
-    if ((i.flags & FragmentInstanceFlag_Coverage) == FragmentCoverage_Triangle) {
-        for (uint32_t k = 0; k < 3; ++k)
-            corners[count++] = i.corners[k];
-    } else {
-        const PrAffine2& m = i.transform;
-        const float xs[2] = {i.bounds.left, i.bounds.right};
-        const float ys[2] = {i.bounds.top, i.bounds.bottom};
-        for (float y : ys) {
-            for (float x : xs)
-                corners[count++] = PrVec2{m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f};
-        }
-    }
-    float lo[2] = {corners[0].x, corners[0].y};
-    float hi[2] = {corners[0].x, corners[0].y};
-    for (uint32_t k = 0; k < count; ++k) {
-        const float p[2] = {corners[k].x, corners[k].y};
-        for (uint32_t axis = 0; axis < 2; ++axis) {
-            // A comparison with NaN is false, so a corner that is not finite fails both tests and the limit stands.
-            if (!(p[axis] > -1e9f && p[axis] < 1e9f))
-                return limit;
-            lo[axis] = p[axis] < lo[axis] ? p[axis] : lo[axis];
-            hi[axis] = p[axis] > hi[axis] ? p[axis] : hi[axis];
-        }
-    }
-    PrIRect box{
-        int32_t(prF32Floor(lo[0] + offset[0])) - 1, int32_t(prF32Floor(lo[1] + offset[1])) - 1,
-        int32_t(prF32Ceil(hi[0] + offset[0])) + 1, int32_t(prF32Ceil(hi[1] + offset[1])) + 1,
-    };
-    return intersection(box, limit);
-}
-
 // The number of target pixels that a run of basic instances must cover to draw on its own with the basic pipeline. A
 // smaller run draws with the instances around it in the blend pipeline. One draw costs the CPU about as much as the
 // basic pipeline saves the GPU over tens of thousands of pixels. The threshold keeps a list that alternates between
@@ -414,11 +384,24 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
     PrIRect rects[kReadBatchMax];
     uint32_t start = fp.first;
     uint32_t end = fp.first + fp.count;
+    constexpr FragmentInstanceFlags kRun = FragmentInstanceFlag_ReadsDestination | FragmentInstanceFlag_Writes;
     while (start < end) {
-        bool reads = (frame->instances[start].flags & FragmentInstanceFlag_ReadsDestination) != 0;
+        FragmentInstanceFlags kind = frame->instances[start].flags & kRun;
+        bool reads = (kind & FragmentInstanceFlag_ReadsDestination) != 0;
         uint32_t stop = start + 1;
-        while (stop < end && ((frame->instances[stop].flags & FragmentInstanceFlag_ReadsDestination) != 0) == reads)
+        while (stop < end && (frame->instances[stop].flags & kRun) == kind)
             ++stop;
+        if ((kind & FragmentInstanceFlag_Writes) != 0) {
+            PrGpuPipeline pipeline = pipelineFor(d, format, FragmentMode_Write);
+            if (pipeline.id != 0) {
+                prGpuCommandsSetPipeline(commands, pipeline);
+                push.first = start;
+                prGpuCommandsSetPush(commands, &push, sizeof(push));
+                prGpuPassDraw(pass, 4, stop - start, 0, 0);
+            }
+            start = stop;
+            continue;
+        }
         if (!reads) {
             // Alternates draws between the basic pipeline and the blend pipeline, which shades every kind of instance.
             while (start < stop) {
@@ -447,15 +430,14 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
             }
             continue;
         }
-        PrGpuPipeline pipeline = pipelineFor(d, format, FragmentMode_Read);
-        if (pipeline.id == 0)
-            pipeline = pipelineFor(d, format, FragmentMode_Blend);
+        bool snapshot = fp.snapshot != 0;
+        PrGpuPipeline pipeline = pipelineFor(d, format, snapshot ? FragmentMode_Snapshot : FragmentMode_Read);
         if (pipeline.id == 0) {
             start = stop;
             continue;
         }
         prGpuCommandsSetPipeline(commands, pipeline);
-        if (d->orderedReads) {
+        if (snapshot || d->orderedReads) {
             push.first = start;
             prGpuCommandsSetPush(commands, &push, sizeof(push));
             prGpuPassDraw(pass, 4, stop - start, 0, 0);
@@ -468,7 +450,7 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
             uint32_t count = 0;
             PrIRect bounds{};
             while (batch < stop && count < kReadBatchMax) {
-                PrIRect rect = instancePixels(frame->instances[batch], offset, limit);
+                PrIRect rect = fragmentInstancePixels(frame->instances[batch], PrVec2{offset[0], offset[1]}, limit);
                 bool overlaps = false;
                 for (uint32_t k = 0; k < count && !overlaps; ++k)
                     overlaps = rectsOverlap(rect, rects[k]);
@@ -494,6 +476,28 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
         }
         prGpuPassSetScissor(pass, scissor);
     }
+}
+
+// Copies the box of a copy pass from its layer into its snapshot layer, between the passes that draw into the layer.
+// Both are read by fragments between passes, and at the same place, so a texel of one is the texel of the other.
+void copySnapshot(FragmentDevice* d, const FragmentFrame* frame, const FragmentFrameState& state, const FragmentPass& fp,
+        PrGpuTexture layer, PrGpuCommands* commands) {
+    PrGpuTexture snapshot = layerTexture(d, state, fp.copy - 1);
+    const FragmentLayer& l = frame->layers[fp.layer - 1];
+    PrIRect box = intersection(fp.box, PrIRect{
+        l.origin.x, l.origin.y, int32_t(int64_t(l.origin.x) + l.extent.x), int32_t(int64_t(l.origin.y) + l.extent.y),
+    });
+    if (snapshot.id == 0 || box.right <= box.left || box.bottom <= box.top)
+        return;
+    PrGpuSubresources all{};
+    PrGpuTextureRegion region = prGpuTextureRegion2d(
+        PrUVec2{uint32_t(box.left - l.origin.x), uint32_t(box.top - l.origin.y)},
+        PrUVec2{uint32_t(box.right - box.left), uint32_t(box.bottom - box.top)});
+    prGpuCommandsTextureBarrier(commands, layer, all, PrGpuAccessFlag_FragmentRead, PrGpuAccessFlag_CopyRead);
+    prGpuCommandsTextureBarrier(commands, snapshot, all, PrGpuAccessFlag_FragmentRead, PrGpuAccessFlag_CopyWrite);
+    prGpuCommandsCopyTexture(commands, layer, &region, snapshot, &region);
+    prGpuCommandsTextureBarrier(commands, layer, all, PrGpuAccessFlag_CopyRead, PrGpuAccessFlag_FragmentRead);
+    prGpuCommandsTextureBarrier(commands, snapshot, all, PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_FragmentRead);
 }
 
 // Carries out the frame's texture requests: textures created and written by uploads, which the frame's commands read,
@@ -554,56 +558,47 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
 // with where they are.
 void writeData(const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE beneath, PrGpuTexture hostBeneath,
         uint32_t beneathId, PrGpuCommands* commands, FragmentFrameState* state) {
-    struct Source {
-        const void* PR_NULLABLE bytes;
-        size_t size;
+    auto view = [](const void* PR_NULLABLE bytes, size_t size) {
+        return PrByteView{static_cast<const uint8_t*>(bytes), size};
     };
-    const Source sources[FragmentPart_Count] = {
-        {frame->instances, sizeof(FragmentInstance) * frame->instanceCount},
-        {frame->clips, sizeof(FragmentClip) * frame->clipCount},
-        {frame->paints, sizeof(FragmentPaint) * frame->paintCount},
-        {frame->clipShapes, sizeof(uint32_t) * frame->clipShapeCount},
-        {frame->shapes, sizeof(FragmentClipShape) * frame->shapeCount},
-        {frame->values, sizeof(float) * frame->valueCount},
-        {frame->rampColors, sizeof(PrColor16) * frame->rampColorCount},
-        {frame->coverage, frame->coverageCount},
-        {frame->tileData, sizeof(float) * frame->tileDataCount},
-        {frame->pieces, sizeof(FragmentPiece) * frame->pieceCount},
-        {frame->maps, sizeof(FragmentMap) * frame->mapCount},
-        {frame->mapData, sizeof(float) * frame->mapDataCount},
-        {frame->mapIndices, sizeof(uint32_t) * frame->mapIndexCount},
-        {nullptr, sizeof(uint32_t) * frame->textureCount},
-        {frame->textures, sizeof(FragmentTexture) * frame->textureCount},
-        {frame->filters, sizeof(FragmentFilter) * frame->filterCount},
-        {frame->filterData, sizeof(float) * frame->filterDataCount},
-        {frame->rampPieces, sizeof(PrDrawRampPiece) * frame->rampPieceCount},
-        {frame->rampTables, sizeof(PrColor16) * (kFragmentRampResolution + 1) * frame->rampCount},
-        {frame->rampCells, sizeof(uint32_t) * (kFragmentRampResolution + 2) * frame->rampCount},
+    // The table of texture handles is written below, once its place is known.
+    const PrByteView parts[FragmentPart_Count] = {
+        view(frame->instances, sizeof(FragmentInstance) * frame->instanceCount),
+        view(frame->clips, sizeof(FragmentClip) * frame->clipCount),
+        view(frame->paints, sizeof(FragmentPaint) * frame->paintCount),
+        view(frame->clipShapes, sizeof(uint32_t) * frame->clipShapeCount),
+        view(frame->shapes, sizeof(FragmentClipShape) * frame->shapeCount),
+        view(frame->values, sizeof(float) * frame->valueCount),
+        view(frame->rampColors, sizeof(PrColor16) * frame->rampColorCount),
+        view(frame->coverage, frame->coverageCount),
+        view(frame->tileData, sizeof(float) * frame->tileDataCount),
+        view(frame->pieces, sizeof(FragmentPiece) * frame->pieceCount),
+        view(frame->maps, sizeof(FragmentMap) * frame->mapCount),
+        view(frame->mapData, sizeof(float) * frame->mapDataCount),
+        view(frame->mapIndices, sizeof(uint32_t) * frame->mapIndexCount),
+        view(nullptr, sizeof(uint32_t) * frame->textureCount),
+        view(frame->textures, sizeof(FragmentTexture) * frame->textureCount),
+        view(frame->filters, sizeof(FragmentFilter) * frame->filterCount),
+        view(frame->filterData, sizeof(float) * frame->filterDataCount),
+        view(frame->rampPieces, sizeof(PrDrawRampPiece) * frame->rampPieceCount),
+        view(frame->rampTables, sizeof(PrColor16) * (kFragmentRampResolution + 1) * frame->rampCount),
+        view(frame->rampCells, sizeof(uint32_t) * (kFragmentRampResolution + 2) * frame->rampCount),
     };
-    uint32_t at[FragmentPart_Count];
-    uint64_t total = 0;
-    for (uint32_t part = 0; part < FragmentPart_Count; ++part) {
-        at[part] = uint32_t(total);
-        total += (sources[part].size + 15) / 16 * 16;
-    }
     PrGpuBuffer buffer{};
-    uint64_t offset = 0;
-    uint8_t* bytes = static_cast<uint8_t*>(prGpuCommandsStream(commands, total != 0 ? total : 16, &buffer, &offset));
-    for (uint32_t part = 0; part < FragmentPart_Count; ++part) {
-        if (sources[part].bytes != nullptr && sources[part].size != 0)
-            prMemCopy(bytes + at[part], sources[part].bytes, sources[part].size);
-        state->uniforms.parts[part] = uint32_t(offset) + at[part];
-    }
+    uint64_t offsets[FragmentPart_Count];
+    uint8_t* bytes = static_cast<uint8_t*>(prGpuCommandsStreamGather(commands, parts, FragmentPart_Count, 0, &buffer, offsets));
+    for (uint32_t part = 0; part < FragmentPart_Count; ++part)
+        state->uniforms.parts[part] = uint32_t(offsets[part]);
     state->uniforms.data = buffer.id;
     // The host's texture beneath the render is placed so that its texels line up with the target's pixels.
-    FragmentTexture* entries = reinterpret_cast<FragmentTexture*>(bytes + at[FragmentPart_Entries]);
+    FragmentTexture* entries = reinterpret_cast<FragmentTexture*>(bytes + (offsets[FragmentPart_Entries] - offsets[0]));
     for (uint32_t i = 0; i < frame->textureCount && hostBeneath.id != 0 && beneathId != 0; ++i) {
         if (entries[i].texture == beneathId && entries[i].hostTexture == 0) {
             entries[i].origin = -beneath->origin;
             entries[i].extent = beneath->extent;
         }
     }
-    uint32_t* table = reinterpret_cast<uint32_t*>(bytes + at[FragmentPart_Table]);
+    uint32_t* table = reinterpret_cast<uint32_t*>(bytes + (offsets[FragmentPart_Table] - offsets[0]));
     for (uint32_t i = 0; i < state->textures.count; ++i)
         table[i] = state->textures.data[i].id;
 }
@@ -612,6 +607,9 @@ void writeData(const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE bene
 
 PrStatus fragmentDeviceCreate(PrGpuDevice* device, FragmentDevice* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
+    // The renderer's shaders reach its resources by handle.
+    if ((prGpuDeviceInfo(device).features & PrGpuFeatureFlag_Bindless) == 0)
+        return PrStatus_NotSupported;
     PrGpuShaderLibrary* library = nullptr;
     PrStatus status = prGpuShaderLibraryCreate(device, kDrawFragmentShaders, sizeof(kDrawFragmentShaders), &library);
     if (status != PrStatus_Ok)
@@ -619,7 +617,9 @@ PrStatus fragmentDeviceCreate(PrGpuDevice* device, FragmentDevice* PR_NULLABLE* 
     FragmentDevice* d = allocZeroed<FragmentDevice>();
     d->device = device;
     d->library = library;
-    d->orderedReads = (prGpuDeviceInfo(device).features & PrGpuFeatureFlag_OrderedTargetReads) != 0;
+    PrGpuFeatureFlags features = prGpuDeviceInfo(device).features;
+    d->targetReads = (features & PrGpuFeatureFlag_TargetReads) != 0;
+    d->orderedReads = (features & PrGpuFeatureFlag_OrderedTargetReads) != 0;
     const PrGpuAddress modes[4] = {PrGpuAddress_Clamp, PrGpuAddress_Repeat, PrGpuAddress_Mirror, PrGpuAddress_Border};
     for (uint32_t i = 0; i < kFragmentSamplers; ++i) {
         bool anisotropic = i >= 16;
@@ -648,6 +648,10 @@ void fragmentDeviceDestroy(FragmentDevice* PR_NULLABLE device) {
     d->pipelines.reset();
     prGpuShaderLibraryDestroy(d->library);
     prMemoryFree(d);
+}
+
+bool fragmentDeviceReadsTarget(const FragmentDevice* device) {
+    return device->targetReads;
 }
 
 void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* commands,
@@ -720,6 +724,12 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
             prGpuCommandsGenerateMipmaps(commands, layer, PrGpuAccessFlag_FragmentRead);
             continue;
         }
+        if (fp.copy != 0) {
+            copySnapshot(d, frame, *state, fp, layer, commands);
+            continue;
+        }
+        if (fp.snapshot != 0)
+            prGpuCommandsSetTexture(commands, 0, layerTexture(d, *state, fp.snapshot - 1), PrGpuSampler{});
         prGpuCommandsTextureBarrier(commands, layer, all, PrGpuAccessFlag_FragmentRead,
             PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc desc = prGpuPassDescColor(layer, fp.clear ? PrGpuLoad_Clear : PrGpuLoad_Keep, PrColor{});

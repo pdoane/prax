@@ -8,6 +8,7 @@
 
 #include "pr/font_subset.h"
 
+#include "pr/align.h"
 #include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/mem.h"
@@ -153,7 +154,7 @@ void writeSfnt(RawArray<SubsetTable>& tables, PrFontWriteFn write, void* PR_NULL
         put32(file, t.bytes.count);
         if (t.tag == kTagHead)
             head = offset;
-        offset += (t.bytes.count + 3) & ~3u;
+        offset += alignUp(t.bytes.count, 4);
     }
     for (uint32_t i = 0; i < count; ++i) {
         const SubsetTable& t = tables.data[i];

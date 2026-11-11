@@ -2,6 +2,7 @@
 
 #include "pr/checksum.h"
 
+#include "pr/align.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
 
@@ -112,7 +113,7 @@ void prSha1Digest(PrByteView bytes, uint8_t out[PR_NONNULL kPrSha1Bytes]) {
     uint32_t state[5] = {0x67452301u, 0xefcdab89u, 0x98badcfeu, 0x10325476u, 0xc3d2e1f0u};
     // The message is padded with a one bit, zeros, and its length in bits, to a whole number of 64-byte blocks.
     uint64_t total = bytes.size + 9;
-    uint64_t padded = (total + 63) / 64 * 64;
+    uint64_t padded = alignUp(total, 64);
     for (uint64_t offset = 0; offset < padded; offset += 64) {
         uint8_t block[64];
         for (uint32_t i = 0; i < 64; ++i) {

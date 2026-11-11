@@ -26,11 +26,19 @@ typedef uint8_t PrGpuShaderStage;
 // The code of a shader library, by the backend that runs it (cmake/shader_library.cmake).
 enum {
     PrGpuShaderTarget_Metal = 1,            // a metallib
-    PrGpuShaderTarget_Spirv = 2,            // a SPIR-V module that reads a copy of the target
+    PrGpuShaderTarget_Spirv = 2,            // a SPIR-V module that does not read the target
     PrGpuShaderTarget_SpirvLocalRead = 3,   // a SPIR-V module that reads the target with dynamic rendering local read
     PrGpuShaderTarget_Dxil = 4,             // DXIL, one blob for each entry point
 };
 typedef uint32_t PrGpuShaderTarget;
+
+// The stage of a device's creation. A device moves from Creating to Ready or Failed once, and stays there.
+enum {
+    PrGpuDeviceStage_Creating,
+    PrGpuDeviceStage_Ready,
+    PrGpuDeviceStage_Failed,
+};
+typedef uint8_t PrGpuDeviceStage;
 
 // An entry point of a shader library, and its code for the device's backend. `groupSize` is a compute shader's group
 // size, and zero otherwise.
@@ -56,10 +64,15 @@ struct PrGpuShaderLibrary {
 struct PrGpuCommands {
     PrGpuDevice* PR_NONNULL (*PR_NONNULL deviceFn)(const PrGpuCommands* commands);
     PrGpuFence (*submitFn)(PrGpuCommands* commands);
-    void* PR_NONNULL (*PR_NONNULL streamFn)(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset);
+    void* PR_NONNULL (*PR_NONNULL streamFn)(PrGpuCommands* commands, uint64_t size, PrGpuBufferUsageFlags usage,
+        PrGpuBuffer* buffer, uint64_t* offset);
     void (*setPushFn)(PrGpuCommands* commands, const void* data, uint32_t size);
     void (*setUniformsFn)(PrGpuCommands* commands, const void* data, uint32_t size);
     void (*setPipelineFn)(PrGpuCommands* commands, PrGpuPipeline pipeline);
+    void (*setBufferFn)(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
+    void (*setRwBufferFn)(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
+    void (*setTextureFn)(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler);
+    void (*setRwTextureFn)(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture);
     void (*dispatchFn)(PrGpuCommands* commands, PrGpuExtent groups);
     void (*dispatchIndirectFn)(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset);
     void (*copyBufferFn)(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset, PrGpuBuffer target,
@@ -96,6 +109,7 @@ struct PrGpuPass {
     void (*setBlendConstantFn)(PrGpuPass* pass, PrColor constant);
     void (*setStencilReferenceFn)(PrGpuPass* pass, uint8_t reference);
     void (*setIndexBufferFn)(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, bool wide);
+    void (*setVertexBufferFn)(PrGpuPass* pass, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
     void (*drawFn)(PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
         uint32_t firstInstance);
     void (*drawIndexedFn)(PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
@@ -116,8 +130,8 @@ struct PrGpuSwapChain {
 };
 
 // The functions of a device's backend, at the start of its state. Each implements the function of pr/gpu.h that it is
-// named for, after pr/gpu.h has checked the arguments. pr/gpu.h implements the rest of its interface from these:
-// writing and reading textures, reading a texture in a command buffer, and submitting and waiting.
+// named for, after pr/gpu.h has checked the arguments. pr/gpu.h implements the rest of its interface from these, such
+// as writing textures and reading a texture in a command buffer.
 //
 // `shaderTargetFn` returns the code that the backend runs, `nativeKindsFn` the native objects that the device hands
 // out, bit k for PrGpuNativeKind k, and `inPlaceImportsFn` the images that it imports in place, bit k for
@@ -126,13 +140,18 @@ struct PrGpuSwapChain {
 //
 // A null `textureCreateOverPixelsFn` means that the device does not hand out PrGpuNativeKind_Pixels, and a null
 // `textureNativeFn` that it hands out no native objects. Either is called only with a kind that the device hands out.
+//
+// The backend's constructor fills the whole table before it returns. `stageFn` and `lostStatusFn` may be called from
+// then on. pr/gpu.h calls the others only once `stageFn` returns Ready, except `destroyFn`, which waits for the
+// creation. `lostStatusFn` returns Ok for a device that is not lost.
 struct PrGpuDevice {
     void (*destroyFn)(PrGpuDevice* device);
     PrGpuDeviceInfo (*infoFn)(const PrGpuDevice* device);
     PrGpuShaderTarget (*shaderTargetFn)(const PrGpuDevice* device);
     uint32_t (*nativeKindsFn)(const PrGpuDevice* device);
     uint32_t (*inPlaceImportsFn)(const PrGpuDevice* device);
-    bool (*isLostFn)(const PrGpuDevice* device);
+    PrGpuDeviceStage (*stageFn)(const PrGpuDevice* device);
+    PrStatus (*lostStatusFn)(const PrGpuDevice* device);
     void (*simulateLossFn)(PrGpuDevice* device);
     bool (*isCompleteFn)(const PrGpuDevice* device, PrGpuFence fence);
     void (*waitFn)(PrGpuDevice* device, PrGpuFence fence);

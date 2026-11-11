@@ -16,6 +16,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 using namespace pr;
@@ -723,7 +725,7 @@ TEST_CASE("vterm graphics: XTWINOPS reports the cell's pixel extent and the scre
 TEST_CASE("vterm graphics: files are read only where the caller allows, and temporary files are deleted after") {
     String folder = temporaryFolder();
     // The protocol takes temporary files only from the system's temporary folder, where others' are too.
-    String path = format("{}/prax-vterm-tty-graphics-protocol-test-{}.rgb", folder, harness::runTag());
+    String path = format("{}/prax-vterm-tty-graphics-protocol-test-{}.rgb", folder, runTag());
     String pixels = solid(2, 2, 3, 7, 8, 9);
     writeFile(path, format("xx{}", pixels));
 

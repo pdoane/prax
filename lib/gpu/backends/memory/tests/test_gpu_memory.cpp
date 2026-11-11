@@ -10,7 +10,11 @@
 #include "pr/mem.h"
 #include "pr/thread.h"
 
+#include "tools/harness/harness_gpu.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -21,7 +25,7 @@ namespace {
 struct Device {
     PrGpuDevice* device = nullptr;
 
-    Device() { REQUIRE(prGpuMemoryCreate(&device) == PrStatus_Ok); }
+    Device() : device(prGpuMemoryCreate(nullptr)) { REQUIRE(prGpuDeviceLostStatus(device) == PrStatus_Ok); }
     ~Device() { prGpuDeviceDestroy(device); }
 
     PrGpuTexture texture(PrUVec2 extent, PrGpuFormat format = PrGpuFormat_Rgba8) {
@@ -34,7 +38,7 @@ struct Device {
     Array<uint8_t> read(PrGpuTexture texture, uint32_t texelBytes = 4) {
         PrUVec2 extent = prGpuTextureExtent(device, texture);
         Array<uint8_t> texels(extent.x * extent.y * texelBytes);
-        prGpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
+        gpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
             PrPixels{texels.data(), size_t(extent.x) * texelBytes, extent});
         return texels;
     }

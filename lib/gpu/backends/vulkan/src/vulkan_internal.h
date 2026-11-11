@@ -22,6 +22,7 @@
 #include "pr/thread.h"
 
 #include "gpu/backends/shared/src/gpu_shared_device.h"
+#include "gpu/backends/shared/src/gpu_shared_upload.h"
 
 // The backend calls Vulkan through the functions that it loads for each device, never through the loader's exports.
 #define VK_NO_PROTOTYPES
@@ -73,6 +74,7 @@ namespace pr_impl {
     X(CmdBeginRendering) \
     X(CmdBindDescriptorSets) \
     X(CmdBindIndexBuffer) \
+    X(CmdBindVertexBuffers) \
     X(CmdBindPipeline) \
     X(CmdCopyBuffer) \
     X(CmdCopyBufferToImage) \
@@ -171,14 +173,35 @@ enum {
 };
 typedef uint32_t VulkanBinding;
 
+// The number of slots of each kind, which keeps the push set within the 32 descriptors that every device pushes.
+constexpr uint32_t kVulkanBufferSlots = 4;
+constexpr uint32_t kVulkanRwBufferSlots = 4;
+constexpr uint32_t kVulkanTextureSlots = 8;
+constexpr uint32_t kVulkanRwTextureSlots = 4;
+
+// The bindings of the push set, as pr/gpu.slang places them. A Texture slot is a sampled image and its sampler, at two
+// bindings.
+enum {
+    VulkanPushBinding_Uniforms = 0,
+    VulkanPushBinding_Target = 1,
+    VulkanPushBinding_Buffers = 2,
+    VulkanPushBinding_RwBuffers = VulkanPushBinding_Buffers + kVulkanBufferSlots,
+    VulkanPushBinding_Textures = VulkanPushBinding_RwBuffers + kVulkanRwBufferSlots,
+    VulkanPushBinding_RwTextures = VulkanPushBinding_Textures + 2 * kVulkanTextureSlots,
+    VulkanPushBinding_Count = VulkanPushBinding_RwTextures + kVulkanRwTextureSlots,
+};
+typedef uint32_t VulkanPushBinding;
+
+// The resources bound to a command buffer's slots, as they are pushed. A null buffer, view or sampler is unbound.
+struct VulkanSlots {
+    VkDescriptorBufferInfo buffers[kVulkanBufferSlots + kVulkanRwBufferSlots];
+    VkDescriptorImageInfo textures[kVulkanTextureSlots];
+    VkDescriptorImageInfo samplers[kVulkanTextureSlots];
+    VkDescriptorImageInfo rwTextures[kVulkanRwTextureSlots];
+};
+
 // The size of the stream's chunks. A larger allocation takes a chunk of its own.
-constexpr uint32_t kStreamChunkBytes = 4u << 20;
-
-// The alignment of the stream's allocations, which pr/gpu.h promises.
-constexpr uint64_t kStreamAlignment = 256;
-
-// The size of a page of upload memory. A larger upload takes a page of its own.
-constexpr uint64_t kStagingPageBytes = uint64_t(8) << 20;
+constexpr uint32_t kStreamChunkBytes = 1u << 20;
 
 // The frames that a swap chain has in flight.
 constexpr uint32_t kSwapChainFrames = 2;
@@ -256,27 +279,24 @@ struct VulkanStreamChunk {
     uint32_t size;
 };
 
-// A page of upload memory, which uploads fill in turn and which is freed once the work that copies from it is done.
+// A block of the staging's memory, which the shared staging names by its index in the device's pages.
 struct VulkanStagingPage {
     VkBuffer buffer;
     VulkanMemory memory;
-    uint64_t size;
-    uint64_t used;
 };
 
 // What an upload does to its target.
 enum {
-    VulkanUploadKind_Copy,          // copies from a staging page into a buffer or a texture
+    VulkanUploadKind_Copy,          // copies from the staging's open block into a buffer or a texture
     VulkanUploadKind_Fill,          // fills a new buffer with zeros
     VulkanUploadKind_Initialize,    // moves a new texture into the layout of shader reads
 };
 typedef uint8_t VulkanUploadKind;
 
-// An upload that waits for the next command buffer to record it.
+// An upload that waits for the batch of uploads to record it.
 struct VulkanUpload {
     VulkanUploadKind kind;
-    uint32_t page;              // an index into the device's pages
-    uint64_t offset;
+    uint64_t offset;            // in the staging's open block
     uint32_t target;            // a buffer's or a texture's slot
     uint64_t targetOffset;      // in a buffer
     uint64_t size;              // the bytes, for a buffer
@@ -325,7 +345,6 @@ struct VulkanPass : GpuSharedPass {
     VkImageView targetView;
     VkRect2D scissor;               // the scissor of the draws, which bounds the copy of the target
     bool localRead;                 // true once the first color attachment is in the layout of local reads
-    bool copied;                    // true once a draw of the pass has copied the target
     bool named;                     // true if the pass opened a group of commands for debuggers
 };
 
@@ -353,6 +372,7 @@ struct VulkanCommands : GpuSharedCommands {
     VkBuffer uniformBuffer;
     uint64_t uniformOffset;
     uint32_t uniformSize;
+    VulkanSlots slots;
     bool pushDirty[2];              // for graphics and compute
     PrGpuNativeStateFlags changed;  // the state that the device changed since the last sync
 
@@ -362,15 +382,10 @@ struct VulkanCommands : GpuSharedCommands {
 
     RawArray<VulkanDoneCall> done;
     RawArray<VulkanPresent> presents;
-    RawArray<uint32_t> pages;          // the staging pages of the uploads that the command buffer copies
     VulkanCommandSlot upload;          // the command buffer that copies the uploads ahead of this one, if any
     RawArray<uint8_t> scratch;         // the stream's bytes once the device is lost, which the GPU never reads
     VulkanPass pass;
 
-    // The texture that holds the copy of the target, which a draw that reads its target samples on a device without
-    // local read. The texture is kept after the command buffer is done, for the next command buffer that reuses this
-    // recording. A pass that needs a larger texture or another format replaces it.
-    PrGpuTexture targetCopy;
 };
 
 // A shader library: one SPIR-V module that holds every entry point.
@@ -405,6 +420,10 @@ struct VulkanSwapChain : GpuSharedSwapChain {
 
 // A device: its Vulkan objects, its tables of resources and pipelines, and its timelines.
 struct VulkanDevice : GpuSharedDevice {
+    // The options that the initialization reads, and the copy of the application's descriptors that they point to.
+    PrGpuVulkanOptions options;
+    PrGpuVulkanDescriptors descriptors;
+
     VulkanFunctions vk;
     void* PR_NULLABLE loader;
     bool ownsInstance;
@@ -420,7 +439,7 @@ struct VulkanDevice : GpuSharedDevice {
     char adapter[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
     VkPhysicalDeviceLimits limits;
     VkPhysicalDeviceMemoryProperties memoryProperties;
-    bool localRead;                 // true if a draw reads its target as an input attachment, not as a copy
+    bool localRead;                 // true if a draw reads its target as an input attachment
 
     // Memory from the application, or the device's own.
     PrGpuVulkanAllocateFn PR_NULLABLE allocate;
@@ -452,8 +471,8 @@ struct VulkanDevice : GpuSharedDevice {
     RawArray<VulkanCommandSlot> freeCommandSlots;
     RawArray<VulkanCommands*> freeCommands;
     RawArray<VulkanStagingPage> pages;             // by index; a page with no buffer is free
-    uint32_t openPage;                             // the page that uploads fill, or UINT32_MAX
-    RawArray<VulkanUpload> uploads;                // waiting for a command buffer
+    GpuSharedStaging staging;
+    RawArray<VulkanUpload> uploads;                // waiting for the batch of uploads to be submitted
     RawArray<VulkanRetired> retired;
     RawArray<uint64_t> openSerials;                // of the command buffers begun and not yet done
     uint64_t nextSerial;
@@ -483,12 +502,6 @@ inline VulkanResource& vulkanResourceAt(VulkanDevice* d, uint32_t slot) {
 inline const VulkanResource& vulkanResourceAt(const VulkanDevice* d, uint32_t slot) {
     PR_ASSERT(slot != 0 && slot < d->resources.count);
     return d->resources.data[slot];
-}
-
-// Returns the type of the push descriptor through which a pipeline that reads its target reads it: an input attachment
-// on a device with local read, and a sampled image of the copy otherwise.
-inline VkDescriptorType vulkanTargetDescriptor(const VulkanDevice* d) {
-    return d->localRead ? VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT : VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 }
 
 // Return the backend's state behind the interface's objects.

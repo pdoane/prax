@@ -3,11 +3,8 @@
 
 #include "pr/gpu.slang"
 
-struct Push {
-    uint level;             // a view of the level before, sampled
-    uint sampler;           // linear, clamped
-};
-PR_GPU_PUSH(Push, push);
+// The level before, with a linear sampler that clamps.
+PR_GPU_TEXTURE(Texture2D<float4>, level, 0);
 
 struct VertexOut {
     float4 position : SV_Position;
@@ -28,6 +25,5 @@ VertexOut mipVertex(uint corner : SV_VertexID) {
 // is even.
 [shader("fragment")]
 float4 mipFragment(VertexOut input) : SV_Target {
-    Texture2D<float4> level = prGpuGet<Texture2D<float4>>(push.level);
-    return level.SampleLevel(prGpuGet<SamplerState>(push.sampler), input.uv, 0);
+    return level.SampleLevel(levelSampler, input.uv, 0);
 }

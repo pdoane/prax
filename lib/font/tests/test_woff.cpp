@@ -1,3 +1,4 @@
+#include "pr/align.h"
 #include "pr/array.h"
 #include "pr/compress_backend.h"
 #include "pr/compress_builtin.h"
@@ -9,6 +10,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 using namespace pr;
@@ -17,7 +20,7 @@ namespace {
 
 // Returns the bytes of the font file `name`, in the fonts directory.
 Array<uint8_t> fontFile(PrStringView name) {
-    return harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
+    return readFile(format("{}/{}", PR_FONTS_DIR, name));
 }
 
 uint32_t be32(const uint8_t* bytes) {
@@ -125,7 +128,7 @@ struct Bits {
         }
     }
 
-    void align() { bit = (bit + 7) / 8 * 8; }
+    void align() { bit = alignUp(bit, 8); }
 };
 
 // Returns a Brotli stream of `data` in uncompressed meta-blocks (rfc 7932 9.2), which needs no encoder.

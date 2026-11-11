@@ -18,6 +18,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 extern "C" int prTestTextCApi(void);
 
 namespace pr_impl {
@@ -28,7 +30,7 @@ namespace {
 
 // Loads a test font by its file name.
 const PrFont* load(const char* name) {
-    Array<uint8_t> bytes = harness::readFile(format("{}/{}", PR_FONTS_DIR, PrStringView(name)));
+    Array<uint8_t> bytes = readFile(format("{}/{}", PR_FONTS_DIR, PrStringView(name)));
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;

@@ -2,6 +2,7 @@
 
 #include "layout/src/layout_fragment.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/layout_tree.h"
@@ -15,7 +16,7 @@ namespace {
 // Returns the start of the trailing array of an allocation, past `offset` bytes and aligned for T.
 template <typename T>
 size_t alignedFor(size_t offset) {
-    return (offset + alignof(T) - 1) & ~(alignof(T) - 1);
+    return alignUp(offset, alignof(T));
 }
 
 // Returns the start of the list of boxes out of flow in the allocation of a fragment, past its children. The list is

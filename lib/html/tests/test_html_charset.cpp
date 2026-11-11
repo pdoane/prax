@@ -13,6 +13,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 namespace {
@@ -73,7 +75,7 @@ TEST_CASE("a loaded document has the charset that html5lib's encoding tests expe
     uint32_t cases = 0;
     const char* const names[] = {"tests1.dat", "tests2.dat", "test-yahoo-jp.dat"};
     for (const char* name : names) {
-        String file = harness::readText(format("{}/encoding/{}", PR_HTML5LIB_DIR, name));
+        String file = readText(format("{}/encoding/{}", PR_HTML5LIB_DIR, name));
         PrStringView text = file;
         for (size_t at = prStringFind(text, "#data\n"); at != text.size; at = prStringFindFrom(text, "#data\n", at)) {
             at += 6;

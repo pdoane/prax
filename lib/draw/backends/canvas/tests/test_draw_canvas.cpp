@@ -4,11 +4,15 @@
 #include "pr/draw_canvas.h"
 #include "pr/gpu.h"
 
+#include "tools/harness/harness_gpu.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 TEST_CASE("a Canvas 2D renderer needs a canvas device, and Default passes over it") {
     PrGpuDevice* device = nullptr;
-    REQUIRE(prGpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
+    REQUIRE(gpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
     PrDrawRenderer* renderer = nullptr;
     CHECK(prDrawCanvasCreate(device, nullptr, &renderer) == PrStatus_NotSupported);
     CHECK(renderer == nullptr);

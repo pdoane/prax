@@ -15,8 +15,10 @@
 #include "pr/draw_renderer.h"
 #include "pr/gpu.h"
 #include "pr/print.h"
+#include "pr/status.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
+#include "pr/task.h"
 #include "pr/text.h"
 
 #include "examples/draw_features/drawing.h"
@@ -25,8 +27,8 @@
 
 namespace {
 
-using namespace pr;
 using namespace drawings;
+using namespace pr;
 
 // The height of the band under the drawing that holds its caption, in logical pixels.
 constexpr float kCaptionHeight = 28;
@@ -51,6 +53,8 @@ struct Window {
     // shader that maps it to the display.
     PrGpuTexture rendered{};
     PrDrawDisplay* display = nullptr;
+
+    PrTaskPool* pool = nullptr;
 };
 
 void announce(const Window& w) {
@@ -59,10 +63,8 @@ void announce(const Window& w) {
 
 // Frees what the window made on its device, and the device.
 void closeDevice(Window& w) {
-    if (w.device != nullptr) {
-        prGpuDeviceWaitIdle(w.device);
+    if (w.device != nullptr)
         prGpuTextureDestroy(w.device, w.rendered);
-    }
     prDrawDisplayDestroy(w.display);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
@@ -76,15 +78,41 @@ void closeDevice(Window& w) {
     w.device = nullptr;
 }
 
-// Makes the platform's device, a swap chain over the window for HDR, and the renderer. Returns false if the window has
-// no device to render with.
+// Creates the platform's device on the pool, if the window has none.
+void requestDevice(Window& w) {
+    if (w.device != nullptr)
+        return;
+    PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
+    options.pool = w.pool;
+    w.device = prGpuDeviceCreate(PrGpuBackend_Default, &options);
+}
+
+// Returns true while the device is being created.
+bool creatingDevice(const Window& w) {
+    return w.device != nullptr && !prGpuDeviceIsReady(w.device);
+}
+
+// Returns true if the window can render. Frees a lost device, which includes one whose creation failed, with everything
+// made on it, and creates another. Makes the swap chain for HDR and the renderer once the device is ready.
 bool openDevice(Window& w) {
+    if (w.device != nullptr && prGpuDeviceIsLost(w.device)) {
+        if (w.swapChain == nullptr) {
+            printError("draw_features: no GPU device to render with ({})\n",
+                prStatusName(prGpuDeviceLostStatus(w.device)));
+        }
+        closeDevice(w);
+    }
+    requestDevice(w);
+    if (w.device == nullptr || !prGpuDeviceIsReady(w.device) || prGpuDeviceIsLost(w.device))
+        return false;
+    if (w.swapChain != nullptr)
+        return true;
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
-            prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
+    if (prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
             prDrawRendererCreate(PrDrawRendererBackend_Fragment, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
+        printError("draw_features: the device cannot render to the window\n");
         closeDevice(w);
         return false;
     }
@@ -158,11 +186,9 @@ bool open(void*, PrAppWindow*, const PrAppFrame*) {
 
 PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
-    // A lost device is made again, with everything on it.
-    if (w.device != nullptr && prGpuDeviceIsLost(w.device))
-        closeDevice(w);
-    if (w.device == nullptr && !openDevice(w))
-        return {};
+    // Frames continue while the device is being created.
+    if (!openDevice(w))
+        return PrAppOutput{.wantsFrame = creatingDevice(w)};
     prGpuSwapChainWait(w.swapChain);
     if (!w.paused)
         w.clock += f->delta;
@@ -204,7 +230,7 @@ void event(void* context, PrAppWindow*, const PrAppEvent* e) {
     }
 }
 
-// Opens the window and the device that renders to it. The window's close stops the application.
+// Opens the window. The window renders once the device is ready, and its close stops the application.
 bool start(void* context, PrApp* app) {
     Window& w = *static_cast<Window*>(context);
     w.app = app;
@@ -215,10 +241,6 @@ bool start(void* context, PrApp* app) {
     };
     if (prAppWindowCreate(app, &desc, &w.window) != PrStatus_Ok)
         return false;
-    if (!openDevice(w)) {
-        printError("draw_features: no GPU device to render with\n");
-        return false;
-    }
     announce(w);
     return true;
 }
@@ -234,6 +256,9 @@ void shutdown(void* context, PrApp*) {
 int main(int argc, char** argv) {
     prCrashHandler();
     static Window w;
+    // The device is created on the pool while the drawings load and the window opens.
+    w.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
+    requestDevice(w);
     w.drawings.append(allFeatures().span());
     w.drawings.append(workloadDrawings().span());
     for (uint32_t i = 0; argc > 1 && i < w.drawings.count(); ++i) {
@@ -249,6 +274,7 @@ int main(int argc, char** argv) {
     prAppRun(app, {.context = &w, .start = start, .event = appEvent, .shutdown = shutdown});
     prAppDestroy(app);
 
+    prTaskPoolDestroy(w.pool);
     prDrawListRelease(w.list);
     releaseDrawings();
     prTextShaperDestroy(w.shaper);

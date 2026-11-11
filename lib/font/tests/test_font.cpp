@@ -13,6 +13,8 @@
 #include "freetype/tttables.h"
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 extern "C" int prTestFontCApi(void);
 
 namespace pr_impl {
@@ -23,7 +25,7 @@ namespace {
 
 // Returns the bytes of the font file `name`, in the fonts directory.
 Array<uint8_t> fontFile(PrStringView name) {
-    return harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
+    return readFile(format("{}/{}", PR_FONTS_DIR, name));
 }
 
 Array<uint8_t> newCmMathBytes() {
@@ -250,7 +252,7 @@ TEST_CASE("variation sequences map as FreeType maps them") {
     for (const char* name : names) {
         String path = format("{}/{}", PR_FONTS_DIR, name);
         CAPTURE(path);
-        Array<uint8_t> bytes = harness::readFile(path);
+        Array<uint8_t> bytes = readFile(path);
         FT_Face face = nullptr;
         REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.count()), 0, &face) == 0);
         const PrFont* font = fromBytes(bytes);

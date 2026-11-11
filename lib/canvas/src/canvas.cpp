@@ -652,7 +652,24 @@ void readPixels(CanvasContext* c) {
     flush(c);
     if (c->pixelsCurrent || c->bitmap == nullptr)
         return;
-    prGpuTextureRead(c->device, c->bitmap->texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, pixelsOf(c));
+    // The read gives the bitmap's texels at its extent and in its format, or no texels on a lost device.
+    struct Read {
+        PrPixels into;
+        size_t rowBytes;
+    };
+    Read read{.into = pixelsOf(c), .rowBytes = size_t(c->extent.x) * prPixelFormatSize(c->format)};
+    for (uint32_t y = 0; y < read.into.extent.y; ++y)
+        prMemZero(read.into.data + y * read.into.stride, read.rowBytes);
+    PrGpuCommands* commands = nullptr;
+    if (prGpuCommandsBegin(c->device, nullptr, &commands)) {
+        prGpuCommandsReadTexture(commands, c->bitmap->texture, PrGpuAccessFlag_ShaderRead,
+            [](void* PR_NULLABLE context, PrPixelView texels) {
+                const Read& r = *static_cast<const Read*>(context);
+                for (uint32_t y = 0; texels.data != nullptr && y < r.into.extent.y; ++y)
+                    prMemCopy(r.into.data + y * r.into.stride, texels.data + y * texels.stride, r.rowBytes);
+            }, &read);
+        prGpuDeviceWait(c->device, prGpuCommandsSubmit(commands));
+    }
     c->pixelsCurrent = true;
 }
 

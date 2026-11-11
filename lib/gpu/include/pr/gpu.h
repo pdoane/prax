@@ -25,12 +25,14 @@
 
 #include "pr/app_surface.h"
 #include "pr/base.h"
+#include "pr/byte_view.h"
 #include "pr/color.h"
 #include "pr/geom.h"
 #include "pr/pixels.h"
 #include "pr/raw_string.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
+#include "pr/task.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -49,10 +51,12 @@ typedef struct PrGpuDevice PrGpuDevice;
 typedef uint64_t PrGpuFence;
 
 // The library's device backends, which the build turns on (README.md), and Default. Default is the backend that the
-// environment variable PR_GPU_BACKEND names (prGpuBackendFromName), if the build has it. Otherwise it is the first
-// backend in the build that the system supports, trying the platform's own first and the memory backend last. So a
-// program and its tests run on any backend in the build, and a portable program runs on any build that has the memory
-// backend.
+// environment variable PR_GPU_BACKEND names (prGpuBackendFromName), if the build has it, so a program and its tests run
+// on any backend in the build. Otherwise Default is the first backend of the build that has not failed, trying the
+// platform's own first and the memory backend last. A backend has failed once a creation by it fails with NotSupported,
+// which only a creation finds out. A creation without a pool whose failure is known when it returns moves on to the
+// next backend at once. Otherwise the device is lost, and the application's recovery from the loss creates a device of
+// the next backend.
 enum {
     PrGpuBackend_Default,
     PrGpuBackend_Metal,
@@ -72,8 +76,17 @@ enum {
     PrGpuFeatureFlag_TextureCompressionAstc = 1u << 2,
 
     // A fragment shader that reads the target (pr/gpu.slang's prGpuTarget) reads what the fragments before it in the
-    // same draw wrote, in the order of the draw's primitives.
+    // same draw wrote, in the order of the draw's primitives. Only a device with PrGpuFeatureFlag_TargetReads has it.
     PrGpuFeatureFlag_OrderedTargetReads = 1u << 3,
+
+    // Shaders reach resources by handle, from any data that they read (pr/gpu.slang's prGpuGet and prGpuLoad). Without
+    // it, shaders reach only the resources bound to the command buffer's slots (prGpuCommandsSetBuffer and the others),
+    // which every device has.
+    PrGpuFeatureFlag_Bindless = 1u << 4,
+
+    // A graphics pipeline reads the pass's target (PrGpuGraphicsPipelineDesc::readsTarget). Without it, such a pipeline
+    // is not supported, and a renderer reads what earlier draws left from a texture of its own.
+    PrGpuFeatureFlag_TargetReads = 1u << 5,
 };
 typedef uint32_t PrGpuFeatureFlags;
 
@@ -124,6 +137,12 @@ enum {
 // The maximum number of color attachments of a pass.
 enum { kPrGpuMaxColorAttachments = 8 };
 
+// The maximum numbers of a pipeline's vertex buffers and vertex attributes (PrGpuVertexLayout).
+enum {
+    kPrGpuMaxVertexBuffers = 8,
+    kPrGpuMaxVertexAttributes = 16,
+};
+
 // What a device is and what it can do. The strings are valid while the device lives.
 typedef struct PrGpuDeviceInfo {
     PrStringView adapter;           // the adapter's name, as the system reports it
@@ -131,14 +150,40 @@ typedef struct PrGpuDeviceInfo {
     PrGpuFeatureFlags features;
     uint32_t maxTextureSize;        // the largest width or height of a 2D texture
 
-    // The number of handles that the device can give out at once, of resources and of samplers.
+    // The number of handles that the device can give out at once, of resources and of samplers. Zero without
+    // PrGpuFeatureFlag_Bindless.
     uint32_t maxResourceHandles;
     uint32_t maxSamplerHandles;
+
+    // The number of slots of each kind that a command buffer binds (prGpuCommandsSetBuffer and the others).
+    uint32_t maxBufferSlots;
+    uint32_t maxRwBufferSlots;
+    uint32_t maxTextureSlots;
+    uint32_t maxRwTextureSlots;
+
+    uint32_t storageOffsetAlignment;    // of a buffer's offset where it is bound to a slot, a power of two
 } PrGpuDeviceInfo;
+
+// Called once, when a device's creation is done, whether the creation succeeded or not (prGpuDeviceLostStatus). It runs
+// on the thread that ran the creation: a thread of the pool, or the creating thread during the constructor if there is
+// no pool. On the web, the page's event loop calls it.
+typedef void (*PrGpuDeviceReadyFn)(void* PR_NULLABLE context, PrGpuDevice* device);
 
 // How a device is created.
 typedef struct PrGpuDeviceOptions {
     bool validation;        // turns on the API's validation where it is installed
+
+    // Creates a device without PrGpuFeatureFlag_Bindless where the system has it, so that the slots alone are used and
+    // tested on any device.
+    bool slotsOnly;
+
+    // The pool that runs the device's creation as a job, or null to create the device during the constructor. A
+    // creation can take hundreds of milliseconds. On the web, creation is asynchronous with or without a pool.
+    PrTaskPool* PR_NULLABLE pool;
+
+    // Called when the device's creation is done, or null for no call.
+    PrGpuDeviceReadyFn PR_NULLABLE ready;
+    void* PR_NULLABLE readyContext;
 } PrGpuDeviceOptions;
 
 // Returns the backend that `name` names, as prGpuBackendName spells it, ignoring case, or Count if it names none.
@@ -153,16 +198,30 @@ bool prGpuBackendIsBuilt(PrGpuBackend backend);
 // Returns the default options: without validation.
 PrGpuDeviceOptions prGpuDeviceOptionsDefault(void);
 
-// Creates a device by the backend on the system's default adapter. Null options mean the defaults. A backend's own
-// header creates one over the application's native device. Returns NotSupported if the build does not have the backend
-// or the system has no adapter that it supports.
-PrStatus prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NULLABLE options,
-    PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
+// Creates a device by the backend on the system's default adapter. Returns the device at once, while its creation may
+// still run. Null options mean the defaults. A backend's own header creates a device over the application's native
+// device. Returns null if the build does not have the backend.
+//
+// The device is ready once its creation is done (prGpuDeviceIsReady). Until then, it does no work, and the calls that
+// make objects fail with InvalidState. If the creation fails, such as on a system without an adapter that the backend
+// supports, the device is lost from the start. An application recovers from a failed creation as it recovers from a
+// loss.
+PrGpuDevice* PR_NULLABLE prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NULLABLE options);
 
-// Waits for the device's work to finish, then frees the device. Every object of the device must be destroyed first.
+// Waits for the device's creation and its work to finish, then frees the device. Every object of the device must be
+// destroyed first.
 void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device);
 
-// Returns what the device is and what it can do.
+// Returns true once the device's creation is done, whether it succeeded or failed. Once true, it stays true. Everything
+// that the creation made is visible to the calling thread after the call returns true.
+bool prGpuDeviceIsReady(const PrGpuDevice* device);
+
+// Returns why the device is lost: the status that its creation failed with, such as NotSupported for a system without
+// an adapter that the backend supports, or Lost for a device that the system took away. Returns Ok for a device that is
+// not lost.
+PrStatus prGpuDeviceLostStatus(const PrGpuDevice* device);
+
+// Returns what the device is and what it can do. Before the device is ready, only the backend's name is set.
 PrGpuDeviceInfo prGpuDeviceInfo(const PrGpuDevice* device);
 
 // Returns true if the device hands out native objects of `kind`.
@@ -269,9 +328,12 @@ typedef struct PrGpuBuffer {
 // How a buffer may be used. Every buffer may be read by shaders through its handle, and be the source or target of a
 // copy.
 enum {
-    PrGpuBufferUsageFlag_Storage = 1u << 0,         // written by shaders
+    PrGpuBufferUsageFlag_Storage = 1u << 0,         // bound to slots, and written by shaders
     PrGpuBufferUsageFlag_Index = 1u << 1,
     PrGpuBufferUsageFlag_Indirect = 1u << 2,
+    PrGpuBufferUsageFlag_Vertex = 1u << 3,
+    PrGpuBufferUsageFlag_All = PrGpuBufferUsageFlag_Storage | PrGpuBufferUsageFlag_Index | PrGpuBufferUsageFlag_Indirect |
+        PrGpuBufferUsageFlag_Vertex,
 };
 typedef uint8_t PrGpuBufferUsageFlags;
 
@@ -557,11 +619,6 @@ void prGpuTextureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTe
 // outside the texture are dropped.
 void prGpuTextureWrite(PrGpuDevice* device, PrGpuTexture texture, PrIVec2 origin, PrPixelView texels);
 
-// Waits for the work submitted before the call, then copies the texels of the first level of a 2D texture at `origin`
-// into `out`, in the texture's format. The size of `out` is the size read. Texels outside the texture are zero. The
-// texture is in the accesses of PrGpuAccessFlag_ShaderRead or of PrGpuAccessFlag_CopyRead, as `access` says.
-void prGpuTextureRead(PrGpuDevice* device, PrGpuTexture texture, uint32_t access, PrIVec2 origin, PrPixels out);
-
 // ---------------------------------------------------------------------------------------------------------------------
 // Shaders and pipelines
 
@@ -687,12 +744,77 @@ typedef struct PrGpuAttachmentFormats {
     uint8_t samples;                                // at least one
 } PrGpuAttachmentFormats;
 
-// A pipeline for draws. A null `fragment` makes a pipeline that writes only depth and stencil. Vertex data is read by
-// shaders through handles, so a pipeline has no vertex layout.
+// The formats of vertex attributes in vertex buffers, by the type and the number of their components, from the lowest
+// address. A Float or Half attribute reads as floats, Unorm and Snorm as floats normalized to [0, 1] and [-1, 1], and
+// Uint and Sint as integers.
+enum {
+    PrGpuVertexFormat_None,
+    PrGpuVertexFormat_Float,
+    PrGpuVertexFormat_Float2,
+    PrGpuVertexFormat_Float3,
+    PrGpuVertexFormat_Float4,
+    PrGpuVertexFormat_Half2,
+    PrGpuVertexFormat_Half4,
+    PrGpuVertexFormat_Uint,
+    PrGpuVertexFormat_Uint2,
+    PrGpuVertexFormat_Uint3,
+    PrGpuVertexFormat_Uint4,
+    PrGpuVertexFormat_Sint,
+    PrGpuVertexFormat_Sint2,
+    PrGpuVertexFormat_Sint3,
+    PrGpuVertexFormat_Sint4,
+    PrGpuVertexFormat_Unorm8x4,
+    PrGpuVertexFormat_Snorm8x4,
+    PrGpuVertexFormat_Uint8x4,
+    PrGpuVertexFormat_Unorm16x2,
+    PrGpuVertexFormat_Unorm16x4,
+    PrGpuVertexFormat_Snorm16x2,
+    PrGpuVertexFormat_Snorm16x4,
+    PrGpuVertexFormat_Count,
+};
+typedef uint8_t PrGpuVertexFormat;
+
+// How a vertex buffer advances: by vertex, or by instance.
+enum {
+    PrGpuVertexStep_Vertex,
+    PrGpuVertexStep_Instance,
+};
+typedef uint8_t PrGpuVertexStep;
+
+// A vertex buffer of a pipeline: the stride in bytes between its elements, and how it advances.
+typedef struct PrGpuVertexBufferLayout {
+    uint32_t stride;
+    PrGpuVertexStep step;
+} PrGpuVertexBufferLayout;
+
+// An attribute of the vertex shader's input: its format, the vertex buffer that it reads, and its offset in bytes into
+// that buffer's elements, a multiple of 4.
+typedef struct PrGpuVertexAttribute {
+    PrGpuVertexFormat format;
+    uint8_t buffer;
+    uint16_t offset;
+} PrGpuVertexAttribute;
+
+// The vertex input of a pipeline, which the hardware fetches ahead of the vertex shader. Attribute k is the shader's
+// input at location k (pr/gpu.slang's PR_GPU_ATTRIBUTE). A pipeline without attributes fetches nothing, and its shaders
+// pull their vertices from buffers.
+typedef struct PrGpuVertexLayout {
+    uint8_t bufferCount;
+    uint8_t attributeCount;
+    PrGpuVertexBufferLayout buffers[kPrGpuMaxVertexBuffers];    // by vertex buffer
+    PrGpuVertexAttribute attributes[kPrGpuMaxVertexAttributes]; // by location
+} PrGpuVertexLayout;
+
+// Returns the size in bytes of an attribute of `format`.
+uint32_t prGpuVertexFormatSize(PrGpuVertexFormat format);
+
+// A pipeline for draws. A null `fragment` makes a pipeline that writes only depth and stencil. Its vertex shader reads
+// its vertices through the vertex layout, or pulls them from buffers through handles or slots.
 typedef struct PrGpuGraphicsPipelineDesc {
     const PrGpuShaderLibrary* library;
     PrStringView vertex;
     PrStringView fragment;
+    PrGpuVertexLayout vertexLayout;
 
     PrGpuTopology topology;
     PrGpuCull cull;
@@ -716,8 +838,8 @@ typedef struct PrGpuGraphicsPipelineDesc {
     PrGpuAttachmentFormats formats;
     PrGpuBlend blend[kPrGpuMaxColorAttachments];    // by color attachment
 
-    // True if the fragment shader reads the pass's first color attachment at its pixel (pr/gpu.slang's prGpuTarget).
-    // The attachment's blending must be disabled.
+    // True if the fragment shader reads the pass's first color attachment at its pixel (pr/gpu.slang's prGpuTarget),
+    // which a device with PrGpuFeatureFlag_TargetReads supports. The attachment's blending must be disabled.
     bool readsTarget;
 
     PrStringView name;                              // a name for debuggers and captures, or empty
@@ -729,7 +851,8 @@ PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibr
 
 // Creates a pipeline for draws, or for dispatches of the compute entry point `compute` of `library`. Returns NotFound
 // if the library has no entry point by a name that the description gives, WrongType if an entry point is of the wrong
-// stage, and NotSupported for a state that the device does not have. On failure, `*out` is zero.
+// stage, and NotSupported for a state that the device does not have, or for an entry point that reaches resources by
+// handle on a device without PrGpuFeatureFlag_Bindless. On failure, `*out` is zero.
 PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc, PrGpuPipeline* out);
 PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrary* library, PrStringView compute,
     PrStringView name, PrGpuPipeline* out);
@@ -777,8 +900,9 @@ enum {
     PrGpuNativeStateFlag_BlendConstant = 1u << 5,
     PrGpuNativeStateFlag_StencilReference = 1u << 6,
     PrGpuNativeStateFlag_Bindings = 1u << 7,      // Metal's argument table, and Direct3D 12's root signature
+    PrGpuNativeStateFlag_VertexBuffers = 1u << 8,
 };
-typedef uint8_t PrGpuNativeStateFlags;
+typedef uint16_t PrGpuNativeStateFlags;
 
 // Hands the native command buffer to the application, which records its own work after the call. Returns the state that
 // the device's work changed since the last call. The application sets that state again, or marks it stale in its own
@@ -796,16 +920,24 @@ PrGpuNativeStateFlags prGpuNativeStateSync(PrGpuCommands* commands);
 // not submit itself. The command buffer is released.
 PrGpuFence prGpuCommandsSubmit(PrGpuCommands* commands);
 
-// Submits the command buffer and waits for its work. Returns the seconds that the device spent on it, which are zero
-// without PrGpuFeatureFlag_Timestamps or if the device was lost first.
-double prGpuCommandsSubmitAndWait(PrGpuCommands* commands);
-
 // Allocates `size` bytes of the command buffer's stream: memory that the GPU reads, valid until the command buffer's
-// work completes, aligned to 256 bytes. Returns the bytes for the caller to write, the handle of the buffer that holds
-// them in `*buffer`, and their offset in that buffer in `*offset`. The stream grows as recording needs it, so the call
-// always succeeds. If the device has no memory left for it, the device is lost, and the call returns memory that the
-// GPU never reads.
-void* prGpuCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset);
+// work completes. Returns the bytes for the caller to write, the handle of the buffer that holds them in `*buffer`, and
+// their offset in that buffer in `*offset`. Shaders may read the bytes through the buffer's handle. `usage` names the
+// other ways that the GPU reads them, as a buffer's usage does, except that the GPU never writes them. The offset is a
+// multiple of the device's storageOffsetAlignment (PrGpuDeviceInfo) for PrGpuBufferUsageFlag_Storage, and of 16
+// otherwise.
+//
+// The stream grows as recording needs it, so the call always succeeds. Each call may return a different buffer. If the
+// device has no memory left for the bytes, the device is lost, and the call returns memory that the GPU never reads.
+void* prGpuCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBufferUsageFlags usage, PrGpuBuffer* buffer,
+    uint64_t* offset);
+
+// Allocates the `count` parts of `parts` one after another in one buffer of the command buffer's stream, as
+// prGpuCommandsStream allocates bytes for `usage`, and copies each part's bytes. A part with null data is left for the
+// caller to write. Writes each part's offset in `*buffer` to `offsets`, which holds `count` offsets. Returns the bytes
+// of the first part. Part `i` starts `offsets[i] - offsets[0]` bytes after them.
+void* prGpuCommandsStreamGather(PrGpuCommands* commands, const PrByteView* parts, uint32_t count,
+    PrGpuBufferUsageFlags usage, PrGpuBuffer* buffer, uint64_t* offsets);
 
 // Sets the root data of the draws and dispatches recorded after the call. Push data is at most kPrGpuMaxPushBytes, and
 // uniforms at most kPrGpuMaxUniformBytes. Both are copied.
@@ -814,6 +946,23 @@ void prGpuCommandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_
 
 // Sets the pipeline of the dispatches recorded after the call, or, in a pass, of the draws.
 void prGpuCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline);
+
+// Bind resources to the command buffer's slots for the draws and dispatches recorded after the call, as root data is
+// set. A slot is of one kind, numbered from zero below the device's maximum of its kind (PrGpuDeviceInfo), and is
+// shared by every stage of a pipeline. A shader declares the slots that it reads (pr/gpu.slang's PR_GPU_BUFFER and the
+// others). A zero buffer or texture unbinds the slot.
+//
+// A Buffer slot is read from `offset` bytes into the buffer, which is a multiple of the device's storageOffsetAlignment
+// (PrGpuDeviceInfo). An RwBuffer slot may also be written. The buffer of either has PrGpuBufferUsageFlag_Storage, or is
+// a buffer of the command buffer's stream allocated for it. A Texture slot is sampled with its sampler, or read without
+// one if the sampler is zero, and its texture has PrGpuTextureUsageFlag_Sampled. An RwTexture slot is read and written
+// without a sampler, and its texture has PrGpuTextureUsageFlag_Storage.
+//
+// A native draw (prGpuPassNativeDraw) unbinds every slot.
+void prGpuCommandsSetBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
+void prGpuCommandsSetRwBuffer(PrGpuCommands* commands, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
+void prGpuCommandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture, PrGpuSampler sampler);
+void prGpuCommandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture);
 
 // Records dispatches outside any pass: `groups` groups of the pipeline's group size, or the groups that a
 // PrGpuDispatchIndirect at `offset` of `buffer` names.
@@ -860,7 +1009,7 @@ void prGpuCommandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture sour
 // Records filling each mip level of a 2D texture after the first from the level before it, outside any pass. Each texel
 // of a level is the average of the texels that it covers in the level before. The texture must have
 // PrGpuTextureUsageFlag_Sampled and _RenderTarget, and a format that filters. Its first level is in `before` until the
-// call, and every level is in the accesses of PrGpuAccessFlag_ShaderRead after it.
+// call, and every level is in the accesses of PrGpuAccessFlag_ShaderRead after it. The call unbinds Texture slot 0.
 void prGpuCommandsGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, uint32_t before);
 
 // Called on the device's thread once a command buffer's work is done, with the seconds that the device spent on it,
@@ -1025,6 +1174,11 @@ void prGpuPassSetStencilReference(PrGpuPass* pass, uint8_t reference);
 // Sets the index buffer of the indexed draws recorded after the call. Indices are bound because the hardware fetches
 // them ahead of the vertex shader and reuses the vertices that it has transformed.
 void prGpuPassSetIndexBuffer(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, bool wide);
+
+// Sets the vertex buffer `slot`, below kPrGpuMaxVertexBuffers, of the draws recorded after the call, read from `offset`
+// bytes into the buffer, a multiple of 4. The buffer has PrGpuBufferUsageFlag_Vertex, or is a buffer of the command
+// buffer's stream. A native draw (prGpuPassNativeDraw) unsets every vertex buffer.
+void prGpuPassSetVertexBuffer(PrGpuPass* pass, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
 
 // Record draws with the pass's pipeline and root data, which are set through the pass's command buffer. An indirect
 // draw reads `count` arguments, `stride` bytes apart, from `buffer` at `offset`.

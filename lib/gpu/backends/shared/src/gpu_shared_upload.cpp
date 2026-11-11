@@ -1,7 +1,8 @@
-// Batches of uploads (gpu_shared_upload.h).
+// Batches of uploads and their staging (gpu_shared_upload.h).
 
 #include "gpu/backends/shared/src/gpu_shared_upload.h"
 
+#include "pr/align.h"
 #include "pr/search.h"
 
 namespace pr_impl {
@@ -65,6 +66,69 @@ void gpuSharedUploadBatchClear(GpuSharedUploadBatch* batch) {
 void gpuSharedUploadBatchReset(GpuSharedUploadBatch* batch) {
     batch->copies.reset();
     batch->textures.reset();
+}
+
+bool gpuSharedStage(GpuSharedStaging* staging, uint64_t size, uint64_t alignment, uint64_t* offset) {
+    if (staging->open.mapped != nullptr) {
+        uint64_t at = alignUp(staging->used, alignment);
+        if (at + size <= staging->open.size) {
+            staging->used = at + size;
+            *offset = at;
+            return true;
+        }
+        staging->submitFn(staging->context);
+        // If the backend had nothing to submit, no work reads the block.
+        gpuSharedStagingSubmitted(staging, 0);
+    }
+    if (staging->collectFn != nullptr)
+        staging->collectFn(staging->context);
+    GpuSharedStagingBlock block{};
+    if (size <= kGpuSharedStagingBlockBytes && staging->free.count != 0) {
+        block = staging->free.last();
+        staging->free.pop();
+        if (staging->idleFn != nullptr)
+            staging->idleFn(staging->context, block, false);
+    } else {
+        uint64_t bytes = kGpuSharedStagingBlockBytes;
+        if (size > bytes)
+            bytes = alignUp(size, kGpuSharedStagingAlignment);
+        if (!staging->makeFn(staging->context, bytes, &block))
+            return false;
+    }
+    staging->open = block;
+    staging->used = size;
+    *offset = 0;
+    return true;
+}
+
+void gpuSharedStagingSubmitted(GpuSharedStaging* staging, PrGpuFence fence) {
+    if (staging->open.mapped == nullptr)
+        return;
+    staging->held.push(GpuSharedStagingHeld{fence, staging->open});
+    staging->open = GpuSharedStagingBlock{};
+    staging->used = 0;
+}
+
+void gpuSharedStagingCollect(GpuSharedStaging* staging, PrGpuFence done) {
+    uint32_t taken = 0;
+    while (taken < staging->held.count && staging->held.data[taken].fence <= done) {
+        GpuSharedStagingBlock block = staging->held.data[taken++].block;
+        if (block.size != kGpuSharedStagingBlockBytes) {
+            staging->freeFn(staging->context, block);
+            continue;
+        }
+        if (staging->idleFn != nullptr)
+            staging->idleFn(staging->context, block, true);
+        staging->free.push(block);
+    }
+    staging->held.erase(0, taken);
+}
+
+void gpuSharedStagingReset(GpuSharedStaging* staging) {
+    staging->open = GpuSharedStagingBlock{};
+    staging->used = 0;
+    staging->held.reset();
+    staging->free.reset();
 }
 
 } // namespace pr_impl

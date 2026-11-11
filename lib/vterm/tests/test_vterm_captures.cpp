@@ -9,6 +9,8 @@
 
 #include "tools/harness/test.h"
 
+using namespace harness;
+
 namespace pr_impl {
 
 using namespace pr;
@@ -16,7 +18,7 @@ using namespace pr;
 namespace {
 
 String readCapture(PrStringView name) {
-    return harness::readText(format("{}/{}", PR_VTERM_CAPTURES_DIR, name));
+    return readText(format("{}/{}", PR_VTERM_CAPTURES_DIR, name));
 }
 
 // Splits `text` into lines. Drops trailing spaces from each line and empty lines from the end.
