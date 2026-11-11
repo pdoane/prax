@@ -7,7 +7,7 @@ this file is the record of which is which. Delete each item when it is done.
 Most items are checks by hand through examples/app_features, whose pages cover lib/app. The headless tests cannot
 drive menus, gestures, sheets, drags or the system's notices.
 
-## macOS (Cocoa)
+## macOS
 
 Every slot is implemented, and each page of app_features has been checked by hand.
 

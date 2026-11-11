@@ -1,4 +1,4 @@
-// The Cocoa application backend: macOS windows and the AppKit event loop.
+// The AppKit application backend: macOS windows and the AppKit event loop.
 //
 // A window's surface is a PrAppSurfaceKind_NsView. Each new window cascades from the last. The application stays open
 // while it has no windows, until the program stops it, and Quit in its menu asks the program to stop.
@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 // Creates an application whose windows are macOS windows on the AppKit event loop.
-PrApp* prAppCocoaCreate(const PrAppOptions* options);
+PrApp* prAppAppKitCreate(const PrAppOptions* options);
 
 #if defined(__cplusplus)
 }

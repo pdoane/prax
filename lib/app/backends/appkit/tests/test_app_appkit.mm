@@ -1,4 +1,4 @@
-#include "pr/app_cocoa.h"
+#include "pr/app_appkit.h"
 #include "pr/array.h"
 #include "pr/string.h"
 #include "pr/thread.h"
@@ -224,14 +224,14 @@ PrAppWindowHandler handlerOf(Run& run, bool second = false) {
 // stops on a Wake event.
 void runHeadless(Run& run) {
     PrAppOptions options{.headless = true, .windowModel = run.windowModel};
-    run.app = prAppCocoaCreate(&options);
+    run.app = prAppAppKitCreate(&options);
     prAppRun(run.app, {
         .context = &run,
         .start = [](void* context, PrApp* app) {
             Run& r = runOf(context);
             r.seen.push("start");
             PrAppWindowDesc desc{
-                .title = "Cocoa test",
+                .title = "AppKit test",
                 .extent = {64, 32},
                 .decoration = r.decoration,
                 .handler = handlerOf(r),
@@ -274,7 +274,7 @@ TEST_CASE("a headless run starts, opens and frames a window, wakes from another 
 
 TEST_CASE("a window is created only while its application runs") {
     PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
-    PrApp* app = prAppCocoaCreate(&options);
+    PrApp* app = prAppAppKitCreate(&options);
     Run run;
     PrAppWindowDesc desc{.extent = {64, 32}, .handler = handlerOf(run)};
     PrAppWindow* window = nullptr;
@@ -306,7 +306,7 @@ TEST_CASE("a Single application refuses a second window, and a Multiple one crea
 
 TEST_CASE("a process outside an application bundle posts no notification, and does not crash trying") {
     PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
-    PrApp* app = prAppCocoaCreate(&options);
+    PrApp* app = prAppAppKitCreate(&options);
     PrAppNotificationDesc desc{.title = "Title", .body = "Body", .tag = 1};
     CHECK(prAppNotificationPost(app, &desc) == PrStatus_InvalidState);
     prAppDestroy(app);
@@ -422,7 +422,7 @@ TEST_CASE("a pen's press reports its pressure, tilt and twist, and its eraser pr
 
 TEST_CASE("the displays have distinct ids, the main display comes first, and a headless window has no position") {
     PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
-    PrApp* app = prAppCocoaCreate(&options);
+    PrApp* app = prAppAppKitCreate(&options);
     uint32_t count = prAppDisplays(app, nullptr, 0);
     Array<PrAppDisplayInfo> displays(count);
     CHECK(prAppDisplays(app, displays.data(), count) == count);
@@ -730,7 +730,7 @@ TEST_CASE("a timer fires after its delay and then at its interval, and a cancell
         Array<uint64_t> fired;
     } timers;
     PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
-    PrApp* app = prAppCocoaCreate(&options);
+    PrApp* app = prAppAppKitCreate(&options);
     prAppRun(app, {
         .context = &timers,
         .start = [](void*, PrApp* app) {
@@ -759,7 +759,7 @@ TEST_CASE("a timer fires after its delay and then at its interval, and a cancell
 
 TEST_CASE("a key's label comes from the layout, a key that types nothing shows its name, and power has a level") {
     PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
-    PrApp* app = prAppCocoaCreate(&options);
+    PrApp* app = prAppAppKitCreate(&options);
     PrStringView letter = prAppKeyCodeLabel(app, PrAppKeyCode_KeyA);
     CHECK(letter.size != 0);
     CHECK(prAppKeyCodeLabel(app, PrAppKeyCode_Enter) == "Enter");

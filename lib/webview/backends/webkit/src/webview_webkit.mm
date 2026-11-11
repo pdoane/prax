@@ -143,8 +143,8 @@ PrWebKitView* objectOf(PrWebView* view) {
 }
 
 void destroy(PrWebView* view) {
-    WebKitView* cocoa = static_cast<WebKitView*>(view);
-    PrWebKitView* object = (__bridge_transfer PrWebKitView*)cocoa->object;
+    WebKitView* webkit = static_cast<WebKitView*>(view);
+    PrWebKitView* object = (__bridge_transfer PrWebKitView*)webkit->object;
     object.loaded = nil;
     object.printed = nil;
     [object.view stopLoading];
@@ -152,7 +152,7 @@ void destroy(PrWebView* view) {
     [object.view removeFromSuperview];
     [object.clip removeFromSuperview];
     [object.window orderOut:nil];
-    prMemoryFree(cocoa);
+    prMemoryFree(webkit);
 }
 
 void resize(PrWebView* view, PrUVec2 viewport) {

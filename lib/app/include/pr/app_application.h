@@ -33,7 +33,7 @@ typedef struct PrAppEvent PrAppEvent;
 // its own (pr/app_backend.h).
 enum {
     PrAppBackend_Default,
-    PrAppBackend_Cocoa,
+    PrAppBackend_AppKit,
     PrAppBackend_Win32,
     PrAppBackend_Web,
     PrAppBackend_Count,

@@ -4,7 +4,7 @@ pages load from, and the time on cores that a browser's processes spend.
 Chrome and Firefox each run in a fresh profile, without extensions and without the throttling that applies to a
 background window, and are closed afterward. Firefox's profile also turns off the rounding of its clock. WebKit, the
 engine that Safari uses, runs in tools/browsers/webkit_host.cpp instead of the developer's Safari. The host is a browser
-of lib/app's Cocoa backend, over a data store that keeps nothing. A browser loads its page from a server of the
+of lib/app's AppKit backend, over a data store that keeps nothing. A browser loads its page from a server of the
 checkout, which sends the headers that isolate the page across origins, so that the page's clock is as fine as the
 browser allows.
 """
