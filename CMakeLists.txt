@@ -237,6 +237,8 @@ pr_backend_option(PR_NET_SOCKETS "lib/net's backend over the system's sockets" "
 pr_backend_option(PR_NET_NULL "lib/net's null network, whose loop its owner runs" ON ON)
 pr_backend_option(PR_PROCESS_POSIX "lib/process's POSIX backend" "${PR_POSIX_PROCESSES}" "${PR_POSIX_PROCESSES}")
 pr_backend_option(PR_PROCESS_WINDOWS "lib/process's Windows backend" "${WIN32}" "${WIN32}")
+pr_backend_option(PR_SURFACE_COMPOSITOR_SERVICES "lib/surface's CompositorServices backend of immersive sessions"
+                  "${PR_VISIONOS}" "${PR_VISIONOS}")
 pr_backend_option(PR_SYNTAX_TREESITTER "lib/syntax's tree-sitter languages" OFF ON)
 pr_backend_option(PR_TASK_BUILTIN "lib/task's built-in backend" ON ON)
 pr_backend_option(PR_TEXT_HARFBUZZ "lib/text's HarfBuzz shaper" OFF ON)

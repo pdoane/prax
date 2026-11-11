@@ -1143,6 +1143,7 @@ typedef struct PrGpuSwapChainDesc {
 // chain's intent. They combine as follows:
 //
 // - Srgb on Bgra8: sRGB, encoded, in [0, 1]. A shader writes and blends the encoded values.
+// - Srgb on Bgra8Srgb: sRGB in [0, 1], which a shader writes and blends in linear light, and the format encodes.
 // - Srgb on Rgba16F: extended sRGB, encoded. Values outside [0, 1] show colors past sRGB's gamut and, on a display with
 //   headroom, brighter than SDR white.
 // - SrgbLinear on Rgba16F: extended sRGB in linear light, which is scRGB.
@@ -1196,10 +1197,11 @@ typedef struct PrGpuSwapChainFrame {
 } PrGpuSwapChainFrame;
 
 // Acquires the frame that the application draws next, at `extent` in target pixels, for a surface whose extent the
-// application chooses, as a window's. The frame's textures are in the accesses of Discard until the frame draws to
-// them. Returns InvalidState if the surface cannot provide a frame now, such as while its window is hidden or the
-// extent is empty, Limit for an extent larger than the device allows, and Lost if the device is lost. On failure,
-// `*out` is zero.
+// application chooses, as a window's. The compositor of an immersive surface chooses the extent, and `extent` is
+// ignored: such a frame is the one that the surface's session began (pr/surface.h). The frame's textures are in the
+// accesses of Discard until the frame draws to them. Returns InvalidState if the surface cannot provide a frame now,
+// such as while its window is hidden, the extent is empty or no session's frame is begun, Limit for an extent larger
+// than the device allows, and Lost if the device is lost. On failure, `*out` is zero.
 PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out);
 
 // Presents the acquired texture once `commands` are done. The texture must be in the accesses of

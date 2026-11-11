@@ -200,8 +200,13 @@ struct GpuMetalLibrary : GpuSharedLibrary {
 
 // A drawable that presents with a command buffer.
 struct GpuMetalDrawable {
-    id drawable;                        // id<CAMetalDrawable>, retained
+    id PR_NULLABLE drawable;            // id<CAMetalDrawable>, retained, or nil for a compositor's drawable
     bool transactional;                 // presents within the window's display transaction
+
+    // A compositor's drawable, which is valid until its session ends the frame after the submission, and what encodes
+    // its present in the command buffer that draws it, just before it is committed.
+    void* PR_NULLABLE compositorDrawable;
+    void (*PR_NULLABLE encodePresent)(void* drawable, id commandBuffer);
 };
 
 struct GpuMetalPass;
@@ -279,6 +284,7 @@ struct GpuMetalDevice : GpuSharedDevice {
                                                      // doneMutex
     bool bindless;                                   // has PrGpuFeatureFlag_Bindless
     bool layered;                                    // renders to the layers of an array within a pass
+    bool compositorPresents;                         // the backend encodes a GpuMetalDrawable's encodePresent
     id<MTLResidencySet> PR_NULLABLE residency;       // retained; null without bindless
     CVMetalTextureCacheRef PR_NULLABLE textureCache; // made the first time an image is imported, under `mutex`
     id<MTLBuffer> resourceHeap;                      // retained

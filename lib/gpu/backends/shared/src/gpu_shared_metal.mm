@@ -2,6 +2,10 @@
 
 #include "gpu/backends/shared/src/gpu_shared_metal.h"
 
+#if TARGET_OS_VISION
+#include "gpu/backends/shared/src/gpu_shared_metal_compositor.h"
+#endif
+
 #include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/apple_string.h"
@@ -558,6 +562,10 @@ CAMetalLayer* PR_NULLABLE layerOf(const PrSurface* surface, const PrGpuSwapChain
 PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
+#if TARGET_OS_VISION
+    if (surface->kind == PrSurfaceKind_CompositorServices)
+        return gpuMetalCompositorSwapChainCreate(device, surface, out);
+#endif
     @autoreleasepool {
         CAMetalLayer* layer = layerOf(surface, desc);
         if (layer == nil)
@@ -1435,7 +1443,9 @@ PrStatus gpuMetalTextureWrap(GpuMetalDevice* d, id<MTLTexture> texture, PrGpuTex
     uint32_t slot = gpuMetalResourceAdd(d, GpuMetalSlot_Texture, t, t.gpuResourceID._impl);
     if (slot == 0)
         return PrStatus_Limit;
+    bool array = t.textureType == MTLTextureType2DArray;
     d->resources[slot].texture = PrGpuTextureDesc{
+        .kind = PrGpuTextureKind(array ? PrGpuTextureKind_2dArray : PrGpuTextureKind_2d),
         .format = gpuMetalFormatFromPixelFormat(t.pixelFormat),
         .usage = usage,
         .levels = uint8_t(t.mipmapLevelCount),

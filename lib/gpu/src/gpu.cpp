@@ -1073,13 +1073,15 @@ PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuS
     PrGpuDevice* device = swapChain->deviceFn(swapChain);
     if (device->isLostFn(device))
         return PrStatus_Lost;
-    if (extent.x == 0 || extent.y == 0)
-        return PrStatus_InvalidState;
-    if (extent.x > device->infoFn(device).maxTextureSize || extent.y > device->infoFn(device).maxTextureSize)
-        return PrStatus_Limit;
-    // A window's frame: one view of the whole extent.
-    out->viewCount = 1;
-    out->views[0].viewport = PrIRect{0, 0, int32_t(extent.x), int32_t(extent.y)};
+    if (!swapChain->compositorExtent) {
+        if (extent.x == 0 || extent.y == 0)
+            return PrStatus_InvalidState;
+        if (extent.x > device->infoFn(device).maxTextureSize || extent.y > device->infoFn(device).maxTextureSize)
+            return PrStatus_Limit;
+        // A window's frame: one view of the whole extent.
+        out->viewCount = 1;
+        out->views[0].viewport = PrIRect{0, 0, int32_t(extent.x), int32_t(extent.y)};
+    }
     PrStatus status = swapChain->acquireFn(swapChain, extent, out);
     if (status != PrStatus_Ok)
         *out = PrGpuSwapChainFrame{};

@@ -577,10 +577,13 @@ PrGpuFence commandsSubmit(PrGpuCommands* commands) {
         GpuMetalDone* dones = gpuMetalDonesCopy(c);
         bool transactional = false;
         for (uint32_t i = 0; i < c->drawables.count; ++i) {
-            if (c->drawables.data[i].transactional)
+            const GpuMetalDrawable& drawable = c->drawables.data[i];
+            if (drawable.encodePresent != nullptr)
+                drawable.encodePresent(drawable.compositorDrawable, c->buffer);
+            else if (drawable.transactional)
                 transactional = true;
             else
-                [c->buffer presentDrawable:c->drawables.data[i].drawable];
+                [c->buffer presentDrawable:drawable.drawable];
         }
         prMutexLock(&d->mutex);
         uploadsSubmit(d);
@@ -896,6 +899,7 @@ PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDev
         d->swapChainFunctions = &kSwapChainFunctions;
         d->textureNativeFn = textureNative;
         d->info.backend = "Metal";
+        d->compositorPresents = true;
         d->nativeKinds = 1u << PrGpuNativeKind_Metal;
         *out = d;
         return PrStatus_Ok;
