@@ -52,6 +52,13 @@ if (PR_APP_UIKIT)
     if (NOT PR_TVOS)
         target_link_libraries(pr_app PUBLIC "-framework CoreMotion")
     endif()
+    # visionOS's immersive space is a scene that SwiftUI hosts, and draws through CompositorServices.
+    if (PR_VISIONOS)
+        target_sources(pr_app PRIVATE backends/uikit/src/uikit_immersive.mm backends/uikit/src/uikit_immersive.swift)
+        set_source_files_properties(backends/uikit/src/uikit_immersive.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+        target_link_libraries(pr_app PUBLIC "-framework SwiftUI" "-framework CompositorServices")
+        target_link_directories(pr_app PUBLIC ${PR_SWIFT_LINK_DIRECTORIES})
+    endif()
 endif()
 
 # The Win32 backend: Win32 windows and their message loop.

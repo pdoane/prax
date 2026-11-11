@@ -182,6 +182,23 @@ PrAppLifecycle prAppLifecycle(const PrApp* app);
 void prAppQuitRespond(PrApp* app, bool quit);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Immersive spaces
+//
+// An immersive space surrounds the user of a headset with what the program draws, beside the application's windows. The
+// application has one space at most, which lib/surface draws: once the space opens, the application receives an
+// ImmersiveOpened event with the native object that a session of lib/surface runs over, and draws the session's frames
+// on a thread of its own (pr/surface.h). Once the space closes, by the program's request or the user's, the session
+// ends and the application receives ImmersiveClosed. The program then stops using the session and destroys it.
+
+// Asks the system to open the immersive space. ImmersiveOpened follows once it opens, or ImmersiveClosed if it does
+// not. Returns NotSupported on a platform without immersive spaces, and InvalidState while the space is open or
+// opening.
+PrStatus prAppImmersiveOpen(PrApp* app);
+
+// Asks the system to close the immersive space, which ImmersiveClosed follows. Does nothing if no space is open.
+void prAppImmersiveClose(PrApp* app);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Timers
 
 // Delivers a Timer event with `tag` after `delay` seconds, and then every `interval` seconds. If `interval` is zero,

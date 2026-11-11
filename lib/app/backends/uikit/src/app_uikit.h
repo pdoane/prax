@@ -101,6 +101,8 @@ UIGestureRecognizerDelegate>
 @property(nonatomic) BOOL launched;                          // a scene has connected
 @property(nonatomic, weak) UIWindowScene* PR_NULLABLE spare; // a connected scene that no window shows, or nil
 @property(nonatomic, strong) NSMutableArray* presented;      // the dialogs that wait for the user, kept until then
+@property(nonatomic) BOOL immersiveOpening;                  // the immersive space was asked for, and has not opened
+@property(nonatomic, strong) id PR_NULLABLE immersive;       // the open immersive space's layer renderer (visionOS)
 - (void)started;
 - (UIWindowScene* PR_NULLABLE)anyScene;
 - (PrAppWindowModel)windowModel;

@@ -59,6 +59,8 @@ struct PrApp {
     void (*PR_NULLABLE quitRespondFn)(PrApp* app, bool quit);
     void (*PR_NULLABLE timerSetFn)(PrApp* app, uint64_t tag, double delay, double interval);
     void (*PR_NULLABLE timerCancelFn)(PrApp* app, uint64_t tag);
+    PrStatus (*PR_NULLABLE immersiveOpenFn)(PrApp* app);
+    void (*PR_NULLABLE immersiveCloseFn)(PrApp* app);
 
     // Displays
     uint32_t (*displaysFn)(const PrApp* app, PrAppDisplayInfo* PR_NULLABLE out, uint32_t capacity);

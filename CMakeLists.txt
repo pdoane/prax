@@ -34,6 +34,28 @@ endif()
 if (PR_IOS OR PR_TVOS OR PR_VISIONOS)
     set(PR_UIKIT ON)
 endif()
+# visionOS's immersive spaces are SwiftUI's, so lib/app's UIKit backend has Swift there. Swift compiles for the
+# platform's devices or for its simulator, as the SDK is. A program links through clang unless it has Swift of its own,
+# and finds the Swift runtime that a library's Swift asks for in PR_SWIFT_LINK_DIRECTORIES. swiftc links through clang,
+# which takes the SDK as its sysroot only when told, and which takes the C++ library once for each of the C++ languages.
+if (PR_VISIONOS)
+    if (CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
+        set(CMAKE_Swift_COMPILER_TARGET arm64-apple-xros26.0-simulator)
+        set(swift_platform xrsimulator)
+    else()
+        set(CMAKE_Swift_COMPILER_TARGET arm64-apple-xros26.0)
+        set(swift_platform xros)
+    endif()
+    enable_language(Swift)
+    set(CMAKE_Swift_LINKER_PREFERENCE_PROPAGATES OFF)
+    # The compiler may be the shim in /usr/bin, which xcrun resolves to the toolchain's.
+    execute_process(COMMAND xcrun --find swiftc OUTPUT_VARIABLE swiftc OUTPUT_STRIP_TRAILING_WHITESPACE
+                    COMMAND_ERROR_IS_FATAL ANY)
+    cmake_path(GET swiftc PARENT_PATH swift_bin)
+    set(PR_SWIFT_LINK_DIRECTORIES ${CMAKE_OSX_SYSROOT}/usr/lib/swift ${swift_bin}/../lib/swift/${swift_platform})
+    add_link_options("$<$<LINK_LANGUAGE:Swift>:SHELL:-Xclang-linker -isysroot -Xclang-linker ${CMAKE_OSX_SYSROOT}>"
+                     "$<$<LINK_LANGUAGE:Swift>:LINKER:-no_warn_duplicate_libraries>")
+endif()
 if (APPLE)
     if (CMAKE_OSX_ARCHITECTURES)
         set(PR_OSX_ARCHITECTURES ${CMAKE_OSX_ARCHITECTURES})

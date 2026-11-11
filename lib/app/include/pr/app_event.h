@@ -92,6 +92,8 @@ enum {
     PrAppEventKind_DisplaysChanged,     // the list from prAppDisplays changed
     PrAppEventKind_LocaleChanged,       // the user changed their languages or regional formats
     PrAppEventKind_KeyboardLayoutChanged,
+    PrAppEventKind_ImmersiveOpened,     // the immersive space opened (prAppImmersiveOpen)
+    PrAppEventKind_ImmersiveClosed,     // the immersive space closed, or failed to open
 
     // --- Device ---
     PrAppEventKind_PowerChanged,        // the value of prAppPower changed
@@ -231,6 +233,13 @@ typedef struct PrAppOpenEvent {
     uint32_t argumentCount;
 } PrAppOpenEvent;
 
+// The details of an ImmersiveOpened event: the native object of the immersive space, which a session of lib/surface
+// runs over (PrSurfaceSessionDesc::native). On visionOS, it is the cp_layer_renderer_t of the space's CompositorLayer,
+// configured as pr/surface_compositor_services.h asks. It stays valid until the ImmersiveClosed event.
+typedef struct PrAppImmersiveEvent {
+    void* native;
+} PrAppImmersiveEvent;
+
 // The details of a Sensor event. The reading is in the first three or four values. The axes follow the natural
 // orientation of the device's display: +x points right, +y up, and +z out of the display.
 typedef struct PrAppSensorEvent {
@@ -256,6 +265,7 @@ struct PrAppEvent {
         uint64_t tag;                   // every tagged kind
         PrAppQuitEvent quit;            // QuitRequested
         PrAppOpenEvent open;            // Open
+        PrAppImmersiveEvent immersive;  // ImmersiveOpened
         PrAppSensorEvent sensor;        // Sensor
     };
 };

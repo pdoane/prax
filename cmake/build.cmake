@@ -15,14 +15,16 @@ add_library(pr_warnings INTERFACE)
 target_compile_options(pr_warnings INTERFACE
     $<$<C_COMPILER_ID:MSVC>:/W4 /wd4190 /wd4201 /wd4200 /wd4244 /wd4245 /wd4267 /wd4018 /wd4389 /wd4456 /wd4457
         /wd4458 /wd4701 /wd4703 /wd4702 /wd4146 /wd4310 /wd5054 /wd4223>
-    $<$<NOT:$<C_COMPILER_ID:MSVC>>:-Wall -Wshadow -Wconversion -Wsign-conversion -Wimplicit-fallthrough
-        -Wcast-align -Wcast-qual -Wundef -Wdouble-promotion -Wmissing-prototypes -Wunreachable-code -Wformat=2>
+    $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<COMPILE_LANGUAGE:C,CXX,OBJCXX>>:-Wall -Wshadow -Wconversion
+        -Wsign-conversion -Wimplicit-fallthrough -Wcast-align -Wcast-qual -Wundef -Wdouble-promotion
+        -Wmissing-prototypes -Wunreachable-code -Wformat=2>
     $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wzero-as-null-pointer-constant>
     $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wnullability-completeness -Wcomma -Wextra-semi>
     $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang>:-Wnullability-completeness -Wcomma>
 )
 if (PR_DEVELOP)
-    target_compile_options(pr_warnings INTERFACE $<IF:$<C_COMPILER_ID:MSVC>,/WX,-Werror>)
+    target_compile_options(pr_warnings INTERFACE $<$<C_COMPILER_ID:MSVC>:/WX>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<COMPILE_LANGUAGE:C,CXX,OBJCXX>>:-Werror>)
     target_link_options(pr_warnings INTERFACE
         $<$<C_COMPILER_ID:MSVC>:/WX>
         $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<PLATFORM_ID:Darwin,iOS,tvOS,visionOS>>:LINKER:-fatal_warnings>

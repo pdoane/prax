@@ -11,6 +11,7 @@
 
 #include "app/backends/uikit/src/uikit_data.h"
 #include "app/backends/uikit/src/uikit_device.h"
+#include "app/backends/uikit/src/uikit_immersive.h"
 
 #import <QuartzCore/QuartzCore.h>
 
@@ -1248,6 +1249,10 @@ PrApp* prAppUiKitCreate(const PrAppOptions* options) {
     app->lifecycleFn = lifecycle;
     app->timerSetFn = timerSet;
     app->timerCancelFn = timerCancel;
+#if TARGET_OS_VISION
+    app->immersiveOpenFn = uiKitImmersiveOpen;
+    app->immersiveCloseFn = uiKitImmersiveClose;
+#endif
     app->displaysFn = displays;
     app->displayInfoFn = displayInfo;
 #if !TARGET_OS_TV

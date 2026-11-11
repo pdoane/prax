@@ -37,8 +37,8 @@ const char* const kEventKinds[] = {
     "TrackpadTouches", "KeyDown", "KeyUp", "Text", "Paste", "CompositionUpdate", "CompositionEnd", "DragEnter",
     "DragOver", "DragLeave", "Drop", "DragEnd", "DragPromise", "CloseRequested", "Timer", "Hotkey", "Notification",
     "StatusItem", "MenuOpening", "MenuItem", "Wake", "QuitRequested", "Open", "LifecycleChanged", "LowMemory",
-    "ClipboardChanged", "DisplaysChanged", "LocaleChanged", "KeyboardLayoutChanged", "PowerChanged", "Suspend",
-    "Resume", "ScreenLocked", "ScreenUnlocked", "Sensor",
+    "ClipboardChanged", "DisplaysChanged", "LocaleChanged", "KeyboardLayoutChanged", "ImmersiveOpened",
+    "ImmersiveClosed", "PowerChanged", "Suspend", "Resume", "ScreenLocked", "ScreenUnlocked", "Sensor",
 };
 static_assert(countOf(kEventKinds) == PrAppEventKind_Sensor + 1, "a name for each kind of event");
 } // namespace

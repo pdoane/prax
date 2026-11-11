@@ -162,6 +162,15 @@ void prAppQuitRespond(PrApp* app, bool quit) {
         app->quitRespondFn(app, quit);
 }
 
+PrStatus prAppImmersiveOpen(PrApp* app) {
+    return app->immersiveOpenFn != nullptr ? app->immersiveOpenFn(app) : PrStatus_NotSupported;
+}
+
+void prAppImmersiveClose(PrApp* app) {
+    if (app->immersiveCloseFn != nullptr)
+        app->immersiveCloseFn(app);
+}
+
 void prAppTimerSet(PrApp* app, uint64_t tag, double delay, double interval) {
     PR_ASSERT(delay >= 0 && interval >= 0);
     if (app->timerSetFn != nullptr)
