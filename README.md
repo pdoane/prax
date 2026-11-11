@@ -172,12 +172,12 @@ after `find_package(prax)` or when the source tree is added to the project.
 
 ## Development
 
-`./dev.sh` runs the development workflow: building, testing, running the conformance suites, benchmarking, regenerating
-generated sources, linting, and checking the package the way a consumer uses it. `./dev.sh help` lists its commands.
-It and its tools are written in Python 3, which development also needs. Its builds use Ninja and enable `PR_EXAMPLES`,
-`PR_APPS` and `PR_DEVELOP`, which builds the tests with warnings as errors, and with `PR_TOOLS`, on by default, the
-tools and the comparisons. They cache downloads in `third_party/downloads`. The suites' test corpora are fetched into
-`third_party` at pinned revisions.
+`./dev.sh` runs the development workflow: building, testing, running the integration tests and the conformance suites,
+benchmarking, regenerating generated sources, linting, and checking the package the way a consumer uses it.
+`./dev.sh help` lists its commands. It and its tools are written in Python 3, which development also needs. Its builds
+use Ninja and enable `PR_EXAMPLES`, `PR_APPS` and `PR_DEVELOP`, which builds the tests with warnings as errors, and with
+`PR_TOOLS`, on by default, the tools and the comparisons. They cache downloads in `third_party/downloads`. The suites'
+test corpora are fetched into `third_party` at pinned revisions.
 
 ### CMake versions
 

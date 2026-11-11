@@ -8,7 +8,7 @@ arguments, passes its output through, and exits with its status.
 
 `./dev.sh example` and `./dev.sh app` with a simulator build, as ios-sim, launch an application bundle through
 launch(): they install it on the device and launch it with the arguments, showing the device (show), and stream the
-application's output until it exits.
+application's output until it exits. `./dev.sh integration` runs one through run(), which returns its output.
 
 The device is the one that PR_SIMULATOR_DEVICE names, by its name or its UDID, or else the platform's booted device, or
 else its first available device. The program's environment reaches it through simctl's SIMCTL_CHILD_ prefix, so a
@@ -124,6 +124,26 @@ def launch(platform, bundle, args, screenshot=None, seconds=4.0):
                 running.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 running.kill()
+
+
+def run(platform, bundle, seconds):
+    """Installs the application bundle `bundle` on a device of `platform`, launches it without showing the device, and
+    returns its exit status and its output once it exits, or None and its output so far once `seconds` pass, when it is
+    terminated."""
+    with open(os.path.join(bundle, "Info.plist"), "rb") as f:
+        identifier = plistlib.load(f)["CFBundleIdentifier"]
+    udid = device(platform)
+    subprocess.run(["xcrun", "simctl", "install", udid, bundle], check=True)
+    command = ["xcrun", "simctl", "launch", "--console", "--terminate-running-process", udid, identifier]
+    running = subprocess.Popen(command, env=environment(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        output, _ = running.communicate(timeout=seconds)
+        return running.returncode, output
+    except subprocess.TimeoutExpired:
+        subprocess.run(["xcrun", "simctl", "terminate", udid, identifier], check=False, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
+        output, _ = running.communicate()
+        return None, output
 
 
 def main():

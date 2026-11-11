@@ -34,6 +34,7 @@ COMMANDS = {
     "document": "tools.shell.commands",
     "example": "tools.build.commands",
     "app": "tools.build.commands",
+    "integration": "tools.integration.commands",
     "fetch": "tools.fetch.commands",
     "clean": "tools.build.commands",
 }
