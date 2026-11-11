@@ -157,7 +157,7 @@ function(pr_stage_resources)
         endif()
 
         get_target_property(bundle ${program} MACOSX_BUNDLE)
-        if (bundle AND PR_IOS)
+        if (bundle AND PR_UIKIT)
             set(destination $<TARGET_BUNDLE_DIR:${program}>)
         elseif (bundle)
             set(destination $<TARGET_BUNDLE_CONTENT_DIR:${program}>/Resources)

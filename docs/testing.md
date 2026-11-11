@@ -8,9 +8,9 @@ exclusions.
 ## Running
 
 `./dev.sh test` is the fast loop: lint, build and unit tests on the host. `./dev.sh ci` checks every target that the
-machine builds: the host in its default and debug builds, and on macOS, the web and iOS, whose tests are built and not
-run. The debug build is the one that checks the assertions. The unit tests read only what the build fetches
-(`cmake/test_data.cmake`).
+machine builds: the host in its default and debug builds, and on macOS, the web and the devices of iOS, tvOS and
+visionOS, whose tests are built and not run. The debug build is the one that checks the assertions. The unit tests
+read only what the build fetches (`cmake/test_data.cmake`).
 
 A unit test is a test case. The build lists its test programs in `tests.json` (`pr_add_test`), most of them doctest
 binaries, and `./dev.sh` runs them several at once, the slowest first, with each binary running all of its cases in one
@@ -202,10 +202,10 @@ lib/app's default backend (`prAppCreate`) whose `main()` composes everything tha
 such as its font bundles, are its resources (`pr/resource.h`), which its build stages with it on every platform. An
 example shows what a library does. An app is for daily use, and keeps its model in a library of its own, which its unit
 tests link. Each is checked by running it. `./dev.sh example <name> [args...]` builds an example and runs it, and
-`./dev.sh app <name> [args...]` an app. With `ios-sim` before the name, each is built as an application bundle for the
-iOS simulator, installed on a simulator device and launched there, with its output streamed back, and `--screenshot
-<png>` captures the device's screen after a few seconds instead. With `ios`, each runs the same way on a connected
-iPhone or iPad.
+`./dev.sh app <name> [args...]` an app. With a simulator build before the name, `ios-sim`, `tvos-sim` or
+`visionos-sim`, each is built as an application bundle for that simulator, installed on a simulator device of the
+platform and launched there, with its output streamed back, and `--screenshot <png>` captures the device's screen after
+a few seconds instead. With `ios`, each runs the same way on a connected iPhone or iPad.
 
 ### Running on an iOS device
 

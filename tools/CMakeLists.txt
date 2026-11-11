@@ -3,8 +3,8 @@
 # and the captured pages' checks.
 add_subdirectory(harness)
 add_subdirectory(shell)
-# The rest run on the host, as dev.sh runs them (PR_TOOLS). A build without them, such as the web's and iOS's, has only
-# what the libraries' tests run: the harnesses that the tests share, and the shell.
+# The rest run on the host, as dev.sh runs them (PR_TOOLS). A build without them, such as the web's and those for UIKit's
+# platforms, has only what the libraries' tests run: the harnesses that the tests share, and the shell.
 if (NOT PR_TOOLS)
     return()
 endif()

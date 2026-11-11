@@ -16,11 +16,24 @@
 #define PR_POSIX_BACKTRACE 0
 #endif
 
+// An alternate stack for signals, which tvOS lacks. There, a crash reports on the stack that it happened on, which a
+// stack that overflowed cannot do.
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+#if defined(__APPLE__) && TARGET_OS_TV
+#define PR_POSIX_SIGNAL_STACK 0
+#else
+#define PR_POSIX_SIGNAL_STACK 1
+#endif
+
 namespace pr_impl {
 namespace {
 
+#if PR_POSIX_SIGNAL_STACK
 // The stack that a crash is reported on, so that a thread that overflows its own stack still reports.
 alignas(16) char crashStack[64 * 1024];
+#endif
 
 void writeText(const char* text) {
     ssize_t written = write(STDERR_FILENO, text, strlen(text));
@@ -100,14 +113,17 @@ void prCorePosixFailed(PrStringView message, PrStringView file, uint32_t line) {
 void prCorePosixCrashHandler(void) {
     if (PR_ADDRESS_SANITIZER)
         return;
+    struct sigaction action {};
+    action.sa_sigaction = crashed;
+    // Some C libraries' flags are unsigned, as musl's SA_RESETHAND is, and the field is an int.
+    action.sa_flags = int(SA_SIGINFO | SA_RESETHAND);
+#if PR_POSIX_SIGNAL_STACK
     stack_t stack{};
     stack.ss_sp = crashStack;
     stack.ss_size = sizeof(crashStack);
     sigaltstack(&stack, nullptr);
-    struct sigaction action {};
-    action.sa_sigaction = crashed;
-    // Some C libraries' flags are unsigned, as musl's SA_RESETHAND is, and the field is an int.
-    action.sa_flags = int(SA_SIGINFO | SA_ONSTACK | SA_RESETHAND);
+    action.sa_flags |= SA_ONSTACK;
+#endif
     sigemptyset(&action.sa_mask);
     constexpr int kCrashes[] = {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGTRAP, SIGABRT};
     for (int number : kCrashes)

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  The Info.plist of an example's or an app's bundle on iOS (pr_ios_bundle in cmake/build.cmake). The launch screen
-  makes the system show the application at the display's own size. The application has one scene unless its bundle
-  asks for several (pr_ios_bundle's MULTIPLE_SCENES), and lib/app's UIKit backend names each scene's delegate when the
-  scene connects.
+  The Info.plist of an example's or an app's bundle on a UIKit platform (pr_uikit_bundle in cmake/build.cmake). The
+  application has one scene unless its bundle asks for several (pr_uikit_bundle's MULTIPLE_SCENES), and lib/app's
+  UIKit backend names each scene's delegate when the scene connects. The platform's own keys follow: on iOS, the launch
+  screen that makes the system show the application at the display's own size, and the orientations.
 -->
 <plist version="1.0">
 <dict>
@@ -26,30 +26,18 @@
     <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
     <key>CFBundleVersion</key>
     <string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
-    <key>LSRequiresIPhoneOS</key>
-    <true/>
     <key>MinimumOSVersion</key>
     <string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
     <key>UIDeviceFamily</key>
     <array>
-        <integer>1</integer>
-        <integer>2</integer>
+@PR_UIKIT_DEVICE_FAMILIES@
     </array>
-    <key>UILaunchScreen</key>
-    <dict/>
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>
-        <@PR_IOS_MULTIPLE_SCENES@/>
+        <@PR_UIKIT_MULTIPLE_SCENES@/>
+@PR_UIKIT_SCENE_KEYS@
     </dict>
-    <key>UISupportedInterfaceOrientations</key>
-    <array>
-        <string>UIInterfaceOrientationPortrait</string>
-        <string>UIInterfaceOrientationPortraitUpsideDown</string>
-        <string>UIInterfaceOrientationLandscapeLeft</string>
-        <string>UIInterfaceOrientationLandscapeRight</string>
-    </array>
-    <key>CADisableMinimumFrameDurationOnPhone</key>
-    <true/>
+@PR_UIKIT_PLATFORM_KEYS@
 </dict>
 </plist>

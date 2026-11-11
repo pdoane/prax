@@ -1,6 +1,7 @@
 # ./dev.sh ci of each configuration (`configuration`) of each platform (`platform`), in a job of its own on the runner
 # that builds it (`os`), so that they run at once. WebAssembly is checked on Linux, whose runners are not bounded by the
-# account's limit of five macOS jobs at once, so that macOS and iOS fit within it.
+# account's limit of five macOS jobs at once, so that the macOS jobs fit within it. The UIKit platforms' devices run no
+# tests, so each is checked in its default build alone.
 #
 # ./dev.sh ci --configure fetches everything the run reads, and the caches of what it fetched are saved then, before
 # anything builds. The compiler cache is saved after the run, passing or not. Each cache is saved even when the run
@@ -29,13 +30,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows, macos, wasm, ios]
+        platform: [windows, macos, wasm]
         configuration: [default, debug]
         include:
           - {platform: windows, os: windows-latest}
           - {platform: macos, os: macos-latest}
           - {platform: wasm, os: ubuntu-latest}
-          - {platform: ios, os: macos-latest}
+          - {platform: ios, configuration: default, os: macos-latest}
+          - {platform: tvos, configuration: default, os: macos-latest}
+          - {platform: visionos, configuration: default, os: macos-latest}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     defaults:
