@@ -46,6 +46,9 @@ PrStatus prAppWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
         (desc->role == PrAppWindowRole_Dialog || desc->role == PrAppWindowRole_Popup));
     PR_ASSERT(!desc->modal || desc->role == PrAppWindowRole_Dialog);
     PR_ASSERT(prUtf8Validate(desc->title) == desc->title.size);
+    // Only a Desktop application has windows for its popups, dialogs and overlays.
+    if (desc->role != PrAppWindowRole_Normal && prAppWindowModel(app) != PrAppWindowModel_Desktop)
+        return PrStatus_NotSupported;
     return app->windowCreateFn(app, desc, out);
 }
 

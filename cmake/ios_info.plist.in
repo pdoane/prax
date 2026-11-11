@@ -3,8 +3,8 @@
 <!--
   The Info.plist of an example's or an app's bundle on iOS (pr_ios_bundle in cmake/build.cmake). The launch screen
   makes the system show the application at the display's own size. The application has one scene unless its bundle
-  asks for several (pr_ios_bundle's MULTIPLE_SCENES), and the application names each scene's delegate when the scene
-  connects.
+  asks for several (pr_ios_bundle's MULTIPLE_SCENES), and lib/app's UIKit backend names each scene's delegate when the
+  scene connects.
 -->
 <plist version="1.0">
 <dict>

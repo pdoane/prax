@@ -401,10 +401,12 @@ def public_names(texts):
     return names
 
 
+OBJC_CLASS = re.compile(r"@(?:interface|implementation)\s+(\w+)")
+
+
 def objc_classes(texts):
     """Returns the Objective-C classes that the texts declare or implement."""
-    pattern = r"@(?:interface|implementation)\s+(\w+)"
-    return {name for text in texts for name in re.findall(pattern, mask_non_code(text))}
+    return {name for text in texts for name in OBJC_CLASS.findall(mask_non_code(text))}
 
 
 def check_internal_names(report, path, text, names, classes=frozenset()):
@@ -412,7 +414,7 @@ def check_internal_names(report, path, text, names, classes=frozenset()):
     them. An Objective-C class, which no namespace can hold, keeps the prefix, wherever it is declared (`classes`), as
     does a function with C linkage, which reaches the linker by its name alone (check_linkage)."""
     code = mask_non_code(text)
-    classes = set(classes) | objc_classes([text]) | c_linkage_names(text)
+    classes = set(classes) | set(OBJC_CLASS.findall(code)) | c_linkage_names(text)
     reported = set()
     for match in PUBLIC_NAME.finditer(code):
         name = match.group(1)

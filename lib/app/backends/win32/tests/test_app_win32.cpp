@@ -553,7 +553,7 @@ TEST_CASE("a quit request that the program cancels keeps the run, and refuses th
 
 TEST_CASE("a dialog outlives the parent that the program destroys, until the program destroys it") {
     Run run;
-    run.windowModel = PrAppWindowModel_Multiple;
+    run.windowModel = PrAppWindowModel_Desktop;
     run.begin = [](Run& r) {
         PrAppWindowDesc desc{
             .title = "Dialog",

@@ -301,13 +301,6 @@ class Namespaces(unittest.TestCase):
         lint.check_documented(report, 'lib/a/src/a.h', '@interface PrAView : NSView\n@end\n')
         self.assertEqual([p[2] for p in report.problems], ['undocumented'])
 
-    def test_an_objective_c_class_keeps_its_prefix_where_another_file_declares_it(self):
-        report = lint.Report()
-        lint.check_internal_names(report, 'lib/a/src/a_view.mm', 'void f(PrAView* view) {}\n', set(), {'PrAView'})
-        self.assertEqual(report.problems, [])
-        lint.check_internal_names(report, 'lib/a/src/a_view.mm', 'void f(PrAView* view) {}\n', set())
-        self.assertEqual([p[2] for p in report.problems], ['internal-name'])
-
     def test_pr_impl_is_spelled_out_only_by_a_macro(self):
         source = ('#define ASSERT(c) \\\n    ::pr_impl::fail(c)\n'
                   '// pr_impl::inComment\n'
@@ -469,6 +462,13 @@ class Namespaces(unittest.TestCase):
                   'void run(PrThing* t) { prThingRun(t); prThingAsBase(t); prHelper(); }\n')
         self.assertEqual(self.rules(lint.check_internal_names, 'lib/core/src/a.mm', source, names),
                          [(3, 'internal-name')])
+
+    def test_an_objective_c_class_keeps_its_prefix_where_another_file_declares_it(self):
+        classes = lint.objc_classes(['@interface PrView : NSObject\n@end\n'])
+        source = 'void run(PrView* view) { [view layout]; }\n'
+        self.assertEqual(self.rules(lint.check_internal_names, 'lib/core/src/b.mm', source, set(), classes), [])
+        self.assertEqual(self.rules(lint.check_internal_names, 'lib/core/src/b.mm', source, set()),
+                         [(1, 'internal-name')])
 
     def test_a_public_type_name_is_its_handle_base_alone(self):
         header = ('typedef struct PrThing PrThing;\ntypedef uint8_t PrKind;\n'

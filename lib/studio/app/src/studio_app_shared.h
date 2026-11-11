@@ -89,6 +89,7 @@ struct StudioWindowState {
     bool initial;                   // the window of the application's description, whose failure fails the run
     PrVec2 extent;                  // of the viewport, in px
     PrAppTitleBar titleBar;         // as the frame that runs reports it
+    PrAppInsets safeArea;           // as the frame that runs reports it
     PrAppWindowBackdrop backdrop;   // as the frame that runs reports it
     bool transparent;               // the swap chain presents alpha, for a transparent window
     PrAppWindow* appWindow;

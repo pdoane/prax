@@ -360,10 +360,12 @@ function(pr_sign_bundle target)
         VERBATIM)
 endfunction()
 
-# Makes `target`, an example or an app, an application bundle for iOS, org.prax.<target>. Its Info.plist is
-# cmake/ios_info.plist.in. With MULTIPLE_SCENES, the application may show several scenes where the device does, as an
-# iPad does, which lib/app's Multiple window model needs. The bundle is signed whole and ad hoc once its resources are
-# staged (pr_sign_bundle), as the simulator requires of what it installs.
+# Makes `target`, an example or an app, an application bundle for iOS, org.prax.<target>, which the simulator installs
+# and launches (tools/build/simulator.py). Its Info.plist is cmake/ios_info.plist.in. With MULTIPLE_SCENES, the
+# application may show several scenes where the device does, as an iPad does, which lib/app's Multiple window model
+# needs. The bundle is signed whole and ad hoc once its resources are staged (pr_sign_bundle), as the simulator requires
+# of what it installs. A device needs the developer's signature instead, which tools/build/device.py applies when it
+# installs the bundle.
 #
 #   pr_ios_bundle(<target> [MULTIPLE_SCENES])
 function(pr_ios_bundle target)

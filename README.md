@@ -42,12 +42,12 @@ conformance. Benchmarks measure immediate-mode frames and dynamic retained docum
 
 ## Status
 
-Prax is approaching pre-alpha on macOS and Windows. The suites' scoreboards (`suites/*/scoreboard.md`) record what
+Prax is approaching pre-alpha on macOS, iOS and Windows. The suites' scoreboards (`suites/*/scoreboard.md`) record what
 passes.
 
 Coming soon:
 
-- **Platforms.** iOS and the web, then Linux and Android.
+- **Platforms.** The web, then Linux and Android.
 - **3D.** A scene renderer, composed with 2D in one frame.
 - **Audio and video.** Audio devices and the Web Audio API, synthesis, recording an application to video, reading
   video and audio files.
@@ -118,6 +118,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | interface | option | backend | builds on | default |
 | --- | --- | --- | --- | --- |
 | app | `PR_APP_APPKIT` | AppKit | macOS | on |
+| app | `PR_APP_UIKIT` | UIKit | iOS | on |
 | app | `PR_APP_WIN32` | Win32 | Windows | on |
 | app | `PR_APP_WEB` | a web page's canvas | the web | on |
 | audio | `PR_AUDIO_MEMORY` | output kept in memory, for a run without a device | every platform | on |

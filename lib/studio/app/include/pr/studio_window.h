@@ -14,11 +14,11 @@
 // If the swap chain holds more than 8-bit sRGB, the list renders into a texture of half floats, which the display
 // shader maps to the display (pr/draw_display.h).
 //
-// In an application of Multiple windows, the window hosts the portals of its context (prUiSetHost): each menu, tooltip
-// or dialog that floats over the window shows in a Popup or Dialog window that the window owns. The window's frame lays
-// them out with the rest of its tree, and each of their windows draws its portal from that frame. Their windows take
-// the window's cursor and drop answer, and the window's output names the one that holds the caret of the text being
-// edited. Each Studio window hosts only its own portals.
+// In a Desktop application, the window hosts the portals of its context (prUiSetHost): each menu, tooltip or dialog
+// that floats over the window shows in a Popup or Dialog window that the window owns. The window's frame lays them out
+// with the rest of its tree, and each of their windows draws its portal from that frame. Their windows take the
+// window's cursor and drop answer, and the window's output names the one that holds the caret of the text being edited.
+// Each Studio window hosts only its own portals.
 //
 // The user's request to close a window closes it unless the window's event callback takes the request.
 //
@@ -71,8 +71,9 @@ typedef void (*PrStudioWindowPaletteFn)(void* PR_NULLABLE context, PrStudioWindo
 // the context's portals go to the context alone.
 typedef bool (*PrStudioWindowEventFn)(void* PR_NULLABLE context, PrStudioWindow* window, const PrAppEvent* event);
 
-// Declares a round of the application under `root`, which is a panel on the app background that fills the viewport
-// below the application's title bar, if it has one. The viewport is `extent` px.
+// Declares a round of the application under `root`, which is a panel on the app background that fills the viewport,
+// within its safe area (PrAppFrame::safeArea) and below the application's title bar, if it has one. The viewport is
+// `extent` px.
 typedef void (*PrStudioWindowBuildFn)(void* PR_NULLABLE context, PrStudioWindow* window, PrLayoutNode root, PrVec2 extent);
 
 // Declares the content of the application's own title bar in each round, in `row`, which lies between the system's

@@ -1,7 +1,7 @@
 // Terminal: terminals in tabs, in Studio's windows.
 //
 // main() is the composition root. It runs the app's interface (apps/terminal/terminal_app.h) in a Studio application of
-// Multiple windows (pr/studio_app.h), and sets the terminals in the monospace face of the application's fonts.
+// Desktop windows (pr/studio_app.h), and sets the terminals in the monospace face of the application's fonts.
 //
 // Usage: terminal [--grid COLUMNSxROWS] [--scrollback LINES] [program [arguments...]]
 //
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
     t.fonts = fonts;
     openApp(t);
     PrAppOptions options = prAppOptionsDefault();
-    options.windowModel = PrAppWindowModel_Multiple;
+    options.windowModel = PrAppWindowModel_Desktop;
     PrStudioAppDesc app{
         .fonts = fonts,
         .options = &options,

@@ -19,9 +19,11 @@ if (PR_GPU_METAL OR PR_GPU_METAL4)
     set_source_files_properties(backends/shared/src/gpu_shared_metal.mm PROPERTIES COMPILE_OPTIONS -fno-objc-arc)
     target_link_libraries(pr_gpu PUBLIC "-framework Metal" "-framework QuartzCore" "-framework CoreVideo"
                                  "-framework Foundation" "-framework CoreFoundation")
-    # A swap chain presents to an AppKit view on macOS.
+    # A swap chain presents to an AppKit view on macOS, and to a UIKit view on iOS.
     if (PR_MACOS)
         target_link_libraries(pr_gpu PUBLIC "-framework AppKit")
+    elseif (PR_IOS)
+        target_link_libraries(pr_gpu PUBLIC "-framework UIKit")
     endif()
 endif()
 if (PR_GPU_METAL)

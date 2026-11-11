@@ -202,7 +202,27 @@ lib/app's default backend (`prAppCreate`) whose `main()` composes everything tha
 such as its font bundles, are its resources (`pr/resource.h`), which its build stages with it on every platform. An
 example shows what a library does. An app is for daily use, and keeps its model in a library of its own, which its unit
 tests link. Each is checked by running it. `./dev.sh example <name> [args...]` builds an example and runs it, and
-`./dev.sh app <name> [args...]` an app.
+`./dev.sh app <name> [args...]` an app. With `ios-sim` before the name, each is built as an application bundle for the
+iOS simulator, installed on a simulator device and launched there, with its output streamed back, and `--screenshot
+<png>` captures the device's screen after a few seconds instead. With `ios`, each runs the same way on a connected
+iPhone or iPad.
+
+### Running on an iOS device
+
+A device runs only what a development certificate signs, under a provisioning profile that lists the device. The build
+signs a bundle ad hoc, as the simulator requires, and `./dev.sh example ios` signs it again for the device, with the
+newest profile that Xcode keeps for the developer's team that lists the device and covers the bundle's identifier,
+`org.prax.<name>`. Xcode's team profile, whose identifier is a wildcard, covers every example and app. A device is
+made ready once:
+
+1. Connect it to the Mac, unlock it, and trust the Mac.
+2. In Xcode, sign in to the developer's account (Settings, Accounts), and open the device in Window, Devices and
+   Simulators, which pairs it and prepares it for development.
+3. On the device, turn on Developer Mode (Settings, Privacy & Security), which restarts it.
+4. Register the device with the team, which regenerates the team's profile to list it: build any iOS application
+   project of Xcode's, such as a new one from its template, for the device, with automatic signing for the team.
+
+`PR_IOS_DEVICE` chooses among several connected devices, by name or UDID.
 
 `./dev.sh package` checks the libraries as a consumer takes them. It builds them with the build's defaults and installs
 them, then builds `tools/package`, a program over their public headers, against the installed package and against the

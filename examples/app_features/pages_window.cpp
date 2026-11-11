@@ -123,6 +123,13 @@ void buildBackdrop(void* context, PrStudioWindow* window, PrLayoutNode root, PrV
     prKitLabel(kit, chip, {.text = "A HUD chip over the backdrop"}, {});
 }
 
+// Logs a window that could not be created, as a popup, a dialog or an overlay of an application that is not a Desktop
+// one.
+void created(Features& f, PrStringView what, PrStatus status) {
+    if (status != PrStatus_Ok)
+        logLine(f, format("{}: {}", what, statusName(status)));
+}
+
 void buildOverlay(void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
     Features& f = featuresOf(context);
     PrKit* kit = prStudioWindowKit(window);
@@ -161,7 +168,7 @@ void openOverlay(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).overlay = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.overlay);
+    created(f, "overlay", prStudioWindowCreate(f.app, &desc, &f.overlay));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -202,7 +209,7 @@ void openPopup(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).popup = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.popup);
+    created(f, "popup", prStudioWindowCreate(f.app, &desc, &f.popup));
 }
 
 // A dialog that closes with its button, or with its close button, whose CloseRequested the window does not take.
@@ -235,7 +242,7 @@ void openDialog(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).dialog = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.dialog);
+    created(f, "dialog", prStudioWindowCreate(f.app, &desc, &f.dialog));
 }
 
 // A window without decoration, which has no title bar and closes from its content. Its field shows that it takes the
@@ -265,7 +272,7 @@ void openBorderless(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).borderless = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.borderless);
+    created(f, "borderless", prStudioWindowCreate(f.app, &desc, &f.borderless));
 }
 
 } // namespace
@@ -283,7 +290,7 @@ void openBackdrop(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).backdrop = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.backdrop);
+    created(f, "backdrop", prStudioWindowCreate(f.app, &desc, &f.backdrop));
 }
 
 void openSecond(Features& f, const PrAppDisplayPosition* PR_NULLABLE at) {
@@ -309,7 +316,7 @@ void openSecond(Features& f, const PrAppDisplayPosition* PR_NULLABLE at) {
         },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.second);
+    created(f, "second", prStudioWindowCreate(f.app, &desc, &f.second));
 }
 
 void toggleOverlay(Features& f) {
@@ -337,8 +344,7 @@ void pageWindows(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
             position.display, position.position.x, position.position.y));
     line(kit, s, format("active: {}   visible: {}   occluded: {}", prAppWindowIsActive(app) ? "yes" : "no",
         prAppWindowIsVisible(app) ? "yes" : "no", prAppWindowIsOccluded(app) ? "yes" : "no"));
-    bool multiple = prAppWindowModel(appOf(f)) == PrAppWindowModel_Multiple;
-    line(kit, s, format("window model: {}", multiple ? "Multiple" : "Single"));
+    line(kit, s, format("window model: {}", prAppWindowModelName(prAppWindowModel(appOf(f)))));
     PrLayoutNode states = row(kit, s);
     for (PrAppWindowState state = PrAppWindowState_Normal; state <= PrAppWindowState_Fullscreen; ++state) {
         if (button(kit, states, prAppWindowStateName(state)))
@@ -355,9 +361,9 @@ void pageWindows(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
     if (textField(kit, titles, 1, f.title, "Title"))
         prAppWindowSetTitle(app, f.title);
     note(kit, s, "Edit the title, and the title bar, the Window menu and the application switcher follow it. The "
-        "application asks for Multiple windows, or Single with --single-window, and --extent 1100x700 sets the control "
+        "application asks for Desktop windows, or Single with --single-window, and --extent 1100x700 sets the control "
         "window's extent. On the web, a Single window fills the page, and its Fullscreen covers the whole display. "
-        "Multiple windows float in the page, which is their display: Fullscreen fills the page, and the page's own "
+        "Desktop windows float in the page, which is their display: Fullscreen fills the page, and the page's own "
         "button puts it on the whole display. The page's title follows the window that has the keyboard.");
 
     PrLayoutNode size = section(kit, parent, "SIZE AND PLACE");
