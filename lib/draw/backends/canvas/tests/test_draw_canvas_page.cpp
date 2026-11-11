@@ -445,7 +445,7 @@ TEST_CASE("the canvas renderer masks a group by alpha and by luminance") {
 
 TEST_CASE("the canvas renderer draws glyphs, filled and stroked") {
     Renderers r;
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawStroke stroke = prDrawStrokeDefault();
     stroke.shape.width = 1.5f;
     const PrDrawStroke* outlines[2] = {nullptr, &stroke};

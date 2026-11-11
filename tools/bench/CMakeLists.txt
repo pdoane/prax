@@ -110,7 +110,7 @@ target_compile_definitions(flex_bench PRIVATE PR_FLEX_BENCH_TAFFY=$<BOOL:${PR_CA
 # A check that Yoga can set Prax text. It links lib/text and no layout, so it fails if the library comes to need one.
 add_executable(text_yoga_check flex_bench/text_yoga_check.cpp)
 target_link_libraries(text_yoga_check PRIVATE prax::font prax::text yoga pr_warnings)
-target_compile_definitions(text_yoga_check PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+target_compile_definitions(text_yoga_check PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 add_test(NAME text_yoga_check COMMAND text_yoga_check)
 
 if (PR_JS)

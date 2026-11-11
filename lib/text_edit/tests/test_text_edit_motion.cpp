@@ -41,13 +41,13 @@ struct Fixture {
     PrLayoutNode root = kPrLayoutNodeNone;
 
     Fixture() {
-        std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
+        std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
         const PrFont* PR_NULLABLE face = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);
-        std::string arabicPath = std::string(PR_FONTS_DIR) + "/NotoSansArabic.ttf";
+        std::string arabicPath = std::string(PR_FONTS_DIR) + "/NotoSansArabic[wdth,wght].ttf";
         REQUIRE(prFontCreateFromFile(arabicPath, 0, nullptr, &face) == PrStatus_Ok);
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);

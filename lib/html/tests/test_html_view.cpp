@@ -116,7 +116,7 @@ struct Viewed {
     explicit Viewed(const char* html, PrImageCodec* PR_NULLABLE images = nullptr,
             const std::vector<uint8_t>* PR_NULLABLE resource = nullptr, bool holds = false,
             const char* url = "about:blank") : resource(resource) {
-        std::string path = std::string(PR_FONTS_DIR) + "/Tinos.ttf";
+        std::string path = std::string(PR_FONTS_DIR) + "/Tinos-Regular.ttf";
         const PrFont* font = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();

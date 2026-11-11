@@ -1127,7 +1127,7 @@ TEST_CASE("the fragment renderer fills paths alike whether tessellated, in strip
 }
 
 TEST_CASE("the fragment renderer draws glyphs from the atlas as the cpu backend fills them") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     const char* text = "Handgloves";
     std::vector<PrFontGlyph> glyphs;
@@ -1366,7 +1366,7 @@ TEST_CASE("the fragment renderer maps a brush along strokes by each pixel's near
 }
 
 TEST_CASE("the fragment renderer draws a list source as a texture at its scale in target pixels, as a brush and as a mask") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* maskList = prDrawListCreate();
     PrFontGlyph glyphs[1] = {{prFontCodePointGlyph(font, 'H'), {30, 70}}};
     PrFontGlyphRun run{};
@@ -1578,7 +1578,7 @@ TEST_CASE("the fragment renderer reads what lies beneath through a projected gro
 }
 
 TEST_CASE("the fragment renderer draws a kept embed, in place and moved by whole pixels, as it draws the embed walked") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     std::vector<PrFontGlyph> glyphs;
     float x = 2.3f;
     for (const char* c = "Kept"; *c != 0; ++c) {
@@ -1954,7 +1954,7 @@ TEST_CASE("the fragment renderer paints a gradient's hard stops as the cpu backe
 
 TEST_CASE("the fragment renderer uploads an image, glyphs and small paths' coverage once") {
     Device device(64, 64);
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     uint8_t texels[4] = {255, 0, 0, 255};
     PrDrawImageDesc desc{
         PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,

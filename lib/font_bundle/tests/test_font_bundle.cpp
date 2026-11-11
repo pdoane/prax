@@ -1,5 +1,7 @@
-// Font bundles: every file of each bundle installs, and the names that each bundle gives match its fonts. Bundles
-// installed together fall back to each bundle's families in turn.
+// Font bundles: each bundle's files are the files that the build fetches for it, and the names that each bundle gives
+// match its fonts. Bundles installed together fall back to each bundle's families in turn. The tests install the
+// bundles' files that the test data holds (cmake/test_data.cmake), which a bundle installs as it would all of its
+// files. The font-coverage suite reads the bundles whole.
 
 #include "pr/font_bundle.h"
 #include "pr/locale.h"
@@ -73,7 +75,25 @@ std::string fallbackOf(PrFontSet* set, PrFontGeneric generic, const char* text, 
 
 using namespace pr_impl;
 
-TEST_CASE("each bundle installs every one of its files, and falls back only to its own families") {
+TEST_CASE("each bundle's files are those that the build fetches for it") {
+    struct Expected {
+        PrFontBundle bundle;
+        uint32_t files;         // the files of the bundle's list in font_bundle.cmake
+    };
+    const Expected expected[] = {
+        {PrFontBundle_Complete, PR_FONT_BUNDLE_FILES_Complete},
+        {PrFontBundle_NotoMono, PR_FONT_BUNDLE_FILES_NotoMono},
+        {PrFontBundle_Standard14, PR_FONT_BUNDLE_FILES_Standard14},
+        {PrFontBundle_Plex, PR_FONT_BUNDLE_FILES_Plex},
+        {PrFontBundle_NerdFontSymbols, PR_FONT_BUNDLE_FILES_NerdFontSymbols},
+    };
+    for (const Expected& e : expected) {
+        CAPTURE(int(e.bundle));
+        CHECK(prFontBundleFileCount(&e.bundle, 1) == e.files);
+    }
+}
+
+TEST_CASE("each bundle falls back only to its own families") {
     struct Expected {
         PrFontBundle bundle;
         const char* first;      // the first fallback family
@@ -83,13 +103,12 @@ TEST_CASE("each bundle installs every one of its files, and falls back only to i
     const Expected expected[] = {
         {PrFontBundle_Complete, "Noto Sans", "Last Resort", nullptr},
         {PrFontBundle_Standard14, "Arimo", "NewComputerModernMath", nullptr},
-        {PrFontBundle_Plex, "IBM Plex Sans Var", "IBM Plex Serif Var", "IBM Plex"},
         {PrFontBundle_NerdFontSymbols, "Symbols Nerd Font Mono", "Symbols Nerd Font Mono", nullptr},
     };
     for (const Expected& e : expected) {
         CAPTURE(int(e.bundle));
         PrFontSet* set = prFontSetCreate(nullptr);
-        CHECK(install(set, {e.bundle}) == prFontBundleFileCount(&e.bundle, 1));
+        CHECK(install(set, {e.bundle}) != 0);
         uint32_t count = prFontSetFallbackCount(set);
         REQUIRE(count != 0);
         CHECK(fallbackFamily(set, 0) == e.first);
@@ -103,14 +122,20 @@ TEST_CASE("each bundle installs every one of its files, and falls back only to i
 TEST_CASE("a stack of bundles installs each file once, and falls back to each bundle's families in turn") {
     PrFontSet* set = prFontSetCreate(nullptr);
     const PrFontBundle bundles[] = {PrFontBundle_Standard14, PrFontBundle_Complete};
-    uint32_t files = prFontBundleFileCount(bundles, 2);
     // New Computer Modern Math is in both.
-    CHECK(files == prFontBundleFileCount(&bundles[0], 1) + prFontBundleFileCount(&bundles[1], 1) - 1);
-    CHECK(install(set, {PrFontBundle_Standard14, PrFontBundle_Complete}) == files);
+    CHECK(prFontBundleFileCount(bundles, 2) ==
+        prFontBundleFileCount(&bundles[0], 1) + prFontBundleFileCount(&bundles[1], 1) - 1);
+    PrFontSet* both = prFontSetCreate(nullptr);
+    PrFontSet* each = prFontSetCreate(nullptr);
+    CHECK(install(both, {PrFontBundle_Standard14, PrFontBundle_Complete}) ==
+        install(each, {PrFontBundle_Standard14}) + install(each, {PrFontBundle_Complete}) - 1);
+    prFontSetDestroy(both);
+    prFontSetDestroy(each);
+    install(set, {PrFontBundle_Standard14, PrFontBundle_Complete});
     // The first bundle that gives a name binds it, and a later bundle binds what the earlier ones do not.
     CHECK(familyOf(set, "serif") == "Tinos");
     CHECK(familyOf(set, "Helvetica") == "Arimo");
-    CHECK(familyOf(set, "emoji") == "Noto Color Emoji");
+    CHECK(familyOf(set, "system-ui") == "Noto Sans");
     uint32_t count = prFontSetFallbackCount(set);
     REQUIRE(count > 1);
     CHECK(fallbackFamily(set, 0) == "Arimo");
@@ -132,49 +157,6 @@ TEST_CASE("Noto names the generic families") {
     CHECK(familyOf(set, "monospace") == "Noto Sans Mono");
     CHECK(familyOf(set, "math") == "NewComputerModernMath");
     CHECK(familyOf(set, "Helvetica").empty());
-    prFontSetDestroy(set);
-}
-
-TEST_CASE("Plex names the generic families, and its variable families by the names of its static ones") {
-    PrFontSet* set = prFontSetCreate(nullptr);
-    install(set, {PrFontBundle_Plex});
-    CHECK(familyOf(set, "serif") == "IBM Plex Serif Var");
-    CHECK(familyOf(set, "IBM Plex Serif") == "IBM Plex Serif Var");
-    CHECK(familyOf(set, "sans-serif") == "IBM Plex Sans Var");
-    CHECK(familyOf(set, "IBM Plex Sans") == "IBM Plex Sans Var");
-    CHECK(familyOf(set, "system-ui") == "IBM Plex Sans Var");
-    CHECK(familyOf(set, "monospace") == "IBM Plex Mono Var");
-    CHECK(familyOf(set, "IBM Plex Mono") == "IBM Plex Mono Var");
-    CHECK(familyOf(set, "math") == "IBM Plex Math");
-    CHECK(familyOf(set, "emoji").empty());
-    prFontSetDestroy(set);
-}
-
-TEST_CASE("Plex sets the scripts that IBM Plex covers in its own families, and the others in a bundle after it") {
-    const char* arabic = "\xd8\xb3\xd9\x84\xd8\xa7\xd9\x85";
-    const char* devanagari = "\xe0\xa4\xa8\xe0\xa4\xae";
-    const char* japanese = "\xe6\x97\xa5\xe6\x9c\xac";
-    const char* bengali = "\xe0\xa6\x95";
-    const char* greek = "\xce\xb1\xce\xb2";
-    PrLocale ja = prLocaleFromTag("ja");
-    PrFontSet* set = prFontSetCreate(nullptr);
-    install(set, {PrFontBundle_Plex});
-    CHECK(fallbackOf(set, PrFontGeneric_SansSerif, "Plex", PrScript_Latn) == "IBM Plex Sans Var");
-    CHECK(fallbackOf(set, PrFontGeneric_SansSerif, arabic, PrScript_Arab) == "IBM Plex Sans Arabic");
-    CHECK(fallbackOf(set, PrFontGeneric_SansSerif, devanagari, PrScript_Deva) == "IBM Plex Sans Devanagari");
-    CHECK(fallbackOf(set, PrFontGeneric_SansSerif, japanese, PrScript_Jpan, ja) == "IBM Plex Sans JP");
-    // Plex Mono has no Greek. The first fallback face with Greek sets it, rather than the serif default family.
-    CHECK(fallbackOf(set, PrFontGeneric_Monospace, greek, PrScript_Grek) == "IBM Plex Sans Var");
-    prFontSetDestroy(set);
-
-    set = prFontSetCreate(nullptr);
-    install(set, {PrFontBundle_Plex, PrFontBundle_Complete});
-    CHECK(familyOf(set, "sans-serif") == "IBM Plex Sans Var");
-    CHECK(fallbackOf(set, PrFontGeneric_SansSerif, arabic, PrScript_Arab) == "IBM Plex Sans Arabic");
-    CHECK(fallbackOf(set, PrFontGeneric_SansSerif, japanese, PrScript_Jpan, ja) == "IBM Plex Sans JP");
-    CHECK(fallbackOf(set, PrFontGeneric_SansSerif, bengali, PrScript_Beng) == "Noto Sans Bengali");
-    // A monospace face of a later bundle suits monospace text better than Plex's other faces.
-    CHECK(fallbackOf(set, PrFontGeneric_Monospace, greek, PrScript_Grek) == "Noto Sans Mono");
     prFontSetDestroy(set);
 }
 

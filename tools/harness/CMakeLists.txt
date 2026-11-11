@@ -38,9 +38,9 @@ endif()
 target_include_directories(draw_compare PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(draw_compare PUBLIC prax::core PRIVATE prax::core_cpp pr_warnings)
 
-# The renderers of lib/draw and its comparisons, in the configurations that the viewer and draw_bench render with. The
-# web's build has no comparisons, and neither of those tools.
-if (NOT EMSCRIPTEN)
+# The renderers of lib/draw and its comparisons, in the configurations that the viewer and draw_bench render with. A
+# build without the tools has no comparisons, and neither of those tools.
+if (PR_TOOLS)
     add_library(draw_renderers STATIC draw_renderers.cpp)
     target_include_directories(draw_renderers PUBLIC ${PROJECT_SOURCE_DIR})
     target_link_libraries(draw_renderers PUBLIC prax::draw prax::gpu
@@ -51,10 +51,11 @@ if (NOT EMSCRIPTEN)
     endif()
 endif()
 
-# The fixture of the tests of Studio Kit and of the libraries over it (kit_fixture.h): a kit that sets text in the font
-# bundles that the build fetched, and the frames that drive it.
+# The fixture of the tests of Studio Kit and of the libraries over it (kit_fixture.h): a kit that sets text in font
+# bundles, and the frames that drive it. It installs the bundles from the tests' fonts (cmake/test_data.cmake), which
+# hold the bundles' files that the tests set text in, so that what the tests see does not depend on PR_FONT_BUNDLES.
 add_library(kit_fixture INTERFACE kit_fixture.h)
 target_include_directories(kit_fixture INTERFACE ${PROJECT_SOURCE_DIR})
-target_compile_definitions(kit_fixture INTERFACE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+target_compile_definitions(kit_fixture INTERFACE PR_FONT_BUNDLE_DIR="${PR_TEST_FONTS_DIR}")
 target_link_libraries(kit_fixture INTERFACE prax::studio_kit prax::font_bundle prax::font prax::text prax::draw
                                             prax::layout prax::ui prax::compress prax::image harness_png doctest::doctest)

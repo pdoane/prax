@@ -6,7 +6,11 @@ Each runner's docstring (`tools/suite/wpt/wpt.py`, `tools/suite/css_parsing.py`,
 
 ## Running
 
-`./dev.sh` is the fast loop: lint, build and unit tests. Then run the suites for the areas that a change touches:
+`./dev.sh test` is the fast loop: lint, build and unit tests on the host. `./dev.sh ci` checks every target that the
+machine builds: the host in its default and debug builds, and on macOS, the web and iOS, whose tests are built and not
+run. The debug build is the one that checks the assertions. The unit tests read only what the build fetches
+(`cmake/test_data.cmake`). What tests a runner against a corpus is a suite. Then run the suites for the areas that a
+change touches:
 
 | area | suites |
 | --- | --- |
@@ -17,7 +21,8 @@ Each runner's docstring (`tools/suite/wpt/wpt.py`, `tools/suite/css_parsing.py`,
 | Markdown | `commonmark`, `gfm`, `markdown-dom` |
 | URL | `url-parsing`, `url-wpt` |
 | terminals (`lib/vterm`) | `esctest` |
-| shell, runner, anything every page uses | every `*-wpt` suite |
+| shell, runner, anything every page uses | every `*-wpt` suite, `wpt-runner` |
+| font bundles | `font-coverage` |
 | SVG, Lottie rendering | `resvg`, `lottie-web`, `skottie`, `rlottie`, `lottie-ios` |
 | the build, a library's public headers or its links | `./dev.sh package` |
 | invalidation, caching, rendering cost | the `*-wpt` suites with `--verify`, and `./dev.sh pages invalidation` |
@@ -137,7 +142,7 @@ loopback (`--resolve`), WPT's CA (`--ca`), wptrunner's wait for a screenshot (`-
 the URLs of the pages. The viewer reaches the server the same way when `./dev.sh viewer` runs it around one. Any other
 page, such as Prax's, loads at its file: URL. Pages have WPT's Ahem font installed, and the `Standard14` font bundle
 (`pr/font_bundle.h`), whose generic families have the metrics of Times, Helvetica and Courier.
-`tools/lint/test_font_bundle.py` checks that the bundles cover each language's exemplar characters. Ahem, whether
+The `font-coverage` suite checks that the bundles cover each language's exemplar characters. Ahem, whether
 installed or loaded by `@font-face`, is drawn without antialiasing, as reftests built on it expect (`prFontIsAliased`).
 A page's `@font-face` faces load when its text asks for them in a rendering update, and `document.fonts.ready` waits for
 them, so a page settles with its fonts loaded. The end of a load lays the document out, and the faces that its text asks

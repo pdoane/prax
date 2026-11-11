@@ -295,9 +295,9 @@ MATH_TEST_FONTS = (
 
 
 def fonts():
-    """The fonts that the text tests and the viewer draw with, each chosen for what it carries: scripts, color glyphs,
-    variation axes, vertical metrics and baseline tables. The color-fonts project's test glyphs exercise every COLRv1
-    paint."""
+    """The fonts that the suites, the benchmarks and the viewer draw with, each chosen for what it carries: scripts,
+    color glyphs, variation axes, vertical metrics and baseline tables. The color-fonts project's test glyphs exercise
+    every COLRv1 paint. The unit tests read theirs from the build (cmake/test_data.cmake)."""
     files = [
         ("NotoSans.ttf", OFL + "notosans/NotoSans%5Bwdth,wght%5D.ttf"),
         ("NotoSans-Italic.ttf", OFL + "notosans/NotoSans-Italic%5Bwdth,wght%5D.ttf"),

@@ -25,5 +25,5 @@ if (PR_DEVELOP)
         tests/test_unicode_normalization.cpp
     )
     target_link_libraries(unicode_tests PRIVATE prax::locale)
-    target_compile_definitions(unicode_tests PRIVATE PR_UNICODE_DIR="${PROJECT_SOURCE_DIR}/third_party/unicode")
+    target_compile_definitions(unicode_tests PRIVATE PR_UNICODE_DIR="${PR_TEST_UNICODE_DIR}")
 endif()

@@ -260,7 +260,9 @@ if (PR_DEVELOP)
     # The tests' doctest header (tools/harness/test.h) prints the C++ layer's strings, which are header-only over the
     # configured core, so the layer's headers are all that this binary needs of it.
     target_include_directories(core_config_tests PRIVATE cpp/include)
-    doctest_discover_tests(core_config_tests)
+    if (NOT PR_IOS)
+        doctest_discover_tests(core_config_tests)
+    endif()
 
     if (PR_JS)
         pr_module_tests(core_quickjs_cpp

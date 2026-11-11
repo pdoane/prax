@@ -44,10 +44,10 @@ std::string testFont(const char* file) {
 // Sans Hebrew for the other Hebrew letters; and Noto Sans JP for Han.
 PrLayoutFontStyle mixed(Fixture& f) {
     static const PrFontCodePointRange kUpper[] = {{0x0000, 0x005f}, {0x05b0, 0x05c7}, {0x05d0, 0x05d9}};
-    addFace(f, testFont("Arimo.ttf"), "Upper", kUpper, 3);
+    addFace(f, testFont("Arimo-Regular.ttf"), "Upper", kUpper, 3);
     addFace(f, testFont("Literata.ttf"), "Fallback");
-    addFace(f, std::string(PR_FONT_BUNDLE_DIR) + "/NotoSansHebrew[wdth,wght].ttf", "Hebrew");
-    addFace(f, testFont("NotoSansJP.ttf"), "Japanese");
+    addFace(f, testFont("NotoSansHebrew[wdth,wght].ttf"), "Hebrew");
+    addFace(f, testFont("NotoSansJP-VF.otf"), "Japanese");
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
     font.font = f.textFont(20, {
         prFontFamilyFromName("Upper"), prFontFamilyFromName("Fallback"),

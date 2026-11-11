@@ -210,6 +210,17 @@ struct Term {
         }
     }
 
+    // Waits until the screen has only what the test writes to it (write). A Windows pseudoconsole clears the screen and
+    // sets the title shortly after the launch, which would erase anything written before it, so this runs frames until
+    // the title changes from the program's name. Elsewhere the screen is ready at once. The program must write nothing,
+    // as sleep does.
+    void settle() {
+#if defined(_WIN32)
+        std::string name(prTerminalTitle(terminal).data, prTerminalTitle(terminal).size);
+        frameUntil([&] { return prTerminalTitle(terminal) != PrStringView(name); });
+#endif
+    }
+
     bool shows(const std::string& text) const { return screen().find(text) != std::string::npos; }
 
     // The center of the screen cell at `column` and `row`, in viewport coordinates.
@@ -496,17 +507,6 @@ std::string cellImage(PrTerminal* terminal, uint32_t columns, uint32_t rows, con
 
 constexpr PrColor8 kImageRed = {0xff, 0x00, 0x00, 0xff};
 
-// The longest time, in milliseconds, that the UI thread may wait for the screen lock while the program floods the
-// terminal. The bound is one slice of parsing, plus room for the scheduler. A build without the optimizer, or with a
-// sanitizer, parses many times slower. The tests run more threads than the machine has cores, so the scheduler may
-// preempt the parser while it holds the lock. No lock can bound that delay, so the bound applies to all but a
-// thousandth of the waits.
-#if defined(NDEBUG)
-constexpr double kLockWaitBound = 5;
-#else
-constexpr double kLockWaitBound = 250;
-#endif
-
 // Returns an upper bound on the wait at the `share` quantile of `info`: the upper edge of the histogram bucket that
 // holds that quantile.
 double waitAtShare(const PrTerminalLockInfo& info, double share) {
@@ -641,6 +641,7 @@ TEST_CASE("terminal: a click with the primary modifier opens the URL under it, a
 TEST_CASE("terminal: a hyperlink under the pointer with the primary modifier underlines all of its cells") {
     FakeApp app;
     Term t("sleep", {"10"}, &app.app);
+    t.settle();
     // One link in two parts, whose text differs from its URI, followed by a URL in plain text.
     t.write(hyperlink("https://example.com/real", "id=a") + "one" + kHyperlinkEnd + " gap " +
         hyperlink("https://example.com/real", "id=a") + "three" + kHyperlinkEnd + " https://example.com/text");
@@ -667,6 +668,7 @@ TEST_CASE("terminal: a hyperlink under the pointer with the primary modifier und
 
 TEST_CASE("terminal: a hyperlink at rest has a faint dotted underline, and text without a link has none") {
     Term t("sleep", {"10"});
+    t.settle();
     t.write("____\r\n" + hyperlink("https://example.com/") + "____" + kHyperlinkEnd);
     t.f.frame();
     std::vector<uint8_t> rgba;
@@ -698,6 +700,7 @@ TEST_CASE("terminal: a hyperlink to a file that exists opens through the handler
         desc->openFileContext = &opened;
     };
     Term t("sleep", {"10"}, &app.app, {}, setup);
+    t.settle();
     std::string uri = taken(prUrlFromFilePath(folder + "/linked.txt"));
     t.write(hyperlink(uri) + "here" + kHyperlinkEnd + " " + hyperlink("file:///nowhere/missing.txt") + "gone" +
         kHyperlinkEnd + " " + hyperlink("file://elsewhere.invalid/x") + "far" + kHyperlinkEnd);
@@ -714,6 +717,7 @@ TEST_CASE("terminal: a hyperlink to a file that exists opens through the handler
 
 TEST_CASE("terminal: a change of the palette, the roles or reverse video redraws the rows that it colors") {
     Term t("sleep", {"10"});
+    t.settle();
     // Two full blocks, which the terminal draws as shapes that fill their cells. One is in the default foreground, and
     // one is in the palette's red.
     t.write("\xe2\x96\x88\x1b[31m\xe2\x96\x88\x1b[0m");
@@ -737,6 +741,7 @@ TEST_CASE("terminal: a change of the palette, the roles or reverse video redraws
 
 TEST_CASE("terminal: the screen takes the colors of the kit's theme, and follows its changes") {
     Term t("sleep", {"10"});
+    t.settle();
     auto color8 = [](PrColor color) {
         return PrColor8{uint8_t(color.r * 255 + 0.5f), uint8_t(color.g * 255 + 0.5f), uint8_t(color.b * 255 + 0.5f), 255};
     };
@@ -757,6 +762,7 @@ TEST_CASE("terminal: the screen takes the colors of the kit's theme, and follows
 
 TEST_CASE("terminal: the view paints no background, and its owner's shows under the cells, the gutter and the edges") {
     Term t("sleep", {"10"});
+    t.settle();
     t.viewport = PrVec2{float(KitFixture::kRenderWidth), float(KitFixture::kRenderHeight)};
     t.f.frame();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
@@ -809,6 +815,7 @@ TEST_CASE("terminal: the view paints no background, and its owner's shows under 
 
 TEST_CASE("terminal: a terminal that paints its background in its view shows it within the view alone") {
     Term t("sleep", {"10"});
+    t.settle();
     // A panel in the window holds the terminal, which paints its own background, as in Scribe.
     t.f.build = [&t](PrLayoutNode root) {
         PrLayoutTree* tree = t.f.tree;
@@ -836,6 +843,7 @@ TEST_CASE("terminal: a terminal that paints its background in its view shows it 
 TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention once while the window is inactive") {
     FakeApp app;
     Term t("sleep", {"10"}, &app.app);
+    t.settle();
     PrVec2 blank = t.cellCenter(10, 5);
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     REQUIRE(near(t.pixel(blank), background));
@@ -873,6 +881,7 @@ TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention
 TEST_CASE("terminal: with reduced motion, the bell's flash holds still and ends at its time") {
     FakeApp app;
     Term t("sleep", {"10"}, &app.app);
+    t.settle();
     t.f.preferences.reducedMotion = true;
     t.f.frame();
     PrVec2 blank = t.cellCenter(10, 5);
@@ -892,6 +901,8 @@ TEST_CASE("terminal: with reduced motion, the bell's flash holds still and ends 
 
 TEST_CASE("terminal: a notification posts unless the terminal has focus in the active window, or as its condition says") {
     FakeApp app;
+    // The notifications take the program's name as their title, so the test does not settle (Term::settle), which waits
+    // for a Windows pseudoconsole's title. A notification acts on the screen's events, not its contents.
     Term t("sleep", {"10"}, &app.app);
     // The terminal shows in the active window without focus. The default and unfocused conditions post, and the
     // invisible condition does not.
@@ -948,6 +959,9 @@ TEST_CASE("terminal: a flood of output goes on showing in the frames that the te
     CHECK_FALSE(prUiOutput(t.f.ui).wantsFrame);
 }
 
+// The wait's duration is reported, and not checked: the scheduler can preempt the parser while it holds the lock, for
+// as long as the machine's load keeps it off the processor. What the parser took during a wait is the bound that load
+// cannot move.
 TEST_CASE("terminal: while the program floods the screen, the UI waits for it no longer than a slice of parsing") {
     FakeApp app;
     // Colored text, wide characters and scrolling lines, which parse slower than plain text, followed by a marker. A
@@ -973,9 +987,11 @@ TEST_CASE("terminal: while the program floods the screen, the UI waits for it no
     PrTerminalLockInfo info = prTerminalLockInfo(t.terminal);
     MESSAGE("frames " << frames << ", waits " << info.count << ", median under " << waitAtShare(info, 0.5) * 1000 <<
         " us, 99.9% under " << waitAtShare(info, 0.999) * 1000 << " us, mean " <<
-        info.totalMilliseconds / double(info.count) * 1000 << " us, worst " << info.worstMilliseconds * 1000 << " us");
+        info.totalMilliseconds / double(info.count) * 1000 << " us, worst " << info.worstMilliseconds * 1000 <<
+        " us, most parsed during a wait " << info.worstBytes << " bytes");
     CHECK(frames > 10);
-    CHECK(waitAtShare(info, 0.999) < kLockWaitBound);
+    CHECK(info.count > 10);
+    CHECK(info.worstBytes <= kPrTerminalParseSliceBytes);
 }
 
 TEST_CASE("terminal: a synchronized update wakes the application as it begins and as it ends, and not between") {
@@ -1210,6 +1226,7 @@ TEST_CASE("terminal: a terminal that stops showing loses focus, which the progra
 
 TEST_CASE("terminal: the working directory is the file URL of this machine that the program reports, decoded") {
     Term t("sleep", {"10"}, nullptr, "/");
+    t.settle();
     // Without a report, the directory is the one that the program started in.
     CHECK(t.directory() == "/");
     t.write("\x1b]7;file:///tmp/a%20b\x07");
@@ -1249,7 +1266,11 @@ TEST_CASE("terminal: without a report, the working directory is the foreground p
 #endif
 
 TEST_CASE("terminal: a new font remakes the cells, and the program hears of the new columns and rows") {
-    Term t("sh", {"-c", "trap 'stty size' WINCH; echo ready; while :; do sleep 0.02; done"});
+    // The program reports its size when it reads a line. The frame that takes the new font resizes the program's
+    // terminal before the line is typed, so the report has the new size. A trap on SIGWINCH would depend on when the
+    // signal arrives, which under a Windows pseudoconsole is late or never.
+    Term t("sh", {"-c", "echo ready; read line; stty size; sleep 10"});
+    prTerminalFocus(t.terminal);
     t.frameUntil([&] { return t.shows("ready"); });
     PrVec2 cell = prTerminalCellExtent(t.terminal);
     PrUVec2 extent = prVtermExtent(Locked(t.terminal));
@@ -1262,6 +1283,7 @@ TEST_CASE("terminal: a new font remakes the cells, and the program hears of the 
     PrUVec2 fewer = prVtermExtent(Locked(t.terminal));
     CHECK(fewer.x < extent.x);
     CHECK(fewer.y < extent.y);
+    t.f.key(PrAppKey_Enter);
     t.frameUntil([&] { return t.shows(std::to_string(fewer.y) + " " + std::to_string(fewer.x)); });
 }
 
@@ -1305,6 +1327,7 @@ TEST_CASE("terminal: arcs, braille patterns and Powerline separators are drawn a
 
 TEST_CASE("terminal: the icons of Nerd Fonts draw within their cells, centered in the line") {
     Term t("sleep", {"10"});
+    t.settle();
     // A file icon from the Private Use Area and a Material Design icon from the Supplementary Private Use Area, each
     // followed by a blank cell.
     t.write("\xef\x85\x9b \xf3\xb0\x80\x81 ");
@@ -1333,6 +1356,7 @@ TEST_CASE("terminal: with the terminal app's fonts, what Noto Sans Mono lacks dr
     {
         Term t("sleep", {"10"}, nullptr, {}, nullptr,
             KitFonts{.bundles = {PrFontBundle_NotoMono, PrFontBundle_NerdFontSymbols}, .system = system});
+        t.settle();
         // A Han ideograph and an emoji, each two columns wide, and a Nerd Fonts file icon. Each is followed by a blank
         // cell.
         t.write("\xe6\xbc\xa2 \xf0\x9f\x98\x80 \xef\x85\x9b ");
@@ -1350,6 +1374,7 @@ TEST_CASE("terminal: with the terminal app's fonts, what Noto Sans Mono lacks dr
 
 TEST_CASE("terminal: blinking text hides and shows on a steady period over its background") {
     Term t("sleep", {"10"});
+    t.settle();
     // A full block that blinks over a red background, and one that does not.
     t.write("\x1b[5;41m\xe2\x96\x88\x1b[0m \xe2\x96\x88");
     t.f.frame();
@@ -1375,6 +1400,7 @@ TEST_CASE("terminal: blinking text hides and shows on a steady period over its b
 
 TEST_CASE("terminal: blinking text stays shown for a user who asks for less motion") {
     Term t("sleep", {"10"});
+    t.settle();
     t.f.preferences.reducedMotion = true;
     t.write("\x1b[5m\xe2\x96\x88\x1b[0m");
     PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);
@@ -1618,6 +1644,7 @@ TEST_CASE("terminal: a terminal whose caller turns the integration off runs the 
 TEST_CASE("terminal: the last command's output and exit code are the application's to read and copy") {
     FakeApp app;
     Term t("sleep", {"10"}, &app.app);
+    t.settle();
     CHECK(taken(prTerminalCommandOutput(t.terminal)).empty());
     t.write(command("one", {"a"}, "0") + command("two", {"b", "c  ", ""}, "4") + kPrompt);
     t.f.frame();
@@ -1636,6 +1663,7 @@ TEST_CASE("terminal: the last command's output and exit code are the application
 
 TEST_CASE("terminal: the prompt keys scroll from prompt to prompt, and the jumped-to command's output selects") {
     Term t("sleep", {"10"});
+    t.settle();
     uint32_t rows = prVtermExtent(Locked(t.terminal)).y;
     std::vector<std::string> first = numbered("f", rows + 4);
     std::vector<std::string> second = numbered("s", rows + 4);
@@ -1678,6 +1706,7 @@ TEST_CASE("terminal: the prompt keys scroll from prompt to prompt, and the jumpe
 TEST_CASE("terminal: the gutter marks a command that succeeded in the theme's success color, and one that failed in "
         "its danger color") {
     Term t("sleep", {"10"});
+    t.settle();
     t.write(command("ok", {}, "0") + command("bad", {}, "2") + kPrompt);
     t.f.frame();
     const PrKitPalette& palette = t.f.kit->theme.palette;
@@ -1689,6 +1718,7 @@ TEST_CASE("terminal: the gutter marks a command that succeeded in the theme's su
 
 TEST_CASE("terminal: the cell's pixel extent is the cell's in target pixels, which the screen reports to programs") {
     Term t("sleep", {"10"});
+    t.settle();
     PrVec2 cell = prTerminalCellExtent(t.terminal);
     PrUVec2 pixels = cellPixelExtent(t.terminal);
     CHECK(pixels.x == uint32_t(prF32Round(cell.x)));
@@ -1697,6 +1727,7 @@ TEST_CASE("terminal: the cell's pixel extent is the cell's in target pixels, whi
 
 TEST_CASE("terminal: images draw over the text, between the backgrounds and the text, or under the backgrounds") {
     Term t("sleep", {"10"});
+    t.settle();
     PrColor8 blue = prVtermPaletteColor(Locked(t.terminal), 4);
     PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);
     // Row 0: three cells with a blue background, each with an image in a different z-index band. Row 1: two full blocks
@@ -1723,6 +1754,7 @@ TEST_CASE("terminal: images draw over the text, between the backgrounds and the 
 
 TEST_CASE("terminal: an image scrolls with its text, into the scrollback that the view scrolls back to") {
     Term t("sleep", {"10"});
+    t.settle();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     t.write("\x1b[3;5H" + graphics(cellImage(t.terminal, 2, 2, ""), cellPixels(t.terminal, 2, 2, kImageRed)));
     t.f.frame();
@@ -1750,6 +1782,7 @@ TEST_CASE("terminal: an image scrolls with its text, into the scrollback that th
 
 TEST_CASE("terminal: the placeholders of a virtual placement draw its image in their cells") {
     Term t("sleep", {"10"});
+    t.settle();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     t.write(graphics(cellImage(t.terminal, 2, 1, ",U=1,i=7,c=2,r=1,q=2"), cellPixels(t.terminal, 2, 1, kImageRed)));
     t.f.frame();

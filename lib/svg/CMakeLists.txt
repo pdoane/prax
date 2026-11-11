@@ -49,7 +49,7 @@ if (PR_DEVELOP)
     # pixels is rendered on the CPU.
     target_link_libraries(svg_tests PRIVATE prax::css prax::dom prax::draw prax::font prax::geom prax::path prax::text
                                             prax::compress prax::image)
-    target_compile_definitions(svg_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    target_compile_definitions(svg_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     # lib/draw's SVG writer, read back.
     if (PR_DRAW_SVG)
         target_sources(svg_tests PRIVATE tests/test_svg_writer.cpp)

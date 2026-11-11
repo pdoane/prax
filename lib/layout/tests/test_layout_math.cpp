@@ -50,7 +50,7 @@ struct MathFixture {
     explicit MathFixture(const char* wpt = nullptr) {
         PrStatus status = PrStatus_Ok;
         if (wpt == nullptr || std::strchr(wpt, '/') != nullptr) {
-            std::string path = wpt != nullptr ? wpt : std::string(PR_FONT_BUNDLE_DIR) + "/NewCMMath-Regular.otf";
+            std::string path = wpt != nullptr ? wpt : std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf";
             std::vector<uint8_t> bytes = readFile(path);
             status = prFontCreate(bytes, 0, nullptr, &font);
         } else {
@@ -838,9 +838,9 @@ TEST_CASE("math line breaks: a display formula breaks at its operators to fit it
     CHECK(starts >= 1);
 }
 
-#if defined(PR_STIX_MATH_FONT)
+// STIX Two Math has the flattened accents (flac) that the bundled math fonts lack.
 TEST_CASE("math under and over: an accent over a base taller than FlattenedAccentBaseHeight takes its flattened form") {
-    MathFixture m(PR_STIX_MATH_FONT);
+    MathFixture m(PR_FONTS_DIR "/STIXTwoMath-Regular.ttf");
     float flattened = m.c().flattenedAccentBaseHeight * kSize;
     PrLayoutMathStyle accent = prLayoutMathStyleDefault();
     accent.scriptFlags = PrLayoutMathScriptFlag_Accent;
@@ -862,4 +862,3 @@ TEST_CASE("math under and over: an accent over a base taller than FlattenedAccen
     CHECK(pxOf(height(m.bounds(lowHat))) == pxOf(inkHeight(hat)));
     CHECK(pxOf(height(m.bounds(highHat))) == pxOf(inkHeight(flat)));
 }
-#endif

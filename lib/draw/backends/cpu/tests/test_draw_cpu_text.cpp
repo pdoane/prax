@@ -54,7 +54,7 @@ std::string pixel(const std::vector<uint8_t>& bytes, uint32_t size, uint32_t x, 
 using namespace pr_impl;
 
 TEST_CASE("a glyph fills its outline") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     uint16_t h = prFontCodePointGlyph(font, 'H');
     PrRect bounds = prFontGlyphBounds(font, h);
     PrFontGlyph glyph{h, {10, 90}};
@@ -103,7 +103,7 @@ TEST_CASE("a bitmap glyph draws its strike's image, and nothing without a codec"
     struct Case {
         const char* font;
         uint32_t codePoint;
-    } cases[] = {{"TwemojiSmileySbix.ttf", 0}, {"NotoColorEmojiCbdt.ttf", '9'}};
+    } cases[] = {{"TwemojiSmileySbix.ttf", 0}, {"NotoColorEmoji.subset.multiple_size_tables.ttf", '9'}};
     for (const Case& c : cases) {
         CAPTURE(std::string(c.font));
         const PrFont* font = load(c.font);

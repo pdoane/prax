@@ -24,7 +24,7 @@ struct Grid {
     std::string text;
 
     Grid() {
-        for (const char* name : {"Cousine.ttf", "NotoSansJP.ttf", "NotoSansHebrew.ttf"}) {
+        for (const char* name : {"Cousine-Regular.ttf", "NotoSansJP-VF.otf", "NotoSansHebrew[wdth,wght].ttf"}) {
             std::string path = std::string(PR_FONTS_DIR) + "/" + name;
             const PrFont* PR_NULLABLE face = nullptr;
             REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);

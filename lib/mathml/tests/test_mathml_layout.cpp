@@ -32,7 +32,7 @@ struct MathPage {
     explicit MathPage(const char* html) {
         const std::string paths[] = {
             std::string(PR_FONTS_DIR) + "/Ahem.ttf",
-            std::string(PR_FONT_BUNDLE_DIR) + "/NewCMMath-Regular.otf",
+            std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf",
         };
         for (const std::string& path : paths) {
             const PrFont* font = nullptr;

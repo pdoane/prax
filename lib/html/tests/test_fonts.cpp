@@ -41,7 +41,7 @@ std::string readFont(const std::string& name) {
 
 // Returns a font as a url() of a data: URL.
 std::string fontUrl() {
-    std::string bytes = readFont("HandwritingCff2.otf");
+    std::string bytes = readFont("noto_handwriting-cff2_colr_1.otf");
     std::string encoded(prBase64EncodedSize(bytes.size()), '\0');
     prBase64Encode(bytes, encoded.data(), encoded.size());
     return "url(data:font/otf;base64," + encoded + ")";
@@ -112,7 +112,7 @@ struct Served {
             if (!hold)
                 answer(request);
         };
-        for (const char* file : {"Tinos.ttf", "Arimo.ttf"}) {
+        for (const char* file : {"Tinos-Regular.ttf", "Arimo-Regular.ttf"}) {
             std::string path = std::string(PR_FONTS_DIR) + "/" + file;
             const PrFont* font = nullptr;
             REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
@@ -235,7 +235,7 @@ struct SetHeard {
 // Returns a face of family B that the test loads itself, whose fetch the host holds.
 PrCssFontFace* loadingFace(PrHtmlPage* page) {
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-    PrCssFontFace* face = prCssFontFaceCreate("B", "url(Arimo.ttf)", nullptr);
+    PrCssFontFace* face = prCssFontFaceCreate("B", "url(Arimo-Regular.ttf)", nullptr);
     REQUIRE(prCssFontFaceSetAdd(prCssDocumentFonts(document), face) == PrStatus_Ok);
     CHECK(prCssFontFaceLoad(face, document) == PrCssFontFaceStatus_Loading);
     runTasks(page);
@@ -364,12 +364,12 @@ TEST_CASE("a FontFaceSetLoadEvent holds the faces it names") {
 
 TEST_CASE("text in a family of @font-face falls back while its face loads, then takes the face") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(fonts/Arimo.ttf) }</style>") + kSpans;
+    std::string html = std::string("<style>@font-face { font-family: Web; src: url(fonts/Arimo-Regular.ttf) }</style>") + kSpans;
     PrHtmlPage* page = served.load(html.c_str());
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(widthOf(page, "web") == widthOf(page, "serif"));
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf"});
+    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
     CHECK(widthOf(page, "web") == widthOf(page, "sans"));
     CHECK(widthOf(page, "web") != widthOf(page, "serif"));
     prHtmlPageDestroy(page);
@@ -389,11 +389,11 @@ TEST_CASE("a family whose faces all failed hides the installed family of its nam
 
 TEST_CASE("a face whose unicode-range holds none of the text is not fetched") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo.ttf); unicode-range: U+0-7F }"
-        "@font-face { font-family: Web; src: url(Cousine.ttf); unicode-range: U+400-4FF }</style>") + kSpans;
+    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf); unicode-range: U+0-7F }"
+        "@font-face { font-family: Web; src: url(Cousine-Regular.ttf); unicode-range: U+400-4FF }</style>") + kSpans;
     PrHtmlPage* page = served.load(html.c_str());
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf"});
+    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
     CHECK(widthOf(page, "web") == widthOf(page, "sans"));
     prHtmlPageDestroy(page);
 }
@@ -415,7 +415,7 @@ TEST_CASE("a WOFF face loads with the host's codec, and fails without one") {
 
 TEST_CASE("a document's faces set only its own text") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo.ttf) }</style>") + kSpans;
+    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }</style>") + kSpans;
     PrHtmlPage* defining = served.load(html.c_str());
     PrHtmlPage* plain = served.load(kSpans);
     settle(defining);
@@ -437,7 +437,7 @@ TEST_CASE("a face that the document's text asks for while it loads holds its loa
         },
         &heard,
     };
-    PrHtmlPage* page = served.load("<style>@font-face { font-family: A; src: url(Arimo.ttf) }</style>"
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: A; src: url(Arimo-Regular.ttf) }</style>"
         "<p style='font-family: A'>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
@@ -457,7 +457,7 @@ TEST_CASE("a face that the document's text asks for while it loads holds its loa
 
 TEST_CASE("a document's set whose text uses none of its faces is loaded once laid out") {
     Served served;
-    PrHtmlPage* page = served.load("<style>@font-face { font-family: A; src: url(Arimo.ttf) }</style><p>text");
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: A; src: url(Arimo-Regular.ttf) }</style><p>text");
     PrCssFontFaceSet* fonts = prCssDocumentFonts(prHtmlWindowDocument(prHtmlPageWindow(page)));
     runTasks(page);
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
@@ -524,7 +524,7 @@ TEST_CASE("a face deleted while it loads and added again settles the set it rejo
 TEST_CASE("a face whose sheet leaves the document while it loads leaves the set loaded") {
     Served served;
     served.hold = true;
-    PrHtmlPage* page = served.load("<style id=s>@font-face { font-family: A; src: url(Arimo.ttf) }</style>"
+    PrHtmlPage* page = served.load("<style id=s>@font-face { font-family: A; src: url(Arimo-Regular.ttf) }</style>"
         "<p id=p>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
@@ -548,7 +548,7 @@ TEST_CASE("a face whose sheet leaves the document while it loads leaves the set 
 
 TEST_CASE("a presentation awaits font requests while a change since its last sync may add a face") {
     Served served;
-    PrHtmlPage* page = served.load("<style>@font-face { font-family: Unused; src: url(Arimo.ttf) }"
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: Unused; src: url(Arimo-Regular.ttf) }"
         "</style><p style='font-family: A'>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssPresentation* presentation = prHtmlPagePresentation(page);
@@ -560,7 +560,7 @@ TEST_CASE("a presentation awaits font requests while a change since its last syn
     SUBCASE("a sheet inserted") {
         PrDomElement* style = nullptr;
         REQUIRE(prDomElementCreate(document, "style", nullptr, &style) == PrStatus_Ok);
-        prDomNodeSetTextContent(prDomElementAsNode(style), "@font-face { font-family: A; src: url(Arimo.ttf) }");
+        prDomNodeSetTextContent(prDomElementAsNode(style), "@font-face { font-family: A; src: url(Arimo-Regular.ttf) }");
         REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(document)), prDomElementAsNode(style)) ==
             PrStatus_Ok);
         prDomNodeRelease(prDomElementAsNode(style));
@@ -568,25 +568,25 @@ TEST_CASE("a presentation awaits font requests while a change since its last syn
     SUBCASE("a rule inserted") {
         PrCssStyleSheet* sheet = prCssStyleSheetListStyleSheetAt(prCssDocumentStyleSheets(document), 0);
         REQUIRE(sheet != nullptr);
-        REQUIRE(prCssStyleSheetInsertRule(sheet, "@font-face { font-family: A; src: url(Arimo.ttf) }", 0, nullptr) ==
-            PrStatus_Ok);
+        REQUIRE(prCssStyleSheetInsertRule(sheet, "@font-face { font-family: A; src: url(Arimo-Regular.ttf) }", 0,
+            nullptr) == PrStatus_Ok);
     }
     SUBCASE("a face added") {
-        PrCssFontFace* face = prCssFontFaceCreate("A", "url(Arimo.ttf)", nullptr);
+        PrCssFontFace* face = prCssFontFaceCreate("A", "url(Arimo-Regular.ttf)", nullptr);
         REQUIRE(prCssFontFaceSetAdd(prCssDocumentFonts(document), face) == PrStatus_Ok);
         prCssFontFaceRelease(face);
     }
     CHECK(cssPresentationAwaitsFontRequests(presentation));
     settle(page);
     CHECK_FALSE(cssPresentationAwaitsFontRequests(presentation));
-    CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf"});
+    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a family whose matched face failed falls back to the next family, not to another of its faces") {
     Served served;
     PrHtmlPage* page = served.load("<style>@font-face { font-family: Web; font-weight: 400; src: url(Missing.ttf) }"
-        "@font-face { font-family: Web; font-weight: 300; src: url(Arimo.ttf) }span { display: inline-block }</style>"
+        "@font-face { font-family: Web; font-weight: 300; src: url(Arimo-Regular.ttf) }span { display: inline-block }</style>"
         "<span id=web style='font-family: Web, serif'>Hamburgefonstiv</span>"
         "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>");
     settle(page);
@@ -597,19 +597,19 @@ TEST_CASE("a family whose matched face failed falls back to the next family, not
 
 TEST_CASE("a failed face gives way to an earlier face of the same style") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo.ttf) }"
+    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }"
         "@font-face { font-family: Web; src: url(Missing.ttf) }</style>") + kSpans;
     PrHtmlPage* page = served.load(html.c_str());
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Missing.ttf", "Arimo.ttf"});
+    CHECK(served.fetched == std::vector<std::string>{"Missing.ttf", "Arimo-Regular.ttf"});
     CHECK(widthOf(page, "web") == widthOf(page, "sans"));
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a rule put back where it was ranks where its rule is, not as the newest face") {
     Served served;
-    PrHtmlPage* page = served.load("<style id=first>@font-face { font-family: Web; src: url(Arimo.ttf) }</style>"
-        "<style id=second>@font-face { font-family: Web; src: url(Cousine.ttf) }</style>"
+    PrHtmlPage* page = served.load("<style id=first>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }</style>"
+        "<style id=second>@font-face { font-family: Web; src: url(Cousine-Regular.ttf) }</style>"
         "<style>span { display: inline-block }</style><span id=web style='font-family: Web'>Hamburgefonstiv</span>"
         "<span id=mono style='font-family: Cousine'>Hamburgefonstiv</span>");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
@@ -631,20 +631,20 @@ TEST_CASE("a rule put back where it was ranks where its rule is, not as the newe
 
 TEST_CASE("a face's size-adjust scales its font once") {
     Served served;
-    PrHtmlPage* page = served.load("<style>@font-face { font-family: Web; src: url(Arimo.ttf) }"
-        "@font-face { font-family: Half; src: url(Arimo.ttf); size-adjust: 50% }span { display: inline-block }</style>"
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }"
+        "@font-face { font-family: Half; src: url(Arimo-Regular.ttf); size-adjust: 50% }span { display: inline-block }</style>"
         "<span id=web style='font-family: Web'>Hamburgefonstiv</span>"
         "<span id=half style='font-family: Half'>Hamburgefonstiv</span>");
     settle(page);
     CHECK(widthOf(page, "half") == doctest::Approx(widthOf(page, "web") / 2).epsilon(0.02));
     // The two rules name one source, which is fetched once.
-    CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf"});
+    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a rule put back whose source the document decoded sets its face at once, without a fetch") {
     Served served;
-    std::string html = std::string("<style id=s>@font-face { font-family: Web; src: url(Arimo.ttf) }</style>") + kSpans;
+    std::string html = std::string("<style id=s>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }</style>") + kSpans;
     PrHtmlPage* page = served.load(html.c_str());
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     settle(page);
@@ -661,7 +661,7 @@ TEST_CASE("a rule put back whose source the document decoded sets its face at on
     // decoded.
     PrDomElement* copy = nullptr;
     REQUIRE(prDomElementCreate(document, "style", nullptr, &copy) == PrStatus_Ok);
-    prDomNodeSetTextContent(prDomElementAsNode(copy), "@font-face { font-family: Web; src: url(Arimo.ttf) }");
+    prDomNodeSetTextContent(prDomElementAsNode(copy), "@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }");
     REQUIRE(prDomNodeAppendChild(head, prDomElementAsNode(copy)) == PrStatus_Ok);
     prDomNodeRelease(prDomElementAsNode(copy));
     prDomNodeRelease(style);
@@ -669,17 +669,17 @@ TEST_CASE("a rule put back whose source the document decoded sets its face at on
     CHECK(widthOf(page, "web") == web);
     settle(page);
     CHECK(widthOf(page, "web") == web);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf"});
+    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a face tries its sources in order, fetching an earlier one before a decoded later one") {
     Served served;
-    PrHtmlPage* page = served.load("<style>@font-face { font-family: First; src: url(Arimo.ttf) }"
-        "@font-face { font-family: Second; src: url(Cousine.ttf), url(Arimo.ttf) }"
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: First; src: url(Arimo-Regular.ttf) }"
+        "@font-face { font-family: Second; src: url(Cousine-Regular.ttf), url(Arimo-Regular.ttf) }"
         "span { display: inline-block }</style><span id=first style='font-family: First'>Hamburgefonstiv</span>");
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf"});
+    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrDomElement* span = nullptr;
     REQUIRE(prDomElementCreate(document, "span", nullptr, &span) == PrStatus_Ok);
@@ -689,15 +689,15 @@ TEST_CASE("a face tries its sources in order, fetching an earlier one before a d
         PrStatus_Ok);
     prDomNodeRelease(prDomElementAsNode(span));
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf", "Cousine.ttf"});
+    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf", "Cousine-Regular.ttf"});
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("fonts that load one at a time, and leave and come back, lay out as a full recomputation does") {
     Served served;
     served.hold = true;
-    PrHtmlPage* page = served.load("<style id=fonts>@font-face { font-family: Web; src: url(Arimo.ttf) }"
-        "@font-face { font-family: Web; src: url(Cousine.ttf); unicode-range: U+30-39 }"
+    PrHtmlPage* page = served.load("<style id=fonts>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }"
+        "@font-face { font-family: Web; src: url(Cousine-Regular.ttf); unicode-range: U+30-39 }"
         "@font-face { font-family: Web; src: url(Twemoji.ttf); unicode-range: U+1F600-1F64F }</style>"
         "<style>body { font-family: Web, serif; width: 600px } .empty { display: inline-block }"
         ".float { float: left } td { border: 1px solid }</style>"
@@ -746,7 +746,7 @@ TEST_CASE("a set whose script face loads switches to loaded at the next style up
     update(page);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
-    PrCssFontFace* face = prCssFontFaceCreate("B", "url(Arimo.ttf)", nullptr);
+    PrCssFontFace* face = prCssFontFaceCreate("B", "url(Arimo-Regular.ttf)", nullptr);
     REQUIRE(prCssFontFaceSetAdd(fonts, face) == PrStatus_Ok);
     CHECK(prCssFontFaceLoad(face, document) == PrCssFontFaceStatus_Loading);
     runTasks(page);
@@ -762,7 +762,7 @@ TEST_CASE("a document with no presentation leaves a face whose sheet left out of
     Served served;
     served.hold = true;
     PrHtmlPage* page =
-        served.load("<style id=s>@font-face { font-family: A; src: url(Arimo.ttf) }</style><p>text", true, false);
+        served.load("<style id=s>@font-face { font-family: A; src: url(Arimo-Regular.ttf) }</style><p>text", true, false);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     REQUIRE(prHtmlPagePresentation(page) == nullptr);
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
@@ -795,7 +795,7 @@ TEST_CASE("sources no face uses are bounded as they become unused, whether or no
     // More sources than the cache keeps unused, each held by a face that loaded from it.
     std::vector<PrCssFontFace*> faces;
     for (int i = 0; i < 80; ++i) {
-        std::string source = "url(Arimo.ttf?" + std::to_string(i) + ")";
+        std::string source = "url(Arimo-Regular.ttf?" + std::to_string(i) + ")";
         PrCssFontFace* face = prCssFontFaceCreate("B", source, nullptr);
         prCssFontFaceLoad(face, document);
         faces.push_back(face);

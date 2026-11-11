@@ -18,5 +18,5 @@ if (PR_DEVELOP)
         tests/test_ui_text_edit.cpp
     )
     target_link_libraries(ui_tests PRIVATE prax::font prax::layout prax::text prax::text_edit)
-    target_compile_definitions(ui_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    target_compile_definitions(ui_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 endif()

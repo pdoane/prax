@@ -193,3 +193,51 @@ pr_dependency(nvim_treesitter
     URL_HASH SHA256=86a819855894e7f622163ac519621eded615ff9efa831ec425a3588c4ac68cd7
     SOURCE_SUBDIR none
 )
+
+# The tree-sitter languages, each a grammar of lib/syntax (pr_syntax_grammar), which PR_SYNTAX_LANGUAGES chooses from.
+set(PR_SYNTAX_LANGUAGES_ALL bash c c_sharp cmake cpp css dart diff dockerfile glsl go hcl hlsl html java javascript json
+    kotlin lua make markdown markdown_inline objc php powershell python ruby rust slang sql swift terraform toml tsx
+    typescript wgsl xml yaml)
+
+# The sources that each language's grammar and queries come from, where they are not its own grammar alone: the
+# grammars that hold another grammar or whose queries build on another's, and nvim-treesitter's queries (nvim).
+set(_pr_syntax_sources_cpp cpp c)
+set(_pr_syntax_sources_glsl glsl c)
+set(_pr_syntax_sources_hcl hcl nvim)
+set(_pr_syntax_sources_hlsl hlsl nvim)
+set(_pr_syntax_sources_markdown_inline markdown)
+set(_pr_syntax_sources_objc objc c)
+set(_pr_syntax_sources_slang slang nvim)
+set(_pr_syntax_sources_terraform hcl nvim)
+set(_pr_syntax_sources_tsx typescript javascript)
+set(_pr_syntax_sources_typescript typescript javascript)
+
+# Downloads the sources of the languages named, each once, and sets a variable named for each source to its directory:
+# `cpp` and `c` for C++, and `nvim` for nvim-treesitter's queries. This is a macro, so that the variables are its
+# caller's.
+macro(pr_syntax_sources_available)
+    set(_pr_syntax_fetched "")
+    foreach (_pr_language IN ITEMS ${ARGN})
+        if (NOT _pr_language IN_LIST PR_SYNTAX_LANGUAGES_ALL)
+            message(FATAL_ERROR "PR_SYNTAX_LANGUAGES: no tree-sitter language named ${_pr_language}")
+        endif()
+        if (DEFINED _pr_syntax_sources_${_pr_language})
+            set(_pr_syntax_need ${_pr_syntax_sources_${_pr_language}})
+        else()
+            set(_pr_syntax_need ${_pr_language})
+        endif()
+        foreach (_pr_source IN LISTS _pr_syntax_need)
+            if (_pr_source IN_LIST _pr_syntax_fetched)
+                continue()
+            endif()
+            list(APPEND _pr_syntax_fetched ${_pr_source})
+            if (_pr_source STREQUAL "nvim")
+                pr_dependency_available(nvim_treesitter)
+                set(nvim ${nvim_treesitter_SOURCE_DIR}/runtime/queries)
+            else()
+                pr_dependency_available(tree_sitter_${_pr_source})
+                set(${_pr_source} ${tree_sitter_${_pr_source}_SOURCE_DIR})
+            endif()
+        endforeach()
+    endforeach()
+endmacro()

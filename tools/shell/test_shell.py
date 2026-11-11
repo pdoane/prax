@@ -234,21 +234,6 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, "parsing goes on\n")
 
-    def test_a_page_of_the_wpt_checkout_loads_from_wpts_server_over_the_network(self):
-        with tempfile.TemporaryDirectory(dir=wpt.WPT) as directory:
-            root = Path(directory)
-            base = "/" + os.path.relpath(directory, wpt.WPT).replace(os.sep, "/")
-            (root / "fixtures").mkdir()
-            (root / "fixtures" / "values.sub.js").write_text("print('{{GET[name]}}', '{{host}}');")
-            page = root / "pages" / "test.html"
-            page.parent.mkdir()
-            page.write_text("<script>print(location.hostname);</script>"
-                            "<script src='" + base + "/fixtures/values.sub.js?name=value'></script>")
-            result = subprocess.run([SHELL, *wpt.network_options(), "--html", wpt.url_of(str(page))],
-                                    capture_output=True, encoding="utf-8", timeout=30)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout.splitlines(), ["web-platform.test", "value web-platform.test"])
-
     def test_inline_syntax_error_keeps_html_line_and_parsing_continues(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

@@ -5,14 +5,19 @@ pr_library(syntax INCLUDE include
 )
 target_link_libraries(pr_syntax PUBLIC prax::core prax::text_edit PRIVATE prax::core_cpp prax::regex)
 
-# Adds the tree-sitter grammar of `language` to the syntax library: a library of the grammar's generated parser, in
-# DIRECTORY/src, its source in the backend (syntax_treesitter_<language>.cpp), and a header, generated here, that
-# declares the grammar's function, tree_sitter_<SYMBOL> (SYMBOL is `language` by default), and holds its queries. The
-# queries of each list are joined in order, so a query that builds on another's, as C++'s on C's, lists that one first,
-# and its own patterns, which come later, win where both name the same bytes.
+# Adds the tree-sitter grammar of `language` to the syntax library, if PR_SYNTAX_LANGUAGES names it: a library of the
+# grammar's generated parser, in DIRECTORY/src, its source in the backend (syntax_treesitter_<language>.cpp), and a
+# header, generated here, that declares the grammar's function, tree_sitter_<SYMBOL> (SYMBOL is `language` by default),
+# and holds its queries. The queries of each list are joined in order, so a query that builds on another's, as C++'s on
+# C's, lists that one first, and its own patterns, which come later, win where both name the same bytes. The library
+# defines PR_SYNTAX_HAS_<LANGUAGE> for each language that it builds in.
 #
 #   pr_syntax_grammar(<language> DIRECTORY <directory> [SYMBOL <name>] [HIGHLIGHTS <file>...] [INJECTIONS <file>...])
 function(pr_syntax_grammar language)
+    # A language that the build does not build in has no sources, which its arguments name.
+    if (NOT language IN_LIST PR_SYNTAX_LANGUAGES)
+        return()
+    endif()
     cmake_parse_arguments(PARSE_ARGV 1 GRAMMAR "" "DIRECTORY;SYMBOL" "HIGHLIGHTS;INJECTIONS")
     if (NOT GRAMMAR_SYMBOL)
         set(GRAMMAR_SYMBOL ${language})
@@ -21,6 +26,8 @@ function(pr_syntax_grammar language)
     if (EXISTS ${GRAMMAR_DIRECTORY}/src/scanner.c)
         list(APPEND sources ${GRAMMAR_DIRECTORY}/src/scanner.c)
     endif()
+    string(TOUPPER ${language} upper)
+    target_compile_definitions(pr_syntax PRIVATE PR_SYNTAX_HAS_${upper})
     set(target pr_tree_sitter_${language})
     add_library(${target} STATIC ${sources})
     target_include_directories(${target} PRIVATE ${GRAMMAR_DIRECTORY}/src)
@@ -73,14 +80,9 @@ if (PR_SYNTAX_TREESITTER)
     set(PR_SYNTAX_GENERATED ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_include_directories(pr_syntax PRIVATE ${PR_SYNTAX_GENERATED})
 
-    foreach (grammar IN ITEMS bash c c_sharp cmake cpp css dart diff dockerfile glsl go hcl hlsl html java javascript
-            json kotlin lua make markdown objc php powershell python ruby rust slang sql swift toml typescript wgsl xml
-            yaml)
-        pr_dependency_available(tree_sitter_${grammar})
-        set(${grammar} ${tree_sitter_${grammar}_SOURCE_DIR})
-    endforeach()
-    pr_dependency_available(nvim_treesitter)
-    set(nvim ${nvim_treesitter_SOURCE_DIR}/runtime/queries)
+    # The languages that the backend builds in, every one by default (cmake/dependencies_tree_sitter.cmake).
+    set(PR_SYNTAX_LANGUAGES "${PR_SYNTAX_LANGUAGES_ALL}" CACHE STRING "The tree-sitter languages that lib/syntax builds in")
+    pr_syntax_sources_available(${PR_SYNTAX_LANGUAGES})
 
     pr_syntax_grammar(bash DIRECTORY ${bash}
         HIGHLIGHTS ${bash}/queries/highlights.scm)
@@ -189,5 +191,8 @@ if (PR_DEVELOP)
             backends/treesitter/tests/test_syntax_treesitter.cpp
             backends/treesitter/tests/test_syntax_treesitter_c.c
         )
+        # The tests check the languages that the build builds in.
+        list(JOIN PR_SYNTAX_LANGUAGES "," built)
+        target_compile_definitions(syntax_tests PRIVATE PR_SYNTAX_LANGUAGES_BUILT=",${built},")
     endif()
 endif()

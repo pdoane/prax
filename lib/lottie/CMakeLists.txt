@@ -28,7 +28,7 @@ if (PR_DEVELOP)
     )
     target_link_libraries(lottie_tests PRIVATE prax::image prax::compress prax::text prax::draw
                                                prax::font prax::path)
-    target_compile_definitions(lottie_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    target_compile_definitions(lottie_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     if (PR_JS)
         target_sources(lottie_tests PRIVATE tests/test_lottie_expression.cpp)
     endif()

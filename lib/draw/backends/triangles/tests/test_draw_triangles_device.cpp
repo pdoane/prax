@@ -181,7 +181,7 @@ TEST_CASE("the triangles renderer draws a frame on the device") {
 
 TEST_CASE("the triangles renderer draws glyphs from the atlas as the cpu backend covers them") {
     Device device(128, 64);
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     std::vector<PrFontGlyph> glyphs;
     PrVec2 pen{8, 44};
@@ -532,7 +532,7 @@ TEST_CASE("triangles uploads its atlas and images once") {
 
 TEST_CASE("triangles draws glyphs from its atlas, covering what the cpu backend covers") {
     Device h(128, 64);
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     addText(list, font, 32, "Hxg", PrVec2{8.3f, 44});
     std::vector<uint8_t> drawn = h.render(list);

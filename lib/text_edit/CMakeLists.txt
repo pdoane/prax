@@ -15,5 +15,5 @@ if (PR_DEVELOP)
         tests/test_text_edit_motion.cpp
     )
     target_link_libraries(text_edit_tests PRIVATE prax::font prax::layout prax::text)
-    target_compile_definitions(text_edit_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    target_compile_definitions(text_edit_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 endif()

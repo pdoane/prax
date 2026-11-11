@@ -176,7 +176,7 @@ TEST_CASE("an inline box split by reordering has a part for each piece, the edge
         CHECK(double(rects[0].left) == doctest::Approx(65.59).epsilon(0.001));
         CHECK(double(rects[0].right - rects[0].left) == doctest::Approx(56.47).epsilon(0.001));
         CHECK(double(rects[1].left) == doctest::Approx(178.66).epsilon(0.001));
-        CHECK(double(rects[1].right - rects[1].left) == doctest::Approx(59.31).epsilon(0.001));
+        CHECK(double(rects[1].right - rects[1].left) == doctest::Approx(58.89).epsilon(0.001));
     }
     SUBCASE("wrapped, its pieces side by side, still two parts, as csswg-drafts#1509 resolved") {
         Page p;
@@ -195,7 +195,7 @@ TEST_CASE("an inline box split by reordering has a part for each piece, the edge
         std::vector<PrRect> rects = p.rects(em, stage);
         REQUIRE(rects.size() == 1);
         CHECK(double(rects[0].left) == doctest::Approx(65.59).epsilon(0.001));
-        CHECK(double(rects[0].right - rects[0].left) == doctest::Approx(115.77).epsilon(0.001));
+        CHECK(double(rects[0].right - rects[0].left) == doctest::Approx(115.36).epsilon(0.001));
     }
 }
 

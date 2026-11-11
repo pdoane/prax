@@ -87,7 +87,7 @@ typedef struct PrDrawTarget {
     PrPixelFormat format;                       // the format of the texture that the render's pass draws into
 
     // The caller's commands. The render's pass records into them after preparing.
-    PrGpuCommands* PR_NULLABLE commands;
+    PrGpuCommands* commands;
 
     const PrDrawBeneath* PR_NULLABLE beneath;   // null for transparent
 } PrDrawTarget;

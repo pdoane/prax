@@ -9,6 +9,7 @@
 #include <string>
 
 #if !defined(_WIN32)
+#include <sys/resource.h>
 #include <unistd.h>
 #endif
 
@@ -121,6 +122,7 @@ struct Received {
     std::string text;
     uint32_t calls = 0;
     bool answered = false;
+    size_t answerAfter = 0;         // the bytes past "ready" that arrive before the answer
 
     Received() { prMutexInit(&mutex); }
     ~Received() { prMutexReset(&mutex); }
@@ -141,7 +143,9 @@ void receive(void* PR_NULLABLE context, PrProcess* process, PrProcessStream stre
     prMutexLock(&received->mutex);
     received->text.append(reinterpret_cast<const char*>(bytes.data), bytes.size);
     received->calls += stream == PrProcessStream_Output ? 1 : 1000000;
-    bool answer = !received->answered && received->text.find("ready") != std::string::npos;
+    size_t ready = received->text.find("ready");
+    bool answer = !received->answered && ready != std::string::npos &&
+        received->text.size() >= ready + 5 + received->answerAfter;
     received->answered = received->answered || answer;
     prMutexUnlock(&received->mutex);
     if (answer)
@@ -149,7 +153,8 @@ void receive(void* PR_NULLABLE context, PrProcess* process, PrProcessStream stre
 }
 
 // Starts `script` under sh with a receive function, on pipes or a terminal. Waits for the process to exit and its
-// output to end.
+// output to end. A process that takes longer than kPatience is destroyed before the test fails, so that its reads end
+// before `received` does.
 PrProcessInfo receiveFrom(Launcher& l, PrStringView script, PrProcessStreams streams, Received* received,
         Atomic<uint32_t>* wakes, PrProcess** out) {
     PrStringView arguments[] = {"-c", script};
@@ -170,7 +175,11 @@ PrProcessInfo receiveFrom(Launcher& l, PrStringView script, PrProcessStreams str
     PrProcessInfo info = prProcessInfo(*out);
     while (!info.exited || !info.outputEnded) {
         prThreadSleep(1);
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
+        if (prTimeMonotonicMilliseconds() >= end) {
+            prProcessDestroy(*out);
+            *out = nullptr;
+            FAIL("the process did not end in time");
+        }
         info = prProcessInfo(*out);
     }
     return info;
@@ -338,14 +347,18 @@ TEST_CASE("process: a receive function takes output past what a process holds fo
 }
 
 TEST_CASE("process: what a receive function writes during a flood reaches a program on a terminal") {
-    // A background job floods the terminal while the program waits for the line that the receiver writes.
+    // A background job floods the terminal until the program reads the line that the receiver writes. The receiver
+    // answers once the flood has passed what the terminal and the reads buffer, so the line is sent while the flood
+    // runs. The program reports the line in its exit code, which no output of the flood can interleave with.
     Launcher l;
     Received received;
+    received.answerAfter = 256 * 1024;
     Atomic<uint32_t> wakes{};
     PrProcess* process = nullptr;
-    receiveFrom(l, "stty -echo; yes | head -c 4000000 & printf ready; read line; printf \"[got $line]\"; wait",
+    PrProcessInfo info = receiveFrom(l, "stty -echo; printf ready; yes & read line; kill $!; wait; test \"$line\" = hello",
         PrProcessStreams_Terminal, &received, &wakes, &process);
-    CHECK(received.taken().find("[got hello]") != std::string::npos);
+    CHECK(info.code == 0);
+    CHECK(received.taken().size() > received.answerAfter);
     prProcessDestroy(process);
 }
 
@@ -436,17 +449,22 @@ TEST_CASE("process: a terminal echoes its input, and its end-of-file character e
 
 TEST_CASE("process: a program on a terminal holds no descriptor of the launcher's, even one that passes to children") {
     Launcher l;
-    // Inheritable descriptors, numbered above the child's standard streams.
+    // Inheritable descriptors, numbered above the child's standard streams: 100, and the highest that the process may
+    // open up to 1000. A shell's limit can be lower, as macOS's 256 is.
+    struct rlimit limit{};
+    REQUIRE(getrlimit(RLIMIT_NOFILE, &limit) == 0);
+    int high = limit.rlim_cur != RLIM_INFINITY && limit.rlim_cur <= 1000 ? int(limit.rlim_cur) - 1 : 1000;
+    REQUIRE(high > 100);
     int ends[2] = {-1, -1};
     REQUIRE(pipe(ends) == 0);
     REQUIRE(dup2(ends[0], 100) == 100);
-    REQUIRE(dup2(ends[1], 1000) == 1000);
-    PrProcess* process = startOnTerminal(l, "sh", {
-        "-c", "for n in 100 1000; do [ -e /dev/fd/$n ] && echo held $n; done; echo checked",
-    });
+    REQUIRE(dup2(ends[1], high) == high);
+    std::string script = "for n in 100 " + std::to_string(high) + "; do [ -e /dev/fd/$n ] && echo held $n; done; " +
+        "echo checked";
+    PrProcess* process = startOnTerminal(l, "sh", {"-c", script.c_str()});
     CHECK(drain(process) == "checked\r\n");
     prProcessDestroy(process);
-    for (int descriptor : {ends[0], ends[1], 100, 1000})
+    for (int descriptor : {ends[0], ends[1], 100, high})
         close(descriptor);
 }
 

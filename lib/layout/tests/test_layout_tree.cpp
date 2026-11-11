@@ -3079,7 +3079,7 @@ TEST_CASE("a compositor shows an embedded scene in its slot, and scrolls into it
 TEST_CASE("a font set change that changes no answer shapes and lays out nothing") {
     Fixture f;
     // Two rules of one source, which share its font.
-    const PrFont* cousine = fontFile("Cousine.ttf");
+    const PrFont* cousine = fontFile("Cousine-Regular.ttf");
     addWeb(f, 1, cousine);
     addWeb(f, 2, cousine);
     prFontRelease(cousine);
@@ -3097,8 +3097,8 @@ TEST_CASE("a font set change that changes no answer shapes and lays out nothing"
 
 TEST_CASE("a change of a text font's answers shapes and lays out the text its groups set, and nothing else") {
     Fixture f;
-    const PrFont* cousine = fontFile("Cousine.ttf");
-    const PrFont* tinos = fontFile("Tinos.ttf");
+    const PrFont* cousine = fontFile("Cousine-Regular.ttf");
+    const PrFont* tinos = fontFile("Tinos-Regular.ttf");
     addWeb(f, 1, cousine);
     webAndDefault(f);
     f.layout(px(400, 400));

@@ -46,7 +46,11 @@ function(_pr_dependency_declare)
                 get_filename_component(file ${dependency_URL} NAME)
             endif()
             set(url ${PR_DOWNLOAD_DIR}/${name}/${file})
-            # A file that is already there with the right hash is not fetched again.
+            # A file that is already there with the right hash is not fetched again. One that is fetched is named as
+            # its download starts, so that a slow download shows what the configure waits for.
+            if (NOT EXISTS ${url})
+                message(STATUS "Downloading ${name}: ${dependency_URL}")
+            endif()
             file(DOWNLOAD ${dependency_URL} ${url} EXPECTED_HASH ${dependency_URL_HASH})
         endif()
         if (dependency_DOWNLOAD_NAME)
@@ -71,3 +75,35 @@ macro(pr_dependency_available)
     _pr_dependency_declare(${ARGN})
     FetchContent_MakeAvailable(${ARGN})
 endmacro()
+
+# Makes files of dependencies available in `directory`, each linked there under its own name, and only those: a file of
+# the directory that no entry names is removed, so that what reads the directory reads only what the list gives it.
+# Each file is named by its dependency, then its path in that dependency's content, as in
+# font_NotoSans/NotoSans[wdth,wght].ttf. A file that two entries name is linked once.
+function(pr_dependency_link directory)
+    set(files ${ARGN})
+    list(REMOVE_DUPLICATES files)
+    file(MAKE_DIRECTORY "${directory}")
+    set(names "")
+    foreach (file IN LISTS files)
+        get_filename_component(name "${file}" NAME)
+        list(APPEND names "${name}")
+    endforeach()
+    file(GLOB present LIST_DIRECTORIES false RELATIVE "${directory}" "${directory}/*")
+    foreach (name IN LISTS present)
+        if (NOT name IN_LIST names)
+            file(REMOVE "${directory}/${name}")
+        endif()
+    endforeach()
+    foreach (file IN LISTS files)
+        string(FIND "${file}" "/" slash)
+        string(SUBSTRING "${file}" 0 ${slash} content)
+        math(EXPR slash "${slash} + 1")
+        string(SUBSTRING "${file}" ${slash} -1 path)
+        pr_dependency_available(${content})
+        string(TOLOWER "${content}" content)
+        get_filename_component(name "${path}" NAME)
+        # Windows makes a symbolic link only with Developer Mode or elevation, and copies otherwise.
+        file(CREATE_LINK "${${content}_SOURCE_DIR}/${path}" "${directory}/${name}" SYMBOLIC COPY_ON_ERROR)
+    endforeach()
+endfunction()

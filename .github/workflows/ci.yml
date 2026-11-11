@@ -1,0 +1,114 @@
+# ./dev.sh ci on each platform of `os`.
+#
+# ./dev.sh ci --configure fetches everything the run reads, and the caches of what it fetched are saved then, before
+# anything builds. The compiler cache is saved after the run, passing or not. Each cache is saved even when the run
+# fails, because a run that fails is what the next push repeats. A run restores the newest compiler cache of its branch,
+# then of main's.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A push to a pull request replaces the run of the push before it.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: ci (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        # Git Bash on Windows, where dev.sh runs.
+        shell: bash
+    env:
+      CCACHE_DIR: ${{ runner.temp }}/ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 2G
+      CCACHE_NOHASHDIR: "true"
+      # The fallback of the compiler cache's restore: the branch's, then main's.
+      CCACHE_KEY: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Install the build's tools
+        run: |
+          python -m pip install --disable-pip-version-check "cmake>=4.0" ninja
+          if [ "$RUNNER_OS" = macOS ]; then
+            brew install ccache
+          else
+            choco install ccache --no-progress -y
+          fi
+          cmake --version
+          ninja --version
+          ccache --version
+
+      # The key of what decides what the run fetches. Only its cache is restored: a cache of another would bring files
+      # that the run no longer reads, and third_party holds what the run fetched and nothing else.
+      - name: Key third_party
+        id: key
+        run: echo "key=third_party-${{ runner.os }}-$(./dev.sh ci --key)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore third_party
+        id: fetched
+        uses: actions/cache/restore@v4
+        with:
+          path: third_party
+          key: ${{ steps.key.outputs.key }}
+
+      - name: Restore the compiler cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.CCACHE_KEY }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ env.CCACHE_KEY }}-
+            ccache-${{ runner.os }}-main-
+
+      - name: Fetch
+        id: configure
+        run: ./dev.sh ci --configure
+
+      - name: Save third_party
+        if: always() && steps.configure.outcome == 'success' && steps.fetched.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: third_party
+          key: ${{ steps.fetched.outputs.cache-primary-key }}
+
+      - name: ./dev.sh ci
+        run: |
+          ccache --zero-stats
+          ./dev.sh ci
+
+      - name: Trim the compiler cache
+        if: always() && steps.configure.outcome == 'success'
+        run: |
+          ccache --show-stats
+          # What this run did not use is left behind, so that the cache holds this run's builds.
+          ccache --evict-older-than 1d
+
+      - name: Save the compiler cache
+        if: always() && steps.configure.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.CCACHE_KEY }}-${{ github.run_id }}-${{ github.run_attempt }}

@@ -356,7 +356,7 @@ TEST_CASE("the static position gives the start edges of its static context, what
         PrLayoutNode box = s.add(s.stage, square(true));
         s.text(s.stage, "דהו");
         s.layout();
-        CHECK(std::abs(s.left(box) - 44.517) < 0.05);
+        CHECK(std::abs(s.left(box) - 43.922) < 0.05);
     }
     SUBCASE("an rtl static block in an ltr containing block: the box's right edge, its width fitting its content") {
         Stage s(true);

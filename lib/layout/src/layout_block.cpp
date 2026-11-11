@@ -51,7 +51,7 @@ struct LayoutShellContent {
 struct LayoutBandsMemo {
     LayoutNodeIndex node;
     LayoutNodeIndex parent;
-    LayoutSpace space;
+    LayoutStoredSpace space;
     LayoutContentInput input;
     PrLayoutUnit axisSize;
     PrLayoutUnit axisEdges;
@@ -609,15 +609,17 @@ void markBroken(const LayoutState& state, const Shell& s, LayoutFragment* fragme
     fragment->broken = broken;
 }
 
-// Returns true if two spaces of a flex item or a table cell are the same. Neither is in flow in a context.
-bool sameSpace(const LayoutSpace& a, const LayoutSpace& b) {
+// Returns true if a stored space and a space of a flex item or a table cell are the same. Neither is in flow in a
+// context.
+bool sameSpace(const LayoutStoredSpace& stored, const LayoutSpace& b) {
+    const LayoutSpace& a = stored.space;
     PR_ASSERT(a.bfc == nullptr && b.bfc == nullptr);
     return a.mode == b.mode && a.available == b.available && a.percentInline == b.percentInline &&
         a.percentBlock == b.percentBlock && a.containing.inlineSize == b.containing.inlineSize &&
         a.containing.blockSize == b.containing.blockSize && a.blockLimit == b.blockLimit &&
         a.fallback == b.fallback && a.autoInline == b.autoInline && a.autoBlock == b.autoBlock &&
-        a.stretchBlock == b.stretchBlock && layoutCellSpacesEqual(layoutCellSpaceFromSpace(a),
-            layoutCellSpaceFromSpace(b)) && layoutSpaceStretchesEqual(a, b);
+        a.stretchBlock == b.stretchBlock && layoutCellSpacesEqual(stored.cell, layoutCellSpaceFromSpace(b)) &&
+        layoutSpaceStretchesEqual(stored, b);
 }
 
 // Returns true if the band memo `m` holds the content of the box `s` for `input`.
@@ -647,7 +649,7 @@ LayoutBandsMemo* keepBands(LayoutState& state, const Shell& s, const LayoutConte
     LayoutBandsMemo* m = allocZeroed<LayoutBandsMemo>();
     m->node = s.node;
     m->parent = s.parent;
-    m->space = s.contentSpace;
+    m->space = layoutStoredSpace(s.contentSpace);
     m->input = input;
     m->input.content = nullptr;
     m->axisSize = s.axis.size;
@@ -1461,7 +1463,7 @@ LayoutMeasurement measure(LayoutState& state, LayoutNodeIndex node, const Layout
     if (handed && state.reuse) {
         LayoutScratch& scratch = *state.scratch;
         scratch.handoffIndex.insert(KeyIndex::hashOf(node), scratch.handoffs.count);
-        scratch.handoffs.push(LayoutHandoff{node, container, requests, result});
+        scratch.handoffs.push(LayoutHandoff{node, layoutStoredSpace(container), requests, result});
     }
     else
         layoutFragmentRelease(result.fragment);
@@ -1945,7 +1947,7 @@ LayoutMeasurement layoutMeasure(LayoutState& state, LayoutNodeIndex node, const 
         return s.memos.data[at].answer;
     LayoutMeasurement answer = measure(state, node, space, requests, kind);
     s.memoIndex.insert(hash, s.memos.count);
-    s.memos.push(LayoutMemo{node, space, requests, kind, answer});
+    s.memos.push(LayoutMemo{node, layoutStoredSpace(space), requests, kind, answer});
     return answer;
 }
 

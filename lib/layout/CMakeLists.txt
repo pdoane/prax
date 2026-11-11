@@ -84,13 +84,6 @@ if (PR_DEVELOP)
         tests/test_layout_tree.cpp
         tests/test_layout_writing_mode.cpp
     )
-    target_compile_definitions(layout_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts"
-                                                    PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
-    # STIX Two Math, which HarfBuzz's tests carry, has the flattened accents (flac) that the bundled math fonts lack.
-    FetchContent_GetProperties(harfbuzz)
-    set(_pr_stix "${harfbuzz_SOURCE_DIR}/test/subset/data/fonts/STIXTwoMath-Regular.ttf")
-    if (harfbuzz_SOURCE_DIR AND EXISTS ${_pr_stix})
-        target_compile_definitions(layout_tests PRIVATE PR_STIX_MATH_FONT="${_pr_stix}")
-    endif()
+    target_compile_definitions(layout_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     target_link_libraries(layout_tests PRIVATE prax::text prax::draw prax::font prax::locale prax::compress)
 endif()

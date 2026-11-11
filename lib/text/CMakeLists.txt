@@ -64,6 +64,5 @@ if (PR_DEVELOP)
         backends/simple/tests/test_text_simple_c.c
     )
     target_link_libraries(text_tests PRIVATE prax::font prax::locale)
-    target_compile_definitions(text_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts"
-        PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    target_compile_definitions(text_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 endif()

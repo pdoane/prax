@@ -49,6 +49,11 @@ SUITES = [
     Suite("html-tree", ("wpt",), ("wpt/.git",), ("tools.suite.html_tree",), ("html_tree",)),
     Suite("url-parsing", ("wpt",), ("wpt/.git",), ("tools.suite.url_parsing",), ("url_parsing",)),
     *(wpt(name) for name in ("url", "mathml", "media-source", "performance", "svg", "webaudio", "xhr")),
+    # The WPT runner's own tests against the checkout and its server, and the rulings of web_features.txt.
+    Suite("wpt-runner", ("wpt", "webfeatures"), ("wpt/.git",), ("tools.suite.wpt.runner_tests",),
+          ("pr_shell", "reftest")),
+    # The font bundles' coverage of each common language's exemplar characters, as CLDR gives them.
+    Suite("font-coverage", ("cldr",), ("cldr/common/main",), ("tools.suite.font_coverage",), ()),
     reftest("resvg", ("resvg_tests", "fonts"), ("resvg-tests/tests",)),
     reftest("lottie-web", ("lottie_corpora", "lottie_web"), ("lottie-web/version",), ("reftest", "lottie_reference")),
     reftest("skottie", ("lottie_corpora", "canvaskit", "resvg_tests"), ("canvaskit/version",),

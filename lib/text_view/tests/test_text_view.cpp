@@ -52,7 +52,7 @@ struct Shown {
     bool colorLines = false;        // even lines are filled with green
 
     explicit Shown(const std::string& text, const std::string& family = "Arimo") {
-        std::string path = std::string(PR_FONTS_DIR) + "/" + family + ".ttf";
+        std::string path = std::string(PR_FONTS_DIR) + "/" + family + "-Regular.ttf";
         const PrFont* PR_NULLABLE face = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();

@@ -39,7 +39,7 @@ std::vector<uint8_t> readFile(const char* name) {
 }
 
 std::vector<uint8_t> newCmMathBytes() {
-    return readPath(std::string(PR_FONT_BUNDLE_DIR) + "/NewCMMath-Regular.otf");
+    return readPath(std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf");
 }
 
 const PrFont* fromBytes(const std::vector<uint8_t>& bytes) {
@@ -219,10 +219,10 @@ TEST_CASE("the public headers compile as C") {
 
 TEST_CASE("the Unicode cmap subtable is the one FreeType chooses, and maps every code point as FreeType does") {
     const char* names[] = {
-        "Arimo.ttf",    "BungeeSpice.ttf",     "ColrTestGlyphs.ttf", "Cousine.ttf",
-        "HandwritingCff2.otf", "KalniaGlaze.ttf", "Literata.ttf",   "Nabla.ttf",
-        "NotoColorEmoji.ttf",  "NotoFlagsSbix.ttf", "NotoSans.ttf",  "NotoSansArabic.ttf",
-        "NotoSansDevanagari.ttf", "NotoSansJP.ttf", "RobotoFlex.ttf", "Tinos.ttf",
+        "Arimo-Regular.ttf",    "BungeeSpice.ttf",     "ColrTestGlyphs.ttf", "Cousine-Regular.ttf",
+        "noto_handwriting-cff2_colr_1.otf", "KalniaGlaze.ttf", "Literata.ttf",   "Nabla.ttf",
+        "NotoColorEmoji.subset.multiple_size_tables.ttf",  "NotoFlagsSbix.ttf", "NotoSans[wdth,wght].ttf",  "NotoSansArabic[wdth,wght].ttf",
+        "NotoSansDevanagari[wdth,wght].ttf", "NotoSansJP-VF.otf", "RobotoFlex.ttf", "Tinos-Regular.ttf",
         "Twemoji.ttf",         "TwemojiSmileySbix.ttf",
     };
     FT_Library library = nullptr;
@@ -252,9 +252,9 @@ TEST_CASE("the Unicode cmap subtable is the one FreeType chooses, and maps every
 }
 
 TEST_CASE("variation sequences map as FreeType maps them") {
-    std::vector<std::string> paths = {std::string(PR_FONT_BUNDLE_DIR) + "/NewCMMath-Regular.otf"};
-    for (const char* name : {"NotoSansJP.ttf", "NotoSansSC.ttf", "NotoSansMongolian.ttf", "NotoColorEmoji.ttf",
-        "NotoSansMath.ttf", "NotoSans.ttf"})
+    std::vector<std::string> paths = {std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf"};
+    for (const char* name : {"NotoSansJP-VF.otf", "cmap14_font1.otf", "NotoSansMongolian-Regular.ttf", "NotoColorEmoji.subset.multiple_size_tables.ttf",
+        "NotoSansMath-Regular.ttf", "NotoSans[wdth,wght].ttf"})
         paths.push_back(std::string(PR_FONTS_DIR) + "/" + name);
     FT_Library library = nullptr;
     REQUIRE(FT_Init_FreeType(&library) == 0);
@@ -283,8 +283,12 @@ TEST_CASE("variation sequences map as FreeType maps them") {
                 firstSelector = selector;
             }
         };
-        FT_UInt32* selectors = FT_Face_GetVariantSelectors(face);
-        for (uint32_t s = 0; selectors != nullptr && selectors[s] != 0; ++s) {
+        // FreeType returns each list in a buffer of the face's, which its next list reuses, so the selectors are copied
+        // before their code points are asked for.
+        std::vector<FT_UInt32> selectors;
+        for (FT_UInt32* at = FT_Face_GetVariantSelectors(face); at != nullptr && *at != 0; ++at)
+            selectors.push_back(*at);
+        for (size_t s = 0; s < selectors.size(); ++s) {
             FT_UInt32* bases = FT_Face_GetCharsOfVariant(face, selectors[s]);
             for (uint32_t b = 0; bases != nullptr && bases[b] != 0; ++b, ++listed) {
                 // The code points beside a listed one, which the font may not list.
@@ -469,9 +473,9 @@ TEST_CASE("a variation sequences subtable at the limits of its records maps what
 
 TEST_CASE("a font's design advances are FreeType's unhinted ones") {
     const char* names[] = {
-        "Arimo.ttf",           "Cousine.ttf",     "HandwritingCff2.otf", "Literata.ttf",
-        "NotoSans.ttf",        "NotoSansJP.ttf",  "NotoSansArabic.ttf",  "RobotoFlex.ttf",
-        "Tinos.ttf",           "Twemoji.ttf",     "NotoColorEmoji.ttf",  "TwemojiSmileySbix.ttf",
+        "Arimo-Regular.ttf",           "Cousine-Regular.ttf",     "noto_handwriting-cff2_colr_1.otf", "Literata.ttf",
+        "NotoSans[wdth,wght].ttf",        "NotoSansJP-VF.otf",  "NotoSansArabic[wdth,wght].ttf",  "RobotoFlex.ttf",
+        "Tinos-Regular.ttf",           "Twemoji.ttf",     "NotoColorEmoji.subset.multiple_size_tables.ttf",  "TwemojiSmileySbix.ttf",
     };
     FT_Library library = nullptr;
     REQUIRE(FT_Init_FreeType(&library) == 0);
@@ -501,7 +505,7 @@ TEST_CASE("a font's design advances are FreeType's unhinted ones") {
 }
 
 TEST_CASE("a single font has one face, and bytes that are not a font none") {
-    std::vector<uint8_t> bytes = readFile("NotoSans.ttf");
+    std::vector<uint8_t> bytes = readFile("NotoSans[wdth,wght].ttf");
     CHECK(prFontCount(bytes) == 1);
     // A collection header that counts more faces than its bytes hold.
     const uint8_t collection[] = {'t', 't', 'c', 'f', 0, 1, 0, 0, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0};
@@ -510,7 +514,7 @@ TEST_CASE("a single font has one face, and bytes that are not a font none") {
 }
 
 TEST_CASE("a font's PostScript name is its name table's, or names the axes of an instance away from its default") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     CHECK(text(prFontPostScriptName(font)) == "NotoSans-Regular");
     prFontRelease(font);
     const PrFont* flex = load("RobotoFlex.ttf");
@@ -528,7 +532,7 @@ TEST_CASE("a font's PostScript name is its name table's, or names the axes of an
 }
 
 TEST_CASE("a font reads its names, metrics and glyphs") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     CHECK(text(prFontFamilyName(font)) == "Noto Sans");
     PrFontMetrics m = prFontMetrics(font);
     CHECK(m.unitsPerEm == 1000);
@@ -536,7 +540,7 @@ TEST_CASE("a font reads its names, metrics and glyphs") {
     CHECK(m.descent == doctest::Approx(0.293));
     CHECK(m.capHeight == doctest::Approx(0.714));
     CHECK(m.xHeight == doctest::Approx(0.536));
-    CHECK(m.averageAdvance == doctest::Approx(0.570));
+    CHECK(m.averageAdvance == doctest::Approx(0.577));
     CHECK(m.maxAdvance == doctest::Approx(2.840));
     CHECK((m.fromFont & PrFontMetricFlag_AverageAdvance) != 0);
     CHECK(m.underlinePosition > 0.0f);
@@ -577,7 +581,7 @@ TEST_CASE("a font reads its names, metrics and glyphs") {
 }
 
 TEST_CASE("a variation is a font of its own, sharing the bytes") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     REQUIRE(prFontAxisCount(font) == 2);
     uint32_t weight = prFontAxis(font, 0).tag == kWght ? 0 : 1;
     PrFontAxis axis = prFontAxis(font, weight);
@@ -606,7 +610,7 @@ TEST_CASE("a variation is a font of its own, sharing the bytes") {
 }
 
 TEST_CASE("each variation keeps its own advances once found") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     uint16_t o = prFontCodePointGlyph(font, 'o');
     PrFontDerivation derivation = prFontDerivationDefault();
     derivation.variationCount = 1;
@@ -627,7 +631,7 @@ TEST_CASE("each variation keeps its own advances once found") {
 }
 
 TEST_CASE("CFF2 outlines read as cubics") {
-    const PrFont* font = load("HandwritingCff2.otf");
+    const PrFont* font = load("noto_handwriting-cff2_colr_1.otf");
     bool cubic = false;
     PrPath* path = prPathCreate();
     for (uint16_t g = 0; g < prFontGlyphCount(font) && !cubic; ++g) {
@@ -670,7 +674,7 @@ TEST_CASE("color glyphs paint as balanced pushes and pops") {
 }
 
 TEST_CASE("one state of a font's face is one font, while it is open") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrFontVariation heavy{kWght, 700};
     PrFontDerivation bold = prFontDerivationDefault();
     bold.variations = &heavy;
@@ -689,7 +693,7 @@ TEST_CASE("one state of a font's face is one font, while it is open") {
     CHECK(prFontCreateDerived(font, &none) == font);
     prFontRelease(font);
     // Fonts made by separate calls to create are separate, whatever their state.
-    const PrFont* again = load("NotoSans.ttf");
+    const PrFont* again = load("NotoSans[wdth,wght].ttf");
     CHECK(again != font);
     prFontRelease(again);
     prFontRelease(c);
@@ -699,7 +703,7 @@ TEST_CASE("one state of a font's face is one font, while it is open") {
 }
 
 TEST_CASE("threads that derive one state at once share one font" * doctest::skip(!prThreadSupported())) {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     std::vector<std::thread> threads;
     std::vector<const PrFont*> made(8);
     for (uint32_t t = 0; t < 8; ++t) {
@@ -724,7 +728,7 @@ TEST_CASE("threads that derive one state at once share one font" * doctest::skip
 }
 
 TEST_CASE("a font is read from several threads at once" * doctest::skip(!prThreadSupported())) {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     std::vector<std::thread> threads;
     std::vector<float> widths(4);
     for (uint32_t t = 0; t < 4; ++t) {
@@ -747,7 +751,7 @@ TEST_CASE("a font is read from several threads at once" * doctest::skip(!prThrea
 }
 
 TEST_CASE("baselines come from BASE, and the rest are related to them") {
-    const PrFont* font = load("NotoSansJP.ttf");
+    const PrFont* font = load("NotoSansJP-VF.otf");
     PrFontMetrics m = prFontMetrics(font);
     // BASE gives ideo at -120 and the ink edges at -67 and 827. idtp is ideo plus an em.
     CHECK(m.ideographicUnder == doctest::Approx(0.12));
@@ -763,7 +767,7 @@ TEST_CASE("baselines come from BASE, and the rest are related to them") {
     prFontRelease(font);
 
     // A Latin font has no BASE. Its ideographic baselines are its ascent and descent, and its central baseline midway.
-    font = load("NotoSans.ttf");
+    font = load("NotoSans[wdth,wght].ttf");
     m = prFontMetrics(font);
     CHECK((m.fromFont & PrFontMetricFlag_Ideographic) == 0);
     CHECK(m.ideographicUnder == doctest::Approx(m.descent));
@@ -802,7 +806,7 @@ TEST_CASE("subscripts, superscripts and heights come from OS/2, varied by MVAR")
 }
 
 TEST_CASE("size-adjust scales outlines and metrics, and overrides replace metrics") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     uint16_t x = prFontCodePointGlyph(font, 'x');
     PrFontDerivation d = prFontDerivationDefault();
     d.sizeAdjust = 0.5f;
@@ -838,7 +842,7 @@ TEST_CASE("size-adjust scales outlines and metrics, and overrides replace metric
 }
 
 TEST_CASE("vertical metrics place an ideograph in its em box") {
-    const PrFont* font = load("NotoSansJP.ttf");
+    const PrFont* font = load("NotoSansJP-VF.otf");
     uint16_t kan = prFontCodePointGlyph(font, 0x6f22);
     CHECK(prFontGlyphVerticalAdvance(font, kan) == doctest::Approx(1));
     PrVec2 origin = prFontGlyphVerticalOrigin(font, kan);
@@ -848,7 +852,7 @@ TEST_CASE("vertical metrics place an ideograph in its em box") {
 }
 
 TEST_CASE("a font is aliased where a derivation says so, and its derivations stay aliased") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     CHECK_FALSE(prFontIsAliased(font));
     const PrFont* aliased = derive(font, [](PrFontDerivation& d) {
         d.aliased = true;
@@ -917,7 +921,7 @@ TEST_CASE("a palette's colors are overridden entry by entry") {
 }
 
 TEST_CASE("a face describes its weight, width and slope, as ranges where axes vary them") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrFontInfo d = prFontInfo(font);
     CHECK(d.weightMin == 100.0f);
     CHECK(d.weightMax == 900.0f);
@@ -937,7 +941,7 @@ TEST_CASE("a face describes its weight, width and slope, as ranges where axes va
 }
 
 TEST_CASE("without a hinter, a font of any hinting draws and advances as designed") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     uint16_t x = prFontCodePointGlyph(font, 'x');
     for (PrFontHinting hinting : {PrFontHinting_Light, PrFontHinting_Full}) {
         const PrFont* asked = hinted(font, hinting);
@@ -957,7 +961,7 @@ TEST_CASE("without a hinter, a font of any hinting draws and advances as designe
 }
 
 TEST_CASE("a font made with a derivation is the font derived from its default instance") {
-    std::vector<uint8_t> bytes = readFile("NotoSans.ttf");
+    std::vector<uint8_t> bytes = readFile("NotoSans[wdth,wght].ttf");
     PrFontVariation heavy{PR_FONT_TAG('w', 'g', 'h', 't'), 800};
     PrFontDerivation d = prFontDerivationDefault();
     d.variations = &heavy;
@@ -1045,7 +1049,7 @@ TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") 
 }
 
 TEST_CASE("a CBDT glyph's image comes from the strike best for the size") {
-    const PrFont* font = load("NotoColorEmojiCbdt.ttf");
+    const PrFont* font = load("NotoColorEmoji.subset.multiple_size_tables.ttf");
     uint16_t nine = prFontCodePointGlyph(font, '9');
     REQUIRE(nine != 0);
     PrFontGlyphImage image{};
@@ -1065,7 +1069,7 @@ TEST_CASE("a CBDT glyph's image comes from the strike best for the size") {
 }
 
 TEST_CASE("a CBDT image whose length runs past its table has no image") {
-    std::vector<uint8_t> bytes = readFile("NotoColorEmojiCbdt.ttf");
+    std::vector<uint8_t> bytes = readFile("NotoColorEmoji.subset.multiple_size_tables.ttf");
     // The PNG of each image follows its length. A length that wraps past 2^32 when added to its position fails.
     const uint8_t signature[] = {0x89, 'P', 'N', 'G'};
     uint32_t corrupted = 0;

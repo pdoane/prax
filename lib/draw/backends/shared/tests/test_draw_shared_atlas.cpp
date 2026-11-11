@@ -57,7 +57,7 @@ TEST_CASE("the public headers compile as C") {
 }
 
 TEST_CASE("the atlas rasterizes a glyph once for each quarter pixel and places it on the pixel grid") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawAtlasOptions options{256, 2, 4, 0.05f};
     PrDrawAtlas* atlas = prDrawAtlasCreate(&options);
     prDrawAtlasNext(atlas);
@@ -107,7 +107,7 @@ TEST_CASE("the atlas rasterizes a glyph once for each quarter pixel and places i
 }
 
 TEST_CASE("the atlas empties a page no glyph was drawn from this use when it is full") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawAtlasOptions options{64, 1, 0, 0.05f};
     PrDrawAtlas* atlas = prDrawAtlasCreate(&options);
     PrFontGlyph glyphs[2] = {{prFontCodePointGlyph(font, 'W'), {0, 40}}, {prFontCodePointGlyph(font, 'M'), {0, 40}}};

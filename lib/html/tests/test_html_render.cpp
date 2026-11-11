@@ -101,7 +101,7 @@ struct Page {
     // `sheets` follow HTML's user agent sheets.
     explicit Page(const char* html, PrVec2 viewport = PrVec2{800, 600},
             PrDomAgentOptions agentOptions = prDomAgentOptionsDefault(), const std::vector<PrCssUserAgentSheet>& sheets = {}) {
-        const char* files[] = {"Tinos.ttf", "Arimo.ttf", "Ahem.ttf"};
+        const char* files[] = {"Tinos-Regular.ttf", "Arimo-Regular.ttf", "Ahem.ttf"};
         for (const char* file : files) {
             const PrFont* font = load(file);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();

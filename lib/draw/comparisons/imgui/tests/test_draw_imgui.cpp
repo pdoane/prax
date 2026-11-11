@@ -170,7 +170,7 @@ TEST_CASE("imgui fills a rect over a cleared texture, and blends a translucent o
 
 TEST_CASE("imgui draws shaped glyphs from its atlas, covering what the cpu backend covers") {
     Device device(128, 64);
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     addText(list, font, 32, "Hxg", PrVec2{8, 44});
     std::vector<uint8_t> drawn = device.render(list);
@@ -232,7 +232,7 @@ TEST_CASE("imgui strokes a closed contour centered, inside or outside, as the cp
 
 TEST_CASE("imgui draws a variable font's instance as its own font") {
     Device device(128, 64);
-    const PrFont* regular = load("NotoSans.ttf");
+    const PrFont* regular = load("NotoSans[wdth,wght].ttf");
     PrFontVariation heavy{0x77676874, 900}; // 'wght'
     PrFontDerivation derivation = prFontDerivationDefault();
     derivation.variations = &heavy;

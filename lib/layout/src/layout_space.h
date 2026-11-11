@@ -145,8 +145,11 @@ struct LayoutSpace {
     const LayoutMathStretch* PR_NULLABLE stretch;
 };
 
-// A box's space is copied for each child, so its fields are ordered to leave no padding.
+// A box's space is copied for each child, so its fields are ordered to leave no padding. This is its size where a
+// pointer is 64 bits.
+#if UINTPTR_MAX == UINT64_MAX
 static_assert(sizeof(LayoutSpace) == 80);
+#endif
 
 // Returns the fragmentainer that a box laid out in `space` is laid out in, or null outside a fragmentation context.
 inline const LayoutFragmentainer* PR_NULLABLE layoutSpaceFragmentainer(const LayoutSpace& space) {
@@ -169,11 +172,33 @@ inline LayoutMathStretch layoutMathStretchFromSpace(const LayoutSpace& space) {
     return space.stretch != nullptr ? *space.stretch : LayoutMathStretch{};
 }
 
-// Returns true if two spaces hold equal stretch size constraints, or neither holds one.
-inline bool layoutSpaceStretchesEqual(const LayoutSpace& a, const LayoutSpace& b) {
-    if (a.stretch == b.stretch)
-        return true;
-    return a.stretch != nullptr && b.stretch != nullptr && layoutMathStretchesEqual(*a.stretch, *b.stretch);
+// A space that outlives the call that received it, as the memos and handoffs of a layout keep the spaces that they
+// answer: the space with what it names by pointer, which lasts only for that call, held by value, and its pointers
+// cleared. Nothing lays out in a stored space; a layout compares it with a space that it is given (layoutStoredSpace).
+struct LayoutStoredSpace {
+    LayoutSpace space;              // `cell`, `fragmentation` and `stretch` are null
+    LayoutCellSpace cell;           // the cell inputs, which are empty for a box that is not a table cell
+    LayoutMathStretch stretch;      // the stretch size constraint, if `stretches`
+    bool stretches;
+};
+
+// Returns `space` as a stored space.
+inline LayoutStoredSpace layoutStoredSpace(const LayoutSpace& space) {
+    LayoutStoredSpace stored{
+        space, layoutCellSpaceFromSpace(space), layoutMathStretchFromSpace(space),
+        space.stretch != nullptr,
+    };
+    stored.space.cell = nullptr;
+    stored.space.fragmentation = nullptr;
+    stored.space.stretch = nullptr;
+    return stored;
+}
+
+// Returns true if a stored space and `space` hold equal stretch size constraints, or neither holds one.
+inline bool layoutSpaceStretchesEqual(const LayoutStoredSpace& stored, const LayoutSpace& space) {
+    if (!stored.stretches || space.stretch == nullptr)
+        return !stored.stretches && space.stretch == nullptr;
+    return layoutMathStretchesEqual(stored.stretch, *space.stretch);
 }
 
 // Returns true if a box laid out in `space` is out of flow, so that its containing block sizes the space.
@@ -316,7 +341,7 @@ struct LayoutInlineBlock {
 // the same (layoutFinal). It holds a reference to the result's fragment.
 struct LayoutHandoff {
     LayoutNodeIndex node;
-    LayoutSpace space;
+    LayoutStoredSpace space;
     LayoutRequests requests;
     LayoutResult result;
 };
@@ -325,7 +350,7 @@ struct LayoutHandoff {
 // request while it runs: nothing changes during a layout, so a box asked the same question again gives the same answer.
 struct LayoutMemo {
     LayoutNodeIndex node;
-    LayoutSpace space;
+    LayoutStoredSpace space;
     LayoutRequests requests;
     LayoutMeasureKind kind;
     LayoutMeasurement answer;
