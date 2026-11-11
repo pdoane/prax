@@ -66,7 +66,7 @@ bool openTarget(StudioAppState* app, StudioWindowTarget* target, PrAppWindow* ap
     if (target->swapChain != nullptr && target->generation == app->generation && target->transparent == transparent)
         return true;
     studioWindowTargetClose(app, target);
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainFlags flags = transparent ? PrGpuSwapChainFlags(PrGpuSwapChainFlag_Transparent) : 0;
     PrGpuSwapChainDesc desc{.intent = intent, .flags = flags};
     target->transparent = transparent;

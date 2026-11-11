@@ -50,7 +50,7 @@ void createFakeWindow(FakeApp& fake) {
     w.setTitleFn = [](PrAppWindow* window, PrStringView) { call(window, "title"); };
     w.titleFn = [](const PrAppWindow*) -> PrStringView { return "Fake"; };
     w.requestAttentionFn = [](PrAppWindow* window) { call(window, "attention"); };
-    w.surfaceFn = [](const PrAppWindow*, PrAppSurface*) -> PrStatus { return PrStatus_InvalidState; };
+    w.surfaceFn = [](const PrAppWindow*, PrSurface*) -> PrStatus { return PrStatus_InvalidState; };
 }
 
 void createFake(FakeApp& fake) {
@@ -173,7 +173,7 @@ TEST_CASE("the interface passes calls through") {
     prAppWindowFocus(window);
     prAppStop(app);
     CHECK(prAppWindowTitle(window) == "Fake");
-    PrAppSurface surface{};
+    PrSurface surface{};
     CHECK(prAppWindowSurface(window, &surface) == PrStatus_InvalidState);
     prAppWindowDestroy(window);
     prAppWindowDestroy(nullptr);

@@ -1,7 +1,7 @@
 // The WebKit backend of web views: a WKWebView, on macOS.
 //
-// A view shows over a host of PrAppSurfaceKind_NsView. While it is hidden, its page renders in a window below the
-// desktop, which the window server composites and no one sees.
+// A view shows over a host of PrSurfaceKind_NsView. While it is hidden, its page renders in a window below the desktop,
+// which the window server composites and no one sees.
 
 #pragma once
 

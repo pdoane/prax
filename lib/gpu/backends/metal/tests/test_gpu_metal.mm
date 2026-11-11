@@ -327,7 +327,7 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
         return;
     @autoreleasepool {
         NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
         PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
         PrGpuSwapChain* transactional = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &transactional) == PrStatus_Ok);
@@ -341,7 +341,7 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
         prGpuSwapChainDestroy(transactional);
 
         NSView* threadedView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface threadedSurface{PrAppSurfaceKind_NsView, (__bridge void*)threadedView};
+        PrSurface threadedSurface{PrSurfaceKind_NsView, (__bridge void*)threadedView};
         desc.flags = PrGpuSwapChainFlag_Threaded;
         PrGpuSwapChain* threaded = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &threadedSurface, &desc, &threaded) == PrStatus_Ok);
@@ -357,28 +357,23 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
 
 #endif
 
-TEST_CASE("metal chooses half floats for HDR only on a display that shows past SDR white, whatever its gamut") {
+TEST_CASE("metal chooses half floats for HDR only on a display that shows past SDR white") {
     const PrGpuSwapChainInfo kSdr{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
     const PrGpuSwapChainInfo kExtended{PrGpuFormat_Rgba16F, PrColorSpace_Srgb};
     struct Case {
         PrGpuSwapChainIntent intent;
         float potentialHeadroom;
-        PrColorSpace gamut;
         PrGpuSwapChainInfo expected;
     };
     const Case cases[] = {
-        {PrGpuSwapChainIntent_Sdr, 1, PrColorSpace_Srgb, kSdr},
-        {PrGpuSwapChainIntent_Sdr, 16, PrColorSpace_DisplayP3, kSdr},
-        {PrGpuSwapChainIntent_Hdr, 1, PrColorSpace_Srgb, kSdr},
-        {PrGpuSwapChainIntent_Hdr, 2, PrColorSpace_Srgb, kExtended},
-        {PrGpuSwapChainIntent_Hdr, 1, PrColorSpace_DisplayP3, kSdr},
-        {PrGpuSwapChainIntent_Hdr, 16, PrColorSpace_DisplayP3, kExtended},
+        {PrGpuSwapChainIntent_Sdr, 1, kSdr},
+        {PrGpuSwapChainIntent_Sdr, 16, kSdr},
+        {PrGpuSwapChainIntent_Hdr, 1, kSdr},
+        {PrGpuSwapChainIntent_Hdr, 2, kExtended},
+        {PrGpuSwapChainIntent_Hdr, 16, kExtended},
     };
     for (const Case& c : cases) {
-        PrAppDisplay display = prAppDisplayDefault();
-        display.potentialHeadroom = c.potentialHeadroom;
-        display.gamut = c.gamut;
-        PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(c.intent, display);
+        PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(c.intent, c.potentialHeadroom);
         CAPTURE(c.intent);
         CAPTURE(c.potentialHeadroom);
         CHECK(info.format == c.expected.format);
@@ -395,7 +390,7 @@ TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, 
     @autoreleasepool {
         // A view outside a window is shown on the main screen.
         NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
         PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
         PrGpuSwapChain* swapChain = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);

@@ -7,12 +7,12 @@
 #include "pr/app_display.h"
 #include "pr/app_event.h"
 #include "pr/app_input.h"
-#include "pr/app_surface.h"
 #include "pr/app_user_preferences.h"
 #include "pr/base.h"
 #include "pr/geom.h"
 #include "pr/pixels.h"
 #include "pr/string_view.h"
+#include "pr/surface.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -418,7 +418,7 @@ void prAppWindowSetProgress(PrAppWindow* window, PrAppProgressState state, float
 void prAppWindowSetDocument(PrAppWindow* window, PrStringView path, bool edited);
 
 // Writes the window's native surface to `out`. The surface is valid until the window is destroyed.
-PrStatus prAppWindowSurface(const PrAppWindow* window, PrAppSurface* out);
+PrStatus prAppWindowSurface(const PrAppWindow* window, PrSurface* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Drags

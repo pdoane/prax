@@ -1,7 +1,7 @@
 // The Win32 application backend: Windows windows and the Win32 message loop.
 //
-// A window's surface is a PrAppSurfaceKind_Hwnd. The application has a message-only window of its own, which receives
-// its wakes and owns the clipboard's data, so that it runs while it has no windows.
+// A window's surface is a PrSurfaceKind_Hwnd. The application has a message-only window of its own, which receives its
+// wakes and owns the clipboard's data, so that it runs while it has no windows.
 //
 // A notification is a balloon on the application's icon in the notification area, and Windows shows it as a toast. The
 // first notification adds the icon, and the end of the run removes it. A new notification replaces the previous one. A

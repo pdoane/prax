@@ -1,6 +1,6 @@
 // The AppKit application backend: macOS windows and the AppKit event loop.
 //
-// A window's surface is a PrAppSurfaceKind_NsView. Each new window cascades from the last. The application stays open
+// A window's surface is a PrSurfaceKind_NsView. Each new window cascades from the last. The application stays open
 // while it has no windows, until the program stops it, and Quit in its menu asks the program to stop.
 //
 // Notifications use the system's UserNotifications framework. Only a process that runs from an application bundle with

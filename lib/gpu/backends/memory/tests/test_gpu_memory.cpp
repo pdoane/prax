@@ -2,12 +2,12 @@
 // and clears, the order that its work runs in, and how the application reaches its memory. The interface's own tests
 // draw with shaders, so they skip this device.
 
-#include "pr/app_surface.h"
 #include "pr/array.h"
 #include "pr/float16.h"
 #include "pr/gpu.h"
 #include "pr/gpu_memory.h"
 #include "pr/mem.h"
+#include "pr/surface.h"
 #include "pr/thread.h"
 
 #include "tools/harness/test.h"
@@ -239,7 +239,7 @@ TEST_CASE("a memory texture over the application's pixels draws and reads them i
 
 TEST_CASE("a memory device presents to no surface") {
     Device d;
-    PrAppSurface window{.kind = PrAppSurfaceKind_Hwnd};
+    PrSurface window{.kind = PrSurfaceKind_Hwnd};
     PrGpuSwapChainDesc desc{};
     PrGpuSwapChain* swapChain = nullptr;
     CHECK(prGpuSwapChainCreate(d.device, &window, &desc, &swapChain) == PrStatus_NotSupported);

@@ -31,7 +31,7 @@ void createFake(FakeView& fake) {
     fake.view.captureFn = [](PrWebView* view, PrRect, PrUVec2, PrWebViewCaptureFn, void*) {
         fakeOf(view).calls.push("capture");
     };
-    fake.view.showFn = [](PrWebView* view, const PrAppSurface*, PrRect, PrRect) { fakeOf(view).calls.push("show"); };
+    fake.view.showFn = [](PrWebView* view, const PrSurface*, PrRect, PrRect) { fakeOf(view).calls.push("show"); };
     fake.view.hideFn = [](PrWebView* view) { fakeOf(view).calls.push("hide"); };
 }
 
@@ -53,7 +53,7 @@ TEST_CASE("the interface passes calls through, and an engine without printing or
     prWebViewLoad(view, "about:blank", [](void*, PrStatus) {}, nullptr);
     prWebViewEvaluate(view, "1", [](void*, PrStatus, PrStringView) {}, nullptr);
     prWebViewCapture(view, PrRect{0, 0, 1, 1}, PrUVec2{1, 1}, [](void*, PrStatus, PrPixelView) {}, nullptr);
-    PrAppSurface host{};
+    PrSurface host{};
     prWebViewShow(view, &host, PrRect{}, PrRect{});
     prWebViewHide(view);
     CHECK(prWebViewPrint(view, "page.pdf", PrVec2{}, [](void*, PrStatus) {}, nullptr) == PrStatus_NotSupported);

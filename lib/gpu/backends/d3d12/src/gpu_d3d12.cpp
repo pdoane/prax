@@ -2883,10 +2883,10 @@ PrUVec2 monitorExtent(HWND window) {
     };
 }
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     D3d12Device* d = d3d12Of(device);
-    if (surface->kind != PrAppSurfaceKind_Hwnd || d->factory == nullptr)
+    if (surface->kind != PrSurfaceKind_Hwnd || d->factory == nullptr)
         return PrStatus_NotSupported;
     HWND window = static_cast<HWND>(surface->handle);
     // The swap chain begins in 8-bit sRGB, and takes the format that its intent wants for the window's display below.

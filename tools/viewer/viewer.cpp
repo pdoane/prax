@@ -897,7 +897,7 @@ void browserShow(Viewer& v, uint32_t index) {
         source.at.left + source.docWidth * zoom,
         source.at.top + source.docHeight * zoom,
     };
-    PrAppSurface host{};
+    PrSurface host{};
     if (prAppWindowSurface(v.window, &host) == PrStatus_Ok)
         prWebViewShow(b.browser, &host, source.at, viewport);
 }
@@ -1117,7 +1117,7 @@ void updateDifference(Viewer& v, const std::string& first, const std::string& se
 bool openViewer(Viewer& v) {
     PrApp* app = v.app;
     PrAppWindow* window = v.window;
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainDesc desc = swapChainDesc(false);
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &v.device) != PrStatus_Ok ||
             prAppWindowSurface(window, &surface) != PrStatus_Ok ||
@@ -1256,7 +1256,7 @@ PrAppOutput frame(void* context, PrAppWindow* window, const PrAppFrame* frame) {
     PrPixelFormat chosen = v.choices.hdr ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8;
     bool ready = v.panes[0]->rendersIn(chosen) && v.panes[1]->rendersIn(chosen);
     if (v.choices.hdr != v.swapChainHdr && ready) {
-        PrAppSurface surface{};
+        PrSurface surface{};
         PrGpuSwapChain* swapChain = nullptr;
         PrGpuSwapChainDesc desc = swapChainDesc(v.choices.hdr);
         if (prAppWindowSurface(window, &surface) == PrStatus_Ok &&

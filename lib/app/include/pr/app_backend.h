@@ -152,7 +152,7 @@ struct PrAppWindow {
         void* PR_NULLABLE context);
     void (*dragStartFn)(PrAppWindow* window, const PrAppDragDesc* desc);
     void (*PR_NULLABLE dragPromiseEndFn)(PrAppWindow* window, uint32_t index, PrStatus status);
-    PrStatus (*surfaceFn)(const PrAppWindow* window, PrAppSurface* out);
+    PrStatus (*surfaceFn)(const PrAppWindow* window, PrSurface* out);
 };
 
 // The function table of a status item backend, placed at the start of the item's state.

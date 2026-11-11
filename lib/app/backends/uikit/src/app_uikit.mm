@@ -486,8 +486,8 @@ void dragStart(PrAppWindow* window, const PrAppDragDesc*) {
     [uiKitObjectOf(window).host deliver:event to:window];
 }
 
-PrStatus surface(const PrAppWindow* window, PrAppSurface* out) {
-    out->kind = PrAppSurfaceKind_UiView;
+PrStatus surface(const PrAppWindow* window, PrSurface* out) {
+    out->kind = PrSurfaceKind_UiView;
     out->handle = (__bridge void*)uiKitObjectOf(window).view;
     return PrStatus_Ok;
 }

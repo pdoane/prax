@@ -185,7 +185,7 @@ void chooseFormat(VulkanDevice* d, VulkanSwapChain* s, PrGpuSwapChainIntent inte
     s->info.space = chosen.reported;
 }
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     VulkanDevice* d = vulkanDevice(device);
     if (d->vk.CreateSwapchainKHR == nullptr || d->vk.GetPhysicalDeviceSurfaceSupportKHR == nullptr)

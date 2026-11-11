@@ -106,9 +106,9 @@ TEST_CASE("a headless run starts, opens and frames a window, wakes from another 
 TEST_CASE("a window's surface is a view whose layer is a Metal layer") {
     Run run;
     run.begin = [](Run& r) {
-        PrAppSurface surface{};
+        PrSurface surface{};
         REQUIRE(prAppWindowSurface(r.window, &surface) == PrStatus_Ok);
-        CHECK(surface.kind == PrAppSurfaceKind_UiView);
+        CHECK(surface.kind == PrSurfaceKind_UiView);
         UIView* view = (__bridge UIView*)surface.handle;
         CHECK([view.layer isKindOfClass:CAMetalLayer.class]);
         CHECK(view.bounds.size.width == 64);

@@ -2,6 +2,7 @@
 # language layers, and in a development build its tests.
 
 add_subdirectory(core)
+add_subdirectory(surface)
 add_subdirectory(task)
 add_subdirectory(cache)
 add_subdirectory(json)

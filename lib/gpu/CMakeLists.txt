@@ -4,7 +4,7 @@ pr_library(gpu INCLUDE include
     backends/shared/src/gpu_shared_device.cpp
     backends/shared/src/gpu_shared_upload.cpp
 )
-target_link_libraries(pr_gpu PUBLIC prax::core prax::geom prax::app prax::color PRIVATE prax::core_cpp)
+target_link_libraries(pr_gpu PUBLIC prax::core prax::geom prax::color prax::surface PRIVATE prax::core_cpp)
 pr_slang(pr_gpu backends/shared/src/gpu_shared_mipmaps.slang VARIABLE kGpuSharedMipmapShaders)
 # On Apple's platforms, any device copies a CVPixelBuffer that it does not import in place.
 if (APPLE)
@@ -18,7 +18,7 @@ if (PR_GPU_METAL OR PR_GPU_METAL4)
     target_sources(pr_gpu PRIVATE backends/shared/src/gpu_shared_metal.mm)
     set_source_files_properties(backends/shared/src/gpu_shared_metal.mm PROPERTIES COMPILE_OPTIONS -fno-objc-arc)
     target_link_libraries(pr_gpu PUBLIC "-framework Metal" "-framework QuartzCore" "-framework CoreVideo"
-                                 "-framework Foundation" "-framework CoreFoundation")
+                                 "-framework Foundation" "-framework CoreFoundation" "-framework CoreGraphics")
     # A swap chain presents to an AppKit view on macOS, and to a UIKit view on UIKit's platforms.
     if (PR_MACOS)
         target_link_libraries(pr_gpu PUBLIC "-framework AppKit")
@@ -92,6 +92,7 @@ if (PR_DEVELOP)
         tests/test_gpu.cpp
         tests/test_gpu_c.c
     )
+    target_link_libraries(gpu_tests PRIVATE prax::surface)
     pr_slang(gpu_tests tests/test_gpu.slang VARIABLE kTestGpuShaders)
     # Each backend's own tests, which record into the application's command buffers and passes with the same shaders.
     pr_slang(gpu_tests tests/test_gpu_native.slang VARIABLE kTestGpuNativeShaders)
@@ -112,7 +113,6 @@ if (PR_DEVELOP)
     endif()
     if (PR_GPU_MEMORY)
         target_sources(gpu_tests PRIVATE backends/memory/tests/test_gpu_memory.cpp)
-        target_link_libraries(gpu_tests PRIVATE prax::app)
     endif()
     if (PR_GPU_CANVAS2D)
         target_sources(gpu_tests PRIVATE backends/canvas2d/tests/test_gpu_canvas2d.cpp)

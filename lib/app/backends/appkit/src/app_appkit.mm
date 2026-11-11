@@ -2635,8 +2635,8 @@ void share(PrAppWindow* window, const PrAppDataContent* content, PrRect anchor, 
     [picker.picker showRelativeToRect:rect ofView:object.view preferredEdge:NSRectEdgeMaxY];
 }
 
-PrStatus surface(const PrAppWindow* window, PrAppSurface* out) {
-    out->kind = PrAppSurfaceKind_NsView;
+PrStatus surface(const PrAppWindow* window, PrSurface* out) {
+    out->kind = PrSurfaceKind_NsView;
     out->handle = (__bridge void*)objectOf(window).view;
     return PrStatus_Ok;
 }

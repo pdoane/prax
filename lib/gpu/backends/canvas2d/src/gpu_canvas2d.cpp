@@ -4,9 +4,9 @@
 #include "pr/gpu_canvas2d.h"
 
 #include "pr/alloc.h"
-#include "pr/app_surface.h"
 #include "pr/memory.h"
 #include "pr/raw_string.h"
+#include "pr/surface.h"
 
 #include "gpu/backends/shared/src/gpu_shared_memory.h"
 
@@ -101,10 +101,10 @@ void present(void* PR_NULLABLE context) {
     prGpuTextureNative(s->device, s->texture, PrGpuNativeKind_Canvas2d, &canvas);
 }
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (surface->kind != PrAppSurfaceKind_HtmlCanvas)
+    if (surface->kind != PrSurfaceKind_HtmlCanvas)
         return PrStatus_NotSupported;
     SwapChain* s = allocZeroed<SwapChain>();
     static_cast<PrGpuSwapChain&>(*s) = kSwapChainFunctions;

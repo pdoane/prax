@@ -1,6 +1,6 @@
 #include "pr/app.h"
-#include "pr/app_surface.h"
 #include "pr/app_user_preferences.h"
+#include "pr/surface.h"
 
 int prTestAppCApi(void);
 

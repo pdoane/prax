@@ -209,7 +209,7 @@ void prAppWindowSetDocument(PrAppWindow* window, PrStringView path, bool edited)
         window->setDocumentFn(window, path, edited);
 }
 
-PrStatus prAppWindowSurface(const PrAppWindow* window, PrAppSurface* out) {
+PrStatus prAppWindowSurface(const PrAppWindow* window, PrSurface* out) {
     return window->surfaceFn(window, out);
 }
 

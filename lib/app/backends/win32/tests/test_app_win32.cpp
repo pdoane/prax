@@ -113,9 +113,9 @@ Run& runOf(void* context) {
 }
 
 HWND windowOf(PrAppWindow* window) {
-    PrAppSurface surface{};
+    PrSurface surface{};
     REQUIRE(prAppWindowSurface(window, &surface) == PrStatus_Ok);
-    REQUIRE(surface.kind == PrAppSurfaceKind_Hwnd);
+    REQUIRE(surface.kind == PrSurfaceKind_Hwnd);
     return static_cast<HWND>(surface.handle);
 }
 

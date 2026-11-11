@@ -4594,8 +4594,8 @@ void statusItemAction(Win32App* app, UINT id, UINT action) {
     }
 }
 
-PrStatus surface(const PrAppWindow* base, PrAppSurface* out) {
-    out->kind = PrAppSurfaceKind_Hwnd;
+PrStatus surface(const PrAppWindow* base, PrSurface* out) {
+    out->kind = PrSurfaceKind_Hwnd;
     out->handle = static_cast<const Win32Window*>(base)->window;
     return PrStatus_Ok;
 }

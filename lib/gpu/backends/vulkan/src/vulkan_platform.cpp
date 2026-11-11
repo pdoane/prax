@@ -106,12 +106,12 @@ const char* PR_NULLABLE vulkanSurfaceExtension(void) {
 #endif
 }
 
-VkResult vulkanSurfaceCreate(VulkanDevice* d, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+VkResult vulkanSurfaceCreate(VulkanDevice* d, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         VkSurfaceKHR PR_NULLABLE* PR_NONNULL out) {
     *out = VK_NULL_HANDLE;
 #if defined(_WIN32)
     (void)desc;
-    if (surface->kind != PrAppSurfaceKind_Hwnd)
+    if (surface->kind != PrSurfaceKind_Hwnd)
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     PFN_vkCreateWin32SurfaceKHR create = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(
         d->vk.GetInstanceProcAddr(d->instance, "vkCreateWin32SurfaceKHR"));
@@ -123,7 +123,7 @@ VkResult vulkanSurfaceCreate(VulkanDevice* d, const PrAppSurface* surface, const
     info.hwnd = static_cast<HWND>(surface->handle);
     return create(d->instance, &info, nullptr, out);
 #elif defined(__APPLE__)
-    if (surface->kind != PrAppSurfaceKind_NsView)
+    if (surface->kind != PrSurfaceKind_NsView)
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     PFN_vkCreateMetalSurfaceEXT create = reinterpret_cast<PFN_vkCreateMetalSurfaceEXT>(
         d->vk.GetInstanceProcAddr(d->instance, "vkCreateMetalSurfaceEXT"));

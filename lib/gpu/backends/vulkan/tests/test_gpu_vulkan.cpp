@@ -351,7 +351,7 @@ TEST_CASE("vulkan presents frames to a window's swap chain, and resizes it") {
     HWND window = CreateWindowExW(0, type.lpszClassName, L"Vulkan test", WS_POPUP, 0, 0, 320, 240, nullptr, nullptr,
         type.hInstance, nullptr);
     REQUIRE(window != nullptr);
-    PrAppSurface surface{PrAppSurfaceKind_Hwnd, window};
+    PrSurface surface{PrSurfaceKind_Hwnd, window};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
     PrGpuSwapChain* swapChain = nullptr;
     REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);

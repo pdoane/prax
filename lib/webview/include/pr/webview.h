@@ -7,13 +7,13 @@
 
 #pragma once
 
-#include "pr/app_surface.h"
 #include "pr/app_user_preferences.h"
 #include "pr/base.h"
 #include "pr/geom.h"
 #include "pr/pixels.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
+#include "pr/surface.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -106,7 +106,7 @@ void prWebViewCapture(PrWebView* view, PrRect rect, PrUVec2 size, PrWebViewCaptu
 // composites the page on its own schedule, as it does any page it shows. The program neither draws it nor waits for it.
 // Whether or not it is shown, the page lays out and captures at the size of its viewport. A host of a kind that the
 // backend does not show over leaves the page where it is.
-void prWebViewShow(PrWebView* view, const PrAppSurface* host, PrRect clip, PrRect frame);
+void prWebViewShow(PrWebView* view, const PrSurface* host, PrRect clip, PrRect frame);
 
 // Removes the page from its host and moves it back to its own window, which no one sees.
 void prWebViewHide(PrWebView* view);

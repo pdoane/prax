@@ -1021,10 +1021,10 @@ void setIcon(PrAppWindow*, PrPixelView pixels) {
     prMemoryFree(packed);
 }
 
-PrStatus surface(const PrAppWindow* base, PrAppSurface* out) {
+PrStatus surface(const PrAppWindow* base, PrSurface* out) {
     const WebWindow* window = windowOf(base);
-    *out = PrAppSurface{
-        .kind = PrAppSurfaceKind_HtmlCanvas,
+    *out = PrSurface{
+        .kind = PrSurfaceKind_HtmlCanvas,
         .handle = const_cast<char*>(prRawStringView(&window->selector).data),
     };
     return PrStatus_Ok;

@@ -1,6 +1,6 @@
 // The UIKit application backend: UIKit's scenes and windows, and the main run loop.
 //
-// A window's surface is a PrAppSurfaceKind_UiView, whose layer is a CAMetalLayer. Each window is the root of a scene of
+// A window's surface is a PrSurfaceKind_UiView, whose layer is a CAMetalLayer. Each window is the root of a scene of
 // its own, which the system sizes and places. A window shows once its scene connects: the first window takes the scene
 // of the launch, and each further window asks the system for a new scene. The window's frames report the scene's safe
 // area and the part that the on-screen keyboard covers.

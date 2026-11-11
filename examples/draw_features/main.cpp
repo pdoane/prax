@@ -79,7 +79,7 @@ void closeDevice(Window& w) {
 // Makes the platform's device, a swap chain over the window for HDR, and the renderer. Returns false if the window has
 // no device to render with.
 bool openDevice(Window& w) {
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
             prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||

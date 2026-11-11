@@ -426,7 +426,7 @@ void closeDevice(Window& w) {
 // Makes the platform's device, a swap chain over the window for SDR, the renderer and the example's pipelines. Returns
 // false if the window has no device to render with.
 bool openDevice(Window& w) {
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
             prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||

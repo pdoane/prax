@@ -289,7 +289,7 @@ TEST_CASE("a page shown in the window keeps its viewport, captures as it does hi
             },
         };
         REQUIRE(prAppWindowCreate(b.app, &desc, &b.window) == PrStatus_Ok);
-        PrAppSurface host{};
+        PrSurface host{};
         REQUIRE(prAppWindowSurface(b.window, &host) == PrStatus_Ok);
         prWebViewShow(b.view, &host, PrRect{8, 4, 48, 24}, PrRect{0, 0, 80, 40});
         prWebViewLoad(b.view, url, [](void* context, PrStatus status) {

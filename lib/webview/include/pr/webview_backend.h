@@ -21,7 +21,7 @@ struct PrWebView {
     void (*loadFn)(PrWebView* view, PrStringView url, PrWebViewDoneFn done, void* PR_NULLABLE context);
     void (*evaluateFn)(PrWebView* view, PrStringView script, PrWebViewResultFn done, void* PR_NULLABLE context);
     void (*captureFn)(PrWebView* view, PrRect rect, PrUVec2 size, PrWebViewCaptureFn done, void* PR_NULLABLE context);
-    void (*showFn)(PrWebView* view, const PrAppSurface* host, PrRect clip, PrRect frame);
+    void (*showFn)(PrWebView* view, const PrSurface* host, PrRect clip, PrRect frame);
     void (*hideFn)(PrWebView* view);
     void (*PR_NULLABLE printFn)(PrWebView* view, PrStringView path, PrVec2 paper, PrWebViewDoneFn done,
         void* PR_NULLABLE context);

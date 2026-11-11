@@ -468,43 +468,26 @@ PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline)
 
 #if TARGET_OS_OSX
 
-// Returns the capabilities of the screen that shows most of the view's window, or of the main screen if the view is not
-// in a window. It reads AppKit, so it must be called on the main thread.
-PrAppDisplay displayOf(NSView* view) {
-    PrAppDisplay display = prAppDisplayDefault();
+// Returns how many times SDR white the screen that shows most of the view's window can reach, or the main screen if the
+// view is not in a window. It reads AppKit, so it must be called on the main thread.
+float potentialHeadroomOf(NSView* view) {
     NSScreen* screen = view.window != nil ? view.window.screen : NSScreen.mainScreen;
-    if (screen != nil) {
-        display.headroom = float(screen.maximumExtendedDynamicRangeColorComponentValue);
-        display.potentialHeadroom = float(screen.maximumPotentialExtendedDynamicRangeColorComponentValue);
-        if ([screen canRepresentDisplayGamut:NSDisplayGamutP3])
-            display.gamut = PrColorSpace_DisplayP3;
-    }
-    return display;
+    return screen != nil ? float(screen.maximumPotentialExtendedDynamicRangeColorComponentValue) : 1.0f;
 }
 
 #else
 
-// Returns the capabilities of the screen of the view's scene, or SDR until the view is in a window, and always on a
-// television, whose layers show no extended range, and on visionOS, which has no screens. It reads UIKit, so it must be
-// called on the main thread.
-PrAppDisplay displayOf(UIView* view) {
-    PrAppDisplay display = prAppDisplayDefault();
-#if TARGET_OS_VISION
-    if (view.window != nil)
-        display.pixelRatio = float(view.traitCollection.displayScale);
+// Returns how many times SDR white the screen of the view's scene can reach: one until the view is in a window, and
+// always on a television, whose layers show no extended range, and on visionOS, which has no screens. It reads UIKit,
+// so it must be called on the main thread.
+float potentialHeadroomOf(UIView* view) {
+#if TARGET_OS_TV || TARGET_OS_VISION
+    (void)view;
+    return 1.0f;
 #else
     UIScreen* screen = view.window.windowScene.screen;
-    if (screen != nil) {
-        display.pixelRatio = float(view.traitCollection.displayScale);
-#if !TARGET_OS_TV
-        display.headroom = MAX(float(screen.currentEDRHeadroom), 1.0f);
-        display.potentialHeadroom = MAX(float(screen.potentialEDRHeadroom), display.headroom);
+    return screen != nil ? float(screen.potentialEDRHeadroom) : 1.0f;
 #endif
-        if (view.traitCollection.displayGamut == UIDisplayGamutP3)
-            display.gamut = PrColorSpace_DisplayP3;
-    }
-#endif
-    return display;
 }
 
 #endif
@@ -525,8 +508,8 @@ void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
 
 // Returns the Metal layer that presents to the view of `surface`, which the view backs or hosts, set for `desc`, or nil
 // if the surface is not an AppKit view.
-CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapChainDesc* desc) {
-    if (surface->kind != PrAppSurfaceKind_NsView)
+CAMetalLayer* PR_NULLABLE layerOf(const PrSurface* surface, const PrGpuSwapChainDesc* desc) {
+    if (surface->kind != PrSurfaceKind_NsView)
         return nil;
     NSView* view = (NSView*)surface->handle;
     // A view that backs itself with a Metal layer keeps that layer, so that AppKit asks the view to display as it
@@ -557,8 +540,8 @@ CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapCh
 // Returns the Metal layer of the view of `surface`, set for `desc`, or nil if the surface is not a UIKit view whose
 // layer is a Metal layer, since a UIKit view keeps the layer that its class makes. UIKit sets the layer's gravity from
 // the view's content mode, and its scale from the view's, which follows the display once the view is in a window.
-CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapChainDesc* desc) {
-    if (surface->kind != PrAppSurfaceKind_UiView)
+CAMetalLayer* PR_NULLABLE layerOf(const PrSurface* surface, const PrGpuSwapChainDesc* desc) {
+    if (surface->kind != PrSurfaceKind_UiView)
         return nil;
     UIView* view = (UIView*)surface->handle;
     if (![view.layer isKindOfClass:CAMetalLayer.class])
@@ -572,7 +555,7 @@ CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapCh
 
 #endif
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     @autoreleasepool {
@@ -581,7 +564,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
             return PrStatus_NotSupported;
         decltype(GpuMetalSwapChain::view) view = (decltype(GpuMetalSwapChain::view))surface->handle;
         layer.device = d->device;
-        PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(desc->intent, displayOf(view));
+        PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(desc->intent, potentialHeadroomOf(view));
         layerTakeInfo(layer, info);
         // The layer is readable, so that a frame can be copied or read back.
         layer.framebufferOnly = NO;
@@ -1011,7 +994,7 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
         // display's mode changes, and on iOS once the view is in a window. AppKit and UIKit can be read only on the
         // main thread, so an acquire on another thread keeps the choice that was last made on the main thread.
         if (sc->intent == PrGpuSwapChainIntent_Hdr && [NSThread isMainThread]) {
-            PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(sc->intent, displayOf(sc->view));
+            PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(sc->intent, potentialHeadroomOf(sc->view));
             if (info.format != sc->info.format || info.space != sc->info.space) {
                 layerTakeInfo(sc->layer, info);
                 sc->info = info;

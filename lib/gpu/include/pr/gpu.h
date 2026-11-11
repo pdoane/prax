@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include "pr/app_surface.h"
 #include "pr/base.h"
 #include "pr/color.h"
 #include "pr/geom.h"
@@ -31,6 +30,7 @@
 #include "pr/raw_string.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
+#include "pr/surface.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -1100,8 +1100,8 @@ enum {
     // While a window is being resized, it can show a frame at the wrong size.
     PrGpuSwapChainFlag_Threaded = 1 << 0,
 
-    // Presents the textures' alpha, with premultiplied colors, so that a window with a backdrop shows it where the
-    // alpha is less than one (PrAppWindowBackdrop). Without the flag, the window shows the textures as opaque.
+    // Presents the textures' alpha, with premultiplied colors, so that whatever is behind a window shows where the
+    // alpha is less than one. Without the flag, the window shows the textures as opaque.
     PrGpuSwapChainFlag_Transparent = 1 << 1,
 };
 typedef uint8_t PrGpuSwapChainFlags;
@@ -1142,10 +1142,10 @@ typedef struct PrGpuSwapChainInfo {
 } PrGpuSwapChainInfo;
 
 // Creates a swap chain that presents to `surface`, which must outlive it. Without PrGpuSwapChainFlag_Threaded, a frame
-// presents within the window's display transaction: from the thread that runs the window, during its frame
-// (PrAppHandler::frame), so that a resize shows each frame at the window's size. Returns NotSupported for a kind of
-// surface the device cannot present to, and Lost if the device is lost. On failure, `*out` is null.
-PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+// presents within the window's display transaction: from the thread that runs the window, while it draws a frame, so
+// that a resize shows each frame at the window's size. Returns NotSupported for a kind of surface the device cannot
+// present to, and Lost if the device is lost. On failure, `*out` is null.
+PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
     PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out);
 
 // Waits for the frames in flight, then frees the swap chain and the textures of its images.

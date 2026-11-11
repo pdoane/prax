@@ -1004,7 +1004,7 @@ void passDrawIndexedIndirect(PrGpuPass*, PrGpuBuffer, uint64_t, uint32_t, uint32
 // ---------------------------------------------------------------------------------------------------------------------
 // Swap chains, which the device lacks until its backend creates its own
 
-PrStatus swapChainCreate(PrGpuDevice*, const PrAppSurface*, const PrGpuSwapChainDesc*,
+PrStatus swapChainCreate(PrGpuDevice*, const PrSurface*, const PrGpuSwapChainDesc*,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     return PrStatus_NotSupported;

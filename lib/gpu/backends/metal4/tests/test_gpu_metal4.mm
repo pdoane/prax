@@ -278,7 +278,7 @@ TEST_CASE("metal4 presents frames, with the transaction only in a live resize un
         return;
     @autoreleasepool {
         NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
         PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
         PrGpuSwapChain* transactional = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &transactional) == PrStatus_Ok);
@@ -292,7 +292,7 @@ TEST_CASE("metal4 presents frames, with the transaction only in a live resize un
         prGpuSwapChainDestroy(transactional);
 
         NSView* threadedView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface threadedSurface{PrAppSurfaceKind_NsView, (__bridge void*)threadedView};
+        PrSurface threadedSurface{PrSurfaceKind_NsView, (__bridge void*)threadedView};
         desc.flags = PrGpuSwapChainFlag_Threaded;
         PrGpuSwapChain* threaded = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &threadedSurface, &desc, &threaded) == PrStatus_Ok);
@@ -313,7 +313,7 @@ TEST_CASE("metal4's HDR swap chain reports what its layer holds, for the display
     @autoreleasepool {
         // A view outside a window is shown on the main screen.
         NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
         PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
         PrGpuSwapChain* swapChain = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);

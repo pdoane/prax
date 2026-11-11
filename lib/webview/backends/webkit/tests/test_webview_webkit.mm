@@ -141,7 +141,7 @@ TEST_CASE("a page shows over a window's view, and moves back to its own window w
         };
         PrAppWindow* window = nullptr;
         REQUIRE(prAppWindowCreate(b.app, &desc, &window) == PrStatus_Ok);
-        PrAppSurface surface{};
+        PrSurface surface{};
         REQUIRE(prAppWindowSurface(window, &surface) == PrStatus_Ok);
         NSView* host = (__bridge NSView*)surface.handle;
         prWebViewShow(b.view, &surface, PrRect{0, 0, 32, 16}, PrRect{0, 0, 32, 16});

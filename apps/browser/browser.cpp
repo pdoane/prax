@@ -177,7 +177,7 @@ bool pageHasKeys(Browser& b) {
 // there is no device to render with.
 bool openDevice(Browser& b) {
     PrAppWindow* window = b.window;
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainDesc swapChain{.intent = PrGpuSwapChainIntent_Hdr};
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok ||
             prAppWindowSurface(window, &surface) != PrStatus_Ok ||

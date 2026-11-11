@@ -715,8 +715,8 @@ void resize(PrWebView* browser, PrUVec2 viewport) {
     layOut(b);
 }
 
-void show(PrWebView* browser, const PrAppSurface* surface, PrRect clip, PrRect frame) {
-    if (surface->kind != PrAppSurfaceKind_Hwnd)
+void show(PrWebView* browser, const PrSurface* surface, PrRect clip, PrRect frame) {
+    if (surface->kind != PrSurfaceKind_Hwnd)
         return;
     Win32Browser* b = static_cast<Win32Browser*>(browser);
     HWND host = static_cast<HWND>(surface->handle);

@@ -95,7 +95,7 @@ void prWebViewCapture(PrWebView* view, PrRect rect, PrUVec2 size, PrWebViewCaptu
     view->captureFn(view, rect, size, done, context);
 }
 
-void prWebViewShow(PrWebView* view, const PrAppSurface* host, PrRect clip, PrRect frame) {
+void prWebViewShow(PrWebView* view, const PrSurface* host, PrRect clip, PrRect frame) {
     view->showFn(view, host, clip, frame);
 }
 

@@ -120,7 +120,7 @@ uint32_t occurrences(const Array<T>& items, const Value& value) {
 }
 
 NSView* viewOf(PrAppWindow* window) {
-    PrAppSurface surface{};
+    PrSurface surface{};
     REQUIRE(prAppWindowSurface(window, &surface) == PrStatus_Ok);
     return (__bridge NSView*)surface.handle;
 }

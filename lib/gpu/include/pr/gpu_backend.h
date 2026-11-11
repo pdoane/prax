@@ -177,7 +177,7 @@ struct PrGpuDevice {
 
     bool (*commandsBeginFn)(PrGpuDevice* device, const PrGpuCommandsOptions* options,
         PrGpuCommands* PR_NULLABLE* PR_NONNULL out);
-    PrStatus (*swapChainCreateFn)(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+    PrStatus (*swapChainCreateFn)(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out);
 };
 

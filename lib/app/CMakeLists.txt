@@ -12,7 +12,7 @@ pr_library(app INCLUDE include
     src/app_user_preferences.cpp
     src/app_window.cpp
 )
-target_link_libraries(pr_app PUBLIC prax::core prax::color prax::geom PRIVATE prax::core_cpp)
+target_link_libraries(pr_app PUBLIC prax::core prax::color prax::geom prax::surface PRIVATE prax::core_cpp)
 
 # What the backends share: the delivery of a window's callbacks, the reads of the clipboard and of drops that wait for
 # their answer, the content of drags, and the regions of a custom title bar.
@@ -78,6 +78,7 @@ if (PR_DEVELOP)
         tests/test_app_c.c
         tests/test_app_popup.cpp
     )
+    target_link_libraries(app_tests PRIVATE prax::surface)
     if (PR_APP_APPKIT OR PR_APP_UIKIT OR PR_APP_WIN32 OR PR_APP_WEB)
         target_sources(app_tests PRIVATE
             backends/shared/tests/test_app_shared_data.cpp
