@@ -171,11 +171,16 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     @autoreleasepool {
         id<MTLLibrary> library = static_cast<const GpuMetalLibrary*>(desc->library)->library;
         MTLRenderPipelineDescriptor* pd = [[MTLRenderPipelineDescriptor new] autorelease];
-        pd.vertexFunction = [[library newFunctionWithName:prAppleNSString(vertex->name)] autorelease];
-        if (fragment != nullptr)
-            pd.fragmentFunction = [[library newFunctionWithName:prAppleNSString(fragment->name)] autorelease];
+        MTLFunctionConstantValues* constants = gpuMetalFunctionConstants(d);
+        pd.vertexFunction = [[library newFunctionWithName:prAppleNSString(vertex->name) constantValues:constants
+            error:nil] autorelease];
+        if (fragment != nullptr) {
+            pd.fragmentFunction = [[library newFunctionWithName:prAppleNSString(fragment->name) constantValues:constants
+                error:nil] autorelease];
+        }
         pd.rasterSampleCount = desc->formats.samples;
         pd.inputPrimitiveTopology = gpuMetalTopologyClass(desc->topology);
+        pd.maxVertexAmplificationCount = gpuMetalAmplification(d, desc->formats.viewCount);
         if (desc->name.size != 0)
             pd.label = prAppleNSString(desc->name);
         for (uint8_t i = 0; i < desc->formats.colorCount; ++i) {
@@ -284,7 +289,7 @@ id<MTLComputeCommandEncoder> computeEncoder(Device* d, Commands* c) {
         [c->compute setBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
         const GpuMetalSlots& slots = c->slots;
         [c->compute setBuffers:slots.buffers offsets:slots.bufferOffsets
-            withRange:NSMakeRange(GpuMetalBinding_Buffers, GpuMetalBinding_Count - GpuMetalBinding_Buffers)];
+            withRange:NSMakeRange(GpuMetalBinding_Buffers, GpuMetalBinding_View - GpuMetalBinding_Buffers)];
         [c->compute setTextures:slots.textures withRange:NSMakeRange(0, GpuMetalTextureBinding_Count)];
         [c->compute setSamplerStates:slots.samplers withRange:NSMakeRange(0, kGpuMetalTextureSlots)];
     }
@@ -616,8 +621,29 @@ bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind, v
     return true;
 }
 
-// Binds the device's buffers in the pass's encoder: the root data and the heaps that its shaders read, and, in a pass
-// of the device's own, the viewport and scissor over the whole attachments.
+// Binds the view base of the draws after the call (GpuMetalView).
+void setView(id<MTLRenderCommandEncoder> encoder, uint32_t view) {
+    GpuMetalView base{view, view};
+    [encoder setVertexBytes:&base length:sizeof(base) atIndex:GpuMetalBinding_View];
+    [encoder setFragmentBytes:&base length:sizeof(base) atIndex:GpuMetalBinding_View];
+}
+
+// Records a draw once, or, in a pass that draws each view on its own, once for each view.
+template <typename Draw>
+void eachView(GpuMetalPass* pass, Draw draw) {
+    if (!pass->eachView) {
+        draw();
+        return;
+    }
+    for (uint8_t i = 0; i < pass->formats.viewCount; ++i) {
+        setView(passEncoder(pass), i);
+        draw();
+    }
+    setView(passEncoder(pass), 0);
+}
+
+// Binds the device's buffers in the pass's encoder: the root data, the heaps that its shaders read and the view base,
+// and, in a pass of the device's own, the viewport and scissor over the whole attachments.
 void passBind(Device* d, Commands* c, GpuMetalPass* pass) {
     id<MTLRenderCommandEncoder> encoder = passEncoder(pass);
     [encoder setVertexBuffer:c->push.buffer offset:c->push.offset atIndex:GpuMetalBinding_Push];
@@ -629,13 +655,15 @@ void passBind(Device* d, Commands* c, GpuMetalPass* pass) {
     [encoder setVertexBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
     [encoder setFragmentBuffer:d->samplerHeap offset:0 atIndex:GpuMetalBinding_Samplers];
     const GpuMetalSlots& slots = c->slots;
-    NSRange buffers = NSMakeRange(GpuMetalBinding_Buffers, GpuMetalBinding_Count - GpuMetalBinding_Buffers);
+    NSRange buffers = NSMakeRange(GpuMetalBinding_Buffers, GpuMetalBinding_View - GpuMetalBinding_Buffers);
     [encoder setVertexBuffers:slots.buffers offsets:slots.bufferOffsets withRange:buffers];
     [encoder setFragmentBuffers:slots.buffers offsets:slots.bufferOffsets withRange:buffers];
     [encoder setVertexTextures:slots.textures withRange:NSMakeRange(0, GpuMetalTextureBinding_Count)];
     [encoder setFragmentTextures:slots.textures withRange:NSMakeRange(0, GpuMetalTextureBinding_Count)];
     [encoder setVertexSamplerStates:slots.samplers withRange:NSMakeRange(0, kGpuMetalTextureSlots)];
     [encoder setFragmentSamplerStates:slots.samplers withRange:NSMakeRange(0, kGpuMetalTextureSlots)];
+    setView(encoder, 0);
+    gpuMetalPassViewsBegin(d, encoder, pass);
     if (!pass->native) {
         [encoder setViewport:MTLViewport{0, 0, double(pass->extent.x), double(pass->extent.y), 0, 1}];
         [encoder setScissorRect:MTLScissorRect{0, 0, pass->extent.x, pass->extent.y}];
@@ -719,8 +747,10 @@ void passDraw(PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
         uint32_t firstVertex, uint32_t firstInstance) {
     PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
-    [passEncoder(pass) drawPrimitives:passPipeline(device, pass).primitive vertexStart:firstVertex
-        vertexCount:vertexCount instanceCount:instanceCount baseInstance:firstInstance];
+    eachView(pass, [&] {
+        [passEncoder(pass) drawPrimitives:passPipeline(device, pass).primitive vertexStart:firstVertex
+            vertexCount:vertexCount instanceCount:instanceCount baseInstance:firstInstance];
+    });
 }
 
 void passDrawIndexed(PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCount,
@@ -729,9 +759,11 @@ void passDrawIndexed(PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCo
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     uint64_t at = pass->indexOffset + uint64_t(firstIndex) * (pass->indexType == MTLIndexTypeUInt32 ? 4 : 2);
-    [passEncoder(pass) drawIndexedPrimitives:passPipeline(device, pass).primitive indexCount:indexCount
-        indexType:pass->indexType indexBuffer:gpuMetalBuffer(d, pass->indexBuffer.id) indexBufferOffset:at
-        instanceCount:instanceCount baseVertex:vertexOffset baseInstance:firstInstance];
+    eachView(pass, [&] {
+        [passEncoder(pass) drawIndexedPrimitives:passPipeline(device, pass).primitive indexCount:indexCount
+            indexType:pass->indexType indexBuffer:gpuMetalBuffer(d, pass->indexBuffer.id) indexBufferOffset:at
+            instanceCount:instanceCount baseVertex:vertexOffset baseInstance:firstInstance];
+    });
 }
 
 void passDrawIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
@@ -739,9 +771,11 @@ void passDrawIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, ui
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     id<MTLBuffer> arguments = gpuMetalBuffer(d, buffer.id);
-    for (uint32_t i = 0; i < count; ++i)
-        [passEncoder(pass) drawPrimitives:passPipeline(device, pass).primitive indirectBuffer:arguments
-            indirectBufferOffset:offset + uint64_t(i) * stride];
+    eachView(pass, [&] {
+        for (uint32_t i = 0; i < count; ++i)
+            [passEncoder(pass) drawPrimitives:passPipeline(device, pass).primitive indirectBuffer:arguments
+                indirectBufferOffset:offset + uint64_t(i) * stride];
+    });
 }
 
 void passDrawIndexedIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
@@ -749,10 +783,12 @@ void passDrawIndexedIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t off
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     id<MTLBuffer> arguments = gpuMetalBuffer(d, buffer.id);
-    for (uint32_t i = 0; i < count; ++i)
-        [passEncoder(pass) drawIndexedPrimitives:passPipeline(device, pass).primitive indexType:pass->indexType
-            indexBuffer:gpuMetalBuffer(d, pass->indexBuffer.id) indexBufferOffset:pass->indexOffset
-            indirectBuffer:arguments indirectBufferOffset:offset + uint64_t(i) * stride];
+    eachView(pass, [&] {
+        for (uint32_t i = 0; i < count; ++i)
+            [passEncoder(pass) drawIndexedPrimitives:passPipeline(device, pass).primitive indexType:pass->indexType
+                indexBuffer:gpuMetalBuffer(d, pass->indexBuffer.id) indexBufferOffset:pass->indexOffset
+                indirectBuffer:arguments indirectBufferOffset:offset + uint64_t(i) * stride];
+    });
 }
 
 // The functions of the device's objects.

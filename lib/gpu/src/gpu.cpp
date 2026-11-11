@@ -719,6 +719,7 @@ PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibr
     desc.stencilFront.compare = PrGpuCompare_Always;
     desc.stencilBack.compare = PrGpuCompare_Always;
     desc.formats.samples = 1;
+    desc.formats.viewCount = 1;
     for (PrGpuBlend& blend : desc.blend)
         blend.write = PrGpuColorWriteFlag_All;
     return desc;
@@ -727,6 +728,7 @@ PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibr
 PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc, PrGpuPipeline* out) {
     *out = PrGpuPipeline{};
     PR_ASSERT(desc->formats.colorCount <= kPrGpuMaxColorAttachments && desc->formats.samples >= 1);
+    PR_ASSERT(desc->formats.viewCount >= 1);
     const PrGpuShaderEntry* vertex = entryNamed(desc->library, desc->vertex);
     const PrGpuShaderEntry* fragment = desc->fragment.size != 0 ? entryNamed(desc->library, desc->fragment) : nullptr;
     if (vertex == nullptr || (desc->fragment.size != 0 && fragment == nullptr))
@@ -735,6 +737,8 @@ PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPip
             (fragment != nullptr && fragment->stage != PrGpuShaderStage_Fragment))
         return PrStatus_WrongType;
     if (desc->readsTarget && (device->infoFn(device).features & PrGpuFeatureFlag_TargetReads) == 0)
+        return PrStatus_NotSupported;
+    if (desc->formats.viewCount > device->infoFn(device).maxViews)
         return PrStatus_NotSupported;
     if (device->isLostFn(device))
         return PrStatus_Lost;
@@ -948,6 +952,7 @@ void prGpuCommandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before
 
 PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor clear) {
     PrGpuPassDesc desc{};
+    desc.viewCount = 1;
     desc.colorCount = 1;
     desc.color[0] = PrGpuAttachment{.texture = texture, .load = load, .store = PrGpuStore_Keep};
     desc.clearColor[0] = clear;
@@ -956,6 +961,19 @@ PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor c
 
 PrGpuPass* prGpuPassBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     PR_ASSERT(desc->native != nullptr || desc->colorCount != 0 || desc->depthStencil.texture.id != 0);
+    PrGpuDevice* device = commands->deviceFn(commands);
+    uint8_t views = desc->native != nullptr ? desc->nativeFormats.viewCount : desc->viewCount;
+    PR_ASSERT(views >= 1 && views <= device->infoFn(device).maxViews);
+    if (desc->native == nullptr && views > 1) {
+        // Each view draws into its own layer of every attachment.
+        for (uint8_t i = 0; i <= desc->colorCount; ++i) {
+            const PrGpuAttachment& a = i < desc->colorCount ? desc->color[i] : desc->depthStencil;
+            if (a.texture.id == 0)
+                continue;
+            PrGpuTextureDesc t = device->textureDescFn(device, a.texture);
+            PR_ASSERT(a.layer == 0 && t.kind == PrGpuTextureKind_2dArray && t.extent.depth >= views);
+        }
+    }
     return commands->passBeginFn(commands, desc);
 }
 

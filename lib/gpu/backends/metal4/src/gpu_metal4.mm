@@ -182,11 +182,16 @@ void destroyDevice(PrGpuDevice* device) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Pipelines
 
-MTL4LibraryFunctionDescriptor* functionDescriptor(const PrGpuShaderLibrary* library, const PrGpuShaderEntry* entry) {
+// Returns the descriptor of an entry point's function, specialized with the device's function constants.
+MTL4FunctionDescriptor* functionDescriptor(const GpuMetalDevice* d, const PrGpuShaderLibrary* library,
+        const PrGpuShaderEntry* entry) {
     MTL4LibraryFunctionDescriptor* f = [[MTL4LibraryFunctionDescriptor new] autorelease];
     f.name = prAppleNSString(entry->name);
     f.library = static_cast<const GpuMetalLibrary*>(library)->library;
-    return f;
+    MTL4SpecializedFunctionDescriptor* specialized = [[MTL4SpecializedFunctionDescriptor new] autorelease];
+    specialized.functionDescriptor = f;
+    specialized.constantValues = gpuMetalFunctionConstants(d);
+    return specialized;
 }
 
 PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc,
@@ -194,11 +199,12 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     Device* d = deviceFrom(device);
     @autoreleasepool {
         MTL4RenderPipelineDescriptor* pd = [[MTL4RenderPipelineDescriptor new] autorelease];
-        pd.vertexFunctionDescriptor = functionDescriptor(desc->library, vertex);
+        pd.vertexFunctionDescriptor = functionDescriptor(d, desc->library, vertex);
         if (fragment != nullptr)
-            pd.fragmentFunctionDescriptor = functionDescriptor(desc->library, fragment);
+            pd.fragmentFunctionDescriptor = functionDescriptor(d, desc->library, fragment);
         pd.rasterSampleCount = desc->formats.samples;
         pd.inputPrimitiveTopology = gpuMetalTopologyClass(desc->topology);
+        pd.maxVertexAmplificationCount = gpuMetalAmplification(d, desc->formats.viewCount);
         if (desc->name.size != 0)
             pd.label = prAppleNSString(desc->name);
         for (uint8_t i = 0; i < desc->formats.colorCount; ++i) {
@@ -232,7 +238,7 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* li
     Device* d = deviceFrom(device);
     @autoreleasepool {
         MTL4ComputePipelineDescriptor* pd = [[MTL4ComputePipelineDescriptor new] autorelease];
-        pd.computeFunctionDescriptor = functionDescriptor(library, compute);
+        pd.computeFunctionDescriptor = functionDescriptor(d, library, compute);
         if (name.size != 0)
             pd.label = prAppleNSString(name);
         NSError* error = nil;
@@ -285,7 +291,7 @@ id<MTL4ComputeCommandEncoder> computeEncoder(Commands* c) {
 
 // Unbinds every slot in the command buffer's argument table, which an earlier command buffer may have bound.
 void clearSlots(Commands* c) {
-    for (uint32_t i = GpuMetalBinding_Buffers; i < GpuMetalBinding_Count; ++i)
+    for (uint32_t i = GpuMetalBinding_Buffers; i < GpuMetalBinding_View; ++i)
         [c->table setAddress:0 atIndex:i];
     for (uint32_t i = 0; i < GpuMetalTextureBinding_Count; ++i)
         [c->table setTexture:MTLResourceID{} atIndex:i];
@@ -559,10 +565,46 @@ bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind, v
     return true;
 }
 
-// Binds the device's argument table in the pass's encoder, and, in a pass of the device's own, the viewport and scissor
-// over the whole attachments.
+// Points the argument table at the view base of the draws after the call (GpuMetalView).
+void setView(Commands* c, GpuMetalPass* pass, uint32_t view) {
+    [c->table setAddress:pass->viewBases + view * kGpuMetalStreamAlignment atIndex:GpuMetalBinding_View];
+}
+
+// Writes the view bases of a pass into the stream: one for each view in a pass that draws each view on its own, and
+// otherwise one of zero.
+void writeViews(GpuMetalDevice* d, Commands* c, GpuMetalPass* pass) {
+    uint32_t count = pass->eachView ? pass->formats.viewCount : 1;
+    uint32_t slot = 0;
+    uint64_t offset = 0;
+    uint8_t* bytes = static_cast<uint8_t*>(gpuMetalStream(d, c, count * kGpuMetalStreamAlignment, &slot, &offset));
+    for (uint32_t i = 0; i < count; ++i) {
+        GpuMetalView base{i, i};
+        prMemCopy(bytes + i * kGpuMetalStreamAlignment, &base, sizeof(base));
+    }
+    pass->viewBases = slot != 0 ? gpuMetalBuffer(d, slot).gpuAddress + offset : 0;
+}
+
+// Records a draw once, or, in a pass that draws each view on its own, once for each view.
+template <typename Draw>
+void eachView(GpuMetalPass* pass, Draw draw) {
+    if (!pass->eachView) {
+        draw();
+        return;
+    }
+    Commands* c = commandsFrom(pass->commands);
+    for (uint8_t i = 0; i < pass->formats.viewCount; ++i) {
+        setView(c, pass, i);
+        draw();
+    }
+    setView(c, pass, 0);
+}
+
+// Binds the device's argument table in the pass's encoder, with the pass's view base, and, in a pass of the device's
+// own, the viewport and scissor over the whole attachments.
 void passBind(Commands* c, GpuMetalPass* pass) {
     id<MTL4RenderCommandEncoder> encoder = passEncoder(pass);
+    gpuMetalPassViewsBegin(gpuMetalDeviceFrom(c->device), encoder, pass);
+    setView(c, pass, 0);
     [encoder setArgumentTable:c->table atStages:MTLRenderStageVertex | MTLRenderStageFragment];
     if (!pass->native) {
         [encoder setViewport:MTLViewport{0, 0, double(pass->extent.x), double(pass->extent.y), 0, 1}];
@@ -593,6 +635,8 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
             if (desc->name.size != 0)
                 [pass->encoder setLabel:prAppleNSString(desc->name)];
         }
+        pass->eachView = pass->formats.viewCount > 1 && !gpuMetalAmplifies(d, pass->formats.viewCount);
+        writeViews(d, c, pass);
         passBind(c, pass);
         c->pass = pass;
         c->pipeline = 0;
@@ -638,9 +682,10 @@ void passDraw(PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
         uint32_t firstVertex, uint32_t firstInstance) {
     PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
-    [passEncoder(pass) drawPrimitives:passPipeline(device,
-        pass).primitive vertexStart:firstVertex vertexCount:vertexCount
-        instanceCount:instanceCount baseInstance:firstInstance];
+    eachView(pass, [&] {
+        [passEncoder(pass) drawPrimitives:passPipeline(device, pass).primitive vertexStart:firstVertex
+            vertexCount:vertexCount instanceCount:instanceCount baseInstance:firstInstance];
+    });
 }
 
 void passDrawIndexed(PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCount,
@@ -650,9 +695,11 @@ void passDrawIndexed(PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCo
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     id<MTLBuffer> indices = gpuMetalBuffer(d, pass->indexBuffer.id);
     uint64_t at = pass->indexOffset + uint64_t(firstIndex) * (pass->indexType == MTLIndexTypeUInt32 ? 4 : 2);
-    [passEncoder(pass) drawIndexedPrimitives:passPipeline(device, pass).primitive indexCount:indexCount
-        indexType:pass->indexType indexBuffer:indices.gpuAddress + at indexBufferLength:indices.length - at
-        instanceCount:instanceCount baseVertex:vertexOffset baseInstance:firstInstance];
+    eachView(pass, [&] {
+        [passEncoder(pass) drawIndexedPrimitives:passPipeline(device, pass).primitive indexCount:indexCount
+            indexType:pass->indexType indexBuffer:indices.gpuAddress + at indexBufferLength:indices.length - at
+            instanceCount:instanceCount baseVertex:vertexOffset baseInstance:firstInstance];
+    });
 }
 
 void passDrawIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
@@ -660,8 +707,10 @@ void passDrawIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, ui
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     uint64_t address = gpuMetalBuffer(d, buffer.id).gpuAddress + offset;
-    for (uint32_t i = 0; i < count; ++i)
-        [passEncoder(pass) drawPrimitives:passPipeline(device, pass).primitive indirectBuffer:address + i * stride];
+    eachView(pass, [&] {
+        for (uint32_t i = 0; i < count; ++i)
+            [passEncoder(pass) drawPrimitives:passPipeline(device, pass).primitive indirectBuffer:address + i * stride];
+    });
 }
 
 void passDrawIndexedIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
@@ -670,10 +719,12 @@ void passDrawIndexedIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t off
     GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
     id<MTLBuffer> indices = gpuMetalBuffer(d, pass->indexBuffer.id);
     uint64_t address = gpuMetalBuffer(d, buffer.id).gpuAddress + offset;
-    for (uint32_t i = 0; i < count; ++i)
-        [passEncoder(pass) drawIndexedPrimitives:passPipeline(device, pass).primitive indexType:pass->indexType
-            indexBuffer:indices.gpuAddress + pass->indexOffset indexBufferLength:indices.length - pass->indexOffset
-            indirectBuffer:address + i * stride];
+    eachView(pass, [&] {
+        for (uint32_t i = 0; i < count; ++i)
+            [passEncoder(pass) drawIndexedPrimitives:passPipeline(device, pass).primitive indexType:pass->indexType
+                indexBuffer:indices.gpuAddress + pass->indexOffset indexBufferLength:indices.length - pass->indexOffset
+                indirectBuffer:address + i * stride];
+    });
 }
 
 // On macOS 27, the compositor skips each present with the transaction of a drawable that an MTL4 queue signalled,

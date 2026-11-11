@@ -2507,6 +2507,7 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
         c->changed |= PrGpuNativeStateFlag_Bindings;
     } else {
         pass->formats.samples = 1;
+        pass->formats.viewCount = 1;
         D3D12_CPU_DESCRIPTOR_HANDLE colors[kPrGpuMaxColorAttachments]{};
         D3D12_CPU_DESCRIPTOR_HANDLE first = c->attachments.color->GetCPUDescriptorHandleForHeapStart();
         for (uint8_t i = 0; i < desc->colorCount; ++i) {
@@ -3369,9 +3370,10 @@ PrStatus prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options, PrGpuDev
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     d->info.backend = "Direct3D 12";
     d->nativeKinds = 1u << PrGpuNativeKind_D3d12;
-    d->info.features = PrGpuFeatureFlag_TextureCompressionBc | PrGpuFeatureFlag_Bindless |
+    d->info.features = PrGpuFeatureFlag_TextureCompressionBc | PrGpuFeatureFlag_Bindless | PrGpuFeatureFlag_Indirect |
         (d->timestampTicks != nullptr ? PrGpuFeatureFlag_Timestamps : 0);
     d->info.maxTextureSize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    d->info.maxViews = 1;
     d->info.maxResourceHandles = kMaxResources - 1;
     d->info.maxSamplerHandles = kMaxSamplers - 1;
     d->info.maxBufferSlots = kBufferSlots;

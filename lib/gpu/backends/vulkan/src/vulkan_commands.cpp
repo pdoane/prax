@@ -843,17 +843,19 @@ void coverPass(VulkanDevice* d, VulkanCommands* c, PrUVec2 extent) {
     changed(c, PrGpuNativeStateFlag_Viewport | PrGpuNativeStateFlag_Scissor);
 }
 
-VkRenderingAttachmentInfo attachmentOf(VulkanDevice* d, const PrGpuAttachment& attachment, PrGpuLoad load, PrGpuStore store) {
+// Returns an attachment of a pass of `views` views, over a layer of the attachment's texture for each view.
+VkRenderingAttachmentInfo attachmentOf(VulkanDevice* d, const PrGpuAttachment& attachment, PrGpuLoad load, PrGpuStore store,
+        uint8_t views) {
     VkRenderingAttachmentInfo info{};
     info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    info.imageView = vulkanAttachmentView(d, attachment.texture.id, attachment.level, attachment.layer);
+    info.imageView = vulkanAttachmentView(d, attachment.texture.id, attachment.level, attachment.layer, views);
     info.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
     info.loadOp = loadOf(load);
     info.storeOp = storeOf(store);
     if (store == PrGpuStore_Resolve && attachment.resolve.id != 0) {
         info.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         info.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-        info.resolveImageView = vulkanAttachmentView(d, attachment.resolve.id, attachment.level, attachment.layer);
+        info.resolveImageView = vulkanAttachmentView(d, attachment.resolve.id, attachment.level, attachment.layer, views);
         info.resolveImageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
     }
     return info;
@@ -866,6 +868,7 @@ void beginRendering(VulkanDevice* d, VulkanCommands* c) {
     info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
     info.renderArea = VkRect2D{{0, 0}, {pass.extent.x, pass.extent.y}};
     info.layerCount = 1;
+    info.viewMask = vulkanViewMask(pass.formats.viewCount);
     info.colorAttachmentCount = pass.formats.colorCount;
     info.pColorAttachments = pass.colors;
     info.pDepthAttachment = pass.hasDepth ? &pass.depth : nullptr;
@@ -894,11 +897,13 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     pass.formats = PrGpuAttachmentFormats{};
     pass.formats.colorCount = desc->colorCount;
     pass.formats.samples = 1;
+    pass.formats.viewCount = desc->viewCount;
+    uint8_t views = desc->viewCount;
     PrUVec2 extent{0, 0};
     for (uint32_t i = 0; i < desc->colorCount; ++i) {
         const PrGpuAttachment& attachment = desc->color[i];
         const VulkanResource& r = vulkanResourceAt(d, attachment.texture.id);
-        pass.colors[i] = attachmentOf(d, attachment, attachment.load, attachment.store);
+        pass.colors[i] = attachmentOf(d, attachment, attachment.load, attachment.store, views);
         PrColor clear = desc->clearColor[i];
         pass.colors[i].clearValue.color = VkClearColorValue{{clear.r, clear.g, clear.b, clear.a}};
         pass.formats.color[i] = r.textureDesc.format;
@@ -915,11 +920,11 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     if (desc->depthStencil.texture.id != 0) {
         const PrGpuAttachment& attachment = desc->depthStencil;
         const VulkanResource& r = vulkanResourceAt(d, attachment.texture.id);
-        pass.depth = attachmentOf(d, attachment, attachment.load, attachment.store);
+        pass.depth = attachmentOf(d, attachment, attachment.load, attachment.store, views);
         pass.depth.clearValue.depthStencil = VkClearDepthStencilValue{desc->clearDepth, desc->clearStencil};
         pass.hasDepth = true;
         if ((r.aspect & VK_IMAGE_ASPECT_STENCIL_BIT) != 0) {
-            pass.stencil = attachmentOf(d, attachment, desc->stencilLoad, desc->stencilStore);
+            pass.stencil = attachmentOf(d, attachment, desc->stencilLoad, desc->stencilStore, views);
             pass.stencil.clearValue.depthStencil = pass.depth.clearValue.depthStencil;
             pass.hasStencil = true;
         }
@@ -956,7 +961,8 @@ void moveTarget(VulkanDevice* d, VulkanCommands* c, bool toLocalRead) {
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = r.image;
-    barrier.subresourceRange = rangeOf(r, PrGpuSubresources{c->pass.target.level, 1, c->pass.target.layer, 1});
+    barrier.subresourceRange = rangeOf(r,
+        PrGpuSubresources{c->pass.target.level, 1, c->pass.target.layer, c->pass.formats.viewCount});
     VkDependencyInfo dependency{};
     dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
     dependency.imageMemoryBarrierCount = 1;

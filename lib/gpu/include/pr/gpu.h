@@ -83,6 +83,10 @@ enum {
     // A graphics pipeline reads the pass's target (PrGpuGraphicsPipelineDesc::readsTarget). Without it, such a pipeline
     // is not supported, and a renderer reads what earlier draws left from a texture of its own.
     PrGpuFeatureFlag_TargetReads = 1u << 5,
+
+    // Draws and dispatches read their arguments from a buffer (prGpuPassDrawIndirect and the others). Without it, a
+    // renderer gives the arguments in the call.
+    PrGpuFeatureFlag_Indirect = 1u << 6,
 };
 typedef uint32_t PrGpuFeatureFlags;
 
@@ -139,6 +143,7 @@ typedef struct PrGpuDeviceInfo {
     PrStringView backend;           // the backend's name, for messages; an application's backend reports its own
     PrGpuFeatureFlags features;
     uint32_t maxTextureSize;        // the largest width or height of a 2D texture
+    uint8_t maxViews;               // the most views of a pass (PrGpuPassDesc::viewCount), at least one
 
     // The number of handles that the device can give out at once, of resources and of samplers. Zero without
     // PrGpuFeatureFlag_Bindless.
@@ -699,12 +704,14 @@ typedef struct PrGpuStencilFace {
     PrGpuCompare compare;
 } PrGpuStencilFace;
 
-// The formats of a pass's attachments, which a graphics pipeline is compiled for and a pass must match.
+// The formats of a pass's attachments and the number of its views, which a graphics pipeline is compiled for and a pass
+// must match.
 typedef struct PrGpuAttachmentFormats {
     uint8_t colorCount;
     PrGpuFormat color[kPrGpuMaxColorAttachments];   // by color attachment
     PrGpuFormat depthStencil;                       // None for a pass without one
     uint8_t samples;                                // at least one
+    uint8_t viewCount;                              // at least one
 } PrGpuAttachmentFormats;
 
 // A pipeline for draws. A null `fragment` makes a pipeline that writes only depth and stencil. Vertex data is read by
@@ -744,13 +751,13 @@ typedef struct PrGpuGraphicsPipelineDesc {
 } PrGpuGraphicsPipelineDesc;
 
 // Returns the defaults of a graphics pipeline over `library`: triangle lists, no culling, no depth or stencil test, no
-// blending, and one sample.
+// blending, one sample and one view.
 PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibrary* library);
 
 // Creates a pipeline for draws, or for dispatches of the compute entry point `compute` of `library`. Returns NotFound
 // if the library has no entry point by a name that the description gives, WrongType if an entry point is of the wrong
-// stage, and NotSupported for a state that the device does not have, or for an entry point that reaches resources by
-// handle on a device without PrGpuFeatureFlag_Bindless. On failure, `*out` is zero.
+// stage, and NotSupported for a state that the device does not have, such as more views than it draws, or for an entry
+// point that reaches resources by handle on a device without PrGpuFeatureFlag_Bindless. On failure, `*out` is zero.
 PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc, PrGpuPipeline* out);
 PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrary* library, PrStringView compute,
     PrStringView name, PrGpuPipeline* out);
@@ -856,7 +863,7 @@ void prGpuCommandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTextur
 void prGpuCommandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture);
 
 // Records dispatches outside any pass: `groups` groups of the pipeline's group size, or the groups that a
-// PrGpuDispatchIndirect at `offset` of `buffer` names.
+// PrGpuDispatchIndirect at `offset` of `buffer` names, which requires PrGpuFeatureFlag_Indirect.
 void prGpuCommandsDispatch(PrGpuCommands* commands, PrGpuExtent groups);
 void prGpuCommandsDispatchIndirect(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset);
 
@@ -1000,6 +1007,11 @@ typedef struct PrGpuAttachment {
 
 // The attachments of a pass of the device's own, and the values that the pass clears them to. Or, a pass that the
 // application has open in its native command buffer.
+//
+// A pass of several views draws each draw once for each view, as the views of a stereo display need. View i draws into
+// layer i of every attachment, which is a 2D array of at least `viewCount` layers whose `layer` is zero. A vertex
+// shader tells the views apart with pr/gpu.slang's prGpuView, and the pass's pipelines are compiled for its number of
+// views. Loads, stores and clears act on every view's layer.
 typedef struct PrGpuPassDesc {
     // A pass that the application began in the native command buffer that the commands record into, as the backend's
     // header describes it. `nativeFormats` are its attachment formats, and `nativeExtent` is its extent in target
@@ -1008,6 +1020,7 @@ typedef struct PrGpuPassDesc {
     PrGpuAttachmentFormats nativeFormats;
     PrUVec2 nativeExtent;
 
+    uint8_t viewCount;                                  // at least one, and at most the device's maxViews
     uint8_t colorCount;
     PrGpuAttachment color[kPrGpuMaxColorAttachments];   // by color attachment
     PrColor clearColor[kPrGpuMaxColorAttachments];      // the values that Clear writes, by color attachment
@@ -1019,8 +1032,8 @@ typedef struct PrGpuPassDesc {
     PrStringView name;                                  // a name for debuggers and captures, or empty
 } PrGpuPassDesc;
 
-// Returns a pass over one color attachment, which it loads as `load` says, clears to `clear` if it clears it, and
-// keeps.
+// Returns a pass of one view over one color attachment, which it loads as `load` says, clears to `clear` if it clears
+// it, and keeps.
 PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor clear);
 
 // Begins a pass. The attachments of a pass of the device's own must be in the accesses of
@@ -1067,7 +1080,8 @@ void prGpuPassSetStencilReference(PrGpuPass* pass, uint8_t reference);
 void prGpuPassSetIndexBuffer(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, bool wide);
 
 // Record draws with the pass's pipeline and root data, which are set through the pass's command buffer. An indirect
-// draw reads `count` arguments, `stride` bytes apart, from `buffer` at `offset`.
+// draw, which requires PrGpuFeatureFlag_Indirect, reads `count` arguments, `stride` bytes apart, from `buffer` at
+// `offset`.
 void prGpuPassDraw(PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
     uint32_t firstInstance);
 void prGpuPassDrawIndexed(PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,

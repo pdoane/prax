@@ -46,7 +46,7 @@ void vulkanRetireDone(VulkanDevice* d);
 void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buffer);
 
 // Returns the view of a texture's `level` and `layer` as an attachment, made the first time that a pass asks for it.
-VkImageView vulkanAttachmentView(VulkanDevice* d, uint32_t slot, uint8_t level, uint16_t layer);
+VkImageView vulkanAttachmentView(VulkanDevice* d, uint32_t slot, uint8_t level, uint16_t layer, uint8_t layers);
 
 // Puts an image that the device does not own, a swap chain's or the application's, into a new slot as a texture that
 // `desc` describes, with its views. Returns the slot, or zero if no slot is left. Called with the device's mutex held.

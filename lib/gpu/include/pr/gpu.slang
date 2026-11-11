@@ -213,3 +213,46 @@ T prGpuLoad<T>(uint buffer, uint offset) {
 #define prGpuTarget(position) float4(0, 0, 0, 0)
 
 #endif
+
+// Views. A pass of several views (PrGpuPassDesc::viewCount) draws each draw once for each view, into the view's layer
+// of the attachments. A vertex shader that draws for several views declares PR_GPU_VIEW_PARAM after its last parameter,
+// reads its view, from zero, with prGpuView() in its own body, and declares PR_GPU_VIEW_OUTPUT after the last field of
+// its output, which it fills with prGpuViewOutput(output). Such a shader draws in a pass of one view too, where its
+// view is zero.
+//
+//     struct VertexOut {
+//         float4 position : SV_Position;
+//         PR_GPU_VIEW_OUTPUT
+//     };
+//
+//     VertexOut vertexMain(uint vertex : SV_VertexID PR_GPU_VIEW_PARAM) {
+//         VertexOut out;
+//         out.position = mul(views[prGpuView()].viewProjection, ...);
+//         prGpuViewOutput(out);
+//         return out;
+//     }
+#if defined(PR_GPU_METAL)
+
+// Metal amplifies each vertex for each view where the device can, and the view mapping chooses each view's layer. Where
+// it cannot, the device draws each draw once for each view, and the shader writes the layer. The view's base, in a
+// buffer at gpu_shared_metal.h's GpuMetalBinding_View, is what the amplification adds to: zero where Metal amplifies,
+// and the view and its layer where the device draws each view.
+struct PrGpuViewBase {
+    uint view;
+    uint layer;
+};
+[[vk::binding(0, 4)]] ConstantBuffer<PrGpuViewBase> prGpuViewBase : register(b20);
+#define PR_GPU_VIEW_PARAM , uint prGpuAmplification : SV_ViewID
+#define PR_GPU_VIEW_OUTPUT uint prGpuLayer : SV_RenderTargetArrayIndex;
+#define prGpuView() (prGpuAmplification + prGpuViewBase.view)
+#define prGpuViewOutput(output) (output).prGpuLayer = prGpuViewBase.layer
+
+#else
+
+// Vulkan's multiview and Direct3D 12's view instancing draw each view into its layer.
+#define PR_GPU_VIEW_PARAM , uint prGpuViewId : SV_ViewID
+#define PR_GPU_VIEW_OUTPUT
+#define prGpuView() prGpuViewId
+#define prGpuViewOutput(output)
+
+#endif

@@ -1284,6 +1284,13 @@ void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags) {
         gpuMetalCommandsFrom(pass->commands)->changed |= flags;
 }
 
+MTLFunctionConstantValues* gpuMetalFunctionConstants(const GpuMetalDevice* d) {
+    MTLFunctionConstantValues* values = [[MTLFunctionConstantValues new] autorelease];
+    bool layered = d->layered;
+    [values setConstantValue:&layered type:MTLDataTypeBool atIndex:kGpuMetalLayeredConstant];
+    return values;
+}
+
 void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) {
     gpuSharedDeviceInit(d);
     d->device = device;
@@ -1345,17 +1352,25 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) 
     else
         d->adapter[size] = 0;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
-    // A pipeline reads its target with framebuffer fetch, which reads in raster order on Apple's GPUs. The iOS
-    // simulator's shader compiler has no framebuffer fetch.
+    // A pipeline reads its target with framebuffer fetch, which reads in raster order on Apple's GPUs. The simulators'
+    // shader compiler has no framebuffer fetch, and their GPUs read no arguments from buffers.
     d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc |
         (bindless ? PrGpuFeatureFlag_Bindless : 0) |
         (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0);
 #if !TARGET_OS_SIMULATOR
-    d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads;
+    d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads | PrGpuFeatureFlag_Indirect;
 #endif
     d->inPlaceImports = 1u << PrGpuImportKind_CoreVideo;
     d->textureImportInPlace = gpuMetalTextureImport;
     d->info.maxTextureSize = 16384;
+    // A device that cannot amplify vertices draws each view of a pass on its own, into its layer. The simulators of
+    // UIKit's platforms other than visionOS have no layers.
+#if TARGET_OS_SIMULATOR && !TARGET_OS_VISION
+    d->layered = false;
+#else
+    d->layered = true;
+#endif
+    d->info.maxViews = d->layered ? kPrGpuMaxViews : 1;
     d->info.maxResourceHandles = bindless ? kGpuMetalMaxResources - 1 : 0;
     d->info.maxSamplerHandles = bindless ? kGpuMetalMaxSamplers - 1 : 0;
     d->info.maxBufferSlots = kGpuMetalBufferSlots;

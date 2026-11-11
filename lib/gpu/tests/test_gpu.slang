@@ -119,3 +119,26 @@ void slotDoubled(uint3 id : SV_DispatchThreadID) {
 void slotFilled(uint3 id : SV_DispatchThreadID) {
     slotWritten.Store(id.xy, push.color);
 }
+
+struct ViewOut {
+    float4 position : SV_Position;
+    nointerpolation uint view : VIEW;
+    PR_GPU_VIEW_OUTPUT
+};
+
+// The push data's quad, drawn for each view of the pass.
+[shader("vertex")]
+ViewOut viewQuad(uint corner : SV_VertexID PR_GPU_VIEW_PARAM) {
+    float2 uv = float2(corner & 1, corner >> 1);
+    ViewOut out;
+    out.position = float4(lerp(push.rect.xy, push.rect.zw, uv), 0, 1);
+    out.view = prGpuView();
+    prGpuViewOutput(out);
+    return out;
+}
+
+// The push data's color, with the view in thirds in red.
+[shader("fragment")]
+float4 viewColor(ViewOut input) : SV_Target {
+    return float4(float(input.view) / 3, push.color.gba);
+}

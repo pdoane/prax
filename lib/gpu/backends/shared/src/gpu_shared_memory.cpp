@@ -937,6 +937,7 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     pass->commands = c;
     pass->formats.colorCount = desc->colorCount;
     pass->formats.samples = 1;
+    pass->formats.viewCount = 1;
     for (uint8_t i = 0; i < desc->colorCount; ++i) {
         const PrGpuAttachment& a = desc->color[i];
         PrGpuTextureDesc t = textureOf(d, a.texture).desc;
@@ -1096,6 +1097,7 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
         .adapter = "memory",
         .backend = backend,
         .maxTextureSize = kMaxTextureSize,
+        .maxViews = 1,
         .maxResourceHandles = UINT32_MAX,
         .maxSamplerHandles = UINT32_MAX,
     };

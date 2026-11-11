@@ -236,12 +236,19 @@ enum {
 };
 typedef uint8_t VulkanSlotKind;
 
-// A view of a texture as an attachment, made when a pass first uses that level and layer.
+// A view of a texture as an attachment, made when a pass first uses that level and those layers: one layer for each
+// view of the pass.
 struct VulkanAttachmentView {
     uint8_t level;
     uint16_t layer;
+    uint8_t layers;
     VkImageView view;
 };
+
+// Returns the view mask of a pass or a pipeline of `views` views: none for one view, which draws without multiview.
+inline uint32_t vulkanViewMask(uint8_t views) {
+    return views > 1 ? (1u << views) - 1 : 0;
+}
 
 // A slot of the bindless array, and what it holds.
 struct VulkanResource {

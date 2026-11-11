@@ -237,6 +237,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     }
     VkPipelineRenderingCreateInfo rendering{};
     rendering.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    rendering.viewMask = vulkanViewMask(desc->formats.viewCount);
     rendering.colorAttachmentCount = desc->formats.colorCount;
     rendering.pColorAttachmentFormats = colorFormats;
     if (desc->formats.depthStencil != PrGpuFormat_None) {

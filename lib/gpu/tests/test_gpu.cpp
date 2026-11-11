@@ -659,6 +659,86 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
     });
 }
 
+TEST_CASE("a pass of several views draws each draw, direct or indirect, into each view's layer") {
+    onEachBackend([](Fixture& f) {
+        uint8_t maxViews = prGpuDeviceInfo(f.device).maxViews;
+        bool indirect = (prGpuDeviceInfo(f.device).features & PrGpuFeatureFlag_Indirect) != 0;
+        CHECK(maxViews >= 1);
+        PrGpuGraphicsPipelineDesc desc = f.description("viewQuad", "viewColor");
+        desc.formats.viewCount = uint8_t(maxViews + 1);
+        PrGpuPipeline refused{};
+        CHECK(prGpuPipelineCreateGraphics(f.device, &desc, &refused) == PrStatus_NotSupported);
+        // A shader of views draws view zero in a pass of one view.
+        PrGpuTexture flat = f.target(PrUVec2{4, 4});
+        PrGpuPipeline single = f.pipeline("viewQuad", "viewColor");
+        f.draw(flat, single, fill(1, 0.5f, 0, 1));
+        CHECK(near(texel(f.read(flat), 4, 1, 1), 0, 128, 0, 255));
+        prGpuPipelineDestroy(f.device, single);
+        prGpuTextureDestroy(f.device, flat);
+        PrGpuDrawIndirect arguments{.vertexCount = 4, .instanceCount = 1};
+        PrGpuBufferDesc argumentsDesc{.size = sizeof(arguments), .usage = PrGpuBufferUsageFlag_Indirect};
+        PrGpuBuffer argumentsBuffer{};
+        REQUIRE(prGpuBufferCreate(f.device, &argumentsDesc, &argumentsBuffer) == PrStatus_Ok);
+        prGpuBufferUpload(f.device, argumentsBuffer, 0, &arguments, sizeof(arguments));
+        for (uint8_t views = 2; views <= maxViews && views <= 3; ++views) {
+            CAPTURE(int(views));
+            PrGpuTextureDesc layered = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{4, 4},
+                PrGpuTextureUsageFlag_RenderTarget | PrGpuTextureUsageFlag_Sampled);
+            layered.kind = PrGpuTextureKind_2dArray;
+            layered.extent.depth = views;
+            PrGpuTexture target{};
+            REQUIRE(prGpuTextureCreate(f.device, &layered, &target) == PrStatus_Ok);
+            desc.formats.viewCount = views;
+            PrGpuPipeline pipeline{};
+            REQUIRE(prGpuPipelineCreateGraphics(f.device, &desc, &pipeline) == PrStatus_Ok);
+            PrGpuCommands* commands = nullptr;
+            REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+            PrGpuSubresources all{};
+            prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ShaderRead,
+                PrGpuAccessFlag_ColorAttachment);
+            prGpuCommandsBufferBarrier(commands, argumentsBuffer, PrGpuAccessFlag_ShaderRead,
+                PrGpuAccessFlag_IndirectRead);
+            PrGpuPassDesc passDesc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{0, 0, 1, 1});
+            passDesc.viewCount = views;
+            PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
+            CHECK(prGpuPassFormats(pass).viewCount == views);
+            prGpuCommandsSetPipeline(commands, pipeline);
+            // The top half directly, and the bottom half's left indirectly where the device can.
+            Push top = fill(0, 1, 0, 1);
+            top.rect[3] = 0;
+            prGpuCommandsSetPush(commands, &top, sizeof(top));
+            prGpuPassDraw(pass, 4, 1, 0, 0);
+            Push bottom = fill(0, 0.5f, 0, 1);
+            bottom.rect[1] = 0;
+            bottom.rect[2] = 0;
+            prGpuCommandsSetPush(commands, &bottom, sizeof(bottom));
+            if (indirect)
+                prGpuPassDrawIndirect(pass, argumentsBuffer, 0, 1, sizeof(arguments));
+            else
+                prGpuPassDraw(pass, 4, 1, 0, 0);
+            prGpuPassEnd(pass);
+            prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment,
+                PrGpuAccessFlag_ShaderRead);
+            prGpuCommandsSubmitAndWait(commands);
+            for (uint16_t layer = 0; layer < views; ++layer) {
+                CAPTURE(layer);
+                PrGpuTexture view{};
+                REQUIRE(prGpuTextureCreateView(f.device, target, PrGpuTextureKind_2d,
+                    PrGpuSubresources{.levels = 1, .firstLayer = layer, .layers = 1}, &view) == PrStatus_Ok);
+                Array<uint8_t> texels = f.read(view);
+                uint8_t red = uint8_t(layer * 85);
+                CHECK(near(texel(texels, 4, 3, 0), red, 255, 0, 255));
+                CHECK(near(texel(texels, 4, 0, 3), red, 128, 0, 255));
+                CHECK(near(texel(texels, 4, 3, 3), 0, 0, 255, 255));
+                prGpuTextureDestroy(f.device, view);
+            }
+            prGpuPipelineDestroy(f.device, pipeline);
+            prGpuTextureDestroy(f.device, target);
+        }
+        prGpuBufferDestroy(f.device, argumentsBuffer);
+    });
+}
+
 TEST_CASE("objects destroyed after their work is recorded live until it is done") {
     onEachBackend([](Fixture& f) {
         PrGpuTexture target = f.target(PrUVec2{4, 4});

@@ -90,6 +90,7 @@ void require(FeatureChain& chain) {
     core.shaderStorageImageReadWithoutFormat = VK_TRUE;
     core.shaderStorageImageWriteWithoutFormat = VK_TRUE;
     chain.vulkan11.shaderDrawParameters = VK_TRUE;
+    chain.vulkan11.multiview = VK_TRUE;
     VkPhysicalDeviceVulkan12Features& v12 = chain.vulkan12;
     v12.descriptorIndexing = VK_TRUE;
     v12.runtimeDescriptorArray = VK_TRUE;
@@ -707,8 +708,11 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
     d->nativeKinds = 1u << PrGpuNativeKind_Vulkan;
     if (d->limits.timestampComputeAndGraphics)
         d->info.features |= PrGpuFeatureFlag_Timestamps;
-    d->info.features |= PrGpuFeatureFlag_Bindless | (d->localRead ? PrGpuFeatureFlag_TargetReads : 0);
+    d->info.features |= PrGpuFeatureFlag_Bindless | PrGpuFeatureFlag_Indirect |
+        (d->localRead ? PrGpuFeatureFlag_TargetReads : 0);
     d->info.maxTextureSize = d->limits.maxImageDimension2D;
+    // Vulkan 1.1 has multiview, of at least six views.
+    d->info.maxViews = kPrGpuMaxViews;
     d->info.maxResourceHandles = d->resourceCount - 1;
     d->info.maxSamplerHandles = d->samplerCount - 1;
     d->info.maxBufferSlots = kVulkanBufferSlots;

@@ -189,6 +189,15 @@ function(compile_metal directory)
                    text "${text}")
         endforeach()
     endif()
+    # A vertex function writes its layer (pr/gpu.slang's PR_GPU_VIEW_OUTPUT) only where the device renders to layers,
+    # which turns on the function constant at gpu_shared_metal.h's kGpuMetalLayeredConstant.
+    string(FIND "${text}" "[[render_target_array_index]]" writes_layer)
+    if (NOT writes_layer EQUAL -1)
+        string(REPLACE "[[render_target_array_index]]" "[[render_target_array_index, function_constant(prGpuLayered)]]"
+               text "${text}")
+        string(REGEX REPLACE "(#include <metal_stdlib>\n)" "\\1constant bool prGpuLayered [[function_constant(32767)]];\n"
+               text "${text}")
+    endif()
     file(WRITE "${source}" "${text}")
     if (NOT METAL_SDK)
         set(METAL_SDK macosx)

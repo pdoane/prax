@@ -211,6 +211,7 @@ TEST_CASE("d3d12 draws into the application's pass, and says which of the pass's
     passDesc.nativeFormats.colorCount = 1;
     passDesc.nativeFormats.color[0] = PrGpuFormat_Rgba8;
     passDesc.nativeFormats.samples = 1;
+    passDesc.nativeFormats.viewCount = 1;
     passDesc.nativeExtent = PrUVec2{8, 8};
     PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
     Uniforms uniforms{.color = {1, 0, 0, 1}};
