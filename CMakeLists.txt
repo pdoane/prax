@@ -18,13 +18,21 @@ if (APPLE)
     enable_language(OBJCXX)
 endif()
 
-# The platforms that Prax runs on (README.md): macOS 26 or newer on Apple Silicon, iOS 26 or newer, and Windows 10
-# version 1809 or newer. A build that targets an older system or another architecture fails here rather than in a
-# library's sources. On Windows, the system headers then declare only what 1809 has.
+# The platforms that Prax runs on (README.md): macOS 26 or newer on Apple Silicon, iOS, tvOS and visionOS 26 or newer,
+# and Windows 10 version 1809 or newer. A build that targets an older system or another architecture fails here rather
+# than in a library's sources. On Windows, the system headers then declare only what 1809 has.
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(PR_MACOS ON)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(PR_IOS ON)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+    set(PR_TVOS ON)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "visionOS")
+    set(PR_VISIONOS ON)
+endif()
+# The platforms whose applications are UIKit's.
+if (PR_IOS OR PR_TVOS OR PR_VISIONOS)
+    set(PR_UIKIT ON)
 endif()
 if (APPLE)
     if (CMAKE_OSX_ARCHITECTURES)
@@ -52,11 +60,11 @@ if (PR_DEVELOP AND CMAKE_VERSION VERSION_LESS 4.0)
 endif()
 # The tools of a development build that run beside the tests: the suites' harnesses, the viewer, the benchmarks, the
 # browsers' hosts and the pages' checks, with the implementations that they compare the engine with. Without them a
-# development build has the tests and what the tests drive, as the web's and iOS's builds do, and fetches none of
-# the comparisons.
+# development build has the tests and what the tests drive, as the builds for the web and for UIKit's platforms do,
+# and fetches none of the comparisons.
 include(CMakeDependentOption)
 cmake_dependent_option(PR_TOOLS "Build the development tools and the comparisons" ON
-    "PR_DEVELOP;NOT EMSCRIPTEN;NOT PR_IOS" OFF)
+    "PR_DEVELOP;NOT EMSCRIPTEN;NOT PR_UIKIT" OFF)
 option(PR_EXAMPLES "Build the examples" OFF)
 option(PR_APPS "Build the apps" OFF)
 option(PR_INSTALL "Install the libraries, their headers and the CMake package" ${PROJECT_IS_TOP_LEVEL})
@@ -184,7 +192,7 @@ if (NOT EMSCRIPTEN)
     set(PR_SYSTEM ON)
 endif()
 # The targets whose Vulkan the Vulkan backend presents through: the desktop systems.
-if (PR_SYSTEM AND NOT PR_IOS)
+if (PR_SYSTEM AND NOT PR_UIKIT)
     set(PR_DESKTOP_VULKAN ON)
 endif()
 # The POSIX targets whose applications may start programs: the desktop systems, and not the mobile ones.
@@ -195,7 +203,7 @@ if (PR_DEVELOP OR PR_EXAMPLES OR PR_APPS OR PR_UNIX_OTHER)
     find_package(OpenSSL 3...<4 QUIET)
 endif()
 pr_backend_option(PR_APP_APPKIT "lib/app's AppKit backend" "${PR_MACOS}" "${PR_MACOS}")
-pr_backend_option(PR_APP_UIKIT "lib/app's UIKit backend" "${PR_IOS}" "${PR_IOS}")
+pr_backend_option(PR_APP_UIKIT "lib/app's UIKit backend" "${PR_UIKIT}" "${PR_UIKIT}")
 pr_backend_option(PR_APP_WIN32 "lib/app's Win32 backend" "${WIN32}" "${WIN32}")
 pr_backend_option(PR_APP_WEB "lib/app's web backend" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
 pr_backend_option(PR_AUDIO_APPLE "lib/audio's Core Audio backend" "${APPLE}" "${APPLE}")
@@ -253,13 +261,23 @@ if (NOT PR_SLANGC)
 endif()
 if (APPLE)
     set(PR_SHADER_TARGETS metal)
-    # A metallib runs on the platform that it was compiled for: macOS, iOS devices or the iOS simulator.
+    # A metallib runs on the platform that it was compiled for: macOS, or the devices or the simulator of a UIKit
+    # platform.
     if (PR_MACOS)
         set(PR_METAL_SDK macosx)
-    elseif (CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
-        set(PR_METAL_SDK iphonesimulator)
     else()
-        set(PR_METAL_SDK iphoneos)
+        if (PR_IOS)
+            set(PR_METAL_SDK iphone)
+        elseif (PR_TVOS)
+            set(PR_METAL_SDK appletv)
+        else()
+            set(PR_METAL_SDK xr)
+        endif()
+        if (CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
+            string(APPEND PR_METAL_SDK simulator)
+        else()
+            string(APPEND PR_METAL_SDK os)
+        endif()
     endif()
 elseif (WIN32)
     set(PR_SHADER_TARGETS dxil)
@@ -301,11 +319,11 @@ if (PR_DEVELOP)
     add_subdirectory(tools)
 endif()
 # The examples run where lib/app has a backend.
-if (PR_EXAMPLES AND (PR_MACOS OR PR_IOS OR WIN32 OR EMSCRIPTEN))
+if (PR_EXAMPLES AND (PR_MACOS OR PR_UIKIT OR WIN32 OR EMSCRIPTEN))
     add_subdirectory(examples)
 endif()
-# The apps run on the desktop and on iOS.
-if (PR_APPS AND (PR_MACOS OR PR_IOS OR WIN32))
+# The apps run on the desktop and on UIKit's platforms.
+if (PR_APPS AND (PR_MACOS OR PR_UIKIT OR WIN32))
     add_subdirectory(apps)
 endif()
 if (PR_INSTALL)

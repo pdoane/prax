@@ -158,6 +158,9 @@ PrAppKey keyOf(UIKey* key, const HidKey& hid) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Gestures and drops
 
+// tvOS has no gestures of its own, no pointer and no drops.
+#if !TARGET_OS_TV
+
 PrAppGesturePhase phaseOf(UIGestureRecognizerState state) {
     switch (state) {
         case UIGestureRecognizerStateBegan: return PrAppGesturePhase_Begin;
@@ -204,6 +207,8 @@ NSString* PR_NULLABLE dropPathFor(NSString* name) {
     return [folder stringByAppendingPathComponent:name.lastPathComponent.length != 0 ? name.lastPathComponent : @"file"];
 }
 
+#endif
+
 } // namespace
 
 } // namespace pr_impl
@@ -245,7 +250,9 @@ using namespace pr_impl;
     CGFloat _scale;                     // the scale of the pinch that is under way, as last reported
     CGFloat _rotation;                  // the rotation of the rotation that is under way, as last reported, in radians
     UIView* _noKeyboard;                // the empty input view that keeps the keyboard down
+#if !TARGET_OS_TV
     UIPointerInteraction* _pointer;
+#endif
 
     // The text that an input method composes, or nil, and the selection within it.
     NSString* _marked;
@@ -267,12 +274,15 @@ using namespace pr_impl;
     if (self != nil) {
         _touches = [NSMapTable weakToStrongObjectsMapTable];
         _noKeyboard = [[UIView alloc] initWithFrame:CGRectZero];
+#if !TARGET_OS_TV
         self.multipleTouchEnabled = YES;
+#endif
         self.backgroundColor = UIColor.blackColor;
         self.autocorrectionType = UITextAutocorrectionTypeNo;
         self.autocapitalizationType = UITextAutocapitalizationTypeNone;
         self.spellCheckingType = UITextSpellCheckingTypeNo;
         self.caret = CGRectNull;
+#if !TARGET_OS_TV
         UIHoverGestureRecognizer* hover =
             [[UIHoverGestureRecognizer alloc] initWithTarget:self action:@selector(hovered:)];
         [self addGestureRecognizer:hover];
@@ -296,6 +306,7 @@ using namespace pr_impl;
         _pointer = [[UIPointerInteraction alloc] initWithDelegate:self];
         [self addInteraction:_pointer];
         [self addInteraction:[[UIDropInteraction alloc] initWithDelegate:self]];
+#endif
         __weak PrUiKitView* weak = self;
         NSArray<UITrait>* traits = @[
             UITraitUserInterfaceStyle.class, UITraitDisplayScale.class, UITraitDisplayGamut.class,
@@ -377,19 +388,23 @@ using namespace pr_impl;
         event.pointer.type = PrAppPointerType_Mouse;
         event.pointer.id = kPrAppPointerMouse;
         event.pointer.primary = true;
+#if !TARGET_OS_TV
         event.pointer.button = source != nil && (source.buttonMask & UIEventButtonMaskSecondary) != 0 ? 1 : 0;
+#endif
         event.pointer.pressure = down ? 0.5f : 0.0f;
     } else {
         NSNumber* number = [_touches objectForKey:touch];
         event.pointer.id = number != nil ? number.unsignedIntValue : 0;
         event.pointer.primary = event.pointer.id == _primary;
         event.pointer.type = touch.type == UITouchTypePencil ? PrAppPointerType_Pen : PrAppPointerType_Touch;
+        event.pointer.pressure = down ? 0.5f : 0.0f;
+#if !TARGET_OS_TV
         if (touch.maximumPossibleForce > 0 && touch.force > 0)
             event.pointer.pressure = float(touch.force / touch.maximumPossibleForce);
-        else
-            event.pointer.pressure = down ? 0.5f : 0.0f;
+#endif
         if (kind == PrAppEventKind_PointerUp || kind == PrAppEventKind_PointerCancel)
             event.pointer.pressure = 0;
+#if !TARGET_OS_TV
         float diameter = float(touch.majorRadius * 2);
         event.pointer.contactSize = PrVec2{diameter, diameter};
         // A pen's tilt from its altitude above the surface and its azimuth (pointerevents3/#converting-between-tiltx-
@@ -402,6 +417,7 @@ using namespace pr_impl;
                 float(atan(sin(azimuth) / tangent) * 180 / M_PI),
             };
         }
+#endif
     }
     if (kind == PrAppEventKind_PointerDown)
         event.pointer.clicks = uint32_t(touch.tapCount);
@@ -458,6 +474,8 @@ using namespace pr_impl;
 - (void)touchesCancelled:(NSSet<UITouch*>*)touches withEvent:(UIEvent*)event {
     [self endTouches:touches kind:PrAppEventKind_PointerCancel event:event];
 }
+#if !TARGET_OS_TV
+
 // The mouse pointer's moves while no button is down: its entry, its moves and its exit.
 - (void)hovered:(UIHoverGestureRecognizer*)recognizer {
     CGPoint at = [recognizer locationInView:self];
@@ -540,14 +558,20 @@ using namespace pr_impl;
     [self deliver:event];
 }
 
+#endif
+
 // --- Cursors ---
 
 - (void)setCursor:(PrAppCursor)cursor {
     if (cursor == _cursor)
         return;
     _cursor = cursor;
+#if !TARGET_OS_TV
     [_pointer invalidate];
+#endif
 }
+#if !TARGET_OS_TV
+
 - (UIPointerRegion*)pointerInteraction:(UIPointerInteraction*)interaction
         regionForRequest:(UIPointerRegionRequest*)request defaultRegion:(UIPointerRegion*)region {
     (void)interaction;
@@ -572,7 +596,11 @@ using namespace pr_impl;
     }
 }
 
+#endif
+
 // --- Drops ---
+
+#if !TARGET_OS_TV
 
 - (PrAppEvent)drop:(id<UIDropSession>)session kind:(PrAppEventKind)kind {
     CGPoint at = [session locationInView:self];
@@ -685,6 +713,8 @@ using namespace pr_impl;
         [view deliver:dropped];
     });
 }
+
+#endif
 
 // --- Keys ---
 

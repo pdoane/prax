@@ -34,7 +34,7 @@ if (PR_APP_APPKIT)
                                  "-framework UniformTypeIdentifiers" "-framework UserNotifications")
 endif()
 
-# The UIKit backend: UIKit's scenes and windows, on iOS and iPadOS.
+# The UIKit backend: UIKit's scenes and windows, on iOS and iPadOS, tvOS and visionOS.
 if (PR_APP_UIKIT)
     set(uikit_sources
         backends/uikit/src/app_uikit.mm
@@ -47,8 +47,11 @@ if (PR_APP_UIKIT)
     set_source_files_properties(${uikit_sources} PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     target_compile_definitions(pr_app PRIVATE PR_APP_HAS_UIKIT)
     target_link_libraries(pr_app PUBLIC "-framework UIKit" "-framework QuartzCore" "-framework UniformTypeIdentifiers"
-                                 "-framework Foundation" "-framework CoreGraphics" "-framework CoreMotion"
-                                 "-framework UserNotifications")
+                                 "-framework Foundation" "-framework CoreGraphics" "-framework UserNotifications")
+    # tvOS has no motion sensors.
+    if (NOT PR_TVOS)
+        target_link_libraries(pr_app PUBLIC "-framework CoreMotion")
+    endif()
 endif()
 
 # The Win32 backend: Win32 windows and their message loop.

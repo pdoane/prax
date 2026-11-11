@@ -26,7 +26,7 @@
 #         [-DDEPFILE=<path>] -P shader_library.cmake
 #
 # ROOT is the directory that the header names the source relative to. METAL_SDK is the SDK that the metallib runs on:
-# macosx, the default, iphoneos or iphonesimulator.
+# macosx, the default, or the devices' or the simulator's SDK of a UIKit platform, as iphoneos or xrsimulator.
 
 cmake_minimum_required(VERSION 3.28)
 
@@ -196,6 +196,11 @@ function(compile_metal directory)
     set(minimum_macosx -mmacosx-version-min=26.0)
     set(minimum_iphoneos -mios-version-min=26.0)
     set(minimum_iphonesimulator -mios-simulator-version-min=26.0)
+    set(minimum_appletvos -mtvos-version-min=26.0)
+    set(minimum_appletvsimulator -mtvos-simulator-version-min=26.0)
+    # The compiler takes visionOS's minimum in its target alone.
+    set(minimum_xros -target air64-apple-xros26.0)
+    set(minimum_xrsimulator -target air64-apple-xros26.0-simulator)
     run(xcrun -sdk ${METAL_SDK} metal -std=metal4.0 ${minimum_${METAL_SDK}} -c "${source}" -o "${directory}/library.air")
     run(xcrun -sdk ${METAL_SDK} metallib "${directory}/library.air" -o "${directory}/library.metallib")
     entry_records("${REFLECTED}")

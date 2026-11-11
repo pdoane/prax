@@ -15,54 +15,56 @@ from tools.lint import commands as lint
 
 USAGE = {
     "build": """\
-./dev.sh build [debug|release|asan|tsan] [wasm|ios|ios-sim] [--lean] [--configure | --keep-going] [--target NAME]...
+./dev.sh build [debug|release|asan|tsan] [wasm|PLATFORM|PLATFORM-sim] [--lean] [--configure | --keep-going]
+               [--target NAME]...
     configure and build a configuration for a platform, the host's by default. The default configuration is optimized,
     with debug symbols and without link-time optimization. `debug` builds without the optimizer and with the assertions.
     `release` adds link-time optimization. `asan` is Debug with the address and undefined behavior sanitizers, and
     `tsan` is Debug with the thread sanitizer. `wasm` compiles to WebAssembly with Emscripten, which it fetches into
-    third_party/emsdk, `ios` for iOS devices with Xcode's iOS SDK, on macOS, and `ios-sim` for the iOS simulator, each
-    in the default configuration or `debug`, as in ./dev.sh build debug wasm. --lean builds the lean form, for a
-    machine that only tests: no tools, comparisons or examples, one font bundle, and ccache where it is installed
-    (tools/build/build.py). --configure configures and builds nothing, which fetches everything that the build and its
+    third_party/emsdk. A PLATFORM of UIKit's, ios, tvos or visionos, compiles for that platform's devices with Xcode's
+    SDK, on macOS, and PLATFORM-sim, as ios-sim, for its simulator. Each of these is in the default configuration or
+    `debug`, as in ./dev.sh build debug wasm. --lean builds the lean form, for a machine that only tests: no tools,
+    comparisons or examples, one font bundle, and ccache where it is installed (tools/build/build.py). --configure configures and builds nothing, which fetches everything that the build and its
     tests read. --keep-going builds past a failure and reports every error. --target builds only the targets named, and
     what they need""",
     "test": """\
-./dev.sh test [debug|asan|tsan] [wasm|ios-sim] [module] [args...]
+./dev.sh test [debug|asan|tsan] [wasm|PLATFORM-sim] [module] [args...]
     the unit tests and the tools' tests against that build's harnesses, with lint beside them, or one module's doctest
     binary with args, as in ./dev.sh test dom -ts="*keyword*" --success, from that build, which builds only that binary.
     With doctest's options and no module, as in ./dev.sh test -tc="*flood*", every binary runs the cases that the
     options choose (tools/build/unit_tests.py). `wasm` runs the unit tests under Node.js, then the page tests
     (pr_page_tests) in headless Chrome, and not the tools' tests, whose harnesses are the host's. A module's page tests
-    are named <module>_page, as in ./dev.sh test wasm draw_page. `ios-sim` runs the unit tests on a simulator device,
-    the one that PR_SIMULATOR_DEVICE names or else the booted one or the first iPhone, and not the tools' tests""",
+    are named <module>_page, as in ./dev.sh test wasm draw_page. PLATFORM-sim, as ios-sim, runs the unit tests on a
+    simulator device of the platform, the one that PR_SIMULATOR_DEVICE names or else the booted one or the first
+    available, and not the tools' tests""",
     "ci": """\
-./dev.sh ci [--configure | --key] [default|debug|asan]... [macos|windows|linux|wasm|ios|ios-sim]...
+./dev.sh ci [--configure | --key] [default|debug|asan]... [macos|windows|linux|wasm|PLATFORM|PLATFORM-sim]...
     whether the tree is in a good state on this machine: lint beside each configuration of each platform named, each run
     past the failures of the others, and then a table of their outcomes, as in ./dev.sh ci debug ios. With no
     configuration named, they are the default and debug, and with no platform named, every platform that the machine
-    checks: its own, and on macOS WebAssembly and iOS too, and the iOS simulator only when it is named. Each runs the
-    build's unit tests, with the tools' tests on the host's platform and the page tests on WebAssembly, except iOS,
-    whose tests are built and not run. `asan` is the host's alone. Each build is its lean form, which fetches only
+    checks: its own, and on macOS WebAssembly and the devices of iOS, tvOS and visionOS too, and a simulator only when
+    it is named. Each runs the build's unit tests, with the tools' tests on the host's platform and the page tests on
+    WebAssembly, except the builds for devices, whose tests are built and not run. `asan` is the host's alone. Each build is its lean form, which fetches only
     what its tests read (./dev.sh build --lean), and builds past a compile error, so that it reports every error
     (./dev.sh build --keep-going). --configure configures each build and fetches what lint reads, and builds and runs
     nothing: everything that the run fetches, which CI caches before it runs (.github/workflows/ci.yml). In CI, where
     third_party then holds what the run fetched and nothing else, it fails past a budget (FETCH_BUDGET). --key prints a
     hash of what decides what the run fetches, which changes when that does, as CI's cache of third_party is keyed""",
     "example": """\
-./dev.sh example [wasm|ios-sim] <name> [args...]
-./dev.sh example wasm|ios-sim <name> --screenshot <png> [--seconds S] [args...]
+./dev.sh example [wasm|PLATFORM-sim] <name> [args...]
+./dev.sh example wasm|PLATFORM-sim <name> --screenshot <png> [--seconds S] [args...]
     build an example under examples, and only what it needs, and run it with the arguments. `wasm` builds it for the
     web, serves the checkout, and opens its page in the system's browser, with the arguments in the page's query, until
     interrupted. --screenshot instead captures the page in headless Chrome, at 960x720, after it has run for S seconds
-    (4 by default), and prints what the page logged. `ios-sim` builds its bundle for the iOS simulator, installs it on
-    a simulator device, the one that PR_SIMULATOR_DEVICE names or else the booted one or the first iPhone, and
-    launches it there, streaming its output until it exits or is interrupted. --screenshot instead captures the
-    device's screen after S seconds and terminates the example""",
+    (4 by default), and prints what the page logged. PLATFORM-sim, as ios-sim, builds its bundle for the platform's
+    simulator, installs it on a simulator device of the platform, chosen as ./dev.sh test chooses it, and launches it
+    there, streaming its output until it exits or is interrupted. --screenshot instead captures the device's screen
+    after S seconds and terminates the example""",
     "app": """\
-./dev.sh app [ios-sim] <name> [args...]
-./dev.sh app ios-sim <name> --screenshot <png> [--seconds S] [args...]
-    build an app under apps, and only what it needs, and run it with the arguments, or with `ios-sim` launch it on a
-    simulator device as ./dev.sh example ios-sim does""",
+./dev.sh app [PLATFORM-sim] <name> [args...]
+./dev.sh app PLATFORM-sim <name> --screenshot <png> [--seconds S] [args...]
+    build an app under apps, and only what it needs, and run it with the arguments, or with PLATFORM-sim launch it on a
+    simulator device as ./dev.sh example does""",
     "clean": """\
 ./dev.sh clean
     delete the build directories""",
@@ -116,7 +118,7 @@ def unit_tests(mode=None, lean=False, keep_going=False):
 
 def test(argv):
     dev.usage(argv, USAGE["test"])
-    mode = builds.take_mode(argv, ("debug", "asan", "tsan"), ("wasm", "ios-sim"))
+    mode = builds.take_mode(argv, ("debug", "asan", "tsan"), ("wasm", *builds.SIMULATOR_PLATFORMS))
     if not argv:
         # The whole run lints beside the build.
         lint.beside(lambda: unit_tests(mode))
@@ -134,7 +136,7 @@ def test(argv):
     if chosen.wasm and os.path.exists(page):
         run_page_tests(page, args)
         return
-    binary = dev.executable(chosen.directory, module + "_tests", chosen.wasm, chosen.ios)
+    binary = dev.executable(chosen.directory, module + "_tests", chosen.wasm, chosen.uikit)
     if not os.path.exists(binary):
         suffix = ".js" if chosen.wasm else ""
         endings = ["_tests" + suffix] + (["_tests.html"] if chosen.wasm else [])
@@ -144,7 +146,7 @@ def test(argv):
     if chosen.wasm:
         dev.run([emsdk.node(), binary, *args])
     elif chosen.simulator:
-        dev.run([sys.executable, builds.SIMULATOR_RUNNER, binary, *args])
+        dev.run([sys.executable, builds.SIMULATOR_RUNNER, "--platform", chosen.platform, binary, *args])
     elif module in NETWORK_MODULES:
         dev.python("tools.harness.net_peer", binary, *args)
     else:
@@ -158,12 +160,14 @@ CI_DEFAULT_CONFIGURATIONS = ("default", "debug")
 
 # The names of the platforms in the run's steps.
 PLATFORM_NAMES = {
-    "macos": "macOS", "windows": "Windows", "linux": "Linux", "wasm": "wasm", "ios": "iOS", "ios-sim": "iOS simulator",
+    "macos": "macOS", "windows": "Windows", "linux": "Linux", "wasm": "wasm",
+    **{name: platform.system for name, platform in builds.UIKIT_PLATFORMS.items()},
+    **{name + "-sim": platform.system + " simulator" for name, platform in builds.UIKIT_PLATFORMS.items()},
 }
 
-# The platforms other than the host's that ./dev.sh ci checks on macOS when none is named. The simulator's tests run on
-# a simulator device, which a run checks only when it names the platform.
-CI_DEFAULT_CROSS_PLATFORMS = ("wasm", "ios")
+# The platforms other than the host's that ./dev.sh ci checks on macOS when none is named: the web and the devices of
+# UIKit's platforms. A simulator's tests run on a simulator device, which a run checks only when it names the platform.
+CI_DEFAULT_CROSS_PLATFORMS = ("wasm", *builds.UIKIT_PLATFORMS)
 
 
 def ci(argv):
@@ -197,8 +201,8 @@ def ci(argv):
                     dev.fail("there is no %s build for %s" % (configuration, platform))
                 continue
             name = PLATFORM_NAMES[platform] + ("" if configuration == "default" else " " + configuration)
-            if platform == "ios":
-                # The iOS build's tests are built and not run.
+            if platform in builds.UIKIT_PLATFORMS:
+                # The tests of a build for a platform's devices are built and not run.
                 steps.append((name + " (build)", built,
                               lambda built=built: builds.build(built, lean=True, keep_going=True)))
             else:
@@ -339,12 +343,13 @@ def run_application(folder, usage, argv, modes):
         chosen = builds.build(targets=[name])
         dev.run([dev.executable(chosen.directory, name), *args])
         return None
-    if mode == "ios-sim":
+    if mode in builds.SIMULATOR_PLATFORMS:
         from tools.build import simulator
 
         screenshot, seconds, args = capture_options(args, usage)
         chosen = builds.build(mode, targets=[name])
-        status = simulator.launch(os.path.join(chosen.directory, name + ".app"), args, screenshot, seconds)
+        status = simulator.launch(chosen.platform, os.path.join(chosen.directory, name + ".app"), args, screenshot,
+                                  seconds)
         if status != 0:
             sys.exit(status)
         return None
@@ -352,11 +357,11 @@ def run_application(folder, usage, argv, modes):
 
 
 def app(argv):
-    run_application("apps", USAGE["app"], argv, ("ios-sim",))
+    run_application("apps", USAGE["app"], argv, builds.SIMULATOR_PLATFORMS)
 
 
 def example(argv):
-    chosen = run_application("examples", USAGE["example"], argv, ("wasm", "ios-sim"))
+    chosen = run_application("examples", USAGE["example"], argv, ("wasm", *builds.SIMULATOR_PLATFORMS))
     if chosen is None:
         return
     _, name, args = chosen

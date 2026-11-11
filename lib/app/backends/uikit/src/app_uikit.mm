@@ -65,12 +65,16 @@ PrAppModifierFlags uiKitModifiersOf(UIKeyModifierFlags flags) {
     return modifiers;
 }
 
+#if !TARGET_OS_VISION
+
 UIScreen* PR_NULLABLE uiKitScreenOf(PrUiKitHost* host, UIView* PR_NULLABLE view) {
     UIWindowScene* scene = view.window.windowScene;
     if (scene == nil)
         scene = [host anyScene];
     return scene.screen;
 }
+
+#endif
 
 namespace {
 
@@ -116,24 +120,49 @@ void heldReset(HeldEvent& held, AppDataSources* PR_NULLABLE sources) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Displays
 
-// Returns the properties of the display that shows `view`, with the view's own scale.
+#if !TARGET_OS_VISION
+
+// Takes the extended range of the screen into `display`. A television's layers show no extended range, so its display
+// is SDR.
+void takeHeadroom(PrAppDisplay& display, UIScreen* screen) {
+#if TARGET_OS_TV
+    (void)display;
+    (void)screen;
+#else
+    display.headroom = MAX(float(screen.currentEDRHeadroom), 1.0f);
+    display.potentialHeadroom = MAX(float(screen.potentialEDRHeadroom), display.headroom);
+#endif
+}
+
+#endif
+
+// Returns the properties of the display that shows `view`, with the view's own scale. visionOS has no screens, and its
+// windows report SDR.
 PrAppDisplay displayOf(PrUiKitHost* host, UIView* view) {
     PrAppDisplay display = prAppDisplayDefault();
+#if TARGET_OS_VISION
+    (void)host;
+    UITraitCollection* traits = view.traitCollection;
+#else
     UIScreen* screen = uiKitScreenOf(host, view);
     UITraitCollection* traits = view.window != nil ? view.traitCollection : screen.traitCollection;
+#endif
     if (traits.displayScale > 0)
         display.pixelRatio = float(traits.displayScale);
     if (traits.displayGamut == UIDisplayGamutP3)
         display.gamut = PrColorSpace_DisplayP3;
-    if (screen != nil) {
-        display.headroom = MAX(float(screen.currentEDRHeadroom), 1.0f);
-        display.potentialHeadroom = MAX(float(screen.potentialEDRHeadroom), display.headroom);
-    }
+#if !TARGET_OS_VISION
+    if (screen != nil)
+        takeHeadroom(display, screen);
+#endif
     return display;
 }
 
+#if !TARGET_OS_TV
+
 // The orientations of the interface, by PrAppOrientation. The natural orientation of a phone's display is portrait, and
-// Landscape is the display turned a quarter counterclockwise, with the interface's top at the device's right.
+// Landscape is the display turned a quarter counterclockwise, with the interface's top at the device's right. A
+// television's display does not turn.
 constexpr UIInterfaceOrientation kInterfaceOrientations[] = {
     UIInterfaceOrientationLandscapeLeft,
     UIInterfaceOrientationPortrait,
@@ -141,6 +170,8 @@ constexpr UIInterfaceOrientation kInterfaceOrientations[] = {
     UIInterfaceOrientationPortraitUpsideDown,
 };
 
+#if TARGET_OS_IOS
+// Only iOS reports the orientation of a display, which visionOS lacks.
 PrAppOrientation orientationOf(UIInterfaceOrientation orientation) {
     for (uint8_t i = 0; i < countOf(kInterfaceOrientations); ++i) {
         if (kInterfaceOrientations[i] == orientation)
@@ -148,6 +179,7 @@ PrAppOrientation orientationOf(UIInterfaceOrientation orientation) {
     }
     return PrAppOrientation_Portrait;
 }
+#endif
 
 UIInterfaceOrientationMask maskOf(PrAppOrientationFlags flags) {
     UIInterfaceOrientationMask mask = 0;
@@ -157,6 +189,11 @@ UIInterfaceOrientationMask maskOf(PrAppOrientationFlags flags) {
     }
     return mask != 0 ? mask : UIInterfaceOrientationMaskAll;
 }
+
+#endif
+
+// visionOS has no displays: its windows are in the user's space.
+#if !TARGET_OS_VISION
 
 // The name of the device's screen, which stays valid for the run.
 constexpr PrStringView kScreenName = "Built-in Display";
@@ -179,29 +216,50 @@ bool screenInfo(PrUiKitHost* host, PrAppDisplayInfo* out) {
             float(bounds.size.height - safe.bottom),
         },
         .refreshRate = float(screen.maximumFramesPerSecond),
+#if TARGET_OS_TV
+        .orientation = PrAppOrientation_Landscape,
+#else
         .orientation = orientationOf(scene.effectiveGeometry.interfaceOrientation),
+#endif
         .main = true,
     };
     if (first == nil) {
         out->display.pixelRatio = float(screen.scale);
-        out->display.headroom = MAX(float(screen.currentEDRHeadroom), 1.0f);
-        out->display.potentialHeadroom = MAX(float(screen.potentialEDRHeadroom), out->display.headroom);
+        takeHeadroom(out->display, screen);
     }
     return true;
 }
 
+#endif
+
 uint32_t displays(const PrApp* app, PrAppDisplayInfo* PR_NULLABLE out, uint32_t capacity) {
+#if TARGET_OS_VISION
+    (void)app;
+    (void)out;
+    (void)capacity;
+    return 0;
+#else
     PrAppDisplayInfo info{};
     if (!screenInfo(uiKitHostOf(app), &info))
         return 0;
     if (capacity != 0)
         out[0] = info;
     return 1;
+#endif
 }
 
 bool displayInfo(const PrApp* app, PrAppDisplayId id, PrAppDisplayInfo* out) {
+#if TARGET_OS_VISION
+    (void)app;
+    (void)id;
+    (void)out;
+    return false;
+#else
     return id == kUiKitScreenId && screenInfo(uiKitHostOf(app), out);
+#endif
 }
+
+#if !TARGET_OS_TV
 
 void setOrientations(PrApp* app, PrAppOrientationFlags orientations) {
     PrUiKitHost* host = uiKitHostOf(app);
@@ -209,6 +267,8 @@ void setOrientations(PrApp* app, PrAppOrientationFlags orientations) {
     for (PrUiKitWindow* window in host.windows)
         [window.controller setNeedsUpdateOfSupportedInterfaceOrientations];
 }
+
+#endif
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The application's functions
@@ -352,6 +412,9 @@ bool isVisible(const PrAppWindow* window) {
     return uiKitObjectOf(window).shown;
 }
 
+// A window of visionOS has a place in the user's space, and none on a display.
+#if !TARGET_OS_VISION
+
 // Returns the screen of a window whose place on it the system lets the user change, or nil for a window that fills the
 // display of a phone, or that shows in no scene.
 UIScreen* PR_NULLABLE placedScreenOf(const PrAppWindow* window) {
@@ -385,6 +448,8 @@ bool position(const PrAppWindow* window, PrAppDisplayPosition* out) {
     return pointToDisplay(window, PrVec2{}, out);
 }
 
+#endif
+
 bool isOccluded(const PrAppWindow* window) {
     UIWindowScene* scene = uiKitObjectOf(window).scene;
     return scene == nil || scene.activationState == UISceneActivationStateBackground;
@@ -405,8 +470,10 @@ void focus(PrAppWindow* window) {
 void setHiddenSystemBars(PrAppWindow* window, PrAppSystemBarFlags hidden) {
     PrUiKitWindow* object = uiKitObjectOf(window);
     object.hiddenBars = hidden;
+#if TARGET_OS_IOS
     [object.controller setNeedsStatusBarAppearanceUpdate];
     [object.controller setNeedsUpdateOfHomeIndicatorAutoHidden];
+#endif
     [object requestFrame];
 }
 
@@ -476,9 +543,11 @@ PrStatus windowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow* PR_N
     window->focusFn = focus;
     window->setHiddenSystemBarsFn = setHiddenSystemBars;
     window->shareFn = uiKitShare;
+#if !TARGET_OS_VISION
     window->positionFn = position;
     window->pointToDisplayFn = pointToDisplay;
     window->pointFromDisplayFn = pointFromDisplay;
+#endif
     window->dragStartFn = dragStart;
     window->surfaceFn = surface;
     window->app = app;
@@ -511,6 +580,7 @@ PrStatus windowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow* PR_N
 using namespace pr_impl;
 
 @implementation PrUiKitViewController
+#if !TARGET_OS_TV
 - (BOOL)prefersStatusBarHidden {
     return (self.owner.hiddenBars & PrAppSystemBarFlag_Status) != 0;
 }
@@ -521,6 +591,7 @@ using namespace pr_impl;
     PrUiKitHost* host = self.owner.host;
     return maskOf(host != nil ? host.orientations : PrAppOrientationFlags(PrAppOrientationFlag_All));
 }
+#endif
 - (void)viewWillTransitionToSize:(CGSize)size
         withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
     [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
@@ -627,9 +698,11 @@ using namespace pr_impl;
     self.frameRequested = YES;
     if (self.displayLink == nil) {
         self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayFrame:)];
+#if !TARGET_OS_VISION
         UIScreen* screen = uiKitScreenOf(self.host, self.view);
         float fastest = screen != nil ? float(screen.maximumFramesPerSecond) : 60.0f;
         self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(MIN(30.0f, fastest), fastest, fastest);
+#endif
         [self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
     }
     self.displayLink.paused = NO;
@@ -771,11 +844,13 @@ using namespace pr_impl;
         return;
     UISceneSessionActivationRequest* request =
         [UISceneSessionActivationRequest requestWithRole:UIWindowSceneSessionRoleApplication];
+#if !TARGET_OS_TV
     UIWindowSceneActivationRequestOptions* options = [[UIWindowSceneActivationRequestOptions alloc] init];
     options.placement = [UIWindowSceneStandardPlacement standardPlacement];
     if (window.prominent)
         options.placement = [UIWindowSceneProminentPlacement prominentPlacement];
     request.options = options;
+#endif
     [UIApplication.sharedApplication activateSceneSessionForRequest:request errorHandler:^(NSError* error) {
         NSLog(@"lib/app: the system made no scene for a window: %@", error);
     }];
@@ -1067,17 +1142,25 @@ using namespace pr_impl;
     _observers = [NSMutableArray array];
     [self observe:UIApplicationDidReceiveMemoryWarningNotification kind:PrAppEventKind_LowMemory];
     [self observe:NSCurrentLocaleDidChangeNotification kind:PrAppEventKind_LocaleChanged];
+#if !TARGET_OS_TV
     [self observe:UIPasteboardChangedNotification kind:PrAppEventKind_ClipboardChanged];
+#endif
     [self observe:UITextInputCurrentInputModeDidChangeNotification kind:PrAppEventKind_KeyboardLayoutChanged];
     [self observe:UIApplicationProtectedDataWillBecomeUnavailable kind:PrAppEventKind_ScreenLocked];
     [self observe:UIApplicationProtectedDataDidBecomeAvailable kind:PrAppEventKind_ScreenUnlocked];
+#if !TARGET_OS_TV
     [self observe:UIDeviceBatteryStateDidChangeNotification kind:PrAppEventKind_PowerChanged];
     [self observe:UIDeviceBatteryLevelDidChangeNotification kind:PrAppEventKind_PowerChanged];
+#endif
     [self observe:NSProcessInfoPowerStateDidChangeNotification kind:PrAppEventKind_PowerChanged];
     [self observeFrames:UIAccessibilityReduceMotionStatusDidChangeNotification];
     [self observeFrames:UIAccessibilityReduceTransparencyStatusDidChangeNotification];
+#if !TARGET_OS_VISION
     [self observeFrames:UIScreenReferenceDisplayModeStatusDidChangeNotification];
-    // The keyboard's frame, in the screen's coordinates, which each window takes in its view's.
+#endif
+#if TARGET_OS_IOS
+    // The keyboard's frame, in the screen's coordinates, which each window takes in its view's. A television's keyboard
+    // covers the whole screen, and visionOS's floats apart from the window, and neither reports a frame in it.
     void (^keyboard)(PrUiKitHost*, NSNotification*) = ^(PrUiKitHost* host, NSNotification* note) {
         BOOL hiding = [note.name isEqualToString:UIKeyboardWillHideNotification];
         CGRect end = [note.userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue];
@@ -1091,6 +1174,7 @@ using namespace pr_impl;
     };
     [self observe:UIKeyboardWillChangeFrameNotification with:keyboard];
     [self observe:UIKeyboardWillHideNotification with:keyboard];
+#endif
 }
 - (void)stopServices {
     uiKitDeviceStop(self.app);
@@ -1166,7 +1250,9 @@ PrApp* prAppUiKitCreate(const PrAppOptions* options) {
     app->timerCancelFn = timerCancel;
     app->displaysFn = displays;
     app->displayInfoFn = displayInfo;
+#if !TARGET_OS_TV
     app->setOrientationsFn = setOrientations;
+#endif
     app->dataRetainFn = uiKitDataRetain;
     app->dataReleaseFn = uiKitDataRelease;
     app->dataReadFn = uiKitDataRead;

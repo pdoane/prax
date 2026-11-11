@@ -8,6 +8,10 @@ add_library(test_main STATIC test_main.cpp test.cpp test.h)
 target_include_directories(test_main PUBLIC ${PROJECT_SOURCE_DIR}
     PRIVATE ${PROJECT_SOURCE_DIR}/lib/core/include ${PROJECT_SOURCE_DIR}/lib/core/cpp/include)
 target_link_libraries(test_main PUBLIC doctest::doctest PRIVATE pr_warnings)
+# doctest reports a crash on an alternate signal stack, which tvOS lacks. The crash handler reports it there instead.
+if (PR_TVOS)
+    target_compile_definitions(test_main PUBLIC DOCTEST_CONFIG_NO_POSIX_SIGNALS)
+endif()
 
 # Reading files and framed cases, writing JSON, and the CPU's counters.
 add_library(harness STATIC cpu_counters.cpp harness.cpp)

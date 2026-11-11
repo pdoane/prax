@@ -5,15 +5,21 @@
 #include "pr/alloc.h"
 #include "pr/integer.h"
 
-#import <CoreMotion/CoreMotion.h>
 #import <UserNotifications/UserNotifications.h>
+
+// tvOS has no motion sensors or battery, and only iOS has haptics and a magnetometer.
+#if !TARGET_OS_TV
+#import <CoreMotion/CoreMotion.h>
+#endif
 
 // The device's services of an application: its motion manager, made on first use, and its answers from the notification
 // center, whose delegate it is while the application runs.
 @interface PrUiKitDevice : NSObject <UNUserNotificationCenterDelegate>
 @property(nonatomic) PrApp* app;
+#if !TARGET_OS_TV
 @property(nonatomic, strong) CMMotionManager* motion;
-@property(nonatomic) uint8_t permission;    // notification permission, an UiKitPermission
+#endif
+@property(nonatomic) uint8_t permission;    // notification permission, a UiKitPermission
 @property(nonatomic, strong) NSMutableArray<UNNotificationRequest*>* waiting;
 @property(nonatomic) BOOL badged;           // a badge waits for the permission
 @property(nonatomic) NSInteger badge;
@@ -33,6 +39,8 @@ enum {
 };
 typedef uint8_t UiKitPermission;
 
+#if !TARGET_OS_TV
+
 // The most notifications that wait for the user's answer. If more are posted, the oldest is dropped.
 constexpr NSUInteger kWaitingNotificationsMax = 16;
 
@@ -41,6 +49,7 @@ NSString* const kNotificationTagKey = @"tag";
 
 // Standard gravity, which an accelerometer reports in units of.
 constexpr double kGravity = 9.80665;
+#endif
 
 PrUiKitDevice* deviceOf(PrApp* app) {
     UiKitApp* uiKit = static_cast<UiKitApp*>(app);
@@ -51,6 +60,8 @@ PrUiKitDevice* deviceOf(PrApp* app) {
     }
     return (__bridge PrUiKitDevice*)uiKit->device;
 }
+
+#if !TARGET_OS_TV
 
 // Delivers a reading of `sensor` to the application.
 void deliverReading(PrApp* app, PrAppSensor sensor, float x, float y, float z, float w = 0) {
@@ -68,9 +79,15 @@ void deliverReading(PrApp* app, PrAppSensor sensor, float x, float y, float z, f
     [host deliver:event to:nullptr];
 }
 
+#endif
+
 } // namespace
 
+// A television runs on external power.
 PrAppPower uiKitPower(const PrApp*) {
+#if TARGET_OS_TV
+    return PrAppPower{.source = PrAppPowerSource_External, .level = -1};
+#else
     UIDevice* device = UIDevice.currentDevice;
     device.batteryMonitoringEnabled = YES;
     PrAppPower power{.source = PrAppPowerSource_Unknown, .level = -1};
@@ -87,6 +104,7 @@ PrAppPower uiKitPower(const PrApp*) {
         power.level = device.batteryLevel;
     power.lowPower = NSProcessInfo.processInfo.lowPowerModeEnabled;
     return power;
+#endif
 }
 
 // The system sleeps only while the display does, so either flag keeps the display awake.
@@ -95,7 +113,12 @@ void uiKitSetAwake(PrApp* app, PrAppAwakeFlags flags) {
         UIApplication.sharedApplication.idleTimerDisabled = flags != 0;
 }
 
+// Only iOS's devices have haptics.
 void uiKitHapticPlay(PrApp* app, PrAppHaptic haptic) {
+#if !TARGET_OS_IOS
+    (void)app;
+    (void)haptic;
+#else
     UIView* view = uiKitHostOf(app).windows.firstObject.view;
     if (view == nil || view.window == nil)
         return;
@@ -116,11 +139,19 @@ void uiKitHapticPlay(PrApp* app, PrAppHaptic haptic) {
         [[UIImpactFeedbackGenerator feedbackGeneratorWithStyle:impact forView:view] impactOccurred];
     else
         [[UINotificationFeedbackGenerator feedbackGeneratorForView:view] notificationOccurred:outcome];
+#endif
 }
 
 // Core Motion's axes are the device's, as the event's are. Its accelerometer reports in units of gravity, with the
 // device at rest reporting gravity's pull, and the event reports the force that holds the device up, the reverse.
 PrStatus uiKitSensorEnable(PrApp* app, PrAppSensor sensor, bool enable, double interval) {
+#if TARGET_OS_TV
+    (void)app;
+    (void)sensor;
+    (void)enable;
+    (void)interval;
+    return PrStatus_NotSupported;
+#else
     PrUiKitDevice* device = deviceOf(app);
     if (device.motion == nil)
         device.motion = [[CMMotionManager alloc] init];
@@ -153,6 +184,7 @@ PrStatus uiKitSensorEnable(PrApp* app, PrAppSensor sensor, bool enable, double i
                 deliverReading(app, sensor, float(r.x), float(r.y), float(r.z));
             }];
             break;
+#if TARGET_OS_IOS
         case PrAppSensor_Magnetometer:
             if (!motion.magnetometerAvailable)
                 return PrStatus_NotSupported;
@@ -166,6 +198,7 @@ PrStatus uiKitSensorEnable(PrApp* app, PrAppSensor sensor, bool enable, double i
                 deliverReading(app, sensor, float(m.x), float(m.y), float(m.z));
             }];
             break;
+#endif
         case PrAppSensor_Attitude:
             if (!motion.deviceMotionAvailable)
                 return PrStatus_NotSupported;
@@ -182,6 +215,7 @@ PrStatus uiKitSensorEnable(PrApp* app, PrAppSensor sensor, bool enable, double i
         default: return PrStatus_NotSupported;
     }
     return PrStatus_Ok;
+#endif
 }
 
 PrStatus uiKitNotificationPost(PrApp* app, const PrAppNotificationDesc* desc) {
@@ -191,6 +225,11 @@ PrStatus uiKitNotificationPost(PrApp* app, const PrAppNotificationDesc* desc) {
     // A headless application posts nothing, because the permission request would go to a user who never sees it.
     if (host.headless)
         return PrStatus_NotSupported;
+#if TARGET_OS_TV
+    // A television shows no notifications, only the badge.
+    (void)desc;
+    return PrStatus_NotSupported;
+#else
     PrUiKitDevice* device = deviceOf(app);
     if (device.permission == UiKitPermission_Refused)
         return PrStatus_NotAllowed;
@@ -211,6 +250,7 @@ PrStatus uiKitNotificationPost(PrApp* app, const PrAppNotificationDesc* desc) {
     [device.waiting addObject:request];
     [device ask];
     return PrStatus_Ok;
+#endif
 }
 
 // The system's badge is a count, so a badge that is not a number shows as 1.
@@ -240,10 +280,14 @@ void uiKitDeviceStop(PrApp* app) {
     if (uiKit->device == nullptr)
         return;
     PrUiKitDevice* device = (__bridge PrUiKitDevice*)uiKit->device;
+#if !TARGET_OS_TV
     [device.motion stopAccelerometerUpdates];
     [device.motion stopGyroUpdates];
+#if TARGET_OS_IOS
     [device.motion stopMagnetometerUpdates];
+#endif
     [device.motion stopDeviceMotionUpdates];
+#endif
     if (uiKitHostOf(app).headless)
         return;
     UNUserNotificationCenter* center = UNUserNotificationCenter.currentNotificationCenter;
@@ -271,7 +315,10 @@ using namespace pr_impl;
         return;
     self.permission = UiKitPermission_Asking;
     __weak PrUiKitDevice* weak = self;
-    UNAuthorizationOptions options = UNAuthorizationOptionAlert | UNAuthorizationOptionBadge;
+    UNAuthorizationOptions options = UNAuthorizationOptionBadge;
+#if !TARGET_OS_TV
+    options |= UNAuthorizationOptionAlert;
+#endif
     [UNUserNotificationCenter.currentNotificationCenter requestAuthorizationWithOptions:options
         completionHandler:^(BOOL granted, NSError*) {
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -292,6 +339,7 @@ using namespace pr_impl;
     [self.waiting removeAllObjects];
     self.badged = NO;
 }
+#if !TARGET_OS_TV
 // Shows a notification even while the application is active, because the program chose to post it.
 - (void)userNotificationCenter:(UNUserNotificationCenter*)center willPresentNotification:(UNNotification*)notification
         withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
@@ -322,4 +370,5 @@ using namespace pr_impl;
     }
     completionHandler();
 }
+#endif
 @end

@@ -30,8 +30,13 @@ PR_ASSUME_NONNULL_BEGIN
 //
 // It is the text input of an input method, whose document is the text that the method composes, since the program's own
 // text stays the program's. The composition shows at the caret of the window's latest output.
+#if TARGET_OS_TV
+@interface PrUiKitView : UIView <UITextInput, UIGestureRecognizerDelegate>
+#else
 @interface PrUiKitView : UIView <UITextInput, UIPointerInteractionDelegate, UIDropInteractionDelegate,
-UIGestureRecognizerDelegate> @property(nonatomic, weak) PrUiKitWindow* owner;
+UIGestureRecognizerDelegate>
+#endif
+@property(nonatomic, weak) PrUiKitWindow* owner;
 @property(nonatomic) BOOL editing;                  // the window's latest output has text input
 @property(nonatomic) PrAppTextInputKind inputKind;  // the kind of that text
 @property(nonatomic) CGRect caret;                  // where that text's caret stands, in the view
@@ -118,7 +123,7 @@ UIGestureRecognizerDelegate> @property(nonatomic, weak) PrUiKitWindow* owner;
 - (void)startServices;
 - (void)stopServices;
 
-// Delivers `answer`, an UiKitAnswer that the host owns from here on, now or once no callback runs.
+// Delivers `answer`, a UiKitAnswer that the host owns from here on, now or once no callback runs.
 - (void)answer:(void*)answer;
 @end
 
@@ -165,7 +170,10 @@ uint32_t uiKitUtf8Length(NSString* string, NSUInteger units);
 PrAppModifierFlags uiKitModifiersOf(UIKeyModifierFlags flags);
 
 // Returns the screen that shows `view`, or that of one of the application's scenes, or nil before a scene connects.
+// visionOS has no screens.
+#if !TARGET_OS_VISION
 UIScreen* PR_NULLABLE uiKitScreenOf(PrUiKitHost* host, UIView* PR_NULLABLE view);
+#endif
 
 } // namespace pr_impl
 

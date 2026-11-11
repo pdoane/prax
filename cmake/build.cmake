@@ -25,8 +25,8 @@ if (PR_DEVELOP)
     target_compile_options(pr_warnings INTERFACE $<IF:$<C_COMPILER_ID:MSVC>,/WX,-Werror>)
     target_link_options(pr_warnings INTERFACE
         $<$<C_COMPILER_ID:MSVC>:/WX>
-        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<PLATFORM_ID:Darwin,iOS>>:LINKER:-fatal_warnings>
-        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<NOT:$<PLATFORM_ID:Darwin,iOS>>>:LINKER:--fatal-warnings>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<PLATFORM_ID:Darwin,iOS,tvOS,visionOS>>:LINKER:-fatal_warnings>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<NOT:$<PLATFORM_ID:Darwin,iOS,tvOS,visionOS>>>:LINKER:--fatal-warnings>
     )
 endif()
 
@@ -265,11 +265,12 @@ function(pr_write_tests)
 endfunction()
 
 # Adds the doctest binary `target` as a test (pr_add_test), if the host runs it or the build's emulator does, as the
-# simulator's runner does for an iOS simulator build. A build for iOS devices only builds it.
+# simulator's runner does for the build for a UIKit platform's simulator. A build for a UIKit platform's devices only
+# builds it.
 #
 #   pr_add_tests(<target>)
 function(pr_add_tests target)
-    if (NOT PR_IOS OR CMAKE_CROSSCOMPILING_EMULATOR)
+    if (NOT PR_UIKIT OR CMAKE_CROSSCOMPILING_EMULATOR)
         pr_add_test(${target} KIND doctest COMMAND ${target})
     endif()
 endfunction()
@@ -330,21 +331,44 @@ function(pr_harness name module)
     target_link_libraries(${name} PRIVATE ${module} harness pr_warnings)
 endfunction()
 
-# Makes `target`, an example or an app, an application bundle for iOS, org.prax.<target>, which the simulator installs
-# and launches (tools/build/simulator.py). Its Info.plist is cmake/ios_info.plist.in. With MULTIPLE_SCENES, the
-# application may show several scenes where the device does, as an iPad does, which lib/app's Multiple window model
-# needs. The bundle is signed whole, as the simulator requires of what it installs.
+# Makes `target`, an example or an app, an application bundle for the UIKit platform that the build targets,
+# org.prax.<target>, which the simulator installs and launches (tools/build/simulator.py). Its Info.plist is
+# cmake/uikit_info.plist.in, with the platform's own keys. With MULTIPLE_SCENES, the application may show several scenes
+# where the device does, as an iPad does, which lib/app's Multiple window model needs. The bundle is signed whole, as
+# the simulator requires of what it installs.
 #
-#   pr_ios_bundle(<target> [MULTIPLE_SCENES])
-function(pr_ios_bundle target)
+#   pr_uikit_bundle(<target> [MULTIPLE_SCENES])
+function(pr_uikit_bundle target)
     cmake_parse_arguments(PARSE_ARGV 1 arg "MULTIPLE_SCENES" "" "")
-    set(PR_IOS_MULTIPLE_SCENES false)
+    set(PR_UIKIT_MULTIPLE_SCENES false)
     if (arg_MULTIPLE_SCENES)
-        set(PR_IOS_MULTIPLE_SCENES true)
+        set(PR_UIKIT_MULTIPLE_SCENES true)
+    endif()
+    set(PR_UIKIT_SCENE_KEYS "")
+    set(PR_UIKIT_PLATFORM_KEYS "")
+    if (PR_IOS)
+        set(PR_UIKIT_DEVICE_FAMILIES "        <integer>1</integer>\n        <integer>2</integer>")
+        string(CONCAT PR_UIKIT_PLATFORM_KEYS
+            "    <key>LSRequiresIPhoneOS</key>\n    <true/>\n"
+            "    <key>UILaunchScreen</key>\n    <dict/>\n"
+            "    <key>UISupportedInterfaceOrientations</key>\n    <array>\n"
+            "        <string>UIInterfaceOrientationPortrait</string>\n"
+            "        <string>UIInterfaceOrientationPortraitUpsideDown</string>\n"
+            "        <string>UIInterfaceOrientationLandscapeLeft</string>\n"
+            "        <string>UIInterfaceOrientationLandscapeRight</string>\n    </array>\n"
+            "    <key>CADisableMinimumFrameDurationOnPhone</key>\n    <true/>")
+    elseif (PR_TVOS)
+        set(PR_UIKIT_DEVICE_FAMILIES "        <integer>3</integer>")
+    else()
+        # visionOS opens the application in a window, rather than in a space of its own.
+        set(PR_UIKIT_DEVICE_FAMILIES "        <integer>7</integer>")
+        string(CONCAT PR_UIKIT_SCENE_KEYS
+            "        <key>UIApplicationPreferredDefaultSceneSessionRole</key>\n"
+            "        <string>UIWindowSceneSessionRoleApplication</string>")
     endif()
     # The bundle's properties fill in the rest of the template when CMake writes the bundle.
     set(plist ${CMAKE_CURRENT_BINARY_DIR}/${target}_info.plist.in)
-    configure_file(${PROJECT_SOURCE_DIR}/cmake/ios_info.plist.in ${plist} @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/cmake/uikit_info.plist.in ${plist} @ONLY)
     set_target_properties(${target} PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_GUI_IDENTIFIER org.prax.${target}

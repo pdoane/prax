@@ -17,8 +17,9 @@ endif()
 #
 # The example reads the font bundles' files from PR_FONT_BUNDLE_DIR, and each DATA path, a file or a directory, from
 # its macro. On the web, the example is a page, <name>.html, which packages the files of FONT_BUNDLES, FONT_FILES and
-# DATA. On macOS, it is an application bundle, org.prax.<name>, which INFO_PLIST describes if it is given. On iOS, it is
-# an application bundle of the same identifier (pr_ios_bundle), which shows several scenes with MULTIPLE_SCENES.
+# DATA. On macOS, it is an application bundle, org.prax.<name>, which INFO_PLIST describes if it is given. On a UIKit
+# platform, it is an application bundle of the same identifier (pr_uikit_bundle), which shows several scenes with
+# MULTIPLE_SCENES.
 function(pr_example name)
     cmake_parse_arguments(PARSE_ARGV 1 arg "MULTIPLE_SCENES" "INFO_PLIST" "FONT_BUNDLES;FONT_FILES;DATA")
     add_executable(${name} ${arg_UNPARSED_ARGUMENTS})
@@ -54,10 +55,10 @@ function(pr_example name)
             target_compile_definitions(${name} PRIVATE ${macro}="${path}")
         endif()
     endwhile()
-    if (PR_IOS AND arg_MULTIPLE_SCENES)
-        pr_ios_bundle(${name} MULTIPLE_SCENES)
-    elseif (PR_IOS)
-        pr_ios_bundle(${name})
+    if (PR_UIKIT AND arg_MULTIPLE_SCENES)
+        pr_uikit_bundle(${name} MULTIPLE_SCENES)
+    elseif (PR_UIKIT)
+        pr_uikit_bundle(${name})
     elseif (APPLE)
         set_target_properties(${name} PROPERTIES MACOSX_BUNDLE TRUE MACOSX_BUNDLE_GUI_IDENTIFIER org.prax.${name})
         if (arg_INFO_PLIST)

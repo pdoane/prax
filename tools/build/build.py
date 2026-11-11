@@ -4,8 +4,9 @@ The default build is optimized, with debug symbols and without link-time optimiz
 except the benchmarks, which read their numbers from Release. Debug keeps the assertions. The sanitizer builds are
 Debug as well. One catches reads past the end of a buffer that the others let through, and the other catches races
 between threads. The WebAssembly build compiles with Emscripten (emsdk.py), runs on one thread, and runs its tests under
-Node.js. The iOS build is the default cross-compiled for iOS devices with Xcode's iOS SDK, on macOS, and only builds.
-Each of the two has a Debug form beside it, which keeps the assertions.
+Node.js. The builds for UIKit's platforms, iOS, tvOS and visionOS, are the default cross-compiled with Xcode's SDKs, on
+macOS: for a platform's devices, which only builds, or for its simulator, whose programs run on a simulator device. Each
+of these cross-compiled builds has a Debug form beside it, which keeps the assertions.
 
 Each build has a lean form, in a directory of its own, for a machine that only tests, as ./dev.sh ci and CI's runners
 do: PR_LEAN, which builds the tests and fetches only what they read (cmake/lean.cmake). It compiles through ccache where
@@ -35,11 +36,7 @@ ASAN = os.path.join(dev.ROOT, "build-asan")
 TSAN = os.path.join(dev.ROOT, "build-tsan")
 WASM = os.path.join(dev.ROOT, "build-wasm")
 WASM_DEBUG = os.path.join(dev.ROOT, "build-wasm-debug")
-IOS = os.path.join(dev.ROOT, "build-ios")
-IOS_DEBUG = os.path.join(dev.ROOT, "build-ios-debug")
-IOS_SIMULATOR = os.path.join(dev.ROOT, "build-ios-sim")
-IOS_SIMULATOR_DEBUG = os.path.join(dev.ROOT, "build-ios-sim-debug")
-# What runs the simulator build's programs, as its tests run them (pr_write_tests).
+# What runs the simulator builds' programs, as their tests run them (pr_write_tests).
 SIMULATOR_RUNNER = os.path.join(dev.ROOT, "tools", "build", "simulator.py")
 # The base of an A/B comparison: its sources, its builds, and its harnesses by commit (ab.py).
 AB = os.path.join(dev.ROOT, "build-ab")
@@ -55,13 +52,31 @@ THREAD_SANITIZE = None if dev.WINDOWS else "-fsanitize=thread -fno-omit-frame-po
 ASAN_SLOWDOWN = 4
 
 
+class UikitPlatform:
+    """A platform whose applications are UIKit's: its name in CMake (CMAKE_SYSTEM_NAME) and in Xcode's downloads, and
+    the SDKs of its devices and of its simulator."""
+
+    def __init__(self, system, sdk, simulator_sdk):
+        self.system = system
+        self.sdk = sdk
+        self.simulator_sdk = simulator_sdk
+
+
+UIKIT_PLATFORMS = {
+    "ios": UikitPlatform("iOS", "iphoneos", "iphonesimulator"),
+    "tvos": UikitPlatform("tvOS", "appletvos", "appletvsimulator"),
+    "visionos": UikitPlatform("visionOS", "xros", "xrsimulator"),
+}
+
+
 class Mode:
     """A build: its directory, its CMake build type, its compiler and linker flags, how many times longer its
-    harnesses take than the default build's, whether it compiles to WebAssembly, for iOS devices, or for the iOS
-    simulator, whose programs run on a simulator device (tools/build/simulator.py), the cache entries that it sets
-    beyond the development build's, by name, and whether it compiles through a compiler cache where one is installed."""
+    harnesses take than the default build's, whether it compiles to WebAssembly or for the UIKit platform that
+    `platform` names, for its devices or for its simulator, whose programs run on a simulator device
+    (tools/build/simulator.py), the cache entries that it sets beyond the development build's, by name, and whether it
+    compiles through a compiler cache where one is installed."""
 
-    def __init__(self, name, directory, build_type, flags="", slowdown=1, wasm=False, ios=False, simulator=False,
+    def __init__(self, name, directory, build_type, flags="", slowdown=1, wasm=False, platform=None, simulator=False,
                  cache=None, compiler_cache=False):
         self.name = name
         self.directory = directory
@@ -69,7 +84,8 @@ class Mode:
         self.flags = flags
         self.slowdown = slowdown
         self.wasm = wasm
-        self.ios = ios or simulator
+        self.platform = platform
+        self.uikit = platform is not None
         self.simulator = simulator
         self.cache = cache or {}
         self.compiler_cache = compiler_cache
@@ -77,7 +93,7 @@ class Mode:
     def lean(self):
         """Returns the lean form of the build, in the build's directory with -lean after it."""
         return Mode(self.name + " lean", self.directory + "-lean", self.build_type, self.flags, self.slowdown,
-                    self.wasm, self.ios, self.simulator, dict(self.cache, PR_LEAN="ON"), True)
+                    self.wasm, self.platform, self.simulator, dict(self.cache, PR_LEAN="ON"), True)
 
     def cache_entries(self):
         """The cache entries that the build sets beyond the development build's: its own, and ccache as the compilers'
@@ -103,18 +119,31 @@ MODES = {
     "tsan": Mode("tsan", TSAN, "Debug", THREAD_SANITIZE),
     "wasm": Mode("wasm", WASM, "RelWithDebInfo", wasm=True),
     "wasm-debug": Mode("wasm-debug", WASM_DEBUG, "Debug", wasm=True),
-    "ios": Mode("ios", IOS, "RelWithDebInfo", ios=True),
-    "ios-debug": Mode("ios-debug", IOS_DEBUG, "Debug", ios=True),
-    "ios-sim": Mode("ios-sim", IOS_SIMULATOR, "RelWithDebInfo", simulator=True),
-    "ios-sim-debug": Mode("ios-sim-debug", IOS_SIMULATOR_DEBUG, "Debug", simulator=True),
 }
+
+
+def uikit_modes():
+    """Returns each UIKit platform's builds by name, as for iOS: ios in build-ios for its devices and ios-sim in
+    build-ios-sim for its simulator, each with a Debug form beside it, as ios-debug in build-ios-debug."""
+    found = {}
+    for platform in UIKIT_PLATFORMS:
+        for target, simulator in ((platform, False), (platform + "-sim", True)):
+            for suffix, build_type in (("", "RelWithDebInfo"), ("-debug", "Debug")):
+                found[target + suffix] = Mode(target + suffix, os.path.join(dev.ROOT, "build-" + target + suffix),
+                                              build_type, platform=platform, simulator=simulator)
+    return found
+
+
+MODES.update(uikit_modes())
 
 
 # The configurations of a build, as the commands name them, and the platforms that it compiles for. The host's platform
 # is the default's. The others cross-compile, in the default and debug configurations.
 CONFIGURATIONS = ("default", "debug", "release", "asan", "tsan")
-PLATFORMS = ("macos", "windows", "linux", "wasm", "ios", "ios-sim")
-CROSS_PLATFORMS = ("wasm", "ios", "ios-sim")
+# A UIKit platform's devices are named for the platform, as ios, and its simulator after it, as ios-sim.
+SIMULATOR_PLATFORMS = tuple(name + "-sim" for name in UIKIT_PLATFORMS)
+CROSS_PLATFORMS = ("wasm", *UIKIT_PLATFORMS, *SIMULATOR_PLATFORMS)
+PLATFORMS = ("macos", "windows", "linux", *CROSS_PLATFORMS)
 
 
 def host_platform():
@@ -152,16 +181,19 @@ def mode(name, lean=False):
         found = found.lean()
     if found.flags is None:
         dev.fail("MSVC has no thread sanitizer")
-    if found.ios and not dev.darwin():
-        dev.fail("the iOS build needs macOS and Xcode")
+    if found.uikit and not dev.darwin():
+        dev.fail("the %s build needs macOS and Xcode" % UIKIT_PLATFORMS[found.platform].system)
     return found
 
 
-def ios_sdk(sdk="iphoneos"):
-    """Fails unless Xcode has the iOS SDK `sdk`, which the iOS build compiles against: iphoneos for devices, or
-    iphonesimulator for the simulator."""
+def uikit_sdk(platform, simulator):
+    """Fails unless Xcode has the SDK that a UIKit platform's build compiles against, for its devices or for its
+    simulator."""
+    chosen = UIKIT_PLATFORMS[platform]
+    sdk = chosen.simulator_sdk if simulator else chosen.sdk
     if dev.output(["xcrun", "--sdk", sdk, "--show-sdk-path"], check=False) is None:
-        dev.fail("the iOS build needs Xcode's iOS SDK (xcodebuild -downloadPlatform iOS)")
+        dev.fail("the %s build needs Xcode's %s SDK (xcodebuild -downloadPlatform %s)" %
+                 (chosen.system, sdk, chosen.system))
 
 
 # The file in a build directory that keeps what vcvars added to the environment, since vcvars takes a second to run.
@@ -265,24 +297,30 @@ def openssl_root():
     return dev.output(["brew", "--prefix", "openssl"], check=False)
 
 
-def configure(source, directory, build_type, flags="", out=None, wasm=False, ios=False, simulator=False,
+def simulator_runner(platform):
+    """Returns the command, as a CMake list, that runs a program of the build for the simulator of the UIKit platform
+    `platform` (CMAKE_CROSSCOMPILING_EMULATOR)."""
+    return "%s;%s;--platform;%s" % (sys.executable, SIMULATOR_RUNNER, platform)
+
+
+def configure(source, directory, build_type, flags="", out=None, wasm=False, platform=None, simulator=False,
               entries=None):
     """Configures the build of the sources in `source` into `directory`, of `build_type`, with the compiler and linker
-    flags `flags`, with Ninja, for the host or, with `wasm`, for WebAssembly, or with `ios`, for iOS devices, or with
-    `simulator` too, for the iOS simulator, and with the cache `entries` beyond the development build's, by name. CMake
-    writes to `out`, or to the standard output."""
+    flags `flags`, with Ninja, for the host or, with `wasm`, for WebAssembly, or with `platform`, for a UIKit platform's
+    devices, or with `simulator` too, for its simulator, and with the cache `entries` beyond the development build's, by
+    name. CMake writes to `out`, or to the standard output."""
     entries = entries or {}
     if wasm:
         emsdk.fetch()
         emsdk.environment()
-    elif ios:
-        ios_sdk("iphonesimulator" if simulator else "iphoneos")
+    elif platform:
+        uikit_sdk(platform, simulator)
     elif dev.WINDOWS:
         msvc_environment(directory)
     if not dev.has("ninja"):
         dev.fail("ninja is required (brew install ninja, or winget install Ninja-build.Ninja)")
     # lib/tls's OpenSSL backend builds where CMake finds OpenSSL: the system's, or Homebrew's on macOS.
-    openssl = None if wasm or ios else openssl_root()
+    openssl = None if wasm or platform else openssl_root()
     # The WebAssembly build allocates through the C library, until mimalloc is tried there.
     mimalloc = "OFF" if wasm else "ON"
 
@@ -298,11 +336,11 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False, ios
         if openssl:
             found.append("-DOPENSSL_ROOT_DIR=" + openssl)
         # The WebAssembly build's programs run under emsdk's Node.js, as the tests and their discovery run them.
-        # Emscripten's toolchain finds Node.js only on the path. The simulator build's run on a simulator device.
+        # Emscripten's toolchain finds Node.js only on the path. A simulator build's run on a simulator device.
         if wasm:
             found.append("-DCMAKE_CROSSCOMPILING_EMULATOR=" + emsdk.node())
         if simulator:
-            found.append("-DCMAKE_CROSSCOMPILING_EMULATOR=" + sys.executable + ";" + SIMULATOR_RUNNER)
+            found.append("-DCMAKE_CROSSCOMPILING_EMULATOR=" + simulator_runner(platform))
         found += ["-D%s=%s" % entry for entry in entries.items()]
         return found
 
@@ -320,10 +358,12 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False, ios
     if lines is None and wasm:
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
                  "-DCMAKE_TOOLCHAIN_FILE=" + emsdk.toolchain(), *options()], stdout=out, stderr=out)
-    elif lines is None and ios:
-        sysroot = ["-DCMAKE_OSX_SYSROOT=iphonesimulator", "-DCMAKE_OSX_ARCHITECTURES=arm64"] if simulator else []
+    elif lines is None and platform:
+        chosen = UIKIT_PLATFORMS[platform]
+        sysroot = chosen.simulator_sdk if simulator else chosen.sdk
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
-                 "-DCMAKE_SYSTEM_NAME=iOS", *sysroot, *options()], stdout=out, stderr=out)
+                 "-DCMAKE_SYSTEM_NAME=" + chosen.system, "-DCMAKE_OSX_SYSROOT=" + sysroot,
+                 "-DCMAKE_OSX_ARCHITECTURES=arm64", *options()], stdout=out, stderr=out)
     elif lines is None and dev.WINDOWS:
         # MSVC's default flags, such as /EHsc, stay, and the build's flags add to them. The linker takes none.
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
@@ -339,6 +379,7 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False, ios
           or "PR_PLATFORM_MIMALLOC:BOOL=" + mimalloc not in lines
           or "CMAKE_BUILD_TYPE:STRING=" + build_type not in lines
           or (wasm and not cached("CMAKE_CROSSCOMPILING_EMULATOR", emsdk.node()))
+          or (simulator and not cached("CMAKE_CROSSCOMPILING_EMULATOR", simulator_runner(platform)))
           or (openssl and not cached("OPENSSL_ROOT_DIR", openssl))
           or not all(cached(name, value) for name, value in entries.items())):
         dev.run(["cmake", "-S", source, "-B", directory, "-DCMAKE_BUILD_TYPE=" + build_type, *options()], stdout=out,
@@ -362,7 +403,7 @@ def build(name="default", targets=(), keep_going=False, lean=False, configure_on
         for example, names in EXAMPLE_CHECKOUTS.items():
             if not targets or example in targets:
                 checkouts.fetch(*names)
-    configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags, wasm=chosen.wasm, ios=chosen.ios,
+    configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags, wasm=chosen.wasm, platform=chosen.platform,
               simulator=chosen.simulator, entries=chosen.cache_entries())
     if configure_only:
         return chosen

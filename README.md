@@ -42,8 +42,8 @@ conformance. Benchmarks measure immediate-mode frames and dynamic retained docum
 
 ## Status
 
-Prax is approaching pre-alpha on macOS, iOS and Windows. The suites' scoreboards (`suites/*/scoreboard.md`) record what
-passes.
+Prax is approaching pre-alpha on macOS, iOS, tvOS, visionOS and Windows. The suites' scoreboards
+(`suites/*/scoreboard.md`) record what passes.
 
 Coming soon:
 
@@ -57,9 +57,9 @@ Coming soon:
 ## Usage
 
 Prax builds with CMake 3.28 or newer, a C17 and C++20 compiler (MSVC on Windows), and Git. It targets arm64, and x86-64
-with x86-64-v3 (AVX2). It runs on macOS 26 or newer on Apple Silicon, on iOS 26 or newer, and on Windows 10 version 1809
-or newer; configuring a build for anything older fails. The build fetches its dependencies at pinned releases and checks
-each against its hash (`cmake/dependencies.cmake`). To use your own copy of a dependency, set
+with x86-64-v3 (AVX2). It runs on macOS 26 or newer on Apple Silicon, on iOS, tvOS and visionOS 26 or newer, and on
+Windows 10 version 1809 or newer; configuring a build for anything older fails. The build fetches its dependencies at
+pinned releases and checks each against its hash (`cmake/dependencies.cmake`). To use your own copy of a dependency, set
 `FETCHCONTENT_SOURCE_DIR_<NAME>` to its source directory.
 
 - Each library is a CMake target named for its module (`prax::draw`, `prax::layout`), or for its module and language
@@ -118,7 +118,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | interface | option | backend | builds on | default |
 | --- | --- | --- | --- | --- |
 | app | `PR_APP_APPKIT` | AppKit | macOS | on |
-| app | `PR_APP_UIKIT` | UIKit | iOS | on |
+| app | `PR_APP_UIKIT` | UIKit | iOS, tvOS and visionOS | on |
 | app | `PR_APP_WIN32` | Win32 | Windows | on |
 | app | `PR_APP_WEB` | a web page's canvas | the web | on |
 | audio | `PR_AUDIO_MEMORY` | output kept in memory, for a run without a device | every platform | on |
@@ -139,7 +139,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | gpu | `PR_GPU_METAL` | Metal 3 | macOS | on |
 | gpu | `PR_GPU_METAL4` | Metal 4, for experiments | macOS | on |
 | gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
-| gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web and iOS | on for Linux and Android |
+| gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web and UIKit's | on for Linux and Android |
 | gpu | `PR_GPU_MEMORY` | memory, without shaders or presentation | every platform | on |
 | gpu | `PR_GPU_CANVAS2D` | memory and a web page's canvases, without shaders | the web | on |
 | http | `PR_HTTP_BUILTIN` | HTTP/1.1 over `lib/net` and `lib/tls` | every platform | on |

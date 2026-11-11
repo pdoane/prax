@@ -56,11 +56,11 @@ def python(module, *args, cwd=ROOT, env=None, check=True):
     return run([sys.executable, "-m", module, *args], cwd=cwd, env=env, check=check)
 
 
-def executable(directory, name, wasm=False, ios=False):
+def executable(directory, name, wasm=False, uikit=False):
     """Returns the path of the program `name` in `directory`, with the platform's extension, or the extension of
     Emscripten's script that loads a WebAssembly program. On macOS, a program built as an application bundle runs from
-    inside the bundle, and an iOS bundle holds its program at its top."""
-    if ios:
+    inside the bundle, and the bundle of a UIKit platform, as iOS, holds its program at its top."""
+    if uikit:
         return os.path.join(directory, name + ".app", name)
     if not wasm and darwin():
         bundled = os.path.join(directory, name + ".app", "Contents", "MacOS", name)

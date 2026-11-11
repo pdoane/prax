@@ -484,18 +484,26 @@ PrAppDisplay displayOf(NSView* view) {
 
 #else
 
-// Returns the capabilities of the screen of the view's scene, or SDR until the view is in a window. It reads UIKit, so
-// it must be called on the main thread.
+// Returns the capabilities of the screen of the view's scene, or SDR until the view is in a window, and always on a
+// television, whose layers show no extended range, and on visionOS, which has no screens. It reads UIKit, so it must be
+// called on the main thread.
 PrAppDisplay displayOf(UIView* view) {
     PrAppDisplay display = prAppDisplayDefault();
+#if TARGET_OS_VISION
+    if (view.window != nil)
+        display.pixelRatio = float(view.traitCollection.displayScale);
+#else
     UIScreen* screen = view.window.windowScene.screen;
     if (screen != nil) {
         display.pixelRatio = float(view.traitCollection.displayScale);
+#if !TARGET_OS_TV
         display.headroom = MAX(float(screen.currentEDRHeadroom), 1.0f);
         display.potentialHeadroom = MAX(float(screen.potentialEDRHeadroom), display.headroom);
+#endif
         if (view.traitCollection.displayGamut == UIDisplayGamutP3)
             display.gamut = PrColorSpace_DisplayP3;
     }
+#endif
     return display;
 }
 
@@ -508,7 +516,9 @@ void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
     CGColorSpaceRef space = CGColorSpaceCreateWithName(extended ? kCGColorSpaceExtendedSRGB : kCGColorSpaceSRGB);
     layer.colorspace = space;
     CGColorSpaceRelease(space);
+#if !TARGET_OS_TV
     layer.wantsExtendedDynamicRangeContent = extended ? YES : NO;
+#endif
 }
 
 #if TARGET_OS_OSX

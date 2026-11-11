@@ -7,6 +7,9 @@
 
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
+// tvOS has no clipboard and no document picker.
+#if !TARGET_OS_TV
+
 // A document picker that waits for the user's choice, and the request that the choice answers. The host keeps it among
 // its presented dialogs until then.
 @interface PrUiKitPicker : NSObject <UIDocumentPickerDelegate>
@@ -16,9 +19,13 @@
 @property(nonatomic, weak) UIViewController* controller;
 @end
 
+#endif
+
 namespace pr_impl {
 
 namespace {
+
+#if !TARGET_OS_TV
 
 // Returns the straight-alpha sRGB Rgba8 rows of `image`, with the extent in `extent`, or nil.
 NSMutableData* PR_NULLABLE pixelsOf(UIImage* PR_NULLABLE image, PrUVec2* extent) {
@@ -50,6 +57,10 @@ NSMutableData* PR_NULLABLE pixelsOf(UIImage* PR_NULLABLE image, PrUVec2* extent)
     return pixels;
 }
 
+#endif
+
+#if !TARGET_OS_TV
+
 // Returns a PNG of straight-alpha sRGB Rgba8 `image`, or nil.
 NSData* PR_NULLABLE pngOf(PrPixelView image) {
     NSMutableData* rows = [NSMutableData dataWithLength:size_t(image.extent.x) * image.extent.y * 4];
@@ -71,9 +82,15 @@ NSData* PR_NULLABLE pngOf(PrPixelView image) {
     return png;
 }
 
+#endif
+
 // Reads the general pasteboard into `out`: the forms that it holds for a read of the forms, which reads no content and
 // so asks the user nothing, or else the content of the form that `kind` reads.
 void readPasteboard(AppDataAnswer kind, AppDataStore& out) {
+#if TARGET_OS_TV
+    (void)kind;
+    (void)out;
+#else
     UIPasteboard* board = UIPasteboard.generalPasteboard;
     if (kind == PrAppDataReadKind_Forms) {
         if (board.hasStrings)
@@ -117,6 +134,7 @@ void readPasteboard(AppDataAnswer kind, AppDataStore& out) {
             });
         }
     }
+#endif
 }
 
 // Answers the request `id` of content from the main queue: from the general pasteboard, or from a source's store.
@@ -169,6 +187,8 @@ void readFile(PrApp* app, uint32_t id, PrAppDataSource source, uint32_t index, u
     });
 }
 
+#if !TARGET_OS_TV
+
 // Returns the content types of a dialog's file types, or any item if it names none.
 NSArray<UTType*>* contentTypesOf(const PrAppFileDialogDesc& desc) {
     NSMutableArray<UTType*>* types = [NSMutableArray array];
@@ -206,6 +226,8 @@ void dismissCanceled(PrUiKitHost* host) {
         [host.presented removeObject:picker];
     }
 }
+
+#endif
 
 } // namespace
 
@@ -256,6 +278,11 @@ void uiKitDataRead(PrApp* app, const PrAppDataRead* read) {
 
 // Writes the text, HTML, first URL and image of `content` to the general pasteboard, as one item.
 PrStatus uiKitDataWrite(PrApp*, PrAppDataSource source, const PrAppDataContent* content) {
+#if TARGET_OS_TV
+    (void)source;
+    (void)content;
+    return PrStatus_NotSupported;
+#else
     if (source != kPrAppDataSourceClipboard)
         return PrStatus_NotSupported;
     NSMutableDictionary<NSString*, id>* item = [NSMutableDictionary dictionary];
@@ -273,6 +300,7 @@ PrStatus uiKitDataWrite(PrApp*, PrAppDataSource source, const PrAppDataContent* 
     }
     UIPasteboard.generalPasteboard.items = item.count != 0 ? @[ item ] : @[];
     return PrStatus_Ok;
+#endif
 }
 
 // Writes a file's bytes on a queue of its own, and answers from the main queue. A write at offset zero empties the file
@@ -303,6 +331,11 @@ void uiKitFileDialog(PrApp* app, const PrAppFileDialogDesc* desc, PrAppFileDialo
     PrUiKitHost* host = uiKitHostOf(app);
     uint32_t id = appDataRequestsAdd(static_cast<UiKitApp*>(app)->requests, kPrAppDataSourceNone, AppDataAnswer_Source,
         (void (*)(void))done, context);
+#if TARGET_OS_TV
+    (void)host;
+    (void)desc;
+    uiKitAnswerSoon(app, uiKitAnswerOf(UiKitAnswerKind_Source, id, PrStatus_NotSupported));
+#else
     UIViewController* presenter = host.headless ? nil : presenterOf(host, desc->parent);
     if (presenter == nil || desc->kind != PrAppFileDialogKind_Open) {
         uiKitAnswerSoon(app, uiKitAnswerOf(UiKitAnswerKind_Source, id, PrStatus_NotSupported));
@@ -323,10 +356,12 @@ void uiKitFileDialog(PrApp* app, const PrAppFileDialogDesc* desc, PrAppFileDialo
     controller.delegate = picker;
     [host.presented addObject:picker];
     [presenter presentViewController:controller animated:YES completion:nil];
+#endif
 }
 
 void uiKitDataCancel(PrApp* app, void* PR_NULLABLE context) {
     appDataRequestsCancel(static_cast<UiKitApp*>(app)->requests, context);
+#if !TARGET_OS_TV
     // A dialog closes on the main thread, which alone holds the dialogs.
     PrUiKitHost* host = uiKitHostOf(app);
     if (NSThread.isMainThread) {
@@ -338,6 +373,7 @@ void uiKitDataCancel(PrApp* app, void* PR_NULLABLE context) {
         if (PrUiKitHost* main = weak; main != nil && main.app != nullptr)
             dismissCanceled(main);
     });
+#endif
 }
 
 // Shows the system's share sheet, which answers once the user picks a service or dismisses it.
@@ -346,6 +382,12 @@ void uiKitShare(PrAppWindow* window, const PrAppDataContent* content, PrRect anc
     PrApp* app = static_cast<UiKitWindow*>(window)->app;
     uint32_t id = appDataRequestsAdd(static_cast<UiKitApp*>(app)->requests, kPrAppDataSourceNone, AppDataAnswer_Status,
         (void (*)(void))done, context);
+#if TARGET_OS_TV
+    // A television has no share sheet.
+    (void)content;
+    (void)anchor;
+    uiKitAnswerSoon(app, uiKitAnswerOf(UiKitAnswerKind_Status, id, PrStatus_NotSupported));
+#else
     NSMutableArray* items = [NSMutableArray array];
     if ((content->forms & PrAppDataFormFlag_Text) != 0)
         [items addObject:uiKitStringOf(content->text)];
@@ -379,11 +421,14 @@ void uiKitShare(PrAppWindow* window, const PrAppDataContent* content, PrRect anc
     sheet.popoverPresentationController.sourceRect = CGRectMake(CGFloat(anchor.left), CGFloat(anchor.top),
         CGFloat(anchor.right - anchor.left), CGFloat(anchor.bottom - anchor.top));
     [object.controller presentViewController:sheet animated:YES completion:nil];
+#endif
 }
 
 } // namespace pr_impl
 
 using namespace pr_impl;
+
+#if !TARGET_OS_TV
 
 @implementation PrUiKitPicker
 // Answers with a source of the picked files' paths, or with None if the user canceled.
@@ -415,3 +460,5 @@ using namespace pr_impl;
     [self answer:nil];
 }
 @end
+
+#endif

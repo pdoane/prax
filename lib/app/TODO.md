@@ -11,10 +11,12 @@ drive menus, gestures, sheets, drags or the system's notices.
 
 Every slot is implemented, and each page of app_features has been checked by hand.
 
-## iOS
+## UIKit: iOS, tvOS and visionOS
 
-The backend runs in the simulator (`./dev.sh example ios-sim draw_gallery`, and app_features on an iPad simulator for
-several windows). It has never run on a device. Everything below the first item is written and built, and has been
+The backend runs in the simulators (`./dev.sh example ios-sim draw_gallery`, and the same with tvos-sim and
+visionos-sim, and app_features on an iPad simulator for several windows). It has never run on a device. tvOS renders,
+and its remote, its focus and game controllers wait for lib/app's gamepads. visionOS shows windows, and its immersive
+rendering is to come. Everything below the first item is written and built, and has been
 seen only as far as a screenshot shows it.
 
 - [ ] Check by hand on a device: touches, the Pencil, the hover and scroll of a trackpad, hardware keys, the on-screen
@@ -80,7 +82,10 @@ These slots stay null, and need no work:
 - On macOS, `setIconFn`, because the system shows only the application's icon, and `textScale`, which stays 1 because
   macOS has no system-wide text size.
 - On Windows, `setDocumentFn`, because the system shows no document in a title bar.
-- On iOS, the window's extent, position, state, opacity, backdrop, keep-above, passthrough, pointer mode, icon,
-  progress and document, which the system decides or has no place for, the menu bar, status items, global hotkeys,
-  presence, hiding, the quit request, the trash, the file manager, recent documents and key labels, which the system
-  does not have, and `PrAppKey_GoBack`, which no iOS key sends.
+- On UIKit's platforms, the window's extent, position, state, opacity, backdrop, keep-above, passthrough, pointer
+  mode, icon, progress and document, which the system decides or has no place for, the menu bar, status items, global
+  hotkeys, presence, hiding, the quit request, the trash, the file manager, recent documents and key labels, which the
+  system does not have, and `PrAppKey_GoBack`, which no iOS key sends. tvOS has no clipboard, document picker, share
+  sheet, drops, pointer, gestures, keyboard frame, orientations, haptics, motion sensors, battery, extended range or
+  notifications but the badge. visionOS has no displays, so no display list, positions or extended range, and no
+  haptics, magnetometer or keyboard frame.
