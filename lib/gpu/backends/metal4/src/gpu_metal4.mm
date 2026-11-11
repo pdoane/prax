@@ -679,7 +679,7 @@ void passDrawIndexedIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t off
 // On macOS 27, the compositor skips each present with the transaction of a drawable that an MTL4 queue signalled,
 // except during a live resize. A frame presents with the transaction only there, which is where it keeps the drawable
 // in step with the window's size.
-PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuSwapChainFrame* out) {
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     if (sc->transactional && sc->layer.presentsWithTransaction != sc->view.inLiveResize)
         sc->layer.presentsWithTransaction = sc->view.inLiveResize;

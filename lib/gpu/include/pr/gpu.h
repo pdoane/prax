@@ -1162,11 +1162,31 @@ PrGpuSwapChainInfo prGpuSwapChainInfo(const PrGpuSwapChain* swapChain);
 // only to acquire a texture, such as Metal, this returns at once.
 void prGpuSwapChainWait(PrGpuSwapChain* swapChain);
 
-// Acquires the texture that the next frame draws to, at `extent` in target pixels. The texture is a render target that
-// may be copied from, in the accesses of Discard until the frame draws to it. Returns InvalidState if the surface
-// cannot provide a texture now, such as while its window is hidden or the extent is empty, Limit for an extent larger
-// than the device allows, and Lost if the device is lost. On failure, `*out` is zero.
-PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out);
+// The most views that a frame has.
+enum { kPrGpuMaxViews = 4 };
+
+// What one view of a frame draws to: a viewport, in target pixels, of a layer of the frame's textures.
+typedef struct PrGpuView {
+    PrIRect viewport;
+    uint16_t layer;
+} PrGpuView;
+
+// The textures that a frame draws to, and its views. `color` is a render target that may be copied from. `depth` is the
+// depth that the surface takes with the frame, or zero for a surface that takes none, as a window does. A window's
+// frame has one view, the whole of the only layer of its texture. An immersive surface's frame has a view for each eye.
+typedef struct PrGpuSwapChainFrame {
+    PrGpuTexture color;
+    PrGpuTexture depth;
+    uint8_t viewCount;
+    PrGpuView views[kPrGpuMaxViews];
+} PrGpuSwapChainFrame;
+
+// Acquires the frame that the application draws next, at `extent` in target pixels, for a surface whose extent the
+// application chooses, as a window's. The frame's textures are in the accesses of Discard until the frame draws to
+// them. Returns InvalidState if the surface cannot provide a frame now, such as while its window is hidden or the
+// extent is empty, Limit for an extent larger than the device allows, and Lost if the device is lost. On failure,
+// `*out` is zero.
+PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out);
 
 // Presents the acquired texture once `commands` are done. The texture must be in the accesses of
 // PrGpuAccessFlag_Present by the end of the commands. The application submits `commands` after this call, and does not

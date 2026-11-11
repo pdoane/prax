@@ -2976,7 +2976,7 @@ void swapChainWait(PrGpuSwapChain* handle) {
     sc->waited = true;
 }
 
-PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuSwapChainFrame* out) {
     PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(handle)->device;
     D3d12Device* d = d3d12Of(device);
     D3d12SwapChain* sc = static_cast<D3d12SwapChain*>(handle);
@@ -3010,7 +3010,7 @@ PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* 
     uint32_t slot = sc->buffers[sc->swapChain->GetCurrentBackBufferIndex()];
     d->resources[slot].texture.extent = PrGpuExtent{extent.x, extent.y, 1};
     sc->current = PrGpuTexture{slot};
-    *out = sc->current;
+    out->color = sc->current;
     return PrStatus_Ok;
 }
 

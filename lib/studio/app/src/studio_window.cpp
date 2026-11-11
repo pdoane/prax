@@ -114,9 +114,9 @@ PrGpuTexture renderedFor(StudioAppState* app, StudioWindowTarget& target, PrUVec
 void render(StudioAppState* studio, StudioWindowTarget& target, PrDrawList* list, PrUVec2 extent, PrColor canvas,
         const PrAppDisplay& display) {
     PrGpuDevice* device = studio->device;
-    PrGpuTexture drawable{};
+    PrGpuSwapChainFrame frame{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(target.swapChain, extent, &drawable) != PrStatus_Ok ||
+    if (prGpuSwapChainAcquire(target.swapChain, extent, &frame) != PrStatus_Ok ||
             !prGpuCommandsBegin(device, nullptr, &commands))
         return;
     PrPixelFormat direct = PrPixelFormat_Bgra8;
@@ -131,7 +131,7 @@ void render(StudioAppState* studio, StudioWindowTarget& target, PrDrawList* list
         prGpuTextureDestroy(device, target.rendered);
         target.rendered = PrGpuTexture{};
     }
-    PrGpuTexture into = mapped ? renderedFor(studio, target, extent) : drawable;
+    PrGpuTexture into = mapped ? renderedFor(studio, target, extent) : frame.color;
     PrPixelFormat format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : direct);
     PrDrawTarget drawn{.extent = extent, .format = format, .commands = commands};
     prDrawFramePrepare(target.frame, list, &drawn);
@@ -146,15 +146,16 @@ void render(StudioAppState* studio, StudioWindowTarget& target, PrDrawList* list
     prGpuPassEnd(encoder);
     if (mapped) {
         prGpuCommandsTextureBarrier(commands, into, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_FragmentRead);
-        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
+        prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_Discard,
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuSwapChainInfo info = prGpuSwapChainInfo(target.swapChain);
-        PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Discard, PrColor{});
+        PrGpuPassDesc shown = prGpuPassDescColor(frame.color, PrGpuLoad_Discard, PrColor{});
         encoder = prGpuPassBegin(commands, &shown);
         PrDrawDisplayDesc mapping{.target = info.space, .headroom = display.headroom, .gamut = display.gamut};
         prDrawDisplayDraw(studio->display, encoder, into, &mapping);
         prGpuPassEnd(encoder);
     }
-    prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
+    prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
     prGpuSwapChainPresent(target.swapChain, commands);
     prGpuCommandsSubmit(commands);
 }

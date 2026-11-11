@@ -126,7 +126,7 @@ void swapChainDestroy(PrGpuSwapChain* swapChain) {
 // The page paces its frames with its animation frames, so the swap chain has nothing to wait for.
 void swapChainWait(PrGpuSwapChain*) {}
 
-PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out) {
     SwapChain* s = static_cast<SwapChain*>(swapChain);
     PrGpuDevice* device = s->device;
     if (s->texture.id != 0) {
@@ -152,7 +152,7 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
         }
         gpuMemoryAdoptMirror(device, s->texture, canvas);
     }
-    *out = s->texture;
+    out->color = s->texture;
     return PrStatus_Ok;
 }
 

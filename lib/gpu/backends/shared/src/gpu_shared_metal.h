@@ -378,7 +378,7 @@ void* gpuMetalStream(GpuMetalDevice* d, GpuMetalCommands* c, uint64_t size, uint
 void gpuMetalRenderPipelineSet(const GpuMetalPipeline& p, id encoder);
 
 // Acquires a swap chain's next drawable, at `extent`.
-PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out);
+PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuSwapChainFrame* out);
 
 // Runs what a submission's completion does: reports an error, calls `dones` and frees them, and raises the device's
 // count of fences done. Called once for each fence, in any order.

@@ -360,8 +360,9 @@ TEST_CASE("vulkan presents frames to a window's swap chain, and resizes it") {
     for (PrUVec2 extent : extents) {
         SetWindowPos(window, nullptr, 0, 0, int(extent.x), int(extent.y), SWP_NOMOVE | SWP_NOZORDER);
         prGpuSwapChainWait(swapChain);
-        PrGpuTexture texture{};
-        REQUIRE(prGpuSwapChainAcquire(swapChain, extent, &texture) == PrStatus_Ok);
+        PrGpuSwapChainFrame frame{};
+        REQUIRE(prGpuSwapChainAcquire(swapChain, extent, &frame) == PrStatus_Ok);
+        PrGpuTexture texture = frame.color;
         CHECK(prGpuTextureExtent(f.device, texture).x == extent.x);
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));

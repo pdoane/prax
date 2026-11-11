@@ -1050,8 +1050,8 @@ void prGpuSwapChainWait(PrGpuSwapChain* swapChain) {
     swapChain->waitFn(swapChain);
 }
 
-PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
-    *out = PrGpuTexture{};
+PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out) {
+    *out = PrGpuSwapChainFrame{};
     PrGpuDevice* device = swapChain->deviceFn(swapChain);
     if (device->isLostFn(device))
         return PrStatus_Lost;
@@ -1059,7 +1059,13 @@ PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuT
         return PrStatus_InvalidState;
     if (extent.x > device->infoFn(device).maxTextureSize || extent.y > device->infoFn(device).maxTextureSize)
         return PrStatus_Limit;
-    return swapChain->acquireFn(swapChain, extent, out);
+    // A window's frame: one view of the whole extent.
+    out->viewCount = 1;
+    out->views[0].viewport = PrIRect{0, 0, int32_t(extent.x), int32_t(extent.y)};
+    PrStatus status = swapChain->acquireFn(swapChain, extent, out);
+    if (status != PrStatus_Ok)
+        *out = PrGpuSwapChainFrame{};
+    return status;
 }
 
 void prGpuSwapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands) {

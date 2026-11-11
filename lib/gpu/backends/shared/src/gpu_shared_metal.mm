@@ -984,7 +984,7 @@ void gpuMetalRenderPipelineSet(const GpuMetalPipeline& p, id encoder) {
     [encoder setDepthBias:p.depthBias slopeScale:p.depthBiasSlope clamp:p.depthBiasClamp];
 }
 
-PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuSwapChainFrame* out) {
     GpuMetalDevice* d = gpuMetalDeviceFrom(static_cast<GpuSharedSwapChain*>(handle)->device);
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     @autoreleasepool {
@@ -1023,7 +1023,7 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
         };
         sc->drawable = [drawable retain];
         sc->texture = PrGpuTexture{slot};
-        *out = sc->texture;
+        out->color = sc->texture;
         return PrStatus_Ok;
     }
 }

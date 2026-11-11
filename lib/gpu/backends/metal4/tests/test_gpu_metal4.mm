@@ -120,8 +120,9 @@ struct AppMetal {
 
 // Clears the swap chain's next drawable and presents it.
 PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
-    PrGpuTexture texture{};
-    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &texture) == PrStatus_Ok);
+    PrGpuSwapChainFrame frame{};
+    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &frame) == PrStatus_Ok);
+    PrGpuTexture texture = frame.color;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
     prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_Discard,

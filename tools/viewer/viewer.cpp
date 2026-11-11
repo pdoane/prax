@@ -1379,9 +1379,10 @@ PrAppOutput frame(void* context, PrAppWindow* window, const PrAppFrame* frame) {
     prGpuCommandsOnDone(commands, frameDone, &v);
 
     // The drawable waits on the display, which paces the frames.
-    PrGpuTexture drawable{};
-    PrStatus acquired = prGpuSwapChainAcquire(v.swapChain, PrUVec2{width, height}, &drawable);
+    PrGpuSwapChainFrame swapFrame{};
+    PrStatus acquired = prGpuSwapChainAcquire(v.swapChain, PrUVec2{width, height}, &swapFrame);
     if (acquired == PrStatus_Ok) {
+        PrGpuTexture drawable = swapFrame.color;
         PrGpuSwapChainInfo info = prGpuSwapChainInfo(v.swapChain);
         prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
         // A swap chain of 8-bit sRGB takes the frame as it is. Any other maps it to the display.

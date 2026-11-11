@@ -251,7 +251,7 @@ void swapChainWait(PrGpuSwapChain* swapChain) {
     s->waited = true;
 }
 
-PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out) {
     PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(swapChain)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanSwapChain* s = swapChainOf(swapChain);
@@ -277,7 +277,7 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
             return d->lost.load() ? PrStatus_Lost : PrStatus_InvalidState;
         }
         s->current = image;
-        *out = PrGpuTexture{s->images.data[image].slot};
+        out->color = PrGpuTexture{s->images.data[image].slot};
         return PrStatus_Ok;
     }
     return PrStatus_InvalidState;

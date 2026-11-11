@@ -109,13 +109,14 @@ struct PrGpuPass {
 };
 
 // The functions of a swap chain's backend, at the start of its state. Each implements the function of pr/gpu.h that it
-// is named for.
+// is named for. pr/gpu.h fills the frame that `acquireFn` writes as a window's before the call, so a backend that
+// presents to a window writes only the frame's texture.
 struct PrGpuSwapChain {
     PrGpuDevice* PR_NONNULL (*PR_NONNULL deviceFn)(const PrGpuSwapChain* swapChain);
     PrGpuSwapChainInfo (*infoFn)(const PrGpuSwapChain* swapChain);
     void (*destroyFn)(PrGpuSwapChain* swapChain);
     void (*waitFn)(PrGpuSwapChain* swapChain);
-    PrStatus (*acquireFn)(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out);
+    PrStatus (*acquireFn)(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out);
     void (*presentFn)(PrGpuSwapChain* swapChain, PrGpuCommands* commands);
 };
 

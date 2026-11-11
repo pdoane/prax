@@ -121,8 +121,15 @@ struct AppMetal {
 
 // Clears the swap chain's next drawable and presents it.
 PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
-    PrGpuTexture texture{};
-    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &texture) == PrStatus_Ok);
+    PrGpuSwapChainFrame frame{};
+    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &frame) == PrStatus_Ok);
+    // A window's frame is one view of the whole texture, with no depth.
+    CHECK(frame.viewCount == 1);
+    CHECK(frame.views[0].viewport.right == 32);
+    CHECK(frame.views[0].viewport.bottom == 32);
+    CHECK(frame.views[0].layer == 0);
+    CHECK(frame.depth.id == 0);
+    PrGpuTexture texture = frame.color;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
     prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
@@ -398,8 +405,9 @@ TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, 
         bool beyondSdr = screen != nil && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1;
         CAMetalLayer* layer = (CAMetalLayer*)view.layer;
         for (int frame = 0; frame < 2; ++frame) {
-            PrGpuTexture texture{};
-            REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &texture) == PrStatus_Ok);
+            PrGpuSwapChainFrame acquired{};
+            REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &acquired) == PrStatus_Ok);
+            PrGpuTexture texture = acquired.color;
             PrGpuSwapChainInfo info = prGpuSwapChainInfo(swapChain);
             CHECK(info.format == (beyondSdr ? PrGpuFormat_Rgba16F : PrGpuFormat_Bgra8));
             CHECK(info.space == PrColorSpace_Srgb);
