@@ -34,6 +34,7 @@ typedef struct PrAppEvent PrAppEvent;
 enum {
     PrAppBackend_Default,
     PrAppBackend_AppKit,
+    PrAppBackend_UiKit,
     PrAppBackend_Win32,
     PrAppBackend_Web,
     PrAppBackend_Count,
@@ -58,15 +59,27 @@ enum {
 };
 typedef uint8_t PrAppPresence;
 
-// How many windows an application has. A Single application has one window, which the program draws its popups and
-// dialogs inside, and a second window answers NotSupported. The desktop sizes and places that window as any other, and
-// a phone, a console or a web page shows it filling the display. A Multiple application has as many windows as it
-// creates, where the platform has them.
+// How many windows an application has, and which roles have windows of their own (PrAppWindowRole). Each model has what
+// the one before it has.
+//
+// A Single application has one window, and a second window answers NotSupported. The desktop sizes and places that
+// window as any other, and a phone, a console or a web page shows it filling the display.
+//
+// A Multiple application has as many Normal windows as it creates, which the system may size and place as it chooses,
+// as iPadOS does. The program draws its popups, dialogs and overlays inside its windows, and a window of any other role
+// answers NotSupported.
+//
+// A Desktop application has windows of every role, which the program sizes and places within what the system allows, as
+// on macOS, Windows and the web.
 enum {
     PrAppWindowModel_Single,
     PrAppWindowModel_Multiple,
+    PrAppWindowModel_Desktop,
 };
 typedef uint8_t PrAppWindowModel;
+
+// Returns the name of a window model, as in "Desktop", or the null view if `model` is not one.
+PrStringView prAppWindowModelName(PrAppWindowModel model);
 
 // Options for creating an application.
 //
@@ -118,8 +131,8 @@ void prAppStop(PrApp* app);
 // Changes whether the application appears in the system's lists (PrAppOptions::presence).
 void prAppSetPresence(PrApp* app, PrAppPresence presence);
 
-// Returns the window model that the application runs with: the one that its options asked for, or Single where the
-// platform has only one window.
+// Returns the window model that the application runs with: the one that its options asked for, or the most that the
+// platform has below it, such as Multiple on iPadOS and Single on a phone.
 PrAppWindowModel prAppWindowModel(const PrApp* app);
 
 // Hides all of the application's windows, or shows the ones that hiding concealed, like the Hide command on macOS. The

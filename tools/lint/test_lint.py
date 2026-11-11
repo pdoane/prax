@@ -432,6 +432,13 @@ class Namespaces(unittest.TestCase):
         self.assertEqual(self.rules(lint.check_internal_names, 'lib/core/src/a.mm', source, names),
                          [(3, 'internal-name')])
 
+    def test_an_objective_c_class_keeps_its_prefix_where_another_file_declares_it(self):
+        classes = lint.objc_classes(['@interface PrView : NSObject\n@end\n'])
+        source = 'void run(PrView* view) { [view layout]; }\n'
+        self.assertEqual(self.rules(lint.check_internal_names, 'lib/core/src/b.mm', source, set(), classes), [])
+        self.assertEqual(self.rules(lint.check_internal_names, 'lib/core/src/b.mm', source, set()),
+                         [(1, 'internal-name')])
+
     def test_a_public_type_name_is_its_handle_base_alone(self):
         header = ('typedef struct PrThing PrThing;\ntypedef uint8_t PrKind;\n'
                   'typedef struct PrPoint {\n    float x;\n} PrPoint;\ntypedef void (*PrVisitFn)(void* c);\n')

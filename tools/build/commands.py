@@ -42,22 +42,27 @@ USAGE = {
     configuration named, they are the default and debug, and with no platform named, every platform that the machine
     checks: its own, and on macOS WebAssembly and iOS too, and the iOS simulator only when it is named. Each runs the
     build's unit tests, with the tools' tests on the host's platform and the page tests on WebAssembly, except iOS,
-    whose tests are built and not run. `asan` is the host's alone. Each build is its lean form, which fetches only what its tests read (./dev.sh build --lean), and
-    builds past a compile error, so that it reports every error (./dev.sh build --keep-going). --configure configures
-    each build and fetches what lint reads, and builds and runs nothing: everything that the run fetches, which CI
-    caches before it runs (.github/workflows/ci.yml). In CI, where third_party then holds what the run fetched and
-    nothing else, it fails past a budget (FETCH_BUDGET). --key prints a hash of what decides what the run fetches,
-    which changes when that does, as CI's cache of third_party is keyed""",
+    whose tests are built and not run. `asan` is the host's alone. Each build is its lean form, which fetches only
+    what its tests read (./dev.sh build --lean), and builds past a compile error, so that it reports every error
+    (./dev.sh build --keep-going). --configure configures each build and fetches what lint reads, and builds and runs
+    nothing: everything that the run fetches, which CI caches before it runs (.github/workflows/ci.yml). In CI, where
+    third_party then holds what the run fetched and nothing else, it fails past a budget (FETCH_BUDGET). --key prints a
+    hash of what decides what the run fetches, which changes when that does, as CI's cache of third_party is keyed""",
     "example": """\
-./dev.sh example [wasm] <name> [args...]
-./dev.sh example wasm <name> --screenshot <png> [--seconds S] [args...]
+./dev.sh example [wasm|ios-sim] <name> [args...]
+./dev.sh example wasm|ios-sim <name> --screenshot <png> [--seconds S] [args...]
     build an example under examples, and only what it needs, and run it with the arguments. `wasm` builds it for the
     web, serves the checkout, and opens its page in the system's browser, with the arguments in the page's query, until
     interrupted. --screenshot instead captures the page in headless Chrome, at 960x720, after it has run for S seconds
-    (4 by default), and prints what the page logged""",
+    (4 by default), and prints what the page logged. `ios-sim` builds its bundle for the iOS simulator, installs it on
+    a simulator device, the one that PR_SIMULATOR_DEVICE names or else the booted one or the first iPhone, and
+    launches it there, streaming its output until it exits or is interrupted. --screenshot instead captures the
+    device's screen after S seconds and terminates the example""",
     "app": """\
-./dev.sh app <name> [args...]
-    build an app under apps, and only what it needs, and run it with the arguments""",
+./dev.sh app [ios-sim] <name> [args...]
+./dev.sh app ios-sim <name> --screenshot <png> [--seconds S] [args...]
+    build an app under apps, and only what it needs, and run it with the arguments, or with `ios-sim` launch it on a
+    simulator device as ./dev.sh example ios-sim does""",
     "clean": """\
 ./dev.sh clean
     delete the build directories""",
@@ -301,41 +306,61 @@ def application_names(folder):
     return sorted(name for name in os.listdir(root) if os.path.isdir(os.path.join(root, name)))
 
 
-def app(argv):
-    dev.usage(argv, USAGE["app"], None if argv else 1)
-    names = application_names("apps")
-    if argv[0] not in names:
-        dev.fail("no app named %s; one of: %s" % (argv[0], " ".join(names)))
-    chosen = builds.build(targets=[argv[0]])
-    dev.run([dev.executable(chosen.directory, argv[0]), *argv[1:]])
-
-
-def example(argv):
-    dev.usage(argv, USAGE["example"], None if argv else 1)
-    wasm = argv[0] == "wasm"
-    if wasm:
-        argv = argv[1:]
-        dev.usage(argv, USAGE["example"], None if argv else 1)
-    names = application_names("examples")
-    if argv[0] not in names:
-        dev.fail("no example named %s; one of: %s" % (argv[0], " ".join(names)))
-    if argv[0] in builds.EXAMPLE_CHECKOUTS:
-        checkouts.fetch(*builds.EXAMPLE_CHECKOUTS[argv[0]])
-    if not wasm:
-        chosen = builds.build(targets=[argv[0]])
-        dev.run([dev.executable(chosen.directory, argv[0]), *argv[1:]])
-        return
-    name, args = argv[0], argv[1:]
+def capture_options(args, usage):
+    """Takes --screenshot and --seconds from the front of `args`, and returns the screenshot's path or None, the
+    seconds, and the arguments that follow them."""
     screenshot = None
     seconds = 4.0
     while args[:1] in (["--screenshot"], ["--seconds"]):
         if len(args) < 2:
-            dev.usage([], USAGE["example"], 1)
+            dev.usage([], usage, 1)
         if args[0] == "--screenshot":
             screenshot = os.path.abspath(args[1])
         else:
             seconds = float(args[1])
         args = args[2:]
+    return screenshot, seconds, args
+
+
+def run_application(folder, usage, argv, modes):
+    """Builds and runs the application under `folder`, examples or apps, that `argv` names, after the build's mode if
+    it names one of `modes`, with the arguments that follow. Returns the build's mode, or None for the host's, with the
+    name and the arguments, if the caller runs that mode itself."""
+    dev.usage(argv, usage, None if argv else 1)
+    mode = argv.pop(0) if argv[0] in modes else None
+    dev.usage(argv, usage, None if argv else 1)
+    names = application_names(folder)
+    if argv[0] not in names:
+        dev.fail("no %s named %s; one of: %s" % (folder[:-1], argv[0], " ".join(names)))
+    name, args = argv[0], argv[1:]
+    if name in builds.EXAMPLE_CHECKOUTS:
+        checkouts.fetch(*builds.EXAMPLE_CHECKOUTS[name])
+    if mode is None:
+        chosen = builds.build(targets=[name])
+        dev.run([dev.executable(chosen.directory, name), *args])
+        return None
+    if mode == "ios-sim":
+        from tools.build import simulator
+
+        screenshot, seconds, args = capture_options(args, usage)
+        chosen = builds.build(mode, targets=[name])
+        status = simulator.launch(os.path.join(chosen.directory, name + ".app"), args, screenshot, seconds)
+        if status != 0:
+            sys.exit(status)
+        return None
+    return mode, name, args
+
+
+def app(argv):
+    run_application("apps", USAGE["app"], argv, ("ios-sim",))
+
+
+def example(argv):
+    chosen = run_application("examples", USAGE["example"], argv, ("wasm", "ios-sim"))
+    if chosen is None:
+        return
+    _, name, args = chosen
+    screenshot, seconds, args = capture_options(args, USAGE["example"])
     chosen = builds.build("wasm", targets=[name])
     page = os.path.join(chosen.directory, name + ".html")
     if screenshot:

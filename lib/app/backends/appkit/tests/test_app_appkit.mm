@@ -80,7 +80,7 @@ struct Run {
     PrAppWindow* second = nullptr;
     void (*begin)(Run& run) = nullptr;
     bool wakeOnFrame = false;       // the first frame wakes the application from another thread
-    PrAppWindowModel windowModel = PrAppWindowModel_Multiple;
+    PrAppWindowModel windowModel = PrAppWindowModel_Desktop;
 
     // The first window's frame, and the title bar regions that its frames return, and its last frame's title bar.
     PrAppWindowDecoration decoration = PrAppWindowDecoration_System;
@@ -231,7 +231,7 @@ void runHeadless(Run& run) {
             Run& r = runOf(context);
             r.seen.push("start");
             PrAppWindowDesc desc{
-                .title = "AppKit test",
+                .title = "macOS test",
                 .extent = {64, 32},
                 .decoration = r.decoration,
                 .handler = handlerOf(r),
@@ -273,7 +273,7 @@ TEST_CASE("a headless run starts, opens and frames a window, wakes from another 
 }
 
 TEST_CASE("a window is created only while its application runs") {
-    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
+    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Desktop};
     PrApp* app = prAppAppKitCreate(&options);
     Run run;
     PrAppWindowDesc desc{.extent = {64, 32}, .handler = handlerOf(run)};
@@ -283,7 +283,7 @@ TEST_CASE("a window is created only while its application runs") {
     prAppDestroy(app);
 }
 
-TEST_CASE("a Single application refuses a second window, and a Multiple one creates it") {
+TEST_CASE("a Single application refuses a second window, a Multiple one refuses only popups, and a Desktop one neither") {
     Run run;
     run.windowModel = PrAppWindowModel_Single;
     run.begin = [](Run& r) {
@@ -295,17 +295,40 @@ TEST_CASE("a Single application refuses a second window, and a Multiple one crea
     };
     runHeadless(run);
     Run multiple;
+    multiple.windowModel = PrAppWindowModel_Multiple;
     multiple.begin = [](Run& r) {
         CHECK(prAppWindowModel(r.app) == PrAppWindowModel_Multiple);
         PrAppWindowDesc desc{.extent = {32, 32}, .handler = handlerOf(r, true)};
         CHECK(prAppWindowCreate(r.app, &desc, &r.second) == PrStatus_Ok);
+        PrAppWindowDesc popup{
+            .extent = {32, 32},
+            .role = PrAppWindowRole_Popup,
+            .parent = r.window,
+            .handler = handlerOf(r, true),
+        };
+        PrAppWindow* refused = nullptr;
+        CHECK(prAppWindowCreate(r.app, &popup, &refused) == PrStatus_NotSupported);
+        CHECK(refused == nullptr);
         prAppWake(r.app);
     };
     runHeadless(multiple);
+    Run desktop;
+    desktop.begin = [](Run& r) {
+        CHECK(prAppWindowModel(r.app) == PrAppWindowModel_Desktop);
+        PrAppWindowDesc popup{
+            .extent = {32, 32},
+            .role = PrAppWindowRole_Popup,
+            .parent = r.window,
+            .handler = handlerOf(r, true),
+        };
+        CHECK(prAppWindowCreate(r.app, &popup, &r.second) == PrStatus_Ok);
+        prAppWake(r.app);
+    };
+    runHeadless(desktop);
 }
 
 TEST_CASE("a process outside an application bundle posts no notification, and does not crash trying") {
-    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
+    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Desktop};
     PrApp* app = prAppAppKitCreate(&options);
     PrAppNotificationDesc desc{.title = "Title", .body = "Body", .tag = 1};
     CHECK(prAppNotificationPost(app, &desc) == PrStatus_InvalidState);
@@ -347,7 +370,8 @@ TEST_CASE("a key with Option held means the key that it types without Option, as
     Run run;
     run.begin = [](Run& r) {
         NSView* view = viewOf(r.window);
-        for (NSEventType type : {NSEventTypeKeyDown, NSEventTypeKeyUp}) {
+        const NSEventType types[] = {NSEventTypeKeyDown, NSEventTypeKeyUp};
+        for (NSEventType type : types) {
             NSEvent* optionOne = [NSEvent keyEventWithType:type location:NSZeroPoint
                 modifierFlags:NSEventModifierFlagOption timestamp:0 windowNumber:view.window.windowNumber context:nil
                 characters:@"¡" charactersIgnoringModifiers:@"1" isARepeat:NO keyCode:18];
@@ -421,7 +445,7 @@ TEST_CASE("a pen's press reports its pressure, tilt and twist, and its eraser pr
 }
 
 TEST_CASE("the displays have distinct ids, the main display comes first, and a headless window has no position") {
-    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
+    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Desktop};
     PrApp* app = prAppAppKitCreate(&options);
     uint32_t count = prAppDisplays(app, nullptr, 0);
     Array<PrAppDisplayInfo> displays(count);
@@ -729,7 +753,7 @@ TEST_CASE("a timer fires after its delay and then at its interval, and a cancell
     struct Timers {
         Array<uint64_t> fired;
     } timers;
-    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
+    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Desktop};
     PrApp* app = prAppAppKitCreate(&options);
     prAppRun(app, {
         .context = &timers,
@@ -758,7 +782,7 @@ TEST_CASE("a timer fires after its delay and then at its interval, and a cancell
 }
 
 TEST_CASE("a key's label comes from the layout, a key that types nothing shows its name, and power has a level") {
-    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Multiple};
+    PrAppOptions options{.headless = true, .windowModel = PrAppWindowModel_Desktop};
     PrApp* app = prAppAppKitCreate(&options);
     PrStringView letter = prAppKeyCodeLabel(app, PrAppKeyCode_KeyA);
     CHECK(letter.size != 0);

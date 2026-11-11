@@ -13,13 +13,14 @@ endif()
 # Adds the example `name` for every platform:
 #
 #   pr_example(<name> <source>... [FONT_BUNDLES <bundle>...] [FONT_FILES <file>...] [DATA <macro> <path>...]
-#       [INFO_PLIST <file>])
+#       [INFO_PLIST <file>] [MULTIPLE_SCENES])
 #
 # The example reads the font bundles' files from PR_FONT_BUNDLE_DIR, and each DATA path, a file or a directory, from
 # its macro. On the web, the example is a page, <name>.html, which packages the files of FONT_BUNDLES, FONT_FILES and
-# DATA. On macOS, it is an application bundle, org.prax.<name>, which INFO_PLIST describes if it is given.
+# DATA. On macOS, it is an application bundle, org.prax.<name>, which INFO_PLIST describes if it is given. On iOS, it is
+# an application bundle of the same identifier (pr_ios_bundle), which shows several scenes with MULTIPLE_SCENES.
 function(pr_example name)
-    cmake_parse_arguments(PARSE_ARGV 1 arg "" "INFO_PLIST" "FONT_BUNDLES;FONT_FILES;DATA")
+    cmake_parse_arguments(PARSE_ARGV 1 arg "MULTIPLE_SCENES" "INFO_PLIST" "FONT_BUNDLES;FONT_FILES;DATA")
     add_executable(${name} ${arg_UNPARSED_ARGUMENTS})
     target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR})
     target_link_libraries(${name} PRIVATE pr_warnings)
@@ -53,7 +54,11 @@ function(pr_example name)
             target_compile_definitions(${name} PRIVATE ${macro}="${path}")
         endif()
     endwhile()
-    if (APPLE AND NOT IOS)
+    if (PR_IOS AND arg_MULTIPLE_SCENES)
+        pr_ios_bundle(${name} MULTIPLE_SCENES)
+    elseif (PR_IOS)
+        pr_ios_bundle(${name})
+    elseif (APPLE)
         set_target_properties(${name} PROPERTIES MACOSX_BUNDLE TRUE MACOSX_BUNDLE_GUI_IDENTIFIER org.prax.${name})
         if (arg_INFO_PLIST)
             set_target_properties(${name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${arg_INFO_PLIST})
@@ -136,6 +141,7 @@ pr_example(app_features
     app_features/pages_device.cpp
     FONT_BUNDLES Standard14
     INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/app_features/Info.plist.in
+    MULTIPLE_SCENES
 )
 target_link_libraries(app_features PRIVATE prax::studio_app prax::font_bundle prax::font prax::studio_kit prax::layout
                                            prax::ui prax::app prax::color prax::core_cpp)

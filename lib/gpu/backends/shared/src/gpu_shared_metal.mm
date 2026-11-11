@@ -482,6 +482,25 @@ PrAppDisplay displayOf(NSView* view) {
     return display;
 }
 
+#else
+
+// Returns the capabilities of the screen of the view's scene, or SDR until the view is in a window. It reads UIKit, so
+// it must be called on the main thread.
+PrAppDisplay displayOf(UIView* view) {
+    PrAppDisplay display = prAppDisplayDefault();
+    UIScreen* screen = view.window.windowScene.screen;
+    if (screen != nil) {
+        display.pixelRatio = float(view.traitCollection.displayScale);
+        display.headroom = MAX(float(screen.currentEDRHeadroom), 1.0f);
+        display.potentialHeadroom = MAX(float(screen.potentialEDRHeadroom), display.headroom);
+        if (view.traitCollection.displayGamut == UIDisplayGamutP3)
+            display.gamut = PrColorSpace_DisplayP3;
+    }
+    return display;
+}
+
+#endif
+
 // Makes the layer present `info`: half floats in extended sRGB, with EDR, or 8-bit sRGB.
 void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
     bool extended = info.format == PrGpuFormat_Rgba16F;
@@ -492,52 +511,75 @@ void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
     layer.wantsExtendedDynamicRangeContent = extended ? YES : NO;
 }
 
+#if TARGET_OS_OSX
+
+// Returns the Metal layer that presents to the view of `surface`, which the view backs or hosts, set for `desc`, or nil
+// if the surface is not an AppKit view.
+CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapChainDesc* desc) {
+    if (surface->kind != PrAppSurfaceKind_NsView)
+        return nil;
+    NSView* view = (NSView*)surface->handle;
+    // A view that backs itself with a Metal layer keeps that layer, so that AppKit asks the view to display as it
+    // resizes. Any other view hosts a new Metal layer.
+    CAMetalLayer* layer = [view.layer isKindOfClass:CAMetalLayer.class] ? (CAMetalLayer*)view.layer : [CAMetalLayer layer];
+    layer.contentsScale = view.window != nil ? view.window.backingScaleFactor : 1;
+    if (view.layer != layer) {
+        view.layer = layer;
+        view.wantsLayer = YES;
+    }
+    // AppKit sets the gravity of a layer that backs a view from the view's placement, and that of a layer that a view
+    // hosts is the swap chain's to set. A gravity's top is the layer's greatest y, which is the window's bottom where
+    // the layer's geometry is flipped.
+    bool stretch = desc->anchor == PrGpuSwapChainAnchor_Stretch;
+    view.layerContentsPlacement =
+        stretch ? NSViewLayerContentsPlacementScaleAxesIndependently : NSViewLayerContentsPlacementTopLeft;
+    if (stretch)
+        layer.contentsGravity = kCAGravityResize;
+    else if ([layer contentsAreFlipped])
+        layer.contentsGravity = kCAGravityBottomLeft;
+    else
+        layer.contentsGravity = kCAGravityTopLeft;
+    return layer;
+}
+
+#else
+
+// Returns the Metal layer of the view of `surface`, set for `desc`, or nil if the surface is not a UIKit view whose
+// layer is a Metal layer, since a UIKit view keeps the layer that its class makes. UIKit sets the layer's gravity from
+// the view's content mode, and its scale from the view's, which follows the display once the view is in a window.
+CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapChainDesc* desc) {
+    if (surface->kind != PrAppSurfaceKind_UiView)
+        return nil;
+    UIView* view = (UIView*)surface->handle;
+    if (![view.layer isKindOfClass:CAMetalLayer.class])
+        return nil;
+    view.contentMode =
+        desc->anchor == PrGpuSwapChainAnchor_Stretch ? UIViewContentModeScaleToFill : UIViewContentModeTopLeft;
+    if (view.window != nil)
+        view.contentScaleFactor = view.traitCollection.displayScale;
+    return (CAMetalLayer*)view.layer;
+}
+
 #endif
 
 PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
-#if !TARGET_OS_OSX
-    (void)device;
-    (void)surface;
-    (void)desc;
-    (void)out;
-    return PrStatus_NotSupported;
-#else
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     @autoreleasepool {
-        if (surface->kind != PrAppSurfaceKind_NsView)
+        CAMetalLayer* layer = layerOf(surface, desc);
+        if (layer == nil)
             return PrStatus_NotSupported;
-        NSView* view = (NSView*)surface->handle;
-        // A view that backs itself with a Metal layer keeps that layer, so that AppKit asks the view to display as it
-        // resizes. Any other view hosts a new Metal layer.
-        CAMetalLayer* layer = [view.layer isKindOfClass:CAMetalLayer.class] ? (CAMetalLayer*)view.layer : [CAMetalLayer layer];
+        decltype(GpuMetalSwapChain::view) view = (decltype(GpuMetalSwapChain::view))surface->handle;
         layer.device = d->device;
         PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(desc->intent, displayOf(view));
         layerTakeInfo(layer, info);
         // The layer is readable, so that a frame can be copied or read back.
         layer.framebufferOnly = NO;
-        layer.contentsScale = view.window != nil ? view.window.backingScaleFactor : 1;
         layer.presentsWithTransaction = (desc->flags & PrGpuSwapChainFlag_Threaded) == 0;
         // The compositor blends a layer that is not opaque by its premultiplied alpha.
         layer.opaque = (desc->flags & PrGpuSwapChainFlag_Transparent) == 0;
-        if (view.layer != layer) {
-            view.layer = layer;
-            view.wantsLayer = YES;
-        }
-        // AppKit sets the gravity of a layer that backs a view from the view's placement, and that of a layer that a
-        // view hosts is the swap chain's to set. A gravity's top is the layer's greatest y, which is the window's
-        // bottom where the layer's geometry is flipped.
-        bool stretch = desc->anchor == PrGpuSwapChainAnchor_Stretch;
-        view.layerContentsPlacement =
-            stretch ? NSViewLayerContentsPlacementScaleAxesIndependently : NSViewLayerContentsPlacementTopLeft;
-        if (stretch)
-            layer.contentsGravity = kCAGravityResize;
-        else if ([layer contentsAreFlipped])
-            layer.contentsGravity = kCAGravityBottomLeft;
-        else
-            layer.contentsGravity = kCAGravityTopLeft;
         // A bindless device's shaders may reach a drawable by handle, so its queue holds the layer's drawables. On a
-        // device without bindless, a drawable is resident in the encoders that bind it.
+        // slot-only device, which has no residency sets, a drawable is resident in the encoders that bind it.
         if (d->bindless)
             [d->queue addResidencySet:layer.residencySet];
         GpuMetalSwapChain* sc = allocZeroed<GpuMetalSwapChain>();
@@ -551,7 +593,6 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         *out = sc;
         return PrStatus_Ok;
     }
-#endif
 }
 
 // Lets go of the acquired drawable's texture, whose slot stays until the work that drew into it is done.
@@ -956,10 +997,9 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
     @autoreleasepool {
         releaseDrawable(d, sc);
 
-#if TARGET_OS_OSX
         // An HDR swap chain follows its window's display, which changes if the window moves to another display or the
-        // display's mode changes. AppKit can be read only on the main thread, so an acquire on another thread keeps the
-        // choice that was last made on the main thread.
+        // display's mode changes, and on iOS once the view is in a window. AppKit and UIKit can be read only on the
+        // main thread, so an acquire on another thread keeps the choice that was last made on the main thread.
         if (sc->intent == PrGpuSwapChainIntent_Hdr && [NSThread isMainThread]) {
             PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(sc->intent, displayOf(sc->view));
             if (info.format != sc->info.format || info.space != sc->info.space) {
@@ -967,7 +1007,6 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
                 sc->info = info;
             }
         }
-#endif
         CGSize size = CGSizeMake(extent.x, extent.y);
         if (!CGSizeEqualToSize(sc->layer.drawableSize, size))
             sc->layer.drawableSize = size;

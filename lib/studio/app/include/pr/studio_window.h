@@ -71,8 +71,9 @@ typedef void (*PrStudioWindowPaletteFn)(void* PR_NULLABLE context, PrStudioWindo
 // the context's surfaces go to the context alone.
 typedef bool (*PrStudioWindowEventFn)(void* PR_NULLABLE context, PrStudioWindow* window, const PrAppEvent* event);
 
-// Declares a round of the application under `root`, which is a surface on the app background that fills the viewport
-// below the application's title bar, if it has one. The viewport is `extent` px.
+// Declares a round of the application under `root`, which is a surface on the app background that fills the viewport,
+// within its safe area (PrAppFrame::safeArea) and below the application's title bar, if it has one. The viewport is
+// `extent` px.
 typedef void (*PrStudioWindowBuildFn)(void* PR_NULLABLE context, PrStudioWindow* window, PrLayoutNode root, PrVec2 extent);
 
 // Declares the content of the application's own title bar in each round, in `row`, which lies between the system's

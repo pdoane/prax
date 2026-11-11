@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
     t.fonts = fonts;
     openApp(t);
     PrAppOptions options = prAppOptionsDefault();
-    options.windowModel = PrAppWindowModel_Multiple;
+    options.windowModel = PrAppWindowModel_Desktop;
     PrStudioAppDesc app{
         .fonts = fonts,
         .options = &options,

@@ -285,7 +285,8 @@ typedef struct PrAppWindowDesc {
 
 // Creates a window of the running application. The window calls `open` before its first frame, never during this call.
 // Returns InvalidState if the application is not running. Returns NotSupported for a second window of a Single
-// application (PrAppWindowModel). On failure, `*out` is null.
+// application, and for a window of any role but Normal unless the application is a Desktop one (PrAppWindowModel). On
+// failure, `*out` is null.
 PrStatus prAppWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow* PR_NULLABLE* PR_NONNULL out);
 
 // Closes and frees the window. Its handler is not called again. If this is called during one of the window's callbacks,

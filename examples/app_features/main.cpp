@@ -247,8 +247,8 @@ int main(int argc, char** argv) {
     // A second launch hands its arguments to this one, which the Open page shows.
     PrAppOptions options = prAppOptionsDefault();
     options.singleInstance = "org.prax.app-features";
-    // The application asks for Multiple windows, or Single for --single-window.
-    options.windowModel = PrAppWindowModel_Multiple;
+    // The application asks for Desktop windows, or Single for --single-window.
+    options.windowModel = PrAppWindowModel_Desktop;
     for (const String& argument : features.launchArguments) {
         if (argument == "--single-window")
             options.windowModel = PrAppWindowModel_Single;

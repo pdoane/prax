@@ -11,6 +11,30 @@ drive menus, gestures, sheets, drags or the system's notices.
 
 Every slot is implemented, and each page of app_features has been checked by hand.
 
+## iOS
+
+The backend runs in the simulator (`./dev.sh example ios-sim draw_gallery`, and app_features on an iPad simulator for
+several windows). It has never run on a device. Everything below the first item is written and built, and has been
+seen only as far as a screenshot shows it.
+
+- [ ] Check by hand on a device: touches, the Pencil, the hover and scroll of a trackpad, hardware keys, the on-screen
+      keyboard, that a hardware key's Text follows its KeyDown, and that Enter and Backspace arrive once
+- [ ] Check by hand composition through an input method (UITextInput), whose document is the composed text alone, and
+      that its candidates show at the caret
+- [ ] Check by hand pinch and rotation Gesture events, which arrive beside the touches' pointer events
+- [ ] Check by hand the pointer's text beam and hidden cursor, the only cursors that the system's pointer has
+- [ ] Check by hand drops (UIDropInteraction) of text, URLs and files, and clipboard images
+- [ ] Check by hand the document picker for files and directories, notifications and their permission, the badge, and
+      sensors, which the simulator lacks
+- [ ] Check by hand several windows on an iPad: a second window's scene, closing a scene, a scene that the user opens,
+      which closes, and positions, which iPadOS reports for a window the user can move
+- [ ] Rotation: DisplaysChanged after the transition, and the frame at the new extent
+- [ ] Drags from the application (UIDragInteraction), which end with None
+- [ ] Save dialogs, which answer NotSupported: the picker exports a file that exists, and the program writes its file
+      after the dialog answers
+- [ ] A window that keeps running after its scene closed has no scene, and does not get one back
+- [ ] A scene that the user opens could ask the program for a window, where now it closes
+
 ## Windows (Win32)
 
 The backend has never been compiled.
@@ -56,3 +80,7 @@ These slots stay null, and need no work:
 - On macOS, `setIconFn`, because the system shows only the application's icon, and `textScale`, which stays 1 because
   macOS has no system-wide text size.
 - On Windows, `setDocumentFn`, because the system shows no document in a title bar.
+- On iOS, the window's extent, position, state, opacity, backdrop, keep-above, passthrough, pointer mode, icon,
+  progress and document, which the system decides or has no place for, the menu bar, status items, global hotkeys,
+  presence, hiding, the quit request, the trash, the file manager, recent documents and key labels, which the system
+  does not have, and `PrAppKey_GoBack`, which no iOS key sends.

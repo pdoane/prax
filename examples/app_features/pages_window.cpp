@@ -123,6 +123,13 @@ void buildBackdrop(void* context, PrStudioWindow* window, PrLayoutNode root, PrV
     prKitLabel(kit, chip, {.text = "A HUD chip over the backdrop"}, {});
 }
 
+// Logs a window that could not be created, as a popup, a dialog or an overlay of an application that is not a Desktop
+// one.
+void created(Features& f, PrStringView what, PrStatus status) {
+    if (status != PrStatus_Ok)
+        logLine(f, format("{}: {}", what, statusName(status)));
+}
+
 void openBackdrop(Features& f) {
     PrStudioWindowDesc desc{
         .title = "Backdrop",
@@ -134,7 +141,7 @@ void openBackdrop(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).backdrop = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.backdrop);
+    created(f, "backdrop", prStudioWindowCreate(f.app, &desc, &f.backdrop));
 }
 
 void buildOverlay(void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
@@ -175,7 +182,7 @@ void openOverlay(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).overlay = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.overlay);
+    created(f, "overlay", prStudioWindowCreate(f.app, &desc, &f.overlay));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -216,7 +223,7 @@ void openPopup(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).popup = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.popup);
+    created(f, "popup", prStudioWindowCreate(f.app, &desc, &f.popup));
 }
 
 // A dialog that closes with its button, or with its close button, whose CloseRequested the window does not take.
@@ -249,7 +256,7 @@ void openDialog(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).dialog = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.dialog);
+    created(f, "dialog", prStudioWindowCreate(f.app, &desc, &f.dialog));
 }
 
 // A window without decoration, which has no title bar and closes from its content. Its field shows that it takes the
@@ -279,7 +286,7 @@ void openBorderless(Features& f) {
         .close = [](void* context, PrStudioWindow*) { featuresOf(context).borderless = nullptr; },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.borderless);
+    created(f, "borderless", prStudioWindowCreate(f.app, &desc, &f.borderless));
 }
 
 } // namespace
@@ -307,7 +314,7 @@ void openSecond(Features& f, const PrAppDisplayPosition* PR_NULLABLE at) {
         },
         .context = &f,
     };
-    prStudioWindowCreate(f.app, &desc, &f.second);
+    created(f, "second", prStudioWindowCreate(f.app, &desc, &f.second));
 }
 
 void toggleOverlay(Features& f) {
@@ -335,8 +342,7 @@ void pageWindows(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
             position.display, position.position.x, position.position.y));
     line(kit, s, format("active: {}   visible: {}   occluded: {}", prAppWindowIsActive(app) ? "yes" : "no",
         prAppWindowIsVisible(app) ? "yes" : "no", prAppWindowIsOccluded(app) ? "yes" : "no"));
-    bool multiple = prAppWindowModel(appOf(f)) == PrAppWindowModel_Multiple;
-    line(kit, s, format("window model: {}", multiple ? "Multiple" : "Single"));
+    line(kit, s, format("window model: {}", prAppWindowModelName(prAppWindowModel(appOf(f)))));
     PrLayoutNode states = row(kit, s);
     for (PrAppWindowState state = PrAppWindowState_Normal; state <= PrAppWindowState_Fullscreen; ++state) {
         if (button(kit, states, prAppWindowStateName(state)))

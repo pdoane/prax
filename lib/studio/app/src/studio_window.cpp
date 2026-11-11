@@ -20,13 +20,19 @@ PrKitThemeVariant variantOf(PrAppColorScheme scheme) {
     return scheme == PrAppColorScheme_Dark ? PrKitThemeVariant_Dark : PrKitThemeVariant_Light;
 }
 
-// Declares a round: a surface on the app background that fills the viewport, and the application's round under it.
+// Declares a round: a surface on the app background that fills the viewport, and the application's round under it. The
+// background reaches under the system's bars, and the surface pads its content to the safe area.
 void build(void* context, PrUi*, const PrUiRound*) {
     PrStudioWindow* w = static_cast<PrStudioWindow*>(context);
     // Over a backdrop, the window's surface leaves the canvas transparent, so that the backdrop shows.
     bool opaque = w->backdrop == PrAppWindowBackdrop_Opaque;
+    PrAppInsets safe = w->safeArea;
     PrKitSurfaceStyle style{
-        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
+        .box = {
+            .overflow = PrKitOverflow_Clip,
+            .padding = {safe.top, safe.right, safe.bottom, safe.left},
+            .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
+        },
         .background = PrKitBackground(opaque ? PrKitBackground_App : PrKitBackground_None),
     };
     PrLayoutNode window = prKitSurface(w->kit, kPrLayoutNodeNone, {}, style);
@@ -423,6 +429,7 @@ PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
     };
     w->extent = f->extent;
     w->titleBar = f->titleBar;
+    w->safeArea = f->safeArea;
     PrTimePerf waited = prTimePerfNow();
     uint32_t rounds = prUiFrame(w->ui, &desc, build, w);
     if (w->desc.laidOut != nullptr && w->desc.laidOut(w->desc.context, w))
@@ -549,8 +556,9 @@ PrStatus prStudioWindowCreate(PrStudioApp* app, const PrStudioWindowDesc* desc, 
         return status;
     }
     prUiSetWindow(w->ui, w->appWindow);
-    // An application of several windows shows each surface of the window's context in a window of its own.
-    if (prAppWindowModel(app->app) == PrAppWindowModel_Multiple) {
+    // A Desktop application shows each surface of the window's context, such as a menu or a dialog, in a window of its
+    // own. Any other draws them inside the window.
+    if (prAppWindowModel(app->app) == PrAppWindowModel_Desktop) {
         PrUiHost host{.window = surfaceWindow, .context = w};
         prUiSetHost(w->ui, &host);
     }

@@ -12,6 +12,9 @@
 #if defined(PR_APP_HAS_APPKIT)
 #include "pr/app_appkit.h"
 #endif
+#if defined(PR_APP_HAS_UIKIT)
+#include "pr/app_uikit.h"
+#endif
 #if defined(PR_APP_HAS_WIN32)
 #include "pr/app_win32.h"
 #endif
@@ -23,13 +26,16 @@ namespace pr_impl {
 
 namespace {
 
-constexpr PrStringView kBackendNames[PrAppBackend_Count] = {"default", "appkit", "win32", "web"};
+constexpr PrStringView kBackendNames[PrAppBackend_Count] = {"default", "appkit", "uikit", "win32", "web"};
 
 // The backends that the build has, which Default creates the first of, and then Default, so that a build without
 // backends creates none.
 constexpr PrAppBackend kBuilt[] = {
 #if defined(PR_APP_HAS_APPKIT)
     PrAppBackend_AppKit,
+#endif
+#if defined(PR_APP_HAS_UIKIT)
+    PrAppBackend_UiKit,
 #endif
 #if defined(PR_APP_HAS_WIN32)
     PrAppBackend_Win32,
@@ -43,6 +49,8 @@ constexpr PrAppBackend kBuilt[] = {
 // The names of the enumerations, in the order of their enumerators.
 const char* const kLifecycles[] = {"Active", "Inactive", "Background"};
 static_assert(countOf(kLifecycles) == PrAppLifecycle_Background + 1, "a name for each lifecycle state");
+const char* const kWindowModels[] = {"Single", "Multiple", "Desktop"};
+static_assert(countOf(kWindowModels) == PrAppWindowModel_Desktop + 1, "a name for each window model");
 } // namespace
 
 } // namespace pr_impl
@@ -69,6 +77,10 @@ bool prAppBackendIsBuilt(PrAppBackend backend) {
     return false;
 }
 
+PrStringView prAppWindowModelName(PrAppWindowModel model) {
+    return appNameOf(kWindowModels, model);
+}
+
 PrAppOptions prAppOptionsDefault(void) {
     return PrAppOptions{.presence = PrAppPresence_Regular};
 }
@@ -81,6 +93,9 @@ PrApp* PR_NULLABLE prAppCreate(PrAppBackend backend, const PrAppOptions* PR_NULL
     switch (backend == PrAppBackend_Default ? kBuilt[0] : backend) {
 #if defined(PR_APP_HAS_APPKIT)
         case PrAppBackend_AppKit: app = prAppAppKitCreate(&chosen); break;
+#endif
+#if defined(PR_APP_HAS_UIKIT)
+        case PrAppBackend_UiKit: app = prAppUiKitCreate(&chosen); break;
 #endif
 #if defined(PR_APP_HAS_WIN32)
         case PrAppBackend_Win32: app = prAppWin32Create(&chosen); break;

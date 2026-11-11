@@ -329,3 +329,29 @@ function(pr_harness name module)
     add_executable(${name} ${ARGN})
     target_link_libraries(${name} PRIVATE ${module} harness pr_warnings)
 endfunction()
+
+# Makes `target`, an example or an app, an application bundle for iOS, org.prax.<target>, which the simulator installs
+# and launches (tools/build/simulator.py). Its Info.plist is cmake/ios_info.plist.in. With MULTIPLE_SCENES, the
+# application may show several scenes where the device does, as an iPad does, which lib/app's Multiple window model
+# needs. The bundle is signed whole, as the simulator requires of what it installs.
+#
+#   pr_ios_bundle(<target> [MULTIPLE_SCENES])
+function(pr_ios_bundle target)
+    cmake_parse_arguments(PARSE_ARGV 1 arg "MULTIPLE_SCENES" "" "")
+    set(PR_IOS_MULTIPLE_SCENES false)
+    if (arg_MULTIPLE_SCENES)
+        set(PR_IOS_MULTIPLE_SCENES true)
+    endif()
+    # The bundle's properties fill in the rest of the template when CMake writes the bundle.
+    set(plist ${CMAKE_CURRENT_BINARY_DIR}/${target}_info.plist.in)
+    configure_file(${PROJECT_SOURCE_DIR}/cmake/ios_info.plist.in ${plist} @ONLY)
+    set_target_properties(${target} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_GUI_IDENTIFIER org.prax.${target}
+        MACOSX_BUNDLE_BUNDLE_NAME ${target}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_INFO_PLIST ${plist})
+    add_custom_command(TARGET ${target} POST_BUILD COMMAND codesign --force --sign - $<TARGET_BUNDLE_DIR:${target}>
+        VERBATIM)
+endfunction()

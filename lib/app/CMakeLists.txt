@@ -16,7 +16,7 @@ target_link_libraries(pr_app PUBLIC prax::core prax::color prax::geom PRIVATE pr
 
 # What the backends share: the delivery of a window's callbacks, the reads of the clipboard and of drops that wait for
 # their answer, the content of drags, and the regions of a custom title bar.
-if (PR_APP_APPKIT OR PR_APP_WIN32 OR PR_APP_WEB)
+if (PR_APP_APPKIT OR PR_APP_UIKIT OR PR_APP_WIN32 OR PR_APP_WEB)
     target_sources(pr_app PRIVATE
         backends/shared/src/app_shared_data.cpp
         backends/shared/src/app_shared_delivery.cpp
@@ -32,6 +32,23 @@ if (PR_APP_APPKIT)
     target_compile_definitions(pr_app PRIVATE PR_APP_HAS_APPKIT)
     target_link_libraries(pr_app PUBLIC "-framework AppKit" "-framework Carbon" "-framework IOKit" "-framework QuartzCore"
                                  "-framework UniformTypeIdentifiers" "-framework UserNotifications")
+endif()
+
+# The UIKit backend: UIKit's scenes and windows, on iOS and iPadOS.
+if (PR_APP_UIKIT)
+    set(uikit_sources
+        backends/uikit/src/app_uikit.mm
+        backends/uikit/src/uikit_data.mm
+        backends/uikit/src/uikit_device.mm
+        backends/uikit/src/uikit_view.mm
+    )
+    target_sources(pr_app PRIVATE ${uikit_sources})
+    pr_headers(pr_app PUBLIC backends/uikit/include)
+    set_source_files_properties(${uikit_sources} PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+    target_compile_definitions(pr_app PRIVATE PR_APP_HAS_UIKIT)
+    target_link_libraries(pr_app PUBLIC "-framework UIKit" "-framework QuartzCore" "-framework UniformTypeIdentifiers"
+                                 "-framework Foundation" "-framework CoreGraphics" "-framework CoreMotion"
+                                 "-framework UserNotifications")
 endif()
 
 # The Win32 backend: Win32 windows and their message loop.
@@ -58,7 +75,7 @@ if (PR_DEVELOP)
         tests/test_app_c.c
         tests/test_app_popup.cpp
     )
-    if (PR_APP_APPKIT OR PR_APP_WIN32 OR PR_APP_WEB)
+    if (PR_APP_APPKIT OR PR_APP_UIKIT OR PR_APP_WIN32 OR PR_APP_WEB)
         target_sources(app_tests PRIVATE
             backends/shared/tests/test_app_shared_data.cpp
             backends/shared/tests/test_app_shared_delivery.cpp
@@ -67,6 +84,10 @@ if (PR_DEVELOP)
     endif()
     if (PR_APP_WIN32)
         target_sources(app_tests PRIVATE backends/win32/tests/test_app_win32.cpp)
+    endif()
+    if (PR_APP_UIKIT)
+        target_sources(app_tests PRIVATE backends/uikit/tests/test_app_uikit.mm)
+        set_source_files_properties(backends/uikit/tests/test_app_uikit.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     endif()
     if (PR_APP_APPKIT)
         target_sources(app_tests PRIVATE backends/appkit/tests/test_app_appkit.mm)

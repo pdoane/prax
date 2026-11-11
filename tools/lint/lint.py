@@ -373,12 +373,20 @@ def public_names(texts):
     return names
 
 
-def check_internal_names(report, path, text, names):
+OBJC_CLASS = re.compile(r"@(?:interface|implementation)\s+(\w+)")
+
+
+def objc_classes(texts):
+    """Returns the Objective-C classes that the texts declare or implement."""
+    return {name for text in texts for name in OBJC_CLASS.findall(mask_non_code(text))}
+
+
+def check_internal_names(report, path, text, names, classes=frozenset()):
     """The Pr and pr prefixes belong to the public API. Internal code names its own declarations in pr_impl without
-    them. An Objective-C class, which no namespace can hold, keeps the prefix, as does a function with C linkage, which
-    reaches the linker by its name alone (check_linkage)."""
+    them. An Objective-C class, which no namespace can hold, keeps the prefix, wherever it is declared (`classes`), as
+    does a function with C linkage, which reaches the linker by its name alone (check_linkage)."""
     code = mask_non_code(text)
-    classes = set(re.findall(r"@(?:interface|implementation)\s+(\w+)", code)) | c_linkage_names(text)
+    classes = set(classes) | set(OBJC_CLASS.findall(code)) | c_linkage_names(text)
     reported = set()
     for match in PUBLIC_NAME.finditer(code):
         name = match.group(1)
@@ -3182,7 +3190,7 @@ def check_code_file(path):
         check_public_includes(report, path, text)
     else:
         # Internal C++: its own names, its own types, and C++ spellings.
-        check_internal_names(report, path, text, shared.names)
+        check_internal_names(report, path, text, shared.names, shared.classes)
         check_shadowed_types(report, path, text, shared.types, shared.bases)
         check_parallel_enums(report, path, text)
         check_cpp_form(report, path, text)
@@ -3338,12 +3346,13 @@ def main():
     bases = handle_bases(texts.values())
     declared = declared_types(texts.values())
     constants = enum_constants(texts.values())
+    classes = objc_classes(texts.values())
 
     global shared
     shared = argparse.Namespace(texts=texts, headers=headers, public_bases=public_bases,
                                 cpp_api_homes=cpp_api_homes, names=names,
                                 typedefs=typedefs, types=types, bases=bases, declared=declared,
-                                constants=constants, defined=None)
+                                constants=constants, classes=classes, defined=None)
     check_each(report, check_code_file, headers + sources)
 
     # Every hand-written C and C++ file, including the harnesses of tools.

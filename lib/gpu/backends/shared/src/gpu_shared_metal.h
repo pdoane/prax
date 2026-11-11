@@ -27,9 +27,12 @@
 #include "gpu/backends/shared/src/gpu_shared_device.h"
 #include "gpu/backends/shared/src/gpu_shared_upload.h"
 
-// The system APIs that the structures below name. A swap chain presents to an AppKit view on macOS.
+// The system APIs that the structures below name. A swap chain presents to an AppKit view on macOS, and to a UIKit view
+// elsewhere.
 #if TARGET_OS_OSX
 #import <AppKit/AppKit.h>
+#else
+#import <UIKit/UIKit.h>
 #endif
 #import <CoreVideo/CoreVideo.h>
 #import <Metal/Metal.h>
@@ -224,6 +227,8 @@ struct GpuMetalSwapChain : GpuSharedSwapChain {
     CAMetalLayer* layer;                      // retained
 #if TARGET_OS_OSX
     NSView* view;                             // the view that the layer backs or the view hosts, not retained
+#else
+    UIView* view;                             // the view whose layer the layer is, not retained
 #endif
     PrGpuSwapChainIntent intent;
     bool transactional;                       // true unless the swap chain was created PrGpuSwapChainFlag_Threaded

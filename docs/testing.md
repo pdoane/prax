@@ -201,7 +201,9 @@ The examples under `examples/` and the apps under `apps/` are applications over 
 lib/app's default backend (`prAppCreate`) whose `main()` composes everything that runs it. An example shows what a
 library does. An app is for daily use, and keeps its model in a library of its own, which its unit tests link. Each is
 checked by running it. `./dev.sh example <name> [args...]` builds an example and runs it, and `./dev.sh app <name>
-[args...]` an app.
+[args...]` an app. With `ios-sim` before the name, each is built as an application bundle for the iOS simulator,
+installed on a simulator device and launched there, with its output streamed back, and `--screenshot <png>` captures
+the device's screen after a few seconds instead.
 
 `./dev.sh package` checks the libraries as a consumer takes them. It builds them with the build's defaults and installs
 them, then builds `tools/package`, a program over their public headers, against the installed package and against the

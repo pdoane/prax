@@ -616,6 +616,10 @@ void writeData(const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE bene
 
 PrStatus fragmentDeviceCreate(PrGpuDevice* device, FragmentDevice* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
+    // The shaders reach the frame's buffers and textures by handle.
+    PrGpuFeatureFlags features = prGpuDeviceInfo(device).features;
+    if ((features & PrGpuFeatureFlag_Bindless) == 0)
+        return PrStatus_NotSupported;
     PrGpuShaderLibrary* library = nullptr;
     PrStatus status = prGpuShaderLibraryCreate(device, kDrawFragmentShaders, sizeof(kDrawFragmentShaders), &library);
     if (status != PrStatus_Ok)
@@ -623,7 +627,6 @@ PrStatus fragmentDeviceCreate(PrGpuDevice* device, FragmentDevice* PR_NULLABLE* 
     FragmentDevice* d = allocZeroed<FragmentDevice>();
     d->device = device;
     d->library = library;
-    PrGpuFeatureFlags features = prGpuDeviceInfo(device).features;
     d->targetReads = (features & PrGpuFeatureFlag_TargetReads) != 0;
     d->orderedReads = (features & PrGpuFeatureFlag_OrderedTargetReads) != 0;
     const PrGpuAddress modes[4] = {PrGpuAddress_Clamp, PrGpuAddress_Repeat, PrGpuAddress_Mirror, PrGpuAddress_Border};

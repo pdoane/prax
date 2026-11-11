@@ -227,10 +227,10 @@ int main(int argc, char** argv) {
         .close = closeServices,
         .context = &a,
     };
-    // Alchemy asks for Multiple windows, so that its menus, tooltips and dialogs show in windows of their own, or for
+    // Alchemy asks for Desktop windows, so that its menus, tooltips and dialogs show in windows of their own, or for
     // Single with --single-window. A capture asks for Single, so that the captured window shows what its commands open.
     PrAppOptions options = prAppOptionsDefault();
-    options.windowModel = a.capturePath.isEmpty() ? PrAppWindowModel_Multiple : PrAppWindowModel_Single;
+    options.windowModel = a.capturePath.isEmpty() ? PrAppWindowModel_Desktop : PrAppWindowModel_Single;
     for (int i = 1; i < argc; ++i) {
         if (PrStringView(argv[i]) == "--single-window")
             options.windowModel = PrAppWindowModel_Single;
