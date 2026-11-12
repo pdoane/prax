@@ -30,7 +30,8 @@ std::string runTag();
 
 // A folder of this test binary's own, in the system's temporary folder, as a path with forward slashes. Binaries that
 // run at once each have their own, so that their files never collide. It is created on the first call, and removed with
-// what it holds when the binary ends (tools/harness/test.cpp).
+// what it holds when the binary ends (tools/harness/test.cpp). The path is real, with no links in it, as the paths that
+// programs report for their directories are.
 std::string testFolder();
 
 } // namespace harness

@@ -46,7 +46,8 @@ std::string testFolder() {
         std::error_code ignored;
         std::filesystem::remove_all(path, ignored);
         std::filesystem::create_directories(path);
-        gFolder.path = path;
+        // The real path: programs that report their directory resolve links, as macOS's /var to /private/var.
+        gFolder.path = std::filesystem::canonical(path);
     }
     return gFolder.path.generic_string();
 }
