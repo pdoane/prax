@@ -5,6 +5,7 @@ except the benchmarks, which read their numbers from Release. Debug keeps the as
 Debug as well. One catches reads past the end of a buffer that the others let through, and the other catches races
 between threads. The WebAssembly build compiles with Emscripten (emsdk.py), runs on one thread, and runs its tests under
 Node.js. The iOS build is the default cross-compiled for iOS devices with Xcode's iOS SDK, on macOS, and only builds.
+Each of the two has a Debug form beside it, which keeps the assertions.
 
 Each build has a lean form, in a directory of its own, for a machine that only tests, as ./dev.sh ci and CI's runners
 do: PR_LEAN, which builds the tests and fetches only what they read (cmake/lean.cmake). It compiles through ccache where
@@ -33,7 +34,9 @@ RELEASE = os.path.join(dev.ROOT, "build-release")
 ASAN = os.path.join(dev.ROOT, "build-asan")
 TSAN = os.path.join(dev.ROOT, "build-tsan")
 WASM = os.path.join(dev.ROOT, "build-wasm")
+WASM_DEBUG = os.path.join(dev.ROOT, "build-wasm-debug")
 IOS = os.path.join(dev.ROOT, "build-ios")
+IOS_DEBUG = os.path.join(dev.ROOT, "build-ios-debug")
 # The base of an A/B comparison: its sources, its builds, and its harnesses by commit (ab.py).
 AB = os.path.join(dev.ROOT, "build-ab")
 # The libraries built and installed as a consumer takes them, and the consumers built against them.
@@ -94,12 +97,48 @@ MODES = {
     "asan": Mode("asan", ASAN, "Debug", SANITIZE, ASAN_SLOWDOWN),
     "tsan": Mode("tsan", TSAN, "Debug", THREAD_SANITIZE),
     "wasm": Mode("wasm", WASM, "RelWithDebInfo", wasm=True),
+    "wasm-debug": Mode("wasm-debug", WASM_DEBUG, "Debug", wasm=True),
     "ios": Mode("ios", IOS, "RelWithDebInfo", ios=True),
+    "ios-debug": Mode("ios-debug", IOS_DEBUG, "Debug", ios=True),
 }
 
 
+# The configurations of a build, as the commands name them, and the platforms that it compiles for. The host's platform
+# is the default's. The others cross-compile, in the default and debug configurations.
+CONFIGURATIONS = ("default", "debug", "release", "asan", "tsan")
+PLATFORMS = ("macos", "windows", "linux", "wasm", "ios")
+CROSS_PLATFORMS = ("wasm", "ios")
+
+
+def host_platform():
+    """Returns the platform of this machine, one of PLATFORMS."""
+    return "macos" if dev.darwin() else "windows" if dev.WINDOWS else "linux"
+
+
+def mode_name(configuration=None, platform=None):
+    """Returns the name in MODES of the build of `configuration` for `platform`, or None if there is none. Either may
+    be None, for the default configuration and the host's platform."""
+    configuration = configuration or "default"
+    if platform is None or platform == host_platform():
+        return configuration
+    if platform in CROSS_PLATFORMS and configuration in ("default", "debug"):
+        return platform + ("-debug" if configuration == "debug" else "")
+    return None
+
+
+def take_mode(argv, configurations=CONFIGURATIONS, platforms=PLATFORMS):
+    """Removes a configuration of `configurations` from the front of `argv`, then a platform of `platforms`, and returns
+    the name in MODES of their build. Fails if there is none."""
+    configuration = argv.pop(0) if argv[:1] and argv[0] in configurations else None
+    platform = argv.pop(0) if argv[:1] and argv[0] in platforms else None
+    name = mode_name(configuration, platform)
+    if name is None:
+        dev.fail("there is no %s build for %s on %s" % (configuration or "default", platform, host_platform()))
+    return name
+
+
 def mode(name, lean=False):
-    """Returns the build that `name` names: default, debug, release, asan, tsan, wasm or ios, or with `lean`, its lean
+    """Returns the build that `name` names, a key of MODES, or the default build for None, or with `lean`, its lean
     form."""
     found = MODES[name or "default"]
     if lean:

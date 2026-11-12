@@ -1,5 +1,5 @@
-# ./dev.sh ci on each platform of `os`, with each of its targets (`target`) in a job of its own, so that they run at
-# once.
+# ./dev.sh ci of each configuration (`configuration`) of each platform (`platform`), in a job of its own on the runner
+# that builds it (`os`), so that they run at once. WebAssembly and iOS are checked on macOS, as ./dev.sh ci checks them.
 #
 # ./dev.sh ci --configure fetches everything the run reads, and the caches of what it fetched are saved then, before
 # anything builds. The compiler cache is saved after the run, passing or not. Each cache is saved even when the run
@@ -24,12 +24,17 @@ permissions:
 
 jobs:
   ci:
-    name: ci (${{ matrix.os }}, ${{ matrix.target }})
+    name: ci (${{ matrix.platform }}, ${{ matrix.configuration }})
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest]
-        target: [host, debug]
+        platform: [windows, macos, wasm, ios]
+        configuration: [default, debug]
+        include:
+          - {platform: windows, os: windows-latest}
+          - {platform: macos, os: macos-latest}
+          - {platform: wasm, os: macos-latest}
+          - {platform: ios, os: macos-latest}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     defaults:
@@ -37,6 +42,9 @@ jobs:
         # Git Bash on Windows, where dev.sh runs.
         shell: bash
     env:
+      # What the job checks, as ./dev.sh ci names it.
+      CONFIGURATION: ${{ matrix.configuration }}
+      PLATFORM: ${{ matrix.platform }}
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_COMPILERCHECK: content
       CCACHE_MAXSIZE: 2G
@@ -47,15 +55,14 @@ jobs:
       - uses: actions/checkout@v5
 
       # The runner context is not available to the job's env, so what depends on it is set here, for the steps after.
-      # CCACHE_KEY is the fallback of the compiler cache's restore: the branch's, then main's. Each target has its own
+      # CCACHE_KEY is the fallback of the compiler cache's restore: the branch's, then main's. Each job has its own
       # cache, since its builds compile different objects.
       - name: Set the compiler cache's environment
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
-          TARGET: ${{ matrix.target }}
         run: |
           echo "CCACHE_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
-          echo "CCACHE_KEY=ccache-$RUNNER_OS-$TARGET-$BRANCH" >> "$GITHUB_ENV"
+          echo "CCACHE_KEY=ccache-$RUNNER_OS-$PLATFORM-$CONFIGURATION-$BRANCH" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v6
         with:
@@ -77,7 +84,7 @@ jobs:
       # that the run no longer reads, and third_party holds what the run fetched and nothing else.
       - name: Key third_party
         id: key
-        run: echo "key=third_party-${{ runner.os }}-$(./dev.sh ci --key ${{ matrix.target }})" >> "$GITHUB_OUTPUT"
+        run: echo "key=third_party-${{ runner.os }}-$(./dev.sh ci --key "$CONFIGURATION" "$PLATFORM")" >> "$GITHUB_OUTPUT"
 
       - name: Restore third_party
         id: fetched
@@ -93,11 +100,11 @@ jobs:
           key: ${{ env.CCACHE_KEY }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ env.CCACHE_KEY }}-
-            ccache-${{ runner.os }}-${{ matrix.target }}-main-
+            ccache-${{ runner.os }}-${{ matrix.platform }}-${{ matrix.configuration }}-main-
 
       - name: Fetch
         id: configure
-        run: ./dev.sh ci --configure ${{ matrix.target }}
+        run: ./dev.sh ci --configure "$CONFIGURATION" "$PLATFORM"
 
       - name: Save third_party
         if: always() && steps.configure.outcome == 'success' && steps.fetched.outputs.cache-hit != 'true'
@@ -109,7 +116,7 @@ jobs:
       - name: ./dev.sh ci
         run: |
           ccache --zero-stats
-          ./dev.sh ci ${{ matrix.target }}
+          ./dev.sh ci "$CONFIGURATION" "$PLATFORM"
 
       - name: Trim the compiler cache
         if: always() && steps.configure.outcome == 'success'

@@ -77,7 +77,7 @@ def overview():
         log = os.path.join(chosen.directory, ".ninja_log")
         if os.path.exists(log):
             found = True
-            print("    %-8s %-24s built %s" % (name, os.path.relpath(chosen.directory, dev.ROOT),
+            print("    %-10s %-24s built %s" % (name, os.path.relpath(chosen.directory, dev.ROOT),
                                               age(time.time() - os.path.getmtime(log))))
     if not found:
         print("    none yet; ./dev.sh test makes the default build")

@@ -15,36 +15,37 @@ from tools.lint import commands as lint
 
 USAGE = {
     "build": """\
-./dev.sh build [debug|release|asan|tsan|wasm|ios] [--lean] [--configure | --keep-going] [--target NAME]...
-    configure and build. The default is optimized, with debug symbols and without link-time optimization. `debug`
-    builds without the optimizer and with the assertions. `release` adds link-time optimization. `asan` is Debug with
-    the address and undefined behavior sanitizers, and `tsan` is Debug with the thread sanitizer. `wasm` is the default
-    compiled to WebAssembly with Emscripten, which it fetches into third_party/emsdk. `ios` is the default compiled
-    for iOS devices with Xcode's iOS SDK, on macOS. --lean builds the lean form, for a machine that only tests: no
-    tools, comparisons or examples, one font bundle, and ccache where it is installed (tools/build/build.py). --configure
-    configures and builds nothing, which fetches everything that the build and its tests read. --keep-going builds
-    past a failure and reports every error. --target builds only the targets named, and what they need""",
+./dev.sh build [debug|release|asan|tsan] [wasm|ios] [--lean] [--configure | --keep-going] [--target NAME]...
+    configure and build a configuration for a platform, the host's by default. The default configuration is optimized,
+    with debug symbols and without link-time optimization. `debug` builds without the optimizer and with the assertions.
+    `release` adds link-time optimization. `asan` is Debug with the address and undefined behavior sanitizers, and
+    `tsan` is Debug with the thread sanitizer. `wasm` compiles to WebAssembly with Emscripten, which it fetches into
+    third_party/emsdk, and `ios` for iOS devices with Xcode's iOS SDK, on macOS, each in the default configuration or
+    `debug`, as in ./dev.sh build debug wasm. --lean builds the lean form, for a machine that only tests: no tools,
+    comparisons or examples, one font bundle, and ccache where it is installed (tools/build/build.py). --configure
+    configures and builds nothing, which fetches everything that the build and its tests read. --keep-going builds past
+    a failure and reports every error. --target builds only the targets named, and what they need""",
     "test": """\
-./dev.sh test [debug|asan|tsan|wasm] [module] [args...]
+./dev.sh test [debug|asan|tsan] [wasm] [module] [args...]
     the unit tests and the tools' tests against that build's harnesses, with lint beside them, or one module's doctest
-    binary with args, as in ./dev.sh test dom -ts="*keyword*" --success, from that build, which builds only that
-    binary. With doctest's options and no module, as in ./dev.sh test -tc="*flood*", every binary runs the cases that
-    the options choose (tools/build/unit_tests.py). `wasm` runs the unit tests under Node.js, then the page tests (pr_page_tests) in headless Chrome, and not
-    the tools' tests, whose harnesses are the host's. A module's page tests are named <module>_page, as in
-    ./dev.sh test wasm draw_page""",
+    binary with args, as in ./dev.sh test dom -ts="*keyword*" --success, from that build, which builds only that binary.
+    With doctest's options and no module, as in ./dev.sh test -tc="*flood*", every binary runs the cases that the
+    options choose (tools/build/unit_tests.py). `wasm` runs the unit tests under Node.js, then the page tests
+    (pr_page_tests) in headless Chrome, and not the tools' tests, whose harnesses are the host's. A module's page tests
+    are named <module>_page, as in ./dev.sh test wasm draw_page""",
     "ci": """\
-./dev.sh ci [--configure | --key] [asan] [host|debug|wasm|ios]...
-    whether the tree is in a good state on this machine: lint beside every target that the machine builds, each run
-    past the failures of the others, and then a table of their outcomes. The targets are the host's build and its
-    debug build, each with its unit tests and the tools' tests, and on macOS the WebAssembly build with its unit tests
-    and page tests, and the iOS build, whose tests are built and not run. Each is the build's lean form, which fetches
-    only what its tests read (./dev.sh build --lean), and builds past a compile error, so that it reports every error
-    (./dev.sh build --keep-going). The targets named narrow the run to them. `asan` checks the
-    host's sanitizer build in place of the targets. --configure configures each target's build and fetches what lint
-    reads, and builds and runs nothing: everything that the run fetches, which CI caches before it runs
-    (.github/workflows/ci.yml). It reports what third_party then holds, and in CI, where that is what the
-    run fetched, fails past a budget (FETCH_BUDGET). --key prints a hash of what decides what the run fetches, which
-    changes when that does, as CI's cache of third_party is keyed""",
+./dev.sh ci [--configure | --key] [default|debug|asan]... [macos|windows|linux|wasm|ios]...
+    whether the tree is in a good state on this machine: lint beside each configuration of each platform named, each run
+    past the failures of the others, and then a table of their outcomes, as in ./dev.sh ci debug ios. With no
+    configuration named, they are the default and debug, and with no platform named, every platform that the machine
+    checks: its own, and on macOS WebAssembly and iOS too. Each runs the build's unit tests, with the tools' tests on
+    the host's platform and the page tests on WebAssembly, except iOS, whose tests are built and not run. `asan` is the
+    host's alone. Each build is its lean form, which fetches only what its tests read (./dev.sh build --lean), and
+    builds past a compile error, so that it reports every error (./dev.sh build --keep-going). --configure configures
+    each build and fetches what lint reads, and builds and runs nothing: everything that the run fetches, which CI
+    caches before it runs (.github/workflows/ci.yml). It reports what third_party then holds, and in CI, where that is
+    what the run fetched, fails past a budget (FETCH_BUDGET). --key prints a hash of what decides what the run fetches,
+    which changes when that does, as CI's cache of third_party is keyed""",
     "example": """\
 ./dev.sh example [wasm] <name> [args...]
 ./dev.sh example wasm <name> --screenshot <png> [--seconds S] [args...]
@@ -70,7 +71,7 @@ TEST_TIMEOUT = 60
 
 def build(argv):
     dev.usage(argv, USAGE["build"])
-    mode = None
+    mode = builds.take_mode(argv)
     targets = []
     keep_going = False
     lean = False
@@ -85,8 +86,6 @@ def build(argv):
             configure_only = True
         elif argument == "--target":
             targets.append(next(arguments, None) or dev.fail("--target names a target"))
-        elif argument in builds.MODES:
-            mode = argument
         else:
             dev.usage(argv, USAGE["build"], 1)
     if configure_only and (keep_going or targets):
@@ -110,7 +109,7 @@ def unit_tests(mode=None, lean=False, keep_going=False):
 
 def test(argv):
     dev.usage(argv, USAGE["test"])
-    mode = argv.pop(0) if argv[:1] in (["debug"], ["asan"], ["tsan"], ["wasm"]) else None
+    mode = builds.take_mode(argv, ("debug", "asan", "tsan"), ("wasm",))
     if not argv:
         # The whole run lints beside the build.
         lint.beside(lambda: unit_tests(mode))
@@ -143,8 +142,13 @@ def test(argv):
         dev.run([binary, *args])
 
 
-# The targets of ./dev.sh ci, by the name that narrows a run to them.
-CI_TARGETS = ("host", "debug", "wasm", "ios")
+# The configurations that ./dev.sh ci checks, and those it checks when none is named. The debug build checks the
+# assertions, which the default build compiles out.
+CI_CONFIGURATIONS = ("default", "debug", "asan")
+CI_DEFAULT_CONFIGURATIONS = ("default", "debug")
+
+# The names of the platforms in the run's steps.
+PLATFORM_NAMES = {"macos": "macOS", "windows": "Windows", "linux": "Linux", "wasm": "wasm", "ios": "iOS"}
 
 
 def ci(argv):
@@ -153,26 +157,39 @@ def ci(argv):
     key = argv[:1] == ["--key"]
     if configure_only or key:
         argv = argv[1:]
-    mode = argv.pop(0) if argv[:1] == ["asan"] else None
-    if any(argument not in CI_TARGETS for argument in argv) or (mode and argv):
+    configurations = []
+    while argv[:1] and argv[0] in CI_CONFIGURATIONS:
+        configurations.append(argv.pop(0))
+    platforms = []
+    while argv[:1] and argv[0] in builds.PLATFORMS:
+        platforms.append(argv.pop(0))
+    if argv:
         dev.usage(argv, USAGE["ci"], 1)
-    chosen = argv or CI_TARGETS
-    host = ("macOS" if dev.darwin() else "Windows" if dev.WINDOWS else sys.platform) + (" " + mode if mode else "")
-    # Each step's name, its build, and its work.
+    host = builds.host_platform()
+    for platform in platforms:
+        if platform != host and platform not in builds.CROSS_PLATFORMS:
+            dev.fail("%s builds on %s alone" % (platform, PLATFORM_NAMES[platform]))
+    # Emscripten's SDK is two gigabytes, which a check of the web's build on one platform is enough to fetch.
+    named = bool(platforms)
+    platforms = platforms or [host] + (list(builds.CROSS_PLATFORMS) if dev.darwin() else [])
+    # Each step's name, its build, and its work, for each platform and configuration that has a build.
     steps = []
-    if "host" in chosen:
-        steps.append((host, mode, lambda: unit_tests(mode, lean=True, keep_going=True)))
-    if mode is None:
-        # The debug build checks the assertions, which the default build compiles out.
-        if "debug" in chosen:
-            steps.append((host + " debug", "debug", lambda: unit_tests("debug", lean=True, keep_going=True)))
-        # Emscripten's SDK is two gigabytes, which a check of the web's build on one platform is enough to fetch.
-        if "wasm" in chosen and dev.darwin():
-            steps.append(("wasm", "wasm", lambda: unit_tests("wasm", lean=True, keep_going=True)))
-        if "ios" in chosen and dev.darwin():
-            steps.append(("iOS (build)", "ios", lambda: builds.build("ios", lean=True, keep_going=True)))
+    for platform in platforms:
+        for configuration in configurations or CI_DEFAULT_CONFIGURATIONS:
+            built = builds.mode_name(configuration, platform)
+            if built is None:
+                if named:
+                    dev.fail("there is no %s build for %s" % (configuration, platform))
+                continue
+            name = PLATFORM_NAMES[platform] + ("" if configuration == "default" else " " + configuration)
+            if platform == "ios":
+                # The iOS build's tests are built and not run.
+                steps.append((name + " (build)", built,
+                              lambda built=built: builds.build(built, lean=True, keep_going=True)))
+            else:
+                steps.append((name, built, lambda built=built: unit_tests(built, lean=True, keep_going=True)))
     if key:
-        print(fetch_key(any(built == "wasm" for _, built, _ in steps)))
+        print(fetch_key(any(builds.MODES[built].wasm for _, built, _ in steps)))
         return
     if configure_only:
         before = sizes()
