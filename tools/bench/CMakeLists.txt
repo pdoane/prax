@@ -57,7 +57,7 @@ add_executable(vterm_libvterm_check
 )
 target_include_directories(vterm_libvterm_check PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(vterm_libvterm_check PRIVATE prax::vterm prax::core_cpp libvterm pr_warnings)
-add_test(NAME vterm_libvterm_check COMMAND vterm_libvterm_check)
+pr_add_test(vterm_libvterm_check COMMAND vterm_libvterm_check)
 
 # The flex benchmark, which lays the same trees out in lib/layout, Yoga and Taffy (./dev.sh bench flex). Taffy's side
 # is a Rust static library, which Cargo builds, optimized whatever the build type. Where Cargo is not installed, the
@@ -111,7 +111,7 @@ target_compile_definitions(flex_bench PRIVATE PR_FLEX_BENCH_TAFFY=$<BOOL:${PR_CA
 add_executable(text_yoga_check flex_bench/text_yoga_check.cpp)
 target_link_libraries(text_yoga_check PRIVATE prax::font prax::text yoga pr_warnings)
 target_compile_definitions(text_yoga_check PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
-add_test(NAME text_yoga_check COMMAND text_yoga_check)
+pr_add_test(text_yoga_check COMMAND text_yoga_check)
 
 if (PR_JS)
     # What the editor's frames cost, by stage, on the platform's device, over a fixture of the benchmark's own.

@@ -62,6 +62,6 @@ if (PR_DEVELOP)
             quickjs/tests/test_exception_quickjs.cpp
         )
         target_link_libraries(dom_quickjs_tests PRIVATE prax::css_quickjs prax::core_quickjs_cpp prax::webidl_quickjs_cpp)
-        add_test(NAME dom_js_callbacks COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/callback.html)
+        pr_add_test(dom_js_callbacks COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/callback.html)
     endif()
 endif()

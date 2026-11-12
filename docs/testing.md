@@ -10,8 +10,18 @@ exclusions.
 `./dev.sh test` is the fast loop: lint, build and unit tests on the host. `./dev.sh ci` checks every target that the
 machine builds: the host in its default and debug builds, and on macOS, the web and iOS, whose tests are built and not
 run. The debug build is the one that checks the assertions. The unit tests read only what the build fetches
-(`cmake/test_data.cmake`). What tests a runner against a corpus is a suite. Then run the suites for the areas that a
-change touches:
+(`cmake/test_data.cmake`).
+
+A unit test is a test case. The build lists its test programs in `tests.json` (`pr_add_test`), most of them doctest
+binaries, and `./dev.sh` runs them several at once, the slowest first, with each binary running all of its cases in one
+process (`tools/build/unit_tests.py`). Each program's output prints whole as it ends, so that programs never interleave,
+and the run ends with the count of cases and the name of each case that failed. Each failure's whole output is also in
+`tests.log` in the build directory. doctest's options choose cases in every binary, as in `./dev.sh test -tc="*flood*"`,
+or in one module's, as in `./dev.sh test terminal -tc="*flood*"`. A case that runs longer than a minute is named by its
+binary's watchdog, which ends the binary (`PR_TEST_CASE_TIMEOUT`, `tools/harness/test_main.cpp`). A test writes its files
+in `harness::testFolder()`, its binary's own, so that runs at once never share them.
+
+What tests a runner against a corpus is a suite. Then run the suites for the areas that a change touches:
 
 | area | suites |
 | --- | --- |

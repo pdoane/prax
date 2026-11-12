@@ -183,14 +183,92 @@ function(pr_embed target directory)
     target_include_directories(${target} PRIVATE ${PROJECT_BINARY_DIR}/embed)
 endfunction()
 
-# Registers the doctest binary `target` with CTest as one test that runs all of its cases, if the host runs it: a build
-# for iOS only builds it. The cases share a process, since starting one takes longer than most cases do. One case runs
-# alone through the binary's own filters, as in ./dev.sh test <module> -tc="<name>".
+# Sets `out` to `text` as a JSON string.
+function(pr_json_string out text)
+    string(REPLACE "\\" "\\\\" text "${text}")
+    string(REPLACE "\"" "\\\"" text "${text}")
+    set(${out} "\"${text}\"" PARENT_SCOPE)
+endfunction()
+
+# Adds a test that ./dev.sh runs (tools/build/unit_tests.py), which the build lists in tests.json in its directory
+# (pr_write_tests). COMMAND runs in WORKING_DIRECTORY, the current binary directory by default, with the ENVIRONMENT
+# variables set, each as NAME=value. A command whose first word is a target runs the target's program, under the
+# build's emulator if it has one. The test passes if the command exits 0 and, with PASS, prints a match of that regular
+# expression. TIMEOUT, in seconds, ends a command that takes longer. A test of KIND doctest is a binary of doctest's
+# cases, which takes doctest's options and times each case (tools/harness/test_main.cpp).
+#
+#   pr_add_test(<name> COMMAND <word>... [WORKING_DIRECTORY <directory>] [ENVIRONMENT <NAME=value>...]
+#               [PASS <regex>] [TIMEOUT <seconds>] [KIND doctest])
+function(pr_add_test name)
+    cmake_parse_arguments(PARSE_ARGV 1 TEST "" "WORKING_DIRECTORY;PASS;TIMEOUT;KIND" "COMMAND;ENVIRONMENT")
+    if (NOT TEST_WORKING_DIRECTORY)
+        set(TEST_WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+    if (NOT TEST_KIND)
+        set(TEST_KIND command)
+    endif()
+    if (NOT TEST_TIMEOUT)
+        set(TEST_TIMEOUT 0)
+    endif()
+    # The test is written once every target exists (pr_write_tests), since its command may name a target that a later
+    # directory adds.
+    set_property(GLOBAL APPEND PROPERTY PR_TESTS ${name})
+    foreach (field COMMAND ENVIRONMENT WORKING_DIRECTORY PASS TIMEOUT KIND)
+        set_property(GLOBAL PROPERTY PR_TEST_${name}_${field} "${TEST_${field}}")
+    endforeach()
+endfunction()
+
+# Writes the tests that pr_add_test added to tests.json in the build directory. It runs once every directory has added
+# its targets and its tests.
+function(pr_write_tests)
+    get_property(names GLOBAL PROPERTY PR_TESTS)
+    set(entries "")
+    foreach (name IN LISTS names)
+        foreach (field COMMAND ENVIRONMENT WORKING_DIRECTORY PASS TIMEOUT KIND)
+            get_property(${field} GLOBAL PROPERTY PR_TEST_${name}_${field})
+        endforeach()
+        list(GET COMMAND 0 first)
+        if (TARGET ${first})
+            list(REMOVE_AT COMMAND 0)
+            list(PREPEND COMMAND "$<TARGET_FILE:${first}>")
+            if (CMAKE_CROSSCOMPILING_EMULATOR)
+                list(PREPEND COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR})
+            endif()
+        endif()
+        set(words "")
+        foreach (word IN LISTS COMMAND)
+            pr_json_string(quoted "${word}")
+            list(APPEND words "${quoted}")
+        endforeach()
+        list(JOIN words ", " words)
+        set(variables "")
+        foreach (variable IN LISTS ENVIRONMENT)
+            string(FIND "${variable}" "=" equals)
+            string(SUBSTRING "${variable}" 0 ${equals} key)
+            math(EXPR start "${equals} + 1")
+            string(SUBSTRING "${variable}" ${start} -1 value)
+            pr_json_string(key "${key}")
+            pr_json_string(value "${value}")
+            list(APPEND variables "${key}: ${value}")
+        endforeach()
+        list(JOIN variables ", " variables)
+        pr_json_string(quotedName "${name}")
+        pr_json_string(directory "${WORKING_DIRECTORY}")
+        pr_json_string(pass "${PASS}")
+        string(CONCAT entry "  {\"name\": ${quotedName}, \"kind\": \"${KIND}\", \"command\": [${words}], "
+            "\"directory\": ${directory}, \"environment\": {${variables}}, \"pass\": ${pass}, \"timeout\": ${TIMEOUT}}")
+        list(APPEND entries "${entry}")
+    endforeach()
+    list(JOIN entries ",\n" entries)
+    file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/tests.json CONTENT "[\n${entries}\n]\n")
+endfunction()
+
+# Adds the doctest binary `target` as a test (pr_add_test), if the host runs it: a build for iOS only builds it.
 #
 #   pr_add_tests(<target>)
 function(pr_add_tests target)
     if (NOT PR_IOS)
-        add_test(NAME ${target} COMMAND ${target})
+        pr_add_test(${target} KIND doctest COMMAND ${target})
     endif()
 endfunction()
 

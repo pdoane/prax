@@ -148,12 +148,11 @@ if (PR_DEVELOP)
         # The host scripts' tests drive the native pr_shell of this build, which PR_BUILD names to them
         # (tools/suite/corpus.py). The web's build runs pr_shell under Node.js, so it has no such tests.
         if (NOT EMSCRIPTEN)
-            add_test(NAME html_host_scripts COMMAND ${Python3_EXECUTABLE} -m tools.shell.test_shell
-                     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-            set_tests_properties(html_host_scripts PROPERTIES ENVIRONMENT "PR_BUILD=$<TARGET_FILE_DIR:pr_shell>"
-                                 TIMEOUT 60)
+            pr_add_test(html_host_scripts COMMAND ${Python3_EXECUTABLE} -m tools.shell.test_shell
+                        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} ENVIRONMENT "PR_BUILD=$<TARGET_FILE_DIR:pr_shell>"
+                        TIMEOUT 60)
         endif()
-        add_test(NAME html_js_timers COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/timers.html)
-        set_tests_properties(html_js_timers PROPERTIES PASS_REGULAR_EXPRESSION "timer host tests passed" TIMEOUT 10)
+        pr_add_test(html_js_timers COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/timers.html
+                    PASS "timer host tests passed" TIMEOUT 10)
     endif()
 endif()

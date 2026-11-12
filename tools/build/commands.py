@@ -9,6 +9,7 @@ import time
 from tools import dev
 from tools.build import build as builds
 from tools.build import emsdk
+from tools.build import unit_tests as unit_runner
 from tools.fetch import checkouts
 from tools.lint import commands as lint
 
@@ -27,7 +28,8 @@ USAGE = {
 ./dev.sh test [debug|asan|tsan|wasm] [module] [args...]
     the unit tests and the tools' tests against that build's harnesses, with lint beside them, or one module's doctest
     binary with args, as in ./dev.sh test dom -ts="*keyword*" --success, from that build, which builds only that
-    binary. `wasm` runs the unit tests under Node.js, then the page tests (pr_page_tests) in headless Chrome, and not
+    binary. With doctest's options and no module, as in ./dev.sh test -tc="*flood*", every binary runs the cases that
+    the options choose (tools/build/unit_tests.py). `wasm` runs the unit tests under Node.js, then the page tests (pr_page_tests) in headless Chrome, and not
     the tools' tests, whose harnesses are the host's. A module's page tests are named <module>_page, as in
     ./dev.sh test wasm draw_page""",
     "ci": """\
@@ -96,8 +98,8 @@ def unit_tests(mode=None, lean=False, keep_going=False):
     """Builds and runs every unit test of the build that `mode` names, or with `lean` its lean form, then the tools'
     tests against its harnesses. With `keep_going`, the build reports every error (builds.build)."""
     chosen = builds.build(mode, lean=lean, keep_going=keep_going)
-    dev.run(["ctest", "--test-dir", chosen.directory, "--output-on-failure", "--parallel", os.cpu_count() or 4,
-             "--timeout", TEST_TIMEOUT])
+    if not unit_runner.run(chosen.directory, os.cpu_count() or 4, TEST_TIMEOUT):
+        sys.exit(1)
     if chosen.wasm:
         for name in sorted(os.listdir(chosen.directory)):
             if name.endswith("_page_tests.html"):
@@ -112,6 +114,12 @@ def test(argv):
     if not argv:
         # The whole run lints beside the build.
         lint.beside(lambda: unit_tests(mode))
+        return
+    if argv[0].startswith("-"):
+        # doctest's options choose the cases of every binary.
+        chosen = builds.build(mode)
+        if not unit_runner.run(chosen.directory, os.cpu_count() or 4, TEST_TIMEOUT, argv):
+            sys.exit(1)
         return
     # One module's tests build only their binary, <module>_tests.
     module, args = argv[0], argv[1:]
